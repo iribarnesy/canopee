@@ -59,7 +59,7 @@ De la texture et de la profondeur on **dérive** (pas de saisie redondante) : r�
 5. **Moyenne montagne (Massif central, ~900 m)** — sol sur granite, saison courte, gels tardifs fréquents, forte RU. Pour sorbier, myrtille, mélèze ; les fruitiers exigeants y échouent.
 6. **Vallée alluviale ligérienne** — sol profond eutrophe, nappe accessible, risque de crue hivernale scriptée. Peupliers, noyers, frênes ; engorgement à gérer.
 
-Chaque station embarque ses **normales climatiques mensuelles réelles** (Météo-France, à collecter en phase données) et des options **scénarios réchauffés** (ch8), nommés par le réchauffement **en France** — qui court ~2× plus vite que la moyenne globale : « **France +2 °C** » et « **France +4 °C** » (≈ monde +2,5–3 °C ; c'est la trajectoire de référence TRACC pour 2100 *(chiffres exacts à confirmer)*). Séries à construire depuis les projections **DRIAS / Météo-France**.
+Chaque station embarque ses **normales climatiques mensuelles réelles** (Météo-France, à collecter en phase données) et un **réchauffement en trajectoire, pas en décor statique** : la série de 60 ans suit un scénario du GIEC (**SSP1-2.6 / SSP2-4.5 / SSP5-8.5**), régionalisé France via les projections **DRIAS / Météo-France** (la France se réchauffe ~2× plus vite que la moyenne globale). Le joueur choisit le scénario **et l'année de départ** (2026 ou 2040) : même en SSP2 démarré aujourd'hui, la fin de partie est nettement plus chaude que le début — planter en 2026 un arbre qui produira en 2070, c'est LE problème du jeu (ch8). Le CO₂ (ppm) suit la même trajectoire.
 
 ---
 
@@ -205,7 +205,7 @@ Chaque bord de carte a une occupation qui produit des **flux entrants** :
 - **Forêt voisine** → pluie de graines (selon les modes de dissémination : vent = partout dégressif, geai = glands posés jusqu'à 500 m par « paquets », ch4-C), colonisation mycorhizienne plus rapide, auxiliaires et pollinisateurs de base, mais aussi gibier.
 - **Prairie** → graminées et banque de graines de friche, campagnols.
 - **Grande culture intensive** → quasi rien de vivant, dérive de pression ravageurs (pucerons), pas d'auxiliaires.
-- **Régénération naturelle** : chaque année, des semis spontanés apparaissent (espèces = f(voisinage + banque de graines de la station + arbres de la parcelle en âge de grainer)). Le joueur peut les garder (gratuit, adapté, mais placé au hasard du disperseur) ou les faucher — c'est l'arbitrage régénération vs plantation du ch4-B.
+- **Régénération naturelle** : chaque année, des semis spontanés apparaissent (espèces = f(voisinage + banque de graines de la station + arbres de la parcelle en âge de grainer)). Le joueur peut les garder (gratuit, adapté, mais placé au hasard du disperseur — tirages **pseudo-aléatoires seedés** : la graine de la partie fixe tout, cf. §16) ou les faucher — c'est l'arbitrage régénération vs plantation du ch4-B.
 
 ---
 
@@ -215,7 +215,7 @@ Chaque action coûte **de l'argent et/ou du temps de travail** (§10). Liste v1 
 
 **Sol** : observer/analyser (bêche gratuite = infos partielles, analyse labo payante = valeurs exactes), labour initial (gain N à court terme, casse mycorhizes + déstocke C — le piège classique), paillage, BRF, compost/fumier, chaulage, engrais organique ou minéral (avec pertes par lessivage si mal daté, ch1-C), semis d'engrais verts, faux-semis/fauche.
 
-**Végétal** : acheter et planter (plant jeune pas cher/fragile vs plant fort cher/robuste ; **provenance MFR** adaptée ou non à la station *(mécanique à confirmer)*), semer, tailler/élaguer (bois d'œuvre), **éclaircir** (ch5-A : desserrer pour la résilience), recéper (taillis), trogner, couper, **choisir le devenir de chaque coupe** : vendre (bois d'œuvre / chauffage) · brûler sur place · broyer/épandre · laisser en bois mort. Récolter les fruits (fenêtre de fraîcheur), greffer *(v2 ?)*.
+**Végétal** : acheter et planter (plant jeune pas cher/fragile vs plant fort cher/robuste ; v1 : **un seul phénotype par espèce** ; v2 : choix de la provenance MFR, y compris plants méridionaux = migration assistée), semer, tailler/élaguer (bois d'œuvre), **éclaircir** (ch5-A : desserrer pour la résilience), recéper (taillis), trogner, couper, **choisir le devenir de chaque coupe** : vendre (bois d'œuvre / chauffage) · brûler sur place · broyer/épandre · laisser en bois mort. Récolter les fruits (fenêtre de fraîcheur), greffer *(v2 ?)*.
 
 **Aménagements** : clôture, protections individuelles, haie brise-vent, mare (débloque crapauds/libellules), nichoirs/gîtes/perchoirs, ruches (pollinisation + miel), irrigation (réseau ou cuve de récupération — ressource eau limitée et payante, ch7-B), chemin d'accès (réduit le temps de travail des interventions lointaines *(idée à confirmer)*).
 
@@ -259,7 +259,7 @@ Pas de « victoire » unique : des **scénarios** avec objectifs, sur le modèle
 2. **Sortir de la grande culture** (plateau picard) : atteindre un revenu stable + MO du sol ×2 en 25 ans.
 3. **Forêt-jardin vivrière** (bocage breton) : X kg de nourriture/an étalés sur ≥ 9 mois, en < 10 h/semaine au régime de croisière (ch7-B, ordres de grandeur de surface).
 4. **Bas carbone** : maximiser le C net stocké à 40 ans, trésorerie ≥ 0.
-5. **Bac à sable** : tous curseurs libres, y compris +2 °C / +4 °C (ch8).
+5. **Bac à sable** : tous curseurs libres, y compris scénario SSP et année de départ (ch8).
 
 **Indicateurs permanents** : trésorerie · h de travail · bilan C · **index biodiversité** (richesse spécifique pondérée × diversité des strates × habitats : bois mort, mare, haies, fleurs 12 mois — proxy honnête, à afficher comme tel) · LER · autonomie alimentaire.
 
@@ -281,14 +281,15 @@ Variabilité individuelle (ta v2 : tirage d'un « génotype » par individu auto
 5. **Découvert autorisé avec plafond** ; faillite au-delà (hors bac à sable).
 6. Connaissance du sol **par observation** (bio-indicatrices : callune = acide, cornouiller mâle = calcaire — atlas) **+ analyses payantes** pour les valeurs exactes.
 7. **Pollinisation variétale dès la v1** (§7.5).
-8. Scénarios climat nommés par le réchauffement **France** (+2 °C / +4 °C), **effet CO₂** modélisé (§3).
+8. Climat = **trajectoires GIEC (SSP1-2.6 / SSP2-4.5 / SSP5-8.5)** régionalisées France (DRIAS), **année de départ au choix** (2026 ou 2040), effet CO₂ modélisé (§3). Le réchauffement est visible en cours de partie, quel que soit le scénario.
 9. Greffes en v2 ; variétés en v1.
+10. **Un seul phénotype par espèce en v1** ; l'achat de provenances plus méridionales (migration assistée) arrivera en v2, avec la variabilité individuelle.
+11. Aléa (dispersion voisine…) autorisé mais **seedé** : le déterminisme se teste à seed fixée, les tests écologiques valident des critères larges sur plusieurs seeds (§16).
 
 **Encore ouvert :**
 - **Vue graphique** : hypothèse de travail = **isométrique** ; maquette à faire au moment de l'UI, en vérifiant deux points durs de l'iso : lisibilité des ombres portées (information de gameplay) et occlusion des petits sujets derrière les grands arbres. Une vue de dessus « plan de gestion » restera sans doute nécessaire en complément.
 - **Nom** : « Canopée » reste le nom de code.
-- **Stack technique** : à trancher juste avant la V0 (piste : TypeScript + Vite, moteur pur testable sans navigateur, rendu Canvas/PixiJS, données espèces/stations en JSON versionnés).
-- **Provenance MFR** : mécanique fine à décider — v1 minimale possible : provenance adaptée ou non au scénario climatique choisi (migration assistée, ch1-A).
+- **Stack technique** : proposition détaillée dans [stack.md](stack.md), en cours de validation.
 
 ---
 
@@ -298,7 +299,7 @@ Le moteur étant une fonction pure `état + actions → état`, tout se teste sa
 
 - **Tests unitaires par processus** : bilan hydrique, minéralisation, loi du minimum, degrés-jours/phénologie, interception lumineuse par strates.
 - **Tests de conservation (propriétés)** : à chaque tick, l'eau (pluie = interception + ruissellement + drainage + Δstock + prélèvements), le carbone et l'azote sont **conservés** sur l'ensemble des pools. La fuite de matière est LE bug classique des simulateurs.
-- **Test de déterminisme** : deux runs de la même partie (mêmes actions datées) → hash d'état identique à chaque tick.
+- **Test de déterminisme** : tout l'aléa du moteur (dispersion depuis le voisinage, placement des semis…) passe par un **PRNG seedé** stocké dans la sauvegarde — jamais `Math.random`. Même seed + mêmes actions datées → hash d'état identique à chaque tick (c'est un test de non-régression, pas une contrainte de gameplay : deux parties ont des seeds différentes et divergent normalement).
 - **Tests écologiques de bout en bout** : on simule 60 ans et on vérifie que les **trajectoires émergent** des règles, sans les avoir codées en dur —
   - friche sur limon picard, zéro intervention → fruticée → pionniers → les climaciques (hêtre, chêne) dominent la canopée à l'an 60 ;
   - même station **fauchée chaque année** → reste une prairie ;
@@ -307,7 +308,7 @@ Le moteur étant une fonction pure `état + actions → état`, tout se teste sa
   - abricotier en Massif central → vivant mais quasi jamais de récolte (gel des fleurs) ;
   - aulne prospère en berge engorgée là où le chêne pubescent meurt ;
   - légumineuses coupées **épandues** → N du sol ↑ et croissance des voisins ↑ vs le run où on les **vend**.
-  Ces tests sont la **définition exécutable du réalisme** : idéalement, chaque règle de ce document finit en assertion.
+  Ces tests sont la **définition exécutable du réalisme** : idéalement, chaque règle de ce document finit en assertion. Leurs critères sont volontairement **larges** (« le hêtre domine la canopée », « couverture ligneuse > 80 % », jamais « 143 hêtres à l'an 60 ») et chaque scénario tourne sur **plusieurs seeds** : ils doivent survivre à la fois à l'aléa de dispersion et aux recalibrages du moteur.
 - **Golden runs** : quelques parties de référence snapshotées ; toute modification du moteur qui change leur sortie doit être assumée explicitement (même esprit que tes tests de non-régression dbt).
 
 ---
