@@ -1,6 +1,6 @@
 # Canopée — Règles du simulateur d'agroforesterie
 
-> Document de game design, v0.1 (2026-08-31). Nom de code « Canopée » (à changer si tu veux).
+> Document de game design, v0.2 (2026-09-01) — intègre les premières décisions (voir §15). Nom de code « Canopée » (à changer si tu veux).
 > Sources principales : `Notes/Agroforesterie - auto cours.md` (ch. 1–8) et `Notes/atlas-especes/` (~70 ligneux, ~100 herbacées, faune). Les valeurs chiffrées données ici sont des ordres de grandeur **à calibrer** ; celles marquées *(à confirmer)* sont des inférences non sourcées.
 
 ---
@@ -24,7 +24,7 @@
 - Chaque tick : météo → bilan hydrique → cycle N → lumière → croissance/phénologie de chaque individu → interactions biotiques → économie.
 
 ### 1.2 Espace
-- **Parcelle = grille de cellules de 1 m²**, taille par défaut **1 ha** (100×100). Assez pour un vrai design (lignes agroforestières, îlots-guildes, lisières) sans être ingérable.
+- **Parcelle = grille de cellules de 1 m²**. Taille par défaut **1 ha** (100×100) — assez pour un vrai design (lignes, îlots-guildes, lisières) sans noyer le joueur — mais c'est un **paramètre de la station**, pas une limite du moteur : on dimensionne pour tenir ~10 ha × 52 ticks/an fluide, des scénarios plus grands viendront.
 - Un **ligneux** occupe une cellule (son pied) et projette :
   - une **couronne** (disque de rayon `r_houppier(âge)`) qui intercepte la lumière,
   - une **zone racinaire** (disque de rayon ~1–1,5× la couronne *(à confirmer)*, sur `profondeur_racinaire(âge)`) qui prélève eau et nutriments.
@@ -59,7 +59,7 @@ De la texture et de la profondeur on **dérive** (pas de saisie redondante) : r�
 5. **Moyenne montagne (Massif central, ~900 m)** — sol sur granite, saison courte, gels tardifs fréquents, forte RU. Pour sorbier, myrtille, mélèze ; les fruitiers exigeants y échouent.
 6. **Vallée alluviale ligérienne** — sol profond eutrophe, nappe accessible, risque de crue hivernale scriptée. Peupliers, noyers, frênes ; engorgement à gérer.
 
-Chaque station embarque ses **normales climatiques mensuelles réelles** (Météo-France, à collecter en phase données) et une option **scénario +2 °C** (ch8) qui décale les normales — c'est déjà un mode de jeu.
+Chaque station embarque ses **normales climatiques mensuelles réelles** (Météo-France, à collecter en phase données) et des options **scénarios réchauffés** (ch8), nommés par le réchauffement **en France** — qui court ~2× plus vite que la moyenne globale : « **France +2 °C** » et « **France +4 °C** » (≈ monde +2,5–3 °C ; c'est la trajectoire de référence TRACC pour 2100 *(chiffres exacts à confirmer)*). Séries à construire depuis les projections **DRIAS / Météo-France**.
 
 ---
 
@@ -67,8 +67,9 @@ Chaque station embarque ses **normales climatiques mensuelles réelles** (Mété
 
 - Par station : une **série météo hebdomadaire scriptée sur 60 ans**, construite à partir des normales mensuelles + événements datés (canicule de l'an 12, gel tardif semaine 16 de l'an 4, tempête de l'an 27…). Rejouable à l'identique → même partie, mêmes résultats.
 - Variables par semaine : T° moyenne/min/max, précipitations (mm), rayonnement (dérivé latitude + nébulosité), vent (événements).
-- **ETP** (évapotranspiration potentielle) calculée par Hargreaves : `ETP = 0,0023 × Ra × (Tmoy + 17,8) × √(Tmax − Tmin)` — simple et suffisant *(à confirmer vs Penman simplifié)*.
+- **ETP** (évapotranspiration potentielle) calculée par Hargreaves : `ETP = 0,0023 × Ra × (Tmoy + 17,8) × √(Tmax − Tmin)` — **validé**.
 - Dérivés phénologiques : **degrés-jours** (base 5 °C ou 10 °C selon espèce), **heures de froid** hivernales (besoin de vernalisation des fruitiers), **dates de gel** (dernier gel de printemps = risque pour fleurs précoces type abricotier — atlas : « gel des fleurs = risque »).
+- **CO₂ atmosphérique** : chaque scénario fixe sa trajectoire de ppm (≈ 420 aujourd'hui → 550–800 selon scénario). L'**effet fertilisant** est modélisé, honnêtement : hausse **saturante** du potentiel de photosynthèse (ordre de grandeur +10–20 % vers 550 ppm, d'après les expériences FACE *(à calibrer)*) et meilleure **efficience d'usage de l'eau** (stomates moins ouverts → transpiration réduite à production égale). Mais la loi du minimum s'applique toujours : sans azote et sans eau, le bonus CO₂ ne s'exprime pas — c'est l'état de la littérature (limitation progressive par les nutriments ; effet plus faible en forêt mature, et effacé les années de sécheresse).
 - Le **microclimat** modifie la météo localement (ch4-A) : sous couvert, ETP réduite (−20 à −40 %), extrêmes thermiques amortis (moins de gel au sol), vent cassé par les haies (effet sur ~10× leur hauteur) *(coefficients à calibrer)*.
 
 ---
@@ -193,7 +194,7 @@ Pas de tirage aléatoire : des **règles à seuil**, lisibles et apprenables :
 - **Facilitation / effet nurse** (ch1-A) : sous une nurse, un semis subit moins d'ETP, moins de gel, pas de gibier — mais moins de lumière. Le joueur rejoue le moteur de la succession.
 - **Mycorhizes** (ch2-B) : un individu connecté au réseau compatible (ECTO avec ECTO…) gagne en efficacité d'absorption eau/P (+X %) et en résistance au stress hydrique. Le réseau se construit dans le temps et est détruit par le labour.
 - **Allélopathie** : la juglone du noyer pénalise les sensibles dans un rayon donné (atlas).
-- **Pollinisation** : espèces non autofertiles (la plupart des pommiers, kiwaï dioïque, argousier dioïque — atlas) exigent un partenaire compatible à distance de butinage **et** un index pollinisateurs suffisant (fleurs étalées sur l'année, périodes de soudure fin d'hiver/automne de l'atlas).
+- **Pollinisation** : espèces non autofertiles (la plupart des pommiers, kiwaï dioïque, argousier dioïque — atlas) exigent un partenaire compatible à distance de butinage **et** un index pollinisateurs suffisant (fleurs étalées sur l'année, périodes de soudure fin d'hiver/automne de l'atlas). **Dès la v1, au niveau variétal pour les fruitiers** (décision) : chaque variété porte un **groupe de floraison** (A–E) et un statut autofertile/auto-stérile ; deux pommiers de la même variété auto-stérile ne se pollinisent pas — il faut des groupes qui se chevauchent. La fiche espèce des fruitiers embarque donc une liste `varietes` (groupe de floraison, autofertilité, prix/calibre, sensibilités propres).
 - **LER affiché** (ch5-B) : le jeu calcule le Land Equivalent Ratio des assolements mixtes vs monoculture — c'est un indicateur de score, et un outil pédagogique.
 
 ---
@@ -224,8 +225,8 @@ Chaque action coûte **de l'argent et/ou du temps de travail** (§10). Liste v1 
 
 ## 10. Ressources et économie
 
-- **Argent (€)** : capital de départ selon scénario. Dépenses = plants, matériel, intrants, main-d'œuvre saisonnière. Recettes = fruits (prix dégressifs si monoproduit qui sature le marché local *(à confirmer)*), bois d'œuvre (∝ qualité : droit, élagué, gros diamètre), bois de chauffage, petits fruits/plants, miel. **Aides publiques** scriptées (le cours ch5 les mentionne : aides plantation haies/agroforesterie) et éventuel **paiement pour services (label bas-carbone)** lié au §12.
-- **Temps de travail (h/semaine)** : LE régulateur du rythme. Le joueur a ~40 h/semaine ; chaque action a un coût horaire réaliste (planter un arbre ~15 min, récolter 100 kg de pommes ~3 h *(à calibrer)*). Récolte non faite = perdue (ou tombée = litière). Embauche possible (€ ↔ h). C'est ce qui rend une forêt-jardin mature intéressante : peu d'heures, du rendement (ch6, « le pari des vivaces »).
+- **Argent (€)** : capital de départ selon scénario. Dépenses = plants, matériel, intrants, main-d'œuvre saisonnière. Recettes = fruits (prix dégressifs si monoproduit qui sature le marché local *(à confirmer)*), bois d'œuvre (∝ qualité : droit, élagué, gros diamètre), bois de chauffage, petits fruits/plants, miel. **Aides publiques** scriptées (le cours ch5 les mentionne : aides plantation haies/agroforesterie) et éventuel **paiement pour services (label bas-carbone)** lié au §12. **Découvert autorisé** jusqu'à un plafond (dette à intérêts) ; le crever = faillite, fin de partie (hors bac à sable).
+- **Temps de travail : budget annuel en UTH** (unité de travail humain, le terme agricole pour « équivalent temps plein » — on garde « ETP » pour l'évapotranspiration afin d'éviter la collision de sigles). 1 UTH ≈ 1 800 h/an ; le joueur seul = 1 UTH. Chaque action a un coût horaire réaliste (planter un arbre ~1 h, récolter 100 kg de pommes ~3 h *(à calibrer)*). Deux compteurs : les **heures de la semaine** (plafond dur ~60 h/UTH — on peut charbonner en saison de plantation) et la **moyenne annuelle glissante en UTH** — pointer à 70 h une semaine de plantation est OK tant que l'année reste ≤ 1 UTH. Pour dépasser le budget annuel il faut **embaucher** (saisonnier ponctuel ou salarié permanent, € ↔ UTH) : on démarre tout seul, on salarie quand la ferme le permet. Récolte non faite = perdue (ou tombée = litière). C'est ce qui rend la forêt-jardin mature payante : peu d'heures, du rendement (ch6, « le pari des vivaces »).
 - **Carbone** : pas une monnaie dépensable, un **score-bilan** (§12), éventuellement monétisé via label.
 
 ---
@@ -266,26 +267,52 @@ Pas de « victoire » unique : des **scénarios** avec objectifs, sur le modèle
 
 ## 14. Hors périmètre v1 (assumé, pour te répondre « et après ? »)
 
-Variabilité individuelle (ta v2 : tirage d'un « génotype » par individu autour des moyennes d'espèce — le socle déterministe reste, on tire juste les paramètres à la plantation avec une graine aléatoire fixée par partie) · météo stochastique · feu comme système complet (v1 : juste l'inflammabilité et un événement scripté en station 1) · greffe et variétés fruitières détaillées · multijoueur/multi-parcelles · marché dynamique · réglementation (défrichement, PLU) · maraîchage annuel complet (v1 : couverts et quelques vivaces potagères de l'atlas herbacées, le potager annuel du ch7 viendra après).
+Variabilité individuelle (ta v2 : tirage d'un « génotype » par individu autour des moyennes d'espèce — le socle déterministe reste, on tire juste les paramètres à la plantation avec une graine aléatoire fixée par partie) · météo stochastique · feu comme système complet (v1 : juste l'inflammabilité et un événement scripté en station 1) · greffe (les **variétés**, elles, sont en v1 — voir §7.5) · multijoueur/multi-parcelles · marché dynamique · réglementation (défrichement, PLU) · maraîchage annuel complet (v1 : couverts et quelques vivaces potagères de l'atlas herbacées, le potager annuel du ch7 viendra après).
 
 ---
 
-## 15. Ce que tu n'avais pas abordé — points à trancher
+## 15. Décisions actées (2026-09-01) et points encore ouverts
 
-1. **Pas de temps & durée** : OK pour semaine + parties de 30–60 ans avec accélération ? (Alternative : tick mensuel, plus simple, phénologie plus grossière.)
-2. **Spatialisation** : grille 1 m² / 1 ha te va ? C'est structurant pour tout le reste (ombres, racines, design de lignes).
-3. **« Déterministe » précisé** : je propose série météo scriptée (années sèches incluses) plutôt que climat constant — sinon pas de gel tardif ni de sécheresse, et le jeu perd son intérêt. Valide ?
-4. **Le temps de travail comme ressource** : tu avais dit « argent, temps, carbone » — je propose que le « temps » soit des **heures de travail hebdomadaires** (pas juste le temps qui passe). C'est le meilleur frein réaliste au micro-management.
-5. **Échec possible ?** Faillite = fin de partie, ou découvert autorisé ? Je propose faillite possible hors bac à sable.
-6. **La récolte d'infos comme gameplay** : sait-on tout du sol dès le départ, ou faut-il payer des analyses / observer des bio-indicatrices (callune = acide, cornouiller = calcaire — atlas) ? Je pousse pour l'observation, très pédagogique.
-7. **Pollinisation variétale** : gérer l'auto-stérilité (2 variétés de pommiers) dès la v1 ou simplifier à l'espèce ?
-8. **Point de vue graphique** : vue de dessus 2D (la plus honnête pour ombres/racines), isométrique, ou coupe de profil pour le sol ? (Je proposerai une maquette après validation des règles.)
-9. **Nom du jeu** : « Canopée » est un placeholder.
-10. **Stack technique** (à discuter au prochain pas) : je pense TypeScript + Vite, moteur pur sans framework + rendu Canvas/PixiJS, données espèces/stations en JSON versionnés — et des tests unitaires sur le moteur dès le début (bilan d'eau, Liebig, succession émergente).
+**Acté :**
+1. Tick hebdomadaire, parties de 30–60 ans avec accélération.
+2. Grille de 1 m² ; 1 ha par défaut mais **taille paramétrable** (le moteur vise plusieurs ha, voir §1.2).
+3. Météo scriptée déterministe ; **ETP par Hargreaves** (validé).
+4. Temps de travail budgété **à l'année en UTH**, avec compteur hebdomadaire et plafond dur par semaine (§10).
+5. **Découvert autorisé avec plafond** ; faillite au-delà (hors bac à sable).
+6. Connaissance du sol **par observation** (bio-indicatrices : callune = acide, cornouiller mâle = calcaire — atlas) **+ analyses payantes** pour les valeurs exactes.
+7. **Pollinisation variétale dès la v1** (§7.5).
+8. Scénarios climat nommés par le réchauffement **France** (+2 °C / +4 °C), **effet CO₂** modélisé (§3).
+9. Greffes en v2 ; variétés en v1.
+
+**Encore ouvert :**
+- **Vue graphique** : hypothèse de travail = **isométrique** ; maquette à faire au moment de l'UI, en vérifiant deux points durs de l'iso : lisibilité des ombres portées (information de gameplay) et occlusion des petits sujets derrière les grands arbres. Une vue de dessus « plan de gestion » restera sans doute nécessaire en complément.
+- **Nom** : « Canopée » reste le nom de code.
+- **Stack technique** : à trancher juste avant la V0 (piste : TypeScript + Vite, moteur pur testable sans navigateur, rendu Canvas/PixiJS, données espèces/stations en JSON versionnés).
+- **Provenance MFR** : mécanique fine à décider — v1 minimale possible : provenance adaptée ou non au scénario climatique choisi (migration assistée, ch1-A).
 
 ---
 
-## 16. Feuille de route proposée
+## 16. Stratégie de tests (validation des comportements)
+
+Le moteur étant une fonction pure `état + actions → état`, tout se teste sans navigateur, dès la V0 :
+
+- **Tests unitaires par processus** : bilan hydrique, minéralisation, loi du minimum, degrés-jours/phénologie, interception lumineuse par strates.
+- **Tests de conservation (propriétés)** : à chaque tick, l'eau (pluie = interception + ruissellement + drainage + Δstock + prélèvements), le carbone et l'azote sont **conservés** sur l'ensemble des pools. La fuite de matière est LE bug classique des simulateurs.
+- **Test de déterminisme** : deux runs de la même partie (mêmes actions datées) → hash d'état identique à chaque tick.
+- **Tests écologiques de bout en bout** : on simule 60 ans et on vérifie que les **trajectoires émergent** des règles, sans les avoir codées en dur —
+  - friche sur limon picard, zéro intervention → fruticée → pionniers → les climaciques (hêtre, chêne) dominent la canopée à l'an 60 ;
+  - même station **fauchée chaque année** → reste une prairie ;
+  - lande girondine sèche et acide → pins/bouleaux s'installent, le hêtre échoue ;
+  - héliophile planté sous canopée fermée → meurt en quelques années ; un sciaphile y survit ;
+  - abricotier en Massif central → vivant mais quasi jamais de récolte (gel des fleurs) ;
+  - aulne prospère en berge engorgée là où le chêne pubescent meurt ;
+  - légumineuses coupées **épandues** → N du sol ↑ et croissance des voisins ↑ vs le run où on les **vend**.
+  Ces tests sont la **définition exécutable du réalisme** : idéalement, chaque règle de ce document finit en assertion.
+- **Golden runs** : quelques parties de référence snapshotées ; toute modification du moteur qui change leur sortie doit être assumée explicitement (même esprit que tes tests de non-régression dbt).
+
+---
+
+## 17. Feuille de route proposée
 
 - **V0 « le sol et l'eau »** : 1 station, météo scriptée, bilan hydrique + N, 5 espèces, croissance Liebig, plantation/coupe, argent. → valider que « ça pousse juste ».
 - **V0.5 « la lumière »** : strates, ombres, tempéraments, succession émergente, régénération naturelle.
