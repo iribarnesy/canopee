@@ -11,8 +11,10 @@ succession écologique, bilan carbone honnête.
 
 - **Stack technique** : [docs/stack.md](docs/stack.md)
 
-État : V0 « le sol et l'eau » en cours — moteur pur (météo/ETP Hargreaves, bilan
-hydrique, PRNG seedé) + UI jetable de visualisation.
+État : moteur spatial V0.5 — grille de sol 1 m² (eau, azote), arbres positionnés
+qui puisent dans leur zone racinaire, ombres portées décalées au nord,
+croissance en loi du minimum sur 5 espèces. UI jetable de visualisation
+(courbes + carte de parcelle).
 
 ## Développement
 

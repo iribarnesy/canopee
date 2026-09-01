@@ -1,20 +1,22 @@
 /**
- * Bilan hydrique V0 : réservoir à deux compartiments.
+ * Bilan hydrique d'UNE cellule de 1 m² : réservoir à deux compartiments.
  * - la réserve utile (RU) : l'eau disponible pour les plantes ;
  * - l'eau gravitaire au-dessus de la capacité au champ : elle draine à une
- *   vitesse limitée (conductivité du sol) et, tant qu'elle stagne, elle crée
- *   de l'**engorgement** (anoxie racinaire — aulne OK, chêne pubescent KO).
- * Invariant testé : pluie = ETR + drainage + débordement + Δstock, exactement.
- * V1 : horizons multiples, interception par les couronnes, ruissellement (pente),
- * prélèvements par individu selon la profondeur racinaire.
+ *   vitesse limitée (conductivité) et, tant qu'elle stagne, crée de
+ *   l'**engorgement** (anoxie racinaire).
+ * La cellule gère pluie, débordement, drainage et évaporation du sol nu ;
+ * la TRANSPIRATION des arbres est prélevée ensuite, cellule par cellule,
+ * par l'allocation spatiale de tick.ts (docs/regles.md §4.2).
+ * Invariant testé : pluie = évaporation + drainage + débordement + Δstock.
+ * 1 mm sur 1 m² = 1 L.
  */
 
-export interface WaterBalanceInput {
+export interface CellWaterInput {
   /** eau de la réserve utile en début de semaine, mm (0 ≤ x ≤ ru) */
   soilWaterMm: number;
   /** eau gravitaire (au-dessus de la capacité au champ), mm */
   excessMm: number;
-  /** réserve utile du sol, mm */
+  /** réserve utile de la cellule, mm */
   ruMm: number;
   /** porosité de drainage : eau gravitaire max avant débordement en surface, mm */
   excessCapacityMm: number;
@@ -22,33 +24,38 @@ export interface WaterBalanceInput {
   drainagePerWeekMm: number;
   /** pluie de la semaine, mm */
   rainMm: number;
-  /** évapotranspiration potentielle de la semaine, mm */
-  etpMm: number;
+  /** demande évaporatoire du sol nu, mm (fraction de l'ETP, cf. tick.ts) */
+  evapDemandMm: number;
 }
 
-export interface WaterBalanceOutput {
+export interface CellWaterOutput {
   soilWaterMm: number;
   excessMm: number;
-  /** évapotranspiration réelle, mm */
-  etrMm: number;
+  /** évaporation du sol, mm */
+  evapMm: number;
   /** drainage profond, mm (lessive les nitrates, cf. nitrogen.ts) */
   drainageMm: number;
   /** eau refusée par le sol saturé (ruissellement de surface), mm */
   overflowMm: number;
-  /** ETR / ETP ∈ [0,1] — indicateur de stress de sécheresse */
-  satisfactionRatio: number;
   /** part de la porosité de drainage occupée en fin de semaine ∈ [0,1] — anoxie */
   waterloggingRatio: number;
 }
 
 /**
- * En dessous de `DRYNESS_THRESHOLD × RU`, l'évapotranspiration décroît
- * linéairement (comportement standard des modèles à réservoir type FAO-56).
+ * En dessous de `DRYNESS_THRESHOLD × RU`, évaporation et prélèvements
+ * décroissent linéairement (modèles à réservoir type FAO-56).
  */
-const DRYNESS_THRESHOLD = 0.6;
+export const DRYNESS_THRESHOLD = 0.6;
 
-export function weeklyWaterBalance(input: WaterBalanceInput): WaterBalanceOutput {
-  const { ruMm, excessCapacityMm, drainagePerWeekMm, rainMm, etpMm } = input;
+/** Frein de sécheresse d'une cellule ∈ [0,1] selon son remplissage. */
+export function drynessFactor(soilWaterMm: number, ruMm: number): number {
+  if (ruMm <= 0) return 0;
+  return Math.min(1, soilWaterMm / ruMm / DRYNESS_THRESHOLD);
+}
+
+/** Version sans allocation : écrit le résultat dans `out` (boucles de grille). */
+export function cellWaterBalanceInto(input: CellWaterInput, out: CellWaterOutput): void {
+  const { ruMm, excessCapacityMm, drainagePerWeekMm, rainMm, evapDemandMm } = input;
 
   // 1. La pluie remplit d'abord la réserve utile, puis la porosité de drainage.
   const total = input.soilWaterMm + input.excessMm + rainMm;
@@ -63,19 +70,27 @@ export function weeklyWaterBalance(input: WaterBalanceInput): WaterBalanceOutput
   const drainageMm = Math.min(drainagePerWeekMm, excessMm);
   excessMm -= drainageMm;
 
-  // 4. ETR depuis la réserve utile, freinée quand le sol se vide.
-  const fillRatio = ruMm > 0 ? soilWaterMm / ruMm : 0;
-  const drynessFactor = Math.min(1, fillRatio / DRYNESS_THRESHOLD);
-  const etrMm = Math.min(soilWaterMm, etpMm * drynessFactor);
-  soilWaterMm -= etrMm;
+  // 4. Évaporation du sol, freinée quand la cellule se vide.
+  const evapMm = Math.min(soilWaterMm, evapDemandMm * drynessFactor(soilWaterMm, ruMm));
+  soilWaterMm -= evapMm;
 
-  return {
-    soilWaterMm,
-    excessMm,
-    etrMm,
-    drainageMm,
-    overflowMm,
-    satisfactionRatio: etpMm > 0 ? etrMm / etpMm : 1,
-    waterloggingRatio: excessCapacityMm > 0 ? Math.min(1, excessMm / excessCapacityMm) : 0,
+  out.soilWaterMm = soilWaterMm;
+  out.excessMm = excessMm;
+  out.evapMm = evapMm;
+  out.drainageMm = drainageMm;
+  out.overflowMm = overflowMm;
+  out.waterloggingRatio = excessCapacityMm > 0 ? Math.min(1, excessMm / excessCapacityMm) : 0;
+}
+
+export function cellWaterBalance(input: CellWaterInput): CellWaterOutput {
+  const out: CellWaterOutput = {
+    soilWaterMm: 0,
+    excessMm: 0,
+    evapMm: 0,
+    drainageMm: 0,
+    overflowMm: 0,
+    waterloggingRatio: 0,
   };
+  cellWaterBalanceInto(input, out);
+  return out;
 }

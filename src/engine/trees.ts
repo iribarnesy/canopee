@@ -2,19 +2,24 @@
  * Croissance des ligneux — loi du minimum (docs/regles.md §7) :
  * pousse = potentiel(espèce, saison, taille)
  *        × min(f_sécheresse, f_engorgement, f_lumière, f_azote).
- * Mortalité déterministe par accumulation de stress quand l'eau, l'anoxie ou
- * la lumière s'effondrent (la faim d'azote rabougrit mais ne tue pas en V0 ;
- * le stress létal par carence viendra avec le budget carbone, §7.3).
- * V0.5 : lumière « bien mélangée » (light.ts), pas encore de positions ni de
- * couplage transpiration↔ETR.
+ * Tous les facteurs sont désormais LOCAUX : eau et azote prélevés dans les
+ * cellules de la zone racinaire (tick.ts), lumière reçue à la position de
+ * l'arbre (light.ts). Mortalité déterministe par accumulation de stress quand
+ * l'eau, l'anoxie ou la lumière s'effondrent (la faim d'azote rabougrit mais
+ * ne tue pas en V0 ; le stress létal par carence viendra avec le budget
+ * carbone, §7.3). Pas encore de profondeur racinaire par âge (horizons V1).
  */
 
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
+import { crownRadiusM } from "./light";
 
 export interface TreeState {
   id: number;
   especeId: string;
+  /** position du tronc sur la parcelle, m (continu) */
+  x: number;
+  y: number;
   ageWeeks: number;
   heightM: number;
   /** points de stress cumulés ; l'arbre meurt à STRESS_LETHAL */
@@ -22,15 +27,15 @@ export interface TreeState {
   alive: boolean;
 }
 
-/** Conditions de la semaine vues par UN arbre (sol, météo, canopée). */
+/** Conditions de la semaine vues par UN arbre (sol local, canopée, météo). */
 export interface TreeEnvironment {
-  /** ETR/ETP de la parcelle ∈ [0,1] */
+  /** transpiration obtenue / demandée ∈ [0,1] (zone racinaire de CET arbre) */
   waterSatisfaction: number;
-  /** engorgement ∈ [0,1] */
+  /** engorgement moyen de la zone racinaire ∈ [0,1] */
   waterloggingRatio: number;
-  /** lumière relative reçue par CET arbre ∈ [0,1] (light.ts) */
+  /** lumière relative reçue à la position de CET arbre ∈ [0,1] (light.ts) */
   light: number;
-  /** satisfaction du besoin d'azote de CET arbre ∈ [0,1] (nitrogen.ts) */
+  /** satisfaction du besoin d'azote de CET arbre ∈ [0,1] */
   nitrogenSatisfaction: number;
   /** °C moyenne de la semaine */
   tMean: number;
@@ -46,27 +51,51 @@ const STRESS_ONSET = 0.45;
 const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération lente
 /** semaines de croissance effectives/an en tempéré, pour convertir la pousse annuelle */
 const GROWING_WEEKS = 30;
+/** rayon de la zone racinaire / rayon du houppier *(à confirmer)* */
+const ROOT_CROWN_RATIO = 1.2;
+/** part de l'ETP transpirée par une couronne en pleine feuille *(à calibrer)* */
+const TRANSPIRATION_COEFF = 0.9;
 
-/** Taille « métabolique » d'un arbre (proxy feuillage + bois neuf), kg N/semaine max. */
-function metabolicSizeKgWeek(heightM: number): number {
-  return (0.06 * heightM ** 1.5) / 52;
-}
-
-/** Besoin d'azote de l'arbre, kg/semaine : exigence de l'espèce × taille. */
-export function treeNitrogenNeedKgWeek(espece: EspeceV0, heightM: number): number {
-  return espece.azote.demandeRelative * metabolicSizeKgWeek(heightM);
+/** Rayon de prospection racinaire, m (au moins 1 m — le semis a sa cellule). */
+export function rootRadiusM(espece: EspeceV0, heightM: number): number {
+  return Math.max(1, ROOT_CROWN_RATIO * crownRadiusM(heightM, espece.lumiere.houppierRatio));
 }
 
 /**
- * Capacité d'extraction racinaire, kg/semaine : dépend de la taille seulement —
+ * Demande de transpiration de l'arbre, L/semaine : demande évaporatoire ×
+ * surface de couronne × saison (un caduc sans feuilles ne transpire pas).
+ */
+export function treeWaterDemandL(
+  espece: EspeceV0,
+  heightM: number,
+  etpMm: number,
+  season: number,
+): number {
+  const r = crownRadiusM(heightM, espece.lumiere.houppierRatio);
+  const crownAreaM2 = Math.max(0.05, Math.PI * r * r);
+  return etpMm * crownAreaM2 * TRANSPIRATION_COEFF * season;
+}
+
+/** Taille « métabolique » d'un arbre (proxy feuillage + bois neuf), g N/semaine max. */
+function metabolicSizeGWeek(heightM: number): number {
+  return (60 * heightM ** 1.5) / 52;
+}
+
+/** Besoin d'azote de l'arbre, g/semaine : exigence de l'espèce × taille. */
+export function treeNitrogenNeedGWeek(espece: EspeceV0, heightM: number): number {
+  return espece.azote.demandeRelative * metabolicSizeGWeek(heightM);
+}
+
+/**
+ * Capacité d'extraction racinaire, g/semaine : dépend de la taille seulement —
  * c'est le besoin qui varie selon l'espèce, pas l'appareil racinaire.
  */
-export function treeExtractionCapacityKgWeek(heightM: number): number {
-  return metabolicSizeKgWeek(heightM);
+export function treeExtractionCapacityGWeek(heightM: number): number {
+  return metabolicSizeGWeek(heightM);
 }
 
 /** Facteur saison : 0 sous la température de base, 1 à base+8 °C. */
-function seasonFactor(espece: EspeceV0, tMean: number): number {
+export function seasonFactor(espece: EspeceV0, tMean: number): number {
   return Math.min(1, Math.max(0, (tMean - espece.tBaseCroissanceC) / 8));
 }
 

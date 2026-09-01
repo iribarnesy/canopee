@@ -1,14 +1,18 @@
 /**
- * UI jetable de la V0 (« labo moteur ») : bilan hydrique + croissance des
- * 5 espèces sur les stations de test. Sera remplacée par la vraie UI
- * (React + PixiJS) en V0.5/V1 — ne rien construire de précieux ici.
+ * UI jetable de la V0 (« labo moteur ») : bilan hydrique, croissance des
+ * 5 espèces et carte spatiale (eau du sol + couronnes) sur les stations de
+ * test. Sera remplacée par la vraie UI (React + PixiJS) — ne rien construire
+ * de précieux ici.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createGameState,
+  crownRadiusM,
   ESPECES_V0,
-  plant,
+  type GameState,
+  getEspece,
+  plantScattered,
   rngStateFromSeed,
   STATIONS_V0,
   type StationClimat,
@@ -30,20 +34,26 @@ const SPECIES_COLORS: Record<string, string> = {
 
 interface WeekPoint {
   week: number;
-  waterMm: number;
+  meanWaterMm: number;
   waterlogging: number;
   fluxes: TickFluxes;
-  /** hauteur moyenne des vivants par espèce (0 = tous morts) */
   heights: Record<string, number>;
   aliveCounts: Record<string, number>;
 }
 
-function simulate(sc: StationClimat): WeekPoint[] {
+interface SimResult {
+  points: WeekPoint[];
+  /** état en fin d'été de la dernière année : l'assèchement local est visible */
+  finalState: GameState;
+}
+
+function simulate(sc: StationClimat): SimResult {
   const weather = syntheticYear(sc.climat);
   let state = createGameState(sc.station, rngStateFromSeed(42));
   for (const espece of ESPECES_V0) {
-    state = plant(state, espece.id, TREES_PER_SPECIES);
+    state = plantScattered(state, espece.id, TREES_PER_SPECIES);
   }
+  let lateSummerState = state;
   const points: WeekPoint[] = [];
   for (let i = 0; i < YEARS * 52; i++) {
     const w = weather[i % 52];
@@ -58,20 +68,22 @@ function simulate(sc: StationClimat): WeekPoint[] {
       heights[espece.id] =
         alive.length > 0 ? alive.reduce((s, t) => s + t.heightM, 0) / alive.length : 0;
     }
+    const waterArr = state.soil.waterMm;
     points.push({
       week: i,
-      waterMm: state.soil.waterMm,
-      waterlogging: result.fluxes.waterloggingRatio,
+      meanWaterMm: waterArr.reduce((a, b) => a + b, 0) / waterArr.length,
+      waterlogging: result.fluxes.waterloggingMean,
       fluxes: result.fluxes,
       heights,
       aliveCounts,
     });
+    if (i % 52 === 35) lateSummerState = state;
   }
-  return points;
+  return { points, finalState: lateSummerState };
 }
 
 const W = 900;
-const H = 220;
+const H = 200;
 const PAD = 40;
 
 function linePath(values: number[], yScale: (v: number) => number): string {
@@ -106,7 +118,7 @@ function WaterChart({ points, ruMm }: { points: WeekPoint[]; ruMm: number }) {
       />
       <path
         d={linePath(
-          points.map((p) => p.waterMm),
+          points.map((p) => p.meanWaterMm),
           yScale,
         )}
         fill="none"
@@ -114,7 +126,7 @@ function WaterChart({ points, ruMm }: { points: WeekPoint[]; ruMm: number }) {
         strokeWidth={2}
       />
       <text x={PAD} y={yScale(ruMm) - 6} fontSize={11} fill="#7a7261">
-        vert : réserve utile (RU = {ruMm} mm) · brun : engorgement (0–1)
+        vert : eau moyenne (RU = {ruMm} mm) · brun : engorgement moyen (0–1)
       </text>
     </svg>
   );
@@ -145,11 +157,59 @@ function HeightChart({ points }: { points: WeekPoint[] }) {
   );
 }
 
+/** Carte spatiale : eau du sol (clair = sec, foncé = humide) + couronnes. */
+function ParcelMap({ state }: { state: GameState }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const side = state.station.coteM;
+  const scale = 4;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const ru = state.station.ruMm;
+    for (let y = 0; y < side; y++) {
+      for (let x = 0; x < side; x++) {
+        const w = (state.soil.waterMm[y * side + x] ?? 0) / ru;
+        // sec = beige clair, humide = brun-vert sombre
+        const l = 88 - 45 * w;
+        ctx.fillStyle = `hsl(90 18% ${l}%)`;
+        // y de la grille vers le nord = haut du canvas
+        ctx.fillRect(x * scale, (side - 1 - y) * scale, scale, scale);
+      }
+    }
+    for (const tree of state.trees) {
+      if (!tree.alive) continue;
+      const espece = getEspece(tree.especeId);
+      const r = Math.max(1.5, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio) * scale);
+      ctx.beginPath();
+      ctx.arc(tree.x * scale, (side - tree.y) * scale, r, 0, 2 * Math.PI);
+      ctx.fillStyle = `${SPECIES_COLORS[tree.especeId] ?? "#555"}b0`;
+      ctx.fill();
+    }
+  }, [state, side]);
+
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        width={side * scale}
+        height={side * scale}
+        style={{ border: "1px solid #b0a58c" }}
+      />
+      <p style={{ color: "#6b6250", fontSize: 13, margin: "4px 0 0" }}>
+        Parcelle en fin d'été de la dernière année (nord en haut) — fond : eau du sol (clair = sec)
+        ; disques : couronnes. On voit chaque arbre assécher sa zone racinaire.
+      </p>
+    </div>
+  );
+}
+
 export function App() {
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
   const sc = STATIONS_V0.find((s) => s.station.id === stationId) ?? STATIONS_V0[0];
   if (!sc) throw new Error("aucune station");
-  const points = useMemo(() => simulate(sc), [sc]);
+  const { points, finalState } = useMemo(() => simulate(sc), [sc]);
 
   const last = points[points.length - 1];
   const lastYear = points.slice(-52);
@@ -164,7 +224,9 @@ export function App() {
         color: "#2e2a20",
       }}
     >
-      <h1 style={{ fontSize: "1.3rem" }}>Canopée — labo moteur (V0 : eau, azote, croissance)</h1>
+      <h1 style={{ fontSize: "1.3rem" }}>
+        Canopée — labo moteur (grille 1 m² : eau, azote, lumière)
+      </h1>
       <p>
         {STATIONS_V0.map((s) => (
           <button
@@ -186,8 +248,8 @@ export function App() {
         ))}
       </p>
       <p style={{ color: "#6b6250" }}>
-        {YEARS} ans simulés · {TREES_PER_SPECIES} plants/espèce · météo synthétique déterministe ·
-        seed 42
+        {YEARS} ans simulés · {TREES_PER_SPECIES} plants/espèce dispersés (seed 42) · météo
+        synthétique déterministe
       </p>
       <WaterChart points={points} ruMm={sc.station.ruMm} />
       <HeightChart points={points} />
@@ -200,9 +262,11 @@ export function App() {
           </span>
         ))}
       </p>
+      <ParcelMap state={finalState} />
       <p style={{ color: "#6b6250" }}>
-        Dernière année — pluie {sum((p) => p.fluxes.rainMm)} mm · ETR {sum((p) => p.fluxes.etrMm)}{" "}
-        mm · drainage {sum((p) => p.fluxes.drainageMm)} mm · minéralisation N{" "}
+        Dernière année — pluie {sum((p) => p.fluxes.rainMm)} mm · évaporation{" "}
+        {sum((p) => p.fluxes.evapMm)} mm · transpiration {sum((p) => p.fluxes.transpirationMm)} mm ·
+        drainage {sum((p) => p.fluxes.drainageMm)} mm · minéralisation N{" "}
         {sum((p) => p.fluxes.mineralizationKgHa)} kg/ha · prélèvement N{" "}
         {sum((p) => p.fluxes.uptakeKgHa)} kg/ha · lessivage N {sum((p) => p.fluxes.leachedKgHa)}{" "}
         kg/ha

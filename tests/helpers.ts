@@ -1,12 +1,13 @@
 import { syntheticYear } from "../src/engine/meteo";
 import { rngStateFromSeed } from "../src/engine/rng";
-import { createGameState, type GameState, plant } from "../src/engine/state";
+import { createGameState, type GameState, plantScattered } from "../src/engine/state";
 import type { StationClimat } from "../src/engine/stations";
 import { tick } from "../src/engine/tick";
 
 export interface RunOptions {
   seed?: number;
-  plantations?: { especeId: string; count: number }[];
+  /** plantations initiales, positions pseudo-aléatoires seedées */
+  plantations?: { especeId: string; count: number; heightM?: number }[];
 }
 
 /** Simule n années sur une station, avec plantation initiale optionnelle. */
@@ -14,7 +15,7 @@ export function runYears(sc: StationClimat, years: number, opts: RunOptions = {}
   const weather = syntheticYear(sc.climat);
   let state = createGameState(sc.station, rngStateFromSeed(opts.seed ?? 42));
   for (const p of opts.plantations ?? []) {
-    state = plant(state, p.especeId, p.count);
+    state = plantScattered(state, p.especeId, p.count, p.heightM ?? 0.3);
   }
   for (let i = 0; i < years * 52; i++) {
     const w = weather[i % 52];

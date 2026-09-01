@@ -1,15 +1,16 @@
 /**
- * Cycle de l'azote V0 (docs/regles.md §4.2, version minimale), en trois étapes
- * orchestrées par tick.ts :
+ * Cycle de l'azote d'UNE cellule de 1 m², en grammes (1 kg/ha = 0,1 g/m²) :
  *   1. minéralisation (f(T°, humidité, anoxie)) ;
- *   2. prélèvement PAR INDIVIDU : chaque arbre a un besoin en kg (∝ taille ×
- *      exigence de l'espèce) et une capacité d'extraction (∝ taille ×
- *      disponibilité du sol, identique entre espèces). Un frugal est comblé
- *      là où un exigeant a faim — c'est émergent, pas normalisé ;
- *   3. lessivage des nitrates proportionnel au drainage.
+ *   2. prélèvement par les arbres dont les racines occupent la cellule —
+ *      alloué spatialement par tick.ts : chaque arbre a un besoin en grammes
+ *      (exigence de l'espèce × taille) et une capacité d'extraction (∝ taille
+ *      × disponibilité locale). Un frugal est comblé là où un exigeant a faim ;
+ *   3. lessivage proportionnel au drainage de la cellule.
  * Invariant testé : minéralisation = prélèvements + lessivage + Δstock.
- * V0.5+ : litières avec C/N, immobilisation (faim d'azote), restitutions.
+ * V1 : litières avec C/N, immobilisation (faim d'azote), restitutions.
  */
+
+export const KG_PER_HA_TO_G_PER_M2 = 0.1;
 
 /** Facteur température de la minéralisation (Q10 ≈ 2, référence 12 °C). */
 function temperatureFactor(tMean: number): number {
@@ -24,17 +25,19 @@ function moistureFactor(moistureRatio: number, waterloggingRatio: number): numbe
   return dryness * anoxia;
 }
 
-export interface MineralizationInput {
-  mineralizationPotentialKgHaWeek: number;
+export interface CellMineralizationInput {
+  /** minéralisation potentielle de la cellule, g/m²/semaine en conditions optimales */
+  potentialGWeek: number;
   tMean: number;
+  /** remplissage de la réserve utile de la cellule ∈ [0,1] */
   moistureRatio: number;
   waterloggingRatio: number;
 }
 
-/** Azote libéré par l'humus cette semaine, kg/ha. */
-export function weeklyMineralization(input: MineralizationInput): number {
+/** Azote libéré par l'humus de la cellule cette semaine, g. */
+export function cellMineralization(input: CellMineralizationInput): number {
   return (
-    input.mineralizationPotentialKgHaWeek *
+    input.potentialGWeek *
     temperatureFactor(input.tMean) *
     moistureFactor(input.moistureRatio, input.waterloggingRatio)
   );
@@ -42,64 +45,20 @@ export function weeklyMineralization(input: MineralizationInput): number {
 
 /**
  * Stock au-delà duquel l'extraction racinaire n'est plus freinée par la
- * dilution de l'azote dans le sol, kg/ha *(à calibrer)*.
+ * dilution de l'azote dans le sol : 3 g/m² = 30 kg/ha *(à calibrer)*.
  */
-const AVAILABILITY_SATURATION_KG_HA = 30;
+export const AVAILABILITY_SATURATION_G_M2 = 3;
 
-export interface UptakeRequest {
-  /** besoin de l'individu, kg/semaine (exigence de l'espèce × taille) */
-  needKg: number;
-  /** capacité d'extraction max, kg/semaine (taille seule — identique entre espèces) */
-  extractionCapacityKg: number;
-}
-
-export interface UptakeResult {
-  /** prélèvement de chaque individu, kg (même ordre que les requêtes) */
-  uptakesKg: number[];
-  /** satisfaction de chaque individu = prélèvement / besoin ∈ [0,1] */
-  satisfactions: number[];
-  totalUptakeKg: number;
+/** Frein de dilution ∈ [0,1] : un sol pauvre se prélève lentement. */
+export function nitrogenAvailabilityFactor(stockG: number): number {
+  return Math.min(1, stockG / AVAILABILITY_SATURATION_G_M2);
 }
 
 /**
- * Répartit le pool d'azote entre les individus.
- * L'extraction de chacun est bornée par : son besoin, sa capacité racinaire
- * pondérée par la disponibilité (un sol dilué se prélève lentement), et la
- * part restante du pool (rationnement proportionnel en cas de pénurie).
- */
-export function allocateUptake(poolKgHa: number, requests: UptakeRequest[]): UptakeResult {
-  const availability = Math.min(1, poolKgHa / AVAILABILITY_SATURATION_KG_HA);
-  const wanted = requests.map((r) => Math.min(r.needKg, r.extractionCapacityKg * availability));
-  const totalWanted = wanted.reduce((a, b) => a + b, 0);
-  const scale = totalWanted > poolKgHa ? poolKgHa / totalWanted : 1;
-
-  const uptakesKg = wanted.map((w) => w * scale);
-  const satisfactions = requests.map((r, i) => {
-    const uptake = uptakesKg[i] ?? 0;
-    return r.needKg > 0 ? Math.min(1, uptake / r.needKg) : 1;
-  });
-  return {
-    uptakesKg,
-    satisfactions,
-    totalUptakeKg: uptakesKg.reduce((a, b) => a + b, 0),
-  };
-}
-
-export interface LeachingResult {
-  mineralNKgHa: number;
-  leachedKgHa: number;
-}
-
-/**
- * Lessivage : l'azote en solution part avec l'eau qui draine
+ * Lessivage d'une cellule : l'azote en solution part avec l'eau qui draine
  * (modèle de mélange : fraction = eau partie / eau totale).
  */
-export function weeklyLeaching(
-  mineralNKgHa: number,
-  drainageMm: number,
-  soilWaterMm: number,
-): LeachingResult {
+export function cellLeachedG(stockG: number, drainageMm: number, soilWaterMm: number): number {
   const leachFraction = drainageMm / Math.max(1e-9, drainageMm + soilWaterMm);
-  const leachedKgHa = mineralNKgHa * leachFraction;
-  return { mineralNKgHa: mineralNKgHa - leachedKgHa, leachedKgHa };
+  return stockG * leachFraction;
 }

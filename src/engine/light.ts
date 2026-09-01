@@ -1,58 +1,51 @@
 /**
- * Lumière V0.5 — compétition verticale « parcelle bien mélangée » (docs/regles.md §5).
- * Pas encore de positions : chaque arbre reçoit la lumière qui traverse le
- * feuillage cumulé de tous les arbres PLUS HAUTS que lui (Beer-Lambert,
- * k = 0,5). Les caducs n'ombragent pas hors saison de végétation.
- * V1 : grille spatiale, ombres portées latérales, strates par cellule.
+ * Lumière spatiale (docs/regles.md §5) : chaque arbre reçoit la lumière qui
+ * traverse les couronnes des arbres PLUS HAUTS dont l'ombre couvre sa
+ * position (Beer-Lambert par couronne traversée, k = 0,5). L'ombre d'une
+ * couronne est décalée vers le NORD (+y) d'une fraction de la hauteur —
+ * le soleil est au sud en France : planter en lignes est-ouest ou nord-sud
+ * n'a pas le même effet. Les caducs n'ombragent pas hors saison de végétation.
  */
 
 import { getEspece } from "./especes";
 import type { TreeState } from "./trees";
 
 const BEER_LAMBERT_K = 0.5;
-/**
- * Extinction maximale (saturation douce) : les couronnes se chevauchent au
- * lieu de s'empiler indéfiniment. exp(−4) ≈ 1,8 % de lumière au sol — l'ordre
- * de grandeur mesuré sous hêtraie fermée *(à calibrer)*.
- */
-const MAX_EXTINCTION = 4;
+/** Décalage de l'ombre vers le nord, en fraction de la hauteur (moyenne annuelle, lat ~45°). */
+const SHADOW_NORTH_OFFSET = 0.4;
 
-/** Surface du houppier, m². */
-function crownAreaM2(heightM: number, houppierRatio: number): number {
-  const r = houppierRatio * heightM;
-  return Math.PI * r * r;
+/** Rayon du houppier, m. */
+export function crownRadiusM(heightM: number, houppierRatio: number): number {
+  return houppierRatio * heightM;
 }
 
 /**
  * Lumière relative ∈ [0,1] reçue par chaque arbre vivant (index aligné sur
- * `trees`, 1 pour les morts — sans effet). `leavesOn` : true si les caducs
- * sont en feuilles cette semaine.
+ * `trees`, 1 pour les morts). `leavesOn` : true si les caducs sont en feuilles.
+ * O(n²) borné par les rayons — index spatial quand la régénération multipliera
+ * les tiges.
  */
-export function computeLight(
-  trees: readonly TreeState[],
-  parcelAreaM2: number,
-  leavesOn: boolean,
-): number[] {
-  // Tri par hauteur décroissante ; cumul de surface foliaire au fur et à mesure.
-  const order = trees
-    .map((tree, index) => ({ tree, index }))
-    .filter(({ tree }) => tree.alive)
-    .sort((a, b) => b.tree.heightM - a.tree.heightM);
-
+export function computeLight(trees: readonly TreeState[], leavesOn: boolean): number[] {
   const light = trees.map(() => 1);
-  let leafAreaAboveM2 = 0;
-  for (const { tree, index } of order) {
-    // L'arbre reçoit la lumière atténuée par le feuillage strictement au-dessus
-    // de lui, avec saturation douce du couvert (chevauchement des couronnes).
-    const rawExtinction = (BEER_LAMBERT_K * leafAreaAboveM2) / parcelAreaM2;
-    const extinction = MAX_EXTINCTION * (1 - Math.exp(-rawExtinction / MAX_EXTINCTION));
-    light[index] = Math.exp(-extinction);
-    const espece = getEspece(tree.especeId);
-    const shades = leavesOn || !espece.lumiere.caduc;
-    if (shades) {
-      leafAreaAboveM2 +=
-        espece.lumiere.lai * crownAreaM2(tree.heightM, espece.lumiere.houppierRatio);
+  for (let i = 0; i < trees.length; i++) {
+    const target = trees[i];
+    if (!target || !target.alive) continue;
+    let extinction = 0;
+    for (let j = 0; j < trees.length; j++) {
+      if (i === j) continue;
+      const shader = trees[j];
+      if (!shader || !shader.alive || shader.heightM <= target.heightM) continue;
+      const espece = getEspece(shader.especeId);
+      if (espece.lumiere.caduc && !leavesOn) continue;
+      const r = crownRadiusM(shader.heightM, espece.lumiere.houppierRatio);
+      const shadowY = shader.y + SHADOW_NORTH_OFFSET * shader.heightM;
+      const dx = target.x - shader.x;
+      const dy = target.y - shadowY;
+      if (dx * dx + dy * dy <= r * r) {
+        extinction += BEER_LAMBERT_K * espece.lumiere.lai;
+      }
     }
+    light[i] = Math.exp(-extinction);
   }
   return light;
 }

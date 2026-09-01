@@ -1,11 +1,15 @@
 /**
- * État du jeu, V0 : une station minimale, un sol mono-zone (eau + azote),
- * des arbres sans position spatiale (la grille arrive en V0.5).
- * Chaque étape de la feuille de route (docs/regles.md §17) enrichit ces types.
+ * État du jeu : une station, une grille de sol 1 m² (eau + azote par cellule),
+ * des arbres positionnés. Chaque étape de la feuille de route
+ * (docs/regles.md §17) enrichit ces types.
  */
 
 import { getEspece } from "./especes";
+import type { GridDims } from "./grid";
+import { cellCount } from "./grid";
+import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { RngState } from "./rng";
+import { rngFloat } from "./rng";
 import type { TreeState } from "./trees";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
@@ -23,16 +27,22 @@ export interface Station {
   mineralizationPotentialKgHaWeek: number;
   /** azote minéral au démarrage, kg/ha */
   initialMineralNKgHa: number;
-  /** surface de la parcelle, m² (grille spatiale en V1 — docs/regles.md §1.2) */
-  parcelAreaM2: number;
+  /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
+  coteM: number;
 }
 
-/** État dynamique du sol, mono-zone en V0. */
+export function gridDims(station: Station): GridDims {
+  return { widthM: station.coteM, heightM: station.coteM };
+}
+
+/** État dynamique du sol : une valeur par cellule, index `i = y*width + x`. */
 export interface SoilState {
-  waterMm: number;
+  /** eau de la réserve utile, mm */
+  waterMm: number[];
   /** eau gravitaire au-dessus de la capacité au champ (engorgement), mm */
-  excessMm: number;
-  mineralNKgHa: number;
+  excessMm: number[];
+  /** azote minéral, g/m² (1 kg/ha = 0,1 g/m²) */
+  mineralNG: number[];
 }
 
 export interface GameState {
@@ -45,50 +55,92 @@ export interface GameState {
   rng: RngState;
 }
 
-/** Flux de la semaine, pour l'affichage et les tests de conservation. */
+/** Flux de la semaine, moyennés sur la parcelle (affichage + tests de conservation). */
 export interface TickFluxes {
   rainMm: number;
   etpMm: number;
-  etrMm: number;
+  /** évaporation du sol, mm moyen */
+  evapMm: number;
+  /** transpiration des arbres, mm moyen (Σ L / surface) */
+  transpirationMm: number;
   drainageMm: number;
   overflowMm: number;
-  waterSatisfaction: number;
-  waterloggingRatio: number;
+  /** engorgement moyen ∈ [0,1] */
+  waterloggingMean: number;
   mineralizationKgHa: number;
   uptakeKgHa: number;
   leachedKgHa: number;
 }
 
 export function createGameState(station: Station, rng: RngState): GameState {
+  const n = cellCount(gridDims(station));
   return {
     week: 0,
     station,
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
-    soil: { waterMm: station.ruMm, excessMm: 0, mineralNKgHa: station.initialMineralNKgHa },
+    soil: {
+      waterMm: new Array(n).fill(station.ruMm),
+      excessMm: new Array(n).fill(0),
+      mineralNG: new Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
+    },
     trees: [],
     nextTreeId: 1,
     rng,
   };
 }
 
-/**
- * Proto-action V0 : planter n plants d'une espèce (jeune plant de 30 cm par
- * défaut ; `heightM` permet d'initialiser un peuplement déjà en place).
- */
-export function plant(state: GameState, especeId: string, count: number, heightM = 0.3): GameState {
+/** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
+export function plantAt(
+  state: GameState,
+  especeId: string,
+  x: number,
+  y: number,
+  heightM = 0.3,
+): GameState {
   getEspece(especeId); // valide l'id
+  const tree: TreeState = {
+    id: state.nextTreeId,
+    especeId,
+    x,
+    y,
+    ageWeeks: 0,
+    heightM,
+    stress: 0,
+    alive: true,
+  };
+  return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
+}
+
+/**
+ * Proto-action : planter n plants à des positions pseudo-aléatoires SEEDÉES
+ * (consomme le rng de la partie — deux parties de même seed plantent pareil).
+ */
+export function plantScattered(
+  state: GameState,
+  especeId: string,
+  count: number,
+  heightM = 0.3,
+): GameState {
+  getEspece(especeId);
+  const side = state.station.coteM;
+  let rng = state.rng;
   const trees = [...state.trees];
   for (let i = 0; i < count; i++) {
+    const rx = rngFloat(rng);
+    const ry = rngFloat(rx.state);
+    rng = ry.state;
     trees.push({
       id: state.nextTreeId + i,
       especeId,
+      x: rx.value * side,
+      y: ry.value * side,
       ageWeeks: 0,
       heightM,
       stress: 0,
       alive: true,
     });
   }
-  return { ...state, trees, nextTreeId: state.nextTreeId + count };
+  return { ...state, trees, nextTreeId: state.nextTreeId + count, rng };
 }
 
 /** Semaine dans l'année (0–51). */
