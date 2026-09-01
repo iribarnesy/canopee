@@ -1,8 +1,8 @@
 /**
- * L'écran de jeu : parcelle en vue de dessus (le « plan de gestion »,
- * docs/regles.md §15), HUD (temps, trésorerie, heures, carbone), actions
- * (planter, couper, récolter, chauler, embaucher). Rendu Canvas 2D — la vue
- * isométrique viendra comme couche visuelle ultérieure.
+ * L'écran de jeu : parcelle en vue OBLIQUE (les arbres montrent leur hauteur,
+ * triés du fond vers l'avant) sur le sol en vue de dessus, HUD, fil
+ * d'événements, actions (planter, couper, récolter, chauler, embaucher).
+ * Rendu Canvas 2D — l'isométrique complète viendra comme couche visuelle.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -49,13 +49,84 @@ const btn = (active = false): React.CSSProperties => ({
   cursor: "pointer",
 });
 
+/** hauteur à l'écran d'un mètre d'arbre, en fraction de l'échelle horizontale */
+const VERTICAL = 0.55;
+
+function drawTreeOblique(
+  ctx: CanvasRenderingContext2D,
+  tree: SnapshotTree,
+  scale: number,
+  coteM: number,
+  selected: boolean,
+) {
+  const espece = getEspece(tree.especeId);
+  const bx = tree.x * scale;
+  const by = (coteM - tree.y) * scale;
+  const hPx = Math.max(4, tree.heightM * scale * VERTICAL);
+  const crownR = Math.max(2.5, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio) * scale);
+  const color = SPECIES_COLORS[tree.especeId] ?? "#4a6b4a";
+
+  // ombre au sol : ancre l'arbre
+  ctx.beginPath();
+  ctx.ellipse(bx, by, crownR, crownR * 0.35, 0, 0, 2 * Math.PI);
+  ctx.fillStyle = "rgba(40,50,30,0.18)";
+  ctx.fill();
+
+  // tronc
+  const trunkW = Math.max(1.5, hPx * 0.06);
+  ctx.fillStyle = "#6b4d2f";
+  ctx.fillRect(bx - trunkW / 2, by - hPx * 0.45, trunkW, hPx * 0.45);
+
+  const conifere = !espece.lumiere.caduc;
+  if (conifere) {
+    // silhouette en triangle (pin)
+    ctx.beginPath();
+    ctx.moveTo(bx, by - hPx);
+    ctx.lineTo(bx - crownR, by - hPx * 0.2);
+    ctx.lineTo(bx + crownR, by - hPx * 0.2);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  } else {
+    // houppier en ellipse (feuillu)
+    ctx.beginPath();
+    ctx.ellipse(bx, by - hPx * 0.68, crownR, hPx * 0.38, 0, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  if (tree.fruitsKg > 0.5) {
+    // fruits mûrs : points orange sur le houppier, impossibles à rater
+    ctx.fillStyle = "#ff8c1a";
+    for (const [dx, dy] of [
+      [-0.5, -0.6],
+      [0.4, -0.75],
+      [0, -0.5],
+      [0.55, -0.5],
+      [-0.3, -0.85],
+    ] as const) {
+      ctx.beginPath();
+      ctx.arc(bx + dx * crownR, by + dy * hPx, Math.max(1.8, scale * 0.35), 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+
+  if (selected) {
+    ctx.beginPath();
+    ctx.ellipse(bx, by, crownR + 2, crownR * 0.35 + 2, 0, 0, 2 * Math.PI);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
 function drawParcel(
   canvas: HTMLCanvasElement,
   snapshot: Snapshot,
   coteM: number,
   ruMm: number,
   overlay: Overlay,
-  selectedId: number | undefined,
+  selectedIds: ReadonlySet<number>,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -82,29 +153,10 @@ function drawParcel(
       ctx.fillRect(x * scale, (coteM - 1 - y) * scale, Math.ceil(scale), Math.ceil(scale));
     }
   }
-  for (const tree of snapshot.trees) {
-    const espece = getEspece(tree.especeId);
-    const r = Math.max(2, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio) * scale);
-    const cx = tree.x * scale;
-    const cy = (coteM - tree.y) * scale;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-    ctx.fillStyle = `${SPECIES_COLORS[tree.especeId] ?? "#555"}b8`;
-    ctx.fill();
-    if (tree.fruitsKg > 0.5) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, r + 1.5, 0, 2 * Math.PI);
-      ctx.strokeStyle = "#e8871e";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    if (tree.id === selectedId) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, r + 3, 0, 2 * Math.PI);
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
+  // du fond (nord, haut de l'écran) vers l'avant : l'occlusion raconte la profondeur
+  const sorted = [...snapshot.trees].sort((a, b) => b.y - a.y);
+  for (const tree of sorted) {
+    drawTreeOblique(ctx, tree, scale, coteM, selectedIds.has(tree.id));
   }
 }
 
@@ -163,12 +215,12 @@ export function GameView() {
   const [overlay, setOverlay] = useState<Overlay>("eau");
   const [especeId, setEspeceId] = useState("betula_pendula");
   const [rayonChaulage, setRayonChaulage] = useState(8);
-  const [selectedId, setSelectedId] = useState<number>();
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
 
   const { station, snapshot } = game;
-  const selected = useMemo(
-    () => snapshot?.trees.find((t) => t.id === selectedId),
-    [snapshot, selectedId],
+  const selectedTrees = useMemo(
+    () => (snapshot ? snapshot.trees.filter((t) => selectedIds.has(t.id)) : []),
+    [snapshot, selectedIds],
   );
   const fruitsPrets = useMemo(
     () => (snapshot ? snapshot.trees.filter((t) => t.fruitsKg > 0.5) : []),
@@ -177,9 +229,9 @@ export function GameView() {
 
   useEffect(() => {
     if (canvasRef.current && snapshot && station) {
-      drawParcel(canvasRef.current, snapshot, station.coteM, station.ruMm, overlay, selectedId);
+      drawParcel(canvasRef.current, snapshot, station.coteM, station.ruMm, overlay, selectedIds);
     }
-  }, [snapshot, station, overlay, selectedId]);
+  }, [snapshot, station, overlay, selectedIds]);
 
   if (!station || !snapshot) {
     return (
@@ -201,7 +253,8 @@ export function GameView() {
   const annee = Math.floor(snapshot.week / 52) + 1;
   const semaine = snapshot.week % 52;
   const mois = MOIS[Math.min(11, Math.floor(semaine / 4.34))];
-  const canvasPx = 600;
+  const canvasPx = 620;
+  const tresorerie = snapshot.economy.treasuryEur;
 
   const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -212,31 +265,52 @@ export function GameView() {
     } else if (mode === "chauler") {
       game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
     } else {
-      // Sélection : l'arbre dont la couronne contient le clic, le plus proche.
+      // Sélection au pied de l'arbre ; maj/ctrl = ajouter à la sélection.
       let best: SnapshotTree | undefined;
       let bestD = Infinity;
       for (const t of snapshot.trees) {
         const espece = getEspece(t.especeId);
-        const r = Math.max(0.8, crownRadiusM(t.heightM, espece.lumiere.houppierRatio));
+        const r = Math.max(1, crownRadiusM(t.heightM, espece.lumiere.houppierRatio));
         const d = Math.hypot(t.x - mx, t.y - my);
         if (d <= r + 0.5 && d < bestD) {
           best = t;
           bestD = d;
         }
       }
-      setSelectedId(best?.id);
+      if (e.shiftKey || e.metaKey || e.ctrlKey) {
+        if (best) {
+          const next = new Set(selectedIds);
+          if (next.has(best.id)) next.delete(best.id);
+          else next.add(best.id);
+          setSelectedIds(next);
+        }
+      } else {
+        setSelectedIds(best ? new Set([best.id]) : new Set());
+      }
     }
   };
+
+  const selEspeces = [...new Set(selectedTrees.map((t) => t.especeId))];
+  const selFruitsKg = selectedTrees.reduce((s, t) => s + t.fruitsKg, 0);
 
   return (
     <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
       <div>
-        <p style={{ margin: "0 0 6px" }}>
-          <strong>
-            An {annee}, {mois}
-          </strong>{" "}
-          · {snapshot.weather.tMean.toFixed(0)} °C · {snapshot.weather.rainMm.toFixed(0)} mm ·{" "}
-          {station.nom} ({station.meteoLabel})
+        <p style={{ margin: "0 0 6px", display: "flex", gap: 16, alignItems: "baseline" }}>
+          <strong style={{ fontSize: "1.25rem" }}>
+            An {annee} · {mois}
+          </strong>
+          <strong style={{ fontSize: "1.25rem", color: tresorerie < 0 ? "#c0392b" : "#2e5b30" }}>
+            {tresorerie.toFixed(0)} €
+          </strong>
+          <span>
+            ⏱ {snapshot.economy.hoursUsedWeek.toFixed(0)}/{60 * snapshot.economy.uth} h ·{" "}
+            {snapshot.economy.uth} UTH
+          </span>
+          <span>
+            🌡 {snapshot.weather.tMean.toFixed(0)} °C · 🌧 {snapshot.weather.rainMm.toFixed(0)} mm
+          </span>
+          {snapshot.economy.bankrupt && <strong style={{ color: "#c0392b" }}>FAILLITE</strong>}
         </p>
         <p style={{ margin: "0 0 6px" }}>
           {[0, 1, 4, 13, 52].map((v) => (
@@ -246,11 +320,19 @@ export function GameView() {
               style={btn(game.speed === v)}
               onClick={() => game.setSpeed(v)}
             >
-              {v === 0 ? "⏸ pause" : `×${v}`}
+              {v === 0 ? "⏸" : `×${v}`}
             </button>
           ))}
+          <label style={{ marginRight: 10 }}>
+            <input
+              type="checkbox"
+              checked={game.autoHarvest}
+              onChange={(e) => game.setAutoHarvest(e.target.checked)}
+            />{" "}
+            🧺 récolte auto
+          </label>
           <button type="button" style={btn()} onClick={game.quit}>
-            Quitter (sauvegarde auto)
+            Quitter
           </button>
         </p>
         <canvas
@@ -265,40 +347,27 @@ export function GameView() {
           onClick={onCanvasClick}
         />
         <p style={{ margin: "4px 0 0", color: "#6b6250", fontSize: 13 }}>
-          Calque :{" "}
+          Sol :{" "}
           {(["eau", "ph", "azote"] as const).map((o) => (
             <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
               {o}
             </button>
           ))}
-          — nord en haut · cercle orange = fruits mûrs
+          — nord au fond · points orange = fruits mûrs · maj+clic = sélection multiple
         </p>
       </div>
 
-      <div style={{ width: 330, display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={panel}>
-          <strong>{snapshot.economy.treasuryEur.toFixed(0)} €</strong>
-          {snapshot.economy.bankrupt && <strong style={{ color: "#c0392b" }}> — FAILLITE</strong>}
-          <br />
-          Semaine : {snapshot.economy.hoursUsedWeek.toFixed(0)} h / {60 * snapshot.economy.uth} h ·
-          Année : {snapshot.economy.hoursUsedYear.toFixed(0)} h · {snapshot.economy.uth} UTH
-          <br />
-          <button type="button" style={btn()} onClick={() => game.dispatch({ type: "embaucher" })}>
-            Embaucher (600 €/sem)
-          </button>
-          <button type="button" style={btn()} onClick={() => game.dispatch({ type: "licencier" })}>
-            Licencier
-          </button>
-        </div>
-
-        <div style={panel}>
-          Carbone : vivant {snapshot.inventory.vivantTHa.toFixed(1)} · humus{" "}
-          {snapshot.inventory.humusTHa.toFixed(1)} ·{" "}
-          <strong>
-            bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
-            {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
-          </strong>
-        </div>
+      <div style={{ width: 340, display: "flex", flexDirection: "column", gap: 10 }}>
+        {game.notice && <div style={{ ...panel, background: "#f3e6c4" }}>⏸ {game.notice}</div>}
+        {game.refusals.length > 0 && (
+          <div style={{ ...panel, color: "#8a4b2d" }}>
+            {game.refusals.slice(0, 3).map((r, i) => (
+              <div key={`${r.week}-${r.action}-${i}`}>
+                ⚠ {r.action} : {r.reason}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div style={panel}>
           <strong>Action</strong>
@@ -315,6 +384,17 @@ export function GameView() {
           </button>
           <button type="button" style={btn(mode === "chauler")} onClick={() => setMode("chauler")}>
             Chauler
+          </button>
+          <button
+            type="button"
+            style={btn()}
+            onClick={() => game.dispatch({ type: "embaucher" })}
+            title="600 €/sem, première semaine payée d'avance — embaucher la semaine d'une récolte = saisonnier"
+          >
+            👷 Embaucher
+          </button>
+          <button type="button" style={btn()} onClick={() => game.dispatch({ type: "licencier" })}>
+            Licencier
           </button>
           {mode === "planter" && (
             <div style={{ marginTop: 6 }}>
@@ -351,53 +431,85 @@ export function GameView() {
           )}
         </div>
 
-        {selected && (
+        {selectedTrees.length > 0 && (
           <div style={panel}>
-            <strong>{getEspece(selected.especeId).nom}</strong> · {selected.heightM.toFixed(1)} m ·{" "}
-            {Math.floor(selected.ageWeeks / 52)} ans
-            {selected.stress > 1 && ` · stress ${selected.stress.toFixed(0)}/10`}
-            {selected.fruitsKg > 0.5 && (
+            <strong>
+              {selectedTrees.length === 1
+                ? getEspece(selectedTrees[0]?.especeId ?? "").nom
+                : `${selectedTrees.length} arbres sélectionnés`}
+            </strong>
+            {selectedTrees.length === 1 && selectedTrees[0] && (
               <>
                 {" "}
-                · 🍎 {selected.fruitsKg.toFixed(0)} kg mûrs
-                <br />
-                <button
-                  type="button"
-                  style={btn(true)}
-                  onClick={() => game.dispatch({ type: "recolter", treeIds: [selected.id] })}
-                >
-                  Récolter
-                </button>
+                · {selectedTrees[0].heightM.toFixed(1)} m ·{" "}
+                {Math.floor(selectedTrees[0].ageWeeks / 52)} ans
+                {selectedTrees[0].stress > 1 &&
+                  ` · stress ${selectedTrees[0].stress.toFixed(0)}/10`}
               </>
             )}
+            {selFruitsKg > 0.5 && <> · 🍎 {selFruitsKg.toFixed(0)} kg mûrs</>}
             <br />
+            {selEspeces.map((id) => (
+              <button
+                key={id}
+                type="button"
+                style={btn()}
+                onClick={() =>
+                  setSelectedIds(
+                    new Set(snapshot.trees.filter((t) => t.especeId === id).map((t) => t.id)),
+                  )
+                }
+              >
+                + tous les {getEspece(id).nom.toLowerCase()}s
+              </button>
+            ))}
+            <br />
+            {selFruitsKg > 0.5 && (
+              <button
+                type="button"
+                style={btn(true)}
+                onClick={() =>
+                  game.dispatch({ type: "recolter", treeIds: selectedTrees.map((t) => t.id) })
+                }
+              >
+                🧺 Récolter
+              </button>
+            )}
             <button
               type="button"
               style={btn()}
               onClick={() => {
-                game.dispatch({ type: "couper", treeIds: [selected.id], devenir: "vendre" });
-                setSelectedId(undefined);
+                game.dispatch({
+                  type: "couper",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  devenir: "vendre",
+                });
+                setSelectedIds(new Set());
               }}
             >
-              Couper &amp; vendre
+              🪓 Couper &amp; vendre
             </button>
             <button
               type="button"
               style={btn()}
               onClick={() => {
-                game.dispatch({ type: "couper", treeIds: [selected.id], devenir: "epandre" });
-                setSelectedId(undefined);
+                game.dispatch({
+                  type: "couper",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  devenir: "epandre",
+                });
+                setSelectedIds(new Set());
               }}
             >
-              Couper &amp; épandre (BRF)
+              🪓 Couper &amp; épandre (BRF)
             </button>
           </div>
         )}
 
-        {fruitsPrets.length > 0 && (
+        {fruitsPrets.length > 0 && !game.autoHarvest && (
           <div style={panel}>
             🍎 <strong>{fruitsPrets.reduce((s, t) => s + t.fruitsKg, 0).toFixed(0)} kg</strong> de
-            fruits mûrs sur {fruitsPrets.length} arbres — vite, avant la fin de la fenêtre !
+            fruits mûrs sur {fruitsPrets.length} arbres.
             <br />
             <button
               type="button"
@@ -411,25 +523,28 @@ export function GameView() {
           </div>
         )}
 
-        {game.notice && (
-          <div style={{ ...panel, background: "#f3e6c4" }}>
-            ⏸ Pause automatique : {game.notice}. Récoltez, puis relancez le temps !
-          </div>
-        )}
+        <div style={{ ...panel, fontSize: 13 }}>
+          🌲 {snapshot.trees.length} arbres · carbone {snapshot.inventory.vivantTHa.toFixed(1)} t
+          vivant + {snapshot.inventory.humusTHa.toFixed(1)} t humus ·{" "}
+          <strong>
+            bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
+            {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
+          </strong>
+        </div>
 
-        {game.refusals.length > 0 && (
-          <div style={{ ...panel, color: "#8a4b2d" }}>
-            {game.refusals.map((r, i) => (
-              <div key={`${r.week}-${r.action}-${i}`}>
-                ⚠ {r.action} : {r.reason}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ ...panel, fontSize: 13, color: "#6b6250" }}>
-          {snapshot.trees.length} arbres vivants. La régénération naturelle sème toute seule —
-          fauchez (coupez) ce qui vous gêne.
+        <div style={{ ...panel, maxHeight: 320, overflowY: "auto", fontSize: 13 }}>
+          <strong>Journal</strong>
+          {game.events.length === 0 && (
+            <div style={{ color: "#6b6250" }}>Rien à signaler pour l'instant.</div>
+          )}
+          {game.events.map((ev, i) => (
+            <div key={`${ev.week}-${i}`} style={{ marginTop: 3 }}>
+              <span style={{ color: "#6b6250" }}>
+                an {Math.floor(ev.week / 52) + 1} s{ev.week % 52}
+              </span>{" "}
+              {ev.icone} {ev.message}
+            </div>
+          ))}
         </div>
       </div>
     </div>

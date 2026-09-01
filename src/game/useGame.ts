@@ -8,6 +8,7 @@ import type { ActionRefusal } from "../engine/actions";
 import type {
   ActionSansSemaine,
   FromWorker,
+  GameEvent,
   SaveGame,
   Snapshot,
   StationInfo,
@@ -31,7 +32,10 @@ export interface GameApi {
   station?: StationInfo;
   snapshot?: Snapshot;
   refusals: ActionRefusal[];
+  events: GameEvent[];
   speed: number;
+  autoHarvest: boolean;
+  setAutoHarvest: (enabled: boolean) => void;
   /** message de pause automatique (fruits mûrs…) */
   notice?: string;
   replayProgress?: { done: number; total: number };
@@ -50,6 +54,8 @@ export function useGame(): GameApi {
   const [speed, setSpeedState] = useState(0);
   const [replayProgress, setReplayProgress] = useState<{ done: number; total: number }>();
   const [notice, setNotice] = useState<string>();
+  const [events, setEvents] = useState<GameEvent[]>([]);
+  const [autoHarvest, setAutoHarvestState] = useState(true);
 
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
@@ -66,7 +72,10 @@ export function useGame(): GameApi {
         case "snapshot":
           setSnapshot(msg.snapshot);
           if (msg.snapshot.refusals.length > 0) {
-            setRefusals((prev) => [...msg.snapshot.refusals, ...prev].slice(0, 6));
+            setRefusals((prev) => [...msg.snapshot.refusals, ...prev].slice(0, 4));
+          }
+          if (msg.snapshot.events.length > 0) {
+            setEvents((prev) => [...msg.snapshot.events.slice().reverse(), ...prev].slice(0, 60));
           }
           break;
         case "progress":
@@ -103,21 +112,33 @@ export function useGame(): GameApi {
     station,
     snapshot,
     refusals,
+    events,
     speed,
+    autoHarvest,
+    setAutoHarvest: (enabled) => {
+      setAutoHarvestState(enabled);
+      send({ type: "autoHarvest", enabled });
+    },
     notice,
     replayProgress,
     newGame: (stationId, seed, meteo) => {
       ensureWorker();
       setRefusals([]);
+      setEvents([]);
       setSnapshot(undefined);
       send({ type: "init", stationId, seed, meteo });
+      send({ type: "autoHarvest", enabled: true });
+      setAutoHarvestState(true);
       setSpeedState(0);
     },
     resume: (save) => {
       ensureWorker();
       setRefusals([]);
+      setEvents([]);
       setSnapshot(undefined);
       send({ type: "resume", save });
+      send({ type: "autoHarvest", enabled: true });
+      setAutoHarvestState(true);
       setSpeedState(0);
     },
     dispatch: (action) => {

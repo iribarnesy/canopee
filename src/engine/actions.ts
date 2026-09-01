@@ -28,8 +28,7 @@ export const PLANT_MIN_SPACING_M = 1;
 export const WOOD_PRICE_EUR_M3 = 35;
 /** salaire hebdomadaire chargé d'un ouvrier, € *(à calibrer)* */
 export const SALARY_EUR_WEEK = 600;
-/** temps de récolte des fruits, h/kg (règles §10 : ~3 h les 100 kg) */
-export const HARVEST_HOURS_PER_KG = 0.03;
+
 /** chaulage : coût et temps par m² *(à calibrer)* */
 export const LIME_EUR_M2 = 0.02;
 export const LIME_HOURS_M2 = 0.002;
@@ -302,7 +301,9 @@ function applyRecolter(
     }
     const espece = getEspece(tree.especeId);
     const prix = espece.fruits?.prixEurKg ?? 0;
-    const hours = tree.fruitsKg * HARVEST_HOURS_PER_KG;
+    // Cadence de cueillette propre à l'espèce (ramasser 19 kg de noisettes
+    // n'a rien à voir avec cueillir 19 kg de pommes).
+    const hours = tree.fruitsKg * (espece.fruits?.recolteHKg ?? 0.03);
     if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
       refusals.push(refuse(action.week, "recolter", `plafond hebdomadaire atteint (arbre ${id})`));
       break;
@@ -373,11 +374,24 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyCouper(state, action);
     case "recolter":
       return applyRecolter(state, action);
-    case "embaucher":
+    case "embaucher": {
+      // La première semaine de salaire se paie À L'EMBAUCHE : embaucher pour
+      // une seule semaine (saisonnier de récolte) coûte donc son vrai prix.
+      if (state.economy.treasuryEur - SALARY_EUR_WEEK < OVERDRAFT_LIMIT_EUR) {
+        return { state, refusals: [refuse(action.week, "embaucher", "découvert plafonné")] };
+      }
       return {
-        state: { ...state, economy: { ...state.economy, uth: state.economy.uth + 1 } },
+        state: {
+          ...state,
+          economy: {
+            ...state.economy,
+            uth: state.economy.uth + 1,
+            treasuryEur: state.economy.treasuryEur - SALARY_EUR_WEEK,
+          },
+        },
         refusals: [],
       };
+    }
     case "licencier":
       return {
         state: {

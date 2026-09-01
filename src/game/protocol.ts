@@ -35,6 +35,13 @@ export interface SnapshotTree {
   fruitsKg: number;
 }
 
+/** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */
+export interface GameEvent {
+  week: number;
+  icone: string;
+  message: string;
+}
+
 export interface Snapshot {
   week: number;
   weather: WeekWeather;
@@ -47,6 +54,8 @@ export interface Snapshot {
   soilN: Float32Array;
   /** refus d'actions depuis le dernier instantané */
   refusals: ActionRefusal[];
+  /** événements depuis le dernier instantané */
+  events: GameEvent[];
 }
 
 export interface StationInfo {
@@ -63,6 +72,7 @@ export type ToWorker =
   | { type: "resume"; save: SaveGame }
   | { type: "speed"; weeksPerSecond: number }
   | { type: "action"; action: ActionSansSemaine }
+  | { type: "autoHarvest"; enabled: boolean }
   | { type: "requestSave" };
 
 export type FromWorker =

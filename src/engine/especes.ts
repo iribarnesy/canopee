@@ -103,6 +103,8 @@ export interface EspeceV0 {
     /** rendement d'un adulte en pleine forme, kg/an */
     rendementMaxKg: number;
     prixEurKg: number;
+    /** temps de cueillette, h/kg (pommes rapides, noisettes lentes) *(à calibrer)* */
+    recolteHKg: number;
     /** auto-fertile ? sinon il faut un congénère mature à moins de 30 m (§7.5) */
     autofertile: boolean;
   };
@@ -238,6 +240,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       croissanceSem: 14,
       rendementMaxKg: 80,
       prixEurKg: 1.2,
+      recolteHKg: 0.02,
       autofertile: false, // la plupart des variétés : il faut un pollinisateur (décision §15)
     },
     sources: [ATLAS],
@@ -266,6 +269,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       croissanceSem: 12,
       rendementMaxKg: 40,
       prixEurKg: 3,
+      recolteHKg: 0.04,
       autofertile: true,
     },
     sources: [ATLAS],
@@ -294,6 +298,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       croissanceSem: 16,
       rendementMaxKg: 8,
       prixEurKg: 4,
+      recolteHKg: 0.15,
       autofertile: false, // auto-incompatible : il faut un voisin
     },
     sources: [ATLAS],
