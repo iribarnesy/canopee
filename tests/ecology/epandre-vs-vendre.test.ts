@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { GameAction } from "../../src/engine/actions";
+import { carbonInventory } from "../../src/engine/carbon";
 import { runJournal } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
 import { LIMON_PAUVRE_N } from "../../src/engine/stations";
@@ -72,6 +73,14 @@ describe("couper les aulnes : épandre ou vendre (15 ans, limon pauvre en N)", (
       return sum;
     };
     expect(nTotal(epandre.state, 30, 30)).toBeGreaterThan(1.2 * nTotal(vendre.state, 30, 30));
+  });
+
+  it("côté carbone : épandre garde les stocks sur la parcelle, vendre les émet (§12)", () => {
+    const invVendre = carbonInventory(vendre.state, STATION.initialSoilCTHa);
+    const invEpandre = carbonInventory(epandre.state, STATION.initialSoilCTHa);
+    expect(invVendre.exporteCumTHa).toBeGreaterThan(0);
+    expect(invEpandre.exporteCumTHa).toBe(0);
+    expect(invEpandre.totalTHa).toBeGreaterThan(invVendre.totalTHa);
   });
 
   it("les hêtres voisins poussent mieux quand les aulnes ont été épandus", () => {

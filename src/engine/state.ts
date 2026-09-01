@@ -6,6 +6,8 @@
 
 import type { EconomyState } from "./actions";
 import { createEconomy } from "./actions";
+import type { CarbonState } from "./carbon";
+import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
@@ -29,6 +31,8 @@ export interface Station {
   mineralizationPotentialKgHaWeek: number;
   /** azote minéral au démarrage, kg/ha */
   initialMineralNKgHa: number;
+  /** stock initial de carbone du sol (humus), t C/ha — LE gros stock (§12) */
+  initialSoilCTHa: number;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
@@ -49,6 +53,10 @@ export interface SoilState {
   mineralNG: number[];
   /** azote de la litière au sol, g/m² (libéré vers le minéral en se décomposant) */
   litterNG: number[];
+  /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
+  litterCG: number[];
+  /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
+  humusCG: number[];
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
   litterK: number[];
@@ -62,6 +70,7 @@ export interface GameState {
   trees: TreeState[];
   nextTreeId: number;
   economy: EconomyState;
+  carbon: CarbonState;
   rng: RngState;
 }
 
@@ -98,12 +107,15 @@ export function createGameState(
     week: 0,
     station,
     economy: createEconomy(options.treasuryEur ?? 20_000),
+    carbon: createCarbonState(),
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: new Array(n).fill(station.ruMm),
       excessMm: new Array(n).fill(0),
       mineralNG: new Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
       litterNG: new Array(n).fill(0),
+      litterCG: new Array(n).fill(0),
+      humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       litterK: new Array(n).fill(0),
     },
     trees: [],

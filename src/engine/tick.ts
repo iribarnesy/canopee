@@ -8,6 +8,14 @@
  * → morts en litière → régénération annuelle (semaine 14).
  */
 
+import {
+  DEADWOOD_DECAY_PER_YEAR,
+  DEADWOOD_HUMIFICATION,
+  HUMUS_DECAY_PER_YEAR,
+  LITTER_HUMIFICATION,
+  treeAboveCarbonKg,
+  treeTotalCarbonKg,
+} from "./carbon";
 import { getEspece } from "./especes";
 import { cellCount, forEachDiscCell } from "./grid";
 import { computeGroundLight, computeLight, crownRadiusM } from "./light";
@@ -84,6 +92,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const excessMm = state.soil.excessMm.slice();
   const mineralNG = state.soil.mineralNG.slice();
   const litterNG = state.soil.litterNG.slice();
+  const litterCG = state.soil.litterCG.slice();
+  const humusCG = state.soil.humusCG.slice();
   const litterK = state.soil.litterK.slice();
   const waterlogging = new Array<number>(nCells);
   const availFactor = new Array<number>(nCells);
@@ -102,6 +112,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let waterloggingSum = 0;
   let mineralizationSumG = 0;
   let litterDecaySumG = 0;
+  let climateSum = 0;
+  let emittedG = 0; // CO2 des décompositions (litière + humus), g C
 
   for (let i = 0; i < nCells; i++) {
     cellWaterBalanceInto(
@@ -134,13 +146,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       moistureRatio,
       cellOut.waterloggingRatio,
     );
+    climateSum += climate;
     const mineralized = potentialG * climate;
-    // La litière se décompose selon son C/N (aulne vite, pin lentement, ch2-B).
-    const decayed = (litterNG[i] ?? 0) * Math.min(1, (litterK[i] ?? 0) * climate);
-    litterNG[i] = (litterNG[i] ?? 0) - decayed;
-    mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + decayed;
+    // La litière se décompose selon son C/N (aulne vite, pin lentement, ch2-B) ;
+    // son carbone part pour partie en humus (humification), le reste en CO2.
+    const decayFraction = Math.min(1, (litterK[i] ?? 0) * climate);
+    const decayedN = (litterNG[i] ?? 0) * decayFraction;
+    const decayedC = (litterCG[i] ?? 0) * decayFraction;
+    litterNG[i] = (litterNG[i] ?? 0) - decayedN;
+    litterCG[i] = (litterCG[i] ?? 0) - decayedC;
+    humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
+    emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
+    // L'humus, pool lent, respire aussi (V1 : couplage avec la minéralisation N
+    // et le labour qui déstocke — docs/regles.md §12).
+    const humusLoss = (humusCG[i] ?? 0) * ((HUMUS_DECAY_PER_YEAR / 52) * climate);
+    humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
+    emittedG += humusLoss;
+    mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + decayedN;
     mineralizationSumG += mineralized;
-    litterDecaySumG += decayed;
+    litterDecaySumG += decayedN;
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
   }
 
@@ -244,6 +268,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   // ── 5. Croissance de chaque arbre — loi du minimum, facteurs locaux ───────
+  let nppKgC = 0; // production primaire nette de la semaine (bois + racines)
   let nextTrees: TreeState[] = trees.map((tree, t) => {
     const next = tickTree(tree, {
       waterSatisfaction: waterSatisfaction[t] ?? 1,
@@ -252,6 +277,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
       tMean: weather.tMean,
     }).tree;
+    if (tree.alive && next.heightM > tree.heightM) {
+      const espece = getEspece(tree.especeId);
+      nppKgC += treeTotalCarbonKg(espece, next.heightM) - treeTotalCarbonKg(espece, tree.heightM);
+    }
     const acquired = acquiredNG[t] ?? 0;
     return acquired > 0 ? { ...next, uptakeYearG: next.uptakeYearG + acquired } : next;
   });
@@ -259,6 +288,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 6. Retours de litière : chute des feuilles + arbres morts ─────────────
   let litterfallSumG = 0;
   let fixationSumG = 0;
+  let leafNppKgC = 0; // le feuillage tombé a été produit dans l'année (NPP feuilles)
   const depositLitter = (tree: TreeState, amountG: number) => {
     if (amountG <= 0) return;
     const espece = getEspece(tree.especeId);
@@ -268,12 +298,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       n++;
     });
     const share = amountG / n;
+    const shareC = share * espece.litiere.cnRatio;
     const kSpecies = litterDecayRate(espece.litiere.cnRatio);
     forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
       const oldN = litterNG[i] ?? 0;
       litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
       litterNG[i] = oldN + share;
+      litterCG[i] = (litterCG[i] ?? 0) + shareC;
     });
+    leafNppKgC += (amountG * espece.litiere.cnRatio) / 1000;
     if (espece.azote.fixateur) fixationSumG += amountG;
     else litterfallSumG += amountG;
   };
@@ -286,17 +319,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
   }
 
-  // Les morts de la semaine rendent leur azote de l'année et quittent la carte
-  // (le bois mort comme pool de carbone arrive avec le module carbone, §12).
+  // Les morts de la semaine rendent leur azote de l'année, leur carbone part
+  // au pool de bois mort, et ils quittent la carte.
+  let deadWoodKgC = state.carbon.deadWoodKgC;
   const survivors: TreeState[] = [];
   for (const tree of nextTrees) {
     if (tree.alive) {
       survivors.push(tree);
     } else {
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
+      deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM);
     }
   }
   nextTrees = survivors;
+
+  // Le bois mort se décompose : une part s'humifie, le reste part en CO2.
+  const meanClimate = climateSum / nCells;
+  const deadDecayKgC = deadWoodKgC * ((DEADWOOD_DECAY_PER_YEAR / 52) * meanClimate);
+  deadWoodKgC -= deadDecayKgC;
+  const humifiedPerCellG = (deadDecayKgC * DEADWOOD_HUMIFICATION * 1000) / nCells;
+  for (let i = 0; i < nCells; i++) humusCG[i] = (humusCG[i] ?? 0) + humifiedPerCellG;
+  emittedG += deadDecayKgC * (1 - DEADWOOD_HUMIFICATION) * 1000;
 
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
   let rng = state.rng;
@@ -319,8 +362,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     state: {
       ...state,
       week: state.week + 1,
-      soil: { waterMm, excessMm, mineralNG, litterNG, litterK },
+      soil: { waterMm, excessMm, mineralNG, litterNG, litterCG, humusCG, litterK },
       trees: nextTrees,
+      carbon: {
+        ...state.carbon,
+        deadWoodKgC,
+        nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC,
+        emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000,
+      },
       rng,
       nextTreeId,
     },
@@ -368,12 +417,15 @@ export function stateHash(state: GameState): number {
     state.soil.excessMm,
     state.soil.mineralNG,
     state.soil.litterNG,
+    state.soil.litterCG,
+    state.soil.humusCG,
     state.soil.litterK,
   ]) {
     for (const v of arr) mixNumber(v);
   }
   mixString(JSON.stringify(state.trees));
   mixString(JSON.stringify(state.economy));
+  mixString(JSON.stringify(state.carbon));
   mixString(JSON.stringify(state.rng));
   return hash >>> 0;
 }

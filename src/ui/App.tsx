@@ -23,6 +23,7 @@ import {
   tick,
   type WeekWeather,
 } from "../engine";
+import { carbonInventory } from "../engine/carbon";
 
 const YEARS = 20;
 const TREES_PER_SPECIES = 30;
@@ -311,6 +312,24 @@ export function App() {
         (semis du voisinage et des adultes de la parcelle, positions seedées).
       </p>
       <ParcelMap state={finalState} />
+      <p style={{ color: "#6b6250" }}>
+        {(() => {
+          const inv = carbonInventory(finalState, sc.station.initialSoilCTHa);
+          return (
+            <>
+              Carbone (t C/ha) — vivant {inv.vivantTHa.toFixed(1)} · bois mort{" "}
+              {inv.boisMortTHa.toFixed(1)} · litière {inv.litiereTHa.toFixed(1)} · humus{" "}
+              {inv.humusTHa.toFixed(1)} ·{" "}
+              <strong>
+                bilan net {inv.bilanNetTHa >= 0 ? "+" : ""}
+                {inv.bilanNetTHa.toFixed(1)}
+              </strong>{" "}
+              (NPP cumulée {inv.nppCumTHa.toFixed(1)}, émis {inv.emisCumTHa.toFixed(1)}, exporté{" "}
+              {inv.exporteCumTHa.toFixed(1)})
+            </>
+          );
+        })()}
+      </p>
       <p style={{ color: "#6b6250" }}>
         Dernière année — pluie {sum((p) => p.fluxes.rainMm)} mm · évaporation{" "}
         {sum((p) => p.fluxes.evapMm)} mm · transpiration {sum((p) => p.fluxes.transpirationMm)} mm ·

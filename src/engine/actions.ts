@@ -8,6 +8,7 @@
  * plafond (heures ou découvert).
  */
 
+import { treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import type { GameState } from "./state";
@@ -95,6 +96,7 @@ function applyPlanter(
   const trees = [...state.trees];
   let nextTreeId = state.nextTreeId;
   let planted = 0;
+  let importedKgC = 0;
 
   for (const pos of action.positions) {
     if (hoursUsedWeek + PLANT_HOURS > WEEK_HOURS_CAP * state.economy.uth) {
@@ -136,6 +138,7 @@ function applyPlanter(
     treasuryEur -= espece.economie.prixPlantEur;
     hoursUsedWeek += PLANT_HOURS;
     hoursUsedYear += PLANT_HOURS;
+    importedKgC += treeTotalCarbonKg(espece, 0.3); // le plant arrive avec sa biomasse
   }
 
   return {
@@ -143,6 +146,10 @@ function applyPlanter(
       ...state,
       trees,
       nextTreeId,
+      carbon: {
+        ...state.carbon,
+        importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedKgC,
+      },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
@@ -157,7 +164,9 @@ function applyCouper(
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
   const litterNG = state.soil.litterNG.slice();
+  const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
+  let { deadWoodKgC, exportedEnergyCumKgC } = state.carbon;
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
 
   for (const id of action.treeIds) {
@@ -178,8 +187,13 @@ function applyCouper(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
+    // Les souches et racines restent au sol dans les deux cas (bois mort).
+    deadWoodKgC +=
+      treeTotalCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, tree.heightM);
     if (action.devenir === "vendre") {
       treasuryEur += woodVolumeM3(tree.heightM) * WOOD_PRICE_EUR_M3;
+      // Bois énergie : brûlé chez le client → carbone émis immédiatement (§12).
+      exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
       // retournent en litière sous l'ancienne couronne (docs/regles.md §4.2).
@@ -201,11 +215,14 @@ function applyCouper(
       }
       if (cells.length === 0) cells.push(0);
       const share = depositG / cells.length;
+      // Tout le carbone aérien broyé reste sur place, dans la litière.
+      const shareC = (treeAboveCarbonKg(espece, tree.heightM) * 1000) / cells.length;
       const kSpecies = 0.6 / Math.max(1, espece.litiere.cnRatio);
       for (const i of cells) {
         const oldN = litterNG[i] ?? 0;
         litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
         litterNG[i] = oldN + share;
+        litterCG[i] = (litterCG[i] ?? 0) + shareC;
       }
     }
     trees.splice(idx, 1); // l'arbre coupé quitte la carte (bois mort/carbone en V1)
@@ -215,7 +232,8 @@ function applyCouper(
     state: {
       ...state,
       trees,
-      soil: { ...state.soil, litterNG, litterK },
+      soil: { ...state.soil, litterNG, litterCG, litterK },
+      carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,

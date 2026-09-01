@@ -1,4 +1,5 @@
 export * from "./actions";
+export * from "./carbon";
 export * from "./especes";
 export * from "./game";
 export * from "./grid";

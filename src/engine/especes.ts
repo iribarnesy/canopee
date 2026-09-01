@@ -79,6 +79,10 @@ export interface EspeceV0 {
     /** prix d'un jeune plant, € *(à calibrer sur les pépinières forestières)* */
     prixPlantEur: number;
   };
+  bois: {
+    /** densité du bois sec, t/m³ (infradensité, pour la biomasse et le carbone) */
+    densite: number;
+  };
   sources: string[];
 }
 
@@ -103,6 +107,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière tendre, très riche en N (C/N ~15) : l'aulne améliore son sol (ch2-B).
     litiere: { cnRatio: 15 },
     economie: { prixPlantEur: 2 },
+    bois: { densite: 0.45 },
     sources: [ATLAS],
   },
   {
@@ -122,6 +127,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière coriace, lente (C/N ~50) — la voie fongique (ch2-B).
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 3 },
+    bois: { densite: 0.68 },
     sources: [ATLAS],
   },
   {
@@ -139,6 +145,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 40 },
     economie: { prixPlantEur: 3 },
+    bois: { densite: 0.75 },
     sources: [ATLAS],
   },
   {
@@ -157,6 +164,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Aiguilles à C/N ~60 : minéralisation lente et acidifiante (ch2-B).
     litiere: { cnRatio: 60 },
     economie: { prixPlantEur: 1.5 },
+    bois: { densite: 0.45 },
     sources: [ATLAS],
   },
   {
@@ -174,6 +182,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 1.5 },
+    bois: { densite: 0.55 },
     sources: [ATLAS],
   },
 ];
