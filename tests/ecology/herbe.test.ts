@@ -66,8 +66,8 @@ describe("dynamique du tapis herbacé", () => {
     expect(couvertureMax(0.6, 1)).toBeGreaterThan(0.8);
   });
 
-  it("elle recule quand elle manque d'eau (l'herbe grille avant les arbres)", () => {
-    expect(couvertureMax(1, 0.2)).toBeLessThan(couvertureMax(1, 1));
+  it("elle recule quand le sol de surface s'assèche (l'herbe grille la première)", () => {
+    expect(couvertureMax(1, 0.1)).toBeLessThan(couvertureMax(1, 1));
   });
 });
 
@@ -84,5 +84,29 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     const gainPauvre = 1.3;
     expect(avec.hauteur / sans.hauteur).toBeLessThan(gainPauvre);
     expect(sans.hauteur).toBeGreaterThan(3);
+  });
+});
+
+describe("stabilité du tapis (pas d'oscillation artificielle)", () => {
+  it("une zone fauchée rejoint le niveau général et n'y ré-oscille plus", () => {
+    const station: Station = { ...LIMON_RICHE.station, coteM: 30, voisinage: [] };
+    const serie = serieMeteoPour("limon-riche");
+    if (!serie) throw new Error("série manquante");
+    const weather = serieToWeeks(serie);
+    let state = createGameState(station, rngStateFromSeed(3));
+    const actions: GameAction[] = [{ type: "faucher", week: 3 * 52 + 20, x: 10, y: 10, rayonM: 4 }];
+    const ecarts: number[] = [];
+    for (let i = 0; i < 6 * 52; i++) {
+      const w = weather[i % weather.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, actions).state;
+      // Après un an de reprise, la zone fauchée ne doit plus se distinguer.
+      if (i > 4 * 52 + 20) {
+        const fauchee = state.soil.herbeCouverture[10 * 30 + 10] ?? 0;
+        const temoin = state.soil.herbeCouverture[25 * 30 + 25] ?? 0;
+        ecarts.push(Math.abs(fauchee - temoin));
+      }
+    }
+    expect(Math.max(...ecarts)).toBeLessThan(0.25);
   });
 });

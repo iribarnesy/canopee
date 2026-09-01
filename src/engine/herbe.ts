@@ -35,16 +35,19 @@ const REGRESSION_PAR_SEMAINE = 0.2;
 const LUMIERE_MINIMALE = 0.12;
 
 /**
- * Couverture que la cellule peut porter, compte tenu de la lumière qui atteint
- * le sol et de ce que l'herbe a pu boire. Une lande rase ou un sous-bois sombre
- * plafonnent bas ; une trouée bien alimentée se referme vite.
+ * Couverture que la cellule peut porter, d'après la lumière qui atteint le sol
+ * et l'ÉTAT hydrique de l'horizon de surface (son remplissage, pas la
+ * satisfaction de l'herbe elle-même : sinon la couverture se nourrit de sa
+ * propre consommation et le tapis se met à osciller).
+ * Une lande rase ou un sous-bois sombre plafonnent bas ; une trouée fraîche se
+ * referme vite. L'herbe grille la première en été : ses racines sont fines et
+ * superficielles, elle recule avant que les arbres ne souffrent.
  */
-export function couvertureMax(lumiereAuSol: number, satisfactionEau: number): number {
+export function couvertureMax(lumiereAuSol: number, remplissageEauSurface: number): number {
   if (lumiereAuSol <= LUMIERE_MINIMALE) return 0;
   const parLumiere = Math.min(1, (lumiereAuSol - LUMIERE_MINIMALE) / 0.35);
-  // L'herbe grille la première : ses racines sont fines et superficielles,
-  // un été sec fait reculer le tapis avant que les arbres ne souffrent.
-  return Math.max(0, parLumiere * Math.min(1, satisfactionEau / 0.7));
+  const parEau = Math.min(1, remplissageEauSurface / 0.35);
+  return Math.max(0, parLumiere * parEau);
 }
 
 /**

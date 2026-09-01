@@ -312,11 +312,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
 
-  // La strate évolue selon la lumière reçue et l'eau qu'elle a pu boire.
+  // La strate évolue selon la lumière reçue et l'humidité qui RESTE en surface
+  // après le passage de tout le monde (état du sol, pas flux : cf. herbe.ts).
   let herbeSum = 0;
   for (let i = 0; i < nCells; i++) {
-    const servi = (herbeDemandeL[i] ?? 0) > 0 ? (waterServedRatio[i * nH] ?? 0) : 1;
-    const cible = couvertureMax(groundLight[i] ?? 1, servi);
+    const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
+    const cible = couvertureMax(groundLight[i] ?? 1, remplissage);
     herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
     herbeSum += herbeCouverture[i] ?? 0;
   }
