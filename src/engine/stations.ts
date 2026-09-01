@@ -24,6 +24,7 @@ export const LANDE_SECHE: StationClimat = {
     drainagePerWeekMm: 80,
     mineralizationPotentialKgHaWeek: 0.6, // sol pauvre : ~20-25 kg N/ha/an effectifs
     initialMineralNKgHa: 15,
+    parcelAreaM2: 10_000,
   },
   climat: {
     tMeanAnnual: 13.5,
@@ -45,6 +46,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
     drainagePerWeekMm: 4,
     mineralizationPotentialKgHaWeek: 2.5,
     initialMineralNKgHa: 40,
+    parcelAreaM2: 10_000,
   },
   climat: {
     tMeanAnnual: 12,
@@ -66,6 +68,7 @@ export const LIMON_RICHE: StationClimat = {
     drainagePerWeekMm: 35,
     mineralizationPotentialKgHaWeek: 3, // ~110-130 kg N/ha/an effectifs
     initialMineralNKgHa: 60,
+    parcelAreaM2: 10_000,
   },
   climat: {
     tMeanAnnual: 11.5,

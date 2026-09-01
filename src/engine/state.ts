@@ -23,6 +23,8 @@ export interface Station {
   mineralizationPotentialKgHaWeek: number;
   /** azote minéral au démarrage, kg/ha */
   initialMineralNKgHa: number;
+  /** surface de la parcelle, m² (grille spatiale en V1 — docs/regles.md §1.2) */
+  parcelAreaM2: number;
 }
 
 /** État dynamique du sol, mono-zone en V0. */
@@ -55,7 +57,6 @@ export interface TickFluxes {
   mineralizationKgHa: number;
   uptakeKgHa: number;
   leachedKgHa: number;
-  nitrogenSatisfaction: number;
 }
 
 export function createGameState(station: Station, rng: RngState): GameState {
@@ -70,8 +71,11 @@ export function createGameState(station: Station, rng: RngState): GameState {
   };
 }
 
-/** Proto-action V0 : planter n jeunes plants d'une espèce (30 cm). */
-export function plant(state: GameState, especeId: string, count: number): GameState {
+/**
+ * Proto-action V0 : planter n plants d'une espèce (jeune plant de 30 cm par
+ * défaut ; `heightM` permet d'initialiser un peuplement déjà en place).
+ */
+export function plant(state: GameState, especeId: string, count: number, heightM = 0.3): GameState {
   getEspece(especeId); // valide l'id
   const trees = [...state.trees];
   for (let i = 0; i < count; i++) {
@@ -79,7 +83,7 @@ export function plant(state: GameState, especeId: string, count: number): GameSt
       id: state.nextTreeId + i,
       especeId,
       ageWeeks: 0,
-      heightM: 0.3,
+      heightM,
       stress: 0,
       alive: true,
     });

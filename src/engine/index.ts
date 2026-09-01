@@ -1,4 +1,5 @@
 export * from "./especes";
+export * from "./light";
 export * from "./meteo";
 export * from "./nitrogen";
 export * from "./rng";

@@ -1,18 +1,22 @@
 /**
  * Le cœur du moteur : une fonction pure `état + météo → état`.
  * Ordre d'un tick (docs/regles.md §1.1) :
- * météo → bilan hydrique → cycle N → croissance des arbres
- * → [lumière → biotique → économie : à venir].
+ * météo → bilan hydrique → lumière → cycle N (minéralisation, prélèvements
+ * par individu, lessivage) → croissance des arbres → [biotique → économie : à venir].
  */
 
 import { getEspece } from "./especes";
+import { computeLight } from "./light";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
-import { weeklyNitrogenCycle } from "./nitrogen";
+import { allocateUptake, weeklyLeaching, weeklyMineralization } from "./nitrogen";
 import type { GameState, TickFluxes } from "./state";
 import { weekOfYear } from "./state";
-import { tickTree, treeNitrogenDemandKgWeek } from "./trees";
+import { tickTree, treeExtractionCapacityKgWeek, treeNitrogenNeedKgWeek } from "./trees";
 import { weeklyWaterBalance } from "./water";
+
+/** °C moyenne hebdo au-dessus de laquelle les caducs sont en feuilles (proxy V0). */
+const LEAVES_ON_TMEAN_C = 6;
 
 export interface TickResult {
   state: GameState;
@@ -34,33 +38,46 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     etpMm,
   });
 
-  // 2. Cycle de l'azote. Les fixateurs ne demandent rien au sol (Frankia/Rhizobium).
-  const uptakeDemandKgHa = state.trees.reduce((sum, tree) => {
-    if (!tree.alive) return sum;
-    const espece = getEspece(tree.especeId);
-    if (espece.azote.fixateur) return sum;
-    return sum + treeNitrogenDemandKgWeek(espece, tree.heightM);
-  }, 0);
+  // 2. Lumière reçue par chaque arbre (compétition verticale).
+  const leavesOn = weather.tMean > LEAVES_ON_TMEAN_C;
+  const light = computeLight(state.trees, station.parcelAreaM2, leavesOn);
 
-  const nitrogen = weeklyNitrogenCycle({
-    mineralNKgHa: state.soil.mineralNKgHa,
+  // 3. Cycle de l'azote : minéralisation, puis prélèvement PAR INDIVIDU
+  //    (besoin en kg selon l'exigence de l'espèce, extraction selon la taille),
+  //    puis lessivage de ce qui reste.
+  const mineralizationKgHa = weeklyMineralization({
     mineralizationPotentialKgHaWeek: station.mineralizationPotentialKgHaWeek,
     tMean: weather.tMean,
     moistureRatio: station.ruMm > 0 ? water.soilWaterMm / station.ruMm : 0,
     waterloggingRatio: water.waterloggingRatio,
-    uptakeDemandKgHa,
-    drainageMm: water.drainageMm,
-    soilWaterMm: water.soilWaterMm,
   });
+  const pool = state.soil.mineralNKgHa + mineralizationKgHa;
 
-  // 3. Croissance de chaque arbre — loi du minimum.
-  const env = {
-    waterSatisfaction: water.satisfactionRatio,
-    waterloggingRatio: water.waterloggingRatio,
-    nitrogenSatisfaction: nitrogen.demandSatisfaction,
-    tMean: weather.tMean,
-  };
-  const trees = state.trees.map((tree) => tickTree(tree, env).tree);
+  const requests = state.trees.map((tree) => {
+    const espece = getEspece(tree.especeId);
+    // Les fixateurs couvrent leur besoin par la symbiose : rien demandé au sol en V0.
+    if (!tree.alive || espece.azote.fixateur) {
+      return { needKg: 0, extractionCapacityKg: 0 };
+    }
+    return {
+      needKg: treeNitrogenNeedKgWeek(espece, tree.heightM),
+      extractionCapacityKg: treeExtractionCapacityKgWeek(tree.heightM),
+    };
+  });
+  const uptake = allocateUptake(pool, requests);
+  const leaching = weeklyLeaching(pool - uptake.totalUptakeKg, water.drainageMm, water.soilWaterMm);
+
+  // 4. Croissance de chaque arbre — loi du minimum, facteurs individuels.
+  const trees = state.trees.map(
+    (tree, i) =>
+      tickTree(tree, {
+        waterSatisfaction: water.satisfactionRatio,
+        waterloggingRatio: water.waterloggingRatio,
+        light: light[i] ?? 1,
+        nitrogenSatisfaction: uptake.satisfactions[i] ?? 1,
+        tMean: weather.tMean,
+      }).tree,
+  );
 
   return {
     state: {
@@ -69,7 +86,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       soil: {
         waterMm: water.soilWaterMm,
         excessMm: water.excessMm,
-        mineralNKgHa: nitrogen.mineralNKgHa,
+        mineralNKgHa: leaching.mineralNKgHa,
       },
       trees,
     },
@@ -81,10 +98,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       overflowMm: water.overflowMm,
       waterSatisfaction: water.satisfactionRatio,
       waterloggingRatio: water.waterloggingRatio,
-      mineralizationKgHa: nitrogen.mineralizationKgHa,
-      uptakeKgHa: nitrogen.uptakeKgHa,
-      leachedKgHa: nitrogen.leachedKgHa,
-      nitrogenSatisfaction: nitrogen.demandSatisfaction,
+      mineralizationKgHa,
+      uptakeKgHa: uptake.totalUptakeKg,
+      leachedKgHa: leaching.leachedKgHa,
     },
   };
 }
