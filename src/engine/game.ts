@@ -27,15 +27,21 @@ export interface RunResult {
   refusals: ActionRefusal[];
 }
 
-/** Ouvre la semaine : salaires des embauchés (§10), compteurs d'heures, faillite. */
+/**
+ * Ouvre la semaine : expiration des contrats saisonniers, salaires des CDI
+ * (les saisonniers sont payés d'avance à l'embauche), compteurs, faillite.
+ */
 export function beginWeek(state: GameState): GameState {
-  const salaries = (state.economy.uth - 1) * SALARY_EUR_WEEK;
+  const saisonniers = state.economy.saisonniersFinSemaine.filter((fin) => fin > state.week);
+  const salaries = state.economy.ouvriersCdi * SALARY_EUR_WEEK;
   const treasuryEur = state.economy.treasuryEur - salaries;
   return {
     ...state,
     economy: {
       ...state.economy,
       treasuryEur,
+      uth: 1 + state.economy.ouvriersCdi + saisonniers.length,
+      saisonniersFinSemaine: saisonniers,
       hoursUsedWeek: 0,
       hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
       bankrupt: state.economy.bankrupt || treasuryEur < OVERDRAFT_LIMIT_EUR,

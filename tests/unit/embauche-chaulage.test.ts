@@ -14,16 +14,16 @@ function positionsGrid(n: number, x0: number, y0: number, spacing: number) {
   }));
 }
 
-describe("embauche (§10) : les UTH étendent la capacité, les salaires pèsent", () => {
+describe("embauche (§10) : saisonnier vs CDI", () => {
   const STATION = { ...LIMON_RICHE.station, coteM: 60 };
 
-  it("avec un ouvrier embauché, on plante deux fois plus dans la semaine", () => {
+  it("un saisonnier double la capacité de la semaine, puis repart tout seul", () => {
     const maxSeul = Math.floor(WEEK_HOURS_CAP / PLANT_HOURS);
     const journal = {
       stationId: STATION.id,
       seed: 3,
       actions: [
-        { type: "embaucher", week: 0 },
+        { type: "embaucher", week: 0, contrat: "saisonnier", semaines: 2 },
         {
           type: "planter",
           week: 1,
@@ -32,17 +32,36 @@ describe("embauche (§10) : les UTH étendent la capacité, les salaires pèsent
         },
       ] as GameAction[],
     };
-    const { state } = runJournal(STATION, journal, WEATHER, 2);
+    const { state } = runJournal(STATION, journal, WEATHER, 5);
     expect(state.trees).toHaveLength(2 * maxSeul);
-    expect(state.economy.uth).toBe(2);
+    // Le contrat de 2 semaines est expiré : retour à 1 UTH sans licencier.
+    expect(state.economy.uth).toBe(1);
+    expect(state.economy.saisonniersFinSemaine).toEqual([]);
+    // Coût : 2 semaines × 700 € payées d'avance + les plants.
+    expect(state.economy.treasuryEur).toBeCloseTo(20_000 - 1_400 - 2 * maxSeul * 1.5, 6);
   });
 
-  it("les salaires hebdomadaires drainent la trésorerie jusqu'à la faillite", () => {
+  it("le tour de passe-passe CDI (embaucher-récolter-licencier) coûte son vrai prix", () => {
+    const journal = {
+      stationId: STATION.id,
+      seed: 3,
+      actions: [
+        { type: "embaucher", week: 0, contrat: "cdi" },
+        { type: "licencier", week: 0 },
+      ] as GameAction[],
+    };
+    const { state } = runJournal(STATION, journal, WEATHER, 1);
+    // 600 € (1re semaine payée d'avance) + 1 200 € d'indemnités de rupture.
+    expect(state.economy.treasuryEur).toBeCloseTo(20_000 - 600 - 1_200, 6);
+    expect(state.economy.uth).toBe(1);
+  });
+
+  it("les salaires d'un CDI drainent la trésorerie jusqu'à la faillite", () => {
     const journal = {
       stationId: STATION.id,
       seed: 3,
       treasuryEur: 5_000,
-      actions: [{ type: "embaucher", week: 0 }] as GameAction[],
+      actions: [{ type: "embaucher", week: 0, contrat: "cdi" }] as GameAction[],
     };
     // 5 000 € + découvert 20 000 € / 600 €·sem ≈ 41 semaines avant la faillite.
     const { state } = runJournal(STATION, journal, WEATHER, 60);
@@ -57,6 +76,20 @@ describe("embauche (§10) : les UTH étendent la capacité, les salaires pèsent
       60,
     );
     expect(apresLicenciement.state.economy.bankrupt).toBe(false);
+  });
+
+  it("licencier sans CDI est refusé (les saisonniers ne se licencient pas)", () => {
+    const journal = {
+      stationId: STATION.id,
+      seed: 3,
+      actions: [
+        { type: "embaucher", week: 0, contrat: "saisonnier", semaines: 4 },
+        { type: "licencier", week: 1 },
+      ] as GameAction[],
+    };
+    const { state, refusals } = runJournal(STATION, journal, WEATHER, 2);
+    expect(refusals[0]?.reason).toContain("aucun ouvrier en CDI");
+    expect(state.economy.uth).toBe(2); // le saisonnier est toujours là
   });
 });
 

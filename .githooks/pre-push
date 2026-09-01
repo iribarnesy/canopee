@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Refuse de pousser si la vérification complète n'est pas verte (même suite que la CI).
+set -e
+echo "pre-push : vérification complète (typecheck + lint + frontières + tests)…"
+npm run verif

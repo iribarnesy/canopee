@@ -12,7 +12,8 @@
     "lint:fix": "biome check --write src tests",
     "check:boundaries": "bash scripts/check-boundaries.sh",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",

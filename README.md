@@ -31,3 +31,6 @@ npm run check:boundaries   # garde-fous : le moteur reste pur (pas de DOM, pas d
 ```
 
 Le moteur vit dans `src/engine/` et n'importe jamais rien de l'UI — c'est vérifié en CI.
+
+Après le clone : `git config core.hooksPath .githooks` — le hook pre-push
+rejoue toute la vérification (`npm run verif`) avant chaque push.

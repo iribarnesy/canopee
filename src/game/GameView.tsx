@@ -215,6 +215,7 @@ export function GameView() {
   const [overlay, setOverlay] = useState<Overlay>("eau");
   const [especeId, setEspeceId] = useState("betula_pendula");
   const [rayonChaulage, setRayonChaulage] = useState(8);
+  const [semainesSaison, setSemainesSaison] = useState(4);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
 
   const { station, snapshot } = game;
@@ -304,8 +305,10 @@ export function GameView() {
             {tresorerie.toFixed(0)} €
           </strong>
           <span>
-            ⏱ {snapshot.economy.hoursUsedWeek.toFixed(0)}/{60 * snapshot.economy.uth} h ·{" "}
-            {snapshot.economy.uth} UTH
+            ⏱ {snapshot.economy.hoursUsedWeek.toFixed(0)}/{60 * snapshot.economy.uth} h · vous
+            {snapshot.economy.ouvriersCdi > 0 && ` + ${snapshot.economy.ouvriersCdi} CDI`}
+            {snapshot.economy.saisonniersFinSemaine.length > 0 &&
+              ` + ${snapshot.economy.saisonniersFinSemaine.length} sais.`}
           </span>
           <span>
             🌡 {snapshot.weather.tMean.toFixed(0)} °C · 🌧 {snapshot.weather.rainMm.toFixed(0)} mm
@@ -388,13 +391,36 @@ export function GameView() {
           <button
             type="button"
             style={btn()}
-            onClick={() => game.dispatch({ type: "embaucher" })}
-            title="600 €/sem, première semaine payée d'avance — embaucher la semaine d'une récolte = saisonnier"
+            onClick={() =>
+              game.dispatch({ type: "embaucher", contrat: "saisonnier", semaines: semainesSaison })
+            }
+            title="Payé d'avance (700 €/sem), repart tout seul à la fin du contrat — l'outil des récoltes"
           >
-            👷 Embaucher
+            👷 Saisonnier {semainesSaison} sem ({semainesSaison * 700} €)
           </button>
-          <button type="button" style={btn()} onClick={() => game.dispatch({ type: "licencier" })}>
-            Licencier
+          <input
+            type="range"
+            min={1}
+            max={12}
+            value={semainesSaison}
+            onChange={(e) => setSemainesSaison(Number(e.target.value))}
+            style={{ verticalAlign: "middle", width: 70 }}
+          />
+          <button
+            type="button"
+            style={btn()}
+            onClick={() => game.dispatch({ type: "embaucher", contrat: "cdi" })}
+            title="600 €/sem, rupture 1 200 € (indemnités + préavis)"
+          >
+            👷 CDI
+          </button>
+          <button
+            type="button"
+            style={btn()}
+            onClick={() => game.dispatch({ type: "licencier" })}
+            title="Rompre un CDI : 1 200 € d'indemnités"
+          >
+            Licencier (1 200 €)
           </button>
           {mode === "planter" && (
             <div style={{ marginTop: 6 }}>

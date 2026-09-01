@@ -26,8 +26,12 @@ export const PLANT_HOURS = 1;
 export const PLANT_MIN_SPACING_M = 1;
 /** prix de vente du bois énergie, €/m³ *(à calibrer ; bois d'œuvre en V1)* */
 export const WOOD_PRICE_EUR_M3 = 35;
-/** salaire hebdomadaire chargé d'un ouvrier, € *(à calibrer)* */
+/** salaire hebdomadaire chargé d'un ouvrier en CDI, € *(à calibrer)* */
 export const SALARY_EUR_WEEK = 600;
+/** salaire hebdomadaire d'un saisonnier (précarité incluse), payé d'avance, € */
+export const SEASONAL_EUR_WEEK = 700;
+/** indemnités + préavis à la rupture d'un CDI, € */
+export const SEVERANCE_EUR = 1200;
 
 /** chaulage : coût et temps par m² *(à calibrer)* */
 export const LIME_EUR_M2 = 0.02;
@@ -46,13 +50,25 @@ export interface EconomyState {
   hoursUsedWeek: number;
   /** heures consommées depuis le début de l'année (affichage UTH) */
   hoursUsedYear: number;
-  /** nombre d'UTH disponibles (1 = le joueur seul ; embauche en V1) */
+  /** UTH disponibles = 1 (le joueur) + CDI + saisonniers actifs (recalculé chaque semaine) */
   uth: number;
+  /** ouvriers permanents (salaire hebdo ; rupture = indemnités) */
+  ouvriersCdi: number;
+  /** contrats saisonniers en cours : semaine de fin (exclusive) de chacun */
+  saisonniersFinSemaine: number[];
   bankrupt: boolean;
 }
 
 export function createEconomy(treasuryEur: number): EconomyState {
-  return { treasuryEur, hoursUsedWeek: 0, hoursUsedYear: 0, uth: 1, bankrupt: false };
+  return {
+    treasuryEur,
+    hoursUsedWeek: 0,
+    hoursUsedYear: 0,
+    uth: 1,
+    ouvriersCdi: 0,
+    saisonniersFinSemaine: [],
+    bankrupt: false,
+  };
 }
 
 export type GameAction =
@@ -75,11 +91,19 @@ export type GameAction =
       treeIds: number[];
     }
   | {
-      /** embauche d'un ouvrier permanent : +1 UTH, salaire hebdomadaire (§10) */
+      /**
+       * Embauche (§10). CDI : 600 €/sem (1re semaine payée à l'embauche),
+       * rupture 1 200 €. Saisonnier : 700 €/sem payées d'avance pour
+       * `semaines` semaines, le contrat expire tout seul — l'outil des
+       * pointes de récolte. `contrat` absent = CDI (vieux journaux).
+       */
       type: "embaucher";
       week: number;
+      contrat?: "cdi" | "saisonnier";
+      semaines?: number;
     }
   | {
+      /** rupture d'un CDI : indemnités + préavis (1 200 €) */
       type: "licencier";
       week: number;
     }
@@ -375,8 +399,30 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
     case "recolter":
       return applyRecolter(state, action);
     case "embaucher": {
-      // La première semaine de salaire se paie À L'EMBAUCHE : embaucher pour
-      // une seule semaine (saisonnier de récolte) coûte donc son vrai prix.
+      const contrat = action.contrat ?? "cdi";
+      if (contrat === "saisonnier") {
+        const semaines = Math.max(1, Math.round(action.semaines ?? 4));
+        const cost = semaines * SEASONAL_EUR_WEEK;
+        if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+          return { state, refusals: [refuse(action.week, "embaucher", "découvert plafonné")] };
+        }
+        return {
+          state: {
+            ...state,
+            economy: {
+              ...state.economy,
+              uth: state.economy.uth + 1,
+              treasuryEur: state.economy.treasuryEur - cost,
+              saisonniersFinSemaine: [
+                ...state.economy.saisonniersFinSemaine,
+                action.week + semaines,
+              ],
+            },
+          },
+          refusals: [],
+        };
+      }
+      // CDI : la première semaine se paie à l'embauche, le reste chaque semaine.
       if (state.economy.treasuryEur - SALARY_EUR_WEEK < OVERDRAFT_LIMIT_EUR) {
         return { state, refusals: [refuse(action.week, "embaucher", "découvert plafonné")] };
       }
@@ -386,20 +432,40 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
           economy: {
             ...state.economy,
             uth: state.economy.uth + 1,
+            ouvriersCdi: state.economy.ouvriersCdi + 1,
             treasuryEur: state.economy.treasuryEur - SALARY_EUR_WEEK,
           },
         },
         refusals: [],
       };
     }
-    case "licencier":
+    case "licencier": {
+      if (state.economy.ouvriersCdi === 0) {
+        return {
+          state,
+          refusals: [
+            refuse(
+              action.week,
+              "licencier",
+              "aucun ouvrier en CDI (les saisonniers expirent seuls)",
+            ),
+          ],
+        };
+      }
+      // Indemnités dues même en difficulté : licencier n'est jamais refusé.
       return {
         state: {
           ...state,
-          economy: { ...state.economy, uth: Math.max(1, state.economy.uth - 1) },
+          economy: {
+            ...state.economy,
+            uth: Math.max(1, state.economy.uth - 1),
+            ouvriersCdi: state.economy.ouvriersCdi - 1,
+            treasuryEur: state.economy.treasuryEur - SEVERANCE_EUR,
+          },
         },
         refusals: [],
       };
+    }
     case "chauler":
       return applyChauler(state, action);
   }

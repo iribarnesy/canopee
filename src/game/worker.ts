@@ -82,10 +82,16 @@ function performAction(action: GameAction) {
       if (dEur > 0) event("🧺", `Récolte : ${eur} (${dHeures.toFixed(1)} h)`);
       break;
     case "embaucher":
-      if (dEur < 0) event("👷", `Ouvrier embauché (600 €/sem, 1re semaine payée d'avance)`);
+      if (dEur < 0)
+        event(
+          "👷",
+          action.contrat === "saisonnier"
+            ? `Saisonnier embauché ${Math.max(1, Math.round(action.semaines ?? 4))} semaines (${eur})`
+            : `Ouvrier embauché en CDI (600 €/sem, 1re semaine payée d'avance)`,
+        );
       break;
     case "licencier":
-      event("👋", "Ouvrier licencié");
+      if (dEur < 0) event("👋", `CDI rompu : ${eur} d'indemnités`);
       break;
     case "chauler":
       event("🪨", `Chaulage : ${eur} (${dHeures.toFixed(1)} h)`);
@@ -174,6 +180,14 @@ function stepWeeks(n: number) {
     const ticked = tick(state, w);
     lastFluxes = ticked.fluxes;
     state = beginWeek(ticked.state);
+    const finis =
+      before.economy.saisonniersFinSemaine.length - state.economy.saisonniersFinSemaine.length;
+    if (finis > 0) {
+      event(
+        "👋",
+        `Fin de contrat : ${finis} saisonnier${finis > 1 ? "s" : ""} reparti${finis > 1 ? "s" : ""}`,
+      );
+    }
 
     // ── Fil d'événements : ce qui a changé cette semaine ────────────────────
     const weekOfYear = before.week % 52;
@@ -244,7 +258,7 @@ function stepWeeks(n: number) {
           post({
             type: "autopause",
             reason:
-              "récolte auto incomplète : plus assez d'heures cette semaine — embauchez ou récoltez à la main",
+              "récolte auto incomplète : plus assez d'heures cette semaine — embauchez un saisonnier ou récoltez à la main",
           });
           prevFruitsReadyKg = 0;
           return;
