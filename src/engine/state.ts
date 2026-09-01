@@ -29,6 +29,8 @@ export interface Station {
   initialMineralNKgHa: number;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
+  /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
+  voisinage: { especeId: string; semisParAn: number }[];
 }
 
 export function gridDims(station: Station): GridDims {
@@ -43,6 +45,11 @@ export interface SoilState {
   excessMm: number[];
   /** azote minéral, g/m² (1 kg/ha = 0,1 g/m²) */
   mineralNG: number[];
+  /** azote de la litière au sol, g/m² (libéré vers le minéral en se décomposant) */
+  litterNG: number[];
+  /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
+   * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
+  litterK: number[];
 }
 
 export interface GameState {
@@ -70,6 +77,12 @@ export interface TickFluxes {
   mineralizationKgHa: number;
   uptakeKgHa: number;
   leachedKgHa: number;
+  /** N retourné au sol par la chute des feuilles (recyclage interne), kg/ha */
+  litterfallKgHa: number;
+  /** N libéré par la décomposition de la litière, kg/ha */
+  litterDecayKgHa: number;
+  /** N NOUVEAU entré par la fixation symbiotique (litière des fixateurs), kg/ha */
+  fixationKgHa: number;
 }
 
 export function createGameState(station: Station, rng: RngState): GameState {
@@ -82,6 +95,8 @@ export function createGameState(station: Station, rng: RngState): GameState {
       waterMm: new Array(n).fill(station.ruMm),
       excessMm: new Array(n).fill(0),
       mineralNG: new Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
+      litterNG: new Array(n).fill(0),
+      litterK: new Array(n).fill(0),
     },
     trees: [],
     nextTreeId: 1,
@@ -107,6 +122,7 @@ export function plantAt(
     heightM,
     stress: 0,
     alive: true,
+    uptakeYearG: 0,
   };
   return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
 }
@@ -138,6 +154,7 @@ export function plantScattered(
       heightM,
       stress: 0,
       alive: true,
+      uptakeYearG: 0,
     });
   }
   return { ...state, trees, nextTreeId: state.nextTreeId + count, rng };

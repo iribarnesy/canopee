@@ -25,13 +25,17 @@ export function runYears(sc: StationClimat, years: number, opts: RunOptions = {}
   return state;
 }
 
-/** Hauteur moyenne des arbres vivants d'une espèce (0 si tous morts). */
-export function meanHeight(state: GameState, especeId: string): number {
-  const alive = state.trees.filter((t) => t.especeId === especeId && t.alive);
+/**
+ * Hauteur moyenne des arbres vivants d'une espèce (0 si tous morts).
+ * `maxId` restreint à la cohorte plantée au départ (les recrues de la
+ * régénération naturelle ont des ids supérieurs).
+ */
+export function meanHeight(state: GameState, especeId: string, maxId = Infinity): number {
+  const alive = state.trees.filter((t) => t.especeId === especeId && t.alive && t.id <= maxId);
   if (alive.length === 0) return 0;
   return alive.reduce((s, t) => s + t.heightM, 0) / alive.length;
 }
 
-export function aliveCount(state: GameState, especeId: string): number {
-  return state.trees.filter((t) => t.especeId === especeId && t.alive).length;
+export function aliveCount(state: GameState, especeId: string, maxId = Infinity): number {
+  return state.trees.filter((t) => t.especeId === especeId && t.alive && t.id <= maxId).length;
 }

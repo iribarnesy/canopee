@@ -25,6 +25,10 @@ export const LANDE_SECHE: StationClimat = {
     mineralizationPotentialKgHaWeek: 0.6, // sol pauvre : ~20-25 kg N/ha/an effectifs
     initialMineralNKgHa: 15,
     coteM: 100,
+    voisinage: [
+      { especeId: "pinus_sylvestris", semisParAn: 4 },
+      { especeId: "betula_pendula", semisParAn: 3 },
+    ],
   },
   climat: {
     tMeanAnnual: 13.5,
@@ -47,6 +51,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
     mineralizationPotentialKgHaWeek: 2.5,
     initialMineralNKgHa: 40,
     coteM: 100,
+    voisinage: [],
   },
   climat: {
     tMeanAnnual: 12,
@@ -69,6 +74,7 @@ export const LIMON_RICHE: StationClimat = {
     mineralizationPotentialKgHaWeek: 3, // ~110-130 kg N/ha/an effectifs
     initialMineralNKgHa: 60,
     coteM: 100,
+    voisinage: [],
   },
   climat: {
     tMeanAnnual: 11.5,
@@ -91,9 +97,40 @@ export const LIMON_PAUVRE_N: StationClimat = {
   climat: LIMON_RICHE.climat,
 };
 
+/**
+ * Friche sur limon moyen, 50 × 50 m : la station du test de succession
+ * émergente — on ne plante rien, le paysage voisin colonise.
+ */
+export const FRICHE_LIMON: StationClimat = {
+  station: {
+    id: "friche-limon",
+    nom: "Friche sur limon (succession)",
+    latitudeDeg: 47.5,
+    ruMm: 140,
+    excessCapacityMm: 50,
+    drainagePerWeekMm: 30,
+    mineralizationPotentialKgHaWeek: 2.5,
+    initialMineralNKgHa: 40,
+    coteM: 50,
+    voisinage: [
+      { especeId: "betula_pendula", semisParAn: 6 },
+      { especeId: "pinus_sylvestris", semisParAn: 3 },
+      { especeId: "fagus_sylvatica", semisParAn: 2 },
+    ],
+  },
+  climat: {
+    tMeanAnnual: 11.5,
+    tSeasonalAmplitude: 7,
+    tDiurnalRange: 8,
+    rainAnnualMm: 850,
+    rainWinterShare: 0.55,
+  },
+};
+
 export const STATIONS_V0: readonly StationClimat[] = [
   LANDE_SECHE,
   VALLEE_ENGORGEE,
   LIMON_RICHE,
   LIMON_PAUVRE_N,
+  FRICHE_LIMON,
 ];

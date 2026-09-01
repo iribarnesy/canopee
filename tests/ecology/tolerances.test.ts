@@ -25,12 +25,12 @@ describe("engorgement (fond de vallée, drainage lent)", () => {
   });
 
   it("l'aulne glutineux prospère (atlas : tolère l'engorgement, berges)", () => {
-    expect(aliveCount(state, "alnus_glutinosa")).toBe(10);
-    expect(meanHeight(state, "alnus_glutinosa")).toBeGreaterThan(4);
+    expect(aliveCount(state, "alnus_glutinosa", 20)).toBe(10);
+    expect(meanHeight(state, "alnus_glutinosa", 20)).toBeGreaterThan(4);
   });
 
   it("le chêne pubescent meurt (xérophile des coteaux secs)", () => {
-    expect(aliveCount(state, "quercus_pubescens")).toBe(0);
+    expect(aliveCount(state, "quercus_pubescens", 20)).toBe(0);
   });
 });
 
@@ -44,14 +44,14 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
   });
 
   it("les xérophiles (pin sylvestre, chêne pubescent) tiennent", () => {
-    expect(aliveCount(state, "pinus_sylvestris")).toBe(10);
-    expect(aliveCount(state, "quercus_pubescens")).toBe(10);
-    expect(meanHeight(state, "pinus_sylvestris")).toBeGreaterThan(2);
+    expect(aliveCount(state, "pinus_sylvestris", 30)).toBe(10);
+    expect(aliveCount(state, "quercus_pubescens", 30)).toBe(10);
+    expect(meanHeight(state, "pinus_sylvestris", 30)).toBeGreaterThan(2);
   });
 
   it("le hêtre souffre : mort, ou nettement dominé par le pin", () => {
-    const fagus = meanHeight(state, "fagus_sylvatica");
-    const pinus = meanHeight(state, "pinus_sylvestris");
+    const fagus = meanHeight(state, "fagus_sylvatica", 30);
+    const pinus = meanHeight(state, "pinus_sylvestris", 30);
     expect(fagus).toBeLessThan(pinus * 0.6);
   });
 });
@@ -66,14 +66,14 @@ describe("azote (même limon, riche vs pauvre)", () => {
   const pauvre = runYears(LIMON_PAUVRE_N, YEARS, { plantations });
 
   it("le hêtre (exigeant, non fixateur) pousse nettement moins sur sol pauvre en N", () => {
-    const hRiche = meanHeight(riche, "fagus_sylvatica");
-    const hPauvre = meanHeight(pauvre, "fagus_sylvatica");
+    const hRiche = meanHeight(riche, "fagus_sylvatica", 300);
+    const hPauvre = meanHeight(pauvre, "fagus_sylvatica", 300);
     expect(hPauvre).toBeLessThan(hRiche * 0.8);
   });
 
   it("l'aulne (fixateur) est quasi insensible à la pauvreté en azote", () => {
-    const hRiche = meanHeight(riche, "alnus_glutinosa");
-    const hPauvre = meanHeight(pauvre, "alnus_glutinosa");
+    const hRiche = meanHeight(riche, "alnus_glutinosa", 300);
+    const hPauvre = meanHeight(pauvre, "alnus_glutinosa", 300);
     expect(hPauvre).toBeGreaterThan(hRiche * 0.9);
   });
 });
@@ -87,10 +87,10 @@ describe("station confort (limon riche, peuplement clair)", () => {
   });
 
   it("tout le monde survit, et le pionnier (bouleau) démarre plus vite que le hêtre", () => {
-    expect(aliveCount(state, "betula_pendula")).toBe(10);
-    expect(aliveCount(state, "fagus_sylvatica")).toBe(10);
-    expect(meanHeight(state, "betula_pendula")).toBeGreaterThan(
-      meanHeight(state, "fagus_sylvatica"),
+    expect(aliveCount(state, "betula_pendula", 20)).toBe(10);
+    expect(aliveCount(state, "fagus_sylvatica", 20)).toBe(10);
+    expect(meanHeight(state, "betula_pendula", 20)).toBeGreaterThan(
+      meanHeight(state, "fagus_sylvatica", 20),
     );
   });
 });

@@ -21,10 +21,11 @@ function meanWaterStock(state: GameState): number {
   return sum / n;
 }
 
+/** Stock d'azote du sol = minéral + litière, kg/ha. */
 function meanNStockKgHa(state: GameState): number {
   const n = state.soil.mineralNG.length;
   let sum = 0;
-  for (let i = 0; i < n; i++) sum += state.soil.mineralNG[i] ?? 0;
+  for (let i = 0; i < n; i++) sum += (state.soil.mineralNG[i] ?? 0) + (state.soil.litterNG[i] ?? 0);
   return (sum / n) * 10;
 }
 
@@ -47,9 +48,11 @@ function checkConservation(sc: StationClimat, years: number) {
       fluxes.evapMm + fluxes.transpirationMm + fluxes.drainageMm + fluxes.overflowMm + deltaWater,
     ).toBeCloseTo(fluxes.rainMm, 6);
 
+    // Entrées : minéralisation de l'humus + retour de litière (recyclage des
+    // arbres) + fixation symbiotique. Sorties : prélèvements + lessivage.
     const deltaN = meanNStockKgHa(next) - beforeN;
     expect(fluxes.uptakeKgHa + fluxes.leachedKgHa + deltaN).toBeCloseTo(
-      fluxes.mineralizationKgHa,
+      fluxes.mineralizationKgHa + fluxes.litterfallKgHa + fluxes.fixationKgHa,
       6,
     );
     state = next;

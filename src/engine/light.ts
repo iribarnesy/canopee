@@ -5,6 +5,8 @@
  * couronne est décalée vers le NORD (+y) d'une fraction de la hauteur —
  * le soleil est au sud en France : planter en lignes est-ouest ou nord-sud
  * n'a pas le même effet. Les caducs n'ombragent pas hors saison de végétation.
+ * Un index spatial (paniers de 12 m) borne le coût quand la régénération
+ * multiplie les tiges.
  */
 
 import { getEspece } from "./especes";
@@ -13,39 +15,127 @@ import type { TreeState } from "./trees";
 const BEER_LAMBERT_K = 0.5;
 /** Décalage de l'ombre vers le nord, en fraction de la hauteur (moyenne annuelle, lat ~45°). */
 const SHADOW_NORTH_OFFSET = 0.4;
+const BUCKET_M = 12;
+/**
+ * Extinction maximale (saturation douce) : les couronnes superposées se
+ * chevauchent et laissent des trouées de ciel, elles ne s'empilent pas en
+ * couches parfaites. exp(−4,5) ≈ 1,1 % de lumière au sol — l'ordre de grandeur
+ * mesuré sous les couverts les plus sombres *(à calibrer)*.
+ */
+const MAX_EXTINCTION = 4.5;
 
 /** Rayon du houppier, m. */
 export function crownRadiusM(heightM: number, houppierRatio: number): number {
   return houppierRatio * heightM;
 }
 
+interface Shadow {
+  cx: number;
+  cy: number;
+  r2: number;
+  heightM: number;
+  extinction: number;
+}
+
+/** Ombres actives (arbres vivants, en feuilles), indexées par panier spatial. */
+function buildShadowIndex(trees: readonly TreeState[], leavesOn: boolean): Map<number, Shadow[]> {
+  const buckets = new Map<number, Shadow[]>();
+  for (const tree of trees) {
+    if (!tree.alive) continue;
+    const espece = getEspece(tree.especeId);
+    if (espece.lumiere.caduc && !leavesOn) continue;
+    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+    if (r <= 0) continue;
+    const shadow: Shadow = {
+      cx: tree.x,
+      cy: tree.y + SHADOW_NORTH_OFFSET * tree.heightM,
+      r2: r * r,
+      heightM: tree.heightM,
+      extinction: BEER_LAMBERT_K * espece.lumiere.lai,
+    };
+    const bx0 = Math.floor((shadow.cx - r) / BUCKET_M);
+    const bx1 = Math.floor((shadow.cx + r) / BUCKET_M);
+    const by0 = Math.floor((shadow.cy - r) / BUCKET_M);
+    const by1 = Math.floor((shadow.cy + r) / BUCKET_M);
+    for (let by = by0; by <= by1; by++) {
+      for (let bx = bx0; bx <= bx1; bx++) {
+        const key = by * 100_000 + bx;
+        const list = buckets.get(key);
+        if (list) list.push(shadow);
+        else buckets.set(key, [shadow]);
+      }
+    }
+  }
+  return buckets;
+}
+
+function extinctionAt(
+  buckets: Map<number, Shadow[]>,
+  x: number,
+  y: number,
+  heightM: number,
+): number {
+  const key = Math.floor(y / BUCKET_M) * 100_000 + Math.floor(x / BUCKET_M);
+  const list = buckets.get(key);
+  if (!list) return 0;
+  let extinction = 0;
+  for (const s of list) {
+    // Plus haut = ombrage plein ; codominant (dans les 25 % sous la cible) =
+    // ombrage latéral partiel. Sans lui, une cohorte dense de même hauteur ne
+    // se gênerait jamais et l'auto-éclaircie n'émergerait pas.
+    let weight: number;
+    if (s.heightM > heightM) weight = 1;
+    else if (s.heightM > 0.75 * heightM && s.heightM < heightM) weight = 0.4;
+    else continue;
+    const dx = x - s.cx;
+    const dy = y - s.cy;
+    if (dx * dx + dy * dy <= s.r2) extinction += weight * s.extinction;
+  }
+  // Une ou deux couronnes s'additionnent pleinement ; les empilements profonds
+  // saturent (chevauchements, trouées de ciel) vers MAX_EXTINCTION.
+  if (extinction <= 2) return extinction;
+  const span = MAX_EXTINCTION - 2;
+  return 2 + span * (1 - Math.exp(-(extinction - 2) / span));
+}
+
 /**
  * Lumière relative ∈ [0,1] reçue par chaque arbre vivant (index aligné sur
  * `trees`, 1 pour les morts). `leavesOn` : true si les caducs sont en feuilles.
- * O(n²) borné par les rayons — index spatial quand la régénération multipliera
- * les tiges.
  */
 export function computeLight(trees: readonly TreeState[], leavesOn: boolean): number[] {
-  const light = trees.map(() => 1);
-  for (let i = 0; i < trees.length; i++) {
-    const target = trees[i];
-    if (!target || !target.alive) continue;
-    let extinction = 0;
-    for (let j = 0; j < trees.length; j++) {
-      if (i === j) continue;
-      const shader = trees[j];
-      if (!shader || !shader.alive || shader.heightM <= target.heightM) continue;
-      const espece = getEspece(shader.especeId);
-      if (espece.lumiere.caduc && !leavesOn) continue;
-      const r = crownRadiusM(shader.heightM, espece.lumiere.houppierRatio);
-      const shadowY = shader.y + SHADOW_NORTH_OFFSET * shader.heightM;
-      const dx = target.x - shader.x;
-      const dy = target.y - shadowY;
-      if (dx * dx + dy * dy <= r * r) {
-        extinction += BEER_LAMBERT_K * espece.lumiere.lai;
-      }
+  const buckets = buildShadowIndex(trees, leavesOn);
+  return trees.map((tree) =>
+    tree.alive ? Math.exp(-extinctionAt(buckets, tree.x, tree.y, tree.heightM)) : 1,
+  );
+}
+
+/** Lumière relative au sol en un point (pour l'installation des semis). */
+export function lightAtPoint(
+  trees: readonly TreeState[],
+  x: number,
+  y: number,
+  leavesOn: boolean,
+): number {
+  const buckets = buildShadowIndex(trees, leavesOn);
+  return Math.exp(-extinctionAt(buckets, x, y, 0));
+}
+
+/**
+ * Lumière relative au sol de CHAQUE cellule (microclimat : l'évaporation est
+ * réduite sous couvert, docs/regles.md §3).
+ */
+export function computeGroundLight(
+  trees: readonly TreeState[],
+  widthM: number,
+  heightM: number,
+  leavesOn: boolean,
+): number[] {
+  const buckets = buildShadowIndex(trees, leavesOn);
+  const out = new Array<number>(widthM * heightM);
+  for (let y = 0; y < heightM; y++) {
+    for (let x = 0; x < widthM; x++) {
+      out[y * widthM + x] = Math.exp(-extinctionAt(buckets, x + 0.5, y + 0.5, 0));
     }
-    light[i] = Math.exp(-extinction);
   }
-  return light;
+  return out;
 }

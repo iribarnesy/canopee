@@ -25,6 +25,27 @@ function moistureFactor(moistureRatio: number, waterloggingRatio: number): numbe
   return dryness * anoxia;
 }
 
+/**
+ * Facteur climatique commun de l'activité des décomposeurs (humus ET litière) :
+ * T°, humidité, anoxie — la boucle microbienne du ch2-B.
+ */
+export function decompositionClimateFactor(
+  tMean: number,
+  moistureRatio: number,
+  waterloggingRatio: number,
+): number {
+  return temperatureFactor(tMean) * moistureFactor(moistureRatio, waterloggingRatio);
+}
+
+/**
+ * Vitesse de décomposition de base d'une litière, /semaine à conditions
+ * optimales, dérivée de son C/N : aulne (C/N 15) ≈ 0,04, aiguilles de pin
+ * (C/N 60) ≈ 0,01 *(à calibrer)*.
+ */
+export function litterDecayRate(cnRatio: number): number {
+  return 0.6 / Math.max(1, cnRatio);
+}
+
 export interface CellMineralizationInput {
   /** minéralisation potentielle de la cellule, g/m²/semaine en conditions optimales */
   potentialGWeek: number;
@@ -38,8 +59,7 @@ export interface CellMineralizationInput {
 export function cellMineralization(input: CellMineralizationInput): number {
   return (
     input.potentialGWeek *
-    temperatureFactor(input.tMean) *
-    moistureFactor(input.moistureRatio, input.waterloggingRatio)
+    decompositionClimateFactor(input.tMean, input.moistureRatio, input.waterloggingRatio)
   );
 }
 

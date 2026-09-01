@@ -25,6 +25,8 @@ export interface TreeState {
   /** points de stress cumulés ; l'arbre meurt à STRESS_LETHAL */
   stress: number;
   alive: boolean;
+  /** azote acquis depuis la dernière chute des feuilles, g (recyclé en litière) */
+  uptakeYearG: number;
 }
 
 /** Conditions de la semaine vues par UN arbre (sol local, canopée, météo). */
@@ -132,6 +134,9 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const espece = getEspece(tree.especeId);
   const season = seasonFactor(espece, env.tMean);
   const fSec = droughtFactor(espece, env.waterSatisfaction);
+  // Survie hydrique : seuil découplé du confort (le hêtre pousse mal en sec
+  // mais son semis survit ; l'aulne, lui, meurt vite hors sol frais).
+  const fSecSurvie = Math.min(1, env.waterSatisfaction / espece.eau.seuilStressSecheresse);
   const fEng = waterloggingFactor(espece, env.waterloggingRatio);
   const fLum = lightFactor(espece, env.light);
   const fN = espece.azote.fixateur ? 0.95 : env.nitrogenSatisfaction;
@@ -142,13 +147,21 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // saison de végétation : un arbre dormant ne consomme presque rien.
   const fLumSurvival =
     season > 0 ? Math.min(1, (0.5 * env.light) / espece.lumiere.compensation) : 1;
-  const survivalFactor = Math.min(fSec, fEng, fLumSurvival);
+  // Sénescence : passé ~85 % de la longévité, la vigueur décline puis l'arbre
+  // meurt (déterministe) — le moteur du cycle sylvigénétique (ch4-A).
+  const ageYears = tree.ageWeeks / 52;
+  const longevite = espece.regeneration.longeviteAns;
+  const fAge =
+    ageYears < 0.85 * longevite
+      ? 1
+      : Math.max(0, 1 - (ageYears - 0.85 * longevite) / (0.3 * longevite));
+  const survivalFactor = Math.min(fSecSurvie, fEng, fLumSurvival, fAge);
 
   // Croissance : potentiel × loi du minimum, asymptote vers la hauteur max.
   // Un arbre stressé pousse moins (il puise dans ses réserves, docs/regles.md §7.1).
   const stressPenalty = 1 - tree.stress / STRESS_LETHAL;
   const potentialM =
-    (espece.pousseMaxMAn / GROWING_WEEKS) * season * (1 - tree.heightM / espece.hauteurMaxM);
+    (espece.pousseMaxMAn / GROWING_WEEKS) * season * fAge * (1 - tree.heightM / espece.hauteurMaxM);
   const heightM = tree.heightM + Math.max(0, potentialM) * limitingFactor * stressPenalty;
 
   // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.

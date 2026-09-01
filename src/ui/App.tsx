@@ -23,6 +23,8 @@ import {
 
 const YEARS = 20;
 const TREES_PER_SPECIES = 30;
+/** ids ≤ ce seuil = cohorte plantée ; au-delà = recrues de la régénération */
+const PLANTED_MAX_ID = TREES_PER_SPECIES * 5;
 
 const SPECIES_COLORS: Record<string, string> = {
   alnus_glutinosa: "#2c6e49",
@@ -63,10 +65,13 @@ function simulate(sc: StationClimat): SimResult {
     const heights: Record<string, number> = {};
     const aliveCounts: Record<string, number> = {};
     for (const espece of ESPECES_V0) {
-      const alive = state.trees.filter((t) => t.especeId === espece.id && t.alive);
-      aliveCounts[espece.id] = alive.length;
+      // Moyennes sur la cohorte PLANTÉE ; les recrues sont comptées à part.
+      const planted = state.trees.filter(
+        (t) => t.especeId === espece.id && t.alive && t.id <= PLANTED_MAX_ID,
+      );
+      aliveCounts[espece.id] = planted.length;
       heights[espece.id] =
-        alive.length > 0 ? alive.reduce((s, t) => s + t.heightM, 0) / alive.length : 0;
+        planted.length > 0 ? planted.reduce((s, t) => s + t.heightM, 0) / planted.length : 0;
     }
     const waterArr = state.soil.waterMm;
     points.push({
@@ -258,18 +263,25 @@ export function App() {
           <span key={espece.id} style={{ marginRight: 16 }}>
             <span style={{ color: SPECIES_COLORS[espece.id], fontWeight: 700 }}>■</span>{" "}
             {espece.nom} : {(last?.heights[espece.id] ?? 0).toFixed(1)} m ·{" "}
-            {last?.aliveCounts[espece.id] ?? 0}/{TREES_PER_SPECIES} vivants
+            {last?.aliveCounts[espece.id] ?? 0}/{TREES_PER_SPECIES} plantés vivants
           </span>
         ))}
+      </p>
+      <p style={{ color: "#6b6250" }}>
+        Régénération naturelle :{" "}
+        {finalState.trees.filter((t) => t.alive && t.id > PLANTED_MAX_ID).length} recrues vivantes
+        (semis du voisinage et des adultes de la parcelle, positions seedées).
       </p>
       <ParcelMap state={finalState} />
       <p style={{ color: "#6b6250" }}>
         Dernière année — pluie {sum((p) => p.fluxes.rainMm)} mm · évaporation{" "}
         {sum((p) => p.fluxes.evapMm)} mm · transpiration {sum((p) => p.fluxes.transpirationMm)} mm ·
-        drainage {sum((p) => p.fluxes.drainageMm)} mm · minéralisation N{" "}
+        drainage {sum((p) => p.fluxes.drainageMm)} mm · débordement{" "}
+        {sum((p) => p.fluxes.overflowMm)} mm · minéralisation N{" "}
         {sum((p) => p.fluxes.mineralizationKgHa)} kg/ha · prélèvement N{" "}
         {sum((p) => p.fluxes.uptakeKgHa)} kg/ha · lessivage N {sum((p) => p.fluxes.leachedKgHa)}{" "}
-        kg/ha
+        kg/ha · retour litière N {sum((p) => p.fluxes.litterfallKgHa)} kg/ha · fixation N{" "}
+        {sum((p) => p.fluxes.fixationKgHa)} kg/ha
       </p>
     </main>
   );
