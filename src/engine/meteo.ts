@@ -1,0 +1,91 @@
+/**
+ * Météo hebdomadaire et évapotranspiration potentielle (ETP).
+ * ETP par Hargreaves-Samani (1985), rayonnement extraterrestre par FAO-56.
+ * Décision actée : Hargreaves (docs/regles.md §3).
+ */
+
+/** Météo d'une semaine de simulation. */
+export interface WeekWeather {
+  /** °C */
+  tMean: number;
+  tMin: number;
+  tMax: number;
+  /** mm sur la semaine */
+  rainMm: number;
+}
+
+const GSC = 0.082; // constante solaire, MJ·m⁻²·min⁻¹ (FAO-56)
+
+/** Jour de l'année (1–365) au milieu d'une semaine de simulation (0–51). */
+export function midWeekDayOfYear(week: number): number {
+  return Math.min(365, Math.round(week * 7 + 3.5) + 1);
+}
+
+/**
+ * Rayonnement extraterrestre Ra en MJ·m⁻²·jour⁻¹ (FAO-56, éq. 21).
+ * Latitude en degrés (positif = nord), dayOfYear 1–365.
+ */
+export function extraterrestrialRadiation(latitudeDeg: number, dayOfYear: number): number {
+  const phi = (latitudeDeg * Math.PI) / 180;
+  const dr = 1 + 0.033 * Math.cos((2 * Math.PI * dayOfYear) / 365);
+  const delta = 0.409 * Math.sin((2 * Math.PI * dayOfYear) / 365 - 1.39);
+  // Angle horaire au coucher ; clamp pour les latitudes/saisons extrêmes.
+  const x = Math.min(1, Math.max(-1, -Math.tan(phi) * Math.tan(delta)));
+  const omegaS = Math.acos(x);
+  return (
+    ((24 * 60) / Math.PI) *
+    GSC *
+    dr *
+    (omegaS * Math.sin(phi) * Math.sin(delta) + Math.cos(phi) * Math.cos(delta) * Math.sin(omegaS))
+  );
+}
+
+/**
+ * ETP hebdomadaire (mm) par Hargreaves-Samani :
+ * ET0_jour = 0,0023 × Ra(mm) × (Tmoy + 17,8) × √(Tmax − Tmin)
+ * Ra converti de MJ·m⁻²·j⁻¹ en mm·j⁻¹ par ×0,408 (FAO-56).
+ */
+export function weeklyEtpHargreaves(latitudeDeg: number, week: number, w: WeekWeather): number {
+  const ra = extraterrestrialRadiation(latitudeDeg, midWeekDayOfYear(week));
+  const raMm = 0.408 * ra;
+  const amplitude = Math.max(0, w.tMax - w.tMin);
+  const daily = 0.0023 * raMm * (w.tMean + 17.8) * Math.sqrt(amplitude);
+  return Math.max(0, daily) * 7;
+}
+
+/** Paramètres d'un générateur d'année météo synthétique (placeholder avant DRIAS). */
+export interface SyntheticClimate {
+  /** °C, moyenne annuelle */
+  tMeanAnnual: number;
+  /** °C, demi-amplitude saisonnière (Tjuillet − Tannuelle) */
+  tSeasonalAmplitude: number;
+  /** °C, écart quotidien min/max autour de la moyenne */
+  tDiurnalRange: number;
+  /** mm/an */
+  rainAnnualMm: number;
+  /** part de la pluie tombant sur le semestre d'hiver, 0.5 = uniforme */
+  rainWinterShare: number;
+}
+
+/**
+ * Année météo synthétique, purement déterministe (sinusoïdes, aucun aléa).
+ * Sert aux tests et au développement tant que les séries DRIAS ne sont pas intégrées.
+ */
+export function syntheticYear(c: SyntheticClimate): WeekWeather[] {
+  const weeks: WeekWeather[] = [];
+  for (let week = 0; week < 52; week++) {
+    // Pic de chaleur fin juillet (semaine ~29), creux fin janvier.
+    const phase = (2 * Math.PI * (week - 29)) / 52;
+    const tMean = c.tMeanAnnual + c.tSeasonalAmplitude * Math.cos(phase);
+    // Pluie : plus abondante en hiver selon rainWinterShare.
+    const winterWeight = 1 + (2 * c.rainWinterShare - 1) * -Math.cos(phase);
+    const rainMm = (c.rainAnnualMm / 52) * winterWeight;
+    weeks.push({
+      tMean,
+      tMin: tMean - c.tDiurnalRange / 2,
+      tMax: tMean + c.tDiurnalRange / 2,
+      rainMm,
+    });
+  }
+  return weeks;
+}
