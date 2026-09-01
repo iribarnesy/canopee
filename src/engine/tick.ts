@@ -40,7 +40,6 @@ import { gridDims, weekOfYear } from "./state";
 import type { TreeState } from "./trees";
 import {
   fractionsRacinairesParHorizon,
-  profondeurRacinesCm,
   rootRadiusM,
   seasonFactor,
   tickTree,
@@ -218,8 +217,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const espece = getEspece(tree.especeId);
     const season = seasonFactor(espece, weather.tMean);
     const rootR = rootRadiusM(espece, tree.heightM);
-    const profondeur = profondeurRacinesCm(espece, tree.heightM, solPenetrableCm);
-    const fractions = fractionsRacinairesParHorizon(epaisseurs, profondeur);
+    const fractions = fractionsRacinairesParHorizon(epaisseurs, tree.rootDepthCm);
     rootFractions[t] = fractions;
     let n = 0;
     let wlSum = 0;
@@ -334,6 +332,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       light: light[t] ?? 1,
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
       phMean: phMean[t] ?? 7,
+      solPenetrableCm,
       tMean: weather.tMean,
     });
     const next = result.tree;

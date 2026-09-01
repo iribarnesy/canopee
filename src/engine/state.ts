@@ -190,6 +190,7 @@ export function plantAt(
     fruitsKg: 0,
     fruitProgress: 0,
     bloomFrosted: false,
+    rootDepthCm: 20,
   };
   return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
 }
@@ -225,6 +226,7 @@ export function plantScattered(
       fruitsKg: 0,
       fruitProgress: 0,
       bloomFrosted: false,
+      rootDepthCm: 20,
     });
   }
   return { ...state, trees, nextTreeId: state.nextTreeId + count, rng };

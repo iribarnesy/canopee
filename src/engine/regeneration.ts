@@ -134,6 +134,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       fruitsKg: 0,
       fruitProgress: 0,
       bloomFrosted: false,
+      rootDepthCm: 20,
     });
   };
 

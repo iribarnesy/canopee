@@ -33,6 +33,14 @@ export interface TreeState {
   fruitProgress: number;
   /** fleurs détruites par un gel tardif cette année (§7.2) */
   bloomFrosted: boolean;
+  /**
+   * Profondeur réellement explorée par les racines, cm. Ce n'est pas une
+   * propriété figée : l'arbre INVESTIT vers le bas quand la surface ne suffit
+   * plus (plasticité racinaire). Un sujet qui n'a jamais eu soif garde un
+   * système superficiel — et se retrouve vulnérable le jour où la sécheresse
+   * arrive.
+   */
+  rootDepthCm: number;
 }
 
 /** Conditions de la semaine vues par UN arbre (sol local, canopée, météo). */
@@ -47,6 +55,8 @@ export interface TreeEnvironment {
   nitrogenSatisfaction: number;
   /** pH moyen de la zone racinaire */
   phMean: number;
+  /** profondeur de sol pénétrable de la station, cm */
+  solPenetrableCm: number;
   /** °C moyenne de la semaine */
   tMean: number;
 }
@@ -67,11 +77,9 @@ const ROOT_CROWN_RATIO = 1.2;
 const TRANSPIRATION_COEFF = 0.9;
 
 /**
- * Profondeur explorée par les racines, cm : elle s'approfondit avec la taille
- * de l'arbre (un semis n'a que la surface) et bute sur ce que le sol permet
- * (roche, alios — `profondeurPenetrableCm`). C'est la dimension verticale de
- * la compétition : deux espèces peuvent partager le même mètre carré sans
- * puiser dans la même eau (critère E7).
+ * Profondeur que l'arbre POURRAIT atteindre : ce que son espèce et sa taille
+ * permettent, borné par ce que le sol laisse pénétrer (roche, alios).
+ * C'est un plafond, pas la profondeur réelle — voir `nouvelleProfondeurRacines`.
  */
 export function profondeurRacinesCm(
   espece: EspeceV0,
@@ -83,6 +91,35 @@ export function profondeurRacinesCm(
   const maturite = Math.min(1, (heightM / (0.6 * espece.hauteurMaxM)) ** 0.7);
   const potentiel = 25 + (espece.racines.profondeurMaxCm - 25) * maturite;
   return Math.max(15, Math.min(potentiel, solPenetrableCm));
+}
+
+/**
+ * Part du potentiel qu'un arbre développe même sans jamais manquer d'eau :
+ * un système de base, proportionné à sa taille, qui l'ancre et le nourrit.
+ */
+const RACINES_PLANCHER = 0.35;
+/** Vitesse maximale d'approfondissement d'un arbre assoiffé, cm/an *(à calibrer)*. */
+const APPROFONDISSEMENT_CM_AN = 25;
+
+/**
+ * Plasticité racinaire : l'arbre n'investit vers le bas que si la surface ne
+ * lui suffit pas. Comblé en eau, il garde un chevelu superficiel (économe) ;
+ * assoiffé, il descend chercher la réserve profonde. Les racines déjà faites
+ * ne disparaissent pas — la profondeur ne régresse jamais.
+ */
+export function nouvelleProfondeurRacines(
+  espece: EspeceV0,
+  tree: TreeState,
+  solPenetrableCm: number,
+  waterSatisfaction: number,
+  season: number,
+): number {
+  const potentiel = profondeurRacinesCm(espece, tree.heightM, solPenetrableCm);
+  const plancher = Math.min(potentiel, Math.max(15, RACINES_PLANCHER * potentiel));
+  // La soif (et elle seule) déclenche l'investissement vers le bas.
+  const soif = Math.max(0, 1 - waterSatisfaction);
+  const gain = (APPROFONDISSEMENT_CM_AN / 52) * season * soif;
+  return Math.min(potentiel, Math.max(plancher, tree.rootDepthCm + gain));
 }
 
 /**
@@ -228,6 +265,14 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
 
   const espece = getEspece(tree.especeId);
   const season = seasonFactor(espece, env.tMean);
+  // Plasticité racinaire : l'arbre approfondit s'il a manqué d'eau cette semaine.
+  const rootDepthCm = nouvelleProfondeurRacines(
+    espece,
+    tree,
+    env.solPenetrableCm,
+    env.waterSatisfaction,
+    season,
+  );
   const fSec = droughtFactor(espece, env.waterSatisfaction);
   // Survie hydrique : seuil découplé du confort (le hêtre pousse mal en sec
   // mais son semis survit ; l'aulne, lui, meurt vite hors sol frais).
@@ -270,7 +315,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const alive = stress < STRESS_LETHAL;
 
   return {
-    tree: { ...tree, ageWeeks: tree.ageWeeks + 1, heightM, stress, alive },
+    tree: { ...tree, ageWeeks: tree.ageWeeks + 1, heightM, stress, alive, rootDepthCm },
     limitingFactor,
   };
 }

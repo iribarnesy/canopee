@@ -24,21 +24,21 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
-| A. Sol, eau, atmosphère | 11 | 2 | 3 | 16 |
+| A. Sol, eau, atmosphère | 12 | 2 | 3 | 17 |
 | B. Lumière et structure | 5 | 2 | 3 | 10 |
 | C. Nutriments et cycles | 4 | 3 | 5 | 12 |
 | D. Climat et phénologie | 4 | 3 | 3 | 10 |
-| E. Interactions entre plantes | 4 | 3 | 4 | 11 |
+| E. Interactions entre plantes | 5 | 2 | 4 | 11 |
 | F. Dynamique des peuplements | 4 | 2 | 4 | 10 |
 | G. Faune et santé | 0 | 0 | 6 | 6 |
 | H. Gestion, économie, travail | 4 | 3 | 5 | 12 |
 | I. Carbone | 3 | 2 | 3 | 8 |
-| **Total** | **39** | **20** | **36** | **95** |
+| **Total** | **41** | **19** | **36** | **96** |
 
-**Score de réalisme : 39 pleins + 20 partiels sur 95 → ≈ 52 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 41 pleins + 19 partiels sur 96 → ≈ 53 %** *(un partiel compte 1/2)*.
 
-*Historique : 47 % (référentiel initial) → 52 % (horizons de sol, dérivation
-physique, profondeur racinaire).*
+*Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
+physique, profondeur et plasticité racinaires).*
 
 ---
 
@@ -56,6 +56,7 @@ physique, profondeur racinaire).*
 | A8 | Une nappe accessible soutient la végétation en été | 🟡 | recharge l'horizon profond ; pas encore de battement saisonnier |
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
 | A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
+| A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` |
 | A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ❌ | Aucune pente dans le moteur |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
@@ -118,7 +119,7 @@ physique, profondeur racinaire).*
 | E2 | Un fixateur voisin profite aux autres | ✅ | `litiere.test.ts` |
 | E3 | La facilitation domine en milieu contraint, la compétition en milieu riche | 🟡 | émergent, non testé comme tel |
 | E4 | Les espèces xérophiles transpirent moins par unité de feuillage (WUE) | 🟡 | dérivé du tempérament, à calibrer sur données |
-| E11 | Un pivot résiste à la sécheresse là où un traçant souffre | 🟡 | mécanisme en place, effet à quantifier |
+| E11 | Un pivot résiste à la sécheresse là où un traçant souffre | ✅ | `racines.test.ts` (sable sur limon : le pivot survit, le traçant meurt) |
 | E5 | Une haie brise-vent améliore la production sur 10-20 fois sa hauteur | ✅ | `windShelterAt` |
 | E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | ❌ | Champ prévu, non implémenté |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |

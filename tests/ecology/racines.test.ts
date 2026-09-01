@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
-import { syntheticYear } from "../../src/engine/meteo";
+import { syntheticYear as anneeSynthetique, syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { horizon, profondeurPenetrableCm } from "../../src/engine/soil";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
@@ -93,19 +93,73 @@ describe("complémentarité verticale sur sol contrasté", () => {
     expect(pivot[1] ?? 0).toBeGreaterThan(tracant[1] ?? 0);
   });
 
-  it("les deux espèces cohabitent sans que le peuplement s'effondre", () => {
+  it("le pivot atteint la réserve profonde et survit ; le traçant reste prisonnier du sable", () => {
     const weather = syntheticYear(LIMON_RICHE.climat);
     let state = createGameState(station, rngStateFromSeed(4));
-    state = plantAt(state, "quercus_pubescens", 12, 15, 4);
-    state = plantAt(state, "betula_pendula", 18, 15, 4);
+    state = plantAt(state, "quercus_pubescens", 12, 15, 4); // pivot
+    state = plantAt(state, "betula_pendula", 18, 15, 4); // traçant
     for (let i = 0; i < 12 * 52; i++) {
       const w = weather[i % weather.length];
       if (!w) throw new Error("météo manquante");
       state = advanceWeek(state, w, []).state;
     }
-    // Les deux sujets plantés (ids 1 et 2) tiennent — le reste est de la
-    // régénération naturelle du bouleau, qui a atteint l'âge de grainer.
-    const plantes = state.trees.filter((t) => t.id <= 2 && t.alive);
-    expect(plantes).toHaveLength(2);
+    const pivot = state.trees.find((t) => t.id === 1);
+    const tracant = state.trees.find((t) => t.id === 2);
+    expect(pivot?.alive).toBe(true);
+    // Il est allé chercher l'eau sous le sable superficiel.
+    expect(pivot?.rootDepthCm ?? 0).toBeGreaterThan(50);
+    expect(tracant?.alive ?? false).toBe(false);
+  });
+});
+
+describe("plasticité racinaire : on ne creuse que si on a soif", () => {
+  /** Sol profond identique ; seul le régime hydrique change. */
+  const PROFIL = [
+    horizon(25, { sable: 60, limon: 30, argile: 10 }, { moPct: 2, ph: 6.5 }),
+    horizon(120, { sable: 30, limon: 55, argile: 15 }, { moPct: 0.9, ph: 6.8 }),
+  ];
+
+  function eleverUnChene(nappeMm: number, pluieAnnuelleMm: number, ans: number) {
+    const station: Station = {
+      ...LIMON_RICHE.station,
+      id: "plasticite",
+      profil: PROFIL,
+      coteM: 30,
+      voisinage: [],
+      remonteeNappeMmSemaine: nappeMm,
+      ventExposition: 0.3,
+      ruMm: 200,
+    };
+    const weather = anneeSynthetique({ ...LIMON_RICHE.climat, rainAnnualMm: pluieAnnuelleMm });
+    let state = createGameState(station, rngStateFromSeed(4));
+    state = plantAt(state, "quercus_pubescens", 15, 15, 2);
+    for (let i = 0; i < ans * 52; i++) {
+      const w = weather[i % weather.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, []).state;
+    }
+    const arbre = state.trees[0];
+    if (!arbre?.alive) throw new Error("l'arbre du test est mort");
+    return arbre;
+  }
+
+  const gate = eleverUnChene(10, 1000, 20); // nappe généreuse, climat arrosé
+  const endurci = eleverUnChene(0, 550, 20); // pas de nappe, climat sec
+
+  it("un arbre qui n'a jamais manqué d'eau garde un système superficiel", () => {
+    expect(gate.rootDepthCm).toBeLessThan(endurci.rootDepthCm);
+  });
+
+  it("l'arbre assoiffé descend chercher la réserve profonde", () => {
+    expect(endurci.rootDepthCm).toBeGreaterThan(70);
+  });
+
+  it("les deux atteignent des tailles comparables : c'est bien l'allocation qui diffère", () => {
+    expect(gate.heightM).toBeGreaterThan(0.7 * endurci.heightM);
+  });
+
+  it("un semis démarre en surface, quelles que soient ses capacités d'espèce", () => {
+    const jeune = eleverUnChene(10, 1000, 1);
+    expect(jeune.rootDepthCm).toBeLessThan(60);
   });
 });

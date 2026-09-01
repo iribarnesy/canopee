@@ -195,6 +195,7 @@ function applyPlanter(
       fruitsKg: 0,
       fruitProgress: 0,
       bloomFrosted: false,
+      rootDepthCm: 20,
     });
     planted++;
     treasuryEur -= espece.economie.prixPlantEur;
