@@ -167,11 +167,17 @@ export interface ProfilHydroOutput {
  * de surface.
  * Invariant : pluie + nappe = évaporation + drainage + débordement + Δstock.
  */
-export function profilHydro(input: ProfilHydroInput): ProfilHydroOutput {
+export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): ProfilHydroOutput {
   const { horizons } = input;
   const n = horizons.length;
-  const eauMm = input.eauMm.slice(0, n);
-  const excesMm = input.excesMm.slice(0, n);
+  // Réutilisation des tableaux fournis : la boucle sur les cellules du tick
+  // appelle cette fonction des dizaines de milliers de fois par semaine.
+  const eauMm = out?.eauMm ?? new Array<number>(n);
+  const excesMm = out?.excesMm ?? new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    eauMm[i] = input.eauMm[i] ?? 0;
+    excesMm[i] = input.excesMm[i] ?? 0;
+  }
 
   // ── Passe 1 : la pluie s'infiltre de haut en bas ──────────────────────────
   let flux = input.rainMm;
@@ -242,8 +248,18 @@ export function profilHydro(input: ProfilHydroInput): ProfilHydroOutput {
     eauMm[n - 1] = (eauMm[n - 1] ?? 0) + nappeMm;
   }
 
-  const engorgementParHorizon = horizons.map((h, i) =>
-    h.porositeMm > 0 ? Math.min(1, (excesMm[i] ?? 0) / h.porositeMm) : 0,
-  );
+  const engorgementParHorizon = out?.engorgementParHorizon ?? new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    const h = horizons[i];
+    engorgementParHorizon[i] =
+      h && h.porositeMm > 0 ? Math.min(1, (excesMm[i] ?? 0) / h.porositeMm) : 0;
+  }
+  if (out) {
+    out.evapMm = evapMm;
+    out.drainageMm = drainageMm;
+    out.overflowMm = overflowMm;
+    out.nappeMm = nappeMm;
+    return out;
+  }
   return { eauMm, excesMm, evapMm, drainageMm, overflowMm, nappeMm, engorgementParHorizon };
 }

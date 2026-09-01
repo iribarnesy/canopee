@@ -139,25 +139,38 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   const eauCellule = new Array<number>(nH);
   const excesCellule = new Array<number>(nH);
+  // Buffer réutilisé : évite des dizaines de milliers d'allocations par semaine.
+  const bilanOut = {
+    eauMm: new Array<number>(nH).fill(0),
+    excesMm: new Array<number>(nH).fill(0),
+    evapMm: 0,
+    drainageMm: 0,
+    overflowMm: 0,
+    nappeMm: 0,
+    engorgementParHorizon: new Array<number>(nH).fill(0),
+  };
   for (let i = 0; i < nCells; i++) {
     const base = i * nH;
     for (let h = 0; h < nH; h++) {
       eauCellule[h] = waterMm[base + h] ?? 0;
       excesCellule[h] = excessMm[base + h] ?? 0;
     }
-    const bilan = profilHydro({
-      horizons: horizonsHydro,
-      eauMm: eauCellule,
-      excesMm: excesCellule,
-      rainMm: weather.rainMm,
-      evapDemandMm:
-        etpMm *
-        SOIL_EVAP_FRACTION *
-        (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
-        (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
-      nappeMm: station.remonteeNappeMmSemaine,
-      drainageExterneMm: station.drainageExterneMmSemaine,
-    });
+    const bilan = profilHydro(
+      {
+        horizons: horizonsHydro,
+        eauMm: eauCellule,
+        excesMm: excesCellule,
+        rainMm: weather.rainMm,
+        evapDemandMm:
+          etpMm *
+          SOIL_EVAP_FRACTION *
+          (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
+          (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
+        nappeMm: station.remonteeNappeMmSemaine,
+        drainageExterneMm: station.drainageExterneMmSemaine,
+      },
+      bilanOut,
+    );
     for (let h = 0; h < nH; h++) {
       waterMm[base + h] = bilan.eauMm[h] ?? 0;
       excessMm[base + h] = bilan.excesMm[h] ?? 0;

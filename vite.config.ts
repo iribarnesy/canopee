@@ -7,5 +7,9 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
+    // Les tests écologiques simulent des décennies sur des grilles de milliers
+    // de cellules : le défaut de 5 s ne suffit pas, surtout sur les runners CI.
+    testTimeout: 120_000,
+    hookTimeout: 120_000,
   },
 });
