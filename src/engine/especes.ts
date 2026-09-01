@@ -89,7 +89,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.8,
     // Atlas : « très hygrophile (tolère l'engorgement) », berges — vit en marais
     // mais souffre vite en sol sec (seuil de confort élevé).
-    eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.5, toleranceEngorgement: 1 },
+    eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.65, toleranceEngorgement: 1 },
     // Atlas : héliophile pionnier.
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.3, caduc: true },
     tBaseCroissanceC: 6,

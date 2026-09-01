@@ -53,6 +53,34 @@ export function weeklyEtpHargreaves(latitudeDeg: number, week: number, w: WeekWe
   return Math.max(0, daily) * 7;
 }
 
+/**
+ * Série météo hebdomadaire réelle (format de data/meteo/*.json, construit par
+ * scripts/build_meteo.py depuis l'open data Météo-France). Déterministe et
+ * rejouable : c'est la « série scriptée » de docs/regles.md §3.
+ */
+export interface SerieMeteoHebdo {
+  id: string;
+  stationMeteo: string;
+  poste: string;
+  lat: number;
+  alti: number;
+  periode: [number, number];
+  source: string;
+  colonnes: string[];
+  /** [tMoy °C, tMin °C, tMax °C, pluie mm] × 52 semaines × n années */
+  semaines: number[][];
+}
+
+/** Convertit une série réelle en semaines de simulation. */
+export function serieToWeeks(serie: SerieMeteoHebdo): WeekWeather[] {
+  return serie.semaines.map((s) => ({
+    tMean: s[0] ?? 0,
+    tMin: s[1] ?? 0,
+    tMax: s[2] ?? 0,
+    rainMm: s[3] ?? 0,
+  }));
+}
+
 /** Paramètres d'un générateur d'année météo synthétique (placeholder avant DRIAS). */
 export interface SyntheticClimate {
   /** °C, moyenne annuelle */

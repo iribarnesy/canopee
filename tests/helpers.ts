@@ -1,4 +1,4 @@
-import { syntheticYear } from "../src/engine/meteo";
+import { syntheticYear, type WeekWeather } from "../src/engine/meteo";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../src/engine/state";
 import type { StationClimat } from "../src/engine/stations";
@@ -8,17 +8,19 @@ export interface RunOptions {
   seed?: number;
   /** plantations initiales, positions pseudo-aléatoires seedées */
   plantations?: { especeId: string; count: number; heightM?: number }[];
+  /** série météo à rejouer (défaut : année synthétique de la station) */
+  weather?: WeekWeather[];
 }
 
 /** Simule n années sur une station, avec plantation initiale optionnelle. */
 export function runYears(sc: StationClimat, years: number, opts: RunOptions = {}): GameState {
-  const weather = syntheticYear(sc.climat);
+  const weather = opts.weather ?? syntheticYear(sc.climat);
   let state = createGameState(sc.station, rngStateFromSeed(opts.seed ?? 42));
   for (const p of opts.plantations ?? []) {
     state = plantScattered(state, p.especeId, p.count, p.heightM ?? 0.3);
   }
   for (let i = 0; i < years * 52; i++) {
-    const w = weather[i % 52];
+    const w = weather[i % weather.length];
     if (!w) throw new Error("météo manquante");
     state = tick(state, w).state;
   }

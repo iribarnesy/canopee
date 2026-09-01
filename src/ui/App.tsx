@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { serieMeteoPour } from "../data/meteo";
 import {
   createGameState,
   crownRadiusM,
@@ -16,9 +17,11 @@ import {
   rngStateFromSeed,
   STATIONS_V0,
   type StationClimat,
+  serieToWeeks,
   syntheticYear,
   type TickFluxes,
   tick,
+  type WeekWeather,
 } from "../engine";
 
 const YEARS = 20;
@@ -49,25 +52,35 @@ interface SimResult {
   finalState: GameState;
 }
 
-function simulate(sc: StationClimat): SimResult {
-  const weather = syntheticYear(sc.climat);
+/** Sur la friche, on ne plante rien : on regarde la succession se dérouler. */
+function isSuccessionStation(sc: StationClimat): boolean {
+  return sc.station.id === "friche-limon";
+}
+
+function simulate(sc: StationClimat, weather: WeekWeather[]): SimResult {
+  const succession = isSuccessionStation(sc);
+  const years = succession ? 150 : YEARS;
   let state = createGameState(sc.station, rngStateFromSeed(42));
-  for (const espece of ESPECES_V0) {
-    state = plantScattered(state, espece.id, TREES_PER_SPECIES);
+  if (!succession) {
+    for (const espece of ESPECES_V0) {
+      state = plantScattered(state, espece.id, TREES_PER_SPECIES);
+    }
   }
+  const statMaxId = succession ? Infinity : PLANTED_MAX_ID;
   let lateSummerState = state;
   const points: WeekPoint[] = [];
-  for (let i = 0; i < YEARS * 52; i++) {
-    const w = weather[i % 52];
+  for (let i = 0; i < years * 52; i++) {
+    const w = weather[i % weather.length];
     if (!w) throw new Error("météo manquante");
     const result = tick(state, w);
     state = result.state;
     const heights: Record<string, number> = {};
     const aliveCounts: Record<string, number> = {};
     for (const espece of ESPECES_V0) {
-      // Moyennes sur la cohorte PLANTÉE ; les recrues sont comptées à part.
+      // Moyennes sur la cohorte PLANTÉE ; les recrues sont comptées à part
+      // (sur la friche, rien n'est planté : on suit tout le peuplement).
       const planted = state.trees.filter(
-        (t) => t.especeId === espece.id && t.alive && t.id <= PLANTED_MAX_ID,
+        (t) => t.especeId === espece.id && t.alive && t.id <= statMaxId,
       );
       aliveCounts[espece.id] = planted.length;
       heights[espece.id] =
@@ -212,9 +225,15 @@ function ParcelMap({ state }: { state: GameState }) {
 
 export function App() {
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
+  const [meteoReelle, setMeteoReelle] = useState(true);
   const sc = STATIONS_V0.find((s) => s.station.id === stationId) ?? STATIONS_V0[0];
   if (!sc) throw new Error("aucune station");
-  const { points, finalState } = useMemo(() => simulate(sc), [sc]);
+  const serie = serieMeteoPour(sc.station.id);
+  const useReelle = meteoReelle && serie !== undefined;
+  const { points, finalState } = useMemo(() => {
+    const weather = useReelle && serie ? serieToWeeks(serie) : syntheticYear(sc.climat);
+    return simulate(sc, weather);
+  }, [sc, useReelle, serie]);
 
   const last = points[points.length - 1];
   const lastYear = points.slice(-52);
@@ -253,8 +272,26 @@ export function App() {
         ))}
       </p>
       <p style={{ color: "#6b6250" }}>
-        {YEARS} ans simulés · {TREES_PER_SPECIES} plants/espèce dispersés (seed 42) · météo
-        synthétique déterministe
+        {isSuccessionStation(sc)
+          ? "150 ans simulés · RIEN n'est planté : succession émergente depuis le voisinage (seed 42)"
+          : `${YEARS} ans simulés · ${TREES_PER_SPECIES} plants/espèce dispersés (seed 42)`}{" "}
+        ·{" "}
+        <button
+          type="button"
+          onClick={() => setMeteoReelle(!meteoReelle)}
+          style={{
+            border: "1px solid #b0a58c",
+            borderRadius: 4,
+            background: "#f6f4ee",
+            cursor: "pointer",
+            padding: "1px 8px",
+          }}
+        >
+          météo : {useReelle ? "réelle" : "synthétique"}
+        </button>{" "}
+        {useReelle && serie
+          ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France, rejouée en boucle)`
+          : "année type répétée"}
       </p>
       <WaterChart points={points} ruMm={sc.station.ruMm} />
       <HeightChart points={points} />
@@ -263,7 +300,8 @@ export function App() {
           <span key={espece.id} style={{ marginRight: 16 }}>
             <span style={{ color: SPECIES_COLORS[espece.id], fontWeight: 700 }}>■</span>{" "}
             {espece.nom} : {(last?.heights[espece.id] ?? 0).toFixed(1)} m ·{" "}
-            {last?.aliveCounts[espece.id] ?? 0}/{TREES_PER_SPECIES} plantés vivants
+            {last?.aliveCounts[espece.id] ?? 0}
+            {isSuccessionStation(sc) ? " vivants" : `/${TREES_PER_SPECIES} plantés vivants`}
           </span>
         ))}
       </p>
