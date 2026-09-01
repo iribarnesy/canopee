@@ -59,6 +59,8 @@ export interface Station {
   ventExposition: number;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
+  /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */
+  herbeInitiale: number;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
   voisinage: { especeId: string; semisParAn: number }[];
 }
@@ -89,6 +91,11 @@ export interface SoilState {
   humusCG: number[];
   /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
   ph: number[];
+  /**
+   * Couverture de la strate herbacée ∈ [0,1] par cellule (herbe.ts) : la
+   * concurrence que subissent les jeunes plants, et la protection du sol.
+   */
+  herbeCouverture: number[];
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
   litterK: number[];
@@ -122,6 +129,8 @@ export interface TickFluxes {
   overflowMm: number;
   /** engorgement moyen ∈ [0,1] */
   waterloggingMean: number;
+  /** couverture herbacée moyenne ∈ [0,1] */
+  herbeCouvertureMean: number;
   mineralizationKgHa: number;
   uptakeKgHa: number;
   leachedKgHa: number;
@@ -160,6 +169,8 @@ export function createGameState(
       litterCG: new Array(n).fill(0),
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       ph: new Array(n).fill(station.phInitial),
+      // Une parcelle nue au départ : la strate s'installe d'elle-même.
+      herbeCouverture: new Array(n).fill(station.herbeInitiale),
       litterK: new Array(n).fill(0),
     },
     trees: [],

@@ -59,16 +59,19 @@ export const LANDE_SECHE: StationClimat = {
     id: "lande-seche",
     nom: "Lande sableuse sèche",
     latitudeDeg: 44.5,
-    // Podzol landais : sable acide très filtrant sur alios induré, qui borne
-    // l'enracinement à ~25 cm et freine le ressuyage hivernal.
+    // Podzol landais : un horizon de surface acide, un sable lessivé épais où
+    // les racines descendent, puis l'alios induré qui les arrête et fait
+    // stagner l'eau l'hiver.
     profil: [
       horizon(20, { sable: 85, limon: 10, argile: 5 }, { moPct: 1.8, ph: 4.5 }),
-      horizon(35, { sable: 90, limon: 7, argile: 3 }, { moPct: 0.6, ph: 4.7, induration: 0.85 }),
+      horizon(55, { sable: 92, limon: 6, argile: 2 }, { moPct: 0.4, ph: 4.8 }),
+      horizon(40, { sable: 88, limon: 8, argile: 4 }, { moPct: 0.3, ph: 5, induration: 0.9 }),
     ],
     initialMineralNKgHa: 15,
     remonteeNappeMmSemaine: 0,
     // Nappe perchée hivernale sur l'alios : l'eau ne part pas vite.
     drainageExterneMmSemaine: 30,
+    herbeInitiale: 0.5, // lande rase : callune et molinie couvrent déjà le sol
     ventExposition: 0.85, // lande atlantique rase : le vent balaie tout
     coteM: 100,
     voisinage: [
@@ -101,6 +104,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
     remonteeNappeMmSemaine: 12,
     // Nappe affleurante : l'exutoire est saturé, rien ne s'évacue.
     drainageExterneMmSemaine: 5,
+    herbeInitiale: 0.8, // prairie humide dense
     ventExposition: 0.2, // fond de vallée abrité
     coteM: 100,
     voisinage: [],
@@ -128,6 +132,7 @@ export const LIMON_RICHE: StationClimat = {
     initialMineralNKgHa: 60,
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY, // plateau bien drainé
+    herbeInitiale: 0.2, // sortie de culture : le sol se réenherbe
     ventExposition: 0.6, // plateau limoneux ouvert (§2.2)
     coteM: 100,
     voisinage: [],
@@ -174,6 +179,7 @@ export const FRICHE_LIMON: StationClimat = {
     initialMineralNKgHa: 40,
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
+    herbeInitiale: 0.9, // friche : l'herbe tient déjà tout le terrain
     ventExposition: 0.4,
     coteM: 50,
     voisinage: [

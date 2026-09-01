@@ -45,7 +45,8 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
 
   it("le pin sylvestre, xérophile acidiphile, tient", () => {
     expect(aliveCount(state, "pinus_sylvestris", 30)).toBe(10);
-    expect(meanHeight(state, "pinus_sylvestris", 30)).toBeGreaterThan(1.5);
+    // Croissance lente : sable pauvre, vent, et concurrence de la lande.
+    expect(meanHeight(state, "pinus_sylvestris", 30)).toBeGreaterThan(1.2);
   });
 
   it("le chêne pubescent, calcicole, meurt sur ce sable acide (pH 4,5 — bio-indication)", () => {

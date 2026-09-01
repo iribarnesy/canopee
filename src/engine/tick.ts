@@ -18,6 +18,7 @@ import {
 } from "./carbon";
 import { getEspece } from "./especes";
 import { cellCount, forEachDiscCell } from "./grid";
+import { couvertureMax, herbeDemandeAzoteG, herbeDemandeEauL, prochaineCouverture } from "./herbe";
 import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from "./light";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
@@ -53,8 +54,8 @@ import { drynessFactor, profilHydro } from "./water";
 /** °C moyenne hebdo au-dessus de laquelle les caducs sont en feuilles (proxy V0). */
 const LEAVES_ON_TMEAN_C = 6;
 /**
- * Part de l'ETP consommée par le sol nu et sa strate herbacée implicite
- * (évaporation + transpiration des herbes, non modélisées avant la V1).
+ * Part de l'ETP qu'un sol NU peut évaporer (la strate herbacée, elle, est
+ * modélisée explicitement dans herbe.ts et transpire pour son compte).
  */
 const SOIL_EVAP_FRACTION = 0.5;
 /**
@@ -123,6 +124,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterCG = state.soil.litterCG.slice();
   const humusCG = state.soil.humusCG.slice();
   const litterK = state.soil.litterK.slice();
+  const herbeCouverture = state.soil.herbeCouverture.slice();
   /** engorgement par (cellule, horizon) */
   const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
@@ -271,6 +273,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
   }
 
+  // ── 3 bis. La strate herbacée demande sa part, en surface uniquement ──────
+  // C'est la concurrence qui fait échouer les plantations non entretenues.
+  const saisonHerbe = Math.min(1, Math.max(0, (weather.tMean - 4) / 8));
+  const herbeDemandeL = new Array<number>(nCells).fill(0);
+  for (let i = 0; i < nCells; i++) {
+    const couverture = herbeCouverture[i] ?? 0;
+    if (couverture <= 0) continue;
+    const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
+    herbeDemandeL[i] = demandeEau;
+    cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
+    cellNWanted[i] = (cellNWanted[i] ?? 0) + herbeDemandeAzoteG(couverture, saisonHerbe);
+  }
+
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
   const nServedRatio = new Array<number>(nCells).fill(0);
   let transpirationSumL = 0;
@@ -295,6 +310,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       mineralNG[i] = stock - taken;
       uptakeSumG += taken;
     }
+  }
+
+  // La strate évolue selon la lumière reçue et l'eau qu'elle a pu boire.
+  let herbeSum = 0;
+  for (let i = 0; i < nCells; i++) {
+    const servi = (herbeDemandeL[i] ?? 0) > 0 ? (waterServedRatio[i * nH] ?? 0) : 1;
+    const cible = couvertureMax(groundLight[i] ?? 1, servi);
+    herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
+    herbeSum += herbeCouverture[i] ?? 0;
   }
 
   const waterSatisfaction = new Array<number>(nTrees).fill(1);
@@ -518,6 +542,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         humusCG,
         ph: state.soil.ph,
         litterK,
+        herbeCouverture,
       },
       trees: nextTrees,
       ddYearBase5,
@@ -539,6 +564,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       drainageMm: drainageSum / nCells,
       overflowMm: overflowSum / nCells,
       waterloggingMean: waterloggingSum / nCells,
+      herbeCouvertureMean: herbeSum / nCells,
       mineralizationKgHa: (mineralizationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKgHa: (uptakeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKgHa: (leachedSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
+import { ruHorizonMm } from "../../src/engine/soil";
 import { createGameState, plantScattered } from "../../src/engine/state";
 import { LANDE_SECHE } from "../../src/engine/stations";
 import { stateHash, tick } from "../../src/engine/tick";
@@ -59,8 +60,11 @@ describe("déterminisme du moteur", () => {
     // Et la réserve se recharge : retour proche du plein en fin d'année.
     const yearEnd = meanWater[52 * 3 - 1];
     if (yearEnd === undefined) throw new Error("index invalide");
-    // Fin d'année : l'horizon de surface est rechargé (RU de surface, pas du profil).
-    const ruSurface = LANDE_SECHE.station.ruMm * 0.4;
-    expect(yearEnd).toBeGreaterThan(ruSurface * 0.8);
+    // Fin d'année : l'horizon de surface est rechargé. On compare à SA réserve
+    // utile (pas à celle du profil entier), diminuée de ce que la strate
+    // herbacée continue de boire.
+    const premierHorizon = LANDE_SECHE.station.profil[0];
+    if (!premierHorizon) throw new Error("profil vide");
+    expect(yearEnd).toBeGreaterThan(ruHorizonMm(premierHorizon) * 0.6);
   });
 });

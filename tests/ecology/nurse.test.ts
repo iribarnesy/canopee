@@ -48,8 +48,10 @@ describe("effet nurse sur lande sèche et ventée", () => {
   const abrite = hauteurApres("quercus_suber", 6, 3, 12);
   const etouffe = hauteurApres("quercus_suber", 6, 1.2, 12);
 
-  it("le chêne-liège, adapté au sable acide, s'installe même nu", () => {
-    expect(nu).toBeGreaterThan(0.5);
+  it("le chêne-liège, adapté au sable acide, s'installe même nu (mais végète)", () => {
+    // Sans entretien, la strate herbacée lui dispute l'eau et l'azote : il
+    // survit sur la lande, il n'y prospère pas.
+    expect(nu).toBeGreaterThan(0.35);
   });
 
   it("abrité à bonne distance, il pousse mieux qu'à découvert", () => {

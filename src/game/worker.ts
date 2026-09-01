@@ -97,6 +97,9 @@ function performAction(action: GameAction) {
     case "chauler":
       event("🪨", `Chaulage : ${eur} (${dHeures.toFixed(1)} h)`);
       break;
+    case "faucher":
+      event("🌾", `Fauche : ${dHeures.toFixed(1)} h — les jeunes plants respirent`);
+      break;
   }
 }
 
@@ -121,6 +124,7 @@ function emptyFluxes(): TickFluxes {
     drainageMm: 0,
     overflowMm: 0,
     waterloggingMean: 0,
+    herbeCouvertureMean: 0,
     mineralizationKgHa: 0,
     uptakeKgHa: 0,
     leachedKgHa: 0,
@@ -167,6 +171,7 @@ function postSnapshot() {
     soilWater: surfaceWater(state, nHorizons),
     soilPh: Float32Array.from(state.soil.ph),
     soilN: Float32Array.from(state.soil.mineralNG),
+    soilHerbe: Float32Array.from(state.soil.herbeCouverture),
     refusals: pendingRefusals,
   };
   pendingRefusals = [];
@@ -175,6 +180,7 @@ function postSnapshot() {
     snapshot.soilWater.buffer,
     snapshot.soilPh.buffer,
     snapshot.soilN.buffer,
+    snapshot.soilHerbe.buffer,
   ]);
 }
 

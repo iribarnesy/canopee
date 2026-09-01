@@ -36,6 +36,10 @@ export const SEVERANCE_EUR = 1200;
 /** chaulage : coût et temps par m² *(à calibrer)* */
 export const LIME_EUR_M2 = 0.02;
 export const LIME_HOURS_M2 = 0.002;
+/** fauche/dégagement : temps par m² (débroussailleuse) *(à calibrer)* */
+export const FAUCHE_HOURS_M2 = 0.006;
+/** couverture herbacée restant juste après un passage */
+export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
 /** effet d'un chaulage sur le pH (plafonné à 7,5) */
 export const LIME_PH_STEP = 0.5;
 /**
@@ -110,6 +114,18 @@ export type GameAction =
   | {
       /** chauler un disque : pH +0,5 (plafond 7,5) — pour les calcicoles (§9) */
       type: "chauler";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+    }
+  | {
+      /**
+       * Faucher/dégager un disque : rabat la strate herbacée, qui repartira.
+       * C'est l'entretien qui sauve une plantation de la concurrence (ch4-B) —
+       * et l'herbe coupée reste au sol en litière.
+       */
+      type: "faucher";
       week: number;
       x: number;
       y: number;
@@ -388,6 +404,49 @@ function applyChauler(
   };
 }
 
+function applyFaucher(
+  state: GameState,
+  action: Extract<GameAction, { type: "faucher" }>,
+): ApplyResult {
+  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const hours = areaM2 * FAUCHE_HOURS_M2;
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "faucher", "plafond hebdomadaire atteint")] };
+  }
+  const herbeCouverture = state.soil.herbeCouverture.slice();
+  const litterNG = state.soil.litterNG.slice();
+  const litterCG = state.soil.litterCG.slice();
+  const cote = state.station.coteM;
+  const r2 = action.rayonM * action.rayonM;
+  for (let y = 0; y < cote; y++) {
+    for (let x = 0; x < cote; x++) {
+      const dx = x + 0.5 - action.x;
+      const dy = y + 0.5 - action.y;
+      if (dx * dx + dy * dy > r2) continue;
+      const i = y * cote + x;
+      const avant = herbeCouverture[i] ?? 0;
+      if (avant <= FAUCHE_COUVERTURE_RESIDUELLE) continue;
+      const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
+      herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
+      // L'herbe coupée reste sur place : litière tendre, vite recyclée.
+      litterNG[i] = (litterNG[i] ?? 0) + coupe * 4;
+      litterCG[i] = (litterCG[i] ?? 0) + coupe * 4 * 25;
+    }
+  }
+  return {
+    state: {
+      ...state,
+      soil: { ...state.soil, herbeCouverture, litterNG, litterCG },
+      economy: {
+        ...state.economy,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
 export function applyAction(state: GameState, action: GameAction): ApplyResult {
   if (state.economy.bankrupt) {
     return { state, refusals: [refuse(action.week, action.type, "faillite")] };
@@ -469,5 +528,7 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
     }
     case "chauler":
       return applyChauler(state, action);
+    case "faucher":
+      return applyFaucher(state, action);
   }
 }

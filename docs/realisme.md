@@ -24,21 +24,21 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
-| A. Sol, eau, atmosphère | 12 | 2 | 3 | 17 |
-| B. Lumière et structure | 5 | 2 | 3 | 10 |
+| A. Sol, eau, atmosphère | 13 | 2 | 3 | 18 |
+| B. Lumière et structure | 5 | 3 | 2 | 10 |
 | C. Nutriments et cycles | 4 | 3 | 5 | 12 |
 | D. Climat et phénologie | 4 | 3 | 3 | 10 |
-| E. Interactions entre plantes | 5 | 2 | 4 | 11 |
+| E. Interactions entre plantes | 6 | 2 | 4 | 12 |
 | F. Dynamique des peuplements | 4 | 2 | 4 | 10 |
 | G. Faune et santé | 0 | 0 | 6 | 6 |
-| H. Gestion, économie, travail | 4 | 3 | 5 | 12 |
+| H. Gestion, économie, travail | 5 | 3 | 5 | 13 |
 | I. Carbone | 3 | 2 | 3 | 8 |
-| **Total** | **41** | **19** | **36** | **96** |
+| **Total** | **44** | **20** | **35** | **99** |
 
-**Score de réalisme : 41 pleins + 19 partiels sur 96 → ≈ 53 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 44 pleins + 20 partiels sur 99 → ≈ 55 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
-physique, profondeur et plasticité racinaires).*
+physique, profondeur et plasticité racinaires) → 55 % (strate herbacée).*
 
 ---
 
@@ -51,6 +51,7 @@ physique, profondeur et plasticité racinaires).*
 | A3 | L'évaporation d'un sol nu s'auto-limite quand la surface sèche | ✅ | `soilEvapFactor` quadratique |
 | A4 | Un couvert végétal réduit l'évaporation du sol (microclimat) | ✅ | `CANOPY_EVAP_FLOOR` × ombrage au sol |
 | A5 | Un paillis/litière au sol réduit encore l'évaporation | ✅ | `MULCH_MAX_EFFECT` sur le stock de litière |
+| A18 | Un sol couvert d'herbe évapore moins qu'un sol nu | ✅ | couverture herbacée dans le bilan d'évaporation |
 | A6 | Un sol engorgé asphyxie les racines des espèces sensibles | ✅ | `waterloggingFactor` ; `tolerances.test.ts` |
 | A7 | Le vent augmente la demande évaporative ; un abri la réduit | ✅ | `windShelterAt` (portée 12 H) ; `nurse.test.ts` |
 | A8 | Une nappe accessible soutient la végétation en été | 🟡 | recharge l'horizon profond ; pas encore de battement saisonnier |
@@ -75,7 +76,7 @@ physique, profondeur et plasticité racinaires).*
 | B5 | Les caducs n'ombragent pas hors saison (fenêtre des vernales) | ✅ | `leavesOn` ; pas encore de strate herbacée pour en profiter |
 | B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main |
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
-| B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | ❌ | Seuls les ligneux plantés existent |
+| B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | ❌ | Pas d'effet de bord |
 | B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | ❌ | Houppier = ratio fixe × hauteur |
 
@@ -124,7 +125,8 @@ physique, profondeur et plasticité racinaires).*
 | E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | ❌ | Champ prévu, non implémenté |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ❌ | Pas de sylviculture progressive |
-| E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend de B8 |
+| E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
+| E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
 | E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ❌ | Dépend de B10 |
 
 ## F. Dynamique des peuplements
@@ -165,7 +167,8 @@ physique, profondeur et plasticité racinaires).*
 | H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ❌ | Prix unique au m³ |
 | H7 | Les prix varient (marché, saturation locale) | ❌ | Prix fixes |
 | H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ❌ | Seule la coupe rase existe |
-| H9 | Irrigation, fertilisation, protections individuelles, clôtures | ❌ | Seul le chaulage existe |
+| H9 | Irrigation, fertilisation, protections individuelles, clôtures | ❌ | Chaulage et fauche existent ; le reste non |
+| H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
 | H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
 | H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |
 | H12 | Le sol se découvre par observation ou analyse payante | 🟡 | tout est visible dans l'UI (calques) |
@@ -187,11 +190,10 @@ physique, profondeur et plasticité racinaires).*
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Strate herbacée** (B8, E9, et la vraie concurrence des jeunes plants) — désormais le chantier le plus rentable.
-2. **Sylviculture** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
-3. **Biotique** : gibier, ravageurs à seuils, auxiliaires (G1-G3, G6).
-4. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
-5. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
+1. **Sylviculture** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
+2. **Biotique** : gibier, ravageurs à seuils, auxiliaires (G1-G3, G6).
+3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
+4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
 
 ## Générateur de stations : ce qu'il reste à faire
 

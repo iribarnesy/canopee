@@ -28,8 +28,8 @@ const MOIS = [
   "décembre",
 ];
 
-type Mode = "selection" | "planter" | "chauler";
-type Overlay = "eau" | "ph" | "azote";
+type Mode = "selection" | "planter" | "chauler" | "faucher";
+type Overlay = "eau" | "ph" | "azote" | "herbe";
 
 const panel: React.CSSProperties = {
   border: "1px solid #b0a58c",
@@ -144,6 +144,12 @@ function drawParcel(
         hue = 20 + ((ph - 4) / 4.5) * 200; // acide = orangé, calcaire = bleuté
         sat = 35;
         l = 70;
+      } else if (overlay === "herbe") {
+        // Plus l'herbe couvre, plus le vert est franc.
+        const c = snapshot.soilHerbe[i] ?? 0;
+        hue = 95;
+        sat = 15 + 45 * c;
+        l = 85 - 35 * c;
       } else {
         l = 90 - 50 * Math.min(1, (snapshot.soilN[i] ?? 0) / 3);
         hue = 55;
@@ -265,6 +271,8 @@ export function GameView() {
       game.dispatch({ type: "planter", especeId, positions: [{ x: mx, y: my }] });
     } else if (mode === "chauler") {
       game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
+    } else if (mode === "faucher") {
+      game.dispatch({ type: "faucher", x: mx, y: my, rayonM: rayonChaulage });
     } else {
       // Sélection au pied de l'arbre ; maj/ctrl = ajouter à la sélection.
       let best: SnapshotTree | undefined;
@@ -351,7 +359,7 @@ export function GameView() {
         />
         <p style={{ margin: "4px 0 0", color: "#6b6250", fontSize: 13 }}>
           Sol :{" "}
-          {(["eau", "ph", "azote"] as const).map((o) => (
+          {(["eau", "ph", "azote", "herbe"] as const).map((o) => (
             <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
               {o}
             </button>
@@ -387,6 +395,14 @@ export function GameView() {
           </button>
           <button type="button" style={btn(mode === "chauler")} onClick={() => setMode("chauler")}>
             Chauler
+          </button>
+          <button
+            type="button"
+            style={btn(mode === "faucher")}
+            onClick={() => setMode("faucher")}
+            title="Dégager la strate herbacée autour des jeunes plants — l'entretien qui sauve une plantation sur sol pauvre"
+          >
+            🌾 Faucher
           </button>
           <button
             type="button"
@@ -442,7 +458,7 @@ export function GameView() {
               </div>
             </div>
           )}
-          {mode === "chauler" && (
+          {(mode === "chauler" || mode === "faucher") && (
             <div style={{ marginTop: 6 }}>
               Rayon :{" "}
               <input
@@ -452,7 +468,11 @@ export function GameView() {
                 value={rayonChaulage}
                 onChange={(e) => setRayonChaulage(Number(e.target.value))}
               />{" "}
-              {rayonChaulage} m — pH +0,5 sur le disque.
+              {rayonChaulage} m —{" "}
+              {mode === "chauler"
+                ? "pH +0,5 sur le disque"
+                : "l'herbe est rabattue, elle repoussera"}
+              .
             </div>
           )}
         </div>
@@ -550,8 +570,10 @@ export function GameView() {
         )}
 
         <div style={{ ...panel, fontSize: 13 }}>
-          🌲 {snapshot.trees.length} arbres · carbone {snapshot.inventory.vivantTHa.toFixed(1)} t
-          vivant + {snapshot.inventory.humusTHa.toFixed(1)} t humus ·{" "}
+          🌲 {snapshot.trees.length} arbres · 🌾 herbe{" "}
+          {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % · carbone{" "}
+          {snapshot.inventory.vivantTHa.toFixed(1)} t vivant +{" "}
+          {snapshot.inventory.humusTHa.toFixed(1)} t humus ·{" "}
           <strong>
             bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
             {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
