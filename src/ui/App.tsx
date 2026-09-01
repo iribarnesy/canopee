@@ -81,14 +81,12 @@ function simulate(sc: StationClimat, weather: WeekWeather[]): SimResult {
     const heights: Record<string, number> = {};
     const aliveCounts: Record<string, number> = {};
     for (const espece of ESPECES_V0) {
-      // Moyennes sur la cohorte PLANTÉE ; les recrues sont comptées à part
-      // (sur la friche, rien n'est planté : on suit tout le peuplement).
-      const planted = state.trees.filter(
-        (t) => t.especeId === espece.id && t.alive && t.id <= statMaxId,
-      );
-      aliveCounts[espece.id] = planted.length;
-      heights[espece.id] =
-        planted.length > 0 ? planted.reduce((s, t) => s + t.heightM, 0) / planted.length : 0;
+      // Hauteur DOMINANTE (max des vivants, recrues comprises) : la métrique
+      // forestière standard, sans l'artefact des moyennes qui s'effondrent
+      // quand un individu meurt. Les comptages distinguent la cohorte plantée.
+      const alive = state.trees.filter((t) => t.especeId === espece.id && t.alive);
+      aliveCounts[espece.id] = alive.filter((t) => t.id <= statMaxId).length;
+      heights[espece.id] = alive.reduce((max, t) => Math.max(max, t.heightM), 0);
     }
     const waterArr = state.soil.waterMm;
     points.push({
@@ -173,7 +171,8 @@ function HeightChart({ points }: { points: WeekPoint[] }) {
         />
       ))}
       <text x={PAD} y={PAD - 8} fontSize={11} fill="#7a7261">
-        hauteur moyenne des vivants, m (max affiché : {maxH.toFixed(1)} m)
+        hauteur dominante par espèce (max des vivants, recrues comprises), m — max affiché :{" "}
+        {maxH.toFixed(1)} m
       </text>
     </svg>
   );
