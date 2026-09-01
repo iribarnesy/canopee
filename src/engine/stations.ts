@@ -19,14 +19,18 @@ export const LANDE_SECHE: StationClimat = {
     id: "lande-seche",
     nom: "Lande sableuse sèche",
     latitudeDeg: 44.5,
-    ruMm: 60,
-    excessCapacityMm: 40,
-    drainagePerWeekMm: 80,
+    // Podzol landais : réserve minuscule sur sable filtrant. L'alios ralentit
+    // un peu le ressuyage hivernal, mais c'est la SÉCHERESSE estivale — réserve
+    // vide + vent — qui trie les essences ici.
+    ruMm: 45,
+    excessCapacityMm: 45,
+    drainagePerWeekMm: 40,
     mineralizationPotentialKgHaWeek: 0.6, // sol pauvre : ~20-25 kg N/ha/an effectifs
     initialMineralNKgHa: 15,
     initialSoilCTHa: 30,
     phInitial: 4.5,
     remonteeNappeMmSemaine: 0,
+    ventExposition: 0.85, // lande atlantique rase : le vent balaie tout
     coteM: 100,
     voisinage: [
       { especeId: "pinus_sylvestris", semisParAn: 4 },
@@ -56,6 +60,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
     initialSoilCTHa: 80,
     phInitial: 6.5,
     remonteeNappeMmSemaine: 12,
+    ventExposition: 0.2, // fond de vallée abrité
     coteM: 100,
     voisinage: [],
   },
@@ -82,6 +87,7 @@ export const LIMON_RICHE: StationClimat = {
     initialSoilCTHa: 65,
     phInitial: 7,
     remonteeNappeMmSemaine: 0,
+    ventExposition: 0.6, // plateau limoneux ouvert (§2.2)
     coteM: 100,
     voisinage: [],
   },
@@ -124,6 +130,7 @@ export const FRICHE_LIMON: StationClimat = {
     initialSoilCTHa: 65,
     phInitial: 6.8,
     remonteeNappeMmSemaine: 0,
+    ventExposition: 0.4,
     coteM: 50,
     voisinage: [
       { especeId: "betula_pendula", semisParAn: 6 },

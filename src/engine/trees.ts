@@ -72,18 +72,44 @@ export function rootRadiusM(espece: EspeceV0, heightM: number): number {
 }
 
 /**
+ * Part de la demande évaporatoire qui subsiste à l'ombre totale (advection,
+ * déficit de saturation de l'air) : sous couvert, l'essentiel du rayonnement
+ * net disparaît et la transpiration s'effondre *(à calibrer)*.
+ */
+const SHADE_TRANSPIRATION_FLOOR = 0.25;
+/**
+ * Surcroît de demande en plein vent sur une station très exposée *(à calibrer)*.
+ * Un sujet abrité (par une nurse, une haie, la canopée) y échappe : c'est
+ * l'effet brise-vent, le gain agroforestier le mieux documenté (ch5).
+ */
+const WIND_MAX_EXTRA = 0.6;
+
+/**
  * Demande de transpiration de l'arbre, L/semaine : demande évaporatoire ×
- * surface de couronne × saison (un caduc sans feuilles ne transpire pas).
+ * surface de couronne × saison × **rayonnement reçu** (un caduc sans feuilles
+ * ne transpire pas).
+ * Le facteur rayonnement est le moteur de l'effet nurse (ch1-A) : un sujet
+ * abrité transpire bien moins qu'en plein soleil, donc survit là où l'eau
+ * manque — au prix d'une croissance bridée par f_lumière. En milieu frais le
+ * marché s'inverse : l'ombre ne protège de rien et coûte de la croissance.
  */
 export function treeWaterDemandL(
   espece: EspeceV0,
   heightM: number,
   etpMm: number,
   season: number,
+  light = 1,
+  ventExposition = 0,
+  abriVent = 0,
 ): number {
   const r = crownRadiusM(heightM, espece.lumiere.houppierRatio);
   const crownAreaM2 = Math.max(0.05, Math.PI * r * r);
-  return etpMm * crownAreaM2 * TRANSPIRATION_COEFF * season;
+  const rayonnement = SHADE_TRANSPIRATION_FLOOR + (1 - SHADE_TRANSPIRATION_FLOOR) * light;
+  const vent = 1 + WIND_MAX_EXTRA * ventExposition * (1 - abriVent);
+  // Efficience d'usage de l'eau : les xérophiles (cuticule épaisse, stomates
+  // régulés) transpirent moins par unité de couronne que les hygrophiles.
+  const wue = 0.35 + 0.65 * espece.eau.seuilConfortSecheresse;
+  return etpMm * crownAreaM2 * TRANSPIRATION_COEFF * wue * season * rayonnement * vent;
 }
 
 /** Taille « métabolique » d'un arbre (proxy feuillage + bois neuf), g N/semaine max. */

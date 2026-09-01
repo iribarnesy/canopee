@@ -37,6 +37,12 @@ export interface Station {
   phInitial: number;
   /** remontée capillaire de nappe, mm/semaine (0 = pas de nappe accessible) */
   remonteeNappeMmSemaine: number;
+  /**
+   * Exposition au vent ∈ [0,1] : 0 = vallon abrité, 1 = lande atlantique ou
+   * plateau ouvert. Le vent dessèche les sujets découverts — c'est ce qui rend
+   * l'effet brise-vent d'une haie ou d'une nurse payant (ch5, docs §9).
+   */
+  ventExposition: number;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */

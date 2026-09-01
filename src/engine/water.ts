@@ -51,10 +51,21 @@ export interface CellWaterOutput {
  */
 export const DRYNESS_THRESHOLD = 0.6;
 
-/** Frein de sécheresse d'une cellule ∈ [0,1] selon son remplissage. */
+/** Frein de sécheresse d'une cellule ∈ [0,1] selon son remplissage (racines). */
 export function drynessFactor(soilWaterMm: number, ruMm: number): number {
   if (ruMm <= 0) return 0;
   return Math.min(1, soilWaterMm / ruMm / DRYNESS_THRESHOLD);
+}
+
+/**
+ * Frein propre à l'ÉVAPORATION du sol : quadratique, car un sol qui sèche
+ * s'auto-protège — la couche superficielle desséchée devient une barrière
+ * (« mulch naturel », phase 2 de l'évaporation). Les racines, elles, vont
+ * chercher l'eau liée bien plus efficacement, d'où deux courbes distinctes.
+ */
+export function soilEvapFactor(soilWaterMm: number, ruMm: number): number {
+  const f = drynessFactor(soilWaterMm, ruMm);
+  return f * f;
 }
 
 /** Version sans allocation : écrit le résultat dans `out` (boucles de grille). */
@@ -74,8 +85,8 @@ export function cellWaterBalanceInto(input: CellWaterInput, out: CellWaterOutput
   const drainageMm = Math.min(drainagePerWeekMm, excessMm);
   excessMm -= drainageMm;
 
-  // 4. Évaporation du sol, freinée quand la cellule se vide.
-  const evapMm = Math.min(soilWaterMm, evapDemandMm * drynessFactor(soilWaterMm, ruMm));
+  // 4. Évaporation du sol, freinée (quadratiquement) quand la cellule se vide.
+  const evapMm = Math.min(soilWaterMm, evapDemandMm * soilEvapFactor(soilWaterMm, ruMm));
   soilWaterMm -= evapMm;
 
   // 5. Remontée capillaire de la nappe : recharge la réserve utile par le bas

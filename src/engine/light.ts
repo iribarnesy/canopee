@@ -89,7 +89,14 @@ function extinctionAt(
     else continue;
     const dx = x - s.cx;
     const dy = y - s.cy;
-    if (dx * dx + dy * dy <= s.r2) extinction += weight * s.extinction;
+    const d2 = dx * dx + dy * dy;
+    if (d2 <= s.r2) {
+      // Pénombre : l'ombre est pleine à l'aplomb du houppier et s'estompe vers
+      // son bord (couronne moins épaisse, lumière latérale). C'est ce dégradé
+      // qui crée les micro-situations d'abri — un sujet planté EN LISIÈRE d'une
+      // nurse est protégé du vent et du rayonnement sans être étouffé (ch1-A).
+      extinction += weight * s.extinction * (1 - d2 / s.r2);
+    }
   }
   // Une ou deux couronnes s'additionnent pleinement ; les empilements profonds
   // saturent (chevauchements, trouées de ciel) vers MAX_EXTINCTION.
@@ -118,6 +125,32 @@ export function lightAtPoint(
 ): number {
   const buckets = buildShadowIndex(trees, leavesOn);
   return Math.exp(-extinctionAt(buckets, x, y, 0));
+}
+
+/**
+ * Abri au vent d'un point ∈ [0,1] (docs/regles.md §3, ch5 « haie brise-vent »).
+ * Contrairement à l'ombre et aux racines, la protection au vent PORTE LOIN :
+ * une haie abrite sur 10 à 20 fois sa hauteur. C'est ce découplage qui rend
+ * l'agroforesterie payante en milieu venté — on protège sans concurrencer,
+ * à condition d'espacer.
+ */
+export function windShelterAt(
+  trees: readonly TreeState[],
+  x: number,
+  y: number,
+  selfId?: number,
+): number {
+  let shelter = 0;
+  for (const t of trees) {
+    if (!t.alive || t.id === selfId || t.heightM < 0.5) continue;
+    const dx = t.x - x;
+    const dy = t.y - y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    // Au-delà de 12 hauteurs, l'effet est nul ; tout près, il plafonne.
+    if (d > 12 * t.heightM) continue;
+    shelter += (0.12 * t.heightM) / Math.max(1.5, d);
+  }
+  return Math.min(1, shelter);
 }
 
 /**

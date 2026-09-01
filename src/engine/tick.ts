@@ -1,11 +1,11 @@
 /**
  * Le cœur du moteur : une fonction pure `état + météo → état`, spatialisée.
  * Ordre d'un tick (docs/regles.md §1.1) :
- * météo → bilan hydrique par cellule → minéralisation humus + décomposition
- * de la litière par cellule → lumière par arbre → prélèvements eau/azote par
- * arbre dans SA zone racinaire (deux passes, indépendantes de l'ordre des
- * arbres) → lessivage → croissance des arbres → chute des feuilles (semaine 44)
- * → morts en litière → régénération annuelle (semaine 14).
+ * météo → lumière (elle pilote la croissance ET la transpiration) → bilan
+ * hydrique + minéralisation + décomposition de la litière, par cellule →
+ * prélèvements eau/azote par arbre dans SA zone racinaire (deux passes,
+ * indépendantes de l'ordre des arbres) → lessivage → croissance des arbres →
+ * chute des feuilles (semaine 44) → morts en litière → régénération (sem. 14).
  */
 
 import {
@@ -18,7 +18,7 @@ import {
 } from "./carbon";
 import { getEspece } from "./especes";
 import { cellCount, forEachDiscCell } from "./grid";
-import { computeGroundLight, computeLight, crownRadiusM } from "./light";
+import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from "./light";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
 import {
@@ -46,18 +46,26 @@ import { cellWaterBalanceInto, drynessFactor } from "./water";
 /** °C moyenne hebdo au-dessus de laquelle les caducs sont en feuilles (proxy V0). */
 const LEAVES_ON_TMEAN_C = 6;
 /**
- * Part de l'ETP consommée par le sol et sa strate herbacée implicite
+ * Part de l'ETP consommée par le sol nu et sa strate herbacée implicite
  * (évaporation + transpiration des herbes, non modélisées avant la V1).
- * Uniforme en V0.5 — le microclimat sous couvert viendra la moduler.
  */
-const SOIL_EVAP_FRACTION = 0.65;
+const SOIL_EVAP_FRACTION = 0.5;
 /**
  * Microclimat forestier (docs/regles.md §3, volet humidité) : sous couvert
  * fermé, l'évaporation du sol tombe à cette fraction de sa valeur plein soleil
- * (ombre + air calme + humidité) *(à calibrer)*. Le volet température (−x °C
- * en canicule) viendra avec les vraies séries météo.
+ * (ombre + air calme + humidité) *(à calibrer)*. Bas, car sous un couvert la
+ * transpiration des arbres REMPLACE l'évaporation du sol au lieu de s'y
+ * ajouter — c'est la même ETP qui se partage. Le volet température (−x °C en
+ * canicule) viendra avec les vraies séries météo.
  */
-const CANOPY_EVAP_FLOOR = 0.35;
+const CANOPY_EVAP_FLOOR = 0.15;
+/**
+ * Paillage : une litière fournie coupe l'évaporation du sol nu (ch2, ch7
+ * « zéro sol nu »). Plafond d'effet et stock de litière (g C/m²) qui l'atteint
+ * — ~250 g C/m² ≈ 5 t MS/ha au sol *(à calibrer)*.
+ */
+const MULCH_MAX_EFFECT = 0.5;
+const MULCH_FULL_CG = 250;
 const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
 const RECRUITMENT_WEEK = 14;
@@ -83,9 +91,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const potentialG = station.mineralizationPotentialKgHaWeek / G_PER_M2_TO_KG_PER_HA;
   const trees = state.trees;
 
-  // ── 0. Ombrage au sol (microclimat : le couvert freine l'évaporation) ─────
+  // ── 0. Lumière : au sol (microclimat, évaporation) et par arbre (croissance
+  //      ET transpiration — c'est le moteur de l'effet nurse, cf. trees.ts).
   const leavesOn = weather.tMean > LEAVES_ON_TMEAN_C;
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, leavesOn);
+  const light = computeLight(trees, leavesOn);
 
   // ── 1. Bilan hydrique + minéralisation + décomposition de la litière ──────
   const waterMm = state.soil.waterMm.slice();
@@ -129,7 +139,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         evapDemandMm:
           etpMm *
           SOIL_EVAP_FRACTION *
-          (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)),
+          (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
+          (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
         nappeMm: station.remonteeNappeMmSemaine,
       },
       cellOut,
@@ -172,9 +183,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
   }
 
-  // ── 2. Lumière reçue par chaque arbre (ombres portées, décalées au nord) ──
-  const light = computeLight(trees, leavesOn);
-
   // ── 3. Prélèvements eau + azote, en deux passes (ordre-indépendant) ───────
   const nTrees = trees.length;
   const waterDemandL = new Array<number>(nTrees).fill(0);
@@ -202,7 +210,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     rootCells[t] = n;
     wlMean[t] = wlSum / n;
     phMean[t] = phSum / n;
-    waterDemandL[t] = treeWaterDemandL(espece, tree.heightM, etpMm, season);
+    waterDemandL[t] = treeWaterDemandL(
+      espece,
+      tree.heightM,
+      etpMm,
+      season,
+      light[t] ?? 1,
+      station.ventExposition,
+      station.ventExposition > 0 ? windShelterAt(trees, tree.x, tree.y, tree.id) : 0,
+    );
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
     const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
     const wPerCell = (waterDemandL[t] ?? 0) / n;
