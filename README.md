@@ -10,6 +10,8 @@ succession écologique, bilan carbone honnête.
   (chaque valeur du jeu doit être sourcée).
 
 - **Stack technique** : [docs/stack.md](docs/stack.md)
+- **Critères de réalisme** : [docs/realisme.md](docs/realisme.md) — le référentiel
+  de vérité écologique que le moteur doit atteindre, et où on en est.
 
 État : moteur spatial complet sur 5 espèces — grille de sol 1 m² (eau, azote,
 litières), arbres positionnés (zone racinaire, ombres portées décalées au

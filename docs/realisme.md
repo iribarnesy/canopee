@@ -1,0 +1,193 @@
+# Canopée — Critères de réalisme
+
+> Référentiel de vérification du moteur, v1 (2026-09-01).
+> **À quoi ça sert** : le jeu doit produire, pour *n'importe quelle* combinaison
+> (sol × climat × espèces × voisinage), le résultat que produirait la réalité —
+> y compris sur des stations générées, jamais écrites à la main. Ce document
+> liste les comportements réels attendus, dit où on en est, et sert de feuille
+> de route : chaque mécanisme ajouté doit faire basculer des critères.
+>
+> **Principe de non-régression conceptuelle** : aucun critère ne doit être
+> satisfait par un cas particulier codé en dur. Tout passe par des paramètres
+> continus et des lois générales — un critère « coché » par une exception ne
+> compte pas.
+
+## Comment lire
+
+- ✅ **couvert** — mécanisme présent ET prouvé par un test automatisé
+- 🟡 **partiel** — mécanisme présent mais grossier, ou non testé
+- ❌ **absent** — le moteur ne sait pas faire
+
+Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
+
+## Score actuel
+
+| Domaine | ✅ | 🟡 | ❌ | Total |
+|---|---|---|---|---|
+| A. Sol, eau, atmosphère | 6 | 4 | 4 | 14 |
+| B. Lumière et structure | 5 | 2 | 3 | 10 |
+| C. Nutriments et cycles | 4 | 3 | 5 | 12 |
+| D. Climat et phénologie | 4 | 3 | 3 | 10 |
+| E. Interactions entre plantes | 3 | 2 | 5 | 10 |
+| F. Dynamique des peuplements | 4 | 2 | 4 | 10 |
+| G. Faune et santé | 0 | 0 | 6 | 6 |
+| H. Gestion, économie, travail | 4 | 3 | 5 | 12 |
+| I. Carbone | 3 | 2 | 3 | 8 |
+| **Total** | **33** | **21** | **38** | **92** |
+
+**Score de réalisme : 33 pleins + 21 partiels sur 92 → ≈ 47 %** *(un partiel compte 1/2)*.
+
+---
+
+## A. Sol, eau, atmosphère
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| A1 | L'eau du sol suit un bilan conservatif (rien ne se perd, rien n'apparaît) | ✅ | `water.ts` ; `tick-conservation.test.ts` |
+| A2 | Un sol à faible réserve utile se vide plus vite qu'un sol profond | ✅ | RU par station ; `determinism.test.ts` |
+| A3 | L'évaporation d'un sol nu s'auto-limite quand la surface sèche | ✅ | `soilEvapFactor` quadratique |
+| A4 | Un couvert végétal réduit l'évaporation du sol (microclimat) | ✅ | `CANOPY_EVAP_FLOOR` × ombrage au sol |
+| A5 | Un paillis/litière au sol réduit encore l'évaporation | ✅ | `MULCH_MAX_EFFECT` sur le stock de litière |
+| A6 | Un sol engorgé asphyxie les racines des espèces sensibles | ✅ | `waterloggingFactor` ; `tolerances.test.ts` |
+| A7 | Le vent augmente la demande évaporative ; un abri la réduit | 🟡 | `windShelterAt` (portée 12 H) — non testé isolément |
+| A8 | Une nappe accessible soutient la végétation en été | 🟡 | `remonteeNappeMmSemaine` — constante, sans battement saisonnier |
+| A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ❌ | Saisis à la main. **Prérequis du générateur de sols** (§2.1) |
+| A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ❌ | Modèle mono-couche. Bloque la stratification racinaire |
+| A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ❌ | Aucune pente dans le moteur |
+| A12 | La MO du sol augmente la réserve utile (humus = éponge) | ❌ | RU indépendante de l'humus |
+| A13 | La structure/compaction évolue (tassement, restauration par les racines) | ❌ | Pas de variable structure |
+| A14 | Deux plantes voisines se disputent réellement l'eau de leurs cellules communes | ✅ | Allocation spatiale en 2 passes ; `nurse.test.ts` |
+
+## B. Lumière et structure
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| B1 | Un couvert dense intercepte la lumière (Beer-Lambert) | ✅ | `light.ts` |
+| B2 | L'ombre est portée vers le nord (soleil au sud) : l'orientation des lignes compte | ✅ | `SHADOW_NORTH_OFFSET` |
+| B3 | L'ombre est dégradée : pénombre en bordure de houppier | ✅ | atténuation en (1 − d²/r²) |
+| B4 | Un héliophile meurt sous couvert fermé ; un sciaphile y patiente | ✅ | points de compensation ; `lumiere.test.ts` |
+| B5 | Les caducs n'ombragent pas hors saison (fenêtre des vernales) | ✅ | `leavesOn` ; pas encore de strate herbacée pour en profiter |
+| B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main |
+| B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
+| B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | ❌ | Seuls les ligneux plantés existent |
+| B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | ❌ | Pas d'effet de bord |
+| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | ❌ | Houppier = ratio fixe × hauteur |
+
+## C. Nutriments et cycles
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| C1 | L'azote suit un bilan conservatif | ✅ | `tick-conservation.test.ts` |
+| C2 | La minéralisation dépend de la température, de l'humidité et de l'anoxie | ✅ | `decompositionClimateFactor` |
+| C3 | Les nitrates sont lessivés par le drainage | ✅ | `cellLeachedG` |
+| C4 | Une litière à C/N bas se décompose vite ; les aiguilles, lentement | ✅ | `litterDecayRate` ; `litiere.test.ts` |
+| C5 | Les fixateurs enrichissent réellement leur voisinage | ✅ | fixation → litière ; `litiere.test.ts` |
+| C6 | Un frugal se contente d'un sol pauvre là où un exigeant a faim | ✅ | besoin en g/individu ; `nitrogen-conservation.test.ts` |
+| C7 | Le pH exclut les espèces hors de leur gamme (calcicoles / acidiphiles) | ✅ | `phFactor` ; `embauche-chaulage.test.ts` |
+| C8 | Le carbone du sol et l'azote sont couplés (retourner une prairie libère N et C) | ❌ | Humus C et N minéral évoluent séparément |
+| C9 | Enfouir un matériau à C/N élevé provoque une faim d'azote | ❌ | Pas d'immobilisation |
+| C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | 🟡 | Chaulage seul ; pas de dérive |
+| C11 | Phosphore et potassium peuvent limiter la croissance | ❌ | Seul N est modélisé |
+| C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ❌ | Absentes (ch2-B) |
+
+## D. Climat et phénologie
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| D1 | Le climat est réel, variable d'une année à l'autre, avec vraies sécheresses | ✅ | séries Météo-France ; `meteo-reelle.test.ts` |
+| D2 | L'ETP suit le rayonnement, la latitude et l'amplitude thermique | ✅ | Hargreaves/FAO-56 ; `etp.test.ts` |
+| D3 | La floraison suit un cumul de degrés-jours | ✅ | `ddYearBase5` ; `fruits.test.ts` |
+| D4 | Un gel tardif détruit les fleurs ouvertes : les précoces sont un pari | ✅ | `tMinAbsC` ; `fruits.test.ts` |
+| D5 | La variabilité climatique ouvre des fenêtres d'installation | 🟡 | visible (`fenetres-installation.test.ts`), non piloté par un mécanisme dédié |
+| D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | ❌ | Microclimat = humidité seulement |
+| D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ❌ | `besoin_froid_h` prévu, non implémenté |
+| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ❌ | Séries historiques rejouées en boucle |
+| D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ❌ | Prévu §3, non implémenté |
+| D10 | L'altitude et l'exposition modifient températures et rayonnement | 🟡 | latitude seule ; pas d'altitude ni d'adret/ubac |
+
+## E. Interactions entre plantes
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| E1 | Une nurse protège (vent, rayonnement) mais concurrence (eau) : tout est dans la distance | ✅ | `nurse.test.ts` |
+| E2 | Un fixateur voisin profite aux autres | ✅ | `litiere.test.ts` |
+| E3 | La facilitation domine en milieu contraint, la compétition en milieu riche | 🟡 | émergent, non testé comme tel |
+| E4 | Les espèces xérophiles transpirent moins par unité de feuillage (WUE) | 🟡 | dérivé du tempérament, à calibrer sur données |
+| E5 | Une haie brise-vent améliore la production sur 10-20 fois sa hauteur | ✅ | `windShelterAt` |
+| E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | ❌ | Champ prévu, non implémenté |
+| E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ❌ | Dépend de A10 |
+| E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ❌ | Pas de sylviculture progressive |
+| E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend de B8 |
+| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ❌ | Dépend de B10 |
+
+## F. Dynamique des peuplements
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| F1 | Une friche abandonnée se boise selon la succession pionniers → climaciques | ✅ | `succession.test.ts` (200 ans) |
+| F2 | La dissémination dépend du mode (vent, oiseaux, gravité) | ✅ | `regeneration.ts` |
+| F3 | Les semis ne s'installent que dans leurs conditions (lumière, pH) | ✅ | filtres d'installation |
+| F4 | Les arbres vieillissent et meurent (sénescence) | ✅ | `fAge` ; `succession.test.ts` |
+| F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
+| F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | plafond de densité arbitraire + ombrage codominant |
+| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
+| F8 | Certaines espèces rejettent de souche ou drageonnent | ❌ | Champs prévus, non implémentés |
+| F9 | La banque de graines du sol garde une mémoire du passé | ❌ | Absente |
+| F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ❌ | Absent (inflammabilité prévue) |
+
+## G. Faune et santé
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| G1 | Le gibier abroutit les jeunes plants non protégés | ❌ | Absent (ch4-C) |
+| G2 | Les ravageurs apparaissent à des seuils (scolytes après sécheresse…) | ❌ | Absent (§7.4) |
+| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ❌ | Absent |
+| G4 | Les pollinisateurs conditionnent la fructification | 🟡→❌ | Pollinisation croisée entre arbres seulement, pas d'insectes |
+| G5 | Les disséminateurs (geai) transportent les grosses graines | 🟡→❌ | Mode « oiseaux » abstrait, pas d'animal |
+| G6 | Les maladies datées frappent (chalarose du frêne) | ❌ | Absent |
+
+## H. Gestion, économie, travail
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| H1 | Chaque action coûte du temps de travail et de l'argent | ✅ | `actions.ts` ; `actions.test.ts` |
+| H2 | Le temps de travail est plafonné par semaine et budgété à l'année (UTH) | ✅ | `WEEK_HOURS_CAP` |
+| H3 | Saisonnier vs CDI : coûts, durées et ruptures réalistes | ✅ | `embauche-chaulage.test.ts` |
+| H4 | La cadence de récolte dépend de l'espèce (pommes vs noisettes) | ✅ | `fruits.recolteHKg` |
+| H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |
+| H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ❌ | Prix unique au m³ |
+| H7 | Les prix varient (marché, saturation locale) | ❌ | Prix fixes |
+| H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ❌ | Seule la coupe rase existe |
+| H9 | Irrigation, fertilisation, protections individuelles, clôtures | ❌ | Seul le chaulage existe |
+| H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
+| H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |
+| H12 | Le sol se découvre par observation ou analyse payante | 🟡 | tout est visible dans l'UI (calques) |
+
+## I. Carbone
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| I1 | Le carbone suit un bilan conservatif entre tous les pools | ✅ | `carbon-conservation.test.ts` |
+| I2 | Le sol est le plus gros stock en tempéré | ✅ | `carbon.test.ts` |
+| I3 | Le bois énergie vendu est émis immédiatement (il ne stocke rien) | ✅ | `epandre-vs-vendre.test.ts` |
+| I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | ❌ | Dépend de H6 |
+| I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
+| I6 | Le travail du sol déstocke massivement le carbone | ❌ | Pas de labour |
+| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | proxy 0,015·H² × densité, à caler sur l'IFN |
+| I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
+
+---
+
+## Ce qui débloquerait le plus de critères
+
+1. **Horizons de sol + profondeur racinaire** (A9, A10, A12, E7, et la porte du générateur de sols) — le chantier structurant.
+2. **Strate herbacée** (B8, E9, G-partiel, et la vraie concurrence des jeunes plants).
+3. **Sylviculture** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
+4. **Biotique** : gibier, ravageurs à seuils, auxiliaires (G1-G3, G6).
+5. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
+
+## Règle de travail
+
+À chaque ajout au moteur, mettre ce document à jour : cocher, recompter, et
+vérifier qu'aucun critère n'a été coché par un cas particulier. Le score n'est
+pas une note — c'est une carte de ce qui reste à rendre vrai.
