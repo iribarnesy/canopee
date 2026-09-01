@@ -14,6 +14,8 @@ import { cellCount } from "./grid";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
+import type { Horizon, SoilProfile } from "./soil";
+import { ruHorizonMm } from "./soil";
 import type { TreeState } from "./trees";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
@@ -21,6 +23,11 @@ export interface Station {
   id: string;
   nom: string;
   latitudeDeg: number;
+  /**
+   * Profil de sol : la description PHYSIQUE dont tout le reste est dérivé
+   * (soil.ts). Les champs qui suivent sont calculés, jamais saisis.
+   */
+  profil: SoilProfile;
   /** réserve utile du sol, mm (dérivée de texture × profondeur en V1) */
   ruMm: number;
   /** porosité de drainage (eau gravitaire max avant débordement), mm */
@@ -38,6 +45,13 @@ export interface Station {
   /** remontée capillaire de nappe, mm/semaine (0 = pas de nappe accessible) */
   remonteeNappeMmSemaine: number;
   /**
+   * Drainage EXTERNE, mm/semaine : ce que l'exutoire peut évacuer, quelle que
+   * soit la perméabilité du sol. Un fond de vallée à nappe affleurante ne peut
+   * rien évacuer même sur sol sableux — c'est la topographie qui commande.
+   * `Infinity` = versant bien drainé.
+   */
+  drainageExterneMmSemaine: number;
+  /**
    * Exposition au vent ∈ [0,1] : 0 = vallon abrité, 1 = lande atlantique ou
    * plateau ouvert. Le vent dessèche les sujets découverts — c'est ce qui rend
    * l'effet brise-vent d'une haie ou d'une nurse payant (ch5, docs §9).
@@ -53,11 +67,17 @@ export function gridDims(station: Station): GridDims {
   return { widthM: station.coteM, heightM: station.coteM };
 }
 
-/** État dynamique du sol : une valeur par cellule, index `i = y*width + x`. */
+/**
+ * État dynamique du sol. L'eau est stratifiée : indexée par
+ * `cellule * nbHorizons + horizon` (critère A10). L'azote, le carbone et le pH
+ * restent mono-couche — la vie du sol, l'absorption d'azote et le chaulage se
+ * jouent pour l'essentiel dans les premiers centimètres *(approximation
+ * assumée, à lever si le besoin apparaît)*.
+ */
 export interface SoilState {
-  /** eau de la réserve utile, mm */
+  /** eau de la réserve utile, mm — par (cellule, horizon) */
   waterMm: number[];
-  /** eau gravitaire au-dessus de la capacité au champ (engorgement), mm */
+  /** eau gravitaire au-dessus de la capacité au champ, mm — par (cellule, horizon) */
   excessMm: number[];
   /** azote minéral, g/m² (1 kg/ha = 0,1 g/m²) */
   mineralNG: number[];
@@ -119,6 +139,12 @@ export function createGameState(
   options: { treasuryEur?: number } = {},
 ): GameState {
   const n = cellCount(gridDims(station));
+  const nH = Math.max(1, station.profil.length);
+  // Chaque horizon démarre à sa propre réserve utile (sol ressuyé du 1er janvier).
+  const eauInitiale: number[] = [];
+  for (let i = 0; i < n; i++) {
+    for (let h = 0; h < nH; h++) eauInitiale.push(ruHorizonMm(station.profil[h] as Horizon));
+  }
   return {
     week: 0,
     station,
@@ -127,8 +153,8 @@ export function createGameState(
     ddYearBase5: 0,
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
-      waterMm: new Array(n).fill(station.ruMm),
-      excessMm: new Array(n).fill(0),
+      waterMm: eauInitiale,
+      excessMm: new Array(n * nH).fill(0),
       mineralNG: new Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
       litterNG: new Array(n).fill(0),
       litterCG: new Array(n).fill(0),

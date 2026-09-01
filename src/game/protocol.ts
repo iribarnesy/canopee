@@ -62,6 +62,7 @@ export interface StationInfo {
   id: string;
   nom: string;
   coteM: number;
+  /** réserve utile de l'horizon de surface, mm (échelle de la carte) */
   ruMm: number;
   phInitial: number;
   meteoLabel: string;

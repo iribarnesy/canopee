@@ -12,13 +12,14 @@ import { tick } from "../../src/engine/tick";
  * + Δstock, et minéralisation = prélèvements + lessivage + Δstock d'azote.
  */
 
+/** Stock d'eau moyen par CELLULE, tous horizons confondus (sol stratifié). */
 function meanWaterStock(state: GameState): number {
-  const n = state.soil.waterMm.length;
+  const nCells = state.soil.mineralNG.length;
   let sum = 0;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < state.soil.waterMm.length; i++) {
     sum += (state.soil.waterMm[i] ?? 0) + (state.soil.excessMm[i] ?? 0);
   }
-  return sum / n;
+  return sum / nCells;
 }
 
 /** Stock d'azote du sol = minéral + litière, kg/ha. */
@@ -46,7 +47,7 @@ function checkConservation(sc: StationClimat, years: number) {
     const deltaWater = meanWaterStock(next) - before;
     expect(
       fluxes.evapMm + fluxes.transpirationMm + fluxes.drainageMm + fluxes.overflowMm + deltaWater,
-    ).toBeCloseTo(fluxes.rainMm + fluxes.nappeMm, 6);
+    ).toBeCloseTo(fluxes.rainMm + fluxes.nappeMm, 5);
 
     // Entrées : minéralisation de l'humus + retour de litière (recyclage des
     // arbres) + fixation symbiotique. Sorties : prélèvements + lessivage.

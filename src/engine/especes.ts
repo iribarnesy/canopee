@@ -55,6 +55,15 @@ export interface EspeceV0 {
     /** true = perd ses feuilles (n'ombrage plus l'hiver) */
     caduc: boolean;
   };
+  racines: {
+    /**
+     * Profondeur d'enracinement d'un sujet adulte, cm, si le sol le permet.
+     * Un pivot (chêne, pin) descend chercher l'eau profonde ; un système
+     * traçant (épicéa, bouleau) reste en surface. C'est ce contraste qui rend
+     * la complémentarité agroforestière possible (critère E7).
+     */
+    profondeurMaxCm: number;
+  };
   /** °C moyenne hebdo de démarrage de la croissance (proxy du tempérament thermique) */
   tBaseCroissanceC: number;
   azote: {
@@ -126,6 +135,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [4.5, 7.5],
     // Atlas : héliophile pionnier.
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.3, caduc: true },
+    racines: { profondeurMaxCm: 90 }, // traçant de berge, l'eau est en surface
     tBaseCroissanceC: 6,
     // Atlas : eutrophe, mais fixateur (Frankia) → indifférent au N du sol.
     azote: { demandeRelative: 0.8, fixateur: true },
@@ -148,6 +158,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : sciaphile climacique — un semis survit à ~1-2 % de lumière (ch3-B),
     // couronne très opaque.
     lumiere: { compensation: 0.01, saturation: 0.35, lai: 3.5, houppierRatio: 0.35, caduc: true },
+    racines: { profondeurMaxCm: 110 }, // racines étalées, peu pivotantes — d'où sa sensibilité à la sécheresse
     tBaseCroissanceC: 6,
     azote: { demandeRelative: 0.7, fixateur: false },
     regeneration: { maturiteAns: 40, longeviteAns: 300, dissemination: "gravite", semisParAn: 3 },
@@ -168,6 +179,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [5.5, 8.5],
     // Atlas : héliophile, couronne claire de coteau sec.
     lumiere: { compensation: 0.15, saturation: 0.6, lai: 1.5, houppierRatio: 0.3, caduc: true },
+    racines: { profondeurMaxCm: 250 }, // pivot puissant : il va chercher l'eau profonde des coteaux secs
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "oiseaux", semisParAn: 2 },
@@ -187,6 +199,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [4, 7.5],
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     lumiere: { compensation: 0.25, saturation: 0.7, lai: 1.2, houppierRatio: 0.25, caduc: false },
+    racines: { profondeurMaxCm: 200 }, // pivot, d'où sa résistance sur sols filtrants
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.25, fixateur: false },
     regeneration: { maturiteAns: 15, longeviteAns: 250, dissemination: "vent", semisParAn: 3 },
@@ -207,6 +220,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [3.8, 7.5],
     // Atlas : très héliophile ; ombre légère (couronne aérée) — le bon parasol de nurse.
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.3, houppierRatio: 0.3, caduc: true },
+    racines: { profondeurMaxCm: 100 }, // traçant superficiel de pionnier
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.35, fixateur: false },
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
@@ -225,6 +239,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.15 },
     ph: [5.5, 8],
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.45, caduc: true },
+    racines: { profondeurMaxCm: 120 }, // fruitier greffé, enracinement moyen
     tBaseCroissanceC: 6,
     azote: { demandeRelative: 0.6, fixateur: false },
     // Cultivar greffé : pas de régénération naturelle fidèle.
@@ -255,6 +270,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.4, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.05 },
     ph: [6, 8.5],
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.8, houppierRatio: 0.45, caduc: true },
+    racines: { profondeurMaxCm: 180 }, // pivot des sols secs et chauds
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 4, longeviteAns: 60, dissemination: "gravite", semisParAn: 0 },
@@ -284,6 +300,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
     ph: [5, 8],
     lumiere: { compensation: 0.05, saturation: 0.4, lai: 2.5, houppierRatio: 0.5, caduc: true },
+    racines: { profondeurMaxCm: 90 }, // cépée à racines traçantes
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.4, fixateur: false },
     regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 1 },
@@ -314,6 +331,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [3.5, 6.5],
     // Rameaux épineux persistants : il ombrage et brise le vent toute l'année.
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 2.2, houppierRatio: 0.55, caduc: false },
+    racines: { profondeurMaxCm: 140 }, // pivot de fabacée : il prospecte plus bas que sa taille ne le suggère
     tBaseCroissanceC: 5,
     // Fabacée fixatrice (Rhizobium) : elle enrichit le sable qu'elle colonise.
     azote: { demandeRelative: 0.5, fixateur: true },
@@ -333,6 +351,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.1 },
     ph: [4, 7],
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.6, houppierRatio: 0.45, caduc: false },
+    racines: { profondeurMaxCm: 130 }, // pivot de fabacée
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: true },
     regeneration: { maturiteAns: 3, longeviteAns: 20, dissemination: "gravite", semisParAn: 4 },
@@ -351,6 +370,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.2 },
     ph: [3.5, 6],
     lumiere: { compensation: 0.22, saturation: 0.7, lai: 2, houppierRatio: 0.6, caduc: false },
+    racines: { profondeurMaxCm: 40 }, // sous-arbrisseau à racines fines superficielles
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.15, fixateur: false },
     regeneration: { maturiteAns: 3, longeviteAns: 30, dissemination: "vent", semisParAn: 6 },
@@ -371,6 +391,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.55, seuilStressSecheresse: 0.22, toleranceEngorgement: 0.05 },
     ph: [4, 6.5],
     lumiere: { compensation: 0.08, saturation: 0.5, lai: 3.2, houppierRatio: 0.38, caduc: true },
+    racines: { profondeurMaxCm: 180 }, // pivot, mais qui redoute l'asphyxie
     tBaseCroissanceC: 7,
     azote: { demandeRelative: 0.45, fixateur: false },
     regeneration: { maturiteAns: 20, longeviteAns: 300, dissemination: "gravite", semisParAn: 2 },
@@ -401,6 +422,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « silice/acide » — calcifuge strict des sables siliceux.
     ph: [3.8, 6.8],
     lumiere: { compensation: 0.2, saturation: 0.65, lai: 2.8, houppierRatio: 0.42, caduc: false },
+    racines: { profondeurMaxCm: 250 }, // pivot profond des sables méditerranéens
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.4, fixateur: false },
     regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "oiseaux", semisParAn: 2 },
@@ -419,6 +441,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.05 },
     ph: [4, 6.5],
     lumiere: { compensation: 0.12, saturation: 0.6, lai: 2.4, houppierRatio: 0.45, caduc: false },
+    racines: { profondeurMaxCm: 150 }, // racines profondes, adaptation méditerranéenne
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.3, fixateur: false },
     regeneration: { maturiteAns: 5, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 2 },

@@ -24,18 +24,21 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
-| A. Sol, eau, atmosphère | 6 | 4 | 4 | 14 |
+| A. Sol, eau, atmosphère | 11 | 2 | 3 | 16 |
 | B. Lumière et structure | 5 | 2 | 3 | 10 |
 | C. Nutriments et cycles | 4 | 3 | 5 | 12 |
 | D. Climat et phénologie | 4 | 3 | 3 | 10 |
-| E. Interactions entre plantes | 3 | 2 | 5 | 10 |
+| E. Interactions entre plantes | 4 | 3 | 4 | 11 |
 | F. Dynamique des peuplements | 4 | 2 | 4 | 10 |
 | G. Faune et santé | 0 | 0 | 6 | 6 |
 | H. Gestion, économie, travail | 4 | 3 | 5 | 12 |
 | I. Carbone | 3 | 2 | 3 | 8 |
-| **Total** | **33** | **21** | **38** | **92** |
+| **Total** | **39** | **20** | **36** | **95** |
 
-**Score de réalisme : 33 pleins + 21 partiels sur 92 → ≈ 47 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 39 pleins + 20 partiels sur 95 → ≈ 52 %** *(un partiel compte 1/2)*.
+
+*Historique : 47 % (référentiel initial) → 52 % (horizons de sol, dérivation
+physique, profondeur racinaire).*
 
 ---
 
@@ -49,12 +52,14 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | A4 | Un couvert végétal réduit l'évaporation du sol (microclimat) | ✅ | `CANOPY_EVAP_FLOOR` × ombrage au sol |
 | A5 | Un paillis/litière au sol réduit encore l'évaporation | ✅ | `MULCH_MAX_EFFECT` sur le stock de litière |
 | A6 | Un sol engorgé asphyxie les racines des espèces sensibles | ✅ | `waterloggingFactor` ; `tolerances.test.ts` |
-| A7 | Le vent augmente la demande évaporative ; un abri la réduit | 🟡 | `windShelterAt` (portée 12 H) — non testé isolément |
-| A8 | Une nappe accessible soutient la végétation en été | 🟡 | `remonteeNappeMmSemaine` — constante, sans battement saisonnier |
-| A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ❌ | Saisis à la main. **Prérequis du générateur de sols** (§2.1) |
-| A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ❌ | Modèle mono-couche. Bloque la stratification racinaire |
+| A7 | Le vent augmente la demande évaporative ; un abri la réduit | ✅ | `windShelterAt` (portée 12 H) ; `nurse.test.ts` |
+| A8 | Une nappe accessible soutient la végétation en été | 🟡 | recharge l'horizon profond ; pas encore de battement saisonnier |
+| A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
+| A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
 | A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ❌ | Aucune pente dans le moteur |
-| A12 | La MO du sol augmente la réserve utile (humus = éponge) | ❌ | RU indépendante de l'humus |
+| A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
+| A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
+| A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` ; `soil.test.ts` — statique : l'humus qui s'accumule ne l'augmente pas encore |
 | A13 | La structure/compaction évolue (tassement, restauration par les racines) | ❌ | Pas de variable structure |
 | A14 | Deux plantes voisines se disputent réellement l'eau de leurs cellules communes | ✅ | Allocation spatiale en 2 passes ; `nurse.test.ts` |
 
@@ -113,9 +118,10 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | E2 | Un fixateur voisin profite aux autres | ✅ | `litiere.test.ts` |
 | E3 | La facilitation domine en milieu contraint, la compétition en milieu riche | 🟡 | émergent, non testé comme tel |
 | E4 | Les espèces xérophiles transpirent moins par unité de feuillage (WUE) | 🟡 | dérivé du tempérament, à calibrer sur données |
+| E11 | Un pivot résiste à la sécheresse là où un traçant souffre | 🟡 | mécanisme en place, effet à quantifier |
 | E5 | Une haie brise-vent améliore la production sur 10-20 fois sa hauteur | ✅ | `windShelterAt` |
 | E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | ❌ | Champ prévu, non implémenté |
-| E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ❌ | Dépend de A10 |
+| E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ❌ | Pas de sylviculture progressive |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend de B8 |
 | E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ❌ | Dépend de B10 |
@@ -180,11 +186,19 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Horizons de sol + profondeur racinaire** (A9, A10, A12, E7, et la porte du générateur de sols) — le chantier structurant.
-2. **Strate herbacée** (B8, E9, G-partiel, et la vraie concurrence des jeunes plants).
-3. **Sylviculture** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
-4. **Biotique** : gibier, ravageurs à seuils, auxiliaires (G1-G3, G6).
-5. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
+1. **Strate herbacée** (B8, E9, et la vraie concurrence des jeunes plants) — désormais le chantier le plus rentable.
+2. **Sylviculture** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
+3. **Biotique** : gibier, ravageurs à seuils, auxiliaires (G1-G3, G6).
+4. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
+5. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
+
+## Générateur de stations : ce qu'il reste à faire
+
+La dérivation (A9) est en place : une station se décrit par un profil
+d'horizons, tout le reste est calculé. Pour générer des stations quelconques,
+il manque seulement le tirage cohérent des profils (une texture, une
+profondeur et une MO plausibles ensemble, et cohérentes avec le climat et la
+position topographique) — pas de nouveau mécanisme moteur.
 
 ## Règle de travail
 

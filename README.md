@@ -13,13 +13,13 @@ succession écologique, bilan carbone honnête.
 - **Critères de réalisme** : [docs/realisme.md](docs/realisme.md) — le référentiel
   de vérité écologique que le moteur doit atteindre, et où on en est.
 
-État : moteur spatial complet sur 5 espèces — grille de sol 1 m² (eau, azote,
-litières), arbres positionnés (zone racinaire, ombres portées décalées au
-nord), croissance en loi du minimum, régénération naturelle et succession
-émergente (testée sur 200 ans), météo réelle Météo-France (60 ans), premières
-actions joueur (planter, couper-vendre/épandre) avec argent et temps de
-travail — le journal d'actions daté + la seed forment la sauvegarde rejouable.
-UI jetable de visualisation (courbes + carte de parcelle).
+État : moteur spatial sur 14 espèces — sol en **horizons** dont tout est
+dérivé (texture, MO, pierrosité → réserve utile, drainage, fertilité), grille
+1 m², arbres positionnés qui puisent selon la **profondeur de leurs racines**,
+lumière avec ombres portées et pénombre, effet nurse et brise-vent, régénération
+et succession émergente, météo réelle Météo-France (60 ans), phénologie et
+récoltes, carbone, économie (argent, UTH, contrats). Jeu jouable en ligne :
+https://iribarnesy.github.io/canopee/
 
 ## Développement
 

@@ -29,10 +29,18 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import { yearlyRecruitment } from "./regeneration";
+import {
+  conductiviteHorizonMmSemaine,
+  porositeDrainageMm,
+  profondeurPenetrableCm,
+  ruHorizonMm,
+} from "./soil";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
 import type { TreeState } from "./trees";
 import {
+  fractionsRacinairesParHorizon,
+  profondeurRacinesCm,
   rootRadiusM,
   seasonFactor,
   tickTree,
@@ -40,8 +48,8 @@ import {
   treeNitrogenNeedGWeek,
   treeWaterDemandL,
 } from "./trees";
-import type { CellWaterOutput } from "./water";
-import { cellWaterBalanceInto, drynessFactor } from "./water";
+import type { HorizonHydro } from "./water";
+import { drynessFactor, profilHydro } from "./water";
 
 /** °C moyenne hebdo au-dessus de laquelle les caducs sont en feuilles (proxy V0). */
 const LEAVES_ON_TMEAN_C = 6;
@@ -97,7 +105,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, leavesOn);
   const light = computeLight(trees, leavesOn);
 
-  // ── 1. Bilan hydrique + minéralisation + décomposition de la litière ──────
+  // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
+  const profil = station.profil;
+  const nH = Math.max(1, profil.length);
+  const horizonsHydro: HorizonHydro[] = profil.map((h) => ({
+    ruMm: ruHorizonMm(h),
+    porositeMm: porositeDrainageMm(h),
+    conductiviteMm: conductiviteHorizonMmSemaine(h),
+  }));
+  const epaisseurs = profil.map((h) => h.epaisseurCm);
+  const solPenetrableCm = profondeurPenetrableCm(profil);
+  const ruSurface = horizonsHydro[0]?.ruMm ?? 1;
+
   const waterMm = state.soil.waterMm.slice();
   const excessMm = state.soil.excessMm.slice();
   const mineralNG = state.soil.mineralNG.slice();
@@ -105,18 +124,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterCG = state.soil.litterCG.slice();
   const humusCG = state.soil.humusCG.slice();
   const litterK = state.soil.litterK.slice();
-  const waterlogging = new Array<number>(nCells);
+  /** engorgement par (cellule, horizon) */
+  const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
   const drainageMmArr = new Array<number>(nCells);
-  const cellOut: CellWaterOutput = {
-    soilWaterMm: 0,
-    excessMm: 0,
-    evapMm: 0,
-    drainageMm: 0,
-    overflowMm: 0,
-    nappeMm: 0,
-    waterloggingRatio: 0,
-  };
   let evapSum = 0;
   let nappeSum = 0;
   let drainageSum = 0;
@@ -127,39 +138,45 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
 
+  const eauCellule = new Array<number>(nH);
+  const excesCellule = new Array<number>(nH);
   for (let i = 0; i < nCells; i++) {
-    cellWaterBalanceInto(
-      {
-        soilWaterMm: waterMm[i] ?? 0,
-        excessMm: excessMm[i] ?? 0,
-        ruMm: station.ruMm,
-        excessCapacityMm: station.excessCapacityMm,
-        drainagePerWeekMm: station.drainagePerWeekMm,
-        rainMm: weather.rainMm,
-        evapDemandMm:
-          etpMm *
-          SOIL_EVAP_FRACTION *
-          (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
-          (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
-        nappeMm: station.remonteeNappeMmSemaine,
-      },
-      cellOut,
-    );
-    waterMm[i] = cellOut.soilWaterMm;
-    excessMm[i] = cellOut.excessMm;
-    waterlogging[i] = cellOut.waterloggingRatio;
-    drainageMmArr[i] = cellOut.drainageMm;
-    evapSum += cellOut.evapMm;
-    nappeSum += cellOut.nappeMm;
-    drainageSum += cellOut.drainageMm;
-    overflowSum += cellOut.overflowMm;
-    waterloggingSum += cellOut.waterloggingRatio;
+    const base = i * nH;
+    for (let h = 0; h < nH; h++) {
+      eauCellule[h] = waterMm[base + h] ?? 0;
+      excesCellule[h] = excessMm[base + h] ?? 0;
+    }
+    const bilan = profilHydro({
+      horizons: horizonsHydro,
+      eauMm: eauCellule,
+      excesMm: excesCellule,
+      rainMm: weather.rainMm,
+      evapDemandMm:
+        etpMm *
+        SOIL_EVAP_FRACTION *
+        (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
+        (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
+      nappeMm: station.remonteeNappeMmSemaine,
+      drainageExterneMm: station.drainageExterneMmSemaine,
+    });
+    for (let h = 0; h < nH; h++) {
+      waterMm[base + h] = bilan.eauMm[h] ?? 0;
+      excessMm[base + h] = bilan.excesMm[h] ?? 0;
+      waterlogging[base + h] = bilan.engorgementParHorizon[h] ?? 0;
+    }
+    drainageMmArr[i] = bilan.drainageMm;
+    evapSum += bilan.evapMm;
+    nappeSum += bilan.nappeMm;
+    drainageSum += bilan.drainageMm;
+    overflowSum += bilan.overflowMm;
+    waterloggingSum += bilan.engorgementParHorizon[0] ?? 0;
 
-    const moistureRatio = station.ruMm > 0 ? (waterMm[i] ?? 0) / station.ruMm : 0;
+    // La vie du sol se joue en surface : c'est l'horizon 0 qui pilote.
+    const moistureRatio = ruSurface > 0 ? (waterMm[base] ?? 0) / ruSurface : 0;
     const climate = decompositionClimateFactor(
       weather.tMean,
       moistureRatio,
-      cellOut.waterloggingRatio,
+      waterlogging[base] ?? 0,
     );
     climateSum += climate;
     const mineralized = potentialG * climate;
@@ -172,8 +189,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
     humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
     emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
-    // L'humus, pool lent, respire aussi (V1 : couplage avec la minéralisation N
-    // et le labour qui déstocke — docs/regles.md §12).
     const humusLoss = (humusCG[i] ?? 0) * ((HUMUS_DECAY_PER_YEAR / 52) * climate);
     humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
     emittedG += humusLoss;
@@ -184,13 +199,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   // ── 3. Prélèvements eau + azote, en deux passes (ordre-indépendant) ───────
+  // L'eau est demandée par (cellule, horizon) selon la distribution verticale
+  // des racines de chaque arbre : un semis ne puise qu'en surface, un pivot
+  // adulte va chercher l'eau profonde. C'est la complémentarité verticale.
   const nTrees = trees.length;
   const waterDemandL = new Array<number>(nTrees).fill(0);
   const nNeedG = new Array<number>(nTrees).fill(0);
   const rootCells = new Array<number>(nTrees).fill(1);
   const wlMean = new Array<number>(nTrees).fill(0);
   const phMean = new Array<number>(nTrees).fill(7);
-  const cellWaterDemand = new Array<number>(nCells).fill(0);
+  const rootFractions = new Array<number[]>(nTrees);
+  const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
   const cellNWanted = new Array<number>(nCells).fill(0);
 
   for (let t = 0; t < nTrees; t++) {
@@ -199,12 +218,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const espece = getEspece(tree.especeId);
     const season = seasonFactor(espece, weather.tMean);
     const rootR = rootRadiusM(espece, tree.heightM);
+    const profondeur = profondeurRacinesCm(espece, tree.heightM, solPenetrableCm);
+    const fractions = fractionsRacinairesParHorizon(epaisseurs, profondeur);
+    rootFractions[t] = fractions;
     let n = 0;
     let wlSum = 0;
     let phSum = 0;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
       n++;
-      wlSum += waterlogging[i] ?? 0;
+      // L'anoxie ressentie dépend de là où sont les racines : une nappe
+      // perchée en profondeur n'asphyxie pas un système superficiel.
+      for (let h = 0; h < nH; h++) {
+        wlSum += (waterlogging[i * nH + h] ?? 0) * (fractions[h] ?? 0);
+      }
       phSum += state.soil.ph[i] ?? 7;
     });
     rootCells[t] = n;
@@ -221,27 +247,33 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
     const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
-    const wPerCell = (waterDemandL[t] ?? 0) / n;
     const needPerCell = (nNeedG[t] ?? 0) / n;
     const capPerCell = capG / n;
+    const wPerCell = (waterDemandL[t] ?? 0) / n;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
-      cellWaterDemand[i] = (cellWaterDemand[i] ?? 0) + wPerCell;
+      for (let h = 0; h < nH; h++) {
+        cellWaterDemand[i * nH + h] =
+          (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0);
+      }
       cellNWanted[i] =
         (cellNWanted[i] ?? 0) + Math.min(needPerCell, capPerCell * (availFactor[i] ?? 0));
     });
   }
 
-  const waterServedRatio = new Array<number>(nCells).fill(0);
+  const waterServedRatio = new Array<number>(nCells * nH).fill(0);
   const nServedRatio = new Array<number>(nCells).fill(0);
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   for (let i = 0; i < nCells; i++) {
-    const wDemand = cellWaterDemand[i] ?? 0;
-    if (wDemand > 0) {
-      const water = waterMm[i] ?? 0;
-      const extracted = Math.min(water, wDemand * drynessFactor(water, station.ruMm));
-      waterServedRatio[i] = extracted / wDemand;
-      waterMm[i] = water - extracted;
+    const base = i * nH;
+    for (let h = 0; h < nH; h++) {
+      const wDemand = cellWaterDemand[base + h] ?? 0;
+      if (wDemand <= 0) continue;
+      const ruH = horizonsHydro[h]?.ruMm ?? 0;
+      const water = waterMm[base + h] ?? 0;
+      const extracted = Math.min(water, wDemand * drynessFactor(water, ruH));
+      waterServedRatio[base + h] = extracted / wDemand;
+      waterMm[base + h] = water - extracted;
       transpirationSumL += extracted;
     }
     const nWanted = cellNWanted[i] ?? 0;
@@ -263,21 +295,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const espece = getEspece(tree.especeId);
     const rootR = rootRadiusM(espece, tree.heightM);
     const n = rootCells[t] ?? 1;
+    const fractions = rootFractions[t] ?? [1];
     const wPerCell = (waterDemandL[t] ?? 0) / n;
     const needPerCell = (nNeedG[t] ?? 0) / n;
     const capPerCell = (espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM)) / n;
     let gotW = 0;
     let gotN = 0;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
-      gotW += wPerCell * (waterServedRatio[i] ?? 0);
+      for (let h = 0; h < nH; h++) {
+        gotW += wPerCell * (fractions[h] ?? 0) * (waterServedRatio[i * nH + h] ?? 0);
+      }
       gotN += Math.min(needPerCell, capPerCell * (availFactor[i] ?? 0)) * (nServedRatio[i] ?? 0);
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;
     waterSatisfaction[t] = wd > 0 ? Math.min(1, gotW / wd) : 1;
     nSatisfaction[t] = nd > 0 ? Math.min(1, gotN / nd) : 1;
-    // Les fixateurs couvrent leur besoin par la symbiose : azote NOUVEAU (air),
-    // comptabilisé comme fixation quand il retombe en litière.
     acquiredNG[t] = espece.azote.fixateur
       ? 0.95 * treeNitrogenNeedGWeek(espece, tree.heightM) * seasonFactor(espece, weather.tMean)
       : gotN;
@@ -286,7 +319,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 4. Lessivage de l'azote minéral restant ────────────────────────────────
   let leachedSumG = 0;
   for (let i = 0; i < nCells; i++) {
-    const leached = cellLeachedG(mineralNG[i] ?? 0, drainageMmArr[i] ?? 0, waterMm[i] ?? 0);
+    const leached = cellLeachedG(mineralNG[i] ?? 0, drainageMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
     mineralNG[i] = (mineralNG[i] ?? 0) - leached;
     leachedSumG += leached;
   }

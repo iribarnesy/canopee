@@ -66,6 +66,58 @@ const ROOT_CROWN_RATIO = 1.2;
 /** part de l'ETP transpirée par une couronne en pleine feuille *(à calibrer)* */
 const TRANSPIRATION_COEFF = 0.9;
 
+/**
+ * Profondeur explorée par les racines, cm : elle s'approfondit avec la taille
+ * de l'arbre (un semis n'a que la surface) et bute sur ce que le sol permet
+ * (roche, alios — `profondeurPenetrableCm`). C'est la dimension verticale de
+ * la compétition : deux espèces peuvent partager le même mètre carré sans
+ * puiser dans la même eau (critère E7).
+ */
+export function profondeurRacinesCm(
+  espece: EspeceV0,
+  heightM: number,
+  solPenetrableCm: number,
+): number {
+  // Un jeune plant explore déjà 20-30 cm ; l'approfondissement suit la
+  // croissance et sature quand l'arbre atteint sa taille adulte.
+  const maturite = Math.min(1, (heightM / (0.6 * espece.hauteurMaxM)) ** 0.7);
+  const potentiel = 25 + (espece.racines.profondeurMaxCm - 25) * maturite;
+  return Math.max(15, Math.min(potentiel, solPenetrableCm));
+}
+
+/**
+ * Répartition verticale des racines : densité décroissante avec la profondeur
+ * (modèle exponentiel classique). Rend la fraction de racines présente dans
+ * chaque horizon, dans l'ordre du profil, en tenant compte de la profondeur
+ * réellement explorée.
+ */
+export function fractionsRacinairesParHorizon(
+  epaisseursCm: readonly number[],
+  profondeurExploreeCm: number,
+): number[] {
+  const fractions: number[] = [];
+  let sommet = 0;
+  let total = 0;
+  for (const epaisseur of epaisseursCm) {
+    const bas = Math.min(sommet + epaisseur, profondeurExploreeCm);
+    if (bas <= sommet) {
+      fractions.push(0);
+    } else {
+      // Densité ∝ exp(-z / L) : la moitié des racines dans le premier tiers.
+      const L = Math.max(15, profondeurExploreeCm / 2.2);
+      const part = Math.exp(-sommet / L) - Math.exp(-bas / L);
+      fractions.push(part);
+      total += part;
+    }
+    sommet += epaisseur;
+  }
+  if (total <= 0) {
+    // Sol si mince que tout tient dans le premier horizon.
+    return epaisseursCm.map((_, i) => (i === 0 ? 1 : 0));
+  }
+  return fractions.map((f) => f / total);
+}
+
 /** Rayon de prospection racinaire, m (au moins 1 m — le semis a sa cellule). */
 export function rootRadiusM(espece: EspeceV0, heightM: number): number {
   return Math.max(1, ROOT_CROWN_RATIO * crownRadiusM(heightM, espece.lumiere.houppierRatio));

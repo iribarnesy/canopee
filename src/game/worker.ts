@@ -14,6 +14,7 @@ import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
 import { rngStateFromSeed } from "../engine/rng";
+import { ruHorizonMm } from "../engine/soil";
 import { createGameState, type GameState, type TickFluxes } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { tick } from "../engine/tick";
@@ -129,8 +130,17 @@ function emptyFluxes(): TickFluxes {
   };
 }
 
+/** Eau de l'horizon de surface, par cellule (le sol est stratifié, cf. soil.ts). */
+function surfaceWater(s: GameState, nH: number): Float32Array {
+  const nCells = s.soil.mineralNG.length;
+  const out = new Float32Array(nCells);
+  for (let i = 0; i < nCells; i++) out[i] = s.soil.waterMm[i * nH] ?? 0;
+  return out;
+}
+
 function postSnapshot() {
   if (!state || !sc) return;
+  const nHorizons = Math.max(1, sc.station.profil.length);
   const w = weather[state.week % weather.length];
   if (!w) return;
   const snapshot: Snapshot = {
@@ -152,7 +162,9 @@ function postSnapshot() {
         stress: t.stress,
         fruitsKg: t.fruitsKg,
       })),
-    soilWater: Float32Array.from(state.soil.waterMm),
+    // Carte : on montre l'eau de l'horizon de SURFACE, celle que voient les
+    // semis et l'évaporation (le sol est stratifié, cf. soil.ts).
+    soilWater: surfaceWater(state, nHorizons),
     soilPh: Float32Array.from(state.soil.ph),
     soilN: Float32Array.from(state.soil.mineralNG),
     refusals: pendingRefusals,
@@ -296,7 +308,7 @@ function stationInfo() {
     id: sc.station.id,
     nom: sc.station.nom,
     coteM: sc.station.coteM,
-    ruMm: sc.station.ruMm,
+    ruMm: sc.station.profil[0] ? ruHorizonMm(sc.station.profil[0]) : sc.station.ruMm,
     phInitial: sc.station.phInitial,
     meteoLabel: serie
       ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France)`

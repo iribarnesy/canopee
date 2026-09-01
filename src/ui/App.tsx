@@ -24,6 +24,7 @@ import {
   type WeekWeather,
 } from "../engine";
 import { carbonInventory } from "../engine/carbon";
+import { type Horizon, ruHorizonMm } from "../engine/soil";
 
 const YEARS = 20;
 const TREES_PER_SPECIES = 30;
@@ -80,9 +81,12 @@ function simulate(sc: StationClimat, weather: WeekWeather[]): SimResult {
       heights[espece.id] = alive.reduce((max, t) => Math.max(max, t.heightM), 0);
     }
     const waterArr = state.soil.waterMm;
+    const nHoriz = Math.max(1, state.station.profil.length);
+    let surfaceSum = 0;
+    for (let c = 0; c < waterArr.length; c += nHoriz) surfaceSum += waterArr[c] ?? 0;
     points.push({
       week: i,
-      meanWaterMm: waterArr.reduce((a, b) => a + b, 0) / waterArr.length,
+      meanWaterMm: surfaceSum / (waterArr.length / nHoriz),
       waterlogging: result.fluxes.waterloggingMean,
       fluxes: result.fluxes,
       heights,
@@ -179,10 +183,12 @@ function ParcelMap({ state }: { state: GameState }) {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    const ru = state.station.ruMm;
+    // La carte montre l'horizon de surface (le sol est stratifié).
+    const ru = ruHorizonMm(state.station.profil[0] as Horizon);
     for (let y = 0; y < side; y++) {
       for (let x = 0; x < side; x++) {
-        const w = (state.soil.waterMm[y * side + x] ?? 0) / ru;
+        const nH = Math.max(1, state.station.profil.length);
+        const w = (state.soil.waterMm[(y * side + x) * nH] ?? 0) / ru;
         // sec = beige clair, humide = brun-vert sombre
         const l = 88 - 45 * w;
         ctx.fillStyle = `hsl(90 18% ${l}%)`;
