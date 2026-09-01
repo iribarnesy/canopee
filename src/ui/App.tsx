@@ -30,16 +30,7 @@ const TREES_PER_SPECIES = 30;
 /** ids ≤ ce seuil = cohorte plantée ; au-delà = recrues de la régénération */
 const PLANTED_MAX_ID = TREES_PER_SPECIES * 5;
 
-const SPECIES_COLORS: Record<string, string> = {
-  alnus_glutinosa: "#2c6e49",
-  fagus_sylvatica: "#7d5ba6",
-  quercus_pubescens: "#c05746",
-  pinus_sylvestris: "#3a7ca5",
-  betula_pendula: "#c9a227",
-  malus_domestica: "#d1495b",
-  prunus_armeniaca: "#e8871e",
-  corylus_avellana: "#8c5e3c",
-};
+import { SPECIES_COLORS } from "./couleurs";
 
 interface WeekPoint {
   week: number;
@@ -243,17 +234,8 @@ export function App() {
   const sum = (f: (p: WeekPoint) => number) => Math.round(lastYear.reduce((a, p) => a + f(p), 0));
 
   return (
-    <main
-      style={{
-        fontFamily: "system-ui, sans-serif",
-        maxWidth: 960,
-        margin: "2rem auto",
-        color: "#2e2a20",
-      }}
-    >
-      <h1 style={{ fontSize: "1.3rem" }}>
-        Canopée — labo moteur (grille 1 m² : eau, azote, lumière)
-      </h1>
+    <div>
+      <h1 style={{ fontSize: "1.3rem" }}>Labo moteur (grille 1 m² : eau, azote, lumière)</h1>
       <p>
         {STATIONS_V0.map((s) => (
           <button
@@ -342,6 +324,6 @@ export function App() {
         kg/ha · retour litière N {sum((p) => p.fluxes.litterfallKgHa)} kg/ha · fixation N{" "}
         {sum((p) => p.fluxes.fixationKgHa)} kg/ha
       </p>
-    </main>
+    </div>
   );
 }

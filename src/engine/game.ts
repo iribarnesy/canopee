@@ -1,15 +1,17 @@
 /**
  * Le runner de partie : rejoue un JOURNAL d'actions datées sur une station et
- * une seed — c'est le format de sauvegarde (docs/stack.md). Chaque semaine :
- * remise à zéro du compteur d'heures → actions datées de la semaine (dans
- * l'ordre du journal) → tick de simulation. Entièrement déterministe.
+ * une seed — c'est le format de sauvegarde (docs/stack.md). Une semaine :
+ * `beginWeek` (salaires, remise à zéro des compteurs, faillite) → actions
+ * datées de la semaine (dans l'ordre du journal) → tick de simulation.
+ * Le worker de l'UI suit exactement la même séquence en appliquant les
+ * actions au fil de l'eau : partie vécue et partie rejouée sont identiques.
  */
 
 import type { ActionRefusal, GameAction } from "./actions";
 import { applyAction, OVERDRAFT_LIMIT_EUR, SALARY_EUR_WEEK } from "./actions";
 import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
-import type { GameState, Station } from "./state";
+import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
 import { tick } from "./tick";
 
@@ -25,23 +27,29 @@ export interface RunResult {
   refusals: ActionRefusal[];
 }
 
-/** Avance d'une semaine : actions de la semaine courante, puis tick. */
+/** Ouvre la semaine : salaires des embauchés (§10), compteurs d'heures, faillite. */
+export function beginWeek(state: GameState): GameState {
+  const salaries = (state.economy.uth - 1) * SALARY_EUR_WEEK;
+  const treasuryEur = state.economy.treasuryEur - salaries;
+  return {
+    ...state,
+    economy: {
+      ...state.economy,
+      treasuryEur,
+      hoursUsedWeek: 0,
+      hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
+      bankrupt: state.economy.bankrupt || treasuryEur < OVERDRAFT_LIMIT_EUR,
+    },
+  };
+}
+
+/** Avance d'une semaine : ouverture, actions de la semaine courante, tick. */
 export function advanceWeek(
   state: GameState,
   weather: WeekWeather,
   actions: readonly GameAction[],
-): { state: GameState; refusals: ActionRefusal[] } {
-  // Salaires des ouvriers embauchés (au-delà du joueur lui-même, §10).
-  const salaries = (state.economy.uth - 1) * SALARY_EUR_WEEK;
-  let s: GameState = {
-    ...state,
-    economy: {
-      ...state.economy,
-      treasuryEur: state.economy.treasuryEur - salaries,
-      hoursUsedWeek: 0,
-      hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
-    },
-  };
+): { state: GameState; refusals: ActionRefusal[]; fluxes: TickFluxes } {
+  let s = beginWeek(state);
   const refusals: ActionRefusal[] = [];
   for (const action of actions) {
     if (action.week !== s.week) continue;
@@ -49,10 +57,8 @@ export function advanceWeek(
     s = result.state;
     refusals.push(...result.refusals);
   }
-  if (s.economy.treasuryEur < OVERDRAFT_LIMIT_EUR && !s.economy.bankrupt) {
-    s = { ...s, economy: { ...s.economy, bankrupt: true } };
-  }
-  return { state: tick(s, weather).state, refusals };
+  const ticked = tick(s, weather);
+  return { state: ticked.state, refusals, fluxes: ticked.fluxes };
 }
 
 /** Rejoue une partie complète depuis sa sauvegarde (station + seed + journal). */
