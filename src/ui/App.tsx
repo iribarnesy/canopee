@@ -1,116 +1,157 @@
 /**
- * UI jetable de la V0 (« labo moteur ») : visualise le bilan hydrique sur 3 ans
- * pour vérifier à l'œil que le moteur se comporte. Sera remplacée par la vraie
- * UI (React + PixiJS) en V0.5/V1 — ne rien construire de précieux ici.
+ * UI jetable de la V0 (« labo moteur ») : bilan hydrique + croissance des
+ * 5 espèces sur les stations de test. Sera remplacée par la vraie UI
+ * (React + PixiJS) en V0.5/V1 — ne rien construire de précieux ici.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   createGameState,
+  ESPECES_V0,
+  plant,
   rngStateFromSeed,
-  type Station,
+  STATIONS_V0,
+  type StationClimat,
   syntheticYear,
   type TickFluxes,
   tick,
 } from "../engine";
 
-const STATION: Station = {
-  id: "gironde-v0",
-  nom: "Lande du Sud-Gironde (V0 : RU faible)",
-  latitudeDeg: 44.5,
-  ruMm: 70,
-};
+const YEARS = 20;
+const TREES_PER_SPECIES = 30;
 
-const CLIMATE = {
-  tMeanAnnual: 13.5,
-  tSeasonalAmplitude: 7,
-  tDiurnalRange: 10,
-  rainAnnualMm: 900,
-  rainWinterShare: 0.65,
+const SPECIES_COLORS: Record<string, string> = {
+  alnus_glutinosa: "#2c6e49",
+  fagus_sylvatica: "#7d5ba6",
+  quercus_pubescens: "#c05746",
+  pinus_sylvestris: "#3a7ca5",
+  betula_pendula: "#c9a227",
 };
-
-const YEARS = 3;
 
 interface WeekPoint {
   week: number;
   waterMm: number;
+  waterlogging: number;
   fluxes: TickFluxes;
+  /** hauteur moyenne des vivants par espèce (0 = tous morts) */
+  heights: Record<string, number>;
+  aliveCounts: Record<string, number>;
 }
 
-function simulate(): WeekPoint[] {
-  const weather = syntheticYear(CLIMATE);
-  let state = createGameState(STATION, rngStateFromSeed(42));
+function simulate(sc: StationClimat): WeekPoint[] {
+  const weather = syntheticYear(sc.climat);
+  let state = createGameState(sc.station, rngStateFromSeed(42));
+  for (const espece of ESPECES_V0) {
+    state = plant(state, espece.id, TREES_PER_SPECIES);
+  }
   const points: WeekPoint[] = [];
   for (let i = 0; i < YEARS * 52; i++) {
     const w = weather[i % 52];
     if (!w) throw new Error("météo manquante");
     const result = tick(state, w);
     state = result.state;
-    points.push({ week: i, waterMm: state.soil.waterMm, fluxes: result.fluxes });
+    const heights: Record<string, number> = {};
+    const aliveCounts: Record<string, number> = {};
+    for (const espece of ESPECES_V0) {
+      const alive = state.trees.filter((t) => t.especeId === espece.id && t.alive);
+      aliveCounts[espece.id] = alive.length;
+      heights[espece.id] =
+        alive.length > 0 ? alive.reduce((s, t) => s + t.heightM, 0) / alive.length : 0;
+    }
+    points.push({
+      week: i,
+      waterMm: state.soil.waterMm,
+      waterlogging: result.fluxes.waterloggingRatio,
+      fluxes: result.fluxes,
+      heights,
+      aliveCounts,
+    });
   }
   return points;
 }
 
 const W = 900;
-const H = 260;
+const H = 220;
 const PAD = 40;
 
-function Chart({ points }: { points: WeekPoint[] }) {
-  const xScale = (week: number) => PAD + (week / (points.length - 1)) * (W - 2 * PAD);
-  const yScale = (mm: number) => H - PAD - (mm / STATION.ruMm) * (H - 2 * PAD);
-
-  const waterPath = points
-    .map(
-      (p, i) =>
-        `${i === 0 ? "M" : "L"}${xScale(p.week).toFixed(1)},${yScale(p.waterMm).toFixed(1)}`,
-    )
+function linePath(values: number[], yScale: (v: number) => number): string {
+  const xStep = (W - 2 * PAD) / (values.length - 1);
+  return values
+    .map((v, i) => `${i === 0 ? "M" : "L"}${(PAD + i * xStep).toFixed(1)},${yScale(v).toFixed(1)}`)
     .join(" ");
+}
 
+function WaterChart({ points, ruMm }: { points: WeekPoint[]; ruMm: number }) {
+  const yScale = (mm: number) => H - PAD - (mm / ruMm) * (H - 2 * PAD);
+  const yScaleRatio = (r: number) => H - PAD - r * (H - 2 * PAD);
   return (
-    <svg width={W} height={H} role="img" aria-label="Stock d'eau du sol par semaine">
+    <svg width={W} height={H} role="img" aria-label="Eau du sol et engorgement">
       <rect width={W} height={H} fill="#f6f4ee" />
-      {/* pluie (barres) */}
-      {points.map((p) => (
-        <rect
-          key={p.week}
-          x={xScale(p.week) - 1}
-          y={yScale(Math.min(p.fluxes.rainMm, STATION.ruMm))}
-          width={2}
-          height={H - PAD - yScale(Math.min(p.fluxes.rainMm, STATION.ruMm))}
-          fill="#9db8d2"
-        />
-      ))}
-      {/* réserve utile pleine */}
       <line
         x1={PAD}
-        y1={yScale(STATION.ruMm)}
+        y1={yScale(ruMm)}
         x2={W - PAD}
-        y2={yScale(STATION.ruMm)}
+        y2={yScale(ruMm)}
         stroke="#b0a58c"
         strokeDasharray="4 4"
       />
-      {/* stock d'eau */}
-      <path d={waterPath} fill="none" stroke="#3d6b3f" strokeWidth={2} />
-      {/* séparateurs d'années */}
-      {Array.from({ length: YEARS }, (_, y) => y * 52).map((weekStart) => (
-        <line
-          key={`year-start-${weekStart}`}
-          x1={xScale(weekStart)}
-          y1={PAD / 2}
-          x2={xScale(weekStart)}
-          y2={H - PAD}
-          stroke="#ccc4b2"
+      <path
+        d={linePath(
+          points.map((p) => p.waterlogging),
+          yScaleRatio,
+        )}
+        fill="none"
+        stroke="#8a6d3b"
+        strokeWidth={1.5}
+      />
+      <path
+        d={linePath(
+          points.map((p) => p.waterMm),
+          yScale,
+        )}
+        fill="none"
+        stroke="#3d6b3f"
+        strokeWidth={2}
+      />
+      <text x={PAD} y={yScale(ruMm) - 6} fontSize={11} fill="#7a7261">
+        vert : réserve utile (RU = {ruMm} mm) · brun : engorgement (0–1)
+      </text>
+    </svg>
+  );
+}
+
+function HeightChart({ points }: { points: WeekPoint[] }) {
+  const maxH = Math.max(4, ...points.map((p) => Math.max(...Object.values(p.heights))));
+  const yScale = (m: number) => H - PAD - (m / maxH) * (H - 2 * PAD);
+  return (
+    <svg width={W} height={H} role="img" aria-label="Hauteur moyenne par espèce">
+      <rect width={W} height={H} fill="#f6f4ee" />
+      {ESPECES_V0.map((espece) => (
+        <path
+          key={espece.id}
+          d={linePath(
+            points.map((p) => p.heights[espece.id] ?? 0),
+            yScale,
+          )}
+          fill="none"
+          stroke={SPECIES_COLORS[espece.id] ?? "#555"}
+          strokeWidth={2}
         />
       ))}
-      <text x={PAD} y={yScale(STATION.ruMm) - 6} fontSize={11} fill="#7a7261">
-        RU = {STATION.ruMm} mm
+      <text x={PAD} y={PAD - 8} fontSize={11} fill="#7a7261">
+        hauteur moyenne des vivants, m (max affiché : {maxH.toFixed(1)} m)
       </text>
     </svg>
   );
 }
 
 export function App() {
-  const points = useMemo(simulate, []);
+  const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
+  const sc = STATIONS_V0.find((s) => s.station.id === stationId) ?? STATIONS_V0[0];
+  if (!sc) throw new Error("aucune station");
+  const points = useMemo(() => simulate(sc), [sc]);
+
+  const last = points[points.length - 1];
   const lastYear = points.slice(-52);
   const sum = (f: (p: WeekPoint) => number) => Math.round(lastYear.reduce((a, p) => a + f(p), 0));
 
@@ -123,17 +164,48 @@ export function App() {
         color: "#2e2a20",
       }}
     >
-      <h1 style={{ fontSize: "1.3rem" }}>Canopée — labo moteur (V0 : bilan hydrique)</h1>
-      <p style={{ color: "#6b6250" }}>
-        {STATION.nom} · lat {STATION.latitudeDeg}° · météo synthétique déterministe · {YEARS} ans
-        simulés
-      </p>
-      <Chart points={points} />
+      <h1 style={{ fontSize: "1.3rem" }}>Canopée — labo moteur (V0 : eau, azote, croissance)</h1>
       <p>
-        Dernière année — pluie : <strong>{sum((p) => p.fluxes.rainMm)} mm</strong> · ETP :{" "}
-        <strong>{sum((p) => p.fluxes.etpMm)} mm</strong> · ETR :{" "}
-        <strong>{sum((p) => p.fluxes.etrMm)} mm</strong> · drainage :{" "}
-        <strong>{sum((p) => p.fluxes.drainageMm)} mm</strong>
+        {STATIONS_V0.map((s) => (
+          <button
+            key={s.station.id}
+            type="button"
+            onClick={() => setStationId(s.station.id)}
+            style={{
+              marginRight: 8,
+              padding: "4px 10px",
+              border: "1px solid #b0a58c",
+              borderRadius: 4,
+              background: s.station.id === sc.station.id ? "#3d6b3f" : "#f6f4ee",
+              color: s.station.id === sc.station.id ? "#fff" : "#2e2a20",
+              cursor: "pointer",
+            }}
+          >
+            {s.station.nom}
+          </button>
+        ))}
+      </p>
+      <p style={{ color: "#6b6250" }}>
+        {YEARS} ans simulés · {TREES_PER_SPECIES} plants/espèce · météo synthétique déterministe ·
+        seed 42
+      </p>
+      <WaterChart points={points} ruMm={sc.station.ruMm} />
+      <HeightChart points={points} />
+      <p>
+        {ESPECES_V0.map((espece) => (
+          <span key={espece.id} style={{ marginRight: 16 }}>
+            <span style={{ color: SPECIES_COLORS[espece.id], fontWeight: 700 }}>■</span>{" "}
+            {espece.nom} : {(last?.heights[espece.id] ?? 0).toFixed(1)} m ·{" "}
+            {last?.aliveCounts[espece.id] ?? 0}/{TREES_PER_SPECIES} vivants
+          </span>
+        ))}
+      </p>
+      <p style={{ color: "#6b6250" }}>
+        Dernière année — pluie {sum((p) => p.fluxes.rainMm)} mm · ETR {sum((p) => p.fluxes.etrMm)}{" "}
+        mm · drainage {sum((p) => p.fluxes.drainageMm)} mm · minéralisation N{" "}
+        {sum((p) => p.fluxes.mineralizationKgHa)} kg/ha · prélèvement N{" "}
+        {sum((p) => p.fluxes.uptakeKgHa)} kg/ha · lessivage N {sum((p) => p.fluxes.leachedKgHa)}{" "}
+        kg/ha
       </p>
     </main>
   );

@@ -1,27 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, type Station } from "../../src/engine/state";
+import { createGameState, plant } from "../../src/engine/state";
+import { LANDE_SECHE } from "../../src/engine/stations";
 import { stateHash, tick } from "../../src/engine/tick";
 
-const STATION: Station = {
-  id: "test-gironde",
-  nom: "Lande test",
-  latitudeDeg: 44.5,
-  ruMm: 70,
-};
-
-const CLIMATE = {
-  tMeanAnnual: 13.5,
-  tSeasonalAmplitude: 7,
-  tDiurnalRange: 10,
-  rainAnnualMm: 900,
-  rainWinterShare: 0.65,
-};
-
-function runYears(seed: number, years: number): number[] {
-  const weather = syntheticYear(CLIMATE);
-  let state = createGameState(STATION, rngStateFromSeed(seed));
+function runHashes(seed: number, years: number): number[] {
+  const weather = syntheticYear(LANDE_SECHE.climat);
+  let state = createGameState(LANDE_SECHE.station, rngStateFromSeed(seed));
+  state = plant(state, "pinus_sylvestris", 5);
+  state = plant(state, "betula_pendula", 5);
   const hashes: number[] = [];
   for (let i = 0; i < years * 52; i++) {
     const w = weather[i % 52];
@@ -34,12 +22,12 @@ function runYears(seed: number, years: number): number[] {
 
 describe("déterminisme du moteur", () => {
   it("même seed + même météo + mêmes actions → hash identique à chaque tick (10 ans)", () => {
-    expect(runYears(42, 10)).toEqual(runYears(42, 10));
+    expect(runHashes(42, 10)).toEqual(runHashes(42, 10));
   });
 
   it("le sol se vide en été et se recharge en hiver (cycle annuel visible)", () => {
-    const weather = syntheticYear(CLIMATE);
-    let state = createGameState(STATION, rngStateFromSeed(1));
+    const weather = syntheticYear(LANDE_SECHE.climat);
+    let state = createGameState(LANDE_SECHE.station, rngStateFromSeed(1));
     const waterByWeek: number[] = [];
     for (let i = 0; i < 52 * 3; i++) {
       const w = weather[i % 52];
@@ -55,6 +43,6 @@ describe("déterminisme du moteur", () => {
     // Et la réserve se recharge : retour proche du plein en fin d'année.
     const yearEnd = waterByWeek[52 * 3 - 1];
     if (yearEnd === undefined) throw new Error("index invalide");
-    expect(yearEnd).toBeGreaterThan(STATION.ruMm * 0.8);
+    expect(yearEnd).toBeGreaterThan(LANDE_SECHE.station.ruMm * 0.8);
   });
 });

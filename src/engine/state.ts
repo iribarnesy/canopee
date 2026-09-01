@@ -1,9 +1,12 @@
 /**
- * État du jeu, V0 : une station minimale, un sol mono-zone, un compteur de temps.
+ * État du jeu, V0 : une station minimale, un sol mono-zone (eau + azote),
+ * des arbres sans position spatiale (la grille arrive en V0.5).
  * Chaque étape de la feuille de route (docs/regles.md §17) enrichit ces types.
  */
 
+import { getEspece } from "./especes";
 import type { RngState } from "./rng";
+import type { TreeState } from "./trees";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
@@ -12,11 +15,22 @@ export interface Station {
   latitudeDeg: number;
   /** réserve utile du sol, mm (dérivée de texture × profondeur en V1) */
   ruMm: number;
+  /** porosité de drainage (eau gravitaire max avant débordement), mm */
+  excessCapacityMm: number;
+  /** vitesse max de drainage, mm/semaine (conductivité du sol) */
+  drainagePerWeekMm: number;
+  /** minéralisation potentielle de l'humus, kg N/ha/semaine en conditions optimales */
+  mineralizationPotentialKgHaWeek: number;
+  /** azote minéral au démarrage, kg/ha */
+  initialMineralNKgHa: number;
 }
 
 /** État dynamique du sol, mono-zone en V0. */
 export interface SoilState {
   waterMm: number;
+  /** eau gravitaire au-dessus de la capacité au champ (engorgement), mm */
+  excessMm: number;
+  mineralNKgHa: number;
 }
 
 export interface GameState {
@@ -24,6 +38,8 @@ export interface GameState {
   week: number;
   station: Station;
   soil: SoilState;
+  trees: TreeState[];
+  nextTreeId: number;
   rng: RngState;
 }
 
@@ -33,17 +49,42 @@ export interface TickFluxes {
   etpMm: number;
   etrMm: number;
   drainageMm: number;
+  overflowMm: number;
   waterSatisfaction: number;
+  waterloggingRatio: number;
+  mineralizationKgHa: number;
+  uptakeKgHa: number;
+  leachedKgHa: number;
+  nitrogenSatisfaction: number;
 }
 
 export function createGameState(station: Station, rng: RngState): GameState {
   return {
     week: 0,
     station,
-    // On démarre sol plein : début de partie au 1er janvier, réserve rechargée.
-    soil: { waterMm: station.ruMm },
+    // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
+    soil: { waterMm: station.ruMm, excessMm: 0, mineralNKgHa: station.initialMineralNKgHa },
+    trees: [],
+    nextTreeId: 1,
     rng,
   };
+}
+
+/** Proto-action V0 : planter n jeunes plants d'une espèce (30 cm). */
+export function plant(state: GameState, especeId: string, count: number): GameState {
+  getEspece(especeId); // valide l'id
+  const trees = [...state.trees];
+  for (let i = 0; i < count; i++) {
+    trees.push({
+      id: state.nextTreeId + i,
+      especeId,
+      ageWeeks: 0,
+      heightM: 0.3,
+      stress: 0,
+      alive: true,
+    });
+  }
+  return { ...state, trees, nextTreeId: state.nextTreeId + count };
 }
 
 /** Semaine dans l'année (0–51). */
