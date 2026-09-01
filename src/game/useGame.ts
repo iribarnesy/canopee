@@ -5,6 +5,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionRefusal } from "../engine/actions";
+
+let uid = 0;
+export type WithUid<T> = T & { uid: number };
+const withUid = <T>(x: T): WithUid<T> => ({ ...x, uid: ++uid });
+
 import type {
   ActionSansSemaine,
   FromWorker,
@@ -31,8 +36,8 @@ export function loadSave(): SaveGame | undefined {
 export interface GameApi {
   station?: StationInfo;
   snapshot?: Snapshot;
-  refusals: ActionRefusal[];
-  events: GameEvent[];
+  refusals: WithUid<ActionRefusal>[];
+  events: WithUid<GameEvent>[];
   speed: number;
   autoHarvest: boolean;
   setAutoHarvest: (enabled: boolean) => void;
@@ -50,11 +55,11 @@ export function useGame(): GameApi {
   const workerRef = useRef<Worker>(null);
   const [station, setStation] = useState<StationInfo>();
   const [snapshot, setSnapshot] = useState<Snapshot>();
-  const [refusals, setRefusals] = useState<ActionRefusal[]>([]);
+  const [refusals, setRefusals] = useState<WithUid<ActionRefusal>[]>([]);
   const [speed, setSpeedState] = useState(0);
   const [replayProgress, setReplayProgress] = useState<{ done: number; total: number }>();
   const [notice, setNotice] = useState<string>();
-  const [events, setEvents] = useState<GameEvent[]>([]);
+  const [events, setEvents] = useState<WithUid<GameEvent>[]>([]);
   const [autoHarvest, setAutoHarvestState] = useState(true);
 
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
@@ -72,10 +77,12 @@ export function useGame(): GameApi {
         case "snapshot":
           setSnapshot(msg.snapshot);
           if (msg.snapshot.refusals.length > 0) {
-            setRefusals((prev) => [...msg.snapshot.refusals, ...prev].slice(0, 4));
+            setRefusals((prev) => [...msg.snapshot.refusals.map(withUid), ...prev].slice(0, 4));
           }
           if (msg.snapshot.events.length > 0) {
-            setEvents((prev) => [...msg.snapshot.events.slice().reverse(), ...prev].slice(0, 60));
+            setEvents((prev) =>
+              [...msg.snapshot.events.map(withUid).reverse(), ...prev].slice(0, 60),
+            );
           }
           break;
         case "progress":

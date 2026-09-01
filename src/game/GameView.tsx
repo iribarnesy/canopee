@@ -361,8 +361,8 @@ export function GameView() {
         {game.notice && <div style={{ ...panel, background: "#f3e6c4" }}>⏸ {game.notice}</div>}
         {game.refusals.length > 0 && (
           <div style={{ ...panel, color: "#8a4b2d" }}>
-            {game.refusals.slice(0, 3).map((r, i) => (
-              <div key={`${r.week}-${r.action}-${i}`}>
+            {game.refusals.slice(0, 3).map((r) => (
+              <div key={r.uid}>
                 ⚠ {r.action} : {r.reason}
               </div>
             ))}
@@ -537,8 +537,8 @@ export function GameView() {
           {game.events.length === 0 && (
             <div style={{ color: "#6b6250" }}>Rien à signaler pour l'instant.</div>
           )}
-          {game.events.map((ev, i) => (
-            <div key={`${ev.week}-${i}`} style={{ marginTop: 3 }}>
+          {game.events.map((ev) => (
+            <div key={ev.uid} style={{ marginTop: 3 }}>
               <span style={{ color: "#6b6250" }}>
                 an {Math.floor(ev.week / 52) + 1} s{ev.week % 52}
               </span>{" "}

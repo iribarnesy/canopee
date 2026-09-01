@@ -310,7 +310,7 @@ function init(stationId: string, newSeed: number, mode: "reelle" | "synthetique"
   startLoop();
 }
 
-onmessage = (event: MessageEvent<ToWorker>) => {
+self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   const msg = event.data;
   switch (msg.type) {
     case "init":
@@ -369,4 +369,4 @@ onmessage = (event: MessageEvent<ToWorker>) => {
       break;
     }
   }
-};
+});
