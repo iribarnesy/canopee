@@ -1,4 +1,6 @@
+export * from "./actions";
 export * from "./especes";
+export * from "./game";
 export * from "./grid";
 export * from "./light";
 export * from "./meteo";

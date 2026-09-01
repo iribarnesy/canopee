@@ -4,6 +4,8 @@
  * (docs/regles.md §17) enrichit ces types.
  */
 
+import type { EconomyState } from "./actions";
+import { createEconomy } from "./actions";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
@@ -59,6 +61,7 @@ export interface GameState {
   soil: SoilState;
   trees: TreeState[];
   nextTreeId: number;
+  economy: EconomyState;
   rng: RngState;
 }
 
@@ -85,11 +88,16 @@ export interface TickFluxes {
   fixationKgHa: number;
 }
 
-export function createGameState(station: Station, rng: RngState): GameState {
+export function createGameState(
+  station: Station,
+  rng: RngState,
+  options: { treasuryEur?: number } = {},
+): GameState {
   const n = cellCount(gridDims(station));
   return {
     week: 0,
     station,
+    economy: createEconomy(options.treasuryEur ?? 20_000),
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: new Array(n).fill(station.ruMm),

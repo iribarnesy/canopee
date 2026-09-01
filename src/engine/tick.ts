@@ -373,6 +373,7 @@ export function stateHash(state: GameState): number {
     for (const v of arr) mixNumber(v);
   }
   mixString(JSON.stringify(state.trees));
+  mixString(JSON.stringify(state.economy));
   mixString(JSON.stringify(state.rng));
   return hash >>> 0;
 }

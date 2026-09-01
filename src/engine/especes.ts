@@ -75,6 +75,10 @@ export interface EspeceV0 {
     /** rapport C/N de la litière : bas = minéralisation rapide (ch2-B) */
     cnRatio: number;
   };
+  economie: {
+    /** prix d'un jeune plant, € *(à calibrer sur les pépinières forestières)* */
+    prixPlantEur: number;
+  };
   sources: string[];
 }
 
@@ -98,6 +102,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 12, longeviteAns: 100, dissemination: "vent", semisParAn: 4 },
     // Litière tendre, très riche en N (C/N ~15) : l'aulne améliore son sol (ch2-B).
     litiere: { cnRatio: 15 },
+    economie: { prixPlantEur: 2 },
     sources: [ATLAS],
   },
   {
@@ -116,6 +121,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 40, longeviteAns: 300, dissemination: "gravite", semisParAn: 3 },
     // Litière coriace, lente (C/N ~50) — la voie fongique (ch2-B).
     litiere: { cnRatio: 50 },
+    economie: { prixPlantEur: 3 },
     sources: [ATLAS],
   },
   {
@@ -132,6 +138,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 40 },
+    economie: { prixPlantEur: 3 },
     sources: [ATLAS],
   },
   {
@@ -149,6 +156,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 15, longeviteAns: 250, dissemination: "vent", semisParAn: 3 },
     // Aiguilles à C/N ~60 : minéralisation lente et acidifiante (ch2-B).
     litiere: { cnRatio: 60 },
+    economie: { prixPlantEur: 1.5 },
     sources: [ATLAS],
   },
   {
@@ -165,6 +173,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.35, fixateur: false },
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
     litiere: { cnRatio: 25 },
+    economie: { prixPlantEur: 1.5 },
     sources: [ATLAS],
   },
 ];

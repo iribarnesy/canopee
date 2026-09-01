@@ -11,10 +11,13 @@ succession écologique, bilan carbone honnête.
 
 - **Stack technique** : [docs/stack.md](docs/stack.md)
 
-État : moteur spatial V0.5 — grille de sol 1 m² (eau, azote), arbres positionnés
-qui puisent dans leur zone racinaire, ombres portées décalées au nord,
-croissance en loi du minimum sur 5 espèces. UI jetable de visualisation
-(courbes + carte de parcelle).
+État : moteur spatial complet sur 5 espèces — grille de sol 1 m² (eau, azote,
+litières), arbres positionnés (zone racinaire, ombres portées décalées au
+nord), croissance en loi du minimum, régénération naturelle et succession
+émergente (testée sur 200 ans), météo réelle Météo-France (60 ans), premières
+actions joueur (planter, couper-vendre/épandre) avec argent et temps de
+travail — le journal d'actions daté + la seed forment la sauvegarde rejouable.
+UI jetable de visualisation (courbes + carte de parcelle).
 
 ## Développement
 
