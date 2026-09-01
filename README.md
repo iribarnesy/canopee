@@ -9,4 +9,20 @@ succession écologique, bilan carbone honnête.
   à recouper avec la *Flore forestière française* et des références publiques
   (chaque valeur du jeu doit être sourcée).
 
-État : phase de conception — les règles sont en cours de validation, pas encore de code.
+- **Stack technique** : [docs/stack.md](docs/stack.md)
+
+État : V0 « le sol et l'eau » en cours — moteur pur (météo/ETP Hargreaves, bilan
+hydrique, PRNG seedé) + UI jetable de visualisation.
+
+## Développement
+
+```bash
+npm install
+npm run dev          # labo moteur sur http://localhost:5173
+npm test             # tests (unitaires, propriétés de conservation, déterminisme)
+npm run typecheck
+npm run lint
+npm run check:boundaries   # garde-fous : le moteur reste pur (pas de DOM, pas de Math.random)
+```
+
+Le moteur vit dans `src/engine/` et n'importe jamais rien de l'UI — c'est vérifié en CI.
