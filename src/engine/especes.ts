@@ -421,9 +421,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.25 },
     // Atlas : « silice/acide » — calcifuge strict des sables siliceux.
     ph: [3.8, 6.8],
-    lumiere: { compensation: 0.2, saturation: 0.65, lai: 2.8, houppierRatio: 0.42, caduc: false },
+    // Semi-héliophile : contrairement au pin, ses jeunes supportent le couvert
+    // — c'est ainsi qu'une subéraie s'installe SOUS la pinède et prend le
+    // relais, le pin ne se régénérant pas sous sa propre ombre.
+    lumiere: { compensation: 0.07, saturation: 0.5, lai: 2.8, houppierRatio: 0.42, caduc: false },
     racines: { profondeurMaxCm: 250 }, // pivot profond des sables méditerranéens
-    tBaseCroissanceC: 8,
+    // Thermophile, mais chez lui sur la façade atlantique douce.
+    tBaseCroissanceC: 7,
     azote: { demandeRelative: 0.4, fixateur: false },
     regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 50 },

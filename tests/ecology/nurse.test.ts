@@ -44,22 +44,33 @@ function hauteurApres(especeId: string, nurses: number, distanceM: number, years
 }
 
 describe("effet nurse sur lande sèche et ventée", () => {
-  const nu = hauteurApres("quercus_suber", 0, 0, 12);
-  const abrite = hauteurApres("quercus_suber", 6, 3, 12);
-  const etouffe = hauteurApres("quercus_suber", 6, 1.2, 12);
+  // Le chêne-liège tolère l'ombre en jeunesse : pour lui, l'abri est tout bénéfice.
+  const liegeNu = hauteurApres("quercus_suber", 0, 0, 12);
+  const liegeAbrite = hauteurApres("quercus_suber", 6, 3, 12);
+  const liegeColle = hauteurApres("quercus_suber", 6, 1.2, 12);
+  // Le pin est franchement héliophile : trop près, l'ombre lui coûte plus que
+  // l'abri ne lui rapporte.
+  const pinNu = hauteurApres("pinus_sylvestris", 0, 0, 12);
+  const pinAbrite = hauteurApres("pinus_sylvestris", 6, 3, 12);
+  const pinColle = hauteurApres("pinus_sylvestris", 6, 1.2, 12);
 
   it("le chêne-liège, adapté au sable acide, s'installe même nu (mais végète)", () => {
     // Sans entretien, la strate herbacée lui dispute l'eau et l'azote : il
     // survit sur la lande, il n'y prospère pas.
-    expect(nu).toBeGreaterThan(0.35);
+    expect(liegeNu).toBeGreaterThan(0.35);
   });
 
-  it("abrité à bonne distance, il pousse mieux qu'à découvert", () => {
-    expect(abrite).toBeGreaterThan(nu);
+  it("abrité, il pousse mieux qu'à découvert — le vent lui coûte plus que l'ombre", () => {
+    expect(liegeAbrite).toBeGreaterThan(liegeNu);
+    expect(liegeColle).toBeGreaterThan(liegeNu);
   });
 
-  it("collé aux ajoncs, la concurrence racinaire l'emporte sur l'abri", () => {
-    expect(etouffe).toBeLessThan(abrite);
+  it("l'héliophile, lui, paie l'ombre : collé à la nurse il fait moins bien qu'à distance", () => {
+    expect(pinColle).toBeLessThan(pinAbrite);
+  });
+
+  it("à bonne distance, l'abri profite aux deux tempéraments", () => {
+    expect(pinAbrite).toBeGreaterThan(pinNu);
   });
 });
 
