@@ -16,7 +16,7 @@ import { getEspece } from "./especes";
 import { crownRadiusM, lightAtPoint } from "./light";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
-import type { TreeState } from "./trees";
+import { phFactor, type TreeState } from "./trees";
 
 /** distance moyenne de dispersion par le vent, m (exponentielle) */
 const WIND_MEAN_DISTANCE_M = 25;
@@ -33,6 +33,8 @@ export interface RecruitmentInput {
   voisinage: readonly { especeId: string; semisParAn: number }[];
   /** true si les caducs sont en feuilles (filtre lumière des semis) */
   leavesOn: boolean;
+  /** pH par cellule (un semis ne s'installe pas hors de sa gamme) */
+  ph: readonly number[];
   nextTreeId: number;
 }
 
@@ -103,8 +105,10 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     rng = pos.rng;
     if (aliveCount + newTrees.length >= maxTrees) return;
     if (pos.x < 0 || pos.x >= coteM || pos.y < 0 || pos.y >= coteM) return; // perdu hors parcelle
-    // Filtre lumière : il faut au moins 2 × le point de compensation pour s'installer.
+    // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme.
     if (lightAtPoint(trees, pos.x, pos.y, leavesOn) < 2 * espece.lumiere.compensation) return;
+    const cellPh = input.ph[Math.floor(pos.y) * coteM + Math.floor(pos.x)] ?? 7;
+    if (phFactor(espece, cellPh) < 0.2) return;
     // Concurrence immédiate : pas d'installation collée à un vivant.
     for (const t of trees) {
       if (!t.alive) continue;
@@ -127,6 +131,9 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       stress: 0,
       alive: true,
       uptakeYearG: 0,
+      fruitsKg: 0,
+      fruitProgress: 0,
+      bloomFrosted: false,
     });
   };
 

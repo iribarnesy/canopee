@@ -26,6 +26,20 @@ export const PLANT_HOURS = 1;
 export const PLANT_MIN_SPACING_M = 1;
 /** prix de vente du bois énergie, €/m³ *(à calibrer ; bois d'œuvre en V1)* */
 export const WOOD_PRICE_EUR_M3 = 35;
+/** salaire hebdomadaire chargé d'un ouvrier, € *(à calibrer)* */
+export const SALARY_EUR_WEEK = 600;
+/** temps de récolte des fruits, h/kg (règles §10 : ~3 h les 100 kg) */
+export const HARVEST_HOURS_PER_KG = 0.03;
+/** chaulage : coût et temps par m² *(à calibrer)* */
+export const LIME_EUR_M2 = 0.02;
+export const LIME_HOURS_M2 = 0.002;
+/** effet d'un chaulage sur le pH (plafonné à 7,5) */
+export const LIME_PH_STEP = 0.5;
+/**
+ * C/N du bois raméal fragmenté épandu : du BOIS, pas des feuilles — libération
+ * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
+ */
+export const BRF_CN_RATIO = 40;
 
 export interface EconomyState {
   treasuryEur: number;
@@ -55,6 +69,28 @@ export type GameAction =
       treeIds: number[];
       /** vendre (bois énergie) ou broyer/épandre sur place (litière, BRF) */
       devenir: "vendre" | "epandre";
+    }
+  | {
+      type: "recolter";
+      week: number;
+      treeIds: number[];
+    }
+  | {
+      /** embauche d'un ouvrier permanent : +1 UTH, salaire hebdomadaire (§10) */
+      type: "embaucher";
+      week: number;
+    }
+  | {
+      type: "licencier";
+      week: number;
+    }
+  | {
+      /** chauler un disque : pH +0,5 (plafond 7,5) — pour les calcicoles (§9) */
+      type: "chauler";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
     };
 
 export interface ActionRefusal {
@@ -133,6 +169,9 @@ function applyPlanter(
       stress: 0,
       alive: true,
       uptakeYearG: 0,
+      fruitsKg: 0,
+      fruitProgress: 0,
+      bloomFrosted: false,
     });
     planted++;
     treasuryEur -= espece.economie.prixPlantEur;
@@ -200,7 +239,9 @@ function applyCouper(
       // Pour un fixateur, c'est de l'azote NOUVEAU — la mécanique fondatrice
       // « couper les légumineuses et les épandre » (§16).
       const depositG = 0.5 * tree.uptakeYearG + treeNitrogenNeedGWeek(espece, tree.heightM) * 52;
-      const crownR = Math.max(1, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio));
+      // On ÉPAND le broyat sur la zone (pas en tas au pied) : rayon large,
+      // pour que les racines des voisins y accèdent.
+      const crownR = Math.max(2.5, 2 * crownRadiusM(tree.heightM, espece.lumiere.houppierRatio));
       const cells: number[] = [];
       const x0 = Math.max(0, Math.floor(tree.x - crownR));
       const x1 = Math.min(dims.widthM - 1, Math.floor(tree.x + crownR));
@@ -217,7 +258,7 @@ function applyCouper(
       const share = depositG / cells.length;
       // Tout le carbone aérien broyé reste sur place, dans la litière.
       const shareC = (treeAboveCarbonKg(espece, tree.heightM) * 1000) / cells.length;
-      const kSpecies = 0.6 / Math.max(1, espece.litiere.cnRatio);
+      const kSpecies = 0.6 / BRF_CN_RATIO;
       for (const i of cells) {
         const oldN = litterNG[i] ?? 0;
         litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
@@ -240,6 +281,87 @@ function applyCouper(
   };
 }
 
+function applyRecolter(
+  state: GameState,
+  action: Extract<GameAction, { type: "recolter" }>,
+): ApplyResult {
+  const refusals: ActionRefusal[] = [];
+  let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
+  const trees = [...state.trees];
+
+  for (const id of action.treeIds) {
+    const idx = trees.findIndex((t) => t.id === id && t.alive);
+    const tree = idx >= 0 ? trees[idx] : undefined;
+    if (!tree) {
+      refusals.push(refuse(action.week, "recolter", `arbre ${id} introuvable ou mort`));
+      continue;
+    }
+    if (tree.fruitsKg <= 0) {
+      refusals.push(refuse(action.week, "recolter", `arbre ${id} : rien à récolter`));
+      continue;
+    }
+    const espece = getEspece(tree.especeId);
+    const prix = espece.fruits?.prixEurKg ?? 0;
+    const hours = tree.fruitsKg * HARVEST_HOURS_PER_KG;
+    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+      refusals.push(refuse(action.week, "recolter", `plafond hebdomadaire atteint (arbre ${id})`));
+      break;
+    }
+    hoursUsedWeek += hours;
+    hoursUsedYear += hours;
+    treasuryEur += tree.fruitsKg * prix;
+    trees[idx] = { ...tree, fruitsKg: 0 };
+  }
+  return {
+    state: {
+      ...state,
+      trees,
+      economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
+    },
+    refusals,
+  };
+}
+
+function applyChauler(
+  state: GameState,
+  action: Extract<GameAction, { type: "chauler" }>,
+): ApplyResult {
+  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const cost = areaM2 * LIME_EUR_M2;
+  const hours = areaM2 * LIME_HOURS_M2;
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "chauler", "plafond hebdomadaire atteint")] };
+  }
+  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+    return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
+  }
+  const ph = state.soil.ph.slice();
+  const cote = state.station.coteM;
+  const r2 = action.rayonM * action.rayonM;
+  for (let y = 0; y < cote; y++) {
+    for (let x = 0; x < cote; x++) {
+      const dx = x + 0.5 - action.x;
+      const dy = y + 0.5 - action.y;
+      if (dx * dx + dy * dy <= r2) {
+        ph[y * cote + x] = Math.min(7.5, (ph[y * cote + x] ?? 7) + LIME_PH_STEP);
+      }
+    }
+  }
+  return {
+    state: {
+      ...state,
+      soil: { ...state.soil, ph },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur - cost,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
 export function applyAction(state: GameState, action: GameAction): ApplyResult {
   if (state.economy.bankrupt) {
     return { state, refusals: [refuse(action.week, action.type, "faillite")] };
@@ -249,5 +371,22 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyPlanter(state, action);
     case "couper":
       return applyCouper(state, action);
+    case "recolter":
+      return applyRecolter(state, action);
+    case "embaucher":
+      return {
+        state: { ...state, economy: { ...state.economy, uth: state.economy.uth + 1 } },
+        refusals: [],
+      };
+    case "licencier":
+      return {
+        state: {
+          ...state,
+          economy: { ...state.economy, uth: Math.max(1, state.economy.uth - 1) },
+        },
+        refusals: [],
+      };
+    case "chauler":
+      return applyChauler(state, action);
   }
 }

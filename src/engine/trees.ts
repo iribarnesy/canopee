@@ -27,6 +27,12 @@ export interface TreeState {
   alive: boolean;
   /** azote acquis depuis la dernière chute des feuilles, g (recyclé en litière) */
   uptakeYearG: number;
+  /** fruits mûrs en attente de récolte, kg (perdus après la fenêtre, §10) */
+  fruitsKg: number;
+  /** avancement de la croissance des fruits de l'année ∈ [0,1] */
+  fruitProgress: number;
+  /** fleurs détruites par un gel tardif cette année (§7.2) */
+  bloomFrosted: boolean;
 }
 
 /** Conditions de la semaine vues par UN arbre (sol local, canopée, météo). */
@@ -39,6 +45,8 @@ export interface TreeEnvironment {
   light: number;
   /** satisfaction du besoin d'azote de CET arbre ∈ [0,1] */
   nitrogenSatisfaction: number;
+  /** pH moyen de la zone racinaire */
+  phMean: number;
   /** °C moyenne de la semaine */
   tMean: number;
 }
@@ -114,6 +122,15 @@ function waterloggingFactor(espece: EspeceV0, waterlogging: number): number {
 }
 
 /**
+ * f_pH : 1 dans la gamme de l'espèce, bordure douce de ±0,7 pH, 0 au-delà
+ * (chlorose puis mort — la bio-indication de l'atlas : calcicoles vs acidiphiles).
+ */
+export function phFactor(espece: EspeceV0, ph: number): number {
+  const [min, max] = espece.ph;
+  return Math.min(1, Math.max(0, Math.min((ph - min) / 0.7, (max - ph) / 0.7)));
+}
+
+/**
  * f_lumière : 0 au point de compensation (l'arbre vit sur ses réserves),
  * 1 à saturation — les sciaphiles saturent bas, les héliophiles exigent le plein soleil (ch3-B).
  */
@@ -139,8 +156,9 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const fSecSurvie = Math.min(1, env.waterSatisfaction / espece.eau.seuilStressSecheresse);
   const fEng = waterloggingFactor(espece, env.waterloggingRatio);
   const fLum = lightFactor(espece, env.light);
+  const fPH = phFactor(espece, env.phMean);
   const fN = espece.azote.fixateur ? 0.95 : env.nitrogenSatisfaction;
-  const limitingFactor = Math.min(fSec, fEng, fLum, fN);
+  const limitingFactor = Math.min(fSec, fEng, fLum, fPH, fN);
   // Seuls l'eau, l'anoxie et l'ombre SOUS le point de compensation épuisent
   // les réserves : au-dessus, l'arbre « survit » même s'il ne pousse plus
   // (méthode pousse / s'épanouit / survit, ch3-C). L'ombre ne compte qu'en
@@ -155,7 +173,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     ageYears < 0.85 * longevite
       ? 1
       : Math.max(0, 1 - (ageYears - 0.85 * longevite) / (0.3 * longevite));
-  const survivalFactor = Math.min(fSecSurvie, fEng, fLumSurvival, fAge);
+  const survivalFactor = Math.min(fSecSurvie, fEng, fLumSurvival, fPH, fAge);
 
   // Croissance : potentiel × loi du minimum, asymptote vers la hauteur max.
   // Un arbre stressé pousse moins (il puise dans ses réserves, docs/regles.md §7.1).

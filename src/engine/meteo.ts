@@ -6,12 +6,17 @@
 
 /** Météo d'une semaine de simulation. */
 export interface WeekWeather {
-  /** °C */
+  /** °C (moyennes de la semaine) */
   tMean: number;
   tMin: number;
   tMax: number;
   /** mm sur la semaine */
   rainMm: number;
+  /**
+   * LA nuit la plus froide de la semaine, °C — les gels tardifs sont des
+   * événements ponctuels, invisibles dans une moyenne (§7.2).
+   */
+  tMinAbsC: number;
 }
 
 const GSC = 0.082; // constante solaire, MJ·m⁻²·min⁻¹ (FAO-56)
@@ -78,6 +83,7 @@ export function serieToWeeks(serie: SerieMeteoHebdo): WeekWeather[] {
     tMin: s[1] ?? 0,
     tMax: s[2] ?? 0,
     rainMm: s[3] ?? 0,
+    tMinAbsC: s[4] ?? (s[1] ?? 0) - 3,
   }));
 }
 
@@ -113,6 +119,8 @@ export function syntheticYear(c: SyntheticClimate): WeekWeather[] {
       tMin: tMean - c.tDiurnalRange / 2,
       tMax: tMean + c.tDiurnalRange / 2,
       rainMm,
+      // nuit la plus froide de la semaine : ~3 °C sous la moyenne des minimales
+      tMinAbsC: tMean - c.tDiurnalRange / 2 - 3,
     });
   }
   return weeks;

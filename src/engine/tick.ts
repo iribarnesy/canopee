@@ -104,9 +104,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     evapMm: 0,
     drainageMm: 0,
     overflowMm: 0,
+    nappeMm: 0,
     waterloggingRatio: 0,
   };
   let evapSum = 0;
+  let nappeSum = 0;
   let drainageSum = 0;
   let overflowSum = 0;
   let waterloggingSum = 0;
@@ -128,6 +130,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           etpMm *
           SOIL_EVAP_FRACTION *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)),
+        nappeMm: station.remonteeNappeMmSemaine,
       },
       cellOut,
     );
@@ -136,6 +139,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     waterlogging[i] = cellOut.waterloggingRatio;
     drainageMmArr[i] = cellOut.drainageMm;
     evapSum += cellOut.evapMm;
+    nappeSum += cellOut.nappeMm;
     drainageSum += cellOut.drainageMm;
     overflowSum += cellOut.overflowMm;
     waterloggingSum += cellOut.waterloggingRatio;
@@ -177,6 +181,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const nNeedG = new Array<number>(nTrees).fill(0);
   const rootCells = new Array<number>(nTrees).fill(1);
   const wlMean = new Array<number>(nTrees).fill(0);
+  const phMean = new Array<number>(nTrees).fill(7);
   const cellWaterDemand = new Array<number>(nCells).fill(0);
   const cellNWanted = new Array<number>(nCells).fill(0);
 
@@ -188,12 +193,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const rootR = rootRadiusM(espece, tree.heightM);
     let n = 0;
     let wlSum = 0;
+    let phSum = 0;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
       n++;
       wlSum += waterlogging[i] ?? 0;
+      phSum += state.soil.ph[i] ?? 7;
     });
     rootCells[t] = n;
     wlMean[t] = wlSum / n;
+    phMean[t] = phSum / n;
     waterDemandL[t] = treeWaterDemandL(espece, tree.heightM, etpMm, season);
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
     const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
@@ -269,20 +277,97 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // ── 5. Croissance de chaque arbre — loi du minimum, facteurs locaux ───────
   let nppKgC = 0; // production primaire nette de la semaine (bois + racines)
+  const limitingFactors = new Array<number>(nTrees).fill(0);
   let nextTrees: TreeState[] = trees.map((tree, t) => {
-    const next = tickTree(tree, {
+    const result = tickTree(tree, {
       waterSatisfaction: waterSatisfaction[t] ?? 1,
       waterloggingRatio: wlMean[t] ?? 0,
       light: light[t] ?? 1,
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
+      phMean: phMean[t] ?? 7,
       tMean: weather.tMean,
-    }).tree;
+    });
+    const next = result.tree;
+    limitingFactors[t] = result.limitingFactor;
     if (tree.alive && next.heightM > tree.heightM) {
       const espece = getEspece(tree.especeId);
       nppKgC += treeTotalCarbonKg(espece, next.heightM) - treeTotalCarbonKg(espece, tree.heightM);
     }
     const acquired = acquiredNG[t] ?? 0;
     return acquired > 0 ? { ...next, uptakeYearG: next.uptakeYearG + acquired } : next;
+  });
+
+  // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────
+  // Degrés-jours base 5 °C depuis le 1er janvier ; floraison quand le cumul
+  // franchit le seuil de l'espèce, gel tardif fatal aux fleurs ouvertes,
+  // croissance du fruit au rythme de la loi du minimum, récolte à la semaine
+  // de l'espèce — non récoltée, elle est perdue (§10).
+  const ddPrev = week === 0 ? 0 : state.ddYearBase5;
+  const ddYearBase5 = ddPrev + Math.max(0, weather.tMean - 5) * 7;
+  nextTrees = nextTrees.map((tree, t) => {
+    const espece = getEspece(tree.especeId);
+    const fruits = espece.fruits;
+    if (!fruits) return tree;
+    let { fruitsKg, fruitProgress, bloomFrosted } = tree;
+    if (week === 0) {
+      fruitProgress = 0;
+      bloomFrosted = false;
+      fruitsKg = 0; // les fruits de l'an passé sont perdus depuis longtemps
+    }
+    const mature = tree.alive && tree.ageWeeks >= espece.regeneration.maturiteAns * 52;
+    if (mature) {
+      const bloomEnd = fruits.floraisonDJ + 100;
+      // Fenêtre de floraison : gel fatal aux fleurs ouvertes (atlas : abricotier).
+      if (
+        ddPrev < bloomEnd &&
+        ddYearBase5 >= fruits.floraisonDJ &&
+        weather.tMinAbsC <= fruits.gelFatalC
+      ) {
+        bloomFrosted = true;
+      }
+      // Croissance du fruit : au rythme du facteur limitant de la semaine.
+      if (ddYearBase5 >= bloomEnd && week < fruits.recolteWeek && !bloomFrosted) {
+        fruitProgress = Math.min(
+          1,
+          fruitProgress + (limitingFactors[t] ?? 0) / fruits.croissanceSem,
+        );
+      }
+      if (week === fruits.recolteWeek) {
+        // Pollinisation (§7.5, version espèce en attendant les variétés) : un
+        // auto-stérile sans congénère mature à moins de 30 m produit très peu.
+        let pollinated = fruits.autofertile;
+        if (!pollinated) {
+          for (const other of nextTrees) {
+            if (other.id === tree.id || !other.alive || other.especeId !== tree.especeId) continue;
+            if (other.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+            const dx = other.x - tree.x;
+            const dy = other.y - tree.y;
+            if (dx * dx + dy * dy <= 30 * 30) {
+              pollinated = true;
+              break;
+            }
+          }
+        }
+        const sizeFactor = Math.min(1, (tree.heightM / (0.7 * espece.hauteurMaxM)) ** 2);
+        fruitsKg =
+          fruits.rendementMaxKg *
+          sizeFactor *
+          fruitProgress *
+          (bloomFrosted ? 0 : 1) *
+          (pollinated ? 1 : 0.2);
+      }
+      if (week === fruits.recolteWeek + fruits.fenetreRecolteWeeks) {
+        fruitsKg = 0; // récolte non faite = perdue (§10)
+      }
+    }
+    if (
+      fruitsKg === tree.fruitsKg &&
+      fruitProgress === tree.fruitProgress &&
+      bloomFrosted === tree.bloomFrosted
+    ) {
+      return tree;
+    }
+    return { ...tree, fruitsKg, fruitProgress, bloomFrosted };
   });
 
   // ── 6. Retours de litière : chute des feuilles + arbres morts ─────────────
@@ -351,6 +436,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       coteM: station.coteM,
       voisinage: station.voisinage,
       leavesOn,
+      ph: state.soil.ph,
       nextTreeId,
     });
     nextTrees = [...nextTrees, ...recruitment.newTrees];
@@ -362,8 +448,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     state: {
       ...state,
       week: state.week + 1,
-      soil: { waterMm, excessMm, mineralNG, litterNG, litterCG, humusCG, litterK },
+      soil: {
+        waterMm,
+        excessMm,
+        mineralNG,
+        litterNG,
+        litterCG,
+        humusCG,
+        ph: state.soil.ph,
+        litterK,
+      },
       trees: nextTrees,
+      ddYearBase5,
       carbon: {
         ...state.carbon,
         deadWoodKgC,
@@ -377,6 +473,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       rainMm: weather.rainMm,
       etpMm,
       evapMm: evapSum / nCells,
+      nappeMm: nappeSum / nCells,
       transpirationMm: transpirationSumL / nCells,
       drainageMm: drainageSum / nCells,
       overflowMm: overflowSum / nCells,
@@ -412,6 +509,7 @@ export function stateHash(state: GameState): number {
     hash = Math.imul(hash, 0x01000193);
   };
   mixNumber(state.week);
+  mixNumber(state.ddYearBase5);
   for (const arr of [
     state.soil.waterMm,
     state.soil.excessMm,
@@ -419,6 +517,7 @@ export function stateHash(state: GameState): number {
     state.soil.litterNG,
     state.soil.litterCG,
     state.soil.humusCG,
+    state.soil.ph,
     state.soil.litterK,
   ]) {
     for (const v of arr) mixNumber(v);

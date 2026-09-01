@@ -36,6 +36,9 @@ const SPECIES_COLORS: Record<string, string> = {
   quercus_pubescens: "#c05746",
   pinus_sylvestris: "#3a7ca5",
   betula_pendula: "#c9a227",
+  malus_domestica: "#d1495b",
+  prunus_armeniaca: "#e8871e",
+  corylus_avellana: "#8c5e3c",
 };
 
 interface WeekPoint {

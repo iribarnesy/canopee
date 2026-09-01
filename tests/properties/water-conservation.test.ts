@@ -18,6 +18,7 @@ describe("bilan hydrique d'une cellule — conservation de l'eau", () => {
       drainagePerWeekMm: fc.double({ min: 0, max: 100, noNaN: true }),
       rainMm: fc.double({ min: 0, max: 150, noNaN: true }),
       evapDemandMm: fc.double({ min: 0, max: 30, noNaN: true }),
+      nappeMm: fc.double({ min: 0, max: 20, noNaN: true }),
     })
     .map(({ ruMm, fillRatio, excessCapacityMm, excessRatio, ...rest }) => ({
       ruMm,
@@ -27,13 +28,13 @@ describe("bilan hydrique d'une cellule — conservation de l'eau", () => {
       ...rest,
     }));
 
-  it("pluie = évaporation + drainage + débordement + Δstock (à 1e-9 près)", () => {
+  it("pluie + nappe absorbée = évaporation + drainage + débordement + Δstock (à 1e-9 près)", () => {
     fc.assert(
       fc.property(arbitraries, (input) => {
         const out = cellWaterBalance(input);
         const deltaStock = out.soilWaterMm + out.excessMm - (input.soilWaterMm + input.excessMm);
         expect(out.evapMm + out.drainageMm + out.overflowMm + deltaStock).toBeCloseTo(
-          input.rainMm,
+          input.rainMm + out.nappeMm,
           9,
         );
       }),
@@ -64,10 +65,10 @@ describe("bilan hydrique d'une cellule — conservation de l'eau", () => {
     let soil = { soilWaterMm: 140, excessMm: 0 };
     const common = { ruMm: 140, excessCapacityMm: 60, drainagePerWeekMm: 4 };
     for (let i = 0; i < 7; i++) {
-      const out = cellWaterBalance({ ...common, ...soil, rainMm: 30, evapDemandMm: 2 });
+      const out = cellWaterBalance({ ...common, ...soil, rainMm: 30, evapDemandMm: 2, nappeMm: 0 });
       soil = { soilWaterMm: out.soilWaterMm, excessMm: out.excessMm };
     }
-    const out = cellWaterBalance({ ...common, ...soil, rainMm: 30, evapDemandMm: 2 });
+    const out = cellWaterBalance({ ...common, ...soil, rainMm: 30, evapDemandMm: 2, nappeMm: 0 });
     expect(out.waterloggingRatio).toBeGreaterThan(0.5);
   });
 });

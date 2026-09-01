@@ -25,6 +25,8 @@ export const LANDE_SECHE: StationClimat = {
     mineralizationPotentialKgHaWeek: 0.6, // sol pauvre : ~20-25 kg N/ha/an effectifs
     initialMineralNKgHa: 15,
     initialSoilCTHa: 30,
+    phInitial: 4.5,
+    remonteeNappeMmSemaine: 0,
     coteM: 100,
     voisinage: [
       { especeId: "pinus_sylvestris", semisParAn: 4 },
@@ -52,6 +54,8 @@ export const VALLEE_ENGORGEE: StationClimat = {
     mineralizationPotentialKgHaWeek: 2.5,
     initialMineralNKgHa: 40,
     initialSoilCTHa: 80,
+    phInitial: 6.5,
+    remonteeNappeMmSemaine: 12,
     coteM: 100,
     voisinage: [],
   },
@@ -76,6 +80,8 @@ export const LIMON_RICHE: StationClimat = {
     mineralizationPotentialKgHaWeek: 3, // ~110-130 kg N/ha/an effectifs
     initialMineralNKgHa: 60,
     initialSoilCTHa: 65,
+    phInitial: 7,
+    remonteeNappeMmSemaine: 0,
     coteM: 100,
     voisinage: [],
   },
@@ -116,6 +122,8 @@ export const FRICHE_LIMON: StationClimat = {
     mineralizationPotentialKgHaWeek: 2.5,
     initialMineralNKgHa: 40,
     initialSoilCTHa: 65,
+    phInitial: 6.8,
+    remonteeNappeMmSemaine: 0,
     coteM: 50,
     voisinage: [
       { especeId: "betula_pendula", semisParAn: 6 },

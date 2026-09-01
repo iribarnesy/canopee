@@ -6,7 +6,7 @@
  */
 
 import type { ActionRefusal, GameAction } from "./actions";
-import { applyAction, OVERDRAFT_LIMIT_EUR } from "./actions";
+import { applyAction, OVERDRAFT_LIMIT_EUR, SALARY_EUR_WEEK } from "./actions";
 import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station } from "./state";
@@ -31,10 +31,13 @@ export function advanceWeek(
   weather: WeekWeather,
   actions: readonly GameAction[],
 ): { state: GameState; refusals: ActionRefusal[] } {
+  // Salaires des ouvriers embauchés (au-delà du joueur lui-même, §10).
+  const salaries = (state.economy.uth - 1) * SALARY_EUR_WEEK;
   let s: GameState = {
     ...state,
     economy: {
       ...state.economy,
+      treasuryEur: state.economy.treasuryEur - salaries,
       hoursUsedWeek: 0,
       hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
     },

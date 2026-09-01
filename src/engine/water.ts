@@ -26,6 +26,8 @@ export interface CellWaterInput {
   rainMm: number;
   /** demande évaporatoire du sol nu, mm (fraction de l'ETP, cf. tick.ts) */
   evapDemandMm: number;
+  /** remontée capillaire de nappe disponible, mm/semaine (fond de vallée, §2) */
+  nappeMm: number;
 }
 
 export interface CellWaterOutput {
@@ -37,6 +39,8 @@ export interface CellWaterOutput {
   drainageMm: number;
   /** eau refusée par le sol saturé (ruissellement de surface), mm */
   overflowMm: number;
+  /** remontée de nappe réellement absorbée, mm (flux entrant, conservation) */
+  nappeMm: number;
   /** part de la porosité de drainage occupée en fin de semaine ∈ [0,1] — anoxie */
   waterloggingRatio: number;
 }
@@ -74,6 +78,12 @@ export function cellWaterBalanceInto(input: CellWaterInput, out: CellWaterOutput
   const evapMm = Math.min(soilWaterMm, evapDemandMm * drynessFactor(soilWaterMm, ruMm));
   soilWaterMm -= evapMm;
 
+  // 5. Remontée capillaire de la nappe : recharge la réserve utile par le bas
+  //    (fond de vallée : engorgé l'hiver, jamais à sec l'été — docs/regles.md §2).
+  const nappeMm = Math.min(input.nappeMm, ruMm - soilWaterMm);
+  soilWaterMm += nappeMm;
+
+  out.nappeMm = nappeMm;
   out.soilWaterMm = soilWaterMm;
   out.excessMm = excessMm;
   out.evapMm = evapMm;
@@ -89,6 +99,7 @@ export function cellWaterBalance(input: CellWaterInput): CellWaterOutput {
     evapMm: 0,
     drainageMm: 0,
     overflowMm: 0,
+    nappeMm: 0,
     waterloggingRatio: 0,
   };
   cellWaterBalanceInto(input, out);

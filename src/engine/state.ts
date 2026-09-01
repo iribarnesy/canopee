@@ -33,6 +33,10 @@ export interface Station {
   initialMineralNKgHa: number;
   /** stock initial de carbone du sol (humus), t C/ha — LE gros stock (§12) */
   initialSoilCTHa: number;
+  /** pH initial du sol (nuancier acidiphile→calcicole des espèces, atlas) */
+  phInitial: number;
+  /** remontée capillaire de nappe, mm/semaine (0 = pas de nappe accessible) */
+  remonteeNappeMmSemaine: number;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
@@ -57,6 +61,8 @@ export interface SoilState {
   litterCG: number[];
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: number[];
+  /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
+  ph: number[];
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
   litterK: number[];
@@ -71,6 +77,8 @@ export interface GameState {
   nextTreeId: number;
   economy: EconomyState;
   carbon: CarbonState;
+  /** degrés-jours base 5 °C cumulés depuis le 1er janvier (phénologie, §7.2) */
+  ddYearBase5: number;
   rng: RngState;
 }
 
@@ -80,6 +88,8 @@ export interface TickFluxes {
   etpMm: number;
   /** évaporation du sol, mm moyen */
   evapMm: number;
+  /** remontée de nappe absorbée, mm moyen (flux entrant) */
+  nappeMm: number;
   /** transpiration des arbres, mm moyen (Σ L / surface) */
   transpirationMm: number;
   drainageMm: number;
@@ -108,6 +118,7 @@ export function createGameState(
     station,
     economy: createEconomy(options.treasuryEur ?? 20_000),
     carbon: createCarbonState(),
+    ddYearBase5: 0,
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: new Array(n).fill(station.ruMm),
@@ -116,6 +127,7 @@ export function createGameState(
       litterNG: new Array(n).fill(0),
       litterCG: new Array(n).fill(0),
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
+      ph: new Array(n).fill(station.phInitial),
       litterK: new Array(n).fill(0),
     },
     trees: [],
@@ -143,6 +155,9 @@ export function plantAt(
     stress: 0,
     alive: true,
     uptakeYearG: 0,
+    fruitsKg: 0,
+    fruitProgress: 0,
+    bloomFrosted: false,
   };
   return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
 }
@@ -175,6 +190,9 @@ export function plantScattered(
       stress: 0,
       alive: true,
       uptakeYearG: 0,
+      fruitsKg: 0,
+      fruitProgress: 0,
+      bloomFrosted: false,
     });
   }
   return { ...state, trees, nextTreeId: state.nextTreeId + count, rng };

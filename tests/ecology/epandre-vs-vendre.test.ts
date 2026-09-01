@@ -3,7 +3,10 @@
  * joueur qui coupe ses fixateurs choisit — VENDRE la récolte (argent) ou
  * ÉPANDRE sur place (l'azote fixé retourne au sol et nourrit les voisins).
  * Les deux parties sont identiques jusqu'à la coupe (même seed, même journal
- * amont) ; seul le devenir diffère.
+ * amont) ; seul le devenir diffère. La litière annuelle des aulnes vivants
+ * fertilise les deux scénarios à l'identique jusqu'à la coupe ; après, la
+ * zone « vendre » s'épuise, la zone « épandre » tient des années grâce au
+ * BRF (C/N ligneux, libération lente — ch2-B).
  */
 
 import { describe, expect, it } from "vitest";
@@ -26,7 +29,7 @@ for (let i = 0; i < 8; i++) {
   HETRES.push({ x: 25.5 + (i % 4) * 3, y: 25.5 + Math.floor(i / 4) * 3 });
 }
 
-const CUT_WEEK = 10 * 52 + 30; // fin d'été de l'an 10 (l'azote de l'année est dans les feuilles)
+const CUT_WEEK = 8 * 52 + 30; // fin d'été de l'an 8 (l'azote de l'année est dans les feuilles)
 
 function journal(devenir: "vendre" | "epandre") {
   return {
@@ -45,9 +48,9 @@ function journal(devenir: "vendre" | "epandre") {
   };
 }
 
-describe("couper les aulnes : épandre ou vendre (15 ans, limon pauvre en N)", () => {
-  const vendre = runJournal(STATION, journal("vendre"), WEATHER, 15 * 52);
-  const epandre = runJournal(STATION, journal("epandre"), WEATHER, 15 * 52);
+describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", () => {
+  const vendre = runJournal(STATION, journal("vendre"), WEATHER, 16 * 52);
+  const epandre = runJournal(STATION, journal("epandre"), WEATHER, 16 * 52);
 
   it("aucune action n'est refusée dans les deux parties", () => {
     expect(vendre.refusals).toEqual([]);

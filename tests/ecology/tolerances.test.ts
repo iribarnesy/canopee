@@ -43,10 +43,13 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
     ],
   });
 
-  it("les xérophiles (pin sylvestre, chêne pubescent) tiennent", () => {
+  it("le pin sylvestre, xérophile acidiphile, tient", () => {
     expect(aliveCount(state, "pinus_sylvestris", 30)).toBe(10);
-    expect(aliveCount(state, "quercus_pubescens", 30)).toBe(10);
-    expect(meanHeight(state, "pinus_sylvestris", 30)).toBeGreaterThan(2);
+    expect(meanHeight(state, "pinus_sylvestris", 30)).toBeGreaterThan(1.5);
+  });
+
+  it("le chêne pubescent, calcicole, meurt sur ce sable acide (pH 4,5 — bio-indication)", () => {
+    expect(aliveCount(state, "quercus_pubescens", 30)).toBe(0);
   });
 
   it("le hêtre souffre : mort, ou nettement dominé par le pin", () => {

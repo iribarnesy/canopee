@@ -61,16 +61,20 @@ def build(src_dir: Path, out_dir: Path) -> None:
                     slot["tm"].append(tm)
 
         # première passe : moyennes hebdo quand les données existent
+        # (+ tMinAbs = LA nuit la plus froide de la semaine : les gels tardifs
+        # sont des événements ponctuels, invisibles dans une moyenne)
         weekly = {}
         for (y, w), s in acc.items():
             if len(s["tm"]) >= 4 and len(s["rr"]) >= 4:
                 # pluie hebdo = cumul, ajusté si jours manquants
                 rr = sum(s["rr"]) * 7 / len(s["rr"])
+                tn_mean = statistics.mean(s["tn"]) if s["tn"] else statistics.mean(s["tm"]) - 4
                 weekly[(y, w)] = (
                     statistics.mean(s["tm"]),
-                    statistics.mean(s["tn"]) if s["tn"] else statistics.mean(s["tm"]) - 4,
+                    tn_mean,
                     statistics.mean(s["tx"]) if s["tx"] else statistics.mean(s["tm"]) + 4,
                     rr,
+                    min(s["tn"]) if s["tn"] else tn_mean - 3,
                 )
 
         # climatologie par semaine (pour combler les trous)
@@ -79,7 +83,7 @@ def build(src_dir: Path, out_dir: Path) -> None:
             vals = [weekly[(y, w)] for y in range(YEAR_START, YEAR_END + 1) if (y, w) in weekly]
             if not vals:
                 raise SystemExit(f"{game_id}: aucune donnée pour la semaine {w}")
-            climato[w] = tuple(statistics.mean(v[i] for v in vals) for i in range(4))
+            climato[w] = tuple(statistics.mean(v[i] for v in vals) for i in range(5))
 
         semaines = []
         filled = 0
@@ -89,7 +93,9 @@ def build(src_dir: Path, out_dir: Path) -> None:
                 if v is None:
                     v = climato[w]
                     filled += 1
-                semaines.append([round(v[0], 2), round(v[1], 2), round(v[2], 2), round(v[3], 2)])
+                semaines.append(
+                    [round(v[0], 2), round(v[1], 2), round(v[2], 2), round(v[3], 2), round(v[4], 2)]
+                )
 
         out = {
             "id": game_id,
@@ -99,7 +105,7 @@ def build(src_dir: Path, out_dir: Path) -> None:
             "alti": meta.get("alti", 0),
             "periode": [YEAR_START, YEAR_END],
             "source": "Météo-France, données climatologiques de base quotidiennes (meteo.data.gouv.fr, licence ouverte Etalab)",
-            "colonnes": ["tMoyC", "tMinC", "tMaxC", "pluieMm"],
+            "colonnes": ["tMoyC", "tMinC", "tMaxC", "pluieMm", "tMinAbsC"],
             "semaines": semaines,
         }
         path = out_dir / f"{game_id}.json"

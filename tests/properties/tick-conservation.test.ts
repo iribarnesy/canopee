@@ -46,7 +46,7 @@ function checkConservation(sc: StationClimat, years: number) {
     const deltaWater = meanWaterStock(next) - before;
     expect(
       fluxes.evapMm + fluxes.transpirationMm + fluxes.drainageMm + fluxes.overflowMm + deltaWater,
-    ).toBeCloseTo(fluxes.rainMm, 6);
+    ).toBeCloseTo(fluxes.rainMm + fluxes.nappeMm, 6);
 
     // Entrées : minéralisation de l'humus + retour de litière (recyclage des
     // arbres) + fixation symbiotique. Sorties : prélèvements + lessivage.
