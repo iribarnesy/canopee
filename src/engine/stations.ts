@@ -29,7 +29,7 @@ export interface StationClimat {
  * physique du sol (soil.ts), jamais saisis. C'est ce qui permettra de générer
  * des stations quelconques — critère de réalisme A9.
  */
-function stationDepuisProfil(
+export function stationDepuisProfil(
   base: Omit<
     Station,
     | "ruMm"

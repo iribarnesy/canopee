@@ -15,12 +15,21 @@ import type { GameAction } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
 import { T_HA_TO_G_M2 } from "../engine/carbon";
 import { getScenario, meteoDerivee } from "../engine/climat";
+import { ESPECES_V0 } from "../engine/especes";
 import { advanceWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, type WeekWeather } from "../engine/meteo";
 import { rngStateFromSeed } from "../engine/rng";
+import { horizon } from "../engine/soil";
 import { createGameState, type GameState, plantAt, type Station } from "../engine/state";
-import { FRICHE_LIMON, LANDE_SECHE, LIMON_RICHE, type STATIONS_V0 } from "../engine/stations";
+import {
+  FRICHE_LIMON,
+  LANDE_SECHE,
+  LIMON_RICHE,
+  type STATIONS_V0,
+  stationDepuisProfil,
+} from "../engine/stations";
+import { COULEUR_AUTRES, SPECIES_COLORS } from "../ui/couleurs";
 
 export interface Serie {
   nom: string;
@@ -39,6 +48,24 @@ export interface ResultatExperience {
   verdict: string;
 }
 
+/** Un réglage qu'on peut tourner avant de lancer une expérience. */
+export interface Parametre {
+  id: string;
+  libelle: string;
+  /** ce que ce réglage change, en une phrase */
+  aide: string;
+  min: number;
+  max: number;
+  pas: number;
+  defaut: number;
+  /** unité affichée à côté de la valeur */
+  unite: string;
+  /** libellés à la place des nombres (bascules, choix) */
+  libellesValeurs?: readonly string[];
+}
+
+export type Reglages = Record<string, number>;
+
 export interface Experience {
   id: string;
   titre: string;
@@ -48,7 +75,9 @@ export interface Experience {
   attendu: string;
   /** durée indicative du calcul */
   cout: "court" | "long";
-  executer: () => ResultatExperience;
+  /** réglages exposés au joueur (absent = expérience figée) */
+  parametres?: readonly Parametre[];
+  executer: (reglages: Reglages) => ResultatExperience;
 }
 
 const VERT = "#3f7d3f";
@@ -147,7 +176,219 @@ const premier = (a: readonly number[]) => a[0] ?? 0;
 const hausse = (a: readonly number[]) =>
   (((dernier(a) - premier(a)) / Math.max(1e-9, premier(a))) * 100).toFixed(0);
 
+/**
+ * Bac à sable : une friche vierge, une pluie de semis de toutes les espèces,
+ * et des réglages qu'on tourne pour voir qui gagne. C'est le moteur mis à nu —
+ * rien n'est planté, rien n'est conduit, tout se joue entre le sol, le climat
+ * et les tempéraments.
+ */
+const BAC_A_SABLE: Experience = {
+  id: "bac-a-sable",
+  titre: "Bac à sable — régénération naturelle",
+  question: "Qui s'installe, sur quel terrain, et sous quel climat ?",
+  attendu:
+    "Toutes les espèces reçoivent la même pluie de semis. Ce qui décide, ce sont leurs tempéraments face au sol et au climat qu'on a réglés — et le gibier, qui trie par appétence. Aucune espèce n'est favorisée par le code.",
+  cout: "long",
+  parametres: [
+    {
+      id: "ans",
+      libelle: "Durée",
+      aide: "La succession met des décennies : à 30 ans on voit les pionnières, à 150 ans le climax.",
+      min: 30,
+      max: 150,
+      pas: 10,
+      defaut: 80,
+      unite: "ans",
+    },
+    {
+      id: "gibier",
+      libelle: "Gibier",
+      aide: "Densité de cervidés du paysage. Au-delà de ~0,35/ha, les essences appétentes ne sortent plus de la hauteur de dent.",
+      min: 0,
+      max: 0.6,
+      pas: 0.05,
+      defaut: 0.15,
+      unite: "cervidés/ha",
+    },
+    {
+      id: "profondeur",
+      libelle: "Profondeur de sol",
+      aide: "Épaisseur exploitable par les racines. Un sol profond avantage les pivots, un sol maigre les frugales.",
+      min: 25,
+      max: 200,
+      pas: 5,
+      defaut: 90,
+      unite: "cm",
+    },
+    {
+      id: "argile",
+      libelle: "Texture",
+      aide: "De sableuse (0) à argileuse (100) : ça décide de la réserve utile ET du drainage.",
+      min: 0,
+      max: 100,
+      pas: 5,
+      defaut: 40,
+      unite: "% fin",
+    },
+    {
+      id: "ph",
+      libelle: "pH du sol",
+      aide: "Il exclut les espèces hors de leur gamme, et freine la vie du sol quand il est acide.",
+      min: 4,
+      max: 8,
+      pas: 0.1,
+      defaut: 6,
+      unite: "",
+    },
+    {
+      id: "mo",
+      libelle: "Matière organique",
+      aide: "Le capital de départ : azote à minéraliser et eau retenue.",
+      min: 0.5,
+      max: 8,
+      pas: 0.5,
+      defaut: 3,
+      unite: "%",
+    },
+    {
+      id: "latitude",
+      libelle: "Latitude",
+      aide: "Position sur le globe : elle fixe le rayonnement, donc l'évapotranspiration. Du Roussillon (42°) à la Flandre (51°).",
+      min: 42,
+      max: 51,
+      pas: 0.5,
+      defaut: 47,
+      unite: "°N",
+    },
+    {
+      id: "meteo",
+      libelle: "Climat local",
+      aide: "La série d'observations rejouée : océanique landais, ligérien, ou nord.",
+      min: 0,
+      max: 2,
+      pas: 1,
+      defaut: 1,
+      unite: "",
+      libellesValeurs: ["Mont-de-Marsan", "Tours", "Abbeville"],
+    },
+    {
+      id: "scenario",
+      libelle: "Trajectoire climatique",
+      aide: "Le climat dérive-t-il pendant la partie ?",
+      min: 0,
+      max: 3,
+      pas: 1,
+      defaut: 0,
+      unite: "",
+      libellesValeurs: ["Climat figé", "SSP1-2.6", "SSP2-4.5", "SSP5-8.5"],
+    },
+  ],
+  executer: (r) => {
+    const ans = Math.round(r.ans ?? 80);
+    const argile = (r.argile ?? 40) / 100;
+    const profondeur = r.profondeur ?? 90;
+    const ph = r.ph ?? 6;
+    const mo = r.mo ?? 3;
+    // Un profil à deux horizons : un horizon de surface humifère, puis le
+    // reste. La MO décroît avec la profondeur, comme partout.
+    const surfaceCm = Math.min(30, profondeur);
+    const texture = { sable: 1 - argile, limon: argile * 0.6, argile: argile * 0.4 };
+    const profil = [
+      horizon(surfaceCm, texture, { moPct: mo, ph }),
+      ...(profondeur > surfaceCm
+        ? [horizon(profondeur - surfaceCm, texture, { moPct: mo * 0.3, ph })]
+        : []),
+    ];
+    const meteoIds = ["lande-seche", "limon-riche", "friche-limon"] as const;
+    const meteoId = meteoIds[Math.round(r.meteo ?? 1)] ?? "limon-riche";
+    const scenarios = ["stable", "ssp126", "ssp245", "ssp585"] as const;
+    const scenarioId = scenarios[Math.round(r.scenario ?? 0)] ?? "stable";
+
+    const st = stationDepuisProfil({
+      id: "bac-a-sable",
+      nom: "Bac à sable",
+      coteM: 50,
+      latitudeDeg: r.latitude ?? 47,
+      profil,
+      initialMineralNKgHa: 20,
+      remonteeNappeMmSemaine: 0,
+      drainageExterneMmSemaine: 40,
+      ventExposition: 0.5,
+      herbeInitiale: 0.6,
+      gibierParHa: r.gibier ?? 0.15,
+      depositionNKgHaAn: 14,
+      // Pluie de semis identique pour TOUTES les espèces : c'est la condition
+      // pour que le résultat ne dise rien d'autre que le terrain et le climat.
+      voisinage: ESPECES_V0.map((e) => ({ especeId: e.id, semisParAn: 3 })),
+    });
+
+    const w = meteo(meteoId);
+    const scenario = getScenario(scenarioId);
+    let state = createGameState(st, rngStateFromSeed(7));
+    const parAn: Record<string, number[]> = {};
+    for (const e of ESPECES_V0) parAn[e.id] = [];
+    for (let i = 0; i < ans * 52; i++) {
+      const base = w[i % w.length];
+      if (!base) throw new Error("météo manquante");
+      state = advanceWeek(
+        state,
+        meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52)),
+        [],
+      ).state;
+      if ((i + 1) % 52 === 0) {
+        for (const e of ESPECES_V0) {
+          parAn[e.id]?.push(state.trees.filter((t) => t.alive && t.especeId === e.id).length);
+        }
+      }
+    }
+
+    // Au plus six espèces nommées : au-delà, une légende devient un jeu de
+    // devinettes. Le reste est replié dans « autres ».
+    // On nomme les six qui ont compté À UN MOMENT, pas seulement à la fin :
+    // sinon les pionnières, qui dominent puis s'effacent, disparaissent dans
+    // « autres » et la succession devient illisible.
+    const classees = ESPECES_V0.map((e) => ({
+      espece: e,
+      valeurs: parAn[e.id] ?? [],
+      fin: dernier(parAn[e.id] ?? []),
+      sommet: Math.max(0, ...(parAn[e.id] ?? [])),
+    })).sort((a, b) => b.sommet - a.sommet);
+    const nommees = classees.filter((c) => c.sommet > 0).slice(0, 6);
+    const autres = classees.filter((c) => !nommees.includes(c));
+    const series: Serie[] = nommees.map((c) => ({
+      nom: c.espece.nom,
+      couleur: SPECIES_COLORS[c.espece.id] ?? COULEUR_AUTRES,
+      valeurs: c.valeurs,
+    }));
+    if (autres.some((c) => c.fin > 0)) {
+      series.push({
+        nom: "autres",
+        couleur: COULEUR_AUTRES,
+        valeurs: Array.from({ length: ans }, (_, i) =>
+          autres.reduce((s, c) => s + (c.valeurs[i] ?? 0), 0),
+        ),
+      });
+    }
+    const total = classees.reduce((s, c) => s + c.fin, 0);
+    const podium = [...classees]
+      .sort((a, b) => b.fin - a.fin)
+      .filter((c) => c.fin > 0)
+      .slice(0, 3)
+      .map((c) => `${c.espece.nom} (${c.fin})`)
+      .join(", ");
+    const disparues = classees.filter((c) => c.fin === 0).length;
+    return {
+      id: "bac-a-sable",
+      forme: "courbe",
+      uniteY: "individus vivants",
+      series,
+      verdict: `Après ${ans} ans : ${total} tiges vivantes. En tête : ${podium || "personne"}. ${disparues} espèce${disparues > 1 ? "s n'ont" : " n'a"} pas tenu. Changez un réglage à la fois pour voir ce qui décide.`,
+    };
+  },
+};
+
 export const EXPERIENCES: readonly Experience[] = [
+  BAC_A_SABLE,
   {
     id: "gibier",
     titre: "Le gibier",

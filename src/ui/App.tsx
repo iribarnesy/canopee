@@ -31,7 +31,7 @@ const TREES_PER_SPECIES = 30;
 /** ids ≤ ce seuil = cohorte plantée ; au-delà = recrues de la régénération */
 const PLANTED_MAX_ID = TREES_PER_SPECIES * 5;
 
-import { SPECIES_COLORS } from "./couleurs";
+import { COULEUR_AUTRES, SPECIES_COLORS } from "./couleurs";
 
 interface WeekPoint {
   week: number;
@@ -39,7 +39,10 @@ interface WeekPoint {
   waterlogging: number;
   fluxes: TickFluxes;
   heights: Record<string, number>;
+  /** tous les individus vivants, recrues comprises */
   aliveCounts: Record<string, number>;
+  /** ceux qui viennent de la cohorte plantée (0 en succession) */
+  plantesVivants: Record<string, number>;
 }
 
 interface SimResult {
@@ -72,12 +75,17 @@ function simulate(sc: StationClimat, weather: WeekWeather[]): SimResult {
     state = result.state;
     const heights: Record<string, number> = {};
     const aliveCounts: Record<string, number> = {};
+    const plantesVivants: Record<string, number> = {};
     for (const espece of ESPECES_V0) {
       // Hauteur DOMINANTE (max des vivants, recrues comprises) : la métrique
       // forestière standard, sans l'artefact des moyennes qui s'effondrent
       // quand un individu meurt. Les comptages distinguent la cohorte plantée.
       const alive = state.trees.filter((t) => t.especeId === espece.id && t.alive);
-      aliveCounts[espece.id] = alive.filter((t) => t.id <= statMaxId).length;
+      // On compte TOUT ce qui est vivant — sans les recrues, une parcelle
+      // couverte de semis paraissait vide, ce qui est le contraire de ce
+      // qu'on veut lire sur une régénération naturelle.
+      aliveCounts[espece.id] = alive.length;
+      plantesVivants[espece.id] = alive.filter((t) => t.id <= statMaxId).length;
       heights[espece.id] = alive.reduce((max, t) => Math.max(max, t.heightM), 0);
     }
     const waterArr = state.soil.waterMm;
@@ -91,6 +99,7 @@ function simulate(sc: StationClimat, weather: WeekWeather[]): SimResult {
       fluxes: result.fluxes,
       heights,
       aliveCounts,
+      plantesVivants,
     });
     if (i % 52 === 35) lateSummerState = state;
   }
@@ -101,8 +110,8 @@ const W = 900;
 const H = 200;
 const PAD = 40;
 
-function linePath(values: number[], yScale: (v: number) => number): string {
-  const xStep = (W - 2 * PAD) / (values.length - 1);
+function linePath(values: number[], yScale: (v: number) => number, xMax = W - PAD): string {
+  const xStep = (xMax - PAD) / Math.max(1, values.length - 1);
   return values
     .map((v, i) => `${i === 0 ? "M" : "L"}${(PAD + i * xStep).toFixed(1)},${yScale(v).toFixed(1)}`)
     .join(" ");
@@ -112,7 +121,13 @@ function WaterChart({ points, ruMm }: { points: WeekPoint[]; ruMm: number }) {
   const yScale = (mm: number) => H - PAD - (mm / ruMm) * (H - 2 * PAD);
   const yScaleRatio = (r: number) => H - PAD - r * (H - 2 * PAD);
   return (
-    <svg width={W} height={H} role="img" aria-label="Eau du sol et engorgement">
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ display: "block", maxWidth: W }}
+      role="img"
+      aria-label="Eau du sol et engorgement"
+    >
       <rect width={W} height={H} fill="#f6f4ee" />
       <line
         x1={PAD}
@@ -147,34 +162,98 @@ function WaterChart({ points, ruMm }: { points: WeekPoint[]; ruMm: number }) {
   );
 }
 
-function HeightChart({ points }: { points: WeekPoint[] }) {
+/**
+ * Hauteur dominante par espèce. On ne trace QUE les espèces encore vivantes à
+ * la fin, au plus six, et chaque courbe porte son nom à son extrémité : au-delà
+ * d'une demi-douzaine de couleurs, une légende devient un jeu de devinettes.
+ * Les autres restent en gris, présentes mais sans prétendre à une identité.
+ */
+function HeightChart({ points, classement }: { points: WeekPoint[]; classement: LigneEspece[] }) {
   const maxH = Math.max(4, ...points.map((p) => Math.max(...Object.values(p.heights))));
   const yScale = (m: number) => H - PAD - (m / maxH) * (H - 2 * PAD);
+  const enAvant = classement.filter((l) => l.vivants > 0).slice(0, 6);
+  const ids = new Set(enAvant.map((l) => l.espece.id));
+  // Deux espèces qui finissent à la même hauteur superposeraient leurs
+  // étiquettes : on les écarte du minimum lisible, du haut vers le bas.
+  const ESPACEMENT = 12;
+  const etiquettes = [...enAvant]
+    .sort((a, b) => b.hauteur - a.hauteur)
+    .reduce<{ ligne: LigneEspece; y: number }[]>((acc, ligne) => {
+      const voulu = yScale(ligne.hauteur);
+      const precedent = acc[acc.length - 1];
+      acc.push({
+        ligne,
+        y: precedent ? Math.max(voulu, precedent.y + ESPACEMENT) : voulu,
+      });
+      return acc;
+    }, []);
+  const largeurEtiquette = 96;
+  const xFin = W - PAD - largeurEtiquette;
   return (
-    <svg width={W} height={H} role="img" aria-label="Hauteur moyenne par espèce">
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ display: "block", maxWidth: W }}
+      role="img"
+      aria-label="Hauteur dominante par espèce, les six premières nommées"
+    >
       <rect width={W} height={H} fill="#f6f4ee" />
-      {ESPECES_V0.map((espece) => (
+      {ESPECES_V0.filter((e) => !ids.has(e.id)).map((espece) => (
         <path
           key={espece.id}
           d={linePath(
             points.map((p) => p.heights[espece.id] ?? 0),
             yScale,
+            xFin,
           )}
           fill="none"
-          stroke={SPECIES_COLORS[espece.id] ?? "#555"}
-          strokeWidth={2}
+          stroke={COULEUR_AUTRES}
+          strokeWidth={1}
+          opacity={0.55}
         />
       ))}
+      {etiquettes.map(({ ligne, y }) => {
+        const couleur = SPECIES_COLORS[ligne.espece.id] ?? "#555";
+        const yCourbe = yScale(ligne.hauteur);
+        return (
+          <g key={ligne.espece.id}>
+            <path
+              d={linePath(
+                points.map((p) => p.heights[ligne.espece.id] ?? 0),
+                yScale,
+                xFin,
+              )}
+              fill="none"
+              stroke={couleur}
+              strokeWidth={2}
+            />
+            <circle cx={xFin} cy={yCourbe} r={3} fill={couleur} />
+            {/* Trait de rappel quand l'étiquette a dû être décalée. */}
+            <line x1={xFin} y1={yCourbe} x2={xFin + 5} y2={y} stroke={couleur} strokeWidth={1} />
+            <text x={xFin + 8} y={y + 3.5} fontSize={10.5} fill="#3b352a">
+              {ligne.espece.nom}
+            </text>
+          </g>
+        );
+      })}
       <text x={PAD} y={PAD - 8} fontSize={11} fill="#7a7261">
-        hauteur dominante par espèce (max des vivants, recrues comprises), m — max affiché :{" "}
-        {maxH.toFixed(1)} m
+        hauteur dominante (max des vivants, recrues comprises), m — max affiché : {maxH.toFixed(1)}{" "}
+        m ; en gris, les espèces éteintes
       </text>
     </svg>
   );
 }
 
 /** Carte spatiale : eau du sol (clair = sec, foncé = humide) + couronnes. */
-function ParcelMap({ state }: { state: GameState }) {
+function ParcelMap({ state, classement }: { state: GameState; classement: LigneEspece[] }) {
+  // Mêmes six espèces en couleur que sur le graphe, le reste en gris : la
+  // carte et la courbe racontent alors la même histoire.
+  const nommees = new Set(
+    classement
+      .filter((l) => l.vivants > 0)
+      .slice(0, 6)
+      .map((l) => l.espece.id),
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const side = state.station.coteM;
   const scale = 4;
@@ -202,10 +281,15 @@ function ParcelMap({ state }: { state: GameState }) {
       const r = Math.max(1.5, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio) * scale);
       ctx.beginPath();
       ctx.arc(tree.x * scale, (side - tree.y) * scale, r, 0, 2 * Math.PI);
-      ctx.fillStyle = `${SPECIES_COLORS[tree.especeId] ?? "#555"}b0`;
+      ctx.fillStyle = `${(nommees.has(tree.especeId) ? SPECIES_COLORS[tree.especeId] : COULEUR_AUTRES) ?? "#555"}c0`;
       ctx.fill();
+      // Un liseré clair : sans lui, deux couronnes qui se chevauchent forment
+      // une tache et on ne compte plus rien.
+      ctx.strokeStyle = "#f6f4eecc";
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
     }
-  }, [state, side]);
+  }, [state, side, nommees]);
 
   return (
     <div>
@@ -213,12 +297,87 @@ function ParcelMap({ state }: { state: GameState }) {
         ref={canvasRef}
         width={side * scale}
         height={side * scale}
-        style={{ border: "1px solid #b0a58c" }}
+        style={{ border: "1px solid #b0a58c", maxWidth: "100%", height: "auto" }}
       />
       <p style={{ color: "#6b6250", fontSize: 13, margin: "4px 0 0" }}>
-        Parcelle en fin d'été de la dernière année (nord en haut) — fond : eau du sol (clair = sec)
-        ; disques : couronnes. On voit chaque arbre assécher sa zone racinaire.
+        Parcelle en fin d'été de la dernière année (nord en haut),{" "}
+        <strong>arbres vivants seulement</strong> — fond : eau du sol (clair = sec) ; disques :
+        couronnes, aux couleurs du tableau ci-dessus (en gris, les espèces hors des six premières).
+        On voit chaque arbre assécher sa zone racinaire.
       </p>
+    </div>
+  );
+}
+
+interface LigneEspece {
+  espece: (typeof ESPECES_V0)[number];
+  /** tous les vivants, recrues comprises */
+  vivants: number;
+  /** parmi eux, ceux de la cohorte plantée */
+  plantes: number;
+  hauteur: number;
+}
+
+/**
+ * Qui occupe le terrain, et de combien. Un tableau trié répond en un coup
+ * d'œil à la question que la liste alphabétique laissait sans réponse ; les
+ * disparues sont reléguées à la fin, en une ligne.
+ */
+function TableauEspeces({
+  classement,
+  succession,
+}: {
+  classement: LigneEspece[];
+  succession: boolean;
+}) {
+  const presentes = classement.filter((l) => l.vivants > 0);
+  const disparues = classement.filter((l) => l.vivants === 0);
+  const cellule: React.CSSProperties = { padding: "2px 10px 2px 0", textAlign: "right" };
+  return (
+    <div style={{ margin: "8px 0" }}>
+      <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr style={{ color: "#7a7261", textAlign: "left" }}>
+            <th style={{ ...cellule, textAlign: "left" }}>espèce</th>
+            <th style={cellule}>vivants</th>
+            {!succession && <th style={cellule}>dont plantés / {TREES_PER_SPECIES}</th>}
+            <th style={cellule}>hauteur dominante</th>
+          </tr>
+        </thead>
+        <tbody>
+          {presentes.map((l) => (
+            <tr key={l.espece.id}>
+              <td style={{ ...cellule, textAlign: "left", whiteSpace: "nowrap" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 10,
+                    height: 10,
+                    borderRadius: 2,
+                    background: SPECIES_COLORS[l.espece.id] ?? "#555",
+                    marginRight: 7,
+                  }}
+                />
+                {l.espece.nom}
+              </td>
+              <td style={{ ...cellule, fontVariantNumeric: "tabular-nums" }}>{l.vivants}</td>
+              {!succession && (
+                <td style={{ ...cellule, fontVariantNumeric: "tabular-nums", color: "#7a7261" }}>
+                  {l.plantes}
+                </td>
+              )}
+              <td style={{ ...cellule, fontVariantNumeric: "tabular-nums" }}>
+                {l.hauteur.toFixed(1)} m
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {disparues.length > 0 && (
+        <p style={{ color: "#8a8271", fontSize: 12.5, margin: "6px 0 0" }}>
+          Disparues ({disparues.length}) : {disparues.map((l) => l.espece.nom).join(", ")}.
+        </p>
+      )}
     </div>
   );
 }
@@ -236,6 +395,14 @@ export function App() {
   }, [sc, useReelle, serie]);
 
   const last = points[points.length - 1];
+  // Classement décroissant par effectif vivant : ce qui domine le peuplement se
+  // lit en premier, et les espèces disparues tombent en bas.
+  const classement: LigneEspece[] = ESPECES_V0.map((espece) => ({
+    espece,
+    vivants: last?.aliveCounts[espece.id] ?? 0,
+    plantes: last?.plantesVivants[espece.id] ?? 0,
+    hauteur: last?.heights[espece.id] ?? 0,
+  })).sort((a, b) => b.vivants - a.vivants || b.hauteur - a.hauteur);
   const lastYear = points.slice(-52);
   const sum = (f: (p: WeekPoint) => number) => Math.round(lastYear.reduce((a, p) => a + f(p), 0));
 
@@ -285,23 +452,14 @@ export function App() {
           : "année type répétée"}
       </p>
       <WaterChart points={points} ruMm={sc.station.ruMm} />
-      <HeightChart points={points} />
-      <p>
-        {ESPECES_V0.map((espece) => (
-          <span key={espece.id} style={{ marginRight: 16 }}>
-            <span style={{ color: SPECIES_COLORS[espece.id], fontWeight: 700 }}>■</span>{" "}
-            {espece.nom} : {(last?.heights[espece.id] ?? 0).toFixed(1)} m ·{" "}
-            {last?.aliveCounts[espece.id] ?? 0}
-            {isSuccessionStation(sc) ? " vivants" : `/${TREES_PER_SPECIES} plantés vivants`}
-          </span>
-        ))}
-      </p>
+      <HeightChart points={points} classement={classement} />
+      <TableauEspeces classement={classement} succession={isSuccessionStation(sc)} />
       <p style={{ color: "#6b6250" }}>
         Régénération naturelle :{" "}
         {finalState.trees.filter((t) => t.alive && t.id > PLANTED_MAX_ID).length} recrues vivantes
         (semis du voisinage et des adultes de la parcelle, positions seedées).
       </p>
-      <ParcelMap state={finalState} />
+      <ParcelMap state={finalState} classement={classement} />
       <p style={{ color: "#6b6250" }}>
         {(() => {
           const inv = carbonInventory(finalState, sc.station.initialSoilCTHa);

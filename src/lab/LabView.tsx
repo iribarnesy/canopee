@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { App as SondeStation } from "../ui/App";
-import { EXPERIENCES, type ResultatExperience } from "./experiences";
+import { EXPERIENCES, type Reglages, type ResultatExperience } from "./experiences";
 import type { DuLabo, VersLabo } from "./worker";
 
 const CADRE = {
@@ -124,11 +124,27 @@ export function LabView() {
     return () => w.terminate();
   }, []);
 
-  const lancer = useCallback((id: string) => {
-    setErreur(undefined);
-    setEnCours(id);
-    workerRef.current?.postMessage({ type: "executer", id } satisfies VersLabo);
-  }, []);
+  const [reglages, setReglages] = useState<Record<string, Reglages>>(() =>
+    Object.fromEntries(
+      EXPERIENCES.map((e) => [
+        e.id,
+        Object.fromEntries((e.parametres ?? []).map((p) => [p.id, p.defaut])),
+      ]),
+    ),
+  );
+
+  const lancer = useCallback(
+    (id: string) => {
+      setErreur(undefined);
+      setEnCours(id);
+      workerRef.current?.postMessage({
+        type: "executer",
+        id,
+        reglages: reglages[id] ?? {},
+      } satisfies VersLabo);
+    },
+    [reglages],
+  );
 
   return (
     <div style={{ maxWidth: 720 }}>
@@ -145,6 +161,52 @@ export function LabView() {
           <div key={e.id} style={{ ...CADRE, marginBottom: 14 }}>
             <strong>{e.titre}</strong> — {e.question}
             <p style={{ color: "#555", fontSize: 13, margin: "6px 0 8px" }}>{e.attendu}</p>
+            {e.parametres && (
+              <div style={{ margin: "8px 0 10px" }}>
+                {e.parametres.map((p) => {
+                  const valeur = reglages[e.id]?.[p.id] ?? p.defaut;
+                  const affichee = p.libellesValeurs
+                    ? (p.libellesValeurs[Math.round(valeur)] ?? String(valeur))
+                    : `${valeur}${p.unite ? ` ${p.unite}` : ""}`;
+                  return (
+                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <label
+                        htmlFor={`${e.id}-${p.id}`}
+                        style={{ width: 160, fontSize: 13 }}
+                        title={p.aide}
+                      >
+                        {p.libelle}
+                      </label>
+                      <input
+                        id={`${e.id}-${p.id}`}
+                        type="range"
+                        min={p.min}
+                        max={p.max}
+                        step={p.pas}
+                        value={valeur}
+                        title={p.aide}
+                        onChange={(ev) =>
+                          setReglages((r) => ({
+                            ...r,
+                            [e.id]: { ...r[e.id], [p.id]: Number(ev.target.value) },
+                          }))
+                        }
+                        style={{ width: 160 }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 13,
+                          minWidth: 130,
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {affichee}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <button
               type="button"
               style={bouton(enCours === e.id)}
