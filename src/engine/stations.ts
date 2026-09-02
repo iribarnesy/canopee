@@ -6,6 +6,7 @@
  */
 
 import type { SyntheticClimate } from "./meteo";
+import { phosphoreAssimilableGM2, potassiumEchangeableGM2 } from "./pk";
 import {
   carboneProfilTHa,
   drainageProfilMmSemaine,
@@ -38,6 +39,8 @@ export function stationDepuisProfil(
     | "mineralizationPotentialKgHaWeek"
     | "initialSoilCTHa"
     | "phInitial"
+    | "phosphoreInitialGM2"
+    | "potassiumInitialGM2"
   > & { profil: SoilProfile; initialMineralNKgHa: number },
 ): Station {
   const { profil, ...reste } = base;
@@ -50,6 +53,11 @@ export function stationDepuisProfil(
     mineralizationPotentialKgHaWeek: mineralisationPotentielleKgHaSemaine(profil),
     initialSoilCTHa: carboneProfilTHa(profil),
     phInitial: phSurface(profil),
+    // Stocks de départ dérivés du sol, comme tout le reste : l'argile porte
+    // le potassium, la matière organique et le pH décident du phosphore
+    // assimilable (pk.ts).
+    phosphoreInitialGM2: phosphoreAssimilableGM2(profil),
+    potassiumInitialGM2: potassiumEchangeableGM2(profil),
   };
 }
 

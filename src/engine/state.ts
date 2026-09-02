@@ -82,6 +82,10 @@ export interface Station {
    * dessus. L'ignorer rendait nos stations pauvres invivables.
    */
   depositionNKgHaAn: number;
+  /** phosphore assimilable au départ, g/m² (dérivé du profil) */
+  phosphoreInitialGM2: number;
+  /** potassium échangeable au départ, g/m² (dérivé du profil) */
+  potassiumInitialGM2: number;
 }
 
 export function gridDims(station: Station): GridDims {
@@ -108,6 +112,25 @@ export interface SoilState {
   litterCG: number[];
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: number[];
+  /**
+   * Phosphore ASSIMILABLE, g/m². Il ne diffuse pas : ce qui est dans une
+   * cellule n'y bougera pas (pk.ts).
+   */
+  phosphoreG: number[];
+  /**
+   * Phosphore FIXÉ (fer, aluminium, calcium), g/m². Immense et lentement
+   * relargué : un sol peut être riche en phosphore total et affamer les
+   * plantes.
+   */
+  phosphoreFixeG: number[];
+  /** Potassium ÉCHANGEABLE, g/m² : retenu par le complexe, lessivable. */
+  potassiumG: number[];
+  /**
+   * Réserve de potassium non échangeable, g/m² : coincée entre les feuillets
+   * des argiles, elle tamponne la solution — elle relargue quand les racines
+   * puisent, elle réabsorbe quand il y en a trop.
+   */
+  potassiumReserveG: number[];
   /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
   ph: number[];
   /**
@@ -181,6 +204,14 @@ export interface TickFluxes {
   waterloggingMean: number;
   /** couverture herbacée moyenne ∈ [0,1] */
   herbeCouvertureMean: number;
+  /** phosphore et potassium prélevés, kg/ha */
+  /** stocks moyens, g/m² (suivis, pas encore couplés à la croissance) */
+  phosphoreMoyenGM2: number;
+  potassiumMoyenGM2: number;
+  uptakePKgHa: number;
+  uptakeKKgHa: number;
+  /** potassium lessivé, kg/ha */
+  leachedKKgHa: number;
   /** matière sèche prélevée par le gibier cette semaine, kg */
   broutageKg: number;
   /** azote apporté par les dépôts atmosphériques, kg/ha (semaine) */
@@ -229,6 +260,12 @@ export function createGameState(
       litterCG: new Array(n).fill(0),
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       ph: new Array(n).fill(station.phInitial),
+      phosphoreG: new Array(n).fill(station.phosphoreInitialGM2),
+      // Le stock fixé de départ : dix fois l'assimilable, l'ordre de grandeur
+      // habituel entre phosphore total et phosphore assimilable.
+      phosphoreFixeG: new Array(n).fill(station.phosphoreInitialGM2 * 10),
+      potassiumG: new Array(n).fill(station.potassiumInitialGM2),
+      potassiumReserveG: new Array(n).fill(station.potassiumInitialGM2 * 10),
       // Une parcelle nue au départ : la strate s'installe d'elle-même.
       herbeCouverture: new Array(n).fill(station.herbeInitiale),
       herbeBiomasse: new Array(n).fill(station.herbeInitiale),

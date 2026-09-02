@@ -114,6 +114,9 @@ export interface TreeEnvironment {
   light: number;
   /** satisfaction du besoin d'azote de CET arbre ∈ [0,1] */
   nitrogenSatisfaction: number;
+  /** satisfaction des besoins en phosphore et en potassium ∈ [0,1] (pk.ts) */
+  phosphoreSatisfaction?: number;
+  potassiumSatisfaction?: number;
   /** pH moyen de la zone racinaire */
   phMean: number;
   /** profondeur de sol pénétrable de la station, cm */
@@ -348,7 +351,12 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const fLum = lightFactor(espece, env.light);
   const fPH = phFactor(espece, env.phMean);
   const fN = espece.azote.fixateur ? 0.95 : env.nitrogenSatisfaction;
-  const limitingFactor = Math.min(fSec, fEng, fLum, fPH, fN);
+  // Loi du minimum : le phosphore et le potassium entrent au même titre que
+  // les autres. Ils ne freinent presque jamais sur un bon sol — c'est sur les
+  // sols acides ou sableux qu'ils prennent la main (pk.ts).
+  const fP = env.phosphoreSatisfaction ?? 1;
+  const fK = env.potassiumSatisfaction ?? 1;
+  const limitingFactor = Math.min(fSec, fEng, fLum, fPH, fN, fP, fK);
   // Seuls l'eau, l'anoxie et l'ombre SOUS le point de compensation épuisent
   // les réserves : au-dessus, l'arbre « survit » même s'il ne pousse plus
   // (méthode pousse / s'épanouit / survit, ch3-C). L'ombre ne compte qu'en

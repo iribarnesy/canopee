@@ -96,6 +96,30 @@ Chaque station embarque ses **normales climatiques mensuelles réelles** (Mété
 - **Bilan hydrique en cascade** : pluie → interception par les couronnes (~15–30 % *(à calibrer)*) → infiltration (limitée si battance/compaction → ruissellement, majoré par la pente) → remplissage horizon par horizon → drainage profond (qui **lessive les nitrates**) ; prélèvements = transpiration des plantes (chacune puise dans les horizons qu'atteignent ses racines) + évaporation du sol nu.
 - **Minéralisation** de la litière et de la MO : vitesse = f(T°, humidité, activité biologique, **C/N de la litière**) — feuilles d'aulne (C/N ~15) rendent l'azote vite, aiguilles de pin (C/N ~60) lentement et en acidifiant (ch2-B, voies bactérienne vs fongique).
 - **Immobilisation** : enfouir un BRF ou une paille à C/N élevé « emprunte » du N minéral pendant sa décomposition (faim d'azote) — vrai piège de gameplay, documenté ch2.
+
+**Phosphore et potassium** (`src/engine/pk.ts`, critère C11) — *cycles
+implémentés, pas encore couplés à la croissance*. Les copier sur l'azote aurait
+été faux : ce qui compte, c'est ce qui les distingue.
+- Le **phosphore ne circule pas** (il diffuse au millimètre) et ne se lessive
+  pas — mais il se **rétrograde** : piégé par le fer et l'aluminium en sol
+  acide, par le calcium en sol calcaire, d'où une disponibilité en cloche
+  autour de pH 6,5. Un sol peut être riche en phosphore total et affamer les
+  plantes.
+- Le **potassium circule trop** : simple ion, retenu par le seul complexe
+  d'échange (argiles + humus). Sur un sable il part au drainage, sur une argile
+  il reste ; une réserve non échangeable tamponne la solution. Il n'entre pas
+  dans les molécules du vivant — la pluie le rince des feuilles avant leur
+  chute, et il revient donc plus vite que le phosphore.
+- Entrées : altération de la roche sur tout le profil, dépôts atmosphériques,
+  retour à la chute des feuilles (85 % pour K, 70 % pour P, contre 50 % pour
+  l'azote — le bois est pauvre en ces deux éléments).
+- *Ce qui manque avant de les brancher sur la loi du minimum* : les stocks
+  disponibles dérivent à la baisse sur soixante ans, parce que le moteur n'a ni
+  altération rhizosphérique ni racines atteignant la roche altérable. Les
+  brancher tels quels décalait assez l'équilibre pour allumer des incendies sur
+  une friche limoneuse et empêcher le hêtre d'atteindre la canopée à deux cents
+  ans. La dérive est testée et consignée : le jour où ce test tombe parce que
+  les stocks tiennent, le couplage pourra être activé.
 - **Fixation biologique de N** : légumineuses (*Rhizobium*) et actinorhiziennes (*Frankia* : aulne, argousier, chalef — atlas). Flux ∝ biomasse du fixateur, restitué au sol via litière/racines mortes ou **à la coupe si épandu** (ta règle : épandre vs vendre). Ordre de grandeur : aulne 50–100 kg N/ha/an en peuplement dense *(à calibrer)*. La fixation coûte au fixateur (~10 % de croissance en moins vs N abondant, « la légumineuse paie deux fois », ch1-C).
 - **Érosion** : t/ha = f(pente, couverture, agrégation) ; emporte MO et argiles → dégâts permanents sur les cellules en pente nues.
 - **pH dynamique lent** : litières acidifiantes (résineux, éricacées), exports de bois, pluie ; remontée par chaulage ou litières riches en bases (tilleul, frêne) *(effet litières à confirmer)*.

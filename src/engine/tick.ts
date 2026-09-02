@@ -48,6 +48,25 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import {
+  alterationPhosphoreG,
+  alterationPotassiumG,
+  capaciteEchange,
+  DEPOSITION_K_KG_HA_AN,
+  DEPOSITION_P_KG_HA_AN,
+  disponibilitePhosphore,
+  echangeReserveK,
+  facteurNutriment,
+  lessivagePotassiumG,
+  RATIO_K_SUR_N,
+  RATIO_P_SUR_N,
+  RELARGAGE_HEBDO,
+  RETOUR_LITIERE_K,
+  RETOUR_LITIERE_P,
+  retrogradationHebdo,
+  SATURATION_K_G_M2,
+  SATURATION_P_G_M2,
+} from "./pk";
+import {
   carteBiotique,
   degatsSurArbre,
   disperser,
@@ -176,6 +195,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const humusCG = state.soil.humusCG.slice();
+  const phosphoreG = state.soil.phosphoreG.slice();
+  const phosphoreFixeG = state.soil.phosphoreFixeG.slice();
+  const potassiumG = state.soil.potassiumG.slice();
+  const potassiumReserveG = state.soil.potassiumReserveG.slice();
   const litterK = state.soil.litterK.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
@@ -194,6 +217,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
   let depositionSumG = 0;
+  // Altération de la roche et dépôts, g/m²/semaine (pk.ts).
+  const horizonSurface0 = profil[0];
+  const alterationPSemaine = alterationPhosphoreG(profil);
+  const alterationKSemaine = alterationPotassiumG(profil);
+  const depositionPSemaine = DEPOSITION_P_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
+  const depositionKSemaine = DEPOSITION_K_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
+  const cecSurface = horizonSurface0 ? capaciteEchange(horizonSurface0) : 10;
+  let uptakePSumG = 0;
+  let uptakeKSumG = 0;
+  let leachedKSumG = 0;
   // Apport hebdomadaire moyen, g N/m² ; la part humide suit la pluie de la
   // semaine, rapportée à une semaine moyenne de l'année.
   const depositionSemaineG = station.depositionNKgHaAn / G_PER_M2_TO_KG_PER_HA / 52;
@@ -288,6 +321,35 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);
     depositionSumG += depositionG;
     mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + transfere + depositionG;
+
+    // ── Phosphore et potassium (pk.ts) ─────────────────────────────────────
+    const phCell = state.soil.ph[i] ?? 7;
+    // Ce que l'humus minéralisé rend : le phosphore suit l'azote (les deux
+    // sont dans les molécules du vivant) ; le potassium très peu, car ce n'est
+    // qu'un ion libre — il est parti de la feuille avant même qu'elle tombe.
+    // Le phosphore libéré par l'humus qui se minéralise. Celui des feuilles
+    // tombées, lui, revient à la chute (plus bas) : le compter deux fois
+    // reviendrait à en fabriquer.
+    const pOrganique = mineralized * RATIO_P_SUR_N;
+
+    // Ce que la roche libère, semaine après semaine.
+    phosphoreG[i] = (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine + depositionPSemaine;
+    potassiumG[i] = (potassiumG[i] ?? 0) + alterationKSemaine + depositionKSemaine;
+    // Le tampon du sol : la réserve suit ce que les racines prennent.
+    const echange = echangeReserveK(
+      potassiumG[i] ?? 0,
+      potassiumReserveG[i] ?? 0,
+      station.potassiumInitialGM2,
+    );
+    potassiumG[i] = (potassiumG[i] ?? 0) + echange;
+    potassiumReserveG[i] = (potassiumReserveG[i] ?? 0) - echange;
+    // Rétrogradation : le phosphore assimilable repasse en formes fixées,
+    // d'autant plus vite que le pH s'éloigne de l'optimum. Rien ne se perd —
+    // le stock fixé relargue lentement en retour.
+    const fixe = (phosphoreG[i] ?? 0) * retrogradationHebdo(phCell);
+    const relargue = (phosphoreFixeG[i] ?? 0) * RELARGAGE_HEBDO;
+    phosphoreG[i] = (phosphoreG[i] ?? 0) - fixe + relargue;
+    phosphoreFixeG[i] = (phosphoreFixeG[i] ?? 0) + fixe - relargue;
     mineralizationSumG += mineralized;
     litterDecaySumG += transfere;
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
@@ -299,6 +361,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // adulte va chercher l'eau profonde. C'est la complémentarité verticale.
   const nTrees = trees.length;
   const waterDemandL = new Array<number>(nTrees).fill(0);
+  const pSatisfaction = new Array<number>(nTrees).fill(1);
+  const kSatisfaction = new Array<number>(nTrees).fill(1);
   const nNeedG = new Array<number>(nTrees).fill(0);
   const rootCells = new Array<number>(nTrees).fill(1);
   const wlMean = new Array<number>(nTrees).fill(0);
@@ -306,6 +370,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const rootFractions = new Array<number[]>(nTrees);
   const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
   const cellNWanted = new Array<number>(nCells).fill(0);
+  const cellPWanted = new Array<number>(nCells).fill(0);
+  const cellKWanted = new Array<number>(nCells).fill(0);
 
   for (let t = 0; t < nTrees; t++) {
     const tree = trees[t];
@@ -327,6 +393,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     rootFractions[t] = fractions;
     let n = 0;
     let wlSum = 0;
+    let pSum = 0;
+    let kSum = 0;
     let phSum = 0;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
       n++;
@@ -336,10 +404,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         wlSum += (waterlogging[i * nH + h] ?? 0) * (fractions[h] ?? 0);
       }
       phSum += state.soil.ph[i] ?? 7;
+      // Phosphore réellement assimilable ici : le stock, tamisé par le pH.
+      pSum += (phosphoreG[i] ?? 0) * disponibilitePhosphore(state.soil.ph[i] ?? 7);
+      kSum += potassiumG[i] ?? 0;
     });
     rootCells[t] = n;
     wlMean[t] = wlSum / n;
     phMean[t] = phSum / n;
+    // Le phosphore et le potassium se lisent comme une ANALYSE DE SOL : un
+    // stock comparé à un seuil, pas une allocation hebdomadaire. C'est ainsi
+    // que l'agronomie en parle, et c'est bien plus stable — les coupler au
+    // partage semaine par semaine faisait osciller des peuplements entiers.
+    pSatisfaction[t] = facteurNutriment(pSum / n, SATURATION_P_G_M2);
+    kSatisfaction[t] = facteurNutriment(kSum / n, SATURATION_K_G_M2);
     // À forte concentration de CO₂, les stomates s'ouvrent moins : l'arbre
     // perd moins d'eau pour le même carbone (climat.ts).
     waterDemandL[t] =
@@ -367,7 +444,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // pourquoi il compte sur les sols pauvres et pas sur les riches
       // (où le frein est déjà levé).
       const dispo = Math.min(1, (availFactor[i] ?? 0) * gainMyco);
-      cellNWanted[i] = (cellNWanted[i] ?? 0) + Math.min(needPerCell, capPerCell * dispo);
+      const demandeN = Math.min(needPerCell, capPerCell * dispo);
+      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
+      // Phosphore et potassium suivent le besoin d'azote (stœchiométrie du
+      // vivant) : ce sont les DISPONIBILITÉS qui diffèrent, pas les besoins.
+      // Le phosphore, immobile, n'est capté que par ce que le mycélium et les
+      // racines touchent réellement — d'où le même gain mycorhizien, qui vaut
+      // ici bien plus que pour l'azote.
+      cellPWanted[i] = (cellPWanted[i] ?? 0) + (needPerCell / n) * n * RATIO_P_SUR_N * gainMyco;
+      cellKWanted[i] = (cellKWanted[i] ?? 0) + needPerCell * RATIO_K_SUR_N;
     });
   }
 
@@ -386,6 +471,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
   const nServedRatio = new Array<number>(nCells).fill(0);
+  const pServedRatio = new Array<number>(nCells).fill(0);
+  const kServedRatio = new Array<number>(nCells).fill(0);
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   for (let i = 0; i < nCells; i++) {
@@ -407,6 +494,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nServedRatio[i] = taken / nWanted;
       mineralNG[i] = stock - taken;
       uptakeSumG += taken;
+    }
+    // Phosphore : la disponibilité dépend du pH, et ce qui n'est pas pris
+    // reste sur place (il ne circule pas).
+    const pWanted = cellPWanted[i] ?? 0;
+    if (pWanted > 0) {
+      const offert = (phosphoreG[i] ?? 0) * disponibilitePhosphore(state.soil.ph[i] ?? 7);
+      const pris = Math.min(offert, pWanted);
+      pServedRatio[i] = pris / pWanted;
+      phosphoreG[i] = (phosphoreG[i] ?? 0) - pris;
+      uptakePSumG += pris;
+    }
+    const kWanted = cellKWanted[i] ?? 0;
+    if (kWanted > 0) {
+      const pris = Math.min(potassiumG[i] ?? 0, kWanted);
+      kServedRatio[i] = pris / kWanted;
+      potassiumG[i] = (potassiumG[i] ?? 0) - pris;
+      uptakeKSumG += pris;
     }
   }
 
@@ -442,11 +546,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const capPerCell = (espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM)) / n;
     let gotW = 0;
     let gotN = 0;
+
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
       for (let h = 0; h < nH; h++) {
         gotW += wPerCell * (fractions[h] ?? 0) * (waterServedRatio[i * nH + h] ?? 0);
       }
-      gotN += Math.min(needPerCell, capPerCell * (availFactor[i] ?? 0)) * (nServedRatio[i] ?? 0);
+      const demandeCell = Math.min(needPerCell, capPerCell * (availFactor[i] ?? 0));
+      gotN += demandeCell * (nServedRatio[i] ?? 0);
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;
@@ -463,6 +569,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const leached = cellLeachedG(mineralNG[i] ?? 0, drainageMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
     mineralNG[i] = (mineralNG[i] ?? 0) - leached;
     leachedSumG += leached;
+    // Le potassium part lui aussi avec l'eau, mais le complexe d'échange le
+    // retient : c'est pourquoi les sables en manquent et les argiles non.
+    const perduK = lessivagePotassiumG(
+      potassiumG[i] ?? 0,
+      drainageMmArr[i] ?? 0,
+      waterMm[i * nH] ?? 0,
+      cecSurface,
+    );
+    potassiumG[i] = (potassiumG[i] ?? 0) - perduK;
+    leachedKSumG += perduK;
   }
 
   // ── 5. Croissance de chaque arbre — loi du minimum, facteurs locaux ───────
@@ -474,6 +590,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterloggingRatio: wlMean[t] ?? 0,
       light: light[t] ?? 1,
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
+      // Le phosphore et le potassium sont SUIVIS mais ne freinent pas encore
+      // la croissance : voir la note de pk.ts. Les brancher tels quels
+      // déséquilibrait assez le peuplement pour allumer des incendies sur une
+      // friche limoneuse qui n'en avait jamais connu, et pour empêcher le
+      // hêtre d'atteindre la canopée à deux cents ans.
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
       tMean: weather.tMean,
@@ -722,6 +843,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
       litterNG[i] = oldN + share;
       litterCG[i] = (litterCG[i] ?? 0) + shareC;
+      // Le phosphore de la feuille rentre au sol avec elle. On le rend
+      // disponible dès la chute plutôt que d'ouvrir un pool « P de litière » :
+      // une approximation d'un pas de temps, sur un élément qui de toute façon
+      // ne bouge pas d'un millimètre.
+      phosphoreG[i] =
+        (phosphoreG[i] ?? 0) + share * RATIO_P_SUR_N * (RETOUR_LITIERE_P / LITTER_RETURN_FRACTION);
+      // Le POTASSIUM revient tout de suite : ce n'est qu'un ion, la pluie le
+      // rince de la feuille avant même qu'elle ait fini de se décomposer. Le
+      // phosphore, lui, est dans les molécules — il attend la décomposition,
+      // et revient donc plus haut, au rythme de la minéralisation.
+      potassiumG[i] =
+        (potassiumG[i] ?? 0) + share * RATIO_K_SUR_N * (RETOUR_LITIERE_K / LITTER_RETURN_FRACTION);
     });
     leafNppKgC += (amountG * espece.litiere.cnRatio) / 1000;
     if (espece.azote.fixateur) fixationSumG += amountG;
@@ -888,6 +1021,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterCG,
         humusCG,
         ph: state.soil.ph,
+        phosphoreG,
+        phosphoreFixeG,
+        potassiumG,
+        potassiumReserveG,
         litterK,
         herbeCouverture,
         herbeBiomasse,
@@ -926,6 +1063,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       mineralizationKgHa: (mineralizationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKgHa: (uptakeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKgHa: (leachedSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      phosphoreMoyenGM2: phosphoreG.reduce((a, b) => a + b, 0) / nCells,
+      potassiumMoyenGM2: potassiumG.reduce((a, b) => a + b, 0) / nCells,
+      uptakePKgHa: (uptakePSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      uptakeKKgHa: (uptakeKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      leachedKKgHa: (leachedKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       litterfallKgHa: (litterfallSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       litterDecayKgHa: (litterDecaySumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       fixationKgHa: (fixationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
