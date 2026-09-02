@@ -188,6 +188,24 @@ Pas de tirage aléatoire : des **règles à seuil**, lisibles et apprenables :
 - Processionnaire si pins >X % du couvert et hiver doux (série météo).
 - Campagnols si herbe haute non fauchée au pied des jeunes arbres (protection : fauche, anneau de bulbes ch6, buses via perchoirs).
 - Chalarose du frêne : arrive à l'année scriptée A+12 quoi qu'il arrive (réalité française) — enjeu de diversification.
+
+*Implémenté* (`src/engine/ravageurs.ts`, critères G2/G3/J5), **sans les seuils
+par ravageur nommé prévus ci-dessus** : un mécanisme unique les remplace tous,
+et les cas particuliers en tombent. Chaque espèce a une sensibilité ; ce qui
+décide, c'est la **vigueur** de l'individu — pas son stress létal : un arbre
+dominé ou chroniquement assoiffé végète bien avant d'être en danger, et c'est
+celui-là qui n'a plus de quoi faire de la résine. La population croît sur cette
+ressource, d'autant plus vite qu'il fait chaud, **hiverne** (d'où les crises
+qui s'installent sur plusieurs années de suite) et essaime vers les cellules
+voisines. En face, les auxiliaires exercent une **prédation** proportionnelle à
+la qualité de l'habitat du VOISINAGE — pas de la cellule : une mésange
+prospecte un hectare, un parasitoïde quelques dizaines de mètres, et évaluer la
+diversité au mètre carré donnait « une seule essence » partout, pur ou mélangé.
+Mesuré : une aulnaie pure perd 30 % de ses tiges aux ravageurs là où le même
+nombre d'aulnes mélangés en perd 5 %.
+Le même habitat porte les **pollinisateurs** (G4) : la nouaison d'un verger nu
+tombe à 35 % de son potentiel. C'est par là que l'indice de biodiversité cesse
+d'être décoratif.
 - **Gibier** (chevreuil/lapin) : pression fixée par le contexte paysager ; abroutissement des plants <1,5 m non protégés (ch4-C). Contre-mesures : clôture, protections individuelles, ronces/épineux nurses (aubépine, prunellier = « nurses » de l'atlas).
 
 *Implémenté* (`src/engine/gibier.ts`, critère G1) — et **sans tirage au sort ni

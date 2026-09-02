@@ -348,6 +348,7 @@ function applyPlanter(
       rootDepthCm: 20,
       hauteurElagueeM: 0,
       pousseTendreM: 0,
+      vigueur: 1,
       protege: false,
       recepages: 0,
     });
@@ -714,6 +715,7 @@ function applyReceper(
       heightM: 0.5,
       hauteurElagueeM: 0,
       pousseTendreM: 0,
+      vigueur: 1,
       protege: false,
       stress: 0,
       fruitsKg: 0,

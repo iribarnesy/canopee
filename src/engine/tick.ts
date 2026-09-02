@@ -19,7 +19,7 @@ import {
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import { brouter, DIGESTIBILITE, LIGNIFICATION_PAR_SEMAINE } from "./gibier";
-import { cellCount, forEachDiscCell } from "./grid";
+import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
   couvertureMax,
   herbeDemandeAzoteG,
@@ -36,6 +36,13 @@ import {
   litterDecayRate,
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
+import {
+  carteBiotique,
+  degatsSurArbre,
+  disperser,
+  facteurChaleur,
+  prochainePression,
+} from "./ravageurs";
 import { yearlyRecruitment } from "./regeneration";
 import {
   conductiviteHorizonMmSemaine,
@@ -49,6 +56,7 @@ import type { TreeState } from "./trees";
 import {
   fractionsRacinairesParHorizon,
   rootRadiusM,
+  STRESS_LETHAL,
   seasonFactor,
   tickTree,
   treeExtractionCapacityGWeek,
@@ -404,9 +412,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const espece = getEspece(tree.especeId);
       nppKgC += treeTotalCarbonKg(espece, next.heightM) - treeTotalCarbonKg(espece, tree.heightM);
     }
+    // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
+    // l'état de santé que les ravageurs lisent, pas la hauteur.
+    const vigueur = next.vigueur + ((result.limitingFactor ?? 1) - next.vigueur) * 0.05;
     const acquired = acquiredNG[t] ?? 0;
-    return acquired > 0 ? { ...next, uptakeYearG: next.uptakeYearG + acquired } : next;
+    return { ...next, vigueur, uptakeYearG: next.uptakeYearG + Math.max(0, acquired) };
   });
+
+  const boisMortTHa = state.carbon.deadWoodKgC / 1000 / (nCells / 10_000);
+  const { ressource, habitat } = carteBiotique(nextTrees, herbeCouverture, boisMortTHa, dims);
 
   // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────
   // Degrés-jours base 5 °C depuis le 1er janvier ; floraison quand le cumul
@@ -460,12 +474,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           }
         }
         const sizeFactor = Math.min(1, (tree.heightM / (0.7 * espece.hauteurMaxM)) ** 2);
+        // Service de pollinisation (§7.4, critère G4) : trouver un congénère ne
+        // suffit pas, encore faut-il quelqu'un pour porter le pollen. Les
+        // insectes qui le font vivent du même habitat que les auxiliaires —
+        // des fleurs étalées dans l'année, des strates, un sol non nu. Un
+        // verger nu dans une plaine nue perd une bonne part de sa nouaison ;
+        // il n'en perd jamais la totalité (vent, abeilles domestiques).
+        const cellArbre = cellIndexAt(dims, tree.x, tree.y);
+        const servicePollinisation = 0.35 + 0.65 * Math.min(1, habitat[cellArbre] ?? 0);
         fruitsKg =
           fruits.rendementMaxKg *
           sizeFactor *
           fruitProgress *
           (bloomFrosted ? 0 : 1) *
-          (pollinated ? 1 : 0.2);
+          (pollinated ? 1 : 0.2) *
+          servicePollinisation;
       }
       if (week === fruits.recolteWeek + fruits.fenetreRecolteWeeks) {
         fruitsKg = 0; // récolte non faite = perdue (§10)
@@ -549,6 +572,42 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       };
     });
   }
+
+  // ── 5 quater. Ravageurs et auxiliaires (§7.4) ────────────────────────────
+  // Les ravageurs prospèrent sur les hôtes sensibles ET affaiblis ; les
+  // auxiliaires les freinent à hauteur de ce que l'habitat local leur offre.
+  const chaleur = facteurChaleur(weather.tMean);
+  let ravageurs = state.soil.ravageurs.slice();
+  let ravageurSum = 0;
+  let habitatSum = 0;
+  for (let i = 0; i < nCells; i++) {
+    ravageurs[i] = prochainePression(
+      ravageurs[i] ?? 0,
+      ressource[i] ?? 0,
+      habitat[i] ?? 0,
+      chaleur,
+    );
+    habitatSum += habitat[i] ?? 0;
+  }
+  ravageurs = Array.from(disperser(Float64Array.from(ravageurs), dims));
+  for (let i = 0; i < nCells; i++) ravageurSum += ravageurs[i] ?? 0;
+
+  nextTrees = nextTrees.map((tree) => {
+    if (!tree.alive) return tree;
+    const espece = getEspece(tree.especeId);
+    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+    let somme = 0;
+    let n = 0;
+    forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
+      somme += ravageurs[i] ?? 0;
+      n++;
+    });
+    const degats = degatsSurArbre(tree, n > 0 ? somme / n : 0);
+    if (degats <= 0) return tree;
+    const stress = tree.stress + degats;
+    if (stress < STRESS_LETHAL) return { ...tree, stress };
+    return { ...tree, stress, alive: false, causeMort: "ravageurs" as const };
+  });
 
   // ── 6. Retours de litière : chute des feuilles + arbres morts ─────────────
   // Les déjections du gibier sont un retour de litière comme un autre : c'est
@@ -678,6 +737,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             uptakeYearG: 0,
             hauteurElagueeM: 0,
             pousseTendreM: 0,
+            vigueur: 1,
             protege: false,
           });
         } else {
@@ -741,6 +801,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         herbeCouverture,
         herbeBiomasse,
         herbeHumidite,
+        ravageurs,
       },
       trees: nextTrees,
       ddYearBase5,
@@ -766,6 +827,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterloggingMean: waterloggingSum / nCells,
       herbeCouvertureMean: herbeSum / nCells,
       broutageKg: broutage.preleveKg,
+      ravageurMoyen: ravageurSum / nCells,
+      auxiliairesMoyen: habitatSum / nCells,
       mineralizationKgHa: (mineralizationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKgHa: (uptakeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKgHa: (leachedSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

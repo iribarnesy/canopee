@@ -118,6 +118,12 @@ export interface SoilState {
    * sa propre consommation avec une semaine de retard et se met à osciller.
    */
   herbeHumidite: number[];
+  /**
+   * Population de ravageurs par cellule ∈ [0,1] (ravageurs.ts). Elle vit là où
+   * des hôtes sensibles s'affaiblissent, et recule là où l'habitat nourrit les
+   * auxiliaires.
+   */
+  ravageurs: number[];
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
   litterK: number[];
@@ -155,6 +161,10 @@ export interface TickFluxes {
   herbeCouvertureMean: number;
   /** matière sèche prélevée par le gibier cette semaine, kg */
   broutageKg: number;
+  /** population moyenne de ravageurs sur la parcelle ∈ [0,1] */
+  ravageurMoyen: number;
+  /** qualité moyenne de l'habitat des auxiliaires ∈ [0,1] */
+  auxiliairesMoyen: number;
   mineralizationKgHa: number;
   uptakeKgHa: number;
   leachedKgHa: number;
@@ -198,6 +208,7 @@ export function createGameState(
       herbeBiomasse: new Array(n).fill(station.herbeInitiale),
       // Le 1er janvier, la réserve de surface est pleine.
       herbeHumidite: new Array(n).fill(1),
+      ravageurs: new Array(n).fill(0),
       litterK: new Array(n).fill(0),
     },
     trees: [],
@@ -231,6 +242,7 @@ export function plantAt(
     rootDepthCm: 20,
     hauteurElagueeM: 0,
     pousseTendreM: 0,
+    vigueur: 1,
     protege: false,
     recepages: 0,
   };
@@ -271,6 +283,7 @@ export function plantScattered(
       rootDepthCm: 20,
       hauteurElagueeM: 0,
       pousseTendreM: 0,
+      vigueur: 1,
       protege: false,
       recepages: 0,
     });

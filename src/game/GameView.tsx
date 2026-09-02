@@ -711,7 +711,9 @@ export function GameView() {
             bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
             {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
           </strong>
-          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem
+          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · 🐛 ravageurs{" "}
+          {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · 🐞 auxiliaires{" "}
+          {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} %
           <br />🦋 biodiversité <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
           <span style={{ opacity: 0.7 }}>
             ({snapshot.biodiversite.richesse} essence

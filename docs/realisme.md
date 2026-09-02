@@ -30,18 +30,19 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | D. Climat et phénologie | 4 | 3 | 3 | 10 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
-| G. Faune et santé | 3 | 0 | 5 | 8 |
+| G. Faune et santé | 5 | 1 | 2 | 8 |
 | H. Gestion, économie, travail | 9 | 4 | 3 | 16 |
 | I. Carbone | 4 | 3 | 2 | 9 |
-| J. Biodiversité et structure | 2 | 2 | 2 | 6 |
-| **Total** | **58** | **24** | **31** | **113** |
+| J. Biodiversité et structure | 3 | 3 | 0 | 6 |
+| **Total** | **61** | **26** | **26** | **113** |
 
-**Score de réalisme : 58 pleins + 24 partiels sur 113 → 62 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 61 pleins + 26 partiels sur 113 → 65 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 59 % (feu émergent + sylviculture) → 60 % (éclaircie outillée, liège,
-récupération des bois brûlés, indice de biodiversité) → 62 % (gibier).*
+récupération des bois brûlés, indice de biodiversité) → 62 % (gibier) →
+65 % (ravageurs, auxiliaires et pollinisateurs — la diversité PAIE enfin).*
 
 ---
 
@@ -156,9 +157,9 @@ récupération des bois brûlés, indice de biodiversité) → 62 % (gibier).*
 | G1 | Le gibier abroutit les jeunes plants non protégés | ✅ | `gibier.ts` ; `gibier.test.ts` — au-dessus de ~0,35 cervidé/ha, une plantation appétente ne sort jamais de la hauteur de dent |
 | G7 | Sa sélectivité réoriente la composition (le noisetier trinque, le pin passe) | ✅ | `especes.gibier.appetence` ; émergent, rien n'est codé espèce par espèce |
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
-| G2 | Les ravageurs apparaissent à des seuils (scolytes après sécheresse…) | ❌ | Absent (§7.4) |
-| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ❌ | Absent |
-| G4 | Les pollinisateurs conditionnent la fructification | 🟡→❌ | Pollinisation croisée entre arbres seulement, pas d'insectes |
+| G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
+| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; aulnaie pure décimée, mélange épargné |
+| G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | 🟡→❌ | Mode « oiseaux » abstrait, pas d'animal |
 | G6 | Les maladies datées frappent (chalarose du frêne) | ❌ | Absent |
 
@@ -210,15 +211,18 @@ inventaire.
 | J2 | Le bois mort est un habitat, pas un déchet | ✅ | pool `deadWoodKgC` intégré à l'indice (ch4-A) |
 | J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | 🟡 | proxy par la hauteur ; pas de vétérans ni de cavités |
 | J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | 🟡 | strates et sempervirence comptées ; pas de lisières ni de structure horizontale |
-| J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ❌ | l'indice s'observe mais n'agit sur rien — il faut le module biotique (G1-G3) |
-| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | ❌ | étalement mesuré, mais aucun insecte ne le consomme (ch4-C) |
+| J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
+| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C) |
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Biotique, la suite** : le gibier est fait ; restent les ravageurs à
-   seuils (scolytes après sécheresse), les auxiliaires et les pollinisateurs
-   (G2-G6). C'est là que l'indice de biodiversité gagnerait enfin un effet en
-   retour (J5, J6) : un peuplement riche freine les pullulations.
+1. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9). C'est
+   maintenant le plus gros manque : tout le moteur réagit au climat, mais le
+   climat ne bouge pas.
+2. **Couplage humus ↔ azote et labour** (C8, C9, I6), et l'humus qui gagne de
+   la réserve utile (A12 dynamique).
+3. **Reste du biotique** : maladies datées (chalarose), frottis et écorçage,
+   sanglier, chasse (G5, G6).
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
 4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
 

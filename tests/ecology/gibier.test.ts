@@ -143,6 +143,7 @@ describe("mécanique du broutage", () => {
       hauteurElagueeM: 0,
       recepages: 0,
       pousseTendreM: pousse,
+      vigueur: 1,
       protege: false,
     };
   }

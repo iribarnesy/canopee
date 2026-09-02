@@ -137,6 +137,16 @@ export interface EspeceV0 {
     /** rejette de souche après un feu (châtaignier, arbousier, chêne-liège) */
     rejetteApresFeu: boolean;
   };
+  ravageurs: {
+    /**
+     * Sensibilité ∈ [0,1] aux ravageurs et maladies : ce qu'une essence risque
+     * quand elle est plantée pure et qu'elle s'affaiblit. Les résineux en
+     * peuplement pur (scolytes, processionnaire) et les fruitiers cultivés
+     * (carpocapse, tavelure, moniliose) sont en haut de l'échelle ; les ligneux
+     * bas de la lande, en bas.
+     */
+    sensibilite: number;
+  };
   gibier: {
     /**
      * Appétence ∈ [0,1] pour les cervidés : à quel point les rameaux de
@@ -195,6 +205,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.45, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     // brouté sans être recherché
+    // phytophthora de l'aulne : réel, et mortel sur les berges
+    ravageurs: { sensibilite: 0.55 },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -220,6 +232,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.68, prixOeuvreEurM3: 180, rejetteDeSouche: false },
     // peu appété, mais consommé l'hiver faute de mieux
+    // peu attaqué tant qu'il n'a pas soif
+    ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
@@ -243,6 +257,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.75, prixOeuvreEurM3: 220, rejetteDeSouche: true },
     // les chênes sont en tête des listes d'appétence
+    // défoliateurs (bombyx, tordeuse) sur les chênes
+    ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.75 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.5, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -267,6 +283,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.45, prixOeuvreEurM3: 110, rejetteDeSouche: false },
     // résineux dédaigné (il subit surtout les frottis, v2)
+    // scolytes et processionnaire : le cas d'école du résineux pur
+    ravageurs: { sensibilite: 0.75 },
     gibier: { appetence: 0.2 },
     feu: { inflammabilite: 0.9, resistanceEcorce: 0.35, rejetteApresFeu: false },
     sources: [ATLAS],
@@ -290,6 +308,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.55, prixOeuvreEurM3: 120, rejetteDeSouche: true },
     // rameaux tendres, brouté en pionnier
+    // pionnier peu sujet
+    ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.1, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -324,6 +344,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       autofertile: false, // la plupart des variétés : il faut un pollinisateur (décision §15)
     },
     // un verger non protégé est un garde-manger
+    // carpocapse et tavelure : un verger sans auxiliaires se traite
+    ravageurs: { sensibilite: 0.85 },
     gibier: { appetence: 0.85 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
@@ -357,6 +379,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       autofertile: true,
     },
     // fruitier très appété
+    // moniliose
+    ravageurs: { sensibilite: 0.8 },
     gibier: { appetence: 0.8 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
@@ -390,6 +414,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       autofertile: false, // auto-incompatible : il faut un voisin
     },
     // l'essence préférée du chevreuil
+    // balanin des noisettes
+    ravageurs: { sensibilite: 0.45 },
     gibier: { appetence: 0.9 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.1, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -414,6 +440,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.6, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // épines dissuasives, mais brouté en hiver sur la lande
+    // rien ne s'y attaque vraiment
+    ravageurs: { sensibilite: 0.15 },
     gibier: { appetence: 0.25 },
     feu: { inflammabilite: 0.98, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -436,6 +464,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 2.5 },
     bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // genêt appété, sans épines
+    ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.55 },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -459,6 +488,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
     // consommée l'hiver quand il n'y a rien d'autre
+    ravageurs: { sensibilite: 0.15 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -493,6 +523,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       autofertile: false, // auto-stérile : il lui faut un congénère
     },
     // rejets très broutés
+    // chancre et cynips
+    ravageurs: { sensibilite: 0.7 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -533,6 +565,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Cette même écorce isole si bien que l'arbre traverse l'incendie et
     // repart (atlas : « écorce = liège → résiste au feu »).
     // appété, mais feuillage coriace
+    ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
     sources: [ATLAS],
@@ -566,6 +599,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       autofertile: true,
     },
     // feuillage sclérophylle peu recherché
+    ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.7, resistanceEcorce: 0.35, rejetteApresFeu: true },
     sources: [ATLAS],

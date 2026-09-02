@@ -21,7 +21,8 @@ export type CauseMort =
   | "ombre"
   | "vieillesse"
   | "feu"
-  | "abroutissement";
+  | "abroutissement"
+  | "ravageurs";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   secheresse: "de sécheresse",
@@ -30,6 +31,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   vieillesse: "de vieillesse",
   feu: "dans l'incendie",
   abroutissement: "broutés par le gibier",
+  ravageurs: "achevés par les ravageurs",
 };
 
 export interface TreeState {
@@ -85,6 +87,15 @@ export interface TreeState {
    */
   pousseTendreM: number;
   /**
+   * Vigueur ∈ [0,1] : moyenne lissée du facteur limitant sur les derniers
+   * mois. Ce n'est pas la même chose que le stress. Le stress ne monte que
+   * lorsque l'arbre est en danger de mort ; la vigueur, elle, dit s'il pousse
+   * à son potentiel ou s'il végète. Un sujet dominé ou chroniquement assoiffé
+   * a une vigueur basse bien avant d'accumuler du stress — et c'est CELUI-LÀ
+   * que les ravageurs trouvent (moins de résine, moins de tanins).
+   */
+  vigueur: number;
+  /**
    * Plant protégé (manchon, gaine) : hors d'atteinte des dents tant qu'il n'a
    * pas dépassé la hauteur de broutage.
    */
@@ -109,7 +120,7 @@ export interface TreeEnvironment {
   tMean: number;
 }
 
-const STRESS_LETHAL = 10;
+export const STRESS_LETHAL = 10;
 /**
  * Facteur de survie sous ce seuil → l'arbre puise dans ses réserves. Les
  * facteurs sont déjà normalisés par les tolérances de l'espèce, donc ce seuil

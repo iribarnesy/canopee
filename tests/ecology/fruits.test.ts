@@ -153,3 +153,60 @@ describe("pollinisation croisée (§7.5) et récolte (§10)", () => {
     expect(fruitsApresFenetre).toBe(0); // récolte non faite = perdue (§10)
   });
 });
+
+describe("service de pollinisation (§7.4, critère G4)", () => {
+  it("un verger nu produit moins que le même verger dans un environnement diversifié", () => {
+    const positions = [
+      { x: 20, y: 20 },
+      { x: 25, y: 20 },
+    ];
+    const recolte = (accompagnement: GameAction[]): number => {
+      const actions: GameAction[] = [
+        { type: "planter", week: 0, especeId: "malus_domestica", positions },
+        { type: "proteger", week: 1, treeIds: [1, 2] },
+        ...accompagnement,
+      ];
+      let best = 0;
+      run(actions, 12, (state) => {
+        for (const t of state.trees) {
+          if (t.especeId === "malus_domestica") best = Math.max(best, t.fruitsKg);
+        }
+      });
+      return best;
+    };
+    const nu = recolte([]);
+    // Une haie d'essences variées et étagées autour du verger : c'est de là que
+    // viennent les pollinisateurs, et les mêmes habitats servent aux auxiliaires.
+    const haie: GameAction[] = [
+      {
+        type: "planter",
+        week: 0,
+        especeId: "corylus_avellana",
+        positions: [
+          { x: 14, y: 20 },
+          { x: 14, y: 24 },
+        ],
+      },
+      {
+        type: "planter",
+        week: 0,
+        especeId: "quercus_pubescens",
+        positions: [
+          { x: 14, y: 16 },
+          { x: 31, y: 20 },
+        ],
+      },
+      {
+        type: "planter",
+        week: 0,
+        especeId: "betula_pendula",
+        positions: [
+          { x: 31, y: 16 },
+          { x: 31, y: 24 },
+        ],
+      },
+    ];
+    const accompagne = recolte(haie);
+    expect(accompagne).toBeGreaterThan(1.15 * nu);
+  });
+});
