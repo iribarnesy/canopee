@@ -23,6 +23,8 @@ export interface SaveGame {
   meteo: "reelle" | "synthetique";
   /** trajectoire climatique GIEC suivie par la partie (climat.ts) */
   scenario: ScenarioId;
+  /** paysage autour de la parcelle (paysage.ts) */
+  paysageId: string;
   /** année civile du début de partie */
   anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
@@ -60,6 +62,8 @@ export interface Snapshot {
   biodiversite: IndiceBiodiversite;
   /** année civile en cours (climat.ts) */
   anneeCivile: number;
+  /** nom du paysage autour de la parcelle */
+  paysage: string;
   /** CO₂ de l'année, ppm */
   co2Ppm: number;
   /** broyat en réserve, kg de matière sèche */
@@ -96,6 +100,7 @@ export type ToWorker =
       seed: number;
       meteo: "reelle" | "synthetique";
       scenario: ScenarioId;
+      paysageId: string;
       anneeDepart: number;
     }
   | { type: "resume"; save: SaveGame }

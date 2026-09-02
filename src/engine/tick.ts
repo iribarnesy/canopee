@@ -55,6 +55,7 @@ import {
   litterDecayRate,
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
+import { frequentationHumaine, getPaysage } from "./paysage";
 import {
   alterationPhosphoreG,
   alterationPotassiumG,
@@ -996,7 +997,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   {
     let secheresseSum = 0;
     for (let i = 0; i < nCells; i++) secheresseSum += (waterMm[i * nH] ?? 0) / ruSurface;
-    const charge = chargeCombustible(nextTrees, herbeBiomasse, litterCG, station.coteM);
+    const charge = chargeCombustible(
+      nextTrees,
+      herbeBiomasse,
+      litterCG,
+      station.coteM,
+      groundLight,
+    );
     const depart = departDeFeu(
       rng,
       week,
@@ -1005,6 +1012,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       charge,
       station.ventExposition,
       station.coteM,
+      frequentationHumaine(getPaysage(station.paysageId)),
     );
     rng = depart.rng;
     if (depart.origine !== undefined) {

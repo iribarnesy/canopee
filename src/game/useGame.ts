@@ -50,6 +50,7 @@ export interface GameApi {
     seed: number,
     meteo: "reelle" | "synthetique",
     scenario: ScenarioId,
+    paysageId: string,
     anneeDepart: number,
   ) => void;
   resume: (save: SaveGame) => void;
@@ -135,12 +136,12 @@ export function useGame(): GameApi {
     },
     notice,
     replayProgress,
-    newGame: (stationId, seed, meteo, scenario, anneeDepart) => {
+    newGame: (stationId, seed, meteo, scenario, paysageId, anneeDepart) => {
       ensureWorker();
       setRefusals([]);
       setEvents([]);
       setSnapshot(undefined);
-      send({ type: "init", stationId, seed, meteo, scenario, anneeDepart });
+      send({ type: "init", stationId, seed, meteo, scenario, paysageId, anneeDepart });
       send({ type: "autoHarvest", enabled: true });
       setAutoHarvestState(true);
       setSpeedState(0);

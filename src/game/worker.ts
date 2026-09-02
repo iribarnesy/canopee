@@ -23,9 +23,16 @@ import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
+import {
+  depositionNKgHaAn,
+  getPaysage,
+  gibierParHa,
+  ventExposition,
+  voisinageSemencier,
+} from "../engine/paysage";
 import { rngStateFromSeed } from "../engine/rng";
 import { ruHorizonMm } from "../engine/soil";
-import { createGameState, type GameState, type TickFluxes } from "../engine/state";
+import { createGameState, type GameState, type Station, type TickFluxes } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
@@ -39,6 +46,7 @@ let journal: GameAction[] = [];
 let meteoMode: "reelle" | "synthetique" = "reelle";
 let scenario: ScenarioId = "ssp245";
 let anneeDepart = 2026;
+let paysage = "bocage";
 // Normales saisonnières de la série : elles servent à accentuer les extrêmes.
 let normales: Normales | undefined;
 let seed = 1;
@@ -246,6 +254,19 @@ function meteoSemaine(absolue: number): WeekWeather {
   );
 }
 
+/** La station telle qu'elle est, mais dans le paysage choisi par le joueur. */
+function stationAvecPaysage(base: Station): Station {
+  const p = getPaysage(paysage);
+  return {
+    ...base,
+    paysageId: paysage,
+    voisinage: voisinageSemencier(p),
+    gibierParHa: gibierParHa(p),
+    depositionNKgHaAn: depositionNKgHaAn(p),
+    ventExposition: ventExposition(p),
+  };
+}
+
 function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWeather[] {
   const serie = mode === "reelle" ? serieMeteoPour(stationId) : undefined;
   if (serie) return serieToWeeks(serie);
@@ -303,6 +324,7 @@ function postSnapshot() {
     economy: state.economy,
     inventory: carbonInventory(state, sc.station.initialSoilCTHa),
     anneeCivile,
+    paysage: getPaysage(paysage).nom,
     co2Ppm: w.co2Ppm ?? CO2_ACTUEL_PPM,
     stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
     pressionGibier: state.pressionGibier,
@@ -508,17 +530,21 @@ function init(
   newSeed: number,
   mode: "reelle" | "synthetique",
   scenarioId: ScenarioId,
+  paysageId: string,
   annee: number,
 ) {
   scenario = scenarioId;
   anneeDepart = annee;
+  paysage = paysageId;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
   seed = newSeed;
   weather = loadWeather(stationId, mode);
   normales = normalesHebdo(weather);
-  state = beginWeek(createGameState(sc.station, rngStateFromSeed(newSeed)));
+  // Le paysage choisi remplace celui de la station : c'est la même terre, mais
+  // au milieu d'une hêtraie, de champs ou d'un lotissement (paysage.ts).
+  state = beginWeek(createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed)));
   journal = [];
   pendingRefusals = [];
   pendingEvents = [];
@@ -536,7 +562,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   const msg = event.data;
   switch (msg.type) {
     case "init":
-      init(msg.stationId, msg.seed, msg.meteo, msg.scenario, msg.anneeDepart);
+      init(msg.stationId, msg.seed, msg.meteo, msg.scenario, msg.paysageId, msg.anneeDepart);
       break;
     case "resume": {
       // Rejoue la sauvegarde : même séquence beginWeek → actions → tick.
@@ -544,12 +570,13 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       if (!sc) throw new Error(`station inconnue : ${msg.save.stationId}`);
       meteoMode = msg.save.meteo;
       scenario = msg.save.scenario;
+      paysage = msg.save.paysageId;
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
       normales = normalesHebdo(weather);
       journal = msg.save.actions;
-      let replayed = createGameState(sc.station, rngStateFromSeed(seed));
+      let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed));
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
@@ -586,6 +613,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         seed,
         meteo: meteoMode,
         scenario,
+        paysageId: paysage,
         anneeDepart,
         weeks: state.week,
         actions: journal,

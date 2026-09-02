@@ -42,11 +42,28 @@ export interface ChargeCombustible {
  * Charge de combustible : ce qui peut brûler dans chaque cellule. L'herbe sèche
  * et la litière portent le feu au sol ; les espèces résineuses l'amplifient.
  */
+/**
+ * Ce qu'un couvert fermé retire au feu.
+ *
+ * Sous une futaie feuillue dense, la litière reste humide : le couvert coupe
+ * le soleil et le vent, et l'air y est saturé. C'est LA raison pour laquelle
+ * les incendies français courent en pinède, en maquis et en lande, et presque
+ * jamais en hêtraie — et non parce que le hêtre serait ininflammable en
+ * laboratoire. Sans ce facteur, le moteur faisait brûler des hêtraies de
+ * Touraine *(à calibrer)*.
+ */
+export const PORTANCE_SOUS_COUVERT = 0.3;
+
+export function portanceDuFeu(lumiereAuSol: number): number {
+  return PORTANCE_SOUS_COUVERT + (1 - PORTANCE_SOUS_COUVERT) * Math.min(1, lumiereAuSol);
+}
+
 export function chargeCombustible(
   trees: readonly TreeState[],
   herbeCouverture: readonly number[],
   litterCG: readonly number[],
   coteM: number,
+  lumiereAuSol?: readonly number[],
 ): ChargeCombustible {
   const n = coteM * coteM;
   const parCellule = new Array<number>(n).fill(0);
@@ -74,6 +91,12 @@ export function chargeCombustible(
           parCellule[i] = (parCellule[i] ?? 0) + 0.9 * espece.feu.inflammabilite;
         }
       }
+    }
+  }
+  // Ce qui est à l'ombre d'un couvert fermé reste humide et porte mal le feu.
+  if (lumiereAuSol) {
+    for (let i = 0; i < n; i++) {
+      parCellule[i] = (parCellule[i] ?? 0) * portanceDuFeu(lumiereAuSol[i] ?? 1);
     }
   }
   let somme = 0;
@@ -122,12 +145,22 @@ export function departDeFeu(
   charge: ChargeCombustible,
   ventExposition: number,
   coteM: number,
+  frequentationHumaine = 1,
 ): DepartFeu {
   if (semaineAnnee < SAISON_FEU[0] || semaineAnnee > SAISON_FEU[1]) return { rng };
   const risque = indiceRisqueFeu(secheresseSurface, tMaxC, charge.moyenne, ventExposition);
   if (risque <= 0) return { rng };
   const tirage = rngFloat(rng);
-  if (tirage.value > PROBA_DEPART_MAX * risque) return { rng: tirage.state };
+  // Il ne suffit pas que les conditions soient réunies : il faut une SOURCE.
+  // En France, la quasi-totalité des départs est d'origine humaine — mégot,
+  // travaux, barbecue, ligne électrique — et non la foudre. À sécheresse et
+  // combustible égaux, un massif isolé s'enflamme donc bien moins souvent
+  // qu'un bois de lotissement (paysage.ts). Sans ce facteur, le moteur faisait
+  // de l'autocombustion : une hêtraie de Touraine brûlait faute de quiconque
+  // pour ne PAS y mettre le feu.
+  if (tirage.value > PROBA_DEPART_MAX * risque * frequentationHumaine) {
+    return { rng: tirage.state };
+  }
   // Le départ n'est pas n'importe où : il se produit là où il y a de quoi
   // s'enflammer. On tire une cellule au prorata de sa combustibilité — un
   // fourré d'ajoncs part bien plus souvent qu'un sous-bois frais.

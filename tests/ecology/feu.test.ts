@@ -15,11 +15,13 @@ import {
   chargeCombustible,
   departDeFeu,
   indiceRisqueFeu,
+  portanceDuFeu,
   propager,
   survitAuFeu,
 } from "../../src/engine/feu";
 import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
+import { frequentationHumaine, getPaysage } from "../../src/engine/paysage";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LANDE_SECHE } from "../../src/engine/stations";
@@ -238,5 +240,52 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
       if (r.incendie) n++;
     }
     expect(n).toBe(incendies);
+  });
+});
+
+describe("il faut une SOURCE, et un combustible qui porte", () => {
+  const charge = { parCellule: new Array(100).fill(1), moyenne: 1 };
+  const CANICULE = 32;
+
+  it("à conditions identiques, un massif isolé s'enflamme moins qu'une lisière de banlieue", () => {
+    // La quasi-totalité des départs français est d'origine humaine — mégot,
+    // travaux, barbecue, ligne électrique — et non la foudre. Sans ce facteur,
+    // le moteur faisait de l'autocombustion.
+    const departs = (paysageId: string) => {
+      let rng = rngStateFromSeed(4);
+      let n = 0;
+      const freq = frequentationHumaine(getPaysage(paysageId));
+      for (let i = 0; i < 400; i++) {
+        const r = departDeFeu(rng, 30, 0.03, CANICULE, charge, 0.6, 10, freq);
+        rng = r.rng;
+        if (r.origine !== undefined) n++;
+      }
+      return n;
+    };
+    expect(departs("peri-urbain")).toBeGreaterThan(1.5 * departs("massif-forestier"));
+  });
+
+  it("sous un couvert fermé, la litière reste humide et ne porte pas le feu", () => {
+    // C'est la vraie raison pour laquelle les incendies français courent en
+    // pinède, en maquis et en lande, et presque jamais en hêtraie.
+    expect(portanceDuFeu(1)).toBe(1);
+    expect(portanceDuFeu(0.02)).toBeLessThan(0.35);
+  });
+
+  it("une hêtraie fermée ne brûle pas, une lande ouverte oui", () => {
+    const cote = 20;
+    const litiere = new Array(cote * cote).fill(400);
+    const herbe = new Array(cote * cote).fill(0);
+    const sombre = new Array(cote * cote).fill(0.03);
+    const ouvert = new Array(cote * cote).fill(1);
+    const hetres = Array.from({ length: 40 }, (_, i) => ({
+      ...arbre("fagus_sylvatica", 25),
+      id: i + 1,
+      x: 2 + (i % 7) * 2.5,
+      y: 2 + Math.floor(i / 7) * 3,
+    }));
+    const sousCouvert = chargeCombustible(hetres, herbe, litiere, cote, sombre);
+    const aDecouvert = chargeCombustible(hetres, herbe, litiere, cote, ouvert);
+    expect(sousCouvert.moyenne).toBeLessThan(aDecouvert.moyenne / 2);
   });
 });

@@ -417,9 +417,27 @@ l'ammoniac des cultures et des oxydes d'azote de la circulation ; le vent est
 freiné par les boisements voisins ; et la **fréquentation humaine** commande
 les départs de feu, qui sont d'origine humaine dans leur immense majorité.
 
-Cinq paysages pour commencer : au cœur d'un massif, dans un bocage d'élevage,
+Six paysages pour commencer : au cœur d'un massif, dans un bocage d'élevage,
 en pleine plaine céréalière, en lisière de banlieue, au milieu de la lande, en
-lisière de forêt. Un nouveau se décrit en quatre nombres et une liste.
+lisière de forêt. **Le joueur choisit le sien au lancement**, indépendamment de
+la station : la même terre au milieu d'une hêtraie ou d'un lotissement, ce
+n'est pas la même partie. Un nouveau paysage se décrit en quatre nombres et une
+liste de semenciers.
+
+**Les départs de feu ont enfin une source.** Le moteur faisait jusqu'ici de
+l'autocombustion : une probabilité hebdomadaire fonction de la sécheresse, de
+la chaleur, du combustible et du vent, sans que personne n'allume rien. Or en
+France la quasi-totalité des départs est d'origine humaine — mégot, travaux,
+barbecue, ligne électrique — et non la foudre. La `frequentationHumaine` du
+paysage multiplie donc la probabilité de départ : une campagne ordinaire vaut
+1, un massif isolé un peu moins, une lisière de banlieue une fois et demie
+plus.
+
+**Et le combustible sous couvert fermé ne porte plus le feu.** C'était l'autre
+moitié du problème : une hêtraie de Touraine brûlait. Sous une futaie feuillue
+dense, la litière reste humide — le couvert coupe le soleil et le vent. C'est
+la vraie raison pour laquelle les incendies français courent en pinède, en
+maquis et en lande, et presque jamais en hêtraie.
 
 ---
 

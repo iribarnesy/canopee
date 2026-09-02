@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SCENARIOS, type ScenarioId } from "../engine/climat";
 import { ESPECES_V0, getEspece } from "../engine/especes";
 import { crownRadiusM } from "../engine/light";
+import { PAYSAGES } from "../engine/paysage";
 import { STATIONS_V0 } from "../engine/stations";
 import { SPECIES_COLORS } from "../ui/couleurs";
 import type { Snapshot, SnapshotTree } from "./protocol";
@@ -184,6 +185,7 @@ function StartScreen({
     seed: number,
     meteo: "reelle" | "synthetique",
     scenario: ScenarioId,
+    paysageId: string,
     anneeDepart: number,
   ) => void;
   onResume: () => void;
@@ -191,6 +193,7 @@ function StartScreen({
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
   const [seed, setSeed] = useState(42);
   const [scenario, setScenario] = useState<ScenarioId>("ssp245");
+  const [paysageId, setPaysageId] = useState(PAYSAGES[1]?.id ?? "bocage");
   const [anneeDepart, setAnneeDepart] = useState(2026);
   const save = loadSave();
   return (
@@ -207,6 +210,26 @@ function StartScreen({
             {s.station.nom}
           </button>
         ))}
+      </p>
+      <p>
+        <strong>Ce qu'il y a autour</strong> — l'entourage décide du gibier, des semis qui arrivent,
+        de l'azote qui tombe du ciel, du vent et des départs de feu.
+        <br />
+        {PAYSAGES.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            style={btn(p.id === paysageId)}
+            onClick={() => setPaysageId(p.id)}
+            title={p.description}
+          >
+            {p.nom}
+          </button>
+        ))}
+        <br />
+        <span style={{ color: "#5f5947", fontSize: 13 }}>
+          {PAYSAGES.find((p) => p.id === paysageId)?.description}
+        </span>
       </p>
       <p>
         <strong>Trajectoire climatique</strong> — ce qu'on plante aujourd'hui vivra dedans.
@@ -248,7 +271,7 @@ function StartScreen({
         <button
           type="button"
           style={btn(true)}
-          onClick={() => onStart(stationId, seed, "reelle", scenario, anneeDepart)}
+          onClick={() => onStart(stationId, seed, "reelle", scenario, paysageId, anneeDepart)}
         >
           Démarrer (météo réelle)
         </button>
@@ -795,9 +818,10 @@ export function GameView() {
             bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
             {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
           </strong>
+          <br />
+          🗺️ {snapshot.paysage} · gibier {(snapshot.pressionGibier * 100).toFixed(0)} %
           <br />📅 {snapshot.anneeCivile} · CO₂ {snapshot.co2Ppm.toFixed(0)} ppm
-          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem (pression{" "}
-          {(snapshot.pressionGibier * 100).toFixed(0)} %) · 🐛 ravageurs{" "}
+          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · 🐛 ravageurs{" "}
           {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · 🐞 auxiliaires{" "}
           {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} % · 🍄 mycorhizes{" "}
           {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %

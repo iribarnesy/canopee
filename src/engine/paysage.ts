@@ -88,7 +88,11 @@ export function ventExposition(p: Paysage): number {
  * moins souvent qu'un bois de lotissement *(à calibrer)*.
  */
 export function frequentationHumaine(p: Paysage): number {
-  return 0.15 + 0.55 * p.partUrbaine + 0.3 * p.partCultivee;
+  // Échelle relative : une campagne ordinaire vaut 1, un massif isolé un peu
+  // moins, une lisière de banlieue une fois et demie plus. Même un paysage
+  // rural a ses routes, ses chantiers et ses barbecues — c'est pourquoi le
+  // plancher n'est pas bas.
+  return 0.8 + 1.2 * p.partUrbaine + 0.5 * p.partCultivee;
 }
 
 export const PAYSAGES: readonly Paysage[] = [
