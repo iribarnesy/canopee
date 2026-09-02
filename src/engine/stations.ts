@@ -5,9 +5,11 @@
  * les données Météo-France/DRIAS.
  */
 
+import { ESPECES_V0, getEspece } from "./especes";
 import type { SyntheticClimate } from "./meteo";
 import {
   depositionNKgHaAn,
+  especeTenable,
   getPaysage,
   gibierParHa,
   ventExposition,
@@ -62,7 +64,14 @@ export function stationDepuisProfil(
   return {
     ...reste,
     profil,
-    voisinage: voisinageSemencier(paysage),
+    voisinage: voisinageSemencier(
+      paysage,
+      (especeId) => especeTenable(getEspece(especeId), phSurface(profil), ruProfilMm(profil)),
+      () =>
+        ESPECES_V0.filter((e) => especeTenable(e, phSurface(profil), ruProfilMm(profil))).map(
+          (e) => e.id,
+        ),
+    ),
     gibierParHa: gibierParHa(paysage),
     depositionNKgHaAn: depositionNKgHaAn(paysage),
     ventExposition: ventExposition(paysage),

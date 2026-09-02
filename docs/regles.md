@@ -424,6 +424,15 @@ la station : la même terre au milieu d'une hêtraie ou d'un lotissement, ce
 n'est pas la même partie. Un nouveau paysage se décrit en quatre nombres et une
 liste de semenciers.
 
+*Et toutes les combinaisons ont un sens*, parce que **les voisins subissent le
+même sol que nous**. Une lande sableuse « au cœur d'un massif forestier » n'est
+pas une hêtraie — le hêtre ne tient pas plus dehors que dedans sur un podzol à
+pH 4,5 : c'est une pinède. Le paysage dit une intention et une intensité, le
+terrain dit quelles essences la portent. Les semenciers déclarés ne sont donc
+que des candidats : on écarte ceux que la station ne supporte pas (facteur pH
+du moteur, réserve utile), et si aucun ne passe, on prend les essences de
+l'atlas qui, elles, y vivent — en gardant l'abondance voulue.
+
 **Les départs de feu ont enfin une source.** Le moteur faisait jusqu'ici de
 l'autocombustion : une probabilité hebdomadaire fonction de la sécheresse, de
 la chaleur, du combustible et du vent, sans que personne n'allume rien. Or en

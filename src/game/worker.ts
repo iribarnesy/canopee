@@ -19,12 +19,13 @@ import {
   normalesHebdo,
   type ScenarioId,
 } from "../engine/climat";
-import { getEspece } from "../engine/especes";
+import { ESPECES_V0, getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
 import {
   depositionNKgHaAn,
+  especeTenable,
   getPaysage,
   gibierParHa,
   ventExposition,
@@ -260,7 +261,11 @@ function stationAvecPaysage(base: Station): Station {
   return {
     ...base,
     paysageId: paysage,
-    voisinage: voisinageSemencier(p),
+    voisinage: voisinageSemencier(
+      p,
+      (especeId) => especeTenable(getEspece(especeId), base.phInitial, base.ruMm),
+      () => ESPECES_V0.filter((e) => especeTenable(e, base.phInitial, base.ruMm)).map((e) => e.id),
+    ),
     gibierParHa: gibierParHa(p),
     depositionNKgHaAn: depositionNKgHaAn(p),
     ventExposition: ventExposition(p),

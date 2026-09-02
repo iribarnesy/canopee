@@ -28,6 +28,9 @@
  * quatre nombres et une liste d'essences.
  */
 
+import type { EspeceV0 } from "./especes";
+import { phFactor } from "./trees";
+
 /** Ce qu'un paysage apporte à la parcelle, dérivé de sa composition. */
 export interface Paysage {
   id: string;
@@ -69,9 +72,33 @@ export function depositionNKgHaAn(p: Paysage): number {
   return 6 + 16 * p.partCultivee + 12 * p.partUrbaine;
 }
 
-/** Pluie de semis annuelle : ce qui pousse alentour, et en quelle abondance. */
-export function voisinageSemencier(p: Paysage): { especeId: string; semisParAn: number }[] {
-  return p.semenciers.map((s) => ({ ...s }));
+/**
+ * Pluie de semis annuelle : ce qui pousse alentour, et en quelle abondance.
+ *
+ * Les semenciers du paysage ne sont qu'une INTENTION — « un massif feuillu »,
+ * « une lande à pins ». Ce qui pousse réellement autour de la parcelle subit le
+ * même sol et le même climat qu'elle : on ne peut pas avoir une hêtraie autour
+ * d'un podzol sableux, le hêtre n'y tient pas plus dehors que dedans.
+ *
+ * On filtre donc les candidats par ce que la station supporte, et si aucun ne
+ * passe, on prend les essences de l'atlas qui, elles, y vivent — en gardant
+ * l'abondance voulue par le paysage. « Au cœur d'un massif » sur du sable
+ * acide, ce sont des pins, pas des hêtres : c'est la même intention, traduite
+ * par le terrain.
+ */
+export function voisinageSemencier(
+  p: Paysage,
+  compatible?: (especeId: string) => boolean,
+  repli?: () => readonly string[],
+): { especeId: string; semisParAn: number }[] {
+  if (!compatible) return p.semenciers.map((s) => ({ ...s }));
+  const retenus = p.semenciers.filter((s) => compatible(s.especeId));
+  if (retenus.length > 0) return retenus.map((s) => ({ ...s }));
+  const total = p.semenciers.reduce((somme, s) => somme + s.semisParAn, 0);
+  const substituts = (repli?.() ?? []).slice(0, 3);
+  if (substituts.length === 0 || total === 0) return [];
+  const part = Math.max(1, Math.round(total / substituts.length));
+  return substituts.map((especeId) => ({ especeId, semisParAn: part }));
 }
 
 /** Exposition au vent : les boisements voisins freinent, le découvert expose. */
@@ -179,4 +206,21 @@ export function getPaysage(id: string): Paysage {
   const p = PAYSAGES.find((x) => x.id === id);
   if (!p) throw new Error(`paysage inconnu : ${id}`);
   return p;
+}
+
+/**
+ * Une essence peut-elle vivre sur cette station ? Filtre grossier mais
+ * suffisant pour écarter les absurdités : le pH doit être dans sa gamme
+ * (bordure comprise, comme pour la croissance) et un sol à faible réserve
+ * utile exclut les espèces qui exigent de la fraîcheur.
+ */
+export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number): boolean {
+  // On réutilise le facteur pH du moteur plutôt qu'une bordure approximative :
+  // au bord exact de sa gamme, une espèce ne pousse déjà plus du tout, et
+  // c'est le cas du hêtre à pH 4,5.
+  if (phFactor(espece, phStation) < 0.25) return false;
+  // Sous ~120 mm de réserve utile, seules les espèces qui encaissent la soif
+  // tiennent le coup.
+  if (ruMm < 120 && espece.eau.seuilStressSecheresse > 0.55) return false;
+  return true;
 }
