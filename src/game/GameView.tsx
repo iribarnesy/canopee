@@ -782,6 +782,8 @@ export function GameView() {
           {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · 🐞 auxiliaires{" "}
           {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} % · 🍄 mycorhizes{" "}
           {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
+          <br />🧪 sol : P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} · K{" "}
+          {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables
           <br />🦋 biodiversité <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
           <span style={{ opacity: 0.7 }}>
             ({snapshot.biodiversite.richesse} essence
