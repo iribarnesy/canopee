@@ -20,11 +20,15 @@ import type { TreeState } from "./trees";
 /** Semaines où un départ de feu est possible (fin de printemps → début d'automne). */
 export const SAISON_FEU: readonly [number, number] = [18, 42];
 /** Remplissage de l'horizon de surface sous lequel la végétation est sèche. */
-const SECHERESSE_CRITIQUE = 0.25;
+const SECHERESSE_CRITIQUE = 0.12;
+/** Température maximale à partir de laquelle la chaleur commence à compter, °C. */
+const CHALEUR_SEUIL_C = 24;
 /** Probabilité hebdomadaire de départ de feu quand tout est réuni *(à calibrer)*. */
-const PROBA_DEPART_MAX = 0.02;
+const PROBA_DEPART_MAX = 0.015;
 /** Combustible minimal pour qu'un feu prenne, en indice de charge. */
-const CHARGE_MINIMALE = 0.25;
+const CHARGE_MINIMALE = 0.2;
+/** Charge au-delà de laquelle le feu passe à coup sûr (lande, résineux). */
+const CHARGE_PROPAGATION_CERTAINE = 0.8;
 /** Hauteur au-delà de laquelle un arbre est trop haut pour qu'un feu courant l'atteigne. */
 const HAUTEUR_REFUGE_M = 12;
 
@@ -65,7 +69,9 @@ export function chargeCombustible(
         const dy = y + 0.5 - tree.y;
         if (dx * dx + dy * dy <= r * r) {
           const i = y * coteM + x;
-          parCellule[i] = (parCellule[i] ?? 0) + 0.5 * espece.feu.inflammabilite;
+          // Un résineux ajoute énormément sous lui (aiguilles, résine) ;
+          // un feuillu frais, presque rien.
+          parCellule[i] = (parCellule[i] ?? 0) + 0.9 * espece.feu.inflammabilite;
         }
       }
     }
@@ -82,23 +88,46 @@ export interface DepartFeu {
 }
 
 /**
- * Un feu part-il cette semaine ? Il faut la saison, un sol sec et de quoi
- * brûler. Le tirage est seedé : la même partie brûle aux mêmes dates.
+ * Indice de risque d'incendie ∈ [0,1], calculé UNIQUEMENT à partir des
+ * conditions du moment : sécheresse du sol de surface, chaleur, combustible
+ * disponible et vent qui attise. Aucune station n'est déclarée « à feu » ou
+ * « sans feu » — c'est le climat qui décide. Un limon du Nord n'atteint
+ * pratiquement jamais ces conditions aujourd'hui, mais les atteindra si les
+ * étés se réchauffent et s'assèchent : le risque remonte vers le nord tout
+ * seul, comme dans la réalité (ch8).
+ */
+export function indiceRisqueFeu(
+  secheresseSurface: number,
+  tMaxC: number,
+  chargeMoyenne: number,
+  ventExposition: number,
+): number {
+  if (secheresseSurface > SECHERESSE_CRITIQUE || chargeMoyenne < CHARGE_MINIMALE) return 0;
+  const fSecheresse = Math.min(1, (SECHERESSE_CRITIQUE - secheresseSurface) / SECHERESSE_CRITIQUE);
+  const fChaleur = Math.min(1, Math.max(0, (tMaxC - CHALEUR_SEUIL_C) / 10));
+  const fCombustible = Math.min(1, chargeMoyenne);
+  const fVent = 0.5 + 0.5 * ventExposition;
+  return fSecheresse * fChaleur * fCombustible * fVent;
+}
+
+/**
+ * Un feu part-il cette semaine ? Le tirage est seedé : la même partie brûle
+ * aux mêmes dates.
  */
 export function departDeFeu(
   rng: RngState,
   semaineAnnee: number,
   secheresseSurface: number,
+  tMaxC: number,
   charge: ChargeCombustible,
+  ventExposition: number,
   coteM: number,
 ): DepartFeu {
   if (semaineAnnee < SAISON_FEU[0] || semaineAnnee > SAISON_FEU[1]) return { rng };
-  if (secheresseSurface > SECHERESSE_CRITIQUE || charge.moyenne < CHARGE_MINIMALE) return { rng };
-  const intensiteRisque =
-    Math.min(1, (SECHERESSE_CRITIQUE - secheresseSurface) / SECHERESSE_CRITIQUE) *
-    Math.min(1, charge.moyenne);
+  const risque = indiceRisqueFeu(secheresseSurface, tMaxC, charge.moyenne, ventExposition);
+  if (risque <= 0) return { rng };
   const tirage = rngFloat(rng);
-  if (tirage.value > PROBA_DEPART_MAX * intensiteRisque) return { rng: tirage.state };
+  if (tirage.value > PROBA_DEPART_MAX * risque) return { rng: tirage.state };
   const position = rngFloat(tirage.state);
   return {
     rng: position.state,
@@ -107,18 +136,46 @@ export function departDeFeu(
 }
 
 /**
- * Propage le feu de proche en proche depuis l'origine : il ne passe que là où
- * il y a de quoi brûler, ce qui rend les coupures (zones fauchées, sol nu,
- * feuillus frais) réellement efficaces.
- * Rend l'ensemble des cellules brûlées.
+ * Chance qu'une cellule s'enflamme quand le feu arrive à sa porte : elle suit
+ * ce qu'elle a à offrir au feu. Une lande d'ajoncs ou une pinède s'embrasent à
+ * coup sûr ; un sous-bois de feuillus frais et peu chargé éteint souvent le
+ * front. C'est ce qui donne leur valeur aux coupures et au choix des essences
+ * (ch5 « concevoir contre le FEU »).
  */
-export function propager(origine: number, charge: ChargeCombustible, coteM: number): Set<number> {
+export function probabilitePropagation(chargeLocale: number): number {
+  if (chargeLocale < CHARGE_MINIMALE) return 0;
+  return Math.min(
+    1,
+    (chargeLocale - CHARGE_MINIMALE) / (CHARGE_PROPAGATION_CERTAINE - CHARGE_MINIMALE),
+  );
+}
+
+/**
+ * Propage le feu de proche en proche depuis l'origine. Chaque cellule prend
+ * feu selon sa combustibilité : le front s'essouffle dans ce qui brûle mal et
+ * fonce dans ce qui brûle bien. Tirages seedés (rejoués à l'identique).
+ */
+export function propager(
+  origine: number,
+  charge: ChargeCombustible,
+  coteM: number,
+  rng: RngState,
+): { brulees: Set<number>; rng: RngState } {
   const brulees = new Set<number>();
+  const vues = new Set<number>();
+  let etat = rng;
   const file = [origine];
   while (file.length > 0) {
     const cellule = file.pop();
-    if (cellule === undefined || brulees.has(cellule)) continue;
-    if ((charge.parCellule[cellule] ?? 0) < CHARGE_MINIMALE) continue;
+    if (cellule === undefined || vues.has(cellule)) continue;
+    vues.add(cellule);
+    const proba = probabilitePropagation(charge.parCellule[cellule] ?? 0);
+    if (proba <= 0) continue;
+    if (proba < 1) {
+      const tirage = rngFloat(etat);
+      etat = tirage.state;
+      if (tirage.value > proba) continue; // le front s'éteint ici
+    }
     brulees.add(cellule);
     const x = cellule % coteM;
     const y = Math.floor(cellule / coteM);
@@ -127,7 +184,7 @@ export function propager(origine: number, charge: ChargeCombustible, coteM: numb
     if (y > 0) file.push(cellule - coteM);
     if (y < coteM - 1) file.push(cellule + coteM);
   }
-  return brulees;
+  return { brulees, rng: etat };
 }
 
 /**

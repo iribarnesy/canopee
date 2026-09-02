@@ -130,6 +130,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const humusCG = state.soil.humusCG.slice();
   const litterK = state.soil.litterK.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeBiomasse = state.soil.herbeBiomasse.slice();
   /** engorgement par (cellule, horizon) */
   const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
@@ -324,6 +325,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     const cible = couvertureMax(groundLight[i] ?? 1, remplissage);
     herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
+    // La biomasse suit la croissance mais ne suit pas la régression : le foin
+    // reste debout et ne part qu'avec la décomposition, la fauche ou le feu.
+    herbeBiomasse[i] = Math.max(
+      herbeCouverture[i] ?? 0,
+      (herbeBiomasse[i] ?? 0) * (1 - (0.01 * climateSum) / nCells),
+    );
     herbeSum += herbeCouverture[i] ?? 0;
   }
 
@@ -529,14 +536,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let rng = state.rng;
   let incendie: TickResult["incendie"];
   let carboneFeuKgC = 0;
-  if (station.feuPossible) {
+  {
     let secheresseSum = 0;
     for (let i = 0; i < nCells; i++) secheresseSum += (waterMm[i * nH] ?? 0) / ruSurface;
-    const charge = chargeCombustible(nextTrees, herbeCouverture, litterCG, station.coteM);
-    const depart = departDeFeu(rng, week, secheresseSum / nCells, charge, station.coteM);
+    const charge = chargeCombustible(nextTrees, herbeBiomasse, litterCG, station.coteM);
+    const depart = departDeFeu(
+      rng,
+      week,
+      secheresseSum / nCells,
+      weather.tMax,
+      charge,
+      station.ventExposition,
+      station.coteM,
+    );
     rng = depart.rng;
     if (depart.origine !== undefined) {
-      const brulees = propager(depart.origine, charge, station.coteM);
+      const propagation = propager(depart.origine, charge, station.coteM, rng);
+      rng = propagation.rng;
+      const brulees = propagation.brulees;
       let tues = 0;
       let rejets = 0;
       const apresFeu: TreeState[] = [];
@@ -575,6 +592,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // Le feu consume la strate herbacée et la litière des cellules touchées.
       for (const i of brulees) {
         herbeCouverture[i] = 0;
+        herbeBiomasse[i] = 0;
         carboneFeuKgC += (litterCG[i] ?? 0) / 1000;
         litterCG[i] = 0;
         // L'azote de la litière part en fumée pour l'essentiel ; le reste
@@ -623,6 +641,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         ph: state.soil.ph,
         litterK,
         herbeCouverture,
+        herbeBiomasse,
       },
       trees: nextTrees,
       ddYearBase5,

@@ -28,18 +28,18 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
 | C. Nutriments et cycles | 4 | 3 | 5 | 12 |
 | D. Climat et phénologie | 4 | 3 | 3 | 10 |
-| E. Interactions entre plantes | 6 | 2 | 4 | 12 |
-| F. Dynamique des peuplements | 5 | 2 | 3 | 10 |
+| E. Interactions entre plantes | 7 | 2 | 3 | 12 |
+| F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 0 | 0 | 6 | 6 |
-| H. Gestion, économie, travail | 5 | 3 | 5 | 13 |
-| I. Carbone | 4 | 2 | 3 | 9 |
-| **Total** | **46** | **20** | **34** | **100** |
+| H. Gestion, économie, travail | 6 | 4 | 4 | 14 |
+| I. Carbone | 4 | 3 | 2 | 9 |
+| **Total** | **50** | **22** | **31** | **103** |
 
-**Score de réalisme : 46 pleins + 20 partiels sur 100 → 56 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 50 pleins + 22 partiels sur 103 → 59 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
-56 % (feu).*
+59 % (feu émergent + sylviculture).*
 
 ---
 
@@ -125,7 +125,7 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 | E5 | Une haie brise-vent améliore la production sur 10-20 fois sa hauteur | ✅ | `windShelterAt` |
 | E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | ❌ | Champ prévu, non implémenté |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
-| E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ❌ | Pas de sylviculture progressive |
+| E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
 | E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ❌ | Dépend de B10 |
@@ -143,7 +143,9 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 | F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | ❌ | Champs prévus, non implémentés |
 | F9 | La banque de graines du sol garde une mémoire du passé | ❌ | Absente |
-| F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` — départ conditionné (saison, sécheresse, combustible), propagation arrêtée par les coupures, tri par l'écorce, rejets de souche |
+| F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
+| F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
+| F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
 
 ## G. Faune et santé
 
@@ -165,9 +167,9 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 | H3 | Saisonnier vs CDI : coûts, durées et ruptures réalistes | ✅ | `embauche-chaulage.test.ts` |
 | H4 | La cadence de récolte dépend de l'espèce (pommes vs noisettes) | ✅ | `fruits.recolteHKg` |
 | H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |
-| H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ❌ | Prix unique au m³ |
+| H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ✅ | `valeurSurPied` ; `sylviculture.test.ts` — il faut une bille élaguée ET du diamètre |
 | H7 | Les prix varient (marché, saturation locale) | ❌ | Prix fixes |
-| H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ❌ | Seule la coupe rase existe |
+| H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | 🟡 | élagage, recépage, coupe ; l'éclaircie reste à outiller (sélection par critère) |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | ❌ | Chaulage et fauche existent ; le reste non |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
 | H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
@@ -181,7 +183,7 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 | I1 | Le carbone suit un bilan conservatif entre tous les pools | ✅ | `carbon-conservation.test.ts` |
 | I2 | Le sol est le plus gros stock en tempéré | ✅ | `carbon.test.ts` |
 | I3 | Le bois énergie vendu est émis immédiatement (il ne stocke rien) | ✅ | `epandre-vs-vendre.test.ts` |
-| I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | ❌ | Dépend de H6 |
+| I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | 🟡 | comptabilisé comme stock (`oeuvreCumKgC`) ; pas encore de fin de vie du produit |
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ❌ | Pas de labour |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
@@ -192,7 +194,8 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Sylviculture** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
+1. **Éclaircie outillée** (sélectionner par critère plutôt qu'arbre par arbre) et fin de vie des produits bois.
+2. **Sylviculture historique** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
 2. **Biotique** : gibier, ravageurs à seuils, auxiliaires (G1-G3, G6).
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
 4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).

@@ -8,7 +8,7 @@
 
 import { serieMeteoPour } from "../data/meteo";
 import type { ActionRefusal, GameAction } from "../engine/actions";
-import { applyAction } from "../engine/actions";
+import { applyAction, valeurSurPied } from "../engine/actions";
 import { carbonInventory } from "../engine/carbon";
 import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
@@ -48,6 +48,18 @@ function nomEspece(id: string): string {
   return getEspece(id).nom.toLowerCase();
 }
 
+/** Dit si la coupe part en scierie ou en bûches, pour le journal. */
+function qualiteVente(avant: GameState, treeIds: readonly number[]): string {
+  let oeuvre = 0;
+  for (const id of treeIds) {
+    const t = avant.trees.find((x) => x.id === id);
+    if (t && valeurSurPied(getEspece(t.especeId), t).qualite === "oeuvre") oeuvre++;
+  }
+  if (oeuvre === 0) return "bois de chauffage";
+  if (oeuvre === treeIds.length) return "bois d'œuvre";
+  return `${oeuvre} en bois d'œuvre, le reste en chauffage`;
+}
+
 /** Applique une action, la date, la journalise et raconte son résultat. */
 function performAction(action: GameAction) {
   if (!state) return;
@@ -75,7 +87,7 @@ function performAction(action: GameAction) {
         event(
           "🪓",
           action.devenir === "vendre"
-            ? `${n} arbre${n > 1 ? "s" : ""} vendu${n > 1 ? "s" : ""} en bois énergie : ${eur}`
+            ? `${n} arbre${n > 1 ? "s" : ""} vendu${n > 1 ? "s" : ""} (${qualiteVente(before, action.treeIds)}) : ${eur}`
             : `${n} arbre${n > 1 ? "s" : ""} broyé${n > 1 ? "s" : ""} et épandu${n > 1 ? "s" : ""} en BRF (azote et carbone au sol)`,
         );
       break;
@@ -113,6 +125,22 @@ function performAction(action: GameAction) {
     case "faucher":
       event("🌾", `Fauche : ${dHeures.toFixed(1)} h — les jeunes plants respirent`);
       break;
+    case "elaguer": {
+      const n = action.treeIds.length;
+      event(
+        "✂️",
+        `${n} arbre${n > 1 ? "s" : ""} élagué${n > 1 ? "s" : ""} (${dHeures.toFixed(1)} h) — une bille propre pour la scierie`,
+      );
+      break;
+    }
+    case "receper": {
+      const n = action.treeIds.length;
+      event(
+        "🪵",
+        `${n} cépée${n > 1 ? "s" : ""} recépée${n > 1 ? "s" : ""} : ${eur} — la souche repartira`,
+      );
+      break;
+    }
   }
 }
 
@@ -178,6 +206,7 @@ function postSnapshot() {
         ageWeeks: t.ageWeeks,
         stress: t.stress,
         fruitsKg: t.fruitsKg,
+        hauteurElagueeM: t.hauteurElagueeM,
       })),
     // Carte : on montre l'eau de l'horizon de SURFACE, celle que voient les
     // semis et l'évaporation (le sol est stratifié, cf. soil.ts).

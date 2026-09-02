@@ -11,7 +11,13 @@
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import { getEspece } from "../../src/engine/especes";
-import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "../../src/engine/feu";
+import {
+  chargeCombustible,
+  departDeFeu,
+  indiceRisqueFeu,
+  propager,
+  survitAuFeu,
+} from "../../src/engine/feu";
 import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -38,25 +44,57 @@ function arbre(especeId: string, heightM: number): TreeState {
     fruitProgress: 0,
     bloomFrosted: false,
     rootDepthCm: 60,
+    hauteurElagueeM: 0,
+    recepages: 0,
   };
 }
 
 describe("départ de feu : il faut que tout s'aligne", () => {
   const charge = { parCellule: new Array(100).fill(1), moyenne: 1 };
   const rng = rngStateFromSeed(1);
+  const CANICULE = 32;
 
   it("rien ne part en hiver, même sur un terrain sec et chargé", () => {
-    expect(departDeFeu(rng, 5, 0.05, charge, 10).origine).toBeUndefined();
-    expect(departDeFeu(rng, 48, 0.05, charge, 10).origine).toBeUndefined();
+    expect(departDeFeu(rng, 5, 0.05, CANICULE, charge, 0.8, 10).origine).toBeUndefined();
+    expect(departDeFeu(rng, 48, 0.05, CANICULE, charge, 0.8, 10).origine).toBeUndefined();
   });
 
   it("rien ne part si le sol est humide", () => {
-    expect(departDeFeu(rng, 30, 0.8, charge, 10).origine).toBeUndefined();
+    expect(departDeFeu(rng, 30, 0.8, CANICULE, charge, 0.8, 10).origine).toBeUndefined();
   });
 
   it("rien ne part s'il n'y a pas de combustible", () => {
     const vide = { parCellule: new Array(100).fill(0), moyenne: 0 };
-    expect(departDeFeu(rng, 30, 0.05, vide, 10).origine).toBeUndefined();
+    expect(departDeFeu(rng, 30, 0.05, CANICULE, vide, 0.8, 10).origine).toBeUndefined();
+  });
+
+  it("rien ne part par temps frais, même sur sol sec", () => {
+    expect(departDeFeu(rng, 30, 0.05, 18, charge, 0.8, 10).origine).toBeUndefined();
+  });
+});
+
+describe("le risque de feu émerge des conditions, il n'est pas décrété", () => {
+  it("aucune station n'est marquée « à feu » : seul le climat décide", () => {
+    // Mêmes combustible et vent : c'est la chaleur et la sécheresse qui font
+    // basculer le risque — c'est ainsi que le réchauffement le fera remonter
+    // vers le nord (ch8).
+    const frais = indiceRisqueFeu(0.5, 20, 1, 0.5);
+    const chaudEtSec = indiceRisqueFeu(0.02, 36, 1, 0.5);
+    expect(frais).toBe(0);
+    expect(chaudEtSec).toBeGreaterThan(0.3);
+    expect(chaudEtSec).toBeLessThanOrEqual(1);
+  });
+
+  it("à conditions égales, le vent aggrave le risque", () => {
+    expect(indiceRisqueFeu(0.05, 32, 1, 1)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 0));
+  });
+
+  it("un été qui se réchauffe de 6 °C fait apparaître un risque là où il n'y en avait pas", () => {
+    // Mêmes sol et végétation ; seule la température de l'été change.
+    const aujourdhui = indiceRisqueFeu(0.08, 23, 0.8, 0.4);
+    const rechauffe = indiceRisqueFeu(0.08, 29, 0.8, 0.4);
+    expect(aujourdhui).toBe(0);
+    expect(rechauffe).toBeGreaterThan(0);
   });
 });
 
@@ -66,15 +104,37 @@ describe("propagation : une coupure arrête le feu", () => {
     const parCellule = new Array(cote * cote).fill(1);
     // Colonne centrale rase (fauchée) : le feu ne doit pas passer à droite.
     for (let y = 0; y < cote; y++) parCellule[y * cote + 5] = 0;
-    const brulees = propager(0, { parCellule, moyenne: 1 }, cote);
+    const { brulees } = propager(0, { parCellule, moyenne: 1 }, cote, rngStateFromSeed(2));
     const droite = [...brulees].filter((i) => i % cote > 5);
     expect(brulees.size).toBeGreaterThan(30);
     expect(droite).toHaveLength(0);
   });
 
+  it("le front s'essouffle dans ce qui brûle mal, fonce dans ce qui brûle bien", () => {
+    const cote = 21;
+    const faible = propager(
+      0,
+      { parCellule: new Array(cote * cote).fill(0.35), moyenne: 0.35 },
+      cote,
+      rngStateFromSeed(9),
+    );
+    const fort = propager(
+      0,
+      { parCellule: new Array(cote * cote).fill(1), moyenne: 1 },
+      cote,
+      rngStateFromSeed(9),
+    );
+    expect(faible.brulees.size).toBeLessThan(0.5 * fort.brulees.size);
+  });
+
   it("sans coupure, il parcourt tout le terrain", () => {
     const cote = 11;
-    const brulees = propager(0, { parCellule: new Array(cote * cote).fill(1), moyenne: 1 }, cote);
+    const { brulees } = propager(
+      0,
+      { parCellule: new Array(cote * cote).fill(1), moyenne: 1 },
+      cote,
+      rngStateFromSeed(2),
+    );
     expect(brulees.size).toBe(cote * cote);
   });
 });

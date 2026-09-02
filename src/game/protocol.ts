@@ -33,6 +33,8 @@ export interface SnapshotTree {
   ageWeeks: number;
   stress: number;
   fruitsKg: number;
+  /** hauteur de bille élaguée, m (ce qui fera du bois d'œuvre) */
+  hauteurElagueeM: number;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */

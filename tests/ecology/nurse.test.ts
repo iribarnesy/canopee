@@ -76,8 +76,10 @@ describe("effet nurse sur lande sèche et ventée", () => {
 
 describe("le brise-vent porte plus loin que l'ombre", () => {
   it("une nurse à 5 m protège encore, sans faire d'ombre", () => {
-    const nu = hauteurApres("pinus_sylvestris", 0, 0, 12);
-    const loin = hauteurApres("pinus_sylvestris", 6, 5, 12);
+    // 8 ans : sur cette lande, un incendie finit par passer au-delà et
+    // brouillerait la comparaison (cf. feu.test.ts).
+    const nu = hauteurApres("pinus_sylvestris", 0, 0, 8);
+    const loin = hauteurApres("pinus_sylvestris", 6, 5, 8);
     expect(loin).toBeGreaterThan(nu);
   });
 });

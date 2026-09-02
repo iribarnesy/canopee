@@ -9,6 +9,7 @@
  */
 
 import { treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
+import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import type { GameState } from "./state";
@@ -24,8 +25,18 @@ export const OVERDRAFT_LIMIT_EUR = -20_000;
 export const PLANT_HOURS = 1;
 /** espacement minimal imposé à la plantation, m */
 export const PLANT_MIN_SPACING_M = 1;
-/** prix de vente du bois énergie, €/m³ *(à calibrer ; bois d'œuvre en V1)* */
+/** prix de vente du bois de chauffage, €/m³ *(à calibrer)* */
 export const WOOD_PRICE_EUR_M3 = 35;
+/** diamètre minimal pour qu'une bille intéresse une scierie, cm *(à calibrer)* */
+export const DIAMETRE_OEUVRE_MIN_CM = 30;
+/** hauteur de bille élaguée minimale pour vendre en bois d'œuvre, m */
+export const BILLE_OEUVRE_MIN_M = 4;
+/** temps d'élagage, h par mètre de tronc et par arbre *(à calibrer)* */
+export const ELAGAGE_HOURS_PAR_M = 0.35;
+/** hauteur maximale atteignable à l'élagage (au-delà, il faut une nacelle) */
+export const ELAGAGE_MAX_M = 8;
+/** temps de recépage d'une cépée, h *(à calibrer)* */
+export const RECEPAGE_HOURS = 0.8;
 /** salaire hebdomadaire chargé d'un ouvrier en CDI, € *(à calibrer)* */
 export const SALARY_EUR_WEEK = 600;
 /** salaire hebdomadaire d'un saisonnier (précarité incluse), payé d'avance, € */
@@ -121,6 +132,26 @@ export type GameAction =
     }
   | {
       /**
+       * Élaguer : monter une bille propre sur les arbres choisis. C'est ce
+       * qui fera plus tard du bois d'œuvre au lieu du chauffage (ch5-A).
+       */
+      type: "elaguer";
+      week: number;
+      treeIds: number[];
+      /** hauteur de tronc à dégager, m */
+      hauteurM: number;
+    }
+  | {
+      /**
+       * Recéper : couper au ras pour faire repartir la souche en cépée
+       * (taillis, trogne). Seules les espèces qui rejettent le supportent.
+       */
+      type: "receper";
+      week: number;
+      treeIds: number[];
+    }
+  | {
+      /**
        * Faucher/dégager un disque : rabat la strate herbacée, qui repartira.
        * C'est l'entretien qui sauve une plantation de la concurrence (ch4-B) —
        * et l'herbe coupée reste au sol en litière.
@@ -146,6 +177,40 @@ export interface ApplyResult {
 /** Volume de bois récoltable, m³ — proxy allométrique V0 *(à calibrer IFN)*. */
 export function woodVolumeM3(heightM: number): number {
   return 0.015 * heightM * heightM;
+}
+
+/**
+ * Diamètre à hauteur de poitrine, cm — proxy tiré de la hauteur *(à calibrer)*.
+ * Un arbre de 20 m fait environ 40 cm de diamètre.
+ */
+export function diametreCm(heightM: number): number {
+  return 2 * heightM;
+}
+
+/**
+ * Ce que vaut un arbre sur pied, € — et à quel titre. Une bille droite,
+ * élaguée et de bon diamètre part en scierie à plusieurs centaines d'euros le
+ * m³ ; le reste finit en bûches. C'est l'écart qui justifie l'élagage et la
+ * patience (ch5-A).
+ */
+export function valeurSurPied(
+  espece: EspeceV0,
+  tree: { heightM: number; hauteurElagueeM: number },
+): { eur: number; qualite: "oeuvre" | "chauffage" } {
+  const volume = woodVolumeM3(tree.heightM);
+  const assezGros = diametreCm(tree.heightM) >= DIAMETRE_OEUVRE_MIN_CM;
+  const assezElague = tree.hauteurElagueeM >= BILLE_OEUVRE_MIN_M;
+  if (assezGros && assezElague) {
+    // Seule la bille élaguée fait de l'œuvre ; le houppier reste du chauffage.
+    const partOeuvre = Math.min(0.6, tree.hauteurElagueeM / tree.heightM);
+    return {
+      eur:
+        volume * partOeuvre * espece.bois.prixOeuvreEurM3 +
+        volume * (1 - partOeuvre) * WOOD_PRICE_EUR_M3,
+      qualite: "oeuvre",
+    };
+  }
+  return { eur: volume * WOOD_PRICE_EUR_M3, qualite: "chauffage" };
 }
 
 /** Temps d'abattage + façonnage d'un arbre, h *(à calibrer)*. */
@@ -212,6 +277,8 @@ function applyPlanter(
       fruitProgress: 0,
       bloomFrosted: false,
       rootDepthCm: 20,
+      hauteurElagueeM: 0,
+      recepages: 0,
     });
     planted++;
     treasuryEur -= espece.economie.prixPlantEur;
@@ -245,7 +312,7 @@ function applyCouper(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
-  let { deadWoodKgC, exportedEnergyCumKgC } = state.carbon;
+  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC } = state.carbon;
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
 
   for (const id of action.treeIds) {
@@ -270,9 +337,16 @@ function applyCouper(
     deadWoodKgC +=
       treeTotalCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, tree.heightM);
     if (action.devenir === "vendre") {
-      treasuryEur += woodVolumeM3(tree.heightM) * WOOD_PRICE_EUR_M3;
-      // Bois énergie : brûlé chez le client → carbone émis immédiatement (§12).
-      exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+      const vente = valeurSurPied(espece, tree);
+      treasuryEur += vente.eur;
+      if (vente.qualite === "oeuvre") {
+        // Bois d'œuvre : le carbone reste piégé dans le produit (charpente,
+        // meuble) pour des décennies — ce n'est pas une émission (§12).
+        oeuvreCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+      } else {
+        // Bois de chauffage : brûlé chez le client → émis immédiatement.
+        exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+      }
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
       // retournent en litière sous l'ancienne couronne (docs/regles.md §4.2).
@@ -314,7 +388,7 @@ function applyCouper(
       ...state,
       trees,
       soil: { ...state.soil, litterNG, litterCG, litterK },
-      carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC },
+      carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
@@ -414,6 +488,7 @@ function applyFaucher(
     return { state, refusals: [refuse(action.week, "faucher", "plafond hebdomadaire atteint")] };
   }
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const cote = state.station.coteM;
@@ -428,6 +503,7 @@ function applyFaucher(
       if (avant <= FAUCHE_COUVERTURE_RESIDUELLE) continue;
       const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
       herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
+      herbeBiomasse[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       // L'herbe coupée reste sur place : litière tendre, vite recyclée.
       litterNG[i] = (litterNG[i] ?? 0) + coupe * 4;
       litterCG[i] = (litterCG[i] ?? 0) + coupe * 4 * 25;
@@ -436,7 +512,7 @@ function applyFaucher(
   return {
     state: {
       ...state,
-      soil: { ...state.soil, herbeCouverture, litterNG, litterCG },
+      soil: { ...state.soil, herbeCouverture, herbeBiomasse, litterNG, litterCG },
       economy: {
         ...state.economy,
         hoursUsedWeek: state.economy.hoursUsedWeek + hours,
@@ -444,6 +520,97 @@ function applyFaucher(
       },
     },
     refusals: [],
+  };
+}
+
+function applyElaguer(
+  state: GameState,
+  action: Extract<GameAction, { type: "elaguer" }>,
+): ApplyResult {
+  const refusals: ActionRefusal[] = [];
+  let { hoursUsedWeek, hoursUsedYear } = state.economy;
+  const trees = [...state.trees];
+  for (const id of action.treeIds) {
+    const idx = trees.findIndex((t) => t.id === id && t.alive);
+    const tree = idx >= 0 ? trees[idx] : undefined;
+    if (!tree) {
+      refusals.push(refuse(action.week, "elaguer", `arbre ${id} introuvable`));
+      continue;
+    }
+    // On n'élague que jusqu'à la moitié de la hauteur : au-delà, on ampute
+    // la couronne et on prive l'arbre de sa croissance.
+    const cible = Math.min(action.hauteurM, ELAGAGE_MAX_M, tree.heightM / 2);
+    if (cible <= tree.hauteurElagueeM + 0.1) {
+      refusals.push(
+        refuse(action.week, "elaguer", `arbre ${id} : trop petit pour monter la bille plus haut`),
+      );
+      continue;
+    }
+    const hours = (cible - tree.hauteurElagueeM) * ELAGAGE_HOURS_PAR_M;
+    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+      refusals.push(refuse(action.week, "elaguer", "plafond hebdomadaire atteint"));
+      break;
+    }
+    hoursUsedWeek += hours;
+    hoursUsedYear += hours;
+    trees[idx] = { ...tree, hauteurElagueeM: cible };
+  }
+  return {
+    state: { ...state, trees, economy: { ...state.economy, hoursUsedWeek, hoursUsedYear } },
+    refusals,
+  };
+}
+
+function applyReceper(
+  state: GameState,
+  action: Extract<GameAction, { type: "receper" }>,
+): ApplyResult {
+  const refusals: ActionRefusal[] = [];
+  let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
+  const trees = [...state.trees];
+  let { exportedEnergyCumKgC } = state.carbon;
+  for (const id of action.treeIds) {
+    const idx = trees.findIndex((t) => t.id === id && t.alive);
+    const tree = idx >= 0 ? trees[idx] : undefined;
+    if (!tree) {
+      refusals.push(refuse(action.week, "receper", `arbre ${id} introuvable`));
+      continue;
+    }
+    const espece = getEspece(tree.especeId);
+    if (!espece.bois.rejetteDeSouche) {
+      refusals.push(
+        refuse(action.week, "receper", `${espece.nom} ne rejette pas de souche : il en mourrait`),
+      );
+      continue;
+    }
+    if (hoursUsedWeek + RECEPAGE_HOURS > WEEK_HOURS_CAP * state.economy.uth) {
+      refusals.push(refuse(action.week, "receper", "plafond hebdomadaire atteint"));
+      break;
+    }
+    hoursUsedWeek += RECEPAGE_HOURS;
+    hoursUsedYear += RECEPAGE_HOURS;
+    // On récolte la tige et la souche repart : c'est tout l'intérêt du taillis.
+    treasuryEur += woodVolumeM3(tree.heightM) * WOOD_PRICE_EUR_M3;
+    exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+    trees[idx] = {
+      ...tree,
+      heightM: 0.5,
+      hauteurElagueeM: 0,
+      stress: 0,
+      fruitsKg: 0,
+      fruitProgress: 0,
+      uptakeYearG: 0,
+      recepages: tree.recepages + 1,
+    };
+  }
+  return {
+    state: {
+      ...state,
+      trees,
+      carbon: { ...state.carbon, exportedEnergyCumKgC },
+      economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
+    },
+    refusals,
   };
 }
 
@@ -530,5 +697,9 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyChauler(state, action);
     case "faucher":
       return applyFaucher(state, action);
+    case "elaguer":
+      return applyElaguer(state, action);
+    case "receper":
+      return applyReceper(state, action);
   }
 }

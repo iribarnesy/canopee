@@ -64,7 +64,8 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       const deltaStock = totalStockKgC(state) - before;
       const npp = c1.nppCumKgC - c0.nppCumKgC;
       const emitted = c1.emittedCumKgC - c0.emittedCumKgC;
-      const exported = c1.exportedEnergyCumKgC - c0.exportedEnergyCumKgC;
+      const exported =
+        c1.exportedEnergyCumKgC - c0.exportedEnergyCumKgC + (c1.oeuvreCumKgC - c0.oeuvreCumKgC);
       const imported = c1.importedPlantsCumKgC - c0.importedPlantsCumKgC;
       // Entrées : photosynthèse + plants achetés. Sorties : CO2 + bois vendu.
       expect(deltaStock + emitted + exported).toBeCloseTo(npp + imported, 4);

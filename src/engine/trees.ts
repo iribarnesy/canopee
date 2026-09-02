@@ -47,6 +47,14 @@ export interface TreeState {
   /** ce qui a eu raison de l'arbre (renseigné à sa mort) */
   causeMort?: CauseMort;
   /**
+   * Hauteur de tronc élaguée, m : la bille sans nœuds qui fera du bois
+   * d'œuvre. Un arbre jamais élagué et poussé au large reste branchu — bon
+   * pour le chauffage, pas pour la scierie.
+   */
+  hauteurElagueeM: number;
+  /** nombre de recépages subis (taillis, trogne) */
+  recepages: number;
+  /**
    * Profondeur réellement explorée par les racines, cm. Ce n'est pas une
    * propriété figée : l'arbre INVESTIT vers le bas quand la surface ne suffit
    * plus (plasticité racinaire). Un sujet qui n'a jamais eu soif garde un

@@ -96,6 +96,14 @@ export interface EspeceV0 {
   bois: {
     /** densité du bois sec, t/m³ (infradensité, pour la biomasse et le carbone) */
     densite: number;
+    /**
+     * Prix du m³ de BOIS D'ŒUVRE de cette essence, € — sans commune mesure
+     * avec le bois de chauffage, mais il faut une bille droite et sans nœuds
+     * (donc de l'élagage) et un diamètre suffisant.
+     */
+    prixOeuvreEurM3: number;
+    /** rejette de souche après recépage (taillis, trogne — ch5-A) */
+    rejetteDeSouche: boolean;
   };
   feu: {
     /**
@@ -158,7 +166,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière tendre, très riche en N (C/N ~15) : l'aulne améliore son sol (ch2-B).
     litiere: { cnRatio: 15 },
     economie: { prixPlantEur: 2 },
-    bois: { densite: 0.45 },
+    bois: { densite: 0.45, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -181,7 +189,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière coriace, lente (C/N ~50) — la voie fongique (ch2-B).
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 3 },
-    bois: { densite: 0.68 },
+    bois: { densite: 0.68, prixOeuvreEurM3: 180, rejetteDeSouche: false },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
   },
@@ -202,7 +210,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 40 },
     economie: { prixPlantEur: 3 },
-    bois: { densite: 0.75 },
+    bois: { densite: 0.75, prixOeuvreEurM3: 220, rejetteDeSouche: true },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.5, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -224,7 +232,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Aiguilles à C/N ~60 : minéralisation lente et acidifiante (ch2-B).
     litiere: { cnRatio: 60 },
     economie: { prixPlantEur: 1.5 },
-    bois: { densite: 0.45 },
+    bois: { densite: 0.45, prixOeuvreEurM3: 110, rejetteDeSouche: false },
     feu: { inflammabilite: 0.9, resistanceEcorce: 0.35, rejetteApresFeu: false },
     sources: [ATLAS],
   },
@@ -245,7 +253,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 1.5 },
-    bois: { densite: 0.55 },
+    bois: { densite: 0.55, prixOeuvreEurM3: 120, rejetteDeSouche: true },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.1, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -266,7 +274,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "gravite", semisParAn: 0 },
     litiere: { cnRatio: 30 },
     economie: { prixPlantEur: 12 },
-    bois: { densite: 0.6 },
+    bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
     fruits: {
       floraisonDJ: 200, // fin avril — après la plupart des gels
       gelFatalC: -2,
@@ -297,7 +305,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 4, longeviteAns: 60, dissemination: "gravite", semisParAn: 0 },
     litiere: { cnRatio: 30 },
     economie: { prixPlantEur: 14 },
-    bois: { densite: 0.6 },
+    bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
     fruits: {
       floraisonDJ: 60, // fin février-mars : LE pari du gel tardif (atlas)
       gelFatalC: -1.5,
@@ -328,7 +336,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 1 },
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 8 },
-    bois: { densite: 0.62 },
+    bois: { densite: 0.62, prixOeuvreEurM3: 70, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 15, // chatons d'hiver (janv.-fév.), pollinisation par le vent
       gelFatalC: -8, // les chatons encaissent le froid — pas de pari climatique
@@ -361,7 +369,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 3, longeviteAns: 25, dissemination: "gravite", semisParAn: 5 },
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 3 },
-    bois: { densite: 0.6 },
+    bois: { densite: 0.6, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     feu: { inflammabilite: 0.98, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -381,7 +389,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 3, longeviteAns: 20, dissemination: "gravite", semisParAn: 4 },
     litiere: { cnRatio: 22 },
     economie: { prixPlantEur: 2.5 },
-    bois: { densite: 0.55 },
+    bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -402,7 +410,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière éricacée : lente et acidifiante (voie fongique, ch2-B).
     litiere: { cnRatio: 45 },
     economie: { prixPlantEur: 2 },
-    bois: { densite: 0.6 },
+    bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -423,7 +431,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 20, longeviteAns: 300, dissemination: "gravite", semisParAn: 2 },
     litiere: { cnRatio: 45 },
     economie: { prixPlantEur: 4 },
-    bois: { densite: 0.6 },
+    bois: { densite: 0.6, prixOeuvreEurM3: 200, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 750, // juin : bien après les gels tardifs
       gelFatalC: -2,
@@ -459,7 +467,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 5 },
-    bois: { densite: 0.7 },
+    bois: { densite: 0.7, prixOeuvreEurM3: 160, rejetteDeSouche: true },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -479,7 +487,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 5, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 45 },
     economie: { prixPlantEur: 9 },
-    bois: { densite: 0.7 },
+    bois: { densite: 0.7, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 1150, // fleurit en automne (atlas : ressource des pollinisateurs)
       gelFatalC: -4,

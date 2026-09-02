@@ -59,6 +59,11 @@ export interface CarbonState {
   exportedEnergyCumKgC: number;
   /** carbone importé par les plants achetés en pépinière, kg C */
   importedPlantsCumKgC: number;
+  /**
+   * Bois d'ŒUVRE vendu, kg C : contrairement au bois de chauffage, il reste
+   * stocké dans le produit (charpente, meuble) pendant sa durée de vie (§12).
+   */
+  oeuvreCumKgC: number;
 }
 
 export function createCarbonState(): CarbonState {
@@ -68,6 +73,7 @@ export function createCarbonState(): CarbonState {
     emittedCumKgC: 0,
     exportedEnergyCumKgC: 0,
     importedPlantsCumKgC: 0,
+    oeuvreCumKgC: 0,
   };
 }
 
@@ -82,6 +88,8 @@ export interface CarbonInventory {
   nppCumTHa: number;
   emisCumTHa: number;
   exporteCumTHa: number;
+  /** bois d'œuvre vendu, t C/ha — stocké dans les produits, pas émis */
+  oeuvreCumTHa: number;
   /** bilan net de la partie : Δstocks depuis le départ, t C/ha (>0 = la parcelle stocke) */
   bilanNetTHa: number;
 }
@@ -118,6 +126,9 @@ export function carbonInventory(state: GameState, initialHumusTHa: number): Carb
     nppCumTHa: state.carbon.nppCumKgC / 1000 / areaHa,
     emisCumTHa: state.carbon.emittedCumKgC / 1000 / areaHa,
     exporteCumTHa: state.carbon.exportedEnergyCumKgC / 1000 / areaHa,
-    bilanNetTHa: totalTHa - initialHumusTHa,
+    oeuvreCumTHa: state.carbon.oeuvreCumKgC / 1000 / areaHa,
+    // Le bois d'œuvre compte au crédit : il a quitté la parcelle sans revenir
+    // à l'atmosphère.
+    bilanNetTHa: totalTHa + state.carbon.oeuvreCumKgC / 1000 / areaHa - initialHumusTHa,
   };
 }

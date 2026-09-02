@@ -509,6 +509,8 @@ export function GameView() {
                 {Math.floor(selectedTrees[0].ageWeeks / 52)} ans
                 {selectedTrees[0].stress > 1 &&
                   ` · stress ${selectedTrees[0].stress.toFixed(0)}/10`}
+                {selectedTrees[0].hauteurElagueeM > 0 &&
+                  ` · bille ${selectedTrees[0].hauteurElagueeM.toFixed(1)} m`}
               </>
             )}
             {selFruitsKg > 0.5 && <> · 🍎 {selFruitsKg.toFixed(0)} kg mûrs</>}
@@ -539,6 +541,30 @@ export function GameView() {
                 🧺 Récolter
               </button>
             )}
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({
+                  type: "elaguer",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  hauteurM: 6,
+                })
+              }
+              title="Monter une bille propre : c'est ce qui fera du bois d'œuvre au lieu du chauffage"
+            >
+              ✂️ Élaguer
+            </button>
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({ type: "receper", treeIds: selectedTrees.map((t) => t.id) })
+              }
+              title="Couper au ras : la souche repart en cépée (taillis). Seules les espèces qui rejettent le supportent."
+            >
+              🪵 Recéper
+            </button>
             <button
               type="button"
               style={btn()}

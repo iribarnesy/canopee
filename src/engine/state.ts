@@ -61,11 +61,6 @@ export interface Station {
   coteM: number;
   /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */
   herbeInitiale: number;
-  /**
-   * Des incendies peuvent-ils survenir ici ? Vrai sur les landes et les
-   * stations sèches, faux en fond de vallée humide.
-   */
-  feuPossible: boolean;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
   voisinage: { especeId: string; semisParAn: number }[];
 }
@@ -101,6 +96,13 @@ export interface SoilState {
    * concurrence que subissent les jeunes plants, et la protection du sol.
    */
   herbeCouverture: number[];
+  /**
+   * Biomasse herbacée présente ∈ [0,1] : elle SUIT la couverture mais ne
+   * disparaît pas quand l'herbe jaunit — le foin sur pied reste le meilleur
+   * combustible de l'été. Seuls le feu, la fauche et la décomposition la font
+   * baisser.
+   */
+  herbeBiomasse: number[];
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
   litterK: number[];
@@ -176,6 +178,7 @@ export function createGameState(
       ph: new Array(n).fill(station.phInitial),
       // Une parcelle nue au départ : la strate s'installe d'elle-même.
       herbeCouverture: new Array(n).fill(station.herbeInitiale),
+      herbeBiomasse: new Array(n).fill(station.herbeInitiale),
       litterK: new Array(n).fill(0),
     },
     trees: [],
@@ -207,6 +210,8 @@ export function plantAt(
     fruitProgress: 0,
     bloomFrosted: false,
     rootDepthCm: 20,
+    hauteurElagueeM: 0,
+    recepages: 0,
   };
   return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
 }
@@ -243,6 +248,8 @@ export function plantScattered(
       fruitProgress: 0,
       bloomFrosted: false,
       rootDepthCm: 20,
+      hauteurElagueeM: 0,
+      recepages: 0,
     });
   }
   return { ...state, trees, nextTreeId: state.nextTreeId + count, rng };
