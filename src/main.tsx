@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GameView } from "./game/GameView";
-import { App as LabView } from "./ui/App";
+import { LabView } from "./lab/LabView";
 
 function Root() {
   const [tab, setTab] = useState<"jeu" | "labo">("jeu");
