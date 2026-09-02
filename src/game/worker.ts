@@ -13,6 +13,7 @@ import { indiceBiodiversite } from "../engine/biodiversite";
 import { carbonInventory } from "../engine/carbon";
 import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
+import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
 import { rngStateFromSeed } from "../engine/rng";
 import { ruHorizonMm } from "../engine/soil";
@@ -39,6 +40,20 @@ let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
 let droughtYearFlagged = -1;
 let bankruptcyAnnounced = false;
+
+/**
+ * Dire au joueur POURQUOI un chantier a coûté ce qu'il a coûté : c'est la
+ * disposition de ses arbres qui décide si l'engin entre.
+ */
+function moyen(
+  state: GameState,
+  action: Extract<GameAction, { type: "faucher" | "chauler" }>,
+): string {
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  if (part >= 0.85) return "à la machine";
+  if (part <= 0.15) return "à la main : l'engin ne passe pas";
+  return `${Math.round(part * 100)} % à la machine, le reste à la main`;
+}
 
 function event(icone: string, message: string) {
   if (!state) return;
@@ -120,12 +135,17 @@ function performAction(action: GameAction) {
     case "licencier":
       if (dEur < 0) event("👋", `CDI rompu : ${eur} d'indemnités`);
       break;
-    case "chauler":
-      event("🪨", `Chaulage : ${eur} (${dHeures.toFixed(1)} h)`);
+    case "chauler": {
+      event("🪨", `Chaulage : ${eur} (${dHeures.toFixed(1)} h, ${moyen(before, action)})`);
       break;
-    case "faucher":
-      event("🌾", `Fauche : ${dHeures.toFixed(1)} h — les jeunes plants respirent`);
+    }
+    case "faucher": {
+      event(
+        "🌾",
+        `Fauche : ${dHeures.toFixed(1)} h ${eur} (${moyen(before, action)}) — les jeunes plants respirent`,
+      );
       break;
+    }
     case "eclaircir": {
       const n = before.trees.length - state.trees.length;
       if (n > 0)

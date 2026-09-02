@@ -31,18 +31,19 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 5 | 1 | 2 | 8 |
-| H. Gestion, économie, travail | 9 | 4 | 3 | 16 |
+| H. Gestion, économie, travail | 10 | 4 | 3 | 17 |
 | I. Carbone | 4 | 3 | 2 | 9 |
 | J. Biodiversité et structure | 3 | 3 | 0 | 6 |
-| **Total** | **61** | **26** | **26** | **113** |
+| **Total** | **62** | **26** | **26** | **114** |
 
-**Score de réalisme : 61 pleins + 26 partiels sur 113 → 65 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 62 pleins + 26 partiels sur 114 → 66 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 59 % (feu émergent + sylviculture) → 60 % (éclaircie outillée, liège,
 récupération des bois brûlés, indice de biodiversité) → 62 % (gibier) →
-65 % (ravageurs, auxiliaires et pollinisateurs — la diversité PAIE enfin).*
+65 % (ravageurs, auxiliaires et pollinisateurs — la diversité PAIE enfin) →
+66 % (mécanisation déduite de la disposition des arbres).*
 
 ---
 
@@ -178,6 +179,7 @@ récupération des bois brûlés, indice de biodiversité) → 62 % (gibier) →
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche et protections individuelles (`proteger`) ; irrigation, fertilisation et clôtures absentes |
+| H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
 | H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
 | H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |

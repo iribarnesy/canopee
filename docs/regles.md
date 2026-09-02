@@ -260,6 +260,20 @@ Chaque action coûte **de l'argent et/ou du temps de travail** (§10). Liste v1 
 
 - **Argent (€)** : capital de départ selon scénario. Dépenses = plants, matériel, intrants, main-d'œuvre saisonnière. Recettes = fruits (prix dégressifs si monoproduit qui sature le marché local *(à confirmer)*), bois d'œuvre (∝ qualité : droit, élagué, gros diamètre), bois de chauffage, petits fruits/plants, miel. **Aides publiques** scriptées (le cours ch5 les mentionne : aides plantation haies/agroforesterie) et éventuel **paiement pour services (label bas-carbone)** lié au §12. **Découvert autorisé** jusqu'à un plafond (dette à intérêts) ; le crever = faillite, fin de partie (hors bac à sable).
 - **Temps de travail : budget annuel en UTH** (unité de travail humain, le terme agricole pour « équivalent temps plein » — on garde « ETP » pour l'évapotranspiration afin d'éviter la collision de sigles). 1 UTH ≈ 1 800 h/an ; le joueur seul = 1 UTH. Chaque action a un coût horaire réaliste (planter un arbre ~1 h, récolter 100 kg de pommes ~3 h *(à calibrer)*). Deux compteurs : les **heures de la semaine** (plafond dur ~60 h/UTH — on peut charbonner en saison de plantation) et la **moyenne annuelle glissante en UTH** — pointer à 70 h une semaine de plantation est OK tant que l'année reste ≤ 1 UTH. Pour dépasser le budget annuel il faut **embaucher** (saisonnier ponctuel ou salarié permanent, € ↔ UTH) : on démarre tout seul, on salarie quand la ferme le permet. Récolte non faite = perdue (ou tombée = litière). C'est ce qui rend la forêt-jardin mature payante : peu d'heures, du rendement (ch6, « le pari des vivaces »).
+- **Mécanisation** (`src/engine/mecanisation.ts`) : il n'y a pas *un* temps de
+  fauche ou d'épandage, il y en a deux — celui de l'engin et celui de la main
+  — et c'est **la disposition des arbres** qui décide lequel s'applique. On
+  cherche la meilleure direction de passage, on projette les arbres sur l'axe
+  perpendiculaire (deux arbres proches sur cet axe sont dans le même rang) et
+  on mesure la part de la zone qui tient dans des couloirs plus larges que
+  l'engin. Aucune parcelle n'est déclarée mécanisable : ça se déduit de ce que
+  le joueur a planté. Mesuré : des rangs à 4,5 m donnent 76 % de mécanisable,
+  les mêmes tiges dispersées 11 %, et un carré serré à 1,8 m 0 % — alignés ou
+  non, il n'y a pas la place. La fauche passe ainsi de ~17 h/ha (rangs) à
+  ~55 h/ha (dispersé), et la machine se paie (~120 €/ha). C'est ce qui donne
+  enfin une raison de jeu à l'alignement, comme en agroforesterie moderne.
+  *Reste à faire* : engins de largeurs différentes au choix du joueur,
+  itinéraires (demi-tours en bout de rang), tassement du sol.
 - **Carbone** : pas une monnaie dépensable, un **score-bilan** (§12), éventuellement monétisé via label.
 
 ---

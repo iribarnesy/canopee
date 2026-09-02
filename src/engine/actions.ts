@@ -13,6 +13,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { HAUTEUR_BROUTAGE_M } from "./gibier";
 import { crownRadiusM } from "./light";
+import { partMecanisable } from "./mecanisation";
 import type { GameState } from "./state";
 import { treeNitrogenNeedGWeek } from "./trees";
 
@@ -33,12 +34,13 @@ export const DIAMETRE_OEUVRE_MIN_CM = 30;
 /** hauteur de bille élaguée minimale pour vendre en bois d'œuvre, m */
 export const BILLE_OEUVRE_MIN_M = 4;
 /**
- * Temps d'élagage, h par mètre de tronc et par arbre. À la perche, monter un
- * mètre de bille propre sur un jeune arbre prend quelques minutes ; c'est
- * répété sur des centaines de tiges que ça pèse. (Mon premier chiffre, 0,35 h,
- * revenait à vingt minutes par mètre et par arbre : trois à cinq fois trop.)
+ * Temps d'élagage, h par mètre de tronc et par arbre : une vingtaine de
+ * minutes, à la main, sécateur et scie d'élagage, en montant à l'échelle ou à
+ * la perche. J'avais divisé ce chiffre par trois en le croyant surestimé ;
+ * c'est le contraire qui est vrai — l'élagage de qualité est lent, et c'est
+ * pour ça qu'on ne le fait que sur les tiges qu'on a choisies.
  */
-export const ELAGAGE_HOURS_PAR_M = 0.12;
+export const ELAGAGE_HOURS_PAR_M = 0.35;
 /** hauteur maximale atteignable à l'élagage (au-delà, il faut une nacelle) */
 export const ELAGAGE_MAX_M = 8;
 /**
@@ -68,19 +70,26 @@ export const SEASONAL_EUR_WEEK = 700;
 /** indemnités + préavis à la rupture d'un CDI, € */
 export const SEVERANCE_EUR = 1200;
 
-/**
- * Chaulage : 200 €/ha d'amendement (2 à 3 t à 40-80 €/t) et 4 h/ha à
- * l'épandeur. (0,002 h/m² faisait vingt heures à l'hectare pour épandre de la
- * chaux : c'était le temps d'un épandage à la pelle.)
- */
+/** Chaulage : 200 €/ha d'amendement (2 à 3 t à 40-80 €/t). */
 export const LIME_EUR_M2 = 0.02;
-export const LIME_HOURS_M2 = 0.0004;
+/** Épandage à la brouette et à la pelle, entre des arbres serrés : 20 h/ha. */
+export const LIME_HOURS_M2_MAIN = 0.002;
+/** Épandage à l'épandeur, sur des passages dégagés : 4 h/ha. */
+export const LIME_HOURS_M2_ENGIN = 0.0004;
 /**
- * Fauche/dégagement : temps par m² à la débroussailleuse, soit ~15 h/ha —
- * l'ordre de grandeur d'un dégagement de plantation. (0,006 h/m² donnait
- * soixante heures à l'hectare : une semaine et demie pour un seul passage.)
+ * Fauche à la débroussailleuse, autour de chaque plant : 60 h/ha. C'est le
+ * vrai prix d'un dégagement quand un engin ne peut pas entrer — et c'est le
+ * cas dès que la plantation est dense ou irrégulière.
  */
-export const FAUCHE_HOURS_M2 = 0.0015;
+export const FAUCHE_HOURS_M2_MAIN = 0.006;
+/** Fauche au gyrobroyeur, sur des passages dégagés : ~3 h/ha. */
+export const FAUCHE_HOURS_M2_ENGIN = 0.0003;
+/**
+ * Coût de l'engin par m² travaillé à la machine, € : carburant, usure et
+ * amortissement, de l'ordre de 120 €/ha *(à calibrer)*. La machine achète du
+ * temps, elle ne le donne pas.
+ */
+export const COUT_ENGIN_EUR_M2 = 0.012;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
 /** effet d'un chaulage sur le pH (plafonné à 7,5) */
@@ -517,8 +526,9 @@ function applyChauler(
   action: Extract<GameAction, { type: "chauler" }>,
 ): ApplyResult {
   const areaM2 = Math.PI * action.rayonM * action.rayonM;
-  const cost = areaM2 * LIME_EUR_M2;
-  const hours = areaM2 * LIME_HOURS_M2;
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const cost = areaM2 * (LIME_EUR_M2 + part * COUT_ENGIN_EUR_M2);
+  const hours = areaM2 * (part * LIME_HOURS_M2_ENGIN + (1 - part) * LIME_HOURS_M2_MAIN);
   if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
     return { state, refusals: [refuse(action.week, "chauler", "plafond hebdomadaire atteint")] };
   }
@@ -557,7 +567,11 @@ function applyFaucher(
   action: Extract<GameAction, { type: "faucher" }>,
 ): ApplyResult {
   const areaM2 = Math.PI * action.rayonM * action.rayonM;
-  const hours = areaM2 * FAUCHE_HOURS_M2;
+  // Ce que l'engin peut atteindre dépend de la façon dont c'est planté : le
+  // reste se fait à la débroussailleuse, vingt fois plus lentement.
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const hours = areaM2 * (part * FAUCHE_HOURS_M2_ENGIN + (1 - part) * FAUCHE_HOURS_M2_MAIN);
+  const coutEngin = areaM2 * part * COUT_ENGIN_EUR_M2;
   if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
     return { state, refusals: [refuse(action.week, "faucher", "plafond hebdomadaire atteint")] };
   }
@@ -589,6 +603,7 @@ function applyFaucher(
       soil: { ...state.soil, herbeCouverture, herbeBiomasse, litterNG, litterCG },
       economy: {
         ...state.economy,
+        treasuryEur: state.economy.treasuryEur - coutEngin,
         hoursUsedWeek: state.economy.hoursUsedWeek + hours,
         hoursUsedYear: state.economy.hoursUsedYear + hours,
       },
