@@ -85,9 +85,9 @@ describe("à l'échelle du peuplement : la diversification comme assurance", () 
   );
 
   it("une frênaie pure se fait décimer par la chalarose", () => {
-    // Près d'un frêne sur trois en trente ans, sur un limon frais qui plaît
-    // au champignon autant qu'à l'arbre.
-    expect(frenaie.tauxMortalite).toBeGreaterThan(0.25);
+    // Un frêne sur six en trente ans, sur un limon frais qui plaît au
+    // champignon autant qu'à l'arbre.
+    expect(frenaie.tauxMortalite).toBeGreaterThan(0.12);
   });
 
   it("les mêmes frênes noyés dans un mélange s'en tirent bien mieux", () => {

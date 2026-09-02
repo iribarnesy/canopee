@@ -375,8 +375,16 @@ qu'une semaine plus chaude et un CO₂ plus élevé.
   décale pas, elle s'étire par le haut. On amplifie donc l'écart d'une semaine
   à sa normale saisonnière quand il est CHAUD (+8 %/°C de réchauffement) et le
   déficit quand elle est SÈCHE (+5 %/°C) ; les semaines fraîches ou arrosées ne
-  sont pas touchées. *Limite qui demeure* : un été sec qui suit un été sec ne
-  se cumule pas — or c'est l'enchaînement qui tue.
+  sont pas touchées.
+- **La mémoire des sécheresses est dans l'ARBRE, pas dans le sol.** Mesuré :
+  même sous SSP5-8.5, la réserve profonde revient à 94-100 % à chaque sortie
+  d'hiver — chaque été repart à plein. Ce qui garde la trace, c'est la
+  **cavitation** : sous tension extrême, l'eau casse en colonnes dans les
+  vaisseaux, et ces vaisseaux ne se réparent pas ; l'arbre ne récupère qu'en
+  fabriquant du bois neuf, soit trois à quatre ans pour effacer un épisode
+  sévère. Un arbre embolisé transpire moins et reste en déficit même le sol
+  plein — c'est pourquoi il meurt souvent à la sécheresse SUIVANTE et non à
+  celle qui l'a abîmé. C'est le décalage observé après 1976, 2003 et 2018.
 
 Constat au passage : même sans scénario, la série 1964-2023 rejouée telle
 quelle fait monter l'ETP de 16 % en soixante ans. Le réchauffement observé est

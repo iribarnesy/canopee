@@ -325,6 +325,7 @@ export function plantAt(
     pousseTendreM: 0,
     vigueur: 1,
     protege: false,
+    dommageHydraulique: 0,
     recepages: 0,
   };
   return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
@@ -365,6 +366,7 @@ export function plantScattered(
       hauteurElagueeM: 0,
       pousseTendreM: 0,
       vigueur: 1,
+      dommageHydraulique: 0,
       protege: false,
       recepages: 0,
     });

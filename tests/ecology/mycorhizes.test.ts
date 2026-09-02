@@ -51,6 +51,7 @@ function arbre(id: number, especeId: string, x: number, y: number, heightM: numb
     recepages: 0,
     pousseTendreM: 0,
     vigueur: 1,
+    dommageHydraulique: 0,
     protege: false,
   };
 }

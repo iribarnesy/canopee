@@ -460,6 +460,7 @@ function applyPlanter(
       hauteurElagueeM: 0,
       pousseTendreM: 0,
       vigueur: 1,
+      dommageHydraulique: 0,
       protege: false,
       recepages: 0,
     });
@@ -1143,6 +1144,7 @@ function applyReceper(
       hauteurElagueeM: 0,
       pousseTendreM: 0,
       vigueur: 1,
+      dommageHydraulique: 0,
       protege: false,
       stress: 0,
       fruitsKg: 0,

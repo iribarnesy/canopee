@@ -27,16 +27,16 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | A. Sol, eau, atmosphère | 13 | 2 | 3 | 18 |
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
 | C. Nutriments et cycles | 9 | 3 | 1 | 13 |
-| D. Climat et phénologie | 6 | 4 | 1 | 11 |
+| D. Climat et phénologie | 7 | 3 | 1 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 6 | 1 | 1 | 8 |
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **74** | **26** | **18** | **118** |
+| **Total** | **75** | **25** | **18** | **118** |
 
-**Score de réalisme : 74 pleins + 26 partiels sur 118 → 74 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 75 pleins + 25 partiels sur 118 → 74 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -52,7 +52,7 @@ potassium) → 73 % (altération biologique : les cycles tiennent, P et K
 limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
 l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
-arbres-habitats, chalarose).*
+arbres-habitats, chalarose, mémoire hydraulique des sécheresses).*
 
 ---
 
@@ -125,7 +125,7 @@ arbres-habitats, chalarose).*
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ❌ | `besoin_froid_h` prévu, non implémenté |
 | D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent |
 | D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
-| D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | 🟡 | les écarts chauds et les déficits de pluie sont amplifiés (`normalesHebdo`) ; les sécheresses PLURIANNUELLES, elles, ne sont pas allongées |
+| D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | ✅ | écarts chauds et déficits de pluie amplifiés (`normalesHebdo`) ; et la mémoire pluriannuelle existe — non dans le sol (qui se recharge chaque hiver, mesuré à 94-100 %) mais dans l'arbre, par la cavitation (`dommageHydraulique`) |
 | D10 | L'altitude et l'exposition modifient températures et rayonnement | 🟡 | latitude seule ; pas d'altitude ni d'adret/ubac |
 
 ## E. Interactions entre plantes
@@ -231,9 +231,6 @@ inventaire.
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Sécheresses pluriannuelles** : on accentue les extrêmes d'une semaine,
-   mais un été sec qui suit un été sec ne se cumule pas encore — or c'est
-   l'enchaînement qui tue (D11 reste partiel).
 2. **Reste du biotique** : frottis et écorçage (un arbre est aujourd'hui
    totalement immunisé dès qu'il passe 1,5 m), sanglier, geai disséminateur
    (G5).

@@ -123,6 +123,7 @@ describe("le CO₂ : ce qu'il donne et ce qu'il ne donne pas", () => {
       recepages: 0,
       pousseTendreM: 0,
       vigueur: 1,
+      dommageHydraulique: 0,
       protege: false,
     };
     const env = {

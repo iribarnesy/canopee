@@ -88,6 +88,7 @@ import { gridDims, weekOfYear } from "./state";
 import type { TreeState } from "./trees";
 import {
   fractionsRacinairesParHorizon,
+  prochainDommageHydraulique,
   rootRadiusM,
   STRESS_LETHAL,
   seasonFactor,
@@ -438,7 +439,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         light[t] ?? 1,
         station.ventExposition,
         station.ventExposition > 0 ? windShelterAt(trees, tree.x, tree.y, tree.id) : 0,
-      ) * facteurCo2Transpiration(ppmSemaine);
+      ) *
+      facteurCo2Transpiration(ppmSemaine) *
+      // Un arbre embolisé ne peut plus faire monter l'eau qu'il voudrait :
+      // ses vaisseaux cassés ne conduisent plus (trees.ts).
+      (1 - tree.dommageHydraulique);
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
     const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
     const needPerCell = (nNeedG[t] ?? 0) / n;
@@ -554,7 +559,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;
-    waterSatisfaction[t] = wd > 0 ? Math.min(1, gotW / wd) : 1;
+    // Satisfaction rapportée au besoin d'un arbre INTACT : c'est ce qui fait
+    // qu'un sujet embolisé reste en déficit même le sol plein — et qu'il meurt
+    // souvent à la sécheresse SUIVANTE, pas à celle qui l'a abîmé.
+    const besoinIntact = wd / Math.max(0.15, 1 - tree.dommageHydraulique);
+    waterSatisfaction[t] = besoinIntact > 0 ? Math.min(1, gotW / besoinIntact) : 1;
     nSatisfaction[t] = nd > 0 ? Math.min(1, gotN / nd) : 1;
     acquiredNG[t] = espece.azote.fixateur
       ? 0.95 * treeNitrogenNeedGWeek(espece, tree.heightM) * seasonFactor(espece, weather.tMean)
@@ -604,8 +613,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
     const vigueur = next.vigueur + ((result.limitingFactor ?? 1) - next.vigueur) * 0.05;
+    // La cavitation s'installe vite et se dilue lentement : c'est la mémoire
+    // pluriannuelle des sécheresses (trees.ts).
+    const dommageHydraulique = prochainDommageHydraulique(
+      next.dommageHydraulique,
+      waterSatisfaction[t] ?? 1,
+      getEspece(tree.especeId).eau.seuilStressSecheresse,
+    );
     const acquired = acquiredNG[t] ?? 0;
-    return { ...next, vigueur, uptakeYearG: next.uptakeYearG + Math.max(0, acquired) };
+    return {
+      ...next,
+      vigueur,
+      dommageHydraulique,
+      uptakeYearG: next.uptakeYearG + Math.max(0, acquired),
+    };
   });
 
   let moyenneEauSurface = 0;
@@ -990,6 +1011,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             hauteurElagueeM: 0,
             pousseTendreM: 0,
             vigueur: 1,
+            dommageHydraulique: 0,
             protege: false,
           });
         } else {

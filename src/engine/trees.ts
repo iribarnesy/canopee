@@ -97,6 +97,22 @@ export interface TreeState {
    */
   pousseTendreM: number;
   /**
+   * Dommage hydraulique ∈ [0,1] : la part du système conducteur mise hors
+   * service par l'embolie.
+   *
+   * Quand la sécheresse devient sévère, l'eau qui monte dans les vaisseaux
+   * casse en colonnes et laisse des bulles : la cavitation. Ces vaisseaux-là
+   * ne se réparent pas — l'arbre ne récupère qu'en fabriquant du bois neuf, ce
+   * qui prend des années. C'est LA mémoire d'une sécheresse, et elle est dans
+   * l'arbre, pas dans le sol : la réserve du sol, elle, se recharge chaque
+   * hiver.
+   *
+   * C'est ce qui explique les mortalités DIFFÉRÉES qu'on observe après 1976,
+   * 2003 ou 2018 — les arbres ne meurent pas l'année de la sécheresse, mais
+   * deux ou trois ans après, à la suivante.
+   */
+  dommageHydraulique: number;
+  /**
    * Vigueur ∈ [0,1] : moyenne lissée du facteur limitant sur les derniers
    * mois. Ce n'est pas la même chose que le stress. Le stress ne monte que
    * lorsque l'arbre est en danger de mort ; la vigueur, elle, dit s'il pousse
@@ -140,6 +156,46 @@ export interface TreeEnvironment {
 }
 
 export const STRESS_LETHAL = 10;
+
+/**
+ * Vitesse à laquelle la cavitation s'installe quand la satisfaction en eau
+ * tombe sous le seuil de survie de l'espèce *(à calibrer)*.
+ */
+export const CAVITATION_PAR_SEMAINE = 0.03;
+
+/**
+ * Part du seuil de survie en dessous de laquelle la cavitation s'installe
+ * vraiment. Ce n'est pas le simple manque d'eau qui casse les colonnes : il
+ * faut une tension extrême, bien au-delà de l'inconfort. Un arbre passe des
+ * étés à souffrir sans s'emboliser.
+ */
+export const SEUIL_CAVITATION = 0.5;
+
+/**
+ * Vitesse de « réparation » : l'arbre ne répare rien, il dilue le dommage en
+ * fabriquant du bois neuf. Compter des années, pas des semaines — environ 6 %
+ * par an, soit trois à quatre ans pour effacer un épisode sévère. C'est
+ * l'ordre de grandeur du décalage observé entre une grande sécheresse et le
+ * pic de mortalité qui la suit *(à calibrer)*.
+ */
+export const RECUPERATION_PAR_SEMAINE = 0.0012;
+
+/**
+ * Fait évoluer le dommage hydraulique d'un arbre : il s'aggrave sous stress
+ * sévère, se dilue lentement le reste du temps.
+ */
+export function prochainDommageHydraulique(
+  dommage: number,
+  satisfactionEau: number,
+  seuilSurvie: number,
+): number {
+  const seuil = seuilSurvie * SEUIL_CAVITATION;
+  if (satisfactionEau < seuil) {
+    const severite = (seuil - satisfactionEau) / Math.max(0.05, seuil);
+    return Math.min(0.85, dommage + CAVITATION_PAR_SEMAINE * severite);
+  }
+  return Math.max(0, dommage - RECUPERATION_PAR_SEMAINE);
+}
 /**
  * Facteur de survie sous ce seuil → l'arbre puise dans ses réserves. Les
  * facteurs sont déjà normalisés par les tolérances de l'espèce, donc ce seuil

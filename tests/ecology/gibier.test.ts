@@ -145,6 +145,7 @@ describe("mécanique du broutage", () => {
       recepages: 0,
       pousseTendreM: pousse,
       vigueur: 1,
+      dommageHydraulique: 0,
       protege: false,
     };
   }

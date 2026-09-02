@@ -51,6 +51,7 @@ function frene(recepages: number, heightM = 8): TreeState {
     teteTrogneM: recepages > 0 ? TROGNE_HAUTEUR_M : undefined,
     pousseTendreM: 0,
     vigueur: 1,
+    dommageHydraulique: 0,
     protege: false,
   };
 }
