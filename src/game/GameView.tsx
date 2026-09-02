@@ -780,7 +780,8 @@ export function GameView() {
           <br />📅 {snapshot.anneeCivile} · CO₂ {snapshot.co2Ppm.toFixed(0)} ppm
           <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · 🐛 ravageurs{" "}
           {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · 🐞 auxiliaires{" "}
-          {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} %
+          {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} % · 🍄 mycorhizes{" "}
+          {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
           <br />🦋 biodiversité <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
           <span style={{ opacity: 0.7 }}>
             ({snapshot.biodiversite.richesse} essence

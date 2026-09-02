@@ -34,6 +34,13 @@ import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from ".
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
 import {
+  cibleReseau,
+  facteurAbsorption,
+  prochainReseau,
+  reseauSousArbre,
+  TYPES_MYCORHIZE,
+} from "./mycorhizes";
+import {
   azoteNetDecomposition,
   cellLeachedG,
   decompositionClimateFactor,
@@ -305,6 +312,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (!tree?.alive) continue;
     const espece = getEspece(tree.especeId);
     const season = seasonFactor(espece, weather.tMean);
+    // Le mycélium compatible prolonge les racines : à racines égales, un
+    // arbre connecté prospecte un volume de terre plus grand (§7.5). C'est de
+    // l'exploration, pas de la création — le bilan reste conservatif.
+    const reseauLocal = reseauSousArbre(
+      state.soil.mycorhizes[espece.mycorhize],
+      tree,
+      espece,
+      dims,
+    );
     const rootR = rootRadiusM(espece, tree.heightM);
     const fractions = fractionsRacinairesParHorizon(epaisseurs, tree.rootDepthCm);
     rootFractions[t] = fractions;
@@ -336,7 +352,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         station.ventExposition > 0 ? windShelterAt(trees, tree.x, tree.y, tree.id) : 0,
       ) * facteurCo2Transpiration(ppmSemaine);
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
-    const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
+    const capG = espece.azote.fixateur
+      ? 0
+      : treeExtractionCapacityGWeek(tree.heightM) * facteurAbsorption(reseauLocal);
     const needPerCell = (nNeedG[t] ?? 0) / n;
     const capPerCell = capG / n;
     const wPerCell = (waterDemandL[t] ?? 0) / n;
@@ -625,6 +643,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
   }
 
+  // ── 5 ter bis. Réseaux mycorhiziens (§7.5) ────────────────────────────────
+  // Ils suivent les hôtes compatibles, très lentement : c'est ce qui fait
+  // qu'un sol forestier ancien n'a rien à voir avec un labour de l'an dernier.
+  const mycorhizes = {
+    ecto: state.soil.mycorhizes.ecto.slice(),
+    arbusculaire: state.soil.mycorhizes.arbusculaire.slice(),
+    ericoide: state.soil.mycorhizes.ericoide.slice(),
+  };
+  let mycoSum = 0;
+  for (const type of TYPES_MYCORHIZE) {
+    const cible = cibleReseau(nextTrees, type, dims);
+    const reseau = mycorhizes[type];
+    for (let i = 0; i < nCells; i++) {
+      reseau[i] = prochainReseau(reseau[i] ?? 0, cible[i] ?? 0);
+      mycoSum += reseau[i] ?? 0;
+    }
+  }
+
   // ── 5 quater. Ravageurs et auxiliaires (§7.4) ────────────────────────────
   // Les ravageurs prospèrent sur les hôtes sensibles ET affaiblis ; les
   // auxiliaires les freinent à hauteur de ce que l'habitat local leur offre.
@@ -854,6 +890,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         herbeBiomasse,
         herbeHumidite,
         ravageurs,
+        mycorhizes,
       },
       trees: nextTrees,
       ddYearBase5,
@@ -882,6 +919,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       depositionKgHa: (depositionSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       ravageurMoyen: ravageurSum / nCells,
       auxiliairesMoyen: habitatSum / nCells,
+      mycorhizesMoyen: mycoSum / (nCells * TYPES_MYCORHIZE.length),
       mineralizationKgHa: (mineralizationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKgHa: (uptakeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKgHa: (leachedSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

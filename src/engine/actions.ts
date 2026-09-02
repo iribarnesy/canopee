@@ -15,6 +15,7 @@ import { HAUTEUR_BROUTAGE_M } from "./gibier";
 import { forEachDiscCell } from "./grid";
 import { crownRadiusM } from "./light";
 import { partMecanisable } from "./mecanisation";
+import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import type { GameState } from "./state";
 import { treeNitrogenNeedGWeek } from "./trees";
 
@@ -808,6 +809,11 @@ function applyLabourer(
   const litterCG = state.soil.litterCG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
+  const mycorhizes = {
+    ecto: state.soil.mycorhizes.ecto.slice(),
+    arbusculaire: state.soil.mycorhizes.arbusculaire.slice(),
+    ericoide: state.soil.mycorhizes.ericoide.slice(),
+  };
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
   let emisKgC = 0;
@@ -830,6 +836,12 @@ function applyLabourer(
       // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix.
       herbeCouverture[i] = 0;
       herbeBiomasse[i] = 0;
+      // Et le prix qu'on ne voit pas sur la facture : les hyphes sont
+      // tranchées. Le réseau mettra des années à se retisser (§7.5).
+      for (const type of TYPES_MYCORHIZE) {
+        const reseau = mycorhizes[type];
+        reseau[i] = (reseau[i] ?? 0) * SURVIE_APRES_LABOUR;
+      }
     }
   }
   // Tout ce qui n'a pas encore de tronc y passe.
@@ -853,6 +865,7 @@ function applyLabourer(
         litterCG,
         herbeCouverture,
         herbeBiomasse,
+        mycorhizes,
       },
       carbon: {
         ...state.carbon,

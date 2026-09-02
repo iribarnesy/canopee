@@ -134,6 +134,11 @@ export interface SoilState {
    * auxiliaires.
    */
   ravageurs: number[];
+  /**
+   * Réseaux mycorhiziens par cellule, un par type (mycorhizes.ts) : ils
+   * mettent des années à se tisser et ne survivent pas au labour.
+   */
+  mycorhizes: { ecto: number[]; arbusculaire: number[]; ericoide: number[] };
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
   litterK: number[];
@@ -184,6 +189,8 @@ export interface TickFluxes {
   ravageurMoyen: number;
   /** qualité moyenne de l'habitat des auxiliaires ∈ [0,1] */
   auxiliairesMoyen: number;
+  /** développement moyen des réseaux mycorhiziens ∈ [0,1] */
+  mycorhizesMoyen: number;
   mineralizationKgHa: number;
   uptakeKgHa: number;
   leachedKgHa: number;
@@ -228,6 +235,13 @@ export function createGameState(
       // Le 1er janvier, la réserve de surface est pleine.
       herbeHumidite: new Array(n).fill(1),
       ravageurs: new Array(n).fill(0),
+      // Une parcelle de départ porte déjà un fond de réseau : elle n'a pas
+      // été stérilisée. C'est le labour qui remet à zéro.
+      mycorhizes: {
+        ecto: new Array(n).fill(0.25),
+        arbusculaire: new Array(n).fill(0.25),
+        ericoide: new Array(n).fill(0.25),
+      },
       litterK: new Array(n).fill(0),
     },
     trees: [],

@@ -225,7 +225,19 @@ clôture.
 
 ### 7.5 Interactions positives (le cœur agroforestier)
 - **Facilitation / effet nurse** (ch1-A) : sous une nurse, un semis subit moins d'ETP, moins de gel, pas de gibier — mais moins de lumière. Le joueur rejoue le moteur de la succession.
-- **Mycorhizes** (ch2-B) : un individu connecté au réseau compatible (ECTO avec ECTO…) gagne en efficacité d'absorption eau/P (+X %) et en résistance au stress hydrique. Le réseau se construit dans le temps et est détruit par le labour.
+- **Mycorhizes** (ch2-B) — *implémenté* (`src/engine/mycorhizes.ts`) : trois
+  types incompatibles (ecto des essences forestières, arbusculaire des
+  fruitiers et légumineuses, éricoïde des landes), un réseau par type et par
+  cellule, qui suit les hôtes compatibles à l'échelle de leurs RACINES et met
+  ~5 ans à se tisser. Un labour n'en laisse que 5 %, et il faut plus de dix ans
+  pour revenir : c'est le coût qu'on ne voit pas sur la facture. Gain modélisé :
+  +30 % d'absorption d'azote à réseau complet.
+  *Ce que je n'ai PAS retenu* : j'avais d'abord modélisé le bénéfice comme une
+  extension du rayon racinaire. C'est faux physiquement (les hyphes explorent
+  des pores, pas un disque plus grand) et faux dans ses effets — élargir tous
+  les disques dilue l'asymétrie de compétition, au point que le hêtre
+  n'atteignait plus la canopée à 200 ans. Le gain sur l'eau et le phosphore
+  attend donc le cycle du phosphore.
 - **Allélopathie** : la juglone du noyer pénalise les sensibles dans un rayon donné (atlas).
 - **Pollinisation** : espèces non autofertiles (la plupart des pommiers, kiwaï dioïque, argousier dioïque — atlas) exigent un partenaire compatible à distance de butinage **et** un index pollinisateurs suffisant (fleurs étalées sur l'année, périodes de soudure fin d'hiver/automne de l'atlas). **Dès la v1, au niveau variétal pour les fruitiers** (décision) : chaque variété porte un **groupe de floraison** (A–E) et un statut autofertile/auto-stérile ; deux pommiers de la même variété auto-stérile ne se pollinisent pas — il faut des groupes qui se chevauchent. La fiche espèce des fruitiers embarque donc une liste `varietes` (groupe de floraison, autofertilité, prix/calibre, sensibilités propres).
 - **LER affiché** (ch5-B) : le jeu calcule le Land Equivalent Ratio des assolements mixtes vs monoculture — c'est un indicateur de score, et un outil pédagogique.

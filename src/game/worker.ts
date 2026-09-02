@@ -250,6 +250,7 @@ function emptyFluxes(): TickFluxes {
     depositionKgHa: 0,
     ravageurMoyen: 0,
     auxiliairesMoyen: 0,
+    mycorhizesMoyen: 0,
     mineralizationKgHa: 0,
     uptakeKgHa: 0,
     leachedKgHa: 0,
