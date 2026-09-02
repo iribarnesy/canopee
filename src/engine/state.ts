@@ -61,6 +61,14 @@ export interface Station {
   coteM: number;
   /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */
   herbeInitiale: number;
+  /**
+   * Le paysage autour de la parcelle (paysage.ts). C'est LUI qui décide de la
+   * pluie de semis, de la densité de gibier, des dépôts d'azote, de
+   * l'exposition au vent et de la fréquentation humaine — ces cinq choses ne
+   * sont pas indépendantes, et les saisir séparément permettait de décrire une
+   * parcelle « au cœur d'une hêtraie » qui ne recevait aucun semis de hêtre.
+   */
+  paysageId: string;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
   voisinage: { especeId: string; semisParAn: number }[];
   /**

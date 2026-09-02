@@ -311,16 +311,11 @@ const BAC_A_SABLE: Experience = {
       coteM: 50,
       latitudeDeg: r.latitude ?? 47,
       profil,
+      paysageId: "bocage",
       initialMineralNKgHa: 20,
       remonteeNappeMmSemaine: 0,
       drainageExterneMmSemaine: 40,
-      ventExposition: 0.5,
       herbeInitiale: 0.6,
-      gibierParHa: r.gibier ?? 0.15,
-      depositionNKgHaAn: 14,
-      // Pluie de semis identique pour TOUTES les espèces : c'est la condition
-      // pour que le résultat ne dise rien d'autre que le terrain et le climat.
-      voisinage: ESPECES_V0.map((e) => ({ especeId: e.id, semisParAn: 3 })),
     });
 
     const w = meteo(meteoId);

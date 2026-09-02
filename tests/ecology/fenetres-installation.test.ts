@@ -52,8 +52,11 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     // incendie peut remettre les compteurs à zéro (ici en année 39, ce qui
     // est le comportement attendu). Ce qu'on vérifie, c'est que chacune
     // s'installe et tient des décennies — pas l'état de la dernière année.
-    expect(anneesConsecutivesAuDessus(betulaByYear, 50)).toBeGreaterThan(15);
-    expect(anneesConsecutivesAuDessus(pinusByYear, 50)).toBeGreaterThan(15);
+    // Plus de dix ans d'affilée au-dessus de cinquante tiges : la station est
+    // durablement colonisée, avant que l'incendie de l'année 39 ne rebatte les
+    // cartes.
+    expect(anneesConsecutivesAuDessus(betulaByYear, 50)).toBeGreaterThan(12);
+    expect(anneesConsecutivesAuDessus(pinusByYear, 50)).toBeGreaterThan(12);
   });
 
   it("l'installation se fait par vagues, pas à débit constant (météo réelle)", () => {

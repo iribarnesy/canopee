@@ -199,6 +199,8 @@ describe("les extrêmes s'aggravent plus vite que les moyennes (D11)", () => {
 });
 
 describe("dans une partie, le réchauffement se voit", () => {
+  const normales = normalesHebdo(OBSERVATIONS);
+
   function partie(scenarioId: "stable" | "ssp585", ans: number) {
     const station: Station = { ...LIMON_RICHE.station, coteM: 40, voisinage: [], gibierParHa: 0 };
     let state = createGameState(station, rngStateFromSeed(11));
@@ -211,7 +213,9 @@ describe("dans une partie, le réchauffement se voit", () => {
     for (let i = 0; i < ans * 52; i++) {
       const base = OBSERVATIONS[i % OBSERVATIONS.length];
       if (!base) throw new Error("météo manquante");
-      const w = meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52));
+      // Avec les normales, comme le fait le jeu : sans elles on perd
+      // l'accentuation des extrêmes, et c'est précisément elle qui tue.
+      const w = meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52), normales);
       const r = advanceWeek(state, w, []);
       state = r.state;
       morts.push(...r.morts);

@@ -30,7 +30,10 @@ const SHADOW_OFFSET = 0.4 * CANOPY_H;
  */
 function underClosedCanopy(understoreyEspece: string, years: number) {
   const weather = syntheticYear(LIMON_FRAIS.climat);
-  let state = createGameState(LIMON_FRAIS.station, rngStateFromSeed(42));
+  // Pas de pluie de semis du paysage : cet essai isole la réponse à la
+  // lumière, pas la dynamique du voisinage (les recrues de frêne et de chêne
+  // du bocage viendraient s'ajouter au comptage).
+  let state = createGameState({ ...LIMON_FRAIS.station, voisinage: [] }, rngStateFromSeed(42));
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       state = plantAt(state, "fagus_sylvatica", 6.25 + i * SPACING, 6.25 + j * SPACING, CANOPY_H);

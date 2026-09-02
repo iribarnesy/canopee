@@ -239,6 +239,18 @@ inventaire.
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
 4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
 
+## Le paysage : ce que l'entourage décide
+
+`paysage.ts` regroupe en un objet nommé ce qui était éparpillé — gibier, dépôts
+d'azote, semenciers, vent, fréquentation humaine. C'est ce qui permet de dire
+« au milieu des champs » ou « en lisière de banlieue » et d'en tirer des
+conséquences cohérentes, au lieu de saisir quatre nombres indépendants.
+
+*Restent hors du modèle, et ce sont les mêmes racines* : la **pente**,
+l'**altitude**, et tout ce qui suppose un écoulement LATÉRAL de l'eau (mare,
+ruisseau, ruissellement, inondation, exposition adret/ubac). Le bilan hydrique
+est aujourd'hui strictement vertical, cellule par cellule.
+
 ## Générateur de stations : ce qu'il reste à faire
 
 La dérivation (A9) est en place : une station se décrit par un profil

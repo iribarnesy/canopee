@@ -597,6 +597,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // ── 5. Croissance de chaque arbre — loi du minimum, facteurs locaux ───────
   let nppKgC = 0; // production primaire nette de la semaine (bois + racines)
+  let importedPlantsKgC = 0; // carbone des recrues, venu de la graine
   const limitingFactors = new Array<number>(nTrees).fill(0);
   let nextTrees: TreeState[] = trees.map((tree, t) => {
     const result = tickTree(tree, {
@@ -1089,6 +1090,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       lumiereAuSol: groundLight,
       nextTreeId,
     });
+    // Le carbone des recrues vient d'ailleurs : de la graine, produite par un
+    // parent hors parcelle ou par les réserves d'un parent qu'on ne débite
+    // pas. C'est donc une ENTRÉE, au même titre qu'un plant acheté — sans quoi
+    // le bilan carbone fabrique de la matière à chaque printemps.
+    for (const recrue of recruitment.newTrees) {
+      importedPlantsKgC += treeTotalCarbonKg(getEspece(recrue.especeId), recrue.heightM);
+    }
     nextTrees = [...nextTrees, ...recruitment.newTrees];
     rng = recruitment.rng;
     nextTreeId = recruitment.nextTreeId;
@@ -1126,6 +1134,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         ...state.carbon,
         deadWoodKgC,
         nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC,
+        importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedPlantsKgC,
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
       },
       rng,

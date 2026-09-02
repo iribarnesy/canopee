@@ -401,6 +401,28 @@ déjà dans les données.
 
 ---
 
+### 10 ter. Le paysage autour de la parcelle (implémenté)
+
+`src/engine/paysage.ts`. Une parcelle d'un hectare ne vit pas seule, et ce qui
+l'entoure décidait jusqu'ici de quatre choses éparpillées dans quatre champs
+sans lien : densité de gibier, dépôts atmosphériques d'azote, pluie de semis,
+exposition au vent. On pouvait donc décrire une parcelle « au cœur d'une
+hêtraie » qui ne recevait aucun semis de hêtre, ou une parcelle urbaine pleine
+de chevreuils.
+
+Le paysage est désormais **un objet nommé**, décrit en une phrase, trois parts
+(boisée, cultivée, urbanisée) et une liste de semenciers — et tout le reste
+s'en déduit : le gibier a besoin de couvert ; les dépôts d'azote viennent de
+l'ammoniac des cultures et des oxydes d'azote de la circulation ; le vent est
+freiné par les boisements voisins ; et la **fréquentation humaine** commande
+les départs de feu, qui sont d'origine humaine dans leur immense majorité.
+
+Cinq paysages pour commencer : au cœur d'un massif, dans un bocage d'élevage,
+en pleine plaine céréalière, en lisière de banlieue, au milieu de la lande, en
+lisière de forêt. Un nouveau se décrit en quatre nombres et une liste.
+
+---
+
 ## 11. Succession écologique « moteur de fond »
 
 Sans intervention, chaque cellule suit la trajectoire du ch1-A : sol nu → annuelles → vivaces/graminées → fruticée épineuse (ronce, prunellier, aubépine = nurses) → pionniers (bouleau, saule, genêt) → intermédiaires → climaciques (hêtre, chêne) via **facilitation** (les pionniers créent l'ombre et le sol qui permettent aux suivants de s'installer, et sont ensuite éliminés par cette même ombre). Le stade est émergent (résultat des règles lumière/sol/dissémination), pas une variable codée en dur — mais on **teste** que la trajectoire émerge bien. Objectif de design du ch6 : le joueur apprend à viser la **jeune forêt** productive, pas le climax sombre.

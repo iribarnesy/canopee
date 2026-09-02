@@ -7,6 +7,8 @@ import { tick } from "../src/engine/tick";
 export interface RunOptions {
   /** densité de cervidés ; 0 par défaut pour isoler ce qu'on mesure */
   gibierParHa?: number;
+  /** pluie de semis du paysage ; vide par défaut, même raison */
+  voisinage?: { especeId: string; semisParAn: number }[];
   seed?: number;
   /** plantations initiales, positions pseudo-aléatoires seedées */
   plantations?: { especeId: string; count: number; heightM?: number }[];
@@ -20,7 +22,13 @@ export function runYears(sc: StationClimat, years: number, opts: RunOptions = {}
   // Ces essais isolent une tolérance (eau, engorgement, lumière, pH) : on met
   // donc le gibier de côté, sans quoi c'est lui qu'on mesure. Les dégâts de
   // cervidés ont leurs propres tests (gibier.test.ts).
-  const station = { ...sc.station, gibierParHa: opts.gibierParHa ?? 0 };
+  // Ni gibier, ni pluie de semis venue du paysage : ces essais isolent une
+  // tolérance ou une réponse à la lumière, pas la dynamique du voisinage.
+  const station = {
+    ...sc.station,
+    gibierParHa: opts.gibierParHa ?? 0,
+    voisinage: opts.voisinage ?? [],
+  };
   let state = createGameState(station, rngStateFromSeed(opts.seed ?? 42));
   for (const p of opts.plantations ?? []) {
     state = plantScattered(state, p.especeId, p.count, p.heightM ?? 0.3);

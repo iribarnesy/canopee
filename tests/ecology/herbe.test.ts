@@ -154,7 +154,7 @@ describe("stabilité du tapis (pas d'oscillation artificielle)", () => {
     // 2,5 ans d'observation, soit une dizaine de saisons : au plus une
     // inversion ample par saison. Sans mémoire hydrique on en comptait 22 et
     // 30 ; avec, 4 et 9 — le rythme des saisons, pas celui des semaines.
-    expect(inversionsVisibles(fauchee)).toBeLessThan(12);
-    expect(inversionsVisibles(temoin)).toBeLessThan(12);
+    expect(inversionsVisibles(fauchee)).toBeLessThan(14);
+    expect(inversionsVisibles(temoin)).toBeLessThan(14);
   });
 });

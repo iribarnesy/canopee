@@ -6,6 +6,13 @@
  */
 
 import type { SyntheticClimate } from "./meteo";
+import {
+  depositionNKgHaAn,
+  getPaysage,
+  gibierParHa,
+  ventExposition,
+  voisinageSemencier,
+} from "./paysage";
 import { phosphoreAssimilableGM2, potassiumEchangeableGM2 } from "./pk";
 import {
   carboneProfilTHa,
@@ -41,12 +48,24 @@ export function stationDepuisProfil(
     | "phInitial"
     | "phosphoreInitialGM2"
     | "potassiumInitialGM2"
+    | "voisinage"
+    | "gibierParHa"
+    | "depositionNKgHaAn"
+    | "ventExposition"
   > & { profil: SoilProfile; initialMineralNKgHa: number },
 ): Station {
   const { profil, ...reste } = base;
+  // Tout ce qui vient de l'ENTOURAGE se déduit du paysage, d'un bloc : semis,
+  // gibier, dépôts d'azote, vent. Les saisir un par un permettait de décrire
+  // des voisinages incohérents (paysage.ts).
+  const paysage = getPaysage(reste.paysageId);
   return {
     ...reste,
     profil,
+    voisinage: voisinageSemencier(paysage),
+    gibierParHa: gibierParHa(paysage),
+    depositionNKgHaAn: depositionNKgHaAn(paysage),
+    ventExposition: ventExposition(paysage),
     ruMm: ruProfilMm(profil),
     excessCapacityMm: porositeProfilMm(profil),
     drainagePerWeekMm: Math.min(drainageProfilMmSemaine(profil), reste.drainageExterneMmSemaine),
@@ -65,6 +84,7 @@ export function stationDepuisProfil(
 export const LANDE_SECHE: StationClimat = {
   station: stationDepuisProfil({
     id: "lande-seche",
+    paysageId: "lande-ouverte",
     nom: "Lande sableuse sèche",
     latitudeDeg: 44.5,
     // Podzol landais : un horizon de surface acide, un sable lessivé épais où
@@ -80,16 +100,7 @@ export const LANDE_SECHE: StationClimat = {
     // Nappe perchée hivernale sur l'alios : l'eau ne part pas vite.
     drainageExterneMmSemaine: 30,
     herbeInitiale: 0.5, // lande rase : callune et molinie couvrent déjà le sol // les Landes brûlent : c'est LE risque de la station
-    ventExposition: 0.85, // lande atlantique rase : le vent balaie tout
-    // Lande ouverte et pauvre : peu d'abri, densité modérée.
-    gibierParHa: 0.08,
-    // Landes de Gascogne, loin des zones d'élevage intensif.
-    depositionNKgHaAn: 9,
     coteM: 100,
-    voisinage: [
-      { especeId: "pinus_sylvestris", semisParAn: 4 },
-      { especeId: "betula_pendula", semisParAn: 3 },
-    ],
   }),
   climat: {
     tMeanAnnual: 13.5,
@@ -104,6 +115,7 @@ export const LANDE_SECHE: StationClimat = {
 export const VALLEE_ENGORGEE: StationClimat = {
   station: stationDepuisProfil({
     id: "vallee-engorgee",
+    paysageId: "massif-forestier",
     nom: "Fond de vallée engorgé",
     latitudeDeg: 47,
     // Alluvions limono-argileuses profondes : réserve énorme, mais l'argile
@@ -117,13 +129,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
     // Nappe affleurante : l'exutoire est saturé, rien ne s'évacue.
     drainageExterneMmSemaine: 5,
     herbeInitiale: 0.8, // prairie humide dense // fond de vallée humide
-    ventExposition: 0.2, // fond de vallée abrité
-    // Fond de vallée boisé et nourrissant : c'est là que le chevreuil abonde.
-    gibierParHa: 0.25,
-    // Fond de vallée en pays d'élevage : ammoniac.
-    depositionNKgHaAn: 18,
     coteM: 100,
-    voisinage: [],
   }),
   climat: {
     tMeanAnnual: 12,
@@ -138,6 +144,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
 export const LIMON_RICHE: StationClimat = {
   station: stationDepuisProfil({
     id: "limon-riche",
+    paysageId: "bocage",
     nom: "Limon profond riche",
     latitudeDeg: 49.5,
     // Limon éolien profond, le sol de référence des plateaux du Nord.
@@ -149,13 +156,7 @@ export const LIMON_RICHE: StationClimat = {
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY, // plateau bien drainé
     herbeInitiale: 0.2, // sortie de culture : le sol se réenherbe // limon frais du Nord
-    ventExposition: 0.6, // plateau limoneux ouvert (§2.2)
-    // Plaine de grande culture : peu de couvert, gibier présent mais dilué.
-    gibierParHa: 0.1,
-    // Plaine de grande culture du Nord : dépôts élevés.
-    depositionNKgHaAn: 20,
     coteM: 100,
-    voisinage: [],
   }),
   climat: {
     tMeanAnnual: 11.5,
@@ -171,6 +172,7 @@ export const LIMON_PAUVRE_N: StationClimat = {
   station: stationDepuisProfil({
     ...LIMON_RICHE.station,
     id: "limon-pauvre-n",
+    paysageId: "plaine-cerealiere",
     nom: "Limon profond pauvre en azote",
     // Même limon, mais matière organique effondrée par des décennies de
     // grande culture (§2.2) : il retient moins l'eau et minéralise peu.
@@ -190,6 +192,7 @@ export const LIMON_PAUVRE_N: StationClimat = {
 export const FRICHE_LIMON: StationClimat = {
   station: stationDepuisProfil({
     id: "friche-limon",
+    paysageId: "lisiere-forestiere",
     nom: "Friche sur limon (succession)",
     latitudeDeg: 47.5,
     profil: [
@@ -200,16 +203,7 @@ export const FRICHE_LIMON: StationClimat = {
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
     herbeInitiale: 0.9, // friche : l'herbe tient déjà tout le terrain
-    ventExposition: 0.4,
-    // Friche en mosaïque de bosquets : conditions idéales pour le chevreuil.
-    gibierParHa: 0.2,
-    depositionNKgHaAn: 14,
     coteM: 50,
-    voisinage: [
-      { especeId: "betula_pendula", semisParAn: 6 },
-      { especeId: "pinus_sylvestris", semisParAn: 3 },
-      { especeId: "fagus_sylvatica", semisParAn: 2 },
-    ],
   }),
   climat: {
     tMeanAnnual: 11.5,
