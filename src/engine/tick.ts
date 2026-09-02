@@ -25,7 +25,6 @@ import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
 import {
   cellLeachedG,
-  cellMineralization,
   decompositionClimateFactor,
   litterDecayRate,
   nitrogenAvailabilityFactor,
@@ -239,7 +238,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   for (let t = 0; t < nTrees; t++) {
     const tree = trees[t];
-    if (!tree || !tree.alive) continue;
+    if (!tree?.alive) continue;
     const espece = getEspece(tree.especeId);
     const season = seasonFactor(espece, weather.tMean);
     const rootR = rootRadiusM(espece, tree.heightM);
@@ -344,7 +343,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const acquiredNG = new Array<number>(nTrees).fill(0);
   for (let t = 0; t < nTrees; t++) {
     const tree = trees[t];
-    if (!tree || !tree.alive) continue;
+    if (!tree?.alive) continue;
     const espece = getEspece(tree.especeId);
     const rootR = rootRadiusM(espece, tree.heightM);
     const n = rootCells[t] ?? 1;

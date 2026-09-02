@@ -254,10 +254,6 @@ export function fellingHours(heightM: number): number {
   return 0.3 + 0.15 * heightM;
 }
 
-function hoursAvailable(state: GameState): number {
-  return WEEK_HOURS_CAP * state.economy.uth - state.economy.hoursUsedWeek;
-}
-
 function refuse(week: number, action: GameAction["type"], reason: string): ActionRefusal {
   return { week, action, reason };
 }
