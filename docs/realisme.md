@@ -26,17 +26,17 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 13 | 2 | 3 | 18 |
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
-| C. Nutriments et cycles | 4 | 3 | 5 | 12 |
+| C. Nutriments et cycles | 6 | 3 | 4 | 13 |
 | D. Climat et phénologie | 6 | 3 | 2 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 5 | 1 | 2 | 8 |
 | H. Gestion, économie, travail | 10 | 4 | 3 | 17 |
-| I. Carbone | 4 | 3 | 2 | 9 |
+| I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 3 | 3 | 0 | 6 |
-| **Total** | **64** | **26** | **25** | **115** |
+| **Total** | **67** | **26** | **23** | **116** |
 
-**Score de réalisme : 64 pleins + 26 partiels sur 115 → 67 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 67 pleins + 26 partiels sur 116 → 69 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -44,7 +44,9 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 récupération des bois brûlés, indice de biodiversité) → 62 % (gibier) →
 65 % (ravageurs, auxiliaires et pollinisateurs — la diversité PAIE enfin) →
 66 % (mécanisation déduite de la disposition des arbres) → 67 % (le climat
-dérive enfin : trajectoires SSP et effet CO₂).*
+dérive enfin : trajectoires SSP et effet CO₂) → 69 % (le sol devient un
+capital : humus ↔ azote, réserve utile dynamique, labour, dépôts
+atmosphériques).*
 
 ---
 
@@ -67,7 +69,7 @@ dérive enfin : trajectoires SSP et effet CO₂).*
 | A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ❌ | Aucune pente dans le moteur |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
-| A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` ; `soil.test.ts` — statique : l'humus qui s'accumule ne l'augmente pas encore |
+| A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` + réserve de surface recalculée par cellule selon son humus ; `sol-vivant.test.ts` |
 | A13 | La structure/compaction évolue (tassement, restauration par les racines) | ❌ | Pas de variable structure |
 | A14 | Deux plantes voisines se disputent réellement l'eau de leurs cellules communes | ✅ | Allocation spatiale en 2 passes ; `nurse.test.ts` |
 
@@ -97,7 +99,8 @@ dérive enfin : trajectoires SSP et effet CO₂).*
 | C5 | Les fixateurs enrichissent réellement leur voisinage | ✅ | fixation → litière ; `litiere.test.ts` |
 | C6 | Un frugal se contente d'un sol pauvre là où un exigeant a faim | ✅ | besoin en g/individu ; `nitrogen-conservation.test.ts` |
 | C7 | Le pH exclut les espèces hors de leur gamme (calcicoles / acidiphiles) | ✅ | `phFactor` ; `embauche-chaulage.test.ts` |
-| C8 | Le carbone du sol et l'azote sont couplés (retourner une prairie libère N et C) | ❌ | Humus C et N minéral évoluent séparément |
+| C8 | Le carbone du sol et l'azote sont couplés (retourner une prairie libère N et C) | ✅ | la minéralisation de l'humus rend C ET N au C/N de l'humus ; action `labourer` ; `sol-vivant.test.ts` |
+| C13 | Les dépôts atmosphériques apportent de l'azote (et fertilisent les milieux pauvres) | ✅ | `station.depositionNKgHaAn` ; 9 à 20 kg/ha/an selon la région |
 | C9 | Enfouir un matériau à C/N élevé provoque une faim d'azote | ❌ | Pas d'immobilisation |
 | C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | 🟡 | Chaulage seul ; pas de dérive |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ❌ | Seul N est modélisé |
@@ -196,7 +199,7 @@ dérive enfin : trajectoires SSP et effet CO₂).*
 | I3 | Le bois énergie vendu est émis immédiatement (il ne stocke rien) | ✅ | `epandre-vs-vendre.test.ts` |
 | I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | 🟡 | comptabilisé comme stock (`oeuvreCumKgC`) ; pas encore de fin de vie du produit |
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
-| I6 | Le travail du sol déstocke massivement le carbone | ❌ | Pas de labour |
+| I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
 | I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | proxy 0,015·H² × densité, à caler sur l'IFN |
 | I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
@@ -220,14 +223,15 @@ inventaire.
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Couplage humus ↔ azote et labour** (C8, C9, I6), et l'humus qui gagne de
-   la réserve utile (A12 dynamique) — le sol est le dernier gros pan encore
-   figé.
-2. **Aggravation des extrêmes** (D11) : on décale la moyenne du climat, mais
+1. **Aggravation des extrêmes** (D11) : on décale la moyenne du climat, mais
    les canicules et les sécheresses pluriannuelles s'aggravent plus vite que
    la moyenne, et ce sont elles qui tuent.
+2. **Faim d'azote** (C9) : enfouir un BRF à C/N élevé devrait immobiliser
+   l'azote avant de le rendre. C'est ce qui manque pour que « couper &
+   épandre » ait son vrai coût de court terme.
 3. **Reste du biotique** : maladies datées (chalarose), frottis et écorçage,
    sanglier, chasse (G5, G6).
+4. **Phosphore et potassium** (C11), et les mycorhizes (C12).
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
 4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
 
