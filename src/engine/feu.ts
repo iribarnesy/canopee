@@ -128,11 +128,18 @@ export function departDeFeu(
   if (risque <= 0) return { rng };
   const tirage = rngFloat(rng);
   if (tirage.value > PROBA_DEPART_MAX * risque) return { rng: tirage.state };
+  // Le départ n'est pas n'importe où : il se produit là où il y a de quoi
+  // s'enflammer. On tire une cellule au prorata de sa combustibilité — un
+  // fourré d'ajoncs part bien plus souvent qu'un sous-bois frais.
   const position = rngFloat(tirage.state);
-  return {
-    rng: position.state,
-    origine: Math.floor(position.value * coteM * coteM),
-  };
+  const total = charge.parCellule.reduce((somme, c) => somme + Math.max(0, c), 0);
+  if (total <= 0) return { rng: position.state };
+  let seuil = position.value * total;
+  for (let i = 0; i < charge.parCellule.length; i++) {
+    seuil -= Math.max(0, charge.parCellule[i] ?? 0);
+    if (seuil <= 0) return { rng: position.state, origine: i };
+  }
+  return { rng: position.state, origine: coteM * coteM - 1 };
 }
 
 /**

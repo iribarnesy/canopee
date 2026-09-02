@@ -31,15 +31,17 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 0 | 0 | 6 | 6 |
-| H. Gestion, économie, travail | 6 | 4 | 4 | 14 |
+| H. Gestion, économie, travail | 9 | 3 | 4 | 16 |
 | I. Carbone | 4 | 3 | 2 | 9 |
-| **Total** | **50** | **22** | **31** | **103** |
+| J. Biodiversité et structure | 2 | 2 | 2 | 6 |
+| **Total** | **55** | **23** | **33** | **111** |
 
-**Score de réalisme : 50 pleins + 22 partiels sur 103 → 59 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 55 pleins + 23 partiels sur 111 → 60 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
-59 % (feu émergent + sylviculture).*
+59 % (feu émergent + sylviculture) → 60 % (éclaircie outillée, liège,
+récupération des bois brûlés, indice de biodiversité).*
 
 ---
 
@@ -169,7 +171,9 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 | H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |
 | H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ✅ | `valeurSurPied` ; `sylviculture.test.ts` — il faut une bille élaguée ET du diamètre |
 | H7 | Les prix varient (marché, saturation locale) | ❌ | Prix fixes |
-| H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | 🟡 | élagage, recépage, coupe ; l'éclaircie reste à outiller (sélection par critère) |
+| H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, coupe, et éclaircie par critère (`choisirTigesAEclaircir` ; `eclaircie.test.ts`) — les trognes restent à faire |
+| H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
+| H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | ❌ | Chaulage et fauche existent ; le reste non |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
 | H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
@@ -192,11 +196,26 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 
 ---
 
+## J. Biodiversité et structure
+
+Ce que vaut un peuplement au-delà de sa récolte. L'indice est un proxy assumé :
+il classe des situations les unes par rapport aux autres, il ne remplace pas un
+inventaire.
+
+| # | Critère de réalité | État | Porté par / manque |
+|---|---|---|---|
+| J1 | La richesse en essences ET leur équilibre comptent (une essence à 95 % est un désert) | ✅ | `biodiversite.ts` équitabilité de Shannon ; `biodiversite.test.ts` |
+| J2 | Le bois mort est un habitat, pas un déchet | ✅ | pool `deadWoodKgC` intégré à l'indice (ch4-A) |
+| J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | 🟡 | proxy par la hauteur ; pas de vétérans ni de cavités |
+| J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | 🟡 | strates et sempervirence comptées ; pas de lisières ni de structure horizontale |
+| J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ❌ | l'indice s'observe mais n'agit sur rien — il faut le module biotique (G1-G3) |
+| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | ❌ | étalement mesuré, mais aucun insecte ne le consomme (ch4-C) |
+
 ## Ce qui débloquerait le plus de critères
 
-1. **Éclaircie outillée** (sélectionner par critère plutôt qu'arbre par arbre) et fin de vie des produits bois.
-2. **Sylviculture historique** : éclaircie, élagage, recépage, bois d'œuvre (H6, H8, I4, E8).
-2. **Biotique** : gibier, ravageurs à seuils, auxiliaires (G1-G3, G6).
+1. **Biotique** : gibier, ravageurs à seuils, auxiliaires, pollinisateurs
+   (G1-G6) — c'est aussi ce qui donnerait un effet en retour à l'indice de
+   biodiversité (J5, J6), aujourd'hui purement observé.
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
 4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
 

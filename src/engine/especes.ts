@@ -105,6 +105,23 @@ export interface EspeceV0 {
     /** rejette de souche après recépage (taillis, trogne — ch5-A) */
     rejetteDeSouche: boolean;
   };
+  /**
+   * Production qu'on prélève SANS abattre l'arbre et qui repousse : le liège
+   * du chêne-liège, la sève, la résine. C'est ce qui fait vivre une subéraie
+   * pendant des siècles sans jamais la couper.
+   */
+  ecorce?: {
+    nom: string;
+    /** années entre deux levées (le liège met ~10 ans à se reformer) */
+    rotationAns: number;
+    /** âge minimal du premier démasclage */
+    premierAge: number;
+    /** rendement d'un arbre adulte à chaque levée, kg */
+    rendementKg: number;
+    prixEurKg: number;
+    /** temps de levée, h/kg */
+    recolteHKg: number;
+  };
   feu: {
     /**
      * Inflammabilité ∈ [0,1] : ce que l'espèce apporte comme combustible.
@@ -468,6 +485,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 5 },
     bois: { densite: 0.7, prixOeuvreEurM3: 160, rejetteDeSouche: true },
+    // Le liège se lève tous les ~10 ans SANS abattre l'arbre : une subéraie
+    // produit pendant un siècle et demi. C'est la vraie raison de la planter,
+    // bien plus que son bois.
+    ecorce: {
+      nom: "liège",
+      rotationAns: 10,
+      premierAge: 25,
+      rendementKg: 45,
+      prixEurKg: 1.8,
+      recolteHKg: 0.05,
+    },
+    // Cette même écorce isole si bien que l'arbre traverse l'incendie et
+    // repart (atlas : « écorce = liège → résiste au feu »).
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
     sources: [ATLAS],
   },

@@ -28,7 +28,7 @@ const MOIS = [
   "décembre",
 ];
 
-type Mode = "selection" | "planter" | "chauler" | "faucher";
+type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir";
 type Overlay = "eau" | "ph" | "azote" | "herbe";
 
 const panel: React.CSSProperties = {
@@ -222,6 +222,8 @@ export function GameView() {
   const [especeId, setEspeceId] = useState("betula_pendula");
   const [rayonChaulage, setRayonChaulage] = useState(8);
   const [semainesSaison, setSemainesSaison] = useState(4);
+  const [densiteCible, setDensiteCible] = useState(400);
+  const [critereEclaircie, setCritereEclaircie] = useState<"parLeBas" | "parLeHaut">("parLeBas");
   const [mainOuvertePanneau, setMainOuvertePanneau] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
 
@@ -274,6 +276,16 @@ export function GameView() {
       game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
     } else if (mode === "faucher") {
       game.dispatch({ type: "faucher", x: mx, y: my, rayonM: rayonChaulage });
+    } else if (mode === "eclaircir") {
+      game.dispatch({
+        type: "eclaircir",
+        x: mx,
+        y: my,
+        rayonM: rayonChaulage,
+        densiteCibleParHa: densiteCible,
+        critere: critereEclaircie,
+        devenir: "vendre",
+      });
     } else {
       // Sélection au pied de l'arbre ; maj/ctrl = ajouter à la sélection.
       let best: SnapshotTree | undefined;
@@ -399,6 +411,14 @@ export function GameView() {
           </button>
           <button
             type="button"
+            style={btn(mode === "eclaircir")}
+            onClick={() => setMode("eclaircir")}
+            title="Ramener une zone à une densité choisie, en désignant les tiges par un critère"
+          >
+            🌲 Éclaircir
+          </button>
+          <button
+            type="button"
             style={btn(mode === "faucher")}
             onClick={() => setMode("faucher")}
             title="Dégager la strate herbacée autour des jeunes plants — l'entretien qui sauve une plantation sur sol pauvre"
@@ -476,6 +496,47 @@ export function GameView() {
               </div>
             </div>
           )}
+          {mode === "eclaircir" && (
+            <div style={{ marginTop: 6 }}>
+              <button
+                type="button"
+                style={btn(critereEclaircie === "parLeBas")}
+                onClick={() => setCritereEclaircie("parLeBas")}
+                title="Retirer les dominés : la croissance se concentre sur les plus beaux"
+              >
+                par le bas
+              </button>
+              <button
+                type="button"
+                style={btn(critereEclaircie === "parLeHaut")}
+                onClick={() => setCritereEclaircie("parLeHaut")}
+                title="Prélever les gros : on récolte le capital"
+              >
+                par le haut
+              </button>
+              <br />
+              Densité visée :{" "}
+              <input
+                type="range"
+                min={100}
+                max={1500}
+                step={50}
+                value={densiteCible}
+                onChange={(e) => setDensiteCible(Number(e.target.value))}
+                style={{ verticalAlign: "middle", width: 90 }}
+              />{" "}
+              {densiteCible} tiges/ha · rayon{" "}
+              <input
+                type="range"
+                min={3}
+                max={20}
+                value={rayonChaulage}
+                onChange={(e) => setRayonChaulage(Number(e.target.value))}
+                style={{ verticalAlign: "middle", width: 70 }}
+              />{" "}
+              {rayonChaulage} m
+            </div>
+          )}
           {(mode === "chauler" || mode === "faucher") && (
             <div style={{ marginTop: 6 }}>
               Rayon :{" "}
@@ -541,6 +602,16 @@ export function GameView() {
                 🧺 Récolter
               </button>
             )}
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({ type: "leverEcorce", treeIds: selectedTrees.map((t) => t.id) })
+              }
+              title="Lever le liège : une récolte qui ne tue pas l'arbre et revient tous les dix ans"
+            >
+              🟤 Lever l'écorce
+            </button>
             <button
               type="button"
               style={btn()}
@@ -622,6 +693,14 @@ export function GameView() {
             bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
             {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
           </strong>
+          <br />🦋 biodiversité <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
+          <span style={{ opacity: 0.7 }}>
+            ({snapshot.biodiversite.richesse} essence
+            {snapshot.biodiversite.richesse > 1 ? "s" : ""}, strates{" "}
+            {(snapshot.biodiversite.strates * 100).toFixed(0)} %, couvert permanent{" "}
+            {(snapshot.biodiversite.couvertPermanent * 100).toFixed(0)} %, bois mort{" "}
+            {(snapshot.biodiversite.boisMort * 100).toFixed(0)} %)
+          </span>
         </div>
 
         <div style={{ ...panel, maxHeight: 560, overflowY: "auto", fontSize: 13, flex: 1 }}>

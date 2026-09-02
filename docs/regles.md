@@ -263,6 +263,16 @@ Pas de « victoire » unique : des **scénarios** avec objectifs, sur le modèle
 
 **Indicateurs permanents** : trésorerie · h de travail · bilan C · **index biodiversité** (richesse spécifique pondérée × diversité des strates × habitats : bois mort, mare, haies, fleurs 12 mois — proxy honnête, à afficher comme tel) · LER · autonomie alimentaire.
 
+*Implémenté* (`src/engine/biodiversite.ts`, affiché dans le HUD) : richesse
+d'essences, équitabilité de Shannon (une essence à 95 % vaut un désert, même à
+richesse élevée), diversité des strates, gros arbres, bois mort, part de
+couvert permanent, étalement des floraisons. C'est ce qui donne au chêne-liège
+dans une pinède une valeur que son bois seul ne dit pas : sempervirent, il
+apporte du couvert toute l'année, une strate de plus et une essence de plus.
+*Manque* : mare et haies (pas d'objets non-arbres), arbres à cavités, lisières,
+et surtout un **effet en retour** — l'indice s'observe mais ne change rien au
+peuplement tant que le module biotique (§7.4) n'existe pas.
+
 ---
 
 ## 14. Hors périmètre v1 (assumé, pour te répondre « et après ? »)

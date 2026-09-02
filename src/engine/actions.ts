@@ -37,6 +37,11 @@ export const ELAGAGE_HOURS_PAR_M = 0.35;
 export const ELAGAGE_MAX_M = 8;
 /** temps de recépage d'une cépée, h *(à calibrer)* */
 export const RECEPAGE_HOURS = 0.8;
+/**
+ * Décote d'un bois brûlé récupéré en coupe sanitaire : il vaut encore quelque
+ * chose (chauffage, trituration), mais l'œuvre est perdue *(à calibrer)*.
+ */
+export const DECOTE_CHABLIS = 0.4;
 /** salaire hebdomadaire chargé d'un ouvrier en CDI, € *(à calibrer)* */
 export const SALARY_EUR_WEEK = 600;
 /** salaire hebdomadaire d'un saisonnier (précarité incluse), payé d'avance, € */
@@ -129,6 +134,37 @@ export type GameAction =
       x: number;
       y: number;
       rayonM: number;
+    }
+  | {
+      /**
+       * Lever l'écorce (démasclage du liège) : une récolte qui ne tue pas
+       * l'arbre et qui revient tous les dix ans.
+       */
+      type: "leverEcorce";
+      week: number;
+      treeIds: number[];
+    }
+  | {
+      /**
+       * Éclaircir une zone jusqu'à une densité cible, en désignant les tiges
+       * par un CRITÈRE plutôt qu'une par une (ch5-A « les coupes »).
+       *  - `parLeBas` : on retire les dominés — l'éclaircie classique, qui
+       *    concentre la croissance sur les plus beaux sujets ;
+       *  - `parLeHaut` : on prélève les gros — récolte du capital ;
+       *  - `espece` : on retire une essence (dégager une nurse, diversifier
+       *    une pinède pour couper la continuité du combustible).
+       */
+      type: "eclaircir";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+      /** tiges/ha visées après passage */
+      densiteCibleParHa: number;
+      critere: "parLeBas" | "parLeHaut" | "espece";
+      /** pour le critère « espece » */
+      especeId?: string;
+      devenir: "vendre" | "epandre";
     }
   | {
       /**
@@ -316,9 +352,10 @@ function applyCouper(
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
 
   for (const id of action.treeIds) {
-    const idx = trees.findIndex((t) => t.id === id && t.alive);
+    // Un arbre tué par le feu mais encore debout se récolte aussi.
+    const idx = trees.findIndex((t) => t.id === id && (t.alive || t.brulEeSemaine !== undefined));
     if (idx < 0) {
-      refusals.push(refuse(action.week, "couper", `arbre ${id} introuvable ou mort`));
+      refusals.push(refuse(action.week, "couper", `arbre ${id} introuvable`));
       continue;
     }
     const tree = trees[idx];
@@ -338,8 +375,9 @@ function applyCouper(
       treeTotalCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, tree.heightM);
     if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
-      treasuryEur += vente.eur;
-      if (vente.qualite === "oeuvre") {
+      const brule = tree.brulEeSemaine !== undefined;
+      treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1);
+      if (vente.qualite === "oeuvre" && !brule) {
         // Bois d'œuvre : le carbone reste piégé dans le produit (charpente,
         // meuble) pour des décennies — ce n'est pas une émission (§12).
         oeuvreCumKgC += treeAboveCarbonKg(espece, tree.heightM);
@@ -614,6 +652,105 @@ function applyReceper(
   };
 }
 
+/**
+ * Désigne les arbres à retirer pour ramener une zone à sa densité cible.
+ * C'est le cœur de l'éclaircie : le joueur dit ce qu'il veut obtenir, le
+ * moteur choisit les tiges selon le critère demandé.
+ */
+export function choisirTigesAEclaircir(
+  state: GameState,
+  action: Extract<GameAction, { type: "eclaircir" }>,
+): number[] {
+  const r2 = action.rayonM * action.rayonM;
+  const dansZone = state.trees.filter((t) => {
+    if (!t.alive) return false;
+    const dx = t.x - action.x;
+    const dy = t.y - action.y;
+    return dx * dx + dy * dy <= r2;
+  });
+  if (action.critere === "espece") {
+    return dansZone.filter((t) => t.especeId === action.especeId).map((t) => t.id);
+  }
+  const surfaceHa = (Math.PI * r2) / 10_000;
+  const aGarder = Math.max(0, Math.round(action.densiteCibleParHa * surfaceHa));
+  if (dansZone.length <= aGarder) return [];
+  // Par le bas : on sacrifie les dominés. Par le haut : on prélève les gros.
+  const ordre = [...dansZone].sort((a, b) =>
+    action.critere === "parLeBas" ? a.heightM - b.heightM : b.heightM - a.heightM,
+  );
+  return ordre.slice(0, dansZone.length - aGarder).map((t) => t.id);
+}
+
+/** L'arbre est-il en état de donner son écorce (âge, délai depuis la dernière levée) ? */
+export function ecorceRecoltable(
+  tree: { especeId: string; ageWeeks: number; heightM: number; derniereLeveeSemaine?: number },
+  semaine: number,
+): boolean {
+  const espece = getEspece(tree.especeId);
+  const ecorce = espece.ecorce;
+  if (!ecorce) return false;
+  if (tree.ageWeeks < ecorce.premierAge * 52) return false;
+  if (tree.derniereLeveeSemaine === undefined) return true;
+  return semaine - tree.derniereLeveeSemaine >= ecorce.rotationAns * 52;
+}
+
+function applyLeverEcorce(
+  state: GameState,
+  action: Extract<GameAction, { type: "leverEcorce" }>,
+): ApplyResult {
+  const refusals: ActionRefusal[] = [];
+  let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
+  const trees = [...state.trees];
+  for (const id of action.treeIds) {
+    const idx = trees.findIndex((t) => t.id === id && t.alive);
+    const tree = idx >= 0 ? trees[idx] : undefined;
+    if (!tree) {
+      refusals.push(refuse(action.week, "leverEcorce", `arbre ${id} introuvable`));
+      continue;
+    }
+    const ecorce = getEspece(tree.especeId).ecorce;
+    if (!ecorce) {
+      refusals.push(
+        refuse(
+          action.week,
+          "leverEcorce",
+          `${getEspece(tree.especeId).nom} n'a pas d'écorce à lever`,
+        ),
+      );
+      continue;
+    }
+    if (!ecorceRecoltable(tree, action.week)) {
+      refusals.push(
+        refuse(
+          action.week,
+          "leverEcorce",
+          `arbre ${id} : trop jeune ou levé il y a moins de ${ecorce.rotationAns} ans`,
+        ),
+      );
+      continue;
+    }
+    // Le rendement suit la taille : un gros arbre porte plus de planches.
+    const kg = ecorce.rendementKg * Math.min(1.5, tree.heightM / 12);
+    const hours = kg * ecorce.recolteHKg;
+    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+      refusals.push(refuse(action.week, "leverEcorce", "plafond hebdomadaire atteint"));
+      break;
+    }
+    hoursUsedWeek += hours;
+    hoursUsedYear += hours;
+    treasuryEur += kg * ecorce.prixEurKg;
+    trees[idx] = { ...tree, derniereLeveeSemaine: action.week };
+  }
+  return {
+    state: {
+      ...state,
+      trees,
+      economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
+    },
+    refusals,
+  };
+}
+
 export function applyAction(state: GameState, action: GameAction): ApplyResult {
   if (state.economy.bankrupt) {
     return { state, refusals: [refuse(action.week, action.type, "faillite")] };
@@ -697,6 +834,23 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyChauler(state, action);
     case "faucher":
       return applyFaucher(state, action);
+    case "eclaircir": {
+      const treeIds = choisirTigesAEclaircir(state, action);
+      if (treeIds.length === 0) {
+        return {
+          state,
+          refusals: [refuse(action.week, "eclaircir", "rien à prélever : la zone est déjà claire")],
+        };
+      }
+      return applyCouper(state, {
+        type: "couper",
+        week: action.week,
+        treeIds,
+        devenir: action.devenir,
+      });
+    }
+    case "leverEcorce":
+      return applyLeverEcorce(state, action);
     case "elaguer":
       return applyElaguer(state, action);
     case "receper":

@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  applyAction,
   diametreCm,
   type GameAction,
   valeurSurPied,
@@ -18,6 +19,8 @@ import {
 import { getEspece } from "../../src/engine/especes";
 import { runJournal } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
+import { rngStateFromSeed } from "../../src/engine/rng";
+import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
@@ -127,5 +130,63 @@ describe("carbone : l'œuvre stocke, les bûches émettent", () => {
     const { state } = runJournal(STATION, journal, WEATHER, 5);
     expect(state.carbon.oeuvreCumKgC).toBe(0);
     expect(state.carbon.exportedEnergyCumKgC).toBe(0);
+  });
+});
+
+describe("le liège : produire sans abattre", () => {
+  it("un chêne-liège adulte donne son écorce, et l'arbre reste debout", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "quercus_suber", 20, 20, 10);
+    // On vieillit l'arbre jusqu'à l'âge du premier démasclage.
+    state = {
+      ...state,
+      trees: state.trees.map((t) => ({ ...t, ageWeeks: 30 * 52 })),
+    };
+    const tresorAvant = state.economy.treasuryEur;
+    const { state: apres, refusals } = applyAction(state, {
+      type: "leverEcorce",
+      week: 30 * 52,
+      treeIds: [1],
+    });
+    expect(refusals).toEqual([]);
+    expect(apres.economy.treasuryEur).toBeGreaterThan(tresorAvant + 30);
+    const arbre = apres.trees.find((t) => t.id === 1);
+    expect(arbre?.alive).toBe(true); // il produit sans mourir
+    expect(arbre?.derniereLeveeSemaine).toBe(30 * 52);
+  });
+
+  it("on ne relève pas l'écorce avant que le liège se soit reformé", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "quercus_suber", 20, 20, 10);
+    state = { ...state, trees: state.trees.map((t) => ({ ...t, ageWeeks: 30 * 52 })) };
+    const premier = applyAction(state, { type: "leverEcorce", week: 30 * 52, treeIds: [1] });
+    const trop_tot = applyAction(premier.state, {
+      type: "leverEcorce",
+      week: 33 * 52,
+      treeIds: [1],
+    });
+    expect(trop_tot.refusals[0]?.reason).toContain("moins de 10 ans");
+    // Dix ans plus tard, c'est reparti.
+    const apresRotation = applyAction(premier.state, {
+      type: "leverEcorce",
+      week: 41 * 52,
+      treeIds: [1],
+    });
+    expect(apresRotation.refusals).toEqual([]);
+  });
+
+  it("un jeune chêne-liège n'a pas encore de liège exploitable", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "quercus_suber", 20, 20, 4);
+    const { refusals } = applyAction(state, { type: "leverEcorce", week: 52 * 5, treeIds: [1] });
+    expect(refusals[0]?.reason).toContain("trop jeune");
+  });
+
+  it("les autres essences n'ont pas d'écorce à lever", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "pinus_sylvestris", 20, 20, 15);
+    state = { ...state, trees: state.trees.map((t) => ({ ...t, ageWeeks: 40 * 52 })) };
+    const { refusals } = applyAction(state, { type: "leverEcorce", week: 40 * 52, treeIds: [1] });
+    expect(refusals[0]?.reason).toContain("pas d'écorce");
   });
 });

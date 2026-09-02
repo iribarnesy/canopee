@@ -5,6 +5,7 @@
  */
 
 import type { ActionRefusal, EconomyState, GameAction } from "../engine/actions";
+import type { IndiceBiodiversite } from "../engine/biodiversite";
 import type { CarbonInventory } from "../engine/carbon";
 import type { WeekWeather } from "../engine/meteo";
 import type { TickFluxes } from "../engine/state";
@@ -49,6 +50,7 @@ export interface Snapshot {
   weather: WeekWeather;
   economy: EconomyState;
   inventory: CarbonInventory;
+  biodiversite: IndiceBiodiversite;
   fluxes: TickFluxes;
   trees: SnapshotTree[];
   soilWater: Float32Array;

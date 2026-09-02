@@ -194,7 +194,7 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     state = plantAt(state, "quercus_suber", 10 + (i % 5) * 9, 12 + Math.floor(i / 5) * 14, 5);
   }
   let incendies = 0;
-  let carboneParti = 0;
+  let arbresTues = 0;
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
@@ -202,13 +202,13 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     state = r.state;
     if (r.incendie) {
       incendies++;
-      carboneParti += r.incendie.carboneTHa;
+      arbresTues += r.incendie.arbresTues;
     }
   }
 
-  it("la lande finit par brûler", () => {
+  it("la lande finit par brûler et le feu tue", () => {
     expect(incendies).toBeGreaterThan(0);
-    expect(carboneParti).toBeGreaterThan(1);
+    expect(arbresTues).toBeGreaterThan(5);
   });
 
   it("après le feu, c'est le chêne-liège qui tient le terrain", () => {

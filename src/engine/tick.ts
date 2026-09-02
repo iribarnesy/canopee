@@ -81,6 +81,11 @@ const RECRUITMENT_WEEK = 14;
 /** semaine de la chute des feuilles (automne) */
 const LITTERFALL_WEEK = 44;
 /**
+ * Combien de temps un arbre tué par le feu reste récupérable avant que le bois
+ * ne se déprécie (bleuissement, insectes) : environ un an *(à calibrer)*.
+ */
+const CHABLIS_RECUPERABLE_SEMAINES = 52;
+/**
  * Part de l'azote acquis dans l'année qui retourne au sol avec les feuilles ;
  * le reste est retenu dans le bois *(à calibrer — rétranslocation ch3-B)*.
  */
@@ -510,6 +515,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (const tree of nextTrees) {
     if (tree.alive) {
       survivors.push(tree);
+    } else if (
+      tree.brulEeSemaine !== undefined &&
+      state.week - tree.brulEeSemaine < CHABLIS_RECUPERABLE_SEMAINES
+    ) {
+      // Sur pied et encore commercialisable : on le garde en jeu.
+      survivors.push(tree);
     } else {
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM);
@@ -572,12 +583,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           apresFeu.push(tree);
           continue;
         }
-        carboneFeuKgC += treeAboveCarbonKg(espece, tree.heightM);
         tues++;
         if (espece.feu.rejetteApresFeu && tree.heightM > 0.6) {
           // Rejet de souche : l'arbre repart d'en bas, avec ses racines
           // intactes — c'est ce qui fait des pyrophytes des gagnants du feu.
           rejets++;
+          // La partie aérienne a brûlé, la souche repart.
+          carboneFeuKgC += treeAboveCarbonKg(espece, tree.heightM);
           apresFeu.push({
             ...tree,
             heightM: 0.4,
@@ -585,7 +597,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             fruitsKg: 0,
             fruitProgress: 0,
             uptakeYearG: 0,
+            hauteurElagueeM: 0,
           });
+        } else {
+          // Arbre tué mais toujours debout : récupérable en coupe sanitaire
+          // pendant quelques mois (§7.4). Son carbone n'est pas encore parti.
+          apresFeu.push({ ...tree, alive: false, causeMort: "feu", brulEeSemaine: state.week });
         }
       }
       nextTrees = apresFeu;

@@ -9,6 +9,7 @@
 import { serieMeteoPour } from "../data/meteo";
 import type { ActionRefusal, GameAction } from "../engine/actions";
 import { applyAction, valeurSurPied } from "../engine/actions";
+import { indiceBiodiversite } from "../engine/biodiversite";
 import { carbonInventory } from "../engine/carbon";
 import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
@@ -125,6 +126,20 @@ function performAction(action: GameAction) {
     case "faucher":
       event("🌾", `Fauche : ${dHeures.toFixed(1)} h — les jeunes plants respirent`);
       break;
+    case "eclaircir": {
+      const n = before.trees.length - state.trees.length;
+      if (n > 0)
+        event(
+          "🌲",
+          `Éclaircie ${action.critere === "parLeBas" ? "par le bas" : action.critere === "parLeHaut" ? "par le haut" : "sélective"} : ${n} tiges prélevées, ${eur}`,
+        );
+      break;
+    }
+    case "leverEcorce": {
+      if (dEur > 0)
+        event("🟤", `Liège levé : ${eur} (${dHeures.toFixed(1)} h) — les arbres restent debout`);
+      break;
+    }
     case "elaguer": {
       const n = action.treeIds.length;
       event(
@@ -193,6 +208,11 @@ function postSnapshot() {
     weather: w,
     economy: state.economy,
     inventory: carbonInventory(state, sc.station.initialSoilCTHa),
+    biodiversite: indiceBiodiversite(
+      state.trees,
+      state.carbon.deadWoodKgC,
+      (sc.station.coteM * sc.station.coteM) / 10_000,
+    ),
     fluxes: lastFluxes ?? emptyFluxes(),
     events: pendingEvents,
     trees: state.trees

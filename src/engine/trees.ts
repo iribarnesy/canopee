@@ -54,6 +54,14 @@ export interface TreeState {
   hauteurElagueeM: number;
   /** nombre de recépages subis (taillis, trogne) */
   recepages: number;
+  /** semaine de la dernière levée d'écorce (liège) ; absent = jamais démasclé */
+  derniereLeveeSemaine?: number;
+  /**
+   * Semaine où le feu l'a tué. L'arbre reste debout : on peut encore le
+   * récolter en coupe sanitaire, à prix déprécié, avant que le bois ne
+   * bleuisse et que les insectes ne s'y mettent.
+   */
+  brulEeSemaine?: number;
   /**
    * Profondeur réellement explorée par les racines, cm. Ce n'est pas une
    * propriété figée : l'arbre INVESTIT vers le bas quand la surface ne suffit
