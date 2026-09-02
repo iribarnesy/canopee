@@ -17,6 +17,14 @@ import {
   PAYSAGES,
   resumeBordures,
 } from "../engine/paysage";
+import {
+  ALTITUDE_SERIE_M,
+  anomalieAltitudeC,
+  coefficientRuissellement,
+  facteurExpositionRayonnement,
+  type Relief,
+  RUISSELLEMENT_AMONT,
+} from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
 import { SPECIES_COLORS } from "../ui/couleurs";
 import type { Snapshot, SnapshotTree } from "./protocol";
@@ -194,6 +202,7 @@ function StartScreen({
     meteo: "reelle" | "synthetique",
     scenario: ScenarioId,
     bordures: Bordures,
+    relief: Relief,
     anneeDepart: number,
   ) => void;
   onResume: () => void;
@@ -204,9 +213,25 @@ function StartScreen({
   const [bordures, setBordures] = useState<Bordures>(bordersUniformes(PAYSAGES[1]?.id ?? "bocage"));
   const [cotesSeparees, setCotesSeparees] = useState(false);
   const [anneeDepart, setAnneeDepart] = useState(2026);
+  const [relief, setRelief] = useState<Relief>(
+    STATIONS_V0[0]?.station.relief ?? {
+      altitudeM: 120,
+      pentePct: 0,
+      expositionDeg: 180,
+      forme: "plan",
+      bassinAmontHa: 0,
+    },
+  );
   const save = loadSave();
 
   const choisie = STATIONS_V0.find((s) => s.station.id === stationId);
+  // Changer de terrain remet le relief d'origine de la station : c'est celui
+  // qui va avec ce sol (un podzol landais n'est pas sur un flanc de montagne).
+  // Le joueur le déforme ensuite comme il veut.
+  useEffect(() => {
+    const s = STATIONS_V0.find((x) => x.station.id === stationId);
+    if (s) setRelief(s.station.relief);
+  }, [stationId]);
   // Ce que l'entourage donnera vraiment, calculé par le moteur lui-même : les
   // semis annoncés par un paysage sont filtrés par ce que CE sol supporte.
   const entourage = useMemo(
@@ -221,6 +246,17 @@ function StartScreen({
     .sort((a, b) => b.semisParAn - a.semisParAn)
     .slice(0, 3)
     .map((v) => getEspece(v.especeId).nom.toLowerCase());
+
+  // Ce que le relief change, calculé par le moteur : température avec
+  // l'altitude, rayonnement avec l'exposition, part de la pluie qui file en
+  // surface au lieu de s'infiltrer, et ce qui arrive du bassin d'amont.
+  const anomalieC = anomalieAltitudeC(relief, ALTITUDE_SERIE_M);
+  const rayonnement = facteurExpositionRayonnement(relief);
+  const ruissellementNu = coefficientRuissellement(relief.pentePct, 0.1, 0.5);
+  const ruissellementCouvert = coefficientRuissellement(relief.pentePct, 0.95, 0.5);
+  const pluieHebdoMm = (choisie?.climat.rainAnnualMm ?? 800) / 52;
+  const surfaceHa = (choisie?.station.coteM ?? 100) ** 2 / 10000;
+  const amontMm = (pluieHebdoMm * RUISSELLEMENT_AMONT * relief.bassinAmontHa) / surfaceHa;
 
   const setCote = (cote: keyof Bordures, id: string) =>
     setBordures(cotesSeparees ? { ...bordures, [cote]: id } : bordersUniformes(id));
@@ -345,6 +381,124 @@ function StartScreen({
       </section>
 
       <section className="carte">
+        <h3>Le relief</h3>
+        <p className="sous">
+          L'eau et la chaleur ne se répartissent pas à plat : une pente fait filer la pluie, un
+          versant sud grille, un vallon reçoit ce que le bassin d'amont lui envoie.
+        </p>
+        <div className="reglages">
+          <label htmlFor="altitude">Altitude</label>
+          <input
+            id="altitude"
+            type="range"
+            min={20}
+            max={1600}
+            step={20}
+            value={relief.altitudeM}
+            onChange={(e) => setRelief({ ...relief, altitudeM: Number(e.target.value) })}
+          />
+          <span className="valeur">{relief.altitudeM} m</span>
+
+          <label htmlFor="pente">Pente</label>
+          <input
+            id="pente"
+            type="range"
+            min={0}
+            max={45}
+            step={1}
+            value={relief.pentePct}
+            onChange={(e) => setRelief({ ...relief, pentePct: Number(e.target.value) })}
+          />
+          <span className="valeur">{relief.pentePct} %</span>
+
+          <label htmlFor="amont">Bassin amont</label>
+          <input
+            id="amont"
+            type="range"
+            min={0}
+            max={20}
+            step={0.5}
+            value={relief.bassinAmontHa}
+            onChange={(e) => setRelief({ ...relief, bassinAmontHa: Number(e.target.value) })}
+          />
+          <span className="valeur">{relief.bassinAmontHa.toFixed(1)} ha</span>
+
+          <span className="intitule">Exposition</span>
+          <div className="choix">
+            {(
+              [
+                [0, "Nord (ubac)"],
+                [90, "Est"],
+                [180, "Sud (adret)"],
+                [270, "Ouest"],
+              ] as const
+            ).map(([deg, libelle]) => (
+              <button
+                key={deg}
+                type="button"
+                style={btn(relief.expositionDeg === deg)}
+                disabled={relief.pentePct === 0}
+                title={
+                  relief.pentePct === 0
+                    ? "Sans pente, l'exposition ne change rien"
+                    : "Le versant que regarde la pente"
+                }
+                onClick={() => setRelief({ ...relief, expositionDeg: deg })}
+              >
+                {libelle}
+              </button>
+            ))}
+          </div>
+
+          <span className="intitule">Forme</span>
+          <div className="choix">
+            {(
+              [
+                ["plan", "Versant régulier", "Une pente d'un seul tenant."],
+                [
+                  "vallon",
+                  "Vallon (entonnoir)",
+                  "Les versants convergent : l'eau se concentre au milieu de la parcelle.",
+                ],
+                [
+                  "croupe",
+                  "Croupe (dos d'âne)",
+                  "Le terrain bombe : l'eau s'écarte des deux côtés et le sommet reste sec.",
+                ],
+              ] as const
+            ).map(([forme, libelle, aide]) => (
+              <button
+                key={forme}
+                type="button"
+                style={btn(relief.forme === forme)}
+                title={aide}
+                onClick={() => setRelief({ ...relief, forme })}
+              >
+                {libelle}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="effets">
+          <span title="0,6 °C de moins par 100 m d'altitude, par rapport à la station météo">
+            🌡 {anomalieC >= 0 ? "+" : ""}
+            {anomalieC.toFixed(1)} °C
+          </span>
+          <span title="un versant sud reçoit plus d'énergie : il évapore plus et sèche plus tôt">
+            ☀️ rayonnement {rayonnement >= 1 ? "+" : ""}
+            {((rayonnement - 1) * 100).toFixed(0)} %
+          </span>
+          <span title="part de la pluie qui file en surface au lieu de s'infiltrer">
+            💧 ruissellement {(ruissellementNu * 100).toFixed(0)} % à nu ·{" "}
+            {(ruissellementCouvert * 100).toFixed(0)} % sous couvert
+          </span>
+          <span title="eau reçue du bassin situé au-dessus, en semaine de pluie moyenne">
+            ⬇️ {amontMm.toFixed(1)} mm/sem d'amont
+          </span>
+        </div>
+      </section>
+
+      <section className="carte">
         <h3>Le climat</h3>
         <p className="sous">Ce qu'on plante aujourd'hui vivra dedans.</p>
         <div className="seg">
@@ -390,7 +544,9 @@ function StartScreen({
         <button
           type="button"
           style={{ ...btn(true), padding: "8px 20px", fontSize: 14, fontWeight: 600 }}
-          onClick={() => onStart(stationId, seed, "reelle", scenario, bordures, anneeDepart)}
+          onClick={() =>
+            onStart(stationId, seed, "reelle", scenario, bordures, relief, anneeDepart)
+          }
         >
           Démarrer
         </button>

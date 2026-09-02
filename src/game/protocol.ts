@@ -10,6 +10,7 @@ import type { CarbonInventory } from "../engine/carbon";
 import type { ScenarioId } from "../engine/climat";
 import type { WeekWeather } from "../engine/meteo";
 import type { Bordures } from "../engine/paysage";
+import type { Relief } from "../engine/relief";
 import type { TickFluxes } from "../engine/state";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
@@ -28,6 +29,8 @@ export interface SaveGame {
   paysageId: string;
   /** ce qu'il y a de chaque côté ; absent = ancienne sauvegarde uniforme */
   bordures?: Bordures;
+  /** relief choisi ; absent = celui d'origine de la station */
+  relief?: Relief;
   /** année civile du début de partie */
   anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
@@ -104,6 +107,7 @@ export type ToWorker =
       meteo: "reelle" | "synthetique";
       scenario: ScenarioId;
       bordures: Bordures;
+      relief: Relief;
       anneeDepart: number;
     }
   | { type: "resume"; save: SaveGame }

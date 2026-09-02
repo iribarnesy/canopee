@@ -175,6 +175,49 @@ select {
   );
 }
 
+/* Un réglage continu : intitulé, curseur, valeur — alignés en colonnes. */
+.reglages {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 6px 12px;
+  align-items: center;
+  max-width: 470px;
+}
+
+.reglages > label,
+.reglages > .intitule {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--encre-douce);
+  white-space: nowrap;
+}
+
+.reglages input[type="range"] {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--foret);
+}
+
+.reglages .valeur {
+  font-family: system-ui, sans-serif;
+  font-size: 12.5px;
+  white-space: nowrap;
+  min-width: 62px;
+  text-align: right;
+}
+
+.reglages .choix {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
 .effets {
   display: flex;
   flex-wrap: wrap;

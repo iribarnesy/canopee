@@ -29,7 +29,7 @@ import {
   entourageDeLaStation,
   resumeBordures,
 } from "../engine/paysage";
-import { ALTITUDE_SERIE_M, anomalieAltitudeC } from "../engine/relief";
+import { ALTITUDE_SERIE_M, anomalieAltitudeC, type Relief } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
 import { ruHorizonMm } from "../engine/soil";
 import { createGameState, type GameState, type Station, type TickFluxes } from "../engine/state";
@@ -47,6 +47,8 @@ let meteoMode: "reelle" | "synthetique" = "reelle";
 let scenario: ScenarioId = "ssp245";
 let anneeDepart = 2026;
 let bordures: Bordures = bordersUniformes("bocage");
+// Relief choisi au lancement ; à défaut, celui d'origine de la station.
+let relief: Relief | undefined;
 // Normales saisonnières de la série : elles servent à accentuer les extrêmes.
 let normales: Normales | undefined;
 let seed = 1;
@@ -252,14 +254,15 @@ function meteoSemaine(absolue: number): WeekWeather {
     anneeDepart + Math.floor(absolue / 52),
     normales,
     // L'altitude de la parcelle par rapport à celle de la station météo.
-    sc ? anomalieAltitudeC(sc.station.relief, ALTITUDE_SERIE_M) : 0,
+    sc ? anomalieAltitudeC(relief ?? sc.station.relief, ALTITUDE_SERIE_M) : 0,
   );
 }
 
-/** La station telle qu'elle est, mais dans le paysage choisi par le joueur. */
+/** La station telle qu'elle est, mais dans le paysage et le relief choisis. */
 function stationAvecPaysage(base: Station): Station {
   return {
     ...base,
+    relief: relief ?? base.relief,
     paysageId: bordures.nord,
     bordures,
     ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),
@@ -532,11 +535,13 @@ function init(
   mode: "reelle" | "synthetique",
   scenarioId: ScenarioId,
   bordersChoisies: Bordures,
+  reliefChoisi: Relief,
   annee: number,
 ) {
   scenario = scenarioId;
   anneeDepart = annee;
   bordures = bordersChoisies;
+  relief = reliefChoisi;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -563,7 +568,15 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   const msg = event.data;
   switch (msg.type) {
     case "init":
-      init(msg.stationId, msg.seed, msg.meteo, msg.scenario, msg.bordures, msg.anneeDepart);
+      init(
+        msg.stationId,
+        msg.seed,
+        msg.meteo,
+        msg.scenario,
+        msg.bordures,
+        msg.relief,
+        msg.anneeDepart,
+      );
       break;
     case "resume": {
       // Rejoue la sauvegarde : même séquence beginWeek → actions → tick.
@@ -572,6 +585,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       meteoMode = msg.save.meteo;
       scenario = msg.save.scenario;
       bordures = msg.save.bordures ?? bordersUniformes(msg.save.paysageId);
+      relief = msg.save.relief;
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
@@ -616,6 +630,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         scenario,
         paysageId: bordures.nord,
         bordures,
+        relief: relief ?? sc?.station.relief,
         anneeDepart,
         weeks: state.week,
         actions: journal,
