@@ -11,7 +11,14 @@ import type { ActionRefusal, GameAction } from "../engine/actions";
 import { applyAction, valeurSurPied } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
 import { carbonInventory } from "../engine/carbon";
-import { CO2_ACTUEL_PPM, getScenario, meteoDerivee, type ScenarioId } from "../engine/climat";
+import {
+  CO2_ACTUEL_PPM,
+  getScenario,
+  meteoDerivee,
+  type Normales,
+  normalesHebdo,
+  type ScenarioId,
+} from "../engine/climat";
 import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
@@ -32,6 +39,8 @@ let journal: GameAction[] = [];
 let meteoMode: "reelle" | "synthetique" = "reelle";
 let scenario: ScenarioId = "ssp245";
 let anneeDepart = 2026;
+// Normales saisonnières de la série : elles servent à accentuer les extrêmes.
+let normales: Normales | undefined;
 let seed = 1;
 let weeksPerSecond = 0;
 let pendingRefusals: ActionRefusal[] = [];
@@ -206,6 +215,7 @@ function meteoSemaine(absolue: number): WeekWeather {
     absolue % 52,
     getScenario(scenario),
     anneeDepart + Math.floor(absolue / 52),
+    normales,
   );
 }
 
@@ -472,6 +482,7 @@ function init(
   meteoMode = mode;
   seed = newSeed;
   weather = loadWeather(stationId, mode);
+  normales = normalesHebdo(weather);
   state = beginWeek(createGameState(sc.station, rngStateFromSeed(newSeed)));
   journal = [];
   pendingRefusals = [];
@@ -501,6 +512,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
+      normales = normalesHebdo(weather);
       journal = msg.save.actions;
       let replayed = createGameState(sc.station, rngStateFromSeed(seed));
       for (let i = 0; i < msg.save.weeks; i++) {

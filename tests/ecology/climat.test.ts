@@ -19,6 +19,7 @@ import {
   facteurPluie,
   getScenario,
   meteoDerivee,
+  normalesHebdo,
   rechauffementGlobalC,
 } from "../../src/engine/climat";
 import { advanceWeek } from "../../src/engine/game";
@@ -143,6 +144,56 @@ describe("le CO₂ : ce qu'il donne et ce qu'il ne donne pas", () => {
     // multiplie un potentiel que la loi du minimum a déjà réduit à presque
     // rien. Il ne fabrique pas d'eau.
     expect(assoiffe.avec - assoiffe.sans).toBeLessThan(0.25 * (alaise.avec - alaise.sans));
+  });
+});
+
+describe("les extrêmes s'aggravent plus vite que les moyennes (D11)", () => {
+  const normales = normalesHebdo(OBSERVATIONS);
+
+  it("une canicule gagne plus de degrés qu'une semaine ordinaire de la même saison", () => {
+    const s = 30; // début août
+    const semaines = OBSERVATIONS.filter((_, i) => i % 52 === s);
+    const ordinaire = semaines.reduce((a, b) =>
+      Math.abs(b.tMean - (normales.tMean[s] ?? 0)) < Math.abs(a.tMean - (normales.tMean[s] ?? 0))
+        ? b
+        : a,
+    );
+    const canicule = semaines.reduce((a, b) => (b.tMean > a.tMean ? b : a));
+    const sc = getScenario("ssp585");
+    const gain = (w: (typeof semaines)[number]) =>
+      meteoDerivee(w, s, sc, 2090, normales).tMean - w.tMean;
+    expect(gain(canicule)).toBeGreaterThan(gain(ordinaire) + 0.5);
+  });
+
+  it("une semaine déjà en déficit se creuse au-delà du simple décalage", () => {
+    const s = 30;
+    const semaines = OBSERVATIONS.filter((_, i) => i % 52 === s);
+    const normale = normales.rainMm[s] ?? 0;
+    // Une semaine sous sa normale, mais pas à zéro (on ne peut pas creuser
+    // au-dessous de rien).
+    const enDeficit = semaines
+      .filter((w) => w.rainMm > 2 && w.rainMm < normale)
+      .reduce((a, b) => (b.rainMm < a.rainMm ? b : a));
+    const arrosee = semaines.reduce((a, b) => (b.rainMm > a.rainMm ? b : a));
+    const sc = getScenario("ssp585");
+    // Comparé au seul décalage saisonnier : la semaine en déficit perd en plus,
+    // celle au-dessus de sa normale ne perd rien de plus.
+    expect(meteoDerivee(enDeficit, s, sc, 2090, normales).rainMm).toBeLessThan(
+      meteoDerivee(enDeficit, s, sc, 2090).rainMm,
+    );
+    expect(meteoDerivee(arrosee, s, sc, 2090, normales).rainMm).toBeCloseTo(
+      meteoDerivee(arrosee, s, sc, 2090).rainMm,
+      6,
+    );
+  });
+
+  it("sans normales, on retombe sur le simple décalage de moyenne", () => {
+    const base = OBSERVATIONS[30];
+    if (!base) throw new Error("météo manquante");
+    const sc = getScenario("ssp585");
+    expect(meteoDerivee(base, 30, sc, 2090).tMean).toBeLessThanOrEqual(
+      meteoDerivee(base, 30, sc, 2090, normales).tMean + 1e-9,
+    );
   });
 });
 

@@ -14,7 +14,7 @@ import { serieMeteoPour } from "../data/meteo";
 import type { GameAction } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
 import { T_HA_TO_G_M2 } from "../engine/carbon";
-import { getScenario, meteoDerivee } from "../engine/climat";
+import { getScenario, meteoDerivee, normalesHebdo } from "../engine/climat";
 import { ESPECES_V0 } from "../engine/especes";
 import { advanceWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
@@ -122,12 +122,13 @@ function courbe(
 ): number[] {
   let state = preparer(createGameState(st, rngStateFromSeed(7)));
   const scenario = getScenario(scenarioId);
+  const normales = normalesHebdo(weather);
   const cumul: Cumuls = { mortsParCause: {}, etpAnnee: 0, incendies: 0 };
   const valeurs: number[] = [];
   for (let i = 0; i < ans * 52; i++) {
     const base = weather[i % weather.length];
     if (!base) throw new Error("météo manquante");
-    const w = meteoDerivee(base, i % 52, scenario, anneeDepart + Math.floor(i / 52));
+    const w = meteoDerivee(base, i % 52, scenario, anneeDepart + Math.floor(i / 52), normales);
     const r = advanceWeek(state, w, actions);
     state = r.state;
     cumul.etpAnnee += r.fluxes.etpMm;
@@ -324,6 +325,7 @@ const BAC_A_SABLE: Experience = {
 
     const w = meteo(meteoId);
     const scenario = getScenario(scenarioId);
+    const normales = normalesHebdo(w);
     let state = createGameState(st, rngStateFromSeed(7));
     const parAn: Record<string, number[]> = {};
     for (const e of ESPECES_V0) parAn[e.id] = [];
@@ -332,7 +334,7 @@ const BAC_A_SABLE: Experience = {
       if (!base) throw new Error("météo manquante");
       state = advanceWeek(
         state,
-        meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52)),
+        meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52), normales),
         [],
       ).state;
       if ((i + 1) % 52 === 0) {

@@ -295,9 +295,12 @@ qu'une semaine plus chaude et un CO₂ plus élevé.
   ~+20 % pour un doublement, appliquée au POTENTIEL donc bornée par la loi du
   minimum — un arbre qui a soif n'en profite pas) et il ferme les stomates, ce
   qui économise de l'eau sans jamais compenser la hausse de l'ETP.
-- **La variabilité reste celle des observations** : on décale la moyenne, on
-  ne fabrique pas de canicules. C'est une limite assumée, et elle sous-estime
-  le risque (les extrêmes s'aggravent plus vite que les moyennes).
+- **Les extrêmes s'aggravent plus vite que la moyenne** : la distribution ne se
+  décale pas, elle s'étire par le haut. On amplifie donc l'écart d'une semaine
+  à sa normale saisonnière quand il est CHAUD (+8 %/°C de réchauffement) et le
+  déficit quand elle est SÈCHE (+5 %/°C) ; les semaines fraîches ou arrosées ne
+  sont pas touchées. *Limite qui demeure* : un été sec qui suit un été sec ne
+  se cumule pas — or c'est l'enchaînement qui tue.
 
 Constat au passage : même sans scénario, la série 1964-2023 rejouée telle
 quelle fait monter l'ETP de 16 % en soixante ans. Le réchauffement observé est

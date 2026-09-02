@@ -64,6 +64,32 @@ export function cellMineralization(input: CellMineralizationInput): number {
 }
 
 /**
+ * Rendement de croissance microbienne : part du carbone d'un substrat que les
+ * décomposeurs assimilent (le reste part en CO₂). C'est la même valeur que
+ * l'humification de la litière — ce sont deux façons de dire la même chose.
+ */
+export const RENDEMENT_MICROBIEN = 0.3;
+
+/** Rapport C/N de la biomasse microbienne : ~8, très azotée. */
+export const CN_MICROBES = 8;
+
+/**
+ * Azote NET libéré par la décomposition d'un substrat, g.
+ *
+ * Les décomposeurs ont besoin d'azote pour construire leur propre biomasse.
+ * Si le substrat n'en contient pas assez — au-delà d'un C/N d'environ 27 —
+ * ils vont le chercher dans le sol : c'est la **faim d'azote**, bien connue de
+ * quiconque a enfoui du BRF ou de la paille. L'azote n'est pas perdu, il est
+ * IMMOBILISÉ ; il reviendra quand ces micro-organismes mourront à leur tour.
+ *
+ * Valeur négative = immobilisation (le sol se fait ponctionner).
+ */
+export function azoteNetDecomposition(carboneDecomposeG: number, azoteDecomposeG: number): number {
+  const besoin = (carboneDecomposeG * RENDEMENT_MICROBIEN) / CN_MICROBES;
+  return azoteDecomposeG - besoin;
+}
+
+/**
  * Stock au-delà duquel l'extraction racinaire n'est plus freinée par la
  * dilution de l'azote dans le sol : 3 g/m² = 30 kg/ha *(à calibrer)*.
  */

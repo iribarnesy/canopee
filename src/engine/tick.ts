@@ -34,6 +34,7 @@ import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from ".
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
 import {
+  azoteNetDecomposition,
   cellLeachedG,
   decompositionClimateFactor,
   litterDecayRate,
@@ -252,7 +253,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const decayFraction = Math.min(1, (litterK[i] ?? 0) * climate);
     const decayedN = (litterNG[i] ?? 0) * decayFraction;
     const decayedC = (litterCG[i] ?? 0) * decayFraction;
-    litterNG[i] = (litterNG[i] ?? 0) - decayedN;
+    // Faim d'azote (C9) : un substrat à C/N élevé oblige les décomposeurs à
+    // puiser dans l'azote minéral du sol. Rien ne se perd — l'azote passe du
+    // pool minéral au pool en décomposition, et reviendra plus tard.
+    const netN = azoteNetDecomposition(decayedC, decayedN);
+    const disponible = mineralNG[i] ?? 0;
+    // On ne peut pas immobiliser plus que ce qu'il y a : à défaut d'azote, la
+    // décomposition ralentit, elle ne s'endette pas.
+    const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
+    litterNG[i] = (litterNG[i] ?? 0) - transfere;
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
     humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
     emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
@@ -271,9 +280,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // secs (poussières, gaz absorbés).
     const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);
     depositionSumG += depositionG;
-    mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + decayedN + depositionG;
+    mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + transfere + depositionG;
     mineralizationSumG += mineralized;
-    litterDecaySumG += decayedN;
+    litterDecaySumG += transfere;
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
   }
 

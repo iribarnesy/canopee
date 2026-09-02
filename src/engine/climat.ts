@@ -181,23 +181,79 @@ export function facteurPluie(scenario: Scenario, annee: number, week: number): n
 }
 
 /**
+ * Amplification des écarts chauds, par degré de réchauffement global.
+ *
+ * Les extrêmes ne suivent pas la moyenne : en Europe, les canicules se
+ * réchauffent nettement plus vite que l'été moyen — la distribution ne se
+ * décale pas, elle s'étire par le haut. Ne décaler que la moyenne, comme on le
+ * faisait, sous-estime donc précisément ce qui tue les arbres. On amplifie
+ * l'écart POSITIF d'une semaine à sa normale saisonnière ; les semaines
+ * fraîches, elles, ne sont pas refroidies *(ordre de grandeur : +8 % d'écart
+ * par degré, à calibrer)*.
+ */
+export const AMPLIFICATION_EXTREMES = 0.08;
+
+/**
+ * Amplification des déficits de pluie : les épisodes secs s'allongent et se
+ * creusent plus vite que la moyenne saisonnière ne baisse.
+ */
+export const AMPLIFICATION_SECHERESSE = 0.05;
+
+/** Normales saisonnières d'une série : 52 valeurs, la moyenne de chaque semaine. */
+export interface Normales {
+  tMean: readonly number[];
+  rainMm: readonly number[];
+}
+
+export function normalesHebdo(serie: readonly WeekWeather[]): Normales {
+  const tMean = new Array<number>(52).fill(0);
+  const rainMm = new Array<number>(52).fill(0);
+  const n = new Array<number>(52).fill(0);
+  serie.forEach((w, i) => {
+    const s = i % 52;
+    tMean[s] = (tMean[s] ?? 0) + w.tMean;
+    rainMm[s] = (rainMm[s] ?? 0) + w.rainMm;
+    n[s] = (n[s] ?? 0) + 1;
+  });
+  for (let s = 0; s < 52; s++) {
+    const k = Math.max(1, n[s] ?? 1);
+    tMean[s] = (tMean[s] ?? 0) / k;
+    rainMm[s] = (rainMm[s] ?? 0) / k;
+  }
+  return { tMean, rainMm };
+}
+
+/**
  * Météo d'une semaine, décalée par la trajectoire climatique. On décale les
  * températures (donc l'ETP, recalculée par Hargreaves en aval) et on module la
- * pluie ; la variabilité, elle, reste celle des observations.
+ * pluie ; la variabilité vient des observations, mais ses extrêmes chauds et
+ * secs s'accentuent — c'est l'objet de `normales`, qui dit à quoi comparer.
+ * Sans `normales`, on se contente du décalage de moyenne.
  */
 export function meteoDerivee(
   base: WeekWeather,
   week: number,
   scenario: Scenario,
   annee: number,
+  normales?: Normales,
 ): WeekWeather {
   const dT = anomalieC(scenario, annee, week);
+  const dGlobal = Math.max(0, rechauffementGlobalC(scenario, annee) - RECHAUFFEMENT_SERIE_C);
+  const s = week % 52;
+  // Écart chaud de la semaine par rapport à sa normale : c'est LUI qu'on étire.
+  const ecartChaud = normales ? Math.max(0, base.tMean - (normales.tMean[s] ?? base.tMean)) : 0;
+  const supplement = ecartChaud * AMPLIFICATION_EXTREMES * dGlobal;
+  const pluieNormale = normales?.rainMm[s];
+  const deficit = pluieNormale !== undefined ? Math.max(0, pluieNormale - base.rainMm) : 0;
+  const pluie =
+    base.rainMm * facteurPluie(scenario, annee, week) -
+    deficit * AMPLIFICATION_SECHERESSE * dGlobal;
   return {
-    tMean: base.tMean + dT,
+    tMean: base.tMean + dT + supplement,
     tMin: base.tMin + dT,
-    tMax: base.tMax + dT,
+    tMax: base.tMax + dT + supplement,
     tMinAbsC: base.tMinAbsC + dT,
-    rainMm: base.rainMm * facteurPluie(scenario, annee, week),
+    rainMm: Math.max(0, pluie),
     co2Ppm: co2Ppm(scenario, annee),
   };
 }

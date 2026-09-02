@@ -15,6 +15,7 @@ import { applyAction, LABOUR_PERTE_HUMUS } from "../../src/engine/actions";
 import { CN_HUMUS, T_HA_TO_G_M2 } from "../../src/engine/carbon";
 import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
+import { azoteNetDecomposition } from "../../src/engine/nitrogen";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { ruHorizonMm } from "../../src/engine/soil";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
@@ -153,5 +154,62 @@ describe("le labour : un gain immédiat payé par le capital", () => {
     // alors même que chaque labour en libérait beaucoup sur le moment.
     const cinqDerniers = (s: readonly number[]) => s.slice(-5 * 52).reduce((a, b) => a + b, 0) / 5;
     expect(cinqDerniers(laboure.serieN)).toBeLessThan(cinqDerniers(tranquille.serieN));
+  });
+});
+
+describe("la faim d'azote (C9)", () => {
+  it("le seuil est vers C/N 27 : en dessous ça libère, au-dessus ça ponctionne", () => {
+    // 100 g de carbone décomposé, avec des substrats de plus en plus pauvres.
+    const net = (cn: number) => azoteNetDecomposition(100, 100 / cn);
+    expect(net(15)).toBeGreaterThan(0); // litière d'aulne : elle nourrit
+    expect(net(50)).toBeLessThan(0); // BRF ligneux : il affame
+    expect(net(27)).toBeCloseTo(0, 1); // le point de bascule
+  });
+
+  it("épandre du BRF ponctionne l'azote du sol avant de le rendre", () => {
+    // Deux parcelles identiques ; sur l'une, on broie vingt aulnes sur place.
+    const construire = () => {
+      let state = createGameState(STATION, rngStateFromSeed(2));
+      const ids: number[] = [];
+      for (let i = 0; i < 20; i++) {
+        state = plantAt(state, "alnus_glutinosa", 11 + (i % 5) * 2, 11 + Math.floor(i / 5) * 2, 6);
+        const dernier = state.trees[state.trees.length - 1];
+        if (dernier) ids.push(dernier.id);
+      }
+      return { state, ids };
+    };
+    const base = construire();
+    const cellules = () => {
+      const idx: number[] = [];
+      for (let y = 8; y < 23; y++) for (let x = 8; x < 23; x++) idx.push(y * 30 + x);
+      return idx;
+    };
+    const azoteMineral = (s: typeof base.state) => {
+      const idx = cellules();
+      return idx.reduce((a, i) => a + (s.soil.mineralNG[i] ?? 0), 0) / idx.length;
+    };
+    const suivre = (epandre: boolean) => {
+      let state = construire().state;
+      const actions: GameAction[] = epandre
+        ? [{ type: "couper", week: 5, treeIds: base.ids, devenir: "epandre" }]
+        : [];
+      const serie: number[] = [];
+      for (let i = 0; i < 60; i++) {
+        const w = WEATHER[i % WEATHER.length];
+        if (!w) throw new Error("météo manquante");
+        state = advanceWeek(state, w, actions).state;
+        serie.push(azoteMineral(state));
+      }
+      return serie;
+    };
+    const avecBrf = suivre(true);
+    const sans = suivre(false);
+    // Un mois après le broyage, le sol EN A MOINS que s'il n'avait rien reçu :
+    // les décomposeurs se servent avant les plantes. C'est la raison pour
+    // laquelle on n'enfouit pas du BRF juste avant de planter.
+    const apresUnMois = 5 + 4;
+    expect(avecBrf[apresUnMois] ?? 0).toBeLessThan(sans[apresUnMois] ?? 0);
+    // Rien n'est perdu pour autant : le total (minéral + litière) reste
+    // supérieur, c'est ce que vérifie epandre-vs-vendre.test.ts.
   });
 });
