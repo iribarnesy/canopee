@@ -97,6 +97,21 @@ export interface EspeceV0 {
     /** densité du bois sec, t/m³ (infradensité, pour la biomasse et le carbone) */
     densite: number;
   };
+  feu: {
+    /**
+     * Inflammabilité ∈ [0,1] : ce que l'espèce apporte comme combustible.
+     * Les résineux et les landes brûlent comme des torches ; les feuillus
+     * frais bien moins.
+     */
+    inflammabilite: number;
+    /**
+     * Résistance de l'écorce ∈ [0,1] : chance de survivre au passage du feu
+     * pour un sujet adulte. Le liège est LA réponse évolutive à l'incendie.
+     */
+    resistanceEcorce: number;
+    /** rejette de souche après un feu (châtaignier, arbousier, chêne-liège) */
+    rejetteApresFeu: boolean;
+  };
   /** production fruitière (docs/regles.md §7.2) — absent pour les essences forestières */
   fruits?: {
     /** floraison : cumul de degrés-jours base 5 °C depuis le 1er janvier */
@@ -144,6 +159,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 15 },
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.45 },
+    feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -166,6 +182,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.68 },
+    feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
   },
   {
@@ -186,6 +203,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 40 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.75 },
+    feu: { inflammabilite: 0.45, resistanceEcorce: 0.5, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -207,6 +225,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 60 },
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.45 },
+    feu: { inflammabilite: 0.9, resistanceEcorce: 0.35, rejetteApresFeu: false },
     sources: [ATLAS],
   },
   {
@@ -227,6 +246,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.55 },
+    feu: { inflammabilite: 0.5, resistanceEcorce: 0.1, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -258,6 +278,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.02,
       autofertile: false, // la plupart des variétés : il faut un pollinisateur (décision §15)
     },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
   },
   {
@@ -288,6 +309,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.04,
       autofertile: true,
     },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
   },
   {
@@ -318,6 +340,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.15,
       autofertile: false, // auto-incompatible : il faut un voisin
     },
+    feu: { inflammabilite: 0.4, resistanceEcorce: 0.1, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -339,6 +362,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.6 },
+    feu: { inflammabilite: 0.98, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -358,6 +382,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 22 },
     economie: { prixPlantEur: 2.5 },
     bois: { densite: 0.55 },
+    feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -378,6 +403,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 45 },
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.6 },
+    feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -409,6 +435,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.08, // ramassage au sol
       autofertile: false, // auto-stérile : il lui faut un congénère
     },
+    feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -433,6 +460,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 5 },
     bois: { densite: 0.7 },
+    feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -463,6 +491,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.1,
       autofertile: true,
     },
+    feu: { inflammabilite: 0.7, resistanceEcorce: 0.35, rejetteApresFeu: true },
     sources: [ATLAS],
   },
 ];

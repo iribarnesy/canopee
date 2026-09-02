@@ -14,6 +14,17 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 
+/** Ce qui tue un arbre — pour le raconter au joueur. */
+export type CauseMort = "secheresse" | "engorgement" | "ombre" | "vieillesse" | "feu";
+
+export const LIBELLE_CAUSE: Record<CauseMort, string> = {
+  secheresse: "de sécheresse",
+  engorgement: "asphyxiés par l'eau",
+  ombre: "étouffés par l'ombre",
+  vieillesse: "de vieillesse",
+  feu: "dans l'incendie",
+};
+
 export interface TreeState {
   id: number;
   especeId: string;
@@ -33,6 +44,8 @@ export interface TreeState {
   fruitProgress: number;
   /** fleurs détruites par un gel tardif cette année (§7.2) */
   bloomFrosted: boolean;
+  /** ce qui a eu raison de l'arbre (renseigné à sa mort) */
+  causeMort?: CauseMort;
   /**
    * Profondeur réellement explorée par les racines, cm. Ce n'est pas une
    * propriété figée : l'arbre INVESTIT vers le bas quand la surface ne suffit
@@ -313,9 +326,23 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     stress = Math.max(0, stress - 0.25);
   }
   const alive = stress < STRESS_LETHAL;
+  // À la mort, on retient QUEL facteur a eu le dernier mot : c'est ce que le
+  // joueur a besoin de savoir pour corriger le tir.
+  let causeMort: CauseMort | undefined;
+  if (!alive) {
+    const pire = Math.min(fSecSurvie, fEng, fLumSurvival, fAge);
+    causeMort =
+      pire === fAge
+        ? "vieillesse"
+        : pire === fEng
+          ? "engorgement"
+          : pire === fLumSurvival
+            ? "ombre"
+            : "secheresse";
+  }
 
   return {
-    tree: { ...tree, ageWeeks: tree.ageWeeks + 1, heightM, stress, alive, rootDepthCm },
+    tree: { ...tree, ageWeeks: tree.ageWeeks + 1, heightM, stress, alive, rootDepthCm, causeMort },
     limitingFactor,
   };
 }

@@ -29,16 +29,17 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | C. Nutriments et cycles | 4 | 3 | 5 | 12 |
 | D. Climat et phénologie | 4 | 3 | 3 | 10 |
 | E. Interactions entre plantes | 6 | 2 | 4 | 12 |
-| F. Dynamique des peuplements | 4 | 2 | 4 | 10 |
+| F. Dynamique des peuplements | 5 | 2 | 3 | 10 |
 | G. Faune et santé | 0 | 0 | 6 | 6 |
 | H. Gestion, économie, travail | 5 | 3 | 5 | 13 |
-| I. Carbone | 3 | 2 | 3 | 8 |
-| **Total** | **44** | **20** | **35** | **99** |
+| I. Carbone | 4 | 2 | 3 | 9 |
+| **Total** | **46** | **20** | **34** | **100** |
 
-**Score de réalisme : 44 pleins + 20 partiels sur 99 → ≈ 55 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 46 pleins + 20 partiels sur 100 → 56 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
-physique, profondeur et plasticité racinaires) → 55 % (strate herbacée).*
+physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
+56 % (feu).*
 
 ---
 
@@ -142,7 +143,7 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée).*
 | F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | ❌ | Champs prévus, non implémentés |
 | F9 | La banque de graines du sol garde une mémoire du passé | ❌ | Absente |
-| F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ❌ | Absent (inflammabilité prévue) |
+| F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` — départ conditionné (saison, sécheresse, combustible), propagation arrêtée par les coupures, tri par l'écorce, rejets de souche |
 
 ## G. Faune et santé
 
@@ -183,6 +184,7 @@ physique, profondeur et plasticité racinaires) → 55 % (strate herbacée).*
 | I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | ❌ | Dépend de H6 |
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ❌ | Pas de labour |
+| I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
 | I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | proxy 0,015·H² × densité, à caler sur l'IFN |
 | I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
 

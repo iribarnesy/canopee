@@ -72,6 +72,7 @@ export const LANDE_SECHE: StationClimat = {
     // Nappe perchée hivernale sur l'alios : l'eau ne part pas vite.
     drainageExterneMmSemaine: 30,
     herbeInitiale: 0.5, // lande rase : callune et molinie couvrent déjà le sol
+    feuPossible: true, // les Landes brûlent : c'est LE risque de la station
     ventExposition: 0.85, // lande atlantique rase : le vent balaie tout
     coteM: 100,
     voisinage: [
@@ -105,6 +106,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
     // Nappe affleurante : l'exutoire est saturé, rien ne s'évacue.
     drainageExterneMmSemaine: 5,
     herbeInitiale: 0.8, // prairie humide dense
+    feuPossible: false, // fond de vallée humide
     ventExposition: 0.2, // fond de vallée abrité
     coteM: 100,
     voisinage: [],
@@ -133,6 +135,7 @@ export const LIMON_RICHE: StationClimat = {
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY, // plateau bien drainé
     herbeInitiale: 0.2, // sortie de culture : le sol se réenherbe
+    feuPossible: false, // limon frais du Nord
     ventExposition: 0.6, // plateau limoneux ouvert (§2.2)
     coteM: 100,
     voisinage: [],
@@ -180,6 +183,9 @@ export const FRICHE_LIMON: StationClimat = {
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
     herbeInitiale: 0.9, // friche : l'herbe tient déjà tout le terrain
+    // Limon continental frais : les incendies de forêt y sont rares (le risque
+    // se concentre sur les landes atlantiques et le pourtour méditerranéen).
+    feuPossible: false,
     ventExposition: 0.4,
     coteM: 50,
     voisinage: [

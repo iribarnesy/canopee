@@ -61,6 +61,11 @@ export interface Station {
   coteM: number;
   /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */
   herbeInitiale: number;
+  /**
+   * Des incendies peuvent-ils survenir ici ? Vrai sur les landes et les
+   * stations sèches, faux en fond de vallée humide.
+   */
+  feuPossible: boolean;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
   voisinage: { especeId: string; semisParAn: number }[];
 }

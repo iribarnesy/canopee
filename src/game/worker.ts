@@ -18,6 +18,7 @@ import { ruHorizonMm } from "../engine/soil";
 import { createGameState, type GameState, type TickFluxes } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { tick } from "../engine/tick";
+import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import type { FromWorker, GameEvent, SaveGame, Snapshot, ToWorker } from "./protocol";
 
 let sc: StationClimat | undefined;
@@ -79,9 +80,21 @@ function performAction(action: GameAction) {
         );
       break;
     }
-    case "recolter":
-      if (dEur > 0) event("🧺", `Récolte : ${eur} (${dHeures.toFixed(1)} h)`);
+    case "recolter": {
+      if (dEur <= 0) break;
+      // Détail par espèce : ce qui a été ramassé, et combien.
+      const parEspece = new Map<string, number>();
+      for (const id of action.treeIds) {
+        const avant = before.trees.find((t) => t.id === id);
+        if (!avant || avant.fruitsKg <= 0) continue;
+        parEspece.set(avant.especeId, (parEspece.get(avant.especeId) ?? 0) + avant.fruitsKg);
+      }
+      const detail = [...parEspece]
+        .map(([id, kg]) => `${kg.toFixed(0)} kg de ${nomEspece(id)}`)
+        .join(", ");
+      event("🧺", `Récolte : ${detail || "fruits"} → ${eur} (${dHeures.toFixed(1)} h)`);
       break;
+    }
     case "embaucher":
       if (dEur < 0)
         event(
@@ -209,16 +222,22 @@ function stepWeeks(n: number) {
 
     // ── Fil d'événements : ce qui a changé cette semaine ────────────────────
     const weekOfYear = before.week % 52;
-    // Morts (par espèce)
-    const deadBySpecies = new Map<string, number>();
-    const aliveAfter = new Set(state.trees.filter((t) => t.alive).map((t) => t.id));
-    for (const t of before.trees) {
-      if (t.alive && !aliveAfter.has(t.id)) {
-        deadBySpecies.set(t.especeId, (deadBySpecies.get(t.especeId) ?? 0) + 1);
-      }
+    // Morts : regroupées par espèce ET par cause, pour que le joueur sache
+    // ce qui a tué ses arbres et puisse corriger le tir.
+    const parEspeceEtCause = new Map<string, { n: number; hMax: number }>();
+    for (const mort of ticked.morts) {
+      const cle = `${mort.especeId}|${mort.cause}`;
+      const agg = parEspeceEtCause.get(cle) ?? { n: 0, hMax: 0 };
+      agg.n++;
+      agg.hMax = Math.max(agg.hMax, mort.heightM);
+      parEspeceEtCause.set(cle, agg);
     }
-    for (const [id, n2] of deadBySpecies) {
-      event("💀", `${n2} ${nomEspece(id)}${n2 > 1 ? "s" : ""} mort${n2 > 1 ? "s" : ""}`);
+    for (const [cle, agg] of parEspeceEtCause) {
+      const [id, cause] = cle.split("|");
+      if (!id) continue;
+      const libelle = LIBELLE_CAUSE[(cause ?? "secheresse") as CauseMort] ?? "";
+      const taille = agg.hMax >= 1 ? ` (jusqu'à ${agg.hMax.toFixed(1)} m)` : " (semis)";
+      event("💀", `${agg.n} ${nomEspece(id)}${agg.n > 1 ? "s" : ""} ${libelle}${taille}`);
     }
     // Gel des fleurs
     const frostedBefore = new Set(before.trees.filter((t) => t.bloomFrosted).map((t) => t.id));
@@ -236,10 +255,7 @@ function stepWeeks(n: number) {
     }
     // Semis naturels (semaine du recrutement)
     if (weekOfYear === 14) {
-      const recruits =
-        state.trees.length -
-        before.trees.length +
-        (deadBySpecies.size > 0 ? [...deadBySpecies.values()].reduce((a, b) => a + b, 0) : 0);
+      const recruits = state.trees.length - before.trees.length + ticked.morts.length;
       if (recruits > 0) event("🌿", `${recruits} semis naturels se sont installés`);
     }
     // Sécheresse (sol moyen presque à sec en saison de végétation)
@@ -251,6 +267,23 @@ function stepWeeks(n: number) {
       if (sum / arr.length < 0.2 * sc.station.ruMm) {
         droughtYearFlagged = year;
         event("🔥", "Sécheresse : la réserve du sol est presque à sec — les sensibles souffrent");
+      }
+    }
+    // Incendie : l'événement le plus marquant d'une partie sur lande.
+    if (ticked.incendie) {
+      const f = ticked.incendie;
+      const are = Math.round(f.cellulesBrulees / 100);
+      event(
+        "🔥",
+        `INCENDIE : ${are > 0 ? `${are} ares` : `${f.cellulesBrulees} m²`} brûlés, ` +
+          `${f.arbresTues} arbres tués${f.rejets > 0 ? `, ${f.rejets} repartent de souche` : ""} — ` +
+          `${f.carboneTHa.toFixed(1)} t C/ha parties en fumée`,
+      );
+      if (weeksPerSecond > 1) {
+        weeksPerSecond = 0;
+        post({ type: "autopause", reason: `Incendie : ${f.arbresTues} arbres perdus` });
+        postSnapshot();
+        return;
       }
     }
     // Faillite : le temps s'arrête, le joueur doit regarder ses comptes.

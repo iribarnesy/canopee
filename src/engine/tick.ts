@@ -17,6 +17,7 @@ import {
   treeTotalCarbonKg,
 } from "./carbon";
 import { getEspece } from "./especes";
+import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import { cellCount, forEachDiscCell } from "./grid";
 import { couvertureMax, herbeDemandeAzoteG, herbeDemandeEauL, prochaineCouverture } from "./herbe";
 import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from "./light";
@@ -88,6 +89,10 @@ const LITTER_RETURN_FRACTION = 0.5;
 export interface TickResult {
   state: GameState;
   fluxes: TickFluxes;
+  /** arbres morts pendant ce tick, avec ce qui les a tués (pour le journal) */
+  morts: { especeId: string; cause: string; heightM: number }[];
+  /** incendie de la semaine, s'il y en a eu un */
+  incendie?: { cellulesBrulees: number; arbresTues: number; rejets: number; carboneTHa: number };
 }
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
@@ -494,12 +499,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // au pool de bois mort, et ils quittent la carte.
   let deadWoodKgC = state.carbon.deadWoodKgC;
   const survivors: TreeState[] = [];
+  const morts: { especeId: string; cause: string; heightM: number }[] = [];
   for (const tree of nextTrees) {
     if (tree.alive) {
       survivors.push(tree);
     } else {
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM);
+      morts.push({
+        especeId: tree.especeId,
+        cause: tree.causeMort ?? "secheresse",
+        heightM: tree.heightM,
+      });
     }
   }
   nextTrees = survivors;
@@ -512,8 +523,76 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) humusCG[i] = (humusCG[i] ?? 0) + humifiedPerCellG;
   emittedG += deadDecayKgC * (1 - DEADWOOD_HUMIFICATION) * 1000;
 
-  // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
+  // ── 6 bis. Le feu (§7.4, ch5) ─────────────────────────────────────────────
+  // Il ne part que si la saison, la sécheresse et le combustible s'alignent,
+  // puis se propage là où il trouve à brûler — d'où l'intérêt des coupures.
   let rng = state.rng;
+  let incendie: TickResult["incendie"];
+  let carboneFeuKgC = 0;
+  if (station.feuPossible) {
+    let secheresseSum = 0;
+    for (let i = 0; i < nCells; i++) secheresseSum += (waterMm[i * nH] ?? 0) / ruSurface;
+    const charge = chargeCombustible(nextTrees, herbeCouverture, litterCG, station.coteM);
+    const depart = departDeFeu(rng, week, secheresseSum / nCells, charge, station.coteM);
+    rng = depart.rng;
+    if (depart.origine !== undefined) {
+      const brulees = propager(depart.origine, charge, station.coteM);
+      let tues = 0;
+      let rejets = 0;
+      const apresFeu: TreeState[] = [];
+      for (const tree of nextTrees) {
+        const cellule =
+          Math.min(station.coteM - 1, Math.max(0, Math.floor(tree.y))) * station.coteM +
+          Math.min(station.coteM - 1, Math.max(0, Math.floor(tree.x)));
+        if (!brulees.has(cellule)) {
+          apresFeu.push(tree);
+          continue;
+        }
+        // L'intensité suit le combustible local.
+        const intensite = Math.min(1, (charge.parCellule[cellule] ?? 0) / 1.2);
+        const espece = getEspece(tree.especeId);
+        if (survitAuFeu(tree, intensite)) {
+          apresFeu.push(tree);
+          continue;
+        }
+        carboneFeuKgC += treeAboveCarbonKg(espece, tree.heightM);
+        tues++;
+        if (espece.feu.rejetteApresFeu && tree.heightM > 0.6) {
+          // Rejet de souche : l'arbre repart d'en bas, avec ses racines
+          // intactes — c'est ce qui fait des pyrophytes des gagnants du feu.
+          rejets++;
+          apresFeu.push({
+            ...tree,
+            heightM: 0.4,
+            stress: 0,
+            fruitsKg: 0,
+            fruitProgress: 0,
+            uptakeYearG: 0,
+          });
+        }
+      }
+      nextTrees = apresFeu;
+      // Le feu consume la strate herbacée et la litière des cellules touchées.
+      for (const i of brulees) {
+        herbeCouverture[i] = 0;
+        carboneFeuKgC += (litterCG[i] ?? 0) / 1000;
+        litterCG[i] = 0;
+        // L'azote de la litière part en fumée pour l'essentiel ; le reste
+        // reste en cendres, immédiatement disponible.
+        mineralNG[i] = (mineralNG[i] ?? 0) + (litterNG[i] ?? 0) * 0.2;
+        litterNG[i] = 0;
+      }
+      const areaHa = (station.coteM * station.coteM) / 10_000;
+      incendie = {
+        cellulesBrulees: brulees.size,
+        arbresTues: tues,
+        rejets,
+        carboneTHa: carboneFeuKgC / 1000 / areaHa,
+      };
+    }
+  }
+
+  // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
   let nextTreeId = state.nextTreeId;
   if (week === RECRUITMENT_WEEK) {
     const recruitment = yearlyRecruitment({
@@ -551,11 +630,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         ...state.carbon,
         deadWoodKgC,
         nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC,
-        emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000,
+        emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
       },
       rng,
       nextTreeId,
     },
+    morts,
+    incendie,
     fluxes: {
       rainMm: weather.rainMm,
       etpMm,

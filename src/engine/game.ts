@@ -54,7 +54,13 @@ export function advanceWeek(
   state: GameState,
   weather: WeekWeather,
   actions: readonly GameAction[],
-): { state: GameState; refusals: ActionRefusal[]; fluxes: TickFluxes } {
+): {
+  state: GameState;
+  refusals: ActionRefusal[];
+  fluxes: TickFluxes;
+  morts: { especeId: string; cause: string; heightM: number }[];
+  incendie?: { cellulesBrulees: number; arbresTues: number; rejets: number; carboneTHa: number };
+} {
   let s = beginWeek(state);
   const refusals: ActionRefusal[] = [];
   for (const action of actions) {
@@ -64,7 +70,13 @@ export function advanceWeek(
     refusals.push(...result.refusals);
   }
   const ticked = tick(s, weather);
-  return { state: ticked.state, refusals, fluxes: ticked.fluxes };
+  return {
+    state: ticked.state,
+    refusals,
+    fluxes: ticked.fluxes,
+    morts: ticked.morts,
+    incendie: ticked.incendie,
+  };
 }
 
 /** Rejoue une partie complète depuis sa sauvegarde (station + seed + journal). */

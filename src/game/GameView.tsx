@@ -222,6 +222,7 @@ export function GameView() {
   const [especeId, setEspeceId] = useState("betula_pendula");
   const [rayonChaulage, setRayonChaulage] = useState(8);
   const [semainesSaison, setSemainesSaison] = useState(4);
+  const [mainOuvertePanneau, setMainOuvertePanneau] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
 
   const { station, snapshot } = game;
@@ -368,7 +369,7 @@ export function GameView() {
         </p>
       </div>
 
-      <div style={{ width: 340, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ width: 380, display: "flex", flexDirection: "column", gap: 10 }}>
         {game.notice && <div style={{ ...panel, background: "#f3e6c4" }}>⏸ {game.notice}</div>}
         {game.refusals.length > 0 && (
           <div style={{ ...panel, color: "#8a4b2d" }}>
@@ -406,38 +407,55 @@ export function GameView() {
           </button>
           <button
             type="button"
-            style={btn()}
-            onClick={() =>
-              game.dispatch({ type: "embaucher", contrat: "saisonnier", semaines: semainesSaison })
-            }
-            title="Payé d'avance (700 €/sem), repart tout seul à la fin du contrat — l'outil des récoltes"
+            style={btn(mainOuvertePanneau)}
+            onClick={() => setMainOuvertePanneau(!mainOuvertePanneau)}
+            title="Embaucher de la main-d'œuvre"
           >
-            👷 Saisonnier {semainesSaison} sem ({semainesSaison * 700} €)
+            👷 Main-d'œuvre
           </button>
-          <input
-            type="range"
-            min={1}
-            max={12}
-            value={semainesSaison}
-            onChange={(e) => setSemainesSaison(Number(e.target.value))}
-            style={{ verticalAlign: "middle", width: 70 }}
-          />
-          <button
-            type="button"
-            style={btn()}
-            onClick={() => game.dispatch({ type: "embaucher", contrat: "cdi" })}
-            title="600 €/sem, rupture 1 200 € (indemnités + préavis)"
-          >
-            👷 CDI
-          </button>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() => game.dispatch({ type: "licencier" })}
-            title="Rompre un CDI : 1 200 € d'indemnités"
-          >
-            Licencier (1 200 €)
-          </button>
+          {mainOuvertePanneau && (
+            <div style={{ marginTop: 6 }}>
+              <button
+                type="button"
+                style={btn()}
+                onClick={() =>
+                  game.dispatch({
+                    type: "embaucher",
+                    contrat: "saisonnier",
+                    semaines: semainesSaison,
+                  })
+                }
+                title="Payé d'avance, repart tout seul à la fin du contrat — l'outil des récoltes"
+              >
+                Saisonnier {semainesSaison} sem ({semainesSaison * 700} €)
+              </button>
+              <input
+                type="range"
+                min={1}
+                max={12}
+                value={semainesSaison}
+                onChange={(e) => setSemainesSaison(Number(e.target.value))}
+                style={{ verticalAlign: "middle", width: 70 }}
+              />
+              <br />
+              <button
+                type="button"
+                style={btn()}
+                onClick={() => game.dispatch({ type: "embaucher", contrat: "cdi" })}
+                title="600 €/sem, rupture 1 200 € (indemnités + préavis)"
+              >
+                CDI (600 €/sem)
+              </button>
+              <button
+                type="button"
+                style={btn()}
+                onClick={() => game.dispatch({ type: "licencier" })}
+                title="Rompre un CDI : 1 200 € d'indemnités"
+              >
+                Licencier (1 200 €)
+              </button>
+            </div>
+          )}
           {mode === "planter" && (
             <div style={{ marginTop: 6 }}>
               {ESPECES_V0.map((e) => (
@@ -580,7 +598,7 @@ export function GameView() {
           </strong>
         </div>
 
-        <div style={{ ...panel, maxHeight: 320, overflowY: "auto", fontSize: 13 }}>
+        <div style={{ ...panel, maxHeight: 560, overflowY: "auto", fontSize: 13, flex: 1 }}>
           <strong>Journal</strong>
           {game.events.length === 0 && (
             <div style={{ color: "#6b6250" }}>Rien à signaler pour l'instant.</div>
