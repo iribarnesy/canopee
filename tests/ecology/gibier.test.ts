@@ -16,6 +16,7 @@ import {
   aPorteeDeDent,
   attraitFrottis,
   brouter,
+  FROTTIS_REPIT_SEMAINES,
   frottisDeLaSemaine,
   HAUTEUR_BROUTAGE_M,
 } from "../../src/engine/gibier";
@@ -304,7 +305,18 @@ describe("les frottis : passer la hauteur de dent ne met pas à l'abri", () => {
     expect(cible(2.5, 0, 0.9)).toBeLessThan(cible(2.5, 0, 0.15) / 5);
   });
 
-  it("une tige déjà marquée ne l'est pas deux fois dans l'année", () => {
+  it("un arbre-repère est refrotté, et c'est l'accumulation qui le tue", () => {
+    // Les brocards sont territoriaux : deux mâles ne se partagent pas une tige
+    // au milieu d'un territoire. Mais chacun refrotte les siennes, et les
+    // arbres bien placés deviennent des repères marqués saison après saison —
+    // d'où le motif observé sur le terrain : quelques tiges massacrées au
+    // milieu de tiges intactes.
+    const nu = { ...arbreNu(2.5), id: 1 };
+    const marque = { ...nu, frotteSemaine: 0 };
+    expect(attraitFrottis(marque, 0, 0.15)).toBeGreaterThan(attraitFrottis(nu, 0, 0.15));
+  });
+
+  it("mais on ne refrotte pas une marque encore fraîche", () => {
     const tiges = Array.from({ length: 5 }, (_, i) => ({
       ...arbreNu(2.5),
       id: i + 1,
@@ -317,10 +329,19 @@ describe("les frottis : passer la hauteur de dent ne met pas à l'abri", () => {
     const marquees = tiges.map((t) =>
       premier.some((f) => f.treeId === t.id) ? { ...t, frotteSemaine: semaine } : t,
     );
+    // La semaine d'après, la marque est fraîche : on passe à côté.
     const suivant = frottisDeLaSemaine(marquees, 0.5, 1, semaine + 1, semaine + 1, () => 0.15);
     for (const f of suivant) {
       expect(premier.some((p) => p.treeId === f.treeId)).toBe(false);
     }
+    // Quelques semaines plus tard, en revanche, le repère reprend du service :
+    // on balaie la fin de la saison, le budget hebdomadaire étant fractionnaire.
+    let repereRefrotte = false;
+    for (let w = semaine + FROTTIS_REPIT_SEMAINES; w <= 24; w++) {
+      const tard = frottisDeLaSemaine(marquees, 0.5, 1, w, w, () => 0.15);
+      if (tard.some((f) => premier.some((p) => p.treeId === f.treeId))) repereRefrotte = true;
+    }
+    expect(repereRefrotte).toBe(true);
   });
 
   it("hors saison, les bois sont faits : plus de frottis", () => {

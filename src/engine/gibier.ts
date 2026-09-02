@@ -138,6 +138,24 @@ export const FROTTIS_SEMAINES: readonly [number, number] = [12, 24];
 /** Frottis par cervidé et par an *(à calibrer)*. */
 export const FROTTIS_PAR_CERVIDE_AN = 12;
 
+/**
+ * Répit après un frottis, en semaines. Pas un an — c'était trop absolu.
+ *
+ * Un brocard est territorial : deux mâles ne se partagent pas la même tige au
+ * milieu d'un territoire, et c'est même l'objet du marquage. Mais il **refrotte
+ * les siennes**, et les arbres bien placés — en limite de territoire, sur une
+ * coulée — deviennent des repères marqués saison après saison. Ce sont ceux-là
+ * qui finissent par mourir, pendant que leurs voisins n'ont rien.
+ */
+export const FROTTIS_REPIT_SEMAINES = 4;
+
+/**
+ * Surcroît d'attrait d'une tige déjà marquée : un arbre-repère le reste. C'est
+ * ce qui produit le motif qu'on observe sur le terrain — quelques tiges
+ * massacrées au milieu de tiges intactes, et non des dégâts répartis.
+ */
+export const BONUS_ARBRE_REPERE = 0.6;
+
 /** Points de stress d'un frottis sur une tige déjà solide. */
 export const FROTTIS_DEGAT = 3.5;
 
@@ -169,7 +187,9 @@ export function attraitFrottis(
   // Écorce épaisse et crevassée (pin, chêne-liège) : sans intérêt.
   const ecorce = 1 - Math.min(1, resistanceEcorce);
   const isolement = 1 / (1 + voisinsProches);
-  return ecorce * isolement;
+  // Un arbre déjà marqué est un repère : on y revient.
+  const repere = tree.frotteSemaine !== undefined ? 1 + BONUS_ARBRE_REPERE : 1;
+  return ecorce * isolement * repere;
 }
 
 export interface BroutageCellule {
@@ -224,9 +244,15 @@ export function frottisDeLaSemaine(
     }
     // Une clôture arrête les bois autant que les dents.
     if (estEnclos?.(tree)) continue;
-    // Une tige marquée dans l'année ne l'est pas deux fois : le brocard a fait
-    // son territoire, il passe à la suivante.
-    if (tree.frotteSemaine !== undefined && semaineAbsolue - tree.frotteSemaine < 52) continue;
+    // Le temps que la marque fraîchisse : on ne refrotte pas la semaine
+    // suivante. Au-delà, l'arbre-repère redevient une cible — et c'est
+    // l'accumulation qui le tue.
+    if (
+      tree.frotteSemaine !== undefined &&
+      semaineAbsolue - tree.frotteSemaine < FROTTIS_REPIT_SEMAINES
+    ) {
+      continue;
+    }
     const attrait = attraitFrottis(tree, voisins, resistanceEcorce(tree.especeId));
     if (attrait > 0) candidats.push({ tree, attrait });
   }
