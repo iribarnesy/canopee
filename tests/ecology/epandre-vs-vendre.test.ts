@@ -10,10 +10,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { GameAction } from "../../src/engine/actions";
+import { applyAction, type GameAction } from "../../src/engine/actions";
 import { carbonInventory } from "../../src/engine/carbon";
-import { runJournal } from "../../src/engine/game";
+import { advanceWeek, runJournal } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
+import { rngStateFromSeed } from "../../src/engine/rng";
+import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_PAUVRE_N } from "../../src/engine/stations";
 
 const STATION = { ...LIMON_PAUVRE_N.station, coteM: 60 };
@@ -93,5 +95,93 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
       return alive.reduce((sum, t) => sum + t.heightM, 0) / alive.length;
     };
     expect(meanFagus(epandre.state)).toBeGreaterThan(1.05 * meanFagus(vendre.state));
+  });
+});
+
+describe("le tas de broyat : transporter la fertilité", () => {
+  it("broyer met en réserve au lieu de nourrir le sol tout de suite", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "alnus_glutinosa", 10, 10, 6);
+    const id = state.nextTreeId - 1;
+    for (let i = 0; i < 60; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, []).state;
+    }
+    const litiereAvant = state.soil.litterNG.reduce((a, b) => a + b, 0);
+    const apres = applyAction(state, {
+      type: "couper",
+      week: 60,
+      treeIds: [id],
+      devenir: "broyer",
+    }).state;
+    // Rien n'est tombé au sol : tout est dans la remorque.
+    expect(apres.stockBrf.azoteG).toBeGreaterThan(0);
+    expect(apres.soil.litterNG.reduce((a, b) => a + b, 0)).toBeCloseTo(litiereAvant, 6);
+  });
+
+  it("on l'épand où l'on veut, et l'azote y va — pas ailleurs", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "alnus_glutinosa", 10, 10, 6);
+    const id = state.nextTreeId - 1;
+    for (let i = 0; i < 60; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, []).state;
+    }
+    const broye = applyAction(state, {
+      type: "couper",
+      week: 60,
+      treeIds: [id],
+      devenir: "broyer",
+    }).state;
+    const stock = broye.stockBrf.azoteG;
+    // On porte le tas à l'autre bout de la parcelle, loin de l'aulne coupé.
+    const epandu = applyAction(broye, {
+      type: "epandreBrf",
+      week: 61,
+      x: 30,
+      y: 30,
+      rayonM: 4,
+      part: 1,
+    }).state;
+    const cote = STATION.coteM;
+    const litiere = (x: number, y: number) => epandu.soil.litterNG[y * cote + x] ?? 0;
+    expect(litiere(30, 30)).toBeGreaterThan(0);
+    // Là où l'arbre a été coupé, rien n'a été déposé.
+    expect(litiere(10, 10)).toBeCloseTo(broye.soil.litterNG[10 * cote + 10] ?? 0, 6);
+    // Le tas est vidé, et rien ne s'est perdu en route.
+    expect(epandu.stockBrf.azoteG).toBeCloseTo(0, 6);
+    const depose =
+      epandu.soil.litterNG.reduce((a, b) => a + b, 0) -
+      broye.soil.litterNG.reduce((a, b) => a + b, 0);
+    expect(depose).toBeCloseTo(stock, 4);
+  });
+
+  it("épandre un gros tas coûte des heures : la manutention n'est pas gratuite", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = { ...state, stockBrf: { carboneG: 400_000, azoteG: 4_000 } };
+    const apres = applyAction(state, {
+      type: "epandreBrf",
+      week: 1,
+      x: 20,
+      y: 20,
+      rayonM: 6,
+      part: 1,
+    });
+    expect(apres.state.economy.hoursUsedWeek).toBeGreaterThan(2);
+  });
+
+  it("on ne peut pas épandre un tas vide", () => {
+    const state = createGameState(STATION, rngStateFromSeed(3));
+    const r = applyAction(state, {
+      type: "epandreBrf",
+      week: 1,
+      x: 20,
+      y: 20,
+      rayonM: 5,
+      part: 1,
+    });
+    expect(r.refusals).toHaveLength(1);
   });
 });

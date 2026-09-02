@@ -97,6 +97,8 @@ export interface CarbonInventory {
   vivantTHa: number;
   boisMortTHa: number;
   litiereTHa: number;
+  /** broyat en tas, pas encore épandu, t C/ha */
+  brfTHa: number;
   humusTHa: number;
   totalTHa: number;
   /** compteurs cumulés en t C/ha */
@@ -130,12 +132,16 @@ export function carbonInventory(state: GameState, initialHumusTHa: number): Carb
   const boisMortTHa = state.carbon.deadWoodKgC / 1000 / areaHa;
   // moyenne g/m² → t/ha (1 t/ha = 100 g/m²)
   const litiereTHa = litterG / nCells / T_HA_TO_G_M2;
+  // Le tas de broyat est un stock comme un autre : tant qu'il n'est pas
+  // épandu, son carbone est là, il attend.
+  const brfTHa = state.stockBrf.carboneG / 1000 / 1000 / areaHa;
   const humusTHa = humusG / nCells / T_HA_TO_G_M2;
-  const totalTHa = vivantTHa + boisMortTHa + litiereTHa + humusTHa;
+  const totalTHa = vivantTHa + boisMortTHa + litiereTHa + humusTHa + brfTHa;
   return {
     vivantTHa,
     boisMortTHa,
     litiereTHa,
+    brfTHa,
     humusTHa,
     totalTHa,
     nppCumTHa: state.carbon.nppCumKgC / 1000 / areaHa,

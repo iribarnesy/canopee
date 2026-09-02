@@ -31,12 +31,12 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 5 | 1 | 2 | 8 |
-| H. Gestion, économie, travail | 10 | 4 | 3 | 17 |
+| H. Gestion, économie, travail | 11 | 4 | 3 | 18 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 3 | 3 | 0 | 6 |
-| **Total** | **68** | **27** | **21** | **116** |
+| **Total** | **69** | **27** | **21** | **117** |
 
-**Score de réalisme : 68 pleins + 27 partiels sur 116 → 70 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 69 pleins + 27 partiels sur 117 → 71 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -46,7 +46,8 @@ récupération des bois brûlés, indice de biodiversité) → 62 % (gibier) →
 66 % (mécanisation déduite de la disposition des arbres) → 67 % (le climat
 dérive enfin : trajectoires SSP et effet CO₂) → 69 % (le sol devient un
 capital : humus ↔ azote, réserve utile dynamique, labour, dépôts
-atmosphériques) → 70 % (faim d'azote, extrêmes climatiques amplifiés).*
+atmosphériques) → 70 % (faim d'azote, extrêmes climatiques amplifiés) → 71 % (tas de broyat : la fertilité se
+transporte).*
 
 ---
 
@@ -185,6 +186,7 @@ atmosphériques) → 70 % (faim d'azote, extrêmes climatiques amplifiés).*
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche et protections individuelles (`proteger`) ; irrigation, fertilisation et clôtures absentes |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
+| H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
 | H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
 | H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |

@@ -248,6 +248,16 @@ Chaque action coûte **de l'argent et/ou du temps de travail** (§10). Liste v1 
 
 **Sol** : observer/analyser (bêche gratuite = infos partielles, analyse labo payante = valeurs exactes), labour initial (gain N à court terme, casse mycorhizes + déstocke C — le piège classique), paillage, BRF, compost/fumier, chaulage, engrais organique ou minéral (avec pertes par lessivage si mal daté, ch1-C), semis d'engrais verts, faux-semis/fauche.
 
+**Broyat (BRF)** — implémenté : couper offre trois devenirs, et la nuance
+compte. `vendre` exporte le bois ; `epandre` le broie et le laisse SUR PLACE,
+sous l'ancienne couronne ; `broyer` le charge dans un **tas** (`state.stockBrf`,
+le seul objet du modèle qui n'a pas de position — parce qu'un tas n'en a pas),
+qu'on épand ensuite où l'on veut, au prix de la manutention. C'est ce qui rend
+possible le geste fondateur du §16 : couper les fixateurs là où ils poussent et
+**porter leur azote au pied de ce qu'on veut nourrir**. Avec sa contrepartie
+désormais modélisée : sous un tapis de plaquettes à C/N 40, les décomposeurs
+ponctionnent l'azote du sol avant de le rendre (§7.4, faim d'azote).
+
 **Végétal** : acheter et planter (plant jeune pas cher/fragile vs plant fort cher/robuste ; v1 : **un seul phénotype par espèce** ; v2 : choix de la provenance MFR, y compris plants méridionaux = migration assistée), semer, tailler/élaguer (bois d'œuvre), **éclaircir** (ch5-A : desserrer pour la résilience), recéper (taillis), trogner, couper, **choisir le devenir de chaque coupe** : vendre (bois d'œuvre / chauffage) · brûler sur place · broyer/épandre · laisser en bois mort. Récolter les fruits (fenêtre de fraîcheur), greffer *(v2 ?)*.
 
 **Aménagements** : clôture, protections individuelles, haie brise-vent, mare (débloque crapauds/libellules), nichoirs/gîtes/perchoirs, ruches (pollinisation + miel), irrigation (réseau ou cuve de récupération — ressource eau limitée et payante, ch7-B), chemin d'accès (réduit le temps de travail des interventions lointaines *(idée à confirmer)*).

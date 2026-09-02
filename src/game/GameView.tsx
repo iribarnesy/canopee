@@ -29,7 +29,7 @@ const MOIS = [
   "décembre",
 ];
 
-type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir";
+type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir" | "brf";
 type Overlay = "eau" | "ph" | "azote" | "herbe";
 
 const panel: React.CSSProperties = {
@@ -324,6 +324,8 @@ export function GameView() {
       game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
     } else if (mode === "faucher") {
       game.dispatch({ type: "faucher", x: mx, y: my, rayonM: rayonChaulage });
+    } else if (mode === "brf") {
+      game.dispatch({ type: "epandreBrf", x: mx, y: my, rayonM: rayonChaulage, part: 1 });
     } else if (mode === "eclaircir") {
       game.dispatch({
         type: "eclaircir",
@@ -465,6 +467,16 @@ export function GameView() {
           >
             🌲 Éclaircir
           </button>
+          {snapshot.stockBrfKg > 1 && (
+            <button
+              type="button"
+              style={btn(mode === "brf")}
+              onClick={() => setMode("brf")}
+              title="Épandre le tas de broyat là où vous voulez porter la fertilité"
+            >
+              🍂 Épandre le BRF ({snapshot.stockBrfKg.toFixed(0)} kg)
+            </button>
+          )}
           <button
             type="button"
             style={btn(mode === "faucher")}
@@ -585,7 +597,7 @@ export function GameView() {
               {rayonChaulage} m
             </div>
           )}
-          {(mode === "chauler" || mode === "faucher") && (
+          {(mode === "chauler" || mode === "faucher" || mode === "brf") && (
             <div style={{ marginTop: 6 }}>
               Rayon :{" "}
               <input
@@ -650,6 +662,20 @@ export function GameView() {
                 🧺 Récolter
               </button>
             )}
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({
+                  type: "couper",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  devenir: "broyer",
+                })
+              }
+              title="Broyer et charger : le bois rejoint le tas, à épandre où vous voudrez"
+            >
+              🍂 Couper & broyer (en tas)
+            </button>
             <button
               type="button"
               style={btn()}

@@ -27,7 +27,9 @@ function meanNStockKgHa(state: GameState): number {
   const n = state.soil.mineralNG.length;
   let sum = 0;
   for (let i = 0; i < n; i++) sum += (state.soil.mineralNG[i] ?? 0) + (state.soil.litterNG[i] ?? 0);
-  return (sum / n) * 10;
+  // Le tas de broyat en attente compte lui aussi : sinon, broyer un arbre
+  // ferait disparaître son azote du bilan.
+  return ((sum + state.stockBrf.azoteG) / n) * 10;
 }
 
 function checkConservation(sc: StationClimat, years: number) {

@@ -62,6 +62,8 @@ export interface Snapshot {
   anneeCivile: number;
   /** CO₂ de l'année, ppm */
   co2Ppm: number;
+  /** broyat en réserve, kg de matière sèche */
+  stockBrfKg: number;
   fluxes: TickFluxes;
   trees: SnapshotTree[];
   soilWater: Float32Array;

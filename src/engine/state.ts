@@ -148,6 +148,13 @@ export interface GameState {
   nextTreeId: number;
   economy: EconomyState;
   carbon: CarbonState;
+  /**
+   * Tas de broyat en attente d'être épandu. C'est un TAS : il n'a pas de
+   * position sur la parcelle, contrairement à tout le reste du modèle — et
+   * c'est bien ce qu'il est dans la réalité, une remorque de plaquettes qu'on
+   * ira vider là où on en a besoin.
+   */
+  stockBrf: { carboneG: number; azoteG: number };
   /** degrés-jours base 5 °C cumulés depuis le 1er janvier (phénologie, §7.2) */
   ddYearBase5: number;
   rng: RngState;
@@ -224,6 +231,7 @@ export function createGameState(
       litterK: new Array(n).fill(0),
     },
     trees: [],
+    stockBrf: { carboneG: 0, azoteG: 0 },
     nextTreeId: 1,
     rng,
   };

@@ -8,10 +8,11 @@
  * plafond (heures ou découvert).
  */
 
-import { CN_HUMUS, treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
+import { CARBON_FRACTION, CN_HUMUS, treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { HAUTEUR_BROUTAGE_M } from "./gibier";
+import { forEachDiscCell } from "./grid";
 import { crownRadiusM } from "./light";
 import { partMecanisable } from "./mecanisation";
 import type { GameState } from "./state";
@@ -115,6 +116,13 @@ export const LIME_PH_STEP = 0.5;
  * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
  */
 export const BRF_CN_RATIO = 40;
+/**
+ * Surcoût de temps pour charger le broyat au lieu de le laisser tomber sur
+ * place : il faut remplir et déplacer la remorque *(à calibrer)*.
+ */
+export const BROYAGE_CHARGE_FACTEUR = 1.6;
+/** Temps d'épandage du broyat, h par kg de matière sèche *(à calibrer)*. */
+export const EPANDAGE_HEURES_PAR_KG = 0.004;
 
 export interface EconomyState {
   treasuryEur: number;
@@ -154,8 +162,15 @@ export type GameAction =
       type: "couper";
       week: number;
       treeIds: number[];
-      /** vendre (bois énergie) ou broyer/épandre sur place (litière, BRF) */
-      devenir: "vendre" | "epandre";
+      /**
+       * Que fait-on du bois ?
+       *  - `vendre` : il part en bois énergie (ou d'œuvre s'il en a la qualité) ;
+       *  - `epandre` : broyé et laissé SUR PLACE, sous l'ancienne couronne ;
+       *  - `broyer` : broyé et chargé, il rejoint le tas de BRF, à épandre où
+       *    l'on veut. C'est plus long — il faut remplir la remorque — mais
+       *    c'est ce qui permet de TRANSPORTER la fertilité.
+       */
+      devenir: "vendre" | "epandre" | "broyer";
     }
   | {
       type: "recolter";
@@ -216,7 +231,7 @@ export type GameAction =
       critere: "parLeBas" | "parLeHaut" | "espece";
       /** pour le critère « espece » */
       especeId?: string;
-      devenir: "vendre" | "epandre";
+      devenir: "vendre" | "epandre" | "broyer";
     }
   | {
       /**
@@ -228,6 +243,20 @@ export type GameAction =
       treeIds: number[];
       /** hauteur de tronc à dégager, m */
       hauteurM: number;
+    }
+  | {
+      /**
+       * Épandre le tas de broyat sur une zone choisie. C'est LE geste de
+       * transfert de fertilité : on coupe les fixateurs d'azote là où ils
+       * poussent, et on porte leur azote au pied des arbres qu'on veut nourrir.
+       */
+      type: "epandreBrf";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+      /** part du tas à épandre ∈ ]0,1] */
+      part: number;
     }
   | {
       /**
@@ -421,6 +450,7 @@ function applyCouper(
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
   let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC } = state.carbon;
+  let stockBrf = state.stockBrf;
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
 
   for (const id of action.treeIds) {
@@ -433,8 +463,11 @@ function applyCouper(
     const tree = trees[idx];
     if (!tree) continue;
     const espece = getEspece(tree.especeId);
-    // Broyer/épandre demande ~30 % de travail en plus que vendre bord de route.
-    const hours = fellingHours(tree.heightM) * (action.devenir === "epandre" ? 1.3 : 1);
+    // Broyer demande plus de travail que vendre bord de route ; charger le
+    // broyat pour l'emporter, plus encore.
+    const facteurTravail =
+      action.devenir === "epandre" ? 1.3 : action.devenir === "broyer" ? BROYAGE_CHARGE_FACTEUR : 1;
+    const hours = fellingHours(tree.heightM) * facteurTravail;
     if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
       refusals.push(refuse(action.week, "couper", `plafond hebdomadaire atteint (arbre ${id})`));
       break;
@@ -457,6 +490,15 @@ function applyCouper(
         // Bois de chauffage : brûlé chez le client → émis immédiatement.
         exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
       }
+    } else if (action.devenir === "broyer") {
+      // Le broyat rejoint le tas : rien ne touche le sol pour l'instant.
+      stockBrf = {
+        carboneG: stockBrf.carboneG + treeAboveCarbonKg(espece, tree.heightM) * 1000,
+        azoteG:
+          stockBrf.azoteG +
+          0.5 * tree.uptakeYearG +
+          treeNitrogenNeedGWeek(espece, tree.heightM) * 52,
+      };
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
       // retournent en litière sous l'ancienne couronne (docs/regles.md §4.2).
@@ -498,10 +540,70 @@ function applyCouper(
       ...state,
       trees,
       soil: { ...state.soil, litterNG, litterCG, litterK },
+      stockBrf,
       carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
+  };
+}
+
+/**
+ * Épandre le tas de broyat sur une zone choisie : le geste qui déplace la
+ * fertilité. On coupe les fixateurs là où ils poussent, et on porte leur azote
+ * au pied de ce qu'on veut nourrir — au prix d'un temps de manutention, et
+ * d'une faim d'azote passagère (nitrogen.ts) sous le tapis de plaquettes.
+ */
+function applyEpandreBrf(
+  state: GameState,
+  action: Extract<GameAction, { type: "epandreBrf" }>,
+): ApplyResult {
+  const part = Math.min(1, Math.max(0, action.part));
+  const carboneG = state.stockBrf.carboneG * part;
+  const azoteG = state.stockBrf.azoteG * part;
+  if (carboneG <= 0) {
+    return { state, refusals: [refuse(action.week, "epandreBrf", "le tas de broyat est vide")] };
+  }
+  const hours = (carboneG / 1000 / CARBON_FRACTION) * EPANDAGE_HEURES_PAR_KG;
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return {
+      state,
+      refusals: [refuse(action.week, "epandreBrf", "plafond hebdomadaire atteint")],
+    };
+  }
+
+  const cote = state.station.coteM;
+  const dims = { widthM: cote, heightM: cote };
+  const cells: number[] = [];
+  forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => cells.push(i));
+  const litterNG = state.soil.litterNG.slice();
+  const litterCG = state.soil.litterCG.slice();
+  const litterK = state.soil.litterK.slice();
+  const partN = azoteG / cells.length;
+  const partC = carboneG / cells.length;
+  const kBrf = 0.6 / BRF_CN_RATIO;
+  for (const i of cells) {
+    const oldN = litterNG[i] ?? 0;
+    litterK[i] = (oldN * (litterK[i] ?? 0) + partN * kBrf) / (oldN + partN);
+    litterNG[i] = oldN + partN;
+    litterCG[i] = (litterCG[i] ?? 0) + partC;
+  }
+
+  return {
+    state: {
+      ...state,
+      soil: { ...state.soil, litterNG, litterCG, litterK },
+      stockBrf: {
+        carboneG: state.stockBrf.carboneG - carboneG,
+        azoteG: state.stockBrf.azoteG - azoteG,
+      },
+      economy: {
+        ...state.economy,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
   };
 }
 
@@ -1072,6 +1174,8 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyProteger(state, action);
     case "labourer":
       return applyLabourer(state, action);
+    case "epandreBrf":
+      return applyEpandreBrf(state, action);
     case "receper":
       return applyReceper(state, action);
   }

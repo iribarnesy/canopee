@@ -10,7 +10,7 @@ import { serieMeteoPour } from "../data/meteo";
 import type { ActionRefusal, GameAction } from "../engine/actions";
 import { applyAction, valeurSurPied } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
-import { carbonInventory } from "../engine/carbon";
+import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import {
   CO2_ACTUEL_PPM,
   getScenario,
@@ -167,6 +167,14 @@ function performAction(action: GameAction) {
         );
       break;
     }
+    case "epandreBrf": {
+      event("🍂", `Broyat épandu (${dHeures.toFixed(1)} h) — l'azote va où on l'a porté`);
+      break;
+    }
+    case "labourer": {
+      event("🚜", `Labour : ${eur} (${dHeures.toFixed(1)} h) — le sol est nu, l'azote est libéré`);
+      break;
+    }
     case "proteger": {
       const n =
         state.trees.filter((t) => t.protege).length - before.trees.filter((t) => t.protege).length;
@@ -271,6 +279,7 @@ function postSnapshot() {
     inventory: carbonInventory(state, sc.station.initialSoilCTHa),
     anneeCivile,
     co2Ppm: w.co2Ppm ?? CO2_ACTUEL_PPM,
+    stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
     biodiversite: indiceBiodiversite(
       state.trees,
       state.carbon.deadWoodKgC,
