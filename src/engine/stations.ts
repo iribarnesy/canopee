@@ -75,6 +75,8 @@ export const LANDE_SECHE: StationClimat = {
     ventExposition: 0.85, // lande atlantique rase : le vent balaie tout
     // Lande ouverte et pauvre : peu d'abri, densité modérée.
     gibierParHa: 0.08,
+    // Landes de Gascogne, loin des zones d'élevage intensif.
+    depositionNKgHaAn: 9,
     coteM: 100,
     voisinage: [
       { especeId: "pinus_sylvestris", semisParAn: 4 },
@@ -110,6 +112,8 @@ export const VALLEE_ENGORGEE: StationClimat = {
     ventExposition: 0.2, // fond de vallée abrité
     // Fond de vallée boisé et nourrissant : c'est là que le chevreuil abonde.
     gibierParHa: 0.25,
+    // Fond de vallée en pays d'élevage : ammoniac.
+    depositionNKgHaAn: 18,
     coteM: 100,
     voisinage: [],
   }),
@@ -140,6 +144,8 @@ export const LIMON_RICHE: StationClimat = {
     ventExposition: 0.6, // plateau limoneux ouvert (§2.2)
     // Plaine de grande culture : peu de couvert, gibier présent mais dilué.
     gibierParHa: 0.1,
+    // Plaine de grande culture du Nord : dépôts élevés.
+    depositionNKgHaAn: 20,
     coteM: 100,
     voisinage: [],
   }),
@@ -189,6 +195,7 @@ export const FRICHE_LIMON: StationClimat = {
     ventExposition: 0.4,
     // Friche en mosaïque de bosquets : conditions idéales pour le chevreuil.
     gibierParHa: 0.2,
+    depositionNKgHaAn: 14,
     coteM: 50,
     voisinage: [
       { especeId: "betula_pendula", semisParAn: 6 },

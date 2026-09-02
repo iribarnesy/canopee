@@ -155,21 +155,24 @@ describe("dans une partie, le réchauffement se voit", () => {
     const scenario = getScenario(scenarioId);
     let etpDebut = 0;
     let etpFin = 0;
+    const morts: { especeId: string; cause: string }[] = [];
     for (let i = 0; i < ans * 52; i++) {
       const base = OBSERVATIONS[i % OBSERVATIONS.length];
       if (!base) throw new Error("météo manquante");
       const w = meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52));
       const r = advanceWeek(state, w, []);
       state = r.state;
+      morts.push(...r.morts);
       if (i < 5 * 52) etpDebut += r.fluxes.etpMm;
       if (i >= (ans - 5) * 52) etpFin += r.fluxes.etpMm;
     }
-    const vivants = (id: string) => state.trees.filter((t) => t.alive && t.especeId === id).length;
     return {
       etpDebut: etpDebut / 5,
       etpFin: etpFin / 5,
-      hetres: vivants("fagus_sylvatica"),
-      chenes: vivants("quercus_pubescens"),
+      hetresMortsDeSoif: morts.filter(
+        (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
+      ).length,
+      mortsRavageurs: morts.filter((m) => m.cause === "ravageurs").length,
     };
   }
 
@@ -187,11 +190,19 @@ describe("dans une partie, le réchauffement se voit", () => {
     expect(chauffe.etpFin / chauffe.etpDebut).toBeGreaterThan(1.1 * (fige.etpFin / fige.etpDebut));
   });
 
-  it("le hêtre, mésophile, recule quand le chêne pubescent tient", () => {
+  it("le hêtre, mésophile, se met à mourir de soif — ce qu'il ne faisait pas", () => {
     // Aucun déplacement d'aire n'est codé : c'est la conjonction d'une ETP qui
-    // monte et de pluies d'été qui reculent, lue par des seuils d'espèce
-    // différents (le chêne pubescent est LE chêne des coteaux secs).
-    const partHetres = (p: typeof fige) => p.hetres / Math.max(1, p.hetres + p.chenes);
-    expect(partHetres(chauffe)).toBeLessThan(partHetres(fige));
+    // monte et de pluies d'été qui reculent, lue par les seuils d'une espèce
+    // qui « aime le frais ». Sur soixante ans de climat figé, le hêtre ne
+    // meurt jamais de sécheresse sur ce limon profond ; sous SSP5-8.5, si.
+    expect(fige.hetresMortsDeSoif).toBe(0);
+    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(5);
+  });
+
+  it("le réchauffement fait aussi flamber les ravageurs", () => {
+    // Conséquence en cascade, elle non plus codée nulle part : plus il fait
+    // chaud, plus les générations s'enchaînent (ravageurs.ts). C'est ce qui
+    // frappe les essences sensibles avant même que la sécheresse ne les tue.
+    expect(chauffe.mortsRavageurs).toBeGreaterThan(3 * Math.max(1, fige.mortsRavageurs));
   });
 });

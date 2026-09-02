@@ -27,8 +27,23 @@ export const LITTER_HUMIFICATION = 0.3;
 export const DEADWOOD_HUMIFICATION = 0.25;
 /** décomposition du bois mort, /an à climat optimal *(à calibrer)* */
 export const DEADWOOD_DECAY_PER_YEAR = 0.05;
-/** décomposition de l'humus, /an à climat optimal — pool lent *(à calibrer)* */
-export const HUMUS_DECAY_PER_YEAR = 0.005;
+/**
+ * Minéralisation de l'humus, /an à climat optimal (le « k2 » des agronomes).
+ *
+ * C'est ce coefficient qui rend l'azote du sol, puisque l'humus est le pool
+ * d'azote organique. En le couplant enfin à la minéralisation, sa valeur cesse
+ * d'être libre : à C/N 11, un sol de 65 t C/ha doit rendre de l'ordre de
+ * 80 kg N/ha/an, ce qui impose ~1,5 %/an — la fourchette agronomique
+ * classique (1 à 2 %/an en climat tempéré). Mon 0,5 % initial, choisi sans
+ * contrainte, donnait trois fois trop peu.
+ */
+export const HUMUS_DECAY_PER_YEAR = 0.015;
+
+/**
+ * Rapport C/N de l'humus : ~11 en sol biologiquement actif (mull). C'est lui
+ * qui convertit le carbone minéralisé en azote rendu aux plantes.
+ */
+export const CN_HUMUS = 11;
 /** 1 t/ha = 100 g/m² */
 export const T_HA_TO_G_M2 = 100;
 

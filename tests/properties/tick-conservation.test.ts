@@ -52,8 +52,14 @@ function checkConservation(sc: StationClimat, years: number) {
     // Entrées : minéralisation de l'humus + retour de litière (recyclage des
     // arbres) + fixation symbiotique. Sorties : prélèvements + lessivage.
     const deltaN = meanNStockKgHa(next) - beforeN;
+    // Entrées : minéralisation de l'humus, retours de litière, fixation
+    // symbiotique et dépôts atmosphériques (ces derniers sont un apport venu
+    // de l'extérieur du système, au même titre que la fixation).
     expect(fluxes.uptakeKgHa + fluxes.leachedKgHa + deltaN).toBeCloseTo(
-      fluxes.mineralizationKgHa + fluxes.litterfallKgHa + fluxes.fixationKgHa,
+      fluxes.mineralizationKgHa +
+        fluxes.litterfallKgHa +
+        fluxes.fixationKgHa +
+        fluxes.depositionKgHa,
       6,
     );
     state = next;

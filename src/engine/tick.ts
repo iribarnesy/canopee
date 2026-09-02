@@ -9,10 +9,12 @@
  */
 
 import {
+  CN_HUMUS,
   DEADWOOD_DECAY_PER_YEAR,
   DEADWOOD_HUMIFICATION,
   HUMUS_DECAY_PER_YEAR,
   LITTER_HUMIFICATION,
+  T_HA_TO_G_M2,
   treeAboveCarbonKg,
   treeTotalCarbonKg,
 } from "./carbon";
@@ -47,6 +49,7 @@ import {
 import { yearlyRecruitment } from "./regeneration";
 import {
   conductiviteHorizonMmSemaine,
+  facteurPhBiologie,
   porositeDrainageMm,
   profondeurPenetrableCm,
   ruHorizonMm,
@@ -125,7 +128,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // du gain de croissance et de la fermeture des stomates.
   const ppmSemaine = weather.co2Ppm ?? CO2_ACTUEL_PPM;
   const facteurCo2 = facteurCo2Croissance(ppmSemaine);
-  const potentialG = station.mineralizationPotentialKgHaWeek / G_PER_M2_TO_KG_PER_HA;
   const trees = state.trees;
 
   // ── 0. Lumière : au sol (microclimat, évaporation) et par arbre (croissance
@@ -145,6 +147,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const epaisseurs = profil.map((h) => h.epaisseurCm);
   const solPenetrableCm = profondeurPenetrableCm(profil);
   const ruSurface = horizonsHydro[0]?.ruMm ?? 1;
+  // Réserve utile DYNAMIQUE de l'horizon de surface (critère A12) : elle suit
+  // l'humus de la cellule. C'est le retour sur investissement de « construire
+  // du sol » — et, à l'inverse, ce qu'un labour répété finit par coûter en
+  // eau disponible. On raisonne en écart relatif au profil de départ, l'humus
+  // étant compté pour tout le profil et non par horizon.
+  const horizonSurface = profil[0];
+  const humusInitialG = station.initialSoilCTHa * T_HA_TO_G_M2;
+  const ruSurfacePourHumus = (humusG: number): number => {
+    if (!horizonSurface || humusInitialG <= 0) return ruSurface;
+    const rapport = Math.min(3, Math.max(0.2, humusG / humusInitialG));
+    return ruHorizonMm({ ...horizonSurface, moPct: horizonSurface.moPct * rapport });
+  };
+  // Buffer réutilisé : un tableau d'horizons par cellule serait ruineux.
+  const horizonsCellule: HorizonHydro[] = horizonsHydro.map((h) => ({ ...h }));
 
   const waterMm = state.soil.waterMm.slice();
   const excessMm = state.soil.excessMm.slice();
@@ -169,6 +185,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let litterDecaySumG = 0;
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
+  let depositionSumG = 0;
+  // Apport hebdomadaire moyen, g N/m² ; la part humide suit la pluie de la
+  // semaine, rapportée à une semaine moyenne de l'année.
+  const depositionSemaineG = station.depositionNKgHaAn / G_PER_M2_TO_KG_PER_HA / 52;
+  const partPluie = Math.min(3, weather.rainMm / 15);
 
   const eauCellule = new Array<number>(nH);
   const excesCellule = new Array<number>(nH);
@@ -188,9 +209,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       eauCellule[h] = waterMm[base + h] ?? 0;
       excesCellule[h] = excessMm[base + h] ?? 0;
     }
+    const surface = horizonsCellule[0];
+    if (surface) surface.ruMm = ruSurfacePourHumus(humusCG[i] ?? humusInitialG);
     const bilan = profilHydro(
       {
-        horizons: horizonsHydro,
+        horizons: horizonsCellule,
         eauMm: eauCellule,
         excesMm: excesCellule,
         rainMm: weather.rainMm,
@@ -224,7 +247,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterlogging[base] ?? 0,
     );
     climateSum += climate;
-    const mineralized = potentialG * climate;
     // La litière se décompose selon son C/N (aulne vite, pin lentement, ch2-B) ;
     // son carbone part pour partie en humus (humification), le reste en CO2.
     const decayFraction = Math.min(1, (litterK[i] ?? 0) * climate);
@@ -234,10 +256,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
     humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
     emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
-    const humusLoss = (humusCG[i] ?? 0) * ((HUMUS_DECAY_PER_YEAR / 52) * climate);
+    // L'humus est LE stock d'azote organique du sol : ce qui s'en minéralise
+    // part en CO₂ pour le carbone et revient aux plantes pour l'azote, au
+    // rapport C/N de l'humus. Les deux cycles ne peuvent plus diverger — et
+    // c'est ce couplage qui donne son sens à « construire du sol » (§12).
+    // L'acidité freine la vie du sol : un humus mor tient son azote.
+    const humusLoss =
+      (humusCG[i] ?? 0) *
+      ((HUMUS_DECAY_PER_YEAR / 52) * climate * facteurPhBiologie(state.soil.ph[i] ?? 7));
     humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
     emittedG += humusLoss;
-    mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + decayedN;
+    const mineralized = humusLoss / CN_HUMUS;
+    // Dépôts atmosphériques : pour moitié lessivés par la pluie, pour moitié
+    // secs (poussières, gaz absorbés).
+    const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);
+    depositionSumG += depositionG;
+    mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + decayedN + depositionG;
     mineralizationSumG += mineralized;
     litterDecaySumG += decayedN;
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
@@ -836,6 +870,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterloggingMean: waterloggingSum / nCells,
       herbeCouvertureMean: herbeSum / nCells,
       broutageKg: broutage.preleveKg,
+      depositionKgHa: (depositionSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       ravageurMoyen: ravageurSum / nCells,
       auxiliairesMoyen: habitatSum / nCells,
       mineralizationKgHa: (mineralizationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

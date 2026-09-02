@@ -72,6 +72,16 @@ export interface Station {
    * cultivée, 0,3/ha dans un massif à forte densité.
    */
   gibierParHa: number;
+  /**
+   * Dépôts atmosphériques d'azote, kg/ha/an. Ce n'est pas un détail : entre
+   * les oxydes d'azote de la combustion et l'ammoniac de l'élevage, le ciel
+   * français apporte 8 à 25 kg N/ha/an selon la région. Sur un sol pauvre,
+   * c'est PLUS que ce que la minéralisation de l'humus fournit — c'est même
+   * ce qui fait disparaître les landes et les pelouses maigres d'Europe, en
+   * les fertilisant assez pour que les graminées et les ligneux prennent le
+   * dessus. L'ignorer rendait nos stations pauvres invivables.
+   */
+  depositionNKgHaAn: number;
 }
 
 export function gridDims(station: Station): GridDims {
@@ -161,6 +171,8 @@ export interface TickFluxes {
   herbeCouvertureMean: number;
   /** matière sèche prélevée par le gibier cette semaine, kg */
   broutageKg: number;
+  /** azote apporté par les dépôts atmosphériques, kg/ha (semaine) */
+  depositionKgHa: number;
   /** population moyenne de ravageurs sur la parcelle ∈ [0,1] */
   ravageurMoyen: number;
   /** qualité moyenne de l'habitat des auxiliaires ∈ [0,1] */

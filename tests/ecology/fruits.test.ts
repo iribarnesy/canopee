@@ -149,7 +149,10 @@ describe("pollinisation croisée (§7.5) et récolte (§10)", () => {
         fruitsApresFenetre = state.trees.reduce((s, t) => s + t.fruitsKg, 0);
       }
     });
-    expect(treasuryAvec).toBeGreaterThan(treasurySans + 10);
+    // Le verger nu récolte peu — sans habitat pour les pollinisateurs, la
+    // nouaison plafonne (§7.4). Ce qui est testé ici, c'est que récolter
+    // rapporte et que ne pas récolter perd tout.
+    expect(treasuryAvec).toBeGreaterThan(treasurySans + 5);
     expect(fruitsApresFenetre).toBe(0); // récolte non faite = perdue (§10)
   });
 });

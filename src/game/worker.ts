@@ -229,6 +229,7 @@ function emptyFluxes(): TickFluxes {
     waterloggingMean: 0,
     herbeCouvertureMean: 0,
     broutageKg: 0,
+    depositionKgHa: 0,
     ravageurMoyen: 0,
     auxiliairesMoyen: 0,
     mineralizationKgHa: 0,

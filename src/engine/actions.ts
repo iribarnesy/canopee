@@ -8,7 +8,7 @@
  * plafond (heures ou découvert).
  */
 
-import { treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
+import { CN_HUMUS, treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { HAUTEUR_BROUTAGE_M } from "./gibier";
@@ -90,6 +90,22 @@ export const FAUCHE_HOURS_M2_ENGIN = 0.0003;
  * temps, elle ne le donne pas.
  */
 export const COUT_ENGIN_EUR_M2 = 0.012;
+/** Labour : ~2 h/ha au tracteur, et il faut un engin — on ne laboure pas à la bêche un hectare. */
+export const LABOUR_HOURS_M2 = 0.0002;
+/** Coût du passage de labour, € par m² (carburant, usure : ~200 €/ha). */
+export const LABOUR_EUR_M2 = 0.02;
+/**
+ * Part de l'humus minéralisée d'un coup par un labour.
+ *
+ * Retourner un sol casse les agrégats et expose à l'air une matière organique
+ * jusque-là protégée : les micro-organismes la brûlent en quelques semaines.
+ * C'est le fameux « coup de fouet » — une bouffée d'azote qui nourrit la
+ * culture suivante, payée par du capital sol qui, lui, met des décennies à se
+ * reconstituer. De l'ordre de 5 % du stock par labour *(à calibrer)*.
+ */
+export const LABOUR_PERTE_HUMUS = 0.05;
+/** Hauteur en dessous de laquelle un plant ne survit pas au passage de l'outil, m. */
+export const LABOUR_HAUTEUR_DETRUITE_M = 1.2;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
 /** effet d'un chaulage sur le pH (plafonné à 7,5) */
@@ -212,6 +228,17 @@ export type GameAction =
       treeIds: number[];
       /** hauteur de tronc à dégager, m */
       hauteurM: number;
+    }
+  | {
+      /**
+       * Labourer : retourner le sol d'une zone. Le geste fondateur de
+       * l'agriculture, et celui qui coûte le plus cher au sol.
+       */
+      type: "labourer";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
     }
   | {
       /**
@@ -650,6 +677,96 @@ function applyElaguer(
   };
 }
 
+function applyLabourer(
+  state: GameState,
+  action: Extract<GameAction, { type: "labourer" }>,
+): ApplyResult {
+  // On ne laboure que là où l'engin passe : entre des arbres serrés, la
+  // question ne se pose même pas.
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  if (part < 0.5) {
+    return {
+      state,
+      refusals: [refuse(action.week, "labourer", "l'engin ne peut pas manœuvrer ici")],
+    };
+  }
+  const areaM2 = Math.PI * action.rayonM * action.rayonM * part;
+  const hours = areaM2 * LABOUR_HOURS_M2;
+  const cost = areaM2 * LABOUR_EUR_M2;
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "labourer", "plafond hebdomadaire atteint")] };
+  }
+  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+    return { state, refusals: [refuse(action.week, "labourer", "découvert plafonné")] };
+  }
+
+  const humusCG = state.soil.humusCG.slice();
+  const mineralNG = state.soil.mineralNG.slice();
+  const litterNG = state.soil.litterNG.slice();
+  const litterCG = state.soil.litterCG.slice();
+  const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeBiomasse = state.soil.herbeBiomasse.slice();
+  const cote = state.station.coteM;
+  const r2 = action.rayonM * action.rayonM;
+  let emisKgC = 0;
+  for (let y = 0; y < cote; y++) {
+    for (let x = 0; x < cote; x++) {
+      const dx = x + 0.5 - action.x;
+      const dy = y + 0.5 - action.y;
+      if (dx * dx + dy * dy > r2) continue;
+      const i = y * cote + x;
+      // Le coup de fouet : de l'humus part en fumée, son azote reste.
+      const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
+      humusCG[i] = (humusCG[i] ?? 0) - perdu;
+      mineralNG[i] = (mineralNG[i] ?? 0) + perdu / CN_HUMUS;
+      emisKgC += (perdu * (1 - 1 / CN_HUMUS)) / 1000;
+      // La litière est enfouie et se minéralise avec le reste.
+      mineralNG[i] = (mineralNG[i] ?? 0) + (litterNG[i] ?? 0);
+      emisKgC += (litterCG[i] ?? 0) / 1000;
+      litterNG[i] = 0;
+      litterCG[i] = 0;
+      // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix.
+      herbeCouverture[i] = 0;
+      herbeBiomasse[i] = 0;
+    }
+  }
+  // Tout ce qui n'a pas encore de tronc y passe.
+  const trees = state.trees.map((t) => {
+    if (!t.alive || t.heightM > LABOUR_HAUTEUR_DETRUITE_M) return t;
+    const dx = t.x - action.x;
+    const dy = t.y - action.y;
+    if (dx * dx + dy * dy > r2) return t;
+    return { ...t, alive: false, causeMort: "labour" as const };
+  });
+
+  return {
+    state: {
+      ...state,
+      trees,
+      soil: {
+        ...state.soil,
+        humusCG,
+        mineralNG,
+        litterNG,
+        litterCG,
+        herbeCouverture,
+        herbeBiomasse,
+      },
+      carbon: {
+        ...state.carbon,
+        emittedCumKgC: state.carbon.emittedCumKgC + emisKgC,
+      },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur - cost,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
 function applyProteger(
   state: GameState,
   action: Extract<GameAction, { type: "proteger" }>,
@@ -953,6 +1070,8 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyElaguer(state, action);
     case "proteger":
       return applyProteger(state, action);
+    case "labourer":
+      return applyLabourer(state, action);
     case "receper":
       return applyReceper(state, action);
   }

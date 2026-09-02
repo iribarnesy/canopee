@@ -40,8 +40,15 @@ export function ruHorizonMm(h: Horizon): number {
   // mm d'eau par cm de sol selon la texture : le limon retient le mieux,
   // le sable très peu, l'argile beaucoup mais la retient trop fort.
   const parCm = 0.6 * h.sable + 2.0 * h.limon + 1.6 * h.argile;
-  // La matière organique fait éponge (critère A12).
-  const bonusMo = 0.05 * h.moPct;
+  // La matière organique fait éponge (critère A12). L'ampleur de l'effet est
+  // débattue : les estimations vont de ~0,05 à ~0,15 mm/cm par point de MO.
+  // On prend le milieu de la fourchette, en sachant que ce paramètre n'est
+  // pas anodin — au-delà de 0,1, l'eau reste assez souvent disponible en
+  // surface pour que les jeunes arbres n'investissent plus vers le bas
+  // (plasticité racinaire, trees.ts) et se fassent surprendre par la première
+  // vraie sécheresse. Le mécanisme est réel ; sa violence, elle, dépend d'un
+  // chiffre incertain, donc on reste prudent.
+  const bonusMo = 0.1 * h.moPct;
   return (parCm + bonusMo) * h.epaisseurCm * (1 - h.pierrosite);
 }
 
