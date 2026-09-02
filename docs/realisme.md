@@ -30,13 +30,13 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | D. Climat et phénologie | 7 | 3 | 1 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
-| G. Faune et santé | 7 | 1 | 1 | 9 |
+| G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **76** | **25** | **18** | **119** |
+| **Total** | **77** | **25** | **17** | **119** |
 
-**Score de réalisme : 76 pleins + 25 partiels sur 119 → 74 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 77 pleins + 25 partiels sur 119 → 75 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -52,7 +52,7 @@ potassium) → 73 % (altération biologique : les cycles tiennent, P et K
 limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
 l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
-arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis).*
+arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai).*
 
 ---
 
@@ -173,7 +173,7 @@ arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis).*
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; aulnaie pure décimée, mélange épargné |
 | G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison |
-| G5 | Les disséminateurs (geai) transportent les grosses graines | 🟡→❌ | Mode « oiseaux » abstrait, pas d'animal |
+| G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
 | G6 | Les maladies datées frappent (chalarose du frêne) | ✅ | `maladies.ts` ; `maladies.test.ts` — mieux qu'une date : une année d'arrivée historique, puis une pression qui suit la densité d'hôtes et l'humidité. Une frênaie pure perd un tiers de ses tiges en trente ans, le même nombre de frênes en mélange s'en tire deux fois mieux |
 
 ## H. Gestion, économie, travail
@@ -232,8 +232,8 @@ inventaire.
 
 ## Ce qui débloquerait le plus de critères
 
-2. **Reste du biotique** : sanglier (retournement du sol, consommation des
-   glands) et geai disséminateur (G5).
+2. **Le sanglier** : retournement du sol, consommation des glands et des
+   châtaignes — le dernier grand absent du module biotique.
 3. **Variabilité individuelle** (v2) : tous les individus d'une espèce sont
    aujourd'hui identiques, ce qui rend certains résultats en tout-ou-rien.
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).

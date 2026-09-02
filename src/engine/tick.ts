@@ -1086,6 +1086,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       voisinage: station.voisinage,
       leavesOn,
       ph: state.soil.ph,
+      lumiereAuSol: groundLight,
       nextTreeId,
     });
     nextTrees = [...nextTrees, ...recruitment.newTrees];

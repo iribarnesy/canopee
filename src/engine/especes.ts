@@ -80,8 +80,18 @@ export interface EspeceV0 {
     maturiteAns: number;
     /** longévité : la sénescence démarre vers 0,85 × cette valeur, années */
     longeviteAns: number;
-    /** mode de dissémination (ch4-C) : noyau de dispersion des semis */
-    dissemination: "vent" | "oiseaux" | "gravite";
+    /**
+     * Mode de dissémination (ch4-C) : le noyau de dispersion des semis.
+     *  - `vent` : noyau exponentiel autour du parent (bouleau, frêne, pin) ;
+     *  - `oiseaux` : n'importe où, avec les fientes (arbouse, sureau) ;
+     *  - `gravite` : sous la couronne, à peine au-delà (faînes) ;
+     *  - `geai` : les GROSSES graines. Un geai enterre des milliers de glands
+     *    par automne, jusqu'à un kilomètre, et il les cache **en terrain
+     *    découvert** parce qu'il doit les retrouver. C'est la raison pour
+     *    laquelle les chênes colonisent les friches et se régénèrent mal sous
+     *    leur propre couvert (ch4-C).
+     */
+    dissemination: "vent" | "oiseaux" | "gravite" | "geai";
     /** établissements potentiels par adulte et par an (APRÈS l'entonnoir de mortalité, ch4-B) */
     semisParAn: number;
   };
@@ -274,7 +284,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 250 }, // pivot puissant : il va chercher l'eau profonde des coteaux secs
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.5, fixateur: false },
-    regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "oiseaux", semisParAn: 2 },
+    regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 40 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.75, prixOeuvreEurM3: 220, rejetteDeSouche: true },
@@ -549,7 +559,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 180 }, // pivot, mais qui redoute l'asphyxie
     tBaseCroissanceC: 7,
     azote: { demandeRelative: 0.45, fixateur: false },
-    regeneration: { maturiteAns: 20, longeviteAns: 300, dissemination: "gravite", semisParAn: 2 },
+    regeneration: { maturiteAns: 20, longeviteAns: 300, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 45 },
     economie: { prixPlantEur: 4 },
     bois: { densite: 0.6, prixOeuvreEurM3: 200, rejetteDeSouche: true },
@@ -591,7 +601,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Thermophile, mais chez lui sur la façade atlantique douce.
     tBaseCroissanceC: 7,
     azote: { demandeRelative: 0.4, fixateur: false },
-    regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "oiseaux", semisParAn: 2 },
+    regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 5 },
     bois: { densite: 0.7, prixOeuvreEurM3: 160, rejetteDeSouche: true },

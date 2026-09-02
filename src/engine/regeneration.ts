@@ -35,6 +35,11 @@ export interface RecruitmentInput {
   leavesOn: boolean;
   /** pH par cellule (un semis ne s'installe pas hors de sa gamme) */
   ph: readonly number[];
+  /**
+   * Lumière au sol par cellule : elle sert au geai, qui cache ses glands en
+   * terrain découvert pour les retrouver.
+   */
+  lumiereAuSol: readonly number[];
   nextTreeId: number;
 }
 
@@ -50,11 +55,16 @@ function draw(rng: RngState): { rng: RngState; value: number } {
 }
 
 /** Position d'un semis selon le mode de dissémination de l'espèce (ch4-C). */
-function drawPosition(
+/**
+ * Où atterrit un semis : le noyau de dispersion dépend entièrement du mode de
+ * dissémination de l'espèce (exporté pour les tests écologiques).
+ */
+export function drawPosition(
   rng: RngState,
   espece: EspeceV0,
   parent: TreeState | null,
   coteM: number,
+  lumiereAuSol: readonly number[],
 ): { rng: RngState; x: number; y: number } {
   let r = draw(rng);
   const u1 = r.value;
@@ -65,8 +75,28 @@ function drawPosition(
 
   switch (espece.regeneration.dissemination) {
     case "oiseaux":
-      // Le geai plante loin, n'importe où sur la parcelle (ch4-C).
+      // Avec les fientes : n'importe où sur la parcelle.
       return { rng: r.rng, x: u1 * coteM, y: u2 * coteM };
+    case "geai": {
+      // Le geai cache ses glands loin du parent, et surtout EN DÉCOUVERT :
+      // il doit pouvoir les retrouver. On tire quelques emplacements et on
+      // garde le plus ouvert — c'est ce biais, et non une règle sur les
+      // chênes, qui les fait coloniser les friches et se régénérer mal sous
+      // leur propre couvert.
+      let meilleur = { x: u1 * coteM, y: u2 * coteM, lumiere: -1 };
+      let etat = r.rng;
+      for (let essai = 0; essai < 4; essai++) {
+        const a = draw(etat);
+        const b = draw(a.rng);
+        etat = b.rng;
+        const x = a.value * coteM;
+        const y = b.value * coteM;
+        const cellule = Math.floor(y) * coteM + Math.floor(x);
+        const lumiere = lumiereAuSol[cellule] ?? 1;
+        if (lumiere > meilleur.lumiere) meilleur = { x, y, lumiere };
+      }
+      return { rng: etat, x: meilleur.x, y: meilleur.y };
+    }
     case "vent": {
       const distance = -WIND_MEAN_DISTANCE_M * Math.log(1 - Math.min(u1, 0.999));
       const angle = 2 * Math.PI * u2;
@@ -101,7 +131,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
 
   const tryEstablish = (especeId: string, parent: TreeState | null) => {
     const espece = getEspece(especeId);
-    const pos = drawPosition(rng, espece, parent, coteM);
+    const pos = drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
     rng = pos.rng;
     if (aliveCount + newTrees.length >= maxTrees) return;
     if (pos.x < 0 || pos.x >= coteM || pos.y < 0 || pos.y >= coteM) return; // perdu hors parcelle

@@ -249,6 +249,15 @@ nombre d'aulnes mélangés en perd 5 %.
 Le même habitat porte les **pollinisateurs** (G4) : la nouaison d'un verger nu
 tombe à 35 % de son potentiel. C'est par là que l'indice de biodiversité cesse
 d'être décoratif.
+- **Geai** (implémenté) : un gland ne va nulle part tout seul. Le geai en
+  enterre des milliers par automne, jusqu'au kilomètre, et il les cache **en
+  terrain découvert** parce qu'il doit les retrouver. Mode de dissémination
+  `geai` pour les chênes et le châtaignier : loin du parent, et biaisé vers les
+  cellules les plus éclairées. Rien dans le code ne parle de chênes — c'est le
+  biais de l'oiseau qui fait qu'ils colonisent les friches et se régénèrent mal
+  sous leur propre couvert. Le hêtre, lui, reste tributaire de la gravité : ses
+  faînes roulent, et c'est pourquoi une hêtraie avance lentement, de proche en
+  proche.
 - **Gibier** (chevreuil/lapin) : pression fixée par le contexte paysager ; abroutissement des plants <1,5 m non protégés (ch4-C). Contre-mesures : clôture, protections individuelles, ronces/épineux nurses (aubépine, prunellier = « nurses » de l'atlas).
 
 *Implémenté* (`src/engine/gibier.ts`, critère G1) — et **sans tirage au sort ni
