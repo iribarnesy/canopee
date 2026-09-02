@@ -30,13 +30,13 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | D. Climat et phénologie | 6 | 4 | 1 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
-| G. Faune et santé | 5 | 1 | 2 | 8 |
+| G. Faune et santé | 6 | 1 | 1 | 8 |
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **73** | **26** | **19** | **118** |
+| **Total** | **74** | **26** | **18** | **118** |
 
-**Score de réalisme : 73 pleins + 26 partiels sur 118 → 73 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 74 pleins + 26 partiels sur 118 → 74 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -51,7 +51,8 @@ transporte) → 71 % (réseaux mycorhiziens) → 72 % (cycles du phosphore et du
 potassium) → 73 % (altération biologique : les cycles tiennent, P et K
 limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
 l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
-aux cultures) → 73 % (frêne, trogne, arbres-habitats).*
+aux cultures) → 74 % (frêne, trogne,
+arbres-habitats, chalarose).*
 
 ---
 
@@ -172,7 +173,7 @@ aux cultures) → 73 % (frêne, trogne, arbres-habitats).*
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; aulnaie pure décimée, mélange épargné |
 | G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | 🟡→❌ | Mode « oiseaux » abstrait, pas d'animal |
-| G6 | Les maladies datées frappent (chalarose du frêne) | ❌ | Absent |
+| G6 | Les maladies datées frappent (chalarose du frêne) | ✅ | `maladies.ts` ; `maladies.test.ts` — mieux qu'une date : une année d'arrivée historique, puis une pression qui suit la densité d'hôtes et l'humidité. Une frênaie pure perd un tiers de ses tiges en trente ans, le même nombre de frênes en mélange s'en tire deux fois mieux |
 
 ## H. Gestion, économie, travail
 
@@ -233,8 +234,9 @@ inventaire.
 1. **Sécheresses pluriannuelles** : on accentue les extrêmes d'une semaine,
    mais un été sec qui suit un été sec ne se cumule pas encore — or c'est
    l'enchaînement qui tue (D11 reste partiel).
-2. **Reste du biotique** : maladies datées (chalarose), frottis et écorçage,
-   sanglier, chasse (G5, G6).
+2. **Reste du biotique** : frottis et écorçage (un arbre est aujourd'hui
+   totalement immunisé dès qu'il passe 1,5 m), sanglier, geai disséminateur
+   (G5).
 3. **Variabilité individuelle** (v2) : tous les individus d'une espèce sont
    aujourd'hui identiques, ce qui rend certains résultats en tout-ou-rien.
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).

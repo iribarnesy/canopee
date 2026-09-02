@@ -218,6 +218,20 @@ Pas de tirage aléatoire : des **règles à seuil**, lisibles et apprenables :
 - Campagnols si herbe haute non fauchée au pied des jeunes arbres (protection : fauche, anneau de bulbes ch6, buses via perchoirs).
 - Chalarose du frêne : arrive à l'année scriptée A+12 quoi qu'il arrive (réalité française) — enjeu de diversification.
 
+*Implémenté autrement, et mieux* (`src/engine/maladies.ts`) : une date scriptée
+est jouable mais n'apprend rien d'autre qu'à subir. Une maladie a donc une
+**année d'arrivée dans le pays** — donnée historique, 2008 pour la chalarose —
+puis une pression qui dépend de deux choses que le joueur contrôle : la
+**densité locale d'hôtes** (l'inoculum vient des feuilles infectées tombées à
+moins de 20 m, si bien qu'un frêne isolé dans un mélange s'en tire infiniment
+mieux qu'un frêne en frênaie) et l'**humidité** (le champignon a besoin d'un
+été humide pour fructifier — les frênes des situations sèches et aérées
+résistent, ce qu'on observe partout en France). Mesuré : une frênaie pure perd
+près d'un tiers de ses tiges en trente ans, le même nombre de frênes noyés dans
+un mélange en perd deux fois moins. La diversification cesse d'être une bonne
+intention pour devenir une assurance chiffrable. Rien n'est spécifique au frêne
+dans le moteur : une autre maladie s'ajoute en une ligne de données.
+
 *Implémenté* (`src/engine/ravageurs.ts`, critères G2/G3/J5), **sans les seuils
 par ravageur nommé prévus ci-dessus** : un mécanisme unique les remplace tous,
 et les cas particuliers en tombent. Chaque espèce a une sensibilité ; ce qui

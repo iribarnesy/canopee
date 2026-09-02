@@ -22,6 +22,8 @@ export interface WeekWeather {
    * trajectoire climatique, on prend la valeur d'aujourd'hui.
    */
   co2Ppm?: number;
+  /** année civile de la semaine (climat.ts) — sert aux maladies datées */
+  annee?: number;
 }
 
 const GSC = 0.082; // constante solaire, MJ·m⁻²·min⁻¹ (FAO-56)

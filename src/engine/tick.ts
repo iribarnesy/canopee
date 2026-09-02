@@ -31,6 +31,7 @@ import {
   prochaineCouverture,
 } from "./herbe";
 import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from "./light";
+import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
 import {
@@ -607,6 +608,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return { ...next, vigueur, uptakeYearG: next.uptakeYearG + Math.max(0, acquired) };
   });
 
+  let moyenneEauSurface = 0;
+  for (let i = 0; i < nCells; i++) moyenneEauSurface += waterMm[i * nH] ?? 0;
+  moyenneEauSurface /= nCells;
   const boisMortTHa = state.carbon.deadWoodKgC / 1000 / (nCells / 10_000);
   const { ressource, habitat } = carteBiotique(nextTrees, herbeCouverture, boisMortTHa, dims);
 
@@ -815,6 +819,35 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (stress < STRESS_LETHAL) return { ...tree, stress };
     return { ...tree, stress, alive: false, causeMort: "ravageurs" as const };
   });
+
+  // ── 5 quinquies. Maladies (§7.4) ──────────────────────────────────────────
+  // Une épidémie installée dans le pays frappe d'autant plus fort que les
+  // hôtes sont serrés et que l'été est humide. C'est ce qui fait de la
+  // diversification une assurance, et pas une bonne intention.
+  const maladies = maladiesActives(weather.annee ?? 2026);
+  if (maladies.length > 0) {
+    const humiditeSurface = ruSurface > 0 ? moyenneEauSurface / ruSurface : 0;
+    nextTrees = nextTrees.map((tree) => {
+      if (!tree.alive) return tree;
+      const maladie = maladies.find((m) => m.especeId === tree.especeId);
+      if (!maladie) return tree;
+      let voisins = 0;
+      for (const autre of nextTrees) {
+        if (autre.id === tree.id || !autre.alive || autre.especeId !== tree.especeId) continue;
+        const dx = autre.x - tree.x;
+        const dy = autre.y - tree.y;
+        if (dx * dx + dy * dy <= RAYON_INOCULUM_M * RAYON_INOCULUM_M) voisins++;
+      }
+      const degats =
+        maladie.virulence *
+        pressionMaladie(maladie, voisins, humiditeSurface) *
+        getEspece(tree.especeId).ravageurs.sensibilite;
+      if (degats <= 0) return tree;
+      const stress = tree.stress + degats;
+      if (stress < STRESS_LETHAL) return { ...tree, stress };
+      return { ...tree, stress, alive: false, causeMort: "maladie" as const };
+    });
+  }
 
   // ── 6. Retours de litière : chute des feuilles + arbres morts ─────────────
   // Les déjections du gibier sont un retour de litière comme un autre : c'est

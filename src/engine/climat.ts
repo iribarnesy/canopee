@@ -255,6 +255,7 @@ export function meteoDerivee(
     tMinAbsC: base.tMinAbsC + dT,
     rainMm: Math.max(0, pluie),
     co2Ppm: co2Ppm(scenario, annee),
+    annee,
   };
 }
 

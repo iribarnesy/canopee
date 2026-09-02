@@ -23,7 +23,8 @@ export type CauseMort =
   | "feu"
   | "abroutissement"
   | "ravageurs"
-  | "labour";
+  | "labour"
+  | "maladie";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   secheresse: "de sécheresse",
@@ -34,6 +35,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   abroutissement: "broutés par le gibier",
   ravageurs: "achevés par les ravageurs",
   labour: "retournés par le labour",
+  maladie: "emportés par la maladie",
 };
 
 export interface TreeState {
