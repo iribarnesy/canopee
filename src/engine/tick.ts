@@ -321,6 +321,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       espece,
       dims,
     );
+    const gainMyco = facteurAbsorption(reseauLocal);
     const rootR = rootRadiusM(espece, tree.heightM);
     const fractions = fractionsRacinairesParHorizon(epaisseurs, tree.rootDepthCm);
     rootFractions[t] = fractions;
@@ -352,9 +353,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         station.ventExposition > 0 ? windShelterAt(trees, tree.x, tree.y, tree.id) : 0,
       ) * facteurCo2Transpiration(ppmSemaine);
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
-    const capG = espece.azote.fixateur
-      ? 0
-      : treeExtractionCapacityGWeek(tree.heightM) * facteurAbsorption(reseauLocal);
+    const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
     const needPerCell = (nNeedG[t] ?? 0) / n;
     const capPerCell = capG / n;
     const wPerCell = (waterDemandL[t] ?? 0) / n;
@@ -363,8 +362,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cellWaterDemand[i * nH + h] =
           (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0);
       }
-      cellNWanted[i] =
-        (cellNWanted[i] ?? 0) + Math.min(needPerCell, capPerCell * (availFactor[i] ?? 0));
+      // Le mycélium sait capter l'azote DILUÉ, là où une racine nue ne
+      // trouverait plus rien : c'est sur ce frein-là qu'il agit, et c'est
+      // pourquoi il compte sur les sols pauvres et pas sur les riches
+      // (où le frein est déjà levé).
+      const dispo = Math.min(1, (availFactor[i] ?? 0) * gainMyco);
+      cellNWanted[i] = (cellNWanted[i] ?? 0) + Math.min(needPerCell, capPerCell * dispo);
     });
   }
 

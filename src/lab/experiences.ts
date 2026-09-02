@@ -11,7 +11,7 @@
  */
 
 import { serieMeteoPour } from "../data/meteo";
-import type { GameAction } from "../engine/actions";
+import { applyAction, type GameAction } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
 import { T_HA_TO_G_M2 } from "../engine/carbon";
 import { getScenario, meteoDerivee, normalesHebdo } from "../engine/climat";
@@ -389,8 +389,66 @@ const BAC_A_SABLE: Experience = {
   },
 };
 
+const MYCORHIZES: Experience = {
+  id: "mycorhizes",
+  titre: "Planter dans un labour",
+  question: "Pourquoi un plant démarre-t-il mieux dans un vieux sol forestier ?",
+  attendu:
+    "Le réseau mycorhizien met des années à se tisser et un labour n'en laisse que 5 %. On regarde ici deux choses : le réseau lui-même, et si les plants en pâtissent réellement.",
+  cout: "court",
+  executer: () => {
+    const st = station(LIMON_RICHE, { coteM: 30, gibierParHa: 0 });
+    const w = meteo("limon-riche");
+    const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+    const planter = (s: GameState) => planterGrille(s, "betula_pendula", 5, 5, 0.5).state;
+    // Même parcelle, même graine, mêmes plants : seul le labour préalable
+    // change. On laboure une semaine avant de planter, comme on le ferait.
+    const laboure = (s: GameState) =>
+      planter(applyAction(s, { type: "labourer", week: 0, x: 15, y: 15, rayonM: 14 }).state);
+    const reseau = (s: GameState) => moyenne(s.soil.mycorhizes.ecto) * 100;
+    // Hauteur DOMINANTE, pas médiane : au bout de quinze ans les semis naturels
+    // arrivent en masse et écraseraient la médiane, ce qui se lisait comme un
+    // effondrement de la plantation alors qu'aucun plant ne mourait.
+    const hauteur = (s: GameState) =>
+      Math.max(
+        0,
+        ...s.trees.filter((t) => t.alive && t.especeId === "betula_pendula").map((t) => t.heightM),
+      );
+    return {
+      id: "mycorhizes",
+      forme: "courbe",
+      uniteY: "réseau ectomycorhizien (%) — et hauteur dominante des plants (m, ×10)",
+      series: [
+        {
+          nom: "sol non travaillé : réseau",
+          couleur: VERT,
+          valeurs: courbe(st, w, 25, planter, [], reseau),
+        },
+        {
+          nom: "après labour : réseau",
+          couleur: ROUGE,
+          valeurs: courbe(st, w, 25, laboure, [], reseau),
+        },
+        {
+          nom: "sol non travaillé : hauteur ×10",
+          couleur: "#7fb069",
+          valeurs: courbe(st, w, 25, planter, [], (s) => hauteur(s) * 10),
+        },
+        {
+          nom: "après labour : hauteur ×10",
+          couleur: "#d99b7c",
+          valeurs: courbe(st, w, 25, laboure, [], (s) => hauteur(s) * 10),
+        },
+      ],
+      verdict:
+        "Le labour tranche les hyphes : le réseau repart de presque rien et met plus de dix ans à revenir. En revanche — et c'est un résultat, pas un oubli — la HAUTEUR des plants s'en ressent à peine sur ces limons : le coup de fouet azoté du labour compense à peu près la perte du réseau, et l'azote n'est de toute façon pas ce qui limite le plus ici. Le service mycorhizien ne prendra sa vraie valeur qu'avec le cycle du phosphore, qui est l'élément que les hyphes vont vraiment chercher.",
+    };
+  },
+};
+
 export const EXPERIENCES: readonly Experience[] = [
   BAC_A_SABLE,
+  MYCORHIZES,
   {
     id: "gibier",
     titre: "Le gibier",
