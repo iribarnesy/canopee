@@ -8,6 +8,7 @@ import type { EconomyState } from "./actions";
 import { createEconomy } from "./actions";
 import type { CarbonState } from "./carbon";
 import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
+import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
@@ -61,6 +62,8 @@ export interface Station {
   ventExposition: number;
   /** relief de la parcelle : altitude, pente, exposition, forme (relief.ts) */
   relief: Relief;
+  /** eau libre permanente : ruisseau longeant un côté, mare (eau_surface.ts) */
+  eau: EauDeSurface;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
   /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */

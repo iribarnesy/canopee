@@ -19,6 +19,7 @@ import {
   normalesHebdo,
   type ScenarioId,
 } from "../engine/climat";
+import { type EauDeSurface, profondeurNappeCm } from "../engine/eau_surface";
 import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
@@ -29,10 +30,21 @@ import {
   entourageDeLaStation,
   resumeBordures,
 } from "../engine/paysage";
-import { ALTITUDE_SERIE_M, anomalieAltitudeC, type Relief } from "../engine/relief";
+import {
+  ALTITUDE_SERIE_M,
+  altitudeParCellule,
+  anomalieAltitudeC,
+  type Relief,
+} from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
 import { ruHorizonMm } from "../engine/soil";
-import { createGameState, type GameState, type Station, type TickFluxes } from "../engine/state";
+import {
+  createGameState,
+  type GameState,
+  gridDims,
+  type Station,
+  type TickFluxes,
+} from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
@@ -49,6 +61,8 @@ let anneeDepart = 2026;
 let bordures: Bordures = bordersUniformes("bocage");
 // Relief choisi au lancement ; à défaut, celui d'origine de la station.
 let relief: Relief | undefined;
+// Eau libre choisie au lancement (ruisseau, mare) ; à défaut, aucune.
+let eau: EauDeSurface | undefined;
 // Normales saisonnières de la série : elles servent à accentuer les extrêmes.
 let normales: Normales | undefined;
 let seed = 1;
@@ -263,6 +277,7 @@ function stationAvecPaysage(base: Station): Station {
   return {
     ...base,
     relief: relief ?? base.relief,
+    eau: eau ?? base.eau,
     paysageId: bordures.nord,
     bordures,
     ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),
@@ -517,7 +532,18 @@ function startLoop() {
 function stationInfo() {
   if (!sc) throw new Error("pas de station");
   const serie = meteoMode === "reelle" ? serieMeteoPour(sc.station.id) : undefined;
+  const station = stationAvecPaysage(sc.station);
+  const dims = gridDims(station);
   return {
+    eau: station.eau,
+    // Le champ de nappe ne bouge pas : on l'envoie une fois pour toutes, la
+    // carte s'en sert pour la teinte « nappe » (eau_surface.ts).
+    nappeCm: profondeurNappeCm(
+      station.eau,
+      altitudeParCellule(station.relief, dims),
+      dims,
+      station.profil,
+    ),
     id: sc.station.id,
     nom: sc.station.nom,
     coteM: sc.station.coteM,
@@ -536,12 +562,14 @@ function init(
   scenarioId: ScenarioId,
   bordersChoisies: Bordures,
   reliefChoisi: Relief,
+  eauChoisie: EauDeSurface,
   annee: number,
 ) {
   scenario = scenarioId;
   anneeDepart = annee;
   bordures = bordersChoisies;
   relief = reliefChoisi;
+  eau = eauChoisie;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -575,6 +603,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         msg.scenario,
         msg.bordures,
         msg.relief,
+        msg.eau,
         msg.anneeDepart,
       );
       break;
@@ -586,6 +615,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       scenario = msg.save.scenario;
       bordures = msg.save.bordures ?? bordersUniformes(msg.save.paysageId);
       relief = msg.save.relief;
+      eau = msg.save.eau;
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
@@ -631,6 +661,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         paysageId: bordures.nord,
         bordures,
         relief: relief ?? sc?.station.relief,
+        eau: eau ?? sc?.station.eau,
         anneeDepart,
         weeks: state.week,
         actions: journal,

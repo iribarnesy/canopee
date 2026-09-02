@@ -7,6 +7,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SCENARIOS, type ScenarioId } from "../engine/climat";
+import {
+  type CoteParcelle,
+  cellulesEnEau,
+  type EauDeSurface,
+  profondeurNappeCm,
+  resumeEau,
+  SANS_EAU,
+} from "../engine/eau_surface";
 import { ESPECES_V0, getEspece } from "../engine/especes";
 import { crownRadiusM } from "../engine/light";
 import {
@@ -19,6 +27,7 @@ import {
 } from "../engine/paysage";
 import {
   ALTITUDE_SERIE_M,
+  altitudeParCellule,
   anomalieAltitudeC,
   coefficientRuissellement,
   facteurExpositionRayonnement,
@@ -46,7 +55,7 @@ const MOIS = [
 ];
 
 type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir" | "brf" | "cloturer";
-type Overlay = "eau" | "ph" | "azote" | "herbe";
+type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe";
 
 const panel: React.CSSProperties = {
   border: "1px solid var(--trait)",
@@ -153,6 +162,8 @@ function drawParcel(
   ruMm: number,
   overlay: Overlay,
   selectedIds: ReadonlySet<number>,
+  nappeCm: Float32Array | undefined,
+  enEau: readonly boolean[] | undefined,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -176,10 +187,24 @@ function drawParcel(
         hue = 95;
         sat = 15 + 45 * c;
         l = 85 - 35 * c;
+      } else if (overlay === "nappe") {
+        // Du bleu franc là où la nappe affleure au beige là où elle est hors
+        // de portée : c'est la carte qui explique la ripisylve.
+        const prof = nappeCm?.[i] ?? Number.POSITIVE_INFINITY;
+        const proximite = Number.isFinite(prof) ? Math.max(0, 1 - prof / 300) : 0;
+        hue = 205;
+        sat = 8 + 52 * proximite;
+        l = 88 - 40 * proximite;
       } else {
         l = 90 - 50 * Math.min(1, (snapshot.soilN[i] ?? 0) / 3);
         hue = 55;
         sat = 30;
+      }
+      // L'eau libre elle-même : elle prime sur tous les calques.
+      if (enEau?.[i]) {
+        hue = 200;
+        sat = 55;
+        l = 45;
       }
       ctx.fillStyle = `hsl(${hue} ${sat}% ${l}%)`;
       ctx.fillRect(x * scale, (coteM - 1 - y) * scale, Math.ceil(scale), Math.ceil(scale));
@@ -203,6 +228,7 @@ function StartScreen({
     scenario: ScenarioId,
     bordures: Bordures,
     relief: Relief,
+    eau: EauDeSurface,
     anneeDepart: number,
   ) => void;
   onResume: () => void;
@@ -222,6 +248,7 @@ function StartScreen({
       bassinAmontHa: 0,
     },
   );
+  const [eau, setEau] = useState<EauDeSurface>(SANS_EAU);
   const save = loadSave();
 
   const choisie = STATIONS_V0.find((s) => s.station.id === stationId);
@@ -257,6 +284,28 @@ function StartScreen({
   const pluieHebdoMm = (choisie?.climat.rainAnnualMm ?? 800) / 52;
   const surfaceHa = (choisie?.station.coteM ?? 100) ** 2 / 10000;
   const amontMm = (pluieHebdoMm * RUISSELLEMENT_AMONT * relief.bassinAmontHa) / surfaceHa;
+
+  // Aperçu du champ de nappe sur CETTE parcelle : mêmes fonctions que le
+  // moteur, appliquées au terrain et au relief choisis.
+  const nappe = useMemo(() => {
+    if (!choisie || eau.type === "aucune") return undefined;
+    const dims = { widthM: choisie.station.coteM, heightM: choisie.station.coteM };
+    const champ = profondeurNappeCm(
+      eau,
+      altitudeParCellule(relief, dims),
+      dims,
+      choisie.station.profil,
+    );
+    let proche = Number.POSITIVE_INFINITY;
+    let loin = 0;
+    for (const v of champ) {
+      if (Number.isFinite(v)) {
+        proche = Math.min(proche, v);
+        loin = Math.max(loin, v);
+      }
+    }
+    return { proche: Number.isFinite(proche) ? proche : 0, loin };
+  }, [choisie, eau, relief]);
 
   const setCote = (cote: keyof Bordures, id: string) =>
     setBordures(cotesSeparees ? { ...bordures, [cote]: id } : bordersUniformes(id));
@@ -499,6 +548,121 @@ function StartScreen({
       </section>
 
       <section className="carte">
+        <h3>L'eau de surface</h3>
+        <p className="sous">
+          Un ruisseau ou une mare, ce n'est pas un décor : c'est une nappe sous vos pieds. Elle
+          affleure au bord, s'enfonce en s'éloignant, et c'est elle — pas une règle sur les espèces
+          — qui fait pousser l'aulne là où le hêtre se noie.
+        </p>
+        <div className="seg">
+          {(
+            [
+              ["aucune", "Aucune"],
+              ["ruisseau", "Un ruisseau"],
+              ["mare", "Une mare"],
+            ] as const
+          ).map(([type, libelle]) => (
+            <button
+              key={type}
+              type="button"
+              style={btn(eau.type === type)}
+              onClick={() =>
+                setEau(
+                  type === "aucune"
+                    ? SANS_EAU
+                    : type === "ruisseau"
+                      ? { type, cote: "sud", bergeM: 0.3 }
+                      : { type, xRel: 0.5, yRel: 0.5, rayonM: 4, bergeM: 0.6 },
+                )
+              }
+            >
+              {libelle}
+            </button>
+          ))}
+        </div>
+        {eau.type !== "aucune" && (
+          <div className="reglages" style={{ marginTop: 10 }}>
+            {eau.type === "ruisseau" && (
+              <>
+                <span className="intitule">Il longe le</span>
+                <div className="choix">
+                  {(["nord", "est", "sud", "ouest"] as const).map((cote) => (
+                    <button
+                      key={cote}
+                      type="button"
+                      style={btn(eau.cote === cote)}
+                      onClick={() => setEau({ ...eau, cote: cote as CoteParcelle })}
+                    >
+                      {cote}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            {eau.type === "mare" && (
+              <>
+                <label htmlFor="rayon">Rayon</label>
+                <input
+                  id="rayon"
+                  type="range"
+                  min={2}
+                  max={12}
+                  step={1}
+                  value={eau.rayonM ?? 4}
+                  onChange={(e) => setEau({ ...eau, rayonM: Number(e.target.value) })}
+                />
+                <span className="valeur">{eau.rayonM ?? 4} m</span>
+                <label htmlFor="marex">Position O-E</label>
+                <input
+                  id="marex"
+                  type="range"
+                  min={0.1}
+                  max={0.9}
+                  step={0.05}
+                  value={eau.xRel ?? 0.5}
+                  onChange={(e) => setEau({ ...eau, xRel: Number(e.target.value) })}
+                />
+                <span className="valeur">{((eau.xRel ?? 0.5) * 100).toFixed(0)} %</span>
+                <label htmlFor="marey">Position S-N</label>
+                <input
+                  id="marey"
+                  type="range"
+                  min={0.1}
+                  max={0.9}
+                  step={0.05}
+                  value={eau.yRel ?? 0.5}
+                  onChange={(e) => setEau({ ...eau, yRel: Number(e.target.value) })}
+                />
+                <span className="valeur">{((eau.yRel ?? 0.5) * 100).toFixed(0)} %</span>
+              </>
+            )}
+            <label htmlFor="berge">Encaissement</label>
+            <input
+              id="berge"
+              type="range"
+              min={0}
+              max={3}
+              step={0.1}
+              value={eau.bergeM}
+              onChange={(e) => setEau({ ...eau, bergeM: Number(e.target.value) })}
+            />
+            <span className="valeur">{eau.bergeM.toFixed(1)} m</span>
+          </div>
+        )}
+        {nappe && (
+          <div className="effets">
+            <span title="profondeur de la nappe sous la cellule la plus proche de l'eau">
+              💧 nappe à {nappe.proche.toFixed(0)} cm au bord
+            </span>
+            <span title="profondeur de la nappe au point le plus éloigné de l'eau">
+              🏜 {nappe.loin > 350 ? "hors de portée" : `${nappe.loin.toFixed(0)} cm`} au plus loin
+            </span>
+            <span>{resumeEau(eau)}</span>
+          </div>
+        )}
+      </section>
+
+      <section className="carte">
         <h3>Le climat</h3>
         <p className="sous">Ce qu'on plante aujourd'hui vivra dedans.</p>
         <div className="seg">
@@ -545,7 +709,7 @@ function StartScreen({
           type="button"
           style={{ ...btn(true), padding: "8px 20px", fontSize: 14, fontWeight: 600 }}
           onClick={() =>
-            onStart(stationId, seed, "reelle", scenario, bordures, relief, anneeDepart)
+            onStart(stationId, seed, "reelle", scenario, bordures, relief, eau, anneeDepart)
           }
         >
           Démarrer
@@ -588,11 +752,30 @@ export function GameView() {
     [snapshot],
   );
 
+  // Les cellules occupées par l'eau libre : elles ne changent pas de la
+  // partie, on les calcule une fois (eau_surface.ts).
+  const enEau = useMemo(
+    () =>
+      station
+        ? cellulesEnEau(station.eau, { widthM: station.coteM, heightM: station.coteM })
+        : undefined,
+    [station],
+  );
+
   useEffect(() => {
     if (canvasRef.current && snapshot && station) {
-      drawParcel(canvasRef.current, snapshot, station.coteM, station.ruMm, overlay, selectedIds);
+      drawParcel(
+        canvasRef.current,
+        snapshot,
+        station.coteM,
+        station.ruMm,
+        overlay,
+        selectedIds,
+        station.nappeCm,
+        enEau,
+      );
     }
-  }, [snapshot, station, overlay, selectedIds]);
+  }, [snapshot, station, overlay, selectedIds, enEau]);
 
   if (!station || !snapshot) {
     return (
@@ -735,6 +918,7 @@ export function GameView() {
               ["ph", "pH"],
               ["azote", "Azote"],
               ["herbe", "Herbe"],
+              ...(station.eau.type !== "aucune" ? ([["nappe", "Nappe"]] as const) : []),
             ] as const
           ).map(([o, libelle]) => (
             <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>

@@ -45,11 +45,42 @@ C'est le concept central du cours (ch3-C : « le tempérament est en toi, la sta
 | Pente (°) et exposition (N/S/E/O) | rayonnement reçu (adret/ubac), ruissellement/érosion, drainage |
 | Profondeur jusqu'à la roche mère | plafond du volume prospectable par les racines |
 | Horizons du sol (2–3 couches) | pour chacun : épaisseur, texture (% sable/limon/argile), pierrosité, pH, % CaCO₃, % MO initiale |
-| Profondeur de nappe (si présente) et battement saisonnier | engorgement (aulne/saule OK, hêtre KO), réserve d'eau bonus |
+| Eau libre : ruisseau longeant un côté, ou mare (§2 bis) | tient une nappe locale → engorgement au bord, remontée capillaire en été |
 | Occupation initiale | prairie / grande culture / friche / taillis / pinède… → stock initial de C, banque de graines, structure du sol |
 | Contexte paysager | ce qui entoure la parcelle (§8) |
 
 De la texture et de la profondeur on **dérive** (pas de saisie redondante) : réserve utile (RU, mm), CEC, sensibilité à la battance, vitesse de drainage. Ordres de grandeur RU : sable ~0,8 mm/cm, limon ~1,8 mm/cm, argile ~1,6 mm/cm de sol *(à calibrer sur références agro)*.
+
+### 2 bis. L'eau de surface (implémenté)
+
+Un plan d'eau ne se décrit pas par ce qu'on en voit mais par la **nappe** qu'il
+tient sous la parcelle. `eau_surface.ts` en dérive, cellule par cellule, une
+profondeur de nappe à partir de deux termes :
+
+- **le relief** — plus une cellule domine le plan d'eau, plus la nappe est
+  profonde sous elle ; l'ampleur dépend du sol (*subordination au relief* : un
+  sable très conducteur laisse la nappe suivre le terrain, une argile la garde
+  perchée près de la surface) ;
+- **la distance** — passé la portée d'influence (60 m pour un cours d'eau, six
+  fois le rayon pour une mare), la cellule ne sent plus rien et retrouve le
+  régime de la station.
+
+Trois effets, tous exprimés dans le bilan hydrique existant :
+
+1. **saturation imposée** — sous la surface libre, réserve utile ET
+   macroporosité sont pleines. Ce n'est pas un flux qu'on choisit, c'est un
+   état ; l'eau ainsi ajoutée est comptée comme venue de la nappe, sinon le
+   bilan ne bouclerait pas ;
+2. **remontée capillaire** — décroissance exponentielle avec la distance
+   verticale, sur une hauteur capillaire déduite de la texture (30 cm dans un
+   sable, ~1,8 m dans un limon) ;
+3. **exutoire bouché** — un sol dont la nappe est dans le profil n'a nulle part
+   où envoyer son eau ; à nappe affleurante, plus rien ne part (marais). Un
+   exutoire déclaré « illimité » redevient fini dès que la nappe monte.
+
+La ripisylve en découle sans qu'aucune espèce ne soit nommée : au bord de l'eau
+l'aulne (tolérance à l'engorgement 1) prospère là où le hêtre (0,1) s'asphyxie,
+et l'écart disparaît à vingt mètres.
 
 ### 2.2 Stations proposées pour la v1 (terrains français réels)
 1. **Lande du Sud-Gironde** — reprend l'étude de cas du cours (ch5) : sable podzolique acide (pH ~4,5), nappe hivernale, RU faible, climat océanique aquitain, contexte = pinède de pin maritime en monoculture. Difficulté : pauvreté, feu, acidité.

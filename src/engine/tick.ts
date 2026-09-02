@@ -19,6 +19,7 @@ import {
   treeTotalCarbonKg,
 } from "./carbon";
 import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
+import { drainageAvecNappe, profondeurNappeCm, remonteeCapillaireMm } from "./eau_surface";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import {
@@ -195,6 +196,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     ruMm: ruHorizonMm(h),
     porositeMm: porositeDrainageMm(h),
     conductiviteMm: conductiviteHorizonMmSemaine(h),
+    epaisseurCm: h.epaisseurCm,
   }));
   const epaisseurs = profil.map((h) => h.epaisseurCm);
   const solPenetrableCm = profondeurPenetrableCm(profil);
@@ -261,6 +263,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // champ d'altitudes, l'ordre de descente et la voisine aval — ils ne
   // changent pas d'une semaine à l'autre.
   const altitudes = altitudeParCellule(station.relief, dims);
+  // L'eau libre (ruisseau, mare) tient une nappe sous la parcelle : elle
+  // affleure à la berge et s'enfonce en s'éloignant (eau_surface.ts). Deux
+  // effets, cellule par cellule : ce que la capillarité rend aux racines, et
+  // ce que l'exutoire peut encore évacuer.
+  const nappeCm = profondeurNappeCm(station.eau, altitudes, dims, station.profil);
   const descente = ordreDeDescente(altitudes);
   const aval = voisineAval(altitudes, dims);
   const partRuisselante = fractionRuissellement(station.relief.pentePct);
@@ -317,8 +324,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           SOIL_EVAP_FRACTION *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
           (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
-        nappeMm: station.remonteeNappeMmSemaine,
-        drainageExterneMm: station.drainageExterneMmSemaine,
+        nappeMm: Number.isFinite(nappeCm[i] ?? Number.POSITIVE_INFINITY)
+          ? station.remonteeNappeMmSemaine + remonteeCapillaireMm(nappeCm[i] ?? 0, station.profil)
+          : station.remonteeNappeMmSemaine,
+        nappeProfondeurCm: nappeCm[i] ?? Number.POSITIVE_INFINITY,
+        drainageExterneMm: drainageAvecNappe(
+          station.drainageExterneMmSemaine,
+          nappeCm[i] ?? Number.POSITIVE_INFINITY,
+          station.profil,
+        ),
       },
       bilanOut,
     );

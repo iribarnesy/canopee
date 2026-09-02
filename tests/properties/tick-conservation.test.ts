@@ -84,4 +84,37 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
   it("vallée engorgée, 3 ans, peuplement mixte", () => {
     checkConservation(VALLEE_ENGORGEE, 3);
   });
+
+  it("avec un ruisseau : l'eau imposée par la nappe est comptée comme un apport", () => {
+    // La nappe ne se contente plus de remonter par capillarité : elle SATURE
+    // le sol sous sa surface libre (eau_surface.ts). Cette eau-là vient de
+    // l'extérieur de la parcelle et doit apparaître dans le bilan, sinon elle
+    // se créerait toute seule au bord de l'eau.
+    checkConservation(
+      {
+        ...LANDE_SECHE,
+        station: {
+          ...LANDE_SECHE.station,
+          coteM: 30,
+          eau: { type: "ruisseau", cote: "sud", bergeM: 0.3 },
+          relief: { ...LANDE_SECHE.station.relief, pentePct: 4 },
+        },
+      },
+      3,
+    );
+  });
+
+  it("avec une mare : même bilan, source ponctuelle", () => {
+    checkConservation(
+      {
+        ...VALLEE_ENGORGEE,
+        station: {
+          ...VALLEE_ENGORGEE.station,
+          coteM: 30,
+          eau: { type: "mare", xRel: 0.5, yRel: 0.5, rayonM: 3, bergeM: 0.5 },
+        },
+      },
+      3,
+    );
+  });
 });

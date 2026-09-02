@@ -5,6 +5,7 @@
  * les données Météo-France/DRIAS.
  */
 
+import { type EauDeSurface, SANS_EAU } from "./eau_surface";
 import type { SyntheticClimate } from "./meteo";
 import { bordersUniformes, entourageDeLaStation } from "./paysage";
 import { phosphoreAssimilableGM2, potassiumEchangeableGM2 } from "./pk";
@@ -47,9 +48,10 @@ export function stationDepuisProfil(
     | "depositionNKgHaAn"
     | "ventExposition"
     | "bordures"
-  > & { profil: SoilProfile; initialMineralNKgHa: number },
+    | "eau"
+  > & { profil: SoilProfile; initialMineralNKgHa: number; eau?: EauDeSurface },
 ): Station {
-  const { profil, ...reste } = base;
+  const { profil, eau, ...reste } = base;
   // Tout ce qui vient de l'ENTOURAGE se déduit du paysage, d'un bloc : semis,
   // gibier, dépôts d'azote, vent. Les saisir un par un permettait de décrire
   // des voisinages incohérents (paysage.ts).
@@ -59,6 +61,9 @@ export function stationDepuisProfil(
   return {
     ...reste,
     profil,
+    // Sans mention contraire, une parcelle n'a pas d'eau libre : le ruisseau
+    // et la mare se choisissent (eau_surface.ts).
+    eau: eau ?? SANS_EAU,
     bordures,
     ...entourageDeLaStation(bordures, phSurface(profil), ruProfilMm(profil)),
     ruMm: ruProfilMm(profil),

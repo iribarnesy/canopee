@@ -125,6 +125,8 @@ export interface HorizonHydro {
   porositeMm: number;
   /** conductivité vers l'horizon du dessous, mm/semaine */
   conductiviteMm: number;
+  /** épaisseur, cm — sert à situer l'horizon par rapport à la nappe */
+  epaisseurCm: number;
 }
 
 export interface ProfilHydroInput {
@@ -140,6 +142,13 @@ export interface ProfilHydroInput {
   nappeMm: number;
   /** ce que l'exutoire peut évacuer sous le dernier horizon, mm/semaine */
   drainageExterneMm: number;
+  /**
+   * Profondeur de la nappe permanente sous la cellule, cm (`Infinity` = pas de
+   * nappe à portée). Ce n'est pas un flux mais une CONTRAINTE : sous la
+   * surface libre, le sol est saturé par définition, et c'est ce qui asphyxie
+   * les racines au bord d'un ruisseau (eau_surface.ts).
+   */
+  nappeProfondeurCm?: number;
 }
 
 export interface ProfilHydroOutput {
@@ -180,6 +189,11 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
   }
 
   // ── Passe 1 : la pluie s'infiltre de haut en bas ──────────────────────────
+  // Ce qu'un horizon ne peut pas laisser descendre à temps ne disparaît pas :
+  // il REFLUE vers le haut, remplit ce qui reste de porosité au-dessus, et ce
+  // qui ne tient nulle part finit par ruisseler. C'est ce qui fait qu'un orage
+  // sur un sol déjà plein ne s'infiltre pas : il part en surface.
+  let refus = 0;
   let flux = input.rainMm;
   for (let i = 0; i < n && flux > 0; i++) {
     const h = horizons[i];
@@ -192,7 +206,8 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     flux -= versPorosite;
     // Ce qui reste ne peut descendre plus vite que la conductivité de l'horizon.
     const peutDescendre = Math.min(flux, h.conductiviteMm);
-    flux = peutDescendre; // le surplus non descendu reflue (traité ci-dessous)
+    refus += flux - peutDescendre;
+    flux = peutDescendre;
   }
   let drainageBrut = flux;
 
@@ -223,7 +238,7 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
 
   // ── L'exutoire limite la sortie ; le refus remonte en nappe perchée ───────
   const drainageMm = Math.min(drainageBrut, input.drainageExterneMm);
-  let remontant = drainageBrut - drainageMm;
+  let remontant = drainageBrut - drainageMm + refus;
   for (let i = n - 1; i >= 0 && remontant > 0; i--) {
     const h = horizons[i];
     if (!h) continue;
@@ -246,6 +261,36 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
   if (hd && input.nappeMm > 0) {
     nappeMm = Math.min(input.nappeMm, Math.max(0, hd.ruMm - (eauMm[n - 1] ?? 0)));
     eauMm[n - 1] = (eauMm[n - 1] ?? 0) + nappeMm;
+  }
+
+  // ── Saturation imposée par la nappe ──────────────────────────────────────
+  // La surface libre d'une nappe, c'est le haut de la zone saturée : tout ce
+  // qui est dessous a sa réserve utile pleine ET sa macroporosité pleine. Ce
+  // n'est pas un apport qu'on choisit, c'est un état. L'eau ainsi ajoutée est
+  // comptée comme venue de la nappe, sans quoi le bilan ne bouclerait pas.
+  const nappeCm = input.nappeProfondeurCm ?? Number.POSITIVE_INFINITY;
+  if (Number.isFinite(nappeCm)) {
+    let hautCm = 0;
+    for (let i = 0; i < n; i++) {
+      const h = horizons[i];
+      if (!h) continue;
+      const basCm = hautCm + h.epaisseurCm;
+      // Part de l'horizon située sous la surface libre.
+      const partNoyee =
+        h.epaisseurCm > 0 ? Math.min(1, Math.max(0, (basCm - nappeCm) / h.epaisseurCm)) : 0;
+      hautCm = basCm;
+      if (partNoyee <= 0) continue;
+      const cibleRu = h.ruMm * partNoyee;
+      if ((eauMm[i] ?? 0) < cibleRu) {
+        nappeMm += cibleRu - (eauMm[i] ?? 0);
+        eauMm[i] = cibleRu;
+      }
+      const cibleExces = h.porositeMm * partNoyee;
+      if ((excesMm[i] ?? 0) < cibleExces) {
+        nappeMm += cibleExces - (excesMm[i] ?? 0);
+        excesMm[i] = cibleExces;
+      }
+    }
   }
 
   const engorgementParHorizon = out?.engorgementParHorizon ?? new Array<number>(n);

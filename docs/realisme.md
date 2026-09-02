@@ -69,11 +69,14 @@ latéral, adret/ubac).*
 | A18 | Un sol couvert d'herbe évapore moins qu'un sol nu | ✅ | couverture herbacée dans le bilan d'évaporation |
 | A6 | Un sol engorgé asphyxie les racines des espèces sensibles | ✅ | `waterloggingFactor` ; `tolerances.test.ts` |
 | A7 | Le vent augmente la demande évaporative ; un abri la réduit | ✅ | `windShelterAt` (portée 12 H) ; `nurse.test.ts` |
-| A8 | Une nappe accessible soutient la végétation en été | 🟡 | recharge l'horizon profond ; pas encore de battement saisonnier |
+| A8 | Une nappe accessible soutient la végétation en été | ✅ | remontée capillaire décroissante avec la distance verticale ; hauteur capillaire déduite de la texture (`eau_surface.ts`) |
+| A19 | Un ruisseau ou une mare tient une nappe locale : la ripisylve s'installe toute seule | ✅ | `profondeurNappeCm` (subordination au relief × portée d'influence) ; `eau-surface.test.ts` — au bord de l'eau l'aulne domine, le hêtre s'y noie |
+| A20 | Sous la surface libre d'une nappe, le sol est saturé (ce n'est pas un flux, c'est un état) | ✅ | saturation imposée dans `profilHydro`, comptée comme un apport de nappe |
+| A21 | Un orage sur un sol déjà plein ruisselle intégralement | ✅ | passe 1 de `profilHydro` : le refus reflue au lieu d'être perdu ; `profil-hydro-conservation.test.ts` |
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
 | A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
 | A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` |
-| A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ❌ | Aucune pente dans le moteur |
+| A11 | La pente crée ruissellement, érosion et dessèchement d'adret | 🟡 | ruissellement et adret faits (`relief.ts`) ; l'érosion manque — le ruissellement emporte de l'eau, pas de terre |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
 | A13 | L'eau ruisselle d'une cellule à l'autre : bas de pente frais, crête sèche | ✅ | `relief.ts` ; `relief.test.ts` — le coefficient de ruissellement dépend de la pente, de la COUVERTURE DU SOL et de la saturation |
@@ -258,10 +261,32 @@ vallon en entonnoir, croupe), et l'eau descend : ce qui ruisselle en haut a une
 seconde chance de s'infiltrer en bas, ce qui fait les bas de pente frais et les
 crêtes sèches sur la même parcelle.
 
-Ce qui reste à faire : la **mare** et le **ruisseau** comme objets (on a
-l'écoulement, pas encore de plan d'eau permanent), les **inondations par
-débordement** venues d'un cours d'eau, et l'**érosion** — le ruissellement
-emporte de l'eau mais pas encore de terre.
+Le relief se **choisit au lancement** — altitude, pente, exposition, forme,
+bassin d'amont — au lieu d'être figé par station : la même terre peut se jouer
+à 60 m sur du plat ou à 1 200 m sur un ubac à 30 %.
+
+## L'eau de surface : la ripisylve, sans règle sur les espèces
+
+`eau_surface.ts`. Un ruisseau qui longe un côté, une mare creusée dans la
+parcelle. Ce qui compte n'est pas le plan d'eau mais la **nappe** qu'il tient :
+elle affleure à la berge et s'enfonce en s'éloignant, selon deux termes qui
+disent deux choses différentes — le **relief** (plus une cellule domine le plan
+d'eau, plus la nappe est loin sous ses pieds, d'autant plus que le sol conduit
+bien l'eau) et la **portée d'influence** (un cours d'eau draine tout un versant,
+une mare ne mouille que ses abords).
+
+Trois conséquences, toutes déjà connues du bilan hydrique : une **remontée
+capillaire** d'autant plus forte que la nappe est proche, un **exutoire bouché**
+là où elle est dans le profil, et surtout la **saturation imposée** sous la
+surface libre — le point qui manquait, et sans lequel le ruisseau ne changeait
+presque rien. Résultat mesuré à douze ans, ruisseau au sud : au bord de l'eau
+l'aulne pousse un peu mieux (6,22 m contre 6,03) et le hêtre s'effondre (1,27 m
+contre 2,73) ; à vingt mètres, plus aucune différence. Aucune espèce n'est
+nommée nulle part.
+
+Ce qui reste à faire : les **inondations par débordement** venues du cours
+d'eau (on a la nappe, pas la crue), le **battement saisonnier** de la nappe, et
+l'**érosion**.
 
 ## Générateur de stations : ce qu'il reste à faire
 

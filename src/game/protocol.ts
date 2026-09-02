@@ -8,6 +8,7 @@ import type { ActionRefusal, EconomyState, GameAction } from "../engine/actions"
 import type { IndiceBiodiversite } from "../engine/biodiversite";
 import type { CarbonInventory } from "../engine/carbon";
 import type { ScenarioId } from "../engine/climat";
+import type { EauDeSurface } from "../engine/eau_surface";
 import type { WeekWeather } from "../engine/meteo";
 import type { Bordures } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
@@ -31,6 +32,8 @@ export interface SaveGame {
   bordures?: Bordures;
   /** relief choisi ; absent = celui d'origine de la station */
   relief?: Relief;
+  /** eau libre choisie ; absent = aucune */
+  eau?: EauDeSurface;
   /** année civile du début de partie */
   anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
@@ -97,6 +100,10 @@ export interface StationInfo {
   ruMm: number;
   phInitial: number;
   meteoLabel: string;
+  /** eau libre de la parcelle : l'UI la dessine (eau_surface.ts) */
+  eau: EauDeSurface;
+  /** profondeur de la nappe sous chaque cellule, cm — fixe, envoyée une fois */
+  nappeCm: Float32Array;
 }
 
 export type ToWorker =
@@ -108,6 +115,7 @@ export type ToWorker =
       scenario: ScenarioId;
       bordures: Bordures;
       relief: Relief;
+      eau: EauDeSurface;
       anneeDepart: number;
     }
   | { type: "resume"; save: SaveGame }
