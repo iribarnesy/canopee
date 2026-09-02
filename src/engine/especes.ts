@@ -137,6 +137,16 @@ export interface EspeceV0 {
     /** rejette de souche après un feu (châtaignier, arbousier, chêne-liège) */
     rejetteApresFeu: boolean;
   };
+  gibier: {
+    /**
+     * Appétence ∈ [0,1] pour les cervidés : à quel point les rameaux de
+     * l'année sont recherchés. Le chevreuil est un « cueilleur » sélectif —
+     * il vide un noisetier ou un chêne avant de toucher au pin, et c'est
+     * cette sélectivité qui réoriente la composition d'une régénération
+     * (ch4-C). Les épineux et les feuillages coriaces s'en tirent mieux.
+     */
+    appetence: number;
+  };
   /** production fruitière (docs/regles.md §7.2) — absent pour les essences forestières */
   fruits?: {
     /** floraison : cumul de degrés-jours base 5 °C depuis le 1er janvier */
@@ -184,6 +194,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 15 },
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.45, prixOeuvreEurM3: 90, rejetteDeSouche: true },
+    // brouté sans être recherché
+    gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -207,6 +219,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 50 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.68, prixOeuvreEurM3: 180, rejetteDeSouche: false },
+    // peu appété, mais consommé l'hiver faute de mieux
+    gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
   },
@@ -228,6 +242,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 40 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.75, prixOeuvreEurM3: 220, rejetteDeSouche: true },
+    // les chênes sont en tête des listes d'appétence
+    gibier: { appetence: 0.75 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.5, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -250,6 +266,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 60 },
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.45, prixOeuvreEurM3: 110, rejetteDeSouche: false },
+    // résineux dédaigné (il subit surtout les frottis, v2)
+    gibier: { appetence: 0.2 },
     feu: { inflammabilite: 0.9, resistanceEcorce: 0.35, rejetteApresFeu: false },
     sources: [ATLAS],
   },
@@ -271,6 +289,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.55, prixOeuvreEurM3: 120, rejetteDeSouche: true },
+    // rameaux tendres, brouté en pionnier
+    gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.1, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -303,6 +323,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.02,
       autofertile: false, // la plupart des variétés : il faut un pollinisateur (décision §15)
     },
+    // un verger non protégé est un garde-manger
+    gibier: { appetence: 0.85 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
   },
@@ -334,6 +356,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.04,
       autofertile: true,
     },
+    // fruitier très appété
+    gibier: { appetence: 0.8 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
     sources: [ATLAS],
   },
@@ -365,6 +389,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.15,
       autofertile: false, // auto-incompatible : il faut un voisin
     },
+    // l'essence préférée du chevreuil
+    gibier: { appetence: 0.9 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.1, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -387,6 +413,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.6, prixOeuvreEurM3: 40, rejetteDeSouche: true },
+    // épines dissuasives, mais brouté en hiver sur la lande
+    gibier: { appetence: 0.25 },
     feu: { inflammabilite: 0.98, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -407,6 +435,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 22 },
     economie: { prixPlantEur: 2.5 },
     bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
+    // genêt appété, sans épines
+    gibier: { appetence: 0.55 },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -428,6 +458,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 45 },
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
+    // consommée l'hiver quand il n'y a rien d'autre
+    gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -460,6 +492,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.08, // ramassage au sol
       autofertile: false, // auto-stérile : il lui faut un congénère
     },
+    // rejets très broutés
+    gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -498,6 +532,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     // Cette même écorce isole si bien que l'arbre traverse l'incendie et
     // repart (atlas : « écorce = liège → résiste au feu »).
+    // appété, mais feuillage coriace
+    gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
     sources: [ATLAS],
   },
@@ -529,6 +565,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       recolteHKg: 0.1,
       autofertile: true,
     },
+    // feuillage sclérophylle peu recherché
+    gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.7, resistanceEcorce: 0.35, rejetteApresFeu: true },
     sources: [ATLAS],
   },

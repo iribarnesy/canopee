@@ -73,6 +73,8 @@ export const LANDE_SECHE: StationClimat = {
     drainageExterneMmSemaine: 30,
     herbeInitiale: 0.5, // lande rase : callune et molinie couvrent déjà le sol // les Landes brûlent : c'est LE risque de la station
     ventExposition: 0.85, // lande atlantique rase : le vent balaie tout
+    // Lande ouverte et pauvre : peu d'abri, densité modérée.
+    gibierParHa: 0.08,
     coteM: 100,
     voisinage: [
       { especeId: "pinus_sylvestris", semisParAn: 4 },
@@ -106,6 +108,8 @@ export const VALLEE_ENGORGEE: StationClimat = {
     drainageExterneMmSemaine: 5,
     herbeInitiale: 0.8, // prairie humide dense // fond de vallée humide
     ventExposition: 0.2, // fond de vallée abrité
+    // Fond de vallée boisé et nourrissant : c'est là que le chevreuil abonde.
+    gibierParHa: 0.25,
     coteM: 100,
     voisinage: [],
   }),
@@ -134,6 +138,8 @@ export const LIMON_RICHE: StationClimat = {
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY, // plateau bien drainé
     herbeInitiale: 0.2, // sortie de culture : le sol se réenherbe // limon frais du Nord
     ventExposition: 0.6, // plateau limoneux ouvert (§2.2)
+    // Plaine de grande culture : peu de couvert, gibier présent mais dilué.
+    gibierParHa: 0.1,
     coteM: 100,
     voisinage: [],
   }),
@@ -181,6 +187,8 @@ export const FRICHE_LIMON: StationClimat = {
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
     herbeInitiale: 0.9, // friche : l'herbe tient déjà tout le terrain
     ventExposition: 0.4,
+    // Friche en mosaïque de bosquets : conditions idéales pour le chevreuil.
+    gibierParHa: 0.2,
     coteM: 50,
     voisinage: [
       { especeId: "betula_pendula", semisParAn: 6 },

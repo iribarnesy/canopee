@@ -111,6 +111,14 @@ function drawTreeOblique(
     }
   }
 
+  if (tree.protege && tree.heightM <= 1.5) {
+    // Manchon : un petit fût clair au pied du plant, pour voir d'un coup d'œil
+    // ce qui est encore à la merci du gibier.
+    ctx.fillStyle = "#d8d2c4";
+    const w = Math.max(1.5, scale * 0.5);
+    ctx.fillRect(bx - w / 2, by - Math.min(hPx, scale * 1.2), w, Math.min(hPx, scale * 1.2));
+  }
+
   if (selected) {
     ctx.beginPath();
     ctx.ellipse(bx, by, crownR + 2, crownR * 0.35 + 2, 0, 0, 2 * Math.PI);
@@ -606,6 +614,16 @@ export function GameView() {
               type="button"
               style={btn()}
               onClick={() =>
+                game.dispatch({ type: "proteger", treeIds: selectedTrees.map((t) => t.id) })
+              }
+              title="Poser un manchon : le plant échappe aux dents jusqu'à ce qu'il ait sa flèche hors d'atteinte"
+            >
+              🛡️ Protéger
+            </button>
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
                 game.dispatch({ type: "leverEcorce", treeIds: selectedTrees.map((t) => t.id) })
               }
               title="Lever le liège : une récolte qui ne tue pas l'arbre et revient tous les dix ans"
@@ -693,6 +711,7 @@ export function GameView() {
             bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
             {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
           </strong>
+          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem
           <br />🦋 biodiversité <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
           <span style={{ opacity: 0.7 }}>
             ({snapshot.biodiversite.richesse} essence

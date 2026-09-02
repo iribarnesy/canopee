@@ -36,6 +36,8 @@ export interface SnapshotTree {
   fruitsKg: number;
   /** hauteur de bille élaguée, m (ce qui fera du bois d'œuvre) */
   hauteurElagueeM: number;
+  /** plant sous manchon : le gibier ne l'atteint pas */
+  protege: boolean;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */

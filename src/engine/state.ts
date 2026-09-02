@@ -63,6 +63,15 @@ export interface Station {
   herbeInitiale: number;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
   voisinage: { especeId: string; semisParAn: number }[];
+  /**
+   * Densité de cervidés du paysage, individus/ha (« équivalent chevreuil »).
+   * C'est une donnée de CONTEXTE, au même titre que le voisinage semencier :
+   * le domaine vital d'un chevreuil fait des dizaines d'hectares, la parcelle
+   * ne détermine pas sa population, elle en reçoit la part que son attrait
+   * justifie (gibier.ts). Ordres de grandeur français : 0,05/ha en plaine
+   * cultivée, 0,3/ha dans un massif à forte densité.
+   */
+  gibierParHa: number;
 }
 
 export function gridDims(station: Station): GridDims {
@@ -144,6 +153,8 @@ export interface TickFluxes {
   waterloggingMean: number;
   /** couverture herbacée moyenne ∈ [0,1] */
   herbeCouvertureMean: number;
+  /** matière sèche prélevée par le gibier cette semaine, kg */
+  broutageKg: number;
   mineralizationKgHa: number;
   uptakeKgHa: number;
   leachedKgHa: number;
@@ -219,6 +230,8 @@ export function plantAt(
     bloomFrosted: false,
     rootDepthCm: 20,
     hauteurElagueeM: 0,
+    pousseTendreM: 0,
+    protege: false,
     recepages: 0,
   };
   return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
@@ -257,6 +270,8 @@ export function plantScattered(
       bloomFrosted: false,
       rootDepthCm: 20,
       hauteurElagueeM: 0,
+      pousseTendreM: 0,
+      protege: false,
       recepages: 0,
     });
   }

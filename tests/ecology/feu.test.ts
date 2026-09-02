@@ -45,6 +45,8 @@ function arbre(especeId: string, heightM: number): TreeState {
     bloomFrosted: false,
     rootDepthCm: 60,
     hauteurElagueeM: 0,
+    pousseTendreM: 0,
+    protege: false,
     recepages: 0,
   };
 }

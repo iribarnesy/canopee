@@ -24,6 +24,8 @@ function arbre(id: number, especeId: string, heightM: number): TreeState {
     bloomFrosted: false,
     rootDepthCm: 80,
     hauteurElagueeM: 0,
+    pousseTendreM: 0,
+    protege: false,
     recepages: 0,
   };
 }

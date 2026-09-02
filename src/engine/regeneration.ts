@@ -136,6 +136,8 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       bloomFrosted: false,
       rootDepthCm: 20,
       hauteurElagueeM: 0,
+      pousseTendreM: 0,
+      protege: false,
       recepages: 0,
     });
   };

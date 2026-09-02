@@ -15,7 +15,13 @@ import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
-export type CauseMort = "secheresse" | "engorgement" | "ombre" | "vieillesse" | "feu";
+export type CauseMort =
+  | "secheresse"
+  | "engorgement"
+  | "ombre"
+  | "vieillesse"
+  | "feu"
+  | "abroutissement";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   secheresse: "de sécheresse",
@@ -23,6 +29,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   ombre: "étouffés par l'ombre",
   vieillesse: "de vieillesse",
   feu: "dans l'incendie",
+  abroutissement: "broutés par le gibier",
 };
 
 export interface TreeState {
@@ -70,6 +77,18 @@ export interface TreeState {
    * arrive.
    */
   rootDepthCm: number;
+  /**
+   * Longueur de pousse encore TENDRE, m : ce que l'arbre a allongé récemment
+   * et qui n'a pas fini de lignifier. C'est exactement ce que le chevreuil
+   * mange — un rameau de l'année, pas du bois. Ce stock se remplit à la
+   * croissance, se vide au broutage et se lignifie avec le temps.
+   */
+  pousseTendreM: number;
+  /**
+   * Plant protégé (manchon, gaine) : hors d'atteinte des dents tant qu'il n'a
+   * pas dépassé la hauteur de broutage.
+   */
+  protege: boolean;
 }
 
 /** Conditions de la semaine vues par UN arbre (sol local, canopée, météo). */

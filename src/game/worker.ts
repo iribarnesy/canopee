@@ -135,6 +135,13 @@ function performAction(action: GameAction) {
         );
       break;
     }
+    case "proteger": {
+      const n =
+        state.trees.filter((t) => t.protege).length - before.trees.filter((t) => t.protege).length;
+      if (n > 0)
+        event("🛡️", `${n} plant${n > 1 ? "s" : ""} protégé${n > 1 ? "s" : ""} du gibier, ${eur}`);
+      break;
+    }
     case "leverEcorce": {
       if (dEur > 0)
         event("🟤", `Liège levé : ${eur} (${dHeures.toFixed(1)} h) — les arbres restent debout`);
@@ -181,6 +188,7 @@ function emptyFluxes(): TickFluxes {
     overflowMm: 0,
     waterloggingMean: 0,
     herbeCouvertureMean: 0,
+    broutageKg: 0,
     mineralizationKgHa: 0,
     uptakeKgHa: 0,
     leachedKgHa: 0,
@@ -227,6 +235,7 @@ function postSnapshot() {
         stress: t.stress,
         fruitsKg: t.fruitsKg,
         hauteurElagueeM: t.hauteurElagueeM,
+        protege: t.protege,
       })),
     // Carte : on montre l'eau de l'horizon de SURFACE, celle que voient les
     // semis et l'évaporation (le sol est stratifié, cf. soil.ts).

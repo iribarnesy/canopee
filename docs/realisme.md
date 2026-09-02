@@ -30,18 +30,18 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | D. Climat et phénologie | 4 | 3 | 3 | 10 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
-| G. Faune et santé | 0 | 0 | 6 | 6 |
-| H. Gestion, économie, travail | 9 | 3 | 4 | 16 |
+| G. Faune et santé | 3 | 0 | 5 | 8 |
+| H. Gestion, économie, travail | 9 | 4 | 3 | 16 |
 | I. Carbone | 4 | 3 | 2 | 9 |
 | J. Biodiversité et structure | 2 | 2 | 2 | 6 |
-| **Total** | **55** | **23** | **33** | **111** |
+| **Total** | **58** | **24** | **31** | **113** |
 
-**Score de réalisme : 55 pleins + 23 partiels sur 111 → 60 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 58 pleins + 24 partiels sur 113 → 62 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 59 % (feu émergent + sylviculture) → 60 % (éclaircie outillée, liège,
-récupération des bois brûlés, indice de biodiversité).*
+récupération des bois brûlés, indice de biodiversité) → 62 % (gibier).*
 
 ---
 
@@ -153,7 +153,9 @@ récupération des bois brûlés, indice de biodiversité).*
 
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
-| G1 | Le gibier abroutit les jeunes plants non protégés | ❌ | Absent (ch4-C) |
+| G1 | Le gibier abroutit les jeunes plants non protégés | ✅ | `gibier.ts` ; `gibier.test.ts` — au-dessus de ~0,35 cervidé/ha, une plantation appétente ne sort jamais de la hauteur de dent |
+| G7 | Sa sélectivité réoriente la composition (le noisetier trinque, le pin passe) | ✅ | `especes.gibier.appetence` ; émergent, rien n'est codé espèce par espèce |
+| G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent à des seuils (scolytes après sécheresse…) | ❌ | Absent (§7.4) |
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ❌ | Absent |
 | G4 | Les pollinisateurs conditionnent la fructification | 🟡→❌ | Pollinisation croisée entre arbres seulement, pas d'insectes |
@@ -174,7 +176,7 @@ récupération des bois brûlés, indice de biodiversité).*
 | H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, coupe, et éclaircie par critère (`choisirTigesAEclaircir` ; `eclaircie.test.ts`) — les trognes restent à faire |
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
-| H9 | Irrigation, fertilisation, protections individuelles, clôtures | ❌ | Chaulage et fauche existent ; le reste non |
+| H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche et protections individuelles (`proteger`) ; irrigation, fertilisation et clôtures absentes |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
 | H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
 | H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |
@@ -213,9 +215,10 @@ inventaire.
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Biotique** : gibier, ravageurs à seuils, auxiliaires, pollinisateurs
-   (G1-G6) — c'est aussi ce qui donnerait un effet en retour à l'indice de
-   biodiversité (J5, J6), aujourd'hui purement observé.
+1. **Biotique, la suite** : le gibier est fait ; restent les ravageurs à
+   seuils (scolytes après sécheresse), les auxiliaires et les pollinisateurs
+   (G2-G6). C'est là que l'indice de biodiversité gagnerait enfin un effet en
+   retour (J5, J6) : un peuplement riche freine les pullulations.
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
 4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
 

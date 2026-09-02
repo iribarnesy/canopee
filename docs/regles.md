@@ -190,6 +190,21 @@ Pas de tirage aléatoire : des **règles à seuil**, lisibles et apprenables :
 - Chalarose du frêne : arrive à l'année scriptée A+12 quoi qu'il arrive (réalité française) — enjeu de diversification.
 - **Gibier** (chevreuil/lapin) : pression fixée par le contexte paysager ; abroutissement des plants <1,5 m non protégés (ch4-C). Contre-mesures : clôture, protections individuelles, ronces/épineux nurses (aubépine, prunellier = « nurses » de l'atlas).
 
+*Implémenté* (`src/engine/gibier.ts`, critère G1) — et **sans tirage au sort ni
+seuil arbitraire**, contrairement à ce que prévoyait cette section : la
+pression se compte en kilos de matière sèche disputés. `station.gibierParHa`
+donne la densité du paysage (donnée de contexte, comme le voisinage semencier :
+un chevreuil a des dizaines d'hectares de domaine vital) ; chaque cellule offre
+un fourrage — herbe et rameaux tendres à hauteur de dent — ; la ration se
+cherche d'abord en ligneux (le chevreuil est un cueilleur sélectif, pas un
+brouteur d'herbe) avec une **réponse fonctionnelle** qui rend une ressource
+rare coûteuse à récolter ; chaque arbre perd la longueur de pousse qu'on lui a
+mangée, pondérée par son appétence. Trois conséquences tombent toutes seules :
+le noisetier reste bloqué là où le pin sort, la densité protège par dilution,
+et les déjections déplacent carbone et azote vers les cellules broutées au lieu
+de les faire disparaître. Reste à faire : frottis, écorçage, sanglier, chasse,
+clôture.
+
 ### 7.5 Interactions positives (le cœur agroforestier)
 - **Facilitation / effet nurse** (ch1-A) : sous une nurse, un semis subit moins d'ETP, moins de gel, pas de gibier — mais moins de lumière. Le joueur rejoue le moteur de la succession.
 - **Mycorhizes** (ch2-B) : un individu connecté au réseau compatible (ECTO avec ECTO…) gagne en efficacité d'absorption eau/P (+X %) et en résistance au stress hydrique. Le réseau se construit dans le temps et est détruit par le labour.

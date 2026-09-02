@@ -11,6 +11,7 @@
 import { treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
+import { HAUTEUR_BROUTAGE_M } from "./gibier";
 import { crownRadiusM } from "./light";
 import type { GameState } from "./state";
 import { treeNitrogenNeedGWeek } from "./trees";
@@ -35,6 +36,10 @@ export const BILLE_OEUVRE_MIN_M = 4;
 export const ELAGAGE_HOURS_PAR_M = 0.35;
 /** hauteur maximale atteignable à l'élagage (au-delà, il faut une nacelle) */
 export const ELAGAGE_MAX_M = 8;
+/** Prix d'une protection individuelle (manchon/gaine + tuteur), € *(à calibrer)*. */
+export const PROTECTION_EUR = 3;
+/** Temps de pose d'une protection, h. */
+export const PROTECTION_HEURES = 0.08;
 /** temps de recépage d'une cépée, h *(à calibrer)* */
 export const RECEPAGE_HOURS = 0.8;
 /**
@@ -179,6 +184,16 @@ export type GameAction =
     }
   | {
       /**
+       * Protéger : poser un manchon ou une gaine sur des plants. C'est le
+       * geste qui décide du sort d'une plantation là où il y a du gibier —
+       * il faut tenir jusqu'à ce que la flèche passe la hauteur de dent.
+       */
+      type: "proteger";
+      week: number;
+      treeIds: number[];
+    }
+  | {
+      /**
        * Recéper : couper au ras pour faire repartir la souche en cépée
        * (taillis, trogne). Seules les espèces qui rejettent le supportent.
        */
@@ -310,6 +325,8 @@ function applyPlanter(
       bloomFrosted: false,
       rootDepthCm: 20,
       hauteurElagueeM: 0,
+      pousseTendreM: 0,
+      protege: false,
       recepages: 0,
     });
     planted++;
@@ -595,6 +612,50 @@ function applyElaguer(
   };
 }
 
+function applyProteger(
+  state: GameState,
+  action: Extract<GameAction, { type: "proteger" }>,
+): ApplyResult {
+  const refusals: ActionRefusal[] = [];
+  let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
+  const trees = [...state.trees];
+  for (const id of action.treeIds) {
+    const idx = trees.findIndex((t) => t.id === id && t.alive);
+    const tree = idx >= 0 ? trees[idx] : undefined;
+    if (!tree) {
+      refusals.push(refuse(action.week, "proteger", `arbre ${id} introuvable`));
+      continue;
+    }
+    if (tree.protege) {
+      refusals.push(refuse(action.week, "proteger", `arbre ${id} : déjà protégé`));
+      continue;
+    }
+    if (tree.heightM > HAUTEUR_BROUTAGE_M) {
+      // Il est sorti tout seul : dépenser pour lui serait de l'argent perdu.
+      refusals.push(
+        refuse(action.week, "proteger", `arbre ${id} : hors d'atteinte, protection inutile`),
+      );
+      continue;
+    }
+    if (hoursUsedWeek + PROTECTION_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
+      refusals.push(refuse(action.week, "proteger", "plafond hebdomadaire atteint"));
+      break;
+    }
+    hoursUsedWeek += PROTECTION_HEURES;
+    hoursUsedYear += PROTECTION_HEURES;
+    treasuryEur -= PROTECTION_EUR;
+    trees[idx] = { ...tree, protege: true };
+  }
+  return {
+    state: {
+      ...state,
+      trees,
+      economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
+    },
+    refusals,
+  };
+}
+
 function applyReceper(
   state: GameState,
   action: Extract<GameAction, { type: "receper" }>,
@@ -630,6 +691,8 @@ function applyReceper(
       ...tree,
       heightM: 0.5,
       hauteurElagueeM: 0,
+      pousseTendreM: 0,
+      protege: false,
       stress: 0,
       fruitsKg: 0,
       fruitProgress: 0,
@@ -849,6 +912,8 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyLeverEcorce(state, action);
     case "elaguer":
       return applyElaguer(state, action);
+    case "proteger":
+      return applyProteger(state, action);
     case "receper":
       return applyReceper(state, action);
   }

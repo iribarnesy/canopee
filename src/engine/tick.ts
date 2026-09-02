@@ -18,6 +18,7 @@ import {
 } from "./carbon";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
+import { brouter, DIGESTIBILITE, LIGNIFICATION_PAR_SEMAINE } from "./gibier";
 import { cellCount, forEachDiscCell } from "./grid";
 import {
   couvertureMax,
@@ -480,8 +481,79 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return { ...tree, fruitsKg, fruitProgress, bloomFrosted };
   });
 
+  // ── 5 ter. Le gibier (§7.4, ch4-C) ────────────────────────────────────────
+  // Les rameaux de l'année lignifient peu à peu ; ce qui reste tendre est ce
+  // que le chevreuil mange. La pression vient du paysage, se répartit sur les
+  // cellules selon ce qu'elles offrent, et se prélève arbre par arbre.
+  nextTrees = nextTrees.map((tree, t) => {
+    const pousse = Math.max(0, tree.heightM - (trees[t]?.heightM ?? tree.heightM));
+    const tendre = (tree.pousseTendreM + pousse) * (1 - LIGNIFICATION_PAR_SEMAINE);
+    return tendre === tree.pousseTendreM ? tree : { ...tree, pousseTendreM: tendre };
+  });
+  let broutageAzoteG = 0;
+  const couvertArbore = new Array<number>(nCells);
+  for (let i = 0; i < nCells; i++) couvertArbore[i] = 1 - (groundLight[i] ?? 1);
+  const broutage = brouter(
+    nextTrees,
+    herbeCouverture,
+    couvertArbore,
+    station.coteM,
+    station.gibierParHa,
+    saisonHerbe,
+  );
+  if (broutage.preleveKg > 0) {
+    for (let i = 0; i < nCells; i++) {
+      const consommee = broutage.parCellule[i]?.herbeConsommee ?? 0;
+      if (consommee > 0) herbeCouverture[i] = Math.max(0, (herbeCouverture[i] ?? 0) - consommee);
+    }
+    nextTrees = nextTrees.map((tree) => {
+      const degat = broutage.parArbre.get(tree.id);
+      if (!degat) return tree;
+      if (degat.mort) {
+        return { ...tree, alive: false, causeMort: "abroutissement" as const };
+      }
+      const espece = getEspece(tree.especeId);
+      const hauteur = Math.max(0.05, tree.heightM - degat.pousseMangeeM);
+      // Le carbone mangé ne s'évapore pas : il part en respiration du gibier,
+      // et ce qui n'est pas digéré revient au sol en déjections.
+      const mangeKgC = treeTotalCarbonKg(espece, tree.heightM) - treeTotalCarbonKg(espece, hauteur);
+      // L'azote suit le même chemin : ce qui partait dans le rameau quitte
+      // l'arbre et revient au sol. L'herbivore ne détruit rien, il déplace.
+      const cell = Math.floor(tree.y) * station.coteM + Math.floor(tree.x);
+      const dansLaParcelle = cell >= 0 && cell < nCells;
+      const partMangee =
+        tree.pousseTendreM > 0 ? Math.min(1, degat.pousseMangeeM / tree.pousseTendreM) : 0;
+      // Rien ne sort du bilan : si la cellule est hors grille, l'azote reste
+      // dans l'arbre plutôt que de s'évaporer de la comptabilité.
+      const azoteRenduG = dansLaParcelle ? tree.uptakeYearG * partMangee : 0;
+      if (dansLaParcelle) {
+        // Les déjections tombent là où le gibier broute, pas « sur la parcelle » :
+        // un herbivore CONCENTRE la fertilité, il ne l'étale pas.
+        if (mangeKgC > 0)
+          litterCG[cell] = (litterCG[cell] ?? 0) + mangeKgC * (1 - DIGESTIBILITE) * 1000;
+        if (azoteRenduG > 0) {
+          broutageAzoteG += azoteRenduG;
+          const oldN = litterNG[cell] ?? 0;
+          litterK[cell] =
+            (oldN * (litterK[cell] ?? 0) + azoteRenduG * litterDecayRate(15)) /
+            (oldN + azoteRenduG);
+          litterNG[cell] = oldN + azoteRenduG;
+        }
+      }
+      if (mangeKgC > 0) emittedG += mangeKgC * DIGESTIBILITE * 1000;
+      return {
+        ...tree,
+        heightM: hauteur,
+        pousseTendreM: Math.max(0, tree.pousseTendreM - degat.pousseMangeeM),
+        uptakeYearG: tree.uptakeYearG - azoteRenduG,
+      };
+    });
+  }
+
   // ── 6. Retours de litière : chute des feuilles + arbres morts ─────────────
-  let litterfallSumG = 0;
+  // Les déjections du gibier sont un retour de litière comme un autre : c'est
+  // de l'azote qui quitte les arbres pour revenir au sol.
+  let litterfallSumG = broutageAzoteG;
   let fixationSumG = 0;
   let leafNppKgC = 0; // le feuillage tombé a été produit dans l'année (NPP feuilles)
   const depositLitter = (tree: TreeState, amountG: number) => {
@@ -605,6 +677,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             fruitProgress: 0,
             uptakeYearG: 0,
             hauteurElagueeM: 0,
+            pousseTendreM: 0,
+            protege: false,
           });
         } else {
           // Arbre tué mais toujours debout : récupérable en coupe sanitaire
@@ -691,6 +765,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       overflowMm: overflowSum / nCells,
       waterloggingMean: waterloggingSum / nCells,
       herbeCouvertureMean: herbeSum / nCells,
+      broutageKg: broutage.preleveKg,
       mineralizationKgHa: (mineralizationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKgHa: (uptakeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKgHa: (leachedSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

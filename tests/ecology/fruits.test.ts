@@ -124,6 +124,11 @@ describe("pollinisation croisée (§7.5) et récolte (§10)", () => {
           { x: 25, y: 20 },
         ],
       },
+      // Un verger se protège du gibier : sans manchon, des pommiers (parmi
+      // les essences les plus appétentes) ne montent jamais à fruit. Ce test
+      // porte sur la récolte, pas sur le broutage — on met donc l'arboriculteur
+      // dans les conditions où il travaille vraiment.
+      { type: "proteger", week: 1, treeIds: [1, 2] },
     ];
     // Les fruits mûrissent pendant le tick de la semaine 38 : on récolte la
     // semaine suivante (les actions s'exécutent avant le tick).
