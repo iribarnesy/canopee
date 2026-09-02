@@ -49,9 +49,19 @@ function plantation(
     const dernier = state.trees[state.trees.length - 1];
     if (dernier) ids.push(dernier.id);
   }
-  const actions: GameAction[] = options.protege
-    ? [{ type: "proteger", week: 1, treeIds: ids }]
-    : [];
+  // Poser une protection prend une demi-heure : 169 plants, c'est plus de
+  // quatre-vingts heures. On étale sur plusieurs semaines, comme sur le
+  // terrain — sinon le plafond hebdomadaire en refuse la moitié en silence.
+  const actions: GameAction[] = [];
+  if (options.protege) {
+    for (let debut = 0; debut < ids.length; debut += 100) {
+      actions.push({
+        type: "proteger",
+        week: 1 + debut / 100,
+        treeIds: ids.slice(debut, debut + 100),
+      });
+    }
+  }
   for (let i = 0; i < 12 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");

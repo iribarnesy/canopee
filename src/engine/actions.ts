@@ -32,14 +32,28 @@ export const WOOD_PRICE_EUR_M3 = 35;
 export const DIAMETRE_OEUVRE_MIN_CM = 30;
 /** hauteur de bille élaguée minimale pour vendre en bois d'œuvre, m */
 export const BILLE_OEUVRE_MIN_M = 4;
-/** temps d'élagage, h par mètre de tronc et par arbre *(à calibrer)* */
-export const ELAGAGE_HOURS_PAR_M = 0.35;
+/**
+ * Temps d'élagage, h par mètre de tronc et par arbre. À la perche, monter un
+ * mètre de bille propre sur un jeune arbre prend quelques minutes ; c'est
+ * répété sur des centaines de tiges que ça pèse. (Mon premier chiffre, 0,35 h,
+ * revenait à vingt minutes par mètre et par arbre : trois à cinq fois trop.)
+ */
+export const ELAGAGE_HOURS_PAR_M = 0.12;
 /** hauteur maximale atteignable à l'élagage (au-delà, il faut une nacelle) */
 export const ELAGAGE_MAX_M = 8;
-/** Prix d'une protection individuelle (manchon/gaine + tuteur), € *(à calibrer)*. */
-export const PROTECTION_EUR = 3;
-/** Temps de pose d'une protection, h. */
-export const PROTECTION_HEURES = 0.08;
+/**
+ * Prix d'une protection individuelle, € : la gaine ou le grillage (2-3 €), le
+ * tuteur de châtaignier qui tient debout dix ans (3-4 €) et les colliers. Ce
+ * n'est pas un accessoire, c'est presque le prix du plant lui-même.
+ */
+export const PROTECTION_EUR = 8;
+/**
+ * Temps de pose, h. Enfoncer un piquet assez profond pour qu'un chevreuil qui
+ * frotte ne le couche pas, monter la gaine, l'attacher : une demi-heure par
+ * arbre, sur le terrain. C'est CE chiffre qui fait de la protection une
+ * décision — protéger mille plants, c'est cinq cents heures.
+ */
+export const PROTECTION_HEURES = 0.5;
 /** temps de recépage d'une cépée, h *(à calibrer)* */
 export const RECEPAGE_HOURS = 0.8;
 /**
@@ -54,11 +68,19 @@ export const SEASONAL_EUR_WEEK = 700;
 /** indemnités + préavis à la rupture d'un CDI, € */
 export const SEVERANCE_EUR = 1200;
 
-/** chaulage : coût et temps par m² *(à calibrer)* */
+/**
+ * Chaulage : 200 €/ha d'amendement (2 à 3 t à 40-80 €/t) et 4 h/ha à
+ * l'épandeur. (0,002 h/m² faisait vingt heures à l'hectare pour épandre de la
+ * chaux : c'était le temps d'un épandage à la pelle.)
+ */
 export const LIME_EUR_M2 = 0.02;
-export const LIME_HOURS_M2 = 0.002;
-/** fauche/dégagement : temps par m² (débroussailleuse) *(à calibrer)* */
-export const FAUCHE_HOURS_M2 = 0.006;
+export const LIME_HOURS_M2 = 0.0004;
+/**
+ * Fauche/dégagement : temps par m² à la débroussailleuse, soit ~15 h/ha —
+ * l'ordre de grandeur d'un dégagement de plantation. (0,006 h/m² donnait
+ * soixante heures à l'hectare : une semaine et demie pour un seul passage.)
+ */
+export const FAUCHE_HOURS_M2 = 0.0015;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
 /** effet d'un chaulage sur le pH (plafonné à 7,5) */
