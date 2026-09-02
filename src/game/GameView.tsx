@@ -9,7 +9,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SCENARIOS, type ScenarioId } from "../engine/climat";
 import { ESPECES_V0, getEspece } from "../engine/especes";
 import { crownRadiusM } from "../engine/light";
-import { type Bordures, bordersUniformes, PAYSAGES } from "../engine/paysage";
+import {
+  type Bordures,
+  bordersUniformes,
+  entourageDeLaStation,
+  frequentationDesBordures,
+  PAYSAGES,
+  resumeBordures,
+} from "../engine/paysage";
 import { STATIONS_V0 } from "../engine/stations";
 import { SPECIES_COLORS } from "../ui/couleurs";
 import type { Snapshot, SnapshotTree } from "./protocol";
@@ -34,20 +41,21 @@ type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir" | "brf
 type Overlay = "eau" | "ph" | "azote" | "herbe";
 
 const panel: React.CSSProperties = {
-  border: "1px solid #b0a58c",
-  borderRadius: 6,
-  padding: "8px 10px",
-  background: "#faf8f2",
+  border: "1px solid var(--trait)",
+  borderRadius: 8,
+  padding: "8px 12px",
+  background: "var(--carte)",
 };
 
 const btn = (active = false): React.CSSProperties => ({
-  padding: "3px 10px",
-  marginRight: 6,
+  padding: "4px 11px",
+  marginRight: 5,
   marginBottom: 4,
-  border: "1px solid #b0a58c",
-  borderRadius: 4,
-  background: active ? "#3d6b3f" : "#f6f4ee",
-  color: active ? "#fff" : "#2e2a20",
+  border: "1px solid",
+  borderColor: active ? "var(--foret)" : "var(--trait)",
+  borderRadius: 6,
+  background: active ? "var(--foret)" : "#fff",
+  color: active ? "#fff" : "var(--encre)",
   cursor: "pointer",
 });
 
@@ -197,115 +205,203 @@ function StartScreen({
   const [cotesSeparees, setCotesSeparees] = useState(false);
   const [anneeDepart, setAnneeDepart] = useState(2026);
   const save = loadSave();
-  return (
-    <div style={{ maxWidth: 640 }}>
-      <h2 style={{ fontSize: "1.1rem" }}>Nouvelle partie</h2>
-      <p>
-        {STATIONS_V0.map((s) => (
-          <button
-            key={s.station.id}
-            type="button"
-            style={btn(s.station.id === stationId)}
-            onClick={() => setStationId(s.station.id)}
-          >
-            {s.station.nom}
-          </button>
+
+  const choisie = STATIONS_V0.find((s) => s.station.id === stationId);
+  // Ce que l'entourage donnera vraiment, calculé par le moteur lui-même : les
+  // semis annoncés par un paysage sont filtrés par ce que CE sol supporte.
+  const entourage = useMemo(
+    () =>
+      choisie
+        ? entourageDeLaStation(bordures, choisie.station.phInitial, choisie.station.ruMm)
+        : null,
+    [bordures, choisie],
+  );
+  const semisParAn = entourage?.voisinage.reduce((s, v) => s + v.semisParAn, 0) ?? 0;
+  const essences = [...(entourage?.voisinage ?? [])]
+    .sort((a, b) => b.semisParAn - a.semisParAn)
+    .slice(0, 3)
+    .map((v) => getEspece(v.especeId).nom.toLowerCase());
+
+  const setCote = (cote: keyof Bordures, id: string) =>
+    setBordures(cotesSeparees ? { ...bordures, [cote]: id } : bordersUniformes(id));
+
+  const selecteur = (cote: keyof Bordures, libelle: string) => (
+    <label className="cote">
+      <span className="cote-nom">{libelle}</span>
+      <select value={bordures[cote]} onChange={(e) => setCote(cote, e.target.value)}>
+        {PAYSAGES.map((p) => (
+          <option key={p.id} value={p.id} title={p.description}>
+            {p.court}
+          </option>
         ))}
+      </select>
+    </label>
+  );
+
+  return (
+    <div className="depart">
+      <h2>Nouvelle partie</h2>
+      <p className="accroche">
+        Un sol, un entourage, un climat — et cinquante ans devant vous. Rien n'est scripté&nbsp;:
+        tout ce qui arrivera découlera de ces trois choix.
       </p>
-      <p>
-        <strong>Ce qu'il y a autour</strong> — l'entourage décide du gibier, des semis qui arrivent,
-        de l'azote qui tombe du ciel, du vent et des départs de feu.
-        <br />
-        <button
-          type="button"
-          style={btn(cotesSeparees)}
-          onClick={() => setCotesSeparees(!cotesSeparees)}
-          title="Un voisinage différent de chaque côté : forêt au nord, champs au sud…"
-        >
-          {cotesSeparees ? "↩ un seul voisinage" : "⊞ un voisinage par côté"}
-        </button>
-        <br />
-        {(cotesSeparees
-          ? ([
-              ["nord", "Nord"],
-              ["est", "Est"],
-              ["sud", "Sud"],
-              ["ouest", "Ouest"],
-            ] as const)
-          : ([["nord", ""]] as const)
-        ).map(([cote, libelle]) => (
-          <div key={cote} style={{ marginBottom: 4 }}>
-            {libelle && (
-              <span style={{ display: "inline-block", width: 44, fontSize: 13 }}>{libelle}</span>
-            )}
+
+      <section className="carte">
+        <h3>Le terrain</h3>
+        <p className="sous">
+          Le sol décide de ce qu'il retient d'eau, de ce qu'il minéralise, de ce qu'il supporte.
+        </p>
+        <div className="seg">
+          {STATIONS_V0.map((s) => (
+            <button
+              key={s.station.id}
+              type="button"
+              style={btn(s.station.id === stationId)}
+              onClick={() => setStationId(s.station.id)}
+            >
+              {s.station.nom}
+            </button>
+          ))}
+        </div>
+        {choisie && (
+          <p className="glose">
+            {choisie.station.coteM} × {choisie.station.coteM} m · réserve utile{" "}
+            {choisie.station.ruMm.toFixed(0)} mm · pH {choisie.station.phInitial.toFixed(1)} ·{" "}
+            {choisie.climat.rainAnnualMm} mm de pluie par an ·{" "}
+            {choisie.station.relief.pentePct > 0
+              ? `pente ${choisie.station.relief.pentePct} % à ${choisie.station.relief.altitudeM} m`
+              : `terrain plat à ${choisie.station.relief.altitudeM} m`}
+          </p>
+        )}
+      </section>
+
+      <section className="carte">
+        <h3>Ce qu'il y a autour</h3>
+        <p className="sous">
+          L'entourage décide du gibier, des semis qui arrivent tout seuls, de l'azote qui tombe du
+          ciel, du vent et des départs de feu.
+        </p>
+        {cotesSeparees ? (
+          <div className="compas">
+            <div />
+            {selecteur("nord", "NORD")}
+            <div />
+            {selecteur("ouest", "OUEST")}
+            <div className="parcelle">votre parcelle</div>
+            {selecteur("est", "EST")}
+            <div />
+            {selecteur("sud", "SUD")}
+            <div />
+          </div>
+        ) : (
+          <div className="seg">
             {PAYSAGES.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                style={btn(p.id === bordures[cote])}
-                onClick={() =>
-                  setBordures(
-                    cotesSeparees ? { ...bordures, [cote]: p.id } : bordersUniformes(p.id),
-                  )
-                }
+                style={btn(p.id === bordures.nord)}
+                onClick={() => setCote("nord", p.id)}
                 title={p.description}
               >
-                {p.nom}
+                {p.court}
               </button>
             ))}
           </div>
-        ))}
-        <span style={{ color: "#5f5947", fontSize: 13 }}>
-          {PAYSAGES.find((p) => p.id === bordures.nord)?.description}
-        </span>
-      </p>
-      <p>
-        <strong>Trajectoire climatique</strong> — ce qu'on plante aujourd'hui vivra dedans.
-        <br />
-        {SCENARIOS.map((sc) => (
-          <button
-            key={sc.id}
-            type="button"
-            style={btn(sc.id === scenario)}
-            onClick={() => setScenario(sc.id)}
-            title={sc.description}
-          >
-            {sc.nom}
-          </button>
-        ))}
-        <br />
-        Départ :{" "}
-        {[2026, 2040].map((a) => (
-          <button
-            key={a}
-            type="button"
-            style={btn(a === anneeDepart)}
-            onClick={() => setAnneeDepart(a)}
-          >
-            {a}
-          </button>
-        ))}
-      </p>
-      <p>
-        Seed :{" "}
-        <input
-          type="number"
-          value={seed}
-          onChange={(e) => setSeed(Number(e.target.value) || 0)}
-          style={{ width: 90 }}
-        />
-      </p>
-      <p>
+        )}
+        <p style={{ margin: "10px 0 0", fontSize: 13 }}>
+          <label style={{ cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={cotesSeparees}
+              onChange={(e) => setCotesSeparees(e.target.checked)}
+            />{" "}
+            un entourage différent de chaque côté
+          </label>
+        </p>
+        <p className="glose" style={{ minHeight: 0 }}>
+          {cotesSeparees
+            ? resumeBordures(bordures)
+            : PAYSAGES.find((p) => p.id === bordures.nord)?.description}
+        </p>
+        {entourage && (
+          <div className="effets">
+            <span title="densité de cervidés : ils broutent les pousses et frottent les jeunes tiges">
+              🦌 {entourage.gibierParHa.toFixed(1)} cervidé/ha
+            </span>
+            <span title="semis arrivant du voisinage, après filtrage par ce que ce sol supporte">
+              🌱 {semisParAn} semis/an{essences.length > 0 && ` — ${essences.join(", ")}`}
+            </span>
+            <span title="dépôts atmosphériques d'azote (élevages, trafic, cultures)">
+              💧 {entourage.depositionNKgHaAn.toFixed(0)} kg N/ha/an
+            </span>
+            <span title="exposition au vent : un côté ouvert suffit à laisser passer">
+              💨 vent {(entourage.ventExposition * 100).toFixed(0)} %
+            </span>
+            <span title="fréquentation humaine : d'où partent les feux">
+              🔥 départs ×{frequentationDesBordures(bordures).toFixed(1)}
+            </span>
+          </div>
+        )}
+      </section>
+
+      <section className="carte">
+        <h3>Le climat</h3>
+        <p className="sous">Ce qu'on plante aujourd'hui vivra dedans.</p>
+        <div className="seg">
+          {SCENARIOS.map((sc) => (
+            <button
+              key={sc.id}
+              type="button"
+              style={btn(sc.id === scenario)}
+              onClick={() => setScenario(sc.id)}
+              title={sc.description}
+            >
+              {sc.nom}
+            </button>
+          ))}
+        </div>
+        <p className="glose">{SCENARIOS.find((sc) => sc.id === scenario)?.description}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13 }}>Année de départ</span>
+          <div className="seg">
+            {[2026, 2040].map((a) => (
+              <button
+                key={a}
+                type="button"
+                style={btn(a === anneeDepart)}
+                onClick={() => setAnneeDepart(a)}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+          <span style={{ fontSize: 13, marginLeft: 8 }}>Graine du hasard</span>
+          <input
+            type="number"
+            value={seed}
+            onChange={(e) => setSeed(Number(e.target.value) || 0)}
+            style={{ width: 80 }}
+            title="Deux parties avec la même graine se déroulent à l'identique."
+          />
+        </div>
+      </section>
+
+      <p className="seg">
         <button
           type="button"
-          style={btn(true)}
+          style={{ ...btn(true), padding: "8px 20px", fontSize: 14, fontWeight: 600 }}
           onClick={() => onStart(stationId, seed, "reelle", scenario, bordures, anneeDepart)}
         >
-          Démarrer (météo réelle)
+          Démarrer
         </button>
         {save && (
-          <button type="button" style={btn()} onClick={onResume}>
-            Reprendre la partie sauvegardée ({save.stationId}, an {Math.floor(save.weeks / 52) + 1})
+          <button
+            type="button"
+            style={{ ...btn(), padding: "8px 16px" }}
+            onClick={onResume}
+            title={`${save.stationId}, semaine ${save.weeks}`}
+          >
+            Reprendre la partie sauvegardée (an {Math.floor(save.weeks / 52) + 1})
           </button>
         )}
       </p>
@@ -421,7 +517,7 @@ export function GameView() {
   return (
     <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
       <div>
-        <p style={{ margin: "0 0 6px", display: "flex", gap: 16, alignItems: "baseline" }}>
+        <p className="bandeau">
           <strong style={{ fontSize: "1.25rem" }}>
             An {annee} · {mois}
           </strong>
@@ -468,16 +564,25 @@ export function GameView() {
           height={canvasPx}
           style={{
             width: canvasPx,
-            border: "1px solid #b0a58c",
+            border: "1px solid var(--trait)",
+            borderRadius: 8,
+            boxShadow: "var(--ombre)",
             cursor: mode === "selection" ? "default" : "crosshair",
           }}
           onClick={onCanvasClick}
         />
-        <p style={{ margin: "4px 0 0", color: "#6b6250", fontSize: 13 }}>
+        <p style={{ margin: "6px 0 0", color: "var(--encre-douce)", fontSize: 13 }}>
           Sol :{" "}
-          {(["eau", "ph", "azote", "herbe"] as const).map((o) => (
+          {(
+            [
+              ["eau", "Eau"],
+              ["ph", "pH"],
+              ["azote", "Azote"],
+              ["herbe", "Herbe"],
+            ] as const
+          ).map(([o, libelle]) => (
             <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
-              {o}
+              {libelle}
             </button>
           ))}
           — nord au fond · points orange = fruits mûrs · maj+clic = sélection multiple
@@ -496,9 +601,8 @@ export function GameView() {
           </div>
         )}
 
-        <div style={panel}>
-          <strong>Action</strong>
-          <br />
+        <section className="carte">
+          <h3>Action</h3>
           <button
             type="button"
             style={btn(mode === "selection")}
@@ -683,7 +787,7 @@ export function GameView() {
               .
             </div>
           )}
-        </div>
+        </section>
 
         {selectedTrees.length > 0 && (
           <div style={panel}>
@@ -837,48 +941,79 @@ export function GameView() {
           </div>
         )}
 
-        <div style={{ ...panel, fontSize: 13 }}>
-          🌲 {snapshot.trees.length} arbres · 🌾 herbe{" "}
-          {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % · carbone{" "}
-          {snapshot.inventory.vivantTHa.toFixed(1)} t vivant +{" "}
-          {snapshot.inventory.humusTHa.toFixed(1)} t humus ·{" "}
-          <strong>
-            bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
-            {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
-          </strong>
-          <br />
-          🗺️ {snapshot.paysage} · gibier {(snapshot.pressionGibier * 100).toFixed(0)} %
-          <br />📅 {snapshot.anneeCivile} · CO₂ {snapshot.co2Ppm.toFixed(0)} ppm
-          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · 🐛 ravageurs{" "}
-          {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · 🐞 auxiliaires{" "}
-          {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} % · 🍄 mycorhizes{" "}
-          {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
-          <br />🧪 sol : P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} · K{" "}
-          {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables
-          <br />🦋 biodiversité <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
-          <span style={{ opacity: 0.7 }}>
-            ({snapshot.biodiversite.richesse} essence
-            {snapshot.biodiversite.richesse > 1 ? "s" : ""}, strates{" "}
-            {(snapshot.biodiversite.strates * 100).toFixed(0)} %, couvert permanent{" "}
-            {(snapshot.biodiversite.couvertPermanent * 100).toFixed(0)} %, bois mort{" "}
-            {(snapshot.biodiversite.boisMort * 100).toFixed(0)} %)
-          </span>
-        </div>
+        <section className="carte">
+          <h3>La parcelle</h3>
+          <dl className="stats">
+            <dt>Arbres</dt>
+            <dd>
+              {snapshot.trees.length} · herbe{" "}
+              {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % du sol
+            </dd>
+            <dt>Carbone</dt>
+            <dd>
+              {snapshot.inventory.vivantTHa.toFixed(1)} t vivant +{" "}
+              {snapshot.inventory.humusTHa.toFixed(1)} t humus ·{" "}
+              <strong>
+                bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
+                {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
+              </strong>
+            </dd>
+            <dt>Entourage</dt>
+            <dd>
+              {snapshot.paysage}
+              <span className="detail">
+                {" "}
+                · gibier {(snapshot.pressionGibier * 100).toFixed(0)} %
+              </span>
+            </dd>
+            <dt>Époque</dt>
+            <dd>
+              {snapshot.anneeCivile}{" "}
+              <span className="detail">· CO₂ {snapshot.co2Ppm.toFixed(0)} ppm</span>
+            </dd>
+            <dt>Pression</dt>
+            <dd>
+              broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · ravageurs{" "}
+              {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · auxiliaires{" "}
+              {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} %
+            </dd>
+            <dt>Sol</dt>
+            <dd>
+              P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} · K{" "}
+              {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables · mycorhizes{" "}
+              {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
+            </dd>
+            <dt>Biodiversité</dt>
+            <dd>
+              <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
+              <span className="detail">
+                ({snapshot.biodiversite.richesse} essence
+                {snapshot.biodiversite.richesse > 1 ? "s" : ""}, strates{" "}
+                {(snapshot.biodiversite.strates * 100).toFixed(0)} %, couvert permanent{" "}
+                {(snapshot.biodiversite.couvertPermanent * 100).toFixed(0)} %, bois mort{" "}
+                {(snapshot.biodiversite.boisMort * 100).toFixed(0)} %)
+              </span>
+            </dd>
+          </dl>
+        </section>
 
-        <div style={{ ...panel, maxHeight: 560, overflowY: "auto", fontSize: 13, flex: 1 }}>
-          <strong>Journal</strong>
+        <section
+          className="carte journal"
+          style={{ maxHeight: 560, overflowY: "auto", fontSize: 13, flex: 1 }}
+        >
+          <h3>Journal</h3>
           {game.events.length === 0 && (
-            <div style={{ color: "#6b6250" }}>Rien à signaler pour l'instant.</div>
+            <div style={{ color: "var(--encre-douce)" }}>Rien à signaler pour l'instant.</div>
           )}
           {game.events.map((ev) => (
-            <div key={ev.uid} style={{ marginTop: 3 }}>
-              <span style={{ color: "#6b6250" }}>
-                an {Math.floor(ev.week / 52) + 1} s{ev.week % 52}
+            <div key={ev.uid} className="entree">
+              <span className="quand">
+                AN {Math.floor(ev.week / 52) + 1} · S{ev.week % 52}
               </span>{" "}
               {ev.icone} {ev.message}
             </div>
           ))}
-        </div>
+        </section>
       </div>
     </div>
   );

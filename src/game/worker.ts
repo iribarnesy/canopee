@@ -19,19 +19,15 @@ import {
   normalesHebdo,
   type ScenarioId,
 } from "../engine/climat";
-import { ESPECES_V0, getEspece } from "../engine/especes";
+import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
 import {
   type Bordures,
   bordersUniformes,
-  depositionDesBordures,
-  especeTenable,
-  gibierDesBordures,
+  entourageDeLaStation,
   resumeBordures,
-  ventDesBordures,
-  voisinageDesBordures,
 } from "../engine/paysage";
 import { ALTITUDE_SERIE_M, anomalieAltitudeC } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
@@ -262,18 +258,11 @@ function meteoSemaine(absolue: number): WeekWeather {
 
 /** La station telle qu'elle est, mais dans le paysage choisi par le joueur. */
 function stationAvecPaysage(base: Station): Station {
-  const tenable = (especeId: string) =>
-    especeTenable(getEspece(especeId), base.phInitial, base.ruMm);
-  const substituts = () =>
-    ESPECES_V0.filter((e) => especeTenable(e, base.phInitial, base.ruMm)).map((e) => e.id);
   return {
     ...base,
     paysageId: bordures.nord,
     bordures,
-    voisinage: voisinageDesBordures(bordures, tenable, substituts),
-    gibierParHa: gibierDesBordures(bordures),
-    depositionNKgHaAn: depositionDesBordures(bordures),
-    ventExposition: ventDesBordures(bordures),
+    ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),
   };
 }
 

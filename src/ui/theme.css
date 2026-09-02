@@ -1,0 +1,245 @@
+/*
+ * Feuille de style commune. Tout le reste de l'interface est en styles
+ * inline ; ce fichier ne porte que ce que l'inline ne sait pas faire — les
+ * variables de couleur, le survol, le focus — et la mise en page de l'écran
+ * de départ, qui a besoin de vraies grilles.
+ */
+
+:root {
+  --fond: #f3f0e7;
+  --carte: #fffdf7;
+  --encre: #23201a;
+  --encre-douce: #6b6455;
+  --trait: #ded5c0;
+  --foret: #2f6b43;
+  --foret-pale: #e8f0e6;
+  --terre: #a9622a;
+  --ombre: 0 1px 2px rgba(60, 50, 30, 0.08);
+}
+
+html {
+  background: var(--fond);
+}
+
+body {
+  margin: 0;
+  color: var(--encre);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: inherit;
+}
+
+button {
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    transform 0.06s;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--foret);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--foret);
+  outline-offset: 1px;
+}
+
+input,
+select {
+  border: 1px solid var(--trait);
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: #fff;
+}
+
+/* --- écran de départ ------------------------------------------------- */
+
+.depart {
+  max-width: 660px;
+}
+
+.depart h2 {
+  font-size: 1.55rem;
+  font-weight: 600;
+  margin: 0 0 2px;
+  letter-spacing: 0.01em;
+}
+
+.depart .accroche {
+  color: var(--encre-douce);
+  margin: 0 0 18px;
+}
+
+.carte {
+  background: var(--carte);
+  border: 1px solid var(--trait);
+  border-radius: 10px;
+  padding: 14px 16px 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--ombre);
+}
+
+.carte > h3 {
+  margin: 0 0 2px;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--foret);
+}
+
+.carte > .sous {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  color: var(--encre-douce);
+}
+
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.glose {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--encre-douce);
+  min-height: 2.6em;
+}
+
+/* La rose des vents : les quatre côtés autour de la parcelle, chacun à sa
+   place. Un menu déroulant par côté vaut mieux que vingt-quatre boutons. */
+.compas {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
+  align-items: center;
+  justify-items: center;
+  max-width: 430px;
+}
+
+.compas .cote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cote-nom {
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--encre-douce);
+}
+
+.compas select {
+  min-width: 118px;
+}
+
+.compas .parcelle {
+  width: 100%;
+  padding: 14px 6px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--encre-douce);
+  border: 1px dashed var(--foret);
+  border-radius: 8px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--foret-pale),
+    var(--foret-pale) 6px,
+    #fff 6px,
+    #fff 12px
+  );
+}
+
+.effets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.effets > span {
+  border: 1px solid var(--trait);
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: #fff;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--encre-douce);
+}
+
+/* --- en jeu ----------------------------------------------------------- */
+
+/* Le tableau de bord : une ligne par grandeur, l'intitulé à gauche en petit,
+   la valeur à droite. Bien plus lisible qu'une coulée de texte à émojis. */
+.stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.stats dt {
+  font-family: system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--encre-douce);
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.stats dd {
+  margin: 0;
+}
+
+.stats .detail {
+  color: var(--encre-douce);
+}
+
+.bandeau {
+  display: flex;
+  gap: 18px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+}
+
+.journal .entree {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #f0ebdd;
+}
+
+.journal .quand {
+  font-family: system-ui, sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--encre-douce);
+}

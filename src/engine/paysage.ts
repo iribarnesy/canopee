@@ -28,13 +28,15 @@
  * quatre nombres et une liste d'essences.
  */
 
-import type { EspeceV0 } from "./especes";
+import { ESPECES_V0, type EspeceV0, getEspece } from "./especes";
 import { phFactor } from "./trees";
 
 /** Ce qu'un paysage apporte à la parcelle, dérivé de sa composition. */
 export interface Paysage {
   id: string;
   nom: string;
+  /** libellé d'un mot, pour les boutons et les résumés */
+  court: string;
   /** ce que ça change pour le joueur, en une phrase */
   description: string;
   /** part boisée de l'entourage ∈ [0,1] */
@@ -125,6 +127,7 @@ export function frequentationHumaine(p: Paysage): number {
 export const PAYSAGES: readonly Paysage[] = [
   {
     id: "massif-forestier",
+    court: "Forêt",
     nom: "Au cœur d'un massif forestier",
     description:
       "Semis en abondance, gibier nombreux, air propre et vent cassé par les arbres. Tout pousse — et tout est mangé.",
@@ -139,6 +142,7 @@ export const PAYSAGES: readonly Paysage[] = [
   },
   {
     id: "bocage",
+    court: "Bocage",
     nom: "Dans un bocage d'élevage",
     description:
       "Des haies partout : de quoi semer, du gibier à l'abri, et l'ammoniac des élevages qui fertilise gratuitement.",
@@ -153,6 +157,7 @@ export const PAYSAGES: readonly Paysage[] = [
   },
   {
     id: "plaine-cerealiere",
+    court: "Grande culture",
     nom: "En pleine plaine céréalière",
     description:
       "Pas un arbre à l'horizon : rien ne sème, le vent balaie, et les dépôts d'azote sont au maximum. Ce que vous plantez est le seul boisement du secteur.",
@@ -164,6 +169,7 @@ export const PAYSAGES: readonly Paysage[] = [
   },
   {
     id: "peri-urbain",
+    court: "Banlieue",
     nom: "En lisière de banlieue",
     description:
       "Peu de gibier mais beaucoup de passage : c'est de là que partent les feux. L'air est chargé d'azote, et il n'y a presque rien pour semer.",
@@ -174,6 +180,7 @@ export const PAYSAGES: readonly Paysage[] = [
   },
   {
     id: "lande-ouverte",
+    court: "Lande",
     nom: "Au milieu de la lande",
     description:
       "Un horizon rase, du vent en permanence, et pour seuls semenciers les pins et les bouleaux qui tiennent le sable.",
@@ -188,6 +195,7 @@ export const PAYSAGES: readonly Paysage[] = [
   },
   {
     id: "lisiere-forestiere",
+    court: "Lisière",
     nom: "En lisière de forêt",
     description:
       "Une friche adossée à un massif : les pionnières arrivent en nombre, les climaciques suivent de loin. C'est le paysage de la succession.",
@@ -293,10 +301,37 @@ export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number)
   return true;
 }
 
+/**
+ * Tout ce que l'entourage apporte à une parcelle donnée, d'un bloc : les
+ * semis (filtrés par ce que le sol supporte réellement), le gibier, l'azote
+ * qui tombe du ciel et le vent. Une seule implémentation, partagée par la
+ * construction des stations, le worker et l'aperçu de l'écran de départ —
+ * sinon les trois finissent par diverger.
+ */
+export function entourageDeLaStation(
+  bordures: Bordures,
+  phStation: number,
+  ruMm: number,
+): {
+  voisinage: { especeId: string; semisParAn: number }[];
+  gibierParHa: number;
+  depositionNKgHaAn: number;
+  ventExposition: number;
+} {
+  const tenable = (especeId: string) => especeTenable(getEspece(especeId), phStation, ruMm);
+  const substituts = () =>
+    ESPECES_V0.filter((e) => especeTenable(e, phStation, ruMm)).map((e) => e.id);
+  return {
+    voisinage: voisinageDesBordures(bordures, tenable, substituts),
+    gibierParHa: gibierDesBordures(bordures),
+    depositionNKgHaAn: depositionDesBordures(bordures),
+    ventExposition: ventDesBordures(bordures),
+  };
+}
+
 /** Résumé lisible des bordures : « bocage » si tout est pareil, sinon la liste. */
 export function resumeBordures(b: Bordures): string {
-  const noms = cotes(b).map((p) => p.nom);
-  const uniques = [...new Set(noms)];
-  if (uniques.length === 1) return uniques[0] ?? "";
-  return `N ${getPaysage(b.nord).nom} · E ${getPaysage(b.est).nom} · S ${getPaysage(b.sud).nom} · O ${getPaysage(b.ouest).nom}`;
+  const uniques = [...new Set(cotes(b).map((p) => p.court))];
+  if (uniques.length === 1) return getPaysage(b.nord).nom;
+  return `N ${getPaysage(b.nord).court} · E ${getPaysage(b.est).court} · S ${getPaysage(b.sud).court} · O ${getPaysage(b.ouest).court}`;
 }

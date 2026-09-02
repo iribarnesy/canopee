@@ -5,16 +5,8 @@
  * les données Météo-France/DRIAS.
  */
 
-import { ESPECES_V0, getEspece } from "./especes";
 import type { SyntheticClimate } from "./meteo";
-import {
-  bordersUniformes,
-  depositionDesBordures,
-  especeTenable,
-  gibierDesBordures,
-  ventDesBordures,
-  voisinageDesBordures,
-} from "./paysage";
+import { bordersUniformes, entourageDeLaStation } from "./paysage";
 import { phosphoreAssimilableGM2, potassiumEchangeableGM2 } from "./pk";
 import {
   carboneProfilTHa,
@@ -64,20 +56,11 @@ export function stationDepuisProfil(
   // Par défaut, les quatre côtés portent le même paysage ; le joueur peut les
   // choisir séparément au lancement (paysage.ts).
   const bordures = bordersUniformes(reste.paysageId);
-  const tenable = (especeId: string) =>
-    especeTenable(getEspece(especeId), phSurface(profil), ruProfilMm(profil));
-  const substituts = () =>
-    ESPECES_V0.filter((e) => especeTenable(e, phSurface(profil), ruProfilMm(profil))).map(
-      (e) => e.id,
-    );
   return {
     ...reste,
     profil,
     bordures,
-    voisinage: voisinageDesBordures(bordures, tenable, substituts),
-    gibierParHa: gibierDesBordures(bordures),
-    depositionNKgHaAn: depositionDesBordures(bordures),
-    ventExposition: ventDesBordures(bordures),
+    ...entourageDeLaStation(bordures, phSurface(profil), ruProfilMm(profil)),
     ruMm: ruProfilMm(profil),
     excessCapacityMm: porositeProfilMm(profil),
     drainagePerWeekMm: Math.min(drainageProfilMmSemaine(profil), reste.drainageExterneMmSemaine),
