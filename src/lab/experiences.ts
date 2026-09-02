@@ -19,6 +19,7 @@ import { ESPECES_V0 } from "../engine/especes";
 import { advanceWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, type WeekWeather } from "../engine/meteo";
+import { RELIEF_PLAT } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
 import { horizon } from "../engine/soil";
 import { createGameState, type GameState, plantAt, type Station } from "../engine/state";
@@ -312,6 +313,7 @@ const BAC_A_SABLE: Experience = {
       latitudeDeg: r.latitude ?? 47,
       profil,
       paysageId: "bocage",
+      relief: RELIEF_PLAT,
       initialMineralNKgHa: 20,
       remonteeNappeMmSemaine: 0,
       drainageExterneMmSemaine: 40,

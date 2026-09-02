@@ -22,6 +22,7 @@ import {
   SATURATION_K_G_M2,
   SATURATION_P_G_M2,
 } from "../../src/engine/pk";
+import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { horizon } from "../../src/engine/soil";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
@@ -45,7 +46,13 @@ describe("le phosphore ne circule pas, il se bloque", () => {
 
   it("un sol peut être riche en phosphore TOTAL et pauvre en assimilable", () => {
     // C'est le paradoxe des sols acides : le stock est là, il est inatteignable.
-    const acide = { ...LIMON_RICHE.station, coteM: 10 };
+    const acide = {
+      ...LIMON_RICHE.station,
+      // Terrain plat et fermé : ces essais isolent un mécanisme vertical, pas
+      // l'hydrologie d'un versant (relief.ts).
+      relief: RELIEF_PLAT,
+      coteM: 10,
+    };
     const state = createGameState(acide, rngStateFromSeed(1));
     const total = (state.soil.phosphoreG[0] ?? 0) + (state.soil.phosphoreFixeG[0] ?? 0);
     expect(state.soil.phosphoreG[0] ?? 0).toBeLessThan(total / 5);
@@ -76,6 +83,9 @@ describe("les cycles, et ce qui leur manque encore", () => {
   function soixanteAns() {
     const station: Station = {
       ...LIMON_RICHE.station,
+      // Terrain plat et fermé : ces essais isolent un mécanisme vertical, pas
+      // l'hydrologie d'un versant (relief.ts).
+      relief: RELIEF_PLAT,
       coteM: 30,
       voisinage: [],
       gibierParHa: 0,

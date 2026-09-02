@@ -24,7 +24,7 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
-| A. Sol, eau, atmosphère | 13 | 2 | 3 | 18 |
+| A. Sol, eau, atmosphère | 15 | 2 | 3 | 20 |
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
 | C. Nutriments et cycles | 9 | 3 | 1 | 13 |
 | D. Climat et phénologie | 7 | 3 | 1 | 11 |
@@ -34,9 +34,9 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **77** | **25** | **17** | **119** |
+| **Total** | **79** | **25** | **17** | **121** |
 
-**Score de réalisme : 77 pleins + 25 partiels sur 119 → 75 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 79 pleins + 25 partiels sur 121 → 76 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -52,7 +52,8 @@ potassium) → 73 % (altération biologique : les cycles tiennent, P et K
 limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
 l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
-arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai).*
+arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai) → 76 % (relief, écoulement
+latéral, adret/ubac).*
 
 ---
 
@@ -75,6 +76,8 @@ arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai
 | A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ❌ | Aucune pente dans le moteur |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
+| A13 | L'eau ruisselle d'une cellule à l'autre : bas de pente frais, crête sèche | ✅ | `relief.ts` ; `relief.test.ts` — le coefficient de ruissellement dépend de la pente, de la COUVERTURE DU SOL et de la saturation |
+| A14 | L'altitude refroidit et l'exposition décide du rayonnement (adret/ubac) | ✅ | 0,6 °C/100 m ; ±25 % d'ETP entre versant sud et versant nord |
 | A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` + réserve de surface recalculée par cellule selon son humus ; `sol-vivant.test.ts` |
 | A13 | La structure/compaction évolue (tassement, restauration par les racines) | ❌ | Pas de variable structure |
 | A14 | Deux plantes voisines se disputent réellement l'eau de leurs cellules communes | ✅ | Allocation spatiale en 2 passes ; `nurse.test.ts` |
@@ -246,10 +249,19 @@ d'azote, semenciers, vent, fréquentation humaine. C'est ce qui permet de dire
 « au milieu des champs » ou « en lisière de banlieue » et d'en tirer des
 conséquences cohérentes, au lieu de saisir quatre nombres indépendants.
 
-*Restent hors du modèle, et ce sont les mêmes racines* : la **pente**,
-l'**altitude**, et tout ce qui suppose un écoulement LATÉRAL de l'eau (mare,
-ruisseau, ruissellement, inondation, exposition adret/ubac). Le bilan hydrique
-est aujourd'hui strictement vertical, cellule par cellule.
+## Le relief : l'eau circule enfin
+
+`relief.ts`. Le bilan hydrique était strictement vertical — chaque mètre carré
+recevait sa pluie et ne parlait jamais à ses voisins. Désormais une parcelle a
+une **altitude**, une **pente**, une **exposition** et une **forme** (plan,
+vallon en entonnoir, croupe), et l'eau descend : ce qui ruisselle en haut a une
+seconde chance de s'infiltrer en bas, ce qui fait les bas de pente frais et les
+crêtes sèches sur la même parcelle.
+
+Ce qui reste à faire : la **mare** et le **ruisseau** comme objets (on a
+l'écoulement, pas encore de plan d'eau permanent), les **inondations par
+débordement** venues d'un cours d'eau, et l'**érosion** — le ruissellement
+emporte de l'eau mais pas encore de terre.
 
 ## Générateur de stations : ce qu'il reste à faire
 

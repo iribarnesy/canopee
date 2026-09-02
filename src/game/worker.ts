@@ -31,6 +31,7 @@ import {
   ventExposition,
   voisinageSemencier,
 } from "../engine/paysage";
+import { ALTITUDE_SERIE_M, anomalieAltitudeC } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
 import { ruHorizonMm } from "../engine/soil";
 import { createGameState, type GameState, type Station, type TickFluxes } from "../engine/state";
@@ -252,6 +253,8 @@ function meteoSemaine(absolue: number): WeekWeather {
     getScenario(scenario),
     anneeDepart + Math.floor(absolue / 52),
     normales,
+    // L'altitude de la parcelle par rapport à celle de la station météo.
+    sc ? anomalieAltitudeC(sc.station.relief, ALTITUDE_SERIE_M) : 0,
   );
 }
 
@@ -290,6 +293,8 @@ function emptyFluxes(): TickFluxes {
     drainageMm: 0,
     overflowMm: 0,
     waterloggingMean: 0,
+    ruissellementEntrantMm: 0,
+    ruissellementSortantMm: 0,
     herbeCouvertureMean: 0,
     broutageKg: 0,
     depositionKgHa: 0,

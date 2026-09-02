@@ -93,6 +93,7 @@ export function stationDepuisProfil(
 export const LANDE_SECHE: StationClimat = {
   station: stationDepuisProfil({
     id: "lande-seche",
+    relief: { altitudeM: 60, pentePct: 1, expositionDeg: 180, forme: "plan", bassinAmontHa: 0 },
     paysageId: "lande-ouverte",
     nom: "Lande sableuse sèche",
     latitudeDeg: 44.5,
@@ -124,6 +125,7 @@ export const LANDE_SECHE: StationClimat = {
 export const VALLEE_ENGORGEE: StationClimat = {
   station: stationDepuisProfil({
     id: "vallee-engorgee",
+    relief: { altitudeM: 80, pentePct: 2, expositionDeg: 180, forme: "vallon", bassinAmontHa: 6 },
     paysageId: "massif-forestier",
     nom: "Fond de vallée engorgé",
     latitudeDeg: 47,
@@ -153,6 +155,7 @@ export const VALLEE_ENGORGEE: StationClimat = {
 export const LIMON_RICHE: StationClimat = {
   station: stationDepuisProfil({
     id: "limon-riche",
+    relief: { altitudeM: 110, pentePct: 4, expositionDeg: 180, forme: "plan", bassinAmontHa: 0.5 },
     paysageId: "bocage",
     nom: "Limon profond riche",
     latitudeDeg: 49.5,
@@ -181,6 +184,7 @@ export const LIMON_PAUVRE_N: StationClimat = {
   station: stationDepuisProfil({
     ...LIMON_RICHE.station,
     id: "limon-pauvre-n",
+    relief: { altitudeM: 95, pentePct: 3, expositionDeg: 0, forme: "plan", bassinAmontHa: 0.3 },
     paysageId: "plaine-cerealiere",
     nom: "Limon profond pauvre en azote",
     // Même limon, mais matière organique effondrée par des décennies de
@@ -201,6 +205,7 @@ export const LIMON_PAUVRE_N: StationClimat = {
 export const FRICHE_LIMON: StationClimat = {
   station: stationDepuisProfil({
     id: "friche-limon",
+    relief: { altitudeM: 130, pentePct: 6, expositionDeg: 180, forme: "plan", bassinAmontHa: 0.4 },
     paysageId: "lisiere-forestiere",
     nom: "Friche sur limon (succession)",
     latitudeDeg: 47.5,

@@ -236,6 +236,7 @@ export function meteoDerivee(
   scenario: Scenario,
   annee: number,
   normales?: Normales,
+  anomalieAltitude = 0,
 ): WeekWeather {
   const dT = anomalieC(scenario, annee, week);
   const dGlobal = Math.max(0, rechauffementGlobalC(scenario, annee) - RECHAUFFEMENT_SERIE_C);
@@ -248,11 +249,14 @@ export function meteoDerivee(
   const pluie =
     base.rainMm * facteurPluie(scenario, annee, week) -
     deficit * AMPLIFICATION_SECHERESSE * dGlobal;
+  // L'altitude refroidit toute l'année, de 0,6 °C par 100 m (relief.ts) : à
+  // mille mètres, la saison de végétation dure deux mois de moins.
+  const dTotal = dT + anomalieAltitude;
   return {
-    tMean: base.tMean + dT + supplement,
-    tMin: base.tMin + dT,
-    tMax: base.tMax + dT + supplement,
-    tMinAbsC: base.tMinAbsC + dT,
+    tMean: base.tMean + dTotal + supplement,
+    tMin: base.tMin + dTotal,
+    tMax: base.tMax + dTotal + supplement,
+    tMinAbsC: base.tMinAbsC + dTotal,
     rainMm: Math.max(0, pluie),
     co2Ppm: co2Ppm(scenario, annee),
     annee,

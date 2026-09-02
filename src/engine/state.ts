@@ -12,6 +12,7 @@ import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
+import type { Relief } from "./relief";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
@@ -57,6 +58,8 @@ export interface Station {
    * l'effet brise-vent d'une haie ou d'une nurse payant (ch5, docs §9).
    */
   ventExposition: number;
+  /** relief de la parcelle : altitude, pente, exposition, forme (relief.ts) */
+  relief: Relief;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
   /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */
@@ -228,6 +231,10 @@ export interface TickFluxes {
   uptakeKKgHa: number;
   /** potassium lessivé, kg/ha */
   leachedKKgHa: number;
+  /** eau arrivée de l'amont par ruissellement, mm */
+  ruissellementEntrantMm: number;
+  /** eau partie de la parcelle par ruissellement, mm */
+  ruissellementSortantMm: number;
   /** matière sèche prélevée par le gibier cette semaine, kg */
   broutageKg: number;
   /** azote apporté par les dépôts atmosphériques, kg/ha (semaine) */

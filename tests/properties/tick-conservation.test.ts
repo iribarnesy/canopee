@@ -48,8 +48,16 @@ function checkConservation(sc: StationClimat, years: number) {
 
     const deltaWater = meanWaterStock(next) - before;
     expect(
-      fluxes.evapMm + fluxes.transpirationMm + fluxes.drainageMm + fluxes.overflowMm + deltaWater,
-    ).toBeCloseTo(fluxes.rainMm + fluxes.nappeMm, 5);
+      fluxes.ruissellementSortantMm +
+        fluxes.evapMm +
+        fluxes.transpirationMm +
+        fluxes.drainageMm +
+        fluxes.overflowMm +
+        deltaWater,
+      // Entrées : pluie, remontée de nappe, et l'eau qui arrive de l'amont
+      // par ruissellement. Sortie supplémentaire : celle qui quitte la
+      // parcelle par le point bas (relief.ts).
+    ).toBeCloseTo(fluxes.rainMm + fluxes.nappeMm + fluxes.ruissellementEntrantMm, 5);
 
     // Entrées : minéralisation de l'humus + retour de litière (recyclage des
     // arbres) + fixation symbiotique. Sorties : prélèvements + lessivage.

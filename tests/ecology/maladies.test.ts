@@ -12,6 +12,7 @@ import { getScenario, meteoDerivee } from "../../src/engine/climat";
 import { advanceWeek } from "../../src/engine/game";
 import { MALADIES, maladiesActives, pressionMaladie } from "../../src/engine/maladies";
 import { serieToWeeks } from "../../src/engine/meteo";
+import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
@@ -50,6 +51,9 @@ describe("à l'échelle du peuplement : la diversification comme assurance", () 
   function peuplement(especes: readonly string[], ans: number) {
     const station: Station = {
       ...LIMON_RICHE.station,
+      // Terrain plat et fermé : ces essais isolent un mécanisme vertical, pas
+      // l'hydrologie d'un versant (relief.ts).
+      relief: RELIEF_PLAT,
       coteM: 40,
       voisinage: [],
       gibierParHa: 0,

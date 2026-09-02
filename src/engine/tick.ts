@@ -85,6 +85,15 @@ import {
 } from "./ravageurs";
 import { yearlyRecruitment } from "./regeneration";
 import {
+  altitudeParCellule,
+  coefficientRuissellement,
+  facteurExpositionRayonnement,
+  fractionRuissellement,
+  ordreDeDescente,
+  RUISSELLEMENT_AMONT,
+  voisineAval,
+} from "./relief";
+import {
   conductiviteHorizonMmSemaine,
   facteurPhBiologie,
   porositeDrainageMm,
@@ -161,7 +170,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const dims = gridDims(station);
   const nCells = cellCount(dims);
   const week = weekOfYear(state);
-  const etpMm = weeklyEtpHargreaves(station.latitudeDeg, week, weather);
+  // Un versant sud reçoit plus de rayonnement qu'un terrain plat, un versant
+  // nord moins : c'est l'écart adret/ubac, et il suffit à porter deux
+  // végétations différentes de part et d'autre d'une crête (relief.ts).
+  const etpMm =
+    weeklyEtpHargreaves(station.latitudeDeg, week, weather) *
+    facteurExpositionRayonnement(station.relief);
   // Le CO₂ de l'année voyage avec la météo (climat.ts) : c'est lui qui décide
   // du gain de croissance et de la fermeture des stomates.
   const ppmSemaine = weather.co2Ppm ?? CO2_ACTUEL_PPM;
@@ -243,6 +257,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const depositionSemaineG = station.depositionNKgHaAn / G_PER_M2_TO_KG_PER_HA / 52;
   const partPluie = Math.min(3, weather.rainMm / 15);
 
+  // Relief : l'eau ne reste plus dans sa cellule (relief.ts). On précalcule le
+  // champ d'altitudes, l'ordre de descente et la voisine aval — ils ne
+  // changent pas d'une semaine à l'autre.
+  const altitudes = altitudeParCellule(station.relief, dims);
+  const descente = ordreDeDescente(altitudes);
+  const aval = voisineAval(altitudes, dims);
+  const partRuisselante = fractionRuissellement(station.relief.pentePct);
+  // Ce qui arrive de l'amont : la pluie tombée sur le bassin versant qui verse
+  // sur nous, ramenée à la surface de la parcelle.
+  const surfaceHaParcelle = nCells / 10_000;
+  const apportAmontMm =
+    surfaceHaParcelle > 0
+      ? (weather.rainMm * RUISSELLEMENT_AMONT * station.relief.bassinAmontHa) / surfaceHaParcelle
+      : 0;
+  const debordementParCellule = new Array<number>(nCells).fill(0);
+  let ruissellementEntrantMm = 0;
+  let ruissellementSortantMm = 0;
+
   const eauCellule = new Array<number>(nH);
   const excesCellule = new Array<number>(nH);
   // Buffer réutilisé : évite des dizaines de milliers d'allocations par semaine.
@@ -263,12 +295,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
     const surface = horizonsCellule[0];
     if (surface) surface.ruMm = ruSurfacePourHumus(humusCG[i] ?? humusInitialG);
+    // Ce qui ruisselle ne rentre pas : on le retire de la pluie qui s'infiltre,
+    // et il rejoindra l'aval (relief.ts). La couverture du sol et la litière
+    // freinent — c'est là que « couvrir le sol » paie en eau.
+    const couvertureSol = Math.min(
+      1,
+      (herbeCouverture[i] ?? 0) + Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG),
+    );
+    const saturationSurface = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
+    const ruissele =
+      (weather.rainMm + apportAmontMm) *
+      coefficientRuissellement(station.relief.pentePct, couvertureSol, saturationSurface);
     const bilan = profilHydro(
       {
         horizons: horizonsCellule,
         eauMm: eauCellule,
         excesMm: excesCellule,
-        rainMm: weather.rainMm,
+        rainMm: weather.rainMm + apportAmontMm - ruissele,
         evapDemandMm:
           etpMm *
           SOIL_EVAP_FRACTION *
@@ -285,10 +328,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterlogging[base + h] = bilan.engorgementParHorizon[h] ?? 0;
     }
     drainageMmArr[i] = bilan.drainageMm;
+    ruissellementEntrantMm += apportAmontMm;
+    // Le débordement, c'est l'eau que la cellule n'a pas pu absorber. Sur du
+    // plat elle stagne puis s'en va ; sur une pente, elle RUISSELLE — et c'est
+    // elle qu'il faut router, pas l'eau gravitaire déjà infiltrée.
+    debordementParCellule[i] = bilan.overflowMm + ruissele;
     evapSum += bilan.evapMm;
     nappeSum += bilan.nappeMm;
     drainageSum += bilan.drainageMm;
-    overflowSum += bilan.overflowMm;
+
     waterloggingSum += bilan.engorgementParHorizon[0] ?? 0;
 
     // La vie du sol se joue en surface : c'est l'horizon 0 qui pilote.
@@ -371,6 +419,37 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     mineralizationSumG += mineralized;
     litterDecaySumG += transfere;
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
+  }
+
+  // ── 2 bis. Ruissellement : l'eau descend la pente ─────────────────────────
+  // On parcourt les cellules de la plus haute à la plus basse : ce qui part
+  // d'en haut a déjà été calculé quand on arrive en bas, et l'eau cascade donc
+  // d'un bout à l'autre du versant en une seule passe. C'est l'eau GRAVITAIRE
+  // qui bouge — celle que le sol ne retient pas ; la réserve utile, elle,
+  // reste où elle est.
+  for (const i of descente) {
+    const disponible = debordementParCellule[i] ?? 0;
+    if (disponible <= 0) continue;
+    // Ce qui ne ruisselle pas stagne sur place et finit par s'en aller.
+    const part = disponible * partRuisselante;
+    overflowSum += disponible - part;
+    if (part <= 0) continue;
+    const j = aval[i] ?? -1;
+    if (j < 0) {
+      // Point bas de la parcelle : l'eau s'en va pour de bon.
+      ruissellementSortantMm += part;
+      continue;
+    }
+    // Elle arrive chez la voisine du dessous, où elle a une seconde chance de
+    // s'infiltrer — c'est ce qui fait les bas de pente frais.
+    const cible = j * nH;
+    const ruCible = ruSurfacePourHumus(humusCG[j] ?? humusInitialG);
+    const place = Math.max(0, ruCible - (waterMm[cible] ?? 0));
+    const infiltre = Math.min(part, place);
+    waterMm[cible] = (waterMm[cible] ?? 0) + infiltre;
+    const reste = part - infiltre;
+    // Ce qu'elle ne peut pas absorber continue sa route à la passe suivante.
+    debordementParCellule[j] = (debordementParCellule[j] ?? 0) + reste;
   }
 
   // ── 3. Prélèvements eau + azote, en deux passes (ordre-indépendant) ───────
@@ -1159,6 +1238,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       drainageMm: drainageSum / nCells,
       overflowMm: overflowSum / nCells,
       waterloggingMean: waterloggingSum / nCells,
+      ruissellementEntrantMm: ruissellementEntrantMm / nCells,
+      ruissellementSortantMm: ruissellementSortantMm / nCells,
       herbeCouvertureMean: herbeSum / nCells,
       broutageKg: broutage.preleveKg,
       depositionKgHa: (depositionSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

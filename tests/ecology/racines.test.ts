@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
 import { syntheticYear as anneeSynthetique, syntheticYear } from "../../src/engine/meteo";
+import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { horizon, profondeurPenetrableCm } from "../../src/engine/soil";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
@@ -59,6 +60,9 @@ describe("complémentarité verticale sur sol contrasté", () => {
    */
   const SOL_CONTRASTE: Station = {
     ...LIMON_RICHE.station,
+    // Terrain plat et fermé : ces essais isolent un mécanisme vertical, pas
+    // l'hydrologie d'un versant (relief.ts).
+    relief: RELIEF_PLAT,
     id: "sol-contraste",
     nom: "Sable sur limon profond",
     profil: [
@@ -122,6 +126,9 @@ describe("plasticité racinaire : on ne creuse que si on a soif", () => {
   function eleverUnChene(nappeMm: number, pluieAnnuelleMm: number, ans: number) {
     const station: Station = {
       ...LIMON_RICHE.station,
+      // Terrain plat et fermé : ces essais isolent un mécanisme vertical, pas
+      // l'hydrologie d'un versant (relief.ts).
+      relief: RELIEF_PLAT,
       id: "plasticite",
       profil: PROFIL,
       coteM: 30,

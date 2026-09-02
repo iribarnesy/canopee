@@ -201,11 +201,17 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   }
   let incendies = 0;
   let arbresTues = 0;
+  const tuesParLeFeu: Record<string, number> = {};
+  const mortsTotales: Record<string, number> = {};
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
     const r = advanceWeek(state, w, []);
     state = r.state;
+    for (const m of r.morts) {
+      mortsTotales[m.especeId] = (mortsTotales[m.especeId] ?? 0) + 1;
+      if (m.cause === "feu") tuesParLeFeu[m.especeId] = (tuesParLeFeu[m.especeId] ?? 0) + 1;
+    }
     if (r.incendie) {
       incendies++;
       arbresTues += r.incendie.arbresTues;
@@ -217,10 +223,15 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     expect(arbresTues).toBeGreaterThan(5);
   });
 
-  it("après le feu, c'est le chêne-liège qui tient le terrain", () => {
-    const pins = state.trees.filter((t) => t.alive && t.especeId === "pinus_sylvestris").length;
-    const lieges = state.trees.filter((t) => t.alive && t.especeId === "quercus_suber").length;
-    expect(lieges).toBeGreaterThan(pins);
+  it("le feu trie : il emporte des pins et épargne les chênes-lièges", () => {
+    // On regarde QUI le feu tue, pas qui domine à la fin — ce dernier chiffre
+    // dépend de la date du dernier incendie et bascule pour un rien. Ce qui
+    // est structurel, c'est l'écorce : le liège est la réponse évolutive au
+    // feu, et ça doit se lire dans les causes de mort.
+    const partFeu = (especeId: string) =>
+      (tuesParLeFeu[especeId] ?? 0) / Math.max(1, mortsTotales[especeId] ?? 0);
+    expect(tuesParLeFeu.pinus_sylvestris ?? 0).toBeGreaterThan(0);
+    expect(partFeu("pinus_sylvestris")).toBeGreaterThan(3 * partFeu("quercus_suber"));
   });
 
   it("le feu est déterministe : même graine, mêmes incendies", () => {
