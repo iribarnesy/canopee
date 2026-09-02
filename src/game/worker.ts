@@ -175,6 +175,17 @@ function performAction(action: GameAction) {
       event("🚜", `Labour : ${eur} (${dHeures.toFixed(1)} h) — le sol est nu, l'azote est libéré`);
       break;
     }
+    case "chasser": {
+      event(
+        "🎯",
+        `Journée de chasse : ${eur}, la pression retombe à ${(state.pressionGibier * 100).toFixed(0)} % — mais les voisins reviendront`,
+      );
+      break;
+    }
+    case "cloturer": {
+      event("🚧", `Clôture posée : ${eur} (${dHeures.toFixed(1)} h) — plus une dent à l'intérieur`);
+      break;
+    }
     case "proteger": {
       const n =
         state.trees.filter((t) => t.protege).length - before.trees.filter((t) => t.protege).length;
@@ -286,6 +297,7 @@ function postSnapshot() {
     anneeCivile,
     co2Ppm: w.co2Ppm ?? CO2_ACTUEL_PPM,
     stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
+    pressionGibier: state.pressionGibier,
     biodiversite: indiceBiodiversite(
       state.trees,
       state.carbon.deadWoodKgC,

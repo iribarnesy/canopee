@@ -94,6 +94,21 @@ const ABRI_NU = 0.45;
  */
 export const DIGESTIBILITE = 0.6;
 
+/**
+ * Ce qu'une journée de chasse retire à la pression locale.
+ *
+ * Peu, et pas longtemps — c'est le point. Prélever sur un hectare ne change
+ * rien à une population dont le domaine vital en fait cinquante : le vide
+ * créé se remplit par les voisins en quelques mois. C'est le phénomène
+ * d'**immigration compensatoire**, et c'est pour ça que la régulation du
+ * gibier se décide à l'échelle d'un massif (le plan de chasse), pas d'une
+ * parcelle *(à calibrer)*.
+ */
+export const EFFET_CHASSE = 0.25;
+
+/** Part du vide qui se comble chaque semaine par immigration des voisins. */
+export const RETOUR_IMMIGRATION = 0.03;
+
 /** Un plant plusieurs fois rabattu et resté minuscule finit par mourir. */
 export const HAUTEUR_LETALE_M = 0.12;
 
@@ -139,6 +154,7 @@ export function brouter(
   coteM: number,
   densiteParHa: number,
   saison: number,
+  cloture?: readonly boolean[],
 ): ResultatBroutage {
   const nCells = coteM * coteM;
   const parCellule: BroutageCellule[] = new Array(nCells);
@@ -157,6 +173,8 @@ export function brouter(
     if (!aPorteeDeDent(tree)) continue;
     const cell = Math.floor(tree.y) * coteM + Math.floor(tree.x);
     if (cell < 0 || cell >= nCells) continue;
+    // Derrière une clôture, il n'y a rien à brouter : les dents n'entrent pas.
+    if (cloture?.[cell]) continue;
     const liste = arbresParCellule.get(cell);
     if (liste) liste.push(tree);
     else arbresParCellule.set(cell, [tree]);
@@ -171,7 +189,7 @@ export function brouter(
   let totalLigneux = 0;
   let totalHerbe = 0;
   for (let i = 0; i < nCells; i++) {
-    herbeKg[i] = (herbeCouverture[i] ?? 0) * HERBE_KG_M2_SEMAINE * saison;
+    herbeKg[i] = cloture?.[i] ? 0 : (herbeCouverture[i] ?? 0) * HERBE_KG_M2_SEMAINE * saison;
     // Le gibier fréquente d'autant plus une cellule qu'elle offre du couvert.
     const abri = ABRI_NU + (1 - ABRI_NU) * Math.min(1, couvertArbore[i] ?? 0);
     // Réponse fonctionnelle : une cellule presque vide ne vaut plus le

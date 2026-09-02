@@ -11,7 +11,7 @@
 import { CARBON_FRACTION, CN_HUMUS, treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
-import { HAUTEUR_BROUTAGE_M } from "./gibier";
+import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { forEachDiscCell } from "./grid";
 import { crownRadiusM } from "./light";
 import { partMecanisable } from "./mecanisation";
@@ -108,6 +108,14 @@ export const LABOUR_EUR_M2 = 0.02;
 export const LABOUR_PERTE_HUMUS = 0.05;
 /** Hauteur en dessous de laquelle un plant ne survit pas au passage de l'outil, m. */
 export const LABOUR_HAUTEUR_DETRUITE_M = 1.2;
+/** Une journée de chasse : le temps d'un affût et d'une battue *(à calibrer)*. */
+export const CHASSE_HEURES = 8;
+/** Ce que rapporte la venaison d'une journée, € *(à calibrer)*. */
+export const CHASSE_RECETTE_EUR = 120;
+/** Grillage à gibier de 2 m posé, € par mètre de périmètre *(à calibrer)*. */
+export const CLOTURE_EUR_M = 14;
+/** Pose : creuser, tendre, ancrer — h par mètre de périmètre. */
+export const CLOTURE_HEURES_M = 0.12;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
 /** effet d'un chaulage sur le pH (plafonné à 7,5) */
@@ -258,6 +266,26 @@ export type GameAction =
       rayonM: number;
       /** part du tas à épandre ∈ ]0,1] */
       part: number;
+    }
+  | {
+      /**
+       * Chasser : une journée de prélèvement sur la parcelle. Efficace sur le
+       * moment, vain à terme — les voisins comblent le vide.
+       */
+      type: "chasser";
+      week: number;
+    }
+  | {
+      /**
+       * Clôturer une zone : cher au mètre de périmètre, mais total. À la
+       * différence des manchons, le coût ne dépend pas du nombre de plants —
+       * c'est ce qui le rend imbattable au-delà d'une certaine surface.
+       */
+      type: "cloturer";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
     }
   | {
       /**
@@ -780,6 +808,72 @@ function applyElaguer(
   };
 }
 
+/**
+ * Chasser. Le prélèvement fait reculer la pression… quelques mois. Sur un
+ * hectare pris dans un paysage qui en porte cinquante, le vide se comble par
+ * immigration : c'est pour cette raison que la régulation du gibier se décide
+ * à l'échelle d'un massif et pas d'une parcelle.
+ */
+function applyChasser(
+  state: GameState,
+  action: Extract<GameAction, { type: "chasser" }>,
+): ApplyResult {
+  if (state.economy.hoursUsedWeek + CHASSE_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "chasser", "plafond hebdomadaire atteint")] };
+  }
+  return {
+    state: {
+      ...state,
+      pressionGibier: Math.max(0, state.pressionGibier - EFFET_CHASSE),
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur + CHASSE_RECETTE_EUR,
+        hoursUsedWeek: state.economy.hoursUsedWeek + CHASSE_HEURES,
+        hoursUsedYear: state.economy.hoursUsedYear + CHASSE_HEURES,
+      },
+    },
+    refusals: [],
+  };
+}
+
+/**
+ * Clôturer. Le coût suit le PÉRIMÈTRE, pas la surface ni le nombre de plants :
+ * c'est toute la différence avec les manchons. Clôturer un are est ruineux,
+ * clôturer un hectare est la solution la moins chère dès qu'on y plante dense.
+ */
+function applyCloturer(
+  state: GameState,
+  action: Extract<GameAction, { type: "cloturer" }>,
+): ApplyResult {
+  const perimetreM = 2 * Math.PI * action.rayonM;
+  const cost = perimetreM * CLOTURE_EUR_M;
+  const hours = perimetreM * CLOTURE_HEURES_M;
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "cloturer", "plafond hebdomadaire atteint")] };
+  }
+  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+    return { state, refusals: [refuse(action.week, "cloturer", "découvert plafonné")] };
+  }
+  const cloture = state.soil.cloture.slice();
+  const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
+  forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => {
+    cloture[i] = true;
+  });
+  return {
+    state: {
+      ...state,
+      soil: { ...state.soil, cloture },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur - cost,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
 function applyLabourer(
   state: GameState,
   action: Extract<GameAction, { type: "labourer" }>,
@@ -1187,6 +1281,10 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyProteger(state, action);
     case "labourer":
       return applyLabourer(state, action);
+    case "chasser":
+      return applyChasser(state, action);
+    case "cloturer":
+      return applyCloturer(state, action);
     case "epandreBrf":
       return applyEpandreBrf(state, action);
     case "receper":

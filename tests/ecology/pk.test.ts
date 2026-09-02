@@ -10,6 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
+import { getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
 import {
@@ -191,5 +192,45 @@ describe("où le phosphore et le potassium limitent — et où ils ne limitent p
     // vivre des décennies ; ici on regarde le sol, pas les arbres.)
     const limon = croissance(LIMON_RICHE, "limon-riche", "betula_pendula", 25);
     expect(limon.pDisponible).toBeGreaterThan(10 * lande.pDisponible);
+  });
+});
+
+describe("le seuil de carence appartient à la plante, pas au moteur", () => {
+  it("un fruitier cultivé est bien plus exigeant qu'une essence forestière", () => {
+    // C'est par ce nombre — et non par un cas particulier dans le moteur — que
+    // les cultures s'ajouteront : une céréale sera simplement à 10 ou 20.
+    expect(getEspece("malus_domestica").exigenceMinerale).toBeGreaterThan(
+      2 * getEspece("pinus_sylvestris").exigenceMinerale,
+    );
+    expect(getEspece("quercus_suber").exigenceMinerale).toBe(1);
+  });
+
+  it("sur le même sol pauvre, le fruitier souffre là où le pin se contente", () => {
+    const serie = serieMeteoPour("lande-seche");
+    if (!serie) throw new Error("série manquante");
+    const w = serieToWeeks(serie);
+    const station: Station = {
+      ...LANDE_SECHE.station,
+      coteM: 20,
+      voisinage: [],
+      gibierParHa: 0,
+    };
+    const pousse = (especeId: string) => {
+      let state = createGameState(station, rngStateFromSeed(4));
+      state = plantAt(state, especeId, 10, 10, 1);
+      const id = state.nextTreeId - 1;
+      for (let i = 0; i < 10 * 52; i++) {
+        const semaine = w[i % w.length];
+        if (!semaine) throw new Error("météo manquante");
+        state = advanceWeek(state, semaine, []).state;
+      }
+      const arbre = state.trees.find((t) => t.id === id);
+      return { vivant: arbre?.alive === true, hauteur: arbre?.heightM ?? 0 };
+    };
+    // Sur ce podzol, le phosphore assimilable est dix fois sous le seuil d'un
+    // fruitier et proche de celui d'une essence forestière.
+    const pin = pousse("pinus_sylvestris");
+    const pommier = pousse("malus_domestica");
+    expect(pin.hauteur).toBeGreaterThan(pommier.hauteur);
   });
 });

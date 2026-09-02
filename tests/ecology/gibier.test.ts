@@ -10,11 +10,12 @@
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
+import { applyAction, PROTECTION_EUR } from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
 import { aPorteeDeDent, brouter, HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, plantAt, type Station } from "../../src/engine/state";
+import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { FRICHE_LIMON } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
 
@@ -198,3 +199,84 @@ describe("mécanique du broutage", () => {
     expect(dense.preleveKg).toBeGreaterThan(rare.preleveKg);
   });
 });
+
+describe("les trois façons de se protéger du gibier, et ce qu'elles coûtent", () => {
+  const zone = { x: 20, y: 20, rayonM: 15 };
+
+  it("chasser fait reculer la pression… puis les voisins comblent le vide", () => {
+    const station: Station = { ...FRICHE_LIMON.station, coteM: 40, gibierParHa: 0.3 };
+    let state = createGameState(station, rngStateFromSeed(3));
+    const apres = applyAction(state, { type: "chasser", week: 1 });
+    expect(apres.state.pressionGibier).toBeLessThan(0.8);
+    // Une journée de chasse rapporte un peu de venaison, et coûte une journée.
+    expect(apres.state.economy.treasuryEur).toBeGreaterThan(state.economy.treasuryEur);
+    expect(apres.state.economy.hoursUsedWeek).toBeGreaterThan(6);
+
+    // Un an plus tard, sans rien faire d'autre, la pression est revenue :
+    // prélever sur un hectare ne change rien à une population dont le domaine
+    // vital en fait cinquante. C'est pour ça que le plan de chasse se décide
+    // à l'échelle d'un massif.
+    state = apres.state;
+    for (let i = 0; i < 52; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, []).state;
+    }
+    expect(state.pressionGibier).toBeGreaterThan(0.9);
+  });
+
+  it("chasser toute l'année finit par tenir la pression basse — au prix de son temps", () => {
+    const station: Station = { ...FRICHE_LIMON.station, coteM: 40, gibierParHa: 0.3 };
+    let state = createGameState(station, rngStateFromSeed(3));
+    const battues: GameAction[] = [];
+    for (let semaine = 1; semaine < 52; semaine += 3) {
+      battues.push({ type: "chasser", week: semaine });
+    }
+    for (let i = 0; i < 52; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, battues).state;
+    }
+    expect(state.pressionGibier).toBeLessThan(0.6);
+    // Dix-sept journées de chasse dans l'année : ce n'est pas gratuit.
+    expect(state.economy.hoursUsedYear).toBeGreaterThan(100);
+  });
+
+  it("la clôture, elle, est totale : derrière, plus une dent", () => {
+    const station: Station = { ...FRICHE_LIMON.station, coteM: 40, gibierParHa: 0.5 };
+    let state = createGameState(station, rngStateFromSeed(3));
+    const dedans = planterEn(state, "corylus_avellana", 20, 20);
+    state = dedans.state;
+    const dehors = planterEn(state, "corylus_avellana", 4, 4);
+    state = dehors.state;
+    state = applyAction(state, { type: "cloturer", week: 1, ...zone }).state;
+    for (let i = 0; i < 12 * 52; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, []).state;
+    }
+    const hauteur = (id: number) => state.trees.find((t) => t.id === id)?.heightM ?? 0;
+    expect(hauteur(dedans.id)).toBeGreaterThan(2 * hauteur(dehors.id));
+  });
+
+  it("le coût suit le PÉRIMÈTRE : c'est ce qui la rend imbattable en grand", () => {
+    const station: Station = { ...FRICHE_LIMON.station, coteM: 40, gibierParHa: 0.3 };
+    const state = createGameState(station, rngStateFromSeed(3));
+    const cout = (rayonM: number) => {
+      const r = applyAction(state, { type: "cloturer", week: 1, x: 20, y: 20, rayonM });
+      return state.economy.treasuryEur - r.state.economy.treasuryEur;
+    };
+    // Doubler le rayon quadruple la surface protégée mais ne double que le prix.
+    expect(cout(14)).toBeGreaterThan(1.8 * cout(7));
+    expect(cout(14)).toBeLessThan(2.2 * cout(7));
+    // Face aux manchons : protéger 400 plants coûte 3 200 € et 200 heures ;
+    // les enclore tous derrière un cercle de 14 m en coûte bien moins.
+    expect(cout(14)).toBeLessThan(400 * PROTECTION_EUR);
+  });
+});
+
+/** Plante un sujet à un endroit précis et renvoie son identifiant. */
+function planterEn(state: GameState, especeId: string, x: number, y: number) {
+  const suivant = plantAt(state, especeId, x, y, 0.4);
+  return { state: suivant, id: suivant.nextTreeId - 1 };
+}

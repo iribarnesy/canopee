@@ -21,7 +21,7 @@ import {
 import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
-import { brouter, DIGESTIBILITE, LIGNIFICATION_PAR_SEMAINE } from "./gibier";
+import { brouter, DIGESTIBILITE, LIGNIFICATION_PAR_SEMAINE, RETOUR_IMMIGRATION } from "./gibier";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
   couvertureMax,
@@ -421,8 +421,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // stock comparé à un seuil, pas une allocation hebdomadaire. C'est ainsi
     // que l'agronomie en parle, et c'est bien plus stable — les coupler au
     // partage semaine par semaine faisait osciller des peuplements entiers.
-    pSatisfaction[t] = facteurNutriment(pSum / n, SATURATION_P_G_M2);
-    kSatisfaction[t] = facteurNutriment(kSum / n, SATURATION_K_G_M2);
+    // Le seuil de carence est une propriété de LA PLANTE, pas du moteur : un
+    // pin se contente de ce qui affamerait un pommier, et un pommier de ce qui
+    // affamerait un blé. C'est par ce nombre que les cultures s'ajouteront.
+    pSatisfaction[t] = facteurNutriment(pSum / n, SATURATION_P_G_M2 * espece.exigenceMinerale);
+    kSatisfaction[t] = facteurNutriment(kSum / n, SATURATION_K_G_M2 * espece.exigenceMinerale);
     // À forte concentration de CO₂, les stomates s'ouvrent moins : l'arbre
     // perd moins d'eau pour le même carbone (climat.ts).
     waterDemandL[t] =
@@ -706,8 +709,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     herbeCouverture,
     couvertArbore,
     station.coteM,
-    station.gibierParHa,
+    station.gibierParHa * state.pressionGibier,
     saisonHerbe,
+    state.soil.cloture,
   );
   if (broutage.preleveKg > 0) {
     for (let i = 0; i < nCells; i++) {
@@ -1012,6 +1016,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterCG,
         humusCG,
         ph: state.soil.ph,
+        cloture: state.soil.cloture,
         phosphoreG,
         phosphoreFixeG,
         potassiumG,
@@ -1025,6 +1030,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       },
       trees: nextTrees,
       ddYearBase5,
+      // Le vide laissé par la chasse se comble : les voisins arrivent.
+      pressionGibier: state.pressionGibier + (1 - state.pressionGibier) * RETOUR_IMMIGRATION,
       carbon: {
         ...state.carbon,
         deadWoodKgC,

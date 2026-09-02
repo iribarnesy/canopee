@@ -64,6 +64,8 @@ export interface Snapshot {
   co2Ppm: number;
   /** broyat en réserve, kg de matière sèche */
   stockBrfKg: number;
+  /** pression de gibier locale ∈ [0,1] (la chasse la fait baisser, l'immigration la relève) */
+  pressionGibier: number;
   fluxes: TickFluxes;
   trees: SnapshotTree[];
   soilWater: Float32Array;

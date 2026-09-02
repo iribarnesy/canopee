@@ -138,6 +138,18 @@ export interface EspeceV0 {
     rejetteApresFeu: boolean;
   };
   /**
+   * Exigence minérale, en multiple du seuil de carence forestier (pk.ts).
+   *
+   * Un arbre forestier mycorhizé, qui retransloque son phosphore avant la
+   * chute des feuilles et recycle sur place, vit sur des teneurs qui
+   * condamneraient une culture : c'est la référence, à 1. Un fruitier cultivé,
+   * dont on exporte la récolte chaque année et qu'on a sélectionné pour le
+   * rendement, en demande deux à trois fois plus. Une céréale ou un maraîchage
+   * seraient à dix ou vingt — c'est par ce nombre, et pas par un cas
+   * particulier dans le moteur, que les cultures s'ajouteront le jour venu.
+   */
+  exigenceMinerale: number;
+  /**
    * Type de mycorhize (mycorhizes.ts) : il décide de QUEL réseau l'espèce
    * profite, et lequel elle entretient. Les trois types ne se remplacent pas.
    */
@@ -212,6 +224,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // brouté sans être recherché
     // phytophthora de l'aulne : réel, et mortel sur les berges
     // double symbiose : Frankia pour l'azote, ectomycorhizes pour le reste
+    exigenceMinerale: 1,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.55 },
     gibier: { appetence: 0.4 },
@@ -240,6 +253,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     bois: { densite: 0.68, prixOeuvreEurM3: 180, rejetteDeSouche: false },
     // peu appété, mais consommé l'hiver faute de mieux
     // peu attaqué tant qu'il n'a pas soif
+    exigenceMinerale: 1,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.35 },
@@ -266,6 +280,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     bois: { densite: 0.75, prixOeuvreEurM3: 220, rejetteDeSouche: true },
     // les chênes sont en tête des listes d'appétence
     // défoliateurs (bombyx, tordeuse) sur les chênes
+    exigenceMinerale: 1,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.75 },
@@ -293,6 +308,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     bois: { densite: 0.45, prixOeuvreEurM3: 110, rejetteDeSouche: false },
     // résineux dédaigné (il subit surtout les frottis, v2)
     // scolytes et processionnaire : le cas d'école du résineux pur
+    exigenceMinerale: 1,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.75 },
     gibier: { appetence: 0.2 },
@@ -319,6 +335,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     bois: { densite: 0.55, prixOeuvreEurM3: 120, rejetteDeSouche: true },
     // rameaux tendres, brouté en pionnier
     // pionnier peu sujet
+    exigenceMinerale: 1,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.5 },
@@ -356,6 +373,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     // un verger non protégé est un garde-manger
     // carpocapse et tavelure : un verger sans auxiliaires se traite
+    exigenceMinerale: 2.5,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.85 },
     gibier: { appetence: 0.85 },
@@ -392,6 +410,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     // fruitier très appété
     // moniliose
+    exigenceMinerale: 2.5,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.8 },
     gibier: { appetence: 0.8 },
@@ -429,6 +448,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // l'essence préférée du chevreuil
     // balanin des noisettes
     // l'hôte de la truffe
+    exigenceMinerale: 1.6,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.45 },
     gibier: { appetence: 0.9 },
@@ -456,6 +476,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     bois: { densite: 0.6, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // épines dissuasives, mais brouté en hiver sur la lande
     // rien ne s'y attaque vraiment
+    exigenceMinerale: 1,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.15 },
     gibier: { appetence: 0.25 },
@@ -480,6 +501,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 2.5 },
     bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // genêt appété, sans épines
+    exigenceMinerale: 1,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.55 },
@@ -506,6 +528,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
     // consommée l'hiver quand il n'y a rien d'autre
     // le type des landes : il va chercher l'azote organique des sols acides
+    exigenceMinerale: 1,
     mycorhize: "ericoide",
     ravageurs: { sensibilite: 0.15 },
     gibier: { appetence: 0.35 },
@@ -543,6 +566,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     // rejets très broutés
     // chancre et cynips
+    exigenceMinerale: 1,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.7 },
     gibier: { appetence: 0.5 },
@@ -585,6 +609,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Cette même écorce isole si bien que l'arbre traverse l'incendie et
     // repart (atlas : « écorce = liège → résiste au feu »).
     // appété, mais feuillage coriace
+    exigenceMinerale: 1,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.6 },
@@ -620,6 +645,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       autofertile: true,
     },
     // feuillage sclérophylle peu recherché
+    exigenceMinerale: 1,
     mycorhize: "ericoide",
     ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.3 },

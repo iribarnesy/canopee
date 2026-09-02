@@ -31,12 +31,12 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 5 | 1 | 2 | 8 |
-| H. Gestion, économie, travail | 11 | 4 | 3 | 18 |
+| H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 3 | 3 | 0 | 6 |
-| **Total** | **71** | **27** | **19** | **117** |
+| **Total** | **72** | **27** | **19** | **118** |
 
-**Score de réalisme : 71 pleins + 27 partiels sur 117 → 73 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 72 pleins + 27 partiels sur 118 → 72 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -49,7 +49,9 @@ capital : humus ↔ azote, réserve utile dynamique, labour, dépôts
 atmosphériques) → 70 % (faim d'azote, extrêmes climatiques amplifiés) → 71 % (tas de broyat : la fertilité se
 transporte) → 71 % (réseaux mycorhiziens) → 72 % (cycles du phosphore et du
 potassium) → 73 % (altération biologique : les cycles tiennent, P et K
-limitent enfin, et les mycorhizes gagnent leur vie).*
+limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
+l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
+aux cultures).*
 
 ---
 
@@ -186,7 +188,8 @@ limitent enfin, et les mycorhizes gagnent leur vie).*
 | H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, coupe, et éclaircie par critère (`choisirTigesAEclaircir` ; `eclaircie.test.ts`) — les trognes restent à faire |
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
-| H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche et protections individuelles (`proteger`) ; irrigation, fertilisation et clôtures absentes |
+| H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche, protections individuelles et **clôtures** ; irrigation et fertilisation absentes |
+| H18 | Le gibier se régule aussi par la chasse — et l'immigration compense | ✅ | `chasser` ; `gibier.test.ts` — une journée fait reculer la pression, un an plus tard elle est revenue |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |

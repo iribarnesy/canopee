@@ -131,6 +131,8 @@ export interface SoilState {
    * puisent, elle réabsorbe quand il y en a trop.
    */
   potassiumReserveG: number[];
+  /** cellule enclose : le gibier n'y entre pas (gibier.ts) */
+  cloture: boolean[];
   /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
   ph: number[];
   /**
@@ -183,6 +185,12 @@ export interface GameState {
    * ira vider là où on en a besoin.
    */
   stockBrf: { carboneG: number; azoteG: number };
+  /**
+   * Pression de gibier locale, en part de la densité du paysage ∈ [0,1].
+   * La chasse la fait baisser ; l'immigration des voisins la fait remonter —
+   * c'est ce qui rend la régulation illusoire à l'échelle d'une parcelle.
+   */
+  pressionGibier: number;
   /** degrés-jours base 5 °C cumulés depuis le 1er janvier (phénologie, §7.2) */
   ddYearBase5: number;
   rng: RngState;
@@ -260,6 +268,7 @@ export function createGameState(
       litterCG: new Array(n).fill(0),
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       ph: new Array(n).fill(station.phInitial),
+      cloture: new Array(n).fill(false),
       phosphoreG: new Array(n).fill(station.phosphoreInitialGM2),
       // Le stock fixé de départ : dix fois l'assimilable, l'ordre de grandeur
       // habituel entre phosphore total et phosphore assimilable.
@@ -283,6 +292,7 @@ export function createGameState(
     },
     trees: [],
     stockBrf: { carboneG: 0, azoteG: 0 },
+    pressionGibier: 1,
     nextTreeId: 1,
     rng,
   };

@@ -29,7 +29,7 @@ const MOIS = [
   "décembre",
 ];
 
-type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir" | "brf";
+type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir" | "brf" | "cloturer";
 type Overlay = "eau" | "ph" | "azote" | "herbe";
 
 const panel: React.CSSProperties = {
@@ -324,6 +324,8 @@ export function GameView() {
       game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
     } else if (mode === "faucher") {
       game.dispatch({ type: "faucher", x: mx, y: my, rayonM: rayonChaulage });
+    } else if (mode === "cloturer") {
+      game.dispatch({ type: "cloturer", x: mx, y: my, rayonM: rayonChaulage });
     } else if (mode === "brf") {
       game.dispatch({ type: "epandreBrf", x: mx, y: my, rayonM: rayonChaulage, part: 1 });
     } else if (mode === "eclaircir") {
@@ -479,6 +481,22 @@ export function GameView() {
           )}
           <button
             type="button"
+            style={btn(mode === "cloturer")}
+            onClick={() => setMode("cloturer")}
+            title="Enclore une zone : cher au mètre de périmètre, mais le gibier n'y entre plus"
+          >
+            🚧 Clôturer
+          </button>
+          <button
+            type="button"
+            style={btn()}
+            onClick={() => game.dispatch({ type: "chasser" })}
+            title="Une journée de chasse : la pression recule, puis les voisins comblent le vide"
+          >
+            🎯 Chasser
+          </button>
+          <button
+            type="button"
             style={btn(mode === "faucher")}
             onClick={() => setMode("faucher")}
             title="Dégager la strate herbacée autour des jeunes plants — l'entretien qui sauve une plantation sur sol pauvre"
@@ -597,7 +615,7 @@ export function GameView() {
               {rayonChaulage} m
             </div>
           )}
-          {(mode === "chauler" || mode === "faucher" || mode === "brf") && (
+          {(mode === "chauler" || mode === "faucher" || mode === "brf" || mode === "cloturer") && (
             <div style={{ marginTop: 6 }}>
               Rayon :{" "}
               <input
@@ -778,7 +796,8 @@ export function GameView() {
             {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
           </strong>
           <br />📅 {snapshot.anneeCivile} · CO₂ {snapshot.co2Ppm.toFixed(0)} ppm
-          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · 🐛 ravageurs{" "}
+          <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem (pression{" "}
+          {(snapshot.pressionGibier * 100).toFixed(0)} %) · 🐛 ravageurs{" "}
           {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · 🐞 auxiliaires{" "}
           {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} % · 🍄 mycorhizes{" "}
           {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
