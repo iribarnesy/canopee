@@ -109,4 +109,44 @@ describe("stabilité du tapis (pas d'oscillation artificielle)", () => {
     }
     expect(Math.max(...ecarts)).toBeLessThan(0.25);
   });
+
+  it("la couverture ne fait pas le yo-yo d'une semaine sur l'autre", () => {
+    // Le tapis ne doit changer de sens qu'au rythme des saisons : il recule en
+    // été, repart à l'automne. S'il inverse toutes les deux ou trois semaines,
+    // c'est qu'il réagit à sa propre consommation — c'est ce qui se voyait à
+    // l'écran sous forme de cercles de fauche clignotants.
+    const station: Station = { ...LIMON_RICHE.station, coteM: 30, voisinage: [] };
+    const serie = serieMeteoPour("limon-riche");
+    if (!serie) throw new Error("série manquante");
+    const weather = serieToWeeks(serie);
+    let state = createGameState(station, rngStateFromSeed(3));
+    const actions: GameAction[] = [{ type: "faucher", week: 3 * 52 + 20, x: 10, y: 10, rayonM: 4 }];
+    const fauchee: number[] = [];
+    const temoin: number[] = [];
+    for (let i = 0; i < 6 * 52; i++) {
+      const w = weather[i % weather.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, actions).state;
+      // On observe à partir d'un mois après la fauche : la repousse elle-même
+      // est un mouvement légitime.
+      if (i > 3 * 52 + 24) {
+        fauchee.push(state.soil.herbeCouverture[10 * 30 + 10] ?? 0);
+        temoin.push(state.soil.herbeCouverture[25 * 30 + 25] ?? 0);
+      }
+    }
+    const inversions = (serieCouverture: readonly number[]): number => {
+      let n = 0;
+      let sens = 0;
+      for (let i = 1; i < serieCouverture.length; i++) {
+        const d = Math.sign((serieCouverture[i] ?? 0) - (serieCouverture[i - 1] ?? 0));
+        if (d !== 0 && sens !== 0 && d !== sens) n++;
+        if (d !== 0) sens = d;
+      }
+      return n;
+    };
+    // 2,5 ans d'observation : au plus quelques inversions saisonnières.
+    // Sans mémoire hydrique, on en comptait une vingtaine.
+    expect(inversions(fauchee)).toBeLessThan(8);
+    expect(inversions(temoin)).toBeLessThan(8);
+  });
 });

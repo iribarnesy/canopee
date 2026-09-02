@@ -103,6 +103,12 @@ export interface SoilState {
    * baisser.
    */
   herbeBiomasse: number[];
+  /**
+   * Humidité de surface telle que le tapis la « vit » : moyenne lissée sur
+   * plusieurs semaines (herbe.ts). Sans cette mémoire, la couverture réagit à
+   * sa propre consommation avec une semaine de retard et se met à osciller.
+   */
+  herbeHumidite: number[];
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
   litterK: number[];
@@ -179,6 +185,8 @@ export function createGameState(
       // Une parcelle nue au départ : la strate s'installe d'elle-même.
       herbeCouverture: new Array(n).fill(station.herbeInitiale),
       herbeBiomasse: new Array(n).fill(station.herbeInitiale),
+      // Le 1er janvier, la réserve de surface est pleine.
+      herbeHumidite: new Array(n).fill(1),
       litterK: new Array(n).fill(0),
     },
     trees: [],

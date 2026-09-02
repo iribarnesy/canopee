@@ -35,10 +35,38 @@ const REGRESSION_PAR_SEMAINE = 0.2;
 const LUMIERE_MINIMALE = 0.12;
 
 /**
+ * Inertie du tapis face à l'humidité : part de l'écart rattrapée chaque semaine
+ * par l'humidité « vécue » (constante de temps ≈ 6 semaines).
+ *
+ * C'est ce qui empêche le tapis d'osciller. Regarder l'humidité de la semaine
+ * en cours suffit à créer un cycle : le tapis boit, la surface sèche, il
+ * régresse, il boit moins, la surface se recharge, il repart — une boucle de
+ * rétroaction retardée, qui se voyait à l'écran sous forme de cercles de
+ * fauche clignotants. Un gazon ne se reconfigure pas en une semaine : ses
+ * racines fines et ses talles intègrent les conditions sur plus d'un mois, et
+ * c'est cette mémoire qui amortit la boucle.
+ */
+export const INERTIE_HUMIDITE_HERBE = 0.16;
+
+/**
+ * Mémoire hydrique du tapis : lissage exponentiel de l'humidité de surface.
+ *
+ * Le lissage joue dans les DEUX sens, et c'est ce qui casse le cycle. Un tapis
+ * ne jaunit pas en une semaine sèche (il puise dans ses talles avant de
+ * griller — compter trois à quatre semaines) et ne reverdit pas non plus sur
+ * une averse (il faut refaire des feuilles). N'amortir que la reprise ne
+ * suffit pas : la boucle se reboucle alors par le bas, et les cercles
+ * clignotent toujours — vérifié en le mesurant.
+ */
+export function humiditeVecue(precedente: number, remplissageActuel: number): number {
+  return precedente + (remplissageActuel - precedente) * INERTIE_HUMIDITE_HERBE;
+}
+
+/**
  * Couverture que la cellule peut porter, d'après la lumière qui atteint le sol
- * et l'ÉTAT hydrique de l'horizon de surface (son remplissage, pas la
- * satisfaction de l'herbe elle-même : sinon la couverture se nourrit de sa
- * propre consommation et le tapis se met à osciller).
+ * et l'humidité VÉCUE de l'horizon de surface (lissée sur plusieurs semaines,
+ * et non la satisfaction de l'herbe elle-même : sinon la couverture se nourrit
+ * de sa propre consommation et le tapis se met à osciller).
  * Une lande rase ou un sous-bois sombre plafonnent bas ; une trouée fraîche se
  * referme vite. L'herbe grille la première en été : ses racines sont fines et
  * superficielles, elle recule avant que les arbres ne souffrent.

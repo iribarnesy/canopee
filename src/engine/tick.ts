@@ -19,7 +19,13 @@ import {
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import { cellCount, forEachDiscCell } from "./grid";
-import { couvertureMax, herbeDemandeAzoteG, herbeDemandeEauL, prochaineCouverture } from "./herbe";
+import {
+  couvertureMax,
+  herbeDemandeAzoteG,
+  herbeDemandeEauL,
+  humiditeVecue,
+  prochaineCouverture,
+} from "./herbe";
 import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from "./light";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
@@ -135,6 +141,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterK = state.soil.litterK.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
+  const herbeHumidite = state.soil.herbeHumidite.slice();
   /** engorgement par (cellule, horizon) */
   const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
@@ -327,7 +334,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let herbeSum = 0;
   for (let i = 0; i < nCells; i++) {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
-    const cible = couvertureMax(groundLight[i] ?? 1, remplissage);
+    herbeHumidite[i] = humiditeVecue(herbeHumidite[i] ?? remplissage, remplissage);
+    const cible = couvertureMax(groundLight[i] ?? 1, herbeHumidite[i] ?? remplissage);
     herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
     // La biomasse suit la croissance mais ne suit pas la régression : le foin
     // reste debout et ne part qu'avec la décomposition, la fauche ou le feu.
@@ -658,6 +666,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterK,
         herbeCouverture,
         herbeBiomasse,
+        herbeHumidite,
       },
       trees: nextTrees,
       ddYearBase5,
