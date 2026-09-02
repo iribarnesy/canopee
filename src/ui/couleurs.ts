@@ -42,6 +42,7 @@ export const SPECIES_COLORS: Record<string, string> = {
   calluna_vulgaris: "#a21caf",
   malus_domestica: "#e11d48",
   prunus_armeniaca: "#ea580c",
+  fraxinus_excelsior: "#0e7490",
 };
 
 /** Espèces repliées dans « autres » : un gris qui ne prétend à aucune identité. */

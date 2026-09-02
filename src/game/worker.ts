@@ -175,6 +175,14 @@ function performAction(action: GameAction) {
       event("🚜", `Labour : ${eur} (${dHeures.toFixed(1)} h) — le sol est nu, l'azote est libéré`);
       break;
     }
+    case "trogner": {
+      const n = state.trees.filter((t) => t.teteTrogneM !== undefined).length;
+      event(
+        "🪵",
+        `Étêtage : ${eur} (${dHeures.toFixed(1)} h) — ${n} trogne${n > 1 ? "s" : ""} en tête`,
+      );
+      break;
+    }
     case "chasser": {
       event(
         "🎯",

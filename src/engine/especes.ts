@@ -617,6 +617,42 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     sources: [ATLAS],
   },
   {
+    id: "fraxinus_excelsior",
+    nom: "Frêne commun",
+    nomLatin: "Fraxinus excelsior",
+    hauteurMaxM: 35,
+    pousseMaxMAn: 0.7,
+    // Atlas : mésophile à hygrocline, il aime les sols frais et riches et
+    // souffre vite en sol sec — c'est LE frêne des fonds de vallée et des
+    // haies bocagères.
+    eau: { seuilConfortSecheresse: 0.8, seuilStressSecheresse: 0.45, toleranceEngorgement: 0.5 },
+    ph: [5, 8],
+    // Demi-héliophile : il s'installe en lisière et dans les trouées, pas sous
+    // couvert fermé.
+    lumiere: { compensation: 0.06, saturation: 0.6, lai: 2.5, houppierRatio: 0.35, caduc: true },
+    racines: { profondeurMaxCm: 120 },
+    tBaseCroissanceC: 6,
+    // Exigeant : c'est un arbre de sol riche, il paie cher les sols pauvres.
+    azote: { demandeRelative: 0.9, fixateur: false },
+    regeneration: { maturiteAns: 25, longeviteAns: 200, dissemination: "vent", semisParAn: 5 },
+    // Litière tendre et riche (C/N ~25) : le frêne améliore son sol, c'est une
+    // des raisons de sa place dans les haies.
+    litiere: { cnRatio: 25 },
+    economie: { prixPlantEur: 3 },
+    // Bois d'œuvre de premier ordre (manches, sport, ébénisterie) et rejet
+    // vigoureux : c'est l'arbre à trogne par excellence.
+    bois: { densite: 0.68, prixOeuvreEurM3: 200, rejetteDeSouche: true },
+    feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
+    // Très appété : un jeune frêne non protégé n'a aucune chance.
+    gibier: { appetence: 0.8 },
+    exigenceMinerale: 1,
+    mycorhize: "arbusculaire",
+    // La chalarose (Hymenoscyphus fraxineus) frappe l'espèce depuis 2008 :
+    // c'est l'essence la plus menacée de France.
+    ravageurs: { sensibilite: 0.9 },
+    sources: [ATLAS],
+  },
+  {
     id: "arbutus_unedo",
     nom: "Arbousier",
     nomLatin: "Arbutus unedo",

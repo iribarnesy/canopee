@@ -33,10 +33,10 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | G. Faune et santé | 5 | 1 | 2 | 8 |
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
-| J. Biodiversité et structure | 3 | 3 | 0 | 6 |
-| **Total** | **72** | **27** | **19** | **118** |
+| J. Biodiversité et structure | 4 | 2 | 0 | 6 |
+| **Total** | **73** | **26** | **19** | **118** |
 
-**Score de réalisme : 72 pleins + 27 partiels sur 118 → 72 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 73 pleins + 26 partiels sur 118 → 73 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -51,7 +51,7 @@ transporte) → 71 % (réseaux mycorhiziens) → 72 % (cycles du phosphore et du
 potassium) → 73 % (altération biologique : les cycles tiennent, P et K
 limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
 l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
-aux cultures).*
+aux cultures) → 73 % (frêne, trogne, arbres-habitats).*
 
 ---
 
@@ -185,7 +185,7 @@ aux cultures).*
 | H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |
 | H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ✅ | `valeurSurPied` ; `sylviculture.test.ts` — il faut une bille élaguée ET du diamètre |
 | H7 | Les prix varient (marché, saturation locale) | ❌ | Prix fixes |
-| H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, coupe, et éclaircie par critère (`choisirTigesAEclaircir` ; `eclaircie.test.ts`) — les trognes restent à faire |
+| H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, éclaircie par critère et **trogne** (`trogner` ; `trogne.test.ts`) — quatre gestes qui ne se confondent pas |
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche, protections individuelles et **clôtures** ; irrigation et fertilisation absentes |
@@ -223,7 +223,7 @@ inventaire.
 |---|---|---|---|
 | J1 | La richesse en essences ET leur équilibre comptent (une essence à 95 % est un désert) | ✅ | `biodiversite.ts` équitabilité de Shannon ; `biodiversite.test.ts` |
 | J2 | Le bois mort est un habitat, pas un déchet | ✅ | pool `deadWoodKgC` intégré à l'indice (ch4-A) |
-| J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | 🟡 | proxy par la hauteur ; pas de vétérans ni de cavités |
+| J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | ✅ | gros sujets ET trognes recoupées, dont la tête se creuse (`biodiversite.ts` ; `trogne.test.ts`) |
 | J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | 🟡 | strates et sempervirence comptées ; pas de lisières ni de structure horizontale |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
 | J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C) |

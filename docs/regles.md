@@ -299,6 +299,17 @@ possible le geste fondateur du §16 : couper les fixateurs là où ils poussent 
 désormais modélisée : sous un tapis de plaquettes à C/N 40, les décomposeurs
 ponctionnent l'azote du sol avant de le rendre (§7.4, faim d'azote).
 
+**La trogne (têtard)** — implémentée : ni un recépage (on garde le tronc), ni
+un élagage (on coupe la charpente), c'est une troisième chose. On coupe la tête
+à hauteur d'homme, **au-dessus de la dent du bétail**, elle repart, on y revient
+tous les dix ans. Trois conséquences dans le moteur : du bois à chaque passage
+sans jamais tuer l'arbre ; une longévité multipliée (chaque étêtage rajeunit la
+charpente — c'est pour ça que les plus vieux arbres de nos campagnes sont
+presque tous des trognes) ; et une tête qui se creuse à force d'être recoupée,
+comptée comme **arbre-habitat** dans l'indice de biodiversité, au même titre
+qu'un gros sujet. Le frêne, ajouté avec elle, est l'essence à trogne par
+excellence — et la plus menacée de France depuis l'arrivée de la chalarose.
+
 **Végétal** : acheter et planter (plant jeune pas cher/fragile vs plant fort cher/robuste ; v1 : **un seul phénotype par espèce** ; v2 : choix de la provenance MFR, y compris plants méridionaux = migration assistée), semer, tailler/élaguer (bois d'œuvre), **éclaircir** (ch5-A : desserrer pour la résilience), recéper (taillis), trogner, couper, **choisir le devenir de chaque coupe** : vendre (bois d'œuvre / chauffage) · brûler sur place · broyer/épandre · laisser en bois mort. Récolter les fruits (fenêtre de fraîcheur), greffer *(v2 ?)*.
 
 **Aménagements** : clôture, protections individuelles, haie brise-vent, mare (débloque crapauds/libellules), nichoirs/gîtes/perchoirs, ruches (pollinisation + miel), irrigation (réseau ou cuve de récupération — ressource eau limitée et payante, ch7-B), chemin d'accès (réduit le temps de travail des interventions lointaines *(idée à confirmer)*).

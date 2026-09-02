@@ -27,7 +27,7 @@ export interface IndiceBiodiversite {
   equitabilite: number;
   /** diversité des strates de hauteur ∈ [0,1] */
   strates: number;
-  /** présence de gros arbres (habitats) ∈ [0,1] */
+  /** présence d'arbres-habitats — gros sujets et trognes creuses ∈ [0,1] */
   grosArbres: number;
   /** bois mort au sol ∈ [0,1] */
   boisMort: number;
@@ -86,7 +86,11 @@ export function indiceBiodiversite(
     parEspece.set(t.especeId, (parEspece.get(t.especeId) ?? 0) + 1);
     const strate = STRATES.findIndex((h) => t.heightM < h);
     if (strate >= 0) parStrate[strate] = (parStrate[strate] ?? 0) + 1;
-    if (t.heightM >= 15) gros++;
+    // Arbres-habitats : les gros sujets, mais aussi les TROGNES. Une tête de
+    // trogne recoupée pendant des décennies se creuse, et ce creux vaut mieux
+    // pour la faune qu'un fût sain de vingt mètres — c'est même la raison pour
+    // laquelle on protège les vieux têtards de nos haies (critère J3).
+    if (t.heightM >= 15 || (t.teteTrogneM !== undefined && t.recepages >= 2)) gros++;
     // Le couvert permanent se mesure en surface de houppier, pas en tiges.
     const surface = t.heightM * t.heightM;
     surfaceTotale += surface;

@@ -65,6 +65,12 @@ export interface TreeState {
   hauteurElagueeM: number;
   /** nombre de recépages subis (taillis, trogne) */
   recepages: number;
+  /**
+   * Hauteur de la tête de trogne, m — absent si l'arbre n'a jamais été
+   * étêté. Une trogne se recoupe toujours au même endroit ; la tête grossit,
+   * se creuse, et c'est ce creux qui fait sa valeur pour la faune.
+   */
+  teteTrogneM?: number;
   /** semaine de la dernière levée d'écorce (liège) ; absent = jamais démasclé */
   derniereLeveeSemaine?: number;
   /**
@@ -366,7 +372,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // Sénescence : passé ~85 % de la longévité, la vigueur décline puis l'arbre
   // meurt (déterministe) — le moteur du cycle sylvigénétique (ch4-A).
   const ageYears = tree.ageWeeks / 52;
-  const longevite = espece.regeneration.longeviteAns;
+  // Une trogne vit des siècles là où l'arbre de plein vent vieillit : chaque
+  // étêtage rajeunit la charpente, et l'arbre ne porte jamais le poids d'un
+  // houppier de futaie. C'est pour ça que les plus vieux arbres de nos
+  // campagnes sont presque tous des trognes (ch5-A).
+  const longevite = espece.regeneration.longeviteAns * (1 + 0.5 * Math.min(4, tree.recepages));
   const fAge =
     ageYears < 0.85 * longevite
       ? 1

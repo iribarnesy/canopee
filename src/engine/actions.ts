@@ -108,6 +108,10 @@ export const LABOUR_EUR_M2 = 0.02;
 export const LABOUR_PERTE_HUMUS = 0.05;
 /** Hauteur en dessous de laquelle un plant ne survit pas au passage de l'outil, m. */
 export const LABOUR_HAUTEUR_DETRUITE_M = 1.2;
+/** Hauteur de tête de trogne par défaut : au-dessus de la dent du bétail. */
+export const TROGNE_HAUTEUR_M = 2;
+/** Temps d'un étêtage, h par arbre *(à calibrer)*. */
+export const TROGNE_HEURES = 1.2;
 /** Une journée de chasse : le temps d'un affût et d'une battue *(à calibrer)*. */
 export const CHASSE_HEURES = 8;
 /** Ce que rapporte la venaison d'une journée, € *(à calibrer)*. */
@@ -266,6 +270,19 @@ export type GameAction =
       rayonM: number;
       /** part du tas à épandre ∈ ]0,1] */
       part: number;
+    }
+  | {
+      /**
+       * Étêter (trogner) : couper la charpente à hauteur d'homme, au-dessus de
+       * la dent du bétail, et laisser la tête repartir. On y revient tous les
+       * dix ans. C'est le geste qui a fait les arbres les plus vieux de nos
+       * campagnes.
+       */
+      type: "trogner";
+      week: number;
+      treeIds: number[];
+      /** hauteur de la tête, m (on recoupe toujours au même endroit) */
+      hauteurTeteM: number;
     }
   | {
       /**
@@ -814,6 +831,75 @@ function applyElaguer(
  * immigration : c'est pour cette raison que la régulation du gibier se décide
  * à l'échelle d'un massif et pas d'une parcelle.
  */
+/**
+ * Étêter. Ce n'est ni un recépage (on garde le tronc) ni un élagage (on coupe
+ * la charpente) : c'est une troisième chose, qui produit du bois et du
+ * fourrage tous les dix ans sans jamais tuer l'arbre, et qui le fait vivre
+ * bien plus longtemps qu'un arbre de plein vent.
+ */
+function applyTrogner(
+  state: GameState,
+  action: Extract<GameAction, { type: "trogner" }>,
+): ApplyResult {
+  const refusals: ActionRefusal[] = [];
+  let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
+  const trees = [...state.trees];
+  let { exportedEnergyCumKgC } = state.carbon;
+  const hauteurTete = Math.max(1, action.hauteurTeteM);
+  for (const id of action.treeIds) {
+    const idx = trees.findIndex((t) => t.id === id && t.alive);
+    const tree = idx >= 0 ? trees[idx] : undefined;
+    if (!tree) {
+      refusals.push(refuse(action.week, "trogner", `arbre ${id} introuvable`));
+      continue;
+    }
+    const espece = getEspece(tree.especeId);
+    if (!espece.bois.rejetteDeSouche) {
+      refusals.push(
+        refuse(action.week, "trogner", `${espece.nom} ne rejette pas : la tête ne repartirait pas`),
+      );
+      continue;
+    }
+    // On ne trogne pas un arbre qui n'a pas encore dépassé la tête.
+    if (tree.heightM < hauteurTete + 1) {
+      refusals.push(
+        refuse(action.week, "trogner", `arbre ${id} : trop court pour une tête à ${hauteurTete} m`),
+      );
+      continue;
+    }
+    if (hoursUsedWeek + TROGNE_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
+      refusals.push(refuse(action.week, "trogner", "plafond hebdomadaire atteint"));
+      break;
+    }
+    hoursUsedWeek += TROGNE_HEURES;
+    hoursUsedYear += TROGNE_HEURES;
+    // Ce qu'on emporte : tout ce qui dépassait la tête, en bois de chauffage.
+    const emporte =
+      treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, hauteurTete);
+    treasuryEur += (woodVolumeM3(tree.heightM) - woodVolumeM3(hauteurTete)) * WOOD_PRICE_EUR_M3;
+    exportedEnergyCumKgC += Math.max(0, emporte);
+    trees[idx] = {
+      ...tree,
+      heightM: hauteurTete,
+      teteTrogneM: hauteurTete,
+      recepages: tree.recepages + 1,
+      hauteurElagueeM: Math.min(tree.hauteurElagueeM, hauteurTete),
+      pousseTendreM: 0,
+      fruitsKg: 0,
+      fruitProgress: 0,
+    };
+  }
+  return {
+    state: {
+      ...state,
+      trees,
+      carbon: { ...state.carbon, exportedEnergyCumKgC },
+      economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
+    },
+    refusals,
+  };
+}
+
 function applyChasser(
   state: GameState,
   action: Extract<GameAction, { type: "chasser" }>,
@@ -1283,6 +1369,8 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyLabourer(state, action);
     case "chasser":
       return applyChasser(state, action);
+    case "trogner":
+      return applyTrogner(state, action);
     case "cloturer":
       return applyCloturer(state, action);
     case "epandreBrf":
