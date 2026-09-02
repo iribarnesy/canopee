@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
+import type { GameAction } from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
 import {
@@ -17,11 +18,13 @@ import {
   echangeReserveK,
   lessivagePotassiumG,
   retrogradationHebdo,
+  SATURATION_K_G_M2,
+  SATURATION_P_G_M2,
 } from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { horizon } from "../../src/engine/soil";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
+import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -124,24 +127,69 @@ describe("les cycles, et ce qui leur manque encore", () => {
   });
 
   it("rien ne se perd : le phosphore change de forme, il ne disparaît pas", () => {
-    // L'assimilable baisse, le fixé grossit d'autant — c'est la rétrogradation.
     expect(run.fin.pTotal).toBeGreaterThan(0.8 * run.debut.pTotal);
-    expect(run.fin.p).toBeLessThan(run.debut.p);
   });
 
-  it("LIMITE CONNUE : les deux stocks disponibles se vident en soixante ans", () => {
-    // Sous un peuplement vigoureux, l'assimilable et l'échangeable descendent
-    // bien plus que ne le ferait un vrai sol : l'altération, les dépôts et le
-    // retour des feuilles ne couvrent pas ce que la biomasse accumule, et les
-    // pools tampons relarguent trop lentement. Un vrai sol tient mieux, parce
-    // que les racines profondes atteignent la roche altérable et que la
-    // rhizosphère accélère l'altération — deux choses que le moteur n'a pas.
-    //
-    // C'est ÉCRIT ICI, et testé, parce que c'est exactement pour cette raison
-    // que le phosphore et le potassium ne freinent pas encore la croissance
-    // (cf. la note de pk.ts). Le jour où ce test tombera en échec parce que
-    // les stocks tiennent, le couplage pourra être branché.
-    expect(run.fin.p).toBeLessThan(run.debut.p / 2);
-    expect(run.fin.k).toBeLessThan(run.debut.k / 2);
+  it("les stocks tiennent sur soixante ans — une forêt ne se vide pas son sol", () => {
+    // C'est le test qui a débloqué le couplage à la croissance. Il échouait
+    // tant que l'altération restait purement chimique ; il passe depuis que la
+    // rhizosphère l'accélère (pk.ts). Une forêt installée fabrique une partie
+    // de sa propre fertilité minérale — ce n'est pas une correction de
+    // confort, c'est un mécanisme mesuré sur le terrain.
+    expect(run.fin.p).toBeGreaterThan(run.debut.p);
+    expect(run.fin.k).toBeGreaterThan(run.debut.k / 2);
+  });
+});
+
+describe("où le phosphore et le potassium limitent — et où ils ne limitent pas", () => {
+  function croissance(base: typeof LIMON_RICHE, meteoId: string, especeId: string, ans: number) {
+    const serie = serieMeteoPour(meteoId);
+    if (!serie) throw new Error("série manquante");
+    const w = serieToWeeks(serie);
+    const station: Station = { ...base.station, coteM: 30, voisinage: [], gibierParHa: 0 };
+    let state = createGameState(station, rngStateFromSeed(5));
+    for (let i = 0; i < 9; i++) {
+      state = plantAt(state, especeId, 8 + (i % 3) * 7, 8 + Math.floor(i / 3) * 7, 0.5);
+    }
+    // On dégage la strate herbacée, sinon c'est elle qui décide de tout sur un
+    // sol pauvre (cf. herbe.test.ts) et on ne verrait plus le phosphore.
+    const entretien: GameAction[] = [];
+    for (let an = 0; an < ans; an++) {
+      entretien.push({ type: "faucher", week: an * 52 + 20, x: 15, y: 15, rayonM: 12 });
+    }
+    for (let i = 0; i < ans * 52; i++) {
+      const semaine = w[i % w.length];
+      if (!semaine) throw new Error("météo manquante");
+      state = advanceWeek(state, semaine, entretien).state;
+    }
+    const vivants = state.trees.filter((t) => t.alive && t.especeId === especeId);
+    const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+    return {
+      hauteur: Math.max(0, ...vivants.map((t) => t.heightM)),
+      pDisponible: moyenne(state.soil.phosphoreG) * disponibilitePhosphore(state.station.phInitial),
+      k: moyenne(state.soil.potassiumG),
+    };
+  }
+
+  it("sur un limon profond, ils ne freinent rien : l'azote et l'eau commandent", () => {
+    const limon = croissance(LIMON_RICHE, "limon-riche", "betula_pendula", 25);
+    // Bien au-dessus des seuils de carence : le phosphore et le potassium ne
+    // sont pas le sujet sur un bon sol, et c'est le résultat attendu.
+    expect(limon.pDisponible).toBeGreaterThan(SATURATION_P_G_M2 * 3);
+    expect(limon.k).toBeGreaterThan(SATURATION_K_G_M2 * 2);
+  });
+
+  it("sur un podzol sableux et acide, le phosphore devient le facteur qui manque", () => {
+    const lande = croissance(LANDE_SECHE, "lande-seche", "pinus_sylvestris", 25);
+    // Un sol que l'agronomie qualifierait de stérile : c'est bien le phosphore
+    // qui y est rare, pas le potassium (le sable en garde un peu, le complexe
+    // d'échange est simplement trop faible pour le retenir longtemps).
+    expect(lande.pDisponible).toBeLessThan(SATURATION_P_G_M2 * 2);
+    // Et l'écart avec le limon est d'un ordre de grandeur : c'est bien un sol
+    // à phosphore, pas une nuance. (Que la pinède landaise tienne malgré tout
+    // est vérifié ailleurs — `tolerances.test.ts` et `feu.test.ts` la font
+    // vivre des décennies ; ici on regarde le sol, pas les arbres.)
+    const limon = croissance(LIMON_RICHE, "limon-riche", "betula_pendula", 25);
+    expect(limon.pDisponible).toBeGreaterThan(10 * lande.pDisponible);
   });
 });

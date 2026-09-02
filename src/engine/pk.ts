@@ -25,24 +25,23 @@
  * différences d'exigence entre espèces (les besoins en P et K sont pris
  * proportionnels au besoin en azote, faute de données fiables par essence).
  *
- * **État d'avancement, à lire avant d'utiliser ce module.** Les deux cycles
- * sont complets et conservatifs : altération de la roche sur tout le profil,
- * dépôts atmosphériques, prélèvement, retour à la chute des feuilles,
- * rétrogradation du phosphore vers les formes fixées, tampon du potassium par
- * la réserve non échangeable, lessivage freiné par le complexe d'échange. Les
- * ordres de grandeur obtenus sont ceux qu'on mesure : 3 à 5 kg P/ha/an et 10 à
- * 40 kg K/ha/an prélevés, 6 kg K/ha/an lessivés, des stocks stables sur deux
- * siècles.
+ * Les deux cycles sont complets, conservatifs et **branchés sur la loi du
+ * minimum** : altération de la roche sur tout le profil, dépôts
+ * atmosphériques, prélèvement stœchiométrique de l'azote réellement absorbé,
+ * retour à la chute des feuilles, rétrogradation du phosphore vers les formes
+ * fixées, tampon du potassium par la réserve non échangeable, lessivage freiné
+ * par le complexe d'échange.
  *
- * En revanche, ils ne freinent PAS ENCORE la croissance. Les brancher sur la
- * loi du minimum, même avec des seuils de carence réalistes, décalait assez
- * l'équilibre du peuplement pour allumer des incendies sur une friche
- * limoneuse qui n'en avait jamais connu et pour empêcher le hêtre d'atteindre
- * la canopée à deux cents ans — deux comportements que le moteur produisait
- * correctement. Un facteur limitant supplémentaire ne s'ajoute pas sans
- * recalibrer ce qu'il touche ; ce sera le travail suivant. En attendant, les
- * stocks sont suivis, conservés et affichés : on peut voir un sol s'appauvrir,
- * simplement ça ne se paie pas encore en croissance.
+ * Trois erreurs ont dû être corrigées avant que ça tienne, et elles valent
+ * d'être notées :
+ *  1. le prélèvement suivait la DEMANDE et non l'azote réellement absorbé —
+ *     un arbre bridé par l'azote se gavait de potassium ;
+ *  2. l'altération ne comptait que l'horizon de surface, alors que les racines
+ *     vont la chercher dans tout le profil ;
+ *  3. il manquait l'**altération biologique** : sans elle, les stocks se
+ *     vidaient en soixante ans et brancher ces facteurs mettait le feu à une
+ *     friche limoneuse. C'est le mécanisme qui a tout débloqué — et, au
+ *     passage, celui qui donne enfin une fonction aux mycorhizes.
  */
 
 import type { Horizon } from "./soil";
@@ -101,6 +100,27 @@ export function capaciteEchange(h: Horizon): number {
  * sableux sont pauvres en potassium *(ordres de grandeur : 1 kg P/ha/an et
  * 15 kg K/ha/an sur un sol argileux, à calibrer)*.
  */
+/**
+ * Accélération de l'altération par la rhizosphère.
+ *
+ * C'est le mécanisme qui manquait, et ce n'est pas un détail de calibration :
+ * les racines et surtout les champignons ectomycorhiziens **dissolvent la
+ * roche**. Ils exsudent des acides organiques et des sidérophores qui attaquent
+ * les apatites et les micas, et vont chercher le phosphore et le potassium là
+ * où l'eau seule ne les libérerait qu'en millénaires. Les mesures donnent des
+ * facteurs de deux à dix par rapport à l'altération purement chimique.
+ *
+ * Deux conséquences qui changent le jeu : une forêt **fabrique en partie sa
+ * propre fertilité minérale** au lieu de seulement puiser dans un stock, et le
+ * réseau mycorhizien cesse d'être un état décoratif — c'est ici qu'il gagne sa
+ * vie *(à calibrer)*.
+ */
+export const FACTEUR_RHIZOSPHERE = 4;
+
+export function facteurAlterationBiologique(reseauMycorhizien: number): number {
+  return 1 + FACTEUR_RHIZOSPHERE * Math.min(1, Math.max(0, reseauMycorhizien));
+}
+
 function alterationG(profil: readonly Horizon[], parAnPour30cm: number, partSable: number): number {
   let total = 0;
   for (const h of profil) {
@@ -180,13 +200,15 @@ export function echangeReserveK(
 /**
  * Seuils de carence : au-dessus, le nutriment ne freine plus.
  *
- * Ce sont des seuils d'ANALYSE DE SOL, pas des besoins annuels. Un sol
- * forestier vit très bien avec 30 kg/ha de potassium échangeable ; c'est en
- * dessous d'une quinzaine que ça se voit, et sur les sables, où le complexe
- * d'échange ne retient rien. Idem pour le phosphore assimilable, autour de
- * 6 kg/ha *(à calibrer)*.
+ * Ce sont des seuils d'ANALYSE DE SOL, pas des besoins annuels, et des seuils
+ * FORESTIERS — bien plus bas que les seuils agronomiques. Un arbre mycorhizé
+ * qui recycle son phosphore et le retransloque avant la chute des feuilles vit
+ * sur des teneurs qui condamneraient une culture : moins d'un kilo à l'hectare
+ * de phosphore assimilable, une quinzaine de potassium échangeable. C'est
+ * précisément ce qui permet à la pinède landaise d'exister sur un podzol que
+ * l'agronomie qualifierait de stérile *(à calibrer)*.
  */
-export const SATURATION_P_G_M2 = 0.6;
+export const SATURATION_P_G_M2 = 0.08;
 export const SATURATION_K_G_M2 = 1.5;
 
 /**
@@ -214,8 +236,11 @@ export const DEPOSITION_K_KG_HA_AN = 3;
 export function phosphoreAssimilableGM2(profil: readonly Horizon[]): number {
   const surface = profil[0];
   if (!surface) return 0;
-  const brut = (0.25 + 0.35 * surface.moPct) * (1 - surface.pierrosite);
-  return brut * disponibilitePhosphore(surface.ph);
+  // Le stock de formes labiles, SANS le filtre du pH : celui-ci s'applique au
+  // moment où une racine vient chercher, pas au stock lui-même. L'appliquer
+  // aux deux endroits pénalisait deux fois les sols acides, au point de rendre
+  // une pinède landaise impossible — alors qu'elle existe.
+  return (0.25 + 0.35 * surface.moPct) * (1 - surface.pierrosite);
 }
 
 /**

@@ -113,13 +113,18 @@ implémentés, pas encore couplés à la croissance*. Les copier sur l'azote aur
 - Entrées : altération de la roche sur tout le profil, dépôts atmosphériques,
   retour à la chute des feuilles (85 % pour K, 70 % pour P, contre 50 % pour
   l'azote — le bois est pauvre en ces deux éléments).
-- *Ce qui manque avant de les brancher sur la loi du minimum* : les stocks
-  disponibles dérivent à la baisse sur soixante ans, parce que le moteur n'a ni
-  altération rhizosphérique ni racines atteignant la roche altérable. Les
-  brancher tels quels décalait assez l'équilibre pour allumer des incendies sur
-  une friche limoneuse et empêcher le hêtre d'atteindre la canopée à deux cents
-  ans. La dérive est testée et consignée : le jour où ce test tombe parce que
-  les stocks tiennent, le couplage pourra être activé.
+- **L'altération biologique** a tout débloqué : racines et champignons
+  ectomycorhiziens dissolvent la roche (acides organiques, sidérophores), d'un
+  facteur deux à dix par rapport à l'altération purement chimique. Sans elle,
+  les stocks se vidaient en soixante ans et brancher ces deux facteurs
+  déséquilibrait le peuplement au point d'allumer des incendies sur une friche
+  limoneuse. Avec elle, une forêt installée **fabrique une partie de sa propre
+  fertilité minérale** — et le réseau mycorhizien cesse d'être décoratif.
+- Résultat : rien ne freine sur un limon profond, où l'azote et l'eau
+  commandent ; sur un podzol landais, le phosphore devient le facteur qui
+  manque, avec dix fois moins d'assimilable. Les seuils sont FORESTIERS, bien
+  plus bas que les seuils agronomiques : un arbre mycorhizé qui retransloque
+  son phosphore vit sur des teneurs qui condamneraient une culture.
 - **Fixation biologique de N** : légumineuses (*Rhizobium*) et actinorhiziennes (*Frankia* : aulne, argousier, chalef — atlas). Flux ∝ biomasse du fixateur, restitué au sol via litière/racines mortes ou **à la coupe si épandu** (ta règle : épandre vs vendre). Ordre de grandeur : aulne 50–100 kg N/ha/an en peuplement dense *(à calibrer)*. La fixation coûte au fixateur (~10 % de croissance en moins vs N abondant, « la légumineuse paie deux fois », ch1-C).
 - **Érosion** : t/ha = f(pente, couverture, agrégation) ; emporte MO et argiles → dégâts permanents sur les cellules en pente nues.
 - **pH dynamique lent** : litières acidifiantes (résineux, éricacées), exports de bois, pluie ; remontée par chaulage ou litières riches en bases (tilleul, frêne) *(effet litières à confirmer)*.

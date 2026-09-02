@@ -26,7 +26,7 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 13 | 2 | 3 | 18 |
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
-| C. Nutriments et cycles | 7 | 5 | 1 | 13 |
+| C. Nutriments et cycles | 9 | 3 | 1 | 13 |
 | D. Climat et phénologie | 6 | 4 | 1 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
@@ -34,9 +34,9 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | H. Gestion, économie, travail | 11 | 4 | 3 | 18 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 3 | 3 | 0 | 6 |
-| **Total** | **69** | **29** | **19** | **117** |
+| **Total** | **71** | **27** | **19** | **117** |
 
-**Score de réalisme : 69 pleins + 29 partiels sur 117 → 72 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 71 pleins + 27 partiels sur 117 → 73 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -48,7 +48,8 @@ dérive enfin : trajectoires SSP et effet CO₂) → 69 % (le sol devient un
 capital : humus ↔ azote, réserve utile dynamique, labour, dépôts
 atmosphériques) → 70 % (faim d'azote, extrêmes climatiques amplifiés) → 71 % (tas de broyat : la fertilité se
 transporte) → 71 % (réseaux mycorhiziens) → 72 % (cycles du phosphore et du
-potassium, pas encore couplés à la croissance).*
+potassium) → 73 % (altération biologique : les cycles tiennent, P et K
+limitent enfin, et les mycorhizes gagnent leur vie).*
 
 ---
 
@@ -105,8 +106,8 @@ potassium, pas encore couplés à la croissance).*
 | C13 | Les dépôts atmosphériques apportent de l'azote (et fertilisent les milieux pauvres) | ✅ | `station.depositionNKgHaAn` ; 9 à 20 kg/ha/an selon la région |
 | C9 | Enfouir un matériau à C/N élevé provoque une faim d'azote | ✅ | `azoteNetDecomposition` (bascule vers C/N 27) ; l'azote est immobilisé, pas perdu ; `sol-vivant.test.ts` |
 | C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | 🟡 | Chaulage seul ; pas de dérive |
-| C11 | Phosphore et potassium peuvent limiter la croissance | 🟡 | `pk.ts` : les deux cycles existent, sont conservatifs et donnent les bons flux annuels, mais ils ne freinent pas encore la croissance — les stocks disponibles dérivent à la baisse sur soixante ans (limite testée et documentée) |
-| C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | 🟡 | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour, gain sur l'azote. Le gain sur l'eau et le phosphore attend le cycle du P |
+| C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
+| C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche** — c'est là qu'ils gagnent leur vie |
 
 ## D. Climat et phénologie
 
@@ -229,14 +230,9 @@ inventaire.
 1. **Sécheresses pluriannuelles** : on accentue les extrêmes d'une semaine,
    mais un été sec qui suit un été sec ne se cumule pas encore — or c'est
    l'enchaînement qui tue (D11 reste partiel).
-2. **Calibrer les entrées de phosphore et de potassium** pour que les stocks
-   tiennent sur un siècle (altération rhizosphérique, racines profondes
-   atteignant la roche altérable). C'est ce qui manque pour brancher C11 sur la
-   loi du minimum — et pour que les mycorhizes rendent leur plein service
-   (C12).
-3. **Reste du biotique** : maladies datées (chalarose), frottis et écorçage,
+2. **Reste du biotique** : maladies datées (chalarose), frottis et écorçage,
    sanglier, chasse (G5, G6).
-4. **Variabilité individuelle** (v2) : tous les individus d'une espèce sont
+3. **Variabilité individuelle** (v2) : tous les individus d'une espèce sont
    aujourd'hui identiques, ce qui rend certains résultats en tout-ou-rien.
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
 4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).

@@ -55,6 +55,7 @@ import {
   DEPOSITION_P_KG_HA_AN,
   disponibilitePhosphore,
   echangeReserveK,
+  facteurAlterationBiologique,
   facteurNutriment,
   lessivagePotassiumG,
   RATIO_K_SUR_N,
@@ -324,17 +325,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
     // ── Phosphore et potassium (pk.ts) ─────────────────────────────────────
     const phCell = state.soil.ph[i] ?? 7;
-    // Ce que l'humus minéralisé rend : le phosphore suit l'azote (les deux
-    // sont dans les molécules du vivant) ; le potassium très peu, car ce n'est
-    // qu'un ion libre — il est parti de la feuille avant même qu'elle tombe.
     // Le phosphore libéré par l'humus qui se minéralise. Celui des feuilles
     // tombées, lui, revient à la chute (plus bas) : le compter deux fois
     // reviendrait à en fabriquer.
     const pOrganique = mineralized * RATIO_P_SUR_N;
 
-    // Ce que la roche libère, semaine après semaine.
-    phosphoreG[i] = (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine + depositionPSemaine;
-    potassiumG[i] = (potassiumG[i] ?? 0) + alterationKSemaine + depositionKSemaine;
+    // Ce que la roche libère, semaine après semaine — et bien plus vite là où
+    // le mycélium l'attaque (pk.ts). C'est ainsi qu'une forêt installée
+    // fabrique une partie de sa propre fertilité minérale.
+    const bio = facteurAlterationBiologique(
+      Math.max(
+        state.soil.mycorhizes.ecto[i] ?? 0,
+        state.soil.mycorhizes.arbusculaire[i] ?? 0,
+        state.soil.mycorhizes.ericoide[i] ?? 0,
+      ),
+    );
+    phosphoreG[i] =
+      (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine * bio + depositionPSemaine;
+    potassiumG[i] = (potassiumG[i] ?? 0) + alterationKSemaine * bio + depositionKSemaine;
     // Le tampon du sol : la réserve suit ce que les racines prennent.
     const echange = echangeReserveK(
       potassiumG[i] ?? 0,
@@ -370,8 +378,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const rootFractions = new Array<number[]>(nTrees);
   const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
   const cellNWanted = new Array<number>(nCells).fill(0);
-  const cellPWanted = new Array<number>(nCells).fill(0);
-  const cellKWanted = new Array<number>(nCells).fill(0);
 
   for (let t = 0; t < nTrees; t++) {
     const tree = trees[t];
@@ -446,13 +452,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const dispo = Math.min(1, (availFactor[i] ?? 0) * gainMyco);
       const demandeN = Math.min(needPerCell, capPerCell * dispo);
       cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
-      // Phosphore et potassium suivent le besoin d'azote (stœchiométrie du
-      // vivant) : ce sont les DISPONIBILITÉS qui diffèrent, pas les besoins.
-      // Le phosphore, immobile, n'est capté que par ce que le mycélium et les
-      // racines touchent réellement — d'où le même gain mycorhizien, qui vaut
-      // ici bien plus que pour l'azote.
-      cellPWanted[i] = (cellPWanted[i] ?? 0) + (needPerCell / n) * n * RATIO_P_SUR_N * gainMyco;
-      cellKWanted[i] = (cellKWanted[i] ?? 0) + needPerCell * RATIO_K_SUR_N;
     });
   }
 
@@ -471,8 +470,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
   const nServedRatio = new Array<number>(nCells).fill(0);
-  const pServedRatio = new Array<number>(nCells).fill(0);
-  const kServedRatio = new Array<number>(nCells).fill(0);
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   for (let i = 0; i < nCells; i++) {
@@ -487,6 +484,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterMm[base + h] = water - extracted;
       transpirationSumL += extracted;
     }
+    let azotePris = 0;
     const nWanted = cellNWanted[i] ?? 0;
     if (nWanted > 0) {
       const stock = mineralNG[i] ?? 0;
@@ -494,23 +492,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nServedRatio[i] = taken / nWanted;
       mineralNG[i] = stock - taken;
       uptakeSumG += taken;
+      azotePris = taken;
     }
-    // Phosphore : la disponibilité dépend du pH, et ce qui n'est pas pris
-    // reste sur place (il ne circule pas).
-    const pWanted = cellPWanted[i] ?? 0;
-    if (pWanted > 0) {
+    // Phosphore et potassium suivent l'azote RÉELLEMENT absorbé, pas la
+    // demande : une plante bridée par l'azote n'accumule pas du potassium pour
+    // autant. C'est la stœchiométrie du vivant qui commande.
+    if (azotePris > 0) {
       const offert = (phosphoreG[i] ?? 0) * disponibilitePhosphore(state.soil.ph[i] ?? 7);
-      const pris = Math.min(offert, pWanted);
-      pServedRatio[i] = pris / pWanted;
-      phosphoreG[i] = (phosphoreG[i] ?? 0) - pris;
-      uptakePSumG += pris;
-    }
-    const kWanted = cellKWanted[i] ?? 0;
-    if (kWanted > 0) {
-      const pris = Math.min(potassiumG[i] ?? 0, kWanted);
-      kServedRatio[i] = pris / kWanted;
-      potassiumG[i] = (potassiumG[i] ?? 0) - pris;
-      uptakeKSumG += pris;
+      const prisP = Math.min(offert, azotePris * RATIO_P_SUR_N);
+      phosphoreG[i] = (phosphoreG[i] ?? 0) - prisP;
+      uptakePSumG += prisP;
+      const prisK = Math.min(potassiumG[i] ?? 0, azotePris * RATIO_K_SUR_N);
+      potassiumG[i] = (potassiumG[i] ?? 0) - prisK;
+      uptakeKSumG += prisK;
     }
   }
 
@@ -590,11 +584,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterloggingRatio: wlMean[t] ?? 0,
       light: light[t] ?? 1,
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
-      // Le phosphore et le potassium sont SUIVIS mais ne freinent pas encore
-      // la croissance : voir la note de pk.ts. Les brancher tels quels
-      // déséquilibrait assez le peuplement pour allumer des incendies sur une
-      // friche limoneuse qui n'en avait jamais connu, et pour empêcher le
-      // hêtre d'atteindre la canopée à deux cents ans.
+      phosphoreSatisfaction: pSatisfaction[t] ?? 1,
+      potassiumSatisfaction: kSatisfaction[t] ?? 1,
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
       tMean: weather.tMean,
