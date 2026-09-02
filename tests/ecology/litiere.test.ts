@@ -55,14 +55,17 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     [27.25, 26.3],
   ];
 
-  let avecAulnes = createGameState(LIMON_PAUVRE_N.station, rngStateFromSeed(9));
+  // Ce test porte sur l'azote apporté par les aulnes : on écarte le gibier,
+  // sans quoi c'est lui qu'on mesure (un hêtre isolé est une cible de frottis).
+  const station = { ...LIMON_PAUVRE_N.station, gibierParHa: 0 };
+  let avecAulnes = createGameState(station, rngStateFromSeed(9));
   avecAulnes = plantAt(avecAulnes, "fagus_sylvatica", 25, 25, 0.5);
   for (const [x, y] of AULNES) {
     avecAulnes = plantAt(avecAulnes, "alnus_glutinosa", x, y, 8);
   }
   const finAvec = run(avecAulnes, YEARS);
 
-  let temoin = createGameState(LIMON_PAUVRE_N.station, rngStateFromSeed(9));
+  let temoin = createGameState(station, rngStateFromSeed(9));
   temoin = plantAt(temoin, "fagus_sylvatica", 25, 25, 0.5);
   const finTemoin = run(temoin, YEARS);
 

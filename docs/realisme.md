@@ -30,13 +30,13 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | D. Climat et phénologie | 7 | 3 | 1 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
-| G. Faune et santé | 6 | 1 | 1 | 8 |
+| G. Faune et santé | 7 | 1 | 1 | 9 |
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **75** | **25** | **18** | **118** |
+| **Total** | **76** | **25** | **18** | **119** |
 
-**Score de réalisme : 75 pleins + 25 partiels sur 118 → 74 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 76 pleins + 25 partiels sur 119 → 74 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -52,7 +52,7 @@ potassium) → 73 % (altération biologique : les cycles tiennent, P et K
 limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
 l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
-arbres-habitats, chalarose, mémoire hydraulique des sécheresses).*
+arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis).*
 
 ---
 
@@ -167,6 +167,7 @@ arbres-habitats, chalarose, mémoire hydraulique des sécheresses).*
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
 | G1 | Le gibier abroutit les jeunes plants non protégés | ✅ | `gibier.ts` ; `gibier.test.ts` — au-dessus de ~0,35 cervidé/ha, une plantation appétente ne sort jamais de la hauteur de dent |
+| G9 | Passer la hauteur de dent ne met pas à l'abri : frottis et écorçage | ✅ | `frottisDeLaSemaine` — le brocard vise les tiges ISOLÉES, à écorce lisse, entre 1,2 et 5 m ; sous 1,6 m la blessure annelle |
 | G7 | Sa sélectivité réoriente la composition (le noisetier trinque, le pin passe) | ✅ | `especes.gibier.appetence` ; émergent, rien n'est codé espèce par espèce |
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
@@ -231,9 +232,8 @@ inventaire.
 
 ## Ce qui débloquerait le plus de critères
 
-2. **Reste du biotique** : frottis et écorçage (un arbre est aujourd'hui
-   totalement immunisé dès qu'il passe 1,5 m), sanglier, geai disséminateur
-   (G5).
+2. **Reste du biotique** : sanglier (retournement du sol, consommation des
+   glands) et geai disséminateur (G5).
 3. **Variabilité individuelle** (v2) : tous les individus d'une espèce sont
    aujourd'hui identiques, ce qui rend certains résultats en tout-ou-rien.
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).

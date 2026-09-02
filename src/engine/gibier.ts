@@ -112,6 +112,66 @@ export const RETOUR_IMMIGRATION = 0.03;
 /** Un plant plusieurs fois rabattu et resté minuscule finit par mourir. */
 export const HAUTEUR_LETALE_M = 0.12;
 
+/**
+ * Frottis et écorçage : les dégâts qui n'ont rien à voir avec la faim.
+ *
+ * Passer la hauteur de dent ne met pas un arbre hors d'atteinte, contrairement
+ * à ce que le moteur supposait. Au printemps, les brocards **frottent** leurs
+ * bois sur les jeunes tiges pour en retirer le velours et marquer leur
+ * territoire : ils choisissent les sujets isolés, bien visibles, à écorce lisse
+ * et souple, entre un et quatre mètres. En fin d'hiver, les cerfs **écorcent**
+ * les perches pour manger le liber. Dans les deux cas, si la blessure fait le
+ * tour, l'arbre est annelé et meurt.
+ *
+ * Deux conséquences de jeu : la protection individuelle sert bien plus
+ * longtemps qu'on ne croyait, et planter dense dilue le risque — un arbre seul
+ * au milieu d'un pré est une cible désignée.
+ */
+
+/** Hauteurs entre lesquelles une tige est à la bonne taille pour le frottis, m. */
+export const FROTTIS_HAUTEUR_MIN_M = 1.2;
+export const FROTTIS_HAUTEUR_MAX_M = 5;
+
+/** Semaines de frottis : le printemps, quand les brocards refont leurs bois. */
+export const FROTTIS_SEMAINES: readonly [number, number] = [12, 24];
+
+/** Frottis par cervidé et par an *(à calibrer)*. */
+export const FROTTIS_PAR_CERVIDE_AN = 12;
+
+/** Points de stress d'un frottis sur une tige déjà solide. */
+export const FROTTIS_DEGAT = 3.5;
+
+/**
+ * En dessous de cette hauteur, la tige est si fine que la blessure en fait le
+ * tour : l'arbre est annelé et meurt. Au-dessus, il survit avec une plaie —
+ * c'est le cas le plus fréquent, un frottis n'est pas une condamnation.
+ */
+export const FROTTIS_HAUTEUR_LETALE_M = 1.6;
+
+export interface Frottis {
+  treeId: number;
+  /** l'arbre est-il annelé ? */
+  mort: boolean;
+}
+
+/**
+ * Attrait d'une tige pour un brocard : la bonne taille, une écorce lisse, et
+ * surtout de l'ISOLEMENT — c'est un marquage de territoire, il vise ce qui se
+ * voit. Une tige noyée dans un fourré n'intéresse personne.
+ */
+export function attraitFrottis(
+  tree: TreeState,
+  voisinsProches: number,
+  resistanceEcorce: number,
+): number {
+  if (tree.protege || !tree.alive) return 0;
+  if (tree.heightM < FROTTIS_HAUTEUR_MIN_M || tree.heightM > FROTTIS_HAUTEUR_MAX_M) return 0;
+  // Écorce épaisse et crevassée (pin, chêne-liège) : sans intérêt.
+  const ecorce = 1 - Math.min(1, resistanceEcorce);
+  const isolement = 1 / (1 + voisinsProches);
+  return ecorce * isolement;
+}
+
 export interface BroutageCellule {
   /** herbe consommée, en fraction de couverture */
   herbeConsommee: number;
@@ -129,6 +189,56 @@ export interface ResultatBroutage {
   parArbre: Map<number, BroutageArbre>;
   /** matière sèche réellement prélevée sur la parcelle, kg */
   preleveKg: number;
+}
+
+/** Rayon dans lequel un voisin « masque » une tige, m. */
+export const FROTTIS_RAYON_VOISINAGE_M = 3;
+
+/**
+ * Désigne les tiges frottées de la semaine. Entièrement déterministe : les
+ * brocards vont aux tiges les plus exposées, dans l'ordre.
+ */
+export function frottisDeLaSemaine(
+  trees: readonly TreeState[],
+  densiteParHa: number,
+  surfaceHa: number,
+  week: number,
+  semaineAbsolue: number,
+  resistanceEcorce: (especeId: string) => number,
+  estEnclos?: (tree: TreeState) => boolean,
+): Frottis[] {
+  const [debut, fin] = FROTTIS_SEMAINES;
+  if (week < debut || week > fin) return [];
+  const semaines = fin - debut + 1;
+  const budget = (densiteParHa * surfaceHa * FROTTIS_PAR_CERVIDE_AN) / semaines;
+  if (budget <= 0) return [];
+
+  const candidats: { tree: TreeState; attrait: number }[] = [];
+  for (const tree of trees) {
+    let voisins = 0;
+    for (const autre of trees) {
+      if (autre.id === tree.id || !autre.alive) continue;
+      const dx = autre.x - tree.x;
+      const dy = autre.y - tree.y;
+      if (dx * dx + dy * dy <= FROTTIS_RAYON_VOISINAGE_M * FROTTIS_RAYON_VOISINAGE_M) voisins++;
+    }
+    // Une clôture arrête les bois autant que les dents.
+    if (estEnclos?.(tree)) continue;
+    // Une tige marquée dans l'année ne l'est pas deux fois : le brocard a fait
+    // son territoire, il passe à la suivante.
+    if (tree.frotteSemaine !== undefined && semaineAbsolue - tree.frotteSemaine < 52) continue;
+    const attrait = attraitFrottis(tree, voisins, resistanceEcorce(tree.especeId));
+    if (attrait > 0) candidats.push({ tree, attrait });
+  }
+  candidats.sort((a, b) => b.attrait - a.attrait || a.tree.id - b.tree.id);
+  // Le budget est fractionnaire : la partie décimale décide s'il y a une tige
+  // de plus cette semaine, sans tirage au sort (la semaine suffit à varier).
+  const nombre =
+    Math.floor(budget) + (week % Math.max(2, Math.round(1 / (budget % 1 || 1))) === 0 ? 1 : 0);
+  return candidats.slice(0, Math.max(0, nombre)).map(({ tree }) => ({
+    treeId: tree.id,
+    mort: tree.heightM < FROTTIS_HAUTEUR_LETALE_M,
+  }));
 }
 
 /** Un arbre est-il à portée de dent ? */

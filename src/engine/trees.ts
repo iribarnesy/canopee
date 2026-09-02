@@ -24,7 +24,8 @@ export type CauseMort =
   | "abroutissement"
   | "ravageurs"
   | "labour"
-  | "maladie";
+  | "maladie"
+  | "frottis";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   secheresse: "de sécheresse",
@@ -36,6 +37,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   ravageurs: "achevés par les ravageurs",
   labour: "retournés par le labour",
   maladie: "emportés par la maladie",
+  frottis: "annelés par les frottis de cervidés",
 };
 
 export interface TreeState {
@@ -73,6 +75,11 @@ export interface TreeState {
    * se creuse, et c'est ce creux qui fait sa valeur pour la faune.
    */
   teteTrogneM?: number;
+  /**
+   * Semaine du dernier frottis subi. Une tige déjà marquée n'intéresse plus :
+   * le brocard a fait son territoire, il passe à la suivante.
+   */
+  frotteSemaine?: number;
   /** semaine de la dernière levée d'écorce (liège) ; absent = jamais démasclé */
   derniereLeveeSemaine?: number;
   /**

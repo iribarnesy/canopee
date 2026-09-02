@@ -12,7 +12,13 @@ import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
 import { applyAction, PROTECTION_EUR } from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
-import { aPorteeDeDent, brouter, HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
+import {
+  aPorteeDeDent,
+  attraitFrottis,
+  brouter,
+  frottisDeLaSemaine,
+  HAUTEUR_BROUTAGE_M,
+} from "../../src/engine/gibier";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
@@ -280,4 +286,82 @@ describe("les trois façons de se protéger du gibier, et ce qu'elles coûtent",
 function planterEn(state: GameState, especeId: string, x: number, y: number) {
   const suivant = plantAt(state, especeId, x, y, 0.4);
   return { state: suivant, id: suivant.nextTreeId - 1 };
+}
+
+describe("les frottis : passer la hauteur de dent ne met pas à l'abri", () => {
+  it("un brocard vise les tiges isolées, à la bonne taille, à écorce lisse", () => {
+    const cible = (heightM: number, voisins: number, resistanceEcorce: number) =>
+      attraitFrottis({ ...arbreNu(heightM), heightM }, voisins, resistanceEcorce);
+    // Trop petite, trop grande : sans intérêt.
+    expect(cible(0.8, 0, 0.15)).toBe(0);
+    expect(cible(9, 0, 0.15)).toBe(0);
+    // La bonne taille, isolée, écorce lisse : cible idéale.
+    expect(cible(2.5, 0, 0.15)).toBeGreaterThan(0);
+    // Noyée dans un fourré, elle n'intéresse plus : c'est du marquage, il faut
+    // que ça se voie.
+    expect(cible(2.5, 8, 0.15)).toBeLessThan(cible(2.5, 0, 0.15) / 5);
+    // Écorce épaisse et crevassée (pin, chêne-liège) : le brocard passe.
+    expect(cible(2.5, 0, 0.9)).toBeLessThan(cible(2.5, 0, 0.15) / 5);
+  });
+
+  it("une tige déjà marquée ne l'est pas deux fois dans l'année", () => {
+    const tiges = Array.from({ length: 5 }, (_, i) => ({
+      ...arbreNu(2.5),
+      id: i + 1,
+      x: 5 + i * 8,
+      y: 20,
+    }));
+    const semaine = 16;
+    const premier = frottisDeLaSemaine(tiges, 0.5, 1, semaine, semaine, () => 0.15);
+    expect(premier.length).toBeGreaterThan(0);
+    const marquees = tiges.map((t) =>
+      premier.some((f) => f.treeId === t.id) ? { ...t, frotteSemaine: semaine } : t,
+    );
+    const suivant = frottisDeLaSemaine(marquees, 0.5, 1, semaine + 1, semaine + 1, () => 0.15);
+    for (const f of suivant) {
+      expect(premier.some((p) => p.treeId === f.treeId)).toBe(false);
+    }
+  });
+
+  it("hors saison, les bois sont faits : plus de frottis", () => {
+    const tiges = [{ ...arbreNu(2.5), id: 1 }];
+    expect(frottisDeLaSemaine(tiges, 0.5, 1, 40, 40, () => 0.15)).toHaveLength(0);
+  });
+
+  it("une tige fine est annelée ; une plus forte s'en tire avec une plaie", () => {
+    const fine = frottisDeLaSemaine([{ ...arbreNu(1.4), id: 1 }], 0.5, 1, 16, 16, () => 0.15);
+    const forte = frottisDeLaSemaine([{ ...arbreNu(3.5), id: 1 }], 0.5, 1, 16, 16, () => 0.15);
+    expect(fine[0]?.mort).toBe(true);
+    expect(forte[0]?.mort).toBe(false);
+  });
+
+  it("le manchon protège aussi des bois, pas seulement des dents", () => {
+    const protegee = { ...arbreNu(2.5), protege: true };
+    expect(attraitFrottis(protegee, 0, 0.15)).toBe(0);
+  });
+});
+
+/** Une tige nue de la hauteur voulue, pour les essais de frottis. */
+function arbreNu(heightM: number): TreeState {
+  return {
+    id: 1,
+    especeId: "fagus_sylvatica",
+    x: 20,
+    y: 20,
+    ageWeeks: 52 * 10,
+    heightM,
+    stress: 0,
+    alive: true,
+    uptakeYearG: 0,
+    fruitsKg: 0,
+    fruitProgress: 0,
+    bloomFrosted: false,
+    rootDepthCm: 60,
+    hauteurElagueeM: 0,
+    recepages: 0,
+    pousseTendreM: 0,
+    vigueur: 1,
+    dommageHydraulique: 0,
+    protege: false,
+  };
 }

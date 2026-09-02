@@ -21,7 +21,14 @@ import {
 import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
-import { brouter, DIGESTIBILITE, LIGNIFICATION_PAR_SEMAINE, RETOUR_IMMIGRATION } from "./gibier";
+import {
+  brouter,
+  DIGESTIBILITE,
+  FROTTIS_DEGAT,
+  frottisDeLaSemaine,
+  LIGNIFICATION_PAR_SEMAINE,
+  RETOUR_IMMIGRATION,
+} from "./gibier";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
   couvertureMax,
@@ -738,6 +745,33 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     saisonHerbe,
     state.soil.cloture,
   );
+  // Frottis : les brocards s'en prennent aux tiges qui ont passé la hauteur de
+  // dent — ce n'est pas de la faim, c'est du marquage (gibier.ts).
+  const frottis = frottisDeLaSemaine(
+    nextTrees,
+    station.gibierParHa * state.pressionGibier,
+    (nCells * 1) / 10_000,
+    week,
+    state.week,
+    (especeId) => getEspece(especeId).feu.resistanceEcorce,
+    (tree) => {
+      const cell = Math.floor(tree.y) * station.coteM + Math.floor(tree.x);
+      return state.soil.cloture[cell] === true;
+    },
+  );
+  if (frottis.length > 0) {
+    const parId = new Map(frottis.map((f) => [f.treeId, f]));
+    nextTrees = nextTrees.map((tree) => {
+      const degat = parId.get(tree.id);
+      if (!degat) return tree;
+      if (degat.mort) return { ...tree, alive: false, causeMort: "frottis" as const };
+      const stress = tree.stress + FROTTIS_DEGAT;
+      const marque = { ...tree, frotteSemaine: state.week };
+      if (stress < STRESS_LETHAL) return { ...marque, stress };
+      return { ...marque, stress, alive: false, causeMort: "frottis" as const };
+    });
+  }
+
   if (broutage.preleveKg > 0) {
     for (let i = 0; i < nCells; i++) {
       const consommee = broutage.parCellule[i]?.herbeConsommee ?? 0;
