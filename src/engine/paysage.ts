@@ -202,6 +202,74 @@ export const PAYSAGES: readonly Paysage[] = [
   },
 ];
 
+/**
+ * Ce qu'il y a de chaque côté de la parcelle.
+ *
+ * Un seul paysage pour tout l'entourage ne suffit pas : on peut très bien
+ * avoir la forêt au nord et des champs au sud, et ça ne donne pas la même
+ * partie. Chaque bordure porte son paysage, et l'entourage effectif s'en
+ * déduit — mais pas de la même façon selon ce qu'on regarde :
+ *  - les **semences** s'additionnent : quatre côtés boisés sèment quatre fois
+ *    plus qu'un seul ;
+ *  - le **gibier** et les **dépôts** se moyennent : ils baignent la parcelle ;
+ *  - la **fréquentation humaine** prend le maximum — un seul côté urbanisé
+ *    suffit à amener les départs de feu ;
+ *  - le **vent** prend aussi le maximum d'exposition : une parcelle abritée sur
+ *    trois côtés et ouverte sur le quatrième reste exposée.
+ */
+export interface Bordures {
+  nord: string;
+  est: string;
+  sud: string;
+  ouest: string;
+}
+
+export function bordersUniformes(paysageId: string): Bordures {
+  return { nord: paysageId, est: paysageId, sud: paysageId, ouest: paysageId };
+}
+
+export function cotes(b: Bordures): Paysage[] {
+  return [b.nord, b.est, b.sud, b.ouest].map(getPaysage);
+}
+
+/** Semis : ils s'additionnent, un côté boisé de plus sème davantage. */
+export function voisinageDesBordures(
+  b: Bordures,
+  compatible?: (especeId: string) => boolean,
+  repli?: () => readonly string[],
+): { especeId: string; semisParAn: number }[] {
+  const total = new Map<string, number>();
+  for (const p of cotes(b)) {
+    for (const s of voisinageSemencier(p, compatible, repli)) {
+      // Chaque côté ne borde qu'un quart du périmètre.
+      total.set(s.especeId, (total.get(s.especeId) ?? 0) + s.semisParAn / 2);
+    }
+  }
+  return [...total.entries()]
+    .map(([especeId, n]) => ({ especeId, semisParAn: Math.round(n) }))
+    .filter((s) => s.semisParAn > 0);
+}
+
+export function gibierDesBordures(b: Bordures): number {
+  const c = cotes(b);
+  return c.reduce((somme, p) => somme + gibierParHa(p), 0) / c.length;
+}
+
+export function depositionDesBordures(b: Bordures): number {
+  const c = cotes(b);
+  return c.reduce((somme, p) => somme + depositionNKgHaAn(p), 0) / c.length;
+}
+
+/** Un seul côté urbanisé suffit à amener les départs de feu. */
+export function frequentationDesBordures(b: Bordures): number {
+  return Math.max(...cotes(b).map(frequentationHumaine));
+}
+
+/** Un seul côté ouvert suffit à laisser passer le vent. */
+export function ventDesBordures(b: Bordures): number {
+  return Math.max(...cotes(b).map(ventExposition));
+}
+
 export function getPaysage(id: string): Paysage {
   const p = PAYSAGES.find((x) => x.id === id);
   if (!p) throw new Error(`paysage inconnu : ${id}`);
@@ -223,4 +291,12 @@ export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number)
   // tiennent le coup.
   if (ruMm < 120 && espece.eau.seuilStressSecheresse > 0.55) return false;
   return true;
+}
+
+/** Résumé lisible des bordures : « bocage » si tout est pareil, sinon la liste. */
+export function resumeBordures(b: Bordures): string {
+  const noms = cotes(b).map((p) => p.nom);
+  const uniques = [...new Set(noms)];
+  if (uniques.length === 1) return uniques[0] ?? "";
+  return `N ${getPaysage(b.nord).nom} · E ${getPaysage(b.est).nom} · S ${getPaysage(b.sud).nom} · O ${getPaysage(b.ouest).nom}`;
 }

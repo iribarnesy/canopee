@@ -424,6 +424,14 @@ la station : la même terre au milieu d'une hêtraie ou d'un lotissement, ce
 n'est pas la même partie. Un nouveau paysage se décrit en quatre nombres et une
 liste de semenciers.
 
+*Et l'entourage se règle CÔTÉ PAR CÔTÉ* : forêt au nord, champs au sud, ça
+n'est pas la même partie. Ce qui se déduit des quatre bordures ne s'agrège pas
+de la même façon selon ce qu'on regarde — les semences **s'additionnent**
+(quatre côtés boisés sèment plus que deux), le gibier et les dépôts d'azote se
+**moyennent** (ils baignent la parcelle), tandis que la fréquentation humaine
+et l'exposition au vent prennent le **maximum** : un seul côté urbanisé suffit
+à amener les départs de feu, un seul côté ouvert à laisser passer le vent.
+
 *Et toutes les combinaisons ont un sens*, parce que **les voisins subissent le
 même sol que nous**. Une lande sableuse « au cœur d'un massif forestier » n'est
 pas une hêtraie — le hêtre ne tient pas plus dehors que dedans sur un podzol à

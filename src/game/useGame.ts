@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionRefusal } from "../engine/actions";
 import type { ScenarioId } from "../engine/climat";
+import type { Bordures } from "../engine/paysage";
 
 let uid = 0;
 export type WithUid<T> = T & { uid: number };
@@ -50,7 +51,7 @@ export interface GameApi {
     seed: number,
     meteo: "reelle" | "synthetique",
     scenario: ScenarioId,
-    paysageId: string,
+    bordures: Bordures,
     anneeDepart: number,
   ) => void;
   resume: (save: SaveGame) => void;
@@ -136,12 +137,12 @@ export function useGame(): GameApi {
     },
     notice,
     replayProgress,
-    newGame: (stationId, seed, meteo, scenario, paysageId, anneeDepart) => {
+    newGame: (stationId, seed, meteo, scenario, bordures, anneeDepart) => {
       ensureWorker();
       setRefusals([]);
       setEvents([]);
       setSnapshot(undefined);
-      send({ type: "init", stationId, seed, meteo, scenario, paysageId, anneeDepart });
+      send({ type: "init", stationId, seed, meteo, scenario, bordures, anneeDepart });
       send({ type: "autoHarvest", enabled: true });
       setAutoHarvestState(true);
       setSpeedState(0);

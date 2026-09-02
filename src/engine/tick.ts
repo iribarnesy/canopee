@@ -55,7 +55,7 @@ import {
   litterDecayRate,
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
-import { frequentationHumaine, getPaysage } from "./paysage";
+import { frequentationDesBordures } from "./paysage";
 import {
   alterationPhosphoreG,
   alterationPotassiumG,
@@ -1091,7 +1091,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       charge,
       station.ventExposition,
       station.coteM,
-      frequentationHumaine(getPaysage(station.paysageId)),
+      frequentationDesBordures(station.bordures),
     );
     rng = depart.rng;
     if (depart.origine !== undefined) {

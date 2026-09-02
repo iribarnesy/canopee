@@ -24,12 +24,14 @@ import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
 import {
-  depositionNKgHaAn,
+  type Bordures,
+  bordersUniformes,
+  depositionDesBordures,
   especeTenable,
-  getPaysage,
-  gibierParHa,
-  ventExposition,
-  voisinageSemencier,
+  gibierDesBordures,
+  resumeBordures,
+  ventDesBordures,
+  voisinageDesBordures,
 } from "../engine/paysage";
 import { ALTITUDE_SERIE_M, anomalieAltitudeC } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
@@ -48,7 +50,7 @@ let journal: GameAction[] = [];
 let meteoMode: "reelle" | "synthetique" = "reelle";
 let scenario: ScenarioId = "ssp245";
 let anneeDepart = 2026;
-let paysage = "bocage";
+let bordures: Bordures = bordersUniformes("bocage");
 // Normales saisonnières de la série : elles servent à accentuer les extrêmes.
 let normales: Normales | undefined;
 let seed = 1;
@@ -260,18 +262,18 @@ function meteoSemaine(absolue: number): WeekWeather {
 
 /** La station telle qu'elle est, mais dans le paysage choisi par le joueur. */
 function stationAvecPaysage(base: Station): Station {
-  const p = getPaysage(paysage);
+  const tenable = (especeId: string) =>
+    especeTenable(getEspece(especeId), base.phInitial, base.ruMm);
+  const substituts = () =>
+    ESPECES_V0.filter((e) => especeTenable(e, base.phInitial, base.ruMm)).map((e) => e.id);
   return {
     ...base,
-    paysageId: paysage,
-    voisinage: voisinageSemencier(
-      p,
-      (especeId) => especeTenable(getEspece(especeId), base.phInitial, base.ruMm),
-      () => ESPECES_V0.filter((e) => especeTenable(e, base.phInitial, base.ruMm)).map((e) => e.id),
-    ),
-    gibierParHa: gibierParHa(p),
-    depositionNKgHaAn: depositionNKgHaAn(p),
-    ventExposition: ventExposition(p),
+    paysageId: bordures.nord,
+    bordures,
+    voisinage: voisinageDesBordures(bordures, tenable, substituts),
+    gibierParHa: gibierDesBordures(bordures),
+    depositionNKgHaAn: depositionDesBordures(bordures),
+    ventExposition: ventDesBordures(bordures),
   };
 }
 
@@ -334,7 +336,7 @@ function postSnapshot() {
     economy: state.economy,
     inventory: carbonInventory(state, sc.station.initialSoilCTHa),
     anneeCivile,
-    paysage: getPaysage(paysage).nom,
+    paysage: resumeBordures(bordures),
     co2Ppm: w.co2Ppm ?? CO2_ACTUEL_PPM,
     stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
     pressionGibier: state.pressionGibier,
@@ -540,12 +542,12 @@ function init(
   newSeed: number,
   mode: "reelle" | "synthetique",
   scenarioId: ScenarioId,
-  paysageId: string,
+  bordersChoisies: Bordures,
   annee: number,
 ) {
   scenario = scenarioId;
   anneeDepart = annee;
-  paysage = paysageId;
+  bordures = bordersChoisies;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -572,7 +574,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   const msg = event.data;
   switch (msg.type) {
     case "init":
-      init(msg.stationId, msg.seed, msg.meteo, msg.scenario, msg.paysageId, msg.anneeDepart);
+      init(msg.stationId, msg.seed, msg.meteo, msg.scenario, msg.bordures, msg.anneeDepart);
       break;
     case "resume": {
       // Rejoue la sauvegarde : même séquence beginWeek → actions → tick.
@@ -580,7 +582,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       if (!sc) throw new Error(`station inconnue : ${msg.save.stationId}`);
       meteoMode = msg.save.meteo;
       scenario = msg.save.scenario;
-      paysage = msg.save.paysageId;
+      bordures = msg.save.bordures ?? bordersUniformes(msg.save.paysageId);
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
@@ -623,7 +625,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         seed,
         meteo: meteoMode,
         scenario,
-        paysageId: paysage,
+        paysageId: bordures.nord,
+        bordures,
         anneeDepart,
         weeks: state.week,
         actions: journal,

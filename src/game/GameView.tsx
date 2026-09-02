@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SCENARIOS, type ScenarioId } from "../engine/climat";
 import { ESPECES_V0, getEspece } from "../engine/especes";
 import { crownRadiusM } from "../engine/light";
-import { PAYSAGES } from "../engine/paysage";
+import { type Bordures, bordersUniformes, PAYSAGES } from "../engine/paysage";
 import { STATIONS_V0 } from "../engine/stations";
 import { SPECIES_COLORS } from "../ui/couleurs";
 import type { Snapshot, SnapshotTree } from "./protocol";
@@ -185,7 +185,7 @@ function StartScreen({
     seed: number,
     meteo: "reelle" | "synthetique",
     scenario: ScenarioId,
-    paysageId: string,
+    bordures: Bordures,
     anneeDepart: number,
   ) => void;
   onResume: () => void;
@@ -193,7 +193,8 @@ function StartScreen({
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
   const [seed, setSeed] = useState(42);
   const [scenario, setScenario] = useState<ScenarioId>("ssp245");
-  const [paysageId, setPaysageId] = useState(PAYSAGES[1]?.id ?? "bocage");
+  const [bordures, setBordures] = useState<Bordures>(bordersUniformes(PAYSAGES[1]?.id ?? "bocage"));
+  const [cotesSeparees, setCotesSeparees] = useState(false);
   const [anneeDepart, setAnneeDepart] = useState(2026);
   const save = loadSave();
   return (
@@ -215,20 +216,47 @@ function StartScreen({
         <strong>Ce qu'il y a autour</strong> — l'entourage décide du gibier, des semis qui arrivent,
         de l'azote qui tombe du ciel, du vent et des départs de feu.
         <br />
-        {PAYSAGES.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            style={btn(p.id === paysageId)}
-            onClick={() => setPaysageId(p.id)}
-            title={p.description}
-          >
-            {p.nom}
-          </button>
-        ))}
+        <button
+          type="button"
+          style={btn(cotesSeparees)}
+          onClick={() => setCotesSeparees(!cotesSeparees)}
+          title="Un voisinage différent de chaque côté : forêt au nord, champs au sud…"
+        >
+          {cotesSeparees ? "↩ un seul voisinage" : "⊞ un voisinage par côté"}
+        </button>
         <br />
+        {(cotesSeparees
+          ? ([
+              ["nord", "Nord"],
+              ["est", "Est"],
+              ["sud", "Sud"],
+              ["ouest", "Ouest"],
+            ] as const)
+          : ([["nord", ""]] as const)
+        ).map(([cote, libelle]) => (
+          <div key={cote} style={{ marginBottom: 4 }}>
+            {libelle && (
+              <span style={{ display: "inline-block", width: 44, fontSize: 13 }}>{libelle}</span>
+            )}
+            {PAYSAGES.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                style={btn(p.id === bordures[cote])}
+                onClick={() =>
+                  setBordures(
+                    cotesSeparees ? { ...bordures, [cote]: p.id } : bordersUniformes(p.id),
+                  )
+                }
+                title={p.description}
+              >
+                {p.nom}
+              </button>
+            ))}
+          </div>
+        ))}
         <span style={{ color: "#5f5947", fontSize: 13 }}>
-          {PAYSAGES.find((p) => p.id === paysageId)?.description}
+          {PAYSAGES.find((p) => p.id === bordures.nord)?.description}
         </span>
       </p>
       <p>
@@ -271,7 +299,7 @@ function StartScreen({
         <button
           type="button"
           style={btn(true)}
-          onClick={() => onStart(stationId, seed, "reelle", scenario, paysageId, anneeDepart)}
+          onClick={() => onStart(stationId, seed, "reelle", scenario, bordures, anneeDepart)}
         >
           Démarrer (météo réelle)
         </button>

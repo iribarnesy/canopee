@@ -12,6 +12,7 @@ import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
+import type { Bordures } from "./paysage";
 import type { Relief } from "./relief";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
@@ -72,6 +73,11 @@ export interface Station {
    * parcelle « au cœur d'une hêtraie » qui ne recevait aucun semis de hêtre.
    */
   paysageId: string;
+  /**
+   * Ce qu'il y a de chaque côté (paysage.ts). `paysageId` reste le résumé
+   * affiché ; ce sont les bordures qui font foi.
+   */
+  bordures: Bordures;
   /** pluie de semis annuelle venant du paysage voisin (docs/regles.md §8) */
   voisinage: { especeId: string; semisParAn: number }[];
   /**

@@ -8,12 +8,12 @@
 import { ESPECES_V0, getEspece } from "./especes";
 import type { SyntheticClimate } from "./meteo";
 import {
-  depositionNKgHaAn,
+  bordersUniformes,
+  depositionDesBordures,
   especeTenable,
-  getPaysage,
-  gibierParHa,
-  ventExposition,
-  voisinageSemencier,
+  gibierDesBordures,
+  ventDesBordures,
+  voisinageDesBordures,
 } from "./paysage";
 import { phosphoreAssimilableGM2, potassiumEchangeableGM2 } from "./pk";
 import {
@@ -54,27 +54,30 @@ export function stationDepuisProfil(
     | "gibierParHa"
     | "depositionNKgHaAn"
     | "ventExposition"
+    | "bordures"
   > & { profil: SoilProfile; initialMineralNKgHa: number },
 ): Station {
   const { profil, ...reste } = base;
   // Tout ce qui vient de l'ENTOURAGE se déduit du paysage, d'un bloc : semis,
   // gibier, dépôts d'azote, vent. Les saisir un par un permettait de décrire
   // des voisinages incohérents (paysage.ts).
-  const paysage = getPaysage(reste.paysageId);
+  // Par défaut, les quatre côtés portent le même paysage ; le joueur peut les
+  // choisir séparément au lancement (paysage.ts).
+  const bordures = bordersUniformes(reste.paysageId);
+  const tenable = (especeId: string) =>
+    especeTenable(getEspece(especeId), phSurface(profil), ruProfilMm(profil));
+  const substituts = () =>
+    ESPECES_V0.filter((e) => especeTenable(e, phSurface(profil), ruProfilMm(profil))).map(
+      (e) => e.id,
+    );
   return {
     ...reste,
     profil,
-    voisinage: voisinageSemencier(
-      paysage,
-      (especeId) => especeTenable(getEspece(especeId), phSurface(profil), ruProfilMm(profil)),
-      () =>
-        ESPECES_V0.filter((e) => especeTenable(e, phSurface(profil), ruProfilMm(profil))).map(
-          (e) => e.id,
-        ),
-    ),
-    gibierParHa: gibierParHa(paysage),
-    depositionNKgHaAn: depositionNKgHaAn(paysage),
-    ventExposition: ventExposition(paysage),
+    bordures,
+    voisinage: voisinageDesBordures(bordures, tenable, substituts),
+    gibierParHa: gibierDesBordures(bordures),
+    depositionNKgHaAn: depositionDesBordures(bordures),
+    ventExposition: ventDesBordures(bordures),
     ruMm: ruProfilMm(profil),
     excessCapacityMm: porositeProfilMm(profil),
     drainagePerWeekMm: Math.min(drainageProfilMmSemaine(profil), reste.drainageExterneMmSemaine),

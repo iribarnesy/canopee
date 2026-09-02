@@ -9,6 +9,7 @@ import type { IndiceBiodiversite } from "../engine/biodiversite";
 import type { CarbonInventory } from "../engine/carbon";
 import type { ScenarioId } from "../engine/climat";
 import type { WeekWeather } from "../engine/meteo";
+import type { Bordures } from "../engine/paysage";
 import type { TickFluxes } from "../engine/state";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
@@ -25,6 +26,8 @@ export interface SaveGame {
   scenario: ScenarioId;
   /** paysage autour de la parcelle (paysage.ts) */
   paysageId: string;
+  /** ce qu'il y a de chaque côté ; absent = ancienne sauvegarde uniforme */
+  bordures?: Bordures;
   /** année civile du début de partie */
   anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
@@ -100,7 +103,7 @@ export type ToWorker =
       seed: number;
       meteo: "reelle" | "synthetique";
       scenario: ScenarioId;
-      paysageId: string;
+      bordures: Bordures;
       anneeDepart: number;
     }
   | { type: "resume"; save: SaveGame }

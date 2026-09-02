@@ -14,13 +14,21 @@
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0, getEspece } from "../../src/engine/especes";
 import {
+  type Bordures,
+  bordersUniformes,
+  depositionDesBordures,
   depositionNKgHaAn,
   especeTenable,
+  frequentationDesBordures,
   frequentationHumaine,
   getPaysage,
+  gibierDesBordures,
   gibierParHa,
   PAYSAGES,
+  resumeBordures,
+  ventDesBordures,
   ventExposition,
+  voisinageDesBordures,
   voisinageSemencier,
 } from "../../src/engine/paysage";
 import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
@@ -85,5 +93,61 @@ describe("ce que l'entourage décide, et qui n'était pas cohérent avant", () =
       expect(p.nom.length).toBeGreaterThan(3);
       expect(p.description.length).toBeGreaterThan(40);
     }
+  });
+});
+
+describe("un voisinage par côté", () => {
+  const forestier = bordersUniformes("massif-forestier");
+  const mixte: Bordures = {
+    nord: "massif-forestier",
+    est: "massif-forestier",
+    sud: "plaine-cerealiere",
+    ouest: "plaine-cerealiere",
+  };
+  const champs = bordersUniformes("plaine-cerealiere");
+
+  it("les semis S'ADDITIONNENT : quatre côtés boisés sèment plus que deux", () => {
+    const total = (b: Bordures) =>
+      voisinageDesBordures(b).reduce((somme, s) => somme + s.semisParAn, 0);
+    expect(total(forestier)).toBeGreaterThan(total(mixte));
+    expect(total(mixte)).toBeGreaterThan(total(champs));
+  });
+
+  it("le gibier et l'azote se MOYENNENT : ils baignent la parcelle", () => {
+    expect(gibierDesBordures(mixte)).toBeCloseTo(
+      (gibierDesBordures(forestier) + gibierDesBordures(champs)) / 2,
+      6,
+    );
+    expect(depositionDesBordures(mixte)).toBeGreaterThan(depositionDesBordures(forestier));
+    expect(depositionDesBordures(mixte)).toBeLessThan(depositionDesBordures(champs));
+  });
+
+  it("un seul côté urbanisé suffit à amener les départs de feu", () => {
+    const troisForets: Bordures = {
+      nord: "massif-forestier",
+      est: "massif-forestier",
+      sud: "massif-forestier",
+      ouest: "peri-urbain",
+    };
+    // Le maximum, pas la moyenne : il ne faut qu'une source.
+    expect(frequentationDesBordures(troisForets)).toBe(
+      frequentationDesBordures(bordersUniformes("peri-urbain")),
+    );
+  });
+
+  it("un seul côté ouvert suffit à laisser passer le vent", () => {
+    const abriteSaufUn: Bordures = {
+      nord: "massif-forestier",
+      est: "massif-forestier",
+      sud: "massif-forestier",
+      ouest: "plaine-cerealiere",
+    };
+    expect(ventDesBordures(abriteSaufUn)).toBe(ventDesBordures(champs));
+  });
+
+  it("le résumé dit ce qu'il y a autour, côté par côté quand ils diffèrent", () => {
+    expect(resumeBordures(forestier)).not.toContain("·");
+    expect(resumeBordures(mixte)).toContain("N ");
+    expect(resumeBordures(mixte)).toContain("S ");
   });
 });
