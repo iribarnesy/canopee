@@ -72,6 +72,7 @@ latéral, adret/ubac).*
 | A8 | Une nappe accessible soutient la végétation en été | ✅ | remontée capillaire décroissante avec la distance verticale ; hauteur capillaire déduite de la texture (`eau_surface.ts`) |
 | A19 | Un ruisseau ou une mare tient une nappe locale : la ripisylve s'installe toute seule | ✅ | `profondeurNappeCm` (subordination au relief × portée d'influence) ; `eau-surface.test.ts` — au bord de l'eau l'aulne domine, le hêtre s'y noie |
 | A20 | Sous la surface libre d'une nappe, le sol est saturé (ce n'est pas un flux, c'est un état) | ✅ | saturation imposée dans `profilHydro`, comptée comme un apport de nappe |
+| A22 | Une crue noie le bas de la parcelle quand le bassin d'amont verse, et reflue ensuite | ✅ | `hauteurDeCrueM` ; `eau-surface.test.ts` — même eau que le ruissellement d'amont, relue depuis le cours d'eau |
 | A21 | Un orage sur un sol déjà plein ruisselle intégralement | ✅ | passe 1 de `profilHydro` : le refus reflue au lieu d'être perdu ; `profil-hydro-conservation.test.ts` |
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
 | A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
@@ -284,9 +285,13 @@ l'aulne pousse un peu mieux (6,22 m contre 6,03) et le hêtre s'effondre (1,27 m
 contre 2,73) ; à vingt mètres, plus aucune différence. Aucune espèce n'est
 nommée nulle part.
 
-Ce qui reste à faire : les **inondations par débordement** venues du cours
-d'eau (on a la nappe, pas la crue), le **battement saisonnier** de la nappe, et
-l'**érosion**.
+**La crue** en découle sans mécanisme neuf : le cours d'eau reçoit le même
+ruissellement d'amont que la parcelle, monte d'autant, et sa nappe affleure
+dans le bas. Elle reflue dès que l'amont ne verse plus. Sans bassin d'amont,
+pas de crue ; sans plan d'eau, la pluie ruisselle et s'en va.
+
+Ce qui reste à faire : le **battement saisonnier** de la nappe (hors crue), et
+l'**érosion** — le ruissellement emporte de l'eau, pas encore de terre.
 
 ## Générateur de stations : ce qu'il reste à faire
 

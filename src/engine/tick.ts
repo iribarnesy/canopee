@@ -19,7 +19,12 @@ import {
   treeTotalCarbonKg,
 } from "./carbon";
 import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
-import { drainageAvecNappe, profondeurNappeCm, remonteeCapillaireMm } from "./eau_surface";
+import {
+  drainageAvecNappe,
+  hauteurDeCrueM,
+  profondeurNappeCm,
+  remonteeCapillaireMm,
+} from "./eau_surface";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import {
@@ -267,7 +272,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // affleure à la berge et s'enfonce en s'éloignant (eau_surface.ts). Deux
   // effets, cellule par cellule : ce que la capillarité rend aux racines, et
   // ce que l'exutoire peut encore évacuer.
-  const nappeCm = profondeurNappeCm(station.eau, altitudes, dims, station.profil);
+  const nappeReposCm = profondeurNappeCm(station.eau, altitudes, dims, station.profil);
   const descente = ordreDeDescente(altitudes);
   const aval = voisineAval(altitudes, dims);
   const partRuisselante = fractionRuissellement(station.relief.pentePct);
@@ -278,6 +283,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     surfaceHaParcelle > 0
       ? (weather.rainMm * RUISSELLEMENT_AMONT * station.relief.bassinAmontHa) / surfaceHaParcelle
       : 0;
+  // La crue : le cours d'eau reçoit le même ruissellement d'amont que la
+  // parcelle, et monte d'autant. Sa nappe monte avec lui, ce qui noie le bas
+  // et asphyxie ce qui ne tolère pas l'engorgement (eau_surface.ts).
+  const crueCm = 100 * hauteurDeCrueM(station.eau, apportAmontMm);
+  const nappeCm = crueCm > 0 ? nappeReposCm.map((v) => Math.max(0, v - crueCm)) : nappeReposCm;
+  let cellulesInondees = 0;
+  for (const v of nappeCm) if (v <= 5) cellulesInondees++;
+
   const debordementParCellule = new Array<number>(nCells).fill(0);
   let ruissellementEntrantMm = 0;
   let ruissellementSortantMm = 0;
@@ -1254,6 +1267,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterloggingMean: waterloggingSum / nCells,
       ruissellementEntrantMm: ruissellementEntrantMm / nCells,
       ruissellementSortantMm: ruissellementSortantMm / nCells,
+      partInondee: cellulesInondees / nCells,
       herbeCouvertureMean: herbeSum / nCells,
       broutageKg: broutage.preleveKg,
       depositionKgHa: (depositionSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

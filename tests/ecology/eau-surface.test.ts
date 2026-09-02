@@ -113,6 +113,54 @@ describe("le champ de nappe", () => {
   });
 });
 
+describe("la crue", () => {
+  /** Une semaine de pluie sur une parcelle dominée par un grand bassin amont. */
+  function semaineDePluie(eau: EauDeSurface, bassinAmontHa: number) {
+    const st = {
+      ...station(eau),
+      relief: { ...RELIEF_PLAT, pentePct: 3, expositionDeg: 180, bassinAmontHa },
+    };
+    const meteo = syntheticYear(LIMON_RICHE.climat);
+    let state = createGameState(st, rngStateFromSeed(3));
+    // La semaine la plus pluvieuse de l'année synthétique.
+    const pluvieuse = meteo.reduce((a, b) => (b.rainMm > a.rainMm ? b : a));
+    let derniere = tick(state, pluvieuse);
+    for (let i = 0; i < 6; i++) {
+      state = derniere.state;
+      derniere = tick(state, pluvieuse);
+    }
+    return derniere.fluxes;
+  }
+
+  it("un grand bassin d'amont fait monter le cours d'eau et noie le bas", () => {
+    const petite = semaineDePluie(RUISSEAU, 0.5);
+    const grosse = semaineDePluie(RUISSEAU, 40);
+    expect(grosse.partInondee).toBeGreaterThan(petite.partInondee);
+    expect(grosse.partInondee).toBeGreaterThan(0.1);
+  });
+
+  it("sans cours d'eau ni mare, la même pluie n'inonde rien", () => {
+    // L'eau ruisselle et s'en va : c'est la nappe du plan d'eau qui noie, pas
+    // la pluie elle-même.
+    expect(semaineDePluie(SANS_EAU, 40).partInondee).toBe(0);
+  });
+
+  it("la crue reflue quand l'amont ne verse plus", () => {
+    const st = {
+      ...station(RUISSEAU),
+      relief: { ...RELIEF_PLAT, pentePct: 3, expositionDeg: 180, bassinAmontHa: 40 },
+    };
+    const meteo = syntheticYear(LIMON_RICHE.climat);
+    const pluvieuse = meteo.reduce((a, b) => (b.rainMm > a.rainMm ? b : a));
+    const sec = { ...pluvieuse, rainMm: 0 };
+    let state = createGameState(st, rngStateFromSeed(3));
+    const enCrue = tick(state, pluvieuse);
+    state = enCrue.state;
+    const apres = tick(state, sec);
+    expect(apres.fluxes.partInondee).toBeLessThan(enCrue.fluxes.partInondee);
+  });
+});
+
 /** Altitudes de test : plan incliné descendant vers le sud (y = 0). */
 function altitudesTest(w: number, h: number): number[] {
   const alt = new Array<number>(w * h);

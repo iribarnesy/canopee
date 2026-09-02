@@ -1323,6 +1323,15 @@ export function GameView() {
               {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables · mycorhizes{" "}
               {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
             </dd>
+            {snapshot.fluxes.partInondee > 0 && (
+              <>
+                <dt>Crue</dt>
+                <dd>
+                  la nappe affleure sur {(snapshot.fluxes.partInondee * 100).toFixed(0)} % de la
+                  parcelle
+                </dd>
+              </>
+            )}
             <dt>Biodiversité</dt>
             <dd>
               <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}

@@ -237,6 +237,22 @@ export function facteurExutoire(profondeurCm: number, profil: SoilProfile): numb
 }
 
 /**
+ * De combien le plan d'eau monte quand son bassin lui envoie de l'eau, m.
+ *
+ * Une crue n'a pas de cause à part : c'est la même eau qui, ailleurs sur la
+ * parcelle, arrive par ruissellement depuis l'amont (relief.ts). On la relit
+ * simplement du point de vue du cours d'eau — plus son bassin lui verse
+ * d'eau dans la semaine, plus il déborde, et la nappe monte d'autant sous
+ * toute la zone qu'il influence. Sans bassin d'amont, pas de crue.
+ */
+export const MONTEE_DE_CRUE_M_PAR_MM = 0.02;
+
+export function hauteurDeCrueM(eau: EauDeSurface, apportAmontMm: number): number {
+  if (eau.type === "aucune") return 0;
+  return Math.max(0, MONTEE_DE_CRUE_M_PAR_MM * apportAmontMm);
+}
+
+/**
  * Ce que l'exutoire évacue réellement sous une cellule, mm/semaine. Une
  * station peut déclarer un exutoire illimité (plateau bien drainé) ; dès que
  * la nappe entre dans le profil, c'est la conductivité du sol qui redevient

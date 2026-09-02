@@ -78,6 +78,13 @@ Trois effets, tous exprimés dans le bilan hydrique existant :
    où envoyer son eau ; à nappe affleurante, plus rien ne part (marais). Un
    exutoire déclaré « illimité » redevient fini dès que la nappe monte.
 
+**La crue** n'a pas de cause à part : c'est la même eau qui, ailleurs sur la
+parcelle, arrive de l'amont par ruissellement (§2, relief). On la relit du
+point de vue du cours d'eau — plus son bassin lui verse d'eau dans la semaine,
+plus il monte, et sa nappe avec lui, jusqu'à affleurer dans le bas. Sans bassin
+d'amont, pas de crue ; sans plan d'eau non plus, la pluie ruisselle et s'en va.
+Elle reflue dès que l'amont ne verse plus.
+
 La ripisylve en découle sans qu'aucune espèce ne soit nommée : au bord de l'eau
 l'aulne (tolérance à l'engorgement 1) prospère là où le hêtre (0,1) s'asphyxie,
 et l'écart disparaît à vingt mètres.

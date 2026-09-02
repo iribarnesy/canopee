@@ -75,6 +75,8 @@ let prevFruitsReadyKg = 0;
 let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
 let droughtYearFlagged = -1;
+// Part inondée la semaine précédente : on ne raconte la crue qu'une fois.
+let partInondeePrecedente = 0;
 let bankruptcyAnnounced = false;
 
 /**
@@ -294,6 +296,7 @@ function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWea
 
 function emptyFluxes(): TickFluxes {
   return {
+    partInondee: 0,
     rainMm: 0,
     etpMm: 0,
     evapMm: 0,
@@ -458,6 +461,13 @@ function stepWeeks(n: number) {
         event("🔥", "Sécheresse : la réserve du sol est presque à sec — les sensibles souffrent");
       }
     }
+    // Crue : le cours d'eau reçoit l'eau de son bassin d'amont et monte, la
+    // nappe avec lui. On la raconte au moment où elle noie, pas chaque semaine.
+    const inondee = ticked.fluxes.partInondee;
+    if (inondee >= 0.05 && partInondeePrecedente < 0.05) {
+      event("🌊", `Crue : la nappe affleure sur ${Math.round(inondee * 100)} % de la parcelle`);
+    }
+    partInondeePrecedente = inondee;
     // Incendie : l'événement le plus marquant d'une partie sur lande.
     if (ticked.incendie) {
       const f = ticked.incendie;
@@ -586,6 +596,7 @@ function init(
   weeksPerSecond = 0;
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
+  partInondeePrecedente = 0;
   prevFruitsReadyKg = 0;
   post({ type: "ready", station: stationInfo() });
   postSnapshot();

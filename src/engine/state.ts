@@ -244,6 +244,8 @@ export interface TickFluxes {
   ruissellementEntrantMm: number;
   /** eau partie de la parcelle par ruissellement, mm */
   ruissellementSortantMm: number;
+  /** part de la parcelle dont la nappe affleure (inondée) ∈ [0,1] */
+  partInondee: number;
   /** matière sèche prélevée par le gibier cette semaine, kg */
   broutageKg: number;
   /** azote apporté par les dépôts atmosphériques, kg/ha (semaine) */
