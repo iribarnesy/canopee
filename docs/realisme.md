@@ -27,23 +27,24 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | A. Sol, eau, atmosphère | 13 | 2 | 3 | 18 |
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
 | C. Nutriments et cycles | 4 | 3 | 5 | 12 |
-| D. Climat et phénologie | 4 | 3 | 3 | 10 |
+| D. Climat et phénologie | 6 | 3 | 2 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
 | F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
 | G. Faune et santé | 5 | 1 | 2 | 8 |
 | H. Gestion, économie, travail | 10 | 4 | 3 | 17 |
 | I. Carbone | 4 | 3 | 2 | 9 |
 | J. Biodiversité et structure | 3 | 3 | 0 | 6 |
-| **Total** | **62** | **26** | **26** | **114** |
+| **Total** | **64** | **26** | **25** | **115** |
 
-**Score de réalisme : 62 pleins + 26 partiels sur 114 → 66 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 64 pleins + 26 partiels sur 115 → 67 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
 59 % (feu émergent + sylviculture) → 60 % (éclaircie outillée, liège,
 récupération des bois brûlés, indice de biodiversité) → 62 % (gibier) →
 65 % (ravageurs, auxiliaires et pollinisateurs — la diversité PAIE enfin) →
-66 % (mécanisation déduite de la disposition des arbres).*
+66 % (mécanisation déduite de la disposition des arbres) → 67 % (le climat
+dérive enfin : trajectoires SSP et effet CO₂).*
 
 ---
 
@@ -113,8 +114,9 @@ récupération des bois brûlés, indice de biodiversité) → 62 % (gibier) →
 | D5 | La variabilité climatique ouvre des fenêtres d'installation | 🟡 | visible (`fenetres-installation.test.ts`), non piloté par un mécanisme dédié |
 | D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | ❌ | Microclimat = humidité seulement |
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ❌ | `besoin_froid_h` prévu, non implémenté |
-| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ❌ | Séries historiques rejouées en boucle |
-| D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ❌ | Prévu §3, non implémenté |
+| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent |
+| D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
+| D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses pluriannuelles) | ❌ | on décale la moyenne ; la variabilité reste celle des observations |
 | D10 | L'altitude et l'exposition modifient températures et rayonnement | 🟡 | latitude seule ; pas d'altitude ni d'adret/ubac |
 
 ## E. Interactions entre plantes
@@ -218,11 +220,12 @@ inventaire.
 
 ## Ce qui débloquerait le plus de critères
 
-1. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9). C'est
-   maintenant le plus gros manque : tout le moteur réagit au climat, mais le
-   climat ne bouge pas.
-2. **Couplage humus ↔ azote et labour** (C8, C9, I6), et l'humus qui gagne de
-   la réserve utile (A12 dynamique).
+1. **Couplage humus ↔ azote et labour** (C8, C9, I6), et l'humus qui gagne de
+   la réserve utile (A12 dynamique) — le sol est le dernier gros pan encore
+   figé.
+2. **Aggravation des extrêmes** (D11) : on décale la moyenne du climat, mais
+   les canicules et les sécheresses pluriannuelles s'aggravent plus vite que
+   la moyenne, et ce sont elles qui tuent.
 3. **Reste du biotique** : maladies datées (chalarose), frottis et écorçage,
    sanglier, chasse (G5, G6).
 3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).

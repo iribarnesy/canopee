@@ -7,6 +7,7 @@
 import type { ActionRefusal, EconomyState, GameAction } from "../engine/actions";
 import type { IndiceBiodiversite } from "../engine/biodiversite";
 import type { CarbonInventory } from "../engine/carbon";
+import type { ScenarioId } from "../engine/climat";
 import type { WeekWeather } from "../engine/meteo";
 import type { TickFluxes } from "../engine/state";
 
@@ -20,6 +21,10 @@ export interface SaveGame {
   stationId: string;
   seed: number;
   meteo: "reelle" | "synthetique";
+  /** trajectoire climatique GIEC suivie par la partie (climat.ts) */
+  scenario: ScenarioId;
+  /** année civile du début de partie */
+  anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
   weeks: number;
   actions: GameAction[];
@@ -53,6 +58,10 @@ export interface Snapshot {
   economy: EconomyState;
   inventory: CarbonInventory;
   biodiversite: IndiceBiodiversite;
+  /** année civile en cours (climat.ts) */
+  anneeCivile: number;
+  /** CO₂ de l'année, ppm */
+  co2Ppm: number;
   fluxes: TickFluxes;
   trees: SnapshotTree[];
   soilWater: Float32Array;
@@ -77,7 +86,14 @@ export interface StationInfo {
 }
 
 export type ToWorker =
-  | { type: "init"; stationId: string; seed: number; meteo: "reelle" | "synthetique" }
+  | {
+      type: "init";
+      stationId: string;
+      seed: number;
+      meteo: "reelle" | "synthetique";
+      scenario: ScenarioId;
+      anneeDepart: number;
+    }
   | { type: "resume"; save: SaveGame }
   | { type: "speed"; weeksPerSecond: number }
   | { type: "action"; action: ActionSansSemaine }

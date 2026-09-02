@@ -118,6 +118,12 @@ export interface TreeEnvironment {
   solPenetrableCm: number;
   /** °C moyenne de la semaine */
   tMean: number;
+  /**
+   * Effet fertilisant du CO₂ sur le potentiel de croissance (climat.ts).
+   * 1 = concentration d'aujourd'hui. Il agit sur le POTENTIEL, donc la loi du
+   * minimum le borne : un arbre qui a soif n'en profite pas.
+   */
+  facteurCo2?: number;
 }
 
 export const STRESS_LETHAL = 10;
@@ -361,7 +367,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // Un arbre stressé pousse moins (il puise dans ses réserves, docs/regles.md §7.1).
   const stressPenalty = 1 - tree.stress / STRESS_LETHAL;
   const potentialM =
-    (espece.pousseMaxMAn / GROWING_WEEKS) * season * fAge * (1 - tree.heightM / espece.hauteurMaxM);
+    (espece.pousseMaxMAn / GROWING_WEEKS) *
+    season *
+    fAge *
+    (env.facteurCo2 ?? 1) *
+    (1 - tree.heightM / espece.hauteurMaxM);
   const heightM = tree.heightM + Math.max(0, potentialM) * limitingFactor * stressPenalty;
 
   // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.

@@ -16,6 +16,7 @@ import {
   treeAboveCarbonKg,
   treeTotalCarbonKg,
 } from "./carbon";
+import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import { brouter, DIGESTIBILITE, LIGNIFICATION_PAR_SEMAINE } from "./gibier";
@@ -120,6 +121,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const nCells = cellCount(dims);
   const week = weekOfYear(state);
   const etpMm = weeklyEtpHargreaves(station.latitudeDeg, week, weather);
+  // Le CO₂ de l'année voyage avec la météo (climat.ts) : c'est lui qui décide
+  // du gain de croissance et de la fermeture des stomates.
+  const ppmSemaine = weather.co2Ppm ?? CO2_ACTUEL_PPM;
+  const facteurCo2 = facteurCo2Croissance(ppmSemaine);
   const potentialG = station.mineralizationPotentialKgHaWeek / G_PER_M2_TO_KG_PER_HA;
   const trees = state.trees;
 
@@ -275,15 +280,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     rootCells[t] = n;
     wlMean[t] = wlSum / n;
     phMean[t] = phSum / n;
-    waterDemandL[t] = treeWaterDemandL(
-      espece,
-      tree.heightM,
-      etpMm,
-      season,
-      light[t] ?? 1,
-      station.ventExposition,
-      station.ventExposition > 0 ? windShelterAt(trees, tree.x, tree.y, tree.id) : 0,
-    );
+    // À forte concentration de CO₂, les stomates s'ouvrent moins : l'arbre
+    // perd moins d'eau pour le même carbone (climat.ts).
+    waterDemandL[t] =
+      treeWaterDemandL(
+        espece,
+        tree.heightM,
+        etpMm,
+        season,
+        light[t] ?? 1,
+        station.ventExposition,
+        station.ventExposition > 0 ? windShelterAt(trees, tree.x, tree.y, tree.id) : 0,
+      ) * facteurCo2Transpiration(ppmSemaine);
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
     const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
     const needPerCell = (nNeedG[t] ?? 0) / n;
@@ -405,6 +413,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
       tMean: weather.tMean,
+      facteurCo2,
     });
     const next = result.tree;
     limitingFactors[t] = result.limitingFactor;

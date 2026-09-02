@@ -278,6 +278,33 @@ Chaque action coûte **de l'argent et/ou du temps de travail** (§10). Liste v1 
 
 ---
 
+### 10 bis. Trajectoire climatique (implémenté)
+
+`src/engine/climat.ts` superpose aux observations réelles une trajectoire
+GIEC — SSP1-2.6, SSP2-4.5, SSP5-8.5, plus un témoin « climat figé » réservé au
+laboratoire. Le joueur choisit sa trajectoire et son année de départ (2026 ou
+2040) au lancement ; le moteur, lui, ne sait rien du scénario : il ne voit
+qu'une semaine plus chaude et un CO₂ plus élevé.
+
+- **La France se réchauffe plus vite que le globe** (×1,4 en hiver, ×1,9 en
+  été) : sous SSP5-8.5, une semaine de juillet 2090 est plus de 6 °C au-dessus
+  de son équivalent observé.
+- **Les étés s'assèchent** (−9 %/°C) pendant que les hivers s'arrosent un peu
+  (+3 %/°C) : le total annuel bouge peu, sa répartition beaucoup.
+- **Le CO₂ agit deux fois** : il stimule la croissance (réponse logarithmique,
+  ~+20 % pour un doublement, appliquée au POTENTIEL donc bornée par la loi du
+  minimum — un arbre qui a soif n'en profite pas) et il ferme les stomates, ce
+  qui économise de l'eau sans jamais compenser la hausse de l'ETP.
+- **La variabilité reste celle des observations** : on décale la moyenne, on
+  ne fabrique pas de canicules. C'est une limite assumée, et elle sous-estime
+  le risque (les extrêmes s'aggravent plus vite que les moyennes).
+
+Constat au passage : même sans scénario, la série 1964-2023 rejouée telle
+quelle fait monter l'ETP de 16 % en soixante ans. Le réchauffement observé est
+déjà dans les données.
+
+---
+
 ## 11. Succession écologique « moteur de fond »
 
 Sans intervention, chaque cellule suit la trajectoire du ch1-A : sol nu → annuelles → vivaces/graminées → fruticée épineuse (ronce, prunellier, aubépine = nurses) → pionniers (bouleau, saule, genêt) → intermédiaires → climaciques (hêtre, chêne) via **facilitation** (les pionniers créent l'ombre et le sol qui permettent aux suivants de s'installer, et sont ensuite éliminés par cette même ombre). Le stade est émergent (résultat des règles lumière/sol/dissémination), pas une variable codée en dur — mais on **teste** que la trajectoire émerge bien. Objectif de design du ch6 : le joueur apprend à viser la **jeune forêt** productive, pas le climax sombre.

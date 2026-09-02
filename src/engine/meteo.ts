@@ -17,6 +17,11 @@ export interface WeekWeather {
    * événements ponctuels, invisibles dans une moyenne (§7.2).
    */
   tMinAbsC: number;
+  /**
+   * Concentration de CO₂ de l'année, ppm (climat.ts). Optionnelle : sans
+   * trajectoire climatique, on prend la valeur d'aujourd'hui.
+   */
+  co2Ppm?: number;
 }
 
 const GSC = 0.082; // constante solaire, MJ·m⁻²·min⁻¹ (FAO-56)

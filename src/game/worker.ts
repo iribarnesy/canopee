@@ -11,6 +11,7 @@ import type { ActionRefusal, GameAction } from "../engine/actions";
 import { applyAction, valeurSurPied } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
 import { carbonInventory } from "../engine/carbon";
+import { CO2_ACTUEL_PPM, getScenario, meteoDerivee, type ScenarioId } from "../engine/climat";
 import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
@@ -29,6 +30,8 @@ let weather: WeekWeather[] = [];
 let state: GameState | undefined;
 let journal: GameAction[] = [];
 let meteoMode: "reelle" | "synthetique" = "reelle";
+let scenario: ScenarioId = "ssp245";
+let anneeDepart = 2026;
 let seed = 1;
 let weeksPerSecond = 0;
 let pendingRefusals: ActionRefusal[] = [];
@@ -189,6 +192,23 @@ function performAction(action: GameAction) {
 const post = (msg: FromWorker, transfer: Transferable[] = []) =>
   (postMessage as (m: FromWorker, t?: Transferable[]) => void)(msg, transfer);
 
+/**
+ * Météo d'une semaine de partie : l'observation correspondante, décalée par la
+ * trajectoire climatique choisie. C'est ici que le climat se met à dériver —
+ * le moteur, lui, ne sait rien du scénario, il ne voit qu'une semaine plus
+ * chaude et un CO₂ plus élevé.
+ */
+function meteoSemaine(absolue: number): WeekWeather {
+  const base = weather[absolue % weather.length];
+  if (!base) throw new Error("météo manquante");
+  return meteoDerivee(
+    base,
+    absolue % 52,
+    getScenario(scenario),
+    anneeDepart + Math.floor(absolue / 52),
+  );
+}
+
 function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWeather[] {
   const serie = mode === "reelle" ? serieMeteoPour(stationId) : undefined;
   if (serie) return serieToWeeks(serie);
@@ -231,13 +251,15 @@ function surfaceWater(s: GameState, nH: number): Float32Array {
 function postSnapshot() {
   if (!state || !sc) return;
   const nHorizons = Math.max(1, sc.station.profil.length);
-  const w = weather[state.week % weather.length];
-  if (!w) return;
+  const w = meteoSemaine(state.week);
+  const anneeCivile = anneeDepart + Math.floor(state.week / 52);
   const snapshot: Snapshot = {
     week: state.week,
     weather: w,
     economy: state.economy,
     inventory: carbonInventory(state, sc.station.initialSoilCTHa),
+    anneeCivile,
+    co2Ppm: w.co2Ppm ?? CO2_ACTUEL_PPM,
     biodiversite: indiceBiodiversite(
       state.trees,
       state.carbon.deadWoodKgC,
@@ -285,7 +307,7 @@ function postSnapshot() {
 function stepWeeks(n: number) {
   if (!state) return;
   for (let i = 0; i < n; i++) {
-    const w = weather[state.week % weather.length];
+    const w = meteoSemaine(state.week);
     if (!w) return;
     const before = state;
     const ticked = tick(state, w);
@@ -435,7 +457,15 @@ function stationInfo() {
   };
 }
 
-function init(stationId: string, newSeed: number, mode: "reelle" | "synthetique") {
+function init(
+  stationId: string,
+  newSeed: number,
+  mode: "reelle" | "synthetique",
+  scenarioId: ScenarioId,
+  annee: number,
+) {
+  scenario = scenarioId;
+  anneeDepart = annee;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -459,21 +489,21 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   const msg = event.data;
   switch (msg.type) {
     case "init":
-      init(msg.stationId, msg.seed, msg.meteo);
+      init(msg.stationId, msg.seed, msg.meteo, msg.scenario, msg.anneeDepart);
       break;
     case "resume": {
       // Rejoue la sauvegarde : même séquence beginWeek → actions → tick.
       sc = STATIONS_V0.find((s) => s.station.id === msg.save.stationId);
       if (!sc) throw new Error(`station inconnue : ${msg.save.stationId}`);
       meteoMode = msg.save.meteo;
+      scenario = msg.save.scenario;
+      anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
       journal = msg.save.actions;
       let replayed = createGameState(sc.station, rngStateFromSeed(seed));
       for (let i = 0; i < msg.save.weeks; i++) {
-        const w = weather[i % weather.length];
-        if (!w) break;
-        const step = advanceWeek(replayed, w, journal);
+        const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
         lastFluxes = step.fluxes;
         if (i % 104 === 0) post({ type: "progress", done: i, total: msg.save.weeks });
@@ -507,6 +537,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         stationId: sc?.station.id ?? "",
         seed,
         meteo: meteoMode,
+        scenario,
+        anneeDepart,
         weeks: state.week,
         actions: journal,
       };

@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SCENARIOS, type ScenarioId } from "../engine/climat";
 import { ESPECES_V0, getEspece } from "../engine/especes";
 import { crownRadiusM } from "../engine/light";
 import { STATIONS_V0 } from "../engine/stations";
@@ -178,11 +179,19 @@ function StartScreen({
   onStart,
   onResume,
 }: {
-  onStart: (stationId: string, seed: number, meteo: "reelle" | "synthetique") => void;
+  onStart: (
+    stationId: string,
+    seed: number,
+    meteo: "reelle" | "synthetique",
+    scenario: ScenarioId,
+    anneeDepart: number,
+  ) => void;
   onResume: () => void;
 }) {
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
   const [seed, setSeed] = useState(42);
+  const [scenario, setScenario] = useState<ScenarioId>("ssp245");
+  const [anneeDepart, setAnneeDepart] = useState(2026);
   const save = loadSave();
   return (
     <div style={{ maxWidth: 640 }}>
@@ -200,6 +209,33 @@ function StartScreen({
         ))}
       </p>
       <p>
+        <strong>Trajectoire climatique</strong> — ce qu'on plante aujourd'hui vivra dedans.
+        <br />
+        {SCENARIOS.map((sc) => (
+          <button
+            key={sc.id}
+            type="button"
+            style={btn(sc.id === scenario)}
+            onClick={() => setScenario(sc.id)}
+            title={sc.description}
+          >
+            {sc.nom}
+          </button>
+        ))}
+        <br />
+        Départ :{" "}
+        {[2026, 2040].map((a) => (
+          <button
+            key={a}
+            type="button"
+            style={btn(a === anneeDepart)}
+            onClick={() => setAnneeDepart(a)}
+          >
+            {a}
+          </button>
+        ))}
+      </p>
+      <p>
         Seed :{" "}
         <input
           type="number"
@@ -209,7 +245,11 @@ function StartScreen({
         />
       </p>
       <p>
-        <button type="button" style={btn(true)} onClick={() => onStart(stationId, seed, "reelle")}>
+        <button
+          type="button"
+          style={btn(true)}
+          onClick={() => onStart(stationId, seed, "reelle", scenario, anneeDepart)}
+        >
           Démarrer (météo réelle)
         </button>
         {save && (
@@ -711,6 +751,7 @@ export function GameView() {
             bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
             {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
           </strong>
+          <br />📅 {snapshot.anneeCivile} · CO₂ {snapshot.co2Ppm.toFixed(0)} ppm
           <br />🦌 broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · 🐛 ravageurs{" "}
           {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · 🐞 auxiliaires{" "}
           {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} %
