@@ -1488,6 +1488,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           state.soil.nappeRegionaleMm,
           nappeStockMm.reduce((a, b) => a + b, 0) / nCells,
           station.partBassinSemblable ?? 0,
+          nappeRegionaleDepart,
+          station.profil,
         ),
         phosphoreG,
         phosphoreFixeG,

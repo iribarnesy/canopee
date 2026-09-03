@@ -84,6 +84,15 @@ export const APPORT_REGIONAL_MAX_MM = 20;
  */
 export const VITESSE_REGIONALE = 0.01;
 
+/**
+ * De combien le niveau régional peut s'écarter du sien, au maximum, en cm de
+ * nappe. Même si tout un massif change d'un coup, le réseau qui le draine ne
+ * bouge pas : les lits des rivières restent où ils sont, et c'est leur cote
+ * qui fixe le plancher. Sans cette borne, un bassin « entièrement semblable »
+ * n'a plus aucun ancrage et la nappe dérive jusqu'à saturer la parcelle.
+ */
+export const DERIVE_REGIONALE_MAX_CM = 100;
+
 /** Vidange latérale minimale et maximale, par semaine. */
 export const VIDANGE_MINIMALE = 0.005;
 export const VIDANGE_MAXIMALE = 0.1;
@@ -239,7 +248,11 @@ export function nouveauNiveauRegionalMm(
   regionalMm: number,
   stockMoyenParcelleMm: number,
   partSemblable: number,
+  regionalDepartMm: number,
+  profil: SoilProfile,
 ): number {
   const part = Math.min(1, Math.max(0, partSemblable));
-  return regionalMm + (stockMoyenParcelleMm - regionalMm) * part * VITESSE_REGIONALE;
+  const suivi = regionalMm + (stockMoyenParcelleMm - regionalMm) * part * VITESSE_REGIONALE;
+  const marge = DERIVE_REGIONALE_MAX_CM * porositeDrainable(profil) * 10;
+  return Math.min(regionalDepartMm + marge, Math.max(regionalDepartMm - marge, suivi));
 }

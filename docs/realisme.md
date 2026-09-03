@@ -360,6 +360,36 @@ Cinq tests ont bougé. Aucun ne portait sur la nappe : ils mesuraient des
 équilibres que la nappe déplace, et tous disaient moins que ce qu'ils
 croyaient.
 
+### Ce que l'essai a donné : planter autrement atténue, sans protéger
+
+Profil « Saumos 2022 » — sable landais, nappe perchée, bassin entier logé à la
+même enseigne — deux compositions plantées, et le moteur laissé libre de
+déclencher ses propres incendies. Seize graines par composition, cinquante ans :
+
+| composition | brûlé moyen | gros feux | peuplement tué | remontée de nappe |
+|---|---|---|---|---|
+| pinède pure | 1 928 m² | 12/16 | 86 % | **52 cm** |
+| feuillus (bouleau, châtaignier) | 1 470 m² | 8/16 | 101 % | **32 cm** |
+| chêne-liège dominant | 2 058 m² | 12/16 | 81 % | 47 cm |
+
+Planter des feuillus réduit d'un tiers le nombre de gros incendies et de 38 %
+la remontée de nappe qui suit. C'est la seule atténuation trouvée, et elle est
+modeste. Le chêne-liège suit une autre stratégie : il ne réduit ni la surface
+parcourue ni la remontée, il perd simplement moins d'arbres à chaque passage —
+son écorce est faite pour ça — et c'est lui qui porte le peuplement le plus
+haut à la fin. Survivre au feu et l'empêcher sont deux choses différentes.
+
+**Et un résultat contre-intuitif** : mieux faire pousser n'est pas une
+protection. Le peuplement qui transpire le plus tient la nappe le plus bas ;
+quand il brûle, elle remonte d'autant. La productivité aggrave le rebond.
+
+**La leçon de méthode compte autant que le résultat.** D'une graine à l'autre,
+la même composition brûle de 0 à 4 500 m², et trois à cinq parties sur seize ne
+connaissent aucun incendie. Le premier essai, fait sur un seul tirage par
+composition, concluait « les feuillus ne brûlent jamais » — ce que seize
+répétitions ont démenti. Un simulateur de ce genre ne se lit qu'en
+répétitions.
+
 **L'échelle de l'incendie compte, et elle se règle.** Le niveau régional est
 exogène tant que la parcelle est seule à brûler. Mais quand tout un massif
 part, les alentours cessent eux aussi de transpirer et le niveau régional monte
