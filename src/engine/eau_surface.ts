@@ -35,7 +35,13 @@ import {
 export type CoteParcelle = "nord" | "est" | "sud" | "ouest";
 
 export interface EauDeSurface {
-  type: "aucune" | "ruisseau" | "mare";
+  /**
+   * `terrain` : on ne déclare rien, c'est la topographie qui décide — les
+   * cuvettes se remplissent, les talwegs assez drainés deviennent des cours
+   * d'eau (terrain.ts). Les deux autres valeurs sont des raccourcis pour
+   * poser une eau sans dessiner le terrain.
+   */
+  type: "aucune" | "ruisseau" | "mare" | "terrain";
   /** ruisseau : le côté de la parcelle qu'il longe */
   cote?: CoteParcelle;
   /** mare : centre en fraction du côté ∈ [0,1] */
@@ -92,25 +98,55 @@ export function cellulesEnEau(eau: EauDeSurface, dims: GridDims): boolean[] {
 }
 
 /**
- * Distance de chaque cellule à l'eau libre la plus proche, m — transformée de
- * distance de Chamfer en deux passes (aller-retour), suffisamment exacte à
- * l'échelle du mètre. `Infinity` partout s'il n'y a pas d'eau.
+ * Ce que la nappe voit d'un plan d'eau, quelle que soit son origine : des
+ * cellules en eau, la cote de leur surface libre, et la portée d'influence de
+ * chacune. Une mare déclarée et une mare creusée à la main produisent le même
+ * objet — c'est pour ça que la suite n'a pas besoin de savoir laquelle.
  */
-export function distanceALEau(enEau: readonly boolean[], dims: GridDims): Float32Array {
+export interface SourcesEau {
+  enEau: readonly boolean[];
+  /** cote de la surface libre au-dessus de chaque cellule en eau, m */
+  niveauM: readonly number[];
+  /** portée d'influence de chaque source, m */
+  porteeM: readonly number[];
+}
+
+interface ChampProche {
+  distance: Float32Array;
+  niveau: Float32Array;
+  portee: Float32Array;
+}
+
+/**
+ * Pour chaque cellule, la source d'eau la plus proche : sa distance, la cote
+ * de sa surface libre et sa portée. Transformée de distance de Chamfer en
+ * deux passes (aller-retour), qui transporte les attributs de la source avec
+ * la distance — sans quoi deux mares de cotes différentes se mélangeraient.
+ */
+export function champProche(sources: SourcesEau, dims: GridDims): ChampProche {
   const { widthM: w, heightM: h } = dims;
-  const d = new Float32Array(w * h).fill(Number.POSITIVE_INFINITY);
+  const n = w * h;
+  const distance = new Float32Array(n).fill(Number.POSITIVE_INFINITY);
+  const niveau = new Float32Array(n);
+  const portee = new Float32Array(n);
   let uneSource = false;
-  for (let i = 0; i < d.length; i++) {
-    if (enEau[i]) {
-      d[i] = 0;
+  for (let i = 0; i < n; i++) {
+    if (sources.enEau[i]) {
+      distance[i] = 0;
+      niveau[i] = sources.niveauM[i] ?? 0;
+      portee[i] = sources.porteeM[i] ?? 30;
       uneSource = true;
     }
   }
-  if (!uneSource) return d;
+  if (!uneSource) return { distance, niveau, portee };
   const DIAG = Math.SQRT2;
   const relax = (i: number, j: number, cout: number) => {
-    const v = (d[j] ?? Number.POSITIVE_INFINITY) + cout;
-    if (v < (d[i] ?? Number.POSITIVE_INFINITY)) d[i] = v;
+    const v = (distance[j] ?? Number.POSITIVE_INFINITY) + cout;
+    if (v < (distance[i] ?? Number.POSITIVE_INFINITY)) {
+      distance[i] = v;
+      niveau[i] = niveau[j] ?? 0;
+      portee[i] = portee[j] ?? 30;
+    }
   };
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -130,7 +166,16 @@ export function distanceALEau(enEau: readonly boolean[], dims: GridDims): Float3
       if (x > 0 && y < h - 1) relax(i, i + w - 1, DIAG);
     }
   }
-  return d;
+  return { distance, niveau, portee };
+}
+
+/** Distance à l'eau libre la plus proche, m (`Infinity` s'il n'y a pas d'eau). */
+export function distanceALEau(enEau: readonly boolean[], dims: GridDims): Float32Array {
+  const n = dims.widthM * dims.heightM;
+  return champProche(
+    { enEau, niveauM: new Array<number>(n).fill(0), porteeM: new Array<number>(n).fill(30) },
+    dims,
+  ).distance;
 }
 
 /**
@@ -174,29 +219,20 @@ export function hauteurCapillaireCm(profil: SoilProfile): number {
  * `Infinity` s'il n'y a pas d'eau de surface : la cellule retombe alors sur la
  * nappe uniforme de la station.
  */
-export function profondeurNappeCm(
-  eau: EauDeSurface,
+export function champDeNappeCm(
+  sources: SourcesEau | undefined,
   altitudesM: readonly number[],
   dims: GridDims,
   profil: SoilProfile,
 ): Float32Array {
   const n = dims.widthM * dims.heightM;
   const out = new Float32Array(n).fill(Number.POSITIVE_INFINITY);
-  if (eau.type === "aucune") return out;
-  const enEau = cellulesEnEau(eau, dims);
-  const distance = distanceALEau(enEau, dims);
-  // Cote du plan d'eau : le point le plus bas qu'il touche, moins la berge.
-  let zEau = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < n; i++) {
-    if (enEau[i]) zEau = Math.min(zEau, altitudesM[i] ?? 0);
-  }
-  if (!Number.isFinite(zEau)) return out;
-  zEau -= eau.bergeM;
+  if (!sources) return out;
+  const proche = champProche(sources, dims);
   const suit = subordinationAuRelief(profil);
-  const portee = porteeDInfluenceM(eau);
   for (let i = 0; i < n; i++) {
     const sol = altitudesM[i] ?? 0;
-    const d = distance[i] ?? Number.POSITIVE_INFINITY;
+    const d = proche.distance[i] ?? Number.POSITIVE_INFINITY;
     if (!Number.isFinite(d)) continue;
     // Deux termes, et ils disent deux choses différentes :
     //  - le terrain : plus une cellule domine le plan d'eau, plus la nappe
@@ -204,11 +240,49 @@ export function profondeurNappeCm(
     //    et la butte sèche) ;
     //  - la distance : passé la portée du cours d'eau ou de la mare, la
     //    cellule ne sent plus rien et retrouve le régime de la station.
-    const parLeRelief = 100 * suit * Math.max(0, sol - zEau);
-    const parLEloignement = PROFONDEUR_SANS_EFFET_CM * (1 - Math.exp(-d / portee));
+    const parLeRelief = 100 * suit * Math.max(0, sol - (proche.niveau[i] ?? 0));
+    const parLEloignement =
+      PROFONDEUR_SANS_EFFET_CM * (1 - Math.exp(-d / Math.max(1, proche.portee[i] ?? 30)));
     out[i] = parLeRelief + parLEloignement;
   }
   return out;
+}
+
+/**
+ * Les sources d'eau DÉCLARÉES : « un ruisseau au sud », « une mare de 4 m ».
+ * Le plan d'eau est horizontal, sa cote est le point le plus bas qu'il touche
+ * moins l'encaissement de la berge.
+ */
+export function sourcesDeclarees(
+  eau: EauDeSurface,
+  altitudesM: readonly number[],
+  dims: GridDims,
+): SourcesEau | undefined {
+  if (eau.type === "aucune" || eau.type === "terrain") return undefined;
+  const n = dims.widthM * dims.heightM;
+  const enEau = cellulesEnEau(eau, dims);
+  let zEau = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < n; i++) {
+    if (enEau[i]) zEau = Math.min(zEau, altitudesM[i] ?? 0);
+  }
+  if (!Number.isFinite(zEau)) return undefined;
+  zEau -= eau.bergeM;
+  const portee = porteeDInfluenceM(eau);
+  return {
+    enEau,
+    niveauM: new Array<number>(n).fill(zEau),
+    porteeM: new Array<number>(n).fill(portee),
+  };
+}
+
+/** Profondeur de la nappe pour une eau déclarée (raccourci historique). */
+export function profondeurNappeCm(
+  eau: EauDeSurface,
+  altitudesM: readonly number[],
+  dims: GridDims,
+  profil: SoilProfile,
+): Float32Array {
+  return champDeNappeCm(sourcesDeclarees(eau, altitudesM, dims), altitudesM, dims, profil);
 }
 
 /**

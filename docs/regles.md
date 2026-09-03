@@ -89,6 +89,51 @@ La ripisylve en découle sans qu'aucune espèce ne soit nommée : au bord de l'e
 l'aulne (tolérance à l'engorgement 1) prospère là où le hêtre (0,1) s'asphyxie,
 et l'écart disparaît à vingt mètres.
 
+### 2 ter. Le terrain comme donnée (implémenté)
+
+Le relief pouvait se choisir, mais parmi trois silhouettes (plan, vallon,
+croupe). `Relief.altitudesM` permet de fournir **l'altitude de chaque cellule**
+— dessinée, générée ou importée —, auquel cas la silhouette paramétrique ne
+sert plus à rien.
+
+Avec un terrain quelconque, on ne peut plus *déclarer* l'eau : il faut la
+**déduire** (`terrain.ts`), avec les deux algorithmes classiques de
+l'hydrologie numérique.
+
+- **Remplissage des cuvettes** (priority-flood) : on part des bords, par où
+  l'eau sort, et on progresse toujours par le point le plus bas encore
+  atteignable. Une cellule ne peut pas être plus basse que le col qu'il a
+  fallu franchir pour l'atteindre, et cet écart est exactement la hauteur
+  d'eau. Un trou creusé se remplit ; le même trou percé jusqu'au bord ne
+  retient plus rien.
+- **Accumulation d'écoulement** : chaque cellule reçoit ce qui verse vers elle.
+  Au-delà d'un seuil de surface drainée — la définition hydrologique d'un
+  ruisseau — le talweg devient un cours d'eau.
+
+Et une cuvette ne devient pas une mare parce qu'elle est creuse : il faut
+qu'il y arrive plus d'eau qu'il n'en part. Ce qui arrive, c'est la pluie
+entière sur le plan d'eau (une surface libre ne transpire pas) plus la part
+efficace de son bassin ; ce qui part, c'est l'évaporation et l'infiltration
+par le fond, que le colmatage ralentit beaucoup. D'où une règle qui vaut leçon
+d'agroforesterie : **on ne creuse pas une mare dans du sable**.
+
+Ensuite, `eau_surface.ts` ne voit que des cellules en eau, leur cote et leur
+portée : une mare creusée et une mare déclarée produisent la même nappe, donc
+la même ripisylve.
+
+### 2 quater. Les bords de la parcelle
+
+Une parcelle n'est pas un monde clos. Ce qui sort est compté
+(`ruissellementSortantMm`, par le point bas). Ce qui entre vient du bassin
+d'amont, et **entre par la bordure haute** — pas en pluie uniforme sur toute la
+parcelle, ce qui en ferait de la pluie et non du ruissellement (`entreesDAmont`).
+L'eau traverse ensuite le terrain en s'infiltrant à chaque cellule.
+
+Ce qui reste une approximation assumée : on ne sait rien du terrain *hors* de
+la parcelle. Le remplissage des cuvettes suppose que l'eau peut sortir par
+n'importe quel bord ; une mare creusée à cheval sur la limite se viderait donc
+chez le voisin, ce qui est vrai si le voisin est plus bas et faux sinon.
+
 ### 2.2 Stations proposées pour la v1 (terrains français réels)
 1. **Lande du Sud-Gironde** — reprend l'étude de cas du cours (ch5) : sable podzolique acide (pH ~4,5), nappe hivernale, RU faible, climat océanique aquitain, contexte = pinède de pin maritime en monoculture. Difficulté : pauvreté, feu, acidité.
 2. **Plateau limoneux picard** — limon profond (>1,5 m), pH ~7, ancienne grande culture : sol riche mais MO effondrée (~1,5 %), vie du sol à reconstruire, vent, pas de nappe. Le « bon élève » apparent.

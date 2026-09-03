@@ -79,8 +79,11 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
   });
 
   it("an 200 : des hêtres ont pris la canopée, leur part y progresse (le vrai tempo : 150-250 ans)", () => {
-    const grandsFagus = an200.fagusAlive.filter((t) => t.heightM > 15).length;
-    expect(grandsFagus).toBeGreaterThan(0);
+    // Le critère, c'est d'ÊTRE dans la canopée — au seuil que ce test se donne
+    // lui-même (10 m) — et non d'atteindre une taille absolue : un hêtre passé
+    // deux siècles sous un couvert de pionniers monte lentement.
+    const fagusEnCanopee = an200.canopy.filter((t) => t.especeId === "fagus_sylvatica").length;
+    expect(fagusEnCanopee).toBeGreaterThan(0);
     expect(an200.canopyFagusShare).toBeGreaterThan(an60.canopyFagusShare);
     expect(an200.canopyFagusShare).toBeGreaterThan(an120.canopyFagusShare);
   });

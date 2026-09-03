@@ -64,6 +64,12 @@ export interface Station {
   relief: Relief;
   /** eau libre permanente : ruisseau longeant un côté, mare (eau_surface.ts) */
   eau: EauDeSurface;
+  /**
+   * Pluie annuelle, mm. Elle ne sert qu'à savoir si une cuvette tient l'eau
+   * (terrain.ts) ; le bilan hydrique, lui, travaille semaine par semaine sur
+   * la météo réelle. Absente, on prend une valeur française ordinaire.
+   */
+  pluieAnnuelleMm?: number;
   /** côté de la parcelle carrée, m (grille de widthM × heightM cellules de 1 m²) */
   coteM: number;
   /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */

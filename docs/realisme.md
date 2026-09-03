@@ -72,6 +72,9 @@ latéral, adret/ubac).*
 | A8 | Une nappe accessible soutient la végétation en été | ✅ | remontée capillaire décroissante avec la distance verticale ; hauteur capillaire déduite de la texture (`eau_surface.ts`) |
 | A19 | Un ruisseau ou une mare tient une nappe locale : la ripisylve s'installe toute seule | ✅ | `profondeurNappeCm` (subordination au relief × portée d'influence) ; `eau-surface.test.ts` — au bord de l'eau l'aulne domine, le hêtre s'y noie |
 | A20 | Sous la surface libre d'une nappe, le sol est saturé (ce n'est pas un flux, c'est un état) | ✅ | saturation imposée dans `profilHydro`, comptée comme un apport de nappe |
+| A23 | Le terrain se donne cellule par cellule ; l'eau libre s'en DÉDUIT (cuvettes remplies, talwegs drainés) | ✅ | `terrain.ts` ; `terrain.test.ts` — creuser un trou fait une mare, le percer sur le côté ne fait plus rien |
+| A24 | Une cuvette ne tient l'eau que si son bassin couvre l'évaporation et l'infiltration | ✅ | `assecherLesCuvettesQuiNeTiennentPas` — la même cuvette tient dans l'argile, pas dans le sable |
+| A25 | L'eau d'amont entre par la bordure haute et traverse en s'infiltrant | ✅ | `entreesDAmont` ; `terrain.test.ts` |
 | A22 | Une crue noie le bas de la parcelle quand le bassin d'amont verse, et reflue ensuite | ✅ | `hauteurDeCrueM` ; `eau-surface.test.ts` — même eau que le ruissellement d'amont, relue depuis le cours d'eau |
 | A21 | Un orage sur un sol déjà plein ruisselle intégralement | ✅ | passe 1 de `profilHydro` : le refus reflue au lieu d'être perdu ; `profil-hydro-conservation.test.ts` |
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |

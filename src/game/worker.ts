@@ -280,6 +280,8 @@ function stationAvecPaysage(base: Station): Station {
     ...base,
     relief: relief ?? base.relief,
     eau: eau ?? base.eau,
+    // Sert à savoir si une cuvette creusée tient l'eau (terrain.ts).
+    pluieAnnuelleMm: sc?.climat.rainAnnualMm,
     paysageId: bordures.nord,
     bordures,
     ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),

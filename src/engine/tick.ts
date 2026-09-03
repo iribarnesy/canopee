@@ -20,10 +20,11 @@ import {
 } from "./carbon";
 import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
 import {
+  champDeNappeCm,
   drainageAvecNappe,
   hauteurDeCrueM,
-  profondeurNappeCm,
   remonteeCapillaireMm,
+  sourcesDeclarees,
 } from "./eau_surface";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
@@ -93,6 +94,7 @@ import { yearlyRecruitment } from "./regeneration";
 import {
   altitudeParCellule,
   coefficientRuissellement,
+  entreesDAmont,
   facteurExpositionRayonnement,
   fractionRuissellement,
   ordreDeDescente,
@@ -108,6 +110,7 @@ import {
 } from "./soil";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
+import { PLUIE_DEFAUT_MM_AN, sourcesDuTerrain } from "./terrain";
 import type { TreeState } from "./trees";
 import {
   fractionsRacinairesParHorizon,
@@ -272,7 +275,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // affleure à la berge et s'enfonce en s'éloignant (eau_surface.ts). Deux
   // effets, cellule par cellule : ce que la capillarité rend aux racines, et
   // ce que l'exutoire peut encore évacuer.
-  const nappeReposCm = profondeurNappeCm(station.eau, altitudes, dims, station.profil);
+  // D'où vient l'eau libre : soit elle est déclarée (« un ruisseau au sud »),
+  // soit c'est le terrain qui la fabrique — les cuvettes se remplissent, les
+  // talwegs assez drainés deviennent des cours d'eau (terrain.ts). Les deux
+  // produisent le même objet, et la suite ne sait pas laquelle c'est.
+  const sourcesEau =
+    station.eau.type === "terrain"
+      ? sourcesDuTerrain(altitudes, dims, {
+          apportAmontM2: station.relief.bassinAmontHa * 10_000,
+          // Une cuvette ne tient l'eau que si son bassin lui en apporte plus
+          // qu'elle n'en perd par le fond et par évaporation (terrain.ts).
+          pluieAnnuelleMm: station.pluieAnnuelleMm ?? PLUIE_DEFAUT_MM_AN,
+          profil: station.profil,
+        })
+      : sourcesDeclarees(station.eau, altitudes, dims);
+  const nappeReposCm = champDeNappeCm(sourcesEau, altitudes, dims, station.profil);
   const descente = ordreDeDescente(altitudes);
   const aval = voisineAval(altitudes, dims);
   const partRuisselante = fractionRuissellement(station.relief.pentePct);
@@ -283,6 +300,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     surfaceHaParcelle > 0
       ? (weather.rainMm * RUISSELLEMENT_AMONT * station.relief.bassinAmontHa) / surfaceHaParcelle
       : 0;
+  // L'eau d'amont ne tombe pas du ciel : elle franchit la bordure haute puis
+  // traverse la parcelle en s'infiltrant au passage (relief.ts). La répartir
+  // uniformément revenait à en faire de la pluie.
+  const poidsAmont = apportAmontMm > 0 ? entreesDAmont(altitudes, dims) : undefined;
+  const apportCelluleMm = (i: number) =>
+    poidsAmont ? apportAmontMm * nCells * (poidsAmont[i] ?? 0) : 0;
   // La crue : le cours d'eau reçoit le même ruissellement d'amont que la
   // parcelle, et monte d'autant. Sa nappe monte avec lui, ce qui noie le bas
   // et asphyxie ce qui ne tolère pas l'engorgement (eau_surface.ts).
@@ -323,15 +346,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       (herbeCouverture[i] ?? 0) + Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG),
     );
     const saturationSurface = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
+    const amontIci = apportCelluleMm(i);
     const ruissele =
-      (weather.rainMm + apportAmontMm) *
+      (weather.rainMm + amontIci) *
       coefficientRuissellement(station.relief.pentePct, couvertureSol, saturationSurface);
     const bilan = profilHydro(
       {
         horizons: horizonsCellule,
         eauMm: eauCellule,
         excesMm: excesCellule,
-        rainMm: weather.rainMm + apportAmontMm - ruissele,
+        rainMm: weather.rainMm + amontIci - ruissele,
         evapDemandMm:
           etpMm *
           SOIL_EVAP_FRACTION *
@@ -355,7 +379,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterlogging[base + h] = bilan.engorgementParHorizon[h] ?? 0;
     }
     drainageMmArr[i] = bilan.drainageMm;
-    ruissellementEntrantMm += apportAmontMm;
+    ruissellementEntrantMm += amontIci;
     // Le débordement, c'est l'eau que la cellule n'a pas pu absorber. Sur du
     // plat elle stagne puis s'en va ; sur une pente, elle RUISSELLE — et c'est
     // elle qu'il faut router, pas l'eau gravitaire déjà infiltrée.

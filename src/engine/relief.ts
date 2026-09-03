@@ -23,6 +23,15 @@ import type { GridDims } from "./grid";
 export interface Relief {
   /** altitude moyenne de la parcelle, m */
   altitudeM: number;
+  /**
+   * Terrain dessiné : altitude de CHAQUE cellule, en m relatifs (mêmes
+   * dimensions que la grille). Quand il est là, il remplace la forme
+   * paramétrique — pente, exposition et forme ne servent plus qu'à décrire le
+   * terrain pour le joueur. C'est ce qui permet de modeler un terrain à la
+   * main (une pente d'un côté, un trou creusé) au lieu de choisir parmi trois
+   * silhouettes (terrain.ts).
+   */
+  altitudesM?: readonly number[];
   /** pente moyenne, en % (0 = plat, 30 = raide) */
   pentePct: number;
   /**
@@ -92,6 +101,8 @@ export function facteurExpositionRayonnement(relief: Relief): number {
  */
 export function altitudeParCellule(relief: Relief, dims: GridDims): number[] {
   const { widthM: w, heightM: h } = dims;
+  // Terrain dessiné : on le prend tel quel. Il n'y a rien à générer.
+  if (relief.altitudesM && relief.altitudesM.length === w * h) return [...relief.altitudesM];
   const altitudes = new Array<number>(w * h).fill(0);
   const rad = (relief.expositionDeg * Math.PI) / 180;
   // Vecteur de descente : x vers l'est, y vers le nord.
@@ -164,11 +175,67 @@ export function voisineAval(altitudes: readonly number[], dims: GridDims): Int32
 }
 
 /**
- * Part de l'eau gravitaire d'une cellule qui part vers l'aval en une semaine.
- * Sur du plat, rien ne bouge ; sur une pente franche, presque tout part.
+ * Part de l'eau de surface d'une cellule qui rejoint l'aval en une semaine.
+ *
+ * Une semaine, c'est très long pour de l'eau qui court sur le sol : dès qu'il
+ * y a une vraie pente, tout est parti. Ce qui reste sur place, ce n'est pas de
+ * l'eau qui « ruisselle lentement », c'est de l'eau qui n'a nulle part où
+ * aller — une flaque sur du plat. D'où un passage franc : rien à pente nulle,
+ * tout au-delà de 2 %.
+ *
+ * *(La version précédente n'en faisait partir que `pente/40` — 5 % sur un
+ * terrain à 2 % — ce qui revenait à faire disparaître l'eau reçue de l'amont
+ * avant qu'elle n'ait traversé la parcelle.)*
  */
 export function fractionRuissellement(pentePct: number): number {
-  return Math.min(0.9, pentePct / 40);
+  return Math.min(1, pentePct / 2);
+}
+
+/**
+ * Par où l'eau d'amont entre dans la parcelle : poids par cellule, de somme 1.
+ *
+ * Elle n'arrive pas en pluie uniforme — ce serait de la pluie, pas du
+ * ruissellement. Elle franchit la BORDURE HAUTE et traverse ensuite le terrain
+ * en s'infiltrant au passage. Sur un terrain sans relief marqué, faute de
+ * bordure haute identifiable, elle se répartit sur tout le pourtour.
+ */
+export function entreesDAmont(altitudes: readonly number[], dims: GridDims): number[] {
+  const { widthM: w, heightM: h } = dims;
+  const n = w * h;
+  const bordures: number[] = [];
+  for (let x = 0; x < w; x++) {
+    bordures.push(x);
+    if (h > 1) bordures.push((h - 1) * w + x);
+  }
+  for (let y = 1; y < h - 1; y++) {
+    bordures.push(y * w);
+    if (w > 1) bordures.push(y * w + w - 1);
+  }
+  const poids = new Array<number>(n).fill(0);
+  if (bordures.length === 0) return poids;
+  let basse = Number.POSITIVE_INFINITY;
+  let haute = Number.NEGATIVE_INFINITY;
+  for (const i of bordures) {
+    const a = altitudes[i] ?? 0;
+    basse = Math.min(basse, a);
+    haute = Math.max(haute, a);
+  }
+  // Terrain plat : pas de bordure haute, l'eau entre de partout.
+  if (haute - basse < 1e-9) {
+    for (const i of bordures) poids[i] = 1 / bordures.length;
+    return poids;
+  }
+  // Sinon, chaque cellule de bordure reçoit à proportion de sa hauteur
+  // au-dessus du point bas du pourtour : la crête prend tout, le bas rien.
+  let total = 0;
+  for (const i of bordures) {
+    const part = ((altitudes[i] ?? 0) - basse) / (haute - basse);
+    poids[i] = part * part;
+    total += poids[i];
+  }
+  if (total <= 0) return poids;
+  for (const i of bordures) poids[i] = (poids[i] ?? 0) / total;
+  return poids;
 }
 
 /**
