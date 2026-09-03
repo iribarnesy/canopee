@@ -228,10 +228,14 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     // dépend de la date du dernier incendie et bascule pour un rien. Ce qui
     // est structurel, c'est l'écorce : le liège est la réponse évolutive au
     // feu, et ça doit se lire dans les causes de mort.
-    const partFeu = (especeId: string) =>
-      (tuesParLeFeu[especeId] ?? 0) / Math.max(1, mortsTotales[especeId] ?? 0);
+    // On compare les PERTES au feu rapportées aux effectifs plantés, et non la
+    // part du feu dans les causes de mort : quand le feu devient la seule
+    // cause de mort — ce qui arrive dès que la station est confortable par
+    // ailleurs — cette part vaut 1 pour tout le monde et ne trie plus rien.
     expect(tuesParLeFeu.pinus_sylvestris ?? 0).toBeGreaterThan(0);
-    expect(partFeu("pinus_sylvestris")).toBeGreaterThan(3 * partFeu("quercus_suber"));
+    expect(tuesParLeFeu.pinus_sylvestris ?? 0).toBeGreaterThan(
+      2 * (tuesParLeFeu.quercus_suber ?? 0),
+    );
   });
 
   it("le feu est déterministe : même graine, mêmes incendies", () => {

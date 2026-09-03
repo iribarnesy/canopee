@@ -315,38 +315,56 @@ l'hiver suivant les zones brûlées s'inondent. S'y ajoute la perte de rugosité
 du terrain, qui accélère le ruissellement, et un exutoire — le canal des étangs
 — qu'on ne peut pas charger davantage sans inonder Lège.
 
-**Ce que le simulateur voit aujourd'hui.** Essai fait : pinède de quarante ans
-sur la lande, puis deux futurs à partir du même état, l'un intact, l'autre
-brûlé (arbres morts, couvert et litière détruits). Sur l'année qui suit :
+**Ce que le simulateur voyait, et ce qu'il ne voyait pas.** Premier essai :
+pinède de quarante ans, puis deux futurs à partir du même état, l'un intact,
+l'autre brûlé. Il voyait la CAUSE — la transpiration s'effondrait, l'eau
+qu'elle prenait percolait — et la rugosité perdue. Mais rien n'était inondé,
+parce que l'eau qui percolait **quittait le système** : la profondeur de nappe
+était un champ figé, aucun stock ne la recevait.
 
-| | transpiration | évaporation du sol | drainage | ruissellement | part inondée |
-|---|---|---|---|---|---|
-| intacte | 136 mm | 247 mm | 453 mm | 7 mm | 0 % |
-| brûlée | **45 mm** | 301 mm | **486 mm** | 11 mm | **0 %** |
+**La nappe est maintenant un stock** (`nappe.ts`), et la chaîne s'établit
+d'elle-même. Aulnaie de fond de vallée, quarante ans, puis incendie :
 
-Il voit donc la CAUSE — la transpiration s'effondre, l'eau qu'elle prenait
-percole désormais — et il voit la rugosité perdue (le ruissellement augmente).
-Mais il ne voit pas la CONSÉQUENCE : rien n'est inondé, parce que l'eau qui
-percole **quitte le système**. La profondeur de nappe est un champ figé, déduit
-du terrain et de l'eau libre ; aucun stock ne la reçoit, donc elle ne peut pas
-monter.
+| | transpiration | nappe d'hiver | parcelle inondée |
+|---|---|---|---|
+| intacte | 730 mm/an | 0,74 m sous la surface | 0 % |
+| brûlée | **196 mm/an** | **0,20 m** | **9 %** |
 
-**Ce qu'il faudrait, et pourquoi ce n'est pas un petit ajout.** Une nappe-stock
-par cellule, rechargée par ce qui percole, vidangée latéralement. Le
-prototype a été écrit et il boucle (conservation de l'eau vérifiée, drainage et
-remontée capillaire devenant des transferts internes). Mais il ne s'agit pas
-d'un module à brancher : mettre une nappe sous le sol change le régime
-hydrique de TOUTES les stations, et la chaîne complète est bouclée sur
-elle-même — une nappe haute fait mieux pousser les pins, des pins mieux
-poussants transpirent davantage, et c'est cela qui fait baisser la nappe. Sur
-la lande du jeu les pins plafonnent à trois mètres en quarante ans, là où les
-Landes réelles en font vingt : la boucle ne peut pas s'établir tant que les
-stations ne sont pas recalées avec leur nappe. C'est un chantier de
-recalibration, pas un ajout, et il a été remis à plus tard plutôt que livré à
-moitié.
+La forêt tenait la nappe un demi-mètre plus bas ; brûlée, elle la relâche, et
+la nappe affleure. Sur un limon planté de hêtres, le même essai donne 3,94 m
+→ 3,49 m : le mécanisme est là aussi, simplement la nappe part de trop bas
+pour affleurer. Rien de tout cela n'est écrit nulle part — ce sont la
+transpiration, la percolation et la remontée capillaire, déjà présentes, qui
+se rejoignent une fois qu'un stock les relie.
 
-Ce qui reste à faire : la **nappe comme stock** (ci-dessus), dont le battement
-saisonnier découlera.
+**Ce que la recalibration a demandé.** Mettre une nappe sous le sol change le
+régime hydrique de toutes les stations, et il a fallu :
+
+- **déclarer** la profondeur d'équilibre de chaque station au lieu de la
+  déduire de proxys — c'est un relevé de terrain, pas un calcul ;
+- un **échange régional dans les deux sens** : à l'échelle d'une parcelle, le
+  niveau d'une nappe est décidé par le réseau qui la draine à des kilomètres.
+  Une parcelle plus chargée se vide vers la région, un fond de vallée en
+  REÇOIT — et c'est pour cela qu'il est engorgé ;
+- de laisser la nappe **monter dans le sol** et pas seulement jusqu'à sa base,
+  sans quoi l'inondation restait structurellement impossible ;
+- de **plafonner la transpiration par l'énergie disponible**. Le défaut est
+  apparu avec la nappe : tant que l'eau manquait, c'est elle qui bridait. Une
+  aulnaie alimentée par la nappe transpirait 1 021 mm par an, soit bien plus
+  que le soleil n'en permet. La demande d'un arbre est proportionnelle à son
+  houppier ; quand les couronnes se superposent, la somme dépassait plusieurs
+  fois l'ETP. Un mètre carré ne reçoit qu'un mètre carré d'énergie.
+
+Cinq tests ont bougé. Aucun ne portait sur la nappe : ils mesuraient des
+équilibres que la nappe déplace, et tous disaient moins que ce qu'ils
+croyaient.
+
+*Limites assumées* : la profondeur d'équilibre est une donnée exogène, donc un
+incendie à l'échelle d'un MASSIF — celui du cas d'étude — n'est représenté que
+sur la parcelle, la région continuant de tenir son niveau ; et le
+ruissellement d'un fond de vallée saturé en permanence est surestimé, l'eau y
+faisant des allers-retours entre nappe et surface.
+
 
 ## L'érosion : ce qui part d'un versant
 

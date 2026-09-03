@@ -12,6 +12,7 @@ import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
+import { stockEquilibreMm } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
 import type { Relief } from "./relief";
@@ -64,6 +65,12 @@ export interface Station {
   relief: Relief;
   /** eau libre permanente : ruisseau longeant un côté, mare (eau_surface.ts) */
   eau: EauDeSurface;
+  /**
+   * Profondeur d'équilibre de la nappe sous la parcelle, cm : le niveau que le
+   * réseau hydrographique régional lui impose. C'est un relevé de terrain, pas
+   * un calcul (nappe.ts). Absente, elle se déduit des autres déclarations.
+   */
+  profondeurNappeEquilibreCm?: number;
   /**
    * Pluie annuelle, mm. Elle ne sert qu'à savoir si une cuvette tient l'eau
    * (terrain.ts) ; le bilan hydrique, lui, travaille semaine par semaine sur
@@ -159,6 +166,12 @@ export interface SoilState {
   potassiumReserveG: number[];
   /** cellule enclose : le gibier n'y entre pas (gibier.ts) */
   cloture: boolean[];
+  /**
+   * Eau stockée dans l'aquifère sous chaque cellule, mm (nappe.ts). C'est le
+   * stock qui manquait : sans lui, ce que la végétation ne transpire pas
+   * disparaissait au lieu de faire monter la nappe.
+   */
+  nappeMm: number[];
   /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
   ph: number[];
   /**
@@ -252,6 +265,14 @@ export interface TickFluxes {
   ruissellementSortantMm: number;
   /** part de la parcelle dont la nappe affleure (inondée) ∈ [0,1] */
   partInondee: number;
+  /** eau sortie de la parcelle par la nappe (vers la région et l'aval), mm */
+  vidangeNappeMm: number;
+  /** eau reçue du réseau régional, mm — un fond de vallée en reçoit */
+  apportRegionalMm: number;
+  /** eau entrée dans le sol depuis un ruisseau ou une mare voisine, mm */
+  apportEauLibreMm: number;
+  /** profondeur moyenne de la nappe sous la parcelle, cm */
+  nappeProfondeurCm: number;
   /** terre arrachée par le ruissellement cette semaine, kg/m² */
   erosionArracheeKgM2: number;
   /** terre effectivement sortie de la parcelle, kg/m² (le reste s'est déposé) */
@@ -311,6 +332,15 @@ export function createGameState(
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
+      // La partie démarre à l'équilibre : la nappe est là où la région la met.
+      nappeMm: new Array(n).fill(
+        stockEquilibreMm(
+          station.profil,
+          station.remonteeNappeMmSemaine,
+          station.drainageExterneMmSemaine,
+          station.profondeurNappeEquilibreCm,
+        ),
+      ),
       phosphoreG: new Array(n).fill(station.phosphoreInitialGM2),
       // Le stock fixé de départ : dix fois l'assimilable, l'ordre de grandeur
       // habituel entre phosphore total et phosphore assimilable.

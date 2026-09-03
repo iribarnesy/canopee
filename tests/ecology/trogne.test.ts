@@ -29,6 +29,9 @@ const STATION: Station = {
   coteM: 20,
   voisinage: [],
   gibierParHa: 0,
+  // Sans herbe : ce test porte sur le geste de trogne, pas sur la survie d'un
+  // frêne isolé au milieu d'une prairie — qui se joue, elle, à peu de chose.
+  herbeInitiale: 0,
 };
 
 function frene(recepages: number, heightM = 8): TreeState {
@@ -59,7 +62,10 @@ function frene(recepages: number, heightM = 8): TreeState {
 describe("le geste", () => {
   function pousserUnFrene(ans: number) {
     let state = createGameState(STATION, rngStateFromSeed(3));
-    state = plantAt(state, "fraxinus_excelsior", 10, 10, 2);
+    // On part d'un baliveau déjà formé : ce test porte sur le GESTE de trogne,
+    // pas sur les aléas des dix premières années d'un frêne isolé, qui se
+    // jouent à peu de chose et brouillent ce qu'on veut mesurer.
+    state = plantAt(state, "fraxinus_excelsior", 10, 10, 6);
     const id = state.nextTreeId - 1;
     for (let i = 0; i < ans * 52; i++) {
       const w = WEATHER[i % WEATHER.length];
@@ -70,13 +76,13 @@ describe("le geste", () => {
   }
 
   it("étêter rapporte du bois et laisse l'arbre vivant", () => {
-    const { state, id } = pousserUnFrene(30);
+    const { state, id } = pousserUnFrene(8);
     const avant = state.trees.find((t) => t.id === id);
     if (!avant) throw new Error("arbre disparu");
     expect(avant.heightM).toBeGreaterThan(TROGNE_HAUTEUR_M + 1);
     const apres = applyAction(state, {
       type: "trogner",
-      week: 30 * 52,
+      week: 8 * 52,
       treeIds: [id],
       hauteurTeteM: TROGNE_HAUTEUR_M,
     });
@@ -88,10 +94,10 @@ describe("le geste", () => {
   });
 
   it("la tête repart, et on peut y revenir", () => {
-    const { state, id } = pousserUnFrene(30);
+    const { state, id } = pousserUnFrene(8);
     let courant = applyAction(state, {
       type: "trogner",
-      week: 30 * 52,
+      week: 8 * 52,
       treeIds: [id],
       hauteurTeteM: TROGNE_HAUTEUR_M,
     }).state;

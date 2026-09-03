@@ -97,6 +97,13 @@ export const LANDE_SECHE: StationClimat = {
       horizon(40, { sable: 88, limon: 8, argile: 4 }, { moPct: 0.3, ph: 5, induration: 0.9 }),
     ],
     initialMineralNKgHa: 15,
+    // Nappe perchée sur l'alios, autour de deux mètres et demi — plus haute
+    // l'hiver, plus basse l'été. Elle reste sous le profil : le sable
+    // au-dessus est à sec en été, et c'est bien ce contraste qui fait la
+    // lande. *(Une nappe plus haute la rendrait confortable, et les espèces
+    // frugales n'y auraient plus aucun avantage : c'est ce que les essais ont
+    // montré en la remontant à 90 cm.)*
+    profondeurNappeEquilibreCm: 420,
     remonteeNappeMmSemaine: 0,
     // Nappe perchée hivernale sur l'alios : l'eau ne part pas vite.
     drainageExterneMmSemaine: 30,
@@ -127,6 +134,9 @@ export const VALLEE_ENGORGEE: StationClimat = {
       horizon(55, { sable: 20, limon: 45, argile: 35 }, { moPct: 1.2, ph: 6.6 }),
     ],
     initialMineralNKgHa: 40,
+    // Fond de vallée : la nappe est juste sous les pieds toute l'année, et le
+    // réseau régional la réalimente en permanence.
+    profondeurNappeEquilibreCm: 40,
     remonteeNappeMmSemaine: 12,
     // Nappe affleurante : l'exutoire est saturé, rien ne s'évacue.
     drainageExterneMmSemaine: 5,
@@ -156,6 +166,8 @@ export const LIMON_RICHE: StationClimat = {
       horizon(65, { sable: 15, limon: 70, argile: 15 }, { moPct: 0.8, ph: 7.2 }),
     ],
     initialMineralNKgHa: 60,
+    // Plateau limoneux bien drainé : la nappe est hors de portée des racines.
+    profondeurNappeEquilibreCm: 630,
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY, // plateau bien drainé
     herbeInitiale: 0.2, // sortie de culture : le sol se réenherbe // limon frais du Nord
@@ -205,6 +217,7 @@ export const FRICHE_LIMON: StationClimat = {
       horizon(50, { sable: 25, limon: 60, argile: 15 }, { moPct: 0.9, ph: 6.9 }),
     ],
     initialMineralNKgHa: 40,
+    profondeurNappeEquilibreCm: 610,
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
     herbeInitiale: 0.9, // friche : l'herbe tient déjà tout le terrain

@@ -1557,6 +1557,14 @@ export function GameView() {
               {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · auxiliaires{" "}
               {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} %
             </dd>
+            <dt>Nappe</dt>
+            <dd>
+              à {(snapshot.fluxes.nappeProfondeurCm / 100).toFixed(2)} m sous la surface
+              <span className="detail">
+                {" "}
+                · la forêt la fait descendre en transpirant, un incendie la fait remonter
+              </span>
+            </dd>
             <dt>Sol</dt>
             <dd>
               P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} · K{" "}

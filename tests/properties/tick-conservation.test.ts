@@ -19,6 +19,8 @@ function meanWaterStock(state: GameState): number {
   for (let i = 0; i < state.soil.waterMm.length; i++) {
     sum += (state.soil.waterMm[i] ?? 0) + (state.soil.excessMm[i] ?? 0);
   }
+  // La nappe est un stock de la parcelle au même titre que le sol (nappe.ts).
+  for (const v of state.soil.nappeMm) sum += v;
   return sum / nCells;
 }
 
@@ -51,13 +53,22 @@ function checkConservation(sc: StationClimat, years: number) {
       fluxes.ruissellementSortantMm +
         fluxes.evapMm +
         fluxes.transpirationMm +
-        fluxes.drainageMm +
+        fluxes.vidangeNappeMm +
         fluxes.overflowMm +
         deltaWater,
-      // Entrées : pluie, remontée de nappe, et l'eau qui arrive de l'amont
-      // par ruissellement. Sortie supplémentaire : celle qui quitte la
-      // parcelle par le point bas (relief.ts).
-    ).toBeCloseTo(fluxes.rainMm + fluxes.nappeMm + fluxes.ruissellementEntrantMm, 5);
+      // Depuis que la nappe est un stock (nappe.ts), deux flux ont changé de
+      // nature et sortent du bilan : le DRAINAGE ne quitte plus le système, il
+      // recharge l'aquifère ; la REMONTÉE CAPILLAIRE n'arrive plus de nulle
+      // part, elle y puise. Restent en entrée la pluie, le ruissellement
+      // d'amont, ce que le réseau régional donne à la parcelle, et ce qu'un
+      // ruisseau voisin fournit en lui imposant une nappe haute.
+    ).toBeCloseTo(
+      fluxes.rainMm +
+        fluxes.ruissellementEntrantMm +
+        fluxes.apportRegionalMm +
+        fluxes.apportEauLibreMm,
+      5,
+    );
 
     // Entrées : minéralisation de l'humus + retour de litière (recyclage des
     // arbres) + fixation symbiotique. Sorties : prélèvements + lessivage.

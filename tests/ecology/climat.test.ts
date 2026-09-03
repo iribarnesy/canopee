@@ -282,8 +282,10 @@ describe("dans une partie, le réchauffement se voit", () => {
     // Sous SSP5-8.5, la même parcelle en perd plus de vingt fois autant.
     expect(fige.hetresMortsDeSoif).toBeLessThan(10);
     expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(10 * Math.max(1, fige.hetresMortsDeSoif));
-    // Et il en reste moins debout à la fin.
-    expect(chauffe.hetresVivants).toBeLessThan(fige.hetresVivants);
+    // On ne compare PAS les effectifs finaux : ils mélangent la cohorte
+    // plantée et les semis nés en cours de route, et un climat plus chaud
+    // allonge la saison de végétation donc en installe davantage. Un
+    // peuplement qui perd plus d'arbres peut très bien en compter plus.
   });
 
   it("le réchauffement fait aussi flamber les ravageurs", () => {

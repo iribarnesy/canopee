@@ -247,6 +247,30 @@ comptent :
 
 Ce qui sort est une perte sèche, comptée dans les bilans carbone et azote.
 
+### 4.4 La nappe (implémenté)
+
+La nappe est un **stock** par cellule, pas un décor. Elle se recharge de ce qui
+percole sous le dernier horizon, échange **dans les deux sens** avec le réseau
+régional — dont le niveau d'équilibre est une donnée déclarée par la station —
+et s'écoule latéralement vers l'aval. Son niveau monte comme le stock divisé
+par la porosité drainable : cent millimètres font soixante-dix centimètres de
+battement dans un sable, deux mètres dans une argile.
+
+Quand elle atteint la base du profil, elle entre dans le sol et les mécanismes
+existants prennent le relais — saturation imposée, exutoire bouché, asphyxie.
+L'inondation n'est rien d'autre que le prolongement de la montée.
+
+C'est ce stock qui permet à une **forêt de faire baisser la nappe** en
+transpirant, et à un **incendie de la faire remonter** : mesuré sur une aulnaie
+de fond de vallée, 0,74 m sous la surface avec la forêt, 0,20 m et 9 % de la
+parcelle inondée l'hiver qui suit le feu.
+
+**Plafond d'énergie.** La transpiration d'une cellule ne peut pas dépasser ce
+que l'ETP y apporte (à 15 % près, un couvert rugueux captant un peu plus qu'un
+gazon de référence). La demande d'un arbre étant proportionnelle à son
+houppier, la somme des demandes dépassait sinon plusieurs fois l'énergie reçue
+dès que les couronnes se superposent.
+
 ## 5. Lumière et strates
 
 - Modèle par **strates verticales** (les 7 strates de la forêt-jardin, ch6-A : canopée, arbres bas, arbustes, herbacées, couvre-sol, rhizosphère, lianes).

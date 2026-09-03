@@ -56,6 +56,14 @@ import {
   TYPES_MYCORHIZE,
 } from "./mycorhizes";
 import {
+  APPORT_REGIONAL_MAX_MM,
+  capaciteAquifereMm,
+  ECHANGE_REGIONAL,
+  profondeurPourStock,
+  stockEquilibreMm,
+  tauxDeVidange,
+} from "./nappe";
+import {
   azoteNetDecomposition,
   cellLeachedG,
   decompositionClimateFactor,
@@ -149,6 +157,13 @@ const CANOPY_EVAP_FLOOR = 0.15;
  * — ~250 g C/m² ≈ 5 t MS/ha au sol *(à calibrer)*.
  */
 const MULCH_MAX_EFFECT = 0.5;
+/**
+ * Plafond de transpiration d'une cellule, en multiple de l'ETP. Un couvert
+ * rugueux capte un peu plus d'énergie qu'un gazon de référence — advection,
+ * turbulence — d'où une valeur légèrement supérieure à 1 *(à calibrer)*.
+ */
+const PLAFOND_ENERGIE = 1.15;
+
 const MULCH_FULL_CG = 250;
 const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
@@ -288,6 +303,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     profil: station.profil,
   });
   const nappeReposCm = champDeNappeCm(sourcesEau, altitudes, dims, station.profil);
+  // La nappe comme STOCK (nappe.ts) : ce qui percole sous le profil ne
+  // disparaît plus, il la recharge ; la région la ramène vers son niveau
+  // d'équilibre, dans les deux sens ; et son niveau décide de ce que le sol
+  // peut encore évacuer. C'est ce chaînage qui permet à une forêt de faire
+  // baisser la nappe en transpirant — et à un incendie de la faire remonter.
+  const nappeStockMm = state.soil.nappeMm.slice();
+  const capaciteNappeMm = capaciteAquifereMm(station.profil);
+  const nappeEquilibreMm = stockEquilibreMm(
+    station.profil,
+    station.remonteeNappeMmSemaine,
+    station.drainageExterneMmSemaine,
+    station.profondeurNappeEquilibreCm,
+  );
+  let vidangeNappeMm = 0;
+  let apportRegionalMm = 0;
+  let remonteeNappeMm = 0;
+  let apportEauLibreMm = 0;
   const descente = ordreDeDescente(altitudes);
   const aval = voisineAval(altitudes, dims);
   // La pente se lit CELLULE PAR CELLULE : sur un terrain dessiné, la berge
@@ -315,7 +347,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // parcelle, et monte d'autant. Sa nappe monte avec lui, ce qui noie le bas
   // et asphyxie ce qui ne tolère pas l'engorgement (eau_surface.ts).
   const crueCm = 100 * hauteurDeCrueM(station.eau, apportAmontMm);
-  const nappeCm = crueCm > 0 ? nappeReposCm.map((v) => Math.max(0, v - crueCm)) : nappeReposCm;
+  const nappeEauLibreCm =
+    crueCm > 0 ? nappeReposCm.map((v) => Math.max(0, v - crueCm)) : nappeReposCm;
+  // Deux nappes possibles sous une cellule : celle qu'impose l'eau libre
+  // voisine, et celle que porte l'aquifère. C'est la plus HAUTE des deux qui
+  // gouverne, puisque c'est elle qui sature le sol en premier.
+  const nappeCm = new Float32Array(nCells);
+  for (let i = 0; i < nCells; i++) {
+    nappeCm[i] = Math.min(
+      nappeEauLibreCm[i] ?? Number.POSITIVE_INFINITY,
+      profondeurPourStock(nappeStockMm[i] ?? 0, station.profil),
+    );
+  }
   let cellulesInondees = 0;
   for (const v of nappeCm) if (v <= 5) cellulesInondees++;
 
@@ -383,6 +426,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           SOIL_EVAP_FRACTION *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
           (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
+        // La remontée capillaire PUISE dans la nappe : ce n'est plus un apport
+        // venu de nulle part, c'est un transfert.
         nappeMm: Number.isFinite(nappeCm[i] ?? Number.POSITIVE_INFINITY)
           ? station.remonteeNappeMmSemaine + remonteeCapillaireMm(nappeCm[i] ?? 0, station.profil)
           : station.remonteeNappeMmSemaine,
@@ -406,6 +451,37 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // plat elle stagne puis s'en va ; sur une pente, elle RUISSELLE — et c'est
     // elle qu'il faut router, pas l'eau gravitaire déjà infiltrée.
     debordementParCellule[i] = bilan.overflowMm + ruissele;
+    // Ce qui percole recharge la nappe ; ce qu'elle a rendu au sol lui est
+    // retiré. L'eau qui remonte n'a pas toujours la même provenance : quand un
+    // ruisseau voisin impose une nappe haute, c'est LUI qui fournit, et cette
+    // eau-là ENTRE dans la parcelle. On sert donc d'abord sur l'aquifère
+    // local, le reste vient de l'eau libre.
+    //
+    // Ce bloc vient APRÈS l'affectation du débordement, et il faut qu'il y
+    // reste : le trop-plein d'aquifère s'y ajoute, et le placer avant le
+    // faisait effacer par elle.
+    const depuisAquifere = Math.min(nappeStockMm[i] ?? 0, bilan.nappeMm);
+    apportEauLibreMm += bilan.nappeMm - depuisAquifere;
+    remonteeNappeMm += bilan.nappeMm;
+    let stockNappe = (nappeStockMm[i] ?? 0) - depuisAquifere + bilan.drainageMm;
+    // Échange avec le réseau régional, dans les deux sens : une parcelle plus
+    // chargée que le niveau régional se vide vers lui, un fond de vallée en
+    // reçoit. C'est ce terme qui tient le niveau d'une nappe, à l'échelle
+    // d'une parcelle où rien d'autre ne le déciderait.
+    const echangeRegional = Math.min(
+      APPORT_REGIONAL_MAX_MM,
+      (nappeEquilibreMm - stockNappe) * ECHANGE_REGIONAL,
+    );
+    if (echangeRegional >= 0) apportRegionalMm += echangeRegional;
+    else vidangeNappeMm += -echangeRegional;
+    stockNappe += echangeRegional;
+    if (stockNappe > capaciteNappeMm) {
+      // Aquifère plein : le reste ressort en surface. C'est une source.
+      debordementParCellule[i] = (debordementParCellule[i] ?? 0) + (stockNappe - capaciteNappeMm);
+      nappeStockMm[i] = capaciteNappeMm;
+    } else {
+      nappeStockMm[i] = Math.max(0, stockNappe);
+    }
     evapSum += bilan.evapMm;
     nappeSum += bilan.nappeMm;
     drainageSum += bilan.drainageMm;
@@ -500,6 +576,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // d'un bout à l'autre du versant en une seule passe. C'est l'eau GRAVITAIRE
   // qui bouge — celle que le sol ne retient pas ; la réserve utile, elle,
   // reste où elle est.
+  // ── 2 ter. La nappe s'écoule vers l'aval ─────────────────────────────────
+  // Même réseau que le ruissellement, mais bien plus lentement : c'est le
+  // débit de base, celui qui fait les bas de pente frais et les sources.
+  for (const i of descente) {
+    const stock = nappeStockMm[i] ?? 0;
+    if (stock <= 0) continue;
+    const part = stock * tauxDeVidange(station.profil, pentes[i] ?? 0);
+    if (part <= 0) continue;
+    nappeStockMm[i] = stock - part;
+    const j = aval[i] ?? -1;
+    if (j < 0) {
+      vidangeNappeMm += part;
+      continue;
+    }
+    const place = Math.max(0, capaciteNappeMm - (nappeStockMm[j] ?? 0));
+    const recu = Math.min(part, place);
+    nappeStockMm[j] = (nappeStockMm[j] ?? 0) + recu;
+    // Si l'aval est plein, l'eau ressort : c'est une source de rupture de pente.
+    if (part > recu) debordementParCellule[i] = (debordementParCellule[i] ?? 0) + (part - recu);
+  }
+
   // L'eau qui court emporte la terre : ce qui suit descend avec elle, cellule
   // par cellule (erosion.ts). `sedimentEnTransit` est ce qu'une cellule passe
   // à sa voisine d'aval, en kg de terre par m².
@@ -704,6 +801,32 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     herbeDemandeL[i] = demandeEau;
     cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
     cellNWanted[i] = (cellNWanted[i] ?? 0) + herbeDemandeAzoteG(couverture, saisonHerbe);
+  }
+
+  // ── Plafond d'énergie ─────────────────────────────────────────────────────
+  // On ne transpire pas plus que le soleil ne le permet. La demande d'un arbre
+  // est proportionnelle à la surface de son houppier ; quand les couronnes se
+  // superposent — et elles se superposent, jusqu'à deux ou trois épaisseurs —
+  // la somme des demandes d'une cellule peut dépasser plusieurs fois ce que
+  // l'évapotranspiration potentielle peut fournir. C'est physiquement
+  // impossible : l'eau évaporée l'est avec l'énergie reçue, et un mètre carré
+  // n'en reçoit qu'un mètre carré. On rabat donc les demandes d'une cellule
+  // au prorata quand leur somme dépasse ce plafond.
+  //
+  // *(Le défaut est apparu avec la nappe : tant que l'eau manquait, c'est elle
+  // qui bridait, et le plafond ne servait jamais. Une aulnaie de fond de
+  // vallée alimentée par la nappe transpirait 1 021 mm par an.)*
+  for (let i = 0; i < nCells; i++) {
+    const base = i * nH;
+    let demandeCellule = herbeDemandeL[i] ?? 0;
+    for (let h = 0; h < nH; h++) demandeCellule += cellWaterDemand[base + h] ?? 0;
+    const plafond = etpMm * facteurExpositionRayonnement(station.relief) * PLAFOND_ENERGIE;
+    if (demandeCellule <= plafond || demandeCellule <= 0) continue;
+    const facteur = plafond / demandeCellule;
+    for (let h = 0; h < nH; h++) {
+      cellWaterDemand[base + h] = (cellWaterDemand[base + h] ?? 0) * facteur;
+    }
+    herbeDemandeL[i] = (herbeDemandeL[i] ?? 0) * facteur;
   }
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
@@ -1344,6 +1467,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         humusCG,
         ph: state.soil.ph,
         cloture: state.soil.cloture,
+        nappeMm: nappeStockMm,
         phosphoreG,
         phosphoreFixeG,
         potassiumG,
@@ -1377,7 +1501,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       rainMm: weather.rainMm,
       etpMm,
       evapMm: evapSum / nCells,
-      nappeMm: nappeSum / nCells,
+      nappeMm: remonteeNappeMm / nCells,
+      vidangeNappeMm: vidangeNappeMm / nCells,
+      apportRegionalMm: apportRegionalMm / nCells,
+      apportEauLibreMm: apportEauLibreMm / nCells,
+      nappeProfondeurCm:
+        nappeStockMm.reduce((a, b) => a + profondeurPourStock(b, station.profil), 0) / nCells,
       transpirationMm: transpirationSumL / nCells,
       drainageMm: drainageSum / nCells,
       overflowMm: overflowSum / nCells,
