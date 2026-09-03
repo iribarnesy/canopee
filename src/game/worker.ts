@@ -61,6 +61,7 @@ let anneeDepart = 2026;
 let bordures: Bordures = bordersUniformes("bocage");
 // Relief choisi au lancement ; à défaut, celui d'origine de la station.
 let relief: Relief | undefined;
+let maturationAns = 0;
 // Eau libre choisie au lancement (ruisseau, mare) ; à défaut, aucune.
 let eau: EauDeSurface | undefined;
 // Normales saisonnières de la série : elles servent à accentuer les extrêmes.
@@ -251,6 +252,31 @@ function performAction(action: GameAction) {
   }
 }
 
+/**
+ * Faire vieillir la parcelle avant que le joueur n'arrive.
+ *
+ * Un terrain qu'on vient de modeler n'est pas un terrain : c'est une
+ * topographie. Ce qui en fait un lieu — l'humus accumulé, l'herbe installée,
+ * les semis venus du voisinage, la ceinture d'aulnes autour du trou qui s'est
+ * rempli — demande du temps. On le lui donne d'un coup, en simulant les
+ * années qui précèdent le début de partie : le joueur ne fait rien, seul le
+ * moteur tourne. Le climat de ces années-là est celui de l'époque, pas celui
+ * du début de partie.
+ */
+function faireVieillir(depart: GameState, annees: number): GameState {
+  let etat = depart;
+  const semaines = annees * 52;
+  const anneeBase = anneeDepart - annees;
+  for (let k = 0; k < semaines; k++) {
+    etat = advanceWeek(etat, meteoSemaine(k, anneeBase), []).state;
+    if (k % 260 === 0)
+      post({ type: "progress", done: k, total: semaines, phase: "vieillissement" });
+  }
+  // Le compteur de semaines repart de zéro : l'an 1 du joueur, c'est son
+  // arrivée, pas la naissance du terrain.
+  return { ...etat, week: 0 };
+}
+
 const post = (msg: FromWorker, transfer: Transferable[] = []) =>
   (postMessage as (m: FromWorker, t?: Transferable[]) => void)(msg, transfer);
 
@@ -260,14 +286,14 @@ const post = (msg: FromWorker, transfer: Transferable[] = []) =>
  * le moteur, lui, ne sait rien du scénario, il ne voit qu'une semaine plus
  * chaude et un CO₂ plus élevé.
  */
-function meteoSemaine(absolue: number): WeekWeather {
-  const base = weather[absolue % weather.length];
+function meteoSemaine(absolue: number, anneeBase = anneeDepart): WeekWeather {
+  const base = weather[((absolue % weather.length) + weather.length) % weather.length];
   if (!base) throw new Error("météo manquante");
   return meteoDerivee(
     base,
-    absolue % 52,
+    ((absolue % 52) + 52) % 52,
     getScenario(scenario),
-    anneeDepart + Math.floor(absolue / 52),
+    anneeBase + Math.floor(absolue / 52),
     normales,
     // L'altitude de la parcelle par rapport à celle de la station météo.
     sc ? anomalieAltitudeC(relief ?? sc.station.relief, ALTITUDE_SERIE_M) : 0,
@@ -575,6 +601,7 @@ function init(
   bordersChoisies: Bordures,
   reliefChoisi: Relief,
   eauChoisie: EauDeSurface,
+  maturation: number,
   annee: number,
 ) {
   scenario = scenarioId;
@@ -582,6 +609,7 @@ function init(
   bordures = bordersChoisies;
   relief = reliefChoisi;
   eau = eauChoisie;
+  maturationAns = maturation;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -590,7 +618,8 @@ function init(
   normales = normalesHebdo(weather);
   // Le paysage choisi remplace celui de la station : c'est la même terre, mais
   // au milieu d'une hêtraie, de champs ou d'un lotissement (paysage.ts).
-  state = beginWeek(createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed)));
+  const neuf = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed));
+  state = beginWeek(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
   journal = [];
   pendingRefusals = [];
   pendingEvents = [];
@@ -617,6 +646,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         msg.bordures,
         msg.relief,
         msg.eau,
+        msg.maturationAns,
         msg.anneeDepart,
       );
       break;
@@ -629,17 +659,22 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       bordures = msg.save.bordures ?? bordersUniformes(msg.save.paysageId);
       relief = msg.save.relief;
       eau = msg.save.eau;
+      maturationAns = msg.save.maturationAns ?? 0;
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
       normales = normalesHebdo(weather);
       journal = msg.save.actions;
       let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed));
+      // Le vieillissement fait partie de l'histoire de la parcelle : il se
+      // rejoue à l'identique avant les actions du joueur.
+      if (maturationAns > 0) replayed = faireVieillir(replayed, maturationAns);
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
         lastFluxes = step.fluxes;
-        if (i % 104 === 0) post({ type: "progress", done: i, total: msg.save.weeks });
+        if (i % 104 === 0)
+          post({ type: "progress", done: i, total: msg.save.weeks, phase: "rejeu" });
       }
       state = beginWeek(replayed);
       pendingRefusals = [];
@@ -675,6 +710,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         bordures,
         relief: relief ?? sc?.station.relief,
         eau: eau ?? sc?.station.eau,
+        maturationAns,
         anneeDepart,
         weeks: state.week,
         actions: journal,

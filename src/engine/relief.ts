@@ -149,8 +149,14 @@ export function voisineAval(altitudes: readonly number[], dims: GridDims): Int32
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
+      const ici = altitudes[i] ?? 0;
       let meilleur = -1;
-      let plusBas = altitudes[i] ?? 0;
+      // On compare des PENTES, pas des dénivelés : à dénivelé égal, la voisine
+      // en diagonale est 1,41 fois plus loin, donc moins pentue. Comparer les
+      // dénivelés bruts faisait gagner la diagonale à égalité — et sur un plan
+      // incliné, où les trois voisines d'aval sont à égalité parfaite, toute
+      // l'eau de la parcelle dérivait vers un coin en creusant un faux talweg.
+      let meilleurePente = 0;
       for (let ddy = -1; ddy <= 1; ddy++) {
         for (let ddx = -1; ddx <= 1; ddx++) {
           if (ddx === 0 && ddy === 0) continue;
@@ -159,9 +165,12 @@ export function voisineAval(altitudes: readonly number[], dims: GridDims): Int32
           // Hors parcelle : l'eau s'en va, c'est l'exutoire.
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
           const j = ny * w + nx;
-          const a = altitudes[j] ?? 0;
-          if (a < plusBas) {
-            plusBas = a;
+          const denivele = ici - (altitudes[j] ?? 0);
+          if (denivele <= 0) continue;
+          const distance = ddx !== 0 && ddy !== 0 ? Math.SQRT2 : 1;
+          const pente = denivele / distance;
+          if (pente > meilleurePente) {
+            meilleurePente = pente;
             meilleur = j;
           }
         }

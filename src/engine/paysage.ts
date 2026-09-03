@@ -138,6 +138,10 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "fagus_sylvatica", semisParAn: 5 },
       { especeId: "quercus_pubescens", semisParAn: 4 },
       { especeId: "corylus_avellana", semisParAn: 3 },
+      // Il y a toujours un ruisseau quelque part dans un massif, et l'aulne
+      // sème loin : ses graines flottent et volent. Sur un terrain sec, ces
+      // semis mourront — c'est au moteur d'en décider, pas à la liste.
+      { especeId: "alnus_glutinosa", semisParAn: 2 },
     ],
   },
   {
@@ -153,6 +157,8 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "fraxinus_excelsior", semisParAn: 4 },
       { especeId: "quercus_pubescens", semisParAn: 2 },
       { especeId: "corylus_avellana", semisParAn: 2 },
+      // Les fossés et les mares d'abreuvement du bocage portent des aulnes.
+      { especeId: "alnus_glutinosa", semisParAn: 2 },
     ],
   },
   {
@@ -206,6 +212,7 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "betula_pendula", semisParAn: 6 },
       { especeId: "pinus_sylvestris", semisParAn: 3 },
       { especeId: "fagus_sylvatica", semisParAn: 2 },
+      { especeId: "alnus_glutinosa", semisParAn: 1 },
     ],
   },
 ];

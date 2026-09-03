@@ -34,6 +34,8 @@ export interface SaveGame {
   relief?: Relief;
   /** eau libre choisie ; absent = aucune */
   eau?: EauDeSurface;
+  /** années simulées à vide avant l'arrivée du joueur ; absent = 0 */
+  maturationAns?: number;
   /** année civile du début de partie */
   anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
@@ -116,6 +118,8 @@ export type ToWorker =
       bordures: Bordures;
       relief: Relief;
       eau: EauDeSurface;
+      /** années à faire passer sur le terrain avant que le joueur n'arrive */
+      maturationAns: number;
       anneeDepart: number;
     }
   | { type: "resume"; save: SaveGame }
@@ -128,6 +132,6 @@ export type FromWorker =
   | { type: "ready"; station: StationInfo }
   | { type: "snapshot"; snapshot: Snapshot }
   | { type: "save"; save: SaveGame }
-  | { type: "progress"; done: number; total: number }
+  | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
   /** le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la vitesse */
   | { type: "autopause"; reason: string };

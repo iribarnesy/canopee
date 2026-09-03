@@ -121,6 +121,17 @@ Ensuite, `eau_surface.ts` ne voit que des cellules en eau, leur cote et leur
 portée : une mare creusée et une mare déclarée produisent la même nappe, donc
 la même ripisylve.
 
+### 2 ter bis. Faire passer le temps avant d'arriver
+
+Un terrain qu'on vient de modeler n'est pas un lieu, c'est une topographie.
+L'humus accumulé, l'herbe installée, les semis venus du voisinage, la ceinture
+d'arbres autour du trou qui s'est rempli : tout cela demande du temps. Le
+**vieillissement** le donne d'avance — le moteur simule N années sans joueur,
+avec le climat de ces années-là (2026 moins N), puis le compteur repart à zéro.
+Rien n'est scripté : ce qui a poussé a poussé tout seul. Le vieillissement fait
+partie de l'histoire de la parcelle, donc il se rejoue à l'identique au
+chargement d'une sauvegarde.
+
 ### 2 quater. Les bords de la parcelle
 
 Une parcelle n'est pas un monde clos. Ce qui sort est compté

@@ -47,7 +47,7 @@ export interface GameApi {
   setAutoHarvest: (enabled: boolean) => void;
   /** message de pause automatique (fruits mûrs…) */
   notice?: string;
-  replayProgress?: { done: number; total: number };
+  replayProgress?: { done: number; total: number; phase?: "vieillissement" | "rejeu" };
   newGame: (
     stationId: string,
     seed: number,
@@ -56,6 +56,7 @@ export interface GameApi {
     bordures: Bordures,
     relief: Relief,
     eau: EauDeSurface,
+    maturationAns: number,
     anneeDepart: number,
   ) => void;
   resume: (save: SaveGame) => void;
@@ -70,7 +71,11 @@ export function useGame(): GameApi {
   const [snapshot, setSnapshot] = useState<Snapshot>();
   const [refusals, setRefusals] = useState<WithUid<ActionRefusal>[]>([]);
   const [speed, setSpeedState] = useState(0);
-  const [replayProgress, setReplayProgress] = useState<{ done: number; total: number }>();
+  const [replayProgress, setReplayProgress] = useState<{
+    done: number;
+    total: number;
+    phase?: "vieillissement" | "rejeu";
+  }>();
   const [notice, setNotice] = useState<string>();
   const [events, setEvents] = useState<WithUid<GameEvent>[]>([]);
   const [autoHarvest, setAutoHarvestState] = useState(true);
@@ -99,7 +104,7 @@ export function useGame(): GameApi {
           }
           break;
         case "progress":
-          setReplayProgress({ done: msg.done, total: msg.total });
+          setReplayProgress({ done: msg.done, total: msg.total, phase: msg.phase });
           break;
         case "autopause":
           setSpeedState(0);
@@ -141,7 +146,17 @@ export function useGame(): GameApi {
     },
     notice,
     replayProgress,
-    newGame: (stationId, seed, meteo, scenario, bordures, relief, eau, anneeDepart) => {
+    newGame: (
+      stationId,
+      seed,
+      meteo,
+      scenario,
+      bordures,
+      relief,
+      eau,
+      maturationAns,
+      anneeDepart,
+    ) => {
       ensureWorker();
       setRefusals([]);
       setEvents([]);
@@ -155,6 +170,7 @@ export function useGame(): GameApi {
         bordures,
         relief,
         eau,
+        maturationAns,
         anneeDepart,
       });
       send({ type: "autoHarvest", enabled: true });

@@ -252,11 +252,13 @@ describe("dans une partie, le réchauffement se voit", () => {
     // qui « aime le frais ». Sur soixante ans de climat figé, le hêtre ne
     // meurt jamais de sécheresse sur ce limon profond ; sous SSP5-8.5, si.
     // Le contraste est binaire, c'est ce qui compte : jamais à climat figé,
-    // plusieurs fois sous SSP5-8.5. (Le nombre exact a baissé quand les
-    // mycorhizes ont amélioré la nutrition azotée — des arbres mieux nourris
-    // encaissent un peu mieux la soif.)
+    // plusieurs fois sous SSP5-8.5. Le nombre exact, lui, dérive à chaque fois
+    // qu'on nourrit mieux les arbres — d'abord les mycorhizes, puis l'arrivée
+    // de l'aulne dans la pluie de semis du voisinage, qui fixe de l'azote pour
+    // ses voisins. Des hêtres mieux nourris encaissent un peu mieux la soif :
+    // c'est le mécanisme qui compte, pas le compte exact.
     expect(fige.hetresMortsDeSoif).toBe(0);
-    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(2);
+    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(1);
   });
 
   it("le réchauffement fait aussi flamber les ravageurs", () => {

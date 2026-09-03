@@ -36,6 +36,7 @@ import {
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
 import { SPECIES_COLORS } from "../ui/couleurs";
+import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import type { Snapshot, SnapshotTree } from "./protocol";
 import { loadSave, useGame } from "./useGame";
 
@@ -229,6 +230,7 @@ function StartScreen({
     bordures: Bordures,
     relief: Relief,
     eau: EauDeSurface,
+    maturationAns: number,
     anneeDepart: number,
   ) => void;
   onResume: () => void;
@@ -249,6 +251,8 @@ function StartScreen({
     },
   );
   const [eau, setEau] = useState<EauDeSurface>(SANS_EAU);
+  const [terrain, setTerrain] = useState<number[] | undefined>(undefined);
+  const [maturationAns, setMaturationAns] = useState(0);
   const save = loadSave();
 
   const choisie = STATIONS_V0.find((s) => s.station.id === stationId);
@@ -274,6 +278,10 @@ function StartScreen({
     .slice(0, 3)
     .map((v) => getEspece(v.especeId).nom.toLowerCase());
 
+  // Le terrain dessiné remplace la silhouette paramétrique (relief.ts), et il
+  // impose l'eau déduite : on ne déclare plus rien, c'est le modelé qui parle.
+  const reliefFinal: Relief = terrain ? { ...relief, altitudesM: terrain } : relief;
+
   // Ce que le relief change, calculé par le moteur : température avec
   // l'altitude, rayonnement avec l'exposition, part de la pluie qui file en
   // surface au lieu de s'infiltrer, et ce qui arrive du bassin d'amont.
@@ -292,7 +300,7 @@ function StartScreen({
     const dims = { widthM: choisie.station.coteM, heightM: choisie.station.coteM };
     const champ = profondeurNappeCm(
       eau,
-      altitudeParCellule(relief, dims),
+      altitudeParCellule(reliefFinal, dims),
       dims,
       choisie.station.profil,
     );
@@ -305,7 +313,7 @@ function StartScreen({
       }
     }
     return { proche: Number.isFinite(proche) ? proche : 0, loin };
-  }, [choisie, eau, relief]);
+  }, [choisie, eau, reliefFinal]);
 
   const setCote = (cote: keyof Bordures, id: string) =>
     setBordures(cotesSeparees ? { ...bordures, [cote]: id } : bordersUniformes(id));
@@ -663,6 +671,70 @@ function StartScreen({
       </section>
 
       <section className="carte">
+        <h3>Modeler le terrain</h3>
+        <p className="sous">
+          Facultatif. Creusez, montez, lissez — et l'eau apparaît d'elle-même là où le terrain la
+          retient. Ce n'est pas un décor : la cuvette qui tient l'eau tiendra une nappe, et la nappe
+          fera la ripisylve.
+        </p>
+        <div className="seg">
+          <button
+            type="button"
+            style={btn(terrain !== undefined)}
+            onClick={() => {
+              if (terrain) {
+                setTerrain(undefined);
+                if (eau.type === "terrain") setEau(SANS_EAU);
+              } else if (choisie) {
+                setTerrain(terrainInitial(choisie.station.coteM, relief.pentePct));
+                setEau({ type: "terrain", bergeM: 0 });
+              }
+            }}
+          >
+            {terrain ? "↩ revenir au relief paramétré" : "✎ dessiner le terrain"}
+          </button>
+        </div>
+        {terrain && choisie && (
+          <div style={{ marginTop: 10 }}>
+            <EditeurTerrain
+              coteM={choisie.station.coteM}
+              pluieAnnuelleMm={choisie.climat.rainAnnualMm}
+              profil={choisie.station.profil}
+              valeur={terrain}
+              onChange={setTerrain}
+            />
+          </div>
+        )}
+      </section>
+
+      <section className="carte">
+        <h3>Avant votre arrivée</h3>
+        <p className="sous">
+          Un terrain qu'on vient de modeler n'est qu'une topographie. L'humus, l'herbe, les semis
+          venus du voisinage et la ceinture d'arbres autour de l'eau demandent du temps — on peut le
+          lui donner d'avance.
+        </p>
+        <div className="reglages">
+          <label htmlFor="maturation">Vieillissement</label>
+          <input
+            id="maturation"
+            type="range"
+            min={0}
+            max={120}
+            step={5}
+            value={maturationAns}
+            onChange={(e) => setMaturationAns(Number(e.target.value))}
+          />
+          <span className="valeur">{maturationAns === 0 ? "aucun" : `${maturationAns} ans`}</span>
+        </div>
+        <p className="glose" style={{ minHeight: 0 }}>
+          {maturationAns === 0
+            ? "Vous arrivez sur le terrain tel qu'il est décrit ci-dessus."
+            : `Le moteur simule ${maturationAns} ans sans vous (${anneeDepart - maturationAns}-${anneeDepart}), puis vous arrivez. Ce qui aura poussé aura poussé tout seul.`}
+        </p>
+      </section>
+
+      <section className="carte">
         <h3>Le climat</h3>
         <p className="sous">Ce qu'on plante aujourd'hui vivra dedans.</p>
         <div className="seg">
@@ -709,7 +781,17 @@ function StartScreen({
           type="button"
           style={{ ...btn(true), padding: "8px 20px", fontSize: 14, fontWeight: 600 }}
           onClick={() =>
-            onStart(stationId, seed, "reelle", scenario, bordures, relief, eau, anneeDepart)
+            onStart(
+              stationId,
+              seed,
+              "reelle",
+              scenario,
+              bordures,
+              reliefFinal,
+              eau,
+              maturationAns,
+              anneeDepart,
+            )
           }
         >
           Démarrer
@@ -781,7 +863,11 @@ export function GameView() {
     return (
       <div>
         {game.replayProgress && (
-          <p>Rechargement de la partie… {Math.round(game.replayProgress.done / 52)} ans rejoués.</p>
+          <p>
+            {game.replayProgress.phase === "vieillissement"
+              ? `Le terrain vieillit sans vous… ${Math.round(game.replayProgress.done / 52)} ans sur ${Math.round(game.replayProgress.total / 52)}.`
+              : `Rechargement de la partie… ${Math.round(game.replayProgress.done / 52)} ans rejoués.`}
+          </p>
         )}
         <StartScreen
           onStart={game.newGame}
