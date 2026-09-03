@@ -28,8 +28,8 @@ import {
 const STATION = { ...LIMON_RICHE.station, coteM: 20, voisinage: [], gibierParHa: 0 };
 const METEO = syntheticYear(LIMON_RICHE.climat);
 
-/** Un arbre mort depuis `semaines`, planté au milieu. */
-function chandelle(semaines: number, heightM = 18): TreeState {
+/** Une chandelle morte à la semaine 0, plantée au milieu. */
+function chandelle(heightM = 18): TreeState {
   return {
     id: 1,
     especeId: "fagus_sylvatica",
@@ -79,7 +79,7 @@ describe("un arbre mort reste debout", () => {
     const espece = getEspece("fagus_sylvatica");
     const duree = dureeChandelleSemaines(espece);
     let state = createGameState(STATION, rngStateFromSeed(3));
-    state = { ...state, trees: [chandelle(0)], nextTreeId: 2 };
+    state = { ...state, trees: [chandelle()], nextTreeId: 2 };
     for (let i = 0; i < duree + 60; i++) state = tick(state, METEO[i % 52] as never).state;
     expect(state.trees).toHaveLength(0);
   });
@@ -87,23 +87,23 @@ describe("un arbre mort reste debout", () => {
   it("elle ne fait plus d'ombre : elle n'a plus de feuilles", () => {
     // L'ombre est décalée vers le nord (light.ts) : on place le semis là où
     // elle tombe, pas au pied de l'arbre.
-    const semis = { ...chandelle(10, 0.5), id: 2, alive: true, x: 10, y: 10 + 0.4 * 18 };
-    const sousLaChandelle = computeLight([chandelle(10), semis], true)[1] ?? 0;
-    const vivant = { ...chandelle(10), id: 3, alive: true };
+    const semis = { ...chandelle(0.5), id: 2, alive: true, x: 10, y: 10 + 0.4 * 18 };
+    const sousLaChandelle = computeLight([chandelle(), semis], true)[1] ?? 0;
+    const vivant = { ...chandelle(), id: 3, alive: true };
     const sousLArbre = computeLight([vivant, semis], true)[1] ?? 0;
     expect(sousLaChandelle).toBeCloseTo(1, 6);
     expect(sousLArbre).toBeLessThan(0.2);
   });
 
   it("mais elle vaut un arbre-habitat, ce qu'un jeune arbre sain n'est pas", () => {
-    const avec = indiceBiodiversite([chandelle(10)], 0, 0.04);
-    const sans = indiceBiodiversite([{ ...chandelle(10, 4), id: 9, alive: true }], 0, 0.04);
+    const avec = indiceBiodiversite([chandelle()], 0, 0.04);
+    const sans = indiceBiodiversite([{ ...chandelle(4), id: 9, alive: true }], 0, 0.04);
     expect(avec.grosArbres).toBeGreaterThan(sans.grosArbres);
   });
 
   it("une chandelle trop courte ne compte pas : un pic n'y creuse rien", () => {
-    const haute = indiceBiodiversite([chandelle(10, 18)], 0, 0.04);
-    const basse = indiceBiodiversite([chandelle(10, 3)], 0, 0.04);
+    const haute = indiceBiodiversite([chandelle(18)], 0, 0.04);
+    const basse = indiceBiodiversite([chandelle(3)], 0, 0.04);
     expect(haute.grosArbres).toBeGreaterThan(basse.grosArbres);
   });
 });
