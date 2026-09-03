@@ -91,6 +91,13 @@ export interface TreeState {
    */
   brulEeSemaine?: number;
   /**
+   * Semaine où la mort a été enregistrée. Tant qu'elle est absente, l'arbre
+   * vient de mourir et son bois n'a pas encore rejoint le sol ; une fois
+   * posée, c'est une CHANDELLE — un tronc mort resté debout
+   * (`dureeChandelleSemaines`).
+   */
+  mortSemaine?: number;
+  /**
    * Profondeur réellement explorée par les racines, cm. Ce n'est pas une
    * propriété figée : l'arbre INVESTIT vers le bas quand la surface ne suffit
    * plus (plasticité racinaire). Un sujet qui n'a jamais eu soif garde un
@@ -495,4 +502,23 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     tree: { ...tree, ageWeeks: tree.ageWeeks + 1, heightM, stress, alive, rootDepthCm, causeMort },
     limitingFactor,
   };
+}
+
+/**
+ * Combien de temps un arbre mort reste DEBOUT, en semaines.
+ *
+ * Un arbre tué par la sécheresse ou le feu ne s'effondre pas le jour même : il
+ * sèche sur pied et tient des années. Cette chandelle est un habitat à part
+ * entière — c'est là que les pics creusent, et le trou qu'ils abandonnent
+ * sert ensuite à des dizaines d'espèces — et elle ne fait pas d'ombre,
+ * puisqu'elle n'a plus de feuilles. Le bois dense tient plus longtemps : un
+ * chêne mort reste debout une décennie là où un saule s'écroule en trois ans.
+ *
+ * *(à calibrer : les durées de terrain vont de 2 à 20 ans selon l'essence, le
+ * diamètre et l'exposition au vent, que le moteur ne connaît pas encore)*
+ */
+export const CHANDELLE_ANS_PAR_DENSITE = 15;
+
+export function dureeChandelleSemaines(espece: EspeceV0): number {
+  return Math.round(espece.bois.densite * CHANDELLE_ANS_PAR_DENSITE * 52);
 }

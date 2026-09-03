@@ -450,6 +450,7 @@ function postSnapshot() {
         fruitsKg: t.fruitsKg,
         hauteurElagueeM: t.hauteurElagueeM,
         protege: t.protege,
+        chandelle: !t.alive,
       })),
     // Carte : on montre l'eau de l'horizon de SURFACE, celle que voient les
     // semis et l'évaporation (le sol est stratifié, cf. soil.ts).

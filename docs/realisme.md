@@ -238,7 +238,8 @@ inventaire.
 |---|---|---|---|
 | J1 | La richesse en essences ET leur équilibre comptent (une essence à 95 % est un désert) | ✅ | `biodiversite.ts` équitabilité de Shannon ; `biodiversite.test.ts` |
 | J2 | Le bois mort est un habitat, pas un déchet | ✅ | pool `deadWoodKgC` intégré à l'indice (ch4-A) |
-| J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | ✅ | gros sujets ET trognes recoupées, dont la tête se creuse (`biodiversite.ts` ; `trogne.test.ts`) |
+| J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | ✅ | gros sujets, trognes recoupées ET chandelles (`biodiversite.ts` ; `trogne.test.ts`, `chandelles.test.ts`) |
+| J8 | Un arbre mort reste debout des années : c'est LE bois mort qui compte pour la faune | ✅ | `dureeChandelleSemaines` (densité du bois × 15 ans) ; `chandelles.test.ts` |
 | J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | 🟡 | strates et sempervirence comptées ; pas de lisières ni de structure horizontale |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
 | J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C) |

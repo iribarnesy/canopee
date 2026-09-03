@@ -124,6 +124,7 @@ import { gridDims, weekOfYear } from "./state";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
 import type { TreeState } from "./trees";
 import {
+  dureeChandelleSemaines,
   fractionsRacinairesParHorizon,
   prochainDommageHydraulique,
   rootRadiusM,
@@ -1319,13 +1320,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (const tree of nextTrees) {
     if (tree.alive) {
       survivors.push(tree);
-    } else if (
+      continue;
+    }
+    if (
       tree.brulEeSemaine !== undefined &&
       state.week - tree.brulEeSemaine < CHABLIS_RECUPERABLE_SEMAINES
     ) {
-      // Sur pied et encore commercialisable : on le garde en jeu.
+      // Sur pied et encore commercialisable : on le garde tel quel, le temps
+      // que le joueur décide d'aller le chercher.
       survivors.push(tree);
-    } else {
+      continue;
+    }
+    if (tree.mortSemaine === undefined) {
+      // Il vient de mourir : sa litière tombe et son bois rejoint le pool de
+      // bois mort. Ce transfert n'a lieu qu'UNE fois — ensuite l'arbre reste
+      // en jeu comme chandelle, sans plus rien à donner.
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM);
       morts.push({
@@ -1333,6 +1342,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cause: tree.causeMort ?? "secheresse",
         heightM: tree.heightM,
       });
+      survivors.push({ ...tree, mortSemaine: state.week });
+      continue;
+    }
+    // Chandelle : un tronc mort tient debout des années avant de s'abattre.
+    // Elle ne fait pas d'ombre (les morts sont ignorés du calcul de lumière)
+    // mais elle occupe la place et sert d'habitat (trees.ts, biodiversite.ts).
+    if (state.week - tree.mortSemaine < dureeChandelleSemaines(getEspece(tree.especeId))) {
+      survivors.push(tree);
     }
   }
   nextTrees = survivors;

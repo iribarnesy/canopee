@@ -40,6 +40,12 @@ export interface IndiceBiodiversite {
 }
 
 /** Strates de hauteur (m) : sol, arbustive, sous-étage, canopée. */
+/**
+ * Hauteur à partir de laquelle une chandelle vaut un arbre-habitat, m. En
+ * dessous, le tronc est trop mince pour qu'un pic y creuse une loge.
+ */
+export const CHANDELLE_HABITAT_M = 8;
+
 const STRATES: readonly number[] = [1, 4, 12, Number.POSITIVE_INFINITY];
 
 /** Entropie de Shannon normalisée : 0 = une seule catégorie, 1 = tout équilibré. */
@@ -61,7 +67,16 @@ export function indiceBiodiversite(
   surfaceHa: number,
 ): IndiceBiodiversite {
   const vivants = trees.filter((t) => t.alive);
-  if (vivants.length === 0) {
+  // Les CHANDELLES comptent parmi les arbres-habitats, et pas qu'un peu : un
+  // tronc mort resté debout est ce que les pics attaquent en premier, et le
+  // trou qu'ils abandonnent sert ensuite à des dizaines d'espèces qui ne
+  // savent pas creuser. Un arbre vivant sain n'offre rien de tel. Elles se
+  // comptent AVANT le cas « pas un arbre vivant » : une parcelle brûlée n'est
+  // pas vide de vie, elle en porte une autre.
+  const chandelles = trees.filter(
+    (t) => !t.alive && t.mortSemaine !== undefined && t.heightM >= CHANDELLE_HABITAT_M,
+  ).length;
+  if (vivants.length === 0 && chandelles === 0) {
     return {
       richesse: 0,
       equitabilite: 0,
@@ -76,9 +91,9 @@ export function indiceBiodiversite(
 
   const parEspece = new Map<string, number>();
   const parStrate = new Array<number>(STRATES.length).fill(0);
-  let gros = 0;
   let surfaceSempervirente = 0;
   let surfaceTotale = 0;
+  let gros = chandelles;
   const moisFloraison = new Set<number>();
 
   for (const t of vivants) {

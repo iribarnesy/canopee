@@ -60,6 +60,11 @@ export interface SnapshotTree {
   hauteurElagueeM: number;
   /** plant sous manchon : le gibier ne l'atteint pas */
   protege: boolean;
+  /**
+   * Chandelle : un tronc mort resté debout. Il ne pousse plus, ne fait plus
+   * d'ombre, mais il occupe la place et sert d'habitat (trees.ts).
+   */
+  chandelle: boolean;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */

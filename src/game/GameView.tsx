@@ -108,6 +108,38 @@ function drawTreeOblique(
   const crownR = Math.max(2.5, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio) * scale);
   const color = SPECIES_COLORS[tree.especeId] ?? "#4a6b4a";
 
+  if (tree.chandelle) {
+    // Une chandelle : un fût gris, sans houppier, plus court que l'arbre qu'il
+    // fut — la cime est la première à tomber. On la dessine quand même, parce
+    // qu'elle occupe la place et qu'elle vaut un arbre-habitat.
+    const hMort = hPx * 0.75;
+    ctx.beginPath();
+    ctx.ellipse(bx, by, crownR * 0.3, crownR * 0.12, 0, 0, 2 * Math.PI);
+    ctx.fillStyle = "rgba(40,50,30,0.14)";
+    ctx.fill();
+    const largeur = Math.max(1.5, hPx * 0.07);
+    ctx.fillStyle = "#8d8577";
+    ctx.fillRect(bx - largeur / 2, by - hMort, largeur, hMort);
+    // Deux moignons de branches : c'est ce qui distingue une chandelle d'un
+    // piquet, et ce à quoi on la reconnaît de loin sur le terrain.
+    ctx.strokeStyle = "#8d8577";
+    ctx.lineWidth = Math.max(1, largeur * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(bx, by - hMort * 0.8);
+    ctx.lineTo(bx - crownR * 0.5, by - hMort * 0.95);
+    ctx.moveTo(bx, by - hMort * 0.6);
+    ctx.lineTo(bx + crownR * 0.45, by - hMort * 0.8);
+    ctx.stroke();
+    if (selected) {
+      ctx.beginPath();
+      ctx.ellipse(bx, by, crownR * 0.3 + 2, crownR * 0.12 + 2, 0, 0, 2 * Math.PI);
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    return;
+  }
+
   // ombre au sol : ancre l'arbre
   ctx.beginPath();
   ctx.ellipse(bx, by, crownR, crownR * 0.35, 0, 0, 2 * Math.PI);
