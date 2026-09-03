@@ -43,7 +43,7 @@ Un seul package (pas de monorepo pnpm-workspaces pour l'instant) : la frontière
 ## Points de vigilance
 
 - **Le format de save = journal d'actions rejouées** (event sourcing) : élégant et testable, mais chaque changement de règles casse les vieilles saves → prévoir un numéro de version de moteur par save, et assumer la casse pendant le développement.
-- **Perf du rendu iso** : objectif 60 fps sur 1 ha, dégradation propre à 10 ha (LOD : sprites simplifiés dézoommé). À prototyper tôt — c'est le seul vrai risque technique.
+- **Perf du rendu iso** : objectif 60 fps sur 1 ha, dégradation propre à 10 ha (LOD : sprites simplifiés dézoommé). À prototyper tôt — c'est le seul vrai risque technique. L'inventaire complet du chantier de rendu (visuels, animations, changements de protocole, découpage en lots) est dans [interface-visuelle.md](interface-visuelle.md) ; le choix PixiJS vs Canvas 2D en couches y est rouvert et tranché par une pointe technique mesurée.
 - **Snapshots Worker → UI** : on n'envoie pas 100 k cellules 60 fois/s ; on envoie des deltas ou un snapshot par tick simulé, l'interpolation visuelle est côté rendu.
 
 ## Le contrat moteur → rendu (instantanés)
