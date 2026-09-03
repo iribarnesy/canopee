@@ -34,6 +34,8 @@ export interface SaveGame {
   relief?: Relief;
   /** eau libre choisie ; absent = aucune */
   eau?: EauDeSurface;
+  /** profondeur d'équilibre de la nappe choisie, cm ; absent = celle de la station */
+  nappeCm?: number;
   /** années simulées à vide avant l'arrivée du joueur ; absent = 0 */
   maturationAns?: number;
   /** année civile du début de partie */
@@ -108,6 +110,8 @@ export interface StationInfo {
   eau: EauDeSurface;
   /** cellules occupées par l'eau libre, telles que le moteur les voit */
   enEau: boolean[];
+  /** profondeur d'équilibre de la nappe, cm */
+  nappeEquilibreCm: number;
   /** profondeur de la nappe sous chaque cellule, cm — fixe, envoyée une fois */
   nappeCm: Float32Array;
 }
@@ -122,6 +126,8 @@ export type ToWorker =
       bordures: Bordures;
       relief: Relief;
       eau: EauDeSurface;
+      /** profondeur d'équilibre de la nappe, cm */
+      nappeCm: number;
       /** années à faire passer sur le terrain avant que le joueur n'arrive */
       maturationAns: number;
       anneeDepart: number;

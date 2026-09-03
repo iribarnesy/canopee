@@ -12,10 +12,11 @@ import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
-import { stockEquilibreMm } from "./nappe";
+import { stocksEquilibreParCellule } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
 import type { Relief } from "./relief";
+import { altitudeParCellule } from "./relief";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
@@ -332,15 +333,17 @@ export function createGameState(
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
-      // La partie démarre à l'équilibre : la nappe est là où la région la met.
-      nappeMm: new Array(n).fill(
-        stockEquilibreMm(
+      // La partie démarre à l'équilibre : la nappe est là où la région la met,
+      // creux par creux — elle est plus plate que le terrain (nappe.ts).
+      nappeMm: [
+        ...stocksEquilibreParCellule(
           station.profil,
+          altitudeParCellule(station.relief, { widthM: station.coteM, heightM: station.coteM }),
           station.remonteeNappeMmSemaine,
           station.drainageExterneMmSemaine,
           station.profondeurNappeEquilibreCm,
         ),
-      ),
+      ],
       phosphoreG: new Array(n).fill(station.phosphoreInitialGM2),
       // Le stock fixé de départ : dix fois l'assimilable, l'ordre de grandeur
       // habituel entre phosphore total et phosphore assimilable.

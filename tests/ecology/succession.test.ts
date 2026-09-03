@@ -112,7 +112,14 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     expect(an200.canopyFagusShare).toBeGreaterThan(an120.canopyFagusShare);
   });
 
-  it("le peuplement reste sous le plafond d'auto-éclaircie", () => {
-    expect(an200.aliveCount).toBeLessThanOrEqual(0.15 * 50 * 50);
+  it("le peuplement s'auto-éclaircit : une futaie de deux siècles est claire", () => {
+    // Le plafond ne compte plus des tiges mais du RECOUVREMENT (regeneration.ts) :
+    // des milliers de tiges quand elles font trente centimètres, quelques
+    // centaines quand elles font vingt mètres. Ce qu'on vérifie, c'est que la
+    // densité a bien fondu par rapport au fourré — pas qu'elle passe sous un
+    // nombre fixe, qui était faux aux deux bouts.
+    const parHa = (n: number) => (n / (50 * 50)) * 10_000;
+    expect(parHa(an200.aliveCount)).toBeLessThan(2000);
+    expect(parHa(an200.aliveCount)).toBeLessThan(parHa(an15.aliveCount));
   });
 });

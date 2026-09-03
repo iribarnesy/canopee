@@ -60,7 +60,7 @@ import {
   capaciteAquifereMm,
   ECHANGE_REGIONAL,
   profondeurPourStock,
-  stockEquilibreMm,
+  stocksEquilibreParCellule,
   tauxDeVidange,
 } from "./nappe";
 import {
@@ -309,8 +309,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // baisser la nappe en transpirant — et à un incendie de la faire remonter.
   const nappeStockMm = state.soil.nappeMm.slice();
   const capaciteNappeMm = capaciteAquifereMm(station.profil);
-  const nappeEquilibreMm = stockEquilibreMm(
+  // La nappe est une SURFACE, plus plate que le terrain : profonde sous les
+  // buttes, affleurante dans les creux (nappe.ts). Chaque cellule a donc son
+  // propre niveau d'équilibre.
+  const nappeEquilibreParCellule = stocksEquilibreParCellule(
     station.profil,
+    altitudes,
     station.remonteeNappeMmSemaine,
     station.drainageExterneMmSemaine,
     station.profondeurNappeEquilibreCm,
@@ -469,7 +473,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // d'une parcelle où rien d'autre ne le déciderait.
     const echangeRegional = Math.min(
       APPORT_REGIONAL_MAX_MM,
-      (nappeEquilibreMm - stockNappe) * ECHANGE_REGIONAL,
+      ((nappeEquilibreParCellule[i] ?? 0) - stockNappe) * ECHANGE_REGIONAL,
     );
     if (echangeRegional >= 0) apportRegionalMm += echangeRegional;
     else vidangeNappeMm += -echangeRegional;

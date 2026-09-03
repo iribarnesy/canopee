@@ -41,7 +41,7 @@ import {
   RUISSELLEMENT_AMONT,
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
-import { SPECIES_COLORS } from "../ui/couleurs";
+import { COULEUR_AUTRES, SPECIES_COLORS } from "../ui/couleurs";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import type { Snapshot, SnapshotTree } from "./protocol";
 import { loadSave, useGame } from "./useGame";
@@ -284,6 +284,7 @@ function StartScreen({
     bordures: Bordures,
     relief: Relief,
     eau: EauDeSurface,
+    nappeCm: number,
     maturationAns: number,
     anneeDepart: number,
   ) => void;
@@ -305,6 +306,7 @@ function StartScreen({
     },
   );
   const [eau, setEau] = useState<EauDeSurface>(SANS_EAU);
+  const [nappeCm, setNappeCm] = useState(STATIONS_V0[0]?.station.profondeurNappeEquilibreCm ?? 300);
   const [terrain, setTerrain] = useState<number[] | undefined>(undefined);
   const [maturationAns, setMaturationAns] = useState(0);
   const save = loadSave();
@@ -326,6 +328,9 @@ function StartScreen({
     if (s) setRelief(s.station.relief);
     setTerrain(undefined);
     setEau((e) => (e.type === "terrain" ? SANS_EAU : e));
+    if (s?.station.profondeurNappeEquilibreCm !== undefined) {
+      setNappeCm(s.station.profondeurNappeEquilibreCm);
+    }
   };
   // Ce que l'entourage donnera vraiment, calculé par le moteur lui-même : les
   // semis annoncés par un paysage sont filtrés par ce que CE sol supporte.
@@ -647,6 +652,29 @@ function StartScreen({
           affleure au bord, s'enfonce en s'éloignant, et c'est elle — pas une règle sur les espèces
           — qui fait pousser l'aulne là où le hêtre se noie.
         </p>
+        <div className="reglages" style={{ marginBottom: 12 }}>
+          <label htmlFor="nappe">Nappe</label>
+          <input
+            id="nappe"
+            type="range"
+            min={30}
+            max={800}
+            step={10}
+            value={nappeCm}
+            onChange={(e) => setNappeCm(Number(e.target.value))}
+            title="Profondeur d'équilibre de la nappe, celle que le réseau régional impose"
+          />
+          <span className="valeur">{(nappeCm / 100).toFixed(1)} m</span>
+        </div>
+        <p className="glose" style={{ minHeight: 0, marginTop: 0 }}>
+          {nappeCm <= 100
+            ? "Nappe affleurante : le sol reste engorgé, seules les espèces qui le tolèrent tiendront."
+            : nappeCm <= 250
+              ? "Nappe à portée des racines : elles iront y puiser en été, et la forêt la fera baisser en transpirant."
+              : "Nappe profonde : la parcelle ne vit que de sa pluie."}{" "}
+          Elle est plus PLATE que le terrain — sous une butte elle s'enfonce, dans un creux elle
+          affleure.
+        </p>
         <div className="seg">
           {(
             [
@@ -917,6 +945,7 @@ function StartScreen({
               bordures,
               reliefFinal,
               eau,
+              nappeCm,
               maturationAns,
               anneeDepart,
             )
@@ -958,6 +987,33 @@ export function GameView() {
     () => (snapshot ? snapshot.trees.filter((t) => selectedIds.has(t.id)) : []),
     [snapshot, selectedIds],
   );
+  /**
+   * Qui domine la parcelle, en direct. On classe par NOMBRE de tiges et on
+   * montre la hauteur du plus grand : une essence peut être partout en
+   * sous-étage sans jamais atteindre la canopée, et c'est une information
+   * différente de « qui occupe le terrain ».
+   */
+  const composition = useMemo(() => {
+    if (!snapshot || snapshot.trees.length === 0) return [];
+    const parEspece = new Map<string, { n: number; hauteurMax: number }>();
+    for (const t of snapshot.trees) {
+      const agg = parEspece.get(t.especeId) ?? { n: 0, hauteurMax: 0 };
+      agg.n++;
+      agg.hauteurMax = Math.max(agg.hauteurMax, t.heightM);
+      parEspece.set(t.especeId, agg);
+    }
+    const total = snapshot.trees.length;
+    return [...parEspece]
+      .sort((a, b) => b[1].n - a[1].n)
+      .slice(0, 5)
+      .map(([especeId, agg]) => ({
+        especeId,
+        nom: getEspece(especeId).nom.toLowerCase(),
+        part: Math.round((agg.n / total) * 100),
+        hauteurMax: agg.hauteurMax,
+      }));
+  }, [snapshot]);
+
   const fruitsPrets = useMemo(
     () => (snapshot ? snapshot.trees.filter((t) => t.fruitsKg > 0.5) : []),
     [snapshot],
@@ -1562,8 +1618,38 @@ export function GameView() {
               à {(snapshot.fluxes.nappeProfondeurCm / 100).toFixed(2)} m sous la surface
               <span className="detail">
                 {" "}
-                · la forêt la fait descendre en transpirant, un incendie la fait remonter
+                · équilibre régional {(station.nappeEquilibreCm / 100).toFixed(1)} m — la forêt la
+                fait descendre en transpirant, un incendie la fait remonter
               </span>
+            </dd>
+            <dt>Essences</dt>
+            <dd>
+              {composition.length === 0 ? (
+                "aucun arbre"
+              ) : (
+                <>
+                  {composition.map((c, rang) => (
+                    <span key={c.especeId} style={{ whiteSpace: "nowrap" }}>
+                      {rang > 0 && " · "}
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: 8,
+                          height: 8,
+                          borderRadius: 2,
+                          background: SPECIES_COLORS[c.especeId] ?? COULEUR_AUTRES,
+                          marginRight: 4,
+                        }}
+                      />
+                      {c.nom} <strong>{c.part}</strong> %
+                      <span className="detail">
+                        {" "}
+                        ({c.hauteurMax < 10 ? c.hauteurMax.toFixed(1) : c.hauteurMax.toFixed(0)} m)
+                      </span>
+                    </span>
+                  ))}
+                </>
+              )}
             </dd>
             <dt>Sol</dt>
             <dd>

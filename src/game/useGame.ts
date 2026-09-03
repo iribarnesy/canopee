@@ -56,6 +56,7 @@ export interface GameApi {
     bordures: Bordures,
     relief: Relief,
     eau: EauDeSurface,
+    nappeCm: number,
     maturationAns: number,
     anneeDepart: number,
   ) => void;
@@ -154,6 +155,7 @@ export function useGame(): GameApi {
       bordures,
       relief,
       eau,
+      nappeCm,
       maturationAns,
       anneeDepart,
     ) => {
@@ -170,6 +172,7 @@ export function useGame(): GameApi {
         bordures,
         relief,
         eau,
+        nappeCm,
         maturationAns,
         anneeDepart,
       });

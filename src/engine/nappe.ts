@@ -35,6 +35,7 @@
  * l'inondation apparaisse : elle est le prolongement de la montée.
  */
 
+import { subordinationAuRelief } from "./eau_surface";
 import {
   conductiviteHorizonMmSemaine,
   porositeDrainageMm,
@@ -170,4 +171,45 @@ export function stockEquilibreMm(
     profondeurEquilibreCm(profil, remonteeNappeMmSemaine, drainageExterneMmSemaine, declaree),
     profil,
   );
+}
+
+/**
+ * Stock d'équilibre CELLULE PAR CELLULE, mm.
+ *
+ * Une nappe n'est pas une couche d'eau posée à profondeur constante sous le
+ * terrain : c'est une surface, et elle est bien plus PLATE que la
+ * topographie. Sous une butte elle est profonde, sous un creux elle affleure —
+ * c'est ce qui fait les bas-fonds humides et les crêtes sèches d'un même
+ * versant, et c'est exactement ce que le joueur dessine quand il creuse.
+ *
+ * De combien elle suit le terrain dépend du sol (`subordinationAuRelief`) : un
+ * sable très conducteur porte une nappe presque horizontale — donc très
+ * profonde sous les hauts —, une argile la garde perchée près de la surface
+ * partout. La station déclare la profondeur à l'altitude MOYENNE de la
+ * parcelle ; chaque cellule s'en écarte selon sa propre hauteur.
+ */
+export function stocksEquilibreParCellule(
+  profil: SoilProfile,
+  altitudesM: readonly number[],
+  remonteeNappeMmSemaine: number,
+  drainageExterneMmSemaine: number,
+  declaree?: number,
+): Float32Array {
+  const n = altitudesM.length;
+  const out = new Float32Array(n);
+  const moyenne = altitudesM.reduce((a, b) => a + b, 0) / Math.max(1, n);
+  const base = profondeurEquilibreCm(
+    profil,
+    remonteeNappeMmSemaine,
+    drainageExterneMmSemaine,
+    declaree,
+  );
+  const suit = subordinationAuRelief(profil);
+  for (let i = 0; i < n; i++) {
+    // Une cellule un mètre au-dessus de la moyenne a sa nappe d'autant plus
+    // bas — au prorata de ce que le sol laisse la nappe suivre le terrain.
+    const ecartCm = ((altitudesM[i] ?? moyenne) - moyenne) * 100 * suit;
+    out[i] = stockPourProfondeur(Math.max(0, base + ecartCm), profil);
+  }
+  return out;
 }
