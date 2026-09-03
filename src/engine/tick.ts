@@ -259,7 +259,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const availFactor = new Array<number>(nCells);
   const drainageMmArr = new Array<number>(nCells);
   let evapSum = 0;
-  let nappeSum = 0;
   let drainageSum = 0;
   let overflowSum = 0;
   let waterloggingSum = 0;
@@ -483,7 +482,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nappeStockMm[i] = Math.max(0, stockNappe);
     }
     evapSum += bilan.evapMm;
-    nappeSum += bilan.nappeMm;
     drainageSum += bilan.drainageMm;
 
     waterloggingSum += bilan.engorgementParHorizon[0] ?? 0;
