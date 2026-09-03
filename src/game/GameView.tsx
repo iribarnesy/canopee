@@ -77,6 +77,11 @@ const btn = (active = false): React.CSSProperties => ({
   cursor: "pointer",
 });
 
+/** Hauteur de départ du houppier quand l'arbre n'est pas élagué. */
+function conifereBase(espece: { lumiere: { caduc: boolean } }): number {
+  return espece.lumiere.caduc ? 0.3 : 0.2;
+}
+
 /** hauteur à l'écran d'un mètre d'arbre, en fraction de l'échelle horizontale */
 const VERTICAL = 0.55;
 
@@ -100,25 +105,33 @@ function drawTreeOblique(
   ctx.fillStyle = "rgba(40,50,30,0.18)";
   ctx.fill();
 
+  // Un arbre élagué se RECONNAÎT : la bille est nue jusqu'à la hauteur
+  // travaillée, et le houppier commence au-dessus. C'est toute la silhouette
+  // de l'arbre de futaie, par opposition au branchu de plein vent.
+  const partElaguee =
+    tree.heightM > 0 ? Math.min(0.75, Math.max(0, tree.hauteurElagueeM / tree.heightM)) : 0;
+  const baseHouppier = Math.max(conifereBase(espece), partElaguee);
   // tronc
   const trunkW = Math.max(1.5, hPx * 0.06);
   ctx.fillStyle = "#6b4d2f";
-  ctx.fillRect(bx - trunkW / 2, by - hPx * 0.45, trunkW, hPx * 0.45);
+  const hautTronc = Math.max(0.45, baseHouppier + 0.05);
+  ctx.fillRect(bx - trunkW / 2, by - hPx * hautTronc, trunkW, hPx * hautTronc);
 
   const conifere = !espece.lumiere.caduc;
   if (conifere) {
     // silhouette en triangle (pin)
     ctx.beginPath();
     ctx.moveTo(bx, by - hPx);
-    ctx.lineTo(bx - crownR, by - hPx * 0.2);
-    ctx.lineTo(bx + crownR, by - hPx * 0.2);
+    ctx.lineTo(bx - crownR, by - hPx * baseHouppier);
+    ctx.lineTo(bx + crownR, by - hPx * baseHouppier);
     ctx.closePath();
     ctx.fillStyle = color;
     ctx.fill();
   } else {
     // houppier en ellipse (feuillu)
+    const centre = (1 + baseHouppier) / 2;
     ctx.beginPath();
-    ctx.ellipse(bx, by - hPx * 0.68, crownR, hPx * 0.38, 0, 0, 2 * Math.PI);
+    ctx.ellipse(bx, by - hPx * centre, crownR, (hPx * (1 - baseHouppier)) / 2, 0, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
   }
@@ -211,6 +224,41 @@ function drawParcel(
       ctx.fillRect(x * scale, (coteM - 1 - y) * scale, Math.ceil(scale), Math.ceil(scale));
     }
   }
+  // La clôture : on ne peint pas l'intérieur — ce serait un aplat de plus sur
+  // une carte qui en a déjà — on trace le GRILLAGE, c'est-à-dire les côtés de
+  // cellules qui séparent le clos du dehors.
+  ctx.strokeStyle = "#8a6d3b";
+  ctx.lineWidth = Math.max(1.5, scale * 0.22);
+  ctx.beginPath();
+  for (let y = 0; y < coteM; y++) {
+    for (let x = 0; x < coteM; x++) {
+      if (!snapshot.soilCloture[y * coteM + x]) continue;
+      const gauche = x > 0 ? snapshot.soilCloture[y * coteM + x - 1] : 0;
+      const droite = x < coteM - 1 ? snapshot.soilCloture[y * coteM + x + 1] : 0;
+      const dessous = y > 0 ? snapshot.soilCloture[(y - 1) * coteM + x] : 0;
+      const dessus = y < coteM - 1 ? snapshot.soilCloture[(y + 1) * coteM + x] : 0;
+      const px = x * scale;
+      const py = (coteM - 1 - y) * scale;
+      if (!gauche) {
+        ctx.moveTo(px, py);
+        ctx.lineTo(px, py + scale);
+      }
+      if (!droite) {
+        ctx.moveTo(px + scale, py);
+        ctx.lineTo(px + scale, py + scale);
+      }
+      if (!dessus) {
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + scale, py);
+      }
+      if (!dessous) {
+        ctx.moveTo(px, py + scale);
+        ctx.lineTo(px + scale, py + scale);
+      }
+    }
+  }
+  ctx.stroke();
+
   // du fond (nord, haut de l'écran) vers l'avant : l'occlusion raconte la profondeur
   const sorted = [...snapshot.trees].sort((a, b) => b.y - a.y);
   for (const tree of sorted) {
@@ -846,6 +894,7 @@ export function GameView() {
   const game = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<Mode>("selection");
+  const [avecManchon, setAvecManchon] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>("eau");
   const [especeId, setEspeceId] = useState("betula_pendula");
   const [rayonChaulage, setRayonChaulage] = useState(8);
@@ -912,7 +961,12 @@ export function GameView() {
     const mx = ((e.clientX - rect.left) / rect.width) * station.coteM;
     const my = station.coteM - ((e.clientY - rect.top) / rect.height) * station.coteM;
     if (mode === "planter") {
-      game.dispatch({ type: "planter", especeId, positions: [{ x: mx, y: my }] });
+      game.dispatch({
+        type: "planter",
+        especeId,
+        positions: [{ x: mx, y: my }],
+        avecManchon,
+      });
     } else if (mode === "chauler") {
       game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
     } else if (mode === "faucher") {
@@ -956,6 +1010,13 @@ export function GameView() {
       }
     }
   };
+
+  // Ce que l'éclaircie va garder : c'est l'arithmétique que le joueur ne peut
+  // pas faire de tête, et sans elle « densité visée » ne veut rien dire.
+  const tigesGardees = Math.max(
+    0,
+    Math.round((densiteCible * Math.PI * rayonChaulage * rayonChaulage) / 10_000),
+  );
 
   const selEspeces = [...new Set(selectedTrees.map((t) => t.especeId))];
   const selFruitsKg = selectedTrees.reduce((s, t) => s + t.fruitsKg, 0);
@@ -1067,9 +1128,9 @@ export function GameView() {
             type="button"
             style={btn(mode === "eclaircir")}
             onClick={() => setMode("eclaircir")}
-            title="Ramener une zone à une densité choisie, en désignant les tiges par un critère"
+            title="Abattre des tiges entières pour ramener une zone à la densité choisie. Rien à voir avec l'élagage, qui laisse l'arbre debout."
           >
-            🌲 Éclaircir
+            🪚 Éclaircir (abattre)
           </button>
           {snapshot.stockBrfKg > 1 && (
             <button
@@ -1171,28 +1232,44 @@ export function GameView() {
                   {e.nom} ({e.economie.prixPlantEur} €)
                 </button>
               ))}
-              <div style={{ color: "#6b6250", fontSize: 13 }}>
-                Clic sur la carte = 1 plant (1 h, espacement ≥ 1 m).
+              <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
+                <label style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={avecManchon}
+                    onChange={(e) => setAvecManchon(e.target.checked)}
+                  />{" "}
+                  🛡️ poser un manchon en même temps (+8 €, +30 min par plant)
+                </label>
+                <br />
+                Clic sur la carte = 1 plant (1 h, espacement ≥ 1 m). Sans manchon, un plant appétent
+                se fait brouter tant qu'il n'a pas sa flèche hors d'atteinte — vous pourrez toujours
+                en poser un après coup en sélectionnant l'arbre.
               </div>
             </div>
           )}
           {mode === "eclaircir" && (
             <div style={{ marginTop: 6 }}>
+              <div style={{ color: "#8a4b2d", fontSize: 13, marginBottom: 6 }}>
+                ⚠️ Éclaircir, c'est <strong>abattre des tiges entières</strong> pour desserrer le
+                peuplement — pas couper des branches. Pour travailler les branches d'un arbre et le
+                laisser debout, c'est <strong>élaguer</strong>, sur une sélection d'arbres.
+              </div>
               <button
                 type="button"
                 style={btn(critereEclaircie === "parLeBas")}
                 onClick={() => setCritereEclaircie("parLeBas")}
                 title="Retirer les dominés : la croissance se concentre sur les plus beaux"
               >
-                par le bas
+                par le bas (on abat les petits)
               </button>
               <button
                 type="button"
                 style={btn(critereEclaircie === "parLeHaut")}
                 onClick={() => setCritereEclaircie("parLeHaut")}
-                title="Prélever les gros : on récolte le capital"
+                title="Prélever les gros : on récolte le capital sur pied et on libère les dominés"
               >
-                par le haut
+                par le haut (on abat les gros)
               </button>
               <br />
               Densité visée :{" "}
@@ -1215,6 +1292,13 @@ export function GameView() {
                 style={{ verticalAlign: "middle", width: 70 }}
               />{" "}
               {rayonChaulage} m
+              <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
+                Un cercle de {rayonChaulage} m fait{" "}
+                {Math.round(Math.PI * rayonChaulage * rayonChaulage)} m² : à {densiteCible}{" "}
+                tiges/ha, on y <strong>garde {tigesGardees} tiges</strong> et on abat tout le reste,
+                en commençant par les{" "}
+                {critereEclaircie === "parLeHaut" ? "plus grandes" : "plus petites"}.
+              </div>
             </div>
           )}
           {(mode === "chauler" || mode === "faucher" || mode === "brf" || mode === "cloturer") && (
@@ -1326,9 +1410,9 @@ export function GameView() {
                   hauteurM: 6,
                 })
               }
-              title="Monter une bille propre : c'est ce qui fera du bois d'œuvre au lieu du chauffage"
+              title="Couper les branches basses des arbres sélectionnés, qui restent debout : la bille montée fera du bois d'œuvre au lieu du chauffage. Le houppier remonte, on le voit sur la carte."
             >
-              ✂️ Élaguer
+              ✂️ Élaguer à 6 m
             </button>
             <button
               type="button"

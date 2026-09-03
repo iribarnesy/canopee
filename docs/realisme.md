@@ -297,6 +297,22 @@ pas de crue ; sans plan d'eau, la pluie ruisselle et s'en va.
 Ce qui reste à faire : le **battement saisonnier** de la nappe (hors crue), et
 l'**érosion** — le ruissellement emporte de l'eau, pas encore de terre.
 
+## Ce que l'atlas ne contient pas encore, et ce que ça déforme
+
+Le peuplement spontané se partage entre les quatre ou cinq espèces de l'atlas
+qui tiennent sur la station. Le noisetier y occupe 30 à 35 % des tiges les
+soixante premières années, puis retombe à 5-13 % quand le couvert se ferme :
+la TRAJECTOIRE est juste — c'est bien un arbuste de lisière et de sous-étage,
+abondant jeune puis dominé — mais le NIVEAU est surévalué, faute de
+concurrents. Dans la réalité, cette strate arbustive se partage entre le
+prunellier, l'aubépine, le cornouiller, la ronce, les saules et le sureau,
+qu'on n'a pas encore. Tant qu'ils manquent, lire « noisetier » comme « strate
+arbustive ».
+
+*(À l'origine il montait à 48 % : le taux de régénération, plancher à 1 semis
+par pied et par an faute de savoir gérer les taux fractionnaires, ignorait que
+la noisette est mangée par tout le monde.)*
+
 ## Générateur de stations : ce qu'il reste à faire
 
 La dérivation (A9) est en place : une station se décrit par un profil

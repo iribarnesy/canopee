@@ -133,7 +133,7 @@ function performAction(action: GameAction) {
       if (n > 0)
         event(
           "🌱",
-          `${n} ${nomEspece(action.especeId)}${n > 1 ? "s" : ""} planté${n > 1 ? "s" : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
+          `${n} ${nomEspece(action.especeId)}${n > 1 ? "s" : ""} planté${n > 1 ? "s" : ""}${action.avecManchon ? " et manchonné" + (n > 1 ? "s" : "") : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
         );
       break;
     }
@@ -406,6 +406,9 @@ function postSnapshot() {
     soilPh: Float32Array.from(state.soil.ph),
     soilN: Float32Array.from(state.soil.mineralNG),
     soilHerbe: Float32Array.from(state.soil.herbeCouverture),
+    // La clôture change quand le joueur en pose : elle voyage à chaque
+    // instantané, sinon il ne verrait pas ce qu'il vient de payer.
+    soilCloture: Uint8Array.from(state.soil.cloture, (c) => (c ? 1 : 0)),
     refusals: pendingRefusals,
   };
   pendingRefusals = [];
@@ -415,6 +418,7 @@ function postSnapshot() {
     snapshot.soilPh.buffer,
     snapshot.soilN.buffer,
     snapshot.soilHerbe.buffer,
+    snapshot.soilCloture.buffer,
   ]);
 }
 
@@ -458,7 +462,16 @@ function stepWeeks(n: number) {
       if (!id) continue;
       const libelle = LIBELLE_CAUSE[(cause ?? "secheresse") as CauseMort] ?? "";
       const taille = agg.hMax >= 1 ? ` (jusqu'à ${agg.hMax.toFixed(1)} m)` : " (semis)";
-      event("💀", `${agg.n} ${nomEspece(id)}${agg.n > 1 ? "s" : ""} ${libelle}${taille}`);
+      // Sur un sol hors gamme, on donne les chiffres : c'est la seule cause de
+      // mort que le joueur peut corriger d'un geste (chauler).
+      const precision =
+        cause === "solHorsGamme" && state
+          ? ` — sol à pH ${state.station.phInitial.toFixed(1)}, il leur en faut ${getEspece(id).ph[0]} à ${getEspece(id).ph[1]}`
+          : "";
+      event(
+        "💀",
+        `${agg.n} ${nomEspece(id)}${agg.n > 1 ? "s" : ""} ${libelle}${taille}${precision}`,
+      );
     }
     // Gel des fleurs
     const frostedBefore = new Set(before.trees.filter((t) => t.bloomFrosted).map((t) => t.id));

@@ -174,9 +174,26 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     });
   };
 
+  /**
+   * Combien de tentatives cette année : la partie entière, plus une de plus
+   * avec la probabilité de la décimale. Sans ça, un taux inférieur à 1 ne
+   * produirait jamais rien — or c'est le régime normal des espèces dont les
+   * graines sont lourdes et convoitées, qui ne placent pas un semis par pied
+   * et par an.
+   */
+  const tentatives = (taux: number): number => {
+    const entier = Math.floor(taux);
+    const reste = taux - entier;
+    if (reste <= 0) return entier;
+    const r = rngFloat(rng);
+    rng = r.state;
+    return entier + (r.value < reste ? 1 : 0);
+  };
+
   // 1. Pluie de semis du paysage voisin (non contrôlable, docs/regles.md §8).
   for (const v of voisinage) {
-    for (let k = 0; k < v.semisParAn; k++) tryEstablish(v.especeId, null);
+    const n = tentatives(v.semisParAn);
+    for (let k = 0; k < n; k++) tryEstablish(v.especeId, null);
   }
 
   // 2. Semis des adultes de la parcelle en âge de grainer.
@@ -184,7 +201,8 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     if (!tree.alive) continue;
     const espece = getEspece(tree.especeId);
     if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
-    for (let k = 0; k < espece.regeneration.semisParAn; k++) tryEstablish(tree.especeId, tree);
+    const n = tentatives(espece.regeneration.semisParAn);
+    for (let k = 0; k < n; k++) tryEstablish(tree.especeId, tree);
   }
 
   return { newTrees, rng, nextTreeId };

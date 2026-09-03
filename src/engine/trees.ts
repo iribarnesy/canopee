@@ -20,6 +20,7 @@ export type CauseMort =
   | "engorgement"
   | "ombre"
   | "vieillesse"
+  | "solHorsGamme"
   | "feu"
   | "abroutissement"
   | "ravageurs"
@@ -32,6 +33,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   engorgement: "asphyxiés par l'eau",
   ombre: "étouffés par l'ombre",
   vieillesse: "de vieillesse",
+  solHorsGamme: "sur un sol hors de leur gamme de pH",
   feu: "dans l'incendie",
   abroutissement: "broutés par le gibier",
   ravageurs: "achevés par les ravageurs",
@@ -471,15 +473,22 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // joueur a besoin de savoir pour corriger le tir.
   let causeMort: CauseMort | undefined;
   if (!alive) {
-    const pire = Math.min(fSecSurvie, fEng, fLumSurvival, fAge);
+    // Le pH manquait à cette liste alors qu'il compte dans la survie : un
+    // arbre tué par un sol trop acide se voyait attribuer la « vieillesse »,
+    // parce que tous les facteurs listés valaient 1 et que l'âge était le
+    // premier testé. Un pommier de trois ans mort « de vieillesse » sur une
+    // lande à pH 4,5, c'était ça.
+    const pire = Math.min(fSecSurvie, fEng, fLumSurvival, fPH, fAge);
     causeMort =
-      pire === fAge
-        ? "vieillesse"
-        : pire === fEng
-          ? "engorgement"
-          : pire === fLumSurvival
-            ? "ombre"
-            : "secheresse";
+      pire === fPH
+        ? "solHorsGamme"
+        : pire === fAge
+          ? "vieillesse"
+          : pire === fEng
+            ? "engorgement"
+            : pire === fLumSurvival
+              ? "ombre"
+              : "secheresse";
   }
 
   return {

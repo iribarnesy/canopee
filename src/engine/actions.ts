@@ -168,6 +168,13 @@ export type GameAction =
   | {
       type: "planter";
       week: number;
+      /**
+       * Poser le manchon dans la foulée. C'est le geste réel : on ne plante
+       * pas d'abord pour revenir protéger la semaine suivante, on arrive avec
+       * ses plants et ses protections. Coût et temps identiques à l'action
+       * `proteger` séparée.
+       */
+      avecManchon?: boolean;
       especeId: string;
       positions: { x: number; y: number }[];
     }
@@ -418,14 +425,16 @@ function applyPlanter(
   let planted = 0;
   let importedKgC = 0;
 
+  const heuresParPlant = PLANT_HOURS + (action.avecManchon ? PROTECTION_HEURES : 0);
+  const euroParPlant = espece.economie.prixPlantEur + (action.avecManchon ? PROTECTION_EUR : 0);
   for (const pos of action.positions) {
-    if (hoursUsedWeek + PLANT_HOURS > WEEK_HOURS_CAP * state.economy.uth) {
+    if (hoursUsedWeek + heuresParPlant > WEEK_HOURS_CAP * state.economy.uth) {
       refusals.push(
         refuse(action.week, "planter", `plafond hebdomadaire atteint (${planted} plantés)`),
       );
       break;
     }
-    if (treasuryEur - espece.economie.prixPlantEur < OVERDRAFT_LIMIT_EUR) {
+    if (treasuryEur - euroParPlant < OVERDRAFT_LIMIT_EUR) {
       refusals.push(refuse(action.week, "planter", `découvert plafonné (${planted} plantés)`));
       break;
     }
@@ -461,13 +470,13 @@ function applyPlanter(
       pousseTendreM: 0,
       vigueur: 1,
       dommageHydraulique: 0,
-      protege: false,
+      protege: action.avecManchon === true,
       recepages: 0,
     });
     planted++;
-    treasuryEur -= espece.economie.prixPlantEur;
-    hoursUsedWeek += PLANT_HOURS;
-    hoursUsedYear += PLANT_HOURS;
+    treasuryEur -= euroParPlant;
+    hoursUsedWeek += heuresParPlant;
+    hoursUsedYear += heuresParPlant;
     importedKgC += treeTotalCarbonKg(espece, 0.3); // le plant arrive avec sa biomasse
   }
 

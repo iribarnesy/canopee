@@ -440,7 +440,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 90 }, // cépée à racines traçantes
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.4, fixateur: false },
-    regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 1 },
+    // La noisette est lourde, nourrissante et convoitée : mulots, écureuils,
+    // geais et balanin en prélèvent l'essentiel, et un noisetier ne place pas
+    // un descendant par an. On reste donc bien en dessous de 1 — le taux est
+    // un nombre d'établissements POTENTIELS, après l'entonnoir de mortalité
+    // graine→semis, et cet entonnoir est ici très étroit *(à calibrer)*.
+    regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "geai", semisParAn: 0.4 },
     litiere: { cnRatio: 25 },
     economie: { prixPlantEur: 8 },
     bois: { densite: 0.62, prixOeuvreEurM3: 70, rejetteDeSouche: true },

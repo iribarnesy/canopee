@@ -88,6 +88,8 @@ export interface Snapshot {
   soilN: Float32Array;
   /** couverture herbacée par cellule ∈ [0,1] */
   soilHerbe: Float32Array;
+  /** cellules closes (1) — le gibier n'y entre pas */
+  soilCloture: Uint8Array;
   /** refus d'actions depuis le dernier instantané */
   refusals: ActionRefusal[];
   /** événements depuis le dernier instantané */
