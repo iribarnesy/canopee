@@ -252,6 +252,12 @@ export interface TickFluxes {
   ruissellementSortantMm: number;
   /** part de la parcelle dont la nappe affleure (inondée) ∈ [0,1] */
   partInondee: number;
+  /** terre arrachée par le ruissellement cette semaine, kg/m² */
+  erosionArracheeKgM2: number;
+  /** terre effectivement sortie de la parcelle, kg/m² (le reste s'est déposé) */
+  erosionSortieKgM2: number;
+  /** azote parti avec la terre, kg/ha */
+  erosionNKgHa: number;
   /** matière sèche prélevée par le gibier cette semaine, kg */
   broutageKg: number;
   /** azote apporté par les dépôts atmosphériques, kg/ha (semaine) */

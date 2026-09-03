@@ -65,7 +65,9 @@ function checkConservation(sc: StationClimat, years: number) {
     // Entrées : minéralisation de l'humus, retours de litière, fixation
     // symbiotique et dépôts atmosphériques (ces derniers sont un apport venu
     // de l'extérieur du système, au même titre que la fixation).
-    expect(fluxes.uptakeKgHa + fluxes.leachedKgHa + deltaN).toBeCloseTo(
+    // Sorties : prélèvements, lessivage, et ce que la terre emporte en
+    // ruisselant hors de la parcelle (erosion.ts).
+    expect(fluxes.uptakeKgHa + fluxes.leachedKgHa + fluxes.erosionNKgHa + deltaN).toBeCloseTo(
       fluxes.mineralizationKgHa +
         fluxes.litterfallKgHa +
         fluxes.fixationKgHa +

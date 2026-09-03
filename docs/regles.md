@@ -231,6 +231,22 @@ implémentés, pas encore couplés à la croissance*. Les copier sur l'azote aur
 
 ---
 
+### 4.3 Érosion (implémenté)
+
+Le ruissellement arrache l'horizon de surface — *érosivité × ruissellement ×
+√pente × (1 − couverture)²* — et l'emporte vers l'aval avec sa charge : humus,
+litière, azote minéral et organique, phosphore, potassium. Trois traits
+comptent :
+
+- **sans ruissellement, pas d'érosion**, quelle que soit la pente : un versant
+  raide sous couvert forestier n'érode pas ;
+- le sédiment est **enrichi** (×3) : ce qui part est la meilleure part du sol ;
+- il se **dépose** en chemin, d'autant plus que la cellule d'arrivée est
+  couverte — le principe de la bande enherbée et de la haie sur courbe de
+  niveau. Environ un cinquième seulement quitte la parcelle.
+
+Ce qui sort est une perte sèche, comptée dans les bilans carbone et azote.
+
 ## 5. Lumière et strates
 
 - Modèle par **strates verticales** (les 7 strates de la forêt-jardin, ch6-A : canopée, arbres bas, arbustes, herbacées, couvre-sol, rhizosphère, lianes).

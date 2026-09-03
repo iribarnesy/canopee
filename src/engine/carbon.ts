@@ -79,6 +79,12 @@ export interface CarbonState {
    * stocké dans le produit (charpente, meuble) pendant sa durée de vie (§12).
    */
   oeuvreCumKgC: number;
+  /**
+   * Carbone du sol emporté hors de la parcelle par l'érosion, kg C. Il n'est
+   * ni émis ni vendu : il est parti ailleurs, et sans ce compteur il
+   * disparaîtrait du bilan (erosion.ts).
+   */
+  erosionCumKgC: number;
 }
 
 export function createCarbonState(): CarbonState {
@@ -89,6 +95,7 @@ export function createCarbonState(): CarbonState {
     exportedEnergyCumKgC: 0,
     importedPlantsCumKgC: 0,
     oeuvreCumKgC: 0,
+    erosionCumKgC: 0,
   };
 }
 

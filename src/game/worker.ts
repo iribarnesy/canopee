@@ -79,6 +79,8 @@ let pendingEvents: GameEvent[] = [];
 let droughtYearFlagged = -1;
 // Part inondée la semaine précédente : on ne raconte la crue qu'une fois.
 let partInondeePrecedente = 0;
+// Terre perdue depuis le début de l'année civile de jeu, kg/m².
+let erosionAnnee = 0;
 let bankruptcyAnnounced = false;
 
 /**
@@ -326,6 +328,9 @@ function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWea
 function emptyFluxes(): TickFluxes {
   return {
     partInondee: 0,
+    erosionArracheeKgM2: 0,
+    erosionSortieKgM2: 0,
+    erosionNKgHa: 0,
     rainMm: 0,
     etpMm: 0,
     evapMm: 0,
@@ -503,6 +508,20 @@ function stepWeeks(n: number) {
         event("🔥", "Sécheresse : la réserve du sol est presque à sec — les sensibles souffrent");
       }
     }
+    // Érosion : on ne la raconte pas semaine par semaine — elle est
+    // insensible à cette échelle — mais une fois l'an, et seulement quand elle
+    // dépasse ce qu'un sol peut reconstituer (~1 t/ha/an de formation).
+    erosionAnnee += ticked.fluxes.erosionSortieKgM2;
+    if (weekOfYear === 51) {
+      const tHaAn = erosionAnnee * 10;
+      if (tHaAn >= 1) {
+        event(
+          "🏜",
+          `Le versant perd sa terre : ${tHaAn.toFixed(1)} t/ha sorties cette année — couvrir le sol est le premier remède`,
+        );
+      }
+      erosionAnnee = 0;
+    }
     // Crue : le cours d'eau reçoit l'eau de son bassin d'amont et monte, la
     // nappe avec lui. On la raconte au moment où elle noie, pas chaque semaine.
     const inondee = ticked.fluxes.partInondee;
@@ -648,6 +667,7 @@ function init(
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
   partInondeePrecedente = 0;
+  erosionAnnee = 0;
   prevFruitsReadyKg = 0;
   post({ type: "ready", station: stationInfo() });
   postSnapshot();

@@ -64,8 +64,13 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       const deltaStock = totalStockKgC(state) - before;
       const npp = c1.nppCumKgC - c0.nppCumKgC;
       const emitted = c1.emittedCumKgC - c0.emittedCumKgC;
+      // L'érosion est une sortie comme une autre : le carbone du sol emporté
+      // n'est ni émis ni vendu, il est parti ailleurs (erosion.ts).
       const exported =
-        c1.exportedEnergyCumKgC - c0.exportedEnergyCumKgC + (c1.oeuvreCumKgC - c0.oeuvreCumKgC);
+        c1.exportedEnergyCumKgC -
+        c0.exportedEnergyCumKgC +
+        (c1.oeuvreCumKgC - c0.oeuvreCumKgC) +
+        (c1.erosionCumKgC - c0.erosionCumKgC);
       const imported = c1.importedPlantsCumKgC - c0.importedPlantsCumKgC;
       // Entrées : photosynthèse + plants achetés. Sorties : CO2 + bois vendu.
       expect(deltaStock + emitted + exported).toBeCloseTo(npp + imported, 4);

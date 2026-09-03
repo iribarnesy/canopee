@@ -25,6 +25,7 @@ import {
   hauteurDeCrueM,
   remonteeCapillaireMm,
 } from "./eau_surface";
+import { fractionEmportee, masseHorizonKgM2, partDeposee, terreArracheeKgM2 } from "./erosion";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import {
@@ -321,6 +322,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const debordementParCellule = new Array<number>(nCells).fill(0);
   let ruissellementEntrantMm = 0;
   let ruissellementSortantMm = 0;
+  // Érosion : la terre arrachée voyage avec sa charge de fertilité, et ce
+  // qu'elle emporte hors de la parcelle est une perte sèche (erosion.ts).
+  const masseSurfaceKgM2 = profil[0] ? masseHorizonKgM2(profil[0]) : 0;
+  const chargeHumusCG = new Array<number>(nCells).fill(0);
+  const chargeLitiereCG = new Array<number>(nCells).fill(0);
+  const chargeNminG = new Array<number>(nCells).fill(0);
+  const chargeNlitG = new Array<number>(nCells).fill(0);
+  const chargePG = new Array<number>(nCells).fill(0);
+  const chargeKG = new Array<number>(nCells).fill(0);
+  let erosionArracheeKg = 0;
+  let erosionSortieKg = 0;
+  let erosionSortieHumusCG = 0;
+  let erosionSortieLitiereCG = 0;
+  let erosionSortieNminG = 0;
+  let erosionSortieNlitG = 0;
+  let erosionSortiePG = 0;
+  let erosionSortieKG = 0;
 
   const eauCellule = new Array<number>(nH);
   const excesCellule = new Array<number>(nH);
@@ -482,11 +500,80 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // d'un bout à l'autre du versant en une seule passe. C'est l'eau GRAVITAIRE
   // qui bouge — celle que le sol ne retient pas ; la réserve utile, elle,
   // reste où elle est.
+  // L'eau qui court emporte la terre : ce qui suit descend avec elle, cellule
+  // par cellule (erosion.ts). `sedimentEnTransit` est ce qu'une cellule passe
+  // à sa voisine d'aval, en kg de terre par m².
+  const sedimentEnTransit = new Array<number>(nCells).fill(0);
+  const couvertureDe = (i: number) =>
+    Math.min(1, (herbeCouverture[i] ?? 0) + Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG));
   for (const i of descente) {
     const disponible = debordementParCellule[i] ?? 0;
+    const partRuisselante = fractionRuissellement(pentes[i] ?? 0);
+    const part = disponible * partRuisselante;
+    // ── Érosion : ce qui part en surface arrache de la terre au passage ─────
+    const arrachee = part > 0 ? terreArracheeKgM2(part, pentes[i] ?? 0, couvertureDe(i)) : 0;
+    const emporte = fractionEmportee(arrachee, masseSurfaceKgM2);
+    if (emporte > 0) {
+      // Le sédiment part avec sa charge : humus, litière, azote, phosphore et
+      // potassium de surface s'en vont dans la même proportion.
+      const dHumus = (humusCG[i] ?? 0) * emporte;
+      const dLitiere = (litterCG[i] ?? 0) * emporte;
+      const dNmin = (mineralNG[i] ?? 0) * emporte;
+      const dNlit = (litterNG[i] ?? 0) * emporte;
+      const dP = (phosphoreG[i] ?? 0) * emporte;
+      const dK = (potassiumG[i] ?? 0) * emporte;
+      humusCG[i] = (humusCG[i] ?? 0) - dHumus;
+      litterCG[i] = (litterCG[i] ?? 0) - dLitiere;
+      mineralNG[i] = (mineralNG[i] ?? 0) - dNmin;
+      litterNG[i] = (litterNG[i] ?? 0) - dNlit;
+      phosphoreG[i] = (phosphoreG[i] ?? 0) - dP;
+      potassiumG[i] = (potassiumG[i] ?? 0) - dK;
+      chargeHumusCG[i] = (chargeHumusCG[i] ?? 0) + dHumus;
+      chargeLitiereCG[i] = (chargeLitiereCG[i] ?? 0) + dLitiere;
+      chargeNminG[i] = (chargeNminG[i] ?? 0) + dNmin;
+      chargeNlitG[i] = (chargeNlitG[i] ?? 0) + dNlit;
+      chargePG[i] = (chargePG[i] ?? 0) + dP;
+      chargeKG[i] = (chargeKG[i] ?? 0) + dK;
+      sedimentEnTransit[i] = (sedimentEnTransit[i] ?? 0) + arrachee;
+      erosionArracheeKg += arrachee;
+    }
+    const jSediment = aval[i] ?? -1;
+    const enTransit = sedimentEnTransit[i] ?? 0;
+    if (enTransit > 0) {
+      if (jSediment < 0) {
+        // Point bas : la terre quitte la parcelle. C'est une perte sèche, et
+        // elle doit apparaître dans les bilans (carbone, azote, P, K).
+        erosionSortieKg += enTransit;
+        erosionSortieHumusCG += chargeHumusCG[i] ?? 0;
+        erosionSortieLitiereCG += chargeLitiereCG[i] ?? 0;
+        erosionSortieNminG += chargeNminG[i] ?? 0;
+        erosionSortieNlitG += chargeNlitG[i] ?? 0;
+        erosionSortiePG += chargePG[i] ?? 0;
+        erosionSortieKG += chargeKG[i] ?? 0;
+      } else {
+        // Une partie se dépose ici, le reste continue : un sol couvert peigne
+        // les particules, c'est le principe de la bande enherbée.
+        const depose = partDeposee(couvertureDe(jSediment));
+        humusCG[jSediment] = (humusCG[jSediment] ?? 0) + (chargeHumusCG[i] ?? 0) * depose;
+        litterCG[jSediment] = (litterCG[jSediment] ?? 0) + (chargeLitiereCG[i] ?? 0) * depose;
+        mineralNG[jSediment] = (mineralNG[jSediment] ?? 0) + (chargeNminG[i] ?? 0) * depose;
+        litterNG[jSediment] = (litterNG[jSediment] ?? 0) + (chargeNlitG[i] ?? 0) * depose;
+        phosphoreG[jSediment] = (phosphoreG[jSediment] ?? 0) + (chargePG[i] ?? 0) * depose;
+        potassiumG[jSediment] = (potassiumG[jSediment] ?? 0) + (chargeKG[i] ?? 0) * depose;
+        const reste = 1 - depose;
+        sedimentEnTransit[jSediment] = (sedimentEnTransit[jSediment] ?? 0) + enTransit * reste;
+        chargeHumusCG[jSediment] =
+          (chargeHumusCG[jSediment] ?? 0) + (chargeHumusCG[i] ?? 0) * reste;
+        chargeLitiereCG[jSediment] =
+          (chargeLitiereCG[jSediment] ?? 0) + (chargeLitiereCG[i] ?? 0) * reste;
+        chargeNminG[jSediment] = (chargeNminG[jSediment] ?? 0) + (chargeNminG[i] ?? 0) * reste;
+        chargeNlitG[jSediment] = (chargeNlitG[jSediment] ?? 0) + (chargeNlitG[i] ?? 0) * reste;
+        chargePG[jSediment] = (chargePG[jSediment] ?? 0) + (chargePG[i] ?? 0) * reste;
+        chargeKG[jSediment] = (chargeKG[jSediment] ?? 0) + (chargeKG[i] ?? 0) * reste;
+      }
+    }
     if (disponible <= 0) continue;
     // Ce qui ne ruisselle pas stagne sur place et finit par s'en aller.
-    const part = disponible * fractionRuissellement(pentes[i] ?? 0);
     overflowSum += disponible - part;
     if (part <= 0) continue;
     const j = aval[i] ?? -1;
@@ -1278,6 +1365,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC,
         importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedPlantsKgC,
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
+        erosionCumKgC:
+          state.carbon.erosionCumKgC + (erosionSortieHumusCG + erosionSortieLitiereCG) / 1000,
       },
       rng,
       nextTreeId,
@@ -1296,6 +1385,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       ruissellementEntrantMm: ruissellementEntrantMm / nCells,
       ruissellementSortantMm: ruissellementSortantMm / nCells,
       partInondee: cellulesInondees / nCells,
+      erosionArracheeKgM2: erosionArracheeKg / nCells,
+      erosionSortieKgM2: erosionSortieKg / nCells,
+      erosionNKgHa: ((erosionSortieNminG + erosionSortieNlitG) / nCells) * 10,
       herbeCouvertureMean: herbeSum / nCells,
       broutageKg: broutage.preleveKg,
       depositionKgHa: (depositionSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

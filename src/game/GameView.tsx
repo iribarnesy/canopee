@@ -1514,6 +1514,16 @@ export function GameView() {
               {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables · mycorhizes{" "}
               {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
             </dd>
+            {snapshot.fluxes.erosionArracheeKgM2 > 0 && (
+              <>
+                <dt>Érosion</dt>
+                <dd>
+                  {(snapshot.fluxes.erosionArracheeKgM2 * 520).toFixed(1)} t/ha/an arrachées ·{" "}
+                  <strong>{(snapshot.fluxes.erosionSortieKgM2 * 520).toFixed(1)}</strong> sorties de
+                  la parcelle
+                </dd>
+              </>
+            )}
             {snapshot.fluxes.partInondee > 0 && (
               <>
                 <dt>Crue</dt>

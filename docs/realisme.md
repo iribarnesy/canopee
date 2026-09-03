@@ -81,7 +81,8 @@ latéral, adret/ubac).*
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
 | A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
 | A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` |
-| A11 | La pente crée ruissellement, érosion et dessèchement d'adret | 🟡 | ruissellement et adret faits (`relief.ts`) ; l'érosion manque — le ruissellement emporte de l'eau, pas de terre |
+| A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ✅ | `relief.ts` + `erosion.ts` ; `erosion.test.ts` — 4 t/ha/an à 15 % sur sol nu, quasi rien sous couvert |
+| A27 | Ce que l'eau emporte est plus riche que le sol moyen, et se dépose plus bas | ✅ | enrichissement ×3, dépôt fonction du couvert de la cellule d'arrivée — le versant se déshabille par le sommet |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
 | A13 | L'eau ruisselle d'une cellule à l'autre : bas de pente frais, crête sèche | ✅ | `relief.ts` ; `relief.test.ts` — le coefficient de ruissellement dépend de la pente, de la COUVERTURE DU SOL et de la saturation |
@@ -294,8 +295,38 @@ ruissellement d'amont que la parcelle, monte d'autant, et sa nappe affleure
 dans le bas. Elle reflue dès que l'amont ne verse plus. Sans bassin d'amont,
 pas de crue ; sans plan d'eau, la pluie ruisselle et s'en va.
 
-Ce qui reste à faire : le **battement saisonnier** de la nappe (hors crue), et
-l'**érosion** — le ruissellement emporte de l'eau, pas encore de terre.
+Ce qui reste à faire : le **battement saisonnier** de la nappe (hors crue).
+
+## L'érosion : ce qui part d'un versant
+
+`erosion.ts`. Le ruissellement circulait sans rien emporter. Il emporte
+maintenant l'horizon de surface — celui qui porte l'humus, l'azote, le
+phosphore assimilable —, en gardant la structure de l'équation universelle de
+perte en terre ramenée à la semaine : *érosivité × ruissellement × √pente ×
+(1 − couverture)²*.
+
+Le carré sur le couvert n'est pas cosmétique : il dit que les premiers
+pourcents de sol nu coûtent peu et que les derniers coûtent tout. Mesuré sur
+dix ans de limon : **4 t/ha/an arrachées à 15 % de pente sur sol nu, 9 t/ha/an
+à 30 %, et pratiquement rien dès que l'herbe couvre** — les ordres de grandeur
+européens pour un sol cultivé nu.
+
+Deux choses distinguent l'érosion d'une simple perte de masse, et toutes deux
+sont modélisées : ce qui part est **plus riche** que le sol moyen (l'eau
+emporte les fines et les matières organiques, pas les cailloux : enrichissement
+×3), et ce qui part **se dépose plus bas** dès que l'eau ralentit, d'autant
+mieux que la cellule d'arrivée est couverte. C'est le colluvium de bas de
+versant, et c'est aussi pourquoi une bande enherbée ou une haie sur courbe de
+niveau arrête le sédiment. Seul un cinquième de la terre arrachée quitte
+réellement la parcelle — le rapport d'export classique à l'échelle de la
+parcelle.
+
+Ce qui franchit la limite est **perdu pour de bon**, et compté comme tel dans
+les bilans carbone et azote : sans ce compteur, l'humus emporté aurait disparu
+des livres.
+
+*Limite assumée* : l'horizon ne s'amincit pas. On perd la fertilité de la
+surface, pas encore son épaisseur ni sa réserve utile.
 
 ## Ce que l'atlas ne contient pas encore, et ce que ça déforme
 
