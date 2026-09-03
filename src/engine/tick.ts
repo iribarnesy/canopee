@@ -1388,6 +1388,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       erosionArracheeKgM2: erosionArracheeKg / nCells,
       erosionSortieKgM2: erosionSortieKg / nCells,
       erosionNKgHa: ((erosionSortieNminG + erosionSortieNlitG) / nCells) * 10,
+      erosionPKgHa: (erosionSortiePG / nCells) * 10,
+      erosionKKgHa: (erosionSortieKG / nCells) * 10,
       herbeCouvertureMean: herbeSum / nCells,
       broutageKg: broutage.preleveKg,
       depositionKgHa: (depositionSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

@@ -1521,6 +1521,12 @@ export function GameView() {
                   {(snapshot.fluxes.erosionArracheeKgM2 * 520).toFixed(1)} t/ha/an arrachées ·{" "}
                   <strong>{(snapshot.fluxes.erosionSortieKgM2 * 520).toFixed(1)}</strong> sorties de
                   la parcelle
+                  <span className="detail">
+                    {" "}
+                    · avec {(snapshot.fluxes.erosionNKgHa * 52).toFixed(1)} N ·{" "}
+                    {(snapshot.fluxes.erosionPKgHa * 52).toFixed(2)} P ·{" "}
+                    {(snapshot.fluxes.erosionKKgHa * 52).toFixed(1)} K kg/ha/an
+                  </span>
                 </dd>
               </>
             )}

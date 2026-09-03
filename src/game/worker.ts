@@ -331,6 +331,8 @@ function emptyFluxes(): TickFluxes {
     erosionArracheeKgM2: 0,
     erosionSortieKgM2: 0,
     erosionNKgHa: 0,
+    erosionPKgHa: 0,
+    erosionKKgHa: 0,
     rainMm: 0,
     etpMm: 0,
     evapMm: 0,

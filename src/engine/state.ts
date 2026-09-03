@@ -258,6 +258,10 @@ export interface TickFluxes {
   erosionSortieKgM2: number;
   /** azote parti avec la terre, kg/ha */
   erosionNKgHa: number;
+  /** phosphore assimilable parti avec la terre, kg/ha */
+  erosionPKgHa: number;
+  /** potassium échangeable parti avec la terre, kg/ha */
+  erosionKKgHa: number;
   /** matière sèche prélevée par le gibier cette semaine, kg */
   broutageKg: number;
   /** azote apporté par les dépôts atmosphériques, kg/ha (semaine) */
