@@ -133,7 +133,7 @@ function performAction(action: GameAction) {
       if (n > 0)
         event(
           "🌱",
-          `${n} ${nomEspece(action.especeId)}${n > 1 ? "s" : ""} planté${n > 1 ? "s" : ""}${action.avecManchon ? " et manchonné" + (n > 1 ? "s" : "") : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
+          `${n} ${nomEspece(action.especeId)}${n > 1 ? "s" : ""} planté${n > 1 ? "s" : ""}${action.avecManchon ? ` et manchonné${n > 1 ? "s" : ""}` : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
         );
       break;
     }
