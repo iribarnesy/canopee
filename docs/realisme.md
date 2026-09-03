@@ -295,7 +295,48 @@ ruissellement d'amont que la parcelle, monte d'autant, et sa nappe affleure
 dans le bas. Elle reflue dès que l'amont ne verse plus. Sans bassin d'amont,
 pas de crue ; sans plan d'eau, la pluie ruisselle et s'en va.
 
-Ce qui reste à faire : le **battement saisonnier** de la nappe (hors crue).
+## Cas d'étude : après l'incendie, l'inondation
+
+*Notes d'un conseil d'administration d'urgence après les feux de Gironde
+(Saumos, Landiras, 2022), transmises par l'auteur du jeu.* Le raisonnement des
+gestionnaires est le suivant : **la forêt fait baisser le niveau de la nappe**
+en transpirant ; là où elle a brûlé, elle ne pompe plus, la nappe remonte, et
+l'hiver suivant les zones brûlées s'inondent. S'y ajoute la perte de rugosité
+du terrain, qui accélère le ruissellement, et un exutoire — le canal des étangs
+— qu'on ne peut pas charger davantage sans inonder Lège.
+
+**Ce que le simulateur voit aujourd'hui.** Essai fait : pinède de quarante ans
+sur la lande, puis deux futurs à partir du même état, l'un intact, l'autre
+brûlé (arbres morts, couvert et litière détruits). Sur l'année qui suit :
+
+| | transpiration | évaporation du sol | drainage | ruissellement | part inondée |
+|---|---|---|---|---|---|
+| intacte | 136 mm | 247 mm | 453 mm | 7 mm | 0 % |
+| brûlée | **45 mm** | 301 mm | **486 mm** | 11 mm | **0 %** |
+
+Il voit donc la CAUSE — la transpiration s'effondre, l'eau qu'elle prenait
+percole désormais — et il voit la rugosité perdue (le ruissellement augmente).
+Mais il ne voit pas la CONSÉQUENCE : rien n'est inondé, parce que l'eau qui
+percole **quitte le système**. La profondeur de nappe est un champ figé, déduit
+du terrain et de l'eau libre ; aucun stock ne la reçoit, donc elle ne peut pas
+monter.
+
+**Ce qu'il faudrait, et pourquoi ce n'est pas un petit ajout.** Une nappe-stock
+par cellule, rechargée par ce qui percole, vidangée latéralement. Le
+prototype a été écrit et il boucle (conservation de l'eau vérifiée, drainage et
+remontée capillaire devenant des transferts internes). Mais il ne s'agit pas
+d'un module à brancher : mettre une nappe sous le sol change le régime
+hydrique de TOUTES les stations, et la chaîne complète est bouclée sur
+elle-même — une nappe haute fait mieux pousser les pins, des pins mieux
+poussants transpirent davantage, et c'est cela qui fait baisser la nappe. Sur
+la lande du jeu les pins plafonnent à trois mètres en quarante ans, là où les
+Landes réelles en font vingt : la boucle ne peut pas s'établir tant que les
+stations ne sont pas recalées avec leur nappe. C'est un chantier de
+recalibration, pas un ajout, et il a été remis à plus tard plutôt que livré à
+moitié.
+
+Ce qui reste à faire : la **nappe comme stock** (ci-dessus), dont le battement
+saisonnier découlera.
 
 ## L'érosion : ce qui part d'un versant
 
