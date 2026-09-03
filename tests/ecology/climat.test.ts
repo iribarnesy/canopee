@@ -17,9 +17,11 @@ import {
   facteurCo2Croissance,
   facteurCo2Transpiration,
   facteurPluie,
+  formeSaisonniere,
   getScenario,
   meteoDerivee,
   normalesHebdo,
+  rechauffementFranceC,
   rechauffementGlobalC,
 } from "../../src/engine/climat";
 import { advanceWeek } from "../../src/engine/game";
@@ -66,11 +68,32 @@ describe("les trajectoires GIEC", () => {
 
 describe("la France n'est pas le globe", () => {
   it("elle se réchauffe plus vite, et l'été plus que l'hiver", () => {
-    const hiver = amplificationFrance(2);
-    const ete = amplificationFrance(28);
-    expect(hiver).toBeGreaterThan(1.2);
+    const s = getScenario("ssp245");
+    const hiver = amplificationFrance(s, 2100, 2);
+    const ete = amplificationFrance(s, 2100, 28);
+    expect(hiver).toBeGreaterThan(1);
     expect(ete).toBeGreaterThan(hiver);
     expect(ete).toBeLessThan(2.2);
+  });
+
+  it("les trajectoires françaises valent ce que dit l'estimation contrainte", () => {
+    // Ribes et al. 2022 (CMIP6 contraint), base des paliers TRACC : à +2,7 °C
+    // pour le globe, la France est à +3,8 °C en moyenne annuelle, +3,2 l'hiver
+    // et +5,1 l'été. C'est ce que le moteur doit reproduire — on tolère un
+    // demi-degré, la forme saisonnière n'étant pas exactement sinusoïdale.
+    const s = getScenario("ssp245");
+    expect(rechauffementFranceC(s, 2100)).toBeCloseTo(3.8, 1);
+    const annuel = rechauffementFranceC(s, 2100);
+    expect(annuel * formeSaisonniere(2)).toBeGreaterThan(2.7);
+    expect(annuel * formeSaisonniere(2)).toBeLessThan(3.5);
+    expect(annuel * formeSaisonniere(28)).toBeGreaterThan(4.7);
+    expect(annuel * formeSaisonniere(28)).toBeLessThan(5.5);
+  });
+
+  it("la forme saisonnière ne fait que RÉPARTIR : sa moyenne annuelle vaut 1", () => {
+    let somme = 0;
+    for (let w = 0; w < 52; w++) somme += formeSaisonniere(w);
+    expect(somme / 52).toBeCloseTo(1, 2);
   });
 
   it("les étés s'assèchent pendant que les hivers s'arrosent", () => {

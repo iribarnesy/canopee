@@ -31,6 +31,14 @@ export interface Scenario {
   description: string;
   /** réchauffement global médian vs 1850-1900, °C, par année d'ancrage (AR6 WG1) */
   rechauffement: readonly (readonly [number, number])[];
+  /**
+   * Réchauffement ANNUEL EN FRANCE vs 1850-1900, °C. C'est lui que le moteur
+   * applique — la parcelle est en France, pas sur la moyenne du globe — et
+   * c'est lui qu'il faut lire quand on compare deux trajectoires.
+   */
+  rechauffementFrance: readonly (readonly [number, number])[];
+  /** fourchette France en 2100, °C (bornes basse et haute de l'estimation contrainte) */
+  fourchetteFrance2100?: readonly [number, number];
   /** concentration de CO₂, ppm, par année d'ancrage (trajectoires SSP) */
   co2: readonly (readonly [number, number])[];
 }
@@ -43,6 +51,13 @@ export interface Scenario {
  * la série contient sa propre tendance, on l'assimile à sa moyenne)*.
  */
 export const RECHAUFFEMENT_SERIE_C = 0.5;
+
+/**
+ * Réchauffement FRANÇAIS déjà contenu dans la série, °C vs 1850-1900. La
+ * France s'est réchauffée plus vite que le globe : au milieu de la période
+ * observée (~1994), elle était à environ +0,9 °C quand le globe était à +0,5.
+ */
+export const RECHAUFFEMENT_SERIE_FRANCE_C = 0.9;
 
 /** CO₂ de référence, ppm : la moyenne de la période observée. */
 export const CO2_SERIE_PPM = 360;
@@ -57,6 +72,10 @@ export const SCENARIOS: readonly Scenario[] = [
       [1990, RECHAUFFEMENT_SERIE_C],
       [2100, RECHAUFFEMENT_SERIE_C],
     ],
+    rechauffementFrance: [
+      [1990, RECHAUFFEMENT_SERIE_FRANCE_C],
+      [2100, RECHAUFFEMENT_SERIE_FRANCE_C],
+    ],
     co2: [
       [1990, CO2_SERIE_PPM],
       [2100, CO2_SERIE_PPM],
@@ -66,7 +85,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: "ssp126",
     nom: "SSP1-2.6",
     description:
-      "Neutralité carbone atteinte vers 2050 : le réchauffement se stabilise autour de +1,8 °C.",
+      "Neutralité carbone vers 2050. Le globe se stabilise à +1,8 °C — la France à +2,4 °C, et ses étés à +3.",
     rechauffement: [
       [2020, 1.1],
       [2030, 1.5],
@@ -74,6 +93,14 @@ export const SCENARIOS: readonly Scenario[] = [
       [2090, 1.8],
       [2100, 1.8],
     ],
+    rechauffementFrance: [
+      [2020, 1.7],
+      [2030, 2.0],
+      [2050, 2.3],
+      [2090, 2.4],
+      [2100, 2.4],
+    ],
+    fourchetteFrance2100: [2.0, 2.9],
     co2: [
       [2020, 412],
       [2050, 445],
@@ -84,7 +111,7 @@ export const SCENARIOS: readonly Scenario[] = [
     id: "ssp245",
     nom: "SSP2-4.5",
     description:
-      "La trajectoire « au fil de l'eau », celle vers laquelle pointent les politiques actuelles : +2,7 °C en 2100.",
+      "La trajectoire « au fil de l'eau », celle vers laquelle pointent les politiques actuelles : +2,7 °C pour le globe, mais +3,8 °C en France et +5,1 °C sur ses étés.",
     rechauffement: [
       [2020, 1.1],
       [2030, 1.5],
@@ -92,6 +119,14 @@ export const SCENARIOS: readonly Scenario[] = [
       [2090, 2.7],
       [2100, 2.7],
     ],
+    rechauffementFrance: [
+      [2020, 1.7],
+      [2030, 2.1],
+      [2050, 2.7],
+      [2090, 3.6],
+      [2100, 3.8],
+    ],
+    fourchetteFrance2100: [2.9, 4.8],
     co2: [
       [2020, 412],
       [2050, 480],
@@ -102,7 +137,15 @@ export const SCENARIOS: readonly Scenario[] = [
     id: "ssp585",
     nom: "SSP5-8.5",
     description:
-      "Émissions non contenues : +4,4 °C en 2100, soit près de +8 °C sur les étés français.",
+      "Émissions non contenues : +4,4 °C pour le globe, +6,7 °C en France, et près de +9 °C sur ses étés.",
+    rechauffementFrance: [
+      [2020, 1.7],
+      [2030, 2.2],
+      [2050, 3.3],
+      [2090, 6.4],
+      [2100, 6.7],
+    ],
+    fourchetteFrance2100: [5.2, 8.2],
     rechauffement: [
       [2020, 1.1],
       [2030, 1.6],
@@ -154,18 +197,55 @@ export function poidsEte(week: number): number {
 }
 
 /**
- * Facteur d'amplification français. La France se réchauffe environ une fois et
- * demie plus vite que la moyenne du globe (les continents plus que les océans),
- * et ses étés bien davantage — jusqu'au double.
+ * Répartition saisonnière du réchauffement français : combien vaut une semaine
+ * donnée par rapport à la MOYENNE ANNUELLE. De moyenne 1 par construction, donc
+ * sans effet sur le total — elle ne fait que le distribuer.
+ *
+ * En France, l'été se réchauffe beaucoup plus que le reste de l'année, et
+ * l'écart s'accentue avec le niveau de réchauffement (assèchement des sols,
+ * moins d'évaporation pour tempérer). Le carré sur le poids d'été concentre
+ * l'excès sur juillet-août au lieu de l'étaler : à +3,8 °C annuels, cela donne
+ * +3,0 l'hiver et +5,1 l'été, ce qui est l'estimation contrainte pour la
+ * France (Ribes et al. 2022, base des paliers TRACC).
+ *
+ * *(La version précédente amplifiait le réchauffement GLOBAL d'un facteur
+ * 1,4 en hiver et 1,9 en été. L'été tombait juste, mais l'hiver était trop
+ * chaud, et la moyenne annuelle française sortait à +4,5 °C au lieu de +3,8
+ * sous SSP2-4.5.)*
  */
-export function amplificationFrance(week: number): number {
-  return 1.4 + 0.5 * poidsEte(week);
+export function formeSaisonniere(week: number): number {
+  const p = poidsEte(week);
+  return 0.79 + 0.55 * p * p;
 }
 
-/** Anomalie de température à ajouter à la semaine observée, °C. */
+/**
+ * Facteur d'amplification français : ce que vaut une semaine française par
+ * rapport au réchauffement GLOBAL. Conservé parce qu'il se lit bien — la
+ * France se réchauffe une fois et demie plus vite que le globe, ses étés
+ * presque deux fois — mais le moteur, lui, part désormais des trajectoires
+ * françaises directement.
+ */
+export function amplificationFrance(scenario: Scenario, annee: number, week: number): number {
+  const global = rechauffementGlobalC(scenario, annee);
+  if (global <= 0) return 1;
+  return (rechauffementFranceC(scenario, annee) * formeSaisonniere(week)) / global;
+}
+
+/** Réchauffement annuel français vs 1850-1900, °C. */
+export function rechauffementFranceC(scenario: Scenario, annee: number): number {
+  return interpoler(scenario.rechauffementFrance, annee);
+}
+
+/**
+ * Anomalie de température à ajouter à la semaine observée, °C.
+ *
+ * On part du réchauffement FRANÇAIS — la parcelle est en France — dont on
+ * retire ce que la série d'observations contient déjà, puis on le répartit
+ * dans l'année.
+ */
 export function anomalieC(scenario: Scenario, annee: number, week: number): number {
-  const global = rechauffementGlobalC(scenario, annee) - RECHAUFFEMENT_SERIE_C;
-  return global * amplificationFrance(week);
+  const france = rechauffementFranceC(scenario, annee) - RECHAUFFEMENT_SERIE_FRANCE_C;
+  return france * formeSaisonniere(week);
 }
 
 /**

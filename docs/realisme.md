@@ -295,6 +295,16 @@ ruissellement d'amont que la parcelle, monte d'autant, et sa nappe affleure
 dans le bas. Elle reflue dès que l'amont ne verse plus. Sans bassin d'amont,
 pas de crue ; sans plan d'eau, la pluie ruisselle et s'en va.
 
+## Les trajectoires climatiques sont françaises
+
+Le moteur partait du réchauffement mondial et l'amplifiait (×1,4 l'hiver,
+×1,9 l'été). L'été tombait juste ; l'hiver était trop chaud, et la moyenne
+annuelle française sortait à +4,5 °C au lieu de +3,8 sous SSP2-4.5. Il part
+maintenant des trajectoires FRANÇAISES — estimation observationnellement
+contrainte de Ribes et al., base des paliers TRACC — et ne fait que les
+répartir dans l'année, avec une forme saisonnière de moyenne 1 qui concentre
+l'excès sur juillet-août. L'interface affiche les deux : monde et France.
+
 ## Cas d'étude : après l'incendie, l'inondation
 
 *Notes d'un conseil d'administration d'urgence après les feux de Gironde

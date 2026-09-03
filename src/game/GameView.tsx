@@ -6,7 +6,13 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SCENARIOS, type ScenarioId } from "../engine/climat";
+import {
+  formeSaisonniere,
+  rechauffementFranceC,
+  rechauffementGlobalC,
+  SCENARIOS,
+  type ScenarioId,
+} from "../engine/climat";
 import {
   type CoteParcelle,
   type EauDeSurface,
@@ -830,6 +836,49 @@ function StartScreen({
           ))}
         </div>
         <p className="glose">{SCENARIOS.find((sc) => sc.id === scenario)?.description}</p>
+        {(() => {
+          const sc = SCENARIOS.find((x) => x.id === scenario);
+          if (!sc || sc.id === "stable") return null;
+          const monde = rechauffementGlobalC(sc, 2100);
+          const france = rechauffementFranceC(sc, 2100);
+          const f = sc.fourchetteFrance2100;
+          return (
+            <div className="effets">
+              <span title="réchauffement moyen du globe en 2100, vs 1850-1900 (GIEC AR6)">
+                🌍 monde +{monde.toFixed(1)} °C
+              </span>
+              <span title="réchauffement annuel moyen en France — c'est celui que subit la parcelle">
+                🇫🇷 France <strong>+{france.toFixed(1)} °C</strong>
+                {f && ` [${f[0].toFixed(1)} ; ${f[1].toFixed(1)}]`}
+              </span>
+              <span title="l'été se réchauffe bien plus que la moyenne annuelle">
+                ☀️ été français +{(france * formeSaisonniere(28)).toFixed(1)} °C
+              </span>
+              <span title="l'hiver se réchauffe moins que l'été, mais plus que le globe">
+                ❄️ hiver +{(france * formeSaisonniere(2)).toFixed(1)} °C
+              </span>
+            </div>
+          );
+        })()}
+        <details style={{ marginTop: 8, fontSize: 13, color: "var(--encre-douce)" }}>
+          <summary style={{ cursor: "pointer" }}>D'où viennent ces chiffres</summary>
+          <p style={{ marginTop: 6 }}>
+            Le réchauffement mondial vient du sixième rapport du GIEC. Les valeurs françaises,
+            elles, ne s'en déduisent pas par une simple règle de trois : la France se réchauffe
+            environ une fois et demie plus vite que le globe, et ses étés presque deux fois —
+            l'assèchement des sols supprimant l'évaporation qui les tempérait.
+          </p>
+          <p>
+            Ces valeurs sont celles de l'<strong>estimation observationnellement contrainte</strong>{" "}
+            (Ribes et al., CMIP6), qui sert de base aux paliers <strong>TRACC</strong>, le
+            référentiel français d'adaptation. Elles sont nettement plus chaudes que les projections
+            régionales EURO-CORDEX diffusées par DRIAS-2020, surtout en été : la plupart de ces
+            modèles régionaux ne font varier ni les aérosols ni l'effet physiologique du CO₂ sur les
+            stomates, et sous-estiment de ce fait le réchauffement estival. Pour quoi que ce soit
+            qui ressemble à de la planification, ce sont les paliers TRACC qu'on attend de vous, pas
+            des sorties SSP brutes.
+          </p>
+        </details>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13 }}>Année de départ</span>
           <div className="seg">

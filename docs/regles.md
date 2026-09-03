@@ -491,6 +491,31 @@ excellence — et la plus menacée de France depuis l'arrivée de la chalarose.
 
 ### 10 bis. Trajectoire climatique (implémenté)
 
+**Les chiffres sont français, pas mondiaux.** Le moteur ne part plus du
+réchauffement global qu'il amplifierait : il part des trajectoires FRANÇAISES,
+et ne fait que les répartir dans l'année. C'est le seul chiffre qui a un sens
+pour une parcelle — et l'écart avec le monde est considérable :
+
+| Scénario | Monde 2100 | France, annuel | Hiver | Été |
+|---|---|---|---|---|
+| SSP1-2.6 | +1,8 | +2,4 [2,0 ; 2,9] | +1,9 | +3,2 |
+| SSP2-4.5 | +2,7 | **+3,8** [2,9 ; 4,8] | +3,0 | +5,1 |
+| SSP5-8.5 | +4,4 | **+6,7** [5,2 ; 8,2] | +5,3 | +9,0 |
+
+Ce sont les valeurs de l'**estimation observationnellement contrainte** (Ribes
+et al., CMIP6), qui sert de base aux paliers **TRACC**, le référentiel français
+d'adaptation. Elles sont nettement plus chaudes que les projections régionales
+EURO-CORDEX diffusées par DRIAS-2020, surtout en été : la plupart de ces
+modèles régionaux ne font varier ni les aérosols ni l'effet physiologique du
+CO₂ sur les stomates, et sous-estiment de ce fait le réchauffement estival —
+au point que leur meilleure estimation tombe hors de la plage CMIP6 contrainte.
+Pour de la planification d'adaptation, ce sont les paliers TRACC qu'on attend,
+pas des sorties SSP brutes.
+
+*(Auparavant le moteur amplifiait le réchauffement global d'un facteur 1,4 en
+hiver et 1,9 en été. L'été tombait juste, mais l'hiver était trop chaud et la
+moyenne annuelle française sortait à +4,5 °C au lieu de +3,8 sous SSP2-4.5.)*
+
 `src/engine/climat.ts` superpose aux observations réelles une trajectoire
 GIEC — SSP1-2.6, SSP2-4.5, SSP5-8.5, plus un témoin « climat figé » réservé au
 laboratoire. Le joueur choisit sa trajectoire et son année de départ (2026 ou
