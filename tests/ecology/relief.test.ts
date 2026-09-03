@@ -15,7 +15,9 @@ import { serieToWeeks } from "../../src/engine/meteo";
 import {
   altitudeParCellule,
   anomalieAltitudeC,
+  anomalieExpositionC,
   coefficientRuissellement,
+  ECART_ADRET_UBAC_C,
   facteurExpositionRayonnement,
   fractionRuissellement,
   ordreDeDescente,
@@ -168,5 +170,27 @@ describe("dans une partie : le bas de pente est plus frais que la crête", () =>
     };
     expect(apport(0)).toBe(0);
     expect(apport(6)).toBeGreaterThan(50);
+  });
+});
+
+describe("l'adret est plus chaud, pas seulement plus sec", () => {
+  it("un versant sud gagne un degré et demi sur un versant nord de même pente", () => {
+    const pente = { ...RELIEF_PLAT, pentePct: 50 };
+    const adret = anomalieExpositionC({ ...pente, expositionDeg: 180 });
+    const ubac = anomalieExpositionC({ ...pente, expositionDeg: 0 });
+    expect(adret).toBeCloseTo(ECART_ADRET_UBAC_C, 3);
+    expect(ubac).toBeCloseTo(-ECART_ADRET_UBAC_C, 3);
+    expect(adret - ubac).toBeCloseTo(2 * ECART_ADRET_UBAC_C, 3);
+  });
+
+  it("sans pente, l'exposition ne veut rien dire", () => {
+    for (const deg of [0, 90, 180, 270]) {
+      expect(Math.abs(anomalieExpositionC({ ...RELIEF_PLAT, expositionDeg: deg }))).toBe(0);
+    }
+  });
+
+  it("l'est et l'ouest sont à mi-chemin", () => {
+    const pente = { ...RELIEF_PLAT, pentePct: 50 };
+    expect(Math.abs(anomalieExpositionC({ ...pente, expositionDeg: 90 }))).toBeLessThan(0.001);
   });
 });

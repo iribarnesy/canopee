@@ -201,6 +201,28 @@ export function fractionRuissellement(pentePct: number): number {
 }
 
 /**
+ * Écart de température dû à l'EXPOSITION, °C.
+ *
+ * Un versant sud reçoit plus d'énergie qu'un versant nord, et cela ne se voit
+ * pas seulement dans l'évapotranspiration : le sol et l'air au ras du sol y
+ * sont réellement plus chauds. En France, l'écart entre un adret et un ubac de
+ * même altitude atteint un à deux degrés de moyenne — assez pour décaler le
+ * débourrement de deux semaines et pour que les deux versants ne portent pas
+ * la même végétation.
+ *
+ * *(Jusqu'ici la pente n'agissait que sur le rayonnement, donc sur la
+ * demande en eau. Un versant sud était plus SEC mais pas plus CHAUD, ce qui
+ * n'a pas de sens physique : c'est la même énergie qui fait les deux.)*
+ */
+export const ECART_ADRET_UBAC_C = 1.5;
+
+export function anomalieExpositionC(relief: Relief): number {
+  // cos(azimut − sud) : +1 plein sud, −1 plein nord.
+  const versSud = Math.cos(((relief.expositionDeg - 180) * Math.PI) / 180);
+  return ECART_ADRET_UBAC_C * versSud * Math.min(1, relief.pentePct / 50);
+}
+
+/**
  * Pente locale de chaque cellule, en % : la plus forte descente vers une
  * voisine, rapportée à la distance. Sur un versant régulier elle vaut la pente
  * de la parcelle ; sur un terrain dessiné elle varie, et c'est ce qu'il faut —

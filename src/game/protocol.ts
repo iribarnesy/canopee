@@ -90,6 +90,10 @@ export interface Snapshot {
   soilN: Float32Array;
   /** couverture herbacée par cellule ∈ [0,1] */
   soilHerbe: Float32Array;
+  /** profondeur de la nappe sous chaque cellule, cm — elle vit, elle (nappe.ts) */
+  soilNappeCm: Float32Array;
+  /** engorgement moyen du profil par cellule ∈ [0,1] : ce qui asphyxie les racines */
+  soilEngorgement: Float32Array;
   /** cellules closes (1) — le gibier n'y entre pas */
   soilCloture: Uint8Array;
   /** refus d'actions depuis le dernier instantané */

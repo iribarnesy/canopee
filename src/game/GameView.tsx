@@ -34,6 +34,7 @@ import {
   ALTITUDE_SERIE_M,
   altitudeParCellule,
   anomalieAltitudeC,
+  anomalieExpositionC,
   coefficientRuissellement,
   facteurExpositionRayonnement,
   penteParCellule,
@@ -62,7 +63,7 @@ const MOIS = [
 ];
 
 type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir" | "brf" | "cloturer";
-type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe";
+type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement";
 
 const panel: React.CSSProperties = {
   border: "1px solid var(--trait)",
@@ -209,12 +210,24 @@ function drawParcel(
         l = 85 - 35 * c;
       } else if (overlay === "nappe") {
         // Du bleu franc là où la nappe affleure au beige là où elle est hors
-        // de portée : c'est la carte qui explique la ripisylve.
-        const prof = nappeCm?.[i] ?? Number.POSITIVE_INFINITY;
+        // de portée : c'est la carte qui explique la ripisylve, et celle qui
+        // montre la nappe monter après un incendie.
+        const prof = Math.min(
+          snapshot.soilNappeCm[i] ?? Number.POSITIVE_INFINITY,
+          nappeCm?.[i] ?? Number.POSITIVE_INFINITY,
+        );
         const proximite = Number.isFinite(prof) ? Math.max(0, 1 - prof / 300) : 0;
         hue = 205;
         sat = 8 + 52 * proximite;
         l = 88 - 40 * proximite;
+      } else if (overlay === "engorgement") {
+        // Ce que les racines subissent vraiment : la macroporosité noyée. Du
+        // beige au violet, parce que ce n'est pas de l'eau disponible — c'est
+        // de l'asphyxie.
+        const e = Math.min(1, Math.max(0, snapshot.soilEngorgement[i] ?? 0));
+        hue = 280;
+        sat = 6 + 44 * e;
+        l = 90 - 45 * e;
       } else {
         l = 90 - 50 * Math.min(1, (snapshot.soilN[i] ?? 0) / 3);
         hue = 55;
@@ -356,6 +369,7 @@ function StartScreen({
   // surface au lieu de s'infiltrer, et ce qui arrive du bassin d'amont.
   const anomalieC = anomalieAltitudeC(relief, ALTITUDE_SERIE_M);
   const rayonnement = facteurExpositionRayonnement(relief);
+  const anomalieExposition = anomalieExpositionC(relief);
   // Quand le terrain est dessiné, la pente n'est plus un réglage : elle se lit
   // sur le modelé, exactement comme le moteur la lira (relief.ts).
   const penteEffective = useMemo(() => {
@@ -627,9 +641,15 @@ function StartScreen({
           </div>
         </div>
         <div className="effets">
-          <span title="0,6 °C de moins par 100 m d'altitude, par rapport à la station météo">
-            🌡 {anomalieC >= 0 ? "+" : ""}
-            {anomalieC.toFixed(1)} °C
+          <span title="0,6 °C de moins par 100 m d'altitude, et l'écart entre adret et ubac">
+            🌡 {anomalieC + anomalieExposition >= 0 ? "+" : ""}
+            {(anomalieC + anomalieExposition).toFixed(1)} °C
+            <span className="detail">
+              {" "}
+              (altitude {anomalieC >= 0 ? "+" : ""}
+              {anomalieC.toFixed(1)}, exposition {anomalieExposition >= 0 ? "+" : ""}
+              {anomalieExposition.toFixed(1)})
+            </span>
           </span>
           <span title="un versant sud reçoit plus d'énergie : il évapore plus et sèche plus tôt">
             ☀️ rayonnement {rayonnement >= 1 ? "+" : ""}
@@ -641,6 +661,13 @@ function StartScreen({
           </span>
           <span title="eau reçue du bassin situé au-dessus, en semaine de pluie moyenne">
             ⬇️ {amontMm.toFixed(1)} mm/sem d'amont
+          </span>
+          <span title="la forme décide de la façon dont l'eau se rassemble ou s'écarte">
+            {relief.forme === "vallon"
+              ? "🕳 l'eau converge au milieu"
+              : relief.forme === "croupe"
+                ? "⛰ l'eau s'écarte, le sommet sèche"
+                : "▱ versant régulier, l'eau descend tout droit"}
           </span>
         </div>
       </section>
@@ -1191,7 +1218,8 @@ export function GameView() {
               ["ph", "pH"],
               ["azote", "Azote"],
               ["herbe", "Herbe"],
-              ...(station.eau.type !== "aucune" ? ([["nappe", "Nappe"]] as const) : []),
+              ["nappe", "Nappe"],
+              ["engorgement", "Engorgement"],
             ] as const
           ).map(([o, libelle]) => (
             <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>

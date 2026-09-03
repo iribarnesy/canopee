@@ -24,7 +24,7 @@ import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
-import { profondeurEquilibreCm } from "../engine/nappe";
+import { profondeurEquilibreCm, profondeurPourStock } from "../engine/nappe";
 import {
   type Bordures,
   bordersUniformes,
@@ -35,10 +35,11 @@ import {
   ALTITUDE_SERIE_M,
   altitudeParCellule,
   anomalieAltitudeC,
+  anomalieExpositionC,
   type Relief,
 } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
-import { ruHorizonMm } from "../engine/soil";
+import { porositeDrainageMm, ruHorizonMm } from "../engine/soil";
 import {
   createGameState,
   type GameState,
@@ -302,7 +303,12 @@ function meteoSemaine(absolue: number, anneeBase = anneeDepart): WeekWeather {
     anneeBase + Math.floor(absolue / 52),
     normales,
     // L'altitude de la parcelle par rapport à celle de la station météo.
-    sc ? anomalieAltitudeC(relief ?? sc.station.relief, ALTITUDE_SERIE_M) : 0,
+    // Ce que le relief change à la température : l'altitude refroidit, et
+    // l'exposition sépare l'adret de l'ubac (relief.ts).
+    sc
+      ? anomalieAltitudeC(relief ?? sc.station.relief, ALTITUDE_SERIE_M) +
+          anomalieExpositionC(relief ?? sc.station.relief)
+      : 0,
   );
 }
 
@@ -327,6 +333,33 @@ function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWea
   const station = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!station) throw new Error(`station inconnue : ${stationId}`);
   return syntheticYear(station.climat);
+}
+
+/** Profondeur de la nappe sous chaque cellule, cm (nappe.ts). */
+function nappeParCellule(state: GameState): Float32Array {
+  const profil = state.station.profil;
+  return Float32Array.from(state.soil.nappeMm, (mm) => profondeurPourStock(mm, profil));
+}
+
+/**
+ * Engorgement moyen du profil sous chaque cellule ∈ [0,1] : la part de la
+ * macroporosité occupée par l'eau, moyennée sur les horizons. C'est ce que les
+ * racines subissent, et ce qu'on veut pouvoir REGARDER sur la carte.
+ */
+function engorgementParCellule(state: GameState, nH: number): Float32Array {
+  const profil = state.station.profil;
+  const porosites = profil.map((h) => porositeDrainageMm(h));
+  const n = state.soil.mineralNG.length;
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let somme = 0;
+    for (let h = 0; h < nH; h++) {
+      const capacite = porosites[h] ?? 0;
+      if (capacite > 0) somme += Math.min(1, (state.soil.excessMm[i * nH + h] ?? 0) / capacite);
+    }
+    out[i] = somme / Math.max(1, nH);
+  }
+  return out;
 }
 
 function emptyFluxes(): TickFluxes {
@@ -421,6 +454,10 @@ function postSnapshot() {
     soilPh: Float32Array.from(state.soil.ph),
     soilN: Float32Array.from(state.soil.mineralNG),
     soilHerbe: Float32Array.from(state.soil.herbeCouverture),
+    // La nappe et l'engorgement changent chaque semaine : ils voyagent avec
+    // l'instantané, contrairement au champ figé de l'eau libre.
+    soilNappeCm: nappeParCellule(state),
+    soilEngorgement: engorgementParCellule(state, nHorizons),
     // La clôture change quand le joueur en pose : elle voyage à chaque
     // instantané, sinon il ne verrait pas ce qu'il vient de payer.
     soilCloture: Uint8Array.from(state.soil.cloture, (c) => (c ? 1 : 0)),
@@ -433,6 +470,8 @@ function postSnapshot() {
     snapshot.soilPh.buffer,
     snapshot.soilN.buffer,
     snapshot.soilHerbe.buffer,
+    snapshot.soilNappeCm.buffer,
+    snapshot.soilEngorgement.buffer,
     snapshot.soilCloture.buffer,
   ]);
 }
