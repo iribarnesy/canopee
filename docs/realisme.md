@@ -379,6 +379,31 @@ parcourue ni la remontée, il perd simplement moins d'arbres à chaque passage �
 son écorce est faite pour ça — et c'est lui qui porte le peuplement le plus
 haut à la fin. Survivre au feu et l'empêcher sont deux choses différentes.
 
+**Ce qui marche vraiment : intervenir après, et avec la bonne essence.** Changer
+d'essence AVANT le feu n'atténue qu'à la marge. Replanter dès que le feu a
+emporté le peuplement change davantage :
+
+| conduite | remontée | semaines de nappe haute | engorgement | ruissellement |
+|---|---|---|---|---|
+| pin, laissé à lui-même | 41 cm | 69 | 0,71 | 74 mm |
+| pin, replanté en pin | 38 cm | 67 | 0,59 | 53 mm |
+| pin, replanté en **aulne** | **31 cm** | **47** | **0,48** | 65 mm |
+| pin, replanté en chêne-liège | 62 cm | 99 | 0,82 | 82 mm |
+
+Replanter en aulne réduit d'un tiers la durée pendant laquelle la nappe reste
+haute. La raison est dans la fiche de l'espèce et nulle part ailleurs : l'aulne
+tolère l'engorgement au maximum de l'atlas (1,0) ET il a soif (confort 0,85).
+Il survit donc à ce que le feu a créé, et il boit exactement là où l'eau
+s'accumule. Replanter en chêne-liège fait l'inverse et AGGRAVE : xérophile
+(confort 0,35), il ne boit pas dans un sol détrempé. **Le bon arbre d'après-feu
+n'est pas celui qui résiste au feu, c'est celui qui tient dans l'eau.**
+
+**Une précision de vocabulaire** : « remontée de nappe » ne veut pas dire
+inondation de surface. Sur ce sable, la part de parcelle réellement sous eau
+reste nulle dans tous les essais ; ce que la remontée produit, c'est de
+l'ENGORGEMENT (0,48 à 0,90 de la macroporosité noyée) et du RUISSELLEMENT en
+plus — et c'est ce dernier qui inonde en aval, dans le canal des étangs.
+
 **Et un résultat contre-intuitif** : mieux faire pousser n'est pas une
 protection. Le peuplement qui transpire le plus tient la nappe le plus bas ;
 quand il brûle, elle remonte d'autant. La productivité aggrave le rebond.

@@ -30,6 +30,31 @@
  * pour ça) et c'est le peuplement le plus haut à la fin. Survivre au feu et
  * l'empêcher sont deux stratégies différentes.
  *
+ * ─── CE QUI MARCHE VRAIMENT : REPLANTER, ET AVEC QUOI ────────────────────────
+ * Changer d'essence AVANT le feu ne protège qu'à la marge. Intervenir APRÈS
+ * change davantage. Cinq graines, trente-huit ans, replantation dès qu'un feu
+ * emporte le peuplement :
+ *
+ *   conduite                       remontée   semaines hautes   engorgement   ruissellement
+ *   pin, laissé à lui-même           41 cm         69              0,71          74 mm
+ *   pin, replanté en pin             38 cm         67              0,59          53 mm
+ *   pin, replanté en AULNE           31 cm         47              0,48          65 mm
+ *   pin, replanté en chêne-liège     62 cm         99              0,82          82 mm
+ *
+ * Replanter en aulne réduit d'un tiers la durée pendant laquelle la nappe reste
+ * haute, et d'un tiers l'engorgement. La raison est dans la fiche de l'espèce
+ * et nulle part ailleurs : l'aulne tolère l'engorgement (1,0, le maximum de
+ * l'atlas) ET il a soif (seuil de confort 0,85). Il survit donc à ce que le
+ * feu a créé, et il boit exactement là où l'eau s'accumule.
+ *
+ * Replanter en chêne-liège fait l'inverse et AGGRAVE : c'est une espèce
+ * xérophile (confort 0,35), elle ne boit pas dans un sol détrempé. Le bon
+ * arbre après un incendie n'est pas celui qui résiste au feu, c'est celui qui
+ * tient dans l'eau.
+ *
+ * *(Dans cet essai la replantation est gratuite et instantanée. En partie elle
+ * coûte des heures et des plants, et c'est un autre débat.)*
+ *
  * ─── ET SURTOUT : LA VARIANCE ÉCRASE TOUT ────────────────────────────────────
  * D'une graine à l'autre, la même composition brûle de 0 à 4 500 m². Trois à
  * cinq parties sur seize ne connaissent aucun incendie. Un seul essai par
@@ -88,30 +113,61 @@ function planter(depart: GameState, melange: readonly string[]): GameState {
   return s;
 }
 
-/** Une partie : ce qui a brûlé, et si un incendie a emporté le peuplement. */
-function partie(melange: readonly string[], seed: number, annees: number) {
+/**
+ * Une partie. `replant` simule l'intervention du gestionnaire : dès qu'un feu
+ * emporte le peuplement, on replante l'essence indiquée.
+ */
+function partie(
+  melange: readonly string[],
+  seed: number,
+  annees: number,
+  replant?: readonly string[],
+) {
   let state = createGameState(saumos(), rngStateFromSeed(seed));
   state = planter(state, melange);
   let brulees = 0;
   let grosFeu = false;
+  let anFeu = -1;
+  let nappeAvantFeu = 0;
+  let semainesHautes = 0;
+  let engorgementApres = 0;
   for (let i = 0; i < annees * 52; i++) {
+    const an = Math.floor(i / 52);
     const r = tick(state, meteo(i));
     state = r.state;
     if (r.incendie) {
       brulees += r.incendie.cellulesBrulees;
-      if (r.incendie.arbresTues > 30 && i > 15 * 52) grosFeu = true;
+      if (r.incendie.arbresTues > 30) {
+        if (i > 15 * 52) grosFeu = true;
+        if (an > 12 && anFeu < 0) {
+          anFeu = an;
+          nappeAvantFeu = r.fluxes.nappeProfondeurCm;
+        }
+        if (replant) state = planter(state, replant);
+      }
+    }
+    if (anFeu >= 0 && an > anFeu && an <= anFeu + 4) {
+      // « Nappe haute » : plus de dix centimètres au-dessus de son niveau
+      // d'avant le feu. C'est la DURÉE de l'anomalie qui compte, pas son pic.
+      if (r.fluxes.nappeProfondeurCm < nappeAvantFeu - 10) semainesHautes++;
+      engorgementApres = Math.max(engorgementApres, r.fluxes.waterloggingMean);
     }
   }
-  return { brulees, grosFeu };
+  return { brulees, grosFeu, semainesHautes, engorgementApres, aEuFeu: anFeu >= 0 };
 }
 
 /** Moyenne sur plusieurs graines : une seule ne dit rien (voir l'en-tête). */
-function surPlusieursGraines(melange: readonly string[]) {
+function surPlusieursGraines(melange: readonly string[], replant?: readonly string[]) {
   const graines = [1, 7, 33, 404];
-  const parties = graines.map((g) => partie(melange, g, 35));
+  const parties = graines.map((g) => partie(melange, g, 35, replant));
+  const avecFeu = parties.filter((p) => p.aEuFeu);
+  const moyenne = (f: (p: (typeof parties)[0]) => number) =>
+    avecFeu.length === 0 ? 0 : avecFeu.reduce((s, p) => s + f(p), 0) / avecFeu.length;
   return {
     bruleesMoyennes: parties.reduce((s, p) => s + p.brulees, 0) / parties.length,
     grosFeux: parties.filter((p) => p.grosFeu).length,
+    semainesHautes: moyenne((p) => p.semainesHautes),
+    engorgement: moyenne((p) => p.engorgementApres),
     parties: parties.length,
   };
 }
@@ -137,5 +193,28 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     // d'essence ne met pas à l'abri. Sur seize répétitions, les feuillus
     // connaissent encore un gros incendie une fois sur deux.
     expect(feuillus.bruleesMoyennes).toBeGreaterThan(0);
+  });
+});
+
+describe("l'intervention du gestionnaire : replanter, et avec quoi", () => {
+  const AULNE = ["alnus_glutinosa"];
+  const PIN = ["pinus_sylvestris"];
+  const laisse = surPlusieursGraines(PIN);
+  const replanteAulne = surPlusieursGraines(PIN, AULNE);
+
+  it("replanter en aulne raccourcit l'anomalie de nappe et l'engorgement", () => {
+    // L'aulne tolère l'engorgement au maximum de l'atlas (1,0) ET il a soif
+    // (confort 0,85) : il survit à ce que le feu a créé et il boit là où l'eau
+    // s'accumule. Aucune règle ne le dit — ce sont ses deux chiffres de fiche.
+    expect(replanteAulne.semainesHautes).toBeLessThan(laisse.semainesHautes);
+    expect(replanteAulne.engorgement).toBeLessThan(laisse.engorgement);
+  });
+
+  it("le bon arbre d'après-feu n'est pas celui qui résiste au feu", () => {
+    // Le chêne-liège survit à l'incendie mieux que tout autre, mais c'est une
+    // espèce xérophile : replanté après le feu, il ne boit pas le surplus et
+    // laisse la nappe haute plus longtemps que l'aulne.
+    const replanteLiege = surPlusieursGraines(PIN, ["quercus_suber"]);
+    expect(replanteAulne.semainesHautes).toBeLessThan(replanteLiege.semainesHautes);
   });
 });
