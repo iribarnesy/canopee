@@ -13,13 +13,7 @@ import {
   SCENARIOS,
   type ScenarioId,
 } from "../engine/climat";
-import {
-  type CoteParcelle,
-  type EauDeSurface,
-  profondeurNappeCm,
-  resumeEau,
-  SANS_EAU,
-} from "../engine/eau_surface";
+import { type EauDeSurface, profondeurNappeCm, resumeEau, SANS_EAU } from "../engine/eau_surface";
 import { ESPECES_V0, getEspece } from "../engine/especes";
 import { crownRadiusM } from "../engine/light";
 import {
@@ -44,6 +38,7 @@ import {
 import { STATIONS_V0 } from "../engine/stations";
 import { COULEUR_AUTRES, SPECIES_COLORS } from "../ui/couleurs";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
+import { PlanEau } from "./PlanEau";
 import type { Snapshot, SnapshotTree } from "./protocol";
 import { loadSave, useGame } from "./useGame";
 
@@ -730,23 +725,6 @@ function StartScreen({
         </div>
         {eau.type !== "aucune" && (
           <div className="reglages" style={{ marginTop: 10 }}>
-            {eau.type === "ruisseau" && (
-              <>
-                <span className="intitule">Il longe le</span>
-                <div className="choix">
-                  {(["nord", "est", "sud", "ouest"] as const).map((cote) => (
-                    <button
-                      key={cote}
-                      type="button"
-                      style={btn(eau.cote === cote)}
-                      onClick={() => setEau({ ...eau, cote: cote as CoteParcelle })}
-                    >
-                      {cote}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
             {eau.type === "mare" && (
               <>
                 <label htmlFor="rayon">Rayon</label>
@@ -760,28 +738,6 @@ function StartScreen({
                   onChange={(e) => setEau({ ...eau, rayonM: Number(e.target.value) })}
                 />
                 <span className="valeur">{eau.rayonM ?? 4} m</span>
-                <label htmlFor="marex">Position O-E</label>
-                <input
-                  id="marex"
-                  type="range"
-                  min={0.1}
-                  max={0.9}
-                  step={0.05}
-                  value={eau.xRel ?? 0.5}
-                  onChange={(e) => setEau({ ...eau, xRel: Number(e.target.value) })}
-                />
-                <span className="valeur">{((eau.xRel ?? 0.5) * 100).toFixed(0)} %</span>
-                <label htmlFor="marey">Position S-N</label>
-                <input
-                  id="marey"
-                  type="range"
-                  min={0.1}
-                  max={0.9}
-                  step={0.05}
-                  value={eau.yRel ?? 0.5}
-                  onChange={(e) => setEau({ ...eau, yRel: Number(e.target.value) })}
-                />
-                <span className="valeur">{((eau.yRel ?? 0.5) * 100).toFixed(0)} %</span>
               </>
             )}
             <label htmlFor="berge">Encaissement</label>
@@ -796,6 +752,9 @@ function StartScreen({
             />
             <span className="valeur">{eau.bergeM.toFixed(1)} m</span>
           </div>
+        )}
+        {eau.type !== "aucune" && choisie && (
+          <PlanEau eau={eau} coteM={choisie.station.coteM} onChange={setEau} />
         )}
         {nappe && (
           <div className="effets">

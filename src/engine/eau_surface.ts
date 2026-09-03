@@ -352,5 +352,7 @@ export function resumeEau(eau: EauDeSurface): string {
   if (eau.type === "aucune") return "pas d'eau de surface";
   const encaissement = `berge ${eau.bergeM.toFixed(1)} m`;
   if (eau.type === "ruisseau") return `ruisseau au ${eau.cote ?? "sud"} · ${encaissement}`;
-  return `mare de ${(eau.rayonM ?? 3).toFixed(0)} m de rayon · ${encaissement}`;
+  const ouestEst = Math.round((eau.xRel ?? 0.5) * 100);
+  const sudNord = Math.round((eau.yRel ?? 0.5) * 100);
+  return `mare de ${(eau.rayonM ?? 3).toFixed(0)} m · à ${ouestEst} % d'ouest en est et ${sudNord} % du sud · ${encaissement}`;
 }
