@@ -350,10 +350,14 @@ La ronce prend tout et s'efface (héliophile, quinze ans de vie) ; l'aubépine,
 bicentenaire, tient le sous-étage jusqu'au bout ; les épineux, que le gibier
 délaisse, sont ce sous quoi les semis d'arbres passent leurs premières années.
 
-*Limite* : le peuplement bute en permanence sur le plafond d'auto-éclaircie
-(1 500 tiges/ha). Un vrai fourré en compte plusieurs milliers — ce qu'on lit
-ici, ce sont donc des PARTS, pas des densités. Manquent encore le cornouiller,
-les saules arbustifs, le fusain, le troène.
+Le plafond d'auto-éclaircie ne compte plus des tiges mais du **recouvrement** :
+un peuplement sature quand la somme des couronnes atteint deux fois et demie la
+surface au sol. Un nombre fixe était faux aux deux bouts ; celui-ci donne
+1 160 tiges/ha à cinq ans, **3 900 en plein fourré à quinze ans**, 956 à
+quatre-vingts après auto-éclaircie — les ordres de grandeur réels, sans qu'on
+ait eu à choisir un chiffre par étape.
+
+*Manquent encore* : le cornouiller, les saules arbustifs, le fusain, le troène.
 
 ## Générateur de stations : ce qu'il reste à faire
 

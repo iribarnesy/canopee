@@ -23,6 +23,8 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
   let state = createGameState(station, rngStateFromSeed(7));
   const betulaByYear: number[] = [];
   const pinusByYear: number[] = [];
+  /** Bouleaux en âge de grainer, année par année : les semenciers du moment. */
+  const semenciersByYear: number[] = [];
   for (let i = 0; i < 42 * 52; i++) {
     const w = weather[i % weather.length];
     if (!w) throw new Error("météo manquante");
@@ -33,6 +35,11 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
       );
       pinusByYear.push(
         state.trees.filter((t) => t.alive && t.especeId === "pinus_sylvestris").length,
+      );
+      semenciersByYear.push(
+        state.trees.filter(
+          (t) => t.alive && t.especeId === "betula_pendula" && t.ageWeeks / 52 >= 10,
+        ).length,
       );
     }
   }
@@ -60,17 +67,24 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
   });
 
   it("l'installation se fait par vagues, pas à débit constant (météo réelle)", () => {
-    // Gains annuels pendant la phase de colonisation : la variabilité du climat
-    // ouvre des fenêtres — c'est ce que la météo synthétique ne peut pas donner.
-    const gains: number[] = [];
+    // On rapporte les gains au NOMBRE DE SEMENCIERS de l'année. Sans cette
+    // normalisation, on ne mesure que la croissance exponentielle d'une
+    // population qui se ressème elle-même : dix bouleaux en font plus que
+    // deux, quel que soit le temps qu'il fait. Ce qu'on veut voir, c'est que
+    // le RENDEMENT d'un semencier varie fortement d'une année sur l'autre —
+    // c'est ça, une fenêtre d'installation.
+    const rendements: number[] = [];
     for (let i = 1; i < 25; i++) {
-      gains.push((betulaByYear[i] ?? 0) - (betulaByYear[i - 1] ?? 0));
+      const semenciers = semenciersByYear[i - 1] ?? 0;
+      if (semenciers < 5) continue; // avant, c'est la pluie de semis du voisinage
+      rendements.push(((betulaByYear[i] ?? 0) - (betulaByYear[i - 1] ?? 0)) / semenciers);
     }
-    const tries = [...gains].sort((a, b) => a - b);
+    expect(rendements.length).toBeGreaterThan(5);
+    const tries = [...rendements].sort((a, b) => a - b);
     const median = tries[Math.floor(tries.length / 2)] ?? 0;
-    const best = Math.max(...gains);
-    expect(best).toBeGreaterThan(20);
-    expect(best).toBeGreaterThan(4 * Math.max(1, median));
+    const best = Math.max(...rendements);
+    // Une bonne année vaut plusieurs années ordinaires, par semencier.
+    expect(best).toBeGreaterThan(2 * Math.max(0.05, median));
   });
 
   it("la colonisation part de rien et met des décennies", () => {

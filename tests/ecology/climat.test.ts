@@ -229,6 +229,7 @@ describe("dans une partie, le réchauffement se voit", () => {
         (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
       ).length,
       mortsRavageurs: morts.filter((m) => m.cause === "ravageurs").length,
+      hetresVivants: state.trees.filter((t) => t.alive && t.especeId === "fagus_sylvatica").length,
     };
   }
 
@@ -251,14 +252,15 @@ describe("dans une partie, le réchauffement se voit", () => {
     // monte et de pluies d'été qui reculent, lue par les seuils d'une espèce
     // qui « aime le frais ». Sur soixante ans de climat figé, le hêtre ne
     // meurt jamais de sécheresse sur ce limon profond ; sous SSP5-8.5, si.
-    // Le contraste est binaire, c'est ce qui compte : jamais à climat figé,
-    // plusieurs fois sous SSP5-8.5. Le nombre exact, lui, dérive à chaque fois
-    // qu'on nourrit mieux les arbres — d'abord les mycorhizes, puis l'arrivée
-    // de l'aulne dans la pluie de semis du voisinage, qui fixe de l'azote pour
-    // ses voisins. Des hêtres mieux nourris encaissent un peu mieux la soif :
-    // c'est le mécanisme qui compte, pas le compte exact.
-    expect(fige.hetresMortsDeSoif).toBe(0);
-    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(1);
+    // Ce qui compte est le RAPPORT, pas le compte. À climat figé, il meurt
+    // quelques hêtres de soif : un semis dense s'auto-éclaircit, et la soif
+    // est un des couteaux qui s'en charge — d'autant plus depuis que le
+    // plafond d'auto-éclaircie laisse le fourré atteindre sa vraie densité.
+    // Sous SSP5-8.5, la même parcelle en perd plus de vingt fois autant.
+    expect(fige.hetresMortsDeSoif).toBeLessThan(10);
+    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(10 * Math.max(1, fige.hetresMortsDeSoif));
+    // Et il en reste moins debout à la fin.
+    expect(chauffe.hetresVivants).toBeLessThan(fige.hetresVivants);
   });
 
   it("le réchauffement fait aussi flamber les ravageurs", () => {

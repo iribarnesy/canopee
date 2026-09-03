@@ -412,6 +412,16 @@ clôture.
 
 ---
 
+### 7.6 Auto-éclaircie (implémenté)
+
+Ce qui sature un peuplement n'est pas un nombre de tiges mais la PLACE : la
+somme des couronnes rapportée à la surface au sol. Au-delà de deux fois et
+demie — un peuplement stratifié superpose deux à trois épaisseurs de houppier —
+il ne reste plus assez de lumière pour qu'un semis de plus s'installe. La même
+règle donne donc des milliers de tiges quand elles font trente centimètres et
+quelques centaines quand elles font vingt mètres, sans qu'on ait à choisir un
+chiffre pour chaque étape.
+
 ## 8. Le hors-parcelle (paysage, non contrôlable)
 
 Chaque bord de carte a une occupation qui produit des **flux entrants** :

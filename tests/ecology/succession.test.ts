@@ -49,6 +49,9 @@ function snapshotStats(state: GameState) {
         : 0,
     fagusAlive: alive.filter((t) => t.especeId === "fagus_sylvatica"),
     betulaAlive: alive.filter((t) => t.especeId === "betula_pendula").length,
+    /** Bouleaux plus âgés que la longévité de l'espèce : la cohorte de départ. */
+    betulaVieux: alive.filter((t) => t.especeId === "betula_pendula" && t.ageWeeks / 52 > 90)
+      .length,
   };
 }
 
@@ -84,10 +87,15 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     expect(fagusSousEtage).toBeGreaterThan(an60.fagusAlive.length / 2);
   });
 
-  it("an 120 : la cohorte pionnière initiale s'est effondrée (longévité du bouleau ~90 ans)", () => {
-    // Le bouleau se maintient par recrutement dans ses propres trouées, mais
-    // décline ; la banque de hêtres, elle, grossit.
-    expect(an120.betulaAlive).toBeLessThan(an60.betulaAlive * 0.75);
+  it("an 120 : la cohorte pionnière initiale s'est éteinte (longévité du bouleau ~90 ans)", () => {
+    // On compte ce que le titre annonce : les VIEUX bouleaux, ceux de la
+    // vague de colonisation. Le nombre total, lui, ne dit rien — le bouleau se
+    // maintient en se ressemant dans ses propres trouées, et c'est justement
+    // ce qui fait de lui un pionnier qui dure sans jamais vieillir.
+    // Pas tout à fait zéro : la sénescence s'étale, et quelques sujets
+    // dépassent leur longévité avant de céder. Mais il n'en reste qu'une
+    // poignée sur la centaine qui tenait le terrain à soixante ans.
+    expect(an120.betulaVieux).toBeLessThan(0.1 * an60.betulaAlive);
     expect(an120.fagusAlive.length).toBeGreaterThan(an60.fagusAlive.length);
   });
 

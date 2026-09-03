@@ -20,8 +20,22 @@ import { phFactor, type TreeState } from "./trees";
 
 /** distance moyenne de dispersion par le vent, m (exponentielle) */
 const WIND_MEAN_DISTANCE_M = 25;
-/** densité max de tiges vivantes, /m² (plafond d'auto-éclaircie *(à calibrer)*) */
-const MAX_TREE_DENSITY = 0.15;
+/**
+ * Plafond d'auto-éclaircie, exprimé en RECOUVREMENT et non en nombre de tiges.
+ *
+ * Un plafond fixe — on avait 1 500 tiges/ha — est faux aux deux bouts : un
+ * fourré de ronces et d'épineux en compte plusieurs milliers, une futaie
+ * adulte quelques centaines. Ce qui sature un peuplement, ce n'est pas un
+ * nombre, c'est la PLACE : la somme des couronnes rapportée à la surface du
+ * sol. Un peuplement stratifié en superpose deux à trois épaisseurs — au-delà,
+ * il ne reste plus assez de lumière pour qu'un semis de plus s'installe.
+ *
+ * C'est la loi d'auto-éclaircie, sous la forme la plus directe que permette un
+ * moteur qui connaît les houppiers : elle donne des milliers de tiges quand
+ * elles font trente centimètres, et quelques centaines quand elles font vingt
+ * mètres, sans qu'on ait à choisir un chiffre pour chaque étape.
+ */
+const RECOUVREMENT_MAX = 2.5;
 const MIN_SPACING_M = 1.2;
 const SEEDLING_HEIGHT_M = 0.3;
 
@@ -124,16 +138,23 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   const { trees, coteM, voisinage, leavesOn } = input;
   let rng = input.rng;
   let nextTreeId = input.nextTreeId;
-  const maxTrees = Math.floor(MAX_TREE_DENSITY * coteM * coteM);
   const newTrees: TreeState[] = [];
-  let aliveCount = 0;
-  for (const t of trees) if (t.alive) aliveCount++;
+  // Place déjà prise par les couronnes, m². Les semis qu'on ajoute comptent
+  // aussi : c'est ce qui empêche une année exceptionnelle d'en installer mille.
+  let couronnesM2 = 0;
+  const surfaceM2 = coteM * coteM;
+  const placeMaxM2 = RECOUVREMENT_MAX * surfaceM2;
+  for (const t of trees) {
+    if (!t.alive) continue;
+    const r = crownRadiusM(t.heightM, getEspece(t.especeId).lumiere.houppierRatio);
+    couronnesM2 += Math.PI * r * r;
+  }
 
   const tryEstablish = (especeId: string, parent: TreeState | null) => {
     const espece = getEspece(especeId);
     const pos = drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
     rng = pos.rng;
-    if (aliveCount + newTrees.length >= maxTrees) return;
+    if (couronnesM2 >= placeMaxM2) return;
     if (pos.x < 0 || pos.x >= coteM || pos.y < 0 || pos.y >= coteM) return; // perdu hors parcelle
     // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme.
     if (lightAtPoint(trees, pos.x, pos.y, leavesOn) < 2 * espece.lumiere.compensation) return;
@@ -151,6 +172,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       const dy = t.y - pos.y;
       if (dx * dx + dy * dy < MIN_SPACING_M * MIN_SPACING_M) return;
     }
+    couronnesM2 += Math.PI * crownRadiusM(SEEDLING_HEIGHT_M, espece.lumiere.houppierRatio) ** 2;
     newTrees.push({
       id: nextTreeId++,
       especeId,
