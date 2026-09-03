@@ -24,7 +24,6 @@ import {
   drainageAvecNappe,
   hauteurDeCrueM,
   remonteeCapillaireMm,
-  sourcesDeclarees,
 } from "./eau_surface";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
@@ -98,6 +97,7 @@ import {
   facteurExpositionRayonnement,
   fractionRuissellement,
   ordreDeDescente,
+  penteParCellule,
   RUISSELLEMENT_AMONT,
   voisineAval,
 } from "./relief";
@@ -110,7 +110,7 @@ import {
 } from "./soil";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
-import { PLUIE_DEFAUT_MM_AN, sourcesDuTerrain } from "./terrain";
+import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
 import type { TreeState } from "./trees";
 import {
   fractionsRacinairesParHorizon,
@@ -279,20 +279,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // soit c'est le terrain qui la fabrique — les cuvettes se remplissent, les
   // talwegs assez drainés deviennent des cours d'eau (terrain.ts). Les deux
   // produisent le même objet, et la suite ne sait pas laquelle c'est.
-  const sourcesEau =
-    station.eau.type === "terrain"
-      ? sourcesDuTerrain(altitudes, dims, {
-          apportAmontM2: station.relief.bassinAmontHa * 10_000,
-          // Une cuvette ne tient l'eau que si son bassin lui en apporte plus
-          // qu'elle n'en perd par le fond et par évaporation (terrain.ts).
-          pluieAnnuelleMm: station.pluieAnnuelleMm ?? PLUIE_DEFAUT_MM_AN,
-          profil: station.profil,
-        })
-      : sourcesDeclarees(station.eau, altitudes, dims);
+  const sourcesEau = sourcesDeLaParcelle(station.eau, altitudes, dims, {
+    apportAmontM2: station.relief.bassinAmontHa * 10_000,
+    // Une cuvette ne tient l'eau que si son bassin lui en apporte plus qu'elle
+    // n'en perd par le fond et par évaporation (terrain.ts).
+    pluieAnnuelleMm: station.pluieAnnuelleMm ?? PLUIE_DEFAUT_MM_AN,
+    profil: station.profil,
+  });
   const nappeReposCm = champDeNappeCm(sourcesEau, altitudes, dims, station.profil);
   const descente = ordreDeDescente(altitudes);
   const aval = voisineAval(altitudes, dims);
-  const partRuisselante = fractionRuissellement(station.relief.pentePct);
+  // La pente se lit CELLULE PAR CELLULE : sur un terrain dessiné, la berge
+  // d'une mare et le plateau qui la borde n'ont rien à voir (relief.ts).
+  const pentes = penteParCellule(altitudes, dims);
   // Ce qui arrive de l'amont : la pluie tombée sur le bassin versant qui verse
   // sur nous, ramenée à la surface de la parcelle.
   const surfaceHaParcelle = nCells / 10_000;
@@ -303,7 +302,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // L'eau d'amont ne tombe pas du ciel : elle franchit la bordure haute puis
   // traverse la parcelle en s'infiltrant au passage (relief.ts). La répartir
   // uniformément revenait à en faire de la pluie.
-  const poidsAmont = apportAmontMm > 0 ? entreesDAmont(altitudes, dims) : undefined;
+  // Au-delà de quelques hectares, ce qui arrive n'est plus du ruissellement
+  // diffus mais un cours d'eau : il entre par un point et traverse dans son
+  // lit (terrain.ts).
+  const amontM2 = station.relief.bassinAmontHa * 10_000;
+  const poidsAmont =
+    apportAmontMm > 0 ? entreesDAmont(altitudes, dims, amontM2 >= SEUIL_COURS_DEAU_M2) : undefined;
   const apportCelluleMm = (i: number) =>
     poidsAmont ? apportAmontMm * nCells * (poidsAmont[i] ?? 0) : 0;
   // La crue : le cours d'eau reçoit le même ruissellement d'amont que la
@@ -349,7 +353,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const amontIci = apportCelluleMm(i);
     const ruissele =
       (weather.rainMm + amontIci) *
-      coefficientRuissellement(station.relief.pentePct, couvertureSol, saturationSurface);
+      coefficientRuissellement(pentes[i] ?? 0, couvertureSol, saturationSurface);
     const bilan = profilHydro(
       {
         horizons: horizonsCellule,
@@ -482,7 +486,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const disponible = debordementParCellule[i] ?? 0;
     if (disponible <= 0) continue;
     // Ce qui ne ruisselle pas stagne sur place et finit par s'en aller.
-    const part = disponible * partRuisselante;
+    const part = disponible * fractionRuissellement(pentes[i] ?? 0);
     overflowSum += disponible - part;
     if (part <= 0) continue;
     const j = aval[i] ?? -1;

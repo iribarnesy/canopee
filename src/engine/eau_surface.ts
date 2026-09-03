@@ -68,7 +68,11 @@ export const PROFONDEUR_SANS_EFFET_CM = 400;
 export function cellulesEnEau(eau: EauDeSurface, dims: GridDims): boolean[] {
   const { widthM: w, heightM: h } = dims;
   const dedans = new Array<boolean>(w * h).fill(false);
-  if (eau.type === "aucune") return dedans;
+  // « terrain » n'est pas une forme déclarée : c'est le modelé qui décide, et
+  // seul terrain.ts sait le lire. Sans ce garde-fou, on tombait dans la
+  // branche « mare » et on inventait un disque de 3 m au milieu de la
+  // parcelle — ce que le joueur voyait à la place de ce qu'il avait dessiné.
+  if (eau.type === "aucune" || eau.type === "terrain") return dedans;
   if (eau.type === "ruisseau") {
     // Le lit occupe la première rangée du côté longé : le cours d'eau est
     // hors parcelle, sa berge est dedans.

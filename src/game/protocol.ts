@@ -104,6 +104,8 @@ export interface StationInfo {
   meteoLabel: string;
   /** eau libre de la parcelle : l'UI la dessine (eau_surface.ts) */
   eau: EauDeSurface;
+  /** cellules occupées par l'eau libre, telles que le moteur les voit */
+  enEau: boolean[];
   /** profondeur de la nappe sous chaque cellule, cm — fixe, envoyée une fois */
   nappeCm: Float32Array;
 }

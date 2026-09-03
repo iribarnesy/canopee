@@ -19,7 +19,7 @@ import {
   normalesHebdo,
   type ScenarioId,
 } from "../engine/climat";
-import { type EauDeSurface, profondeurNappeCm } from "../engine/eau_surface";
+import { champDeNappeCm, type EauDeSurface } from "../engine/eau_surface";
 import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
@@ -46,6 +46,7 @@ import {
   type TickFluxes,
 } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
+import { sourcesDeLaParcelle } from "../engine/terrain";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import type { FromWorker, GameEvent, SaveGame, Snapshot, ToWorker } from "./protocol";
@@ -572,16 +573,22 @@ function stationInfo() {
   const serie = meteoMode === "reelle" ? serieMeteoPour(sc.station.id) : undefined;
   const station = stationAvecPaysage(sc.station);
   const dims = gridDims(station);
+  const altitudes = altitudeParCellule(station.relief, dims);
+  // La MÊME résolution que le tick : l'eau affichée est celle que la
+  // simulation connaît, qu'elle soit déclarée ou déduite du modelé.
+  const sources = sourcesDeLaParcelle(station.eau, altitudes, dims, {
+    apportAmontM2: station.relief.bassinAmontHa * 10_000,
+    pluieAnnuelleMm: station.pluieAnnuelleMm,
+    profil: station.profil,
+  });
   return {
     eau: station.eau,
-    // Le champ de nappe ne bouge pas : on l'envoie une fois pour toutes, la
-    // carte s'en sert pour la teinte « nappe » (eau_surface.ts).
-    nappeCm: profondeurNappeCm(
-      station.eau,
-      altitudeParCellule(station.relief, dims),
-      dims,
-      station.profil,
-    ),
+    // Ni les cellules en eau ni le champ de nappe ne bougent : on les envoie
+    // une fois pour toutes, la carte s'en sert telles quelles.
+    enEau: sources
+      ? [...sources.enEau]
+      : new Array<boolean>(dims.widthM * dims.heightM).fill(false),
+    nappeCm: champDeNappeCm(sources, altitudes, dims, station.profil),
     id: sc.station.id,
     nom: sc.station.nom,
     coteM: sc.station.coteM,

@@ -201,6 +201,80 @@ export function fractionRuissellement(pentePct: number): number {
 }
 
 /**
+ * Pente locale de chaque cellule, en % : la plus forte descente vers une
+ * voisine, rapportée à la distance. Sur un versant régulier elle vaut la pente
+ * de la parcelle ; sur un terrain dessiné elle varie, et c'est ce qu'il faut —
+ * un plateau creusé d'une mare a des berges raides et un fond plat, et l'eau
+ * ne s'y comporte pas de la même façon d'un mètre carré à l'autre.
+ */
+export function penteParCellule(altitudes: readonly number[], dims: GridDims): Float32Array {
+  const { widthM: w, heightM: h } = dims;
+  const pentes = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const ici = altitudes[i] ?? 0;
+      let max = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const denivele = ici - (altitudes[ny * w + nx] ?? 0);
+          if (denivele <= 0) continue;
+          const distance = dx !== 0 && dy !== 0 ? Math.SQRT2 : 1;
+          max = Math.max(max, (denivele / distance) * 100);
+        }
+      }
+      pentes[i] = max;
+    }
+  }
+  return pentes;
+}
+
+/**
+ * L'encoche de la bordure haute : la cellule la plus basse du pourtour amont.
+ * C'est par là qu'un cours d'eau venu de l'extérieur entre dans la parcelle —
+ * un ruisseau ne franchit pas une limite n'importe où, il passe au point bas.
+ * `-1` si la parcelle est plate (il n'y a pas de bordure haute).
+ */
+export function pointDEntreeDAmont(altitudes: readonly number[], dims: GridDims): number {
+  const { widthM: w, heightM: h } = dims;
+  const poids = entreesDAmont(altitudes, dims);
+  // On repère d'abord LE CÔTÉ par lequel l'amont arrive — celui qui reçoit le
+  // plus de poids — puis, sur ce côté seulement, le point bas. Chercher le
+  // point bas parmi toutes les cellules de forte altitude donnerait un coin,
+  // et le ruisseau entrerait de travers.
+  const cotes = [
+    { cellules: Array.from({ length: w }, (_, x) => (h - 1) * w + x) },
+    { cellules: Array.from({ length: w }, (_, x) => x) },
+    { cellules: Array.from({ length: h }, (_, y) => y * w) },
+    { cellules: Array.from({ length: h }, (_, y) => y * w + w - 1) },
+  ];
+  let meilleurCote: number[] | undefined;
+  let meilleurPoids = 0;
+  for (const { cellules } of cotes) {
+    const total = cellules.reduce((s, i) => s + (poids[i] ?? 0), 0);
+    if (total > meilleurPoids) {
+      meilleurPoids = total;
+      meilleurCote = cellules;
+    }
+  }
+  if (!meilleurCote) return -1;
+  let meilleur = -1;
+  let plusBas = Number.POSITIVE_INFINITY;
+  for (const i of meilleurCote) {
+    const a = altitudes[i] ?? 0;
+    if (a < plusBas) {
+      plusBas = a;
+      meilleur = i;
+    }
+  }
+  return meilleur;
+}
+
+/**
  * Par où l'eau d'amont entre dans la parcelle : poids par cellule, de somme 1.
  *
  * Elle n'arrive pas en pluie uniforme — ce serait de la pluie, pas du
@@ -208,7 +282,25 @@ export function fractionRuissellement(pentePct: number): number {
  * en s'infiltrant au passage. Sur un terrain sans relief marqué, faute de
  * bordure haute identifiable, elle se répartit sur tout le pourtour.
  */
-export function entreesDAmont(altitudes: readonly number[], dims: GridDims): number[] {
+export function entreesDAmont(
+  altitudes: readonly number[],
+  dims: GridDims,
+  concentree = false,
+): number[] {
+  if (concentree) {
+    // Un cours d'eau franchit la limite en un point, pas en nappe : toute
+    // l'eau entre par l'encoche, puis suit le terrain (terrain.ts).
+    const poids = new Array<number>(dims.widthM * dims.heightM).fill(0);
+    const entree = pointDEntreeDAmont(altitudes, dims);
+    if (entree >= 0) {
+      poids[entree] = 1;
+      return poids;
+    }
+  }
+  return entreesDiffuses(altitudes, dims);
+}
+
+function entreesDiffuses(altitudes: readonly number[], dims: GridDims): number[] {
   const { widthM: w, heightM: h } = dims;
   const n = w * h;
   const bordures: number[] = [];

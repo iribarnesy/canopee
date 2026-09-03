@@ -25,13 +25,22 @@
  * ripisylve.
  */
 
-import type { SourcesEau } from "./eau_surface";
+import { type EauDeSurface, type SourcesEau, sourcesDeclarees } from "./eau_surface";
 import type { GridDims } from "./grid";
-import { voisineAval } from "./relief";
+import { pointDEntreeDAmont, voisineAval } from "./relief";
 import { conductiviteHorizonMmSemaine, type SoilProfile } from "./soil";
 
-/** Surface drainée à partir de laquelle un talweg devient un cours d'eau, m². */
-export const SEUIL_COURS_DEAU_M2 = 1500;
+/**
+ * Surface drainée à partir de laquelle un talweg porte un cours d'eau
+ * PERMANENT, m². Sous nos climats il faut plusieurs hectares — le chiffre
+ * varie beaucoup avec la géologie, on prend cinq *(à calibrer)*.
+ *
+ * Conséquence voulue : aucune parcelle d'un hectare ne fabrique son ruisseau
+ * toute seule. Un cours d'eau qui la traverse vient forcément de l'extérieur,
+ * c'est-à-dire de son bassin d'amont. *(Un seuil bas — on avait commencé à
+ * 1 500 m² — transformait la moindre rigole creusée en rivière.)*
+ */
+export const SEUIL_COURS_DEAU_M2 = 50_000;
 
 /**
  * Part de la conductivité du sol qui subsiste sous un plan d'eau : le fond se
@@ -55,8 +64,10 @@ export interface EauxDuTerrain {
   enEau: boolean[];
   /** cote de la surface libre au-dessus de chaque cellule en eau, m */
   niveauM: number[];
-  /** surface drainée par cellule, m² (utile pour comprendre le terrain) */
+  /** bassin versant de chaque cellule, m² — tout ce qui finit par lui parvenir */
   accumulationM2: Float32Array;
+  /** surface drainée par un vrai talweg, m² : nulle sur les surfaces planes */
+  accumulationTalwegM2: Float32Array;
 }
 
 /** File de priorité minimale sur (clé, valeur) — tas binaire. */
@@ -120,27 +131,47 @@ class TasMin {
  * exactement la hauteur d'eau.
  */
 export function remplirDepressions(altitudes: readonly number[], dims: GridDims): number[] {
+  return floodPrioritaire(altitudes, dims).niveau;
+}
+
+/**
+ * Le priority-flood, avec son ARBRE : en plus du niveau de remplissage, on
+ * retient par quelle cellule chacune a été atteinte. Comme l'inondation part
+ * des bords — les exutoires — et progresse vers l'intérieur, ce parent est la
+ * cellule vers laquelle l'eau s'écoule. On obtient ainsi un réseau de drainage
+ * valable PARTOUT, y compris sur les surfaces parfaitement planes où la
+ * comparaison de voisines ne donne rien (aucune n'est plus basse), et à
+ * l'intérieur des cuvettes pleines, où l'arbre conduit au déversoir.
+ */
+function floodPrioritaire(
+  altitudes: readonly number[],
+  dims: GridDims,
+): { niveau: number[]; parent: Int32Array; ordre: number[] } {
   const { widthM: w, heightM: h } = dims;
   const n = w * h;
   const niveau = new Array<number>(n).fill(Number.POSITIVE_INFINITY);
+  const parent = new Int32Array(n).fill(-1);
+  const ordre: number[] = [];
   const vu = new Array<boolean>(n).fill(false);
   const tas = new TasMin();
-  const pousser = (i: number, cle: number) => {
+  const pousser = (i: number, cle: number, venantDe: number) => {
     if (vu[i]) return;
     vu[i] = true;
     niveau[i] = cle;
+    parent[i] = venantDe;
     tas.pousser(cle, i);
   };
   for (let x = 0; x < w; x++) {
-    pousser(x, altitudes[x] ?? 0);
-    pousser((h - 1) * w + x, altitudes[(h - 1) * w + x] ?? 0);
+    pousser(x, altitudes[x] ?? 0, -1);
+    pousser((h - 1) * w + x, altitudes[(h - 1) * w + x] ?? 0, -1);
   }
   for (let y = 0; y < h; y++) {
-    pousser(y * w, altitudes[y * w] ?? 0);
-    pousser(y * w + w - 1, altitudes[y * w + w - 1] ?? 0);
+    pousser(y * w, altitudes[y * w] ?? 0, -1);
+    pousser(y * w + w - 1, altitudes[y * w + w - 1] ?? 0, -1);
   }
   while (tas.taille > 0) {
     const i = tas.retirer();
+    ordre.push(i);
     const x = i % w;
     const y = (i - x) / w;
     const courant = niveau[i] ?? 0;
@@ -152,23 +183,76 @@ export function remplirDepressions(altitudes: readonly number[], dims: GridDims)
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         const j = ny * w + nx;
         if (vu[j]) continue;
-        pousser(j, Math.max(altitudes[j] ?? 0, courant));
+        pousser(j, Math.max(altitudes[j] ?? 0, courant), i);
       }
     }
   }
-  return niveau;
+  return { niveau, parent, ordre };
 }
 
 /**
- * Surface drainée par chaque cellule, m². On descend le terrain REMPLI (sinon
- * l'eau s'arrête dans le premier creux) et chaque cellule passe son eau à sa
- * voisine d'aval. `apportAmontM2` est le bassin extérieur qui verse sur la
- * parcelle : il entre par le haut, réparti sur la crête.
+ * Surface drainée par chaque cellule, m².
+ *
+ * On suit l'arbre du priority-flood plutôt que la voisine la plus basse : sur
+ * une surface plane, aucune voisine n'est plus basse et la comparaison ne
+ * donne rien — chaque cellule garderait son seul mètre carré, et aucune
+ * cuvette n'aurait jamais de bassin versant. L'arbre, lui, conduit toujours
+ * quelque part, parce qu'il a été construit depuis les exutoires.
+ *
+ * `apportAmontM2` est le bassin extérieur qui verse sur la parcelle : il entre
+ * par la crête, comme l'eau du bilan hydrique (`entreesDAmont`).
  */
 export function accumulationEcoulement(
-  altitudesRemplies: readonly number[],
+  altitudes: readonly number[],
   dims: GridDims,
   apportAmontM2 = 0,
+): Float32Array {
+  return accumulationParArbre(altitudes, dims, apportAmontM2);
+}
+
+function accumulationParArbre(
+  altitudes: readonly number[],
+  dims: GridDims,
+  apportAmontM2: number,
+): Float32Array {
+  const { parent, ordre } = floodPrioritaire(altitudes, dims);
+  const n = dims.widthM * dims.heightM;
+  const accumulation = new Float32Array(n).fill(1);
+  if (apportAmontM2 > 0) {
+    const hautes = Math.max(1, Math.round(n * 0.05));
+    const parAltitude = altitudes
+      .map((_, i) => i)
+      .sort((a, b) => (altitudes[b] ?? 0) - (altitudes[a] ?? 0));
+    for (let k = 0; k < hautes; k++) {
+      const i = parAltitude[k];
+      if (i !== undefined) accumulation[i] = (accumulation[i] ?? 0) + apportAmontM2 / hautes;
+    }
+  }
+  // L'ordre du flood va des exutoires vers l'amont : on le remonte à l'envers
+  // pour que chaque cellule ait reçu tout son amont avant de passer à l'aval.
+  for (let k = ordre.length - 1; k >= 0; k--) {
+    const i = ordre[k];
+    if (i === undefined) continue;
+    const j = parent[i] ?? -1;
+    if (j >= 0) accumulation[j] = (accumulation[j] ?? 0) + (accumulation[i] ?? 0);
+  }
+  return accumulation;
+}
+
+/**
+ * Surface drainée par un vrai TALWEG, m² : cette fois on suit la voisine la
+ * plus pentue, et elle seule. Sur une surface plane il n'y en a pas, donc
+ * l'accumulation y reste à un mètre carré — ce qui est le résultat voulu.
+ *
+ * Il faut bien les deux : l'arbre du flood conduit toujours quelque part, ce
+ * qui donne un bassin versant partout, mais sur un plat il concentre l'eau
+ * dans une branche arbitraire. S'en servir pour repérer les cours d'eau
+ * inventerait des rivières au milieu d'une prairie parfaitement plane.
+ */
+function accumulationParPente(
+  altitudesRemplies: readonly number[],
+  dims: GridDims,
+  apportAmontM2: number,
 ): Float32Array {
   const n = dims.widthM * dims.heightM;
   const accumulation = new Float32Array(n).fill(1);
@@ -176,11 +260,19 @@ export function accumulationEcoulement(
     .map((_, i) => i)
     .sort((a, b) => (altitudesRemplies[b] ?? 0) - (altitudesRemplies[a] ?? 0));
   if (apportAmontM2 > 0) {
-    // La crête reçoit ce qui vient de l'extérieur : les 5 % les plus hauts.
-    const hautes = Math.max(1, Math.round(n * 0.05));
-    for (let k = 0; k < hautes; k++) {
-      const i = ordre[k];
-      if (i !== undefined) accumulation[i] = (accumulation[i] ?? 0) + apportAmontM2 / hautes;
+    // Un vrai cours d'eau entre par un point — l'encoche de la bordure haute —
+    // et non en nappe : c'est ce qui fait qu'il traverse la parcelle dans un
+    // lit au lieu de l'inonder. En dessous, c'est du ruissellement diffus, et
+    // il arrive par toute la crête.
+    if (apportAmontM2 >= SEUIL_COURS_DEAU_M2) {
+      const entree = pointDEntreeDAmont(altitudesRemplies, dims);
+      if (entree >= 0) accumulation[entree] = (accumulation[entree] ?? 0) + apportAmontM2;
+    } else {
+      const hautes = Math.max(1, Math.round(n * 0.05));
+      for (let k = 0; k < hautes; k++) {
+        const i = ordre[k];
+        if (i !== undefined) accumulation[i] = (accumulation[i] ?? 0) + apportAmontM2 / hautes;
+      }
     }
   }
   const aval = voisineAval(altitudesRemplies, dims);
@@ -220,7 +312,8 @@ export function eauxDuTerrain(
   const seuilCoursDeauM2 = options.seuilCoursDeauM2 ?? SEUIL_COURS_DEAU_M2;
   const n = dims.widthM * dims.heightM;
   const remplies = remplirDepressions(altitudes, dims);
-  const accumulation = accumulationEcoulement(remplies, dims, apportAmontM2);
+  const accumulation = accumulationParArbre(altitudes, dims, apportAmontM2);
+  const talweg = accumulationParPente(remplies, dims, apportAmontM2);
   const enEau = new Array<boolean>(n).fill(false);
   const niveauM = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) {
@@ -233,12 +326,12 @@ export function eauxDuTerrain(
       continue;
     }
     // Un talweg assez drainé : le lit du cours d'eau est au niveau du sol.
-    if ((accumulation[i] ?? 0) >= seuilCoursDeauM2) {
+    if ((talweg[i] ?? 0) >= seuilCoursDeauM2) {
       enEau[i] = true;
       niveauM[i] = sol;
     }
   }
-  const eaux = { enEau, niveauM, accumulationM2: accumulation };
+  const eaux = { enEau, niveauM, accumulationM2: accumulation, accumulationTalwegM2: talweg };
   if (options.pluieAnnuelleMm !== undefined && options.profil) {
     assecherLesCuvettesQuiNeTiennentPas(
       eaux,
@@ -251,14 +344,67 @@ export function eauxDuTerrain(
   return eaux;
 }
 
+/** Le bilan d'un plan d'eau : ce qu'il reçoit, ce qu'il perd, et sa survie. */
+export interface BilanCuvette {
+  /** cellules du plan d'eau, m² */
+  surfaceM2: number;
+  /** tout ce qui draine vers elle, m² */
+  bassinM2: number;
+  /** ce qu'elle reçoit, mm/an, ramenés à sa surface */
+  apportMmAn: number;
+  /** évaporation + fuite par le fond, mm/an */
+  pertesMmAn: number;
+  /** part des pertes due à l'infiltration (le reste est de l'évaporation) */
+  fuiteMmAn: number;
+  /** alimentée en permanence par un cours d'eau : le bilan ne s'applique pas */
+  alimenteeParUnCoursDeau: boolean;
+  tient: boolean;
+}
+
 /**
  * Une cuvette ne devient pas une mare parce qu'elle est creuse : il faut qu'il
- * y arrive plus d'eau qu'il n'en part. Ce qui arrive, c'est la pluie efficace
- * de son bassin versant ; ce qui part, c'est l'infiltration par le fond (que
- * le colmatage ralentit beaucoup) et l'évaporation de la surface libre. D'où
- * cette règle, qui vaut leçon d'agroforesterie : on ne creuse pas une mare
- * dans du sable.
+ * y arrive plus d'eau qu'il n'en part. Ce qui arrive, c'est la pluie entière
+ * tombée dessus — une surface libre ne transpire pas — plus la part efficace
+ * de ce que ses terres lui envoient ; ce qui part, c'est l'évaporation et
+ * l'infiltration par le fond, que le colmatage ralentit beaucoup.
+ *
+ * Deux conséquences que le joueur doit pouvoir lire : on ne creuse pas une
+ * mare dans du sable, et une mare trop grande pour son bassin s'assèche —
+ * l'évaporation croît avec la surface, l'apport non.
  */
+export function bilanDesCuvettes(
+  eaux: EauxDuTerrain,
+  dims: GridDims,
+  seuilCoursDeauM2: number,
+  pluieAnnuelleMm: number,
+  profil: SoilProfile,
+): { composante: number[]; bilan: BilanCuvette }[] {
+  const fond = profil[profil.length - 1];
+  const fuiteMmAn = fond ? conductiviteHorizonMmSemaine(fond) * 52 * COLMATAGE_DU_FOND : 0;
+  const pertesMmAn = fuiteMmAn + EVAPORATION_PLAN_DEAU_MM_AN;
+  return plansDEauConnexes(eaux, dims).map((composante) => {
+    const alimenteeParUnCoursDeau = composante.some(
+      (i) => (eaux.accumulationTalwegM2[i] ?? 0) >= seuilCoursDeauM2,
+    );
+    const bassinM2 = composante.reduce((m, i) => Math.max(m, eaux.accumulationM2[i] ?? 0), 0);
+    const terresM2 = Math.max(0, bassinM2 - composante.length);
+    const apportMmAn =
+      pluieAnnuelleMm + (terresM2 * pluieAnnuelleMm * PART_EFFICACE) / composante.length;
+    return {
+      composante,
+      bilan: {
+        surfaceM2: composante.length,
+        bassinM2,
+        apportMmAn,
+        pertesMmAn,
+        fuiteMmAn,
+        alimenteeParUnCoursDeau,
+        tient: alimenteeParUnCoursDeau || apportMmAn >= pertesMmAn,
+      },
+    };
+  });
+}
+
 function assecherLesCuvettesQuiNeTiennentPas(
   eaux: EauxDuTerrain,
   dims: GridDims,
@@ -266,22 +412,14 @@ function assecherLesCuvettesQuiNeTiennentPas(
   pluieAnnuelleMm: number,
   profil: SoilProfile,
 ): void {
-  const fond = profil[profil.length - 1];
-  if (!fond) return;
-  const fuiteMmAn = conductiviteHorizonMmSemaine(fond) * 52 * COLMATAGE_DU_FOND;
-  const pertesMmAn = fuiteMmAn + EVAPORATION_PLAN_DEAU_MM_AN;
-  for (const composante of plansDEauConnexes(eaux, dims)) {
-    // Un cours d'eau est alimenté par l'amont : il n'a pas à se justifier.
-    if (composante.some((i) => (eaux.accumulationM2[i] ?? 0) >= seuilCoursDeauM2)) continue;
-    // Le bassin de la cuvette, c'est ce qui converge vers elle : la plus
-    // grande accumulation qu'on y trouve. Ce qui tombe SUR le plan d'eau
-    // compte pour la pluie entière — une surface libre ne transpire pas — ;
-    // ce qui vient des terres alentour, seulement pour la part efficace.
-    const bassinM2 = composante.reduce((m, i) => Math.max(m, eaux.accumulationM2[i] ?? 0), 0);
-    const terresM2 = Math.max(0, bassinM2 - composante.length);
-    const apportMmAn =
-      pluieAnnuelleMm + (terresM2 * pluieAnnuelleMm * PART_EFFICACE) / composante.length;
-    if (apportMmAn >= pertesMmAn) continue;
+  for (const { composante, bilan } of bilanDesCuvettes(
+    eaux,
+    dims,
+    seuilCoursDeauM2,
+    pluieAnnuelleMm,
+    profil,
+  )) {
+    if (bilan.tient) continue;
     for (const i of composante) {
       eaux.enEau[i] = false;
       eaux.niveauM[i] = 0;
@@ -338,7 +476,9 @@ function porteeDesPlansDEau(
   for (const composante of plansDEauConnexes(eaux, dims)) {
     // Un cours d'eau est alimenté en permanence : sa portée est celle d'un
     // drain de versant. Une mare ne vaut que par sa taille.
-    const coursDeau = composante.some((i) => (eaux.accumulationM2[i] ?? 0) >= seuilCoursDeauM2);
+    const coursDeau = composante.some(
+      (i) => (eaux.accumulationTalwegM2[i] ?? 0) >= seuilCoursDeauM2,
+    );
     const rayonEquivalent = Math.sqrt(composante.length / Math.PI);
     const p = coursDeau ? 60 : Math.max(10, 6 * rayonEquivalent);
     for (const i of composante) portee[i] = p;
@@ -363,4 +503,22 @@ export function sourcesDuTerrain(
     niveauM: eaux.niveauM,
     porteeM: porteeDesPlansDEau(eaux, dims, options.seuilCoursDeauM2 ?? SEUIL_COURS_DEAU_M2),
   };
+}
+
+/**
+ * D'où vient l'eau libre d'une parcelle — déclarée ou déduite du modelé.
+ *
+ * Un seul endroit décide, et le moteur comme l'interface s'y adressent : sans
+ * ça, la carte peut afficher une eau que la simulation ne connaît pas (ou
+ * l'inverse), et le joueur ne voit pas le terrain qu'il a dessiné.
+ */
+export function sourcesDeLaParcelle(
+  eau: EauDeSurface,
+  altitudes: readonly number[],
+  dims: GridDims,
+  options: OptionsTerrain = {},
+): SourcesEau | undefined {
+  return eau.type === "terrain"
+    ? sourcesDuTerrain(altitudes, dims, options)
+    : sourcesDeclarees(eau, altitudes, dims);
 }

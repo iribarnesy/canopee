@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SCENARIOS, type ScenarioId } from "../engine/climat";
 import {
   type CoteParcelle,
-  cellulesEnEau,
   type EauDeSurface,
   profondeurNappeCm,
   resumeEau,
@@ -31,6 +30,7 @@ import {
   anomalieAltitudeC,
   coefficientRuissellement,
   facteurExpositionRayonnement,
+  penteParCellule,
   type Relief,
   RUISSELLEMENT_AMONT,
 } from "../engine/relief";
@@ -256,13 +256,23 @@ function StartScreen({
   const save = loadSave();
 
   const choisie = STATIONS_V0.find((s) => s.station.id === stationId);
-  // Changer de terrain remet le relief d'origine de la station : c'est celui
-  // qui va avec ce sol (un podzol landais n'est pas sur un flanc de montagne).
-  // Le joueur le déforme ensuite comme il veut.
-  useEffect(() => {
-    const s = STATIONS_V0.find((x) => x.station.id === stationId);
+  /**
+   * Choisir un terrain remet le relief d'origine de la station — c'est celui
+   * qui va avec ce sol, un podzol landais n'est pas sur un flanc de montagne —
+   * et abandonne le modelage, qui valait pour une parcelle d'une autre taille.
+   *
+   * Tout se fait ICI, dans le gestionnaire de clic, et non dans un effet : un
+   * effet se déclenche APRÈS le rendu, si bien qu'un joueur qui choisissait
+   * une station puis ouvrait l'éditeur voyait son modelage effacé dans la
+   * foulée par l'effet en retard.
+   */
+  const choisirStation = (id: string) => {
+    setStationId(id);
+    const s = STATIONS_V0.find((x) => x.station.id === id);
     if (s) setRelief(s.station.relief);
-  }, [stationId]);
+    setTerrain(undefined);
+    setEau((e) => (e.type === "terrain" ? SANS_EAU : e));
+  };
   // Ce que l'entourage donnera vraiment, calculé par le moteur lui-même : les
   // semis annoncés par un paysage sont filtrés par ce que CE sol supporte.
   const entourage = useMemo(
@@ -287,8 +297,20 @@ function StartScreen({
   // surface au lieu de s'infiltrer, et ce qui arrive du bassin d'amont.
   const anomalieC = anomalieAltitudeC(relief, ALTITUDE_SERIE_M);
   const rayonnement = facteurExpositionRayonnement(relief);
-  const ruissellementNu = coefficientRuissellement(relief.pentePct, 0.1, 0.5);
-  const ruissellementCouvert = coefficientRuissellement(relief.pentePct, 0.95, 0.5);
+  // Quand le terrain est dessiné, la pente n'est plus un réglage : elle se lit
+  // sur le modelé, exactement comme le moteur la lira (relief.ts).
+  const penteEffective = useMemo(() => {
+    if (!terrain || !choisie) return relief.pentePct;
+    const pentes = penteParCellule(terrain, {
+      widthM: choisie.station.coteM,
+      heightM: choisie.station.coteM,
+    });
+    let somme = 0;
+    for (const p of pentes) somme += p;
+    return somme / pentes.length;
+  }, [terrain, choisie, relief.pentePct]);
+  const ruissellementNu = coefficientRuissellement(penteEffective, 0.1, 0.5);
+  const ruissellementCouvert = coefficientRuissellement(penteEffective, 0.95, 0.5);
   const pluieHebdoMm = (choisie?.climat.rainAnnualMm ?? 800) / 52;
   const surfaceHa = (choisie?.station.coteM ?? 100) ** 2 / 10000;
   const amontMm = (pluieHebdoMm * RUISSELLEMENT_AMONT * relief.bassinAmontHa) / surfaceHa;
@@ -350,7 +372,7 @@ function StartScreen({
               key={s.station.id}
               type="button"
               style={btn(s.station.id === stationId)}
-              onClick={() => setStationId(s.station.id)}
+              onClick={() => choisirStation(s.station.id)}
             >
               {s.station.nom}
             </button>
@@ -464,9 +486,17 @@ function StartScreen({
             max={45}
             step={1}
             value={relief.pentePct}
+            disabled={terrain !== undefined}
+            title={
+              terrain
+                ? "La pente se lit sur le terrain que vous avez dessiné"
+                : "Pente moyenne de la parcelle"
+            }
             onChange={(e) => setRelief({ ...relief, pentePct: Number(e.target.value) })}
           />
-          <span className="valeur">{relief.pentePct} %</span>
+          <span className="valeur">
+            {terrain ? `${penteEffective.toFixed(1)} % (dessinée)` : `${relief.pentePct} %`}
+          </span>
 
           <label htmlFor="amont">Bassin amont</label>
           <input
@@ -494,7 +524,7 @@ function StartScreen({
                 key={deg}
                 type="button"
                 style={btn(relief.expositionDeg === deg)}
-                disabled={relief.pentePct === 0}
+                disabled={relief.pentePct === 0 && !terrain}
                 title={
                   relief.pentePct === 0
                     ? "Sans pente, l'exposition ne change rien"
@@ -528,7 +558,8 @@ function StartScreen({
                 key={forme}
                 type="button"
                 style={btn(relief.forme === forme)}
-                title={aide}
+                disabled={terrain !== undefined}
+                title={terrain ? "Sans effet : votre terrain dessiné fait foi" : aide}
                 onClick={() => setRelief({ ...relief, forme })}
               >
                 {libelle}
@@ -834,16 +865,6 @@ export function GameView() {
     [snapshot],
   );
 
-  // Les cellules occupées par l'eau libre : elles ne changent pas de la
-  // partie, on les calcule une fois (eau_surface.ts).
-  const enEau = useMemo(
-    () =>
-      station
-        ? cellulesEnEau(station.eau, { widthM: station.coteM, heightM: station.coteM })
-        : undefined,
-    [station],
-  );
-
   useEffect(() => {
     if (canvasRef.current && snapshot && station) {
       drawParcel(
@@ -854,10 +875,10 @@ export function GameView() {
         overlay,
         selectedIds,
         station.nappeCm,
-        enEau,
+        station.enEau,
       );
     }
-  }, [snapshot, station, overlay, selectedIds, enEau]);
+  }, [snapshot, station, overlay, selectedIds]);
 
   if (!station || !snapshot) {
     return (

@@ -106,9 +106,15 @@ l'hydrologie numérique.
   fallu franchir pour l'atteindre, et cet écart est exactement la hauteur
   d'eau. Un trou creusé se remplit ; le même trou percé jusqu'au bord ne
   retient plus rien.
-- **Accumulation d'écoulement** : chaque cellule reçoit ce qui verse vers elle.
-  Au-delà d'un seuil de surface drainée — la définition hydrologique d'un
-  ruisseau — le talweg devient un cours d'eau.
+- **Accumulation d'écoulement**, en deux versions, et il faut les deux :
+  celle qui suit l'ARBRE du remplissage donne à chaque cellule son bassin
+  versant, y compris sur une surface parfaitement plane où aucune voisine
+  n'est plus basse ; celle qui suit la voisine la plus PENTUE ne donne rien sur
+  un plat, et c'est elle qui repère les talwegs — sans quoi on inventerait des
+  rivières au milieu d'une prairie plane. Au-delà de cinq hectares drainés, le
+  talweg porte un cours d'eau permanent : aucune parcelle d'un hectare n'en
+  fabrique donc toute seule, il vient forcément du bassin d'amont, et il entre
+  par un point — l'encoche de la bordure haute — au lieu d'arriver en nappe.
 
 Et une cuvette ne devient pas une mare parce qu'elle est creuse : il faut
 qu'il y arrive plus d'eau qu'il n'en part. Ce qui arrive, c'est la pluie

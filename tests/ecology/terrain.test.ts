@@ -75,10 +75,10 @@ describe("le terrain fabrique son eau", () => {
       }
     }
     const sansAmont = eauxDuTerrain(alt, DIMS);
-    // Un bassin d'amont à l'échelle de la parcelle : 0,3 ha versant sur
-    // 900 m². Au-delà, ce n'est plus un ruisseau qui traverse, c'est une
-    // inondation, et la notion de lit n'a plus de sens.
-    const avecAmont = eauxDuTerrain(alt, DIMS, { apportAmontM2: 3000 });
+    // Il faut un vrai bassin pour un vrai ruisseau : cinq hectares au moins
+    // (SEUIL_COURS_DEAU_M2). Il entre alors par l'encoche de la bordure haute
+    // et suit le fond du V.
+    const avecAmont = eauxDuTerrain(alt, DIMS, { apportAmontM2: 6 * 10_000 });
     expect(sansAmont.enEau.filter(Boolean).length).toBe(0);
     const lit = avecAmont.enEau.filter(Boolean).length;
     expect(lit).toBeGreaterThan(5);
@@ -99,13 +99,29 @@ describe("le terrain fabrique son eau", () => {
     }
   });
 
-  it("l'accumulation conserve les surfaces : le point bas reçoit tout", () => {
-    const alt = new Array<number>(COTE * COTE);
+  it("l'écoulement se concentre : un versant draine par colonnes, un vallon par son axe", () => {
+    const versant = new Array<number>(COTE * COTE);
+    const vallon = new Array<number>(COTE * COTE);
     for (let y = 0; y < COTE; y++) {
-      for (let x = 0; x < COTE; x++) alt[y * COTE + x] = 10 + y * 0.2 + x * 0.001;
+      for (let x = 0; x < COTE; x++) {
+        versant[y * COTE + x] = 10 + y * 0.2;
+        vallon[y * COTE + x] = 10 + y * 0.2 + Math.abs(x - 15) * 0.15;
+      }
     }
-    const acc = accumulationEcoulement(alt, DIMS);
-    expect(Math.max(...acc)).toBeGreaterThan(COTE);
+    // Sur un plan, chaque colonne descend pour son compte : le maximum est de
+    // l'ordre de la hauteur de la parcelle.
+    expect(Math.max(...accumulationEcoulement(versant, DIMS))).toBeGreaterThan(COTE * 0.8);
+    // Dans un vallon, tout converge vers l'axe : bien davantage.
+    expect(Math.max(...accumulationEcoulement(vallon, DIMS))).toBeGreaterThan(COTE * COTE * 0.3);
+  });
+
+  it("même parfaitement plate, une parcelle draine vers son creux", () => {
+    // C'est le cas que la comparaison de voisines ne sait pas traiter : sans
+    // pente, aucune n'est plus basse. L'arbre du flood, lui, part des bords.
+    const alt = creuser(plat(), 15, 15, 5, 1.5);
+    const eaux = eauxDuTerrain(alt, DIMS);
+    const bassin = Math.max(...eaux.accumulationM2);
+    expect(bassin).toBeGreaterThan(COTE * COTE * 0.2);
   });
 
   it("deux mares à des hauteurs différentes gardent chacune sa cote", () => {
@@ -230,7 +246,7 @@ describe("une cuvette ne tient pas l'eau partout", () => {
       for (let x = 0; x < COTE; x++) alt[y * COTE + x] = 10 + y * 0.15 + Math.abs(x - 15) * 0.08;
     }
     const eaux = eauxDuTerrain(alt, DIMS, {
-      apportAmontM2: 3000,
+      apportAmontM2: 6 * 10_000,
       pluieAnnuelleMm: 800,
       profil: sable,
     });
