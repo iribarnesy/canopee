@@ -1624,11 +1624,9 @@ export function GameView() {
             </dd>
             <dt>Essences</dt>
             <dd>
-              {composition.length === 0 ? (
-                "aucun arbre"
-              ) : (
-                <>
-                  {composition.map((c, rang) => (
+              {composition.length === 0
+                ? "aucun arbre"
+                : composition.map((c, rang) => (
                     <span key={c.especeId} style={{ whiteSpace: "nowrap" }}>
                       {rang > 0 && " · "}
                       <span
@@ -1648,8 +1646,6 @@ export function GameView() {
                       </span>
                     </span>
                   ))}
-                </>
-              )}
             </dd>
             <dt>Sol</dt>
             <dd>
