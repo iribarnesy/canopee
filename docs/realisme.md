@@ -328,21 +328,32 @@ des livres.
 *Limite assumée* : l'horizon ne s'amincit pas. On perd la fertilité de la
 surface, pas encore son épaisseur ni sa réserve utile.
 
-## Ce que l'atlas ne contient pas encore, et ce que ça déforme
+## La strate arbustive : quatre espèces qui changent la succession
 
-Le peuplement spontané se partage entre les quatre ou cinq espèces de l'atlas
-qui tiennent sur la station. Le noisetier y occupe 30 à 35 % des tiges les
-soixante premières années, puis retombe à 5-13 % quand le couvert se ferme :
-la TRAJECTOIRE est juste — c'est bien un arbuste de lisière et de sous-étage,
-abondant jeune puis dominé — mais le NIVEAU est surévalué, faute de
-concurrents. Dans la réalité, cette strate arbustive se partage entre le
-prunellier, l'aubépine, le cornouiller, la ronce, les saules et le sureau,
-qu'on n'a pas encore. Tant qu'ils manquent, lire « noisetier » comme « strate
-arbustive ».
+Le noisetier occupait à lui seul 48 % des tiges des soixante premières années.
+Deux causes, corrigées l'une après l'autre : un taux de régénération qui ne
+savait pas descendre sous 1 semis par pied et par an (alors que la noisette est
+mangée par tout le monde), puis surtout l'absence de ses concurrents.
 
-*(À l'origine il montait à 48 % : le taux de régénération, plancher à 1 semis
-par pied et par an faute de savoir gérer les taux fractionnaires, ignorait que
-la noisette est mangée par tout le monde.)*
+L'atlas les avait, le moteur non : **prunellier**, **aubépine**, **ronce** et
+**sureau noir** — tous notés « pionniers » et trois d'entre eux « nurse ». Ce
+sont eux qui prennent une friche, pas un arbuste de sous-étage. Avec eux, la
+succession se lit enfin comme sur le terrain (limon, lisière forestière) :
+
+| | fourré | arbres | noisetier |
+|---|---|---|---|
+| an 15 | ronce 42 %, prunellier 11 % | bouleau 17 % | — |
+| an 40 | prunellier 17 %, aubépine 13 % | bouleau 35 % | — |
+| an 120 | aubépine 18 %, ronce 3 % | bouleau 26 %, hêtre 24 % | 10 % |
+
+La ronce prend tout et s'efface (héliophile, quinze ans de vie) ; l'aubépine,
+bicentenaire, tient le sous-étage jusqu'au bout ; les épineux, que le gibier
+délaisse, sont ce sous quoi les semis d'arbres passent leurs premières années.
+
+*Limite* : le peuplement bute en permanence sur le plafond d'auto-éclaircie
+(1 500 tiges/ha). Un vrai fourré en compte plusieurs milliers — ce qu'on lit
+ici, ce sont donc des PARTS, pas des densités. Manquent encore le cornouiller,
+les saules arbustifs, le fusain, le troène.
 
 ## Générateur de stations : ce qu'il reste à faire
 

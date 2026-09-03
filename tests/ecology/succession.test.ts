@@ -15,7 +15,20 @@ import { createGameState, type GameState } from "../../src/engine/state";
 import { FRICHE_LIMON } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
-const PIONNIERS = new Set(["betula_pendula", "pinus_sylvestris"]);
+/**
+ * Les pionnières, au sens de l'atlas (colonne « Succ. » = `pion`). La liste ne
+ * comptait que les deux ARBRES pionniers parce que l'atlas moteur s'arrêtait
+ * là ; la strate arbustive — ronce, prunellier, aubépine, sureau — en fait
+ * partie de plein droit, et c'est même elle qui prend une friche en premier.
+ */
+const PIONNIERS = new Set([
+  "betula_pendula",
+  "pinus_sylvestris",
+  "rubus_fruticosus",
+  "prunus_spinosa",
+  "crataegus_monogyna",
+  "sambucus_nigra",
+]);
 
 function snapshotStats(state: GameState) {
   const alive = state.trees.filter((t) => t.alive);

@@ -142,6 +142,11 @@ export const PAYSAGES: readonly Paysage[] = [
       // sème loin : ses graines flottent et volent. Sur un terrain sec, ces
       // semis mourront — c'est au moteur d'en décider, pas à la liste.
       { especeId: "alnus_glutinosa", semisParAn: 2 },
+      // La fruticée des trouées et des layons : sous futaie fermée elle reste
+      // discrète, mais elle occupe la moindre ouverture.
+      { especeId: "rubus_fruticosus", semisParAn: 3 },
+      { especeId: "sambucus_nigra", semisParAn: 1 },
+      { especeId: "crataegus_monogyna", semisParAn: 1 },
     ],
   },
   {
@@ -159,6 +164,12 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "corylus_avellana", semisParAn: 2 },
       // Les fossés et les mares d'abreuvement du bocage portent des aulnes.
       { especeId: "alnus_glutinosa", semisParAn: 2 },
+      // Une haie de bocage, c'est d'abord ça : de l'épine noire, de l'épine
+      // blanche et de la ronce. Les oiseaux qui s'y nichent sèment le reste.
+      { especeId: "prunus_spinosa", semisParAn: 3 },
+      { especeId: "crataegus_monogyna", semisParAn: 3 },
+      { especeId: "rubus_fruticosus", semisParAn: 3 },
+      { especeId: "sambucus_nigra", semisParAn: 2 },
     ],
   },
   {
@@ -170,8 +181,9 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.03,
     partCultivee: 0.95,
     partUrbaine: 0.02,
-    // Rien, ou presque : c'est tout l'enjeu de ce paysage.
-    semenciers: [],
+    // Presque rien — c'est tout l'enjeu de ce paysage. Seule la ronce arrive
+    // quand même : les oiseaux la sèment jusqu'au milieu des champs.
+    semenciers: [{ especeId: "rubus_fruticosus", semisParAn: 1 }],
   },
   {
     id: "peri-urbain",
@@ -182,7 +194,13 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.2,
     partCultivee: 0.15,
     partUrbaine: 0.65,
-    semenciers: [{ especeId: "betula_pendula", semisParAn: 2 }],
+    // Friches urbaines : le sureau nitrophile y prospère sur les remblais, et
+    // la ronce tient tous les délaissés.
+    semenciers: [
+      { especeId: "betula_pendula", semisParAn: 2 },
+      { especeId: "rubus_fruticosus", semisParAn: 3 },
+      { especeId: "sambucus_nigra", semisParAn: 3 },
+    ],
   },
   {
     id: "lande-ouverte",
@@ -213,6 +231,12 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "pinus_sylvestris", semisParAn: 3 },
       { especeId: "fagus_sylvatica", semisParAn: 2 },
       { especeId: "alnus_glutinosa", semisParAn: 1 },
+      // C'est LE paysage de la fruticée : l'ourlet d'épineux d'où la forêt
+      // avance sur la friche, protégée du gibier par ce qu'elle traverse.
+      { especeId: "prunus_spinosa", semisParAn: 4 },
+      { especeId: "crataegus_monogyna", semisParAn: 3 },
+      { especeId: "rubus_fruticosus", semisParAn: 4 },
+      { especeId: "sambucus_nigra", semisParAn: 2 },
     ],
   },
 ];

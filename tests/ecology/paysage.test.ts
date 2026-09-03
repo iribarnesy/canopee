@@ -55,11 +55,15 @@ describe("les voisins subissent le même sol que nous", () => {
     expect(surLimon).toContain("quercus_pubescens");
   });
 
-  it("l'intensité, elle, reste celle du paysage : un massif sème plus qu'une banlieue", () => {
+  it("l'intensité, elle, reste celle du paysage : un massif sème plus qu'une plaine", () => {
     const total = (paysageId: string) =>
       voisinageSemencier(getPaysage(paysageId)).reduce((s, x) => s + x.semisParAn, 0);
-    expect(total("massif-forestier")).toBeGreaterThan(3 * total("peri-urbain"));
-    expect(total("plaine-cerealiere")).toBe(0);
+    expect(total("massif-forestier")).toBeGreaterThan(3 * total("plaine-cerealiere"));
+    // La plaine céréalière n'est pas tout à fait stérile : les oiseaux y
+    // sèment de la ronce jusqu'au milieu des champs. Mais c'est tout, et c'est
+    // dérisoire à côté d'un massif.
+    const plaine = voisinageSemencier(getPaysage("plaine-cerealiere"));
+    expect(plaine.map((x) => x.especeId)).toEqual(["rubus_fruticosus"]);
   });
 });
 

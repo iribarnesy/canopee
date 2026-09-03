@@ -43,6 +43,12 @@ export const SPECIES_COLORS: Record<string, string> = {
   malus_domestica: "#e11d48",
   prunus_armeniaca: "#ea580c",
   fraxinus_excelsior: "#0e7490",
+  // La strate arbustive : des teintes proches les unes des autres, parce que
+  // c'est ainsi qu'on la lit sur le terrain — un fourré, pas des individus.
+  prunus_spinosa: "#7e22ce",
+  crataegus_monogyna: "#be185d",
+  rubus_fruticosus: "#4338ca",
+  sambucus_nigra: "#1e40af",
 };
 
 /** Espèces repliées dans « autres » : un gris qui ne prétend à aucune identité. */

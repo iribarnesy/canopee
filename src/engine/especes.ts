@@ -471,6 +471,147 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     sources: [ATLAS],
   },
   {
+    id: "prunus_spinosa",
+    nom: "Prunellier",
+    nomLatin: "Prunus spinosa",
+    hauteurMaxM: 4,
+    pousseMaxMAn: 0.4,
+    // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
+    eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
+    ph: [5.5, 8.5],
+    lumiere: { compensation: 0.12, saturation: 0.7, lai: 2.2, houppierRatio: 0.6, caduc: true },
+    racines: { profondeurMaxCm: 100 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.5, fixateur: false },
+    // Drupes emportées par les oiseaux, mais la vraie conquête se fait par
+    // DRAGEONS : le fourré avance en tache. Faute de savoir modéliser le
+    // drageonnement, on compense par un taux de semis généreux *(à calibrer)*.
+    regeneration: { maturiteAns: 5, longeviteAns: 50, dissemination: "oiseaux", semisParAn: 1.2 },
+    litiere: { cnRatio: 28 },
+    economie: { prixPlantEur: 4 },
+    bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    fruits: {
+      floraisonDJ: 60, // fleurit AVANT les feuilles, dès mars : exposé au gel
+      gelFatalC: -3,
+      recolteWeek: 42, // après les premières gelées, qui les rendent mangeables
+      fenetreRecolteWeeks: 4,
+      croissanceSem: 20,
+      rendementMaxKg: 4,
+      prixEurKg: 2,
+      recolteHKg: 0.3, // épineux : la cueillette est lente
+      autofertile: true,
+    },
+    // Épineux serré : le gibier l'évite, et ce qu'il protège pousse dedans.
+    exigenceMinerale: 1.5,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.4 },
+    gibier: { appetence: 0.3 },
+    feu: { inflammabilite: 0.45, resistanceEcorce: 0.15, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "crataegus_monogyna",
+    nom: "Aubépine",
+    nomLatin: "Crataegus monogyna",
+    hauteurMaxM: 8,
+    pousseMaxMAn: 0.3,
+    // Atlas : « nurse épineuse », pionnière, très commune.
+    eau: { seuilConfortSecheresse: 0.55, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
+    ph: [5.5, 8.5],
+    lumiere: { compensation: 0.1, saturation: 0.65, lai: 2.5, houppierRatio: 0.55, caduc: true },
+    racines: { profondeurMaxCm: 130 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.5, fixateur: false },
+    // Cenelles avalées par les grives : elles ressortent n'importe où.
+    regeneration: { maturiteAns: 8, longeviteAns: 200, dissemination: "oiseaux", semisParAn: 0.9 },
+    litiere: { cnRatio: 26 },
+    economie: { prixPlantEur: 4 },
+    bois: { densite: 0.8, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Épines longues : c'est l'abri sous lequel un chêne passe ses dix
+    // premières années sans se faire brouter.
+    exigenceMinerale: 1.8,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.5 },
+    gibier: { appetence: 0.25 },
+    feu: { inflammabilite: 0.4, resistanceEcorce: 0.2, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "rubus_fruticosus",
+    nom: "Ronce",
+    nomLatin: "Rubus fruticosus",
+    hauteurMaxM: 2.5,
+    pousseMaxMAn: 1.4, // la plus rapide de l'atlas : elle prend une friche en trois ans
+    // Atlas : « nurse (fruticée) », pionnière, cosmopolite tempéré.
+    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.25 },
+    ph: [4.5, 8],
+    // Demi-ombre tolérée : elle tient sous un couvert clair, ce qui lui permet
+    // d'attendre la trouée.
+    lumiere: { compensation: 0.06, saturation: 0.5, lai: 3, houppierRatio: 0.8, caduc: true },
+    racines: { profondeurMaxCm: 60 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.7, fixateur: false },
+    // Les mûres sont mangées par tout ce qui vole : c'est LE colonisateur.
+    regeneration: { maturiteAns: 2, longeviteAns: 15, dissemination: "oiseaux", semisParAn: 2 },
+    litiere: { cnRatio: 24 },
+    economie: { prixPlantEur: 2 },
+    bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    fruits: {
+      floraisonDJ: 900, // juin : hors d'atteinte des gels
+      gelFatalC: -1,
+      recolteWeek: 34,
+      fenetreRecolteWeeks: 5,
+      croissanceSem: 8,
+      rendementMaxKg: 3,
+      prixEurKg: 4,
+      recolteHKg: 0.4, // ronces : on y laisse du sang et du temps
+      autofertile: true,
+    },
+    exigenceMinerale: 1.6,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.3 },
+    gibier: { appetence: 0.45 },
+    feu: { inflammabilite: 0.5, resistanceEcorce: 0.05, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "sambucus_nigra",
+    nom: "Sureau noir",
+    nomLatin: "Sambucus nigra",
+    hauteurMaxM: 7,
+    pousseMaxMAn: 0.9,
+    // Atlas : « nitrophile, pousse vite », pionnier, très commun.
+    eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.3 },
+    ph: [5.5, 8],
+    lumiere: { compensation: 0.1, saturation: 0.55, lai: 2.5, houppierRatio: 0.6, caduc: true },
+    racines: { profondeurMaxCm: 80 },
+    tBaseCroissanceC: 6,
+    // NITROPHILE : il ne pousse que là où l'azote abonde — lisières fumées,
+    // tas de fumier, pieds de haie. C'est un indicateur, pas un passe-partout.
+    azote: { demandeRelative: 1, fixateur: false },
+    regeneration: { maturiteAns: 4, longeviteAns: 40, dissemination: "oiseaux", semisParAn: 1.5 },
+    litiere: { cnRatio: 20 }, // litière tendre, azotée : elle se minéralise vite
+    economie: { prixPlantEur: 5 },
+    bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    fruits: {
+      floraisonDJ: 700, // juin
+      gelFatalC: -1,
+      recolteWeek: 36,
+      fenetreRecolteWeeks: 3,
+      croissanceSem: 10,
+      rendementMaxKg: 8,
+      prixEurKg: 3,
+      recolteHKg: 0.12,
+      autofertile: true,
+    },
+    exigenceMinerale: 2.5,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.35 },
+    gibier: { appetence: 0.2 }, // feuillage rebutant : le chevreuil s'en détourne
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.1, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
     id: "ulex_europaeus",
     nom: "Ajonc d'Europe",
     nomLatin: "Ulex europaeus",
