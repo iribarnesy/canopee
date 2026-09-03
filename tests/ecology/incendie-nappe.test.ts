@@ -38,9 +38,9 @@ const METEO = syntheticYear(VALLEE_ENGORGEE.climat);
  * station où le mécanisme est le plus lisible : une forêt qui a de l'eau à
  * volonté en consomme beaucoup, donc elle en prive beaucoup la nappe.
  */
-function foret(annees: number): GameState {
+function foret(annees: number, partBassinSemblable = 0): GameState {
   let state = createGameState(
-    { ...VALLEE_ENGORGEE.station, coteM: 30, voisinage: [], gibierParHa: 0 },
+    { ...VALLEE_ENGORGEE.station, coteM: 30, voisinage: [], gibierParHa: 0, partBassinSemblable },
     rngStateFromSeed(4),
   );
   state = plantScattered(state, "alnus_glutinosa", 100, 0.5);
@@ -92,5 +92,35 @@ describe("la forêt tient la nappe, et l'incendie la relâche", () => {
 
   it("4. la rugosité perdue accélère le ruissellement", () => {
     expect(brulee.ruissellement).toBeGreaterThan(intacte.ruissellement);
+  });
+});
+
+describe("l'échelle de l'incendie compte", () => {
+  /** Remontée de nappe après le feu, cm, selon ce que le bassin partage. */
+  function remontee(partBassinSemblable: number): number {
+    const avant = foret(40, partBassinSemblable);
+    return suivre(avant).nappeHiver - suivre(bruler(avant)).nappeHiver;
+  }
+
+  it("un massif qui brûle en entier fait remonter la nappe bien plus qu'une parcelle", () => {
+    // Le niveau régional est une donnée exogène tant que la parcelle est seule
+    // à brûler : la région continue de tenir son niveau. Mais quand tout le
+    // bassin subit le même sort, les alentours cessent eux aussi de
+    // transpirer, et le niveau régional monte avec (nappe.ts). C'est la
+    // différence entre l'incendie d'une parcelle et celui d'un massif — et
+    // c'est le second que décrivaient les gestionnaires girondins.
+    const isolee = remontee(0);
+    const massif = remontee(1);
+    expect(isolee).toBeGreaterThan(0);
+    expect(massif).toBeGreaterThan(1.5 * isolee);
+  });
+
+  it("sans rien partager avec son bassin, la parcelle ne déplace pas la région", () => {
+    // Le paramètre a un sens : à zéro, le niveau régional ne bouge pas d'un
+    // pouce quoi qu'il arrive sur la parcelle.
+    const etat = foret(5, 0);
+    let s = etat;
+    for (let i = 0; i < 52; i++) s = tick(s, METEO[i] as never).state;
+    expect(s.soil.nappeRegionaleMm).toBeCloseTo(etat.soil.nappeRegionaleMm, 6);
   });
 });

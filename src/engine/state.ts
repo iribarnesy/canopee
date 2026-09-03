@@ -12,7 +12,7 @@ import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
-import { stocksEquilibreParCellule } from "./nappe";
+import { stockEquilibreMm, stocksEquilibreParCellule } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
 import type { Relief } from "./relief";
@@ -72,6 +72,13 @@ export interface Station {
    * un calcul (nappe.ts). Absente, elle se déduit des autres déclarations.
    */
   profondeurNappeEquilibreCm?: number;
+  /**
+   * Part du bassin versant qui subit le même sort que la parcelle ∈ [0,1].
+   * 0 : une parcelle isolée, la région tient son niveau quoi qu'il lui arrive.
+   * 1 : elle est représentative de tout son bassin — un incendie qui l'emporte
+   * emporte aussi les alentours, et la nappe régionale monte avec (nappe.ts).
+   */
+  partBassinSemblable?: number;
   /**
    * Pluie annuelle, mm. Elle ne sert qu'à savoir si une cuvette tient l'eau
    * (terrain.ts) ; le bilan hydrique, lui, travaille semaine par semaine sur
@@ -173,6 +180,11 @@ export interface SoilState {
    * disparaissait au lieu de faire monter la nappe.
    */
   nappeMm: number[];
+  /**
+   * Niveau de référence du réseau régional, mm. Il ne bouge que si ce qui
+   * arrive à la parcelle arrive aussi à son bassin (nappe.ts).
+   */
+  nappeRegionaleMm: number;
   /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
   ph: number[];
   /**
@@ -335,6 +347,12 @@ export function createGameState(
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,
       // creux par creux — elle est plus plate que le terrain (nappe.ts).
+      nappeRegionaleMm: stockEquilibreMm(
+        station.profil,
+        station.remonteeNappeMmSemaine,
+        station.drainageExterneMmSemaine,
+        station.profondeurNappeEquilibreCm,
+      ),
       nappeMm: [
         ...stocksEquilibreParCellule(
           station.profil,

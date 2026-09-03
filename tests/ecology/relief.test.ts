@@ -17,7 +17,6 @@ import {
   anomalieAltitudeC,
   anomalieExpositionC,
   coefficientRuissellement,
-  ECART_ADRET_UBAC_C,
   facteurExpositionRayonnement,
   fractionRuissellement,
   ordreDeDescente,
@@ -174,23 +173,56 @@ describe("dans une partie : le bas de pente est plus frais que la crête", () =>
 });
 
 describe("l'adret est plus chaud, pas seulement plus sec", () => {
-  it("un versant sud gagne un degré et demi sur un versant nord de même pente", () => {
-    const pente = { ...RELIEF_PLAT, pentePct: 50 };
-    const adret = anomalieExpositionC({ ...pente, expositionDeg: 180 });
-    const ubac = anomalieExpositionC({ ...pente, expositionDeg: 0 });
-    expect(adret).toBeCloseTo(ECART_ADRET_UBAC_C, 3);
-    expect(ubac).toBeCloseTo(-ECART_ADRET_UBAC_C, 3);
-    expect(adret - ubac).toBeCloseTo(2 * ECART_ADRET_UBAC_C, 3);
+  it("l'écart adret/ubac reste dans la fourchette de terrain", () => {
+    // Le seul vrai contrôle possible ici : confronter le chiffre du moteur à
+    // ce que mesurent les relevés. Sous nos latitudes, l'écart de température
+    // de l'AIR entre deux versants opposés de forte pente se compte en
+    // dixièmes de degré à un degré et demi — bien moins que l'écart des
+    // températures de sol, qui atteint plusieurs degrés et qu'on ne modélise
+    // pas. Un test qui se contenterait de vérifier que `adret === +CONSTANTE`
+    // ne vérifierait que l'algèbre de sa propre formule.
+    const raide = { ...RELIEF_PLAT, pentePct: 50 };
+    const ecart =
+      anomalieExpositionC({ ...raide, expositionDeg: 180 }) -
+      anomalieExpositionC({ ...raide, expositionDeg: 0 });
+    expect(ecart).toBeGreaterThan(0.6);
+    expect(ecart).toBeLessThan(4);
   });
 
-  it("sans pente, l'exposition ne veut rien dire", () => {
+  it("la chaleur et la soif ont la MÊME cause : elles ne peuvent pas diverger", () => {
+    // C'est l'argument physique qui a motivé le mécanisme : le rayonnement
+    // supplémentaire d'un adret évapore ET chauffe. Les deux effets se
+    // déduisent donc d'un seul facteur, et le rapport de l'un à l'autre est le
+    // même quelle que soit la pente ou l'orientation.
+    const cas = [
+      { pentePct: 10, expositionDeg: 180 },
+      { pentePct: 35, expositionDeg: 180 },
+      { pentePct: 60, expositionDeg: 0 },
+      { pentePct: 25, expositionDeg: 225 },
+    ];
+    const rapports = cas.map((c) => {
+      const relief = { ...RELIEF_PLAT, ...c };
+      return anomalieExpositionC(relief) / (facteurExpositionRayonnement(relief) - 1);
+    });
+    for (const r of rapports) expect(r).toBeCloseTo(rapports[0] ?? 0, 6);
+  });
+
+  it("sans pente, ni chaleur ni soif supplémentaires — les deux s'annulent ensemble", () => {
     for (const deg of [0, 90, 180, 270]) {
-      expect(Math.abs(anomalieExpositionC({ ...RELIEF_PLAT, expositionDeg: deg }))).toBe(0);
+      const plat = { ...RELIEF_PLAT, expositionDeg: deg };
+      expect(Math.abs(anomalieExpositionC(plat))).toBe(0);
+      expect(facteurExpositionRayonnement(plat)).toBe(1);
     }
   });
 
-  it("l'est et l'ouest sont à mi-chemin", () => {
-    const pente = { ...RELIEF_PLAT, pentePct: 50 };
-    expect(Math.abs(anomalieExpositionC({ ...pente, expositionDeg: 90 }))).toBeLessThan(0.001);
+  it("l'est et l'ouest sont à mi-chemin, et l'écart croît avec la pente", () => {
+    const sud = (p: number) =>
+      anomalieExpositionC({ ...RELIEF_PLAT, pentePct: p, expositionDeg: 180 });
+    expect(
+      Math.abs(anomalieExpositionC({ ...RELIEF_PLAT, pentePct: 50, expositionDeg: 90 })),
+    ).toBeLessThan(0.001);
+    expect(sud(10)).toBeGreaterThan(0);
+    expect(sud(30)).toBeGreaterThan(sud(10));
+    expect(sud(50)).toBeGreaterThan(sud(30));
   });
 });

@@ -360,11 +360,25 @@ Cinq tests ont bougé. Aucun ne portait sur la nappe : ils mesuraient des
 équilibres que la nappe déplace, et tous disaient moins que ce qu'ils
 croyaient.
 
-*Limites assumées* : la profondeur d'équilibre est une donnée exogène, donc un
-incendie à l'échelle d'un MASSIF — celui du cas d'étude — n'est représenté que
-sur la parcelle, la région continuant de tenir son niveau ; et le
-ruissellement d'un fond de vallée saturé en permanence est surestimé, l'eau y
-faisant des allers-retours entre nappe et surface.
+**L'échelle de l'incendie compte, et elle se règle.** Le niveau régional est
+exogène tant que la parcelle est seule à brûler. Mais quand tout un massif
+part, les alentours cessent eux aussi de transpirer et le niveau régional monte
+avec : un paramètre dit quelle part du bassin subit le même sort que la
+parcelle. Mesuré sur l'aulnaie de vallée :
+
+| bassin semblable | nappe, forêt intacte | après le feu | remontée |
+|---|---|---|---|
+| 0 % (parcelle isolée) | 0,75 m | 0,20 m | 55 cm |
+| 100 % (tout le massif) | **1,62 m** | 0,35 m | **127 cm** |
+
+À 100 %, la forêt tient la nappe régionale un mètre plus bas ; quand elle brûle
+en entier, la nappe remonte de plus d'un mètre. C'est la différence entre
+l'incendie d'une parcelle et celui d'un massif.
+
+*Limite assumée* : le ruissellement d'un fond de vallée saturé en permanence est
+surestimé, l'eau y faisant des allers-retours entre nappe et surface. Le bilan
+boucle — rien ne se crée — mais le chiffre affiché mélange ces circulations
+avec ce qui quitte réellement la parcelle.
 
 
 ## L'érosion : ce qui part d'un versant

@@ -201,25 +201,36 @@ export function fractionRuissellement(pentePct: number): number {
 }
 
 /**
+ * Sensibilité de la température au rayonnement reçu, °C par unité d'écart
+ * relatif. Un versant qui reçoit 25 % d'énergie en plus est plus chaud d'à peu
+ * près un degré en moyenne annuelle *(à calibrer)*.
+ *
+ * L'ordre de grandeur : sous nos latitudes, l'écart de température de l'air
+ * entre un adret et un ubac de même altitude se compte en dixièmes de degré à
+ * un degré et demi selon la raideur — bien moins que l'écart des températures
+ * de SOL, qui atteint plusieurs degrés et qu'on ne modélise pas. Ce qu'on
+ * vise ici est le premier, celui que voit la phénologie.
+ *
+ * *Ce qui réfuterait ce chiffre* : des relevés d'air à 2 m sur deux versants
+ * appariés. S'ils montrent moins de 0,3 °C ou plus de 2 °C d'écart pour une
+ * pente de 50 %, la constante est à revoir.
+ */
+export const SENSIBILITE_THERMIQUE_RAYONNEMENT_C = 4;
+
+/**
  * Écart de température dû à l'EXPOSITION, °C.
  *
- * Un versant sud reçoit plus d'énergie qu'un versant nord, et cela ne se voit
- * pas seulement dans l'évapotranspiration : le sol et l'air au ras du sol y
- * sont réellement plus chauds. En France, l'écart entre un adret et un ubac de
- * même altitude atteint un à deux degrés de moyenne — assez pour décaler le
- * débourrement de deux semaines et pour que les deux versants ne portent pas
- * la même végétation.
+ * Il se déduit du rayonnement, et c'est le point : un versant sud reçoit plus
+ * d'énergie, et cette même énergie fait DEUX choses — elle évapore plus et
+ * elle chauffe plus. Les deux effets partagent donc une seule cause et une
+ * seule formule ; ils s'annulent ensemble sur un terrain plat, et croissent
+ * ensemble avec la pente.
  *
- * *(Jusqu'ici la pente n'agissait que sur le rayonnement, donc sur la
- * demande en eau. Un versant sud était plus SEC mais pas plus CHAUD, ce qui
- * n'a pas de sens physique : c'est la même énergie qui fait les deux.)*
+ * *(Jusqu'ici la pente n'agissait que sur l'évapotranspiration. Un versant sud
+ * était plus SEC mais pas plus CHAUD, ce qui n'a pas de sens physique.)*
  */
-export const ECART_ADRET_UBAC_C = 1.5;
-
 export function anomalieExpositionC(relief: Relief): number {
-  // cos(azimut − sud) : +1 plein sud, −1 plein nord.
-  const versSud = Math.cos(((relief.expositionDeg - 180) * Math.PI) / 180);
-  return ECART_ADRET_UBAC_C * versSud * Math.min(1, relief.pentePct / 50);
+  return SENSIBILITE_THERMIQUE_RAYONNEMENT_C * (facteurExpositionRayonnement(relief) - 1);
 }
 
 /**

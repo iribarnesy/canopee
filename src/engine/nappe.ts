@@ -77,6 +77,13 @@ export const ECHANGE_REGIONAL = 0.03;
  */
 export const APPORT_REGIONAL_MAX_MM = 20;
 
+/**
+ * Vitesse à laquelle le niveau RÉGIONAL suit ce qui arrive à la parcelle, par
+ * semaine. Une nappe régionale met des années à bouger : un centième par
+ * semaine, soit deux ans pour l'essentiel du chemin *(à calibrer)*.
+ */
+export const VITESSE_REGIONALE = 0.01;
+
 /** Vidange latérale minimale et maximale, par semaine. */
 export const VIDANGE_MINIMALE = 0.005;
 export const VIDANGE_MAXIMALE = 0.1;
@@ -212,4 +219,27 @@ export function stocksEquilibreParCellule(
     out[i] = stockPourProfondeur(Math.max(0, base + ecartCm), profil);
   }
   return out;
+}
+
+/**
+ * Nouveau niveau régional après une semaine, mm.
+ *
+ * Le niveau d'équilibre est une donnée exogène : il vient du réseau qui draine
+ * la parcelle, à des kilomètres. Cela suffit tant que ce qui arrive à la
+ * parcelle ne lui arrive qu'à elle. Mais quand tout un massif brûle — le cas
+ * qui nous occupe — les alentours cessent eux aussi de transpirer, et le
+ * niveau régional monte avec.
+ *
+ * `partSemblable` dit quelle part du bassin subit le même sort que la
+ * parcelle : 0 pour une parcelle isolée dans un paysage inchangé, 1 quand elle
+ * est représentative de tout son bassin. C'est le seul paramètre qui manquait
+ * pour que l'échelle de l'événement compte.
+ */
+export function nouveauNiveauRegionalMm(
+  regionalMm: number,
+  stockMoyenParcelleMm: number,
+  partSemblable: number,
+): number {
+  const part = Math.min(1, Math.max(0, partSemblable));
+  return regionalMm + (stockMoyenParcelleMm - regionalMm) * part * VITESSE_REGIONALE;
 }

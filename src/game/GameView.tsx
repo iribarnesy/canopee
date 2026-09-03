@@ -39,6 +39,13 @@ import { STATIONS_V0 } from "../engine/stations";
 import { COULEUR_AUTRES, SPECIES_COLORS } from "../ui/couleurs";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { PlanEau } from "./PlanEau";
+import {
+  chargerProfils,
+  enregistrerProfil,
+  lireProfilExporte,
+  type ProfilDepart,
+  supprimerProfil,
+} from "./profils";
 import type { Snapshot, SnapshotTree } from "./protocol";
 import { loadSave, useGame } from "./useGame";
 
@@ -293,6 +300,7 @@ function StartScreen({
     relief: Relief,
     eau: EauDeSurface,
     nappeCm: number,
+    partBassin: number,
     maturationAns: number,
     anneeDepart: number,
   ) => void;
@@ -314,6 +322,11 @@ function StartScreen({
     },
   );
   const [eau, setEau] = useState<EauDeSurface>(SANS_EAU);
+  const [partBassin, setPartBassin] = useState(0);
+  const [profils, setProfils] = useState<ProfilDepart[]>(() => chargerProfils());
+  const [nomProfil, setNomProfil] = useState("");
+  const [importTexte, setImportTexte] = useState("");
+  const [messageProfil, setMessageProfil] = useState("");
   const [nappeCm, setNappeCm] = useState(STATIONS_V0[0]?.station.profondeurNappeEquilibreCm ?? 300);
   const [terrain, setTerrain] = useState<number[] | undefined>(undefined);
   const [maturationAns, setMaturationAns] = useState(0);
@@ -404,6 +417,37 @@ function StartScreen({
     }
     return { proche: Number.isFinite(proche) ? proche : 0, loin };
   }, [choisie, eau, reliefFinal]);
+
+  /** L'état courant de l'écran, figé en profil. */
+  const profilCourant = (nom: string): ProfilDepart => ({
+    version: 1,
+    nom,
+    stationId,
+    bordures,
+    relief: reliefFinal,
+    eau,
+    nappeCm,
+    partBassinSemblable: partBassin,
+    scenario,
+    anneeDepart,
+    maturationAns,
+  });
+
+  /** Repose tout l'écran dans l'état décrit par un profil. */
+  const appliquerProfil = (p: ProfilDepart) => {
+    setStationId(p.stationId);
+    setBordures(p.bordures);
+    setCotesSeparees(new Set(Object.values(p.bordures)).size > 1);
+    setRelief(p.relief);
+    setTerrain(p.relief.altitudesM ? [...p.relief.altitudesM] : undefined);
+    setEau(p.eau);
+    setNappeCm(p.nappeCm);
+    setPartBassin(p.partBassinSemblable);
+    setScenario(p.scenario);
+    setAnneeDepart(p.anneeDepart);
+    setMaturationAns(p.maturationAns);
+    setNomProfil(p.nom);
+  };
 
   const setCote = (cote: keyof Bordures, id: string) =>
     setBordures(cotesSeparees ? { ...bordures, [cote]: id } : bordersUniformes(id));
@@ -687,7 +731,27 @@ function StartScreen({
             title="Profondeur d'équilibre de la nappe, celle que le réseau régional impose"
           />
           <span className="valeur">{(nappeCm / 100).toFixed(1)} m</span>
+
+          <label htmlFor="bassin">Bassin semblable</label>
+          <input
+            id="bassin"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={Math.round(partBassin * 100)}
+            onChange={(e) => setPartBassin(Number(e.target.value) / 100)}
+            title="Part du bassin versant qui subit le même sort que la parcelle"
+          />
+          <span className="valeur">{Math.round(partBassin * 100)} %</span>
         </div>
+        <p className="glose" style={{ minHeight: 0, marginTop: 0 }}>
+          {partBassin === 0
+            ? "Parcelle isolée : quoi qu'il lui arrive, la région tient le niveau de la nappe."
+            : partBassin >= 0.9
+              ? "La parcelle vaut pour tout son bassin : si elle brûle, le massif brûle, et la nappe régionale remonte avec."
+              : "Une partie du bassin suit le sort de la parcelle : la nappe régionale bouge, mais moins qu'elle."}
+        </p>
         <p className="glose" style={{ minHeight: 0, marginTop: 0 }}>
           {nappeCm <= 100
             ? "Nappe affleurante : le sol reste engorgé, seules les espèces qui le tolèrent tiendront."
@@ -918,6 +982,99 @@ function StartScreen({
         </div>
       </section>
 
+      <section className="carte">
+        <h3>Profils de départ</h3>
+        <p className="sous">
+          Figer tout ce qui précède — terrain, entourage, relief, eau, climat — pour rejouer
+          plusieurs parties dans les mêmes conditions. La graine du hasard, elle, reste libre :
+          c'est en la changeant qu'on distingue ce qui tient du terrain de ce qui tient de la
+          chance.
+        </p>
+        <div className="seg" style={{ marginBottom: 8 }}>
+          <input
+            type="text"
+            value={nomProfil}
+            placeholder="nom du profil"
+            onChange={(e) => setNomProfil(e.target.value)}
+            style={{ width: 200 }}
+          />
+          <button
+            type="button"
+            style={btn()}
+            disabled={nomProfil.trim().length === 0}
+            onClick={() => {
+              const profil = profilCourant(nomProfil.trim());
+              setProfils(enregistrerProfil(profil));
+              setMessageProfil(`« ${profil.nom} » enregistré.`);
+            }}
+          >
+            Enregistrer
+          </button>
+          <button
+            type="button"
+            style={btn()}
+            onClick={() => {
+              const texte = JSON.stringify(profilCourant(nomProfil.trim() || "profil"), null, 2);
+              setImportTexte(texte);
+              setMessageProfil("Profil courant écrit ci-dessous : copiez-le pour le garder.");
+            }}
+          >
+            Exporter en JSON
+          </button>
+        </div>
+        {profils.length > 0 && (
+          <div className="seg" style={{ marginBottom: 8 }}>
+            {profils.map((p) => (
+              <span key={p.nom} style={{ display: "inline-flex" }}>
+                <button type="button" style={btn()} onClick={() => appliquerProfil(p)}>
+                  ↺ {p.nom}
+                </button>
+                <button
+                  type="button"
+                  style={{ ...btn(), marginRight: 10 }}
+                  title={`Oublier « ${p.nom} »`}
+                  onClick={() => {
+                    setProfils(supprimerProfil(p.nom));
+                    setMessageProfil(`« ${p.nom} » oublié.`);
+                  }}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <textarea
+          value={importTexte}
+          onChange={(e) => setImportTexte(e.target.value)}
+          placeholder="Collez ici un profil exporté pour le charger"
+          rows={3}
+          style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: 11 }}
+        />
+        <div className="seg" style={{ marginTop: 6 }}>
+          <button
+            type="button"
+            style={btn()}
+            disabled={importTexte.trim().length === 0}
+            onClick={() => {
+              const lu = lireProfilExporte(importTexte);
+              if (typeof lu === "string") setMessageProfil(lu);
+              else {
+                appliquerProfil(lu);
+                setMessageProfil(`« ${lu.nom} » chargé.`);
+              }
+            }}
+          >
+            Charger ce JSON
+          </button>
+        </div>
+        {messageProfil && (
+          <p className="glose" style={{ minHeight: 0 }}>
+            {messageProfil}
+          </p>
+        )}
+      </section>
+
       <p className="seg">
         <button
           type="button"
@@ -932,6 +1089,7 @@ function StartScreen({
               reliefFinal,
               eau,
               nappeCm,
+              partBassin,
               maturationAns,
               anneeDepart,
             )

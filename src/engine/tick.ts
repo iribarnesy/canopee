@@ -59,7 +59,9 @@ import {
   APPORT_REGIONAL_MAX_MM,
   capaciteAquifereMm,
   ECHANGE_REGIONAL,
+  nouveauNiveauRegionalMm,
   profondeurPourStock,
+  stockEquilibreMm,
   stocksEquilibreParCellule,
   tauxDeVidange,
 } from "./nappe";
@@ -312,6 +314,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // La nappe est une SURFACE, plus plate que le terrain : profonde sous les
   // buttes, affleurante dans les creux (nappe.ts). Chaque cellule a donc son
   // propre niveau d'équilibre.
+  // Décalage du niveau régional par rapport à sa valeur d'origine : c'est lui
+  // qui porte l'effet d'un événement à l'échelle du bassin (nappe.ts).
+  const nappeRegionaleDepart = stockEquilibreMm(
+    station.profil,
+    station.remonteeNappeMmSemaine,
+    station.drainageExterneMmSemaine,
+    station.profondeurNappeEquilibreCm,
+  );
+  const decalageRegional = state.soil.nappeRegionaleMm - nappeRegionaleDepart;
   const nappeEquilibreParCellule = stocksEquilibreParCellule(
     station.profil,
     altitudes,
@@ -473,7 +484,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // d'une parcelle où rien d'autre ne le déciderait.
     const echangeRegional = Math.min(
       APPORT_REGIONAL_MAX_MM,
-      ((nappeEquilibreParCellule[i] ?? 0) - stockNappe) * ECHANGE_REGIONAL,
+      ((nappeEquilibreParCellule[i] ?? 0) + decalageRegional - stockNappe) * ECHANGE_REGIONAL,
     );
     if (echangeRegional >= 0) apportRegionalMm += echangeRegional;
     else vidangeNappeMm += -echangeRegional;
@@ -1470,6 +1481,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         ph: state.soil.ph,
         cloture: state.soil.cloture,
         nappeMm: nappeStockMm,
+        // Le réseau régional suit la parcelle à proportion de ce que le bassin
+        // partage avec elle : c'est ainsi qu'un incendie de MASSIF se
+        // distingue d'un incendie de parcelle (nappe.ts).
+        nappeRegionaleMm: nouveauNiveauRegionalMm(
+          state.soil.nappeRegionaleMm,
+          nappeStockMm.reduce((a, b) => a + b, 0) / nCells,
+          station.partBassinSemblable ?? 0,
+        ),
         phosphoreG,
         phosphoreFixeG,
         potassiumG,

@@ -69,6 +69,8 @@ let maturationAns = 0;
 let eau: EauDeSurface | undefined;
 // Profondeur d'équilibre de la nappe choisie au lancement, cm.
 let nappeCm: number | undefined;
+// Part du bassin qui subit le même sort que la parcelle (nappe.ts).
+let partBassin: number | undefined;
 // Normales saisonnières de la série : elles servent à accentuer les extrêmes.
 let normales: Normales | undefined;
 let seed = 1;
@@ -319,6 +321,7 @@ function stationAvecPaysage(base: Station): Station {
     relief: relief ?? base.relief,
     eau: eau ?? base.eau,
     profondeurNappeEquilibreCm: nappeCm ?? base.profondeurNappeEquilibreCm,
+    partBassinSemblable: partBassin ?? base.partBassinSemblable,
     // Sert à savoir si une cuvette creusée tient l'eau (terrain.ts).
     pluieAnnuelleMm: sc?.climat.rainAnnualMm,
     paysageId: bordures.nord,
@@ -696,6 +699,7 @@ function init(
   reliefChoisi: Relief,
   eauChoisie: EauDeSurface,
   nappeChoisieCm: number,
+  partBassinChoisie: number,
   maturation: number,
   annee: number,
 ) {
@@ -705,6 +709,7 @@ function init(
   relief = reliefChoisi;
   eau = eauChoisie;
   nappeCm = nappeChoisieCm;
+  partBassin = partBassinChoisie;
   maturationAns = maturation;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
@@ -744,6 +749,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         msg.relief,
         msg.eau,
         msg.nappeCm,
+        msg.partBassin,
         msg.maturationAns,
         msg.anneeDepart,
       );
@@ -758,6 +764,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       relief = msg.save.relief;
       eau = msg.save.eau;
       nappeCm = msg.save.nappeCm;
+      partBassin = msg.save.partBassin;
       maturationAns = msg.save.maturationAns ?? 0;
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
@@ -810,6 +817,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         relief: relief ?? sc?.station.relief,
         eau: eau ?? sc?.station.eau,
         nappeCm: nappeCm ?? sc?.station.profondeurNappeEquilibreCm,
+        partBassin: partBassin ?? sc?.station.partBassinSemblable,
         maturationAns,
         anneeDepart,
         weeks: state.week,

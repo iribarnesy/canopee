@@ -36,6 +36,8 @@ export interface SaveGame {
   eau?: EauDeSurface;
   /** profondeur d'équilibre de la nappe choisie, cm ; absent = celle de la station */
   nappeCm?: number;
+  /** part du bassin qui subit le même sort que la parcelle ∈ [0,1] */
+  partBassin?: number;
   /** années simulées à vide avant l'arrivée du joueur ; absent = 0 */
   maturationAns?: number;
   /** année civile du début de partie */
@@ -132,6 +134,8 @@ export type ToWorker =
       eau: EauDeSurface;
       /** profondeur d'équilibre de la nappe, cm */
       nappeCm: number;
+      /** part du bassin qui subit le même sort que la parcelle ∈ [0,1] */
+      partBassin: number;
       /** années à faire passer sur le terrain avant que le joueur n'arrive */
       maturationAns: number;
       anneeDepart: number;
