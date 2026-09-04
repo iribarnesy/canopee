@@ -16,10 +16,10 @@ import {
   partFoliaireActive,
   partFoliaireDans,
   SENESCENCE_DEBUT_SEMAINE,
+  SOLSTICE_ETE_SEMAINE,
   semaineDeFroid,
   senescenceEnCoursDans,
   senescenceFoliaire,
-  SOLSTICE_ETE_SEMAINE,
 } from "../../src/engine/phenologie";
 
 /** Jour au 15 avril, à la latitude du limon (49,5° N) et de la lande (44,5° N). */
@@ -233,5 +233,49 @@ describe("la sénescence, distincte de la chute", () => {
     // l'automne, sinon elle rognerait la croissance de toute l'année.
     const ete = partFoliaire(chene, 900, 15, false, 0);
     expect(partFoliaireActive(chene, 900, 15, false, 0)).toBeCloseTo(ete, 10);
+  });
+});
+
+describe("rien ne tombe hors sénescence", () => {
+  /**
+   * Le bug que ce test verrouille : la chute des feuilles se calculait comme
+   * l'écart entre `partFoliaire` de cette semaine et celui d'un cran plus tôt.
+   * Au printemps, ces deux appels ont le même compteur de sénescence (zéro) —
+   * leur seule différence était le besoin de froid, passé d'un côté et pas de
+   * l'autre. Un hêtre dont la dormance n'était pas levée versait ainsi près
+   * d'un tiers de son azote foliaire en litière EN PLEINE FEUILLAISON.
+   *
+   * Ce n'était pas une chute de feuilles : c'était deux lois comparées l'une à
+   * l'autre. Le garde `senescenceEnCoursDans` supprime la cause.
+   */
+  const hetre = getEspece("fagus_sylvatica");
+
+  it("au printemps, un froid insatisfait ne fait pas tomber de feuilles", () => {
+    // Le cas exact : hêtre, 500 °C·j, trois semaines de froid pour un besoin
+    // bien supérieur — la dormance n'est pas levée, le débourrement est
+    // retardé, et rien ne doit tomber pour autant.
+    expect(hetre.phenologie.besoinFroidSemaines).toBeGreaterThan(3);
+    const printemps = contextePhenologique(49.5, 16, 500, 3);
+    expect(senescenceEnCoursDans(printemps)).toBe(false);
+
+    // C'est bien la comparaison qui divergeait : sans le garde, l'écart entre
+    // les deux appels est positif alors que le feuillage ne fait que SORTIR.
+    const avecFroid = partFoliaireDans(hetre, printemps);
+    const sansFroid = partFoliaireDans(hetre, {
+      ...printemps,
+      semainesDeFroid: Number.POSITIVE_INFINITY,
+    });
+    expect(sansFroid).toBeGreaterThan(avecFroid);
+  });
+
+  it("en automne, la sénescence est bien enclenchée et le froid n'entre plus", () => {
+    // La branche d'automne de `partFoliaire` ignore le besoin de froid : les
+    // deux contextes doivent donc donner exactement la même chose.
+    const automne = contextePhenologique(49.5, SENESCENCE_DEBUT_SEMAINE + 2, 900, 3);
+    expect(senescenceEnCoursDans(automne)).toBe(true);
+    expect(partFoliaireDans(hetre, automne)).toBeCloseTo(
+      partFoliaireDans(hetre, { ...automne, semainesDeFroid: Number.POSITIVE_INFINITY }),
+      10,
+    );
   });
 });

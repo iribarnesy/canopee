@@ -86,7 +86,12 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import { frequentationDesBordures } from "./paysage";
-import { contextePhenologique, partFoliaireDans, semaineDeFroid } from "./phenologie";
+import {
+  contextePhenologique,
+  partFoliaireDans,
+  semaineDeFroid,
+  senescenceEnCoursDans,
+} from "./phenologie";
 import {
   alterationPhosphoreG,
   alterationPotassiumG,
@@ -1421,14 +1426,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (!tree.alive || tree.uptakeYearG <= 0) return tree;
     const espece = getEspece(tree.especeId);
     if (!espece.lumiere.caduc) return tree;
+    // Rien ne tombe hors sénescence. Le garde manquait, et l'asymétrie du
+    // froid n'était qu'un symptôme : au PRINTEMPS, les deux appels ci-dessous
+    // ont le même `semainesDepuisSenescence` (zéro), donc leur seule
+    // différence était le besoin de froid — et un hêtre à 500 °C·j avec trois
+    // semaines de froid « lâchait » ainsi 27,8 % de son azote foliaire en
+    // pleine feuillaison. Ce n'était pas une chute de feuilles, c'était deux
+    // lois comparées l'une à l'autre.
+    //
+    // Une fois le garde posé, on est toujours dans la branche d'automne de
+    // `partFoliaire`, qui ne regarde pas le froid : les deux appels peuvent
+    // donc partager le même contexte, et l'asymétrie disparaît d'elle-même.
+    if (!senescenceEnCoursDans(pheno)) return tree;
     const restant = partFoliaireDans(espece, pheno);
     // La même semaine, un cran plus tôt dans la chute : l'écart entre les deux
-    // est ce que l'arbre a lâché. Le besoin de froid ne compte pas ici — la
-    // branche d'automne de `partFoliaire` ne le regarde pas.
+    // est ce que l'arbre a lâché.
     const restantAvant = partFoliaireDans(espece, {
       ...pheno,
       semainesDepuisSenescence: Math.max(0, pheno.semainesDepuisSenescence - 1),
-      semainesDeFroid: Number.POSITIVE_INFINITY,
     });
     const tombe = Math.max(0, restantAvant - restant);
     if (tombe <= 0) return tree;

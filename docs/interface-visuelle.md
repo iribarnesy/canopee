@@ -10,8 +10,11 @@
 > l'échelle vraie**, **essences reconnaissables une par une**, phénologie dans
 > le moteur). Le périmètre s'ouvre : **la faune visible, la pluie et le son
 > entrent** ; la vraie 3D et la météo volumétrique restent dehors, avec les
-> raisons. Les chandelles sont faites côté moteur (§2.6). Ces choix changent la
-> charge : voir §9.
+> raisons. Ces choix changent la charge : voir §9.
+>
+> **v0.3** — le **contrat moteur → rendu est livré** (§2), et le catalogue est
+> passé à vingt-cinq essences, ce qui renchérit D4. Il n'y a plus de blocage
+> côté moteur : le chantier peut commencer au lot L0.
 
 ---
 
@@ -140,217 +143,109 @@ celle du rendu.
 | **D3** | Échelle verticale | ✅ **tout à l'échelle vraie** — relief compris | **Et ça ne coûte presque rien** : les cinq stations livrées ont 1 à 6 % de pente, soit **1 à 6 m de dénivelé sur 100 m**. À 1 m = 8 px, c'est 8 à 48 px sur une parcelle qui en fait 800 de haut : lisible, jamais gênant. L'exagération que j'avais proposée était une prudence mal placée. **Le vrai coût est ailleurs** : dès que le terrain a du relief, une butte peut masquer ce qui est derrière, donc le tri en profondeur doit **entrelacer le sol et les arbres** au lieu de cuire le terrain en une seule couche sous tout le reste (§3). C'est `+M` sur L1/L2. Le seul cas à surveiller est un terrain **modelé à la main** (l'éditeur laisse creuser sans limite) : prévoir un avertissement au-delà de ~25 % de pente moyenne, pas un plafond. |
 | **D4** | Silhouettes par espèce | ✅ **une essence = une silhouette reconnaissable**, niveau illustration | Renversement complet de la v0.1, et c'est la bonne exigence : **c'est le seul moyen que le joueur apprenne les essences**, ce qui est l'objectif pédagogique du §0.6 des règles. La technique qui le permet sans devenir illustrateur : **squelette généré par branchement récursif** (angle, ratio, divergence, dominance apicale — paramétrés par espèce) + **feuilles, fleurs et fruits en tracés SVG écrits à la main dans le code**, d'après des références botaniques. Voir §4 et §5.4. **Coût honnête : c'est ce qui double le chantier** (§9). |
 | **D5** | Composition ou sprites entiers | ✅ **composition en pièces** (souche/tronc, charpente, feuillage, accessoires) | Un arbre élagué **et** trogné **et** fruité **et** en train de brûler est une combinaison légitime. En sprites entiers c'est un produit cartésien ; en pièces, quelques dessins. D'autant plus vrai avec D4 : le squelette généré *est* la composition. |
-| **D6** | Où vit l'état d'animation | ✅ **dans le rendu** | Le rendu tient une scène persistante entre deux instantanés : valeurs interpolées, animations en cours, marqueurs de changement. Le moteur n'apprend jamais le mot « frame ». Les chandelles, elles, sont bien dans le moteur — et c'est fait (§2.6). |
+| **D6** | Où vit l'état d'animation | ✅ **dans le rendu** | Le rendu tient une scène persistante entre deux instantanés : valeurs interpolées, animations en cours, marqueurs de changement. Le moteur n'apprend jamais le mot « frame ». Les chandelles, elles, sont bien dans le moteur — et c'est fait. |
 | **D7** | Le temps | ✅ **horloge d'animation découplée du tick + politique de vitesse** | Le worker tourne à 10 Hz et avale **jusqu'à 26 semaines par pas** (`worker.ts:startLoop`), en ne postant qu'un instantané par lot. À ×512, une année passe entre deux images. La politique — et la réponse à « je veux voir ce qui a changé même à ×64 » — est au §6.8, revue en v0.2. |
 
 ---
 
-## 2. Le contrat de données : ce que le moteur sait déjà, et ne dit pas
+## 2. Le contrat de données : **livré** (PR #2, commit `3a5a640`)
 
-C'est **le plus gros morceau technique du chantier**, et le moins
-spectaculaire. Presque tout ce qu'il faut est déjà calculé ; l'instantané
-(`src/game/protocol.ts`) n'en transporte qu'un extrait, taillé pour la carte
-en aplats.
+Ce chapitre listait, version après version, ce que le moteur calculait et
+gardait pour lui. Il n'a plus cet objet : le contrat est en place. On le garde
+ici comme **référence de ce que le rendu peut lire**, et comme trace de ce qui
+manque encore.
 
-### 2.1 Par arbre
+La règle d'architecture qui en sort, et qui vaut plus que la liste : la
+traduction état → instantané vit dans `src/game/snapshot.ts`, pure et testée.
+**Le worker assemble, il ne décide pas.** Tout nouveau champ passe par là, et
+un test échoue si un tampon typé manque à la liste de transfert
+(`transferablesDuSnapshot`) — un oubli se paierait en une copie complète par
+semaine simulée.
 
-`SnapshotTree` envoie aujourd'hui : `id, especeId, x, y, heightM, ageWeeks,
-stress, fruitsKg, hauteurElagueeM, protege, chandelle`.
+### 2.1 Ce que le rendu peut lire aujourd'hui
 
-> **✅ Le bug de `chandelle` est corrigé.** `worker.ts:postSnapshot()` faisait
-> `state.trees.filter((t) => t.alive)` **avant** `.map(… chandelle: !t.alive)` :
-> tout arbre mort était écarté, le drapeau valait constamment `false`, et les
-> 32 lignes de `drawTreeOblique` qui dessinent le fût gris à deux moignons
-> étaient du code mort — aucune chandelle n'était visible en jeu. Les tests ne
-> l'avaient pas vu parce qu'ils sont au niveau du moteur
-> (`tests/ecology/chandelles.test.ts`), pas du worker.
->
-> Ce que le correctif a demandé, au-delà du filtre retiré : distinguer
-> partout les **tiges vivantes** des chandelles, puisque `snapshot.trees`
-> mélange désormais les deux — la composition du peuplement et son total, le
-> compteur d'arbres (qui affiche maintenant les chandelles à part), les fruits
-> à récolter, la sélection « + tous les X », et le **rayon de clic** (une
-> chandelle n'a plus de houppier : sans rétrécissement, un fût mort captait les
-> clics sur toute l'emprise de la couronne qu'il avait de son vivant). Le
-> moteur, lui, n'avait besoin de rien : toutes les actions étaient déjà gardées
-> par `t.alive`, et `couper` acceptait déjà l'arbre brûlé sur pied.
->
-> **Et une couture pour que ça ne se reproduise pas.** La traduction
-> état → instantané vivait en ligne dans le worker, qu'aucun test ne peut
-> instancier — c'est *structurellement* pour ça que le bug était invisible. Elle
-> est maintenant dans `src/game/snapshot.ts`, pure, et
-> `tests/unit/snapshot.test.ts` la couvre. Le point important : la fonction
-> prend **la liste** d'arbres et non un arbre, parce que le filtre fautif ne
-> portait pas sur la traduction d'un arbre mais sur le choix de ceux qu'on
-> traduit — un test sur un seul arbre n'aurait rien vu. Vérifié en
-> réintroduisant le filtre : deux tests tombent.
->
-> **✅ Les deux conséquences de moteur sont traitées.** On peut maintenant
-> `couper` une chandelle grise — c'est du bois de chauffage décoté, jamais de
-> l'œuvre, et son carbone est **déplacé** hors du pool de bois mort au lieu
-> d'y être ajouté une seconde fois (il y était entré à la mort). En revanche
-> elle ne fait pas de BRF : le broyat veut du bois **frais**, c'est le cambium
-> vivant et l'azote du rameau de l'année qui font son intérêt. Et
-> `partMecanisable` compte désormais les chandelles comme obstacles — j'avais
-> écrit ici le contraire, à tort : le code **filtrait** `!alive`, donc un
-> tracteur passait à travers les troncs morts. Après une mortalité, la fauche
-> et le chaulage restent chers jusqu'au nettoyage.
-
-| Champ de `TreeState` | Envoyé ? | Ce qu'il permet de dessiner |
+| Besoin | Où | Ce qu'on en dessine |
 |---|---|---|
-| `hauteurElagueeM` | ✅ | La bille nue jusqu'au houppier — déjà exploité par la vue oblique. |
-| `protege` | ✅ | Le manchon au pied du plant. |
-| `fruitsKg` | ✅ | Les fruits mûrs sur la couronne. |
-| `stress` | ✅ | Rien pour l'instant : le stress ne monte qu'au bord de la mort. Utile pour les 2–3 dernières semaines d'un arbre. |
-| **`teteTrogneM`** | ❌ | **La trogne** : tête renflée à hauteur d'homme, faisceau de rejets au-dessus. Demandé explicitement. |
-| **`recepages`** | ❌ | L'âge de gestion : une trogne à son 6ᵉ étêtage a une tête grosse et creuse, pas la même qu'au premier. Sert aussi à la cavité (habitat). |
-| **`vigueur`** | ❌ | **La clé de la santé visible** : moyenne lissée du facteur limitant. Un arbre qui végète a un feuillage clairsemé et pâle *avant* d'accumuler du stress. C'est ce qui rendra une parcelle « en souffrance » lisible d'un coup d'œil. |
-| **`dommageHydraulique`** | ❌ | La **cime sèche** : branches mortes en haut du houppier, la signature des sécheresses passées. Mémoire pluriannuelle — visuellement, l'arbre garde la trace. |
-| `chandelle` | ✅ | Le fût gris à deux moignons. Corrigé — voir l'encadré ci-dessus. |
-| **`mortSemaine`** | ❌ | L'âge de la chandelle : elle grisonne, perd ses moignons, se creuse (les pics), puis tombe. Sans elle, toutes les chandelles se ressemblent. |
-| **`brulEeSemaine`** | ❌ | Distinguer la chandelle **noire** (feu) de la chandelle **grise** (sécheresse, vieillesse). Deux histoires différentes, et la première est encore récoltable un an. |
-| **`causeMort`** | ❌ | Choisit l'animation de mort (§6.3) — la seule donnée qui manque pour que les onze morts se racontent différemment. |
-| **`derniereLeveeSemaine`** | ❌ | Le tronc **démasclé** du chêne-liège : ocre-rouge vif pendant quelques années, puis il grisonne. Un des plus beaux détails disponibles gratuitement. |
-| **`rootDepthCm`** | ❌ | Pour une coupe de sol en option (« voir les racines ») ; pas prioritaire. |
-| **`fruitProgress`, `bloomFrosted`** | ❌ | Floraison → nouaison → maturation, et les **fleurs grillées** par un gel tardif (fleurs brunes, pas de fruits cette année). |
-| **`pousseTendreM`** | ❌ | Ce que le chevreuil mange. Pour l'animation de broutage (rameaux coupés net). |
+| **Relief** | `StationInfo.altitudesM` | le terrain isométrique, ses flancs, l'ombrage de pente |
+| **Calendrier foliaire** | `Snapshot.pheno` (`ContextePhenologique` : 5 scalaires) | les couleurs de saison, via `partFoliaireDans`, `senescenceDans` et `partFoliaireActiveDans` — une seule loi, deux appelants, aucune dérive possible entre l'écran et le moteur |
+| **Trogne** | `teteTrogneM`, `recepages` | tête renflée, faisceau de rejets, cavité qui se creuse aux étêtages |
+| **Santé** | `vigueur`, `dommageHydraulique` | feuillage clairsemé et pâle ; **cime sèche** des sécheresses passées |
+| **Chandelles** | `chandelle`, `mortSemaine`, `brulEeSemaine` | le fût qui grisonne et se creuse ; la **noire** du feu contre la **grise** du temps |
+| **Morts** | `Snapshot.morts` (`MortDeLaSemaine{id,x,y,especeId,cause,heightM}`) | les onze animations de mort, chacune à sa place — et elles **s'accumulent** entre deux instantanés, donc rien ne passe à la trappe à grande vitesse |
+| **Gestes** | `Snapshot.gestes` (`GesteVisible`) | l'arbre qui **tombe** au lieu de s'escamoter ; élagage, étêtage, recépage, broutage, frottis. Ils disent ce qui a été *réellement* touché — le plafond horaire arrête souvent le chantier en cours de route |
+| **Incendie** | `Snapshot.incendie` (`IncendieResult{origine,brulees,rangs}`) | le front qui court : les cellules sont rangées **par rang croissant**, le rendu n'a qu'à les découper en tranches |
+| **Eau de surface** | `soilDebordementMm` | la crue, la lame d'eau qui court, les ravines |
+| **Ambiance** | `soilLumiere` | le sous-bois sombre, les taches de lumière, la clairière |
+| **Tapis** | `soilLitiereCG` | les feuilles de novembre, le paillage, le noir des cendres |
+| **Floraison, gel, brout, liège** | `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`, `derniereLeveeSemaine` | voile de fleurs, fleurs brunies par le gel, rameaux coupés net, écorce arrachée, tronc ocre-rouge |
+| **Météo** | `Snapshot.weather` (déjà là avant) | pluie, neige, gel, canicule — `rainMm` suffit |
 
-**À faire** : élargir `SnapshotTree` à ces champs (`M`). Coût mémoire : ~14
-nombres × quelques milliers d'arbres par instantané, négligeable. Attention à
-`stationInfo`/`postSnapshot` : les tableaux de sol sont **transférés** (zéro
-copie) ; les arbres sont sérialisés — au-delà de ~20 000 arbres il faudra
-passer les arbres en tableaux typés parallèles (`Float32Array` par champ).
-À surveiller, pas à faire tout de suite.
+Trois choses qui ont été faites **mieux** que ce que ce document demandait, et
+qui méritent d'être sues avant de coder :
 
-### 2.2 Par cellule
+- **`litterCG` est de l'état, pas une grandeur de tick** : elle s'accumule et
+  se décompose, donc elle se lit comme `soilPh`, sans être dupliquée dans le
+  résultat du tick.
+- **Les grilles sont copiées à l'assemblage** : le transfert les détache, et
+  une action reçue en pause déclenche un instantané sans qu'aucune semaine
+  n'ait été simulée — sinon la crue disparaîtrait entre deux clics.
+- **Le front de feu ne coûte pas le déterminisme** : `propager()` dépile
+  toujours (l'ordre de consommation du PRNG en dépend), et `rangsDuFront()`
+  calcule les distances après coup, en BFS pur sur le seul ensemble brûlé. Un
+  test compare l'état du PRNG pour le prouver.
 
-| Donnée | Envoyée ? | Usage visuel |
+### 2.2 Deux pièges de timing à ne pas déclencher
+
+- **La mort au feu arrive en retard dans `morts`.** Un arbre tué par le feu
+  n'y entre qu'un an après l'incendie : le versement au pool de bois mort est
+  différé de `CHABLIS_RECUPERABLE_SEMAINES`, le temps qu'on puisse encore le
+  récolter. **Ne pas brancher l'animation de torchage sur `morts`** : elle se
+  lit tout de suite sur `causeMort`/`brulEeSemaine` et sur `incendie`.
+- **La sénescence n'est pas la chute.** `partFoliaire` dit combien de feuillage
+  reste accroché, `senescenceFoliaire` à quel point il a jauni. Le second
+  devance le premier de deux à trois semaines : c'est ce décalage qui donne le
+  houppier plein et doré d'octobre. Ne pas les confondre — et attention à
+  `senescenceEnCoursDans`, qui est un oui/non (« le compteur tourne »), pas un
+  avancement.
+
+### 2.3 Les deux cartes de tâche laissées ouvertes : traitées
+
+**Le carbone d'une chandelle coupée (~933 kgC créés de rien).** Passé le délai
+de récupération, couper une chandelle brûlée exportait son bois *et* rajoutait
+ses racines au pool où tout était déjà compté. La cause était le garde de
+`applyCouper`, posé sur `brulEeSemaine` : il laissait passer un brûlé de plus
+d'un an, dont `mortSemaine` était pourtant déjà posée. Le garde est maintenant
+sur **`mortSemaine`**, la seule question qui compte — « ce bois est-il déjà dans
+le pool ? » —, et l'abattage devient alors un **transfert** hors du pool, borné
+par ce qu'il en reste (une chandelle de dix ans en a déjà rendu l'essentiel).
+Deux tests le couvrent, dont le cas du pool presque vide.
+
+**L'asymétrie du froid dans la chute des feuilles (27,8 % d'azote foliaire
+versé au printemps).** Ce n'était pas un arbitrage entre correction et
+calibration : l'asymétrie n'était qu'un symptôme. Le calcul de la chute
+tournait **toutes les semaines**, y compris au printemps, où les deux appels à
+`partFoliaire` partagent le même compteur de sénescence (zéro) — leur seule
+différence était le besoin de froid, passé d'un côté et pas de l'autre. Un
+hêtre dont la dormance n'était pas levée « lâchait » donc de l'azote en pleine
+feuillaison, alors qu'il ne faisait que sortir ses feuilles. Ce n'était pas une
+chute, c'étaient deux lois comparées l'une à l'autre.
+
+Le garde manquant est celui que le moteur avait déjà sous la main :
+`senescenceEnCoursDans(pheno)`. Une fois posé, on est toujours dans la branche
+d'automne de `partFoliaire`, qui ne regarde pas le froid — les deux appels
+peuvent partager le même contexte et l'asymétrie disparaît d'elle-même, sans
+qu'il faille arbitrer quoi que ce soit. En automne, le comportement est
+inchangé au chiffre près (test).
+
+### 2.4 Ce qui manque encore, et qui ne me bloque pas
+
+| Manque | Ce que le rendu ne pourra pas faire | À qui |
 |---|---|---|
-| `soilWater`, `soilPh`, `soilN`, `soilEngorgement`, `soilNappeCm` | ✅ | Nuances du sol, mares, sol détrempé. Les calques analytiques restent à l'autre vue ; ici c'est de l'ambiance. |
-| `soilHerbe` | ✅ | Le tapis : rase, haute, sèche, fauchée. |
-| `soilCloture` | ✅ | Le grillage (déjà tracé en périmètre par la vue actuelle). |
-| `enEau` (fixe) | ✅ | Ruisseau, mare. |
-| **`altitudesM`** | ❌ | **Le relief.** `altitudeParCellule()` est déjà appelé dans `worker.ts:stationInfo()` pour placer l'eau — il suffit de le joindre à `StationInfo`. Sans ça, pas d'isométrique du tout. **Bloquant, `S`.** |
-| **`debordementParCellule`** (mm/sem) | ❌ | **L'eau qui court en surface** — la seule base honnête pour une crue, une nappe d'eau, une ravine. Calculé dans `tick.ts:456` et jeté. **`S`.** |
-| **`groundLight`** | ❌ | La lumière au sol (`light.ts:computeGroundLight`). Donne le sous-bois sombre, les taches de lumière, la clarté d'une clairière — l'ambiance, presque gratuitement. **`S`.** |
-| **`litterCG`** | ❌ | Le tapis de feuilles mortes en novembre, le paillage sous une couronne, le noir des cendres après un feu. **`S`.** |
-| **`cellules brûlées`** | ❌ | Voir §2.3. |
-| `herbeBiomasse` | ❌ | Le foin sur pied de l'été (jaune) ≠ la couverture verte. Nuance, `S`. |
-
-### 2.3 Les événements spatialisés — le vrai manque
-
-Le fil d'événements est **du texte** (`GameEvent = { week, icone, message }`).
-Pour animer, il faut savoir *où*.
-
-| Événement | Ce que le moteur a | Ce qu'il faut | Charge |
-|---|---|---|---|
-| **Morts** | `TickResult.morts: { especeId, cause, heightM }[]` — pas d'`id`, pas de position | `{ id, especeId, x, y, heightM, cause, semaine }` | `S` (ajouter les champs, `tick.ts:1313`) |
-| **Incendie** | `{ cellulesBrulees, arbresTues, rejets, carboneTHa }` — des compteurs | **l'ensemble des cellules brûlées**, plus pour chacune son **rang d'arrivée du front** (distance à l'origine), et la liste des arbres tués / des souches qui rejettent | `M` — voir la note ci-dessous |
-| **Crue** | `fluxes.partInondee` (un scalaire) | dérivable côté rendu : `soilNappeCm ≤ 5` par cellule + `debordement` + le côté du ruisseau. Rien à changer dans le moteur si on expose `debordementParCellule`. | `S` |
-| **Coupe / éclaircie / recépage** | l'arbre disparaît (ou rapetisse) entre deux instantanés | `{ ids, type }` pour animer la chute plutôt que l'escamotage | `S` |
-| **Broutage / frottis** | `fluxes.broutageKg`, `tree.frotteSemaine` | les `id` touchés cette semaine | `S` |
-| **Gel des fleurs** | `bloomFrosted` par arbre | rien de plus | — |
-
-**Note sur le front de feu.** `feu.ts:propager()` fait un parcours en pile
-(`file.pop()`, donc en profondeur) et l'ordre de consommation du PRNG en
-dépend : **le remplacer par une file casserait le déterminisme et les tests**
-(`tests/ecology/feu.test.ts`, `incendie-nappe.test.ts`). La bonne façon :
-garder le parcours tel quel, et calculer *après coup*, en passe pure sur
-l'ensemble des cellules brûlées, la distance de chacune à l'origine (BFS sur
-le seul ensemble brûlé). Aucun tirage, aucun changement de résultat, et le
-rendu obtient exactement ce qu'il lui faut pour faire courir un front.
-
-### 2.4 La phénologie : faite (commits `7737b94`, `6af5254`)
-
-`leavesOn = tMean > 6 °C` a disparu. Chaque espèce a maintenant son calendrier
-(`src/engine/phenologie.ts`) : un **forçage** en degrés-jours base 5 propre à
-l'espèce, et une **porte photopériodique** sans laquelle le modèle serait
-absurde au sud — au 12 avril, la lande girondine a cumulé 341 °C·j quand le
-limon du Nord n'en a que 123, et un seuil de forçage seul y ferait débourrer
-six semaines trop tôt. L'indice foliaire entre dans Beer-Lambert (un houppier à
-moitié sorti ne fait pas la même ombre), la chute s'étale sur cinq semaines, et
-les sempervirents restent à 1.
-
-`partFoliaire(espece, ddYearBase5, dureeJourH, automne, semainesDepuisSenescence)`
-rend exactement ce que le rendu attendait : une part de feuillage continue
-∈ [0,1], **par espèce**. Ce qui reste à faire côté protocole est donc minuscule :
-
-- transporter cette part **par arbre** dans `SnapshotTree` (le rendu ne doit pas
-  refaire le calcul : il n'a ni le cumul de degrés-jours ni la durée du jour) ;
-- ou, à défaut, transporter `ddYearBase5` + `dureeJourH` + `automne` dans
-  l'instantané et laisser le rendu appeler `partFoliaire` — c'est du moteur pur,
-  donc légitime, et ça coûte trois nombres au lieu d'un par arbre.
-
-**La seconde voie est préférable** : elle donne au rendu la fonction *et* ses
-entrées, sans dupliquer une valeur par arbre, et elle reste juste si la
-phénologie se raffine (le *chilling* n'est pas modélisé — limite assumée du
-commit). ✅ **La sénescence est maintenant séparée de la feuillaison.**
-`senescenceFoliaire()` dit dans quel ÉTAT est le feuillage encore accroché
-(0 = vert, 1 = entièrement doré et hors service), là où `partFoliaire` dit
-seulement combien il en reste. Le rendu a donc les deux nombres qu'il faut pour
-la coloration d'automne : un houppier presque plein **et** entièrement roux,
-qui est exactement ce qu'on voit en octobre.
-
-`partFoliaireActive` — accroché × (1 − jauni) — est fourni avec : c'est la part
-du feuillage qui **travaille** encore.
-
-**Une chose qu'il faut savoir en abordant les animations de saison** : cette
-part active ne commande **pas** encore la croissance ni la transpiration, qui
-passent toujours par un seuil thermique. Donc à l'écran, un houppier doré
-d'octobre continue de grandir, et un caduc nu de janvier continue de puiser dans
-le sol. Le brancher demande de recalibrer `GROWING_WEEKS` et les
-`pousseMaxMAn` — mesuré et documenté dans `docs/realisme.md`, « la saison de
-végétation est encore thermique ». Ce n'est pas bloquant pour le rendu, mais
-c'est une incohérence que le joueur pourra voir une fois les saisons animées.
-
-**Une inquiétude vérifiée et écartée** : le compteur d'étalement part d'une
-semaine fixe (40) alors que la porte photopériodique s'ouvre à une date qui
-dépend de la latitude — de quoi faire sauter une parcelle du sud du vert à
-l'or en une image. Mesuré sur nos latitudes : le seuil de 11,5 h tombe en
-**semaine 39 de Lille à Bordeaux** (l'écart de durée du jour entre 44,5° et
-49,5° N n'est que de 0,14 h près de l'équinoxe). La porte s'ouvre donc une
-semaine avant que le compteur ne démarre, la courbe part de 1 et descend sans
-marche. La simplification du moteur tient ; il n'y avait rien à corriger.
-
-### 2.5 Récapitulatif des changements de protocole
-
-| # | Changement | Charge | Bloque quoi |
-|---|---|---|---|
-| P1 | `StationInfo.altitudesM` (déjà calculé dans `stationInfo()`, il suffit de le joindre) | `S` | tout le relief iso (lot 1) |
-| P2 | `SnapshotTree` élargi (~14 champs, dont `teteTrogneM`, `vigueur`, `dommageHydraulique`, `mortSemaine`, `derniereLeveeSemaine`) | `M` | stades, gestion, santé (lots 2, 4) |
-| P3 | ✅ **`chandelle` corrigé** ; reste à ajouter `causeMort`, `mortSemaine`, `brulEeSemaine` | `S` | les morts, les brûlés (lots 5, 6) |
-| P4 | `soilDebordement`, `soilLumiereAuSol`, `soilLitiere` | `S` | eau de surface, ambiance, cendres |
-| P5 | `TickResult.morts` avec `id`, `x`, `y` | `S` | animations de mort |
-| P6 | `TickResult.incendie` avec cellules + rang du front | `M` | l'incendie (lot 6) |
-| P7 | événements de gestion spatialisés (coupes, brout, frottis) | `S` | retours d'action (lot 4) |
-| P8 | ✅ **phénologie et sénescence faites** (`phenologie.ts`) ; reste à exposer `ddYearBase5`, `dureeJourH`, `automne`, `semainesDepuisSenescence`, `semainesDeFroid` dans l'instantané — cinq scalaires, et le rendu appelle `partFoliaire` et `senescenceFoliaire` lui-même | `S` | les saisons (lot 3) |
-| P9 | de quoi peupler la faune : `pressionGibier` (✅ déjà là), ids broutés/frottés de la semaine (= P7), floraisons en cours (= P2) | — | la faune visible (lot 9) — **rien de neuf à demander**, tout tombe de P2 et P7 |
-
-Total protocole : **~1,5 j** de ce qui reste (P3 et P8 étant pour l'essentiel
-faits). C'est le prix d'entrée, et il a baissé.
-
-### 2.6 Les chandelles : fait (commit `95eec77`)
-
-Un arbre mort reste maintenant debout, pour une durée qui suit la densité de
-son bois (`dureeChandelleSemaines` : une décennie pour un chêne, trois ans pour
-un sureau), il compte comme arbre-habitat au-dessus de huit mètres, et le
-transfert de carbone a lieu une seule fois, à la mort. Le rendu y gagne
-exactement ce qu'il lui fallait : **un cadavre qui existe dans l'état**, donc
-animable sans que le rendu ait à inventer un fantôme.
-
-Ce qui reste à faire de ce côté :
-
-- **le bug de `chandelle`** (§2.1) — la fonctionnalité est invisible en jeu ;
-- `mortSemaine` et `brulEeSemaine` dans l'instantané, pour que la chandelle
-  vieillisse à l'écran (grise puis creusée puis tombée) et que la noire du feu
-  se distingue de la grise de la sécheresse ;
-- les deux conséquences que le commit laisse ouvertes et qui touchent le
-  rendu : une chandelle est du **combustible sur pied** que `chargeCombustible`
-  ignore (donc à l'écran une chandelle ne brûlera pas alors qu'elle devrait),
-  et sa chute ne fait **pas de trouée** dans le couvert (donc pas de tache de
-  lumière au sol à animer). Ce sont des questions de moteur, pas de rendu — je
-  les signale ici parce que le jour où elles seront traitées, il y aura deux
-  animations de plus à écrire.
+| **La saison de végétation est encore thermique** | Un houppier doré continue de grandir et un caduc nu de janvier de puiser dans le sol : l'incohérence sera **visible** une fois les saisons animées. Mesuré et chiffré dans `docs/realisme.md` — c'est un chantier de calibration (`GROWING_WEEKS`, `pousseMaxMAn`), pas une correction. | moteur |
+| **La marcescence** | Le chêne et le charme gardent leurs feuilles mortes et brunes une partie de l'hiver. Silhouette d'hiver très reconnaissable, donc ça compte pour D4. Il faudrait un champ par espèce. | moteur |
+| **La chute d'une chandelle ne fait pas de trouée** | Pas de tache de lumière au sol à animer le jour où elle s'abat. | moteur |
+| **Le tas de BRF n'a pas de position** | À poser conventionnellement au bord de la parcelle. | rendu |
+| **Le rembobinage** | Cadré, pas fait : il faudra un instantané **par semaine simulée** quand l'enregistrement est actif, au lieu d'un par lot de 26. Le budget est dans `docs/stack.md` (« Le contrat moteur → rendu »). | worker, au lot L8 |
 
 ## 3. Architecture de rendu
 
@@ -491,7 +386,7 @@ dessus, la correspondance est dans `atlas/palette.ts`.
 
 Les **saisons** décalent la palette entière (sol, herbe, feuillage, ciel,
 lumière), interpolée en continu sur l'année à partir de la phénologie du moteur
-(P8). C'est l'effet le plus rentable du chantier.
+(`Snapshot.pheno`). C'est l'effet le plus rentable du chantier.
 
 ## 5. Inventaire des visuels
 
@@ -548,7 +443,7 @@ et on n'accepte pas non plus que quatre espèces se ressemblent.
 avec D4 c'est le squelette qui les porte : semis (< 0,5 m), gaulis (0,5–3 m),
 perchis (3–10 m), futaie (10 m–max), sénescent (`fAge < 1` : cime dégarnie,
 grosses charpentières mortes, houppier étalé), **chandelle** (fût gris ou noir,
-qui se creuse puis tombe — §2.6).
+qui se creuse puis tombe, `mortSemaine`).
 
 **Toutes les fiches, sans ordre de faveur** (Q8) : les vingt-cinq essences
 doivent être reconnaissables, aucune ne reste en port générique. Ça ne veut pas
@@ -570,26 +465,26 @@ n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 | État | Ce qu'on voit | Donnée |
 |---|---|---|
 | **Élagué** | bille nue jusqu'à `hauteurElagueeM`, houppier au-dessus. La silhouette de la futaie, opposée au branchu de plein vent. | ✅ déjà envoyé |
-| **Trogne** | tronc court, **tête renflée** à `teteTrogneM`, faisceau de rejets dressés au-dessus. La tête grossit et se creuse avec `recepages` → cavité visible au-delà de 3–4 étêtages. | ❌ P2 |
-| **Juste étêtée** | tête nue, moignons de coupe clairs, aucun rejet — pendant une saison | ❌ P2 + P7 |
-| **Cépée recépée** | souche large, brins courts et nombreux (`heightM = 0,5` après l'action), qui repartent | ❌ P2 |
-| **Démasclé** | tronc **ocre-rouge** sur les 2–3 premiers mètres pendant quelques années, puis grisonnant | ❌ P2 |
+| **Trogne** | tronc court, **tête renflée** à `teteTrogneM`, faisceau de rejets dressés au-dessus. La tête grossit et se creuse avec `recepages` → cavité visible au-delà de 3–4 étêtages. | ✅ |
+| **Juste étêtée** | tête nue, moignons de coupe clairs, aucun rejet — pendant une saison | ✅ |
+| **Cépée recépée** | souche large, brins courts et nombreux (`heightM = 0,5` après l'action), qui repartent | ✅ |
+| **Démasclé** | tronc **ocre-rouge** sur les 2–3 premiers mètres pendant quelques années, puis grisonnant | ✅ |
 | **Manchonné** | fût blanc translucide au pied | ✅ |
 | **Fruits mûrs** | ponctuation orange sur la couronne | ✅ (à raffiner : `fruitProgress`) |
-| **En fleurs** | voile blanc/rose sur la couronne du fruitier | ❌ P2 |
-| **Fleurs gelées** | fleurs brunes, chute rapide, pas de fruits cette année | ❌ P2 |
+| **En fleurs** | voile blanc/rose sur la couronne du fruitier | ✅ |
+| **Fleurs gelées** | fleurs brunes, chute rapide, pas de fruits cette année | ✅ |
 
 ### 5.6 Les états de santé
 
 | État | Ce qu'on voit | Donnée |
 |---|---|---|
-| Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` (P2) |
-| Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` (P2) |
-| Défoliation | couronne mangée par les ravageurs | `ravageurs` par cellule (P4) |
-| Brouté | rameaux coupés net, plant rabougri en boule | `pousseTendreM` (P2) |
-| Frotté | écorce arrachée en bas du tronc | `frotteSemaine` (P2) |
-| Mort sur pied | chandelle grise, sans feuille | P3 (+ §2.6) |
-| Brûlé sur pied | chandelle noire | `brulEeSemaine` (P3) |
+| Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` |
+| Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` |
+| Défoliation | couronne mangée par les ravageurs | `ravageurs` par cellule — **pas encore envoyé** |
+| Brouté | rameaux coupés net, plant rabougri en boule | `pousseTendreM` |
+| Frotté | écorce arrachée en bas du tronc | `frotteSemaine` |
+| Mort sur pied | chandelle grise, sans feuille | `chandelle`, `mortSemaine` |
+| Brûlé sur pied | chandelle noire | `brulEeSemaine` |
 
 ### 5.7 Saisons, météo, lumière
 
@@ -598,10 +493,10 @@ il n'y a **rien à demander au moteur** pour cette section.
 
 | Élément | Donnée | Charge |
 |---|---|---|
-| Quatre palettes de saison interpolées en continu | phénologie (P8) | `M` |
+| Quatre palettes de saison interpolées en continu | `Snapshot.pheno` | `M` |
 | **Pluie** : rideau de gouttes obliques, intensité ∝ `rainMm`, sol qui foncit, gouttes qui rebondissent, flaques dans les creux | `weather.rainMm` ✅ | `M` |
 | **Neige** : tuiles blanchies, couronnes chargées, fonte progressive | `tMean`, `tMinAbsC` ✅ | `M` |
-| **Gel** : givre blanc au sol au petit matin, et les fleurs qui brunissent quand `bloomFrosted` passe | `tMinAbsC` ✅ + P2 | `S` |
+| **Gel** : givre blanc au sol au petit matin, et les fleurs qui brunissent quand `bloomFrosted` passe | `tMinAbsC` ✅ + `bloomFrosted` ✅ | `S` |
 | **Brume** : nappe basse dans les creux quand la nappe affleure — le fond de vallon respire | `soilNappeCm` ✅ | `M` |
 | **Voile de chaleur** : l'air tremble au-dessus du sol nu en canicule | `tMaxC` ✅ | `S` |
 | Ciel : teinte selon saison, couvert selon la pluie, orangé pendant un incendie | ✅ | `S` |
@@ -655,7 +550,7 @@ l'état ; l'individu, lui, est de la figuration.**
 | **Brocard / chevreuil** | `pressionGibier` × surface, et il évite les cellules closes (`soilCloture`) | broute un plant dont `pousseTendreM` a baissé, **se frotte** contre un arbre dont `frotteSemaine` vient d'être posée, lève la tête, s'en va | `L` |
 | **Oiseaux** | indice de biodiversité + saison ; plus nombreux avec les strates et le bois mort | se posent sur les branches, sur les **chandelles** en priorité (les pics y creusent), s'envolent au passage | `M` |
 | **Geai** | l'espèce est déjà dans le moteur comme **disséminateur** (`dissemination: "geai"`) | enterre un gland en terrain découvert à la semaine du recrutement — c'est littéralement le mécanisme du moteur, rendu visible | `M` |
-| **Papillons, abeilles** | floraisons en cours (`fruitProgress`, P2) | tournent autour des arbres en fleurs, disparaissent hors floraison | `S` |
+| **Papillons, abeilles** | floraisons en cours (`fruitProgress`) | tournent autour des arbres en fleurs, disparaissent hors floraison | `S` |
 | **Insectes ravageurs** | `ravageurs` par cellule au-delà d'un seuil | nuée discrète sur les couronnes défoliées | `S` |
 
 Le geai est le meilleur de la liste : il ne décore pas, il **explique** pourquoi
@@ -693,7 +588,7 @@ données lues, ce qu'elle dessine, priorité }`.
 |---|---|---|---|
 | Croissance interpolée (l'arbre grandit en douceur entre deux instantanés) | continu | `heightM` | `M` |
 | Balancement au vent (amplitude ∝ `ventExposition`, plus fort sur les cimes libres) | continu | station + hauteur | `M` |
-| Débourrement (la couronne se remplit au printemps) | 2–3 semaines | phénologie (P8) | `M` |
+| Débourrement (la couronne se remplit au printemps) | 2–3 semaines | `Snapshot.pheno` | `M` |
 | Coloration d'automne | 3–4 semaines | phénologie | `S` |
 | **Chute des feuilles** | 2–3 semaines, particules | phénologie + `LITTERFALL_WEEK` | `M` |
 | Herbe qui pousse, jaunit, est fauchée | continu | `soilHerbe`, `herbeBiomasse` | `S` |
@@ -735,9 +630,11 @@ c'est exactement ce que le joueur doit comprendre.
 | **`maladie`** | dessèchement d'une branche puis de l'ensemble, feuilles qui restent accrochées et brunes | quelques semaines | `M` |
 | **`frottis`** | écorce arrachée au pied, l'arbre garde ses feuilles puis s'effondre d'un coup (annelé) | une saison | `M` |
 
-**Dépendance dure** : sans P3 + P5 (les morts avec leur `id`, leur position et
-leur cause, et les cadavres dans l'instantané), **aucune** de ces animations
-n'est possible. Et sans §2.6, le cadavre n'existe qu'au bon vouloir du rendu.
+**Tout est là** : `Snapshot.morts` porte l'`id`, la position et la cause, les
+chandelles voyagent avec les vivants, et les morts **s'accumulent** entre deux
+instantanés. Seule réserve, et elle compte : la mort au feu arrive un an en
+retard dans `morts` (§2.2) — le torchage se lit sur `causeMort` et `incendie`,
+pas là.
 
 ### 6.4 L'incendie
 
@@ -748,7 +645,7 @@ sait déjà où le feu part, où il passe, qui il tue, qui rejette.
 |---|---|---|
 | Conditions | l'herbe jaunit, l'air tremble, le ciel se charge (le risque est calculable : `indiceRisqueFeu`) | `M` |
 | Départ | une lueur sur la cellule d'origine, un filet de fumée | `S` |
-| **Le front** | une ligne de flammes qui court de cellule en cellule dans l'ordre du rang d'arrivée, s'essouffle dans le feuillu frais, fonce dans la lande. **C'est la carte de combustibilité qui devient visible** — donc la pédagogie des coupures et du choix d'essences. | `L` (dépend de P6) |
+| **Le front** | une ligne de flammes qui court de cellule en cellule dans l'ordre du rang d'arrivée, s'essouffle dans le feuillu frais, fonce dans la lande. **C'est la carte de combustibilité qui devient visible** — donc la pédagogie des coupures et du choix d'essences. | `L` |
 | **Arbres qui brûlent** | torchage : la couronne s'embrase, les particules montent, il reste une chandelle noire. Un chêne-liège, lui, **survit** : écorce noircie, houppier intact — la démonstration de l'adaptation, gratuite. | `L` |
 | Fumée | colonne au-dessus du front, panache incliné par le vent, ciel orangé | `M` |
 | Après | sol noir, cendres, chandelles, puis **rejets de souche verts au printemps suivant** (`rejetteApresFeu`) — le feu n'élimine pas, il trie | `M` |
@@ -911,22 +808,22 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 
 ---
 
-## 9. Découpage en lots (révisé v0.2)
+## 9. Découpage en lots
 
-| Lot | Contenu | Livre | Protocole | Charge |
-|---|---|---|---|---|
-| **L0** | **Pointe technique** : Pixi vs Canvas 2D témoin sur le pire cas réel (friche en succession, ~5 000 tiges, terrain modelé), projection et échelles calées sur les vraies stations, **un arbre généré par branchement** pour valider D4 et le temps de cuisson, trois captures pour trancher Q6 | un prototype jetable + une décision écrite | P1 | `M` |
-| **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | P1, P4 | `L` |
-| **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | P2 | `XL` |
-| **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | — | `XL` |
-| **L3** | Le temps : interpolation entre instantanés, croissance douce, **phénologie** (débourrement, coloration, chute), saisons, vent, herbe | la parcelle vit | P8 | `L` |
-| **L4** | Gestion : élagage, **trogne**, recépage, démasclage, manchon, coupe qui tombe, fleurs et fruits, retours d'action | **la demande centrale : on voit ce qu'on fait aux arbres** | P2, P7 | `L` |
-| **L5** | **Les morts** : les onze causes, les chandelles qui vieillissent, la chute des feuilles de sécheresse | on comprend pourquoi ça meurt | P3, P5 | `L` |
-| **L6** | **L'incendie** : front, torchage, fumée, cendres, rejets, cadrage caméra | l'événement mémorable d'une partie | P6 | `L` |
-| **L7** | **La crue** : montée, lame d'eau, courant, retrait, limon | l'autre catastrophe | P4 | `M` |
-| **L8** | **Voir les changements** : calque des changements, bilan de période cliquable, **rembobinage** et mode cinéma, politique de vitesse | on peut jouer vite sans rien perdre | instantané hebdo optionnel | `L` |
-| **L9** | **La faune et le son** : brocard, oiseaux, geai, papillons ; couches sonores | la parcelle est habitée | rien de neuf (P2, P7) | `L` |
-| **L10** | Finition : météo (pluie, neige, gel, brume), hors-parcelle, ciel, HUD minimal | ça devient un jeu qu'on montre | — | `L` |
+| Lot | Contenu | Livre | Charge |
+|---|---|---|---|
+| **L0** | **Pointe technique** : Pixi vs Canvas 2D témoin sur le pire cas réel (friche en succession, ~5 000 tiges, terrain modelé), projection et échelles calées sur les vraies stations, **un arbre généré par branchement** pour valider D4 et le temps de cuisson, trois captures pour trancher Q6 | un prototype jetable + une décision écrite | `M` |
+| **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | `L` |
+| **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | `XL` |
+| **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | `XL` |
+| **L3** | Le temps : interpolation entre instantanés, croissance douce, **phénologie** (débourrement, coloration, chute), saisons, vent, herbe | la parcelle vit | `L` |
+| **L4** | Gestion : élagage, **trogne**, recépage, démasclage, manchon, coupe qui tombe, fleurs et fruits, retours d'action | **la demande centrale : on voit ce qu'on fait aux arbres** | `L` |
+| **L5** | **Les morts** : les onze causes, les chandelles qui vieillissent, la chute des feuilles de sécheresse | on comprend pourquoi ça meurt | `L` |
+| **L6** | **L'incendie** : front, torchage, fumée, cendres, rejets, cadrage caméra | l'événement mémorable d'une partie | `L` |
+| **L7** | **La crue** : montée, lame d'eau, courant, retrait, limon | l'autre catastrophe | `M` |
+| **L8** | **Voir les changements** : calque des changements, bilan de période cliquable, **rembobinage** et mode cinéma, politique de vitesse | on peut jouer vite sans rien perdre (demande l'instantané hebdomadaire, §2.4) | `L` |
+| **L9** | **La faune et le son** : brocard, oiseaux, geai, papillons ; couches sonores | la parcelle est habitée | `L` |
+| **L10** | Finition : météo (pluie, neige, gel, brume), hors-parcelle, ciel, HUD minimal | ça devient un jeu qu'on montre | `L` |
 
 **Ordre imposé** : L0 → L1 → L2 en série (rien ne se dessine sans projection ni
 terrain, et rien ne s'anime sans arbres). Ensuite L3 et L4 en parallèle. L5,
@@ -937,7 +834,7 @@ fiche par fiche, sans bloquer personne. L8, L9, L10 à la fin, en continu.
 
 | | v0.1 | v0.2 | Cause |
 |---|---|---|---|
-| Protocole | ~2,5 j | ~2,5 j | inchangé (P9 est gratuit) |
+| Protocole | ~2,5 j | **0** | livré par la PR #2 |
 | Terrain et caméra | `L` | `L` + `M` | relief à l'échelle → tri entrelacé (D3) |
 | Arbres | `L` | `XL` + `XL` | **essences reconnaissables** (D4) : générateur + 25 fiches |
 | Voir les changements | `M` | `L` | calque + bilan + rembobinage (§6.8) |
@@ -1007,8 +904,8 @@ chiffre supportable :
 | Q1 | Pixi ou Canvas 2D ? | **Pixi**, avec Canvas 2D mesuré en témoin au lot 0 |
 | Q2 | Une vue ou deux ? | **Bascule** dans l'écran de jeu |
 | Q3 | Niveau de mise en scène ? | **Le niveau acceptable** : vague de crue et front de flamme restent des mises en scène ordonnées d'un état hebdomadaire, explicitement bornées. Pas de routage d'eau de surface dans le moteur. |
-| Q4 | Chandelles dans le moteur ? | **Fait** (commit `95eec77`) — reste le bug du §2.1 |
-| Q5 | Phénologie continue ? | **Oui**, en cours côté moteur. Convention attendue au §2.4. |
+| Q4 | Chandelles dans le moteur ? | **Fait**, et leurs conséquences aussi : combustible sur pied, obstacle pour un engin, fût sec qui se coupe |
+| Q5 | Phénologie continue ? | **Faite**, sénescence séparée comprise. Le rendu la lit dans `Snapshot.pheno` (§2.1). |
 | Q6 | Le style (contour ou pas) ? | **Au lot 0**, sur trois captures |
 | — | La 3D ? | **Non**, raisons au §0 |
 | — | Les animaux ? | **Oui** (§5.10, lot L9) — sauf l'élevage, voir Q7 |

@@ -91,6 +91,19 @@ function conifereBase(espece: { lumiere: { caduc: boolean } }): number {
   return espece.lumiere.caduc ? 0.3 : 0.2;
 }
 
+/**
+ * Ce qu'on peut cliquer d'un arbre, en m. C'est son houppier — sauf pour une
+ * chandelle, qui n'en a plus : sans ce rétrécissement, un fût mort capte les
+ * clics sur toute l'emprise de la couronne qu'il avait de son vivant, et vole
+ * la sélection à ses voisins vivants. Le facteur suit ce que `drawTreeOblique`
+ * dessine réellement d'une chandelle.
+ */
+function rayonCliquableM(tree: SnapshotTree): number {
+  const espece = getEspece(tree.especeId);
+  const houppier = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+  return Math.max(1, tree.chandelle ? houppier * 0.3 : houppier);
+}
+
 /** hauteur à l'écran d'un mètre d'arbre, en fraction de l'échelle horizontale */
 const VERTICAL = 0.55;
 
@@ -1277,8 +1290,7 @@ export function GameView() {
       let best: SnapshotTree | undefined;
       let bestD = Infinity;
       for (const t of snapshot.trees) {
-        const espece = getEspece(t.especeId);
-        const r = Math.max(1, crownRadiusM(t.heightM, espece.lumiere.houppierRatio));
+        const r = rayonCliquableM(t);
         const d = Math.hypot(t.x - mx, t.y - my);
         if (d <= r + 0.5 && d < bestD) {
           best = t;
@@ -1620,7 +1632,12 @@ export function GameView() {
                 {" "}
                 · {selectedTrees[0].heightM.toFixed(1)} m ·{" "}
                 {Math.floor(selectedTrees[0].ageWeeks / 52)} ans
-                {selectedTrees[0].stress > 1 &&
+                {/* Le dire, sinon on lit l'âge et le stress d'un arbre mort
+                    comme ceux d'un vivant, et on s'étonne qu'aucun geste ne
+                    marche dessus : le moteur les refuse tous, à raison. */}
+                {selectedTrees[0].chandelle && " · chandelle (bois mort sur pied)"}
+                {!selectedTrees[0].chandelle &&
+                  selectedTrees[0].stress > 1 &&
                   ` · stress ${selectedTrees[0].stress.toFixed(0)}/10`}
                 {selectedTrees[0].hauteurElagueeM > 0 &&
                   ` · bille ${selectedTrees[0].hauteurElagueeM.toFixed(1)} m`}
@@ -1635,7 +1652,10 @@ export function GameView() {
                 style={btn()}
                 onClick={() =>
                   setSelectedIds(
-                    new Set(snapshot.trees.filter((t) => t.especeId === id).map((t) => t.id)),
+                    // Les vivants seuls : on sélectionne une essence pour lui
+                    // faire quelque chose, et le moteur refuse tout geste sur
+                    // une chandelle.
+                    new Set(vivants.filter((t) => t.especeId === id).map((t) => t.id)),
                   )
                 }
               >
