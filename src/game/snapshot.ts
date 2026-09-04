@@ -169,6 +169,8 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     soilPh: Float32Array.from(state.soil.ph),
     /** bois mort couché, g C/m² : de quoi dessiner les troncs au sol */
     soilBoisAuSol: Float32Array.from(state.soil.boisAuSolCG),
+    /** et sa part en travers de la pente : celle qui barre l'eau */
+    soilBoisEnTravers: Float32Array.from(state.soil.boisEnTraversPart),
     soilN: Float32Array.from(state.soil.mineralNG),
     soilHerbe: Float32Array.from(state.soil.herbeCouverture),
     // La biomasse ne se déduit pas de la couverture : elle reste sur pied
@@ -230,6 +232,7 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilWater.buffer,
     s.soilPh.buffer,
     s.soilBoisAuSol.buffer,
+    s.soilBoisEnTravers.buffer,
     s.soilN.buffer,
     s.soilHerbe.buffer,
     s.soilHerbeBiomasse.buffer,

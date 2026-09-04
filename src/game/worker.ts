@@ -364,6 +364,8 @@ function emptyFluxes(): TickFluxes {
     partInondee: 0,
     erosionArracheeKgM2: 0,
     erosionSortieKgM2: 0,
+    boisRetenueMm: 0,
+    boisSedimentPiegeKgM2: 0,
     erosionNKgHa: 0,
     vidangeNappeMm: 0,
     apportRegionalMm: 0,

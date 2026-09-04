@@ -162,6 +162,20 @@ export interface SoilState {
    */
   boisAuSolCG: number[];
   /**
+   * Part de ce bois couché qui BARRE l'eau, ∈ [0,1] : moyenne, pondérée par
+   * les masses posées, de l'efficacité barrante de chaque tronc — sa longueur
+   * efficace au-delà du seuil de 30° (boisMort.ts). Ce n'est PAS un stock de
+   * carbone : c'est un descriptif du stock voisin, et l'ajouter aux bilans
+   * compterait le même bois deux fois.
+   *
+   * Une masse seule ne suffisait pas : un tronc en travers d'un thalweg barre
+   * l'eau, le même tronc couché dans le sens de la pente ne barre rien. Comme
+   * la décomposition et le ramassage agissent proportionnellement sur toute la
+   * masse d'une cellule, cette part-là ne bouge pas avec eux : elle ne change
+   * que lorsqu'un nouveau tronc se pose.
+   */
+  boisEnTraversPart: number[];
+  /**
    * Phosphore ASSIMILABLE, g/m². Il ne diffuse pas : ce qui est dans une
    * cellule n'y bougera pas (pk.ts).
    */
@@ -309,6 +323,14 @@ export interface TickFluxes {
   erosionArracheeKgM2: number;
   /** terre effectivement sortie de la parcelle, kg/m² (le reste s'est déposé) */
   erosionSortieKgM2: number;
+  /**
+   * Lame que le bois couché EN TRAVERS a détournée du ruissellement vers le
+   * sol cette semaine, mm (boisMort.ts). Zéro dès que le sol est plein : un
+   * barrage ne fait pas rentrer l'eau dans une éponge saturée.
+   */
+  boisRetenueMm: number;
+  /** terre que le bois couché en travers a retenue derrière lui, kg/m² */
+  boisSedimentPiegeKgM2: number;
   /** azote parti avec la terre, kg/ha */
   erosionNKgHa: number;
   /** phosphore assimilable parti avec la terre, kg/ha */
@@ -366,6 +388,7 @@ export function createGameState(
       litterCG: new Array(n).fill(0),
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Array(n).fill(0),
+      boisEnTraversPart: new Array(n).fill(0),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,

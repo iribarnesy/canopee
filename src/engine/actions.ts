@@ -1014,6 +1014,7 @@ function applyRamasserBoisMort(
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
   const boisAuSolCG = state.soil.boisAuSolCG.slice();
+  const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
   const cibles: number[] = [];
   let carboneKgC = 0;
   for (let y = 0; y < cote; y++) {
@@ -1042,11 +1043,16 @@ function applyRamasserBoisMort(
       refusals: [refuse(action.week, "ramasserBoisMort", "plafond hebdomadaire atteint")],
     };
   }
-  for (const i of cibles) boisAuSolCG[i] = 0;
+  // Le tronc parti, il ne barre plus rien : la part en travers s'en va avec
+  // lui. C'est le vrai prix caché du ramassage sur un versant.
+  for (const i of cibles) {
+    boisAuSolCG[i] = 0;
+    boisEnTraversPart[i] = 0;
+  }
   return {
     state: {
       ...state,
-      soil: { ...state.soil, boisAuSolCG },
+      soil: { ...state.soil, boisAuSolCG, boisEnTraversPart },
       // Il partira en fumée chez celui qui l'achète : c'est un export émetteur,
       // pas un stockage (§12).
       carbon: {
