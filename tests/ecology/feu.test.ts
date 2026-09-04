@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
+import { livingCarbonKg, treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import {
   chargeCombustible,
@@ -147,6 +148,74 @@ describe("propagation : une coupure arrête le feu", () => {
   });
 });
 
+describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
+  it("ce qui part en fumée est l'aérien MOINS le rejet resté debout", () => {
+    // Un ajonc qui repart de souche garde 40 cm sur pied. Les imputer à la
+    // fumée émettait un carbone que l'arbre porte encore ; et comme son
+    // carbone racinaire se déduit de sa hauteur, le rabattre en faisait
+    // disparaître par ailleurs. Les deux erreurs se compensaient à moitié,
+    // donc aucune des deux ne se voyait.
+    const station: Station = { ...LANDE_SECHE.station, coteM: 30, voisinage: [] };
+    let state = createGameState(station, rngStateFromSeed(2));
+    for (let i = 0; i < 36; i++) {
+      state = plantAt(state, "ulex_europaeus", 2 + (i % 6) * 5, 2 + Math.floor(i / 6) * 5, 1.2);
+    }
+    /**
+     * Stocks + tout ce qui est sorti du système. La litière et l'humus en font
+     * partie : un feu les convertit en fumée, donc les omettre ferait voir une
+     * création de carbone là où il n'y a qu'un transfert.
+     */
+    /**
+     * Le grand livre complet, à la semaine. Trois termes s'y invitent qu'on
+     * oublie facilement, et chacun ferait voir une fausse fuite : la litière
+     * et l'humus, qu'un feu convertit en fumée ; le bois couché ; et le bois
+     * des arbres TUÉS mais pas encore enregistrés morts — un arbre brûlé
+     * reste debout et récupérable un an, son carbone quitte le stock vivant à
+     * l'instant du feu et ne rejoint le pool des morts qu'à l'enregistrement.
+     */
+    const bilan = (s: typeof state) => {
+      let solG = 0;
+      for (let k = 0; k < s.soil.boisAuSolCG.length; k++) {
+        solG += (s.soil.boisAuSolCG[k] ?? 0) + (s.soil.litterCG[k] ?? 0) + (s.soil.humusCG[k] ?? 0);
+      }
+      let enSuspensKgC = 0;
+      for (const t of s.trees) {
+        if (!t.alive && t.mortSemaine === undefined) {
+          enSuspensKgC += treeTotalCarbonKg(getEspece(t.especeId), t.heightM);
+        }
+      }
+      return (
+        livingCarbonKg(s.trees) +
+        enSuspensKgC +
+        s.carbon.deadWoodKgC +
+        solG / 1000 +
+        s.carbon.exportedEnergyCumKgC +
+        s.carbon.oeuvreCumKgC +
+        s.carbon.emittedCumKgC
+      );
+    };
+    let rejets = 0;
+    for (let i = 0; i < 15 * 52 && rejets === 0; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      const avant = bilan(state);
+      const entreesAvant = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC;
+      const r = advanceWeek(state, w, []);
+      state = r.state;
+      if (!r.incendie || r.incendie.rejets === 0) continue;
+      rejets = r.incendie.rejets;
+      const entrees = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC - entreesAvant;
+      // Égalité, donc : ni création ni fuite. C'est ce qui rend le test
+      // capable d'attraper les DEUX erreurs, qui se compensaient à moitié —
+      // l'aérien du rejet imputé deux fois d'un côté, ses racines évaporées
+      // de l'autre.
+      expect(bilan(state) - avant).toBeCloseTo(entrees, 3);
+    }
+    // Le décor doit vraiment produire des rejets, sinon le test ne prouve rien.
+    expect(rejets).toBeGreaterThan(300);
+  });
+});
+
 describe("le front du feu : où il est passé, et dans quel ordre", () => {
   it("le rang, c'est la distance à l'origine à travers ce qui a brûlé", () => {
     const cote = 11;
@@ -257,14 +326,42 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   }
   let incendies = 0;
   let arbresTues = 0;
+  let rejetsTotaux = 0;
   const tuesParLeFeu: Record<string, number> = {};
   const mortsTotales: Record<string, number> = {};
   let dernier: NonNullable<ReturnType<typeof advanceWeek>["incendie"]> | undefined;
+  /**
+   * Stocks + sorties d'un état. Un rejet de souche garde 40 cm sur pied :
+   * imputer tout l'aérien à la fumée émettait un carbone que l'arbre porte
+   * encore, et comme le carbone racinaire se déduit de la hauteur, le rabattre
+   * en faisait disparaître par ailleurs. Les deux erreurs se compensaient à
+   * moitié, donc aucune ne se voyait.
+   */
+  const bilan = (s: typeof state) => {
+    let solG = 0;
+    for (let k = 0; k < s.soil.boisAuSolCG.length; k++) solG += s.soil.boisAuSolCG[k] ?? 0;
+    return (
+      livingCarbonKg(s.trees) +
+      s.carbon.deadWoodKgC +
+      solG / 1000 +
+      s.carbon.exportedEnergyCumKgC +
+      s.carbon.oeuvreCumKgC +
+      s.carbon.emittedCumKgC
+    );
+  };
+  let creeParLesRejets = 0;
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
+    const avantBilan = bilan(state);
+    const avantEntrees = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC;
     const r = advanceWeek(state, w, []);
     state = r.state;
+    if (r.incendie && r.incendie.rejets > 0) {
+      rejetsTotaux += r.incendie.rejets;
+      const entrees = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC - avantEntrees;
+      creeParLesRejets = Math.max(creeParLesRejets, bilan(state) - avantBilan - entrees);
+    }
     for (const m of r.morts) {
       mortsTotales[m.especeId] = (mortsTotales[m.especeId] ?? 0) + 1;
       if (m.cause === "feu") tuesParLeFeu[m.especeId] = (tuesParLeFeu[m.especeId] ?? 0) + 1;
