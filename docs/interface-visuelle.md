@@ -1,10 +1,10 @@
 # Canopée — L'interface visuelle (vue isométrique)
 
-> Inventaire, v0.2 (2026-09-03). **Rien n'est développé.** Ce document est la
-> liste de tout ce qu'il faut construire, dans quel ordre, et ce que le moteur
-> devra apprendre à dire pour que ce soit possible. Les estimations de charge
-> sont en journées d'un développeur qui connaît le dépôt (S ≈ ½ j, M ≈ 1–2 j,
-> L ≈ 3–5 j, XL ≈ une semaine et plus).
+> Inventaire, v0.4 (2026-09-04). **Le lot L0 est développé, le reste non.** Ce
+> document est la liste de tout ce qu'il faut construire, dans quel ordre, et ce
+> que le moteur devra apprendre à dire pour que ce soit possible. Les estimations
+> de charge sont en journées d'un développeur qui connaît le dépôt (S ≈ ½ j,
+> M ≈ 1–2 j, L ≈ 3–5 j, XL ≈ une semaine et plus).
 >
 > **v0.2** — les décisions sont prises (§1 : Pixi, dimétrique 2:1, **relief à
 > l'échelle vraie**, **essences reconnaissables une par une**, phénologie dans
@@ -15,6 +15,12 @@
 > **v0.3** — le **contrat moteur → rendu est livré** (§2), et le catalogue est
 > passé à vingt-cinq essences, ce qui renchérit D4. Il n'y a plus de blocage
 > côté moteur : le chantier peut commencer au lot L0.
+>
+> **v0.4** — **le lot L0 est fait, et il a corrigé ce document** : D1 est
+> renversée (Canvas 2D d'abord), l'enveloppe du houppier ne peut pas émerger du
+> branchement, et deux règles d'architecture apparaissent. Tout est mesuré et
+> chiffré dans `docs/lot0-pointe-technique.md` ; les passages touchés ci-dessous
+> portent la mention **(L0)**.
 
 ---
 
@@ -138,10 +144,10 @@ celle du rendu.
 
 | # | Décision | Retenu | Ce que ça implique |
 |---|---|---|---|
-| **D1** | Moteur de rendu | ✅ **PixiJS v8** (WebGL) | Conforme à `docs/stack.md`. On y gagne le batching de quelques milliers de sprites, le culling, les filtres (flou de chaleur, reflet d'eau) et **les particules** (braises, feuilles, embruns, gouttes) — la moitié des animations du §6. Coût : ~400 ko de bundle. Le lot 0 mesure quand même Canvas 2D en couches comme témoin : si Pixi ne gagne rien sur le pire cas, on saura pourquoi on paie la dépendance. |
+| **D1** | Moteur de rendu | ⚠️ **renversé par L0 : Canvas 2D en couches d'abord**, Pixi v8 en option de montée en charge | Mesuré sur le pire cas réel (5 017 tiges, an 50 d'une friche) : **Canvas 2D tient 9 ms par image au zoom 1 et 7,9 ms au zoom 4, en pur logiciel** — le budget est de 16,7 ms. Le rendu ne dépend donc pas d'un GPU pour être fluide, et c'est un résultat de sécurité qu'on ne veut pas perdre : zéro dépendance, contrôle total sur des formes procédurales de toute façon. Pixi garde son seul argument mesuré, et il est réel : les milliers de sprites par image (ombres, particules du lot L8) où il gagne un facteur trente. **À rejouer sur une machine avec GPU** : le conteneur de mesure rend WebGL en logiciel (SwiftShader), donc le bras Pixi n'y a pas été mesuré à son avantage. `docs/lot0-pointe-technique.md`. |
 | **D2** | Projection | ✅ **dimétrique 2:1** | Diagonales sur pentes entières, profondeur triée par `x + y`, picking inversible analytiquement. Un cube unité a une hauteur écran égale à la demi-largeur de tuile — c'est ce qui rend D3 gratuit. |
 | **D3** | Échelle verticale | ✅ **tout à l'échelle vraie** — relief compris | **Et ça ne coûte presque rien** : les cinq stations livrées ont 1 à 6 % de pente, soit **1 à 6 m de dénivelé sur 100 m**. À 1 m = 8 px, c'est 8 à 48 px sur une parcelle qui en fait 800 de haut : lisible, jamais gênant. L'exagération que j'avais proposée était une prudence mal placée. **Le vrai coût est ailleurs** : dès que le terrain a du relief, une butte peut masquer ce qui est derrière, donc le tri en profondeur doit **entrelacer le sol et les arbres** au lieu de cuire le terrain en une seule couche sous tout le reste (§3). C'est `+M` sur L1/L2. Le seul cas à surveiller est un terrain **modelé à la main** (l'éditeur laisse creuser sans limite) : prévoir un avertissement au-delà de ~25 % de pente moyenne, pas un plafond. |
-| **D4** | Silhouettes par espèce | ✅ **une essence = une silhouette reconnaissable**, niveau illustration | Renversement complet de la v0.1, et c'est la bonne exigence : **c'est le seul moyen que le joueur apprenne les essences**, ce qui est l'objectif pédagogique du §0.6 des règles. La technique qui le permet sans devenir illustrateur : **squelette généré par branchement récursif** (angle, ratio, divergence, dominance apicale — paramétrés par espèce) + **feuilles, fleurs et fruits en tracés SVG écrits à la main dans le code**, d'après des références botaniques. Voir §4 et §5.4. **Coût honnête : c'est ce qui double le chantier** (§9). |
+| **D4** | Silhouettes par espèce | ✅ **une essence = une silhouette reconnaissable**, niveau illustration | Renversement complet de la v0.1, et c'est la bonne exigence : **c'est le seul moyen que le joueur apprenne les essences**, ce qui est l'objectif pédagogique du §0.6 des règles. La technique qui le permet sans devenir illustrateur : **squelette généré par branchement récursif** (angle, ratio, divergence, dominance apicale — paramétrés par espèce) + **feuilles, fleurs et fruits en tracés SVG écrits à la main dans le code**, d'après des références botaniques. Voir §4 et §5.4. **Coût honnête : c'est ce qui double le chantier** (§9). **(L0)** Validé sur trois essences — bouleau, chêne pubescent, pin sylvestre se distinguent au premier coup d'œil, y compris nus — avec une correction de méthode importante : **l'enveloppe du houppier ne sort pas du branchement**, elle doit être un paramètre explicite de la fiche (§4). |
 | **D5** | Composition ou sprites entiers | ✅ **composition en pièces** (souche/tronc, charpente, feuillage, accessoires) | Un arbre élagué **et** trogné **et** fruité **et** en train de brûler est une combinaison légitime. En sprites entiers c'est un produit cartésien ; en pièces, quelques dessins. D'autant plus vrai avec D4 : le squelette généré *est* la composition. |
 | **D6** | Où vit l'état d'animation | ✅ **dans le rendu** | Le rendu tient une scène persistante entre deux instantanés : valeurs interpolées, animations en cours, marqueurs de changement. Le moteur n'apprend jamais le mot « frame ». Les chandelles, elles, sont bien dans le moteur — et c'est fait. |
 | **D7** | Le temps | ✅ **horloge d'animation découplée du tick + politique de vitesse** | Le worker tourne à 10 Hz et avale **jusqu'à 26 semaines par pas** (`worker.ts:startLoop`), en ne postant qu'un instantané par lot. À ×512, une année passe entre deux images. La politique — et la réponse à « je veux voir ce qui a changé même à ×64 » — est au §6.8, revue en v0.2. |
@@ -256,7 +262,7 @@ inchangé au chiffre près (test).
 
 ```
 src/render/
-  projection.ts      # parcelle (m) ↔ écran (px), aller ET retour. Pur, testable.
+  projection.ts      # ✅ écrit au lot L0 : parcelle (m) ↔ écran (px), aller ET retour. Pur, 14 tests.
   camera.ts          # pan, zoom, orientation (4 quarts de tour), limites
   scene.ts           # la scène persistante : ce qui est à l'écran, entre deux instantanés
   interpolation.ts   # lissage d'un instantané au suivant (hauteurs, fruits, eau)
@@ -323,10 +329,32 @@ src/render/
   lit un fourré sur le terrain. Avec D4, le LOD devient **plus** important, pas
   moins : le détail d'illustration ne se justifie qu'au zoom, et il faut
   basculer proprement entre l'arbre dessiné et la tache.
-- **Le pire cas** : une friche en pleine succession, plusieurs milliers de
-  semis (`plantScattered` + régénération), sur un terrain modelé à la main.
-  C'est ce cas-là que le lot 0 doit mesurer, pas une parcelle de 400 tiges
-  plantées.
+- **Le pire cas, mesuré (L0)** : une friche en pleine succession fait
+  **5 017 tiges à l'an 50** (dont 1 059 chandelles), et la charge **plafonne
+  vers l'an 25** — la friche se sature à cinq mille tiges et s'y tient.
+  L'estimation était juste. Un **cinquième des tiges fait moins d'un mètre**,
+  donc moins de trois pixels à la parcelle entière : le LOD n'est pas une
+  optimisation tardive, c'est une part importante de la scène dès le premier
+  jour.
+
+**Deux règles d'architecture que L0 a produites, et qui ne se voient sur aucune
+capture :**
+
+- **Aucune primitive vectorielle par image.** Dessiner 5 017 ellipses d'ombre
+  par image coûte **73,9 ms** à Canvas 2D contre 2,2 ms à Pixi, où ce sont des
+  sprites. Le facteur trente ne doit rien au GPU : il vient du coût d'une
+  primitive vectorielle appelée cinq mille fois. Ombres, halos, liserés,
+  marqueurs de changement (§6.8) : **tout est cuit une fois dans un bitmap ou
+  posé en sprite**. La règle vaut pour les deux bras de D1.
+- **L'atlas cuit à UNE taille de référence**, mis à l'échelle ensuite, et non
+  par palier de hauteur. L'atlas à la demande est validé — **474 silhouettes
+  suffisent aux 5 017 arbres**, soit 10,6 arbres par texture — mais le coût de
+  cuisson est passé de 46 ms à **1 740–3 369 ms** à mesure que les silhouettes
+  devenaient reconnaissables (4 à 13,3 ms l'unité). Trois secondes de gel au
+  premier affichage : inacceptable. Les remèdes sont connus — plafonner le
+  nombre de segments par arbre, cuire à une seule taille (÷12), étaler la
+  cuisson sur plusieurs images. Le terrain, lui, se cuit en 62 à 114 ms pour
+  10 000 cellules en 49 morceaux : D3 est confirmé bon marché.
 
 ---
 
@@ -353,6 +381,19 @@ Trois couches, et c'est là qu'est toute l'astuce :
    déroule le même squelette moins loin, et un gaulis *est* un jeune arbre, pas
    un sprite séparé. L'élagage, l'étêtage et le recépage aussi : ce sont des
    coupes dans le squelette.
+   **(L0) Mais l'enveloppe du houppier n'émerge PAS du branchement** : elle doit
+   être un **paramètre explicite** de la fiche — cône, boule, gobelet, étagé,
+   fastigié, retombant — avec la décroissance des étages vers le sommet imposée,
+   pas espérée. Trois exemples mesurés : à 0,85 de dominance apicale le bouleau
+   fait une touffe au sommet d'un bâton (il a fallu descendre à 0,62 et ajouter
+   un ordre) ; aucun réglage d'angle sur un port fourchu ne produit le cône d'un
+   pin, il faut un port **étagé** distinct (axe droit, verticilles presque
+   horizontaux) ; et sans écourtement explicite des étages, ce pin fait une
+   boule. À écrire dans la structure de la fiche **avant** les vingt-cinq
+   fiches, sinon on les écrit deux fois.
+   **(L0) Plafonner le nombre de segments**, quel que soit le paramétrage : il
+   croît en (branches par nœud)^(ordres), et c'est ce qui a fait passer la
+   cuisson d'une silhouette de 0,3 à 13,3 ms.
 2. **Les feuilles, fleurs et fruits sont dessinés à la main, en tracés SVG
    écrits dans le code**, d'après des références botaniques. C'est **ce qui
    identifie une espèce** — la feuille palmée du platane, la composée du frêne,
@@ -361,7 +402,11 @@ Trois couches, et c'est là qu'est toute l'astuce :
    heure de travail par espèce, pas une journée, et zéro fichier binaire.
 3. **Le feuillage est un semis de ces tracés** le long des rameaux, avec une
    densité et une teinte par espèce et par saison. Vu de loin ça fait une
-   masse ; vu de près on distingue les feuilles.
+   masse ; vu de près on distingue les feuilles. **(L0) Un bouquet par rameau
+   terminal, pas une feuille** : une feuille par rameau donne une brindille
+   décorée, pas une masse foliaire. Et le feuillage s'accroche à **tout rameau
+   terminal**, pas au dernier ordre de récursion — une branche devient trop
+   courte avant d'atteindre l'ordre maximal, et l'arbre sort nu.
 
 ### La fiche graphique par espèce
 
@@ -392,6 +437,14 @@ dessus, la correspondance est dans `atlas/palette.ts`.
 Les **saisons** décalent la palette entière (sol, herbe, feuillage, ciel,
 lumière), interpolée en continu sur l'année à partir de la phénologie du moteur
 (`Snapshot.pheno`). C'est l'effet le plus rentable du chantier.
+
+**(L0) Une contrainte qu'aucun chiffre ne donnait : la palette de sol ne peut
+pas être claire.** Sur un fond blanc cassé, **le bouleau disparaît** — son
+écorce blanche est sa signature la plus forte, et elle ne se lit pas sur un sol
+clair. Il a fallu passer la planche d'essai à un vert-gris moyen pour que les
+trois essences se distinguent. Ou bien le sol reste soutenu, ou bien le bouleau
+reçoit un liseré sombre ; il n'y a pas de troisième option. C'est le genre de
+chose qu'on ne trouve qu'en regardant une capture.
 
 ## 5. Inventaire des visuels
 
@@ -805,8 +858,8 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 - **Déterminisme du rendu** : toute variation « organique » (le penchant d'un
   arbre, la phase de son balancement, la forme de sa couronne) dérive de son
   `id` via `engine/rng.ts`, pas de `Math.random`. Deux parties de même graine
-  donnent **la même image**. À ajouter à `scripts/check-boundaries.sh` :
-  interdire `Math.random` dans `src/render/`. `S`
+  donnent **la même image**. ✅ **fait au lot L0** : `scripts/check-boundaries.sh`
+  interdit `Math.random` dans `src/render/`. `S`
 - **Budget d'image** : un test headless qui monte la scène du pire cas et
   vérifie le temps de la boucle. Fragile en CI — plutôt un script de mesure
   qu'un test bloquant. `M`
@@ -817,7 +870,7 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 
 | Lot | Contenu | Livre | Charge |
 |---|---|---|---|
-| **L0** | **Pointe technique** : Pixi vs Canvas 2D témoin sur le pire cas réel (friche en succession, ~5 000 tiges, terrain modelé), projection et échelles calées sur les vraies stations, **un arbre généré par branchement** pour valider D4 et le temps de cuisson, trois captures pour trancher Q6 | un prototype jetable + une décision écrite | `M` |
+| **L0** | ✅ **fait** (`docs/lot0-pointe-technique.md`) — pire cas mesuré (5 017 tiges), les deux moteurs de rendu comparés, `src/render/projection.ts` écrit et testé, trois essences générées par branchement, trois styles rendus. A renversé D1, corrigé D4, répondu à Q6 et produit deux règles d'architecture. **Reste** : rejouer le bras Pixi sur une machine avec GPU. | un prototype jetable + une décision écrite | `M` |
 | **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | `L` |
 | **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | `XL` |
 | **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | `XL` |
@@ -873,10 +926,13 @@ chiffre supportable :
    générateur d'abord (L2), les fiches en fond (L2b), et une règle simple —
    **une essence n'est « finie » que si un joueur la reconnaît sans étiquette**.
    Ça se teste sur quelqu'un d'autre.
-2. **La perf sur la friche en succession.** Le cas nominal (400 tiges) est
-   facile ; plusieurs milliers de semis **avec des arbres détaillés**, non. Le
-   LOD et l'atlas à la demande sont prévus dès L2, pas rattrapés après. C'est
-   ce que L0 doit mesurer.
+2. ~~**La perf sur la friche en succession.**~~ **Mesuré au lot L0, et ce
+   n'est plus le risque principal** : 5 017 tiges se dessinent en 9 ms par
+   image en Canvas 2D pur logiciel. Le risque s'est **déplacé** : ce n'est pas
+   le dessin par image, c'est la **cuisson** de l'atlas (jusqu'à 3,4 s de gel
+   au premier affichage) et le coût d'une primitive vectorielle répétée cinq
+   mille fois. Les deux règles du §3 y répondent, et elles sont structurelles :
+   à tenir dès L1, pas à rattraper.
 3. **Le terrain recuit à chaque tick.** Si la quantification des valeurs de sol
    est trop fine, chaque semaine invalide tous les morceaux et le cache ne sert
    à rien. À traiter dès L1.
@@ -906,12 +962,12 @@ chiffre supportable :
 
 | | Question | Réponse |
 |---|---|---|
-| Q1 | Pixi ou Canvas 2D ? | **Pixi**, avec Canvas 2D mesuré en témoin au lot 0 |
+| Q1 | Pixi ou Canvas 2D ? | ~~**Pixi**, avec Canvas 2D mesuré en témoin au lot 0~~ → **retourné par la mesure : Canvas 2D**, parce qu'il tient le pire cas sans GPU (9 ms/image). Voir D1. Un point reste à vérifier sur une machine avec carte graphique. |
 | Q2 | Une vue ou deux ? | **Bascule** dans l'écran de jeu |
 | Q3 | Niveau de mise en scène ? | **Le niveau acceptable** : vague de crue et front de flamme restent des mises en scène ordonnées d'un état hebdomadaire, explicitement bornées. Pas de routage d'eau de surface dans le moteur. |
 | Q4 | Chandelles dans le moteur ? | **Fait**, et leurs conséquences aussi : combustible sur pied, obstacle pour un engin, fût sec qui se coupe |
 | Q5 | Phénologie continue ? | **Faite**, sénescence séparée comprise. Le rendu la lit dans `Snapshot.pheno` (§2.1). |
-| Q6 | Le style (contour ou pas) ? | **Au lot 0**, sur trois captures |
+| Q6 | Le style (contour ou pas) ? | **Aplats + liseré** — mesuré au lot L0 : le liseré ne coûte rien de plus que l'aplat en médiane (9,1 contre 9 ms) et a un p95 bien meilleur (18 contre 141 ms). L'ombre portée est à **cuire**, pas à dessiner. Et le sol ne peut pas être clair, sinon le bouleau disparaît (§4). |
 | — | La 3D ? | **Non**, raisons au §0 |
 | — | Les animaux ? | **Oui** (§5.10, lot L9) — sauf l'élevage, voir Q7 |
 | — | Le son ? | **Oui** (§5.10, lot L9) |

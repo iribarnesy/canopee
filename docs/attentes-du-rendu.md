@@ -2,12 +2,23 @@
 
 > Tenu par la session qui construit la vue isométrique
 > (`docs/interface-visuelle.md`), à l'usage de qui travaille dans `src/engine/`.
-> Dernière revue : 2026-09-04.
+> Dernière revue : 2026-09-04 (après le lot L0).
 
 Le **contrat de base est livré** (commit `3a5a640`) : relief, calendrier
 foliaire, arbres complets, morts spatialisées, front d'incendie, trois
 grandeurs par cellule, gestes. **Plus rien ne bloque le chantier de rendu.**
 Ce qui suit est la file d'attente de ce qui viendra ensuite.
+
+**Le lot L0 est fait** (`docs/lot0-pointe-technique.md`) et **il n'ajoute rien
+à cette liste** : le contrat a tenu tel quel sur une scène réelle de 5 017
+tiges sortie du moteur, et les trois corrections que la pointe technique a
+produites sont toutes côté rendu. C'est le retour le plus utile que je puisse
+donner sur la PR #2 : rien à reprendre.
+
+Une seule nuance, et elle joue *contre* une de mes demandes : les silhouettes
+d'hiver **nues** se distinguent déjà au premier coup d'œil (bouleau, chêne
+pubescent et pin sylvestre, capture à l'appui). La marcescence reste donc bien
+un ⚪ bonus et je ne la remonte pas.
 
 ## Comment lire, et comment répondre
 
