@@ -79,7 +79,7 @@ Le LOD reste une bonne idée pour plus tard, mais **il n'a jamais rien
 économisé** dans ce banc : ce n'est pas lui qui explique les chiffres, ni avant
 ni maintenant.
 
-## D1 / Q1 — Pixi ou Canvas 2D : **tranché, sur GPU, et Canvas 2D reste le défaut**
+## D1 / Q1 — Pixi ou Canvas 2D : **mesuré sur GPU, puis tranché en faveur de Pixi**
 
 ```
 ANGLE (Apple, ANGLE Metal Renderer: Apple M4 Pro, Unspecified Version)
@@ -144,12 +144,29 @@ l'an 50). On ne peut pas donner mieux qu'une fourchette : Pixi ne quitte jamais
 le plafond du vsync dans les configurations normales, donc son coût réel par
 image n'est pas mesurable ici — seule sa capacité l'est.
 
-**D1 ne change pas : Canvas 2D reste le défaut.** Il tient le pire cas réel,
-avec zéro dépendance de production et un contrôle total sur des formes qui sont
-procédurales de toute façon. Mais la décision est désormais **plus serrée
-qu'elle en avait l'air**, et il faut le dire clairement : les « 9 ms sur un
-budget de 16,7 » étaient un artefact de mesure ; la vraie marge est nulle. Deux
-conséquences pour L1 :
+**La mesure, seule, laissait le choix ouvert** : Canvas 2D tient le pire cas
+réel sur cette machine, avec zéro dépendance de production et un contrôle total
+sur des formes qui sont procédurales de toute façon. Mais elle disait aussi que
+la marge est **nulle** — les « 9 ms sur un budget de 16,7 » étaient un artefact
+de mesure, et la capacité de Canvas 2D est exactement le pire cas.
+
+**Ce qui a tranché est un fait que le banc ne pouvait pas produire : la cible.**
+Le jeu doit tourner sur une machine médiocre — portable scolaire, GPU intégré.
+La mesure a été prise sur un M4 Pro, très au-dessus de la médiane, et le même
+Canvas 2D tombe à 10 img/s en rendu purement logiciel. Un moteur de rendu dont
+la capacité égale le pire cas sur du matériel haut de gamme n'a pas de quoi
+descendre la gamme. **D1 retient donc PixiJS v8**, dont le facteur 4 à 8 est
+exactement la marge qui manque, et qui couvre du même coup les particules du
+lot L8 et les parcelles de plus d'un hectare prévues plus tard. `pixi.js`
+repasse en dépendance de production.
+
+À noter pour l'honnêteté du dossier : cette ligne a changé trois fois. Pixi par
+défaut à la rédaction, Canvas 2D après une mesure **fausse**, Pixi de nouveau
+après la mesure juste et l'énoncé de la cible. Les deux premiers revirements
+étaient des erreurs de méthode ; le troisième est le seul qui repose sur des
+chiffres valides.
+
+Deux conséquences pour L1, indépendantes du bras retenu :
 
 - **le zoom rapproché est le point de rupture, pas la parcelle entière.** Au
   zoom 4 la cadence tombe à 30 img/s. À nuancer honnêtement : le banc dessine
@@ -159,10 +176,10 @@ conséquences pour L1 :
   **borne pessimiste**, pas le coût d'une vue zoomée — mais il dit où
   regarder : **L1 doit découper par emprise visible**, ce qui n'était pas une
   exigence tant qu'on croyait le zoom 4 gratuit ;
-- **Pixi passe de « option de montée en charge » à « issue de secours
-  identifiée et chiffrée »**. Le facteur 4 à 8 est la marge qu'on achèterait si
-  les particules du lot L8, une parcelle plus grande ou un matériel plus modeste
-  faisaient sauter Canvas 2D. Il reste en dépendance de développement.
+- **Canvas 2D reste un témoin utile**, et le banc le garde : c'est le seul bras
+  dont les quatre grandeurs concordent, donc celui qui sert à valider la
+  méthode de mesure elle-même. Il chiffre aussi ce qu'on gagne réellement à
+  Pixi, plutôt que de le supposer.
 
 **À rejouer sur la scène de référence**, c'est trois commandes :
 
@@ -309,10 +326,9 @@ d'aller-retour sur terrain accidenté aux quatre orientations), ce document, et
 le garde-fou de déterminisme dans `scripts/check-boundaries.sh` (`Math.random`
 interdit dans `src/render`).
 
-`pixi.js` est installé en **dépendance de développement**, pas de production :
-seul le banc l'importe, et D1 ne l'a pas retenu par défaut. C'est là qu'il faut
-qu'il soit tant que la question reste ouverte — et il ne coûte rien au paquet
-livré à cet endroit.
+`pixi.js` est en **dépendance de production** : c'est le moteur de rendu retenu
+(D1). Canvas 2D reste dans le banc comme témoin de méthode — c'est le seul bras
+dont les quatre grandeurs concordent.
 
 **Jetable, et maintenant jetable pour de bon** : `spike/` et `src/spike/`
 n'ont plus de question ouverte à garder — D1 est tranchée sur GPU, sur une
@@ -344,7 +360,7 @@ risque n° 2.
 
 | Décision | Avant | Après L0 |
 |---|---|---|
-| **D1** | Pixi par défaut, Canvas 2D en témoin | **Canvas 2D par défaut, confirmé sur GPU** — mais sans marge (60–63 img/s sur le pire cas). Pixi = issue de secours chiffrée à 4–8× |
+| **D1** | Pixi par défaut, Canvas 2D en témoin | **Pixi**, après un aller-retour : Canvas 2D tient le pire cas sur GPU haut de gamme (60–63 img/s) mais sans marge, et la cible inclut le matériel médiocre. Pixi porte 4 à 8× |
 | **D4** | le houppier émerge du branchement | l'enveloppe du houppier est un **paramètre explicite** de la fiche |
 | **Q6** | à trancher sur captures | aplats + liseré recommandés ; **le sol ne peut pas être clair** |
 | — | (rien) | **aucune primitive vectorielle par image** — règle d'architecture |

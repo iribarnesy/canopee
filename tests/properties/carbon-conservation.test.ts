@@ -295,3 +295,47 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
     expect(exporte).toBeLessThan(treeAboveCarbonKg(espece, 12));
   });
 });
+
+/**
+ * Le quatrième cas de la famille, et le seul qui passe par le FEU : un arbre
+ * vivant que l'incendie rabat mais qui repart de souche. Deux erreurs s'y
+ * compensaient à moitié, donc aucune ne se voyait — imputer tout l'aérien à la
+ * fumée émettait un carbone que la souche porte encore, et comme le carbone
+ * racinaire se déduit de la hauteur, rabattre l'arbre en faisait disparaître
+ * par ailleurs.
+ *
+ * Le chemin était jusqu'ici hors de portée des tests : le scénario de
+ * `feu.test.ts` ne peut structurellement pas rejeter (le pin est tué mais ne
+ * rejette pas, le chêne-liège rejette mais son écorce à 0,95 ne le laisse pas
+ * tuer). D'où cette lande de GENÊTS — inflammabilité 0,98, écorce nulle,
+ * pyrophyte qui rejette : elle brûle et elle repart, ce qui est exactement le
+ * cas à couvrir.
+ */
+describe("un feu qui fait rejeter de souche", () => {
+  const LANDE = { ...LANDE_SECHE.station, coteM: 40, gibierParHa: 0, voisinage: [] };
+  const METEO_SECHE = syntheticYear(LANDE_SECHE.climat);
+
+  it("le rejet ne crée ni ne détruit de carbone, semaine après semaine", () => {
+    let state = createGameState(LANDE, rngStateFromSeed(12));
+    for (let i = 0; i < 25; i++) {
+      state = plantAt(state, "cytisus_scoparius", 3 + (i % 5) * 8, 3 + Math.floor(i / 5) * 8, 2);
+    }
+
+    let rejets = 0;
+    for (let i = 0; i < 40 * 52; i++) {
+      const w = METEO_SECHE[i % METEO_SECHE.length];
+      if (!w) throw new Error("météo manquante");
+      const stockAvant = totalStockKgC(state);
+      const avant = state;
+      const step = advanceWeek(state, w, []);
+      state = step.state;
+      expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
+      if (step.incendie) rejets += step.incendie.rejets;
+    }
+
+    // Le garde qui empêche ce test de devenir muet : sans rejet, la boucle
+    // ci-dessus ne vérifie plus que le tick ordinaire, et c'est ce qui est
+    // arrivé à la version qui vivait dans `feu.test.ts`.
+    expect(rejets).toBeGreaterThan(0);
+  });
+});
