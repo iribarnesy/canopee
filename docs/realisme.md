@@ -813,7 +813,7 @@ debout, parce que ce sont deux objets différents :
 | décomposition | 5 %/an | **9 %/an** — il touche la terre et reste humide |
 | humus | dilué sur la parcelle | **sur place**, sous le tronc |
 | faune | pics, puis tout ce qui occupe leurs loges | carabes, salamandres, saproxyliques du sol |
-| sol | rien | protège la terre sous lui, comme un paillage |
+| sol | rien | protège la terre sous lui comme un paillage — et **barre l'eau** s'il est en travers (voir plus bas) |
 
 La direction de chute suit l'aval, d'autant plus franchement que la pente est
 raide : au-delà de 30 %, la gravité tranche ; à plat, l'arbre tombe où son
@@ -858,10 +858,143 @@ tire donc désormais sur une graine dérivée de l'arbre et de la semaine, ce qu
 la garde rejouable sans rebattre les cartes des autres. Et le test des
 ravageurs, lui, moyenne sur trois graines au lieu d'en croire une.
 
-*Limite qui reste* : un tronc couché en travers d'un thalweg devrait freiner
-l'eau et piéger le sédiment. Il protège aujourd'hui la terre **sous lui** —
-c'est déjà un effet reconnu du bois mort — mais il ne ralentit pas encore le
-ruissellement qui passe à côté.
+### Le tronc en travers : il barre, ou il fait gouttière
+
+Le tronc couché protégeait la terre **sous lui**, comme un paillage, et rien
+de plus. Il manquait le mécanisme qui compte pour un versant : un tronc posé
+en travers d'un thalweg **barre**. L'eau s'y met en flaque et a le temps de
+rentrer dans la terre ; le sédiment se dépose derrière lui. C'est le principe
+des *log erosion barriers* de la restauration après incendie, et c'est un des
+rares leviers réels dont dispose un propriétaire contre le ruissellement de sa
+parcelle.
+
+Tout tient à l'**orientation**, et c'est pour ça qu'il a fallu ajouter un champ
+plutôt qu'un coefficient : une masse de bois par cellule ne dit pas si le tronc
+barre ou s'il fait gouttière.
+
+**La grandeur retenue n'est pas de nous.** Adams, Dixon, Wilcox & McWethy
+(2023, *Earth Surface Processes and Landforms* 48 : 1665-1678), reprenant
+Myronidis et al. (2010), définissent la **longueur efficace** d'un tronc
+Lₑ = sin φ × L, où φ est l'angle entre son axe et la direction de l'écoulement.
+C'est exactement la projection du tronc sur la courbe de niveau. Et leurs
+essais sur table basculante — dix-huit passages, six orientations, trois
+inclinaisons — donnent le **seuil** : *aucune* accumulation derrière un tronc
+orienté à moins de 30° du courant, rien du tout sous 15° de la ligne de plus
+grande pente. Smith & Swanson (1987) disent la même chose sur le terrain, au
+mont Saint Helens : plus de 90 % des troncs qui stockent quelque chose font au
+moins 45° avec l'écoulement. Le sol retient donc, par cellule, la moyenne
+pondérée par les masses de cette efficacité barrante — pas un simple sinus, un
+sinus **seuillé tronc par tronc**, parce que deux troncs à 25° ne barrent rien
+alors que leur moyenne, elle, ne serait pas nulle.
+
+**Deux effets distincts, et il ne faut pas les confondre.**
+
+| | ce qui se passe | où c'est branché |
+|---|---|---|
+| l'eau | une part du ruissellement qui traverse la cellule est mise en flaque, puis **offerte au sol** ; ce que le sol ne prend pas percole vers la **nappe** | avant le calcul d'érosion, donc moins de lame ⇒ moins d'arrachement |
+| la terre | une part du sédiment en transit se **dépose derrière le tronc**, sur sa propre cellule, avec toute sa charge (humus, litière, N, P, K) | après l'arrachement, avant le passage à l'aval |
+
+Le passage à la nappe n'est pas un artifice comptable, c'est le mécanisme même :
+un tronc ne **supprime** pas l'eau, il la **retarde**. Ce qui courait en surface
+et traversait la parcelle dans la semaine devient de l'eau de nappe, qui met des
+mois à rejoindre l'aval. C'est cela, hydrauliquement, « lutter contre une
+inondation ». À un pas de temps hebdomadaire on ne sait pas représenter le
+décalage du pic lui-même — seulement le volume qui change de chemin.
+
+**La capacité, et c'est elle qui empêche le mécanisme d'être une baguette
+magique.** Le coin amont d'un tronc contient un volume fini, donné par
+l'équation (3) d'Adams et al. :
+
+    S = (d·Lₑ/2) · (d/tanθ − πd/4)
+
+un coin triangulaire de hauteur *d* (le diamètre du tronc) qui remonte d/tanθ
+vers l'amont, moins le demi-cylindre qu'occupe le tronc. On n'a rien choisi là
+non plus, et deux conséquences en sortent seules : **plus la pente est raide,
+moins le tronc retient**, et au-delà de 127 % de pente il ne retient plus rien
+— le tronc surplombe son propre tas. Le volume obtenu, 0,065 m³ par mètre
+efficace à 40 % de pente, est du bon ordre : Wagenbrenner, MacDonald & Rough
+(2006) mesurent 0,049 m³ par mètre efficace sur 210 troncs du Colorado ;
+Robichaud, Pierson, Brown & Wagenbrenner (2008) 0,020 m³ par mètre posé.
+
+Ce coin géométrique est ensuite **ramené à 30 %**, parce que le terrain dit
+qu'il ne sert jamais en entier. Robichaud et al. (2008) sont formels : « runoff
+and sediment were observed going over the top and around the ends of the
+barriers **even when the barriers were less than half filled** » — sur
+vingt-neuf franchissements observés, trois seulement portaient sur un barrage
+plein. Leur pluie simulée n'a mobilisé que 7 % de la capacité des troncs.
+Enfin, le coin **s'ensevelit** : le colluvium accumulé sur la cellule se lit
+déjà dans l'état (`epaisseurPerdueCm` négative), et quand il atteint le haut du
+tronc, le tronc ne sert plus. Aucun champ nouveau pour cela.
+
+**Ce que ça donne, mesuré.** Versant nu à 25 %, vallon, 0,5 ha d'amont, une
+ligne continue de billes en bas de pente, cinq ans, moyenne de cinq graines :
+
+| | eau de surface sortie | terre exportée |
+|---|---|---|
+| pas de bois | 1133 mm | 1,96 kg/m² |
+| bois **dans le sens de la pente** | 1133 mm | 1,92 kg/m² |
+| bois **en travers** | 1095 mm (**−3,4 %**) | 1,75 kg/m² (**−11 %**) |
+
+La ligne du milieu est le résultat qui compte : à masse égale, à paillage égal,
+le bois couché dans le sens de la pente ne détourne **pas une goutte** et ne
+retient **pas un gramme**. Les 2 % qu'il gagne quand même sur la terre sont
+l'ancien effet de paillage, qui lui se moque de l'orientation.
+
+**Et le plafond fonctionne.** Sur la même parcelle, en faisant grossir le
+bassin d'amont — donc la crue :
+
+| bassin amont | terre exportée en moins |
+|---|---|
+| 0,5 ha | −11 % |
+| 12 ha | −4 % |
+
+C'est exactement ce que trouvent Robichaud et al. (2008, *International Journal
+of Wildland Fire* 17 : 255-273) sur six paires de bassins suivis quatre à six
+ans : un effet sur les petites pluies, **aucun effet au-delà du temps de retour
+deux ans**. Trois troncs n'arrêtent pas une inondation, et le moteur le dit
+maintenant tout seul.
+
+**La conséquence gênante, et elle est vraie.** La chute suit l'aval d'autant
+plus franchement que la pente est raide. Donc **là où l'érosion fait le plus de
+dégâts, le chablis naturel sert le moins** : la transversalité moyenne d'une
+chute passe de 0,67 à 2 % de pente à 0,26 à 25 %, et à zéro au-delà de 30 %. Un
+versant raide ne s'arme pas tout seul ; il faut y **abattre sur courbe de
+niveau**, ce qui est précisément le geste de la restauration post-incendie. À
+l'inverse, sur un versant doux à 15 %, le bois mort d'un peuplement laissé à
+lui-même est barrant à 37 % en moyenne, piège 1,6 kg/m² de terre en soixante
+ans et détourne 3,9 % de l'eau de surface — mesuré sur trois graines contre le
+même bois dont on a annulé l'orientation.
+
+**Un bug attrapé au passage, et il valait le voyage.** `versLAval` indexait le
+champ d'altitudes avec les coordonnées **flottantes** de l'arbre. L'index
+tombait entre deux cases, le tableau rendait `undefined` pour les quatre
+voisines, la pente sortait nulle — et la chute était donc **tirée au hasard sur
+un versant à 60 % comme à plat**. Le mécanisme d'orientation existait sur le
+papier et ne s'était jamais déclenché en partie. Le test unitaire ne pouvait
+pas le voir : il appelait la fonction avec des entiers.
+
+*Ce qui reste faux* :
+
+- **Le contact au sol n'est pas modélisé.** Un chablis frais repose sur ses
+  branches et surplombe la terre : Adams et al. décrivent une capacité de
+  stockage nulle en classe de décomposition I, maximale en classe III quand le
+  tronc s'est affaissé au ras du sol. Le moteur suppose le contact acquis dès
+  la chute, donc il est **trop généreux les premières années**.
+- **Le pic de crue n'est pas décalé, seulement réduit en volume.** C'est
+  pourtant l'effet principal d'un obstacle sur une inondation. Un pas de temps
+  hebdomadaire ne sait pas le porter.
+- **Au-delà de 30 % de pente, la transversalité tombe à zéro exactement**,
+  parce que `directionDeChute` aligne alors la chute sur l'aval sans dispersion
+  résiduelle. La vraie forêt garde de la dispersion, et donc quelques troncs
+  utiles même sur un versant raide *(à confirmer)*.
+- **La part utile du coin (30 %) est la constante la plus fragile du lot** :
+  elle décide à elle seule de la force du mécanisme, et elle est calée sur une
+  seule campagne de mesure.
+- **Aucune littérature ne donne de rugosité de Manning mesurée pour un tronc
+  couché sur un versant.** C'est pourquoi le tronc est traité ici comme un
+  réservoir fini à seuil de débordement, et non comme une rugosité — ce que
+  fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
+  des barrages de débris.
 
 ## La variabilité individuelle : la fin des clones
 
