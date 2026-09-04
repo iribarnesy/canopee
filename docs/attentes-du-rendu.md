@@ -61,16 +61,31 @@ issue au passage suivant.
 
 **Une fois, au lancement** (`StationInfo`) : `altitudesM` (le relief, maille du
 tick), `nappeCm` (champ figé), `enEau`, `eau`, `coteM`, `ruMm`, `phInitial`,
-`nappeEquilibreCm`, `meteoLabel`.
+`nappeEquilibreCm`, `ventExposition`, `meteoLabel`.
 
 **À chaque instantané** (`Snapshot`) : la semaine, la météo, l'année civile, le
 CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick, la
 pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 (`pheno`).
 
-**Par cellule**, en `Float32Array`/`Uint8Array` transférés : `soilWater`,
-`soilPh`, `soilN`, `soilHerbe`, `soilNappeCm`, `soilEngorgement`, `soilCloture`,
-`soilDebordementMm`, `soilLumiere`, `soilLitiereCG`.
+**Par cellule**, en `Float32Array`/`Uint8Array` transférés :
+
+| Grille | Ce qu'elle porte |
+|---|---|
+| `soilWater` | eau de l'horizon de surface, mm |
+| `soilPh` | pH |
+| `soilN` | azote minéral, g/m² |
+| `soilHerbe` | couverture herbacée ∈ [0,1] |
+| `soilHerbeBiomasse` | herbe SUR PIED — elle reste quand l'herbe jaunit |
+| `soilLitiereCG` | litière, gC/m² : le tapis de novembre, le paillage, les cendres |
+| `soilBoisAuSol` | bois mort COUCHÉ, gC/m² : où poser des troncs |
+| `soilRavageurs` | pression de ravageurs — la TACHE de défoliation, pas sa moyenne |
+| `soilEpaisseurPerdueCm` | érosion cumulée, signée : négatif = dépôt |
+| `soilNappeCm` | profondeur de la nappe, cm |
+| `soilEngorgement` | engorgement du profil ∈ [0,1] |
+| `soilDebordementMm` | ce qui n'est pas rentré dans le sol cette semaine, mm |
+| `soilLumiere` | lumière arrivant au sol ∈ [0,1] |
+| `soilCloture` | cellules closes (1) |
 
 **Par arbre** (`SnapshotTree`, chandelles comprises) : `id`, `especeId`, `x`,
 `y`, `heightM`, `ageWeeks`, `stress`, `fruitsKg`, `hauteurElagueeM`, `protege`,
@@ -83,12 +98,23 @@ pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 `trogner`, `receper`, `brouter`, `frotter`, avec les ids réellement touchés),
 `incendie` (compteurs + `origine`, `brulees` et `rangs` du front).
 
-**Et ce que le rendu peut calculer lui-même**, sans rien demander : la part
-foliaire et la sénescence de n'importe quelle espèce, depuis `Snapshot.pheno` et
-`especes.ts` (`partFoliaireDans`, `senescenceFoliaire`) ; le rayon de houppier
-depuis la hauteur (`light.ts:crownRadiusM`) ; tout ce qui est une fonction pure
-de l'instantané et des fiches d'espèces, puisque le moteur est importable depuis
-l'UI.
+**Et ce que le rendu peut calculer lui-même**, sans rien demander : tout ce qui
+est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur
+est importable depuis l'UI. En particulier le rayon de houppier depuis la
+hauteur (`light.ts:crownRadiusM`), et le feuillage de n'importe quelle espèce
+depuis `Snapshot.pheno` — mais il y en a DEUX, et pour une fois c'est le rendu
+que la distinction concerne le plus :
+
+- `partFoliaireOmbrageanteDans(espece, pheno)` — ce qui intercepte la lumière,
+  feuilles mortes d'un marcescent comprises. C'est la silhouette : la masse à
+  dessiner, et l'ombre qu'elle porte.
+- `partFoliaireActiveDans(espece, pheno)` — ce qui travaille. Un chêne de
+  février garde ses feuilles brunes mais ne pousse plus.
+
+L'écart entre les deux est donc directement la part de feuillage MORT encore
+accroché : un houppier à colorer en brun-roux plutôt qu'en vert, sans qu'aucun
+champ n'ait à voyager pour le dire. `senescenceFoliaire(pheno)` dit, lui, si la
+chute est enclenchée.
 
 ## Deux limites connues
 
