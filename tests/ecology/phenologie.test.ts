@@ -1,6 +1,7 @@
 /**
  * Phénologie foliaire (phenologie.ts) : l'ordre de débourrement, la porte
- * photopériodique, et l'étalement de la chute.
+ * photopériodique, l'étalement de la chute, et la sénescence — qui devance la
+ * chute et met la feuille hors service avant qu'elle ne tombe.
  */
 
 import { describe, expect, it } from "vitest";
@@ -10,12 +11,15 @@ import {
   contextePhenologique,
   debourrementExigeDJ,
   ETALEMENT_CHUTE_SEMAINES,
+  ETALEMENT_SENESCENCE_SEMAINES,
   partFoliaire,
+  partFoliaireActive,
   partFoliaireDans,
   SENESCENCE_DEBUT_SEMAINE,
-  SOLSTICE_ETE_SEMAINE,
   semaineDeFroid,
+  senescenceEnCoursDans,
   senescenceFoliaire,
+  SOLSTICE_ETE_SEMAINE,
 } from "../../src/engine/phenologie";
 
 /** Jour au 15 avril, à la latitude du limon (49,5° N) et de la lande (44,5° N). */
@@ -171,7 +175,63 @@ describe("le contexte phénologique", () => {
     expect(partFoliaireDans(chene, ctx)).toBe(
       partFoliaire(chene, 900, ctx.jourH, true, ctx.semainesDepuisSenescence, 20),
     );
-    // Et la sénescence est enclenchée : c'est ce qui brunit le feuillage.
-    expect(senescenceFoliaire(ctx)).toBe(true);
+    // Et la sénescence est enclenchée : le compteur de chute tourne.
+    expect(senescenceEnCoursDans(ctx)).toBe(true);
+  });
+});
+
+describe("la sénescence, distincte de la chute", () => {
+  const chene = getEspece("quercus_pubescens");
+  const pin = getEspece("pinus_sylvestris");
+  /** Un jour d'automne déjà court : la sénescence est enclenchée. */
+  const jourCourt = 10;
+
+  it("elle DEVANCE la chute : le houppier est encore garni et déjà doré", () => {
+    // C'est tout l'automne, et c'est ce que la part foliaire seule ne disait
+    // pas : beaucoup de feuilles, plus une qui travaille.
+    const semaine = ETALEMENT_SENESCENCE_SEMAINES;
+    const accrochee = partFoliaire(chene, 900, jourCourt, true, semaine);
+    const jaunie = senescenceFoliaire(chene, jourCourt, true, semaine);
+    expect(accrochee).toBeGreaterThan(0.5);
+    expect(jaunie).toBe(1);
+  });
+
+  it("elle est nulle avant que le jour ne raccourcisse assez", () => {
+    // Un jour long d'août : rien n'a commencé, même après le solstice.
+    expect(senescenceFoliaire(chene, 15, true, 0)).toBe(0);
+    // Et jamais au printemps, quelle que soit la durée du jour.
+    expect(senescenceFoliaire(chene, 10, false, 5)).toBe(0);
+  });
+
+  it("un sempervirent ne sénesce pas : pas d'automne pour un pin", () => {
+    expect(senescenceFoliaire(pin, jourCourt, true, 10)).toBe(0);
+    expect(partFoliaireActive(pin, 0, jourCourt, true, 10)).toBe(1);
+  });
+
+  it("le feuillage ACTIF tombe à zéro avant le feuillage accroché", () => {
+    // La conséquence qui compte pour le moteur : l'arbre cesse de produire
+    // (donc de pousser et de transpirer) alors qu'il porte encore ses
+    // feuilles. Sans ça, un automne doux faisait pousser un houppier mort.
+    const semaine = ETALEMENT_SENESCENCE_SEMAINES;
+    expect(partFoliaireActive(chene, 900, jourCourt, true, semaine)).toBe(0);
+    expect(partFoliaire(chene, 900, jourCourt, true, semaine)).toBeGreaterThan(0);
+  });
+
+  it("l'actif décroît sans jamais dépasser l'accroché", () => {
+    let precedent = Number.POSITIVE_INFINITY;
+    for (let s = 0; s <= ETALEMENT_CHUTE_SEMAINES; s++) {
+      const actif = partFoliaireActive(chene, 900, jourCourt, true, s);
+      const accrochee = partFoliaire(chene, 900, jourCourt, true, s);
+      expect(actif).toBeLessThanOrEqual(accrochee + 1e-9);
+      expect(actif).toBeLessThanOrEqual(precedent + 1e-9);
+      precedent = actif;
+    }
+  });
+
+  it("en pleine saison, l'actif EST l'accroché : rien ne change l'été", () => {
+    // Le garde-fou de non-régression : la sénescence ne doit toucher que
+    // l'automne, sinon elle rognerait la croissance de toute l'année.
+    const ete = partFoliaire(chene, 900, 15, false, 0);
+    expect(partFoliaireActive(chene, 900, 15, false, 0)).toBeCloseTo(ete, 10);
   });
 });

@@ -92,8 +92,9 @@ déplacer, la nourrir, compter ses œufs, et voir son azote au sol. Ce n'est pas
 une grosse brique (un parcours, un aliment, une déposition d'azote localisée,
 des œufs, un peu de travail hebdomadaire) et c'est très à sa place dans un jeu
 d'agroforesterie — la volaille en verger est un classique. Mais c'est **un
-module moteur**, pas un sprite. À décider séparément (§11, Q7) : je le mets
-volontiers en chantier, dans la file du moteur, pas dans celle du rendu.
+module moteur**, pas un sprite. **Décidé (Q7) : plus tard, quand le moteur l'aura
+prévu.** Ça reste un beau chantier — mais dans la file du moteur, pas dans
+celle du rendu.
 
 **Dehors, avec les raisons** :
 
@@ -156,19 +157,44 @@ en aplats.
 `SnapshotTree` envoie aujourd'hui : `id, especeId, x, y, heightM, ageWeeks,
 stress, fruitsKg, hauteurElagueeM, protege, chandelle`.
 
-> **⚠️ Bug à corriger d'abord — le champ `chandelle` vaut toujours `false`.**
-> `worker.ts:postSnapshot()` fait `state.trees.filter((t) => t.alive)` **avant**
-> `.map(… chandelle: !t.alive)` : tout arbre mort est écarté, donc le drapeau
-> est constant et les 32 lignes de `drawTreeOblique` qui dessinent le fût gris
-> à deux moignons sont du **code mort**. Aucune chandelle n'est visible en jeu
-> aujourd'hui. Les tests n'ont rien vu parce qu'ils sont au niveau du moteur
+> **✅ Le bug de `chandelle` est corrigé.** `worker.ts:postSnapshot()` faisait
+> `state.trees.filter((t) => t.alive)` **avant** `.map(… chandelle: !t.alive)` :
+> tout arbre mort était écarté, le drapeau valait constamment `false`, et les
+> 32 lignes de `drawTreeOblique` qui dessinent le fût gris à deux moignons
+> étaient du code mort — aucune chandelle n'était visible en jeu. Les tests ne
+> l'avaient pas vu parce qu'ils sont au niveau du moteur
 > (`tests/ecology/chandelles.test.ts`), pas du worker.
-> Le correctif n'est pas d'un seul mot : en retirant le filtre, il faut
-> exclure les chandelles des cinq endroits qui comptent des tiges vivantes —
-> `composition` et son `total` (`GameView.tsx:1173-1181`), la sélection par
-> espèce (`:1632`), le compteur du bandeau (`:1762`) et la boucle `:1273`.
-> C'est exactement le changement P3 ci-dessous, dont la vue isométrique a
-> besoin de toute façon.
+>
+> Ce que le correctif a demandé, au-delà du filtre retiré : distinguer
+> partout les **tiges vivantes** des chandelles, puisque `snapshot.trees`
+> mélange désormais les deux — la composition du peuplement et son total, le
+> compteur d'arbres (qui affiche maintenant les chandelles à part), les fruits
+> à récolter, la sélection « + tous les X », et le **rayon de clic** (une
+> chandelle n'a plus de houppier : sans rétrécissement, un fût mort captait les
+> clics sur toute l'emprise de la couronne qu'il avait de son vivant). Le
+> moteur, lui, n'avait besoin de rien : toutes les actions étaient déjà gardées
+> par `t.alive`, et `couper` acceptait déjà l'arbre brûlé sur pied.
+>
+> **Et une couture pour que ça ne se reproduise pas.** La traduction
+> état → instantané vivait en ligne dans le worker, qu'aucun test ne peut
+> instancier — c'est *structurellement* pour ça que le bug était invisible. Elle
+> est maintenant dans `src/game/snapshot.ts`, pure, et
+> `tests/unit/snapshot.test.ts` la couvre. Le point important : la fonction
+> prend **la liste** d'arbres et non un arbre, parce que le filtre fautif ne
+> portait pas sur la traduction d'un arbre mais sur le choix de ceux qu'on
+> traduit — un test sur un seul arbre n'aurait rien vu. Vérifié en
+> réintroduisant le filtre : deux tests tombent.
+>
+> **✅ Les deux conséquences de moteur sont traitées.** On peut maintenant
+> `couper` une chandelle grise — c'est du bois de chauffage décoté, jamais de
+> l'œuvre, et son carbone est **déplacé** hors du pool de bois mort au lieu
+> d'y être ajouté une seconde fois (il y était entré à la mort). En revanche
+> elle ne fait pas de BRF : le broyat veut du bois **frais**, c'est le cambium
+> vivant et l'azote du rameau de l'année qui font son intérêt. Et
+> `partMecanisable` compte désormais les chandelles comme obstacles — j'avais
+> écrit ici le contraire, à tort : le code **filtrait** `!alive`, donc un
+> tracteur passait à travers les troncs morts. Après une mortalité, la fauche
+> et le chaulage restent chers jusqu'au nettoyage.
 
 | Champ de `TreeState` | Envoyé ? | Ce qu'il permet de dessiner |
 |---|---|---|
@@ -180,7 +206,7 @@ stress, fruitsKg, hauteurElagueeM, protege, chandelle`.
 | **`recepages`** | ❌ | L'âge de gestion : une trogne à son 6ᵉ étêtage a une tête grosse et creuse, pas la même qu'au premier. Sert aussi à la cavité (habitat). |
 | **`vigueur`** | ❌ | **La clé de la santé visible** : moyenne lissée du facteur limitant. Un arbre qui végète a un feuillage clairsemé et pâle *avant* d'accumuler du stress. C'est ce qui rendra une parcelle « en souffrance » lisible d'un coup d'œil. |
 | **`dommageHydraulique`** | ❌ | La **cime sèche** : branches mortes en haut du houppier, la signature des sécheresses passées. Mémoire pluriannuelle — visuellement, l'arbre garde la trace. |
-| `chandelle` | ⚠️ envoyé mais toujours `false` | Le fût gris. Voir l'encadré ci-dessus. |
+| `chandelle` | ✅ | Le fût gris à deux moignons. Corrigé — voir l'encadré ci-dessus. |
 | **`mortSemaine`** | ❌ | L'âge de la chandelle : elle grisonne, perd ses moignons, se creuse (les pics), puis tombe. Sans elle, toutes les chandelles se ressemblent. |
 | **`brulEeSemaine`** | ❌ | Distinguer la chandelle **noire** (feu) de la chandelle **grise** (sécheresse, vieillesse). Deux histoires différentes, et la première est encore récoltable un an. |
 | **`causeMort`** | ❌ | Choisit l'animation de mort (§6.3) — la seule donnée qui manque pour que les onze morts se racontent différemment. |
@@ -234,42 +260,57 @@ l'ensemble des cellules brûlées, la distance de chacune à l'origine (BFS sur
 le seul ensemble brûlé). Aucun tirage, aucun changement de résultat, et le
 rendu obtient exactement ce qu'il lui faut pour faire courir un front.
 
-### 2.4 La phénologie
+### 2.4 La phénologie : faite (commits `7737b94`, `6af5254`)
 
-`leavesOn = weather.tMean > 6 °C` est calculé dans `tick.ts` et **jamais
-transmis**. La chute des feuilles est un couperet : semaine 44, tout tombe
-d'un coup (`LITTERFALL_WEEK`). Le débourrement n'existe pas comme date, c'est
-un seuil de température franchi.
+`leavesOn = tMean > 6 °C` a disparu. Chaque espèce a maintenant son calendrier
+(`src/engine/phenologie.ts`) : un **forçage** en degrés-jours base 5 propre à
+l'espèce, et une **porte photopériodique** sans laquelle le modèle serait
+absurde au sud — au 12 avril, la lande girondine a cumulé 341 °C·j quand le
+limon du Nord n'en a que 123, et un seuil de forçage seul y ferait débourrer
+six semaines trop tôt. L'indice foliaire entre dans Beer-Lambert (un houppier à
+moitié sorti ne fait pas la même ombre), la chute s'étale sur cinq semaines, et
+les sempervirents restent à 1.
 
-Pour une belle vue saisonnière il faut un **état phénologique continu** ∈ [0,1]
-par arbre (ou au moins par espèce) : nu → débourrement → pleine feuille →
-coloration → chute. Deux chemins :
+`partFoliaire(espece, ddYearBase5, dureeJourH, automne, semainesDepuisSenescence)`
+rend exactement ce que le rendu attendait : une part de feuillage continue
+∈ [0,1], **par espèce**. Ce qui reste à faire côté protocole est donc minuscule :
 
-- **Cheap (`S`)** : le rendu le dérive lui-même d'un lissage de `tMean` sur
-  quelques semaines + `LITTERFALL_WEEK`. Suffisant, mais c'est le rendu qui
-  invente une phénologie que le moteur ignore — contraire au principe 1, à
-  assumer comme approximation d'affichage.
-- **Propre (`M`)** : le moteur porte un `phenologie ∈ [0,1]` par arbre, piloté
-  par les degrés-jours (`ddYearBase5` existe déjà !) et le besoin en froid de
-  l'espèce. Utile *au moteur* aussi : le gel tardif, l'ombre portée d'hiver et
-  l'interception de la lumière méritent mieux qu'un seuil binaire à 6 °C.
-  C'est un critère de `docs/realisme.md` §D qui se débloquerait au passage.
+- transporter cette part **par arbre** dans `SnapshotTree` (le rendu ne doit pas
+  refaire le calcul : il n'a ni le cumul de degrés-jours ni la durée du jour) ;
+- ou, à défaut, transporter `ddYearBase5` + `dureeJourH` + `automne` dans
+  l'instantané et laisser le rendu appeler `partFoliaire` — c'est du moteur pur,
+  donc légitime, et ça coûte trois nombres au lieu d'un par arbre.
 
-**✅ Décidé : la voie propre** (`M`), et le moteur est déjà en cours de
-modification. C'est le bon choix pour deux raisons qui dépassent le rendu :
-`ddYearBase5` est déjà là, et le seuil binaire à 6 °C plafonne aujourd'hui
-trois choses que le moteur fait sérieusement partout ailleurs — le gel tardif,
-l'ombre portée d'hiver et l'interception lumineuse. Un critère de
-`docs/realisme.md` §D se débloque au passage.
+**La seconde voie est préférable** : elle donne au rendu la fonction *et* ses
+entrées, sans dupliquer une valeur par arbre, et elle reste juste si la
+phénologie se raffine (le *chilling* n'est pas modélisé — limite assumée du
+commit). ✅ **La sénescence est maintenant séparée de la feuillaison.**
+`senescenceFoliaire()` dit dans quel ÉTAT est le feuillage encore accroché
+(0 = vert, 1 = entièrement doré et hors service), là où `partFoliaire` dit
+seulement combien il en reste. Le rendu a donc les deux nombres qu'il faut pour
+la coloration d'automne : un houppier presque plein **et** entièrement roux,
+qui est exactement ce qu'on voit en octobre.
 
-Ce que le rendu attend précisément, pour éviter un aller-retour : un
-`phenologie ∈ [0,1]` **par arbre** (pas par espèce — deux chênes de vigueur
-différente ne débourrent pas ensemble), transmis dans `SnapshotTree`, avec la
-convention 0 = nu, 1 = pleine feuille, et une **phase distincte pour la
-sénescence foliaire** (la coloration d'automne n'est pas le débourrement à
-l'envers : la feuille jaunit *puis* tombe). Deux nombres valent mieux qu'un :
-`feuillaison ∈ [0,1]` et `senescence ∈ [0,1]`. Les sempervirents (chêne-liège,
-arbousier, pin, callune) restent à 1 toute l'année — et ça se verra.
+`partFoliaireActive` — accroché × (1 − jauni) — est fourni avec : c'est la part
+du feuillage qui **travaille** encore.
+
+**Une chose qu'il faut savoir en abordant les animations de saison** : cette
+part active ne commande **pas** encore la croissance ni la transpiration, qui
+passent toujours par un seuil thermique. Donc à l'écran, un houppier doré
+d'octobre continue de grandir, et un caduc nu de janvier continue de puiser dans
+le sol. Le brancher demande de recalibrer `GROWING_WEEKS` et les
+`pousseMaxMAn` — mesuré et documenté dans `docs/realisme.md`, « la saison de
+végétation est encore thermique ». Ce n'est pas bloquant pour le rendu, mais
+c'est une incohérence que le joueur pourra voir une fois les saisons animées.
+
+**Une inquiétude vérifiée et écartée** : le compteur d'étalement part d'une
+semaine fixe (40) alors que la porte photopériodique s'ouvre à une date qui
+dépend de la latitude — de quoi faire sauter une parcelle du sud du vert à
+l'or en une image. Mesuré sur nos latitudes : le seuil de 11,5 h tombe en
+**semaine 39 de Lille à Bordeaux** (l'écart de durée du jour entre 44,5° et
+49,5° N n'est que de 0,14 h près de l'équinoxe). La porte s'ouvre donc une
+semaine avant que le compteur ne démarre, la courbe part de 1 et descend sans
+marche. La simplification du moteur tient ; il n'y avait rien à corriger.
 
 ### 2.5 Récapitulatif des changements de protocole
 
@@ -277,16 +318,16 @@ arbousier, pin, callune) restent à 1 toute l'année — et ça se verra.
 |---|---|---|---|
 | P1 | `StationInfo.altitudesM` (déjà calculé dans `stationInfo()`, il suffit de le joindre) | `S` | tout le relief iso (lot 1) |
 | P2 | `SnapshotTree` élargi (~14 champs, dont `teteTrogneM`, `vigueur`, `dommageHydraulique`, `mortSemaine`, `derniereLeveeSemaine`) | `M` | stades, gestion, santé (lots 2, 4) |
-| P3 | **corriger `chandelle`** (retirer le filtre `alive` + exclure les chandelles des 5 comptages) et ajouter `causeMort`, `brulEeSemaine` | `S` | les morts, les brûlés (lots 5, 6) — et ça débogue une fonctionnalité déjà livrée |
+| P3 | ✅ **`chandelle` corrigé** ; reste à ajouter `causeMort`, `mortSemaine`, `brulEeSemaine` | `S` | les morts, les brûlés (lots 5, 6) |
 | P4 | `soilDebordement`, `soilLumiereAuSol`, `soilLitiere` | `S` | eau de surface, ambiance, cendres |
 | P5 | `TickResult.morts` avec `id`, `x`, `y` | `S` | animations de mort |
 | P6 | `TickResult.incendie` avec cellules + rang du front | `M` | l'incendie (lot 6) |
 | P7 | événements de gestion spatialisés (coupes, brout, frottis) | `S` | retours d'action (lot 4) |
-| P8 | **phénologie continue** dans le moteur : `feuillaison` + `senescence` par arbre | `M` | les saisons (lot 3) — *en cours* |
+| P8 | ✅ **phénologie et sénescence faites** (`phenologie.ts`) ; reste à exposer `ddYearBase5`, `dureeJourH`, `automne`, `semainesDepuisSenescence`, `semainesDeFroid` dans l'instantané — cinq scalaires, et le rendu appelle `partFoliaire` et `senescenceFoliaire` lui-même | `S` | les saisons (lot 3) |
 | P9 | de quoi peupler la faune : `pressionGibier` (✅ déjà là), ids broutés/frottés de la semaine (= P7), floraisons en cours (= P2) | — | la faune visible (lot 9) — **rien de neuf à demander**, tout tombe de P2 et P7 |
 
-Total protocole : **~2,5 j**, sans une ligne de rendu. C'est le prix d'entrée —
-et P3 est à faire de toute façon, puisque c'est un bug.
+Total protocole : **~1,5 j** de ce qui reste (P3 et P8 étant pour l'essentiel
+faits). C'est le prix d'entrée, et il a baissé.
 
 ### 2.6 Les chandelles : fait (commit `95eec77`)
 
@@ -509,13 +550,20 @@ perchis (3–10 m), futaie (10 m–max), sénescent (`fAge < 1` : cime dégarnie
 grosses charpentières mortes, houppier étalé), **chandelle** (fût gris ou noir,
 qui se creuse puis tombe — §2.6).
 
-**Priorisation** — dix-neuf fiches graphiques ne se font pas d'un bloc. Ordre
-proposé : les six essences qui structurent le plus souvent un peuplement
-(aulne, hêtre, chêne pubescent, pin sylvestre, bouleau, châtaignier), puis les
-quatre du fourré (qui partagent presque tout), puis les fruitiers, puis le
-reste. Chaque fiche est un **incrément indépendant et livrable** : la vue
-fonctionne avec six espèces finies et treize en port générique, et
-s'améliore fiche par fiche.
+**Toutes les fiches, sans ordre de faveur** (Q8) : les dix-neuf essences
+doivent être reconnaissables, aucune ne reste en port générique. Ça ne veut pas
+dire qu'on les écrit dans le désordre — l'ordre de travail suit ce qui
+**mutualise** le plus, pas ce qui est le plus utile :
+
+1. **une fiche par famille de port** d'abord (8 fiches), pour éprouver le
+   générateur sur les huit géométries et faire remonter ses manques ;
+2. puis **les onze restantes**, chacune dans une famille déjà défrichée, donc
+   plus rapide — c'est là que le paramétrage par espèce paie.
+
+Aucune des deux vagues ne bloque le reste du chantier : la vue tourne avec les
+fiches déjà écrites, et une essence sans fiche prend le port de sa famille en
+attendant la sienne. Le critère de fin est le même pour toutes : **une essence
+n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 
 ### 5.5 Les états de gestion — le cœur de la demande
 
@@ -785,7 +833,9 @@ glissante d'un an à plein détail, et au-delà on ne conserve que les
 worker devra poster un instantané **par semaine simulée** quand
 l'enregistrement est actif, au lieu d'un par lot de 26 — c'est le seul
 changement côté worker, et il ne coûte que de la mémoire, pas du calcul.
-Charge `L`.
+**Acté (Q9) : le rembobinage est toujours possible**, donc l'enregistrement
+tourne en permanence ; sur une parcelle de 10 ha il faudra n'enregistrer que
+les différences entre semaines, ou raccourcir la fenêtre. Charge `L`.
 
 #### La politique de vitesse qui en découle
 
@@ -837,6 +887,11 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
   d'instantané qu'elle lit → un test vérifie que **le protocole les fournit
   tous**. C'est ce qui empêche une animation d'inventer une donnée (principe 1,
   vérifié par la machine). `M`
+- **La traduction état → instantané** : elle vit dans `src/game/snapshot.ts`,
+  pure, et non plus en ligne dans le worker. Toute donnée que l'UI reçoit passe
+  par là et est donc testable — c'est ce qui a manqué aux chandelles (§2.1).
+  Règle : **aucune sélection, aucun filtre dans le worker** ; il assemble, il ne
+  décide pas. `S`
 - **Peuplement de la faune** : même principe, appliqué au §5.10 — un test
   vérifie que le nombre de bêtes de chaque espèce est bien une **fonction de
   l'état** (zéro chevreuil quand `pressionGibier` est nulle, zéro papillon hors
@@ -955,21 +1010,24 @@ chiffre supportable :
 | — | La pluie ? | **Oui** (§5.7), et c'est gratuit — `rainMm` est déjà dans l'instantané |
 | — | Météo volumétrique ? | **Non** — c'est la simulation de l'atmosphère en volume, elle n'a pas de sens sans 3D. L'effet, lui, est dedans. |
 
+### Aussi tranchées
+
+| | Question | Réponse |
+|---|---|---|
+| Q7 | Les poules et l'élevage ? | **Plus tard**, quand le moteur l'aura prévu. Pas de sprite d'animal d'élevage avant son module — la règle de figuration du §5.10 s'applique : la faune sauvage entre parce que le moteur sait déjà la peupler (pression de gibier, broutage, frottis, biodiversité) ; l'élevage, non. |
+| Q8 | L'ordre des fiches d'espèce ? | **Pas d'ordre de faveur : il faut les faire toutes.** L'ordre de travail suit la mutualisation (une fiche par famille de port, puis les onze autres) — voir §5.4. |
+| Q9 | Le rembobinage ? | **Toujours possible.** L'enregistrement de la fenêtre glissante est donc actif en permanence, quelle que soit la taille de la parcelle. Conséquence à porter : sur 10 ha, une cellule coûte cent fois plus que sur 1 ha — il faudra alors n'enregistrer que les **différences** entre semaines et non les instantanés entiers, ou raccourcir la fenêtre. À dimensionner au lot 8, pas avant. |
+
 ### Encore ouvertes
 
-- **Q7 — Les poules (et l'élevage).** Le moteur ne connaît aucun animal
-  d'élevage ; `regles.md` §14 le met en v2. Une poule décorative se
-  retournerait contre nous. Le module minimal serait : un parcours clôturé, un
-  aliment (acheté ou glané au sol), une déposition d'azote **localisée** — donc
-  qui interagit avec `nitrogen.ts` —, des œufs, et quelques heures de travail
-  par semaine. La volaille en verger est un classique agroforestier et ça se
-  marierait bien avec le reste. **Veux-tu que je le chiffre comme un chantier
-  moteur à part ?**
-- **Q8 — L'ordre des fiches d'espèce.** J'ai proposé les six structurantes,
-  puis le fourré, puis les fruitiers. Si tu joues surtout une station en
-  particulier, on commence par ses essences à elle.
-- **Q9 — L'enregistrement pour le rembobinage : toujours actif, ou sur
-  demande ?** Toujours actif coûte ~15 Mo et un instantané par semaine ; sur
-  demande évite le coût mais oblige à prévoir qu'on voudra revoir la scène, ce
-  qui est rarement le cas avant qu'il ne soit trop tard. Je penche pour
-  **toujours actif sur 1 ha**, désactivé au-delà.
+- **Le combustible sur pied.** Une chandelle est du bois sec et debout que
+  `chargeCombustible` (feu.ts) ignore encore — c'est la conséquence que le
+  commit des chandelles laissait ouverte, et elle est du ressort du moteur.
+  Visuellement, ça veut dire qu'une chandelle ne brûlera pas dans l'incendie
+  du lot L6 alors qu'elle devrait être la première à partir.
+- **La chute d'une chandelle ne fait pas de trouée** dans le couvert : pas de
+  tache de lumière au sol à animer le jour où elle s'abat.
+- **La marcescence** : le chêne et le charme gardent leurs feuilles mortes et
+  brunes une partie de l'hiver au lieu de les lâcher. `senescenceFoliaire` va
+  au bout et la feuille tombe ; il faudrait un champ par espèce. C'est une
+  silhouette d'hiver très reconnaissable, donc ça compte pour D4.

@@ -379,7 +379,20 @@ export function treeExtractionCapacityGWeek(heightM: number): number {
   return metabolicSizeGWeek(heightM);
 }
 
-/** Facteur saison : 0 sous la température de base, 1 à base+8 °C. */
+/**
+ * Facteur saison : 0 sous la température de base, 1 à base+8 °C.
+ *
+ * C'est le dernier reste du booléen `leavesOn` : un proxy de la saison de
+ * végétation qui ne regarde que le thermomètre, alors que `phenologie.ts` sait
+ * maintenant, espèce par espèce, quand les feuilles sortent et quand elles
+ * cessent de travailler. Le brancher ici est tentant et se paie : `GROWING_WEEKS`
+ * et `pousseMaxMAn` ont été calés AVEC cette saison-là, plus longue que la vraie
+ * (elle compte les semaines douces de mars où l'arbre est encore nu). Substituer
+ * la phénologie sans recalibrer ces deux constantes rabote la croissance
+ * annuelle sans la rendre plus juste — mesuré : un bouleau de dix ans sur limon
+ * riche passe de 4,0 à 3,8 m, quand la réalité de terrain est plutôt 10 m.
+ * Voir docs/realisme.md, « la saison de végétation est encore thermique ».
+ */
 export function seasonFactor(espece: EspeceV0, tMean: number): number {
   return Math.min(1, Math.max(0, (tMean - espece.tBaseCroissanceC) / 8));
 }

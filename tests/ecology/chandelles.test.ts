@@ -11,10 +11,12 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { applyAction, DECOTE_CHANDELLE } from "../../src/engine/actions";
 import { indiceBiodiversite } from "../../src/engine/biodiversite";
 import { getEspece } from "../../src/engine/especes";
 import { chargeCombustible } from "../../src/engine/feu";
 import { computeLight } from "../../src/engine/light";
+import { partMecanisable } from "../../src/engine/mecanisation";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
@@ -121,5 +123,97 @@ describe("une chandelle est du combustible sur pied", () => {
     const avecMorte = chargeCombustible([morte], herbe, litiere, 20);
     const avecVive = chargeCombustible([vive], herbe, litiere, 20);
     expect(avecMorte.moyenne).toBeGreaterThan(avecVive.moyenne);
+  });
+});
+
+describe("abattre une chandelle", () => {
+  /** Une parcelle avec une seule chandelle de hêtre, morte depuis un moment. */
+  function avecChandelle(patch: Partial<TreeState> = {}) {
+    const vide = createGameState(STATION, rngStateFromSeed(7));
+    return { ...vide, trees: [{ ...chandelle(), ...patch }], nextTreeId: 2 };
+  }
+
+  /** Ce qu'une coupe rapporte, sur une parcelle donnée. */
+  function gainDeLaCoupe(etat: ReturnType<typeof avecChandelle>) {
+    const apres = applyAction(etat, { type: "couper", week: 60, treeIds: [1], devenir: "vendre" });
+    return {
+      eur: apres.state.economy.treasuryEur - etat.economy.treasuryEur,
+      etat: apres.state,
+      refusals: apres.refusals,
+    };
+  }
+
+  it("un fût sec se coupe : c'est du bois de chauffage, pas un intouchable", () => {
+    const coupe = gainDeLaCoupe(avecChandelle());
+    expect(coupe.refusals).toHaveLength(0);
+    expect(coupe.etat.trees).toHaveLength(0);
+    expect(coupe.eur).toBeGreaterThan(0);
+  });
+
+  it("elle rapporte moins que la même tige verte, et jamais d'œuvre", () => {
+    // Le fût est fendillé, l'aubier parti, les insectes passés : même élaguée
+    // de son vivant, une chandelle ne fait pas une bille de scierie.
+    const morte = gainDeLaCoupe(avecChandelle({ hauteurElagueeM: 8 }));
+    expect(morte.etat.carbon.oeuvreCumKgC).toBe(0);
+    expect(DECOTE_CHANDELLE).toBeLessThan(1);
+
+    const vive = gainDeLaCoupe(
+      avecChandelle({ hauteurElagueeM: 8, alive: true, mortSemaine: undefined }),
+    );
+    expect(vive.etat.carbon.oeuvreCumKgC).toBeGreaterThan(0);
+    expect(morte.eur).toBeLessThan(vive.eur);
+  });
+
+  it("le carbone est DÉPLACÉ, pas créé : le bois mort baisse d'autant", () => {
+    // Le piège de l'opération. Le carbone aérien d'une chandelle est déjà
+    // dans le pool de bois mort — il y est entré à sa mort. L'emporter doit
+    // l'en retirer ; l'y ajouter une seconde fois fabriquerait du carbone.
+    const base = avecChandelle();
+    const avant = { ...base, carbon: { ...base.carbon, deadWoodKgC: 5000 } };
+    const coupe = gainDeLaCoupe(avant);
+    const exporte = coupe.etat.carbon.exportedEnergyCumKgC - avant.carbon.exportedEnergyCumKgC;
+    const boisMortPerdu = avant.carbon.deadWoodKgC - coupe.etat.carbon.deadWoodKgC;
+    expect(exporte).toBeGreaterThan(0);
+    expect(boisMortPerdu).toBeCloseTo(exporte, 6);
+  });
+
+  it("une chandelle très décomposée ne rend plus que ce qu'il reste d'elle", () => {
+    // Le pool de bois mort se décompose : une chandelle de dix ans a déjà
+    // rendu l'essentiel au sol et à l'air. On ne peut pas en emporter plus
+    // qu'il n'en reste, sinon le pool passe sous zéro et on crée du carbone.
+    const base = avecChandelle();
+    const presqueVide = { ...base, carbon: { ...base.carbon, deadWoodKgC: 3 } };
+    const coupe = gainDeLaCoupe(presqueVide);
+    expect(coupe.etat.carbon.deadWoodKgC).toBe(0);
+    expect(
+      coupe.etat.carbon.exportedEnergyCumKgC - presqueVide.carbon.exportedEnergyCumKgC,
+    ).toBeCloseTo(3, 6);
+    // Le bois se vend quand même : l'argent et le carbone sont deux livres
+    // de comptes séparés, et la décote couvre l'état du fût.
+    expect(coupe.eur).toBeGreaterThan(0);
+  });
+
+  it("une chandelle sèche ne fait pas de BRF : le broyat veut du bois FRAIS", () => {
+    // Ce n'est pas une limite technique, c'est l'agronomie : l'intérêt du BRF
+    // est dans le cambium vivant et l'azote du rameau de l'année.
+    const avant = avecChandelle();
+    for (const devenir of ["epandre", "broyer"] as const) {
+      const apres = applyAction(avant, { type: "couper", week: 60, treeIds: [1], devenir });
+      expect(apres.refusals).toHaveLength(1);
+      expect(apres.state.trees).toHaveLength(1);
+    }
+  });
+
+  it("un tracteur ne passe pas à travers un fût mort", () => {
+    // Une chandelle n'ombrage plus rien, mais elle occupe le couloir : après
+    // une mortalité, la fauche et le chaulage restent chers jusqu'au nettoyage.
+    const morts: TreeState[] = [1, 2, 3, 4, 5, 6, 7].map((i) => ({
+      ...chandelle(),
+      id: i,
+      x: 4 + i * 1.6,
+      y: 10 + ((i * 7) % 5),
+    }));
+    expect(partMecanisable(morts, 10, 10, 8)).toBeLessThan(1);
+    expect(partMecanisable([], 10, 10, 8)).toBe(1);
   });
 });

@@ -135,7 +135,9 @@ latéral, adret/ubac).*
 | D4 | Un gel tardif détruit les fleurs ouvertes : les précoces sont un pari | ✅ | `tMinAbsC` ; `fruits.test.ts` |
 | D5 | La variabilité climatique ouvre des fenêtres d'installation | 🟡 | visible (`fenetres-installation.test.ts`), non piloté par un mécanisme dédié |
 | D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | ❌ | Microclimat = humidité seulement |
-| D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ❌ | `besoin_froid_h` prévu, non implémenté |
+| D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
+| D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
+| D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler AVANT de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
 | D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent |
 | D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
 | D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | ✅ | écarts chauds et déficits de pluie amplifiés (`normalesHebdo`) ; et la mémoire pluriannuelle existe — non dans le sol (qui se recharge chaque hiver, mesuré à 94-100 %) mais dans l'arbre, par la cavitation (`dommageHydraulique`) |
@@ -542,6 +544,63 @@ d'horizons, tout le reste est calculé. Pour générer des stations quelconques,
 il manque seulement le tirage cohérent des profils (une texture, une
 profondeur et une MO plausibles ensemble, et cohérentes avec le climat et la
 position topographique) — pas de nouveau mécanisme moteur.
+
+## La saison de végétation est encore thermique
+
+La phénologie foliaire est en place, espèce par espèce : `phenologie.ts` sait
+quand chaque essence débourre (forçage en degrés-jours, porte photopériodique,
+besoin de froid), à quelle vitesse son houppier se déploie, quand ses feuilles
+**jaunissent** (`senescenceFoliaire`) et quand elles tombent. `partFoliaireActive`
+— accroché × (1 − jauni) — dit à tout instant quelle part du feuillage travaille
+encore.
+
+**Mais ce n'est pas ce qui commande la croissance et la transpiration.** Les
+deux passent toujours par `seasonFactor`, un simple seuil thermique
+(0 sous `tBaseCroissanceC`, 1 à +8 °C), identique pour toutes les espèces à leur
+température de base près. Conséquences, toutes réelles :
+
+- un bouleau **pousse en mars**, avant d'avoir une feuille, dès que la moyenne
+  hebdomadaire dépasse 5 °C ;
+- un houppier **entièrement doré d'octobre** produit encore ;
+- un caduc **nu de janvier** transpire dans les Landes, où l'hiver est doux —
+  c'est le dernier reste de l'artefact `leavesOn > 6 °C` qui avait coûté la
+  conclusion sur l'aulne après incendie. Le commit de phénologie a branché le
+  feuillage sur l'interception lumineuse (Beer-Lambert), pas sur la
+  transpiration ;
+- un frêne, qui débourre six semaines après le bouleau, **démarre sa croissance
+  en même temps que lui**, ce qui annule dans le bilan annuel l'ordre de
+  débourrement qu'on vient de modéliser.
+
+**Pourquoi ce n'est pas corrigé.** Substituer `partFoliaireActive` à
+`seasonFactor` — ou en prendre le minimum, ce qui est plus conforme à la loi du
+minimum — a été essayé et mesuré :
+
+| | avant | avec la phénologie |
+|---|---|---|
+| bouleau à 10 ans, limon riche (`lumiere.test.ts`) | 4,0 m | **3,8 m** |
+| morts par ravageurs, climat figé vs SSP5-8.5 (`climat.test.ts`) | 2 → 4 | 3 → 5 |
+
+Deux seuils calibrés se déplacent, et surtout la croissance **baisse sans se
+rapprocher du terrain** : un jeune bouleau sur bon sol fait un mètre à un mètre
+cinquante par an en réalité, soit 10 m à dix ans, quand le moteur en annonce
+déjà moins de 4. C'est que `GROWING_WEEKS = 30` et les `pousseMaxMAn` de
+l'atlas ont été calés AVEC cette saison thermique trop longue : elle absorbe la
+durée de la saison de végétation. Brancher la vraie phénologie par-dessus la
+compte deux fois.
+
+**Ce qu'il faudrait faire, dans cet ordre** : (1) remplacer `seasonFactor` par
+`min(f_température, partFoliaireActive)` où `f_température` ne porte plus que la
+vitesse du métabolisme, pas la longueur de la saison ; (2) recalibrer
+`GROWING_WEEKS` et les `pousseMaxMAn` sur des hauteurs dominantes observées à
+âge donné (les tables de production sont faites pour ça) ; (3) remesurer les
+conclusions qui touchent à l'eau et aux ravageurs. C'est un chantier de
+calibration, pas une correction de mécanisme — d'où cette entrée plutôt qu'un
+commit.
+
+*Le gain attendu n'est pas mince* : c'est l'ordre de débourrement qui deviendrait
+un avantage compétitif mesurable — le bouleau qui prend six semaines d'avance
+sur le frêne, la lumière d'avril sous un couvert encore nu, et l'aulne qui ne
+rabat plus la nappe en janvier.
 
 ## Règle de travail
 
