@@ -10,6 +10,15 @@
 
 import type { GesteVisible } from "./actions";
 import {
+  type CelluleSousLeTronc,
+  couvertureDuBoisAuSol,
+  DECOMPOSITION_AU_SOL_PAR_AN,
+  directionDeChute,
+  ecrasePar,
+  empreinteDeChute,
+  MASSE_LINEIQUE_TRONC_KGC_PAR_M,
+} from "./boisMort";
+import {
   CN_HUMUS,
   DEADWOOD_DECAY_PER_YEAR,
   DEADWOOD_HUMIFICATION,
@@ -55,7 +64,7 @@ import {
   computeGroundLight,
   computeLight,
   crownRadiusM,
-  type PartFoliaire,
+  type PartOmbrageante,
   windShelterAt,
 } from "./light";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
@@ -88,7 +97,8 @@ import {
 import { frequentationDesBordures } from "./paysage";
 import {
   contextePhenologique,
-  partFoliaireDans,
+  partFoliaireActiveDans,
+  partFoliaireOmbrageanteDans,
   semaineDeFroid,
   senescenceEnCoursDans,
 } from "./phenologie";
@@ -239,6 +249,25 @@ export interface IncendieResult {
   rangs: Int32Array;
 }
 
+/**
+ * Une chandelle qui s'abat, telle qu'on peut la raconter ET la dessiner : le
+ * rendu a besoin de la direction pour coucher le tronc dans le bon sens, et de
+ * l'empreinte pour savoir où le poser (boisMort.ts).
+ */
+export interface ChuteDeChandelle {
+  id: number;
+  x: number;
+  y: number;
+  especeId: string;
+  heightM: number;
+  /** direction de la chute, radians (0 = +x, sens trigonométrique) */
+  directionRad: number;
+  /** bois déposé au sol par cette chute, kg C */
+  masseKgC: number;
+  /** cellules recouvertes par le tronc, et sur quelle longueur */
+  empreinte: CelluleSousLeTronc[];
+}
+
 export interface TickResult {
   state: GameState;
   fluxes: TickFluxes;
@@ -260,6 +289,8 @@ export interface TickResult {
   debordementParCellule: Float32Array;
   /** lumière relative arrivant au sol, cellule par cellule ∈ [0,1] (light.ts) */
   lumiereAuSol: Float32Array;
+  /** chandelles abattues cette semaine, avec où et comment elles sont tombées */
+  chutes: ChuteDeChandelle[];
 }
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
@@ -291,9 +322,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     state.ddYearBase5,
     state.semainesDeFroid,
   );
-  const partFoliaireDe: PartFoliaire = (tree) => partFoliaireDans(getEspece(tree.especeId), pheno);
-  const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partFoliaireDe);
-  const light = computeLight(trees, partFoliaireDe);
+  // L'ombre porte sur le feuillage qui INTERCEPTE, feuilles mortes des
+  // marcescents comprises ; la croissance et la litière suivront la part
+  // vivante (phenologie.ts).
+  const partOmbrageanteDe: PartOmbrageante = (tree) =>
+    partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno);
+  const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partOmbrageanteDe);
+  const light = computeLight(trees, partOmbrageanteDe);
 
   // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
   const profil = station.profil;
@@ -707,8 +742,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // par cellule (erosion.ts). `sedimentEnTransit` est ce qu'une cellule passe
   // à sa voisine d'aval, en kg de terre par m².
   const sedimentEnTransit = new Array<number>(nCells).fill(0);
+  // Un tronc couché en travers protège la terre sous lui comme un paillage, et
+  // c'est un effet reconnu du bois mort : ce qui est dessous ne part pas. On
+  // lit le bois de la semaine PRÉCÉDENTE — un arbre qui s'abat ce tick-ci
+  // protégera la parcelle à partir du suivant.
   const couvertureDe = (i: number) =>
-    Math.min(1, (herbeCouverture[i] ?? 0) + Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG));
+    Math.min(
+      1,
+      (herbeCouverture[i] ?? 0) +
+        Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG) +
+        couvertureDuBoisAuSol(
+          (state.soil.boisAuSolCG[i] ?? 0) / 1000 / MASSE_LINEIQUE_TRONC_KGC_PAR_M,
+        ),
+    );
   for (const i of descente) {
     const disponible = debordementParCellule[i] ?? 0;
     const partRuisselante = fractionRuissellement(pentes[i] ?? 0);
@@ -828,7 +874,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const tree = trees[t];
     if (!tree?.alive) continue;
     const espece = getEspece(tree.especeId);
-    const season = seasonFactor(espece, weather.tMean);
+    // Même règle que pour la croissance : un arbre sans feuilles ne transpire
+    // pas, aussi doux que soit l'hiver (trees.ts, phenologie.ts).
+    const season = seasonFactor(espece, weather.tMean) * partFoliaireActiveDans(espece, pheno);
     // Le mycélium compatible prolonge les racines : à racines égales, un
     // arbre connecté prospecte un volume de terre plus grand (§7.5). C'est de
     // l'exploration, pas de la création — le bilan reste conservatif.
@@ -1072,6 +1120,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
       tMean: weather.tMean,
+      // Le feuillage ACTIF, pas l'ombrageant : des feuilles mortes de
+      // marcescence font de l'ombre mais ne travaillent pas (phenologie.ts).
+      partFoliaire: partFoliaireActiveDans(getEspece(tree.especeId), pheno),
       facteurCo2,
     });
     const next = result.tree;
@@ -1103,7 +1154,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) moyenneEauSurface += waterMm[i * nH] ?? 0;
   moyenneEauSurface /= nCells;
   const boisMortTHa = state.carbon.deadWoodKgC / 1000 / (nCells / 10_000);
-  const { ressource, habitat } = carteBiotique(nextTrees, herbeCouverture, boisMortTHa, dims);
+  const { ressource, habitat, abriHivernal } = carteBiotique(
+    nextTrees,
+    herbeCouverture,
+    boisMortTHa,
+    dims,
+  );
 
   // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────
   // Degrés-jours base 5 °C depuis le 1er janvier ; floraison quand le cumul
@@ -1326,6 +1382,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       ressource[i] ?? 0,
       habitat[i] ?? 0,
       chaleur,
+      abriHivernal[i] ?? 0,
     );
     habitatSum += habitat[i] ?? 0;
   }
@@ -1433,15 +1490,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // semaines de froid « lâchait » ainsi 27,8 % de son azote foliaire en
     // pleine feuillaison. Ce n'était pas une chute de feuilles, c'était deux
     // lois comparées l'une à l'autre.
-    //
-    // Une fois le garde posé, on est toujours dans la branche d'automne de
-    // `partFoliaire`, qui ne regarde pas le froid : les deux appels peuvent
-    // donc partager le même contexte, et l'asymétrie disparaît d'elle-même.
     if (!senescenceEnCoursDans(pheno)) return tree;
-    const restant = partFoliaireDans(espece, pheno);
+    const restant = partFoliaireActiveDans(espece, pheno);
     // La même semaine, un cran plus tôt dans la chute : l'écart entre les deux
-    // est ce que l'arbre a lâché.
-    const restantAvant = partFoliaireDans(espece, {
+    // est ce que l'arbre a lâché. Le besoin de froid ne compte pas ici, et le
+    // garde ci-dessus est ce qui le garantit : on est toujours dans la branche
+    // d'automne de `partFoliaireActive`, qui ne le regarde pas. Les deux appels
+    // peuvent donc partager le même contexte.
+    const restantAvant = partFoliaireActiveDans(espece, {
       ...pheno,
       semainesDepuisSenescence: Math.max(0, pheno.semainesDepuisSenescence - 1),
     });
@@ -1467,6 +1523,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Les morts de la semaine rendent leur azote de l'année, leur carbone part
   // au pool de bois mort, et ils quittent la carte.
   let deadWoodKgC = state.carbon.deadWoodKgC;
+  const boisAuSolCG = state.soil.boisAuSolCG.slice();
+  // Le hasard est disponible dès ici parce qu'une chandelle qui s'abat tombe
+  // dans une direction. Tant qu'aucune ne tombe, aucun tirage n'est consommé
+  // et la suite de la semaine voit exactement les mêmes nombres qu'avant.
+  let rng = state.rng;
+  const chutes: ChuteDeChandelle[] = [];
   const survivors: TreeState[] = [];
   const morts: MortDeLaSemaine[] = [];
   for (const tree of nextTrees) {
@@ -1505,9 +1567,82 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // mais elle occupe la place et sert d'habitat (trees.ts, biodiversite.ts).
     if (state.week - tree.mortSemaine < dureeChandelleSemaines(getEspece(tree.especeId))) {
       survivors.push(tree);
+      continue;
     }
+    // Elle s'abat. Elle ne s'évapore pas : son bois se couche sur les cellules
+    // qu'il recouvre, dans une direction que la pente oriente (boisMort.ts).
+    const chute = directionDeChute(altitudes, dims, tree.x, tree.y, rng);
+    rng = chute.rng;
+    const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, chute.radians, dims);
+    const longueurTotale = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
+    if (longueurTotale <= 0) continue;
+    // Ce qu'il reste de son bois après des années à sécher debout. Le pool des
+    // chandelles ne sait pas ce qui appartient à qui : on estime la part de cet
+    // arbre par sa décroissance, en la bornant au pool pour que le carbone ne
+    // puisse pas être compté deux fois.
+    const anneesDebout = (state.week - tree.mortSemaine) / 52;
+    const restantKgC = Math.min(
+      Math.max(0, deadWoodKgC),
+      treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM) *
+        Math.exp(-DEADWOOD_DECAY_PER_YEAR * anneesDebout),
+    );
+    deadWoodKgC -= restantKgC;
+    // Le bout de tronc qui dépasse la limite est déposé quand même, réparti sur
+    // les cellules du dedans : on ne fait pas disparaître du carbone au prétexte
+    // qu'un arbre avait poussé au bord.
+    for (const c of empreinte) {
+      boisAuSolCG[c.cellule] =
+        (boisAuSolCG[c.cellule] ?? 0) + restantKgC * (c.longueurM / longueurTotale) * 1000;
+    }
+    chutes.push({
+      id: tree.id,
+      x: tree.x,
+      y: tree.y,
+      especeId: tree.especeId,
+      heightM: tree.heightM,
+      directionRad: chute.radians,
+      masseKgC: restantKgC,
+      empreinte,
+    });
   }
   nextTrees = survivors;
+
+  // Ce qui poussait sous le tronc. La règle est celle de la masse : ce qui
+  // reçoit plus lourd que soi casse (boisMort.ts). Un semis disparaît sous
+  // n'importe quel tronc, un arbre fait encaisse. Le bois de l'écrasé rejoint
+  // le sol là où il gisait, pas le pool des chandelles : il est déjà couché.
+  if (chutes.length > 0) {
+    const massePosee = new Map<number, number>();
+    for (const chute of chutes) {
+      const longueur = chute.empreinte.reduce((somme, c) => somme + c.longueurM, 0);
+      for (const c of chute.empreinte) {
+        const part = chute.masseKgC * (c.longueurM / longueur);
+        massePosee.set(c.cellule, Math.max(massePosee.get(c.cellule) ?? 0, part));
+      }
+    }
+    const debout: TreeState[] = [];
+    for (const tree of nextTrees) {
+      const cellule = cellIndexAt(dims, tree.x, tree.y);
+      const recu = massePosee.get(cellule);
+      const espece = getEspece(tree.especeId);
+      const masse = treeTotalCarbonKg(espece, tree.heightM);
+      if (!tree.alive || recu === undefined || !ecrasePar(recu, masse)) {
+        debout.push(tree);
+        continue;
+      }
+      depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
+      boisAuSolCG[cellule] = (boisAuSolCG[cellule] ?? 0) + masse * 1000;
+      morts.push({
+        id: tree.id,
+        x: tree.x,
+        y: tree.y,
+        especeId: tree.especeId,
+        cause: "ecrasement",
+        heightM: tree.heightM,
+      });
+    }
+    nextTrees = debout;
+  }
 
   // Le bois mort se décompose : une part s'humifie, le reste part en CO2.
   const meanClimate = climateSum / nCells;
@@ -1516,11 +1651,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const humifiedPerCellG = (deadDecayKgC * DEADWOOD_HUMIFICATION * 1000) / nCells;
   for (let i = 0; i < nCells; i++) humusCG[i] = (humusCG[i] ?? 0) + humifiedPerCellG;
   emittedG += deadDecayKgC * (1 - DEADWOOD_HUMIFICATION) * 1000;
+  // Le bois couché se décompose plus vite que le bois debout, et il fait son
+  // humus SUR PLACE : c'est là toute la différence avec le pool de parcelle.
+  for (let i = 0; i < nCells; i++) {
+    const stock = boisAuSolCG[i] ?? 0;
+    if (stock <= 0) continue;
+    const decompose = stock * ((DECOMPOSITION_AU_SOL_PAR_AN / 52) * meanClimate);
+    boisAuSolCG[i] = stock - decompose;
+    humusCG[i] = (humusCG[i] ?? 0) + decompose * DEADWOOD_HUMIFICATION;
+    emittedG += decompose * (1 - DEADWOOD_HUMIFICATION);
+  }
 
   // ── 6 bis. Le feu (§7.4, ch5) ─────────────────────────────────────────────
   // Il ne part que si la saison, la sécheresse et le combustible s'alignent,
   // puis se propage là où il trouve à brûler — d'où l'intérêt des coupures.
-  let rng = state.rng;
   let incendie: TickResult["incendie"];
   let carboneFeuKgC = 0;
   {
@@ -1532,6 +1676,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       litterCG,
       station.coteM,
       groundLight,
+      boisAuSolCG,
     );
     const depart = departDeFeu(
       rng,
@@ -1654,7 +1799,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       rng,
       coteM: station.coteM,
       voisinage: station.voisinage,
-      partFoliaire: partFoliaireDe,
+      partOmbrageante: partOmbrageanteDe,
       ph: state.soil.ph,
       lumiereAuSol: groundLight,
       nextTreeId,
@@ -1678,6 +1823,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       soil: {
         waterMm,
         excessMm,
+        boisAuSolCG,
         mineralNG,
         litterNG,
         litterCG,
@@ -1725,6 +1871,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nextTreeId,
     },
     morts,
+    chutes,
     incendie,
     gestes,
     // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne

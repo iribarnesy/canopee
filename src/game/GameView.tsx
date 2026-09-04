@@ -64,7 +64,28 @@ const MOIS = [
   "décembre",
 ];
 
-type Mode = "selection" | "planter" | "chauler" | "faucher" | "eclaircir" | "brf" | "cloturer";
+/**
+ * Ce que le disque va faire, mode par mode. Une seule phrase par geste : trois
+ * modes affichaient jusqu'ici la légende de la fauche parce que la condition
+ * s'arrêtait au chaulage.
+ */
+const LEGENDE_RAYON: Partial<Record<Mode, string>> = {
+  chauler: "pH +0,5 sur le disque",
+  faucher: "l'herbe est rabattue, elle repoussera",
+  boisMort: "les troncs tombés partent au chauffage — plus d'humus ni d'abri dessous",
+  brf: "le broyat est épandu, l'azote va où on le porte",
+  cloturer: "le disque est mis hors d'atteinte du gibier",
+};
+
+type Mode =
+  | "selection"
+  | "planter"
+  | "chauler"
+  | "faucher"
+  | "boisMort"
+  | "eclaircir"
+  | "brf"
+  | "cloturer";
 type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement";
 
 const panel: React.CSSProperties = {
@@ -1269,6 +1290,8 @@ export function GameView() {
       });
     } else if (mode === "chauler") {
       game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
+    } else if (mode === "boisMort") {
+      game.dispatch({ type: "ramasserBoisMort", x: mx, y: my, rayonM: rayonChaulage });
     } else if (mode === "faucher") {
       game.dispatch({ type: "faucher", x: mx, y: my, rayonM: rayonChaulage });
     } else if (mode === "cloturer") {
@@ -1468,6 +1491,14 @@ export function GameView() {
           </button>
           <button
             type="button"
+            style={btn(mode === "boisMort")}
+            onClick={() => setMode("boisMort")}
+            title="Ramasser les troncs tombés pour le chauffage — moins de combustible, mais moins d'humus, d'abris et de terre retenue"
+          >
+            🪵 Bois mort
+          </button>
+          <button
+            type="button"
             style={btn(mainOuvertePanneau)}
             onClick={() => setMainOuvertePanneau(!mainOuvertePanneau)}
             title="Embaucher de la main-d'œuvre"
@@ -1601,7 +1632,11 @@ export function GameView() {
               </div>
             </div>
           )}
-          {(mode === "chauler" || mode === "faucher" || mode === "brf" || mode === "cloturer") && (
+          {(mode === "chauler" ||
+            mode === "faucher" ||
+            mode === "boisMort" ||
+            mode === "brf" ||
+            mode === "cloturer") && (
             <div style={{ marginTop: 6 }}>
               Rayon :{" "}
               <input
@@ -1611,11 +1646,7 @@ export function GameView() {
                 value={rayonChaulage}
                 onChange={(e) => setRayonChaulage(Number(e.target.value))}
               />{" "}
-              {rayonChaulage} m —{" "}
-              {mode === "chauler"
-                ? "pH +0,5 sur le disque"
-                : "l'herbe est rabattue, elle repoussera"}
-              .
+              {rayonChaulage} m — {LEGENDE_RAYON[mode] ?? ""}.
             </div>
           )}
         </section>

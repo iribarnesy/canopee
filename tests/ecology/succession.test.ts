@@ -77,7 +77,12 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
 
   it("an 15 : la friche est colonisée, très majoritairement par les pionniers", () => {
     expect(an15.aliveCount).toBeGreaterThan(20);
-    expect(an15.pioneerShare).toBeGreaterThan(0.8);
+    // Le seuil a baissé de 0,80 à 0,75 le jour où le troène et le fusain ont
+    // cessé d'être des fiches mortes : ce sont des arbustes de lisière classés
+    // « intermédiaires », et ils arrivent tôt dans une friche bordée de haies.
+    // La friche reste très majoritairement pionnière — 0,79 — mais elle l'est
+    // un peu moins qu'une friche qui n'aurait que des pionnières à sa portée.
+    expect(an15.pioneerShare).toBeGreaterThan(0.75);
   });
 
   it("an 60 : canopée pionnière, les hêtres attendent dans le sous-étage", () => {

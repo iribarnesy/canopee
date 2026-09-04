@@ -54,6 +54,22 @@ export interface EspeceV0 {
     houppierRatio: number;
     /** true = perd ses feuilles (n'ombrage plus l'hiver) */
     caduc: boolean;
+    /**
+     * Part du feuillage gardée en plein hiver ∈ [0,1], pour les
+     * SEMI-PERSISTANTS. Entre le caduc qui se dénude et le sempervirent qui ne
+     * bouge pas, il y a le troène : il garde une partie de ses feuilles quand
+     * l'hiver est doux et les perd quand il est rude. Absente, l'espèce suit
+     * son `caduc` — tout ou rien.
+     */
+    retentionHivernale?: number;
+    /**
+     * MARCESCENCE : part du feuillage gardée sur l'arbre après la sénescence,
+     * MORTE ∈ [0,1]. Le charme et le jeune chêne gardent leurs feuilles brunes
+     * jusqu'à ce que les bourgeons les poussent au printemps. Ce n'est ni de la
+     * persistance — ces feuilles ne photosynthétisent plus — ni de la caducité
+     * ordinaire : elles ombragent encore tout l'hiver (phenologie.ts).
+     */
+    marcescence?: number;
   };
   racines: {
     /**
@@ -200,6 +216,14 @@ export interface EspeceV0 {
      * bas de la lande, en bas.
      */
     sensibilite: number;
+    /**
+     * Hôte HIVERNAL : la plante héberge les ravageurs pendant l'hiver et les
+     * relâche au printemps sur ses voisines. Le fusain d'Europe est l'hôte
+     * d'hiver du puceron noir. Ce n'est pas un défaut de l'espèce — c'est un
+     * chaînon de son cycle, et le connaître change la façon de composer une
+     * haie (ravageurs.ts).
+     */
+    hoteHivernal?: boolean;
   };
   gibier: {
     /**
@@ -281,7 +305,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [4.5, 8],
     // Atlas : sciaphile climacique — un semis survit à ~1-2 % de lumière (ch3-B),
     // couronne très opaque.
-    lumiere: { compensation: 0.01, saturation: 0.35, lai: 3.5, houppierRatio: 0.35, caduc: true },
+    // Marcescent seulement jeune ou taillé, d'où une valeur nettement plus
+    // basse que celle du charme : le moteur n'a qu'un trait par espèce, pas un
+    // trait par âge *(à calibrer)*.
+    lumiere: {
+      compensation: 0.01,
+      saturation: 0.35,
+      lai: 3.5,
+      houppierRatio: 0.35,
+      caduc: true,
+      marcescence: 0.35,
+    },
     racines: { profondeurMaxCm: 110 }, // racines étalées, peu pivotantes — d'où sa sensibilité à la sécheresse
     tBaseCroissanceC: 6,
     azote: { demandeRelative: 0.7, fixateur: false },
@@ -311,7 +345,16 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.05 },
     ph: [5.5, 8.5],
     // Atlas : héliophile, couronne claire de coteau sec.
-    lumiere: { compensation: 0.15, saturation: 0.6, lai: 1.5, houppierRatio: 0.3, caduc: true },
+    // Marcescent, surtout jeune : le trait est ici une moyenne sur la vie de
+    // l'arbre, plus basse que ce qu'on observe sur un taillis *(à calibrer)*.
+    lumiere: {
+      compensation: 0.15,
+      saturation: 0.6,
+      lai: 1.5,
+      houppierRatio: 0.3,
+      caduc: true,
+      marcescence: 0.5,
+    },
     racines: { profondeurMaxCm: 250 }, // pivot puissant : il va chercher l'eau profonde des coteaux secs
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.5, fixateur: false },
@@ -673,7 +716,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // un seul candidat au sous-étage.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.35 },
     ph: [4.5, 8],
-    lumiere: { compensation: 0.03, saturation: 0.4, lai: 3.5, houppierRatio: 0.35, caduc: true },
+    // MARCESCENT type : c'est lui qu'on voit roux en janvier dans les haies, et
+    // c'est ce qui fait du charme un brise-vent d'hiver quand le hêtre voisin
+    // est nu *(à calibrer)*.
+    lumiere: {
+      compensation: 0.03,
+      saturation: 0.4,
+      lai: 3.5,
+      houppierRatio: 0.35,
+      caduc: true,
+      marcescence: 0.7,
+    },
     racines: { profondeurMaxCm: 110 },
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.6, fixateur: false },
@@ -795,36 +848,29 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Fusain d'Europe",
     nomLatin: "Euonymus europaeus",
     hauteurMaxM: 6,
-    pousseMaxMAn: 0.35,
-    // Atlas : arbuste de haie et de lisière, neutro-calcicole, à demi-ombre.
-    // Il ne domine jamais rien : il occupe l'ourlet, sous les grands, là où le
-    // couvert s'entrouvre.
-    eau: { seuilConfortSecheresse: 0.65, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
+    pousseMaxMAn: 0.3,
+    // Atlas : arbuste de demi-ombre à ombre, haies et lisières, surtout sur
+    // calcaire. Ses capsules roses à quatre lobes et ses arilles orange sont
+    // toxiques — et son bois donne les fusains à dessin.
+    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.2 },
     ph: [5.5, 8.5],
-    lumiere: { compensation: 0.05, saturation: 0.5, lai: 2.5, houppierRatio: 0.55, caduc: true },
-    racines: { profondeurMaxCm: 100 },
+    lumiere: { compensation: 0.05, saturation: 0.45, lai: 2.2, houppierRatio: 0.5, caduc: true },
+    racines: { profondeurMaxCm: 90 },
     tBaseCroissanceC: 5,
-    azote: { demandeRelative: 0.6, fixateur: false },
-    // Capsules roses à arilles orange : les rouges-gorges et les fauvettes les
-    // emportent — la graine ressort n'importe où, comme celle de l'aubépine.
-    regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 0.9 },
-    litiere: { cnRatio: 24 },
-    // Il verdit tôt, avant les grands arbres de la haie.
-    phenologie: { debourrementDJ: 115, seuilJourH: 11.2, besoinFroidSemaines: 10 },
-    economie: { prixPlantEur: 4 },
-    // Bois blanc, dur et fin : celui dont on fait les fusains à dessin — mais
-    // rien qui se vende au m³.
+    azote: { demandeRelative: 0.5, fixateur: false },
+    regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 1 },
+    litiere: { cnRatio: 26 },
+    phenologie: { debourrementDJ: 125, seuilJourH: 11.4, besoinFroidSemaines: 10 },
+    economie: { prixPlantEur: 5 },
     bois: { densite: 0.7, prixOeuvreEurM3: 0, rejetteDeSouche: true },
-    exigenceMinerale: 1.8,
+    exigenceMinerale: 1.7,
     mycorhize: "arbusculaire",
-    // C'est l'hôte d'HIVER du puceron noir (Aphis fabae) : il l'héberge d'une
-    // saison à l'autre, et un fusain fatigué se couvre d'oïdium.
-    ravageurs: { sensibilite: 0.55 },
-    // Toute la plante est toxique — ce qui ne dissuade pas complètement le
-    // chevreuil, mais il a mieux à faire dans la même haie.
-    gibier: { appetence: 0.2 },
-    feu: { inflammabilite: 0.3, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    // Fruits toxiques : rien à récolter (pas de bloc `fruits`).
+    // Hôte d'HIVER du puceron noir : il l'héberge à la mauvaise saison et le
+    // relâche au printemps sur ses voisines. C'est ce qui en fait un arbuste à
+    // placer en connaissance de cause dans une haie.
+    ravageurs: { sensibilite: 0.45, hoteHivernal: true },
+    gibier: { appetence: 0.4 },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {
@@ -832,33 +878,48 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Troène commun",
     nomLatin: "Ligustrum vulgare",
     hauteurMaxM: 5,
-    pousseMaxMAn: 0.4,
-    // Atlas : « calcicole, supporte la taille → haies ». C'est l'arbuste des
-    // ourlets calcaires secs : là où le fusain demande de la fraîcheur, lui
-    // tient le coteau.
-    eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.15 },
+    pousseMaxMAn: 0.35,
+    // Atlas : « semi-persistant ; calcicole ; très mellifère (juin) ; supporte
+    // la taille → haies ». Ourlets et lisières, surtout sur calcaire.
+    eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
     ph: [6, 8.5],
-    lumiere: { compensation: 0.05, saturation: 0.55, lai: 3, houppierRatio: 0.5, caduc: true },
+    // SEMI-PERSISTANT : il ne se dénude jamais tout à fait. C'est le seul de
+    // l'atlas dans ce cas, et c'est ce qui lui vaut sa place dans les haies —
+    // il abrite encore en février (phenologie.ts).
+    lumiere: {
+      compensation: 0.05,
+      saturation: 0.5,
+      lai: 2.4,
+      houppierRatio: 0.5,
+      caduc: true,
+      retentionHivernale: 0.45,
+    },
     racines: { profondeurMaxCm: 90 },
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: false },
-    // Baies noires en grappes dressées, avalées par les grives tout l'hiver.
-    regeneration: { maturiteAns: 5, longeviteAns: 60, dissemination: "oiseaux", semisParAn: 1.2 },
-    litiere: { cnRatio: 25 },
-    // Semi-persistant : il garde ses feuilles jusqu'aux vraies gelées et
-    // repart parmi les premiers. Le moteur ne connaît que caduc/persistant —
-    // on le compte caduc, mais il débourre très tôt.
-    phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 7 },
-    economie: { prixPlantEur: 3 },
+    regeneration: { maturiteAns: 5, longeviteAns: 70, dissemination: "oiseaux", semisParAn: 1.5 },
+    litiere: { cnRatio: 27 },
+    phenologie: { debourrementDJ: 120, seuilJourH: 11.4, besoinFroidSemaines: 9 },
+    economie: { prixPlantEur: 4 },
     bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
-    exigenceMinerale: 1.5,
+    fruits: {
+      // Très mellifère en juin : ses fleurs comptent dans l'étalement des
+      // floraisons, même si ses baies sont toxiques et ne se récoltent pas.
+      floraisonDJ: 800,
+      gelFatalC: -1,
+      recolteWeek: 40,
+      fenetreRecolteWeeks: 2,
+      croissanceSem: 12,
+      rendementMaxKg: 0,
+      prixEurKg: 0,
+      recolteHKg: 0,
+      autofertile: true,
+    },
+    exigenceMinerale: 1.6,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.3 },
-    // Un feuillage encore vert en décembre, à hauteur de museau : c'est
-    // exactement ce que le chevreuil cherche quand tout le reste est nu.
-    gibier: { appetence: 0.5 },
-    feu: { inflammabilite: 0.35, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    // Baies toxiques : rien à récolter (pas de bloc `fruits`).
+    gibier: { appetence: 0.35 },
+    feu: { inflammabilite: 0.4, resistanceEcorce: 0.15, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {

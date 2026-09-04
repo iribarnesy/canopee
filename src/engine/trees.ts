@@ -27,9 +27,11 @@ export type CauseMort =
   | "ravageurs"
   | "labour"
   | "maladie"
-  | "frottis";
+  | "frottis"
+  | "ecrasement";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
+  ecrasement: "écrasé par la chute d'un arbre mort",
   secheresse: "de sécheresse",
   engorgement: "asphyxiés par l'eau",
   ombre: "étouffés par l'ombre",
@@ -174,6 +176,15 @@ export interface TreeEnvironment {
   /** °C moyenne de la semaine */
   tMean: number;
   /**
+   * Part du feuillage ACTIF de cet arbre ∈ [0,1] (phenologie.ts) : celui qui
+   * travaille, pas celui qui ombre. Un caduc sans feuilles ne pousse pas et ne
+   * transpire pas, quelle que soit la douceur du temps — c'était le trou que
+   * laissait un facteur saison purement thermique. Absente, on suppose le
+   * feuillage complet, ce qui préserve le comportement des essais qui
+   * n'étudient pas la phénologie.
+   */
+  partFoliaire?: number;
+  /**
    * Effet fertilisant du CO₂ sur le potentiel de croissance (climat.ts).
    * 1 = concentration d'aujourd'hui. Il agit sur le POTENTIEL, donc la loi du
    * minimum le borne : un arbre qui a soif n'en profite pas.
@@ -229,8 +240,19 @@ export function prochainDommageHydraulique(
  */
 const STRESS_ONSET = 0.45;
 const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération lente
-/** semaines de croissance effectives/an en tempéré, pour convertir la pousse annuelle */
-const GROWING_WEEKS = 30;
+/**
+ * Semaines de végétation effectives par an, pour convertir la pousse annuelle
+ * en pousse hebdomadaire.
+ *
+ * La valeur a baissé de trente à vingt-six le jour où la croissance a cessé
+ * d'être commandée par la seule température. Ce n'est pas un rattrapage : la
+ * constante veut dire « le nombre de semaines sur lesquelles la pousse
+ * annuelle se répartit », et la phénologie en donne désormais le vrai compte —
+ * un caduc n'a de feuilles qu'une petite moitié de l'année, pas dès qu'il fait
+ * doux. Sans cet ajustement, la même pousse annuelle se serait retrouvée
+ * étalée sur une saison plus courte, donc amputée d'un dixième *(à calibrer)*.
+ */
+const GROWING_WEEKS = 26;
 /** rayon de la zone racinaire / rayon du houppier *(à confirmer)* */
 const ROOT_CROWN_RATIO = 1.2;
 /** part de l'ETP transpirée par une couronne en pleine feuille *(à calibrer)* */
@@ -382,16 +404,16 @@ export function treeExtractionCapacityGWeek(heightM: number): number {
 /**
  * Facteur saison : 0 sous la température de base, 1 à base+8 °C.
  *
- * C'est le dernier reste du booléen `leavesOn` : un proxy de la saison de
- * végétation qui ne regarde que le thermomètre, alors que `phenologie.ts` sait
- * maintenant, espèce par espèce, quand les feuilles sortent et quand elles
- * cessent de travailler. Le brancher ici est tentant et se paie : `GROWING_WEEKS`
- * et `pousseMaxMAn` ont été calés AVEC cette saison-là, plus longue que la vraie
- * (elle compte les semaines douces de mars où l'arbre est encore nu). Substituer
- * la phénologie sans recalibrer ces deux constantes rabote la croissance
- * annuelle sans la rendre plus juste — mesuré : un bouleau de dix ans sur limon
- * riche passe de 4,0 à 3,8 m, quand la réalité de terrain est plutôt 10 m.
- * Voir docs/realisme.md, « la saison de végétation est encore thermique ».
+ * Il ne porte plus que la VITESSE du métabolisme, pas la longueur de la saison :
+ * celle-là vient de `partFoliaireActive`, avec qui il se multiplie dans le tick.
+ * C'est ce qui a permis de recalibrer `GROWING_WEEKS` (trente semaines à
+ * vingt-six) sans rien raboter — substituer la phénologie sans ce recalibrage
+ * aurait baissé la croissance sans la rendre plus juste.
+ *
+ * Ce qui n'est PAS encore dans la boucle, un cran plus fin : la sénescence. Une
+ * feuille jaunie est encore accrochée et vivante, donc encore comptée ici, et
+ * `partFoliaireAssimilante` mesure exactement cet écart — deux semaines par an.
+ * Voir docs/realisme.md, « le houppier doré produit encore ».
  */
 export function seasonFactor(espece: EspeceV0, tMean: number): number {
   return Math.min(1, Math.max(0, (tMean - espece.tBaseCroissanceC) / 8));
@@ -437,7 +459,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   if (!tree.alive) return { tree, limitingFactor: 0 };
 
   const espece = getEspece(tree.especeId);
-  const season = seasonFactor(espece, env.tMean);
+  // La saison a deux commandes, et il faut les deux : la CHALEUR, qui décide
+  // si l'activité est possible, et le FEUILLAGE, qui décide s'il y a de quoi
+  // travailler. Un hiver doux ne fait pas pousser un arbre nu.
+  const feuillageActif = env.partFoliaire ?? 1;
+  const season = seasonFactor(espece, env.tMean) * feuillageActif;
   // Plasticité racinaire : l'arbre approfondit s'il a manqué d'eau cette semaine.
   const rootDepthCm = nouvelleProfondeurRacines(
     espece,

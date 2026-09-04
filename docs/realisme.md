@@ -537,6 +537,141 @@ les autres essences étant écartées et le repli jamais déclenché. Le voisina
 sème maintenant autant quel que soit le sol — ce qui change, c'est QUI : on
 garde les espèces qui tiennent et on complète avec celles qui poussent là.
 
+## La phénologie : chaque espèce a son calendrier
+
+Le feuillage était commandé par un booléen — `leavesOn = tMean > 6 °C` — et
+toute la litière tombait en une semaine. Deux couperets, et le premier était de
+surcroît identique pour toutes les espèces : un bouleau et un frêne
+débourraient le même jour, ce qui est faux de six semaines. Or l'ordre de
+débourrement décide de qui profite de la lumière d'avril sous un couvert encore
+nu.
+
+Le modèle combine les deux commandes que la littérature donne comme
+indissociables : le **forçage**, un cumul de degrés-jours base 5 propre à chaque
+espèce, et la **photopériode**, un seuil de durée du jour sous lequel rien ne
+part. Le second n'est pas un raffinement — notre série le montre : au 12 avril,
+la lande girondine a cumulé 341 °C·j quand le limon du Nord n'en a que 123. Un
+seuil de forçage seul ferait débourrer les Landes six semaines avant le Nord, là
+où l'écart réel est de deux à trois.
+
+S'y ajoute le **besoin de froid** : un bourgeon ne sort de dormance qu'après des
+semaines fraîches, et un hiver trop doux enfle le cumul de chaleur exigé. Hêtre
+sur limon : onze semaines de froid à climat figé contre quatre sous SSP5-8.5 en
+2090, ce qui porte son exigence de 315 à 420 °C·j. L'effet **amortit l'avance
+sans la renverser** à nos latitudes.
+
+**La croissance suit désormais le feuillage**, et plus seulement la température :
+un caduc poussait en janvier quand l'hiver était doux, et transpirait sans avoir
+une feuille. La transpiration hivernale d'un hêtre tombe à 3 mm par an quand le
+pin, sempervirent, en garde 8. Le nombre de semaines de végétation est passé de
+trente à vingt-six, ce qui n'est pas un rattrapage : la constante signifie « le
+nombre de semaines sur lesquelles la pousse annuelle se répartit », et la
+phénologie en donne le vrai compte.
+
+**Ce que la correction a coûté** : une conclusion. L'avantage mesuré de l'aulne
+en replantation d'après-feu n'était qu'un effet de la transpiration hivernale
+fantôme qu'autorisait le booléen. Voir « une conclusion retirée » plus haut.
+
+*Limite qui reste, et qui n'est pas de ce chantier* : les hauteurs absolues sont
+faibles — un hêtre de plaine plafonne autour de quatre mètres à quarante ans là
+où le terrain en donne douze à quinze. Les rapports entre essences et entre
+stations sont justes, les niveaux ne le sont pas.
+
+## Les chandelles : un arbre mort ne disparaît pas
+
+Un arbre tué par la sécheresse quittait la parcelle le tick même. Un tronc mort
+sèche pourtant sur pied et tient des années, il occupe la place, et c'est le
+bois mort **debout** qui compte pour la faune : les pics l'attaquent en premier,
+et le trou qu'ils abandonnent sert ensuite à des dizaines d'espèces qui ne
+savent pas creuser.
+
+Une chandelle tient d'autant plus longtemps que son bois est dense — une
+décennie pour un chêne, trois ans pour un sureau. Elle ne fait plus d'ombre,
+compte comme arbre-habitat au-dessus de huit mètres, et charge le feu **×1,4**
+par rapport au même arbre vivant : c'est du bois sec, et c'est pourquoi une
+parcelle déjà passée au feu rebrûle mieux que celle d'à côté.
+
+Le transfert de carbone a lieu à la MORT et une seule fois : la chandelle n'est
+ensuite qu'un objet de jeu et d'habitat. C'est ce qui a permis d'ajouter le
+mécanisme sans toucher aux bilans.
+
+### Et quand elle tombe : le bois couché
+
+La chandelle finissait par quitter la parcelle sans rien laisser, son bois
+dissous dans un pool global indifférent à l'endroit où l'arbre avait vécu.
+C'est deux fois faux. Un tronc s'abat **quelque part**, dans une direction ; et
+ce qu'il devient — humus, abri, obstacle à l'eau, écrasement de ce qui poussait
+dessous — se joue sur les quelques mètres carrés qu'il recouvre, pas sur la
+parcelle entière.
+
+Le bois mort **au sol** est désormais un stock par cellule, distinct du bois
+debout, parce que ce sont deux objets différents :
+
+| | debout | couché |
+|---|---|---|
+| décomposition | 5 %/an | **9 %/an** — il touche la terre et reste humide |
+| humus | dilué sur la parcelle | **sur place**, sous le tronc |
+| faune | pics, puis tout ce qui occupe leurs loges | carabes, salamandres, saproxyliques du sol |
+| sol | rien | protège la terre sous lui, comme un paillage |
+
+La direction de chute suit l'aval, d'autant plus franchement que la pente est
+raide : au-delà de 30 %, la gravité tranche ; à plat, l'arbre tombe où son
+défaut le porte. Une seule formule, resserrée par la pente, plutôt qu'un cas
+« pente » et un cas « plat » — et le test compare deux nuages de deux cents
+tirages, parce qu'une chute unique ne prouverait rien.
+
+Ce qui poussait dessous casse selon une règle de masse : **ce qui reçoit plus
+lourd que soi casse**. Un semis disparaît sous n'importe quel tronc, un arbre
+fait encaisse, et aucun seuil par espèce n'est écrit nulle part — la masse des
+deux protagonistes se lit déjà dans leur carbone.
+
+*Approximation assumée* : le pool des morts debout ne sait pas quel bois
+appartient à quel arbre. Ce qu'une chandelle dépose en tombant est donc
+**estimé** par sa décroissance depuis sa mort, borné au pool restant. La borne
+garantit qu'aucun carbone n'est créé ; en revanche, si le pool a été entamé
+ailleurs, la chute dépose moins qu'elle ne le devrait. Le test de conservation
+compte maintenant le bois couché parmi les stocks, sans quoi une chute aurait
+fait apparaître du carbone venu de nulle part.
+
+Le bois couché est enfin du **combustible**, et pas le même que l'herbe : le
+gros bois s'allume mal et porte mal le front, il fait durer et chauffer plutôt
+que courir. Il pèse donc moins par unité de masse et sature bien plus haut —
+un tronc dépose des kilos de carbone sur son mètre carré là où la litière s'y
+compte en centaines de grammes.
+
+D'où une décision, plutôt qu'un réglage : **ramasser le bois mort**. Le joueur
+y gagne du chauffage — décoté de moitié, un tronc piqué ne vaut pas une bille
+fraîche — et un peu moins de gros combustible. Il y perd de l'humus en devenir,
+un abri pour la faune du sol, et la protection que le tronc offrait à la terre
+sous lui. Le moteur ne tranche pas à sa place ; il fait seulement que les deux
+plateaux existent.
+
+*Limite qui reste* : un tronc couché en travers d'un thalweg devrait freiner
+l'eau et piéger le sédiment. Il protège aujourd'hui la terre **sous lui** —
+c'est déjà un effet reconnu du bois mort — mais il ne ralentit pas encore le
+ruissellement qui passe à côté.
+
+## La variabilité individuelle : la fin des clones
+
+Deux arbres de même essence étaient des clones parfaits : à conditions égales
+ils poussaient exactement pareil. Ce n'est pas cosmétique — c'est cette
+dispersion qui crée les dominants et les dominés, donc l'auto-éclaircie, donc
+le sens même d'une éclaircie par le haut ou par le bas.
+
+Chaque arbre porte sa **vigueur individuelle** (±20 %, tirée dans le générateur
+de la partie, donc reproductible). Elle module uniquement ce que l'arbre TIRE de
+conditions données : deux voisins ont la même eau et la même lumière, l'un en
+fait plus que l'autre.
+
+**Ce que ça a coûté en tests, et c'est la partie instructive.** Quatre essais ont
+cassé, tous du même genre : ils comparaient un individu à un individu. Avec
+±20 % de dispersion, c'est le tirage qui décide et non le mécanisme — le travers
+des incendies, à l'échelle de l'arbre. L'effet nurse neutralise donc la vigueur
+et moyenne sur trois graines ; et l'un de ses résultats s'est nuancé au passage :
+collé à la nurse, le chêne-liège ne gagne plus rien (0,38 m contre 0,39 m à
+découvert). Ce qu'on gagne sur le vent, on le perd sur la lumière — c'est
+l'ombre portée qui fixe la bonne distance.
+
 ## Générateur de stations : ce qu'il reste à faire
 
 La dérivation (A9) est en place : une station se décrit par un profil
@@ -545,62 +680,47 @@ il manque seulement le tirage cohérent des profils (une texture, une
 profondeur et une MO plausibles ensemble, et cohérentes avec le climat et la
 position topographique) — pas de nouveau mécanisme moteur.
 
-## La saison de végétation est encore thermique
+## Le houppier doré produit encore
 
-La phénologie foliaire est en place, espèce par espèce : `phenologie.ts` sait
-quand chaque essence débourre (forçage en degrés-jours, porte photopériodique,
-besoin de froid), à quelle vitesse son houppier se déploie, quand ses feuilles
-**jaunissent** (`senescenceFoliaire`) et quand elles tombent. `partFoliaireActive`
-— accroché × (1 − jauni) — dit à tout instant quelle part du feuillage travaille
-encore.
+Ce chantier était intitulé « la saison de végétation est encore thermique ». Il
+a été fait entre-temps, et cette entrée enregistre ce qui reste.
 
-**Mais ce n'est pas ce qui commande la croissance et la transpiration.** Les
-deux passent toujours par `seasonFactor`, un simple seuil thermique
-(0 sous `tBaseCroissanceC`, 1 à +8 °C), identique pour toutes les espèces à leur
-température de base près. Conséquences, toutes réelles :
+**Ce qui est fait.** La croissance et la transpiration ne passent plus par le
+seul thermomètre : elles sont commandées par `partFoliaireActive` — le feuillage
+vivant déployé, espèce par espèce — en produit avec un facteur thermique qui ne
+porte plus que la vitesse du métabolisme. Et `GROWING_WEEKS` est passé de trente
+à vingt-six, ce qui est la contrepartie indispensable : la constante veut dire
+« sur combien de semaines la pousse annuelle se répartit », et c'est la
+phénologie qui en donne le compte. Un caduc nu de janvier ne transpire donc plus
+dans les Landes, et l'ordre de débourrement compte enfin dans le bilan annuel.
 
-- un bouleau **pousse en mars**, avant d'avoir une feuille, dès que la moyenne
-  hebdomadaire dépasse 5 °C ;
-- un houppier **entièrement doré d'octobre** produit encore ;
-- un caduc **nu de janvier** transpire dans les Landes, où l'hiver est doux —
-  c'est le dernier reste de l'artefact `leavesOn > 6 °C` qui avait coûté la
-  conclusion sur l'aulne après incendie. Le commit de phénologie a branché le
-  feuillage sur l'interception lumineuse (Beer-Lambert), pas sur la
-  transpiration ;
-- un frêne, qui débourre six semaines après le bouleau, **démarre sa croissance
-  en même temps que lui**, ce qui annule dans le bilan annuel l'ordre de
-  débourrement qu'on vient de modéliser.
+**Ce qui reste, et c'est un cran plus fin.** L'automne se joue en deux temps : la
+feuille jaunit d'abord, elle tombe deux à trois semaines plus tard. Entre les
+deux, elle est accrochée, vivante, et ne produit plus rien —
+`partFoliaireAssimilante` mesure exactement cet écart. Elle n'est **pas** branchée
+sur la croissance, donc un houppier entièrement doré d'octobre produit encore
+pendant deux semaines par an.
 
-**Pourquoi ce n'est pas corrigé.** Substituer `partFoliaireActive` à
-`seasonFactor` — ou en prendre le minimum, ce qui est plus conforme à la loi du
-minimum — a été essayé et mesuré :
+**Pourquoi elle ne l'est pas.** Le premier essai, fait *avant* le recalibrage
+ci-dessus, coûtait deux seuils écologiques calibrés :
 
-| | avant | avec la phénologie |
+| | avant | avec la sénescence |
 |---|---|---|
 | bouleau à 10 ans, limon riche (`lumiere.test.ts`) | 4,0 m | **3,8 m** |
 | morts par ravageurs, climat figé vs SSP5-8.5 (`climat.test.ts`) | 2 → 4 | 3 → 5 |
 
-Deux seuils calibrés se déplacent, et surtout la croissance **baisse sans se
-rapprocher du terrain** : un jeune bouleau sur bon sol fait un mètre à un mètre
-cinquante par an en réalité, soit 10 m à dix ans, quand le moteur en annonce
-déjà moins de 4. C'est que `GROWING_WEEKS = 30` et les `pousseMaxMAn` de
-l'atlas ont été calés AVEC cette saison thermique trop longue : elle absorbe la
-durée de la saison de végétation. Brancher la vraie phénologie par-dessus la
-compte deux fois.
+Cette mesure ne vaut plus telle quelle : elle a été prise sur `GROWING_WEEKS =
+30` et sur une croissance encore thermique. **À remesurer sur la calibration
+actuelle**, et l'enjeu est petit — deux semaines par an sur une saison de
+vingt-six, soit de l'ordre de 8 % de la production d'automne, pas de l'année.
+C'est le genre de raffinement qu'on branche quand on recalibre pour une autre
+raison, pas pour lui seul.
 
-**Ce qu'il faudrait faire, dans cet ordre** : (1) remplacer `seasonFactor` par
-`min(f_température, partFoliaireActive)` où `f_température` ne porte plus que la
-vitesse du métabolisme, pas la longueur de la saison ; (2) recalibrer
-`GROWING_WEEKS` et les `pousseMaxMAn` sur des hauteurs dominantes observées à
-âge donné (les tables de production sont faites pour ça) ; (3) remesurer les
-conclusions qui touchent à l'eau et aux ravageurs. C'est un chantier de
-calibration, pas une correction de mécanisme — d'où cette entrée plutôt qu'un
-commit.
-
-*Le gain attendu n'est pas mince* : c'est l'ordre de débourrement qui deviendrait
-un avantage compétitif mesurable — le bouleau qui prend six semaines d'avance
-sur le frêne, la lumière d'avril sous un couvert encore nu, et l'aulne qui ne
-rabat plus la nappe en janvier.
+*Limite qui reste, et qui n'est pas de ce chantier* : les hauteurs absolues sont
+faibles — un hêtre de plaine plafonne autour de quatre mètres à quarante ans là
+où le terrain en donne douze à quinze. Les rapports entre essences et entre
+stations sont justes, les niveaux ne le sont pas. C'est ce qu'il faudrait
+reprendre sur des tables de production, et c'est plus gros que la sénescence.
 
 ## Règle de travail
 

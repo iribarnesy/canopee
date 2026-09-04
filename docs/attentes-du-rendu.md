@@ -15,10 +15,34 @@ tiges sortie du moteur, et les trois corrections que la pointe technique a
 produites sont toutes côté rendu. C'est le retour le plus utile que je puisse
 donner sur la PR #2 : rien à reprendre.
 
-Une seule nuance, et elle joue *contre* une de mes demandes : les silhouettes
-d'hiver **nues** se distinguent déjà au premier coup d'œil (bouleau, chêne
-pubescent et pin sylvestre, capture à l'appui). La marcescence reste donc bien
-un ⚪ bonus et je ne la remonte pas.
+Depuis, **la base a bougé** : `main` a livré la marcescence et branché la
+croissance sur le feuillage, ce qui ferme deux entrées de cette liste (voir
+ci-dessous). La branche de rendu a été remise à jour dessus, et une collision
+de vocabulaire a été arbitrée au passage : `partFoliaireActive` garde le sens
+de `main` (feuillage vivant déployé), et ce que j'appelais ainsi — vivant *et*
+encore vert — devient `partFoliaireAssimilante`. Trois parts foliaires, trois
+noms, une seule loi chacune.
+
+## Le canal a changé : les demandes passent par des **issues**
+
+La session moteur a pris ce fichier en charge et ouvert un meilleur canal : une
+demande de rendu s'écrit maintenant en **issue GitHub** titrée
+`[attente-rendu] …`, sur un formulaire qui force à dire la maille, l'unité, le
+caractère bloquant et **le visuel que ça débloque**. C'est mieux qu'un fichier
+sur trois points : une issue se ferme par la PR qui la livre, elle ne dérive pas
+d'une branche à l'autre, et elle se discute là où elle est.
+
+Ce fichier reste donc utile pour deux choses seulement — **ce qui est tranché**
+(le bas de page) et **la mémoire de ce que j'ai demandé et de ce que j'ai eu
+tort de demander**. Les entrées vivantes ci-dessous valent jusqu'à ce que leur
+issue existe ; les deux premières sont ouvertes — **#4** (la chute d'une
+chandelle dans l'instantané) et **#5** (les gestes de zone).
+
+> **Collision connue** : la PR #3 réécrit ce même fichier pour en faire la
+> référence du contrat moteur → rendu, et ma PR #1 le porte dans cette version.
+> Les deux ne peuvent pas fusionner sans arbitrage, et **c'est la version de la
+> PR #3 qui doit gagner** : le contrat appartient à qui le tient. Ce que la
+> mienne a de propre — le bas de page — se replie dessus à ce moment-là.
 
 ## Comment lire, et comment répondre
 
@@ -27,7 +51,7 @@ un ⚪ bonus et je ne la remonte pas.
 | **🔴 bloquant** | Je ne peux pas avancer sur le lot concerné sans ça. |
 | **🟠 urgent** | Ne me bloque pas, mais c'est un bug ou une incohérence qui s'aggrave en attendant. |
 | **🟡 pas pressé** | Attendu à une date connue (le lot est nommé). Rien ne brûle avant. |
-| **⚪ bonus** | Ferait plaisir, se défend écologiquement, ne manquera à personne si ça ne vient pas. |
+| **⚪ bonus** | Ferait plaisir, se défend écologiquement, ne manquera à personne si ça ne vient pas. (Aucune entrée en ce moment : les deux bonus de la liste ont été livrés.) |
 
 **Pour répondre** : traite l'entrée, puis passe-la en ✅ **fait** avec la
 référence du commit, sans supprimer la ligne — je relis ce fichier avant chaque
@@ -67,41 +91,76 @@ j'en ai besoin.*
 
 ## 🟡 Pas pressé (mais attendu à une date connue)
 
-### La saison de végétation est encore thermique — **avant le lot L3**
+### ✅ **Fait** — la saison de végétation n'est plus thermique (`d770e70`)
 
-La croissance et la transpiration passent toujours par `seasonFactor`, un
-seuil de température, alors que `phenologie.ts` sait maintenant, espèce par
-espèce, quand les feuilles sortent et quand elles cessent de travailler
-(`partFoliaireActive`).
+La croissance et la transpiration sont maintenant commandées par
+`partFoliaireActive`, en produit avec un facteur thermique qui ne porte plus que
+la vitesse du métabolisme, et `GROWING_WEEKS` a été recalibré de trente à
+vingt-six semaines en conséquence. C'était exactement ce que je demandais, dans
+le bon ordre — recalibrer, pas substituer — et un caduc nu de janvier ne puise
+donc plus dans le sol.
 
-Conséquence pour moi : au lot L3, quand les saisons seront animées, **un
-houppier entièrement doré d'octobre continuera de grandir à l'écran**, et un
-caduc nu de janvier continuera de puiser dans le sol. L'incohérence sera
-visible, pas seulement théorique.
+**Ce qui reste**, et je le passe de 🟡 à ⚪ bonus parce que c'est petit : la
+sénescence n'est pas dans la boucle. Entre le jaunissement et la chute, une
+feuille est accrochée, vivante, et ne produit plus rien —
+`partFoliaireAssimilante` mesure cet écart et n'est branchée sur rien. Un
+houppier doré produit donc encore, deux semaines par an sur vingt-six. Mes
+chiffres d'avant (bouleau 4,0 → 3,8 m) ont été pris sur l'ancienne calibration
+et ne valent plus : à remesurer sur celle d'aujourd'hui, et seulement si tu
+recalibres pour une autre raison. Détail dans `docs/realisme.md`, « le houppier
+doré produit encore ».
 
-Ce n'est pas une correction à faire à la légère : j'ai essayé, mesuré et
-retiré. Le détail chiffré, les deux seuils écologiques qui bougent et l'ordre
-des trois étapes sont dans **`docs/realisme.md`, « la saison de végétation est
-encore thermique »**. En résumé : `GROWING_WEEKS` et les `pousseMaxMAn` ont été
-calés AVEC cette saison-là, donc brancher la vraie phénologie par-dessus la
-compte deux fois — il faut recalibrer, pas substituer.
+### ✅ **Fait** — la marcescence (`35e53e1`)
 
-### `ravageurs` par cellule dans l'instantané — **lots L2/L5**
+Je l'avais mise en ⚪ bonus et elle est arrivée avec plus de soin que je n'en
+demandais : `OPACITE_FEUILLE_MORTE` et `partFoliaireOmbrageante` distinguent ce
+qui ombre de ce qui travaille, et les feuilles mortes occupent la place que le
+feuillage vivant libère au lieu de s'y ajouter. Pour le rendu, c'est la
+silhouette d'hiver du charme et du jeune chêne, qui est très reconnaissable —
+donc c'est directement du D4.
 
-La population de ravageurs par cellule existe (`state.soil.ravageurs`) et ne
-voyage pas. C'est ce qui permet de dessiner une **défoliation qui s'étend en
-tache** plutôt qu'un arbre qui dépérit sans raison lisible — et l'une des onze
-causes de mort (`ravageurs`) en dépend pour être racontée autrement qu'en
-faisant simplement disparaître l'arbre.
+### ✅ **Fait** — trois cartes par cellule de plus (`801b056`)
 
-Un `Float32Array` de plus, à joindre à la liste de transfert.
+Je demandais `ravageurs` par cellule ; il en est arrivé trois, et les deux
+autres étaient sur ma liste ou m'auraient manqué :
 
-### La chute d'une chandelle ne fait pas de trouée — **lot L5**
+- `soilRavageurs` — la défoliation se lira par **taches** et non comme un arbre
+  qui dépérit sans raison lisible. C'est ce qui rend racontable l'une des onze
+  causes de mort.
+- `soilHerbeBiomasse` — le **foin sur pied** de l'été, jaune et abondant là où
+  la couverture a déjà chuté. Deux nuances de tapis au lieu d'une. C'était mon
+  ⚪ bonus.
+- `soilEpaisseurPerdueCm` — négative là où le sédiment s'est déposé, donc les
+  ravines **et** les zones d'accumulation. Je ne l'avais pas demandée et j'en
+  aurais eu besoin au lot L10.
 
-Quand une chandelle s'abat, elle quitte la carte sans rien changer au couvert.
-Rien à animer, donc : pas de tache de lumière qui s'ouvre au sol, alors que
-c'est précisément le moment intéressant du cycle sylvigénétique. Noté comme
-conséquence ouverte dans le commit des chandelles.
+Et `soilBoisAuSol` avec, ce qui m'amène au point suivant.
+
+### La chute d'une chandelle : presque tout est là, il manque l'événement — **lot L5** (issue #4)
+
+**Ce qui est fait, et c'est l'essentiel** : une chandelle qui s'abat tombe
+désormais quelque part (`boisMort.ts` — direction orientée par la pente,
+empreinte au sol, écrasement de ce qui poussait dessous), son bois reste sur les
+cellules qu'il recouvre (`soilBoisAuSol`), et la trouée s'ouvre d'elle-même
+puisque la lumière est recalculée (`soilLumiere`). Le rendu peut donc poser des
+troncs couchés au bon endroit et montrer la tache de lumière.
+
+**Ce qui manque, et c'est petit** : `ChuteDeChandelle` vit dans `TickResult` et
+ne passe pas dans le `Snapshot`, alors que `morts` y passe. Sans lui, je peux
+montrer le tronc **après**, pas la chute — or c'est le moment intéressant du
+cycle sylvigénétique, et le commentaire de `tick.ts` prévoit déjà l'usage
+(« l'empreinte pour savoir où le poser »). Le champ existe, il est sérialisable
+tel quel, il suffit de le joindre comme `morts`.
+
+### Les gestes de ZONE ne voyagent pas — **lot L4** (issue #5)
+
+`GesteVisible` est `{ type, ids }` : il ne sait désigner que des arbres nommés.
+`labourer`, `epandre` et `ramasserBoisMort` sont donc muets pour le rendu, alors
+que c'est exactement le grief auquel `gestes` répond déjà pour la coupe. Sans le
+geste, un tronc couché ramassé disparaît du sol d'une image à l'autre —
+indiscernable de sa décomposition, qui est un tout autre phénomène et bien plus
+lente. L'observation initiale vient de la session moteur, sur `ramasserBoisMort`
+seul ; c'est la forme du type qui est en cause, donc autant traiter la famille.
 
 ### Un instantané par semaine simulée quand on enregistre — **lot L8**
 
@@ -114,28 +173,6 @@ différences.
 
 C'est du worker plus que du moteur, et je peux le faire moi-même — je le liste
 pour qu'on ne se marche pas dessus.
-
----
-
-## ⚪ Bonus
-
-### La marcescence
-
-Le chêne et le charme gardent leurs feuilles mortes et brunes une partie de
-l'hiver, au lieu de les lâcher. `senescenceFoliaire` va au bout et la feuille
-tombe.
-
-Ça compte plus qu'il n'y paraît pour la décision D4 (« une essence = une
-silhouette reconnaissable ») : une silhouette d'hiver garnie et rousse est un
-critère de reconnaissance très fort sur le terrain, et il n'y en a pas
-beaucoup en janvier. Un champ booléen par espèce suffirait.
-
-### `herbeBiomasse` par cellule
-
-`soilHerbe` transporte la couverture ; la biomasse présente, elle, ne suit pas.
-Or l'une jaunit et l'autre reste : le **foin sur pied** de l'été est jaune et
-abondant là où la couverture a déjà chuté. Deux nuances de tapis au lieu d'une,
-pour un `Float32Array`.
 
 ---
 

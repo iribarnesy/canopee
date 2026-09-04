@@ -6,21 +6,27 @@
 
 import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
+import { computeLight } from "../../src/engine/light";
 import { dureeDuJourH } from "../../src/engine/meteo";
 import {
+  type ContextePhenologique,
   contextePhenologique,
   debourrementExigeDJ,
   ETALEMENT_CHUTE_SEMAINES,
   ETALEMENT_SENESCENCE_SEMAINES,
-  partFoliaire,
   partFoliaireActive,
-  partFoliaireDans,
+  partFoliaireActiveDans,
+  partFoliaireAssimilante,
+  partFoliaireOmbrageanteDans,
   SENESCENCE_DEBUT_SEMAINE,
   SOLSTICE_ETE_SEMAINE,
   semaineDeFroid,
   senescenceEnCoursDans,
   senescenceFoliaire,
 } from "../../src/engine/phenologie";
+import { rngStateFromSeed } from "../../src/engine/rng";
+import { createGameState, plantAt } from "../../src/engine/state";
+import { LIMON_RICHE } from "../../src/engine/stations";
 
 /** Jour au 15 avril, à la latitude du limon (49,5° N) et de la lande (44,5° N). */
 const AVRIL_NORD = dureeDuJourH(49.5, 105);
@@ -40,8 +46,8 @@ describe("l'ordre de débourrement", () => {
     const bouleau = getEspece("betula_pendula");
     const frene = getEspece("fraxinus_excelsior");
     // 200 °C·j : mi-avril dans le nord de la France.
-    expect(partFoliaire(bouleau, 200, AVRIL_NORD, false, 0)).toBeGreaterThan(0.9);
-    expect(partFoliaire(frene, 200, AVRIL_NORD, false, 0)).toBe(0);
+    expect(partFoliaireActive(bouleau, 200, AVRIL_NORD, false, 0)).toBeGreaterThan(0.9);
+    expect(partFoliaireActive(frene, 200, AVRIL_NORD, false, 0)).toBe(0);
   });
 });
 
@@ -54,11 +60,13 @@ describe("la porte photopériodique", () => {
     const cumulLargementSuffisant = 600;
     // Mi-février au sud : jour court, rien ne part malgré la chaleur.
     const fevrierSud = dureeDuJourH(44.5, 46);
-    expect(partFoliaire(chene, cumulLargementSuffisant, fevrierSud, false, 0)).toBe(0);
+    expect(partFoliaireActive(chene, cumulLargementSuffisant, fevrierSud, false, 0)).toBe(0);
     // Mi-avril, la porte s'entrouvre ; fin avril elle est grande ouverte.
-    expect(partFoliaire(chene, cumulLargementSuffisant, AVRIL_SUD, false, 0)).toBeGreaterThan(0.4);
+    expect(partFoliaireActive(chene, cumulLargementSuffisant, AVRIL_SUD, false, 0)).toBeGreaterThan(
+      0.4,
+    );
     const finAvrilSud = dureeDuJourH(44.5, 120);
-    expect(partFoliaire(chene, cumulLargementSuffisant, finAvrilSud, false, 0)).toBe(1);
+    expect(partFoliaireActive(chene, cumulLargementSuffisant, finAvrilSud, false, 0)).toBe(1);
   });
 
   it("le hêtre est le plus photopériodique des feuillus de l'atlas", () => {
@@ -72,9 +80,9 @@ describe("le déploiement et la chute sont progressifs", () => {
   it("le feuillage sort par degrés, pas d'un coup", () => {
     const chene = getEspece("quercus_pubescens");
     const dj = chene.phenologie.debourrementDJ;
-    const debut = partFoliaire(chene, dj + 5, 14, false, 0);
-    const milieu = partFoliaire(chene, dj + 45, 14, false, 0);
-    const fin = partFoliaire(chene, dj + 120, 14, false, 0);
+    const debut = partFoliaireActive(chene, dj + 5, 14, false, 0);
+    const milieu = partFoliaireActive(chene, dj + 45, 14, false, 0);
+    const fin = partFoliaireActive(chene, dj + 120, 14, false, 0);
     expect(debut).toBeGreaterThan(0);
     expect(milieu).toBeGreaterThan(debut);
     expect(fin).toBeGreaterThan(milieu);
@@ -84,7 +92,7 @@ describe("le déploiement et la chute sont progressifs", () => {
   it("les feuilles tombent sur plusieurs semaines", () => {
     const chene = getEspece("quercus_pubescens");
     const jourCourt = 10;
-    const parts = [0, 1, 2, 3, 4, 5].map((s) => partFoliaire(chene, 900, jourCourt, true, s));
+    const parts = [0, 1, 2, 3, 4, 5].map((s) => partFoliaireActive(chene, 900, jourCourt, true, s));
     for (let i = 1; i < parts.length; i++) {
       expect(parts[i] ?? 0).toBeLessThanOrEqual(parts[i - 1] ?? 0);
     }
@@ -94,8 +102,8 @@ describe("le déploiement et la chute sont progressifs", () => {
 
   it("un sempervirent garde son feuillage toute l'année", () => {
     const pin = getEspece("pinus_sylvestris");
-    expect(partFoliaire(pin, 0, 9, false, 0)).toBe(1);
-    expect(partFoliaire(pin, 900, 9, true, 10)).toBe(1);
+    expect(partFoliaireActive(pin, 0, 9, false, 0)).toBe(1);
+    expect(partFoliaireActive(pin, 900, 9, true, 10)).toBe(1);
   });
 });
 
@@ -133,8 +141,8 @@ describe("le besoin de froid : un hiver doux RETARDE le printemps", () => {
     const hetre = getEspece("fagus_sylvatica");
     const jourLong = 14;
     const chaleur = 260; // de quoi débourrer après un hiver normal
-    expect(partFoliaire(hetre, chaleur, jourLong, false, 0, 20)).toBeGreaterThan(0);
-    expect(partFoliaire(hetre, chaleur, jourLong, false, 0, 3)).toBe(0);
+    expect(partFoliaireActive(hetre, chaleur, jourLong, false, 0, 20)).toBeGreaterThan(0);
+    expect(partFoliaireActive(hetre, chaleur, jourLong, false, 0, 3)).toBe(0);
   });
 });
 
@@ -169,11 +177,11 @@ describe("le contexte phénologique", () => {
     expect(nord.jourH).toBeLessThan(sud.jourH);
   });
 
-  it("il redonne exactement `partFoliaire` : une seule loi, deux appelants", () => {
+  it("il redonne exactement `partFoliaireActive` : une seule loi, deux appelants", () => {
     const chene = getEspece("quercus_pubescens");
     const ctx = contextePhenologique(49.5, 45, 900, 20);
-    expect(partFoliaireDans(chene, ctx)).toBe(
-      partFoliaire(chene, 900, ctx.jourH, true, ctx.semainesDepuisSenescence, 20),
+    expect(partFoliaireActiveDans(chene, ctx)).toBe(
+      partFoliaireActive(chene, 900, ctx.jourH, true, ctx.semainesDepuisSenescence, 20),
     );
     // Et la sénescence est enclenchée : le compteur de chute tourne.
     expect(senescenceEnCoursDans(ctx)).toBe(true);
@@ -190,9 +198,9 @@ describe("la sénescence, distincte de la chute", () => {
     // C'est tout l'automne, et c'est ce que la part foliaire seule ne disait
     // pas : beaucoup de feuilles, plus une qui travaille.
     const semaine = ETALEMENT_SENESCENCE_SEMAINES;
-    const accrochee = partFoliaire(chene, 900, jourCourt, true, semaine);
+    const deployee = partFoliaireActive(chene, 900, jourCourt, true, semaine);
     const jaunie = senescenceFoliaire(chene, jourCourt, true, semaine);
-    expect(accrochee).toBeGreaterThan(0.5);
+    expect(deployee).toBeGreaterThan(0.5);
     expect(jaunie).toBe(1);
   });
 
@@ -205,41 +213,41 @@ describe("la sénescence, distincte de la chute", () => {
 
   it("un sempervirent ne sénesce pas : pas d'automne pour un pin", () => {
     expect(senescenceFoliaire(pin, jourCourt, true, 10)).toBe(0);
-    expect(partFoliaireActive(pin, 0, jourCourt, true, 10)).toBe(1);
+    expect(partFoliaireAssimilante(pin, 0, jourCourt, true, 10)).toBe(1);
   });
 
-  it("le feuillage ACTIF tombe à zéro avant le feuillage accroché", () => {
+  it("le feuillage ASSIMILANT tombe à zéro avant le feuillage déployé", () => {
     // La conséquence qui compte pour le moteur : l'arbre cesse de produire
     // (donc de pousser et de transpirer) alors qu'il porte encore ses
     // feuilles. Sans ça, un automne doux faisait pousser un houppier mort.
     const semaine = ETALEMENT_SENESCENCE_SEMAINES;
-    expect(partFoliaireActive(chene, 900, jourCourt, true, semaine)).toBe(0);
-    expect(partFoliaire(chene, 900, jourCourt, true, semaine)).toBeGreaterThan(0);
+    expect(partFoliaireAssimilante(chene, 900, jourCourt, true, semaine)).toBe(0);
+    expect(partFoliaireActive(chene, 900, jourCourt, true, semaine)).toBeGreaterThan(0);
   });
 
-  it("l'actif décroît sans jamais dépasser l'accroché", () => {
+  it("l'assimilant ne dépasse jamais le déployé, et ne remonte pas", () => {
     let precedent = Number.POSITIVE_INFINITY;
     for (let s = 0; s <= ETALEMENT_CHUTE_SEMAINES; s++) {
-      const actif = partFoliaireActive(chene, 900, jourCourt, true, s);
-      const accrochee = partFoliaire(chene, 900, jourCourt, true, s);
-      expect(actif).toBeLessThanOrEqual(accrochee + 1e-9);
-      expect(actif).toBeLessThanOrEqual(precedent + 1e-9);
-      precedent = actif;
+      const assimilant = partFoliaireAssimilante(chene, 900, jourCourt, true, s);
+      const deployee = partFoliaireActive(chene, 900, jourCourt, true, s);
+      expect(assimilant).toBeLessThanOrEqual(deployee + 1e-9);
+      expect(assimilant).toBeLessThanOrEqual(precedent + 1e-9);
+      precedent = assimilant;
     }
   });
 
-  it("en pleine saison, l'actif EST l'accroché : rien ne change l'été", () => {
+  it("en pleine saison, l'assimilant EST le déployé : rien ne change l'été", () => {
     // Le garde-fou de non-régression : la sénescence ne doit toucher que
     // l'automne, sinon elle rognerait la croissance de toute l'année.
-    const ete = partFoliaire(chene, 900, 15, false, 0);
-    expect(partFoliaireActive(chene, 900, 15, false, 0)).toBeCloseTo(ete, 10);
+    const ete = partFoliaireActive(chene, 900, 15, false, 0);
+    expect(partFoliaireAssimilante(chene, 900, 15, false, 0)).toBeCloseTo(ete, 10);
   });
 });
 
 describe("rien ne tombe hors sénescence", () => {
   /**
    * Le bug que ce test verrouille : la chute des feuilles se calculait comme
-   * l'écart entre `partFoliaire` de cette semaine et celui d'un cran plus tôt.
+   * l'écart entre `partFoliaireActive` de cette semaine et celui d'un cran plus tôt.
    * Au printemps, ces deux appels ont le même compteur de sénescence (zéro) —
    * leur seule différence était le besoin de froid, passé d'un côté et pas de
    * l'autre. Un hêtre dont la dormance n'était pas levée versait ainsi près
@@ -260,8 +268,8 @@ describe("rien ne tombe hors sénescence", () => {
 
     // C'est bien la comparaison qui divergeait : sans le garde, l'écart entre
     // les deux appels est positif alors que le feuillage ne fait que SORTIR.
-    const avecFroid = partFoliaireDans(hetre, printemps);
-    const sansFroid = partFoliaireDans(hetre, {
+    const avecFroid = partFoliaireActiveDans(hetre, printemps);
+    const sansFroid = partFoliaireActiveDans(hetre, {
       ...printemps,
       semainesDeFroid: Number.POSITIVE_INFINITY,
     });
@@ -269,13 +277,153 @@ describe("rien ne tombe hors sénescence", () => {
   });
 
   it("en automne, la sénescence est bien enclenchée et le froid n'entre plus", () => {
-    // La branche d'automne de `partFoliaire` ignore le besoin de froid : les
+    // La branche d'automne de `partFoliaireActive` ignore le besoin de froid : les
     // deux contextes doivent donc donner exactement la même chose.
     const automne = contextePhenologique(49.5, SENESCENCE_DEBUT_SEMAINE + 2, 900, 3);
     expect(senescenceEnCoursDans(automne)).toBe(true);
-    expect(partFoliaireDans(hetre, automne)).toBeCloseTo(
-      partFoliaireDans(hetre, { ...automne, semainesDeFroid: Number.POSITIVE_INFINITY }),
+    expect(partFoliaireActiveDans(hetre, automne)).toBeCloseTo(
+      partFoliaireActiveDans(hetre, { ...automne, semainesDeFroid: Number.POSITIVE_INFINITY }),
       10,
     );
+  });
+});
+
+/**
+ * La MARCESCENCE : le charme et le jeune chêne gardent leurs feuilles MORTES
+ * tout l'hiver. Elles ombragent encore, elles ne travaillent plus — ce n'est ni
+ * la persistance du troène (feuilles vivantes) ni la caducité du bouleau
+ * (branches nues).
+ */
+describe("la marcescence", () => {
+  /** Mi-janvier et mi-juillet au limon du Nord, avec les cumuls de la saison. */
+  const JANVIER = contextePhenologique(49.5, 2, 5, 2);
+  const JUILLET = contextePhenologique(49.5, 28, 900, 20);
+  /** Début décembre : la sénescence est passée, chaque espèce est dans son régime d'hiver. */
+  const DECEMBRE = contextePhenologique(49.5, 49, 900, 20);
+
+  /**
+   * Un arbre de 12 m et un semis placé au centre exact de son ombre (décalée
+   * vers le nord de 0,4 × H, cf. light.ts) : la lumière que reçoit le semis est
+   * celle qui a traversé la couronne.
+   */
+  function lumiereDuSemisSous(especeCanopee: string, ctx: ContextePhenologique): number {
+    const hauteurM = 12;
+    let state = createGameState(LIMON_RICHE.station, rngStateFromSeed(42));
+    state = plantAt(state, especeCanopee, 30, 30, hauteurM);
+    state = plantAt(state, "fagus_sylvatica", 30, 30 + 0.4 * hauteurM, 0.5);
+    const light = computeLight(state.trees, (tree) =>
+      partFoliaireOmbrageanteDans(getEspece(tree.especeId), ctx),
+    );
+    return light[1] ?? 1;
+  }
+
+  it("en janvier, le semis est à l'ombre sous un charme et en plein ciel sous un bouleau", () => {
+    // C'est ce qui fait la réputation du taillis de charme : sombre même en
+    // février, quand le sous-bois du bouleau reçoit tout.
+    expect(lumiereDuSemisSous("betula_pendula", JANVIER)).toBe(1);
+    expect(lumiereDuSemisSous("carpinus_betulus", JANVIER)).toBeLessThan(0.6);
+  });
+
+  it("des feuilles mortes ombragent moins que le même houppier en juillet", () => {
+    const charme = getEspece("carpinus_betulus");
+    const hiver = partFoliaireOmbrageanteDans(charme, JANVIER);
+    const ete = partFoliaireOmbrageanteDans(charme, JUILLET);
+    expect(hiver).toBeGreaterThan(0);
+    expect(hiver).toBeLessThan(ete);
+    expect(ete).toBe(1);
+  });
+
+  it("ces feuilles sont mortes : l'arbre n'en tire rien, pas plus qu'un bouleau nu", () => {
+    // La croissance et le retour de litière ne lisent que la part ACTIVE
+    // (tick.ts) : en janvier le marcescent est à l'arrêt comme les autres
+    // caducs, tout en faisant de l'ombre.
+    const charme = getEspece("carpinus_betulus");
+    const bouleau = getEspece("betula_pendula");
+    expect(partFoliaireActiveDans(charme, JANVIER)).toBe(0);
+    expect(partFoliaireActiveDans(bouleau, JANVIER)).toBe(0);
+    expect(partFoliaireOmbrageanteDans(charme, JANVIER)).toBeGreaterThan(0);
+    expect(partFoliaireOmbrageanteDans(bouleau, JANVIER)).toBe(0);
+  });
+
+  it("le trait ne déplace que l'ombre, aucune semaine de l'année", () => {
+    // Garde-fou : si la marcescence entrait un jour dans le feuillage qui
+    // travaille, un charme se mettrait à pousser en janvier avec des feuilles
+    // mortes.
+    const charme = getEspece("carpinus_betulus");
+    const sansMarcescence = { ...charme, lumiere: { ...charme.lumiere, marcescence: 0 } };
+    for (let semaine = 0; semaine < 52; semaine++) {
+      const ctx = contextePhenologique(49.5, semaine, 30 * semaine, 12);
+      expect(partFoliaireActiveDans(charme, ctx)).toBe(
+        partFoliaireActiveDans(sansMarcescence, ctx),
+      );
+      expect(partFoliaireOmbrageanteDans(charme, ctx)).toBeGreaterThanOrEqual(
+        partFoliaireOmbrageanteDans(sansMarcescence, ctx),
+      );
+    }
+    expect(partFoliaireOmbrageanteDans(charme, JANVIER)).toBeGreaterThan(
+      partFoliaireOmbrageanteDans(sansMarcescence, JANVIER),
+    );
+  });
+
+  it("marcescence n'est pas persistance : le houx, lui, travaille encore", () => {
+    // Deux ligneux feuillus en décembre, deux mécanismes opposés : le houx
+    // garde des feuilles vivantes, le charme un feuillage mort. Tous deux
+    // ombragent, un seul assimile.
+    const charme = getEspece("carpinus_betulus");
+    const houx = getEspece("ilex_aquifolium");
+    expect(partFoliaireActiveDans(houx, DECEMBRE)).toBe(1);
+    expect(partFoliaireActiveDans(charme, DECEMBRE)).toBe(0);
+    expect(partFoliaireOmbrageanteDans(charme, DECEMBRE)).toBeGreaterThan(0);
+  });
+
+  it("un caduc ordinaire n'a pas de marcescence : le moteur ne connaît que le trait", () => {
+    for (const id of ["betula_pendula", "fraxinus_excelsior", "salix_alba"]) {
+      const espece = getEspece(id);
+      expect(espece.lumiere.marcescence ?? 0).toBe(0);
+      expect(partFoliaireOmbrageanteDans(espece, JANVIER)).toBe(
+        partFoliaireActiveDans(espece, JANVIER),
+      );
+    }
+  });
+});
+
+describe("un semi-persistant ne se dénude jamais", () => {
+  const troene = getEspece("ligustrum_vulgare");
+  const plancher = troene.lumiere.retentionHivernale ?? 0;
+
+  it("garde son plancher toute l'année, y compris avant le débourrement", () => {
+    expect(plancher).toBeGreaterThan(0);
+    // On balaie l'année entière, semaine par semaine, plutôt que de tester
+    // février : le bug corrigé ici vivait dans une seule branche, et une seule
+    // date bien choisie l'aurait manqué.
+    const creux = Math.min(
+      ...Array.from({ length: 52 }, (_, semaine) => {
+        const automne = semaine >= 35;
+        return partFoliaireActive(
+          troene,
+          // Cumul de degrés-jours plausible : nul en hiver, monte au printemps.
+          Math.max(0, (semaine - 8) * 25),
+          dureeDuJourH(45, semaine),
+          automne,
+          Math.max(0, semaine - 40),
+        );
+      }),
+    );
+    expect(creux).toBeCloseTo(plancher, 5);
+  });
+
+  it("un caduc ordinaire, lui, passe bien par zéro", () => {
+    const creux = Math.min(
+      ...Array.from({ length: 52 }, (_, semaine) =>
+        partFoliaireActive(
+          getEspece("quercus_pubescens"),
+          Math.max(0, (semaine - 8) * 25),
+          dureeDuJourH(45, semaine),
+          semaine >= 35,
+          Math.max(0, semaine - 40),
+        ),
+      ),
+    );
+    expect(creux).toBe(0);
   });
 });

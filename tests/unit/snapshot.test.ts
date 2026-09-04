@@ -138,6 +138,50 @@ describe("les grilles de l'instantané", () => {
     expect(snapshot.soilLumiere[0]).toBeCloseTo(1, 6);
   });
 
+  it("porte l'herbe sur pied, les ravageurs et l'érosion, cellule par cellule", () => {
+    const state = etatNeuf();
+    const nCells = STATION.coteM * STATION.coteM;
+    // Des valeurs distinctes par cellule : une moyenne les confondrait, et
+    // c'est justement ce que le rendu ne peut pas dessiner.
+    const modifie = {
+      ...state,
+      soil: {
+        ...state.soil,
+        herbeBiomasse: state.soil.herbeBiomasse.map((_, i) => i / nCells),
+        ravageurs: state.soil.ravageurs.map((_, i) => (i === 3 ? 0.8 : 0.05)),
+      },
+    };
+    const snapshot = construireSnapshot({ ...entrees(modifie), state: modifie });
+
+    expect(snapshot.soilHerbeBiomasse).toHaveLength(nCells);
+    expect(snapshot.soilRavageurs).toHaveLength(nCells);
+    expect(snapshot.soilEpaisseurPerdueCm).toHaveLength(nCells);
+    expect([...snapshot.soilHerbeBiomasse]).toEqual(
+      modifie.soil.herbeBiomasse.map((v) => Math.fround(v)),
+    );
+    // La tache de ravageurs reste une tache : la cellule 3 se distingue.
+    expect(snapshot.soilRavageurs[3]).toBeCloseTo(0.8, 6);
+    expect(snapshot.soilRavageurs[0]).toBeCloseTo(0.05, 6);
+    // La biomasse n'est pas la couverture : deux cartes, deux valeurs.
+    expect([...snapshot.soilHerbe]).not.toEqual([...snapshot.soilHerbeBiomasse]);
+  });
+
+  it("garde le SIGNE de l'épaisseur perdue : un dépôt est négatif", () => {
+    // Là où le sédiment s'accumule, la perte est négative. Un transport qui
+    // la ramènerait à zéro effacerait les zones d'accumulation.
+    const state = etatNeuf();
+    const modifie = {
+      ...state,
+      soil: {
+        ...state.soil,
+        epaisseurPerdueCm: state.soil.epaisseurPerdueCm.map((_, i) => (i === 5 ? -0.75 : 0.25)),
+      },
+    };
+    const snapshot = construireSnapshot({ ...entrees(modifie), state: modifie });
+    expect(snapshot.soilEpaisseurPerdueCm[5]).toBeCloseTo(-0.75, 6);
+    expect(snapshot.soilEpaisseurPerdueCm[0]).toBeCloseTo(0.25, 6);
+  });
+
   it("sans grandeur de tick, l'instantané reste dessinable", () => {
     // Le tout premier instantané part avant qu'aucun tick n'ait tourné.
     const state = etatNeuf();

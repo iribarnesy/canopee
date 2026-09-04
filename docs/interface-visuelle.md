@@ -252,8 +252,8 @@ inchangé au chiffre près (test).
 
 | Manque | Ce que le rendu ne pourra pas faire | À qui |
 |---|---|---|
-| **La saison de végétation est encore thermique** | Un houppier doré continue de grandir et un caduc nu de janvier de puiser dans le sol : l'incohérence sera **visible** une fois les saisons animées. Mesuré et chiffré dans `docs/realisme.md` — c'est un chantier de calibration (`GROWING_WEEKS`, `pousseMaxMAn`), pas une correction. | moteur |
-| **La marcescence** | Le chêne et le charme gardent leurs feuilles mortes et brunes une partie de l'hiver. Silhouette d'hiver très reconnaissable, donc ça compte pour D4. Il faudrait un champ par espèce. | moteur |
+| ~~La saison de végétation est encore thermique~~ | ✅ **fait côté moteur** : la croissance suit `partFoliaireActive` et `GROWING_WEEKS` a été recalibré. Un caduc nu de janvier ne puise plus. Reste un écart de deux semaines par an — un houppier doré produit encore, la sénescence n'étant pas dans la boucle. Invisible à l'écran, contrairement au précédent. | — |
+| ~~La marcescence~~ | ✅ **faite côté moteur** (`partFoliaireOmbrageante`, `OPACITE_FEUILLE_MORTE`) : le charme et le jeune chêne gardent leurs feuilles mortes, qui ombragent encore sans travailler. Silhouette d'hiver garnie et rousse — c'est directement du D4, et c'est offert. | — |
 | **La chute d'une chandelle ne fait pas de trouée** | Pas de tache de lumière au sol à animer le jour où elle s'abat. | moteur |
 | **Le tas de BRF n'a pas de position** | À poser conventionnellement au bord de la parcelle. | rendu |
 | **Le rembobinage** | Cadré, pas fait : il faudra un instantané **par semaine simulée** quand l'enregistrement est actif, au lieu d'un par lot de 26. Le budget est dans `docs/stack.md` (« Le contrat moteur → rendu »). | worker, au lot L8 |

@@ -4,7 +4,8 @@
  * position (Beer-Lambert par couronne traversée, k = 0,5). L'ombre d'une
  * couronne est décalée vers le NORD (+y) d'une fraction de la hauteur —
  * le soleil est au sud en France : planter en lignes est-ouest ou nord-sud
- * n'a pas le même effet. Les caducs n'ombragent pas hors saison de végétation.
+ * n'a pas le même effet. Les caducs n'ombragent pas hors saison de végétation,
+ * sauf les marcescents, qui gardent leurs feuilles mortes jusqu'au printemps.
  * Un index spatial (paniers de 12 m) borne le coût quand la régénération
  * multiplie les tiges.
  */
@@ -39,13 +40,18 @@ interface Shadow {
 
 /** Ombres actives (arbres vivants, en feuilles), indexées par panier spatial. */
 /**
- * Part du feuillage déployé d'un arbre ∈ [0,1]. Un booléen ne suffit pas : le
- * bouleau est en feuilles quand le frêne est encore nu, et un houppier à
- * moitié sorti ne fait pas la même ombre qu'un houppier plein (phenologie.ts).
+ * Part du feuillage d'un arbre qui INTERCEPTE la lumière ∈ [0,1]. Un booléen ne
+ * suffit pas : le bouleau est en feuilles quand le frêne est encore nu, et un
+ * houppier à moitié sorti ne fait pas la même ombre qu'un houppier plein
+ * (phenologie.ts). Ce qui ombre n'est pas ce qui assimile — les feuilles mortes
+ * d'un marcescent comptent ici et nulle part ailleurs.
  */
-export type PartFoliaire = (tree: TreeState) => number;
+export type PartOmbrageante = (tree: TreeState) => number;
 
-function buildShadowIndex(trees: readonly TreeState[], part: PartFoliaire): Map<number, Shadow[]> {
+function buildShadowIndex(
+  trees: readonly TreeState[],
+  part: PartOmbrageante,
+): Map<number, Shadow[]> {
   const buckets = new Map<number, Shadow[]>();
   for (const tree of trees) {
     if (!tree.alive) continue;
@@ -117,9 +123,9 @@ function extinctionAt(
 
 /**
  * Lumière relative ∈ [0,1] reçue par chaque arbre vivant (index aligné sur
- * `trees`, 1 pour les morts). `part` donne le feuillage déployé de chaque arbre.
+ * `trees`, 1 pour les morts). `part` donne le feuillage ombrageant de chaque arbre.
  */
-export function computeLight(trees: readonly TreeState[], part: PartFoliaire): number[] {
+export function computeLight(trees: readonly TreeState[], part: PartOmbrageante): number[] {
   const buckets = buildShadowIndex(trees, part);
   return trees.map((tree) =>
     tree.alive ? Math.exp(-extinctionAt(buckets, tree.x, tree.y, tree.heightM)) : 1,
@@ -131,7 +137,7 @@ export function lightAtPoint(
   trees: readonly TreeState[],
   x: number,
   y: number,
-  part: PartFoliaire,
+  part: PartOmbrageante,
 ): number {
   const buckets = buildShadowIndex(trees, part);
   return Math.exp(-extinctionAt(buckets, x, y, 0));
@@ -171,7 +177,7 @@ export function computeGroundLight(
   trees: readonly TreeState[],
   widthM: number,
   heightM: number,
-  part: PartFoliaire,
+  part: PartOmbrageante,
 ): number[] {
   const buckets = buildShadowIndex(trees, part);
   const out = new Array<number>(widthM * heightM);

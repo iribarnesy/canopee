@@ -66,18 +66,34 @@ export function portanceDuFeu(lumiereAuSol: number): number {
  */
 export const BOIS_MORT_SUR_PIED = 1.4;
 
+/**
+ * Carbone de bois couché, g/m², au-delà duquel la cellule ne peut plus porter
+ * davantage de gros combustible : cinq kilos de carbone par mètre carré, soit
+ * environ un tronc de trente centimètres posé en travers.
+ */
+export const BOIS_AU_SOL_SATURATION_CG = 5000;
+
 export function chargeCombustible(
   trees: readonly TreeState[],
   herbeCouverture: readonly number[],
   litterCG: readonly number[],
   coteM: number,
   lumiereAuSol?: readonly number[],
+  boisAuSolCG?: readonly number[],
 ): ChargeCombustible {
   const n = coteM * coteM;
   const parCellule = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) {
     // Herbe (sèche en été) + litière accumulée.
     parCellule[i] = 0.6 * (herbeCouverture[i] ?? 0) + 0.4 * Math.min(1, (litterCG[i] ?? 0) / 300);
+    // Le bois COUCHÉ compte aussi, mais pas comme de l'herbe : le gros bois
+    // s'allume mal et porte mal le front — c'est un combustible qui fait
+    // durer et chauffer, pas courir. D'où un poids plus faible et un seuil de
+    // saturation bien plus haut : un tronc dépose des kilos de carbone sur son
+    // mètre carré là où la litière s'y compte en centaines de grammes.
+    parCellule[i] =
+      (parCellule[i] ?? 0) +
+      0.25 * Math.min(1, (boisAuSolCG?.[i] ?? 0) / BOIS_AU_SOL_SATURATION_CG);
   }
   // Les couronnes ajoutent leur propre combustible sous elles — et les
   // CHANDELLES aussi, davantage même : un tronc mort sur pied est du bois sec,

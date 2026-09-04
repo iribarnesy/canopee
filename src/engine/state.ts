@@ -154,6 +154,14 @@ export interface SoilState {
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: number[];
   /**
+   * Carbone du bois mort COUCHÉ sur cette cellule, g/m². Distinct du bois mort
+   * debout (`carbon.deadWoodKgC`, qui reste un stock de parcelle tant que les
+   * chandelles tiennent) : un tronc par terre se décompose plus vite, fait de
+   * l'humus là où il est, protège la terre sous lui et abrite d'autres bêtes
+   * que le bois sur pied (boisMort.ts).
+   */
+  boisAuSolCG: number[];
+  /**
    * Phosphore ASSIMILABLE, g/m². Il ne diffuse pas : ce qui est dans une
    * cellule n'y bougera pas (pk.ts).
    */
@@ -357,6 +365,7 @@ export function createGameState(
       litterNG: new Array(n).fill(0),
       litterCG: new Array(n).fill(0),
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
+      boisAuSolCG: new Array(n).fill(0),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,

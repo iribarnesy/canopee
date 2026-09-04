@@ -125,11 +125,27 @@ export function facteurChaleur(tMeanC: number): number {
   return Math.max(0, Math.min(1.4, (tMeanC - T_BASE_RAVAGEUR) / 12));
 }
 
+/**
+ * Ce qu'un hôte hivernal ajoute à la survie des ravageurs sous son couvert.
+ *
+ * Certaines plantes hébergent les ravageurs pendant l'hiver et les relâchent
+ * au printemps sur les cultures voisines : le fusain d'Europe est l'hôte
+ * d'hiver du puceron noir, exactement comme le prunellier l'est de la
+ * lucilie. Ce n'est pas un défaut de l'espèce — c'est un chaînon de son cycle,
+ * et le connaître change la façon de composer une haie *(à calibrer)*.
+ */
+export const ABRI_HIVERNAL_EFFET = 0.5;
+
 export interface CarteBiotique {
   /** ressource exploitable par cellule (hôtes sensibles et affaiblis) */
   ressource: Float64Array;
   /** qualité de l'habitat des auxiliaires par cellule ∈ [0,1] */
   habitat: Float64Array;
+  /**
+   * Présence d'hôtes hivernaux par cellule ∈ [0,1] : là où ils poussent, les
+   * ravageurs passent mieux l'hiver et repartent plus vite au printemps.
+   */
+  abriHivernal: Float64Array;
 }
 
 /**
@@ -146,6 +162,8 @@ export function carteBiotique(
   const n = dims.widthM * dims.heightM;
   const ressource = new Float64Array(n);
   const habitat = new Float64Array(n);
+  // Là où des hôtes hivernaux poussent, les ravageurs passent mieux l'hiver.
+  const abriHivernal = new Float64Array(n);
   // Une essence = un bit ; une strate = un bit. Compter les bits d'un entier
   // coûte moins cher que de tenir un Set par cellule.
   const nbx = Math.max(1, Math.ceil(dims.widthM / BLOC_AUXILIAIRES_M));
@@ -166,7 +184,9 @@ export function carteBiotique(
     const strateBit = strate >= 0 ? 1 << strate : 0;
     const vuln = vulnerabilite(tree.especeId, tree.vigueur);
     const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+    const abrite = espece.ravageurs.hoteHivernal === true;
     forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
+      if (abrite) abriHivernal[i] = Math.min(1, (abriHivernal[i] ?? 0) + 1);
       ressource[i] = (ressource[i] ?? 0) + vuln;
     });
     const bx = Math.min(nbx - 1, Math.max(0, Math.floor(tree.x / BLOC_AUXILIAIRES_M)));
@@ -213,7 +233,7 @@ export function carteBiotique(
       0.2 * Math.min(1, herbeCouverture[i] ?? 0) +
       0.15 * partBoisMort;
   }
-  return { ressource, habitat };
+  return { ressource, habitat, abriHivernal };
 }
 
 function popcount(v: number): number {
@@ -232,14 +252,19 @@ export function prochainePression(
   ressource: number,
   habitat: number,
   chaleur: number,
+  abriHivernal = 0,
 ): number {
   if (ressource <= 0) return Math.max(0, pression - DECLIN * pression);
   const plafond = Math.min(1, ressource / RESSOURCE_SATURATION);
   // Natalité comme prédation suivent l'activité : l'hiver, tout s'arrête, et
   // la population attend au lieu de disparaître.
   const natalite = TAUX_CROISSANCE * chaleur;
+  // La perte d'hivernage est ce qui empêche une population de repartir chaque
+  // printemps là où elle était : un hôte hivernal la réduit, et c'est
+  // précisément par là qu'il pèse sur le peuplement voisin.
+  const perteHivernage = PERTE_HIVERNAGE * (1 - Math.min(1, abriHivernal) * ABRI_HIVERNAL_EFFET);
   const mortalite =
-    (DECLIN + PREDATION_MAX * Math.min(1, habitat)) * Math.min(1, chaleur) + PERTE_HIVERNAGE;
+    (DECLIN + PREDATION_MAX * Math.min(1, habitat)) * Math.min(1, chaleur) + perteHivernage;
   const base = Math.max(pression, INOCULUM);
   const suivant = base + base * (natalite * (1 - base / Math.max(plafond, 1e-6)) - mortalite);
   return Math.min(1, Math.max(0, suivant));

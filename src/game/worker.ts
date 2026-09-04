@@ -202,6 +202,18 @@ function performAction(action: GameAction) {
       );
       break;
     }
+    case "ramasserBoisMort": {
+      const enleve =
+        (before.soil.boisAuSolCG.reduce((t, v) => t + v, 0) -
+          state.soil.boisAuSolCG.reduce((t, v) => t + v, 0)) /
+        1000;
+      if (enleve > 0)
+        event(
+          "🪵",
+          `Bois mort ramassé : ${Math.round(enleve)} kg C ${eur} — autant d'humus et d'abris en moins`,
+        );
+      break;
+    }
     case "eclaircir": {
       const n = before.trees.length - state.trees.length;
       if (n > 0)
@@ -624,6 +636,9 @@ function stationInfo(): StationInfo {
       station.drainageExterneMmSemaine,
       station.profondeurNappeEquilibreCm,
     ),
+    // Déjà calculée par `stationAvecPaysage` pour le moteur : elle ne dépend
+    // que des bordures, qui ne changent pas en cours de partie.
+    ventExposition: station.ventExposition,
     // Ni les cellules en eau ni le champ de nappe ne bougent : on les envoie
     // une fois pour toutes, la carte s'en sert telles quelles.
     enEau: sources

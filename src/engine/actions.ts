@@ -31,6 +31,26 @@ export const PLANT_HOURS = 1;
 export const PLANT_MIN_SPACING_M = 1;
 /** prix de vente du bois de chauffage, €/m³ *(à calibrer)* */
 export const WOOD_PRICE_EUR_M3 = 35;
+
+/**
+ * Masse volumique du bois mort ramassé, kg/m³. Une moyenne assumée : une fois
+ * par terre, le bois n'a plus d'espèce — il a une masse et un état.
+ */
+export const DENSITE_BOIS_MORT_KG_M3 = 500;
+
+/**
+ * Décote du bois mort comme bois de chauffage. Un tronc qui a séché sur pied
+ * puis passé des années par terre a perdu une part de son pouvoir calorifique
+ * et s'est piqué : il chauffe, mais il ne vaut pas une bille fraîche.
+ */
+export const DECOTE_BOIS_MORT = 0.5;
+
+/**
+ * Heures pour ramasser un mètre cube de bois mort épars. Plus lent que de
+ * débiter un arbre abattu au même endroit : il faut aller le chercher, il est
+ * couché n'importe comment, et une part se casse à la manipulation.
+ */
+export const RAMASSAGE_HOURS_M3 = 2.5;
 /** diamètre minimal pour qu'une bille intéresse une scierie, cm *(à calibrer)* */
 export const DIAMETRE_OEUVRE_MIN_CM = 30;
 /** hauteur de bille élaguée minimale pour vendre en bois d'œuvre, m */
@@ -362,6 +382,19 @@ export type GameAction =
        * et l'herbe coupée reste au sol en litière.
        */
       type: "faucher";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+    }
+  | {
+      /**
+       * Ramasser le bois mort COUCHÉ d'une zone pour le chauffage. Le geste
+       * n'est pas neutre : il enlève de l'humus en devenir, un abri et une
+       * protection du sol, et il retire du gros combustible. C'est l'arbitrage
+       * même du bois mort, et il n'a de bonne réponse qu'au cas par cas.
+       */
+      type: "ramasserBoisMort";
       week: number;
       x: number;
       y: number;
@@ -901,6 +934,69 @@ function applyFaucher(
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
+/**
+ * Ramasser le bois mort couché d'une zone. Le joueur y gagne du chauffage et
+ * un peu moins de gros combustible ; il y perd de l'humus en devenir, un abri
+ * pour la faune du sol et la protection que le tronc offrait à la terre sous
+ * lui. Rien ici ne tranche à sa place.
+ */
+function applyRamasserBoisMort(
+  state: GameState,
+  action: Extract<GameAction, { type: "ramasserBoisMort" }>,
+): ApplyResult {
+  const cote = state.station.coteM;
+  const r2 = action.rayonM * action.rayonM;
+  const boisAuSolCG = state.soil.boisAuSolCG.slice();
+  const cibles: number[] = [];
+  let carboneKgC = 0;
+  for (let y = 0; y < cote; y++) {
+    for (let x = 0; x < cote; x++) {
+      const dx = x + 0.5 - action.x;
+      const dy = y + 0.5 - action.y;
+      if (dx * dx + dy * dy > r2) continue;
+      const i = y * cote + x;
+      const stock = boisAuSolCG[i] ?? 0;
+      if (stock <= 0) continue;
+      cibles.push(i);
+      carboneKgC += stock / 1000;
+    }
+  }
+  if (carboneKgC <= 0) {
+    return {
+      state,
+      refusals: [refuse(action.week, "ramasserBoisMort", "pas de bois mort au sol ici")],
+    };
+  }
+  const volumeM3 = carboneKgC / CARBON_FRACTION / DENSITE_BOIS_MORT_KG_M3;
+  const hours = volumeM3 * RAMASSAGE_HOURS_M3;
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return {
+      state,
+      refusals: [refuse(action.week, "ramasserBoisMort", "plafond hebdomadaire atteint")],
+    };
+  }
+  for (const i of cibles) boisAuSolCG[i] = 0;
+  return {
+    state: {
+      ...state,
+      soil: { ...state.soil, boisAuSolCG },
+      // Il partira en fumée chez celui qui l'achète : c'est un export émetteur,
+      // pas un stockage (§12).
+      carbon: {
+        ...state.carbon,
+        exportedEnergyCumKgC: state.carbon.exportedEnergyCumKgC + carboneKgC,
+      },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur + volumeM3 * WOOD_PRICE_EUR_M3 * DECOTE_BOIS_MORT,
         hoursUsedWeek: state.economy.hoursUsedWeek + hours,
         hoursUsedYear: state.economy.hoursUsedYear + hours,
       },
@@ -1476,6 +1572,8 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyChauler(state, action);
     case "faucher":
       return applyFaucher(state, action);
+    case "ramasserBoisMort":
+      return applyRamasserBoisMort(state, action);
     case "eclaircir": {
       const treeIds = choisirTigesAEclaircir(state, action);
       if (treeIds.length === 0) {

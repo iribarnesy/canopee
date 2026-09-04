@@ -31,20 +31,26 @@
  *
  * Et l'automne se joue en DEUX temps, qu'on distingue ici : la feuille jaunit
  * d'abord — la chlorophylle se démonte, l'azote est rapatrié — puis elle
- * tombe, deux à trois semaines plus tard. D'où deux grandeurs séparées :
- * `partFoliaire` dit combien de feuillage reste accroché, `senescenceFoliaire`
- * dans quel état il est, et `partFoliaireActive` — le produit des deux — ce qui
- * travaille encore.
+ * tombe, deux à trois semaines plus tard.
  *
- * *Ce que la troisième ne commande pas encore* : la croissance et la
- * transpiration passent toujours par `seasonFactor` (un seuil thermique), donc
- * un houppier doré ou un caduc nu de janvier doux produit et puise encore.
- * Brancher `partFoliaireActive` à leur place suppose de recalibrer
- * `GROWING_WEEKS` et `pousseMaxMAn`, qui ont été calés sur cette saison-là.
- * Mesuré, sans recalibrage : la croissance baisse d'environ 5 % et deux seuils
- * écologiques calibrés se déplacent, sans que la sortie se rapproche du
- * terrain. Voir docs/realisme.md, « la saison de végétation est encore
- * thermique ».
+ * D'où TROIS parts foliaires, qu'il faut tenir séparées :
+ *
+ *  - `partFoliaireOmbrageante` : ce qui intercepte la lumière, y compris les
+ *    feuilles mortes qu'un marcescent garde accrochées. C'est Beer-Lambert.
+ *  - `partFoliaireActive` : le feuillage vivant déployé. C'est lui qui commande
+ *    la croissance et la transpiration (tick.ts), en produit avec un facteur
+ *    thermique qui ne porte plus que la vitesse du métabolisme.
+ *  - `partFoliaireAssimilante` : le vivant ENCORE VERT, soit le précédent moins
+ *    ce que `senescenceFoliaire` a jauni.
+ *
+ * *Ce que la troisième ne commande pas encore* : la croissance. Un houppier
+ * entièrement doré d'octobre produit donc toujours. Brancher l'assimilante à
+ * la place de l'active suppose de recalibrer `GROWING_WEEKS` et `pousseMaxMAn`
+ * une seconde fois — mesuré avant que le premier recalibrage n'ait eu lieu :
+ * la croissance baissait d'environ 5 % et deux seuils écologiques calibrés se
+ * déplaçaient, sans que la sortie se rapproche du terrain. À remesurer sur la
+ * calibration actuelle. Voir docs/realisme.md, « le houppier doré produit
+ * encore ».
  *
  * Enfin, le BESOIN DE FROID. Un bourgeon n'est pas une graine qu'on chauffe :
  * il sort de dormance en accumulant d'abord des semaines fraîches, et ce n'est
@@ -57,6 +63,26 @@
  * hêtre débourre quand même plus tôt, simplement moins tôt qu'il ne l'aurait
  * fait sans dormance. Le renversement complet ne s'observe que là où l'hiver
  * est déjà doux.
+ *
+ * Enfin la MARCESCENCE, qui oblige à distinguer deux feuillages là où le moteur
+ * n'en comptait qu'un. Le charme garde tout l'hiver ses feuilles MORTES,
+ * attachées jusqu'à ce que les bourgeons les poussent en avril. Elles font
+ * encore de l'ombre, mais elles ne photosynthétisent plus. Confondre ce cas
+ * avec le troène SEMI-PERSISTANT — qui, lui, garde des feuilles VIVANTES —
+ * reviendrait à faire pousser un charme en janvier ; le confondre avec un
+ * caduc ordinaire reviendrait à éclairer son sous-étage tout l'hiver, alors
+ * qu'un taillis de charme est notoirement sombre en février.
+ *
+ * D'où deux parts foliaires : celle qui TRAVAILLE (`partFoliaireActive`, le
+ * feuillage vivant, seul à compter pour la croissance et la litière) et celle
+ * qui OMBRE (`partFoliaireOmbrageante`, feuilles mortes comprises, seule à
+ * entrer dans Beer-Lambert). Elles ne se séparent que chez les marcescents.
+ *
+ * Deux limites assumées. Le retour de litière d'un marcescent suit encore la
+ * part active, donc l'automne, alors que ses feuilles ne tombent qu'au
+ * débourrement suivant. Et l'abri au vent (light.ts) ne regarde aucun
+ * feuillage, pas même celui des caducs : la marcescence n'y change donc rien
+ * pour l'instant.
  */
 
 import type { EspeceV0 } from "./especes";
@@ -135,14 +161,16 @@ export function debourrementExigeDJ(espece: EspeceV0, semainesDeFroid: number): 
 }
 
 /**
- * Part du feuillage déployé ∈ [0,1] pour une espèce donnée.
+ * Part du feuillage VIVANT déployé ∈ [0,1] pour une espèce donnée : celui qui
+ * assimile, et lui seul. C'est la part qui commande la croissance et le retour
+ * de litière — les feuilles marcescentes n'y entrent pas, elles sont mortes.
  *
  * `ddYearBase5` est le cumul de degrés-jours depuis le 1ᵉʳ janvier,
  * `dureeJourH` la durée du jour de la semaine, `automne` true après le
  * solstice d'été (c'est le raccourcissement qui déclenche, pas la durée seule :
  * onze heures de jour en mars ne veulent pas dire la même chose qu'en octobre).
  */
-export function partFoliaire(
+export function partFoliaireActive(
   espece: EspeceV0,
   ddYearBase5: number,
   dureeJourH: number,
@@ -153,9 +181,14 @@ export function partFoliaire(
   // Les sempervirents gardent leur feuillage : ni débourrement ni chute.
   if (!espece.lumiere.caduc) return 1;
 
+  // Les SEMI-PERSISTANTS gardent une partie de leur feuillage : ils ne se
+  // dénudent jamais tout à fait. C'est un plancher, pas un régime à part.
+  const plancher = espece.lumiere.retentionHivernale ?? 0;
+
   if (automne) {
     if (dureeJourH > SEUIL_SENESCENCE_H) return 1;
-    return Math.max(0, 1 - semainesDepuisSenescence / ETALEMENT_CHUTE_SEMAINES);
+    const tombe = 1 - semainesDepuisSenescence / ETALEMENT_CHUTE_SEMAINES;
+    return Math.max(plancher, Math.min(1, tombe));
   }
 
   const pheno = espece.phenologie;
@@ -165,7 +198,48 @@ export function partFoliaire(
   const forcage = Math.min(1, Math.max(0, (ddYearBase5 - exige) / ETALEMENT_DEBOURREMENT_DJ));
   // Porte photopériodique : tant que le jour est trop court, rien ne part.
   const porte = Math.min(1, Math.max(0, (dureeJourH - pheno.seuilJourH) / LARGEUR_PORTE_H));
-  return Math.min(forcage, porte);
+  // Le plancher vaut au printemps comme à l'automne, et c'est tout l'intérêt :
+  // les feuilles qu'un semi-persistant a gardées en décembre sont encore là en
+  // mars. Sans cette ligne il se dénudait à la Saint-Sylvestre pour reverdir au
+  // débourrement — soit exactement le contraire d'un semi-persistant.
+  return Math.max(plancher, Math.min(forcage, porte));
+}
+
+/**
+ * Ce qu'une feuille morte intercepte, rapporté à une feuille verte. Brunie,
+ * enroulée, elle laisse passer davantage, et le houppier s'est éclairci de
+ * toutes celles que le vent a emportées *(à calibrer)*.
+ */
+export const OPACITE_FEUILLE_MORTE = 0.55;
+
+/**
+ * Part du feuillage qui INTERCEPTE la lumière ∈ [0,1] : le feuillage vivant,
+ * plus les feuilles mortes qu'un marcescent garde attachées. C'est cette
+ * part-là qui entre dans Beer-Lambert (light.ts), et elle seule.
+ */
+export function partFoliaireOmbrageante(
+  espece: EspeceV0,
+  ddYearBase5: number,
+  dureeJourH: number,
+  automne: boolean,
+  semainesDepuisSenescence: number,
+  semainesDeFroid = Number.POSITIVE_INFINITY,
+): number {
+  const active = partFoliaireActive(
+    espece,
+    ddYearBase5,
+    dureeJourH,
+    automne,
+    semainesDepuisSenescence,
+    semainesDeFroid,
+  );
+  const marcescence = espece.lumiere.marcescence ?? 0;
+  if (marcescence <= 0) return active;
+  // Les feuilles mortes occupent la place que le feuillage vivant libère :
+  // elles s'installent à mesure qu'il meurt à l'automne et s'en vont à mesure
+  // que les bourgeons les poussent au printemps. Un complément, donc, pas une
+  // somme — sinon un charme d'octobre ombrerait plus qu'un charme de juillet.
+  return active + OPACITE_FEUILLE_MORTE * marcescence * (1 - active);
 }
 
 /**
@@ -173,18 +247,19 @@ export function partFoliaire(
  * 0 = vertes et fonctionnelles, 1 = entièrement jaunies, vidées de leur azote
  * et hors service.
  *
- * C'est la grandeur qui manquait. `partFoliaire` dit COMBIEN de feuillage
- * reste ; celle-ci dit DANS QUEL ÉTAT il est. Les deux sont indépendantes : à
- * la mi-octobre un chêne peut porter les trois quarts de son feuillage (part
- * foliaire haute) et n'en tirer plus rien (sénescence à 1).
+ * C'est la grandeur qui manquait. `partFoliaireActive` dit COMBIEN de feuillage
+ * vivant reste ; celle-ci dit DANS QUEL ÉTAT il est. Les deux sont
+ * indépendantes : à la mi-octobre un chêne peut porter les trois quarts de son
+ * feuillage et n'en tirer plus rien (sénescence à 1).
  *
  * Un sempervirent ne sénesce pas de façon saisonnière : ses aiguilles se
  * renouvellent sur plusieurs années, sans automne. Il reste donc à 0.
  *
- * *Non modélisée* : la MARCESCENCE — le chêne et le charme gardent leurs
- * feuilles mortes et brunes une partie de l'hiver, au lieu de les lâcher. Il
- * faudrait un champ par espèce ; la sénescence, elle, va au bout et la feuille
- * tombe.
+ * Ne pas confondre avec la MARCESCENCE (`OPACITE_FEUILLE_MORTE`,
+ * `partFoliaireOmbrageante`), qui est l'étape d'après : la sénescence vide la
+ * feuille de son azote et la fait jaunir, la marcescence dit qu'elle reste
+ * accrochée après sa mort. Un charme fait les deux, un bouleau seulement la
+ * première.
  */
 export function senescenceFoliaire(
   espece: EspeceV0,
@@ -198,14 +273,24 @@ export function senescenceFoliaire(
 }
 
 /**
- * Feuillage réellement ACTIF ∈ [0,1] : ce qui est accroché **et** encore vert.
+ * Feuillage ASSIMILANT ∈ [0,1] : ce qui est déployé, vivant **et** encore vert.
  *
- * C'est cette part-là qui assimile, donc qui fait pousser l'arbre et le fait
- * transpirer — pas la part accrochée. Sans cette distinction, un arbre au
- * houppier doré continuait de croître et de puiser dans le sol tant que la
- * température le permettait, ce qui arrive tous les automnes doux.
+ * Trois parts foliaires cohabitent maintenant, et il faut les tenir distinctes
+ * — c'est la seule difficulté de ce module :
+ *
+ * - `partFoliaireOmbrageante` : ce qui intercepte la lumière, feuilles mortes
+ *   marcescentes comprises. La plus grande des trois. C'est Beer-Lambert.
+ * - `partFoliaireActive` : le feuillage vivant déployé, marcescence exclue.
+ * - `partFoliaireAssimilante` : celui-ci, la part vivante **et pas encore
+ *   jaunie**. La plus petite. Un houppier doré d'octobre est déployé, vivant,
+ *   et ne produit plus rien.
+ *
+ * **Elle n'est PAS branchée sur la croissance**, et c'est délibéré : mesuré, le
+ * branchement déplace des seuils écologiques calibrés (`docs/realisme.md`).
+ * Elle existe pour le rendu — colorer un houppier demande de savoir s'il
+ * travaille encore — et pour le jour où la calibration sera refaite.
  */
-export function partFoliaireActive(
+export function partFoliaireAssimilante(
   espece: EspeceV0,
   ddYearBase5: number,
   dureeJourH: number,
@@ -213,7 +298,7 @@ export function partFoliaireActive(
   semainesDepuisSenescence: number,
   semainesDeFroid = Number.POSITIVE_INFINITY,
 ): number {
-  const accrochee = partFoliaire(
+  const vivante = partFoliaireActive(
     espece,
     ddYearBase5,
     dureeJourH,
@@ -222,7 +307,7 @@ export function partFoliaireActive(
     semainesDeFroid,
   );
   const jaunie = senescenceFoliaire(espece, dureeJourH, automne, semainesDepuisSenescence);
-  return accrochee * (1 - jaunie);
+  return vivante * (1 - jaunie);
 }
 
 /**
@@ -280,9 +365,21 @@ export function contextePhenologique(
   };
 }
 
-/** `partFoliaire` prise dans son contexte : la forme qu'appellent le tick et le rendu. */
-export function partFoliaireDans(espece: EspeceV0, ctx: ContextePhenologique): number {
-  return partFoliaire(
+/** Le feuillage qui TRAVAILLE, pris dans son contexte : la forme qu'appellent le tick et le rendu. */
+export function partFoliaireActiveDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return partFoliaireActive(
+    espece,
+    ctx.ddYearBase5,
+    ctx.jourH,
+    ctx.automne,
+    ctx.semainesDepuisSenescence,
+    ctx.semainesDeFroid,
+  );
+}
+
+/** Le feuillage qui OMBRE, pris dans son contexte : ce que la lumière traverse. */
+export function partFoliaireOmbrageanteDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return partFoliaireOmbrageante(
     espece,
     ctx.ddYearBase5,
     ctx.jourH,
@@ -311,12 +408,12 @@ export function senescenceDans(espece: EspeceV0, ctx: ContextePhenologique): num
 }
 
 /**
- * `partFoliaireActive` prise dans son contexte : ce qui est accroché ET vert,
+ * `partFoliaireAssimilante` prise dans son contexte : déployé, vivant ET vert,
  * donc ce qui travaille. C'est la forme que le rendu appellera pour savoir si
  * un arbre est en pleine production ou déjà à l'arrêt.
  */
-export function partFoliaireActiveDans(espece: EspeceV0, ctx: ContextePhenologique): number {
-  return partFoliaireActive(
+export function partFoliaireAssimilanteDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return partFoliaireAssimilante(
     espece,
     ctx.ddYearBase5,
     ctx.jourH,
