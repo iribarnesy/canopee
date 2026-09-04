@@ -21,7 +21,13 @@ const WEATHER = syntheticYear(LIMON_RICHE.climat);
 function totalStockKgC(state: GameState): number {
   let soilG = 0;
   for (let i = 0; i < state.soil.litterCG.length; i++) {
-    soilG += (state.soil.litterCG[i] ?? 0) + (state.soil.humusCG[i] ?? 0);
+    soilG +=
+      (state.soil.litterCG[i] ?? 0) +
+      (state.soil.humusCG[i] ?? 0) +
+      // Le bois couché est un stock à part entière : sans cette ligne, une
+      // chandelle qui s'abat ferait apparaître du carbone venu de nulle part
+      // (boisMort.ts).
+      (state.soil.boisAuSolCG[i] ?? 0);
   }
   return livingCarbonKg(state.trees) + state.carbon.deadWoodKgC + soilG / 1000;
 }

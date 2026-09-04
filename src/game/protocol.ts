@@ -144,6 +144,12 @@ export interface Snapshot {
   trees: SnapshotTree[];
   soilWater: Float32Array;
   soilPh: Float32Array;
+  /**
+   * Bois mort COUCHÉ, g C par m². Ce que les chandelles abattues ont laissé là
+   * où elles sont tombées (boisMort.ts) : le rendu peut y poser des troncs, et
+   * ce sont les mêmes cellules qui font de l'humus et retiennent la terre.
+   */
+  soilBoisAuSol: Float32Array;
   soilN: Float32Array;
   /** couverture herbacée par cellule ∈ [0,1] */
   soilHerbe: Float32Array;

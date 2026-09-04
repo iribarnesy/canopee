@@ -140,7 +140,15 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     co2Ppm: e.weather.co2Ppm ?? CO2_ACTUEL_PPM,
     stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
     pressionGibier: state.pressionGibier,
-    biodiversite: indiceBiodiversite(state.trees, state.carbon.deadWoodKgC, areaHa),
+    // Le bois COUCHÉ compte autant que le debout, et pas pour les mêmes
+    // bêtes : les pics veulent du sur-pied, les carabes et les salamandres du
+    // par-terre. L'indice ne fait pour l'instant pas la différence, mais il
+    // serait faux d'oublier la moitié du bois mort d'une vieille parcelle.
+    biodiversite: indiceBiodiversite(
+      state.trees,
+      state.carbon.deadWoodKgC + somme(state.soil.boisAuSolCG) / 1000,
+      areaHa,
+    ),
     fluxes: e.fluxes,
     // Le calendrier foliaire se RECALCULE à l'identique : mêmes entrées que
     // celles du tick, donc mêmes couleurs de saison de part et d'autre.
@@ -157,6 +165,8 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // semis et l'évaporation.
     soilWater: eauDeSurface(state, nH),
     soilPh: Float32Array.from(state.soil.ph),
+    /** bois mort couché, g C/m² : de quoi dessiner les troncs au sol */
+    soilBoisAuSol: Float32Array.from(state.soil.boisAuSolCG),
     soilN: Float32Array.from(state.soil.mineralNG),
     soilHerbe: Float32Array.from(state.soil.herbeCouverture),
     // La biomasse ne se déduit pas de la couverture : elle reste sur pied
@@ -205,10 +215,18 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
  * pour qu'un champ ajouté d'un côté ne s'oublie pas de l'autre : oublié, il se
  * paie en une copie complète par semaine simulée.
  */
+/** Somme d'un champ par cellule — assez fréquent pour ne pas se réécrire. */
+function somme(champ: readonly number[]): number {
+  let total = 0;
+  for (const v of champ) total += v;
+  return total;
+}
+
 export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
   const buffers: ArrayBufferLike[] = [
     s.soilWater.buffer,
     s.soilPh.buffer,
+    s.soilBoisAuSol.buffer,
     s.soilN.buffer,
     s.soilHerbe.buffer,
     s.soilHerbeBiomasse.buffer,

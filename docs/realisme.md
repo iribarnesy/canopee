@@ -593,6 +593,49 @@ Le transfert de carbone a lieu à la MORT et une seule fois : la chandelle n'est
 ensuite qu'un objet de jeu et d'habitat. C'est ce qui a permis d'ajouter le
 mécanisme sans toucher aux bilans.
 
+### Et quand elle tombe : le bois couché
+
+La chandelle finissait par quitter la parcelle sans rien laisser, son bois
+dissous dans un pool global indifférent à l'endroit où l'arbre avait vécu.
+C'est deux fois faux. Un tronc s'abat **quelque part**, dans une direction ; et
+ce qu'il devient — humus, abri, obstacle à l'eau, écrasement de ce qui poussait
+dessous — se joue sur les quelques mètres carrés qu'il recouvre, pas sur la
+parcelle entière.
+
+Le bois mort **au sol** est désormais un stock par cellule, distinct du bois
+debout, parce que ce sont deux objets différents :
+
+| | debout | couché |
+|---|---|---|
+| décomposition | 5 %/an | **9 %/an** — il touche la terre et reste humide |
+| humus | dilué sur la parcelle | **sur place**, sous le tronc |
+| faune | pics, puis tout ce qui occupe leurs loges | carabes, salamandres, saproxyliques du sol |
+| sol | rien | protège la terre sous lui, comme un paillage |
+
+La direction de chute suit l'aval, d'autant plus franchement que la pente est
+raide : au-delà de 30 %, la gravité tranche ; à plat, l'arbre tombe où son
+défaut le porte. Une seule formule, resserrée par la pente, plutôt qu'un cas
+« pente » et un cas « plat » — et le test compare deux nuages de deux cents
+tirages, parce qu'une chute unique ne prouverait rien.
+
+Ce qui poussait dessous casse selon une règle de masse : **ce qui reçoit plus
+lourd que soi casse**. Un semis disparaît sous n'importe quel tronc, un arbre
+fait encaisse, et aucun seuil par espèce n'est écrit nulle part — la masse des
+deux protagonistes se lit déjà dans leur carbone.
+
+*Approximation assumée* : le pool des morts debout ne sait pas quel bois
+appartient à quel arbre. Ce qu'une chandelle dépose en tombant est donc
+**estimé** par sa décroissance depuis sa mort, borné au pool restant. La borne
+garantit qu'aucun carbone n'est créé ; en revanche, si le pool a été entamé
+ailleurs, la chute dépose moins qu'elle ne le devrait. Le test de conservation
+compte maintenant le bois couché parmi les stocks, sans quoi une chute aurait
+fait apparaître du carbone venu de nulle part.
+
+*Limite qui reste* : un tronc couché en travers d'un thalweg devrait freiner
+l'eau et piéger le sédiment. Il protège aujourd'hui la terre **sous lui** —
+c'est déjà un effet reconnu du bois mort — mais il ne ralentit pas encore le
+ruissellement qui passe à côté.
+
 ## La variabilité individuelle : la fin des clones
 
 Deux arbres de même essence étaient des clones parfaits : à conditions égales

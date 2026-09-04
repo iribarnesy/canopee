@@ -27,9 +27,11 @@ export type CauseMort =
   | "ravageurs"
   | "labour"
   | "maladie"
-  | "frottis";
+  | "frottis"
+  | "ecrasement";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
+  ecrasement: "écrasé par la chute d'un arbre mort",
   secheresse: "de sécheresse",
   engorgement: "asphyxiés par l'eau",
   ombre: "étouffés par l'ombre",
