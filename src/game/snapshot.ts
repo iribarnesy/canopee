@@ -159,6 +159,17 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     soilPh: Float32Array.from(state.soil.ph),
     soilN: Float32Array.from(state.soil.mineralNG),
     soilHerbe: Float32Array.from(state.soil.herbeCouverture),
+    // La biomasse ne se déduit pas de la couverture : elle reste sur pied
+    // quand l'herbe jaunit, et seul le feu, la fauche et la décomposition la
+    // font baisser.
+    soilHerbeBiomasse: Float32Array.from(state.soil.herbeBiomasse),
+    // Les ravageurs par cellule, pas seulement leur moyenne : c'est la tache
+    // de défoliation, et la mort qui la suit, que le rendu doit montrer.
+    soilRavageurs: Float32Array.from(state.soil.ravageurs),
+    // L'érosion est un CUMUL signé porté par l'état, pas un flux de la
+    // semaine : c'est lui qui dit où le sol s'est creusé et où il s'est
+    // rechargé.
+    soilEpaisseurPerdueCm: Float32Array.from(state.soil.epaisseurPerdueCm),
     // La nappe et l'engorgement changent chaque semaine : ils voyagent avec
     // l'instantané, contrairement au champ figé de l'eau libre.
     soilNappeCm: nappeParCellule(state),
@@ -200,6 +211,9 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilPh.buffer,
     s.soilN.buffer,
     s.soilHerbe.buffer,
+    s.soilHerbeBiomasse.buffer,
+    s.soilRavageurs.buffer,
+    s.soilEpaisseurPerdueCm.buffer,
     s.soilNappeCm.buffer,
     s.soilEngorgement.buffer,
     s.soilCloture.buffer,

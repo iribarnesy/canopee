@@ -147,6 +147,26 @@ export interface Snapshot {
   soilN: Float32Array;
   /** couverture herbacée par cellule ∈ [0,1] */
   soilHerbe: Float32Array;
+  /**
+   * Biomasse herbacée par cellule ∈ [0,1] (herbe.ts). Ce n'est pas la
+   * couverture : le foin sur pied jaunit en été alors que la couverture a
+   * déjà chuté, et c'est cette matière-là qui reste à dessiner — et à brûler.
+   */
+  soilHerbeBiomasse: Float32Array;
+  /**
+   * Population de ravageurs par cellule ∈ [0,1] (ravageurs.ts). Seule la
+   * moyenne voyageait (`TickFluxes.ravageurMoyen`), et une moyenne ne se
+   * dessine pas : la défoliation se lit par TACHES, et c'est là que les
+   * arbres finissent par mourir.
+   */
+  soilRavageurs: Float32Array;
+  /**
+   * Épaisseur d'horizon de surface perdue par cellule, cm — NÉGATIVE là où le
+   * sédiment s'est déposé (erosion.ts). Les moyennes de `TickFluxes` disent
+   * combien la parcelle a perdu, jamais où : sans cette carte le rendu ne peut
+   * placer ni les ravines ni les zones d'accumulation.
+   */
+  soilEpaisseurPerdueCm: Float32Array;
   /** profondeur de la nappe sous chaque cellule, cm — elle vit, elle (nappe.ts) */
   soilNappeCm: Float32Array;
   /** engorgement moyen du profil par cellule ∈ [0,1] : ce qui asphyxie les racines */
@@ -207,6 +227,12 @@ export interface StationInfo {
   enEau: boolean[];
   /** profondeur d'équilibre de la nappe, cm */
   nappeEquilibreCm: number;
+  /**
+   * Exposition au vent de la parcelle ∈ [0,1], telle que les bordures la font
+   * (paysage.ts). Elles sont fixées au départ : elle part une fois, avec la
+   * station. C'est ce qui règle le balancement des arbres.
+   */
+  ventExposition: number;
   /** profondeur de la nappe sous chaque cellule, cm — fixe, envoyée une fois */
   nappeCm: Float32Array;
   /**
