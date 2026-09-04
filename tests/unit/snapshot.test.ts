@@ -53,6 +53,7 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     events: [],
     morts: ticked.morts,
     gestes: ticked.gestes,
+    chutes: ticked.chutes,
     incendie: ticked.incendie,
   };
 }
@@ -217,6 +218,40 @@ describe("les grilles de l'instantané", () => {
       .filter(([, v]) => !transferes.has((v as ArrayBufferView).buffer as Transferable))
       .map(([cle]) => cle);
     expect(oublies).toEqual([]);
+  });
+});
+
+describe("les chutes de chandelle", () => {
+  it("voyagent dans l'instantané, avec de quoi coucher le tronc", () => {
+    // Le rendu n'a que l'instantané : `soilBoisAuSol` lui dit où le tronc est
+    // arrivé, mais pas qu'il vient de TOMBER. Sans l'événement, la trouée
+    // n'est qu'un changement d'éclairage entre deux images.
+    const state = etatNeuf();
+    const chute = {
+      id: 42,
+      x: 5.5,
+      y: 6.25,
+      especeId: "carpinus_betulus",
+      heightM: 14,
+      directionRad: 1.2,
+      masseKgC: 210,
+      empreinte: [
+        { cellule: 6 * STATION.coteM + 5, longueurM: 1 },
+        { cellule: 7 * STATION.coteM + 5, longueurM: 0.5 },
+      ],
+    };
+    const snapshot = construireSnapshot({ ...entrees(state), state, chutes: [chute] });
+    expect(snapshot.chutes).toEqual([chute]);
+    // La direction et l'empreinte survivent au passage : ce sont elles qui
+    // disent dans quel sens basculer et où poser le fût.
+    expect(snapshot.chutes[0]?.directionRad).toBeCloseTo(1.2, 6);
+    expect(snapshot.chutes[0]?.empreinte).toHaveLength(2);
+  });
+
+  it("un instantané sans chute en porte une liste vide, pas `undefined`", () => {
+    const state = etatNeuf();
+    const snapshot = construireSnapshot({ ...entrees(state), state, chutes: [] });
+    expect(snapshot.chutes).toEqual([]);
   });
 });
 

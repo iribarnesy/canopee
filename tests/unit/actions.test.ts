@@ -3,6 +3,8 @@ import {
   applyAction,
   DECOTE_BOIS_MORT,
   DENSITE_BOIS_MORT_KG_M3,
+  estGesteSurArbres,
+  estGesteSurZone,
   fellingHours,
   type GameAction,
   PLANT_HOURS,
@@ -184,8 +186,9 @@ describe("ce que l'action rapporte au rendu", () => {
       critere: "parLeBas",
       devenir: "vendre",
     });
-    expect(r.gestes?.[0]?.type).toBe("eclaircir");
-    expect(r.gestes?.[0]?.ids.length).toBeGreaterThan(0);
+    const geste = r.gestes?.[0];
+    expect(geste?.type).toBe("eclaircir");
+    expect(geste && estGesteSurArbres(geste) ? geste.ids.length : 0).toBeGreaterThan(0);
   });
 
   it("élaguer, étêter, recéper : chacun se dit", () => {
@@ -302,5 +305,78 @@ describe("ramasser le bois mort couché", () => {
     );
     const sans = chargeCombustible([], herbe, litiere, STATION.coteM);
     expect(avec.moyenne).toBeGreaterThan(sans.moyenne);
+  });
+});
+
+/**
+ * Les gestes de ZONE. `GesteVisible` ne savait désigner que des arbres
+ * nommés : toutes les actions de sol étaient donc muettes pour le rendu, et
+ * un tronc ramassé disparaissait d'une image à l'autre — indiscernable de sa
+ * décomposition, qui est un tout autre phénomène et bien plus lente.
+ */
+describe("les gestes qui n'ont pas d'arbre pour cible", () => {
+  function cellulesDe(r: ReturnType<typeof applyAction>, type: string): readonly number[] {
+    const geste = (r.gestes ?? []).filter(estGesteSurZone).find((g) => g.type === type);
+    return geste?.cellules ?? [];
+  }
+
+  it("le chaulage nomme le disque chaulé, aux indices des grilles", () => {
+    const state = createGameState(STATION, rngStateFromSeed(2));
+    const r = applyAction(state, { type: "chauler", week: 0, x: 10, y: 10, rayonM: 3 });
+    const cellules = cellulesDe(r, "chauler");
+    expect(cellules.length).toBeGreaterThan(0);
+    // Mêmes indices que `soilPh` : c'est là que le pH a bougé, et nulle part ailleurs.
+    for (const i of cellules) {
+      expect(r.state.soil.ph[i]).toBeGreaterThan(state.soil.ph[i] ?? 0);
+    }
+    const touchees = new Set(cellules);
+    for (let i = 0; i < state.soil.ph.length; i++) {
+      if (!touchees.has(i)) expect(r.state.soil.ph[i]).toBe(state.soil.ph[i]);
+    }
+  });
+
+  it("le labour et la clôture disent aussi leur zone", () => {
+    const state = createGameState(STATION, rngStateFromSeed(2));
+    const laboure = applyAction(state, { type: "labourer", week: 0, x: 10, y: 10, rayonM: 4 });
+    expect(cellulesDe(laboure, "labourer").length).toBeGreaterThan(0);
+
+    const close = applyAction(state, { type: "cloturer", week: 0, x: 10, y: 10, rayonM: 4 });
+    const cellules = cellulesDe(close, "cloturer");
+    expect(cellules.length).toBeGreaterThan(0);
+    for (const i of cellules) expect(close.state.soil.cloture[i]).toBe(true);
+  });
+
+  it("la fauche ne nomme que ce qu'elle a vraiment coupé", () => {
+    // Une pelouse déjà rase ne se fauche pas : le rendu n'a rien à y montrer.
+    const state = createGameState(STATION, rngStateFromSeed(2));
+    const rase = {
+      ...state,
+      soil: { ...state.soil, herbeCouverture: state.soil.herbeCouverture.map(() => 0) },
+    };
+    const r = applyAction(rase, { type: "faucher", week: 0, x: 10, y: 10, rayonM: 5 });
+    expect(cellulesDe(r, "faucher")).toEqual([]);
+  });
+
+  it("le ramassage nomme les cellules d'où le bois est parti", () => {
+    const state = createGameState(STATION, rngStateFromSeed(2));
+    const cote = STATION.coteM;
+    const avecBois = {
+      ...state,
+      soil: {
+        ...state.soil,
+        boisAuSolCG: state.soil.boisAuSolCG.map((_, i) => (i === 10 * cote + 10 ? 4000 : 0)),
+      },
+    };
+    const r = applyAction(avecBois, {
+      type: "ramasserBoisMort",
+      week: 0,
+      x: 10.5,
+      y: 10.5,
+      rayonM: 3,
+    });
+    // Seule la cellule qui PORTAIT du bois : les voisines vides n'ont rien
+    // perdu, et le rendu n'a pas à les animer.
+    expect(cellulesDe(r, "ramasserBoisMort")).toEqual([10 * cote + 10]);
+    expect(r.state.soil.boisAuSolCG[10 * cote + 10]).toBe(0);
   });
 });
