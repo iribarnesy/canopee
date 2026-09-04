@@ -49,6 +49,7 @@ function arbre(id: number, especeId: string, x: number, y: number, heightM: numb
     rootDepthCm: 80,
     hauteurElagueeM: 0,
     recepages: 0,
+    vigueurIndividuelle: 1,
     pousseTendreM: 0,
     vigueur: 1,
     dommageHydraulique: 0,

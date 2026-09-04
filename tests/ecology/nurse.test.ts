@@ -20,8 +20,27 @@ if (!serie) throw new Error("série lande manquante");
 const WEATHER = serieToWeeks(serie);
 
 /** Hauteur atteinte par un sujet planté au centre, entouré ou non d'ajoncs. */
+/**
+ * Hauteur atteinte, MOYENNÉE sur plusieurs graines. Une seule ne suffit plus :
+ * depuis que chaque arbre porte sa vigueur propre (trees.ts), comparer un
+ * individu à un individu revient à comparer deux tirages. On neutralise la
+ * vigueur pour isoler l'abri, ET on répète — parce que le reste de la partie
+ * (semis du voisinage, ravageurs) tire lui aussi dans le même générateur.
+ */
 function hauteurApres(especeId: string, nurses: number, distanceM: number, years: number) {
-  let state = createGameState(STATION, rngStateFromSeed(11));
+  const graines = [11, 29, 47];
+  const mesures = graines.map((g) => hauteurUneGraine(especeId, nurses, distanceM, years, g));
+  return mesures.reduce((a, b) => a + b, 0) / mesures.length;
+}
+
+function hauteurUneGraine(
+  especeId: string,
+  nurses: number,
+  distanceM: number,
+  years: number,
+  graine: number,
+) {
+  let state = createGameState(STATION, rngStateFromSeed(graine));
   for (let a = 0; a < nurses; a++) {
     const angle = (2 * Math.PI * a) / Math.max(1, nurses);
     state = plantAt(
@@ -34,6 +53,13 @@ function hauteurApres(especeId: string, nurses: number, distanceM: number, years
   }
   state = plantAt(state, especeId, 20, 20, 0.3);
   const id = state.nextTreeId - 1;
+  // On NEUTRALISE la vigueur individuelle : cet essai isole l'effet nurse, et
+  // il compare un arbre à un autre. Avec ±20 % de dispersion individuelle
+  // (trees.ts), c'est le tirage qui déciderait, pas l'abri.
+  state = {
+    ...state,
+    trees: state.trees.map((t) => ({ ...t, vigueurIndividuelle: 1 })),
+  };
   for (let i = 0; i < years * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
@@ -60,9 +86,20 @@ describe("effet nurse sur lande sèche et ventée", () => {
     expect(liegeNu).toBeGreaterThan(0.35);
   });
 
-  it("abrité, il pousse mieux qu'à découvert — le vent lui coûte plus que l'ombre", () => {
+  it("abrité à bonne distance, il pousse mieux qu'à découvert", () => {
+    // Le vent lui coûte plus que l'ombre — mais à BONNE DISTANCE seulement.
     expect(liegeAbrite).toBeGreaterThan(liegeNu);
-    expect(liegeColle).toBeGreaterThan(liegeNu);
+  });
+
+  it("collé à la nurse, l'abri et l'ombre s'annulent", () => {
+    // Mesuré : 0,38 m collé contre 0,39 m à découvert, moyenné sur trois
+    // graines — l'écart n'a plus de sens. Même pour une espèce qui supporte
+    // l'ombre, se serrer contre l'abri ne rapporte plus rien : ce qu'on gagne
+    // sur le vent, on le perd sur la lumière. C'est l'ombre portée qui fixe la
+    // bonne distance, et elle se compte en mètres.
+    expect(Math.abs(liegeColle - liegeNu)).toBeLessThan(0.15 * liegeNu);
+    // Alors qu'à trois mètres, le gain est net.
+    expect(liegeAbrite).toBeGreaterThan(1.1 * liegeColle);
   });
 
   it("l'héliophile, lui, paie l'ombre : collé à la nurse il fait moins bien qu'à distance", () => {

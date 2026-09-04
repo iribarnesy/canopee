@@ -16,7 +16,7 @@ import { getEspece } from "./especes";
 import { crownRadiusM, lightAtPoint, type PartFoliaire } from "./light";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
-import { phFactor, type TreeState } from "./trees";
+import { phFactor, type TreeState, tirerVigueurIndividuelle } from "./trees";
 
 /** distance moyenne de dispersion par le vent, m (exponentielle) */
 const WIND_MEAN_DISTANCE_M = 25;
@@ -173,7 +173,11 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       if (dx * dx + dy * dy < MIN_SPACING_M * MIN_SPACING_M) return;
     }
     couronnesM2 += Math.PI * crownRadiusM(SEEDLING_HEIGHT_M, espece.lumiere.houppierRatio) ** 2;
+    // Un semis naturel a sa vigueur propre, comme un plant de pépinière.
+    const tirageVigueur = tirerVigueurIndividuelle(rng);
+    rng = tirageVigueur.rng;
     newTrees.push({
+      vigueurIndividuelle: tirageVigueur.vigueur,
       id: nextTreeId++,
       especeId,
       x: pos.x,

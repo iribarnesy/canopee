@@ -17,7 +17,7 @@ import { crownRadiusM } from "./light";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import type { GameState } from "./state";
-import { treeNitrogenNeedGWeek } from "./trees";
+import { tirerVigueurIndividuelle, treeNitrogenNeedGWeek } from "./trees";
 
 /** plafond d'heures de travail par UTH et par semaine (docs/regles.md §10) */
 export const WEEK_HOURS_CAP = 60;
@@ -424,6 +424,9 @@ function applyPlanter(
   let nextTreeId = state.nextTreeId;
   let planted = 0;
   let importedKgC = 0;
+  // La vigueur de chaque plant se tire dans le générateur de la partie : deux
+  // parties de même graine plantent donc exactement les mêmes individus.
+  let rng = state.rng;
 
   const heuresParPlant = PLANT_HOURS + (action.avecManchon ? PROTECTION_HEURES : 0);
   const euroParPlant = espece.economie.prixPlantEur + (action.avecManchon ? PROTECTION_EUR : 0);
@@ -452,7 +455,10 @@ function applyPlanter(
       refusals.push(refuse(action.week, "planter", "trop proche d'un arbre vivant (< 1 m)"));
       continue;
     }
+    const tirage = tirerVigueurIndividuelle(rng);
+    rng = tirage.rng;
     trees.push({
+      vigueurIndividuelle: tirage.vigueur,
       id: nextTreeId++,
       especeId: action.especeId,
       x: pos.x,
@@ -485,6 +491,7 @@ function applyPlanter(
       ...state,
       trees,
       nextTreeId,
+      rng,
       carbon: {
         ...state.carbon,
         importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedKgC,

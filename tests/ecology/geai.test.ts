@@ -36,6 +36,7 @@ function parent(especeId: string): TreeState {
     rootDepthCm: 150,
     hauteurElagueeM: 0,
     recepages: 0,
+    vigueurIndividuelle: 1,
     pousseTendreM: 0,
     vigueur: 1,
     dommageHydraulique: 0,

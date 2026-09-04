@@ -36,6 +36,7 @@ const STATION: Station = {
 
 function frene(recepages: number, heightM = 8): TreeState {
   return {
+    vigueurIndividuelle: 1,
     id: 1,
     especeId: "fraxinus_excelsior",
     x: 10,

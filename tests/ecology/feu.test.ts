@@ -52,6 +52,7 @@ function arbre(especeId: string, heightM: number): TreeState {
     dommageHydraulique: 0,
     protege: false,
     recepages: 0,
+    vigueurIndividuelle: 1,
   };
 }
 

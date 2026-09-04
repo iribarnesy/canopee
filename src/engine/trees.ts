@@ -13,6 +13,7 @@
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
+import { type RngState, rngFloat } from "./rng";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
 export type CauseMort =
@@ -97,6 +98,15 @@ export interface TreeState {
    * (`dureeChandelleSemaines`).
    */
   mortSemaine?: number;
+  /**
+   * Vigueur individuelle, autour de 1 : la part d'un arbre qui ne vient ni de
+   * son espèce ni de sa station, mais de lui. Deux semis de même essence
+   * plantés côte à côte le même jour ne font pas le même arbre — génétique,
+   * qualité du plant, hasard des premières racines. C'est cette dispersion qui
+   * crée les dominants et les dominés, donc l'auto-éclaircie et l'éclaircie
+   * par le haut (`tirerVigueurIndividuelle`).
+   */
+  vigueurIndividuelle: number;
   /**
    * Profondeur réellement explorée par les racines, cm. Ce n'est pas une
    * propriété figée : l'arbre INVESTIT vers le bas quand la surface ne suffit
@@ -466,7 +476,13 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     fAge *
     (env.facteurCo2 ?? 1) *
     (1 - tree.heightM / espece.hauteurMaxM);
-  const heightM = tree.heightM + Math.max(0, potentialM) * limitingFactor * stressPenalty;
+  // La vigueur individuelle entre ici, et seulement ici : elle module ce que
+  // l'arbre TIRE de conditions données, pas les conditions elles-mêmes. Deux
+  // voisins ont la même eau et la même lumière ; l'un en fait plus que l'autre,
+  // et c'est ce qui crée les dominants et les dominés.
+  const heightM =
+    tree.heightM +
+    Math.max(0, potentialM) * limitingFactor * stressPenalty * tree.vigueurIndividuelle;
 
   // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.
   let stress = tree.stress;
@@ -521,4 +537,30 @@ export const CHANDELLE_ANS_PAR_DENSITE = 15;
 
 export function dureeChandelleSemaines(espece: EspeceV0): number {
   return Math.round(espece.bois.densite * CHANDELLE_ANS_PAR_DENSITE * 52);
+}
+
+/**
+ * Dispersion de la vigueur individuelle : écart-type relatif. Vingt pour cent
+ * — un arbre sur vingt pousse un tiers plus vite que la moyenne, un autre un
+ * tiers moins — c'est l'ordre de grandeur observé dans une plantation
+ * monoclonale, avant même que la concurrence ne s'en mêle *(à calibrer)*.
+ */
+export const DISPERSION_VIGUEUR = 0.2;
+/** Bornes : ni un arbre deux fois trop vigoureux, ni un plant mort-né. */
+export const VIGUEUR_MIN = 0.55;
+export const VIGUEUR_MAX = 1.45;
+
+/**
+ * Tire la vigueur d'un individu. Deux tirages uniformes moyennés : cela suffit
+ * à faire une cloche, et cela reste déterministe pour une graine donnée.
+ */
+export function tirerVigueurIndividuelle(rng: RngState): { rng: RngState; vigueur: number } {
+  const a = rngFloat(rng);
+  const b = rngFloat(a.state);
+  const centre = (a.value + b.value) / 2;
+  const vigueur = 1 + DISPERSION_VIGUEUR * 2 * (centre - 0.5) * 2;
+  return {
+    rng: b.state,
+    vigueur: Math.min(VIGUEUR_MAX, Math.max(VIGUEUR_MIN, vigueur)),
+  };
 }

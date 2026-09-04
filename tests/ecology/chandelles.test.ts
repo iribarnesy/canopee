@@ -52,6 +52,7 @@ function chandelle(heightM = 18): TreeState {
     dommageHydraulique: 0,
     protege: false,
     recepages: 0,
+    vigueurIndividuelle: 1,
     causeMort: "secheresse",
   } satisfies TreeState & { causeMort: "secheresse" } as TreeState & { mortSemaine: number };
 }

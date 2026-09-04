@@ -21,7 +21,7 @@ import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
 import { ruHorizonMm } from "./soil";
-import type { TreeState } from "./trees";
+import { type TreeState, tirerVigueurIndividuelle } from "./trees";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
@@ -415,7 +415,11 @@ export function plantAt(
   heightM = 0.3,
 ): GameState {
   getEspece(especeId); // valide l'id
+  // Chaque plant a sa vigueur : deux semis plantés côte à côte le même jour ne
+  // font pas le même arbre (trees.ts).
+  const tirage = tirerVigueurIndividuelle(state.rng);
   const tree: TreeState = {
+    vigueurIndividuelle: tirage.vigueur,
     id: state.nextTreeId,
     especeId,
     x,
@@ -436,7 +440,12 @@ export function plantAt(
     dommageHydraulique: 0,
     recepages: 0,
   };
-  return { ...state, trees: [...state.trees, tree], nextTreeId: state.nextTreeId + 1 };
+  return {
+    ...state,
+    trees: [...state.trees, tree],
+    nextTreeId: state.nextTreeId + 1,
+    rng: tirage.rng,
+  };
 }
 
 /**
@@ -456,8 +465,10 @@ export function plantScattered(
   for (let i = 0; i < count; i++) {
     const rx = rngFloat(rng);
     const ry = rngFloat(rx.state);
-    rng = ry.state;
+    const tirage = tirerVigueurIndividuelle(ry.state);
+    rng = tirage.rng;
     trees.push({
+      vigueurIndividuelle: tirage.vigueur,
       id: state.nextTreeId + i,
       especeId,
       x: rx.value * side,
