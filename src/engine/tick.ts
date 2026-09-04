@@ -25,6 +25,7 @@ import {
   DEADWOOD_HUMIFICATION,
   HUMUS_DECAY_PER_YEAR,
   LITTER_HUMIFICATION,
+  racinesPerduesEnRabattant,
   T_HA_TO_G_M2,
   treeAboveCarbonKg,
   treeTotalCarbonKg,
@@ -206,6 +207,8 @@ const RECRUITMENT_WEEK = 14;
 const DEBUT_COMPTAGE_FROID = 37;
 /** Ce qui reste toujours de l'horizon de surface, même décapé, cm. */
 const EPAISSEUR_MINIMALE_CM = 3;
+/** Hauteur du rejet de souche qui repart après un feu, m. */
+const HAUTEUR_REJET_M = 0.4;
 /** Dernière semaine de l'année : le feuillage restant tombe pour de bon. */
 const DERNIERE_SEMAINE = 51;
 /**
@@ -1712,14 +1715,29 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         }
         tues++;
         if (espece.feu.rejetteApresFeu && tree.heightM > 0.6) {
-          // Rejet de souche : l'arbre repart d'en bas, avec ses racines
-          // intactes — c'est ce qui fait des pyrophytes des gagnants du feu.
+          // Rejet de souche : l'arbre repart d'en bas, sur un système
+          // racinaire qui a tenu — c'est ce qui fait des pyrophytes des
+          // gagnants du feu.
           rejets++;
-          // La partie aérienne a brûlé, la souche repart.
-          carboneFeuKgC += treeAboveCarbonKg(espece, tree.heightM);
+          // La partie aérienne a brûlé, la souche repart : ce qui est parti en
+          // fumée, c'est l'aérien MOINS le rejet qui reste debout. L'imputer
+          // entier émettait un carbone que l'arbre porte toujours.
+          carboneFeuKgC +=
+            treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, HAUTEUR_REJET_M);
+          // Elle ne porte plus pour autant les racines d'un arbre de dix
+          // mètres : l'excédent meurt et se décompose sur place (carbon.ts).
+          // Sans ce versement, le feu ferait DISPARAÎTRE ce carbone.
+          //
+          // Réservé aux VIVANTS : cette branche est aussi empruntée par les
+          // chandelles, dont le bois est déjà au pool depuis leur mort. Leur
+          // verser des racines en plus créerait du carbone. Qu'un tronc mort
+          // « rejette » est une autre affaire, et pas la mienne ici.
+          if (tree.alive) {
+            deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, HAUTEUR_REJET_M);
+          }
           apresFeu.push({
             ...tree,
-            heightM: 0.4,
+            heightM: HAUTEUR_REJET_M,
             stress: 0,
             fruitsKg: 0,
             fruitProgress: 0,

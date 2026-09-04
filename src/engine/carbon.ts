@@ -62,6 +62,41 @@ export function treeTotalCarbonKg(espece: EspeceV0, heightM: number): number {
   return treeAboveCarbonKg(espece, heightM) * (1 + ROOT_SHOOT_RATIO);
 }
 
+/**
+ * Carbone RACINAIRE d'un arbre, kg C.
+ *
+ * Il se déduit de l'aérien par un rapport fixe, donc RABATTRE un arbre lui
+ * retire des racines sur le papier. C'est une simplification qu'il faut
+ * connaître : sur le terrain, la souche d'un taillis garde son système
+ * racinaire — c'est même ce qui fait la vigueur du rejet. Tant que le modèle
+ * déduit les racines de la hauteur, la seule comptabilité honnête est de
+ * verser la part perdue au bois mort (`racinesPerduesEnRabattant`) plutôt que
+ * de la laisser disparaître.
+ */
+export function treeRootCarbonKg(espece: EspeceV0, heightM: number): number {
+  return treeAboveCarbonKg(espece, heightM) * ROOT_SHOOT_RATIO;
+}
+
+/**
+ * Carbone racinaire qu'un arbre RABATTU cesse de porter, kg C — recépage,
+ * étêtage, rejet après feu. C'est du bois mort qui reste dans le sol : il ne
+ * s'exporte pas, il ne s'émet pas, il se décompose sur place.
+ *
+ * Sans ce versement, un charme de douze mètres recépé fait disparaître deux
+ * cent trente kilos de carbone de la comptabilité, et la conservation est
+ * fausse d'autant.
+ */
+export function racinesPerduesEnRabattant(
+  espece: EspeceV0,
+  hauteurAvantM: number,
+  hauteurApresM: number,
+): number {
+  return Math.max(
+    0,
+    treeRootCarbonKg(espece, hauteurAvantM) - treeRootCarbonKg(espece, hauteurApresM),
+  );
+}
+
 /** Pools et compteurs cumulés de la partie, kg C à l'échelle de la parcelle. */
 export interface CarbonState {
   /** bois mort au sol/debout (troncs des morts, souches des coupés), kg C */
