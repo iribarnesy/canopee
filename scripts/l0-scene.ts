@@ -24,6 +24,7 @@ import { serieMeteoPour } from "../src/data/meteo";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
+import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
 import { FRICHE_LIMON } from "../src/engine/stations";
@@ -92,6 +93,30 @@ function recensement(an: number, fichier: string, trees: ArbreScene[]): string {
   return lignes.join("\n");
 }
 
+/**
+ * Le SOL de la même scène, ajouté pour le lot L1.
+ *
+ * Le premier jet ne figeait que les arbres, parce que le banc de L0 ne
+ * dessinait le sol qu'en carte d'humidité. Le lot L1 lui donne sa vraie
+ * palette — herbe, biomasse sur pied, litière — et il faut donc que ces
+ * grilles voyagent aussi, sinon on regarde un sol inventé.
+ *
+ * Les valeurs sont arrondies : trois décimales suffisent pour huit paliers de
+ * quantification, et le fichier reste lisible.
+ */
+function figerLeSol(state: GameState, station: Station) {
+  const arrondi = (a: readonly number[], d = 3) => Array.from(a, (v) => Number(v.toFixed(d)));
+  const dims = { widthM: station.coteM, heightM: station.coteM };
+  return {
+    ruMm: station.ruMm,
+    altitudesM: arrondi(altitudeParCellule(station.relief, dims), 2),
+    waterMm: arrondi(state.soil.waterMm, 2),
+    herbeCouverture: arrondi(state.soil.herbeCouverture),
+    herbeBiomasse: arrondi(state.soil.herbeBiomasse),
+    litiereCG: arrondi(state.soil.litterCG, 1),
+  };
+}
+
 function main() {
   // 1 ha au lieu des 50 × 50 m de la station de test : c'est la taille du
   // pire cas annoncé par l'inventaire.
@@ -124,7 +149,10 @@ function main() {
     if (!aEcrire.has(an)) continue;
     const trees = figer(state);
     const fichier = `${DOSSIER}/scene-an${an}.json`;
-    writeFileSync(fichier, `${JSON.stringify({ coteM: COTE_M, week: an * 52, trees })}\n`);
+    writeFileSync(
+      fichier,
+      `${JSON.stringify({ coteM: COTE_M, week: an * 52, trees, sol: figerLeSol(state, station) })}\n`,
+    );
     rapports.push(recensement(an, fichier, trees));
   }
   console.log(

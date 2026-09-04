@@ -14,8 +14,16 @@ import { getEspece } from "./especes";
 import type { TreeState } from "./trees";
 
 const BEER_LAMBERT_K = 0.5;
-/** Décalage de l'ombre vers le nord, en fraction de la hauteur (moyenne annuelle, lat ~45°). */
-const SHADOW_NORTH_OFFSET = 0.4;
+/**
+ * Décalage de l'ombre vers le nord, en fraction de la hauteur (moyenne
+ * annuelle, lat ~45°).
+ *
+ * Exporté parce que le RENDU le lit : une ombre dessinée dans une autre
+ * direction que celle où le moteur la calcule mentirait sur qui ombrage qui,
+ * et c'est précisément ce que le §0 de `docs/interface-visuelle.md` interdit.
+ * Le soleil est donc au sud à l'écran comme dans le modèle.
+ */
+export const SHADOW_NORTH_OFFSET = 0.4;
 const BUCKET_M = 12;
 /**
  * Extinction maximale (saturation douce) : les couronnes superposées se
