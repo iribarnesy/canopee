@@ -137,12 +137,12 @@ describe("les auxiliaires jugent le voisinage, pas le mètre carré", () => {
 });
 
 describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
-  function peuplement(especes: string[], focal: string, ans: number) {
+  function peuplement(especes: string[], focal: string, ans: number, graine = 4) {
     const station: Station = { ...LIMON_RICHE.station, coteM: 40, voisinage: [], gibierParHa: 0 };
     const serie = serieMeteoPour("limon-riche");
     if (!serie) throw new Error("série manquante");
     const weather = serieToWeeks(serie);
-    let state = createGameState(station, rngStateFromSeed(4));
+    let state = createGameState(station, rngStateFromSeed(graine));
     for (let i = 0; i < 144; i++) {
       const esp = especes[i % especes.length];
       if (!esp) throw new Error("espèce manquante");
@@ -162,8 +162,22 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
     return { tauxMortalite: tuesParRavageurs / plantes, pressionMax };
   }
 
-  const pur = peuplement(["alnus_glutinosa"], "alnus_glutinosa", 40);
-  const mixte = peuplement(
+  /**
+   * Moyenne sur trois graines. Une seule partie ne suffit pas : la vigueur
+   * individuelle et la loterie des chandelles qui s'abattent font bouger le
+   * compte d'une graine à l'autre, et c'est l'écart entre les deux
+   * peuplements — pas sa troisième décimale — qui est le résultat.
+   */
+  function moyenneSurGraines(especes: string[], focal: string, ans: number) {
+    const runs = [4, 17, 29].map((g) => peuplement(especes, focal, ans, g));
+    return {
+      tauxMortalite: runs.reduce((s, r) => s + r.tauxMortalite, 0) / runs.length,
+      pressionMax: runs.reduce((s, r) => s + r.pressionMax, 0) / runs.length,
+    };
+  }
+
+  const pur = moyenneSurGraines(["alnus_glutinosa"], "alnus_glutinosa", 40);
+  const mixte = moyenneSurGraines(
     ["alnus_glutinosa", "quercus_pubescens", "betula_pendula", "fagus_sylvatica"],
     "alnus_glutinosa",
     40,

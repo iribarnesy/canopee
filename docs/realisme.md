@@ -827,6 +827,17 @@ un abri pour la faune du sol, et la protection que le tronc offrait à la terre
 sous lui. Le moteur ne tranche pas à sa place ; il fait seulement que les deux
 plateaux existent.
 
+**Le flux aléatoire de la chute est séparé du flux principal**, et c'est une
+leçon plus large que le bois mort. Le hasard du moteur est une suite unique et
+séquentielle : un mécanisme qui y ajoute un seul tirage décale tous les
+suivants. Le jour où les chandelles ont commencé à tirer un angle, trois
+conclusions écologiques du dépôt ont basculé — l'aulnaie décimée par les
+ravageurs, le hêtre qui meurt de soif, les feuillus qui brûlent moins. Aucune
+n'avait changé de nature : elles lisaient un jet de dés particulier. La chute
+tire donc désormais sur une graine dérivée de l'arbre et de la semaine, ce qui
+la garde rejouable sans rebattre les cartes des autres. Et le test des
+ravageurs, lui, moyenne sur trois graines au lieu d'en croire une.
+
 *Limite qui reste* : un tronc couché en travers d'un thalweg devrait freiner
 l'eau et piéger le sédiment. Il protège aujourd'hui la terre **sous lui** —
 c'est déjà un effet reconnu du bois mort — mais il ne ralentit pas encore le
