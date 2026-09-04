@@ -49,6 +49,11 @@ export const SPECIES_COLORS: Record<string, string> = {
   crataegus_monogyna: "#be185d",
   rubus_fruticosus: "#4338ca",
   sambucus_nigra: "#1e40af",
+  // Le sous-étage d'ombre et les bords d'eau.
+  carpinus_betulus: "#15803d",
+  ilex_aquifolium: "#14532d",
+  salix_alba: "#0891b2",
+  cornus_mas: "#ca8a04",
 };
 
 /** Espèces repliées dans « autres » : un gris qui ne prétend à aucune identité. */

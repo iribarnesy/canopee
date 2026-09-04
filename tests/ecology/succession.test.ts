@@ -24,6 +24,7 @@ import { tick } from "../../src/engine/tick";
 const PIONNIERS = new Set([
   "betula_pendula",
   "pinus_sylvestris",
+  "salix_alba",
   "rubus_fruticosus",
   "prunus_spinosa",
   "crataegus_monogyna",

@@ -94,13 +94,22 @@ export function voisinageSemencier(
   repli?: () => readonly string[],
 ): { especeId: string; semisParAn: number }[] {
   if (!compatible) return p.semenciers.map((s) => ({ ...s }));
-  const retenus = p.semenciers.filter((s) => compatible(s.especeId));
-  if (retenus.length > 0) return retenus.map((s) => ({ ...s }));
+  const retenus = p.semenciers.filter((s) => compatible(s.especeId)).map((s) => ({ ...s }));
   const total = p.semenciers.reduce((somme, s) => somme + s.semisParAn, 0);
-  const substituts = (repli?.() ?? []).slice(0, 3);
-  if (substituts.length === 0 || total === 0) return [];
-  const part = Math.max(1, Math.round(total / substituts.length));
-  return substituts.map((especeId) => ({ especeId, semisParAn: part }));
+  const tenu = retenus.reduce((somme, s) => somme + s.semisParAn, 0);
+  // Le voisinage sème AUTANT quel que soit le sol : ce qui change, c'est QUI.
+  // On complète donc avec ce qui pousse là, au lieu de se contenter des rares
+  // rescapés de la liste déclarée. Sans ce complément, il suffisait qu'une
+  // seule espèce tolère le podzol pour qu'un massif forestier landais devienne
+  // une hêtraie de houx pur — le repli ne se déclenchait que si la liste
+  // ressortait entièrement vide.
+  const manquant = total - tenu;
+  if (manquant <= 0) return retenus;
+  const dejaLa = new Set(retenus.map((s) => s.especeId));
+  const substituts = (repli?.() ?? []).filter((id) => !dejaLa.has(id)).slice(0, 3);
+  if (substituts.length === 0) return retenus;
+  const part = Math.max(1, Math.round(manquant / substituts.length));
+  return [...retenus, ...substituts.map((especeId) => ({ especeId, semisParAn: part }))];
 }
 
 /** Exposition au vent : les boisements voisins freinent, le découvert expose. */
@@ -147,6 +156,12 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "rubus_fruticosus", semisParAn: 3 },
       { especeId: "sambucus_nigra", semisParAn: 1 },
       { especeId: "crataegus_monogyna", semisParAn: 1 },
+      // Le sous-étage d'un massif : le charme monte à la canopée, le houx
+      // tient l'ombre en dessous et garde ses feuilles tout l'hiver.
+      { especeId: "carpinus_betulus", semisParAn: 3 },
+      { especeId: "ilex_aquifolium", semisParAn: 2 },
+      // Les fonds humides du massif portent des saules avec les aulnes.
+      { especeId: "salix_alba", semisParAn: 2 },
     ],
   },
   {
@@ -170,6 +185,11 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "crataegus_monogyna", semisParAn: 3 },
       { especeId: "rubus_fruticosus", semisParAn: 3 },
       { especeId: "sambucus_nigra", semisParAn: 2 },
+      // Le charme est l'essence des haies plessées, le cornouiller celle des
+      // talus calcaires, le saule celle des fossés.
+      { especeId: "carpinus_betulus", semisParAn: 2 },
+      { especeId: "cornus_mas", semisParAn: 1 },
+      { especeId: "salix_alba", semisParAn: 2 },
     ],
   },
   {
@@ -237,6 +257,13 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "crataegus_monogyna", semisParAn: 3 },
       { especeId: "rubus_fruticosus", semisParAn: 4 },
       { especeId: "sambucus_nigra", semisParAn: 2 },
+      { especeId: "salix_alba", semisParAn: 2 },
+      { especeId: "carpinus_betulus", semisParAn: 1 },
+      // Le charme est l'essence des haies plessées, le cornouiller celle des
+      // talus calcaires, le saule celle des fossés.
+      { especeId: "carpinus_betulus", semisParAn: 2 },
+      { especeId: "cornus_mas", semisParAn: 1 },
+      { especeId: "salix_alba", semisParAn: 2 },
     ],
   },
 ];

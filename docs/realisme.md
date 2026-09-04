@@ -423,10 +423,19 @@ parcelle. Mesuré sur l'aulnaie de vallée :
 en entier, la nappe remonte de plus d'un mètre. C'est la différence entre
 l'incendie d'une parcelle et celui d'un massif.
 
-*Limite assumée* : le ruissellement d'un fond de vallée saturé en permanence est
-surestimé, l'eau y faisant des allers-retours entre nappe et surface. Le bilan
-boucle — rien ne se crée — mais le chiffre affiché mélange ces circulations
-avec ce qui quitte réellement la parcelle.
+*Une « limite » qui n'en était pas.* On avait noté ici que le ruissellement d'un
+fond de vallée saturé semblait surestimé — 8 700 mm par an, huit fois la pluie —
+en soupçonnant des allers-retours entre nappe et surface. Instrumentation faite,
+le bilan est exact et l'explication est ailleurs : l'essai faisait déverser les
+**6 ha de bassin d'amont** de la station sur une parcelle d'essai réduite à
+30 m, soit 0,09 ha. Deux cents millimètres par semaine arrivent alors du dehors
+et repartent : c'est ce que reçoit réellement une parcelle placée sous un
+bassin soixante fois plus grand qu'elle. À la taille réelle de la station
+(100 m), le même bassin n'apporte que 18 mm par semaine.
+
+La leçon porte sur les ESSAIS, pas sur le moteur : réduire `coteM` sans réduire
+`bassinAmontHa` change la physique de la station. L'interface, elle, affiche
+l'apport d'amont en clair au moment du réglage.
 
 
 ## L'érosion : ce qui part d'un versant
@@ -500,7 +509,31 @@ surface au sol. Un nombre fixe était faux aux deux bouts ; celui-ci donne
 quatre-vingts après auto-éclaircie — les ordres de grandeur réels, sans qu'on
 ait eu à choisir un chiffre par étape.
 
-*Manquent encore* : le cornouiller, les saules arbustifs, le fusain, le troène.
+**Quatre essences de plus, prises dans l'atlas** — et choisies pour ce qu'elles
+comblent, non pour faire nombre :
+
+- le **charme**, sciaphile climacique : le hêtre était jusque-là la SEULE
+  essence d'ombre du moteur, et une forêt n'a jamais un seul candidat au
+  sous-étage. Sur limon en massif, la composition à cent cinquante ans devient
+  une hêtraie-charmaie (hêtre 56 %, charme 29 %), ce qui est le climax du nord
+  de la France ;
+- le **houx**, sempervirent sciaphile : le seul couvert PERMANENT de sous-bois,
+  celui qui abrite et nourrit en janvier sous une hêtraie nue ;
+- le **saule blanc**, pionnier des bords d'eau, qui tolère l'engorgement à 0,95
+  — avec l'aulne, c'est l'essence des ripisylves ;
+- le **cornouiller mâle**, calcicole, qui fleurit en février sur bois nu : la
+  première ressource de l'année pour les pollinisateurs.
+
+*Le fusain et le troène ne figurent pas dans l'atlas* : on ne les a pas
+inventés.
+
+**Un bug que ces ajouts ont révélé.** La substitution des semenciers était
+tout-ou-rien : on ne remplaçait la liste d'un paysage que si elle ressortait
+ENTIÈREMENT vide sur la station. Il a suffi que le houx (pH 4-7) tolère le
+podzol landais pour qu'un massif forestier y devienne une forêt de houx pur,
+les autres essences étant écartées et le repli jamais déclenché. Le voisinage
+sème maintenant autant quel que soit le sol — ce qui change, c'est QUI : on
+garde les espèces qui tiennent et on complète avec celles qui poussent là.
 
 ## Générateur de stations : ce qu'il reste à faire
 

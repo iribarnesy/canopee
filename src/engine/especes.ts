@@ -663,6 +663,134 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     sources: [ATLAS],
   },
   {
+    id: "carpinus_betulus",
+    nom: "Charme",
+    nomLatin: "Carpinus betulus",
+    hauteurMaxM: 25,
+    pousseMaxMAn: 0.4,
+    // Atlas : sciaphile climacique, « haies ». Il comblait un vrai trou — le
+    // hêtre était la seule essence d'ombre du moteur, et une forêt n'a jamais
+    // un seul candidat au sous-étage.
+    eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.35 },
+    ph: [4.5, 8],
+    lumiere: { compensation: 0.03, saturation: 0.4, lai: 3.5, houppierRatio: 0.35, caduc: true },
+    racines: { profondeurMaxCm: 110 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.6, fixateur: false },
+    regeneration: { maturiteAns: 20, longeviteAns: 150, dissemination: "vent", semisParAn: 2 },
+    litiere: { cnRatio: 28 },
+    // Le charme débourre tôt, avant le hêtre et le chêne.
+    phenologie: { debourrementDJ: 130, seuilJourH: 11.5, besoinFroidSemaines: 12 },
+    economie: { prixPlantEur: 3 },
+    // Bois très dur : c'est LE bois de chauffage, et le taillis de charme
+    // repart indéfiniment — d'où sa place dans toutes les haies plessées.
+    bois: { densite: 0.8, prixOeuvreEurM3: 90, rejetteDeSouche: true },
+    exigenceMinerale: 2,
+    mycorhize: "ecto",
+    ravageurs: { sensibilite: 0.3 },
+    gibier: { appetence: 0.55 },
+    feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "ilex_aquifolium",
+    nom: "Houx",
+    nomLatin: "Ilex aquifolium",
+    hauteurMaxM: 8,
+    pousseMaxMAn: 0.15, // l'un des plus lents de l'atlas
+    // Atlas : « persistant », sciaphile climacique. C'est le seul couvert
+    // PERMANENT de sous-bois : en janvier, sous une hêtraie nue, c'est lui qui
+    // abrite et nourrit.
+    eau: { seuilConfortSecheresse: 0.75, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.2 },
+    ph: [4, 7],
+    lumiere: { compensation: 0.02, saturation: 0.35, lai: 3, houppierRatio: 0.4, caduc: false },
+    racines: { profondeurMaxCm: 80 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.4, fixateur: false },
+    regeneration: { maturiteAns: 15, longeviteAns: 200, dissemination: "oiseaux", semisParAn: 1.5 },
+    litiere: { cnRatio: 35 }, // feuille coriace et cireuse : elle met des années
+    phenologie: { debourrementDJ: 200, seuilJourH: 11.5, besoinFroidSemaines: 8 },
+    economie: { prixPlantEur: 7 },
+    bois: { densite: 0.8, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    exigenceMinerale: 1.2,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.2 },
+    // Piquant, mais le chevreuil s'y met quand même en hiver, faute de mieux.
+    gibier: { appetence: 0.3 },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "salix_alba",
+    nom: "Saule blanc",
+    nomLatin: "Salix alba",
+    hauteurMaxM: 20,
+    pousseMaxMAn: 1.2,
+    // Atlas : « bouture facile, pH indifférent », bords d'eau, pionnier. Avec
+    // l'aulne, c'est l'essence des ripisylves — et la seule qui accepte d'avoir
+    // les pieds dans l'eau presque en permanence.
+    eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.6, toleranceEngorgement: 0.95 },
+    ph: [4.5, 8],
+    lumiere: { compensation: 0.18, saturation: 0.8, lai: 2, houppierRatio: 0.45, caduc: true },
+    racines: { profondeurMaxCm: 120 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.8, fixateur: false },
+    // Graines plumeuses, emportées loin par le vent — mais qui ne germent que
+    // sur limon frais et nu, ce que le moteur traduit par sa soif.
+    regeneration: { maturiteAns: 5, longeviteAns: 60, dissemination: "vent", semisParAn: 4 },
+    litiere: { cnRatio: 22 },
+    // Il débourre parmi les tout premiers, avec le bouleau.
+    phenologie: { debourrementDJ: 80, seuilJourH: 10.8, besoinFroidSemaines: 7 },
+    economie: { prixPlantEur: 3 }, // une bouture suffit
+    bois: { densite: 0.4, prixOeuvreEurM3: 60, rejetteDeSouche: true },
+    exigenceMinerale: 2,
+    // L'atlas le donne à double mycorhization ; le moteur ne connaît qu'un
+    // réseau par espèce, on retient l'ectomycorhize.
+    mycorhize: "ecto",
+    ravageurs: { sensibilite: 0.5 },
+    gibier: { appetence: 0.6 },
+    feu: { inflammabilite: 0.3, resistanceEcorce: 0.1, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "cornus_mas",
+    nom: "Cornouiller mâle",
+    nomLatin: "Cornus mas",
+    hauteurMaxM: 6,
+    pousseMaxMAn: 0.25,
+    // Atlas : « calcicole, floraison précoce ». Il fleurit en février, avant
+    // tout le monde — c'est la première ressource de l'année pour les
+    // pollinisateurs, et cela compte dans l'indice de biodiversité.
+    eau: { seuilConfortSecheresse: 0.45, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.1 },
+    ph: [6, 8.5],
+    lumiere: { compensation: 0.06, saturation: 0.5, lai: 2.5, houppierRatio: 0.5, caduc: true },
+    racines: { profondeurMaxCm: 100 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.5, fixateur: false },
+    regeneration: { maturiteAns: 6, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 1 },
+    litiere: { cnRatio: 25 },
+    phenologie: { debourrementDJ: 110, seuilJourH: 11.3, besoinFroidSemaines: 11 },
+    economie: { prixPlantEur: 6 },
+    bois: { densite: 0.9, prixOeuvreEurM3: 0, rejetteDeSouche: true }, // le bois le plus dur d'Europe
+    fruits: {
+      floraisonDJ: 25, // février, sur bois nu : c'est sa signature
+      gelFatalC: -4, // et il l'encaisse, sans quoi il n'existerait pas
+      recolteWeek: 34,
+      fenetreRecolteWeeks: 3,
+      croissanceSem: 20,
+      rendementMaxKg: 6,
+      prixEurKg: 3,
+      recolteHKg: 0.15,
+      autofertile: false,
+    },
+    exigenceMinerale: 1.8,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.25 },
+    gibier: { appetence: 0.35 },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
     id: "ulex_europaeus",
     nom: "Ajonc d'Europe",
     nomLatin: "Ulex europaeus",
