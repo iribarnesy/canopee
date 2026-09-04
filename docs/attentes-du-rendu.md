@@ -1,56 +1,43 @@
 # Ce que le rendu attend du moteur
 
-> Fichier d'échange entre l'agent qui construit la vue isométrique et celui qui
-> tient le moteur. Le rendu écrit ici ce qui lui manque, au fil de ses
-> découvertes ; le moteur relève, discute, livre, et annote.
+> Référence de contrat entre l'agent qui construit la vue isométrique et celui
+> qui tient le moteur. Ce fichier dit ce qui voyage déjà, ce que le rendu peut
+> calculer seul, et ce qui sera discuté plutôt que livré. **Les demandes, elles,
+> ne s'écrivent pas ici : elles s'ouvrent en issue** (voir plus bas).
 
 Le principe est celui de tout le projet : le moteur est l'actif précieux, il
 reste pur et testable, et l'UI ne reçoit que des instantanés (`docs/stack.md`).
 Une conséquence pratique : le rendu ne peut pas aller chercher ce dont il a
-besoin, il faut que ça VOYAGE. D'où ce fichier.
+besoin, il faut que ça VOYAGE. D'où ce contrat.
 
-## Écrire une attente
+## Une demande = une issue
 
-Une entrée par besoin, en titre de niveau 3, la plus récente en bas. Trois
-choses suffisent, et la troisième est la plus importante :
+Le formulaire `.github/ISSUE_TEMPLATE/attente-du-rendu.yml` pose les questions
+utiles. Le titre part avec le préfixe `[attente-rendu]`, ce qui suffit à les
+retrouver même sans label.
 
-```markdown
-### Le nom court du besoin
+Trois champs comptent, et le deuxième est le plus important :
 
-**Ce qu'il me faut** — le champ ou la grandeur, avec son unité et sa maille
-(par arbre ? par cellule ? un scalaire par semaine ?).
+1. **Ce qu'il me faut** — le champ ou la grandeur, avec sa maille (par arbre ?
+   par cellule ? un scalaire par semaine ?) et son unité.
+2. **Ce que ça donne à l'écran** — le visuel précis que ça débloque. Pas « ce
+   serait plus juste » : « sans ça, les onze morts se ressemblent toutes ».
+3. **Ce que j'ai essayé** — si tu as cherché à le recalculer depuis
+   l'instantané et que ça ne marche pas, dis pourquoi. C'est ce qui fait gagner
+   le plus de temps.
 
-**Ce que ça donne à l'écran** — le visuel précis que ça débloque. Pas
-« ce serait plus juste » : « sans ça, les onze morts se ressemblent toutes ».
-
-**Ce que j'ai essayé** — si tu as cherché à le recalculer côté rendu et que ça
-ne marche pas, dis pourquoi. C'est ce qui fait gagner le plus de temps.
-```
-
-Dire aussi si c'est **bloquant** (le rendu ne peut pas démarrer sans) ou
-**souhaitable** (il y a un contournement moche mais viable) : ça décide de
+Plus une mention **bloquant** (le rendu ne peut pas démarrer sans) ou
+**souhaitable** (il y a un contournement moche mais viable) : elle décide de
 l'ordre, et un besoin bloquant passe devant un besoin plus élégant.
 
-## Ce que le moteur répond
+Ensuite : le moteur relève les issues ouvertes, livre ce qui est justifié, et la
+PR qui livre ferme l'issue (`Closes #N`). L'état d'une demande, c'est donc
+l'état de son issue — rien à tenir à jour à la main.
 
-Chaque entrée traitée reçoit une ligne d'annotation, ajoutée par la PR
-elle-même :
-
-```markdown
-> **Traité : PR #12** — `Snapshot.pheno` porte les cinq scalaires ; le rendu
-> appelle `partFoliaireDans(espece, snapshot.pheno)`.
-```
-
-Une demande peut aussi être **discutée** plutôt que livrée — l'annotation le
-dit alors, avec l'alternative :
-
-```markdown
-> **Discuté : PR #12** — pas de part foliaire par arbre : elle se recalcule à
-> l'identique depuis `pheno` et la fiche d'espèce, et un champ par arbre
-> dériverait le jour où la phénologie se raffine.
-```
-
-Les quatre motifs de discussion, pour qu'ils ne soient pas une surprise :
+Une demande peut aussi être **discutée** plutôt que livrée. Dans ce cas la
+réponse va dans le fil de l'issue, avec l'alternative, et l'issue reste ouverte
+tant qu'on n'est pas d'accord. Les quatre motifs, pour qu'ils ne soient jamais
+une surprise :
 
 1. **Ça voyage déjà** — ou ça se déduit en une ligne de ce qui voyage.
 2. **Ça casse le déterminisme** — l'aléa passe par un PRNG seedé, et l'ordre de
@@ -64,9 +51,13 @@ Les quatre motifs de discussion, pour qu'ils ne soient pas une surprise :
 4. **C'est du rendu** — l'interpolation entre deux semaines, le lissage, le
    LOD, le choix des couleurs : le moteur donne des grandeurs, pas des pixels.
 
+Si pour une raison quelconque tu ne peux pas ouvrir d'issue, écris la demande en
+bas de ce fichier sous un titre `### `, pousse-la, et elle sera convertie en
+issue au passage suivant.
+
 ## Ce qui voyage déjà
 
-À vérifier avant d'écrire une entrée — `src/game/protocol.ts` est la référence.
+À vérifier avant d'ouvrir une issue — `src/game/protocol.ts` est la référence.
 
 **Une fois, au lancement** (`StationInfo`) : `altitudesM` (le relief, maille du
 tick), `nappeCm` (champ figé), `enEau`, `eau`, `coteM`, `ruMm`, `phInitial`,
@@ -74,7 +65,8 @@ tick), `nappeCm` (champ figé), `enEau`, `eau`, `coteM`, `ruMm`, `phInitial`,
 
 **À chaque instantané** (`Snapshot`) : la semaine, la météo, l'année civile, le
 CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick, la
-pression de gibier, le stock de BRF, le paysage.
+pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
+(`pheno`).
 
 **Par cellule**, en `Float32Array`/`Uint8Array` transférés : `soilWater`,
 `soilPh`, `soilN`, `soilHerbe`, `soilNappeCm`, `soilEngorgement`, `soilCloture`,
@@ -102,13 +94,9 @@ l'UI.
 
 - **Les arbres sont sérialisés, pas transférés.** Au-delà de ~20 000 arbres il
   faudra passer en tableaux typés parallèles (un `Float32Array` par champ). Si
-  tu vois le coût monter sur une friche en pleine succession, écris-le ici.
+  tu vois le coût monter sur une friche en pleine succession, ouvre une issue.
 - **Le rembobinage n'est pas fait.** Rejouer une période à ×1 après avoir joué à
   ×64 demande un instantané par semaine SIMULÉE quand l'enregistrement est
   actif, au lieu d'un par lot (`startLoop` avale jusqu'à 26 semaines par pas).
   ~280 ko par instantané sur 1 ha, ~15 Mo l'année : tenable, à cadrer avant de
   figer le protocole.
-
-## Les attentes
-
-_(rien pour l'instant — la première entrée va ici)_
