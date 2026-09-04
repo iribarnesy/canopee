@@ -16,12 +16,14 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "types": [
-      "vite/client"
+      "vite/client",
+      "node"
     ],
     "resolveJsonModule": true
   },
   "include": [
     "src",
-    "tests"
+    "tests",
+    "scripts"
   ]
 }
