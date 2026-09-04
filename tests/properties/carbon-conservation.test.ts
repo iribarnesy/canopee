@@ -12,8 +12,8 @@ import { getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, type GameState, plantAt } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
+import { createGameState, type GameState, plantAt, plantScattered } from "../../src/engine/state";
+import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
 
 const STATION = { ...LIMON_RICHE.station, coteM: 50 };
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
@@ -141,6 +141,65 @@ describe("couper une chandelle brûlée passé le délai de récupération", () 
     expect(state.trees.some((t) => t.id === 1)).toBe(false);
     // Ce qui reste au pool, ce sont les racines — pas l'arbre entier.
     expect(state.carbon.deadWoodKgC).toBeLessThan(poolAvantCoupe - exporteALaCoupe + 1e-6);
+    expect(state.carbon.deadWoodKgC).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * L'autre bout du même fil : la chandelle qui REBRÛLE. Son bois sec est le
+ * meilleur combustible de la parcelle (`chargeCombustible`), mais il est déjà
+ * compté au pool de bois mort. Le feu l'émettait sans l'en retirer — et pire,
+ * pour une essence qui rejette de souche, il faisait « repartir » un arbre
+ * mort : 40 charmes morts de 15 m fabriquaient 51 840 kgC en une semaine.
+ */
+describe("un incendie qui emporte des chandelles", () => {
+  // Une lande sèche, sans gibier ni pluie de semis du voisinage : il ne reste
+  // sur la parcelle que les chandelles, et le feu qui finit par passer.
+  const LANDE = { ...LANDE_SECHE.station, coteM: 50, gibierParHa: 0, voisinage: [] };
+  const METEO_SECHE = syntheticYear(LANDE_SECHE.climat);
+
+  it("le bois brûlé sort du pool, et un arbre mort ne rejette pas de souche", () => {
+    let state = createGameState(LANDE, rngStateFromSeed(5));
+    // Le charme rejette de souche : c'est l'essence qui déclenchait la
+    // résurrection d'une chandelle, et donc la création de carbone.
+    state = plantScattered(state, "carpinus_betulus", 40, 15);
+    state = {
+      ...state,
+      trees: state.trees.map((t) => ({ ...t, alive: false, causeMort: "secheresse" })),
+    };
+
+    let feux = 0;
+    let poolAvantFeu = 0;
+    let brulKgC = 0;
+    let chandellesEmportees = 0;
+    for (let i = 0; i < 5 * 52; i++) {
+      const w = METEO_SECHE[i % 52];
+      if (!w) throw new Error("météo manquante");
+      const stockAvant = totalStockKgC(state);
+      const avant = state;
+      const step = advanceWeek(state, w, []);
+      state = step.state;
+      expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
+      if (step.incendie) {
+        feux++;
+        poolAvantFeu = avant.carbon.deadWoodKgC;
+        brulKgC = state.carbon.emittedCumKgC - avant.carbon.emittedCumKgC;
+        chandellesEmportees = avant.trees.length - state.trees.length;
+        // Aucun arbre vivant sur la parcelle : le feu ne tue personne, et
+        // surtout ne fait rejeter aucun mort.
+        expect(step.incendie.arbresTues).toBe(0);
+        expect(step.incendie.rejets).toBe(0);
+      }
+    }
+
+    expect(feux).toBeGreaterThan(0);
+    // Les chandelles ont brûlé : elles quittent la carte, et le bois parti en
+    // fumée a été PRIS au pool, pas émis en plus de lui.
+    expect(chandellesEmportees).toBe(40);
+    expect(state.trees).toEqual([]);
+    expect(brulKgC).toBeGreaterThan(0);
+    expect(state.carbon.deadWoodKgC).toBeLessThan(poolAvantFeu - brulKgC + 1e-6);
+    // Il reste les racines : le feu emporte l'aérien, pas ce qui est en terre.
     expect(state.carbon.deadWoodKgC).toBeGreaterThan(0);
   });
 });

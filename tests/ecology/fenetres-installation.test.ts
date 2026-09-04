@@ -53,15 +53,22 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     // incendie peut remettre les compteurs à zéro (ici en année 39, ce qui
     // est le comportement attendu). Ce qu'on vérifie, c'est que chacune
     // s'installe et tient des décennies — pas l'état de la dernière année.
-    // Plus de dix ans d'affilée au-dessus de cinquante tiges : la station est
-    // durablement colonisée, avant que l'incendie de l'année 39 ne rebatte les
-    // cartes.
     // On compte les années au-dessus du seuil, CONSÉCUTIVES OU NON : la date
     // des incendies varie d'une graine à l'autre, et une seule d'entre elles
     // coupe la série en deux sans rien dire de la colonisation. Ce qui compte
     // est que la station soit tenue une bonne partie du temps.
     expect(anneesAuDessus(betulaByYear, 50)).toBeGreaterThan(12);
-    expect(anneesAuDessus(pinusByYear, 50)).toBeGreaterThan(12);
+    // Le pin tient la station, mais SOUS le bouleau : celui-ci monte plus vite
+    // et prend la lumière (ici près de mille tiges en fin de série, contre
+    // quelques dizaines de pins). On lui demande donc de tenir des décennies à
+    // une trentaine de tiges, pas de faire jeu égal.
+    // Le seuil vaut ce que vaut le régime de feu : depuis que le feu CONSUME
+    // les chandelles au lieu de les laisser debout (tick.ts), le combustible
+    // ne s'accumule plus indéfiniment et les incendies s'espacent (années 15,
+    // 23 et 39, au lieu d'un feu tous les trois ou quatre ans). Le bouleau
+    // profite de ces longs intervalles ; le pin, lui, redémarre après chaque
+    // passage du feu.
+    expect(anneesAuDessus(pinusByYear, 30)).toBeGreaterThan(12);
   });
 
   it("l'installation se fait par vagues, pas à débit constant (météo réelle)", () => {

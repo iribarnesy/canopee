@@ -1515,6 +1515,30 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           apresFeu.push(tree);
           continue;
         }
+        if (!tree.alive) {
+          // Une chandelle qui rebrûle. Son bois sec part en fumée, mais il est
+          // DÉJÀ compté quelque part : l'émettre sans l'en retirer fabriquerait
+          // du carbone. Et un arbre déjà mort ne rejette pas de souche, ni ne
+          // compte une deuxième fois parmi les arbres tués par le feu.
+          const aerienKgC = treeAboveCarbonKg(espece, tree.heightM);
+          if (tree.mortSemaine === undefined) {
+            // Tué par un feu précédent et encore récupérable : son carbone
+            // attendait sur pied, personne ne l'avait encore versé. L'aérien
+            // s'envole, les racines rejoignent le bois mort — le versement que
+            // sa mort n'avait fait que différer.
+            carboneFeuKgC += aerienKgC;
+            deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
+          } else {
+            // Chandelle déjà versée au pool, qui se décompose depuis : on n'en
+            // émet pas plus qu'il n'en reste (même borne qu'à la coupe).
+            const brulKgC = Math.min(aerienKgC, deadWoodKgC);
+            carboneFeuKgC += brulKgC;
+            deadWoodKgC -= brulKgC;
+          }
+          // Le tronc a brûlé : la chandelle ne tient plus debout. Ses racines
+          // restent au pool, et la place se libère.
+          continue;
+        }
         tues++;
         if (espece.feu.rejetteApresFeu && tree.heightM > 0.6) {
           // Rejet de souche : l'arbre repart d'en bas, avec ses racines
