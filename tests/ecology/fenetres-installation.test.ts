@@ -48,8 +48,6 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     return parAnnee.filter((n) => n > seuil).length;
   }
 
-
-
   it("les deux pionnières frugales colonisent durablement le sable", () => {
     // « Durablement » ne veut pas dire « pour toujours » : sur la lande, un
     // incendie peut remettre les compteurs à zéro (ici en année 39, ce qui
