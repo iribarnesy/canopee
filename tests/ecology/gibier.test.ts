@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
-import { applyAction, PROTECTION_EUR } from "../../src/engine/actions";
+import { applyAction, estGesteSurArbres, PROTECTION_EUR } from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
 import {
   aPorteeDeDent,
@@ -413,7 +413,7 @@ describe("les gestes du gibier remontent au rendu", () => {
       if (!w) throw new Error("météo manquante");
       const r = advanceWeek(state, w, []);
       state = r.state;
-      broutes = r.gestes.find((g) => g.type === "brouter")?.ids ?? [];
+      broutes = r.gestes.filter(estGesteSurArbres).find((g) => g.type === "brouter")?.ids ?? [];
     }
     expect(broutes.length).toBeGreaterThan(0);
     // Des arbres du jeu, pas des identifiants inventés.
@@ -433,7 +433,7 @@ describe("les gestes du gibier remontent au rendu", () => {
       semaine = state.week;
       const r = advanceWeek(state, w, []);
       state = r.state;
-      frottes = r.gestes.find((g) => g.type === "frotter")?.ids ?? [];
+      frottes = r.gestes.filter(estGesteSurArbres).find((g) => g.type === "frotter")?.ids ?? [];
     }
     expect(frottes.length).toBeGreaterThan(0);
     for (const id of frottes) {

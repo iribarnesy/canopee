@@ -13,7 +13,7 @@ import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
-import type { IncendieResult, MortDeLaSemaine } from "./tick";
+import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "./tick";
 import { tick } from "./tick";
 
 export interface Journal {
@@ -63,6 +63,8 @@ export function advanceWeek(
   incendie?: IncendieResult;
   /** gestes du joueur ET du gibier de la semaine, pour le rendu (tick.ts) */
   gestes: GesteVisible[];
+  /** chandelles abattues cette semaine (boisMort.ts) */
+  chutes: ChuteDeChandelle[];
   /** débordement de la semaine, mm par cellule (tick.ts) */
   debordementParCellule: Float32Array;
   /** lumière arrivant au sol, par cellule (tick.ts) */
@@ -86,6 +88,7 @@ export function advanceWeek(
     morts: ticked.morts,
     incendie: ticked.incendie,
     gestes: [...gestes, ...ticked.gestes],
+    chutes: ticked.chutes,
     debordementParCellule: ticked.debordementParCellule,
     lumiereAuSol: ticked.lumiereAuSol,
   };

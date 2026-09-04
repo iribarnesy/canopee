@@ -245,16 +245,21 @@ inchangé au chiffre près (test).
 
 ### 2.4 Ce qui manque encore, et qui ne me bloque pas
 
-> La file d'attente vivante, avec les priorités et l'état d'avancement, est
-> dans **[attentes-du-rendu.md](attentes-du-rendu.md)** — c'est ce fichier-là
-> que lit qui travaille dans `src/engine/`. Le tableau ci-dessous en est le
-> résumé au moment de la rédaction.
+> **Le canal a changé** : une demande au moteur s'ouvre maintenant en **issue
+> GitHub** titrée `[attente-rendu]`, sur un formulaire qui force à dire la
+> maille, l'unité et le visuel que ça débloque
+> (`.github/ISSUE_TEMPLATE/attente-du-rendu.yml`). L'état d'une demande est
+> l'état de son issue, il n'y a rien à tenir à jour à la main.
+> **[attentes-du-rendu.md](attentes-du-rendu.md)** reste la référence de ce qui
+> voyage déjà et des quatre motifs pour lesquels une demande peut être discutée
+> plutôt que livrée. Le tableau ci-dessous n'est qu'un résumé daté.
 
 | Manque | Ce que le rendu ne pourra pas faire | À qui |
 |---|---|---|
 | ~~La saison de végétation est encore thermique~~ | ✅ **fait côté moteur** : la croissance suit `partFoliaireActive` et `GROWING_WEEKS` a été recalibré. Un caduc nu de janvier ne puise plus. Reste un écart de deux semaines par an — un houppier doré produit encore, la sénescence n'étant pas dans la boucle. Invisible à l'écran, contrairement au précédent. | — |
 | ~~La marcescence~~ | ✅ **faite côté moteur** (`partFoliaireOmbrageante`, `OPACITE_FEUILLE_MORTE`) : le charme et le jeune chêne gardent leurs feuilles mortes, qui ombragent encore sans travailler. Silhouette d'hiver garnie et rousse — c'est directement du D4, et c'est offert. | — |
-| **La chute d'une chandelle ne fait pas de trouée** | Pas de tache de lumière au sol à animer le jour où elle s'abat. | moteur |
+| ~~La chute d'une chandelle~~ | ✅ **livré** (issue #4) : `Snapshot.chutes` porte direction, masse et empreinte au sol, `soilBoisAuSol` dit où le tronc repose, et la trouée s'ouvre d'elle-même puisque `soilLumiere` est recalculée. La chute est donc animable, pas seulement son résultat. | — |
+| ~~Les gestes de ZONE ne voyagent pas~~ | ✅ **livré** (issue #5) : `GesteVisible` s'est ouvert en `{ type, cellules }` à côté de `{ type, ids }` — `chauler`, `faucher`, `epandreBrf`, `labourer`, `ramasserBoisMort`, `cloturer`. Et ce qui est nommé est ce qui a **réellement** été touché, plafond horaire compris. | — |
 | **Le tas de BRF n'a pas de position** | À poser conventionnellement au bord de la parcelle. | rendu |
 | **Le rembobinage** | Cadré, pas fait : il faudra un instantané **par semaine simulée** quand l'enregistrement est actif, au lieu d'un par lot de 26. Le budget est dans `docs/stack.md` (« Le contrat moteur → rendu »). | worker, au lot L8 |
 
