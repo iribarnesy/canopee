@@ -91,15 +91,22 @@ describe("effet nurse sur lande sèche et ventée", () => {
     expect(liegeAbrite).toBeGreaterThan(liegeNu);
   });
 
-  it("collé à la nurse, l'abri et l'ombre s'annulent", () => {
-    // Mesuré : 0,38 m collé contre 0,39 m à découvert, moyenné sur trois
-    // graines — l'écart n'a plus de sens. Même pour une espèce qui supporte
-    // l'ombre, se serrer contre l'abri ne rapporte plus rien : ce qu'on gagne
-    // sur le vent, on le perd sur la lumière. C'est l'ombre portée qui fixe la
-    // bonne distance, et elle se compte en mètres.
-    expect(Math.abs(liegeColle - liegeNu)).toBeLessThan(0.15 * liegeNu);
-    // Alors qu'à trois mètres, le gain est net.
-    expect(liegeAbrite).toBeGreaterThan(1.1 * liegeColle);
+  it("pour le sciaphile, plus c'est près, mieux c'est : l'ombre ne lui coûte rien", () => {
+    // Le verdict a changé avec la recalibration de l'azote
+    // (`AZOTE_HOUPPIER_G_M2_AN`, trees.ts). Tant que l'azote bridait tout le
+    // monde autour de 0,4, aucun des trois traitements ne poussait vraiment :
+    // on mesurait 0,38 m collé contre 0,39 m à découvert et on en concluait
+    // que l'abri et l'ombre s'annulaient. C'était l'égalité de deux zéros.
+    // Une fois l'azote rendu à un budget réaliste, l'essai mesure enfin ce
+    // qu'il prétendait mesurer, et il retrouve ce que l'en-tête de ce fichier
+    // annonçait depuis toujours : « le chêne-liège tolère l'ombre en jeunesse,
+    // pour lui l'abri est tout bénéfice ». Sur une lande sèche et ventée, plus
+    // il est près de la nurse, mieux il pousse — 0,53 m collé, 0,44 m à trois
+    // mètres, 0,37 m à découvert. Ce qui n'a pas bougé, et qui est le fond de
+    // l'affaire : la bonne distance dépend du TEMPÉRAMENT, et l'héliophile,
+    // lui, paie l'ombre (essai suivant).
+    expect(liegeColle).toBeGreaterThan(liegeAbrite);
+    expect(liegeAbrite).toBeGreaterThan(liegeNu);
   });
 
   it("l'héliophile, lui, paie l'ombre : collé à la nurse il fait moins bien qu'à distance", () => {

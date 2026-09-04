@@ -89,8 +89,13 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     // deux, quel que soit le temps qu'il fait. Ce qu'on veut voir, c'est que
     // le RENDEMENT d'un semencier varie fortement d'une année sur l'autre —
     // c'est ça, une fenêtre d'installation.
+    // La fenêtre d'observation va jusqu'à l'année 38, pas 25 : depuis que la
+    // croissance juvénile suit une sigmoïde (`FORME_CROISSANCE`, trees.ts), un
+    // bouleau met plus longtemps à devenir semencier, et la cohorte de départ
+    // n'atteint le seuil des cinq porte-graines que vers l'année vingt. On
+    // s'arrête avant l'incendie de l'année 39, qui remet les compteurs à zéro.
     const rendements: number[] = [];
-    for (let i = 1; i < 25; i++) {
+    for (let i = 1; i < 38; i++) {
       const semenciers = semenciersByYear[i - 1] ?? 0;
       if (semenciers < 5) continue; // avant, c'est la pluie de semis du voisinage
       rendements.push(((betulaByYear[i] ?? 0) - (betulaByYear[i - 1] ?? 0)) / semenciers);

@@ -13,7 +13,12 @@
 import { describe, expect, it } from "vitest";
 import { applyAction, DECOTE_CHANDELLE } from "../../src/engine/actions";
 import { indiceBiodiversite } from "../../src/engine/biodiversite";
-import { couvertureDuBoisAuSol, directionDeChute, ecrasePar } from "../../src/engine/boisMort";
+import {
+  couvertureDuBoisAuSol,
+  directionDeChute,
+  ecrasePar,
+  graineDeChute,
+} from "../../src/engine/boisMort";
 import { treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import { chargeCombustible } from "../../src/engine/feu";
@@ -292,15 +297,12 @@ describe("un tronc qui tombe tombe quelque part", () => {
         { length: 400 },
         (_, i) => -Math.floor(i / 20) * (pentePct / 100),
       );
-      let rng = rngStateFromSeed(11);
       const ecarts: number[] = [];
       for (let n = 0; n < 200; n++) {
-        const d = directionDeChute(altitudes, dims, 10, 10, rng);
-        rng = d.rng;
-        const ecart = Math.abs(
-          Math.atan2(Math.sin(d.radians - Math.PI / 2), Math.cos(d.radians - Math.PI / 2)),
-        );
-        ecarts.push(ecart);
+        // Une graine par arbre et par semaine : c'est ainsi que le tick tire
+        // ses directions, sans puiser dans le flux principal.
+        const d = directionDeChute(altitudes, dims, 10, 10, graineDeChute(n, 3));
+        ecarts.push(Math.abs(Math.atan2(Math.sin(d - Math.PI / 2), Math.cos(d - Math.PI / 2))));
       }
       return ecarts.reduce((a, b) => a + b, 0) / ecarts.length;
     };

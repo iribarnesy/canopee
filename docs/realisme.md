@@ -29,14 +29,14 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | C. Nutriments et cycles | 9 | 3 | 1 | 13 |
 | D. Climat et phénologie | 7 | 3 | 1 | 11 |
 | E. Interactions entre plantes | 7 | 2 | 3 | 12 |
-| F. Dynamique des peuplements | 7 | 2 | 3 | 12 |
+| F. Dynamique des peuplements | 7 | 3 | 3 | 13 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **79** | **25** | **17** | **121** |
+| **Total** | **79** | **26** | **17** | **122** |
 
-**Score de réalisme : 79 pleins + 25 partiels sur 121 → 76 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 79 pleins + 26 partiels sur 122 → 75 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -53,7 +53,14 @@ limitent enfin, et les mycorhizes gagnent leur vie) → chasse et clôture, et
 l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
 arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai) → 76 % (relief, écoulement
-latéral, adret/ubac).*
+latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
+production).*
+
+*Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
+hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
+un critère qu'on ne remplit qu'à moitié (F13) là où, avant, personne ne
+comptait les points. Un référentiel qui ne s'allonge jamais finit par ne plus
+mesurer que ce qu'on sait déjà faire.*
 
 ---
 
@@ -176,6 +183,7 @@ latéral, adret/ubac).*
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
+| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` contre Jansen 1996 (hauteur dominante, classe médiane) : pin, aulne et frêne dans la bande, hêtre encore un tiers trop bas (facteur eau), bouleau au-dessus de la meilleure classe (`pousseMaxMAn` de l'atlas) |
 
 ## G. Faune et santé
 
@@ -572,10 +580,185 @@ phénologie en donne le vrai compte.
 en replantation d'après-feu n'était qu'un effet de la transpiration hivernale
 fantôme qu'autorisait le booléen. Voir « une conclusion retirée » plus haut.
 
-*Limite qui reste, et qui n'est pas de ce chantier* : les hauteurs absolues sont
-faibles — un hêtre de plaine plafonne autour de quatre mètres à quarante ans là
-où le terrain en donne douze à quinze. Les rapports entre essences et entre
-stations sont justes, les niveaux ne le sont pas.
+*Cette section laissait une limite ouverte* — « les hauteurs absolues sont
+faibles, un hêtre de plaine plafonne autour de quatre mètres à quarante ans » —
+et c'est le chantier suivant qui l'a levée.
+
+## Les hauteurs absolues : le moteur se cale sur les tables de production
+
+Le constat était juste ; la cause n'était pas là où on la cherchait. Un hêtre
+planté sur la station confort faisait 2,1 m à dix ans, 3,0 m à vingt et 4,8 m à
+quarante. Les rapports tenaient — le bouleau devant le hêtre, le limon riche
+devant le limon pauvre — mais aucun niveau n'était présentable, et le rendu
+visuel allait se calibrer là-dessus.
+
+**La vérité terrain d'abord.** On a retenu les tables néerlandaises de
+**Jansen, Sevenster & Faber (1996)**, *Opbrengsttabellen voor belangrijke
+boomsoorten in Nederland* (IBN-DLO rapport 221, <https://edepot.wur.nl/174739>),
+classe de croissance **médiane** de chaque essence. C'est la seule source du
+corpus consulté qui donne directement la **hauteur dominante** — les cent plus
+gros arbres à l'hectare — avec un âge compté depuis la germination et de
+nombreuses classes de fertilité ; et le **CNPF (2025)**, *Faciliter
+l'utilisation des tables de production forestières dans le cadre du Label Bas
+Carbone*, la juge parmi les mieux adaptées au contexte français pour plusieurs
+de ces essences.
+
+| Essence (classe médiane) | 20 ans | 40 ans | 60 ans |
+|---|---|---|---|
+| Hêtre — *Beuk* GK 8 (gamme 4→12) | 7,7 m | **16,0 m** | 22,9 m |
+| Pin sylvestre — *Groveden* GK 8 (4→12) | 8,1 m | **15,5 m** | 19,8 m |
+| Bouleau — *Berk* GK 5 (3→6), Braastad 1967 | 8,6 m | **14,8 m** | 19,6 m |
+| Aulne — *Zwarte els* GK 6 (4→8), Mitscherlich 1945 | 12,6 m | **18,0 m** | 21,3 m |
+| Frêne — *Es* GK 6 (4→9), Volquardts 1958 | 9,0 m | **16,5 m** | 21,4 m |
+
+*Deux pièges de lecture, signalés parce qu'ils changent les chiffres.* Les
+tables allemandes classiques (Schober, Wiedemann, Jüttner) donnent la
+*Mittelhöhe*, hauteur MOYENNE du peuplement, plus basse que la hauteur
+dominante — le seul écart chiffré qu'on ait trouvé est de 0,8 m à 80 ans sur
+l'épicéa, ce qui ne fait pas une règle de conversion *(à confirmer)*. Et l'âge
+n'a pas la même origine partout : germination chez Jansen, hauteur de 0,30 m
+chez Bontemps. Les valeurs à dix ans qu'on lit ici et là sont des
+extrapolations sous le premier âge tabulé (quinze ans) : on ne s'y cale pas.
+
+**La cause : un besoin d'azote quinze fois trop gros, qui s'affamait
+lui-même.** Sur la station confort, le facteur limitant d'un hêtre était
+l'azote 93 % des semaines de végétation, et sa satisfaction moyenne valait
+**0,39** — toute sa vie. La loi du minimum multipliait donc la croissance par
+0,4 en permanence. Le sol n'y était pour rien : ce limon minéralise 60 à
+80 kg N/ha/an, ce qui est un chiffre de terrain honnête. C'est la DEMANDE qui
+était fausse. Elle s'écrivait `60 × h^1,5` grammes par an : un hêtre de quinze
+mètres y réclamait 3,5 kg d'azote **à lui seul**, quand un hectare de hêtraie
+fermée en prélève 50 à 100.
+
+Et le mécanisme se mordait la queue. Les arbres raflaient chaque semaine tout
+l'azote minéral de leur zone racinaire ; le stock du sol restait donc collé à
+zéro ; le frein de dilution — `nitrogenAvailabilityFactor`, saturé à 30 kg N/ha
+— voyait ce stock nul et bridait l'extraction ; les arbres se retrouvaient
+affamés par leur propre voracité. **Un sol pauvre en azote minéral n'est pas un
+sol pauvre : c'est un sol où l'azote est consommé aussi vite qu'il apparaît.**
+
+Le besoin est maintenant accroché à la seule grandeur qui le porte
+physiquement, la **surface de houppier** : `AZOTE_HOUPPIER_G_M2_AN` = 8 g/m²/an
+pour une essence d'exigence maximale. Le compte se refait à la main — un
+couvert feuillu ferme porte 5 à 6 m² de feuilles par m² de sol, une feuille
+titre 2 à 2,5 % d'azote, l'arbre en retransloque la moitié avant la chute — et
+retombe sur 50 à 100 kg N/ha/an au houppier fermé, la fourchette des bilans de
+peuplements tempérés. Un hêtre de trois mètres demande désormais une quinzaine
+de grammes par an, pas deux cents. Sa satisfaction en azote est passée de
+**0,39 à 0,86**, et le facteur maître a changé de nature : c'est maintenant
+l'EAU qui prend la main, sept semaines de végétation sur dix.
+
+**Ce qu'on a écarté en chemin**, parce qu'un diagnostic sans réfutation n'en est
+pas un :
+
+- **`GROWING_WEEKS`** (26) était soupçonné d'avoir été mal recalé après le
+  passage à la phénologie. Mesure : le hêtre cumule **24,1** semaines-équivalentes
+  de végétation par an sur cette station, le pin 32,6. L'écart au diviseur coûte
+  7 %, pas 60 %. Hors de cause.
+- **Lumière, pH, phosphore, potassium** : facteurs moyens à 1,00 sur la station
+  confort. Ils ne bridaient rien.
+- **L'eau**, en revanche, est bien limitante, mais en second : 0,83 en moyenne
+  pour le hêtre. Elle est devenue le facteur maître une fois l'azote corrigé, et
+  c'est elle qui explique le retard qui subsiste (voir plus bas).
+
+**La deuxième cause : la courbe n'avait pas la bonne forme.** La croissance
+s'écrivait `pousse × (1 − h/hmax)`. C'est la forme différentielle de
+Chapman-Richards `H = A·(1 − e^(−kt))^c` avec **c = 1** — la seule valeur de la
+famille qui ne soit pas sigmoïde : la pousse annuelle y est maximale à la
+germination et ne fait que décroître. Aucune essence ne pousse comme ça. Un
+hêtre fait quinze centimètres par an sous son couvert d'origine, accélère vers
+vingt ans, et ne culmine qu'entre dix et vingt mètres.
+
+`FORME_CROISSANCE` vaut maintenant **1,5**, ce qui déplace le maximum de pousse
+à 19 % de la hauteur adulte. La valeur n'est pas inventée : **Bouchon & Trencia
+(1990)**, « Sylviculture et production du Chêne », *Rev. For. Fr.* XLII-2,
+publient pour le chêne sessile des `c` de **1,14 à 2,07** selon la classe de
+fertilité ; **Patrício et al.** (iForest, châtaignier en futaie) un exposant de
+**1,62**. Une normalisation garde à `pousseMaxMAn` son sens — « la pousse
+annuelle maximale » — quel que soit l'exposant.
+
+**Avant / après**, hauteur moyenne de douze sujets plantés au large sur le limon
+riche, moyennée sur trois graines (la variabilité individuelle est de ±20 % :
+un individu, une graine, ne prouvent rien) :
+
+| Essence | 10 ans | 20 ans | 40 ans | Table à 40 ans |
+|---|---|---|---|---|
+| Hêtre | 2,1 → **2,6** | 3,0 → **5,3** | 4,8 → **10,6** | 16,0 |
+| Pin sylvestre | 3,1 → **3,9** | 4,3 → **8,2** | 6,1 → **15,0** | 15,5 |
+| Bouleau | 4,2 → **6,2** | 7,1 → **11,9** | 9,8 → **17,8** | 14,8 |
+| Aulne | 5,0 → **5,0** | 8,9 → **10,1** | 14,5 → **17,2** | 18,0 |
+| Frêne | 2,4 → **3,8** | 3,4 → **8,0** | 5,4 → **14,6** | 16,5 |
+| Charme | 2,3 → **3,1** | 3,3 → **6,3** | 5,2 → **11,6** | pas de table |
+| Chêne pubescent | 2,1 → **2,7** | 3,0 → **5,3** | 4,4 → **9,5** | pas de table |
+
+*L'aulne bouge peu, et c'est cohérent : il FIXE son azote, donc il était le
+seul à ne pas souffrir du besoin surdimensionné. C'est d'ailleurs ce contraste
+qui a mis sur la piste — un aulne à 14,5 m à quarante ans quand le hêtre voisin
+plafonnait à 4,8 m, sur la même station, ne pouvait pas venir de l'eau ni de la
+lumière.*
+
+`hauteurs.test.ts` fige la comparaison, aux deux âges réellement TABULÉS
+(20 et 40 ans), avec une tolérance de ±45 % qui y est justifiée : les classes de
+fertilité de la table s'étalent déjà de −18 % à +16 % autour de la médiane, nos
+stations ne sont calées sur aucune classe, et chaque arbre porte ±20 % de
+vigueur propre. La bande certifie « la bonne classe de fertilité, à une classe
+près » — elle aurait hurlé sur le hêtre à 0,30 fois la table.
+
+**Ce qui reste faux, et il en reste.**
+
+- **Le hêtre est encore un tiers trop bas à quarante ans** (10,6 m contre 16,0).
+  Ce n'est plus l'azote : c'est l'eau. Son seuil de confort hydrique est de 0,85
+  — le hêtre est notoirement sensible à la sécheresse d'été — et le limon riche
+  ne reçoit que 750 mm par an, dont 55 % en hiver. Le moteur le place donc vers
+  la classe 4-5 de la table là où la médiane est la 8. C'est défendable pour un
+  hêtre sur 750 mm ; ce n'est pas prouvé.
+- **Le bouleau dépasse la meilleure classe publiée** : 11,9 m à vingt ans contre
+  8,6 en classe médiane et 9,5 en GK6. En cause, `pousseMaxMAn = 0,9 m/an`,
+  hérité de l'atlas et jamais confronté à une table. Pire : les tables donnent
+  l'aulne PLUS rapide que le bouleau en jeunesse (12,6 contre 8,6 m à vingt
+  ans) quand l'atlas range le bouleau devant. **Ce rapport-là est faux**, et il
+  n'a pas été corrigé ici — recaler les `pousseMaxMAn` essence par essence est
+  un autre chantier.
+- **L'exposant de forme est global.** Les tables distinguent trois profils —
+  démarrage rapide et plateau précoce (aulne, bouleau, merisier, robinier),
+  démarrage lent et croissance longue (hêtre, chênes, sapin), intermédiaire
+  (frêne, pin, douglas) — qu'un paramètre unique ne sait pas rendre. C'est
+  pourquoi l'aulne reste un peu lent en jeunesse et le bouleau un peu vif.
+- **Le vrai réglage du frein d'extraction est ailleurs.**
+  `AVAILABILITY_SATURATION_G_M2` = 3 g/m², soit 30 kg N/ha, est le stock
+  au-dessus duquel une racine prélève sans entrave. Un sol forestier n'en tient
+  jamais autant : le nôtre plafonne à 1,9 g/m² sur le limon riche et 0,5 sur le
+  limon pauvre. Ce seuil est donc trop haut, et il vit dans `nitrogen.ts` — hors
+  du périmètre de ce chantier. On ne l'a pas touché.
+- **Le lessivage reste énorme** — 55 à 75 kg N/ha/an — mais c'est un artefact du
+  protocole d'essai : douze arbres sur un hectare ne couvrent que 2 % du sol de
+  leurs racines, et tout le reste draine. Un peuplement fermé n'a pas ce
+  comportement.
+- **Deux essences sans référence** : le châtaignier meurt sur le limon riche
+  (pH 7, il est acidiphile) et n'a de toute façon aucune table de futaie en
+  France ; le chêne pubescent n'a **qu'une seule** table au monde (Giurgiu &
+  Draghici 2004, Roumanie), et le CNPF écarte explicitement l'équivalence avec
+  le chêne sessile, qui surestime.
+
+**Ce que la correction a coûté**, c'est-à-dire les conclusions qu'elle a
+changées :
+
+- **L'effet nurse a changé de verdict.** On lisait « collé à la nurse, l'abri et
+  l'ombre s'annulent » — 0,38 m collé contre 0,39 m à découvert. C'était
+  l'égalité de deux zéros : l'azote bridait tout le monde à 0,4 et rien ne
+  poussait, ni à l'abri ni au soleil. L'essai mesure maintenant ce qu'il
+  prétendait mesurer, et il retrouve ce que son propre en-tête annonçait : le
+  chêne-liège tolère l'ombre en jeunesse, donc **plus il est près de la nurse,
+  mieux il pousse** (0,53 m collé, 0,44 m à trois mètres, 0,37 m à découvert).
+  L'héliophile, lui, paie toujours l'ombre.
+- **La fertilisation par l'aulne rapporte moins.** Le gain du hêtre voisin
+  quand on épand les aulnes coupés au lieu de les vendre est passé de +5 % à
+  +2 %. Le mécanisme tient ; c'est son ampleur qui était gonflée par un hêtre
+  affamé en permanence.
+- **Le creux mycorhizien de la première décennie a disparu.** Les bouleaux
+  couvrent le sol en dix ans au lieu de vingt, et le réseau se tisse plus vite
+  qu'il ne reflue. Ce n'était pas un fait de terrain, c'était la signature
+  d'arbres trois fois trop lents.
 
 ## Les chandelles : un arbre mort ne disparaît pas
 
@@ -645,6 +828,17 @@ fraîche — et un peu moins de gros combustible. Il y perd de l'humus en deveni
 un abri pour la faune du sol, et la protection que le tronc offrait à la terre
 sous lui. Le moteur ne tranche pas à sa place ; il fait seulement que les deux
 plateaux existent.
+
+**Le flux aléatoire de la chute est séparé du flux principal**, et c'est une
+leçon plus large que le bois mort. Le hasard du moteur est une suite unique et
+séquentielle : un mécanisme qui y ajoute un seul tirage décale tous les
+suivants. Le jour où les chandelles ont commencé à tirer un angle, trois
+conclusions écologiques du dépôt ont basculé — l'aulnaie décimée par les
+ravageurs, le hêtre qui meurt de soif, les feuillus qui brûlent moins. Aucune
+n'avait changé de nature : elles lisaient un jet de dés particulier. La chute
+tire donc désormais sur une graine dérivée de l'arbre et de la semaine, ce qui
+la garde rejouable sans rebattre les cartes des autres. Et le test des
+ravageurs, lui, moyenne sur trois graines au lieu d'en croire une.
 
 *Limite qui reste* : un tronc couché en travers d'un thalweg devrait freiner
 l'eau et piéger le sédiment. Il protège aujourd'hui la terre **sous lui** —

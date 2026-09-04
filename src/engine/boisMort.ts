@@ -16,7 +16,7 @@
  */
 
 import type { GridDims } from "./grid";
-import { type RngState, rngFloat } from "./rng";
+import { rngFloat, rngStateFromSeed } from "./rng";
 
 /**
  * Décomposition du bois mort AU SOL, par an. Plus rapide que les 5 % du bois
@@ -63,13 +63,29 @@ export function directionDeChute(
   dims: GridDims,
   x: number,
   y: number,
-  rng: RngState,
-): { rng: RngState; radians: number } {
+  graine: number,
+): number {
   const { radians: aval, pentePct } = versLAval(altitudes, dims, x, y);
   const contrainte = Math.min(1, pentePct / PENTE_ORIENTANT_LA_CHUTE_PCT);
-  const tirage = rngFloat(rng);
-  const ecart = (tirage.value * 2 - 1) * Math.PI;
-  return { rng: tirage.state, radians: aval + ecart * (1 - contrainte) };
+  const ecart = (rngFloat(rngStateFromSeed(graine)).value * 2 - 1) * Math.PI;
+  return aval + ecart * (1 - contrainte);
+}
+
+/**
+ * Graine propre à une chute : l'identité de l'arbre et la semaine, mélangées.
+ * Deux parties identiques font tomber le même arbre dans le même sens, et la
+ * partie reste rejouable — mais la chute ne PUISE PAS dans le flux principal.
+ *
+ * Cette précaution n'est pas de la coquetterie. Le flux est unique et
+ * séquentiel : un mécanisme qui y ajoute un seul tirage décale tous les
+ * suivants, et trois conclusions écologiques du dépôt ont basculé le jour où
+ * les chandelles ont commencé à tirer un angle. Elles ne mesuraient pas un
+ * effet, elles lisaient un jet de dés particulier — mais le moteur n'a pas à
+ * rebattre les cartes de tout le monde chaque fois qu'on lui ajoute une
+ * mécanique.
+ */
+export function graineDeChute(idArbre: number, semaine: number): number {
+  return (idArbre * 2654435761 + semaine * 40503) >>> 0;
 }
 
 /**

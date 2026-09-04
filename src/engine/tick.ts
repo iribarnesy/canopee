@@ -16,6 +16,7 @@ import {
   directionDeChute,
   ecrasePar,
   empreinteDeChute,
+  graineDeChute,
   MASSE_LINEIQUE_TRONC_KGC_PAR_M,
 } from "./boisMort";
 import {
@@ -1571,9 +1572,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
     // Elle s'abat. Elle ne s'évapore pas : son bois se couche sur les cellules
     // qu'il recouvre, dans une direction que la pente oriente (boisMort.ts).
-    const chute = directionDeChute(altitudes, dims, tree.x, tree.y, rng);
-    rng = chute.rng;
-    const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, chute.radians, dims);
+    // La direction se tire sur un flux PROPRE à cette chute (boisMort.ts) : le
+    // flux principal est unique et séquentiel, un tirage de plus y décalerait
+    // tous les suivants et rebattrait les cartes de tous les autres mécanismes.
+    const radians = directionDeChute(
+      altitudes,
+      dims,
+      tree.x,
+      tree.y,
+      graineDeChute(tree.id, state.week),
+    );
+    const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, radians, dims);
     const longueurTotale = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
     if (longueurTotale <= 0) continue;
     // Ce qu'il reste de son bois après des années à sécher debout. Le pool des
@@ -1600,7 +1609,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       y: tree.y,
       especeId: tree.especeId,
       heightM: tree.heightM,
-      directionRad: chute.radians,
+      directionRad: radians,
       masseKgC: restantKgC,
       empreinte,
     });
