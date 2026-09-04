@@ -624,6 +624,9 @@ function stationInfo(): StationInfo {
       station.drainageExterneMmSemaine,
       station.profondeurNappeEquilibreCm,
     ),
+    // Déjà calculée par `stationAvecPaysage` pour le moteur : elle ne dépend
+    // que des bordures, qui ne changent pas en cours de partie.
+    ventExposition: station.ventExposition,
     // Ni les cellules en eau ni le champ de nappe ne bougent : on les envoie
     // une fois pour toutes, la carte s'en sert telles quelles.
     enEau: sources
