@@ -25,6 +25,16 @@ if grep -rnE "from ['\"]\.\./(ui|render|sim-worker)" src/engine; then
   fail=1
 fi
 
+# Le rendu doit être DÉTERMINISTE : deux parties de même graine donnent la même
+# image. Toute variation « organique » (penchant d'un arbre, phase de son
+# balancement, forme de son houppier) dérive de son id, pas du hasard — sinon
+# une capture d'écran n'est pas reproductible et un bug de rendu ne se rejoue
+# pas (docs/interface-visuelle.md §8).
+if [ -d src/render ] && grep -rnE "Math\.random\s*\(" src/render; then
+  echo "ERREUR : Math.random interdit dans src/render — dériver la variation de l'id de l'arbre." >&2
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "Frontières du moteur respectées."
 fi

@@ -197,7 +197,7 @@ export interface Snapshot {
   soilLitiereCG: Float32Array;
   /**
    * Le calendrier foliaire de la semaine (phenologie.ts) : cinq scalaires
-   * avec lesquels le rendu recalcule `partFoliaire` et la sénescence espèce
+   * avec lesquels le rendu recalcule les parts foliaires et la sénescence espèce
    * par espèce, sans qu'on ait à transporter une valeur par arbre.
    */
   pheno: ContextePhenologique;

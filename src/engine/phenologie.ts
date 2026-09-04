@@ -29,6 +29,29 @@
  * jour raccourcit sous un seuil, et l'étalement fait tomber la litière sur un
  * mois au lieu d'une semaine.
  *
+ * Et l'automne se joue en DEUX temps, qu'on distingue ici : la feuille jaunit
+ * d'abord — la chlorophylle se démonte, l'azote est rapatrié — puis elle
+ * tombe, deux à trois semaines plus tard.
+ *
+ * D'où TROIS parts foliaires, qu'il faut tenir séparées :
+ *
+ *  - `partFoliaireOmbrageante` : ce qui intercepte la lumière, y compris les
+ *    feuilles mortes qu'un marcescent garde accrochées. C'est Beer-Lambert.
+ *  - `partFoliaireActive` : le feuillage vivant déployé. C'est lui qui commande
+ *    la croissance et la transpiration (tick.ts), en produit avec un facteur
+ *    thermique qui ne porte plus que la vitesse du métabolisme.
+ *  - `partFoliaireAssimilante` : le vivant ENCORE VERT, soit le précédent moins
+ *    ce que `senescenceFoliaire` a jauni.
+ *
+ * *Ce que la troisième ne commande pas encore* : la croissance. Un houppier
+ * entièrement doré d'octobre produit donc toujours. Brancher l'assimilante à
+ * la place de l'active suppose de recalibrer `GROWING_WEEKS` et `pousseMaxMAn`
+ * une seconde fois — mesuré avant que le premier recalibrage n'ait eu lieu :
+ * la croissance baissait d'environ 5 % et deux seuils écologiques calibrés se
+ * déplaçaient, sans que la sortie se rapproche du terrain. À remesurer sur la
+ * calibration actuelle. Voir docs/realisme.md, « le houppier doré produit
+ * encore ».
+ *
  * Enfin, le BESOIN DE FROID. Un bourgeon n'est pas une graine qu'on chauffe :
  * il sort de dormance en accumulant d'abord des semaines fraîches, et ce n'est
  * qu'ensuite que la chaleur le fait partir. C'est le paradoxe bien documenté du
@@ -83,6 +106,25 @@ export const ETALEMENT_DEBOURREMENT_DJ = 90;
 export const SEUIL_SENESCENCE_H = 11.5;
 /** Semaines sur lesquelles les feuilles tombent une fois la sénescence lancée. */
 export const ETALEMENT_CHUTE_SEMAINES = 5;
+/**
+ * Semaines sur lesquelles une feuille ENCORE ACCROCHÉE jaunit et cesse
+ * d'assimiler.
+ *
+ * La sénescence n'est pas la chute : c'est ce qui la précède. Le jour
+ * raccourcit, la plante démonte sa chlorophylle et rapatrie son azote, et la
+ * feuille devient jaune, puis rousse — **avant** de se détacher. Deux à trois
+ * semaines séparent les deux, et c'est ce décalage qui fait tout l'automne :
+ * un houppier presque plein, mais entièrement doré, qui ne produit plus rien.
+ *
+ * Plus court que `ETALEMENT_CHUTE_SEMAINES`, donc : le jaunissement DEVANCE
+ * l'abscission. La conséquence n'est pas décorative — une feuille jaune a
+ * cessé de photosynthétiser, donc l'arbre ne pousse plus et ne transpire
+ * presque plus, alors que la température, elle, autoriserait encore les deux.
+ *
+ * *(à calibrer : les suivis phénologiques donnent deux à quatre semaines entre
+ * le pic de coloration et la chute, selon l'essence et l'année)*
+ */
+export const ETALEMENT_SENESCENCE_SEMAINES = 2;
 /** Largeur de la porte photopériodique, heures : elle ne s'ouvre pas d'un coup. */
 export const LARGEUR_PORTE_H = 1.2;
 
@@ -201,9 +243,76 @@ export function partFoliaireOmbrageante(
 }
 
 /**
- * Part du feuillage MOYENNE d'un peuplement, pour les usages qui n'ont pas
- * d'espèce sous la main (l'ombre au sol se calcule arbre par arbre, mais le
- * calendrier de la litière est commun).
+ * Avancement de la SÉNESCENCE des feuilles encore accrochées ∈ [0,1] :
+ * 0 = vertes et fonctionnelles, 1 = entièrement jaunies, vidées de leur azote
+ * et hors service.
+ *
+ * C'est la grandeur qui manquait. `partFoliaireActive` dit COMBIEN de feuillage
+ * vivant reste ; celle-ci dit DANS QUEL ÉTAT il est. Les deux sont
+ * indépendantes : à la mi-octobre un chêne peut porter les trois quarts de son
+ * feuillage et n'en tirer plus rien (sénescence à 1).
+ *
+ * Un sempervirent ne sénesce pas de façon saisonnière : ses aiguilles se
+ * renouvellent sur plusieurs années, sans automne. Il reste donc à 0.
+ *
+ * Ne pas confondre avec la MARCESCENCE (`OPACITE_FEUILLE_MORTE`,
+ * `partFoliaireOmbrageante`), qui est l'étape d'après : la sénescence vide la
+ * feuille de son azote et la fait jaunir, la marcescence dit qu'elle reste
+ * accrochée après sa mort. Un charme fait les deux, un bouleau seulement la
+ * première.
+ */
+export function senescenceFoliaire(
+  espece: EspeceV0,
+  dureeJourH: number,
+  automne: boolean,
+  semainesDepuisSenescence: number,
+): number {
+  if (!espece.lumiere.caduc) return 0;
+  if (!automne || dureeJourH > SEUIL_SENESCENCE_H) return 0;
+  return Math.min(1, Math.max(0, semainesDepuisSenescence / ETALEMENT_SENESCENCE_SEMAINES));
+}
+
+/**
+ * Feuillage ASSIMILANT ∈ [0,1] : ce qui est déployé, vivant **et** encore vert.
+ *
+ * Trois parts foliaires cohabitent maintenant, et il faut les tenir distinctes
+ * — c'est la seule difficulté de ce module :
+ *
+ * - `partFoliaireOmbrageante` : ce qui intercepte la lumière, feuilles mortes
+ *   marcescentes comprises. La plus grande des trois. C'est Beer-Lambert.
+ * - `partFoliaireActive` : le feuillage vivant déployé, marcescence exclue.
+ * - `partFoliaireAssimilante` : celui-ci, la part vivante **et pas encore
+ *   jaunie**. La plus petite. Un houppier doré d'octobre est déployé, vivant,
+ *   et ne produit plus rien.
+ *
+ * **Elle n'est PAS branchée sur la croissance**, et c'est délibéré : mesuré, le
+ * branchement déplace des seuils écologiques calibrés (`docs/realisme.md`).
+ * Elle existe pour le rendu — colorer un houppier demande de savoir s'il
+ * travaille encore — et pour le jour où la calibration sera refaite.
+ */
+export function partFoliaireAssimilante(
+  espece: EspeceV0,
+  ddYearBase5: number,
+  dureeJourH: number,
+  automne: boolean,
+  semainesDepuisSenescence: number,
+  semainesDeFroid = Number.POSITIVE_INFINITY,
+): number {
+  const vivante = partFoliaireActive(
+    espece,
+    ddYearBase5,
+    dureeJourH,
+    automne,
+    semainesDepuisSenescence,
+    semainesDeFroid,
+  );
+  const jaunie = senescenceFoliaire(espece, dureeJourH, automne, semainesDepuisSenescence);
+  return vivante * (1 - jaunie);
+}
+
+/**
+ * La sénescence est-elle enclenchée ? Pour les usages qui n'ont pas d'espèce
+ * sous la main (le calendrier de la litière est commun).
  */
 export function senescenceEnCours(dureeJourH: number, automne: boolean): boolean {
   return automne && dureeJourH <= SEUIL_SENESCENCE_H;
@@ -280,7 +389,36 @@ export function partFoliaireOmbrageanteDans(espece: EspeceV0, ctx: ContextePheno
   );
 }
 
-/** La sénescence est-elle enclenchée ? (les feuilles tombent, elles brunissent) */
-export function senescenceFoliaire(ctx: ContextePhenologique): boolean {
+/**
+ * La sénescence est-elle enclenchée ? Le nom suit `partFoliaireDans` : « dans »
+ * veut dire « pris dans son contexte ».
+ *
+ * Ne pas confondre avec `senescenceFoliaire`, qui n'est pas un oui/non mais un
+ * AVANCEMENT ∈ [0,1] : la première dit que l'automne a commencé, la seconde à
+ * quel point le feuillage a jauni. C'est cette dernière qu'il faut pour colorer
+ * un houppier ; celle-ci ne sert qu'à savoir si le compteur tourne.
+ */
+export function senescenceEnCoursDans(ctx: ContextePhenologique): boolean {
   return senescenceEnCours(ctx.jourH, ctx.automne);
+}
+
+/** `senescenceFoliaire` prise dans son contexte : l'avancement du jaunissement. */
+export function senescenceDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return senescenceFoliaire(espece, ctx.jourH, ctx.automne, ctx.semainesDepuisSenescence);
+}
+
+/**
+ * `partFoliaireAssimilante` prise dans son contexte : déployé, vivant ET vert,
+ * donc ce qui travaille. C'est la forme que le rendu appellera pour savoir si
+ * un arbre est en pleine production ou déjà à l'arrêt.
+ */
+export function partFoliaireAssimilanteDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return partFoliaireAssimilante(
+    espece,
+    ctx.ddYearBase5,
+    ctx.jourH,
+    ctx.automne,
+    ctx.semainesDepuisSenescence,
+    ctx.semainesDeFroid,
+  );
 }

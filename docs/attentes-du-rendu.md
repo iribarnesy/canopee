@@ -114,19 +114,35 @@ sur le seul `type`).
 est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur
 est importable depuis l'UI. En particulier le rayon de houppier depuis la
 hauteur (`light.ts:crownRadiusM`), et le feuillage de n'importe quelle espèce
-depuis `Snapshot.pheno` — mais il y en a DEUX, et pour une fois c'est le rendu
-que la distinction concerne le plus :
+depuis `Snapshot.pheno` — mais il y en a **TROIS**, et pour une fois c'est le
+rendu que la distinction concerne le plus :
 
 - `partFoliaireOmbrageanteDans(espece, pheno)` — ce qui intercepte la lumière,
   feuilles mortes d'un marcescent comprises. C'est la silhouette : la masse à
-  dessiner, et l'ombre qu'elle porte.
-- `partFoliaireActiveDans(espece, pheno)` — ce qui travaille. Un chêne de
-  février garde ses feuilles brunes mais ne pousse plus.
+  dessiner, et l'ombre qu'elle porte. La plus grande des trois.
+- `partFoliaireActiveDans(espece, pheno)` — le feuillage vivant déployé, celui
+  qui commande la croissance et la transpiration.
+- `partFoliaireAssimilanteDans(espece, pheno)` — le vivant **encore vert**. La
+  plus petite des trois.
 
-L'écart entre les deux est donc directement la part de feuillage MORT encore
-accroché : un houppier à colorer en brun-roux plutôt qu'en vert, sans qu'aucun
-champ n'ait à voyager pour le dire. `senescenceFoliaire(pheno)` dit, lui, si la
-chute est enclenchée.
+**Les deux écarts sont ce que le rendu vient chercher**, et aucun champ n'a à
+voyager pour les dire :
+
+| écart | ce que ça donne à l'écran |
+|---|---|
+| ombrageante − active | la part de feuillage **mort** encore accroché : le charme brun-roux de février, à colorer en brun plutôt qu'en vert |
+| active − assimilante | la part **jaunie mais toujours attachée** : le houppier entièrement doré d'octobre, garni et à l'arrêt |
+
+Deux fonctions séparent l'oui/non de l'avancement, et il ne faut pas les
+confondre — la confusion a déjà coûté un bug ici :
+`senescenceEnCoursDans(pheno)` dit si la chute est enclenchée ;
+`senescenceDans(espece, pheno)` dit **à quel point** le feuillage a jauni,
+∈ [0,1]. C'est la seconde qu'il faut pour colorer un houppier.
+
+L'assimilante n'est branchée sur rien côté moteur, et c'est délibéré : brancher
+la sénescence sur la croissance suppose de recalibrer une seconde fois
+(`docs/realisme.md`, « le houppier doré produit encore »). L'écart vaut deux
+semaines par an sur vingt-six.
 
 ## Deux limites connues
 
@@ -138,3 +154,51 @@ chute est enclenchée.
   actif, au lieu d'un par lot (`startLoop` avale jusqu'à 26 semaines par pas).
   ~280 ko par instantané sur 1 ha, ~15 Mo l'année : tenable, à cadrer avant de
   figer le protocole.
+
+---
+
+# Ce qui est tranché, et ce sur quoi je me suis trompé
+
+> Cette partie vient de la version que la branche de rendu portait avant que ce
+> fichier ne devienne la référence du contrat. Ce ne sont **pas** des demandes —
+> aucune n'attend quoi que ce soit du moteur. C'est de la mémoire : ce qu'il ne
+> faut pas rouvrir sans raison neuve, et ce que j'ai affirmé à tort.
+
+## Déjà tranché — ne pas rouvrir sans raison neuve
+
+| Sujet | Décision |
+|---|---|
+| **Les animaux d'élevage** (poules, volaille en verger) | **Plus tard**, quand le moteur les aura prévus. Pas de sprite d'élevage avant son module : une poule qu'on ne peut ni déplacer ni nourrir se retourne contre nous. La faune SAUVAGE, elle, entre dès le lot L9 — le moteur sait déjà la peupler (pression de gibier, broutage, frottis, biodiversité), et la règle est que le nombre et l'activité des bêtes lisent l'état, l'individu restant du décor. |
+| **La vraie 3D** | Non. Raisons au §0 de `docs/interface-visuelle.md` — la première étant que la qualité d'illustration par jour de travail y est bien plus basse, la seconde que le moteur est plat (couronne = disque, ombre = disque décalé) et que la 3D afficherait une précision que le modèle n'a pas. |
+| **La météo volumétrique** | Non : c'est la simulation de l'atmosphère en volume, elle n'a pas de sens sans 3D. L'**effet** (pluie, neige, gel, brume) est dedans et ne coûte rien — `weather` est déjà dans l'instantané. |
+| **Le routage de l'eau de surface dans le temps** | Non demandé. La vague d'une crue est une mise en scène ordonnée d'un état hebdomadaire, explicitement bornée : elle ne mouille que ce que `soilNappeCm` et `soilDebordementMm` déclarent mouillé. |
+
+## Branches absorbées
+
+`claude/focused-mayer-w6gcf6` (supprimée le 2026-09-04) portait deux
+correctifs de carbone, tous deux intégrés à la vue isométrique avant
+suppression :
+
+- `8c408c5` — le carbone d'une chandelle coupée (~933 kgC créés de rien passé
+  le délai de récupération). Son `actions.ts` n'a pas été reprise : la même
+  correction, avec la même clé (`mortSemaine`) et la même borne, était déjà
+  là. **Ses deux fichiers de tests, si** — ils comblaient un angle mort réel de
+  l'invariant de conservation (les arbres tués par le feu et encore sur pied,
+  dont le carbone n'est ni dans le vivant ni dans le pool).
+- `3c68769` — le feu qui recréait les chandelles au lieu de les consumer
+  (51 840 kgC en une semaine sur quarante charmes morts). Repris tel quel.
+
+Les SHA restent valables si l'on veut y revenir : `git show 8c408c5`,
+`git show 3c68769`.
+
+## Deux endroits où j'ai eu tort, pour calibrer ma crédibilité
+
+- J'ai écrit que `partMecanisable` comptait les chandelles comme obstacles. Le
+  code les **filtrait** : un tracteur passait à travers les troncs morts.
+  Corrigé depuis, dans les deux sens.
+- J'ai demandé que `litterCG` remonte dans le résultat du tick. C'est de
+  l'**état** — elle s'accumule et se décompose —, donc elle se lit comme
+  `soilPh`. La réponse livrée était meilleure que ma demande.
+
+Autrement dit : quand une entrée de ce fichier te paraît fausse, elle l'est
+peut-être.

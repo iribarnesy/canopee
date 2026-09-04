@@ -93,6 +93,20 @@ export const RECEPAGE_HAUTEUR_M = 0.5;
  * chose (chauffage, trituration), mais l'œuvre est perdue *(à calibrer)*.
  */
 export const DECOTE_CHABLIS = 0.4;
+/**
+ * Décote d'une CHANDELLE sèche abattue pour le chauffage.
+ *
+ * Un fût mort sur pied est déjà ressuyé — c'est même le bois de chauffage le
+ * plus commode, prêt à brûler sans deux ans de séchage. Mais il est fendillé,
+ * l'aubier part en poussière et les insectes s'y sont mis : jamais d'œuvre, et
+ * un volume utile moindre. Il vaut donc un peu moins que la même tige verte,
+ * pas beaucoup moins *(à calibrer)*.
+ *
+ * Il reste évidemment le choix de NE PAS la couper : une chandelle est un
+ * arbre-habitat (biodiversite.ts), et c'est le seul « produit » du jeu qui
+ * rapporte davantage debout que par terre.
+ */
+export const DECOTE_CHANDELLE = 0.7;
 /** salaire hebdomadaire chargé d'un ouvrier en CDI, € *(à calibrer)* */
 export const SALARY_EUR_WEEK = 600;
 /** salaire hebdomadaire d'un saisonnier (précarité incluse), payé d'avance, € */
@@ -625,8 +639,11 @@ function applyCouper(
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
 
   for (const id of action.treeIds) {
-    // Un arbre tué par le feu mais encore debout se récolte aussi.
-    const idx = trees.findIndex((t) => t.id === id && (t.alive || t.brulEeSemaine !== undefined));
+    // Tout ce qui est debout se coupe : la tige vive, le brûlé de l'année en
+    // coupe sanitaire, et la CHANDELLE sèche en bois de chauffage. Il n'y a
+    // rien d'autre dans `state.trees` — un arbre n'en sort que le jour où il
+    // s'abat (tick.ts).
+    const idx = trees.findIndex((t) => t.id === id);
     if (idx < 0) {
       refusals.push(refuse(action.week, "couper", `arbre ${id} introuvable`));
       continue;
@@ -634,6 +651,33 @@ function applyCouper(
     const tree = trees[idx];
     if (!tree) continue;
     const espece = getEspece(tree.especeId);
+    /**
+     * Le bois de cet arbre est-il DÉJÀ dans le pool de bois mort ?
+     *
+     * `mortSemaine` est posée au tick qui suit la mort, en même temps que le
+     * carbone aérien est versé au bois mort — une fois pour toutes. Passé ce
+     * moment, emporter le fût n'ajoute rien au bilan : ça le DÉPLACE. Sans
+     * cette distinction on fabriquerait du carbone en abattant un mort, ce
+     * qu'un test de conservation refuse à juste titre.
+     *
+     * Le cas du brûlé de l'année est différent et reste inchangé : il n'a pas
+     * encore de `mortSemaine`, son carbone est toujours « dans l'arbre ».
+     */
+    const dejaEnBoisMort = tree.mortSemaine !== undefined;
+    if (dejaEnBoisMort && action.devenir !== "vendre") {
+      // Le BRF est du bois raméal FRAIS : c'est le cambium vivant et l'azote
+      // du rameau de l'année qui font son intérêt agronomique. Broyer un fût
+      // sec ne donne pas du BRF, ça donne de la sciure — beaucoup de carbone,
+      // aucun azote, et une faim d'azote au sol pour des années.
+      refusals.push(
+        refuse(
+          action.week,
+          "couper",
+          `arbre ${id} : une chandelle sèche ne fait pas de BRF (il faut du bois frais) — à vendre en chauffage, ou à laisser debout`,
+        ),
+      );
+      continue;
+    }
     // Broyer demande plus de travail que vendre bord de route ; charger le
     // broyat pour l'emporter, plus encore.
     const facteurTravail =
@@ -646,20 +690,51 @@ function applyCouper(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
-    // Les souches et racines restent au sol dans les deux cas (bois mort).
-    deadWoodKgC +=
-      treeTotalCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, tree.heightM);
+    const aerienKgC = treeAboveCarbonKg(espece, tree.heightM);
+    /**
+     * Carbone qui quitte réellement la parcelle avec le fût.
+     *
+     * Pour une tige vive, c'est tout son aérien. Pour une chandelle, c'est ce
+     * qu'il en RESTE dans le pool de bois mort — lequel se décompose semaine
+     * après semaine (tick.ts). Une chandelle de dix ans a déjà rendu au sol et
+     * à l'atmosphère une bonne part d'elle-même ; en emporter davantage
+     * viderait le pool sous zéro et fabriquerait du carbone.
+     *
+     * C'est l'approximation qu'impose un pool AGRÉGÉ : le moteur ne sait pas
+     * quelle part du bois mort appartient à quelle chandelle. Un pool séparé
+     * pour le bois mort DEBOUT serait plus juste — il se décompose plus
+     * lentement, sec et hors sol — et c'est le jour où il existera qu'on
+     * pourra dater ce que vaut une chandelle *(limite assumée)*.
+     */
+    const emporteKgC = dejaEnBoisMort ? Math.min(aerienKgC, Math.max(0, deadWoodKgC)) : aerienKgC;
+    if (dejaEnBoisMort) {
+      // On RETIRE du bois mort ce qu'on emporte : la souche et les racines,
+      // elles, y étaient déjà et y restent.
+      deadWoodKgC -= emporteKgC;
+    } else {
+      // Les souches et racines restent au sol dans les trois cas (bois mort).
+      deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
+    }
     if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
       const brule = tree.brulEeSemaine !== undefined;
-      treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1);
-      if (vente.qualite === "oeuvre" && !brule) {
+      if (dejaEnBoisMort) {
+        // Une chandelle ne fait JAMAIS d'œuvre, même si elle a été élaguée de
+        // son vivant : le bois est fendillé, l'aubier parti, les insectes
+        // passés. Elle se vend au volume, au prix du chauffage, décotée — et
+        // un fût noirci par le feu vaut encore moins qu'un fût gris.
+        const decote = brule ? DECOTE_CHABLIS : DECOTE_CHANDELLE;
+        treasuryEur += woodVolumeM3(tree.heightM) * WOOD_PRICE_EUR_M3 * decote;
+      } else {
+        treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1);
+      }
+      if (vente.qualite === "oeuvre" && !brule && !dejaEnBoisMort) {
         // Bois d'œuvre : le carbone reste piégé dans le produit (charpente,
         // meuble) pour des décennies — ce n'est pas une émission (§12).
-        oeuvreCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+        oeuvreCumKgC += emporteKgC;
       } else {
         // Bois de chauffage : brûlé chez le client → émis immédiatement.
-        exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+        exportedEnergyCumKgC += emporteKgC;
       }
     } else if (action.devenir === "broyer") {
       // Le broyat rejoint le tas : rien ne touche le sol pour l'instant.

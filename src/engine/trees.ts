@@ -488,7 +488,20 @@ export function treeExtractionCapacityGWeek(heightM: number): number {
   return metabolicSizeGWeek(heightM);
 }
 
-/** Facteur saison : 0 sous la température de base, 1 à base+8 °C. */
+/**
+ * Facteur saison : 0 sous la température de base, 1 à base+8 °C.
+ *
+ * Il ne porte plus que la VITESSE du métabolisme, pas la longueur de la saison :
+ * celle-là vient de `partFoliaireActive`, avec qui il se multiplie dans le tick.
+ * C'est ce qui a permis de recalibrer `GROWING_WEEKS` (trente semaines à
+ * vingt-six) sans rien raboter — substituer la phénologie sans ce recalibrage
+ * aurait baissé la croissance sans la rendre plus juste.
+ *
+ * Ce qui n'est PAS encore dans la boucle, un cran plus fin : la sénescence. Une
+ * feuille jaunie est encore accrochée et vivante, donc encore comptée ici, et
+ * `partFoliaireAssimilante` mesure exactement cet écart — deux semaines par an.
+ * Voir docs/realisme.md, « le houppier doré produit encore ».
+ */
 export function seasonFactor(espece: EspeceV0, tMean: number): number {
   return Math.min(1, Math.max(0, (tMean - espece.tBaseCroissanceC) / 8));
 }

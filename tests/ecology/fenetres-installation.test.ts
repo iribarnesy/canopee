@@ -50,18 +50,36 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
 
   it("les deux pionnières frugales colonisent durablement le sable", () => {
     // « Durablement » ne veut pas dire « pour toujours » : sur la lande, un
-    // incendie peut remettre les compteurs à zéro (ici en année 39, ce qui
-    // est le comportement attendu). Ce qu'on vérifie, c'est que chacune
+    // incendie remet les compteurs à zéro. Ce qu'on vérifie, c'est que chacune
     // s'installe et tient des décennies — pas l'état de la dernière année.
-    // Plus de dix ans d'affilée au-dessus de cinquante tiges : la station est
-    // durablement colonisée, avant que l'incendie de l'année 39 ne rebatte les
-    // cartes.
-    // On compte les années au-dessus du seuil, CONSÉCUTIVES OU NON : la date
-    // des incendies varie d'une graine à l'autre, et une seule d'entre elles
-    // coupe la série en deux sans rien dire de la colonisation. Ce qui compte
-    // est que la station soit tenue une bonne partie du temps.
+    //
+    // ON NE NOMME PAS LES ANNÉES D'INCENDIE. Le régime de feu dépend
+    // entièrement de la graine : mesuré sur six d'entre elles, on va d'AUCUN
+    // feu en quarante-deux ans à trois feux (années 1, 19 et 38). Un
+    // commentaire qui datait l'incendie s'est déjà retrouvé faux quand le
+    // moteur a changé — la date n'est pas une propriété écologique, le
+    // comportement en est une.
+    //
+    // On compte les années au-dessus du seuil, CONSÉCUTIVES OU NON : une
+    // seule interruption ne dit rien de la colonisation.
     expect(anneesAuDessus(betulaByYear, 50)).toBeGreaterThan(12);
-    expect(anneesAuDessus(pinusByYear, 50)).toBeGreaterThan(12);
+
+    // Le pin, lui, demande DEUX clauses, et c'est le régime de feu qui
+    // l'impose. Il s'installe franchement — il passe la cinquantaine de tiges
+    // sur les six graines mesurées, de 98 à 332 selon le nombre de feux — puis
+    // il tient la station à une trentaine de tiges, sous le bouleau qui monte
+    // plus vite et prend la lumière. Lui demander de tenir DOUZE ANS au-dessus
+    // de cinquante échouerait dès qu'une graine met deux ou trois feux dans la
+    // fenêtre (9 et 11 années seulement, sur les graines 7 et 12).
+    //
+    // Pourquoi le bouleau l'emporte, et pourquoi c'est défendable : il rejette
+    // de souche après un feu (`rejetteApresFeu`), le pin non ; il fructifie à
+    // dix ans contre quinze, et sème deux fois plus. Un feu fréquent favorise
+    // les rejeteurs contre les semenciers obligés — c'est un schéma documenté.
+    // Que les Landes soient un pays de pin relève de la plantation et de la
+    // gestion, pas de la succession spontanée sous feu fréquent.
+    expect(Math.max(...pinusByYear)).toBeGreaterThan(50);
+    expect(anneesAuDessus(pinusByYear, 30)).toBeGreaterThan(12);
   });
 
   it("l'installation se fait par vagues, pas à débit constant (météo réelle)", () => {

@@ -5,3 +5,6 @@ dist/
 
 # Arbres de travail des agents : temporaires, jamais versionnés.
 .claude/worktrees/
+
+# Sorties du banc L0 : mesures et captures, régénérables en une commande.
+l0-mesures/

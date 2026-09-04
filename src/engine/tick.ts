@@ -102,6 +102,7 @@ import {
   partFoliaireActiveDans,
   partFoliaireOmbrageanteDans,
   semaineDeFroid,
+  senescenceEnCoursDans,
 } from "./phenologie";
 import {
   alterationPhosphoreG,
@@ -1486,14 +1487,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (!tree.alive || tree.uptakeYearG <= 0) return tree;
     const espece = getEspece(tree.especeId);
     if (!espece.lumiere.caduc) return tree;
+    // Rien ne tombe hors sénescence. Le garde manquait, et l'asymétrie du
+    // froid n'était qu'un symptôme : au PRINTEMPS, les deux appels ci-dessous
+    // ont le même `semainesDepuisSenescence` (zéro), donc leur seule
+    // différence était le besoin de froid — et un hêtre à 500 °C·j avec trois
+    // semaines de froid « lâchait » ainsi 27,8 % de son azote foliaire en
+    // pleine feuillaison. Ce n'était pas une chute de feuilles, c'était deux
+    // lois comparées l'une à l'autre.
+    if (!senescenceEnCoursDans(pheno)) return tree;
     const restant = partFoliaireActiveDans(espece, pheno);
     // La même semaine, un cran plus tôt dans la chute : l'écart entre les deux
-    // est ce que l'arbre a lâché. Le besoin de froid ne compte pas ici — la
-    // branche d'automne de `partFoliaireActive` ne le regarde pas.
+    // est ce que l'arbre a lâché. Le besoin de froid ne compte pas ici, et le
+    // garde ci-dessus est ce qui le garantit : on est toujours dans la branche
+    // d'automne de `partFoliaireActive`, qui ne le regarde pas. Les deux appels
+    // peuvent donc partager le même contexte.
     const restantAvant = partFoliaireActiveDans(espece, {
       ...pheno,
       semainesDepuisSenescence: Math.max(0, pheno.semainesDepuisSenescence - 1),
-      semainesDeFroid: Number.POSITIVE_INFINITY,
     });
     const tombe = Math.max(0, restantAvant - restant);
     if (tombe <= 0) return tree;
@@ -1711,6 +1721,30 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         const espece = getEspece(tree.especeId);
         if (survitAuFeu(tree, intensite)) {
           apresFeu.push(tree);
+          continue;
+        }
+        if (!tree.alive) {
+          // Une chandelle qui rebrûle. Son bois sec part en fumée, mais il est
+          // DÉJÀ compté quelque part : l'émettre sans l'en retirer fabriquerait
+          // du carbone. Et un arbre déjà mort ne rejette pas de souche, ni ne
+          // compte une deuxième fois parmi les arbres tués par le feu.
+          const aerienKgC = treeAboveCarbonKg(espece, tree.heightM);
+          if (tree.mortSemaine === undefined) {
+            // Tué par un feu précédent et encore récupérable : son carbone
+            // attendait sur pied, personne ne l'avait encore versé. L'aérien
+            // s'envole, les racines rejoignent le bois mort — le versement que
+            // sa mort n'avait fait que différer.
+            carboneFeuKgC += aerienKgC;
+            deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
+          } else {
+            // Chandelle déjà versée au pool, qui se décompose depuis : on n'en
+            // émet pas plus qu'il n'en reste (même borne qu'à la coupe).
+            const brulKgC = Math.min(aerienKgC, deadWoodKgC);
+            carboneFeuKgC += brulKgC;
+            deadWoodKgC -= brulKgC;
+          }
+          // Le tronc a brûlé : la chandelle ne tient plus debout. Ses racines
+          // restent au pool, et la place se libère.
           continue;
         }
         tues++;

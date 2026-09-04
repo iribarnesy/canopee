@@ -13,6 +13,15 @@ succession écologique, bilan carbone honnête.
 - **Critères de réalisme** : [docs/realisme.md](docs/realisme.md) — le référentiel
   de vérité écologique que le moteur doit atteindre, et où on en est.
 
+- **Interface visuelle** : [docs/interface-visuelle.md](docs/interface-visuelle.md) —
+  l'inventaire du chantier de la vue isométrique (visuels, animations, ce que
+  le moteur devra apprendre à dire).
+
+- **Attentes du rendu** : [docs/attentes-du-rendu.md](docs/attentes-du-rendu.md) —
+  la file d'attente des évolutions que la vue isométrique demande au moteur,
+  avec leur urgence. C'est là que se répond « qu'est-ce que je fais ensuite ? »
+  quand on travaille dans `src/engine/`.
+
 État : moteur spatial sur 25 espèces — sol en **horizons** dont tout est
 dérivé (texture, MO, pierrosité → réserve utile, drainage, fertilité), grille
 1 m², arbres positionnés qui puisent selon la **profondeur de leurs racines**,

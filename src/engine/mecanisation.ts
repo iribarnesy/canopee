@@ -14,6 +14,9 @@
  * des arbres, donc de ce que le joueur a planté. Planter en ligne devient un
  * choix qui se paie toute la vie du peuplement — c'est exactement pourquoi
  * l'agroforesterie moderne aligne ses arbres.
+ *
+ * Un obstacle, c'est tout ce qui est DEBOUT — les chandelles comprises. Elles
+ * ne font plus ni ombre ni feuilles, mais elles occupent le couloir.
  */
 
 import type { TreeState } from "./trees";
@@ -45,7 +48,15 @@ export function partMecanisable(
 ): number {
   const obstacles: { x: number; y: number }[] = [];
   for (const tree of trees) {
-    if (!tree.alive) continue;
+    // Les CHANDELLES comptent. Un tronc mort resté debout n'ombrage plus, ne
+    // transpire plus, ne pousse plus — mais un tracteur ne passe pas à
+    // travers. C'est même le pire des obstacles : un fût sec et cassant, qu'on
+    // ne veut pas frôler. On ne filtre donc pas sur `alive` ; tout ce que
+    // `state.trees` contient est debout, par construction (tick.ts retire
+    // l'arbre le jour où sa chandelle s'abat).
+    //
+    // Conséquence de jeu voulue : après une mortalité, la fauche et le
+    // chaulage redeviennent chers jusqu'à ce qu'on ait nettoyé.
     const dx = tree.x - cx;
     const dy = tree.y - cy;
     if (dx * dx + dy * dy <= rayonM * rayonM) obstacles.push({ x: dx, y: dy });

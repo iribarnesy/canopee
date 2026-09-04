@@ -142,7 +142,9 @@ mesurer que ce qu'on sait déjà faire.*
 | D4 | Un gel tardif détruit les fleurs ouvertes : les précoces sont un pari | ✅ | `tMinAbsC` ; `fruits.test.ts` |
 | D5 | La variabilité climatique ouvre des fenêtres d'installation | 🟡 | visible (`fenetres-installation.test.ts`), non piloté par un mécanisme dédié |
 | D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | ❌ | Microclimat = humidité seulement |
-| D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ❌ | `besoin_froid_h` prévu, non implémenté |
+| D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
+| D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
+| D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler AVANT de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
 | D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent |
 | D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
 | D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | ✅ | écarts chauds et déficits de pluie amplifiés (`normalesHebdo`) ; et la mémoire pluriannuelle existe — non dans le sol (qui se recharge chaque hiver, mesuré à 94-100 %) mais dans l'arbre, par la cavitation (`dommageHydraulique`) |
@@ -871,6 +873,48 @@ d'horizons, tout le reste est calculé. Pour générer des stations quelconques,
 il manque seulement le tirage cohérent des profils (une texture, une
 profondeur et une MO plausibles ensemble, et cohérentes avec le climat et la
 position topographique) — pas de nouveau mécanisme moteur.
+
+## Le houppier doré produit encore
+
+Ce chantier était intitulé « la saison de végétation est encore thermique ». Il
+a été fait entre-temps, et cette entrée enregistre ce qui reste.
+
+**Ce qui est fait.** La croissance et la transpiration ne passent plus par le
+seul thermomètre : elles sont commandées par `partFoliaireActive` — le feuillage
+vivant déployé, espèce par espèce — en produit avec un facteur thermique qui ne
+porte plus que la vitesse du métabolisme. Et `GROWING_WEEKS` est passé de trente
+à vingt-six, ce qui est la contrepartie indispensable : la constante veut dire
+« sur combien de semaines la pousse annuelle se répartit », et c'est la
+phénologie qui en donne le compte. Un caduc nu de janvier ne transpire donc plus
+dans les Landes, et l'ordre de débourrement compte enfin dans le bilan annuel.
+
+**Ce qui reste, et c'est un cran plus fin.** L'automne se joue en deux temps : la
+feuille jaunit d'abord, elle tombe deux à trois semaines plus tard. Entre les
+deux, elle est accrochée, vivante, et ne produit plus rien —
+`partFoliaireAssimilante` mesure exactement cet écart. Elle n'est **pas** branchée
+sur la croissance, donc un houppier entièrement doré d'octobre produit encore
+pendant deux semaines par an.
+
+**Pourquoi elle ne l'est pas.** Le premier essai, fait *avant* le recalibrage
+ci-dessus, coûtait deux seuils écologiques calibrés :
+
+| | avant | avec la sénescence |
+|---|---|---|
+| bouleau à 10 ans, limon riche (`lumiere.test.ts`) | 4,0 m | **3,8 m** |
+| morts par ravageurs, climat figé vs SSP5-8.5 (`climat.test.ts`) | 2 → 4 | 3 → 5 |
+
+Cette mesure ne vaut plus telle quelle : elle a été prise sur `GROWING_WEEKS =
+30` et sur une croissance encore thermique. **À remesurer sur la calibration
+actuelle**, et l'enjeu est petit — deux semaines par an sur une saison de
+vingt-six, soit de l'ordre de 8 % de la production d'automne, pas de l'année.
+C'est le genre de raffinement qu'on branche quand on recalibre pour une autre
+raison, pas pour lui seul.
+
+*Cette entrée fermait sur une limite* — les hauteurs absolues trop faibles, un
+hêtre de plaine à quatre mètres à quarante ans — en disant qu'il faudrait la
+reprendre sur des tables de production. C'est fait : voir « les hauteurs
+absolues : le moteur se cale sur les tables de production » plus haut. Ce qui reste ici,
+la sénescence hors de la boucle, est un raffinement à côté.
 
 ## Règle de travail
 

@@ -1,6 +1,7 @@
 /**
  * Phénologie foliaire (phenologie.ts) : l'ordre de débourrement, la porte
- * photopériodique, et l'étalement de la chute.
+ * photopériodique, l'étalement de la chute, et la sénescence — qui devance la
+ * chute et met la feuille hors service avant qu'elle ne tombe.
  */
 
 import { describe, expect, it } from "vitest";
@@ -12,12 +13,15 @@ import {
   contextePhenologique,
   debourrementExigeDJ,
   ETALEMENT_CHUTE_SEMAINES,
+  ETALEMENT_SENESCENCE_SEMAINES,
   partFoliaireActive,
   partFoliaireActiveDans,
+  partFoliaireAssimilante,
   partFoliaireOmbrageanteDans,
   SENESCENCE_DEBUT_SEMAINE,
   SOLSTICE_ETE_SEMAINE,
   semaineDeFroid,
+  senescenceEnCoursDans,
   senescenceFoliaire,
 } from "../../src/engine/phenologie";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -179,8 +183,108 @@ describe("le contexte phénologique", () => {
     expect(partFoliaireActiveDans(chene, ctx)).toBe(
       partFoliaireActive(chene, 900, ctx.jourH, true, ctx.semainesDepuisSenescence, 20),
     );
-    // Et la sénescence est enclenchée : c'est ce qui brunit le feuillage.
-    expect(senescenceFoliaire(ctx)).toBe(true);
+    // Et la sénescence est enclenchée : le compteur de chute tourne.
+    expect(senescenceEnCoursDans(ctx)).toBe(true);
+  });
+});
+
+describe("la sénescence, distincte de la chute", () => {
+  const chene = getEspece("quercus_pubescens");
+  const pin = getEspece("pinus_sylvestris");
+  /** Un jour d'automne déjà court : la sénescence est enclenchée. */
+  const jourCourt = 10;
+
+  it("elle DEVANCE la chute : le houppier est encore garni et déjà doré", () => {
+    // C'est tout l'automne, et c'est ce que la part foliaire seule ne disait
+    // pas : beaucoup de feuilles, plus une qui travaille.
+    const semaine = ETALEMENT_SENESCENCE_SEMAINES;
+    const deployee = partFoliaireActive(chene, 900, jourCourt, true, semaine);
+    const jaunie = senescenceFoliaire(chene, jourCourt, true, semaine);
+    expect(deployee).toBeGreaterThan(0.5);
+    expect(jaunie).toBe(1);
+  });
+
+  it("elle est nulle avant que le jour ne raccourcisse assez", () => {
+    // Un jour long d'août : rien n'a commencé, même après le solstice.
+    expect(senescenceFoliaire(chene, 15, true, 0)).toBe(0);
+    // Et jamais au printemps, quelle que soit la durée du jour.
+    expect(senescenceFoliaire(chene, 10, false, 5)).toBe(0);
+  });
+
+  it("un sempervirent ne sénesce pas : pas d'automne pour un pin", () => {
+    expect(senescenceFoliaire(pin, jourCourt, true, 10)).toBe(0);
+    expect(partFoliaireAssimilante(pin, 0, jourCourt, true, 10)).toBe(1);
+  });
+
+  it("le feuillage ASSIMILANT tombe à zéro avant le feuillage déployé", () => {
+    // La conséquence qui compte pour le moteur : l'arbre cesse de produire
+    // (donc de pousser et de transpirer) alors qu'il porte encore ses
+    // feuilles. Sans ça, un automne doux faisait pousser un houppier mort.
+    const semaine = ETALEMENT_SENESCENCE_SEMAINES;
+    expect(partFoliaireAssimilante(chene, 900, jourCourt, true, semaine)).toBe(0);
+    expect(partFoliaireActive(chene, 900, jourCourt, true, semaine)).toBeGreaterThan(0);
+  });
+
+  it("l'assimilant ne dépasse jamais le déployé, et ne remonte pas", () => {
+    let precedent = Number.POSITIVE_INFINITY;
+    for (let s = 0; s <= ETALEMENT_CHUTE_SEMAINES; s++) {
+      const assimilant = partFoliaireAssimilante(chene, 900, jourCourt, true, s);
+      const deployee = partFoliaireActive(chene, 900, jourCourt, true, s);
+      expect(assimilant).toBeLessThanOrEqual(deployee + 1e-9);
+      expect(assimilant).toBeLessThanOrEqual(precedent + 1e-9);
+      precedent = assimilant;
+    }
+  });
+
+  it("en pleine saison, l'assimilant EST le déployé : rien ne change l'été", () => {
+    // Le garde-fou de non-régression : la sénescence ne doit toucher que
+    // l'automne, sinon elle rognerait la croissance de toute l'année.
+    const ete = partFoliaireActive(chene, 900, 15, false, 0);
+    expect(partFoliaireAssimilante(chene, 900, 15, false, 0)).toBeCloseTo(ete, 10);
+  });
+});
+
+describe("rien ne tombe hors sénescence", () => {
+  /**
+   * Le bug que ce test verrouille : la chute des feuilles se calculait comme
+   * l'écart entre `partFoliaireActive` de cette semaine et celui d'un cran plus tôt.
+   * Au printemps, ces deux appels ont le même compteur de sénescence (zéro) —
+   * leur seule différence était le besoin de froid, passé d'un côté et pas de
+   * l'autre. Un hêtre dont la dormance n'était pas levée versait ainsi près
+   * d'un tiers de son azote foliaire en litière EN PLEINE FEUILLAISON.
+   *
+   * Ce n'était pas une chute de feuilles : c'était deux lois comparées l'une à
+   * l'autre. Le garde `senescenceEnCoursDans` supprime la cause.
+   */
+  const hetre = getEspece("fagus_sylvatica");
+
+  it("au printemps, un froid insatisfait ne fait pas tomber de feuilles", () => {
+    // Le cas exact : hêtre, 500 °C·j, trois semaines de froid pour un besoin
+    // bien supérieur — la dormance n'est pas levée, le débourrement est
+    // retardé, et rien ne doit tomber pour autant.
+    expect(hetre.phenologie.besoinFroidSemaines).toBeGreaterThan(3);
+    const printemps = contextePhenologique(49.5, 16, 500, 3);
+    expect(senescenceEnCoursDans(printemps)).toBe(false);
+
+    // C'est bien la comparaison qui divergeait : sans le garde, l'écart entre
+    // les deux appels est positif alors que le feuillage ne fait que SORTIR.
+    const avecFroid = partFoliaireActiveDans(hetre, printemps);
+    const sansFroid = partFoliaireActiveDans(hetre, {
+      ...printemps,
+      semainesDeFroid: Number.POSITIVE_INFINITY,
+    });
+    expect(sansFroid).toBeGreaterThan(avecFroid);
+  });
+
+  it("en automne, la sénescence est bien enclenchée et le froid n'entre plus", () => {
+    // La branche d'automne de `partFoliaireActive` ignore le besoin de froid : les
+    // deux contextes doivent donc donner exactement la même chose.
+    const automne = contextePhenologique(49.5, SENESCENCE_DEBUT_SEMAINE + 2, 900, 3);
+    expect(senescenceEnCoursDans(automne)).toBe(true);
+    expect(partFoliaireActiveDans(hetre, automne)).toBeCloseTo(
+      partFoliaireActiveDans(hetre, { ...automne, semainesDeFroid: Number.POSITIVE_INFINITY }),
+      10,
+    );
   });
 });
 
