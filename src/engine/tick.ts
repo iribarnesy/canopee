@@ -145,8 +145,6 @@ import {
 import type { HorizonHydro } from "./water";
 import { drynessFactor, profilHydro } from "./water";
 
-/** °C moyenne hebdo au-dessus de laquelle les caducs sont en feuilles (proxy V0). */
-const LEAVES_ON_TMEAN_C = 6;
 /**
  * Part de l'ETP qu'un sol NU peut évaporer (la strate herbacée, elle, est
  * modélisée explicitement dans herbe.ts et transpire pour son compte).
