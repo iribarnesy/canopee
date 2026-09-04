@@ -17,6 +17,7 @@ import {
   indiceRisqueFeu,
   portanceDuFeu,
   propager,
+  rangsDuFront,
   survitAuFeu,
 } from "../../src/engine/feu";
 import { advanceWeek } from "../../src/engine/game";
@@ -146,6 +147,60 @@ describe("propagation : une coupure arrête le feu", () => {
   });
 });
 
+describe("le front du feu : où il est passé, et dans quel ordre", () => {
+  it("le rang, c'est la distance à l'origine à travers ce qui a brûlé", () => {
+    const cote = 11;
+    const parCellule = new Array(cote * cote).fill(1);
+    const origine = 5 * cote + 5;
+    const { brulees } = propager(origine, { parCellule, moyenne: 1 }, cote, rngStateFromSeed(2));
+    const rangs = rangsDuFront(brulees, origine, cote);
+    // Tout l'ensemble brûlé est atteint : le feu ne saute pas.
+    expect(rangs.size).toBe(brulees.size);
+    expect(rangs.get(origine)).toBe(0);
+    // Distance de Manhattan, puisqu'on avance de proche en proche en croix.
+    for (const [cellule, rang] of rangs) {
+      const dx = Math.abs((cellule % cote) - 5);
+      const dy = Math.abs(Math.floor(cellule / cote) - 5);
+      expect(rang).toBe(dx + dy);
+    }
+  });
+
+  it("contourne la coupure : derrière l'obstacle, le front arrive plus tard", () => {
+    const cote = 11;
+    const parCellule = new Array(cote * cote).fill(1);
+    // Un mur rase sauf une porte, en bas : le feu doit faire le tour.
+    for (let y = 0; y < cote - 1; y++) parCellule[y * cote + 5] = 0;
+    const { brulees } = propager(0, { parCellule, moyenne: 1 }, cote, rngStateFromSeed(3));
+    const rangs = rangsDuFront(brulees, 0, cote);
+    const derriere = rangs.get(5 + 1); // juste à droite du mur, en haut
+    expect(derriere).toBeDefined();
+    // À vol d'oiseau six cellules ; par la porte du bas, bien davantage.
+    expect(derriere ?? 0).toBeGreaterThan(6);
+  });
+
+  it("ne consomme aucun tirage : le déterminisme du feu est intact", () => {
+    const cote = 11;
+    const charge = { parCellule: new Array(cote * cote).fill(0.5), moyenne: 0.5 };
+    const avant = propager(0, charge, cote, rngStateFromSeed(5));
+    // La passe de rangs est postérieure et pure : elle ne peut pas déplacer
+    // l'état du PRNG, donc le tirage suivant est le même.
+    rangsDuFront(avant.brulees, 0, cote);
+    const apres = propager(0, charge, cote, rngStateFromSeed(5));
+    expect([...apres.brulees].sort((a, b) => a - b)).toEqual(
+      [...avant.brulees].sort((a, b) => a - b),
+    );
+    expect(apres.rng).toEqual(avant.rng);
+  });
+
+  it("un feu qui ne prend pas à l'origine ne laisse pas de front", () => {
+    const cote = 5;
+    const charge = { parCellule: new Array(cote * cote).fill(0), moyenne: 0 };
+    const { brulees } = propager(0, charge, cote, rngStateFromSeed(1));
+    expect(brulees.size).toBe(0);
+    expect(rangsDuFront(brulees, 0, cote).size).toBe(0);
+  });
+});
+
 describe("le feu trie les espèces", () => {
   it("le chêne-liège traverse un incendie qui tue le pin", () => {
     const intensite = 0.8;
@@ -204,6 +259,7 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   let arbresTues = 0;
   const tuesParLeFeu: Record<string, number> = {};
   const mortsTotales: Record<string, number> = {};
+  let dernier: NonNullable<ReturnType<typeof advanceWeek>["incendie"]> | undefined;
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
@@ -216,12 +272,34 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     if (r.incendie) {
       incendies++;
       arbresTues += r.incendie.arbresTues;
+      dernier = r.incendie;
     }
   }
 
   it("la lande finit par brûler et le feu tue", () => {
     expect(incendies).toBeGreaterThan(0);
     expect(arbresTues).toBeGreaterThan(5);
+  });
+
+  it("l'incendie rend son front, pas seulement des compteurs", () => {
+    // Sans les cellules ET leur rang d'arrivée, le rendu ne peut que noircir
+    // une tache d'un coup : pas de ligne de flammes qui court.
+    expect(dernier).toBeDefined();
+    if (!dernier) return;
+    expect(dernier.brulees).toHaveLength(dernier.cellulesBrulees);
+    expect(dernier.rangs).toHaveLength(dernier.cellulesBrulees);
+    expect(dernier.brulees[0]).toBe(dernier.origine);
+    expect(dernier.rangs[0]).toBe(0);
+    // Rangées par rang croissant : le rendu n'a qu'à les découper en tranches.
+    const croissants = [...dernier.rangs].every(
+      (r, i) => i === 0 || r >= (dernier?.rangs[i - 1] ?? 0),
+    );
+    expect(croissants).toBe(true);
+    // Et chaque cellule est bien dans la grille.
+    for (const c of dernier.brulees) {
+      expect(c).toBeGreaterThanOrEqual(0);
+      expect(c).toBeLessThan(station.coteM * station.coteM);
+    }
   });
 
   it("le feu trie : il emporte des pins et épargne les chênes-lièges", () => {

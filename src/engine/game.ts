@@ -7,12 +7,13 @@
  * actions au fil de l'eau : partie vécue et partie rejouée sont identiques.
  */
 
-import type { ActionRefusal, GameAction } from "./actions";
+import type { ActionRefusal, GameAction, GesteVisible } from "./actions";
 import { applyAction, OVERDRAFT_LIMIT_EUR, SALARY_EUR_WEEK } from "./actions";
 import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
+import type { IncendieResult, MortDeLaSemaine } from "./tick";
 import { tick } from "./tick";
 
 export interface Journal {
@@ -58,16 +59,24 @@ export function advanceWeek(
   state: GameState;
   refusals: ActionRefusal[];
   fluxes: TickFluxes;
-  morts: { especeId: string; cause: string; heightM: number }[];
-  incendie?: { cellulesBrulees: number; arbresTues: number; rejets: number; carboneTHa: number };
+  morts: MortDeLaSemaine[];
+  incendie?: IncendieResult;
+  /** gestes du joueur ET du gibier de la semaine, pour le rendu (tick.ts) */
+  gestes: GesteVisible[];
+  /** débordement de la semaine, mm par cellule (tick.ts) */
+  debordementParCellule: Float32Array;
+  /** lumière arrivant au sol, par cellule (tick.ts) */
+  lumiereAuSol: Float32Array;
 } {
   let s = beginWeek(state);
   const refusals: ActionRefusal[] = [];
+  const gestes: GesteVisible[] = [];
   for (const action of actions) {
     if (action.week !== s.week) continue;
     const result = applyAction(s, action);
     s = result.state;
     refusals.push(...result.refusals);
+    gestes.push(...(result.gestes ?? []));
   }
   const ticked = tick(s, weather);
   return {
@@ -76,6 +85,9 @@ export function advanceWeek(
     fluxes: ticked.fluxes,
     morts: ticked.morts,
     incendie: ticked.incendie,
+    gestes: [...gestes, ...ticked.gestes],
+    debordementParCellule: ticked.debordementParCellule,
+    lumiereAuSol: ticked.lumiereAuSol,
   };
 }
 

@@ -43,7 +43,20 @@
  */
 
 import type { EspeceV0 } from "./especes";
+import { dureeDuJourH, midWeekDayOfYear } from "./meteo";
 
+/**
+ * Semaine du solstice d'été : au-delà, le jour raccourcit. C'est le
+ * basculement qui donne son sens à la porte photopériodique — onze heures de
+ * jour en mars ne veulent pas dire la même chose qu'en octobre.
+ */
+export const SOLSTICE_ETE_SEMAINE = 25;
+/**
+ * Semaine où la chute des feuilles commence à se compter. La sénescence
+ * s'enclenche quand le jour passe sous son seuil ; on date le compteur
+ * d'étalement à partir d'ici plutôt que de porter un état de plus.
+ */
+export const SENESCENCE_DEBUT_SEMAINE = 40;
 /** Sur combien de degrés-jours le feuillage se déploie, une fois parti. */
 export const ETALEMENT_DEBOURREMENT_DJ = 90;
 /** Durée du jour à partir de laquelle la sénescence s'enclenche, heures. */
@@ -126,4 +139,68 @@ export function partFoliaire(
  */
 export function senescenceEnCours(dureeJourH: number, automne: boolean): boolean {
   return automne && dureeJourH <= SEUIL_SENESCENCE_H;
+}
+
+/**
+ * Tout ce qu'il faut savoir de la SAISON pour calculer une part foliaire, sans
+ * avoir l'état de la partie sous la main.
+ *
+ * Cinq scalaires : deux viennent de l'état (le cumul de chaleur et le froid
+ * accumulé), trois se déduisent de la latitude et de la semaine. C'est
+ * exactement ce que `partFoliaire` demande — et ça tient dans un instantané,
+ * là où une valeur par arbre dupliquerait ce que l'espèce sait déjà. Si la
+ * phénologie se raffine, le contexte grossit et les deux appelants suivent.
+ */
+export interface ContextePhenologique {
+  /** cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier (GameState) */
+  ddYearBase5: number;
+  /** durée du jour au milieu de la semaine, heures */
+  jourH: number;
+  /** true après le solstice d'été : le jour raccourcit */
+  automne: boolean;
+  /** semaines écoulées depuis le début du compteur de chute */
+  semainesDepuisSenescence: number;
+  /** semaines de froid utile accumulées pour lever la dormance (GameState) */
+  semainesDeFroid: number;
+}
+
+/**
+ * Le contexte phénologique d'une semaine. `semaineAnnee` est la semaine DANS
+ * L'ANNÉE (0–51), pas la semaine absolue de la partie.
+ *
+ * Un seul endroit calcule ce calendrier : le tick s'en sert pour faire pousser
+ * les feuilles, le rendu pour les colorer. Deux copies dériveraient — un
+ * houppier doré côté écran, un houppier vert côté moteur.
+ */
+export function contextePhenologique(
+  latitudeDeg: number,
+  semaineAnnee: number,
+  ddYearBase5: number,
+  semainesDeFroid: number,
+): ContextePhenologique {
+  const automne = semaineAnnee >= SOLSTICE_ETE_SEMAINE;
+  return {
+    ddYearBase5,
+    jourH: dureeDuJourH(latitudeDeg, midWeekDayOfYear(semaineAnnee)),
+    automne,
+    semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
+    semainesDeFroid,
+  };
+}
+
+/** `partFoliaire` prise dans son contexte : la forme qu'appellent le tick et le rendu. */
+export function partFoliaireDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return partFoliaire(
+    espece,
+    ctx.ddYearBase5,
+    ctx.jourH,
+    ctx.automne,
+    ctx.semainesDepuisSenescence,
+    ctx.semainesDeFroid,
+  );
+}
+
+/** La sénescence est-elle enclenchée ? (les feuilles tombent, elles brunissent) */
+export function senescenceFoliaire(ctx: ContextePhenologique): boolean {
+  return senescenceEnCours(ctx.jourH, ctx.automne);
 }

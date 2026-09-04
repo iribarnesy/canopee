@@ -127,3 +127,93 @@ describe("plafonds économiques (déterministes)", () => {
     expect(after.trees).toHaveLength(0);
   });
 });
+
+/**
+ * Les retours de geste : quels arbres l'action a RÉELLEMENT touchés.
+ *
+ * Sans eux, le rendu reçoit un instantané avec un arbre en moins et n'a aucun
+ * moyen de savoir lequel : l'arbre s'escamote au lieu de tomber.
+ */
+describe("ce que l'action rapporte au rendu", () => {
+  function troisFrenes() {
+    let state = createGameState(STATION, rngStateFromSeed(4));
+    state = plantAt(state, "fraxinus_excelsior", 10, 10, 9);
+    state = plantAt(state, "fraxinus_excelsior", 16, 10, 9);
+    state = plantAt(state, "fraxinus_excelsior", 22, 10, 9);
+    const ids = state.trees.map((t) => t.id);
+    return { state, ids };
+  }
+
+  it("la coupe nomme les tiges tombées", () => {
+    const { state, ids } = troisFrenes();
+    const r = applyAction(state, {
+      type: "couper",
+      week: 0,
+      treeIds: [ids[0] ?? 0, ids[1] ?? 0],
+      devenir: "vendre",
+    });
+    expect(r.gestes).toEqual([{ type: "couper", ids: [ids[0], ids[1]] }]);
+  });
+
+  it("elle ne nomme que celles qui sont vraiment tombées", () => {
+    const { state, ids } = troisFrenes();
+    const r = applyAction(state, {
+      type: "couper",
+      week: 0,
+      // 9999 n'existe pas : il est refusé, il ne doit pas s'animer.
+      treeIds: [ids[0] ?? 0, 9999],
+      devenir: "vendre",
+    });
+    expect(r.gestes).toEqual([{ type: "couper", ids: [ids[0]] }]);
+    expect(r.refusals).toHaveLength(1);
+  });
+
+  it("l'éclaircie se distingue de la coupe : ce n'est pas la même animation", () => {
+    const { state } = troisFrenes();
+    const r = applyAction(state, {
+      type: "eclaircir",
+      week: 0,
+      x: 16,
+      y: 10,
+      rayonM: 12,
+      densiteCibleParHa: 1,
+      critere: "parLeBas",
+      devenir: "vendre",
+    });
+    expect(r.gestes?.[0]?.type).toBe("eclaircir");
+    expect(r.gestes?.[0]?.ids.length).toBeGreaterThan(0);
+  });
+
+  it("élaguer, étêter, recéper : chacun se dit", () => {
+    const { state, ids } = troisFrenes();
+    const elague = applyAction(state, {
+      type: "elaguer",
+      week: 0,
+      treeIds: [ids[0] ?? 0],
+      hauteurM: 3,
+    });
+    expect(elague.gestes).toEqual([{ type: "elaguer", ids: [ids[0]] }]);
+
+    const trogne = applyAction(state, {
+      type: "trogner",
+      week: 0,
+      treeIds: [ids[1] ?? 0],
+      hauteurTeteM: 2,
+    });
+    expect(trogne.gestes).toEqual([{ type: "trogner", ids: [ids[1]] }]);
+
+    const recepe = applyAction(state, {
+      type: "receper",
+      week: 0,
+      treeIds: [ids[2] ?? 0],
+    });
+    expect(recepe.gestes).toEqual([{ type: "receper", ids: [ids[2]] }]);
+  });
+
+  it("une action refusée n'annonce aucun geste", () => {
+    const { state } = troisFrenes();
+    const r = applyAction(state, { type: "elaguer", week: 0, treeIds: [9999], hauteurM: 3 });
+    expect(r.gestes).toEqual([]);
+    expect(r.refusals).toHaveLength(1);
+  });
+});

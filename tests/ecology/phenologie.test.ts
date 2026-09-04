@@ -7,10 +7,15 @@ import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
 import { dureeDuJourH } from "../../src/engine/meteo";
 import {
+  contextePhenologique,
   debourrementExigeDJ,
   ETALEMENT_CHUTE_SEMAINES,
   partFoliaire,
+  partFoliaireDans,
+  SENESCENCE_DEBUT_SEMAINE,
+  SOLSTICE_ETE_SEMAINE,
   semaineDeFroid,
+  senescenceFoliaire,
 } from "../../src/engine/phenologie";
 
 /** Jour au 15 avril, à la latitude du limon (49,5° N) et de la lande (44,5° N). */
@@ -126,5 +131,47 @@ describe("le besoin de froid : un hiver doux RETARDE le printemps", () => {
     const chaleur = 260; // de quoi débourrer après un hiver normal
     expect(partFoliaire(hetre, chaleur, jourLong, false, 0, 20)).toBeGreaterThan(0);
     expect(partFoliaire(hetre, chaleur, jourLong, false, 0, 3)).toBe(0);
+  });
+});
+
+/**
+ * Le CONTEXTE phénologique : les cinq scalaires qui suffisent à retrouver le
+ * calendrier d'une semaine sans avoir l'état de la partie sous la main. C'est
+ * ce qui voyage dans l'instantané, et ce qui garantit que le rendu colore les
+ * houppiers avec exactement le calendrier du moteur (src/game/snapshot.ts).
+ */
+describe("le contexte phénologique", () => {
+  it("l'automne commence au solstice, pas au 1ᵉʳ janvier", () => {
+    const printemps = contextePhenologique(49.5, SOLSTICE_ETE_SEMAINE - 1, 400, 20);
+    const ete = contextePhenologique(49.5, SOLSTICE_ETE_SEMAINE, 400, 20);
+    expect(printemps.automne).toBe(false);
+    expect(ete.automne).toBe(true);
+  });
+
+  it("le compteur de chute ne part qu'à la semaine de sénescence", () => {
+    expect(
+      contextePhenologique(49.5, SENESCENCE_DEBUT_SEMAINE, 900, 20).semainesDepuisSenescence,
+    ).toBe(0);
+    expect(
+      contextePhenologique(49.5, SENESCENCE_DEBUT_SEMAINE + 3, 900, 20).semainesDepuisSenescence,
+    ).toBe(3);
+    // Avant le solstice, il n'y a rien à compter.
+    expect(contextePhenologique(49.5, 10, 300, 20).semainesDepuisSenescence).toBe(0);
+  });
+
+  it("le jour raccourcit plus vite au nord : le contexte le sait", () => {
+    const nord = contextePhenologique(49.5, 45, 900, 20);
+    const sud = contextePhenologique(44.5, 45, 900, 20);
+    expect(nord.jourH).toBeLessThan(sud.jourH);
+  });
+
+  it("il redonne exactement `partFoliaire` : une seule loi, deux appelants", () => {
+    const chene = getEspece("quercus_pubescens");
+    const ctx = contextePhenologique(49.5, 45, 900, 20);
+    expect(partFoliaireDans(chene, ctx)).toBe(
+      partFoliaire(chene, 900, ctx.jourH, true, ctx.semainesDepuisSenescence, 20),
+    );
+    // Et la sénescence est enclenchée : c'est ce qui brunit le feuillage.
+    expect(senescenceFoliaire(ctx)).toBe(true);
   });
 });
