@@ -791,6 +791,77 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     sources: [ATLAS],
   },
   {
+    id: "euonymus_europaeus",
+    nom: "Fusain d'Europe",
+    nomLatin: "Euonymus europaeus",
+    hauteurMaxM: 6,
+    pousseMaxMAn: 0.35,
+    // Atlas : arbuste de haie et de lisière, neutro-calcicole, à demi-ombre.
+    // Il ne domine jamais rien : il occupe l'ourlet, sous les grands, là où le
+    // couvert s'entrouvre.
+    eau: { seuilConfortSecheresse: 0.65, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
+    ph: [5.5, 8.5],
+    lumiere: { compensation: 0.05, saturation: 0.5, lai: 2.5, houppierRatio: 0.55, caduc: true },
+    racines: { profondeurMaxCm: 100 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.6, fixateur: false },
+    // Capsules roses à arilles orange : les rouges-gorges et les fauvettes les
+    // emportent — la graine ressort n'importe où, comme celle de l'aubépine.
+    regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 0.9 },
+    litiere: { cnRatio: 24 },
+    // Il verdit tôt, avant les grands arbres de la haie.
+    phenologie: { debourrementDJ: 115, seuilJourH: 11.2, besoinFroidSemaines: 10 },
+    economie: { prixPlantEur: 4 },
+    // Bois blanc, dur et fin : celui dont on fait les fusains à dessin — mais
+    // rien qui se vende au m³.
+    bois: { densite: 0.7, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    exigenceMinerale: 1.8,
+    mycorhize: "arbusculaire",
+    // C'est l'hôte d'HIVER du puceron noir (Aphis fabae) : il l'héberge d'une
+    // saison à l'autre, et un fusain fatigué se couvre d'oïdium.
+    ravageurs: { sensibilite: 0.55 },
+    // Toute la plante est toxique — ce qui ne dissuade pas complètement le
+    // chevreuil, mais il a mieux à faire dans la même haie.
+    gibier: { appetence: 0.2 },
+    feu: { inflammabilite: 0.3, resistanceEcorce: 0.1, rejetteApresFeu: true },
+    // Fruits toxiques : rien à récolter (pas de bloc `fruits`).
+    sources: [ATLAS],
+  },
+  {
+    id: "ligustrum_vulgare",
+    nom: "Troène commun",
+    nomLatin: "Ligustrum vulgare",
+    hauteurMaxM: 5,
+    pousseMaxMAn: 0.4,
+    // Atlas : « calcicole, supporte la taille → haies ». C'est l'arbuste des
+    // ourlets calcaires secs : là où le fusain demande de la fraîcheur, lui
+    // tient le coteau.
+    eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.15 },
+    ph: [6, 8.5],
+    lumiere: { compensation: 0.05, saturation: 0.55, lai: 3, houppierRatio: 0.5, caduc: true },
+    racines: { profondeurMaxCm: 90 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.5, fixateur: false },
+    // Baies noires en grappes dressées, avalées par les grives tout l'hiver.
+    regeneration: { maturiteAns: 5, longeviteAns: 60, dissemination: "oiseaux", semisParAn: 1.2 },
+    litiere: { cnRatio: 25 },
+    // Semi-persistant : il garde ses feuilles jusqu'aux vraies gelées et
+    // repart parmi les premiers. Le moteur ne connaît que caduc/persistant —
+    // on le compte caduc, mais il débourre très tôt.
+    phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 7 },
+    economie: { prixPlantEur: 3 },
+    bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    exigenceMinerale: 1.5,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.3 },
+    // Un feuillage encore vert en décembre, à hauteur de museau : c'est
+    // exactement ce que le chevreuil cherche quand tout le reste est nu.
+    gibier: { appetence: 0.5 },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.1, rejetteApresFeu: true },
+    // Baies toxiques : rien à récolter (pas de bloc `fruits`).
+    sources: [ATLAS],
+  },
+  {
     id: "ulex_europaeus",
     nom: "Ajonc d'Europe",
     nomLatin: "Ulex europaeus",

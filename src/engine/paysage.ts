@@ -160,6 +160,8 @@ export const PAYSAGES: readonly Paysage[] = [
       // tient l'ombre en dessous et garde ses feuilles tout l'hiver.
       { especeId: "carpinus_betulus", semisParAn: 3 },
       { especeId: "ilex_aquifolium", semisParAn: 2 },
+      // Le fusain occupe les layons et les trouées du sous-étage.
+      { especeId: "euonymus_europaeus", semisParAn: 1 },
       // Les fonds humides du massif portent des saules avec les aulnes.
       { especeId: "salix_alba", semisParAn: 2 },
     ],
@@ -190,6 +192,11 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "carpinus_betulus", semisParAn: 2 },
       { especeId: "cornus_mas", semisParAn: 1 },
       { especeId: "salix_alba", semisParAn: 2 },
+      // Le fusain et le troène ne font jamais la haie à eux seuls, mais il n'y
+      // a guère de haie sans eux — l'un dans la fraîcheur du pied, l'autre sur
+      // le talus sec.
+      { especeId: "euonymus_europaeus", semisParAn: 1 },
+      { especeId: "ligustrum_vulgare", semisParAn: 1 },
     ],
   },
   {
@@ -259,11 +266,11 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "sambucus_nigra", semisParAn: 2 },
       { especeId: "salix_alba", semisParAn: 2 },
       { especeId: "carpinus_betulus", semisParAn: 1 },
-      // Le charme est l'essence des haies plessées, le cornouiller celle des
-      // talus calcaires, le saule celle des fossés.
-      { especeId: "carpinus_betulus", semisParAn: 2 },
+      // L'ourlet calcaire de la lisière : cornouiller, fusain et troène s'y
+      // tiennent ensemble, à l'exacte limite du couvert.
       { especeId: "cornus_mas", semisParAn: 1 },
-      { especeId: "salix_alba", semisParAn: 2 },
+      { especeId: "euonymus_europaeus", semisParAn: 2 },
+      { especeId: "ligustrum_vulgare", semisParAn: 2 },
     ],
   },
 ];

@@ -13,7 +13,7 @@ succession écologique, bilan carbone honnête.
 - **Critères de réalisme** : [docs/realisme.md](docs/realisme.md) — le référentiel
   de vérité écologique que le moteur doit atteindre, et où on en est.
 
-État : moteur spatial sur 14 espèces — sol en **horizons** dont tout est
+État : moteur spatial sur 25 espèces — sol en **horizons** dont tout est
 dérivé (texture, MO, pierrosité → réserve utile, drainage, fertilité), grille
 1 m², arbres positionnés qui puisent selon la **profondeur de leurs racines**,
 lumière avec ombres portées et pénombre, effet nurse et brise-vent, régénération

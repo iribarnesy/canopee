@@ -54,6 +54,9 @@ export const SPECIES_COLORS: Record<string, string> = {
   ilex_aquifolium: "#14532d",
   salix_alba: "#0891b2",
   cornus_mas: "#ca8a04",
+  // L'ourlet de haie calcaire : le fusain et le troène poussent côte à côte.
+  euonymus_europaeus: "#db2777",
+  ligustrum_vulgare: "#7c2d12",
 };
 
 /** Espèces repliées dans « autres » : un gris qui ne prétend à aucune identité. */
