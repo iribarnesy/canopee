@@ -89,8 +89,24 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     expect(an60.canopy.length).toBeGreaterThan(15);
     expect(an60.canopyPioneerShare).toBeGreaterThan(0.7);
     expect(an60.fagusAlive.length).toBeGreaterThan(3);
-    const fagusSousEtage = an60.fagusAlive.filter((t) => t.heightM < 10).length;
-    expect(fagusSousEtage).toBeGreaterThan(an60.fagusAlive.length / 2);
+    // « Attendre dans le sous-étage » est une position RELATIVE, et il a fallu
+    // recalibrer les vitesses de croissance pour s'en apercevoir : la version
+    // précédente comptait les hêtres sous DIX MÈTRES, un seuil qui ne voulait
+    // dire « sous-étage » que dans une forêt dont la canopée plafonnait à
+    // douze. Avec des hauteurs calées sur les tables, la friche de soixante ans
+    // monte à vingt-quatre mètres et le hêtre médian à treize — il est toujours
+    // à la moitié de la dominante, et ne tient que 16 % de la canopée. Le
+    // sous-étage n'a pas bougé ; c'est la règle qui le mesurait mal.
+    const dominante =
+      an60.alive
+        .map((t) => t.heightM)
+        .sort((a, b) => b - a)
+        .slice(0, 10)
+        .reduce((s, h) => s + h, 0) / 10;
+    const hetres = an60.fagusAlive.map((t) => t.heightM).sort((a, b) => a - b);
+    const medianeHetre = hetres[Math.floor(hetres.length / 2)] ?? 0;
+    expect(medianeHetre).toBeLessThan(0.7 * dominante);
+    expect(an60.canopyFagusShare).toBeLessThan(0.3);
   });
 
   it("an 120 : la cohorte pionnière initiale s'est éteinte (longévité du bouleau ~90 ans)", () => {

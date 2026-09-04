@@ -183,7 +183,7 @@ mesurer que ce qu'on sait déjà faire.*
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
-| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` contre Jansen 1996 (hauteur dominante, classe médiane) : pin, aulne et frêne dans la bande, hêtre encore un tiers trop bas (facteur eau), bouleau au-dessus de la meilleure classe (`pousseMaxMAn` de l'atlas) |
+| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` contre Jansen 1996 (hauteur dominante, classe médiane). Quatre essences à ±15 % à quarante ans — mais le hêtre y est CALÉ, donc l'essai le garde plus qu'il ne le valide ; pin, aulne et frêne, non touchés, sont une validation entière. La vérification tenue à l'écart est à vingt ans : −13 % à +10 %. Le bouleau reste hors table, faute de référence transposable |
 
 ## G. Faune et santé
 
@@ -706,19 +706,37 @@ près » — elle aurait hurlé sur le hêtre à 0,30 fois la table.
 
 **Ce qui reste faux, et il en reste.**
 
-- **Le hêtre est encore un tiers trop bas à quarante ans** (10,6 m contre 16,0).
-  Ce n'est plus l'azote : c'est l'eau. Son seuil de confort hydrique est de 0,85
-  — le hêtre est notoirement sensible à la sécheresse d'été — et le limon riche
-  ne reçoit que 750 mm par an, dont 55 % en hiver. Le moteur le place donc vers
-  la classe 4-5 de la table là où la médiane est la 8. C'est défendable pour un
-  hêtre sur 750 mm ; ce n'est pas prouvé.
-- **Le bouleau dépasse la meilleure classe publiée** : 11,9 m à vingt ans contre
-  8,6 en classe médiane et 9,5 en GK6. En cause, `pousseMaxMAn = 0,9 m/an`,
-  hérité de l'atlas et jamais confronté à une table. Pire : les tables donnent
-  l'aulne PLUS rapide que le bouleau en jeunesse (12,6 contre 8,6 m à vingt
-  ans) quand l'atlas range le bouleau devant. **Ce rapport-là est faux**, et il
-  n'a pas été corrigé ici — recaler les `pousseMaxMAn` essence par essence est
-  un autre chantier.
+- ~~**Le hêtre est encore un tiers trop bas**, et c'est l'eau.~~ **Faux, et
+  vérifié** : de 750 à 1100 mm de pluie annuelle, le hêtre à quarante ans passe
+  de 11,5 à 11,9 m. Quarante centimètres. L'eau ne le bridait pas — son
+  `pousseMaxMAn` de 0,45 m/an le bridait, et la hauteur suit ce plafond presque
+  linéairement (0,45 → 11,5 m ; 0,60 → 15,0 ; 0,75 → 18,0). Ce paramètre n'était
+  d'ailleurs sourcé nulle part : **l'atlas de référence ne contient aucune
+  donnée de croissance**, seulement des traits écologiques. Les vitesses ont été
+  inventées pendant le développement.
+- ~~**Le bouleau dépasse la meilleure classe publiée**, et il devance l'aulne à
+  tort.~~ **Écarté après vérification de la source.** La seule table de bouleau
+  du corpus est Braastad 1967, *Produksjonstabeller for bjørk* — **norvégienne**,
+  donc boréale. La transposer à un bocage à 11,5 °C de moyenne serait une erreur
+  de catégorie, et en tirer un rang contre un aulne calé sur une table allemande
+  (Mitscherlich 1945) en serait une seconde : on comparerait deux climats, pas
+  deux essences. Le bouleau reste donc à 0,9 m/an — une estimation, mais une
+  estimation honnête, et il est sorti du tableau de calage. Ce n'est pas une
+  décision de confort : ralentir le bouleau sur cette autorité-là cassait cinq
+  conclusions écologiques du dépôt sans qu'aucune preuve ne l'exige. *(À
+  confirmer : il manque une table française ou allemande de bouleau.)*
+**Un calage n'est pas une validation, et le dire change la façon de tester.**
+Le moteur n'a pas de notion d'indice de fertilité : caler une essence sur une
+classe de table oblige donc à décréter qu'une station la représente — ici, le
+limon riche VAUT la classe médiane. Une fois ce choix fait, un essai qui
+compare à la table les espèces qu'on vient d'y caler ne prouve plus rien. D'où
+le partage : **un seul paramètre par espèce ajusté, sur un seul âge (quarante
+ans), et le second âge (vingt ans) laissé de côté**. Les hauteurs à vingt ans
+ne sont donc pas un ajustement mais une prédiction de la forme de la courbe —
+et elles tombent entre −13 % et +10 % des tables. C'est ce chiffre-là qui dit
+quelque chose du moteur. Les trois essences non recalées (pin, aulne, frêne)
+restent, elles, une validation à part entière aux deux âges.
+
 - **L'exposant de forme est global.** Les tables distinguent trois profils —
   démarrage rapide et plateau précoce (aulne, bouleau, merisier, robinier),
   démarrage lent et croissance longue (hêtre, chênes, sapin), intermédiaire

@@ -299,7 +299,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Hêtre",
     nomLatin: "Fagus sylvatica",
     hauteurMaxM: 35,
-    pousseMaxMAn: 0.45,
+    // Calé sur la table : 0,45 donnait 11,5 m à quarante ans contre 16,0 dans
+    // Jansen 1996 (hêtre, classe médiane). La hauteur suit ce plafond presque
+    // linéairement — le hêtre était bridé par son paramètre, pas par sa
+    // station : de 750 à 1100 mm de pluie il ne gagnait que 40 cm en quarante
+    // ans. Voir `hauteurs.test.ts`.
+    pousseMaxMAn: 0.65,
     // Atlas : mésophile, « aime le frais, sensible à la sécheresse ».
     eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
     ph: [4.5, 8],
@@ -408,6 +413,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Bouleau verruqueux",
     nomLatin: "Betula pendula",
     hauteurMaxM: 25,
+    // NON calé sur table, et c'est délibéré. La seule table de bouleau du
+    // corpus est Braastad 1967, *Produksjonstabeller for bjørk* — norvégienne,
+    // donc boréale : 8,6 m à vingt ans en classe médiane. La transposer à un
+    // bocage à 11,5 °C de moyenne serait une erreur de catégorie, et en tirer
+    // un RANG contre un aulne calé sur une table allemande (Mitscherlich 1945)
+    // en serait une seconde — on comparerait deux climats, pas deux essences.
+    // 0,9 m/an reste donc une estimation, mais une estimation honnête pour un
+    // bouleau de plaine française *(à confirmer : il manque une table
+    // française ou allemande de bouleau)*.
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },

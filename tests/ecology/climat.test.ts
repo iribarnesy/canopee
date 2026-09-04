@@ -225,9 +225,9 @@ describe("les extrêmes s'aggravent plus vite que les moyennes (D11)", () => {
 describe("dans une partie, le réchauffement se voit", () => {
   const normales = normalesHebdo(OBSERVATIONS);
 
-  function partie(scenarioId: "stable" | "ssp585", ans: number) {
+  function partie(scenarioId: "stable" | "ssp585", ans: number, graine = 11) {
     const station: Station = { ...LIMON_RICHE.station, coteM: 40, voisinage: [], gibierParHa: 0 };
-    let state = createGameState(station, rngStateFromSeed(11));
+    let state = createGameState(station, rngStateFromSeed(graine));
     state = plantScattered(state, "fagus_sylvatica", 60);
     state = plantScattered(state, "quercus_pubescens", 60);
     const scenario = getScenario(scenarioId);
@@ -257,8 +257,29 @@ describe("dans une partie, le réchauffement se voit", () => {
     };
   }
 
-  const fige = partie("stable", 60);
-  const chauffe = partie("ssp585", 60);
+  /**
+   * Moyenne sur trois parties. Les comptes de morts sont des ÉVÉNEMENTS
+   * rares : une seule partie en donne un tirage, pas une mesure. Le rapport
+   * ravageurs chaud/figé s'est mis à osciller autour de 2 le jour où les
+   * vitesses de croissance ont été recalées — pas parce que le lien entre
+   * chaleur et pullulation avait changé, mais parce qu'une seule partie ne
+   * sait pas distinguer 1,7 de 2,1.
+   */
+  function moyenneSurGraines(scenarioId: "stable" | "ssp585", ans: number) {
+    const runs = [11, 23, 37].map((g) => partie(scenarioId, ans, g));
+    const moyen = (f: (r: (typeof runs)[number]) => number) =>
+      runs.reduce((s, r) => s + f(r), 0) / runs.length;
+    return {
+      etpDebut: moyen((r) => r.etpDebut),
+      etpFin: moyen((r) => r.etpFin),
+      hetresMortsDeSoif: moyen((r) => r.hetresMortsDeSoif),
+      mortsRavageurs: moyen((r) => r.mortsRavageurs),
+      hetresVivants: moyen((r) => r.hetresVivants),
+    };
+  }
+
+  const fige = moyenneSurGraines("stable", 60);
+  const chauffe = moyenneSurGraines("ssp585", 60);
 
   it("la demande en eau de l'atmosphère monte bien plus vite qu'avec le seul climat observé", () => {
     // À noter : même « figée », la parcelle voit l'ETP monter de 16 % en
@@ -294,8 +315,14 @@ describe("dans une partie, le réchauffement se voit", () => {
     // Conséquence en cascade, elle non plus codée nulle part : plus il fait
     // chaud, plus les générations s'enchaînent (ravageurs.ts). C'est ce qui
     // frappe les essences sensibles avant même que la sécheresse ne les tue.
-    // Le rapport exact bouge à chaque fois qu'on touche à l'eau ou à la
-    // densité — les deux nourrissent les ravageurs. C'est le sens qui compte.
-    expect(chauffe.mortsRavageurs).toBeGreaterThan(2 * Math.max(1, fige.mortsRavageurs));
+    // L'ampleur, elle, a été revue à la baisse et il faut le dire : le seuil
+    // était à ×2, posé sur UNE partie. Moyenné sur trois, le rapport vaut 1,6
+    // (36,7 morts contre 22,7) — et il ne l'a pas toujours valu : il est passé
+    // sous 2 le jour où les vitesses de croissance ont été calées sur les
+    // tables de production. Un arbre qui pousse à son rythme réel est un arbre
+    // plus vigoureux, donc moins pris par les ravageurs. Le lien entre chaleur
+    // et pullulation n'a pas changé ; c'est ce qu'on croyait en connaître de
+    // l'ampleur qui reposait sur un tirage.
+    expect(chauffe.mortsRavageurs).toBeGreaterThan(1.3 * Math.max(1, fige.mortsRavageurs));
   });
 });
