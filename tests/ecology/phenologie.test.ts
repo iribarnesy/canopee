@@ -282,3 +282,44 @@ describe("la marcescence", () => {
     }
   });
 });
+
+describe("un semi-persistant ne se dénude jamais", () => {
+  const troene = getEspece("ligustrum_vulgare");
+  const plancher = troene.lumiere.retentionHivernale ?? 0;
+
+  it("garde son plancher toute l'année, y compris avant le débourrement", () => {
+    expect(plancher).toBeGreaterThan(0);
+    // On balaie l'année entière, semaine par semaine, plutôt que de tester
+    // février : le bug corrigé ici vivait dans une seule branche, et une seule
+    // date bien choisie l'aurait manqué.
+    const creux = Math.min(
+      ...Array.from({ length: 52 }, (_, semaine) => {
+        const automne = semaine >= 35;
+        return partFoliaireActive(
+          troene,
+          // Cumul de degrés-jours plausible : nul en hiver, monte au printemps.
+          Math.max(0, (semaine - 8) * 25),
+          dureeDuJourH(45, semaine),
+          automne,
+          Math.max(0, semaine - 40),
+        );
+      }),
+    );
+    expect(creux).toBeCloseTo(plancher, 5);
+  });
+
+  it("un caduc ordinaire, lui, passe bien par zéro", () => {
+    const creux = Math.min(
+      ...Array.from({ length: 52 }, (_, semaine) =>
+        partFoliaireActive(
+          getEspece("quercus_pubescens"),
+          Math.max(0, (semaine - 8) * 25),
+          dureeDuJourH(45, semaine),
+          semaine >= 35,
+          Math.max(0, semaine - 40),
+        ),
+      ),
+    );
+    expect(creux).toBe(0);
+  });
+});

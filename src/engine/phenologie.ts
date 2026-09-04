@@ -156,7 +156,11 @@ export function partFoliaireActive(
   const forcage = Math.min(1, Math.max(0, (ddYearBase5 - exige) / ETALEMENT_DEBOURREMENT_DJ));
   // Porte photopériodique : tant que le jour est trop court, rien ne part.
   const porte = Math.min(1, Math.max(0, (dureeJourH - pheno.seuilJourH) / LARGEUR_PORTE_H));
-  return Math.min(forcage, porte);
+  // Le plancher vaut au printemps comme à l'automne, et c'est tout l'intérêt :
+  // les feuilles qu'un semi-persistant a gardées en décembre sont encore là en
+  // mars. Sans cette ligne il se dénudait à la Saint-Sylvestre pour reverdir au
+  // débourrement — soit exactement le contraire d'un semi-persistant.
+  return Math.max(plancher, Math.min(forcage, porte));
 }
 
 /**
