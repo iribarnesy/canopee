@@ -91,6 +91,21 @@ export function fractionEmportee(arracheeKgM2: number, masseHorizonKgM2: number)
 }
 
 /**
+ * Épaisseur de sol correspondant à une masse arrachée, cm.
+ *
+ * C'est la conséquence longue de l'érosion, et la plus grave : un sol qui
+ * s'amincit retient moins d'eau, donc ruisselle davantage, donc s'érode plus
+ * vite. La boucle se referme sur elle-même, et c'est ainsi que des versants
+ * cultivés finissent sur la roche en un siècle ou deux.
+ */
+export function epaisseurPerdueCm(arracheeKgM2: number, horizon: Horizon): number {
+  const densite = densiteApparente(horizon); // t/m³
+  if (densite <= 0) return 0;
+  // kg/m² ÷ (t/m³ × 10) = cm de sol.
+  return arracheeKgM2 / (densite * 10);
+}
+
+/**
  * Part du sédiment en transit qui se dépose sur la cellule où il arrive. Un
  * sol couvert freine l'eau et peigne les particules : c'est le principe de la
  * bande enherbée et de la haie sur courbe de niveau.

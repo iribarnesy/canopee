@@ -457,8 +457,19 @@ Ce qui franchit la limite est **perdu pour de bon**, et compté comme tel dans
 les bilans carbone et azote : sans ce compteur, l'humus emporté aurait disparu
 des livres.
 
-*Limite assumée* : l'horizon ne s'amincit pas. On perd la fertilité de la
-surface, pas encore son épaisseur ni sa réserve utile.
+**Le sol s'amincit**, et c'est la conséquence longue — la plus grave, parce
+qu'elle boucle sur elle-même : un horizon qui maigrit retient moins d'eau, donc
+ruisselle davantage, donc s'érode plus vite. C'est ainsi que des versants
+cultivés finissent sur la roche en un siècle ou deux. La réserve utile de
+surface se calcule désormais sur l'épaisseur RESTANTE, avec un plancher de
+trois centimètres — même décapé, il reste toujours un peu de terre.
+
+Mesuré sur vingt-cinq ans à 30 % de pente : 0,14 cm perdus en moyenne sur un
+sol laissé nu au départ, jusqu'à 0,33 cm en haut de versant, et 2,3 cm
+d'accumulation en bas — le colluvium. C'est peu, et pour une bonne raison : sur
+une parcelle abandonnée, l'herbe reprend en quelques années et l'érosion
+s'arrête. Un versant labouré tous les ans, lui, ne referme jamais cette
+fenêtre.
 
 ## La strate arbustive : quatre espèces qui changent la succession
 

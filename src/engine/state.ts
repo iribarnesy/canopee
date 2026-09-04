@@ -185,6 +185,12 @@ export interface SoilState {
    * arrive à la parcelle arrive aussi à son bassin (nappe.ts).
    */
   nappeRegionaleMm: number;
+  /**
+   * Épaisseur d'horizon de surface perdue par érosion, cm (négative là où le
+   * sédiment s'est déposé). Un sol qui s'amincit retient moins d'eau, donc
+   * ruisselle davantage, donc s'érode plus vite (erosion.ts).
+   */
+  epaisseurPerdueCm: number[];
   /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
   ph: number[];
   /**
@@ -355,6 +361,7 @@ export function createGameState(
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,
       // creux par creux — elle est plus plate que le terrain (nappe.ts).
+      epaisseurPerdueCm: new Array(n).fill(0),
       nappeRegionaleMm: stockEquilibreMm(
         station.profil,
         station.remonteeNappeMmSemaine,

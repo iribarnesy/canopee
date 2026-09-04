@@ -25,7 +25,13 @@ import {
   hauteurDeCrueM,
   remonteeCapillaireMm,
 } from "./eau_surface";
-import { fractionEmportee, masseHorizonKgM2, partDeposee, terreArracheeKgM2 } from "./erosion";
+import {
+  epaisseurPerdueCm as epaisseurPerdueCm2,
+  fractionEmportee,
+  masseHorizonKgM2,
+  partDeposee,
+  terreArracheeKgM2,
+} from "./erosion";
 import { getEspece } from "./especes";
 import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
 import {
@@ -184,6 +190,8 @@ const RECRUITMENT_WEEK = 14;
  */
 const DEBUT_COMPTAGE_FROID = 37;
 /** Semaine du solstice d'été : au-delà, le jour raccourcit. */
+/** Ce qui reste toujours de l'horizon de surface, même décapé, cm. */
+const EPAISSEUR_MINIMALE_CM = 3;
 const SOLSTICE_ETE_SEMAINE = 25;
 /**
  * Semaine où la chute des feuilles commence à se compter. La sénescence
@@ -268,10 +276,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // étant compté pour tout le profil et non par horizon.
   const horizonSurface = profil[0];
   const humusInitialG = station.initialSoilCTHa * T_HA_TO_G_M2;
-  const ruSurfacePourHumus = (humusG: number): number => {
+  const ruSurfacePourHumus = (humusG: number, perdueCm = 0): number => {
     if (!horizonSurface || humusInitialG <= 0) return ruSurface;
     const rapport = Math.min(3, Math.max(0.2, humusG / humusInitialG));
-    return ruHorizonMm({ ...horizonSurface, moPct: horizonSurface.moPct * rapport });
+    // L'érosion amincit l'horizon : moins d'épaisseur, moins de réserve. On
+    // garde un plancher — même décapé, il reste toujours un peu de terre.
+    const epaisseur = Math.max(
+      EPAISSEUR_MINIMALE_CM,
+      horizonSurface.epaisseurCm - Math.max(0, perdueCm),
+    );
+    return ruHorizonMm({
+      ...horizonSurface,
+      epaisseurCm: epaisseur,
+      moPct: horizonSurface.moPct * rapport,
+    });
   };
   // Buffer réutilisé : un tableau d'horizons par cellule serait ruineux.
   const horizonsCellule: HorizonHydro[] = horizonsHydro.map((h) => ({ ...h }));
@@ -416,6 +434,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Érosion : la terre arrachée voyage avec sa charge de fertilité, et ce
   // qu'elle emporte hors de la parcelle est une perte sèche (erosion.ts).
   const masseSurfaceKgM2 = profil[0] ? masseHorizonKgM2(profil[0]) : 0;
+  const epaisseurPerdueCm = state.soil.epaisseurPerdueCm.slice();
   const chargeHumusCG = new Array<number>(nCells).fill(0);
   const chargeLitiereCG = new Array<number>(nCells).fill(0);
   const chargeNminG = new Array<number>(nCells).fill(0);
@@ -450,7 +469,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       excesCellule[h] = excessMm[base + h] ?? 0;
     }
     const surface = horizonsCellule[0];
-    if (surface) surface.ruMm = ruSurfacePourHumus(humusCG[i] ?? humusInitialG);
+    if (surface) {
+      surface.ruMm = ruSurfacePourHumus(humusCG[i] ?? humusInitialG, epaisseurPerdueCm[i] ?? 0);
+    }
     // Ce qui ruisselle ne rentre pas : on le retire de la pluie qui s'infiltre,
     // et il rejoindra l'aval (relief.ts). La couverture du sol et la litière
     // freinent — c'est là que « couvrir le sol » paie en eau.
@@ -680,6 +701,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       chargeKG[i] = (chargeKG[i] ?? 0) + dK;
       sedimentEnTransit[i] = (sedimentEnTransit[i] ?? 0) + arrachee;
       erosionArracheeKg += arrachee;
+      // Le sol s'amincit d'autant : c'est la conséquence longue, celle qui
+      // ferme la boucle (moins de réserve utile → plus de ruissellement).
+      if (horizonSurface) {
+        epaisseurPerdueCm[i] =
+          (epaisseurPerdueCm[i] ?? 0) + epaisseurPerdueCm2(arrachee, horizonSurface);
+      }
     }
     const jSediment = aval[i] ?? -1;
     const enTransit = sedimentEnTransit[i] ?? 0;
@@ -698,6 +725,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // Une partie se dépose ici, le reste continue : un sol couvert peigne
         // les particules, c'est le principe de la bande enherbée.
         const depose = partDeposee(couvertureDe(jSediment));
+        if (horizonSurface) {
+          epaisseurPerdueCm[jSediment] =
+            (epaisseurPerdueCm[jSediment] ?? 0) -
+            epaisseurPerdueCm2(enTransit * depose, horizonSurface);
+        }
         humusCG[jSediment] = (humusCG[jSediment] ?? 0) + (chargeHumusCG[i] ?? 0) * depose;
         litterCG[jSediment] = (litterCG[jSediment] ?? 0) + (chargeLitiereCG[i] ?? 0) * depose;
         mineralNG[jSediment] = (mineralNG[jSediment] ?? 0) + (chargeNminG[i] ?? 0) * depose;
@@ -729,7 +761,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Elle arrive chez la voisine du dessous, où elle a une seconde chance de
     // s'infiltrer — c'est ce qui fait les bas de pente frais.
     const cible = j * nH;
-    const ruCible = ruSurfacePourHumus(humusCG[j] ?? humusInitialG);
+    const ruCible = ruSurfacePourHumus(humusCG[j] ?? humusInitialG, epaisseurPerdueCm[j] ?? 0);
     const place = Math.max(0, ruCible - (waterMm[cible] ?? 0));
     const infiltre = Math.min(part, place);
     waterMm[cible] = (waterMm[cible] ?? 0) + infiltre;
@@ -1570,6 +1602,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         ph: state.soil.ph,
         cloture: state.soil.cloture,
         nappeMm: nappeStockMm,
+        epaisseurPerdueCm,
         // Le réseau régional suit la parcelle à proportion de ce que le bassin
         // partage avec elle : c'est ainsi qu'un incendie de MASSIF se
         // distingue d'un incendie de parcelle (nappe.ts).

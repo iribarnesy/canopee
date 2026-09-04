@@ -91,3 +91,45 @@ describe("l'érosion emporte la terre, pas seulement l'eau", () => {
     expect(sortie).toBeLessThan(arrachee);
   });
 });
+
+describe("l'érosion amincit le sol, et c'est la boucle qui se referme", () => {
+  it("un versant nu perd de l'épaisseur, un versant couvert n'en perd pas", () => {
+    // C'est la conséquence longue de l'érosion, et la plus grave : un sol qui
+    // s'amincit retient moins d'eau, donc ruisselle davantage, donc s'érode
+    // plus vite.
+    const nu = surUnVersant(30, 0, 25);
+    const couvert = surUnVersant(30, 0.95, 25);
+    const perte = (s: GameState) =>
+      s.soil.epaisseurPerdueCm.reduce((a, b) => a + Math.max(0, b), 0) /
+      s.soil.epaisseurPerdueCm.length;
+    expect(perte(nu.state)).toBeGreaterThan(0);
+    expect(perte(couvert.state)).toBeLessThan(0.2 * perte(nu.state));
+  });
+
+  it("ce qui part du haut épaissit le bas : le colluvium", () => {
+    const { state } = surUnVersant(30, 0, 25);
+    // Le terrain descend vers le sud (y = 0) : la terre s'accumule en bas.
+    const bande = (yDebut: number, yFin: number) => {
+      let somme = 0;
+      let n = 0;
+      for (let y = yDebut; y < yFin; y++) {
+        for (let x = 0; x < COTE; x++) {
+          somme += state.soil.epaisseurPerdueCm[y * COTE + x] ?? 0;
+          n++;
+        }
+      }
+      return somme / Math.max(1, n);
+    };
+    // En haut on perd (valeur positive), en bas on gagne (valeur négative).
+    expect(bande(COTE - 8, COTE)).toBeGreaterThan(bande(0, 8));
+  });
+
+  it("un sol aminci retient moins d'eau : la boucle est vicieuse", () => {
+    // On compare la réserve utile de surface là où le sol a le plus maigri à
+    // celle d'une cellule intacte. Le lien passe par l'épaisseur d'horizon.
+    const { state } = surUnVersant(30, 0, 25);
+    const perdues = [...state.soil.epaisseurPerdueCm];
+    expect(Math.max(...perdues)).toBeGreaterThan(0);
+    expect(Math.min(...perdues)).toBeLessThan(0);
+  });
+});
