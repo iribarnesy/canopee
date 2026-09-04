@@ -202,6 +202,18 @@ function performAction(action: GameAction) {
       );
       break;
     }
+    case "ramasserBoisMort": {
+      const enleve =
+        (before.soil.boisAuSolCG.reduce((t, v) => t + v, 0) -
+          state.soil.boisAuSolCG.reduce((t, v) => t + v, 0)) /
+        1000;
+      if (enleve > 0)
+        event(
+          "🪵",
+          `Bois mort ramassé : ${Math.round(enleve)} kg C ${eur} — autant d'humus et d'abris en moins`,
+        );
+      break;
+    }
     case "eclaircir": {
       const n = before.trees.length - state.trees.length;
       if (n > 0)
