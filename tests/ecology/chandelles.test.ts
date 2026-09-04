@@ -13,6 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { indiceBiodiversite } from "../../src/engine/biodiversite";
 import { getEspece } from "../../src/engine/especes";
+import { chargeCombustible } from "../../src/engine/feu";
 import { computeLight } from "../../src/engine/light";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -105,5 +106,19 @@ describe("un arbre mort reste debout", () => {
     const haute = indiceBiodiversite([chandelle(18)], 0, 0.04);
     const basse = indiceBiodiversite([chandelle(3)], 0, 0.04);
     expect(haute.grosArbres).toBeGreaterThan(basse.grosArbres);
+  });
+});
+
+describe("une chandelle est du combustible sur pied", () => {
+  it("elle charge plus que le même arbre vivant : c'est du bois sec", () => {
+    // Une parcelle déjà passée au feu, ou frappée par la sécheresse, rebrûle
+    // mieux que celle d'à côté — et c'est pour ça.
+    const morte = chandelle(18);
+    const vive = { ...morte, alive: true };
+    const herbe = new Array(400).fill(0);
+    const litiere = new Array(400).fill(0);
+    const avecMorte = chargeCombustible([morte], herbe, litiere, 20);
+    const avecVive = chargeCombustible([vive], herbe, litiere, 20);
+    expect(avecMorte.moyenne).toBeGreaterThan(avecVive.moyenne);
   });
 });

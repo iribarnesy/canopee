@@ -58,6 +58,14 @@ export function portanceDuFeu(lumiereAuSol: number): number {
   return PORTANCE_SOUS_COUVERT + (1 - PORTANCE_SOUS_COUVERT) * Math.min(1, lumiereAuSol);
 }
 
+/**
+ * Ce qu'une chandelle vaut comme combustible, par rapport au même arbre
+ * vivant. Un tronc mort sur pied est du bois sec : il s'enflamme plus
+ * facilement qu'un houppier vert, mais il n'en reste qu'un fût — plus de
+ * feuillage, moins de matière *(à calibrer)*.
+ */
+export const BOIS_MORT_SUR_PIED = 1.4;
+
 export function chargeCombustible(
   trees: readonly TreeState[],
   herbeCouverture: readonly number[],
@@ -71,9 +79,14 @@ export function chargeCombustible(
     // Herbe (sèche en été) + litière accumulée.
     parCellule[i] = 0.6 * (herbeCouverture[i] ?? 0) + 0.4 * Math.min(1, (litterCG[i] ?? 0) / 300);
   }
-  // Les couronnes ajoutent leur propre combustible sous elles.
+  // Les couronnes ajoutent leur propre combustible sous elles — et les
+  // CHANDELLES aussi, davantage même : un tronc mort sur pied est du bois sec,
+  // fendillé, sans une goutte d'eau dedans. C'est ce qui fait qu'une parcelle
+  // déjà passée au feu ou frappée par la sécheresse rebrûle mieux que celle
+  // d'à côté (trees.ts).
   for (const tree of trees) {
-    if (!tree.alive) continue;
+    const morte = !tree.alive && tree.mortSemaine !== undefined;
+    if (!tree.alive && !morte) continue;
     const espece = getEspece(tree.especeId);
     const r = Math.max(1, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio));
     const x0 = Math.max(0, Math.floor(tree.x - r));
@@ -88,7 +101,9 @@ export function chargeCombustible(
           const i = y * coteM + x;
           // Un résineux ajoute énormément sous lui (aiguilles, résine) ;
           // un feuillu frais, presque rien.
-          parCellule[i] = (parCellule[i] ?? 0) + 0.9 * espece.feu.inflammabilite;
+          parCellule[i] =
+            (parCellule[i] ?? 0) +
+            0.9 * espece.feu.inflammabilite * (morte ? BOIS_MORT_SUR_PIED : 1);
         }
       }
     }
