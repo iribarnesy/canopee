@@ -48,16 +48,7 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     return parAnnee.filter((n) => n > seuil).length;
   }
 
-  /** Plus longue série d'années consécutives au-dessus du seuil. */
-  function anneesConsecutivesAuDessus(parAnnee: readonly number[], seuil: number): number {
-    let record = 0;
-    let courant = 0;
-    for (const n of parAnnee) {
-      courant = n > seuil ? courant + 1 : 0;
-      if (courant > record) record = courant;
-    }
-    return record;
-  }
+
 
   it("les deux pionnières frugales colonisent durablement le sable", () => {
     // « Durablement » ne veut pas dire « pour toujours » : sur la lande, un
