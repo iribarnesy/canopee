@@ -54,6 +54,14 @@ export interface EspeceV0 {
     houppierRatio: number;
     /** true = perd ses feuilles (n'ombrage plus l'hiver) */
     caduc: boolean;
+    /**
+     * Part du feuillage gardée en plein hiver ∈ [0,1], pour les
+     * SEMI-PERSISTANTS. Entre le caduc qui se dénude et le sempervirent qui ne
+     * bouge pas, il y a le troène : il garde une partie de ses feuilles quand
+     * l'hiver est doux et les perd quand il est rude. Absente, l'espèce suit
+     * son `caduc` — tout ou rien.
+     */
+    retentionHivernale?: number;
   };
   racines: {
     /**
@@ -200,6 +208,14 @@ export interface EspeceV0 {
      * bas de la lande, en bas.
      */
     sensibilite: number;
+    /**
+     * Hôte HIVERNAL : la plante héberge les ravageurs pendant l'hiver et les
+     * relâche au printemps sur ses voisines. Le fusain d'Europe est l'hôte
+     * d'hiver du puceron noir. Ce n'est pas un défaut de l'espèce — c'est un
+     * chaînon de son cycle, et le connaître change la façon de composer une
+     * haie (ravageurs.ts).
+     */
+    hoteHivernal?: boolean;
   };
   gibier: {
     /**
@@ -859,6 +875,85 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.1, rejetteApresFeu: true },
     // Baies toxiques : rien à récolter (pas de bloc `fruits`).
+    sources: [ATLAS],
+  },
+  {
+    id: "euonymus_europaeus",
+    nom: "Fusain d'Europe",
+    nomLatin: "Euonymus europaeus",
+    hauteurMaxM: 6,
+    pousseMaxMAn: 0.3,
+    // Atlas : arbuste de demi-ombre à ombre, haies et lisières, surtout sur
+    // calcaire. Ses capsules roses à quatre lobes et ses arilles orange sont
+    // toxiques — et son bois donne les fusains à dessin.
+    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.2 },
+    ph: [5.5, 8.5],
+    lumiere: { compensation: 0.05, saturation: 0.45, lai: 2.2, houppierRatio: 0.5, caduc: true },
+    racines: { profondeurMaxCm: 90 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.5, fixateur: false },
+    regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 1 },
+    litiere: { cnRatio: 26 },
+    phenologie: { debourrementDJ: 125, seuilJourH: 11.4, besoinFroidSemaines: 10 },
+    economie: { prixPlantEur: 5 },
+    bois: { densite: 0.7, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    exigenceMinerale: 1.7,
+    mycorhize: "arbusculaire",
+    // Hôte d'HIVER du puceron noir : il l'héberge à la mauvaise saison et le
+    // relâche au printemps sur ses voisines. C'est ce qui en fait un arbuste à
+    // placer en connaissance de cause dans une haie.
+    ravageurs: { sensibilite: 0.45, hoteHivernal: true },
+    gibier: { appetence: 0.4 },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "ligustrum_vulgare",
+    nom: "Troène commun",
+    nomLatin: "Ligustrum vulgare",
+    hauteurMaxM: 5,
+    pousseMaxMAn: 0.35,
+    // Atlas : « semi-persistant ; calcicole ; très mellifère (juin) ; supporte
+    // la taille → haies ». Ourlets et lisières, surtout sur calcaire.
+    eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
+    ph: [6, 8.5],
+    // SEMI-PERSISTANT : il ne se dénude jamais tout à fait. C'est le seul de
+    // l'atlas dans ce cas, et c'est ce qui lui vaut sa place dans les haies —
+    // il abrite encore en février (phenologie.ts).
+    lumiere: {
+      compensation: 0.05,
+      saturation: 0.5,
+      lai: 2.4,
+      houppierRatio: 0.5,
+      caduc: true,
+      retentionHivernale: 0.45,
+    },
+    racines: { profondeurMaxCm: 90 },
+    tBaseCroissanceC: 5,
+    azote: { demandeRelative: 0.5, fixateur: false },
+    regeneration: { maturiteAns: 5, longeviteAns: 70, dissemination: "oiseaux", semisParAn: 1.5 },
+    litiere: { cnRatio: 27 },
+    phenologie: { debourrementDJ: 120, seuilJourH: 11.4, besoinFroidSemaines: 9 },
+    economie: { prixPlantEur: 4 },
+    bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    fruits: {
+      // Très mellifère en juin : ses fleurs comptent dans l'étalement des
+      // floraisons, même si ses baies sont toxiques et ne se récoltent pas.
+      floraisonDJ: 800,
+      gelFatalC: -1,
+      recolteWeek: 40,
+      fenetreRecolteWeeks: 2,
+      croissanceSem: 12,
+      rendementMaxKg: 0,
+      prixEurKg: 0,
+      recolteHKg: 0,
+      autofertile: true,
+    },
+    exigenceMinerale: 1.6,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.3 },
+    gibier: { appetence: 0.35 },
+    feu: { inflammabilite: 0.4, resistanceEcorce: 0.15, rejetteApresFeu: true },
     sources: [ATLAS],
   },
   {

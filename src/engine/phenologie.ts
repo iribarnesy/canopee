@@ -117,9 +117,14 @@ export function partFoliaire(
   // Les sempervirents gardent leur feuillage : ni débourrement ni chute.
   if (!espece.lumiere.caduc) return 1;
 
+  // Les SEMI-PERSISTANTS gardent une partie de leur feuillage : ils ne se
+  // dénudent jamais tout à fait. C'est un plancher, pas un régime à part.
+  const plancher = espece.lumiere.retentionHivernale ?? 0;
+
   if (automne) {
     if (dureeJourH > SEUIL_SENESCENCE_H) return 1;
-    return Math.max(0, 1 - semainesDepuisSenescence / ETALEMENT_CHUTE_SEMAINES);
+    const tombe = 1 - semainesDepuisSenescence / ETALEMENT_CHUTE_SEMAINES;
+    return Math.max(plancher, Math.min(1, tombe));
   }
 
   const pheno = espece.phenologie;

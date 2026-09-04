@@ -1098,7 +1098,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) moyenneEauSurface += waterMm[i * nH] ?? 0;
   moyenneEauSurface /= nCells;
   const boisMortTHa = state.carbon.deadWoodKgC / 1000 / (nCells / 10_000);
-  const { ressource, habitat } = carteBiotique(nextTrees, herbeCouverture, boisMortTHa, dims);
+  const { ressource, habitat, abriHivernal } = carteBiotique(
+    nextTrees,
+    herbeCouverture,
+    boisMortTHa,
+    dims,
+  );
 
   // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────
   // Degrés-jours base 5 °C depuis le 1er janvier ; floraison quand le cumul
@@ -1321,6 +1326,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       ressource[i] ?? 0,
       habitat[i] ?? 0,
       chaleur,
+      abriHivernal[i] ?? 0,
     );
     habitatSum += habitat[i] ?? 0;
   }

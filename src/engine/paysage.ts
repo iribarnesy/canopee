@@ -191,6 +191,9 @@ export const PAYSAGES: readonly Paysage[] = [
       // talus calcaires, le saule celle des fossés.
       { especeId: "carpinus_betulus", semisParAn: 2 },
       { especeId: "cornus_mas", semisParAn: 1 },
+      // Les deux arbustes de haie par excellence, calcicoles tous les deux.
+      { especeId: "euonymus_europaeus", semisParAn: 1 },
+      { especeId: "ligustrum_vulgare", semisParAn: 2 },
       { especeId: "salix_alba", semisParAn: 2 },
       // Le fusain et le troène ne font jamais la haie à eux seuls, mais il n'y
       // a guère de haie sans eux — l'un dans la fraîcheur du pied, l'autre sur
@@ -266,9 +269,13 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "sambucus_nigra", semisParAn: 2 },
       { especeId: "salix_alba", semisParAn: 2 },
       { especeId: "carpinus_betulus", semisParAn: 1 },
+      { especeId: "ligustrum_vulgare", semisParAn: 1 },
       // L'ourlet calcaire de la lisière : cornouiller, fusain et troène s'y
       // tiennent ensemble, à l'exacte limite du couvert.
       { especeId: "cornus_mas", semisParAn: 1 },
+      // Les deux arbustes de haie par excellence, calcicoles tous les deux.
+      { especeId: "euonymus_europaeus", semisParAn: 1 },
+      { especeId: "ligustrum_vulgare", semisParAn: 2 },
       { especeId: "euonymus_europaeus", semisParAn: 2 },
       { especeId: "ligustrum_vulgare", semisParAn: 2 },
     ],
