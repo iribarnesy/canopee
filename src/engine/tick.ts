@@ -55,7 +55,7 @@ import {
   computeGroundLight,
   computeLight,
   crownRadiusM,
-  type PartFoliaire,
+  type PartOmbrageante,
   windShelterAt,
 } from "./light";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
@@ -86,7 +86,12 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import { frequentationDesBordures } from "./paysage";
-import { contextePhenologique, partFoliaireDans, semaineDeFroid } from "./phenologie";
+import {
+  contextePhenologique,
+  partFoliaireActiveDans,
+  partFoliaireOmbrageanteDans,
+  semaineDeFroid,
+} from "./phenologie";
 import {
   alterationPhosphoreG,
   alterationPotassiumG,
@@ -286,9 +291,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     state.ddYearBase5,
     state.semainesDeFroid,
   );
-  const partFoliaireDe: PartFoliaire = (tree) => partFoliaireDans(getEspece(tree.especeId), pheno);
-  const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partFoliaireDe);
-  const light = computeLight(trees, partFoliaireDe);
+  // L'ombre porte sur le feuillage qui INTERCEPTE, feuilles mortes des
+  // marcescents comprises ; la croissance et la litière suivront la part
+  // vivante (phenologie.ts).
+  const partOmbrageanteDe: PartOmbrageante = (tree) =>
+    partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno);
+  const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partOmbrageanteDe);
+  const light = computeLight(trees, partOmbrageanteDe);
 
   // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
   const profil = station.profil;
@@ -1427,11 +1436,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (!tree.alive || tree.uptakeYearG <= 0) return tree;
     const espece = getEspece(tree.especeId);
     if (!espece.lumiere.caduc) return tree;
-    const restant = partFoliaireDans(espece, pheno);
+    const restant = partFoliaireActiveDans(espece, pheno);
     // La même semaine, un cran plus tôt dans la chute : l'écart entre les deux
     // est ce que l'arbre a lâché. Le besoin de froid ne compte pas ici — la
-    // branche d'automne de `partFoliaire` ne le regarde pas.
-    const restantAvant = partFoliaireDans(espece, {
+    // branche d'automne de `partFoliaireActive` ne le regarde pas.
+    const restantAvant = partFoliaireActiveDans(espece, {
       ...pheno,
       semainesDepuisSenescence: Math.max(0, pheno.semainesDepuisSenescence - 1),
       semainesDeFroid: Number.POSITIVE_INFINITY,
@@ -1621,7 +1630,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       rng,
       coteM: station.coteM,
       voisinage: station.voisinage,
-      partFoliaire: partFoliaireDe,
+      partOmbrageante: partOmbrageanteDe,
       ph: state.soil.ph,
       lumiereAuSol: groundLight,
       nextTreeId,

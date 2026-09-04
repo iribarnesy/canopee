@@ -13,7 +13,7 @@
 
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
-import { crownRadiusM, lightAtPoint, type PartFoliaire } from "./light";
+import { crownRadiusM, lightAtPoint, type PartOmbrageante } from "./light";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import { phFactor, type TreeState, tirerVigueurIndividuelle } from "./trees";
@@ -45,8 +45,8 @@ export interface RecruitmentInput {
   coteM: number;
   /** semis annuels arrivant du paysage hors-parcelle */
   voisinage: readonly { especeId: string; semisParAn: number }[];
-  /** feuillage déployé de chaque arbre : le filtre lumière des semis en dépend */
-  partFoliaire: PartFoliaire;
+  /** feuillage ombrageant de chaque arbre : le filtre lumière des semis en dépend */
+  partOmbrageante: PartOmbrageante;
   /** pH par cellule (un semis ne s'installe pas hors de sa gamme) */
   ph: readonly number[];
   /**
@@ -135,7 +135,7 @@ export function drawPosition(
 }
 
 export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
-  const { trees, coteM, voisinage, partFoliaire } = input;
+  const { trees, coteM, voisinage, partOmbrageante } = input;
   let rng = input.rng;
   let nextTreeId = input.nextTreeId;
   const newTrees: TreeState[] = [];
@@ -157,7 +157,8 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     if (couronnesM2 >= placeMaxM2) return;
     if (pos.x < 0 || pos.x >= coteM || pos.y < 0 || pos.y >= coteM) return; // perdu hors parcelle
     // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme.
-    if (lightAtPoint(trees, pos.x, pos.y, partFoliaire) < 2 * espece.lumiere.compensation) return;
+    if (lightAtPoint(trees, pos.x, pos.y, partOmbrageante) < 2 * espece.lumiere.compensation)
+      return;
     const cellPh = input.ph[Math.floor(pos.y) * coteM + Math.floor(pos.x)] ?? 7;
     if (phFactor(espece, cellPh) < 0.2) return;
     // Concurrence immédiate : pas d'installation collée à un vivant.

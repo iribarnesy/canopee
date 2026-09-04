@@ -62,6 +62,14 @@ export interface EspeceV0 {
      * son `caduc` — tout ou rien.
      */
     retentionHivernale?: number;
+    /**
+     * MARCESCENCE : part du feuillage gardée sur l'arbre après la sénescence,
+     * MORTE ∈ [0,1]. Le charme et le jeune chêne gardent leurs feuilles brunes
+     * jusqu'à ce que les bourgeons les poussent au printemps. Ce n'est ni de la
+     * persistance — ces feuilles ne photosynthétisent plus — ni de la caducité
+     * ordinaire : elles ombragent encore tout l'hiver (phenologie.ts).
+     */
+    marcescence?: number;
   };
   racines: {
     /**
@@ -297,7 +305,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [4.5, 8],
     // Atlas : sciaphile climacique — un semis survit à ~1-2 % de lumière (ch3-B),
     // couronne très opaque.
-    lumiere: { compensation: 0.01, saturation: 0.35, lai: 3.5, houppierRatio: 0.35, caduc: true },
+    // Marcescent seulement jeune ou taillé, d'où une valeur nettement plus
+    // basse que celle du charme : le moteur n'a qu'un trait par espèce, pas un
+    // trait par âge *(à calibrer)*.
+    lumiere: {
+      compensation: 0.01,
+      saturation: 0.35,
+      lai: 3.5,
+      houppierRatio: 0.35,
+      caduc: true,
+      marcescence: 0.35,
+    },
     racines: { profondeurMaxCm: 110 }, // racines étalées, peu pivotantes — d'où sa sensibilité à la sécheresse
     tBaseCroissanceC: 6,
     azote: { demandeRelative: 0.7, fixateur: false },
@@ -327,7 +345,16 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.05 },
     ph: [5.5, 8.5],
     // Atlas : héliophile, couronne claire de coteau sec.
-    lumiere: { compensation: 0.15, saturation: 0.6, lai: 1.5, houppierRatio: 0.3, caduc: true },
+    // Marcescent, surtout jeune : le trait est ici une moyenne sur la vie de
+    // l'arbre, plus basse que ce qu'on observe sur un taillis *(à calibrer)*.
+    lumiere: {
+      compensation: 0.15,
+      saturation: 0.6,
+      lai: 1.5,
+      houppierRatio: 0.3,
+      caduc: true,
+      marcescence: 0.5,
+    },
     racines: { profondeurMaxCm: 250 }, // pivot puissant : il va chercher l'eau profonde des coteaux secs
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.5, fixateur: false },
@@ -689,7 +716,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // un seul candidat au sous-étage.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.35 },
     ph: [4.5, 8],
-    lumiere: { compensation: 0.03, saturation: 0.4, lai: 3.5, houppierRatio: 0.35, caduc: true },
+    // MARCESCENT type : c'est lui qu'on voit roux en janvier dans les haies, et
+    // c'est ce qui fait du charme un brise-vent d'hiver quand le hêtre voisin
+    // est nu *(à calibrer)*.
+    lumiere: {
+      compensation: 0.03,
+      saturation: 0.4,
+      lai: 3.5,
+      houppierRatio: 0.35,
+      caduc: true,
+      marcescence: 0.7,
+    },
     racines: { profondeurMaxCm: 110 },
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.6, fixateur: false },
