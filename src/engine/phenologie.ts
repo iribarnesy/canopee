@@ -40,6 +40,26 @@
  * hêtre débourre quand même plus tôt, simplement moins tôt qu'il ne l'aurait
  * fait sans dormance. Le renversement complet ne s'observe que là où l'hiver
  * est déjà doux.
+ *
+ * Enfin la MARCESCENCE, qui oblige à distinguer deux feuillages là où le moteur
+ * n'en comptait qu'un. Le charme garde tout l'hiver ses feuilles MORTES,
+ * attachées jusqu'à ce que les bourgeons les poussent en avril. Elles font
+ * encore de l'ombre, mais elles ne photosynthétisent plus. Confondre ce cas
+ * avec le troène SEMI-PERSISTANT — qui, lui, garde des feuilles VIVANTES —
+ * reviendrait à faire pousser un charme en janvier ; le confondre avec un
+ * caduc ordinaire reviendrait à éclairer son sous-étage tout l'hiver, alors
+ * qu'un taillis de charme est notoirement sombre en février.
+ *
+ * D'où deux parts foliaires : celle qui TRAVAILLE (`partFoliaireActive`, le
+ * feuillage vivant, seul à compter pour la croissance et la litière) et celle
+ * qui OMBRE (`partFoliaireOmbrageante`, feuilles mortes comprises, seule à
+ * entrer dans Beer-Lambert). Elles ne se séparent que chez les marcescents.
+ *
+ * Deux limites assumées. Le retour de litière d'un marcescent suit encore la
+ * part active, donc l'automne, alors que ses feuilles ne tombent qu'au
+ * débourrement suivant. Et l'abri au vent (light.ts) ne regarde aucun
+ * feuillage, pas même celui des caducs : la marcescence n'y change donc rien
+ * pour l'instant.
  */
 
 import type { EspeceV0 } from "./especes";
@@ -99,14 +119,16 @@ export function debourrementExigeDJ(espece: EspeceV0, semainesDeFroid: number): 
 }
 
 /**
- * Part du feuillage déployé ∈ [0,1] pour une espèce donnée.
+ * Part du feuillage VIVANT déployé ∈ [0,1] pour une espèce donnée : celui qui
+ * assimile, et lui seul. C'est la part qui commande la croissance et le retour
+ * de litière — les feuilles marcescentes n'y entrent pas, elles sont mortes.
  *
  * `ddYearBase5` est le cumul de degrés-jours depuis le 1ᵉʳ janvier,
  * `dureeJourH` la durée du jour de la semaine, `automne` true après le
  * solstice d'été (c'est le raccourcissement qui déclenche, pas la durée seule :
  * onze heures de jour en mars ne veulent pas dire la même chose qu'en octobre).
  */
-export function partFoliaire(
+export function partFoliaireActive(
   espece: EspeceV0,
   ddYearBase5: number,
   dureeJourH: number,
@@ -135,6 +157,43 @@ export function partFoliaire(
   // Porte photopériodique : tant que le jour est trop court, rien ne part.
   const porte = Math.min(1, Math.max(0, (dureeJourH - pheno.seuilJourH) / LARGEUR_PORTE_H));
   return Math.min(forcage, porte);
+}
+
+/**
+ * Ce qu'une feuille morte intercepte, rapporté à une feuille verte. Brunie,
+ * enroulée, elle laisse passer davantage, et le houppier s'est éclairci de
+ * toutes celles que le vent a emportées *(à calibrer)*.
+ */
+export const OPACITE_FEUILLE_MORTE = 0.55;
+
+/**
+ * Part du feuillage qui INTERCEPTE la lumière ∈ [0,1] : le feuillage vivant,
+ * plus les feuilles mortes qu'un marcescent garde attachées. C'est cette
+ * part-là qui entre dans Beer-Lambert (light.ts), et elle seule.
+ */
+export function partFoliaireOmbrageante(
+  espece: EspeceV0,
+  ddYearBase5: number,
+  dureeJourH: number,
+  automne: boolean,
+  semainesDepuisSenescence: number,
+  semainesDeFroid = Number.POSITIVE_INFINITY,
+): number {
+  const active = partFoliaireActive(
+    espece,
+    ddYearBase5,
+    dureeJourH,
+    automne,
+    semainesDepuisSenescence,
+    semainesDeFroid,
+  );
+  const marcescence = espece.lumiere.marcescence ?? 0;
+  if (marcescence <= 0) return active;
+  // Les feuilles mortes occupent la place que le feuillage vivant libère :
+  // elles s'installent à mesure qu'il meurt à l'automne et s'en vont à mesure
+  // que les bourgeons les poussent au printemps. Un complément, donc, pas une
+  // somme — sinon un charme d'octobre ombrerait plus qu'un charme de juillet.
+  return active + OPACITE_FEUILLE_MORTE * marcescence * (1 - active);
 }
 
 /**
@@ -193,9 +252,21 @@ export function contextePhenologique(
   };
 }
 
-/** `partFoliaire` prise dans son contexte : la forme qu'appellent le tick et le rendu. */
-export function partFoliaireDans(espece: EspeceV0, ctx: ContextePhenologique): number {
-  return partFoliaire(
+/** Le feuillage qui TRAVAILLE, pris dans son contexte : la forme qu'appellent le tick et le rendu. */
+export function partFoliaireActiveDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return partFoliaireActive(
+    espece,
+    ctx.ddYearBase5,
+    ctx.jourH,
+    ctx.automne,
+    ctx.semainesDepuisSenescence,
+    ctx.semainesDeFroid,
+  );
+}
+
+/** Le feuillage qui OMBRE, pris dans son contexte : ce que la lumière traverse. */
+export function partFoliaireOmbrageanteDans(espece: EspeceV0, ctx: ContextePhenologique): number {
+  return partFoliaireOmbrageante(
     espece,
     ctx.ddYearBase5,
     ctx.jourH,
