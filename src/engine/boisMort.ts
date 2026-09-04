@@ -34,7 +34,28 @@ export const DECOMPOSITION_AU_SOL_PAR_AN = 0.09;
  * le hasard garde sa part : un arbre de plaine tombe où son défaut le porte.
  * Au-delà, la gravité tranche.
  */
-export const PENTE_ORIENTANT_LA_CHUTE_PCT = 30;
+export const PENTE_ORIENTANT_LA_CHUTE_PCT = 40;
+
+/**
+ * Part de hasard qui SUBSISTE quand la pente est franche, ∈ [0,1] — ±63° de
+ * dispersion autour de l'aval.
+ *
+ * Sans elle, la contrainte atteignait 1 et tous les arbres d'un versant raide
+ * tombaient exactement dans l'axe de la pente. C'est faux, et la conséquence
+ * était visible : plus un seul tronc en travers là où l'érosion fait le plus de
+ * dégâts, donc un mécanisme de barrage éteint précisément où il compte.
+ *
+ * La littérature va dans ce sens et ne va pas plus loin. Rentch et al. (huit
+ * peuplements de chênes anciens, *J. Torrey Bot. Soc.* 137) concluent que « la
+ * forte variation des directions de chute empêche d'établir une relation
+ * statistique constante » avec la pente ou le vent, et pointent l'asymétrie du
+ * houppier comme troisième larron. Côté ripisylve, on ne mesure une tendance
+ * nettement plus marquée vers l'aval qu'AU-DESSUS de 40 % de pente — d'où le
+ * seuil ci-dessus, qui valait 30 sans source. La tendance est donc réelle, son
+ * ampleur modeste, et elle n'efface jamais le hasard *(à calibrer : aucune de
+ * ces sources ne publie d'écart-type angulaire directement réutilisable)*.
+ */
+export const DISPERSION_RESIDUELLE = 0.35;
 
 /**
  * Part de la cellule qu'un mètre de tronc couche recouvre. Un tronc adulte
@@ -66,7 +87,8 @@ export function directionDeChute(
   graine: number,
 ): number {
   const { radians: aval, pentePct } = versLAval(altitudes, dims, x, y);
-  const contrainte = Math.min(1, pentePct / PENTE_ORIENTANT_LA_CHUTE_PCT);
+  const contrainte =
+    (1 - DISPERSION_RESIDUELLE) * Math.min(1, pentePct / PENTE_ORIENTANT_LA_CHUTE_PCT);
   const ecart = (rngFloat(rngStateFromSeed(graine)).value * 2 - 1) * Math.PI;
   return aval + ecart * (1 - contrainte);
 }

@@ -126,11 +126,20 @@ describe("l'orientation d'un tronc décide de tout", () => {
   });
 
   it("un chablis naturel barre d'autant moins que la pente est raide", () => {
-    // C'est la conséquence gênante, et elle est vraie : là où l'érosion fait le
-    // plus de dégâts, la chute naturelle sert le moins. Sur une pente marquée,
-    // l'arbre part vers l'aval et son tronc devient une gouttière. Il faut
-    // ABATTRE sur courbe de niveau pour obtenir un barrage — c'est exactement
-    // ce que fait la restauration post-incendie.
+    // La conséquence gênante, et elle tient : là où l'érosion fait le plus de
+    // dégâts, la chute naturelle sert le moins. Sur une pente marquée, l'arbre
+    // part plutôt vers l'aval et son tronc devient une gouttière — d'où
+    // l'intérêt d'ABATTRE sur courbe de niveau, ce que fait la restauration
+    // post-incendie.
+    //
+    // « Plutôt », et non « toujours » : l'écart s'est nettement resserré le
+    // jour où la dispersion résiduelle est entrée dans `directionDeChute`
+    // (0,64 à plat → 0,49 à 50 %, là où le modèle donnait 0 auparavant). Ce
+    // zéro était un artefact de forme, pas une mesure : la contrainte de pente
+    // atteignait exactement 1 et alignait tous les arbres au cordeau. La
+    // littérature dit l'inverse — Rentch et al. concluent que la forte
+    // variation des directions de chute empêche d'établir une relation
+    // constante avec la pente, et l'asymétrie du houppier s'en mêle.
     const dims = { widthM: COTE, heightM: COTE };
     const moyenne = (pentePct: number) => {
       const alt = Array.from(
@@ -150,7 +159,10 @@ describe("l'orientation d'un tronc décide de tout", () => {
     expect(moyenne(2)).toBeGreaterThan(0.5);
     expect(moyenne(2)).toBeLessThan(0.8);
     expect(moyenne(25)).toBeLessThan(moyenne(8));
-    expect(moyenne(50)).toBeLessThan(0.05);
+    // La pente oriente, elle ne range pas : à 50 % il reste la moitié du bois
+    // en travers. Ce qui doit rester vrai, c'est le SENS et l'écart net.
+    expect(moyenne(50)).toBeLessThan(0.85 * moyenne(2));
+    expect(moyenne(50)).toBeGreaterThan(0.3);
   });
 
   it("la chute enregistre l'orientation dans le sol qu'elle couvre", () => {
@@ -177,7 +189,14 @@ describe("l'orientation d'un tronc décide de tout", () => {
     };
     const raide = partMoyenne(60);
     const plat = partMoyenne(0);
-    expect(raide).toBeLessThan(0.1);
+    // Le versant raide barre moins que le plat, sans jamais tomber à zéro :
+    // même à 60 %, la dispersion résiduelle des chutes laisse un quart du bois
+    // en travers (`DISPERSION_RESIDUELLE`, boisMort.ts).
+    // Mesuré : 0,27 à 60 % contre 0,37 à plat, soit un quart de barrage en
+    // moins. C'est net, et c'est loin du zéro qu'affichait le modèle avant que
+    // la dispersion résiduelle des chutes ne soit rétablie.
+    expect(raide).toBeLessThan(0.85 * plat);
+    expect(raide).toBeGreaterThan(0.15);
     // Chute quelconque : l'espérance de l'efficacité barrante d'un angle tiré
     // au hasard vaut (2/π)·(√3 − π/3) ≈ 0,44 une fois le seuil des 30° passé.
     expect(plat).toBeGreaterThan(0.35);
@@ -325,10 +344,14 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // Sur une pente de 15 %, la chute reste largement désorientée : le bois
     // mort d'une vieille parcelle est en travers pour les deux tiers environ.
     expect(moy(oriente, "travers")).toBeGreaterThan(0.3);
-    // Il piège de la terre — sur place, derrière les troncs : 1,6 kg/m² sur
-    // soixante ans, là où le même bois couché dans le sens de la pente n'en
-    // piège aucune.
-    expect(moy(oriente, "piege")).toBeGreaterThan(1);
+    // Il piège de la terre — sur place, derrière les troncs — là où le même
+    // bois couché dans le sens de la pente n'en piège aucune. Le TONNAGE, lui,
+    // dépend d'abord de ce que le versant a à donner : mesuré à 1,6 kg/m² sur
+    // soixante ans avant que les vitesses de croissance ne soient calées sur
+    // les tables, il tombe à 0,8 ensuite. Ce n'est pas le mécanisme qui a
+    // faibli — c'est la forêt qui, poussant à son rythme réel, couvre plus vite
+    // et laisse moins partir. Un piège ne retient que ce qui passe.
+    expect(moy(oriente, "piege")).toBeGreaterThan(0.5);
     expect(moy(aPlat, "piege")).toBe(0);
     // Et il détourne une part nette de l'eau de surface vers le sol.
     expect(moy(oriente, "eau")).toBeLessThan(0.97 * moy(aPlat, "eau"));

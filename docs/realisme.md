@@ -954,16 +954,32 @@ ans : un effet sur les petites pluies, **aucun effet au-delà du temps de retour
 deux ans**. Trois troncs n'arrêtent pas une inondation, et le moteur le dit
 maintenant tout seul.
 
-**La conséquence gênante, et elle est vraie.** La chute suit l'aval d'autant
-plus franchement que la pente est raide. Donc **là où l'érosion fait le plus de
-dégâts, le chablis naturel sert le moins** : la transversalité moyenne d'une
-chute passe de 0,67 à 2 % de pente à 0,26 à 25 %, et à zéro au-delà de 30 %. Un
-versant raide ne s'arme pas tout seul ; il faut y **abattre sur courbe de
-niveau**, ce qui est précisément le geste de la restauration post-incendie. À
-l'inverse, sur un versant doux à 15 %, le bois mort d'un peuplement laissé à
-lui-même est barrant à 37 % en moyenne, piège 1,6 kg/m² de terre en soixante
-ans et détourne 3,9 % de l'eau de surface — mesuré sur trois graines contre le
-même bois dont on a annulé l'orientation.
+**La conséquence gênante, et elle tient — moins fort qu'annoncé.** La chute
+suit l'aval d'autant plus franchement que la pente est raide, donc **là où
+l'érosion fait le plus de dégâts, le chablis naturel sert le moins**. Mais
+l'ampleur a été corrigée à la baisse le jour même : le modèle affichait une
+transversalité **nulle** au-delà de 30 % de pente, et ce zéro était un artefact
+de forme — la contrainte de pente atteignait exactement 1 et alignait tous les
+arbres au cordeau. Aucune forêt ne fait ça. Rentch et al. (*J. Torrey Bot.
+Soc.* 137, huit peuplements de chênes anciens) concluent que « la forte
+variation des directions de chute » empêche d'établir une relation constante
+avec la pente ou le vent, l'asymétrie du houppier s'en mêlant ; côté ripisylve,
+la tendance vers l'aval ne devient nettement plus marquée qu'**au-dessus de
+40 %** de pente — d'où ce seuil, qui valait 30 sans source.
+
+Avec une dispersion résiduelle de ±63°, la transversalité passe de 0,37 à plat
+à 0,27 sur un versant à 60 % : **un quart de barrage en moins, pas la
+disparition du barrage**. Le conseil de gestion ne change pas — abattre sur
+courbe de niveau reste le geste qui arme un versant, et c'est celui de la
+restauration post-incendie — mais un versant raide n'est plus décrit comme nu.
+Sur un versant doux à 15 %, le bois mort d'un peuplement laissé à lui-même est
+barrant à 37 % en moyenne et détourne 3,9 % de l'eau de surface.
+
+Le TONNAGE piégé, lui, dépend d'abord de ce que le versant a à donner :
+1,6 kg/m² sur soixante ans avant que les vitesses de croissance ne soient
+calées sur les tables de production, 0,8 après. Ce n'est pas le mécanisme qui a
+faibli, c'est la forêt qui, poussant à son rythme réel, couvre plus vite et
+laisse moins partir. **Un piège ne retient que ce qui passe.**
 
 **Un bug attrapé au passage, et il valait le voyage.** `versLAval` indexait le
 champ d'altitudes avec les coordonnées **flottantes** de l'arbre. L'index
