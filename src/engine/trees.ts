@@ -174,6 +174,15 @@ export interface TreeEnvironment {
   /** °C moyenne de la semaine */
   tMean: number;
   /**
+   * Part du feuillage ACTIF de cet arbre ∈ [0,1] (phenologie.ts) : celui qui
+   * travaille, pas celui qui ombre. Un caduc sans feuilles ne pousse pas et ne
+   * transpire pas, quelle que soit la douceur du temps — c'était le trou que
+   * laissait un facteur saison purement thermique. Absente, on suppose le
+   * feuillage complet, ce qui préserve le comportement des essais qui
+   * n'étudient pas la phénologie.
+   */
+  partFoliaire?: number;
+  /**
    * Effet fertilisant du CO₂ sur le potentiel de croissance (climat.ts).
    * 1 = concentration d'aujourd'hui. Il agit sur le POTENTIEL, donc la loi du
    * minimum le borne : un arbre qui a soif n'en profite pas.
@@ -229,8 +238,19 @@ export function prochainDommageHydraulique(
  */
 const STRESS_ONSET = 0.45;
 const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération lente
-/** semaines de croissance effectives/an en tempéré, pour convertir la pousse annuelle */
-const GROWING_WEEKS = 30;
+/**
+ * Semaines de végétation effectives par an, pour convertir la pousse annuelle
+ * en pousse hebdomadaire.
+ *
+ * La valeur a baissé de trente à vingt-six le jour où la croissance a cessé
+ * d'être commandée par la seule température. Ce n'est pas un rattrapage : la
+ * constante veut dire « le nombre de semaines sur lesquelles la pousse
+ * annuelle se répartit », et la phénologie en donne désormais le vrai compte —
+ * un caduc n'a de feuilles qu'une petite moitié de l'année, pas dès qu'il fait
+ * doux. Sans cet ajustement, la même pousse annuelle se serait retrouvée
+ * étalée sur une saison plus courte, donc amputée d'un dixième *(à calibrer)*.
+ */
+const GROWING_WEEKS = 26;
 /** rayon de la zone racinaire / rayon du houppier *(à confirmer)* */
 const ROOT_CROWN_RATIO = 1.2;
 /** part de l'ETP transpirée par une couronne en pleine feuille *(à calibrer)* */
@@ -424,7 +444,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   if (!tree.alive) return { tree, limitingFactor: 0 };
 
   const espece = getEspece(tree.especeId);
-  const season = seasonFactor(espece, env.tMean);
+  // La saison a deux commandes, et il faut les deux : la CHALEUR, qui décide
+  // si l'activité est possible, et le FEUILLAGE, qui décide s'il y a de quoi
+  // travailler. Un hiver doux ne fait pas pousser un arbre nu.
+  const feuillageActif = env.partFoliaire ?? 1;
+  const season = seasonFactor(espece, env.tMean) * feuillageActif;
   // Plasticité racinaire : l'arbre approfondit s'il a manqué d'eau cette semaine.
   const rootDepthCm = nouvelleProfondeurRacines(
     espece,

@@ -823,7 +823,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const tree = trees[t];
     if (!tree?.alive) continue;
     const espece = getEspece(tree.especeId);
-    const season = seasonFactor(espece, weather.tMean);
+    // Même règle que pour la croissance : un arbre sans feuilles ne transpire
+    // pas, aussi doux que soit l'hiver (trees.ts, phenologie.ts).
+    const season = seasonFactor(espece, weather.tMean) * partFoliaireDe(tree);
     // Le mycélium compatible prolonge les racines : à racines égales, un
     // arbre connecté prospecte un volume de terre plus grand (§7.5). C'est de
     // l'exploration, pas de la création — le bilan reste conservatif.
@@ -1067,6 +1069,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
       tMean: weather.tMean,
+      partFoliaire: partFoliaireDe(tree),
       facteurCo2,
     });
     const next = result.tree;
