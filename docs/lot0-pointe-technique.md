@@ -336,6 +336,28 @@ d'arbres soit mesuré d'une machine à l'autre. **L'an 30 est la scène de
 référence** (le pic de charge) ; l'an 50 est gardée parce que c'est la forêt la
 plus haute, donc le pire cas de remplissage par arbre.
 
+**Les deux fichiers sont épinglés à un état du moteur : `df97f2c`.** C'est la
+contrepartie du gel, et il faut la dire, sinon elle se lit comme un bug : gelée
+veut dire qu'elle NE SUIT PAS le moteur. Régénérer sur un moteur plus récent
+donnera donc un fichier différent, et **c'est normal**. Constaté dès la fusion
+de la PR #1 : `72e4162` (le carbone racinaire préservé au rabattage) déplace la
+démographie de ~1 % — 5 378 tiges au lieu de 5 436 à l'an 30, 2 180 au lieu de
+2 198 à l'an 50, hauteurs maximales inchangées à 0,01 m près. Aucune conclusion
+de ce document n'en dépend.
+
+Comment lire un écart, donc :
+
+- **écart de quelques pour cent après un commit moteur** — attendu, rien à
+  faire. Les chiffres de perf restent valables : ils se jouent à l'ordre de
+  grandeur du millier de tiges, pas à la cinquantaine près ;
+- **écart sur les HAUTEURS, ou de plus de ~20 % sur le nombre de tiges** — là
+  il faut rejouer le banc. C'est exactement ce qui a invalidé la première
+  mesure, et le remplissage par image dépend de la hauteur au carré ;
+- **écart sans commit moteur entre-temps** — celui-là est un vrai bug, dans le
+  générateur ou dans le déterminisme du moteur. Le PRNG est seedé et
+  `scripts/check-boundaries.sh` interdit `Math.random` : deux passes sur le
+  même arbre doivent donner le même octet.
+
 Les conclusions ci-dessus sont reportées dans `docs/interface-visuelle.md`
 v0.4, aux endroits marqués **(L0)** : D1, D4, §3, §4, §9, Q1, Q6 et le
 risque n° 2.
