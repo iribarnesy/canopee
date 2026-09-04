@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   applyAction,
+  DECOTE_BOIS_MORT,
+  DENSITE_BOIS_MORT_KG_M3,
   fellingHours,
   type GameAction,
   PLANT_HOURS,
@@ -8,6 +10,8 @@ import {
   WOOD_PRICE_EUR_M3,
   woodVolumeM3,
 } from "../../src/engine/actions";
+import { CARBON_FRACTION } from "../../src/engine/carbon";
+import { chargeCombustible } from "../../src/engine/feu";
 import { runJournal } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -215,5 +219,88 @@ describe("ce que l'action rapporte au rendu", () => {
     const r = applyAction(state, { type: "elaguer", week: 0, treeIds: [9999], hauteurM: 3 });
     expect(r.gestes).toEqual([]);
     expect(r.refusals).toHaveLength(1);
+  });
+});
+
+describe("ramasser le bois mort couché", () => {
+  /** Une parcelle où un tronc s'est couché autour de (10, 10). */
+  function avecUnTroncAuSol(gParM2 = 4000) {
+    const state = createGameState(STATION, rngStateFromSeed(1));
+    const boisAuSolCG = state.soil.boisAuSolCG.slice();
+    for (let d = 0; d < 12; d++) boisAuSolCG[10 * STATION.coteM + (10 + d)] = gParM2;
+    return { ...state, soil: { ...state.soil, boisAuSolCG } };
+  }
+
+  it("le bois part, l'argent rentre, et le carbone est compté comme exporté", () => {
+    const avant = avecUnTroncAuSol();
+    const stock = avant.soil.boisAuSolCG.reduce((a, v) => a + v, 0) / 1000;
+    const { state, refusals } = applyAction(avant, {
+      type: "ramasserBoisMort",
+      week: 10,
+      x: 16,
+      y: 10.5,
+      rayonM: 8,
+    });
+    expect(refusals).toHaveLength(0);
+    const reste = state.soil.boisAuSolCG.reduce((a, v) => a + v, 0) / 1000;
+    const ramasse = stock - reste;
+    expect(ramasse).toBeGreaterThan(0);
+    // Rien ne se perd : ce qui quitte le sol est exactement ce qui est compté
+    // comme parti en fumée chez l'acheteur.
+    expect(state.carbon.exportedEnergyCumKgC - avant.carbon.exportedEnergyCumKgC).toBeCloseTo(
+      ramasse,
+      6,
+    );
+    expect(state.economy.treasuryEur).toBeGreaterThan(avant.economy.treasuryEur);
+    expect(state.economy.hoursUsedWeek).toBeGreaterThan(avant.economy.hoursUsedWeek);
+  });
+
+  it("il se vend moins cher qu'une bille fraîche du même volume", () => {
+    const avant = avecUnTroncAuSol();
+    const stock = avant.soil.boisAuSolCG.reduce((a, v) => a + v, 0) / 1000;
+    const { state } = applyAction(avant, {
+      type: "ramasserBoisMort",
+      week: 10,
+      x: 16,
+      y: 10.5,
+      rayonM: 8,
+    });
+    const gagne = state.economy.treasuryEur - avant.economy.treasuryEur;
+    const volumeM3 = stock / CARBON_FRACTION / DENSITE_BOIS_MORT_KG_M3;
+    expect(gagne).toBeLessThan(volumeM3 * WOOD_PRICE_EUR_M3);
+    expect(gagne).toBeCloseTo(volumeM3 * WOOD_PRICE_EUR_M3 * DECOTE_BOIS_MORT, 6);
+  });
+
+  it("ramasser là où il n'y a rien est refusé, pas facturé", () => {
+    const avant = createGameState(STATION, rngStateFromSeed(1));
+    const { state, refusals } = applyAction(avant, {
+      type: "ramasserBoisMort",
+      week: 10,
+      x: 25,
+      y: 25,
+      rayonM: 5,
+    });
+    expect(refusals).toHaveLength(1);
+    expect(state.economy.treasuryEur).toBe(avant.economy.treasuryEur);
+    expect(state.economy.hoursUsedWeek).toBe(avant.economy.hoursUsedWeek);
+  });
+
+  it("le bois couché est du gros combustible : l'enlever fait baisser la charge", () => {
+    // Il s'allume mal mais il fait durer le feu. Nettoyer une parcelle de son
+    // bois mort réduit donc le risque — au prix de tout ce que le bois mort
+    // apportait par ailleurs.
+    const avant = avecUnTroncAuSol();
+    const herbe = new Array(STATION.coteM * STATION.coteM).fill(0.2);
+    const litiere = new Array(STATION.coteM * STATION.coteM).fill(50);
+    const avec = chargeCombustible(
+      [],
+      herbe,
+      litiere,
+      STATION.coteM,
+      undefined,
+      avant.soil.boisAuSolCG,
+    );
+    const sans = chargeCombustible([], herbe, litiere, STATION.coteM);
+    expect(avec.moyenne).toBeGreaterThan(sans.moyenne);
   });
 });

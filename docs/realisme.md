@@ -631,6 +631,19 @@ ailleurs, la chute dépose moins qu'elle ne le devrait. Le test de conservation
 compte maintenant le bois couché parmi les stocks, sans quoi une chute aurait
 fait apparaître du carbone venu de nulle part.
 
+Le bois couché est enfin du **combustible**, et pas le même que l'herbe : le
+gros bois s'allume mal et porte mal le front, il fait durer et chauffer plutôt
+que courir. Il pèse donc moins par unité de masse et sature bien plus haut —
+un tronc dépose des kilos de carbone sur son mètre carré là où la litière s'y
+compte en centaines de grammes.
+
+D'où une décision, plutôt qu'un réglage : **ramasser le bois mort**. Le joueur
+y gagne du chauffage — décoté de moitié, un tronc piqué ne vaut pas une bille
+fraîche — et un peu moins de gros combustible. Il y perd de l'humus en devenir,
+un abri pour la faune du sol, et la protection que le tronc offrait à la terre
+sous lui. Le moteur ne tranche pas à sa place ; il fait seulement que les deux
+plateaux existent.
+
 *Limite qui reste* : un tronc couché en travers d'un thalweg devrait freiner
 l'eau et piéger le sédiment. Il protège aujourd'hui la terre **sous lui** —
 c'est déjà un effet reconnu du bois mort — mais il ne ralentit pas encore le

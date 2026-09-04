@@ -1666,6 +1666,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       litterCG,
       station.coteM,
       groundLight,
+      boisAuSolCG,
     );
     const depart = departDeFeu(
       rng,
