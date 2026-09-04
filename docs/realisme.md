@@ -535,6 +535,85 @@ les autres essences étant écartées et le repli jamais déclenché. Le voisina
 sème maintenant autant quel que soit le sol — ce qui change, c'est QUI : on
 garde les espèces qui tiennent et on complète avec celles qui poussent là.
 
+## La phénologie : chaque espèce a son calendrier
+
+Le feuillage était commandé par un booléen — `leavesOn = tMean > 6 °C` — et
+toute la litière tombait en une semaine. Deux couperets, et le premier était de
+surcroît identique pour toutes les espèces : un bouleau et un frêne
+débourraient le même jour, ce qui est faux de six semaines. Or l'ordre de
+débourrement décide de qui profite de la lumière d'avril sous un couvert encore
+nu.
+
+Le modèle combine les deux commandes que la littérature donne comme
+indissociables : le **forçage**, un cumul de degrés-jours base 5 propre à chaque
+espèce, et la **photopériode**, un seuil de durée du jour sous lequel rien ne
+part. Le second n'est pas un raffinement — notre série le montre : au 12 avril,
+la lande girondine a cumulé 341 °C·j quand le limon du Nord n'en a que 123. Un
+seuil de forçage seul ferait débourrer les Landes six semaines avant le Nord, là
+où l'écart réel est de deux à trois.
+
+S'y ajoute le **besoin de froid** : un bourgeon ne sort de dormance qu'après des
+semaines fraîches, et un hiver trop doux enfle le cumul de chaleur exigé. Hêtre
+sur limon : onze semaines de froid à climat figé contre quatre sous SSP5-8.5 en
+2090, ce qui porte son exigence de 315 à 420 °C·j. L'effet **amortit l'avance
+sans la renverser** à nos latitudes.
+
+**La croissance suit désormais le feuillage**, et plus seulement la température :
+un caduc poussait en janvier quand l'hiver était doux, et transpirait sans avoir
+une feuille. La transpiration hivernale d'un hêtre tombe à 3 mm par an quand le
+pin, sempervirent, en garde 8. Le nombre de semaines de végétation est passé de
+trente à vingt-six, ce qui n'est pas un rattrapage : la constante signifie « le
+nombre de semaines sur lesquelles la pousse annuelle se répartit », et la
+phénologie en donne le vrai compte.
+
+**Ce que la correction a coûté** : une conclusion. L'avantage mesuré de l'aulne
+en replantation d'après-feu n'était qu'un effet de la transpiration hivernale
+fantôme qu'autorisait le booléen. Voir « une conclusion retirée » plus haut.
+
+*Limite qui reste, et qui n'est pas de ce chantier* : les hauteurs absolues sont
+faibles — un hêtre de plaine plafonne autour de quatre mètres à quarante ans là
+où le terrain en donne douze à quinze. Les rapports entre essences et entre
+stations sont justes, les niveaux ne le sont pas.
+
+## Les chandelles : un arbre mort ne disparaît pas
+
+Un arbre tué par la sécheresse quittait la parcelle le tick même. Un tronc mort
+sèche pourtant sur pied et tient des années, il occupe la place, et c'est le
+bois mort **debout** qui compte pour la faune : les pics l'attaquent en premier,
+et le trou qu'ils abandonnent sert ensuite à des dizaines d'espèces qui ne
+savent pas creuser.
+
+Une chandelle tient d'autant plus longtemps que son bois est dense — une
+décennie pour un chêne, trois ans pour un sureau. Elle ne fait plus d'ombre,
+compte comme arbre-habitat au-dessus de huit mètres, et charge le feu **×1,4**
+par rapport au même arbre vivant : c'est du bois sec, et c'est pourquoi une
+parcelle déjà passée au feu rebrûle mieux que celle d'à côté.
+
+Le transfert de carbone a lieu à la MORT et une seule fois : la chandelle n'est
+ensuite qu'un objet de jeu et d'habitat. C'est ce qui a permis d'ajouter le
+mécanisme sans toucher aux bilans.
+
+## La variabilité individuelle : la fin des clones
+
+Deux arbres de même essence étaient des clones parfaits : à conditions égales
+ils poussaient exactement pareil. Ce n'est pas cosmétique — c'est cette
+dispersion qui crée les dominants et les dominés, donc l'auto-éclaircie, donc
+le sens même d'une éclaircie par le haut ou par le bas.
+
+Chaque arbre porte sa **vigueur individuelle** (±20 %, tirée dans le générateur
+de la partie, donc reproductible). Elle module uniquement ce que l'arbre TIRE de
+conditions données : deux voisins ont la même eau et la même lumière, l'un en
+fait plus que l'autre.
+
+**Ce que ça a coûté en tests, et c'est la partie instructive.** Quatre essais ont
+cassé, tous du même genre : ils comparaient un individu à un individu. Avec
+±20 % de dispersion, c'est le tirage qui décide et non le mécanisme — le travers
+des incendies, à l'échelle de l'arbre. L'effet nurse neutralise donc la vigueur
+et moyenne sur trois graines ; et l'un de ses résultats s'est nuancé au passage :
+collé à la nurse, le chêne-liège ne gagne plus rien (0,38 m contre 0,39 m à
+découvert). Ce qu'on gagne sur le vent, on le perd sur la lumière — c'est
+l'ombre portée qui fixe la bonne distance.
+
 ## Générateur de stations : ce qu'il reste à faire
 
 La dérivation (A9) est en place : une station se décrit par un profil
