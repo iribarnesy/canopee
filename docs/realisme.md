@@ -380,24 +380,16 @@ parcourue ni la remontée, il perd simplement moins d'arbres à chaque passage �
 son écorce est faite pour ça — et c'est lui qui porte le peuplement le plus
 haut à la fin. Survivre au feu et l'empêcher sont deux choses différentes.
 
-**Ce qui marche vraiment : intervenir après, et avec la bonne essence.** Changer
-d'essence AVANT le feu n'atténue qu'à la marge. Replanter dès que le feu a
-emporté le peuplement change davantage :
-
-| conduite | remontée | semaines de nappe haute | engorgement | ruissellement |
-|---|---|---|---|---|
-| pin, laissé à lui-même | 41 cm | 69 | 0,71 | 74 mm |
-| pin, replanté en pin | 38 cm | 67 | 0,59 | 53 mm |
-| pin, replanté en **aulne** | **31 cm** | **47** | **0,48** | 65 mm |
-| pin, replanté en chêne-liège | 62 cm | 99 | 0,82 | 82 mm |
-
-Replanter en aulne réduit d'un tiers la durée pendant laquelle la nappe reste
-haute. La raison est dans la fiche de l'espèce et nulle part ailleurs : l'aulne
-tolère l'engorgement au maximum de l'atlas (1,0) ET il a soif (confort 0,85).
-Il survit donc à ce que le feu a créé, et il boit exactement là où l'eau
-s'accumule. Replanter en chêne-liège fait l'inverse et AGGRAVE : xérophile
-(confort 0,35), il ne boit pas dans un sol détrempé. **Le bon arbre d'après-feu
-n'est pas celui qui résiste au feu, c'est celui qui tient dans l'eau.**
+**Une conclusion retirée.** On avait mesuré ici que replanter en aulne après le
+feu raccourcissait d'un tiers la durée pendant laquelle la nappe reste haute,
+et on l'avait écrit comme un résultat. C'en était un artefact : le feuillage
+était alors commandé par un seul booléen — `tMean > 6 °C` — vrai presque tout
+l'hiver dans les Landes, si bien que TOUS les caducs y transpiraient en
+janvier. Un aulne sans feuilles ne rabat pas une nappe hivernale. Depuis que
+chaque espèce a son calendrier (`phenologie.ts`), cette transpiration fantôme a
+disparu, et l'avantage de l'aulne avec elle. Remesuré : aucune essence de
+replantation ne se détache, les écarts sont du même ordre que le bruit d'un
+incendie à l'autre.
 
 **Une précision de vocabulaire** : « remontée de nappe » ne veut pas dire
 inondation de surface. Sur ce sable, la part de parcelle réellement sous eau

@@ -53,6 +53,19 @@ export function extraterrestrialRadiation(latitudeDeg: number, dayOfYear: number
 }
 
 /**
+ * Durée du jour, en heures (FAO-56, éq. 34). C'est le même angle horaire de
+ * coucher que le rayonnement extraterrestre : une seule géométrie, deux usages.
+ * La photopériode commande la phénologie autant que la température — et elle,
+ * elle ne se réchauffe pas.
+ */
+export function dureeDuJourH(latitudeDeg: number, dayOfYear: number): number {
+  const phi = (latitudeDeg * Math.PI) / 180;
+  const delta = 0.409 * Math.sin((2 * Math.PI * dayOfYear) / 365 - 1.39);
+  const x = Math.min(1, Math.max(-1, -Math.tan(phi) * Math.tan(delta)));
+  return (24 / Math.PI) * Math.acos(x);
+}
+
+/**
  * ETP hebdomadaire (mm) par Hargreaves-Samani :
  * ET0_jour = 0,0023 × Ra(mm) × (Tmoy + 17,8) × √(Tmax − Tmin)
  * Ra converti de MJ·m⁻²·j⁻¹ en mm·j⁻¹ par ×0,408 (FAO-56).

@@ -99,6 +99,27 @@ export interface EspeceV0 {
     /** rapport C/N de la litière : bas = minéralisation rapide (ch2-B) */
     cnRatio: number;
   };
+  /**
+   * Calendrier foliaire (phenologie.ts). L'ORDRE de débourrement est un fait
+   * de terrain massif : le bouleau part début avril quand le frêne attend la
+   * mi-mai, et c'est ce décalage qui décide de qui profite de la lumière
+   * d'avril sous un couvert encore nu.
+   */
+  phenologie: {
+    /**
+     * Cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier au débourrement.
+     * Calé sur les DATES observées dans le nord de la France, mesurées avec
+     * notre propre série météo *(à calibrer espèce par espèce)*.
+     */
+    debourrementDJ: number;
+    /**
+     * Durée du jour minimale, heures. Sans cette porte, la chaleur seule
+     * ferait débourrer le Sud-Ouest six semaines avant le Nord — l'écart réel
+     * est de deux à trois. Le hêtre, le chêne et l'épicéa y sont notoirement
+     * les plus sensibles.
+     */
+    seuilJourH: number;
+  };
   economie: {
     /** prix d'un jeune plant, € *(à calibrer sur les pépinières forestières)* */
     prixPlantEur: number;
@@ -229,6 +250,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 12, longeviteAns: 100, dissemination: "vent", semisParAn: 4 },
     // Litière tendre, très riche en N (C/N ~15) : l'aulne améliore son sol (ch2-B).
     litiere: { cnRatio: 15 },
+    // L'aulne est des premiers, avec le bouleau : début avril.
+    phenologie: { debourrementDJ: 90, seuilJourH: 11.0 },
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.45, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     // brouté sans être recherché
@@ -259,6 +282,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 40, longeviteAns: 300, dissemination: "gravite", semisParAn: 3 },
     // Litière coriace, lente (C/N ~50) — la voie fongique (ch2-B).
     litiere: { cnRatio: 50 },
+    // Le hêtre attend : dix à vingt jours après le chêne dans l'ouest, et il est parmi les plus photopériodiques.
+    phenologie: { debourrementDJ: 240, seuilJourH: 13.0 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.68, prixOeuvreEurM3: 180, rejetteDeSouche: false },
     // peu appété, mais consommé l'hiver faute de mieux
@@ -286,6 +311,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 40 },
+    // Le chêne débourre fin avril, et il est photopériodique.
+    phenologie: { debourrementDJ: 190, seuilJourH: 12.5 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.75, prixOeuvreEurM3: 220, rejetteDeSouche: true },
     // les chênes sont en tête des listes d'appétence
@@ -314,6 +341,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 15, longeviteAns: 250, dissemination: "vent", semisParAn: 3 },
     // Aiguilles à C/N ~60 : minéralisation lente et acidifiante (ch2-B).
     litiere: { cnRatio: 60 },
+    // Sempervirent : ces valeurs ne servent pas, mais le champ reste renseigné.
+    phenologie: { debourrementDJ: 150, seuilJourH: 11.0 },
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.45, prixOeuvreEurM3: 110, rejetteDeSouche: false },
     // résineux dédaigné (il subit surtout les frottis, v2)
@@ -341,6 +370,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.35, fixateur: false },
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
     litiere: { cnRatio: 25 },
+    // Le bouleau ouvre le bal, début avril — c'est le pionnier jusque dans son calendrier.
+    phenologie: { debourrementDJ: 85, seuilJourH: 10.8 },
     economie: { prixPlantEur: 1.5 },
     bois: { densite: 0.55, prixOeuvreEurM3: 120, rejetteDeSouche: true },
     // rameaux tendres, brouté en pionnier
@@ -368,6 +399,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Cultivar greffé : pas de régénération naturelle fidèle.
     regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "gravite", semisParAn: 0 },
     litiere: { cnRatio: 30 },
+    // Fruitier de plaine : feuillaison après la floraison, mi-avril.
+    phenologie: { debourrementDJ: 150, seuilJourH: 11.5 },
     economie: { prixPlantEur: 12 },
     bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
     fruits: {
@@ -405,6 +438,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 4, longeviteAns: 60, dissemination: "gravite", semisParAn: 0 },
     litiere: { cnRatio: 30 },
+    // L'abricotier part très tôt, et c'est bien là son problème : le gel le rattrape.
+    phenologie: { debourrementDJ: 110, seuilJourH: 11.2 },
     economie: { prixPlantEur: 14 },
     bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
     fruits: {
@@ -447,6 +482,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // graine→semis, et cet entonnoir est ici très étroit *(à calibrer)*.
     regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "geai", semisParAn: 0.4 },
     litiere: { cnRatio: 25 },
+    // Le noisetier est précoce — il fleurit même en plein hiver.
+    phenologie: { debourrementDJ: 95, seuilJourH: 11.0 },
     economie: { prixPlantEur: 8 },
     bois: { densite: 0.62, prixOeuvreEurM3: 70, rejetteDeSouche: true },
     fruits: {
@@ -488,6 +525,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // drageonnement, on compense par un taux de semis généreux *(à calibrer)*.
     regeneration: { maturiteAns: 5, longeviteAns: 50, dissemination: "oiseaux", semisParAn: 1.2 },
     litiere: { cnRatio: 28 },
+    // L'épine noire fleurit avant de feuiller, dès mars.
+    phenologie: { debourrementDJ: 115, seuilJourH: 11.3 },
     economie: { prixPlantEur: 4 },
     bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     fruits: {
@@ -525,6 +564,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Cenelles avalées par les grives : elles ressortent n'importe où.
     regeneration: { maturiteAns: 8, longeviteAns: 200, dissemination: "oiseaux", semisParAn: 0.9 },
     litiere: { cnRatio: 26 },
+    // L'aubépine suit l'épine noire de quelques semaines.
+    phenologie: { debourrementDJ: 135, seuilJourH: 11.5 },
     economie: { prixPlantEur: 4 },
     bois: { densite: 0.8, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     // Épines longues : c'est l'abri sous lequel un chêne passe ses dix
@@ -554,6 +595,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Les mûres sont mangées par tout ce qui vole : c'est LE colonisateur.
     regeneration: { maturiteAns: 2, longeviteAns: 15, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 24 },
+    // La ronce ne perd qu'une partie de son feuillage : elle repart tôt.
+    phenologie: { debourrementDJ: 120, seuilJourH: 11.3 },
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     fruits: {
@@ -590,7 +633,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // tas de fumier, pieds de haie. C'est un indicateur, pas un passe-partout.
     azote: { demandeRelative: 1, fixateur: false },
     regeneration: { maturiteAns: 4, longeviteAns: 40, dissemination: "oiseaux", semisParAn: 1.5 },
-    litiere: { cnRatio: 20 }, // litière tendre, azotée : elle se minéralise vite
+    litiere: { cnRatio: 20 },
+    // Le sureau est l'un des tout premiers à verdir dans les haies.
+    phenologie: { debourrementDJ: 105, seuilJourH: 11.2 }, // litière tendre, azotée : elle se minéralise vite
     economie: { prixPlantEur: 5 },
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     fruits: {
@@ -628,6 +673,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: true },
     regeneration: { maturiteAns: 3, longeviteAns: 25, dissemination: "gravite", semisParAn: 5 },
     litiere: { cnRatio: 25 },
+    // Sempervirent : valeurs sans effet.
+    phenologie: { debourrementDJ: 100, seuilJourH: 11.0 },
     economie: { prixPlantEur: 3 },
     bois: { densite: 0.6, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // épines dissuasives, mais brouté en hiver sur la lande
@@ -654,6 +701,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: true },
     regeneration: { maturiteAns: 3, longeviteAns: 20, dissemination: "gravite", semisParAn: 4 },
     litiere: { cnRatio: 22 },
+    // Sempervirent : valeurs sans effet.
+    phenologie: { debourrementDJ: 100, seuilJourH: 11.0 },
     economie: { prixPlantEur: 2.5 },
     bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // genêt appété, sans épines
@@ -680,6 +729,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 3, longeviteAns: 30, dissemination: "vent", semisParAn: 6 },
     // Litière éricacée : lente et acidifiante (voie fongique, ch2-B).
     litiere: { cnRatio: 45 },
+    // Sempervirent : valeurs sans effet.
+    phenologie: { debourrementDJ: 100, seuilJourH: 11.0 },
     economie: { prixPlantEur: 2 },
     bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
     // consommée l'hiver quand il n'y a rien d'autre
@@ -707,6 +758,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.45, fixateur: false },
     regeneration: { maturiteAns: 20, longeviteAns: 300, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 45 },
+    // Le châtaignier est tardif : mi-mai. *(Des observations de terrain le donnent parfois plus précoce que le chêne ; on suit ici la vue forestière courante.)*
+    phenologie: { debourrementDJ: 300, seuilJourH: 12.5 },
     economie: { prixPlantEur: 4 },
     bois: { densite: 0.6, prixOeuvreEurM3: 200, rejetteDeSouche: true },
     fruits: {
@@ -749,6 +802,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.4, fixateur: false },
     regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 50 },
+    // Sempervirent : valeurs sans effet.
+    phenologie: { debourrementDJ: 150, seuilJourH: 11.5 },
     economie: { prixPlantEur: 5 },
     bois: { densite: 0.7, prixOeuvreEurM3: 160, rejetteDeSouche: true },
     // Le liège se lève tous les ~10 ans SANS abattre l'arbre : une subéraie
@@ -794,6 +849,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière tendre et riche (C/N ~25) : le frêne améliore son sol, c'est une
     // des raisons de sa place dans les haies.
     litiere: { cnRatio: 25 },
+    // Le frêne est le dernier des grands feuillus à sortir, mi-mai passée.
+    phenologie: { debourrementDJ: 310, seuilJourH: 12.5 },
     economie: { prixPlantEur: 3 },
     // Bois d'œuvre de premier ordre (manches, sport, ébénisterie) et rejet
     // vigoureux : c'est l'arbre à trogne par excellence.
@@ -823,6 +880,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.3, fixateur: false },
     regeneration: { maturiteAns: 5, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 45 },
+    // Sempervirent : valeurs sans effet.
+    phenologie: { debourrementDJ: 120, seuilJourH: 11.0 },
     economie: { prixPlantEur: 9 },
     bois: { densite: 0.7, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     fruits: {

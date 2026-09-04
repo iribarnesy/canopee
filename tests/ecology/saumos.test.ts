@@ -30,30 +30,22 @@
  * pour ça) et c'est le peuplement le plus haut à la fin. Survivre au feu et
  * l'empêcher sont deux stratégies différentes.
  *
- * ─── CE QUI MARCHE VRAIMENT : REPLANTER, ET AVEC QUOI ────────────────────────
- * Changer d'essence AVANT le feu ne protège qu'à la marge. Intervenir APRÈS
- * change davantage. Cinq graines, trente-huit ans, replantation dès qu'un feu
- * emporte le peuplement :
+ * ─── UNE CONCLUSION RETIRÉE ──────────────────────────────────────────────────
+ * On avait mesuré ici que replanter en aulne après le feu raccourcissait d'un
+ * tiers la durée pendant laquelle la nappe reste haute, et on l'avait écrit
+ * comme un résultat. C'en était un artefact.
  *
- *   conduite                       remontée   semaines hautes   engorgement   ruissellement
- *   pin, laissé à lui-même           41 cm         69              0,71          74 mm
- *   pin, replanté en pin             38 cm         67              0,59          53 mm
- *   pin, replanté en AULNE           31 cm         47              0,48          65 mm
- *   pin, replanté en chêne-liège     62 cm         99              0,82          82 mm
+ * À l'époque, le feuillage était commandé par un seul booléen — `tMean > 6 °C`
+ * — vrai presque tout l'hiver dans les Landes. TOUS les caducs y transpiraient
+ * donc en janvier, ce qui n'a aucun sens : un aulne n'a pas de feuilles en
+ * hiver et ne peut pas rabattre une nappe hivernale. Depuis que chaque espèce
+ * a son calendrier (phenologie.ts), cette transpiration fantôme a disparu — et
+ * l'avantage de l'aulne avec elle.
  *
- * Replanter en aulne réduit d'un tiers la durée pendant laquelle la nappe reste
- * haute, et d'un tiers l'engorgement. La raison est dans la fiche de l'espèce
- * et nulle part ailleurs : l'aulne tolère l'engorgement (1,0, le maximum de
- * l'atlas) ET il a soif (seuil de confort 0,85). Il survit donc à ce que le
- * feu a créé, et il boit exactement là où l'eau s'accumule.
- *
- * Replanter en chêne-liège fait l'inverse et AGGRAVE : c'est une espèce
- * xérophile (confort 0,35), elle ne boit pas dans un sol détrempé. Le bon
- * arbre après un incendie n'est pas celui qui résiste au feu, c'est celui qui
- * tient dans l'eau.
- *
- * *(Dans cet essai la replantation est gratuite et instantanée. En partie elle
- * coûte des heures et des plants, et c'est un autre débat.)*
+ * Remesuré sur cinq graines, aucune essence de replantation ne se détache : les
+ * écarts (38 à 115 semaines de nappe haute selon l'essence) sont du même ordre
+ * que le bruit d'un incendie à l'autre, et l'ordre des essences change avec la
+ * graine. On ne conclut donc rien.
  *
  * ─── ET SURTOUT : LA VARIANCE ÉCRASE TOUT ────────────────────────────────────
  * D'une graine à l'autre, la même composition brûle de 0 à 4 500 m². Trois à
@@ -196,25 +188,26 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
   });
 });
 
-describe("l'intervention du gestionnaire : replanter, et avec quoi", () => {
-  const AULNE = ["alnus_glutinosa"];
+describe("l'intervention du gestionnaire : ce que l'essai NE montre pas", () => {
   const PIN = ["pinus_sylvestris"];
   const laisse = surPlusieursGraines(PIN);
-  const replanteAulne = surPlusieursGraines(PIN, AULNE);
+  const replante = surPlusieursGraines(PIN, ["alnus_glutinosa"]);
 
-  it("replanter en aulne raccourcit l'anomalie de nappe et l'engorgement", () => {
-    // L'aulne tolère l'engorgement au maximum de l'atlas (1,0) ET il a soif
-    // (confort 0,85) : il survit à ce que le feu a créé et il boit là où l'eau
-    // s'accumule. Aucune règle ne le dit — ce sont ses deux chiffres de fiche.
-    expect(replanteAulne.semainesHautes).toBeLessThan(laisse.semainesHautes);
-    expect(replanteAulne.engorgement).toBeLessThan(laisse.engorgement);
-  });
-
-  it("le bon arbre d'après-feu n'est pas celui qui résiste au feu", () => {
-    // Le chêne-liège survit à l'incendie mieux que tout autre, mais c'est une
-    // espèce xérophile : replanté après le feu, il ne boit pas le surplus et
-    // laisse la nappe haute plus longtemps que l'aulne.
-    const replanteLiege = surPlusieursGraines(PIN, ["quercus_suber"]);
-    expect(replanteAulne.semainesHautes).toBeLessThan(replanteLiege.semainesHautes);
+  it("replanter ne change pas de façon fiable la suite hydrologique", () => {
+    // Ce test garde la trace d'une CONCLUSION RETIRÉE. On avait mesuré que
+    // replanter en aulne raccourcissait d'un tiers l'anomalie de nappe, et on
+    // l'avait écrit. C'était un artefact : à l'époque, le feuillage était
+    // commandé par un simple `tMean > 6 °C`, vrai presque tout l'hiver dans
+    // les Landes — tous les caducs y transpiraient donc en janvier. Avec un
+    // vrai calendrier foliaire (phenologie.ts), un aulne n'a pas de feuilles
+    // en hiver et ne peut pas rabattre une nappe hivernale. L'avantage a
+    // disparu avec l'artefact qui le portait.
+    //
+    // Ce qui reste vrai : les écarts entre essences de replantation sont du
+    // même ordre que le bruit d'un incendie à l'autre. On n'assert donc rien
+    // sur leur direction — on vérifie seulement que les deux conduites
+    // produisent bien une anomalie, ce qui est le fait solide.
+    expect(laisse.semainesHautes).toBeGreaterThan(0);
+    expect(replante.semainesHautes).toBeGreaterThan(0);
   });
 });

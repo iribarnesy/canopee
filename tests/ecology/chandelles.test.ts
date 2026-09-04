@@ -88,9 +88,9 @@ describe("un arbre mort reste debout", () => {
     // L'ombre est décalée vers le nord (light.ts) : on place le semis là où
     // elle tombe, pas au pied de l'arbre.
     const semis = { ...chandelle(0.5), id: 2, alive: true, x: 10, y: 10 + 0.4 * 18 };
-    const sousLaChandelle = computeLight([chandelle(), semis], true)[1] ?? 0;
+    const sousLaChandelle = computeLight([chandelle(), semis], () => 1)[1] ?? 0;
     const vivant = { ...chandelle(), id: 3, alive: true };
-    const sousLArbre = computeLight([vivant, semis], true)[1] ?? 0;
+    const sousLArbre = computeLight([vivant, semis], () => 1)[1] ?? 0;
     expect(sousLaChandelle).toBeCloseTo(1, 6);
     expect(sousLArbre).toBeLessThan(0.2);
   });

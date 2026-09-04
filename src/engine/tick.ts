@@ -44,10 +44,16 @@ import {
   humiditeVecue,
   prochaineCouverture,
 } from "./herbe";
-import { computeGroundLight, computeLight, crownRadiusM, windShelterAt } from "./light";
+import {
+  computeGroundLight,
+  computeLight,
+  crownRadiusM,
+  type PartFoliaire,
+  windShelterAt,
+} from "./light";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
-import { weeklyEtpHargreaves } from "./meteo";
+import { dureeDuJourH, midWeekDayOfYear, weeklyEtpHargreaves } from "./meteo";
 import {
   cibleReseau,
   facteurAbsorption,
@@ -73,6 +79,7 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import { frequentationDesBordures } from "./paysage";
+import { partFoliaire } from "./phenologie";
 import {
   alterationPhosphoreG,
   alterationPotassiumG,
@@ -172,7 +179,16 @@ const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
 const RECRUITMENT_WEEK = 14;
 /** semaine de la chute des feuilles (automne) */
-const LITTERFALL_WEEK = 44;
+/** Semaine du solstice d'été : au-delà, le jour raccourcit. */
+const SOLSTICE_ETE_SEMAINE = 25;
+/**
+ * Semaine où la chute des feuilles commence à se compter. La sénescence
+ * s'enclenche quand le jour passe sous son seuil (phenologie.ts) ; on date le
+ * compteur d'étalement à partir d'ici plutôt que de porter un état de plus.
+ */
+const SENESCENCE_DEBUT_SEMAINE = 40;
+/** Dernière semaine de l'année : le feuillage restant tombe pour de bon. */
+const DERNIERE_SEMAINE = 51;
 /**
  * Combien de temps un arbre tué par le feu reste récupérable avant que le bois
  * ne se déprécie (bleuissement, insectes) : environ un an *(à calibrer)*.
@@ -212,9 +228,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // ── 0. Lumière : au sol (microclimat, évaporation) et par arbre (croissance
   //      ET transpiration — c'est le moteur de l'effet nurse, cf. trees.ts).
-  const leavesOn = weather.tMean > LEAVES_ON_TMEAN_C;
-  const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, leavesOn);
-  const light = computeLight(trees, leavesOn);
+  // Phénologie : chaque espèce a son calendrier, et le feuillage se déploie
+  // progressivement au lieu de s'allumer d'un coup (phenologie.ts).
+  const jourH = dureeDuJourH(station.latitudeDeg, midWeekDayOfYear(week));
+  const automne = week >= SOLSTICE_ETE_SEMAINE;
+  const semainesDepuisSenescence = automne ? Math.max(0, week - SENESCENCE_DEBUT_SEMAINE) : 0;
+  const partFoliaireDe: PartFoliaire = (tree) =>
+    partFoliaire(
+      getEspece(tree.especeId),
+      state.ddYearBase5,
+      jourH,
+      automne,
+      semainesDepuisSenescence,
+    );
+  const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partFoliaireDe);
+  const light = computeLight(trees, partFoliaireDe);
 
   // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
   const profil = station.profil;
@@ -1304,9 +1332,42 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     else litterfallSumG += amountG;
   };
 
-  if (week === LITTERFALL_WEEK) {
+  // La chute des feuilles s'étale sur un mois au lieu de tomber en une
+  // semaine : chaque arbre lâche ce que sa propre sénescence lui a fait
+  // perdre depuis la semaine précédente (phenologie.ts). Un frêne, qui part
+  // tard, garde donc ses feuilles plus longtemps qu'un bouleau.
+  nextTrees = nextTrees.map((tree) => {
+    if (!tree.alive || tree.uptakeYearG <= 0) return tree;
+    const espece = getEspece(tree.especeId);
+    if (!espece.lumiere.caduc) return tree;
+    const restant = partFoliaire(
+      espece,
+      state.ddYearBase5,
+      jourH,
+      automne,
+      semainesDepuisSenescence,
+    );
+    const restantAvant = partFoliaire(
+      espece,
+      state.ddYearBase5,
+      jourH,
+      automne,
+      Math.max(0, semainesDepuisSenescence - 1),
+    );
+    const tombe = Math.max(0, restantAvant - restant);
+    if (tombe <= 0) return tree;
+    const part = Math.min(1, tombe / Math.max(1e-9, restantAvant));
+    const azote = part * tree.uptakeYearG;
+    depositLitter(tree, LITTER_RETURN_FRACTION * azote);
+    return { ...tree, uptakeYearG: tree.uptakeYearG - azote };
+  });
+  // Filet de sécurité : ce qu'un arbre n'a pas lâché avant la fin de l'année
+  // tombe quand même, sinon son azote resterait dans un feuillage qui n'existe
+  // plus et le bilan azoté ne boucler ait pas.
+  if (week === DERNIERE_SEMAINE) {
     nextTrees = nextTrees.map((tree) => {
       if (!tree.alive || tree.uptakeYearG <= 0) return tree;
+      if (!getEspece(tree.especeId).lumiere.caduc) return tree;
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
       return { ...tree, uptakeYearG: 0 };
     });
@@ -1467,7 +1528,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       rng,
       coteM: station.coteM,
       voisinage: station.voisinage,
-      leavesOn,
+      partFoliaire: partFoliaireDe,
       ph: state.soil.ph,
       lumiereAuSol: groundLight,
       nextTreeId,

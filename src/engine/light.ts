@@ -38,12 +38,20 @@ interface Shadow {
 }
 
 /** Ombres actives (arbres vivants, en feuilles), indexées par panier spatial. */
-function buildShadowIndex(trees: readonly TreeState[], leavesOn: boolean): Map<number, Shadow[]> {
+/**
+ * Part du feuillage déployé d'un arbre ∈ [0,1]. Un booléen ne suffit pas : le
+ * bouleau est en feuilles quand le frêne est encore nu, et un houppier à
+ * moitié sorti ne fait pas la même ombre qu'un houppier plein (phenologie.ts).
+ */
+export type PartFoliaire = (tree: TreeState) => number;
+
+function buildShadowIndex(trees: readonly TreeState[], part: PartFoliaire): Map<number, Shadow[]> {
   const buckets = new Map<number, Shadow[]>();
   for (const tree of trees) {
     if (!tree.alive) continue;
     const espece = getEspece(tree.especeId);
-    if (espece.lumiere.caduc && !leavesOn) continue;
+    const feuillage = part(tree);
+    if (feuillage <= 0) continue;
     const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
     if (r <= 0) continue;
     const shadow: Shadow = {
@@ -51,7 +59,9 @@ function buildShadowIndex(trees: readonly TreeState[], leavesOn: boolean): Map<n
       cy: tree.y + SHADOW_NORTH_OFFSET * tree.heightM,
       r2: r * r,
       heightM: tree.heightM,
-      extinction: BEER_LAMBERT_K * espece.lumiere.lai,
+      // L'indice foliaire suit le déploiement : c'est là que la phénologie
+      // entre dans la loi de Beer-Lambert.
+      extinction: BEER_LAMBERT_K * espece.lumiere.lai * feuillage,
     };
     const bx0 = Math.floor((shadow.cx - r) / BUCKET_M);
     const bx1 = Math.floor((shadow.cx + r) / BUCKET_M);
@@ -107,10 +117,10 @@ function extinctionAt(
 
 /**
  * Lumière relative ∈ [0,1] reçue par chaque arbre vivant (index aligné sur
- * `trees`, 1 pour les morts). `leavesOn` : true si les caducs sont en feuilles.
+ * `trees`, 1 pour les morts). `part` donne le feuillage déployé de chaque arbre.
  */
-export function computeLight(trees: readonly TreeState[], leavesOn: boolean): number[] {
-  const buckets = buildShadowIndex(trees, leavesOn);
+export function computeLight(trees: readonly TreeState[], part: PartFoliaire): number[] {
+  const buckets = buildShadowIndex(trees, part);
   return trees.map((tree) =>
     tree.alive ? Math.exp(-extinctionAt(buckets, tree.x, tree.y, tree.heightM)) : 1,
   );
@@ -121,9 +131,9 @@ export function lightAtPoint(
   trees: readonly TreeState[],
   x: number,
   y: number,
-  leavesOn: boolean,
+  part: PartFoliaire,
 ): number {
-  const buckets = buildShadowIndex(trees, leavesOn);
+  const buckets = buildShadowIndex(trees, part);
   return Math.exp(-extinctionAt(buckets, x, y, 0));
 }
 
@@ -161,9 +171,9 @@ export function computeGroundLight(
   trees: readonly TreeState[],
   widthM: number,
   heightM: number,
-  leavesOn: boolean,
+  part: PartFoliaire,
 ): number[] {
-  const buckets = buildShadowIndex(trees, leavesOn);
+  const buckets = buildShadowIndex(trees, part);
   const out = new Array<number>(widthM * heightM);
   for (let y = 0; y < heightM; y++) {
     for (let x = 0; x < widthM; x++) {
