@@ -94,9 +94,21 @@ pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`.
 
 **Ce qui s'est passé depuis le dernier instantané** : `events`, `refusals`,
-`morts` (avec `id` et position), `gestes` (`couper`, `eclaircir`, `elaguer`,
-`trogner`, `receper`, `brouter`, `frotter`, avec les ids réellement touchés),
-`incendie` (compteurs + `origine`, `brulees` et `rangs` du front).
+`morts` (avec `id` et position), `chutes` (chandelles abattues : direction et
+empreinte du tronc), `incendie` (compteurs + `origine`, `brulees` et `rangs` du
+front), et `gestes`, qui ont DEUX mailles :
+
+- `{ type, ids }` pour ce qui désigne des arbres — `couper`, `eclaircir`,
+  `elaguer`, `trogner`, `receper`, `brouter`, `frotter` ;
+- `{ type, cellules }` pour ce qui désigne du sol — `chauler`, `faucher`,
+  `epandreBrf`, `labourer`, `ramasserBoisMort`, `cloturer`. Indices de cellule
+  identiques à ceux des grilles.
+
+Dans les deux cas, ce qui est nommé est ce qui a RÉELLEMENT été touché : le
+plafond horaire arrête souvent un chantier en cours de route, et une pelouse
+déjà rase ne se fauche pas. `estGesteSurArbres` et `estGesteSurZone` discriminent
+les deux mailles (`find` rend l'union entière, que TypeScript ne rétrécit pas
+sur le seul `type`).
 
 **Et ce que le rendu peut calculer lui-même**, sans rien demander : tout ce qui
 est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur
