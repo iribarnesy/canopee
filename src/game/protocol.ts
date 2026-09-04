@@ -14,7 +14,7 @@ import type { Bordures } from "../engine/paysage";
 import type { ContextePhenologique } from "../engine/phenologie";
 import type { Relief } from "../engine/relief";
 import type { TickFluxes } from "../engine/state";
-import type { IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
@@ -215,6 +215,13 @@ export interface Snapshot {
    * éclaircie, élagage, étêtage, recépage, broutage, frottis).
    */
   gestes: GesteVisible[];
+  /**
+   * Chandelles abattues depuis le dernier instantané. `soilBoisAuSol` dit où
+   * le tronc s'est retrouvé, mais pas qu'il vient de TOMBER : sans ces
+   * événements, la trouée n'est qu'un changement d'éclairage entre deux
+   * images, au lieu d'être la conséquence lisible d'une chute (boisMort.ts).
+   */
+  chutes: ChuteDeChandelle[];
   /** l'incendie de la semaine, avec son front, s'il y en a eu un (feu.ts) */
   incendie?: IncendieResult;
 }

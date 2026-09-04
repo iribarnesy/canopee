@@ -46,7 +46,7 @@ import {
 } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { sourcesDeLaParcelle } from "../engine/terrain";
-import type { IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
@@ -84,6 +84,7 @@ let pendingEvents: GameEvent[] = [];
 // Ce qui s'est passé depuis le dernier instantané et que le rendu doit ANIMER.
 let pendingMorts: MortDeLaSemaine[] = [];
 let pendingGestes: GesteVisible[] = [];
+let pendingChutes: ChuteDeChandelle[] = [];
 let pendingIncendie: IncendieResult | undefined;
 // Grandeurs du dernier tick : elles ne sont pas dans l'état, et sans elles le
 // rendu n'a ni crue, ni sous-bois sombre (tick.ts).
@@ -417,12 +418,14 @@ function postSnapshot() {
     events: pendingEvents,
     morts: pendingMorts,
     gestes: pendingGestes,
+    chutes: pendingChutes,
     incendie: pendingIncendie,
   });
   pendingRefusals = [];
   pendingEvents = [];
   pendingMorts = [];
   pendingGestes = [];
+  pendingChutes = [];
   // Les tampons du feu partent avec l'instantané : on ne les garde pas pour le
   // suivant, sinon la même flambée se rejouerait à l'écran.
   pendingIncendie = undefined;
@@ -452,6 +455,7 @@ function stepWeeks(n: number) {
     lastLumiereAuSol = ticked.lumiereAuSol;
     pendingMorts.push(...ticked.morts);
     pendingGestes.push(...ticked.gestes);
+    pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
     if (ticked.incendie) pendingIncendie = ticked.incendie;
@@ -695,6 +699,7 @@ function init(
   pendingEvents = [];
   pendingMorts = [];
   pendingGestes = [];
+  pendingChutes = [];
   pendingIncendie = undefined;
   lastFluxes = undefined;
   lastDebordement = undefined;
@@ -766,6 +771,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       pendingEvents = [];
       pendingMorts = [];
       pendingGestes = [];
+      pendingChutes = [];
       pendingIncendie = undefined;
       weeksPerSecond = 0;
       post({ type: "ready", station: stationInfo() });

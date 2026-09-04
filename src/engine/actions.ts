@@ -405,16 +405,33 @@ export interface ApplyResult {
 }
 
 /**
- * Un geste subi par des arbres nommés, dans la semaine. Le joueur en est
- * l'auteur pour la plupart ; le gibier pour `brouter` et `frotter`, que le
- * tick rapporte de la même façon (tick.ts).
+ * Un geste de la semaine, et ce qu'il a touché.
+ *
+ * Deux mailles, parce qu'il y a deux sortes de gestes et qu'aucune des deux ne
+ * s'exprime dans l'autre. Une coupe désigne des ARBRES : le rendu doit savoir
+ * lesquels tombent, sinon ils s'escamotent. Un labour, un chaulage, un
+ * ramassage de bois mort désignent des CELLULES : sans elles, le sol change de
+ * teinte d'une image à l'autre et le geste n'a pas eu lieu à l'écran.
+ *
+ * Les indices de cellule sont les mêmes que ceux des grilles de l'instantané —
+ * `y * coteM + x` — donc rien de nouveau à comprendre côté rendu.
  */
-export interface GesteVisible {
-  type: GesteType;
+export type GesteVisible = GesteSurArbres | GesteSurZone;
+
+export interface GesteSurArbres {
+  type: GesteTypeArbre;
+  /** les arbres réellement touchés, pas ceux qu'on avait demandés */
   ids: readonly number[];
 }
 
-export type GesteType =
+export interface GesteSurZone {
+  type: GesteTypeZone;
+  /** cellules réellement touchées, indices `y * coteM + x` */
+  cellules: readonly number[];
+}
+
+/** Gestes qui désignent des arbres. Le gibier est l'auteur des deux derniers. */
+export type GesteTypeArbre =
   | "couper"
   | "eclaircir"
   | "elaguer"
@@ -422,6 +439,30 @@ export type GesteType =
   | "receper"
   | "brouter"
   | "frotter";
+
+/** Gestes qui désignent une zone de sol. */
+export type GesteTypeZone =
+  | "chauler"
+  | "faucher"
+  | "epandreBrf"
+  | "labourer"
+  | "ramasserBoisMort"
+  | "cloturer";
+
+export type GesteType = GesteTypeArbre | GesteTypeZone;
+
+/**
+ * Discriminer les deux mailles. `Array.prototype.find` rend l'union entière,
+ * que TypeScript ne sait pas rétrécir sur le seul `type` : ces deux gardes
+ * évitent au rendu — et à nous — de le refaire à la main à chaque usage.
+ */
+export function estGesteSurArbres(geste: GesteVisible): geste is GesteSurArbres {
+  return "ids" in geste;
+}
+
+export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
+  return "cellules" in geste;
+}
 
 /** Volume de bois récoltable, m³ — proxy allométrique V0 *(à calibrer IFN)*. */
 export function woodVolumeM3(heightM: number): number {
@@ -730,6 +771,7 @@ function applyEpandreBrf(
       },
     },
     refusals: [],
+    gestes: cells.length > 0 ? [{ type: "epandreBrf", cellules: cells }] : [],
   };
 }
 
@@ -793,12 +835,15 @@ function applyChauler(
   const ph = state.soil.ph.slice();
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
+  const chaulees: number[] = [];
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
       const dx = x + 0.5 - action.x;
       const dy = y + 0.5 - action.y;
       if (dx * dx + dy * dy <= r2) {
-        ph[y * cote + x] = Math.min(7.5, (ph[y * cote + x] ?? 7) + LIME_PH_STEP);
+        const i = y * cote + x;
+        chaulees.push(i);
+        ph[i] = Math.min(7.5, (ph[i] ?? 7) + LIME_PH_STEP);
       }
     }
   }
@@ -814,6 +859,7 @@ function applyChauler(
       },
     },
     refusals: [],
+    gestes: chaulees.length > 0 ? [{ type: "chauler", cellules: chaulees }] : [],
   };
 }
 
@@ -836,6 +882,9 @@ function applyFaucher(
   const litterCG = state.soil.litterCG.slice();
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
+  // Les cellules où l'outil a effectivement mordu : une pelouse déjà rase ne
+  // se fauche pas, et le rendu n'a rien à y montrer.
+  const fauchees: number[] = [];
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
       const dx = x + 0.5 - action.x;
@@ -844,6 +893,7 @@ function applyFaucher(
       const i = y * cote + x;
       const avant = herbeCouverture[i] ?? 0;
       if (avant <= FAUCHE_COUVERTURE_RESIDUELLE) continue;
+      fauchees.push(i);
       const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
       herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       herbeBiomasse[i] = FAUCHE_COUVERTURE_RESIDUELLE;
@@ -864,6 +914,7 @@ function applyFaucher(
       },
     },
     refusals: [],
+    gestes: fauchees.length > 0 ? [{ type: "faucher", cellules: fauchees }] : [],
   };
 }
 
@@ -927,6 +978,9 @@ function applyRamasserBoisMort(
       },
     },
     refusals: [],
+    // Sans ça, un tronc couché disparaît du sol d'une image à l'autre —
+    // indiscernable de sa décomposition, qui est bien plus lente.
+    gestes: [{ type: "ramasserBoisMort", cellules: cibles }],
   };
 }
 
@@ -1091,7 +1145,9 @@ function applyCloturer(
   }
   const cloture = state.soil.cloture.slice();
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
+  const closes: number[] = [];
   forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => {
+    closes.push(i);
     cloture[i] = true;
   });
   return {
@@ -1106,6 +1162,7 @@ function applyCloturer(
       },
     },
     refusals: [],
+    gestes: closes.length > 0 ? [{ type: "cloturer", cellules: closes }] : [],
   };
 }
 
@@ -1145,6 +1202,7 @@ function applyLabourer(
   };
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
+  const labourees: number[] = [];
   let emisKgC = 0;
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
@@ -1152,6 +1210,7 @@ function applyLabourer(
       const dy = y + 0.5 - action.y;
       if (dx * dx + dy * dy > r2) continue;
       const i = y * cote + x;
+      labourees.push(i);
       // Le coup de fouet : de l'humus part en fumée, son azote reste.
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;
@@ -1208,6 +1267,7 @@ function applyLabourer(
       },
     },
     refusals: [],
+    gestes: labourees.length > 0 ? [{ type: "labourer", cellules: labourees }] : [],
   };
 }
 
@@ -1518,7 +1578,7 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return {
         ...coupe,
         gestes: (coupe.gestes ?? []).map((g) =>
-          g.type === "couper" ? { ...g, type: "eclaircir" as const } : g,
+          estGesteSurArbres(g) && g.type === "couper" ? { ...g, type: "eclaircir" as const } : g,
         ),
       };
     }
