@@ -910,11 +910,11 @@ vingt-six, soit de l'ordre de 8 % de la production d'automne, pas de l'année.
 C'est le genre de raffinement qu'on branche quand on recalibre pour une autre
 raison, pas pour lui seul.
 
-*Limite qui reste, et qui n'est pas de ce chantier* : les hauteurs absolues sont
-faibles — un hêtre de plaine plafonne autour de quatre mètres à quarante ans là
-où le terrain en donne douze à quinze. Les rapports entre essences et entre
-stations sont justes, les niveaux ne le sont pas. C'est ce qu'il faudrait
-reprendre sur des tables de production, et c'est plus gros que la sénescence.
+*Cette entrée fermait sur une limite* — les hauteurs absolues trop faibles, un
+hêtre de plaine à quatre mètres à quarante ans — en disant qu'il faudrait la
+reprendre sur des tables de production. C'est fait : voir « les hauteurs
+absolues : le moteur se cale sur les tables de production » plus haut. Ce qui reste ici,
+la sénescence hors de la boucle, est un raffinement à côté.
 
 ## Règle de travail
 

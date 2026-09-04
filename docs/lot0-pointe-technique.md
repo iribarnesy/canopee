@@ -5,6 +5,18 @@
 > rejoué** : une des conclusions ci-dessous ne peut pas être tirée dans un
 > conteneur sans carte graphique.
 
+> **À relire avec une date en tête.** Ces mesures ont été prises *avant* le
+> recalibrage des hauteurs sur les tables de production (`5bbbb78`, arrivé sur
+> `main` le même jour). La scène figée porte donc une forêt trop courte : h max
+> 15,1 m à l'an 50, là où un peuplement calé sur les tables en donnera le double
+> ou davantage. Ce qui **ne change pas** : le nombre de tiges, qui vient de la
+> régénération et de la mortalité, et la règle sur les primitives vectorielles,
+> qui ne dépend pas de la taille des sujets. Ce qui **est sous-mesuré** : la
+> surface de remplissage par image et le coût de cuisson de l'atlas, tous deux
+> à peu près quadratiques en hauteur. Comme la marge de D1 est de 9 ms sur un
+> budget de 16,7 ms, **c'est assez pour qu'il faille rejouer le banc** avant que
+> le lot L1 ne s'appuie sur ces chiffres. Voir la fin du document.
+
 ## Le pire cas, enfin mesuré au lieu d'être estimé
 
 Le document d'inventaire parlait de « friche en succession, ~5 000 tiges ».
@@ -175,7 +187,13 @@ qu'il soit tant que la question reste ouverte — et il ne coûte rien au paquet
 livré à cet endroit.
 
 **Jetable, mais gardé exprès** : `spike/` et `src/spike/` restent tant que D1
-n'est pas tranchée sur une vraie machine. À supprimer ensuite, avec
+n'est pas tranchée sur une vraie machine — et il y a maintenant une seconde
+raison de les garder. Le recalibrage des hauteurs (`5bbbb78`) rend la scène
+figée obsolète : il faut la régénérer et rejouer les trois styles sur une forêt
+de vraie taille. Deux mesures à refaire ensemble, donc, sur la même machine :
+**Pixi contre Canvas 2D avec un GPU, et les deux sur des arbres deux fois plus
+hauts.** Tant que ce n'est pas fait, le chiffre de 9 ms est un plancher, pas un
+résultat. À supprimer ensuite, avec
 `scripts/l0-mesure.mjs`.
 
 `spike/scene-an50.json` est la scène **figée** : sortie du moteur (station
