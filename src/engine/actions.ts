@@ -538,9 +538,25 @@ function applyCouper(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
-    // Les souches et racines restent au sol dans les deux cas (bois mort).
-    deadWoodKgC +=
-      treeTotalCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, tree.heightM);
+    // Deux situations bien distinctes, et c'est `mortSemaine` qui les sépare.
+    // Tant qu'elle est absente, le carbone de l'arbre n'a jamais été versé au
+    // pool de bois mort : on l'emporte, et souches et racines y restent. Une
+    // fois posée (tick.ts), la totalité du carbone de l'arbre EST DÉJÀ au pool
+    // — une chandelle, brûlée ou non — et l'emporter, c'est l'en RETIRER, pas
+    // l'y rajouter. Sans quoi on exporterait un bois compté deux fois.
+    let emporteKgC = treeAboveCarbonKg(espece, tree.heightM);
+    if (tree.mortSemaine === undefined) {
+      // Les souches et racines restent au sol (bois mort).
+      deadWoodKgC +=
+        treeTotalCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, tree.heightM);
+    } else {
+      // Le pool se décompose chaque semaine (DEADWOOD_DECAY_PER_YEAR) : on ne
+      // peut pas en sortir plus qu'il n'en reste. Ce qu'on emporte est donc
+      // borné par le pool, et ce qu'on exporte suit — le tronc pourri qu'on
+      // débarde ne pèse plus ce qu'il pesait le jour de sa mort.
+      emporteKgC = Math.min(emporteKgC, deadWoodKgC);
+      deadWoodKgC -= emporteKgC;
+    }
     if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
       const brule = tree.brulEeSemaine !== undefined;
@@ -548,15 +564,15 @@ function applyCouper(
       if (vente.qualite === "oeuvre" && !brule) {
         // Bois d'œuvre : le carbone reste piégé dans le produit (charpente,
         // meuble) pour des décennies — ce n'est pas une émission (§12).
-        oeuvreCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+        oeuvreCumKgC += emporteKgC;
       } else {
         // Bois de chauffage : brûlé chez le client → émis immédiatement.
-        exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+        exportedEnergyCumKgC += emporteKgC;
       }
     } else if (action.devenir === "broyer") {
       // Le broyat rejoint le tas : rien ne touche le sol pour l'instant.
       stockBrf = {
-        carboneG: stockBrf.carboneG + treeAboveCarbonKg(espece, tree.heightM) * 1000,
+        carboneG: stockBrf.carboneG + emporteKgC * 1000,
         azoteG:
           stockBrf.azoteG +
           0.5 * tree.uptakeYearG +
@@ -586,7 +602,7 @@ function applyCouper(
       if (cells.length === 0) cells.push(0);
       const share = depositG / cells.length;
       // Tout le carbone aérien broyé reste sur place, dans la litière.
-      const shareC = (treeAboveCarbonKg(espece, tree.heightM) * 1000) / cells.length;
+      const shareC = (emporteKgC * 1000) / cells.length;
       const kSpecies = 0.6 / BRF_CN_RATIO;
       for (const i of cells) {
         const oldN = litterNG[i] ?? 0;
