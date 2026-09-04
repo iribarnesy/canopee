@@ -388,3 +388,59 @@ function arbreNu(heightM: number): TreeState {
     protege: false,
   };
 }
+
+/**
+ * Ce que le gibier fait, le rendu doit pouvoir le MONTRER la semaine où ça
+ * arrive : une pousse mangée, une écorce arrachée au pied. Le tick les
+ * rapporte comme des gestes, au même titre que ceux du joueur (tick.ts).
+ */
+describe("les gestes du gibier remontent au rendu", () => {
+  const station: Station = {
+    ...FRICHE_LIMON.station,
+    coteM: 30,
+    voisinage: [],
+    gibierParHa: 3,
+  };
+
+  it("le broutage nomme les tiges mangées", () => {
+    let state = createGameState(station, rngStateFromSeed(8));
+    for (let i = 0; i < 30; i++) {
+      state = plantAt(state, "corylus_avellana", 2 + (i % 6) * 4, 2 + Math.floor(i / 6) * 4, 0.6);
+    }
+    let broutes: readonly number[] = [];
+    for (let i = 0; i < 52 && broutes.length === 0; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      const r = advanceWeek(state, w, []);
+      state = r.state;
+      broutes = r.gestes.find((g) => g.type === "brouter")?.ids ?? [];
+    }
+    expect(broutes.length).toBeGreaterThan(0);
+    // Des arbres du jeu, pas des identifiants inventés.
+    for (const id of broutes) expect(state.trees.some((t) => t.id === id)).toBe(true);
+  });
+
+  it("le frottis nomme les tiges marquées, celles-là mêmes qui portent la date", () => {
+    let state = createGameState(station, rngStateFromSeed(11));
+    for (let i = 0; i < 24; i++) {
+      state = plantAt(state, "corylus_avellana", 3 + (i % 6) * 4, 3 + Math.floor(i / 6) * 5, 2.5);
+    }
+    let frottes: readonly number[] = [];
+    let semaine = 0;
+    for (let i = 0; i < 3 * 52 && frottes.length === 0; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      semaine = state.week;
+      const r = advanceWeek(state, w, []);
+      state = r.state;
+      frottes = r.gestes.find((g) => g.type === "frotter")?.ids ?? [];
+    }
+    expect(frottes.length).toBeGreaterThan(0);
+    for (const id of frottes) {
+      const arbre = state.trees.find((t) => t.id === id);
+      // L'écorce arrachée est datée dans l'arbre : le geste et le champ
+      // `frotteSemaine` racontent la même chose, et le rendu peut recouper.
+      if (arbre) expect(arbre.frotteSemaine).toBe(semaine);
+    }
+  });
+});

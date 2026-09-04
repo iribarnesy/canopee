@@ -363,7 +363,32 @@ export interface ActionRefusal {
 export interface ApplyResult {
   state: GameState;
   refusals: ActionRefusal[];
+  /**
+   * Ce que l'action a fait subir à quels arbres. Sans ça, un arbre coupé
+   * s'ESCAMOTE au lieu de tomber : le rendu voit un instantané avec un arbre
+   * en moins et n'a aucun moyen de savoir lequel, ni pourquoi.
+   */
+  gestes?: GesteVisible[];
 }
+
+/**
+ * Un geste subi par des arbres nommés, dans la semaine. Le joueur en est
+ * l'auteur pour la plupart ; le gibier pour `brouter` et `frotter`, que le
+ * tick rapporte de la même façon (tick.ts).
+ */
+export interface GesteVisible {
+  type: GesteType;
+  ids: readonly number[];
+}
+
+export type GesteType =
+  | "couper"
+  | "eclaircir"
+  | "elaguer"
+  | "trogner"
+  | "receper"
+  | "brouter"
+  | "frotter";
 
 /** Volume de bois récoltable, m³ — proxy allométrique V0 *(à calibrer IFN)*. */
 export function woodVolumeM3(heightM: number): number {
@@ -514,6 +539,7 @@ function applyCouper(
   const litterK = state.soil.litterK.slice();
   let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC } = state.carbon;
   let stockBrf = state.stockBrf;
+  const coupes: number[] = [];
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
 
   for (const id of action.treeIds) {
@@ -595,6 +621,7 @@ function applyCouper(
         litterCG[i] = (litterCG[i] ?? 0) + shareC;
       }
     }
+    coupes.push(id);
     trees.splice(idx, 1); // l'arbre coupé quitte la carte (bois mort/carbone en V1)
   }
 
@@ -608,6 +635,9 @@ function applyCouper(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
+    // Les tiges RÉELLEMENT tombées, pas celles qu'on a demandées : le plafond
+    // horaire arrête souvent le chantier en cours de route.
+    gestes: coupes.length > 0 ? [{ type: "couper", ids: coupes }] : [],
   };
 }
 
@@ -811,6 +841,7 @@ function applyElaguer(
   const refusals: ActionRefusal[] = [];
   let { hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
+  const elagues: number[] = [];
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
@@ -834,11 +865,13 @@ function applyElaguer(
     }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
+    elagues.push(id);
     trees[idx] = { ...tree, hauteurElagueeM: cible };
   }
   return {
     state: { ...state, trees, economy: { ...state.economy, hoursUsedWeek, hoursUsedYear } },
     refusals,
+    gestes: elagues.length > 0 ? [{ type: "elaguer", ids: elagues }] : [],
   };
 }
 
@@ -862,6 +895,7 @@ function applyTrogner(
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
   let { exportedEnergyCumKgC } = state.carbon;
+  const etetes: number[] = [];
   const hauteurTete = Math.max(1, action.hauteurTeteM);
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
@@ -890,6 +924,7 @@ function applyTrogner(
     }
     hoursUsedWeek += TROGNE_HEURES;
     hoursUsedYear += TROGNE_HEURES;
+    etetes.push(id);
     // Ce qu'on emporte : tout ce qui dépassait la tête, en bois de chauffage.
     const emporte =
       treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, hauteurTete);
@@ -914,6 +949,7 @@ function applyTrogner(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
+    gestes: etetes.length > 0 ? [{ type: "trogner", ids: etetes }] : [],
   };
 }
 
@@ -1131,6 +1167,7 @@ function applyReceper(
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
   let { exportedEnergyCumKgC } = state.carbon;
+  const recepes: number[] = [];
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
@@ -1151,6 +1188,7 @@ function applyReceper(
     }
     hoursUsedWeek += RECEPAGE_HOURS;
     hoursUsedYear += RECEPAGE_HOURS;
+    recepes.push(id);
     // On récolte la tige et la souche repart : c'est tout l'intérêt du taillis.
     treasuryEur += woodVolumeM3(tree.heightM) * WOOD_PRICE_EUR_M3;
     exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
@@ -1177,6 +1215,7 @@ function applyReceper(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
+    gestes: recepes.length > 0 ? [{ type: "receper", ids: recepes }] : [],
   };
 }
 
@@ -1370,12 +1409,20 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
           refusals: [refuse(action.week, "eclaircir", "rien à prélever : la zone est déjà claire")],
         };
       }
-      return applyCouper(state, {
+      const coupe = applyCouper(state, {
         type: "couper",
         week: action.week,
         treeIds,
         devenir: action.devenir,
       });
+      // Une éclaircie EST une coupe, mais le rendu la raconte autrement : une
+      // dizaine de dominés qui s'effacent, pas un gros arbre qui tombe.
+      return {
+        ...coupe,
+        gestes: (coupe.gestes ?? []).map((g) =>
+          g.type === "couper" ? { ...g, type: "eclaircir" as const } : g,
+        ),
+      };
     }
     case "leverEcorce":
       return applyLeverEcorce(state, action);

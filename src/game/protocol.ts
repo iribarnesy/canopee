@@ -4,15 +4,18 @@
  * journal d'actions datées + la seed (rejouable, src/engine/game.ts).
  */
 
-import type { ActionRefusal, EconomyState, GameAction } from "../engine/actions";
+import type { ActionRefusal, EconomyState, GameAction, GesteVisible } from "../engine/actions";
 import type { IndiceBiodiversite } from "../engine/biodiversite";
 import type { CarbonInventory } from "../engine/carbon";
 import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
 import type { WeekWeather } from "../engine/meteo";
 import type { Bordures } from "../engine/paysage";
+import type { ContextePhenologique } from "../engine/phenologie";
 import type { Relief } from "../engine/relief";
 import type { TickFluxes } from "../engine/state";
+import type { IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type { CauseMort } from "../engine/trees";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
 type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
@@ -65,6 +68,53 @@ export interface SnapshotTree {
    * d'ombre, mais il occupe la place et sert d'habitat (trees.ts).
    */
   chandelle: boolean;
+  /**
+   * Hauteur de la tête de trogne, m ; absent = jamais étêté. LA TROGNE : une
+   * tête renflée à hauteur fixe et un faisceau de rejets au-dessus. C'est la
+   * silhouette la plus reconnaissable du bocage, et sans ce champ le rendu
+   * dessine un arbre ordinaire.
+   */
+  teteTrogneM?: number;
+  /**
+   * Nombre de recépages subis. La tête d'une trogne grossit et se creuse à
+   * chaque étêtage : c'est ce compteur qui donne la cavité.
+   */
+  recepages: number;
+  /**
+   * Vigueur ∈ [0,1] : l'arbre pousse-t-il à son potentiel, ou végète-t-il ?
+   * Un feuillage clairsemé et pâle, bien avant le moindre stress.
+   */
+  vigueur: number;
+  /**
+   * Dommage hydraulique ∈ [0,1] : la CIME SÈCHE. C'est la mémoire des
+   * sécheresses passées, et elle ne se répare pas (trees.ts).
+   */
+  dommageHydraulique: number;
+  /**
+   * Semaine où la mort a été enregistrée ; absent = vivant. C'est l'ÂGE de la
+   * chandelle : elle grisonne, se creuse et finit par tomber.
+   */
+  mortSemaine?: number;
+  /**
+   * Semaine où le feu l'a tué ; absent = pas brûlé. Ce qui distingue la
+   * chandelle NOIRE de la GRISE.
+   */
+  brulEeSemaine?: number;
+  /** ce qui a eu raison de l'arbre : onze causes, onze animations de mort */
+  causeMort?: CauseMort;
+  /**
+   * Semaine de la dernière levée d'écorce ; absent = jamais démasclé. Le tronc
+   * d'un chêne-liège démasclé est ocre-rouge, et il reverdit avec les années.
+   */
+  derniereLeveeSemaine?: number;
+  /** avancement des fruits de l'année ∈ [0,1] : floraison → nouaison → maturation */
+  fruitProgress: number;
+  /** fleurs détruites par un gel tardif : elles brunissent au lieu de nouer */
+  bloomFrosted: boolean;
+  /** longueur de pousse encore tendre, m — ce que le chevreuil a mangé (gibier.ts) */
+  pousseTendreM: number;
+  /** semaine du dernier frottis ; absent = jamais frotté (écorce arrachée au pied) */
+  frotteSemaine?: number;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */
@@ -103,10 +153,44 @@ export interface Snapshot {
   soilEngorgement: Float32Array;
   /** cellules closes (1) — le gibier n'y entre pas */
   soilCloture: Uint8Array;
+  /**
+   * Ce qui n'a pas pu rentrer dans le sol cette semaine, mm par cellule
+   * (débordement du profil + ruissellement refusé). La crue, la lame d'eau,
+   * la ravine (tick.ts).
+   */
+  soilDebordementMm: Float32Array;
+  /**
+   * Lumière relative arrivant au sol par cellule ∈ [0,1] (light.ts) : le
+   * sous-bois sombre, les taches de lumière, l'ambiance.
+   */
+  soilLumiere: Float32Array;
+  /**
+   * Litière au sol, gC/m² par cellule : le tapis de feuilles de novembre, le
+   * paillage d'un BRF fraîchement épandu, le noir des cendres après un feu.
+   */
+  soilLitiereCG: Float32Array;
+  /**
+   * Le calendrier foliaire de la semaine (phenologie.ts) : cinq scalaires
+   * avec lesquels le rendu recalcule `partFoliaire` et la sénescence espèce
+   * par espèce, sans qu'on ait à transporter une valeur par arbre.
+   */
+  pheno: ContextePhenologique;
   /** refus d'actions depuis le dernier instantané */
   refusals: ActionRefusal[];
   /** événements depuis le dernier instantané */
   events: GameEvent[];
+  /**
+   * Arbres morts depuis le dernier instantané, avec leur position : c'est ce
+   * qui déclenche les animations de mort, une par cause.
+   */
+  morts: MortDeLaSemaine[];
+  /**
+   * Gestes subis par des arbres nommés depuis le dernier instantané (coupe,
+   * éclaircie, élagage, étêtage, recépage, broutage, frottis).
+   */
+  gestes: GesteVisible[];
+  /** l'incendie de la semaine, avec son front, s'il y en a eu un (feu.ts) */
+  incendie?: IncendieResult;
 }
 
 export interface StationInfo {
@@ -125,6 +209,13 @@ export interface StationInfo {
   nappeEquilibreCm: number;
   /** profondeur de la nappe sous chaque cellule, cm — fixe, envoyée une fois */
   nappeCm: Float32Array;
+  /**
+   * Altitude de chaque cellule, m — le RELIEF, tel que le moteur le voit
+   * (`altitudeParCellule`, relief.ts). Il ne bouge pas d'une semaine à
+   * l'autre : envoyé une fois, avec le reste de la station. Sans lui il n'y a
+   * pas de vue isométrique du tout.
+   */
+  altitudesM: readonly number[];
 }
 
 export type ToWorker =

@@ -8,6 +8,7 @@
  * chute des feuilles (semaine 44) → morts en litière → régénération (sem. 14).
  */
 
+import type { GesteVisible } from "./actions";
 import {
   CN_HUMUS,
   DEADWOOD_DECAY_PER_YEAR,
@@ -33,7 +34,7 @@ import {
   terreArracheeKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
-import { chargeCombustible, departDeFeu, propager, survitAuFeu } from "./feu";
+import { chargeCombustible, departDeFeu, propager, rangsDuFront, survitAuFeu } from "./feu";
 import {
   brouter,
   DIGESTIBILITE,
@@ -59,7 +60,7 @@ import {
 } from "./light";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
-import { dureeDuJourH, midWeekDayOfYear, weeklyEtpHargreaves } from "./meteo";
+import { weeklyEtpHargreaves } from "./meteo";
 import {
   cibleReseau,
   facteurAbsorption,
@@ -85,7 +86,7 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import { frequentationDesBordures } from "./paysage";
-import { partFoliaire, semaineDeFroid } from "./phenologie";
+import { contextePhenologique, partFoliaireDans, semaineDeFroid } from "./phenologie";
 import {
   alterationPhosphoreG,
   alterationPotassiumG,
@@ -135,7 +136,7 @@ import {
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
-import type { TreeState } from "./trees";
+import type { CauseMort, TreeState } from "./trees";
 import {
   dureeChandelleSemaines,
   fractionsRacinairesParHorizon,
@@ -182,23 +183,14 @@ const MULCH_FULL_CG = 250;
 const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
 const RECRUITMENT_WEEK = 14;
-/** semaine de la chute des feuilles (automne) */
 /**
  * Semaine où l'on remet à zéro le compteur de froid. Mi-septembre : le froid
  * qui lève la dormance est celui de l'automne et de l'hiver qui SUIVENT, pas
  * celui de l'hiver précédent.
  */
 const DEBUT_COMPTAGE_FROID = 37;
-/** Semaine du solstice d'été : au-delà, le jour raccourcit. */
 /** Ce qui reste toujours de l'horizon de surface, même décapé, cm. */
 const EPAISSEUR_MINIMALE_CM = 3;
-const SOLSTICE_ETE_SEMAINE = 25;
-/**
- * Semaine où la chute des feuilles commence à se compter. La sénescence
- * s'enclenche quand le jour passe sous son seuil (phenologie.ts) ; on date le
- * compteur d'étalement à partir d'ici plutôt que de porter un état de plus.
- */
-const SENESCENCE_DEBUT_SEMAINE = 40;
 /** Dernière semaine de l'année : le feuillage restant tombe pour de bon. */
 const DERNIERE_SEMAINE = 51;
 /**
@@ -212,13 +204,57 @@ const CHABLIS_RECUPERABLE_SEMAINES = 52;
  */
 const LITTER_RETURN_FRACTION = 0.5;
 
+/** Un arbre mort pendant le tick : de quoi le raconter ET l'animer là où il est. */
+export interface MortDeLaSemaine {
+  /** l'arbre qui vient de mourir : il reste en jeu comme chandelle */
+  id: number;
+  /** position du tronc, m — sans elle le rendu ne sait pas où animer la chute */
+  x: number;
+  y: number;
+  especeId: string;
+  cause: CauseMort;
+  heightM: number;
+}
+
+/** L'incendie de la semaine, tel qu'on peut le raconter ET le dessiner. */
+export interface IncendieResult {
+  cellulesBrulees: number;
+  arbresTues: number;
+  rejets: number;
+  carboneTHa: number;
+  /** cellule où le feu est parti */
+  origine: number;
+  /** cellules brûlées, rangées par rang d'arrivée du front */
+  brulees: Int32Array;
+  /**
+   * Rang d'arrivée du front sur chaque cellule de `brulees`, même ordre : sa
+   * distance à l'origine en cellules. C'est ce qui permet de faire COURIR une
+   * ligne de flammes au lieu de noircir la tache d'un coup (feu.ts).
+   */
+  rangs: Int32Array;
+}
+
 export interface TickResult {
   state: GameState;
   fluxes: TickFluxes;
-  /** arbres morts pendant ce tick, avec ce qui les a tués (pour le journal) */
-  morts: { especeId: string; cause: string; heightM: number }[];
+  /** arbres morts pendant ce tick, avec ce qui les a tués et où ils sont */
+  morts: MortDeLaSemaine[];
   /** incendie de la semaine, s'il y en a eu un */
-  incendie?: { cellulesBrulees: number; arbresTues: number; rejets: number; carboneTHa: number };
+  incendie?: IncendieResult;
+  /**
+   * Ce que le GIBIER a fait subir à quels arbres cette semaine (broutage,
+   * frottis). Les gestes du joueur remontent par `applyAction` (actions.ts) ;
+   * le rendu les traite de la même façon.
+   */
+  gestes: GesteVisible[];
+  /**
+   * Ce qui n'a pas pu rentrer dans le sol de chaque cellule cette semaine,
+   * mm : débordement du profil + ruissellement refusé à l'infiltration. La
+   * seule base honnête pour une crue, une lame d'eau ou une ravine.
+   */
+  debordementParCellule: Float32Array;
+  /** lumière relative arrivant au sol, cellule par cellule ∈ [0,1] (light.ts) */
+  lumiereAuSol: Float32Array;
 }
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
@@ -242,18 +278,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   //      ET transpiration — c'est le moteur de l'effet nurse, cf. trees.ts).
   // Phénologie : chaque espèce a son calendrier, et le feuillage se déploie
   // progressivement au lieu de s'allumer d'un coup (phenologie.ts).
-  const jourH = dureeDuJourH(station.latitudeDeg, midWeekDayOfYear(week));
-  const automne = week >= SOLSTICE_ETE_SEMAINE;
-  const semainesDepuisSenescence = automne ? Math.max(0, week - SENESCENCE_DEBUT_SEMAINE) : 0;
-  const partFoliaireDe: PartFoliaire = (tree) =>
-    partFoliaire(
-      getEspece(tree.especeId),
-      state.ddYearBase5,
-      jourH,
-      automne,
-      semainesDepuisSenescence,
-      state.semainesDeFroid,
-    );
+  // Le MÊME contexte que celui qui voyagera dans l'instantané : le rendu
+  // recalcule les couleurs de saison avec exactement ces cinq scalaires.
+  const pheno = contextePhenologique(
+    station.latitudeDeg,
+    week,
+    state.ddYearBase5,
+    state.semainesDeFroid,
+  );
+  const partFoliaireDe: PartFoliaire = (tree) => partFoliaireDans(getEspece(tree.especeId), pheno);
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partFoliaireDe);
   const light = computeLight(trees, partFoliaireDe);
 
@@ -1189,6 +1222,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       return state.soil.cloture[cell] === true;
     },
   );
+  // Ce que le gibier a fait, arbre par arbre : le rendu montre l'écorce
+  // arrachée et la pousse mangée la semaine où ça arrive, pas plus tard.
+  const gestes: GesteVisible[] = [];
+  if (frottis.length > 0) gestes.push({ type: "frotter", ids: frottis.map((f) => f.treeId) });
+  if (broutage.parArbre.size > 0)
+    gestes.push({ type: "brouter", ids: [...broutage.parArbre.keys()] });
   if (frottis.length > 0) {
     const parId = new Map(frottis.map((f) => [f.treeId, f]));
     nextTrees = nextTrees.map((tree) => {
@@ -1382,21 +1421,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (!tree.alive || tree.uptakeYearG <= 0) return tree;
     const espece = getEspece(tree.especeId);
     if (!espece.lumiere.caduc) return tree;
-    const restant = partFoliaire(
-      espece,
-      state.ddYearBase5,
-      jourH,
-      automne,
-      semainesDepuisSenescence,
-      state.semainesDeFroid,
-    );
-    const restantAvant = partFoliaire(
-      espece,
-      state.ddYearBase5,
-      jourH,
-      automne,
-      Math.max(0, semainesDepuisSenescence - 1),
-    );
+    const restant = partFoliaireDans(espece, pheno);
+    // La même semaine, un cran plus tôt dans la chute : l'écart entre les deux
+    // est ce que l'arbre a lâché. Le besoin de froid ne compte pas ici — la
+    // branche d'automne de `partFoliaire` ne le regarde pas.
+    const restantAvant = partFoliaireDans(espece, {
+      ...pheno,
+      semainesDepuisSenescence: Math.max(0, pheno.semainesDepuisSenescence - 1),
+      semainesDeFroid: Number.POSITIVE_INFINITY,
+    });
     const tombe = Math.max(0, restantAvant - restant);
     if (tombe <= 0) return tree;
     const part = Math.min(1, tombe / Math.max(1e-9, restantAvant));
@@ -1420,7 +1453,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // au pool de bois mort, et ils quittent la carte.
   let deadWoodKgC = state.carbon.deadWoodKgC;
   const survivors: TreeState[] = [];
-  const morts: { especeId: string; cause: string; heightM: number }[] = [];
+  const morts: MortDeLaSemaine[] = [];
   for (const tree of nextTrees) {
     if (tree.alive) {
       survivors.push(tree);
@@ -1442,6 +1475,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM);
       morts.push({
+        id: tree.id,
+        x: tree.x,
+        y: tree.y,
         especeId: tree.especeId,
         cause: tree.causeMort ?? "secheresse",
         heightM: tree.heightM,
@@ -1554,11 +1590,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterNG[i] = 0;
       }
       const areaHa = (station.coteM * station.coteM) / 10_000;
+      // Le front, reconstitué APRÈS coup : aucun tirage, aucun changement au
+      // parcours ni au résultat (feu.ts). Rangées par rang d'arrivée, les
+      // cellules se découpent en tranches — la ligne de flammes du rendu.
+      const rangs = rangsDuFront(brulees, depart.origine, station.coteM);
+      const ordonnees = [...rangs].sort((a, b) => a[1] - b[1] || a[0] - b[0]);
       incendie = {
         cellulesBrulees: brulees.size,
         arbresTues: tues,
         rejets,
         carboneTHa: carboneFeuKgC / 1000 / areaHa,
+        origine: depart.origine,
+        brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
+        rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
       };
     }
   }
@@ -1643,6 +1687,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     },
     morts,
     incendie,
+    gestes,
+    // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne
+    // sont pas de l'état (la semaine suivante les recalcule), mais sans elles
+    // le rendu n'a ni crue, ni sous-bois sombre, ni tache de lumière.
+    debordementParCellule: Float32Array.from(debordementParCellule),
+    lumiereAuSol: Float32Array.from(groundLight),
     fluxes: {
       rainMm: weather.rainMm,
       etpMm,

@@ -6,6 +6,7 @@ export * from "./grid";
 export * from "./light";
 export * from "./meteo";
 export * from "./nitrogen";
+export * from "./phenologie";
 export * from "./rng";
 export * from "./state";
 export * from "./stations";

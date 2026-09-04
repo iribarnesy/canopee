@@ -253,3 +253,46 @@ export function survitAuFeu(tree: TreeState, intensite: number): boolean {
   const protection = Math.min(0.97, espece.feu.resistanceEcorce + protectionTaille);
   return protection > intensite;
 }
+
+/**
+ * Rang d'arrivée du front sur chaque cellule brûlée : sa distance à l'origine,
+ * comptée en cellules à travers ce qui a brûlé. C'est ce qui permet de faire
+ * COURIR une ligne de flammes au lieu de noircir un patch d'un coup.
+ *
+ * Passe pure et postérieure : on ne touche pas au parcours de `propager`. Il
+ * dépile (`file.pop()`), et l'ordre de consommation du PRNG en dépend — passer
+ * en file changerait les tirages, donc les parties. Ici, aucun tirage : un
+ * simple BFS sur l'ensemble déjà brûlé, qui ne peut rien changer au résultat.
+ *
+ * Chaque cellule brûlée est joignable depuis l'origine à travers des cellules
+ * brûlées (le feu ne saute pas), donc tout l'ensemble est atteint.
+ */
+export function rangsDuFront(
+  brulees: ReadonlySet<number>,
+  origine: number,
+  coteM: number,
+): Map<number, number> {
+  const rangs = new Map<number, number>();
+  if (!brulees.has(origine)) return rangs;
+  rangs.set(origine, 0);
+  const file = [origine];
+  for (let tete = 0; tete < file.length; tete++) {
+    const cellule = file[tete];
+    if (cellule === undefined) continue;
+    const rang = (rangs.get(cellule) ?? 0) + 1;
+    const x = cellule % coteM;
+    const y = Math.floor(cellule / coteM);
+    const voisins = [
+      x > 0 ? cellule - 1 : -1,
+      x < coteM - 1 ? cellule + 1 : -1,
+      y > 0 ? cellule - coteM : -1,
+      y < coteM - 1 ? cellule + coteM : -1,
+    ];
+    for (const voisin of voisins) {
+      if (voisin < 0 || !brulees.has(voisin) || rangs.has(voisin)) continue;
+      rangs.set(voisin, rang);
+      file.push(voisin);
+    }
+  }
+  return rangs;
+}

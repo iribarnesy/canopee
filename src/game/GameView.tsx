@@ -1164,21 +1164,30 @@ export function GameView() {
     [snapshot, selectedIds],
   );
   /**
+   * L'instantané porte TOUS les arbres, chandelles comprises (snapshot.ts) :
+   * elles se dessinent, mais elles ne se comptent pas comme un peuplement.
+   */
+  const vivants = useMemo(
+    () => (snapshot ? snapshot.trees.filter((t) => !t.chandelle) : []),
+    [snapshot],
+  );
+  const chandelles = snapshot ? snapshot.trees.length - vivants.length : 0;
+  /**
    * Qui domine la parcelle, en direct. On classe par NOMBRE de tiges et on
    * montre la hauteur du plus grand : une essence peut être partout en
    * sous-étage sans jamais atteindre la canopée, et c'est une information
    * différente de « qui occupe le terrain ».
    */
   const composition = useMemo(() => {
-    if (!snapshot || snapshot.trees.length === 0) return [];
+    if (vivants.length === 0) return [];
     const parEspece = new Map<string, { n: number; hauteurMax: number }>();
-    for (const t of snapshot.trees) {
+    for (const t of vivants) {
       const agg = parEspece.get(t.especeId) ?? { n: 0, hauteurMax: 0 };
       agg.n++;
       agg.hauteurMax = Math.max(agg.hauteurMax, t.heightM);
       parEspece.set(t.especeId, agg);
     }
-    const total = snapshot.trees.length;
+    const total = vivants.length;
     return [...parEspece]
       .sort((a, b) => b[1].n - a[1].n)
       .slice(0, 5)
@@ -1188,12 +1197,9 @@ export function GameView() {
         part: Math.round((agg.n / total) * 100),
         hauteurMax: agg.hauteurMax,
       }));
-  }, [snapshot]);
+  }, [vivants]);
 
-  const fruitsPrets = useMemo(
-    () => (snapshot ? snapshot.trees.filter((t) => t.fruitsKg > 0.5) : []),
-    [snapshot],
-  );
+  const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
 
   useEffect(() => {
     if (canvasRef.current && snapshot && station) {
@@ -1759,8 +1765,9 @@ export function GameView() {
           <dl className="stats">
             <dt>Arbres</dt>
             <dd>
-              {snapshot.trees.length} · herbe{" "}
-              {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % du sol
+              {vivants.length}
+              {chandelles > 0 ? ` + ${chandelles} chandelle${chandelles > 1 ? "s" : ""}` : ""} ·
+              herbe {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % du sol
             </dd>
             <dt>Carbone</dt>
             <dd>

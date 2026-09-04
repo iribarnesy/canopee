@@ -7,12 +7,9 @@
  */
 
 import { serieMeteoPour } from "../data/meteo";
-import type { ActionRefusal, GameAction } from "../engine/actions";
+import type { ActionRefusal, GameAction, GesteVisible } from "../engine/actions";
 import { applyAction, valeurSurPied } from "../engine/actions";
-import { indiceBiodiversite } from "../engine/biodiversite";
-import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import {
-  CO2_ACTUEL_PPM,
   getScenario,
   meteoDerivee,
   type Normales,
@@ -24,7 +21,7 @@ import { getEspece } from "../engine/especes";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
-import { profondeurEquilibreCm, profondeurPourStock } from "../engine/nappe";
+import { profondeurEquilibreCm } from "../engine/nappe";
 import {
   type Bordures,
   bordersUniformes,
@@ -39,7 +36,7 @@ import {
   type Relief,
 } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
-import { porositeDrainageMm, ruHorizonMm } from "../engine/soil";
+import { ruHorizonMm } from "../engine/soil";
 import {
   createGameState,
   type GameState,
@@ -49,9 +46,11 @@ import {
 } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { sourcesDeLaParcelle } from "../engine/terrain";
+import type { IncendieResult, MortDeLaSemaine } from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
-import type { FromWorker, GameEvent, SaveGame, Snapshot, ToWorker } from "./protocol";
+import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
+import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 
 let sc: StationClimat | undefined;
 let weather: WeekWeather[] = [];
@@ -82,6 +81,14 @@ let fractionalWeeks = 0;
 let prevFruitsReadyKg = 0;
 let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
+// Ce qui s'est passé depuis le dernier instantané et que le rendu doit ANIMER.
+let pendingMorts: MortDeLaSemaine[] = [];
+let pendingGestes: GesteVisible[] = [];
+let pendingIncendie: IncendieResult | undefined;
+// Grandeurs du dernier tick : elles ne sont pas dans l'état, et sans elles le
+// rendu n'a ni crue, ni sous-bois sombre (tick.ts).
+let lastDebordement: Float32Array | undefined;
+let lastLumiereAuSol: Float32Array | undefined;
 let droughtYearFlagged = -1;
 // Part inondée la semaine précédente : on ne raconte la crue qu'une fois.
 let partInondeePrecedente = 0;
@@ -132,6 +139,7 @@ function performAction(action: GameAction) {
   const result = applyAction(state, action);
   state = result.state;
   pendingRefusals.push(...result.refusals);
+  pendingGestes.push(...(result.gestes ?? []));
   const dEur = state.economy.treasuryEur - before.economy.treasuryEur;
   const dHeures = state.economy.hoursUsedWeek - before.economy.hoursUsedWeek;
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
@@ -338,33 +346,6 @@ function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWea
   return syntheticYear(station.climat);
 }
 
-/** Profondeur de la nappe sous chaque cellule, cm (nappe.ts). */
-function nappeParCellule(state: GameState): Float32Array {
-  const profil = state.station.profil;
-  return Float32Array.from(state.soil.nappeMm, (mm) => profondeurPourStock(mm, profil));
-}
-
-/**
- * Engorgement moyen du profil sous chaque cellule ∈ [0,1] : la part de la
- * macroporosité occupée par l'eau, moyennée sur les horizons. C'est ce que les
- * racines subissent, et ce qu'on veut pouvoir REGARDER sur la carte.
- */
-function engorgementParCellule(state: GameState, nH: number): Float32Array {
-  const profil = state.station.profil;
-  const porosites = profil.map((h) => porositeDrainageMm(h));
-  const n = state.soil.mineralNG.length;
-  const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    let somme = 0;
-    for (let h = 0; h < nH; h++) {
-      const capacite = porosites[h] ?? 0;
-      if (capacite > 0) somme += Math.min(1, (state.soil.excessMm[i * nH + h] ?? 0) / capacite);
-    }
-    out[i] = somme / Math.max(1, nH);
-  }
-  return out;
-}
-
 function emptyFluxes(): TickFluxes {
   return {
     partInondee: 0,
@@ -407,77 +388,36 @@ function emptyFluxes(): TickFluxes {
   };
 }
 
-/** Eau de l'horizon de surface, par cellule (le sol est stratifié, cf. soil.ts). */
-function surfaceWater(s: GameState, nH: number): Float32Array {
-  const nCells = s.soil.mineralNG.length;
-  const out = new Float32Array(nCells);
-  for (let i = 0; i < nCells; i++) out[i] = s.soil.waterMm[i * nH] ?? 0;
-  return out;
-}
-
 function postSnapshot() {
   if (!state || !sc) return;
-  const nHorizons = Math.max(1, sc.station.profil.length);
-  const w = meteoSemaine(state.week);
-  const anneeCivile = anneeDepart + Math.floor(state.week / 52);
-  const snapshot: Snapshot = {
-    week: state.week,
-    weather: w,
-    economy: state.economy,
-    inventory: carbonInventory(state, sc.station.initialSoilCTHa),
-    anneeCivile,
+  // Le worker ASSEMBLE, il ne décide pas : la traduction état → instantané
+  // est pure et testée dans snapshot.ts.
+  const snapshot = construireSnapshot({
+    state,
+    weather: meteoSemaine(state.week),
+    anneeCivile: anneeDepart + Math.floor(state.week / 52),
     paysage: resumeBordures(bordures),
-    co2Ppm: w.co2Ppm ?? CO2_ACTUEL_PPM,
-    stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
-    pressionGibier: state.pressionGibier,
-    biodiversite: indiceBiodiversite(
-      state.trees,
-      state.carbon.deadWoodKgC,
-      (sc.station.coteM * sc.station.coteM) / 10_000,
-    ),
+    initialSoilCTHa: sc.station.initialSoilCTHa,
     fluxes: lastFluxes ?? emptyFluxes(),
-    events: pendingEvents,
-    trees: state.trees
-      .filter((t) => t.alive)
-      .map((t) => ({
-        id: t.id,
-        especeId: t.especeId,
-        x: t.x,
-        y: t.y,
-        heightM: t.heightM,
-        ageWeeks: t.ageWeeks,
-        stress: t.stress,
-        fruitsKg: t.fruitsKg,
-        hauteurElagueeM: t.hauteurElagueeM,
-        protege: t.protege,
-        chandelle: !t.alive,
-      })),
-    // Carte : on montre l'eau de l'horizon de SURFACE, celle que voient les
-    // semis et l'évaporation (le sol est stratifié, cf. soil.ts).
-    soilWater: surfaceWater(state, nHorizons),
-    soilPh: Float32Array.from(state.soil.ph),
-    soilN: Float32Array.from(state.soil.mineralNG),
-    soilHerbe: Float32Array.from(state.soil.herbeCouverture),
-    // La nappe et l'engorgement changent chaque semaine : ils voyagent avec
-    // l'instantané, contrairement au champ figé de l'eau libre.
-    soilNappeCm: nappeParCellule(state),
-    soilEngorgement: engorgementParCellule(state, nHorizons),
-    // La clôture change quand le joueur en pose : elle voyage à chaque
-    // instantané, sinon il ne verrait pas ce qu'il vient de payer.
-    soilCloture: Uint8Array.from(state.soil.cloture, (c) => (c ? 1 : 0)),
+    debordementParCellule: lastDebordement,
+    lumiereAuSol: lastLumiereAuSol,
     refusals: pendingRefusals,
-  };
+    events: pendingEvents,
+    morts: pendingMorts,
+    gestes: pendingGestes,
+    incendie: pendingIncendie,
+  });
   pendingRefusals = [];
   pendingEvents = [];
-  post({ type: "snapshot", snapshot }, [
-    snapshot.soilWater.buffer,
-    snapshot.soilPh.buffer,
-    snapshot.soilN.buffer,
-    snapshot.soilHerbe.buffer,
-    snapshot.soilNappeCm.buffer,
-    snapshot.soilEngorgement.buffer,
-    snapshot.soilCloture.buffer,
-  ]);
+  pendingMorts = [];
+  pendingGestes = [];
+  // Les tampons du feu partent avec l'instantané : on ne les garde pas pour le
+  // suivant, sinon la même flambée se rejouerait à l'écran.
+  pendingIncendie = undefined;
+  // Les grandeurs du tick, elles, se GARDENT : une action reçue en pause
+  // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
+  // joueur ne doit pas voir la crue disparaître entre deux clics.
+  post({ type: "snapshot", snapshot }, transferablesDuSnapshot(snapshot));
 }
 
 /**
@@ -493,6 +433,16 @@ function stepWeeks(n: number) {
     const before = state;
     const ticked = tick(state, w);
     lastFluxes = ticked.fluxes;
+    // Ce que le rendu doit ANIMER, accumulé jusqu'au prochain instantané : à
+    // ×64 un instantané couvre plusieurs semaines, et rien ne doit se perdre
+    // en route (une mort qu'on n'a pas vue est un arbre qui s'escamote).
+    lastDebordement = ticked.debordementParCellule;
+    lastLumiereAuSol = ticked.lumiereAuSol;
+    pendingMorts.push(...ticked.morts);
+    pendingGestes.push(...ticked.gestes);
+    // Deux incendies dans un même lot d'instantané : on garde le dernier, le
+    // seul dont l'écran a encore quelque chose à montrer.
+    if (ticked.incendie) pendingIncendie = ticked.incendie;
     state = beginWeek(ticked.state);
     const finis =
       before.economy.saisonniersFinSemaine.length - state.economy.saisonniersFinSemaine.length;
@@ -653,7 +603,7 @@ function startLoop() {
   }, 100);
 }
 
-function stationInfo() {
+function stationInfo(): StationInfo {
   if (!sc) throw new Error("pas de station");
   const serie = meteoMode === "reelle" ? serieMeteoPour(sc.station.id) : undefined;
   const station = stationAvecPaysage(sc.station);
@@ -680,6 +630,9 @@ function stationInfo() {
       ? [...sources.enEau]
       : new Array<boolean>(dims.widthM * dims.heightM).fill(false),
     nappeCm: champDeNappeCm(sources, altitudes, dims, station.profil),
+    // Le relief, celui-là même qui a servi à placer l'eau libre. Il ne change
+    // pas d'une semaine à l'autre : il part une fois, avec la station.
+    altitudesM: altitudes,
     id: sc.station.id,
     nom: sc.station.nom,
     coteM: sc.station.coteM,
@@ -725,7 +678,12 @@ function init(
   journal = [];
   pendingRefusals = [];
   pendingEvents = [];
+  pendingMorts = [];
+  pendingGestes = [];
+  pendingIncendie = undefined;
   lastFluxes = undefined;
+  lastDebordement = undefined;
+  lastLumiereAuSol = undefined;
   weeksPerSecond = 0;
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
@@ -780,11 +738,20 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
         lastFluxes = step.fluxes;
+        // La dernière semaine rejouée est celle qu'on va montrer : son
+        // débordement et sa lumière au sol servent au premier instantané.
+        lastDebordement = step.debordementParCellule;
+        lastLumiereAuSol = step.lumiereAuSol;
         if (i % 104 === 0)
           post({ type: "progress", done: i, total: msg.save.weeks, phase: "rejeu" });
       }
       state = beginWeek(replayed);
+      // Le rejeu n'a rien à raconter : ce sont des semaines déjà vécues.
       pendingRefusals = [];
+      pendingEvents = [];
+      pendingMorts = [];
+      pendingGestes = [];
+      pendingIncendie = undefined;
       weeksPerSecond = 0;
       post({ type: "ready", station: stationInfo() });
       postSnapshot();
