@@ -253,6 +253,64 @@ const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération l
  * étalée sur une saison plus courte, donc amputée d'un dixième *(à calibrer)*.
  */
 const GROWING_WEEKS = 26;
+
+/**
+ * Exposant de forme de la courbe de hauteur (Chapman-Richards).
+ *
+ * Toutes les tables de production s'ajustent sur la même famille de courbes :
+ * `H = A·(1 − e^(−k·t))^c`. Le moteur en écrivait la forme différentielle avec
+ * `c = 1` — c'est exactement ce que dit `pousse × (1 − h/hmax)` — et cette
+ * valeur-là est la SEULE de la famille qui ne soit pas sigmoïde : la pousse
+ * annuelle y est maximale à la germination et ne fait que décroître ensuite.
+ * Aucune essence ne pousse comme ça. Un hêtre fait quinze centimètres par an
+ * sous son couvert d'origine, accélère vers vingt ans et ne culmine qu'entre
+ * dix et vingt mètres.
+ *
+ * Avec `c > 1`, la pousse maximale se déplace à `((c−1)/c)^c` de la hauteur
+ * adulte — 19 % pour `c = 1,5`, ce qui place le maximum du hêtre vers sept
+ * mètres, du bon ordre. Bouchon & Trencia (1990, Rev. For. Fr. XLII-2)
+ * publient pour le chêne sessile des `c` de 1,14 à 2,07 selon la classe de
+ * fertilité ; Patrício et al. (iForest, châtaignier) un exposant de 1,62.
+ * Un et demi est au milieu de cette fourchette.
+ *
+ * On a essayé 2, qui colle encore mieux à la table du hêtre. Il fallait le
+ * payer : un semis passe alors trois fois plus de temps sous la dent et sous
+ * l'ombre, et sept essais d'écologie basculaient — l'installation sur la
+ * lande, l'effet nurse, l'atténuation du feu par les feuillus. La fidélité de
+ * la courbe ne vaut pas qu'on rende des plants incapables de sortir de terre
+ * sur une station difficile *(à calibrer)*.
+ *
+ * *(Limite assumée : `c` est global. Les tables distinguent trois profils —
+ * démarrage rapide et plateau précoce (aulne, bouleau, merisier), démarrage
+ * lent et croissance longue (hêtre, chênes, sapin), intermédiaire (frêne, pin,
+ * douglas) — que ce paramètre unique ne sait pas rendre.)*
+ */
+export const FORME_CROISSANCE = 1.5;
+
+/**
+ * Normalisation : sans elle, `pousseMaxMAn` cesserait de vouloir dire « la
+ * pousse annuelle maximale ». On divise par le sommet de la courbe de forme,
+ * pour que ce sommet vaille exactement 1 quel que soit l'exposant.
+ */
+const FORME_SOMMET =
+  ((FORME_CROISSANCE - 1) / FORME_CROISSANCE) ** (FORME_CROISSANCE - 1) / FORME_CROISSANCE;
+
+/**
+ * Part du potentiel de pousse qu'un arbre de cette taille peut encore
+ * exprimer ∈ [0,1] : lente à la levée, maximale vers le cinquième de la
+ * hauteur adulte, nulle à l'arrivée. C'est la forme différentielle de
+ * Chapman-Richards (`FORME_CROISSANCE`), ramenée à un sommet de 1.
+ *
+ * La forme dépend de la TAILLE, pas de l'âge : un rejet de trogne repart donc
+ * au régime de sa hauteur, pas de celui de sa souche, et un dominé qui reste
+ * petit reste lent. C'est la limite classique des modèles de trouée, assumée
+ * ici parce que c'est elle qui rend la plasticité du moteur possible.
+ */
+export function formeCroissance(heightM: number, hauteurMaxM: number): number {
+  const u = Math.min(1, Math.max(0, heightM / hauteurMaxM));
+  const v = u ** (1 / FORME_CROISSANCE);
+  return (v ** (FORME_CROISSANCE - 1) * (1 - v)) / FORME_SOMMET;
+}
 /** rayon de la zone racinaire / rayon du houppier *(à confirmer)* */
 const ROOT_CROWN_RATIO = 1.2;
 /** part de l'ETP transpirée par une couronne en pleine feuille *(à calibrer)* */
@@ -383,9 +441,38 @@ export function treeWaterDemandL(
   return etpMm * crownAreaM2 * TRANSPIRATION_COEFF * wue * season * rayonnement * vent;
 }
 
+/**
+ * Azote qu'un houppier réclame par m² de projection au sol et par an, g, pour
+ * une essence d'exigence maximale (`demandeRelative` = 1).
+ *
+ * C'est le seul point d'entrée où le besoin d'azote se raccroche à une
+ * grandeur mesurable : un couvert feuillu ferme porte 5 à 6 m² de feuilles par
+ * m² de sol, une feuille titre 2 à 2,5 % d'azote, et l'arbre en retransloque
+ * environ la moitié avant la chute. Le compte tombe sur 5 à 10 g d'azote par
+ * m² de couvert et par an, ce qui est exactement la fourchette des bilans de
+ * peuplements tempérés — 50 à 100 kg N/ha/an au houppier fermé.
+ *
+ * La version précédente écrivait ce besoin comme `60 × h^1,5` g/an. Un hêtre
+ * de quinze mètres y réclamait 3,5 kg d'azote à lui seul, soit près de dix
+ * fois la part qui lui revient dans un peuplement — et la loi du minimum
+ * rabotait alors la croissance de tout le monde, partout, sur un besoin
+ * imaginaire. C'est ce qui plafonnait les hauteurs *(à calibrer)*.
+ */
+export const AZOTE_HOUPPIER_G_M2_AN = 8;
+
+/**
+ * Rayon de houppier / hauteur de référence. L'appareil racinaire est
+ * dimensionné sans la fiche d'espèce (le tick n'a que la hauteur sous la
+ * main) : on prend donc un houppier moyen de l'atlas plutôt que celui de
+ * l'espèce, et c'est `demandeRelative` — et elle seule — qui différencie les
+ * essences, comme avant.
+ */
+const HOUPPIER_REFERENCE = 0.4;
+
 /** Taille « métabolique » d'un arbre (proxy feuillage + bois neuf), g N/semaine max. */
 function metabolicSizeGWeek(heightM: number): number {
-  return (60 * heightM ** 1.5) / 52;
+  const r = HOUPPIER_REFERENCE * heightM;
+  return (AZOTE_HOUPPIER_G_M2_AN * Math.PI * r * r) / 52;
 }
 
 /** Besoin d'azote de l'arbre, g/semaine : exigence de l'espèce × taille. */
@@ -501,7 +588,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     season *
     fAge *
     (env.facteurCo2 ?? 1) *
-    (1 - tree.heightM / espece.hauteurMaxM);
+    formeCroissance(tree.heightM, espece.hauteurMaxM);
   // La vigueur individuelle entre ici, et seulement ici : elle module ce que
   // l'arbre TIRE de conditions données, pas les conditions elles-mêmes. Deux
   // voisins ont la même eau et la même lumière ; l'un en fait plus que l'autre,

@@ -94,7 +94,14 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
       expect(alive.length).toBeGreaterThan(0);
       return alive.reduce((sum, t) => sum + t.heightM, 0) / alive.length;
     };
-    expect(meanFagus(epandre.state)).toBeGreaterThan(1.05 * meanFagus(vendre.state));
+    // Le gain est passé de 5 % à 2 % le jour où le besoin d'azote des arbres
+    // a été ramené à un budget réel (`AZOTE_HOUPPIER_G_M2_AN`, trees.ts) : il
+    // était auparavant une quinzaine de fois trop gros, si bien que le hêtre
+    // était affamé en permanence et que le moindre apport se voyait. Un hêtre
+    // de trois mètres consomme une quinzaine de grammes d'azote par an, pas
+    // deux cents ; l'apport des aulnes le sert donc moins. Le mécanisme tient
+    // toujours — c'est son AMPLEUR qui était exagérée par un bug.
+    expect(meanFagus(epandre.state)).toBeGreaterThan(1.02 * meanFagus(vendre.state));
   });
 });
 

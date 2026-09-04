@@ -107,7 +107,7 @@ describe("ce que le réseau apporte", () => {
     expect(facteurAbsorption(1)).toBeLessThan(1.5);
   });
 
-  it("un peuplement qui prend le terrain tisse son réseau — après l'avoir laissé retomber", () => {
+  it("un peuplement qui prend le terrain tisse son réseau", () => {
     let state = createGameState(STATION, rngStateFromSeed(5));
     for (let i = 0; i < 25; i++) {
       state = plantAt(state, "betula_pendula", 5 + (i % 5) * 5, 5 + Math.floor(i / 5) * 5, 2);
@@ -121,11 +121,16 @@ describe("ce que le réseau apporte", () => {
       state = advanceWeek(state, w, []).state;
       if ((i + 1) % (52 * 10) === 0) releves.push(moyenne(state.soil.mycorhizes.ecto));
     }
-    // Creux d'abord : de jeunes plants n'occupent pas encore le sol, et le
-    // fond de réseau qui préexistait reflue faute d'hôtes.
-    expect(releves[0] ?? 1).toBeLessThan(debut);
-    // Puis le peuplement prend le terrain et le réseau se tisse pour de bon.
+    // Le creux du premier relevé a disparu avec la recalibration de l'azote
+    // (`AZOTE_HOUPPIER_G_M2_AN`, trees.ts) : les bouleaux couvrent maintenant
+    // le sol en dix ans au lieu de vingt, et le réseau se tisse plus vite
+    // qu'il ne reflue. Ce n'était pas un fait de terrain mais la conséquence
+    // d'arbres qui poussaient trois fois trop lentement — on ne teste donc
+    // plus que ce qui reste vrai : le réseau part d'un fond, et il se densifie
+    // à mesure que le peuplement prend le terrain.
+    expect(releves[0] ?? 0).toBeGreaterThan(debut * 0.9);
     expect(releves[2] ?? 0).toBeGreaterThan(debut + 0.4);
+    expect(releves[2] ?? 0).toBeGreaterThan(releves[0] ?? 0);
   });
 });
 
