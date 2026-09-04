@@ -6,7 +6,12 @@
 import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
 import { dureeDuJourH } from "../../src/engine/meteo";
-import { ETALEMENT_CHUTE_SEMAINES, partFoliaire } from "../../src/engine/phenologie";
+import {
+  debourrementExigeDJ,
+  ETALEMENT_CHUTE_SEMAINES,
+  partFoliaire,
+  semaineDeFroid,
+} from "../../src/engine/phenologie";
 
 /** Jour au 15 avril, à la latitude du limon (49,5° N) et de la lande (44,5° N). */
 const AVRIL_NORD = dureeDuJourH(49.5, 105);
@@ -82,5 +87,44 @@ describe("le déploiement et la chute sont progressifs", () => {
     const pin = getEspece("pinus_sylvestris");
     expect(partFoliaire(pin, 0, 9, false, 0)).toBe(1);
     expect(partFoliaire(pin, 900, 9, true, 10)).toBe(1);
+  });
+});
+
+describe("le besoin de froid : un hiver doux RETARDE le printemps", () => {
+  it("sans froid, il faut bien plus de chaleur pour débourrer", () => {
+    // C'est le paradoxe documenté du réchauffement sur la phénologie de
+    // printemps : le bourgeon ne sort pas de dormance sans avoir eu froid, et
+    // un hiver trop doux recule le débourrement au lieu de l'avancer.
+    const hetre = getEspece("fagus_sylvatica");
+    const hiverNormal = debourrementExigeDJ(hetre, 20);
+    const hiverDoux = debourrementExigeDJ(hetre, 4);
+    expect(hiverNormal).toBeCloseTo(hetre.phenologie.debourrementDJ, 6);
+    expect(hiverDoux).toBeGreaterThan(1.5 * hiverNormal);
+  });
+
+  it("le hêtre en souffre plus que le bouleau : il en réclame davantage", () => {
+    // La littérature est nette sur l'ordre : le besoin de froid du bouleau et
+    // du chêne est bien moindre que celui du hêtre.
+    const froid = (id: string) => getEspece(id).phenologie.besoinFroidSemaines;
+    expect(froid("fagus_sylvatica")).toBeGreaterThan(froid("betula_pendula"));
+    expect(froid("fagus_sylvatica")).toBeGreaterThan(froid("quercus_pubescens"));
+    // À hiver également doux, le hêtre est le plus pénalisé des deux.
+    const penalite = (id: string) =>
+      debourrementExigeDJ(getEspece(id), 5) / getEspece(id).phenologie.debourrementDJ;
+    expect(penalite("fagus_sylvatica")).toBeGreaterThan(penalite("betula_pendula"));
+  });
+
+  it("seul le froid UTILE compte : ni le gel profond ni la douceur", () => {
+    expect(semaineDeFroid(5)).toBe(true);
+    expect(semaineDeFroid(-3)).toBe(false);
+    expect(semaineDeFroid(14)).toBe(false);
+  });
+
+  it("un hiver doux retarde le feuillage à date égale", () => {
+    const hetre = getEspece("fagus_sylvatica");
+    const jourLong = 14;
+    const chaleur = 260; // de quoi débourrer après un hiver normal
+    expect(partFoliaire(hetre, chaleur, jourLong, false, 0, 20)).toBeGreaterThan(0);
+    expect(partFoliaire(hetre, chaleur, jourLong, false, 0, 3)).toBe(0);
   });
 });

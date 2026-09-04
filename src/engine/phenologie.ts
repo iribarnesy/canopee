@@ -29,10 +29,17 @@
  * jour raccourcit sous un seuil, et l'étalement fait tomber la litière sur un
  * mois au lieu d'une semaine.
  *
- * *Ce qui n'est pas modélisé* : le besoin de FROID (chilling) qui doit être
- * satisfait avant que le forçage ne compte. Sans lui, un hiver anormalement
- * doux avance le débourrement là où, en réalité, il le retarde. La limite
- * porte sur les scénarios les plus chauds de fin de siècle.
+ * Enfin, le BESOIN DE FROID. Un bourgeon n'est pas une graine qu'on chauffe :
+ * il sort de dormance en accumulant d'abord des semaines fraîches, et ce n'est
+ * qu'ensuite que la chaleur le fait partir. C'est le paradoxe bien documenté du
+ * réchauffement sur la phénologie de printemps.
+ *
+ * Mesuré sur le limon du Nord, hêtre : onze semaines de froid à climat figé
+ * contre quatre sous SSP5-8.5 en 2090, ce qui porte son exigence de 315 à
+ * 420 °C·j. L'effet AMORTIT l'avance sans la renverser à ces latitudes — le
+ * hêtre débourre quand même plus tôt, simplement moins tôt qu'il ne l'aurait
+ * fait sans dormance. Le renversement complet ne s'observe que là où l'hiver
+ * est déjà doux.
  */
 
 import type { EspeceV0 } from "./especes";
@@ -45,6 +52,38 @@ export const SEUIL_SENESCENCE_H = 11.5;
 export const ETALEMENT_CHUTE_SEMAINES = 5;
 /** Largeur de la porte photopériodique, heures : elle ne s'ouvre pas d'un coup. */
 export const LARGEUR_PORTE_H = 1.2;
+
+/**
+ * Températures entre lesquelles une semaine compte comme du froid utile. En
+ * dessous de zéro le bourgeon est gelé et rien ne progresse ; au-dessus de dix
+ * degrés il ne s'agit plus de froid *(à calibrer)*.
+ */
+export const FROID_MIN_C = 0;
+export const FROID_MAX_C = 10;
+
+/**
+ * De combien le besoin de forçage enfle quand le froid n'a pas été satisfait.
+ * Un doublement : un hiver sans froid demande deux fois plus de chaleur pour
+ * débourrer, ce qui décale de plusieurs semaines *(à calibrer)*.
+ */
+export const PENALITE_SANS_FROID = 1;
+
+/** Une semaine compte-t-elle comme du froid utile à la levée de dormance ? */
+export function semaineDeFroid(tMeanC: number): boolean {
+  return tMeanC >= FROID_MIN_C && tMeanC <= FROID_MAX_C;
+}
+
+/**
+ * Cumul de forçage réellement exigé, une fois le froid pris en compte.
+ * Satisfait, le besoin nominal suffit ; pas du tout satisfait, il double.
+ */
+export function debourrementExigeDJ(espece: EspeceV0, semainesDeFroid: number): number {
+  const satisfait = Math.min(
+    1,
+    semainesDeFroid / Math.max(1, espece.phenologie.besoinFroidSemaines),
+  );
+  return espece.phenologie.debourrementDJ * (1 + PENALITE_SANS_FROID * (1 - satisfait));
+}
 
 /**
  * Part du feuillage déployé ∈ [0,1] pour une espèce donnée.
@@ -60,6 +99,7 @@ export function partFoliaire(
   dureeJourH: number,
   automne: boolean,
   semainesDepuisSenescence: number,
+  semainesDeFroid = Number.POSITIVE_INFINITY,
 ): number {
   // Les sempervirents gardent leur feuillage : ni débourrement ni chute.
   if (!espece.lumiere.caduc) return 1;
@@ -70,11 +110,10 @@ export function partFoliaire(
   }
 
   const pheno = espece.phenologie;
-  // Forçage : le cumul de chaleur depuis janvier.
-  const forcage = Math.min(
-    1,
-    Math.max(0, (ddYearBase5 - pheno.debourrementDJ) / ETALEMENT_DEBOURREMENT_DJ),
-  );
+  // Forçage : le cumul de chaleur depuis janvier, contre un besoin que le
+  // manque de froid a pu gonfler.
+  const exige = debourrementExigeDJ(espece, semainesDeFroid);
+  const forcage = Math.min(1, Math.max(0, (ddYearBase5 - exige) / ETALEMENT_DEBOURREMENT_DJ));
   // Porte photopériodique : tant que le jour est trop court, rien ne part.
   const porte = Math.min(1, Math.max(0, (dureeJourH - pheno.seuilJourH) / LARGEUR_PORTE_H));
   return Math.min(forcage, porte);

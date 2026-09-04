@@ -245,6 +245,11 @@ export interface GameState {
   pressionGibier: number;
   /** degrés-jours base 5 °C cumulés depuis le 1er janvier (phénologie, §7.2) */
   ddYearBase5: number;
+  /**
+   * Semaines de froid accumulées depuis l'automne, pour la levée de dormance
+   * (phenologie.ts). Un hiver doux en compte peu, et le débourrement recule.
+   */
+  semainesDeFroid: number;
   rng: RngState;
 }
 
@@ -335,6 +340,9 @@ export function createGameState(
     economy: createEconomy(options.treasuryEur ?? 20_000),
     carbon: createCarbonState(),
     ddYearBase5: 0,
+    // Une partie démarre au 1ᵉʳ janvier : l'hiver qui précède est supposé
+    // normal, sans quoi la première année débourrerait en retard sans raison.
+    semainesDeFroid: 20,
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: eauInitiale,

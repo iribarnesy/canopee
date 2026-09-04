@@ -79,7 +79,7 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import { frequentationDesBordures } from "./paysage";
-import { partFoliaire } from "./phenologie";
+import { partFoliaire, semaineDeFroid } from "./phenologie";
 import {
   alterationPhosphoreG,
   alterationPotassiumG,
@@ -177,6 +177,12 @@ const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
 const RECRUITMENT_WEEK = 14;
 /** semaine de la chute des feuilles (automne) */
+/**
+ * Semaine où l'on remet à zéro le compteur de froid. Mi-septembre : le froid
+ * qui lève la dormance est celui de l'automne et de l'hiver qui SUIVENT, pas
+ * celui de l'hiver précédent.
+ */
+const DEBUT_COMPTAGE_FROID = 37;
 /** Semaine du solstice d'été : au-delà, le jour raccourcit. */
 const SOLSTICE_ETE_SEMAINE = 25;
 /**
@@ -238,6 +244,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       jourH,
       automne,
       semainesDepuisSenescence,
+      state.semainesDeFroid,
     );
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partFoliaireDe);
   const light = computeLight(trees, partFoliaireDe);
@@ -1035,6 +1042,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // de l'espèce — non récoltée, elle est perdue (§10).
   const ddPrev = week === 0 ? 0 : state.ddYearBase5;
   const ddYearBase5 = ddPrev + Math.max(0, weather.tMean - 5) * 7;
+  // Le froid se compte à partir de l'automne et sert au printemps suivant : on
+  // remet le compteur à zéro en entrant dans l'automne, pas au 1ᵉʳ janvier.
+  const semainesDeFroid =
+    (week === DEBUT_COMPTAGE_FROID ? 0 : state.semainesDeFroid) +
+    (semaineDeFroid(weather.tMean) ? 1 : 0);
   nextTrees = nextTrees.map((tree, t) => {
     const espece = getEspece(tree.especeId);
     const fruits = espece.fruits;
@@ -1344,6 +1356,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       jourH,
       automne,
       semainesDepuisSenescence,
+      state.semainesDeFroid,
     );
     const restantAvant = partFoliaire(
       espece,
@@ -1580,6 +1593,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       },
       trees: nextTrees,
       ddYearBase5,
+      semainesDeFroid,
       // Le vide laissé par la chasse se comble : les voisins arrivent.
       pressionGibier: state.pressionGibier + (1 - state.pressionGibier) * RETOUR_IMMIGRATION,
       carbon: {
