@@ -8,7 +8,13 @@
  * plafond (heures ou découvert).
  */
 
-import { CARBON_FRACTION, CN_HUMUS, treeAboveCarbonKg, treeTotalCarbonKg } from "./carbon";
+import {
+  CARBON_FRACTION,
+  CN_HUMUS,
+  racinesPerduesEnRabattant,
+  treeAboveCarbonKg,
+  treeTotalCarbonKg,
+} from "./carbon";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
@@ -80,6 +86,8 @@ export const PROTECTION_EUR = 8;
 export const PROTECTION_HEURES = 0.5;
 /** temps de recépage d'une cépée, h *(à calibrer)* */
 export const RECEPAGE_HOURS = 0.8;
+/** Hauteur à laquelle la souche repart après recépage, m. */
+export const RECEPAGE_HAUTEUR_M = 0.5;
 /**
  * Décote d'un bois brûlé récupéré en coupe sanitaire : il vaut encore quelque
  * chose (chauffage, trituration), mais l'œuvre est perdue *(à calibrer)*.
@@ -1119,7 +1127,7 @@ function applyTrogner(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
-  let { exportedEnergyCumKgC } = state.carbon;
+  let { exportedEnergyCumKgC, deadWoodKgC } = state.carbon;
   const etetes: number[] = [];
   const hauteurTete = Math.max(1, action.hauteurTeteM);
   for (const id of action.treeIds) {
@@ -1155,6 +1163,8 @@ function applyTrogner(
       treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, hauteurTete);
     treasuryEur += (woodVolumeM3(tree.heightM) - woodVolumeM3(hauteurTete)) * WOOD_PRICE_EUR_M3;
     exportedEnergyCumKgC += Math.max(0, emporte);
+    // Même chose qu'au recépage : ce que la tête perd en racines reste au sol.
+    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, hauteurTete);
     trees[idx] = {
       ...tree,
       heightM: hauteurTete,
@@ -1170,7 +1180,7 @@ function applyTrogner(
     state: {
       ...state,
       trees,
-      carbon: { ...state.carbon, exportedEnergyCumKgC },
+      carbon: { ...state.carbon, exportedEnergyCumKgC, deadWoodKgC },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
@@ -1397,7 +1407,7 @@ function applyReceper(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
-  let { exportedEnergyCumKgC } = state.carbon;
+  let { exportedEnergyCumKgC, deadWoodKgC } = state.carbon;
   const recepes: number[] = [];
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
@@ -1421,11 +1431,19 @@ function applyReceper(
     hoursUsedYear += RECEPAGE_HOURS;
     recepes.push(id);
     // On récolte la tige et la souche repart : c'est tout l'intérêt du taillis.
-    treasuryEur += woodVolumeM3(tree.heightM) * WOOD_PRICE_EUR_M3;
-    exportedEnergyCumKgC += treeAboveCarbonKg(espece, tree.heightM);
+    // Ce qui part, c'est la tige MOINS la souche laissée sur place — la
+    // compter entière vendait un demi-mètre de bois resté debout, et créait
+    // le carbone correspondant.
+    treasuryEur +=
+      (woodVolumeM3(tree.heightM) - woodVolumeM3(RECEPAGE_HAUTEUR_M)) * WOOD_PRICE_EUR_M3;
+    exportedEnergyCumKgC +=
+      treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, RECEPAGE_HAUTEUR_M);
+    // Les racines que l'arbre cesse de porter restent dans le sol : elles ne
+    // s'exportent pas avec la tige, elles se décomposent sur place (carbon.ts).
+    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, RECEPAGE_HAUTEUR_M);
     trees[idx] = {
       ...tree,
-      heightM: 0.5,
+      heightM: RECEPAGE_HAUTEUR_M,
       hauteurElagueeM: 0,
       pousseTendreM: 0,
       vigueur: 1,
@@ -1442,7 +1460,7 @@ function applyReceper(
     state: {
       ...state,
       trees,
-      carbon: { ...state.carbon, exportedEnergyCumKgC },
+      carbon: { ...state.carbon, exportedEnergyCumKgC, deadWoodKgC },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
