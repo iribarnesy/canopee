@@ -1,0 +1,63 @@
+name: Attente du rendu
+description: Le rendu a besoin d'une grandeur que le moteur ne fait pas voyager.
+title: "[attente-rendu] "
+labels: ["attente-rendu"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Avant d'ouvrir : `docs/attentes-du-rendu.md` liste ce qui voyage déjà et
+        ce que le rendu peut recalculer seul depuis l'instantané et les fiches
+        d'espèces. Un coup d'œil évite une demande pour un champ qui est là.
+
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Ce qu'il me faut
+      description: Le champ ou la grandeur, avec sa MAILLE (par arbre, par cellule, un scalaire par semaine) et son UNITÉ.
+      placeholder: |
+        `SnapshotTree.diametreCm` — le diamètre à 1,30 m, en cm, par arbre.
+    validations:
+      required: true
+
+  - type: textarea
+    id: visuel
+    attributes:
+      label: Ce que ça donne à l'écran
+      description: Le visuel précis que ça débloque. C'est le champ qui décide — « ce serait plus juste » ne se traite pas.
+      placeholder: |
+        La grosseur du fût. Aujourd'hui je la déduis de la hauteur, donc un
+        chêne de plein vent et un perchis serré ont le même tronc à l'écran,
+        alors que c'est exactement ce qui les distingue sur le terrain.
+    validations:
+      required: true
+
+  - type: textarea
+    id: essaye
+    attributes:
+      label: Ce que j'ai essayé
+      description: Si tu as cherché à le recalculer côté rendu, dis pourquoi ça ne marche pas. C'est ce qui fait gagner le plus de temps.
+      placeholder: |
+        J'ai tenté `woodVolumeM3(heightM)` renversé, mais il ne connaît pas la
+        concurrence : deux arbres de même hauteur y donnent le même diamètre.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: urgence
+    attributes:
+      label: Bloquant ou souhaitable ?
+      description: Un besoin bloquant passe devant un besoin plus élégant.
+      options:
+        - Bloquant — le rendu ne peut pas avancer sans
+        - Souhaitable — il y a un contournement moche mais viable
+    validations:
+      required: true
+
+  - type: textarea
+    id: contexte
+    attributes:
+      label: Autre chose ?
+      description: Capture d'écran de ce que ça donne aujourd'hui, piste d'implémentation, lien vers le code du rendu concerné.
+    validations:
+      required: false
