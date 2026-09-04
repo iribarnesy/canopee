@@ -52,7 +52,7 @@ pas contradictoire, c'est exactement ce que fait une planche botanique.
    botaniques (§4). Conséquences : le style est paramétrable d'un seul endroit,
    chaque combinaison (essence × stade × saison × gestion) est gratuite, et le
    dépôt ne grossit pas. C'est ce qui rend tenable l'exigence de **reconnaître
-   chaque essence** sur dix-neuf espèces (et quarante à terme).
+   chaque essence** sur vingt-cinq espèces (et quarante à terme).
    *Une seule exception, assumée* : le **son** (§5.10) suppose des fichiers
    audio. Ils vivront dans `data/sons/` avec leur licence et leur provenance,
    au même titre que les valeurs écologiques sont sourcées.
@@ -526,11 +526,11 @@ actuelle), manchon de plant (`S`), tas de BRF (`S`, mais il n'a pas de
 position dans le moteur : à poser conventionnellement au bord), piquets
 d'éclaircie ? (non).
 
-### 5.4 Les arbres — dix-neuf essences, dix-neuf silhouettes
+### 5.4 Les arbres — vingt-cinq essences, vingt-cinq silhouettes
 
 Les huit archétypes de la v0.1 ne disparaissent pas : ils deviennent des
 **familles de port**, c'est-à-dire un jeu de paramètres de départ qu'on
-spécialise ensuite espèce par espèce. On ne repart pas de zéro dix-neuf fois,
+spécialise ensuite espèce par espèce. On ne repart pas de zéro vingt-cinq fois,
 et on n'accepte pas non plus que quatre espèces se ressemblent.
 
 | Famille de port | Espèces | Ce qui les sépare *entre elles* |
@@ -550,14 +550,14 @@ perchis (3–10 m), futaie (10 m–max), sénescent (`fAge < 1` : cime dégarnie
 grosses charpentières mortes, houppier étalé), **chandelle** (fût gris ou noir,
 qui se creuse puis tombe — §2.6).
 
-**Toutes les fiches, sans ordre de faveur** (Q8) : les dix-neuf essences
+**Toutes les fiches, sans ordre de faveur** (Q8) : les vingt-cinq essences
 doivent être reconnaissables, aucune ne reste en port générique. Ça ne veut pas
 dire qu'on les écrit dans le désordre — l'ordre de travail suit ce qui
 **mutualise** le plus, pas ce qui est le plus utile :
 
 1. **une fiche par famille de port** d'abord (8 fiches), pour éprouver le
    générateur sur les huit géométries et faire remonter ses manques ;
-2. puis **les onze restantes**, chacune dans une famille déjà défrichée, donc
+2. puis **les dix-sept restantes**, chacune dans une famille déjà défrichée, donc
    plus rapide — c'est là que le paramétrage par espèce paie.
 
 Aucune des deux vagues ne bloque le reste du chantier : la vue tourne avec les
@@ -621,7 +621,7 @@ tracés**, et les textures sont cuites au démarrage à partir de là.
 
 **À écrire à la main** (le vrai travail) :
 
-- **19 fiches graphiques d'espèce** : ~7 paramètres de port + 1 à 4 tracés SVG
+- **25 fiches graphiques d'espèce** : ~7 paramètres de port + 1 à 4 tracés SVG
   (feuille, fleur, fruit, aiguille) + 4 couleurs de feuillage + écorce +
   `references`. **≈ 0,5 à 1 j par espèce**, la première coûtant plus cher que
   les suivantes.
@@ -918,7 +918,7 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 | **L0** | **Pointe technique** : Pixi vs Canvas 2D témoin sur le pire cas réel (friche en succession, ~5 000 tiges, terrain modelé), projection et échelles calées sur les vraies stations, **un arbre généré par branchement** pour valider D4 et le temps de cuisson, trois captures pour trancher Q6 | un prototype jetable + une décision écrite | P1 | `M` |
 | **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | P1, P4 | `L` |
 | **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | P2 | `XL` |
-| **L2b** | **Les 13 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | — | `XL` |
+| **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | — | `XL` |
 | **L3** | Le temps : interpolation entre instantanés, croissance douce, **phénologie** (débourrement, coloration, chute), saisons, vent, herbe | la parcelle vit | P8 | `L` |
 | **L4** | Gestion : élagage, **trogne**, recépage, démasclage, manchon, coupe qui tombe, fleurs et fruits, retours d'action | **la demande centrale : on voit ce qu'on fait aux arbres** | P2, P7 | `L` |
 | **L5** | **Les morts** : les onze causes, les chandelles qui vieillissent, la chute des feuilles de sécheresse | on comprend pourquoi ça meurt | P3, P5 | `L` |
@@ -939,17 +939,23 @@ fiche par fiche, sans bloquer personne. L8, L9, L10 à la fin, en continu.
 |---|---|---|---|
 | Protocole | ~2,5 j | ~2,5 j | inchangé (P9 est gratuit) |
 | Terrain et caméra | `L` | `L` + `M` | relief à l'échelle → tri entrelacé (D3) |
-| Arbres | `L` | `XL` + `XL` | **essences reconnaissables** (D4) : générateur + 19 fiches |
+| Arbres | `L` | `XL` + `XL` | **essences reconnaissables** (D4) : générateur + 25 fiches |
 | Voir les changements | `M` | `L` | calque + bilan + rembobinage (§6.8) |
 | Faune et son | hors périmètre | `L` | nouveau (§5.10) |
-| **Total** | **25–35 j** | **50–65 j** | |
+| **Total** | **25–35 j** | **55–70 j** | |
 
 C'est **le double**, et la quasi-totalité de l'écart vient de D4 : reconnaître
-dix-neuf essences est de loin la décision la plus chère du lot — et c'est
-probablement celle qui compte le plus pour ce jeu-là. Trois choses rendent le
+vingt-cinq essences est de loin la décision la plus chère du lot — et c'est
+probablement celle qui compte le plus pour ce jeu-là. Le compte a d'ailleurs
+déjà bougé : le catalogue est passé de 19 à 25 essences pendant que j'écrivais
+ce document (charme, houx, saule blanc, cornouiller mâle, fusain, troène). Le
+chantier des fiches graphiques **suit la croissance du catalogue** — c'est un
+coût récurrent, pas un lot qu'on ferme. Autant le savoir : chaque essence
+ajoutée au moteur coûtera désormais une demi-journée à une journée de dessin
+pour rester reconnaissable. Trois choses rendent le
 chiffre supportable :
 
-1. **rien n'est bloquant** : la vue tourne avec six essences finies et treize
+1. **rien n'est bloquant** : la vue tourne avec six essences finies et dix-neuf
    en port générique, et chaque fiche est un incrément livrable ;
 2. **L0 → L4 (≈ 20 j) donnent déjà le jeu que tu décris** — vue isométrique,
    arbres reconnaissables, croissance, élagage, trogne, recépage ;
@@ -958,9 +964,9 @@ chiffre supportable :
 
 ## 10. Risques
 
-1. **Le volume de dessin de D4.** Dix-neuf fiches graphiques, c'est le gros du
+1. **Le volume de dessin de D4.** Vingt-cinq fiches graphiques, c'est le gros du
    chantier et le plus facile à sous-estimer : la tentation sera de bâcler les
-   treize dernières et de se retrouver avec six belles essences et treize
+   dernières et de se retrouver avec six belles essences et dix-neuf
    génériques — c'est-à-dire l'exigence à moitié tenue. Mitigation : le
    générateur d'abord (L2), les fiches en fond (L2b), et une règle simple —
    **une essence n'est « finie » que si un joueur la reconnaît sans étiquette**.
