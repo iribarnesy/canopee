@@ -239,6 +239,11 @@ inchangé au chiffre près (test).
 
 ### 2.4 Ce qui manque encore, et qui ne me bloque pas
 
+> La file d'attente vivante, avec les priorités et l'état d'avancement, est
+> dans **[attentes-du-rendu.md](attentes-du-rendu.md)** — c'est ce fichier-là
+> que lit qui travaille dans `src/engine/`. Le tableau ci-dessous en est le
+> résumé au moment de la rédaction.
+
 | Manque | Ce que le rendu ne pourra pas faire | À qui |
 |---|---|---|
 | **La saison de végétation est encore thermique** | Un houppier doré continue de grandir et un caduc nu de janvier de puiser dans le sol : l'incohérence sera **visible** une fois les saisons animées. Mesuré et chiffré dans `docs/realisme.md` — c'est un chantier de calibration (`GROWING_WEEKS`, `pousseMaxMAn`), pas une correction. | moteur |
