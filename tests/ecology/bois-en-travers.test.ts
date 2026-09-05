@@ -26,6 +26,7 @@ import {
   versLAval,
   volumeDuCoinM3ParM,
 } from "../../src/engine/boisMort";
+import { livingCarbonKg } from "../../src/engine/carbon";
 import { syntheticYear } from "../../src/engine/meteo";
 import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -355,5 +356,92 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     expect(moy(aPlat, "piege")).toBe(0);
     // Et il détourne une part nette de l'eau de surface vers le sol.
     expect(moy(oriente, "eau")).toBeLessThan(0.97 * moy(aPlat, "eau"));
+  });
+});
+
+/**
+ * Le geste que la science désigne, et que le joueur peut enfin faire.
+ *
+ * Le mécanisme de barrage existait sans qu'aucune action ne permette de
+ * l'armer : couper un arbre, c'était le vendre, le broyer ou l'épandre — dans
+ * les trois cas le fût quittait le sol. Or la restauration post-incendie ne
+ * fait pas autre chose que d'abattre et de COUCHER EN TRAVERS.
+ */
+describe("abattre et laisser le tronc en travers", () => {
+  function parcelleAvecArbres() {
+    let state = createGameState(STATION, rngStateFromSeed(7));
+    state = plantScattered(state, "pinus_sylvestris", 12, 8);
+    return state;
+  }
+
+  it("le fût reste au sol, en travers, et rien ne rentre en caisse", () => {
+    const avant = parcelleAvecArbres();
+    const ids = avant.trees.map((t) => t.id);
+    const { state, refusals } = applyAction(avant, {
+      type: "couper",
+      week: 10,
+      treeIds: ids,
+      devenir: "laisser",
+    });
+    expect(refusals).toHaveLength(0);
+    const auSol = state.soil.boisAuSolCG.reduce((a, v) => a + v, 0);
+    expect(auSol).toBeGreaterThan(0);
+    // En travers du versant : c'est tout l'intérêt du geste.
+    const masse = state.soil.boisAuSolCG.reduce((a, v) => a + v, 0);
+    const travers =
+      state.soil.boisAuSolCG.reduce(
+        (a, v, i) => a + v * (state.soil.boisEnTraversPart[i] ?? 0),
+        0,
+      ) / masse;
+    expect(travers).toBeGreaterThan(0.9);
+    // Ça ne rapporte rien, et ça coûte moins que d'aller chercher le bois.
+    expect(state.economy.treasuryEur).toBe(avant.economy.treasuryEur);
+    const vendu = applyAction(avant, {
+      type: "couper",
+      week: 10,
+      treeIds: ids,
+      devenir: "vendre",
+    }).state;
+    expect(vendu.economy.treasuryEur).toBeGreaterThan(state.economy.treasuryEur);
+    expect(state.economy.hoursUsedWeek).toBeLessThan(vendu.economy.hoursUsedWeek);
+  });
+
+  it("le carbone du fût passe au sol, il n'en apparaît ni n'en disparaît", () => {
+    const avant = parcelleAvecArbres();
+    const stock = (s: GameState) =>
+      livingCarbonKg(s.trees) +
+      s.carbon.deadWoodKgC +
+      s.soil.boisAuSolCG.reduce((a, v) => a + v, 0) / 1000;
+    const { state } = applyAction(avant, {
+      type: "couper",
+      week: 10,
+      treeIds: avant.trees.map((t) => t.id),
+      devenir: "laisser",
+    });
+    // Rien n'est vendu ni brûlé : le total ne bouge pas d'un gramme.
+    expect(stock(state)).toBeCloseTo(stock(avant), 6);
+    expect(state.carbon.exportedEnergyCumKgC).toBe(avant.carbon.exportedEnergyCumKgC);
+  });
+
+  it("et ça arme vraiment le versant : moins de terre part", () => {
+    // Le contrôle est le même arbre coupé et VENDU : même parcelle, mêmes
+    // arbres en moins, seule différence le fût laissé ou emporté.
+    const partieAvec = (devenir: "laisser" | "vendre") => {
+      let state = parcelleAvecArbres();
+      state = applyAction(state, {
+        type: "couper",
+        week: 0,
+        treeIds: state.trees.map((t) => t.id),
+        devenir,
+      }).state;
+      let terre = 0;
+      for (let i = 0; i < 3 * 52; i++) {
+        const r = tick(state, METEO[i % 52] as never);
+        state = r.state;
+        terre += r.fluxes.erosionSortieKgM2 ?? 0;
+      }
+      return terre;
+    };
+    expect(partieAvec("laisser")).toBeLessThan(partieAvec("vendre"));
   });
 });

@@ -139,6 +139,42 @@ export function versLAval(
   return { radians: Math.atan2(-dzdy, -dzdx), pentePct: norme * 100 };
 }
 
+/**
+ * Pose du bois sur une cellule, masse ET orientation d'un coup. Une seule
+ * définition de la règle, parce que deux gestes la produisent : la chandelle
+ * qui s'abat toute seule, et le tronc qu'un gestionnaire laisse au sol.
+ *
+ * L'orientation stockée est la moyenne des efficacités barrantes PONDÉRÉE PAR
+ * LES MASSES : deux troncs, l'un en travers l'autre le long, barrent la moitié
+ * de ce que barreraient deux troncs en travers. Le seuil des 30° s'applique
+ * tronc par tronc et non après coup sur la moyenne — deux troncs à 25° de
+ * l'aval ne barrent rien du tout, alors que leur transversalité moyenne, elle,
+ * ne serait pas nulle. Et l'orientation se juge contre l'aval de la cellule QUI
+ * REÇOIT : un tronc de trente mètres traverse plusieurs expositions.
+ */
+export function poserBoisAuSol(
+  boisAuSolCG: number[],
+  boisEnTraversPart: number[],
+  altitudes: readonly number[],
+  dims: GridDims,
+  cellule: number,
+  masseCG: number,
+  radiansTronc: number,
+): void {
+  if (masseCG <= 0) return;
+  const avant = boisAuSolCG[cellule] ?? 0;
+  const { radians } = versLAval(
+    altitudes,
+    dims,
+    cellule % dims.widthM,
+    Math.floor(cellule / dims.widthM),
+  );
+  const barre = partBarrante(transversalite(radiansTronc, radians));
+  boisEnTraversPart[cellule] =
+    ((boisEnTraversPart[cellule] ?? 0) * avant + barre * masseCG) / (avant + masseCG);
+  boisAuSolCG[cellule] = avant + masseCG;
+}
+
 /** Une cellule recouverte par un tronc couché, et sur quelle longueur. */
 export interface CelluleSousLeTronc {
   cellule: number;

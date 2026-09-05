@@ -8,6 +8,7 @@
  * plafond (heures ou découvert).
  */
 
+import { empreinteDeChute, poserBoisAuSol, versLAval } from "./boisMort";
 import {
   CARBON_FRACTION,
   CN_HUMUS,
@@ -22,6 +23,7 @@ import { forEachDiscCell } from "./grid";
 import { crownRadiusM } from "./light";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
+import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tirerVigueurIndividuelle, treeNitrogenNeedGWeek } from "./trees";
 
@@ -57,6 +59,14 @@ export const DECOTE_BOIS_MORT = 0.5;
  * couché n'importe comment, et une part se casse à la manipulation.
  */
 export const RAMASSAGE_HOURS_M3 = 2.5;
+
+/**
+ * Part du travail d'abattage que demande un fût qu'on laisse sur place. On
+ * abat, on ébranche pour que le tronc porte au sol — sans ce contact il ne
+ * barre rien — et on s'arrête là : ni débardage, ni chargement, ni transport.
+ * Le geste est donc moins cher que la vente, et il ne rapporte rien.
+ */
+export const LAISSER_SUR_PLACE_FACTEUR = 0.75;
 /** diamètre minimal pour qu'une bille intéresse une scierie, cm *(à calibrer)* */
 export const DIAMETRE_OEUVRE_MIN_CM = 30;
 /** hauteur de bille élaguée minimale pour vendre en bois d'œuvre, m */
@@ -231,8 +241,13 @@ export type GameAction =
        *  - `broyer` : broyé et chargé, il rejoint le tas de BRF, à épandre où
        *    l'on veut. C'est plus long — il faut remplir la remorque — mais
        *    c'est ce qui permet de TRANSPORTER la fertilité.
+       *  - `laisser` : le fût reste au sol, COUCHÉ EN TRAVERS DE LA PENTE. Ça
+       *    ne rapporte rien et ça demande moins de travail que d'aller le
+       *    chercher, mais c'est le seul geste qui arme un versant contre le
+       *    ruissellement (boisMort.ts) — et c'est précisément celui de la
+       *    restauration post-incendie.
        */
-      devenir: "vendre" | "epandre" | "broyer";
+      devenir: "vendre" | "epandre" | "broyer" | "laisser";
     }
   | {
       type: "recolter";
@@ -293,7 +308,7 @@ export type GameAction =
       critere: "parLeBas" | "parLeHaut" | "espece";
       /** pour le critère « espece » */
       especeId?: string;
-      devenir: "vendre" | "epandre" | "broyer";
+      devenir: "vendre" | "epandre" | "broyer" | "laisser";
     }
   | {
       /**
@@ -637,6 +652,9 @@ function applyCouper(
   let stockBrf = state.stockBrf;
   const coupes: number[] = [];
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
+  const boisAuSolCG = state.soil.boisAuSolCG.slice();
+  const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
+  const altitudes = altitudeParCellule(state.station.relief, dims);
 
   for (const id of action.treeIds) {
     // Tout ce qui est debout se coupe : la tige vive, le brûlé de l'année en
@@ -664,7 +682,7 @@ function applyCouper(
      * encore de `mortSemaine`, son carbone est toujours « dans l'arbre ».
      */
     const dejaEnBoisMort = tree.mortSemaine !== undefined;
-    if (dejaEnBoisMort && action.devenir !== "vendre") {
+    if (dejaEnBoisMort && (action.devenir === "epandre" || action.devenir === "broyer")) {
       // Le BRF est du bois raméal FRAIS : c'est le cambium vivant et l'azote
       // du rameau de l'année qui font son intérêt agronomique. Broyer un fût
       // sec ne donne pas du BRF, ça donne de la sciure — beaucoup de carbone,
@@ -673,7 +691,7 @@ function applyCouper(
         refuse(
           action.week,
           "couper",
-          `arbre ${id} : une chandelle sèche ne fait pas de BRF (il faut du bois frais) — à vendre en chauffage, ou à laisser debout`,
+          `arbre ${id} : une chandelle sèche ne fait pas de BRF (il faut du bois frais) — à vendre en chauffage, à coucher au sol, ou à laisser debout`,
         ),
       );
       continue;
@@ -681,7 +699,13 @@ function applyCouper(
     // Broyer demande plus de travail que vendre bord de route ; charger le
     // broyat pour l'emporter, plus encore.
     const facteurTravail =
-      action.devenir === "epandre" ? 1.3 : action.devenir === "broyer" ? BROYAGE_CHARGE_FACTEUR : 1;
+      action.devenir === "epandre"
+        ? 1.3
+        : action.devenir === "broyer"
+          ? BROYAGE_CHARGE_FACTEUR
+          : action.devenir === "laisser"
+            ? LAISSER_SUR_PLACE_FACTEUR
+            : 1;
     const hours = fellingHours(tree.heightM) * facteurTravail;
     if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
       refusals.push(refuse(action.week, "couper", `plafond hebdomadaire atteint (arbre ${id})`));
@@ -715,7 +739,33 @@ function applyCouper(
       // Les souches et racines restent au sol dans les trois cas (bois mort).
       deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
     }
-    if (action.devenir === "vendre") {
+    if (action.devenir === "laisser") {
+      // Le fût reste là où il tombe, couché EN TRAVERS de la pente : c'est le
+      // geste de la restauration post-incendie, et le moteur suppose que le
+      // bûcheron qui choisit de laisser le bois le pose correctement — on ne
+      // simule pas la maladresse. Sur un terrain plat l'orientation ne veut
+      // rien dire, et elle ne sert à rien non plus : sans pente, pas d'eau qui
+      // court.
+      const { radians: aval } = versLAval(altitudes, dims, tree.x, tree.y);
+      const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, aval + Math.PI / 2, dims);
+      const longueur = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
+      if (longueur > 0) {
+        for (const c of empreinte) {
+          poserBoisAuSol(
+            boisAuSolCG,
+            boisEnTraversPart,
+            altitudes,
+            dims,
+            c.cellule,
+            emporteKgC * (c.longueurM / longueur) * 1000,
+            aval + Math.PI / 2,
+          );
+        }
+      } else {
+        // Rien de la parcelle sous le tronc : son bois retourne au pool.
+        deadWoodKgC += emporteKgC;
+      }
+    } else if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
       const brule = tree.brulEeSemaine !== undefined;
       if (dejaEnBoisMort) {
@@ -786,7 +836,7 @@ function applyCouper(
     state: {
       ...state,
       trees,
-      soil: { ...state.soil, litterNG, litterCG, litterK },
+      soil: { ...state.soil, litterNG, litterCG, litterK, boisAuSolCG, boisEnTraversPart },
       stockBrf,
       carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },

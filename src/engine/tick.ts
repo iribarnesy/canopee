@@ -21,6 +21,7 @@ import {
   longueurDeTroncM,
   longueurEnTraversM,
   partBarrante,
+  poserBoisAuSol,
   sedimentPiegeKgM2,
   transversalite,
   versLAval,
@@ -1637,20 +1638,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
    * celui du pied de l'arbre : un tronc de trente mètres traverse plusieurs
    * expositions, et c'est l'eau de chaque cellule qu'il barre ou non.
    */
-  const poserBois = (cellule: number, masseCG: number, radiansTronc: number) => {
-    if (masseCG <= 0) return;
-    const avant = boisAuSolCG[cellule] ?? 0;
-    const { radians } = versLAval(
-      altitudes,
-      dims,
-      cellule % dims.widthM,
-      Math.floor(cellule / dims.widthM),
-    );
-    const barre = partBarrante(transversalite(radiansTronc, radians));
-    boisEnTraversPart[cellule] =
-      ((boisEnTraversPart[cellule] ?? 0) * avant + barre * masseCG) / (avant + masseCG);
-    boisAuSolCG[cellule] = avant + masseCG;
-  };
+  const poserBois = (cellule: number, masseCG: number, radiansTronc: number) =>
+    poserBoisAuSol(boisAuSolCG, boisEnTraversPart, altitudes, dims, cellule, masseCG, radiansTronc);
   // Le hasard est disponible dès ici parce qu'une chandelle qui s'abat tombe
   // dans une direction. Tant qu'aucune ne tombe, aucun tirage n'est consommé
   // et la suite de la semaine voit exactement les mêmes nombres qu'avant.

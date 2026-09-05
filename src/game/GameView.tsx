@@ -1817,6 +1817,21 @@ export function GameView() {
             >
               🪓 Couper &amp; épandre (BRF)
             </button>
+            <button
+              type="button"
+              style={btn()}
+              onClick={() => {
+                game.dispatch({
+                  type: "couper",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  devenir: "laisser",
+                });
+                setSelectedIds(new Set());
+              }}
+              title="Abattre et coucher le fût en travers de la pente : rien ne rentre en caisse, mais l'eau ralentit et la terre se dépose derrière le tronc"
+            >
+              🪵 Couper &amp; coucher en travers
+            </button>
           </div>
         )}
 

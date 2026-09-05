@@ -981,6 +981,18 @@ calées sur les tables de production, 0,8 après. Ce n'est pas le mécanisme qui
 faibli, c'est la forêt qui, poussant à son rythme réel, couvre plus vite et
 laisse moins partir. **Un piège ne retient que ce qui passe.**
 
+**Et le joueur peut enfin armer son versant.** Le mécanisme existait sans
+qu'aucune action ne permette de s'en servir : couper un arbre, c'était le
+vendre, le broyer ou l'épandre — dans les trois cas le fût quittait le sol. Or
+la restauration post-incendie ne fait pas autre chose qu'abattre et **coucher
+en travers**. D'où un quatrième devenir, `laisser` : le fût reste sur place,
+posé perpendiculairement à la plus grande pente. Ça ne rapporte rien, ça coûte
+un quart de travail en moins que d'aller chercher le bois (on abat, on ébranche
+pour que le tronc porte au sol — sans ce contact il ne barre rien — et on
+s'arrête là), et c'est le seul geste qui arme un versant. Le moteur suppose que
+celui qui choisit de laisser le bois le pose correctement : on ne simule pas la
+maladresse *(hypothèse assumée)*.
+
 **Un bug attrapé au passage, et il valait le voyage.** `versLAval` indexait le
 champ d'altitudes avec les coordonnées **flottantes** de l'arbre. L'index
 tombait entre deux cases, le tableau rendait `undefined` pour les quatre
