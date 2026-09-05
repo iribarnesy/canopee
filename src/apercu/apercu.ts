@@ -15,7 +15,16 @@
  */
 
 import { getEspece } from "../engine/especes";
+import type { ContextePhenologique } from "../engine/phenologie";
+import { partFoliaireOmbrageanteDans, senescenceDans } from "../engine/phenologie";
 import { tournerVue, type Vue, vueInitiale, zoomMax } from "../render/camera";
+import {
+  type ArbreAPoser,
+  AtlasArbres,
+  ancrageDePose,
+  posesDesArbres,
+  tailleDePose,
+} from "../render/couches/arbres";
 import { BRUME, type DecorBordures } from "../render/couches/decor";
 import {
   cuireTachesOmbre,
@@ -41,6 +50,9 @@ interface ArbreScene {
   y: number;
   heightM: number;
   chandelle: boolean;
+  hauteurElagueeM?: number;
+  teteTrogneM?: number;
+  vigueur?: number;
 }
 
 interface Scene {
@@ -57,6 +69,7 @@ interface Scene {
     herbeBiomasse: number[];
     litiereCG: number[];
     bordures?: DecorBordures;
+    pheno?: ContextePhenologique;
   };
 }
 
@@ -80,15 +93,27 @@ function donneesDe(scene: Scene): DonneesSol {
   };
 }
 
-/** Part du feuillage qui fait de l'ombre, à la semaine donnée. Approximation
- * de saison : un caduc est nu de la semaine 45 à la 14. */
-function partOmbrageante(especeId: string, semaine: number): number {
+/**
+ * Part du feuillage qui fait de l'ombre, et avancement de la sénescence.
+ *
+ * **Lus dans le contexte phénologique du moteur, pas approchés ici.** La page
+ * calculait d'abord « un caduc est nu de la semaine 45 à la 14 », ce qui est
+ * grossièrement vrai et précisément faux : le calendrier dépend de l'espèce,
+ * des degrés-jours de l'année et des semaines de froid. Deux calendriers,
+ * celui du moteur et celui de l'écran, dériveraient — et c'est exactement ce
+ * que le §2.1 interdit : « une seule loi, deux appelants, aucune dérive
+ * possible ».
+ */
+function feuillageDe(
+  especeId: string,
+  pheno: ContextePhenologique | undefined,
+): { part: number; senescence: number } {
   const espece = getEspece(especeId);
-  if (!espece) return 1;
-  if (!espece.lumiere.caduc) return 1;
-  if (semaine >= 18 && semaine <= 40) return 1;
-  if (semaine < 12 || semaine > 46) return 0.05;
-  return 0.5;
+  if (!espece || !pheno) return { part: 1, senescence: 0 };
+  return {
+    part: partFoliaireOmbrageanteDans(espece, pheno),
+    senescence: senescenceDans(espece, pheno),
+  };
 }
 
 /**
@@ -122,10 +147,18 @@ interface Options {
   decor?: boolean;
   /** NE PAS borner les ombres au sol — pour montrer le défaut qu'on a corrigé */
   ombresDebordantes?: boolean;
+  /** poser les arbres (défaut : oui) */
+  arbres?: boolean;
+  /** planche : dessiner les sujets NUS, pour juger la ramure d'hiver */
+  nu?: boolean;
+  /** planche : avancement de la sénescence ∈ [0,1] */
+  senescence?: number;
+  /** planche : facteur d'échelle, pour zoomer sur un sujet */
+  echelle?: number;
 }
 
 function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElement {
-  const { ombres = true, decor = true, ombresDebordantes = false } = options;
+  const { ombres = true, decor = true, ombresDebordantes = false, arbres = true } = options;
   const donnees = donneesDe(scene);
   const semaine = scene.week % 52;
   const bordures = scene.sol.bordures;
@@ -178,7 +211,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
           ] ?? 0,
         heightM: t.heightM,
         houppierRatio: getEspece(t.especeId)?.lumiere.houppierRatio ?? 0.4,
-        partOmbrageante: partOmbrageante(t.especeId, semaine),
+        partOmbrageante: feuillageDe(t.especeId, scene.sol.pheno).part,
       }));
     for (const o of ombresAPoser(arbres, vue)) {
       const tache = taches[o.densite];
@@ -204,6 +237,148 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
   }
 
   ctx.drawImage(calque, 0, 0);
+
+  // ── Les arbres ─────────────────────────────────────────────────────────
+  // **Posés APRÈS le calque du sol, et hors de lui.** Un arbre dépasse du
+  // terrain — c'est même tout l'intérêt d'un arbre — donc le découper à la
+  // silhouette du sol, comme on le fait des ombres, le décapiterait.
+  //
+  // Ils ne sont pas non plus entrelacés avec les morceaux de terrain : la
+  // décision D3 l'exigera au lot suivant, quand une butte devra masquer le
+  // pied des arbres derrière elle. Les deux listes sont déjà triées par la
+  // même clé de profondeur, ce qui rendra la fusion mécanique — mais tant que
+  // le sol est posé en un bloc, entrelacer ne changerait rien à l'image et
+  // masquerait ce qui reste à faire.
+  if (arbres) {
+    const poses = posesDesArbres(
+      scene.trees
+        .filter((t) => t.heightM > 0)
+        .map((t): ArbreAPoser => {
+          const espece = getEspece(t.especeId);
+          const f = feuillageDe(t.especeId, scene.sol.pheno);
+          return {
+            id: t.id,
+            especeId: t.especeId,
+            x: t.x,
+            y: t.y,
+            z:
+              scene.sol.altitudesM[
+                Math.min(scene.coteM - 1, Math.floor(t.y)) * scene.coteM +
+                  Math.min(scene.coteM - 1, Math.floor(t.x))
+              ] ?? 0,
+            heightM: t.heightM,
+            houppierRatio: espece?.lumiere.houppierRatio ?? 0.4,
+            ...(t.hauteurElagueeM ? { hauteurElagueeM: t.hauteurElagueeM } : {}),
+            ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
+            ...(t.chandelle ? { chandelle: true } : {}),
+            // Une chandelle n'a plus de feuilles : c'est un tronc mort debout.
+            partFoliaire: t.chandelle ? 0 : f.part,
+            senescence: f.senescence,
+            vigueur: t.vigueur ?? 1,
+          };
+        }),
+      (especeId) => getEspece(especeId)?.hauteurMaxM ?? 20,
+      vue,
+    );
+    const atlas = new AtlasArbres(fabriquer);
+    atlas.rafraichir(poses);
+    // Budget large : on cuit tout d'un coup ici, parce qu'une capture n'a pas
+    // de deuxième image. Dans le jeu, c'est le budget par image qui s'applique.
+    atlas.cuire(10000);
+    for (const pose of poses) {
+      const vignette = atlas.vignette(pose.classe);
+      if (!vignette) continue;
+      // La vignette est cuite à une RÉSOLUTION (puissance de deux, pour que le
+      // cache serve) et posée à sa TAILLE écran. Confondre les deux donnait des
+      // arbres trois fois trop grands.
+      const taille = tailleDePose(pose.arbre.heightM, vignette, vue);
+      const ancre = ancrageDePose(vignette, taille);
+      ctx.drawImage(
+        vignette.image,
+        pose.sx - ancre.dx,
+        pose.sy - ancre.dy,
+        taille.largeur,
+        taille.hauteur,
+      );
+    }
+  }
+
+  return sortie;
+}
+
+/**
+ * La planche d'essences : un sujet par espèce, à taille comparable, sur un fond
+ * neutre.
+ *
+ * **C'est l'épreuve de la décision D4**, et elle ne se passe pas dans la
+ * parcelle : au milieu de cinq mille tiges, on ne juge pas une silhouette. Le
+ * critère est écrit noir sur blanc dans le §5.4 — « une essence n'est finie que
+ * si quelqu'un d'autre la reconnaît sans étiquette » — et il demande de voir les
+ * arbres côte à côte, à la même hauteur, sans rien autour.
+ */
+function planche(
+  especes: readonly string[],
+  hauteurM: number,
+  largeurPx: number,
+  hauteurPx: number,
+  options: Options = {},
+): HTMLCanvasElement {
+  const sortie = fabriquer(largeurPx, hauteurPx);
+  const ctx = sortie.getContext("2d");
+  if (!ctx) throw new Error("contexte 2d indisponible");
+  peindreLeCiel(ctx, largeurPx, hauteurPx);
+
+  // **Une GRILLE, et pas une rangée.** Un arbre de seize mètres au houppier
+  // large est aussi large que haut : sept côte à côte demandent une image sept
+  // fois plus large que haute, où l'on ne voit plus rien. En deux rangs, chaque
+  // sujet a une case à peu près carrée — la proportion d'un arbre.
+  const colonnes = Math.ceil(Math.sqrt(especes.length * 1.6));
+  const lignes = Math.ceil(especes.length / colonnes);
+  const largeurCase = largeurPx / colonnes;
+  const hauteurCase = hauteurPx / lignes;
+  const zoom = (hauteurCase - 46) / (hauteurM * 8);
+  const vue: Vue = {
+    cam: { coteM: 100, zoom, orientation: 0 },
+    centre: { x: 50, y: 50 },
+    largeurPx,
+    hauteurPx,
+  };
+  const atlas = new AtlasArbres(fabriquer);
+  especes.forEach((especeId, i) => {
+    const colonne = i % colonnes;
+    const ligne = Math.floor(i / colonnes);
+    const sol = (ligne + 1) * hauteurCase - 24;
+    const centre = (colonne + 0.5) * largeurCase;
+    ctx.fillStyle = "rgb(96 100 74)";
+    ctx.fillRect(colonne * largeurCase, sol, largeurCase, 24);
+    const espece = getEspece(especeId);
+    const arbre: ArbreAPoser = {
+      id: 7 + i * 13,
+      especeId,
+      x: 50,
+      y: 50,
+      z: 0,
+      heightM: Math.min(hauteurM, espece?.hauteurMaxM ?? hauteurM),
+      houppierRatio: espece?.lumiere.houppierRatio ?? 0.35,
+      partFoliaire: options.nu ? 0 : 1,
+      senescence: options.senescence ?? 0,
+      vigueur: 1,
+    };
+    const poses = posesDesArbres([arbre], () => espece?.hauteurMaxM ?? 20, vue);
+    atlas.rafraichir(poses);
+    atlas.cuire(10);
+    const pose = poses[0];
+    if (!pose) return;
+    const v = atlas.vignette(pose.classe);
+    if (!v) return;
+    const taille = tailleDePose(arbre.heightM, v, vue);
+    const ancre = ancrageDePose(v, taille);
+    ctx.drawImage(v.image, centre - ancre.dx, sol - ancre.dy, taille.largeur, taille.hauteur);
+    ctx.fillStyle = "rgb(212 210 198)";
+    ctx.font = "13px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(especeId.replace("_", " "), centre, sol + 17);
+  });
   return sortie;
 }
 
@@ -255,6 +430,9 @@ function cadrer(
  * L'ordre est celui de la présentation, pas celui de la cuisson.
  */
 interface Planche {
+  /** `especes` = planche d'essences plutôt qu'une scène */
+  especes?: readonly string[];
+  hauteurM?: number;
   scene: string;
   titre: string;
   facteur?: number;
@@ -263,27 +441,51 @@ interface Planche {
   options?: Options;
 }
 
+/** Les sept espèces qui ont une fiche graphique, dans l'ordre des familles. */
+const SEPT = [
+  "fagus_sylvatica",
+  "betula_pendula",
+  "alnus_glutinosa",
+  "pinus_sylvestris",
+  "quercus_suber",
+  "malus_domestica",
+  "corylus_avellana",
+];
+
 const PLANCHE: Planche[] = [
+  { scene: "", especes: SEPT, hauteurM: 16, titre: "les sept essences · été" },
+  {
+    scene: "",
+    especes: SEPT,
+    hauteurM: 16,
+    titre: "les sept essences · nues (la ramure d'hiver)",
+    options: { nu: true },
+  },
+  {
+    scene: "",
+    especes: SEPT,
+    hauteurM: 16,
+    titre: "les sept essences · sénescence",
+    options: { senescence: 1 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "betula_pendula", "pinus_sylvestris"],
+    hauteurM: 16,
+    titre: "trois sujets de près",
+    options: { echelle: 1 },
+  },
   { scene: "friche-s28", titre: "friche · parcelle entière · juillet" },
-  {
-    scene: "friche-s28",
-    titre: "sans hors-parcelle · ombres bornées au sol",
-    options: { decor: false },
-  },
-  {
-    scene: "friche-s28",
-    titre: "sans hors-parcelle · ombres NON bornées (le défaut signalé)",
-    options: { decor: false, ombresDebordantes: true },
-  },
+  { scene: "friche-s28", titre: "friche · sans les arbres", options: { arbres: false } },
   { scene: "friche-s28", titre: "friche · zoom ×6", facteur: 6, centre: { x: 50, y: 50 } },
   { scene: "friche-s28", titre: "friche · zoom ×16", facteur: 16, centre: { x: 50, y: 50 } },
+  { scene: "friche-s28", titre: "friche · zoom ×30", facteur: 30, centre: { x: 50, y: 50 } },
   { scene: "friche-s4", titre: "saison · janvier" },
   { scene: "friche-s17", titre: "saison · avril" },
   { scene: "friche-s28", titre: "saison · juillet" },
   { scene: "friche-s42", titre: "saison · octobre" },
   { scene: "mare-s28", titre: "mare · parcelle entière" },
   { scene: "mare-s28", titre: "mare · zoom ×8", facteur: 8, centre: { x: 60, y: 40 } },
-  { scene: "ruisseau-s28", titre: "ruisseau · zoom ×6", facteur: 6, centre: { x: 50, y: 12 } },
   { scene: "versant-s28", titre: "versant 12 % · parcelle entière" },
   { scene: "versant-s28", titre: "versant 12 % · zoom ×6", facteur: 6, centre: { x: 50, y: 50 } },
   { scene: "friche-s28", titre: "rotation · nord", orientation: 0 },
@@ -300,6 +502,18 @@ async function main(): Promise<void> {
   const filtre = demandees ? new Set(demandees.split(",")) : undefined;
   const cache = new Map<string, Scene>();
   for (const entree of PLANCHE) {
+    if (entree.especes) {
+      // Les planches d'essences ne sont pas des scènes : le filtre `?scenes=`
+      // les laisse passer quand il nomme « planches », et les saute sinon.
+      if (filtre && !filtre.has("planches")) continue;
+      if (etat) etat.textContent = `cuisson · ${entree.titre}…`;
+      vignette(
+        entree.titre,
+        planche(entree.especes, entree.hauteurM ?? 16, 1100, 760, entree.options ?? {}),
+      );
+      await new Promise((r) => setTimeout(r, 0));
+      continue;
+    }
     if (filtre && !filtre.has(entree.scene)) continue;
     if (etat) etat.textContent = `cuisson · ${entree.titre}…`;
     let scene = cache.get(entree.scene);

@@ -34,6 +34,7 @@ import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
+import { contextePhenologique } from "../src/engine/phenologie";
 import { getPaysage } from "../src/engine/paysage";
 import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
@@ -78,6 +79,10 @@ interface ArbreScene {
   heightM: number;
   chandelle: boolean;
   hauteurElagueeM: number;
+  /** hauteur de la tête de trogne, m ; absent = jamais étêté */
+  teteTrogneM?: number;
+  /** vigueur ∈ [0,1] : un arbre qui végète a le houppier clairsemé */
+  vigueur: number;
 }
 
 const arrondi = (v: number, n: number) => Math.round(v * 10 ** n) / 10 ** n;
@@ -97,6 +102,8 @@ function figer(state: GameState): ArbreScene[] {
     heightM: arrondi(t.heightM, 3),
     chandelle: !t.alive,
     hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
+    ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
+    vigueur: arrondi(t.vigueur, 3),
   }));
 }
 
@@ -139,6 +146,7 @@ function figerLeSol(
   state: GameState,
   station: Station,
   debordementMm: Float32Array<ArrayBufferLike>,
+  semaineAnnee: number,
 ) {
   const arrondi = (a: readonly number[] | Float32Array<ArrayBufferLike>, d = 3) =>
     Array.from(a, (v) => Number(v.toFixed(d)));
@@ -161,6 +169,16 @@ function figerLeSol(
     herbeCouverture: arrondi(state.soil.herbeCouverture),
     herbeBiomasse: arrondi(state.soil.herbeBiomasse),
     litiereCG: arrondi(state.soil.litterCG, 1),
+    // Le contexte phénologique de la semaine figée. **Il ne se recalcule pas
+    // côté rendu** : un seul endroit tient ce calendrier, et deux copies
+    // dériveraient — un houppier doré à l'écran, un houppier vert dans le
+    // moteur (docs/interface-visuelle.md §2.1).
+    pheno: contextePhenologique(
+      station.latitudeDeg,
+      semaineAnnee,
+      state.ddYearBase5,
+      state.semainesDeFroid,
+    ),
     // Les quatre bordures, réduites à ce dont le décor a besoin : trois parts
     // par côté. Le rendu n'a que faire des semenciers ou du gibier, et lui
     // passer le `Paysage` entier lui donnerait accès à des données de moteur
@@ -224,7 +242,7 @@ function main() {
           coteM: COTE_M,
           week: i,
           trees: figer(state),
-          sol: figerLeSol(state, station, semaine.debordementParCellule),
+          sol: figerLeSol(state, station, semaine.debordementParCellule, i % 52),
         })}\n`,
       );
     }
@@ -244,7 +262,7 @@ function main() {
         coteM: COTE_M,
         week: an * 52,
         trees,
-        sol: figerLeSol(state, station, dernierDebordement),
+        sol: figerLeSol(state, station, dernierDebordement, (an * 52 - 1) % 52),
       })}\n`,
     );
     rapports.push(recensement(an, fichier, trees));
