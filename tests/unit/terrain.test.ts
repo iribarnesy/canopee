@@ -24,14 +24,14 @@ import {
   cotePavage,
   cuireMorceau,
   type DonneesSol,
-  liserePourZoom,
   morceauxDeLEmprise,
   morceauxParCote,
   signatureMorceau,
+  sousDivisions,
   Terrain,
 } from "../../src/render/couches/terrain";
 import { LITIERE_PLEINE_CG, NIVEAUX } from "../../src/render/palette";
-import { profondeur } from "../../src/render/projection";
+import { profondeur, TUILE_LARGEUR_PX } from "../../src/render/projection";
 
 const COTE = 48; // trois morceaux de 16 m par côté
 
@@ -170,21 +170,32 @@ describe("le pavage : le niveau de détail du SOL", () => {
     }
   });
 
-  it("dessine bien moins de formes quand il agrège — et c'est gratuit en plus", () => {
-    const large = fabriqueBouchon();
+  it("échantillonne grossièrement mais dessine finement — les deux ne sont PAS liés", () => {
+    // La distinction que ce module doit tenir : le pavage combat le bruit,
+    // la subdivision combat les bords francs. Confondre les deux redonne soit
+    // un camouflage, soit une mosaïque.
+    const bouchon = fabriqueBouchon();
     const tresLarge: Vue = { ...vue(), cam: { ...vue().cam, zoom: 0.25 } };
-    cuireMorceau(solPlat(), 1, 1, 20, tresLarge, large.fabriquer);
-    // Un pavé de 8 m : quatre formes au lieu de 256.
-    expect(large.compte.remplissages).toBe(4);
-  });
-});
+    cuireMorceau(solPlat(), 1, 1, 20, tresLarge, bouchon.fabriquer);
 
-describe("le liseré s'efface au loin", () => {
-  it("disparaît quand la tuile devient une trame, et revient au zoom", () => {
-    // Correction venue d'une capture, pas d'un chiffre : à la parcelle entière,
-    // le quadrillage fait lire un champ labouré.
-    expect(liserePourZoom(0.4)).toBe(false);
-    expect(liserePourZoom(4)).toBe(true);
+    const pas = cotePavage(0.25);
+    const pavesParCote = COTE_MORCEAU_M / pas;
+    const sous = sousDivisions(TUILE_LARGEUR_PX * 0.25 * pas);
+    expect(bouchon.compte.remplissages).toBe(pavesParCote ** 2 * sous ** 2);
+    // Quatre échantillons de 8 m, mais bien plus de formes dessinées : c'est
+    // exactement ce qu'on veut.
+    expect(pavesParCote ** 2).toBe(4);
+    expect(bouchon.compte.remplissages).toBeGreaterThan(pavesParCote ** 2);
+  });
+
+  it("borne la subdivision : le coût monte en carré, l'œil ne suit pas", () => {
+    for (const pavePx of [1, 12, 40, 200, 5000]) {
+      const k = sousDivisions(pavePx);
+      expect(k).toBeGreaterThanOrEqual(1);
+      expect(k).toBeLessThanOrEqual(4);
+    }
+    expect(sousDivisions(1)).toBe(1);
+    expect(sousDivisions(48)).toBe(4);
   });
 });
 
@@ -203,23 +214,40 @@ describe("la cuisson", () => {
     expect(bosselé.image.height).toBeGreaterThan(plat.image.height);
   });
 
-  it("remplit une forme par cellule, plus les flancs là où ça descend", () => {
+  it("ne dessine aucun flanc sur un terrain plat", () => {
+    // Le nombre de remplissages suit la subdivision ; ce qui doit être vérifié
+    // ici, c'est qu'un terrain plat n'engendre AUCUN flanc — sinon on peindrait
+    // des falaises là où le sol ne descend pas.
     const { fabriquer, compte } = fabriqueBouchon();
     const v = vue();
     cuireMorceau(solPlat(), 1, 1, 20, v, fabriquer);
-    // Terrain plat : une surface par cellule, aucun flanc.
-    expect(compte.remplissages).toBe(COTE_MORCEAU_M * COTE_MORCEAU_M);
+    const pas = cotePavage(v.cam.zoom);
+    const sous = sousDivisions(TUILE_LARGEUR_PX * v.cam.zoom * pas);
+    const paves = (COTE_MORCEAU_M / pas) ** 2;
+    expect(compte.remplissages).toBe(paves * sous ** 2);
   });
 
-  it("ne trace pas le liseré au zoom d'ensemble, et le trace au zoom rapproché", () => {
-    const large = fabriqueBouchon();
-    cuireMorceau(solPlat(), 1, 1, 20, vue(), large.fabriquer);
-    expect(large.compte.traits).toBe(0);
+  it("ajoute des flancs dès que le terrain descend", () => {
+    const { fabriquer, compte } = fabriqueBouchon();
+    const v = vue();
+    const pas = cotePavage(v.cam.zoom);
+    const sous = sousDivisions(TUILE_LARGEUR_PX * v.cam.zoom * pas);
+    const paves = (COTE_MORCEAU_M / pas) ** 2;
+    const altitudesM = new Array(COTE * COTE).fill(0).map((_, i) => -Math.floor(i / COTE) * 0.5);
+    cuireMorceau(solPlat({ altitudesM }), 1, 1, 20, v, fabriquer);
+    expect(compte.remplissages).toBeGreaterThan(paves * sous ** 2);
+  });
 
-    const proche = fabriqueBouchon();
-    const v = zoomer(vue(), 20, { sx: 600, sy: 350 });
-    cuireMorceau(solPlat(), 1, 1, 20, v, proche.fabriquer);
-    expect(proche.compte.traits).toBeGreaterThan(0);
+  it("ne trace AUCUN contour sur le sol, à aucun zoom", () => {
+    // Conclusion de Q6 renversée pour le sol : un quadrillage permanent fait
+    // lire un champ labouré de loin et un fil de fer de près. Le détourage vaut
+    // pour les formes — arbres, souches, troncs couchés — pas pour le fond.
+    for (const zoom of [0.3, 1, 4, 20]) {
+      const bouchon = fabriqueBouchon();
+      const v: Vue = { ...vue(), cam: { ...vue().cam, zoom } };
+      cuireMorceau(solPlat(), 1, 1, 20, v, bouchon.fabriquer);
+      expect(bouchon.compte.traits).toBe(0);
+    }
   });
 });
 

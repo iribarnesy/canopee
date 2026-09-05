@@ -24,11 +24,17 @@
  *    mesure de L0 a montré que le point de rupture est le zoom rapproché, où le
  *    banc dessinait encore l'hectare entier.
  *
- * **Le liseré s'efface au loin, et ce n'est pas un détail.** Le lot L0
- * recommandait « aplats + liseré » sur des chiffres — le liseré ne coûte rien.
- * Mais en regardant la capture de la parcelle entière, le quadrillage fait lire
- * un champ labouré, pas un sous-bois. Il n'apparaît donc qu'à partir d'une
- * taille de tuile où il devient une information de relief et non une trame.
+ * **Le sol n'a PAS de liseré, contrairement à ce que le lot L0 recommandait.**
+ * Q6 concluait « aplats + liseré » sur des chiffres — le contour ne coûte rien.
+ * Deux captures ont défait cette conclusion, pour le sol seulement. La première,
+ * au zoom d'ensemble : le quadrillage fait lire un champ labouré. La seconde,
+ * après le passage aux quads interpolés : le liseré devenait le seul bord franc
+ * de l'image et le sol lisait comme un fil de fer posé sur du brouillard.
+ *
+ * La conclusion de Q6 vaut donc pour les FORMES — un arbre, une souche, un
+ * tronc couché gagnent à être détourés — et pas pour le sol, qui n'est pas une
+ * forme mais un fond. Pour aider à placer un arbre, la bonne réponse est
+ * d'éclairer la cellule sous le curseur, pas de quadriller l'hectare.
  */
 
 import { celluleVisibles, type Emprise, type Vue, versEcranVue } from "../camera";
@@ -37,28 +43,16 @@ import {
   type CelluleQuantifiee,
   couleurSol,
   eclairer,
+  melange,
   quantifier,
   signatureCellule,
+  type Teinte,
   versCss,
 } from "../palette";
 import { profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 
 /** Côté d'un morceau de terrain, en mètres. */
 export const COTE_MORCEAU_M = 16;
-
-/**
- * Taille de tuile, en pixels de largeur, à partir de laquelle on trace le
- * liseré.
- *
- * **40 px, et le chiffre vient d'une erreur.** La capture de L0 qui faisait
- * « champ labouré » était au zoom d'ensemble, où une tuile fait 16 px : un
- * seuil à 14 px l'aurait laissée quadrillée. Il faut être franchement plus
- * haut — à 40 px, une tuile d'un mètre est une unité qu'on distingue, donc son
- * contour informe (une marche de relief, une limite de cellule labourée) au
- * lieu de faire une trame. C'est vers 24 m de large visible, soit un vrai
- * plan rapproché.
- */
-export const LISERE_DES_PX = 40;
 
 /** Morceaux cuits au maximum par image. Le reste attend la suivante. */
 export const BUDGET_CUISSON_PAR_IMAGE = 4;
@@ -93,6 +87,31 @@ export function cotePavage(zoom: number): number {
   const brut = PAVE_VISE_PX / Math.max(1e-6, largeurTuile);
   if (brut <= 1) return 1;
   return Math.min(8, 2 ** Math.round(Math.log2(brut)));
+}
+
+/**
+ * Largeur écran visée d'un QUAD dessiné, en pixels.
+ *
+ * **À ne pas confondre avec le pavage, et c'est toute l'idée de ce module.** Le
+ * pavage dit à quelle finesse on ÉCHANTILLONNE le sol — il combat le bruit. La
+ * subdivision dit à quelle finesse on le DESSINE — elle combat les bords francs.
+ * Les deux étaient confondus au premier jet : chaque cellule était un aplat
+ * bordé net, et le sol lisait comme une mosaïque de carrelage, surtout au zoom
+ * où une cellule fait cinquante pixels.
+ *
+ * On échantillonne donc grossièrement et on dessine finement, en interpolant
+ * entre les échantillons. Rien de nouveau n'est inventé : entre deux valeurs
+ * que le moteur donne, l'interpolation est la seule chose honnête à afficher —
+ * le sol ne change pas de nature au milieu d'un mètre carré.
+ */
+export const QUAD_VISE_PX = 12;
+
+/**
+ * Combien de fois subdiviser un pavé pour le dessiner. Borné à 4 : au-delà, le
+ * coût de cuisson monte en carré pour un gain que l'œil ne voit plus.
+ */
+export function sousDivisions(paveePx: number): number {
+  return Math.min(4, Math.max(1, Math.round(paveePx / QUAD_VISE_PX)));
 }
 
 /**
@@ -207,11 +226,6 @@ export function morceauxDeLEmprise(
   return liste;
 }
 
-/** Le liseré se trace-t-il à ce zoom ? Voir `LISERE_DES_PX`. */
-export function liserePourZoom(zoom: number): boolean {
-  return TUILE_LARGEUR_PX * zoom >= LISERE_DES_PX;
-}
-
 /** Altitude moyenne d'un pavé de `largeur × hauteur` cellules. */
 function altitudeMoyenne(
   donnees: DonneesSol,
@@ -222,8 +236,8 @@ function altitudeMoyenne(
 ): number {
   let somme = 0;
   let n = 0;
-  for (let y = y0; y < Math.min(donnees.coteM, y0 + hauteur); y++) {
-    for (let x = x0; x < Math.min(donnees.coteM, x0 + largeur); x++) {
+  for (let y = Math.max(0, y0); y < Math.min(donnees.coteM, y0 + hauteur); y++) {
+    for (let x = Math.max(0, x0); x < Math.min(donnees.coteM, x0 + largeur); x++) {
       somme += donnees.altitudesM[y * donnees.coteM + x] ?? 0;
       n++;
     }
@@ -257,8 +271,12 @@ function teintePave(
   let z = 0;
   let pente = 0;
   let n = 0;
-  for (let y = y0; y < Math.min(donnees.coteM, y0 + hauteur); y++) {
-    for (let x = x0; x < Math.min(donnees.coteM, x0 + largeur); x++) {
+  // Les bornes sont rabattues dans la parcelle : un échantillon de l'anneau de
+  // débordement tombe DEHORS, et y lire des zéros donnerait une terre sèche
+  // fictive vers laquelle le bord interpolerait. C'est exactement la frange
+  // pâle qu'une capture a montrée le long des lisières.
+  for (let y = Math.max(0, y0); y < Math.min(donnees.coteM, y0 + hauteur); y++) {
+    for (let x = Math.max(0, x0); x < Math.min(donnees.coteM, x0 + largeur); x++) {
       const i = y * donnees.coteM + x;
       humidite += donnees.humidite[i] ?? 0;
       herbe += donnees.herbe[i] ?? 0;
@@ -277,6 +295,79 @@ function teintePave(
     litiereCG: litiere / n,
   });
   return { teinte: eclairer(couleurSol(q, semaineAnnee), pente / n), z: z / n };
+}
+
+/**
+ * Le champ de sol échantillonné aux centres de pavés, avec **un anneau de
+ * débordement d'un pavé tout autour**.
+ *
+ * L'anneau n'est pas un détail : sans lui, les quads du bord d'un morceau
+ * n'auraient personne avec qui interpoler et se rabattraient sur leur propre
+ * valeur. Deux morceaux voisins montreraient alors une couture nette à leur
+ * frontière — un défaut d'autant plus visible qu'il suit une grille régulière.
+ * Avec l'anneau, chaque morceau interpole vers les valeurs de son voisin, et la
+ * frontière disparaît sans que les morceaux aient à se connaître.
+ */
+interface ChampSol {
+  /** origine du champ en coordonnées de parcelle (coin du nœud d'indice 0) */
+  ox: number;
+  oy: number;
+  /** pas d'échantillonnage, en cellules */
+  pas: number;
+  /** nombre de nœuds par côté */
+  n: number;
+  teintes: Teinte[];
+  z: Float64Array;
+}
+
+function echantillonner(
+  donnees: DonneesSol,
+  x0: number,
+  y0: number,
+  cote: number,
+  pas: number,
+  semaineAnnee: number,
+): ChampSol {
+  const n = Math.ceil(cote / pas) + 3; // +1 de chaque côté pour l'anneau, +1 de garde
+  const ox = x0 - pas;
+  const oy = y0 - pas;
+  const teintes: Teinte[] = new Array(n * n);
+  const z = new Float64Array(n * n);
+  const dernier = donnees.coteM - pas;
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      // Rabattement sur le bord : hors parcelle, on réplique la valeur de la
+      // lisière plutôt que d'inventer un dehors. Les deux morceaux qui se
+      // touchent au bord rabattent pareil, donc la continuité tient.
+      const px = Math.min(dernier, Math.max(0, ox + i * pas));
+      const py = Math.min(dernier, Math.max(0, oy + j * pas));
+      const echantillon = teintePave(donnees, px, py, pas, pas, semaineAnnee);
+      teintes[j * n + i] = echantillon.teinte;
+      z[j * n + i] = echantillon.z;
+    }
+  }
+  return { ox, oy, pas, n, teintes, z };
+}
+
+/** Interpolation bilinéaire du champ, en un point de parcelle quelconque. */
+function lireChamp(champ: ChampSol, px: number, py: number): { teinte: Teinte; z: number } {
+  // Les nœuds sont au CENTRE de leur pavé : d'où le demi-pas.
+  const u = (px - (champ.ox + champ.pas / 2)) / champ.pas;
+  const v = (py - (champ.oy + champ.pas / 2)) / champ.pas;
+  const i = Math.min(champ.n - 2, Math.max(0, Math.floor(u)));
+  const j = Math.min(champ.n - 2, Math.max(0, Math.floor(v)));
+  const fu = Math.min(1, Math.max(0, u - i));
+  const fv = Math.min(1, Math.max(0, v - j));
+  const a = j * champ.n + i;
+  const t00 = champ.teintes[a] ?? { r: 0, g: 0, b: 0 };
+  const t10 = champ.teintes[a + 1] ?? t00;
+  const t01 = champ.teintes[a + champ.n] ?? t00;
+  const t11 = champ.teintes[a + champ.n + 1] ?? t10;
+  const haut = melange(t00, t10, fu);
+  const bas = melange(t01, t11, fu);
+  const zHaut = (champ.z[a] ?? 0) * (1 - fu) + (champ.z[a + 1] ?? 0) * fu;
+  const zBas = (champ.z[a + champ.n] ?? 0) * (1 - fu) + (champ.z[a + champ.n + 1] ?? 0) * fu;
+  return { teinte: melange(haut, bas, fv), z: zHaut * (1 - fv) + zBas * fv };
 }
 
 /**
@@ -333,7 +424,6 @@ export function cuireMorceau(
   if (!ctx) throw new Error("contexte 2d indisponible");
   const decalage = { dx: minSx - 1, dy: minSy - 1 };
 
-  const liseré = liserePourZoom(vue.cam.zoom);
   const demiLargeur = (TUILE_LARGEUR_PX * vue.cam.zoom) / 2;
   const demiHauteur = (TUILE_HAUTEUR_PX * vue.cam.zoom) / 2;
 
@@ -348,34 +438,37 @@ export function cuireMorceau(
   }
   paves.sort((a, b) => a.p - b.p);
 
+  const champ = echantillonner(donnees, x0, y0, COTE_MORCEAU_M, pas, semaineAnnee);
+  const sous = sousDivisions(demiLargeur * 2 * pas);
+  const finesse = pas / sous;
+
   for (const { x, y } of paves) {
     const largeurPave = Math.min(pas, xFin - x);
     const hauteurPave = Math.min(pas, yFin - y);
-    const { teinte, z } = teintePave(donnees, x, y, largeurPave, hauteurPave, semaineAnnee);
+    const centre = lireChamp(champ, x + largeurPave / 2, y + hauteurPave / 2);
 
-    // Le centre du pavé, à l'écran. Un pavé de `n` cellules se projette comme
-    // un losange `n` fois plus grand : c'est la même forme, à l'échelle.
-    const c = versEcranVue({ x: x + largeurPave / 2, y: y + hauteurPave / 2, z }, vue);
-    const cx = c.sx - decalage.dx;
-    const cy = c.sy - decalage.dy;
-    const dl = demiLargeur * largeurPave;
-    const dh = demiHauteur * hauteurPave;
-
-    // Le flanc : ce qui se voit sous le pavé parce que l'aval est plus bas.
-    // Dessiné avant la surface, et plus sombre — c'est de la terre à nu vue de
-    // côté, jamais éclairée par un soleil haut.
+    // ── Le flanc, sur la grille GROSSIÈRE ────────────────────────────────
+    // Ce qui se voit sous le pavé parce que l'aval est plus bas. Dessiné avant
+    // la surface, et plus sombre — c'est de la terre à nu vue de côté, jamais
+    // éclairée par un soleil haut. Il reste grossier volontairement : un flanc
+    // est une falaise, pas un dégradé, et le subdiviser ne changerait rien.
     const zAval = Math.min(
       altitudeMoyenne(donnees, x, Math.min(donnees.coteM - 1, y + hauteurPave), largeurPave, 1),
       altitudeMoyenne(donnees, Math.min(donnees.coteM - 1, x + largeurPave), y, 1, hauteurPave),
     );
-    const chute = Math.max(0, z - zAval);
+    const chute = Math.max(0, centre.z - zAval);
     if (chute > 0.01) {
+      const c = versEcranVue({ x: x + largeurPave / 2, y: y + hauteurPave / 2, z: centre.z }, vue);
+      const cx = c.sx - decalage.dx;
+      const cy = c.sy - decalage.dy;
+      const dl = demiLargeur * largeurPave;
+      const dh = demiHauteur * hauteurPave;
       const bas = versEcranVue(
-        { x: x + largeurPave / 2, y: y + hauteurPave / 2, z: z - chute },
+        { x: x + largeurPave / 2, y: y + hauteurPave / 2, z: centre.z - chute },
         vue,
       );
       const basY = bas.sy - decalage.dy;
-      ctx.fillStyle = versCss(eclairer(teinte, 0.62));
+      ctx.fillStyle = versCss(eclairer(centre.teinte, 0.62));
       ctx.beginPath();
       ctx.moveTo(cx - dl, cy);
       ctx.lineTo(cx, cy + dh);
@@ -387,18 +480,34 @@ export function cuireMorceau(
       ctx.fill();
     }
 
-    ctx.fillStyle = versCss(teinte);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - dh);
-    ctx.lineTo(cx + dl, cy);
-    ctx.lineTo(cx, cy + dh);
-    ctx.lineTo(cx - dl, cy);
-    ctx.closePath();
-    ctx.fill();
-    if (liseré) {
-      ctx.strokeStyle = versCss(eclairer(teinte, 0.88));
-      ctx.lineWidth = 1;
-      ctx.stroke();
+    // ── La surface, en quads FINS et interpolés ──────────────────────────
+    // Chaque quad reçoit la couleur et l'altitude lues dans le champ à son
+    // centre. Un demi-pixel de débordement les recouvre entre eux : sans lui,
+    // l'antialiasing laisse une grille de traits clairs entre les quads, ce qui
+    // reproduirait exactement le défaut qu'on cherche à supprimer.
+    const debord = 0.5;
+    for (let sy = 0; sy < sous; sy++) {
+      for (let sx = 0; sx < sous; sx++) {
+        const qx = x + sx * finesse;
+        const qy = y + sy * finesse;
+        const ql = Math.min(finesse, xFin - qx);
+        const qh = Math.min(finesse, yFin - qy);
+        if (ql <= 0 || qh <= 0) continue;
+        const echantillon = lireChamp(champ, qx + ql / 2, qy + qh / 2);
+        const c = versEcranVue({ x: qx + ql / 2, y: qy + qh / 2, z: echantillon.z }, vue);
+        const cx = c.sx - decalage.dx;
+        const cy = c.sy - decalage.dy;
+        const dl = demiLargeur * ql + debord;
+        const dh = demiHauteur * qh + debord / 2;
+        ctx.fillStyle = versCss(echantillon.teinte);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - dh);
+        ctx.lineTo(cx + dl, cy);
+        ctx.lineTo(cx, cy + dh);
+        ctx.lineTo(cx - dl, cy);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
 
