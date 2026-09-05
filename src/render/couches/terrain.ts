@@ -38,12 +38,18 @@
  */
 
 import { celluleVisibles, type Emprise, type Vue, versEcranVue } from "../camera";
-import { facteurPente } from "../lumiere";
+import { facteurGrain } from "../grain";
+import { expositionMoyenne, facteurPente } from "../lumiere";
 import {
   type CelluleQuantifiee,
+  couleurEau,
+  couleurInondee,
   couleurSol,
+  DEBORDEMENT_PLEIN_MM,
   eclairer,
+  estInondee,
   melange,
+  palier,
   quantifier,
   signatureCellule,
   type Teinte,
@@ -130,6 +136,16 @@ export interface DonneesSol {
   herbeBiomasse: Float32Array;
   /** `Snapshot.soilLitiereCG` */
   litiereCG: Float32Array;
+  /**
+   * `StationInfo.enEau` : les cellules d'eau libre, fixées avec la station.
+   * Absent = parcelle sans ruisseau ni mare.
+   */
+  enEau?: readonly boolean[];
+  /**
+   * `Snapshot.soilDebordementMm` : ce qui n'a pas pu rentrer dans le sol cette
+   * semaine. La flaque de novembre, la lame d'une crue.
+   */
+  debordementMm?: Float32Array;
 }
 
 /** Une image de terrain cuite, et où la poser. */
@@ -186,7 +202,19 @@ export function signatureMorceau(
   const yFin = Math.min(donnees.coteM, (iy + 1) * COTE_MORCEAU_M);
   for (let y = iy * COTE_MORCEAU_M; y < yFin; y++) {
     for (let x = ix * COTE_MORCEAU_M; x < xFin; x++) {
-      h = (h ^ signatureCellule(celluleA(donnees, y * donnees.coteM + x))) >>> 0;
+      const i = y * donnees.coteM + x;
+      h = (h ^ signatureCellule(celluleA(donnees, i))) >>> 0;
+      h = (h * 0x01000193) >>> 0;
+      // L'eau entre dans la signature : sans ça, une crue monterait sans que
+      // le sol soit redessiné. Le débordement est quantifié comme le reste,
+      // sinon chaque millimètre invaliderait le morceau.
+      const eau =
+        (donnees.enEau?.[i] ? 1 : 0) |
+        (palier((donnees.debordementMm?.[i] ?? 0) / DEBORDEMENT_PLEIN_MM) << 1);
+      // Note : le palier suffit à la signature. Le seuil de visibilité, lui,
+      // est dans `estInondee` — deux cellules sous le seuil tombent de toute
+      // façon dans le même palier, donc rien ne se recuit pour rien.
+      h = (h ^ eau) >>> 0;
       h = (h * 0x01000193) >>> 0;
     }
   }
@@ -263,6 +291,7 @@ function teintePave(
   largeur: number,
   hauteur: number,
   semaineAnnee: number,
+  penteReference: number,
 ) {
   let humidite = 0;
   let herbe = 0;
@@ -283,7 +312,7 @@ function teintePave(
       biomasse += donnees.herbeBiomasse[i] ?? 0;
       litiere += donnees.litiereCG[i] ?? 0;
       z += donnees.altitudesM[i] ?? 0;
-      pente += facteurPente(donnees.altitudesM, donnees.coteM, x, y);
+      pente += facteurPente(donnees.altitudesM, donnees.coteM, x, y, penteReference);
       n++;
     }
   }
@@ -327,6 +356,7 @@ function echantillonner(
   cote: number,
   pas: number,
   semaineAnnee: number,
+  penteReference: number,
 ): ChampSol {
   const n = Math.ceil(cote / pas) + 3; // +1 de chaque côté pour l'anneau, +1 de garde
   const ox = x0 - pas;
@@ -341,7 +371,7 @@ function echantillonner(
       // touchent au bord rabattent pareil, donc la continuité tient.
       const px = Math.min(dernier, Math.max(0, ox + i * pas));
       const py = Math.min(dernier, Math.max(0, oy + j * pas));
-      const echantillon = teintePave(donnees, px, py, pas, pas, semaineAnnee);
+      const echantillon = teintePave(donnees, px, py, pas, pas, semaineAnnee, penteReference);
       teintes[j * n + i] = echantillon.teinte;
       z[j * n + i] = echantillon.z;
     }
@@ -438,7 +468,11 @@ export function cuireMorceau(
   }
   paves.sort((a, b) => a.p - b.p);
 
-  const champ = echantillonner(donnees, x0, y0, COTE_MORCEAU_M, pas, semaineAnnee);
+  const largeurTuilePx = TUILE_LARGEUR_PX * vue.cam.zoom;
+  // La pente de référence est celle de la PARCELLE, pas du morceau : une
+  // référence par morceau ferait des marches d'éclairement à chaque frontière.
+  const penteReference = expositionMoyenne(donnees.altitudesM, donnees.coteM);
+  const champ = echantillonner(donnees, x0, y0, COTE_MORCEAU_M, pas, semaineAnnee, penteReference);
   const sous = sousDivisions(demiLargeur * 2 * pas);
   const finesse = pas / sous;
 
@@ -494,12 +528,18 @@ export function cuireMorceau(
         const qh = Math.min(finesse, yFin - qy);
         if (ql <= 0 || qh <= 0) continue;
         const echantillon = lireChamp(champ, qx + ql / 2, qy + qh / 2);
+        // Le grain se multiplie à l'ombrage de pente : deux facteurs de clarté,
+        // l'un qui vient du relief, l'autre de la matière. Il est attaché aux
+        // coordonnées de PARCELLE, donc il ne glisse pas quand la caméra tourne.
+        const matiere = facteurGrain(qx + ql / 2, qy + qh / 2, largeurTuilePx);
+        const teinteQuad =
+          matiere === 1 ? echantillon.teinte : eclairer(echantillon.teinte, matiere);
         const c = versEcranVue({ x: qx + ql / 2, y: qy + qh / 2, z: echantillon.z }, vue);
         const cx = c.sx - decalage.dx;
         const cy = c.sy - decalage.dy;
         const dl = demiLargeur * ql + debord;
         const dh = demiHauteur * qh + debord / 2;
-        ctx.fillStyle = versCss(echantillon.teinte);
+        ctx.fillStyle = versCss(teinteQuad);
         ctx.beginPath();
         ctx.moveTo(cx, cy - dh);
         ctx.lineTo(cx + dl, cy);
@@ -507,6 +547,40 @@ export function cuireMorceau(
         ctx.lineTo(cx - dl, cy);
         ctx.closePath();
         ctx.fill();
+      }
+    }
+    // ── L'eau, à la CELLULE et par-dessus ────────────────────────────────
+    // Elle ne s'interpole pas : une berge est un bord franc, et un ruisseau de
+    // deux mètres fondu dans un pavé disparaîtrait. On la dessine donc à la
+    // résolution du moteur, quelle que soit la finesse du reste.
+    if (donnees.enEau || donnees.debordementMm) {
+      for (let cy2 = y; cy2 < Math.min(yFin, y + hauteurPave); cy2++) {
+        for (let cx2 = x; cx2 < Math.min(xFin, x + largeurPave); cx2++) {
+          const i = cy2 * donnees.coteM + cx2;
+          const libre = donnees.enEau?.[i] === true;
+          const deborde = donnees.debordementMm?.[i] ?? 0;
+          if (!libre && !estInondee(deborde)) continue;
+          const zc = donnees.altitudesM[i] ?? centre.z;
+          const teinteEau = libre
+            ? couleurEau(semaineAnnee)
+            : couleurInondee(lireChamp(champ, cx2 + 0.5, cy2 + 0.5).teinte, deborde, semaineAnnee);
+          const c = versEcranVue({ x: cx2 + 0.5, y: cy2 + 0.5, z: zc }, vue);
+          const ex = c.sx - decalage.dx;
+          const ey = c.sy - decalage.dy;
+          // Même demi-pixel de recouvrement que les quads du sol : sans lui,
+          // l'antialiasing laisse une grille de traits clairs entre les
+          // cellules, et un plan d'eau se met à ressembler à du carrelage.
+          const el = demiLargeur + 0.5;
+          const eh = demiHauteur + 0.25;
+          ctx.fillStyle = versCss(teinteEau);
+          ctx.beginPath();
+          ctx.moveTo(ex, ey - eh);
+          ctx.lineTo(ex + el, ey);
+          ctx.lineTo(ex, ey + eh);
+          ctx.lineTo(ex - el, ey);
+          ctx.closePath();
+          ctx.fill();
+        }
       }
     }
   }

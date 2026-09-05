@@ -70,6 +70,30 @@ export const AMPLITUDE_PENTE = 0.22;
 export const PENTE_SATURATION = 0.08;
 
 /**
+ * Azimut de la lumière qui MODÈLE le terrain, en degrés depuis le nord.
+ *
+ * **Deux lumières, deux métiers, et il a fallu se tromper une fois pour le
+ * voir.** J'avais aligné l'ombrage de pente sur le soleil du moteur — plein sud,
+ * comme le décalage d'ombre de `light.ts` — en refusant le sud-ouest que le §4
+ * demandait. Le raisonnement était bon pour l'OMBRE PORTÉE et faux pour
+ * l'ombrage.
+ *
+ * Ce qui l'a montré : mesuré sur les reliefs que le moteur produit, `dz/dy` vaut
+ * 0,0900 sur toutes les cellules, pour les trois formes — `plan`, `croupe` et
+ * `vallon`. La forme ne joue QUE sur le profil est-ouest. Un ombrage plein sud
+ * est donc aveugle à la seule variation de relief qui existe : croupe et vallon
+ * y rendaient exactement la même image.
+ *
+ * La distinction qui résout ça : l'ombre portée **affirme un mécanisme** — elle
+ * dit qui ombrage qui, et doit tomber là où le moteur la calcule. L'ombrage de
+ * pente n'affirme rien de tel : il donne du volume à une surface. Lui donner un
+ * azimut oblique ne ment sur rien, et c'est la seule façon de voir une croupe.
+ *
+ * 225° — sud-ouest, comme le §4 le demandait dès le début.
+ */
+export const AZIMUT_MODELE_DEG = 225;
+
+/**
  * Gradient du terrain en une cellule : (dz/dx, dz/dy), mètres par mètre.
  *
  * Différences centrées, avec repli sur la différence simple au bord. Les
@@ -117,19 +141,77 @@ export function gradient(
  * autour d'une butte ne déplace pas le soleil. C'est ce qui distingue cet effet
  * de l'ombre portée, dont la direction écran tourne, elle.
  */
-export function facteurPente(
+/**
+ * Exposition d'une cellule à la lumière qui modèle : la composante de la pente
+ * dans la direction opposée au soleil, en mètres par mètre.
+ *
+ * Séparée de `facteurPente` parce que la moyenne de la parcelle se calcule sur
+ * cette même grandeur — et qu'elles doivent rester d'accord.
+ */
+export function expositionPente(
   altitudesM: readonly number[],
   coteM: number,
   x: number,
   y: number,
 ): number {
-  const [, dzdy] = gradient(altitudesM, coteM, x, y);
-  // Seule la composante NORD-SUD compte : le soleil est plein sud, donc un
-  // versant qui monte vers le nord lui fait face. Un versant est-ouest reste à
-  // 1, ce qui est la conséquence assumée d'avoir suivi le moteur plutôt que la
-  // lumière au sud-ouest du §4.
-  const expose = Math.min(1, Math.max(-1, dzdy / PENTE_SATURATION));
+  const [dzdx, dzdy] = gradient(altitudesM, coteM, x, y);
+  const azimut = (AZIMUT_MODELE_DEG * Math.PI) / 180;
+  // Vecteur horizontal pointant VERS le soleil, dans le repère parcelle
+  // (+x est, +y nord) : l'azimut se compte depuis le nord, dans le sens des
+  // aiguilles.
+  const versEst = Math.sin(azimut);
+  const versNord = Math.cos(azimut);
+  // Une pente qui S'ÉLÈVE à l'opposé du soleil lui fait face.
+  return -(dzdx * versEst + dzdy * versNord);
+}
+
+export function facteurPente(
+  altitudesM: readonly number[],
+  coteM: number,
+  x: number,
+  y: number,
+  reference = 0,
+): number {
+  const expose = Math.min(
+    1,
+    Math.max(-1, (expositionPente(altitudesM, coteM, x, y) - reference) / PENTE_SATURATION),
+  );
   return 1 + AMPLITUDE_PENTE * expose;
+}
+
+/**
+ * Exposition MOYENNE de la parcelle, en mètres par mètre.
+ *
+ * **À passer en référence à `facteurPente`, et voici pourquoi.** Les reliefs que
+ * le moteur produit sont largement PLANAIRES dans le sens de la pente : mesuré
+ * sur une station à 9 %, l'exposition est constante sur les dix mille cellules.
+ * Ombrer par rapport à l'horizontale y donnait donc le même facteur PARTOUT —
+ * autrement dit, non pas du relief mais une parcelle uniformément éclaircie,
+ * ce qui virait la palette entière au jaune acide sans rien apprendre à
+ * personne.
+ *
+ * En prenant la pente moyenne pour référence, une parcelle uniformément inclinée
+ * redevient neutre et seuls les ÉCARTS à cette pente — une butte, un talweg, une
+ * rupture — s'éclairent ou s'assombrissent. C'est exactement l'information utile.
+ *
+ * Ce qui est perdu, et c'est assumé : une parcelle plein sud n'a pas l'air plus
+ * ensoleillée qu'une parcelle plein nord. Le niveau absolu ne dit rien qu'un
+ * joueur puisse utiliser — il n'a pas les deux sous les yeux — alors qu'il
+ * corrompt toute la palette.
+ */
+export function expositionMoyenne(altitudesM: readonly number[], coteM: number): number {
+  let somme = 0;
+  let n = 0;
+  // Un échantillon suffit largement, et évite de parcourir dix mille cellules
+  // à chaque cuisson de morceau.
+  const pas = Math.max(1, Math.floor(coteM / 24));
+  for (let y = 0; y < coteM; y += pas) {
+    for (let x = 0; x < coteM; x += pas) {
+      somme += expositionPente(altitudesM, coteM, x, y);
+      n++;
+    }
+  }
+  return n === 0 ? 0 : somme / n;
 }
 
 /**

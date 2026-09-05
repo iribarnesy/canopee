@@ -232,6 +232,71 @@ export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
   return melange(avecHerbe, LITIERE, 0.45 * tapis);
 }
 
+// ── L'eau libre ─────────────────────────────────────────────────────────────
+// Elle n'est PAS une couche du sol comme les autres : l'herbe et la litière se
+// fondent l'une dans l'autre, une berge non. Un ruisseau de deux mètres de large
+// interpolé sur un pavé disparaîtrait purement et simplement. L'eau se dessine
+// donc à la cellule, par-dessus le sol, avec un bord franc.
+
+/** Eau libre en été : verte, chargée, réfléchissant un ciel clair. */
+const EAU_ETE: Teinte = { r: 74, g: 106, b: 104 };
+/** Eau libre en hiver : plus froide, plus grise, moins d'algues. */
+const EAU_HIVER: Teinte = { r: 84, g: 100, b: 116 };
+
+/**
+ * Débordement en dessous duquel on ne dessine RIEN, mm.
+ *
+ * **Le seuil manquait, et son absence peignait la parcelle entière en bleu.**
+ * `soilDebordementMm` n'est pas une hauteur d'eau : c'est un FLUX hebdomadaire,
+ * ce qui n'a pas pu rentrer dans le sol, ruissellement amont compris. Mesuré
+ * sur une friche un janvier pluvieux : 93 mm à la médiane et 1 350 mm au point
+ * bas — la parcelle entière « déborde » chaque semaine humide, et un rendu sans
+ * seuil en concluait qu'elle était inondée. Le protocole dit à quoi cette grille
+ * sert : « la crue, la lame d'eau, la ravine », c'est-à-dire des ÉVÉNEMENTS.
+ *
+ * 5 mm : cinq litres au mètre carré en une semaine, de quoi voir briller le sol
+ * *(à calibrer)*.
+ */
+export const DEBORDEMENT_VISIBLE_MM = 5;
+
+/**
+ * Débordement au-delà duquel la lame d'eau est jugée pleine, mm.
+ *
+ * 120 mm : l'ordre de grandeur d'un talweg qui collecte son bassin sur une
+ * semaine de pluie. Au-delà on ne voit plus le sol dessous *(à calibrer)*.
+ */
+export const DEBORDEMENT_PLEIN_MM = 120;
+
+/** La couleur de l'eau libre à une saison donnée. */
+export function couleurEau(semaineAnnee: number): Teinte {
+  const phase = phaseAnnuelle(semaineAnnee);
+  // Un cycle doux : l'eau suit la saison sans la précéder.
+  const ete = Math.max(0, Math.sin((phase - 0.15) * Math.PI * 2 * 0.5 + Math.PI * 0.0));
+  return melange(EAU_HIVER, EAU_ETE, Math.min(1, Math.max(0, ete)));
+}
+
+/**
+ * La couleur d'une cellule inondée : le sol vu à travers une lame d'eau.
+ *
+ * Ce n'est pas de l'eau libre — c'est du sol noyé, et ça doit se lire comme tel.
+ * D'où le mélange avec la couleur du sol plutôt qu'un aplat : on voit encore la
+ * litière sous vingt millimètres d'eau, et c'est ce qui distingue une flaque
+ * d'un étang.
+ */
+export function couleurInondee(sol: Teinte, debordementMm: number, semaineAnnee: number): Teinte {
+  if (debordementMm < DEBORDEMENT_VISIBLE_MM) return sol;
+  const part = Math.min(
+    1,
+    (debordementMm - DEBORDEMENT_VISIBLE_MM) / (DEBORDEMENT_PLEIN_MM - DEBORDEMENT_VISIBLE_MM),
+  );
+  return melange(sol, couleurEau(semaineAnnee), 0.75 * part);
+}
+
+/** Une cellule mérite-t-elle d'être dessinée comme mouillée ? */
+export function estInondee(debordementMm: number): boolean {
+  return debordementMm >= DEBORDEMENT_VISIBLE_MM;
+}
+
 /**
  * Signature d'une cellule quantifiée : deux cellules de même signature
  * donneront le même pixel. C'est la clé du cache, et elle doit être un ENTIER —

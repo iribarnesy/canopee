@@ -13,7 +13,9 @@ import { describe, expect, it } from "vitest";
 import { SHADOW_NORTH_OFFSET } from "../../src/engine/light";
 import {
   AMPLITUDE_PENTE,
+  AZIMUT_MODELE_DEG,
   directionOmbreEcran,
+  expositionMoyenne,
   facteurPente,
   gradient,
   longueurOmbreEcran,
@@ -71,30 +73,44 @@ describe("l'ombrage de pente", () => {
     expect(facteurPente(plat(50), COTE, 0, 0)).toBeCloseTo(1, 12);
   });
 
-  it("un versant tourné vers le SUD est plus clair qu'un versant vers le nord", () => {
-    // Le soleil est au sud dans `light.ts`. Un versant qui descend vers le sud
-    // lui fait face ; celui qui descend vers le nord se détourne.
-    const versLeNord = versantVersLeNord(0.2); // monte vers le nord → face au sud
+  it("un versant qui monte au NORD-EST fait face au soleil du modelé", () => {
+    // La lumière qui modèle est au sud-ouest (`AZIMUT_MODELE_DEG`). Un versant
+    // qui s'élève à l'opposé lui fait face.
+    const versLeNord = versantVersLeNord(0.2);
     const versLeSud = versantVersLeNord(-0.2);
-    const faceAuSoleil = facteurPente(versLeNord, COTE, 4, 4);
-    const dosAuSoleil = facteurPente(versLeSud, COTE, 4, 4);
-    expect(faceAuSoleil).toBeGreaterThan(1);
-    expect(dosAuSoleil).toBeLessThan(1);
-    expect(faceAuSoleil).toBeGreaterThan(dosAuSoleil);
+    expect(facteurPente(versLeNord, COTE, 4, 4)).toBeGreaterThan(1);
+    expect(facteurPente(versLeSud, COTE, 4, 4)).toBeLessThan(1);
   });
 
-  it("l'est et l'ouest sont éclairés pareil : le soleil n'a pas d'azimut oblique", () => {
-    // C'est la conséquence assumée d'avoir suivi le moteur plutôt que le §4,
-    // qui voulait une lumière au sud-ouest. Si ce test tombe, c'est qu'on a
-    // introduit un azimut sans le dire au moteur.
+  it("l'EST et l'OUEST ne sont PAS éclairés pareil — et c'est le point", () => {
+    // Renversement assumé d'un choix précédent. J'avais aligné l'ombrage sur le
+    // soleil plein sud du moteur, en refusant le sud-ouest du §4. Mesuré :
+    // `dz/dy` vaut 0,0900 partout sur les trois formes de relief du moteur —
+    // `plan`, `croupe`, `vallon` — qui ne diffèrent QUE par leur profil
+    // est-ouest. Un ombrage plein sud rendait donc une croupe et un vallon
+    // identiques, c'est-à-dire ne montrait aucun relief.
+    //
+    // La distinction : l'ombre PORTÉE affirme un mécanisme — qui ombrage qui —
+    // et doit suivre le moteur. L'ombrage de pente donne du volume à une
+    // surface et n'affirme rien ; un azimut oblique n'y ment sur rien.
     const versLEst: number[] = [];
     for (let y = 0; y < COTE; y++) for (let x = 0; x < COTE; x++) versLEst.push(x * 0.2);
     const versLOuest: number[] = [];
     for (let y = 0; y < COTE; y++) for (let x = 0; x < COTE; x++) versLOuest.push(-x * 0.2);
-    expect(facteurPente(versLEst, COTE, 4, 4)).toBeCloseTo(
-      facteurPente(versLOuest, COTE, 4, 4),
-      10,
+    expect(facteurPente(versLEst, COTE, 4, 4)).toBeGreaterThan(
+      facteurPente(versLOuest, COTE, 4, 4) + 0.1,
     );
+  });
+
+  it("mais l'OMBRE PORTÉE, elle, reste plein nord : les deux lumières diffèrent", () => {
+    // Le garde-fou de la distinction ci-dessus. Si un jour quelqu'un aligne les
+    // deux « pour la cohérence », ce test doit tomber.
+    expect(AZIMUT_MODELE_DEG).not.toBe(180);
+    const d = directionOmbreEcran(cam(0));
+    const pied = versEcran({ x: 4, y: 4, z: 0 }, cam(0));
+    const nord = versEcran({ x: 4, y: 5, z: 0 }, cam(0));
+    const norme = Math.hypot(nord.sx - pied.sx, nord.sy - pied.sy);
+    expect(d.sx).toBeCloseTo((nord.sx - pied.sx) / norme, 10);
   });
 
   it("reste dans une plage utilisable, même sur une pente absurde", () => {
@@ -158,5 +174,46 @@ describe("l'ombre portée", () => {
     // concurrence pour la lumière la met. C'est le seul vrai risque du module.
     const hauteur = (SOLEIL_HAUTEUR_DEG * Math.PI) / 180;
     expect(1 / Math.tan(hauteur)).toBeCloseTo(SHADOW_NORTH_OFFSET, 12);
+  });
+});
+
+describe("la pente de référence, sans laquelle l'ombrage n'ombre rien", () => {
+  it("rend zéro sur un terrain plat", () => {
+    expect(expositionMoyenne(plat(), COTE)).toBeCloseTo(0, 12);
+    expect(expositionMoyenne(plat(30), COTE)).toBeCloseTo(0, 12);
+  });
+
+  it("rend l'exposition d'un plan incliné, exactement", () => {
+    // Un versant nord-sud ne présente au soleil du sud-ouest que la projection
+    // de sa pente sur cette direction, d'où le cosinus de 45°.
+    const projection = Math.cos(Math.PI / 4);
+    expect(expositionMoyenne(versantVersLeNord(0.09), COTE)).toBeCloseTo(0.09 * projection, 6);
+    expect(expositionMoyenne(versantVersLeNord(-0.04), COTE)).toBeCloseTo(-0.04 * projection, 6);
+  });
+
+  it("neutralise un plan incliné : c'est tout l'intérêt", () => {
+    // Sans référence, l'ombrage éclaircissait la parcelle ENTIÈRE — pas du
+    // relief, une palette virée au jaune.
+    const a = versantVersLeNord(0.09);
+    const reference = expositionMoyenne(a, COTE);
+    for (let y = 1; y < COTE - 1; y++) {
+      expect(facteurPente(a, COTE, 4, y, reference)).toBeCloseTo(1, 6);
+    }
+  });
+
+  it("laisse ressortir ce qui S'ÉCARTE du plan : une butte s'éclaire encore", () => {
+    // Un versant régulier, plus une bosse au milieu. La bosse doit se voir même
+    // si le versant, lui, s'efface.
+    const a = versantVersLeNord(0.09);
+    for (let y = 0; y < COTE; y++) {
+      for (let x = 0; x < COTE; x++) {
+        const d = Math.hypot(x - 4, y - 4);
+        a[y * COTE + x] = (a[y * COTE + x] ?? 0) + Math.max(0, 2 - d * 0.6);
+      }
+    }
+    const reference = expositionMoyenne(a, COTE);
+    const versantSeul = facteurPente(versantVersLeNord(0.09), COTE, 4, 2, reference);
+    const surLaBosse = facteurPente(a, COTE, 4, 2, reference);
+    expect(Math.abs(surLaBosse - 1)).toBeGreaterThan(Math.abs(versantSeul - 1) + 0.02);
   });
 });

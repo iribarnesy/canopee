@@ -30,7 +30,7 @@ import {
   sousDivisions,
   Terrain,
 } from "../../src/render/couches/terrain";
-import { LITIERE_PLEINE_CG, NIVEAUX } from "../../src/render/palette";
+import { DEBORDEMENT_PLEIN_MM, LITIERE_PLEINE_CG, NIVEAUX } from "../../src/render/palette";
 import { profondeur, TUILE_LARGEUR_PX } from "../../src/render/projection";
 
 const COTE = 48; // trois morceaux de 16 m par côté
@@ -359,5 +359,55 @@ describe("le cache de terrain", () => {
     const tous = morceauxDeLEmprise(emprise, v);
     const dernier = tous[tous.length - 1];
     expect(`${seul.ix},${seul.iy}`).toBe(`${dernier?.ix},${dernier?.iy}`);
+  });
+});
+
+describe("l'eau libre, qui ne s'interpole pas", () => {
+  /** Une parcelle avec un ruisseau de deux cellules de large. */
+  function avecRuisseau(): DonneesSol {
+    const enEau = new Array(COTE * COTE).fill(false);
+    for (let x = 0; x < COTE; x++) {
+      enEau[20 * COTE + x] = true;
+      enEau[21 * COTE + x] = true;
+    }
+    return solPlat({ enEau });
+  }
+
+  it("entre dans la signature : sinon une crue monterait sans rien redessiner", () => {
+    const sec = solPlat();
+    const debordementMm = new Float32Array(COTE * COTE);
+    debordementMm[18 * COTE + 18] = DEBORDEMENT_PLEIN_MM;
+    expect(signatureMorceau(solPlat({ debordementMm }), 1, 1, 20)).not.toBe(
+      signatureMorceau(sec, 1, 1, 20),
+    );
+  });
+
+  it("mais le débordement est quantifié : un millimètre de plus ne recuit rien", () => {
+    const a = new Float32Array(COTE * COTE).fill(10);
+    const b = new Float32Array(COTE * COTE).fill(10.4);
+    expect(signatureMorceau(solPlat({ debordementMm: b }), 1, 1, 20)).toBe(
+      signatureMorceau(solPlat({ debordementMm: a }), 1, 1, 20),
+    );
+  });
+
+  it("se dessine à la CELLULE, en plus des quads du sol", () => {
+    // Le point : la résolution de l'eau est celle du moteur, pas celle du
+    // pavage. Un ruisseau de deux mètres fondu dans un pavé disparaîtrait.
+    const sans = fabriqueBouchon();
+    const avec = fabriqueBouchon();
+    const v = vue();
+    cuireMorceau(solPlat(), 1, 1, 20, v, sans.fabriquer);
+    cuireMorceau(avecRuisseau(), 1, 1, 20, v, avec.fabriquer);
+    // Deux rangées de 16 cellules traversent le morceau (1,1).
+    expect(avec.compte.remplissages - sans.compte.remplissages).toBe(2 * COTE_MORCEAU_M);
+  });
+
+  it("ne dessine rien là où il n'y a ni eau libre ni débordement", () => {
+    const bouchon = fabriqueBouchon();
+    const debordementMm = new Float32Array(COTE * COTE); // tout à zéro
+    const reference = fabriqueBouchon();
+    cuireMorceau(solPlat(), 1, 1, 20, vue(), reference.fabriquer);
+    cuireMorceau(solPlat({ debordementMm }), 1, 1, 20, vue(), bouchon.fabriquer);
+    expect(bouchon.compte.remplissages).toBe(reference.compte.remplissages);
   });
 });

@@ -22,6 +22,7 @@
 import { writeFileSync } from "node:fs";
 import { serieMeteoPour } from "../src/data/meteo";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
+import { cellulesEnEau } from "../src/engine/eau_surface";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
 import { altitudeParCellule } from "../src/engine/relief";
@@ -32,6 +33,27 @@ import { FRICHE_LIMON } from "../src/engine/stations";
 const GRAINE = 42;
 const COTE_M = 100;
 const DOSSIER = process.env.L0_DOSSIER ?? "spike";
+/** Nom du fichier produit ; par défaut `scene-anN.json`. */
+const NOM = process.env.L0_NOM;
+/**
+ * Variantes de STATION, pour les aperçus du lot L1. Le banc de L0 n'en a pas
+ * besoin — il mesure une charge, pas un paysage — mais le rendu, si : sans
+ * pente on ne voit pas l'ombrage de relief, et sans eau on ne voit pas l'eau.
+ */
+const PENTE_PCT = process.env.L0_PENTE ? Number(process.env.L0_PENTE) : undefined;
+const EAU = process.env.L0_EAU as "ruisseau" | "mare" | undefined;
+/**
+ * Semaines DANS L'ANNÉE à figer, en plus de la fin d'année.
+ *
+ * Sans ça on ne capture qu'au 31 décembre — soit la semaine la plus humide de
+ * l'année, celle où le sol rejette l'eau partout. Le rendu en concluait que la
+ * parcelle était inondée en permanence. Pour juger une palette de saison, il
+ * faut des instantanés PRIS à ces saisons, pas un instantané d'hiver repeint.
+ */
+const SEMAINES = (process.env.L0_SEMAINES ?? "")
+  .split(",")
+  .map((v) => Number.parseInt(v.trim(), 10))
+  .filter((n) => Number.isFinite(n) && n >= 0 && n < 52);
 const ANS = (process.env.L0_ANS ?? "50")
   .split(",")
   .map((s) => Number.parseInt(s.trim(), 10))
@@ -104,11 +126,27 @@ function recensement(an: number, fichier: string, trees: ArbreScene[]): string {
  * Les valeurs sont arrondies : trois décimales suffisent pour huit paliers de
  * quantification, et le fichier reste lisible.
  */
-function figerLeSol(state: GameState, station: Station) {
-  const arrondi = (a: readonly number[], d = 3) => Array.from(a, (v) => Number(v.toFixed(d)));
+function figerLeSol(
+  state: GameState,
+  station: Station,
+  debordementMm: Float32Array<ArrayBufferLike>,
+) {
+  const arrondi = (a: readonly number[] | Float32Array<ArrayBufferLike>, d = 3) =>
+    Array.from(a, (v) => Number(v.toFixed(d)));
   const dims = { widthM: station.coteM, heightM: station.coteM };
   return {
     ruMm: station.ruMm,
+    // L'eau libre est FIXE avec la station ; le débordement, lui, est de la
+    // semaine — les deux voyagent séparément dans le protocole, et le rendu
+    // les dessine différemment (bord franc contre lame translucide).
+    enEau: cellulesEnEau(station.eau, dims),
+    // Le débordement vient du RÉSULTAT DU TICK, pas de `state.soil.excessMm`.
+    // Les deux existent et ne disent pas la même chose : `excessMm` est la
+    // réserve de débordement du profil, une grandeur d'état, tandis que le
+    // rendu veut ce qui n'a pas pu rentrer CETTE SEMAINE — c'est ce que
+    // `soilDebordementMm` transporte (protocol.ts). Confondre les deux
+    // inondait la parcelle entière sur l'aperçu.
+    debordementMm: arrondi(debordementMm, 2),
     altitudesM: arrondi(altitudeParCellule(station.relief, dims), 2),
     waterMm: arrondi(state.soil.waterMm, 2),
     herbeCouverture: arrondi(state.soil.herbeCouverture),
@@ -120,7 +158,22 @@ function figerLeSol(state: GameState, station: Station) {
 function main() {
   // 1 ha au lieu des 50 × 50 m de la station de test : c'est la taille du
   // pire cas annoncé par l'inventaire.
-  const station: Station = { ...FRICHE_LIMON.station, coteM: COTE_M };
+  const base = FRICHE_LIMON.station;
+  const station: Station = {
+    ...base,
+    coteM: COTE_M,
+    ...(PENTE_PCT === undefined
+      ? {}
+      : { relief: { ...base.relief, pentePct: PENTE_PCT, forme: "croupe" as const } }),
+    ...(EAU === undefined
+      ? {}
+      : {
+          eau:
+            EAU === "ruisseau"
+              ? ({ type: "ruisseau", cote: "sud", bergeM: 0.3 } as const)
+              : ({ type: "mare", xRel: 0.6, yRel: 0.4, rayonM: 9, bergeM: 0.5 } as const),
+        }),
+  };
   const serie = serieMeteoPour(station.id);
   if (!serie) throw new Error(`série météo manquante : ${station.id}`);
   const weather = serieToWeeks(serie);
@@ -131,6 +184,7 @@ function main() {
   const dernierAn = ANS[ANS.length - 1] ?? 50;
   const aEcrire = new Set(ANS);
   const rapports: string[] = [];
+  let dernierDebordement: Float32Array<ArrayBufferLike> = new Float32Array(COTE_M * COTE_M);
   // La trajectoire année par année : c'est elle qui dit OÙ est le pire cas,
   // et ce n'est plus là où le premier jet l'avait trouvé.
   process.stderr.write("an\ttiges\tvivantes\tchandelles\thmax\n");
@@ -138,7 +192,23 @@ function main() {
     const base = weather[i % weather.length];
     if (!base) throw new Error("météo manquante");
     const w = meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52), normales);
-    state = advanceWeek(state, w, []).state;
+    const semaine = advanceWeek(state, w, []);
+    state = semaine.state;
+    dernierDebordement = semaine.debordementParCellule;
+    // Les semaines demandées de la DERNIÈRE année, figées au passage.
+    const anEnCours = Math.floor(i / 52) + 1;
+    if (anEnCours === dernierAn && SEMAINES.includes(i % 52)) {
+      const nom = NOM ? NOM.replace(/\.json$/, "") : `scene-an${dernierAn}`;
+      writeFileSync(
+        `${DOSSIER}/${nom}-s${i % 52}.json`,
+        `${JSON.stringify({
+          coteM: COTE_M,
+          week: i,
+          trees: figer(state),
+          sol: figerLeSol(state, station, semaine.debordementParCellule),
+        })}\n`,
+      );
+    }
     if ((i + 1) % 52 !== 0) continue;
     const an = (i + 1) / 52;
     const vivantes = state.trees.filter((t) => t.alive).length;
@@ -148,10 +218,15 @@ function main() {
     );
     if (!aEcrire.has(an)) continue;
     const trees = figer(state);
-    const fichier = `${DOSSIER}/scene-an${an}.json`;
+    const fichier = NOM ? `${DOSSIER}/${NOM}` : `${DOSSIER}/scene-an${an}.json`;
     writeFileSync(
       fichier,
-      `${JSON.stringify({ coteM: COTE_M, week: an * 52, trees, sol: figerLeSol(state, station) })}\n`,
+      `${JSON.stringify({
+        coteM: COTE_M,
+        week: an * 52,
+        trees,
+        sol: figerLeSol(state, station, dernierDebordement),
+      })}\n`,
     );
     rapports.push(recensement(an, fichier, trees));
   }
