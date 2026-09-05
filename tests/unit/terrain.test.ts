@@ -37,7 +37,11 @@ const COTE = 48; // trois morceaux de 16 m par côté
 
 /** Un contexte 2d bouchonné qui compte ce qu'on lui demande. */
 function fabriqueBouchon() {
-  const compte = { canvas: 0, remplissages: 0, traits: 0 };
+  // `traitsColores` compte les traits qui NE SONT PAS de la couleur du
+  // remplissage en cours : ce sont les seuls qui se voient, et donc les seuls
+  // qui violeraient la règle « pas de liseré sur le sol ». Les autres ne font
+  // que fermer le demi-pixel d'antialiasing entre deux surfaces jointives.
+  const compte = { canvas: 0, remplissages: 0, traits: 0, traitsColores: 0 };
   const fabriquer = (largeur: number, hauteur: number) => {
     compte.canvas++;
     const ctx = {
@@ -48,11 +52,21 @@ function fabriqueBouchon() {
       moveTo() {},
       lineTo() {},
       closePath() {},
+      // Le tapis, qui n'apparaît qu'au zoom rapproché, dessine des ellipses
+      // orientées : sans ces quatre-là, les cas à fort zoom lèvent une erreur
+      // au lieu de mesurer ce qu'ils prétendent mesurer.
+      save() {},
+      restore() {},
+      translate() {},
+      rotate() {},
+      ellipse() {},
+      arc() {},
       fill() {
         compte.remplissages++;
       },
       stroke() {
         compte.traits++;
+        if (ctx.strokeStyle !== ctx.fillStyle) compte.traitsColores++;
       },
     };
     return {
@@ -227,26 +241,56 @@ describe("la cuisson", () => {
     expect(compte.remplissages).toBe(paves * sous ** 2);
   });
 
-  it("ajoute des flancs dès que le terrain descend", () => {
+  it("n'ourle PAS une pente régulière, si raide soit-elle", () => {
+    // **Ce test disait l'inverse, et il avait tort.** Il exigeait un flanc dès
+    // que le terrain descendait, ce qui était juste tant que les quads étaient
+    // des losanges plats : sur une pente, chaque pavé décrochait de son voisin
+    // d'aval et il fallait boucher le trou. Une capture a montré ce que ça
+    // donne — un versant lisse hachuré de traits sombres réguliers, c'est-à-dire
+    // un escalier. Les quads sont désormais tracés par leurs quatre coins : la
+    // surface est continue, il n'y a plus rien à boucher, et l'ourlet devient
+    // faux là où il servait.
     const { fabriquer, compte } = fabriqueBouchon();
     const v = vue();
     const pas = cotePavage(v.cam.zoom);
     const sous = sousDivisions(TUILE_LARGEUR_PX * v.cam.zoom * pas);
     const paves = (COTE_MORCEAU_M / pas) ** 2;
+    // Une pente à 50 cm par mètre — raide, et pourtant régulière.
     const altitudesM = new Array(COTE * COTE).fill(0).map((_, i) => -Math.floor(i / COTE) * 0.5);
+    cuireMorceau(solPlat({ altitudesM }), 1, 1, 20, v, fabriquer);
+    expect(compte.remplissages).toBe(paves * sous ** 2);
+  });
+
+  it("ourle en revanche une VRAIE rupture, où il y a une paroi à montrer", () => {
+    const { fabriquer, compte } = fabriqueBouchon();
+    const v = vue();
+    const pas = cotePavage(v.cam.zoom);
+    const sous = sousDivisions(TUILE_LARGEUR_PX * v.cam.zoom * pas);
+    const paves = (COTE_MORCEAU_M / pas) ** 2;
+    // Un talus : trois mètres de chute d'un coup, au milieu du morceau.
+    const altitudesM = new Array(COTE * COTE)
+      .fill(0)
+      .map((_, i) => (Math.floor(i / COTE) >= 24 ? -3 : 0));
     cuireMorceau(solPlat({ altitudesM }), 1, 1, 20, v, fabriquer);
     expect(compte.remplissages).toBeGreaterThan(paves * sous ** 2);
   });
 
-  it("ne trace AUCUN contour sur le sol, à aucun zoom", () => {
+  it("ne trace aucun liseré VISIBLE sur le sol, à aucun zoom", () => {
     // Conclusion de Q6 renversée pour le sol : un quadrillage permanent fait
     // lire un champ labouré de loin et un fil de fer de près. Le détourage vaut
     // pour les formes — arbres, souches, troncs couchés — pas pour le fond.
+    //
+    // Le test comptait les traits et exigeait zéro. Il en reste désormais, mais
+    // **de la couleur exacte du remplissage qu'ils bordent** : leur seul rôle
+    // est de fermer le demi-pixel que l'antialiasing laisse entre deux quads
+    // voisins, sans quoi la grille reparaît en clair — le défaut même que Q6
+    // voulait éviter. Ce qu'il faut vérifier n'est donc plus « aucun trait »
+    // mais « aucun trait d'une AUTRE couleur ».
     for (const zoom of [0.3, 1, 4, 20]) {
       const bouchon = fabriqueBouchon();
       const v: Vue = { ...vue(), cam: { ...vue().cam, zoom } };
       cuireMorceau(solPlat(), 1, 1, 20, v, bouchon.fabriquer);
-      expect(bouchon.compte.traits).toBe(0);
+      expect(bouchon.compte.traitsColores).toBe(0);
     }
   });
 });
@@ -390,16 +434,21 @@ describe("l'eau libre, qui ne s'interpole pas", () => {
     );
   });
 
-  it("se dessine à la CELLULE, en plus des quads du sol", () => {
-    // Le point : la résolution de l'eau est celle du moteur, pas celle du
-    // pavage. Un ruisseau de deux mètres fondu dans un pavé disparaîtrait.
+  it("se dessine par son CONTOUR, en UNE passe, et non cellule par cellule", () => {
+    // Le test exigeait un remplissage par cellule d'eau — c'était le tracé qui
+    // faisait les marches que le retour a signalées. L'eau libre est désormais
+    // un seul chemin par morceau : tous les polygones de rive y sont accumulés
+    // puis peints d'un coup, ce qui fond les cellules voisines en une surface
+    // et supprime aussi les points d'antialiasing qui mouchetaient la mare.
+    //
+    // La résolution, elle, n'a pas changé : le contour reste calculé cellule
+    // par cellule, donc un ruisseau de deux mètres ne disparaît toujours pas.
     const sans = fabriqueBouchon();
     const avec = fabriqueBouchon();
     const v = vue();
     cuireMorceau(solPlat(), 1, 1, 20, v, sans.fabriquer);
     cuireMorceau(avecRuisseau(), 1, 1, 20, v, avec.fabriquer);
-    // Deux rangées de 16 cellules traversent le morceau (1,1).
-    expect(avec.compte.remplissages - sans.compte.remplissages).toBe(2 * COTE_MORCEAU_M);
+    expect(avec.compte.remplissages - sans.compte.remplissages).toBe(1);
   });
 
   it("ne dessine rien là où il n'y a ni eau libre ni débordement", () => {

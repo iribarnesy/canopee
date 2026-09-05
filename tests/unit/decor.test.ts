@@ -167,10 +167,41 @@ describe("les masses du décor", () => {
   });
 
   it("se raréfient avec la distance, puisque la brume les mangerait", () => {
-    const foretPartout: DecorBordures = { nord: foret, est: foret, sud: foret, ouest: foret };
-    const proche = massesDuDecor(foretPartout, COTE, 0, COTE, COTE, COTE + 20);
-    const loin = massesDuDecor(foretPartout, COTE, 0, COTE + 40, COTE, COTE + 60);
-    expect(loin.length).toBeLessThan(proche.length);
+    // Mesuré sur un côté à 40 % boisé, et pas sur la forêt à 90 % : là-bas, le
+    // groupement plaque la probabilité locale à 1 sur des pans entiers, la
+    // raréfaction est noyée, et le test ne mesurerait que le bruit du grumeau.
+    // Trois bandes de même largeur, de plus en plus loin.
+    const moyen: CoteDecor = { boise: 0.4, cultive: 0.3, urbain: 0 };
+    const partout: DecorBordures = { nord: moyen, est: moyen, sud: moyen, ouest: moyen };
+    const bande = (d: number) =>
+      massesDuDecor(partout, COTE, 0, COTE + d, COTE, COTE + d + 30).length;
+    expect(bande(70)).toBeLessThan(bande(10));
+    expect(bande(100)).toBeLessThan(bande(70));
+  });
+
+  it("se GROUPENT au lieu de s'éparpiller : un bois, pas des pois", () => {
+    // Le semis indépendant case par case donnait un motif de Poisson — des
+    // dômes isolés, régulièrement espacés, une colonie bactérienne. Le grumeau
+    // module la probabilité localement, donc la variance du nombre de masses
+    // par bloc doit dépasser celle d'un tirage indépendant, qui vaut np(1−p).
+    const moyen: CoteDecor = { boise: 0.4, cultive: 0.3, urbain: 0 };
+    const partout: DecorBordures = { nord: moyen, est: moyen, sud: moyen, ouest: moyen };
+    const cases = 25; // 5 × 5 cases par bloc
+    const comptes: number[] = [];
+    for (let bx = 0; bx < 8; bx++) {
+      for (let by = 0; by < 8; by++) {
+        const x0 = COTE + 10 + bx * 5 * MAILLE_MASSE_M;
+        const y0 = COTE + 10 + by * 5 * MAILLE_MASSE_M;
+        comptes.push(
+          massesDuDecor(partout, COTE, x0, y0, x0 + 4 * MAILLE_MASSE_M, y0 + 4 * MAILLE_MASSE_M)
+            .length,
+        );
+      }
+    }
+    const moyenne = comptes.reduce((a2, b2) => a2 + b2, 0) / comptes.length;
+    const variance = comptes.reduce((a2, b2) => a2 + (b2 - moyenne) ** 2, 0) / comptes.length;
+    const p = moyenne / cases;
+    expect(variance).toBeGreaterThan(cases * p * (1 - p));
   });
 
   it("une case rend au plus une masse, et son pied reste dans la case", () => {
