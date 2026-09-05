@@ -336,42 +336,24 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   }
   let incendies = 0;
   let arbresTues = 0;
-  let rejetsTotaux = 0;
   const tuesParLeFeu: Record<string, number> = {};
   const mortsTotales: Record<string, number> = {};
   let dernier: NonNullable<ReturnType<typeof advanceWeek>["incendie"]> | undefined;
-  /**
-   * Stocks + sorties d'un état. Un rejet de souche garde 40 cm sur pied :
-   * imputer tout l'aérien à la fumée émettait un carbone que l'arbre porte
-   * encore, et comme le carbone racinaire se déduit de la hauteur, le rabattre
-   * en faisait disparaître par ailleurs. Les deux erreurs se compensaient à
-   * moitié, donc aucune ne se voyait.
-   */
-  const bilan = (s: typeof state) => {
-    let solG = 0;
-    for (let k = 0; k < s.soil.boisAuSolCG.length; k++) solG += s.soil.boisAuSolCG[k] ?? 0;
-    return (
-      livingCarbonKg(s.trees) +
-      s.carbon.deadWoodKgC +
-      solG / 1000 +
-      s.carbon.exportedEnergyCumKgC +
-      s.carbon.oeuvreCumKgC +
-      s.carbon.emittedCumKgC
-    );
-  };
-  let creeParLesRejets = 0;
+  // Ce scénario portait aussi un relevé de carbone sur les rejets de souche.
+  // Il ne relevait rien, et pour une raison structurelle : le pin est tué mais
+  // ne rejette pas, le chêne-liège rejette mais son écorce à 0,95 ne le laisse
+  // pas tuer. `rejets` valait donc zéro sur les quarante ans, et le calcul
+  // était du code mort — ce qu'un avertissement de lint signalait sans dire
+  // pourquoi. Son bilan omettait de surcroît litière et humus, qui bougent
+  // précisément pendant un feu, donc il aurait été faux s'il s'était déclenché.
+  // L'invariant est maintenant testé sur une lande de genêts qui rejette pour
+  // de bon, avec la comptabilité complète : voir
+  // `tests/properties/carbon-conservation.test.ts`.
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
-    const avantBilan = bilan(state);
-    const avantEntrees = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC;
     const r = advanceWeek(state, w, []);
     state = r.state;
-    if (r.incendie && r.incendie.rejets > 0) {
-      rejetsTotaux += r.incendie.rejets;
-      const entrees = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC - avantEntrees;
-      creeParLesRejets = Math.max(creeParLesRejets, bilan(state) - avantBilan - entrees);
-    }
     for (const m of r.morts) {
       mortsTotales[m.especeId] = (mortsTotales[m.especeId] ?? 0) + 1;
       if (m.cause === "feu") tuesParLeFeu[m.especeId] = (tuesParLeFeu[m.especeId] ?? 0) + 1;
