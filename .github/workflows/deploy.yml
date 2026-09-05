@@ -1,0 +1,52 @@
+name: Deploy
+
+# Déclenché par la réussite de CI sur `main`, et par rien d'autre. Le garde-fou
+# est donc le même qu'avant — pas de publication si les tests échouent — mais
+# une pull request ne voit plus qu'un seul check au lieu d'un check sauté qui
+# ressemble à un échec.
+#
+# `workflow_run` a deux pièges, tous deux traités ci-dessous :
+#   - le checkout par défaut prendrait la pointe de la branche par défaut et non
+#     le commit qui a passé les tests, d'où `ref: head_sha` ;
+#   - les permissions ne s'héritent pas du workflow déclencheur, d'où leur
+#     redéclaration.
+# Et un troisième, qui ne se contourne pas : GitHub lit ce fichier depuis la
+# branche par défaut. Une modification n'a donc d'effet qu'une fois fusionnée.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# Une seule publication à la fois, et on ne coupe pas celle qui est en cours :
+# `deploy-pages` laisserait l'environnement dans un état intermédiaire.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
