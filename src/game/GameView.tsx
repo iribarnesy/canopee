@@ -1945,6 +1945,27 @@ export function GameView() {
                 </dd>
               </>
             )}
+            {(snapshot.fluxes.boisSedimentPiegeKgM2 > 0 || snapshot.fluxes.boisRetenueMm > 0) && (
+              <>
+                <dt>Bois en travers</dt>
+                <dd>
+                  retient <strong>{(snapshot.fluxes.boisRetenueMm * 52).toFixed(0)} mm/an</strong>{" "}
+                  d'eau et{" "}
+                  {/* En kg et non en tonnes : le bois mort NATUREL barre peu (un
+                      chablis repose sur ses branches), et « 0,0 t/ha » ne dirait
+                      rien de ce qui se passe. */}
+                  <strong>
+                    {(snapshot.fluxes.boisSedimentPiegeKgM2 * 520_000).toFixed(0)} kg/ha/an
+                  </strong>{" "}
+                  de terre
+                  <span className="detail">
+                    {" "}
+                    · un tronc couché en travers de la pente met l'eau en flaque, le temps qu'elle
+                    rentre, et fait déposer derrière lui ce que le ruissellement emportait
+                  </span>
+                </dd>
+              </>
+            )}
             {snapshot.fluxes.partInondee > 0 && (
               <>
                 <dt>Crue</dt>
