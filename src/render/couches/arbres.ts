@@ -377,6 +377,7 @@ function dessinerFeuillage(
   const parFeuille = elementsParFeuille(fiche.feuillage.forme);
   const tailleFeuillePx = fiche.feuillage.longueurFeuilleM * echelle;
   const detaille = tailleFeuillePx >= FEUILLE_DES_PX;
+  const aiguilles = fiche.feuillage.forme === "aiguille";
 
   // **Le rayon d'une tache se déduit de la SURFACE à couvrir, pas de la taille
   // d'une feuille**, et c'est la deuxième moitié de la correction du houppier
@@ -421,6 +422,12 @@ function dessinerFeuillage(
     // rameau porte un bouquet. Le tirage est déterministe.
     if (hacher(i, classe.palier, 0x77c1) > fiche.feuillage.densite * partFoliaire) continue;
     const bout = versPx(s.arrivee);
+    // La direction du rameau, à l'écran : c'est elle qui oriente une brosse
+    // d'aiguilles. Un feuillu n'en a pas besoin, ses bouquets sont ronds.
+    const pied = versPx(s.depart);
+    const dx = bout.sx - pied.sx;
+    const dy = bout.sy - pied.sy;
+    const norme = Math.hypot(dx, dy) || 1;
     // **La masse est TOUJOURS posée, et les feuilles viennent dessus.** C'est la
     // formulation exacte du §4 : « vu de loin ça fait une masse ; vu de près on
     // distingue les feuilles ». Le premier jet en faisait une alternative — ou
@@ -441,43 +448,91 @@ function dessinerFeuillage(
     // capture montrait au zoom rapproché. Un bord irrégulier ne coûte que
     // quelques sommets de plus et rend au feuillage sa silhouette dentelée,
     // même quand une feuille fait trois pixels et qu'on ne peut pas la dessiner.
-    ctx.beginPath();
-    for (let n = 0; n < SOMMETS_TACHE; n++) {
-      const a = (n / SOMMETS_TACHE) * Math.PI * 2;
-      const r = calibre * (0.72 + 0.5 * hacher(i * 31 + n, classe.palier, 0x22a7));
-      const px = bout.sx + Math.cos(a) * r;
-      const py = bout.sy + Math.sin(a) * r * 0.82;
-      if (n === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+    if (aiguilles) {
+      // **Une BROSSE, pas une boule.** Un conifère ne porte pas de bouquets
+      // ronds : ses aiguilles garnissent le rameau sur toute sa longueur, en
+      // brosse allongée dans son axe. Dessiné en taches rondes comme un
+      // feuillu, le pin sylvestre sortait — c'est le mot du retour — comme
+      // « un feuillu avec des blobs verts », et sa famille entière avec lui.
+      // Le port étagé ne suffit pas : ce qui dit « conifère » à l'œil, c'est la
+      // texture du feuillage autant que la forme de l'arbre.
+      const longueur = Math.max(calibre * 1.4, norme * 0.62);
+      const epaisseur = calibre * 0.62;
+      const mx = (bout.sx + pied.sx) / 2;
+      const my = (bout.sy + pied.sy) / 2;
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(Math.atan2(dy, dx));
+      ctx.beginPath();
+      // Un fuseau à bords irréguliers : les aiguilles dépassent.
+      for (let n = 0; n < SOMMETS_TACHE * 2; n++) {
+        const t = n / (SOMMETS_TACHE * 2);
+        const a = t * Math.PI * 2;
+        const jitter = 0.7 + 0.6 * hacher(i * 37 + n, classe.palier, 0x5c3d);
+        ctx.lineTo(Math.cos(a) * longueur * 0.5, Math.sin(a) * epaisseur * jitter);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else {
+      // **Un contour DÉCHIQUETÉ, pas une ellipse.** Une ellipse est une bulle,
+      // et un houppier fait de bulles se lit comme du brocoli — c'est ce que la
+      // capture montrait au zoom rapproché. Un bord irrégulier ne coûte que
+      // quelques sommets de plus et rend au feuillage sa silhouette dentelée,
+      // même quand une feuille fait trois pixels et qu'on ne peut pas la
+      // dessiner.
+      ctx.beginPath();
+      for (let n = 0; n < SOMMETS_TACHE; n++) {
+        const a = (n / SOMMETS_TACHE) * Math.PI * 2;
+        const r = calibre * (0.72 + 0.5 * hacher(i * 31 + n, classe.palier, 0x22a7));
+        const px = bout.sx + Math.cos(a) * r;
+        const py = bout.sy + Math.sin(a) * r * 0.82;
+        if (n === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
     }
-    ctx.closePath();
-    ctx.fill();
     if (!detaille) continue;
     for (let k = 0; k < fiche.feuillage.feuillesParBouquet; k++) {
       const a1 = hacher(i * 131 + k, classe.variante, 0x1d3b);
       const a2 = hacher(i, k * 17 + classe.palier, 0x9e21);
       // Les feuilles d'un bouquet s'écartent autour du bout du rameau.
-      const angle = a1 * Math.PI * 2;
+      // Une aiguille se pose LE LONG du rameau, une feuille autour de son bout.
+      const angle = aiguilles ? Math.atan2(dy, dx) + (a1 - 0.5) * 0.9 : a1 * Math.PI * 2;
       const rayon = tailleFeuillePx * 0.55 * a2;
-      const cx = bout.sx + Math.cos(angle) * rayon;
-      const cy = bout.sy + Math.sin(angle) * rayon * 0.7;
+      const cx = aiguilles
+        ? pied.sx + dx * a2 + Math.cos(angle + Math.PI / 2) * rayon * 0.6
+        : bout.sx + Math.cos(angle) * rayon;
+      const cy = aiguilles
+        ? pied.sy + dy * a2 + Math.sin(angle + Math.PI / 2) * rayon * 0.6
+        : bout.sy + Math.sin(angle) * rayon * 0.7;
       // Une feuille plus claire quand elle est au-dessus, plus sombre dessous :
       // c'est la seule modulation qui donne du volume à une masse d'aplats.
       const clarte = 0.86 + 0.28 * (1 - (cy - bout.sy) / (tailleFeuillePx + 1e-6) / 2);
       ctx.fillStyle = versCss(eclairer(teinte, Math.min(1.18, Math.max(0.78, clarte))));
+      // **Une aiguille est ORIENTÉE, une feuille non.** Les contours sont
+      // normalisés pointe en haut ; les laisser tels quels donnait une brosse
+      // de pin dont toutes les aiguilles montaient à la verticale, quel que
+      // soit l'angle du rameau qui les porte. Une feuille tombée peut être de
+      // travers, une aiguille de pin sort du rameau.
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (aiguilles) ctx.rotate(angle + Math.PI / 2);
       for (let e = 0; e < parFeuille; e++) {
         // Les aiguilles vont PAR DEUX : c'est la signature du pin sylvestre.
         const ecart = parFeuille > 1 ? (e - 0.5) * 0.22 : 0;
         ctx.beginPath();
         contour.forEach((p, n) => {
-          const px = cx + (p.x + ecart) * tailleFeuillePx;
-          const py = cy - p.y * tailleFeuillePx;
+          const px = (p.x + ecart) * tailleFeuillePx;
+          const py = -p.y * tailleFeuillePx;
           if (n === 0) ctx.moveTo(px, py);
           else ctx.lineTo(px, py);
         });
         ctx.closePath();
         ctx.fill();
       }
+      ctx.restore();
     }
   }
 }

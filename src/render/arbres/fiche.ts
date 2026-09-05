@@ -95,6 +95,21 @@ export interface Branchement {
    * ce qui les sépare à l'œil.
    */
   tortuosite: number;
+  /**
+   * Branchement en VERTICILLES : les branches partent par couronnes réparties
+   * autour de la flèche, à la même hauteur, et non une à une.
+   *
+   * **C'est la différence de structure entre un conifère et un feuillu**, et
+   * elle ne se règle pas avec les six autres nombres. Un pin fait chaque année
+   * une pousse de flèche puis une couronne de branches à son sommet ; entre
+   * deux couronnes, l'axe est nu. Un feuillu ramifie partout. Sans ce drapeau,
+   * le pin sylvestre sortait — dixit le retour — « comme un feuillu avec des
+   * blobs verts », et le port étagé de `port.ts` n'y changeait rien : la forme
+   * de l'enveloppe ne remplace pas la structure de la ramure.
+   *
+   * Absent = branchement continu, le cas des feuillus.
+   */
+  verticille?: boolean;
 }
 
 /**

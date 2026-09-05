@@ -316,8 +316,20 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         const prolonge = k === 0;
         const alea = hacher(sujet.id * 7919 + segments.length, k, 0x51a3);
         const tortu = (alea - 0.5) * 2 * b.tortuosite;
+        // **En verticille, une branche part de la flèche à l'horizontale et
+        // reste À PLAT.** Hors de la flèche, elle ne se redresse pas : elle
+        // s'ouvre en éventail dans son propre plan, ce qui donne l'étage. Un
+        // feuillu, lui, garde le même angle de branchement partout.
+        const angleLateral = b.verticille && !axe.surLaFleche ? b.angleDeg * 0.34 : b.angleDeg;
+        // **La flèche d'un conifère est DROITE**, et pas « un peu moins tordue
+        // que ses branches ». Prendre une fraction de l'angle de branchement
+        // donnait treize degrés par pousse à un pin dont les branches partent à
+        // soixante-douze : au bout de quatre étages la flèche avait quitté
+        // l'axe, et l'arbre n'avait plus de tronc à mi-hauteur. Le contrôle
+        // apical d'un conifère est autrement plus fort que ça.
+        const angleApical = b.verticille ? 2 : b.angleDeg * 0.18;
         const inclinaison =
-          ((prolonge ? b.angleDeg * 0.18 : b.angleDeg) * Math.PI) / 180 + tortu * 0.35;
+          ((prolonge ? angleApical : angleLateral) * Math.PI) / 180 + tortu * 0.35;
         // **L'azimut est propre à CHAQUE nœud**, et le premier jet ne l'était
         // pas : le décalage de base était tiré de `(id, ordre, k)`, donc tous
         // les axes d'un même ordre partaient dans la même direction. Le
@@ -328,9 +340,17 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         //
         // La divergence sépare les filles d'un même nœud ; le décalage tiré du
         // nœud lui-même évite que deux nœuds superposés fassent une palissade.
+        // En verticille, les branches d'une même couronne se répartissent
+        // RÉGULIÈREMENT autour de l'axe — c'est ce qui fait la couronne — au
+        // lieu de suivre la divergence phyllotaxique d'un feuillu.
         const azimut =
-          ((k * b.divergenceDeg + alea * b.divergenceDeg * 0.5) * Math.PI) / 180 +
-          hacher(sujet.id + segments.length * 2654435761, axe.ordre * 31 + k, 0x2c7f) * Math.PI * 2;
+          b.verticille && axe.surLaFleche && !prolonge
+            ? ((k - 1) / Math.max(1, b.branchesParNoeud - 1)) * Math.PI * 2 +
+              hacher(sujet.id + segments.length * 2654435761, axe.ordre, 0x2c7f) * Math.PI * 2
+            : ((k * b.divergenceDeg + alea * b.divergenceDeg * 0.5) * Math.PI) / 180 +
+              hacher(sujet.id + segments.length * 2654435761, axe.ordre * 31 + k, 0x2c7f) *
+                Math.PI *
+                2;
         // **Le ratio de prolongement dépend de qui prolonge.** Sur la flèche, la
         // fille apicale reprend `q` — c'est ce qui fait monter l'arbre. Sur une
         // branche latérale, elle ne reprend que `ratioLongueur`, franchement

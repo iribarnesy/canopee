@@ -33,6 +33,10 @@ export const PIN_SYLVESTRE: FicheGraphique = {
     conicite: 0.92,
     // Nulle ou presque : un pin ne tortille pas son axe.
     tortuosite: 0.05,
+    // **Le trait qui en fait un conifère.** Une pousse de flèche par an, puis
+    // une couronne de branches à son sommet ; entre deux couronnes, l'axe est
+    // nu. Aucun réglage d'angle ne produit ça sur un branchement continu.
+    verticille: true,
   },
   // Une aiguille est longue et fine ; le « bouquet » est ici la brosse de
   // l'année, d'où le compte élevé.

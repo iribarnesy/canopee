@@ -349,3 +349,72 @@ describe("la flèche et les branches ne poussent pas pareil", () => {
     expect(bandes.slice(6).reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
   });
 });
+
+describe("le verticille : ce qui fait un conifère", () => {
+  const conifere: Branchement = {
+    angleDeg: 72,
+    divergenceDeg: 90,
+    ratioLongueur: 0.62,
+    dominance: 0.74,
+    branchesParNoeud: 3,
+    conicite: 0.92,
+    tortuosite: 0.05,
+    verticille: true,
+  };
+
+  it("répartit les branches d'une couronne RÉGULIÈREMENT autour de l'axe", () => {
+    // Un feuillu suit une divergence phyllotaxique et empile ses branches en
+    // spirale ; un conifère en pose une couronne d'un coup. Sans ce cas, le pin
+    // sylvestre sortait « comme un feuillu avec des blobs verts » — et le port
+    // étagé de `port.ts` n'y changeait rien : la forme de l'enveloppe ne
+    // remplace pas la structure de la ramure.
+    const arbre = engendrer(sujet({ hauteurM: 16 }), conifere);
+    // Les branches d'ordre 2 partant d'un même point : c'est une couronne.
+    const parPoint = new Map<string, number[]>();
+    for (const s of arbre) {
+      if (s.ordre !== 2) continue;
+      const cle = `${s.depart.x.toFixed(4)}|${s.depart.y.toFixed(4)}|${s.depart.z.toFixed(4)}`;
+      const azimut = Math.atan2(s.arrivee.z - s.depart.z, s.arrivee.x - s.depart.x);
+      parPoint.set(cle, [...(parPoint.get(cle) ?? []), azimut]);
+    }
+    const couronnes = [...parPoint.values()].filter((a) => a.length >= 2);
+    expect(couronnes.length).toBeGreaterThan(0);
+    // Dans une couronne, les branches ne sont pas toutes du même côté.
+    for (const azimuts of couronnes) {
+      const ecart = Math.max(...azimuts) - Math.min(...azimuts);
+      expect(ecart).toBeGreaterThan(0.5);
+    }
+  });
+
+  it("garde un axe DROIT : c'est la flèche d'un conifère", () => {
+    // La flèche, c'est la chaîne qui reste sur l'axe : ses deux extrémités
+    // sont près du centre. Les latérales, elles, s'en écartent dès leur
+    // premier segment, et leurs propres filles peuvent redescendre — ce qui
+    // est normal pour une branche et ne dit rien de la flèche.
+    const arbre = engendrer(sujet({ hauteurM: 16 }), conifere);
+    const fleche = arbre.filter(
+      (s) =>
+        s.ordre >= 1 &&
+        Math.hypot(s.depart.x, s.depart.z) < 0.2 &&
+        Math.hypot(s.arrivee.x, s.arrivee.z) < 0.2,
+    );
+    expect(fleche.length).toBeGreaterThan(2);
+    for (const s of fleche) {
+      expect(s.arrivee.y - s.depart.y).toBeGreaterThan(0);
+    }
+  });
+
+  it("donne une silhouette différente du même arbre sans verticille", () => {
+    // Mesuré sur les POSITIONS et non sur l'encombrement : les deux arbres
+    // peuvent avoir par hasard le même rayon maximal — c'est arrivé, à seize
+    // décimales — alors que leurs ramures n'ont rien à voir.
+    const avec = engendrer(sujet({ hauteurM: 16 }), conifere);
+    const sans = engendrer(sujet({ hauteurM: 16 }), { ...conifere, verticille: false });
+    const positions = (a: typeof avec) => a.map((s) => `${s.arrivee.x.toFixed(4)}`).join(",");
+    expect(positions(avec)).not.toBe(positions(sans));
+  });
+
+  it("reste déterministe", () => {
+    expect(engendrer(sujet(), conifere)).toEqual(engendrer(sujet(), conifere));
+  });
+});
