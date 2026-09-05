@@ -14,9 +14,11 @@ import { SHADOW_NORTH_OFFSET } from "../../src/engine/light";
 import {
   AMPLITUDE_PENTE,
   AZIMUT_MODELE_DEG,
+  courbure,
   directionOmbreEcran,
   expositionMoyenne,
   facteurPente,
+  facteurRelief,
   gradient,
   longueurOmbreEcran,
   SOLEIL_HAUTEUR_DEG,
@@ -215,5 +217,87 @@ describe("la pente de référence, sans laquelle l'ombrage n'ombre rien", () => 
     const versantSeul = facteurPente(versantVersLeNord(0.09), COTE, 4, 2, reference);
     const surLaBosse = facteurPente(a, COTE, 4, 2, reference);
     expect(Math.abs(surLaBosse - 1)).toBeGreaterThan(Math.abs(versantSeul - 1) + 0.02);
+  });
+});
+
+describe("la courbure, qui rend le relief lisible", () => {
+  const coteM = 40;
+
+  /** Un plan incliné pur : pente constante, aucune courbure nulle part. */
+  function plan(pente: number): number[] {
+    return Array.from({ length: coteM * coteM }, (_, i) => Math.floor(i / coteM) * pente);
+  }
+
+  /** Le même plan, creusé d'un talweg le long de la colonne du milieu. */
+  function talweg(pente: number, creuxM: number): number[] {
+    const z = plan(pente);
+    for (let y = 0; y < coteM; y++) {
+      for (let x = 0; x < coteM; x++) {
+        const d = Math.abs(x - coteM / 2);
+        if (d < 6) z[y * coteM + x] = (z[y * coteM + x] ?? 0) - creuxM * (1 - d / 6);
+      }
+    }
+    return z;
+  }
+
+  it("est nulle sur un plan, même très incliné", () => {
+    const z = plan(0.2);
+    expect(courbure(z, coteM, 20, 20)).toBeCloseTo(0, 9);
+  });
+
+  it("est négative dans un creux et positive sur ses épaules", () => {
+    const z = talweg(0.09, 0.5);
+    expect(courbure(z, coteM, 20, 20)).toBeLessThan(0);
+    expect(courbure(z, coteM, 26, 20)).toBeGreaterThan(0);
+  });
+
+  it("**c'est elle qui voit ce que la pente ne peut pas voir**", () => {
+    // Le défaut signalé : « relief peu lisible ». On compare le FOND du
+    // talweg au plan qui l'entoure — deux points où la pente est rigoureusement
+    // la même (le fond est symétrique, donc `dz/dx` y est nul comme sur le
+    // plan). L'ombrage de pente les rend donc identiques et le talweg est
+    // invisible. La courbure, elle, les sépare.
+    const z = talweg(0.09, 0.5);
+    const reference = expositionMoyenne(z, coteM);
+    const creuxPente = facteurPente(z, coteM, 20, 20, reference);
+    const plainePente = facteurPente(z, coteM, 34, 20, reference);
+    expect(creuxPente).toBeCloseTo(plainePente, 9);
+
+    const creux = facteurRelief(z, coteM, 20, 20, reference);
+    const plaine = facteurRelief(z, coteM, 34, 20, reference);
+    expect(plaine - creux).toBeGreaterThan(0.15);
+  });
+
+  it("laisse un plan uni : elle n'invente pas de relief là où il n'y en a pas", () => {
+    const z = plan(0.09);
+    const reference = expositionMoyenne(z, coteM);
+    for (const [x, y] of [
+      [10, 10],
+      [20, 30],
+      [30, 15],
+    ] as const) {
+      expect(facteurRelief(z, coteM, x, y, reference)).toBeCloseTo(1, 6);
+    }
+  });
+
+  it("sature, donc un accident violent n'éteint pas la palette", () => {
+    const z = talweg(0.09, 20);
+    const reference = expositionMoyenne(z, coteM);
+    const f = facteurRelief(z, coteM, 20, 20, reference);
+    expect(f).toBeGreaterThan(0.4);
+    expect(f).toBeLessThan(2);
+  });
+
+  it("ne dépend pas de l'orientation du terrain", () => {
+    // Une butte ronde vue par ses quatre axes : même courbure, sinon le
+    // relief se lirait différemment selon qu'on est nord-sud ou est-ouest.
+    const z = Array.from({ length: coteM * coteM }, (_, i) => {
+      const x = i % coteM;
+      const y = Math.floor(i / coteM);
+      return Math.exp(-(((x - 20) ** 2 + (y - 20) ** 2) / 80));
+    });
+    const a = courbure(z, coteM, 26, 20);
+    const b = courbure(z, coteM, 20, 26);
+    expect(a).toBeCloseTo(b, 6);
   });
 });

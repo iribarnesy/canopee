@@ -19,6 +19,7 @@ import {
   indexDensite,
   MODE_ACCUMULATION,
   MODE_COMPOSITION,
+  MODE_LIMITE,
   ombreDeLArbre,
   ombresAPoser,
 } from "../../src/render/couches/ombres";
@@ -168,5 +169,29 @@ describe("la liste des ombres", () => {
       vue(),
     );
     expect(liste).toHaveLength(2);
+  });
+});
+
+describe("les ombres s'arrêtent au terrain", () => {
+  it("le masque est découpé en `destination-in` avant d'être multiplié", () => {
+    // Le défaut qu'on corrige : un arbre du bord projetait son ombre sur le
+    // CIEL, et la parcelle avait une frange grise qui la faisait flotter.
+    // Découper le masque à la silhouette du sol règle le cas de n'importe quel
+    // bord, y compris irrégulier, sans avoir à le décrire.
+    expect(MODE_LIMITE).toBe("destination-in");
+  });
+
+  it("une ombre PEUT tomber hors parcelle — c'est la composition qui la borne", () => {
+    // On ne la supprime pas au calcul : un arbre du bord nord a bien une ombre
+    // qui sort, et le jour où il y aura un décor derrière, elle doit s'y poser.
+    const v = vue();
+    const auBord = ombreDeLArbre(arbre({ x: 50, y: COTE - 0.5, heightM: 20 }), v);
+    expect(auBord).toBeDefined();
+    if (!auBord) return;
+    const limite = versEcranVue({ x: 50, y: COTE, z: 0 }, v);
+    // Le soleil est au sud : l'ombre part vers le nord, donc au-delà du bord.
+    // Dans cette projection `sy` croît avec `x + y` : aller vers le nord fait
+    // DESCENDRE à l'écran, donc la tache est plus bas que la limite.
+    expect(auBord.sy).toBeGreaterThan(limite.sy);
   });
 });

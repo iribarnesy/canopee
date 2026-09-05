@@ -108,8 +108,18 @@ const SOL_MOUILLE: Teinte = { r: 92, g: 76, b: 58 };
 const HERBE_PRINTEMPS: Teinte = { r: 106, g: 140, b: 72 };
 /** Herbe d'été mûre : elle jaunit sur pied avant même de manquer d'eau. */
 const HERBE_ETE: Teinte = { r: 138, g: 148, b: 78 };
-/** Foin sec : la biomasse reste, la chlorophylle est partie. */
-const HERBE_PAILLE: Teinte = { r: 178, g: 160, b: 104 };
+/**
+ * Foin sec : la biomasse reste, la chlorophylle est partie.
+ *
+ * Ramené de 178/160/104 à 164/152/104. Le foin est bien plus clair que l'herbe
+ * verte, c'est vrai, mais la biomasse sur pied est une grandeur TRÈS
+ * contrastée d'une cellule à l'autre — sous un fourré rien, dans une trouée
+ * tout — et un écart de quarante niveaux de clarté sur une grandeur pareille
+ * ressort en filaments pâles qui se lisent comme du lichen plutôt que comme un
+ * pré. Même leçon que pour `SOL_MOUILLE`, et même remède : le contraste doit
+ * être proportionné au BRUIT de la grandeur, pas à l'écart réel des matières.
+ */
+const HERBE_PAILLE: Teinte = { r: 164, g: 152, b: 104 };
 /** Herbe d'hiver : elle ne meurt pas sous nos latitudes, elle se ternit. */
 const HERBE_HIVER: Teinte = { r: 104, g: 116, b: 88 };
 

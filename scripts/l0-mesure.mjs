@@ -52,7 +52,7 @@ console.log(`banc : ${URL_BANC}`);
 await page.goto(URL_BANC, { waitUntil: "load" });
 await page.waitForFunction(() => document.title.startsWith("L0 "), null, { timeout: 900000 });
 const texte = await page.locator("#resultat").innerText();
-console.log("\n================ RÉSULTAT ================\n" + texte);
+console.log(`\n================ RÉSULTAT ================\n${texte}`);
 writeFileSync(`${DIR}/resultat.txt`, texte);
 // Une capture par vignette : c'est ce qui tranche Q6.
 // On exporte les canvas DEPUIS la page : la capture d'écran de Playwright

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Canopée — aperçu du sol</title>
+    <style>
+      body { font: 14px system-ui; margin: 0; padding: 12px; background: #22251c; color: #efeade; }
+      h1 { font-size: 1rem; margin: 0 0 8px; font-weight: 600; }
+      .vignette { display: inline-block; margin: 4px 8px 12px 0; vertical-align: top; }
+      .vignette figcaption { font-size: 12px; color: #a8a394; margin-top: 3px; }
+      canvas { display: block; background: #b9c2bd; }
+    </style>
+  </head>
+  <body>
+    <h1>Lot L1 — le sol, les ombres et le hors-parcelle</h1>
+    <div id="etat">chargement…</div>
+    <div id="captures"></div>
+    <script type="module" src="/src/spike/apercu.ts"></script>
+  </body>
+</html>

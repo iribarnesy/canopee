@@ -25,6 +25,7 @@ import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
+import { getPaysage } from "../src/engine/paysage";
 import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
@@ -152,6 +153,16 @@ function figerLeSol(
     herbeCouverture: arrondi(state.soil.herbeCouverture),
     herbeBiomasse: arrondi(state.soil.herbeBiomasse),
     litiereCG: arrondi(state.soil.litterCG, 1),
+    // Les quatre bordures, réduites à ce dont le décor a besoin : trois parts
+    // par côté. Le rendu n'a que faire des semenciers ou du gibier, et lui
+    // passer le `Paysage` entier lui donnerait accès à des données de moteur
+    // qu'il n'a aucune raison de connaître (D6).
+    bordures: Object.fromEntries(
+      (["nord", "est", "sud", "ouest"] as const).map((cote) => {
+        const p = getPaysage(station.bordures[cote]);
+        return [cote, { boise: p.partBoisee, cultive: p.partCultivee, urbain: p.partUrbaine }];
+      }),
+    ),
   };
 }
 

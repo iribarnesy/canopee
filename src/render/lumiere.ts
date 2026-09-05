@@ -245,3 +245,100 @@ export function longueurOmbreEcran(hauteurM: number, cam: Camera): number {
   const bout = versEcran({ x: 0, y: decalageM, z: 0 }, cam);
   return Math.hypot(bout.sx - pied.sx, bout.sy - pied.sy);
 }
+
+/**
+ * Rayon, en mètres, sur lequel se mesure la courbure du terrain.
+ *
+ * Quatre mètres : assez large pour ignorer le bruit de cellule à cellule, assez
+ * étroit pour qu'un talweg de dix mètres de large ressorte entier. En dessous,
+ * on ombre le bruit ; au-dessus, une rupture de pente se dilue.
+ */
+export const RAYON_COURBURE_M = 4;
+
+/**
+ * Courbure du terrain, en mètres : de combien la cellule dépasse la moyenne de
+ * ses voisines à `RAYON_COURBURE_M`.
+ *
+ * Positif sur une croupe, négatif dans un creux, nul sur un plan — **y compris
+ * sur un plan incliné**, et c'est tout l'intérêt. Le facteur de pente ne peut
+ * rien dire d'un versant régulier : sa dérivée est constante, donc son
+ * éclairement aussi. La courbure, elle, est la dérivée SECONDE : elle ne voit
+ * pas l'inclinaison mais les accidents, qui sont précisément ce que l'œil
+ * cherche pour lire un relief.
+ */
+export function courbure(
+  altitudesM: readonly number[],
+  coteM: number,
+  x: number,
+  y: number,
+  rayon = RAYON_COURBURE_M,
+): number {
+  const z = (cx: number, cy: number): number => {
+    const bx = Math.min(coteM - 1, Math.max(0, cx));
+    const by = Math.min(coteM - 1, Math.max(0, cy));
+    return altitudesM[by * coteM + bx] ?? 0;
+  };
+  const ici = z(x, y);
+  const r = Math.max(1, Math.round(rayon));
+  let somme = 0;
+  // Huit voisins sur le cercle : les quatre axes et les quatre diagonales. Les
+  // diagonales sont ramenées au même rayon pour que la mesure ne dépende pas
+  // de l'orientation du terrain.
+  const d = Math.max(1, Math.round(r / Math.SQRT2));
+  for (const [dx, dy] of [
+    [r, 0],
+    [-r, 0],
+    [0, r],
+    [0, -r],
+    [d, d],
+    [d, -d],
+    [-d, d],
+    [-d, -d],
+  ] as const) {
+    somme += z(x + dx, y + dy);
+  }
+  return ici - somme / 8;
+}
+
+/**
+ * Courbure, en mètres, au-delà de laquelle l'effet sature.
+ *
+ * Mesurée sur les stations existantes : les accidents utiles — une croupe, un
+ * fond de vallon — pèsent quelques centimètres sur quatre mètres. Saturer à
+ * douze centimètres rend ces accidents pleinement visibles sans faire virer au
+ * blanc la moindre bosse de terrier.
+ */
+export const COURBURE_SATURATION_M = 0.12;
+
+/**
+ * Amplitude de l'ombrage de courbure.
+ *
+ * Plus fort que celui de pente, parce qu'il porte l'essentiel de la lecture :
+ * sur nos reliefs planaires, la pente ne dit presque rien et c'est la courbure
+ * qui dessine la forme du terrain.
+ */
+export const AMPLITUDE_COURBURE = 0.3;
+
+/**
+ * Facteur d'éclairement complet d'une cellule : la pente ET la courbure.
+ *
+ * **C'est la réponse à « relief peu lisible ».** L'ombrage de pente seul
+ * échouait pour une raison structurelle expliquée dans `expositionMoyenne` :
+ * référencé à la pente moyenne, il ne montre que les écarts d'INCLINAISON, et
+ * un versant régulier n'en a pas. On voyait donc un plan uni là où le terrain a
+ * des formes.
+ *
+ * Les deux facteurs se multiplient parce qu'ils disent deux choses
+ * indépendantes — d'où vient la lumière, et comment la surface se creuse — et
+ * qu'un produit de facteurs de clarté est ce que `eclairer` attend.
+ */
+export function facteurRelief(
+  altitudesM: readonly number[],
+  coteM: number,
+  x: number,
+  y: number,
+  reference = 0,
+): number {
+  const c = Math.min(1, Math.max(-1, courbure(altitudesM, coteM, x, y) / COURBURE_SATURATION_M));
+  return facteurPente(altitudesM, coteM, x, y, reference) * (1 + AMPLITUDE_COURBURE * c);
+}

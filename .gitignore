@@ -8,3 +8,7 @@ dist/
 
 # Sorties du banc L0 : mesures et captures, régénérables en une commande.
 l0-mesures/
+
+# Scènes de l'aperçu L1 : un mégaoctet par instantané, régénérables par
+# `npm run l0:scene`.
+spike/apercu/

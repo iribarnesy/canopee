@@ -113,6 +113,39 @@ export const MODE_ACCUMULATION = "darken" as const;
 export const MODE_COMPOSITION = "multiply" as const;
 
 /**
+ * **Et une quatrième étape, qui manquait : borner les ombres au terrain.**
+ *
+ * Un arbre planté au bord de la parcelle projette son ombre au-delà de la
+ * limite. Composée sur toute la surface de l'écran, cette ombre se posait sur
+ * le CIEL — d'où une frange grise qui débordait du plateau et le faisait
+ * flotter. Le défaut se voyait tout de suite et je ne l'avais pas vu ; il a
+ * fallu qu'on me le dise.
+ *
+ * La correction ne demande pas de découper les ombres une par une, et elle ne
+ * demande pas non plus de calque supplémentaire. **C'est le MASQUE qu'on
+ * découpe**, une fois qu'il est accumulé :
+ *
+ * 4. le masque reçoit la silhouette du sol en `destination-in` — il ne reste
+ *    du masque que ce qui recouvre quelque chose de solide, le reste devient
+ *    transparent.
+ *
+ * Le `multiply` de l'étape 3 vient alors APRÈS, et hors du sol il ne fait plus
+ * rien : une source transparente laisse la destination intacte. C'est ce détail
+ * qui interdisait la solution évidente — composer le masque en `source-atop`
+ * sur un calque de terrain — car `source-atop` impose le mélange normal et
+ * perdrait le `multiply`. Un mode de fusion et un mode de découpe ne peuvent
+ * pas tenir dans la même passe ; on les met donc dans deux passes, et la
+ * découpe est celle qui coûte le moins.
+ *
+ * La silhouette n'est pas un objet de plus à fabriquer : le terrain est déjà
+ * dessiné sur un calque transparent — c'est ce calque qu'on passe en
+ * `destination-in`. Et le jour où le décor du §5.8 est dessiné sur ce même
+ * calque, l'ombre d'un arbre de bordure tombe dessus au lieu de disparaître,
+ * sans une ligne de plus.
+ */
+export const MODE_LIMITE = "destination-in" as const;
+
+/**
  * Cuit les taches d'ombre : des disques gris à bord doux, sur fond BLANC.
  *
  * Le gris et non l'alpha, parce que la composition passe par `darken` puis
