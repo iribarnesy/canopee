@@ -44,6 +44,7 @@ import {
   chargerProfils,
   enregistrerProfil,
   lireProfilExporte,
+  PROFILS_LIVRES,
   type ProfilDepart,
   supprimerProfil,
 } from "./profils";
@@ -1113,6 +1114,22 @@ function StartScreen({
           >
             Exporter en JSON
           </button>
+        </div>
+        <div className="seg" style={{ marginBottom: 8 }}>
+          {PROFILS_LIVRES.map((p) => (
+            <button
+              key={p.nom}
+              type="button"
+              style={{ ...btn(), marginRight: 10 }}
+              onClick={() => {
+                appliquerProfil(p);
+                setMessageProfil(`« ${p.nom} » chargé — profil livré, la graine reste à vous.`);
+              }}
+              title="Situation réelle livrée avec le jeu : elle se charge, se joue, et se modifie sans être écrasée"
+            >
+              📍 {p.nom}
+            </button>
+          ))}
         </div>
         {profils.length > 0 && (
           <div className="seg" style={{ marginBottom: 8 }}>

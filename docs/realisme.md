@@ -1223,6 +1223,25 @@ reprendre sur des tables de production. C'est fait : voir « les hauteurs
 absolues : le moteur se cale sur les tables de production » plus haut. Ce qui reste ici,
 la sénescence hors de la boucle, est un raffinement à côté.
 
+## Les profils livrés : un cas réel, prêt à éprouver
+
+Décrire une situation réelle demande de poser une vingtaine de réglages —
+terrain, entourage, relief, nappe, part du bassin, scénario climatique — et la
+moindre erreur entre deux essais invalide la comparaison. Le jeu livre donc des
+profils tout faits, à côté de ceux qu'on enregistre soi-même.
+
+Le premier est **Saumos 2022 (Gironde)** : sable landais acide, nappe perchée à
+quatre mètres, tout le bassin logé à la même enseigne — c'est un incendie de
+massif, pas un feu de parcelle entourée de vert — et une trajectoire SSP2-4.5.
+Ce sont exactement les paramètres de `saumos.test.ts`, qui annonçait d'ailleurs
+« le profil de départ, celui qu'on enregistre sous *Saumos 2022* » sans que
+personne ne puisse le charger.
+
+**La graine n'en fait pas partie**, et c'est délibéré : sur ce cas-là, la même
+composition brûle de 0 à 4 500 m² selon le tirage. C'est en changeant la graine
+qu'on distingue ce qui tient du terrain de ce qui tient de la chance, et le
+profil est fait pour être rejoué.
+
 ## Règle de travail
 
 À chaque ajout au moteur, mettre ce document à jour : cocher, recompter, et
