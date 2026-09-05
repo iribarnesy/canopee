@@ -304,7 +304,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // linéairement — le hêtre était bridé par son paramètre, pas par sa
     // station : de 750 à 1100 mm de pluie il ne gagnait que 40 cm en quarante
     // ans. Voir `hauteurs.test.ts`.
-    pousseMaxMAn: 0.65,
+    //
+    // Redérivé de 0,65 à 0,57 quand le frein d'extraction de l'azote est passé
+    // d'une rampe linéaire à une saturation de Michaelis-Menten (nitrogen.ts) :
+    // le hêtre étant la seule essence calée sur la table, c'est la seule dont
+    // le plafond devait suivre.
+    pousseMaxMAn: 0.57,
     // Atlas : mésophile, « aime le frais, sensible à la sécheresse ».
     eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
     ph: [4.5, 8],

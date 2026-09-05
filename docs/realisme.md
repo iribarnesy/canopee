@@ -742,6 +742,65 @@ restent, elles, une validation à part entière aux deux âges.
   démarrage lent et croissance longue (hêtre, chênes, sapin), intermédiaire
   (frêne, pin, douglas) — qu'un paramètre unique ne sait pas rendre. C'est
   pourquoi l'aulne reste un peu lent en jeunesse et le bouleau un peu vif.
+### Le frein d'azote : une rampe là où il fallait une saturation
+
+C'était le dernier défaut physique connu et non traité, et il était double.
+
+**L'échelle.** Le frein s'écrivait `min(1, stock / 3 g/m²)` : au-delà de 30 kg
+N/ha, plus de bridage. Or un sol forestier ne porte jamais 30 kg N/ha de
+minéral en même temps — le nôtre plafonne à 1,9 g/m² sur le limon riche et 0,5
+sur la lande. **Le frein était donc actif en permanence, partout, sur toutes les
+stations** : jamais une racine ne prélevait librement.
+
+**La forme.** Un prélèvement racinaire sature, il ne monte pas linéairement
+jusqu'à un couperet. Et la mesure de terrain dit mieux : dans neuf forêts
+tempérées suivies sur une saison (Nadelhoffer et al., *Plant and Soil*), le
+nitrate est prélevé à un rythme RÉGULIER alors que les stocks d'ammonium et la
+minéralisation nette fluctuent fortement d'un mois sur l'autre. L'arbre vit du
+FLUX qu'il intercepte ; le stock debout est petit parce que le prélèvement est
+rapide. Brider le prélèvement à proportion du stock inverse la causalité.
+
+Michaelis-Menten, donc, avec une demi-saturation à 0,5 g/m² — 5 kg N/ha, le bas
+de la gamme observée. **Le changement a été soumis à une réfutation avant d'être
+retenu** : les trois essences dont la vitesse n'est PAS calée sur les tables
+(pin, aulne, frêne) auraient dû se mettre à les dépasser si le frein compensait
+autre chose. Elles restent à +6 %, +1 % et +2 % à quarante ans. Le hêtre, seul
+calé, voit son plafond redérivé de 0,65 à 0,57 — et sa hauteur à vingt ans,
+tenue à l'écart du calage, s'AMÉLIORE au passage (8,2 m contre 8,5, pour 7,7
+dans la table).
+
+Le contraste entre stations, lui, tient : le frein vaut 0,76 sur limon riche
+contre 0,51 sur limon pauvre, et un hêtre de trente ans y fait 12,3 m contre
+8,0. L'azote n'est pas devenu décoratif.
+
+**Cinq conclusions du dépôt ont changé, et une seule est une mauvaise
+nouvelle.**
+
+1. *La fertilisation par l'aulne est RETARDÉE, pas morte.* À seize ans — huit
+   ans après la coupe — épandre vaut 0,99 fois vendre. Ce n'est pas une panne,
+   c'est la **faim d'azote** du broyat : le bois raméal a un C/N élevé, les
+   décomposeurs puisent d'abord l'azote du sol pour bâtir leur biomasse. À
+   trente-cinq ans le gain est de **+9 %**, régulier sur quatre parties. Les
+   mesures précédentes (+5 %, puis +2 %) lisaient le mécanisme pendant son
+   creux. C'est la meilleure surprise de ce chantier.
+2. *Le pin sylvestre perd un tiers de ses tiges sur la lande sèche, de SOIF.*
+   Plus vigoureux, il transpire plus, et le sable ne suit pas. Une mortalité
+   d'un tiers en trente ans sur une lande n'a rien d'anormal ; c'est le test
+   qui exigeait zéro mort.
+3. *L'effet nurse s'inverse une seconde fois.* Abrité à trois mètres bat
+   maintenant collé à la nurse, même pour un sciaphile : quand l'azote cesse de
+   décider de tout, la concurrence pour l'eau reprend la main. C'est
+   l'optimum de distance de la littérature sur les plantes nurses. Ce qui
+   survit aux trois versions du test : abrité à bonne distance bat toujours
+   découvert.
+4. *Le noisetier non protégé sort de la dent un peu plus tôt* — 1,59 m à douze
+   ans pour une dent à 1,50.
+5. *Le prélèvement de potasse monte à 70 kg/ha/an* sur limon riche. C'est le
+   haut de ce qu'on lit en forêt tempérée feuillue, et **c'est le seul chiffre
+   qui me gêne**. *(À confirmer : je n'ai pas trouvé de prélèvement annuel en
+   potassium directement citable pour une hêtraie — les sources donnent le
+   retour par litière, qui n'en est qu'une part.)*
+
 - **Le vrai réglage du frein d'extraction est ailleurs.**
   `AVAILABILITY_SATURATION_G_M2` = 3 g/m², soit 30 kg N/ha, est le stock
   au-dessus duquel une racine prélève sans entrave. Un sol forestier n'en tient

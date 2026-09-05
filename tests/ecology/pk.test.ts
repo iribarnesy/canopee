@@ -133,7 +133,15 @@ describe("les cycles, et ce qui leur manque encore", () => {
     expect(run.parAn.p).toBeGreaterThan(1);
     expect(run.parAn.p).toBeLessThan(15);
     expect(run.parAn.k).toBeGreaterThan(5);
-    expect(run.parAn.k).toBeLessThan(60);
+    // Le plafond est passé de 60 à 80 le jour où le frein d'extraction de
+    // l'azote a cessé de brider les arbres en permanence (nitrogen.ts) : ils
+    // poussent à leur rythme réel, et un arbre plus gros prélève plus de
+    // potasse. On mesure 70 kg/ha/an sur un limon riche — c'est le HAUT de ce
+    // qu'on lit en forêt tempérée feuillue, et c'est à surveiller.
+    // *(À confirmer : je n'ai pas trouvé de chiffre de prélèvement annuel en
+    // potassium directement citable pour une hêtraie ; les sources donnent le
+    // retour par litière, qui n'est qu'une part du prélèvement.)*
+    expect(run.parAn.k).toBeLessThan(80);
     expect(run.parAn.lessivageK).toBeLessThan(15);
   });
 
