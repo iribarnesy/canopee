@@ -737,6 +737,54 @@ et elles tombent entre −13 % et +10 % des tables. C'est ce chiffre-là qui dit
 quelque chose du moteur. Les trois essences non recalées (pin, aulne, frêne)
 restent, elles, une validation à part entière aux deux âges.
 
+### L'exposant de forme se déduit de la longévité
+
+Les tables de production distinguent trois profils de croissance en hauteur —
+démarrage rapide et plateau précoce (aulne, bouleau, merisier), démarrage lent
+et croissance longue (hêtre, chênes, sapin), intermédiaire (frêne, pin,
+douglas) — qu'un exposant unique ne savait pas rendre.
+
+Plutôt qu'un exposant par fiche, qui serait un réglage libre de plus, on le
+**déduit de la longévité**, déjà dans l'atlas. Et la correspondance n'est pas
+une commodité : les trois profils des tables sont exactement les trois classes
+de longévité. Un arbre qui vit un siècle ne peut pas se permettre d'attendre
+pour occuper l'espace ; un chêne de quatre siècles le peut, et c'est la même
+stratégie qui fait son bois dense et son ombre profonde. La courbe de
+croissance et la durée de vie sont deux faces du même arbitrage.
+
+**Ce que ça corrige** : le hêtre passe de +6 % à **+1 %** de la table à vingt
+ans — et cette hauteur-là est tenue à l'écart du calage, donc c'est une
+prédiction qui s'améliore, pas un ajustement.
+
+**Ce que ça ne corrige pas, et je l'ai vérifié plutôt que supposé** : l'aulne
+reste 13 % sous la table à vingt ans alors qu'il y est à quarante. En le
+forçant au profil le plus front-chargé possible (exposant 1,05), il DESCEND à
+10,2 m au lieu de 10,9. Son retard de jeunesse vient donc de son plafond de
+pousse, qui n'est calé sur aucune table — comme vingt autres de l'atlas.
+
+**Et ça a réveillé un défaut du feu, qui n'est PAS corrigé.** En changeant la
+vitesse de l'ajonc, un essai de conservation du carbone s'est mis à ne plus
+trouver d'incendie du tout : un ajonc plus vif referme le couvert plus tôt,
+l'herbe ne s'installe plus, et c'est elle qui portait le feu sur les 88 % de
+cellules sans houppier. En creusant, deux vrais défauts :
+
+1. **La charge des houppiers s'ADDITIONNE à chaque recouvrement**, sans
+   plafond. Un peuplement fermé finit par porter plusieurs fois la charge d'une
+   lande, uniquement parce que ses couronnes se chevauchent.
+2. **L'ombre amortit AUSSI la charge des houppiers**, ce qui rend le modèle
+   circulaire : plus un peuplement porte de combustible, moins il peut brûler.
+   Un fourré d'ajoncs finit par ne plus s'enflammer, le contraire de ce qu'on
+   observe dans les landes.
+
+Ensemble, les deux donnent une conclusion inversée : **le moteur fait porter à
+une hêtraie fermée quatre fois plus de feu qu'à une lande d'ajoncs** (3,34
+contre 0,83, à couvert égal). Les deux corrections ont été écrites, puis
+RETIRÉES : elles changent l'échelle de la charge, sur laquelle la propagation
+est calibrée, et un incendie d'essai a cessé de consumer quoi que ce soit. Le
+feu mérite sa propre passe plutôt qu'un raccourci en fin de chantier — et le
+défaut est consigné dans `feu.test.ts` sous la forme d'un essai qui énonce ce
+qui devrait être vrai et **échoue exprès**, pour qu'on ne l'oublie pas.
+
 - **L'exposant de forme est global.** Les tables distinguent trois profils —
   démarrage rapide et plateau précoce (aulne, bouleau, merisier, robinier),
   démarrage lent et croissance longue (hêtre, chênes, sapin), intermédiaire

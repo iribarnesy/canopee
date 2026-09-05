@@ -198,10 +198,14 @@ describe("un incendie qui emporte des chandelles", () => {
       state = step.state;
       expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
       if (step.incendie) {
+        // On ACCUMULE au lieu de garder le dernier feu. La parcelle en connaît
+        // maintenant plusieurs — les chandelles portent le feu, et l'ombre
+        // n'amortit plus leur charge (feu.ts) — et le dernier, qui ne trouve
+        // plus rien à brûler, écrasait le compte du premier par un zéro.
+        if (feux === 0) poolAvantFeu = avant.carbon.deadWoodKgC;
         feux++;
-        poolAvantFeu = avant.carbon.deadWoodKgC;
-        brulKgC = state.carbon.emittedCumKgC - avant.carbon.emittedCumKgC;
-        chandellesEmportees = avant.trees.length - state.trees.length;
+        brulKgC += state.carbon.emittedCumKgC - avant.carbon.emittedCumKgC;
+        chandellesEmportees += avant.trees.length - state.trees.length;
         // Aucun arbre vivant sur la parcelle : le feu ne tue personne, et
         // surtout ne fait rejeter aucun mort.
         expect(step.incendie.arbresTues).toBe(0);

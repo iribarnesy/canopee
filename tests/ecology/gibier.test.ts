@@ -97,7 +97,13 @@ describe("le piège à dents", () => {
     // cesse de brider les arbres en permanence (nitrogen.ts) : plus vigoureux,
     // il s'échappe un peu plus tôt. Ce qui compte est qu'il lui faille plus
     // d'une décennie pour y arriver, et l'essai suivant dit le reste.
-    expect(noisetierNu.hauteurMediane).toBeLessThan(1.15 * HAUTEUR_BROUTAGE_M);
+    // Le noisetier vit quatre-vingts ans : sa courbe de croissance est
+    // franchement front-chargée depuis que l'exposant de forme se déduit de la
+    // longévité (`exposantDeForme`, trees.ts), et il s'échappe encore un peu
+    // plus tôt — 1,84 m à douze ans. Le piège à dents mord toujours, mais il
+    // n'est plus absolu : ce qui reste vrai, et que dit l'essai suivant, c'est
+    // qu'un plant protégé fait deux fois et demie la taille d'un plant nu.
+    expect(noisetierNu.hauteurMediane).toBeLessThan(1.3 * HAUTEUR_BROUTAGE_M);
   });
 
   it("protéger les plants sauve la plantation", () => {

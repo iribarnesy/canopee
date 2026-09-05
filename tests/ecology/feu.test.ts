@@ -25,7 +25,7 @@ import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { frequentationHumaine, getPaysage } from "../../src/engine/paysage";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, plantAt, type Station } from "../../src/engine/state";
+import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { LANDE_SECHE } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
 
@@ -156,10 +156,6 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
     // disparaître par ailleurs. Les deux erreurs se compensaient à moitié,
     // donc aucune des deux ne se voyait.
     const station: Station = { ...LANDE_SECHE.station, coteM: 30, voisinage: [] };
-    let state = createGameState(station, rngStateFromSeed(2));
-    for (let i = 0; i < 36; i++) {
-      state = plantAt(state, "ulex_europaeus", 2 + (i % 6) * 5, 2 + Math.floor(i / 6) * 5, 1.2);
-    }
     /**
      * Stocks + tout ce qui est sorti du système. La litière et l'humus en font
      * partie : un feu les convertit en fumée, donc les omettre ferait voir une
@@ -173,7 +169,7 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
      * reste debout et récupérable un an, son carbone quitte le stock vivant à
      * l'instant du feu et ne rejoint le pool des morts qu'à l'enregistrement.
      */
-    const bilan = (s: typeof state) => {
+    const bilan = (s: GameState) => {
       let solG = 0;
       for (let k = 0; k < s.soil.boisAuSolCG.length; k++) {
         solG += (s.soil.boisAuSolCG[k] ?? 0) + (s.soil.litterCG[k] ?? 0) + (s.soil.humusCG[k] ?? 0);
@@ -194,22 +190,36 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
         s.carbon.emittedCumKgC
       );
     };
+    // On CHERCHE un incendie avec rejets au lieu d'en espérer un. La version
+    // précédente s'en remettait à une seule partie de quinze ans sur une seule
+    // graine, et elle a fini par ne plus en trouver : un ajonc qui pousse un
+    // peu plus vite referme le couvert plus tôt, l'herbe ne s'installe plus, et
+    // c'est elle qui portait le feu sur les 88 % de cellules sans houppier. Le
+    // décor était juste ; c'est de l'avoir fait tenir sur un tirage unique qui
+    // ne l'était pas.
     let rejets = 0;
-    for (let i = 0; i < 15 * 52 && rejets === 0; i++) {
-      const w = WEATHER[i % WEATHER.length];
-      if (!w) throw new Error("météo manquante");
-      const avant = bilan(state);
-      const entreesAvant = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC;
-      const r = advanceWeek(state, w, []);
-      state = r.state;
-      if (!r.incendie || r.incendie.rejets === 0) continue;
-      rejets = r.incendie.rejets;
-      const entrees = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC - entreesAvant;
-      // Égalité, donc : ni création ni fuite. C'est ce qui rend le test
-      // capable d'attraper les DEUX erreurs, qui se compensaient à moitié —
-      // l'aérien du rejet imputé deux fois d'un côté, ses racines évaporées
-      // de l'autre.
-      expect(bilan(state) - avant).toBeCloseTo(entrees, 3);
+    for (const graine of [2, 5, 9, 13, 21]) {
+      let state = createGameState(station, rngStateFromSeed(graine));
+      for (let i = 0; i < 36; i++) {
+        state = plantAt(state, "ulex_europaeus", 2 + (i % 6) * 5, 2 + Math.floor(i / 6) * 5, 1.2);
+      }
+      for (let i = 0; i < 25 * 52 && rejets === 0; i++) {
+        const w = WEATHER[i % WEATHER.length];
+        if (!w) throw new Error("météo manquante");
+        const avant = bilan(state);
+        const entreesAvant = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC;
+        const r = advanceWeek(state, w, []);
+        state = r.state;
+        if (!r.incendie || r.incendie.rejets === 0) continue;
+        rejets = r.incendie.rejets;
+        const entrees = state.carbon.nppCumKgC + state.carbon.importedPlantsCumKgC - entreesAvant;
+        // Égalité, donc : ni création ni fuite. C'est ce qui rend le test
+        // capable d'attraper les DEUX erreurs, qui se compensaient à moitié —
+        // l'aérien du rejet imputé deux fois d'un côté, ses racines évaporées
+        // de l'autre.
+        expect(bilan(state) - avant).toBeCloseTo(entrees, 3);
+      }
+      if (rejets > 0) break;
     }
     // Le décor doit vraiment produire des rejets, sinon le test ne prouve rien.
     expect(rejets).toBeGreaterThan(300);
@@ -478,5 +488,61 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
     const sousCouvert = chargeCombustible(hetres, herbe, litiere, cote, sombre);
     const aDecouvert = chargeCombustible(hetres, herbe, litiere, cote, ouvert);
     expect(sousCouvert.moyenne).toBeLessThan(aDecouvert.moyenne / 2);
+  });
+
+  /**
+   * DÉFAUT CONNU, non corrigé — l'essai énonce ce qui devrait être vrai et
+   * échoue exprès, pour qu'on ne l'oublie pas.
+   *
+   * Ce qui compte n'est pas un peuplement sous deux éclairements imposés,
+   * c'est la comparaison entre deux VÉGÉTATIONS. À couvert égal, une lande
+   * d'ajoncs devrait porter le feu bien plus qu'une hêtraie : ce n'est pas la
+   * densité qui fait le brasier, c'est ce dont le couvert est fait. Mesuré, le
+   * moteur dit le CONTRAIRE — 3,34 pour la hêtraie contre 0,83 pour la lande,
+   * un facteur quatre à l'envers.
+   *
+   * Deux causes, trouvées en changeant les vitesses de croissance (un ajonc un
+   * peu plus vif a fait disparaître tous les incendies d'un essai) :
+   *
+   * 1. La charge des houppiers s'ADDITIONNE à chaque recouvrement, sans
+   *    plafond. Un peuplement fermé finit par porter plusieurs fois la charge
+   *    d'une lande, uniquement parce que ses couronnes se chevauchent.
+   * 2. L'ombre amortit AUSSI la charge des houppiers, ce qui rend le modèle
+   *    circulaire : plus un peuplement porte de combustible, moins il peut
+   *    brûler. Un fourré d'ajoncs finit par ne plus s'enflammer, le contraire
+   *    de ce qu'on observe dans les landes.
+   *
+   * Les deux corrections ont été écrites puis RETIRÉES : elles changent
+   * l'échelle de la charge, sur laquelle la propagation du feu est calibrée, et
+   * un incendie d'essai a cessé de consumer quoi que ce soit. Le feu mérite sa
+   * propre passe, pas un raccourci en fin de chantier.
+   */
+  it.fails("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
+    const cote = 20;
+    const litiere = new Array(cote * cote).fill(400);
+    const herbe = new Array(cote * cote).fill(0);
+    const ouvert = new Array(cote * cote).fill(1);
+    const disposition = (especeId: string, hauteur: number) =>
+      Array.from({ length: 40 }, (_, i) => ({
+        ...arbre(especeId, hauteur),
+        id: i + 1,
+        x: 2 + (i % 7) * 2.5,
+        y: 2 + Math.floor(i / 7) * 3,
+      }));
+    const hetraie = chargeCombustible(
+      disposition("fagus_sylvatica", 25),
+      herbe,
+      litiere,
+      cote,
+      new Array(cote * cote).fill(0.03),
+    );
+    const lande = chargeCombustible(
+      disposition("ulex_europaeus", 2.2),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    expect(lande.moyenne).toBeGreaterThan(hetraie.moyenne);
   });
 });

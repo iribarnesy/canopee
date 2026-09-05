@@ -288,12 +288,59 @@ const GROWING_WEEKS = 26;
 export const FORME_CROISSANCE = 1.5;
 
 /**
+ * Bornes de l'exposant de forme, et l'échelle qui le relie à la LONGÉVITÉ.
+ *
+ * Les tables de production distinguent trois profils de croissance en hauteur,
+ * et un exposant unique ne savait rendre aucun des deux extrêmes : démarrage
+ * rapide et plateau précoce (aulne, bouleau, merisier), démarrage lent et
+ * croissance longue (hêtre, chênes, sapin), intermédiaire (frêne, pin,
+ * douglas). Le symptôme se lisait dans `hauteurs.test.ts` : l'aulne tombait à
+ * 11,0 m à vingt ans pour 12,6 dans la table alors que sa hauteur à quarante
+ * ans était juste — la signature d'une courbe de la bonne AMPLITUDE et de la
+ * mauvaise FORME.
+ *
+ * Plutôt qu'un exposant par fiche — qui serait un réglage libre de plus —, on
+ * le DÉDUIT de la longévité, déjà présente dans l'atlas. Et la correspondance
+ * n'est pas une commodité : les trois profils des tables sont exactement les
+ * trois classes de longévité. Un arbre qui vit un siècle ne peut pas se
+ * permettre d'attendre pour occuper l'espace ; un chêne de quatre siècles le
+ * peut, et c'est cette même stratégie qui fait son bois dense et son ombre
+ * profonde. La courbe de croissance et la durée de vie sont deux faces du même
+ * arbitrage.
+ *
+ * L'échelle est logarithmique parce que les longévités le sont : de 15 ans
+ * (ronce) à 400 (chêne pubescent), c'est un facteur vingt-cinq. Calée sur deux
+ * points — un siècle de vie donne 1,25, trois siècles donnent 1,70 — puis
+ * bornée : sous 1, la courbe cesse d'être sigmoïde *(à calibrer : les deux
+ * points d'ancrage sont ajustés sur les tables, pas mesurés indépendamment)*.
+ *
+ * **Ce que ça corrige, et ce que ça ne corrige pas.** Le hêtre y gagne beaucoup
+ * — sa hauteur à vingt ans, qui est tenue à l'écart du calage, passe de +6 % à
+ * +1 % de la table. L'AULNE, lui, ne bouge pas : il reste 13 % sous la table à
+ * vingt ans alors qu'il y est à quarante. J'ai vérifié que ce n'était pas la
+ * forme en le forçant au profil le plus front-chargé possible (exposant 1,05) :
+ * il descend à 10,2 m au lieu de 10,9. Son retard de jeunesse vient donc de
+ * son PLAFOND de pousse, pas de sa courbe — et son plafond n'est calé sur
+ * aucune table, comme vingt autres de l'atlas.
+ */
+export const FORME_MIN = 1.05;
+export const FORME_MAX = 2;
+
+/** Exposant de forme d'une espèce, déduit de sa longévité. */
+export function exposantDeForme(longeviteAns: number): number {
+  const pente = 0.45 / Math.log(3);
+  const brut = 1.25 + pente * Math.log(Math.max(1, longeviteAns) / 100);
+  return Math.min(FORME_MAX, Math.max(FORME_MIN, brut));
+}
+
+/**
  * Normalisation : sans elle, `pousseMaxMAn` cesserait de vouloir dire « la
  * pousse annuelle maximale ». On divise par le sommet de la courbe de forme,
  * pour que ce sommet vaille exactement 1 quel que soit l'exposant.
  */
-const FORME_SOMMET =
-  ((FORME_CROISSANCE - 1) / FORME_CROISSANCE) ** (FORME_CROISSANCE - 1) / FORME_CROISSANCE;
+function sommetDeForme(exposant: number): number {
+  return ((exposant - 1) / exposant) ** (exposant - 1) / exposant;
+}
 
 /**
  * Part du potentiel de pousse qu'un arbre de cette taille peut encore
@@ -306,10 +353,14 @@ const FORME_SOMMET =
  * petit reste lent. C'est la limite classique des modèles de trouée, assumée
  * ici parce que c'est elle qui rend la plasticité du moteur possible.
  */
-export function formeCroissance(heightM: number, hauteurMaxM: number): number {
+export function formeCroissance(
+  heightM: number,
+  hauteurMaxM: number,
+  exposant = FORME_CROISSANCE,
+): number {
   const u = Math.min(1, Math.max(0, heightM / hauteurMaxM));
-  const v = u ** (1 / FORME_CROISSANCE);
-  return (v ** (FORME_CROISSANCE - 1) * (1 - v)) / FORME_SOMMET;
+  const v = u ** (1 / exposant);
+  return (v ** (exposant - 1) * (1 - v)) / sommetDeForme(exposant);
 }
 /** rayon de la zone racinaire / rayon du houppier *(à confirmer)* */
 const ROOT_CROWN_RATIO = 1.2;
@@ -601,7 +652,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     season *
     fAge *
     (env.facteurCo2 ?? 1) *
-    formeCroissance(tree.heightM, espece.hauteurMaxM);
+    formeCroissance(
+      tree.heightM,
+      espece.hauteurMaxM,
+      exposantDeForme(espece.regeneration.longeviteAns),
+    );
   // La vigueur individuelle entre ici, et seulement ici : elle module ce que
   // l'arbre TIRE de conditions données, pas les conditions elles-mêmes. Deux
   // voisins ont la même eau et la même lumière ; l'un en fait plus que l'autre,
