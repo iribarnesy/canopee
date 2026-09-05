@@ -321,7 +321,15 @@ export function cuireVignette(
     const epaisseur = Math.max(0.6, s.rayonDepartM * 2 * echelle);
     // L'écorce du haut, quand l'espèce en a une : c'est la signature du pin
     // sylvestre, et elle se lit sur la partie haute du fût et les charpentières.
-    const haut = fiche.ecorceHaute && s.depart.y > hauteurM * 0.45;
+    // L'écorce haute ne vaut que pour le BOIS PORTEUR : le fût et les
+    // charpentières. Appliquée aux brindilles, elle semait des filaments orange
+    // dans tout le houppier — à l'échelle de la parcelle, un pin sylvestre
+    // ressortait en moustaches vives au milieu des verts, ce qui est l'inverse
+    // de sa signature. La partie orangée d'un pin, c'est son tronc haut.
+    const haut =
+      fiche.ecorceHaute &&
+      s.depart.y > hauteurM * 0.45 &&
+      s.rayonDepartM > rayonAuPiedM(hauteurM) * 0.28;
     // **Les RAMEAUX ne sont pas de la couleur du fût**, et le bouleau l'a montré
     // sans appel : peindre en blanc les brindilles d'un houppier donne un arbre
     // mort en plein été, la ramure crevant le feuillage. C'est aussi faux en

@@ -46,7 +46,14 @@ export const BOULEAU: FicheGraphique = {
   // Blanc, et c'est un problème de palette autant qu'une signature : sur un sol
   // clair il DISPARAÎT (contrainte L0). Ou le sol reste soutenu, ou le fût
   // reçoit un liseré sombre ; il n'y a pas de troisième option.
-  ecorce: { r: 236, g: 234, b: 226 },
+  //
+  // Ramené de 236 à 212, parce que le problème s'est présenté par l'autre bout :
+  // sur une friche à l'an 30 — où le bouleau est l'essence dominante — un blanc
+  // presque pur donnait une forêt de bâtons éclatants sur un sol sombre, et on
+  // ne voyait plus que les troncs. Le bouleau reste le fût le plus clair de
+  // l'atlas, ce qui est sa signature ; il cesse d'être le seul objet lumineux
+  // de l'image.
+  ecorce: { r: 212, g: 209, b: 198 },
   references: [
     "Rameau et al., Flore forestière française, t. 1 — Betula pendula",
     "Lot L0, planche de silhouettes : dominance ramenée de 0,85 à 0,62",
