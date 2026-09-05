@@ -91,8 +91,34 @@ describe("effet nurse sur lande sèche et ventée", () => {
     expect(liegeAbrite).toBeGreaterThan(liegeNu);
   });
 
-  it("pour le sciaphile, plus c'est près, mieux c'est : l'ombre ne lui coûte rien", () => {
-    // Le verdict a changé avec la recalibration de l'azote
+  it("même pour le sciaphile, il existe une bonne distance — et ce n'est pas zéro", () => {
+    // ATTENTION à ce test : son verdict a changé DEUX FOIS, et l'historique
+    // vaut plus que la conclusion du jour.
+    //
+    // Version 1 — « l'abri et l'ombre s'annulent » : on mesurait 0,38 m collé
+    // contre 0,39 m à découvert. C'était l'égalité de deux zéros, l'azote
+    // bridant tout le monde autour de 0,4 ; rien ne poussait, donc rien ne se
+    // distinguait.
+    //
+    // Version 2 — « plus c'est près, mieux c'est » : une fois le besoin
+    // d'azote ramené à un budget réel, on lisait 0,53 collé / 0,44 à trois
+    // mètres / 0,37 à découvert.
+    //
+    // Version 3, celle-ci — le frein d'extraction est passé à une saturation
+    // de Michaelis-Menten (`DEMI_SATURATION_G_M2`, nitrogen.ts) et l'ordre
+    // s'inverse à nouveau : 0,78 à trois mètres contre 0,58 collé. Quand
+    // l'azote cesse d'être le facteur qui décide de tout, la concurrence pour
+    // l'eau et la lumière reprend la main, et se coller à sa nurse se paie.
+    //
+    // Ce qui SURVIT aux trois versions, et qui est donc le vrai résultat :
+    // abrité à bonne distance bat toujours découvert. L'optimum de distance
+    // — assez près pour couper le vent, assez loin pour ne pas se disputer
+    // l'eau — est le résultat classique de la littérature sur les plantes
+    // nurses, et c'est celui que le moteur donne maintenant. La leçon de
+    // méthode, elle, est que trois graines ne suffisent pas à rendre une
+    // conclusion robuste si le mécanisme sous-jacent, lui, est faux.
+    //
+    // (Trace de la version 2 :) Le verdict a changé avec la recalibration de l'azote
     // (`AZOTE_HOUPPIER_G_M2_AN`, trees.ts). Tant que l'azote bridait tout le
     // monde autour de 0,4, aucun des trois traitements ne poussait vraiment :
     // on mesurait 0,38 m collé contre 0,39 m à découvert et on en concluait
@@ -105,7 +131,7 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // mètres, 0,37 m à découvert. Ce qui n'a pas bougé, et qui est le fond de
     // l'affaire : la bonne distance dépend du TEMPÉRAMENT, et l'héliophile,
     // lui, paie l'ombre (essai suivant).
-    expect(liegeColle).toBeGreaterThan(liegeAbrite);
+    expect(liegeAbrite).toBeGreaterThan(liegeColle);
     expect(liegeAbrite).toBeGreaterThan(liegeNu);
   });
 

@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { GameAction } from "../engine/actions";
 import {
   formeSaisonniere,
   rechauffementFranceC,
@@ -69,6 +70,31 @@ const MOIS = [
  * modes affichaient jusqu'ici la légende de la fauche parce que la condition
  * s'arrêtait au chaulage.
  */
+/**
+ * Le nom du geste tel qu'on le dit, pour les refus. Sans cette table, le
+ * joueur lisait l'identifiant du code — « ramasserBoisMort », « epandreBrf ».
+ */
+const NOM_DU_GESTE: Partial<Record<GameAction["type"], string>> = {
+  planter: "Planter",
+  couper: "Abattre",
+  recolter: "Récolter",
+  embaucher: "Embaucher",
+  licencier: "Licencier",
+  chauler: "Chauler",
+  leverEcorce: "Cercler l'écorce",
+  eclaircir: "Éclaircir",
+  elaguer: "Élaguer",
+  epandreBrf: "Épandre le broyat",
+  trogner: "Trogner",
+  chasser: "Chasser",
+  cloturer: "Clôturer",
+  labourer: "Labourer",
+  proteger: "Protéger du gibier",
+  receper: "Recéper",
+  faucher: "Faucher",
+  ramasserBoisMort: "Ramasser le bois mort",
+};
+
 const LEGENDE_RAYON: Partial<Record<Mode, string>> = {
   chauler: "pH +0,5 sur le disque",
   faucher: "l'herbe est rabattue, elle repoussera",
@@ -1426,7 +1452,7 @@ export function GameView() {
           <div style={{ ...panel, color: "#8a4b2d" }}>
             {game.refusals.slice(0, 3).map((r) => (
               <div key={r.uid}>
-                ⚠ {r.action} : {r.reason}
+                ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
               </div>
             ))}
           </div>
@@ -1791,6 +1817,21 @@ export function GameView() {
             >
               🪓 Couper &amp; épandre (BRF)
             </button>
+            <button
+              type="button"
+              style={btn()}
+              onClick={() => {
+                game.dispatch({
+                  type: "couper",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  devenir: "laisser",
+                });
+                setSelectedIds(new Set());
+              }}
+              title="Abattre et coucher le fût en travers de la pente : rien ne rentre en caisse, mais l'eau ralentit et la terre se dépose derrière le tronc"
+            >
+              🪵 Couper &amp; coucher en travers
+            </button>
           </div>
         )}
 
@@ -1900,6 +1941,27 @@ export function GameView() {
                     · avec {(snapshot.fluxes.erosionNKgHa * 52).toFixed(1)} N ·{" "}
                     {(snapshot.fluxes.erosionPKgHa * 52).toFixed(2)} P ·{" "}
                     {(snapshot.fluxes.erosionKKgHa * 52).toFixed(1)} K kg/ha/an
+                  </span>
+                </dd>
+              </>
+            )}
+            {(snapshot.fluxes.boisSedimentPiegeKgM2 > 0 || snapshot.fluxes.boisRetenueMm > 0) && (
+              <>
+                <dt>Bois en travers</dt>
+                <dd>
+                  retient <strong>{(snapshot.fluxes.boisRetenueMm * 52).toFixed(0)} mm/an</strong>{" "}
+                  d'eau et{" "}
+                  {/* En kg et non en tonnes : le bois mort NATUREL barre peu (un
+                      chablis repose sur ses branches), et « 0,0 t/ha » ne dirait
+                      rien de ce qui se passe. */}
+                  <strong>
+                    {(snapshot.fluxes.boisSedimentPiegeKgM2 * 520_000).toFixed(0)} kg/ha/an
+                  </strong>{" "}
+                  de terre
+                  <span className="detail">
+                    {" "}
+                    · un tronc couché en travers de la pente met l'eau en flaque, le temps qu'elle
+                    rentre, et fait déposer derrière lui ce que le ruissellement emportait
                   </span>
                 </dd>
               </>

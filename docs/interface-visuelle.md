@@ -17,19 +17,22 @@
 > côté moteur : le chantier peut commencer au lot L0.
 >
 > **v0.4** — **le lot L0 est fait, et il a corrigé ce document** : D1 est
-> renversée puis re-renversée (voir D1), l'enveloppe du houppier ne peut pas émerger du
-> branchement, et deux règles d'architecture apparaissent. Tout est mesuré et
-> chiffré dans `docs/lot0-pointe-technique.md` ; les passages touchés ci-dessous
-> portent la mention **(L0)**.
+> renversée (Canvas 2D d'abord — *annulé en v0.5, la mesure était fausse*),
+> l'enveloppe du houppier ne peut pas émerger du branchement, et deux règles
+> d'architecture apparaissent. Tout est mesuré et chiffré dans
+> `docs/lot0-pointe-technique.md` ; les passages touchés ci-dessous portent la
+> mention **(L0)**.
 >
 > **v0.5** — **le banc L0 a été rejoué sur une machine avec carte graphique, et
-> la réserve de D1 est levée** : Canvas 2D reste le choix, confirmé, mais la
-> marge annoncée n'existait pas — les « 9 ms » mesuraient la soumission du
-> dessin et non l'image. La décision est la même, la lecture est plus serrée, et
-> elle ajoute une exigence à L1 (**découper par emprise visible**, le zoom
-> rapproché étant le point de rupture). Deux constats de plus : le pire cas de
-> la friche est l'**an 30** et non l'an 50, et la crainte d'une explosion du
-> coût de l'atlas ne s'est pas réalisée.
+> D1 est tranchée pour Pixi.** La réserve est levée dans les deux sens : la
+> première mesure était fausse (elle chronométrait la soumission du dessin et
+> non l'image, sur un WebGL rendu en logiciel), et la marge de Canvas 2D
+> n'existait pas — sa capacité valait exactement la scène. Pixi porte 4 à 8×
+> plus de tiges, `pixi.js` passe en dépendance de production, le banc est
+> supprimé et L1 démarre dessus. Une exigence nouvelle pour L1 : **découper par
+> emprise visible**, le zoom rapproché étant le point de rupture. Deux constats
+> de plus : le pire cas de la friche est l'**an 30** et non l'an 50, et la
+> crainte d'une explosion du coût de l'atlas ne s'est pas réalisée.
 
 ---
 
@@ -153,7 +156,7 @@ celle du rendu.
 
 | # | Décision | Retenu | Ce que ça implique |
 |---|---|---|---|
-| **D1** | Moteur de rendu | ✅ **PixiJS v8** (WebGL). Tranché sur un fait que la mesure ne pouvait pas donner : **le jeu doit tourner sur une machine médiocre.** | **Rejoué sur carte graphique** (`ANGLE Metal, Apple M4 Pro`) et sur le vrai pire cas — l'**an 30** d'une friche, 5 436 tiges, h max 16,5 m, la charge culminant là et non à l'an 50. Canvas 2D tient le budget de 16,7 ms sur cette machine : 60 à 63 images par seconde, les trois styles. **Mais sa capacité EST le pire cas** — à charge doublée il tombe à 40 img/s, et en rendu purement logiciel à 10 img/s (96 ms par image). Or la cible inclut le matériel d'entrée de gamme, qui se situe entre les deux. **Pixi porte 4 à 8 fois plus** (43 488 tiges à 60 img/s) : c'est cette marge qui absorbe à la fois un GPU faible, les particules du lot L8 et, plus tard, les parcelles de plus d'un hectare. Coût assumé : ~400 ko de bundle et une dépendance de production. **Deux corrections de méthode** expliquent l'écart avec les versions précédentes de cette ligne : les « 9 ms » chronométraient la SOUMISSION du dessin et non l'image, et le lanceur du banc forçait SwiftShader en dur. **Ce que ça impose à L1** : le point de rupture est le **zoom rapproché**, pas la parcelle entière, donc **le rendu doit découper par emprise visible** — exigence qui n'existait pas tant qu'on croyait le zoom 4 gratuit. `docs/lot0-pointe-technique.md`. |
+| **D1** | Moteur de rendu | ✅ **PixiJS v8 (WebGL)**, tranché par la mesure sur GPU | **Mesuré sur carte graphique** (`ANGLE Metal, Apple M4 Pro`) et sur le vrai pire cas — l'**an 30** d'une friche, 5 436 tiges, h max 16,5 m, la charge culminant là et non à l'an 50. **Pixi porte 4 à 8 fois plus de tiges à 60 img/s** (43 488 contre 5 436) et coûte **6 fois moins de temps de fil principal** (0,3 ms contre 1,8) — or c'est sur le même budget de 16,7 ms qu'il faut aussi financer la simulation, l'interface et les particules du lot L8. Canvas 2D *tenait* le budget (60–63 img/s), mais sa capacité valait **exactement** la scène : à charge doublée il tombait à 40 img/s, et au zoom rapproché à 30. C'est ce qui a renversé l'arbitrage : zéro dépendance ne pèse pas contre un facteur huit et un point de rupture déjà atteint. `pixi.js` est donc une **dépendance de production**. **Ce que ça impose à L1** : le point de rupture est le **zoom rapproché**, pas la parcelle entière, donc **le rendu doit découper par emprise visible**. Et une garantie acquise au passage : en pur logiciel, sans GPU, la scène reste *affichable* (10 img/s en Canvas 2D) — il y a un filet. **Et la marge n'est pas un luxe** : la cible annoncée est « une machine même nulle » pour un hectare, les grandes parcelles venant plus tard et pour les bonnes machines. C'est cette contrainte, autant que la mesure, qui fixe le budget des silhouettes du lot L2. `docs/lot0-pointe-technique.md`. |
 | **D2** | Projection | ✅ **dimétrique 2:1** | Diagonales sur pentes entières, profondeur triée par `x + y`, picking inversible analytiquement. Un cube unité a une hauteur écran égale à la demi-largeur de tuile — c'est ce qui rend D3 gratuit. |
 | **D3** | Échelle verticale | ✅ **tout à l'échelle vraie** — relief compris | **Et ça ne coûte presque rien** : les cinq stations livrées ont 1 à 6 % de pente, soit **1 à 6 m de dénivelé sur 100 m**. À 1 m = 8 px, c'est 8 à 48 px sur une parcelle qui en fait 800 de haut : lisible, jamais gênant. L'exagération que j'avais proposée était une prudence mal placée. **Le vrai coût est ailleurs** : dès que le terrain a du relief, une butte peut masquer ce qui est derrière, donc le tri en profondeur doit **entrelacer le sol et les arbres** au lieu de cuire le terrain en une seule couche sous tout le reste (§3). C'est `+M` sur L1/L2. Le seul cas à surveiller est un terrain **modelé à la main** (l'éditeur laisse creuser sans limite) : prévoir un avertissement au-delà de ~25 % de pente moyenne, pas un plafond. |
 | **D4** | Silhouettes par espèce | ✅ **une essence = une silhouette reconnaissable**, niveau illustration | Renversement complet de la v0.1, et c'est la bonne exigence : **c'est le seul moyen que le joueur apprenne les essences**, ce qui est l'objectif pédagogique du §0.6 des règles. La technique qui le permet sans devenir illustrateur : **squelette généré par branchement récursif** (angle, ratio, divergence, dominance apicale — paramétrés par espèce) + **feuilles, fleurs et fruits en tracés SVG écrits à la main dans le code**, d'après des références botaniques. Voir §4 et §5.4. **Coût honnête : c'est ce qui double le chantier** (§9). **(L0)** Validé sur trois essences — bouleau, chêne pubescent, pin sylvestre se distinguent au premier coup d'œil, y compris nus — avec une correction de méthode importante : **l'enveloppe du houppier ne sort pas du branchement**, elle doit être un paramètre explicite de la fiche (§4). |
@@ -360,14 +363,14 @@ src/render/
 capture :**
 
 - **Aucune primitive vectorielle par image.** Dessiner 5 436 ellipses d'ombre
-  par image coûte à Canvas 2D **4,1 ms de plus** que le même dessin en aplats
-  sur GPU (16,7 contre 12,6 ms), ce qui ramène la cadence pile sur le budget ;
-  en rendu logiciel la même ligne coûtait **411 ms par image**, soit 2 img/s.
-  Pixi, où l'ombre est un sprite, n'en sent rien. Le GPU réduit donc beaucoup
-  la pénalité mais **ne l'annule pas** — et 4,1 ms, c'est exactement la marge
-  qui n'existe pas. Ombres, halos, liserés, marqueurs de changement (§6.8) :
-  **tout est cuit une fois dans un bitmap ou posé en sprite**. La règle vaut
-  pour les deux bras de D1.
+  à chaque image coûtait **4,1 ms de plus** que le même dessin en aplats
+  (16,7 contre 12,6 ms sur GPU), et **411 ms** en rendu logiciel — un facteur
+  cent. Ombres, halos, liserés, marqueurs de changement (§6.8) : **tout est
+  cuit une fois dans un bitmap, puis posé en sprite**. **Le choix de Pixi ne
+  dispense pas de la règle** : sous Pixi la tentation prend la forme d'un
+  `Graphics` reconstruit à chaque image, le coût est le même, et la différence
+  est qu'on ne le verra pas venir — un sprite batché et un `Graphics` se
+  ressemblent dans le code, pas dans le profil.
 - **L'atlas cuit à UNE taille de référence**, mis à l'échelle ensuite, et non
   par palier de hauteur. L'atlas à la demande est validé, et **la crainte
   d'une explosion avec des arbres plus hauts ne s'est pas réalisée** :
@@ -895,7 +898,7 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 
 | Lot | Contenu | Livre | Charge |
 |---|---|---|---|
-| **L0** | ✅ **fait et rejoué sur GPU** (`docs/lot0-pointe-technique.md`) — pire cas mesuré (5 436 tiges à l'an 30, le pic), les deux moteurs de rendu comparés sur carte graphique, `src/render/projection.ts` écrit et testé, trois essences générées par branchement, trois styles rendus, générateur de scène versionné (`scripts/l0-scene.ts`). A confirmé D1, corrigé D4, répondu à Q6 et produit quatre règles d'architecture. **Rien ne reste** : `spike/` et `src/spike/` peuvent partir au démarrage de L1. | un prototype jetable + une décision écrite | `M` |
+| **L0** | ✅ **clos** (`docs/lot0-pointe-technique.md`) — pire cas mesuré (5 436 tiges à l'an 30, le pic), les deux moteurs comparés sur carte graphique, `src/render/projection.ts` écrit et testé, trois essences générées par branchement, trois styles rendus. **A tranché D1 pour Pixi**, corrigé D4, répondu à Q6 et produit quatre règles d'architecture. Le banc a été **supprimé** — il ne reste que `projection.ts`, le garde-fou de `check-boundaries.sh` et la décision écrite. | un prototype jetable + une décision écrite | `M` |
 | **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | `L` |
 | **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | `XL` |
 | **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | `XL` |
@@ -951,17 +954,16 @@ chiffre supportable :
    générateur d'abord (L2), les fiches en fond (L2b), et une règle simple —
    **une essence n'est « finie » que si un joueur la reconnaît sans étiquette**.
    Ça se teste sur quelqu'un d'autre.
-2. **La perf sur la friche en succession** — **mesuré au lot L0, rejoué sur
-   GPU, et le risque n'a pas disparu : il s'est précisé.** Canvas 2D dessine
-   les 5 436 tiges du pic à 60–63 images par seconde, donc le budget passe —
-   mais **sa capacité est exactement de 5 436 tiges** : à charge doublée il
-   tombe à 40 img/s. Il n'y a pas de marge, et les « 9 ms » de la première
-   mesure n'en donnaient qu'une illusion (elles chronométraient la soumission
-   du dessin, pas l'image). Le vrai point de rupture est le **zoom
-   rapproché** — 30 img/s quand on dessine tout l'hectare à ×4 — d'où
-   l'exigence de **découper par emprise visible** dès L1. La cuisson de
-   l'atlas, qu'on croyait le risque principal, est retombée à 182–200 ms. Les
-   règles du §3 restent structurelles : à tenir dès L1, pas à rattraper.
+2. ~~**La perf sur la friche en succession.**~~ **Mesuré au lot L0 sur GPU, et
+   c'est ce qui a fait choisir Pixi** : il porte 43 488 tiges à 60 img/s, huit
+   fois le pic de la friche, et tient 120 img/s dans les trois styles comme au
+   zoom 4. La marge existe donc, et elle est large. Ce que le lot a **déplacé**,
+   c'est où regarder : le point de rupture n'est pas la parcelle saturée mais
+   le **zoom rapproché**, d'où l'exigence de **découper par emprise visible**
+   dès L1. Et les règles du §3 restent structurelles — un `Graphics` redessiné
+   à chaque image coûte sous Pixi ce qu'une ellipse coûtait à Canvas 2D, la
+   différence étant qu'on ne le verra pas venir. À tenir dès L1, pas à
+   rattraper.
 3. **Le terrain recuit à chaque tick.** Si la quantification des valeurs de sol
    est trop fine, chaque semaine invalide tous les morceaux et le cache ne sert
    à rien. À traiter dès L1.
@@ -991,7 +993,7 @@ chiffre supportable :
 
 | | Question | Réponse |
 |---|---|---|
-| Q1 | Pixi ou Canvas 2D ? | **Pixi.** La mesure sur GPU laissait le choix ouvert — Canvas 2D tient le pire cas à 60–63 img/s, mais sa capacité EST le pire cas. Ce qui a tranché n'est pas un chiffre mais la cible : **le jeu doit tourner sur une machine médiocre**, et un moteur sans marge sur un M4 Pro n'a pas de quoi descendre la gamme. Pixi porte 4 à 8 fois plus. Voir D1. **Close.** |
+| Q1 | Pixi ou Canvas 2D ? | **Pixi**, et cette fois c'est mesuré et non supposé : sur GPU il porte 4 à 8× plus de tiges que Canvas 2D à 60 img/s, pour 6× moins de temps de fil principal. Canvas 2D tenait le budget, mais sans marge — capacité égale à la scène, 30 img/s au zoom rapproché. Voir D1. **Tranché, banc supprimé.** |
 | Q2 | Une vue ou deux ? | **Bascule** dans l'écran de jeu |
 | Q3 | Niveau de mise en scène ? | **Le niveau acceptable** : vague de crue et front de flamme restent des mises en scène ordonnées d'un état hebdomadaire, explicitement bornées. Pas de routage d'eau de surface dans le moteur. |
 | Q4 | Chandelles dans le moteur ? | **Fait**, et leurs conséquences aussi : combustible sur pied, obstacle pour un engin, fût sec qui se coupe |

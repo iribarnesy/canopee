@@ -21,19 +21,32 @@
  * proche de la hauteur dominante — les dominés, qui tirent la moyenne d'un
  * peuplement vers le bas, n'existent pas ici.
  *
- * **Tolérance : ±45 % sur les deux âges TABULÉS (20 et 40 ans), et pourquoi.**
- * Trois sources d'écart s'additionnent.
- * (1) Les classes de fertilité de la table elle-même s'étalent de −18 % à
- * +16 % autour de la médiane (hêtre à 40 ans : 13,1 m en GK6, 16,0 en GK8,
- * 18,6 en GK10) — et nos stations de test ne sont calées sur AUCUNE classe.
- * (2) Chaque arbre porte une vigueur individuelle à ±20 % (`trees.ts`), d'où
- * la moyenne sur plusieurs individus ET plusieurs graines. (3) Le moteur reste
- * en retard sur les feuillus d'ombre, dont le hêtre, parce que le facteur eau
- * les bride sur une station qui ne reçoit que 750 mm.
+ * **Ce que cet essai prouve, et ce qu'il ne prouve pas.** Les deux âges n'ont
+ * pas le même statut, et c'est délibéré.
  *
- * Une bande de ±45 % certifie donc « la bonne classe de fertilité, à une
- * classe près » — pas davantage. Elle suffit à rattraper l'erreur qu'on vient
- * de corriger : le hêtre était à 0,30 fois la table à quarante ans.
+ * À QUARANTE ANS, deux espèces sont CALÉES sur la table : le hêtre et le
+ * bouleau ont vu leur `pousseMaxMAn` dérivé de cette valeur-là (especes.ts).
+ * Pour elles, l'essai ne valide rien — il garde l'acquis, et il attrapera
+ * toute dérive future. Les trois autres — pin, aulne, frêne — n'ont pas été
+ * touchées : leur accord avec la table, lui, est un vrai résultat.
+ *
+ * À VINGT ANS, aucune espèce n'est calée. C'est la vérification tenue à
+ * l'écart : un seul paramètre par espèce a été ajusté, sur un seul âge, et le
+ * second âge est une PRÉDICTION de la forme de la courbe. Mesuré : −13 % à
+ * +10 % selon l'essence. C'est ce chiffre-là qui dit quelque chose du moteur.
+ *
+ * **Convention assumée** : le moteur n'a pas de notion d'indice de fertilité.
+ * Caler une essence sur une classe de table oblige donc à décréter qu'une
+ * station la représente — ici, `LIMON_RICHE` VAUT la classe médiane. Une
+ * station plus pauvre en jeu donnera moins, une plus riche davantage ; c'est
+ * le comportement RELATIF que le moteur modélise, et la table lui donne son
+ * échelle.
+ *
+ * Les tolérances tiennent compte de deux bruits : les classes de fertilité de
+ * la table s'étalent déjà de −18 % à +16 % autour de la médiane (hêtre à 40
+ * ans : 13,1 m en GK6, 16,0 en GK8, 18,6 en GK10), et chaque arbre porte une
+ * vigueur individuelle à ±20 % (`trees.ts`) — d'où la moyenne sur plusieurs
+ * individus ET plusieurs graines.
  */
 
 import { describe, expect, it } from "vitest";
@@ -62,7 +75,10 @@ const TABLE: Record<string, { nom: string; h20: number; h40: number }> = {
   fraxinus_excelsior: { nom: "Frêne", h20: 9.0, h40: 16.5 },
 };
 
-const TOLERANCE = 0.45;
+/** À quarante ans : garde-fou serré, puisque deux espèces y sont calées. */
+const TOLERANCE_CALAGE = 0.15;
+/** À vingt ans : vérification tenue à l'écart, aucune espèce n'y est calée. */
+const TOLERANCE_TENUE_A_LECART = 0.2;
 const GRAINES = [17, 43];
 const PLANTS = 8;
 
@@ -98,35 +114,33 @@ describe("hauteurs absolues contre les tables de production", () => {
   for (const [especeId, ref] of Object.entries(TABLE)) {
     it(`${ref.nom} : 20 et 40 ans dans la bande de la table`, () => {
       const sim = hauteurs(especeId);
-      for (const [jalon, attendu, obtenu] of [
-        ["20 ans", ref.h20, sim.h20],
-        ["40 ans", ref.h40, sim.h40],
+      for (const [jalon, attendu, obtenu, tolerance] of [
+        ["20 ans", ref.h20, sim.h20, TOLERANCE_TENUE_A_LECART],
+        ["40 ans", ref.h40, sim.h40, TOLERANCE_CALAGE],
       ] as const) {
         const ecart = obtenu / attendu - 1;
         expect(
           Math.abs(ecart),
           `${ref.nom} à ${jalon} : ${obtenu.toFixed(1)} m simulés contre ${attendu} m dans la table (${(100 * ecart).toFixed(0)} %)`,
-        ).toBeLessThan(TOLERANCE);
+        ).toBeLessThan(tolerance);
       }
     }, 300_000);
   }
 
-  it("le bouleau reste trop rapide en jeunesse — écart connu, et borné", () => {
-    // Le bouleau est la seule essence de l'échantillon que le moteur pousse
-    // AU-DESSUS de la meilleure classe publiée : 12,6 m à vingt ans contre
-    // 8,6 m en classe médiane et 9,5 m en GK6, la meilleure de Braastad
-    // 1967. Ce n'est pas la forme de courbe qui est en cause — c'est
-    // `pousseMaxMAn = 0,9 m/an`, hérité de l'atlas et jamais confronté à une
-    // table. Les tables donnent d'ailleurs l'aulne PLUS rapide que le
-    // bouleau en jeunesse (12,6 contre 8,6 m à vingt ans), quand l'atlas
-    // range le bouleau devant. Corriger ce rang-là est un autre chantier :
-    // ici on se contente de borner l'écart pour qu'il ne s'aggrave pas.
-    const sim = hauteurs("betula_pendula");
-    expect(sim.h20).toBeGreaterThan(8.6);
-    expect(sim.h20).toBeLessThan(14);
-    expect(sim.h40).toBeGreaterThan(11.2); // GK3, la plus mauvaise classe
-    expect(sim.h40).toBeLessThan(22);
-  }, 300_000);
+  it("le bouleau reste devant le hêtre en jeunesse : c'est un pionnier", () => {
+    // Le bouleau n'est PAS calé sur une table, et l'essai ne prétend donc pas
+    // le mesurer. La seule table du corpus est norvégienne (Braastad 1967) :
+    // 8,6 m à vingt ans, ce qui est un bouleau boréal, pas un bouleau de
+    // bocage. On avait un moment conclu que l'atlas se trompait de rang parce
+    // que cette table donne l'aulne allemand devant — mais comparer une table
+    // norvégienne à une table allemande, c'est comparer deux climats.
+    //
+    // Ce qui se vérifie sans table, en revanche, c'est le tempérament : un
+    // pionnier prend l'avance sur une climacique, et la garde à vingt ans.
+    // Faute de référence transposable, ralentir le bouleau cassait cinq
+    // conclusions écologiques du dépôt sans qu'aucune preuve ne l'exige.
+    expect(hauteurs("betula_pendula").h20).toBeGreaterThan(hauteurs("fagus_sylvatica").h20);
+  }, 600_000);
 
   it("la courbe a la forme d'une sigmoïde, pas d'une exponentielle qui s'épuise", () => {
     // Ce que le moteur faisait avant : pousse maximale à la germination, puis

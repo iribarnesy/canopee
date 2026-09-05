@@ -183,7 +183,7 @@ mesurer que ce qu'on sait déjà faire.*
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
-| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` contre Jansen 1996 (hauteur dominante, classe médiane) : pin, aulne et frêne dans la bande, hêtre encore un tiers trop bas (facteur eau), bouleau au-dessus de la meilleure classe (`pousseMaxMAn` de l'atlas) |
+| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` contre Jansen 1996 (hauteur dominante, classe médiane). Quatre essences à ±15 % à quarante ans — mais le hêtre y est CALÉ, donc l'essai le garde plus qu'il ne le valide ; pin, aulne et frêne, non touchés, sont une validation entière. La vérification tenue à l'écart est à vingt ans : −13 % à +10 %. Le bouleau reste hors table, faute de référence transposable |
 
 ## G. Faune et santé
 
@@ -706,24 +706,101 @@ près » — elle aurait hurlé sur le hêtre à 0,30 fois la table.
 
 **Ce qui reste faux, et il en reste.**
 
-- **Le hêtre est encore un tiers trop bas à quarante ans** (10,6 m contre 16,0).
-  Ce n'est plus l'azote : c'est l'eau. Son seuil de confort hydrique est de 0,85
-  — le hêtre est notoirement sensible à la sécheresse d'été — et le limon riche
-  ne reçoit que 750 mm par an, dont 55 % en hiver. Le moteur le place donc vers
-  la classe 4-5 de la table là où la médiane est la 8. C'est défendable pour un
-  hêtre sur 750 mm ; ce n'est pas prouvé.
-- **Le bouleau dépasse la meilleure classe publiée** : 11,9 m à vingt ans contre
-  8,6 en classe médiane et 9,5 en GK6. En cause, `pousseMaxMAn = 0,9 m/an`,
-  hérité de l'atlas et jamais confronté à une table. Pire : les tables donnent
-  l'aulne PLUS rapide que le bouleau en jeunesse (12,6 contre 8,6 m à vingt
-  ans) quand l'atlas range le bouleau devant. **Ce rapport-là est faux**, et il
-  n'a pas été corrigé ici — recaler les `pousseMaxMAn` essence par essence est
-  un autre chantier.
+- ~~**Le hêtre est encore un tiers trop bas**, et c'est l'eau.~~ **Faux, et
+  vérifié** : de 750 à 1100 mm de pluie annuelle, le hêtre à quarante ans passe
+  de 11,5 à 11,9 m. Quarante centimètres. L'eau ne le bridait pas — son
+  `pousseMaxMAn` de 0,45 m/an le bridait, et la hauteur suit ce plafond presque
+  linéairement (0,45 → 11,5 m ; 0,60 → 15,0 ; 0,75 → 18,0). Ce paramètre n'était
+  d'ailleurs sourcé nulle part : **l'atlas de référence ne contient aucune
+  donnée de croissance**, seulement des traits écologiques. Les vitesses ont été
+  inventées pendant le développement.
+- ~~**Le bouleau dépasse la meilleure classe publiée**, et il devance l'aulne à
+  tort.~~ **Écarté après vérification de la source.** La seule table de bouleau
+  du corpus est Braastad 1967, *Produksjonstabeller for bjørk* — **norvégienne**,
+  donc boréale. La transposer à un bocage à 11,5 °C de moyenne serait une erreur
+  de catégorie, et en tirer un rang contre un aulne calé sur une table allemande
+  (Mitscherlich 1945) en serait une seconde : on comparerait deux climats, pas
+  deux essences. Le bouleau reste donc à 0,9 m/an — une estimation, mais une
+  estimation honnête, et il est sorti du tableau de calage. Ce n'est pas une
+  décision de confort : ralentir le bouleau sur cette autorité-là cassait cinq
+  conclusions écologiques du dépôt sans qu'aucune preuve ne l'exige. *(À
+  confirmer : il manque une table française ou allemande de bouleau.)*
+**Un calage n'est pas une validation, et le dire change la façon de tester.**
+Le moteur n'a pas de notion d'indice de fertilité : caler une essence sur une
+classe de table oblige donc à décréter qu'une station la représente — ici, le
+limon riche VAUT la classe médiane. Une fois ce choix fait, un essai qui
+compare à la table les espèces qu'on vient d'y caler ne prouve plus rien. D'où
+le partage : **un seul paramètre par espèce ajusté, sur un seul âge (quarante
+ans), et le second âge (vingt ans) laissé de côté**. Les hauteurs à vingt ans
+ne sont donc pas un ajustement mais une prédiction de la forme de la courbe —
+et elles tombent entre −13 % et +10 % des tables. C'est ce chiffre-là qui dit
+quelque chose du moteur. Les trois essences non recalées (pin, aulne, frêne)
+restent, elles, une validation à part entière aux deux âges.
+
 - **L'exposant de forme est global.** Les tables distinguent trois profils —
   démarrage rapide et plateau précoce (aulne, bouleau, merisier, robinier),
   démarrage lent et croissance longue (hêtre, chênes, sapin), intermédiaire
   (frêne, pin, douglas) — qu'un paramètre unique ne sait pas rendre. C'est
   pourquoi l'aulne reste un peu lent en jeunesse et le bouleau un peu vif.
+### Le frein d'azote : une rampe là où il fallait une saturation
+
+C'était le dernier défaut physique connu et non traité, et il était double.
+
+**L'échelle.** Le frein s'écrivait `min(1, stock / 3 g/m²)` : au-delà de 30 kg
+N/ha, plus de bridage. Or un sol forestier ne porte jamais 30 kg N/ha de
+minéral en même temps — le nôtre plafonne à 1,9 g/m² sur le limon riche et 0,5
+sur la lande. **Le frein était donc actif en permanence, partout, sur toutes les
+stations** : jamais une racine ne prélevait librement.
+
+**La forme.** Un prélèvement racinaire sature, il ne monte pas linéairement
+jusqu'à un couperet. Et la mesure de terrain dit mieux : dans neuf forêts
+tempérées suivies sur une saison (Nadelhoffer et al., *Plant and Soil*), le
+nitrate est prélevé à un rythme RÉGULIER alors que les stocks d'ammonium et la
+minéralisation nette fluctuent fortement d'un mois sur l'autre. L'arbre vit du
+FLUX qu'il intercepte ; le stock debout est petit parce que le prélèvement est
+rapide. Brider le prélèvement à proportion du stock inverse la causalité.
+
+Michaelis-Menten, donc, avec une demi-saturation à 0,5 g/m² — 5 kg N/ha, le bas
+de la gamme observée. **Le changement a été soumis à une réfutation avant d'être
+retenu** : les trois essences dont la vitesse n'est PAS calée sur les tables
+(pin, aulne, frêne) auraient dû se mettre à les dépasser si le frein compensait
+autre chose. Elles restent à +6 %, +1 % et +2 % à quarante ans. Le hêtre, seul
+calé, voit son plafond redérivé de 0,65 à 0,57 — et sa hauteur à vingt ans,
+tenue à l'écart du calage, s'AMÉLIORE au passage (8,2 m contre 8,5, pour 7,7
+dans la table).
+
+Le contraste entre stations, lui, tient : le frein vaut 0,76 sur limon riche
+contre 0,51 sur limon pauvre, et un hêtre de trente ans y fait 12,3 m contre
+8,0. L'azote n'est pas devenu décoratif.
+
+**Cinq conclusions du dépôt ont changé, et une seule est une mauvaise
+nouvelle.**
+
+1. *La fertilisation par l'aulne est RETARDÉE, pas morte.* À seize ans — huit
+   ans après la coupe — épandre vaut 0,99 fois vendre. Ce n'est pas une panne,
+   c'est la **faim d'azote** du broyat : le bois raméal a un C/N élevé, les
+   décomposeurs puisent d'abord l'azote du sol pour bâtir leur biomasse. À
+   trente-cinq ans le gain est de **+9 %**, régulier sur quatre parties. Les
+   mesures précédentes (+5 %, puis +2 %) lisaient le mécanisme pendant son
+   creux. C'est la meilleure surprise de ce chantier.
+2. *Le pin sylvestre perd un tiers de ses tiges sur la lande sèche, de SOIF.*
+   Plus vigoureux, il transpire plus, et le sable ne suit pas. Une mortalité
+   d'un tiers en trente ans sur une lande n'a rien d'anormal ; c'est le test
+   qui exigeait zéro mort.
+3. *L'effet nurse s'inverse une seconde fois.* Abrité à trois mètres bat
+   maintenant collé à la nurse, même pour un sciaphile : quand l'azote cesse de
+   décider de tout, la concurrence pour l'eau reprend la main. C'est
+   l'optimum de distance de la littérature sur les plantes nurses. Ce qui
+   survit aux trois versions du test : abrité à bonne distance bat toujours
+   découvert.
+4. *Le noisetier non protégé sort de la dent un peu plus tôt* — 1,59 m à douze
+   ans pour une dent à 1,50.
+5. *Le prélèvement de potasse monte à 70 kg/ha/an* sur limon riche. C'est le
+   haut de ce qu'on lit en forêt tempérée feuillue, et **c'est le seul chiffre
+   qui me gêne**. *(À confirmer : je n'ai pas trouvé de prélèvement annuel en
+   potassium directement citable pour une hêtraie — les sources donnent le
+   retour par litière, qui n'en est qu'une part.)*
+
 - **Le vrai réglage du frein d'extraction est ailleurs.**
   `AVAILABILITY_SATURATION_G_M2` = 3 g/m², soit 30 kg N/ha, est le stock
   au-dessus duquel une racine prélève sans entrave. Un sol forestier n'en tient
@@ -795,7 +872,7 @@ debout, parce que ce sont deux objets différents :
 | décomposition | 5 %/an | **9 %/an** — il touche la terre et reste humide |
 | humus | dilué sur la parcelle | **sur place**, sous le tronc |
 | faune | pics, puis tout ce qui occupe leurs loges | carabes, salamandres, saproxyliques du sol |
-| sol | rien | protège la terre sous lui, comme un paillage |
+| sol | rien | protège la terre sous lui comme un paillage — et **barre l'eau** s'il est en travers (voir plus bas) |
 
 La direction de chute suit l'aval, d'autant plus franchement que la pente est
 raide : au-delà de 30 %, la gravité tranche ; à plat, l'arbre tombe où son
@@ -840,10 +917,192 @@ tire donc désormais sur une graine dérivée de l'arbre et de la semaine, ce qu
 la garde rejouable sans rebattre les cartes des autres. Et le test des
 ravageurs, lui, moyenne sur trois graines au lieu d'en croire une.
 
-*Limite qui reste* : un tronc couché en travers d'un thalweg devrait freiner
-l'eau et piéger le sédiment. Il protège aujourd'hui la terre **sous lui** —
-c'est déjà un effet reconnu du bois mort — mais il ne ralentit pas encore le
-ruissellement qui passe à côté.
+### Le tronc en travers : il barre, ou il fait gouttière
+
+Le tronc couché protégeait la terre **sous lui**, comme un paillage, et rien
+de plus. Il manquait le mécanisme qui compte pour un versant : un tronc posé
+en travers d'un thalweg **barre**. L'eau s'y met en flaque et a le temps de
+rentrer dans la terre ; le sédiment se dépose derrière lui. C'est le principe
+des *log erosion barriers* de la restauration après incendie, et c'est un des
+rares leviers réels dont dispose un propriétaire contre le ruissellement de sa
+parcelle.
+
+Tout tient à l'**orientation**, et c'est pour ça qu'il a fallu ajouter un champ
+plutôt qu'un coefficient : une masse de bois par cellule ne dit pas si le tronc
+barre ou s'il fait gouttière.
+
+**La grandeur retenue n'est pas de nous.** Adams, Dixon, Wilcox & McWethy
+(2023, *Earth Surface Processes and Landforms* 48 : 1665-1678), reprenant
+Myronidis et al. (2010), définissent la **longueur efficace** d'un tronc
+Lₑ = sin φ × L, où φ est l'angle entre son axe et la direction de l'écoulement.
+C'est exactement la projection du tronc sur la courbe de niveau. Et leurs
+essais sur table basculante — dix-huit passages, six orientations, trois
+inclinaisons — donnent le **seuil** : *aucune* accumulation derrière un tronc
+orienté à moins de 30° du courant, rien du tout sous 15° de la ligne de plus
+grande pente. Smith & Swanson (1987) disent la même chose sur le terrain, au
+mont Saint Helens : plus de 90 % des troncs qui stockent quelque chose font au
+moins 45° avec l'écoulement. Le sol retient donc, par cellule, la moyenne
+pondérée par les masses de cette efficacité barrante — pas un simple sinus, un
+sinus **seuillé tronc par tronc**, parce que deux troncs à 25° ne barrent rien
+alors que leur moyenne, elle, ne serait pas nulle.
+
+**Deux effets distincts, et il ne faut pas les confondre.**
+
+| | ce qui se passe | où c'est branché |
+|---|---|---|
+| l'eau | une part du ruissellement qui traverse la cellule est mise en flaque, puis **offerte au sol** ; ce que le sol ne prend pas percole vers la **nappe** | avant le calcul d'érosion, donc moins de lame ⇒ moins d'arrachement |
+| la terre | une part du sédiment en transit se **dépose derrière le tronc**, sur sa propre cellule, avec toute sa charge (humus, litière, N, P, K) | après l'arrachement, avant le passage à l'aval |
+
+Le passage à la nappe n'est pas un artifice comptable, c'est le mécanisme même :
+un tronc ne **supprime** pas l'eau, il la **retarde**. Ce qui courait en surface
+et traversait la parcelle dans la semaine devient de l'eau de nappe, qui met des
+mois à rejoindre l'aval. C'est cela, hydrauliquement, « lutter contre une
+inondation ». À un pas de temps hebdomadaire on ne sait pas représenter le
+décalage du pic lui-même — seulement le volume qui change de chemin.
+
+**La capacité, et c'est elle qui empêche le mécanisme d'être une baguette
+magique.** Le coin amont d'un tronc contient un volume fini, donné par
+l'équation (3) d'Adams et al. :
+
+    S = (d·Lₑ/2) · (d/tanθ − πd/4)
+
+un coin triangulaire de hauteur *d* (le diamètre du tronc) qui remonte d/tanθ
+vers l'amont, moins le demi-cylindre qu'occupe le tronc. On n'a rien choisi là
+non plus, et deux conséquences en sortent seules : **plus la pente est raide,
+moins le tronc retient**, et au-delà de 127 % de pente il ne retient plus rien
+— le tronc surplombe son propre tas. Le volume obtenu, 0,065 m³ par mètre
+efficace à 40 % de pente, est du bon ordre : Wagenbrenner, MacDonald & Rough
+(2006) mesurent 0,049 m³ par mètre efficace sur 210 troncs du Colorado ;
+Robichaud, Pierson, Brown & Wagenbrenner (2008) 0,020 m³ par mètre posé.
+
+Ce coin géométrique est ensuite **ramené à 30 %**, parce que le terrain dit
+qu'il ne sert jamais en entier. Robichaud et al. (2008) sont formels : « runoff
+and sediment were observed going over the top and around the ends of the
+barriers **even when the barriers were less than half filled** » — sur
+vingt-neuf franchissements observés, trois seulement portaient sur un barrage
+plein. Leur pluie simulée n'a mobilisé que 7 % de la capacité des troncs.
+Enfin, le coin **s'ensevelit** : le colluvium accumulé sur la cellule se lit
+déjà dans l'état (`epaisseurPerdueCm` négative), et quand il atteint le haut du
+tronc, le tronc ne sert plus. Aucun champ nouveau pour cela.
+
+**Ce que ça donne, mesuré.** Versant nu à 25 %, vallon, 0,5 ha d'amont, une
+ligne continue de billes en bas de pente, cinq ans, moyenne de cinq graines :
+
+| | eau de surface sortie | terre exportée |
+|---|---|---|
+| pas de bois | 1133 mm | 1,96 kg/m² |
+| bois **dans le sens de la pente** | 1133 mm | 1,92 kg/m² |
+| bois **en travers** | 1095 mm (**−3,4 %**) | 1,75 kg/m² (**−11 %**) |
+
+La ligne du milieu est le résultat qui compte : à masse égale, à paillage égal,
+le bois couché dans le sens de la pente ne détourne **pas une goutte** et ne
+retient **pas un gramme**. Les 2 % qu'il gagne quand même sur la terre sont
+l'ancien effet de paillage, qui lui se moque de l'orientation.
+
+**Et le plafond fonctionne.** Sur la même parcelle, en faisant grossir le
+bassin d'amont — donc la crue :
+
+| bassin amont | terre exportée en moins |
+|---|---|
+| 0,5 ha | −11 % |
+| 12 ha | −4 % |
+
+C'est exactement ce que trouvent Robichaud et al. (2008, *International Journal
+of Wildland Fire* 17 : 255-273) sur six paires de bassins suivis quatre à six
+ans : un effet sur les petites pluies, **aucun effet au-delà du temps de retour
+deux ans**. Trois troncs n'arrêtent pas une inondation, et le moteur le dit
+maintenant tout seul.
+
+**La conséquence gênante, et elle tient — moins fort qu'annoncé.** La chute
+suit l'aval d'autant plus franchement que la pente est raide, donc **là où
+l'érosion fait le plus de dégâts, le chablis naturel sert le moins**. Mais
+l'ampleur a été corrigée à la baisse le jour même : le modèle affichait une
+transversalité **nulle** au-delà de 30 % de pente, et ce zéro était un artefact
+de forme — la contrainte de pente atteignait exactement 1 et alignait tous les
+arbres au cordeau. Aucune forêt ne fait ça. Rentch et al. (*J. Torrey Bot.
+Soc.* 137, huit peuplements de chênes anciens) concluent que « la forte
+variation des directions de chute » empêche d'établir une relation constante
+avec la pente ou le vent, l'asymétrie du houppier s'en mêlant ; côté ripisylve,
+la tendance vers l'aval ne devient nettement plus marquée qu'**au-dessus de
+40 %** de pente — d'où ce seuil, qui valait 30 sans source.
+
+Avec une dispersion résiduelle de ±63°, la transversalité passe de 0,37 à plat
+à 0,27 sur un versant à 60 % : **un quart de barrage en moins, pas la
+disparition du barrage**. Le conseil de gestion ne change pas — abattre sur
+courbe de niveau reste le geste qui arme un versant, et c'est celui de la
+restauration post-incendie — mais un versant raide n'est plus décrit comme nu.
+Sur un versant doux à 15 %, le bois mort d'un peuplement laissé à lui-même est
+barrant à 37 % en moyenne et détourne 3,9 % de l'eau de surface.
+
+Le TONNAGE piégé, lui, dépend d'abord de ce que le versant a à donner :
+1,6 kg/m² sur soixante ans avant que les vitesses de croissance ne soient
+calées sur les tables de production, 0,8 après. Ce n'est pas le mécanisme qui a
+faibli, c'est la forêt qui, poussant à son rythme réel, couvre plus vite et
+laisse moins partir. **Un piège ne retient que ce qui passe.**
+
+**Un tronc qui ne touche pas le sol ne barre rien**, et c'est ce qui sépare
+l'accident du geste. Un chablis tombe avec son houppier et repose dessus :
+l'eau passe dessous. Un suivi boréal sur cinq saisons de végétation (Šamonil et
+al., *PLoS ONE*, « Surface covering of downed logs ») mesure le contact
+longitudinal à **4,4 points sur 7 pour un tronc sans branches contre 1,6 pour
+un tronc qui en a gardé** — « structural support delays settling ». Presque
+trois fois moins, et Adams et al. donnent d'ailleurs une capacité de stockage
+NULLE en classe de décomposition I : le bois frais ne barre pas.
+
+Le champ d'orientation compte donc maintenant deux choses et non une : la
+direction du tronc ET son contact au sol. Conséquence, et elle change le sens
+du mécanisme : **une forêt livrée à elle-même arme mal son versant**. Le bois
+mort naturel d'un peuplement de soixante ans est barrant à 0,13 au lieu de 0,37,
+et piège quatre fois moins de terre. Ce n'est pas une mauvaise nouvelle pour le
+jeu, au contraire : c'est ce qui donne son sens au geste ci-dessous.
+
+*(Simplification assumée : le contact est figé au dépôt alors qu'il croît avec
+les années — le tronc s'enfonce, la mousse le recouvre. Les toutes premières
+années d'un chablis sont donc surestimées, ce qui joue sur cinq ans dans une
+partie qui en dure deux cents.)*
+
+**Et le joueur peut enfin armer son versant.** Le mécanisme existait sans
+qu'aucune action ne permette de s'en servir : couper un arbre, c'était le
+vendre, le broyer ou l'épandre — dans les trois cas le fût quittait le sol. Or
+la restauration post-incendie ne fait pas autre chose qu'abattre et **coucher
+en travers**. D'où un quatrième devenir, `laisser` : le fût reste sur place,
+posé perpendiculairement à la plus grande pente. Ça ne rapporte rien, ça coûte
+un quart de travail en moins que d'aller chercher le bois (on abat, on ébranche
+pour que le tronc porte au sol — sans ce contact il ne barre rien — et on
+s'arrête là), et c'est le seul geste qui arme un versant. Le moteur suppose que
+celui qui choisit de laisser le bois le pose correctement : on ne simule pas la
+maladresse *(hypothèse assumée)*.
+
+**Un bug attrapé au passage, et il valait le voyage.** `versLAval` indexait le
+champ d'altitudes avec les coordonnées **flottantes** de l'arbre. L'index
+tombait entre deux cases, le tableau rendait `undefined` pour les quatre
+voisines, la pente sortait nulle — et la chute était donc **tirée au hasard sur
+un versant à 60 % comme à plat**. Le mécanisme d'orientation existait sur le
+papier et ne s'était jamais déclenché en partie. Le test unitaire ne pouvait
+pas le voir : il appelait la fonction avec des entiers.
+
+*Ce qui reste faux* :
+
+- **Le contact au sol n'est pas modélisé.** Un chablis frais repose sur ses
+  branches et surplombe la terre : Adams et al. décrivent une capacité de
+  stockage nulle en classe de décomposition I, maximale en classe III quand le
+  tronc s'est affaissé au ras du sol. Le moteur suppose le contact acquis dès
+  la chute, donc il est **trop généreux les premières années**.
+- **Le pic de crue n'est pas décalé, seulement réduit en volume.** C'est
+  pourtant l'effet principal d'un obstacle sur une inondation. Un pas de temps
+  hebdomadaire ne sait pas le porter.
+- **Au-delà de 30 % de pente, la transversalité tombe à zéro exactement**,
+  parce que `directionDeChute` aligne alors la chute sur l'aval sans dispersion
+  résiduelle. La vraie forêt garde de la dispersion, et donc quelques troncs
+  utiles même sur un versant raide *(à confirmer)*.
+- **La part utile du coin (30 %) est la constante la plus fragile du lot** :
+  elle décide à elle seule de la force du mécanisme, et elle est calée sur une
+  seule campagne de mesure.
+- **Aucune littérature ne donne de rugosité de Manning mesurée pour un tronc
+  couché sur un versant.** C'est pourquoi le tronc est traité ici comme un
+  réservoir fini à seuil de débordement, et non comme une rugosité — ce que
+  fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
+  des barrages de débris.
 
 ## La variabilité individuelle : la fin des clones
 

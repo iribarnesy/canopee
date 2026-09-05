@@ -11,8 +11,7 @@
     "lint": "biome check src tests scripts",
     "lint:fix": "biome check --write src tests scripts",
     "check:boundaries": "bash scripts/check-boundaries.sh",
-    "l0:scene": "tsx scripts/l0-scene.ts",
-    "l0:mesure": "node scripts/l0-mesure.mjs",
+    "apercu:scene": "tsx scripts/apercu-scene.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm test"

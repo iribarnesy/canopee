@@ -90,14 +90,47 @@ export function azoteNetDecomposition(carboneDecomposeG: number, azoteDecomposeG
 }
 
 /**
- * Stock au-delà duquel l'extraction racinaire n'est plus freinée par la
- * dilution de l'azote dans le sol : 3 g/m² = 30 kg/ha *(à calibrer)*.
+ * Stock d'azote minéral pour lequel une racine prélève à la MOITIÉ de sa
+ * capacité : 0,5 g/m², soit 5 kg N/ha.
+ *
+ * La version précédente écrivait ce frein comme une rampe linéaire saturant à
+ * 3 g/m² — 30 kg N/ha — et cela ne tenait pas debout de deux façons.
+ *
+ * D'ABORD L'ÉCHELLE. Un sol forestier ne porte jamais 30 kg N/ha de minéral en
+ * même temps : le nôtre plafonne à 1,9 g/m² sur le limon riche et 0,5 sur la
+ * lande. Le frein était donc actif EN PERMANENCE, partout, sur toutes les
+ * stations — jamais une racine ne prélevait librement.
+ *
+ * ENSUITE LA FORME. Un prélèvement racinaire sature (cinétique de
+ * Michaelis-Menten sur la concentration en solution), il ne croît pas
+ * linéairement jusqu'à un couperet. Et la mesure de terrain va plus loin :
+ * dans neuf forêts tempérées suivies sur une saison (Nadelhoffer et al., *Plant
+ * and Soil*), le nitrate est prélevé à un rythme RÉGULIER alors même que les
+ * stocks d'ammonium et la minéralisation nette fluctuent fortement d'un mois à
+ * l'autre. Autrement dit : l'arbre vit du FLUX de minéralisation qu'il
+ * intercepte, et le stock debout est petit précisément parce que le
+ * prélèvement est rapide. Un modèle qui bride le prélèvement à proportion du
+ * stock inverse la causalité.
+ *
+ * La demi-saturation est donc placée BAS, dans le bas de la gamme des stocks
+ * minéraux observés en forêt tempérée *(à calibrer : aucune source ne publie
+ * cette constante sous cette forme — c'est une inférence de la gamme des
+ * stocks et de la régularité du prélèvement)*.
+ *
+ * Ce changement a été soumis à une réfutation avant d'être retenu : les trois
+ * essences dont la vitesse de croissance n'est PAS calée sur les tables de
+ * production (pin, aulne, frêne) auraient dû se mettre à les dépasser si le
+ * frein compensait autre chose. Elles restent à +6 %, +1 % et +2 % à quarante
+ * ans (`hauteurs.test.ts`).
  */
-export const AVAILABILITY_SATURATION_G_M2 = 3;
+export const DEMI_SATURATION_G_M2 = 0.5;
 
-/** Frein de dilution ∈ [0,1] : un sol pauvre se prélève lentement. */
+/**
+ * Frein de dilution ∈ [0,1] : un sol pauvre se prélève lentement, mais un sol
+ * ordinaire n'est pas bridé pour autant.
+ */
 export function nitrogenAvailabilityFactor(stockG: number): number {
-  return Math.min(1, stockG / AVAILABILITY_SATURATION_G_M2);
+  return stockG / (DEMI_SATURATION_G_M2 + stockG);
 }
 
 /**

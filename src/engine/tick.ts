@@ -11,13 +11,21 @@
 import type { GesteVisible } from "./actions";
 import {
   type CelluleSousLeTronc,
+  CONTACT_CHABLIS_BRANCHU,
   couvertureDuBoisAuSol,
   DECOMPOSITION_AU_SOL_PAR_AN,
   directionDeChute,
   ecrasePar,
   empreinteDeChute,
   graineDeChute,
-  MASSE_LINEIQUE_TRONC_KGC_PAR_M,
+  lameRetenueMm,
+  longueurDeTroncM,
+  longueurEnTraversM,
+  partBarrante,
+  poserBoisAuSol,
+  sedimentPiegeKgM2,
+  transversalite,
+  versLAval,
 } from "./boisMort";
 import {
   CN_HUMUS,
@@ -145,6 +153,7 @@ import {
 } from "./relief";
 import {
   conductiviteHorizonMmSemaine,
+  densiteApparente,
   facteurPhBiologie,
   porositeDrainageMm,
   profondeurPenetrableCm,
@@ -746,6 +755,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // par cellule (erosion.ts). `sedimentEnTransit` est ce qu'une cellule passe
   // à sa voisine d'aval, en kg de terre par m².
   const sedimentEnTransit = new Array<number>(nCells).fill(0);
+  // Ce que le bois en travers aura détourné, eau et terre : deux effets
+  // distincts, deux compteurs distincts.
+  let boisRetenueMm = 0;
+  let boisSedimentPiegeKg = 0;
   // Un tronc couché en travers protège la terre sous lui comme un paillage, et
   // c'est un effet reconnu du bois mort : ce qui est dessous ne part pas. On
   // lit le bois de la semaine PRÉCÉDENTE — un arbre qui s'abat ce tick-ci
@@ -755,14 +768,58 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       1,
       (herbeCouverture[i] ?? 0) +
         Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG) +
-        couvertureDuBoisAuSol(
-          (state.soil.boisAuSolCG[i] ?? 0) / 1000 / MASSE_LINEIQUE_TRONC_KGC_PAR_M,
-        ),
+        couvertureDuBoisAuSol(longueurDeTroncM(state.soil.boisAuSolCG[i] ?? 0)),
     );
+  // Le paillage ci-dessus se moque de l'orientation ; le BARRAGE, non. Un
+  // tronc en travers oppose sa longueur au courant, le même tronc couché dans
+  // le sens de la pente ne lui oppose rien (boisMort.ts). D'où une seconde
+  // lecture du bois au sol, projetée sur la courbe de niveau.
+  const barrageDe = (i: number) =>
+    longueurEnTraversM(state.soil.boisAuSolCG[i] ?? 0, state.soil.boisEnTraversPart[i] ?? 0);
   for (const i of descente) {
     const disponible = debordementParCellule[i] ?? 0;
     const partRuisselante = fractionRuissellement(pentes[i] ?? 0);
-    const part = disponible * partRuisselante;
+    // Ce qui ne ruisselle pas stagne sur place et finit par s'en aller. Ce
+    // terme se fige ICI, avant que le bois n'entame la lame ruisselée : ce
+    // qu'un tronc fait entrer dans le sol ne stagne pas, et le compter deux
+    // fois casserait le bilan de l'eau.
+    const stagnante = disponible * (1 - partRuisselante);
+    let part = disponible - stagnante;
+    // ── Ce qu'un tronc en travers retient de l'eau ──────────────────────────
+    // Le tronc ne fait pas disparaître la lame : il la met en flaque, et une
+    // flaque a le temps de rentrer dans la terre. Ce qui rentre change de
+    // NATURE — l'eau qui courait en surface et traversait la parcelle dans la
+    // semaine devient de l'eau du sol, puis de la nappe, qui met des mois à
+    // rejoindre l'aval (§ « la nappe s'écoule vers l'aval », plus haut). C'est
+    // là, et pas ailleurs, qu'un tronc travaille contre une inondation : il ne
+    // supprime pas l'eau, il la retarde.
+    //
+    // Deux plafonds, et ils sont physiques tous les deux : la place qui reste
+    // dans le sol et dans l'aquifère — une éponge pleine n'absorbe rien, si
+    // bien qu'un fond de vallon détrempé ne se protège pas lui-même — et la
+    // capacité de rétention du barrage lui-même (boisMort.ts), qui borne ce
+    // qu'un mètre de tronc peut mettre en flaque avant que l'eau ne le passe
+    // par-dessus.
+    const barrage = barrageDe(i);
+    // Le colluvium déjà accumulé sur la cellule, cm : c'est lui qui finit par
+    // ensevelir le tronc et par lui retirer tout pouvoir (boisMort.ts).
+    const depotIci = -(epaisseurPerdueCm[i] ?? 0);
+    if (barrage > 0 && part > 0) {
+      let retenue = lameRetenueMm(barrage, part, pentes[i] ?? 0, depotIci);
+      const ruIci = ruSurfacePourHumus(humusCG[i] ?? humusInitialG, epaisseurPerdueCm[i] ?? 0);
+      const placeSol = Math.max(0, ruIci - (waterMm[i * nH] ?? 0));
+      const versLeSol = Math.min(retenue, placeSol);
+      waterMm[i * nH] = (waterMm[i * nH] ?? 0) + versLeSol;
+      retenue -= versLeSol;
+      // Le sol plein, la flaque percole : elle recharge la nappe au lieu de
+      // partir en surface. C'est le même trajet que le drainage ordinaire.
+      const placeNappe = Math.max(0, capaciteNappeMm - (nappeStockMm[i] ?? 0));
+      const versLaNappe = Math.min(retenue, placeNappe);
+      nappeStockMm[i] = (nappeStockMm[i] ?? 0) + versLaNappe;
+      const infiltre = versLeSol + versLaNappe;
+      part -= infiltre;
+      boisRetenueMm += infiltre;
+    }
     // ── Érosion : ce qui part en surface arrache de la terre au passage ─────
     const arrachee = part > 0 ? terreArracheeKgM2(part, pentes[i] ?? 0, couvertureDe(i)) : 0;
     const emporte = fractionEmportee(arrachee, masseSurfaceKgM2);
@@ -794,6 +851,45 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (horizonSurface) {
         epaisseurPerdueCm[i] =
           (epaisseurPerdueCm[i] ?? 0) + epaisseurPerdueCm2(arrachee, horizonSurface);
+      }
+    }
+    // ── Ce qu'un tronc en travers piège du sédiment ────────────────────────
+    // Distinct de la retenue d'eau, et c'est le point : même quand le sol est
+    // saturé et que le barrage ne retient plus une goutte, il continue de
+    // peigner la terre qui passe. C'est l'effet mesuré des « log erosion
+    // barriers », et c'est le principal (boisMort.ts). Le dépôt se fait DERRIÈRE
+    // le tronc, donc sur sa propre cellule, avec toute sa charge.
+    if (barrage > 0 && horizonSurface) {
+      const avantPiege = sedimentEnTransit[i] ?? 0;
+      const piege = Math.min(
+        avantPiege,
+        sedimentPiegeKgM2(
+          barrage,
+          avantPiege,
+          pentes[i] ?? 0,
+          depotIci,
+          densiteApparente(horizonSurface),
+        ),
+      );
+      if (piege > 0) {
+        const f = piege / avantPiege;
+        const rendre = (stock: number[], charge: number[]): void => {
+          const rendu = (charge[i] ?? 0) * f;
+          stock[i] = (stock[i] ?? 0) + rendu;
+          charge[i] = (charge[i] ?? 0) - rendu;
+        };
+        rendre(humusCG, chargeHumusCG);
+        rendre(litterCG, chargeLitiereCG);
+        rendre(mineralNG, chargeNminG);
+        rendre(litterNG, chargeNlitG);
+        rendre(phosphoreG, chargePG);
+        rendre(potassiumG, chargeKG);
+        sedimentEnTransit[i] = avantPiege - piege;
+        boisSedimentPiegeKg += piege;
+        // Le sol de la cellule s'épaissit d'autant : c'est le colluvium qui
+        // finira par enterrer le tronc et par lui ôter tout pouvoir.
+        epaisseurPerdueCm[i] =
+          (epaisseurPerdueCm[i] ?? 0) - epaisseurPerdueCm2(piege, horizonSurface);
       }
     }
     const jSediment = aval[i] ?? -1;
@@ -837,8 +933,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       }
     }
     if (disponible <= 0) continue;
-    // Ce qui ne ruisselle pas stagne sur place et finit par s'en aller.
-    overflowSum += disponible - part;
+    overflowSum += stagnante;
     if (part <= 0) continue;
     const j = aval[i] ?? -1;
     if (j < 0) {
@@ -1528,6 +1623,36 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // au pool de bois mort, et ils quittent la carte.
   let deadWoodKgC = state.carbon.deadWoodKgC;
   const boisAuSolCG = state.soil.boisAuSolCG.slice();
+  const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
+  /**
+   * Poser du bois sur une cellule, en gardant trace de son ORIENTATION. La
+   * masse s'ajoute, la part barrante se moyenne — pondérée par les masses,
+   * puisque c'est bien de longueur de barrage qu'il s'agit : deux troncs, l'un
+   * en travers l'autre dans le sens de la pente, ne barrent que la moitié de
+   * ce que barreraient deux troncs en travers.
+   *
+   * Le seuil des 30° s'applique ici, tronc par tronc, et pas plus tard sur la
+   * moyenne : deux troncs à 25° de l'aval ne barrent rien du tout, alors que
+   * leur transversalité moyenne, elle, ne serait pas nulle.
+   *
+   * L'orientation se juge contre l'aval de la cellule QUI REÇOIT, pas contre
+   * celui du pied de l'arbre : un tronc de trente mètres traverse plusieurs
+   * expositions, et c'est l'eau de chaque cellule qu'il barre ou non.
+   */
+  const poserBois = (cellule: number, masseCG: number, radiansTronc: number) =>
+    poserBoisAuSol(
+      boisAuSolCG,
+      boisEnTraversPart,
+      altitudes,
+      dims,
+      cellule,
+      masseCG,
+      radiansTronc,
+      // Un chablis tombe avec son houppier : il repose dessus, et l'eau passe
+      // dessous. C'est la différence avec le tronc qu'un gestionnaire ébranche
+      // et cale (boisMort.ts, actions.ts).
+      CONTACT_CHABLIS_BRANCHU,
+    );
   // Le hasard est disponible dès ici parce qu'une chandelle qui s'abat tombe
   // dans une direction. Tant qu'aucune ne tombe, aucun tirage n'est consommé
   // et la suite de la semaine voit exactement les mêmes nombres qu'avant.
@@ -1603,8 +1728,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // les cellules du dedans : on ne fait pas disparaître du carbone au prétexte
     // qu'un arbre avait poussé au bord.
     for (const c of empreinte) {
-      boisAuSolCG[c.cellule] =
-        (boisAuSolCG[c.cellule] ?? 0) + restantKgC * (c.longueurM / longueurTotale) * 1000;
+      poserBois(c.cellule, restantKgC * (c.longueurM / longueurTotale) * 1000, radians);
     }
     chutes.push({
       id: tree.id,
@@ -1624,12 +1748,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // n'importe quel tronc, un arbre fait encaisse. Le bois de l'écrasé rejoint
   // le sol là où il gisait, pas le pool des chandelles : il est déjà couché.
   if (chutes.length > 0) {
-    const massePosee = new Map<number, number>();
+    // On retient aussi la DIRECTION du tronc le plus lourd reçu : un arbre
+    // qu'un chablis couche part dans le sens de la poussée, pas au hasard.
+    const massePosee = new Map<number, { part: number; radians: number }>();
     for (const chute of chutes) {
       const longueur = chute.empreinte.reduce((somme, c) => somme + c.longueurM, 0);
       for (const c of chute.empreinte) {
         const part = chute.masseKgC * (c.longueurM / longueur);
-        massePosee.set(c.cellule, Math.max(massePosee.get(c.cellule) ?? 0, part));
+        const deja = massePosee.get(c.cellule);
+        if (deja === undefined || part > deja.part) {
+          massePosee.set(c.cellule, { part, radians: chute.directionRad });
+        }
       }
     }
     const debout: TreeState[] = [];
@@ -1638,12 +1767,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const recu = massePosee.get(cellule);
       const espece = getEspece(tree.especeId);
       const masse = treeTotalCarbonKg(espece, tree.heightM);
-      if (!tree.alive || recu === undefined || !ecrasePar(recu, masse)) {
+      if (!tree.alive || recu === undefined || !ecrasePar(recu.part, masse)) {
         debout.push(tree);
         continue;
       }
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
-      boisAuSolCG[cellule] = (boisAuSolCG[cellule] ?? 0) + masse * 1000;
+      poserBois(cellule, masse * 1000, recu.radians);
       morts.push({
         id: tree.id,
         x: tree.x,
@@ -1851,6 +1980,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         waterMm,
         excessMm,
         boisAuSolCG,
+        boisEnTraversPart,
         mineralNG,
         litterNG,
         litterCG,
@@ -1924,6 +2054,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       ruissellementSortantMm: ruissellementSortantMm / nCells,
       partInondee: cellulesInondees / nCells,
       erosionArracheeKgM2: erosionArracheeKg / nCells,
+      boisRetenueMm: boisRetenueMm / nCells,
+      boisSedimentPiegeKgM2: boisSedimentPiegeKg / nCells,
       erosionSortieKgM2: erosionSortieKg / nCells,
       erosionNKgHa: ((erosionSortieNminG + erosionSortieNlitG) / nCells) * 10,
       erosionPKgHa: (erosionSortiePG / nCells) * 10,

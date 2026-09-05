@@ -1,12 +1,17 @@
 /**
- * L'aperçu du lot L1 : une page qui compose la scène complète — décor, sol,
- * ombres — pour qu'on puisse la REGARDER.
+ * L'aperçu : une page qui compose la scène complète — décor, sol, ombres —
+ * pour qu'on puisse la REGARDER.
  *
- * Ce n'est pas un banc de mesure (c'est `main.ts`), et ce n'est pas le jeu :
- * c'est l'endroit où l'assemblage des couches est écrit une seule fois, et
- * l'endroit d'où sortent les captures qu'on soumet. Il est versionné exprès —
- * la version précédente vivait dans un dossier temporaire et a disparu avec
- * lui, ce qui a coûté une reconstruction complète.
+ * Ce n'est pas le jeu, et ce n'est plus le banc de mesure du lot L0, qui est
+ * supprimé depuis que D1 est tranchée. C'est la **boucle de revue du rendu** :
+ * l'endroit où l'assemblage des couches est écrit une seule fois, et l'endroit
+ * d'où sortent les captures qu'on soumet pour dire si c'est beau ou non.
+ *
+ * Versionné exprès. Une première version vivait dans un dossier temporaire et a
+ * disparu avec lui, ce qui a coûté une reconstruction complète.
+ *
+ * Les scènes qu'il charge viennent de `scripts/apercu-scene.ts` et vivent dans
+ * `apercu/scenes/`, qui n'est pas versionné — un mégaoctet par instantané.
  */
 
 import { getEspece } from "../engine/especes";
@@ -213,7 +218,7 @@ function vignette(titre: string, image: HTMLCanvasElement): void {
 }
 
 async function charger(nom: string): Promise<Scene> {
-  const reponse = await fetch(`/spike/apercu/${nom}.json`);
+  const reponse = await fetch(`/apercu/scenes/${nom}.json`);
   if (!reponse.ok) throw new Error(`scène introuvable : ${nom}`);
   return (await reponse.json()) as Scene;
 }

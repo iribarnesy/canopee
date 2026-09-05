@@ -308,7 +308,11 @@ describe("un tronc qui tombe tombe quelque part", () => {
     };
     const raide = versLeSud(60);
     const plat = versLeSud(0);
-    expect(raide).toBeLessThan(0.2);
+    // La pente oriente sans ranger : il reste ±63° de dispersion quand elle est
+    // franche (`DISPERSION_RESIDUELLE`). L'écart moyen à l'aval tombe donc vers
+    // 0,5 rad — une trentaine de degrés — et non vers zéro. Une forêt dont tous
+    // les arbres tomberaient au cordeau serait une invention du modèle.
+    expect(raide).toBeLessThan(0.65);
     // À plat, l'écart moyen à une direction quelconque vaut π/2 : le hasard
     // n'a plus de préférence.
     expect(plat).toBeGreaterThan(1.2);

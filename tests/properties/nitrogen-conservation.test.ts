@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   cellLeachedG,
   cellMineralization,
+  DEMI_SATURATION_G_M2,
   nitrogenAvailabilityFactor,
 } from "../../src/engine/nitrogen";
 
@@ -67,9 +68,21 @@ describe("cycle de l'azote — briques cellule", () => {
     expect(cellLeachedG(5, 60, 60)).toBeCloseTo(2.5, 6);
   });
 
-  it("frein de dilution : nul à stock nul, saturé à 3 g/m²", () => {
+  it("frein de dilution : nul à stock nul, à moitié levé dès 5 kg N/ha", () => {
+    // La forme est celle d'une cinétique de prélèvement, pas d'une rampe :
+    // elle monte vite au début et n'atteint jamais tout à fait 1. La rampe
+    // précédente saturait à 3 g/m² — 30 kg N/ha — un stock qu'un sol
+    // FORESTIER ne porte jamais, si bien que le frein était actif en
+    // permanence sur toutes les stations (nitrogen.ts).
     expect(nitrogenAvailabilityFactor(0)).toBe(0);
-    expect(nitrogenAvailabilityFactor(1.5)).toBeCloseTo(0.5, 9);
-    expect(nitrogenAvailabilityFactor(10)).toBe(1);
+    expect(nitrogenAvailabilityFactor(DEMI_SATURATION_G_M2)).toBeCloseTo(0.5, 9);
+    // Un sol riche du jeu tourne autour de 1,6 g/m² : le frein y est levé aux
+    // trois quarts, sans l'être tout à fait.
+    expect(nitrogenAvailabilityFactor(1.6)).toBeGreaterThan(0.7);
+    expect(nitrogenAvailabilityFactor(1.6)).toBeLessThan(0.8);
+    // Une lande à 0,5 g/m², elle, reste bridée de moitié : le contraste entre
+    // stations tient, et c'est ce qui comptait.
+    expect(nitrogenAvailabilityFactor(0.5)).toBeCloseTo(0.5, 9);
+    expect(nitrogenAvailabilityFactor(1e6)).toBeLessThan(1);
   });
 });

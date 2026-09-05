@@ -161,7 +161,9 @@ function performAction(action: GameAction) {
           "🪓",
           action.devenir === "vendre"
             ? `${n} arbre${n > 1 ? "s" : ""} vendu${n > 1 ? "s" : ""} (${qualiteVente(before, action.treeIds)}) : ${eur}`
-            : `${n} arbre${n > 1 ? "s" : ""} broyé${n > 1 ? "s" : ""} et épandu${n > 1 ? "s" : ""} en BRF (azote et carbone au sol)`,
+            : action.devenir === "laisser"
+              ? `${n} fût${n > 1 ? "s" : ""} couché${n > 1 ? "s" : ""} en travers de la pente — rien en caisse, mais l'eau ralentit et la terre se dépose derrière`
+              : `${n} arbre${n > 1 ? "s" : ""} broyé${n > 1 ? "s" : ""} et épandu${n > 1 ? "s" : ""} en BRF (azote et carbone au sol)`,
         );
       break;
     }
@@ -364,6 +366,8 @@ function emptyFluxes(): TickFluxes {
     partInondee: 0,
     erosionArracheeKgM2: 0,
     erosionSortieKgM2: 0,
+    boisRetenueMm: 0,
+    boisSedimentPiegeKgM2: 0,
     erosionNKgHa: 0,
     vidangeNappeMm: 0,
     apportRegionalMm: 0,

@@ -1,22 +1,31 @@
 /**
- * LOT L0 — le générateur de la scène que le banc rejoue.
+ * Le générateur des scènes de l'APERÇU (docs/interface-visuelle.md §5).
  *
- * La scène est **figée en JSON exprès** : c'est ce qui permet de comparer
- * Pixi et Canvas 2D sur le MÊME jeu d'arbres d'une machine à l'autre
- * (docs/lot0-pointe-technique.md). Mais figée ne veut pas dire
- * irreproductible : ce script est l'autre moitié du marché, et il faut le
- * relancer chaque fois que le moteur change ce que la parcelle contient. Le
- * premier jet ne l'était pas — d'où celui-ci.
+ * **Ce script a changé d'usage, et il a failli disparaître avec le banc.** Il
+ * est né pour figer la scène que le banc du lot L0 rejouait, afin de comparer
+ * Pixi et Canvas 2D sur le MÊME jeu d'arbres d'une machine à l'autre. Ce
+ * travail-là est fini : D1 est tranchée, le banc est supprimé.
  *
- *   npm run l0:scene                 # l'an 50 seul
- *   L0_ANS=10,25,30,50 npm run l0:scene
+ * Ce qui reste, et qui n'est pas la même chose : **la boucle de revue du
+ * rendu**. Pour juger une palette, une texture ou un décor, il faut des
+ * instantanés du moteur — vrais, reproductibles, pris à des saisons et sur des
+ * stations choisies. C'est ce que ce script produit, et c'est pour ça qu'il
+ * survit au banc sous un autre nom.
+ *
+ *   npm run apercu:scene
+ *   APERCU_NOM=friche.json APERCU_ANS=30 APERCU_SEMAINES=4,17,28,42 npm run apercu:scene
+ *   APERCU_NOM=mare.json APERCU_EAU=mare npm run apercu:scene
  *
  * Paramètres : station `friche-limon` portée à 1 ha, graine 42, météo réelle,
  * climat figé. Le voisinage de la station est CONSERVÉ — c'est lui qui
  * colonise la friche, et sans lui la parcelle reste nue.
  *
- * Une passe unique produit tous les instantanés demandés : c'est cinquante ans
+ * Une passe unique produit tous les instantanés demandés : c'est des décennies
  * de simulation sur dix mille cellules, on ne les refait pas par année.
+ *
+ * **La leçon de méthode du lot L0 vaut toujours** : une scène produite par un
+ * script non versionné devient fausse sans que rien ne le signale. Les scènes
+ * elles-mêmes ne sont pas versionnées (un mégaoctet pièce) ; ce script, si.
  */
 
 import { writeFileSync } from "node:fs";
@@ -33,16 +42,15 @@ import { FRICHE_LIMON } from "../src/engine/stations";
 
 const GRAINE = 42;
 const COTE_M = 100;
-const DOSSIER = process.env.L0_DOSSIER ?? "spike";
+const DOSSIER = process.env.APERCU_DOSSIER ?? "apercu/scenes";
 /** Nom du fichier produit ; par défaut `scene-anN.json`. */
-const NOM = process.env.L0_NOM;
+const NOM = process.env.APERCU_NOM;
 /**
- * Variantes de STATION, pour les aperçus du lot L1. Le banc de L0 n'en a pas
- * besoin — il mesure une charge, pas un paysage — mais le rendu, si : sans
- * pente on ne voit pas l'ombrage de relief, et sans eau on ne voit pas l'eau.
+ * Variantes de STATION. Sans pente on ne voit pas l'ombrage de relief, et sans
+ * eau on ne voit pas l'eau : une seule station ne suffit pas à juger un rendu.
  */
-const PENTE_PCT = process.env.L0_PENTE ? Number(process.env.L0_PENTE) : undefined;
-const EAU = process.env.L0_EAU as "ruisseau" | "mare" | undefined;
+const PENTE_PCT = process.env.APERCU_PENTE ? Number(process.env.APERCU_PENTE) : undefined;
+const EAU = process.env.APERCU_EAU as "ruisseau" | "mare" | undefined;
 /**
  * Semaines DANS L'ANNÉE à figer, en plus de la fin d'année.
  *
@@ -51,11 +59,11 @@ const EAU = process.env.L0_EAU as "ruisseau" | "mare" | undefined;
  * parcelle était inondée en permanence. Pour juger une palette de saison, il
  * faut des instantanés PRIS à ces saisons, pas un instantané d'hiver repeint.
  */
-const SEMAINES = (process.env.L0_SEMAINES ?? "")
+const SEMAINES = (process.env.APERCU_SEMAINES ?? "")
   .split(",")
   .map((v) => Number.parseInt(v.trim(), 10))
   .filter((n) => Number.isFinite(n) && n >= 0 && n < 52);
-const ANS = (process.env.L0_ANS ?? "50")
+const ANS = (process.env.APERCU_ANS ?? "50")
   .split(",")
   .map((s) => Number.parseInt(s.trim(), 10))
   .filter((n) => Number.isFinite(n) && n > 0)

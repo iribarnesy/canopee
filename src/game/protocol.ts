@@ -150,6 +150,14 @@ export interface Snapshot {
    * ce sont les mêmes cellules qui font de l'humus et retiennent la terre.
    */
   soilBoisAuSol: Float32Array;
+  /**
+   * Part de ce bois qui BARRE l'eau, ∈ [0,1] (boisMort.ts) : ce qui reste de sa
+   * longueur une fois projetée sur la courbe de niveau et le seuil des 30° passé.
+   * C'est elle, et pas la masse, qui dit si le tronc barre l'eau ou s'il fait
+   * gouttière : deux cellules aussi chargées de bois n'ont pas le même effet
+   * sur le ruissellement, et le rendu doit pouvoir le montrer.
+   */
+  soilBoisEnTravers: Float32Array;
   soilN: Float32Array;
   /** couverture herbacée par cellule ∈ [0,1] */
   soilHerbe: Float32Array;
