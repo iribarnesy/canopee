@@ -981,6 +981,27 @@ calées sur les tables de production, 0,8 après. Ce n'est pas le mécanisme qui
 faibli, c'est la forêt qui, poussant à son rythme réel, couvre plus vite et
 laisse moins partir. **Un piège ne retient que ce qui passe.**
 
+**Un tronc qui ne touche pas le sol ne barre rien**, et c'est ce qui sépare
+l'accident du geste. Un chablis tombe avec son houppier et repose dessus :
+l'eau passe dessous. Un suivi boréal sur cinq saisons de végétation (Šamonil et
+al., *PLoS ONE*, « Surface covering of downed logs ») mesure le contact
+longitudinal à **4,4 points sur 7 pour un tronc sans branches contre 1,6 pour
+un tronc qui en a gardé** — « structural support delays settling ». Presque
+trois fois moins, et Adams et al. donnent d'ailleurs une capacité de stockage
+NULLE en classe de décomposition I : le bois frais ne barre pas.
+
+Le champ d'orientation compte donc maintenant deux choses et non une : la
+direction du tronc ET son contact au sol. Conséquence, et elle change le sens
+du mécanisme : **une forêt livrée à elle-même arme mal son versant**. Le bois
+mort naturel d'un peuplement de soixante ans est barrant à 0,13 au lieu de 0,37,
+et piège quatre fois moins de terre. Ce n'est pas une mauvaise nouvelle pour le
+jeu, au contraire : c'est ce qui donne son sens au geste ci-dessous.
+
+*(Simplification assumée : le contact est figé au dépôt alors qu'il croît avec
+les années — le tronc s'enfonce, la mousse le recouvre. Les toutes premières
+années d'un chablis sont donc surestimées, ce qui joue sur cinq ans dans une
+partie qui en dure deux cents.)*
+
 **Et le joueur peut enfin armer son versant.** Le mécanisme existait sans
 qu'aucune action ne permette de s'en servir : couper un arbre, c'était le
 vendre, le broyer ou l'épandre — dans les trois cas le fût quittait le sol. Or

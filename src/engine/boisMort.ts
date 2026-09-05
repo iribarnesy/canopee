@@ -160,6 +160,7 @@ export function poserBoisAuSol(
   cellule: number,
   masseCG: number,
   radiansTronc: number,
+  contact: number,
 ): void {
   if (masseCG <= 0) return;
   const avant = boisAuSolCG[cellule] ?? 0;
@@ -169,7 +170,8 @@ export function poserBoisAuSol(
     cellule % dims.widthM,
     Math.floor(cellule / dims.widthM),
   );
-  const barre = partBarrante(transversalite(radiansTronc, radians));
+  // Un tronc qui ne TOUCHE PAS le sol ne barre rien : l'eau passe dessous.
+  const barre = contact * partBarrante(transversalite(radiansTronc, radians));
   boisEnTraversPart[cellule] =
     ((boisEnTraversPart[cellule] ?? 0) * avant + barre * masseCG) / (avant + masseCG);
   boisAuSolCG[cellule] = avant + masseCG;
@@ -279,6 +281,35 @@ export function transversalite(radiansTronc: number, radiansAval: number): numbe
  * lieu de buter dessus.
  */
 export const SINUS_BARRANT_MINIMAL = 0.5;
+
+/**
+ * Part du tronc réellement POSÉE sur le sol, selon qu'il a gardé ses branches
+ * ou non. C'est la variable oubliée du barrage : un tronc en travers qui repose
+ * sur son houppier laisse l'eau passer dessous, et Adams et al. donnent une
+ * capacité de stockage nulle en classe de décomposition I — le bois frais ne
+ * barre pas.
+ *
+ * Les chiffres viennent d'un suivi boréal sur cinq saisons de végétation
+ * (Šamonil et al., *PLoS ONE*, « Surface covering of downed logs ») : le
+ * contact longitudinal moyen y vaut **4,4 points sur 7 pour un tronc sans
+ * branches contre 1,6 pour un tronc qui en a gardé** — « structural support
+ * delays settling ». C'est un rapport de presque trois, et il sépare
+ * exactement les deux façons dont du bois arrive au sol dans ce jeu.
+ *
+ * Le geste du gestionnaire est au-dessus des 0,63 mesurés parce qu'il ne se
+ * contente pas d'ébrancher : la pratique des *log erosion barriers* demande de
+ * CALER le tronc dans le sol, pas de le poser dessus *(inférence, à
+ * confirmer)*.
+ *
+ * *(Simplification assumée : le contact est figé au moment du dépôt alors
+ * qu'il croît avec les années — le tronc s'enfonce, la mousse le recouvre. Les
+ * toutes premières années d'un chablis sont donc surestimées. Une valeur par
+ * cellule qui relaxerait vers son asymptote serait plus juste ; elle
+ * demanderait un champ d'état de plus pour un effet qui se joue sur cinq ans
+ * dans une partie qui en dure deux cents.)*
+ */
+export const CONTACT_TRONC_EBRANCHE = 0.8;
+export const CONTACT_CHABLIS_BRANCHU = 0.25;
 
 /**
  * Efficacité barrante d'un tronc, ∈ [0,1] : sa longueur efficace, ramenée à

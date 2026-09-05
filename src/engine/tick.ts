@@ -11,6 +11,7 @@
 import type { GesteVisible } from "./actions";
 import {
   type CelluleSousLeTronc,
+  CONTACT_CHABLIS_BRANCHU,
   couvertureDuBoisAuSol,
   DECOMPOSITION_AU_SOL_PAR_AN,
   directionDeChute,
@@ -1639,7 +1640,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
    * expositions, et c'est l'eau de chaque cellule qu'il barre ou non.
    */
   const poserBois = (cellule: number, masseCG: number, radiansTronc: number) =>
-    poserBoisAuSol(boisAuSolCG, boisEnTraversPart, altitudes, dims, cellule, masseCG, radiansTronc);
+    poserBoisAuSol(
+      boisAuSolCG,
+      boisEnTraversPart,
+      altitudes,
+      dims,
+      cellule,
+      masseCG,
+      radiansTronc,
+      // Un chablis tombe avec son houppier : il repose dessus, et l'eau passe
+      // dessous. C'est la différence avec le tronc qu'un gestionnaire ébranche
+      // et cale (boisMort.ts, actions.ts).
+      CONTACT_CHABLIS_BRANCHU,
+    );
   // Le hasard est disponible dès ici parce qu'une chandelle qui s'abat tombe
   // dans une direction. Tant qu'aucune ne tombe, aucun tirage n'est consommé
   // et la suite de la semaine voit exactement les mêmes nombres qu'avant.

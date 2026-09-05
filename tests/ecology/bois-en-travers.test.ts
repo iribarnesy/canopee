@@ -193,15 +193,17 @@ describe("l'orientation d'un tronc décide de tout", () => {
     // Le versant raide barre moins que le plat, sans jamais tomber à zéro :
     // même à 60 %, la dispersion résiduelle des chutes laisse un quart du bois
     // en travers (`DISPERSION_RESIDUELLE`, boisMort.ts).
-    // Mesuré : 0,27 à 60 % contre 0,37 à plat, soit un quart de barrage en
-    // moins. C'est net, et c'est loin du zéro qu'affichait le modèle avant que
-    // la dispersion résiduelle des chutes ne soit rétablie.
+    // Mesuré : un quart de barrage en moins sur le versant raide. C'est net, et
+    // c'est loin du zéro qu'affichait le modèle avant que la dispersion
+    // résiduelle des chutes ne soit rétablie.
     expect(raide).toBeLessThan(0.85 * plat);
-    expect(raide).toBeGreaterThan(0.15);
+    expect(raide).toBeGreaterThan(0.04);
     // Chute quelconque : l'espérance de l'efficacité barrante d'un angle tiré
-    // au hasard vaut (2/π)·(√3 − π/3) ≈ 0,44 une fois le seuil des 30° passé.
-    expect(plat).toBeGreaterThan(0.35);
-    expect(plat).toBeLessThan(0.55);
+    // au hasard vaut (2/π)·(√3 − π/3) ≈ 0,44 une fois le seuil des 30° passé —
+    // puis le quart, parce qu'un chablis repose sur ses branches et ne touche
+    // le sol que sur 1,6 point de mesure sur 7 (`CONTACT_CHABLIS_BRANCHU`).
+    expect(plat).toBeGreaterThan(0.08);
+    expect(plat).toBeLessThan(0.15);
   });
 });
 
@@ -342,9 +344,12 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     const moy = (r: typeof oriente, k: "eau" | "piege" | "travers") =>
       r.reduce((a, v) => a + v[k], 0) / r.length;
 
-    // Sur une pente de 15 %, la chute reste largement désorientée : le bois
-    // mort d'une vieille parcelle est en travers pour les deux tiers environ.
-    expect(moy(oriente, "travers")).toBeGreaterThan(0.3);
+    // Sur une pente de 15 %, la chute reste largement désorientée. Mais le
+    // chablis tombe avec ses branches et repose dessus : son efficacité
+    // barrante réelle est le quart de sa transversalité (`CONTACT_CHABLIS_
+    // BRANCHU`). Une forêt livrée à elle-même arme donc mal son versant — et
+    // c'est bien pour ça que le geste d'abattre et de coucher existe.
+    expect(moy(oriente, "travers")).toBeGreaterThan(0.08);
     // Il piège de la terre — sur place, derrière les troncs — là où le même
     // bois couché dans le sens de la pente n'en piège aucune. Le TONNAGE, lui,
     // dépend d'abord de ce que le versant a à donner : mesuré à 1,6 kg/m² sur
@@ -352,7 +357,12 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // les tables, il tombe à 0,8 ensuite. Ce n'est pas le mécanisme qui a
     // faibli — c'est la forêt qui, poussant à son rythme réel, couvre plus vite
     // et laisse moins partir. Un piège ne retient que ce qui passe.
-    expect(moy(oriente, "piege")).toBeGreaterThan(0.5);
+    //
+    // Puis il a fallu le diviser encore par deux, pour une raison différente et
+    // plus intéressante : le chablis tombe avec son houppier et repose dessus.
+    // Une forêt livrée à elle-même arme mal son versant, et c'est précisément
+    // pour ça que le geste d'abattre et de coucher en travers a un sens.
+    expect(moy(oriente, "piege")).toBeGreaterThan(0.15);
     expect(moy(aPlat, "piege")).toBe(0);
     // Et il détourne une part nette de l'eau de surface vers le sol.
     expect(moy(oriente, "eau")).toBeLessThan(0.97 * moy(aPlat, "eau"));
@@ -393,7 +403,9 @@ describe("abattre et laisser le tronc en travers", () => {
         (a, v, i) => a + v * (state.soil.boisEnTraversPart[i] ?? 0),
         0,
       ) / masse;
-    expect(travers).toBeGreaterThan(0.9);
+    // 0,8 de contact × la pleine transversalité d'un tronc posé exprès en
+    // travers : un fût calé barre presque tout ce qu'il peut barrer.
+    expect(travers).toBeGreaterThan(0.75);
     // Ça ne rapporte rien, et ça coûte moins que d'aller chercher le bois.
     expect(state.economy.treasuryEur).toBe(avant.economy.treasuryEur);
     const vendu = applyAction(avant, {

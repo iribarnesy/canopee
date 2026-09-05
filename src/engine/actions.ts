@@ -8,7 +8,7 @@
  * plafond (heures ou découvert).
  */
 
-import { empreinteDeChute, poserBoisAuSol, versLAval } from "./boisMort";
+import { CONTACT_TRONC_EBRANCHE, empreinteDeChute, poserBoisAuSol, versLAval } from "./boisMort";
 import {
   CARBON_FRACTION,
   CN_HUMUS,
@@ -759,6 +759,7 @@ function applyCouper(
             c.cellule,
             emporteKgC * (c.longueurM / longueur) * 1000,
             aval + Math.PI / 2,
+            CONTACT_TRONC_EBRANCHE,
           );
         }
       } else {

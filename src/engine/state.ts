@@ -169,10 +169,16 @@ export interface SoilState {
    * compterait le même bois deux fois.
    *
    * Une masse seule ne suffisait pas : un tronc en travers d'un thalweg barre
-   * l'eau, le même tronc couché dans le sens de la pente ne barre rien. Comme
-   * la décomposition et le ramassage agissent proportionnellement sur toute la
-   * masse d'une cellule, cette part-là ne bouge pas avec eux : elle ne change
-   * que lorsqu'un nouveau tronc se pose.
+   * l'eau, le même tronc couché dans le sens de la pente ne barre rien. Deux
+   * choses entrent donc ici, et pas une : l'ORIENTATION du tronc, et son
+   * CONTACT avec le sol — un tronc qui repose sur son houppier laisse l'eau
+   * passer dessous, quelle que soit sa direction (boisMort.ts). Un chablis
+   * naturel barre ainsi près de quatre fois moins qu'un fût qu'on a ébranché
+   * et calé.
+   *
+   * Comme la décomposition et le ramassage agissent proportionnellement sur
+   * toute la masse d'une cellule, cette part-là ne bouge pas avec eux : elle ne
+   * change que lorsqu'un nouveau tronc se pose.
    */
   boisEnTraversPart: number[];
   /**
