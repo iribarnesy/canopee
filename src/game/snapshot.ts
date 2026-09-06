@@ -44,6 +44,8 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     stress: t.stress,
     fruitsKg: t.fruitsKg,
     hauteurElagueeM: t.hauteurElagueeM,
+    // Absente sur un arbre qui vient de naître : il est branchu jusqu'en bas.
+    baseHouppierM: t.baseHouppierM ?? 0,
     protege: t.protege,
     chandelle: !t.alive,
     floraison: floraisonDe(t, ddYearBase5),
