@@ -1263,6 +1263,41 @@ Estes et al. ne mesurent aucune différence entre peuplements éclaircis et non
 éclaircis pendant l'été californien. C'est une raison de ne pas empiler les
 deux effets.*
 
+### Ce que la correction change au cas Saumos
+
+Les conclusions du cas d'étude avaient été mesurées avec le modèle inversé. Elles
+ont été REMESURÉES sur deux lots indépendants de seize graines, cinquante ans.
+
+| composition | lot A | lot B | gros feux A/B |
+|---|---|---|---|
+| pinède pure | 1 825 m² | 1 311 m² | 15/16 · 12/16 |
+| feuillus | 1 715 m² | 1 342 m² | 16/16 · 13/16 |
+| chêne-liège | **1 166 m²** | **1 059 m²** | 13/16 · 13/16 |
+
+**Une conclusion est retirée.** « Planter des feuillus réduit d'un tiers les
+gros incendies et de 38 % la remontée de nappe » ne réplique pas : l'écart
+change de signe d'un lot à l'autre (−6 % puis +2 %). Ce n'est pas une mesure
+ratée, c'est un effet qui n'existe pas à cet horizon — une fois que tout est
+passé au feu au moins une fois, c'est la LANDE qui porte le feu suivant, pas ce
+qu'on avait planté dessus. À vingt-six ans, en revanche, les feuillus brûlent
+bien un tiers de moins : **planter des feuillus achète du temps, ça ne change
+pas le régime de long terme.**
+
+**Une conclusion s'inverse.** On avait écrit que le chêne-liège « ne réduit ni
+la surface parcourue ni la remontée » et que « survivre au feu et l'empêcher
+sont deux stratégies différentes ». C'était l'artefact. Le chêne-liège est la
+seule composition dont l'avantage réplique aux deux horizons, et le mécanisme
+est émergent : son écorce résiste au feu, donc le peuplement reste debout, donc
+le couvert reste fermé, donc la litière reste humide et à l'abri du vent — et le
+feu suivant trouve moins à brûler. **Survivre au feu est ce qui empêche le
+suivant.**
+
+**Et une limite de méthode, chiffrée.** Seize graines ne suffisent pas pour les
+petits écarts : la pinède brûle 1 825 m² dans un lot et 1 311 dans l'autre, soit
+28 % de différence entre deux mesures du même dispositif. C'est pourquoi
+l'avantage des feuillus, qui vaut moins que cela, ne peut pas être affirmé,
+alors que celui du chêne-liège, qui vaut le double, le peut.
+
 *Ce qui reste faux* : le moteur ne modélise pas l'**amorçage de feu de cime**.
 Dans la réalité, le combustible du houppier ne brûle que si le feu de surface
 est assez intense pour l'atteindre — c'est la hauteur de la base du houppier
