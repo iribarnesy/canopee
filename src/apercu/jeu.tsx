@@ -34,6 +34,10 @@ interface Scene {
     chandelle: boolean;
     hauteurElagueeM?: number;
     teteTrogneM?: number;
+    /** `baseHouppierM` du protocole : la base du houppier, m */
+    baseHouppierM?: number;
+    /** `floraison` du protocole : part de la couronne en fleur ∈ [0,1] */
+    floraison?: number;
     vigueur?: number;
     /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
     fruitProgress?: number;
@@ -127,7 +131,7 @@ function Demo(): React.ReactElement {
           ] ?? 0,
         heightM: t.heightM,
         houppierRatio: espece?.lumiere.houppierRatio ?? 0.4,
-        ...(t.hauteurElagueeM ? { hauteurElagueeM: t.hauteurElagueeM } : {}),
+        baseHouppierM: t.baseHouppierM ?? 0,
         ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
         ...(t.chandelle ? { chandelle: true } : {}),
         partFoliaire: t.chandelle ? 0 : part,

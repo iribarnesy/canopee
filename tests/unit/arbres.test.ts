@@ -34,6 +34,7 @@ const arbre = (p: Partial<ArbreAPoser> = {}): ArbreAPoser => ({
   z: 0,
   heightM: 16,
   houppierRatio: 0.35,
+  baseHouppierM: 4,
   partFoliaire: 1,
   senescence: 0,
   vigueur: 1,
@@ -108,7 +109,7 @@ describe("la classe : ce qui se partage et ce qui ne se partage pas", () => {
     const v = vue();
     const ordinaire = cleClasse(classeDe(arbre(), 30, v));
     expect(cleClasse(classeDe(arbre({ teteTrogneM: 2 }), 30, v))).not.toBe(ordinaire);
-    expect(cleClasse(classeDe(arbre({ hauteurElagueeM: 6 }), 30, v))).not.toBe(ordinaire);
+    expect(cleClasse(classeDe(arbre({ baseHouppierM: 11 }), 30, v))).not.toBe(ordinaire);
     expect(cleClasse(classeDe(arbre({ chandelle: true }), 30, v))).not.toBe(ordinaire);
   });
 
@@ -147,7 +148,7 @@ describe("la cuisson d'une vignette", () => {
   it("dessine du bois et du feuillage", () => {
     const { fabriquer, compte } = fabriqueBouchon();
     const c = classeDe(arbre(), 30, vue());
-    cuireVignette(c, 16, 0.35, fabriquer);
+    cuireVignette(c, 16, 0.35, fabriquer, 4);
     expect(compte.traits).toBeGreaterThan(10);
     expect(compte.remplissages).toBeGreaterThan(10);
   });
@@ -155,7 +156,7 @@ describe("la cuisson d'une vignette", () => {
   it("ne dessine AUCUN feuillage sur une chandelle", () => {
     const { fabriquer, compte } = fabriqueBouchon();
     const c = classeDe(arbre({ chandelle: true, partFoliaire: 0 }), 30, vue());
-    cuireVignette(c, 16, 0.35, fabriquer);
+    cuireVignette(c, 16, 0.35, fabriquer, 4);
     expect(compte.remplissages).toBe(0);
     expect(compte.traits).toBeGreaterThan(10);
   });
@@ -165,14 +166,14 @@ describe("la cuisson d'une vignette", () => {
     // pixels, mille segments seraient mille traits d'un tiers de pixel.
     const petit = fabriqueBouchon();
     const grand = fabriqueBouchon();
-    cuireVignette(classeDe(arbre(), 30, vue(0.15)), 16, 0.35, petit.fabriquer);
-    cuireVignette(classeDe(arbre(), 30, vue(6)), 16, 0.35, grand.fabriquer);
+    cuireVignette(classeDe(arbre(), 30, vue(0.15)), 16, 0.35, petit.fabriquer, 4);
+    cuireVignette(classeDe(arbre(), 30, vue(6)), 16, 0.35, grand.fabriquer, 4);
     expect(petit.compte.traits).toBeLessThan(grand.compte.traits);
   });
 
   it("pose le pied de l'arbre en bas de la vignette", () => {
     const { fabriquer } = fabriqueBouchon();
-    const v = cuireVignette(classeDe(arbre(), 30, vue()), 16, 0.35, fabriquer);
+    const v = cuireVignette(classeDe(arbre(), 30, vue()), 16, 0.35, fabriquer, 4);
     expect(v.piedY).toBeCloseTo(v.image.height - 1);
     expect(v.piedX).toBeCloseTo(v.image.width / 2);
   });
@@ -181,8 +182,8 @@ describe("la cuisson d'une vignette", () => {
     const a = fabriqueBouchon();
     const b = fabriqueBouchon();
     const c = classeDe(arbre(), 30, vue());
-    cuireVignette(c, 16, 0.35, a.fabriquer);
-    cuireVignette(c, 16, 0.35, b.fabriquer);
+    cuireVignette(c, 16, 0.35, a.fabriquer, 4);
+    cuireVignette(c, 16, 0.35, b.fabriquer, 4);
     expect(a.compte).toEqual(b.compte);
   });
 });
@@ -209,7 +210,7 @@ describe("la pose : la résolution n'est pas la taille", () => {
     // parcelle n'est large.
     const { fabriquer } = fabriqueBouchon();
     const v = vue();
-    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer);
+    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer, 4);
     const taille = tailleDePose(16, vignette, v);
     expect(arbrePose(vignette, taille)).toBeCloseTo(16 * METRE_VERTICAL_PX * v.cam.zoom, 6);
     expect(taille.hauteur).not.toBeCloseTo(vignette.image.height, 0);
@@ -221,7 +222,7 @@ describe("la pose : la résolution n'est pas la taille", () => {
     // cuisson que de remplissage à l'écran.
     const { fabriquer } = fabriqueBouchon();
     const v = vue();
-    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer);
+    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer, 4);
     const taille = tailleDePose(16, vignette, v);
     const arbre16 = arbrePose(vignette, taille);
     expect(taille.hauteur).toBeGreaterThan(arbre16);
@@ -243,7 +244,7 @@ describe("la pose : la résolution n'est pas la taille", () => {
     const v = vue();
     for (const ratio of [0.25, 0.35, 0.45, 0.6]) {
       const hauteurM = 8;
-      const vignette = cuireVignette(classeDe(arbre(), 30, v), hauteurM, ratio, fabriquer);
+      const vignette = cuireVignette(classeDe(arbre(), 30, v), hauteurM, ratio, fabriquer, 4);
       // pixels par mètre dans la vignette
       const echelle = vignette.hautArbrePx / hauteurM;
       const demiLargeurM = vignette.image.width / 2 / echelle;
@@ -265,7 +266,7 @@ describe("la pose : la résolution n'est pas la taille", () => {
     const v = vue();
     const hauteurM = 1.4;
     const ronce = arbre({ especeId: "rubus_fruticosus", heightM: hauteurM });
-    const vignette = cuireVignette(classeDe(ronce, 2.5, v), hauteurM, 0.5, fabriquer);
+    const vignette = cuireVignette(classeDe(ronce, 2.5, v), hauteurM, 0.5, fabriquer, 4);
     const echelle = vignette.hautArbrePx / hauteurM;
     expect(vignette.image.width / 2 / echelle).toBeGreaterThanOrEqual(0.5 * hauteurM);
     // Et il garde une marge : la vignette est plus haute que le fourré, sinon
@@ -276,7 +277,7 @@ describe("la pose : la résolution n'est pas la taille", () => {
   it("garde les proportions de la vignette", () => {
     const { fabriquer } = fabriqueBouchon();
     const v = vue();
-    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer);
+    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer, 4);
     const taille = tailleDePose(16, vignette, v);
     expect(taille.largeur / taille.hauteur).toBeCloseTo(
       vignette.image.width / vignette.image.height,
@@ -287,7 +288,7 @@ describe("la pose : la résolution n'est pas la taille", () => {
   it("l'ancrage suit la mise à l'échelle", () => {
     const { fabriquer } = fabriqueBouchon();
     const v = vue();
-    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer);
+    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer, 4);
     const taille = tailleDePose(16, vignette, v);
     const ancre = ancrageDePose(vignette, taille);
     // Le pied reste au milieu, en bas, quelle que soit l'échelle.
@@ -298,8 +299,8 @@ describe("la pose : la résolution n'est pas la taille", () => {
   it("un arbre deux fois plus haut se pose deux fois plus haut", () => {
     const { fabriquer } = fabriqueBouchon();
     const v = vue();
-    const petite = cuireVignette(classeDe(arbre({ heightM: 8 }), 30, v), 8, 0.35, fabriquer);
-    const grande = cuireVignette(classeDe(arbre({ heightM: 16 }), 30, v), 16, 0.35, fabriquer);
+    const petite = cuireVignette(classeDe(arbre({ heightM: 8 }), 30, v), 8, 0.35, fabriquer, 4);
+    const grande = cuireVignette(classeDe(arbre({ heightM: 16 }), 30, v), 16, 0.35, fabriquer, 4);
     // Sur l'ARBRE et non sur l'image : la marge vaut une longueur de feuille,
     // la même en mètres pour les deux sujets, donc une part plus grande de la
     // vignette du petit. C'est correct — et ça se verrait comme une erreur si
@@ -415,7 +416,7 @@ describe("le repli d'espèce", () => {
     // la sienne ». Ce n'est pas un vœu, c'est ce que le rendu doit faire.
     const { fabriquer, compte } = fabriqueBouchon();
     const c = classeDe(arbre({ especeId: "ilex_aquifolium" }), 30, vue());
-    expect(() => cuireVignette(c, 4, 0.5, fabriquer)).not.toThrow();
+    expect(() => cuireVignette(c, 4, 0.5, fabriquer, 4)).not.toThrow();
     expect(compte.traits).toBeGreaterThan(0);
   });
 
@@ -425,7 +426,7 @@ describe("le repli d'espèce", () => {
     // botanique et visible sur la capture.
     const { fabriquer, compte } = fabriqueBouchon();
     const c = classeDe(arbre({ especeId: "rubus_fruticosus", heightM: 0.8 }), 3, vue());
-    cuireVignette(c, 0.8, 0.5, fabriquer);
+    cuireVignette(c, 0.8, 0.5, fabriquer, 4);
     expect(compte.traits).toBe(0);
     expect(compte.remplissages).toBeGreaterThan(0);
   });

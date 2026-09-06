@@ -48,6 +48,7 @@ import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
 import { FRICHE_LIMON } from "../src/engine/stations";
+import { arbreDuSnapshot } from "../src/game/snapshot";
 
 const GRAINE = 42;
 const COTE_M = 100;
@@ -113,6 +114,14 @@ interface ArbreScene {
   teteTrogneM?: number;
   /** vigueur ∈ [0,1] : un arbre qui végète a le houppier clairsemé */
   vigueur: number;
+  /**
+   * `baseHouppierM` : la base du houppier, m — en dessous, plus une branche
+   * vivante. C'est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce, donc elle
+   * ne se déduit ni de l'essence ni de la hauteur : elle voyage.
+   */
+  baseHouppierM: number;
+  /** `floraison` : part de la couronne en fleur ∈ [0,1] */
+  floraison: number;
   /** `fruitProgress` : avancement du fruit de l'année ∈ [0,1] */
   fruitProgress: number;
   /** `fruitsKg` : fruits mûrs en attente de récolte — l'état qui appelle un geste */
@@ -122,28 +131,42 @@ interface ArbreScene {
 const arrondi = (v: number, n: number) => Math.round(v * 10 ** n) / 10 ** n;
 
 /**
+ * Fige les arbres pour l'aperçu, en passant par `arbreDuSnapshot`.
+ *
  * **Ne pas filtrer les arbres vivants avant de poser `chandelle`.** Le piège
  * historique du dépôt : garder `t.alive` puis calculer le drapeau sur ce qui
  * reste rend toutes les chandelles invisibles — or un mort debout est
  * précisément ce qu'on veut voir.
+ *
+ * **Par la fonction du protocole, et non par une recopie**, et c'est ce qui
+ * fait que l'aperçu voit la même chose que le jeu. La floraison en particulier
+ * se calcule sur un seuil de degrés-jours (`partFloraison`) : la recopier ici
+ * ferait dériver la scène du jeu d'une semaine ou deux sans que rien ne le
+ * signale — c'est la règle du §2.1, et elle vaut pour le banc autant que pour
+ * le rendu.
  */
 function figer(state: GameState): ArbreScene[] {
   // Le banc de pelouse juge le TAPIS : les arbres n'y ont rien à faire, ils
   // couvriraient précisément ce qu'on regarde.
   if (SANS_ARBRES) return [];
-  return state.trees.map((t) => ({
-    id: t.id,
-    especeId: t.especeId,
-    x: arrondi(t.x, 2),
-    y: arrondi(t.y, 2),
-    heightM: arrondi(t.heightM, 3),
-    chandelle: !t.alive,
-    hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
-    ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
-    vigueur: arrondi(t.vigueur, 3),
-    fruitProgress: arrondi(t.fruitProgress, 3),
-    fruitsKg: arrondi(t.fruitsKg, 2),
-  }));
+  return state.trees.map((t) => {
+    const s = arbreDuSnapshot(t, state.ddYearBase5);
+    return {
+      id: t.id,
+      especeId: t.especeId,
+      x: arrondi(t.x, 2),
+      y: arrondi(t.y, 2),
+      heightM: arrondi(t.heightM, 3),
+      chandelle: !t.alive,
+      hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
+      ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
+      vigueur: arrondi(t.vigueur, 3),
+      baseHouppierM: arrondi(s.baseHouppierM, 2),
+      floraison: arrondi(s.floraison, 3),
+      fruitProgress: arrondi(s.fruitProgress, 3),
+      fruitsKg: arrondi(s.fruitsKg, 2),
+    };
+  });
 }
 
 function recensement(an: number, fichier: string, trees: ArbreScene[]): string {

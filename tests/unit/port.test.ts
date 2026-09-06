@@ -17,7 +17,10 @@ const feuillu = {
 
 /** Le squelette d'essai, et les bornes de son houppier. */
 function ramure(): { segments: Segment[]; base: number; sommet: number } {
-  const segments = engendrer({ id: 77, hauteurM: 18, houppierRatio: 0.35 }, feuillu);
+  const segments = engendrer(
+    { id: 77, hauteurM: 18, houppierRatio: 0.35, baseHouppierM: 2 },
+    feuillu,
+  );
   const houppier = segments.filter((s) => s.ordre >= 1);
   const base = Math.min(...houppier.map((s) => s.depart.y));
   const sommet = Math.max(...houppier.map((s) => s.arrivee.y));

@@ -97,10 +97,26 @@ export interface Sujet {
   /** rayon du houppier / hauteur — vient du moteur (`lumiere.houppierRatio`) */
   houppierRatio: number;
   /**
-   * Hauteur de bille élaguée, m. Aucune charpentière ne part en dessous :
-   * l'élagage est une COUPE dans le squelette, pas un autre arbre.
+   * Base du houppier, m : en dessous, plus une branche vivante.
+   *
+   * **Elle vient du MOTEUR (`baseHouppierM`), et elle remplace deux choses que
+   * le rendu faisait à sa place.** Il calculait la longueur du fût par une
+   * formule à lui — `1 − 2 × houppierRatio`, rabattue entre 0,15 et 0,5 de la
+   * hauteur — c'est-à-dire une approximation privée d'une grandeur écologique,
+   * exactement le défaut que le seuil de grillage de l'herbe avait été. Et il
+   * traitait l'élagage séparément, alors que l'arbre ne distingue pas les deux
+   * façons dont sa couronne remonte.
+   *
+   * Ce que la formule ne pouvait pas dire, et que le moteur dit : la profondeur
+   * de couronne est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce. Le même
+   * chêne est branchu jusqu'en bas en pré et porte quinze mètres de fût nu en
+   * futaie — un ratio par espèce donne le même arbre dans les deux cas.
+   *
+   * La base ne descend jamais : une branche morte ne repousse pas. Elle monte
+   * de deux façons que l'arbre confond — l'ombre qui tue les branches basses
+   * (élagage naturel), ou le joueur qui les coupe.
    */
-  hauteurElagueeM?: number;
+  baseHouppierM: number;
   /**
    * Hauteur de la tête de trogne, m. Le fût s'arrête là, et les rejets
    * repartent tous du même point — la silhouette la plus reconnaissable du
@@ -134,10 +150,6 @@ export interface Sujet {
  * aurait la moitié — ce qui est vrai d'un vieux pin en plateau, mais pas d'un
  * jeune. Quinze pour cent au minimum, la moitié au plus.
  */
-export function longueurDuFutM(sujet: Sujet): number {
-  const part = Math.min(0.5, Math.max(0.15, 1 - 2 * sujet.houppierRatio));
-  return sujet.hauteurM * part;
-}
 
 /** Rayon du fût au pied, déduit de la hauteur. */
 export function rayonAuPiedM(hauteurM: number): number {
@@ -237,10 +249,22 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
   // Les brins d'une cépée se partagent la matière : chacun est plus fin qu'un
   // fût unique de même hauteur, et c'est ce qui la fait lire comme un buisson.
   const rayon = rayonAuPiedM(sujet.hauteurM) / Math.sqrt(brins);
-  // La trogne coupe le fût à sa tête ; sinon le fût monte à la part de hauteur
-  // que le houppier laisse au tronc. Une cépée n'a PAS de fût : ses brins
-  // partent du sol.
-  const troncM = brins > 1 ? 0 : (sujet.teteTrogneM ?? longueurDuFutM(sujet));
+  // Une cépée n'a PAS de fût : ses brins partent du sol. Une trogne s'arrête à
+  // sa tête. Tout le reste monte jusqu'à la base de houppier que le MOTEUR
+  // donne — et non plus jusqu'à une part de hauteur calculée ici.
+  // **Bornée sous la cime, et ce n'est pas une correction de la grandeur.** Le
+  // moteur garantit qu'une base de houppier reste sous la hauteur de l'arbre —
+  // elle ne monte que par mort des branches basses, et un arbre sans branche
+  // n'existe pas. Mais une scène tronquée, un banc mal réglé ou un arbre en
+  // cours de rabattage peuvent présenter le cas, et le générateur ne doit alors
+  // pas rendre un arbre PLUS HAUT que celui qu'on lui demande : c'est ce qui
+  // arrivait, le fût dépassant la cime et `hauteurAtteinteM` avec.
+  //
+  // On ne remplace pas la valeur par une estimation — ce serait retomber dans
+  // l'approximation privée qu'on vient de retirer. On refuse seulement de
+  // dessiner un arbre impossible.
+  const baseM = Math.min(sujet.baseHouppierM, sujet.hauteurM * 0.9);
+  const troncM = brins > 1 ? 0 : (sujet.teteTrogneM ?? baseM);
   const hautDuFut: Point3 = { x: 0, y: Math.max(0.02, troncM), z: 0 };
   segments.push({
     depart: { x: 0, y: 0, z: 0 },
@@ -252,7 +276,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
   });
 
   // Le houppier part du haut du fût, sauf élagage qui le remonte encore.
-  const depart: Point3 = { x: 0, y: Math.max(hautDuFut.y, sujet.hauteurElagueeM ?? 0), z: 0 };
+  const depart: Point3 = hautDuFut;
   if (depart.y > hautDuFut.y) {
     segments.push({
       depart: hautDuFut,

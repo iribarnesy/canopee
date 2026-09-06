@@ -21,12 +21,22 @@ const feuillu: Branchement = {
   tortuosite: 0.3,
 };
 
-const sujet = (p: Partial<Sujet> = {}): Sujet => ({
-  id: 1234,
-  hauteurM: 18,
-  houppierRatio: 0.35,
-  ...p,
-});
+/**
+ * Un sujet d'essai. **La base du houppier suit la hauteur** sauf si l'essai en
+ * impose une : plusieurs essais font varier la hauteur de un à vingt-huit
+ * mètres, et une base fixe donnerait un arbre de un mètre avec quatre mètres de
+ * fût — c'est-à-dire rien du tout, plus une erreur difficile à lire.
+ */
+const sujet = (p: Partial<Sujet> = {}): Sujet => {
+  const hauteurM = p.hauteurM ?? 18;
+  return {
+    id: 1234,
+    hauteurM,
+    baseHouppierM: hauteurM * 0.25,
+    houppierRatio: 0.35,
+    ...p,
+  };
+};
 
 describe("le squelette", () => {
   it("est déterministe : le même arbre rend exactement le même bois", () => {
@@ -174,13 +184,32 @@ describe("le squelette", () => {
   });
 });
 
-describe("l'élagage et la trogne sont des COUPES dans le squelette", () => {
-  it("un arbre élagué n'a aucune charpentière sous la bille", () => {
-    const arbre = engendrer(sujet({ hauteurElagueeM: 8 }), feuillu);
+describe("la base du houppier et la trogne sont des COUPES dans le squelette", () => {
+  it("aucune charpentière ne part sous la base du houppier", () => {
+    // **Le champ a changé de nom parce qu'il a changé de nature.** Le rendu
+    // lisait `hauteurElagueeM` — le coup de scie du joueur — et calculait le
+    // reste du fût par une formule à lui. Il lit maintenant `baseHouppierM`,
+    // que le moteur produit, et qui range les DEUX façons dont une couronne
+    // remonte : l'ombre qui tue les branches basses, et le joueur qui les
+    // coupe. L'arbre ne les distingue pas, et le dessin non plus.
+    const arbre = engendrer(sujet({ baseHouppierM: 8 }), feuillu);
     for (const s of arbre) {
       if (s.ordre === 0) continue;
       expect(s.depart.y).toBeGreaterThanOrEqual(8 - 1e-6);
     }
+  });
+
+  it("**un arbre de pré est branchu jusqu'au sol, le même en futaie ne l'est pas**", () => {
+    // Ce que l'ancienne formule ne pouvait PAS dire, et qui est tout l'intérêt
+    // de la grandeur : la profondeur de couronne est un résultat de
+    // compétition, pas un trait d'espèce. `1 − 2 × houppierRatio` donnait le
+    // même arbre dans les deux cas, puisqu'elle ne connaissait que l'essence.
+    const enPre = engendrer(sujet({ baseHouppierM: 0 }), feuillu).filter((s) => s.ordre >= 1);
+    const enFutaie = engendrer(sujet({ baseHouppierM: 12 }), feuillu).filter((s) => s.ordre >= 1);
+    const basPre = Math.min(...enPre.map((s) => s.depart.y));
+    const basFutaie = Math.min(...enFutaie.map((s) => s.depart.y));
+    expect(basPre).toBeLessThan(1);
+    expect(basFutaie).toBeGreaterThanOrEqual(12 - 1e-6);
   });
 
   it("une trogne repart toute d'un même point, à la hauteur de sa tête", () => {
@@ -191,9 +220,9 @@ describe("l'élagage et la trogne sont des COUPES dans le squelette", () => {
     expect(bas).toBeCloseTo(2, 2);
   });
 
-  it("l'élagage ne raccourcit pas l'arbre", () => {
+  it("remonter la base du houppier ne raccourcit pas l'arbre", () => {
     const libre = hauteurAtteinteM(engendrer(sujet(), feuillu));
-    const elague = hauteurAtteinteM(engendrer(sujet({ hauteurElagueeM: 8 }), feuillu));
+    const elague = hauteurAtteinteM(engendrer(sujet({ baseHouppierM: 8 }), feuillu));
     expect(elague).toBeGreaterThan(libre * 0.75);
   });
 });

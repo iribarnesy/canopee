@@ -64,7 +64,22 @@ export interface ArbreAPoser {
   z: number;
   heightM: number;
   houppierRatio: number;
-  hauteurElagueeM?: number;
+  /**
+   * Base du houppier, m : `Snapshot.baseHouppierM`, tel quel.
+   *
+   * **Elle remplace une approximation que le rendu se fabriquait**, et le
+   * défaut était le même que celui du seuil de grillage de l'herbe : une
+   * grandeur écologique décrétée côté dessin. `longueurDuFutM` tirait la
+   * longueur du fût de `houppierRatio` par une formule à lui, ce qui donnait le
+   * même arbre en pré et en futaie — alors que la profondeur de couronne est un
+   * RÉSULTAT DE COMPÉTITION, et que c'est justement elle qui fait la différence
+   * entre un chêne branchu jusqu'au sol et un chêne à quinze mètres de fût nu.
+   *
+   * Elle absorbe aussi l'élagage : le moteur y range les deux façons dont une
+   * couronne remonte — l'ombre qui tue les branches basses, et le joueur qui
+   * les coupe — parce que l'arbre ne les distingue pas.
+   */
+  baseHouppierM: number;
   /**
    * Avancement du fruit de l'année ∈ [0,1] : `Snapshot.fruitProgress`, tel quel.
    *
@@ -101,6 +116,17 @@ export interface ArbreAPoser {
  * marches.
  */
 export const PALIERS_HAUTEUR = 12;
+
+/**
+ * Paliers de la base du houppier, en part de la hauteur de l'arbre.
+ *
+ * Six : assez pour séparer un arbre branchu jusqu'au sol d'un fût nu sur les
+ * trois quarts, assez peu pour que la clé de cache ne se démultiplie pas. La
+ * grandeur monte lentement — quelques centimètres par semaine sous la
+ * compétition — donc un palier tient des années, et c'est bien ce qu'on veut
+ * d'une clé de cache.
+ */
+export const PALIERS_FUT = 6;
 
 /**
  * Nombre de variantes de squelette par classe.
@@ -342,10 +368,13 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
   // plafonnés après arrondi ne sont plus une puissance de deux, et la promesse
   // « le zoom ne recuit pas tout » s'évanouit au zoom maximal.
   const taillePx = 2 ** Math.ceil(Math.log2(Math.min(VIGNETTE_MAX_PX, largeurPx)));
-  const gestion =
-    (arbre.chandelle ? 1 : 0) |
-    (arbre.teteTrogneM ? 2 : 0) |
-    ((arbre.hauteurElagueeM ?? 0) > 0.5 ? 4 : 0);
+  // La base du houppier entre dans la clé par PALIERS, comme les autres
+  // grandeurs continues : elle change la silhouette du tout au tout — c'est
+  // elle qui sépare le chêne de pré du chêne de futaie — mais elle bouge d'un
+  // centimètre par semaine, et sans quantification chaque tick invaliderait
+  // toutes les vignettes.
+  const fut = palierDe(arbre.baseHouppierM / Math.max(0.1, arbre.heightM), PALIERS_FUT);
+  const gestion = (arbre.chandelle ? 1 : 0) | (arbre.teteTrogneM ? 2 : 0) | (fut << 2);
   // Le fruit entre dans la clé, sinon un pommier chargé et un pommier nu
   // partageraient la même image — et ce serait le pommier nu qu'on verrait, ou
   // le chargé, au hasard de qui a été cuit le premier.
@@ -455,7 +484,8 @@ export function cuireVignette(
   hauteurM: number,
   houppierRatio: number,
   fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
-  gestionM?: { hauteurElagueeM?: number; teteTrogneM?: number },
+  baseHouppierM: number,
+  gestionM?: { teteTrogneM?: number },
 ): Vignette {
   const fiche = ficheDe(classe.especeId) ?? FICHE_GENERIQUE;
   // La hauteur de l'image est la RÉSOLUTION de cuisson : c'est elle que
@@ -505,7 +535,7 @@ export function cuireVignette(
     id: classe.variante * 7919 + classe.palier * 31,
     hauteurM,
     houppierRatio,
-    ...(gestionM?.hauteurElagueeM ? { hauteurElagueeM: gestionM.hauteurElagueeM } : {}),
+    baseHouppierM,
     ...(gestionM?.teteTrogneM ? { teteTrogneM: gestionM.teteTrogneM } : {}),
     ...(fiche.brinsDeCepee ? { brins: fiche.brinsDeCepee } : {}),
   };
@@ -1042,6 +1072,11 @@ export function fourreEnArbre(masse: MasseFourre): ArbreAPoser {
     y: masse.y,
     z: masse.z,
     heightM: masse.hauteurM,
+    // Un fourré n'a pas de fût : il est branchu depuis le sol, par définition.
+    // Ce n'est pas une valeur inventée faute de mieux — c'est ce que « fourré »
+    // veut dire, et le dessin par cellule agrégée ne lit de toute façon pas
+    // cette grandeur.
+    baseHouppierM: 0,
     // Un fourré est aussi large que haut : c'est une masse, pas une tige.
     houppierRatio: 0.5,
     partFoliaire: masse.densite,
@@ -1116,7 +1151,12 @@ export function posesDesArbres(
  */
 export class AtlasArbres {
   private readonly vignettes = new Map<string, Vignette>();
-  private aCuire: { classe: Classe; hauteurM: number; houppierRatio: number }[] = [];
+  private aCuire: {
+    classe: Classe;
+    hauteurM: number;
+    houppierRatio: number;
+    baseHouppierM: number;
+  }[] = [];
 
   constructor(
     private readonly fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
@@ -1124,13 +1164,17 @@ export class AtlasArbres {
 
   /** Dresse la liste des classes manquantes pour les poses données. */
   public rafraichir(poses: readonly PoseArbre[]): number {
-    const vues = new Map<string, { classe: Classe; hauteurM: number; houppierRatio: number }>();
+    const vues = new Map<
+      string,
+      { classe: Classe; hauteurM: number; houppierRatio: number; baseHouppierM: number }
+    >();
     for (const p of poses) {
       const cle = cleClasse(p.classe);
       if (this.vignettes.has(cle) || vues.has(cle)) continue;
       vues.set(cle, {
         classe: p.classe,
         hauteurM: p.arbre.heightM,
+        baseHouppierM: p.arbre.baseHouppierM,
         houppierRatio: p.arbre.houppierRatio,
       });
     }
@@ -1154,7 +1198,7 @@ export class AtlasArbres {
    */
   public cuire(
     budgetPx = BUDGET_CUISSON_PX,
-    gestion?: (c: Classe) => { hauteurElagueeM?: number; teteTrogneM?: number },
+    gestion?: (c: Classe) => { teteTrogneM?: number },
   ): number {
     let faits = 0;
     let depense = 0;
@@ -1173,6 +1217,7 @@ export class AtlasArbres {
           suivant.hauteurM,
           suivant.houppierRatio,
           this.fabriquer,
+          suivant.baseHouppierM,
           gestion?.(suivant.classe),
         ),
       );

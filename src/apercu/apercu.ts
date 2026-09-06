@@ -54,6 +54,10 @@ interface ArbreScene {
   chandelle: boolean;
   hauteurElagueeM?: number;
   teteTrogneM?: number;
+  /** `baseHouppierM` du protocole : la base du houppier, m */
+  baseHouppierM?: number;
+  /** `floraison` du protocole : part de la couronne en fleur ∈ [0,1] */
+  floraison?: number;
   vigueur?: number;
   /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
   fruitProgress?: number;
@@ -172,6 +176,20 @@ interface Options {
    */
   fruitProgress?: number;
   fruitsKg?: number;
+  /**
+   * Planche : la base du houppier, en PART de la hauteur de l'arbre.
+   *
+   * Comme le fruit, c'est une grandeur du moteur que la planche IMPOSE pour
+   * pouvoir comparer — un sujet isolé et un sujet de futaie n'existent pas au
+   * même endroit de la même parcelle, donc aucune scène réelle ne les met côte
+   * à côte. Elle est en part et non en mètres parce que la planche compare des
+   * espèces de hauteurs maximales différentes.
+   *
+   * Absente = 0,25, c'est-à-dire un arbre ayant subi un peu de compétition. Ce
+   * n'est pas une valeur par défaut du moteur, c'est le cadrage de la planche,
+   * et c'est pour ça qu'elle est déclarée ici et pas ailleurs.
+   */
+  baseHouppier?: number;
 }
 
 function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElement {
@@ -295,7 +313,11 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
               ] ?? 0,
             heightM: t.heightM,
             houppierRatio: espece?.lumiere.houppierRatio ?? 0.4,
-            ...(t.hauteurElagueeM ? { hauteurElagueeM: t.hauteurElagueeM } : {}),
+            // Repli à zéro : un arbre dont la scène ne dit pas la base de
+            // houppier est branchu jusqu'au sol, ce qui est vrai de tout arbre
+            // qui vient de naître — et ce qui ne fabrique aucune longueur de
+            // fût, contrairement à la formule qu'on avait ici.
+            baseHouppierM: t.baseHouppierM ?? 0,
             ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
             ...(t.chandelle ? { chandelle: true } : {}),
             // Une chandelle n'a plus de feuilles : c'est un tronc mort debout.
@@ -397,6 +419,7 @@ function planche(
       z: 0,
       heightM: Math.min(hauteurM, espece?.hauteurMaxM ?? hauteurM),
       houppierRatio: espece?.lumiere.houppierRatio ?? 0.35,
+      baseHouppierM: (options.baseHouppier ?? 0.25) * hauteurM,
       partFoliaire: options.nu ? 0 : 1,
       senescence: options.senescence ?? 0,
       vigueur: 1,
@@ -576,6 +599,20 @@ const PLANCHE: Planche[] = [
     hauteurM: 7,
     titre: "les fruits · en croissance (`fruitProgress` à mi-course, verts)",
     options: { fruitProgress: 0.5 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "castanea_sativa", "pinus_sylvestris"],
+    hauteurM: 18,
+    titre: "le même arbre EN PRÉ (branchu jusqu'au sol) — baseHouppier 0",
+    options: { baseHouppier: 0 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "castanea_sativa", "pinus_sylvestris"],
+    hauteurM: 18,
+    titre: "le même arbre EN FUTAIE (fût nu sur les deux tiers) — baseHouppier 0,65",
+    options: { baseHouppier: 0.65 },
   },
   { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
   {
