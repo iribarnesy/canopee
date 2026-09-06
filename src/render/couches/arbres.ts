@@ -44,7 +44,7 @@ import { contraindre } from "../arbres/port";
 import { engendrer, rayonAuPiedM, type Segment, type Sujet } from "../arbres/squelette";
 import { type Vue, versEcranVue } from "../camera";
 import { eclairer, melange, type Teinte, versCss } from "../palette";
-import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX } from "../projection";
+import { METRE_VERTICAL_PX, profondeur, TUILE_LARGEUR_PX } from "../projection";
 
 /** Ce que la couche a besoin de savoir d'un arbre. Un sous-ensemble strict du protocole. */
 export interface ArbreAPoser {
@@ -132,14 +132,26 @@ export const SOMMETS_TACHE = 7;
  * atlas, elle, est bornée. **Une puissance de deux**, pour que le plafond ne
  * défasse pas la quantification qui le suit.
  *
- * Cinq cent douze et non deux cent cinquante-six : à 256, un sujet vu de très
- * près était cuit deux fois plus petit qu'il n'était posé, donc étiré et flou,
- * et ses feuilles ne dépassaient jamais quatre pixels — le seuil de détail ne
- * se déclenchait pas et on ne voyait que des taches, au zoom même où le §4
- * promet qu'« on distingue les feuilles ». Le coût est borné par le champ de
- * vision : au zoom rapproché, il ne reste que quelques classes à l'écran.
+ * **Deux cent cinquante-six, après un aller-retour instructif.** J'étais passé à
+ * 512 parce qu'à 256 les feuilles d'un sujet vu de près ne dépassaient jamais
+ * quatre pixels et que le seuil de détail ne se déclenchait pas. Mais ce seuil a
+ * lui-même été revu depuis — à `LARGEUR_MIN_VISIBLE_M`, une feuille fait trois
+ * pixels et rien n'y changera — et 512 coûte quatre fois plus de pixels à
+ * cuire. Mesuré sur la vue Pixi : la cuisson des vignettes tenait la boucle
+ * d'images à une dizaine par seconde, et l'atlas restait trois cents classes en
+ * retard après la fin du zoom. L'étirement d'un facteur deux par le GPU ne se
+ * voit pas ; l'attente, si.
  */
-export const VIGNETTE_MAX_PX = 512;
+export const VIGNETTE_MAX_PX = 256;
+
+/**
+ * Budget de cuisson des vignettes, en pixels de vignette et par image.
+ *
+ * Trois cent mille : de quoi cuire une vignette pleine taille (256 × 384 × 1,5)
+ * par image, ou une centaine de vignettes de trente-deux pixels. C'est la même
+ * dépense dans les deux cas, ce qui est exactement ce qu'on veut d'un budget.
+ */
+export const BUDGET_CUISSON_PX = 300_000;
 
 /** La classe d'un arbre : deux arbres de même classe partagent leur image. */
 export interface Classe {
@@ -568,10 +580,43 @@ export function posesDesArbres(
   hauteurMaxParEspece: (especeId: string) => number,
   vue: Vue,
 ): PoseArbre[] {
+  // **On ne pose que ce qui est visible**, et le lot L0 l'avait annoncé : « le
+  // point de rupture est le zoom rapproché, pas la parcelle entière, donc le
+  // rendu doit découper par emprise visible ». Sans ce filtre, une friche de
+  // cinq mille six cents tiges posait cinq mille six cents sprites par image et
+  // demandait à l'atlas cinq cents classes de vignette — alors qu'au zoom
+  // rapproché, une trentaine d'arbres sont à l'écran. Mesuré sur la vue Pixi :
+  // l'atlas restait cinq cents classes en retard, et il cuisait des arbres que
+  // personne ne regardait pendant que le sol attendait son tour.
+  //
+  // La marge de `celluleVisibles` compte la hauteur : un arbre dont le pied est
+  // sous le bord inférieur peut avoir sa cime à l'écran.
   const sortie: PoseArbre[] = [];
   for (const arbre of arbres) {
     if (arbre.heightM <= 0) continue;
     const e = versEcranVue({ x: arbre.x, y: arbre.y, z: arbre.z }, vue);
+    // **Le test se fait à l'ÉCRAN, arbre par arbre**, et non sur l'emprise des
+    // cellules. Le premier jet réutilisait `celluleVisibles`, dont la marge vaut
+    // deux fois la hauteur du plus grand sujet — cinquante mètres pour un chêne
+    // de vingt-cinq, soit la moitié de la parcelle. Pour du terrain cette marge
+    // ne coûte que quelques cellules cuites pour rien ; pour des arbres, elle
+    // laissait passer un millier de sujets au zoom rapproché et l'atlas restait
+    // quatre cents classes en retard.
+    //
+    // Un arbre est visible si son fût, sa cime ou son houppier touchent le
+    // cadre. La hauteur ne compte que vers le HAUT — un arbre dont le pied est
+    // sous le bord inférieur peut avoir sa cime à l'écran — et la largeur du
+    // houppier des deux côtés.
+    const hauteurPx = arbre.heightM * METRE_VERTICAL_PX * vue.cam.zoom;
+    const demiLargeurPx = arbre.houppierRatio * arbre.heightM * TUILE_LARGEUR_PX * vue.cam.zoom;
+    if (
+      e.sx + demiLargeurPx < 0 ||
+      e.sx - demiLargeurPx > vue.largeurPx ||
+      e.sy < -8 ||
+      e.sy - hauteurPx > vue.hauteurPx
+    ) {
+      continue;
+    }
     sortie.push({
       arbre,
       classe: classeDe(arbre, hauteurMaxParEspece(arbre.especeId), vue),
@@ -618,17 +663,34 @@ export class AtlasArbres {
     return this.aCuire.length;
   }
 
-  /** Cuit au plus `budget` classes manquantes. Rend le nombre réellement cuit. */
+  /**
+   * Cuit ce qui tient dans un budget de PIXELS. Rend le nombre de classes
+   * réellement cuites.
+   *
+   * **Le budget compte des pixels et non des vignettes**, et c'est ce qui le
+   * rend juste aux deux bouts du zoom. Une vignette de seize pixels et une de
+   * deux cent cinquante-six ne coûtent pas la même chose — un facteur deux cent
+   * cinquante-six en surface — et un budget « six vignettes par image » signifie
+   * donc deux choses opposées selon l'échelle. Mesuré : à la parcelle entière,
+   * quatre cent quarante classes minuscules restaient en attente alors qu'on
+   * aurait pu toutes les cuire en trois images ; au zoom rapproché, six
+   * vignettes pleine taille tenaient la boucle à une dizaine d'images par
+   * seconde. Le même nombre, deux erreurs contraires.
+   */
   public cuire(
-    budget = 6,
+    budgetPx = BUDGET_CUISSON_PX,
     gestion?: (c: Classe) => { hauteurElagueeM?: number; teteTrogneM?: number },
   ): number {
     let faits = 0;
-    while (faits < budget) {
+    let depense = 0;
+    while (depense < budgetPx) {
       const suivant = this.aCuire.shift();
       if (!suivant) break;
       const cle = cleClasse(suivant.classe);
       if (this.vignettes.has(cle)) continue;
+      // La surface de la vignette, à laquelle le coût de cuisson est
+      // proportionnel — le squelette lui-même est plafonné par elle.
+      depense += suivant.classe.taillePx * suivant.classe.taillePx * 1.5;
       this.vignettes.set(
         cle,
         cuireVignette(

@@ -265,28 +265,51 @@ describe("l'atlas", () => {
     const poses = posesDesArbres(arbres, () => 30, v);
     const atlas = new AtlasArbres(fabriquer);
     expect(atlas.rafraichir(poses)).toBe(VARIANTES);
-    atlas.cuire(1000);
+    atlas.cuire(10_000_000);
     expect(atlas.taille).toBe(VARIANTES);
     const canvasApres = compte.canvas;
     // Deuxième tour : rien à cuire.
     expect(atlas.rafraichir(poses)).toBe(0);
-    atlas.cuire(1000);
+    atlas.cuire(10_000_000);
     expect(compte.canvas).toBe(canvasApres);
   });
 
-  it("respecte son budget et garde le reste pour l'image suivante", () => {
+  it("respecte son budget de PIXELS et garde le reste pour l'image suivante", () => {
+    // Le budget compte des pixels, pas des vignettes : c'est ce qui le rend
+    // juste aux deux bouts du zoom, où une vignette peut coûter deux cent
+    // cinquante-six fois plus que l'autre.
     const { fabriquer } = fabriqueBouchon();
     const v = vue();
     const poses = posesDesArbres(
-      Array.from({ length: 40 }, (_, i) => arbre({ id: i, heightM: 2 + i })),
+      Array.from({ length: 40 }, (_, i) => arbre({ id: i, heightM: 2 + i * 0.5 })),
       () => 30,
       v,
     );
     const atlas = new AtlasArbres(fabriquer);
     const manquantes = atlas.rafraichir(poses);
     expect(manquantes).toBeGreaterThan(3);
-    expect(atlas.cuire(3)).toBe(3);
-    expect(atlas.enRetard).toBe(manquantes - 3);
+    // Un budget minuscule ne cuit qu'une classe : on ne saute jamais son tour,
+    // sinon une vignette trop grosse ne serait jamais cuite du tout.
+    expect(atlas.cuire(1)).toBe(1);
+    expect(atlas.enRetard).toBe(manquantes - 1);
+  });
+
+  it("cuit BEAUCOUP de petites vignettes pour le prix d'une grande", () => {
+    const petites = fabriqueBouchon();
+    const grandes = fabriqueBouchon();
+    const deLoin = vue(0.2);
+    const dePres = vue(8);
+    const sujets = Array.from({ length: 60 }, (_, i) => arbre({ id: i, heightM: 2 + i * 0.4 }));
+
+    const atlasLoin = new AtlasArbres(petites.fabriquer);
+    atlasLoin.rafraichir(posesDesArbres(sujets, () => 30, deLoin));
+    const nLoin = atlasLoin.cuire(300_000);
+
+    const atlasPres = new AtlasArbres(grandes.fabriquer);
+    atlasPres.rafraichir(posesDesArbres(sujets, () => 30, dePres));
+    const nPres = atlasPres.cuire(300_000);
+
+    expect(nLoin).toBeGreaterThan(nPres);
   });
 
   it("rend `undefined` pour une classe pas encore cuite, sans lever", () => {
@@ -300,7 +323,7 @@ describe("l'atlas", () => {
     const v = vue();
     const atlas = new AtlasArbres(fabriquer);
     atlas.rafraichir(posesDesArbres([arbre()], () => 30, v));
-    atlas.cuire(5);
+    atlas.cuire(10_000_000);
     expect(atlas.taille).toBe(1);
     atlas.vider();
     expect(atlas.taille).toBe(0);
@@ -333,5 +356,37 @@ describe("la couleur de feuillage suit la sénescence", () => {
     const milieu = couleurFeuillage(HETRE, 0.5);
     expect(milieu.r).toBeGreaterThan(HETRE.couleurs.ete.r);
     expect(milieu.r).toBeLessThan(HETRE.couleurs.automne.r);
+  });
+});
+
+describe("le découpage par emprise visible", () => {
+  it("ne pose QUE ce qui est visible", () => {
+    // La règle du lot L0 : « le point de rupture est le zoom rapproché, pas la
+    // parcelle entière ». Sans ce filtre, la vue Pixi posait cinq mille six
+    // cents sprites par image et gardait cinq cents classes de vignette en
+    // retard, pour une trentaine d'arbres réellement à l'écran.
+    const serre: Vue = { ...vue(), cam: { ...vue().cam, zoom: 6 }, centre: { x: 20, y: 20 } };
+    const tous = Array.from({ length: 400 }, (_, i) =>
+      arbre({ id: i, x: (i % 20) * 5, y: Math.floor(i / 20) * 5, heightM: 6 }),
+    );
+    const poses = posesDesArbres(tous, () => 30, serre);
+    expect(poses.length).toBeGreaterThan(0);
+    expect(poses.length).toBeLessThan(tous.length / 2);
+  });
+
+  it("garde tout ce qui tient à l'écran au zoom d'ensemble", () => {
+    const large = vue();
+    const tous = Array.from({ length: 100 }, (_, i) =>
+      arbre({ id: i, x: (i % 10) * 10 + 2, y: Math.floor(i / 10) * 10 + 2, heightM: 6 }),
+    );
+    expect(posesDesArbres(tous, () => 30, large)).toHaveLength(tous.length);
+  });
+
+  it("garde un arbre dont le PIED est hors cadre mais la cime dedans", () => {
+    // La marge de `celluleVisibles` compte la hauteur, et c'est ce qui évite
+    // qu'un grand arbre disparaisse d'un coup quand son pied sort du bas.
+    const serre: Vue = { ...vue(), cam: { ...vue().cam, zoom: 5 }, centre: { x: 50, y: 50 } };
+    const proche = posesDesArbres([arbre({ x: 50, y: 50, heightM: 25 })], () => 30, serre);
+    expect(proche).toHaveLength(1);
   });
 });

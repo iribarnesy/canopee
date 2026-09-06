@@ -72,6 +72,28 @@ import { type Brin, brinsDeLaCellule, clarteDuMotif, densiteTapis } from "./tapi
 /** Côté d'un morceau de terrain, en mètres. */
 export const COTE_MORCEAU_M = 16;
 
+/**
+ * Le zoom auquel on CUIT, qui n'est pas celui auquel on POSE.
+ *
+ * **Sans cette distinction, zoomer jette tout le cache.** Un morceau cuit à un
+ * zoom donné ne peut être posé qu'à ce zoom-là : au moindre cran de molette, la
+ * signature ne correspond plus et les dix mille cellules sont à recuire.
+ * Mesuré sur la vue PixiJS, neuf crans en huit dixièmes de seconde laissaient
+ * cinq cents morceaux en attente et l'écran se vidait de son sol — le joueur
+ * voyait sa parcelle disparaître pendant qu'il zoomait dessus.
+ *
+ * On cuit donc sur une ÉCHELLE de zooms, par pas de √2, et le GPU met à
+ * l'échelle la texture entre deux barreaux. Un facteur au plus 1,41 sur une
+ * image déjà anticrénelée ne se voit pas ; recuire à chaque cran, si.
+ *
+ * C'est aussi ce que le montage Pixi rend gratuit : redimensionner un sprite ne
+ * coûte rien au GPU, là où en Canvas 2D il faudrait rééchantillonner à la main.
+ */
+export function zoomDeCuisson(zoom: number): number {
+  if (!(zoom > 0)) return 1;
+  return 2 ** (Math.round(Math.log2(zoom) * 2) / 2);
+}
+
 /** Morceaux cuits au maximum par image. Le reste attend la suivante. */
 export const BUDGET_CUISSON_PAR_IMAGE = 4;
 
@@ -173,8 +195,19 @@ export interface Morceau {
   signature: number;
   /** image cuite, prête à être posée */
   image?: HTMLCanvasElement;
-  /** décalage de l'image par rapport à l'ancre, en pixels */
+  /** décalage de l'image, en pixels DU ZOOM DE CUISSON */
   decalage?: { dx: number; dy: number };
+  /**
+   * Le point de parcelle qui sert de référence pour reposer l'image à un autre
+   * zoom, et le décalage de l'image par rapport à lui.
+   *
+   * On ne peut pas se contenter du décalage écran : il vaut pour le zoom de
+   * cuisson et pour lui seul. En gardant un point de PARCELLE, on le reprojette
+   * au zoom courant et on remet l'image dessus, mise à l'échelle du rapport des
+   * deux zooms — ce qui est exact, la projection étant linéaire en zoom.
+   */
+  ancre?: { x: number; y: number; z: number };
+  decalageRelatif?: { dx: number; dy: number };
   /** zoom et orientation auxquels l'image a été cuite */
   zoomCuit?: number;
   orientationCuite?: number;
@@ -482,7 +515,12 @@ export function cuireMorceau(
   semaineAnnee: number,
   vue: Vue,
   fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
-): { image: HTMLCanvasElement; decalage: { dx: number; dy: number } } {
+): {
+  image: HTMLCanvasElement;
+  decalage: { dx: number; dy: number };
+  ancre: { x: number; y: number; z: number };
+  decalageRelatif: { dx: number; dy: number };
+} {
   const xFin = Math.min(donnees.coteM, (ix + 1) * COTE_MORCEAU_M);
   const yFin = Math.min(donnees.coteM, (iy + 1) * COTE_MORCEAU_M);
   const x0 = ix * COTE_MORCEAU_M;
@@ -744,7 +782,17 @@ export function cuireMorceau(
     ctx.stroke();
   }
 
-  return { image, decalage };
+  // L'ancre : le coin du morceau, à l'altitude de sa cellule. N'importe quel
+  // point de parcelle ferait l'affaire — ce qui compte est qu'il soit FIXE et
+  // reprojetable ; le coin est celui dont on se souvient le plus facilement.
+  const ancre = { x: x0, y: y0, z: donnees.altitudesM[y0 * donnees.coteM + x0] ?? 0 };
+  const ancreEcran = versEcranVue(ancre, vue);
+  return {
+    image,
+    decalage,
+    ancre,
+    decalageRelatif: { dx: decalage.dx - ancreEcran.sx, dy: decalage.dy - ancreEcran.sy },
+  };
 }
 
 /**
@@ -790,8 +838,11 @@ export class Terrain {
     for (const { ix, iy } of attendus) {
       const signature = signatureMorceau(donnees, ix, iy, semaineAnnee);
       const existant = this.morceaux.get(this.cle(ix, iy));
+      // Le zoom COMPARÉ est celui de cuisson : deux zooms voisins tombent sur
+      // le même barreau de l'échelle et partagent donc leur image.
       const bonZoom =
-        existant?.zoomCuit === vue.cam.zoom && existant?.orientationCuite === vue.cam.orientation;
+        existant?.zoomCuit === zoomDeCuisson(vue.cam.zoom) &&
+        existant?.orientationCuite === vue.cam.orientation;
       if (!existant || existant.signature !== signature || !bonZoom || !existant.image) {
         aCuire.push({ ix, iy });
       }
@@ -815,7 +866,11 @@ export class Terrain {
       const suivant = this.aCuire.shift();
       if (!suivant) break;
       const { ix, iy } = suivant;
-      const { image, decalage } = cuireMorceau(donnees, ix, iy, semaineAnnee, vue, this.fabriquer);
+      const vueDeCuisson: Vue = {
+        ...vue,
+        cam: { ...vue.cam, zoom: zoomDeCuisson(vue.cam.zoom) },
+      };
+      const cuit = cuireMorceau(donnees, ix, iy, semaineAnnee, vueDeCuisson, this.fabriquer);
       this.morceaux.set(this.cle(ix, iy), {
         ix,
         iy,
@@ -823,9 +878,11 @@ export class Terrain {
         y0: iy * COTE_MORCEAU_M,
         coteM: COTE_MORCEAU_M,
         signature: signatureMorceau(donnees, ix, iy, semaineAnnee),
-        image,
-        decalage,
-        zoomCuit: vue.cam.zoom,
+        image: cuit.image,
+        decalage: cuit.decalage,
+        ancre: cuit.ancre,
+        decalageRelatif: cuit.decalageRelatif,
+        zoomCuit: zoomDeCuisson(vue.cam.zoom),
         orientationCuite: vue.cam.orientation,
       });
       faits++;
@@ -840,7 +897,14 @@ export class Terrain {
     const sortie: Morceau[] = [];
     for (const { ix, iy } of morceauxDeLEmprise(emprise, vue)) {
       const m = this.morceaux.get(this.cle(ix, iy));
-      if (m?.image) sortie.push(m);
+      // **Une image d'une AUTRE orientation ne se repose pas.** Le zoom, si :
+      // l'ancre se reprojette et l'image s'étire. La rotation, non — l'image
+      // montre la parcelle vue d'un autre côté, et la reprojeter la poserait au
+      // bon endroit avec le mauvais contenu. Une capture l'a montré : après un
+      // quart de tour, le sol se couvrait de rectangles décalés en diagonale.
+      // Mieux vaut un trou d'une image ou deux, le temps que la cuisson
+      // rattrape, qu'un sol faux.
+      if (m?.image && m.orientationCuite === vue.cam.orientation) sortie.push(m);
     }
     return sortie;
   }
@@ -877,6 +941,11 @@ export interface MorceauDecor {
   iy: number;
   image: HTMLCanvasElement;
   decalage: { dx: number; dy: number };
+  /** point de parcelle de référence, pour reposer l'image à un autre zoom */
+  ancre: { x: number; y: number; z: number };
+  decalageRelatif: { dx: number; dy: number };
+  /** zoom auquel l'image a été cuite */
+  zoomCuit: number;
   profondeur: number;
 }
 
@@ -892,7 +961,14 @@ export function cuireMorceauDecor(
   iy: number,
   vue: Vue,
   fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
-): { image: HTMLCanvasElement; decalage: { dx: number; dy: number } } | undefined {
+):
+  | {
+      image: HTMLCanvasElement;
+      decalage: { dx: number; dy: number };
+      ancre: { x: number; y: number; z: number };
+      decalageRelatif: { dx: number; dy: number };
+    }
+  | undefined {
   const x0 = ix * COTE_MORCEAU_M;
   const y0 = iy * COTE_MORCEAU_M;
   const x1 = x0 + COTE_MORCEAU_M;
@@ -1064,7 +1140,14 @@ export function cuireMorceauDecor(
     }
   }
 
-  return { image, decalage };
+  const ancre = { x: x0, y: y0, z: z(x0, y0) };
+  const ancreEcran = versEcranVue(ancre, vue);
+  return {
+    image,
+    decalage,
+    ancre,
+    decalageRelatif: { dx: decalage.dx - ancreEcran.sx, dy: decalage.dy - ancreEcran.sy },
+  };
 }
 
 /**
@@ -1073,6 +1156,19 @@ export function cuireMorceauDecor(
  */
 export class Decor {
   private readonly morceaux = new Map<string, MorceauDecor>();
+  /**
+   * Les morceaux qui n'ont RIEN à dessiner — ceux qui tombent entièrement dans
+   * la parcelle.
+   *
+   * **Sans cette mémoire, ils se recuisent à chaque image**, et pour toujours :
+   * `cuireMorceauDecor` rend `undefined`, rien n'entre dans le cache, donc
+   * `rafraichir` les redemande à l'image suivante. Mesuré sur la vue Pixi :
+   * trois cents morceaux restaient éternellement « en attente », le budget
+   * était dépensé chaque image à recalculer qu'il n'y avait rien à faire, et la
+   * ceinture de décor n'apparaissait jamais. Un cache qui ne mémorise pas les
+   * réponses vides n'est pas un cache.
+   */
+  private readonly vides = new Set<string>();
   private zoomCuit = Number.NaN;
   private orientationCuite = Number.NaN;
   private aCuire: { ix: number; iy: number }[] = [];
@@ -1086,9 +1182,16 @@ export class Decor {
 
   /** Dresse la liste des morceaux de décor à cuire pour la vue courante. */
   public rafraichir(vue: Vue): number {
-    if (vue.cam.zoom !== this.zoomCuit || vue.cam.orientation !== this.orientationCuite) {
+    // Le décor suit la même échelle de cuisson que le terrain : sans elle, un
+    // cran de molette le jetait entier, et le hors-parcelle disparaissait
+    // pendant qu'on zoomait — exactement ce qu'il est censé empêcher.
+    if (
+      zoomDeCuisson(vue.cam.zoom) !== this.zoomCuit ||
+      vue.cam.orientation !== this.orientationCuite
+    ) {
       this.morceaux.clear();
-      this.zoomCuit = vue.cam.zoom;
+      this.vides.clear();
+      this.zoomCuit = zoomDeCuisson(vue.cam.zoom);
       this.orientationCuite = vue.cam.orientation;
     }
     const emprise = celluleVisibles(vue);
@@ -1098,7 +1201,8 @@ export class Decor {
     }
     const aCuire: { ix: number; iy: number }[] = [];
     for (const { ix, iy } of this.morceauxVisibles(emprise, vue)) {
-      if (!this.morceaux.has(`${ix},${iy}`)) aCuire.push({ ix, iy });
+      const cle = `${ix},${iy}`;
+      if (!this.morceaux.has(cle) && !this.vides.has(cle)) aCuire.push({ ix, iy });
     }
     this.aCuire = aCuire.reverse();
     return aCuire.length;
@@ -1130,22 +1234,32 @@ export class Decor {
       const suivant = this.aCuire.shift();
       if (!suivant) break;
       const { ix, iy } = suivant;
+      const vueDeCuisson: Vue = {
+        ...vue,
+        cam: { ...vue.cam, zoom: zoomDeCuisson(vue.cam.zoom) },
+      };
       const cuit = cuireMorceauDecor(
         this.bordures,
         this.altitudesM,
         this.coteM,
         ix,
         iy,
-        vue,
+        vueDeCuisson,
         this.fabriquer,
       );
       faits++;
-      if (!cuit) continue;
+      if (!cuit) {
+        this.vides.add(`${ix},${iy}`);
+        continue;
+      }
       this.morceaux.set(`${ix},${iy}`, {
         ix,
         iy,
         image: cuit.image,
         decalage: cuit.decalage,
+        ancre: cuit.ancre,
+        decalageRelatif: cuit.decalageRelatif,
+        zoomCuit: zoomDeCuisson(vue.cam.zoom),
         profondeur: profondeur(
           ix * COTE_MORCEAU_M + COTE_MORCEAU_M / 2,
           iy * COTE_MORCEAU_M + COTE_MORCEAU_M / 2,

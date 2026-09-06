@@ -12,6 +12,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   celluleVisibles,
+  deplacer,
   LARGEUR_MIN_VISIBLE_M,
   tailleEmprise,
   tournerVue,
@@ -232,5 +233,44 @@ describe("l'emprise visible", () => {
     expect(e.y0).toBeGreaterThanOrEqual(0);
     expect(e.x1).toBeLessThanOrEqual(COTE - 1);
     expect(e.y1).toBeLessThanOrEqual(COTE - 1);
+  });
+});
+
+describe("le déplacement", () => {
+  it("suit le glissement : ce qu'on attrape reste sous le doigt", () => {
+    const v = { ...vue(), cam: { ...vue().cam, zoom: 2 } };
+    const avant = versParcelleVue({ sx: 300, sy: 200 }, v);
+    const apres = versParcelleVue({ sx: 340, sy: 230 }, deplacer(v, 40, 30));
+    expect(apres.x).toBeCloseTo(avant.x, 6);
+    expect(apres.y).toBeCloseTo(avant.y, 6);
+  });
+
+  it("tient compte de l'ORIENTATION sans qu'on ait à la défaire", () => {
+    // Le piège évité : retrancher le décalage au centre en pixels ferait
+    // dépendre le déplacement de l'orientation, et il faudrait la corriger à la
+    // main — un calcul qui se désynchronise de `tourner()` le jour où l'un des
+    // deux change.
+    for (const sens of [0, 1, 2, 3]) {
+      let v = { ...vue(), cam: { ...vue().cam, zoom: 2 } };
+      for (let i = 0; i < sens; i++) v = tournerVue(v, 1);
+      const avant = versParcelleVue({ sx: 300, sy: 200 }, v);
+      const apres = versParcelleVue({ sx: 350, sy: 200 }, deplacer(v, 50, 0));
+      expect(apres.x, `orientation ${sens}`).toBeCloseTo(avant.x, 6);
+      expect(apres.y, `orientation ${sens}`).toBeCloseTo(avant.y, 6);
+    }
+  });
+
+  it("garde le centre DANS la parcelle", () => {
+    const v = { ...vue(), cam: { ...vue().cam, zoom: 3 } };
+    const loin = deplacer(v, -100000, -100000);
+    expect(loin.centre.x).toBeGreaterThanOrEqual(0);
+    expect(loin.centre.x).toBeLessThanOrEqual(v.cam.coteM);
+    expect(loin.centre.y).toBeGreaterThanOrEqual(0);
+    expect(loin.centre.y).toBeLessThanOrEqual(v.cam.coteM);
+  });
+
+  it("ne bouge pas pour un glissement nul", () => {
+    const v = vue();
+    expect(deplacer(v, 0, 0).centre).toEqual(v.centre);
   });
 });

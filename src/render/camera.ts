@@ -159,6 +159,31 @@ export function zoomer(vue: Vue, facteur: number, curseur: PointEcran, altitudeM
 }
 
 /**
+ * Déplace la vue d'un glissement écran.
+ *
+ * **En coordonnées de PARCELLE, et pas en pixels.** On pourrait retrancher le
+ * décalage au centre en pixels, mais alors le déplacement dépendrait de
+ * l'orientation de la caméra et il faudrait la défaire à la main — exactement
+ * le genre de calcul qui se désynchronise de `tourner()` un jour. En inversant
+ * deux points d'écran vers la parcelle et en prenant leur écart, la rotation et
+ * le zoom sont pris en compte par construction : glisser de dix pixels vers la
+ * droite déplace toujours la vue de ce que dix pixels valent, vu d'où l'on est.
+ *
+ * Le centre reste borné dans la parcelle : on ne se perd pas dans le vide.
+ */
+export function deplacer(vue: Vue, dxPx: number, dyPx: number): Vue {
+  const origine = versParcelleVue({ sx: 0, sy: 0 }, vue);
+  const glisse = versParcelleVue({ sx: dxPx, sy: dyPx }, vue);
+  return {
+    ...vue,
+    centre: borner(
+      { x: vue.centre.x - (glisse.x - origine.x), y: vue.centre.y - (glisse.y - origine.y) },
+      vue.cam.coteM,
+    ),
+  };
+}
+
+/**
  * Quart de tour. `sens` = +1 (horaire) ou −1.
  *
  * Le centre est exprimé en nord VRAI, donc il n'a pas à bouger : c'est la
