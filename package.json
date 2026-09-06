@@ -12,6 +12,7 @@
     "lint:fix": "biome check --write src tests scripts",
     "check:boundaries": "bash scripts/check-boundaries.sh",
     "apercu:scene": "tsx scripts/apercu-scene.ts",
+    "apercu:capture": "node scripts/apercu-capture.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm test"
