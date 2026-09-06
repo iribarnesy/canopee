@@ -91,7 +91,8 @@ pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 
 **Par arbre** (`SnapshotTree`, chandelles comprises) : `id`, `especeId`, `x`,
 `y`, `heightM`, `ageWeeks`, `stress`, `fruitsKg`, `hauteurElagueeM`,
-`baseHouppierM`, `protege`, `chandelle`, `teteTrogneM`, `recepages`, `vigueur`,
+`baseHouppierM`, `protege`, `chandelle`, `teteTrogneM`, `recepages`,
+`diametreTeteCm`, `caviteTeteL`, `vigueur`,
 `dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
 `derniereLeveeSemaine`, `floraison`, `fruitProgress`, `bloomFrosted`,
 `pousseTendreM`, `frotteSemaine`.
@@ -103,6 +104,13 @@ futaie), ni de `hauteurElagueeM`, qui ne compte que le coup de scie et pas
 l'ombre. Elle remplace l'approximation que le rendu s'était faite
 (`conifereBase`, 0,3 pour un caduc et 0,2 pour un conifère), laquelle dessinait
 deux chênes voisins pareillement alors que le moteur ne les traite pas pareil.
+
+`diametreTeteCm` et `caviteTeteL` (trogne.ts) disent la tête d'un têtard : le
+renflement à dessiner, et le creux qu'il abrite. Le compteur `recepages` ne
+suffit pas à les déduire — la part creusée n'est pas linéaire, et elle plafonne
+— et surtout `biodiversite.ts` lit EXACTEMENT ces valeurs pour noter la
+parcelle. Les recalculer au rendu, c'est prendre le risque de dessiner une tête
+qui ne vaut pas ce que le moteur lui accorde.
 
 **Ce qui s'est passé depuis le dernier instantané** : `events`, `refusals`,
 `morts` (avec `id` et position), `chutes` (chandelles abattues : direction et

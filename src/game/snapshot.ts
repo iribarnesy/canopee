@@ -23,6 +23,7 @@ import type { GameState, TickFluxes } from "../engine/state";
 import { weekOfYear } from "../engine/state";
 import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
 import type { TreeState } from "../engine/trees";
+import { diametreTeteCm, volumeCaviteL } from "../engine/trogne";
 import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
 
 /**
@@ -51,6 +52,10 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     floraison: floraisonDe(t, ddYearBase5),
     teteTrogneM: t.teteTrogneM,
     recepages: t.recepages,
+    // La tête ne se déduit pas du compteur d'étêtages sans recopier le modèle :
+    // c'est le moteur qui la dimensionne, et `biodiversite.ts` lit la même.
+    diametreTeteCm: diametreTeteCm(t),
+    caviteTeteL: volumeCaviteL(t),
     vigueur: t.vigueur,
     dommageHydraulique: t.dommageHydraulique,
     mortSemaine: t.mortSemaine,
