@@ -148,15 +148,6 @@ const HERBE_PRINTEMPS: Teinte = { r: 106, g: 140, b: 72 };
 const HERBE_ETE: Teinte = { r: 94, g: 132, b: 66 };
 
 /**
- * Herbe GRILLÉE par la sécheresse : rase, et brûlée jusqu'au collet.
- *
- * À ne pas confondre avec la paille, qui est de la matière sur pied ayant mûri
- * — haute, blonde, debout. Une pelouse qui grille reste rase et vire au brun
- * terne : c'est la couleur d'un gazon d'août sans arrosage, et c'est ce que le
- * joueur doit lire comme « ici ça manque d'eau ».
- */
-const HERBE_GRILLEE: Teinte = { r: 142, g: 122, b: 78 };
-/**
  * Foin sec : la biomasse reste, la chlorophylle est partie.
  *
  * Ramené de 178/160/104 à 164/152/104. Le foin est bien plus clair que l'herbe
@@ -213,21 +204,38 @@ export function phaseAnnuelle(semaineAnnee: number): number {
  * Couleur de l'herbe à une saison donnée, pour une biomasse et une sécheresse
  * données.
  *
- * TROIS commandes, et il faut les trois : la SAISON dit vers quoi la teinte
- * tire, la BIOMASSE dit si l'herbe est verte ou couchée en foin, la SÉCHERESSE
- * dit si elle grille. Une prairie rase de juillet est verte, un foin de juillet
- * est blond, un gazon de juillet sans eau est brun — même semaine, même station.
+ * Deux commandes : la SAISON dit vers quoi la teinte tire, la BIOMASSE dit si
+ * l'herbe est verte ou couchée en foin. Une prairie rase de juillet est verte,
+ * un foin de juillet est blond — même semaine, même station.
  *
- * **La troisième manquait, et son absence rendait la soif invisible sous
- * l'herbe.** L'humidité ne colorait que le sol NU (`SOL_SEC` ↔ `SOL_MOUILLE`),
- * et `couleurSol` recouvre ce sol par l'herbe dès que la couverture monte. Sur
- * une cellule bien couverte — c'est-à-dire partout où l'herbe compte — la
- * sécheresse ne se voyait donc pas du tout : le tapis restait du même vert,
- * qu'il ait de l'eau ou non. C'est exactement ce que disait le retour, « là où
- * elle sèche on devrait voir une pelouse sèche », et ce n'était pas une
- * question de nuance : la grandeur n'était pas branchée.
+ * **Il en faudrait une troisième, et ce n'est PAS au rendu de la fabriquer.**
+ * « Là où elle sèche on devrait voir une pelouse sèche » : c'est juste, et le
+ * moteur sait déjà le dire — `herbe.ts` porte `humiditeVecue`, l'humidité de
+ * l'horizon de SURFACE lissée sur environ six semaines, avec la justification
+ * exacte du phénomène en commentaire (« un tapis ne jaunit pas en une semaine
+ * sèche : il puise dans ses talles avant de griller — compter trois à quatre
+ * semaines »). Cette grandeur n'est simplement pas dans l'instantané.
+ *
+ * J'avais commencé par la fabriquer ici, en décrétant un seuil de grillage sur
+ * la réserve utile. C'était faux trois fois, et la troisième est la seule qui
+ * compte :
+ *
+ * - faux de VALEUR — le moteur travaille à 0,35 de l'eau de surface, pas 0,42
+ *   de la réserve du profil ;
+ * - faux de GRANDEUR — le profil entier au lieu de l'horizon de surface, et
+ *   sans inertie, alors que l'inertie est précisément ce qui fait qu'une herbe
+ *   ne jaunit pas en une semaine ;
+ * - faux de PRINCIPE — un seuil qui décide qu'une herbe souffre est une
+ *   affirmation de MODÈLE. Le rendu n'en fait aucune. Et une teinte inventée
+ *   pour compenser une donnée absente rend le manque permanent : plus personne
+ *   ne voit qu'il manque quelque chose, puisque l'écran montre quelque chose.
+ *
+ * Le manque est donc porté par une issue moteur, pas par une constante ici. En
+ * attendant, la sécheresse se lit par ce que le moteur donne DÉJÀ et que ce
+ * module lit : la couverture recule — `couvertureMax` la rabat quand l'eau de
+ * surface manque — donc le sol nu réapparaît entre les touffes.
  */
-export function couleurHerbe(semaineAnnee: number, biomasse: number, secheresse = 0): Teinte {
+export function couleurHerbe(semaineAnnee: number, biomasse: number): Teinte {
   const phase = phaseAnnuelle(semaineAnnee);
   // Un cycle simple : hiver → printemps → été → hiver, calé sur les repères que
   // le moteur utilise déjà (solstice en semaine 25, sénescence en semaine 40).
@@ -241,11 +249,7 @@ export function couleurHerbe(semaineAnnee: number, biomasse: number, secheresse 
   // La biomasse tire vers le foin : c'est la matière sur pied qui a séché, et
   // elle se voit surtout quand il y en a beaucoup.
   const foin = Math.min(1, Math.max(0, biomasse)) ** 2;
-  const surPied = melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
-  // Puis la soif, par-dessus : elle grille ce qui reste, foin comme gazon. Un
-  // pré déjà blond qui grille ne blondit pas davantage, il brunit.
-  const soif = Math.min(1, Math.max(0, secheresse));
-  return melange(surPied, HERBE_GRILLEE, 0.72 * soif);
+  return melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
 }
 
 /** Ce que le rendu lit d'une cellule pour la colorer. Tout vient de l'instantané. */
@@ -301,17 +305,6 @@ export function quantifier(c: CelluleSol): CelluleQuantifiee {
 }
 
 /**
- * Remplissage de la réserve utile en dessous duquel l'herbe commence à griller.
- *
- * Une herbe ne grille pas à sec : elle tient tant que le sol lui laisse de quoi
- * transpirer, puis lâche vite. 0,42 est du même ordre que les
- * `seuilConfortSecheresse` des fiches d'espèces (0,4 à 0,55 selon l'essence),
- * ce qui est cohérent — le gazon n'a pas de racine profonde, il souffre au
- * moins aussi tôt que les ligneux *(à calibrer)*.
- */
-export const SEUIL_GRILLE = 0.42;
-
-/**
  * Le sol le plus sombre qu'un couvert fermé puisse donner, en facteur de clarté.
  *
  * **Pas zéro, et pour la même raison que l'ombre portée n'est pas noire** : le
@@ -321,6 +314,15 @@ export const SEUIL_GRILLE = 0.42;
  * lettre donnerait un trou d'encre au milieu de la parcelle, et on ne verrait
  * plus rien de ce qui s'y passe : ni les semis, ni le bois au sol, ni les
  * marques d'action. 0,52 est un choix de dessin, assumé comme tel.
+ *
+ * **Et c'est bien un choix de DESSIN, pas un seuil de modèle** — la distinction
+ * vient de coûter une faute ailleurs dans ce fichier, elle vaut donc d'être
+ * dite. Ce nombre répond à « une cellule dont le moteur dit qu'elle reçoit 2 %
+ * de lumière, je la peins comment ? ». Il ne répond pas à « à partir de quand
+ * une cellule est-elle à l'ombre ? » — cette question-là est tranchée par
+ * `computeGroundLight`, et le rendu n'a pas d'avis. La fonction est monotone et
+ * vaut 1 en pleine lumière : elle ne peut donc pas assombrir une cellule que le
+ * moteur dit éclairée, ni éclaircir une cellule qu'il dit sombre.
  */
 export const COUVERT_LE_PLUS_SOMBRE = 0.52;
 
@@ -355,8 +357,7 @@ export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
   // herbe tient tant que le sol garde de quoi transpirer, puis grille vite. Le
   // seuil est le même ordre de grandeur que les `seuilStressSecheresse` des
   // fiches d'espèces *(à calibrer)*.
-  const secheresse = Math.min(1, Math.max(0, (SEUIL_GRILLE - humidite) / SEUIL_GRILLE));
-  const herbe = couleurHerbe(semaineAnnee, valeurDuPalier(q.herbeBiomasse), secheresse);
+  const herbe = couleurHerbe(semaineAnnee, valeurDuPalier(q.herbeBiomasse));
   // La couverture n'est pas une opacité linéaire : une cellule à moitié
   // couverte lit déjà comme de l'herbe, parce que les touffes se voient de
   // loin et que la terre entre elles est à l'ombre. Le facteur est généreux

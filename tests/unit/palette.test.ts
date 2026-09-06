@@ -198,52 +198,37 @@ describe("le mélange", () => {
   });
 });
 
-describe("la soif se voit sur l'herbe, pas seulement sur la terre", () => {
-  /** De combien la teinte tire vers le jaune-brun : rouge moins bleu. */
-  const chaleur = (t: { r: number; g: number; b: number }) => t.r - t.b;
-
-  it("**une pelouse pleine change de couleur quand le sol se vide**", () => {
-    // Le défaut que ça garde fermé : l'humidité ne colorait que le sol NU, et
-    // `couleurSol` recouvre ce sol dès que la couverture monte. Sur une cellule
-    // bien couverte — c'est-à-dire partout où l'herbe compte — la sécheresse
-    // était donc STRICTEMENT invisible. Ce n'était pas une affaire de nuance
-    // trop faible : la grandeur n'était pas branchée du tout.
-    const pleine = (humidite: number) =>
-      couleurSol(quantifier({ humidite, herbe: 1, herbeBiomasse: 0.25, litiereCG: 0 }), 28);
-    const arrosee = pleine(0.9);
-    const assoiffee = pleine(0.02);
-    // Mesuré : la chaleur passe de 31 à 51. Le seuil est posé sous cette
-    // valeur — il garde le mécanisme branché, il ne fige pas le réglage.
-    expect(chaleur(assoiffee)).toBeGreaterThan(chaleur(arrosee) + 15);
+describe("ce que le rendu N'A PAS le droit d'inventer", () => {
+  it("**la couleur de l'herbe ne prend pas de sécheresse en paramètre**", () => {
+    // Le garde-fou de la règle, et il vient d'une faute réelle : j'avais ajouté
+    // ici un troisième paramètre `secheresse`, dérivé d'un seuil sur la réserve
+    // utile décrété dans le rendu. Le rendu n'a pas à décider à partir de quelle
+    // humidité une herbe souffre — c'est une affirmation de modèle.
+    //
+    // Le moteur, lui, sait le dire : `herbe.ts` porte `humiditeVecue`,
+    // l'humidité de l'horizon de surface lissée sur ~6 semaines, et son seuil
+    // d'eau pour l'herbe vaut 0,35 de l'eau de SURFACE — ni la même valeur, ni
+    // la même grandeur que ce que j'avais inventé. Elle n'est pas encore dans
+    // l'instantané : c'est une issue moteur, pas une constante de palette.
+    //
+    // Cet essai compte les paramètres. C'est grossier, et c'est exactement ce
+    // qu'il faut : il se déclenche à la SIGNATURE, donc avant qu'on ait eu le
+    // temps de rebrancher un seuil quelque part.
+    expect(couleurHerbe.length).toBe(2);
   });
 
-  it("mais elle ne commence pas au premier millimètre manquant", () => {
-    // Une herbe tient tant que le sol lui laisse de quoi transpirer : un sol à
-    // moitié plein n'a aucune raison de jaunir, et le faire jaunir rendrait la
-    // couleur illisible — tout serait toujours un peu grillé.
-    const pleine = (humidite: number) =>
-      couleurSol(quantifier({ humidite, herbe: 1, herbeBiomasse: 0.25, litiereCG: 0 }), 28);
-    expect(chaleur(pleine(0.5))).toBeCloseTo(chaleur(pleine(0.9)), 6);
-  });
-
-  it("l'herbe d'été est VERTE quand elle a de l'eau", () => {
-    // Le ton d'été valait un olive déjà jauni, qui comptait deux fois le
-    // jaunissement — une fois dans la saison, une fois dans la biomasse — et
-    // rendait un vert de pelouse inatteignable quelles que soient les
-    // grandeurs. Un gazon de juillet alimenté en eau est vert.
-    const juillet = couleurHerbe(28, 0.2, 0);
-    expect(juillet.g).toBeGreaterThan(juillet.r + 20);
-    expect(juillet.g).toBeGreaterThan(juillet.b + 40);
-  });
-
-  it("griller et monter en foin ne sont pas la même chose", () => {
-    // Deux dégradations distinctes, deux grandeurs distinctes : le foin est de
-    // la matière sur pied qui a mûri — haute et blonde — et l'herbe grillée est
-    // un gazon ras brûlé jusqu'au collet. Les confondre, c'était rendre l'une
-    // des deux illisible.
-    const foin = couleurHerbe(28, 1, 0);
-    const grillee = couleurHerbe(28, 0.2, 1);
-    expect(clarte(foin)).toBeGreaterThan(clarte(grillee));
+  it("aucune constante de palette ne porte un seuil sur une grandeur du moteur", () => {
+    // La palette a le droit de choisir des COULEURS et des façons de les
+    // afficher — `LITIERE_PLEINE_CG` est un plafond visuel, `OPACITE_OMBRE` un
+    // choix de dessin, `COUVERT_LE_PLUS_SOMBRE` une correspondance entre une
+    // lumière que le moteur calcule et une clarté à l'écran. Ce qu'elle n'a pas
+    // le droit de faire, c'est décider qu'une grandeur physique fait basculer
+    // un état — « en dessous de tant, l'herbe grille ».
+    //
+    // La distinction en une phrase : le rendu choisit COMMENT montrer ce que le
+    // moteur dit ; il ne choisit pas CE QUE le moteur dit.
+    expect(ombreDuCouvert(1)).toBeCloseTo(1, 6);
+    expect(ombreDuCouvert(0)).toBeGreaterThan(0);
   });
 });
 

@@ -66,6 +66,22 @@ pas contradictoire, c'est exactement ce que fait une planche botanique.
    la vague monte là où `soilNappeCm ≤ 5`, nulle part ailleurs. C'est la même
    exigence que le « proxy honnête » de l'indice de biodiversité
    (docs/regles.md §13).
+
+   **Et quand le moteur ne sait pas, on ouvre une ISSUE — on ne comble pas le
+   trou côté rendu.** C'est la règle de procédure, et elle a manqué une fois :
+   pour montrer une pelouse sèche j'ai décrété dans `palette.ts` un seuil de
+   grillage sur la réserve utile, alors qu'un seuil qui décide qu'une herbe
+   souffre est une affirmation de modèle. Elle était fausse en plus d'être
+   déplacée — le moteur travaille sur l'humidité de l'horizon de SURFACE lissée
+   sur six semaines (`humiditeVecue` dans `herbe.ts`, seuil 0,35), pas sur la
+   réserve du profil sans inertie.
+   Le coût réel de la faute n'est pas la valeur : c'est qu'**une teinte inventée
+   pour compenser une donnée absente rend le manque permanent**. Plus personne
+   ne voit qu'il manque quelque chose, puisque l'écran montre quelque chose. Le
+   défaut se fige en fonctionnalité, et il faudra le rétro-trouver.
+   La marche à suivre, donc : le rendu choisit COMMENT montrer ce que le moteur
+   dit ; il ne choisit jamais CE QUE le moteur dit. Le manque part en issue,
+   avec la grandeur qu'il faudrait et l'usage visuel qui la réclame.
 2. **Aucun asset graphique binaire.** Pas de PNG dessinés à la main, pas de
    pipeline d'art. Les silhouettes sont **générées au démarrage** par du code
    vectoriel dans un atlas de textures — y compris les feuilles et les fruits,
@@ -485,9 +501,15 @@ lumière.
 
 D'où la règle de méthode : **quand une scène « fait synthétique », chercher
 d'abord la grandeur débranchée, pas le réglage à retoucher.** Un rendu qui
-n'affiche pas ce que le moteur sait ne se corrige pas en changeant une teinte —
-et une teinte changée pour compenser une donnée manquante rend le défaut
-permanent.
+n'affiche pas ce que le moteur sait ne se corrige pas en changeant une teinte.
+
+Et son corollaire, qui est le principe n° 1 du §0 et que cette passe a enfreint
+une fois : **si la grandeur n'existe pas dans le moteur, elle part en issue.**
+On ne la fabrique pas côté rendu, même « en attendant », même quand on croit
+connaître le bon ordre de grandeur. Le cas vécu : un seuil de grillage de
+l'herbe décrété dans `palette.ts`, faux de valeur ET de grandeur, et surtout
+faux de nature. Une teinte inventée pour compenser une donnée absente rend le
+manque permanent — l'écran montre quelque chose, donc personne ne cherche plus.
 
 **Ce qui reste ouvert après cette passe :**
 
@@ -497,6 +519,12 @@ permanent.
   inventer une différence que la simulation ne fait pas — exactement la
   « fausse réalité » que le retour reproche. C'est donc une carte MOTEUR :
   l'élagage relève la base du houppier, la lumière passe dessous.
+- **Une pelouse sèche ne se voit pas encore**, et c'est une carte MOTEUR : la
+  grandeur qui le dirait est `humiditeVecue` (`herbe.ts`), l'humidité de
+  l'horizon de surface lissée sur ~6 semaines, et elle n'est pas dans
+  l'instantané. En attendant, la sécheresse se lit indirectement — la couverture
+  recule, donc le sol nu réapparaît entre les touffes — ce qui est vrai mais
+  discret.
 - **Les fruits ne sont pas dessinés.** Le moteur a `fruits` et le protocole un
   avancement ; il manque le tracé et le champ dans la pose.
 - **Le vent, les oiseaux** : §5.11, et volontairement en dernier.

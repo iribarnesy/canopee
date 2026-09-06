@@ -140,6 +140,16 @@ export const SOMMETS_TACHE = 7;
  * clair que la base, qui s'ombrage elle-même. C'est le gradient le plus fort
  * d'un arbre, et il ne dépend pas de l'orientation de la caméra — d'où le
  * choix de le porter en priorité.
+ *
+ * **Ce modelé n'affirme rien, et c'est ce qui l'autorise.** Le principe n° 1
+ * interdit au rendu d'inventer ce que le moteur ne sait pas ; il n'interdit pas
+ * de donner du VOLUME à une forme, ce qui est un choix de dessin et non une
+ * affirmation sur l'état. C'est exactement le précédent déjà tranché pour le
+ * terrain, et `lumiere.ts` le dit dans ces termes : « l'ombrage de pente
+ * n'affirme rien de tel : il donne du volume à une surface ». La frontière est
+ * nette — ce modelé ne dit pas qu'un arbre manque d'eau ni qu'il est malade, il
+ * dit qu'un houppier est un volume et pas un aplat. Ce qui serait interdit,
+ * c'est d'en déduire une couleur d'état que le moteur ne calcule pas.
  */
 export const MODELE_HAUT = 0.3;
 

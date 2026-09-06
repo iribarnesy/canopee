@@ -544,10 +544,17 @@ const PLANCHE: Planche[] = [
     options: { echelle: 1 },
   },
   // Le banc de la PELOUSE : le critère est celui du retour — « avec une densité
-  // de 100 % on devrait voir une pelouse quand on zoome, et là où elle sèche
-  // une pelouse sèche ». Trois scènes synthétiques, couverture forcée à 1,
-  // sans arbres pour les deux premières : on juge le tapis, pas ce qui pousse
-  // dessus.
+  // de 100 % on devrait voir une pelouse quand on zoome ». Trois scènes
+  // synthétiques, couverture forcée à 1, sans arbres pour les deux premières :
+  // on juge le tapis, pas ce qui pousse dessus.
+  //
+  // **La seconde moitié du critère — « là où elle sèche, une pelouse sèche » —
+  // n'est PAS montrée ici, et c'est volontaire.** La grandeur qui le dirait
+  // (`humiditeVecue`, l'humidité de surface lissée de `herbe.ts`) n'est pas
+  // dans l'instantané, et le rendu n'a pas à la fabriquer. Ce banc montre donc
+  // ce que le moteur donne : le FOIN sur pied, commandé par la biomasse. Un
+  // banc qui afficherait une pelouse grillée par un seuil inventé ferait
+  // croire le sujet réglé.
   {
     scene: "pelouse-s28",
     titre: "pelouse · couverture 100 % · ×8",
@@ -562,7 +569,7 @@ const PLANCHE: Planche[] = [
   },
   {
     scene: "pelouse-seche-s28",
-    titre: "pelouse sèche · couverture 100 %, foin sur pied · ×24",
+    titre: "pelouse · couverture 100 %, FOIN sur pied · ×24",
     facteur: 24,
     centre: { x: 50, y: 50 },
   },
