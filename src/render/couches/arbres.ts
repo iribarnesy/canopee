@@ -142,6 +142,28 @@ export interface ArbreAPoser {
    * la valeur faunistique d'une trogne.
    */
   recepages?: number;
+  /**
+   * La tige a été FROTTÉE par un brocard : `Snapshot.frotteSemaine` est
+   * renseigné.
+   *
+   * **Le dégât de gibier le plus actionnable du modèle, et le seul qui laisse
+   * une trace lisible.** Le moteur en fait une histoire complète : les brocards
+   * frottent leurs bois au printemps sur les tiges isolées et lisses, entre
+   * `FROTTIS_HAUTEUR_MIN_M` et `FROTTIS_HAUTEUR_MAX_M` ; une tige trop fine est
+   * annelée et meurt ; une tige déjà marquée est un REPÈRE, et le brocard y
+   * revient (`BONUS_ARBRE_REPERE`). C'est cette dernière phrase qui rend le
+   * dessin utile : une plaie fraîche ne dit pas seulement « il s'est passé
+   * quelque chose », elle dit « ça recommencera ici », et le joueur a une
+   * réponse — `proteger`, `cloturer`, ou réguler.
+   *
+   * Le rendu ne lit PAS la semaine, seulement sa présence, exactement comme
+   * pour `brulee` : à quelle vitesse une plaie de frottis se referme est une
+   * question de modèle, et le moteur ne la traite pas. La marque reste donc,
+   * ce qui est d'ailleurs ce que fait une vraie cicatrice de frottis — elle se
+   * bourrelette et se voit des décennies. Sur un arbre devenu grand elle passe
+   * simplement sous le seuil de dessin, comme tout ce qui est trop petit.
+   */
+  frotte?: boolean;
   /** part du feuillage accroché ∈ [0,1] — `partFoliaire` du moteur */
   partFoliaire: number;
   /** avancement de la sénescence ∈ [0,1] — `senescenceFoliaire` */
@@ -532,6 +554,7 @@ export const EST_CHANDELLE = 1;
 export const EST_BRULEE = 2;
 export const EST_PROTEGE = 4;
 export const TETE_CREUSE = 8;
+export const EST_FROTTE = 16;
 
 /**
  * La classe d'un arbre pour une vue donnée.
@@ -574,8 +597,9 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
     // Le seuil du MOTEUR, pas le mien : `biodiversite.ts` compte une trogne
     // comme porteuse de cavités à partir de deux étêtages.
     ((arbre.recepages ?? 0) >= RECEPAGES_CREUX ? TETE_CREUSE : 0) |
-    (fut << 4) |
-    (tete << 7);
+    (arbre.frotte ? EST_FROTTE : 0) |
+    (fut << 5) |
+    (tete << 8);
   // La santé : deux grandeurs distinctes, et il faut les deux. La vigueur dit
   // « cet arbre végète » — réversible, et c'est l'alerte précoce ; le dommage
   // hydraulique dit « cet arbre a perdu de la plomberie » — définitif, et c'est
@@ -842,6 +866,15 @@ export function cuireVignette(
     dessinerTeteDeTrogne(ctx, fiche, classe, teteTrogneM, hauteurM, echelle, versPx);
   }
 
+  // ── La plaie de frottis ───────────────────────────────────────────────
+  // AVANT le manchon, et c'est volontaire : les deux ne coexistent pas chez le
+  // moteur (`attraitFrottis` rend zéro sur un plant protégé), mais si jamais
+  // ils se croisaient, c'est le tube qu'on doit voir par-dessus la plaie — il
+  // est ce qui la fait cesser.
+  if (classe.gestion & EST_FROTTE) {
+    dessinerFrottis(ctx, hauteurM, echelle, versPx);
+  }
+
   // ── Le manchon ────────────────────────────────────────────────────────
   if (classe.gestion & EST_PROTEGE) {
     dessinerManchon(ctx, echelle, piedX, piedY);
@@ -1035,6 +1068,86 @@ function dessinerTeteDeTrogne(
 export const RENFLEMENT_TETE = 2.2;
 /** L'ombre d'une cavité : presque noire, jamais tout à fait. */
 const CREUX_DE_TROGNE: Teinte = { r: 38, g: 32, b: 28 };
+
+/**
+ * La plaie d'un frottis : l'écorce arrachée sur un côté de la tige.
+ *
+ * **Ce que le moteur donne** : `frotteSemaine`, la semaine du dernier frottis,
+ * et toute l'histoire qui va avec — `gibier.ts` décrit des brocards qui
+ * frottent leurs bois au printemps sur les tiges isolées à écorce lisse, et
+ * qui **reviennent sur celles qu'ils ont déjà marquées** (`BONUS_ARBRE_REPERE`).
+ * C'est cette dernière phrase qui fait de la plaie une information utile et pas
+ * une décoration : elle annonce le prochain frottis autant qu'elle raconte
+ * l'ancien.
+ *
+ * **Ce qui vient du dessin** : où la plaie se trouve sur la tige, et à quoi
+ * ressemble du bois mis à nu. La hauteur du frottis n'est pas une grandeur du
+ * moteur et n'a pas à l'être — c'est la hauteur des bois d'un chevreuil, un
+ * fait de l'animal, au même titre que la forme d'une feuille est un fait de
+ * l'espèce (§4). Le moteur, lui, s'occupe de la hauteur de l'ARBRE, qui est ce
+ * qui décide s'il est frottable et s'il en meurt.
+ *
+ * **Ce que le rendu ne fait PAS** : lire la semaine pour faire cicatriser la
+ * plaie. À quelle vitesse un bourrelet recouvre une blessure de frottis est une
+ * question de modèle, et le moteur ne la traite pas. La marque reste donc — ce
+ * qui se défend, une cicatrice de frottis se voyant des décennies — et sur un
+ * arbre devenu grand elle passe simplement sous le seuil de dessin.
+ */
+function dessinerFrottis(
+  ctx: CanvasRenderingContext2D,
+  hauteurM: number,
+  echelle: number,
+  versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
+): void {
+  const rayonPx = rayonAuPiedM(hauteurM) * echelle;
+  const hautPx = (FROTTIS_HAUT_M - FROTTIS_BAS_M) * echelle;
+  // Sous deux pixels de haut ou un de large, la plaie n'est plus qu'un point
+  // sombre sur le fût, et un point sombre au hasard sur un tronc ressemble à un
+  // défaut de rendu, pas à une blessure.
+  if (hautPx < 2 || rayonPx < 0.6) return;
+  const bas = versPx({ x: 0, y: FROTTIS_BAS_M });
+  const haut = versPx({ x: 0, y: FROTTIS_HAUT_M });
+  // **Sur un CÔTÉ de la tige, et pas au milieu.** Un brocard frotte de flanc :
+  // la plaie est une bande verticale décalée, et c'est ce décalage qui la fait
+  // lire comme une écorce arrachée plutôt que comme une ombre de tronc.
+  const cx = bas.sx + rayonPx * 0.3;
+  const cy = (bas.sy + haut.sy) / 2;
+  const demiH = Math.abs(bas.sy - haut.sy) / 2;
+  const demiL = Math.max(0.6, rayonPx * 0.65);
+  // **Deux passes, et la première est celle qui fait la lecture.** Une simple
+  // tache claire sur un fût ne se lit pas comme une plaie : elle se lit comme
+  // le côté éclairé du tronc, qui est déjà dessiné juste au-dessus par la même
+  // méthode. Ce qui distingue une écorce ARRACHÉE, c'est son bord — le lambeau
+  // sombre qui reste autour du bois mis à nu. On pose donc l'ourlet d'abord,
+  // le bois clair ensuite, un peu plus petit.
+  ctx.fillStyle = versCss(OURLET_DE_FROTTIS);
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, demiL + 0.7, demiH, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = versCss(BOIS_A_NU);
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, demiL, demiH * 0.86, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** Le bois mis à nu par un frottis : clair, presque blanc, puis il grisonne. */
+const BOIS_A_NU: Teinte = { r: 212, g: 198, b: 170 };
+
+/** Le lambeau d'écorce qui reste autour de la plaie : c'est lui qu'on lit. */
+const OURLET_DE_FROTTIS: Teinte = { r: 62, g: 48, b: 38 };
+
+/**
+ * Entre quelles hauteurs un brocard frotte, en mètres.
+ *
+ * **La hauteur des BOIS de l'animal, pas une grandeur de parcelle.** Le moteur
+ * dit entre quelles hauteurs une TIGE est frottable (`FROTTIS_HAUTEUR_MIN_M` à
+ * `FROTTIS_HAUTEUR_MAX_M`, soit 1,2 à 5 m de haut) — c'est une propriété de
+ * l'arbre, et elle décide de ce qui arrive. Où l'animal pose ses bois sur cette
+ * tige est une propriété de l'animal, elle ne varie pas d'une parcelle à
+ * l'autre, et le moteur n'a aucune raison de la porter.
+ */
+const FROTTIS_BAS_M = 0.35;
+const FROTTIS_HAUT_M = 0.95;
 
 /**
  * Le manchon de protection : un tube pâle au pied du plant.

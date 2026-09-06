@@ -68,6 +68,8 @@ interface ArbreScene {
   protege?: boolean;
   /** `recepages` du protocole : nombre d'étêtages subis */
   recepages?: number;
+  /** `frotteSemaine` du protocole : présent = un brocard l'a frotté */
+  frotteSemaine?: number;
   /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
   fruitProgress?: number;
   /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -201,6 +203,8 @@ interface Options {
   brulee?: boolean;
   /** Planche : plant sous manchon. */
   protege?: boolean;
+  /** Planche : tige frottée par un brocard (`frotteSemaine` renseigné). */
+  frotte?: boolean;
   /** Planche : hauteur de tête de trogne, m, et nombre d'étêtages. */
   teteTrogneM?: number;
   recepages?: number;
@@ -354,6 +358,8 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             ...(t.brulEeSemaine === undefined ? {} : { brulee: true }),
             ...(t.protege ? { protege: true } : {}),
             ...(t.recepages ? { recepages: t.recepages } : {}),
+            // Même lecture que `brulee` : la présence, pas la semaine.
+            ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
             // Une chandelle n'a plus de feuilles : c'est un tronc mort debout.
             partFoliaire: t.chandelle ? 0 : f.part,
             senescence: f.senescence,
@@ -481,6 +487,7 @@ function planche(
       ...(options.chandelle ? { chandelle: true } : {}),
       ...(options.brulee ? { brulee: true } : {}),
       ...(options.protege ? { protege: true } : {}),
+      ...(options.frotte ? { frotte: true } : {}),
       ...(options.teteTrogneM ? { teteTrogneM: options.teteTrogneM } : {}),
       ...(options.recepages ? { recepages: options.recepages } : {}),
       ...(options.floraison ? { floraison: options.floraison } : {}),
@@ -730,6 +737,20 @@ const PLANCHE: Planche[] = [
     hauteurM: 0.9,
     titre: "manchon · le plant protégé, jusqu'à la hauteur de dent du moteur (1,5 m)",
     options: { protege: true },
+  },
+  {
+    scene: "",
+    especes: ["carpinus_betulus", "fagus_sylvatica", "fraxinus_excelsior", "corylus_avellana"],
+    hauteurM: 2.5,
+    titre: "frottis · la plaie du brocard, sur une tige dans la fourchette du moteur (1,2–5 m)",
+    options: { baseHouppier: 0.35, frotte: true },
+  },
+  {
+    scene: "",
+    especes: ["carpinus_betulus", "fagus_sylvatica", "fraxinus_excelsior", "corylus_avellana"],
+    hauteurM: 2.5,
+    titre: "frottis · les mêmes tiges intactes, pour comparer",
+    options: { baseHouppier: 0.35 },
   },
   { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
   {

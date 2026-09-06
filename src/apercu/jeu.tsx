@@ -47,6 +47,8 @@ interface Scene {
     protege?: boolean;
     /** `recepages` du protocole : nombre d'étêtages subis */
     recepages?: number;
+    /** `frotteSemaine` du protocole : présent = un brocard l'a frotté */
+    frotteSemaine?: number;
     /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
     fruitProgress?: number;
     /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -149,6 +151,7 @@ function Demo(): React.ReactElement {
         ...(t.brulEeSemaine === undefined ? {} : { brulee: true }),
         ...(t.protege ? { protege: true } : {}),
         ...(t.recepages ? { recepages: t.recepages } : {}),
+        ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
         partFoliaire: t.chandelle ? 0 : part,
         senescence: espece && pheno ? senescenceDans(espece, pheno) : 0,
         vigueur: t.vigueur ?? 1,

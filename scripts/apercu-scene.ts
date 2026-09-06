@@ -122,6 +122,8 @@ interface ArbreScene {
   protege: boolean;
   /** `recepages` : nombre d'étêtages subis */
   recepages: number;
+  /** `frotteSemaine` : la semaine du dernier frottis ; absent = jamais frotté */
+  frotteSemaine?: number;
   /**
    * `baseHouppierM` : la base du houppier, m — en dessous, plus une branche
    * vivante. C'est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce, donc elle
@@ -173,6 +175,7 @@ function figer(state: GameState): ArbreScene[] {
       ...(s.brulEeSemaine === undefined ? {} : { brulEeSemaine: s.brulEeSemaine }),
       protege: s.protege,
       recepages: s.recepages,
+      ...(s.frotteSemaine === undefined ? {} : { frotteSemaine: s.frotteSemaine }),
       baseHouppierM: arrondi(s.baseHouppierM, 2),
       floraison: arrondi(s.floraison, 3),
       fruitProgress: arrondi(s.fruitProgress, 3),

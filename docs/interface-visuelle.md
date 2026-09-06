@@ -474,6 +474,7 @@ colonne de droite est la même à chaque fois :
 | `floraison` (#14) | rien ; `fruitProgress` ne permet pas de l'inférer | dessine la fleur, sans connaître aucune date |
 | `baseHouppierM` | `1 − 2 × houppierRatio`, une formule maison | lit la grandeur, et perd un champ au passage |
 | **taille de tête de trogne** (#19) | rien, faute de pouvoir le dire | rien non plus : le renflement se dessine sur le rayon du fût, et ne grossit PAS avec les étêtages |
+| **abroutissement** (#21) | rien ; `pousseTendreM` est un stock, pas un événement | rien non plus, et c'est la bonne réponse tant que le tick jette `pousseMangeeM` |
 
 **Ce que les quatre ont en commun** : dans les quatre cas le rendu ne pouvait
 pas obtenir la grandeur en réfléchissant plus fort, parce qu'elle dépend de
@@ -611,13 +612,14 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   tête enfle ni quel volume de cavité elle offre, et c'est pourtant ce volume
   qui décide de ce qui peut y nicher. Le renflement est donc dessiné sur le
   rayon du fût, identique à trois coupes et à quinze.
-- **`pousseTendreM` reste illisible.** Le §5.6 la donnait pour « brouté », mais
-  une valeur basse veut dire aussi bien « fraîchement brouté » que « déjà
-  lignifié » : les deux états sont indiscernables dans la grandeur, donc rien
-  n'est dessiné. À trancher avec le moteur avant d'ouvrir quoi que ce soit.
-- **`frotteSemaine` n'est toujours pas lue.** Une tige frottée par un brocard
-  porte une plaie d'écorce bien visible, et la grandeur voyage — c'est du
-  travail de rendu qui reste, pas un manque moteur.
+- **L'abroutissement n'a aucune trace** (issue #21). Le §5.6 donnait
+  `pousseTendreM` pour la grandeur qui dit « brouté » ; c'est un STOCK, et une
+  valeur basse veut dire aussi bien « fraîchement brouté » que « ne pousse
+  pas » ou « déjà lignifié ». Le tick, lui, calcule le dégât arbre par arbre
+  (`BroutageArbre.pousseMangeeM`) et le jette. Rien n'est donc dessiné : une
+  flèche broutée peinte sur une inférence fausse masquerait le vrai problème,
+  qui est que la boucle de décision du joueur est aveugle, pas que l'image est
+  pauvre.
 - **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
 - **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
   panneau face caméra : un côté éclairé franc mentirait dès la première
@@ -738,10 +740,12 @@ n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 | Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` ✅ |
 | Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` ✅ |
 | Défoliation | couronne mangée par les ravageurs | `ravageurs` par cellule — **pas encore envoyé** |
-| Brouté | rameaux coupés net, plant rabougri en boule | `pousseTendreM` |
-| Frotté | écorce arrachée en bas du tronc | `frotteSemaine` |
-| Mort sur pied | chandelle grise, sans feuille | `chandelle`, `mortSemaine` |
-| Brûlé sur pied | chandelle noire | `brulEeSemaine` |
+| Brouté | *rien* — la grandeur est un stock, pas un événement | `pousseTendreM` ❌ **issue #21** |
+| Frotté | plaie de bois à nu sur un côté du fût, cernée du lambeau d'écorce | `frotteSemaine` ✅ |
+| Mort sur pied | chandelle grise, sans feuille | `chandelle` ✅ |
+| Brûlé sur pied | chandelle noire | `brulEeSemaine` ✅ |
+| Trogne | tête renflée, creuse au-delà de deux étêtages | `teteTrogneM`, `recepages` ✅ |
+| Protégé | manchon translucide, monté à la hauteur de dent | `protege` ✅ |
 
 **Deux grandeurs, et il faut les deux** — les confondre serait perdre
 l'essentiel de ce qu'elles disent. La **vigueur** est réversible : elle dit

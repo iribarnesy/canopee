@@ -789,3 +789,76 @@ describe("les états de conduite : trogne, chandelle, manchon", () => {
     expect(avec.compte.rects).toHaveLength(1);
   });
 });
+
+describe("le frottis : la seule trace lisible d'un dégât de gibier", () => {
+  it("sépare une tige frottée d'une tige intacte", () => {
+    const v = vue();
+    expect(cleClasse(classeDe(arbre({ frotte: true }), 30, v))).not.toBe(
+      cleClasse(classeDe(arbre(), 30, v)),
+    );
+  });
+
+  it("pose la plaie sur le fût : deux tracés de plus, l'ourlet et le bois à nu", () => {
+    const intacte = fabriqueBouchon();
+    const frottee = fabriqueBouchon();
+    const v = vue(6);
+    // Une tige dans la fourchette du moteur, et sans feuillage pour que le
+    // compte ne mesure que le bois.
+    const tige = { heightM: 2.5, baseHouppierM: 0.9, partFoliaire: 0 } as const;
+    cuireVignette(classeDe(arbre(tige), 30, v), 2.5, 0.4, intacte.fabriquer, 0.9);
+    cuireVignette(
+      classeDe(arbre({ ...tige, frotte: true }), 30, v),
+      2.5,
+      0.4,
+      frottee.fabriquer,
+      0.9,
+    );
+    expect(frottee.compte.remplissages).toBe(intacte.compte.remplissages + 2);
+  });
+
+  /**
+   * La plaie est du bois MIS À NU : plus clair que l'écorce, et cerné d'un
+   * lambeau plus sombre qu'elle. Sans ces deux bouts, la tache se lit comme le
+   * côté éclairé du fût — qui est dessiné juste à côté par la même méthode.
+   */
+  it("pose du bois plus clair que l'écorce et un ourlet plus sombre", () => {
+    const { fabriquer, compte } = fabriqueBouchon();
+    const tige = { heightM: 2.5, baseHouppierM: 0.9, partFoliaire: 0, frotte: true } as const;
+    cuireVignette(classeDe(arbre(tige), 30, vue(6)), 2.5, 0.4, fabriquer, 0.9);
+    const clarte = (css: string) => {
+      const t = css.match(/\d+/g)?.map(Number) ?? [];
+      return ((t[0] ?? 0) + (t[1] ?? 0) + (t[2] ?? 0)) / 3;
+    };
+    const posees = compte.couleurs.map(clarte);
+    const ourlet = posees.at(-2);
+    const nu = posees.at(-1);
+    expect(ourlet).toBeDefined();
+    expect(nu).toBeDefined();
+    if (ourlet === undefined || nu === undefined) return;
+    // L'écorce du charme tourne autour de 110-140 de clarté moyenne ; on ne
+    // fixe pas de valeur, on demande l'ORDRE : ourlet < écorce < bois à nu.
+    const ecorce = posees.slice(0, -2);
+    const moyenne = ecorce.reduce((a, b) => a + b, 0) / Math.max(1, ecorce.length);
+    expect(ourlet).toBeLessThan(moyenne);
+    expect(nu).toBeGreaterThan(moyenne);
+  });
+
+  it("ne dessine rien quand la tige est trop petite à l'écran pour porter une plaie", () => {
+    // Au zoom parcelle, la plaie ferait moins de deux pixels de haut : un point
+    // sombre au hasard sur un fût ressemble à un défaut de rendu, pas à une
+    // blessure.
+    const intacte = fabriqueBouchon();
+    const frottee = fabriqueBouchon();
+    const v = vue(0.15);
+    const tige = { heightM: 2.5, baseHouppierM: 0.9, partFoliaire: 0 } as const;
+    cuireVignette(classeDe(arbre(tige), 30, v), 2.5, 0.4, intacte.fabriquer, 0.9);
+    cuireVignette(
+      classeDe(arbre({ ...tige, frotte: true }), 30, v),
+      2.5,
+      0.4,
+      frottee.fabriquer,
+      0.9,
+    );
+    expect(frottee.compte.remplissages).toBe(intacte.compte.remplissages);
+  });
+});
