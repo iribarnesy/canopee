@@ -433,8 +433,23 @@ export class SceneParcelle {
     // CE QU'ON GÈRE : elle dit où il fait sombre, donc où rien ne poussera.
     //
     // On découpe donc toujours, et sur `couches.sol` seul — jamais sur le décor,
-    // qui n'est pas la parcelle. La passe coûte un plein écran : une seule
-    // primitive pour le GPU, mesurée sans effet sur le coût par image.
+    // qui n'est pas la parcelle.
+    //
+    // **Ce que ça coûte, mesuré et non supposé** : une passe plein écran de
+    // plus, soit +10 % sur le temps par image (1 640 → 1 807 ms de médiane sur
+    // 90 images, friche de 3 264 sprites, 1 500 × 1 000). Le chiffre ABSOLU ne
+    // veut rien dire — le conteneur de mesure n'a pas de GPU et rend par
+    // SwiftShader, un rastériseur logiciel — mais l'écart RELATIF, si : une
+    // passe plein écran n'est pas gratuite ici, et il ne faut pas prétendre
+    // qu'elle l'est. Sur un vrai GPU, un quad plein écran se compte en dixièmes
+    // de milliseconde et la part serait invisible ; ce n'est pas vérifiable
+    // depuis ce conteneur, donc ce n'est pas affirmé.
+    //
+    // Le vrai poste de cette couche est ailleurs, et il est bien plus gros :
+    // `poserOmbres` reconstruit un `Sprite` PAR ARBRE À CHAQUE IMAGE, ce qui
+    // est exactement la « primitive par image » que le lot L0 a proscrite. Le
+    // corriger — garder les sprites et ne bouger que ceux qui changent — vaut
+    // plus que d'économiser cette passe-ci.
     this.silhouette ??= RenderTexture.create({ width: largeur, height: hauteur });
     this.app.renderer.render({
       container: this.couches.sol,
