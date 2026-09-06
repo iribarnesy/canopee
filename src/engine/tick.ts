@@ -107,6 +107,7 @@ import {
 import { frequentationDesBordures } from "./paysage";
 import {
   contextePhenologique,
+  FLORAISON_DUREE_DJ,
   partFoliaireActiveDans,
   partFoliaireOmbrageanteDans,
   semaineDeFroid,
@@ -1284,7 +1285,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
     const mature = tree.alive && tree.ageWeeks >= espece.regeneration.maturiteAns * 52;
     if (mature) {
-      const bloomEnd = fruits.floraisonDJ + 100;
+      const bloomEnd = fruits.floraisonDJ + FLORAISON_DUREE_DJ;
       // Fenêtre de floraison : gel fatal aux fleurs ouvertes (atlas : abricotier).
       if (
         ddPrev < bloomEnd &&

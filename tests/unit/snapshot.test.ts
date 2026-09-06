@@ -99,7 +99,7 @@ describe("les arbres de l'instantané", () => {
   });
 
   it("transporte ce qui donne à un arbre sa silhouette", () => {
-    const t = arbreDuSnapshot(vivant);
+    const t = arbreDuSnapshot(vivant, 0);
     // La trogne, la cime sèche, l'arbre qui végète, l'écorce arrachée :
     // chacun de ces champs porte un visuel, et aucun ne se déduit des autres.
     expect(t.teteTrogneM).toBe(1.8);
@@ -112,6 +112,33 @@ describe("les arbres de l'instantané", () => {
     expect(t.derniereLeveeSemaine).toBe(44);
   });
 
+  it("dit quels arbres sont EN FLEUR — ce que fruitProgress ne dit pas", () => {
+    // `floraisonDJ` du pommier vaut 200, la fenêtre 100 °C·j de plus.
+    const pommier = { ...vivant, especeId: "malus_domestica", ageWeeks: 520 } as TreeState;
+    expect(arbreDuSnapshot(pommier, 150).floraison).toBe(0); // pas encore
+    expect(arbreDuSnapshot(pommier, 225).floraison).toBe(1); // pleine fleur
+    expect(arbreDuSnapshot(pommier, 350).floraison).toBe(0); // déjà noué
+    // Trois cas que `fruitProgress` confond tous les trois à 0.
+    const avant = arbreDuSnapshot({ ...pommier, fruitProgress: 0 } as TreeState, 150);
+    const pendant = arbreDuSnapshot({ ...pommier, fruitProgress: 0 } as TreeState, 225);
+    expect(avant.fruitProgress).toBe(pendant.fruitProgress);
+    expect(avant.floraison).not.toBe(pendant.floraison);
+  });
+
+  it("ne fait fleurir ni les chandelles, ni les immatures, ni le charme", () => {
+    const jeune = { ...vivant, especeId: "malus_domestica", ageWeeks: 100 } as TreeState;
+    expect(arbreDuSnapshot(jeune, 225).floraison).toBe(0);
+    const chandelle = {
+      ...vivant,
+      especeId: "malus_domestica",
+      alive: false,
+      mortSemaine: 10,
+    } as TreeState;
+    expect(arbreDuSnapshot(chandelle, 225).floraison).toBe(0);
+    // Une essence forestière n'a pas de fiche fruitière : rien à dessiner.
+    expect(arbreDuSnapshot(vivant, 225).floraison).toBe(0);
+  });
+
   it("dit de quoi l'arbre est mort — onze causes, onze récits", () => {
     const brule = {
       ...vivant,
@@ -120,7 +147,7 @@ describe("les arbres de l'instantané", () => {
       brulEeSemaine: 199,
       causeMort: "feu",
     } as TreeState;
-    const t = arbreDuSnapshot(brule);
+    const t = arbreDuSnapshot(brule, 0);
     expect(t.causeMort).toBe("feu");
     // La chandelle NOIRE se distingue de la grise par cette seule semaine.
     expect(t.brulEeSemaine).toBe(199);
@@ -165,6 +192,22 @@ describe("les grilles de l'instantané", () => {
     expect(snapshot.soilRavageurs[0]).toBeCloseTo(0.05, 6);
     // La biomasse n'est pas la couverture : deux cartes, deux valeurs.
     expect([...snapshot.soilHerbe]).not.toEqual([...snapshot.soilHerbeBiomasse]);
+  });
+
+  it("porte l'humidité VÉCUE du tapis, qui n'est pas la réserve du profil", () => {
+    const state = etatNeuf();
+    const snapshot = construireSnapshot(entrees(state));
+    const nCells = STATION.coteM * STATION.coteM;
+    expect(snapshot.soilHerbeHumidite).toHaveLength(nCells);
+    // C'est bien la mémoire portée par l'état, pas un recalcul : elle sort de
+    // `state.soil.herbeHumidite`, la seule grandeur que le moteur relit d'une
+    // semaine sur l'autre pour décider si une cellule peut porter de l'herbe.
+    expect([...snapshot.soilHerbeHumidite]).toEqual([
+      ...Float32Array.from(entrees(state).state.soil.herbeHumidite),
+    ]);
+    // Et ce n'est pas `soilWater` : l'une est un remplissage ∈ [0,1] de
+    // l'horizon de surface lissé, l'autre des millimètres instantanés.
+    expect([...snapshot.soilHerbeHumidite]).not.toEqual([...snapshot.soilWater]);
   });
 
   it("garde le SIGNE de l'épaisseur perdue : un dépôt est négatif", () => {
