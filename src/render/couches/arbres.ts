@@ -142,6 +142,22 @@ export const SOMMETS_TACHE = 7;
  * d'images à une dizaine par seconde, et l'atlas restait trois cents classes en
  * retard après la fin du zoom. L'étirement d'un facteur deux par le GPU ne se
  * voit pas ; l'attente, si.
+ *
+ * **Ce que ce plafond coûte, et qu'il faut assumer en toutes lettres.** À 256,
+ * un sujet de seize mètres est cuit sur 384 pixels de haut, soit 24 pixels par
+ * mètre : une feuille de hêtre de huit centimètres y fait 1,9 pixel, sous le
+ * seuil de `FEUILLE_DES_PX`. Le dessin des feuilles ne se déclenche donc
+ * JAMAIS, à aucun zoom — pas seulement de loin. Le critère du §4, « vu de près
+ * on distingue les feuilles », n'est pas approché puis manqué : il est hors
+ * d'atteinte par construction tant que ce plafond tient, et une planche vue de
+ * près ne montre qu'une cuisson de 256 pixels agrandie par le GPU.
+ *
+ * Le relever reste donc la seule voie, mais pas à l'aveugle : la mesure qui a
+ * fait redescendre à 256 date d'avant le tri en espace écran de
+ * `posesDesArbres` et d'avant `BUDGET_CUISSON_PX`, qui compte des pixels et
+ * non des vignettes. Au zoom où les feuilles compteraient, le tri ne laisse
+ * qu'une poignée de classes visibles — ce n'est plus le cas mesuré. Il faut
+ * remesurer avant de trancher, pas rejouer l'aller-retour.
  */
 export const VIGNETTE_MAX_PX = 256;
 
