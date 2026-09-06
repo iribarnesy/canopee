@@ -126,6 +126,39 @@ export const RECOUVREMENT = 2.4;
 export const SOMMETS_TACHE = 7;
 
 /**
+ * De combien le HAUT d'un houppier est plus clair que son bas.
+ *
+ * **Le défaut que ça corrige est celui qui faisait le plus « ordinateur ».**
+ * Chaque tache prenait `0,9 + 0,2 × hachage` : un écart de clarté TIRÉ AU SORT,
+ * donc du bruit, donc aucune information. Résultat, tous les arbres de la
+ * parcelle exactement de la même valeur moyenne, sans un côté éclairé ni un
+ * dessous sombre — le retour l'a nommé sans détour : « la même couleur exacte
+ * sur tous les arbres alors que le soleil est dans une certaine direction,
+ * c'est pas normal, ça fait fausse réalité ».
+ *
+ * Un houppier reçoit la lumière par le dessus : le sommet est franchement plus
+ * clair que la base, qui s'ombrage elle-même. C'est le gradient le plus fort
+ * d'un arbre, et il ne dépend pas de l'orientation de la caméra — d'où le
+ * choix de le porter en priorité.
+ */
+export const MODELE_HAUT = 0.3;
+
+/**
+ * De combien le côté ÉCLAIRÉ d'un houppier est plus clair que l'autre.
+ *
+ * Plus faible que le gradient vertical, et pour une raison honnête : la
+ * vignette est un panneau face caméra, elle ne tourne pas avec la vue. Un
+ * modelé latéral fort mentirait dès la première rotation, puisque le côté
+ * éclairé resterait le même quand le soleil passe derrière. Assez pour que
+ * l'arbre ait un volume, assez peu pour qu'aucune rotation ne le démente.
+ *
+ * La lumière vient de la gauche de l'écran, comme celle du terrain
+ * (`AZIMUT_MODELE_DEG`, sud-ouest) : les deux modelés doivent aller dans le
+ * même sens, sinon la scène a deux soleils et c'est pire que pas de modelé.
+ */
+export const MODELE_COTE = 0.13;
+
+/**
  * Taille écran maximale d'une vignette cuite, en pixels.
  *
  * Au-delà, on cesse de grossir la vignette et on l'étire : un arbre qui occupe
@@ -560,7 +593,9 @@ function dessinerFeuillage(
     y0 = Math.min(y0, p.sy);
     y1 = Math.max(y1, p.sy);
   }
-  const aireHouppier = (Math.PI / 4) * Math.max(1, x1 - x0) * Math.max(1, y1 - y0);
+  const largeurUtile = Math.max(1, x1 - x0);
+  const hauteurUtile = Math.max(1, y1 - y0);
+  const aireHouppier = (Math.PI / 4) * largeurUtile * hauteurUtile;
   const taches = Math.max(1, terminaux.length * fiche.feuillage.densite * partFoliaire);
   // La densité de la fiche dit la TRANSPARENCE relative d'un houppier — un
   // bouleau à 0,45 laisse voir le ciel, un hêtre à 0,92 non. Prise telle quelle
@@ -597,7 +632,21 @@ function dessinerFeuillage(
     //
     // Un peu de modelé au tirage : ça donne du volume à une masse d'aplats sans
     // coûter une passe de plus.
-    ctx.fillStyle = versCss(eclairer(teinte, 0.9 + 0.2 * hacher(i, 3, 0x4411)));
+    // **Le modelé, et non plus un tirage au sort.** Un houppier prend la
+    // lumière par le dessus et par le côté du soleil ; sa base et son revers
+    // s'ombragent eux-mêmes. Les deux coordonnées sont déjà là — la tache est
+    // placée, et l'emprise du houppier est mesurée juste au-dessus — donc ça ne
+    // coûte pas un calcul de plus par tache, seulement la bonne formule.
+    const haut = hauteurUtile > 0 ? (y1 - bout.sy) / hauteurUtile : 0.5;
+    const cote = largeurUtile > 0 ? (bout.sx - (x0 + x1) / 2) / (largeurUtile / 2) : 0;
+    const modele =
+      1 +
+      MODELE_HAUT * (haut - 0.5) * 2 +
+      MODELE_COTE * -Math.max(-1, Math.min(1, cote)) +
+      // Il reste un peu de hasard, mais un peu : c'est la variété d'un
+      // feuillage, plus le facteur qui portait à lui seul tout le rendu.
+      0.06 * (hacher(i, 3, 0x4411) - 0.5);
+    ctx.fillStyle = versCss(eclairer(teinte, modele));
     // Des taches toutes du même calibre se lisent comme une grappe de raisin :
     // on les fait varier du simple au double, ce qui suffit à ce que l'œil y
     // voie une masse.

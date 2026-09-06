@@ -184,12 +184,20 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
     }
   }
 
+  // La silhouette de la PARCELLE SEULE, décor exclu : c'est elle qui borne
+  // l'ombre. Le décor est là pour se taire, et une tache sombre posée dessus
+  // attire l'œil là où il n'y a rien à voir.
+  const silhouette = fabriquer(vue.largeurPx, vue.hauteurPx);
+  const sq = silhouette.getContext("2d");
+  if (!sq) throw new Error("contexte 2d indisponible");
+
   const terrain = new Terrain(fabriquer, scene.coteM);
   terrain.rafraichir(donnees, semaine, vue);
   terrain.cuire(donnees, semaine, vue, 10000);
   for (const m of terrain.aPoser(vue)) {
     if (!m.image || !m.decalage) continue;
     cq.drawImage(m.image, m.decalage.dx, m.decalage.dy);
+    sq.drawImage(m.image, m.decalage.dx, m.decalage.dy);
   }
 
   // ── Les ombres ─────────────────────────────────────────────────────────
@@ -230,9 +238,11 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
       ctx.globalCompositeOperation = "source-over";
       return sortie;
     }
-    // Découpe à la silhouette du sol, PUIS multiplication : voir `MODE_LIMITE`.
+    // Découpe à la silhouette de la PARCELLE, puis multiplication : voir
+    // `MODE_LIMITE`. Sur la silhouette et non sur `calque`, qui porte aussi le
+    // décor — c'est ce qui laissait des taches d'ombre hors de la parcelle.
     mq.globalCompositeOperation = MODE_LIMITE;
-    mq.drawImage(calque, 0, 0);
+    mq.drawImage(silhouette, 0, 0);
     cq.globalCompositeOperation = MODE_COMPOSITION;
     cq.drawImage(masque, 0, 0);
     cq.globalCompositeOperation = "source-over";
@@ -530,6 +540,35 @@ const PLANCHE: Planche[] = [
     hauteurM: 16,
     titre: "trois sujets de près",
     options: { echelle: 1 },
+  },
+  // Le banc de la PELOUSE : le critère est celui du retour — « avec une densité
+  // de 100 % on devrait voir une pelouse quand on zoome, et là où elle sèche
+  // une pelouse sèche ». Trois scènes synthétiques, couverture forcée à 1,
+  // sans arbres pour les deux premières : on juge le tapis, pas ce qui pousse
+  // dessus.
+  {
+    scene: "pelouse-s28",
+    titre: "pelouse · couverture 100 % · ×8",
+    facteur: 8,
+    centre: { x: 50, y: 50 },
+  },
+  {
+    scene: "pelouse-s28",
+    titre: "pelouse · couverture 100 % · ×24",
+    facteur: 24,
+    centre: { x: 50, y: 50 },
+  },
+  {
+    scene: "pelouse-seche-s28",
+    titre: "pelouse sèche · couverture 100 %, foin sur pied · ×24",
+    facteur: 24,
+    centre: { x: 50, y: 50 },
+  },
+  {
+    scene: "pelouse-arbres-s28",
+    titre: "pelouse + arbres · l'ombre portée doit tomber DESSUS · ×8",
+    facteur: 8,
+    centre: { x: 50, y: 50 },
   },
   { scene: "friche-s28", titre: "friche · parcelle entière · juillet" },
   { scene: "friche-s28", titre: "friche · sans les arbres", options: { arbres: false } },

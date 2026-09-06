@@ -35,7 +35,7 @@
  */
 
 import type { CelluleQuantifiee } from "../palette";
-import { valeurDuPalier } from "../palette";
+import { partDuPalier } from "../palette";
 
 /** Ce qu'un brin représente. */
 export type Motif = "touffe" | "feuille" | "terre";
@@ -47,6 +47,16 @@ export interface Brin {
   motif: Motif;
   /** taille relative ∈ [0,6 ; 1,4] : deux touffes voisines ne font pas la même */
   taille: number;
+  /**
+   * Nombre de lames d'une touffe, 2 à 4.
+   *
+   * **Toutes les touffes avaient exactement trois lames, écartées des mêmes
+   * angles** : le motif se répétait à l'identique sur toute la parcelle et le
+   * sol se lisait comme un papier peint — un même glyphe tamponné en grille.
+   * C'est le défaut que le retour appelait « on dirait un ordinateur qui simule
+   * une forêt », et il tient à la RÉPÉTITION plus qu'au dessin.
+   */
+  lames: number;
   /** orientation, radians — une touffe penche, une feuille est posée de travers */
   angle: number;
   /**
@@ -72,11 +82,18 @@ export const TAPIS_PLEIN_PX = 90;
 /**
  * Nombre de brins par mètre carré à densité pleine.
  *
- * Sept : assez pour que le sol ne soit plus une nappe, assez peu pour qu'on
- * distingue encore les marques les unes des autres. Au-delà, elles se
- * recouvrent et on retombe sur un aplat, plus cher à cuire.
+ * **Sept était le compte d'une FRICHE, pas d'une pelouse**, et c'est ce qui
+ * ratait le critère « à couverture 100 % on doit voir une pelouse ». Le
+ * raisonnement d'origine — « assez peu pour qu'on distingue encore les marques
+ * les unes des autres » — décrit une lande où des touffes se détachent sur du
+ * sol nu. Un gazon est le contraire : c'est un COUVERT, et ce qu'on y distingue
+ * n'est pas la touffe individuelle mais un grain serré et continu.
+ *
+ * Quinze, avec des marques deux fois plus petites (`dessinerBrin`) : la
+ * surface d'encre change à peine — donc le coût de cuisson non plus — mais le
+ * sol cesse de se lire comme des objets posés dessus.
  */
-export const BRINS_PAR_M2 = 7;
+export const BRINS_PAR_M2 = 15;
 
 /** Hachage entier → [0,1[, stable et sans allocation. Le même que le grain. */
 function hacher(a: number, b: number, sel: number): number {
@@ -104,8 +121,15 @@ export function densiteTapis(largeurTuilePx: number): number {
  * deux autres ne couvrent pas.
  */
 export function motifDuTirage(cellule: CelluleQuantifiee, tirage: number): Motif {
-  const herbe = valeurDuPalier(cellule.herbe);
-  const litiere = valeurDuPalier(cellule.litiere);
+  // **`partDuPalier` et non `valeurDuPalier`**, et c'est toute la correction.
+  // Celle-là rend le milieu d'une bande, ce qui convient pour interpoler une
+  // couleur mais jamais pour décider si l'on sème une marque : elle ne rend ni
+  // 0 ni 1. Une pelouse annoncée à 100 % de couverture gardait donc des plaques
+  // de terre nue, et une cellule sans la moindre litière était semée de
+  // feuilles mortes — les deux visibles sur le banc de pelouse, et aucune des
+  // deux n'était dans la donnée. Une feuille est là ou n'est pas là.
+  const herbe = partDuPalier(cellule.herbe);
+  const litiere = partDuPalier(cellule.litiere);
   // La litière recouvre l'herbe (elle lui tombe dessus, cf. `couleurSol`), donc
   // elle prend sa part d'abord sur ce qui reste après elle.
   const partFeuille = litiere;
@@ -142,6 +166,7 @@ export function brinsDeLaCellule(
       y: y + b,
       motif: motifDuTirage(cellule, c),
       taille: 0.6 + d * 0.8,
+      lames: 2 + Math.floor(hacher(x * 41 + i, y * 7, 0x6c19) * 3),
       nuance: 1 + (hacher(x * 17 + i, y * 29, 0x2b45) - 0.5) * 0.18,
       // Les touffes penchent peu, les feuilles se posent n'importe comment.
       angle: (hacher(x + 3 * i, y + 5 * i, 0x77e1) - 0.5) * Math.PI,
@@ -169,7 +194,9 @@ export function brinsDeLaCellule(
  * qu'on veut voir, c'est qu'il n'y a rien dessus.
  */
 export function clarteDuMotif(motif: Motif): number {
-  if (motif === "touffe") return 1.12;
+  // 1,07 et non 1,12 : quinze marques par mètre carré au lieu de sept, il faut
+  // que chacune pèse moins, sinon le gazon scintille au lieu de faire nappe.
+  if (motif === "touffe") return 1.07;
   if (motif === "feuille") return 0.94;
   return 0.9;
 }

@@ -184,3 +184,52 @@ describe("le mélange", () => {
     expect(melange(a, b, 0.5)).toEqual({ r: 50, g: 100, b: 25 });
   });
 });
+
+describe("la soif se voit sur l'herbe, pas seulement sur la terre", () => {
+  /** De combien la teinte tire vers le jaune-brun : rouge moins bleu. */
+  const chaleur = (t: { r: number; g: number; b: number }) => t.r - t.b;
+
+  it("**une pelouse pleine change de couleur quand le sol se vide**", () => {
+    // Le défaut que ça garde fermé : l'humidité ne colorait que le sol NU, et
+    // `couleurSol` recouvre ce sol dès que la couverture monte. Sur une cellule
+    // bien couverte — c'est-à-dire partout où l'herbe compte — la sécheresse
+    // était donc STRICTEMENT invisible. Ce n'était pas une affaire de nuance
+    // trop faible : la grandeur n'était pas branchée du tout.
+    const pleine = (humidite: number) =>
+      couleurSol(quantifier({ humidite, herbe: 1, herbeBiomasse: 0.25, litiereCG: 0 }), 28);
+    const arrosee = pleine(0.9);
+    const assoiffee = pleine(0.02);
+    // Mesuré : la chaleur passe de 31 à 51. Le seuil est posé sous cette
+    // valeur — il garde le mécanisme branché, il ne fige pas le réglage.
+    expect(chaleur(assoiffee)).toBeGreaterThan(chaleur(arrosee) + 15);
+  });
+
+  it("mais elle ne commence pas au premier millimètre manquant", () => {
+    // Une herbe tient tant que le sol lui laisse de quoi transpirer : un sol à
+    // moitié plein n'a aucune raison de jaunir, et le faire jaunir rendrait la
+    // couleur illisible — tout serait toujours un peu grillé.
+    const pleine = (humidite: number) =>
+      couleurSol(quantifier({ humidite, herbe: 1, herbeBiomasse: 0.25, litiereCG: 0 }), 28);
+    expect(chaleur(pleine(0.5))).toBeCloseTo(chaleur(pleine(0.9)), 6);
+  });
+
+  it("l'herbe d'été est VERTE quand elle a de l'eau", () => {
+    // Le ton d'été valait un olive déjà jauni, qui comptait deux fois le
+    // jaunissement — une fois dans la saison, une fois dans la biomasse — et
+    // rendait un vert de pelouse inatteignable quelles que soient les
+    // grandeurs. Un gazon de juillet alimenté en eau est vert.
+    const juillet = couleurHerbe(28, 0.2, 0);
+    expect(juillet.g).toBeGreaterThan(juillet.r + 20);
+    expect(juillet.g).toBeGreaterThan(juillet.b + 40);
+  });
+
+  it("griller et monter en foin ne sont pas la même chose", () => {
+    // Deux dégradations distinctes, deux grandeurs distinctes : le foin est de
+    // la matière sur pied qui a mûri — haute et blonde — et l'herbe grillée est
+    // un gazon ras brûlé jusqu'au collet. Les confondre, c'était rendre l'une
+    // des deux illisible.
+    const foin = couleurHerbe(28, 1, 0);
+    const grillee = couleurHerbe(28, 0.2, 1);
+    expect(clarte(foin)).toBeGreaterThan(clarte(grillee));
+  });
+});

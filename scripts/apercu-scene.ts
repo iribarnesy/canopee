@@ -16,6 +16,14 @@
  *   APERCU_NOM=friche.json APERCU_ANS=30 APERCU_SEMAINES=4,17,28,42 npm run apercu:scene
  *   APERCU_NOM=mare.json APERCU_EAU=mare npm run apercu:scene
  *
+ * Le banc de pelouse (§5.1), trois scènes :
+ *
+ *   APERCU_NOM=pelouse.json APERCU_ANS=30 APERCU_SEMAINES=28 APERCU_HERBE=1 \
+ *     APERCU_BIOMASSE=0.25 APERCU_LITIERE=0 APERCU_EAU_PART=0.7 \
+ *     APERCU_SANS_ARBRES=1 npm run apercu:scene
+ *   APERCU_NOM=pelouse-seche.json … APERCU_BIOMASSE=1 APERCU_EAU_PART=0.08 …
+ *   APERCU_NOM=pelouse-arbres.json … (sans APERCU_SANS_ARBRES)
+ *
  * Paramètres : station `friche-limon` portée à 1 ha, graine 42, météo réelle,
  * climat figé. Le voisinage de la station est CONSERVÉ — c'est lui qui
  * colonise la friche, et sans lui la parcelle reste nue.
@@ -34,8 +42,8 @@ import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
-import { contextePhenologique } from "../src/engine/phenologie";
 import { getPaysage } from "../src/engine/paysage";
+import { contextePhenologique } from "../src/engine/phenologie";
 import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
@@ -52,6 +60,28 @@ const NOM = process.env.APERCU_NOM;
  */
 const PENTE_PCT = process.env.APERCU_PENTE ? Number(process.env.APERCU_PENTE) : undefined;
 const EAU = process.env.APERCU_EAU as "ruisseau" | "mare" | undefined;
+/**
+ * Le BANC DE PELOUSE : forcer le tapis à une valeur uniforme, arbres compris.
+ *
+ * **Ce n'est pas une scène du moteur, et c'est assumé.** Le critère de la
+ * pelouse porte sur des BOUTS d'échelle — couverture pleine, litière nulle,
+ * réserve vide — que la simulation ne produit à peu près jamais toutes à la
+ * fois sur la même cellule. Les attendre, c'est ne jamais pouvoir juger le
+ * tapis ; les fabriquer à la main dans un JSON qu'on garde sur son disque,
+ * c'est une scène qui devient fausse sans que rien ne le signale — la leçon de
+ * méthode rappelée en tête de ce fichier.
+ *
+ * On les produit donc ici, par le même script, à partir d'un vrai instantané
+ * dont on ne remplace que le tapis. Tout le reste — relief, bordures,
+ * phénologie, arbres — reste ce que le moteur a calculé.
+ */
+const HERBE = process.env.APERCU_HERBE ? Number(process.env.APERCU_HERBE) : undefined;
+const BIOMASSE = process.env.APERCU_BIOMASSE ? Number(process.env.APERCU_BIOMASSE) : undefined;
+const LITIERE = process.env.APERCU_LITIERE ? Number(process.env.APERCU_LITIERE) : undefined;
+/** Remplissage de la réserve utile ∈ [0,1] imposé à toutes les cellules. */
+const EAU_PART = process.env.APERCU_EAU_PART ? Number(process.env.APERCU_EAU_PART) : undefined;
+/** Vider la liste des arbres : on juge le tapis, pas ce qui pousse dessus. */
+const SANS_ARBRES = process.env.APERCU_SANS_ARBRES === "1";
 /**
  * Semaines DANS L'ANNÉE à figer, en plus de la fin d'année.
  *
@@ -94,6 +124,9 @@ const arrondi = (v: number, n: number) => Math.round(v * 10 ** n) / 10 ** n;
  * précisément ce qu'on veut voir.
  */
 function figer(state: GameState): ArbreScene[] {
+  // Le banc de pelouse juge le TAPIS : les arbres n'y ont rien à faire, ils
+  // couvriraient précisément ce qu'on regarde.
+  if (SANS_ARBRES) return [];
   return state.trees.map((t) => ({
     id: t.id,
     especeId: t.especeId,
@@ -165,10 +198,22 @@ function figerLeSol(
     // inondait la parcelle entière sur l'aperçu.
     debordementMm: arrondi(debordementMm, 2),
     altitudesM: arrondi(altitudeParCellule(station.relief, dims), 2),
-    waterMm: arrondi(state.soil.waterMm, 2),
-    herbeCouverture: arrondi(state.soil.herbeCouverture),
-    herbeBiomasse: arrondi(state.soil.herbeBiomasse),
-    litiereCG: arrondi(state.soil.litterCG, 1),
+    waterMm:
+      EAU_PART === undefined
+        ? arrondi(state.soil.waterMm, 2)
+        : state.soil.waterMm.map(() => Number((EAU_PART * station.ruMm).toFixed(2))),
+    herbeCouverture:
+      HERBE === undefined
+        ? arrondi(state.soil.herbeCouverture)
+        : state.soil.herbeCouverture.map(() => HERBE),
+    herbeBiomasse:
+      BIOMASSE === undefined
+        ? arrondi(state.soil.herbeBiomasse)
+        : state.soil.herbeBiomasse.map(() => BIOMASSE),
+    litiereCG:
+      LITIERE === undefined
+        ? arrondi(state.soil.litterCG, 1)
+        : state.soil.litterCG.map(() => LITIERE),
     // Le contexte phénologique de la semaine figée. **Il ne se recalcule pas
     // côté rendu** : un seul endroit tient ce calendrier, et deux copies
     // dériveraient — un houppier doré à l'écran, un houppier vert dans le

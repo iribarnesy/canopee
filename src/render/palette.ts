@@ -57,6 +57,28 @@ export function valeurDuPalier(p: number, niveaux = NIVEAUX): number {
   return (p + 0.5) / niveaux;
 }
 
+/**
+ * Ramène un palier à une PART ∈ [0,1] qui atteint vraiment ses deux bouts.
+ *
+ * **À ne pas confondre avec `valeurDuPalier`, et la confusion se voyait.**
+ * Celle-là rend le MILIEU d'une tranche, ce qui est juste pour interpoler une
+ * couleur : entre deux teintes, la valeur représentative d'une bande est son
+ * centre. Mais elle ne rend jamais ni 0 ni 1 — une grandeur nulle ressort à
+ * une demi-tranche, une grandeur pleine à une demi-tranche du sommet.
+ *
+ * Pour une couleur, l'écart est invisible. Pour des MARQUES — des objets qu'on
+ * sème ou qu'on ne sème pas — il ne l'est pas du tout : une pelouse annoncée à
+ * 100 % de couverture gardait des plaques de terre nue, et une cellule sans la
+ * moindre litière était semée de feuilles mortes. Les deux se voyaient sur le
+ * banc de pelouse, et aucune ne venait de la donnée : elles venaient de la
+ * façon de la lire. Une feuille est là ou n'est pas là ; il n'y a pas de demi-
+ * tranche de feuille.
+ */
+export function partDuPalier(p: number, niveaux = NIVEAUX): number {
+  if (niveaux <= 1) return 1;
+  return Math.min(1, Math.max(0, p / (niveaux - 1)));
+}
+
 export interface Teinte {
   r: number;
   g: number;
@@ -106,8 +128,34 @@ const SOL_MOUILLE: Teinte = { r: 92, g: 76, b: 58 };
 
 /** Herbe de printemps : vert franc, un peu bleuté, la pousse tendre. */
 const HERBE_PRINTEMPS: Teinte = { r: 106, g: 140, b: 72 };
-/** Herbe d'été mûre : elle jaunit sur pied avant même de manquer d'eau. */
-const HERBE_ETE: Teinte = { r: 138, g: 148, b: 78 };
+/**
+ * Herbe d'été : un vert franc, et non le kaki d'avant.
+ *
+ * **Ce ton portait deux choses à la fois, et c'est ce qui ratait la pelouse.**
+ * Il valait `138 148 78` — un olive déjà jauni — au motif que « l'herbe jaunit
+ * sur pied avant même de manquer d'eau ». C'est vrai d'un PRÉ DE FAUCHE laissé
+ * monter en graine ; ce n'est pas vrai d'un gazon ras et alimenté en eau, qui
+ * reste vert tout l'été. Or le jaunissement sur pied a déjà son paramètre —
+ * `HERBE_PAILLE`, commandé par la biomasse — si bien que le kaki le comptait
+ * deux fois et qu'aucune combinaison de grandeurs ne rendait un vert de
+ * pelouse : à couverture pleine et zoom rapproché, la capture montrait un tapis
+ * kaki uniforme là où le retour demandait « une pelouse ».
+ *
+ * Le ton d'été redevient donc le vert de l'herbe QUI VA BIEN, et les deux
+ * façons de la dégrader — monter en foin, griller de soif — sont dites chacune
+ * par sa grandeur.
+ */
+const HERBE_ETE: Teinte = { r: 94, g: 132, b: 66 };
+
+/**
+ * Herbe GRILLÉE par la sécheresse : rase, et brûlée jusqu'au collet.
+ *
+ * À ne pas confondre avec la paille, qui est de la matière sur pied ayant mûri
+ * — haute, blonde, debout. Une pelouse qui grille reste rase et vire au brun
+ * terne : c'est la couleur d'un gazon d'août sans arrosage, et c'est ce que le
+ * joueur doit lire comme « ici ça manque d'eau ».
+ */
+const HERBE_GRILLEE: Teinte = { r: 142, g: 122, b: 78 };
 /**
  * Foin sec : la biomasse reste, la chlorophylle est partie.
  *
@@ -162,13 +210,24 @@ export function phaseAnnuelle(semaineAnnee: number): number {
 }
 
 /**
- * Couleur de l'herbe à une saison donnée, pour une biomasse donnée.
+ * Couleur de l'herbe à une saison donnée, pour une biomasse et une sécheresse
+ * données.
  *
- * Deux commandes, et il faut les deux : la SAISON dit vers quoi la teinte tire,
- * la BIOMASSE dit si l'herbe est verte ou couchée en foin. Une prairie rase de
- * juillet est verte, un foin de juillet est jaune — même semaine, même station.
+ * TROIS commandes, et il faut les trois : la SAISON dit vers quoi la teinte
+ * tire, la BIOMASSE dit si l'herbe est verte ou couchée en foin, la SÉCHERESSE
+ * dit si elle grille. Une prairie rase de juillet est verte, un foin de juillet
+ * est blond, un gazon de juillet sans eau est brun — même semaine, même station.
+ *
+ * **La troisième manquait, et son absence rendait la soif invisible sous
+ * l'herbe.** L'humidité ne colorait que le sol NU (`SOL_SEC` ↔ `SOL_MOUILLE`),
+ * et `couleurSol` recouvre ce sol par l'herbe dès que la couverture monte. Sur
+ * une cellule bien couverte — c'est-à-dire partout où l'herbe compte — la
+ * sécheresse ne se voyait donc pas du tout : le tapis restait du même vert,
+ * qu'il ait de l'eau ou non. C'est exactement ce que disait le retour, « là où
+ * elle sèche on devrait voir une pelouse sèche », et ce n'était pas une
+ * question de nuance : la grandeur n'était pas branchée.
  */
-export function couleurHerbe(semaineAnnee: number, biomasse: number): Teinte {
+export function couleurHerbe(semaineAnnee: number, biomasse: number, secheresse = 0): Teinte {
   const phase = phaseAnnuelle(semaineAnnee);
   // Un cycle simple : hiver → printemps → été → hiver, calé sur les repères que
   // le moteur utilise déjà (solstice en semaine 25, sénescence en semaine 40).
@@ -182,7 +241,11 @@ export function couleurHerbe(semaineAnnee: number, biomasse: number): Teinte {
   // La biomasse tire vers le foin : c'est la matière sur pied qui a séché, et
   // elle se voit surtout quand il y en a beaucoup.
   const foin = Math.min(1, Math.max(0, biomasse)) ** 2;
-  return melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
+  const surPied = melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
+  // Puis la soif, par-dessus : elle grille ce qui reste, foin comme gazon. Un
+  // pré déjà blond qui grille ne blondit pas davantage, il brunit.
+  const soif = Math.min(1, Math.max(0, secheresse));
+  return melange(surPied, HERBE_GRILLEE, 0.72 * soif);
 }
 
 /** Ce que le rendu lit d'une cellule pour la colorer. Tout vient de l'instantané. */
@@ -215,6 +278,17 @@ export function quantifier(c: CelluleSol): CelluleQuantifiee {
 }
 
 /**
+ * Remplissage de la réserve utile en dessous duquel l'herbe commence à griller.
+ *
+ * Une herbe ne grille pas à sec : elle tient tant que le sol lui laisse de quoi
+ * transpirer, puis lâche vite. 0,42 est du même ordre que les
+ * `seuilConfortSecheresse` des fiches d'espèces (0,4 à 0,55 selon l'essence),
+ * ce qui est cohérent — le gazon n'a pas de racine profonde, il souffre au
+ * moins aussi tôt que les ligneux *(à calibrer)*.
+ */
+export const SEUIL_GRILLE = 0.42;
+
+/**
  * La couleur d'une cellule de sol, à partir de ses paliers et de la semaine.
  *
  * Prend la cellule QUANTIFIÉE et non la brute, exprès : c'est la garantie que
@@ -227,7 +301,12 @@ export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
   const nu = melange(SOL_SEC, SOL_MOUILLE, humidite);
 
   const couverture = valeurDuPalier(q.herbe);
-  const herbe = couleurHerbe(semaineAnnee, valeurDuPalier(q.herbeBiomasse));
+  // La soif se lit sur la réserve utile, et elle ne commence pas à sec : une
+  // herbe tient tant que le sol garde de quoi transpirer, puis grille vite. Le
+  // seuil est le même ordre de grandeur que les `seuilStressSecheresse` des
+  // fiches d'espèces *(à calibrer)*.
+  const secheresse = Math.min(1, Math.max(0, (SEUIL_GRILLE - humidite) / SEUIL_GRILLE));
+  const herbe = couleurHerbe(semaineAnnee, valeurDuPalier(q.herbeBiomasse), secheresse);
   // La couverture n'est pas une opacité linéaire : une cellule à moitié
   // couverte lit déjà comme de l'herbe, parce que les touffes se voient de
   // loin et que la terre entre elles est à l'ombre. Le facteur est généreux

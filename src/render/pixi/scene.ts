@@ -417,27 +417,33 @@ export class SceneParcelle {
     this.spriteOmbres.blendMode = MODE_COMPOSITION;
     this.couches.ombres.addChild(this.spriteOmbres);
 
-    // **Borner l'ombre au sol.** Un arbre du bord projette son ombre au-delà de
-    // la limite ; composée sur toute la surface, elle se poserait sur le CIEL,
-    // et c'est la frange grise qui faisait flotter le plateau.
+    // **Borner l'ombre À LA PARCELLE.** Un arbre du bord projette son ombre
+    // au-delà de la limite ; composée sur toute la surface, elle se poserait
+    // sur le CIEL, et c'est la frange grise qui faisait flotter le plateau.
     //
-    // Quand il y a un hors-parcelle, la question ne se pose pas : la nappe du
-    // décor couvre tout le cadre, donc il n'y a pas de ciel sur lequel déborder,
-    // et l'ombre d'un arbre de bordure tombe sur le décor — ce qui est correct.
-    // Sans décor, en revanche, il faut découper : on rend la silhouette du sol
-    // dans une texture et on s'en sert de masque. La passe coûte un plein écran,
-    // donc on ne la fait que dans ce cas-là.
-    if (!etat.bordures) {
-      this.silhouette ??= RenderTexture.create({ width: largeur, height: hauteur });
-      this.app.renderer.render({
-        container: this.couches.sol,
-        target: this.silhouette,
-        clear: true,
-      });
-      const decoupe = new Sprite(this.silhouette);
-      this.couches.ombres.addChild(decoupe);
-      this.spriteOmbres.mask = decoupe;
-    }
+    // **La découpe était conditionnelle, et c'était une erreur de jugement.**
+    // On ne découpait que sans décor, au motif que la nappe du hors-parcelle
+    // couvre tout le cadre et qu'une ombre de bordure tombant dessus est
+    // « correcte ». Correcte physiquement, oui. Mais le décor est là pour se
+    // taire — il est désaturé, brumé, assombri exprès — et y semer des taches
+    // sombres attire l'œil exactement là où il n'y a rien à voir. Le retour est
+    // sans ambiguïté : « je vois encore des taches à l'extérieur de la
+    // parcelle, c'est vraiment étrange », et « les taches d'ombre autour de la
+    // parcelle, c'est pas important ». Ce qui compte, c'est l'ombre PORTÉE SUR
+    // CE QU'ON GÈRE : elle dit où il fait sombre, donc où rien ne poussera.
+    //
+    // On découpe donc toujours, et sur `couches.sol` seul — jamais sur le décor,
+    // qui n'est pas la parcelle. La passe coûte un plein écran : une seule
+    // primitive pour le GPU, mesurée sans effet sur le coût par image.
+    this.silhouette ??= RenderTexture.create({ width: largeur, height: hauteur });
+    this.app.renderer.render({
+      container: this.couches.sol,
+      target: this.silhouette,
+      clear: true,
+    });
+    const decoupe = new Sprite(this.silhouette);
+    this.couches.ombres.addChild(decoupe);
+    this.spriteOmbres.mask = decoupe;
     fond.destroy();
   }
 

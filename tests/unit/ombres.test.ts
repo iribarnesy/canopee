@@ -37,18 +37,43 @@ function arbre(patch: Partial<ArbreOmbre> = {}): ArbreOmbre {
 }
 
 describe("où tombe l'ombre", () => {
-  it("au NORD du pied, du décalage exact du moteur — aux quatre orientations", () => {
-    // La propriété centrale : on reprojette et on doit retomber sur la cellule
-    // que `light.ts` désigne, c'est-à-dire (x, y + 0,4 h).
+  it("**s'étend du PIED jusqu'au décalage exact du moteur — aux quatre orientations**", () => {
+    // La propriété centrale, et elle a changé de forme sans changer de fond.
+    // L'ombre n'est plus un disque CENTRÉ sur la cellule que `light.ts` désigne
+    // — c'est-à-dire (x, y + 0,4 h) — mais le balayage du houppier entre le
+    // pied de l'arbre et cette cellule-là. Le décalage du moteur reste donc lu
+    // au pixel près : il place l'EXTRÉMITÉ au lieu du milieu.
+    //
+    // Le disque centré au loin était ce qui faisait flotter les arbres : son
+    // bord n'atteignait jamais le tronc, et on voyait un arbre, un trou de
+    // lumière, puis une tache sans rapport visible avec lui.
     for (const o of [0, 1, 2, 3] as const) {
       const v: Vue = { ...vue(), cam: { ...vue().cam, orientation: o } };
       const a = arbre();
       const ombre = ombreDeLArbre(a, v);
       expect(ombre).toBeDefined();
       if (!ombre) return;
-      const attendu = versEcranVue({ x: a.x, y: a.y + SHADOW_NORTH_OFFSET * a.heightM, z: a.z }, v);
-      expect(ombre.sx).toBeCloseTo(attendu.sx, 6);
-      expect(ombre.sy).toBeCloseTo(attendu.sy, 6);
+      const pied = versEcranVue({ x: a.x, y: a.y, z: a.z }, v);
+      const cible = versEcranVue({ x: a.x, y: a.y + SHADOW_NORTH_OFFSET * a.heightM, z: a.z }, v);
+      // Le centre est à mi-chemin des deux.
+      expect(ombre.sx).toBeCloseTo((pied.sx + cible.sx) / 2, 6);
+      expect(ombre.sy).toBeCloseTo((pied.sy + cible.sy) / 2, 6);
+    }
+  });
+
+  it("**couvre le pied de l'arbre : c'est ce qui le pose au sol**", () => {
+    // Le test qui garde fermé le défaut « l'arbre flotte ». Quelle que soit
+    // l'orientation, le pied du tronc doit tomber DANS l'ellipse — sinon il n'y
+    // a rien qui relie l'arbre à son ombre, et l'œil lit un collage.
+    for (const o of [0, 1, 2, 3] as const) {
+      const v: Vue = { ...vue(), cam: { ...vue().cam, orientation: o } };
+      const a = arbre({ heightM: 16, houppierRatio: 0.3 });
+      const ombre = ombreDeLArbre(a, v);
+      if (!ombre) throw new Error("pas d'ombre");
+      const pied = versEcranVue({ x: a.x, y: a.y, z: a.z }, v);
+      const u = (pied.sx - ombre.sx) / (ombre.largeurPx / 2);
+      const w = (pied.sy - ombre.sy) / (ombre.hauteurPx / 2);
+      expect(u * u + w * w, `orientation ${o}`).toBeLessThan(1);
     }
   });
 
@@ -77,14 +102,38 @@ describe("où tombe l'ombre", () => {
 });
 
 describe("la taille de l'ombre", () => {
-  it("est le diamètre du houppier que le MOTEUR calcule, projeté", () => {
+  it("part du diamètre du houppier que le MOTEUR calcule, allongé du balayage", () => {
+    // La largeur n'est plus le seul diamètre : c'est l'enveloppe du disque
+    // balayé du pied jusqu'au point d'ombre. L'invariant garde le diamètre
+    // comme SOCLE — c'est toujours `crownRadiusM` qui commande la taille — et y
+    // ajoute exactement la course, ni plus ni moins.
     const v = vue();
     const a = arbre({ heightM: 14, houppierRatio: 0.35 });
     const ombre = ombreDeLArbre(a, v);
     expect(ombre).toBeDefined();
     if (!ombre) return;
     const rayonM = crownRadiusM(a.heightM, a.houppierRatio);
-    expect(ombre.largeurPx).toBeCloseTo(2 * rayonM * TUILE_LARGEUR_PX * v.cam.zoom, 6);
+    const diametrePx = 2 * rayonM * TUILE_LARGEUR_PX * v.cam.zoom;
+    const pied = versEcranVue({ x: a.x, y: a.y, z: a.z }, v);
+    const cible = versEcranVue({ x: a.x, y: a.y + SHADOW_NORTH_OFFSET * a.heightM, z: a.z }, v);
+    expect(ombre.largeurPx).toBeCloseTo(diametrePx + Math.abs(cible.sx - pied.sx), 6);
+    expect(ombre.hauteurPx).toBeCloseTo(
+      diametrePx * APLATISSEMENT + Math.abs(cible.sy - pied.sy),
+      6,
+    );
+  });
+
+  it("un houppier plus large fait une ombre plus large, à hauteur égale", () => {
+    // Ce que l'invariant précédent garantit sur le fond : la taille de l'ombre
+    // suit le houppier du moteur. Une course identique — même hauteur, même
+    // décalage — et pourtant deux ombres différentes, parce que les deux
+    // houppiers le sont.
+    const v = vue();
+    const etroit = ombreDeLArbre(arbre({ heightM: 14, houppierRatio: 0.2 }), v);
+    const large = ombreDeLArbre(arbre({ heightM: 14, houppierRatio: 0.5 }), v);
+    if (!etroit || !large) throw new Error("pas d'ombre");
+    expect(large.largeurPx).toBeGreaterThan(etroit.largeurPx);
+    expect(large.hauteurPx).toBeGreaterThan(etroit.hauteurPx);
   });
 
   it("est aplatie exactement comme une tuile : un disque au sol se projette ainsi", () => {

@@ -314,17 +314,30 @@ function dessinerBrin(
 ): void {
   // Un brin est dimensionné en fraction de tuile : il grandit avec le zoom
   // comme tout le reste, sans qu'on ait à connaître le zoom ici.
-  const u = demiLargeurTuile * 0.22 * brin.taille;
+  // 0,13 et non 0,22 : la marque est deux fois plus petite depuis qu'il y en a
+  // deux fois plus. C'est le même volume d'encre, réparti plus finement — un
+  // gazon a du GRAIN, pas des objets.
+  const u = demiLargeurTuile * 0.13 * brin.taille;
   ctx.fillStyle = couleur;
   if (brin.motif === "touffe") {
-    // Trois lames qui s'écartent depuis un même pied : la silhouette d'une
-    // touffe se lit à ça et à rien d'autre.
+    // Des lames qui s'écartent depuis un même pied : la silhouette d'une touffe
+    // se lit à ça et à rien d'autre.
+    //
+    // **Mais pas toujours les mêmes**, et c'était le défaut : trois lames aux
+    // écarts fixes `[-0,55 ; 0 ; 0,55]` donnaient un glyphe unique tamponné sur
+    // toute la parcelle. Deux à quatre lames, ouvertes à un angle qui dépend de
+    // leur nombre, et chacune de sa longueur : le motif cesse de se répéter
+    // sans coûter un trait de plus.
     ctx.beginPath();
-    for (const ecart of [-0.55, 0, 0.55]) {
-      const penche = brin.angle * 0.25 + ecart;
-      ctx.moveTo(sx - u * 0.16, sy);
-      ctx.lineTo(sx + Math.sin(penche) * u * 1.5, sy - Math.cos(penche) * u * 2.1);
-      ctx.lineTo(sx + u * 0.16, sy);
+    for (let k = 0; k < brin.lames; k++) {
+      const part = brin.lames === 1 ? 0 : k / (brin.lames - 1) - 0.5;
+      const penche = brin.angle * 0.25 + part * 1.15;
+      // Les lames d'une même touffe n'ont pas la même longueur : c'est le peu
+      // qui sépare une touffe d'herbe d'une fourche.
+      const longue = 1.55 + ((k * 37 + brin.lames) % 5) * 0.22;
+      ctx.moveTo(sx - u * 0.18, sy);
+      ctx.lineTo(sx + Math.sin(penche) * u * 1.5, sy - Math.cos(penche) * u * longue * 1.35);
+      ctx.lineTo(sx + u * 0.18, sy);
     }
     ctx.closePath();
     ctx.fill();

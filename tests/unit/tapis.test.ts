@@ -8,7 +8,7 @@ import {
   TAPIS_DES_PX,
   TAPIS_PLEIN_PX,
 } from "../../src/render/couches/tapis";
-import { NIVEAUX, palier } from "../../src/render/palette";
+import { NIVEAUX, palier, quantifier } from "../../src/render/palette";
 
 const cellule = (herbe: number, litiere: number) => ({
   humidite: palier(0.5),
@@ -158,5 +158,40 @@ describe("la nuance : deux marques voisines ne sont pas identiques", () => {
     for (const brin of brinsDeLaCellule(4, 6, cellule(0.8, 0.3), 1)) {
       expect(Math.abs(brin.nuance - 1)).toBeLessThan(0.1);
     }
+  });
+});
+
+describe("les bouts de l'échelle, là où le retour a buté", () => {
+  /** Les motifs semés sur une cellule, pour un échantillon de tirages. */
+  function motifs(herbe: number, litiere: number): Set<string> {
+    const q = quantifier({ humidite: 0.5, herbe, herbeBiomasse: 0.3, litiereCG: litiere });
+    const vus = new Set<string>();
+    for (let i = 0; i < 400; i++) vus.add(motifDuTirage(q, i / 400));
+    return vus;
+  }
+
+  it("**une couverture pleine ne montre AUCUNE terre nue**", () => {
+    // Le critère est celui du retour, mot pour mot : « avec une densité de
+    // 100 % on devrait voir une pelouse quand on zoome ». Ça n'était pas le
+    // cas, et la donnée n'y était pour rien — c'était la lecture des paliers.
+    // `valeurDuPalier` rend le MILIEU d'une bande, donc une couverture de 100 %
+    // ressortait autour de 0,94 et les 6 % restants tombaient en terre à nu :
+    // des plaques sombres semées régulièrement sur un gazon annoncé plein.
+    expect(motifs(1, 0)).not.toContain("terre");
+  });
+
+  it("**une litière nulle ne sème AUCUNE feuille**", () => {
+    // Le même défaut par l'autre bout, et il se voyait tout autant : une
+    // pelouse sans un gramme de litière était constellée de feuilles mortes,
+    // parce que le palier du bas ne vaut pas zéro non plus.
+    expect(motifs(1, 0)).not.toContain("feuille");
+    expect(motifs(0.5, 0)).not.toContain("feuille");
+  });
+
+  it("le sol nu reste possible quand il n'y a vraiment rien", () => {
+    // La correction ne doit pas supprimer la terre à nu — elle doit la
+    // réserver aux cellules qui la méritent. Sans herbe ni litière, il n'y a
+    // rien d'autre à montrer.
+    expect(motifs(0, 0)).toEqual(new Set(["terre"]));
   });
 });
