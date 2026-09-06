@@ -95,7 +95,7 @@ pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 `diametreTeteCm`, `caviteTeteL`, `vigueur`,
 `dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
 `derniereLeveeSemaine`, `floraison`, `fruitProgress`, `bloomFrosted`,
-`pousseTendreM`, `frotteSemaine`.
+`pousseTendreM`, `frotteSemaine`, `brouteSemaine`.
 
 `baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
 plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien
@@ -104,6 +104,11 @@ futaie), ni de `hauteurElagueeM`, qui ne compte que le coup de scie et pas
 l'ombre. Elle remplace l'approximation que le rendu s'était faite
 (`conifereBase`, 0,3 pour un caduc et 0,2 pour un conifère), laquelle dessinait
 deux chênes voisins pareillement alors que le moteur ne les traite pas pareil.
+
+`brouteSemaine` dit qu'un plant a été brouté, et QUAND. `pousseTendreM` ne le
+dit pas : c'est un stock, qui baisse par lignification et par dormance autant
+que par la dent du chevreuil — le peindre en « brouté » couvrirait surtout des
+arbres en hiver. Même rôle que `frotteSemaine`, et pour la même raison.
 
 `diametreTeteCm` et `caviteTeteL` (trogne.ts) disent la tête d'un têtard : le
 renflement à dessiner, et le creux qu'il abrite. Le compteur `recepages` ne

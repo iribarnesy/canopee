@@ -25,6 +25,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { FRICHE_LIMON } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
+import { arbreDuSnapshot } from "../../src/game/snapshot";
 
 const serie = serieMeteoPour("friche-limon");
 if (!serie) throw new Error("série manquante");
@@ -452,5 +453,104 @@ describe("les gestes du gibier remontent au rendu", () => {
       // `frotteSemaine` racontent la même chose, et le rendu peut recouper.
       if (arbre) expect(arbre.frotteSemaine).toBe(semaine);
     }
+  });
+});
+
+/**
+ * La TRACE de l'abroutissement (issue #21).
+ *
+ * Le tick calculait le dégât arbre par arbre — `brouter()` rend une
+ * `Map<number, BroutageArbre>` — s'en servait pour rabattre la hauteur, pour
+ * l'azote des déjections et pour le carbone respiré, puis jetait la Map. Le
+ * seul reste était un `heightM` plus bas qu'à la semaine d'avant, que personne
+ * ne peut lire depuis un instantané puisqu'un instantané ne porte qu'un
+ * instant.
+ *
+ * Ce n'est pas qu'une affaire d'image : l'abroutissement est une boucle de
+ * décision — voir un plant rabattu, protéger, clôturer, réguler — et sans
+ * trace elle est aveugle.
+ */
+describe("un plant brouté le dit, et dit quand", () => {
+  function parcelle(gibierParHa: number, semaines: number, protegerA?: number) {
+    const station: Station = {
+      ...FRICHE_LIMON.station,
+      coteM: 40,
+      voisinage: [],
+      gibierParHa,
+    };
+    let state = createGameState(station, rngStateFromSeed(5));
+    const ids: number[] = [];
+    for (let i = 0; i < 64; i++) {
+      state = plantAt(state, "corylus_avellana", 4 + (i % 8) * 4, 4 + Math.floor(i / 8) * 4, 0.4);
+      const dernier = state.trees[state.trees.length - 1];
+      if (dernier) ids.push(dernier.id);
+    }
+    // En deux fois : poser soixante-quatre manchons dépasse le plafond horaire
+    // d'une semaine, et la moitié serait refusée en silence.
+    const actions: GameAction[] =
+      protegerA === undefined
+        ? []
+        : [
+            { type: "proteger", week: protegerA, treeIds: ids.slice(0, 32) },
+            { type: "proteger", week: protegerA + 1, treeIds: ids.slice(32) },
+          ];
+    for (let i = 0; i < semaines; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      state = advanceWeek(state, w, actions).state;
+    }
+    return state;
+  }
+
+  it("pose la semaine du dégât, comme le frottis pose la sienne", () => {
+    const state = parcelle(0.4, 3 * 52);
+    const broutes = state.trees.filter((t) => t.brouteSemaine !== undefined);
+    expect(broutes.length).toBeGreaterThan(0);
+    // Une semaine, pas un stock : elle est dans le passé de la partie.
+    for (const t of broutes) {
+      expect(t.brouteSemaine).toBeGreaterThanOrEqual(0);
+      expect(t.brouteSemaine ?? 0).toBeLessThanOrEqual(state.week);
+    }
+  });
+
+  it("ne marque personne là où il n'y a pas de gibier", () => {
+    const state = parcelle(0, 3 * 52);
+    expect(state.trees.every((t) => t.brouteSemaine === undefined)).toBe(true);
+  });
+
+  it("se souvient de ce que `pousseTendreM` oublie", () => {
+    // Le cœur de l'affaire : `pousseTendreM` est un STOCK, sans date. Il
+    // remonte dès que l'arbre repousse, et l'événement disparaît avec.
+    //
+    // Deux parcelles menées deux ans, l'une sous 0,4 cervidé/ha et l'autre
+    // sans, puis on protège la première et on laisse passer six mois. La
+    // pousse tendre des plants broutés a intégralement rattrapé celle des
+    // plants qui n'ont jamais vu une dent — à moins de 5 % près. Un rendu
+    // branché sur ce stock ne verrait plus rien du tout ; la boucle de
+    // décision du joueur non plus.
+    const brouteePuisProtegee = parcelle(0.4, 104 + 26, 40);
+    const jamaisBroutee = parcelle(0, 104 + 26);
+    const medianePousse = (s: typeof brouteePuisProtegee) => {
+      const v = s.trees
+        .filter((t) => t.alive)
+        .map((t) => t.pousseTendreM)
+        .sort((a, b) => a - b);
+      return v[Math.floor(v.length / 2)] ?? 0;
+    };
+    const brutee = medianePousse(brouteePuisProtegee);
+    const vierge = medianePousse(jamaisBroutee);
+    expect(vierge).toBeGreaterThan(0);
+    expect(Math.abs(brutee - vierge) / vierge).toBeLessThan(0.05);
+    // Et pourtant l'une des deux a été broutée, l'autre jamais. Seule la date
+    // le sait encore.
+    expect(brouteePuisProtegee.trees.some((t) => t.brouteSemaine !== undefined)).toBe(true);
+    expect(jamaisBroutee.trees.every((t) => t.brouteSemaine === undefined)).toBe(true);
+  });
+
+  it("voyage jusqu'au rendu", () => {
+    const state = parcelle(0.4, 3 * 52);
+    const brouté = state.trees.find((t) => t.brouteSemaine !== undefined);
+    if (!brouté) throw new Error("aucun plant brouté");
+    expect(arbreDuSnapshot(brouté, state.ddYearBase5).brouteSemaine).toBe(brouté.brouteSemaine);
   });
 });

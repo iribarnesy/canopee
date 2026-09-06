@@ -156,6 +156,16 @@ export interface SnapshotTree {
   pousseTendreM: number;
   /** semaine du dernier frottis ; absent = jamais frotté (écorce arrachée au pied) */
   frotteSemaine?: number;
+  /**
+   * Semaine du dernier abroutissement ; absent = jamais brouté. La flèche
+   * coupée, le plant rabattu — et le moment où c'est arrivé, pour que la
+   * marque s'estompe.
+   *
+   * `pousseTendreM` ne la remplace pas : c'est un stock qui baisse aussi bien
+   * par lignification et par dormance que par la dent du chevreuil. Une valeur
+   * basse peinte en « brouté » couvrirait surtout des arbres en hiver.
+   */
+  brouteSemaine?: number;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */
