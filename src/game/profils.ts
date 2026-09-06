@@ -14,8 +14,8 @@
  */
 
 import type { ScenarioId } from "../engine/climat";
-import type { EauDeSurface } from "../engine/eau_surface";
-import type { Bordures } from "../engine/paysage";
+import { type EauDeSurface, SANS_EAU } from "../engine/eau_surface";
+import { type Bordures, bordersUniformes } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
 
 /** Tout ce qui décrit une situation de départ, sans la partie elle-même. */
@@ -39,6 +39,34 @@ export interface ProfilDepart {
    * Elle est donc laissée au choix à chaque partie.
    */
 }
+
+/**
+ * Profils LIVRÉS avec le jeu : des situations réelles, décrites une fois et
+ * prêtes à éprouver. Ils ne vivent pas dans le navigateur — on ne peut ni les
+ * modifier ni les effacer, mais rien n'empêche d'en repartir et d'enregistrer
+ * sa propre variante à côté.
+ */
+export const PROFILS_LIVRES: readonly ProfilDepart[] = [
+  {
+    version: 1,
+    nom: "Saumos 2022 (Gironde)",
+    stationId: "lande-seche",
+    bordures: bordersUniformes("lande-ouverte"),
+    // Sable landais plat : ce n'est pas le relief qui fait l'inondation ici,
+    // c'est la nappe qui remonte quand la forêt cesse de pomper.
+    relief: { altitudeM: 60, pentePct: 1, expositionDeg: 180, forme: "plan", bassinAmontHa: 0 },
+    eau: SANS_EAU,
+    // Nappe landaise perchée : c'est elle qui fait tenir une forêt sur un sable
+    // sans réserve utile.
+    nappeCm: 400,
+    // Tout le bassin subit le même sort : c'est un incendie de MASSIF, pas un
+    // feu de parcelle entouré de vert.
+    partBassinSemblable: 1,
+    scenario: "ssp245",
+    anneeDepart: 2026,
+    maturationAns: 0,
+  },
+];
 
 const CLE = "canopee.profils.v1";
 

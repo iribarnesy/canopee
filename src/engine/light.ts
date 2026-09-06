@@ -38,6 +38,85 @@ export function crownRadiusM(heightM: number, houppierRatio: number): number {
   return houppierRatio * heightM;
 }
 
+/**
+ * Profondeur maximale d'un houppier, en fraction de la hauteur : un arbre venu
+ * seul garde ses branches presque jusqu'au sol *(à calibrer)*.
+ *
+ * C'est un PLAFOND, pas un trait d'espèce. La profondeur réelle, elle, se
+ * calcule — voir `baseHouppierCible`.
+ */
+export const PROFONDEUR_HOUPPIER_MAX = 0.9;
+
+/**
+ * Hauteur en dessous de laquelle les branches ne paient plus leur respiration,
+ * m — la base du houppier vers laquelle l'arbre tend (docs/realisme.md B10).
+ *
+ * Ce n'est PAS une constante d'espèce, et c'est tout l'enjeu : le même chêne
+ * garde ses branches jusqu'en bas au milieu d'un pré et s'auto-élague sur
+ * quinze mètres en futaie serrée. Ce que l'espèce apporte, c'est le SEUIL
+ * (`lumiere.compensation`, déjà sourcé par l'atlas) et l'opacité de sa propre
+ * couronne (`lumiere.lai`) ; la compétition apporte le reste.
+ *
+ * Le calcul suit le mécanisme physiologique de l'élagage naturel. Une branche
+ * à la profondeur relative p sous la cime reçoit ce que laisse passer le
+ * feuillage au-dessus d'elle — Beer-Lambert, la même loi qu'ailleurs :
+ *
+ *     lumière(p) = lumièreCime × exp(−k · lai · p)
+ *
+ * Elle vit tant que ça reste au-dessus du point de compensation, d'où la
+ * profondeur vivante :
+ *
+ *     p* = ln(lumièreCime / compensation) / (k · lai)
+ *
+ * Ce que ça donne, et c'est le test qui compte : en pleine lumière, hêtre
+ * comme pin gardent une couronne pleine (l'arbre de plein vent est branchu,
+ * quelle que soit l'espèce). À 30 % de lumière, le hêtre garde toujours tout —
+ * compensation 0,01, il patiente — et le pin, compensation 0,25, se retrouve
+ * avec un houppier réduit au tiers de sa hauteur. C'est exactement la futaie
+ * de pins au fût nu et le sous-bois de hêtres branchus jusqu'en bas.
+ */
+export function baseHouppierCible(
+  heightM: number,
+  lumiereCime: number,
+  compensation: number,
+  lai: number,
+): number {
+  if (heightM <= 0) return 0;
+  const opacite = BEER_LAMBERT_K * lai;
+  if (opacite <= 0 || compensation <= 0) return 0;
+  // Une cime déjà sous son point de compensation : plus une seule branche ne
+  // paie sa respiration, pas même la plus haute. C'est la limite continue du
+  // calcul (ln(1) = 0), et c'est un arbre qui se meurt — le point de
+  // compensation est précisément le seuil de mortalité (especes.ts).
+  if (lumiereCime <= compensation) return heightM;
+  const profondeurVivante = Math.log(lumiereCime / compensation) / opacite;
+  const profondeur = Math.min(PROFONDEUR_HOUPPIER_MAX, profondeurVivante);
+  return heightM * (1 - profondeur);
+}
+
+/**
+ * Part de couronne qui reste, une fois retirée la tranche basse ∈ [0,1].
+ *
+ * Deux causes se rejoignent dans `baseHouppierM` et le modèle ne les
+ * distingue pas, parce que l'arbre non plus : l'élagage naturel (la branche
+ * meurt d'ombre) et l'élagage à la scie (le joueur la coupe pour la bille
+ * d'œuvre). Dans les deux cas la couronne perd sa tranche basse, et intercepte
+ * moins.
+ *
+ * C'est LINÉAIRE en profondeur de couronne, donc probablement un peu fort —
+ * les branches basses sont les plus ombragées, donc les moins fournies.
+ * Affiner demande une source sur la distribution verticale du feuillage.
+ */
+export function partHouppier(heightM: number, baseHouppierM: number): number {
+  const profondeurMax = PROFONDEUR_HOUPPIER_MAX * heightM;
+  if (profondeurMax <= 0) return 1;
+  // La base est bornée ici plutôt que chez chaque appelant : un arbre rabattu
+  // (recépage, trogne, rejet de souche) a une base héritée qui peut dépasser
+  // sa nouvelle hauteur, et une profondeur négative n'aurait aucun sens.
+  const base = Math.max(0, Math.min(heightM, baseHouppierM));
+  return Math.max(0, Math.min(1, (heightM - base) / profondeurMax));
+}
+
 interface Shadow {
   cx: number;
   cy: number;
@@ -74,8 +153,13 @@ function buildShadowIndex(
       r2: r * r,
       heightM: tree.heightM,
       // L'indice foliaire suit le déploiement : c'est là que la phénologie
-      // entre dans la loi de Beer-Lambert.
-      extinction: BEER_LAMBERT_K * espece.lumiere.lai * feuillage,
+      // entre dans la loi de Beer-Lambert. Et l'élagage y entre aussi : une
+      // couronne dont on a retiré la tranche basse intercepte moins.
+      extinction:
+        BEER_LAMBERT_K *
+        espece.lumiere.lai *
+        feuillage *
+        partHouppier(tree.heightM, tree.baseHouppierM ?? 0),
     };
     const bx0 = Math.floor((shadow.cx - r) / BUCKET_M);
     const bx1 = Math.floor((shadow.cx + r) / BUCKET_M);

@@ -44,6 +44,7 @@ import {
   chargerProfils,
   enregistrerProfil,
   lireProfilExporte,
+  PROFILS_LIVRES,
   type ProfilDepart,
   supprimerProfil,
 } from "./profils";
@@ -133,11 +134,6 @@ const btn = (active = false): React.CSSProperties => ({
   cursor: "pointer",
 });
 
-/** Hauteur de départ du houppier quand l'arbre n'est pas élagué. */
-function conifereBase(espece: { lumiere: { caduc: boolean } }): number {
-  return espece.lumiere.caduc ? 0.3 : 0.2;
-}
-
 /**
  * Ce qu'on peut cliquer d'un arbre, en m. C'est son houppier — sauf pour une
  * chandelle, qui n'en a plus : sans ce rétrécissement, un fût mort capte les
@@ -206,12 +202,17 @@ function drawTreeOblique(
   ctx.fillStyle = "rgba(40,50,30,0.18)";
   ctx.fill();
 
-  // Un arbre élagué se RECONNAÎT : la bille est nue jusqu'à la hauteur
-  // travaillée, et le houppier commence au-dessus. C'est toute la silhouette
-  // de l'arbre de futaie, par opposition au branchu de plein vent.
-  const partElaguee =
-    tree.heightM > 0 ? Math.min(0.75, Math.max(0, tree.hauteurElagueeM / tree.heightM)) : 0;
-  const baseHouppier = Math.max(conifereBase(espece), partElaguee);
+  // Un arbre au fût nu se RECONNAÎT : la bille est propre jusqu'à la base du
+  // houppier, qui commence au-dessus. C'est toute la silhouette de l'arbre de
+  // futaie, par opposition au branchu de plein vent.
+  //
+  // Cette base vient du MOTEUR (`baseHouppierM`), et c'est un changement de
+  // nature : le rendu en fabriquait une approximation par espèce — 0,3 pour un
+  // caduc, 0,2 pour un conifère — qui ne disait rien de la compétition subie.
+  // Deux chênes voisins, l'un serré l'autre au large, se dessinaient pareil
+  // alors que le moteur ne les traite plus pareil.
+  const baseHouppier =
+    tree.heightM > 0 ? Math.min(0.75, Math.max(0, tree.baseHouppierM / tree.heightM)) : 0;
   // tronc
   const trunkW = Math.max(1.5, hPx * 0.06);
   ctx.fillStyle = "#6b4d2f";
@@ -1113,6 +1114,22 @@ function StartScreen({
           >
             Exporter en JSON
           </button>
+        </div>
+        <div className="seg" style={{ marginBottom: 8 }}>
+          {PROFILS_LIVRES.map((p) => (
+            <button
+              key={p.nom}
+              type="button"
+              style={{ ...btn(), marginRight: 10 }}
+              onClick={() => {
+                appliquerProfil(p);
+                setMessageProfil(`« ${p.nom} » chargé — profil livré, la graine reste à vous.`);
+              }}
+              title="Situation réelle livrée avec le jeu : elle se charge, se joue, et se modifie sans être écrasée"
+            >
+              📍 {p.nom}
+            </button>
+          ))}
         </div>
         {profils.length > 0 && (
           <div className="seg" style={{ marginBottom: 8 }}>

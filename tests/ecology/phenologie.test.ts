@@ -14,6 +14,8 @@ import {
   debourrementExigeDJ,
   ETALEMENT_CHUTE_SEMAINES,
   ETALEMENT_SENESCENCE_SEMAINES,
+  FLORAISON_DUREE_DJ,
+  partFloraison,
   partFoliaireActive,
   partFoliaireActiveDans,
   partFoliaireAssimilante,
@@ -425,5 +427,37 @@ describe("un semi-persistant ne se dénude jamais", () => {
       ),
     );
     expect(creux).toBe(0);
+  });
+});
+
+describe("la floraison s'ouvre et se fane", () => {
+  const DEBUT = 200; // `floraisonDJ` du pommier
+
+  it("vaut zéro hors de la fenêtre, aux deux bouts", () => {
+    expect(partFloraison(DEBUT, DEBUT - 1)).toBe(0);
+    expect(partFloraison(DEBUT, DEBUT)).toBe(0);
+    expect(partFloraison(DEBUT, DEBUT + FLORAISON_DUREE_DJ)).toBe(0);
+    expect(partFloraison(DEBUT, DEBUT + FLORAISON_DUREE_DJ + 500)).toBe(0);
+  });
+
+  it("monte plus vite qu'elle ne redescend — un verger blanchit en quelques jours", () => {
+    // Pleine fleur au quart de la fenêtre, puis fanaison sur les trois quarts.
+    expect(partFloraison(DEBUT, DEBUT + 25)).toBeCloseTo(1, 6);
+    // Symétriques autour du sommet : la montée est trois fois plus raide.
+    expect(partFloraison(DEBUT, DEBUT + 12.5)).toBeCloseTo(0.5, 6);
+    expect(partFloraison(DEBUT, DEBUT + 62.5)).toBeCloseTo(0.5, 6);
+  });
+
+  it("ne saute jamais : c'est ce qui distingue une part d'un booléen", () => {
+    // Un booléen ferait clignoter le verger. Sur un pas de 1 °C·j, la part ne
+    // bouge que d'un quatre-vingtième au plus.
+    let sautMax = 0;
+    let precedent = 0;
+    for (let dd = DEBUT - 10; dd <= DEBUT + FLORAISON_DUREE_DJ + 10; dd++) {
+      const part = partFloraison(DEBUT, dd);
+      sautMax = Math.max(sautMax, Math.abs(part - precedent));
+      precedent = part;
+    }
+    expect(sautMax).toBeLessThan(0.05);
   });
 });

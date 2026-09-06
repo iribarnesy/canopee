@@ -1228,6 +1228,9 @@ function applyTrogner(
       teteTrogneM: hauteurTete,
       recepages: tree.recepages + 1,
       hauteurElagueeM: Math.min(tree.hauteurElagueeM, hauteurTete),
+      // La tête est rabattue : ce qui repartira part d'elle, et une base de
+      // houppier héritée d'un arbre plus haut n'aurait plus de support.
+      baseHouppierM: Math.min(tree.baseHouppierM ?? 0, hauteurTete),
       pousseTendreM: 0,
       fruitsKg: 0,
       fruitProgress: 0,
@@ -1502,6 +1505,9 @@ function applyReceper(
       ...tree,
       heightM: RECEPAGE_HAUTEUR_M,
       hauteurElagueeM: 0,
+      // La souche repart branchu : le fût nu de la tige coupée ne se transmet
+      // pas aux rejets, c'est même tout l'inverse d'un taillis.
+      baseHouppierM: 0,
       pousseTendreM: 0,
       vigueur: 1,
       dommageHydraulique: 0,

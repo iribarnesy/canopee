@@ -422,3 +422,37 @@ export function partFoliaireAssimilanteDans(espece: EspeceV0, ctx: ContextePheno
     ctx.semainesDeFroid,
   );
 }
+
+/**
+ * Largeur de la fenêtre de floraison, en degrés-jours base 5 °C. C'est la
+ * borne haute que `tick.ts` compare déjà à `fruits.floraisonDJ` pour savoir si
+ * un gel tardif tombe sur des fleurs ouvertes ; elle vit ici pour qu'un seul
+ * endroit tienne ce calendrier — le rendu doit dessiner la fleur la semaine où
+ * le moteur la croit ouverte, pas une semaine avant.
+ */
+export const FLORAISON_DUREE_DJ = 100;
+/**
+ * Part de la fenêtre pendant laquelle les fleurs s'OUVRENT. Après, elles se
+ * fanent, plus lentement qu'elles ne se sont ouvertes — un verger passe au
+ * blanc en quelques jours et met deux semaines à perdre ses pétales
+ * *(à calibrer)*.
+ */
+const FLORAISON_OUVERTURE = 0.25;
+
+/**
+ * Part de la couronne en fleur ∈ [0,1], d'après le cumul de degrés-jours.
+ *
+ * Un booléen ferait clignoter le verger d'une semaine à l'autre ; une part le
+ * fait s'ouvrir et se faner. Elle vaut 0 hors fenêtre — donc aussi pour une
+ * espèce sans fruits, dont l'appelant ne l'appellera pas.
+ *
+ * Attention à ce qu'elle N'EST PAS : `fruitProgress` vaut 0 avant la floraison,
+ * 0 pendant, et 0 toute l'année pour un arbre immature. Les trois cas sont
+ * indiscernables, et c'est pour ça que cette part existe.
+ */
+export function partFloraison(floraisonDJ: number, ddYearBase5: number): number {
+  const x = (ddYearBase5 - floraisonDJ) / FLORAISON_DUREE_DJ;
+  if (x <= 0 || x >= 1) return 0;
+  if (x < FLORAISON_OUVERTURE) return x / FLORAISON_OUVERTURE;
+  return (1 - x) / (1 - FLORAISON_OUVERTURE);
+}

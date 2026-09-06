@@ -14,9 +14,10 @@ import type { ActionRefusal, GesteVisible } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
 import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import { CO2_ACTUEL_PPM } from "../engine/climat";
+import { getEspece } from "../engine/especes";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
-import { contextePhenologique } from "../engine/phenologie";
+import { contextePhenologique, partFloraison } from "../engine/phenologie";
 import { porositeDrainageMm } from "../engine/soil";
 import type { GameState, TickFluxes } from "../engine/state";
 import { weekOfYear } from "../engine/state";
@@ -27,8 +28,12 @@ import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
 /**
  * Un arbre, tel que le rendu doit pouvoir le DESSINER. Aucun filtre ici : les
  * chandelles sont des arbres du jeu, elles ont juste cessé de vivre.
+ *
+ * `ddYearBase5` est le cumul de degrés-jours de la semaine (l'état le porte) :
+ * c'est le calendrier qui décide de la floraison, et il se lit ici plutôt que
+ * de se recopier côté rendu.
  */
-export function arbreDuSnapshot(t: TreeState): SnapshotTree {
+export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree {
   return {
     id: t.id,
     especeId: t.especeId,
@@ -39,8 +44,11 @@ export function arbreDuSnapshot(t: TreeState): SnapshotTree {
     stress: t.stress,
     fruitsKg: t.fruitsKg,
     hauteurElagueeM: t.hauteurElagueeM,
+    // Absente sur un arbre qui vient de naître : il est branchu jusqu'en bas.
+    baseHouppierM: t.baseHouppierM ?? 0,
     protege: t.protege,
     chandelle: !t.alive,
+    floraison: floraisonDe(t, ddYearBase5),
     teteTrogneM: t.teteTrogneM,
     recepages: t.recepages,
     vigueur: t.vigueur,
@@ -54,6 +62,21 @@ export function arbreDuSnapshot(t: TreeState): SnapshotTree {
     pousseTendreM: t.pousseTendreM,
     frotteSemaine: t.frotteSemaine,
   };
+}
+
+/**
+ * Part de la couronne en fleur d'un arbre donné. Trois conditions, et pas une
+ * de moins : l'espèce fructifie, l'arbre est vivant, l'arbre est mature. Une
+ * chandelle ne fleurit pas, et un jeune plant non plus — c'est la même
+ * maturité que celle qui commande la nouaison dans `tick.ts`.
+ */
+function floraisonDe(t: TreeState, ddYearBase5: number): number {
+  if (!t.alive) return 0;
+  const espece = getEspece(t.especeId);
+  const fruits = espece.fruits;
+  if (!fruits) return 0;
+  if (t.ageWeeks < espece.regeneration.maturiteAns * 52) return 0;
+  return partFloraison(fruits.floraisonDJ, ddYearBase5);
 }
 
 /** Eau de l'horizon de SURFACE, par cellule (le sol est stratifié, cf. soil.ts). */
@@ -162,7 +185,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     ),
     // Aucun filtre : les chandelles sont des arbres, elles ont juste cessé de
     // vivre. Les compter comme vivants est l'affaire de l'UI, pas la nôtre.
-    trees: state.trees.map(arbreDuSnapshot),
+    trees: state.trees.map((t) => arbreDuSnapshot(t, state.ddYearBase5)),
     // Carte : on montre l'eau de l'horizon de SURFACE, celle que voient les
     // semis et l'évaporation.
     soilWater: eauDeSurface(state, nH),
@@ -177,6 +200,10 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // quand l'herbe jaunit, et seul le feu, la fauche et la décomposition la
     // font baisser.
     soilHerbeBiomasse: Float32Array.from(state.soil.herbeBiomasse),
+    // L'humidité VÉCUE, pas celle de la semaine : le moteur la porte d'une
+    // semaine à l'autre (elle est récurrente par construction), et c'est cette
+    // mémoire-là qui fait griller un tapis — pas la pluie de mardi.
+    soilHerbeHumidite: Float32Array.from(state.soil.herbeHumidite),
     // Les ravageurs par cellule, pas seulement leur moyenne : c'est la tache
     // de défoliation, et la mort qui la suit, que le rendu doit montrer.
     soilRavageurs: Float32Array.from(state.soil.ravageurs),
@@ -236,6 +263,7 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilN.buffer,
     s.soilHerbe.buffer,
     s.soilHerbeBiomasse.buffer,
+    s.soilHerbeHumidite.buffer,
     s.soilRavageurs.buffer,
     s.soilEpaisseurPerdueCm.buffer,
     s.soilNappeCm.buffer,

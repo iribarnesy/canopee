@@ -61,6 +61,17 @@ export interface SnapshotTree {
   fruitsKg: number;
   /** hauteur de bille élaguée, m (ce qui fera du bois d'œuvre) */
   hauteurElagueeM: number;
+  /**
+   * Base du houppier, m : en dessous, plus une branche vivante — donc du fût
+   * nu à dessiner (`trees.ts`, docs/realisme.md B10).
+   *
+   * Elle voyage parce qu'elle ne se déduit de RIEN : ni de l'espèce (le même
+   * chêne est branchu en pré et nu sur quinze mètres en futaie), ni de
+   * `hauteurElagueeM` (qui ne compte que le coup de scie, pas l'ombre). Le
+   * rendu en avait fabriqué une approximation privée — 0,3 pour un caduc,
+   * 0,2 pour un conifère — qui ne disait rien de la compétition subie.
+   */
+  baseHouppierM: number;
   /** plant sous manchon : le gibier ne l'atteint pas */
   protege: boolean;
   /**
@@ -107,6 +118,18 @@ export interface SnapshotTree {
    * d'un chêne-liège démasclé est ocre-rouge, et il reverdit avec les années.
    */
   derniereLeveeSemaine?: number;
+  /**
+   * Part de la couronne EN FLEUR ∈ [0,1] (phenologie.ts). Elle ne se déduit
+   * d'aucun autre champ : `fruitProgress` vaut 0 avant la floraison, 0
+   * pendant, et 0 toute l'année pour un arbre immature — les trois cas sont
+   * indiscernables. Et elle ne se recalcule pas côté rendu : la fenêtre est un
+   * seuil de degrés-jours, et deux copies dériveraient d'une semaine ou deux
+   * sans que rien ne le signale.
+   *
+   * C'est le seul moment de l'année où un verger se voit de loin, et c'est
+   * aussi là que se jouent le gel tardif (`bloomFrosted`) et la pollinisation.
+   */
+  floraison: number;
   /** avancement des fruits de l'année ∈ [0,1] : floraison → nouaison → maturation */
   fruitProgress: number;
   /** fleurs détruites par un gel tardif : elles brunissent au lieu de nouer */
@@ -167,6 +190,21 @@ export interface Snapshot {
    * déjà chuté, et c'est cette matière-là qui reste à dessiner — et à brûler.
    */
   soilHerbeBiomasse: Float32Array;
+  /**
+   * Humidité VÉCUE par le tapis herbacé, par cellule ∈ [0,1] (herbe.ts) : le
+   * remplissage de l'horizon de SURFACE, lissé sur ~6 semaines.
+   *
+   * Ce n'est ni `soilWater` (la réserve du profil entier, instantanée) ni la
+   * couverture : c'est la grandeur sur laquelle le moteur décide lui-même si
+   * une cellule peut porter de l'herbe. L'inertie compte autant que la valeur —
+   * un tapis ne jaunit pas en une semaine sèche et ne reverdit pas sur une
+   * averse ; branchée sur l'humidité instantanée, la couleur du gazon
+   * clignoterait à chaque pluie, ce que ce lissage existe pour éviter.
+   *
+   * C'est ce qui distingue la pelouse GRILLÉE — couverture pleine, biomasse
+   * basse, et pourtant brune — du foin sur pied et de l'herbe qui recule.
+   */
+  soilHerbeHumidite: Float32Array;
   /**
    * Population de ravageurs par cellule ∈ [0,1] (ravageurs.ts). Seule la
    * moyenne voyageait (`TickFluxes.ravageurMoyen`), et une moyenne ne se

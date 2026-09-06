@@ -72,6 +72,22 @@ export interface TreeState {
    * pour le chauffage, pas pour la scierie.
    */
   hauteurElagueeM: number;
+  /**
+   * Base du houppier, m : la hauteur en dessous de laquelle il n'y a plus de
+   * branches vivantes (docs/realisme.md B10). Absente = branchu jusqu'en bas,
+   * ce qu'est tout arbre qui vient de naître.
+   *
+   * Elle ne DESCEND jamais — une branche morte ne repousse pas. Elle monte de
+   * deux façons, et l'arbre ne les distingue pas : l'ombre tue les branches
+   * basses (élagage naturel, `light.ts:baseHouppierCible`), ou le joueur les
+   * coupe (`hauteurElagueeM`). Un arbre rabattu la ramène à sa nouvelle
+   * hauteur — un recépage repart branchu.
+   *
+   * C'est elle, et non un ratio fixe par espèce, qui fait qu'un chêne de pré
+   * est branchu jusqu'en bas et qu'un chêne de futaie a quinze mètres de fût
+   * nu : la profondeur de couronne est un résultat de compétition.
+   */
+  baseHouppierM?: number;
   /** nombre de recépages subis (taillis, trogne) */
   recepages: number;
   /**
