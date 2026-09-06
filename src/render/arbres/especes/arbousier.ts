@@ -35,8 +35,21 @@ export const ARBOUSIER: FicheGraphique = {
     hiver: { r: 54, g: 90, b: 56 },
   },
   // Brun-rouge : c'est à ça qu'on le reconnaît, feuilles ou pas.
+  fruit: {
+    // L'arbouse : rouge-orangé, granuleuse, de la taille d'une petite fraise.
+    // Elle mûrit en NOVEMBRE, en même temps que la floraison suivante — c'est
+    // la signature de l'espèce, et le moteur la porte (`recolteWeek: 46`).
+    forme: "charnu",
+    couleur: { r: 208, g: 76, b: 44 },
+    longueurM: 0.02,
+    parRameau: 3,
+    // arbouses par petits groupes pendants : le groupe a sa dimension propre, et ce n'est pas
+    // une fonction de la taille de la baie.
+    grappeM: 0.035,
+  },
   ecorce: { r: 152, g: 82, b: 62 },
   references: [
+    "Quézel & Médail, Écologie et biogéographie des forêts méditerranéennes — Arbutus unedo",
     "Rameau et al., Flore forestière française, t. 3 — région méditerranéenne, Arbutus unedo",
     "Quézel & Médail, Écologie et biogéographie des forêts du bassin méditerranéen",
   ],

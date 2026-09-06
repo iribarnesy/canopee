@@ -38,8 +38,22 @@ export const TROENE: FicheGraphique = {
     // Ce qui reste en février : moins de feuilles, mais encore vertes.
     hiver: { r: 60, g: 88, b: 58 },
   },
+  fruit: {
+    // Des baies noires en grappes dressées. **Le moteur leur donne un rendement
+    // NUL** — elles sont toxiques et ne se récoltent pas — mais il suit quand
+    // même leur cycle, donc elles ont un état et peuvent se dessiner. Rendement
+    // nul ne veut pas dire fruit absent.
+    forme: "grappe",
+    couleur: { r: 34, g: 32, b: 42 },
+    longueurM: 0.007,
+    parRameau: 9,
+    // grappe dressée de 3 à 6 cm : le groupe a sa dimension propre, et ce n'est pas
+    // une fonction de la taille de la baie.
+    grappeM: 0.045,
+  },
   ecorce: { r: 112, g: 106, b: 92 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — baies du Ligustrum vulgare",
     "Rameau et al., Flore forestière française, t. 1 — Ligustrum vulgare",
     "Atlas des essences (dépôt) — « semi-persistant ; supporte la taille → haies »",
   ],

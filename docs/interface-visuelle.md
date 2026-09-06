@@ -461,6 +461,30 @@ aux quatre saisons, la couleur et le motif d'écorce, la silhouette d'hiver, et
 un champ `references` — **les sources du dessin, au même titre que les valeurs
 du moteur sont sourcées**. C'est la même discipline appliquée à l'image.
 
+### La bonne UNITÉ de dessin, et pourquoi la question revient sans cesse
+
+Trois fois de suite, le même arbitrage a décidé si une fonctionnalité marchait
+ou non, et il vaut d'être énoncé une fois pour toutes :
+
+| Ce qu'on croit dessiner | Ce qu'on dessine en fait | Pourquoi |
+|---|---|---|
+| une feuille | un **bouquet** par rameau | une feuille par rameau donne une brindille décorée, pas une masse foliaire (L0) |
+| une touffe d'herbe | un **grain** serré et continu | sept marques au m² font une lande ; un gazon est un couvert, pas des objets posés dessus |
+| une baie | un **corymbe**, une grappe, un amas | une baie de sureau fait un sixième de pixel ; son corymbe en fait cinq — et c'est le corymbe que l'œil voit |
+
+La règle : **dessiner l'objet que l'œil perçoit à la distance considérée, pas
+l'objet que la botanique nomme.** Ce n'est pas une approximation qu'on
+s'autorise faute de mieux — à cette distance, l'amas EST la perception, et
+dessiner une baie isolée de deux pixels serait le mensonge.
+
+Son corollaire pratique : quand un détail « ne marche que pour deux espèces »,
+la cause est presque toujours qu'on a pris l'unité trop fine. Le fruit ne
+marchait que pour la pomme et l'abricot ; il marche pour neuf espèces depuis
+qu'on dessine le groupe. Et il a fallu pour ça déclarer la taille RÉELLE du
+groupe dans la fiche (`grappeM`), parce que la déduire de la taille du fruit la
+sous-estime d'un facteur deux à trois — un corymbe de sureau fait dix
+centimètres, que ses baies fassent cinq ou huit millimètres.
+
 ### Ce qui doit se lire sans info-bulle
 
 1. l'**essence** — promue au premier rang par D4 (elle était dernière en v0.1) ;
@@ -525,8 +549,20 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   l'instantané. En attendant, la sécheresse se lit indirectement — la couverture
   recule, donc le sol nu réapparaît entre les touffes — ce qui est vrai mais
   discret.
-- **Les fruits ne sont pas dessinés.** Le moteur a `fruits` et le protocole un
-  avancement ; il manque le tracé et le champ dans la pose.
+- **Les fruits sont dessinés** (lot L2), mais seulement la moitié aval du
+  cycle : `fruitProgress` donne le fruit vert, `fruitsKg` le fruit mûr — le seul
+  état de l'arbre qui appelle un geste et se perd si on le rate. La FLORAISON,
+  elle, n'est pas identifiable depuis l'instantané : la fenêtre vit dans
+  `tick.ts` et `fruitProgress` vaut 0 avant, pendant, et toute l'année pour un
+  arbre immature — les trois cas sont indiscernables. Carte moteur, issue #14.
+  Conséquence : `bloomFrosted` n'a aucun support visuel, donc le gel tardif de
+  l'abricotier se traduit à l'écran par une absence de fruit sans cause lisible.
+- **Trois espèces qui portent des fruits bien visibles n'en auront pas** :
+  l'aubépine, le houx, le fusain. Aucune n'a de bloc `fruits` dans `especes.ts`,
+  donc le moteur ne suit pas leur fructification, et leur en dessiner serait
+  inventer un état. C'est dommage à l'œil et c'est la bonne décision — un fruit
+  peint sans état derrière ne mûrit jamais, ne se récolte pas, et masque le
+  manque. Un essai le vérifie dans les deux sens.
 - **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
 - **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
   panneau face caméra : un côté éclairé franc mentirait dès la première

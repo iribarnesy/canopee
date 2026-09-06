@@ -40,6 +40,13 @@
 import { ficheDe } from "../arbres/especes";
 import { contourFeuille, elementsParFeuille } from "../arbres/feuilles";
 import type { FicheGraphique } from "../arbres/fiche";
+import {
+  contourFruit,
+  diametreDuGroupeM,
+  FRUIT_VERT,
+  type Fruit,
+  PART_RAMEAUX_FRUITIERS,
+} from "../arbres/fruits";
 import { contraindre } from "../arbres/port";
 import { engendrer, rayonAuPiedM, type Segment, type Sujet } from "../arbres/squelette";
 import { type Vue, versEcranVue } from "../camera";
@@ -58,6 +65,24 @@ export interface ArbreAPoser {
   heightM: number;
   houppierRatio: number;
   hauteurElagueeM?: number;
+  /**
+   * Avancement du fruit de l'année ∈ [0,1] : `Snapshot.fruitProgress`, tel quel.
+   *
+   * C'est le moteur qui le fait monter, au rythme du facteur limitant de la
+   * semaine (`tick.ts`) — donc un arbre qui souffre porte des fruits qui
+   * n'avancent pas, et ça se voit. Le rendu ne le calcule pas et ne le déduit
+   * pas d'un calendrier : il le lit.
+   */
+  fruitProgress?: number;
+  /**
+   * Fruits mûrs en attente de récolte, kg : `Snapshot.fruitsKg`, tel quel.
+   *
+   * **C'est l'état le plus FONCTIONNEL de l'arbre**, et le seul de cette liste
+   * qui appelle un geste : au-dessus de zéro, il y a quelque chose à récolter,
+   * et ça se perd à la fin de la fenêtre (`fenetreRecolteWeeks`). Le rendu ne
+   * dessine du fruit mûr que sur ce nombre-là.
+   */
+  fruitsKg?: number;
   teteTrogneM?: number;
   chandelle?: boolean;
   /** part du feuillage accroché ∈ [0,1] — `partFoliaire` du moteur */
@@ -90,6 +115,35 @@ export const VARIANTES = 4;
 export const PALIERS_FEUILLAGE = 6;
 
 /**
+ * Les états de fructification qu'on distingue : aucun, en croissance, mûr.
+ *
+ * **Trois, et pas un de plus, parce que chacun multiplie l'atlas.** La
+ * tentation était d'en faire cinq pour montrer le fruit qui tourne — vert, puis
+ * jaune, puis rouge — mais le mûrissement progressif n'appelle aucun geste,
+ * alors que « il y a quelque chose à récolter » en appelle un et se perd si on
+ * le rate (`fenetreRecolteWeeks`). Trois états suffisent à le dire, et ils ne
+ * coûtent que pour les dix espèces qui ont un bloc `fruits` côté moteur : les
+ * autres restent à zéro et leur clé ne change pas.
+ */
+export const FRUIT_AUCUN = 0;
+export const FRUIT_CROISSANCE = 1;
+export const FRUIT_MUR = 2;
+export const ETATS_FRUIT = 3;
+
+/**
+ * L'état de fructification à cuire, d'après ce que le moteur donne.
+ *
+ * L'ordre des tests compte : `fruitsKg` l'emporte sur `fruitProgress`, parce
+ * qu'un arbre chargé de fruits mûrs a aussi un `fruitProgress` de 1 et que
+ * c'est le mûr qui est l'information.
+ */
+export function etatDuFruit(arbre: ArbreAPoser): number {
+  if ((arbre.fruitsKg ?? 0) > 0) return FRUIT_MUR;
+  if ((arbre.fruitProgress ?? 0) > 0.02) return FRUIT_CROISSANCE;
+  return FRUIT_AUCUN;
+}
+
+/**
  * Taille écran d'une FEUILLE, en pixels, à partir de laquelle on la dessine.
  *
  * **Le seuil porte sur la feuille, pas sur l'arbre**, et le premier jet s'était
@@ -102,6 +156,18 @@ export const PALIERS_FEUILLAGE = 6;
  * arbitrage que le tapis du sol, un étage plus haut.
  */
 export const FEUILLE_DES_PX = 2.5;
+
+/**
+ * Taille écran, en pixels, en dessous de laquelle on ne dessine plus de fruit.
+ *
+ * Plus bas que le seuil de la feuille (2,5), et à dessein : un fruit est plus
+ * gros qu'une feuille en général, mais surtout il porte une information
+ * d'ACTION — « il y a quelque chose à récolter » — là où une feuille porte du
+ * détail. On accepte donc de le dessiner un peu plus petit qu'on ne dessinerait
+ * une feuille. En dessous, on n'invente rien : le marqueur du calque des
+ * changements (§6.8) est le bon outil pour dire ça à l'échelle de la parcelle.
+ */
+export const FRUIT_MIN_PX = 1.6;
 
 /**
  * Facteur de recouvrement des taches de feuillage.
@@ -243,6 +309,8 @@ export interface Classe {
   feuillage: number;
   /** état de gestion, encodé : ni élagué ni trogné = 0 */
   gestion: number;
+  /** état de fructification : `FRUIT_AUCUN`, `FRUIT_CROISSANCE` ou `FRUIT_MUR` */
+  fruit: number;
   /** taille de cuisson, en pixels de large */
   taillePx: number;
 }
@@ -278,6 +346,10 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
     (arbre.chandelle ? 1 : 0) |
     (arbre.teteTrogneM ? 2 : 0) |
     ((arbre.hauteurElagueeM ?? 0) > 0.5 ? 4 : 0);
+  // Le fruit entre dans la clé, sinon un pommier chargé et un pommier nu
+  // partageraient la même image — et ce serait le pommier nu qu'on verrait, ou
+  // le chargé, au hasard de qui a été cuit le premier.
+  const fruit = ficheDe(arbre.especeId)?.fruit ? etatDuFruit(arbre) : FRUIT_AUCUN;
   return {
     especeId: arbre.especeId,
     palier: palierDe(arbre.heightM / Math.max(0.1, hauteurMaxM), PALIERS_HAUTEUR),
@@ -289,13 +361,14 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
       palierDe(arbre.partFoliaire, PALIERS_FEUILLAGE) * PALIERS_FEUILLAGE +
       palierDe(arbre.senescence, PALIERS_FEUILLAGE),
     gestion,
+    fruit,
     taillePx,
   };
 }
 
 /** La clé de cache d'une classe. */
 export function cleClasse(c: Classe): string {
-  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.taillePx}`;
+  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.fruit}|${c.taillePx}`;
 }
 
 /** Une vignette cuite, et où poser son pied. */
@@ -519,6 +592,16 @@ export function cuireVignette(
     dessinerFeuillage(ctx, segments, fiche, teinte, partFoliaire, echelle, versPx, classe);
   }
 
+  // ── Les fruits ────────────────────────────────────────────────────────
+  // **Après le feuillage, donc devant lui.** Un fruit caché derrière les
+  // feuilles ne sert à rien : il est là pour dire « il y a quelque chose à
+  // récolter », ce qui est une information d'action et doit se voir. C'est aussi
+  // ce que fait un arbre chargé — les fruits pèsent et pendent sous le
+  // feuillage.
+  if (fiche.fruit && classe.fruit !== FRUIT_AUCUN) {
+    dessinerFruits(ctx, segments, fiche.fruit, classe, echelle, versPx);
+  }
+
   return { image, piedX, piedY, hautArbrePx };
 }
 
@@ -594,6 +677,106 @@ function dessinerFourre(
     }
     ctx.closePath();
     ctx.fill();
+  }
+}
+
+/**
+ * Pose les fruits sur une part des rameaux terminaux.
+ *
+ * **Le nombre et la couleur viennent du moteur ; la place, du dessin.** Le
+ * moteur dit combien de kilos l'arbre porte et où en est le fruit de l'année
+ * (`fruitsKg`, `fruitProgress`) ; il ne dit pas — et n'a aucune raison de dire
+ * — sur quels rameaux ils pendent. Répartir cette masse sur le houppier est le
+ * même travail que répartir le feuillage, et le tirage est déterministe pour la
+ * même raison : un fruit qui sauterait d'un rameau à l'autre d'une image à
+ * l'autre grouillerait.
+ *
+ * En dessous d'une taille écran, on ne dessine rien. C'est le même arbitrage
+ * que la feuille, mais la conclusion est différente et il faut la dire : une
+ * feuille invisible n'est qu'un détail perdu, alors qu'un fruit invisible est
+ * une information d'action perdue. À l'échelle de la parcelle, « cet arbre est
+ * à récolter » ne se dira donc PAS par un fruit d'un demi-pixel — ça se dira
+ * par un marqueur du calque des changements (§6.8), qui est fait pour ça.
+ * Peindre trois pixels rouges dans un houppier ne serait ni lisible ni honnête.
+ */
+function dessinerFruits(
+  ctx: CanvasRenderingContext2D,
+  segments: readonly Segment[],
+  fruit: Fruit,
+  classe: Classe,
+  echelle: number,
+  versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
+): void {
+  const unitePx = fruit.longueurM * echelle;
+  // Diamètre du groupe que porte un rameau fructifère — déclaré par la fiche
+  // quand elle le connaît, estimé sinon.
+  const groupePx = diametreDuGroupeM(fruit) * echelle;
+  // **La bonne UNITÉ de dessin n'est pas toujours le fruit**, et c'est ce qui
+  // fait la différence entre « la fonctionnalité marche pour deux espèces » et
+  // « elle marche pour neuf ». Une prunelle fait treize millimètres : à la
+  // résolution de cuisson maximale elle mesure sept dixièmes de pixel, donc
+  // elle ne serait JAMAIS dessinée, à aucun zoom. Une baie de sureau, un
+  // sixième de pixel.
+  //
+  // Mais ce n'est pas la baie qu'on voit sur un sureau : c'est le CORYMBE, dix
+  // centimètres de large, qui tient largement dans quelques pixels. Même chose
+  // pour la grappe du troène ou les prunelles serrées le long d'un rameau. On
+  // dessine donc le groupe quand le fruit est sous le pixel et que le groupe,
+  // lui, n'y est pas — exactement la règle « un bouquet par rameau, pas une
+  // feuille » du feuillage, appliquée un étage plus bas.
+  //
+  // Ce n'est pas une approximation qu'on s'autorise faute de mieux : à cette
+  // distance, un amas de baies EST ce que l'œil perçoit, et dessiner une baie
+  // isolée de deux pixels serait le mensonge.
+  // **Le même seuil pour l'amas que pour le fruit, et non un seuil plus haut.**
+  // Le premier jet exigeait une fois et demie, par prudence ; mesuré, ça
+  // laissait muets le noisetier (2,1 px) et le cornouiller (1,7 px) alors que
+  // leurs amas sont parfaitement lisibles. La prudence était mal placée : un
+  // amas est plus visible qu'une feuille à taille égale, parce que ce qui le
+  // porte est la COULEUR — un point rouge saturé sur du vert se voit à deux
+  // pixels, là où un contour de feuille verte sur du vert n'existe pas.
+  const enAmas = unitePx < FRUIT_MIN_PX;
+  if (enAmas && groupePx < FRUIT_MIN_PX) return;
+  const taillePx = enAmas ? groupePx : unitePx;
+  const combien = enAmas ? 1 : fruit.parRameau;
+  const contour = contourFruit(enAmas ? "charnu" : fruit.forme);
+  const mur = classe.fruit === FRUIT_MUR;
+  // La couleur ARRIVE avec la maturité, et c'est l'arrivée qui est
+  // l'information. Un fruit vert est un fruit vert : rien ne distingue une
+  // pomme d'août d'une prunelle d'août à cette taille.
+  const teinte = mur ? fruit.couleur : melange(FRUIT_VERT, fruit.couleur, 0.25);
+  const terminaux = segments.filter((s) => s.terminal);
+  // En amas, il n'y a qu'une marque par rameau : elle ne s'étale pas, elle EST
+  // l'étalement.
+  const etalement = enAmas ? 0 : (diametreDuGroupeM(fruit) * echelle) / 2;
+  let i = 0;
+  for (const s of terminaux) {
+    i++;
+    if (hacher(i, classe.palier, 0x3ef7) > PART_RAMEAUX_FRUITIERS) continue;
+    const bout = versPx(s.arrivee);
+    for (let k = 0; k < combien; k++) {
+      // Le groupe s'étale autour du bout du rameau, et PEND : un fruit pèse,
+      // donc le nuage est décalé vers le bas.
+      const a = hacher(i * 31 + k, classe.variante, 0x51c9) * Math.PI * 2;
+      const r = Math.sqrt(hacher(i * 17 + k, k, 0x2d81)) * etalement;
+      const cx = bout.sx + Math.cos(a) * r;
+      const cy = bout.sy + Math.sin(a) * r * 0.8 + taillePx * 0.45;
+      // Un peu de modelé, dans le même sens que le feuillage et le bois : la
+      // lumière vient de la gauche de l'écran.
+      const modele = 1 + 0.16 * (hacher(i + k, 5, 0x77b3) - 0.5);
+      ctx.fillStyle = versCss(eclairer(teinte, modele));
+      ctx.beginPath();
+      for (let n = 0; n < contour.length; n++) {
+        const pt = contour[n];
+        if (!pt) continue;
+        const px = cx + pt.x * taillePx;
+        const py = cy + pt.y * taillePx;
+        if (n === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 }
 

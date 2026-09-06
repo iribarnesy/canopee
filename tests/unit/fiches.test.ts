@@ -4,6 +4,16 @@ import { FICHES, ficheDe } from "../../src/render/arbres/especes";
 import type { Port } from "../../src/render/arbres/fiche";
 import { contraindre } from "../../src/render/arbres/port";
 import { engendrer, rayonAtteintM, SEGMENTS_MAX } from "../../src/render/arbres/squelette";
+import { vueInitiale } from "../../src/render/camera";
+import {
+  type ArbreAPoser,
+  classeDe,
+  cleClasse,
+  etatDuFruit,
+  FRUIT_AUCUN,
+  FRUIT_CROISSANCE,
+  FRUIT_MUR,
+} from "../../src/render/couches/arbres";
 
 describe("les fiches graphiques tiennent au moteur", () => {
   it("désignent toutes une espèce qui existe", () => {
@@ -251,6 +261,104 @@ describe("les houppiers tiennent debout", () => {
       const f = ficheDe(id);
       expect(f, id).toBeDefined();
       expect(f?.branchement.branchesParNoeud, id).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
+  it("**une fiche déclare un fruit SI ET SEULEMENT SI le moteur en suit un**", () => {
+    // Le garde-fou central de cette fonctionnalité, et il tient dans les deux
+    // sens. Une fiche qui déclarerait un fruit sans bloc `fruits` côté moteur
+    // peindrait un fruit sans état derrière : il ne mûrirait jamais, ne se
+    // récolterait pas, ne disparaîtrait pas après la fenêtre — et il masquerait
+    // le fait qu'il manque quelque chose au modèle, ce qui est le pire des deux
+    // maux (§0, principe n° 1).
+    //
+    // Dans l'autre sens, une espèce que le moteur fait fructifier et dont la
+    // fiche ne dit rien produit un arbre qui porte des kilos invisibles : le
+    // joueur ne sait pas qu'il y a à récolter.
+    //
+    // Trois espèces portent des fruits bien visibles et n'ont rien côté moteur
+    // — l'aubépine, le houx, le fusain — et cet essai est ce qui garantit
+    // qu'on ne leur en dessinera pas par distraction.
+    for (const f of FICHES) {
+      const espece = getEspece(f.especeId);
+      if (!espece) continue;
+      expect(
+        Boolean(f.fruit),
+        `${f.especeId} : fiche ${f.fruit ? "avec" : "sans"} fruit, moteur ${espece.fruits ? "avec" : "sans"}`,
+      ).toBe(Boolean(espece.fruits));
+    }
+  });
+
+  it("un rendement NUL n'est pas un fruit absent", () => {
+    // Le troène a `rendementMaxKg: 0` — ses baies sont toxiques et ne se
+    // récoltent pas — mais le moteur suit quand même leur cycle. Elles ont donc
+    // un état, et se dessinent. Confondre « rien à récolter » avec « rien à
+    // voir » aurait supprimé un des fruits les plus caractéristiques de la haie.
+    const troene = ficheDe("ligustrum_vulgare");
+    expect(troene?.fruit).toBeDefined();
+    expect(getEspece("ligustrum_vulgare")?.fruits?.rendementMaxKg).toBe(0);
+  });
+
+  it("**l'état lu est celui du moteur, et le mûr l'emporte**", () => {
+    // `fruitsKg` passe devant `fruitProgress`, et ce n'est pas arbitraire : un
+    // arbre chargé de fruits mûrs a AUSSI un `fruitProgress` de 1, et c'est le
+    // mûr qui est l'information — c'est le seul état de la liste qui appelle un
+    // geste, et il se perd si on le rate (`fenetreRecolteWeeks`).
+    const arbre = (patch: Partial<ArbreAPoser>): ArbreAPoser => ({
+      id: 1,
+      especeId: "malus_domestica",
+      x: 0,
+      y: 0,
+      z: 0,
+      heightM: 6,
+      houppierRatio: 0.45,
+      partFoliaire: 1,
+      senescence: 0,
+      vigueur: 1,
+      ...patch,
+    });
+    expect(etatDuFruit(arbre({}))).toBe(FRUIT_AUCUN);
+    expect(etatDuFruit(arbre({ fruitProgress: 0.5 }))).toBe(FRUIT_CROISSANCE);
+    expect(etatDuFruit(arbre({ fruitProgress: 1, fruitsKg: 12 }))).toBe(FRUIT_MUR);
+    // Et l'inverse ne s'invente pas : sans grandeur, pas de fruit. Un arbre
+    // dont la scène ne transporte pas l'état n'en porte pas.
+    expect(etatDuFruit(arbre({ fruitsKg: 0, fruitProgress: 0 }))).toBe(FRUIT_AUCUN);
+  });
+
+  it("l'état de fructification entre dans la clé de cache", () => {
+    // Sans quoi un pommier chargé et un pommier nu partageraient la même image,
+    // et ce serait l'un ou l'autre qu'on verrait selon qui a été cuit le
+    // premier.
+    const v = vueInitiale(100, 800, 600);
+    const base: ArbreAPoser = {
+      id: 3,
+      especeId: "malus_domestica",
+      x: 10,
+      y: 10,
+      z: 0,
+      heightM: 6,
+      houppierRatio: 0.45,
+      partFoliaire: 1,
+      senescence: 0,
+      vigueur: 1,
+    };
+    const nu = cleClasse(classeDe(base, 12, v));
+    const charge = cleClasse(classeDe({ ...base, fruitProgress: 1, fruitsKg: 9 }, 12, v));
+    expect(nu).not.toBe(charge);
+  });
+
+  it("les diamètres de grappe déclarés sont plus grands que leurs fruits", () => {
+    // Une cohérence bête et utile : un corymbe contient ses baies, donc il est
+    // plus large qu'une baie. C'est le sens de la grandeur — et l'essai attrape
+    // l'unité confondue (centimètres au lieu de mètres), qui est l'erreur
+    // probable sur un champ comme celui-là.
+    for (const f of FICHES) {
+      if (!f.fruit?.grappeM) continue;
+      expect(f.fruit.grappeM, f.especeId).toBeGreaterThan(f.fruit.longueurM);
+      // Et pas absurdement : un groupe de fruits n'est pas un houppier.
+      expect(f.fruit.grappeM, f.especeId).toBeLessThan(0.5);
     }
   });
 });

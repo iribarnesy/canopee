@@ -31,8 +31,18 @@ export const CHATAIGNIER: FicheGraphique = {
     // Le jaune-roux du châtaignier, plus chaud que celui du frêne.
     automne: { r: 186, g: 146, b: 66 },
   },
+  fruit: {
+    // La BOGUE, et non la châtaigne : ce qu'on voit sur l'arbre est une sphère
+    // vert clair hérissée d'épines, grosse comme une balle. La châtaigne
+    // elle-même n'apparaît qu'au sol, une fois la bogue ouverte.
+    forme: "bogue",
+    couleur: { r: 138, g: 152, b: 78 },
+    longueurM: 0.055,
+    parRameau: 2,
+  },
   ecorce: { r: 104, g: 90, b: 74 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — bogue du Castanea sativa",
     "Rameau et al., Flore forestière française, t. 2 — Castanea sativa",
     "Conedera et al. (2016), Castanea sativa in Europe — port et écologie",
   ],

@@ -33,8 +33,21 @@ export const PRUNELLIER: FicheGraphique = {
     ete: { r: 80, g: 110, b: 62 },
     automne: { r: 172, g: 150, b: 80 },
   },
+  fruit: {
+    // Bleu-noir pruineux : la prunelle est le seul fruit BLEU de l'atlas, et
+    // c'est à ça qu'on la nomme — un buisson épineux couvert de points bleus
+    // en octobre ne peut être que ça.
+    forme: "charnu",
+    couleur: { r: 62, g: 66, b: 96 },
+    longueurM: 0.013,
+    parRameau: 4,
+    // prunelles serrées le long du rameau : le groupe a sa dimension propre, et ce n'est pas
+    // une fonction de la taille de la baie.
+    grappeM: 0.05,
+  },
   ecorce: { r: 78, g: 68, b: 60 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — Prunus spinosa, drupe pruineuse",
     "Rameau et al., Flore forestière française, t. 1 — Prunus spinosa",
     "Guide des haies bocagères (CAUE) — l'ourlet épineux et son drageonnement",
   ],

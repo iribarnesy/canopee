@@ -32,8 +32,18 @@ export const ABRICOTIER: FicheGraphique = {
     automne: { r: 184, g: 156, b: 82 },
   },
   // Rougeâtre : les Prunus ont l'écorce plus chaude que les Malus.
+  fruit: {
+    // Orange franc : c'est la couleur la plus chaude de l'atlas, et sur un
+    // verger mixte elle sépare l'abricotier du pommier d'un coup d'œil, ce que
+    // le port en gobelet ne fait pas.
+    forme: "charnu",
+    couleur: { r: 222, g: 138, b: 60 },
+    longueurM: 0.05,
+    parRameau: 3,
+  },
   ecorce: { r: 124, g: 90, b: 74 },
   references: [
+    "Coutanceau, Arboriculture fruitière — maturité et coloration de l'abricot",
     "Bretaudeau & Fauré, Atlas d'arboriculture fruitière — l'abricotier en gobelet",
     "Coutanceau, Arboriculture fruitière — port et floraison précoce du Prunus armeniaca",
   ],

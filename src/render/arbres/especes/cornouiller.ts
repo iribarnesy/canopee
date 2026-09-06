@@ -35,8 +35,20 @@ export const CORNOUILLER_MALE: FicheGraphique = {
     // Les cornouillers virent au pourpre, pas au jaune.
     automne: { r: 160, g: 104, b: 80 },
   },
+  fruit: {
+    // La cornouille : une drupe rouge vif, allongée, pendante — et elle mûrit
+    // en août, avant à peu près tout le monde.
+    forme: "charnu",
+    couleur: { r: 176, g: 44, b: 42 },
+    longueurM: 0.016,
+    parRameau: 2,
+    // drupes solitaires ou par deux, sur un court pédoncule : le groupe a sa dimension propre, et ce n'est pas
+    // une fonction de la taille de la baie.
+    grappeM: 0.032,
+  },
   ecorce: { r: 108, g: 92, b: 76 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — drupe du Cornus mas",
     "Rameau et al., Flore forestière française, t. 1 — Cornus mas",
     "Jacamon, Guide de dendrologie — le bois du cornouiller, le plus dur d'Europe",
   ],

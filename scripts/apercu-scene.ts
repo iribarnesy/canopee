@@ -113,6 +113,10 @@ interface ArbreScene {
   teteTrogneM?: number;
   /** vigueur ∈ [0,1] : un arbre qui végète a le houppier clairsemé */
   vigueur: number;
+  /** `fruitProgress` : avancement du fruit de l'année ∈ [0,1] */
+  fruitProgress: number;
+  /** `fruitsKg` : fruits mûrs en attente de récolte — l'état qui appelle un geste */
+  fruitsKg: number;
 }
 
 const arrondi = (v: number, n: number) => Math.round(v * 10 ** n) / 10 ** n;
@@ -137,6 +141,8 @@ function figer(state: GameState): ArbreScene[] {
     hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
     ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
     vigueur: arrondi(t.vigueur, 3),
+    fruitProgress: arrondi(t.fruitProgress, 3),
+    fruitsKg: arrondi(t.fruitsKg, 2),
   }));
 }
 

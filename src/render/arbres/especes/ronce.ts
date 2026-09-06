@@ -40,8 +40,21 @@ export const RONCE: FicheGraphique = {
     // ses feuilles, c'est la fiche écologique qu'il faut corriger, pas
     // celle-ci — un test le vérifie dans les deux sens.
   },
+  fruit: {
+    // La mûre. **Elle ne se dessine pas encore** : la ronce est un fourré, et
+    // le fourré se dessine par cellule agrégée (`dessinerFourre`) et non par
+    // rameau — il n'a aucun rameau terminal à quoi accrocher un fruit. La fiche
+    // porte quand même la donnée : le moteur suit la fructification de la ronce
+    // (rendement 3 kg, récolte semaine 34), donc l'état existe, et l'accrocher
+    // aux touffes du monticule sera un travail de dessin, pas une invention.
+    forme: "charnu",
+    couleur: { r: 46, g: 34, b: 52 },
+    longueurM: 0.015,
+    parRameau: 3,
+  },
   ecorce: { r: 96, g: 82, b: 68 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — polydrupe du Rubus fruticosus",
     "Rameau et al., Flore forestière française, t. 1 — Rubus fruticosus agg.",
     "Guide des milieux ouverts (CBN) — dynamique du roncier en friche",
   ],

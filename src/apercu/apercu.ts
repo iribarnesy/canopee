@@ -55,6 +55,10 @@ interface ArbreScene {
   hauteurElagueeM?: number;
   teteTrogneM?: number;
   vigueur?: number;
+  /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
+  fruitProgress?: number;
+  /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
+  fruitsKg?: number;
 }
 
 interface Scene {
@@ -159,6 +163,15 @@ interface Options {
   senescence?: number;
   /** planche : facteur d'échelle, pour zoomer sur un sujet */
   echelle?: number;
+  /**
+   * Planche : avancement du fruit ∈ [0,1] et kilos mûrs, tels que le moteur les
+   * donnerait. Ce sont les DEUX grandeurs du protocole, pas un réglage : la
+   * planche les impose pour qu'on puisse juger les deux états côte à côte, ce
+   * qu'aucune semaine réelle ne permet — un pommier et un arbousier ne mûrissent
+   * pas le même mois.
+   */
+  fruitProgress?: number;
+  fruitsKg?: number;
 }
 
 function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElement {
@@ -289,6 +302,11 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             partFoliaire: t.chandelle ? 0 : f.part,
             senescence: f.senescence,
             vigueur: t.vigueur ?? 1,
+            // Tels quels, sans repli inventé : absent veut dire « la scène ne
+            // transporte pas la grandeur », donc pas de fruit — pas « zéro
+            // fruit sur un arbre qui en porte ».
+            ...(t.fruitProgress ? { fruitProgress: t.fruitProgress } : {}),
+            ...(t.fruitsKg ? { fruitsKg: t.fruitsKg } : {}),
           };
         }),
     );
@@ -382,6 +400,8 @@ function planche(
       partFoliaire: options.nu ? 0 : 1,
       senescence: options.senescence ?? 0,
       vigueur: 1,
+      ...(options.fruitProgress ? { fruitProgress: options.fruitProgress } : {}),
+      ...(options.fruitsKg ? { fruitsKg: options.fruitsKg } : {}),
     };
     const poses = posesDesArbres([arbre], () => espece?.hauteurMaxM ?? 20, vue);
     atlas.rafraichir(poses);
@@ -505,6 +525,28 @@ const HAIE = [
   "arbutus_unedo",
 ];
 
+/**
+ * Les espèces dont le MOTEUR suit la fructification, dans l'ordre des tailles
+ * de fruit.
+ *
+ * Dix, et la liste n'est pas un choix de dessin : c'est exactement l'ensemble
+ * des espèces qui ont un bloc `fruits` dans `especes.ts`. L'aubépine, le houx
+ * et le fusain en portent de bien visibles et n'y sont pas — le moteur ne suit
+ * pas leur fructification, donc le rendu n'en dessine pas.
+ */
+const FRUITIERS = [
+  "malus_domestica",
+  "castanea_sativa",
+  "prunus_armeniaca",
+  "arbutus_unedo",
+  "corylus_avellana",
+  "cornus_mas",
+  "prunus_spinosa",
+  "ligustrum_vulgare",
+  "sambucus_nigra",
+  "rubus_fruticosus",
+];
+
 const PLANCHE: Planche[] = [
   { scene: "", especes: FUTAIE, hauteurM: 16, titre: "futaie et vergers · été" },
   {
@@ -520,6 +562,20 @@ const PLANCHE: Planche[] = [
     hauteurM: 16,
     titre: "futaie et vergers · sénescence",
     options: { senescence: 1 },
+  },
+  {
+    scene: "",
+    especes: FRUITIERS,
+    hauteurM: 7,
+    titre: "les fruits · MÛRS (`fruitsKg > 0` : il y a quelque chose à récolter)",
+    options: { fruitProgress: 1, fruitsKg: 12 },
+  },
+  {
+    scene: "",
+    especes: FRUITIERS,
+    hauteurM: 7,
+    titre: "les fruits · en croissance (`fruitProgress` à mi-course, verts)",
+    options: { fruitProgress: 0.5 },
   },
   { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
   {
@@ -587,6 +643,17 @@ const PLANCHE: Planche[] = [
   { scene: "friche-s4", titre: "saison · janvier" },
   { scene: "friche-s17", titre: "saison · avril" },
   { scene: "friche-s28", titre: "saison · juillet" },
+  // Semaine 36 : la semaine de récolte du sureau et du noisetier (`recolteWeek`
+  // dans `especes.ts`). C'est la seule façon de voir le fruit sur le chemin
+  // RÉEL — sur la friche, 143 sureaux portent des kilos mûrs cette semaine-là,
+  // et le troène en est à mi-croissance.
+  { scene: "friche-s36", titre: "saison · septembre · la récolte du sureau" },
+  {
+    scene: "friche-s36",
+    titre: "septembre · zoom ×10 : les corymbes du sureau",
+    facteur: 10,
+    centre: { x: 50, y: 50 },
+  },
   { scene: "friche-s42", titre: "saison · octobre" },
   { scene: "mare-s28", titre: "mare · parcelle entière" },
   { scene: "mare-s28", titre: "mare · zoom ×8", facteur: 8, centre: { x: 60, y: 40 } },

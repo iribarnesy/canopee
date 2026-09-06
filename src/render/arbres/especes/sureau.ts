@@ -36,8 +36,21 @@ export const SUREAU: FicheGraphique = {
     // Le sureau ne flambe pas : il jaunit sale et tombe tôt.
     automne: { r: 158, g: 152, b: 86 },
   },
+  fruit: {
+    // Un CORYMBE : des dizaines de baies minuscules groupées en ombelle plate,
+    // et c'est le groupement qui identifie, pas la baie. Le sureau porte le
+    // `parRameau` le plus élevé de l'atlas pour cette raison.
+    forme: "grappe",
+    couleur: { r: 44, g: 38, b: 58 },
+    longueurM: 0.006,
+    parRameau: 14,
+    // corymbe de 10 à 20 cm : le groupe a sa dimension propre, et ce n'est pas
+    // une fonction de la taille de la baie.
+    grappeM: 0.13,
+  },
   ecorce: { r: 118, g: 106, b: 88 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — corymbe du Sambucus nigra",
     "Rameau et al., Flore forestière française, t. 1 — Sambucus nigra",
     "Guide des haies bocagères (CAUE) — les arbustes à bois tendre",
   ],

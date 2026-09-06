@@ -35,6 +35,10 @@ interface Scene {
     hauteurElagueeM?: number;
     teteTrogneM?: number;
     vigueur?: number;
+    /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
+    fruitProgress?: number;
+    /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
+    fruitsKg?: number;
   }[];
   sol: {
     ruMm: number;

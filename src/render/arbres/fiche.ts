@@ -34,6 +34,7 @@
  */
 
 import type { FormeFeuille } from "./feuilles";
+import type { Fruit } from "./fruits";
 
 /**
  * L'enveloppe du houppier. Six formes, et elles ne sont pas décoratives : ce
@@ -241,6 +242,22 @@ export interface FicheGraphique {
   couleurs: CouleursFeuillage;
   /** couleur du fût — c'est la signature du bouleau et de l'arbousier */
   ecorce: Teinte;
+  /**
+   * Ce qu'il faut pour dessiner le fruit de l'espèce ; absent = on n'en dessine
+   * pas.
+   *
+   * **À déclarer si et seulement si le moteur suit la fructification**, c'est-
+   * à-dire si l'espèce a un bloc `fruits` dans `especes.ts`. Un test le
+   * vérifie dans les deux sens, et ce n'est pas une formalité : une fiche qui
+   * déclarerait un fruit sans état derrière peindrait un fruit qui ne mûrit
+   * jamais, ne se récolte pas et ne disparaît pas après la fenêtre — et
+   * masquerait le fait qu'il manque quelque chose au modèle.
+   *
+   * Dix espèces l'ont. Trois qui portent des fruits bien visibles ne l'ont pas,
+   * faute d'état côté moteur : l'aubépine et ses cenelles, le houx et ses baies,
+   * le fusain et ses capsules roses.
+   */
+  fruit?: Fruit;
   /**
    * Couleur du haut du fût, quand elle diffère.
    *

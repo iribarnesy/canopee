@@ -33,8 +33,18 @@ export const POMMIER: FicheGraphique = {
     ete: { r: 88, g: 122, b: 66 },
     automne: { r: 178, g: 152, b: 74 },
   },
+  fruit: {
+    // La pomme est le fruit le plus GROS de l'atlas, et c'est la moitié de ce
+    // qui la rend reconnaissable : à sept centimètres, elle se voit là où une
+    // baie de sureau demande de zoomer.
+    forme: "charnu",
+    couleur: { r: 186, g: 74, b: 58 },
+    longueurM: 0.07,
+    parRameau: 2,
+  },
   ecorce: { r: 112, g: 96, b: 78 },
   references: [
+    "Bretaudeau & Fauré, Atlas d'arboriculture fruitière — calibre et coloration de la pomme",
     "Bretaudeau & Fauré, Atlas d'arboriculture fruitière — taille en gobelet",
     "Coutanceau, Arboriculture fruitière — port et conduite du pommier",
   ],
