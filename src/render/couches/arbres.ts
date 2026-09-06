@@ -37,6 +37,7 @@
  * comme pour le terrain, donc il se teste sans navigateur.
  */
 
+import { HAUTEUR_BROUTAGE_M } from "../../engine/gibier";
 import { ficheDe } from "../arbres/especes";
 import { contourFeuille, elementsParFeuille } from "../arbres/feuilles";
 import type { FicheGraphique } from "../arbres/fiche";
@@ -111,6 +112,36 @@ export interface ArbreAPoser {
   fruitsKg?: number;
   teteTrogneM?: number;
   chandelle?: boolean;
+  /**
+   * L'arbre a été tué par le FEU : `Snapshot.brulEeSemaine` est renseigné.
+   *
+   * Ce n'est pas la même chandelle qu'un mort de sécheresse, et la différence
+   * est actionnable : le moteur note qu'un arbre brûlé « reste debout : on peut
+   * encore le récolter en coupe sanitaire, à prix déprécié, avant que le bois ne
+   * bleuisse ». Un fût carbonisé et un fût gris n'appellent pas le même geste.
+   *
+   * Le rendu ne lit PAS la semaine, seulement sa présence : de combien de temps
+   * un charbon pâlit est une question de modèle, et le moteur ne la traite pas.
+   */
+  brulee?: boolean;
+  /**
+   * Plant protégé par un manchon : `Snapshot.protege`.
+   *
+   * Le moteur en fait une action à part (`proteger`) et refuse de protéger un
+   * arbre déjà sorti — « hors d'atteinte, protection inutile » au-delà de
+   * `HAUTEUR_BROUTAGE_M`. C'est donc un objet posé par le joueur, avec un coût,
+   * et savoir quels plants en ont un est directement actionnable.
+   */
+  protege?: boolean;
+  /**
+   * Nombre d'étêtages subis : `Snapshot.recepages`.
+   *
+   * Le rendu n'en lit qu'un SEUIL, et c'est celui du moteur : `biodiversite.ts`
+   * compte un arbre comme porteur de cavités si `teteTrogneM` est posé et
+   * `recepages >= 2`. Au-delà, la tête est creuse — et c'est ce creux qui fait
+   * la valeur faunistique d'une trogne.
+   */
+  recepages?: number;
   /** part du feuillage accroché ∈ [0,1] — `partFoliaire` du moteur */
   partFoliaire: number;
   /** avancement de la sénescence ∈ [0,1] — `senescenceFoliaire` */
@@ -176,6 +207,40 @@ export const PALIERS_FUT = 6;
  * arbres diffèrent vraiment — et là, on VEUT qu'ils diffèrent à l'écran.
  */
 export const PALIERS_SANTE = 4;
+
+/**
+ * Paliers de HAUTEUR DE TÊTE d'une trogne, en part de la hauteur de l'arbre.
+ *
+ * **Elle est entrée dans la clé de cache parce qu'elle n'y était pas, et que ça
+ * se voyait.** La classe ne portait qu'un booléen « c'est une trogne » ; la
+ * hauteur de tête, elle, voyageait par un rappel passé à la cuisson — que
+ * personne n'appelait. Résultat : aucune trogne n'avait de tête, nulle part, et
+ * les deux planches censées comparer une tête jeune et une tête creuse
+ * rendaient deux images identiques au bit près.
+ *
+ * Une hauteur de tête ne bouge pas : le moteur coupe toujours au même endroit,
+ * c'est la définition d'une trogne. Elle est donc exactement le genre de
+ * grandeur qu'une clé de cache accueille sans coûter — quatre paliers séparent
+ * la trogne de bord de chemin, étêtée à hauteur d'homme, du saule têtard étêté
+ * à trois mètres, et deux trognes de la même parcelle partagent leur vignette.
+ */
+export const PALIERS_TETE = 4;
+
+/**
+ * Nombre d'étêtages à partir duquel la tête d'une trogne est CREUSE.
+ *
+ * **Le seuil vient du moteur, il n'est pas choisi ici** : `biodiversite.ts`
+ * compte un arbre parmi les gros bois porteurs d'habitat si sa hauteur dépasse
+ * quinze mètres OU si c'est une trogne d'au moins deux étêtages. Autrement dit,
+ * le moteur affirme déjà qu'à partir de deux coupes la tête offre des cavités —
+ * et c'est cette affirmation-là qu'on dessine.
+ *
+ * Ce que le moteur ne dit PAS, en revanche, c'est de combien la tête GROSSIT.
+ * Aucune dimension de tête n'existe côté simulation, et le rendu n'en fabrique
+ * donc pas : la tête est dessinée à partir du rayon du fût, sans grossir avec
+ * les étêtages. Manque porté en issue #19.
+ */
+export const RECEPAGES_CREUX = 2;
 
 /**
  * Part de feuillage que garde un arbre de vigueur NULLE.
@@ -457,6 +522,18 @@ function palierDe(valeur: number, n: number): number {
 }
 
 /**
+ * Les drapeaux de conduite, dans le champ `gestion` de la classe.
+ *
+ * Nommés parce qu'ils ne l'étaient pas : quatre `classe.gestion & 8` semés dans
+ * le fichier, et le jour où un bit s'est décalé d'un cran, c'est le manchon qui
+ * est apparu sur les trognes creuses. Un décalage de bits ne se relit pas.
+ */
+export const EST_CHANDELLE = 1;
+export const EST_BRULEE = 2;
+export const EST_PROTEGE = 4;
+export const TETE_CREUSE = 8;
+
+/**
  * La classe d'un arbre pour une vue donnée.
  *
  * **La clé du cache, donc le cœur du coût.** Tout ce qui y entre multiplie le
@@ -484,7 +561,21 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
   // centimètre par semaine, et sans quantification chaque tick invaliderait
   // toutes les vignettes.
   const fut = palierDe(arbre.baseHouppierM / Math.max(0.1, arbre.heightM), PALIERS_FUT);
-  const gestion = (arbre.chandelle ? 1 : 0) | (arbre.teteTrogneM ? 2 : 0) | (fut << 2);
+  // Zéro = pas une trogne ; 1..PALIERS_TETE = étêtée à cette hauteur-là. Un
+  // palier de plus que nécessaire, et c'est le prix de ne pas avoir à porter
+  // un booléen en double d'une grandeur qui le contient déjà.
+  const tete = arbre.teteTrogneM
+    ? 1 + palierDe(arbre.teteTrogneM / Math.max(0.1, arbre.heightM), PALIERS_TETE)
+    : 0;
+  const gestion =
+    (arbre.chandelle ? EST_CHANDELLE : 0) |
+    (arbre.brulee ? EST_BRULEE : 0) |
+    (arbre.protege ? EST_PROTEGE : 0) |
+    // Le seuil du MOTEUR, pas le mien : `biodiversite.ts` compte une trogne
+    // comme porteuse de cavités à partir de deux étêtages.
+    ((arbre.recepages ?? 0) >= RECEPAGES_CREUX ? TETE_CREUSE : 0) |
+    (fut << 4) |
+    (tete << 7);
   // La santé : deux grandeurs distinctes, et il faut les deux. La vigueur dit
   // « cet arbre végète » — réversible, et c'est l'alerte précoce ; le dommage
   // hydraulique dit « cet arbre a perdu de la plomberie » — définitif, et c'est
@@ -603,7 +694,7 @@ export function cuireVignette(
   houppierRatio: number,
   fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
   baseHouppierM: number,
-  gestionM?: { teteTrogneM?: number },
+  teteTrogneM?: number,
 ): Vignette {
   const fiche = ficheDe(classe.especeId) ?? FICHE_GENERIQUE;
   // La hauteur de l'image est la RÉSOLUTION de cuisson : c'est elle que
@@ -615,7 +706,17 @@ export function cuireVignette(
   // tache de feuillage davantage. Sans marge, la planche de la haie sortait
   // avec des houppiers tranchés net à la verticale — on voyait le bord de la
   // vignette, pas l'arbre.
-  const margeM = Math.max(0.05, fiche.feuillage.longueurFeuilleM * 1.5);
+  //
+  // **Le manchon entre dans la marge, et c'est la seule façon de le voir en
+  // entier.** Il monte à la hauteur de dent du moteur, qui est justement plus
+  // haute que le plant qu'il protège — sinon il ne servirait à rien. Sans cette
+  // ligne, la vignette se cadrait sur l'arbre seul et le tube sortait par le
+  // haut de l'image : la planche montrait un mur pâle coupé net.
+  const margeM = Math.max(
+    0.05,
+    fiche.feuillage.longueurFeuilleM * 1.5,
+    classe.gestion & EST_PROTEGE ? HAUTEUR_BROUTAGE_M - hauteurM : 0,
+  );
   // Combien de pixels vaut un mètre dans cette vignette : la cime PLUS sa marge
   // tiennent dans la hauteur d'image.
   const echelle = (hauteur - 2) / Math.max(0.1, hauteurM + margeM);
@@ -654,7 +755,7 @@ export function cuireVignette(
     hauteurM,
     houppierRatio,
     baseHouppierM,
-    ...(gestionM?.teteTrogneM ? { teteTrogneM: gestionM.teteTrogneM } : {}),
+    ...(teteTrogneM ? { teteTrogneM } : {}),
     ...(fiche.brinsDeCepee ? { brins: fiche.brinsDeCepee } : {}),
   };
   // **Le squelette est plafonné par la TAILLE de la vignette.** À quinze
@@ -699,7 +800,7 @@ export function cuireVignette(
     // branches ; ses rameaux de l'année sont brun-rouge sombre. On assombrit
     // donc l'écorce à mesure que le bois s'affine.
     const finesse = Math.min(1, s.rayonDepartM / Math.max(1e-6, rayonAuPiedM(hauteurM) * 0.35));
-    const base = haut && fiche.ecorceHaute ? fiche.ecorceHaute : fiche.ecorce;
+    const base = teinteDuBois(fiche, haut, classe);
     // Le fût est un CYLINDRE, et il était peint comme un trait.
     //
     // **C'est ce qui faisait la futaie de mâts blancs.** À l'échelle de la
@@ -730,6 +831,20 @@ export function cuireVignette(
       ctx.lineTo(b2.sx - epaisseur * 0.26, b2.sy);
       ctx.stroke();
     }
+  }
+
+  // ── La tête de trogne ─────────────────────────────────────────────────
+  // Le fût s'arrête déjà à `teteTrogneM` et les rejets repartent de là : ce qui
+  // manquait, c'est le RENFLEMENT — le bourrelet de cicatrisation qu'une coupe
+  // répétée au même endroit finit par former, et qui est la silhouette la plus
+  // reconnaissable du bocage.
+  if (teteTrogneM) {
+    dessinerTeteDeTrogne(ctx, fiche, classe, teteTrogneM, hauteurM, echelle, versPx);
+  }
+
+  // ── Le manchon ────────────────────────────────────────────────────────
+  if (classe.gestion & EST_PROTEGE) {
+    dessinerManchon(ctx, echelle, piedX, piedY);
   }
 
   // ── Le feuillage ──────────────────────────────────────────────────────
@@ -845,6 +960,135 @@ function dessinerFourre(
     ctx.fill();
   }
 }
+
+/**
+ * La couleur du bois, selon que l'arbre est vivant, mort debout, ou brûlé.
+ *
+ * **Les trois cas viennent du moteur, les trois teintes sont du dessin** — la
+ * même répartition que partout ailleurs. Le moteur dit `chandelle` (l'arbre
+ * n'est plus vivant) et `brulEeSemaine` (le feu l'a tué) ; qu'un bois mort
+ * grisonne et qu'un bois carbonisé soit noir n'est pas une affirmation de
+ * modèle, c'est ce qu'est du bois mort et du charbon.
+ *
+ * Ce que le rendu ne fait PAS : lire la semaine pour faire pâlir le charbon
+ * avec le temps. De combien un fût brûlé se décolore en trois ans est une
+ * question de modèle, et le moteur ne la traite pas.
+ */
+function teinteDuBois(fiche: FicheGraphique, haut: boolean | undefined, classe: Classe): Teinte {
+  if (classe.gestion & EST_BRULEE) return BOIS_BRULE;
+  if (classe.gestion & EST_CHANDELLE) return BOIS_MORT;
+  return haut && fiche.ecorceHaute ? fiche.ecorceHaute : fiche.ecorce;
+}
+
+/** Bois mort sur pied : gris argenté, l'écorce partie. */
+const BOIS_MORT: Teinte = { r: 138, g: 132, b: 122 };
+/** Bois carbonisé : noir mat, à peine plus clair que le noir pur. */
+const BOIS_BRULE: Teinte = { r: 44, g: 40, b: 38 };
+
+/**
+ * Le renflement d'une tête de trogne, et sa cavité au-delà de deux étêtages.
+ *
+ * **Ce que le moteur donne** : `teteTrogneM` (où l'on coupe, toujours au même
+ * endroit) et `recepages` (combien de fois). Et il en tire lui-même une
+ * conséquence écologique — `biodiversite.ts` compte une trogne d'au moins deux
+ * étêtages parmi les gros bois porteurs d'habitat, au même titre qu'un arbre de
+ * quinze mètres. C'est cette affirmation-là qu'on dessine : au-delà du seuil, la
+ * tête est creuse.
+ *
+ * **Ce que le moteur ne donne PAS**, et qu'on ne fabrique donc pas : la TAILLE
+ * de la tête. Aucune dimension de tête n'existe côté simulation. Le bourrelet
+ * est dessiné à partir du rayon du fût — une allométrie déjà posée par le rendu
+ * (`rayonAuPiedM`) — et il ne grossit pas avec les étêtages, alors qu'une vraie
+ * tête de trogne grossit à chaque coupe. Manque porté en issue #19 plutôt que
+ * comblé ici : la taille d'une tête a une conséquence écologique (le volume de
+ * cavité, donc ce qui peut y nicher), et une valeur inventée au rendu ne serait
+ * jamais confrontée à cette conséquence.
+ */
+function dessinerTeteDeTrogne(
+  ctx: CanvasRenderingContext2D,
+  fiche: FicheGraphique,
+  classe: Classe,
+  teteTrogneM: number,
+  hauteurM: number,
+  echelle: number,
+  versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
+): void {
+  const rayonPx = rayonAuPiedM(hauteurM) * echelle;
+  if (rayonPx < 1) return;
+  const c = versPx({ x: 0, y: teteTrogneM });
+  const large = rayonPx * RENFLEMENT_TETE;
+  ctx.fillStyle = versCss(teinteDuBois(fiche, false, classe));
+  ctx.beginPath();
+  ctx.ellipse(c.sx, c.sy, large, large * 0.78, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // La cavité : le moteur dit qu'à deux étêtages la tête en porte.
+  if (!(classe.gestion & TETE_CREUSE)) return;
+  const creux = large * 0.42;
+  if (creux < 0.8) return;
+  ctx.fillStyle = versCss(CREUX_DE_TROGNE);
+  ctx.beginPath();
+  ctx.ellipse(c.sx, c.sy - large * 0.12, creux, creux * 0.9, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** De combien la tête d'une trogne est plus large que le fût qui la porte. */
+export const RENFLEMENT_TETE = 2.2;
+/** L'ombre d'une cavité : presque noire, jamais tout à fait. */
+const CREUX_DE_TROGNE: Teinte = { r: 38, g: 32, b: 28 };
+
+/**
+ * Le manchon de protection : un tube pâle au pied du plant.
+ *
+ * **Sa hauteur vient du moteur** — `HAUTEUR_BROUTAGE_M`, importé de
+ * `gibier.ts`, la hauteur de dent au-delà de laquelle « la flèche est hors
+ * d'atteinte et le plant est sorti ». C'est exactement l'enjeu de la
+ * protection, et le moteur refuse d'ailleurs de protéger un arbre déjà plus
+ * haut. La choisir ici aurait été inventer la règle du jeu.
+ */
+function dessinerManchon(
+  ctx: CanvasRenderingContext2D,
+  echelle: number,
+  piedX: number,
+  piedY: number,
+): void {
+  const haut = HAUTEUR_BROUTAGE_M * echelle;
+  if (haut < 2) return;
+  const demi = Math.max(0.5, (DIAMETRE_MANCHON_M / 2) * echelle);
+  // **Translucide, parce qu'un manchon l'est.** Opaque, le tube effaçait la
+  // tige et le plant semblait flotter au-dessus du sol : on ne voyait plus ce
+  // qui est protégé, seulement la protection. À travers le plastique on
+  // devine la tige, et c'est exactement l'information qu'on veut — le manchon
+  // se pose autour de quelque chose.
+  ctx.save();
+  ctx.globalAlpha = OPACITE_MANCHON;
+  ctx.fillStyle = versCss(MANCHON);
+  ctx.beginPath();
+  ctx.rect(piedX - demi, piedY - haut, demi * 2, haut);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Le manchon : plastique translucide, verdâtre et pâle. */
+const MANCHON: Teinte = { r: 186, g: 192, b: 168 };
+
+/**
+ * Diamètre d'un manchon de protection, en mètres.
+ *
+ * **Une dimension absolue, et c'est la correction.** Le tube était dessiné à
+ * une fraction de sa propre hauteur — un manchon large de quarante centimètres,
+ * plus gros qu'un fût de vingt ans — et la planche du plant protégé sortait en
+ * mur pâle. Or un manchon ne s'élargit pas quand il s'allonge : c'est un tube
+ * du commerce, et le plant doit y tenir sans plus.
+ *
+ * Comme la forme d'une feuille ou d'un fruit, ce n'est pas une grandeur que le
+ * moteur devrait porter : c'est ce qu'EST l'objet dessiné, pas un état de la
+ * parcelle. La HAUTEUR, elle, est un enjeu de simulation — et elle vient donc
+ * du moteur (`HAUTEUR_BROUTAGE_M`).
+ */
+const DIAMETRE_MANCHON_M = 0.1;
+
+/** Ce que laisse passer le plastique d'un manchon : assez pour deviner la tige. */
+const OPACITE_MANCHON = 0.78;
 
 /**
  * Les rameaux qui portent encore du feuillage, une fois la cime sèche retirée.
@@ -1373,6 +1617,7 @@ export class AtlasArbres {
     hauteurM: number;
     houppierRatio: number;
     baseHouppierM: number;
+    teteTrogneM?: number;
   }[] = [];
 
   constructor(
@@ -1383,7 +1628,13 @@ export class AtlasArbres {
   public rafraichir(poses: readonly PoseArbre[]): number {
     const vues = new Map<
       string,
-      { classe: Classe; hauteurM: number; houppierRatio: number; baseHouppierM: number }
+      {
+        classe: Classe;
+        hauteurM: number;
+        houppierRatio: number;
+        baseHouppierM: number;
+        teteTrogneM?: number;
+      }
     >();
     for (const p of poses) {
       const cle = cleClasse(p.classe);
@@ -1393,6 +1644,12 @@ export class AtlasArbres {
         hauteurM: p.arbre.heightM,
         baseHouppierM: p.arbre.baseHouppierM,
         houppierRatio: p.arbre.houppierRatio,
+        // **En clair, et non par un rappel.** La hauteur de tête voyageait
+        // par une fonction `(classe) => hauteur` que la cuisson appelait — et
+        // qu'aucun appelant ne fournissait, si bien qu'aucune trogne n'avait
+        // de tête. Elle suit maintenant le même chemin que la base de
+        // houppier : une grandeur en mètres, portée avec la classe.
+        ...(p.arbre.teteTrogneM ? { teteTrogneM: p.arbre.teteTrogneM } : {}),
       });
     }
     this.aCuire = [...vues.values()];
@@ -1413,10 +1670,7 @@ export class AtlasArbres {
    * vignettes pleine taille tenaient la boucle à une dizaine d'images par
    * seconde. Le même nombre, deux erreurs contraires.
    */
-  public cuire(
-    budgetPx = BUDGET_CUISSON_PX,
-    gestion?: (c: Classe) => { teteTrogneM?: number },
-  ): number {
+  public cuire(budgetPx = BUDGET_CUISSON_PX): number {
     let faits = 0;
     let depense = 0;
     while (depense < budgetPx) {
@@ -1435,7 +1689,7 @@ export class AtlasArbres {
           suivant.houppierRatio,
           this.fabriquer,
           suivant.baseHouppierM,
-          gestion?.(suivant.classe),
+          suivant.teteTrogneM,
         ),
       );
       faits++;

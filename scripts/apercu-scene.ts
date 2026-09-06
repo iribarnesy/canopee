@@ -116,6 +116,12 @@ interface ArbreScene {
   vigueur: number;
   /** `dommageHydraulique` : la cime sèche, mémoire des sécheresses passées */
   dommageHydraulique: number;
+  /** `brulEeSemaine` : la semaine où le feu l'a tué ; absent = pas brûlé */
+  brulEeSemaine?: number;
+  /** `protege` : plant sous manchon */
+  protege: boolean;
+  /** `recepages` : nombre d'étêtages subis */
+  recepages: number;
   /**
    * `baseHouppierM` : la base du houppier, m — en dessous, plus une branche
    * vivante. C'est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce, donc elle
@@ -164,6 +170,9 @@ function figer(state: GameState): ArbreScene[] {
       ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
       vigueur: arrondi(t.vigueur, 3),
       dommageHydraulique: arrondi(s.dommageHydraulique, 3),
+      ...(s.brulEeSemaine === undefined ? {} : { brulEeSemaine: s.brulEeSemaine }),
+      protege: s.protege,
+      recepages: s.recepages,
       baseHouppierM: arrondi(s.baseHouppierM, 2),
       floraison: arrondi(s.floraison, 3),
       fruitProgress: arrondi(s.fruitProgress, 3),

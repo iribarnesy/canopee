@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
 import { HETRE } from "../../src/render/arbres/especes";
 import { type Vue, vueInitiale } from "../../src/render/camera";
 import {
@@ -44,7 +45,15 @@ const arbre = (p: Partial<ArbreAPoser> = {}): ArbreAPoser => ({
 
 /** Un canvas bouchonné qui compte les tracés. Aucun DOM en test. */
 function fabriqueBouchon() {
-  const compte = { canvas: 0, remplissages: 0, traits: 0 };
+  const compte = {
+    canvas: 0,
+    remplissages: 0,
+    traits: 0,
+    /** Les couleurs posées, dans l'ordre : `fill` comme `stroke`. */
+    couleurs: [] as string[],
+    /** Les rectangles pleins, en pixels de vignette — le manchon en est un. */
+    rects: [] as { x: number; y: number; l: number; h: number }[],
+  };
   const fabriquer = (largeur: number, hauteur: number) => {
     compte.canvas++;
     const ctx = {
@@ -52,6 +61,7 @@ function fabriqueBouchon() {
       strokeStyle: "",
       lineWidth: 0,
       lineCap: "",
+      globalAlpha: 1,
       beginPath() {},
       moveTo() {},
       lineTo() {},
@@ -62,11 +72,16 @@ function fabriqueBouchon() {
       restore() {},
       translate() {},
       rotate() {},
+      rect(x: number, y: number, l: number, h: number) {
+        compte.rects.push({ x, y, l, h });
+      },
       fill() {
         compte.remplissages++;
+        compte.couleurs.push(ctx.fillStyle);
       },
       stroke() {
         compte.traits++;
+        compte.couleurs.push(ctx.strokeStyle);
       },
     };
     return {
@@ -644,5 +659,133 @@ describe("ce que la cime sèche N'A PAS le droit de faire au fruit", () => {
     // À la tolérance du tirage déterministe près : la charge dessinée ne suit
     // pas la cime sèche.
     expect(sec).toBeGreaterThan(sain * 0.75);
+  });
+});
+
+describe("les états de conduite : trogne, chandelle, manchon", () => {
+  /**
+   * **L'essai qui manquait, et le défaut qu'il aurait attrapé.** La hauteur de
+   * tête n'entrait pas dans la clé de cache : elle voyageait par un rappel
+   * passé à la cuisson, qu'aucun appelant ne fournissait. Résultat, aucune
+   * trogne n'avait de tête nulle part — et les deux planches censées comparer
+   * une tête jeune et une tête creuse rendaient deux images identiques au bit
+   * près, ce qu'aucun essai ne pouvait dire puisque aucun ne regardait.
+   */
+  it("sépare deux trognes étêtées à des hauteurs différentes", () => {
+    const v = vue();
+    const basse = cleClasse(classeDe(arbre({ teteTrogneM: 1.6 }), 30, v));
+    const haute = cleClasse(classeDe(arbre({ teteTrogneM: 6 }), 30, v));
+    expect(basse).not.toBe(haute);
+    // Et deux trognes de la même parcelle, étêtées au même endroit à un
+    // centimètre près, PARTAGENT leur vignette : c'est tout l'intérêt du
+    // palier.
+    expect(cleClasse(classeDe(arbre({ teteTrogneM: 1.61 }), 30, v))).toBe(basse);
+  });
+
+  it("sépare la tête creuse de la tête jeune, au seuil du moteur", () => {
+    const v = vue();
+    const jeune = cleClasse(classeDe(arbre({ teteTrogneM: 2.2, recepages: 1 }), 30, v));
+    const creuse = cleClasse(classeDe(arbre({ teteTrogneM: 2.2, recepages: 3 }), 30, v));
+    expect(jeune).not.toBe(creuse);
+    // `biodiversite.ts` compte les cavités à partir de DEUX étêtages : c'est
+    // là, et pas ailleurs, que l'image doit changer.
+    expect(cleClasse(classeDe(arbre({ teteTrogneM: 2.2, recepages: 2 }), 30, v))).toBe(creuse);
+  });
+
+  it("dessine un renflement de plus sur une trogne que sur un arbre ordinaire", () => {
+    const ordinaire = fabriqueBouchon();
+    const trogne = fabriqueBouchon();
+    const v = vue(6);
+    cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, ordinaire.fabriquer, 4);
+    cuireVignette(classeDe(arbre({ teteTrogneM: 2.2 }), 30, v), 16, 0.35, trogne.fabriquer, 4, 2.2);
+    expect(trogne.compte.remplissages).toBeGreaterThan(ordinaire.compte.remplissages);
+  });
+
+  it("ne creuse la tête qu'au-delà du seuil du moteur", () => {
+    const v = vue(6);
+    const jeune = fabriqueBouchon();
+    const creuse = fabriqueBouchon();
+    const commun = { teteTrogneM: 2.2, partFoliaire: 0 } as const;
+    cuireVignette(
+      classeDe(arbre({ ...commun, recepages: 1 }), 30, v),
+      16,
+      0.35,
+      jeune.fabriquer,
+      4,
+      2.2,
+    );
+    cuireVignette(
+      classeDe(arbre({ ...commun, recepages: 3 }), 30, v),
+      16,
+      0.35,
+      creuse.fabriquer,
+      4,
+      2.2,
+    );
+    expect(creuse.compte.remplissages).toBe(jeune.compte.remplissages + 1);
+  });
+
+  it("grise le bois d'une chandelle et noircit celui d'un brûlé", () => {
+    const v = vue(6);
+    const vivant = fabriqueBouchon();
+    const morte = fabriqueBouchon();
+    const brulee = fabriqueBouchon();
+    const nu = { partFoliaire: 0 } as const;
+    cuireVignette(classeDe(arbre(nu), 30, v), 16, 0.35, vivant.fabriquer, 4);
+    cuireVignette(classeDe(arbre({ ...nu, chandelle: true }), 30, v), 16, 0.35, morte.fabriquer, 4);
+    cuireVignette(
+      classeDe(arbre({ ...nu, chandelle: true, brulee: true }), 30, v),
+      16,
+      0.35,
+      brulee.fabriquer,
+      4,
+    );
+    // Le même bois, trois états, trois teintes — et le brûlé est le plus
+    // sombre des trois, sinon le feu ne se lirait pas.
+    const clarte = (c: readonly string[]) => {
+      const n = c
+        .map((s) => s.match(/\d+/g)?.map(Number) ?? [])
+        .filter((t) => t.length >= 3)
+        .map((t) => ((t[0] ?? 0) + (t[1] ?? 0) + (t[2] ?? 0)) / 3);
+      return n.reduce((a, b) => a + b, 0) / Math.max(1, n.length);
+    };
+    expect(clarte(brulee.compte.couleurs)).toBeLessThan(clarte(morte.compte.couleurs));
+    expect(clarte(vivant.compte.couleurs)).not.toBeCloseTo(clarte(morte.compte.couleurs), 0);
+  });
+
+  /**
+   * Le manchon monte à `HAUTEUR_BROUTAGE_M` — la hauteur de dent du moteur —
+   * et pas à une hauteur choisie ici. L'essai lit la constante du moteur plutôt
+   * que d'en réécrire la valeur : c'est le seul moyen qu'il tombe si le moteur
+   * change d'avis.
+   */
+  it("monte le manchon à la hauteur de dent du moteur, et pas plus large qu'un tube", () => {
+    const { fabriquer, compte } = fabriqueBouchon();
+    const c = classeDe(arbre({ heightM: 0.9, baseHouppierM: 0, protege: true }), 30, vue(6));
+    const v = cuireVignette(c, 0.9, 0.4, fabriquer, 0);
+    const tube = compte.rects.at(-1);
+    expect(tube).toBeDefined();
+    if (!tube) return;
+    // L'échelle de la vignette : le pied est en bas, la tête du tube est à
+    // `HAUTEUR_BROUTAGE_M` au-dessus.
+    const pixelsParMetre = v.hautArbrePx / 0.9;
+    expect(tube.h / pixelsParMetre).toBeCloseTo(HAUTEUR_BROUTAGE_M, 1);
+    // Un tube, pas un mur : dix centimètres de diamètre, pas une fraction de
+    // sa propre hauteur.
+    expect(tube.l / pixelsParMetre).toBeCloseTo(0.1, 2);
+    // Et il tient tout entier dans l'image : c'est la marge de vignette qui
+    // lui fait la place, sinon il sort par le haut.
+    expect(tube.y).toBeGreaterThanOrEqual(0);
+  });
+
+  it("ne dessine de manchon que sur un plant protégé", () => {
+    const sans = fabriqueBouchon();
+    const avec = fabriqueBouchon();
+    const v = vue(6);
+    const jeune = { heightM: 0.9, baseHouppierM: 0 } as const;
+    cuireVignette(classeDe(arbre(jeune), 30, v), 0.9, 0.4, sans.fabriquer, 0);
+    cuireVignette(classeDe(arbre({ ...jeune, protege: true }), 30, v), 0.9, 0.4, avec.fabriquer, 0);
+    expect(sans.compte.rects).toHaveLength(0);
+    expect(avec.compte.rects).toHaveLength(1);
   });
 });

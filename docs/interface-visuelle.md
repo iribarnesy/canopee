@@ -473,6 +473,7 @@ colonne de droite est la même à chaque fois :
 | `hauteurElagueeM` → lumière (#13) | rien, faute de pouvoir le dire honnêtement | rien non plus — `soilLumiere` s'en charge tout seul |
 | `floraison` (#14) | rien ; `fruitProgress` ne permet pas de l'inférer | dessine la fleur, sans connaître aucune date |
 | `baseHouppierM` | `1 − 2 × houppierRatio`, une formule maison | lit la grandeur, et perd un champ au passage |
+| **taille de tête de trogne** (#19) | rien, faute de pouvoir le dire | rien non plus : le renflement se dessine sur le rayon du fût, et ne grossit PAS avec les étêtages |
 
 **Ce que les quatre ont en commun** : dans les quatre cas le rendu ne pouvait
 pas obtenir la grandeur en réfléchissant plus fort, parce qu'elle dépend de
@@ -488,6 +489,16 @@ assombri au bon endroit tout seul, parce que le rendu lisait déjà `soilLumiere
 Brancher une grandeur bien placée fait souvent apparaître plusieurs effets sans
 qu'on ait rien à peindre — c'est le meilleur argument pour ouvrir l'issue plutôt
 que pour combler le trou sur place.
+
+**Le cinquième cas est le plus instructif, parce qu'il n'est pas résolu.** Le
+moteur sait qu'une trogne d'au moins deux étêtages porte de l'habitat
+(`biodiversite.ts`), mais pas combien : une tête de trois coupes et une de
+quinze comptent pareil. Le rendu, lui, aurait pu faire grossir joliment le
+bourrelet à chaque coupe — personne ne s'en serait plaint, et l'image aurait
+menti d'une façon particulièrement propre, en donnant à voir une ressource qui
+ne compte nulle part. Le dessin s'en tient donc au rayon du fût. **Un manque
+visible vaut mieux qu'un manque comblé au mauvais endroit** : c'est ce que
+l'issue #19 dit, et ce que la tête plate rappelle en attendant.
 
 **Deux façons de se tromper, pas une.** Inventer un seuil est la première.
 Recopier celui du moteur est la seconde, et elle est plus discrète : deux copies
@@ -595,6 +606,18 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   inventer un état. C'est dommage à l'œil et c'est la bonne décision — un fruit
   peint sans état derrière ne mûrit jamais, ne se récolte pas, et masque le
   manque. Un essai le vérifie dans les deux sens.
+- **Une tête de trogne ne grossit pas** (issue #19). Le moteur compte les
+  étêtages et en tire un seuil d'habitat binaire ; il ne dit pas de combien la
+  tête enfle ni quel volume de cavité elle offre, et c'est pourtant ce volume
+  qui décide de ce qui peut y nicher. Le renflement est donc dessiné sur le
+  rayon du fût, identique à trois coupes et à quinze.
+- **`pousseTendreM` reste illisible.** Le §5.6 la donnait pour « brouté », mais
+  une valeur basse veut dire aussi bien « fraîchement brouté » que « déjà
+  lignifié » : les deux états sont indiscernables dans la grandeur, donc rien
+  n'est dessiné. À trancher avec le moteur avant d'ouvrir quoi que ce soit.
+- **`frotteSemaine` n'est toujours pas lue.** Une tige frottée par un brocard
+  porte une plaie d'écorce bien visible, et la grandeur voyage — c'est du
+  travail de rendu qui reste, pas un manque moteur.
 - **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
 - **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
   panneau face caméra : un côté éclairé franc mentirait dès la première

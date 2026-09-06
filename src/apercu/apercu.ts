@@ -15,6 +15,7 @@
  */
 
 import { getEspece } from "../engine/especes";
+import { HAUTEUR_BROUTAGE_M } from "../engine/gibier";
 import type { ContextePhenologique } from "../engine/phenologie";
 import { partFoliaireOmbrageanteDans, senescenceDans } from "../engine/phenologie";
 import { tournerVue, type Vue, vueInitiale, zoomMax } from "../render/camera";
@@ -61,6 +62,12 @@ interface ArbreScene {
   vigueur?: number;
   /** `dommageHydraulique` du protocole : la cime sèche ∈ [0,1] */
   dommageHydraulique?: number;
+  /** `brulEeSemaine` du protocole : présent = le feu l'a tué */
+  brulEeSemaine?: number;
+  /** `protege` du protocole : plant sous manchon */
+  protege?: boolean;
+  /** `recepages` du protocole : nombre d'étêtages subis */
+  recepages?: number;
   /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
   fruitProgress?: number;
   /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -188,6 +195,15 @@ interface Options {
   vigueur?: number;
   /** Planche : dommage hydraulique ∈ [0,1] imposé — la cime sèche. */
   dommageHydraulique?: number;
+  /** Planche : arbre mort debout. */
+  chandelle?: boolean;
+  /** Planche : tué par le feu (`brulEeSemaine` renseigné côté moteur). */
+  brulee?: boolean;
+  /** Planche : plant sous manchon. */
+  protege?: boolean;
+  /** Planche : hauteur de tête de trogne, m, et nombre d'étêtages. */
+  teteTrogneM?: number;
+  recepages?: number;
   /**
    * Planche : la base du houppier, en PART de la hauteur de l'arbre.
    *
@@ -332,16 +348,20 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             baseHouppierM: t.baseHouppierM ?? 0,
             ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
             ...(t.chandelle ? { chandelle: true } : {}),
+            // `brulEeSemaine` est une SEMAINE ; le rendu n'en lit que la
+            // présence. De combien un charbon pâlit avec le temps est une
+            // question de modèle, et le moteur ne la traite pas.
+            ...(t.brulEeSemaine === undefined ? {} : { brulee: true }),
+            ...(t.protege ? { protege: true } : {}),
+            ...(t.recepages ? { recepages: t.recepages } : {}),
             // Une chandelle n'a plus de feuilles : c'est un tronc mort debout.
             partFoliaire: t.chandelle ? 0 : f.part,
             senescence: f.senescence,
             vigueur: t.vigueur ?? 1,
             ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
-            ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
             // Tels quels, sans repli inventé : absent veut dire « la scène ne
             // transporte pas la grandeur », donc pas de fruit — pas « zéro
             // fruit sur un arbre qui en porte ».
-            ...(t.floraison ? { floraison: t.floraison } : {}),
             ...(t.floraison ? { floraison: t.floraison } : {}),
             ...(t.fruitProgress ? { fruitProgress: t.fruitProgress } : {}),
             ...(t.fruitsKg ? { fruitsKg: t.fruitsKg } : {}),
@@ -411,7 +431,11 @@ function planche(
   const lignes = Math.ceil(especes.length / colonnes);
   const largeurCase = largeurPx / colonnes;
   const hauteurCase = hauteurPx / lignes;
-  const zoom = (hauteurCase - 46) / (hauteurM * 8);
+  // Ce que la case doit CONTENIR, et pas seulement l'arbre : un plant sous
+  // manchon est plus petit que son tube — c'est même toute la raison d'être du
+  // tube — et cadrer sur le plant seul faisait sortir le manchon par le haut.
+  const contenuM = options.protege ? Math.max(hauteurM, HAUTEUR_BROUTAGE_M) : hauteurM;
+  const zoom = (hauteurCase - 46) / (contenuM * 8);
   const vue: Vue = {
     cam: { coteM: 100, zoom, orientation: 0 },
     centre: { x: 50, y: 50 },
@@ -435,11 +459,30 @@ function planche(
       z: 0,
       heightM: Math.min(hauteurM, espece?.hauteurMaxM ?? hauteurM),
       houppierRatio: espece?.lumiere.houppierRatio ?? 0.35,
-      baseHouppierM: (options.baseHouppier ?? 0.25) * hauteurM,
+      // **La tête rabat la base du houppier, parce que c'est ce que le moteur
+      // fait.** `actions.ts`, action `trogner` : la hauteur devient celle de la
+      // tête et `baseHouppierM` est ramenée à `min(base, hauteurTete)` — « ce
+      // qui repartira part d'elle ». Sans ce rabattement, la planche fabriquait
+      // un état que la simulation ne produit jamais : une tête à deux mètres et
+      // un houppier qui recommence quatre mètres plus haut, avec entre les deux
+      // un fût nu que rien ne porte. Ce n'est pas une règle de dessin recopiée,
+      // c'est la planche qui se contraint à ne poser que des états atteignables.
+      baseHouppierM: Math.min(
+        (options.baseHouppier ?? 0.25) * hauteurM,
+        options.teteTrogneM ?? Number.POSITIVE_INFINITY,
+      ),
       partFoliaire: options.nu ? 0 : 1,
       senescence: options.senescence ?? 0,
       vigueur: options.vigueur ?? 1,
       ...(options.dommageHydraulique ? { dommageHydraulique: options.dommageHydraulique } : {}),
+      // Les états de conduite et de mort. Ils passent par le même chemin que
+      // le reste : la planche IMPOSE la valeur que le moteur donnerait, elle
+      // n'en fabrique pas de nouvelle sorte.
+      ...(options.chandelle ? { chandelle: true } : {}),
+      ...(options.brulee ? { brulee: true } : {}),
+      ...(options.protege ? { protege: true } : {}),
+      ...(options.teteTrogneM ? { teteTrogneM: options.teteTrogneM } : {}),
+      ...(options.recepages ? { recepages: options.recepages } : {}),
       ...(options.floraison ? { floraison: options.floraison } : {}),
       ...(options.fruitProgress ? { fruitProgress: options.fruitProgress } : {}),
       ...(options.fruitsKg ? { fruitsKg: options.fruitsKg } : {}),
@@ -652,6 +695,41 @@ const PLANCHE: Planche[] = [
     hauteurM: 16,
     titre: "santé · CIME SÈCHE (dommage hydraulique 0,45 : l'embolie ne se répare pas)",
     options: { dommageHydraulique: 0.45 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
+    hauteurM: 9,
+    titre: "trogne · JEUNE tête (1 étêtage : renflée, pas encore creuse)",
+    options: { teteTrogneM: 2.2, recepages: 1 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
+    hauteurM: 9,
+    titre: "trogne · tête CREUSE (3 étêtages : le seuil d'habitat du moteur)",
+    options: { teteTrogneM: 2.2, recepages: 3 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "pinus_sylvestris", "betula_pendula", "quercus_pubescens"],
+    hauteurM: 14,
+    titre: "chandelle · morte de SÉCHERESSE (bois gris) contre morte du FEU (bois noir)",
+    options: { chandelle: true, nu: true },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "pinus_sylvestris", "betula_pendula", "quercus_pubescens"],
+    hauteurM: 14,
+    titre: "chandelle · brûlée sur pied (`brulEeSemaine` : encore récoltable)",
+    options: { brulee: true, nu: true },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "corylus_avellana", "malus_domestica"],
+    hauteurM: 0.9,
+    titre: "manchon · le plant protégé, jusqu'à la hauteur de dent du moteur (1,5 m)",
+    options: { protege: true },
   },
   { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
   {

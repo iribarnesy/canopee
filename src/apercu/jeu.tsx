@@ -41,6 +41,12 @@ interface Scene {
     vigueur?: number;
     /** `dommageHydraulique` du protocole : la cime sèche ∈ [0,1] */
     dommageHydraulique?: number;
+    /** `brulEeSemaine` du protocole : présent = le feu l'a tué */
+    brulEeSemaine?: number;
+    /** `protege` du protocole : plant sous manchon */
+    protege?: boolean;
+    /** `recepages` du protocole : nombre d'étêtages subis */
+    recepages?: number;
     /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
     fruitProgress?: number;
     /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -140,6 +146,9 @@ function Demo(): React.ReactElement {
         baseHouppierM: t.baseHouppierM ?? 0,
         ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
         ...(t.chandelle ? { chandelle: true } : {}),
+        ...(t.brulEeSemaine === undefined ? {} : { brulee: true }),
+        ...(t.protege ? { protege: true } : {}),
+        ...(t.recepages ? { recepages: t.recepages } : {}),
         partFoliaire: t.chandelle ? 0 : part,
         senescence: espece && pheno ? senescenceDans(espece, pheno) : 0,
         vigueur: t.vigueur ?? 1,
