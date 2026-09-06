@@ -104,6 +104,45 @@ export const PORTANCE_SOUS_COUVERT = 0.3;
  */
 export const SATURATION_HOUPPIER = 0.9 / (1 - Math.exp(-1));
 
+/**
+ * Charge de surface qu'il faut pour qu'un feu atteigne un houppier dont la base
+ * est à UN mètre. Au-delà, l'exigence croît comme la puissance 3/2 de cette
+ * hauteur.
+ *
+ * C'est l'amorçage de feu de cime, et il manquait : la charge des houppiers
+ * entrait directement dans la propagation, comme si un feu rampant dans la
+ * litière pouvait enflammer une cime à vingt mètres. Van Wagner (1977) a posé
+ * le critère qui fait référence : le feu de surface doit dépasser une intensité
+ * critique, et cette intensité croît comme la **puissance 3/2 de la hauteur de
+ * base du houppier**. C'est la raison pour laquelle une futaie élaguée haut ne
+ * passe pas en feu de cime là où un fourré s'embrase.
+ *
+ * *(La STRUCTURE — l'exposant 3/2 — est celle de Van Wagner et elle est solide.
+ * Ses coefficients d'origine, eux, s'expriment en kW/m et en teneur en eau du
+ * feuillage, deux grandeurs que ce moteur n'a pas : je n'ai pas pu récupérer la
+ * publication d'origine pour les transcrire, et je ne les invente pas. La
+ * constante ci-dessous est donc CALÉE, pas transcrite, sur un repère qu'on peut
+ * discuter : une charge de surface de 1 — une lande sèche en plein soleil —
+ * atteint un houppier dont la base est à quatre mètres. À confirmer.)*
+ */
+export const CHARGE_AMORCAGE_A_UN_METRE = 0.125;
+
+/**
+ * Part du houppier qu'un feu de surface donné peut réellement enflammer.
+ *
+ * La hauteur de base du houppier n'est pas un trait d'espèce : elle se calcule
+ * par arbre, l'arbre élaguant lui-même ses branches basses passées sous leur
+ * point de compensation (`baseHouppierCible`, light.ts). Un fourré d'ajoncs a
+ * donc son houppier au ras du sol et le porte entièrement ; une futaie qui
+ * s'est élaguée en grandissant met le sien hors d'atteinte.
+ */
+export function accessibiliteDuHouppier(baseHouppierM: number, chargeAuSol: number): number {
+  if (baseHouppierM <= 0) return 1;
+  const requise = CHARGE_AMORCAGE_A_UN_METRE * baseHouppierM ** 1.5;
+  if (requise <= 0) return 1;
+  return Math.min(1, chargeAuSol / requise);
+}
+
 export function portanceDuFeu(lumiereAuSol: number): number {
   return PORTANCE_SOUS_COUVERT + (1 - PORTANCE_SOUS_COUVERT) * Math.min(1, lumiereAuSol);
 }
@@ -141,6 +180,8 @@ export function chargeCombustible(
   const auSol = new Array<number>(n).fill(0);
   const inflammabiliteSomme = new Array<number>(n).fill(0);
   const houppiers = new Array<number>(n).fill(0);
+  /** Somme des bases de houppier couvrant la cellule, pour en tirer la moyenne. */
+  const baseSomme = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) {
     // Herbe (sèche en été) + litière accumulée.
     auSol[i] = 0.6 * (herbeCouverture[i] ?? 0) + 0.4 * Math.min(1, (litterCG[i] ?? 0) / 300);
@@ -179,6 +220,7 @@ export function chargeCombustible(
           inflammabiliteSomme[i] =
             (inflammabiliteSomme[i] ?? 0) +
             espece.feu.inflammabilite * (morte ? BOIS_MORT_SUR_PIED : 1);
+          baseSomme[i] = (baseSomme[i] ?? 0) + (tree.baseHouppierM ?? 0);
           houppiers[i] = (houppiers[i] ?? 0) + 1;
         }
       }
@@ -190,14 +232,20 @@ export function chargeCombustible(
     // combustible, plus il faisait d'ombre, moins il pouvait brûler — et un
     // fourré d'ajoncs finissait par ne plus s'enflammer du tout.
     const portance = lumiereAuSol ? portanceDuFeu(lumiereAuSol[i] ?? 1) : 1;
+    const chargeAuSol = (auSol[i] ?? 0) * portance;
     const nHouppiers = houppiers[i] ?? 0;
+    // Le houppier ne compte que si le feu de surface peut l'atteindre : c'est
+    // l'amorçage de feu de cime (`accessibiliteDuHouppier`). Un fourré porte
+    // tout son couvert ; une futaie qui s'est élaguée en grandissant met le
+    // sien hors de portée d'un feu rampant.
     const enHauteur =
       nHouppiers > 0
         ? SATURATION_HOUPPIER *
           ((inflammabiliteSomme[i] ?? 0) / nHouppiers) *
-          (1 - Math.exp(-nHouppiers))
+          (1 - Math.exp(-nHouppiers)) *
+          accessibiliteDuHouppier((baseSomme[i] ?? 0) / nHouppiers, chargeAuSol)
         : 0;
-    parCellule[i] = (auSol[i] ?? 0) * portance + enHauteur;
+    parCellule[i] = chargeAuSol + enHauteur;
   }
   let somme = 0;
   for (let i = 0; i < n; i++) somme += parCellule[i] ?? 0;
