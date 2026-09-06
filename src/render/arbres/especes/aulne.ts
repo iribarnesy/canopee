@@ -19,10 +19,17 @@ export const AULNE_GLUTINEUX: FicheGraphique = {
   branchement: {
     // Petit angle : tout monte. C'est ce qui fait le port dressé.
     angleDeg: 26,
-    divergenceDeg: 150,
+    divergenceDeg: 137,
     ratioLongueur: 0.76,
     dominance: 0.66,
-    branchesParNoeud: 2,
+    // Trois. L'aulne est ALTERNE, et ce n'est pas ce que dit ce chiffre : un
+    // nœud du générateur est une unité de POUSSE, pas une insertion de
+    // feuille, et une pousse d'aulne porte plusieurs latérales. À deux — une
+    // seule latérale par nœud — le houppier ne pouvait s'équilibrer qu'en
+    // moyenne sur beaucoup de nœuds, et un aulne à forte dominance apicale
+    // n'en a pas assez : mesuré à 0,27 de décentrement, le pire de l'atlas et
+    // visible d'un coup d'œil sur la planche. À trois : 0,10.
+    branchesParNoeud: 3,
     conicite: 0.88,
     tortuosite: 0.12,
   },

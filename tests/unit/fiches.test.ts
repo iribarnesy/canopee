@@ -163,6 +163,98 @@ describe("les huit familles de port sont éprouvées", () => {
   });
 });
 
+describe("les houppiers tiennent debout", () => {
+  /**
+   * Décentrement d'un houppier : distance du barycentre des bouts à l'axe du
+   * tronc, rapportée au rayon atteint. Zéro = houppier centré.
+   */
+  function decentrement(f: (typeof FICHES)[number], id: number): number | undefined {
+    const espece = getEspece(f.especeId);
+    const ratio = espece?.lumiere.houppierRatio ?? 0.35;
+    const hauteurM = Math.min(16, (espece?.hauteurMaxM ?? 16) * 0.6);
+    const brut = engendrer(
+      {
+        id,
+        hauteurM,
+        houppierRatio: ratio,
+        ...(f.brinsDeCepee ? { brins: f.brinsDeCepee } : {}),
+      },
+      f.branchement,
+    );
+    const houppier = brut.filter((s) => s.ordre >= 1);
+    if (houppier.length === 0) return undefined;
+    const base = Math.min(...houppier.map((s) => s.depart.y));
+    const sommet = Math.max(...houppier.map((s) => s.arrivee.y));
+    const bouts = contraindre(brut, f.port, base, sommet, ratio * hauteurM).filter(
+      (s) => s.terminal,
+    );
+    if (bouts.length === 0) return undefined;
+    const cx = bouts.reduce((a, s) => a + s.arrivee.x, 0) / bouts.length;
+    const cz = bouts.reduce((a, s) => a + s.arrivee.z, 0) / bouts.length;
+    return Math.hypot(cx, cz) / Math.max(1e-6, rayonAtteintM(bouts));
+  }
+
+  it("**aucun houppier ne penche d'un côté**", () => {
+    // Le défaut, et il se voyait d'un coup d'œil sur la planche : le houppier
+    // s'effondrait d'un côté de l'arbre, la flèche restant nue de l'autre. Il
+    // avait trois causes empilées, et il a fallu les trois mesures pour les
+    // séparer — c'est pour ça que cet essai mesure au lieu de regarder.
+    //
+    //   1. Le décalage d'azimut était tiré par FILLE et non par nœud, ce qui
+    //      effaçait la divergence : chaque fille partait dans une direction
+    //      indépendante, et trois tirages uniformes se groupent au lieu de se
+    //      répartir. (0,17→0,32 sur les feuillus à fût unique.)
+    //   2. La divergence était appliquée entre filles d'un même nœud au lieu de
+    //      l'être d'un nœud au suivant : ce n'est pas ce que le mot désigne
+    //      dans la plante, et ce n'est pas ce qui équilibre un arbre.
+    //   3. Les espèces à rameaux opposés déclaraient `branchesParNoeud: 2`,
+    //      c'est-à-dire UNE latérale, la flèche comptant pour la première.
+    //
+    // Les cépées et le pin, eux, étaient déjà centrés : ce sont précisément les
+    // deux cas où le code répartissait les azimuts régulièrement. Le seuil est
+    // fixé au-dessus du pire mesuré après correction — le bouleau et le frêne,
+    // à 0,13 — et bien en dessous de ce que donnaient les trois défauts.
+    for (const f of FICHES) {
+      if (f.fourre) continue;
+      for (const id of [3, 17, 42, 88, 131]) {
+        const d = decentrement(f, id);
+        if (d === undefined) continue;
+        expect(d, `${f.especeId} (graine ${id})`).toBeLessThan(0.25);
+      }
+    }
+  });
+
+  it("aucune fiche ne range ses latérales dans un seul plan", () => {
+    // 180° de divergence, c'est la garantie que toutes les latérales d'un axe
+    // tombent dans un même plan vertical : le frêne en sortait en C. Le piège
+    // est d'autant plus facile que 180° a l'air de vouloir dire « opposé » —
+    // or la paire opposée est affaire de `branchesParNoeud`, pas de divergence.
+    for (const f of FICHES) {
+      if (f.fourre) continue;
+      const d = f.branchement.divergenceDeg;
+      expect(Math.abs(d - 180), `${f.especeId} : divergence ${d}°`).toBeGreaterThan(15);
+    }
+  });
+
+  it("une paire opposée se déclare à TROIS, la flèche comptant pour une", () => {
+    // La cohérence entre ce que la fiche dit en français et ce qu'elle encode :
+    // cinq fiches annonçaient des rameaux « opposés, par paires » avec un
+    // compte qui n'en donnait qu'un seul.
+    const opposees = [
+      "fraxinus_excelsior",
+      "sambucus_nigra",
+      "cornus_mas",
+      "euonymus_europaeus",
+      "ligustrum_vulgare",
+    ];
+    for (const id of opposees) {
+      const f = ficheDe(id);
+      expect(f, id).toBeDefined();
+      expect(f?.branchement.branchesParNoeud, id).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
 describe("les couleurs de feuillage", () => {
   it("sont dans les clous sur les trois canaux", () => {
     for (const f of FICHES) {

@@ -18,12 +18,15 @@ export const FRENE: FicheGraphique = {
   port: "boule",
   branchement: {
     angleDeg: 40,
-    divergenceDeg: 180,
+    divergenceDeg: 90,
     ratioLongueur: 0.72,
     dominance: 0.56,
-    // Deux : le frêne a des rameaux OPPOSÉS, deux par nœud, ce qui donne son
-    // port en éventail. La plupart des feuillus de l'atlas sont alternes.
-    branchesParNoeud: 2,
+    // TROIS, c'est-à-dire la flèche PLUS deux latérales opposées : le frêne
+    // a des rameaux par paires, et c'est ce qui donne son port en éventail.
+    // Le compte disait deux, donc une seule latérale — la paire n'existait
+    // pas, et avec 180° de divergence toutes les latérales tombaient dans un
+    // même plan. Le houppier sortait en C.
+    branchesParNoeud: 3,
     conicite: 0.86,
     tortuosite: 0.14,
   },

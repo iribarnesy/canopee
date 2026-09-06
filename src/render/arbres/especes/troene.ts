@@ -20,10 +20,12 @@ export const TROENE: FicheGraphique = {
   branchement: {
     // Serré : tout monte, c'est ce qui fait le balai.
     angleDeg: 28,
-    divergenceDeg: 174,
+    divergenceDeg: 90,
     ratioLongueur: 0.71,
     dominance: 0.3,
-    branchesParNoeud: 2,
+    // Trois : la flèche et une paire opposée. C'est cette régularité qui
+    // fait qu'une haie de troène taillée reste dense.
+    branchesParNoeud: 3,
     conicite: 0.84,
     tortuosite: 0.2,
   },

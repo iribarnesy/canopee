@@ -155,6 +155,19 @@ interface Axe {
   rayonM: number;
   ordre: number;
   /**
+   * Phase phyllotaxique de l'axe, en radians : l'azimut où partira sa
+   * prochaine branche.
+   *
+   * **C'est ce qui équilibre un houppier, et rien d'autre ne le fait.** La
+   * divergence n'a de sens que d'un nœud AU SUIVANT le long d'un même axe —
+   * c'est la définition même de la phyllotaxie : chaque feuille, donc chaque
+   * bourgeon, donc chaque branche, est décalée d'environ 137° de la
+   * précédente, et c'est cette rotation qui fait qu'un arbre ne pousse pas
+   * tout d'un côté. La porter sur l'axe, c'est modéliser ça ; la tirer au sort
+   * à chaque nœud, c'est le contraire.
+   */
+  phase: number;
+  /**
    * Vrai si l'axe appartient à la FLÈCHE — la chaîne qui prolonge le tronc
    * jusqu'à la cime — et non à une branche latérale.
    *
@@ -273,6 +286,9 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
       longueurM: premierM,
       rayonM: rayon * b.conicite * b.conicite,
       ordre: 1,
+      // Chaque brin démarre sa propre série phyllotaxique, sans quoi une cépée
+      // ferait pousser tous ses brins du même côté à la même hauteur.
+      phase: azimut + hacher(sujet.id, i + 64, 0x1d3b) * Math.PI * 2,
       // Chaque brin d'une cépée porte sa propre flèche : une cépée est un
       // faisceau de tiges, pas un arbre à plusieurs branches.
       surLaFleche: true,
@@ -343,14 +359,49 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         // En verticille, les branches d'une même couronne se répartissent
         // RÉGULIÈREMENT autour de l'axe — c'est ce qui fait la couronne — au
         // lieu de suivre la divergence phyllotaxique d'un feuillu.
+        //
+        // **Le premier jet tirait le décalage sur `(nœud, k)`** : chaque fille
+        // recevait un azimut uniforme indépendant, ce qui effaçait purement et
+        // simplement la divergence — le terme `k × divergenceDeg` n'était plus
+        // qu'un bruit ajouté à un autre bruit. Trois filles tirées au hasard
+        // sur le cercle ne se répartissent pas, elles se groupent, et le biais
+        // se compose d'ordre en ordre.
+        //
+        // Mesuré, et c'est net : le décentrement du houppier — distance du
+        // barycentre des bouts à l'axe, rapportée au rayon — valait 0,17 à
+        // 0,32 pour tous les feuillus à fût unique, contre 0,04 à 0,09 pour
+        // les cépées et le pin. Ce n'était pas un hasard de graine : cépées et
+        // verticilles sont précisément les deux cas où le code répartissait
+        // déjà les azimuts RÉGULIÈREMENT au lieu de les tirer. Les seuls
+        // houppiers centrés étaient ceux qui échappaient à cette ligne.
+        //
+        // **Tirer une rotation par nœud au lieu d'une par fille ne suffit pas**,
+        // et la mesure l'a dit aussi : l'aulne, qui ne fait qu'UNE latérale par
+        // nœud (`branchesParNoeud: 2`, la première prolongeant l'axe), restait
+        // à 0,24. Un nœud à latérale unique est lopsided par nature — aucune
+        // répartition au sein du nœud ne peut le corriger, et une rotation
+        // tirée au sort ne se compense qu'en moyenne, ce qui demande plus de
+        // nœuds qu'un houppier n'en a.
+        //
+        // Ce qui l'équilibre est la PHYLLOTAXIE, et c'est justement ce que le
+        // paramètre `divergenceDeg` désigne dans la vraie plante : la
+        // divergence sépare deux nœuds SUCCESSIFS le long d'un axe, pas deux
+        // filles d'un même nœud. Un aulne dont les latérales sortent à 0°,
+        // 150°, 300°, 90°… tourne autour de sa flèche ; un aulne dont chaque
+        // latérale part dans une direction tirée au sort penche.
+        //
+        // Les filles d'un même nœud, elles, se répartissent RÉGULIÈREMENT — la
+        // règle que le verticille appliquait déjà, et qui n'avait aucune raison
+        // de lui être réservée.
+        const laterales = Math.max(1, b.branchesParNoeud - 1);
+        const gigue = ((alea - 0.5) * b.divergenceDeg * 0.22 * Math.PI) / 180;
         const azimut =
           b.verticille && axe.surLaFleche && !prolonge
-            ? ((k - 1) / Math.max(1, b.branchesParNoeud - 1)) * Math.PI * 2 +
-              hacher(sujet.id + segments.length * 2654435761, axe.ordre, 0x2c7f) * Math.PI * 2
-            : ((k * b.divergenceDeg + alea * b.divergenceDeg * 0.5) * Math.PI) / 180 +
-              hacher(sujet.id + segments.length * 2654435761, axe.ordre * 31 + k, 0x2c7f) *
-                Math.PI *
-                2;
+            ? ((k - 1) / laterales) * Math.PI * 2 + axe.phase
+            : axe.phase + ((k - 1) / laterales) * Math.PI * 2 + gigue;
+        // La phase avance d'une divergence par nœud : c'est la rotation qui
+        // fait le tour de l'axe et répartit les branches sur toute sa longueur.
+        const phaseFille = axe.phase + (b.divergenceDeg * Math.PI) / 180;
         // **Le ratio de prolongement dépend de qui prolonge.** Sur la flèche, la
         // fille apicale reprend `q` — c'est ce qui fait monter l'arbre. Sur une
         // branche latérale, elle ne reprend que `ratioLongueur`, franchement
@@ -372,6 +423,17 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
           longueurM: longueur,
           rayonM: Math.max(0.002, axe.rayonM * b.conicite * (prolonge ? 0.9 : 0.6)),
           ordre: axe.ordre + 1,
+          // La flèche poursuit la série de son axe ; une latérale démarre la
+          // sienne à partir de la direction qu'elle vient de prendre.
+          //
+          // **Et non `azimut + phaseFille`**, qui était le premier jet : comme
+          // l'azimut d'une latérale VAUT à peu près la phase de son axe, cette
+          // somme revenait à doubler la phase à chaque ordre. Doubler un angle
+          // modulo 2π n'est pas un brassage, c'est une application chaotique
+          // qui a des points fixes et des cycles courts — l'aulne, qui n'a
+          // qu'une latérale par nœud et ne peut donc rien compenser au sein du
+          // nœud, y tombait et gardait son houppier d'un seul côté.
+          phase: prolonge ? phaseFille : azimut + (b.divergenceDeg * Math.PI) / 180,
           surLaFleche: axe.surLaFleche && prolonge,
         });
       }

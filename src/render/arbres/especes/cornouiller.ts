@@ -18,12 +18,12 @@ export const CORNOUILLER_MALE: FicheGraphique = {
   brinsDeCepee: 3,
   branchement: {
     angleDeg: 50,
-    divergenceDeg: 178,
+    divergenceDeg: 90,
     ratioLongueur: 0.7,
     dominance: 0.34,
-    // Opposés, comme chez le sureau et le fusain : c'est une famille de
-    // rameaux par paires, et ça se lit sur la silhouette.
-    branchesParNoeud: 2,
+    // Opposés, comme chez le sureau et le fusain : une PAIRE de latérales,
+    // donc trois filles avec la flèche. Ça se lit sur la silhouette.
+    branchesParNoeud: 3,
     conicite: 0.82,
     // Faible : le cornouiller est raide, c'est son bois qui veut ça.
     tortuosite: 0.18,

@@ -18,12 +18,13 @@ export const SUREAU: FicheGraphique = {
   brinsDeCepee: 5,
   branchement: {
     angleDeg: 46,
-    divergenceDeg: 180,
+    divergenceDeg: 90,
     // Long : le sureau fait des pousses d'un mètre dans l'année.
     ratioLongueur: 0.78,
     dominance: 0.22,
-    // Deux : les rameaux du sureau sont OPPOSÉS, par paires.
-    branchesParNoeud: 2,
+    // Trois : la flèche et une PAIRE de latérales opposées. Les rameaux du
+    // sureau sont opposés, et une paire demande trois filles, pas deux.
+    branchesParNoeud: 3,
     conicite: 0.88,
     tortuosite: 0.3,
   },

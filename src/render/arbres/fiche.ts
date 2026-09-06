@@ -67,10 +67,23 @@ export interface Branchement {
    */
   angleDeg: number;
   /**
-   * Écart d'angle entre les filles d'un même nœud, en degrés.
+   * Divergence **phyllotaxique** : la rotation d'un nœud AU SUIVANT le long
+   * d'un même axe, en degrés.
    *
-   * C'est ce qui empêche les filles de se superposer. Zéro donnerait un
-   * éventail plat, ce qu'aucun arbre ne fait.
+   * **D'un nœud au suivant, et non entre les filles d'un même nœud** — c'était
+   * la lecture d'origine, et elle décrivait mal la plante autant que le code.
+   * La phyllotaxie est précisément la rotation d'un bourgeon au bourgeon
+   * suivant : environ 137° chez la plupart des feuillus alternes, 90° chez les
+   * opposés décussés, dont chaque paire est perpendiculaire à la précédente.
+   * C'est CETTE rotation qui fait qu'un arbre ne pousse pas tout d'un côté.
+   *
+   * Les filles d'un même nœud, elles, se répartissent régulièrement autour de
+   * l'axe : il n'y a rien à régler là, et le générateur le fait seul.
+   *
+   * Deux valeurs sont donc à fuir sans une bonne raison : **180°**, qui range
+   * toutes les latérales dans un même plan (le frêne en sortait avec un
+   * houppier en C), et tout diviseur entier de 360° trop petit, qui referme la
+   * série sur elle-même après quelques nœuds.
    */
   divergenceDeg: number;
   /** Longueur d'une fille rapportée à celle de son axe ∈ ]0,1[. */
@@ -84,7 +97,24 @@ export interface Branchement {
    * un ordre. Un fort chiffre ne donne pas un arbre élancé, il donne un mât.
    */
   dominance: number;
-  /** Nombre de filles par nœud. Deux ou trois ; au-delà le compte explose. */
+  /**
+   * Nombre de filles par nœud, **flèche comprise**.
+   *
+   * Le piège est dans « flèche comprise », et il s'est refermé sur cinq
+   * fiches : la première fille prolonge l'axe, donc `2` ne donne qu'UNE
+   * latérale et non une paire. Toutes les espèces à rameaux opposés — frêne,
+   * sureau, cornouiller, fusain, troène — portaient `2` avec un commentaire
+   * disant « opposés, par paires » : la paire n'a jamais existé.
+   *
+   * **Et un nœud est une unité de POUSSE, pas une insertion de feuille.** Une
+   * pousse annuelle porte plusieurs latérales, y compris chez une espèce
+   * alterne ; `3` ne prétend donc pas que l'espèce est opposée. À `2`, le
+   * houppier ne s'équilibre qu'en moyenne sur beaucoup de nœuds, et un arbre à
+   * forte dominance apicale n'en a pas assez — c'est ce qui faisait pencher
+   * l'aulne.
+   *
+   * Deux ou trois ; au-delà le compte explose.
+   */
   branchesParNoeud: number;
   /** Conicité du fût : rapport diamètre au sommet / diamètre au pied ∈ ]0,1]. */
   conicite: number;

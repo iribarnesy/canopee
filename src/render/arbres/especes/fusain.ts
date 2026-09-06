@@ -19,10 +19,12 @@ export const FUSAIN: FicheGraphique = {
   brinsDeCepee: 4,
   branchement: {
     angleDeg: 42,
-    divergenceDeg: 176,
+    divergenceDeg: 90,
     ratioLongueur: 0.74,
     dominance: 0.26,
-    branchesParNoeud: 2,
+    // Trois : la flèche et une paire de latérales opposées — le fusain a
+    // les rameaux opposés, et ses quatre angles avec.
+    branchesParNoeud: 3,
     conicite: 0.86,
     tortuosite: 0.24,
   },
