@@ -101,6 +101,21 @@ export interface TreeState {
    * le brocard a fait son territoire, il passe à la suivante.
    */
   frotteSemaine?: number;
+  /**
+   * Semaine du dernier abroutissement subi ; absente = jamais brouté.
+   *
+   * `pousseTendreM` ne peut pas la remplacer, et c'est tout l'objet de ce
+   * champ : c'est un STOCK, qui monte avec la pousse, descend de la
+   * lignification et descend encore de ce que le chevreuil emporte. Une valeur
+   * basse a donc au moins trois causes indiscernables — l'arbre vient d'être
+   * brouté, l'arbre ne pousse pas en ce moment, ou tout a lignifié depuis
+   * longtemps. Seule une DATE distingue l'événement de l'état.
+   *
+   * Même rôle que `frotteSemaine` pour le frottis, et pour la même raison :
+   * l'abroutissement est une boucle de décision (voir un plant rabattu,
+   * protéger, clôturer, réguler), et sans trace elle est aveugle.
+   */
+  brouteSemaine?: number;
   /** semaine de la dernière levée d'écorce (liège) ; absent = jamais démasclé */
   derniereLeveeSemaine?: number;
   /**
