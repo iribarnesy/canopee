@@ -179,6 +179,20 @@ export interface FicheGraphique {
   especeId: string;
   port: Port;
   /**
+   * FOURRÉ BAS : l'espèce se dessine par cellule agrégée et non par tige.
+   *
+   * **La huitième famille de port, et la seule qui ne passe pas par le
+   * générateur** (§5.4). Une ronce n'a ni fût, ni houppier, ni flèche : c'est
+   * un enchevêtrement de tiges arquées. Lui appliquer un branchement récursif
+   * donne un petit arbre, ce qui est faux et se voit. Et sur la friche de
+   * l'an 30, la ronce est l'espèce la plus abondante du peuplement : une
+   * vignette par tige, c'est le budget entier dépensé pour du sous-étage.
+   *
+   * Une fiche de fourré n'utilise donc ni `port`, ni `branchement` — ils sont
+   * là pour que le type reste unique, et un test vérifie qu'on ne les lit pas.
+   */
+  fourre?: boolean;
+  /**
    * Nombre de brins d'une cépée ; absent = un fût unique.
    *
    * **Une cépée n'est pas un petit arbre**, et le générateur ne l'obtient pas

@@ -45,6 +45,7 @@ import { engendrer, rayonAuPiedM, type Segment, type Sujet } from "../arbres/squ
 import { type Vue, versEcranVue } from "../camera";
 import { eclairer, melange, type Teinte, versCss } from "../palette";
 import { METRE_VERTICAL_PX, profondeur, TUILE_LARGEUR_PX } from "../projection";
+import { agreger, type MasseFourre, type TigeFourre } from "./fourre";
 
 /** Ce que la couche a besoin de savoir d'un arbre. Un sous-ensemble strict du protocole. */
 export interface ArbreAPoser {
@@ -299,6 +300,12 @@ export function cuireVignette(
   // Combien de pixels vaut un mètre dans cette vignette.
   const echelle = (hauteur - 2) / Math.max(0.1, hauteurM);
 
+  // ── Le fourré bas : une masse, pas un arbre ───────────────────────────
+  if (fiche.fourre) {
+    dessinerFourre(ctx, fiche, classe, largeur, hauteur, echelle, hauteurM);
+    return { image, piedX, piedY };
+  }
+
   const sujet: Sujet = {
     id: classe.variante * 7919 + classe.palier * 31,
     hauteurM,
@@ -368,6 +375,67 @@ export function cuireVignette(
   }
 
   return { image, piedX, piedY };
+}
+
+/**
+ * Dessine un fourré bas : un monticule de touffes, sans bois apparent.
+ *
+ * **Ni squelette, ni houppier, ni fût**, et c'est tout le propos de la huitième
+ * famille (§5.4). Une ronce n'a pas d'architecture visible à cette échelle :
+ * c'est un enchevêtrement de tiges arquées dont on ne lit qu'une SURFACE et un
+ * PROFIL. Le passage par le générateur d'arbres donnait un petit arbre à fût et
+ * à couronne — faux en botanique, et visible sur la capture : les ronciers
+ * sortaient en bouquets d'arbustes bien peignés au lieu d'une broussaille.
+ *
+ * Le monticule est plus large que haut, son sommet est irrégulier, et sa
+ * densité vient du comptage des tiges (`fourre.ts`) : deux tiges laissent voir
+ * le sol au travers, trente le couvrent.
+ */
+function dessinerFourre(
+  ctx: CanvasRenderingContext2D,
+  fiche: FicheGraphique,
+  classe: Classe,
+  largeur: number,
+  hauteur: number,
+  echelle: number,
+  hauteurM: number,
+): void {
+  const densite = Math.floor(classe.feuillage / PALIERS_FEUILLAGE) / (PALIERS_FEUILLAGE - 1);
+  if (densite <= 0.02) return;
+  const senescence = (classe.feuillage % PALIERS_FEUILLAGE) / (PALIERS_FEUILLAGE - 1);
+  const teinte = couleurFeuillage(fiche, senescence);
+  const pied = hauteur - 1;
+  const hautPx = Math.max(2, hauteurM * echelle);
+  // Un fourré déborde de son carreau : il est plus large que haut, toujours.
+  const demiLargeur = Math.max(2, largeur / 2 - 1);
+
+  // Le nombre de touffes suit la surface à couvrir, comme le feuillage d'un
+  // arbre — mais ici la surface est celle du monticule entier.
+  const touffes = Math.max(6, Math.round(demiLargeur * hautPx * densite * 0.05));
+  const rayon = Math.max(1.2, Math.sqrt((demiLargeur * hautPx * 2.2) / (Math.PI * touffes)));
+  const epines = fiche.feuillage.forme === "aiguille";
+  for (let i = 0; i < touffes; i++) {
+    const u = hacher(i, classe.palier, 0x3a91);
+    const v = hacher(i * 13, classe.variante, 0x77c3);
+    // Un profil de monticule : large en bas, resserré au sommet.
+    const t = v * v;
+    const x = largeur / 2 + (u - 0.5) * 2 * demiLargeur * (1 - t * 0.55);
+    const y = pied - t * hautPx;
+    const r = rayon * (0.7 + 0.7 * hacher(i * 7, i, 0x51bd));
+    ctx.fillStyle = versCss(eclairer(teinte, 0.86 + 0.28 * v));
+    ctx.beginPath();
+    for (let n = 0; n < SOMMETS_TACHE; n++) {
+      const a = (n / SOMMETS_TACHE) * Math.PI * 2;
+      // Un fourré épineux est HÉRISSÉ : ses touffes ont des pointes, là où une
+      // ronce ou une callune font des bosses. C'est le peu qui distingue un
+      // ajonc d'un roncier quand ni l'un ni l'autre ne fait un mètre.
+      const pointe = epines && n % 2 === 0 ? 1.5 : 1;
+      const rr = r * pointe * (0.7 + 0.5 * hacher(i * 31 + n, classe.palier, 0x22a7));
+      ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.8);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 /**
@@ -575,6 +643,55 @@ export interface PoseArbre {
  * arbres derrière elle. Rendre les deux listes triées par la même grandeur est
  * ce qui rendra l'entrelacement possible sans rien réécrire.
  */
+/**
+ * Sépare les tiges de fourré du reste, et agrège les premières.
+ *
+ * **C'est là que la huitième famille prend son chemin** (§5.4). Une ronce n'est
+ * pas un petit arbre, et sur la friche de l'an 30 il y en a des milliers : les
+ * poser une par une, c'est le budget entier dépensé pour du sous-étage, et un
+ * dessin faux par-dessus le marché.
+ */
+export function separerLeFourre(arbres: readonly ArbreAPoser[]): {
+  arbres: ArbreAPoser[];
+  fourre: MasseFourre[];
+} {
+  const tiges: TigeFourre[] = [];
+  const reste: ArbreAPoser[] = [];
+  for (const a of arbres) {
+    if (ficheDe(a.especeId)?.fourre) {
+      tiges.push({ especeId: a.especeId, x: a.x, y: a.y, z: a.z, heightM: a.heightM });
+    } else {
+      reste.push(a);
+    }
+  }
+  return { arbres: reste, fourre: agreger(tiges) };
+}
+
+/**
+ * Une masse de fourré, ramenée à ce qu'un arbre doit être pour la couche.
+ *
+ * La masse garde son `especeId` — c'est lui qui donne les couleurs — et sa
+ * densité devient la part foliaire, parce que c'est bien ce qu'elle dit : un
+ * carreau à deux tiges de ronce montre le sol, un carreau à trente ne le montre
+ * plus. L'identifiant vient du carreau, pas d'une tige, donc deux images
+ * successives donnent la même variante et le fourré ne grouille pas.
+ */
+export function fourreEnArbre(masse: MasseFourre): ArbreAPoser {
+  return {
+    id: Math.round(masse.x) * 7919 + Math.round(masse.y),
+    especeId: masse.especeId,
+    x: masse.x,
+    y: masse.y,
+    z: masse.z,
+    heightM: masse.hauteurM,
+    // Un fourré est aussi large que haut : c'est une masse, pas une tige.
+    houppierRatio: 0.5,
+    partFoliaire: masse.densite,
+    senescence: 0,
+    vigueur: 1,
+  };
+}
+
 export function posesDesArbres(
   arbres: readonly ArbreAPoser[],
   hauteurMaxParEspece: (especeId: string) => number,

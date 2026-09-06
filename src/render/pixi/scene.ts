@@ -34,12 +34,15 @@
  */
 
 import { Application, Container, Graphics, RenderTexture, Sprite, Texture } from "pixi.js";
+import { ficheDe } from "../arbres/especes";
 import { type Vue, versEcranVue } from "../camera";
 import {
   type ArbreAPoser,
   AtlasArbres,
   ancrageDePose,
+  fourreEnArbre,
   posesDesArbres,
+  separerLeFourre,
   tailleDePose,
 } from "../couches/arbres";
 import { BRUME, type DecorBordures } from "../couches/decor";
@@ -212,7 +215,14 @@ export class SceneParcelle {
     const enRetardDecor = this.decor?.rafraichir(vue) ?? 0;
     const decorCuit = this.decor?.cuire(vue, BUDGET_DECOR) ?? 0;
 
-    const poses = posesDesArbres(etat.arbres, etat.hauteurMaxDe, vue);
+    // Le fourré bas prend son chemin AVANT le reste : agrégé par carreau, il
+    // passe de plusieurs milliers de tiges à quelques centaines de masses.
+    const separe = separerLeFourre(etat.arbres);
+    const poses = posesDesArbres(
+      [...separe.arbres, ...separe.fourre.map(fourreEnArbre)],
+      etat.hauteurMaxDe,
+      vue,
+    );
     const enRetardArbres = this.atlas.rafraichir(poses);
     const classesCuites = this.atlas.cuire(BUDGET_ARBRES_PX);
 
@@ -369,8 +379,10 @@ export class SceneParcelle {
     // Le fond blanc : dans ce schéma, blanc veut dire « pas d'ombre ».
     const fond = new Graphics().rect(0, 0, largeur, hauteur).fill(0xffffff);
     this.pinceau.addChild(fond);
+    // Le fourré ne porte pas d'ombre portée : à cinquante centimètres de haut,
+    // son ombre tient sous lui.
     const arbresOmbre: ArbreOmbre[] = etat.arbres
-      .filter((a) => !a.chandelle && a.heightM > 0)
+      .filter((a) => !a.chandelle && a.heightM > 0 && !ficheDe(a.especeId)?.fourre)
       .map((a) => ({
         x: a.x,
         y: a.y,

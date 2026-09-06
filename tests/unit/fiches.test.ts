@@ -44,7 +44,10 @@ describe("les fiches graphiques tiennent au moteur", () => {
   it("rendent `undefined` pour une espèce sans fiche, sans lever", () => {
     // Une essence sans fiche prend le port de sa famille en attendant la
     // sienne, et la vue tourne : c'est écrit dans §5.4 et ça doit être vrai.
-    expect(ficheDe("rubus_fruticosus")).toBeUndefined();
+    // Neuf espèces du catalogue attendent encore leur fiche : le houx, le
+    // prunellier, l'aubépine, le sureau, le cornouiller, le fusain, le troène,
+    // l'abricotier et l'arbousier.
+    expect(ficheDe("ilex_aquifolium")).toBeUndefined();
     expect(ficheDe("nawak")).toBeUndefined();
   });
 });

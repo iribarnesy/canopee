@@ -10,8 +10,10 @@ import {
   couleurFeuillage,
   cuireVignette,
   FICHE_GENERIQUE,
+  fourreEnArbre,
   PALIERS_HAUTEUR,
   posesDesArbres,
+  separerLeFourre,
   tailleDePose,
   VARIANTES,
   VIGNETTE_MAX_PX,
@@ -335,9 +337,20 @@ describe("le repli d'espèce", () => {
     // §5.4 : « une essence sans fiche prend le port de sa famille en attendant
     // la sienne ». Ce n'est pas un vœu, c'est ce que le rendu doit faire.
     const { fabriquer, compte } = fabriqueBouchon();
-    const c = classeDe(arbre({ especeId: "rubus_fruticosus" }), 30, vue());
+    const c = classeDe(arbre({ especeId: "ilex_aquifolium" }), 30, vue());
     expect(() => cuireVignette(c, 4, 0.5, fabriquer)).not.toThrow();
     expect(compte.traits).toBeGreaterThan(0);
+  });
+
+  it("un FOURRÉ ne dessine aucun bois : c'est une masse, pas un arbre", () => {
+    // La huitième famille ne passe pas par le générateur. Un roncier dessiné
+    // avec un squelette sortait en petit arbre à fût et à couronne — faux en
+    // botanique et visible sur la capture.
+    const { fabriquer, compte } = fabriqueBouchon();
+    const c = classeDe(arbre({ especeId: "rubus_fruticosus", heightM: 0.8 }), 3, vue());
+    cuireVignette(c, 0.8, 0.5, fabriquer);
+    expect(compte.traits).toBe(0);
+    expect(compte.remplissages).toBeGreaterThan(0);
   });
 
   it("la fiche générique est complète", () => {
@@ -388,5 +401,55 @@ describe("le découpage par emprise visible", () => {
     const serre: Vue = { ...vue(), cam: { ...vue().cam, zoom: 5 }, centre: { x: 50, y: 50 } };
     const proche = posesDesArbres([arbre({ x: 50, y: 50, heightM: 25 })], () => 30, serre);
     expect(proche).toHaveLength(1);
+  });
+});
+
+describe("le fourré bas prend un autre chemin", () => {
+  it("sort de la liste des arbres et devient des masses", () => {
+    // §5.4 : les espèces de fourré sont « dessinées par cellule agrégée ».
+    // Une ronce n'a ni fût ni houppier : lui appliquer le générateur donne un
+    // petit arbre, ce qui est faux et se voit.
+    const melange = [
+      arbre({ id: 1, especeId: "fagus_sylvatica" }),
+      ...Array.from({ length: 30 }, (_, i) =>
+        arbre({ id: 100 + i, especeId: "rubus_fruticosus", x: 10 + (i % 3), y: 10, heightM: 0.7 }),
+      ),
+    ];
+    const { arbres: restants, fourre } = separerLeFourre(melange);
+    expect(restants).toHaveLength(1);
+    expect(fourre.length).toBeGreaterThan(0);
+    expect(fourre.length).toBeLessThan(30);
+  });
+
+  it("laisse passer une espèce sans fiche : elle reste un arbre", () => {
+    const { arbres: restants, fourre } = separerLeFourre([arbre({ especeId: "ilex_aquifolium" })]);
+    expect(restants).toHaveLength(1);
+    expect(fourre).toHaveLength(0);
+  });
+
+  it("une masse devient un sujet aussi large que haut", () => {
+    const { fourre } = separerLeFourre([
+      arbre({ especeId: "ulex_europaeus", heightM: 1.2, x: 6, y: 6 }),
+    ]);
+    const masse = fourre[0];
+    expect(masse).toBeDefined();
+    if (!masse) return;
+    const sujet = fourreEnArbre(masse);
+    expect(sujet.houppierRatio).toBeCloseTo(0.5);
+    expect(sujet.heightM).toBeCloseTo(1.2);
+    // La densité devient la part foliaire : un carreau à deux tiges montre le
+    // sol, un carreau plein ne le montre plus.
+    expect(sujet.partFoliaire).toBeGreaterThan(0);
+    expect(sujet.partFoliaire).toBeLessThanOrEqual(1);
+  });
+
+  it("donne le même identifiant d'une image à l'autre — le fourré ne grouille pas", () => {
+    const { fourre } = separerLeFourre([
+      arbre({ id: 1, especeId: "rubus_fruticosus", x: 9, y: 9 }),
+      arbre({ id: 2, especeId: "rubus_fruticosus", x: 10, y: 10 }),
+    ]);
+    const a = fourre.map(fourreEnArbre).map((s) => s.id);
+    const b = fourre.map(fourreEnArbre).map((s) => s.id);
+    expect(a).toEqual(b);
   });
 });

@@ -22,7 +22,9 @@ import {
   type ArbreAPoser,
   AtlasArbres,
   ancrageDePose,
+  fourreEnArbre,
   posesDesArbres,
+  separerLeFourre,
   tailleDePose,
 } from "../render/couches/arbres";
 import { BRUME, type DecorBordures } from "../render/couches/decor";
@@ -250,7 +252,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
   // le sol est posé en un bloc, entrelacer ne changerait rien à l'image et
   // masquerait ce qui reste à faire.
   if (arbres) {
-    const poses = posesDesArbres(
+    const separe = separerLeFourre(
       scene.trees
         .filter((t) => t.heightM > 0)
         .map((t): ArbreAPoser => {
@@ -277,14 +279,19 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             vigueur: t.vigueur ?? 1,
           };
         }),
+    );
+    const poses = posesDesArbres(
+      [...separe.arbres, ...separe.fourre.map(fourreEnArbre)],
       (especeId) => getEspece(especeId)?.hauteurMaxM ?? 20,
       vue,
     );
     const atlas = new AtlasArbres(fabriquer);
     atlas.rafraichir(poses);
-    // Budget large : on cuit tout d'un coup ici, parce qu'une capture n'a pas
-    // de deuxième image. Dans le jeu, c'est le budget par image qui s'applique.
-    atlas.cuire(10000);
+    // Budget SANS LIMITE : une capture n'a pas de deuxième image, donc rien ne
+    // doit rester en attente. Dans le jeu, c'est le budget par image qui
+    // s'applique — et il se compte en PIXELS, pas en vignettes : passer 10 000
+    // ici ne cuisait plus qu'une seule vignette, et la parcelle sortait vide.
+    atlas.cuire(Number.POSITIVE_INFINITY);
     for (const pose of poses) {
       const vignette = atlas.vignette(pose.classe);
       if (!vignette) continue;
@@ -366,7 +373,7 @@ function planche(
     };
     const poses = posesDesArbres([arbre], () => espece?.hauteurMaxM ?? 20, vue);
     atlas.rafraichir(poses);
-    atlas.cuire(10);
+    atlas.cuire(Number.POSITIVE_INFINITY);
     const pose = poses[0];
     if (!pose) return;
     const v = atlas.vignette(pose.classe);

@@ -7,10 +7,11 @@
  * ensuite, chacune dans une famille déjà défrichée. C'est ce qui est fait ici :
  * sept fiches, une par famille d'arbre.
  *
- * La huitième famille — **fourré bas** (ronce, ajonc, genêt, callune) — n'a pas
- * de fiche ici et ce n'est pas un oubli : ces espèces se dessinent **par
- * cellule agrégée** et non par tige, donc elles ne passent pas par le
- * générateur de squelette. Leur place est dans la couche du sol, pas ici.
+ * La huitième famille — **fourré bas** (ronce, ajonc, genêt, callune) — a bien
+ * ses fiches, mais elles portent `fourre: true` et ne sont pas lues de la même
+ * façon : ces espèces se dessinent **par cellule agrégée** et non par tige
+ * (`couches/fourre.ts`), donc ni leur port ni leur branchement ne servent. Ce
+ * qu'on leur demande, ce sont leurs couleurs et leur texture.
  *
  * **Une espèce sans fiche n'est pas un problème** : elle prend le port de sa
  * famille en attendant la sienne, et la vue tourne. Le critère de fin, lui, est
@@ -20,17 +21,21 @@
  */
 
 import type { FicheGraphique } from "../fiche";
+import { AJONC } from "./ajonc";
 import { AULNE_GLUTINEUX } from "./aulne";
 import { BOULEAU } from "./bouleau";
+import { CALLUNE } from "./callune";
 import { CHARME } from "./charme";
 import { CHATAIGNIER } from "./chataignier";
 import { CHENE_LIEGE } from "./chene_liege";
 import { CHENE_PUBESCENT } from "./chene_pubescent";
 import { FRENE } from "./frene";
+import { GENET } from "./genet";
 import { HETRE } from "./hetre";
 import { NOISETIER } from "./noisetier";
 import { PIN_SYLVESTRE } from "./pin_sylvestre";
 import { POMMIER } from "./pommier";
+import { RONCE } from "./ronce";
 import { SAULE_BLANC } from "./saule";
 
 export const FICHES: readonly FicheGraphique[] = [
@@ -46,6 +51,11 @@ export const FICHES: readonly FicheGraphique[] = [
   CHENE_LIEGE,
   POMMIER,
   NOISETIER,
+  // Le fourré bas : dessiné par cellule agrégée, pas par tige.
+  RONCE,
+  AJONC,
+  GENET,
+  CALLUNE,
 ];
 
 const PAR_ID = new Map(FICHES.map((f) => [f.especeId, f]));
@@ -56,16 +66,20 @@ export function ficheDe(especeId: string): FicheGraphique | undefined {
 }
 
 export {
+  AJONC,
   AULNE_GLUTINEUX,
   BOULEAU,
+  CALLUNE,
   CHARME,
   CHATAIGNIER,
   CHENE_LIEGE,
   CHENE_PUBESCENT,
   FRENE,
+  GENET,
   HETRE,
   NOISETIER,
   PIN_SYLVESTRE,
   POMMIER,
+  RONCE,
   SAULE_BLANC,
 };
