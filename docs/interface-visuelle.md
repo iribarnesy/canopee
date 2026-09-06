@@ -746,6 +746,18 @@ n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 | Brûlé sur pied | chandelle noire | `brulEeSemaine` ✅ |
 | Trogne | tête renflée, creuse au-delà de deux étêtages | `teteTrogneM`, `recepages` ✅ |
 | Protégé | manchon translucide, monté à la hauteur de dent | `protege` ✅ |
+| Démasclé | bande ocre-rouge sur le bas du fût, qui grisonne sur la rotation | `derniereLeveeSemaine` + `ecorce.rotationAns` ✅ |
+
+**Le liège est le seul état de cette table dont le moteur donne la DURÉE**, et
+ça change tout ce qu'on peut en dire. Un fût brûlé, une plaie de frottis : le
+moteur pose une semaine et n'en fait rien, donc le rendu ne lit que la présence
+— il ne sait pas à quelle vitesse un charbon pâlit ni une blessure se referme.
+Le liège, lui, a `ecorce.rotationAns`, et `ecorceRecoltable` s'en sert pour
+refuser une levée trop rapprochée : le rapport « où en est l'écorce » est
+exactement celui que le moteur compare à 1. Le rendu peut donc montrer un
+GRADIENT sans rien inventer — et le bout du gradient est directement
+actionnable, puisque « le liège est refait » veut dire « récoltable ». C'est le
+même signal qu'un fruit mûr.
 
 **Deux grandeurs, et il faut les deux** — les confondre serait perdre
 l'essentiel de ce qu'elles disent. La **vigueur** est réversible : elle dit

@@ -70,6 +70,8 @@ interface ArbreScene {
   recepages?: number;
   /** `frotteSemaine` du protocole : présent = un brocard l'a frotté */
   frotteSemaine?: number;
+  /** `derniereLeveeSemaine` du protocole : la semaine du dernier démasclage */
+  derniereLeveeSemaine?: number;
   /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
   fruitProgress?: number;
   /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -205,6 +207,16 @@ interface Options {
   protege?: boolean;
   /** Planche : tige frottée par un brocard (`frotteSemaine` renseigné). */
   frotte?: boolean;
+  /**
+   * Planche : semaines écoulées depuis le démasclage, UNE PAR CASE.
+   *
+   * La seule option de cette liste qui varie d'une case à l'autre, et c'est
+   * qu'elle sert à autre chose que les autres : partout ailleurs la planche
+   * compare des ESPÈCES dans le même état, ici elle compare le même arbre à
+   * quatre âges d'écorce. Une valeur par case, répétée si la liste est plus
+   * courte que la grille.
+   */
+  semainesDepuisLevee?: readonly number[];
   /** Planche : hauteur de tête de trogne, m, et nombre d'étêtages. */
   teteTrogneM?: number;
   recepages?: number;
@@ -360,6 +372,11 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             ...(t.recepages ? { recepages: t.recepages } : {}),
             // Même lecture que `brulee` : la présence, pas la semaine.
             ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
+            // Une DURÉE, pas une présence : le moteur porte la rotation, donc
+            // on peut dire OÙ EN EST l'écorce, pas seulement qu'elle a été levée.
+            ...(t.derniereLeveeSemaine === undefined
+              ? {}
+              : { semainesDepuisLevee: Math.max(0, scene.week - t.derniereLeveeSemaine) }),
             // Une chandelle n'a plus de feuilles : c'est un tronc mort debout.
             partFoliaire: t.chandelle ? 0 : f.part,
             senescence: f.senescence,
@@ -457,6 +474,8 @@ function planche(
     ctx.fillStyle = "rgb(96 100 74)";
     ctx.fillRect(colonne * largeurCase, sol, largeurCase, 24);
     const espece = getEspece(especeId);
+    const serie = options.semainesDepuisLevee;
+    const depuisLevee = serie && serie.length > 0 ? serie[i % serie.length] : undefined;
     const arbre: ArbreAPoser = {
       id: 7 + i * 13,
       especeId,
@@ -488,6 +507,7 @@ function planche(
       ...(options.brulee ? { brulee: true } : {}),
       ...(options.protege ? { protege: true } : {}),
       ...(options.frotte ? { frotte: true } : {}),
+      ...(depuisLevee === undefined ? {} : { semainesDepuisLevee: depuisLevee }),
       ...(options.teteTrogneM ? { teteTrogneM: options.teteTrogneM } : {}),
       ...(options.recepages ? { recepages: options.recepages } : {}),
       ...(options.floraison ? { floraison: options.floraison } : {}),
@@ -751,6 +771,15 @@ const PLANCHE: Planche[] = [
     hauteurM: 2.5,
     titre: "frottis · les mêmes tiges intactes, pour comparer",
     options: { baseHouppier: 0.35 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_suber", "quercus_suber", "quercus_suber", "quercus_suber"],
+    hauteurM: 12,
+    titre: "liège · à vif, puis la rotation du moteur : 0, 3, 6 et 10 ans après la levée",
+    // La rotation du moteur est de dix ans (`ecorce.rotationAns`) : c'est elle
+    // qui règle l'échelle, pas un choix de planche.
+    options: { baseHouppier: 0.3, semainesDepuisLevee: [0, 3 * 52, 6 * 52, 10 * 52] },
   },
   { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
   {

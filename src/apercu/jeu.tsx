@@ -49,6 +49,8 @@ interface Scene {
     recepages?: number;
     /** `frotteSemaine` du protocole : présent = un brocard l'a frotté */
     frotteSemaine?: number;
+    /** `derniereLeveeSemaine` du protocole : la semaine du dernier démasclage */
+    derniereLeveeSemaine?: number;
     /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
     fruitProgress?: number;
     /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -152,6 +154,11 @@ function Demo(): React.ReactElement {
         ...(t.protege ? { protege: true } : {}),
         ...(t.recepages ? { recepages: t.recepages } : {}),
         ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
+        // Une DURÉE, pas une présence : le moteur donne la rotation, donc on
+        // peut dire où en est l'écorce et pas seulement qu'elle a été levée.
+        ...(t.derniereLeveeSemaine === undefined
+          ? {}
+          : { semainesDepuisLevee: Math.max(0, scene.week - t.derniereLeveeSemaine) }),
         partFoliaire: t.chandelle ? 0 : part,
         senescence: espece && pheno ? senescenceDans(espece, pheno) : 0,
         vigueur: t.vigueur ?? 1,

@@ -37,6 +37,7 @@
  * comme pour le terrain, donc il se teste sans navigateur.
  */
 
+import { getEspece } from "../../engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../engine/gibier";
 import { ficheDe } from "../arbres/especes";
 import { contourFeuille, elementsParFeuille } from "../arbres/feuilles";
@@ -164,6 +165,27 @@ export interface ArbreAPoser {
    * simplement sous le seuil de dessin, comme tout ce qui est trop petit.
    */
   frotte?: boolean;
+  /**
+   * Semaines écoulées depuis la dernière levée d'écorce : `Snapshot.week`
+   * moins `Snapshot.derniereLeveeSemaine`. Absent = jamais démasclé.
+   *
+   * **Le seul arbre du jeu dont le tronc change de couleur par une action du
+   * joueur**, et la fiche du chêne-liège le disait avant que quoi que ce soit
+   * ne le dessine : liège levé, le tronc est ocre-rouge vif, puis il grisonne
+   * à mesure que l'écorce se reforme.
+   *
+   * **C'est aussi le seul état de cette liste dont le moteur donne la DURÉE.**
+   * `especes.ts` porte `ecorce.rotationAns` — dix ans pour le liège — et
+   * `ecorceRecoltable` s'en sert pour refuser une levée trop rapprochée. Le
+   * rendu peut donc dire où l'arbre en est sans rien inventer, contrairement au
+   * charbon d'un fût brûlé ou à la plaie d'un frottis, dont le moteur ne dit
+   * pas comment ils vieillissent.
+   *
+   * Et ce que ça donne à voir est directement actionnable : quand le tronc a
+   * fini de grisonner, le liège est refait et l'arbre est de nouveau
+   * récoltable. C'est le même signal qu'un fruit mûr.
+   */
+  semainesDepuisLevee?: number;
   /** part du feuillage accroché ∈ [0,1] — `partFoliaire` du moteur */
   partFoliaire: number;
   /** avancement de la sénescence ∈ [0,1] — `senescenceFoliaire` */
@@ -534,6 +556,15 @@ export interface Classe {
   sante: number;
   /** état de fructification : `FRUIT_AUCUN`, `FRUIT_CROISSANCE` ou `FRUIT_MUR` */
   fruit: number;
+  /**
+   * Où en est l'écorce de se reformer après un démasclage, en paliers.
+   *
+   * `PALIERS_LIEGE` (refait, ou espèce sans écorce à lever) à zéro (à vif).
+   * L'écart est un GRADIENT et non un drapeau, parce que la grandeur du moteur
+   * en est un : `rotationAns` dit combien de temps il faut, pas seulement s'il
+   * a coulé.
+   */
+  liege: number;
   /** taille de cuisson, en pixels de large */
   taillePx: number;
 }
@@ -624,13 +655,44 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
     gestion,
     sante,
     fruit,
+    liege: palierDe(partEcorceRefaite(arbre), PALIERS_LIEGE),
     taillePx,
   };
 }
 
+/**
+ * Paliers de reconstitution de l'écorce après démasclage.
+ *
+ * Quatre pour dix ans de rotation : « à vif », « rougissant », « presque
+ * refait », « refait ». Le dernier palier est celui qui compte — c'est lui qui
+ * dit que l'arbre est de nouveau récoltable — et les trois autres sont là pour
+ * qu'on voie venir. Un palier tient deux ans et demi : c'est très au-dessus de
+ * ce qu'une clé de cache craint.
+ */
+export const PALIERS_LIEGE = 4;
+
+/**
+ * Où en est l'écorce de se reformer, ∈ [0,1] — 0 à vif, 1 refaite.
+ *
+ * **La durée vient du moteur, et c'est ce qui rend cette fonction honnête.**
+ * `especes.ts` porte `ecorce.rotationAns` par espèce, et `ecorceRecoltable`
+ * s'en sert pour refuser une levée trop rapprochée : le rapport calculé ici est
+ * exactement celui que le moteur compare à 1. On ne recopie donc pas une règle,
+ * on lit la constante à sa source — comme `satisfactionEnEau` appelle
+ * `couvertureMax` plutôt que d'en redire le seuil (§4).
+ *
+ * Une espèce sans écorce à lever rend 1 : rien à montrer, écorce normale.
+ */
+export function partEcorceRefaite(arbre: ArbreAPoser): number {
+  if (arbre.semainesDepuisLevee === undefined) return 1;
+  const rotation = getEspece(arbre.especeId).ecorce?.rotationAns;
+  if (!rotation) return 1;
+  return Math.min(1, Math.max(0, arbre.semainesDepuisLevee / (rotation * 52)));
+}
+
 /** La clé de cache d'une classe. */
 export function cleClasse(c: Classe): string {
-  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.sante}|${c.fruit}|${c.taillePx}`;
+  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.sante}|${c.fruit}|${c.liege}|${c.taillePx}`;
 }
 
 /** Une vignette cuite, et où poser son pied. */
@@ -866,6 +928,12 @@ export function cuireVignette(
     dessinerTeteDeTrogne(ctx, fiche, classe, teteTrogneM, hauteurM, echelle, versPx);
   }
 
+  // ── Le tronc démasclé ─────────────────────────────────────────────────
+  // Avant le frottis : les deux se posent sur le bas du fût, et une plaie de
+  // frottis sur un tronc fraîchement levé reste visible — c'est du bois à nu
+  // sur du bois à nu, mais la blessure est plus claire que le liber.
+  dessinerDemasclage(ctx, fiche, classe, hauteurM, echelle, versPx);
+
   // ── La plaie de frottis ───────────────────────────────────────────────
   // AVANT le manchon, et c'est volontaire : les deux ne coexistent pas chez le
   // moteur (`attraitFrottis` rend zéro sur un plant protégé), mais si jamais
@@ -1012,6 +1080,79 @@ function teinteDuBois(fiche: FicheGraphique, haut: boolean | undefined, classe: 
   if (classe.gestion & EST_CHANDELLE) return BOIS_MORT;
   return haut && fiche.ecorceHaute ? fiche.ecorceHaute : fiche.ecorce;
 }
+
+/**
+ * Le tronc démasclé : la bande ocre-rouge du liège levé, qui grisonne.
+ *
+ * **Une bande posée par-dessus le fût, et pas une couleur de segment**, parce
+ * que le démasclage a une LIGNE. On le lève au couteau jusqu'à une hauteur
+ * marquée, et la limite est nette — c'est même ce qui rend une subéraie levée
+ * reconnaissable de loin. Colorer les segments du squelette donnait l'inverse :
+ * le fût d'un chêne-liège tient en un ou deux longs segments, et un segment est
+ * coloré tout entier ou pas du tout, si bien que la limite sautait de zéro à
+ * quatre mètres selon la découpe du squelette.
+ *
+ * **Ce que le moteur donne** : la semaine de la levée et la ROTATION
+ * (`ecorce.rotationAns`), donc le rapport que `partEcorceRefaite` calcule et
+ * que `ecorceRecoltable` compare à 1. Le dernier palier veut dire « le liège
+ * est refait » — c'est-à-dire « récoltable », et c'est l'information utile.
+ *
+ * **Ce que le dessin pose** : la couleur du liber à vif, et la hauteur de
+ * démasclage (voir `HAUTEUR_DEMASCLAGE_M`).
+ */
+function dessinerDemasclage(
+  ctx: CanvasRenderingContext2D,
+  fiche: FicheGraphique,
+  classe: Classe,
+  hauteurM: number,
+  echelle: number,
+  versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
+): void {
+  // Rien à montrer : écorce refaite, ou espèce qu'on ne démascle pas.
+  if (classe.liege >= PALIERS_LIEGE - 1) return;
+  const hautM = Math.min(HAUTEUR_DEMASCLAGE_M, hauteurM * 0.8);
+  const bas = versPx({ x: 0, y: 0 });
+  const haut = versPx({ x: 0, y: hautM });
+  const hautPx = bas.sy - haut.sy;
+  if (hautPx < 2) return;
+  // Un peu plus étroit que le fût au pied : le tronc s'affine en montant, et
+  // une bande à la largeur du pied déborderait en haut.
+  const demi = Math.max(0.6, rayonAuPiedM(hauteurM) * echelle * 0.9);
+  ctx.fillStyle = versCss(melange(LIEGE_A_VIF, fiche.ecorce, classe.liege / (PALIERS_LIEGE - 1)));
+  ctx.beginPath();
+  ctx.rect(bas.sx - demi, haut.sy, demi * 2, hautPx);
+  ctx.fill();
+}
+
+/**
+ * Le tronc d'un chêne-liège fraîchement démasclé : ocre-rouge vif.
+ *
+ * C'est la couleur du liber mis à nu, et elle est spectaculaire — un tronc de
+ * subéraie levée se voit de loin, ce qui est exactement pourquoi elle mérite
+ * d'être dessinée : elle dit d'un coup d'œil quels arbres viennent d'être
+ * récoltés et lesquels attendent encore.
+ */
+const LIEGE_A_VIF: Teinte = { r: 164, g: 78, b: 44 };
+
+/**
+ * Jusqu'où le liège se lève sur le tronc, en mètres.
+ *
+ * **Une hauteur de PRATIQUE, pas un état de parcelle** : on démascle le fût et
+ * la base des charpentières, et cette hauteur ne varie pas d'une subéraie à
+ * l'autre. Même statut que la hauteur de frottis — c'est une propriété du
+ * geste, comme la forme d'une feuille est une propriété de l'espèce (§4).
+ *
+ * **Ce qu'on ne fait PAS, et pourquoi ça ne part pas en issue** : la vraie
+ * hauteur de démasclage MONTE d'une levée à l'autre — « la couronne monte », et
+ * un vieux chêne-liège est démasclé bien plus haut qu'un jeune. C'est un état
+ * par arbre, et le moteur ne le porte pas. La différence est qu'il ne le porte
+ * pas *par omission* : `especes.ts` fait déjà dépendre le rendement de la
+ * taille de l'arbre (`rendementKg × min(1.5, heightM/12)`), ce qui est
+ * exactement ce qu'une hauteur de démasclage croissante produirait. Le modèle
+ * a donc la conséquence sans la cause, et lui ajouter la cause serait un
+ * raffinement, pas un manque.
+ */
+const HAUTEUR_DEMASCLAGE_M = 2.6;
 
 /** Bois mort sur pied : gris argenté, l'écorce partie. */
 const BOIS_MORT: Teinte = { r: 138, g: 132, b: 122 };

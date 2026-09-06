@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getEspece } from "../../src/engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
 import { HETRE } from "../../src/render/arbres/especes";
 import { type Vue, vueInitiale } from "../../src/render/camera";
@@ -13,6 +14,7 @@ import {
   FICHE_GENERIQUE,
   fourreEnArbre,
   PALIERS_HAUTEUR,
+  partEcorceRefaite,
   posesDesArbres,
   separerLeFourre,
   tailleDePose,
@@ -860,5 +862,78 @@ describe("le frottis : la seule trace lisible d'un dégât de gibier", () => {
       0.9,
     );
     expect(frottee.compte.remplissages).toBe(intacte.compte.remplissages);
+  });
+});
+
+describe("le liège : le seul état dont le moteur donne la DURÉE", () => {
+  const suber = (p: Partial<ArbreAPoser> = {}): ArbreAPoser =>
+    arbre({ especeId: "quercus_suber", heightM: 12, baseHouppierM: 3.6, ...p });
+
+  /**
+   * `partEcorceRefaite` ne recopie pas la règle du moteur, elle en lit la
+   * constante : `especes.ts` porte `ecorce.rotationAns`, et `ecorceRecoltable`
+   * compare le même rapport à 1. L'essai lit la constante à la source, pour
+   * qu'il tombe si le moteur change la rotation.
+   */
+  it("suit la rotation du moteur, d'un bout à l'autre", () => {
+    const rotation = getEspece("quercus_suber").ecorce?.rotationAns;
+    expect(rotation).toBeDefined();
+    if (rotation === undefined) return;
+    expect(partEcorceRefaite(suber({ semainesDepuisLevee: 0 }))).toBe(0);
+    expect(partEcorceRefaite(suber({ semainesDepuisLevee: rotation * 52 }))).toBe(1);
+    expect(partEcorceRefaite(suber({ semainesDepuisLevee: (rotation * 52) / 2 }))).toBeCloseTo(
+      0.5,
+      5,
+    );
+    // Au-delà de la rotation, l'écorce ne se refait pas « plus que refaite ».
+    expect(partEcorceRefaite(suber({ semainesDepuisLevee: rotation * 52 * 3 }))).toBe(1);
+  });
+
+  it("ne dit rien d'une espèce qu'on ne démascle pas", () => {
+    // Un hêtre n'a pas de bloc `ecorce` : la grandeur n'a pas de sens pour lui,
+    // et le rendu ne doit surtout pas lui inventer une rotation.
+    expect(getEspece("fagus_sylvatica").ecorce).toBeUndefined();
+    expect(partEcorceRefaite(arbre({ semainesDepuisLevee: 0 }))).toBe(1);
+  });
+
+  it("sépare un tronc à vif d'un tronc refait, et pas seulement levé de non levé", () => {
+    const v = vue();
+    const vif = cleClasse(classeDe(suber({ semainesDepuisLevee: 0 }), 20, v));
+    const mi = cleClasse(classeDe(suber({ semainesDepuisLevee: 5 * 52 }), 20, v));
+    const refait = cleClasse(classeDe(suber({ semainesDepuisLevee: 10 * 52 }), 20, v));
+    expect(new Set([vif, mi, refait]).size).toBe(3);
+    // Un arbre jamais démasclé et un arbre dont l'écorce est refaite sont la
+    // MÊME image : il n'y a rien à distinguer, et c'est ce que dit le moteur en
+    // les rendant tous deux récoltables.
+    expect(cleClasse(classeDe(suber(), 20, v))).toBe(refait);
+  });
+
+  it("pose la bande sur le bas du fût, et rien une fois l'écorce refaite", () => {
+    const refait = fabriqueBouchon();
+    const vif = fabriqueBouchon();
+    const v = vue(6);
+    const nu = { partFoliaire: 0 } as const;
+    cuireVignette(classeDe(suber(nu), 20, v), 12, 0.4, refait.fabriquer, 3.6);
+    const vignette = cuireVignette(
+      classeDe(suber({ ...nu, semainesDepuisLevee: 0 }), 20, v),
+      12,
+      0.4,
+      vif.fabriquer,
+      3.6,
+    );
+    expect(refait.compte.rects).toHaveLength(0);
+    expect(vif.compte.rects).toHaveLength(1);
+    const bande = vif.compte.rects[0];
+    expect(bande).toBeDefined();
+    if (!bande) return;
+    // **La hauteur de démasclage, en MÈTRES, et c'est là que le défaut se
+    // voyait.** La première version colorait les segments du squelette ; le fût
+    // d'un chêne-liège tient en un seul segment, donc la bande montait jusqu'au
+    // houppier — quatre mètres au lieu de deux et demi, et la limite sautait
+    // avec la découpe du squelette.
+    const pixelsParMetre = vignette.hautArbrePx / 12;
+    expect(bande.h / pixelsParMetre).toBeCloseTo(2.6, 1);
+    // Et elle part du PIED : le bas de la bande touche le bas de l'image.
+    expect(bande.y + bande.h).toBeCloseTo(vignette.piedY, 0);
   });
 });
