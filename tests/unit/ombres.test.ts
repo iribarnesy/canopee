@@ -18,6 +18,7 @@ import {
   DENSITES,
   indexDensite,
   MODE_ACCUMULATION,
+  MODE_ACCUMULATION_GPU,
   MODE_COMPOSITION,
   MODE_LIMITE,
   ombreDeLArbre,
@@ -141,6 +142,49 @@ describe("la densité, et pourquoi elle n'est pas une opacité", () => {
     expect(indexDensite(0.1)).toBeLessThanOrEqual(indexDensite(0.5));
     expect(indexDensite(0.5)).toBeLessThanOrEqual(indexDensite(1));
     expect(indexDensite(1)).toBe(DENSITES - 1);
+  });
+});
+
+describe("le mode d'accumulation tient sur un GPU", () => {
+  it("**le mode GPU est un mode de BASE, jamais un mode avancé**", () => {
+    // Le défaut, et il ne se voyait que dans la vue Pixi : un escalier de
+    // rectangles sombres le long du bord de la parcelle, absent de la même
+    // scène passée par le compositeur Canvas. Une ablation l'a désigné — en
+    // sautant les taches, les rectangles disparaissaient, et chacun avait sa
+    // tache ronde inscrite dedans : c'était le QUAD de la tache qui
+    // s'assombrissait, pas son disque.
+    //
+    // La cause est la classification des modes de fusion. `darken` est un mode
+    // AVANCÉ : Pixi l'implémente par un shader qui doit lire le fond déjà
+    // dessiné. Dans une `RenderTexture` rendue avec `clear: true`, cette
+    // lecture ne trouve pas le rectangle blanc posé juste avant dans la même
+    // passe, et `min(blanc, noir)` vaut noir sur tout le quad. Le carré blanc
+    // qui entoure le disque, neutre en Canvas 2D, devenait une tache carrée.
+    //
+    // Les modes ci-dessous se traduisent directement en équation de mélange
+    // OpenGL, sans shader ni lecture de fond. En sortir, c'est réintroduire le
+    // défaut — et il ne se verra dans aucun essai de rendu Canvas.
+    const modesDeBase = ["normal", "add", "multiply", "screen", "min", "max", "none"];
+    expect(modesDeBase).toContain(MODE_ACCUMULATION_GPU);
+  });
+
+  it("dit la même chose que le mode Canvas : garder le minimum", () => {
+    // `min` et `darken` sont la même opération. Ce qui les sépare est la façon
+    // dont le moteur de rendu la réalise, pas ce qu'elle calcule — et c'est
+    // pour ça que les deux constantes doivent rester couplées : si l'une passe
+    // à autre chose que « garder le minimum », l'autre ment.
+    expect(MODE_ACCUMULATION).toBe("darken");
+    expect(MODE_ACCUMULATION_GPU).toBe("min");
+  });
+
+  it("**`multiply` ne convient pas, et c'est mesuré, pas supposé**", () => {
+    // Il est pourtant de base, et il fait bien disparaître les rectangles. Mais
+    // il COMPOSE au lieu de saturer : sous une lisière où les houppiers se
+    // recouvrent, la capture montrait le sol viré au noir et le liseré sableux
+    // du bord effacé. C'est le puits d'encre que la saturation existe pour
+    // éviter, et `MODE_COMPOSITION` l'emploie déjà pour la passe finale — une
+    // seule fois, ce qui est tout l'intérêt.
+    expect(MODE_ACCUMULATION_GPU).not.toBe(MODE_COMPOSITION);
   });
 });
 

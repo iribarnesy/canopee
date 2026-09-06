@@ -110,6 +110,41 @@ export const DENSITES = 4;
  * « aucune primitive vectorielle par image » respectée jusqu'au bout.
  */
 export const MODE_ACCUMULATION = "darken" as const;
+
+/**
+ * Le même mode, **écrit pour le GPU** : `min`, et non `darken`.
+ *
+ * Les deux disent la même chose — garder le minimum de la source et du fond —
+ * mais pas au même prix, et l'un des deux ment sur un GPU.
+ *
+ * **Ce que ça a donné, et comment on l'a su.** La vue Pixi montrait un
+ * escalier de RECTANGLES sombres le long du bord de la parcelle, absent de la
+ * même scène passée par le compositeur Canvas. La comparaison des deux rendus
+ * a écarté la cuisson : le défaut naissait à la composition. Une ablation l'a
+ * ensuite désigné sans ambiguïté — en sautant les taches, les rectangles
+ * disparaissaient, et chacun avait sa tache ronde inscrite dedans. C'était donc
+ * le QUAD de la tache qui s'assombrissait, et non son disque.
+ *
+ * La raison tient à la classification de Pixi : `darken` est un mode
+ * **avancé**, implémenté par un shader qui doit lire le fond déjà dessiné.
+ * Dans une `RenderTexture` rendue avec `clear: true`, cette lecture ne trouve
+ * pas le rectangle blanc posé juste avant dans la même passe — le fond vu par
+ * le shader est du noir transparent, et `min(blanc, noir)` vaut noir sur toute
+ * l'étendue du quad. Le carré opaque blanc qui entoure le disque, inoffensif
+ * en Canvas 2D, devenait donc une tache carrée.
+ *
+ * `min` est en revanche un mode **de base** : il se traduit directement en
+ * `gl.MIN` sur l'équation de mélange, sans lecture de fond et sans shader. Le
+ * blanc y redevient neutre, et la saturation — deux ombres superposées ne sont
+ * pas plus sombres qu'une seule — est conservée exactement.
+ *
+ * **`multiply` a été essayé et écarté**, bien qu'il soit lui aussi de base et
+ * qu'il fasse disparaître les rectangles : il COMPOSE au lieu de saturer, et la
+ * capture le montrait tout de suite — sous une lisière de houppiers qui se
+ * recouvrent, le sol virait au noir et le liseré sableux du bord disparaissait.
+ * C'est précisément le puits d'encre que la saturation existe pour éviter.
+ */
+export const MODE_ACCUMULATION_GPU = "min" as const;
 export const MODE_COMPOSITION = "multiply" as const;
 
 /**

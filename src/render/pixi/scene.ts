@@ -49,7 +49,7 @@ import { BRUME, type DecorBordures } from "../couches/decor";
 import {
   type ArbreOmbre,
   cuireTachesOmbre,
-  MODE_ACCUMULATION,
+  MODE_ACCUMULATION_GPU,
   MODE_COMPOSITION,
   ombresAPoser,
 } from "../couches/ombres";
@@ -401,7 +401,13 @@ export class SceneParcelle {
       sprite.height = o.hauteurPx;
       // Deux ombres superposées ne sont pas plus sombres qu'une seule : c'est la
       // saturation, obtenue sans compter les recouvrements.
-      sprite.blendMode = MODE_ACCUMULATION;
+      //
+      // `MODE_ACCUMULATION_GPU` et non `MODE_ACCUMULATION` : le mode Canvas
+      // (`darken`) est un mode AVANCÉ pour Pixi, donc un shader qui lit le fond
+      // — lecture qui échoue dans une `RenderTexture` fraîchement effacée et
+      // assombrit le quad entier au lieu du seul disque. C'est ce qui faisait
+      // l'escalier de rectangles le long du bord de la parcelle.
+      sprite.blendMode = MODE_ACCUMULATION_GPU;
       this.pinceau.addChild(sprite);
     }
     this.app.renderer.render({ container: this.pinceau, target: this.masque, clear: true });
