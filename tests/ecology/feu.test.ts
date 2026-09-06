@@ -469,7 +469,15 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
     }));
     const sousCouvert = chargeCombustible(hetres, herbe, litiere, cote, sombre);
     const aDecouvert = chargeCombustible(hetres, herbe, litiere, cote, ouvert);
-    expect(sousCouvert.moyenne).toBeLessThan(aDecouvert.moyenne / 2);
+    // L'ombre divise la charge par 1,5 dans ce peuplement-ci, non plus par 2 :
+    // elle n'agit QUE sur le compartiment de SURFACE. C'est ce que disent les
+    // modèles de comportement du feu — le couvert n'éteint pas sa propre
+    // biomasse, il maintient la litière humide et à l'abri du vent. Rothermel
+    // (1983, table II-6) chiffre ce dernier effet : le vent à hauteur de flamme
+    // vaut 0,4 fois le vent de référence en terrain découvert et 0,1 sous une
+    // futaie dense, soit un rapport de 0,25 — l'ordre de grandeur de notre
+    // `PORTANCE_SOUS_COUVERT`.
+    expect(sousCouvert.moyenne).toBeLessThan(0.75 * aDecouvert.moyenne);
   });
 
   /**
@@ -499,7 +507,7 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
    * un incendie d'essai a cessé de consumer quoi que ce soit. Le feu mérite sa
    * propre passe, pas un raccourci en fin de chantier.
    */
-  it.fails("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
+  it("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
     const cote = 20;
     const litiere = new Array(cote * cote).fill(400);
     const herbe = new Array(cote * cote).fill(0);
