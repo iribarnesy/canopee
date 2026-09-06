@@ -77,8 +77,10 @@ pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 | `soilN` | azote minéral, g/m² |
 | `soilHerbe` | couverture herbacée ∈ [0,1] |
 | `soilHerbeBiomasse` | herbe SUR PIED — elle reste quand l'herbe jaunit |
+| `soilHerbeHumidite` | humidité VÉCUE du tapis ∈ [0,1] : la surface, lissée sur ~6 semaines — la pelouse grillée |
 | `soilLitiereCG` | litière, gC/m² : le tapis de novembre, le paillage, les cendres |
 | `soilBoisAuSol` | bois mort COUCHÉ, gC/m² : où poser des troncs |
+| `soilBoisEnTravers` | part de ce bois qui BARRE l'eau ∈ [0,1] : le tronc en travers de la pente |
 | `soilRavageurs` | pression de ravageurs — la TACHE de défoliation, pas sa moyenne |
 | `soilEpaisseurPerdueCm` | érosion cumulée, signée : négatif = dépôt |
 | `soilNappeCm` | profondeur de la nappe, cm |
@@ -91,7 +93,7 @@ pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 `y`, `heightM`, `ageWeeks`, `stress`, `fruitsKg`, `hauteurElagueeM`, `protege`,
 `chandelle`, `teteTrogneM`, `recepages`, `vigueur`, `dommageHydraulique`,
 `mortSemaine`, `brulEeSemaine`, `causeMort`, `derniereLeveeSemaine`,
-`fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`.
+`floraison`, `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`.
 
 **Ce qui s'est passé depuis le dernier instantané** : `events`, `refusals`,
 `morts` (avec `id` et position), `chutes` (chandelles abattues : direction et
