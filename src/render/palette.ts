@@ -258,6 +258,27 @@ export interface CelluleSol {
   herbeBiomasse: number;
   /** litière au sol, gC/m² : `soilLitiereCG` */
   litiereCG: number;
+  /**
+   * Lumière relative arrivant au sol ∈ [0,1] : `soilLumiere`.
+   *
+   * **C'est la grandeur qui manquait pour que ça ressemble à une forêt**, et
+   * elle existait depuis le début : `computeGroundLight` la calcule à chaque
+   * tick, le protocole la transporte, et le rendu ne la lisait pas. Sans elle,
+   * le sol d'une futaie fermée est aussi clair que celui d'une clairière — et
+   * l'ombre portée ne pouvait pas y suppléer, puisqu'elle SATURE à l'opacité
+   * d'un seul arbre (`OPACITE_OMBRE`, voulu, pour éviter les puits d'encre).
+   * Un couvert fermé ne pouvait donc jamais assombrir le sol de plus d'un tiers.
+   *
+   * Les deux mécanismes ne disent pas la même chose et se complètent : la tache
+   * portée donne l'ombre DIRECTIONNELLE d'un houppier sur du sol dégagé, celle
+   * qu'on lit pour savoir où le soleil tombe ; la lumière au sol donne
+   * l'ambiance SOUS le couvert, celle qui décide de ce qui germe. La seconde
+   * est de loin la plus fonctionnelle des deux — c'est elle qui commande
+   * `couvertureMax` pour l'herbe et la régénération.
+   *
+   * Absent = pas de couvert connu, le sol est en pleine lumière.
+   */
+  lumiere?: number;
 }
 
 /** La même cellule, réduite à ses paliers. C'est ce qui entre dans le cache. */
@@ -266,6 +287,7 @@ export interface CelluleQuantifiee {
   herbe: number;
   herbeBiomasse: number;
   litiere: number;
+  lumiere: number;
 }
 
 export function quantifier(c: CelluleSol): CelluleQuantifiee {
@@ -274,6 +296,7 @@ export function quantifier(c: CelluleSol): CelluleQuantifiee {
     herbe: palier(c.herbe),
     herbeBiomasse: palier(c.herbeBiomasse),
     litiere: palier(c.litiereCG / LITIERE_PLEINE_CG),
+    lumiere: palier(c.lumiere ?? 1),
   };
 }
 
@@ -287,6 +310,33 @@ export function quantifier(c: CelluleSol): CelluleQuantifiee {
  * moins aussi tôt que les ligneux *(à calibrer)*.
  */
 export const SEUIL_GRILLE = 0.42;
+
+/**
+ * Le sol le plus sombre qu'un couvert fermé puisse donner, en facteur de clarté.
+ *
+ * **Pas zéro, et pour la même raison que l'ombre portée n'est pas noire** : le
+ * sous-bois d'une hêtraie fermée reçoit ~1 % de la lumière du jour
+ * (`MAX_EXTINCTION`), mais l'œil, lui, s'y adapte — un sous-bois n'est pas noir
+ * pour qui s'y trouve, il est sombre et vert. Rendre la physique au pied de la
+ * lettre donnerait un trou d'encre au milieu de la parcelle, et on ne verrait
+ * plus rien de ce qui s'y passe : ni les semis, ni le bois au sol, ni les
+ * marques d'action. 0,52 est un choix de dessin, assumé comme tel.
+ */
+export const COUVERT_LE_PLUS_SOMBRE = 0.52;
+
+/**
+ * Facteur de clarté du sol pour une lumière au sol donnée.
+ *
+ * La racine et non la valeur brute : l'extinction du couvert est exponentielle
+ * (`exp(-k·LAI)`), si bien que la moitié de l'échelle est écrasée sous 0,2 et
+ * qu'un rendu linéaire ferait un saut brutal entre « clairière » et « noir ».
+ * L'œil, lui, répond à peu près à la racine de l'éclairement — c'est la même
+ * raison qui fait qu'on encode les images en gamma.
+ */
+export function ombreDuCouvert(lumiere: number): number {
+  const l = Math.min(1, Math.max(0, lumiere));
+  return COUVERT_LE_PLUS_SOMBRE + (1 - COUVERT_LE_PLUS_SOMBRE) * Math.sqrt(l);
+}
 
 /**
  * La couleur d'une cellule de sol, à partir de ses paliers et de la semaine.
@@ -318,7 +368,13 @@ export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
   // complètement opaque, même à saturation — un tapis de feuilles laisse
   // toujours passer des touffes, et un brun plein tue la lecture du sol.
   const tapis = valeurDuPalier(q.litiere);
-  return melange(avecHerbe, LITIERE, 0.45 * tapis);
+  const matiere = melange(avecHerbe, LITIERE, 0.45 * tapis);
+
+  // Puis l'OMBRE DU COUVERT, qui n'est pas une matière mais une lumière : elle
+  // ne mélange pas une couleur, elle assombrit celle qui est là. C'est ce qui
+  // fait qu'un sous-bois fermé est sombre et qu'une trouée est claire, et c'est
+  // le premier signal qui dit « forêt » plutôt que « objets posés sur un pré ».
+  return eclairer(matiere, ombreDuCouvert(valeurDuPalier(q.lumiere)));
 }
 
 // ── L'eau libre ─────────────────────────────────────────────────────────────
@@ -392,5 +448,9 @@ export function estInondee(debordementMm: number): boolean {
  * une chaîne coûterait une allocation par cellule et par semaine.
  */
 export function signatureCellule(q: CelluleQuantifiee): number {
-  return ((q.humidite * NIVEAUX + q.herbe) * NIVEAUX + q.herbeBiomasse) * NIVEAUX + q.litiere;
+  return (
+    (((q.humidite * NIVEAUX + q.herbe) * NIVEAUX + q.herbeBiomasse) * NIVEAUX + q.litiere) *
+      NIVEAUX +
+    q.lumiere
+  );
 }

@@ -171,6 +171,14 @@ export interface DonneesSol {
   /** `Snapshot.soilLitiereCG` */
   litiereCG: Float32Array;
   /**
+   * `Snapshot.soilLumiere` : la lumière arrivant au sol ∈ [0,1], par cellule.
+   *
+   * Absente = pas de couvert connu, le sol est en pleine lumière. Le repli est
+   * volontairement le cas CLAIR : une scène qui ne transporte pas la grandeur
+   * doit rendre ce qu'elle rendait avant, pas une parcelle noire.
+   */
+  lumiere?: Float32Array;
+  /**
    * `StationInfo.enEau` : les cellules d'eau libre, fixées avec la station.
    * Absent = parcelle sans ruisseau ni mare.
    */
@@ -406,6 +414,7 @@ function teintePave(
   let herbe = 0;
   let biomasse = 0;
   let litiere = 0;
+  let lumiere = 0;
   let z = 0;
   let relief = 0;
   let n = 0;
@@ -420,6 +429,7 @@ function teintePave(
       herbe += donnees.herbe[i] ?? 0;
       biomasse += donnees.herbeBiomasse[i] ?? 0;
       litiere += donnees.litiereCG[i] ?? 0;
+      lumiere += donnees.lumiere?.[i] ?? 1;
       z += donnees.altitudesM[i] ?? 0;
       relief += facteurRelief(donnees.altitudesM, donnees.coteM, x, y, penteReference);
       n++;
@@ -431,6 +441,7 @@ function teintePave(
     herbe: herbe / n,
     herbeBiomasse: biomasse / n,
     litiereCG: litiere / n,
+    lumiere: lumiere / n,
   });
   return { teinte: eclairer(couleurSol(q, semaineAnnee), relief / n), z: z / n };
 }

@@ -179,6 +179,7 @@ function figerLeSol(
   state: GameState,
   station: Station,
   debordementMm: Float32Array<ArrayBufferLike>,
+  lumiereAuSol: Float32Array<ArrayBufferLike>,
   semaineAnnee: number,
 ) {
   const arrondi = (a: readonly number[] | Float32Array<ArrayBufferLike>, d = 3) =>
@@ -197,6 +198,10 @@ function figerLeSol(
     // `soilDebordementMm` transporte (protocol.ts). Confondre les deux
     // inondait la parcelle entière sur l'aperçu.
     debordementMm: arrondi(debordementMm, 2),
+    // La lumière arrivant au sol, du résultat du tick : c'est elle qui rend un
+    // sous-bois sombre et une trouée claire. Le rendu ne l'avait jamais eue, et
+    // sans elle une futaie fermée a le sol d'une clairière.
+    lumiere: arrondi(lumiereAuSol, 3),
     altitudesM: arrondi(altitudeParCellule(station.relief, dims), 2),
     waterMm:
       EAU_PART === undefined
@@ -267,6 +272,7 @@ function main() {
   const aEcrire = new Set(ANS);
   const rapports: string[] = [];
   let dernierDebordement: Float32Array<ArrayBufferLike> = new Float32Array(COTE_M * COTE_M);
+  let derniereLumiere: Float32Array<ArrayBufferLike> = new Float32Array(COTE_M * COTE_M).fill(1);
   // La trajectoire année par année : c'est elle qui dit OÙ est le pire cas,
   // et ce n'est plus là où le premier jet l'avait trouvé.
   process.stderr.write("an\ttiges\tvivantes\tchandelles\thmax\n");
@@ -277,6 +283,7 @@ function main() {
     const semaine = advanceWeek(state, w, []);
     state = semaine.state;
     dernierDebordement = semaine.debordementParCellule;
+    derniereLumiere = semaine.lumiereAuSol;
     // Les semaines demandées de la DERNIÈRE année, figées au passage.
     const anEnCours = Math.floor(i / 52) + 1;
     if (anEnCours === dernierAn && SEMAINES.includes(i % 52)) {
@@ -287,7 +294,13 @@ function main() {
           coteM: COTE_M,
           week: i,
           trees: figer(state),
-          sol: figerLeSol(state, station, semaine.debordementParCellule, i % 52),
+          sol: figerLeSol(
+            state,
+            station,
+            semaine.debordementParCellule,
+            semaine.lumiereAuSol,
+            i % 52,
+          ),
         })}\n`,
       );
     }
@@ -307,7 +320,7 @@ function main() {
         coteM: COTE_M,
         week: an * 52,
         trees,
-        sol: figerLeSol(state, station, dernierDebordement, (an * 52 - 1) % 52),
+        sol: figerLeSol(state, station, dernierDebordement, derniereLumiere, (an * 52 - 1) % 52),
       })}\n`,
     );
     rapports.push(recensement(an, fichier, trees));

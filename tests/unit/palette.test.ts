@@ -10,12 +10,14 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   type CelluleSol,
+  COUVERT_LE_PLUS_SOMBRE,
   couleurHerbe,
   couleurSol,
   eclairer,
   LITIERE_PLEINE_CG,
   melange,
   NIVEAUX,
+  ombreDuCouvert,
   palier,
   phaseAnnuelle,
   quantifier,
@@ -69,7 +71,15 @@ describe("la quantification, qui fait vivre le cache de morceaux", () => {
       for (let b = 0; b < NIVEAUX; b++) {
         for (let c = 0; c < NIVEAUX; c++) {
           for (let d = 0; d < NIVEAUX; d++) {
-            vues.add(signatureCellule({ humidite: a, herbe: b, herbeBiomasse: c, litiere: d }));
+            vues.add(
+              signatureCellule({
+                humidite: a,
+                herbe: b,
+                herbeBiomasse: c,
+                litiere: d,
+                lumiere: 0,
+              }),
+            );
             compte++;
           }
         }
@@ -114,7 +124,7 @@ describe("le sol dit ce que le moteur calcule", () => {
           for (let l = 0; l < NIVEAUX; l++) {
             for (const semaine of [5, 18, 30, 45]) {
               const t = couleurSol(
-                { humidite: h, herbe: g, herbeBiomasse: b, litiere: l },
+                { humidite: h, herbe: g, herbeBiomasse: b, litiere: l, lumiere: NIVEAUX - 1 },
                 semaine,
               );
               expect(clarte(t)).toBeLessThan(190);
@@ -134,7 +144,10 @@ describe("le sol dit ce que le moteur calcule", () => {
         fc.double({ min: 0.5, max: 1.5, noNaN: true }),
         (h, g, semaine, facteur) => {
           const t = eclairer(
-            couleurSol({ humidite: h, herbe: g, herbeBiomasse: g, litiere: 0 }, semaine),
+            couleurSol(
+              { humidite: h, herbe: g, herbeBiomasse: g, litiere: 0, lumiere: palier(1) },
+              semaine,
+            ),
             facteur,
           );
           const e = versEntier(t);
@@ -231,5 +244,61 @@ describe("la soif se voit sur l'herbe, pas seulement sur la terre", () => {
     const foin = couleurHerbe(28, 1, 0);
     const grillee = couleurHerbe(28, 0.2, 1);
     expect(clarte(foin)).toBeGreaterThan(clarte(grillee));
+  });
+});
+
+describe("l'ombre du couvert : ce que le moteur savait et que le rendu ignorait", () => {
+  it("**un sol sous couvert fermé est plus sombre qu'une trouée**", () => {
+    // Le défaut, et c'est celui qui empêchait le plus la scène de ressembler à
+    // une forêt : `computeGroundLight` calcule la lumière au sol de chaque
+    // cellule à chaque tick, le protocole la transporte sous
+    // `soilLumiere`, et le rendu ne la lisait pas. Le sol d'une futaie fermée
+    // avait donc exactement la couleur de celui d'une clairière.
+    //
+    // L'ombre PORTÉE ne pouvait pas y suppléer, et pas par accident : elle
+    // SATURE à l'opacité d'un seul arbre (`OPACITE_OMBRE`), ce qui est voulu
+    // pour éviter les puits d'encre. Un couvert fermé ne pouvait donc jamais
+    // assombrir le sol de plus d'un tiers, quel que soit le nombre d'arbres.
+    const sol = (lumiere: number) =>
+      couleurSol(
+        quantifier({ humidite: 0.5, herbe: 0.6, herbeBiomasse: 0.4, litiereCG: 200, lumiere }),
+        28,
+      );
+    expect(clarte(sol(0.02))).toBeLessThan(clarte(sol(1)) * 0.75);
+  });
+
+  it("croît avec la lumière, sans saut ni palier vide", () => {
+    let precedent = -1;
+    for (const l of [0, 0.05, 0.2, 0.4, 0.7, 1]) {
+      const c = ombreDuCouvert(l);
+      expect(c).toBeGreaterThanOrEqual(precedent);
+      precedent = c;
+    }
+    expect(ombreDuCouvert(1)).toBeCloseTo(1, 6);
+    expect(ombreDuCouvert(0)).toBeCloseTo(COUVERT_LE_PLUS_SOMBRE, 6);
+  });
+
+  it("**ne descend jamais au noir, même sous une hêtraie fermée**", () => {
+    // La physique dirait ~1 % de lumière sous un couvert fermé
+    // (`MAX_EXTINCTION`). La rendre au pied de la lettre ferait un trou d'encre
+    // au milieu de la parcelle, et on ne verrait plus rien de ce qui s'y
+    // passe : ni les semis, ni le bois au sol, ni les marques d'action. C'est
+    // un choix de dessin, et il est borné pour qu'on ne puisse pas le
+    // durcir par inadvertance jusqu'à rendre le sous-bois illisible.
+    expect(COUVERT_LE_PLUS_SOMBRE).toBeGreaterThan(0.4);
+  });
+
+  it("la grandeur absente vaut PLEINE LUMIÈRE, jamais l'obscurité", () => {
+    // Le repli compte : une scène qui ne transporte pas la lumière au sol doit
+    // rendre ce qu'elle rendait avant, pas une parcelle noire.
+    const sans = quantifier({ humidite: 0.5, herbe: 0.6, herbeBiomasse: 0.4, litiereCG: 200 });
+    const pleine = quantifier({
+      humidite: 0.5,
+      herbe: 0.6,
+      herbeBiomasse: 0.4,
+      litiereCG: 200,
+      lumiere: 1,
+    });
+    expect(sans.lumiere).toBe(pleine.lumiere);
   });
 });

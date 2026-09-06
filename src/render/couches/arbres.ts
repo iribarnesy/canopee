@@ -159,6 +159,28 @@ export const MODELE_HAUT = 0.3;
 export const MODELE_COTE = 0.13;
 
 /**
+ * De combien le flanc à l'ombre d'un tronc est assombri.
+ *
+ * Le trait entier descend d'un cran, et une arête claire vient par-dessus : la
+ * moyenne du fût ne monte donc pas — c'est même l'inverse, ce qui est voulu.
+ * Un tronc n'est pas l'information qu'on vient chercher dans cette vue, et il
+ * n'a aucune raison d'être l'objet le plus clair de l'image.
+ */
+export const OMBRE_DU_BOIS = 0.86;
+
+/** De combien l'arête éclairée d'un tronc est éclaircie, du côté du soleil. */
+export const LUMIERE_DU_BOIS = 1.14;
+
+/**
+ * Épaisseur, en pixels, à partir de laquelle un bois reçoit son arête claire.
+ *
+ * En dessous, l'arête ferait moins d'un pixel : invisible, et payée quand même.
+ * C'est ce seuil qui garde le surcoût de cuisson à quelques pour cent — la
+ * quasi-totalité des segments d'un houppier sont des brindilles.
+ */
+export const EPAISSEUR_ARETE_PX = 3;
+
+/**
  * Taille écran maximale d'une vignette cuite, en pixels.
  *
  * Au-delà, on cesse de grossir la vignette et on l'étire : un arbre qui occupe
@@ -447,13 +469,36 @@ export function cuireVignette(
     // donc l'écorce à mesure que le bois s'affine.
     const finesse = Math.min(1, s.rayonDepartM / Math.max(1e-6, rayonAuPiedM(hauteurM) * 0.35));
     const base = haut && fiche.ecorceHaute ? fiche.ecorceHaute : fiche.ecorce;
-    ctx.strokeStyle = versCss(eclairer(base, 0.55 + 0.45 * finesse));
+    // Le fût est un CYLINDRE, et il était peint comme un trait.
+    //
+    // **C'est ce qui faisait la futaie de mâts blancs.** À l'échelle de la
+    // parcelle, une friche de bouleaux sortait en semis de poteaux d'un blanc
+    // uniforme — l'objet le plus clair et le plus régulier de l'image, donc
+    // celui que l'œil attrape en premier, alors qu'un tronc n'est pas
+    // l'information qu'on vient chercher. Le feuillage venait de recevoir son
+    // modelé ; le bois, lui, restait un aplat, et l'écart entre les deux se
+    // voyait plus que chacun séparément.
+    //
+    // On assombrit donc le trait entier d'un cran, et on repose par-dessus une
+    // arête claire, décalée du côté de la lumière. Deux traits au lieu d'un,
+    // mais SEULEMENT sur le bois porteur : sur une brindille d'un pixel, une
+    // arête ne se voit pas et coûte quand même. C'est là aussi ce qui borne le
+    // surcoût de cuisson à quelques pour cent.
+    ctx.strokeStyle = versCss(eclairer(base, (0.55 + 0.45 * finesse) * OMBRE_DU_BOIS));
     ctx.lineWidth = epaisseur;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(a.sx, a.sy);
     ctx.lineTo(b2.sx, b2.sy);
     ctx.stroke();
+    if (epaisseur >= EPAISSEUR_ARETE_PX) {
+      ctx.strokeStyle = versCss(eclairer(base, (0.55 + 0.45 * finesse) * LUMIERE_DU_BOIS));
+      ctx.lineWidth = epaisseur * 0.38;
+      ctx.beginPath();
+      ctx.moveTo(a.sx - epaisseur * 0.26, a.sy);
+      ctx.lineTo(b2.sx - epaisseur * 0.26, b2.sy);
+      ctx.stroke();
+    }
   }
 
   // ── Le feuillage ──────────────────────────────────────────────────────
