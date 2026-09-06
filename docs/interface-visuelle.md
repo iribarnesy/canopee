@@ -453,6 +453,58 @@ du moteur sont sourcées**. C'est la même discipline appliquée à l'image.
 4. la **souffrance** (vigueur basse, cime sèche, feuillage jauni hors saison) ;
 5. la **structure** du peuplement (qui domine, les trous, la lisière).
 
+### Ce que la première passe de rendu a appris (retour du 2026-09-06)
+
+Le verdict était : « on dirait pas une forêt, on dirait vraiment trop un
+ordinateur qui simule une forêt ». La consigne qui l'accompagne tranche un
+arbitrage qu'il faut écrire, parce qu'il commande tous les choix suivants :
+
+> Quitte à choisir entre réalisme (trop de détails) et minimalisme (pas assez),
+> je préfère le minimalisme avec juste ce qu'il faut pour que ce soit joli. Il
+> faut mettre en avant ce qui est FONCTIONNEL.
+
+Ce qui est fonctionnel est énuméré, et c'est la hiérarchie de dessin :
+
+- le **feuillage** dit si l'arbre sèche ;
+- le **branchage** dit s'il faut élaguer ;
+- un arbre **élagué** fait moins d'ombre en dessous ;
+- les **fruits** quand il y en a ;
+- les **ombres aux bons endroits**.
+
+Et ce qui ne l'est pas : « les taches d'ombre autour de la parcelle, c'est pas
+important ».
+
+**Le diagnostic, et il vaut plus que la liste des corrections.** Quatre des cinq
+défauts trouvés n'étaient pas des défauts de goût : c'étaient des grandeurs du
+moteur qui n'arrivaient pas jusqu'au pixel. La lumière au sol était calculée,
+transportée, jamais lue. La sécheresse ne colorait que le sol nu, donc jamais
+l'herbe qui le couvre. Les paliers étaient lus comme des parts, si bien qu'une
+couverture de 100 % gardait de la terre nue. Le modelé du feuillage était un
+tirage au sort, c'est-à-dire du bruit là où on attendait une direction de
+lumière.
+
+D'où la règle de méthode : **quand une scène « fait synthétique », chercher
+d'abord la grandeur débranchée, pas le réglage à retoucher.** Un rendu qui
+n'affiche pas ce que le moteur sait ne se corrige pas en changeant une teinte —
+et une teinte changée pour compenser une donnée manquante rend le défaut
+permanent.
+
+**Ce qui reste ouvert après cette passe :**
+
+- **Un arbre élagué ne fait pas moins d'ombre**, et le rendu ne peut pas le
+  décider seul : `hauteurElagueeM` n'entre dans aucun calcul de lumière du
+  moteur (vérifié sur `light.ts`, `trees.ts`, `tick.ts`). Le dessiner serait
+  inventer une différence que la simulation ne fait pas — exactement la
+  « fausse réalité » que le retour reproche. C'est donc une carte MOTEUR :
+  l'élagage relève la base du houppier, la lumière passe dessous.
+- **Les fruits ne sont pas dessinés.** Le moteur a `fruits` et le protocole un
+  avancement ; il manque le tracé et le champ dans la pose.
+- **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
+- **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
+  panneau face caméra : un côté éclairé franc mentirait dès la première
+  rotation. La sortie serait de cuire deux variantes par orientation, ce qui
+  double l'atlas — à peser quand le reste sera fait.
+
 ### La palette
 
 Les couleurs de `ui/couleurs.ts` sont des couleurs **catégorielles de
@@ -662,6 +714,50 @@ Des couches d'ambiance pilotées par l'état, mixées en continu (Web Audio) :
 boucles courtes en `.ogg` (< 500 ko au total), dans `data/sons/`, avec licence
 et provenance documentées — la même exigence de sourcing que pour les valeurs
 écologiques. Un réglage de volume et un bouton muet sont obligatoires.
+
+### 5.11 Le temps qui passe : un seul rendu, plusieurs vitesses
+
+**Précisé par le commanditaire (2026-09-06), et ça change l'ordre des lots plus
+que leur contenu.** La §6.8 décrivait déjà une politique de vitesse — bilan de
+période, calque des changements, rembobinage — mais elle partait du rendu
+au tick et ajoutait des dispositifs pour compenser ce qu'on ne voit pas. La
+demande prend le problème par l'autre bout, et elle est plus simple :
+
+1. **Le rendu TEMPS RÉEL est la brique de base**, pas une option de fin. On y
+   voit le vent sur l'herbe et les feuillages, les oiseaux qui s'envolent —
+   l'ambiance continue de la §6.1. C'est le BONUS au sens du calendrier : il
+   vient quand le reste est fait. Mais c'est la brique dont tout le reste
+   découle, et il ne faut donc rien construire qui l'empêche.
+2. **Passer d'une semaine à la suivante est INSTANTANÉ.** Un tick, et la scène
+   est celle de la semaine d'après. Il n'y a aucun sens à faire souffler le
+   vent pendant cette transition-là : on ne regarde pas le temps s'écouler, on
+   change de semaine.
+3. **Une fois le temps réel acquis, l'ellipse n'est plus un cas particulier :
+   c'est une ANIMATION.** Sauter un mois, c'est jouer l'animation de ce qui a
+   changé dans le mois — par exemple tous les arbres morts pendant la période,
+   animés ensemble. Et le principe ne dépend pas de la durée : une semaine, un
+   mois, dix ans, c'est la même mécanique avec plus ou moins à montrer. C'est
+   ce que la §6.8 appelait « fusionner les animations », mais posé comme la
+   règle générale au lieu d'un palier de vitesse.
+4. **Un feu, une crue : on repasse en temps réel.** Ce sont les moments où le
+   joueur doit voir se dérouler, pas résumer. L'`autopause` existante et le
+   « mode cinéma » de la §6.8 sont la même idée, et deviennent le comportement
+   par défaut de la catastrophe.
+
+**Ce que ça impose au rendu, dès maintenant.** Rien de neuf, et c'est
+rassurant : la règle « aucune primitive vectorielle par image » va déjà dans ce
+sens, puisque du temps réel demande un budget par image tenu, pas un rendu
+étalé sur plusieurs images. Deux points à surveiller quand même :
+
+- **Une animation continue ne doit pas invalider un cache de cuisson.** Le vent
+  sur les feuillages ne peut pas passer par une recuisson des vignettes : ce
+  sera une déformation à la POSE (un sprite qu'on incline), pas un redessin.
+  C'est exactement ce que le montage Pixi rend gratuit et que le Canvas 2D
+  rendrait impossible — une raison de plus pour D1.
+- **L'ellipse a besoin de savoir CE QUI a changé**, pas seulement de l'état
+  d'arrivée. C'est déjà ce que le protocole prépare avec les gestes rapportés
+  par les actions (`actions.ts`) et ce que la §6.8 demande au worker pour le
+  rembobinage. Il faudra la même chose pour les morts et les naissances.
 
 ## 6. Inventaire des animations
 
