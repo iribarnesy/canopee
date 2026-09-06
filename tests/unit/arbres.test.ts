@@ -251,6 +251,28 @@ describe("la pose : la résolution n'est pas la taille", () => {
     }
   });
 
+  it("**le fourré aussi tient dans sa boîte, et n'a pas de barre pour base**", () => {
+    // Le fourré avait sa propre boîte — carrée, de côté `taillePx`, remplie sur
+    // toute sa hauteur — et il en sortait un RECTANGLE : monticule tranché net
+    // en bas par une barre sombre rectiligne, coupé à la verticale sur les deux
+    // flancs. Visible au zoom ×16 de la friche, où le roncier faisait un pavé.
+    //
+    // Or `fourreEnArbre` déclare déjà `houppierRatio: 0.5` — « un fourré est
+    // aussi large que haut ». Il n'avait pas besoin d'un cas particulier, mais
+    // qu'on lise ce qu'il déclarait : c'est ce que cet essai garde acquis, en
+    // vérifiant que sa boîte suit la même règle que celle d'un arbre.
+    const { fabriquer } = fabriqueBouchon();
+    const v = vue();
+    const hauteurM = 1.4;
+    const ronce = arbre({ especeId: "rubus_fruticosus", heightM: hauteurM });
+    const vignette = cuireVignette(classeDe(ronce, 2.5, v), hauteurM, 0.5, fabriquer);
+    const echelle = vignette.hautArbrePx / hauteurM;
+    expect(vignette.image.width / 2 / echelle).toBeGreaterThanOrEqual(0.5 * hauteurM);
+    // Et il garde une marge : la vignette est plus haute que le fourré, sinon
+    // les touffes du sommet sont rognées comme l'étaient celles des flancs.
+    expect(vignette.hautArbrePx).toBeLessThan(vignette.image.height);
+  });
+
   it("garde les proportions de la vignette", () => {
     const { fabriquer } = fabriqueBouchon();
     const v = vue();

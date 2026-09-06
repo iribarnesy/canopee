@@ -324,24 +324,6 @@ export function cuireVignette(
   // `taillePx` quantifie, et elle ne dépend pas de l'espèce.
   const hauteur = Math.max(6, Math.round(classe.taillePx * 1.5));
 
-  // ── Le fourré bas : une masse, pas un arbre ───────────────────────────
-  // Il garde la boîte carrée d'origine : une masse agrégée remplit ce qu'on lui
-  // donne, elle n'a pas de houppier dont il faudrait mesurer la largeur.
-  if (fiche.fourre) {
-    const largeurFourre = Math.max(4, Math.round(classe.taillePx));
-    const image = fabriquer(largeurFourre, hauteur);
-    const ctx = image.getContext("2d");
-    if (!ctx) throw new Error("contexte 2d indisponible");
-    const echelleFourre = (hauteur - 2) / Math.max(0.1, hauteurM);
-    dessinerFourre(ctx, fiche, classe, largeurFourre, hauteur, echelleFourre, hauteurM);
-    return {
-      image,
-      piedX: largeurFourre / 2,
-      piedY: hauteur - 1,
-      hautArbrePx: hauteur - 2,
-    };
-  }
-
   // **La marge, et pourquoi elle existe.** Le squelette s'arrête au bout du
   // rameau ; la feuille, elle, dépasse encore de sa propre longueur, et la
   // tache de feuillage davantage. Sans marge, la planche de la haie sortait
@@ -363,6 +345,23 @@ export function cuireVignette(
   const piedX = largeur / 2;
   const piedY = hauteur - 1;
   const hautArbrePx = hauteurM * echelle;
+
+  // ── Le fourré bas : une masse, pas un arbre ───────────────────────────
+  //
+  // **Il prend la MÊME boîte que les arbres, et c'est la correction.** Il avait
+  // la sienne — carrée, de côté `taillePx`, remplie sur toute sa hauteur — et
+  // le résultat était un rectangle : le monticule était tranché net en bas par
+  // une barre sombre rectiligne et coupé à la verticale sur les deux flancs.
+  // Visible au zoom ×16 de la friche, où le roncier sortait en pavé.
+  //
+  // Or `fourreEnArbre` déclare déjà `houppierRatio: 0.5` — « un fourré est
+  // aussi large que haut » — et c'est exactement ce que la boîte commune sait
+  // lire depuis qu'elle mesure le houppier. Le fourré n'avait pas besoin d'un
+  // cas particulier : il avait besoin qu'on lise ce qu'il déclarait.
+  if (fiche.fourre) {
+    dessinerFourre(ctx, fiche, classe, largeur, piedY, echelle, hauteurM);
+    return { image, piedX, piedY, hautArbrePx };
+  }
 
   const sujet: Sujet = {
     id: classe.variante * 7919 + classe.palier * 31,
@@ -454,7 +453,7 @@ function dessinerFourre(
   fiche: FicheGraphique,
   classe: Classe,
   largeur: number,
-  hauteur: number,
+  pied: number,
   echelle: number,
   hauteurM: number,
 ): void {
@@ -462,23 +461,37 @@ function dessinerFourre(
   if (densite <= 0.02) return;
   const senescence = (classe.feuillage % PALIERS_FEUILLAGE) / (PALIERS_FEUILLAGE - 1);
   const teinte = couleurFeuillage(fiche, senescence);
-  const pied = hauteur - 1;
   const hautPx = Math.max(2, hauteurM * echelle);
-  // Un fourré déborde de son carreau : il est plus large que haut, toujours.
   const demiLargeur = Math.max(2, largeur / 2 - 1);
 
   // Le nombre de touffes suit la surface à couvrir, comme le feuillage d'un
   // arbre — mais ici la surface est celle du monticule entier.
   const touffes = Math.max(6, Math.round(demiLargeur * hautPx * densite * 0.05));
   const rayon = Math.max(1.2, Math.sqrt((demiLargeur * hautPx * 2.2) / (Math.PI * touffes)));
+  // **Les touffes rentrent d'un rayon**, sinon celles des bords sont coupées
+  // par le canevas et le monticule sort avec deux flancs verticaux nets. Le
+  // même raisonnement que la marge des arbres, au même endroit.
+  const demiUtile = Math.max(1, demiLargeur - rayon);
   const epines = fiche.feuillage.forme === "aiguille";
   for (let i = 0; i < touffes; i++) {
     const u = hacher(i, classe.palier, 0x3a91);
     const v = hacher(i * 13, classe.variante, 0x77c3);
     // Un profil de monticule : large en bas, resserré au sommet.
-    const t = v * v;
-    const x = largeur / 2 + (u - 0.5) * 2 * demiLargeur * (1 - t * 0.55);
-    const y = pied - t * hautPx;
+    //
+    // **Et non `v²`**, qui était le premier jet : la densité d'un tirage
+    // uniforme élevé au carré diverge en zéro, donc la plupart des touffes
+    // atterrissaient exactement sur la ligne de sol. Leurs moitiés basses s'y
+    // superposaient et s'y faisaient trancher par le bord du canevas : le
+    // fourré avait une BARRE sombre rectiligne pour base, ce qu'aucune
+    // broussaille n'a. Un exposant plus doux garde le monticule — plus fourni
+    // en bas qu'au sommet — sans l'empiler sur une seule ligne.
+    const t = v ** 1.35;
+    const x = largeur / 2 + (u - 0.5) * 2 * demiUtile * (1 - t * 0.55);
+    // La base ondule d'une fraction de rayon : une lisière de roncier n'est pas
+    // tirée au cordeau, et il suffit de peu pour que l'œil cesse d'y voir un
+    // bord de vignette.
+    const assise = pied - rayon * 0.45 * hacher(i * 17, classe.variante, 0x5c07);
+    const y = assise - t * hautPx;
     const r = rayon * (0.7 + 0.7 * hacher(i * 7, i, 0x51bd));
     ctx.fillStyle = versCss(eclairer(teinte, 0.86 + 0.28 * v));
     ctx.beginPath();
