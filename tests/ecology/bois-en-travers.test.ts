@@ -297,6 +297,20 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // le bois garde l'orientation qu'il a prise en tombant. Bras B : même bois,
     // même masse, même paillage, mais transversalité annulée — comme si tous
     // les troncs gisaient dans le sens de la pente. Seule l'orientation change.
+    //
+    // Ce test est long — deux bras, soixante ans, deux graines — et ce n'est
+    // pas du gras. Mesuré avant de raccourcir quoi que ce soit :
+    //
+    //  - SOIXANTE ANS sont nécessaires. À quarante, `piege` vaut 0,068 pour un
+    //    seuil à 0,15 et le rapport d'eau 0,9835 pour un seuil à 0,97 : deux
+    //    assertions sur trois échouent. Le bois doit pousser, mourir, tomber,
+    //    et seulement alors barrer. Raccourcir ne l'allégerait pas, ça le
+    //    falsifierait.
+    //  - LA PARCELLE aussi porte le phénomène. À trente mètres de côté, le
+    //    rapport d'eau vaut 0,957 ; à vingt, il remonte à 0,984 et l'assertion
+    //    tombe — une pente plus courte accumule moins de ruissellement, donc un
+    //    barrage y compte moins. À vingt-quatre, il ne reste que 0,0005 de
+    //    marge : plus rapide, mais fragile, ce qui est pire que lent.
     const station = {
       ...STATION,
       relief: { ...STATION.relief, pentePct: 15, bassinAmontHa: 0.4 },
@@ -338,7 +352,13 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
       }
       return { eau, piege, travers: n > 0 ? travers / n : 0 };
     };
-    const graines = [3, 11, 29];
+    // DEUX graines, pas trois. Chacune passe déjà seule (transversalité 0,11 à
+    // 0,17 pour un seuil à 0,08 ; eau 0,949 à 0,968 pour un seuil à 0,97), et
+    // la moyenne sert à amortir la plus juste des trois. Passer de trois à deux
+    // coûte 27 % de temps en moins sans rogner une marge : 0,1404 / 0,3279 /
+    // 0,9586 contre 0,1450 / 0,3113 / 0,9574 à trois. C'est la SEULE dimension
+    // de ce scénario qui ne porte pas le phénomène — voir plus bas.
+    const graines = [3, 11];
     const oriente = graines.map((g) => bras(g, false));
     const aPlat = graines.map((g) => bras(g, true));
     const moy = (r: typeof oriente, k: "eau" | "piege" | "travers") =>
