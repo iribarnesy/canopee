@@ -59,6 +59,8 @@ interface ArbreScene {
   /** `floraison` du protocole : part de la couronne en fleur ∈ [0,1] */
   floraison?: number;
   vigueur?: number;
+  /** `dommageHydraulique` du protocole : la cime sèche ∈ [0,1] */
+  dommageHydraulique?: number;
   /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
   fruitProgress?: number;
   /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -182,6 +184,10 @@ interface Options {
   fruitsKg?: number;
   /** Planche : part de la couronne en fleur ∈ [0,1], telle que le moteur la donne. */
   floraison?: number;
+  /** Planche : vigueur ∈ [0,1] imposée, pour juger les états de santé côte à côte. */
+  vigueur?: number;
+  /** Planche : dommage hydraulique ∈ [0,1] imposé — la cime sèche. */
+  dommageHydraulique?: number;
   /**
    * Planche : la base du houppier, en PART de la hauteur de l'arbre.
    *
@@ -330,6 +336,8 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             partFoliaire: t.chandelle ? 0 : f.part,
             senescence: f.senescence,
             vigueur: t.vigueur ?? 1,
+            ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
+            ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
             // Tels quels, sans repli inventé : absent veut dire « la scène ne
             // transporte pas la grandeur », donc pas de fruit — pas « zéro
             // fruit sur un arbre qui en porte ».
@@ -430,7 +438,8 @@ function planche(
       baseHouppierM: (options.baseHouppier ?? 0.25) * hauteurM,
       partFoliaire: options.nu ? 0 : 1,
       senescence: options.senescence ?? 0,
-      vigueur: 1,
+      vigueur: options.vigueur ?? 1,
+      ...(options.dommageHydraulique ? { dommageHydraulique: options.dommageHydraulique } : {}),
       ...(options.floraison ? { floraison: options.floraison } : {}),
       ...(options.fruitProgress ? { fruitProgress: options.fruitProgress } : {}),
       ...(options.fruitsKg ? { fruitsKg: options.fruitsKg } : {}),
@@ -629,6 +638,20 @@ const PLANCHE: Planche[] = [
     hauteurM: 18,
     titre: "le même arbre EN FUTAIE (fût nu sur les deux tiers) — baseHouppier 0,65",
     options: { baseHouppier: 0.65 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "betula_pendula", "pinus_sylvestris"],
+    hauteurM: 16,
+    titre: "santé · un arbre qui VÉGÈTE (vigueur 0,2 : houppier clairsemé et pâle)",
+    options: { vigueur: 0.2 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "betula_pendula", "pinus_sylvestris"],
+    hauteurM: 16,
+    titre: "santé · CIME SÈCHE (dommage hydraulique 0,45 : l'embolie ne se répare pas)",
+    options: { dommageHydraulique: 0.45 },
   },
   { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
   {

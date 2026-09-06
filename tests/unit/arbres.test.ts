@@ -15,6 +15,7 @@ import {
   posesDesArbres,
   separerLeFourre,
   tailleDePose,
+  teinteSelonVigueur,
   VARIANTES,
   VIGNETTE_MAX_PX,
 } from "../../src/render/couches/arbres";
@@ -529,5 +530,68 @@ describe("le fourré bas prend un autre chemin", () => {
     const a = fourre.map(fourreEnArbre).map((s) => s.id);
     const b = fourre.map(fourreEnArbre).map((s) => s.id);
     expect(a).toEqual(b);
+  });
+});
+
+describe("les états de santé : deux grandeurs, deux signaux", () => {
+  it("**la vigueur change la vignette : un arbre qui végète n'est pas un arbre sain**", () => {
+    // Elle voyageait jusqu'ici depuis le début et n'était PAS lue à la
+    // cuisson : un arbre qui végétait avait exactement le houppier d'un arbre
+    // florissant. C'est le signal d'alerte PRÉCOCE du moteur — un sujet dominé
+    // ou chroniquement assoiffé a une vigueur basse bien avant d'accumuler du
+    // stress — donc celui qui laisse encore le temps d'agir.
+    const v = vue();
+    expect(cleClasse(classeDe(arbre({ vigueur: 0.2 }), 30, v))).not.toBe(
+      cleClasse(classeDe(arbre({ vigueur: 1 }), 30, v)),
+    );
+  });
+
+  it("le dommage hydraulique aussi, et c'est une AUTRE grandeur", () => {
+    // La vigueur est réversible — l'arbre repart si les conditions
+    // reviennent ; l'embolie ne se répare pas. Les confondre dans une seule
+    // clé ferait dire à l'écran qu'un arbre guéri a retrouvé sa cime, ce qui
+    // est faux : il lui faut des années de bois neuf.
+    const v = vue();
+    expect(cleClasse(classeDe(arbre({ dommageHydraulique: 0.5 }), 30, v))).not.toBe(
+      cleClasse(classeDe(arbre({ dommageHydraulique: 0 }), 30, v)),
+    );
+  });
+
+  it("**la cime sèche par le HAUT, jamais par le bas**", () => {
+    // C'est une histoire de distance hydraulique aux racines : ce qui lâche en
+    // premier est ce qui est le plus loin, donc le sommet. Un arbre qui
+    // perdrait son feuillage bas serait un arbre broutté ou élagué, pas un
+    // arbre assoiffé — et l'œil sait faire la différence.
+    const { fabriquer } = fabriqueBouchon();
+    const v = vue();
+    const sain = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer, 4);
+    const sec = cuireVignette(
+      classeDe(arbre({ dommageHydraulique: 0.6 }), 30, v),
+      16,
+      0.35,
+      fabriquer,
+      4,
+    );
+    // Les deux vignettes existent et ont la même géométrie : c'est le FEUILLAGE
+    // qui manque en haut, pas l'arbre qui a rapetissé. Le bois reste dessiné,
+    // et c'est ce qui distingue une cime sèche d'un arbre simplement défeuillé.
+    expect(sec.hautArbrePx).toBeCloseTo(sain.hautArbrePx, 6);
+    expect(sec.image.height).toBe(sain.image.height);
+  });
+
+  it("un houppier sans vigueur pâlit vers le JAUNE, pas vers l'automne", () => {
+    // Une feuille d'octobre est franchement dorée ou rousse ; un arbre qui
+    // végète en juillet est d'un vert malade — plus clair, plus jaune, moins
+    // saturé. Confondre les deux ferait lire « l'automne arrive » là où le
+    // moteur dit « celui-ci ne va pas bien ».
+    const ete = { r: 86, g: 118, b: 62 };
+    const malade = teinteSelonVigueur(ete, 0);
+    expect(malade.r).toBeGreaterThan(ete.r);
+    expect(malade.b).toBeGreaterThan(ete.b);
+    // Mais il reste VERT : le vert domine encore, ce qui n'est plus vrai d'une
+    // feuille d'automne.
+    expect(malade.g).toBeGreaterThan(malade.b);
+    // Et un arbre en pleine vigueur ne bouge pas d'un cran.
+    expect(teinteSelonVigueur(ete, 1)).toEqual(ete);
   });
 });

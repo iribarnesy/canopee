@@ -114,6 +114,8 @@ interface ArbreScene {
   teteTrogneM?: number;
   /** vigueur ∈ [0,1] : un arbre qui végète a le houppier clairsemé */
   vigueur: number;
+  /** `dommageHydraulique` : la cime sèche, mémoire des sécheresses passées */
+  dommageHydraulique: number;
   /**
    * `baseHouppierM` : la base du houppier, m — en dessous, plus une branche
    * vivante. C'est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce, donc elle
@@ -161,6 +163,7 @@ function figer(state: GameState): ArbreScene[] {
       hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
       ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
       vigueur: arrondi(t.vigueur, 3),
+      dommageHydraulique: arrondi(s.dommageHydraulique, 3),
       baseHouppierM: arrondi(s.baseHouppierM, 2),
       floraison: arrondi(s.floraison, 3),
       fruitProgress: arrondi(s.fruitProgress, 3),

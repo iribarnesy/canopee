@@ -712,13 +712,33 @@ n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 
 | État | Ce qu'on voit | Donnée |
 |---|---|---|
-| Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` |
-| Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` |
+| Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` ✅ |
+| Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` ✅ |
 | Défoliation | couronne mangée par les ravageurs | `ravageurs` par cellule — **pas encore envoyé** |
 | Brouté | rameaux coupés net, plant rabougri en boule | `pousseTendreM` |
 | Frotté | écorce arrachée en bas du tronc | `frotteSemaine` |
 | Mort sur pied | chandelle grise, sans feuille | `chandelle`, `mortSemaine` |
 | Brûlé sur pied | chandelle noire | `brulEeSemaine` |
+
+**Deux grandeurs, et il faut les deux** — les confondre serait perdre
+l'essentiel de ce qu'elles disent. La **vigueur** est réversible : elle dit
+« cet arbre ne pousse pas à son potentiel », et le moteur souligne qu'elle
+descend bien avant le moindre stress, donc c'est l'alerte qui laisse encore le
+temps d'agir. Le **dommage hydraulique** ne se répare pas : l'embolie tue des
+vaisseaux, et l'arbre ne récupère qu'en fabriquant du bois neuf, ce qui prend
+des années. C'est ce qui explique les mortalités DIFFÉRÉES — un arbre meurt deux
+ou trois ans après la sécheresse, un été qui n'a rien d'exceptionnel — et un
+joueur qui ne voit pas la cime sèche ne comprend pas pourquoi.
+
+D'où deux dessins distincts : la vigueur éclaircit et PÂLIT le houppier
+entier ; le dommage le décapite. Et la cime sèche sèche par le HAUT, parce que
+c'est une histoire de distance hydraulique aux racines — un arbre qui perdrait
+son feuillage bas serait un arbre broutté ou élagué, ce que l'œil sait
+distinguer.
+
+La cime sèche s'applique aussi aux FRUITS : un rameau embolisé n'en porte pas.
+C'est le genre de détail qui ne se remarque pas tout de suite et qui, une fois
+vu, décrédibilise tout le reste.
 
 ### 5.7 Saisons, météo, lumière
 

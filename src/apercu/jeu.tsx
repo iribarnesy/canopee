@@ -39,6 +39,8 @@ interface Scene {
     /** `floraison` du protocole : part de la couronne en fleur ∈ [0,1] */
     floraison?: number;
     vigueur?: number;
+    /** `dommageHydraulique` du protocole : la cime sèche ∈ [0,1] */
+    dommageHydraulique?: number;
     /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
     fruitProgress?: number;
     /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -141,6 +143,7 @@ function Demo(): React.ReactElement {
         partFoliaire: t.chandelle ? 0 : part,
         senescence: espece && pheno ? senescenceDans(espece, pheno) : 0,
         vigueur: t.vigueur ?? 1,
+        ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
       };
     });
 

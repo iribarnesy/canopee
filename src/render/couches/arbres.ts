@@ -115,8 +115,36 @@ export interface ArbreAPoser {
   partFoliaire: number;
   /** avancement de la sénescence ∈ [0,1] — `senescenceFoliaire` */
   senescence: number;
-  /** vigueur ∈ [0,1] : un arbre qui végète a le houppier clairsemé */
+  /**
+   * Vigueur ∈ [0,1] : `Snapshot.vigueur`, la moyenne lissée du facteur limitant
+   * sur les derniers mois.
+   *
+   * **À ne pas confondre avec le stress**, et le moteur insiste : le stress ne
+   * monte que lorsque l'arbre est en danger de mort, la vigueur dit s'il pousse
+   * à son potentiel ou s'il végète. Un sujet dominé ou chroniquement assoiffé a
+   * une vigueur basse BIEN AVANT d'accumuler du stress — et c'est celui-là que
+   * les ravageurs trouvent. C'est donc le signal d'alerte précoce, celui qui
+   * laisse encore le temps d'agir, et c'est à ce titre qu'il vaut d'être vu.
+   *
+   * Elle voyageait déjà jusqu'ici et n'était PAS lue à la cuisson : un arbre
+   * qui végétait avait exactement le houppier d'un arbre florissant.
+   */
   vigueur: number;
+  /**
+   * Dommage hydraulique ∈ [0,1] : `Snapshot.dommageHydraulique`, la part du
+   * système conducteur mise hors service par l'embolie.
+   *
+   * **C'est la CIME SÈCHE, et elle ne se répare pas.** L'eau qui monte casse en
+   * colonnes sous la sécheresse sévère, et les vaisseaux embolisés ne
+   * redeviennent jamais fonctionnels — l'arbre ne récupère qu'en fabriquant du
+   * bois neuf, ce qui prend des années. C'est la mémoire des sécheresses
+   * passées, et c'est ce qui explique les mortalités DIFFÉRÉES : les arbres ne
+   * meurent pas l'année de la sécheresse mais deux ou trois ans après.
+   *
+   * Un joueur qui ne la voit pas ne comprend pas pourquoi ses arbres meurent
+   * un été qui n'a rien d'exceptionnel.
+   */
+  dommageHydraulique?: number;
 }
 
 /**
@@ -138,6 +166,52 @@ export const PALIERS_HAUTEUR = 12;
  * d'une clé de cache.
  */
 export const PALIERS_FUT = 6;
+
+/**
+ * Paliers de vigueur et de dommage hydraulique.
+ *
+ * Quatre chacun, et le compte ne coûte que ce qu'il sert : la très grande
+ * majorité des arbres d'une parcelle saine tombent dans le même palier, donc
+ * partagent la même vignette. Une clé de cache ne se démultiplie que là où les
+ * arbres diffèrent vraiment — et là, on VEUT qu'ils diffèrent à l'écran.
+ */
+export const PALIERS_SANTE = 4;
+
+/**
+ * Part de feuillage que garde un arbre de vigueur NULLE.
+ *
+ * Pas zéro : un arbre qui végète n'est pas un arbre mort. La vigueur dit qu'il
+ * ne pousse pas à son potentiel, pas qu'il a lâché — le moteur a `chandelle`
+ * pour ça, et `partFoliaireOmbrageante` pour la saison. Ce qu'on montre est un
+ * houppier CLAIRSEMÉ, à travers lequel on commence à voir la ramure.
+ */
+export const MANQUE_VIGUEUR = 0.45;
+
+/**
+ * De combien le feuillage d'un arbre sans vigueur pâlit et jaunit.
+ *
+ * **À ne pas confondre avec la sénescence d'automne**, qui est un autre axe de
+ * la clé et une autre couleur : une feuille d'octobre est franchement dorée ou
+ * rousse, alors qu'un arbre qui végète en juillet est d'un vert MALADE — plus
+ * clair, plus jaune, moins saturé. Confondre les deux ferait lire « l'automne
+ * arrive » là où le moteur dit « celui-ci ne va pas bien ».
+ */
+export const PALEUR_SANS_VIGUEUR = 0.35;
+
+/**
+ * La teinte d'un feuillage selon la vigueur de l'arbre.
+ *
+ * Vers un vert-jaune pâle, et non vers la couleur d'automne. Un arbre qui
+ * végète garde de la chlorophylle — il en fait moins, et son feuillage est plus
+ * clair et plus jaune, ce qui est exactement l'aspect d'une carence.
+ */
+export function teinteSelonVigueur(teinte: Teinte, vigueur: number): Teinte {
+  const manque = Math.min(1, Math.max(0, 1 - vigueur));
+  return melange(teinte, VERT_MALADE, PALEUR_SANS_VIGUEUR * manque);
+}
+
+/** Le vert d'un feuillage qui manque de tout : clair, jaune, éteint. */
+const VERT_MALADE: Teinte = { r: 168, g: 172, b: 104 };
 
 /**
  * Nombre de variantes de squelette par classe.
@@ -369,6 +443,8 @@ export interface Classe {
   feuillage: number;
   /** état de gestion, encodé : ni élagué ni trogné = 0 */
   gestion: number;
+  /** vigueur et dommage hydraulique, quantifiés puis empaquetés */
+  sante: number;
   /** état de fructification : `FRUIT_AUCUN`, `FRUIT_CROISSANCE` ou `FRUIT_MUR` */
   fruit: number;
   /** taille de cuisson, en pixels de large */
@@ -409,6 +485,13 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
   // toutes les vignettes.
   const fut = palierDe(arbre.baseHouppierM / Math.max(0.1, arbre.heightM), PALIERS_FUT);
   const gestion = (arbre.chandelle ? 1 : 0) | (arbre.teteTrogneM ? 2 : 0) | (fut << 2);
+  // La santé : deux grandeurs distinctes, et il faut les deux. La vigueur dit
+  // « cet arbre végète » — réversible, et c'est l'alerte précoce ; le dommage
+  // hydraulique dit « cet arbre a perdu de la plomberie » — définitif, et c'est
+  // ce qui le tuera dans deux ans.
+  const sante =
+    palierDe(arbre.vigueur, PALIERS_SANTE) * PALIERS_SANTE +
+    palierDe(arbre.dommageHydraulique ?? 0, PALIERS_SANTE);
   // Le fruit entre dans la clé, sinon un pommier chargé et un pommier nu
   // partageraient la même image — et ce serait le pommier nu qu'on verrait, ou
   // le chargé, au hasard de qui a été cuit le premier.
@@ -424,6 +507,7 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
       palierDe(arbre.partFoliaire, PALIERS_FEUILLAGE) * PALIERS_FEUILLAGE +
       palierDe(arbre.senescence, PALIERS_FEUILLAGE),
     gestion,
+    sante,
     fruit,
     taillePx,
   };
@@ -431,7 +515,7 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
 
 /** La clé de cache d'une classe. */
 export function cleClasse(c: Classe): string {
-  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.fruit}|${c.taillePx}`;
+  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.sante}|${c.fruit}|${c.taillePx}`;
 }
 
 /** Une vignette cuite, et où poser son pied. */
@@ -651,9 +735,23 @@ export function cuireVignette(
   // ── Le feuillage ──────────────────────────────────────────────────────
   const partFoliaire = Math.floor(classe.feuillage / PALIERS_FEUILLAGE) / (PALIERS_FEUILLAGE - 1);
   const senescence = (classe.feuillage % PALIERS_FEUILLAGE) / (PALIERS_FEUILLAGE - 1);
+  const vigueur = Math.floor(classe.sante / PALIERS_SANTE) / (PALIERS_SANTE - 1);
+  const dommage = (classe.sante % PALIERS_SANTE) / (PALIERS_SANTE - 1);
   if (partFoliaire > 0.02) {
     const teinte = couleurFeuillage(fiche, senescence);
-    dessinerFeuillage(ctx, segments, fiche, teinte, partFoliaire, echelle, versPx, classe);
+    dessinerFeuillage(
+      ctx,
+      segments,
+      fiche,
+      teinteSelonVigueur(teinte, vigueur),
+      // Un arbre qui végète porte MOINS de feuilles : c'est la première chose
+      // qu'on voit d'un sujet dominé, avant même sa couleur.
+      partFoliaire * (MANQUE_VIGUEUR + (1 - MANQUE_VIGUEUR) * vigueur),
+      echelle,
+      versPx,
+      classe,
+      dommage,
+    );
   }
 
   // ── Les fruits ────────────────────────────────────────────────────────
@@ -663,7 +761,11 @@ export function cuireVignette(
   // ce que fait un arbre chargé — les fruits pèsent et pendent sous le
   // feuillage.
   if (fiche.fruit && classe.fruit !== FRUIT_AUCUN) {
-    dessinerFruits(ctx, segments, fiche.fruit, classe, echelle, versPx);
+    // La cime sèche s'applique AUSSI aux fruits : un rameau embolisé ne porte
+    // ni feuille ni fruit. Sans ça, un arbre à cime sèche portait des pommes
+    // sur du bois mort — le genre de détail qui ne se remarque pas tout de
+    // suite et qui, une fois vu, décrédibilise tout le reste.
+    dessinerFruits(ctx, segments, fiche.fruit, classe, echelle, versPx, dommage);
   }
 
   return { image, piedX, piedY, hautArbrePx };
@@ -745,6 +847,34 @@ function dessinerFourre(
 }
 
 /**
+ * Les rameaux qui portent encore du feuillage, une fois la cime sèche retirée.
+ *
+ * On coupe en HAUTEUR ÉCRAN et non en ordre de branchement : le dommage
+ * hydraulique est une histoire de distance aux racines, pas de topologie de
+ * l'arbre. Un rameau bas porté par une longue charpentière est mieux alimenté
+ * qu'un rameau haut porté par la flèche, et c'est bien ce qu'on veut montrer.
+ */
+function seuilCimeSeche(
+  terminaux: readonly Segment[],
+  dommage: number,
+  versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
+): Segment[] {
+  if (dommage <= 0.02 || terminaux.length === 0) return [...terminaux];
+  let haut = Number.POSITIVE_INFINITY;
+  let bas = Number.NEGATIVE_INFINITY;
+  for (const s of terminaux) {
+    const y = versPx(s.arrivee).sy;
+    haut = Math.min(haut, y);
+    bas = Math.max(bas, y);
+  }
+  if (!(bas > haut)) return [...terminaux];
+  // `sy` croît vers le BAS : la limite descend depuis la cime à mesure que le
+  // dommage monte.
+  const limite = haut + (bas - haut) * dommage;
+  return terminaux.filter((s) => versPx(s.arrivee).sy >= limite);
+}
+
+/**
  * Pose les fruits sur une part des rameaux terminaux.
  *
  * **Le nombre et la couleur viennent du moteur ; la place, du dessin.** Le
@@ -770,6 +900,7 @@ function dessinerFruits(
   classe: Classe,
   echelle: number,
   versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
+  dommageHydraulique = 0,
 ): void {
   const unitePx = fruit.longueurM * echelle;
   // Diamètre du groupe que porte un rameau fructifère — déclaré par la fiche
@@ -822,7 +953,11 @@ function dessinerFruits(
     : mur
       ? fruit.couleur
       : melange(FRUIT_VERT, fruit.couleur, 0.25);
-  const terminaux = segments.filter((s) => s.terminal);
+  const terminaux = seuilCimeSeche(
+    segments.filter((s) => s.terminal),
+    dommageHydraulique,
+    versPx,
+  );
   // En amas, il n'y a qu'une marque par rameau : elle ne s'étale pas, elle EST
   // l'étalement.
   const etalement = enAmas ? 0 : (diametreDuGroupeM(fruit) * echelle) / 2;
@@ -884,8 +1019,19 @@ function dessinerFeuillage(
   echelle: number,
   versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
   classe: Classe,
+  dommageHydraulique = 0,
 ): void {
-  const terminaux = segments.filter((s) => s.terminal);
+  const tous = segments.filter((s) => s.terminal);
+  // **La CIME SÈCHE, et elle sèche par le HAUT.** Le dommage hydraulique est la
+  // part du système conducteur mise hors service par l'embolie ; ce qui lâche
+  // en premier, c'est ce qui est hydrauliquement le plus loin des racines,
+  // c'est-à-dire le sommet. Un arbre qui a soif garde son feuillage bas et
+  // perd sa cime — et les rameaux nus restent, ce qui distingue une cime sèche
+  // d'un arbre simplement défeuillé.
+  //
+  // Le bois est déjà dessiné à ce stade : ne pas poser de bouquet suffit donc à
+  // faire apparaître la ramure, sans une primitive de plus.
+  const terminaux = seuilCimeSeche(tous, dommageHydraulique, versPx);
   const contour = contourFeuille(fiche.feuillage.forme);
   const parFeuille = elementsParFeuille(fiche.feuillage.forme);
   const tailleFeuillePx = fiche.feuillage.longueurFeuilleM * echelle;
