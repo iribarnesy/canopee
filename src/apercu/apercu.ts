@@ -444,8 +444,13 @@ interface Planche {
 /** Les sept espèces qui ont une fiche graphique, dans l'ordre des familles. */
 const SEPT = [
   "fagus_sylvatica",
+  "quercus_pubescens",
+  "castanea_sativa",
+  "fraxinus_excelsior",
+  "carpinus_betulus",
   "betula_pendula",
   "alnus_glutinosa",
+  "salix_alba",
   "pinus_sylvestris",
   "quercus_suber",
   "malus_domestica",
@@ -453,19 +458,19 @@ const SEPT = [
 ];
 
 const PLANCHE: Planche[] = [
-  { scene: "", especes: SEPT, hauteurM: 16, titre: "les sept essences · été" },
+  { scene: "", especes: SEPT, hauteurM: 16, titre: "les douze essences · été" },
   {
     scene: "",
     especes: SEPT,
     hauteurM: 16,
-    titre: "les sept essences · nues (la ramure d'hiver)",
+    titre: "les douze essences · nues (la ramure d'hiver)",
     options: { nu: true },
   },
   {
     scene: "",
     especes: SEPT,
     hauteurM: 16,
-    titre: "les sept essences · sénescence",
+    titre: "les douze essences · sénescence",
     options: { senescence: 1 },
   },
   {

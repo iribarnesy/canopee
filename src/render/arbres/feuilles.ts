@@ -53,7 +53,13 @@ export type FormeFeuille =
   /** ovale dentée de verger — pommier */
   | "dentee"
   /** grande feuille cordée, doublement dentée — noisetier */
-  | "cordee";
+  | "cordee"
+  /** lobée à sinus arrondis — les chênes, et personne d'autre */
+  | "lobee"
+  /** composée : plusieurs folioles sur un même pétiole — frêne, sureau */
+  | "composee"
+  /** longue et étroite, dentée en scie — châtaignier, saule */
+  | "lanceolee";
 
 /**
  * Le contour d'une feuille, en tracé fermé.
@@ -163,6 +169,67 @@ export function contourFeuille(forme: FormeFeuille): readonly PointFeuille[] {
         { x: -0.23, y: 0.25 },
         { x: -0.13, y: 0.11 },
       ];
+    case "lobee":
+      // Chêne : les LOBES, avec leurs sinus arrondis. C'est la feuille la plus
+      // reconnaissable de la flore tempérée, et son contour est le seul du lot
+      // qui ait besoin d'autant de points — les lobes sont l'information.
+      return [
+        { x: 0, y: 0 },
+        { x: 0.1, y: 0.08 },
+        { x: 0.24, y: 0.14 },
+        { x: 0.13, y: 0.24 },
+        { x: 0.28, y: 0.34 },
+        { x: 0.15, y: 0.45 },
+        { x: 0.29, y: 0.56 },
+        { x: 0.14, y: 0.68 },
+        { x: 0.22, y: 0.82 },
+        { x: 0.09, y: 0.92 },
+        { x: 0, y: 1 },
+        { x: -0.1, y: 0.91 },
+        { x: -0.23, y: 0.81 },
+        { x: -0.15, y: 0.67 },
+        { x: -0.3, y: 0.55 },
+        { x: -0.16, y: 0.44 },
+        { x: -0.29, y: 0.33 },
+        { x: -0.14, y: 0.23 },
+        { x: -0.25, y: 0.13 },
+        { x: -0.11, y: 0.07 },
+      ];
+    case "composee":
+      // Frêne, sureau : le contour d'UNE foliole. C'est le semis qui les pose
+      // par cinq ou sept le long d'un pétiole — une feuille composée dessinée
+      // d'un seul tenant ne se distinguerait pas d'une feuille simple.
+      return [
+        { x: 0, y: 0 },
+        { x: 0.11, y: 0.16 },
+        { x: 0.14, y: 0.5 },
+        { x: 0.1, y: 0.82 },
+        { x: 0, y: 1 },
+        { x: -0.1, y: 0.81 },
+        { x: -0.14, y: 0.49 },
+        { x: -0.11, y: 0.15 },
+      ];
+    case "lanceolee":
+      // Châtaignier, saule : longue, étroite, à dents aiguës régulières. Les
+      // dents sont dans le contour — c'est ce qui la sépare d'une foliole.
+      return [
+        { x: 0, y: 0 },
+        { x: 0.09, y: 0.1 },
+        { x: 0.14, y: 0.24 },
+        { x: 0.1, y: 0.34 },
+        { x: 0.15, y: 0.46 },
+        { x: 0.11, y: 0.58 },
+        { x: 0.14, y: 0.72 },
+        { x: 0.08, y: 0.88 },
+        { x: 0, y: 1 },
+        { x: -0.08, y: 0.87 },
+        { x: -0.14, y: 0.71 },
+        { x: -0.1, y: 0.57 },
+        { x: -0.15, y: 0.45 },
+        { x: -0.11, y: 0.33 },
+        { x: -0.14, y: 0.23 },
+        { x: -0.09, y: 0.09 },
+      ];
     default:
       // Noisetier : GRANDE, cordée — donc échancrée à la base, ce qui est son
       // signe le plus sûr — et doublement dentée.
@@ -200,5 +267,10 @@ export function largeurRelative(forme: FormeFeuille): number {
  * plus fiable en botanique de terrain. Un pour tout le reste.
  */
 export function elementsParFeuille(forme: FormeFeuille): number {
-  return forme === "aiguille" ? 2 : 1;
+  // Deux aiguilles par faisceau chez le pin sylvestre — sa signature la plus
+  // fiable en botanique de terrain. Cinq folioles pour une feuille composée :
+  // c'est le nombre qui fait lire « composée » sans qu'on ait à les compter.
+  if (forme === "aiguille") return 2;
+  if (forme === "composee") return 5;
+  return 1;
 }

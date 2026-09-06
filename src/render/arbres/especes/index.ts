@@ -22,16 +22,26 @@
 import type { FicheGraphique } from "../fiche";
 import { AULNE_GLUTINEUX } from "./aulne";
 import { BOULEAU } from "./bouleau";
+import { CHARME } from "./charme";
+import { CHATAIGNIER } from "./chataignier";
 import { CHENE_LIEGE } from "./chene_liege";
+import { CHENE_PUBESCENT } from "./chene_pubescent";
+import { FRENE } from "./frene";
 import { HETRE } from "./hetre";
 import { NOISETIER } from "./noisetier";
 import { PIN_SYLVESTRE } from "./pin_sylvestre";
 import { POMMIER } from "./pommier";
+import { SAULE_BLANC } from "./saule";
 
 export const FICHES: readonly FicheGraphique[] = [
   HETRE,
+  CHENE_PUBESCENT,
+  CHATAIGNIER,
+  FRENE,
+  CHARME,
   BOULEAU,
   AULNE_GLUTINEUX,
+  SAULE_BLANC,
   PIN_SYLVESTRE,
   CHENE_LIEGE,
   POMMIER,
@@ -45,4 +55,17 @@ export function ficheDe(especeId: string): FicheGraphique | undefined {
   return PAR_ID.get(especeId);
 }
 
-export { AULNE_GLUTINEUX, BOULEAU, CHENE_LIEGE, HETRE, NOISETIER, PIN_SYLVESTRE, POMMIER };
+export {
+  AULNE_GLUTINEUX,
+  BOULEAU,
+  CHARME,
+  CHATAIGNIER,
+  CHENE_LIEGE,
+  CHENE_PUBESCENT,
+  FRENE,
+  HETRE,
+  NOISETIER,
+  PIN_SYLVESTRE,
+  POMMIER,
+  SAULE_BLANC,
+};
