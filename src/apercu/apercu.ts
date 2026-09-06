@@ -448,8 +448,15 @@ interface Planche {
   options?: Options;
 }
 
-/** Les sept espèces qui ont une fiche graphique, dans l'ordre des familles. */
-const SEPT = [
+/**
+ * Les arbres de futaie et les fruitiers, dans l'ordre des familles de port.
+ *
+ * Douze sujets à seize mètres : c'est la hauteur à laquelle ces essences-là se
+ * comparent. Les arbustes de haie ont leur propre planche, plus bas — les
+ * mettre ici les réduirait à des points, puisque `heightM` est plafonné par la
+ * hauteur maximale de l'espèce et qu'une aubépine n'en fait que huit.
+ */
+const FUTAIE = [
   "fagus_sylvatica",
   "quercus_pubescens",
   "castanea_sativa",
@@ -461,23 +468,60 @@ const SEPT = [
   "pinus_sylvestris",
   "quercus_suber",
   "malus_domestica",
+  "prunus_armeniaca",
+];
+
+/**
+ * Les arbustes de haie et de lisière, à six mètres.
+ *
+ * **C'est la planche la plus exigeante des deux**, et c'est pour ça qu'elle
+ * existe séparément : douze arbres de futaie se distinguent déjà par leur
+ * taille et leur port, alors que neuf arbustes de haie ont tous à peu près la
+ * même stature et le même vert. S'ils se confondent, c'est le dessin de la
+ * feuille qui n'a pas fait son travail — pas la silhouette, qui ne peut pas le
+ * faire ici.
+ */
+const HAIE = [
   "corylus_avellana",
+  "prunus_spinosa",
+  "crataegus_monogyna",
+  "sambucus_nigra",
+  "cornus_mas",
+  "euonymus_europaeus",
+  "ligustrum_vulgare",
+  "ilex_aquifolium",
+  "arbutus_unedo",
 ];
 
 const PLANCHE: Planche[] = [
-  { scene: "", especes: SEPT, hauteurM: 16, titre: "les douze essences · été" },
+  { scene: "", especes: FUTAIE, hauteurM: 16, titre: "futaie et vergers · été" },
   {
     scene: "",
-    especes: SEPT,
+    especes: FUTAIE,
     hauteurM: 16,
-    titre: "les douze essences · nues (la ramure d'hiver)",
+    titre: "futaie et vergers · nus (la ramure d'hiver)",
     options: { nu: true },
   },
   {
     scene: "",
-    especes: SEPT,
+    especes: FUTAIE,
     hauteurM: 16,
-    titre: "les douze essences · sénescence",
+    titre: "futaie et vergers · sénescence",
+    options: { senescence: 1 },
+  },
+  { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
+  {
+    scene: "",
+    especes: HAIE,
+    hauteurM: 6,
+    titre: "la haie · nue (et ce qui reste : houx, arbousier, troène)",
+    options: { nu: true },
+  },
+  {
+    scene: "",
+    especes: HAIE,
+    hauteurM: 6,
+    titre: "la haie · sénescence (le fusain doit sauter aux yeux)",
     options: { senescence: 1 },
   },
   {

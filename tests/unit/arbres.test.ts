@@ -188,6 +188,21 @@ describe("la cuisson d'une vignette", () => {
 });
 
 describe("la pose : la résolution n'est pas la taille", () => {
+  /**
+   * La hauteur de l'ARBRE une fois posé, marge de vignette déduite.
+   *
+   * **La distinction est le fond de ces essais.** Une vignette réserve de la
+   * place au-dessus de la cime, sinon les feuilles du sommet sont tranchées ;
+   * l'image posée est donc un peu plus haute que l'arbre, et c'est voulu. Ce
+   * qui doit valoir exactement la hauteur écran, c'est l'arbre — mesurer
+   * l'image reviendrait à réclamer une vignette sans marge, c'est-à-dire le
+   * défaut qu'on vient de corriger.
+   */
+  const arbrePose = (
+    vignette: { image: { height: number }; hautArbrePx: number },
+    taille: { hauteur: number },
+  ) => taille.hauteur * (vignette.hautArbrePx / vignette.image.height);
+
   it("**pose à la taille écran, pas à la résolution de cuisson**", () => {
     // Le piège qui s'est refermé : coller la vignette à sa résolution donnait
     // des arbres trois fois trop grands, une futaie de mâts plus hauts que la
@@ -196,8 +211,44 @@ describe("la pose : la résolution n'est pas la taille", () => {
     const v = vue();
     const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer);
     const taille = tailleDePose(16, vignette, v);
-    expect(taille.hauteur).toBeCloseTo(16 * METRE_VERTICAL_PX * v.cam.zoom, 6);
+    expect(arbrePose(vignette, taille)).toBeCloseTo(16 * METRE_VERTICAL_PX * v.cam.zoom, 6);
     expect(taille.hauteur).not.toBeCloseTo(vignette.image.height, 0);
+  });
+
+  it("la marge de la vignette ne déborde pas sur l'arbre", () => {
+    // L'image posée est plus haute que l'arbre — c'est la marge — mais de peu :
+    // une vignette dont la moitié serait du vide gâcherait autant de budget de
+    // cuisson que de remplissage à l'écran.
+    const { fabriquer } = fabriqueBouchon();
+    const v = vue();
+    const vignette = cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, fabriquer);
+    const taille = tailleDePose(16, vignette, v);
+    const arbre16 = arbrePose(vignette, taille);
+    expect(taille.hauteur).toBeGreaterThan(arbre16);
+    expect(taille.hauteur).toBeLessThan(arbre16 * 1.12);
+  });
+
+  it("**la boîte contient le houppier, si large soit-il**", () => {
+    // Le défaut que cet essai garde fermé : la vignette était un rectangle de
+    // proportion fixe — une largeur pour une hauteur et demie — quelle que
+    // soit l'espèce. Un houppier plus large que le tiers de la hauteur en
+    // débordait et sortait tranché net à la verticale. Le moteur donne des
+    // `houppierRatio` de 0,45 à 0,6 à tous les arbustes de haie : ils étaient
+    // TOUS coupés, et la planche de la haie le montrait sans ambiguïté.
+    //
+    // L'invariant se vérifie en mètres et non en pixels : la demi-largeur de
+    // l'image, ramenée à l'échelle de la vignette, doit couvrir le rayon du
+    // houppier — que `contraindre` calibre exactement à `houppierRatio × h`.
+    const { fabriquer } = fabriqueBouchon();
+    const v = vue();
+    for (const ratio of [0.25, 0.35, 0.45, 0.6]) {
+      const hauteurM = 8;
+      const vignette = cuireVignette(classeDe(arbre(), 30, v), hauteurM, ratio, fabriquer);
+      // pixels par mètre dans la vignette
+      const echelle = vignette.hautArbrePx / hauteurM;
+      const demiLargeurM = vignette.image.width / 2 / echelle;
+      expect(demiLargeurM, `ratio ${ratio}`).toBeGreaterThanOrEqual(ratio * hauteurM);
+    }
   });
 
   it("garde les proportions de la vignette", () => {
@@ -227,8 +278,12 @@ describe("la pose : la résolution n'est pas la taille", () => {
     const v = vue();
     const petite = cuireVignette(classeDe(arbre({ heightM: 8 }), 30, v), 8, 0.35, fabriquer);
     const grande = cuireVignette(classeDe(arbre({ heightM: 16 }), 30, v), 16, 0.35, fabriquer);
-    expect(tailleDePose(16, grande, v).hauteur).toBeCloseTo(
-      2 * tailleDePose(8, petite, v).hauteur,
+    // Sur l'ARBRE et non sur l'image : la marge vaut une longueur de feuille,
+    // la même en mètres pour les deux sujets, donc une part plus grande de la
+    // vignette du petit. C'est correct — et ça se verrait comme une erreur si
+    // on comparait les images.
+    expect(arbrePose(grande, tailleDePose(16, grande, v))).toBeCloseTo(
+      2 * arbrePose(petite, tailleDePose(8, petite, v)),
       6,
     );
   });

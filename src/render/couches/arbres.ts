@@ -223,6 +223,22 @@ export interface Vignette {
   /** décalage du PIED de l'arbre dans l'image, en pixels */
   piedX: number;
   piedY: number;
+  /**
+   * Hauteur de l'ARBRE dans l'image, en pixels — et non hauteur de l'image.
+   *
+   * **Sans ce champ, la vignette ne peut pas avoir de marge**, et c'est le
+   * défaut qui a coupé les houppiers de la haie. La pose supposait que l'arbre
+   * remplissait l'image exactement, du bas au haut : toute place réservée
+   * au-dessus de la cime ou sur les côtés aurait posé l'arbre trop petit. La
+   * vignette était donc contrainte d'être un rectangle collé au squelette, et
+   * un houppier plus large que le tiers de la hauteur débordait — soit tous
+   * les arbustes de haie, dont le moteur donne des `houppierRatio` de 0,45 à
+   * 0,6, et une bonne part des arbres de plein vent.
+   *
+   * En le disant, la vignette peut réserver ce qu'elle veut : la pose divise
+   * par CE nombre, pas par la hauteur de l'image.
+   */
+  hautArbrePx: number;
 }
 
 /**
@@ -288,23 +304,49 @@ export function cuireVignette(
   gestionM?: { hauteurElagueeM?: number; teteTrogneM?: number },
 ): Vignette {
   const fiche = ficheDe(classe.especeId) ?? FICHE_GENERIQUE;
-  const largeur = Math.max(4, Math.round(classe.taillePx));
-  // Un arbre est plus haut que large : la vignette lui laisse la place.
+  // La hauteur de l'image est la RÉSOLUTION de cuisson : c'est elle que
+  // `taillePx` quantifie, et elle ne dépend pas de l'espèce.
   const hauteur = Math.max(6, Math.round(classe.taillePx * 1.5));
+
+  // ── Le fourré bas : une masse, pas un arbre ───────────────────────────
+  // Il garde la boîte carrée d'origine : une masse agrégée remplit ce qu'on lui
+  // donne, elle n'a pas de houppier dont il faudrait mesurer la largeur.
+  if (fiche.fourre) {
+    const largeurFourre = Math.max(4, Math.round(classe.taillePx));
+    const image = fabriquer(largeurFourre, hauteur);
+    const ctx = image.getContext("2d");
+    if (!ctx) throw new Error("contexte 2d indisponible");
+    const echelleFourre = (hauteur - 2) / Math.max(0.1, hauteurM);
+    dessinerFourre(ctx, fiche, classe, largeurFourre, hauteur, echelleFourre, hauteurM);
+    return {
+      image,
+      piedX: largeurFourre / 2,
+      piedY: hauteur - 1,
+      hautArbrePx: hauteur - 2,
+    };
+  }
+
+  // **La marge, et pourquoi elle existe.** Le squelette s'arrête au bout du
+  // rameau ; la feuille, elle, dépasse encore de sa propre longueur, et la
+  // tache de feuillage davantage. Sans marge, la planche de la haie sortait
+  // avec des houppiers tranchés net à la verticale — on voyait le bord de la
+  // vignette, pas l'arbre.
+  const margeM = Math.max(0.05, fiche.feuillage.longueurFeuilleM * 1.5);
+  // Combien de pixels vaut un mètre dans cette vignette : la cime PLUS sa marge
+  // tiennent dans la hauteur d'image.
+  const echelle = (hauteur - 2) / Math.max(0.1, hauteurM + margeM);
+  // La largeur suit le houppier réel — `contraindre` le calibre pour qu'il
+  // atteigne exactement `houppierRatio × hauteurM`, c'est donc une mesure et
+  // non une estimation. Le plafond n'est là que contre un ratio aberrant.
+  const demiLargeurM = Math.min(2 * hauteurM, houppierRatio * hauteurM + margeM);
+  const largeur = Math.max(4, Math.round(2 * demiLargeurM * echelle));
   const image = fabriquer(largeur, hauteur);
   const ctx = image.getContext("2d");
   if (!ctx) throw new Error("contexte 2d indisponible");
 
   const piedX = largeur / 2;
   const piedY = hauteur - 1;
-  // Combien de pixels vaut un mètre dans cette vignette.
-  const echelle = (hauteur - 2) / Math.max(0.1, hauteurM);
-
-  // ── Le fourré bas : une masse, pas un arbre ───────────────────────────
-  if (fiche.fourre) {
-    dessinerFourre(ctx, fiche, classe, largeur, hauteur, echelle, hauteurM);
-    return { image, piedX, piedY };
-  }
+  const hautArbrePx = hauteurM * echelle;
 
   const sujet: Sujet = {
     id: classe.variante * 7919 + classe.palier * 31,
@@ -374,7 +416,7 @@ export function cuireVignette(
     dessinerFeuillage(ctx, segments, fiche, teinte, partFoliaire, echelle, versPx, classe);
   }
 
-  return { image, piedX, piedY };
+  return { image, piedX, piedY, hautArbrePx };
 }
 
 /**
@@ -865,12 +907,16 @@ export function tailleDePose(
   vignette: Vignette,
   vue: Vue,
 ): { largeur: number; hauteur: number } {
-  const hauteur = Math.max(1, hauteurM * METRE_VERTICAL_PX * vue.cam.zoom);
-  const largeur = Math.max(
-    1,
-    (vignette.image.width / Math.max(1, vignette.image.height)) * hauteur,
-  );
-  return { largeur, hauteur };
+  // Ce que l'ARBRE doit mesurer à l'écran, en pixels.
+  const arbrePx = Math.max(1, hauteurM * METRE_VERTICAL_PX * vue.cam.zoom);
+  // Le rapport d'agrandissement de l'image se lit sur l'arbre, pas sur l'image :
+  // la vignette réserve une marge au-dessus de la cime et sur les côtés, et
+  // diviser par la hauteur d'image poserait l'arbre trop petit d'autant.
+  const k = arbrePx / Math.max(1, vignette.hautArbrePx);
+  return {
+    largeur: Math.max(1, vignette.image.width * k),
+    hauteur: Math.max(1, vignette.image.height * k),
+  };
 }
 
 /**
