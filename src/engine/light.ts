@@ -38,6 +38,49 @@ export function crownRadiusM(heightM: number, houppierRatio: number): number {
   return houppierRatio * heightM;
 }
 
+/**
+ * Part de la hauteur qu'occupe la couronne d'un arbre non élagué : sa base est
+ * à `(1 − PART_HOUPPIER_HAUTEUR) × heightM` *(à calibrer)*.
+ *
+ * C'est une grandeur de plus que `houppierRatio`, qui est un RAYON rapporté à
+ * la hauteur — une largeur, pas une profondeur. Les confondre reviendrait à
+ * dire qu'un arbre étroit porte une couronne haute, ce qui n'a pas de raison
+ * d'être vrai. Une valeur unique pour toutes les espèces est grossière ; elle a
+ * le mérite de ne pas inventer vingt-cinq nombres sans source.
+ */
+export const PART_HOUPPIER_HAUTEUR = 0.6;
+
+/**
+ * Part de la couronne qui reste après élagage ∈ [0,1] (docs/regles.md §5).
+ *
+ * On élague pour la qualité du bois, et l'effet secondaire est qu'on REND DE LA
+ * LUMIÈRE au sous-étage : c'est le geste qui relie la sylviculture à
+ * l'agroforesterie. Sans lui, `hauteurElagueeM` ne servait qu'à la comptabilité
+ * de la bille d'œuvre, et un arbre élagué jusqu'à six mètres ombrait
+ * exactement comme le même arbre branchu.
+ *
+ * Ce que ça vaut : la couronne perd la tranche entre sa base naturelle et la
+ * hauteur élaguée, et son interception baisse d'autant. C'est LINÉAIRE en
+ * profondeur de couronne, donc probablement un peu fort — les branches basses
+ * sont les plus ombragées, donc les moins fournies, et retirer 20 % de la
+ * hauteur de couronne retire sans doute moins de 20 % du feuillage. Affiner
+ * demande une source sur la distribution verticale du feuillage ; en attendant,
+ * le sens et l'ordre de grandeur sont là, la finesse non.
+ *
+ * Deux garde-fous tiennent l'effet dans des bornes raisonnables : l'élagage est
+ * plafonné à la moitié de la hauteur (`actions.ts`), et à `ELAGAGE_MAX_M` en
+ * absolu — un arbre qui pousse regagne donc peu à peu la couronne qu'on lui a
+ * prise, ce qui est exactement ce que fait un arbre.
+ */
+export function partHouppierApresElagage(heightM: number, hauteurElagueeM: number): number {
+  const profondeurNaturelle = PART_HOUPPIER_HAUTEUR * heightM;
+  if (profondeurNaturelle <= 0) return 1;
+  const baseNaturelleM = heightM - profondeurNaturelle;
+  if (hauteurElagueeM <= baseNaturelleM) return 1;
+  const restante = heightM - hauteurElagueeM;
+  return Math.max(0, Math.min(1, restante / profondeurNaturelle));
+}
+
 interface Shadow {
   cx: number;
   cy: number;
@@ -74,8 +117,13 @@ function buildShadowIndex(
       r2: r * r,
       heightM: tree.heightM,
       // L'indice foliaire suit le déploiement : c'est là que la phénologie
-      // entre dans la loi de Beer-Lambert.
-      extinction: BEER_LAMBERT_K * espece.lumiere.lai * feuillage,
+      // entre dans la loi de Beer-Lambert. Et l'élagage y entre aussi : une
+      // couronne dont on a retiré la tranche basse intercepte moins.
+      extinction:
+        BEER_LAMBERT_K *
+        espece.lumiere.lai *
+        feuillage *
+        partHouppierApresElagage(tree.heightM, tree.hauteurElagueeM),
     };
     const bx0 = Math.floor((shadow.cx - r) / BUCKET_M);
     const bx1 = Math.floor((shadow.cx + r) / BUCKET_M);
