@@ -81,6 +81,17 @@ export interface ArbreAPoser {
    */
   baseHouppierM: number;
   /**
+   * Part de la couronne en fleur ∈ [0,1] : `Snapshot.floraison`, tel quel.
+   *
+   * **Elle ne se déduit d'aucun autre champ, et surtout pas d'un calendrier.**
+   * `fruitProgress` vaut 0 avant la floraison, 0 pendant, et 0 toute l'année
+   * pour un arbre immature — les trois cas sont indiscernables. Et la fenêtre
+   * est un seuil de degrés-jours : la recalculer ici, c'est en tenir une
+   * seconde copie qui dérive d'une semaine ou deux sans que rien ne le signale
+   * (§2.1). Le moteur la calcule, l'instantané la transporte, le rendu la lit.
+   */
+  floraison?: number;
+  /**
    * Avancement du fruit de l'année ∈ [0,1] : `Snapshot.fruitProgress`, tel quel.
    *
    * C'est le moteur qui le fait monter, au rythme du facteur limitant de la
@@ -152,9 +163,10 @@ export const PALIERS_FEUILLAGE = 6;
  * autres restent à zéro et leur clé ne change pas.
  */
 export const FRUIT_AUCUN = 0;
-export const FRUIT_CROISSANCE = 1;
-export const FRUIT_MUR = 2;
-export const ETATS_FRUIT = 3;
+export const FRUIT_FLEUR = 1;
+export const FRUIT_CROISSANCE = 2;
+export const FRUIT_MUR = 3;
+export const ETATS_FRUIT = 4;
 
 /**
  * L'état de fructification à cuire, d'après ce que le moteur donne.
@@ -166,6 +178,12 @@ export const ETATS_FRUIT = 3;
 export function etatDuFruit(arbre: ArbreAPoser): number {
   if ((arbre.fruitsKg ?? 0) > 0) return FRUIT_MUR;
   if ((arbre.fruitProgress ?? 0) > 0.02) return FRUIT_CROISSANCE;
+  // La fleur en dernier, et c'est l'ordre du cycle : elle précède le fruit, et
+  // le moteur remet `floraison` à zéro dès que la nouaison commence. Les deux
+  // ne se chevauchent donc pas — sauf chez l'arbousier, qui fleurit pendant que
+  // mûrissent les arbouses de l'an passé, et où c'est bien le fruit mûr qu'on
+  // veut voir puisque c'est lui qui appelle un geste.
+  if ((arbre.floraison ?? 0) > 0.05) return FRUIT_FLEUR;
   return FRUIT_AUCUN;
 }
 
@@ -194,6 +212,22 @@ export const FEUILLE_DES_PX = 2.5;
  * changements (§6.8) est le bon outil pour dire ça à l'échelle de la parcelle.
  */
 export const FRUIT_MIN_PX = 1.6;
+
+/**
+ * De combien un bouquet de fleurs est plus large que le groupe de fruits qui
+ * lui succède, au même bout de rameau.
+ *
+ * Un arbre noue une petite part de ce qu'il fleurit — quelques dizaines de
+ * pommes pour des milliers de fleurs — donc la fleur occupe plus de place que
+ * le fruit sur exactement le même rameau. Ce n'est pas une grandeur du moteur :
+ * c'est la traduction en dessin du fait qu'une floraison se voit de loin et
+ * qu'une fructification demande de s'approcher.
+ */
+export const FLEUR_ETALEMENT = 1.6;
+
+/** Part de rameaux portant des fleurs. Bien plus qu'en fruits : un arbre en
+ * fleur est blanc PARTOUT, alors qu'il porte ses fruits çà et là. */
+export const PART_RAMEAUX_FLEURIS = 0.55;
 
 /**
  * Facteur de recouvrement des taches de feuillage.
@@ -765,16 +799,29 @@ function dessinerFruits(
   // amas est plus visible qu'une feuille à taille égale, parce que ce qui le
   // porte est la COULEUR — un point rouge saturé sur du vert se voit à deux
   // pixels, là où un contour de feuille verte sur du vert n'existe pas.
-  const enAmas = unitePx < FRUIT_MIN_PX;
-  if (enAmas && groupePx < FRUIT_MIN_PX) return;
-  const taillePx = enAmas ? groupePx : unitePx;
+  // **La FLEUR emprunte toute la mécanique du fruit**, et ce n'est pas une
+  // paresse : elle occupe la même place — le bout des rameaux fructifères — au
+  // même nombre, et elle se heurte au même mur de résolution. Ce qui change est
+  // sa couleur, et le fait qu'une floraison COUVRE davantage qu'une fructifi-
+  // cation : un pommier porte quelques dizaines de pommes et des milliers de
+  // fleurs. D'où un groupe plus large, et jamais de fleur isolée.
+  const enFleur = classe.fruit === FRUIT_FLEUR;
+  if (enFleur && !fruit.fleur) return;
+  const enAmas = enFleur || unitePx < FRUIT_MIN_PX;
+  const largeurAmas = enFleur ? groupePx * FLEUR_ETALEMENT : groupePx;
+  if (enAmas && largeurAmas < FRUIT_MIN_PX) return;
+  const taillePx = enAmas ? largeurAmas : unitePx;
   const combien = enAmas ? 1 : fruit.parRameau;
   const contour = contourFruit(enAmas ? "charnu" : fruit.forme);
   const mur = classe.fruit === FRUIT_MUR;
   // La couleur ARRIVE avec la maturité, et c'est l'arrivée qui est
   // l'information. Un fruit vert est un fruit vert : rien ne distingue une
   // pomme d'août d'une prunelle d'août à cette taille.
-  const teinte = mur ? fruit.couleur : melange(FRUIT_VERT, fruit.couleur, 0.25);
+  const teinte = enFleur
+    ? (fruit.fleur ?? fruit.couleur)
+    : mur
+      ? fruit.couleur
+      : melange(FRUIT_VERT, fruit.couleur, 0.25);
   const terminaux = segments.filter((s) => s.terminal);
   // En amas, il n'y a qu'une marque par rameau : elle ne s'étale pas, elle EST
   // l'étalement.
@@ -782,7 +829,13 @@ function dessinerFruits(
   let i = 0;
   for (const s of terminaux) {
     i++;
-    if (hacher(i, classe.palier, 0x3ef7) > PART_RAMEAUX_FRUITIERS) continue;
+    // Une floraison couvre la couronne, une fructification la pique : le
+    // pommier de mai est blanc partout, celui de septembre porte des pommes çà
+    // et là. C'est le même arbre et le même rameau — c'est la PART qui change.
+    if (
+      hacher(i, classe.palier, 0x3ef7) > (enFleur ? PART_RAMEAUX_FLEURIS : PART_RAMEAUX_FRUITIERS)
+    )
+      continue;
     const bout = versPx(s.arrivee);
     for (let k = 0; k < combien; k++) {
       // Le groupe s'étale autour du bout du rameau, et PEND : un fruit pèse,

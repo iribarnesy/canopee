@@ -41,9 +41,14 @@ export const POMMIER: FicheGraphique = {
     couleur: { r: 186, g: 74, b: 58 },
     longueurM: 0.07,
     parRameau: 2,
+    // Blanc lavé de rose : c'est le contraste le plus fort que porte une
+    // essence de l'atlas, et le seul moment de l'année où un verger se voit du
+    // bout du champ.
+    fleur: { r: 244, g: 226, b: 228 },
   },
   ecorce: { r: 112, g: 96, b: 78 },
   references: [
+    "Bretaudeau & Fauré, Atlas d'arboriculture fruitière — floraison du pommier",
     "Bretaudeau & Fauré, Atlas d'arboriculture fruitière — calibre et coloration de la pomme",
     "Bretaudeau & Fauré, Atlas d'arboriculture fruitière — taille en gobelet",
     "Coutanceau, Arboriculture fruitière — port et conduite du pommier",

@@ -231,6 +231,10 @@ function figerLeSol(
     // sous-bois sombre et une trouée claire. Le rendu ne l'avait jamais eue, et
     // sans elle une futaie fermée a le sol d'une clairière.
     lumiere: arrondi(lumiereAuSol, 3),
+    // L'humidité VÉCUE par le tapis : l'horizon de surface lissé sur ~6
+    // semaines. C'est elle, et non `waterMm`, qui dit si une pelouse grille —
+    // l'inertie fait partie de la grandeur.
+    herbeHumidite: arrondi(state.soil.herbeHumidite, 3),
     altitudesM: arrondi(altitudeParCellule(station.relief, dims), 2),
     waterMm:
       EAU_PART === undefined

@@ -8,6 +8,7 @@
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { couvertureMax } from "../../src/engine/herbe";
 import {
   type CelluleSol,
   COUVERT_LE_PLUS_SOMBRE,
@@ -21,6 +22,7 @@ import {
   palier,
   phaseAnnuelle,
   quantifier,
+  satisfactionEnEau,
   signatureCellule,
   valeurDuPalier,
   versEntier,
@@ -78,6 +80,7 @@ describe("la quantification, qui fait vivre le cache de morceaux", () => {
                 herbeBiomasse: c,
                 litiere: d,
                 lumiere: 0,
+                herbeHumidite: 0,
               }),
             );
             compte++;
@@ -124,7 +127,14 @@ describe("le sol dit ce que le moteur calcule", () => {
           for (let l = 0; l < NIVEAUX; l++) {
             for (const semaine of [5, 18, 30, 45]) {
               const t = couleurSol(
-                { humidite: h, herbe: g, herbeBiomasse: b, litiere: l, lumiere: NIVEAUX - 1 },
+                {
+                  humidite: h,
+                  herbe: g,
+                  herbeBiomasse: b,
+                  litiere: l,
+                  lumiere: NIVEAUX - 1,
+                  herbeHumidite: NIVEAUX - 1,
+                },
                 semaine,
               );
               expect(clarte(t)).toBeLessThan(190);
@@ -145,7 +155,14 @@ describe("le sol dit ce que le moteur calcule", () => {
         (h, g, semaine, facteur) => {
           const t = eclairer(
             couleurSol(
-              { humidite: h, herbe: g, herbeBiomasse: g, litiere: 0, lumiere: palier(1) },
+              {
+                humidite: h,
+                herbe: g,
+                herbeBiomasse: g,
+                litiere: 0,
+                lumiere: palier(1),
+                herbeHumidite: palier(1),
+              },
               semaine,
             ),
             facteur,
@@ -198,8 +215,50 @@ describe("le mélange", () => {
   });
 });
 
+describe("la soif de l'herbe, lue du moteur et non décrétée", () => {
+  const chaleur = (t: { r: number; g: number; b: number }) => t.r - t.b;
+  const pleine = (herbeHumidite: number) =>
+    couleurSol(
+      quantifier({ humidite: 0.5, herbe: 1, herbeBiomasse: 0.25, litiereCG: 0, herbeHumidite }),
+      28,
+    );
+
+  it("**une pelouse pleine brunit quand l'eau de SURFACE manque**", () => {
+    // Ce que le rendu ne pouvait pas montrer avant que le moteur ne l'expose
+    // (issue #12) : sur une cellule bien couverte — c'est-à-dire partout où
+    // l'herbe compte — la soif était strictement invisible, parce que
+    // l'humidité ne colorait que le sol nu et que l'herbe le recouvre.
+    expect(chaleur(pleine(0.02))).toBeGreaterThan(chaleur(pleine(0.9)) + 15);
+  });
+
+  it("**le seuil est celui du MOTEUR, pas une constante d'ici**", () => {
+    // Le garde-fou de la faute, et il est précis. Le premier jet décrétait
+    // `SEUIL_GRILLE = 0.42` sur la réserve utile : faux de valeur, faux de
+    // grandeur, faux de nature. La valeur juste — 0,35 de l'eau de SURFACE —
+    // vit dans `couvertureMax`, et le rendu l'obtient en APPELANT cette
+    // fonction plutôt qu'en recopiant son seuil.
+    //
+    // Recopier serait l'autre façon de se tromper, celle du §2.1 : deux copies
+    // d'une règle dérivent, et personne ne le voit. Cet essai vérifie donc
+    // l'égalité exacte avec le moteur, à plusieurs valeurs — il casse si l'un
+    // des deux bouge sans l'autre.
+    for (const h of [0, 0.1, 0.2, 0.35, 0.5, 1]) {
+      expect(satisfactionEnEau(h), `humidité ${h}`).toBeCloseTo(couvertureMax(1, h), 10);
+    }
+  });
+
+  it("au-dessus du seuil du moteur, l'herbe ne brunit plus du tout", () => {
+    // La conséquence de lire la bonne fonction : le plateau est là où le
+    // moteur le met. Un sol à moitié plein n'a aucune raison de jaunir, et le
+    // faire jaunir rendrait la couleur illisible — tout serait toujours un peu
+    // grillé.
+    expect(satisfactionEnEau(0.5)).toBe(1);
+    expect(chaleur(pleine(0.5))).toBeCloseTo(chaleur(pleine(0.95)), 6);
+  });
+});
+
 describe("ce que le rendu N'A PAS le droit d'inventer", () => {
-  it("**la couleur de l'herbe ne prend pas de sécheresse en paramètre**", () => {
+  it("la couleur de l'herbe prend sa soif du moteur, jamais d'un seuil local", () => {
     // Le garde-fou de la règle, et il vient d'une faute réelle : j'avais ajouté
     // ici un troisième paramètre `secheresse`, dérivé d'un seuil sur la réserve
     // utile décrété dans le rendu. Le rendu n'a pas à décider à partir de quelle
@@ -214,7 +273,15 @@ describe("ce que le rendu N'A PAS le droit d'inventer", () => {
     // Cet essai compte les paramètres. C'est grossier, et c'est exactement ce
     // qu'il faut : il se déclenche à la SIGNATURE, donc avant qu'on ait eu le
     // temps de rebrancher un seuil quelque part.
-    expect(couleurHerbe.length).toBe(2);
+    // Le troisième paramètre est revenu, mais il a changé de nature : ce n'est
+    // plus une « sécheresse » calculée ici depuis un seuil décrété, c'est
+    // `soilHerbeHumidite` transporté tel quel, dont la lecture passe par
+    // `satisfactionEnEau` — donc par `couvertureMax`, donc par le moteur.
+    //
+    // L'essai vérifie ce qui compte : que la valeur neutre soit l'ABSENCE
+    // d'affirmation. Une scène qui ne transporte pas la grandeur doit rendre
+    // une herbe non assoiffée, jamais une herbe grillée par défaut.
+    expect(couleurHerbe(28, 0.25)).toEqual(couleurHerbe(28, 0.25, 1));
   });
 
   it("aucune constante de palette ne porte un seuil sur une grandeur du moteur", () => {

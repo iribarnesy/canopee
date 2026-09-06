@@ -79,6 +79,7 @@ interface Scene {
     herbeBiomasse: number[];
     litiereCG: number[];
     lumiere?: number[];
+    herbeHumidite?: number[];
     bordures?: DecorBordures;
     pheno?: ContextePhenologique;
   };
@@ -98,6 +99,9 @@ function donneesDe(scene: Scene): DonneesSol {
     herbeBiomasse: Float32Array.from(scene.sol.herbeBiomasse),
     litiereCG: Float32Array.from(scene.sol.litiereCG),
     ...(scene.sol.lumiere ? { lumiere: Float32Array.from(scene.sol.lumiere) } : {}),
+    ...(scene.sol.herbeHumidite
+      ? { herbeHumidite: Float32Array.from(scene.sol.herbeHumidite) }
+      : {}),
     ...(scene.sol.enEau ? { enEau: scene.sol.enEau } : {}),
     ...(scene.sol.debordementMm
       ? { debordementMm: Float32Array.from(scene.sol.debordementMm) }
@@ -176,6 +180,8 @@ interface Options {
    */
   fruitProgress?: number;
   fruitsKg?: number;
+  /** Planche : part de la couronne en fleur ∈ [0,1], telle que le moteur la donne. */
+  floraison?: number;
   /**
    * Planche : la base du houppier, en PART de la hauteur de l'arbre.
    *
@@ -327,6 +333,8 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             // Tels quels, sans repli inventé : absent veut dire « la scène ne
             // transporte pas la grandeur », donc pas de fruit — pas « zéro
             // fruit sur un arbre qui en porte ».
+            ...(t.floraison ? { floraison: t.floraison } : {}),
+            ...(t.floraison ? { floraison: t.floraison } : {}),
             ...(t.fruitProgress ? { fruitProgress: t.fruitProgress } : {}),
             ...(t.fruitsKg ? { fruitsKg: t.fruitsKg } : {}),
           };
@@ -423,6 +431,7 @@ function planche(
       partFoliaire: options.nu ? 0 : 1,
       senescence: options.senescence ?? 0,
       vigueur: 1,
+      ...(options.floraison ? { floraison: options.floraison } : {}),
       ...(options.fruitProgress ? { fruitProgress: options.fruitProgress } : {}),
       ...(options.fruitsKg ? { fruitsKg: options.fruitsKg } : {}),
     };
@@ -590,6 +599,13 @@ const PLANCHE: Planche[] = [
     scene: "",
     especes: FRUITIERS,
     hauteurM: 7,
+    titre: "les fleurs · EN FLEUR (`floraison` : le seul moment où un verger se voit de loin)",
+    options: { floraison: 1 },
+  },
+  {
+    scene: "",
+    especes: FRUITIERS,
+    hauteurM: 7,
     titre: "les fruits · MÛRS (`fruitsKg > 0` : il y a quelque chose à récolter)",
     options: { fruitProgress: 1, fruitsKg: 12 },
   },
@@ -679,6 +695,19 @@ const PLANCHE: Planche[] = [
   { scene: "friche-s28", titre: "friche · zoom ×30", facteur: 30, centre: { x: 50, y: 50 } },
   { scene: "friche-s4", titre: "saison · janvier" },
   { scene: "friche-s17", titre: "saison · avril" },
+  // Semaines 13 et 24 : les fenêtres de floraison, et elles sont ÉTROITES —
+  // deux à trois semaines chacune, calées sur un seuil de degrés-jours. Les
+  // rater était facile : les quatre saisons habituelles (s4, s17, s28, s42) ne
+  // croisent aucune floraison de la friche, ce qui n'est pas un défaut mais la
+  // raison d'être de ces deux scènes-ci.
+  { scene: "friche-s13", titre: "floraison · mars · le prunellier sur bois nu" },
+  {
+    scene: "friche-s13",
+    titre: "floraison · mars · zoom ×10 : l'écume blanche des prunelliers",
+    facteur: 10,
+    centre: { x: 50, y: 50 },
+  },
+  { scene: "friche-s24", titre: "floraison · juin · les grappes du troène" },
   { scene: "friche-s28", titre: "saison · juillet" },
   // Semaine 36 : la semaine de récolte du sureau et du noisetier (`recolteWeek`
   // dans `especes.ts`). C'est la seule façon de voir le fruit sur le chemin

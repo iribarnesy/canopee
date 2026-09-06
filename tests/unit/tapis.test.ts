@@ -16,6 +16,7 @@ const cellule = (herbe: number, litiere: number) => ({
   herbeBiomasse: palier(0.5),
   litiere: palier(litiere),
   lumiere: palier(1),
+  herbeHumidite: palier(1),
 });
 
 describe("la densité du tapis suit le zoom", () => {
@@ -141,7 +142,14 @@ describe("les paliers ne perdent pas le lien avec le moteur", () => {
     const parts = new Set<number>();
     for (let p = 0; p < NIVEAUX; p++) {
       let n = 0;
-      const c = { humidite: 0, herbe: p, herbeBiomasse: 0, litiere: 0, lumiere: palier(1) };
+      const c = {
+        humidite: 0,
+        herbe: p,
+        herbeBiomasse: 0,
+        litiere: 0,
+        lumiere: palier(1),
+        herbeHumidite: palier(1),
+      };
       for (let i = 0; i < 500; i++) if (motifDuTirage(c, i / 500) === "touffe") n++;
       parts.add(n);
     }

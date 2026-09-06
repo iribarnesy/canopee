@@ -40,9 +40,14 @@ export const ABRICOTIER: FicheGraphique = {
     couleur: { r: 222, g: 138, b: 60 },
     longueurM: 0.05,
     parRameau: 3,
+    // Rose franc, et AVANT les feuilles : l'abricotier fleurit sur bois nu, ce
+    // qui rend sa floraison encore plus voyante — et c'est exactement ce qui
+    // l'expose au gel de mars (`gelFatalC`).
+    fleur: { r: 240, g: 192, b: 202 },
   },
   ecorce: { r: 124, g: 90, b: 74 },
   references: [
+    "Coutanceau, Arboriculture fruitière — floraison précoce sur bois nu",
     "Coutanceau, Arboriculture fruitière — maturité et coloration de l'abricot",
     "Bretaudeau & Fauré, Atlas d'arboriculture fruitière — l'abricotier en gobelet",
     "Coutanceau, Arboriculture fruitière — port et floraison précoce du Prunus armeniaca",

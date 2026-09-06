@@ -38,6 +38,8 @@
  * Module **pur** : pas de canvas, pas de DOM, aucun état.
  */
 
+import { couvertureMax } from "../engine/herbe";
+
 /** Paliers de quantification d'une grandeur continue du sol (§3). */
 export const NIVEAUX = 8;
 
@@ -148,6 +150,19 @@ const HERBE_PRINTEMPS: Teinte = { r: 106, g: 140, b: 72 };
 const HERBE_ETE: Teinte = { r: 94, g: 132, b: 66 };
 
 /**
+ * Herbe GRILLÉE par la soif : rase, et brûlée jusqu'au collet.
+ *
+ * À ne pas confondre avec la paille, qui est de la matière sur pied ayant mûri
+ * — haute, blonde, debout. Une pelouse qui grille reste rase et vire au brun
+ * terne : c'est la couleur d'un gazon d'août sans arrosage.
+ *
+ * **La couleur est un choix de dessin ; le MOMENT où on l'applique ne l'est
+ * pas.** C'est toute la différence avec la première tentative, qui décrétait
+ * ici un seuil de réserve utile — voir `satisfactionEnEau`.
+ */
+const HERBE_GRILLEE: Teinte = { r: 142, g: 122, b: 78 };
+
+/**
  * Foin sec : la biomasse reste, la chlorophylle est partie.
  *
  * Ramené de 178/160/104 à 164/152/104. Le foin est bien plus clair que l'herbe
@@ -235,7 +250,7 @@ export function phaseAnnuelle(semaineAnnee: number): number {
  * module lit : la couverture recule — `couvertureMax` la rabat quand l'eau de
  * surface manque — donc le sol nu réapparaît entre les touffes.
  */
-export function couleurHerbe(semaineAnnee: number, biomasse: number): Teinte {
+export function couleurHerbe(semaineAnnee: number, biomasse: number, herbeHumidite = 1): Teinte {
   const phase = phaseAnnuelle(semaineAnnee);
   // Un cycle simple : hiver → printemps → été → hiver, calé sur les repères que
   // le moteur utilise déjà (solstice en semaine 25, sénescence en semaine 40).
@@ -249,7 +264,11 @@ export function couleurHerbe(semaineAnnee: number, biomasse: number): Teinte {
   // La biomasse tire vers le foin : c'est la matière sur pied qui a séché, et
   // elle se voit surtout quand il y en a beaucoup.
   const foin = Math.min(1, Math.max(0, biomasse)) ** 2;
-  return melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
+  const surPied = melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
+  // Puis la soif, par-dessus : elle grille ce qui reste, foin comme gazon. Un
+  // pré déjà blond qui grille ne blondit pas davantage, il brunit.
+  const soif = 1 - satisfactionEnEau(herbeHumidite);
+  return melange(surPied, HERBE_GRILLEE, SOIF_LA_PLUS_BRUNE * soif);
 }
 
 /** Ce que le rendu lit d'une cellule pour la colorer. Tout vient de l'instantané. */
@@ -262,6 +281,22 @@ export interface CelluleSol {
   herbeBiomasse: number;
   /** litière au sol, gC/m² : `soilLitiereCG` */
   litiereCG: number;
+  /**
+   * Humidité VÉCUE par le tapis herbacé ∈ [0,1] : `soilHerbeHumidite`.
+   *
+   * Le remplissage de l'horizon de SURFACE, lissé sur ~6 semaines. Ce n'est ni
+   * `soilWater` — la réserve du profil entier, instantanée — ni la couverture :
+   * c'est la grandeur sur laquelle le moteur décide lui-même si une cellule
+   * peut porter de l'herbe.
+   *
+   * **L'inertie compte autant que la valeur.** Un tapis ne jaunit pas en une
+   * semaine sèche et ne reverdit pas sur une averse ; branchée sur l'humidité
+   * instantanée, la couleur du gazon clignoterait à chaque pluie — ce que ce
+   * lissage existe pour éviter, côté moteur comme côté écran.
+   *
+   * Absente = pas de tapis connu, on n'affirme aucune soif.
+   */
+  herbeHumidite?: number;
   /**
    * Lumière relative arrivant au sol ∈ [0,1] : `soilLumiere`.
    *
@@ -292,6 +327,7 @@ export interface CelluleQuantifiee {
   herbeBiomasse: number;
   litiere: number;
   lumiere: number;
+  herbeHumidite: number;
 }
 
 export function quantifier(c: CelluleSol): CelluleQuantifiee {
@@ -301,7 +337,40 @@ export function quantifier(c: CelluleSol): CelluleQuantifiee {
     herbeBiomasse: palier(c.herbeBiomasse),
     litiere: palier(c.litiereCG / LITIERE_PLEINE_CG),
     lumiere: palier(c.lumiere ?? 1),
+    herbeHumidite: palier(c.herbeHumidite ?? 1),
   };
+}
+
+/**
+ * De combien l'herbe assoiffée tire vers le brun, au pire.
+ *
+ * Un choix de dessin, comme `OPACITE_OMBRE` ou `COUVERT_LE_PLUS_SOMBRE` : il
+ * répond à « une cellule dont le moteur dit que l'herbe manque d'eau, je la
+ * peins comment ? ». Il ne répond PAS à « à partir de quand manque-t-elle
+ * d'eau ? » — cette question-là appartient au moteur, et c'est celle que
+ * j'avais répondue à sa place la première fois.
+ */
+export const SOIF_LA_PLUS_BRUNE = 0.72;
+
+/**
+ * Ce que vaut l'eau vécue par le tapis, en satisfaction ∈ [0,1].
+ *
+ * **La valeur vient du MOTEUR, par sa propre fonction.** `couvertureMax` décide
+ * de la couverture qu'une cellule peut porter à partir de la lumière et de
+ * l'eau de surface ; à pleine lumière, ce qu'elle rend EST le facteur d'eau. On
+ * l'appelle donc au lieu de recopier son seuil — recopier serait la seconde
+ * façon de se tromper, celle que le §2.1 nomme : deux copies d'une règle
+ * dérivent, et personne ne le voit.
+ *
+ * **La première tentative faisait pire.** Elle décrétait ici un seuil sur la
+ * réserve utile : faux de valeur (0,42 contre 0,35), faux de grandeur (le
+ * profil entier au lieu de l'horizon de surface, et sans l'inertie qui est le
+ * cœur du phénomène), et surtout faux de nature — un seuil qui décide qu'une
+ * herbe souffre est une affirmation de modèle. Le manque est parti en issue, le
+ * moteur y a répondu, et le rendu se contente maintenant de lire.
+ */
+export function satisfactionEnEau(herbeHumidite: number): number {
+  return couvertureMax(1, Math.min(1, Math.max(0, herbeHumidite)));
 }
 
 /**
@@ -357,7 +426,11 @@ export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
   // herbe tient tant que le sol garde de quoi transpirer, puis grille vite. Le
   // seuil est le même ordre de grandeur que les `seuilStressSecheresse` des
   // fiches d'espèces *(à calibrer)*.
-  const herbe = couleurHerbe(semaineAnnee, valeurDuPalier(q.herbeBiomasse));
+  const herbe = couleurHerbe(
+    semaineAnnee,
+    valeurDuPalier(q.herbeBiomasse),
+    valeurDuPalier(q.herbeHumidite),
+  );
   // La couverture n'est pas une opacité linéaire : une cellule à moitié
   // couverte lit déjà comme de l'herbe, parce que les touffes se voient de
   // loin et que la terre entre elles est à l'ombre. Le facteur est généreux

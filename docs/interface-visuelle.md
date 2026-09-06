@@ -461,6 +461,42 @@ aux quatre saisons, la couleur et le motif d'écorce, la silhouette d'hiver, et
 un champ `references` — **les sources du dessin, au même titre que les valeurs
 du moteur sont sourcées**. C'est la même discipline appliquée à l'image.
 
+### Quatre grandeurs qui manquaient, et ce que ça a appris
+
+Le retour du 6 septembre a produit trois issues moteur, toutes traitées, plus
+une quatrième trouvée en chemin. Le tableau vaut mieux qu'un récit, parce que la
+colonne de droite est la même à chaque fois :
+
+| Grandeur | Ce que le rendu faisait | Ce qu'il fait |
+|---|---|---|
+| `soilHerbeHumidite` (#12) | un seuil de grillage décrété dans `palette.ts`, sur la réserve utile | lit la grandeur, et lit le SEUIL en appelant `couvertureMax` |
+| `hauteurElagueeM` → lumière (#13) | rien, faute de pouvoir le dire honnêtement | rien non plus — `soilLumiere` s'en charge tout seul |
+| `floraison` (#14) | rien ; `fruitProgress` ne permet pas de l'inférer | dessine la fleur, sans connaître aucune date |
+| `baseHouppierM` | `1 − 2 × houppierRatio`, une formule maison | lit la grandeur, et perd un champ au passage |
+
+**Ce que les quatre ont en commun** : dans les quatre cas le rendu ne pouvait
+pas obtenir la grandeur en réfléchissant plus fort, parce qu'elle dépend de
+choses qu'il ne voit pas — la compétition subie, l'inertie d'un tapis sur six
+semaines, un cumul de degrés-jours. Deux des quatre avaient été « résolus » par
+une approximation locale, et les deux approximations étaient fausses de la même
+façon : elles ne connaissaient que l'espèce, là où la grandeur dit une
+HISTOIRE.
+
+**Et la leçon inverse, qui compte autant** : #13 n'a demandé aucun travail de
+dessin. Une fois l'élagage entré dans `computeGroundLight`, le sol s'est
+assombri au bon endroit tout seul, parce que le rendu lisait déjà `soilLumiere`.
+Brancher une grandeur bien placée fait souvent apparaître plusieurs effets sans
+qu'on ait rien à peindre — c'est le meilleur argument pour ouvrir l'issue plutôt
+que pour combler le trou sur place.
+
+**Deux façons de se tromper, pas une.** Inventer un seuil est la première.
+Recopier celui du moteur est la seconde, et elle est plus discrète : deux copies
+d'une règle dérivent, et rien ne le signale (§2.1). D'où la forme finale, qui
+évite les deux — `satisfactionEnEau` APPELLE `couvertureMax` avec une lumière
+pleine, puisque ce que cette fonction rend alors est exactement le facteur
+d'eau. Un essai vérifie l'égalité aux deux bouts de l'échelle : il casse si l'un
+des deux bouge sans l'autre.
+
 ### La bonne UNITÉ de dessin, et pourquoi la question revient sans cesse
 
 Trois fois de suite, le même arbitrage a décidé si une fonctionnalité marchait
@@ -543,20 +579,16 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   inventer une différence que la simulation ne fait pas — exactement la
   « fausse réalité » que le retour reproche. C'est donc une carte MOTEUR :
   l'élagage relève la base du houppier, la lumière passe dessous.
-- **Une pelouse sèche ne se voit pas encore**, et c'est une carte MOTEUR : la
-  grandeur qui le dirait est `humiditeVecue` (`herbe.ts`), l'humidité de
-  l'horizon de surface lissée sur ~6 semaines, et elle n'est pas dans
-  l'instantané. En attendant, la sécheresse se lit indirectement — la couverture
-  recule, donc le sol nu réapparaît entre les touffes — ce qui est vrai mais
-  discret.
-- **Les fruits sont dessinés** (lot L2), mais seulement la moitié aval du
-  cycle : `fruitProgress` donne le fruit vert, `fruitsKg` le fruit mûr — le seul
-  état de l'arbre qui appelle un geste et se perd si on le rate. La FLORAISON,
-  elle, n'est pas identifiable depuis l'instantané : la fenêtre vit dans
-  `tick.ts` et `fruitProgress` vaut 0 avant, pendant, et toute l'année pour un
-  arbre immature — les trois cas sont indiscernables. Carte moteur, issue #14.
-  Conséquence : `bloomFrosted` n'a aucun support visuel, donc le gel tardif de
-  l'abricotier se traduit à l'écran par une absence de fruit sans cause lisible.
+- **Trois manques sont comblés depuis** (issues #12, #13, #14 — le moteur a
+  répondu, le rendu a branché) : la pelouse grille sur `soilHerbeHumidite`,
+  l'arbre élagué rend de la lumière au sous-étage sans une ligne de dessin de
+  plus, et le verger fleurit sur `floraison`. Voir « quatre grandeurs qui
+  manquaient » ci-dessous.
+- **`bloomFrosted` n'a toujours aucun support visuel.** Le champ voyage, mais un
+  arbre dont la floraison a gelé se distingue seulement par une absence de
+  fruit — et une absence ne se lit pas comme une cause. C'est un travail
+  d'ANIMATION (§6.3) plutôt que de vignette : une fleur qui brunit et tombe la
+  semaine du gel, pas un état permanent peint sur l'arbre jusqu'en novembre.
 - **Trois espèces qui portent des fruits bien visibles n'en auront pas** :
   l'aubépine, le houx, le fusain. Aucune n'a de bloc `fruits` dans `especes.ts`,
   donc le moteur ne suit pas leur fructification, et leur en dessiner serait

@@ -50,9 +50,13 @@ export const TROENE: FicheGraphique = {
     // grappe dressée de 3 à 6 cm : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.045,
+    // Grappes blanches dressées en juin, très mellifères — le moteur le note
+    // (`floraisonDJ: 800`) et compte leur part dans l'étalement des floraisons.
+    fleur: { r: 242, g: 240, b: 228 },
   },
   ecorce: { r: 112, g: 106, b: 92 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — panicules du Ligustrum vulgare",
     "Rameau et al., Flore forestière française, t. 1 — baies du Ligustrum vulgare",
     "Rameau et al., Flore forestière française, t. 1 — Ligustrum vulgare",
     "Atlas des essences (dépôt) — « semi-persistant ; supporte la taille → haies »",

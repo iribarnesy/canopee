@@ -12,6 +12,7 @@ import {
   etatDuFruit,
   FRUIT_AUCUN,
   FRUIT_CROISSANCE,
+  FRUIT_FLEUR,
   FRUIT_MUR,
 } from "../../src/render/couches/arbres";
 
@@ -325,11 +326,16 @@ describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
       ...patch,
     });
     expect(etatDuFruit(arbre({}))).toBe(FRUIT_AUCUN);
+    expect(etatDuFruit(arbre({ floraison: 0.8 }))).toBe(FRUIT_FLEUR);
     expect(etatDuFruit(arbre({ fruitProgress: 0.5 }))).toBe(FRUIT_CROISSANCE);
     expect(etatDuFruit(arbre({ fruitProgress: 1, fruitsKg: 12 }))).toBe(FRUIT_MUR);
     // Et l'inverse ne s'invente pas : sans grandeur, pas de fruit. Un arbre
     // dont la scène ne transporte pas l'état n'en porte pas.
     expect(etatDuFruit(arbre({ fruitsKg: 0, fruitProgress: 0 }))).toBe(FRUIT_AUCUN);
+    // L'arbousier fleurit PENDANT que mûrissent les arbouses de l'an passé —
+    // c'est sa signature, et le moteur la porte. Le fruit mûr l'emporte alors,
+    // parce que c'est lui qui appelle un geste.
+    expect(etatDuFruit(arbre({ floraison: 1, fruitsKg: 5 }))).toBe(FRUIT_MUR);
   });
 
   it("l'état de fructification entre dans la clé de cache", () => {
@@ -353,6 +359,27 @@ describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
     const nu = cleClasse(classeDe(base, 12, v));
     const charge = cleClasse(classeDe({ ...base, fruitProgress: 1, fruitsKg: 9 }, 12, v));
     expect(nu).not.toBe(charge);
+  });
+
+  it("**une couleur de fleur suppose un cycle de fruits côté moteur**", () => {
+    // La fleur vit DANS le bloc `fruit`, donc la contrainte est structurelle :
+    // impossible de déclarer une floraison à une espèce dont le moteur ne suit
+    // pas la fructification. C'est voulu — le moment de la floraison se calcule
+    // sur `floraisonDJ`, qui n'existe que dans le bloc `fruits`.
+    for (const f of FICHES) {
+      if (!f.fruit?.fleur) continue;
+      expect(getEspece(f.especeId)?.fruits?.floraisonDJ, f.especeId).toBeGreaterThan(0);
+    }
+  });
+
+  it("toutes les espèces à fruits ne fleurissent PAS de façon visible", () => {
+    // Une floraison discrète existe — chatons verdâtres du noisetier, chatons
+    // crème du châtaignier — et ne se dessine pas : ce qui justifie de la
+    // peindre, c'est qu'elle CHANGE la silhouette de loin. Un noisetier en
+    // fleur ressemble à un noisetier.
+    expect(ficheDe("corylus_avellana")?.fruit?.fleur).toBeUndefined();
+    expect(ficheDe("castanea_sativa")?.fruit?.fleur).toBeUndefined();
+    expect(ficheDe("malus_domestica")?.fruit?.fleur).toBeDefined();
   });
 
   it("les diamètres de grappe déclarés sont plus grands que leurs fruits", () => {

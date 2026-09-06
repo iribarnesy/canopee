@@ -44,9 +44,14 @@ export const PRUNELLIER: FicheGraphique = {
     // prunelles serrées le long du rameau : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.05,
+    // Blanc pur sur bois NU, en février-mars : un prunellier en fleur est une
+    // écume blanche dans une haie encore grise. Rien d'autre ne fait ça à cette
+    // saison.
+    fleur: { r: 246, g: 244, b: 238 },
   },
   ecorce: { r: 78, g: 68, b: 60 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — floraison avant feuillaison",
     "Rameau et al., Flore forestière française, t. 1 — Prunus spinosa, drupe pruineuse",
     "Rameau et al., Flore forestière française, t. 1 — Prunus spinosa",
     "Guide des haies bocagères (CAUE) — l'ourlet épineux et son drageonnement",

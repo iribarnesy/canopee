@@ -87,6 +87,18 @@ export interface Fruit {
    * suffise ; on retombe alors sur l'estimation.
    */
   grappeM?: number;
+  /**
+   * La couleur de la FLEUR ; absente = l'espèce ne fleurit pas de façon visible.
+   *
+   * Une floraison discrète existe — le noisetier fait des chatons verdâtres, le
+   * châtaignier des chatons crème — mais ce qui justifie de la dessiner, c'est
+   * qu'elle CHANGE la silhouette de loin. Un pommier en fleur est blanc sur
+   * toute sa couronne ; un noisetier en fleur ressemble à un noisetier.
+   *
+   * Le moment, lui, ne s'invente pas : c'est `Snapshot.floraison`, calculé sur
+   * un seuil de degrés-jours (`partFloraison`). Le rendu ne connaît aucune date.
+   */
+  fleur?: Teinte;
 }
 
 /**

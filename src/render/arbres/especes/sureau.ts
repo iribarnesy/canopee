@@ -47,9 +47,13 @@ export const SUREAU: FicheGraphique = {
     // corymbe de 10 à 20 cm : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.13,
+    // Les grandes ombelles blanc crème de juin, plates et larges — au même
+    // endroit et de la même taille que les corymbes de fruits qui les suivront.
+    fleur: { r: 240, g: 238, b: 220 },
   },
   ecorce: { r: 118, g: 106, b: 88 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — ombelles du Sambucus nigra",
     "Rameau et al., Flore forestière française, t. 1 — corymbe du Sambucus nigra",
     "Rameau et al., Flore forestière française, t. 1 — Sambucus nigra",
     "Guide des haies bocagères (CAUE) — les arbustes à bois tendre",

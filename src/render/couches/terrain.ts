@@ -179,6 +179,13 @@ export interface DonneesSol {
    */
   lumiere?: Float32Array;
   /**
+   * `Snapshot.soilHerbeHumidite` : l'humidité VÉCUE par le tapis herbacé ∈ [0,1].
+   *
+   * Absente = pas de tapis connu ; on n'affirme alors aucune soif, ce qui rend
+   * la scène telle qu'elle était avant que la grandeur n'existe.
+   */
+  herbeHumidite?: Float32Array;
+  /**
    * `StationInfo.enEau` : les cellules d'eau libre, fixées avec la station.
    * Absent = parcelle sans ruisseau ni mare.
    */
@@ -415,6 +422,7 @@ function teintePave(
   let biomasse = 0;
   let litiere = 0;
   let lumiere = 0;
+  let herbeHumidite = 0;
   let z = 0;
   let relief = 0;
   let n = 0;
@@ -430,6 +438,7 @@ function teintePave(
       biomasse += donnees.herbeBiomasse[i] ?? 0;
       litiere += donnees.litiereCG[i] ?? 0;
       lumiere += donnees.lumiere?.[i] ?? 1;
+      herbeHumidite += donnees.herbeHumidite?.[i] ?? 1;
       z += donnees.altitudesM[i] ?? 0;
       relief += facteurRelief(donnees.altitudesM, donnees.coteM, x, y, penteReference);
       n++;
@@ -442,6 +451,7 @@ function teintePave(
     herbeBiomasse: biomasse / n,
     litiereCG: litiere / n,
     lumiere: lumiere / n,
+    herbeHumidite: herbeHumidite / n,
   });
   return { teinte: eclairer(couleurSol(q, semaineAnnee), relief / n), z: z / n };
 }

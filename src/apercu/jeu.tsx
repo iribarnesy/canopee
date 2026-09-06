@@ -54,6 +54,7 @@ interface Scene {
     herbeBiomasse: number[];
     litiereCG: number[];
     lumiere?: number[];
+    herbeHumidite?: number[];
     bordures?: DecorBordures;
     pheno?: ContextePhenologique;
   };
@@ -73,6 +74,9 @@ function donneesDe(scene: Scene): DonneesSol {
     herbeBiomasse: Float32Array.from(scene.sol.herbeBiomasse),
     litiereCG: Float32Array.from(scene.sol.litiereCG),
     ...(scene.sol.lumiere ? { lumiere: Float32Array.from(scene.sol.lumiere) } : {}),
+    ...(scene.sol.herbeHumidite
+      ? { herbeHumidite: Float32Array.from(scene.sol.herbeHumidite) }
+      : {}),
     ...(scene.sol.enEau ? { enEau: scene.sol.enEau } : {}),
     ...(scene.sol.debordementMm
       ? { debordementMm: Float32Array.from(scene.sol.debordementMm) }

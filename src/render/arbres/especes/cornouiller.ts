@@ -45,9 +45,14 @@ export const CORNOUILLER_MALE: FicheGraphique = {
     // drupes solitaires ou par deux, sur un court pédoncule : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.032,
+    // JAUNE, et en février sur bois nu : le cornouiller mâle est le premier
+    // arbuste à fleurir de la haie, et sa couleur ne ressemble à aucune autre
+    // floraison de l'atlas.
+    fleur: { r: 226, g: 206, b: 96 },
   },
   ecorce: { r: 108, g: 92, b: 76 },
   references: [
+    "Rameau et al., Flore forestière française, t. 1 — floraison hivernale du Cornus mas",
     "Rameau et al., Flore forestière française, t. 1 — drupe du Cornus mas",
     "Rameau et al., Flore forestière française, t. 1 — Cornus mas",
     "Jacamon, Guide de dendrologie — le bois du cornouiller, le plus dur d'Europe",

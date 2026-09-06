@@ -46,9 +46,14 @@ export const ARBOUSIER: FicheGraphique = {
     // arbouses par petits groupes pendants : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.035,
+    // Clochettes blanc crème EN MÊME TEMPS que les arbouses rouges de l'an
+    // passé : c'est la signature de l'espèce, et le moteur la porte — floraison
+    // et récolte tombent au même moment de l'année.
+    fleur: { r: 240, g: 236, b: 226 },
   },
   ecorce: { r: 152, g: 82, b: 62 },
   references: [
+    "Quézel & Médail, Écologie et biogéographie des forêts méditerranéennes — phénologie de l'arbousier",
     "Quézel & Médail, Écologie et biogéographie des forêts méditerranéennes — Arbutus unedo",
     "Rameau et al., Flore forestière française, t. 3 — région méditerranéenne, Arbutus unedo",
     "Quézel & Médail, Écologie et biogéographie des forêts du bassin méditerranéen",
