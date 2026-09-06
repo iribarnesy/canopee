@@ -736,9 +736,30 @@ c'est une histoire de distance hydraulique aux racines — un arbre qui perdrait
 son feuillage bas serait un arbre broutté ou élagué, ce que l'œil sait
 distinguer.
 
-La cime sèche s'applique aussi aux FRUITS : un rameau embolisé n'en porte pas.
-C'est le genre de détail qui ne se remarque pas tout de suite et qui, une fois
-vu, décrédibilise tout le reste.
+**La cime sèche DÉPLACE les fruits, elle n'en retire aucun** — et la première
+version faisait l'inverse, ce qui vaut d'être écrit parce que c'est une
+troisième façon de fauter, distincte des deux autres.
+
+Le moteur calcule `fruitsKg` sans le moindre terme de dommage hydraulique :
+`rendementMaxKg × sizeFactor × fruitProgress × gel × pollinisation × service`.
+Il dit donc qu'un arbre à cime sèche porte sa charge ENTIÈRE. En filtrant les
+rameaux secs puis en parcourant le reste avec la même probabilité, je dessinais
+45 % de fruits en moins sur un arbre à 45 % de cime sèche : j'atténuais le
+signal de RÉCOLTE, le seul de l'arbre qui appelle un geste, au nom d'un
+mécanisme que le moteur ne modélise pas.
+
+Et le « bois mort » n'existe même pas côté moteur — `dommageHydraulique` est un
+scalaire sur l'arbre, le squelette est une construction du rendu. L'incohérence
+à résoudre était donc interne au dessin, et elle n'avait aucune raison de se
+payer sur une donnée. On compense le taux d'acceptation par le taux de survie
+des rameaux : la charge dessinée ne bouge pas, seule sa place change — et la
+place a toujours été l'affaire du rendu.
+
+**Les trois façons de fauter, donc**, et il a fallu les trois pour les voir :
+inventer une grandeur que le moteur n'a pas (le seuil de grillage de l'herbe) ;
+recopier une règle qu'il a déjà (son seuil d'eau, s'il n'était pas appelé) ; et
+ÉDITER une grandeur qu'il donne, en la rabotant au passage. La troisième est la
+plus discrète des trois, parce qu'elle se déguise en souci de cohérence.
 
 ### 5.7 Saisons, météo, lumière
 

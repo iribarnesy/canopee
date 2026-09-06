@@ -953,11 +953,29 @@ function dessinerFruits(
     : mur
       ? fruit.couleur
       : melange(FRUIT_VERT, fruit.couleur, 0.25);
-  const terminaux = seuilCimeSeche(
-    segments.filter((s) => s.terminal),
-    dommageHydraulique,
-    versPx,
-  );
+  // **La cime sèche DÉPLACE les fruits, elle n'en retire aucun**, et la
+  // distinction a failli m'échapper.
+  //
+  // Le moteur calcule `fruitsKg` sans le moindre terme de dommage hydraulique :
+  // `rendementMaxKg × sizeFactor × fruitProgress × gel × pollinisation ×
+  // service`. Il dit donc qu'un arbre à cime sèche porte sa charge ENTIÈRE. Ma
+  // première version filtrait les rameaux secs puis parcourait le reste avec la
+  // même probabilité d'acceptation : elle dessinait 45 % de fruits en moins sur
+  // un arbre à 45 % de cime sèche. C'est-à-dire qu'elle atténuait le signal de
+  // RÉCOLTE — le seul de l'arbre qui appelle un geste — au nom d'un mécanisme
+  // que le moteur ne modélise pas.
+  //
+  // Et le « bois mort » n'existe même pas côté moteur : `dommageHydraulique`
+  // est un scalaire sur l'arbre, le squelette est une construction du rendu.
+  // L'incohérence à résoudre était donc la MIENNE, à l'intérieur du dessin, et
+  // il n'y avait aucune raison de la payer avec une grandeur du moteur.
+  //
+  // On compense : moins de rameaux disponibles, chacun d'autant plus susceptible
+  // d'en porter. La charge dessinée ne bouge pas, seule sa place change — et la
+  // place a toujours été l'affaire du rendu.
+  const tousLesBouts = segments.filter((s) => s.terminal);
+  const terminaux = seuilCimeSeche(tousLesBouts, dommageHydraulique, versPx);
+  const survie = terminaux.length / Math.max(1, tousLesBouts.length);
   // En amas, il n'y a qu'une marque par rameau : elle ne s'étale pas, elle EST
   // l'étalement.
   const etalement = enAmas ? 0 : (diametreDuGroupeM(fruit) * echelle) / 2;
@@ -967,10 +985,10 @@ function dessinerFruits(
     // Une floraison couvre la couronne, une fructification la pique : le
     // pommier de mai est blanc partout, celui de septembre porte des pommes çà
     // et là. C'est le même arbre et le même rameau — c'est la PART qui change.
-    if (
-      hacher(i, classe.palier, 0x3ef7) > (enFleur ? PART_RAMEAUX_FLEURIS : PART_RAMEAUX_FRUITIERS)
-    )
-      continue;
+    // La part est relevée du taux de survie des rameaux : voir plus haut, la
+    // cime sèche déplace les fruits, elle n'en retire pas.
+    const part = Math.min(1, (enFleur ? PART_RAMEAUX_FLEURIS : PART_RAMEAUX_FRUITIERS) / survie);
+    if (hacher(i, classe.palier, 0x3ef7) > part) continue;
     const bout = versPx(s.arrivee);
     for (let k = 0; k < combien; k++) {
       // Le groupe s'étale autour du bout du rameau, et PEND : un fruit pèse,

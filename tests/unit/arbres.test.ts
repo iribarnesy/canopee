@@ -595,3 +595,54 @@ describe("les états de santé : deux grandeurs, deux signaux", () => {
     expect(teinteSelonVigueur(ete, 1)).toEqual(ete);
   });
 });
+
+describe("ce que la cime sèche N'A PAS le droit de faire au fruit", () => {
+  /**
+   * Compte les marques de FRUIT seules.
+   *
+   * L'arbre est posé sans feuillage (`partFoliaire: 0`) — sinon le compteur
+   * mélangerait les deux, et le feuillage, lui, DOIT baisser avec la cime
+   * sèche : c'est tout l'objet du dessin. Le bois se trace en `stroke`, pas en
+   * `fill`, donc ce qui reste est exactement le fruit.
+   */
+  function marquesDeFruit(dommageHydraulique: number): number {
+    const { fabriquer, compte } = fabriqueBouchon();
+    const v = vue(6);
+    const pommier = arbre({
+      especeId: "malus_domestica",
+      heightM: 8,
+      houppierRatio: 0.45,
+      baseHouppierM: 2,
+      fruitProgress: 1,
+      fruitsKg: 12,
+      partFoliaire: 0,
+      dommageHydraulique,
+    });
+    cuireVignette(classeDe(pommier, 12, v), 8, 0.45, fabriquer, 2);
+    return compte.remplissages;
+  }
+
+  it("**elle déplace les fruits, elle n'en retire pas**", () => {
+    // Le moteur calcule `fruitsKg` SANS terme de dommage hydraulique :
+    // `rendementMaxKg × sizeFactor × fruitProgress × gel × pollinisation ×
+    // service`. Il dit donc qu'un arbre à cime sèche porte sa charge entière.
+    //
+    // La première version filtrait les rameaux secs puis parcourait le reste
+    // avec la même probabilité : elle dessinait 45 % de fruits en moins sur un
+    // arbre à 45 % de cime sèche. C'était atténuer le signal de RÉCOLTE — le
+    // seul de l'arbre qui appelle un geste — au nom d'un mécanisme que le
+    // moteur ne modélise pas. Éditer une grandeur du moteur est aussi grave que
+    // d'en inventer une.
+    //
+    // Le « bois mort » n'existe d'ailleurs pas côté moteur : `dommage
+    // Hydraulique` est un scalaire sur l'arbre, et le squelette est une
+    // construction du rendu. L'incohérence à résoudre était interne au dessin ;
+    // elle n'avait pas à se payer sur une donnée.
+    const sain = marquesDeFruit(0);
+    const sec = marquesDeFruit(0.5);
+    expect(sain).toBeGreaterThan(0);
+    // À la tolérance du tirage déterministe près : la charge dessinée ne suit
+    // pas la cime sèche.
+    expect(sec).toBeGreaterThan(sain * 0.75);
+  });
+});
