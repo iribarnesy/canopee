@@ -71,6 +71,7 @@ import {
   prochaineCouverture,
 } from "./herbe";
 import {
+  baseHouppierCible,
   computeGroundLight,
   computeLight,
   crownRadiusM,
@@ -1242,10 +1243,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       getEspece(tree.especeId).eau.seuilStressSecheresse,
     );
     const acquired = acquiredNG[t] ?? 0;
+    // Élagage naturel (docs/realisme.md B10) : sous l'ombre, les branches
+    // basses cessent de payer leur respiration et meurent. La base du houppier
+    // MONTE, et ne redescend jamais — une branche morte ne repousse pas. C'est
+    // ce cliquet qui donne le fût nu d'une futaie serrée, et lui seul : à
+    // lumière pleine, la cible reste au ras du sol et rien ne bouge.
+    const lumiere = getEspece(tree.especeId).lumiere;
+    const cible = baseHouppierCible(next.heightM, light[t] ?? 1, lumiere.compensation, lumiere.lai);
+    // La scie compte autant que l'ombre, et l'arbre ne les distingue pas.
+    const baseHouppierM = Math.max(tree.baseHouppierM ?? 0, cible, next.hauteurElagueeM);
     return {
       ...next,
       vigueur,
       dommageHydraulique,
+      baseHouppierM,
       uptakeYearG: next.uptakeYearG + Math.max(0, acquired),
     };
   });
@@ -1902,6 +1913,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           apresFeu.push({
             ...tree,
             heightM: HAUTEUR_REJET_M,
+            // Un rejet de souche repart branchu : ni fût nu, ni ombre héritée.
+            baseHouppierM: 0,
             stress: 0,
             fruitsKg: 0,
             fruitProgress: 0,

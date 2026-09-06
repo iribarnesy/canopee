@@ -61,6 +61,17 @@ export interface SnapshotTree {
   fruitsKg: number;
   /** hauteur de bille élaguée, m (ce qui fera du bois d'œuvre) */
   hauteurElagueeM: number;
+  /**
+   * Base du houppier, m : en dessous, plus une branche vivante — donc du fût
+   * nu à dessiner (`trees.ts`, docs/realisme.md B10).
+   *
+   * Elle voyage parce qu'elle ne se déduit de RIEN : ni de l'espèce (le même
+   * chêne est branchu en pré et nu sur quinze mètres en futaie), ni de
+   * `hauteurElagueeM` (qui ne compte que le coup de scie, pas l'ombre). Le
+   * rendu en avait fabriqué une approximation privée — 0,3 pour un caduc,
+   * 0,2 pour un conifère — qui ne disait rien de la compétition subie.
+   */
+  baseHouppierM: number;
   /** plant sous manchon : le gibier ne l'atteint pas */
   protege: boolean;
   /**

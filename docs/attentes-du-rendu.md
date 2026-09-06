@@ -90,10 +90,19 @@ pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 | `soilCloture` | cellules closes (1) |
 
 **Par arbre** (`SnapshotTree`, chandelles comprises) : `id`, `especeId`, `x`,
-`y`, `heightM`, `ageWeeks`, `stress`, `fruitsKg`, `hauteurElagueeM`, `protege`,
-`chandelle`, `teteTrogneM`, `recepages`, `vigueur`, `dommageHydraulique`,
-`mortSemaine`, `brulEeSemaine`, `causeMort`, `derniereLeveeSemaine`,
-`floraison`, `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`.
+`y`, `heightM`, `ageWeeks`, `stress`, `fruitsKg`, `hauteurElagueeM`,
+`baseHouppierM`, `protege`, `chandelle`, `teteTrogneM`, `recepages`, `vigueur`,
+`dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
+`derniereLeveeSemaine`, `floraison`, `fruitProgress`, `bloomFrosted`,
+`pousseTendreM`, `frotteSemaine`.
+
+`baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
+plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien
+— ni de l'espèce (le même chêne est branchu en pré et nu sur quinze mètres en
+futaie), ni de `hauteurElagueeM`, qui ne compte que le coup de scie et pas
+l'ombre. Elle remplace l'approximation que le rendu s'était faite
+(`conifereBase`, 0,3 pour un caduc et 0,2 pour un conifère), laquelle dessinait
+deux chênes voisins pareillement alors que le moteur ne les traite pas pareil.
 
 **Ce qui s'est passé depuis le dernier instantané** : `events`, `refusals`,
 `morts` (avec `id` et position), `chutes` (chandelles abattues : direction et
