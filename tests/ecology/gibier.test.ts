@@ -431,6 +431,29 @@ describe("les gestes du gibier remontent au rendu", () => {
     for (const id of broutes) expect(state.trees.some((t) => t.id === id)).toBe(true);
   });
 
+  /**
+   * Le pendant du `retire` des gestes du joueur (issue #37) : le gibier n'en
+   * porte pas, et ce n'est pas un oubli. Il ne retire aucun volume
+   * géométrique — ni hauteur, ni base de houppier — mais un stock,
+   * `pousseTendreM`, dont la date voyage déjà par `brouteSemaine`.
+   */
+  it("le broutage ne prétend pas retirer un volume : il n'a pas de `retire`", () => {
+    let state = createGameState(station, rngStateFromSeed(8));
+    for (let i = 0; i < 30; i++) {
+      state = plantAt(state, "corylus_avellana", 2 + (i % 6) * 4, 2 + Math.floor(i / 6) * 4, 0.6);
+    }
+    let geste: { retire?: unknown } | undefined;
+    for (let i = 0; i < 52 && !geste; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      const r = advanceWeek(state, w, []);
+      state = r.state;
+      geste = r.gestes.filter(estGesteSurArbres).find((g) => g.type === "brouter");
+    }
+    expect(geste).toBeDefined();
+    expect(geste?.retire).toBeUndefined();
+  });
+
   it("le frottis nomme les tiges marquées, celles-là mêmes qui portent la date", () => {
     let state = createGameState(station, rngStateFromSeed(11));
     for (let i = 0; i < 24; i++) {

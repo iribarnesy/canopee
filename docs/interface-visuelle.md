@@ -190,7 +190,7 @@ semaine simulée.
 | **Santé** | `vigueur`, `dommageHydraulique` | feuillage clairsemé et pâle ; **cime sèche** des sécheresses passées |
 | **Chandelles** | `chandelle`, `mortSemaine`, `brulEeSemaine` | le fût qui grisonne et se creuse ; la **noire** du feu contre la **grise** du temps |
 | **Morts** | `Snapshot.morts` (`MortDeLaSemaine{id,x,y,especeId,cause,heightM}`) | les onze animations de mort, chacune à sa place — et elles **s'accumulent** entre deux instantanés, donc rien ne passe à la trappe à grande vitesse |
-| **Gestes** | `Snapshot.gestes` (`GesteVisible`) | l'arbre qui **tombe** au lieu de s'escamoter ; élagage, étêtage, recépage, broutage, frottis. Ils disent ce qui a été *réellement* touché — le plafond horaire arrête souvent le chantier en cours de route |
+| **Gestes** | `Snapshot.gestes` (`GesteVisible`) | l'arbre qui **tombe** au lieu de s'escamoter ; élagage, étêtage, recépage, broutage, frottis. Ils disent ce qui a été *réellement* touché — le plafond horaire arrête souvent le chantier en cours de route. Les cinq gestes du joueur portent `retire: ArbreRetire[]` : position, espèce, hauteurs et bases de houppier avant/après, et `directionRad` quand une tige entière est tombée — de quoi animer un arbre qui a déjà quitté `state.trees` |
 | **Incendie** | `Snapshot.incendie` (`IncendieResult{origine,brulees,rangs}`) | le front qui court : les cellules sont rangées **par rang croissant**, le rendu n'a qu'à les découper en tranches |
 | **Eau de surface** | `soilDebordementMm` | la crue, la lame d'eau qui court, les ravines |
 | **Ambiance** | `soilLumiere` | le sous-bois sombre, les taches de lumière, la clairière |

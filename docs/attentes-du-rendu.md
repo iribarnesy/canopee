@@ -134,6 +134,22 @@ déjà rase ne se fauche pas. `estGesteSurArbres` et `estGesteSurZone` discrimin
 les deux mailles (`find` rend l'union entière, que TypeScript ne rétrécit pas
 sur le seul `type`).
 
+Les cinq gestes du joueur qui retirent du bois portent en plus `retire`, un
+`ArbreRetire[]` dans le même ordre que `ids` : `id`, `x`, `y`, `especeId`,
+`hauteurAvantM` / `hauteurApresM`, `baseHouppierAvantM` / `baseHouppierApresM`,
+et `directionRad`. C'est un enregistrement COMPLET, pas un delta, parce qu'un
+arbre coupé quitte `state.trees` dans le même tick : son identifiant seul ne
+mène plus à rien dans l'instantané. `hauteurApresM` à 0 signe ce départ ; sinon
+c'est ce qui reste debout — tête de trogne, souche de recépage, tige intacte
+d'un élagage. `directionRad` n'est présent que quand une tige ENTIÈRE est
+tombée (`couper`, `eclaircir`, `receper`) : c'est l'orientation en travers de
+la pente, la seule que le moteur sache justifier — il ne modélise ni
+cloisonnement ni sens de débardage, et sur terrain plat elle ne veut rien dire.
+Pour `elaguer` et `trogner` la charpente est démontée sur place, le moteur n'y
+voit pas de direction unique et n'en invente pas. `brouter` et `frotter` n'ont
+pas de `retire` : le gibier prélève un stock (`pousseTendreM`), pas un volume
+géométrique, et sa date voyage par `brouteSemaine`.
+
 **Et ce que le rendu peut calculer lui-même**, sans rien demander : tout ce qui
 est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur
 est importable depuis l'UI. En particulier le rayon de houppier depuis la

@@ -479,6 +479,59 @@ export interface GesteSurArbres {
   type: GesteTypeArbre;
   /** les arbres réellement touchés, pas ceux qu'on avait demandés */
   ids: readonly number[];
+  /**
+   * Ce que le geste a RETIRÉ de chaque arbre nommé dans `ids`, même ordre.
+   *
+   * Sans ça, `ids` ne suffit pas à dessiner le geste : un arbre coupé quitte
+   * `state.trees` dans le même tick, donc le rendu qui reçoit son identifiant
+   * ne le trouve plus dans l'instantané et n'a plus ni sa position ni sa
+   * taille pour l'animer. D'où un enregistrement COMPLET plutôt qu'un delta —
+   * la même forme que `ChuteDeChandelle` et `MortDeLaSemaine` (tick.ts).
+   *
+   * Présent pour les cinq gestes du joueur (`couper`, `eclaircir`, `elaguer`,
+   * `trogner`, `receper`) ; absent pour `brouter` et `frotter`, où le gibier
+   * ne retire aucun volume géométrique — ce qu'il mange est un stock
+   * (`pousseTendreM`), et sa date voyage déjà par `brouteSemaine`.
+   */
+  retire?: readonly ArbreRetire[];
+}
+
+/**
+ * Un arbre tel qu'il était juste AVANT le geste, et tel qu'il en ressort :
+ * de quoi interpoler l'animation sans rien deviner.
+ *
+ * Les deux hauteurs se lisent ensemble. `hauteurApresM` à 0 veut dire que la
+ * tige a quitté la carte (coupe, éclaircie) ; sinon c'est ce qui reste debout
+ * — la tête d'une trogne, la souche d'un recépage, la tige intacte d'un
+ * élagage. Le volume retiré est l'écart entre les deux, et pour l'élagage,
+ * l'écart entre les deux bases de houppier.
+ */
+export interface ArbreRetire {
+  id: number;
+  x: number;
+  y: number;
+  especeId: string;
+  /** hauteur avant le geste, m */
+  hauteurAvantM: number;
+  /** hauteur qui reste debout après, m ; 0 = la tige a quitté la carte */
+  hauteurApresM: number;
+  /** base du houppier avant le geste, m (0 = branchu jusqu'au sol) */
+  baseHouppierAvantM: number;
+  /** base du houppier après le geste, m */
+  baseHouppierApresM: number;
+  /**
+   * Direction dans laquelle le fût a été couché, radians (0 = +x, sens
+   * trigonométrique) — présent seulement quand une tige ENTIÈRE est tombée :
+   * `couper`, `eclaircir`, `receper`. Absent pour `elaguer` et `trogner`, où
+   * la charpente est démontée sur place : le moteur n'y voit pas une
+   * direction unique et n'en invente pas.
+   *
+   * C'est la même orientation que celle du fût laissé au sol — EN TRAVERS de
+   * la pente (boisMort.ts) — parce que c'est la seule que le moteur sache
+   * justifier : il ne modélise ni cloisonnement ni sens de débardage. Sur un
+   * terrain plat elle ne veut rien dire, et ne sert à rien non plus.
+   */
+  directionRad?: number;
 }
 
 export interface GesteSurZone {
@@ -671,6 +724,7 @@ function applyCouper(
   let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC } = state.carbon;
   let stockBrf = state.stockBrf;
   const coupes: number[] = [];
+  const retire: ArbreRetire[] = [];
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
   const boisAuSolCG = state.soil.boisAuSolCG.slice();
   const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
@@ -759,15 +813,25 @@ function applyCouper(
       // Les souches et racines restent au sol dans les trois cas (bois mort).
       deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
     }
+    /**
+     * Le fût est couché EN TRAVERS de la pente. Pour le bois qu'on laisse sur
+     * place c'est le geste de la restauration post-incendie, et le moteur
+     * suppose que le bûcheron qui choisit de laisser le bois le pose
+     * correctement — on ne simule pas la maladresse. Sur un terrain plat
+     * l'orientation ne veut rien dire, et elle ne sert à rien non plus : sans
+     * pente, pas d'eau qui court.
+     *
+     * On la calcule AVANT de savoir ce que devient le fût, parce que l'arbre
+     * tombe dans tous les cas — même celui qu'on débarde a été mis au sol
+     * avant d'être emporté, et le rendu doit pouvoir le montrer. Le moteur ne
+     * modélise ni cloisonnement ni sens de débardage : il donne la seule
+     * orientation qu'il sache justifier, la même dans les quatre devenirs.
+     * `versLAval` ne lit que le relief et ne consomme pas d'aléa.
+     */
+    const { radians: aval } = versLAval(altitudes, dims, tree.x, tree.y);
+    const directionRad = aval + Math.PI / 2;
     if (action.devenir === "laisser") {
-      // Le fût reste là où il tombe, couché EN TRAVERS de la pente : c'est le
-      // geste de la restauration post-incendie, et le moteur suppose que le
-      // bûcheron qui choisit de laisser le bois le pose correctement — on ne
-      // simule pas la maladresse. Sur un terrain plat l'orientation ne veut
-      // rien dire, et elle ne sert à rien non plus : sans pente, pas d'eau qui
-      // court.
-      const { radians: aval } = versLAval(altitudes, dims, tree.x, tree.y);
-      const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, aval + Math.PI / 2, dims);
+      const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, directionRad, dims);
       const longueur = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
       if (longueur > 0) {
         for (const c of empreinte) {
@@ -778,7 +842,7 @@ function applyCouper(
             dims,
             c.cellule,
             emporteKgC * (c.longueurM / longueur) * 1000,
-            aval + Math.PI / 2,
+            directionRad,
             CONTACT_TRONC_EBRANCHE,
           );
         }
@@ -850,6 +914,19 @@ function applyCouper(
       }
     }
     coupes.push(id);
+    retire.push({
+      id,
+      x: tree.x,
+      y: tree.y,
+      especeId: tree.especeId,
+      hauteurAvantM: tree.heightM,
+      // Rien ne reste debout : c'est ce qui oblige à tout dire ici, l'arbre
+      // n'est plus dans l'instantané où le rendu irait chercher le reste.
+      hauteurApresM: 0,
+      baseHouppierAvantM: tree.baseHouppierM ?? 0,
+      baseHouppierApresM: 0,
+      directionRad,
+    });
     trees.splice(idx, 1); // l'arbre coupé quitte la carte (bois mort/carbone en V1)
   }
 
@@ -865,7 +942,7 @@ function applyCouper(
     refusals,
     // Les tiges RÉELLEMENT tombées, pas celles qu'on a demandées : le plafond
     // horaire arrête souvent le chantier en cours de route.
-    gestes: coupes.length > 0 ? [{ type: "couper", ids: coupes }] : [],
+    gestes: coupes.length > 0 ? [{ type: "couper", ids: coupes, retire }] : [],
   };
 }
 
@@ -1152,6 +1229,7 @@ function applyElaguer(
   let { hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
   const elagues: number[] = [];
+  const retire: ArbreRetire[] = [];
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
@@ -1176,12 +1254,27 @@ function applyElaguer(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     elagues.push(id);
+    retire.push({
+      id,
+      x: tree.x,
+      y: tree.y,
+      especeId: tree.especeId,
+      // La tige ne raccourcit pas d'un élagage : ce qui part, c'est la
+      // hauteur de branches entre l'ancienne base de houppier et la nouvelle.
+      hauteurAvantM: tree.heightM,
+      hauteurApresM: tree.heightM,
+      baseHouppierAvantM: tree.baseHouppierM ?? 0,
+      // `hauteurElagueeM` est un plancher pour la base du houppier : le
+      // cliquet du tick la fera monter là (tick.ts), on l'annonce tout de
+      // suite pour que le rendu n'attende pas une semaine.
+      baseHouppierApresM: Math.max(tree.baseHouppierM ?? 0, cible),
+    });
     trees[idx] = { ...tree, hauteurElagueeM: cible };
   }
   return {
     state: { ...state, trees, economy: { ...state.economy, hoursUsedWeek, hoursUsedYear } },
     refusals,
-    gestes: elagues.length > 0 ? [{ type: "elaguer", ids: elagues }] : [],
+    gestes: elagues.length > 0 ? [{ type: "elaguer", ids: elagues, retire }] : [],
   };
 }
 
@@ -1206,6 +1299,7 @@ function applyTrogner(
   const trees = [...state.trees];
   let { exportedEnergyCumKgC, deadWoodKgC } = state.carbon;
   const etetes: number[] = [];
+  const retire: ArbreRetire[] = [];
   const hauteurTete = Math.max(1, action.hauteurTeteM);
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
@@ -1235,6 +1329,17 @@ function applyTrogner(
     hoursUsedWeek += TROGNE_HEURES;
     hoursUsedYear += TROGNE_HEURES;
     etetes.push(id);
+    retire.push({
+      id,
+      x: tree.x,
+      y: tree.y,
+      especeId: tree.especeId,
+      hauteurAvantM: tree.heightM,
+      // La tête reste debout, c'est toute la différence avec une coupe.
+      hauteurApresM: hauteurTete,
+      baseHouppierAvantM: tree.baseHouppierM ?? 0,
+      baseHouppierApresM: Math.min(tree.baseHouppierM ?? 0, hauteurTete),
+    });
     // Ce qu'on emporte : tout ce qui dépassait la tête, en bois de chauffage.
     const emporte =
       treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, hauteurTete);
@@ -1264,7 +1369,7 @@ function applyTrogner(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
-    gestes: etetes.length > 0 ? [{ type: "trogner", ids: etetes }] : [],
+    gestes: etetes.length > 0 ? [{ type: "trogner", ids: etetes, retire }] : [],
   };
 }
 
@@ -1489,6 +1594,9 @@ function applyReceper(
   const trees = [...state.trees];
   let { exportedEnergyCumKgC, deadWoodKgC } = state.carbon;
   const recepes: number[] = [];
+  const retire: ArbreRetire[] = [];
+  const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
+  const altitudes = altitudeParCellule(state.station.relief, dims);
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
@@ -1510,6 +1618,21 @@ function applyReceper(
     hoursUsedWeek += RECEPAGE_HOURS;
     hoursUsedYear += RECEPAGE_HOURS;
     recepes.push(id);
+    // La tige entière tombe avant d'être façonnée : même orientation, et pour
+    // la même raison, que le fût d'une coupe (voir `ArbreRetire`).
+    const { radians: aval } = versLAval(altitudes, dims, tree.x, tree.y);
+    retire.push({
+      id,
+      x: tree.x,
+      y: tree.y,
+      especeId: tree.especeId,
+      hauteurAvantM: tree.heightM,
+      // Il reste la souche, et c'est d'elle que repartiront les rejets.
+      hauteurApresM: RECEPAGE_HAUTEUR_M,
+      baseHouppierAvantM: tree.baseHouppierM ?? 0,
+      baseHouppierApresM: 0,
+      directionRad: aval + Math.PI / 2,
+    });
     // On récolte la tige et la souche repart : c'est tout l'intérêt du taillis.
     // Ce qui part, c'est la tige MOINS la souche laissée sur place — la
     // compter entière vendait un demi-mètre de bois resté debout, et créait
@@ -1547,7 +1670,7 @@ function applyReceper(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
-    gestes: recepes.length > 0 ? [{ type: "receper", ids: recepes }] : [],
+    gestes: recepes.length > 0 ? [{ type: "receper", ids: recepes, retire }] : [],
   };
 }
 

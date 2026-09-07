@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { applyAction } from "../../src/engine/actions";
+import { applyAction, estGesteSurArbres } from "../../src/engine/actions";
 import { syntheticYear } from "../../src/engine/meteo";
 import { contextePhenologique } from "../../src/engine/phenologie";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -337,13 +337,25 @@ describe("ce qui s'est passé cette semaine", () => {
     });
     // Sans cette liste, le rendu voit un instantané avec un arbre en moins et
     // n'a aucun moyen de savoir lequel : l'arbre s'escamote au lieu de tomber.
-    expect(resultat.gestes).toEqual([{ type: "couper", ids: [id] }]);
+    const geste = resultat.gestes?.[0];
+    expect(geste?.type).toBe("couper");
+    expect(geste && estGesteSurArbres(geste) ? geste.ids : []).toEqual([id]);
     const snapshot = construireSnapshot({
       ...entrees(resultat.state),
       state: resultat.state,
       gestes: resultat.gestes ?? [],
     });
-    expect(snapshot.gestes).toEqual([{ type: "couper", ids: [id] }]);
+    // Le geste traverse l'instantané tel quel, `retire` compris : c'est lui
+    // qui porte la position et l'espèce d'un arbre qui a quitté `state.trees`
+    // (actions.ts, issue #37), et le perdre en route reviendrait à ne rien
+    // avoir remonté du tout.
+    expect(snapshot.gestes).toEqual(resultat.gestes);
+    const transporte = snapshot.gestes[0];
+    const retire = transporte && estGesteSurArbres(transporte) ? transporte.retire : undefined;
+    expect(retire?.[0]?.id).toBe(id);
+    expect(retire?.[0]?.especeId).toBe("carpinus_betulus");
+    expect(retire?.[0]?.x).toBe(5);
+    expect(retire?.[0]?.hauteurApresM).toBe(0);
   });
 
   it("spatialise les morts : un id et une position, pas seulement un compte", () => {
