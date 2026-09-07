@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  type ArbreRetire,
   applyAction,
   DECOTE_BOIS_MORT,
   DENSITE_BOIS_MORT_KG_M3,
@@ -8,14 +9,17 @@ import {
   fellingHours,
   type GameAction,
   PLANT_HOURS,
+  RECEPAGE_HAUTEUR_M,
   WEEK_HOURS_CAP,
   WOOD_PRICE_EUR_M3,
   woodVolumeM3,
 } from "../../src/engine/actions";
+import { versLAval } from "../../src/engine/boisMort";
 import { CARBON_FRACTION } from "../../src/engine/carbon";
 import { chargeCombustible } from "../../src/engine/feu";
 import { runJournal } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
+import { altitudeParCellule } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
@@ -150,6 +154,11 @@ describe("ce que l'action rapporte au rendu", () => {
     return { state, ids };
   }
 
+  /** Les identifiants seuls : `retire` est vérifié plus bas, pour lui-même. */
+  function idsDe(r: ReturnType<typeof applyAction>, type: string): readonly number[] {
+    return (r.gestes ?? []).filter(estGesteSurArbres).find((g) => g.type === type)?.ids ?? [];
+  }
+
   it("la coupe nomme les tiges tombées", () => {
     const { state, ids } = troisFrenes();
     const r = applyAction(state, {
@@ -158,7 +167,7 @@ describe("ce que l'action rapporte au rendu", () => {
       treeIds: [ids[0] ?? 0, ids[1] ?? 0],
       devenir: "vendre",
     });
-    expect(r.gestes).toEqual([{ type: "couper", ids: [ids[0], ids[1]] }]);
+    expect(idsDe(r, "couper")).toEqual([ids[0], ids[1]]);
   });
 
   it("elle ne nomme que celles qui sont vraiment tombées", () => {
@@ -170,7 +179,7 @@ describe("ce que l'action rapporte au rendu", () => {
       treeIds: [ids[0] ?? 0, 9999],
       devenir: "vendre",
     });
-    expect(r.gestes).toEqual([{ type: "couper", ids: [ids[0]] }]);
+    expect(idsDe(r, "couper")).toEqual([ids[0]]);
     expect(r.refusals).toHaveLength(1);
   });
 
@@ -199,7 +208,7 @@ describe("ce que l'action rapporte au rendu", () => {
       treeIds: [ids[0] ?? 0],
       hauteurM: 3,
     });
-    expect(elague.gestes).toEqual([{ type: "elaguer", ids: [ids[0]] }]);
+    expect(idsDe(elague, "elaguer")).toEqual([ids[0]]);
 
     const trogne = applyAction(state, {
       type: "trogner",
@@ -207,14 +216,14 @@ describe("ce que l'action rapporte au rendu", () => {
       treeIds: [ids[1] ?? 0],
       hauteurTeteM: 2,
     });
-    expect(trogne.gestes).toEqual([{ type: "trogner", ids: [ids[1]] }]);
+    expect(idsDe(trogne, "trogner")).toEqual([ids[1]]);
 
     const recepe = applyAction(state, {
       type: "receper",
       week: 0,
       treeIds: [ids[2] ?? 0],
     });
-    expect(recepe.gestes).toEqual([{ type: "receper", ids: [ids[2]] }]);
+    expect(idsDe(recepe, "receper")).toEqual([ids[2]]);
   });
 
   it("une action refusée n'annonce aucun geste", () => {
@@ -222,6 +231,160 @@ describe("ce que l'action rapporte au rendu", () => {
     const r = applyAction(state, { type: "elaguer", week: 0, treeIds: [9999], hauteurM: 3 });
     expect(r.gestes).toEqual([]);
     expect(r.refusals).toHaveLength(1);
+  });
+});
+
+/**
+ * Ce que le geste RETIRE. `ids` seul ne suffisait pas : `applyCouper` fait un
+ * `trees.splice`, donc l'arbre coupé a quitté `state.trees` quand le rendu
+ * reçoit son identifiant — il n'a plus ni sa position, ni son espèce, ni sa
+ * hauteur pour l'animer. D'où un enregistrement complet (issue #37).
+ */
+describe("ce que le geste retire, et non seulement à qui", () => {
+  /** Un versant, pour que la direction de chute veuille dire quelque chose. */
+  const PENTE = {
+    ...STATION,
+    relief: { ...STATION.relief, pentePct: 25, expositionDeg: 180, forme: "plan" as const },
+  };
+
+  function deuxFrenes(station = PENTE) {
+    let state = createGameState(station, rngStateFromSeed(4));
+    state = plantAt(state, "fraxinus_excelsior", 10, 10, 9);
+    state = plantAt(state, "fraxinus_excelsior", 20, 20, 9);
+    return { state, ids: state.trees.map((t) => t.id) };
+  }
+
+  function retireDe(r: ReturnType<typeof applyAction>, type: string): readonly ArbreRetire[] {
+    return (r.gestes ?? []).filter(estGesteSurArbres).find((g) => g.type === type)?.retire ?? [];
+  }
+
+  it("la coupe rend l'arbre entier, parce qu'il n'est plus dans l'instantané", () => {
+    const { state, ids } = deuxFrenes();
+    const arbre = state.trees[0];
+    if (!arbre) throw new Error("fixture");
+    const r = applyAction(state, {
+      type: "couper",
+      week: 0,
+      treeIds: [ids[0] ?? 0],
+      devenir: "vendre",
+    });
+    // La prémisse du besoin : l'arbre a bel et bien disparu de l'état.
+    expect(r.state.trees.find((t) => t.id === arbre.id)).toBeUndefined();
+    const [retire] = retireDe(r, "couper");
+    expect(retire).toBeDefined();
+    expect(retire?.id).toBe(arbre.id);
+    expect(retire?.x).toBe(arbre.x);
+    expect(retire?.y).toBe(arbre.y);
+    expect(retire?.especeId).toBe("fraxinus_excelsior");
+    expect(retire?.hauteurAvantM).toBe(arbre.heightM);
+    // Rien ne reste debout : c'est la signature d'un départ de la carte.
+    expect(retire?.hauteurApresM).toBe(0);
+  });
+
+  it("`retire` suit `ids` dans le même ordre, et ne nomme que le réellement touché", () => {
+    const { state, ids } = deuxFrenes();
+    const r = applyAction(state, {
+      type: "couper",
+      week: 0,
+      // 9999 est refusé : il ne doit ni s'animer ni décaler les autres.
+      treeIds: [ids[1] ?? 0, 9999, ids[0] ?? 0],
+      devenir: "vendre",
+    });
+    const geste = (r.gestes ?? []).filter(estGesteSurArbres).find((g) => g.type === "couper");
+    expect(geste?.ids).toEqual([ids[1], ids[0]]);
+    expect(geste?.retire?.map((a) => a.id)).toEqual([ids[1], ids[0]]);
+  });
+
+  /**
+   * La question que l'issue #37 laissait ouverte au moteur : faut-il une
+   * direction quand le fût est emporté ? Oui — l'arbre tombe avant d'être
+   * débardé, et la refuser aurait obligé le rendu à en inventer une.
+   */
+  it("le fût tombe dans le même sens qu'on l'emporte ou qu'on le laisse", () => {
+    const { state, ids } = deuxFrenes();
+    const cible = ids[0] ?? 0;
+    const directions = (["laisser", "vendre", "broyer", "epandre"] as const).map((devenir) => {
+      const r = applyAction(state, { type: "couper", week: 0, treeIds: [cible], devenir });
+      return retireDe(r, "couper")[0]?.directionRad;
+    });
+    for (const d of directions) expect(d).toBeDefined();
+    expect(new Set(directions).size).toBe(1);
+
+    // Et c'est bien l'orientation EN TRAVERS de la pente, celle que le moteur
+    // applique déjà au bois qu'on laisse au sol (boisMort.ts).
+    const dims = { widthM: PENTE.coteM, heightM: PENTE.coteM };
+    const { radians: aval } = versLAval(altitudeParCellule(PENTE.relief, dims), dims, 10, 10);
+    expect(directions[0]).toBeCloseTo(aval + Math.PI / 2, 10);
+  });
+
+  it("l'éclaircie emporte `retire` avec elle : c'est une coupe qui se raconte autrement", () => {
+    const { state } = deuxFrenes();
+    const r = applyAction(state, {
+      type: "eclaircir",
+      week: 0,
+      x: 15,
+      y: 15,
+      rayonM: 14,
+      densiteCibleParHa: 1,
+      critere: "parLeBas",
+      devenir: "vendre",
+    });
+    const retire = retireDe(r, "eclaircir");
+    expect(retire.length).toBeGreaterThan(0);
+    expect(retireDe(r, "couper")).toHaveLength(0);
+    for (const a of retire) {
+      expect(a.hauteurApresM).toBe(0);
+      expect(a.directionRad).toBeDefined();
+    }
+  });
+
+  it("l'élagage ne raccourcit pas la tige : il remonte la base du houppier", () => {
+    const { state, ids } = deuxFrenes();
+    const arbre = state.trees[0];
+    if (!arbre) throw new Error("fixture");
+    const r = applyAction(state, {
+      type: "elaguer",
+      week: 0,
+      treeIds: [ids[0] ?? 0],
+      hauteurM: 3,
+    });
+    const [retire] = retireDe(r, "elaguer");
+    expect(retire?.hauteurAvantM).toBe(arbre.heightM);
+    expect(retire?.hauteurApresM).toBe(arbre.heightM);
+    expect(retire?.baseHouppierApresM ?? 0).toBeGreaterThan(retire?.baseHouppierAvantM ?? 0);
+    // La charpente est démontée sur place : aucune tige entière n'est tombée.
+    expect(retire?.directionRad).toBeUndefined();
+    // Et la base annoncée est celle que le cliquet du tick imposera (tick.ts).
+    expect(retire?.baseHouppierApresM).toBe(
+      r.state.trees.find((t) => t.id === arbre.id)?.hauteurElagueeM,
+    );
+  });
+
+  it("l'étêtage laisse la tête debout, et n'invente pas de direction", () => {
+    let state = createGameState(PENTE, rngStateFromSeed(4));
+    // Le frêne ne rejette pas de tête ; le châtaignier, si.
+    state = plantAt(state, "castanea_sativa", 10, 10, 12);
+    const id = state.trees[0]?.id ?? 0;
+    const avant = state.trees[0]?.heightM ?? 0;
+    const r = applyAction(state, { type: "trogner", week: 0, treeIds: [id], hauteurTeteM: 2 });
+    const [retire] = retireDe(r, "trogner");
+    expect(retire?.hauteurAvantM).toBe(avant);
+    expect(retire?.hauteurApresM).toBe(2);
+    expect(retire?.directionRad).toBeUndefined();
+  });
+
+  it("le recépage rend la souche, et la tige tombe pour de bon", () => {
+    let state = createGameState(PENTE, rngStateFromSeed(4));
+    state = plantAt(state, "castanea_sativa", 10, 10, 12);
+    const id = state.trees[0]?.id ?? 0;
+    const avant = state.trees[0]?.heightM ?? 0;
+    const r = applyAction(state, { type: "receper", week: 0, treeIds: [id] });
+    const [retire] = retireDe(r, "receper");
+    expect(retire?.hauteurAvantM).toBe(avant);
+    expect(retire?.hauteurApresM).toBe(RECEPAGE_HAUTEUR_M);
+    // La souche repart branchue : le fût nu ne se transmet pas aux rejets.
+    expect(retire?.baseHouppierApresM).toBe(0);
+    expect(retire?.directionRad).toBeDefined();
   });
 });
 
