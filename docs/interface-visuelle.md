@@ -1165,15 +1165,33 @@ position du plant avec son ombre et sa couronne à maturité (celle-là est
 pédagogique : elle montre l'emprise future), l'emprise de la clôture, la
 sélection d'arbres. `M`.
 
-### 6.8 Voir ce qui a changé, même à grande vitesse (revu en v0.2)
+### 6.8 Voir ce qui a changé, même à grande vitesse (revu en v0.2, corrigé en v0.5)
 
-**Le problème, posé franchement.** Le worker avale jusqu'à 26 semaines entre
-deux instantanés. À ×64, c'est un trimestre par image ; à ×512, une année. On
-ne peut donc pas *animer* ce qui s'est passé — l'animation d'une mort de
-sécheresse dure trois semaines de jeu, elle n'a pas de place. Mais « je veux
-voir ce qui a changé » n'est **pas** la même demande que « je veux voir les
-animations », et c'est ça qui débloque la solution : suivre le journal texte
-est effectivement pénible, donc **c'est la carte qui doit porter le changement**.
+> **La prémisse de cette section était fausse, et le §5.11 la corrige.** Elle
+> partait de « on ne peut pas ANIMER ce qui s'est passé » et en tirait trois
+> mécanismes de remplacement. Le commanditaire a relu son propre §5.11 dans
+> l'autre sens : « quand on saute d'un temps à l'autre, on a les animations
+> pour montrer ce qui a changé ».
+>
+> **Les deux se réconcilient sur un mot** : la durée de l'animation est une
+> durée de PRÉSENTATION, pas une durée de jeu. Une mort de sécheresse ne prend
+> pas trois semaines à montrer — elle prend le temps qu'on lui donne. D'où
+> `src/render/temps/ellipse.ts` : les changements rangés dans un BUDGET de
+> temps d'écran, groupés par cause et par type, dans un ordre où les causes
+> précèdent leurs conséquences. Une semaine et dix ans tiennent dans le même
+> budget ; l'un montre quatre actes, l'autre quarante.
+>
+> Les trois mécanismes ci-dessous ne disparaissent pas : ils deviennent le
+> **repli** de l'animation, et le plan dit lui-même quand il faut y basculer
+> (`deborde`). Mille arbres morts ne tiennent pas dans deux secondes en restant
+> lisibles ; à ce moment-là, et à ce moment-là seulement, c'est la carte qui
+> porte le changement.
+
+**Le problème, tel qu'il était posé.** Le worker avale jusqu'à 26 semaines entre
+deux instantanés. À ×64, c'est un trimestre par image ; à ×512, une année. Et
+« je veux voir ce qui a changé » n'est **pas** la même demande que « je veux
+voir les animations » : suivre le journal texte est effectivement pénible, donc
+**la carte doit pouvoir porter le changement** quand l'animation déborde.
 
 Trois mécanismes, qui se complètent :
 
@@ -1303,7 +1321,7 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 | **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | `L` |
 | **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | `XL` |
 | **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | `XL` |
-| **L3** | Le temps : interpolation entre instantanés, croissance douce, **phénologie** (débourrement, coloration, chute), saisons, vent, herbe | la parcelle vit | `L` |
+| **L3** | **L'ELLIPSE : animer ce qui a CHANGÉ entre deux temps** — le journal des changements (morts par cause, chutes, gestes, front de feu) rangé dans un budget de temps d'écran, puis joué. La phénologie et les saisons sont faites ; l'interpolation entre instantanés, non — elle n'a pas d'objet (§5.11) | on voit ce qui s'est passé pendant qu'on ne regardait pas | `L` |
 | **L4** | Gestion : élagage, **trogne**, recépage, démasclage, manchon, coupe qui tombe, fleurs et fruits, retours d'action | **la demande centrale : on voit ce qu'on fait aux arbres** | `L` |
 | **L5** | **Les morts** : les onze causes, les chandelles qui vieillissent, la chute des feuilles de sécheresse | on comprend pourquoi ça meurt | `L` |
 | **L6** | **L'incendie** : front, torchage, fumée, cendres, rejets, cadrage caméra | l'événement mémorable d'une partie | `L` |
