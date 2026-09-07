@@ -1298,14 +1298,45 @@ petits écarts : la pinède brûle 1 825 m² dans un lot et 1 311 dans l'autre, 
 l'avantage des feuillus, qui vaut moins que cela, ne peut pas être affirmé,
 alors que celui du chêne-liège, qui vaut le double, le peut.
 
-*Ce qui reste faux* : le moteur ne modélise pas l'**amorçage de feu de cime**.
-Dans la réalité, le combustible du houppier ne brûle que si le feu de surface
-est assez intense pour l'atteindre — c'est la hauteur de la base du houppier
-qui décide. Ici, la charge en hauteur entre directement dans la propagation, ce
-qui reste trop généreux pour une futaie haute et trop sévère pour un fourré
-bas. *(Et une conséquence contre-intuitive, mesurée par Banerjee et al. 2020 en
-simulation fine, n'est pas rendue non plus : ouvrir un sous-étage accélère la
-propagation en laissant entrer le vent, même si l'intensité baisse.)*
+### L'amorçage de feu de cime
+
+La charge du houppier entrait directement dans la propagation, comme si un feu
+rampant dans la litière pouvait enflammer une cime à vingt mètres. Van Wagner
+(1977) a posé le critère qui fait référence : le feu de surface doit dépasser
+une intensité critique pour atteindre le houppier, et cette intensité croît
+comme la **puissance 3/2 de la hauteur de base du houppier**. C'est la raison
+pour laquelle une futaie élaguée haut ne passe pas en feu de cime là où un
+fourré s'embrase — et c'est aussi pourquoi l'élagage est une mesure de
+prévention.
+
+Le moteur avait déjà ce qu'il fallait sans le savoir : la hauteur de base du
+houppier n'y est pas un trait d'espèce, elle se calcule par arbre, celui-ci
+élaguant lui-même les branches passées sous leur point de compensation
+(`baseHouppierCible`, light.ts). Un fourré d'ajoncs a donc son houppier au ras
+du sol et le porte entièrement ; une futaie qui s'est élaguée en grandissant met
+le sien hors d'atteinte d'un feu rampant.
+
+L'effet sur le contraste qui nous occupe est net : à couvert égal, la lande
+d'ajoncs porte maintenant **5,96 fois** la charge d'une hêtraie. Le chemin
+complet de ce chantier :
+
+| état | lande / hêtraie |
+|---|---|
+| avant toute correction | **0,25** — le modèle disait l'inverse de la réalité |
+| deux compartiments de combustible | 1,48 |
+| + amorçage de feu de cime | **5,96** |
+
+*Ce qui reste faux.* La structure — l'exposant 3/2 — est celle de Van Wagner et
+elle est solide ; ses coefficients d'origine s'expriment en kW/m et en teneur en
+eau du feuillage, deux grandeurs que ce moteur n'a pas, et je n'ai pas pu
+récupérer la publication d'origine pour les transcrire. La constante est donc
+**calée, pas transcrite**, sur un repère qu'on peut discuter : une charge de
+surface de 1 — une lande sèche en plein soleil — atteint un houppier dont la
+base est à quatre mètres. *(À confirmer.)*
+
+*Et une conséquence contre-intuitive n'est toujours pas rendue* : Banerjee et
+al. (2020) mesurent en simulation fine qu'ouvrir un sous-étage ACCÉLÈRE la
+propagation en laissant entrer le vent, même si l'intensité baisse.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 
