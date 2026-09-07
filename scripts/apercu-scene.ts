@@ -38,6 +38,7 @@
 
 import { writeFileSync } from "node:fs";
 import { serieMeteoPour } from "../src/data/meteo";
+import { transversalite } from "../src/engine/boisMort";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
 import { advanceWeek } from "../src/engine/game";
@@ -81,6 +82,79 @@ const BIOMASSE = process.env.APERCU_BIOMASSE ? Number(process.env.APERCU_BIOMASS
 const LITIERE = process.env.APERCU_LITIERE ? Number(process.env.APERCU_LITIERE) : undefined;
 /** Remplissage de la réserve utile ∈ [0,1] imposé à toutes les cellules. */
 const EAU_PART = process.env.APERCU_EAU_PART ? Number(process.env.APERCU_EAU_PART) : undefined;
+/**
+ * Le BANC DU BOIS COUCHÉ : forcer une charge de bois et sa transversalité.
+ *
+ * Même raison que le banc de pelouse : la simulation ne met pas côte à côte,
+ * la même semaine, un tronc franchement en travers de la pente et un tronc
+ * franchement dans son sens — c'est pourtant l'écart qu'il faut juger, puisque
+ * l'un barre l'eau et l'autre fait gouttière. La planche impose donc les deux
+ * valeurs que le moteur produirait, comme elle impose une couverture pleine.
+ */
+const BOIS = process.env.APERCU_BOIS ? Number(process.env.APERCU_BOIS) : undefined;
+/** Azimut du tronc couché du banc, en degrés du repère de la parcelle. */
+const BOIS_AZIMUT = process.env.APERCU_BOIS_AZIMUT ? Number(process.env.APERCU_BOIS_AZIMUT) : 0;
+
+/**
+ * Un tronc couché du banc : les cellules qu'il occupe, ET la transversalité
+ * que le moteur en tire.
+ *
+ * **Les deux ensemble, et le premier jet ne l'avait pas fait.** Il chargeait
+ * une rangée de cellules et forçait une transversalité sans rapport : le rendu
+ * dessinait alors, dans chaque cellule, un bout de tronc à l'angle déclaré —
+ * donc des bouts parallèles mais décalés latéralement, une échelle de tirets
+ * au lieu d'un tronc. Le rendu avait raison, le banc fabriquait un état que la
+ * simulation ne produit jamais : le moteur écrit la masse le long de
+ * l'empreinte de la chute et calcule `barre` depuis la MÊME direction, si bien
+ * que les cellules chargées sont toujours alignées sur le tronc.
+ *
+ * Le banc prend donc un AZIMUT de tronc, pose les cellules le long, et laisse
+ * `transversalite` — la fonction du moteur — dire ce que ça barre. Aucune
+ * formule recopiée : `azimutAval` vient du rendu, `transversalite` du moteur.
+ */
+/**
+ * L'azimut de l'AVAL en une cellule, en radians du repère de la parcelle.
+ *
+ * C'est la direction que suit l'eau, et c'est par rapport à elle que le moteur
+ * mesure la transversalité d'un tronc. Le banc en a besoin pour poser un tronc
+ * dont la transversalité déclarée soit celle que le moteur en tirerait ; le
+ * RENDU, lui, n'en a pas besoin — il ne peut de toute façon pas retrouver la
+ * direction d'un tronc depuis une valeur absolue de sinus.
+ */
+function azimutAval(altitudes: readonly number[], coteM: number, x: number, y: number): number {
+  const a = (cx: number, cy: number) =>
+    altitudes[
+      Math.min(coteM - 1, Math.max(0, cy)) * coteM + Math.min(coteM - 1, Math.max(0, cx))
+    ] ?? 0;
+  return Math.atan2(-(a(x, y + 1) - a(x, y - 1)), -(a(x + 1, y) - a(x - 1, y)));
+}
+
+function troncCouche(
+  altitudes: readonly number[],
+  coteM: number,
+  azimutDeg: number,
+): { masse: (i: number) => boolean; travers: (i: number) => number } {
+  const azimut = (azimutDeg * Math.PI) / 180;
+  const occupees = new Set<number>();
+  // Deux troncs de vingt-cinq mètres, pour qu'on en voie un en entier même
+  // après un cadrage. On marche le long de l'azimut, cellule par cellule.
+  for (const [x0, y0] of [
+    [coteM / 3, coteM / 3],
+    [(2 * coteM) / 3, (2 * coteM) / 3],
+  ]) {
+    for (let d = -12.5; d <= 12.5; d += 0.4) {
+      const x = Math.round((x0 ?? 0) + Math.cos(azimut) * d);
+      const y = Math.round((y0 ?? 0) + Math.sin(azimut) * d);
+      if (x < 0 || y < 0 || x >= coteM || y >= coteM) continue;
+      occupees.add(y * coteM + x);
+    }
+  }
+  return {
+    masse: (i) => occupees.has(i),
+    travers: (i) =>
+      transversalite(azimut, azimutAval(altitudes, coteM, i % coteM, Math.floor(i / coteM))),
+  };
+}
 /** Vider la liste des arbres : on juge le tapis, pas ce qui pousse dessus. */
 const SANS_ARBRES = process.env.APERCU_SANS_ARBRES === "1";
 /**
@@ -243,6 +317,7 @@ function figerLeSol(
   const arrondi = (a: readonly number[] | Float32Array<ArrayBufferLike>, d = 3) =>
     Array.from(a, (v) => Number(v.toFixed(d)));
   const dims = { widthM: station.coteM, heightM: station.coteM };
+  const tronc = troncCouche(altitudeParCellule(station.relief, dims), station.coteM, BOIS_AZIMUT);
   return {
     ruMm: station.ruMm,
     // L'eau libre est FIXE avec la station ; le débordement, lui, est de la
@@ -264,6 +339,23 @@ function figerLeSol(
     // semaines. C'est elle, et non `waterMm`, qui dit si une pelouse grille —
     // l'inertie fait partie de la grandeur.
     herbeHumidite: arrondi(state.soil.herbeHumidite, 3),
+    // Le bois mort couché et sa transversalité. Les deux, parce que la masse
+    // seule ne dit pas si le tronc barre l'eau — et c'est ce qui explique
+    // qu'une cellule soit plus humide que sa voisine.
+    // Un SEUL tronc, pas du bois partout. Charger toutes les cellules donnait
+    // une tapisserie de tirets réguliers — ce qui a d'ailleurs servi : c'est
+    // comme ça qu'on a vu que le rendu dessinait un objet par cellule au lieu
+    // d'un tronc traversant. Le banc pose donc une bande, comme un chablis
+    // couché : la seule chose qu'on veuille juger est si ça se lit comme un
+    // tronc, et à quel angle.
+    boisAuSol:
+      BOIS === undefined
+        ? arrondi(state.soil.boisAuSolCG, 1)
+        : state.soil.boisAuSolCG.map((_, i) => (tronc.masse(i) ? BOIS : 0)),
+    boisEnTravers:
+      BOIS === undefined
+        ? arrondi(state.soil.boisEnTraversPart, 3)
+        : state.soil.boisEnTraversPart.map((_, i) => Number(tronc.travers(i).toFixed(3))),
     altitudesM: arrondi(altitudeParCellule(station.relief, dims), 2),
     waterMm:
       EAU_PART === undefined

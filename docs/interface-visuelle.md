@@ -620,6 +620,38 @@ D'où la règle de méthode : **quand une scène « fait synthétique », cherch
 d'abord la grandeur débranchée, pas le réglage à retoucher.** Un rendu qui
 n'affiche pas ce que le moteur sait ne se corrige pas en changeant une teinte.
 
+**Le bois mort couché : six jets pour une ligne, et chacun réfuté par une
+capture.** Le protocole demandait ce dessin en toutes lettres —
+« le rendu peut y poser des troncs », « le rendu doit pouvoir le montrer » —
+et deux `Float32Array` traversaient le worker sans lecteur. L'histoire vaut
+d'être gardée, parce que l'erreur se déplaçait à chaque fois d'un cran :
+
+| Jet | Ce qu'on dessinait | Ce que la capture a montré |
+|---|---|---|
+| 1 | un segment par cellule, orienté par `asin(transversalité)` | des échelles de tirets en travers du vrai tronc |
+| 2 | une tache par cellule, sans direction, à la couverture du moteur | une chaîne de losanges : la couverture réelle est de 30 %, les taches ne se soudent pas |
+| 3 | l'axe du voisinage, quantifié à 45° | un tuyau en marches, avec un trou à chaque décrochement |
+| 4 | le graphe de l'empreinte, cellule à cellule | l'escalier de la rastérisation, fidèlement reproduit |
+| 5 | la direction ajustée par le moment d'ordre deux | des traits parallèles décalés : une direction ne suffit pas à poser une droite |
+| 6 | la droite des moindres carrés — centroïde ET inclinaison | un tronc |
+
+**La leçon n'est pas « il a fallu six essais »**, c'est que la première
+explication était la plus séduisante et la plus fausse. `transversalite` rend
+`|sin(tronc − aval)|` : l'arc sinus semblait l'inverser, et il laisse en
+réalité quatre directions candidates — la valeur absolue est délibérée dans le
+moteur (« un tronc n'a pas de sens »). La direction n'était pas dans cette
+grandeur du tout : elle était dans l'EMPREINTE, que le moteur écrit le long
+des cellules couvertes par la chute. Chercher la grandeur qui porte
+l'information, encore.
+
+Et un dernier détour instructif : le jet 1 avait aussi un banc fautif. Il
+chargeait une rangée de cellules en forçant une transversalité sans rapport,
+donc un état que la simulation ne produit jamais — le moteur tire les deux de
+la même chute. Le banc pose maintenant un azimut de tronc et laisse
+`transversalite` dire ce que ça barre. **Un banc qui fabrique un état
+inatteignable accuse le rendu à tort**, et c'est la deuxième fois (la première
+était la trogne, §5.5).
+
 **Le décor cuisait quatre fois trop.** `Decor.morceauxVisibles` élargissait
 l'emprise de la parcelle d'une PORTÉE scalaire dans les deux axes — donc un
 carré, là où la région visible d'une projection dimétrique est un losange. Les
@@ -837,6 +869,7 @@ n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 | Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` ✅ |
 | Défoliation | couronne mangée par les ravageurs | `ravageurs` par cellule — **pas encore envoyé** |
 | Brouté | sections claires au bout des rameaux à portée, la flèche d'abord | `brouteSemaine` ✅ (issue #21) |
+| Bois couché | un tronc au sol, plus sombre s'il barre l'eau | `soilBoisAuSol` + `soilBoisEnTravers` ✅ |
 | Frotté | plaie de bois à nu sur un côté du fût, cernée du lambeau d'écorce | `frotteSemaine` ✅ |
 | Mort sur pied | chandelle grise, sans feuille | `chandelle` ✅ |
 | Brûlé sur pied | chandelle noire | `brulEeSemaine` ✅ |

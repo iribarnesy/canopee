@@ -12,6 +12,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { MASSE_LINEIQUE_TRONC_KGC_PAR_M, SINUS_BARRANT_MINIMAL } from "../../src/engine/boisMort";
 import {
   celluleVisibles,
   tournerVue,
@@ -43,7 +44,16 @@ function fabriqueBouchon() {
   // remplissage en cours : ce sont les seuls qui se voient, et donc les seuls
   // qui violeraient la règle « pas de liseré sur le sol ». Les autres ne font
   // que fermer le demi-pixel d'antialiasing entre deux surfaces jointives.
-  const compte = { canvas: 0, remplissages: 0, traits: 0, traitsColores: 0 };
+  const compte = {
+    canvas: 0,
+    remplissages: 0,
+    traits: 0,
+    traitsColores: 0,
+    /** Les traits, avec leur couleur et leurs deux bouts : le bois couché. */
+    segments: [] as { css: string; x0: number; y0: number; x1: number; y1: number }[],
+  };
+  let de = { x: 0, y: 0 };
+  let vers = { x: 0, y: 0 };
   const fabriquer = (largeur: number, hauteur: number) => {
     compte.canvas++;
     const ctx = {
@@ -51,8 +61,13 @@ function fabriqueBouchon() {
       strokeStyle: "",
       lineWidth: 0,
       beginPath() {},
-      moveTo() {},
-      lineTo() {},
+      moveTo(x: number, y: number) {
+        de = { x, y };
+        vers = { x, y };
+      },
+      lineTo(x: number, y: number) {
+        vers = { x, y };
+      },
       closePath() {},
       // Le tapis, qui n'apparaît qu'au zoom rapproché, dessine des ellipses
       // orientées : sans ces quatre-là, les cas à fort zoom lèvent une erreur
@@ -63,12 +78,14 @@ function fabriqueBouchon() {
       rotate() {},
       ellipse() {},
       arc() {},
+      lineCap: "",
       fill() {
         compte.remplissages++;
       },
       stroke() {
         compte.traits++;
         if (ctx.strokeStyle !== ctx.fillStyle) compte.traitsColores++;
+        compte.segments.push({ css: ctx.strokeStyle, x0: de.x, y0: de.y, x1: vers.x, y1: vers.y });
       },
     };
     return {
@@ -551,5 +568,111 @@ describe("le décor ne cuit pas ce qui ne touche pas le cadre", () => {
     expect(poses.some((m) => m.iy < 0)).toBe(true);
     expect(poses.some((m) => m.ix * COTE_MORCEAU_M >= COTE)).toBe(true);
     expect(poses.some((m) => m.iy * COTE_MORCEAU_M >= COTE)).toBe(true);
+  });
+});
+
+describe("le bois mort couché : deux Float32Array que personne ne lisait", () => {
+  const n = COTE * COTE;
+  /** Une charge de bois qui donne un tronc d'un mètre par cellule. */
+  const CHARGE_CG = 1000 * MASSE_LINEIQUE_TRONC_KGC_PAR_M;
+
+  it("entre dans la signature du morceau, masse comme orientation", () => {
+    const nu = solPlat();
+    const charge = solPlat({ boisAuSol: new Float32Array(n).fill(CHARGE_CG) });
+    const enTravers = solPlat({
+      boisAuSol: new Float32Array(n).fill(CHARGE_CG),
+      boisEnTravers: new Float32Array(n).fill(1),
+    });
+    const s = (d: DonneesSol) => signatureMorceau(d, 0, 0, 20);
+    // Sans ça, un chablis tomberait sans que le sol soit redessiné — et un
+    // tronc qui pourrit jusqu'à disparaître resterait à l'écran.
+    expect(s(charge)).not.toBe(s(nu));
+    expect(s(enTravers)).not.toBe(s(charge));
+  });
+
+  it("ne dessine rien pour une charge de brindilles", () => {
+    const { fabriquer, compte } = fabriqueBouchon();
+    const nu = fabriqueBouchon();
+    // Un dixième de mètre de tronc au mètre carré : de la litière, pas un tronc.
+    const miettes = solPlat({ boisAuSol: new Float32Array(n).fill(CHARGE_CG * 0.05) });
+    cuireMorceau(miettes, 0, 0, 20, vue(), fabriquer);
+    cuireMorceau(solPlat(), 0, 0, 20, vue(), nu.fabriquer);
+    expect(compte.traits).toBe(nu.compte.traits);
+  });
+
+  /**
+   * **La direction d'un tronc n'est PAS dans la transversalité**, et il a fallu
+   * plusieurs jets pour l'admettre. `transversalite` rend une valeur absolue,
+   * délibérément — « un tronc n'a pas de sens : couché vers l'est ou vers
+   * l'ouest, il barre pareil » — donc un arc sinus laisse quatre directions
+   * candidates. Le rendu en choisissait une, et les captures sortaient en
+   * échelles de tirets.
+   *
+   * Elle est dans l'EMPREINTE : le moteur écrit la masse le long des cellules
+   * que la chute a couvertes. Le rendu ajuste donc la droite des moindres
+   * carrés du nuage local — direction et position — et c'est cette droite
+   * qu'on vérifie ici : une empreinte en rangée donne un tronc en rangée, une
+   * empreinte en colonne un tronc en colonne.
+   */
+  it("lit la direction du tronc dans son empreinte, pas dans la transversalité", () => {
+    const trace = (surUneRangee: boolean) => {
+      const bois = new Float32Array(n);
+      for (let k = 20; k < 40; k++) {
+        bois[surUneRangee ? 30 * COTE + k : k * COTE + 30] = CHARGE_CG;
+      }
+      const { fabriquer, compte } = fabriqueBouchon();
+      cuireMorceau(solPlat({ boisAuSol: bois }), 1, 1, 20, vue(), fabriquer);
+      const t = compte.segments.at(-1);
+      if (!t) throw new Error("aucun tronc dessiné");
+      return (t.y1 - t.y0) / (t.x1 - t.x0);
+    };
+    // Dans la projection dimétrique, l'axe des x de la parcelle descend vers la
+    // droite et l'axe des y vers la gauche : les deux pentes écran sont donc
+    // de signe opposé.
+    expect(Math.sign(trace(true))).not.toBe(Math.sign(trace(false)));
+  });
+
+  /**
+   * Et la transversalité, elle, ne change RIEN à la direction dessinée — c'est
+   * exactement ce que le jet fautif faisait, et l'essai le garde fermé.
+   */
+  it("ne fait pas tourner le tronc quand la transversalité change", () => {
+    const pente = (part: number) => {
+      const bois = new Float32Array(n);
+      for (let k = 20; k < 40; k++) bois[30 * COTE + k] = CHARGE_CG;
+      const { fabriquer, compte } = fabriqueBouchon();
+      const sol = solPlat({ boisAuSol: bois, boisEnTravers: new Float32Array(n).fill(part) });
+      cuireMorceau(sol, 1, 1, 20, vue(), fabriquer);
+      const t = compte.segments.at(-1);
+      if (!t) throw new Error("aucun tronc dessiné");
+      return (t.y1 - t.y0) / (t.x1 - t.x0);
+    };
+    expect(pente(0.1)).toBeCloseTo(pente(0.9), 6);
+  });
+
+  /**
+   * Le seuil qui décide si le tronc barre ou fait gouttière est celui du
+   * moteur — `SINUS_BARRANT_MINIMAL`, le sinus de trente degrés, mesuré sur
+   * table basculante. L'essai le lit à sa source pour tomber s'il bouge.
+   */
+  it("distingue le tronc qui barre de celui qui fait gouttière, au seuil du moteur", () => {
+    const couleur = (part: number) => {
+      const { fabriquer, compte } = fabriqueBouchon();
+      const sol = solPlat({
+        boisAuSol: new Float32Array(n).fill(CHARGE_CG * 20),
+        boisEnTravers: new Float32Array(n).fill(part),
+      });
+      cuireMorceau(sol, 0, 0, 20, vue(), fabriquer);
+      return compte.segments.at(-1)?.css ?? "";
+    };
+    const sous = couleur(SINUS_BARRANT_MINIMAL - 0.05);
+    const dessus = couleur(SINUS_BARRANT_MINIMAL + 0.05);
+    expect(sous).not.toBe(dessus);
+    const clarte = (css: string) => {
+      const t = css.match(/\d+/g)?.map(Number) ?? [];
+      return ((t[0] ?? 0) + (t[1] ?? 0) + (t[2] ?? 0)) / 3;
+    };
+    // Celui qui barre est mouillé en amont, donc plus sombre.
+    expect(clarte(dessus)).toBeLessThan(clarte(sous));
   });
 });

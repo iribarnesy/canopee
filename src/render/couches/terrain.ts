@@ -37,6 +37,12 @@
  * d'éclairer la cellule sous le curseur, pas de quadriller l'hectare.
  */
 
+import {
+  couvertureDuBoisAuSol,
+  EMPRISE_PAR_METRE_DE_TRONC,
+  longueurDeTroncM,
+  SINUS_BARRANT_MINIMAL,
+} from "../../engine/boisMort";
 import { celluleVisibles, type Emprise, type Vue, versEcranVue } from "../camera";
 import { facteurGrain } from "../grain";
 import { expositionMoyenne, facteurRelief } from "../lumiere";
@@ -204,6 +210,32 @@ export interface DonneesSol {
    * semaine. La flaque de novembre, la lame d'une crue.
    */
   debordementMm?: Float32Array;
+  /**
+   * `Snapshot.soilBoisAuSol` : le bois mort COUCHÉ, g C par m².
+   *
+   * **Le protocole demandait ce dessin en toutes lettres** — « le rendu peut y
+   * poser des troncs » — et personne ne lisait le champ. C'est un chablis, ou
+   * une chandelle abattue, resté là où il est tombé : ça fait de l'humus, ça
+   * retient la terre, ça abrite, et le joueur peut le ramasser
+   * (`ramasserBoisMort`). Quatre raisons de le voir.
+   */
+  boisAuSol?: Float32Array;
+  /**
+   * `Snapshot.soilBoisEnTravers` : la TRANSVERSALITÉ du bois couché ∈ [0,1].
+   *
+   * **La grandeur qui explique une chose que le joueur voyait sans la
+   * comprendre.** Le moteur modélise qu'un tronc en travers de la pente barre
+   * l'eau et qu'un tronc dans le sens de la pente fait gouttière — c'est le
+   * sinus de l'angle entre son axe et la ligne de plus grande pente, avec un
+   * seuil mesuré à 30° (`boisMort.ts`, d'après Adams et al. 2023). Une cellule
+   * pouvait donc être plus humide que sa voisine à charge de bois égale, sans
+   * que rien à l'écran ne dise pourquoi.
+   *
+   * Elle donne directement l'ANGLE du tronc à dessiner : `asin(part)` depuis
+   * la direction de l'aval. Ce n'est pas une interprétation, c'est l'inverse
+   * exact de la fonction du moteur.
+   */
+  boisEnTravers?: Float32Array;
 }
 
 /** Une image de terrain cuite, et où la poser. */
@@ -284,6 +316,14 @@ export function signatureMorceau(
       // est dans `estInondee` — deux cellules sous le seuil tombent de toute
       // façon dans le même palier, donc rien ne se recuit pour rien.
       h = (h ^ eau) >>> 0;
+      h = (h * 0x01000193) >>> 0;
+      // Le bois couché entre dans la signature, masse ET orientation : un
+      // chablis qui tombe doit redessiner son morceau, et un tronc qui pourrit
+      // jusqu'à disparaître aussi.
+      const bois =
+        palier(longueurDeTroncM(donnees.boisAuSol?.[i] ?? 0) / TRONC_POUR_UNE_PLEINE_EMPRISE_M) |
+        (palier(donnees.boisEnTravers?.[i] ?? 0) << 3);
+      h = (h ^ bois) >>> 0;
       h = (h * 0x01000193) >>> 0;
     }
   }
@@ -825,6 +865,14 @@ export function cuireMorceau(
     ctx.stroke();
   }
 
+  // ── Le bois mort couché ───────────────────────────────────────────────
+  // **Après l'eau, donc devant elle** : un tronc en travers d'une flaque se
+  // voit, et c'est exactement l'endroit où il faut le voir — c'est lui qui
+  // retient l'eau derrière.
+  if (donnees.boisAuSol) {
+    dessinerBoisAuSol(ctx, donnees, x0, y0, xFin, yFin, vue, decalage);
+  }
+
   // L'ancre : le coin du morceau, à l'altitude de sa cellule. N'importe quel
   // point de parcelle ferait l'affaire — ce qui compte est qu'il soit FIXE et
   // reprojetable ; le coin est celui dont on se souvient le plus facilement.
@@ -837,6 +885,207 @@ export function cuireMorceau(
     decalageRelatif: { dx: decalage.dx - ancreEcran.sx, dy: decalage.dy - ancreEcran.sy },
   };
 }
+
+/**
+ * Le bois mort couché d'un morceau de terrain.
+ *
+ * **Le protocole demandait ce dessin en toutes lettres, et personne ne le
+ * lisait.** `soilBoisAuSol` : « le rendu peut y poser des troncs » ;
+ * `soilBoisEnTravers` : « c'est elle, et pas la masse, qui dit si le tronc
+ * barre l'eau ou s'il fait gouttière, et le rendu doit pouvoir le montrer ».
+ * Deux `Float32Array` qui traversaient le worker pour rien.
+ *
+ * **Trois jets pour trouver d'où vient la direction du tronc**, et les deux
+ * premiers ont été réfutés par une capture :
+ *
+ * 1. `asin(transversalité)`. Ça paraissait exact — la transversalité EST le
+ *    sinus de l'angle entre le tronc et l'aval. C'est faux : la fonction du
+ *    moteur rend une valeur ABSOLUE, délibérément (« un tronc n'a pas de
+ *    sens : couché vers l'est ou vers l'ouest, il barre pareil »), donc un arc
+ *    sinus laisse quatre directions candidates et le rendu en choisissait une
+ *    au hasard. Résultat : des échelles de tirets en travers du vrai tronc.
+ * 2. Pas de direction du tout, juste la part du mètre carré que le bois
+ *    occupe, cellule par cellule. Honnête, mais la couverture réelle d'un
+ *    tronc de trente centimètres dans une cellule d'un mètre est de 30 % :
+ *    les taches ne se soudent pas, et on obtenait une chaîne de losanges.
+ * 3. Le VOISINAGE, en axe quantifié : la paire de voisins opposés la plus
+ *    chargée. Bonne idée, mauvaise résolution — à quarante-cinq degrés près,
+ *    l'empreinte d'un tronc oblique est un escalier, et chaque décrochement
+ *    laissait un trou.
+ * 4. Le graphe de l'empreinte, cellule à cellule. Continu, cette fois, mais
+ *    fidèle à l'escalier : un tuyau en marches, avec un trou triangulaire à
+ *    chaque décrochement. L'empreinte est la RASTÉRISATION d'un tronc droit,
+ *    et la dessiner fidèlement reproduit la rastérisation.
+ * 5. La direction ajustée sur le voisinage, par le moment d'ordre deux du
+ *    nuage des cellules chargées. Direction juste et continue — mais chaque
+ *    segment restait centré sur SA cellule, donc des traits parallèles
+ *    décalés latéralement. Une direction ne suffit pas à dessiner une droite.
+ * 6. **La droite entière, direction ET position.** Le centroïde local donne
+ *    par où elle passe, le moment d'ordre deux autour de lui donne son
+ *    inclinaison : c'est la droite des moindres carrés du nuage. Toutes les
+ *    cellules d'un même tronc tracent alors sur la même droite et leurs
+ *    segments se recouvrent en une seule ligne. De la lecture de donnée, du
+ *    début à la fin.
+ *
+ * **Ce que le dessin pose** : la couleur d'un tronc pourrissant, et le fait
+ * qu'un tronc qui barre soit plus sombre — il est mouillé de son côté amont.
+ * Le SEUIL qui décide, lui, vient du moteur : `SINUS_BARRANT_MINIMAL`, le
+ * sinus de trente degrés, mesuré sur table basculante avec sa source. Et
+ * l'ÉPAISSEUR vient de `couvertureDuBoisAuSol` : le segment traverse un
+ * mètre, donc la part couverte est sa largeur en mètres.
+ *
+ * **Ce qui explique enfin quelque chose au joueur** : une cellule plus humide
+ * que sa voisine à charge de bois égale. La cause était modélisée et
+ * invisible.
+ */
+function dessinerBoisAuSol(
+  ctx: CanvasRenderingContext2D,
+  donnees: DonneesSol,
+  x0: number,
+  y0: number,
+  xFin: number,
+  yFin: number,
+  vue: Vue,
+  decalage: { dx: number; dy: number },
+): void {
+  const bois = donnees.boisAuSol;
+  if (!bois) return;
+  const charge = (x: number, y: number) =>
+    x < 0 || y < 0 || x >= donnees.coteM || y >= donnees.coteM
+      ? 0
+      : (bois[y * donnees.coteM + x] ?? 0);
+  ctx.lineCap = "round";
+  for (let y = y0; y < yFin; y++) {
+    for (let x = x0; x < xFin; x++) {
+      const i = y * donnees.coteM + x;
+      const longueurM = longueurDeTroncM(bois[i] ?? 0);
+      // Sous un dixième de mètre de tronc par mètre carré, il n'y a pas de
+      // tronc : il y a des brindilles, et la litière s'en charge déjà.
+      if (longueurM < TRONC_LE_PLUS_COURT_M) continue;
+      const part = Math.min(1, Math.max(0, donnees.boisEnTravers?.[i] ?? 0));
+      const z = donnees.altitudesM[i] ?? 0;
+      const largeurM = Math.min(1, couvertureDuBoisAuSol(longueurM));
+      ctx.strokeStyle = versCss(part >= SINUS_BARRANT_MINIMAL ? TRONC_BARRANT : TRONC_AU_SOL);
+      ctx.lineWidth = Math.max(1, largeurM * METRE_VERTICAL_PX * vue.cam.zoom);
+      // **La direction, ajustée sur un VOISINAGE et non sur les huit voisins
+      // immédiats.** L'empreinte que le moteur écrit est la rastérisation d'un
+      // tronc droit : à un mètre de résolution, un tronc oblique devient un
+      // escalier. Relier fidèlement les cellules voisines reproduisait donc
+      // l'escalier — un tuyau en marches, avec un trou triangulaire à chaque
+      // décrochement. Ce qu'on veut est la droite QUE l'escalier approxime.
+      //
+      // Elle se lit dans le moment d'ordre deux de l'empreinte locale, ce qui
+      // est la façon standard de retrouver une droite dans un nuage : l'axe
+      // principal du nuage des cellules chargées autour de celle-ci.
+      const dir = axeDeLEmpreinte(charge, x, y);
+      // Le segment passe par le centroïde local, pas par le centre de la
+      // cellule : toutes les cellules d'un même tronc tracent alors sur la
+      // MÊME droite, et leurs segments se recouvrent en une seule ligne.
+      const mx = x + 0.5 + dir.cx;
+      const my = y + 0.5 + dir.cy;
+      const a = versEcranVue(
+        { x: mx + dir.x * DEMI_TRAVERSEE_M, y: my + dir.y * DEMI_TRAVERSEE_M, z },
+        vue,
+      );
+      const b = versEcranVue(
+        { x: mx - dir.x * DEMI_TRAVERSEE_M, y: my - dir.y * DEMI_TRAVERSEE_M, z },
+        vue,
+      );
+      ctx.beginPath();
+      ctx.moveTo(a.sx - decalage.dx, a.sy - decalage.dy);
+      ctx.lineTo(b.sx - decalage.dx, b.sy - decalage.dy);
+      ctx.stroke();
+    }
+  }
+}
+
+/**
+ * L'axe principal de l'empreinte de bois autour d'une cellule, normé.
+ *
+ * Le moment d'ordre deux du nuage des cellules chargées, pondéré par leur
+ * charge : c'est la droite des moindres carrés du nuage, donc le tronc que
+ * l'escalier de la rastérisation approxime. Sur un nuage sans direction — une
+ * cellule isolée — les deux moments sont égaux et l'axe sort horizontal, ce
+ * qui est aussi bon qu'autre chose pour un bout de bois d'un mètre.
+ */
+function axeDeLEmpreinte(
+  charge: (x: number, y: number) => number,
+  x: number,
+  y: number,
+): { x: number; y: number; cx: number; cy: number } {
+  // Le CENTROÏDE d'abord, et c'est lui qui manquait au jet précédent : une
+  // direction juste ne suffit pas à dessiner une droite, il faut aussi savoir
+  // par où elle passe. Des segments bien orientés mais centrés chacun sur sa
+  // cellule donnaient des traits parallèles décalés latéralement — l'escalier
+  // de la rastérisation, cette fois en biais.
+  let poids = 0;
+  let mx = 0;
+  let my = 0;
+  for (let dy = -RAYON_AJUSTEMENT; dy <= RAYON_AJUSTEMENT; dy++) {
+    for (let dx = -RAYON_AJUSTEMENT; dx <= RAYON_AJUSTEMENT; dx++) {
+      const w = charge(x + dx, y + dy);
+      if (w <= 0) continue;
+      poids += w;
+      mx += w * dx;
+      my += w * dy;
+    }
+  }
+  const cx = poids > 0 ? mx / poids : 0;
+  const cy = poids > 0 ? my / poids : 0;
+  // Puis le moment d'ordre deux AUTOUR du centroïde : c'est la droite des
+  // moindres carrés du nuage, donc le tronc que l'escalier approxime.
+  let sxx = 0;
+  let sxy = 0;
+  let syy = 0;
+  for (let dy = -RAYON_AJUSTEMENT; dy <= RAYON_AJUSTEMENT; dy++) {
+    for (let dx = -RAYON_AJUSTEMENT; dx <= RAYON_AJUSTEMENT; dx++) {
+      const w = charge(x + dx, y + dy);
+      if (w <= 0) continue;
+      const ex = dx - cx;
+      const ey = dy - cy;
+      sxx += w * ex * ex;
+      sxy += w * ex * ey;
+      syy += w * ey * ey;
+    }
+  }
+  const angle = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+  return { x: Math.cos(angle), y: Math.sin(angle), cx, cy };
+}
+
+/**
+ * Rayon du voisinage sur lequel on ajuste la direction du tronc, en cellules.
+ *
+ * Deux : assez pour lisser l'escalier d'une rastérisation à un mètre — cinq
+ * cellules de portée suffisent à distinguer une pente de 1/1 d'une pente de
+ * 1/2 — assez peu pour qu'un tronc en croise un autre sans que les deux
+ * directions se mélangent.
+ */
+const RAYON_AJUSTEMENT = 2;
+
+/**
+ * La demi-longueur du segment tracé dans une cellule, m.
+ *
+ * Un peu plus d'un demi-mètre : le segment traverse la cellule de bord à bord
+ * quel que soit son angle, si bien qu'il se raccorde à celui de la cellule
+ * voisine. C'est ce raccordement, et non la couverture au sol, qui fait qu'on
+ * voit un tronc et non une chaîne de taches.
+ */
+const DEMI_TRAVERSEE_M = 0.72;
+
+/** Longueur de tronc par m² en dessous de laquelle il n'y a pas de tronc, m. */
+const TRONC_LE_PLUS_COURT_M = 0.1;
+/**
+ * Longueur de tronc au mètre carré qui couvre la cellule entière, m.
+ *
+ * L'inverse de `EMPRISE_PAR_METRE_DE_TRONC` du moteur : c'est l'échelle sur
+ * laquelle la signature quantifie, pour qu'elle soit celle du modèle et non
+ * un plafond choisi ici.
+ */
+const TRONC_POUR_UNE_PLEINE_EMPRISE_M = 1 / EMPRISE_PAR_METRE_DE_TRONC;
+/** Un tronc couché qui pourrit : gris-brun, plus sombre que la litière. */
+const TRONC_AU_SOL: Teinte = { r: 96, g: 84, b: 68 };
+/** Le même, en travers de la pente : mouillé en amont, donc plus sombre. */
+const TRONC_BARRANT: Teinte = { r: 72, g: 62, b: 50 };
 
 /**
  * Le cache de terrain : il tient les morceaux cuits, repère ceux qui sont

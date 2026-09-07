@@ -92,6 +92,10 @@ interface Scene {
     ruMm: number;
     enEau?: boolean[];
     debordementMm?: number[];
+    /** `Snapshot.soilBoisAuSol` : bois mort couché, g C/m² */
+    boisAuSol?: number[];
+    /** `Snapshot.soilBoisEnTravers` : sa transversalité ∈ [0,1] */
+    boisEnTravers?: number[];
     altitudesM: number[];
     waterMm: number[];
     herbeCouverture: number[];
@@ -122,6 +126,10 @@ function donneesDe(scene: Scene): DonneesSol {
       ? { herbeHumidite: Float32Array.from(scene.sol.herbeHumidite) }
       : {}),
     ...(scene.sol.enEau ? { enEau: scene.sol.enEau } : {}),
+    ...(scene.sol.boisAuSol ? { boisAuSol: Float32Array.from(scene.sol.boisAuSol) } : {}),
+    ...(scene.sol.boisEnTravers
+      ? { boisEnTravers: Float32Array.from(scene.sol.boisEnTravers) }
+      : {}),
     ...(scene.sol.debordementMm
       ? { debordementMm: Float32Array.from(scene.sol.debordementMm) }
       : {}),
@@ -920,6 +928,24 @@ const PLANCHE: Planche[] = [
   { scene: "friche-s42", titre: "saison · octobre" },
   { scene: "mare-s28", titre: "mare · parcelle entière" },
   { scene: "mare-s28", titre: "mare · zoom ×8", facteur: 8, centre: { x: 60, y: 40 } },
+  // Le bois couché, aux deux bouts de la transversalité. La simulation ne met
+  // pas côte à côte, la même semaine, un tronc en travers et un tronc dans le
+  // sens de la pente : le banc impose donc les deux valeurs que le moteur
+  // produirait, comme il impose une couverture d'herbe pleine.
+  {
+    scene: "bois-barre",
+    titre:
+      "bois couché · EN TRAVERS de la pente (barre l'eau : au-delà du seuil des 30° du moteur)",
+    facteur: 6,
+    centre: { x: 40, y: 34 },
+  },
+  {
+    scene: "bois-longe",
+    titre:
+      "bois couché · le long de la pente (transversalité 0,33 : sous le seuil, il fait gouttière)",
+    facteur: 6,
+    centre: { x: 40, y: 34 },
+  },
   { scene: "versant-s28", titre: "versant 12 % · parcelle entière" },
   { scene: "versant-s28", titre: "versant 12 % · zoom ×6", facteur: 6, centre: { x: 50, y: 50 } },
   { scene: "friche-s28", titre: "rotation · nord", orientation: 0 },

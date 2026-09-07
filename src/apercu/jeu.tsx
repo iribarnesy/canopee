@@ -66,6 +66,10 @@ interface Scene {
     ruMm: number;
     enEau?: boolean[];
     debordementMm?: number[];
+    /** `Snapshot.soilBoisAuSol` : bois mort couché, g C/m² */
+    boisAuSol?: number[];
+    /** `Snapshot.soilBoisEnTravers` : sa transversalité ∈ [0,1] */
+    boisEnTravers?: number[];
     altitudesM: number[];
     waterMm: number[];
     herbeCouverture: number[];
@@ -96,6 +100,10 @@ function donneesDe(scene: Scene): DonneesSol {
       ? { herbeHumidite: Float32Array.from(scene.sol.herbeHumidite) }
       : {}),
     ...(scene.sol.enEau ? { enEau: scene.sol.enEau } : {}),
+    ...(scene.sol.boisAuSol ? { boisAuSol: Float32Array.from(scene.sol.boisAuSol) } : {}),
+    ...(scene.sol.boisEnTravers
+      ? { boisEnTravers: Float32Array.from(scene.sol.boisEnTravers) }
+      : {}),
     ...(scene.sol.debordementMm
       ? { debordementMm: Float32Array.from(scene.sol.debordementMm) }
       : {}),
