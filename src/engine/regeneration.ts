@@ -11,6 +11,7 @@
  * La suite (sécheresse, ombre croissante) relève de la mortalité normale.
  */
 
+import { leveeParM2 } from "./banqueGraines";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM, lightAtPoint, type PartOmbrageante } from "./light";
@@ -54,6 +55,14 @@ export interface RecruitmentInput {
    * terrain découvert pour les retrouver.
    */
   lumiereAuSol: readonly number[];
+  /**
+   * Banque de graines du sol, graines/m² par espèce (banqueGraines.ts). C'est
+   * la mémoire du passé de la parcelle : ce qui y a poussé et grainé y attend
+   * sous terre, parfois des décennies.
+   */
+  banqueGraines?: Readonly<Record<string, number>>;
+  /** La parcelle a-t-elle brûlé depuis la dernière levée ? Le feu scarifie. */
+  aBrule?: boolean;
   nextTreeId: number;
 }
 
@@ -62,6 +71,40 @@ export interface RecruitmentResult {
   rng: RngState;
   nextTreeId: number;
 }
+
+/**
+ * Combien d'ÉTABLISSEMENTS pour une graine levée de la banque.
+ *
+ * Le rapport est écrasant, et il doit l'être : sous une lande installée, la
+ * banque d'ajoncs compte des centaines de graines par m², et un feu en fait
+ * lever la moitié. Cela ferait des millions de plantules sur une parcelle d'un
+ * hectare — dont l'immense majorité meurt dans l'année, et dont ce moteur, qui
+ * suit ses ligneux un par un, ne peut de toute façon pas tenir le compte.
+ *
+ * La valeur est donc CALÉE sur l'échelle de représentation du moteur, pas sur
+ * la démographie réelle : une lande brûlée doit y revenir en lande, à la
+ * densité d'ajoncs que le moteur manipule habituellement (quelques centièmes de
+ * pied au m²), pas à celle du terrain. Le plafond de recouvrement des couronnes
+ * fait le reste du travail *(à calibrer)*.
+ */
+const ETABLISSEMENTS_PAR_LEVEE = 0.00002;
+
+/**
+ * Plafond de tentatives issues de la banque, par an et pour toute la parcelle.
+ *
+ * Ce n'est pas de l'écologie, c'est une protection, et elle a été gagnée à la
+ * dure : la première version sans plafond a fait passer la suite d'essais de
+ * deux minutes à DEUX HEURES ET DEMIE. Une banque d'ajoncs bien remplie lève
+ * des centaines de milliers de graines au m² après un feu ; même avec un taux
+ * d'établissement minuscule, cela crée assez d'individus pour que chaque tick
+ * suivant coûte dix fois plus cher.
+ *
+ * Le plafond n'enlève rien au mécanisme : le peuplement d'après-feu est de
+ * toute façon limité par le recouvrement des couronnes quelques années plus
+ * tard. Il empêche seulement le moteur de matérialiser un à un des semis qui
+ * mourront tous.
+ */
+const MAX_LEVEES_PAR_AN = 300;
 
 function draw(rng: RngState): { rng: RngState; value: number } {
   const r = rngFloat(rng);
@@ -221,6 +264,20 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   for (const v of voisinage) {
     const n = tentatives(v.semisParAn);
     for (let k = 0; k < n; k++) tryEstablish(v.especeId, null);
+  }
+
+  // 1 bis. La BANQUE DE GRAINES du sol, pour les espèces qui en font une. Elle
+  // ne dépend ni des adultes présents ni du voisinage : c'est ce que la
+  // parcelle a gardé de son passé, et le feu la réveille (banqueGraines.ts).
+  //
+  // Les levées passent par le MÊME entonnoir que les autres semis — lumière,
+  // pH, place disponible, concurrence immédiate — parce qu'une graine réveillée
+  // par le feu n'est pas dispensée d'écologie.
+  for (const [especeId, stockParM2] of Object.entries(input.banqueGraines ?? {})) {
+    const espece = getEspece(especeId);
+    const levees = leveeParM2(espece, stockParM2, input.aBrule ?? false) * coteM * coteM;
+    const n = Math.min(MAX_LEVEES_PAR_AN, tentatives(levees * ETABLISSEMENTS_PAR_LEVEE));
+    for (let k = 0; k < n; k++) tryEstablish(especeId, null);
   }
 
   // 2. Semis des adultes de la parcelle en âge de grainer.

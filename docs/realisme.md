@@ -141,7 +141,7 @@ mesurer que ce qu'on sait déjà faire.*
 | D3 | La floraison suit un cumul de degrés-jours | ✅ | `ddYearBase5` ; `fruits.test.ts` |
 | D4 | Un gel tardif détruit les fleurs ouvertes : les précoces sont un pari | ✅ | `tMinAbsC` ; `fruits.test.ts` |
 | D5 | La variabilité climatique ouvre des fenêtres d'installation | 🟡 | visible (`fenetres-installation.test.ts`), non piloté par un mécanisme dédié |
-| D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | ❌ | Microclimat = humidité seulement |
+| D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | 🟡 | `microclimat.ts` : les trois offsets de De Frenne et al. 2019 (max −4,1 °C, moyenne −1,7, min **+1,1**), appliqués à proportion de la fermeture. Branché sur le GEL DE FLORAISON — un fruitier abrité échappe au gel tardif qui tue celui d'à côté. Pas encore sur la phénologie ni sur le stress thermique |
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
 | D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
 | D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler AVANT de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
@@ -179,7 +179,7 @@ mesurer que ce qu'on sait déjà faire.*
 | F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | plafond de densité arbitraire + ombrage codominant |
 | F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | ❌ | Champs prévus, non implémentés |
-| F9 | La banque de graines du sol garde une mémoire du passé | ❌ | Absente |
+| F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
@@ -1350,6 +1350,55 @@ seul — aucune règle « élaguer réduit le feu » n'est écrite nulle part.
 Ce qui ne bouge pas, et l'essai le vérifie aussi : le combustible de SURFACE.
 Un pin élagué sur une lande d'herbe sèche brûle toujours au sol ; ce qu'il ne
 fait plus, c'est passer en cime.
+
+## Le couvert ne fait pas que de l'ombre : il tamponne la température
+
+Le moteur savait qu'une litière reste humide sous les arbres. Il ignorait
+l'autre moitié du microclimat forestier, pourtant la mieux mesurée de toutes :
+sous un couvert, les jours sont plus frais, les nuits plus douces, et les
+extrêmes rabotés des deux côtés.
+
+De Frenne et al. (2019), *Nature Ecology & Evolution* 3:744-749 — méta-analyse
+de **98 sites, 74 études, cinq continents, 714 paires** intérieur de forêt /
+milieu ouvert adjacent :
+
+| | écart forêt − ouvert |
+|---|---|
+| température **maximale** | **−4,1 ± 0,5 °C** — la forêt est plus fraîche le jour |
+| température **moyenne** | −1,7 ± 0,3 °C |
+| température **minimale** | **+1,1 ± 0,2 °C** — la forêt est plus douce la nuit |
+
+Toutes à p < 0,001, et l'écart se creuse à mesure que le climat général devient
+plus extrême — ce qui en fait un mécanisme d'autant plus important quand le
+scénario climatique se réchauffe. Un suivi indépendant en forêt tempérée donne
+le même ordre : +7,8 °C de maximum journalier en peuplement ouvert (Breigenzer
+et al. 2026).
+
+Le tampon s'applique **à proportion de la fermeture du couvert au-dessus du
+point considéré** : pas de seuil, pas de palier. Un arbre en plein découvert ne
+gagne rien, un semis sous futaie fermée gagne tout, et à mi-ombre exactement la
+moitié — l'essai le vérifie, parce que c'est ce qui garantit qu'aucun cas
+particulier n'est codé en dur.
+
+**Ce qu'on en fait pour l'instant : le gel de floraison.** Le gel se juge
+désormais sous le couvert de CHAQUE arbre, pas au-dessus de la parcelle. La
+nuit, un couvert renvoie vers le sol le rayonnement que le ciel clair
+emporterait, et la floraison qu'il abrite y échappe. C'est l'argument
+agroforestier pour mettre les fruitiers à l'abri d'une haie plutôt qu'en plein
+découvert, et il n'est écrit nulle part dans le moteur : il tombe de la
+composition du tampon nocturne et du seuil de gel de l'espèce. Mesuré, un
+abricotier entouré de charmes garde sa floraison là où celui d'à côté la perd.
+
+*Ce qui reste à faire* : le tampon n'agit encore ni sur la phénologie — un
+débourrement retardé sous couvert, ce qui est justement une protection
+supplémentaire contre le gel tardif — ni sur le stress thermique d'été, où
+−4,1 °C sur les maxima devraient compter beaucoup.
+
+*Limite assumée* : les chiffres de De Frenne portent sur des moyennes de maxima
+et de minima, pas sur les extrêmes absolus. Pour un gel radiatif — la nuit
+claire et calme où le couvert compte le plus — le tampon réel est probablement
+PLUS grand que 1,1 °C, puisque c'est précisément le rayonnement nocturne que le
+couvert intercepte. On reste sur la valeur publiée plutôt que d'extrapoler.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 

@@ -9,6 +9,7 @@
  */
 
 import type { GesteVisible } from "./actions";
+import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
   type CelluleSousLeTronc,
   CONTACT_CHABLIS_BRANCHU,
@@ -78,6 +79,7 @@ import {
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
+import { fermetureDuCouvert, tMinimumSousCouvert } from "./microclimat";
 import {
   cibleReseau,
   facteurAbsorption,
@@ -1298,7 +1300,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (
         ddPrev < bloomEnd &&
         ddYearBase5 >= fruits.floraisonDJ &&
-        weather.tMinAbsC <= fruits.gelFatalC
+        // Le gel se juge SOUS LE COUVERT de cet arbre-là, pas au-dessus de la
+        // parcelle : la nuit, un couvert renvoie vers le sol le rayonnement que
+        // le ciel clair emporterait, et la floraison qu'il abrite y échappe
+        // (microclimat.ts). C'est l'argument agroforestier pour mettre les
+        // fruitiers à l'abri d'une haie plutôt qu'en plein découvert.
+        tMinimumSousCouvert(weather.tMinAbsC, fermetureDuCouvert(light[t] ?? 1)) <= fruits.gelFatalC
       ) {
         bloomFrosted = true;
       }
@@ -1966,6 +1973,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
   let nextTreeId = state.nextTreeId;
+  // Le feu de la semaine arme la levée de l'année : le drapeau reste levé
+  // jusqu'à la semaine de recrutement, où la banque se réveille (banqueGraines.ts).
+  let aBruleDepuisLaLevee = state.aBruleDepuisLaLevee || incendie !== undefined;
+  let banqueGraines = state.banqueGraines;
   if (week === RECRUITMENT_WEEK) {
     const recruitment = yearlyRecruitment({
       trees: nextTrees,
@@ -1975,6 +1986,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       partOmbrageante: partOmbrageanteDe,
       ph: state.soil.ph,
       lumiereAuSol: groundLight,
+      banqueGraines: state.banqueGraines,
+      aBrule: aBruleDepuisLaLevee,
       nextTreeId,
     });
     // Le carbone des recrues vient d'ailleurs : de la graine, produite par un
@@ -1987,6 +2000,31 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     nextTrees = [...nextTrees, ...recruitment.newTrees];
     rng = recruitment.rng;
     nextTreeId = recruitment.nextTreeId;
+    // La banque vieillit, perd ce qui a levé, et reçoit la graine de l'année.
+    // Seuls les adultes en âge de grainer alimentent : un semis ne sème pas.
+    const adultes = new Map<string, number>();
+    for (const arbre of nextTrees) {
+      if (!arbre.alive) continue;
+      const espece = getEspece(arbre.especeId);
+      if (!espece.regeneration.banqueGraines) continue;
+      if (arbre.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+      adultes.set(arbre.especeId, (adultes.get(arbre.especeId) ?? 0) + 1);
+    }
+    const surfaceM2 = station.coteM * station.coteM;
+    const suivante: Record<string, number> = {};
+    for (const especeId of new Set([...Object.keys(banqueGraines), ...adultes.keys()])) {
+      const espece = getEspece(especeId);
+      const depot = (DEPOT_PAR_ADULTE_PAR_AN * (adultes.get(especeId) ?? 0)) / surfaceM2;
+      const stock = banqueApresUneAnnee(
+        espece,
+        banqueGraines[especeId] ?? 0,
+        depot,
+        aBruleDepuisLaLevee,
+      );
+      if (stock > 0) suivante[especeId] = stock;
+    }
+    banqueGraines = suivante;
+    aBruleDepuisLaLevee = false;
   }
 
   return {
@@ -2030,6 +2068,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       trees: nextTrees,
       ddYearBase5,
       semainesDeFroid,
+      banqueGraines,
+      aBruleDepuisLaLevee,
       // Le vide laissé par la chasse se comble : les voisins arrivent.
       pressionGibier: state.pressionGibier + (1 - state.pressionGibier) * RETOUR_IMMIGRATION,
       carbon: {

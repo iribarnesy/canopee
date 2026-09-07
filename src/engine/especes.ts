@@ -110,6 +110,36 @@ export interface EspeceV0 {
     dissemination: "vent" | "oiseaux" | "gravite" | "geai";
     /** établissements potentiels par adulte et par an (APRÈS l'entonnoir de mortalité, ch4-B) */
     semisParAn: number;
+    /**
+     * BANQUE DE GRAINES du sol, pour les espèces qui en font une. Absente pour
+     * la plupart : un gland ou une faîne est une graine RÉCALCITRANTE, elle ne
+     * survit pas à un hiver sec et ne fait aucune mémoire du passé.
+     *
+     * Les légumineuses à tégument dur, elles, en font une qui dure des
+     * décennies — et le feu la réveille. C'est ce qui fait qu'une lande brûlée
+     * revient en lande : l'ajonc ne recolonise pas depuis le voisinage, il
+     * remonte du sol sur place.
+     */
+    banqueGraines?: {
+      /**
+       * Durée pendant laquelle une graine reste viable dans le sol, années.
+       * L'ajonc tient 25 à 30 ans dans les six premiers centimètres.
+       */
+      persistanceAns: number;
+      /**
+       * Part de la banque qui lève APRÈS UN PASSAGE DE FEU ∈ [0,1]. Le feu
+       * scarifie le tégument sans détruire la banque : le sol isole assez pour
+       * que même un feu intense laisse intactes les graines enfouies, et c'est
+       * la chaleur reçue qui lève leur dormance.
+       */
+      leveeParLeFeu: number;
+      /**
+       * Part qui lève une année ordinaire, sans feu. Faible par construction —
+       * une graine à tégument dur ne germe pas toute seule, c'est tout son
+       * intérêt.
+       */
+      leveeSpontanee: number;
+    };
   };
   litiere: {
     /** rapport C/N de la litière : bas = minéralisation rapide (ch2-B) */
@@ -661,7 +691,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.7, fixateur: false },
     // Les mûres sont mangées par tout ce qui vole : c'est LE colonisateur.
-    regeneration: { maturiteAns: 2, longeviteAns: 15, dissemination: "oiseaux", semisParAn: 2 },
+    regeneration: {
+      maturiteAns: 2,
+      longeviteAns: 15,
+      dissemination: "oiseaux",
+      semisParAn: 2,
+      // La ronce sème par les oiseaux et garde une réserve au sol : c'est ce qui la fait surgir dans une trouée où personne ne l'avait vue.
+      banqueGraines: {
+        persistanceAns: 15,
+        leveeParLeFeu: 0.2,
+        leveeSpontanee: 0.1,
+      },
+    },
     litiere: { cnRatio: 24 },
     // La ronce ne perd qu'une partie de son feuillage : elle repart tôt.
     phenologie: { debourrementDJ: 120, seuilJourH: 11.3, besoinFroidSemaines: 8 },
@@ -956,7 +997,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     // Fabacée fixatrice (Rhizobium) : elle enrichit le sable qu'elle colonise.
     azote: { demandeRelative: 0.5, fixateur: true },
-    regeneration: { maturiteAns: 3, longeviteAns: 25, dissemination: "gravite", semisParAn: 5 },
+    regeneration: {
+      maturiteAns: 3,
+      longeviteAns: 25,
+      dissemination: "gravite",
+      semisParAn: 5,
+      // L'ajonc est LE cas d'école. Sa banque atteint 500 à 2 000 graines/m² sous une lande installée, et jusqu'à des dizaines de milliers ; les graines tiennent 25 à 30 ans dans les six premiers centimètres du sol, et le feu les scarifie sans les détruire — le sol isole assez pour ça. C'est la raison pour laquelle une lande brûlée revient en lande.
+      banqueGraines: {
+        persistanceAns: 28,
+        leveeParLeFeu: 0.45,
+        leveeSpontanee: 0.03,
+      },
+    },
     litiere: { cnRatio: 25 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
@@ -984,7 +1036,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 130 }, // pivot de fabacée
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: true },
-    regeneration: { maturiteAns: 3, longeviteAns: 20, dissemination: "gravite", semisParAn: 4 },
+    regeneration: {
+      maturiteAns: 3,
+      longeviteAns: 20,
+      dissemination: "gravite",
+      semisParAn: 4,
+      // Même famille, même tégument dur, même stratégie : le genêt attend sous terre que quelque chose ouvre le milieu.
+      banqueGraines: {
+        persistanceAns: 20,
+        leveeParLeFeu: 0.4,
+        leveeSpontanee: 0.04,
+      },
+    },
     litiere: { cnRatio: 22 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
@@ -1011,7 +1074,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 40 }, // sous-arbrisseau à racines fines superficielles
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.15, fixateur: false },
-    regeneration: { maturiteAns: 3, longeviteAns: 30, dissemination: "vent", semisParAn: 6 },
+    regeneration: {
+      maturiteAns: 3,
+      longeviteAns: 30,
+      dissemination: "vent",
+      semisParAn: 6,
+      // La callune fait une banque très durable, mais sa levée doit moins au feu qu'à l'ouverture du milieu : elle germe surtout parce que la lumière revient *(à confirmer : moins documenté que l'ajonc)*.
+      banqueGraines: {
+        persistanceAns: 30,
+        leveeParLeFeu: 0.25,
+        leveeSpontanee: 0.06,
+      },
+    },
     // Litière éricacée : lente et acidifiante (voie fongique, ch2-B).
     litiere: { cnRatio: 45 },
     // Sempervirent : valeurs sans effet.
