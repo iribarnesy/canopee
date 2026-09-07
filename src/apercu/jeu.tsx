@@ -118,6 +118,8 @@ function Demo(): React.ReactElement {
     boite.textContent = compte
       ? [
           `sprites   ${compte.spritesPoses}`,
+          `pose      ${compte.msPose.toFixed(2)} ms`,
+          `cuisson   ${compte.msCuisson.toFixed(2)} ms`,
           `sol cuit  ${compte.morceauxCuits}`,
           `décor     ${compte.decorCuit}`,
           `classes   ${compte.classesCuites}`,

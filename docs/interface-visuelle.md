@@ -620,6 +620,12 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   flèche broutée peinte sur une inférence fausse masquerait le vrai problème,
   qui est que la boucle de décision du joueur est aveugle, pas que l'image est
   pauvre.
+- **Le hors-parcelle disparaît au dézoom lointain.** Constaté sur la vue
+  interactive : au-delà d'un certain recul, la nappe de décor ne couvre plus le
+  cadre et le ciel reste nu autour de la parcelle. Ce n'est pas la pose — elle
+  a été prouvée pixel pour pixel identique après sa réécriture — c'est
+  `Decor.aPoser` qui ne rend plus rien à cette échelle. À reprendre avec le
+  décor, pas avec le poseur.
 - **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
 - **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
   panneau face caméra : un côté éclairé franc mentirait dès la première

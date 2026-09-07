@@ -40,6 +40,7 @@ import {
   type ArbreAPoser,
   AtlasArbres,
   ancrageDePose,
+  cleClasse,
   fourreEnArbre,
   posesDesArbres,
   separerLeFourre,
@@ -104,6 +105,22 @@ export interface Compte {
   decorEnRetard: number;
   /** classes de vignette en attente de cuisson */
   arbresEnRetard: number;
+  /**
+   * Millisecondes passées à POSER, hors cuisson et hors rendu GPU.
+   *
+   * **Le poste que rien ne mesurait, et donc que rien ne surveillait.** Le
+   * compte disait combien de sprites étaient posés, jamais ce que les poser
+   * coûtait — or c'est là que vit la « primitive par image » que le lot L0 a
+   * proscrite. Un chiffre qu'on ne mesure pas est un chiffre qui dérive.
+   *
+   * Séparé du reste exprès : la cuisson est budgétée et s'arrête d'elle-même,
+   * le rendu GPU dépend de la machine, la POSE est du JavaScript pur et ne
+   * dépend que de nous. C'est le seul des trois qu'on puisse comparer d'une
+   * version à l'autre depuis un conteneur sans carte graphique.
+   */
+  msPose: number;
+  /** millisecondes passées à cuire, budget compris */
+  msCuisson: number;
 }
 
 /**
@@ -128,7 +145,31 @@ export class SceneParcelle {
   private masque?: RenderTexture;
   private silhouette?: RenderTexture;
   private readonly pinceau = new Container();
+  /**
+   * Le fond blanc du masque d'ombre — « blanc » voulant dire « pas d'ombre ».
+   *
+   * Gardé d'une image à l'autre, et refait seulement quand le cadre change de
+   * taille : c'était un `Graphics` neuf, rempli et détruit soixante fois par
+   * seconde pour dessiner le même rectangle.
+   */
+  private fondOmbre?: Graphics;
+  private fondOmbreTaille = "";
+  /**
+   * La signature du masque d'ombre déjà cuit : caméra + arbres.
+   *
+   * **Le masque est une FONCTION de (arbres, caméra), et rien d'autre.** Tant
+   * que ni l'une ni les autres ne bougent, la texture d'ombre déjà rendue est
+   * exactement celle qu'on s'apprêtait à refaire — et la refaire coûte deux
+   * passes plein écran plus un placement par arbre.
+   *
+   * Ce n'est pas une optimisation de banc : le jeu est au TOUR. Entre deux
+   * ticks, la caméra immobile est le régime normal, pas le cas particulier.
+   * Ce qui bouge dans une image d'attente, ce sont les cuissons en retard et
+   * rien d'autre.
+   */
+  private signatureOmbres = "";
   private spriteOmbres?: Sprite;
+  private decoupeOmbres?: Sprite;
   /** textures posées à l'image précédente, à libérer quand elles changent */
   private readonly posees = new Map<string, Texture>();
   private monte = false;
@@ -182,6 +223,14 @@ export class SceneParcelle {
     this.masque = undefined;
     this.silhouette?.destroy(true);
     this.silhouette = undefined;
+    // **Les deux sprites tenaient ces textures**, et depuis qu'ils survivent
+    // d'une image à l'autre, les oublier ici laisserait la couche d'ombre
+    // pointer sur deux textures détruites — le même plantage que la clé de
+    // classe recopiée, un cran plus bas. Ils se refont à la prochaine image.
+    this.couches.ombres.removeChildren();
+    this.spriteOmbres = undefined;
+    this.decoupeOmbres = undefined;
+    this.signatureOmbres = "";
   }
 
   /**
@@ -202,6 +251,8 @@ export class SceneParcelle {
         solEnRetard: 0,
         decorEnRetard: 0,
         arbresEnRetard: 0,
+        msPose: 0,
+        msCuisson: 0,
       };
     }
     this.terrain ??= new Terrain(this.fabriquer, etat.sol.coteM);
@@ -210,6 +261,7 @@ export class SceneParcelle {
       this.decor = new Decor(this.fabriquer, etat.sol.coteM, etat.bordures, etat.sol.altitudesM);
     }
 
+    const debutCuisson = performance.now();
     const enRetardTerrain = this.terrain.rafraichir(etat.sol, etat.semaineAnnee, vue);
     const morceauxCuits = this.terrain.cuire(etat.sol, etat.semaineAnnee, vue, BUDGET_TERRAIN);
     const enRetardDecor = this.decor?.rafraichir(vue) ?? 0;
@@ -226,11 +278,20 @@ export class SceneParcelle {
     const enRetardArbres = this.atlas.rafraichir(poses);
     const classesCuites = this.atlas.cuire(BUDGET_ARBRES_PX);
 
+    const msCuisson = performance.now() - debutCuisson;
+
+    const debutPose = performance.now();
     let spritesPoses = 0;
     spritesPoses += this.poserDecor(vue);
     spritesPoses += this.poserSol(vue);
     spritesPoses += this.poserArbres(poses, vue);
-    this.poserOmbres(etat, vue);
+    // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
+    // laissait une découpe périmée. La signature ne regarde que les arbres et
+    // la caméra ; or l'ombre est aussi découpée à la SILHOUETTE de la parcelle,
+    // rendue depuis la couche du sol — qui, elle, change tant que la cuisson
+    // rattrape son retard. Sans ce forçage, les premières secondes d'une
+    // parcelle froide gardaient l'ombre découpée sur un sol à moitié cuit.
+    const msPose = performance.now() - debutPose + this.poserOmbres(etat, vue, morceauxCuits > 0);
 
     this.app.render();
     return {
@@ -241,7 +302,55 @@ export class SceneParcelle {
       solEnRetard: enRetardTerrain,
       decorEnRetard: enRetardDecor,
       arbresEnRetard: enRetardArbres,
+      msPose,
+      msCuisson,
     };
+  }
+
+  /**
+   * Le sprite numéro `rang` d'une couche : celui qui y est déjà, sinon un neuf.
+   *
+   * **La couche est un POOL, pas une liste qu'on refait.** Chaque couche
+   * gardait ses sprites une image seulement : `removeChildren()` en tête de
+   * pose, puis un `new Sprite` par image — soit, sur une friche, trois mille
+   * objets alloués et jetés soixante fois par seconde. C'est exactement la
+   * « primitive par image » que le lot L0 a proscrite, réintroduite dans la
+   * couche de pose.
+   *
+   * Mesuré sur la friche de `scripts/apercu-perf.mjs` (2 995 sprites,
+   * 1 500 × 1 000) : **35,7 ms** de pose par image avant, **5,4 / 9,2 / 11,9 ms**
+   * sur trois relevés après (avec le saut de masque d'ombre décrit plus bas).
+   * Trois chiffres et pas un seul parce que le conteneur de mesure partage son
+   * processeur : l'écart entre relevés y est du même ordre que ce qu'on mesure,
+   * donc le gain honnête est « un facteur trois environ », pas une valeur.
+   *
+   * L'ordre de grandeur, lui, se lit sans ambiguïté contre le budget d'une
+   * image à soixante par seconde, qui est de 16,7 ms : la pose seule le
+   * dépassait du double, avant même que quoi que ce soit ne soit dessiné.
+   * Et contrairement au temps de RENDU, ce chiffre-là veut dire quelque chose
+   * depuis ce conteneur — c'est du JavaScript, il ne passe pas par SwiftShader.
+   *
+   * Le rang suffit comme identité : ce qui compte n'est pas QUEL sprite sert à
+   * quoi — ils sont interchangeables — mais qu'il y en ait le bon nombre et
+   * qu'ils portent la bonne texture.
+   */
+  private static sprite(couche: Container, rang: number, texture: Texture): Sprite {
+    const deja = couche.children[rang] as Sprite | undefined;
+    if (deja) {
+      // Réaffecter une texture identique invalide quand même le lot de rendu
+      // de Pixi : on ne le fait que si elle a vraiment changé.
+      if (deja.texture !== texture) deja.texture = texture;
+      deja.visible = true;
+      return deja;
+    }
+    const neuf = new Sprite(texture);
+    couche.addChild(neuf);
+    return neuf;
+  }
+
+  /** Jette ce qui dépasse : la couche a servi plus de sprites à l'image d'avant. */
+  private static tailler(couche: Container, gardes: number): void {
+    while (couche.children.length > gardes) couche.removeChildAt(couche.children.length - 1);
   }
 
   /**
@@ -264,7 +373,7 @@ export class SceneParcelle {
       echelle: number;
     }[],
   ): number {
-    couche.removeChildren();
+    let rang = 0;
     for (const image of images) {
       let texture = this.posees.get(image.cle);
       if (!texture || texture.source.resource !== image.canvas) {
@@ -272,17 +381,20 @@ export class SceneParcelle {
         texture = Texture.from(image.canvas);
         this.posees.set(image.cle, texture);
       }
-      const sprite = new Sprite(texture);
+      const sprite = SceneParcelle.sprite(couche, rang++, texture);
       sprite.x = image.x;
       sprite.y = image.y;
       // Le morceau a été cuit sur un barreau de l'échelle de zoom ; on l'étire
       // du rapport au zoom courant. Un facteur au plus 1,41 sur une image déjà
       // anticrénelée ne se voit pas, et il évite de tout recuire à chaque cran
       // de molette.
-      if (image.echelle !== 1)
-        sprite.setSize(texture.width * image.echelle, texture.height * image.echelle);
-      couche.addChild(sprite);
+      //
+      // Le sprite est RECYCLÉ : il peut porter la taille d'un autre morceau, à
+      // une autre échelle. On repose donc la taille dans les deux cas, sans
+      // quoi un morceau posé à l'échelle 1 garderait l'étirement du précédent.
+      sprite.setSize(texture.width * image.echelle, texture.height * image.echelle);
     }
+    SceneParcelle.tailler(couche, rang);
     return images.length;
   }
 
@@ -338,12 +450,27 @@ export class SceneParcelle {
 
   private poserArbres(poses: ReturnType<typeof posesDesArbres>, vue: Vue): number {
     if (!this.atlas) return 0;
-    this.couches.arbres.removeChildren();
     let n = 0;
     for (const pose of poses) {
       const vignette = this.atlas.vignette(pose.classe);
       if (!vignette) continue;
-      const cle = `arbre:${pose.classe.especeId}|${pose.classe.palier}|${pose.classe.variante}|${pose.classe.feuillage}|${pose.classe.gestion}|${pose.classe.taillePx}`;
+      // **`cleClasse`, et surtout pas une clé écrite à la main.** Il y en avait
+      // une ici, recopiée champ par champ depuis `cleClasse` — et elle a dérivé
+      // trois fois de suite : la santé, le fruit et le liège sont entrés dans la
+      // classe sans entrer dans cette copie.
+      //
+      // Ce n'était pas un défaut cosmétique, c'était un PLANTAGE. Deux classes
+      // distinctes tombaient sur la même clé de texture ; à la deuxième, le
+      // canvas ne correspondait plus, on détruisait la texture — celle qu'un
+      // sprite déjà posé de la première classe tenait encore — et `app.render()`
+      // lisait `alphaMode` sur une source nulle. L'exception remontait dans le
+      // rappel de `requestAnimationFrame`, qui n'atteignait donc jamais son
+      // `requestAnimationFrame` suivant : **la vue de parcelle rendait une seule
+      // image puis gelait**, en silence.
+      //
+      // Deux copies d'une règle dérivent, et rien ne le signale (§2.1). Ici
+      // « rien » aura duré trois passes.
+      const cle = `arbre:${cleClasse(pose.classe)}`;
       let texture = this.posees.get(cle);
       if (!texture || texture.source.resource !== vignette.image) {
         texture?.destroy(true);
@@ -355,30 +482,59 @@ export class SceneParcelle {
       // fois trop grands.
       const taille = tailleDePose(pose.arbre.heightM, vignette, vue);
       const ancre = ancrageDePose(vignette, taille);
-      const sprite = new Sprite(texture);
+      const sprite = SceneParcelle.sprite(this.couches.arbres, n++, texture);
       sprite.x = pose.sx - ancre.dx;
       sprite.y = pose.sy - ancre.dy;
       sprite.width = taille.largeur;
       sprite.height = taille.hauteur;
-      this.couches.arbres.addChild(sprite);
-      n++;
     }
+    SceneParcelle.tailler(this.couches.arbres, n);
     return n;
   }
 
   /**
    * Les ombres, en deux temps : accumulation dans une texture blanche, puis une
    * seule composition en `multiply`.
+   *
+   * Rend les millisecondes de POSE, et elles seules : les deux passes de rendu
+   * de cette couche sont du GPU et n'ont rien à faire dans un chiffre censé
+   * mesurer notre JavaScript.
    */
-  private poserOmbres(etat: EtatScene, vue: Vue): void {
+  private poserOmbres(etat: EtatScene, vue: Vue, forcer: boolean): number {
     const largeur = this.app.renderer.width;
     const hauteur = this.app.renderer.height;
     this.masque ??= RenderTexture.create({ width: largeur, height: hauteur });
 
-    this.pinceau.removeChildren();
-    // Le fond blanc : dans ce schéma, blanc veut dire « pas d'ombre ».
-    const fond = new Graphics().rect(0, 0, largeur, hauteur).fill(0xffffff);
-    this.pinceau.addChild(fond);
+    const debut = performance.now();
+    // La signature se calcule sur des NOMBRES seulement — position, hauteur,
+    // caméra, semaine. La part ombrageante en fait partie sans y figurer : elle
+    // ne dépend que de l'espèce et de la phénologie, l'une ne change pas sans
+    // que la liste d'arbres change, l'autre est la semaine. La lire ici
+    // reviendrait à appeler `ombreDe` pour chaque arbre à chaque image, ce qui
+    // coûte plus cher que ce qu'on cherche à éviter — mesuré : +4 ms.
+    let h = 0x811c9dc5;
+    for (const a of etat.arbres) {
+      h = Math.imul(h ^ (a.x * 64), 0x01000193) >>> 0;
+      h = Math.imul(h ^ (a.y * 64), 0x01000193) >>> 0;
+      h = Math.imul(h ^ (a.heightM * 64), 0x01000193) >>> 0;
+    }
+    const signature = `${largeur}x${hauteur}|${vue.cam.zoom.toFixed(4)}|${vue.cam.orientation}|${vue.centre.x.toFixed(3)},${vue.centre.y.toFixed(3)}|${etat.arbres.length}|${etat.semaineAnnee}|${h}`;
+    if (!forcer && signature === this.signatureOmbres && this.spriteOmbres && this.decoupeOmbres) {
+      return performance.now() - debut;
+    }
+    this.signatureOmbres = signature;
+    const taille = `${largeur}x${hauteur}`;
+    if (!this.fondOmbre || this.fondOmbreTaille !== taille) {
+      const ancien = this.fondOmbre;
+      this.fondOmbre = new Graphics().rect(0, 0, largeur, hauteur).fill(0xffffff);
+      this.fondOmbreTaille = taille;
+      // Le fond occupe toujours le rang 0 : les taches se posent par-dessus.
+      this.pinceau.addChildAt(this.fondOmbre, 0);
+      if (ancien) {
+        this.pinceau.removeChild(ancien);
+        ancien.destroy();
+      }
+    }
     // Le fourré ne porte pas d'ombre portée : à cinquante centimètres de haut,
     // son ombre tient sous lui.
     const arbresOmbre: ArbreOmbre[] = etat.arbres
@@ -391,10 +547,12 @@ export class SceneParcelle {
         houppierRatio: a.houppierRatio,
         partOmbrageante: etat.ombreDe(a),
       }));
+    // Le rang 0 du pinceau est le fond ; les taches suivent.
+    let rang = 1;
     for (const o of ombresAPoser(arbresOmbre, vue)) {
       const tache = this.taches[o.densite];
       if (!tache) continue;
-      const sprite = new Sprite(tache);
+      const sprite = SceneParcelle.sprite(this.pinceau, rang++, tache);
       sprite.x = o.sx - o.largeurPx / 2;
       sprite.y = o.sy - o.hauteurPx / 2;
       sprite.width = o.largeurPx;
@@ -408,14 +566,20 @@ export class SceneParcelle {
       // assombrit le quad entier au lieu du seul disque. C'est ce qui faisait
       // l'escalier de rectangles le long du bord de la parcelle.
       sprite.blendMode = MODE_ACCUMULATION_GPU;
-      this.pinceau.addChild(sprite);
     }
+    SceneParcelle.tailler(this.pinceau, rang);
+    const ms = performance.now() - debut;
     this.app.renderer.render({ container: this.pinceau, target: this.masque, clear: true });
 
-    this.couches.ombres.removeChildren();
-    this.spriteOmbres = new Sprite(this.masque);
-    this.spriteOmbres.blendMode = MODE_COMPOSITION;
-    this.couches.ombres.addChild(this.spriteOmbres);
+    // Les deux sprites de cette couche — la nappe d'ombre et sa découpe —
+    // gardent la même texture d'une image à l'autre : seul leur CONTENU change,
+    // puisque ce sont des `RenderTexture` redessinées juste au-dessus. Les
+    // refaire à chaque image ne servait qu'à jeter deux objets de plus.
+    if (!this.spriteOmbres) {
+      this.spriteOmbres = new Sprite(this.masque);
+      this.spriteOmbres.blendMode = MODE_COMPOSITION;
+      this.couches.ombres.addChild(this.spriteOmbres);
+    }
 
     // **Borner l'ombre À LA PARCELLE.** Un arbre du bord projette son ombre
     // au-delà de la limite ; composée sur toute la surface, elle se poserait
@@ -445,21 +609,24 @@ export class SceneParcelle {
     // de milliseconde et la part serait invisible ; ce n'est pas vérifiable
     // depuis ce conteneur, donc ce n'est pas affirmé.
     //
-    // Le vrai poste de cette couche est ailleurs, et il est bien plus gros :
-    // `poserOmbres` reconstruit un `Sprite` PAR ARBRE À CHAQUE IMAGE, ce qui
-    // est exactement la « primitive par image » que le lot L0 a proscrite. Le
-    // corriger — garder les sprites et ne bouger que ceux qui changent — vaut
-    // plus que d'économiser cette passe-ci.
+    // Le vrai poste de cette couche était ailleurs, et il était bien plus gros :
+    // un `Sprite` reconstruit PAR ARBRE À CHAQUE IMAGE. C'est corrigé — la
+    // couche est un pool (voir `sprite`), et le masque entier est sauté quand
+    // ni la caméra ni les arbres n'ont bougé, ce qui est le régime normal d'un
+    // jeu au tour. Ces deux passes-ci ne se paient donc plus qu'aux images qui
+    // changent vraiment.
     this.silhouette ??= RenderTexture.create({ width: largeur, height: hauteur });
     this.app.renderer.render({
       container: this.couches.sol,
       target: this.silhouette,
       clear: true,
     });
-    const decoupe = new Sprite(this.silhouette);
-    this.couches.ombres.addChild(decoupe);
-    this.spriteOmbres.mask = decoupe;
-    fond.destroy();
+    if (!this.decoupeOmbres) {
+      this.decoupeOmbres = new Sprite(this.silhouette);
+      this.couches.ombres.addChild(this.decoupeOmbres);
+      this.spriteOmbres.mask = this.decoupeOmbres;
+    }
+    return ms;
   }
 
   /** Libère le contexte GPU et toutes les textures. */
@@ -473,6 +640,11 @@ export class SceneParcelle {
     this.masque = undefined;
     this.silhouette?.destroy(true);
     this.silhouette = undefined;
+    this.spriteOmbres = undefined;
+    this.decoupeOmbres = undefined;
+    this.fondOmbre = undefined;
+    this.fondOmbreTaille = "";
+    this.signatureOmbres = "";
     this.app.destroy(true, { children: true, texture: true });
     this.monte = false;
   }

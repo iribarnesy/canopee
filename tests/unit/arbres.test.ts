@@ -937,3 +937,39 @@ describe("le liège : le seul état dont le moteur donne la DURÉE", () => {
     expect(bande.y + bande.h).toBeCloseTo(vignette.piedY, 0);
   });
 });
+
+describe("la clé de classe : tout champ qui entre dans la classe entre dans la clé", () => {
+  /**
+   * **L'essai qui aurait évité un gel silencieux.** `scene.ts` avait sa propre
+   * clé de texture, recopiée champ par champ depuis `cleClasse`, et elle a
+   * dérivé trois fois : la santé, le fruit et le liège sont entrés dans la
+   * classe sans entrer dans la copie. Deux classes distinctes tombaient alors
+   * sur la même clé, on détruisait une texture qu'un sprite déjà posé tenait
+   * encore, et le rendu levait une exception DANS le rappel d'animation — qui
+   * n'atteignait donc jamais son `requestAnimationFrame` suivant. La vue de
+   * parcelle rendait une image, puis gelait.
+   *
+   * Le poseur appelle maintenant `cleClasse`. Cet essai garde l'autre bout :
+   * il parcourt les champs de la classe par réflexion, si bien qu'un champ
+   * ajouté demain est couvert sans qu'on y pense — c'est précisément ce qui a
+   * manqué trois fois.
+   */
+  it("change de clé dès qu'un champ de la classe change, quel qu'il soit", () => {
+    const base = classeDe(arbre(), 30, vue());
+    const cle = cleClasse(base);
+    for (const champ of Object.keys(base) as (keyof typeof base)[]) {
+      const valeur = base[champ];
+      const autre =
+        typeof valeur === "number"
+          ? { ...base, [champ]: valeur + 1 }
+          : { ...base, [champ]: `${valeur}-autre` };
+      expect(cleClasse(autre), `le champ « ${champ} » ne compte pas dans la clé`).not.toBe(cle);
+    }
+  });
+
+  it("ne change pas de clé sans raison : deux classes égales ont la même clé", () => {
+    const a = classeDe(arbre(), 30, vue());
+    const b = classeDe(arbre(), 30, vue());
+    expect(cleClasse(a)).toBe(cleClasse(b));
+  });
+});
