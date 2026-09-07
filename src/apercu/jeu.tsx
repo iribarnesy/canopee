@@ -21,6 +21,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import type { Compte } from "../render/pixi/scene";
+import { chuteEnCours, DEBOUT } from "../render/temps/chute";
 
 interface Scene {
   coteM: number;
@@ -185,6 +186,39 @@ function Demo(): React.ReactElement {
       };
     });
 
+  // **La démonstration de l'ellipse, et rien de plus qu'une démonstration.**
+  // Les scènes du banc sont un INSTANTANÉ : elles ne portent aucun journal de
+  // changements, donc aucune chute réelle à jouer. On en fabrique donc une —
+  // les chandelles de la scène, tombant chacune dans une direction tirée de
+  // son identifiant — pour voir le mécanisme du §5.11 fonctionner : une
+  // déformation à la pose, sans qu'une seule vignette soit recuite.
+  //
+  // Ce que ce n'est pas : une lecture du protocole. Le jour où le worker
+  // livrera `Snapshot.chutes` à la vue, ces directions inventées disparaîtront
+  // au profit de `directionRad`, qui est déjà dans le message.
+  // Toutes les chandelles, échelonnées par identifiant : où qu'on regarde, il
+  // y en a qui tombent. Une `Map` et non un `find` par arbre — le rappel est
+  // appelé une fois par arbre et par image, soit quelques milliers de fois par
+  // seconde, et c'est exactement le genre de coût que le lot L0 a proscrit.
+  const chutes = new Map(
+    arbres
+      .filter((a) => a.chandelle)
+      .map((a) => [
+        a.id,
+        {
+          x: a.x,
+          y: a.y,
+          heightM: a.heightM,
+          directionRad: ((a.id % 360) * Math.PI) / 180,
+          debutMs: (a.id % 20) * 400,
+        },
+      ]),
+  );
+  const DUREE_CHUTE_MS = 1600;
+  // Avancement figé, si l'adresse en demande un : `?chute=0.4`.
+  const brut = new URLSearchParams(location.search).get("chute");
+  const FIGE = brut === null ? undefined : Math.min(1, Math.max(0, Number(brut)));
+
   return (
     <VueParcelle
       sol={donneesDe(scene)}
@@ -194,6 +228,22 @@ function Demo(): React.ReactElement {
       hauteurMaxDe={(especeId) => getEspece(especeId)?.hauteurMaxM ?? 20}
       ombreDe={(a) => a.partFoliaire}
       surCompte={setCompte}
+      deformer={(id, maintenantMs, vue) => {
+        const c = chutes.get(id);
+        if (!c) return DEBOUT;
+        // **`?chute=0.4` FIGE toutes les chandelles à cet avancement**, et
+        // c'est ce qui rend la démonstration jugeable. Sans ça, elle est une
+        // cible mouvante : la boucle tourne à une image par seconde sur un
+        // conteneur sans carte graphique, une chute dure une seconde et demie,
+        // et une capture n'attrape jamais deux fois le même instant — j'ai
+        // cherché le mouvement dans huit captures avant de comprendre que le
+        // problème était l'instrument, pas le mécanisme.
+        if (FIGE !== undefined) return chuteEnCours(c, FIGE, vue);
+        const dansLaBoucle = maintenantMs % 12000;
+        const t = (dansLaBoucle - c.debutMs) / DUREE_CHUTE_MS;
+        if (t <= 0) return DEBOUT;
+        return chuteEnCours(c, Math.min(1, t), vue);
+      }}
     />
   );
 }

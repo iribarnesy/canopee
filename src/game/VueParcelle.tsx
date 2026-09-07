@@ -30,6 +30,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, SceneParcelle } from "../render/pixi/scene";
+import type { Deformation } from "../render/temps/chute";
 
 export interface VueParcelleProps {
   sol: DonneesSol;
@@ -41,6 +42,17 @@ export interface VueParcelleProps {
   ombreDe: (arbre: ArbreAPoser) => number;
   /** appelé après chaque image, pour afficher le coût quand on le veut */
   surCompte?: (compte: Compte) => void;
+  /**
+   * Comment déformer les arbres en cours d'animation, s'il y a lieu.
+   *
+   * Interrogé à CHAQUE image, avec l'horloge et la VUE courante : c'est ainsi
+   * qu'une chandelle tombe sans qu'aucune vignette soit recuite (§5.11). La vue
+   * est passée parce qu'une déformation en dépend — un arbre qui tombe vers
+   * l'objectif ne pivote pas comme un arbre qui tombe de profil, et le joueur
+   * fait tourner la caméra. Absent = tous les arbres debout, l'état normal d'un
+   * jeu au tour entre deux ellipses.
+   */
+  deformer?: (idArbre: number, maintenantMs: number, vue: Vue) => Deformation;
 }
 
 /** Facteur de zoom par cran de molette. Un cran = un pas net, pas un glissement. */
@@ -135,6 +147,11 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
       if (!vivant) return;
       const { props: p, vue: v } = dernier.current;
       if (v) {
+        // L'horloge est ici et nulle part ailleurs : la scène Pixi n'apprend
+        // pas le mot « temps », et `src/render/temps` reste pur.
+        const horloge = performance.now();
+        const rappel = p.deformer;
+        scene.current?.deformerLesArbres(rappel ? (id) => rappel(id, horloge, v) : undefined);
         const compte = scene.current?.rafraichir(
           {
             sol: p.sol,

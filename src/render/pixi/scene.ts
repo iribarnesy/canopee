@@ -56,6 +56,7 @@ import {
 } from "../couches/ombres";
 import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
 import { versCss } from "../palette";
+import { DEBOUT, type Deformation } from "../temps/chute";
 
 /** Budget de cuisson par image, en morceaux de terrain. */
 export const BUDGET_TERRAIN = 4;
@@ -170,6 +171,15 @@ export class SceneParcelle {
   private signatureOmbres = "";
   private spriteOmbres?: Sprite;
   private decoupeOmbres?: Sprite;
+  /**
+   * Ce qui déforme les arbres en cours d'animation, s'il y a lieu.
+   *
+   * Une FONCTION et non un état : la scène ne tient pas d'horloge et ne sait
+   * rien d'une ellipse. Elle demande, par identifiant d'arbre, comment poser
+   * le sprite — et par défaut la réponse est « debout ». Tout le reste vit
+   * au-dessus, dans `src/render/temps`, qui est pur et testé.
+   */
+  private deformer?: (idArbre: number) => Deformation;
   /** textures posées à l'image précédente, à libérer quand elles changent */
   private readonly posees = new Map<string, Texture>();
   private monte = false;
@@ -213,6 +223,17 @@ export class SceneParcelle {
     // dégradés radiaux, ils ne dépendent ni du zoom ni de la saison.
     this.taches = cuireTachesOmbre(this.fabriquer).map((c) => Texture.from(c));
     this.monte = true;
+  }
+
+  /**
+   * Branche (ou débranche) la déformation des arbres.
+   *
+   * Appelée par la boucle d'animation avant `rafraichir`. Sans elle, tous les
+   * arbres sont debout — ce qui est l'état normal d'une scène au repos, et le
+   * seul que le jeu au tour montre entre deux ellipses.
+   */
+  public deformerLesArbres(deformer?: (idArbre: number) => Deformation): void {
+    this.deformer = deformer;
   }
 
   /** Redimensionne le rendu. Le masque d'ombre suit, sinon il se décadre. */
@@ -483,10 +504,33 @@ export class SceneParcelle {
       const taille = tailleDePose(pose.arbre.heightM, vignette, vue);
       const ancre = ancrageDePose(vignette, taille);
       const sprite = SceneParcelle.sprite(this.couches.arbres, n++, texture);
-      sprite.x = pose.sx - ancre.dx;
-      sprite.y = pose.sy - ancre.dy;
+      // **La déformation à la pose, et l'atlas ne bouge pas d'un octet.**
+      // C'est la contrainte que le §5.11 pose nommément : « une animation
+      // continue ne doit pas invalider un cache de cuisson […] ce sera une
+      // déformation à la POSE (un sprite qu'on incline), pas un redessin ».
+      // Une chandelle qui tombe passe donc par ici, avec la vignette déjà
+      // cuite de l'arbre debout.
+      const d = this.deformer?.(pose.arbre.id) ?? DEBOUT;
       sprite.width = taille.largeur;
-      sprite.height = taille.hauteur;
+      sprite.height = taille.hauteur * d.hauteur;
+      sprite.alpha = d.opacite;
+      if (d.rotationRad === 0) {
+        sprite.pivot.set(0, 0);
+        sprite.rotation = 0;
+        sprite.x = pose.sx - ancre.dx;
+        sprite.y = pose.sy - ancre.dy;
+      } else {
+        // **On pivote autour du PIED**, pas du centre du sprite : une souche
+        // reste où elle est. Le pivot est en coordonnées de TEXTURE, donc le
+        // point du pied dans la vignette — d'où la division par l'échelle de
+        // pose, que `setSize` a déjà appliquée.
+        const echelleX = taille.largeur / Math.max(1, texture.width);
+        const echelleY = (taille.hauteur * d.hauteur) / Math.max(1, texture.height);
+        sprite.pivot.set(ancre.dx / echelleX, ancre.dy / echelleY);
+        sprite.rotation = d.rotationRad;
+        sprite.x = pose.sx;
+        sprite.y = pose.sy;
+      }
     }
     SceneParcelle.tailler(this.couches.arbres, n);
     return n;

@@ -748,6 +748,21 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   La mesure a en revanche trouvé un vrai gâchis au même endroit : voir la
   découpe du décor ci-dessous. À reprendre avec le
   décor, pas avec le poseur.
+- **Une masse de fourré ne peut pas être animée individuellement**, et ça a
+  coûté une demi-journée à comprendre. `separerLeFourre` agrège les tiges de
+  fourré par carreau : elles perdent leur identité, donc rien ne peut les
+  déformer une par une. Or **sur une friche à trente ans, 1 874 des 1 918
+  chandelles sont des ronces** — la mort sur pied y est presque entièrement du
+  fourré. La chute ne s'appliquera donc qu'aux 44 autres, hautes de six mètres
+  au plus. Ce n'est pas un défaut : une ronce morte ne tombe pas, elle
+  s'affaisse. Mais il faut le savoir avant de chercher une animation qui ne
+  vient pas.
+- **Aucun tronc ne barre l'eau sur le versant à 12 %** : les 2 027 cellules de
+  bois couché que la simulation y produit ont toutes une transversalité sous le
+  seuil des 30°. La couleur du tronc barrant ne se voit donc que sur le banc,
+  pour l'instant. À revoir avec le moteur : soit les directions de chute
+  s'alignent trop sur la pente, soit c'est juste et un tronc en travers est
+  rare.
 - **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
 - **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
   panneau face caméra : un côté éclairé franc mentirait dès la première
