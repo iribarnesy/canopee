@@ -379,7 +379,7 @@ export interface TickFluxes {
 export function createGameState(
   station: Station,
   rng: RngState,
-  options: { treasuryEur?: number } = {},
+  options: { treasuryEur?: number; economie?: boolean } = {},
 ): GameState {
   const n = cellCount(gridDims(station));
   const nH = Math.max(1, station.profil.length);
@@ -391,7 +391,7 @@ export function createGameState(
   return {
     week: 0,
     station,
-    economy: createEconomy(options.treasuryEur ?? 20_000),
+    economy: createEconomy(options.treasuryEur ?? 20_000, options.economie ?? true),
     carbon: createCarbonState(),
     ddYearBase5: 0,
     // Une partie démarre au 1ᵉʳ janvier : l'hiver qui précède est supposé

@@ -64,6 +64,8 @@ let bordures: Bordures = bordersUniformes("bocage");
 // Relief choisi au lancement ; à défaut, celui d'origine de la station.
 let relief: Relief | undefined;
 let maturationAns = 0;
+/** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
+let economie = true;
 // Eau libre choisie au lancement (ruisseau, mare) ; à défaut, aucune.
 let eau: EauDeSurface | undefined;
 // Profondeur d'équilibre de la nappe choisie au lancement, cm.
@@ -679,6 +681,7 @@ function init(
   partBassinChoisie: number,
   maturation: number,
   annee: number,
+  economieActive: boolean,
 ) {
   scenario = scenarioId;
   anneeDepart = annee;
@@ -688,6 +691,7 @@ function init(
   nappeCm = nappeChoisieCm;
   partBassin = partBassinChoisie;
   maturationAns = maturation;
+  economie = economieActive;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -696,7 +700,9 @@ function init(
   normales = normalesHebdo(weather);
   // Le paysage choisi remplace celui de la station : c'est la même terre, mais
   // au milieu d'une hêtraie, de champs ou d'un lotissement (paysage.ts).
-  const neuf = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed));
+  const neuf = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed), {
+    economie,
+  });
   state = beginWeek(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
   journal = [];
   pendingRefusals = [];
@@ -735,6 +741,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         msg.partBassin,
         msg.maturationAns,
         msg.anneeDepart,
+        msg.economie,
       );
       break;
     case "resume": {
@@ -749,12 +756,17 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       nappeCm = msg.save.nappeCm;
       partBassin = msg.save.partBassin;
       maturationAns = msg.save.maturationAns ?? 0;
+      // Absent = vrai : une sauvegarde d'avant l'option a été jouée AVEC
+      // l'économie, et doit se rejouer ainsi ou elle divergerait.
+      economie = msg.save.economie ?? true;
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
       normales = normalesHebdo(weather);
       journal = msg.save.actions;
-      let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed));
+      let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed), {
+        economie,
+      });
       // Le vieillissement fait partie de l'histoire de la parcelle : il se
       // rejoue à l'identique avant les actions du joueur.
       if (maturationAns > 0) replayed = faireVieillir(replayed, maturationAns);
@@ -812,6 +824,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         nappeCm: nappeCm ?? sc?.station.profondeurNappeEquilibreCm,
         partBassin: partBassin ?? sc?.station.partBassinSemblable,
         maturationAns,
+        economie,
         anneeDepart,
         weeks: state.week,
         actions: journal,

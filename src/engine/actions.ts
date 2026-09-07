@@ -202,11 +202,31 @@ export interface EconomyState {
   /** contrats saisonniers en cours : semaine de fin (exclusive) de chacun */
   saisonniersFinSemaine: number[];
   bankrupt: boolean;
+  /**
+   * L'économie compte-t-elle dans cette partie ?
+   *
+   * Certaines questions ne sont pas économiques. « Quelle succession sur cette
+   * lande en deux siècles », « le chêne-liège protège-t-il du feu », « où planter
+   * pour retenir la terre » : aucune ne demande de savoir si le joueur peut
+   * payer ses plants. Y répondre en devant d'abord tenir une trésorerie n'ajoute
+   * pas de réalisme, ça ajoute une contrainte hors sujet.
+   *
+   * Économie désactivée : plus de découvert refusé, plus de faillite. Le compte
+   * continue de tourner et reste AFFICHÉ — savoir ce qu'aurait coûté une
+   * conduite est instructif même quand on ne la paie pas — mais il ne bloque
+   * plus rien.
+   *
+   * Ce qui NE dépend pas de cette option : le plafond d'heures de travail. Une
+   * journée fait le même nombre d'heures qu'on ait de l'argent ou non ; c'est
+   * une contrainte physique, pas économique.
+   */
+  active: boolean;
 }
 
-export function createEconomy(treasuryEur: number): EconomyState {
+export function createEconomy(treasuryEur: number, active = true): EconomyState {
   return {
     treasuryEur,
+    active,
     hoursUsedWeek: 0,
     hoursUsedYear: 0,
     uth: 1,
@@ -573,7 +593,7 @@ function applyPlanter(
       );
       break;
     }
-    if (treasuryEur - euroParPlant < OVERDRAFT_LIMIT_EUR) {
+    if (state.economy.active && treasuryEur - euroParPlant < OVERDRAFT_LIMIT_EUR) {
       refusals.push(refuse(action.week, "planter", `découvert plafonné (${planted} plantés)`));
       break;
     }
@@ -1631,7 +1651,7 @@ function applyLeverEcorce(
 }
 
 export function applyAction(state: GameState, action: GameAction): ApplyResult {
-  if (state.economy.bankrupt) {
+  if (state.economy.active && state.economy.bankrupt) {
     return { state, refusals: [refuse(action.week, action.type, "faillite")] };
   }
   switch (action.type) {

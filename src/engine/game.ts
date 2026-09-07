@@ -20,6 +20,13 @@ export interface Journal {
   stationId: string;
   seed: number;
   treasuryEur?: number;
+  /**
+   * L'économie comptait-elle dans cette partie ? Sans ce champ, une partie
+   * jouée sans contrainte d'argent se REJOUERAIT avec, et divergerait : un
+   * plant refusé pour découvert au rejeu n'est pas le plant qui avait poussé.
+   * Absent = vrai, pour que les journaux d'avant restent lisibles.
+   */
+  economie?: boolean;
   actions: GameAction[];
 }
 
@@ -45,7 +52,10 @@ export function beginWeek(state: GameState): GameState {
       saisonniersFinSemaine: saisonniers,
       hoursUsedWeek: 0,
       hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
-      bankrupt: state.economy.bankrupt || treasuryEur < OVERDRAFT_LIMIT_EUR,
+      // Économie désactivée : le compte tourne et s'affiche, mais il ne met
+      // plus personne en faillite (actions.ts).
+      bankrupt:
+        state.economy.active && (state.economy.bankrupt || treasuryEur < OVERDRAFT_LIMIT_EUR),
     },
   };
 }
@@ -103,6 +113,7 @@ export function runJournal(
 ): RunResult {
   let state = createGameState(station, rngStateFromSeed(journal.seed), {
     treasuryEur: journal.treasuryEur,
+    economie: journal.economie,
   });
   const refusals: ActionRefusal[] = [];
   for (let i = 0; i < weeks; i++) {

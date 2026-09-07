@@ -43,6 +43,12 @@ export interface SaveGame {
   partBassin?: number;
   /** années simulées à vide avant l'arrivée du joueur ; absent = 0 */
   maturationAns?: number;
+  /**
+   * L'argent contraignait-il la partie ? Absent = oui, pour que les
+   * sauvegardes d'avant restent lisibles. Sans ce champ, une partie jouée sans
+   * contrainte se rejouerait AVEC, et divergerait.
+   */
+  economie?: boolean;
   /** année civile du début de partie */
   anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
@@ -348,6 +354,8 @@ export type ToWorker =
       /** années à faire passer sur le terrain avant que le joueur n'arrive */
       maturationAns: number;
       anneeDepart: number;
+      /** l'argent contraint-il la partie ? (actions.ts) */
+      economie: boolean;
     }
   | { type: "resume"; save: SaveGame }
   | { type: "speed"; weeksPerSecond: number }
