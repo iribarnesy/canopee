@@ -824,11 +824,15 @@ nouvelle.**
    découvert.
 4. *Le noisetier non protégé sort de la dent un peu plus tôt* — 1,59 m à douze
    ans pour une dent à 1,50.
-5. *Le prélèvement de potasse monte à 70 kg/ha/an* sur limon riche. C'est le
-   haut de ce qu'on lit en forêt tempérée feuillue, et **c'est le seul chiffre
-   qui me gêne**. *(À confirmer : je n'ai pas trouvé de prélèvement annuel en
-   potassium directement citable pour une hêtraie — les sources donnent le
-   retour par litière, qui n'en est qu'une part.)*
+5. *Le prélèvement de potasse monte à 70 kg/ha/an* sur limon riche. Ce chiffre
+   m'avait gêné ; **il tient**. Le piège est qu'on lit partout des valeurs bien
+   plus basses — 3 à 16 kg K/ha/an sous une hêtraie — mais ce sont des RETOURS
+   PAR LITIÈRE, pas des prélèvements : le potassium est le plus mobile des
+   cations, l'arbre en retransloque une grande part avant la chute des feuilles
+   et la pluie lessive le reste du feuillage avant qu'il ne tombe. Les bilans
+   qui mesurent le prélèvement montent à 80 kg/ha/an en peuplement feuillu
+   productif. *(À confirmer : pas de bilan français de hêtraie directement
+   citable, seulement des ordres de grandeur concordants.)*
 
 - **Le vrai réglage du frein d'extraction est ailleurs.**
   `AVAILABILITY_SATURATION_G_M2` = 3 g/m², soit 30 kg N/ha, est le stock
