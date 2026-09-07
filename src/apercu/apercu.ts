@@ -72,6 +72,12 @@ interface ArbreScene {
   frotteSemaine?: number;
   /** `derniereLeveeSemaine` du protocole : la semaine du dernier démasclage */
   derniereLeveeSemaine?: number;
+  /** `brouteSemaine` du protocole : présent = un chevreuil l'a brouté */
+  brouteSemaine?: number;
+  /** `diametreTeteCm` du protocole : le renflement à dessiner, cm */
+  diametreTeteCm?: number;
+  /** `caviteTeteL` du protocole : le creux, en litres */
+  caviteTeteL?: number;
   /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
   fruitProgress?: number;
   /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -207,6 +213,8 @@ interface Options {
   protege?: boolean;
   /** Planche : tige frottée par un brocard (`frotteSemaine` renseigné). */
   frotte?: boolean;
+  /** Planche : flèche broutée (`brouteSemaine` renseigné). */
+  broute?: boolean;
   /**
    * Planche : semaines écoulées depuis le démasclage, UNE PAR CASE.
    *
@@ -217,8 +225,18 @@ interface Options {
    * courte que la grille.
    */
   semainesDepuisLevee?: readonly number[];
-  /** Planche : hauteur de tête de trogne, m, et nombre d'étêtages. */
+  /**
+   * Planche : la trogne, telle que le moteur la donne — hauteur de coupe,
+   * diamètre du bourrelet, volume du creux.
+   *
+   * Les trois ensemble, parce que le moteur les donne ensemble : `trogne.ts`
+   * tire le diamètre et la cavité du compte d'étêtages, et la planche impose
+   * les valeurs qui en découlent plutôt que le compte, pour comparer une jeune
+   * tête et une tête centenaire côte à côte.
+   */
   teteTrogneM?: number;
+  diametreTeteCm?: number;
+  caviteTeteL?: number;
   recepages?: number;
   /**
    * Planche : la base du houppier, en PART de la hauteur de l'arbre.
@@ -372,6 +390,12 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             ...(t.recepages ? { recepages: t.recepages } : {}),
             // Même lecture que `brulee` : la présence, pas la semaine.
             ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
+            ...(t.brouteSemaine === undefined ? {} : { broute: true }),
+            // Deux DIMENSIONS, et le rendu n'en fabrique plus aucune : le
+            // diamètre du bourrelet et le volume du creux viennent de
+            // `trogne.ts` (issue #19).
+            ...(t.diametreTeteCm ? { diametreTeteCm: t.diametreTeteCm } : {}),
+            ...(t.caviteTeteL ? { caviteTeteL: t.caviteTeteL } : {}),
             // Une DURÉE, pas une présence : le moteur porte la rotation, donc
             // on peut dire OÙ EN EST l'écorce, pas seulement qu'elle a été levée.
             ...(t.derniereLeveeSemaine === undefined
@@ -509,6 +533,9 @@ function planche(
       ...(options.frotte ? { frotte: true } : {}),
       ...(depuisLevee === undefined ? {} : { semainesDepuisLevee: depuisLevee }),
       ...(options.teteTrogneM ? { teteTrogneM: options.teteTrogneM } : {}),
+      ...(options.diametreTeteCm ? { diametreTeteCm: options.diametreTeteCm } : {}),
+      ...(options.caviteTeteL ? { caviteTeteL: options.caviteTeteL } : {}),
+      ...(options.broute ? { broute: true } : {}),
       ...(options.recepages ? { recepages: options.recepages } : {}),
       ...(options.floraison ? { floraison: options.floraison } : {}),
       ...(options.fruitProgress ? { fruitProgress: options.fruitProgress } : {}),
@@ -723,19 +750,38 @@ const PLANCHE: Planche[] = [
     titre: "santé · CIME SÈCHE (dommage hydraulique 0,45 : l'embolie ne se répare pas)",
     options: { dommageHydraulique: 0.45 },
   },
+  // Les trois âges d'une tête, avec les valeurs que `trogne.ts` produit pour
+  // 1, 6 et 25 étêtages. La planche les IMPOSE plutôt que d'imposer le compte :
+  // c'est ce qui permet de mettre les trois côte à côte, ce qu'aucune parcelle
+  // ne fait — un têtard centenaire et un têtard neuf n'existent pas la même
+  // année.
   {
     scene: "",
     especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
     hauteurM: 9,
-    titre: "trogne · JEUNE tête (1 étêtage : renflée, pas encore creuse)",
-    options: { teteTrogneM: 2.2, recepages: 1 },
+    titre: "trogne · 1 étêtage (tête de 25 cm, aucun creux : une coupe n'est pas un trou)",
+    options: { teteTrogneM: 2.2, recepages: 1, diametreTeteCm: 25, caviteTeteL: 0 },
   },
   {
     scene: "",
     especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
     hauteurM: 9,
-    titre: "trogne · tête CREUSE (3 étêtages : le seuil d'habitat du moteur)",
-    options: { teteTrogneM: 2.2, recepages: 3 },
+    titre: "trogne · 6 étêtages (55 cm, 18 L de creux : de quoi loger une mésange)",
+    options: { teteTrogneM: 2.2, recepages: 6, diametreTeteCm: 55, caviteTeteL: 17.8 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
+    hauteurM: 9,
+    titre: "trogne · 25 étêtages (120 cm au plafond, 407 L : un têtard centenaire)",
+    options: { teteTrogneM: 2.2, recepages: 25, diametreTeteCm: 120, caviteTeteL: 407.2 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fagus_sylvatica", "corylus_avellana", "malus_domestica"],
+    hauteurM: 1.4,
+    titre: "brout · la flèche pincée : sections claires au bout des rameaux à portée",
+    options: { baseHouppier: 0, broute: true },
   },
   {
     scene: "",

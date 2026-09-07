@@ -473,8 +473,8 @@ colonne de droite est la même à chaque fois :
 | `hauteurElagueeM` → lumière (#13) | rien, faute de pouvoir le dire honnêtement | rien non plus — `soilLumiere` s'en charge tout seul |
 | `floraison` (#14) | rien ; `fruitProgress` ne permet pas de l'inférer | dessine la fleur, sans connaître aucune date |
 | `baseHouppierM` | `1 − 2 × houppierRatio`, une formule maison | lit la grandeur, et perd un champ au passage |
-| **taille de tête de trogne** (#19) | rien, faute de pouvoir le dire | rien non plus : le renflement se dessine sur le rayon du fût, et ne grossit PAS avec les étêtages |
-| **abroutissement** (#21) | rien ; `pousseTendreM` est un stock, pas un événement | rien non plus, et c'est la bonne réponse tant que le tick jette `pousseMangeeM` |
+| **taille de tête de trogne** (#19) | une allométrie maison sur le rayon du fût, identique à 3 coupes et à 25 | lit `diametreTeteCm` et `caviteTeteL`, et l'allométrie a disparu |
+| **abroutissement** (#21) | rien ; `pousseTendreM` est un stock, pas un événement | lit `brouteSemaine`, et le premier dégât de gibier lisible du modèle apparaît |
 
 **Ce que les quatre ont en commun** : dans les quatre cas le rendu ne pouvait
 pas obtenir la grandeur en réfléchissant plus fort, parce qu'elle dépend de
@@ -491,15 +491,23 @@ Brancher une grandeur bien placée fait souvent apparaître plusieurs effets san
 qu'on ait rien à peindre — c'est le meilleur argument pour ouvrir l'issue plutôt
 que pour combler le trou sur place.
 
-**Le cinquième cas est le plus instructif, parce qu'il n'est pas résolu.** Le
+**Le cinquième cas est le plus instructif, et il est résolu depuis — ce qui le
+rend meilleur encore.** Le
 moteur sait qu'une trogne d'au moins deux étêtages porte de l'habitat
 (`biodiversite.ts`), mais pas combien : une tête de trois coupes et une de
 quinze comptent pareil. Le rendu, lui, aurait pu faire grossir joliment le
 bourrelet à chaque coupe — personne ne s'en serait plaint, et l'image aurait
 menti d'une façon particulièrement propre, en donnant à voir une ressource qui
 ne compte nulle part. Le dessin s'en tient donc au rayon du fût. **Un manque
-visible vaut mieux qu'un manque comblé au mauvais endroit** : c'est ce que
-l'issue #19 dit, et ce que la tête plate rappelle en attendant.
+visible vaut mieux qu'un manque comblé au mauvais endroit**.
+
+Et la suite a donné raison à ce refus deux fois : le moteur a répondu par un
+module entier (`trogne.ts`) qui porte un diamètre croissant, un volume de
+cavité, et une note d'habitat CONTINUE remplaçant le seuil binaire —
+`biodiversite.ts` compte désormais les litres de creux. Une valeur inventée au
+rendu aurait donné une jolie tête qui grossit devant une biodiversité restée
+plate, et personne n'aurait cherché. Le rendu lit maintenant les deux
+grandeurs, et l'écart qu'on voit est celui que la simulation compte.
 
 **Deux façons de se tromper, pas une.** Inventer un seuil est la première.
 Recopier celui du moteur est la seconde, et elle est plus discrète : deux copies
@@ -670,19 +678,13 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   inventer un état. C'est dommage à l'œil et c'est la bonne décision — un fruit
   peint sans état derrière ne mûrit jamais, ne se récolte pas, et masque le
   manque. Un essai le vérifie dans les deux sens.
-- **Une tête de trogne ne grossit pas** (issue #19). Le moteur compte les
-  étêtages et en tire un seuil d'habitat binaire ; il ne dit pas de combien la
-  tête enfle ni quel volume de cavité elle offre, et c'est pourtant ce volume
-  qui décide de ce qui peut y nicher. Le renflement est donc dessiné sur le
-  rayon du fût, identique à trois coupes et à quinze.
-- **L'abroutissement n'a aucune trace** (issue #21). Le §5.6 donnait
-  `pousseTendreM` pour la grandeur qui dit « brouté » ; c'est un STOCK, et une
-  valeur basse veut dire aussi bien « fraîchement brouté » que « ne pousse
-  pas » ou « déjà lignifié ». Le tick, lui, calcule le dégât arbre par arbre
-  (`BroutageArbre.pousseMangeeM`) et le jette. Rien n'est donc dessiné : une
-  flèche broutée peinte sur une inférence fausse masquerait le vrai problème,
-  qui est que la boucle de décision du joueur est aveugle, pas que l'image est
-  pauvre.
+- **Deux manques de plus sont comblés** (issues #19 et #21, ouvertes par le
+  rendu et traitées côté moteur) : `trogne.ts` donne le diamètre de tête et le
+  volume de cavité, si bien qu'un têtard de trois coupes et un têtard
+  centenaire n'ont plus la même silhouette ; et `brouteSemaine` rend visible le
+  seul dégât du modèle qui ne l'était pas du tout. Les deux sont branchés.
+  L'allométrie maison du bourrelet (`rayonAuPiedM × 2,2`) a disparu du rendu,
+  et le seuil binaire de cavité avec elle.
 - **Le hors-parcelle disparaît au dézoom lointain.** Constaté sur la vue
   interactive : au-delà d'un certain recul, la nappe de décor ne couvre plus le
   cadre et le ciel reste nu autour de la parcelle. Ce n'est pas la pose — elle
@@ -809,11 +811,11 @@ n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 | Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` ✅ |
 | Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` ✅ |
 | Défoliation | couronne mangée par les ravageurs | `ravageurs` par cellule — **pas encore envoyé** |
-| Brouté | *rien* — la grandeur est un stock, pas un événement | `pousseTendreM` ❌ **issue #21** |
+| Brouté | sections claires au bout des rameaux à portée, la flèche d'abord | `brouteSemaine` ✅ (issue #21) |
 | Frotté | plaie de bois à nu sur un côté du fût, cernée du lambeau d'écorce | `frotteSemaine` ✅ |
 | Mort sur pied | chandelle grise, sans feuille | `chandelle` ✅ |
 | Brûlé sur pied | chandelle noire | `brulEeSemaine` ✅ |
-| Trogne | tête renflée, creuse au-delà de deux étêtages | `teteTrogneM`, `recepages` ✅ |
+| Trogne | tête renflée à son diamètre, creusée à son volume | `teteTrogneM`, `diametreTeteCm`, `caviteTeteL` ✅ (issue #19) |
 | Protégé | manchon translucide, monté à la hauteur de dent | `protege` ✅ |
 | Démasclé | bande ocre-rouge sur le bas du fût, qui grisonne sur la rotation | `derniereLeveeSemaine` + `ecorce.rotationAns` ✅ |
 

@@ -51,6 +51,12 @@ interface Scene {
     frotteSemaine?: number;
     /** `derniereLeveeSemaine` du protocole : la semaine du dernier démasclage */
     derniereLeveeSemaine?: number;
+    /** `brouteSemaine` du protocole : présent = un chevreuil l'a brouté */
+    brouteSemaine?: number;
+    /** `diametreTeteCm` du protocole : le renflement à dessiner, cm */
+    diametreTeteCm?: number;
+    /** `caviteTeteL` du protocole : le creux, en litres */
+    caviteTeteL?: number;
     /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
     fruitProgress?: number;
     /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
@@ -156,6 +162,9 @@ function Demo(): React.ReactElement {
         ...(t.protege ? { protege: true } : {}),
         ...(t.recepages ? { recepages: t.recepages } : {}),
         ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
+        ...(t.brouteSemaine === undefined ? {} : { broute: true }),
+        ...(t.diametreTeteCm ? { diametreTeteCm: t.diametreTeteCm } : {}),
+        ...(t.caviteTeteL ? { caviteTeteL: t.caviteTeteL } : {}),
         // Une DURÉE, pas une présence : le moteur donne la rotation, donc on
         // peut dire où en est l'écorce et pas seulement qu'elle a été levée.
         ...(t.derniereLeveeSemaine === undefined

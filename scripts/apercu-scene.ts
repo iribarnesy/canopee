@@ -126,6 +126,12 @@ interface ArbreScene {
   frotteSemaine?: number;
   /** `derniereLeveeSemaine` : la semaine du dernier démasclage ; absent = jamais levé */
   derniereLeveeSemaine?: number;
+  /** `brouteSemaine` : la semaine du dernier abroutissement ; absent = jamais brouté */
+  brouteSemaine?: number;
+  /** `diametreTeteCm` : diamètre de la tête de trogne, cm ; 0 = pas une trogne */
+  diametreTeteCm: number;
+  /** `caviteTeteL` : volume de la cavité de la tête, litres */
+  caviteTeteL: number;
   /**
    * `baseHouppierM` : la base du houppier, m — en dessous, plus une branche
    * vivante. C'est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce, donc elle
@@ -181,6 +187,9 @@ function figer(state: GameState): ArbreScene[] {
       ...(s.derniereLeveeSemaine === undefined
         ? {}
         : { derniereLeveeSemaine: s.derniereLeveeSemaine }),
+      ...(s.brouteSemaine === undefined ? {} : { brouteSemaine: s.brouteSemaine }),
+      diametreTeteCm: s.diametreTeteCm,
+      caviteTeteL: s.caviteTeteL,
       baseHouppierM: arrondi(s.baseHouppierM, 2),
       floraison: arrondi(s.floraison, 3),
       fruitProgress: arrondi(s.fruitProgress, 3),

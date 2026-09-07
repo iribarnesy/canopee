@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
+import { diametreTeteCm, volumeCaviteL } from "../../src/engine/trogne";
 import { HETRE } from "../../src/render/arbres/especes";
 import { type FormeFeuille, portDuBouquet } from "../../src/render/arbres/feuilles";
 import { contraindre } from "../../src/render/arbres/port";
@@ -62,6 +63,8 @@ function fabriqueBouchon() {
     rects: [] as { x: number; y: number; l: number; h: number }[],
     /** Rotations demandées : un bouquet allongé s'oriente, une rosette non. */
     rotations: 0,
+    /** Les ellipses pleines, avec leurs demi-axes — la tête de trogne en est une. */
+    ellipses: [] as { rx: number; ry: number }[],
   };
   const fabriquer = (largeur: number, hauteur: number) => {
     compte.canvas++;
@@ -75,7 +78,9 @@ function fabriqueBouchon() {
       moveTo() {},
       lineTo() {},
       closePath() {},
-      ellipse() {},
+      ellipse(_x: number, _y: number, rx: number, ry: number) {
+        compte.ellipses.push({ rx, ry });
+      },
       arc() {},
       save() {},
       restore() {},
@@ -693,14 +698,29 @@ describe("les états de conduite : trogne, chandelle, manchon", () => {
     expect(cleClasse(classeDe(arbre({ teteTrogneM: 1.61 }), 30, v))).toBe(basse);
   });
 
-  it("sépare la tête creuse de la tête jeune, au seuil du moteur", () => {
+  /**
+   * **Deux gradients là où il y avait un booléen.** Le rendu lisait
+   * `recepages >= 2` — le seuil binaire que `biodiversite.ts` appliquait alors
+   * — et dessinait donc la même tête et le même creux pour un têtard de trois
+   * coupes et pour un saule centenaire. `trogne.ts` donne maintenant un
+   * diamètre qui s'épaissit et une cavité qui se creuse ; l'image doit suivre
+   * les deux.
+   */
+  it("sépare une jeune tête d'un têtard centenaire, et pas seulement d'un arbre nu", () => {
     const v = vue();
-    const jeune = cleClasse(classeDe(arbre({ teteTrogneM: 2.2, recepages: 1 }), 30, v));
-    const creuse = cleClasse(classeDe(arbre({ teteTrogneM: 2.2, recepages: 3 }), 30, v));
-    expect(jeune).not.toBe(creuse);
-    // `biodiversite.ts` compte les cavités à partir de DEUX étêtages : c'est
-    // là, et pas ailleurs, que l'image doit changer.
-    expect(cleClasse(classeDe(arbre({ teteTrogneM: 2.2, recepages: 2 }), 30, v))).toBe(creuse);
+    const tete = (recepages: number) => {
+      const t = { teteTrogneM: 2.2, recepages };
+      return cleClasse(
+        classeDe(
+          arbre({ ...t, diametreTeteCm: diametreTeteCm(t), caviteTeteL: volumeCaviteL(t) }),
+          30,
+          v,
+        ),
+      );
+    };
+    // Les valeurs viennent du moteur, pas de la planche : l'essai tombe si
+    // `trogne.ts` change d'échelle.
+    expect(new Set([tete(1), tete(6), tete(25)]).size).toBe(3);
   });
 
   it("dessine un renflement de plus sur une trogne que sur un arbre ordinaire", () => {
@@ -708,32 +728,86 @@ describe("les états de conduite : trogne, chandelle, manchon", () => {
     const trogne = fabriqueBouchon();
     const v = vue(6);
     cuireVignette(classeDe(arbre(), 30, v), 16, 0.35, ordinaire.fabriquer, 4);
-    cuireVignette(classeDe(arbre({ teteTrogneM: 2.2 }), 30, v), 16, 0.35, trogne.fabriquer, 4, 2.2);
+    cuireVignette(classeDe(arbre({ teteTrogneM: 2.2 }), 30, v), 16, 0.35, trogne.fabriquer, 4, {
+      teteTrogneM: 2.2,
+      diametreTeteCm: 25,
+      caviteTeteL: 0,
+    });
     expect(trogne.compte.remplissages).toBeGreaterThan(ordinaire.compte.remplissages);
   });
 
-  it("ne creuse la tête qu'au-delà du seuil du moteur", () => {
+  /**
+   * **Le renflement vient du MOTEUR, plus du rayon du fût.** C'était une
+   * allométrie maison (`rayonAuPiedM × 2,2`), portée en issue #19 justement
+   * parce qu'une taille de tête a une conséquence écologique qu'une valeur
+   * inventée n'aurait jamais rencontrée. `trogne.ts` la donne : même arbre,
+   * deux diamètres, deux têtes.
+   */
+  it("dimensionne la tête sur le diamètre du moteur, pas sur le fût", () => {
+    const petite = fabriqueBouchon();
+    const grosse = fabriqueBouchon();
+    const v = vue(6);
+    const c = classeDe(arbre({ teteTrogneM: 2.2, partFoliaire: 0 }), 30, v);
+    cuireVignette(c, 16, 0.35, petite.fabriquer, 4, {
+      teteTrogneM: 2.2,
+      diametreTeteCm: 25,
+      caviteTeteL: 0,
+    });
+    cuireVignette(c, 16, 0.35, grosse.fabriquer, 4, {
+      teteTrogneM: 2.2,
+      diametreTeteCm: 120,
+      caviteTeteL: 0,
+    });
+    // Le bouchon ne mesure pas les ellipses ; ce qu'il voit, c'est que la même
+    // CLASSE et le même arbre donnent le même nombre de tracés — donc que la
+    // différence passe bien par la dimension et non par un tracé de plus.
+    expect(grosse.compte.remplissages).toBe(petite.compte.remplissages);
+    expect(grosse.compte.ellipses.length).toBeGreaterThan(0);
+    const dPetite = petite.compte.ellipses.at(0)?.rx ?? 0;
+    const dGrosse = grosse.compte.ellipses.at(0)?.rx ?? 0;
+    // 120 cm contre 25 : un facteur 4,8, et il doit se retrouver à l'écran.
+    expect(dGrosse / dPetite).toBeCloseTo(120 / 25, 1);
+  });
+
+  it("ne creuse pas une tête d'un seul étêtage : une coupe est une plaie", () => {
     const v = vue(6);
     const jeune = fabriqueBouchon();
     const creuse = fabriqueBouchon();
-    const commun = { teteTrogneM: 2.2, partFoliaire: 0 } as const;
-    cuireVignette(
-      classeDe(arbre({ ...commun, recepages: 1 }), 30, v),
-      16,
-      0.35,
-      jeune.fabriquer,
-      4,
-      2.2,
-    );
-    cuireVignette(
-      classeDe(arbre({ ...commun, recepages: 3 }), 30, v),
-      16,
-      0.35,
-      creuse.fabriquer,
-      4,
-      2.2,
-    );
+    const c = classeDe(arbre({ teteTrogneM: 2.2, partFoliaire: 0 }), 30, v);
+    // Les valeurs du moteur pour un et pour six étêtages.
+    cuireVignette(c, 16, 0.35, jeune.fabriquer, 4, {
+      teteTrogneM: 2.2,
+      diametreTeteCm: 25,
+      caviteTeteL: 0,
+    });
+    cuireVignette(c, 16, 0.35, creuse.fabriquer, 4, {
+      teteTrogneM: 2.2,
+      diametreTeteCm: 55,
+      caviteTeteL: 17.8,
+    });
     expect(creuse.compte.remplissages).toBe(jeune.compte.remplissages + 1);
+  });
+
+  /**
+   * Le creux se dessine à sa TAILLE, et pas à une fraction de la tête. Un
+   * volume est une sphère : son diamètre est la racine cubique du volume, si
+   * bien qu'un creux de dix litres et un de cent ne sont pas dans un rapport
+   * de dix à l'écran mais de deux — ce qui est exactement juste, et ce qu'une
+   * fraction constante aurait manqué dans les deux sens.
+   */
+  it("dessine le creux au diamètre que son volume implique", () => {
+    const v = vue(6);
+    const dix = fabriqueBouchon();
+    const cent = fabriqueBouchon();
+    const c = classeDe(arbre({ teteTrogneM: 2.2, partFoliaire: 0 }), 30, v);
+    // Une tête assez large pour que le plafond de dessin ne morde pas.
+    const tete = { teteTrogneM: 2.2, diametreTeteCm: 120 };
+    cuireVignette(c, 16, 0.35, dix.fabriquer, 4, { ...tete, caviteTeteL: 10 });
+    cuireVignette(c, 16, 0.35, cent.fabriquer, 4, { ...tete, caviteTeteL: 100 });
+    const rDix = dix.compte.ellipses.at(1)?.rx ?? 0;
+    const rCent = cent.compte.ellipses.at(1)?.rx ?? 0;
+    expect(rDix).toBeGreaterThan(0);
+    expect(rCent / rDix).toBeCloseTo(10 ** (1 / 3), 1);
   });
 
   it("grise le bois d'une chandelle et noircit celui d'un brûlé", () => {
@@ -1195,5 +1269,85 @@ describe("le repli de la profondeur : un panneau vu de face a quand même une é
     // Mesuré : 35 colonnes sans, 59 avec, sur 243 bouts. On demande la moitié
     // de ce gain, pour que l'essai tienne à un réglage près.
     expect(colonnes(avec)).toBeGreaterThan(colonnes(sans) * 1.3);
+  });
+});
+
+describe("le brout : le dégât qui était entièrement invisible", () => {
+  const plant = (p: Partial<ArbreAPoser> = {}): ArbreAPoser =>
+    arbre({ heightM: 1.4, baseHouppierM: 0, ...p });
+
+  it("sépare un plant brouté d'un plant intact", () => {
+    const v = vue();
+    expect(cleClasse(classeDe(plant({ broute: true }), 30, v))).not.toBe(
+      cleClasse(classeDe(plant(), 30, v)),
+    );
+  });
+
+  /**
+   * **L'essai qui aurait attrapé le défaut que la planche a montré.** Le
+   * premier jet posait les sections AVANT le feuillage — avec un commentaire
+   * affirmant le contraire — et elles étaient purement invisibles : un bout de
+   * rameau est par construction sous le bouquet qu'il porte. Le compte de
+   * tracés montait bien, lui, ce qui aurait suffi à faire passer un essai
+   * naïf.
+   *
+   * On mesure donc l'ORDRE : la dernière couleur posée doit être celle du bois
+   * à nu, pas celle d'une feuille.
+   */
+  it("pose les sections DEVANT le feuillage, pas dessous", () => {
+    const { fabriquer, compte } = fabriqueBouchon();
+    const c = classeDe(plant({ broute: true, partFoliaire: 1 }), 30, vue(6));
+    cuireVignette(c, 1.4, 0.4, fabriquer, 0);
+    const clarte = (css: string) => {
+      const t = css.match(/\d+/g)?.map(Number) ?? [];
+      return { r: t[0] ?? 0, g: t[1] ?? 0, b: t[2] ?? 0 };
+    };
+    const derniere = clarte(compte.couleurs.at(-1) ?? "");
+    // Du bois à nu : clair, et surtout PAS plus vert que rouge.
+    expect(derniere.r).toBeGreaterThan(derniere.g);
+    expect(derniere.r).toBeGreaterThan(150);
+  });
+
+  it("prend la flèche et quelques pousses, pas un rameau sur deux", () => {
+    const sans = fabriqueBouchon();
+    const avec = fabriqueBouchon();
+    const v = vue(6);
+    cuireVignette(classeDe(plant({ partFoliaire: 0 }), 30, v), 1.4, 0.4, sans.fabriquer, 0);
+    cuireVignette(
+      classeDe(plant({ broute: true, partFoliaire: 0 }), 30, v),
+      1.4,
+      0.4,
+      avec.fabriquer,
+      0,
+    );
+    const sections = avec.compte.remplissages - sans.compte.remplissages;
+    expect(sections).toBeGreaterThan(0);
+    // Le premier jet en posait un sur deux : sur un semis qui porte des
+    // dizaines de bouts, ça donnait un plant couvert de points crème qu'on
+    // lisait comme des baies.
+    expect(sections).toBeLessThan(20);
+  });
+
+  /**
+   * La hauteur de dent vient du moteur : `HAUTEUR_BROUTAGE_M` est la hauteur
+   * au-delà de laquelle « la flèche est hors d'atteinte et le plant est
+   * sorti ». Un arbre entièrement au-dessus ne porte donc aucune marque, même
+   * si le champ est renseigné — il a été brouté quand il était petit.
+   */
+  it("ne marque rien au-dessus de la hauteur de dent du moteur", () => {
+    const sans = fabriqueBouchon();
+    const avec = fabriqueBouchon();
+    const v = vue(6);
+    // Un houppier qui commence bien au-dessus de la hauteur de dent.
+    const grand = { heightM: 16, baseHouppierM: HAUTEUR_BROUTAGE_M * 3, partFoliaire: 0 } as const;
+    cuireVignette(classeDe(arbre(grand), 30, v), 16, 0.35, sans.fabriquer, grand.baseHouppierM);
+    cuireVignette(
+      classeDe(arbre({ ...grand, broute: true }), 30, v),
+      16,
+      0.35,
+      avec.fabriquer,
+      grand.baseHouppierM,
+    );
+    expect(avec.compte.remplissages).toBe(sans.compte.remplissages);
   });
 });
