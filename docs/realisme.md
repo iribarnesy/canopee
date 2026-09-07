@@ -218,7 +218,7 @@ mesurer que ce qu'on sait déjà faire.*
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
-| H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
+| H10 | Les aides publiques et paiements pour services existent | 🟡 | `aides.ts` : aide de base au revenu (127 €/ha), écorégime (54 ou 76 €/ha selon la part d'infrastructures agroécologiques), bonus haies (7 €/ha). Et surtout le PLAFOND DE 100 ARBRES/HA au-delà duquel la parcelle n'est plus agricole et perd tout. Règles FIGÉES sur la programmation 2023-2027, ce que la réalité n'est pas |
 | H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |
 | H12 | Le sol se découvre par observation ou analyse payante | 🟡 | tout est visible dans l'UI (calques) |
 
@@ -1399,6 +1399,56 @@ et de minima, pas sur les extrêmes absolus. Pour un gel radiatif — la nuit
 claire et calme où le couvert compte le plus — le tampon réel est probablement
 PLUS grand que 1,1 °C, puisque c'est précisément le rayonnement nocturne que le
 couvert intercepte. On reste sur la valeur publiée plutôt que d'extrapoler.
+
+## Les aides publiques, et l'hypothèse qu'on gèle pour pouvoir en parler
+
+**L'avertissement d'abord.** Les règles simulées sont FIGÉES, et la réalité ne
+l'est pas : la PAC se renégocie tous les cinq à sept ans, ses montants sont
+révisés en cours de programmation, les enveloppes régionales varient. Ce module
+prend les règles françaises 2023-2027, suppose qu'elles ne bougent plus, et le
+dit — parce qu'un jeu qui simule deux siècles avec la PAC de 2023 ment
+forcément, et qu'il vaut mieux mentir en le disant.
+
+Ce qui reste vrai malgré le gel, c'est la **structure de l'arbitrage** : une
+aide à l'hectare conditionnée à un plafond d'arbres, un bonus pour les
+infrastructures agroécologiques, un autre pour les haies. Ces trois leviers
+existent sous une forme ou une autre depuis vingt ans et existeront encore ; ce
+sont les montants qui bougent.
+
+### La règle qui fait la décision
+
+Une parcelle agroforestière reste éligible aux aides surfaciques tant qu'elle
+porte **au plus 100 arbres par hectare** — plafond maintenu pour 2023-2027.
+Au-delà, ce n'est plus une parcelle agricole avec des arbres, c'est un
+boisement : elle sort du régime, et l'aide avec elle.
+
+**C'est le seul endroit du jeu où planter un arbre de plus peut coûter de
+l'argent**, et c'est un vrai arbitrage de terrain. L'essai le vérifie dans les
+deux sens : cent arbres passent, cent un ne passent pas, et la moitié de la
+parcelle en infrastructures agroécologiques ne rattrape rien — l'éligibilité
+vient AVANT les bonus.
+
+### Les montants retenus
+
+| aide | montant | condition |
+|---|---|---|
+| aide de base au revenu (ex-DPB) | **127 €/ha/an** | moyenne visée 2023, contre 114 en 2021 |
+| écorégime, niveau de base | 54 €/ha/an | — |
+| écorégime, niveau supérieur | **76 €/ha/an** | ≥ 10 % d'infrastructures agroécologiques |
+| bonus haies | 7 €/ha/an | ≥ 6 % de haies, sous certification |
+
+*(Sur le bonus haies, une source donne 20 €/ha et les documents départementaux
+consultés 7 €/ha sous certification. On retient 7 et on signale l'écart — à
+confirmer.)*
+
+*Approximation assumée* : la part d'infrastructures agroécologiques est mesurée
+par le couvert arboré, alors que la PAC compte des LINÉAIRES de haies convertis
+en surface équivalente. Ce n'est pas la même chose.
+
+**Les aides ne tombent que si l'économie compte** dans la partie (voir l'option
+de démarrage). Sans elle, le compte tourne pour information seulement, et y
+verser des aides le fausserait : on montrerait une trésorerie qui monte sans que
+rien de ce qui la fait monter ne compte.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 
