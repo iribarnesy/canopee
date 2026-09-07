@@ -1338,6 +1338,19 @@ base est à quatre mètres. *(À confirmer.)*
 al. (2020) mesurent en simulation fine qu'ouvrir un sous-étage ACCÉLÈRE la
 propagation en laissant entrer le vent, même si l'intensité baisse.
 
+**Une conséquence de jeu que personne n'a écrite.** Trois mécanismes existaient
+chacun de leur côté : l'élagage relève la base du houppier (`hauteurElagueeM`
+entre dans `baseHouppierM`) ; la base du houppier décide de l'amorçage de feu de
+cime ; donc **élaguer met le couvert hors d'atteinte d'un feu rampant**. Mesuré,
+un peuplement élagué à six mètres porte un tiers de charge en moins que le même
+peuplement branchu jusqu'à un mètre. C'est exactement ce que prescrit le
+débroussaillement réglementaire dans les Landes, et le moteur y arrive tout
+seul — aucune règle « élaguer réduit le feu » n'est écrite nulle part.
+
+Ce qui ne bouge pas, et l'essai le vérifie aussi : le combustible de SURFACE.
+Un pin élagué sur une lande d'herbe sèche brûle toujours au sol ; ce qu'il ne
+fait plus, c'est passer en cime.
+
 ## Le couvert ne fait pas que de l'ombre : il tamponne la température
 
 Le moteur savait qu'une litière reste humide sous les arbres. Il ignorait
