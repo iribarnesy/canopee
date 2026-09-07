@@ -78,6 +78,7 @@ import {
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
+import { fermetureDuCouvert, tMinimumSousCouvert } from "./microclimat";
 import {
   cibleReseau,
   facteurAbsorption,
@@ -1298,7 +1299,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (
         ddPrev < bloomEnd &&
         ddYearBase5 >= fruits.floraisonDJ &&
-        weather.tMinAbsC <= fruits.gelFatalC
+        // Le gel se juge SOUS LE COUVERT de cet arbre-là, pas au-dessus de la
+        // parcelle : la nuit, un couvert renvoie vers le sol le rayonnement que
+        // le ciel clair emporterait, et la floraison qu'il abrite y échappe
+        // (microclimat.ts). C'est l'argument agroforestier pour mettre les
+        // fruitiers à l'abri d'une haie plutôt qu'en plein découvert.
+        tMinimumSousCouvert(weather.tMinAbsC, fermetureDuCouvert(light[t] ?? 1)) <= fruits.gelFatalC
       ) {
         bloomFrosted = true;
       }
