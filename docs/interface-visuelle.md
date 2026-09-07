@@ -748,6 +748,14 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   La mesure a en revanche trouvé un vrai gâchis au même endroit : voir la
   découpe du décor ci-dessous. À reprendre avec le
   décor, pas avec le poseur.
+- **Le canal de la POSE ne peut montrer que ce qui bouge.** Une chute passe par
+  lui ; une mort de sécheresse, non — elle jaunit puis se défeuille, ce qui est
+  un changement de COULEUR et de part foliaire, donc de cuisson, et la classe le
+  porte déjà. Les deux canaux existent exprès et il ne faut pas les confondre :
+  faire passer un jaunissement par la pose ne marcherait pas, et faire passer
+  une chute par la cuisson recuirait l'atlas au milieu d'une animation. Les
+  actes du plan qui ne sont pas des chutes ne produisent donc aucune
+  déformation, pour l'instant.
 - **Une masse de fourré ne peut pas être animée individuellement**, et ça a
   coûté une demi-journée à comprendre. `separerLeFourre` agrège les tiges de
   fourré par carreau : elles perdent leur identité, donc rien ne peut les
@@ -1079,6 +1087,47 @@ sens, puisque du temps réel demande un budget par image tenu, pas un rendu
   par les actions (`actions.ts`) et ce que la §6.8 demande au worker pour le
   rembobinage. Il faudra la même chose pour les morts et les naissances.
 
+**Ce qui est construit (2026-09-07), et par où ça passe.** Quatre modules, et la
+frontière entre eux est celle du paragraphe ci-dessus — ce qui BOUGE passe par
+la pose, ce qui CHANGE DE COULEUR passe par la cuisson :
+
+| Module | Ce qu'il fait | Pur ? |
+|---|---|---|
+| `render/temps/ellipse.ts` | le PLAN : un journal de changements devient une suite d'actes rangés dans un budget de temps d'écran | oui |
+| `render/temps/chute.ts` | la DÉFORMATION d'un arbre qui tombe, à un avancement donné et pour une vue donnée | oui |
+| `render/temps/lecteur.ts` | OÙ EN EST le plan à un instant, et ce que ça fait à chaque arbre | oui |
+| `pixi/scene.ts` `deformerLesArbres` | applique la déformation à la POSE du sprite | non (Pixi) |
+
+L'horloge n'est dans aucun des quatre : elle est dans la boucle d'images de
+`game/VueParcelle.tsx`, qui interroge le lecteur avec `performance.now()`. C'est
+ce qui garde `render/temps` testable sans navigateur.
+
+**La propriété qui compte est mesurée, pas supposée.** Sur une friche à
+2 713 sprites, avec le banc `npm run apercu:ellipse` qui fait tomber tous les
+arbres à la fois : **zéro classe recuite** sur trois secondes d'animation, à
+tous les avancements de lecture. Le coût de pose ne dépend pas de ce qui tombe
+— 9,9 ms de médiane avec tout debout, 8,2 ms avec tout par terre (min 5,0,
+max 10,7 sur douze relevés). Un premier relevé unique avait donné 25,7 ms à la
+fin de l'ellipse et je l'avais mis sur le compte des sprites pivotés :
+l'échantillonnage dit que c'était une image malchanceuse et rien d'autre. **Un
+relevé par condition ne distingue pas un surcoût d'une malchance**, et c'est la
+deuxième fois dans ce chantier qu'il fallait l'apprendre.
+
+**Ce qui manque encore.** Le journal est POSTICHE dans le banc : les scènes
+d'aperçu sont des instantanés et ne portent aucun journal, donc on le fabrique
+à partir des chandelles présentes. Le protocole porte déjà `Snapshot.chutes`,
+`Snapshot.gestes` et `Snapshot.morts` ; le jour où le worker les livre à la
+vue, seule l'origine du journal change. Et seule la CHUTE est dessinée : un
+geste, une mort par cause, un front de feu sont dans le plan et n'ont pas
+encore de mise en scène.
+
+**Le fourré ne peut pas s'animer, et il faut le savoir.** `separerLeFourre`
+agrège les ronces par carreau : elles n'ont pas d'identité individuelle, donc
+rien ne peut les faire tomber une par une. Sur une friche à trente ans, 1 874
+des 1 918 chandelles sont des ronces. Ce n'est pas un défaut du rendu — c'est
+un choix du moteur, et le bon — mais ça veut dire que l'ellipse d'une friche
+montre les quelques dizaines d'arbres et pas le fourré.
+
 ## 6. Inventaire des animations
 
 Chaque animation est une entrée de registre : `{ déclencheur, durée réelle,
@@ -1198,7 +1247,24 @@ sélection d'arbres. `M`.
 >
 > Les trois mécanismes ci-dessous ne disparaissent pas : ils deviennent le
 > **repli** de l'animation, et le plan dit lui-même quand il faut y basculer
-> (`deborde`). Mille arbres morts ne tiennent pas dans deux secondes en restant
+> (`deborde`).
+>
+> **La chaîne est branchée de bout en bout** : `ellipse.ts` range le journal
+> dans un budget, `lecteur.ts` dit où on en est et ce que ça fait à chaque
+> arbre, `chute.ts` calcule la déformation, et le poseur Pixi l'applique au
+> sprite déjà cuit. Deux décisions du lecteur ne sont pas évidentes et sont
+> tenues par des essais : **un arbre déjà tombé reste tombé** (sinon chaque
+> arbre se relève à l'acte suivant, et l'ellipse devient une suite de choses
+> qui se défont), et **les sujets d'un acte s'échelonnent** (trente-quatre
+> arbres qui tombent au même millième de seconde font une chorégraphie, pas une
+> forêt).
+>
+> **Une seule chose reste postiche** : l'origine du journal. `jeu.tsx` charge un
+> instantané figé, pas un flux, donc la démonstration se fabrique des chutes à
+> partir des chandelles de la scène. Le jour où le worker livrera
+> `Snapshot.chutes` à la vue, deux champs inventés — la direction et la masse —
+> laisseront place à ceux du message, qui les porte déjà, et rien d'autre ne
+> changera. Mille arbres morts ne tiennent pas dans deux secondes en restant
 > lisibles ; à ce moment-là, et à ce moment-là seulement, c'est la carte qui
 > porte le changement.
 
@@ -1336,7 +1402,7 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 | **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | `L` |
 | **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | `XL` |
 | **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | `XL` |
-| **L3** | **L'ELLIPSE : animer ce qui a CHANGÉ entre deux temps** — le journal des changements (morts par cause, chutes, gestes, front de feu) rangé dans un budget de temps d'écran, puis joué. La phénologie et les saisons sont faites ; l'interpolation entre instantanés, non — elle n'a pas d'objet (§5.11) | on voit ce qui s'est passé pendant qu'on ne regardait pas | `L` |
+| **L3** | **L'ELLIPSE : animer ce qui a CHANGÉ entre deux temps** — le journal des changements (morts par cause, chutes, gestes, front de feu) rangé dans un budget de temps d'écran, puis joué. La phénologie et les saisons sont faites ; l'interpolation entre instantanés, non — elle n'a pas d'objet (§5.11). **La chaîne est branchée de bout en bout et la chute est jouée** (`render/temps/`, banc `apercu:ellipse`, zéro recuisson mesurée) ; restent les autres mises en scène et le journal réel du worker (§5.11) | on voit ce qui s'est passé pendant qu'on ne regardait pas | `L` |
 | **L4** | Gestion : élagage, **trogne**, recépage, démasclage, manchon, coupe qui tombe, fleurs et fruits, retours d'action | **la demande centrale : on voit ce qu'on fait aux arbres** | `L` |
 | **L5** | **Les morts** : les onze causes, les chandelles qui vieillissent, la chute des feuilles de sécheresse | on comprend pourquoi ça meurt | `L` |
 | **L6** | **L'incendie** : front, torchage, fumée, cendres, rejets, cadrage caméra | l'événement mémorable d'une partie | `L` |

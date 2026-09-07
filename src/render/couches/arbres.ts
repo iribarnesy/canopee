@@ -1833,7 +1833,6 @@ function dessinerFeuillage(
     const pied = versPx(s.depart);
     const dx = bout.sx - pied.sx;
     const dy = bout.sy - pied.sy;
-    const norme = Math.hypot(dx, dy) || 1;
     // **La masse est TOUJOURS posée, et les feuilles viennent dessus.** C'est la
     // formulation exacte du §4 : « vu de loin ça fait une masse ; vu de près on
     // distingue les feuilles ». Le premier jet en faisait une alternative — ou

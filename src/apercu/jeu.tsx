@@ -8,7 +8,7 @@
  * d'aperçu ne peut dire.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { getEspece } from "../engine/especes";
 import {
@@ -17,11 +17,13 @@ import {
   senescenceDans,
 } from "../engine/phenologie";
 import { VueParcelle } from "../game/VueParcelle";
+import { ficheDe } from "../render/arbres/especes";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import type { Compte } from "../render/pixi/scene";
-import { chuteEnCours, DEBOUT } from "../render/temps/chute";
+import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
+import { deformationDe, indexerLesChutes } from "../render/temps/lecteur";
 
 interface Scene {
   coteM: number;
@@ -111,6 +113,15 @@ function donneesDe(scene: Scene): DonneesSol {
   };
 }
 
+/**
+ * Durée d'écran d'une ellipse, ms.
+ *
+ * Deux secondes et demie, et c'est un BUDGET : c'est tout l'intérêt du §5.11 —
+ * le joueur qui saute une semaine et celui qui saute dix ans attendent le même
+ * temps, l'un voyant quatre actes et l'autre quarante.
+ */
+const DUREE_ELLIPSE_MS = 2500;
+
 function Demo(): React.ReactElement {
   const [scene, setScene] = useState<Scene>();
   const [compte, setCompte] = useState<Compte>();
@@ -125,6 +136,62 @@ function Demo(): React.ReactElement {
   useEffect(() => {
     const etat = document.getElementById("etat");
     if (etat) etat.textContent = scene ? "" : "chargement de la scène…";
+  }, [scene]);
+
+  // **L'ellipse, branchée de bout en bout** : un journal de changements, un
+  // plan, un lecteur, une déformation à la pose. C'est le chemin que le jeu
+  // suivra ; seule l'origine du journal est postiche ici.
+  //
+  // Postiche parce que les scènes du banc sont un INSTANTANÉ : elles ne
+  // portent aucun journal. On en fabrique donc un — les chandelles de la scène
+  // qui ne sont pas du fourré, tombant chacune dans une direction tirée de son
+  // identifiant. Le jour où le worker livrera `Snapshot.chutes` à la vue, ces
+  // deux champs inventés (la direction, la masse) laisseront place à ceux du
+  // message, qui les porte déjà — et rien d'autre ne changera.
+  //
+  // **Le fourré est écarté et il faut le savoir** : `separerLeFourre` agrège
+  // les ronces par carreau, elles perdent leur identité, donc rien ne peut les
+  // animer une par une. Sur une friche à trente ans, 1 874 des 1 918
+  // chandelles sont des ronces — ce qui tombe, ce sont les quelques dizaines
+  // d'arbres restants.
+  //
+  // `?ellipse-tout=1` fait tomber TOUS les arbres et non les seules
+  // chandelles. **Ce n'est pas une scène, c'est un banc de mécanisme, et il
+  // fallait le construire** : les quelques dizaines de chandelles non-fourré
+  // d'un hectare font quelques pixels au zoom de parcelle, et il n'y en a
+  // aucune dans le cadre au zoom rapproché. J'ai cherché le mouvement dans une
+  // quinzaine de captures avant d'admettre que le sujet manquait, pas le
+  // mécanisme.
+  //
+  // **Le tout AVANT le retour anticipé**, et pas après : des `useMemo` placés
+  // sous un `if (!scene) return` s'exécutent en nombre variable d'un rendu à
+  // l'autre, et React refuse — « Rendered more hooks than during the previous
+  // render ». La page ne chargeait plus du tout.
+  const ellipse = useMemo(() => {
+    const tout = new URLSearchParams(location.search).get("ellipse-tout") === "1";
+    const journal: JournalDeSemaine = {
+      chutes: (scene?.trees ?? [])
+        .filter((t) => t.heightM > 0 && (tout ? true : t.chandelle) && !ficheDe(t.especeId)?.fourre)
+        .map((t) => ({
+          id: t.id,
+          x: t.x,
+          y: t.y,
+          especeId: t.especeId,
+          heightM: t.heightM,
+          directionRad: ((t.id % 360) * Math.PI) / 180,
+          masseKgC: 0,
+          empreinte: [],
+        })),
+    };
+    // Indexé UNE FOIS : le rappel de déformation est appelé une fois par arbre
+    // et par image, et une recherche linéaire à cet endroit-là ne tient pas —
+    // trois mille chutes en donnaient neuf millions de comparaisons par image,
+    // et la page ne finissait jamais de charger.
+    const plan = planDEllipse([journal], DUREE_ELLIPSE_MS);
+    // La DURÉE du plan et non le budget : un plan vide dure zéro, et c'est ce
+    // zéro-là qu'il faut porter pour que `?ellipse=` ne prétende pas figer une
+    // ellipse qui n'existe pas.
+    return { index: indexerLesChutes(plan), dureeMs: plan.dureeMs };
   }, [scene]);
 
   useEffect(() => {
@@ -186,38 +253,11 @@ function Demo(): React.ReactElement {
       };
     });
 
-  // **La démonstration de l'ellipse, et rien de plus qu'une démonstration.**
-  // Les scènes du banc sont un INSTANTANÉ : elles ne portent aucun journal de
-  // changements, donc aucune chute réelle à jouer. On en fabrique donc une —
-  // les chandelles de la scène, tombant chacune dans une direction tirée de
-  // son identifiant — pour voir le mécanisme du §5.11 fonctionner : une
-  // déformation à la pose, sans qu'une seule vignette soit recuite.
-  //
-  // Ce que ce n'est pas : une lecture du protocole. Le jour où le worker
-  // livrera `Snapshot.chutes` à la vue, ces directions inventées disparaîtront
-  // au profit de `directionRad`, qui est déjà dans le message.
-  // Toutes les chandelles, échelonnées par identifiant : où qu'on regarde, il
-  // y en a qui tombent. Une `Map` et non un `find` par arbre — le rappel est
-  // appelé une fois par arbre et par image, soit quelques milliers de fois par
-  // seconde, et c'est exactement le genre de coût que le lot L0 a proscrit.
-  const chutes = new Map(
-    arbres
-      .filter((a) => a.chandelle)
-      .map((a) => [
-        a.id,
-        {
-          x: a.x,
-          y: a.y,
-          heightM: a.heightM,
-          directionRad: ((a.id % 360) * Math.PI) / 180,
-          debutMs: (a.id % 20) * 400,
-        },
-      ]),
-  );
-  const DUREE_CHUTE_MS = 1600;
-  // Avancement figé, si l'adresse en demande un : `?chute=0.4`.
-  const brut = new URLSearchParams(location.search).get("chute");
-  const FIGE = brut === null ? undefined : Math.min(1, Math.max(0, Number(brut)));
+  // `?ellipse=0.4` FIGE la lecture à cet avancement, et c'est ce qui rend la
+  // démonstration jugeable : une animation qui tourne à une image par seconde
+  // sur un conteneur sans carte graphique n'est pas observable autrement.
+  const brut = new URLSearchParams(location.search).get("ellipse");
+  const fige = brut === null ? undefined : Math.min(1, Math.max(0, Number(brut)));
 
   return (
     <VueParcelle
@@ -228,22 +268,14 @@ function Demo(): React.ReactElement {
       hauteurMaxDe={(especeId) => getEspece(especeId)?.hauteurMaxM ?? 20}
       ombreDe={(a) => a.partFoliaire}
       surCompte={setCompte}
-      deformer={(id, maintenantMs, vue) => {
-        const c = chutes.get(id);
-        if (!c) return DEBOUT;
-        // **`?chute=0.4` FIGE toutes les chandelles à cet avancement**, et
-        // c'est ce qui rend la démonstration jugeable. Sans ça, elle est une
-        // cible mouvante : la boucle tourne à une image par seconde sur un
-        // conteneur sans carte graphique, une chute dure une seconde et demie,
-        // et une capture n'attrape jamais deux fois le même instant — j'ai
-        // cherché le mouvement dans huit captures avant de comprendre que le
-        // problème était l'instrument, pas le mécanisme.
-        if (FIGE !== undefined) return chuteEnCours(c, FIGE, vue);
-        const dansLaBoucle = maintenantMs % 12000;
-        const t = (dansLaBoucle - c.debutMs) / DUREE_CHUTE_MS;
-        if (t <= 0) return DEBOUT;
-        return chuteEnCours(c, Math.min(1, t), vue);
-      }}
+      deformer={(id, maintenantMs, vue) =>
+        deformationDe(
+          ellipse.index,
+          fige === undefined ? maintenantMs % (DUREE_ELLIPSE_MS * 1.6) : fige * ellipse.dureeMs,
+          id,
+          vue,
+        )
+      }
     />
   );
 }
