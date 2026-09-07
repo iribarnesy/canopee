@@ -266,6 +266,67 @@ export function largeurRelative(forme: FormeFeuille): number {
  * Deux pour le pin : les aiguilles vont **par deux**, et c'est sa signature la
  * plus fiable en botanique de terrain. Un pour tout le reste.
  */
+/**
+ * Le port du BOUQUET : de combien il s'allonge le long du rameau, et de combien
+ * son bord est découpé.
+ *
+ * **La grandeur qui manquait, et elle manquait à l'échelle où l'on joue.** Le
+ * §4 pose que l'unité de dessin est le bouquet et non la feuille — « dessine
+ * l'objet que l'œil perçoit à cette distance ». Il était pourtant le SEUL
+ * élément du houppier sans caractère d'espèce : chaque essence recevait le même
+ * disque déchiqueté, et seules la couleur et la densité les séparaient. Sur la
+ * planche des trois sujets vus de près, un hêtre et un bouleau portaient
+ * exactement le même objet, et le pin sylvestre — dont le code croyait dessiner
+ * une brosse — sortait en boules rondes.
+ *
+ * **Rien de nouveau n'est déclaré pour autant.** Le port d'un bouquet est une
+ * CONSÉQUENCE de la feuille qui le compose, et la fiche déclare déjà sa forme :
+ * cinq folioles sur un pétiole font une fronde allongée et profondément
+ * échancrée, une rosette de feuilles ovales fait une boule pleine à bord doux,
+ * des aiguilles font une brosse dans l'axe du rameau. On lit donc la
+ * conséquence au lieu d'ajouter une déclaration qui pourrait la contredire.
+ *
+ * `allongement` est le rapport de l'axe du rameau à l'axe transverse ; le
+ * dessin conserve l'AIRE, sans quoi allonger un bouquet changerait la
+ * couverture du houppier et donc sa transparence — un effet qu'on n'a pas
+ * demandé. `decoupe` est l'amplitude du bord, de 0 (lisse) à 1 (lacéré).
+ */
+export function portDuBouquet(forme: FormeFeuille): {
+  allongement: number;
+  decoupe: number;
+} {
+  switch (forme) {
+    // Une brosse, et de loin la plus allongée : les aiguilles garnissent le
+    // rameau sur toute sa longueur au lieu de s'assembler à son bout. C'est ce
+    // qui dit « conifère » à l'œil, plus encore que le port étagé.
+    case "aiguille":
+      return { allongement: 3.2, decoupe: 0.75 };
+    // Une fronde : les folioles s'échelonnent sur le pétiole, le bouquet
+    // s'étire et son bord est percé entre elles. Frêne, sureau.
+    case "composee":
+      return { allongement: 2.1, decoupe: 0.85 };
+    // Longue et étroite : le bouquet suit. Châtaignier, saule.
+    case "lanceolee":
+      return { allongement: 1.7, decoupe: 0.6 };
+    // Les lobes se lisent sur le BORD du bouquet, pas sur chaque feuille : un
+    // houppier de chêne est bosselé là où celui d'un hêtre est lisse.
+    case "lobee":
+      return { allongement: 1.15, decoupe: 0.72 };
+    // Grande feuille cordée : un bouquet large, à bord franchement dentelé.
+    case "cordee":
+      return { allongement: 1.2, decoupe: 0.5 };
+    // Petites feuilles lâches et pendantes : à peine allongé, bord irrégulier.
+    case "triangulaire":
+      return { allongement: 1.3, decoupe: 0.55 };
+    case "dentee":
+      return { allongement: 1.05, decoupe: 0.42 };
+    // La rosette pleine à bord doux : hêtre, aulne, chêne-liège. C'est le cas
+    // qui était appliqué à tout le monde.
+    default:
+      return { allongement: 1, decoupe: 0.3 };
+  }
+}
+
 export function elementsParFeuille(forme: FormeFeuille): number {
   // Deux aiguilles par faisceau chez le pin sylvestre — sa signature la plus
   // fiable en botanique de terrain. Cinq folioles pour une feuille composée :

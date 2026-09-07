@@ -40,7 +40,7 @@
 import { getEspece } from "../../engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../engine/gibier";
 import { ficheDe } from "../arbres/especes";
-import { contourFeuille, elementsParFeuille } from "../arbres/feuilles";
+import { contourFeuille, elementsParFeuille, portDuBouquet } from "../arbres/feuilles";
 import type { FicheGraphique } from "../arbres/fiche";
 import {
   contourFruit,
@@ -1553,6 +1553,10 @@ function dessinerFeuillage(
   const tailleFeuillePx = fiche.feuillage.longueurFeuilleM * echelle;
   const detaille = tailleFeuillePx >= FEUILLE_DES_PX;
   const aiguilles = fiche.feuillage.forme === "aiguille";
+  // Le port du bouquet, déduit de la forme de la feuille : c'est ce qui sépare
+  // une fronde de frêne d'une rosette de hêtre à l'échelle où l'on joue,
+  // c'est-à-dire bien en dessous du seuil où l'on dessine une feuille.
+  const port = portDuBouquet(fiche.feuillage.forme);
 
   // **Le rayon d'une tache se déduit de la SURFACE à couvrir, pas de la taille
   // d'une feuille**, et c'est la deuxième moitié de la correction du houppier
@@ -1639,51 +1643,65 @@ function dessinerFeuillage(
     // capture montrait au zoom rapproché. Un bord irrégulier ne coûte que
     // quelques sommets de plus et rend au feuillage sa silhouette dentelée,
     // même quand une feuille fait trois pixels et qu'on ne peut pas la dessiner.
-    if (aiguilles) {
-      // **Une BROSSE, pas une boule.** Un conifère ne porte pas de bouquets
-      // ronds : ses aiguilles garnissent le rameau sur toute sa longueur, en
-      // brosse allongée dans son axe. Dessiné en taches rondes comme un
-      // feuillu, le pin sylvestre sortait — c'est le mot du retour — comme
-      // « un feuillu avec des blobs verts », et sa famille entière avec lui.
-      // Le port étagé ne suffit pas : ce qui dit « conifère » à l'œil, c'est la
-      // texture du feuillage autant que la forme de l'arbre.
-      const longueur = Math.max(calibre * 1.4, norme * 0.62);
-      const epaisseur = calibre * 0.62;
-      const mx = (bout.sx + pied.sx) / 2;
-      const my = (bout.sy + pied.sy) / 2;
-      ctx.save();
-      ctx.translate(mx, my);
-      ctx.rotate(Math.atan2(dy, dx));
-      ctx.beginPath();
-      // Un fuseau à bords irréguliers : les aiguilles dépassent.
-      for (let n = 0; n < SOMMETS_TACHE * 2; n++) {
-        const t = n / (SOMMETS_TACHE * 2);
-        const a = t * Math.PI * 2;
-        const jitter = 0.7 + 0.6 * hacher(i * 37 + n, classe.palier, 0x5c3d);
-        ctx.lineTo(Math.cos(a) * longueur * 0.5, Math.sin(a) * epaisseur * jitter);
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    } else {
-      // **Un contour DÉCHIQUETÉ, pas une ellipse.** Une ellipse est une bulle,
-      // et un houppier fait de bulles se lit comme du brocoli — c'est ce que la
-      // capture montrait au zoom rapproché. Un bord irrégulier ne coûte que
-      // quelques sommets de plus et rend au feuillage sa silhouette dentelée,
-      // même quand une feuille fait trois pixels et qu'on ne peut pas la
-      // dessiner.
-      ctx.beginPath();
-      for (let n = 0; n < SOMMETS_TACHE; n++) {
-        const a = (n / SOMMETS_TACHE) * Math.PI * 2;
-        const r = calibre * (0.72 + 0.5 * hacher(i * 31 + n, classe.palier, 0x22a7));
-        const px = bout.sx + Math.cos(a) * r;
-        const py = bout.sy + Math.sin(a) * r * 0.82;
-        if (n === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fill();
+    // **Un seul tracé pour tous les feuillages, et deux nombres pour les
+    // distinguer.** Il y avait deux branches — la brosse du conifère et la
+    // boule du feuillu — et c'était un faux partage : entre les deux il y a un
+    // continuum, et c'est lui qui porte l'identité d'une essence. Une fronde de
+    // frêne est à mi-chemin, une rosette de hêtre est à un bout, une brosse de
+    // pin à l'autre. Deux branches ne pouvaient pas dire ça, et la boule
+    // gagnait par défaut pour tout le monde sauf le pin.
+    //
+    // **L'AIRE est conservée** quand le bouquet s'allonge : le calibre a été
+    // calculé pour qu'un certain nombre de taches couvre la part voulue du
+    // houppier, et étirer sans compenser aurait changé la transparence de
+    // chaque espèce au passage — un effet de bord qu'on n'a pas demandé.
+    const demiLong = calibre * Math.sqrt(port.allongement);
+    const demiTrav = calibre / Math.sqrt(port.allongement);
+    // Un bouquet allongé se pose LE LONG du rameau, centré sur lui ; un bouquet
+    // rond se pose à son bout, là où les feuilles s'assemblent vraiment.
+    const surLeRameau = Math.min(1, Math.max(0, (port.allongement - 1) / 1.2));
+    const cx = bout.sx - dx * 0.5 * surLeRameau;
+    const cy = bout.sy - dy * 0.5 * surLeRameau;
+    ctx.save();
+    ctx.translate(cx, cy);
+    // **Orienté ou pas, jamais à moitié.** Le premier jet multipliait l'ANGLE
+    // par le facteur d'allongement, ce qui ne veut rien dire : un rameau à 90°
+    // se retrouvait tourné de 81°, un rameau à 10° de 9°, sans rapport avec
+    // quoi que ce soit de physique. Les brosses du pin sortaient donc de
+    // travers, à peu près verticales quel que soit le rameau qui les portait.
+    // Ce qui s'interpole, c'est la FORME — l'allongement — pas la direction :
+    // une rosette n'a pas d'axe et n'a donc pas besoin d'être tournée ; dès
+    // qu'un bouquet en a un, il suit le rameau, complètement.
+    if (port.allongement > 1.15) ctx.rotate(Math.atan2(dy, dx));
+    ctx.beginPath();
+    // **Un contour DÉCHIQUETÉ, pas une ellipse.** Une ellipse est une bulle, et
+    // un houppier fait de bulles se lit comme du brocoli — c'est ce que la
+    // capture montrait au zoom rapproché. L'amplitude du bord vient maintenant
+    // de l'espèce : un chêne est bosselé là où un hêtre est lisse.
+    // Plus de sommets sur un bouquet allongé : à même amplitude, un fuseau n'a
+    // d'irrégularité visible que sur ses longs côtés, et il en faut assez pour
+    // que ce soit une frange et non trois pointes.
+    const allonge = port.allongement > 1.2;
+    const sommets = allonge ? SOMMETS_TACHE * 2 : SOMMETS_TACHE;
+    for (let n = 0; n < sommets; n++) {
+      const a = (n / sommets) * Math.PI * 2;
+      const jitter =
+        1 - port.decoupe / 2 + port.decoupe * hacher(i * 31 + n, classe.palier, 0x22a7);
+      // **L'irrégularité est TRANSVERSE sur un bouquet allongé**, et c'est ce
+      // qui sépare une brosse d'une étoile. Appliquée aussi au grand axe, elle
+      // découpait le fuseau dans sa longueur : les brosses du pin sortaient en
+      // feuilles d'érable dentelées — une silhouette de feuillu là où on
+      // voulait exactement l'inverse. Des aiguilles sortent DU rameau,
+      // perpendiculairement : la frange est sur les flancs, la pointe reste
+      // une pointe.
+      const px = Math.cos(a) * demiLong * (allonge ? 1 : jitter);
+      const py = Math.sin(a) * demiTrav * (allonge ? jitter : 0.82 * jitter);
+      if (n === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
     }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
     if (!detaille) continue;
     for (let k = 0; k < fiche.feuillage.feuillesParBouquet; k++) {
       const a1 = hacher(i * 131 + k, classe.variante, 0x1d3b);

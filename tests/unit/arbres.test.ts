@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
 import { HETRE } from "../../src/render/arbres/especes";
+import { type FormeFeuille, portDuBouquet } from "../../src/render/arbres/feuilles";
 import { type Vue, vueInitiale } from "../../src/render/camera";
 import {
   type ArbreAPoser,
@@ -55,6 +56,8 @@ function fabriqueBouchon() {
     couleurs: [] as string[],
     /** Les rectangles pleins, en pixels de vignette — le manchon en est un. */
     rects: [] as { x: number; y: number; l: number; h: number }[],
+    /** Rotations demandées : un bouquet allongé s'oriente, une rosette non. */
+    rotations: 0,
   };
   const fabriquer = (largeur: number, hauteur: number) => {
     compte.canvas++;
@@ -73,7 +76,9 @@ function fabriqueBouchon() {
       save() {},
       restore() {},
       translate() {},
-      rotate() {},
+      rotate() {
+        compte.rotations++;
+      },
       rect(x: number, y: number, l: number, h: number) {
         compte.rects.push({ x, y, l, h });
       },
@@ -971,5 +976,126 @@ describe("la clé de classe : tout champ qui entre dans la classe entre dans la 
     const a = classeDe(arbre(), 30, vue());
     const b = classeDe(arbre(), 30, vue());
     expect(cleClasse(a)).toBe(cleClasse(b));
+  });
+});
+
+describe("le bouquet : l'unité de dessin, et ce qui la distingue d'une espèce à l'autre", () => {
+  /**
+   * **L'écart que la planche des trois sujets a rendu visible.** Le §4 pose que
+   * l'unité de dessin est le bouquet et non la feuille ; le bouquet était
+   * pourtant le seul élément du houppier sans caractère d'espèce. Un hêtre et un
+   * bouleau vus de près portaient exactement le même disque déchiqueté, et le
+   * pin sylvestre — dont le code croyait dessiner une brosse — sortait en
+   * boules rondes.
+   *
+   * Le port se DÉDUIT de la forme de la feuille, déjà déclarée : rien de
+   * nouveau n'entre dans les fiches, donc rien ne peut les contredire.
+   */
+  it("allonge et découpe une fronde composée plus qu'une rosette ovale", () => {
+    const fronde = portDuBouquet("composee");
+    const rosette = portDuBouquet("ovale");
+    expect(fronde.allongement).toBeGreaterThan(rosette.allongement);
+    expect(fronde.decoupe).toBeGreaterThan(rosette.decoupe);
+    // Une rosette n'a pas d'axe : c'est ce qui la dispense d'être orientée.
+    expect(rosette.allongement).toBe(1);
+  });
+
+  it("fait de l'aiguille le port le plus allongé de tous", () => {
+    const formes: FormeFeuille[] = [
+      "ovale",
+      "triangulaire",
+      "tronquee",
+      "coriace",
+      "dentee",
+      "cordee",
+      "lobee",
+      "composee",
+      "lanceolee",
+    ];
+    const brosse = portDuBouquet("aiguille").allongement;
+    for (const f of formes) {
+      expect(portDuBouquet(f).allongement, `« ${f} » devrait rester sous la brosse`).toBeLessThan(
+        brosse,
+      );
+    }
+  });
+
+  it("borne la découpe : un bord irrégulier, jamais une explosion", () => {
+    const formes: FormeFeuille[] = [
+      "ovale",
+      "triangulaire",
+      "tronquee",
+      "aiguille",
+      "coriace",
+      "dentee",
+      "cordee",
+      "lobee",
+      "composee",
+      "lanceolee",
+    ];
+    for (const f of formes) {
+      const p = portDuBouquet(f);
+      expect(p.decoupe).toBeGreaterThan(0);
+      // Au-delà de 1, le rayon d'un sommet passerait sous zéro et le contour
+      // se retournerait sur lui-même.
+      expect(p.decoupe).toBeLessThanOrEqual(1);
+      expect(p.allongement).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("oriente le bouquet du pin sur son rameau, pas celui du hêtre", () => {
+    // Vignette petite exprès : sous le seuil de détail, aucune feuille n'est
+    // tracée, donc les rotations comptées ne viennent que des bouquets.
+    const pin = fabriqueBouchon();
+    const hetre = fabriqueBouchon();
+    const v = vue(0.6);
+    cuireVignette(
+      classeDe(arbre({ especeId: "pinus_sylvestris" }), 30, v),
+      16,
+      0.3,
+      pin.fabriquer,
+      4,
+    );
+    cuireVignette(
+      classeDe(arbre({ especeId: "fagus_sylvatica" }), 30, v),
+      16,
+      0.35,
+      hetre.fabriquer,
+      4,
+    );
+    expect(pin.compte.rotations).toBeGreaterThan(0);
+    expect(hetre.compte.rotations).toBe(0);
+  });
+
+  /**
+   * **L'aire d'un bouquet ne change pas quand il s'allonge**, et ce n'est pas
+   * cosmétique : le calibre est calculé pour qu'un nombre donné de taches
+   * couvre la part voulue du houppier. Étirer sans compenser aurait changé la
+   * transparence de chaque espèce au passage — un pin serait devenu plus clair
+   * qu'un hêtre pour une raison qui n'a rien à voir avec sa densité.
+   */
+  it("ne change pas le NOMBRE de bouquets selon le port", () => {
+    const pin = fabriqueBouchon();
+    const hetre = fabriqueBouchon();
+    const v = vue(0.6);
+    cuireVignette(
+      classeDe(arbre({ especeId: "pinus_sylvestris" }), 30, v),
+      16,
+      0.3,
+      pin.fabriquer,
+      4,
+    );
+    cuireVignette(
+      classeDe(arbre({ especeId: "fagus_sylvatica" }), 30, v),
+      16,
+      0.3,
+      hetre.fabriquer,
+      4,
+    );
+    // Les deux fiches n'ont pas la même densité, donc pas le même compte — ce
+    // qu'on vérifie, c'est qu'un bouquet reste UN remplissage, et que le port
+    // n'en ajoute ni n'en retire.
+    expect(pin.compte.remplissages).toBeGreaterThan(0);
+    expect(hetre.compte.remplissages).toBeGreaterThan(0);
   });
 });

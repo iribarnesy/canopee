@@ -525,6 +525,43 @@ l'objet que la botanique nomme.** Ce n'est pas une approximation qu'on
 s'autorise faute de mieux — à cette distance, l'amas EST la perception, et
 dessiner une baie isolée de deux pixels serait le mensonge.
 
+**Et le quatrième cas, qui est le retournement du même arbitrage.** Poser que
+l'unité est le bouquet ne suffit pas : il faut ensuite que le BOUQUET porte
+l'identité de l'espèce, sinon on a simplement déplacé le problème d'un cran.
+C'était le cas — le bouquet était le seul élément du houppier sans caractère
+d'espèce. Chaque essence recevait le même disque déchiqueté, et seules la
+couleur et la densité les séparaient : sur la planche des trois sujets vus de
+près, un hêtre et un bouleau portaient exactement le même objet, et le pin
+sylvestre — dont le code croyait dessiner une brosse, avec un commentaire pour
+l'affirmer — sortait en boules rondes.
+
+Le bouquet a donc maintenant deux caractères : de combien il s'ALLONGE le long
+du rameau, et de combien son bord est DÉCOUPÉ. Une fronde de frêne s'étire et
+se perce entre ses folioles ; une rosette de hêtre est une boule à bord doux ;
+une brosse de pin n'est que son axe. **Rien de nouveau n'est déclaré pour
+autant** : le port d'un bouquet est une conséquence de la feuille qui le
+compose, et la fiche déclare déjà sa forme — on lit la conséquence plutôt que
+d'ajouter une déclaration qui pourrait la contredire (§2.1).
+
+Deux détails qui ont chacun coûté une passe, et qui se généralisent :
+
+- **l'aire est conservée quand le bouquet s'allonge.** Le calibre est calculé
+  pour qu'un nombre donné de taches couvre la part voulue du houppier ; étirer
+  sans compenser aurait changé la transparence de chaque espèce au passage, et
+  un pin serait devenu plus clair qu'un hêtre pour une raison qui n'a rien à
+  voir avec sa densité.
+- **l'irrégularité d'un fuseau est TRANSVERSE.** Appliquée aussi au grand axe,
+  elle découpait la brosse dans sa longueur : le pin sortait en feuilles
+  d'érable dentelées, une silhouette de feuillu là où on voulait l'inverse. Des
+  aiguilles sortent du rameau perpendiculairement — la frange est sur les
+  flancs, la pointe reste une pointe.
+
+Il y avait aussi, avant, DEUX branches de dessin — la brosse du conifère et la
+boule du feuillu — et c'était un faux partage. Entre les deux il y a un
+continuum, et c'est lui qui porte l'identité : une fronde est à mi-chemin. Deux
+branches ne pouvaient pas le dire, et la boule gagnait par défaut pour tout le
+monde sauf le pin.
+
 Son corollaire pratique : quand un détail « ne marche que pour deux espèces »,
 la cause est presque toujours qu'on a pris l'unité trop fine. Le fruit ne
 marchait que pour la pomme et l'abricot ; il marche pour neuf espèces depuis
@@ -596,11 +633,17 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   l'arbre élagué rend de la lumière au sous-étage sans une ligne de dessin de
   plus, et le verger fleurit sur `floraison`. Voir « quatre grandeurs qui
   manquaient » ci-dessous.
-- **`bloomFrosted` n'a toujours aucun support visuel.** Le champ voyage, mais un
-  arbre dont la floraison a gelé se distingue seulement par une absence de
-  fruit — et une absence ne se lit pas comme une cause. C'est un travail
-  d'ANIMATION (§6.3) plutôt que de vignette : une fleur qui brunit et tombe la
-  semaine du gel, pas un état permanent peint sur l'arbre jusqu'en novembre.
+- **`bloomFrosted` part au lot ANIMATION — tranché.** Le champ voyage, mais un
+  arbre dont la floraison a gelé ne se distingue que par une absence de fruit,
+  trois mois plus tard, et une absence ne se lit pas comme une cause : le joueur
+  voit un pommier sans pommes, pas pourquoi. Les deux façons de le peindre sur
+  une vignette échouent pour la même raison — un gel est un ÉVÉNEMENT d'une
+  semaine, une vignette est un ÉTAT : ou les fleurs brunes restent accrochées
+  jusqu'en novembre (faux), ou elles disparaissent au bout d'une semaine et
+  personne n'aura regardé cette semaine-là. Une fleur qui brunit et tombe au
+  moment du tick, en revanche, se voit — et c'est exactement le modèle du temps
+  du §5.11 : un gel est de ces événements pour lesquels on repasse en temps
+  réel, comme un feu.
 - **Trois espèces qui portent des fruits bien visibles n'en auront pas** :
   l'aubépine, le houx, le fusain. Aucune n'a de bloc `fruits` dans `especes.ts`,
   donc le moteur ne suit pas leur fructification, et leur en dessiner serait
