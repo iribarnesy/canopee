@@ -126,7 +126,10 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // précédentes (+5 %, puis +2 %) qui la lisaient pendant son creux.
     expect(gainA(16)).toBeLessThan(1.02);
     expect(gainA(35)).toBeGreaterThan(1.05);
-  }, 300_000);
+    // Le délai est large parce que l'essai l'est : trois parties par horizon,
+    // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
+    // les dépassait sur le runner d'intégration, qui est plus lent.
+  }, 900_000);
 });
 
 describe("le tas de broyat : transporter la fertilité", () => {
