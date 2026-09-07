@@ -284,6 +284,18 @@ export interface GameState {
    * (phenologie.ts). Un hiver doux en compte peu, et le débourrement recule.
    */
   semainesDeFroid: number;
+  /**
+   * Banque de graines du sol, graines/m² par espèce (banqueGraines.ts). La
+   * mémoire du passé de la parcelle : ce qui y a grainé y attend sous terre,
+   * parfois des décennies, et le feu la réveille.
+   */
+  banqueGraines: Record<string, number>;
+  /**
+   * La parcelle a-t-elle brûlé depuis la dernière levée annuelle ? Le feu
+   * scarifie les téguments durs : c'est lui qui fait lever d'un coup une banque
+   * que rien d'autre n'aurait réveillée.
+   */
+  aBruleDepuisLaLevee: boolean;
   rng: RngState;
 }
 
@@ -385,6 +397,8 @@ export function createGameState(
     // Une partie démarre au 1ᵉʳ janvier : l'hiver qui précède est supposé
     // normal, sans quoi la première année débourrerait en retard sans raison.
     semainesDeFroid: 20,
+    banqueGraines: {},
+    aBruleDepuisLaLevee: false,
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: eauInitiale,
