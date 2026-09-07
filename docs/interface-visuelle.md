@@ -612,6 +612,26 @@ D'où la règle de méthode : **quand une scène « fait synthétique », cherch
 d'abord la grandeur débranchée, pas le réglage à retoucher.** Un rendu qui
 n'affiche pas ce que le moteur sait ne se corrige pas en changeant une teinte.
 
+**Et la grandeur débranchée n'est pas toujours du moteur** : elle peut venir du
+rendu lui-même. Les houppiers à ramure opposée sortaient en chapelets de perles
+— des bouquets empilés en colonnes verticales — parce que la projection de la
+vignette ne lisait que `x` et `y` du squelette et jetait `z`. Une ramure opposée
+ne prend que quatre azimuts, dont le cosinus n'a que trois valeurs : les
+décalages horizontaux se quantifiaient et les bouts tombaient sur un réseau.
+Replier la profondeur dans la largeur du panneau, en projection oblique, ajoute
+le sinus et démultiplie ce réseau — mesuré : 35 colonnes distinctes avant, 59
+après, sur les 243 bouts d'un cornouiller.
+
+Le chemin pour y arriver vaut la conclusion. **Deux explications ont été
+proposées et mesurées fausses avant celle-là** : l'allongement du bouquet
+(le cornouiller déclare une feuille ovale, son bouquet est une rosette ronde et
+n'avait aucun allongement à baisser) puis « les branches vers l'objectif
+s'écrasent sur l'axe du tronc » (2 % des bouts seulement passaient près de
+l'axe, et le repli fait plutôt monter ce chiffre). Ce qui s'écrasait n'était pas
+la position absolue mais l'ÉCART. La leçon : **une explication plausible d'un
+défaut visible n'est pas une explication vérifiée**, et le coût de ne pas
+vérifier est de régler la mauvaise molette.
+
 Et son corollaire, qui est le principe n° 1 du §0 et que cette passe a enfreint
 une fois : **si la grandeur n'existe pas dans le moteur, elle part en issue.**
 On ne la fabrique pas côté rendu, même « en attendant », même quand on croit

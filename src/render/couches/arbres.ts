@@ -757,6 +757,69 @@ export function couleurFeuillage(fiche: FicheGraphique, senescence: number): Tei
   return melange(c.ete, c.automne, s);
 }
 
+/**
+ * Replie la PROFONDEUR du squelette dans la largeur du panneau.
+ *
+ * **Le `z` du squelette était purement jeté, et une branche pointée vers la
+ * caméra disparaissait donc dans le tronc.** La vignette est un panneau vu de
+ * face — décision assumée : la silhouette d'un arbre ne doit pas changer quand
+ * la caméra tourne autour de lui. Mais « vu de face » ne veut pas dire « sans
+ * profondeur » : en ne gardant que `x`, on projetait à zéro tout ce qui partait
+ * vers l'avant ou l'arrière.
+ *
+ * **Ce que ça donnait, et le mécanisme exact — il a fallu deux fausses pistes
+ * pour l'établir.** Une ramure OPPOSÉE (`branchesParNoeud: 3`,
+ * `divergenceDeg: 90` — cornouiller, sureau, fusain, troène, frêne) ne prend
+ * que quatre azimuts : 0, 90, 180, 270 degrés. Leur cosinus, seul facteur lu
+ * par la projection, ne prend donc que TROIS valeurs — 1, 0, −1. Les décalages
+ * horizontaux se quantifiaient, les bouts de rameaux tombaient sur un réseau de
+ * positions, et les bouquets s'empilaient en colonnes verticales : le
+ * cornouiller sortait en chapelets de perles. Replier la profondeur ajoute le
+ * sinus, qui vaut 0 ou ±1 là où le cosinus vaut ±1 ou 0 : quatre multiplicateurs
+ * au lieu de trois, et le réseau se démultiplie d'ordre en ordre.
+ *
+ * **Mesuré** sur le squelette du cornouiller, 243 bouts après `contraindre` :
+ * **35 colonnes distinctes sans le repli, 59 avec.** Un essai le garde.
+ *
+ * Les deux fausses pistes, parce qu'elles sont instructives. La première :
+ * l'allongement du bouquet — or le cornouiller déclare une feuille ovale, son
+ * bouquet est une rosette ronde et n'avait aucun allongement à baisser. La
+ * seconde : « les branches vers l'objectif s'écrasent sur l'axe du tronc » —
+ * mesuré faux, 2 % des bouts seulement passaient près de l'axe, et le repli
+ * fait plutôt monter ce chiffre. Ce qui s'écrasait n'était pas la position
+ * ABSOLUE mais l'ÉCART : une latérale à angle droit du panneau n'ajoutait rien
+ * à l'abscisse de son parent, et sa descendance montait tout droit au-dessus
+ * de lui.
+ *
+ * Le repli est une projection OBLIQUE, du même genre que la dimétrie du sol :
+ * une convention fixe du panneau, indépendante de la caméra, où la profondeur
+ * compte pour une fraction de la largeur. Un dessin d'architecte fait ça depuis
+ * toujours, et pour la même raison — donner une place à ce qui vient vers
+ * l'œil sans faire tourner l'objet.
+ *
+ * Appliqué AVANT `contraindre`, pour que le calibrage de la largeur du houppier
+ * voie les coordonnées définitives : replier après aurait fait dépasser les
+ * houppiers de la largeur qu'on venait de leur imposer.
+ */
+export function replier(segments: readonly Segment[]): Segment[] {
+  return segments.map((s) => ({
+    ...s,
+    depart: { x: s.depart.x + s.depart.z * PROFONDEUR_OBLIQUE, y: s.depart.y, z: 0 },
+    arrivee: { x: s.arrivee.x + s.arrivee.z * PROFONDEUR_OBLIQUE, y: s.arrivee.y, z: 0 },
+  }));
+}
+
+/**
+ * Ce que vaut un mètre de PROFONDEUR en largeur de panneau.
+ *
+ * Un peu plus de la moitié : assez pour qu'une branche pointée vers l'objectif
+ * ait une existence à l'écran, assez peu pour qu'elle se lise comme une branche
+ * vue en raccourci et non comme une branche de côté. C'est le raccourci d'un
+ * dessin en perspective cavalière, et il n'a pas à être exact — il a à ne pas
+ * être nul.
+ */
+export const PROFONDEUR_OBLIQUE = 0.55;
+
 /** Hachage entier → [0,1[. Le même que partout ailleurs dans le rendu. */
 function hacher(a: number, b: number, sel: number): number {
   let h = (Math.imul(a | 0, 0x27d4eb2d) ^ Math.imul(b | 0, 0x165667b1) ^ sel) >>> 0;
@@ -849,7 +912,7 @@ export function cuireVignette(
   // un détail que personne ne voit, et c'est exactement le piège que L0 a
   // mesuré. Le budget croît avec la surface de la vignette.
   const budget = Math.max(12, Math.round(classe.taillePx * classe.taillePx * 0.035));
-  const brut = engendrer(sujet, fiche.branchement, budget);
+  const brut = replier(engendrer(sujet, fiche.branchement, budget));
   const houppier = brut.filter((s) => s.ordre >= 1);
   const base = houppier.length > 0 ? Math.min(...houppier.map((s) => s.depart.y)) : 0;
   const sommet = houppier.length > 0 ? Math.max(...houppier.map((s) => s.arrivee.y)) : hauteurM;

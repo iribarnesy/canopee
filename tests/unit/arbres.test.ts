@@ -3,6 +3,8 @@ import { getEspece } from "../../src/engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
 import { HETRE } from "../../src/render/arbres/especes";
 import { type FormeFeuille, portDuBouquet } from "../../src/render/arbres/feuilles";
+import { contraindre } from "../../src/render/arbres/port";
+import { engendrer, type Segment } from "../../src/render/arbres/squelette";
 import { type Vue, vueInitiale } from "../../src/render/camera";
 import {
   type ArbreAPoser,
@@ -15,8 +17,10 @@ import {
   FICHE_GENERIQUE,
   fourreEnArbre,
   PALIERS_HAUTEUR,
+  PROFONDEUR_OBLIQUE,
   partEcorceRefaite,
   posesDesArbres,
+  replier,
   separerLeFourre,
   tailleDePose,
   teinteSelonVigueur,
@@ -1097,5 +1101,99 @@ describe("le bouquet : l'unité de dessin, et ce qui la distingue d'une espèce 
     // n'en ajoute ni n'en retire.
     expect(pin.compte.remplissages).toBeGreaterThan(0);
     expect(hetre.compte.remplissages).toBeGreaterThan(0);
+  });
+});
+
+describe("le repli de la profondeur : un panneau vu de face a quand même une épaisseur", () => {
+  /**
+   * **Le défaut le plus coûteux de cette passe, et il tenait à un axe jeté.**
+   * `versPx` ne lisait que `x` et `y` du squelette : une branche pointée vers
+   * l'objectif projetait donc sur `x = 0` et s'écrasait sur le tronc. Une
+   * ramure OPPOSÉE (`branchesParNoeud: 3`, `divergenceDeg: 90`) alterne
+   * exactement entre deux plans perpendiculaires — un nœud sur deux partait
+   * droit vers la caméra. Les bouquets s'empilaient en colonnes verticales et
+   * le cornouiller sortait en chapelets de perles.
+   *
+   * J'avais d'abord attribué ça à l'allongement du bouquet. À tort : le
+   * cornouiller déclare une feuille ovale, son bouquet est une rosette ronde,
+   * il n'avait aucun allongement à baisser. Chercher le réglage plutôt que la
+   * grandeur perdue, une fois de plus.
+   */
+  const seg = (dx: number, dz: number): Segment => ({
+    depart: { x: 0, y: 0, z: 0 },
+    arrivee: { x: dx, y: 1, z: dz },
+    rayonDepartM: 0.05,
+    rayonArriveeM: 0.03,
+    ordre: 1,
+    terminal: true,
+  });
+
+  it("donne une largeur à l'écran à une branche pointée vers l'objectif", () => {
+    const [vers] = replier([seg(0, 1)]);
+    expect(vers).toBeDefined();
+    if (!vers) return;
+    // Avant, c'était zéro : la branche n'existait pas.
+    expect(Math.abs(vers.arrivee.x)).toBeGreaterThan(0.2);
+    expect(vers.arrivee.x).toBeCloseTo(PROFONDEUR_OBLIQUE, 6);
+  });
+
+  it("sépare l'avant de l'arrière, au lieu de les confondre", () => {
+    const [devant] = replier([seg(0, 1)]);
+    const [derriere] = replier([seg(0, -1)]);
+    expect(devant?.arrivee.x).toBeCloseTo(-(derriere?.arrivee.x ?? 0), 6);
+  });
+
+  it("ne touche pas une branche déjà dans le plan du panneau", () => {
+    const [plat] = replier([seg(1, 0)]);
+    expect(plat?.arrivee.x).toBeCloseTo(1, 6);
+    expect(plat?.arrivee.y).toBeCloseTo(1, 6);
+    // Et la profondeur est CONSOMMÉE : plus rien ne reste à replier ensuite.
+    expect(plat?.arrivee.z).toBe(0);
+  });
+
+  /**
+   * **La mesure qui a fini par dire le mécanisme, après deux fausses pistes.**
+   * Une ramure opposée ne prend que quatre azimuts — 0, 90, 180, 270 degrés —
+   * et leur COSINUS, seul facteur que lisait la projection, n'en prend que
+   * trois : 1, 0, −1. Les décalages horizontaux se quantifiaient donc, les
+   * bouts tombaient sur un réseau de positions, et les bouquets s'empilaient en
+   * colonnes. Le sinus vaut 0 ou ±1 là où le cosinus vaut ±1 ou 0 : le replier
+   * donne quatre multiplicateurs au lieu de trois, et le réseau se démultiplie
+   * d'ordre en ordre.
+   *
+   * Ce n'est donc PAS « les branches vers l'objectif s'écrasent sur le tronc »,
+   * ce que j'ai cru et qui est mesuré faux : 2 % des bouts seulement passaient
+   * près de l'axe. Ce qui s'écrasait était l'ÉCART, pas la position.
+   */
+  it("démultiplie les positions d'un houppier à ramure opposée", () => {
+    // La fiche du cornouiller, dans ce qu'elle a de décisif : une paire de
+    // latérales opposées, une divergence d'un quart de tour, un bois raide.
+    const opposee = {
+      angleDeg: 50,
+      divergenceDeg: 90,
+      ratioLongueur: 0.7,
+      dominance: 0.34,
+      branchesParNoeud: 3,
+      conicite: 0.82,
+      tortuosite: 0.18,
+    };
+    const sujet = { id: 11, hauteurM: 6, houppierRatio: 0.5, baseHouppierM: 0.5, brins: 3 };
+    const passe = (avecRepli: boolean) => {
+      const engendre = engendrer(sujet, opposee, 600);
+      const brut = avecRepli ? replier(engendre) : engendre;
+      const houppier = brut.filter((s) => s.ordre >= 1);
+      const base = Math.min(...houppier.map((s) => s.depart.y));
+      const sommet = Math.max(...houppier.map((s) => s.arrivee.y));
+      return contraindre(brut, "boule", base, sommet, 0.5 * 6).filter((s) => s.terminal);
+    };
+    /** Combien de COLONNES distinctes, au décimètre près. */
+    const colonnes = (segs: readonly Segment[]) =>
+      new Set(segs.map((s) => Math.round(s.arrivee.x * 10))).size;
+    const sans = passe(false);
+    const avec = passe(true);
+    expect(sans.length).toBe(avec.length);
+    // Mesuré : 35 colonnes sans, 59 avec, sur 243 bouts. On demande la moitié
+    // de ce gain, pour que l'essai tienne à un réglage près.
+    expect(colonnes(avec)).toBeGreaterThan(colonnes(sans) * 1.3);
   });
 });
