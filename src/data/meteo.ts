@@ -19,8 +19,19 @@ const SERIES: SerieMeteoHebdo[] = [
   fricheLimon as SerieMeteoHebdo,
 ];
 
-/** Série réelle pour une station du jeu (le limon pauvre partage Abbeville). */
+/**
+ * Série réelle pour une station du jeu. Le limon pauvre partage Abbeville, la
+ * Sologne partage Tours.
+ */
 export function serieMeteoPour(stationId: string): SerieMeteoHebdo | undefined {
-  const id = stationId === "limon-pauvre-n" ? "limon-riche" : stationId;
+  // Deux stations partagent la série d'une voisine plutôt que d'en inventer
+  // une : le limon pauvre en azote est le même limon qu'Abbeville, et la
+  // Sologne est à une heure de Tours. Ajouter une série demanderait de
+  // reconstruire un département entier de données Météo-France.
+  const partages: Record<string, string> = {
+    "limon-pauvre-n": "limon-riche",
+    "limon-acide": "vallee-engorgee",
+  };
+  const id = partages[stationId] ?? stationId;
   return SERIES.find((s) => s.id === id);
 }
