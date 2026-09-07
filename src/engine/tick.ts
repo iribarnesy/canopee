@@ -21,11 +21,8 @@ import {
   lameRetenueMm,
   longueurDeTroncM,
   longueurEnTraversM,
-  partBarrante,
   poserBoisAuSol,
   sedimentPiegeKgM2,
-  transversalite,
-  versLAval,
 } from "./boisMort";
 import {
   CN_HUMUS,

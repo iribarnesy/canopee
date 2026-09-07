@@ -14,21 +14,45 @@
  * emportent.
  *
  * ─── CE QUE MESURE L'ESSAI COMPLET ───────────────────────────────────────────
- * Seize graines par composition, cinquante ans, parcelle de 40 m :
+ * REMESURÉ après la correction du modèle de combustible (feu.ts). Les chiffres
+ * précédents avaient été obtenus avec un modèle qui amortissait la charge des
+ * houppiers par l'ombre que ces mêmes houppiers projetaient — ce qui donnait un
+ * avantage artificiel aux peuplements denses, donc aux feuillus.
  *
- *   composition        brûlé moyen   gros feux   peuplement tué   REMONTÉE
- *   pinède pure          1 928 m²     12/16          86 %           52 cm
- *   feuillus             1 470 m²      8/16         101 %           32 cm
- *   chêne-liège          2 058 m²     12/16          81 %           47 cm
+ * DEUX LOTS INDÉPENDANTS de seize graines, cinquante ans, surface brûlée :
  *
- * Planter des feuillus plutôt que du pin réduit d'un tiers le nombre de gros
- * incendies et de 38 % la remontée de nappe qui suit. C'est la seule
- * atténuation qu'on ait trouvée, et elle est modeste.
+ *   composition       lot A     lot B     gros feux A/B   remontée A/B
+ *   pinède pure      1 825 m²  1 311 m²     15/16 · 12/16    64 · 53 cm
+ *   feuillus         1 715 m²  1 342 m²     16/16 · 13/16    56 · 57 cm
+ *   chêne-liège      1 166 m²  1 059 m²     13/16 · 13/16    62 · 77 cm
  *
- * Le chêne-liège, lui, ne réduit ni la surface parcourue ni la remontée : il
- * perd simplement moins d'arbres à chaque passage du feu (son écorce est faite
- * pour ça) et c'est le peuplement le plus haut à la fin. Survivre au feu et
- * l'empêcher sont deux stratégies différentes.
+ * ─── DEUX CONCLUSIONS CHANGENT ───────────────────────────────────────────────
+ *
+ * 1. « Planter des feuillus réduit d'un tiers les gros incendies et de 38 % la
+ *    remontée de nappe » : RETIRÉ. À cinquante ans l'effet ne réplique pas — il
+ *    change de signe d'un lot à l'autre (−6 % puis +2 %), et la remontée ne
+ *    montre aucun ordre stable. Ce n'est pas du bruit qu'on aurait mal mesuré,
+ *    c'est un effet qui n'existe pas à cet horizon : une fois que tout est passé
+ *    au feu au moins une fois, c'est la LANDE qui porte le feu suivant, pas ce
+ *    qu'on avait planté dessus.
+ *
+ * 2. Le même essai arrêté à VINGT-SIX ANS dit autre chose, et les deux sont
+ *    vrais : les feuillus y brûlent 655 m² contre 1 032 au pin, soit un tiers
+ *    de moins. Planter des feuillus ACHÈTE DU TEMPS ; ça ne change pas le
+ *    régime de long terme.
+ *
+ * ─── ET UNE CONCLUSION S'INVERSE ─────────────────────────────────────────────
+ * On avait écrit que le chêne-liège « ne réduit ni la surface parcourue ni la
+ * remontée » et que « survivre au feu et l'empêcher sont deux stratégies
+ * différentes ». C'est faux, et c'était l'artefact du modèle de combustible.
+ *
+ * Le chêne-liège est la SEULE composition dont l'avantage réplique aux deux
+ * horizons : 507 m² contre 1 032 à vingt-six ans (et AUCUN gros incendie sur
+ * huit parties), 1 166 et 1 059 contre 1 825 et 1 311 à cinquante ans. Le
+ * mécanisme est émergent, personne ne l'a écrit : son écorce résiste au feu
+ * (0,95), donc le peuplement reste debout, donc le couvert reste fermé, donc la
+ * litière reste humide et à l'abri du vent — et le feu suivant trouve moins à
+ * brûler. SURVIVRE AU FEU EST CE QUI EMPÊCHE LE SUIVANT.
  *
  * ─── UNE CONCLUSION RETIRÉE ──────────────────────────────────────────────────
  * On avait mesuré ici que replanter en aulne après le feu raccourcissait d'un
@@ -51,8 +75,13 @@
  * D'une graine à l'autre, la même composition brûle de 0 à 4 500 m². Trois à
  * cinq parties sur seize ne connaissent aucun incendie. Un seul essai par
  * composition ne prouve donc RIEN — le premier qu'on avait fait donnait « les
- * feuillus ne brûlent jamais », ce que seize répétitions ont démenti. Le test
- * ci-dessous répète, et ne garde que ce qui survit à la répétition.
+ * feuillus ne brûlent jamais », ce que seize répétitions ont démenti.
+ *
+ * Et seize ne suffisent pas non plus pour les petits écarts : la pinède brûle
+ * 1 825 m² dans un lot de seize graines et 1 311 dans l'autre, soit 28 % de
+ * différence entre deux mesures du MÊME dispositif. C'est la raison pour
+ * laquelle l'avantage des feuillus, qui vaut moins que cela, ne peut pas être
+ * affirmé — alors que celui du chêne-liège, qui vaut le double, le peut.
  */
 
 import { describe, expect, it } from "vitest";
@@ -175,14 +204,33 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     expect(pin.bruleesMoyennes).toBeGreaterThan(200);
   });
 
-  it("les feuillus brûlent moins, et connaissent moins de gros incendies", () => {
+  it("les feuillus achètent du temps : à vingt-six ans ils brûlent moins", () => {
     // Deux mécanismes se cumulent, aucun n'est écrit pour l'occasion :
     // l'inflammabilité propre de l'essence, et le fait qu'un couvert fermé
     // garde sa litière humide (`portanceDuFeu`, feu.ts).
-    // On compare la SURFACE moyenne parcourue, pas le nombre de gros feux :
-    // un compte sur huit parties n'a aucune résolution — il bascule d'une
-    // graine à l'autre, alors que la surface, continue, garde le signal.
+    //
+    // ATTENTION à la portée de ce résultat : il vaut À CET HORIZON. Poussé à
+    // cinquante ans sur deux lots de seize graines, l'écart change de signe
+    // (−6 % puis +2 %) — voir l'en-tête. Une fois que tout est passé au feu au
+    // moins une fois, c'est la lande qui porte le suivant, pas ce qu'on avait
+    // planté dessus.
     expect(feuillus.bruleesMoyennes).toBeLessThan(pin.bruleesMoyennes);
+  });
+
+  it("le chêne-liège, lui, tient aux deux horizons — parce qu'il survit", () => {
+    // La seule composition dont l'avantage réplique : 507 m² contre 1 032 ici,
+    // et 1 166 / 1 059 contre 1 825 / 1 311 à cinquante ans sur deux lots
+    // indépendants.
+    //
+    // Le mécanisme est ÉMERGENT et vaut d'être dit : son écorce résiste au feu
+    // (0,95), donc le peuplement reste debout, donc le couvert reste fermé,
+    // donc la litière reste humide et à l'abri du vent — et le feu suivant
+    // trouve moins à brûler. Survivre au feu est ce qui empêche le suivant.
+    // On avait écrit l'inverse tant que le modèle de combustible amortissait la
+    // charge des houppiers par leur propre ombre.
+    const liege = surPlusieursGraines(["quercus_suber"]);
+    expect(liege.bruleesMoyennes).toBeLessThan(0.7 * pin.bruleesMoyennes);
+    expect(liege.grosFeux).toBeLessThan(pin.grosFeux);
   });
 
   it("mais l'atténuation reste partielle : le feu passe quand même", () => {
