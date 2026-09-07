@@ -59,20 +59,55 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
    * saturation de Michaelis-Menten (nitrogen.ts), et un effet petit ne se
    * mesure pas sur un tirage.
    */
-  // Trois parties par horizon, et pas davantage : chacune fait trente-cinq ans
-  // sur soixante mètres, et l'essai coûte déjà trois minutes.
   const GRAINES = [5, 19, 31];
   const hauteurMoyenneDesHetres = (s: typeof vendre.state) => {
     const alive = s.trees.filter((t) => t.id > 20 && t.id <= 28 && t.alive);
     return alive.length ? alive.reduce((sum, t) => sum + t.heightM, 0) / alive.length : 0;
   };
+
+  /**
+   * Les DEUX jalons en une seule passe. La version précédente rejouait la
+   * partie depuis le début pour chaque horizon : trente-cinq ans, puis seize
+   * ans de la même partie, six fois — soit la moitié du travail jetée. L'essai
+   * pesait 267 s des 317 s de la suite entière.
+   *
+   * On avance donc une fois jusqu'au jalon le plus lointain et on relève la
+   * hauteur des hêtres au passage. Aucune écologie ne change : c'est la même
+   * partie, avec les mêmes tirages, simplement lue deux fois en route.
+   */
+  const JALONS = [16, 35] as const;
+  function hauteursAuxJalons(devenir: "vendre" | "epandre", graine: number) {
+    const j = journal(devenir, graine);
+    let etat = createGameState(STATION, rngStateFromSeed(j.seed));
+    const releves = new Map<number, number>();
+    const derniere = Math.max(...JALONS);
+    for (let i = 0; i < derniere * 52; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      etat = advanceWeek(etat, w, j.actions).state;
+      const an = (i + 1) / 52;
+      if (JALONS.includes(an as (typeof JALONS)[number]))
+        releves.set(an, hauteurMoyenneDesHetres(etat));
+    }
+    return releves;
+  }
+
+  /** Gain moyen épandre / vendre à chaque jalon, sur les trois graines. */
+  const gains = (() => {
+    const parJalon = new Map<number, number[]>(JALONS.map((a) => [a, []]));
+    for (const g of GRAINES) {
+      const v = hauteursAuxJalons("vendre", g);
+      const e = hauteursAuxJalons("epandre", g);
+      for (const an of JALONS) {
+        const hv = v.get(an) ?? 0;
+        parJalon.get(an)?.push(hv > 0 ? (e.get(an) ?? 0) / hv : 0);
+      }
+    }
+    return parJalon;
+  })();
   const gainA = (ans: number) => {
-    const gains = GRAINES.map((g) => {
-      const v = runJournal(STATION, journal("vendre", g), WEATHER, ans * 52);
-      const e = runJournal(STATION, journal("epandre", g), WEATHER, ans * 52);
-      return hauteurMoyenneDesHetres(e.state) / hauteurMoyenneDesHetres(v.state);
-    });
-    return gains.reduce((a, b) => a + b, 0) / gains.length;
+    const liste = gains.get(ans) ?? [];
+    return liste.length ? liste.reduce((a, b) => a + b, 0) / liste.length : 0;
   };
 
   it("aucune action n'est refusée dans les deux parties", () => {
