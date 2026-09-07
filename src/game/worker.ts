@@ -465,6 +465,25 @@ function stepWeeks(n: number) {
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
     if (ticked.incendie) pendingIncendie = ticked.incendie;
+    // Les aides publiques, une fois l'an. On raconte surtout le cas où elles
+    // NE tombent PAS : perdre l'éligibilité en plantant un arbre de trop est
+    // la décision que ce mécanisme met sur la table (aides.ts).
+    if (ticked.aides) {
+      const a = ticked.aides;
+      if (a.eligible) {
+        event(
+          "🇪🇺",
+          `Aides PAC : ${a.totalEur.toFixed(0)} € (${a.densiteParHa.toFixed(0)} arbres/ha, ` +
+            `${(a.partIae * 100).toFixed(0)} % d'infrastructures agroécologiques)`,
+        );
+      } else {
+        event(
+          "🚫",
+          `Aucune aide PAC : ${a.densiteParHa.toFixed(0)} arbres/ha dépasse le plafond de 100. ` +
+            `La parcelle n'est plus agricole aux yeux de la PAC, c'est un boisement`,
+        );
+      }
+    }
     state = beginWeek(ticked.state);
     const finis =
       before.economy.saisonniersFinSemaine.length - state.economy.saisonniersFinSemaine.length;

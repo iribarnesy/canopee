@@ -9,6 +9,7 @@
  */
 
 import type { GesteVisible } from "./actions";
+import { type AidesAnnuelles, aidesAnnuelles } from "./aides";
 import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
   type CelluleSousLeTronc,
@@ -305,6 +306,11 @@ export interface TickResult {
   lumiereAuSol: Float32Array;
   /** chandelles abattues cette semaine, avec où et comment elles sont tombées */
   chutes: ChuteDeChandelle[];
+  /**
+   * Aides publiques versées cette semaine, s'il y en a eu. Une fois l'an, et
+   * seulement si l'économie compte dans cette partie (aides.ts).
+   */
+  aides?: AidesAnnuelles;
 }
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
@@ -1972,6 +1978,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
+  // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
+  // Versées à la semaine du recrutement, qui vaut « début de campagne ». Elles
+  // ne tombent que si l'économie compte dans cette partie : sans elle, le
+  // compte tourne pour information et les aides le fausseraient (aides.ts).
+  let aidesVersees: AidesAnnuelles | undefined;
+  let treasuryApresAides = state.economy.treasuryEur;
+  if (week === RECRUITMENT_WEEK && state.economy.active) {
+    const surfaceHa = (station.coteM * station.coteM) / 10_000;
+    let couvertSomme = 0;
+    for (let i = 0; i < nCells; i++) couvertSomme += 1 - (groundLight[i] ?? 1);
+    aidesVersees = aidesAnnuelles(
+      surfaceHa,
+      nextTrees.filter((t) => t.alive).length,
+      couvertSomme / nCells,
+    );
+    treasuryApresAides += aidesVersees.totalEur;
+  }
+
   let nextTreeId = state.nextTreeId;
   // Le feu de la semaine arme la levée de l'année : le drapeau reste levé
   // jusqu'à la semaine de recrutement, où la banque se réveille (banqueGraines.ts).
@@ -2031,6 +2055,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     state: {
       ...state,
       week: state.week + 1,
+      // Les aides tombent une fois l'an sur la trésorerie ; le reste du temps
+      // l'économie traverse le tick sans changer (aides.ts).
+      economy: aidesVersees ? { ...state.economy, treasuryEur: treasuryApresAides } : state.economy,
       soil: {
         waterMm,
         excessMm,
@@ -2086,6 +2113,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     },
     morts,
     chutes,
+    aides: aidesVersees,
     incendie,
     gestes,
     // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne
