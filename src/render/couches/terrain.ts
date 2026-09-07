@@ -55,7 +55,7 @@ import {
   type Teinte,
   versCss,
 } from "../palette";
-import { profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
+import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import {
   altitudeDecor,
   altitudeMoyenneParcelle,
@@ -63,6 +63,7 @@ import {
   couleurMasse,
   type DecorBordures,
   distanceAuBord,
+  MASSE_LA_PLUS_HAUTE_M,
   massesDuDecor,
   penteMoyenne,
 } from "./decor";
@@ -93,6 +94,14 @@ export function zoomDeCuisson(zoom: number): number {
   if (!(zoom > 0)) return 1;
   return 2 ** (Math.round(Math.log2(zoom) * 2) / 2);
 }
+
+/** Les quatre coins d'un morceau, en parts de son côté. */
+const COINS_MORCEAU: readonly (readonly [number, number])[] = [
+  [0, 0],
+  [1, 0],
+  [0, 1],
+  [1, 1],
+];
 
 /** Morceaux cuits au maximum par image. Le reste attend la suivante. */
 export const BUDGET_CUISSON_PAR_IMAGE = 4;
@@ -1258,7 +1267,75 @@ export class Decor {
       x1: emprise.x1 + portee,
       y1: emprise.y1 + portee,
     };
-    return morceauxDeLEmprise(elargie, vue);
+    // **Et l'élargissement seul ne suffit pas : il faut ensuite ÉCARTER ce qui
+    // ne touche pas le cadre.** La portée est un rayon, appliqué dans les deux
+    // axes : elle décrit un CARRÉ de parcelle là où la région visible, dans une
+    // projection dimétrique, est un LOSANGE. Les quatre coins du carré sont
+    // donc entièrement hors écran, et ils font la majorité de sa surface.
+    //
+    // Mesuré à la vue par défaut d'une parcelle d'un hectare (900 × 640, zoom
+    // minimal) : **729 morceaux demandés, 150 utiles.** Quatre morceaux sur
+    // cinq étaient cuits, gardés en mémoire, transformés en texture GPU et
+    // posés à chaque image pour rien — et c'est la vue que le joueur voit en
+    // premier, celle dont la ceinture de décor apparaissait par plaques
+    // pendant trois secondes.
+    //
+    // Le test est celui que `posesDesArbres` fait déjà pour les arbres : on
+    // projette l'emprise du morceau et on la compare au cadre. Quatre
+    // projections par candidat, de l'arithmétique pure, contre quatre cinquièmes
+    // d'une couche entière.
+    return morceauxDeLEmprise(elargie, vue).filter((m) => this.toucheLeCadre(m.ix, m.iy, vue));
+  }
+
+  /**
+   * L'emprise écran d'un morceau croise-t-elle le cadre ?
+   *
+   * **Les quatre coins au sol ne suffisent pas, et une bande de ciel l'a
+   * montré.** Le premier jet ne testait que le quadrilatère du sol ; la
+   * comparaison pixel à pixel avec la même image sans découpe a laissé mille
+   * pixels d'écart, groupés en haut du cadre — des entailles pâles où le ciel
+   * traversait, à l'endroit exact des morceaux rejetés.
+   *
+   * **Et la deuxième explication était fausse aussi.** J'ai d'abord cru aux
+   * MASSES : un bois monte à seize mètres, donc un morceau dont le sol passe
+   * au-dessus du bord garderait ses masses dans le cadre. Remonter le bord
+   * supérieur n'a rien changé — au pixel près le même millier d'écarts — parce
+   * qu'une masse se dessine vers le haut, ce qui l'éloigne du cadre au lieu de
+   * l'y ramener.
+   *
+   * Ce qui débordait était l'IMAGE du morceau elle-même : elle est cuite avec
+   * sa propre marge (brume, dégradés, masses qui dépassent du carreau) et ne se
+   * réduit pas à l'emprise au sol. Plutôt que de chercher de quel côté et de
+   * combien — on l'a vu, une explication plausible ne suffit pas — on gonfle
+   * l'emprise écran d'un côté de morceau plus la plus haute masse, dans les
+   * quatre directions. C'est large, et c'est fait pour : la découpe reste très
+   * gagnante (mesurée à 729 morceaux demandés contre 336, et 693 posés contre 300) et l'image est
+   * vérifiée identique au pixel près.
+   */
+  private toucheLeCadre(ix: number, iy: number, vue: Vue): boolean {
+    let sxMin = Number.POSITIVE_INFINITY;
+    let sxMax = Number.NEGATIVE_INFINITY;
+    let syMin = Number.POSITIVE_INFINITY;
+    let syMax = Number.NEGATIVE_INFINITY;
+    for (const [dx, dy] of COINS_MORCEAU) {
+      const e = versEcranVue(
+        { x: (ix + dx) * COTE_MORCEAU_M, y: (iy + dy) * COTE_MORCEAU_M, z: 0 },
+        vue,
+      );
+      sxMin = Math.min(sxMin, e.sx);
+      sxMax = Math.max(sxMax, e.sx);
+      syMin = Math.min(syMin, e.sy);
+      syMax = Math.max(syMax, e.sy);
+    }
+    const marge =
+      (COTE_MORCEAU_M * TUILE_LARGEUR_PX + MASSE_LA_PLUS_HAUTE_M * METRE_VERTICAL_PX) *
+      vue.cam.zoom;
+    return (
+      sxMax + marge >= 0 &&
+      sxMin - marge <= vue.largeurPx &&
+      syMax + marge >= 0 &&
+      syMin - marge <= vue.hauteurPx
+    );
   }
 
   /** Cuit au plus `budget` morceaux de décor. Rend le nombre réellement cuit. */

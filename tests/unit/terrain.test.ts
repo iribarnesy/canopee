@@ -19,10 +19,12 @@ import {
   vueInitiale,
   zoomer,
 } from "../../src/render/camera";
+import type { DecorBordures } from "../../src/render/couches/decor";
 import {
   COTE_MORCEAU_M,
   cotePavage,
   cuireMorceau,
+  Decor,
   type DonneesSol,
   morceauxDeLEmprise,
   morceauxParCote,
@@ -458,5 +460,96 @@ describe("l'eau libre, qui ne s'interpole pas", () => {
     cuireMorceau(solPlat(), 1, 1, 20, vue(), reference.fabriquer);
     cuireMorceau(solPlat({ debordementMm }), 1, 1, 20, vue(), bouchon.fabriquer);
     expect(bouchon.compte.remplissages).toBe(reference.compte.remplissages);
+  });
+});
+
+describe("le décor ne cuit pas ce qui ne touche pas le cadre", () => {
+  const fabriquer = (l: number, h: number) =>
+    ({
+      width: Math.max(1, Math.ceil(l)),
+      height: Math.max(1, Math.ceil(h)),
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        lineWidth: 0,
+        lineCap: "",
+        globalAlpha: 1,
+        beginPath() {},
+        moveTo() {},
+        lineTo() {},
+        closePath() {},
+        ellipse() {},
+        arc() {},
+        save() {},
+        restore() {},
+        translate() {},
+        rotate() {},
+        rect() {},
+        fill() {},
+        stroke() {},
+        clearRect() {},
+        fillRect() {},
+        drawImage() {},
+        clip() {},
+        createLinearGradient: () => ({ addColorStop() {} }),
+        createRadialGradient: () => ({ addColorStop() {} }),
+        getImageData: () => ({ data: new Uint8ClampedArray(4) }),
+      }),
+    }) as unknown as HTMLCanvasElement;
+
+  const bordures = {
+    nord: "pre",
+    est: "foret",
+    sud: "culture",
+    ouest: "friche",
+  } as unknown as DecorBordures;
+
+  /**
+   * **La portée est un rayon, la région visible est un losange.** Élargir
+   * l'emprise de la parcelle d'un scalaire dans les deux axes décrit un CARRÉ,
+   * dont les quatre coins sont entièrement hors écran — et ils font la majorité
+   * de sa surface. Mesuré à la vue par défaut d'un hectare : 729 morceaux
+   * demandés pour 150 réellement à l'écran.
+   *
+   * Quatre morceaux sur cinq étaient donc cuits, gardés en mémoire, transformés
+   * en texture GPU et posés à chaque image pour rien — à la vue que le joueur
+   * voit en premier.
+   */
+  it("demande beaucoup moins de morceaux que le carré de la portée n'en contient", () => {
+    const COTE = 100;
+    const decor = new Decor(fabriquer, COTE, bordures, new Array(COTE * COTE).fill(0));
+    const vue = vueInitiale(COTE, 900, 640, 6);
+    const demandes = decor.rafraichir(vue);
+    expect(demandes).toBeGreaterThan(0);
+    // Le carré de la portée en contient 729. On exige moins de la moitié : la
+    // marge de sécurité de la découpe est large exprès, et l'essai ne doit pas
+    // casser au premier réglage.
+    expect(demandes).toBeLessThan(365);
+  });
+
+  /**
+   * Et la découpe ne doit RIEN retirer de visible. C'est vérifié à l'image près
+   * dans le navigateur — la même vue, avec et sans découpe, identique au pixel
+   * près — mais l'essai garde le bord : les morceaux qui touchent le cadre
+   * doivent tous être demandés, y compris ceux qui n'en montrent qu'un coin.
+   */
+  it("garde les morceaux du bord, ceux dont un coin seulement touche le cadre", () => {
+    const COTE = 100;
+    const decor = new Decor(fabriquer, COTE, bordures, new Array(COTE * COTE).fill(0));
+    const vue = vueInitiale(COTE, 900, 640, 6);
+    let reste = decor.rafraichir(vue);
+    let tours = 0;
+    while (reste > 0 && tours < 500) {
+      decor.cuire(vue, 64);
+      reste = decor.rafraichir(vue);
+      tours++;
+    }
+    const poses = decor.aPoser(vue);
+    // La ceinture fait le tour : il y a des morceaux des quatre côtés de la
+    // parcelle, donc des indices négatifs ET au-delà du côté.
+    expect(poses.some((m) => m.ix < 0)).toBe(true);
+    expect(poses.some((m) => m.iy < 0)).toBe(true);
+    expect(poses.some((m) => m.ix * COTE_MORCEAU_M >= COTE)).toBe(true);
+    expect(poses.some((m) => m.iy * COTE_MORCEAU_M >= COTE)).toBe(true);
   });
 });

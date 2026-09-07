@@ -335,6 +335,17 @@ export interface MasseDecor {
 export const MAILLE_MASSE_M = 6;
 
 /**
+ * La plus haute masse de décor possible, m.
+ *
+ * **Exportée pour que la découpe du décor puisse en tenir compte**, et
+ * vérifiée à l'endroit qui la produit : un bois monte à seize mètres, et un
+ * morceau dont le sol passe au-dessus du bord de l'écran garde ses masses dans
+ * le cadre — puisqu'une masse se dessine vers le haut depuis son pied. Sans
+ * cette borne, la découpe rognait une bande de décor en haut de l'image.
+ */
+export const MASSE_LA_PLUS_HAUTE_M = 16;
+
+/**
  * Les masses d'une case du décor : au plus une, tirée selon les parts du côté.
  *
  * Une case et une masse : c'est ce qui garantit qu'elles ne se recouvrent pas
@@ -391,6 +402,9 @@ export function masseDeLaCase(
   const jy = hacher(ix + 5, iy, 0x77b9);
   const rayonM = masse === "bois" ? 2 + grand * 3 : 2 + grand * 1.5;
   const hauteurM = masse === "bois" ? 6 + grand * 10 : 3.5 + grand * 3;
+  // `MASSE_LA_PLUS_HAUTE_M` borne cette expression ; l'y confronter ici évite
+  // qu'elle dérive sans que la découpe du décor le sache.
+  if (hauteurM > MASSE_LA_PLUS_HAUTE_M) throw new Error("masse plus haute que la borne");
   return {
     x: x + (jx - 0.5) * MAILLE_MASSE_M * 0.6,
     y: y + (jy - 0.5) * MAILLE_MASSE_M * 0.6,

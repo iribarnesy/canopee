@@ -620,6 +620,27 @@ D'où la règle de méthode : **quand une scène « fait synthétique », cherch
 d'abord la grandeur débranchée, pas le réglage à retoucher.** Un rendu qui
 n'affiche pas ce que le moteur sait ne se corrige pas en changeant une teinte.
 
+**Le décor cuisait quatre fois trop.** `Decor.morceauxVisibles` élargissait
+l'emprise de la parcelle d'une PORTÉE scalaire dans les deux axes — donc un
+carré, là où la région visible d'une projection dimétrique est un losange. Les
+quatre coins du carré sont entièrement hors écran et font la majorité de sa
+surface : mesuré à la vue par défaut d'un hectare, **729 morceaux demandés pour
+150 réellement à l'écran**. Quatre sur cinq étaient cuits, gardés en mémoire,
+transformés en texture GPU et posés à chaque image pour rien — à la vue que le
+joueur voit en premier, celle dont la ceinture apparaissait par plaques pendant
+trois secondes. La découpe teste maintenant chaque morceau contre le cadre,
+comme `posesDesArbres` le fait pour les arbres : 336 demandés, image vérifiée
+identique au pixel près.
+
+Là encore une explication plausible a coûté une passe. La première découpe, sur
+les quatre coins au sol, laissait des entailles de ciel en haut du cadre ; j'ai
+accusé les MASSES du décor — un bois monte à seize mètres, donc un morceau dont
+le sol passe au-dessus du bord garderait ses masses visibles. Remonter le bord
+n'a rien changé, au pixel près : une masse se dessine vers le haut, ce qui
+l'éloigne du cadre. Ce qui débordait était l'IMAGE du morceau, cuite avec sa
+propre marge. On gonfle donc l'emprise dans les quatre directions plutôt que de
+chercher de quel côté — large exprès, et toujours très gagnant.
+
 **Et la grandeur débranchée n'est pas toujours du moteur** : elle peut venir du
 rendu lui-même. Les houppiers à ramure opposée sortaient en chapelets de perles
 — des bouquets empilés en colonnes verticales — parce que la projection de la
@@ -685,11 +706,15 @@ manque permanent — l'écran montre quelque chose, donc personne ne cherche plu
   seul dégât du modèle qui ne l'était pas du tout. Les deux sont branchés.
   L'allométrie maison du bourrelet (`rayonAuPiedM × 2,2`) a disparu du rendu,
   et le seuil binaire de cavité avec elle.
-- **Le hors-parcelle disparaît au dézoom lointain.** Constaté sur la vue
-  interactive : au-delà d'un certain recul, la nappe de décor ne couvre plus le
-  cadre et le ciel reste nu autour de la parcelle. Ce n'est pas la pose — elle
-  a été prouvée pixel pour pixel identique après sa réécriture — c'est
-  `Decor.aPoser` qui ne rend plus rien à cette échelle. À reprendre avec le
+- ~~Le hors-parcelle disparaît au dézoom lointain~~ — **le défaut n'existait
+  pas, et il faut le dire aussi.** Vérifié : `vueInitiale` démarre à `zoomMin`
+  et `zoomer` s'y arrête, donc **il n'y a pas de dézoom au-delà de la parcelle
+  entière**. Ce que j'avais pris pour un dézoom était un recentrage borné — au
+  zoom minimal, `zoomer` recentre la vue — dans une séquence de gestes où un
+  glissement avait précédé. Deux captures comparées venaient en réalité de deux
+  cadrages différents.
+  La mesure a en revanche trouvé un vrai gâchis au même endroit : voir la
+  découpe du décor ci-dessous. À reprendre avec le
   décor, pas avec le poseur.
 - **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
 - **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
