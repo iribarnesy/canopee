@@ -60,6 +60,7 @@ export interface GameApi {
     partBassin: number,
     maturationAns: number,
     anneeDepart: number,
+    economie: boolean,
   ) => void;
   resume: (save: SaveGame) => void;
   dispatch: (action: ActionSansSemaine) => void;
@@ -160,6 +161,7 @@ export function useGame(): GameApi {
       partBassin,
       maturationAns,
       anneeDepart,
+      economie,
     ) => {
       ensureWorker();
       setRefusals([]);
@@ -178,6 +180,7 @@ export function useGame(): GameApi {
         partBassin,
         maturationAns,
         anneeDepart,
+        economie,
       });
       send({ type: "autoHarvest", enabled: true });
       setAutoHarvestState(true);

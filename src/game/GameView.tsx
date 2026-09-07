@@ -396,6 +396,7 @@ function StartScreen({
     partBassin: number,
     maturationAns: number,
     anneeDepart: number,
+    economie: boolean,
   ) => void;
   onResume: () => void;
 }) {
@@ -423,6 +424,13 @@ function StartScreen({
   const [nappeCm, setNappeCm] = useState(STATIONS_V0[0]?.station.profondeurNappeEquilibreCm ?? 300);
   const [terrain, setTerrain] = useState<number[] | undefined>(undefined);
   const [maturationAns, setMaturationAns] = useState(0);
+  /**
+   * L'argent contraint-il la partie ? Certaines questions ne sont pas
+   * économiques — une succession sur deux siècles, l'effet du chêne-liège sur
+   * le feu — et devoir d'abord tenir une trésorerie pour y répondre n'ajoute
+   * pas de réalisme (actions.ts).
+   */
+  const [economie, setEconomie] = useState(true);
   const save = loadSave();
 
   const choisie = STATIONS_V0.find((s) => s.station.id === stationId);
@@ -1073,6 +1081,29 @@ function StartScreen({
             title="Deux parties avec la même graine se déroulent à l'identique."
           />
         </div>
+        <div className="seg" style={{ marginTop: 8 }}>
+          <button
+            type="button"
+            style={btn(economie)}
+            onClick={() => setEconomie(true)}
+            title="La trésorerie contraint : plants à payer, découvert limité, faillite possible"
+          >
+            💶 L'argent compte
+          </button>
+          <button
+            type="button"
+            style={btn(!economie)}
+            onClick={() => setEconomie(false)}
+            title="Le compte tourne et s'affiche, mais ne bloque rien : ni découvert refusé, ni faillite"
+          >
+            🌱 Écologie seule
+          </button>
+        </div>
+        <p className="glose" style={{ minHeight: 0 }}>
+          {economie
+            ? "Les plants se paient, le découvert est plafonné, et une trésorerie trop longtemps négative met fin à la partie."
+            : "Le compte continue de tourner et reste affiché — savoir ce qu'aurait coûté une conduite est instructif — mais il ne bloque plus rien. Le plafond d'heures de travail, lui, reste : une journée fait le même nombre d'heures qu'on ait de l'argent ou non."}
+        </p>
       </section>
 
       <section className="carte">
@@ -1201,6 +1232,7 @@ function StartScreen({
               partBassin,
               maturationAns,
               anneeDepart,
+              economie,
             )
           }
         >
