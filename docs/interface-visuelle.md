@@ -974,6 +974,93 @@ Une bande de contexte sur les quatre côtés, dérivée de `bordures` : ça ancr
 la parcelle dans un paysage au lieu de la faire flotter, et ça rend visible une
 donnée qui décide de tout (semis, gibier, vent, feu). `M`.
 
+**Refait le 2026-09-07, sur un signalement en trois mots** : « je vois encore
+plein de taches sur l'extérieur de la parcelle, c'est quoi ? ». C'étaient les
+bosquets du décor, et le diagnostic tient en une phrase — un bois dessiné comme
+une COLLECTION D'OBJETS ne peut pas se lire autrement que comme des taches.
+
+**Cinq réglages, cinq échecs, et le même échec cinq fois.**
+
+| essai | ce qu'on voyait |
+|---|---|
+| rayon 2–5 m, hauteur `6 + hasard × 10` | des ovales isolés d'un seul aplat : des **taches** |
+| rayon = 0,38 × hauteur d'essence | des boules de 20 m à peine recouvrantes : un **éboulis de galets** |
+| rayon d'une cime + hauteur d'essence | un hêtre de 30 m dans 4 m de large : des **quilles** |
+| rayon dérivé d'un aplatissement voulu | des **nénuphars** qui se chevauchent, encore dénombrables |
+| modelé presque supprimé | les **taches** du départ, en plus large |
+
+Le §0 de `couches/decor.ts` portait pourtant la réponse depuis le premier
+jour : « de loin, une forêt n'a pas d'arbres, elle a une **lisière et une
+surface** ». Le dessin contredisait son propre principe. Une surface n'a pas de
+contour à compter : elle a une altitude et un bord.
+
+**Ce qui est dessiné maintenant** : un champ de canopée (`canopee`), tracé par
+les mêmes quads de quatre mètres que la nappe, à quatre coins et trié par
+profondeur — donc continu par construction. La hauteur s'annule avec la
+couverture, ce qui fait de la lisière une PENTE et non un mur. Deux passes par
+quad : la jupe (la face verticale, l'ombre du sous-bois) puis le dessus, avec le
+grain du sol. Les masses ne portent plus que les BÂTIMENTS, seule chose du
+décor qui soit vraiment un objet posé sur le sol et qui se compte.
+
+**La cohérence avec le voisinage choisi**, qui était la deuxième demande. Elle
+existait à moitié et je l'avais niée à tort : `GameState` porte un `paysageId`
+par côté (`paysage.ts`, `Bordures`), et les trois parts — boisé, cultivé,
+urbanisé — arrivaient déjà au rendu. Ce qui était jeté en route, ce sont les
+**semenciers** : `apercu-scene.ts` réduisait chaque côté à trois nombres, donc
+un massif de pins de lande se dessinait comme une hêtraie. Ils voyagent
+maintenant, et la canopée en tire son essence (couleur de la fiche graphique) et
+sa hauteur (`hauteurMaxM` du moteur) par peuplement de vingt-six mètres. C'est
+la même leçon que les houppiers du §4 : **l'unité de dessin doit porter
+l'identité de l'espèce**, sinon le problème n'a fait que monter d'un cran.
+
+**Rester hors du focus**, la troisième demande — « faut trouver un moyen pour
+pas que le joueur croie que c'est à lui ». Trois moyens existaient (brume,
+désaturation, contraste écrasé) et ils disent tous « c'est loin », aucun ne dit
+« c'est à quelqu'un d'autre ». Le quatrième, ajouté, est une **opacité de 0,78
+sur la couche** : ce qu'il y a derrière le décor est le fond de brume de
+l'interface, donc le hors-parcelle se lit comme vu à travers quelque chose, et
+la limite de la parcelle devient une frontière entre deux natures d'image. Posée
+sur la couche Pixi, donc gratuite et sans recuisson.
+
+**Deux corrections de découpe** trouvées en chemin :
+
+- la **levée est plafonnée à sept mètres**. Dessinée à sa hauteur vraie, une
+  canopée de trente mètres présentait au bord du bois une jupe de cent dix
+  pixels d'un seul ton, et le décor sortait en facettes de cristal. La hauteur
+  vraie n'apporte rien au joueur et coûte un mur autour de sa parcelle ; ce qui
+  survit du plafonnement, c'est l'ORDRE (une haie se soulève de trois mètres, un
+  massif du maximum) et la couleur, qui est là où est la cohérence ;
+- chaque morceau de décor **redessine la canopée de ses voisins** sur neuf
+  mètres. Une canopée soulevée se projette dans la zone d'écran du morceau d'à
+  côté, et la nappe opaque de celui-là l'effaçait : le hors-parcelle sortait en
+  filet régulier de bandes pâles, à la période exacte des morceaux de seize
+  mètres.
+
+**Et deux fausses pistes, mesurées fausses** avant celle-là : la variation des
+champs (éteinte, image identique au pixel) et le réseau du bruit de grumeau
+(une octave ajoutée pour rien — elle est restée, elle ne nuit pas). C'est la
+troisième fois de ce chantier qu'une explication convaincante ne survit pas à la
+mesure, et la troisième fois que mesurer coûte moins cher que raisonner.
+
+**Ce qui reste ouvert sur le décor :**
+
+- **un liseré pâle sur les deux bords lointains de la parcelle.** J'ai écarté
+  par la mesure la variation des champs, le réseau du bruit, et le joint entre
+  les images (un mètre de recouvrement du décor sous le terrain ne l'a pas
+  supprimé). Le suspect suivant est le masque d'ombre, découpé à la silhouette
+  de la parcelle — non vérifié, donc non affirmé.
+- **le décor ignore la saison.** Sa cuisson ne reçoit pas la semaine, donc les
+  bois voisins sont verts en janvier. Les couleurs d'automne et d'hiver sont
+  dans les fiches ; c'est un branchement, pas une inconnue.
+- **le moteur ne distingue pas une haie d'un peuplement.** `partBoisee` et
+  `semenciers` ne disent pas si les 35 % boisés d'un bocage sont des haies de
+  trois mètres ou des bosquets de vingt. Le rendu s'en tire par l'essence, ce
+  qui est une approximation défendable — une haie de bocage est faite d'épine
+  noire et d'aubépine, un massif de hêtres et de charmes.
+- **`semisParAn` sert de classement d'abondance**, faute de mieux : c'est un
+  taux de semis, pas une part de couvert. Une ronce qui sème beaucoup pèse donc
+  autant qu'un hêtre qui sème peu.
+
 ### 5.9 Compte de ce qu'il faut produire (révisé pour D4)
 
 La composition en pièces (D5) et le squelette généré (D4) changent la nature du

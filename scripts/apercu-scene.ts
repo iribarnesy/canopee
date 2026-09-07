@@ -384,13 +384,26 @@ function figerLeSol(
       state.semainesDeFroid,
     ),
     // Les quatre bordures, réduites à ce dont le décor a besoin : trois parts
-    // par côté. Le rendu n'a que faire des semenciers ou du gibier, et lui
-    // passer le `Paysage` entier lui donnerait accès à des données de moteur
-    // qu'il n'a aucune raison de connaître (D6).
+    // et les ESSENCES, par côté. Le rendu n'a toujours que faire du gibier ou
+    // des dépôts d'azote (D6) — mais les semenciers, si : ce sont eux qui
+    // disent de quoi est fait le bois d'à côté, et sans eux un massif de pins
+    // de lande se dessinait comme une hêtraie. Le poids est le `semisParAn` du
+    // paysage, tel quel : c'est le seul classement d'abondance disponible.
     bordures: Object.fromEntries(
       (["nord", "est", "sud", "ouest"] as const).map((cote) => {
         const p = getPaysage(station.bordures[cote]);
-        return [cote, { boise: p.partBoisee, cultive: p.partCultivee, urbain: p.partUrbaine }];
+        return [
+          cote,
+          {
+            boise: p.partBoisee,
+            cultive: p.partCultivee,
+            urbain: p.partUrbaine,
+            especes: p.semenciers.map((s) => ({
+              especeId: s.especeId,
+              poids: s.semisParAn,
+            })),
+          },
+        ];
       }),
     ),
   };

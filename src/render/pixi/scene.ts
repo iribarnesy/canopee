@@ -46,7 +46,7 @@ import {
   separerLeFourre,
   tailleDePose,
 } from "../couches/arbres";
-import { BRUME, type DecorBordures } from "../couches/decor";
+import { BRUME, type DecorBordures, OPACITE_DU_DECOR } from "../couches/decor";
 import {
   type ArbreOmbre,
   cuireTachesOmbre,
@@ -228,6 +228,16 @@ export class SceneParcelle {
       preference: "webgl",
     });
     parent.appendChild(this.app.canvas as HTMLCanvasElement);
+    // **Le décor est TRANSPARENT, et c'est une demande explicite** : « faut
+    // trouver un moyen pour pas que le joueur croie que c'est à lui ». La
+    // désaturation et le contraste écrasé disaient déjà « au loin » ; ils ne
+    // disaient pas « pas à toi ». Une opacité franchement inférieure à un le
+    // dit, parce qu'elle est la seule de ces trois choses qu'un joueur ne peut
+    // pas prendre pour une variation de terrain : ce qui est derrière le décor,
+    // c'est le fond de brume de l'interface, donc le décor se lit comme une vue
+    // à travers quelque chose. Posée sur la COUCHE et non dans les couleurs
+    // cuites : c'est gratuit, ça ne recuit rien, et ça se règle d'un nombre.
+    this.couches.decor.alpha = OPACITE_DU_DECOR;
     this.app.stage.addChild(
       this.couches.decor,
       this.couches.sol,

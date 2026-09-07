@@ -65,13 +65,19 @@ import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } fro
 import {
   altitudeDecor,
   altitudeMoyenneParcelle,
+  CANOPEE_LA_PLUS_BASSE_M,
+  CONTRASTE_CANOPEE,
+  canopee,
   couleurDecor,
   couleurMasse,
+  DEBORD_CANOPEE_M,
   type DecorBordures,
   distanceAuBord,
+  GRAIN_CANOPEE,
   MASSE_LA_PLUS_HAUTE_M,
   massesDuDecor,
   penteMoyenne,
+  SOUS_BOIS,
 } from "./decor";
 import { polygonesEau } from "./eau";
 import { type Brin, brinsDeLaCellule, clarteDuMotif, densiteTapis } from "./tapis";
@@ -1245,6 +1251,34 @@ export interface MorceauDecor {
  * Cuit un morceau de décor. Rend `undefined` si le morceau est entièrement
  * dans la parcelle — il n'y a alors rien à dessiner, c'est du terrain.
  */
+/**
+ * Vrai si le quad de décor est assez à l'intérieur de la parcelle pour être
+ * sauté — c'est du terrain, et le terrain se dessine par-dessus.
+ *
+ * **Par les quatre coins, et avec un recouvrement**, pour deux raisons dont la
+ * seconde est une précaution et non un remède constaté. D'abord un quad à
+ * cheval sur la limite doit être dessiné en entier, sinon il reste dehors une
+ * bande non couverte de quatre mètres — celle-là est réelle et corrigée ici.
+ * Ensuite les quads sont alignés sur la maille des morceaux, donc leur bord
+ * tombe exactement sur la limite d'une parcelle de cent mètres, et deux images
+ * qui se touchent au pixel peuvent laisser passer un demi-pixel
+ * d'anticrénelage ; un mètre de recouvrement le ferme et ne coûte rien,
+ * puisque le terrain le couvre.
+ *
+ * **Ce recouvrement n'explique PAS le liseré pâle** qu'on voit sur les deux
+ * bords lointains de la parcelle : il est toujours là après. Voir la liste des
+ * défauts ouverts du §5.6 — j'ai écarté par la mesure la variation des champs
+ * et le réseau du bruit, puis ce joint-ci, et je n'ai pas voulu affirmer une
+ * quatrième explication sans l'avoir vérifiée.
+ */
+function quadEntierementDansLaParcelle(x: number, y: number, pas: number, coteM: number): boolean {
+  const r = RECOUVREMENT_DECOR_M;
+  return x >= r && y >= r && x + pas <= coteM - r && y + pas <= coteM - r;
+}
+
+/** De combien le décor mord sur la parcelle, pour ne pas laisser de joint, m. */
+const RECOUVREMENT_DECOR_M = 1;
+
 export function cuireMorceauDecor(
   bordures: DecorBordures,
   altitudesM: readonly number[],
@@ -1284,12 +1318,16 @@ export function cuireMorceauDecor(
   let maxSx = Number.NEGATIVE_INFINITY;
   let minSy = Number.POSITIVE_INFINITY;
   let maxSy = Number.NEGATIVE_INFINITY;
-  const hautMax = 22; // la plus haute masse possible, cf. `masseDeLaCase`
+  // **La borne vient de `decor.ts` et n'est plus recopiée ici.** Elle valait 22
+  // en dur avec un commentaire renvoyant à `masseDeLaCase` : deux copies d'un
+  // même seuil, dont l'une a dérivé dès que la hauteur des bois est devenue
+  // celle de leur essence. C'est le §2.1 en petit.
+  const hautMax = MASSE_LA_PLUS_HAUTE_M;
   for (const [x, y] of [
-    [x0, y0],
-    [x1, y0],
-    [x0, y1],
-    [x1, y1],
+    [x0 - DEBORD_CANOPEE_M, y0 - DEBORD_CANOPEE_M],
+    [x1 + DEBORD_CANOPEE_M, y0 - DEBORD_CANOPEE_M],
+    [x0 - DEBORD_CANOPEE_M, y1 + DEBORD_CANOPEE_M],
+    [x1 + DEBORD_CANOPEE_M, y1 + DEBORD_CANOPEE_M],
   ] as const) {
     for (const h of [0, hautMax]) {
       const e = versEcranVue({ x, y, z: z(x, y) + h }, vue);
@@ -1337,10 +1375,10 @@ export function cuireMorceauDecor(
   for (const { x, y } of quads) {
     const cxM = x + pas / 2;
     const cyM = y + pas / 2;
-    // Le quad qui recouvre la parcelle est sauté : c'est du terrain, et le
-    // terrain se dessine par-dessus de toute façon. Le sauter évite qu'un
-    // liseré de décor déborde à l'intérieur de la limite.
-    if (distanceAuBord(cxM, cyM, coteM) <= 0) continue;
+    // Le quad ENTIÈREMENT dans la parcelle est sauté : c'est du terrain, et le
+    // terrain se dessine par-dessus de toute façon.
+    //
+    if (quadEntierementDansLaParcelle(x, y, pas, coteM)) continue;
     // Le même grain que le sol de la parcelle : sans lui, au zoom rapproché le
     // décor est un aplat parfaitement lisse contre un sol texturé, et la limite
     // de parcelle se lit comme une découpe de papier. Le grain est atténué —
@@ -1373,6 +1411,100 @@ export function cuireMorceauDecor(
     ctx.stroke();
   }
 
+  // ── La CANOPÉE ────────────────────────────────────────────────────────
+  //
+  // **Une surface, pas des bosquets** — voir `canopee` dans `decor.ts`, qui
+  // porte les cinq essais ratés qui ont mené là. Le dessin est celui de la
+  // nappe, à une altitude près : les mêmes quads de quatre mètres, les mêmes
+  // quatre coins à leur propre hauteur, le même tri par profondeur. C'est ce
+  // qui rend la canopée continue par construction, sans terrasse ni joint —
+  // pour la raison exacte qui l'a imposé à la nappe.
+  //
+  // Deux passes par quad : la JUPE d'abord — la face verticale entre le sol et
+  // le dessous de la canopée, qui est ce qu'on voit d'une lisière de face — et
+  // le dessus ensuite. Dans l'ordre du peintre, la jupe d'un quad de devant
+  // recouvre celle de derrière, donc il n'y a que le bord du bois qui reste
+  // visible : on n'a pas à chercher où est la lisière, la projection le fait.
+  // **Le débord n'est pas un confort, c'est la correction d'un défaut de
+  // découpe.** Chaque morceau de décor est une image posée sur les autres ;
+  // une canopée SOULEVÉE d'un morceau se projette dans la zone d'écran du
+  // morceau d'à côté, et la nappe opaque de celui-là l'effaçait. Sur la
+  // capture, le hors-parcelle sortait en filet régulier de bandes pâles — un
+  // motif de grillage, à la période exacte des morceaux de seize mètres.
+  //
+  // J'ai accusé deux innocents avant de le trouver : la variation des champs,
+  // éteinte pour rien (image identique au pixel), puis le réseau du bruit de
+  // grumeau, à qui j'ai ajouté une octave pour rien non plus. C'est en
+  // ÉTEIGNANT la canopée que la bonne piste est apparue — les bandes pâles
+  // disparaissaient avec elle, mais des joints fins restaient, ce qui désignait
+  // le découpage et pas le bruit. Mesurer coûte moins cher que raisonner, et
+  // c'est la troisième fois de ce chantier.
+  //
+  // Chaque morceau redessine donc la canopée des quads voisins qui se
+  // projettent chez lui. Le tracé est déterministe, donc deux morceaux
+  // dessinent exactement la même chose sur leur recouvrement.
+  const quadsCanopee: { x: number; y: number }[] = [];
+  for (let y = y0 - DEBORD_CANOPEE_M; y < y1 + DEBORD_CANOPEE_M; y += pas) {
+    for (let x = x0 - DEBORD_CANOPEE_M; x < x1 + DEBORD_CANOPEE_M; x += pas) {
+      quadsCanopee.push({ x, y });
+    }
+  }
+  quadsCanopee.sort((a, b) => profondeur(a.x, a.y, vue.cam) - profondeur(b.x, b.y, vue.cam));
+  for (const { x, y } of quadsCanopee) {
+    const cxM = x + pas / 2;
+    const cyM = y + pas / 2;
+    if (quadEntierementDansLaParcelle(x, y, pas, coteM)) continue;
+    const c = canopee(bordures, cxM, cyM, coteM);
+    if (c.hauteurM < CANOPEE_LA_PLUS_BASSE_M) continue;
+    const fond = couleurDecor(bordures, cxM, cyM, coteM);
+    const distance = distanceAuBord(cxM, cyM, coteM);
+    const dessus = couleurMasse("bois", fond, distance, CONTRASTE_CANOPEE, c.especeId);
+    const coins = (
+      [
+        [x, y],
+        [x + pas, y],
+        [x + pas, y + pas],
+        [x, y + pas],
+      ] as const
+    ).map(([qx, qy]) => {
+      const h = canopee(bordures, qx, qy, coteM).hauteurM;
+      const sol = versEcranVue({ x: qx, y: qy, z: z(qx, qy) }, vue);
+      const haut = versEcranVue({ x: qx, y: qy, z: z(qx, qy) + h }, vue);
+      return {
+        solX: sol.sx - decalage.dx,
+        solY: sol.sy - decalage.dy,
+        hautX: haut.sx - decalage.dx,
+        hautY: haut.sy - decalage.dy,
+      };
+    });
+    // La jupe : du sol au dessous de la canopée, plus sombre que le dessus.
+    // C'est l'ombre du sous-bois, et c'est elle qui donne son épaisseur au
+    // bois — sans elle la canopée flotte au-dessus du sol comme un nuage.
+    ctx.fillStyle = versCss(eclairer(dessus, SOUS_BOIS));
+    ctx.beginPath();
+    ctx.moveTo(coins[0]?.hautX ?? 0, coins[0]?.hautY ?? 0);
+    for (const k of [1, 2, 3]) ctx.lineTo(coins[k]?.hautX ?? 0, coins[k]?.hautY ?? 0);
+    for (const k of [3, 2, 1, 0]) ctx.lineTo(coins[k]?.solX ?? 0, coins[k]?.solY ?? 0);
+    ctx.closePath();
+    ctx.fill();
+    // Le dessus, avec le même grain que la nappe : une canopée parfaitement
+    // lisse est un plateau de plastique, et c'est le grain qui la fait lire
+    // comme du feuillage sans qu'on puisse compter les arbres.
+    const grain = 1 + (facteurGrain(cxM, cyM, TUILE_LARGEUR_PX * vue.cam.zoom) - 1) * GRAIN_CANOPEE;
+    const teinteDessus = versCss(eclairer(dessus, grain));
+    ctx.fillStyle = teinteDessus;
+    ctx.strokeStyle = teinteDessus;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    coins.forEach((coin, k) => {
+      if (k === 0) ctx.moveTo(coin.hautX, coin.hautY);
+      else ctx.lineTo(coin.hautX, coin.hautY);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
   // ── Les masses ────────────────────────────────────────────────────────
   for (const m of massesDuDecor(bordures, coteM, x0 - 8, y0 - 8, x1 + 8, y1 + 8)) {
     // Une masse n'appartient au morceau que si son PIED y est : sinon deux
@@ -1387,15 +1519,7 @@ export function cuireMorceauDecor(
     const rx = demiLargeur * 2 * m.rayonM * 0.5;
     const hy = (m.hauteurM * TUILE_HAUTEUR_PX * vue.cam.zoom) / 2;
     ctx.fillStyle = versCss(couleurMasse(m.masse, fond, distance));
-    if (m.masse === "bois") {
-      // Une masse boisée, c'est un dôme : à cette distance, aucun houppier
-      // individuel ne se lit, seule la silhouette du bosquet compte.
-      // Le dôme POSE sur le sol : centré à mi-hauteur, de demi-hauteur égale,
-      // il touche le pied au lieu de flotter au-dessus.
-      ctx.beginPath();
-      ctx.ellipse(px, py - hy * 0.5, rx, hy * 0.5, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (m.masse === "bati") {
+    if (m.masse === "bati") {
       // Un volume isométrique : le losange du toit, et les deux faces qui
       // descendent au sol. La demi-hauteur du losange se déduit de sa
       // demi-largeur par l'écrasement de la projection — la calculer autrement
