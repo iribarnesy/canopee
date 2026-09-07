@@ -31,6 +31,7 @@ import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, SceneParcelle } from "../render/pixi/scene";
 import type { Deformation } from "../render/temps/chute";
+import type { CelluleVoilee } from "../render/temps/voile";
 
 export interface VueParcelleProps {
   sol: DonneesSol;
@@ -53,6 +54,16 @@ export interface VueParcelleProps {
    * jeu au tour entre deux ellipses.
    */
   deformer?: (idArbre: number, maintenantMs: number, vue: Vue) => Deformation;
+  /**
+   * Quelles cellules voiler en cours d'animation, s'il y a lieu.
+   *
+   * Le pendant de `deformer` pour les gestes de zone, et interrogé une fois
+   * par image et non une fois par cellule : un front n'éclaire qu'un anneau,
+   * le lecteur rend donc la liste entière d'un coup. Pas de VUE ici — un voile
+   * est posé au sol, il ne dépend pas de l'angle de caméra, alors qu'un arbre
+   * qui tombe vers l'objectif ne pivote pas comme un arbre de profil.
+   */
+  voiler?: (maintenantMs: number) => readonly CelluleVoilee[];
 }
 
 /** Facteur de zoom par cran de molette. Un cran = un pas net, pas un glissement. */
@@ -152,6 +163,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         const horloge = performance.now();
         const rappel = p.deformer;
         scene.current?.deformerLesArbres(rappel ? (id) => rappel(id, horloge, v) : undefined);
+        scene.current?.voilerLesCellules(p.voiler?.(horloge) ?? []);
         const compte = scene.current?.rafraichir(
           {
             sol: p.sol,

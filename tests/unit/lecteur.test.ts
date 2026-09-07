@@ -15,9 +15,12 @@ import { planDEllipse } from "../../src/render/temps/ellipse";
 import {
   deformationDe,
   indexerLesChutes,
+  indexerLesVoiles,
   ouEnEst,
   PART_ECHELONNEE,
+  voilesEnCours,
 } from "../../src/render/temps/lecteur";
+import { TEINTE_DU_GESTE } from "../../src/render/temps/voile";
 
 const vue = (): Vue => vueInitiale(100, 900, 640, 0);
 
@@ -155,5 +158,93 @@ describe("les sujets d'un acte ne tombent pas en cadence", () => {
     const d = deformationDe(indexerLesChutes(plan), acte.debutMs + acte.dureeMs, 1, vue());
     const final = deformationDe(indexerLesChutes(plan), 1e6, 1, vue());
     expect(d.rotationRad).toBeCloseTo(final.rotationRad, 6);
+  });
+});
+
+describe("indexerLesVoiles / voilesEnCours", () => {
+  const cellules = [10 * 40 + 10, 10 * 40 + 11, 11 * 40 + 10, 11 * 40 + 11, 12 * 40 + 12];
+
+  it("ne retient QUE les gestes de zone", () => {
+    // Un broutage et un frottis sont des marques d'écorce que la classe de
+    // vignette porte déjà : les voiler dessinerait la même chose deux fois.
+    const plan = planDEllipse(
+      [
+        {
+          gestes: [
+            { type: "chauler", cellules },
+            { type: "brouter", ids: [1, 2] },
+            { type: "couper", ids: [3] },
+          ],
+        },
+      ],
+      3000,
+    );
+    const voiles = indexerLesVoiles(plan, 40);
+    expect(voiles.length).toBe(1);
+    expect(voiles[0]?.geste.type).toBe("chauler");
+  });
+
+  it("ne voile rien hors du créneau de son acte", () => {
+    const plan = planDEllipse([{ gestes: [{ type: "labourer", cellules }] }], 2000);
+    const voiles = indexerLesVoiles(plan, 40);
+    const acte = voiles[0]?.acte;
+    expect(acte).toBeDefined();
+    if (!acte) return;
+    expect(voilesEnCours(voiles, acte.debutMs - 1).length).toBe(0);
+    expect(voilesEnCours(voiles, acte.debutMs + acte.dureeMs).length).toBe(0);
+    expect(voilesEnCours(voiles, acte.debutMs + acte.dureeMs / 3).length).toBeGreaterThan(0);
+  });
+
+  it("ne laisse rien à la fin du plan", () => {
+    // La propriété du module de voile, vue depuis le lecteur : après l'ellipse,
+    // le sol ne porte plus que ce que la cuisson en dit.
+    const plan = planDEllipse([{ gestes: [{ type: "faucher", cellules }] }], 2000);
+    const voiles = indexerLesVoiles(plan, 40);
+    expect(voilesEnCours(voiles, plan.dureeMs).length).toBe(0);
+    expect(voilesEnCours(voiles, plan.dureeMs * 4).length).toBe(0);
+  });
+
+  it("porte la teinte du geste jusqu'au poseur", () => {
+    const plan = planDEllipse([{ gestes: [{ type: "epandreBrf", cellules }] }], 2000);
+    const voiles = indexerLesVoiles(plan, 40);
+    const acte = voiles[0]?.acte;
+    if (!acte) throw new Error("acte manquant");
+    const vues = voilesEnCours(voiles, acte.debutMs + acte.dureeMs / 4);
+    expect(vues.length).toBeGreaterThan(0);
+    for (const v of vues) expect(v.teinte).toEqual(TEINTE_DU_GESTE.epandreBrf);
+  });
+
+  it("calcule le balayage UNE fois et non par appel", () => {
+    // L'index rend le même tableau de rangs à chaque lecture : c'est ce qui
+    // évite dix mille racines carrées par image sur une fauche d'un hectare.
+    const plan = planDEllipse([{ gestes: [{ type: "chauler", cellules }] }], 2000);
+    const voiles = indexerLesVoiles(plan, 40);
+    const rangs = voiles[0]?.rangs;
+    expect(rangs).toBeDefined();
+    expect(voiles[0]?.rangs).toBe(rangs);
+  });
+
+  it("cumule deux gestes de zone quand leurs créneaux se recouvrent", () => {
+    // Deux actes ne se recouvrent pas dans le plan actuel, mais le lecteur ne
+    // doit pas le SUPPOSER : il additionne ce qu'il trouve.
+    const plan = planDEllipse(
+      [
+        {
+          gestes: [
+            { type: "chauler", cellules },
+            { type: "labourer", cellules: [20 * 40 + 20, 20 * 40 + 21] },
+          ],
+        },
+      ],
+      2000,
+    );
+    const voiles = indexerLesVoiles(plan, 40);
+    expect(voiles.length).toBe(2);
+    const vus = new Set<string>();
+    for (let t = 0; t < plan.dureeMs; t += 10) {
+      for (const v of voilesEnCours(voiles, t)) vus.add(`${v.cellule}`);
+    }
+    // Toutes les cellules des DEUX gestes ont été montrées au fil du plan.
+    expect(vus.size).toBe(cellules.length + 2);
   });
 });

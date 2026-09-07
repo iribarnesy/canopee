@@ -55,8 +55,11 @@ import {
   ombresAPoser,
 } from "../couches/ombres";
 import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
-import { versCss } from "../palette";
+import { cuireLosangeVoile } from "../couches/voile";
+import { versCss, versEntier } from "../palette";
+import { TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import { DEBOUT, type Deformation } from "../temps/chute";
+import type { CelluleVoilee } from "../temps/voile";
 
 /** Budget de cuisson par image, en morceaux de terrain. */
 export const BUDGET_TERRAIN = 4;
@@ -136,6 +139,7 @@ export class SceneParcelle {
   private readonly couches = {
     decor: new Container(),
     sol: new Container(),
+    voiles: new Container(),
     ombres: new Container(),
     arbres: new Container(),
   };
@@ -180,6 +184,17 @@ export class SceneParcelle {
    * au-dessus, dans `src/render/temps`, qui est pur et testé.
    */
   private deformer?: (idArbre: number) => Deformation;
+  /**
+   * Les cellules à voiler cette image, s'il y en a.
+   *
+   * Un TABLEAU et non une fonction, à la différence de la déformation : le
+   * lecteur rend d'un coup les quelques cellules qu'un front éclaire, alors
+   * qu'un arbre s'interroge par identifiant. Vide au repos, ce qui est l'état
+   * ordinaire.
+   */
+  private voiles: readonly CelluleVoilee[] = [];
+  /** Le losange blanc, cuit une fois : c'est la seule forme d'un voile. */
+  private textureVoile?: Texture;
   /** textures posées à l'image précédente, à libérer quand elles changent */
   private readonly posees = new Map<string, Texture>();
   private monte = false;
@@ -216,6 +231,11 @@ export class SceneParcelle {
     this.app.stage.addChild(
       this.couches.decor,
       this.couches.sol,
+      // Le voile d'un geste est SUR le sol et SOUS les arbres : un chaulage
+      // passe devant la terre et derrière les troncs, comme la poussière qu'il
+      // est. Sous les ombres aussi, donc : l'ombre d'un arbre tombe sur la
+      // poussière de chaux.
+      this.couches.voiles,
       this.couches.ombres,
       this.couches.arbres,
     );
@@ -234,6 +254,16 @@ export class SceneParcelle {
    */
   public deformerLesArbres(deformer?: (idArbre: number) => Deformation): void {
     this.deformer = deformer;
+  }
+
+  /**
+   * Branche (ou débranche) le voile des gestes de zone.
+   *
+   * Appelée par la boucle d'animation avant `rafraichir`, comme la déformation
+   * des arbres. Un tableau vide — le défaut — ne pose aucun sprite.
+   */
+  public voilerLesCellules(cellules: readonly CelluleVoilee[]): void {
+    this.voiles = cellules;
   }
 
   /** Redimensionne le rendu. Le masque d'ombre suit, sinon il se décadre. */
@@ -305,6 +335,7 @@ export class SceneParcelle {
     let spritesPoses = 0;
     spritesPoses += this.poserDecor(vue);
     spritesPoses += this.poserSol(vue);
+    spritesPoses += this.poserVoiles(etat, vue);
     spritesPoses += this.poserArbres(poses, vue);
     // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
     // laissait une découpe périmée. La signature ne regarde que les arbres et
@@ -457,6 +488,63 @@ export class SceneParcelle {
       images.push({ cle: `sol:${m.ix},${m.iy}`, canvas: m.image, ...this.replacer(m, vue) });
     }
     return this.poserImages(this.couches.sol, images);
+  }
+
+  /**
+   * Le voile des gestes de zone : un losange teinté par cellule éclairée.
+   *
+   * **Des sprites et non un tracé, et c'est la règle D du lot L0** — « aucune
+   * primitive vectorielle par image ». Un `Graphics` reconstruit à chaque
+   * image, c'est exactement ce que le rendu s'interdit ; un losange blanc cuit
+   * une fois, teinté et rendu translucide à la pose, ne coûte rien de plus
+   * qu'un sprite d'arbre. C'est aussi ce qui garantit qu'un voile en cours ne
+   * recuit AUCUN morceau de terrain (§5.11).
+   *
+   * Le losange est cuit à quatre fois la taille d'une tuile, pas à sa taille :
+   * une cellule fait seize pixels au zoom de parcelle et cent au zoom
+   * rapproché, et une texture agrandie quatre fois sortirait floue.
+   */
+  private poserVoiles(etat: EtatScene, vue: Vue): number {
+    if (this.voiles.length === 0) {
+      SceneParcelle.tailler(this.couches.voiles, 0);
+      return 0;
+    }
+    if (!this.textureVoile) {
+      this.textureVoile = Texture.from(cuireLosangeVoile(this.fabriquer));
+      // **Un losange réduit sans mipmap sort en damier**, et c'est ce qu'a
+      // donné le premier jet : une cellule fait neuf pixels de large au zoom de
+      // parcelle, la texture en fait soixante-quatre, et Pixi échantillonnait
+      // un pixel sur sept. Le voile se lisait comme un grillage posé sur le
+      // sol au lieu d'une poussière. Les mipmaps sont la réponse exacte à ce
+      // problème-là, et le seul endroit du rendu qui en ait besoin — partout
+      // ailleurs, les images sont cuites au zoom où elles sont posées.
+      this.textureVoile.source.scaleMode = "linear";
+      this.textureVoile.source.autoGenerateMipmaps = true;
+      this.textureVoile.source.update();
+    }
+    const cote = etat.sol.coteM;
+    // Le demi-débord des pavés de terrain, pour la même raison qu'eux : deux
+    // losanges voisins doivent se toucher, sinon le voile est un grillage.
+    const largeur = TUILE_LARGEUR_PX * vue.cam.zoom + 1;
+    const hauteur = TUILE_HAUTEUR_PX * vue.cam.zoom + 0.5;
+    let n = 0;
+    for (const c of this.voiles) {
+      const x = (c.cellule % cote) + 0.5;
+      const y = Math.floor(c.cellule / cote) + 0.5;
+      const z = etat.sol.altitudesM[c.cellule] ?? 0;
+      const p = versEcranVue({ x, y, z }, vue);
+      const sprite = SceneParcelle.sprite(this.couches.voiles, n, this.textureVoile);
+      sprite.anchor.set(0.5, 0.5);
+      sprite.width = largeur;
+      sprite.height = hauteur;
+      sprite.x = p.sx;
+      sprite.y = p.sy;
+      sprite.tint = versEntier(c.teinte);
+      sprite.alpha = c.opacite;
+      n++;
+    }
+    SceneParcelle.tailler(this.couches.voiles, n);
+    return n;
   }
 
   private poserDecor(vue: Vue): number {

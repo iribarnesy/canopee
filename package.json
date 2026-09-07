@@ -14,6 +14,7 @@
     "apercu:scene": "tsx scripts/apercu-scene.ts",
     "apercu:capture": "node scripts/apercu-capture.mjs",
     "apercu:ellipse": "node scripts/apercu-ellipse.mjs",
+    "apercu:voile": "node scripts/apercu-voile.mjs",
     "apercu:perf": "node scripts/apercu-perf.mjs",
     "apercu:scenes": "bash scripts/apercu-scenes.sh",
     "test": "vitest run",

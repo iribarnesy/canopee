@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import type { GesteTypeZone } from "../engine/actions";
 import { getEspece } from "../engine/especes";
 import {
   type ContextePhenologique,
@@ -23,7 +24,12 @@ import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import type { Compte } from "../render/pixi/scene";
 import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
-import { deformationDe, indexerLesChutes } from "../render/temps/lecteur";
+import {
+  deformationDe,
+  indexerLesChutes,
+  indexerLesVoiles,
+  voilesEnCours,
+} from "../render/temps/lecteur";
 
 interface Scene {
   coteM: number;
@@ -122,6 +128,18 @@ function donneesDe(scene: Scene): DonneesSol {
  */
 const DUREE_ELLIPSE_MS = 2500;
 
+/**
+ * Où en est la lecture : l'horloge, ou l'avancement figé par `?ellipse=`.
+ *
+ * Partagée par les deux rappels — la déformation des arbres et le voile des
+ * gestes — parce que deux horloges qui devraient être la même finissent par ne
+ * plus l'être. La boucle tourne un peu plus longtemps que l'ellipse pour qu'on
+ * voie l'état d'arrivée avant qu'elle ne reprenne.
+ */
+function ouLire(maintenantMs: number, fige: number | undefined, dureeMs: number): number {
+  return fige === undefined ? maintenantMs % (DUREE_ELLIPSE_MS * 1.6) : fige * dureeMs;
+}
+
 function Demo(): React.ReactElement {
   const [scene, setScene] = useState<Scene>();
   const [compte, setCompte] = useState<Compte>();
@@ -187,11 +205,33 @@ function Demo(): React.ReactElement {
     // et par image, et une recherche linéaire à cet endroit-là ne tient pas —
     // trois mille chutes en donnaient neuf millions de comparaisons par image,
     // et la page ne finissait jamais de charger.
+    // `?geste=chauler&geste-rayon=18` ajoute un geste de zone POSTICHE, au
+    // centre de la parcelle. Postiche pour la même raison que les chutes — un
+    // instantané ne porte pas de journal — mais la maille est celle du moteur :
+    // des indices `y * coteM + x`, ceux que `applyChauler` rend vraiment.
+    const quel = new URLSearchParams(location.search).get("geste");
+    if (quel && scene) {
+      const rayon = Number(new URLSearchParams(location.search).get("geste-rayon") ?? 18);
+      const c = scene.coteM / 2;
+      const cellules: number[] = [];
+      for (let y = 0; y < scene.coteM; y++) {
+        for (let x = 0; x < scene.coteM; x++) {
+          if ((x + 0.5 - c) ** 2 + (y + 0.5 - c) ** 2 <= rayon * rayon) {
+            cellules.push(y * scene.coteM + x);
+          }
+        }
+      }
+      journal.gestes = [{ type: quel as GesteTypeZone, cellules }];
+    }
     const plan = planDEllipse([journal], DUREE_ELLIPSE_MS);
     // La DURÉE du plan et non le budget : un plan vide dure zéro, et c'est ce
     // zéro-là qu'il faut porter pour que `?ellipse=` ne prétende pas figer une
     // ellipse qui n'existe pas.
-    return { index: indexerLesChutes(plan), dureeMs: plan.dureeMs };
+    return {
+      index: indexerLesChutes(plan),
+      voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
+      dureeMs: plan.dureeMs,
+    };
   }, [scene]);
 
   useEffect(() => {
@@ -269,12 +309,10 @@ function Demo(): React.ReactElement {
       ombreDe={(a) => a.partFoliaire}
       surCompte={setCompte}
       deformer={(id, maintenantMs, vue) =>
-        deformationDe(
-          ellipse.index,
-          fige === undefined ? maintenantMs % (DUREE_ELLIPSE_MS * 1.6) : fige * ellipse.dureeMs,
-          id,
-          vue,
-        )
+        deformationDe(ellipse.index, ouLire(maintenantMs, fige, ellipse.dureeMs), id, vue)
+      }
+      voiler={(maintenantMs) =>
+        voilesEnCours(ellipse.voiles, ouLire(maintenantMs, fige, ellipse.dureeMs))
       }
     />
   );

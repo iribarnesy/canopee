@@ -26,10 +26,12 @@
  * écoulé, il rend des nombres.
  */
 
+import { estGesteSurZone, type GesteSurZone } from "../../engine/actions";
 import type { ChuteDeChandelle } from "../../engine/tick";
 import type { Vue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
 import type { Acte, PlanDEllipse } from "./ellipse";
+import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
 /**
  * Part du créneau d'un acte réservée à l'ÉCHELONNEMENT de ses sujets.
@@ -137,4 +139,61 @@ function decalageDe(id: number): number {
   let h = Math.imul(id | 0, 0x27d4eb2d) >>> 0;
   h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
   return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+}
+
+/**
+ * Les gestes de ZONE d'un plan, avec leur balayage déjà calculé.
+ *
+ * Même raison que l'index des chutes, et une raison de plus : le rang d'une
+ * cellule dans le balayage demande un centre de gravité et une distance par
+ * cellule. Le faire par image sur une fauche d'un hectare coûterait dix mille
+ * racines carrées soixante fois par seconde, pour un résultat qui ne change
+ * pas — un plan ne bouge pas pendant qu'il se joue.
+ */
+export interface VoileIndexe {
+  acte: Acte;
+  geste: GesteSurZone;
+  rangs: Float32Array;
+}
+
+/**
+ * Indexe les voiles d'un plan. `coteM` est le côté de la parcelle, celui qui
+ * décode les indices de cellule du moteur.
+ *
+ * **Les gestes sur ARBRES ne sont pas ici, et c'est délibéré.** Un broutage et
+ * un frottis sont des marques d'écorce que la classe de vignette porte déjà :
+ * les animer à la pose dessinerait la même information deux fois. Une coupe,
+ * un étêtage, un recépage font tomber quelque chose, et le protocole ne dit
+ * pas encore QUOI — voir l'issue ouverte pour ça et la note du §5.11.
+ */
+export function indexerLesVoiles(plan: PlanDEllipse, coteM: number): VoileIndexe[] {
+  const voiles: VoileIndexe[] = [];
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "geste") continue;
+    const geste = acte.sujet.geste;
+    if (!estGesteSurZone(geste)) continue;
+    voiles.push({ acte, geste, rangs: rangsDuBalayage(geste, coteM) });
+  }
+  return voiles;
+}
+
+/**
+ * Les cellules à voiler à cet instant, tous actes confondus.
+ *
+ * Rend un tableau vide dès que plus aucun front n'est en cours, ce qui est
+ * l'état ordinaire : un plan de dix actes n'en a qu'un d'ouvert à la fois, et
+ * les gestes de zone y sont rares. L'appelant peut donc poser zéro sprite sans
+ * rien tester lui-même.
+ */
+export function voilesEnCours(voiles: readonly VoileIndexe[], ecouleMs: number): CelluleVoilee[] {
+  let sorties: CelluleVoilee[] = [];
+  for (const { acte, geste, rangs } of voiles) {
+    if (ecouleMs < acte.debutMs || ecouleMs >= acte.debutMs + acte.dureeMs) continue;
+    const avancement = acte.dureeMs > 0 ? (ecouleMs - acte.debutMs) / acte.dureeMs : 1;
+    const ici = cellulesVoilees(geste, rangs, avancement);
+    // Presque toujours un seul acte ouvert : on évite la concaténation quand
+    // il n'y a rien à concaténer.
+    sorties = sorties.length === 0 ? ici : sorties.concat(ici);
+  }
+  return sorties;
 }

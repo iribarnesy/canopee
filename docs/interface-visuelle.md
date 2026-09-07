@@ -1096,7 +1096,8 @@ la pose, ce qui CHANGE DE COULEUR passe par la cuisson :
 | `render/temps/ellipse.ts` | le PLAN : un journal de changements devient une suite d'actes rangés dans un budget de temps d'écran | oui |
 | `render/temps/chute.ts` | la DÉFORMATION d'un arbre qui tombe, à un avancement donné et pour une vue donnée | oui |
 | `render/temps/lecteur.ts` | OÙ EN EST le plan à un instant, et ce que ça fait à chaque arbre | oui |
-| `pixi/scene.ts` `deformerLesArbres` | applique la déformation à la POSE du sprite | non (Pixi) |
+| `render/temps/voile.ts` | le VOILE d'un geste de zone : quelles cellules sont travaillées, et à quelle force | oui |
+| `pixi/scene.ts` `deformerLesArbres` / `voilerLesCellules` | applique la déformation et le voile à la POSE | non (Pixi) |
 
 L'horloge n'est dans aucun des quatre : elle est dans la boucle d'images de
 `game/VueParcelle.tsx`, qui interroge le lecteur avec `performance.now()`. C'est
@@ -1113,13 +1114,46 @@ l'échantillonnage dit que c'était une image malchanceuse et rien d'autre. **Un
 relevé par condition ne distingue pas un surcoût d'une malchance**, et c'est la
 deuxième fois dans ce chantier qu'il fallait l'apprendre.
 
+**Le GESTE, et ce qu'il a fallu séparer.** Les treize gestes du moteur ne se
+mettent pas en scène de la même façon, et le tri ne suit pas leur type mais ce
+que le moteur en DIT :
+
+| geste | mise en scène | où |
+|---|---|---|
+| `chauler` `epandreBrf` `labourer` `faucher` `ramasserBoisMort` `cloturer` | ✅ un voile qui couvre les cellules nommées, puis retombe | pose |
+| `brouter` `frotter` | ✅ une marque d'écorce, déjà dans la classe de vignette | cuisson |
+| `couper` `eclaircir` `elaguer` `trogner` `receper` | ❌ il faudrait savoir ce qui TOMBE — [#37](https://github.com/iribarnesy/canopee/issues/37) | — |
+
+**Le voile ne laisse rien derrière lui, et c'est ce qui garde les deux canaux
+étanches.** Ce qu'un chaulage change durablement est dans les grilles de
+l'instantané, donc dans la cuisson du morceau de terrain ; si le voile
+persistait, la même information serait dessinée deux fois par deux chemins
+différents — le §2.1 dit ce qui arrive alors. À la fin de l'acte, l'opacité est
+donc nulle partout, et c'est un essai et non une intention.
+
+**Deux corrections que seule la capture pouvait donner.** Le premier jet
+faisait suivre le front d'une traîne courte : ça donnait un ANNEAU qui
+s'éloignait du centre, le centre redevenu nu derrière lui — une onde de choc,
+pas un chaulage. Un geste de zone COUVRE une surface, puis la poussière
+retombe. Et le losange du voile, réduit sans mipmap d'une texture de soixante
+pixels à neuf, sortait en DAMIER : le voile se lisait comme un grillage posé
+sur le sol. C'est le seul endroit du rendu qui ait besoin de mipmaps — partout
+ailleurs, les images sont cuites au zoom où elles sont posées.
+
+Le coût, mesuré sur le pire cas atteignable (une fauche d'un hectare, toutes
+les cellules allumées à la fois) : **10 349 losanges pour 5,3 ms de pose
+médiane** (min 2,7, max 6,1) et zéro classe recuite. J'allais grossir la maille
+du voile pour borner ce coût ; la mesure dit que ce n'était pas la peine.
+
 **Ce qui manque encore.** Le journal est POSTICHE dans le banc : les scènes
 d'aperçu sont des instantanés et ne portent aucun journal, donc on le fabrique
 à partir des chandelles présentes. Le protocole porte déjà `Snapshot.chutes`,
 `Snapshot.gestes` et `Snapshot.morts` ; le jour où le worker les livre à la
-vue, seule l'origine du journal change. Et seule la CHUTE est dessinée : un
-geste, une mort par cause, un front de feu sont dans le plan et n'ont pas
-encore de mise en scène.
+vue, seule l'origine du journal change. Restent sans mise en scène : les cinq
+gestes de l'issue #37, les morts par cause et le front de feu. Et une clôture
+n'est pas DESSINÉE du tout — le moteur donne ses cellules, le rendu n'a pas
+encore de piquets ; le voile en montre le tracé, ce qui est un pis-aller
+assumé.
 
 **Le fourré ne peut pas s'animer, et il faut le savoir.** `separerLeFourre`
 agrège les ronces par carreau : elles n'ont pas d'identité individuelle, donc
