@@ -9,6 +9,7 @@
 
 import type { ActionRefusal, GameAction, GesteVisible } from "./actions";
 import { applyAction, OVERDRAFT_LIMIT_EUR, SALARY_EUR_WEEK } from "./actions";
+import type { AidesAnnuelles } from "./aides";
 import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
@@ -75,6 +76,8 @@ export function advanceWeek(
   gestes: GesteVisible[];
   /** chandelles abattues cette semaine (boisMort.ts) */
   chutes: ChuteDeChandelle[];
+  /** aides publiques versées cette semaine, une fois l'an (aides.ts) */
+  aides?: AidesAnnuelles;
   /** débordement de la semaine, mm par cellule (tick.ts) */
   debordementParCellule: Float32Array;
   /** lumière arrivant au sol, par cellule (tick.ts) */
@@ -96,6 +99,7 @@ export function advanceWeek(
     refusals,
     fluxes: ticked.fluxes,
     morts: ticked.morts,
+    aides: ticked.aides,
     incendie: ticked.incendie,
     gestes: [...gestes, ...ticked.gestes],
     chutes: ticked.chutes,
