@@ -528,6 +528,35 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
     expect(accessibiliteDuHouppier(6, 1)).toBeLessThan(accessibiliteDuHouppier(3, 1));
   });
 
+  it("élaguer est une mesure de prévention, et personne ne l'a écrit", () => {
+    // Trois mécanismes qui existaient chacun de leur côté se rejoignent ici, et
+    // le résultat n'est écrit nulle part : l'élagage relève la base du houppier
+    // (`hauteurElagueeM` entre dans `baseHouppierM`, tick.ts) ; la base du
+    // houppier décide de l'amorçage de feu de cime (`accessibiliteDuHouppier`,
+    // ci-dessus) ; donc élaguer met le couvert hors d'atteinte d'un feu
+    // rampant. C'est exactement ce que prescrit le débroussaillement
+    // réglementaire dans les Landes, et le moteur y arrive tout seul.
+    const cote = 20;
+    const litiere = new Array(cote * cote).fill(400);
+    const herbe = new Array(cote * cote).fill(0.3);
+    const ouvert = new Array(cote * cote).fill(1);
+    const peuplement = (base: number) =>
+      Array.from({ length: 40 }, (_, i) => ({
+        ...arbre("pinus_sylvestris", 14),
+        id: i + 1,
+        x: 2 + (i % 7) * 2.5,
+        y: 2 + Math.floor(i / 7) * 3,
+        baseHouppierM: base,
+      }));
+    const branchu = chargeCombustible(peuplement(1), herbe, litiere, cote, ouvert);
+    const elague = chargeCombustible(peuplement(6), herbe, litiere, cote, ouvert);
+    expect(elague.moyenne).toBeLessThan(0.7 * branchu.moyenne);
+    // Mais l'élagage ne met pas à l'abri : le combustible de SURFACE, lui, n'a
+    // pas bougé d'un gramme. Un pin élagué sur une lande d'herbe sèche brûle
+    // toujours au sol — ce qu'il ne fait plus, c'est passer en cime.
+    expect(elague.moyenne).toBeGreaterThan(0);
+  });
+
   it("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
     const cote = 20;
     const litiere = new Array(cote * cote).fill(400);

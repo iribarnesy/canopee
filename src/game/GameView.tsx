@@ -1792,7 +1792,7 @@ export function GameView() {
                   hauteurM: 6,
                 })
               }
-              title="Couper les branches basses des arbres sélectionnés, qui restent debout : la bille montée fera du bois d'œuvre au lieu du chauffage. Le houppier remonte, on le voit sur la carte."
+              title="Couper les branches basses des arbres sélectionnés, qui restent debout : la bille montée fera du bois d'œuvre au lieu du chauffage. Le houppier remonte, on le voit sur la carte — et un houppier haut ne s'enflamme plus d'un feu rampant, ce qui fait de l'élagage une mesure de prévention."
             >
               ✂️ Élaguer à 6 m
             </button>
