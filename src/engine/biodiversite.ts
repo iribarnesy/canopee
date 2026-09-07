@@ -19,6 +19,7 @@
 
 import { getEspece } from "./especes";
 import type { TreeState } from "./trees";
+import { partHabitatDeTrogne } from "./trogne";
 
 export interface IndiceBiodiversite {
   /** nombre d'espèces ligneuses présentes */
@@ -105,7 +106,14 @@ export function indiceBiodiversite(
     // trogne recoupée pendant des décennies se creuse, et ce creux vaut mieux
     // pour la faune qu'un fût sain de vingt mètres — c'est même la raison pour
     // laquelle on protège les vieux têtards de nos haies (critère J3).
-    if (t.heightM >= 15 || (t.teteTrogneM !== undefined && t.recepages >= 2)) gros++;
+    //
+    // Le creux se compte en LITRES, pas en oui/non. Un seuil à deux étêtages
+    // donnait la même valeur à une tête de trois coupes et à un saule têtard
+    // centenaire, alors que l'écart va du litre à la centaine — et que c'est
+    // ce volume, et lui seul, qui décide entre une mésange et une chevêche
+    // (trogne.ts).
+    if (t.heightM >= 15) gros++;
+    else gros += partHabitatDeTrogne(t);
     // Le couvert permanent se mesure en surface de houppier, pas en tiges.
     const surface = t.heightM * t.heightM;
     surfaceTotale += surface;

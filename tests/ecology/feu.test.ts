@@ -13,6 +13,7 @@ import { serieMeteoPour } from "../../src/data/meteo";
 import { livingCarbonKg, treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import {
+  accessibiliteDuHouppier,
   chargeCombustible,
   departDeFeu,
   indiceRisqueFeu,
@@ -469,7 +470,15 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
     }));
     const sousCouvert = chargeCombustible(hetres, herbe, litiere, cote, sombre);
     const aDecouvert = chargeCombustible(hetres, herbe, litiere, cote, ouvert);
-    expect(sousCouvert.moyenne).toBeLessThan(aDecouvert.moyenne / 2);
+    // L'ombre divise la charge par 1,5 dans ce peuplement-ci, non plus par 2 :
+    // elle n'agit QUE sur le compartiment de SURFACE. C'est ce que disent les
+    // modèles de comportement du feu — le couvert n'éteint pas sa propre
+    // biomasse, il maintient la litière humide et à l'abri du vent. Rothermel
+    // (1983, table II-6) chiffre ce dernier effet : le vent à hauteur de flamme
+    // vaut 0,4 fois le vent de référence en terrain découvert et 0,1 sous une
+    // futaie dense, soit un rapport de 0,25 — l'ordre de grandeur de notre
+    // `PORTANCE_SOUS_COUVERT`.
+    expect(sousCouvert.moyenne).toBeLessThan(0.75 * aDecouvert.moyenne);
   });
 
   /**
@@ -499,7 +508,27 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
    * un incendie d'essai a cessé de consumer quoi que ce soit. Le feu mérite sa
    * propre passe, pas un raccourci en fin de chantier.
    */
-  it.fails("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
+  it("un houppier haut ne s'enflamme pas d'un feu rampant", () => {
+    // L'amorçage de feu de cime (Van Wagner 1977) : le feu de surface doit
+    // dépasser une intensité critique pour atteindre le houppier, et cette
+    // intensité croît comme la puissance 3/2 de la hauteur de base du houppier.
+    // C'est pourquoi une futaie élaguée haut ne passe pas en feu de cime là où
+    // un fourré s'embrase.
+    //
+    // La hauteur de base n'est pas un trait d'espèce : elle se calcule par
+    // arbre, celui-ci élaguant lui-même ses branches passées sous leur point de
+    // compensation (`baseHouppierCible`, light.ts).
+    expect(accessibiliteDuHouppier(0.2, 1)).toBe(1); // un fourré : tout est à portée
+    expect(accessibiliteDuHouppier(4, 1)).toBe(1); // le repère de calage
+    expect(accessibiliteDuHouppier(12, 0.12)).toBeLessThan(0.05); // une futaie sombre
+    // Et le même houppier haut DEVIENT accessible si le sol brûle assez fort :
+    // c'est bien un seuil d'intensité, pas une immunité de la futaie.
+    expect(accessibiliteDuHouppier(12, 0.12)).toBeLessThan(accessibiliteDuHouppier(12, 3));
+    // Monotone dans les deux sens, sans discontinuité.
+    expect(accessibiliteDuHouppier(6, 1)).toBeLessThan(accessibiliteDuHouppier(3, 1));
+  });
+
+  it("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
     const cote = 20;
     const litiere = new Array(cote * cote).fill(400);
     const herbe = new Array(cote * cote).fill(0);

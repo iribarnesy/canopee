@@ -21,11 +21,8 @@ import {
   lameRetenueMm,
   longueurDeTroncM,
   longueurEnTraversM,
-  partBarrante,
   poserBoisAuSol,
   sedimentPiegeKgM2,
-  transversalite,
-  versLAval,
 } from "./boisMort";
 import {
   CN_HUMUS,
@@ -1421,8 +1418,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     nextTrees = nextTrees.map((tree) => {
       const degat = broutage.parArbre.get(tree.id);
       if (!degat) return tree;
+      // La DATE, pas le stock : `pousseTendreM` redescend aussi bien par
+      // lignification que par dormance, et une valeur basse ne dit pas qui
+      // l'a fait baisser (trees.ts). Le tick, lui, le sait — il le savait
+      // déjà, il le jetait.
+      const brouteSemaine = degat.pousseMangeeM > 0 ? state.week : tree.brouteSemaine;
       if (degat.mort) {
-        return { ...tree, alive: false, causeMort: "abroutissement" as const };
+        return { ...tree, alive: false, causeMort: "abroutissement" as const, brouteSemaine };
       }
       const espece = getEspece(tree.especeId);
       const hauteur = Math.max(0.05, tree.heightM - degat.pousseMangeeM);
@@ -1458,6 +1460,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         heightM: hauteur,
         pousseTendreM: Math.max(0, tree.pousseTendreM - degat.pousseMangeeM),
         uptakeYearG: tree.uptakeYearG - azoteRenduG,
+        brouteSemaine,
       };
     });
   }

@@ -762,28 +762,9 @@ forçant au profil le plus front-chargé possible (exposant 1,05), il DESCEND à
 10,2 m au lieu de 10,9. Son retard de jeunesse vient donc de son plafond de
 pousse, qui n'est calé sur aucune table — comme vingt autres de l'atlas.
 
-**Et ça a réveillé un défaut du feu, qui n'est PAS corrigé.** En changeant la
-vitesse de l'ajonc, un essai de conservation du carbone s'est mis à ne plus
-trouver d'incendie du tout : un ajonc plus vif referme le couvert plus tôt,
-l'herbe ne s'installe plus, et c'est elle qui portait le feu sur les 88 % de
-cellules sans houppier. En creusant, deux vrais défauts :
-
-1. **La charge des houppiers s'ADDITIONNE à chaque recouvrement**, sans
-   plafond. Un peuplement fermé finit par porter plusieurs fois la charge d'une
-   lande, uniquement parce que ses couronnes se chevauchent.
-2. **L'ombre amortit AUSSI la charge des houppiers**, ce qui rend le modèle
-   circulaire : plus un peuplement porte de combustible, moins il peut brûler.
-   Un fourré d'ajoncs finit par ne plus s'enflammer, le contraire de ce qu'on
-   observe dans les landes.
-
-Ensemble, les deux donnent une conclusion inversée : **le moteur fait porter à
-une hêtraie fermée quatre fois plus de feu qu'à une lande d'ajoncs** (3,34
-contre 0,83, à couvert égal). Les deux corrections ont été écrites, puis
-RETIRÉES : elles changent l'échelle de la charge, sur laquelle la propagation
-est calibrée, et un incendie d'essai a cessé de consumer quoi que ce soit. Le
-feu mérite sa propre passe plutôt qu'un raccourci en fin de chantier — et le
-défaut est consigné dans `feu.test.ts` sous la forme d'un essai qui énonce ce
-qui devrait être vrai et **échoue exprès**, pour qu'on ne l'oublie pas.
+**Et ça a réveillé un défaut du feu, corrigé depuis.** En changeant la vitesse
+de l'ajonc, un essai de conservation du carbone s'est mis à ne plus trouver
+d'incendie du tout. En creusant, deux vrais défauts — voir la section suivante.
 
 - **L'exposant de forme est global.** Les tables distinguent trois profils —
   démarrage rapide et plateau précoce (aulne, bouleau, merisier, robinier),
@@ -1222,6 +1203,140 @@ hêtre de plaine à quatre mètres à quarante ans — en disant qu'il faudrait 
 reprendre sur des tables de production. C'est fait : voir « les hauteurs
 absolues : le moteur se cale sur les tables de production » plus haut. Ce qui reste ici,
 la sénescence hors de la boucle, est un raffinement à côté.
+
+## Le combustible a deux étages, et l'ombre n'agit que sur un
+
+La charge de combustible d'une cellule était fausse de deux façons, et
+ensemble elles donnaient la conclusion inverse de la réalité française : **le
+moteur faisait porter à une hêtraie fermée quatre fois plus de feu qu'à une
+lande d'ajoncs** (3,34 contre 0,83, à couvert égal). Or les incendies courent
+en pinède, en maquis et en lande, presque jamais en hêtraie.
+
+1. **La charge des houppiers s'ADDITIONNAIT à chaque recouvrement**, sans
+   plafond. Dans un peuplement fermé les couronnes se chevauchent, et une
+   cellule finissait par porter plusieurs fois la charge d'une lande —
+   uniquement à cause du chevauchement, pas de ce dont le couvert est fait.
+2. **L'ombre amortissait AUSSI la charge des houppiers.** C'était circulaire :
+   plus un peuplement portait de combustible, plus il faisait d'ombre, moins il
+   pouvait brûler. Un fourré d'ajoncs finissait par ne plus s'enflammer du tout.
+
+Le modèle sépare donc maintenant deux compartiments, comme le font les modèles
+de comportement du feu (Rothermel 1983 ; Scott & Burgan 2005) : le combustible
+de **surface** — herbe, litière, bois couché — et celui du **houppier**. Le
+couvert maintient le premier humide et à l'abri du vent ; il EST le second, et
+ne se protège donc pas lui-même. La charge en hauteur sature en `1 − e^(−n)`
+avec `n` le nombre de couronnes couvrant la cellule, multipliée par leur
+inflammabilité MOYENNE.
+
+**Le coefficient de saturation est choisi pour qu'une couronne isolée porte
+exactement ce qu'elle portait avant.** C'est ce qui permet de corriger la forme
+sans déplacer l'échelle sur laquelle la propagation est calibrée : seuls les
+peuplements denses changent, et c'est le but. Résultat, à couvert égal, la
+lande porte **1,48 fois** la charge de la hêtraie au lieu de 0,25 — un
+basculement d'un facteur six, dans le bon sens.
+
+### Et la constante d'ombrage cesse d'être « à calibrer »
+
+`PORTANCE_SOUS_COUVERT` valait 0,3 sans justification depuis le début. La
+littérature opérationnelle du feu la chiffre par deux voies indépendantes, qui
+tombent au même endroit.
+
+**Le vent.** Les modèles appliquent au vent de référence un *wind adjustment
+factor* pour obtenir le vent à hauteur de flamme. Rothermel (1983, USDA
+GTR INT-143, table II-6 p. 33) donne **0,4 à 0,6 pour un combustible exposé** et
+**0,1 sous une futaie dense** — un rapport de 0,17 à 0,25. Scott (2007), repris
+par Andrews (2012, RMRS-GTR-266, table 7), le tabule sur le taux de couvert :
+0,30 entre 5 et 10 % de couvert, **0,10 au-delà de 50 %**, soit 0,33. L'effet
+sur la vitesse est fort : à combustible et vent égaux, GTR-266 (p. 5) donne
+37,9 ch/h à découvert contre 12,5 sous couvert — **trois fois moins**.
+
+**L'humidité.** Les mêmes tables corrigent l'humidité du combustible fin mort
+selon l'ombrage : **+3 points au cœur de la journée d'été** pour un combustible
+ombragé à plus de moitié, contre 0 pour un combustible exposé. Mesuré en forêt
+tempérée, l'écart est du même ordre — 8 points d'humidité de moins en
+peuplement ouvert, avec 7,8 °C de plus et 24 points d'humidité de l'air en
+moins (Breigenzer et al. 2026, *Fire Ecology* 22:72).
+
+Trois dixièmes, donc : le rapport des vents, qui est le mécanisme le plus
+fiable des deux. *L'humidité, elle, s'efface au bout d'une longue sécheresse —
+Estes et al. ne mesurent aucune différence entre peuplements éclaircis et non
+éclaircis pendant l'été californien. C'est une raison de ne pas empiler les
+deux effets.*
+
+### Ce que la correction change au cas Saumos
+
+Les conclusions du cas d'étude avaient été mesurées avec le modèle inversé. Elles
+ont été REMESURÉES sur deux lots indépendants de seize graines, cinquante ans.
+
+| composition | lot A | lot B | gros feux A/B |
+|---|---|---|---|
+| pinède pure | 1 825 m² | 1 311 m² | 15/16 · 12/16 |
+| feuillus | 1 715 m² | 1 342 m² | 16/16 · 13/16 |
+| chêne-liège | **1 166 m²** | **1 059 m²** | 13/16 · 13/16 |
+
+**Une conclusion est retirée.** « Planter des feuillus réduit d'un tiers les
+gros incendies et de 38 % la remontée de nappe » ne réplique pas : l'écart
+change de signe d'un lot à l'autre (−6 % puis +2 %). Ce n'est pas une mesure
+ratée, c'est un effet qui n'existe pas à cet horizon — une fois que tout est
+passé au feu au moins une fois, c'est la LANDE qui porte le feu suivant, pas ce
+qu'on avait planté dessus. À vingt-six ans, en revanche, les feuillus brûlent
+bien un tiers de moins : **planter des feuillus achète du temps, ça ne change
+pas le régime de long terme.**
+
+**Une conclusion s'inverse.** On avait écrit que le chêne-liège « ne réduit ni
+la surface parcourue ni la remontée » et que « survivre au feu et l'empêcher
+sont deux stratégies différentes ». C'était l'artefact. Le chêne-liège est la
+seule composition dont l'avantage réplique aux deux horizons, et le mécanisme
+est émergent : son écorce résiste au feu, donc le peuplement reste debout, donc
+le couvert reste fermé, donc la litière reste humide et à l'abri du vent — et le
+feu suivant trouve moins à brûler. **Survivre au feu est ce qui empêche le
+suivant.**
+
+**Et une limite de méthode, chiffrée.** Seize graines ne suffisent pas pour les
+petits écarts : la pinède brûle 1 825 m² dans un lot et 1 311 dans l'autre, soit
+28 % de différence entre deux mesures du même dispositif. C'est pourquoi
+l'avantage des feuillus, qui vaut moins que cela, ne peut pas être affirmé,
+alors que celui du chêne-liège, qui vaut le double, le peut.
+
+### L'amorçage de feu de cime
+
+La charge du houppier entrait directement dans la propagation, comme si un feu
+rampant dans la litière pouvait enflammer une cime à vingt mètres. Van Wagner
+(1977) a posé le critère qui fait référence : le feu de surface doit dépasser
+une intensité critique pour atteindre le houppier, et cette intensité croît
+comme la **puissance 3/2 de la hauteur de base du houppier**. C'est la raison
+pour laquelle une futaie élaguée haut ne passe pas en feu de cime là où un
+fourré s'embrase — et c'est aussi pourquoi l'élagage est une mesure de
+prévention.
+
+Le moteur avait déjà ce qu'il fallait sans le savoir : la hauteur de base du
+houppier n'y est pas un trait d'espèce, elle se calcule par arbre, celui-ci
+élaguant lui-même les branches passées sous leur point de compensation
+(`baseHouppierCible`, light.ts). Un fourré d'ajoncs a donc son houppier au ras
+du sol et le porte entièrement ; une futaie qui s'est élaguée en grandissant met
+le sien hors d'atteinte d'un feu rampant.
+
+L'effet sur le contraste qui nous occupe est net : à couvert égal, la lande
+d'ajoncs porte maintenant **5,96 fois** la charge d'une hêtraie. Le chemin
+complet de ce chantier :
+
+| état | lande / hêtraie |
+|---|---|
+| avant toute correction | **0,25** — le modèle disait l'inverse de la réalité |
+| deux compartiments de combustible | 1,48 |
+| + amorçage de feu de cime | **5,96** |
+
+*Ce qui reste faux.* La structure — l'exposant 3/2 — est celle de Van Wagner et
+elle est solide ; ses coefficients d'origine s'expriment en kW/m et en teneur en
+eau du feuillage, deux grandeurs que ce moteur n'a pas, et je n'ai pas pu
+récupérer la publication d'origine pour les transcrire. La constante est donc
+**calée, pas transcrite**, sur un repère qu'on peut discuter : une charge de
+surface de 1 — une lande sèche en plein soleil — atteint un houppier dont la
+base est à quatre mètres. *(À confirmer.)*
+
+*Et une conséquence contre-intuitive n'est toujours pas rendue* : Banerjee et
+al. (2020) mesurent en simulation fine qu'ouvrir un sous-étage ACCÉLÈRE la
+propagation en laissant entrer le vent, même si l'intensité baisse.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 

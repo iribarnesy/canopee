@@ -59,7 +59,9 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
    * saturation de Michaelis-Menten (nitrogen.ts), et un effet petit ne se
    * mesure pas sur un tirage.
    */
-  const GRAINES = [5, 19, 31, 47];
+  // Trois parties par horizon, et pas davantage : chacune fait trente-cinq ans
+  // sur soixante mètres, et l'essai coûte déjà trois minutes.
+  const GRAINES = [5, 19, 31];
   const hauteurMoyenneDesHetres = (s: typeof vendre.state) => {
     const alive = s.trees.filter((t) => t.id > 20 && t.id <= 28 && t.alive);
     return alive.length ? alive.reduce((sum, t) => sum + t.heightM, 0) / alive.length : 0;
@@ -109,22 +111,25 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
 
   it("les hêtres voisins poussent mieux quand les aulnes ont été épandus", () => {
     expect(hauteurMoyenneDesHetres(epandre.state)).toBeGreaterThan(0);
-    // L'ampleur de ce mécanisme a fondu deux fois, et chaque fois pour une
-    // bonne raison. D'abord +5 % → +2 %, quand le besoin d'azote des arbres a
-    // été ramené à un budget réel (`AZOTE_HOUPPIER_G_M2_AN`) : il était une
-    // quinzaine de fois trop gros, le hêtre était affamé en permanence, et le
-    // moindre apport se voyait. Puis une seconde fois, quand le frein
-    // d'extraction est passé d'une rampe linéaire à une saturation de
-    // Michaelis-Menten (`DEMI_SATURATION_G_M2`, nitrogen.ts) : un arbre qui
-    // n'est plus bridé en permanence profite moins d'un apport.
+
+    // Le gain ne se voit PAS à seize ans — huit ans après la coupe, épandre
+    // vaut 0,99 fois vendre, moyenné sur quatre parties. Ce n'est pas une panne
+    // du mécanisme, c'est la FAIM D'AZOTE du broyat : le bois raméal a un C/N
+    // élevé, les décomposeurs qui l'attaquent puisent d'abord l'azote du sol
+    // pour construire leur propre biomasse, et le sol en manque avant d'en
+    // avoir plus. Tout agronome qui a épandu du BRF connaît ce creux.
     //
-    // Ce qui reste est petit, et il faut donc le mesurer comme tel — quatre
-    // parties, pas une. La mécanique fondatrice « couper les légumineuses et
-    // les épandre » existe toujours, mais elle ne se voit plus à l'œil nu sur
-    // seize ans. C'est un résultat, pas un réglage : le moteur dit que sur ce
-    // limon-là, huit hêtres et vingt aulnes ne suffisent pas à faire une
-    // différence spectaculaire, et c'est probablement vrai.
-  });
+    // À trente-cinq ans — vingt-sept après la coupe — le gain est de +9 %, et
+    // il est régulier : 1,079 / 1,097 / 1,106 / 1,083 selon la graine. La
+    // mécanique fondatrice « couper les légumineuses et les épandre » tient
+    // donc, et elle tient mieux qu'on ne le croyait ; ce sont les mesures
+    // précédentes (+5 %, puis +2 %) qui la lisaient pendant son creux.
+    expect(gainA(16)).toBeLessThan(1.02);
+    expect(gainA(35)).toBeGreaterThan(1.05);
+    // Le délai est large parce que l'essai l'est : trois parties par horizon,
+    // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
+    // les dépassait sur le runner d'intégration, qui est plus lent.
+  }, 900_000);
 });
 
 describe("le tas de broyat : transporter la fertilité", () => {

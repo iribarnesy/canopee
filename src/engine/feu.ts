@@ -43,16 +43,105 @@ export interface ChargeCombustible {
  * et la litière portent le feu au sol ; les espèces résineuses l'amplifient.
  */
 /**
- * Ce qu'un couvert fermé retire au feu.
+ * Ce qu'un couvert fermé retire au feu DE SURFACE.
  *
- * Sous une futaie feuillue dense, la litière reste humide : le couvert coupe
- * le soleil et le vent, et l'air y est saturé. C'est LA raison pour laquelle
- * les incendies français courent en pinède, en maquis et en lande, et presque
+ * Sous une futaie feuillue dense, la litière reste humide : le couvert coupe le
+ * soleil et le vent, et l'air y est saturé. C'est LA raison pour laquelle les
+ * incendies français courent en pinède, en maquis et en lande, et presque
  * jamais en hêtraie — et non parce que le hêtre serait ininflammable en
  * laboratoire. Sans ce facteur, le moteur faisait brûler des hêtraies de
- * Touraine *(à calibrer)*.
+ * Touraine.
+ *
+ * La valeur portait « à calibrer » depuis le début. Elle ne le porte plus,
+ * parce que la littérature opérationnelle du feu la chiffre par deux voies
+ * indépendantes, et que les deux tombent au même endroit.
+ *
+ * LE VENT. Les modèles de comportement du feu appliquent au vent de référence
+ * un « facteur d'ajustement » (*wind adjustment factor*) pour obtenir le vent à
+ * hauteur de flamme. Rothermel (1983, *How to predict the spread and intensity
+ * of forest and range fires*, USDA GTR INT-143, table II-6 p. 33) donne **0,4 à
+ * 0,6 pour un combustible exposé** et **0,1 sous une futaie dense**, 0,2 sous
+ * une futaie claire — un rapport de 0,17 à 0,25. Scott (2007), repris par
+ * Andrews (2012, RMRS-GTR-266, table 7), le tabule directement sur le taux de
+ * couvert : 0,30 entre 5 et 10 % de couvert, **0,10 au-delà de 50 %** — un
+ * rapport de 0,33.
+ *
+ * L'HUMIDITÉ. Les mêmes tables corrigent l'humidité du combustible fin mort
+ * selon l'ombrage : au cœur de la journée d'été, **+3 points d'humidité pour un
+ * combustible ombragé à plus de 50 %** contre 0 pour un combustible exposé
+ * (INT-143 table B p. 17), et +4 points dans la version indexée sur le couvert
+ * (table D-1 p. 141). Mesuré en forêt tempérée, l'écart est du même ordre :
+ * 8 points d'humidité de moins en peuplement ouvert qu'en peuplement fermé,
+ * avec 7,8 °C de plus et 24 points d'humidité de l'air en moins (Breigenzer et
+ * al. 2026, *Fire Ecology* 22:72).
+ *
+ * Trois dixièmes, donc — le rapport des vents, qui est le mécanisme le plus
+ * fiable des deux. *(L'humidité, elle, s'efface au bout d'une longue
+ * sécheresse : Estes et al. ne mesurent aucune différence d'humidité entre
+ * peuplements éclaircis et non éclaircis pendant l'été californien. C'est une
+ * raison de ne pas empiler les deux effets.)*
  */
 export const PORTANCE_SOUS_COUVERT = 0.3;
+
+/**
+ * Coefficient du combustible de HOUPPIER, calé pour qu'une couronne isolée
+ * porte exactement ce qu'elle portait avant.
+ *
+ * La charge en hauteur s'ajoutait à chaque recouvrement, sans plafond : dans un
+ * peuplement fermé les couronnes se chevauchent, et une cellule finissait par
+ * porter cinq fois la charge d'une lande — uniquement à cause du
+ * chevauchement, pas de ce dont le couvert est fait. Le moteur en tirait la
+ * conclusion inverse de la réalité française, où le feu court en pinède, en
+ * maquis et en lande, et presque jamais en hêtraie.
+ *
+ * La charge sature donc en `1 − e^(−n)` avec `n` le nombre de couronnes qui
+ * couvrent la cellule, multipliée par leur inflammabilité MOYENNE : une cellule
+ * sous couvert est sous couvert, et ce qui la distingue est ce dont ce couvert
+ * est fait. Le coefficient `0,9 / (1 − e⁻¹)` fait qu'à `n = 1` on retrouve
+ * exactement l'ancienne valeur `0,9 × inflammabilité` — c'est ce qui permet de
+ * corriger la forme SANS déplacer l'échelle sur laquelle la propagation est
+ * calibrée. Seuls les peuplements denses changent, et c'est le but.
+ */
+export const SATURATION_HOUPPIER = 0.9 / (1 - Math.exp(-1));
+
+/**
+ * Charge de surface qu'il faut pour qu'un feu atteigne un houppier dont la base
+ * est à UN mètre. Au-delà, l'exigence croît comme la puissance 3/2 de cette
+ * hauteur.
+ *
+ * C'est l'amorçage de feu de cime, et il manquait : la charge des houppiers
+ * entrait directement dans la propagation, comme si un feu rampant dans la
+ * litière pouvait enflammer une cime à vingt mètres. Van Wagner (1977) a posé
+ * le critère qui fait référence : le feu de surface doit dépasser une intensité
+ * critique, et cette intensité croît comme la **puissance 3/2 de la hauteur de
+ * base du houppier**. C'est la raison pour laquelle une futaie élaguée haut ne
+ * passe pas en feu de cime là où un fourré s'embrase.
+ *
+ * *(La STRUCTURE — l'exposant 3/2 — est celle de Van Wagner et elle est solide.
+ * Ses coefficients d'origine, eux, s'expriment en kW/m et en teneur en eau du
+ * feuillage, deux grandeurs que ce moteur n'a pas : je n'ai pas pu récupérer la
+ * publication d'origine pour les transcrire, et je ne les invente pas. La
+ * constante ci-dessous est donc CALÉE, pas transcrite, sur un repère qu'on peut
+ * discuter : une charge de surface de 1 — une lande sèche en plein soleil —
+ * atteint un houppier dont la base est à quatre mètres. À confirmer.)*
+ */
+export const CHARGE_AMORCAGE_A_UN_METRE = 0.125;
+
+/**
+ * Part du houppier qu'un feu de surface donné peut réellement enflammer.
+ *
+ * La hauteur de base du houppier n'est pas un trait d'espèce : elle se calcule
+ * par arbre, l'arbre élaguant lui-même ses branches basses passées sous leur
+ * point de compensation (`baseHouppierCible`, light.ts). Un fourré d'ajoncs a
+ * donc son houppier au ras du sol et le porte entièrement ; une futaie qui
+ * s'est élaguée en grandissant met le sien hors d'atteinte.
+ */
+export function accessibiliteDuHouppier(baseHouppierM: number, chargeAuSol: number): number {
+  if (baseHouppierM <= 0) return 1;
+  const requise = CHARGE_AMORCAGE_A_UN_METRE * baseHouppierM ** 1.5;
+  if (requise <= 0) return 1;
+  return Math.min(1, chargeAuSol / requise);
+}
 
 export function portanceDuFeu(lumiereAuSol: number): number {
   return PORTANCE_SOUS_COUVERT + (1 - PORTANCE_SOUS_COUVERT) * Math.min(1, lumiereAuSol);
@@ -83,17 +172,26 @@ export function chargeCombustible(
 ): ChargeCombustible {
   const n = coteM * coteM;
   const parCellule = new Array<number>(n).fill(0);
+  // Deux compartiments, et c'est la distinction qui manquait. Les modèles de
+  // comportement du feu (Rothermel 1983, Scott & Burgan 2005) séparent le
+  // combustible de SURFACE — herbe, litière, bois couché — de celui du
+  // HOUPPIER, parce que le couvert n'agit pas de la même façon sur les deux :
+  // il maintient le premier humide et à l'abri du vent, mais il EST le second.
+  const auSol = new Array<number>(n).fill(0);
+  const inflammabiliteSomme = new Array<number>(n).fill(0);
+  const houppiers = new Array<number>(n).fill(0);
+  /** Somme des bases de houppier couvrant la cellule, pour en tirer la moyenne. */
+  const baseSomme = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) {
     // Herbe (sèche en été) + litière accumulée.
-    parCellule[i] = 0.6 * (herbeCouverture[i] ?? 0) + 0.4 * Math.min(1, (litterCG[i] ?? 0) / 300);
+    auSol[i] = 0.6 * (herbeCouverture[i] ?? 0) + 0.4 * Math.min(1, (litterCG[i] ?? 0) / 300);
     // Le bois COUCHÉ compte aussi, mais pas comme de l'herbe : le gros bois
     // s'allume mal et porte mal le front — c'est un combustible qui fait
     // durer et chauffer, pas courir. D'où un poids plus faible et un seuil de
     // saturation bien plus haut : un tronc dépose des kilos de carbone sur son
     // mètre carré là où la litière s'y compte en centaines de grammes.
-    parCellule[i] =
-      (parCellule[i] ?? 0) +
-      0.25 * Math.min(1, (boisAuSolCG?.[i] ?? 0) / BOIS_AU_SOL_SATURATION_CG);
+    auSol[i] =
+      (auSol[i] ?? 0) + 0.25 * Math.min(1, (boisAuSolCG?.[i] ?? 0) / BOIS_AU_SOL_SATURATION_CG);
   }
   // Les couronnes ajoutent leur propre combustible sous elles — et les
   // CHANDELLES aussi, davantage même : un tronc mort sur pied est du bois sec,
@@ -116,19 +214,38 @@ export function chargeCombustible(
         if (dx * dx + dy * dy <= r * r) {
           const i = y * coteM + x;
           // Un résineux ajoute énormément sous lui (aiguilles, résine) ;
-          // un feuillu frais, presque rien.
-          parCellule[i] =
-            (parCellule[i] ?? 0) +
-            0.9 * espece.feu.inflammabilite * (morte ? BOIS_MORT_SUR_PIED : 1);
+          // un feuillu frais, presque rien. On accumule ici de quoi calculer
+          // une MOYENNE d'inflammabilité et un taux de recouvrement, pas une
+          // somme : voir plus bas.
+          inflammabiliteSomme[i] =
+            (inflammabiliteSomme[i] ?? 0) +
+            espece.feu.inflammabilite * (morte ? BOIS_MORT_SUR_PIED : 1);
+          baseSomme[i] = (baseSomme[i] ?? 0) + (tree.baseHouppierM ?? 0);
+          houppiers[i] = (houppiers[i] ?? 0) + 1;
         }
       }
     }
   }
-  // Ce qui est à l'ombre d'un couvert fermé reste humide et porte mal le feu.
-  if (lumiereAuSol) {
-    for (let i = 0; i < n; i++) {
-      parCellule[i] = (parCellule[i] ?? 0) * portanceDuFeu(lumiereAuSol[i] ?? 1);
-    }
+  for (let i = 0; i < n; i++) {
+    // L'ombre n'amortit QUE le compartiment de surface. L'amortir aussi en
+    // hauteur rendait le modèle circulaire — plus un peuplement portait de
+    // combustible, plus il faisait d'ombre, moins il pouvait brûler — et un
+    // fourré d'ajoncs finissait par ne plus s'enflammer du tout.
+    const portance = lumiereAuSol ? portanceDuFeu(lumiereAuSol[i] ?? 1) : 1;
+    const chargeAuSol = (auSol[i] ?? 0) * portance;
+    const nHouppiers = houppiers[i] ?? 0;
+    // Le houppier ne compte que si le feu de surface peut l'atteindre : c'est
+    // l'amorçage de feu de cime (`accessibiliteDuHouppier`). Un fourré porte
+    // tout son couvert ; une futaie qui s'est élaguée en grandissant met le
+    // sien hors de portée d'un feu rampant.
+    const enHauteur =
+      nHouppiers > 0
+        ? SATURATION_HOUPPIER *
+          ((inflammabiliteSomme[i] ?? 0) / nHouppiers) *
+          (1 - Math.exp(-nHouppiers)) *
+          accessibiliteDuHouppier((baseSomme[i] ?? 0) / nHouppiers, chargeAuSol)
+        : 0;
+    parCellule[i] = chargeAuSol + enHauteur;
   }
   let somme = 0;
   for (let i = 0; i < n; i++) somme += parCellule[i] ?? 0;

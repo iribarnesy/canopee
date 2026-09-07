@@ -88,9 +88,27 @@ export interface SnapshotTree {
   teteTrogneM?: number;
   /**
    * Nombre de recépages subis. La tête d'une trogne grossit et se creuse à
-   * chaque étêtage : c'est ce compteur qui donne la cavité.
+   * chaque étêtage — mais la DIMENSION qui en découle ne se déduit pas de ce
+   * seul compteur sans recopier le modèle : elle voyage, ci-dessous.
    */
   recepages: number;
+  /**
+   * Diamètre de la tête de trogne, cm — 0 si l'arbre n'a jamais été étêté
+   * (`trogne.ts`). C'est le renflement à dessiner, et il GROSSIT coupe après
+   * coupe : une tête de trois étêtages et un saule têtard centenaire n'ont
+   * pas la même silhouette, ni de loin la même valeur.
+   */
+  diametreTeteCm: number;
+  /**
+   * Volume de la cavité de la tête, litres — 0 tant qu'elle ne s'est pas
+   * creusée. C'est ce creux qui vaut habitat, et le rendu peut le montrer :
+   * quelques litres pour une mésange, des dizaines pour une chevêche.
+   *
+   * Il ne se déduit ni de `recepages` (la part creusée n'est pas linéaire) ni
+   * du diamètre : c'est le moteur qui tient ce calcul, et `biodiversite.ts`
+   * lit exactement la même valeur pour noter la parcelle.
+   */
+  caviteTeteL: number;
   /**
    * Vigueur ∈ [0,1] : l'arbre pousse-t-il à son potentiel, ou végète-t-il ?
    * Un feuillage clairsemé et pâle, bien avant le moindre stress.
@@ -138,6 +156,16 @@ export interface SnapshotTree {
   pousseTendreM: number;
   /** semaine du dernier frottis ; absent = jamais frotté (écorce arrachée au pied) */
   frotteSemaine?: number;
+  /**
+   * Semaine du dernier abroutissement ; absent = jamais brouté. La flèche
+   * coupée, le plant rabattu — et le moment où c'est arrivé, pour que la
+   * marque s'estompe.
+   *
+   * `pousseTendreM` ne la remplace pas : c'est un stock qui baisse aussi bien
+   * par lignification et par dormance que par la dent du chevreuil. Une valeur
+   * basse peinte en « brouté » couvrirait surtout des arbres en hiver.
+   */
+  brouteSemaine?: number;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */

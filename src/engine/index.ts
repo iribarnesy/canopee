@@ -12,4 +12,5 @@ export * from "./state";
 export * from "./stations";
 export * from "./tick";
 export * from "./trees";
+export * from "./trogne";
 export * from "./water";
