@@ -183,7 +183,7 @@ mesurer que ce qu'on sait déjà faire.*
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
-| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` contre Jansen 1996 (hauteur dominante, classe médiane). Quatre essences à ±15 % à quarante ans — mais le hêtre y est CALÉ, donc l'essai le garde plus qu'il ne le valide ; pin, aulne et frêne, non touchés, sont une validation entière. La vérification tenue à l'écart est à vingt ans : −13 % à +10 %. Le bouleau reste hors table, faute de référence transposable |
+| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` : six essences contre des tables (Jansen 1996 aux Pays-Bas, Lockow 2009 pour le charme, Lemaire 2005 pour le châtaignier) et quatre arbustes contre des mesures de terrain britanniques et bretonnes, faute de table. Deux essences seulement y sont CALÉES (hêtre, charme) : l'essai les garde plus qu'il ne les valide. Les huit autres sont une validation entière, et la vérification tenue à l'écart est à vingt ans (−13 % à +10 %). Restent hors référence, et le disent : bouleau, chêne pubescent, saule blanc, prunellier — plus le chêne-liège, faute de station méditerranéenne où le confronter |
 
 ## G. Faune et santé
 
@@ -736,6 +736,97 @@ ne sont donc pas un ajustement mais une prédiction de la forme de la courbe —
 et elles tombent entre −13 % et +10 % des tables. C'est ce chiffre-là qui dit
 quelque chose du moteur. Les trois essences non recalées (pin, aulne, frêne)
 restent, elles, une validation à part entière aux deux âges.
+
+### Vingt vitesses posées à la main, passées à la littérature
+
+Le constat de la section précédente — « l'atlas de référence ne contient aucune
+donnée de croissance, les vitesses ont été inventées pendant le développement »
+— valait pour vingt fiches sur vingt-cinq. On les a toutes reprises, une par
+une, avec une règle et une méthode.
+
+**La règle est géographique**, et c'est la leçon du bouleau : une mesure n'est
+recevable que si elle vient d'un climat tempéré océanique ou semi-continental
+comparable au nord de la France — France, Belgique, Pays-Bas, Allemagne de
+l'Ouest, sud de l'Angleterre, et nord de l'Espagne pour les méditerranéennes.
+Sont écartées, explicitement et en le disant : la Scandinavie, l'Amérique du
+Nord, la Nouvelle-Zélande (où l'ajonc est étudié comme invasive), la haute
+montagne, le bassin méditerranéen sec.
+
+**La méthode est celle déjà établie** : un seul paramètre ajusté, sur un seul
+âge, le reste tenu à l'écart. Résultat : **une seule valeur a bougé.**
+
+| Espèce | Avant | Après | Référence retenue (pays) | Statut |
+|---|---|---|---|---|
+| Charme | 0,40 | **0,53** | Lockow & Lockow 2009, première table de production du charme, bonité médiane HO100 = 25 m (Brandebourg) | **CALÉ** sur 16,3 m à 40 ans |
+| Châtaignier | 0,65 | 0,65 | Lemaire 2005, faisceau des taillis, publié par le CRPF IDF-Centre (France) | VALIDÉ : 19,0 m simulés contre ~18,7 |
+| Genêt à balais | 0,50 | 0,50 | Waloff & Richards 1977, via la *Biological Flora* 2025 (Londres) | VALIDÉ : 1,55 et 2,26 m contre 1,60 et 2,20 |
+| Houx | 0,15 | 0,15 | Peterken & Lloyd 1967 (Grande-Bretagne) | VALIDÉ : 2,02 m à 10 ans contre 1,5-3,0 m à 8-15 |
+| Fusain | 0,30 | 0,30 | Willoughby 2007, plantations des Midlands (Angleterre) | VALIDÉ : 29 cm/an contre 27 |
+| Aubépine | 0,30 | 0,30 | Grubb 1999 et Willoughby 2007 (Angleterre) | ENCADRÉ : 28,4 cm/an dans la bande 28-37 |
+| Ajonc | 0,45 | 0,45 | Hornoy 2011, jardin commun près de Rennes (Bretagne) | ENCADRÉ : 118 cm à 2 ans contre 110-130 |
+| Callune | 0,12 | 0,12 | Schellenberg 2021 (Allemagne du Nord), classes JNCC (R.-U.) | ENCADRÉ : 6 cm/an de hauteur sous 10 cm/an d'allongement |
+| Noisetier | 0,60 | 0,60 | Harmer 2004, taillis du Hampshire (Angleterre) | ENCADRÉ, mais sur des REJETS de cépée |
+| Pommier | 0,50 | 0,50 | LfL Bayern 2022 et guides de pré-verger (Allemagne) | ENCADRÉ : 7,6 m à 40 ans contre 7,5 m mesurés (10-70 ans) |
+| Sureau | 0,90 | 0,90 | Gilbert 1991, via Atkinson 2002 (Angleterre) | PLANCHER seulement : 37 cm/an sur gravats, le moteur en fait 58 |
+| Cornouiller mâle | 0,25 | 0,25 | catalogues de pépiniéristes allemands | 24-26 cm/an dans la fourchette 10-30 — du commerce, pas de la mesure |
+| Ronce | 1,40 | 1,40 | bases horticoles allemandes | plafond à 2,5 m en trois ans, cohérent avec 1-3 m |
+| Abricotier | 0,50 | 0,50 | fiche RHS (Royaume-Uni) | 4-8 m en 10-20 ans : le moteur y est, mais c'est une base horticole |
+| Troène | 0,35 | 0,35 | Grubb 1999 (Angleterre) | ORDINAL seulement : « groupe rapide », devant le fusain |
+| Prunellier | 0,40 | 0,40 | — | ORDINAL seulement (même essai) : **reste inventé** |
+| Chêne pubescent | 0,35 | 0,35 | — | **reste inventé** : aucune table hors Roumanie, Croatie, Provence |
+| Saule blanc | 1,20 | 1,20 | — | **reste inventé** : aucune table de saule de plein vent nulle part |
+| Chêne-liège | 0,30 | 0,30 | Sánchez-González 2010 (Espagne, Tunisie) | **NON VÉRIFIABLE** : pas de station méditerranéenne au moteur |
+| Arbousier | 0,25 | 0,25 | Asensio 2008, plantation en Galice (nord de l'Espagne) | première année seulement : 25 cm/an contre 29-42 mesurés |
+
+**Le charme était sous TOUTES ses références, et c'est ce qui a décidé.** La
+seule table qui existe pour lui vient du Brandebourg, plaine subcontinentale
+plus sèche que le bocage — géographie à décoter, donc. Mais l'équivalence que
+le CNPF (2025) recommande pour le charme français, les tables *néerlandaises*
+de chêne, donne 15,4 m à quarante ans, à 6 % de la table allemande. Le moteur
+était à 13,4 m, sous les deux : le monter ne demande pas de choisir une source
+contre l'autre. Sa hauteur à vingt ans, tenue à l'écart du calage, tombe alors
+à **−2,7 %** de la table.
+
+**Trois pièges que la littérature signale, et qu'on aurait mangés sans elle.**
+
+1. **Les courbes de châtaignier sont des courbes de TAILLIS.** Un rejet de
+   souche part sur un système racinaire déjà fait ; le moteur, dont la forme de
+   croissance dépend de la taille et non de l'âge, ne sait pas rendre cette
+   avance. On ne compare donc pas le châtaignier à vingt ans — on vérifie le
+   SIGNE de l'écart (le semis simulé doit rester derrière, et il l'est :
+   10,5 m contre 13).
+2. **Un turion de ronce s'allonge de trois à six mètres par saison, et la
+   roncière fait un mètre cinquante.** Les cannes s'arquent et se marcottent :
+   l'allongement n'est pas un gain de hauteur. Caler la ronce sur le premier
+   chiffre l'aurait rendue trois fois trop haute.
+3. **Un chiffre de *Biological Flora* attribué à la Grande-Bretagne peut venir
+   de Catalogne.** La monographie 2025 du genêt donne « 80 cm à 24 mois, 210 cm
+   à 63 mois » comme britannique ; la source primaire (Paynter 2003) n'a de
+   placettes européennes qu'en Catalogne et dans les Cévennes. C'est la même
+   erreur que Braastad, en plus discrète — vérifier la géographie veut dire
+   remonter d'un cran.
+
+**Ce que la confrontation a révélé du moteur, et qui n'était pas cherché.**
+
+- **Tous les semis naissent à trente centimètres** (`SEEDLING_HEIGHT_M`,
+  regeneration.ts), plantations comprises. Pour un chêne, c'est un plant de
+  pépinière ; pour la callune, dont la hauteur adulte est de soixante
+  centimètres, c'est la moitié de sa taille finale — la callune du jeu saute sa
+  phase pionnière, celle qui dure six ans dans la nature. Sa vitesse n'est pas
+  en cause ; la hauteur de semis unique l'est *(à confirmer : il faudrait la
+  dériver de la taille adulte)*.
+- **Le houx et le châtaignier meurent sur le limon riche.** Il titre pH 7,0 en
+  surface, et leurs gammes s'arrêtent à 7 et 6,5. C'est cohérent avec leur
+  autécologie — ce sont des calcifuges — mais cela veut dire que la station
+  phare du dépôt ne peut pas les héberger, et que les mesurer demande un limon
+  ACIDE, que `hauteurs.test.ts` construit pour eux.
+
+**Le coût est resté tenu** : l'essai passe de 110 à **112 secondes** en
+gagnant six espèces et sept assertions. Deux leviers, aucun compromis sur la
+statistique (toujours huit sujets × deux graines) : la mémoïsation des parties
+— le hêtre servait trois fois, il n'est calculé qu'une — et des jalons courts,
+un arbuste dont la mesure de terrain s'arrête à cinq ans ne coûtant plus une
+partie de quarante ans.
 
 ### L'exposant de forme se déduit de la longévité
 
