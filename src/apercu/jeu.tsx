@@ -10,13 +10,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { GesteTypeZone } from "../engine/actions";
+import type { GesteTypeZone, GesteVisible } from "../engine/actions";
 import { getEspece } from "../engine/especes";
 import {
   type ContextePhenologique,
   partFoliaireOmbrageanteDans,
   senescenceDans,
 } from "../engine/phenologie";
+import type { ChuteDeChandelle, MortDeLaSemaine } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 import { VueParcelle } from "../game/VueParcelle";
 import { ficheDe } from "../render/arbres/especes";
@@ -39,6 +40,20 @@ import {
 interface Scene {
   coteM: number;
   week: number;
+  /**
+   * Ce qui a changé depuis l'instantané précédent, tel que le moteur le
+   * rapporte (`advanceWeek`), accumulé par le constructeur de scènes.
+   *
+   * **Absent des scènes cuites avant le 2026-09-09** : celles-là n'en portaient
+   * pas, et le banc leur fabriquait un journal. Le repli existe donc encore,
+   * mais il est réservé aux bancs de MÉCANISME (`?ellipse-tout`, `?mort=`) —
+   * une scène qui porte son journal joue le vrai.
+   */
+  journal?: {
+    morts: MortDeLaSemaine[];
+    gestes: GesteVisible[];
+    chutes: ChuteDeChandelle[];
+  };
   trees: {
     id: number;
     especeId: string;
@@ -198,6 +213,20 @@ function Demo(): React.ReactElement {
     // onze mises en scène : une semaine ordinaire en produit deux ou trois, sur
     // des arbres de dix pixels.
     const cause = params.get("mort") as CauseMort | null;
+    // **Le journal RÉEL quand la scène en porte un**, et c'est le seul cas
+    // normal. Les deux bancs de mécanisme le remplacent exprès — ils fabriquent
+    // un sujet que la scène n'a pas — et c'est pour ça qu'ils portent un nom
+    // qui dit qu'ils forcent quelque chose.
+    const reel = scene?.journal;
+    if (reel && !tout && !cause) {
+      const plan = planDEllipse([reel], DUREE_ELLIPSE_MS);
+      return {
+        index: indexerLesChutes(plan),
+        voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
+        morts: indexerLesMorts(plan),
+        dureeMs: plan.dureeMs,
+      };
+    }
     const journal: JournalDeSemaine = {
       ...(cause
         ? {

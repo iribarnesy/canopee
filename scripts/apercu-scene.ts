@@ -38,6 +38,7 @@
 
 import { writeFileSync } from "node:fs";
 import { serieMeteoPour } from "../src/data/meteo";
+import type { GesteVisible } from "../src/engine/actions";
 import { transversalite } from "../src/engine/boisMort";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
@@ -49,6 +50,7 @@ import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
 import { FRICHE_LIMON } from "../src/engine/stations";
+import type { ChuteDeChandelle, MortDeLaSemaine } from "../src/engine/tick";
 import { arbreDuSnapshot } from "../src/game/snapshot";
 
 const GRAINE = 42;
@@ -443,6 +445,16 @@ function main() {
   // La trajectoire année par année : c'est elle qui dit OÙ est le pire cas,
   // et ce n'est plus là où le premier jet l'avait trouvé.
   process.stderr.write("an\ttiges\tvivantes\tchandelles\thmax\n");
+  // **Le JOURNAL, accumulé d'un instantané au suivant.** C'est la sémantique du
+  // worker (`pendingMorts` et compagnie) et c'est la seule qui ait un sens :
+  // l'ellipse anime ce qui a changé DEPUIS la dernière fois qu'on a regardé.
+  // Sans lui, les scènes du banc étaient des instantanés muets, et le rendu se
+  // fabriquait un journal postiche pour avoir quelque chose à animer.
+  let enAttente: {
+    morts: MortDeLaSemaine[];
+    gestes: GesteVisible[];
+    chutes: ChuteDeChandelle[];
+  } = { morts: [], gestes: [], chutes: [] };
   for (let i = 0; i < dernierAn * 52; i++) {
     const base = weather[i % weather.length];
     if (!base) throw new Error("météo manquante");
@@ -451,6 +463,17 @@ function main() {
     state = semaine.state;
     dernierDebordement = semaine.debordementParCellule;
     derniereLumiere = semaine.lumiereAuSol;
+    // **On n'accumule qu'à partir de la dernière année**, et c'est une
+    // correction attrapée avant la première génération : le journal ne se vide
+    // qu'à l'émission d'une scène, or la première tombe au bout de trente ans.
+    // Le premier fichier aurait porté trente ans de morts — des milliers — et
+    // aurait fait dire à l'ellipse « voilà ce qui a changé depuis la dernière
+    // fois que vous avez regardé », ce qui aurait été faux de trente ans.
+    if (i >= (dernierAn - 1) * 52) {
+      enAttente.morts.push(...semaine.morts);
+      enAttente.gestes.push(...semaine.gestes);
+      enAttente.chutes.push(...semaine.chutes);
+    }
     // Les semaines demandées de la DERNIÈRE année, figées au passage.
     const anEnCours = Math.floor(i / 52) + 1;
     if (anEnCours === dernierAn && SEMAINES.includes(i % 52)) {
@@ -461,6 +484,11 @@ function main() {
           coteM: COTE_M,
           week: i,
           trees: figer(state),
+          // L'incendie n'y est pas : ses champs sont des `Int32Array`, que JSON
+          // transforme en objets indexés, et aucune de ces scènes ne brûle. Le
+          // jour où une scène de feu existera, il faudra les sérialiser à la
+          // main.
+          journal: enAttente,
           sol: figerLeSol(
             state,
             station,
@@ -470,6 +498,7 @@ function main() {
           ),
         })}\n`,
       );
+      enAttente = { morts: [], gestes: [], chutes: [] };
     }
     if ((i + 1) % 52 !== 0) continue;
     const an = (i + 1) / 52;

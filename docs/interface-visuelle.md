@@ -1242,15 +1242,45 @@ les cellules allumées à la fois) : **10 349 losanges pour 5,3 ms de pose
 médiane** (min 2,7, max 6,1) et zéro classe recuite. J'allais grossir la maille
 du voile pour borner ce coût ; la mesure dit que ce n'était pas la peine.
 
-**Ce qui manque encore.** Le journal est POSTICHE dans le banc : les scènes
-d'aperçu sont des instantanés et ne portent aucun journal, donc on le fabrique
-à partir des chandelles présentes. Le protocole porte déjà `Snapshot.chutes`,
-`Snapshot.gestes` et `Snapshot.morts` ; le jour où le worker les livre à la
-vue, seule l'origine du journal change. Restent sans mise en scène : les cinq
-gestes de l'issue #37, les morts par cause et le front de feu. Et une clôture
-n'est pas DESSINÉE du tout — le moteur donne ses cellules, le rendu n'a pas
-encore de piquets ; le voile en montre le tracé, ce qui est un pis-aller
-assumé.
+**Le journal est RÉEL depuis le 2026-09-09.** Il l'était déjà de bout en bout
+dans le moteur — `advanceWeek` rend `{morts, gestes, chutes, incendie}` chaque
+semaine et le worker les accumule d'un instantané au suivant (`pendingMorts`) —
+mais les scènes du banc étaient des instantanés muets, et le rendu se
+fabriquait un journal pour avoir quelque chose à animer. `apercu-scene.ts`
+accumule maintenant le vrai, avec la même sémantique que le worker : ce qui a
+changé DEPUIS le dernier instantané. Les deux bancs de mécanisme
+(`?ellipse-tout=1`, `?mort=`) le remplacent toujours, exprès, et leur nom dit
+qu'ils forcent quelque chose.
+
+Ce que le vrai journal donne sur la friche de référence, à l'an trente :
+
+| scène | morts | chutes | gestes |
+|---|---|---|---|
+| `friche-s4` | 81 (78 de vieillesse, 2 ravageurs, 1 écrasé) | 3 | 5 |
+| `friche-s13` | 153, toutes de vieillesse | 3 | 10 |
+| `friche-s28` | 45 (41 écrasés, 4 d'ombre) | 54 | 4 |
+
+**Et une conséquence mesurée qu'il faut regarder en face** : sur `friche-s28`,
+une ellipse entière ne change que **196 pixels sur 880 000 — 0,02 % de
+l'image** (comparaison pixel à pixel du début et de la fin, `lire-png.mjs`).
+Le mécanisme marche, les quarante-cinq morts et les cinquante-quatre chutes
+sont bien jouées ; simplement, sur deux mille huit cents tiges de dix pixels,
+une semaine ordinaire ne se VOIT pas.
+
+Ça ne condamne pas le §5.11, mais ça dit ce qui lui manque : **une ellipse a
+besoin d'un doigt qui montre**. C'est exactement le « calque des changements »
+du §6.8, rangé au lot L8 — et il passe du statut de repli à celui de pièce
+nécessaire. À grande vitesse le plan le signale déjà (`deborde`) ; ce qu'on
+découvre ici, c'est qu'à vitesse NORMALE le problème est le même pour la raison
+inverse : il n'y a pas trop à montrer, il y en a trop peu pour qu'on le trouve.
+
+**Ce qui manque encore.** Les cinq gestes de l'issue #37 (ce qui tombe d'une
+coupe, d'un étêtage, d'un recépage), le front de feu (§6.4), et le calque des
+changements ci-dessus. Une clôture n'est pas DESSINÉE non plus — le moteur
+donne ses cellules, le rendu n'a pas encore de piquets ; le voile en montre le
+tracé, ce qui est un pis-aller assumé. Enfin, seules les scènes `friche-*` ont
+été régénérées avec leur journal : les autres tombent sur le repli, et
+`apercu-scenes.sh` sait les refaire.
 
 **Le fourré ne peut pas s'animer, et il faut le savoir.** `separerLeFourre`
 agrège les ronces par carreau : elles n'ont pas d'identité individuelle, donc

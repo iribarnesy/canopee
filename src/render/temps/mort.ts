@@ -58,11 +58,7 @@
  *
  * **La trajectoire par cause vient du §6.3 et pas de moi.** Le cahier décrit
  * les onze mises en scène ; ce fichier les traduit en « quelle grandeur bouge,
- * dans quel ordre ». Là où le §6.3 décrit une DISPARITION (le labour, le
- * plant brouté, l'écrasement), la classe n'y peut rien : un arbre qui s'en va
- * n'est pas un arbre qui change d'état, et ces trois-là passent par la pose —
- * une opacité, une hauteur. Les deux canaux servent donc, chacun pour ce qu'il
- * sait faire.
+ * dans quelle fenêtre de l'acte », et rien de plus.
  *
  * Module **pur** : des nombres, aucun canvas, aucun sprite.
  */

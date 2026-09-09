@@ -14,6 +14,12 @@
 # et valeurs forcées relus cellule par cellule). Elles sont donc à vérifier
 # une fois rejouées ; celles du bois couché, ajoutées avec lui, sont sûres.
 #
+# **Depuis le 2026-09-09, chaque scène porte son JOURNAL** — ce qui a changé
+# depuis l'instantané précédent, avec la sémantique du worker. Les scènes cuites
+# avant n'en ont pas, et le banc leur fabrique un journal postiche ; seules les
+# `friche-*` ont été régénérées. Refaire les autres, c'est relancer la ligne
+# correspondante ci-dessous.
+#
 # Usage :  bash scripts/apercu-scenes.sh [nom...]
 #          bash scripts/apercu-scenes.sh bois          # juste le bois couché
 #
