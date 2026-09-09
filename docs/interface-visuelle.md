@@ -1044,11 +1044,21 @@ mesure, et la troisième fois que mesurer coûte moins cher que raisonner.
 
 **Ce qui reste ouvert sur le décor :**
 
-- **un liseré pâle sur les deux bords lointains de la parcelle.** J'ai écarté
-  par la mesure la variation des champs, le réseau du bruit, et le joint entre
-  les images (un mètre de recouvrement du décor sous le terrain ne l'a pas
-  supprimé). Le suspect suivant est le masque d'ombre, découpé à la silhouette
-  de la parcelle — non vérifié, donc non affirmé.
+- ~~un liseré pâle sur les deux bords lointains de la parcelle~~ —
+  **trouvé et corrigé, et par la mesure.** J'ai soupçonné à tort la variation
+  des champs, le réseau du bruit, le joint entre les images, puis le masque
+  d'ombre. La réponse est venue d'un décodeur PNG de trente lignes
+  (`scripts/lire-png.mjs`) : en descendant une colonne de pixels à travers le
+  bord, la clarté passait de 78 à 109 sur cinq pixels avant de tomber sur la
+  parcelle. Une bande PLUS CLAIRE que le décor autour, large d'un mètre ou
+  deux : c'était une bande SANS CANOPÉE, et sa cause est un quad à cheval sur
+  la limite dont le CENTRE tombe dans la parcelle, là où la couverture est
+  nulle par définition. La canopée se décide donc sur les quatre coins, et un
+  quad de bord se dessine avec ses coins intérieurs au sol — ce qui donne au
+  passage la lisière qu'on veut voir là. Après correction : 100 des deux côtés
+  du point suspect, plus de marche. **Quatre explications convaincantes, une
+  seule vraie, et c'est la mesure qui a tranché à chaque fois** — d'où l'outil,
+  qui restera.
 - **le décor ignore la saison.** Sa cuisson ne reçoit pas la semaine, donc les
   bois voisins sont verts en janvier. Les couleurs d'automne et d'hiver sont
   dans les fiches ; c'est un branchement, pas une inconnue.

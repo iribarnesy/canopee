@@ -1454,11 +1454,17 @@ export function cuireMorceauDecor(
     const cxM = x + pas / 2;
     const cyM = y + pas / 2;
     if (quadEntierementDansLaParcelle(x, y, pas, coteM)) continue;
-    const c = canopee(bordures, cxM, cyM, coteM);
-    if (c.hauteurM < CANOPEE_LA_PLUS_BASSE_M) continue;
-    const fond = couleurDecor(bordures, cxM, cyM, coteM);
-    const distance = distanceAuBord(cxM, cyM, coteM);
-    const dessus = couleurMasse("bois", fond, distance, CONTRASTE_CANOPEE, c.especeId);
+    // **Les QUATRE COINS décident, pas le centre**, et c'est une mesure qui l'a
+    // imposé. Un quad à cheval sur la limite a son centre DANS la parcelle, où
+    // la couverture est nulle par définition : le quad était donc sauté, et il
+    // restait tout autour de la parcelle une bande de quatre mètres sans
+    // canopée. Mesurée sur la capture : cinq pixels de clarté 109 contre 78 au
+    // delà, soit un liseré pâle que j'avais d'abord mis sur le compte du masque
+    // d'ombre — sans le vérifier, et à tort.
+    //
+    // En prenant les coins, un quad de bord se dessine avec ses coins
+    // intérieurs au sol et ses coins extérieurs levés : la canopée DESCEND
+    // jusqu'à la limite, ce qui est exactement la lisière qu'on veut voir là.
     const coins = (
       [
         [x, y],
@@ -1471,12 +1477,35 @@ export function cuireMorceauDecor(
       const sol = versEcranVue({ x: qx, y: qy, z: z(qx, qy) }, vue);
       const haut = versEcranVue({ x: qx, y: qy, z: z(qx, qy) + h }, vue);
       return {
+        hauteurM: h,
         solX: sol.sx - decalage.dx,
         solY: sol.sy - decalage.dy,
         hautX: haut.sx - decalage.dx,
         hautY: haut.sy - decalage.dy,
       };
     });
+    let laPlusHaute = 0;
+    for (const coin of coins) laPlusHaute = Math.max(laPlusHaute, coin.hauteurM);
+    if (laPlusHaute < CANOPEE_LA_PLUS_BASSE_M) continue;
+    // La teinte se prend là où il Y A de la canopée : au centre d'un quad de
+    // bord, il n'y en a pas, donc pas d'essence non plus.
+    const echantillon = (() => {
+      const c = canopee(bordures, cxM, cyM, coteM);
+      if (c.especeId) return { point: { x: cxM, y: cyM }, c };
+      for (const [qx, qy] of [
+        [x, y],
+        [x + pas, y],
+        [x + pas, y + pas],
+        [x, y + pas],
+      ] as const) {
+        const d = canopee(bordures, qx, qy, coteM);
+        if (d.especeId) return { point: { x: qx, y: qy }, c: d };
+      }
+      return { point: { x: cxM, y: cyM }, c };
+    })();
+    const fond = couleurDecor(bordures, echantillon.point.x, echantillon.point.y, coteM);
+    const distance = Math.max(0.5, distanceAuBord(echantillon.point.x, echantillon.point.y, coteM));
+    const dessus = couleurMasse("bois", fond, distance, CONTRASTE_CANOPEE, echantillon.c.especeId);
     // La jupe : du sol au dessous de la canopée, plus sombre que le dessus.
     // C'est l'ombre du sous-bois, et c'est elle qui donne son épaisseur au
     // bois — sans elle la canopée flotte au-dessus du sol comme un nuage.
