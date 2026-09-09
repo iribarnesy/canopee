@@ -31,6 +31,7 @@ import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, SceneParcelle } from "../render/pixi/scene";
 import type { Deformation } from "../render/temps/chute";
+import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
 
 export interface VueParcelleProps {
@@ -64,6 +65,60 @@ export interface VueParcelleProps {
    * qui tombe vers l'objectif ne pivote pas comme un arbre de profil.
    */
   voiler?: (maintenantMs: number) => readonly CelluleVoilee[];
+  /**
+   * Comment un arbre en train de mourir se dessine, s'il y a lieu.
+   *
+   * **Le troisième canal, et il ne ressemble pas aux deux autres** : il ne
+   * déforme pas un sprite, il change l'ÉTAT de l'arbre avant qu'on en calcule
+   * la classe de vignette. C'est ce que le §5.11 exige — un feuillage qui
+   * jaunit puis tombe ne s'obtient pas en inclinant une image déjà cuite, il
+   * faut la recuire. Le coût est borné par la quantification de la classe :
+   * une mort ne traverse que les quelques paliers de feuillage qui existent
+   * déjà.
+   *
+   * Rend `undefined` pour tout arbre qui ne meurt pas — le cas normal — et
+   * l'arbre part alors tel que l'instantané le donne, sans copie.
+   */
+  mourant?: (idArbre: number, maintenantMs: number, vivant: ArbreVivant) => EtatMourant | undefined;
+}
+
+/**
+ * Remplace l'état des arbres qui meurent, et laisse les autres tels quels.
+ *
+ * **Le tableau d'origine est rendu TEL QUEL quand personne ne meurt**, ce qui
+ * est le cas à toutes les images sauf pendant une ellipse : la scène compare
+ * des références pour décider quoi recuire, et lui donner un tableau neuf à
+ * chaque image lui ferait croire que tout a changé.
+ *
+ * Quand quelqu'un meurt, seuls les arbres concernés sont copiés — les autres
+ * gardent leur objet, donc leur classe de vignette, donc leur texture.
+ */
+function appliquerLesMorts(
+  arbres: readonly ArbreAPoser[],
+  mourant: VueParcelleProps["mourant"],
+  maintenantMs: number,
+): readonly ArbreAPoser[] {
+  if (!mourant) return arbres;
+  let touche = false;
+  const sortie = arbres.map((a) => {
+    const e = mourant(a.id, maintenantMs, {
+      partFoliaire: a.partFoliaire,
+      senescence: a.senescence,
+      vigueur: a.vigueur,
+      dommageHydraulique: a.dommageHydraulique ?? 0,
+    });
+    if (!e) return a;
+    touche = true;
+    return {
+      ...a,
+      partFoliaire: e.partFoliaire,
+      senescence: e.senescence,
+      vigueur: e.vigueur,
+      dommageHydraulique: e.dommageHydraulique,
+      ...(e.chandelle ? { chandelle: true } : {}),
+    };
+  });
+  return touche ? sortie : arbres;
 }
 
 /** Facteur de zoom par cran de molette. Un cran = un pas net, pas un glissement. */
@@ -168,7 +223,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
           {
             sol: p.sol,
             semaineAnnee: p.semaineAnnee,
-            arbres: p.arbres,
+            arbres: appliquerLesMorts(p.arbres, p.mourant, horloge),
             ...(p.bordures ? { bordures: p.bordures } : {}),
             hauteurMaxDe: p.hauteurMaxDe,
             ombreDe: p.ombreDe,

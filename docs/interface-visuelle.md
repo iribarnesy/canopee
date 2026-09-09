@@ -1318,6 +1318,60 @@ instantanés. Seule réserve, et elle compte : la mort au feu arrive un an en
 retard dans `morts` (§2.2) — le torchage se lit sur `causeMort` et `incendie`,
 pas là.
 
+**Construit le 2026-09-09 (`render/temps/mort.ts`), et par la CUISSON.** C'est
+la décision qui a tout déterminé : une chute est un mouvement, donc un panneau
+qu'on incline ; une mort de sécheresse n'est pas un mouvement, c'est un
+feuillage qui jaunit puis tombe, et ça ne s'obtient pas en déformant une image
+déjà cuite. Ce qui rend l'exercice honnête est que les quatre grandeurs qu'une
+mort fait bouger — `partFoliaire`, `senescence`, `vigueur`,
+`dommageHydraulique` — sont des champs du MOTEUR que la classe de vignette
+quantifie déjà. Une mort part d'un état que le moteur donne et arrive à un
+état qu'il donne aussi ; le rendu ne fabrique que l'entre-deux.
+
+Les onze mises en scène de la table ci-dessus sont traduites en « quelle
+grandeur bouge, dans quelle fenêtre de l'acte ». Trois d'entre elles décrivent
+une DISPARITION (labour, abroutissement, écrasement) : la classe n'y peut
+rien, et celles-là passent par la pose — une opacité, une hauteur.
+
+**Le coût, compté exactement** (`npm run apercu:classes`, hors navigateur) sur
+un banc de 1 868 arbres vivants, 659 classes au repos :
+
+| cause | classes ajoutées |
+|---|---|
+| sécheresse, vieillesse | 4 × le repos |
+| ravageurs, solHorsGamme | 3 × |
+| engorgement, maladie | 2,7 × |
+| ombre | 2 × |
+| feu, frottis | 1 × |
+| **labour, abroutissement, écrasement** | **0** |
+
+Trois leçons, et aucune ne venait du raisonnement :
+
+1. **L'avancement d'une mort doit être QUANTIFIÉ** (`PALIERS_DE_MORT = 5`).
+   J'avais écrit dans le module que la cuisson serait « bon marché, contre
+   toute attente », au motif que la classe est déjà quantifiée. Faux : la clé
+   de classe est un PRODUIT, et une grandeur continue qui y entre annule le
+   cache. Quantifiée, la mort ne traverse que cinq états et le facteur
+   ci-dessus est exactement le nombre d'états que la cause traverse.
+2. **Les trois morts qui font disparaître l'arbre coûtent ZÉRO classe.** La
+   séparation des deux canaux ne relève donc pas que du principe : elle se
+   paie ou se gagne.
+3. **Le coût ne dépend pas du nombre de morts** mais du nombre d'ESPÈCES qui
+   meurent. Le cas pathologique est un banc qui tue toute la parcelle, pas une
+   semaine de jeu.
+
+**Et une mesure qu'il fallait savoir ne pas croire** : j'ai d'abord compté « les
+classes recuites » au navigateur en échantillonnant seize images sur soixante
+et en additionnant. Deux variantes du même code ont donné 965 puis 1 364 — la
+somme d'un échantillon n'est pas un total. Le compte exact énumère les clés, et
+il tient dans un script sans navigateur.
+
+**Un défaut à connaître, découvert en mesurant** : `AtlasArbres` n'évince
+jamais rien. Le cache de vignettes est une `Map` qui grandit pour la partie
+entière — ce qui est très bien pour une friche stable, et discutable dès qu'une
+ellipse en ajoute quatre mille. Personne ne l'a encore payé ; c'est écrit ici
+pour que ce soit une décision et non une surprise.
+
 ### 6.4 L'incendie
 
 Le morceau le plus spectaculaire, et le mieux servi par le moteur — `feu.ts`

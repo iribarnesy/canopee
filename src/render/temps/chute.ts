@@ -64,6 +64,24 @@ export interface Deformation {
 export const DEBOUT: Deformation = { rotationRad: 0, hauteur: 1, opacite: 1 };
 
 /**
+ * Compose deux déformations du même sprite.
+ *
+ * **Nécessaire dès qu'une ellipse porte plusieurs actes sur un même arbre** —
+ * franchir dix ans, c'est voir un arbre mourir puis tomber. Les échelles se
+ * multiplient et les angles s'ajoutent, ce qui est la seule composition qui
+ * garde `DEBOUT` neutre : combiner quoi que ce soit avec « debout » ne change
+ * rien, et c'est ce qui permet d'appeler cette fonction sans se demander si
+ * l'un des deux actes a lieu.
+ */
+export function combiner(a: Deformation, b: Deformation): Deformation {
+  return {
+    rotationRad: a.rotationRad + b.rotationRad,
+    hauteur: a.hauteur * b.hauteur,
+    opacite: a.opacite * b.opacite,
+  };
+}
+
+/**
  * Le plus court qu'un panneau se laisse écraser, en part de sa hauteur.
  *
  * **La limite d'un panneau vu de face, assumée et bornée.** Un arbre qui tombe

@@ -28,9 +28,11 @@
 
 import { estGesteSurZone, type GesteSurZone } from "../../engine/actions";
 import type { ChuteDeChandelle } from "../../engine/tick";
+import type { CauseMort } from "../../engine/trees";
 import type { Vue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
 import type { Acte, PlanDEllipse } from "./ellipse";
+import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
 /**
@@ -197,3 +199,85 @@ export function voilesEnCours(voiles: readonly VoileIndexe[], ecouleMs: number):
   }
   return sorties;
 }
+
+/**
+ * Les MORTS d'un plan, indexées par arbre.
+ *
+ * Même raison que les chutes : une fois par ellipse, pas une fois par arbre et
+ * par image. Une mort porte sa cause, et c'est la cause qui décide de la mise
+ * en scène (`mort.ts`).
+ */
+export type MortsIndexees = Map<number, { acte: Acte; cause: CauseMort }>;
+
+/** Indexe les morts d'un plan par identifiant d'arbre. */
+export function indexerLesMorts(plan: PlanDEllipse): MortsIndexees {
+  const index: MortsIndexees = new Map();
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "mort") continue;
+    for (const m of acte.sujet.morts) index.set(m.id, { acte, cause: acte.sujet.cause });
+  }
+  return index;
+}
+
+/**
+ * Ce qu'il faut faire de l'arbre `idArbre` s'il est en train de mourir.
+ *
+ * Rend `undefined` quand il ne meurt pas dans cette ellipse — l'immense
+ * majorité —, ce qui laisse l'appelant poser l'arbre tel que l'instantané le
+ * donne, sans copie ni allocation.
+ *
+ * **La même décision que pour les chutes** : une mort passée reste accomplie.
+ * Sans ça, un arbre mort au premier acte reverdirait au second, et l'ellipse
+ * serait une suite de choses qui se défont.
+ */
+export function etatMourantDe(
+  index: MortsIndexees,
+  ecouleMs: number,
+  idArbre: number,
+  vivant: ArbreVivant,
+): EtatMourant | undefined {
+  const trouve = index.get(idArbre);
+  if (!trouve) return undefined;
+  const { acte, cause } = trouve;
+  if (ecouleMs >= acte.debutMs + acte.dureeMs) return mortAccomplie(cause, vivant);
+  if (ecouleMs < acte.debutMs) return undefined;
+  const t = avancementDuSujet(acte, idArbre, ecouleMs);
+  return t <= 0 ? undefined : mourirEnCours(cause, vivant, t);
+}
+
+/**
+ * La part POSE d'une mort : ce qui rapetisse et ce qui s'effface.
+ *
+ * Séparée de `etatMourantDe` parce que les deux canaux n'ont pas le même
+ * client : la classe part à la cuisson avant la pose, la déformation part à la
+ * pose. Et parce que celle-ci ne demande PAS l'état vivant de l'arbre — un
+ * effacement ne dépend que du temps —, ce qui permet à la boucle d'images de
+ * l'appeler sans rien reconstruire.
+ */
+export function poseDeLaMort(index: MortsIndexees, ecouleMs: number, idArbre: number): Deformation {
+  const trouve = index.get(idArbre);
+  if (!trouve) return DEBOUT;
+  const { acte, cause } = trouve;
+  const fini = ecouleMs >= acte.debutMs + acte.dureeMs;
+  if (!fini && ecouleMs < acte.debutMs) return DEBOUT;
+  const t = fini ? 1 : avancementDuSujet(acte, idArbre, ecouleMs);
+  if (t <= 0) return DEBOUT;
+  // L'état vivant ne sert qu'aux grandeurs de classe ; les zéros suffisent ici.
+  const e = mourirEnCours(cause, VIVANT_NEUTRE, t);
+  return { rotationRad: 0, hauteur: e.hauteur, opacite: e.opacite };
+}
+
+/**
+ * Un arbre vivant « neutre », pour les calculs qui n'en dépendent pas.
+ *
+ * `mourirEnCours` prend l'état de départ pour interpoler le feuillage ; la
+ * hauteur et l'opacité, elles, n'en dépendent pas. Passer un état bidon est
+ * donc sûr ICI et nulle part ailleurs — d'où la constante nommée, plutôt qu'un
+ * objet anonyme qu'on finirait par recopier là où il ferait un faux.
+ */
+const VIVANT_NEUTRE: ArbreVivant = {
+  partFoliaire: 0,
+  senescence: 0,
+  vigueur: 0,
+  dommageHydraulique: 0,
+};

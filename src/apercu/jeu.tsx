@@ -17,17 +17,22 @@ import {
   partFoliaireOmbrageanteDans,
   senescenceDans,
 } from "../engine/phenologie";
+import type { CauseMort } from "../engine/trees";
 import { VueParcelle } from "../game/VueParcelle";
 import { ficheDe } from "../render/arbres/especes";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import type { Compte } from "../render/pixi/scene";
+import { combiner } from "../render/temps/chute";
 import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
 import {
   deformationDe,
+  etatMourantDe,
   indexerLesChutes,
+  indexerLesMorts,
   indexerLesVoiles,
+  poseDeLaMort,
   voilesEnCours,
 } from "../render/temps/lecteur";
 
@@ -186,10 +191,39 @@ function Demo(): React.ReactElement {
   // l'autre, et React refuse — « Rendered more hooks than during the previous
   // render ». La page ne chargeait plus du tout.
   const ellipse = useMemo(() => {
-    const tout = new URLSearchParams(location.search).get("ellipse-tout") === "1";
+    const params = new URLSearchParams(location.search);
+    const tout = params.get("ellipse-tout") === "1";
+    // `?mort=secheresse` fait mourir de cette cause TOUS les arbres vivants —
+    // banc de mécanisme, comme `ellipse-tout`. C'est le seul moyen de juger les
+    // onze mises en scène : une semaine ordinaire en produit deux ou trois, sur
+    // des arbres de dix pixels.
+    const cause = params.get("mort") as CauseMort | null;
     const journal: JournalDeSemaine = {
+      ...(cause
+        ? {
+            morts: (scene?.trees ?? [])
+              .filter((t) => t.heightM > 0 && !t.chandelle && !ficheDe(t.especeId)?.fourre)
+              .map((t) => ({
+                id: t.id,
+                x: t.x,
+                y: t.y,
+                especeId: t.especeId,
+                cause,
+                heightM: t.heightM,
+              })),
+          }
+        : {}),
       chutes: (scene?.trees ?? [])
-        .filter((t) => t.heightM > 0 && (tout ? true : t.chandelle) && !ficheDe(t.especeId)?.fourre)
+        .filter(
+          (t) =>
+            t.heightM > 0 &&
+            (tout ? true : t.chandelle) &&
+            !ficheDe(t.especeId)?.fourre &&
+            // Une ellipse qui montre une mort ne doit pas faire tomber le même
+            // arbre en même temps : deux actes sur un sujet se composent, et on
+            // ne verrait ni l'un ni l'autre.
+            !cause,
+        )
         .map((t) => ({
           id: t.id,
           x: t.x,
@@ -209,9 +243,9 @@ function Demo(): React.ReactElement {
     // centre de la parcelle. Postiche pour la même raison que les chutes — un
     // instantané ne porte pas de journal — mais la maille est celle du moteur :
     // des indices `y * coteM + x`, ceux que `applyChauler` rend vraiment.
-    const quel = new URLSearchParams(location.search).get("geste");
+    const quel = params.get("geste");
     if (quel && scene) {
-      const rayon = Number(new URLSearchParams(location.search).get("geste-rayon") ?? 18);
+      const rayon = Number(params.get("geste-rayon") ?? 18);
       const c = scene.coteM / 2;
       const cellules: number[] = [];
       for (let y = 0; y < scene.coteM; y++) {
@@ -230,6 +264,7 @@ function Demo(): React.ReactElement {
     return {
       index: indexerLesChutes(plan),
       voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
+      morts: indexerLesMorts(plan),
       dureeMs: plan.dureeMs,
     };
   }, [scene]);
@@ -308,8 +343,19 @@ function Demo(): React.ReactElement {
       hauteurMaxDe={(especeId) => getEspece(especeId)?.hauteurMaxM ?? 20}
       ombreDe={(a) => a.partFoliaire}
       surCompte={setCompte}
-      deformer={(id, maintenantMs, vue) =>
-        deformationDe(ellipse.index, ouLire(maintenantMs, fige, ellipse.dureeMs), id, vue)
+      deformer={(id, maintenantMs, vue) => {
+        const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
+        // Les deux canaux de pose se COMPOSENT : franchir dix ans, c'est voir
+        // un arbre mourir puis tomber, et `DEBOUT` est neutre pour cette
+        // composition — on peut donc appeler les deux sans se demander lequel
+        // a lieu.
+        return combiner(
+          deformationDe(ellipse.index, ou, id, vue),
+          poseDeLaMort(ellipse.morts, ou, id),
+        );
+      }}
+      mourant={(id, maintenantMs, vivant) =>
+        etatMourantDe(ellipse.morts, ouLire(maintenantMs, fige, ellipse.dureeMs), id, vivant)
       }
       voiler={(maintenantMs) =>
         voilesEnCours(ellipse.voiles, ouLire(maintenantMs, fige, ellipse.dureeMs))
