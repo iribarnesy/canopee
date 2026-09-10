@@ -40,7 +40,7 @@
  * Module **pur** : des positions et des teintes, aucun sprite.
  */
 
-import { estGesteSurZone, type GesteVisible } from "../../engine/actions";
+import { estGesteSurZone } from "../../engine/actions";
 import type { CauseMort } from "../../engine/trees";
 import type { Teinte } from "../palette";
 import type { JournalDeSemaine } from "./ellipse";
