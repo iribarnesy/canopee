@@ -21,6 +21,17 @@
  * posée sur la carte, et ça doit se voir comme tel — sans quoi on aurait
  * ajouté un objet de plus à une scène qui en a déjà trois mille.
  *
+ * **Le SOL ne s'estompe pas, et je l'ai essayé deux fois avant de comprendre
+ * pourquoi.** J'avais baissé l'opacité de la couche de sol à 0,62, puis à 0,88
+ * en trouvant la première trop forte. Les deux sont fausses pour une raison que
+ * seule la capture donne : derrière le sol il y a le fond de brume de
+ * l'interface, qui est PÂLE. Baisser l'alpha d'une couche ne la fait donc pas
+ * reculer, ça la fait BLANCHIR — la parcelle sortait comme sous un voile de
+ * lait, ce qui estompait aussi ce qui devait rester net dessus. Le sol n'a de
+ * toute façon pas changé : c'est la référence sur laquelle on lit les
+ * positions. Ce qui s'estompe, ce sont les arbres, qui se posent sur du sombre
+ * et y disparaissent vraiment.
+ *
  * **Les positions viennent du journal et de nulle part ailleurs.** Une mort
  * porte ses coordonnées ; un geste sur arbres porte des identifiants, dont
  * l'appelant connaît les positions ; un geste de zone porte ses cellules. Le
@@ -45,7 +56,9 @@ export type SorteDeMarqueur =
   /** un arbre a été touché par un geste : un liseré */
   | "liseré"
   /** une zone a été travaillée : un repère à son centre */
-  | "zone";
+  | "zone"
+  /** un semis s'est installé : un point, parce que deux pixels ne se trouvent pas */
+  | "recrue";
 
 export interface Marqueur {
   /** position en mètres de parcelle */
@@ -92,6 +105,108 @@ export const TEINTE_DE_LA_CAUSE: Record<CauseMort, Teinte> = {
 
 /** La teinte d'un geste — celle du travail, pas celle d'une cause. */
 export const TEINTE_DU_MARQUEUR_DE_GESTE: Teinte = { r: 236, g: 232, b: 210 };
+
+/** Le vert d'une recrue. Le §6.8 dit « un point vert », et il a raison. */
+export const TEINTE_DE_LA_RECRUE: Teinte = { r: 126, g: 206, b: 108 };
+
+/**
+ * L'ESTOMPE : ce qui n'a pas changé s'efface pour laisser voir ce qui a changé.
+ *
+ * **C'est le commanditaire qui l'a proposée, et c'est un meilleur mécanisme que
+ * le mien.** J'avais ajouté un halo autour de chaque arbre mort ; il a demandé
+ * « ce serait pas mieux de rendre tout ce qui est moins pertinent transparent
+ * pour permettre de bien voir les variations et animations ? ». Oui, et pour
+ * trois raisons qui n'étaient pas évidentes avant qu'il le dise :
+ *
+ * 1. **Ça n'ajoute rien à la scène.** Un halo est un objet de plus dans une
+ *    image qui en compte déjà trois mille ; l'estompe n'en ajoute aucun, elle
+ *    en retire. Le §0 du décor disait déjà ça de la brume : ne pas attirer l'œil
+ *    est un travail de SOUSTRACTION.
+ * 2. **Ça marche pour les ANIMATIONS aussi**, et c'est le mot qu'il a employé.
+ *    Un halo montre un endroit ; l'estompe fait que le seul arbre net qui bouge
+ *    est celui qui tombe. Le mouvement redevient visible sans qu'on le pointe.
+ * 3. **Ça ne demande aucun vocabulaire.** Un anneau ouvert doit s'apprendre ;
+ *    « ce qui est net vient de changer » se comprend sans notice.
+ *
+ * Elle passe par l'OPACITÉ de la pose, donc par un canal qui existe déjà et ne
+ * recuit rien.
+ *
+ * **Et elle ne suffit PAS seule, ce que seule la mesure dit.** L'estompe rend
+ * trouvable ce qui est CLAIR ou COLORÉ — un semis vert, un front de flammes,
+ * une couronne qui jaunit de sécheresse ressortent immédiatement sur un
+ * peuplement éteint. Elle échoue sur ce qui est SOMBRE ou MINUSCULE : une
+ * chandelle nue parmi du feuillage sombre reste sombre même à pleine opacité,
+ * et un semis de trente centimètres fait deux pixels. Sur la capture des
+ * quarante-cinq morts d'une semaine, l'estompe seule ne montrait rien.
+ *
+ * Le calque garde donc les deux mécanismes, et la règle est claire :
+ * **l'estompe pour trouver, un marqueur là où le contraste ne peut pas
+ * suffire** — les morts, qui sont sombres, et les recrues, qui sont
+ * minuscules.
+ */
+export const OPACITE_HORS_SUJET = 0.14;
+
+/**
+ * Les identifiants d'arbres que ce journal concerne, et que l'estompe garde
+ * NETS — tout le reste s'efface.
+ *
+ * **Les gestes de masse en sont exclus, et j'avais écrit ici le contraire.**
+ * Le premier jet les gardait en entier, avec ce raisonnement : « estomper ne
+ * coûte rien par sujet, donc rien n'oblige à plafonner ; et une semaine où le
+ * gibier a brouté deux mille tiges est une semaine où deux mille tiges ont
+ * vraiment changé. » Le raisonnement est juste et la conclusion est fausse :
+ * la capture montre 2 058 sujets nets sur 2 831 arbres, donc une image
+ * uniformément délavée où rien ne ressort. **L'estompe s'est fait défaire par
+ * exactement ce qui avait défait les marqueurs**, et il fallait le même
+ * remède — le même seuil, et pour la même raison.
+ *
+ * Ce n'est pas une entorse à l'honnêteté : le compte des changements non
+ * pointés reste rendu par `marqueursDuJournal`, et il dit « 7 966 ». Ce que
+ * l'estompe promet n'est pas « voici tout ce qui a changé », c'est « voici ce
+ * que tu cherches ». Un phénomène de masse ne se cherche pas, il se lit dans
+ * une phrase.
+ */
+export function sujetsDuJournal(journal: JournalDeSemaine): Set<number> {
+  const sujets = new Set<number>();
+  for (const m of journal.morts ?? []) sujets.add(m.id);
+  for (const c of journal.chutes ?? []) sujets.add(c.id);
+  for (const geste of journal.gestes ?? []) {
+    if (estGesteSurZone(geste)) continue;
+    if (geste.ids.length > TIGES_PAR_GESTE_MAX) continue;
+    for (const id of geste.ids) sujets.add(id);
+  }
+  return sujets;
+}
+
+/**
+ * Les RECRUES d'un instantané : les arbres arrivés depuis le précédent.
+ *
+ * **Dérivées de `ageWeeks`, et il a fallu se corriger pour le voir.** J'avais
+ * ouvert une issue en affirmant que les naissances ne voyageaient pas — sans
+ * avoir cherché le champ. `Snapshot.trees[].ageWeeks` existe et arrive au
+ * rendu : une recrue est un arbre plus jeune que l'intervalle écoulé, ce qui se
+ * lit dans l'instantané SEUL. Pas de diff, pas d'état gardé, donc rien
+ * n'enfreint le §2.1 — c'est même plus robuste qu'une liste de naissances, qui
+ * se perdrait si un message était sauté.
+ *
+ * Elles restent NETTES sous l'estompe et reçoivent un point vert : un semis de
+ * trente centimètres fait deux pixels au zoom de parcelle, et aucune opacité au
+ * monde ne rend deux pixels trouvables.
+ */
+export function recruesDuSnapshot(
+  arbres: readonly { id: number; x: number; y: number; ageWeeks: number }[],
+  semainesEcoulees: number,
+): { ids: Set<number>; marqueurs: Marqueur[] } {
+  const ids = new Set<number>();
+  const marqueurs: Marqueur[] = [];
+  if (semainesEcoulees <= 0) return { ids, marqueurs };
+  for (const a of arbres) {
+    if (a.ageWeeks > semainesEcoulees) continue;
+    ids.add(a.id);
+    marqueurs.push({ x: a.x, y: a.y, sorte: "recrue", teinte: TEINTE_DE_LA_RECRUE });
+  }
+  return { ids, marqueurs };
+}
 
 /** Ce que le calque montre, et ce qu'il a renoncé à montrer. */
 export interface Calque {

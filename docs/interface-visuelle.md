@@ -1533,13 +1533,50 @@ non pointés**.
 liste qui se voit tout seul — vingt mètres de mouvement. Le marquer ajouterait
 un repère là où l'œil va déjà.
 
-**Ce qui manque au calque**, et c'est la moitié positive de l'histoire :
-le point vert des recrues et l'anneau des franchissements de stade. Le moteur
-calcule les recrues (`recruitment.newTrees`, avec position et espèce) et les
-jette ; les stades n'existent pas dans le protocole —
-[#46](https://github.com/iribarnesy/canopee/issues/46). **Un calque qui ne sait
-montrer que ce qui meurt donne une lecture fausse de la parcelle** : une friche
-qui se boise est le sujet même du jeu, et elle n'y laisse aucune trace.
+**L'ESTOMPE, ajoutée le lendemain sur une remarque du commanditaire, et c'est
+un meilleur mécanisme que le mien.** Devant les halos il a demandé : « ce serait
+pas mieux de rendre tout ce qui est moins pertinent transparent pour permettre
+de bien voir les variations et animations ? ». Oui, et pour trois raisons qui
+n'étaient pas évidentes avant qu'il le dise : ça n'ajoute AUCUN objet à une
+image qui en compte trois mille (c'est un travail de soustraction, comme la
+brume du §5.8) ; ça marche pour les ANIMATIONS et pas seulement pour les
+positions — le seul arbre net qui bouge est celui qui tombe ; et ça ne demande
+aucun vocabulaire, là où un anneau ouvert doit s'apprendre. Elle passe par
+l'opacité de la POSE, donc par un canal qui existait déjà.
+
+**Mais elle ne suffit pas seule, et c'est la mesure qui le dit.** L'estompe rend
+trouvable ce qui est CLAIR ou COLORÉ — 359 semis verts sur un peuplement éteint
+sautent aux yeux — et échoue sur ce qui est SOMBRE ou MINUSCULE : les
+quarante-cinq chandelles nues d'une semaine restent invisibles parmi du
+feuillage éteint. Le calque garde donc les deux, avec une règle simple :
+**l'estompe pour trouver, un marqueur là où le contraste ne peut pas suffire.**
+
+Trois erreurs en chemin, toutes attrapées par la capture :
+
+- **le sol ne doit PAS s'estomper.** Je lui ai baissé l'opacité à 0,62 puis à
+  0,88 : derrière lui il y a le fond de brume, qui est PÂLE, donc baisser
+  l'alpha ne le fait pas reculer mais BLANCHIR. La parcelle sortait comme sous
+  un voile de lait. Le sol n'a de toute façon pas changé — c'est la référence
+  sur laquelle on lit les positions. Leçon générale : dans cette scène,
+  l'opacité fait reculer ce qui est posé sur du sombre et blanchir ce qui est
+  posé sur le fond de scène ;
+- **0,3 était trop fort** : à 0,14, le peuplement recule vraiment ;
+- **l'estompe s'est fait défaire par le broutage**, exactement comme les
+  marqueurs. En gardant nets tous les sujets du journal, 2 058 arbres sur 2 831
+  restaient nets et l'image était uniformément délavée. Même seuil, même
+  raison : un phénomène de masse ne se cherche pas, il se lit dans une phrase.
+
+**Les RECRUES sont là, et il a fallu me corriger pour ça.** J'avais ouvert
+[#46](https://github.com/iribarnesy/canopee/issues/46) en affirmant que les
+naissances ne voyageaient pas — sans avoir cherché le champ.
+`Snapshot.trees[].ageWeeks` existe et arrive au rendu : une recrue est un arbre
+plus jeune que l'intervalle du journal, ce qui se lit dans l'instantané SEUL,
+sans diff et sans état gardé. C'est même plus robuste qu'une liste de
+naissances, qui se perdrait si un message était sauté. Sur `friche-s17` — la
+seule scène dont la fenêtre contient la semaine 14, celle du recrutement
+annuel — **359 semis**, et ils se voient. L'issue ne porte plus que sur les
+franchissements de stade, qui n'existent nulle part dans le protocole et dont
+il n'est pas sûr que le moteur veuille les porter.
 
 #### La demande d'origine (v0.2)
 

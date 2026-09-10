@@ -50,9 +50,11 @@ import { BRUME, type DecorBordures, OPACITE_DU_DECOR } from "../couches/decor";
 import {
   cuireHalo,
   cuireLisere,
+  cuirePoint,
   cuireRepere,
   HAUTEUR_DU_MARQUEUR_PX,
   OPACITE_DU_MARQUEUR,
+  PART_DU_POINT,
   TAILLE_MARQUEUR_PX,
 } from "../couches/marqueurs";
 import {
@@ -614,7 +616,9 @@ export class SceneParcelle {
       halo: Texture.from(cuireHalo(this.fabriquer)),
       liseré: Texture.from(cuireLisere(this.fabriquer)),
       zone: Texture.from(cuireRepere(this.fabriquer)),
+      recrue: Texture.from(cuirePoint(this.fabriquer)),
     };
+    const formes = this.formes;
     const cote = etat.sol.coteM;
     let n = 0;
     for (const m of this.marqueurs) {
@@ -622,10 +626,13 @@ export class SceneParcelle {
       const cy = Math.min(cote - 1, Math.max(0, Math.floor(m.y)));
       const z = etat.sol.altitudesM[cy * cote + cx] ?? 0;
       const p = versEcranVue({ x: m.x, y: m.y, z }, vue);
-      const sprite = SceneParcelle.sprite(this.couches.marqueurs, n, this.formes[m.sorte]);
+      const sprite = SceneParcelle.sprite(this.couches.marqueurs, n, formes[m.sorte]);
       sprite.anchor.set(0.5, 0.5);
-      sprite.width = TAILLE_MARQUEUR_PX;
-      sprite.height = TAILLE_MARQUEUR_PX;
+      // Un point de recrue est plus petit : une naissance est une bonne
+      // nouvelle discrète, et il y en a des centaines.
+      const taille = TAILLE_MARQUEUR_PX * (m.sorte === "recrue" ? PART_DU_POINT : 1);
+      sprite.width = taille;
+      sprite.height = taille;
       sprite.x = p.sx;
       sprite.y = p.sy - HAUTEUR_DU_MARQUEUR_PX;
       sprite.tint = versEntier(m.teinte);

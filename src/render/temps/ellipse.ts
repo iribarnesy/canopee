@@ -59,7 +59,23 @@ export interface JournalDeSemaine {
 
 /** Ce qu'un acte montre. Une union, pour que le dessin sache quoi faire. */
 export type Sujet =
-  | { quoi: "feu"; origine: number; brulees: readonly number[] }
+  | {
+      quoi: "feu";
+      origine: number;
+      brulees: readonly number[];
+      /**
+       * Rang d'arrivée du front sur chaque cellule de `brulees`, même ordre.
+       *
+       * **Il manquait, et c'est une correction de ce module.** Le sujet ne
+       * portait que les cellules brûlées — or `IncendieResult` donne aussi les
+       * rangs, et le commentaire du moteur dit à quoi ils servent : « c'est ce
+       * qui permet de faire COURIR une ligne de flammes au lieu de noircir un
+       * patch d'un coup ». Sans eux, le plan aurait obligé le dessin à
+       * noircir d'un coup, c'est-à-dire à perdre la seule chose qui rend un
+       * incendie pédagogique.
+       */
+      rangs: readonly number[];
+    }
   | { quoi: "chute"; chutes: readonly ChuteDeChandelle[] }
   | { quoi: "mort"; cause: CauseMort; morts: readonly MortDeLaSemaine[] }
   | { quoi: "geste"; geste: GesteVisible };
@@ -185,7 +201,14 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
     parType.set(g.type, fusionnerGestes(deja, g));
   }
   for (const g of parType.values()) sujets.push({ quoi: "geste", geste: g });
-  for (const f of feux) sujets.push({ quoi: "feu", origine: f.origine, brulees: [...f.brulees] });
+  for (const f of feux) {
+    sujets.push({
+      quoi: "feu",
+      origine: f.origine,
+      brulees: [...f.brulees],
+      rangs: [...f.rangs],
+    });
+  }
   for (const [cause, morts] of parCause) sujets.push({ quoi: "mort", cause, morts });
   if (chutes.length > 0) sujets.push({ quoi: "chute", chutes });
 

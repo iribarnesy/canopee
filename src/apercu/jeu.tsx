@@ -25,16 +25,24 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import type { Compte } from "../render/pixi/scene";
-import { type Marqueur, marqueursDuJournal } from "../render/temps/changements";
-import { combiner } from "../render/temps/chute";
+import {
+  type Marqueur,
+  marqueursDuJournal,
+  OPACITE_HORS_SUJET,
+  recruesDuSnapshot,
+  sujetsDuJournal,
+} from "../render/temps/changements";
+import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
 import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
 import {
   deformationDe,
   etatMourantDe,
+  feuEnCours,
   indexerLesChutes,
   indexerLesMorts,
   indexerLesVoiles,
   poseDeLaMort,
+  trouverLeFeu,
   voilesEnCours,
 } from "../render/temps/lecteur";
 
@@ -54,6 +62,21 @@ interface Scene {
     morts: MortDeLaSemaine[];
     gestes: GesteVisible[];
     chutes: ChuteDeChandelle[];
+    /**
+     * Sur combien de semaines ce journal a été accumulé.
+     *
+     * C'est ce qui reconnaît une RECRUE sans rien garder : un arbre dont l'âge
+     * est inférieur à cet intervalle est arrivé depuis la dernière fois qu'on a
+     * regardé (`recruesDuSnapshot`).
+     */
+    semaines?: number;
+    /**
+     * L'incendie, si la scène en porte un (`APERCU_FEU=1`).
+     *
+     * En tableaux et non en `Int32Array` : JSON transforme les tableaux typés
+     * en objets indexés, et le front y perdrait son ordre.
+     */
+    incendie?: { origine: number; brulees: number[]; rangs: number[] };
   };
   trees: {
     id: number;
@@ -61,6 +84,8 @@ interface Scene {
     x: number;
     y: number;
     heightM: number;
+    /** `ageWeeks` du protocole : c'est lui qui reconnaît une recrue */
+    ageWeeks: number;
     chandelle: boolean;
     hauteurElagueeM?: number;
     teteTrogneM?: number;
@@ -220,21 +245,58 @@ function Demo(): React.ReactElement {
     // qui dit qu'ils forcent quelque chose.
     const reel = scene?.journal;
     if (reel && !tout && !cause) {
-      const plan = planDEllipse([reel], DUREE_ELLIPSE_MS);
-      // Le calque des changements sort du MÊME journal que le plan : c'est ce
-      // qui garantit qu'il montre exactement ce que l'ellipse a joué, ni plus
-      // ni moins. `?calque=0` l'éteint, pour comparer.
+      // L'incendie rejoint le journal sous la forme que le plan attend. Les
+      // trois nombres que `IncendieResult` porte en plus — cellules brûlées,
+      // arbres tués, carbone — ne servent qu'au fil d'actualité.
+      // `incendie` est retiré du reste AVANT le mélange : la forme sérialisée
+      // et la forme du protocole ne sont pas la même, et les répandre toutes
+      // les deux donnerait une union des deux.
+      const { incendie: incendieBrut, ...reste } = reel;
+      const journalReel: JournalDeSemaine = {
+        ...reste,
+        ...(incendieBrut
+          ? {
+              incendie: {
+                origine: incendieBrut.origine,
+                brulees: Int32Array.from(incendieBrut.brulees),
+                rangs: Int32Array.from(incendieBrut.rangs),
+                cellulesBrulees: incendieBrut.brulees.length,
+                arbresTues: 0,
+                rejets: 0,
+                carboneTHa: 0,
+              },
+            }
+          : {}),
+      };
+      const plan = planDEllipse([journalReel], DUREE_ELLIPSE_MS);
       const ou = new Map((scene?.trees ?? []).map((t) => [t.id, { x: t.x, y: t.y }]));
+      // `?calque=0` éteint tout, pour comparer ; `?calque=marqueurs` garde les
+      // repères sans estomper, ce qui isole ce que chaque mécanisme apporte.
+      const quoi = params.get("calque") ?? "estompe";
+      const recrues = recruesDuSnapshot(scene?.trees ?? [], reel.semaines ?? 0);
+      const tous = marqueursDuJournal(journalReel, (id) => ou.get(id), scene?.coteM ?? 1);
+      // **L'estompe ET les marqueurs, et la mesure a tranché contre mon premier
+      // choix.** J'avais mis l'estompe seule par défaut, en pensant qu'elle
+      // remplaçait les repères. Elle rend trouvable ce qui est clair ou coloré,
+      // et échoue sur ce qui est sombre ou minuscule : une chandelle nue parmi
+      // du feuillage éteint reste invisible, un semis fait deux pixels. Les
+      // deux se complètent au lieu de se remplacer.
       const calque =
-        params.get("calque") === "0"
+        quoi === "0"
           ? { marqueurs: [] as Marqueur[], omis: 0 }
-          : marqueursDuJournal(reel, (id) => ou.get(id), scene?.coteM ?? 1);
+          : { marqueurs: [...tous.marqueurs, ...recrues.marqueurs], omis: tous.omis };
+      const sujets = quoi === "0" ? new Set<number>() : sujetsDuJournal(journalReel);
+      for (const id of recrues.ids) sujets.add(id);
       return {
         index: indexerLesChutes(plan),
         voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
         morts: indexerLesMorts(plan),
+        feu: trouverLeFeu(plan),
         marqueurs: calque.marqueurs,
         omis: calque.omis,
+        recrues: recrues.ids.size,
+        sujets,
+        estompe: quoi !== "0" && quoi !== "marqueurs" && sujets.size > 0,
         dureeMs: plan.dureeMs,
       };
     }
@@ -305,8 +367,12 @@ function Demo(): React.ReactElement {
       index: indexerLesChutes(plan),
       voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
       morts: indexerLesMorts(plan),
+      feu: trouverLeFeu(plan),
       marqueurs: [] as Marqueur[],
       omis: 0,
+      recrues: 0,
+      sujets: new Set<number>(),
+      estompe: false,
       dureeMs: plan.dureeMs,
     };
   }, [scene]);
@@ -334,9 +400,11 @@ function Demo(): React.ReactElement {
     if (!etat || !scene) return;
     // Le calque et ce qu'il a renoncé à montrer : sans ce chiffre à l'écran,
     // un calque vide et un calque débordé se ressemblent.
-    etat.textContent = `calque : ${ellipse.marqueurs.length} marqueurs${
+    etat.textContent = `${ellipse.estompe ? "estompe" : "marqueurs"} : ${
+      ellipse.sujets.size
+    } sujets nets, ${ellipse.recrues} recrues, ${ellipse.marqueurs.length} repères${
       ellipse.omis > 0 ? `, ${ellipse.omis} changements non pointés` : ""
-    }`;
+    }${ellipse.feu ? ` — INCENDIE de ${ellipse.feu.feu.brulees.length} cellules` : ""}`;
   }, [ellipse, scene]);
 
   if (!scene) return <div />;
@@ -402,17 +470,26 @@ function Demo(): React.ReactElement {
         // un arbre mourir puis tomber, et `DEBOUT` est neutre pour cette
         // composition — on peut donc appeler les deux sans se demander lequel
         // a lieu.
+        // L'estompe est une TROISIÈME déformation, et elle se compose comme les
+        // deux autres : ce qui n'est pas sujet du journal s'efface.
+        const estompe: Deformation =
+          ellipse.estompe && !ellipse.sujets.has(id)
+            ? { rotationRad: 0, hauteur: 1, opacite: OPACITE_HORS_SUJET }
+            : DEBOUT;
         return combiner(
-          deformationDe(ellipse.index, ou, id, vue),
-          poseDeLaMort(ellipse.morts, ou, id),
+          combiner(deformationDe(ellipse.index, ou, id, vue), poseDeLaMort(ellipse.morts, ou, id)),
+          estompe,
         );
       }}
       mourant={(id, maintenantMs, vivant) =>
         etatMourantDe(ellipse.morts, ouLire(maintenantMs, fige, ellipse.dureeMs), id, vivant)
       }
-      voiler={(maintenantMs) =>
-        voilesEnCours(ellipse.voiles, ouLire(maintenantMs, fige, ellipse.dureeMs))
-      }
+      voiler={(maintenantMs) => {
+        const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
+        // Le front d'incendie et le voile d'un geste passent par la MÊME
+        // couche : deux choses différentes qui se dessinent pareil.
+        return [...voilesEnCours(ellipse.voiles, ou), ...feuEnCours(ellipse.feu, ou)];
+      }}
     />
   );
 }

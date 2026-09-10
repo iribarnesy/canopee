@@ -149,3 +149,33 @@ export const HAUTEUR_DU_MARQUEUR_PX = 12;
  * le marqueur, il cherche l'arbre.
  */
 export const OPACITE_DU_MARQUEUR = 0.88;
+
+/**
+ * Un POINT : un disque plein, pour une recrue.
+ *
+ * Plein et non ajouré, à la différence des trois autres : un semis de deux
+ * pixels n'a rien à laisser voir, et c'est le seul cas où le marqueur REMPLACE
+ * son sujet plutôt que de l'entourer. Petit, parce qu'une naissance est une
+ * bonne nouvelle discrète et qu'il y en a des centaines.
+ */
+export function cuirePoint(
+  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+): HTMLCanvasElement {
+  const canvas = fabriquer(COTE_MARQUEUR_PX, COTE_MARQUEUR_PX);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  const c = COTE_MARQUEUR_PX / 2;
+  const r = COTE_MARQUEUR_PX * 0.19;
+  ctx.fillStyle = OMBRE_DU_TRAIT;
+  ctx.beginPath();
+  ctx.arc(c, c, r + DEBORD_DU_LISERE_PX, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = CLARTE_DU_TRAIT;
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.fill();
+  return canvas;
+}
+
+/** Part de la taille d'un marqueur que prend un point de recrue. */
+export const PART_DU_POINT = 0.6;

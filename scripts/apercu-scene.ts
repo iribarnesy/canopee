@@ -42,6 +42,7 @@ import type { GesteVisible } from "../src/engine/actions";
 import { transversalite } from "../src/engine/boisMort";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
+import { chargeCombustible, propager, rangsDuFront } from "../src/engine/feu";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
 import { getPaysage } from "../src/engine/paysage";
@@ -160,6 +161,23 @@ function troncCouche(
 /** Vider la liste des arbres : on juge le tapis, pas ce qui pousse dessus. */
 const SANS_ARBRES = process.env.APERCU_SANS_ARBRES === "1";
 /**
+ * `APERCU_FEU=1` : allume un incendie sur la scène, à la semaine capturée.
+ *
+ * **Propagé par le MOTEUR et non fabriqué**, et c'est la leçon du banc de bois
+ * mort : un banc qui fabrique un état inatteignable accuse le rendu. On prend
+ * donc la charge de combustible réelle de la parcelle (`chargeCombustible`), on
+ * allume au centre, et on laisse `propager` faire son travail avec le PRNG de la
+ * partie. Le front qui en sort est celui qu'un vrai été sec produirait — y
+ * compris son irrégularité, qui est justement ce que le §6.4 veut montrer.
+ *
+ * On n'attend PAS qu'un départ de feu arrive tout seul : `departDeFeu` demande
+ * une sécheresse et un tirage, et une scène de démonstration ne peut pas
+ * dépendre de la météo de 2026. Ce qu'on force est l'ALLUMAGE, pas la
+ * propagation — et l'allumage est de toute façon d'origine humaine dans la
+ * grande majorité des cas (`feu.ts`).
+ */
+const FEU = process.env.APERCU_FEU === "1";
+/**
  * Semaines DANS L'ANNÉE à figer, en plus de la fin d'année.
  *
  * Sans ça on ne capture qu'au 31 décembre — soit la semaine la plus humide de
@@ -184,6 +202,8 @@ interface ArbreScene {
   x: number;
   y: number;
   heightM: number;
+  /** `ageWeeks` du protocole : l'âge en semaines, qui reconnaît une recrue */
+  ageWeeks: number;
   chandelle: boolean;
   hauteurElagueeM: number;
   /** hauteur de la tête de trogne, m ; absent = jamais étêté */
@@ -251,6 +271,10 @@ function figer(state: GameState): ArbreScene[] {
       x: arrondi(t.x, 2),
       y: arrondi(t.y, 2),
       heightM: arrondi(t.heightM, 3),
+      // L'ÂGE, et c'est lui qui reconnaît une recrue sans rien garder : un
+      // arbre plus jeune que l'intervalle du journal est arrivé depuis le
+      // dernier instantané (`recruesDuSnapshot`).
+      ageWeeks: t.ageWeeks,
       chandelle: !t.alive,
       hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
       ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
@@ -309,6 +333,37 @@ function recensement(an: number, fichier: string, trees: ArbreScene[]): string {
  * Les valeurs sont arrondies : trois décimales suffisent pour huit paliers de
  * quantification, et le fichier reste lisible.
  */
+/**
+ * Un incendie propagé par le moteur sur la parcelle telle qu'elle est.
+ *
+ * Rend la forme sérialisable de `IncendieResult` — les `Int32Array` de
+ * `brulees` et `rangs` deviendraient des objets indexés en JSON, donc on écrit
+ * des tableaux.
+ */
+function incendieDeDemonstration(
+  state: GameState,
+  lumiereAuSol: Float32Array<ArrayBufferLike>,
+): { origine: number; brulees: number[]; rangs: number[] } {
+  const charge = chargeCombustible(
+    state.trees,
+    state.soil.herbeCouverture,
+    state.soil.litterCG,
+    COTE_M,
+    [...lumiereAuSol],
+    state.soil.boisAuSolCG,
+  );
+  const origine = Math.floor(COTE_M / 2) * COTE_M + Math.floor(COTE_M / 2);
+  const { brulees } = propager(origine, charge, COTE_M, rngStateFromSeed(GRAINE_DU_FEU));
+  const rangs = rangsDuFront(brulees, origine, COTE_M);
+  // Rangées par rang d'arrivée, comme le moteur les rend : c'est ce que le
+  // rendu attend pour faire courir le front.
+  const liste = [...brulees].sort((a, b) => (rangs.get(a) ?? 0) - (rangs.get(b) ?? 0));
+  return { origine, brulees: liste, rangs: liste.map((c) => rangs.get(c) ?? 0) };
+}
+
+/** La graine de l'allumage de démonstration. Fixe : une scène est reproductible. */
+const GRAINE_DU_FEU = 7717;
+
 function figerLeSol(
   state: GameState,
   station: Station,
@@ -454,7 +509,9 @@ function main() {
     morts: MortDeLaSemaine[];
     gestes: GesteVisible[];
     chutes: ChuteDeChandelle[];
-  } = { morts: [], gestes: [], chutes: [] };
+    /** sur combien de semaines il a été accumulé — voir `recruesDuSnapshot` */
+    semaines: number;
+  } = { morts: [], gestes: [], chutes: [], semaines: 0 };
   for (let i = 0; i < dernierAn * 52; i++) {
     const base = weather[i % weather.length];
     if (!base) throw new Error("météo manquante");
@@ -473,6 +530,7 @@ function main() {
       enAttente.morts.push(...semaine.morts);
       enAttente.gestes.push(...semaine.gestes);
       enAttente.chutes.push(...semaine.chutes);
+      enAttente.semaines++;
     }
     // Les semaines demandées de la DERNIÈRE année, figées au passage.
     const anEnCours = Math.floor(i / 52) + 1;
@@ -488,7 +546,10 @@ function main() {
           // transforme en objets indexés, et aucune de ces scènes ne brûle. Le
           // jour où une scène de feu existera, il faudra les sérialiser à la
           // main.
-          journal: enAttente,
+          journal: {
+            ...enAttente,
+            ...(FEU ? { incendie: incendieDeDemonstration(state, semaine.lumiereAuSol) } : {}),
+          },
           sol: figerLeSol(
             state,
             station,
@@ -498,7 +559,7 @@ function main() {
           ),
         })}\n`,
       );
-      enAttente = { morts: [], gestes: [], chutes: [] };
+      enAttente = { morts: [], gestes: [], chutes: [], semaines: 0 };
     }
     if ((i + 1) % 52 !== 0) continue;
     const an = (i + 1) / 52;

@@ -32,6 +32,7 @@ import type { CauseMort } from "../../engine/trees";
 import type { Vue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
 import type { Acte, PlanDEllipse } from "./ellipse";
+import { type FrontDIncendie, frontEnCours } from "./feu";
 import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
@@ -281,3 +282,43 @@ const VIVANT_NEUTRE: ArbreVivant = {
   vigueur: 0,
   dommageHydraulique: 0,
 };
+
+/**
+ * L'incendie d'un plan, s'il y en a un, avec son acte.
+ *
+ * Un seul : `planDEllipse` en fait un acte unique, et le worker ne garde que
+ * le dernier incendie d'un lot d'instantanés (`worker.ts`) — deux incendies
+ * dans la même semaine sont un cas que le moteur a déjà tranché.
+ */
+export function trouverLeFeu(plan: PlanDEllipse): { acte: Acte; feu: FrontDIncendie } | undefined {
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "feu") continue;
+    return { acte, feu: { brulees: acte.sujet.brulees, rangs: acte.sujet.rangs } };
+  }
+  return undefined;
+}
+
+/**
+ * Les cellules du front à cet instant.
+ *
+ * Rendues sous la même forme que le voile d'un geste de zone, et posées par la
+ * même couche : une flamme au sol et un nuage de chaux ne sont pas la même
+ * chose, mais ils se dessinent de la même façon.
+ */
+export function feuEnCours(
+  trouve: { acte: Acte; feu: FrontDIncendie } | undefined,
+  ecouleMs: number,
+): CelluleVoilee[] {
+  if (!trouve) return [];
+  const { acte, feu } = trouve;
+  if (ecouleMs < acte.debutMs) return [];
+  // **Après l'acte, la cendre RESTE**, à la différence du voile d'un geste :
+  // un sol brûlé est un état, pas un passage. L'instantané d'après le dira
+  // dans ses grilles — l'herbe a disparu — mais tant que l'ellipse joue, c'est
+  // ce calque qui le porte, et l'éteindre ferait reverdir la parcelle.
+  const avancement =
+    ecouleMs >= acte.debutMs + acte.dureeMs
+      ? 1
+      : (ecouleMs - acte.debutMs) / Math.max(1, acte.dureeMs);
+  return frontEnCours(feu, avancement);
+}
