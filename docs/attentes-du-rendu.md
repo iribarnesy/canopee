@@ -123,7 +123,7 @@ espèce, hauteur à la levée — la moitié positive de `morts`, même forme ; 
 PAS confondre avec « arbre jeune », voir plus bas),
 `franchissements` (`{ id, deStade, versStade }` : les tiges que la CROISSANCE a
 fait changer de stade), `chutes` (chandelles abattues : direction et empreinte
-du tronc), `incendie` (compteurs + `origine`, `brulees` et `rangs` du front),
+du tronc), `incendie` (compteurs + `origine`, `brulees`, `rangs` et `charges` du front),
 et `gestes`, qui ont DEUX mailles :
 
 - `{ type, ids }` pour ce qui désigne des arbres — `couper`, `eclaircir`,

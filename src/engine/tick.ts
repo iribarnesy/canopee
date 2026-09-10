@@ -310,6 +310,20 @@ export interface IncendieResult {
    * ligne de flammes au lieu de noircir la tache d'un coup (feu.ts).
    */
   rangs: Int32Array;
+  /**
+   * Charge de combustible de chaque cellule de `brulees`, même ordre : l'indice
+   * de `chargeCombustible` (feu.ts), herbe sèche + litière + ligneux, ∈ [0, ~1,5].
+   *
+   * C'est DANS QUOI la cellule a brûlé, et ça décide de la hauteur de flamme :
+   * haute dans l'ajonc, basse dans un pré ras. Sans elle le rendu dessine
+   * toutes ses flammes à la même hauteur de convention, et « le feu s'essouffle
+   * dans le feuillu frais, fonce dans la lande » ne se lit que sur la vitesse
+   * du front, jamais sur la flamme elle-même.
+   *
+   * Relevée telle que le feu l'a trouvée, avant qu'il ne consume quoi que ce
+   * soit : c'est la charge qui a porté le front, pas ce qu'il en reste.
+   */
+  charges: Float32Array;
 }
 
 /**
@@ -2036,6 +2050,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         origine: depart.origine,
         brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
         rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
+        charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
       };
     }
   }

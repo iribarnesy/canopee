@@ -392,6 +392,36 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     }
   });
 
+  /**
+   * La charge de chaque cellule brûlée (issue #50). Sans elle, le rendu dessine
+   * toutes ses flammes à la même hauteur de convention, faute de savoir DANS
+   * QUOI elles brûlent : « le feu s'essouffle dans le feuillu frais, fonce dans
+   * la lande » ne se lit alors que sur la vitesse du front, jamais sur la
+   * flamme. Une lande de pins et d'ajoncs ne brûle pas partout pareil, et c'est
+   * précisément ce que le calque doit montrer.
+   */
+  it("l'incendie rend AUSSI dans quoi chaque cellule a brûlé", () => {
+    expect(dernier).toBeDefined();
+    if (!dernier) return;
+    // Alignée sur `brulees`, cellule par cellule : c'est ce qui permet de lire
+    // les deux ensemble sans table de correspondance.
+    expect(dernier.charges).toHaveLength(dernier.cellulesBrulees);
+    // Une cellule qui a brûlé portait du combustible : une charge nulle
+    // partout voudrait dire qu'on relève la charge APRÈS consommation, ce qui
+    // serait le contraire de ce qu'on veut montrer.
+    const total = [...dernier.charges].reduce((a, b) => a + b, 0);
+    expect(total).toBeGreaterThan(0);
+    for (const c of dernier.charges) {
+      expect(c).toBeGreaterThanOrEqual(0);
+      // Borne haute de l'indice de `chargeCombustible`, avec de la marge.
+      expect(c).toBeLessThan(3);
+    }
+    // Et ça VARIE : une lande de pins et d'ajoncs ne brûle pas partout à la
+    // même intensité. Une charge uniforme rendrait le champ inutile.
+    const distinctes = new Set([...dernier.charges].map((c) => c.toFixed(3)));
+    expect(distinctes.size).toBeGreaterThan(1);
+  });
+
   it("le feu trie : il emporte des pins et épargne les chênes-lièges", () => {
     // On regarde QUI le feu tue, pas qui domine à la fin — ce dernier chiffre
     // dépend de la date du dernier incendie et bascule pour un rien. Ce qui
