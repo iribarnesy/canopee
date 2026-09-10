@@ -111,7 +111,7 @@ mesurer que ce qu'on sait déjà faire.*
 | B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main |
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
-| B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | ❌ | Pas d'effet de bord |
+| B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
 | B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le RAYON, lui, reste `houppierRatio × hauteur` : pas de port serré |
 
 ## C. Nutriments et cycles
@@ -1694,6 +1694,67 @@ reste sous 70 % de la taille du même pommier à trente mètres — au-delà de 
 portée de la juglone, la distance que conseille tout guide de plantation. Le
 moteur y arrive sans qu'on l'écrive : le pommier n'a pas de règle « éviter le
 noyer », il a une sensibilité, et le noyer une portée.
+
+## L'effet de bord : la parcelle n'est pas seule au monde
+
+Le moteur traitait la limite de parcelle comme une limite du monde : au-delà,
+rien. Un carré de bocage au milieu d'un massif forestier recevait donc autant de
+lumière sur ses bords qu'une clairière isolée — faux, et faux dans le sens qui
+compte, puisque la lisière est justement l'endroit où l'agroforesterie se joue.
+
+### La géométrie n'est pas symétrique
+
+**Ce qui vous ombrage est ce qui est au SUD.** Le soleil est au sud en France,
+les ombres tombent vers le nord (`SHADOW_NORTH_OFFSET`), et un bois planté au
+NORD d'une parcelle ne lui coûte pas une heure de soleil — c'est elle qui
+l'ombrage.
+
+Les quatre bordures ne pèsent donc pas pareil : le sud à plein, l'est et l'ouest
+au tiers (le soleil y est bas et son rayonnement faible), le nord pas du tout.
+La profondeur de la bande ombragée reprend la géométrie du moteur plutôt qu'un
+chiffre importé — un peuplement projette son ombre sur `SHADOW_NORTH_OFFSET`
+fois sa hauteur, comme un arbre.
+
+*Hypothèse assumée* : le modèle de paysage ne dit pas la HAUTEUR du bois voisin,
+seulement sa part boisée. On prend une futaie mûre, à lever le jour où les
+bordures porteront une hauteur.
+
+### Un résultat contre-intuitif, et il est juste
+
+Le premier essai attendait qu'un arbre de lisière sud pousse MOINS à l'ombre
+d'un massif. C'est vrai d'un héliophile — le pin y perd. Mais le hêtre, lui,
+**y gagne** : 8,7 m contre 7,4 en plaine découverte.
+
+La raison tient en une ligne : sur le limon riche, à 750 mm de pluie, le hêtre
+est limité par l'**eau** et non par la lumière. Moins de rayonnement, c'est
+moins de transpiration, donc moins de stress hydrique — et il supporte l'ombre
+par tempérament. C'est exactement le mécanisme de l'effet nurse, appliqué à une
+lisière.
+
+Les deux sont éprouvés, le second surtout : pour qu'il ne passe pas pour une
+régression le jour où quelqu'un le remarquera.
+
+### Et il retire une conclusion du cas Saumos, pour la deuxième fois
+
+« Les feuillus achètent du temps » ne tient plus. On l'avait déjà réduit une
+fois — l'avantage de long terme ne répliquait pas, seul celui à vingt-six ans
+restait. Avec l'effet de bord, ce dernier s'inverse : sur seize graines, les
+feuillus brûlent **656 m² contre 431 au pin**, soit la moitié DE PLUS.
+
+Le changement a été isolé — en désactivant le seul ombrage de l'entourage,
+l'ancien ordre revient. L'explication qui tient, et elle n'est pas vérifiée pour
+elle-même : l'atténuation par les feuillus reposait sur leur capacité à FERMER
+LE COUVERT vite, ce qui étouffe la lande qui porte le feu. Tout ce qui les
+ralentit défait donc l'atténuation, et l'ombre de la lisière les ralentit.
+
+Ce qui survit : le chêne-liège brûle toujours moins que le pin — 344 m² contre
+431, soit 20 % de moins au lieu de 30. C'est le seul résultat de ce cas d'étude
+qui garde le même sens à travers tous les états du moteur qu'a connus ce dépôt.
+
+*Une inconsistance à noter* : le profil Saumos suppose un incendie de MASSIF,
+tout le bassin logé à la même enseigne. Or l'ombrage de bordure suppose un
+entourage boisé intact et permanent — après un feu de massif, les voisins ont
+brûlé aussi. Le moteur ne le sait pas.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 

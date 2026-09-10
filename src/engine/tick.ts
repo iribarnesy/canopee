@@ -78,6 +78,7 @@ import {
   type PartOmbrageante,
   windShelterAt,
 } from "./light";
+import { lumiereApresBordures } from "./lisiere";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
@@ -433,6 +434,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return Math.min(1, total);
   };
   const light = computeLight(trees, partOmbrageanteDe);
+  // L'ENTOURAGE ombrage les lisières : un carré de bocage au milieu d'un massif
+  // n'est pas une clairière isolée (lisiere.ts). Et la géométrie n'est pas
+  // symétrique — c'est ce qui est au SUD qui ombrage.
+  for (let t = 0; t < light.length; t++) {
+    const arbre = trees[t];
+    if (!arbre) continue;
+    light[t] = (light[t] ?? 1) * lumiereApresBordures(arbre.x, arbre.y, dims, station.bordures);
+  }
+  for (let i = 0; i < nCells; i++) {
+    const x = (i % dims.widthM) + 0.5;
+    const y = Math.floor(i / dims.widthM) + 0.5;
+    groundLight[i] = (groundLight[i] ?? 1) * lumiereApresBordures(x, y, dims, station.bordures);
+  }
 
   // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
   const profil = station.profil;

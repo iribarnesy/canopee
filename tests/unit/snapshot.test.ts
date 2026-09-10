@@ -164,8 +164,13 @@ describe("les grilles de l'instantané", () => {
     expect(snapshot.soilDebordementMm).toHaveLength(nCells);
     expect(snapshot.soilLumiere).toHaveLength(nCells);
     expect(snapshot.soilLitiereCG).toHaveLength(nCells);
-    // Sans arbre, tout le sol est éclairé.
-    expect(snapshot.soilLumiere[0]).toBeCloseTo(1, 6);
+    // Sans arbre, le sol est éclairé — SAUF sur les bandes de bordure, que
+    // l'entourage ombrage désormais (lisiere.ts). La cellule 0 est au coin
+    // sud-ouest, donc dans la bande la plus ombragée de toutes ; c'est au CŒUR
+    // de la parcelle que l'absence d'arbre se lit.
+    const centre = Math.floor(nCells / 2) + Math.floor(STATION.coteM / 2);
+    expect(snapshot.soilLumiere[centre]).toBeCloseTo(1, 6);
+    expect(snapshot.soilLumiere[0] ?? 0).toBeLessThan(1);
   });
 
   it("porte l'herbe sur pied, les ravageurs et l'érosion, cellule par cellule", () => {
