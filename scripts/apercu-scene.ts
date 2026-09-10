@@ -42,7 +42,13 @@ import type { GesteVisible } from "../src/engine/actions";
 import { transversalite } from "../src/engine/boisMort";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
-import { chargeCombustible, departDeFeu, propager, rangsDuFront } from "../src/engine/feu";
+import {
+  chargeCombustible,
+  departDeFeu,
+  propager,
+  rangsDuFront,
+  survitAuFeu,
+} from "../src/engine/feu";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
 import { frequentationDesBordures, getPaysage } from "../src/engine/paysage";
@@ -263,7 +269,7 @@ const arrondi = (v: number, n: number) => Math.round(v * 10 ** n) / 10 ** n;
  * signale — c'est la règle du §2.1, et elle vaut pour le banc autant que pour
  * le rendu.
  */
-function figer(state: GameState): ArbreScene[] {
+function figer(state: GameState, brules: ReadonlySet<number> = new Set()): ArbreScene[] {
   // Le banc de pelouse juge le TAPIS : les arbres n'y ont rien à faire, ils
   // couvriraient précisément ce qu'on regarde.
   if (SANS_ARBRES) return [];
@@ -279,12 +285,22 @@ function figer(state: GameState): ArbreScene[] {
       // arbre plus jeune que l'intervalle du journal est arrivé depuis le
       // dernier instantané (`recruesDuSnapshot`).
       ageWeeks: t.ageWeeks,
-      chandelle: !t.alive,
+      // Un arbre que le feu vient de tuer est un TRONC MORT SUR PIED, et le
+      // moteur l'écrit ainsi (`{...tree, alive: false, causeMort: "feu",
+      // brulEeSemaine: state.week}`). L'instantané le dit donc charbonné, et
+      // c'est de là que le rendu apprend qu'il y a un torchage à mettre en
+      // scène — le journal ne peut pas le lui dire, le moteur ne rapporte une
+      // mort par le feu qu'un an plus tard (issue #52).
+      chandelle: !t.alive || brules.has(t.id),
       hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
       ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
       vigueur: arrondi(t.vigueur, 3),
       dommageHydraulique: arrondi(s.dommageHydraulique, 3),
-      ...(s.brulEeSemaine === undefined ? {} : { brulEeSemaine: s.brulEeSemaine }),
+      ...(brules.has(t.id)
+        ? { brulEeSemaine: state.week }
+        : s.brulEeSemaine === undefined
+          ? {}
+          : { brulEeSemaine: s.brulEeSemaine }),
       protege: s.protege,
       recepages: s.recepages,
       ...(s.frotteSemaine === undefined ? {} : { frotteSemaine: s.frotteSemaine }),
@@ -348,7 +364,7 @@ function incendieDeDemonstration(
   state: GameState,
   station: Station,
   lumiereAuSol: Float32Array<ArrayBufferLike>,
-): { origine: number; brulees: number[]; rangs: number[] } {
+): { origine: number; brulees: number[]; rangs: number[]; tues: number[] } {
   const charge = chargeCombustible(
     state.trees,
     state.soil.herbeCouverture,
@@ -393,7 +409,34 @@ function incendieDeDemonstration(
   // Rangées par rang d'arrivée, comme le moteur les rend : c'est ce que le
   // rendu attend pour faire courir le front.
   const liste = [...brulees].sort((a, b) => (rangs.get(a) ?? 0) - (rangs.get(b) ?? 0));
-  return { origine, brulees: liste, rangs: liste.map((c) => rangs.get(c) ?? 0) };
+  // **Et le feu TUE, par la règle du moteur.** Sans ça, la scène de feu ne
+  // portait aucun arbre brûlé : `brulEeSemaine` n'était posé sur personne, et
+  // le torchage du §6.4 n'avait rien à mettre en scène. C'est `survitAuFeu` qui
+  // décide — l'écorce de l'espèce contre l'intensité locale — donc la
+  // démonstration montre la vraie sélection, chêne-liège compris.
+  const tues: number[] = [];
+  for (const tree of state.trees) {
+    if (!tree.alive) continue;
+    const cellule =
+      Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.y))) * COTE_M +
+      Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.x)));
+    if (!brulees.has(cellule)) continue;
+    if (!survitAuFeu(tree, intensiteDuFeu(charge.parCellule[cellule] ?? 0))) tues.push(tree.id);
+  }
+  return { origine, brulees: liste, rangs: liste.map((c) => rangs.get(c) ?? 0), tues };
+}
+
+/**
+ * L'intensité du feu dans une cellule, d'après sa charge de combustible.
+ *
+ * **Recopiée de `tick.ts` et c'est un défaut assumé** : le moteur la calcule en
+ * une ligne au milieu de sa section incendie (« l'intensité suit le combustible
+ * local ») sans l'exposer, alors que c'est elle qui décide qui meurt avec
+ * `survitAuFeu`. Deux copies d'une règle dérivent — l'issue #52 est ouverte pour
+ * qu'elle sorte du tick.
+ */
+function intensiteDuFeu(chargeLocale: number): number {
+  return Math.min(1, chargeLocale / 1.2);
 }
 
 /** La graine de l'allumage de démonstration. Fixe : une scène est reproductible. */
@@ -593,6 +636,12 @@ function main() {
     const anEnCours = Math.floor(i / 52) + 1;
     if (anEnCours === dernierAn && SEMAINES.includes(i % 52)) {
       const nom = NOM ? NOM.replace(/\.json$/, "") : `scene-an${dernierAn}`;
+      // L'incendie est calculé AVANT de figer les arbres : ce sont ses victimes
+      // qui décident lesquels l'instantané décrit comme des troncs charbonnés,
+      // et c'est ce qui donne au rendu de quoi mettre en scène un torchage.
+      const incendie = FEU
+        ? incendieDeDemonstration(state, station, semaine.lumiereAuSol)
+        : undefined;
       writeFileSync(
         `${DOSSIER}/${nom}-s${i % 52}.json`,
         `${JSON.stringify({
@@ -603,16 +652,10 @@ function main() {
           // ne dit pas d'où le vent vient — seulement combien la parcelle y est
           // exposée — et le rendu ne fait pas semblant de savoir le reste.
           ventExposition: station.ventExposition,
-          trees: figer(state),
-          // L'incendie n'y est pas : ses champs sont des `Int32Array`, que JSON
-          // transforme en objets indexés, et aucune de ces scènes ne brûle. Le
-          // jour où une scène de feu existera, il faudra les sérialiser à la
-          // main.
+          trees: figer(state, new Set(incendie?.tues ?? [])),
           journal: {
             ...enAttente,
-            ...(FEU
-              ? { incendie: incendieDeDemonstration(state, station, semaine.lumiereAuSol) }
-              : {}),
+            ...(incendie ? { incendie } : {}),
           },
           sol: figerLeSol(
             state,

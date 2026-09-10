@@ -144,7 +144,18 @@ function appliquerLesMorts(
       senescence: e.senescence,
       vigueur: e.vigueur,
       dommageHydraulique: e.dommageHydraulique,
-      ...(e.chandelle ? { chandelle: true } : {}),
+      // **Posé et non ajouté, et c'est une correction.** Le premier jet ne
+      // savait qu'AJOUTER la chandelle (`...(e.chandelle ? {chandelle: true} :
+      // {})`), or un arbre que le journal déclare mort cette semaine est déjà
+      // une chandelle dans l'instantané : la mise en scène ne pouvait donc pas
+      // le montrer encore debout et feuillu au début de son acte, ce qui est
+      // pourtant tout ce que le §6.3 demande. C'est la mise en scène qui décide
+      // à quel moment l'arbre devient une chandelle, pas l'instantané.
+      chandelle: e.chandelle,
+      // L'écorce charbonnée, elle, reste OPTIONNELLE : aucune des onze causes
+      // du §6.3 n'a d'avis sur elle, et si elles rendaient `false` elles
+      // effaceraient la trace d'un incendie passé (`mort.ts`).
+      ...(e.brulee === undefined ? {} : { brulee: e.brulee }),
     };
   });
   return touche ? sortie : arbres;

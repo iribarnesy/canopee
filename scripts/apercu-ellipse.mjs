@@ -19,6 +19,10 @@ if (!DIR) throw new Error("SORTIE manquant : où écrire les captures ?");
 const SCENE = process.env.SCENE ?? "friche-s4";
 const TOUT = process.env.TOUT !== "0";
 const LECTURES = (process.env.LECTURES ?? "0,0.35,0.7,1").split(",");
+// `CALQUE=0` éteint l'estompe et les repères : sur une scène qui porte un vrai
+// journal, ils lavent l'image et cachent précisément ce qu'on veut juger — un
+// incendie, par exemple, n'est pas un « changement à pointer », c'est le sujet.
+const CALQUE = process.env.CALQUE;
 mkdirSync(DIR, { recursive: true });
 
 const nav = await chromium.launch({
@@ -32,7 +36,9 @@ const lire = () => page.evaluate(() => document.getElementById("compte")?.textCo
 const nombre = (s, quoi) => Number(new RegExp(`${quoi}\\s+([\\d.]+)`).exec(s)?.[1] ?? Number.NaN);
 
 for (const t of LECTURES) {
-  const url = `http://localhost:5173/apercu/jeu.html?scene=${SCENE}${TOUT ? "&ellipse-tout=1" : ""}&ellipse=${t}`;
+  const url = `http://localhost:5173/apercu/jeu.html?scene=${SCENE}${
+    TOUT ? "&ellipse-tout=1" : ""
+  }${CALQUE === undefined ? "" : `&calque=${CALQUE}`}&ellipse=${t}`;
   await page.goto(url, { waitUntil: "load" });
   await page
     .waitForFunction(

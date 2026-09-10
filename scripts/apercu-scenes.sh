@@ -82,6 +82,20 @@ if veut feu; then
     npx tsx scripts/apercu-scene.ts
 fi
 
+# ── Le banc du TORCHAGE ────────────────────────────────────────────────────
+# **La friche de trois ans ne peut PAS montrer un torchage, et c'est mesuré** :
+# elle porte 229 tiges dont la plus haute fait 1,13 m, et le feu en tue 222.
+# Ce n'est pas un torchage, c'est un pré fauché — un torchage a besoin d'une
+# couronne. Le sondage année par année donne : à 5 et 6 ans, une dizaine de
+# cellules brûlent (rien à voir) ; à 7 et 8 ans, quelques centaines et des
+# tiges de 3 m ; à 18 ans, 7 039 cellules, 2 751 tiges tuées dont la plus haute
+# à 11,6 m — et 31 SURVIVANTES de plus de 5 m, qui sont la démonstration de la
+# sélection par l'écorce (`survitAuFeu`).
+if veut torchage; then
+  APERCU_NOM=feu-bois.json APERCU_ANS=18 APERCU_SEMAINES=30 APERCU_FEU=1 \
+    npx tsx scripts/apercu-scene.ts
+fi
+
 # ── Le banc du bois couché ─────────────────────────────────────────────────
 # Deux troncs de vingt-cinq mètres, à deux azimuts. La transversalité n'est pas
 # forcée : `transversalite` du moteur la calcule depuis l'azimut posé et l'aval

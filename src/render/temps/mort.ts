@@ -80,6 +80,21 @@ export interface EtatMourant {
   dommageHydraulique: number;
   /** vrai dès que l'arbre doit se dessiner en chandelle */
   chandelle: boolean;
+  /**
+   * Vrai dès que l'écorce doit se dessiner CHARBONNÉE ; absent = laisser
+   * l'instantané décider.
+   *
+   * **Aucune des onze causes du §6.3 ne s'en sert, et c'est pour le torchage du
+   * §6.4** (`feu.ts`) : un arbre que le front atteint noircit dès que la flamme
+   * lèche son écorce, bien avant d'être un tronc mort sur pied. Entre les deux,
+   * on voit un arbre noir qui a encore des feuilles — ce qui est exactement ce
+   * qu'on voit d'un arbre en train d'être torché.
+   *
+   * Optionnel plutôt que faux par défaut : une mort de sécheresse n'a rien à
+   * dire sur l'écorce, et si elle rendait `false`, elle EFFACERAIT la trace d'un
+   * incendie passé sur un arbre que la sécheresse achève cinq ans plus tard.
+   */
+  brulee?: boolean;
   /** opacité du sprite ∈ [0,1] */
   opacite: number;
   /** échelle verticale du sprite ∈ ]0,1] */

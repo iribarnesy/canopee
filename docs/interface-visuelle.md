@@ -1413,7 +1413,7 @@ sait déjà où le feu part, où il passe, qui il tue, qui rejette.
 | Départ | une lueur sur la cellule d'origine, un filet de fumée | `S` |
 | **Le front** | une ligne de flammes qui court de cellule en cellule dans l'ordre du rang d'arrivée, s'essouffle dans le feuillu frais, fonce dans la lande. **C'est la carte de combustibilité qui devient visible** — donc la pédagogie des coupures et du choix d'essences. | `L` |
 | **Arbres qui brûlent** | torchage : la couronne s'embrase, les particules montent, il reste une chandelle noire. Un chêne-liège, lui, **survit** : écorce noircie, houppier intact — la démonstration de l'adaptation, gratuite. | `L` |
-| Fumée | colonne au-dessus du front, panache incliné par le vent, ciel orangé | `M` |
+| **Fumée** | colonne au-dessus du front, panache incliné par le vent, ciel orangé | `M` |
 | Après | sol noir, cendres, chandelles, puis **rejets de souche verts au printemps suivant** (`rejetteApresFeu`) — le feu n'élimine pas, il trie | `M` |
 | Caméra | le moteur met déjà le jeu en pause (`autopause`) sur incendie : la vue peut cadrer le départ | `S` |
 
@@ -1442,10 +1442,10 @@ Deux défauts attrapés, l'un par un essai et l'autre par le moteur lui-même :
   d'après décrira : du sol brûlé.
 
 **La scène de démonstration a appris quelque chose avant qu'on regarde
-l'image** : à huit ans, le couvert s'est refermé, le combustible de surface
-reste humide (`PORTANCE_SOUS_COUVERT`) et **l'allumage ne prend pas** — zéro
-cellule brûlée. À trois ans, friche herbeuse et ouverte : 6 505 cellules et un
-front de 116 rangs. C'est la pédagogie du tableau ci-dessus — « s'essouffle
+l'image** : à huit ans, le couvert s'est refermé et le combustible de surface
+reste humide (`PORTANCE_SOUS_COUVERT`) — l'allumage ne prenait pas du tout, et
+depuis que le banc déclare une canicule, il ne brûle que 149 cellules contre
+6 545 sur la friche ouverte de trois ans (front de 176 rangs). C'est la pédagogie du tableau ci-dessus — « s'essouffle
 dans le feuillu frais, fonce dans la lande » — obtenue sans une ligne de dessin,
 et le banc la porte (`bash scripts/apercu-scenes.sh feu`).
 
@@ -1520,10 +1520,97 @@ toutes les lectures de l'acte, pose médiane de 2 à 7 ms pour 6 300 sprites au
 plus large du front (dont environ 800 particules : 48 lueurs, 129 langues et
 autant de cœurs, 480 bouffées, 56 traînées, 86 braises).
 
-Ce qui reste du §6.4 : le cadrage caméra sur le départ, le ciel orangé, et la
-direction de vent de l'issue #50. Le torchage, lui, est déjà là par la cuisson :
-la vignette porte `brulee`, et la mort de cause `feu` la met en place dès le
-premier instant.
+**Le ciel orangé, le cadrage du départ et la fin des petits carrés
+(2026-09-10, suite).**
+
+**Le brûlé était dessiné au CARREAU**, un losange net par cellule, donc un
+damier — et pire, les cellules que la propagation avait sautées à l'intérieur
+(`probabilitePropagation` n'est pas 1) ressortaient en petits losanges verts
+nets au milieu du noir, ce qui se lit comme du bruit d'écran et non comme une
+cicatrice. Le carreau n'était pourtant pas le mauvais choix pour le voile d'un
+GESTE : une cellule chaulée EST un carreau, l'épandeur passe ou ne passe pas, et
+le bord franc dit « ce mètre-là a été travaillé ». Une brûlure, non. Elle est
+donc dessinée à la TACHE — deux fois la cellule, quatre variantes de lobes,
+bords fondus — et **les données n'ont pas changé pour autant : c'est la taille
+du pinceau**. Les îlots isolés d'un mètre disparaissent sous leurs voisines, les
+grands restent, et le bord de la cicatrice s'effrange.
+
+Le **ciel orangé** est un seul sprite plein cadre en fusion ADDITIVE : un calque
+en opacité normale délave l'image et donne du vieux papier, l'additif pousse les
+teintes vers le chaud sans écraser les sombres. Sa charge vient du moteur — le
+nombre de cellules qui flambent au même instant, rapporté à trois cents — donc
+un départ de quarante cellules n'orange pas l'horizon, ce que le §6.4 distingue
+justement de la colonne.
+
+Le **cadrage du départ** (`cadrer`) recentre et ne touche pas au zoom : un
+cadrage qui zoomerait reprendrait au joueur le réglage qu'il vient de faire. Il
+s'applique une fois par cible, sinon la vue revient se coller sur l'incendie dès
+qu'il essaie de glisser ailleurs.
+
+**Et le banc ne choisit plus où le feu part** : il allumait au centre, ce qui
+était faux de deux façons — un feu part là où il y a de quoi s'enflammer, et un
+centre de parcelle est déjà cadré, donc le cadrage ne se voyait pas.
+`departDeFeu` tire la cellule au prorata de sa combustibilité, et la scène a
+changé de tête : le départ tombe sur le bord ouest et le front TRAVERSE la
+parcelle au lieu de s'étaler en anneau.
+
+### Le torchage, et pourquoi il a fallu deux découvertes pour l'obtenir
+
+**Première découverte : un incendie et ses victimes n'arrivent jamais dans le
+même journal** (issue #52). Le tick marque l'arbre tué par le feu
+(`alive: false, causeMort: "feu", brulEeSemaine`) mais ne le pousse pas dans
+`morts` ; et la boucle qui remplit `morts` l'écarte explicitement tant qu'il est
+« récupérable en coupe sanitaire », soit `CHABLIS_RECUPERABLE_SEMAINES = 52`.
+Une mort par le feu est donc rapportée **un an après l'incendie**, à une semaine
+où `incendie` est `undefined`. Une mise en scène qui aurait attendu `morts`
+n'aurait jamais rien eu à animer — et c'est pour ça que `TRAJECTOIRES.feu` de
+`mort.ts` était resté une trajectoire neutre.
+
+Le contournement est le même que pour les recrues : l'INSTANTANÉ le dit.
+`brulEeSemaine` porte la semaine où le feu a tué l'arbre, et un arbre dont cette
+semaine tombe dans l'intervalle du journal a brûlé pendant l'ellipse qu'on joue.
+Et le MOMENT vient du front : **le rang de sa cellule dit quand la ligne de
+flammes l'atteint**. Un arbre ne s'embrase donc pas quand l'acte commence, il
+s'embrase quand le feu arrive à son pied — la seule chose qui rende un torchage
+lisible plutôt que décoratif. Les flammes montent DANS le houppier
+(`baseHouppierM`) et pas dans le fût nu, ce qui est exactement la pédagogie de
+l'élagage contre le feu.
+
+**Seconde découverte, et elle vaut pour tout le §6.3** : un arbre que le journal
+déclare mort cette semaine est DÉJÀ une chandelle dans l'instantané. Les onze
+mises en scène de mort partaient donc d'un feuillage nul et interpolaient du
+néant vers le néant — **elles ne montraient rien**, et le banc ne l'avait pas
+attrapé parce qu'il choisit exprès des arbres vivants (`?mort=<cause>`). Deux
+corrections : `appliquerLesMorts` POSE la chandelle au lieu de l'ajouter (c'est
+la mise en scène qui décide à quel moment l'arbre en devient une, pas
+l'instantané), et l'appelant reconstruit l'état d'avant l'acte — ce qui n'est pas
+une invention, puisque `partFoliaireOmbrageanteDans` et `senescenceDans`
+calculent ce que cette espèce porte à cette semaine.
+
+**Trois choses mesurées, dont deux qui ont changé la scène de démonstration :**
+
+- **la friche de trois ans ne PEUT PAS montrer un torchage.** Elle porte 229
+  tiges dont la plus haute fait 1,13 m, et le feu en tue 222 : ce n'est pas un
+  torchage, c'est un pré fauché. Un torchage a besoin d'une couronne. Le sondage
+  année par année : à 5 et 6 ans, une dizaine de cellules brûlent (rien à voir) ;
+  à 7 et 8 ans, quelques centaines et des tiges de 3 m ; **à 18 ans, 7 039
+  cellules, 2 751 tiges tuées dont la plus haute à 11,6 m, et 55 SURVIVANTES de
+  plus de 4 m** — la sélection par l'écorce (`survitAuFeu`) rendue visible sans
+  une ligne de dessin. D'où une seconde scène,
+  `bash scripts/apercu-scenes.sh torchage` ;
+- **un arbre sur le dernier rang flambait indéfiniment**, attrapé par un essai :
+  la tête du front ne dépassait le dernier rang que de la largeur du front plus
+  un, or un torchage dure sept rangs. Le dépassement doit couvrir la plus longue
+  chose que l'incendie met en scène (`DEPASSEMENT_DU_FRONT`) ;
+- au passage du front, **267 couronnes flambent en même temps** sur cette scène,
+  plafonnées à soixante posées, et tout s'éteint à la fin de l'acte. Pose de 6 à
+  15 ms pour 9 900 sprites, et toujours zéro classe de vignette recuite.
+
+Ce qui reste du §6.4 : la direction de vent de l'issue #50, la charge de
+combustible par cellule brûlée (qui donnerait une hauteur de flamme réelle au
+lieu d'une constante de convention), et les rejets de souche du printemps
+suivant — que le calque des changements pointera comme des recrues, sans rien de
+plus.
 
 ### 6.5 La crue
 

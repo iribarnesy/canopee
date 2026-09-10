@@ -41,6 +41,7 @@
  */
 
 import type { Teinte } from "../palette";
+import { type ArbreVivant, dansLaFenetre, type EtatMourant, PALIERS_DE_MORT } from "./mort";
 import type { CelluleVoilee } from "./voile";
 
 /**
@@ -66,6 +67,34 @@ export interface FrontDIncendie {
  * profondeur : ce qu'on voit d'un feu courant.
  */
 export const RANGS_DU_FRONT = 3;
+
+/**
+ * Sur combien de rangs du front un arbre se torche, de la première flamme à la
+ * chandelle noire.
+ *
+ * Sept, soit un peu plus du double de la profondeur du front : une couronne
+ * met plus de temps à brûler que l'herbe sous elle, et c'est ce décalage qui
+ * fait qu'on voit des torches DERRIÈRE la ligne de flammes — ce qu'on voit
+ * d'un feu courant qui monte dans les arbres.
+ */
+export const TORCHAGE_EN_RANGS = 7;
+
+/**
+ * De combien la tête du front DÉPASSE le dernier rang, en rangs.
+ *
+ * **Le dépassement doit couvrir la plus longue chose que l'incendie met en
+ * scène, et un essai a attrapé les deux fois où ce n'était pas le cas.** La
+ * première : sans dépassement du tout, les dernières cellules flambaient encore
+ * à la fin de l'acte ; avec la seule largeur du front, elles finissaient en
+ * braise et non en cendre, faute du rang de refroidissement. La seconde : un
+ * arbre sur le dernier rang était encore en train de flamber quand l'acte
+ * s'achevait, parce qu'un torchage dure sept rangs là où le refroidissement
+ * d'une cellule en dure quatre — sa couronne aurait brûlé indéfiniment.
+ *
+ * L'état final doit être celui que l'instantané d'après décrira : du sol brûlé
+ * et des chandelles noires. D'où le maximum, et non l'un des deux.
+ */
+export const DEPASSEMENT_DU_FRONT = Math.max(RANGS_DU_FRONT + 1, TORCHAGE_EN_RANGS);
 
 /**
  * Les trois états d'une cellule que le feu traverse.
@@ -149,23 +178,18 @@ function melanger(a: Teinte, b: Teinte, part: number): Teinte {
 /**
  * Où en est la TÊTE du front, en rangs, à un avancement donné.
  *
- * **Le front dépasse le dernier rang de sa largeur PLUS UN**, et l'essai a
- * attrapé le « plus un » : sans dépassement du tout, les dernières cellules
- * flamberaient encore à la fin de l'acte et le feu se figerait en pleine
- * flamme ; avec `RANGS_DU_FRONT` seulement, elles finissaient en BRAISE et non
- * en cendre, puisqu'il leur manquait le rang de refroidissement. L'état final
- * doit être celui que l'instantané d'après décrira : du sol brûlé.
- *
  * Extrait parce que TOUT ce qui dessine un incendie en dépend — la cendre, les
- * flammes, la fumée, les braises. Deux copies de cette formule et le panache se
- * décalerait du front d'un rang, ce qui se verrait tout de suite : de la fumée
- * là où il n'y a plus de feu.
+ * flammes, la fumée, les braises, les couronnes qui flambent. Deux copies de
+ * cette formule et le panache se décalerait du front d'un rang, ce qui se
+ * verrait tout de suite : de la fumée là où il n'y a plus de feu.
+ *
+ * Le dépassement du dernier rang est expliqué avec `DEPASSEMENT_DU_FRONT`.
  */
-function teteDuFront(front: FrontDIncendie, avancement: number): number {
+export function teteDuFront(front: FrontDIncendie, avancement: number): number {
   const n = Math.min(front.brulees.length, front.rangs.length);
   let rangMax = 0;
   for (let i = 0; i < n; i++) rangMax = Math.max(rangMax, front.rangs[i] ?? 0);
-  return Math.min(1, Math.max(0, avancement)) * (rangMax + RANGS_DU_FRONT + 1);
+  return Math.min(1, Math.max(0, avancement)) * (rangMax + DEPASSEMENT_DU_FRONT);
 }
 
 export function frontEnCours(front: FrontDIncendie, avancement: number): CelluleVoilee[] {
@@ -913,3 +937,193 @@ export function chargeDuCiel(front: FrontDIncendie, avancement: number): number 
   const n = cellulesEnFlammes(front, avancement).length;
   return Math.min(1, n / CELLULES_POUR_UN_CIEL_PLEIN);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Le TORCHAGE : un arbre que le front atteint (§6.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Un arbre que l'incendie a tué, tel que le rendu le lit.
+ *
+ * **Ce qui rend le torchage possible sans rien inventer, et ce n'est pas le
+ * journal.** Le moteur ne rapporte PAS une mort par le feu au moment du feu :
+ * un arbre brûlé reste « récupérable en coupe sanitaire » pendant
+ * `CHABLIS_RECUPERABLE_SEMAINES` — un an — et n'entre dans `morts` qu'après
+ * (issue #52). Un incendie et ses victimes n'arrivent donc jamais dans le même
+ * journal, et une mise en scène qui attendrait ça n'aurait jamais rien à
+ * montrer.
+ *
+ * Mais l'INSTANTANÉ le dit : `brulEeSemaine` porte la semaine où le feu a tué
+ * l'arbre. Un arbre dont cette semaine tombe dans l'intervalle du journal a
+ * brûlé pendant l'ellipse qu'on est en train de jouer — exactement le même
+ * raisonnement que pour les recrues, reconnues à leur `ageWeeks`.
+ *
+ * Et le MOMENT vient du front : le rang de sa cellule dit quand la ligne de
+ * flammes l'atteint. Un arbre ne s'embrase donc pas quand l'acte commence, il
+ * s'embrase quand le feu arrive à son pied — ce qui est la seule chose qui
+ * puisse rendre un torchage lisible plutôt que décoratif.
+ */
+export interface ArbreQuiSeTorche {
+  id: number;
+  x: number;
+  y: number;
+  /** sa cellule, celle qui porte son rang dans le front */
+  cellule: number;
+  hauteurM: number;
+  /** base du houppier, m : en dessous, c'est du tronc, et le tronc ne flambe pas */
+  baseHouppierM: number;
+  /** rayon du houppier, m */
+  rayonHouppierM: number;
+  /** le rang du front sur sa cellule : c'est QUAND il s'embrase */
+  rang: number;
+}
+
+/**
+ * Où en est le torchage d'un arbre, ∈ [0,1], ou `undefined` si le feu ne l'a
+ * pas encore atteint.
+ */
+export function avancementDuTorchage(tete: number, rang: number): number | undefined {
+  const depuis = tete - rang;
+  if (depuis <= 0) return undefined;
+  return Math.min(1, depuis / TORCHAGE_EN_RANGS);
+}
+
+/**
+ * À quel avancement du torchage la couronne est le plus embrasée, et sur quelle
+ * largeur.
+ *
+ * Le pic n'est pas au début : il faut que le feu monte. Et il n'est pas non
+ * plus au milieu — une couronne s'embrase vite et brûle longtemps, donc la
+ * montée est plus raide que la retombée.
+ */
+export const TORCHE_LA_PLUS_VIVE = 0.32;
+export const LARGEUR_DE_LA_TORCHE = 0.5;
+
+/** Combien de langues de flamme dans une couronne qui flambe. */
+export const FLAMMES_PAR_TORCHE = 5;
+
+/**
+ * Combien d'arbres au plus flambent en même temps à l'écran.
+ *
+ * Mesuré : la friche de démonstration perd 222 tiges dans le même incendie.
+ * Comme un torchage ne dure que sept rangs sur cent soixante-seize, elles ne
+ * flambent pas toutes ensemble — mais un feu qui traverse un peuplement dense
+ * en embraserait bien plus que ce qu'on peut poser, et le plafond est là pour
+ * que le coût ne dépende pas de la densité du peuplement.
+ */
+export const TORCHES_MAX = 60;
+
+/** Combien de braises une couronne qui flambe lâche. */
+export const BRAISES_PAR_TORCHE = 3;
+
+/** Jusqu'où montent les braises d'une couronne, en multiples de sa hauteur. */
+export const ENVOL_DES_BRAISES = 1.5;
+
+/**
+ * De combien la couronne d'un arbre flambe, ∈ [0,1].
+ *
+ * Une bosse : elle s'embrase, elle brûle, elle s'éteint. Zéro avant que le feu
+ * arrive et zéro quand il ne reste qu'une chandelle noire — c'est ce dernier
+ * zéro qui compte, parce qu'une chandelle qui flamberait encore à la fin de
+ * l'acte dirait que le feu n'est pas passé.
+ */
+export function vivaciteDeLaTorche(u: number): number {
+  const d = Math.abs(u - TORCHE_LA_PLUS_VIVE);
+  return Math.max(0, 1 - d / LARGEUR_DE_LA_TORCHE);
+}
+
+/**
+ * Les flammes et les braises d'une couronne qui flambe.
+ *
+ * Dans le houppier et pas au pied : `baseHouppierM` dit où commence ce qui peut
+ * brûler, et un fût nu de six mètres ne s'embrase pas. C'est ce qui distingue
+ * visuellement un arbre élagué d'un arbre branchu jusqu'en bas — et c'est
+ * précisément la pédagogie de l'élagage contre le feu (§6.4, « la pédagogie des
+ * coupures »).
+ */
+export function flammesDeTorche(torche: ArbreQuiSeTorche, u: number, phaseMs: number): Particule[] {
+  const vive = vivaciteDeLaTorche(u);
+  if (vive <= 0) return [];
+  const bas = Math.min(torche.baseHouppierM, torche.hauteurM * 0.85);
+  const hautDuHouppier = Math.max(0.4, torche.hauteurM - bas);
+  const rayon = Math.max(0.3, torche.rayonHouppierM);
+  const sorties: Particule[] = [];
+  for (let j = 0; j < FLAMMES_PAR_TORCHE; j++) {
+    const angle = alea(torche.id, j) * Math.PI * 2;
+    const loin = rayon * (0.15 + 0.7 * alea(torche.id, j + 20));
+    const bat = cycle(phaseMs / PERIODE_DE_FLAMME_MS + alea(torche.id, j + 40));
+    const ondule = 0.6 + 0.4 * Math.sin(2 * Math.PI * bat);
+    // Répartie sur la hauteur du houppier, et un peu au-dessus : une couronne
+    // qui flambe dépasse sa propre cime.
+    const dansLeHouppier = alea(torche.id, j + 60);
+    const haut = hautDuHouppier * (0.5 + 0.5 * ondule) * vive;
+    sorties.push({
+      cellule: torche.cellule,
+      x: torche.x + Math.cos(angle) * loin,
+      y: torche.y + Math.sin(angle) * loin,
+      hM: bas + hautDuHouppier * dansLeHouppier * 0.8,
+      largeurM: Math.max(0.4, rayon * 0.75),
+      hauteurM: Math.max(FLAMME_LA_PLUS_BASSE_M, haut),
+      forme: "flamme",
+      variante: Math.floor(alea(torche.id, j + 80) * VARIANTES) % VARIANTES,
+      teinte: melanger(FLAMME, BRAISE, 0.2 + 0.5 * u),
+      opacite: OPACITE_DE_LA_FLAMME * (0.6 + 0.4 * ondule) * vive,
+    });
+  }
+  // Les braises : c'est ce que le §6.4 appelle « les particules montent », et
+  // c'est le seul signe qui se voie d'un torchage vu de loin.
+  for (let j = 0; j < BRAISES_PAR_TORCHE; j++) {
+    const decalage = alea(torche.id, j + 100);
+    const vol = cycle(phaseMs / VOL_DE_BRAISE_MS + decalage);
+    const angle = alea(torche.id, j + 120) * Math.PI * 2;
+    sorties.push({
+      cellule: torche.cellule,
+      x: torche.x + Math.cos(angle) * rayon * vol * 1.4,
+      y: torche.y + Math.sin(angle) * rayon * vol * 1.4,
+      hM: torche.hauteurM * (0.6 + ENVOL_DES_BRAISES * vol),
+      largeurM: TAILLE_DE_BRAISE_M,
+      hauteurM: TAILLE_DE_BRAISE_M,
+      forme: "braise",
+      variante: 0,
+      teinte: melanger(COEUR, BRAISE, vol ** 0.6),
+      opacite: 0.9 * vive * (1 - vol) ** 0.7,
+    });
+  }
+  return sorties;
+}
+
+/**
+ * Ce que le torchage fait à l'ÉTAT de l'arbre, c'est-à-dire à sa vignette.
+ *
+ * **Trois grandeurs seulement, et c'est un budget de cuisson.** La couronne se
+ * défeuille, la vigueur tombe, l'arbre passe charbonné puis chandelle. Le
+ * jaunissement n'y est pas : un feuillage brûlé ne jaunit pas, il noircit, et
+ * c'est `brulee` qui le dit dans la classe.
+ *
+ * L'avancement est QUANTIFIÉ pour les mêmes raisons que dans `mort.ts` — une
+ * grandeur continue dans une clé de cache est un cache qui ne sert à rien.
+ */
+export function torchageEnCours(avantLeFeu: ArbreVivant, u: number): EtatMourant {
+  const brut = Math.min(1, Math.max(0, u));
+  const a = Math.round(brut * (PALIERS_DE_MORT - 1)) / (PALIERS_DE_MORT - 1);
+  return {
+    senescence: avantLeFeu.senescence,
+    // La couronne se vide entre le premier tiers et les deux tiers.
+    partFoliaire: avantLeFeu.partFoliaire * (1 - dansLaFenetre(a, [0.15, 0.65])),
+    vigueur: avantLeFeu.vigueur * (1 - dansLaFenetre(a, [0, 0.5])),
+    dommageHydraulique: avantLeFeu.dommageHydraulique,
+    // **Charbonné AVANT d'être une chandelle**, et l'ordre compte : l'écorce
+    // noircit dès que la flamme la léche, alors qu'il faut que la couronne ait
+    // fini de brûler pour que ce soit un tronc mort sur pied. Entre les deux, on
+    // voit un arbre noir qui a encore des feuilles — ce qui est exactement ce
+    // qu'on voit d'un arbre en train d'être torché.
+    brulee: brut >= CHARBONNE_A,
+    chandelle: brut >= CHANDELLE_A,
+    opacite: 1,
+    hauteur: 1,
+  };
+}
+
+/** À quel avancement du torchage l'écorce est noircie, puis l'arbre une chandelle. */
+export const CHARBONNE_A = 0.2;
+export const CHANDELLE_A = 0.7;

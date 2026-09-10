@@ -33,12 +33,19 @@ import type { Vue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
 import type { Acte, PlanDEllipse } from "./ellipse";
 import {
+  type ArbreQuiSeTorche,
+  avancementDuTorchage,
   chargeDuCiel,
   type FrontDIncendie,
   feuAuSol,
+  flammesDeTorche,
   frontEnCours,
   type Particule,
   panacheDuFeu,
+  TORCHES_MAX,
+  teteDuFront,
+  torchageEnCours,
+  vivaciteDeLaTorche,
 } from "./feu";
 import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
@@ -371,6 +378,7 @@ export function particulesDuFeu(
   ecouleMs: number,
   coteM: number,
   exposition: number,
+  torches: TorchesIndexees = AUCUNE_TORCHE,
 ): IncendieAPoser {
   if (!trouve) return RIEN_NE_BRULE;
   const a = avancementDuFeu(trouve, ecouleMs);
@@ -378,6 +386,11 @@ export function particulesDuFeu(
   return {
     particules: [
       ...feuAuSol(trouve.feu, a, ecouleMs, coteM),
+      // Les couronnes qui flambent passent par la MÊME liste que le feu au sol,
+      // donc par la même couche : une torche est derrière les arbres qui sont
+      // devant elle et devant ceux qui sont derrière, ce que le tri par
+      // ordonnée d'écran donne gratuitement.
+      ...flammesDesTorches(torches, ecouleMs),
       ...panacheDuFeu(trouve.feu, a, ecouleMs, coteM, trouve.origine, exposition),
     ],
     ciel: chargeDuCiel(trouve.feu, a),
@@ -400,3 +413,157 @@ export interface IncendieAPoser {
 
 /** Le repos : ni particule, ni ciel. Partagé, donc sans allocation par image. */
 export const RIEN_NE_BRULE: IncendieAPoser = { particules: [], ciel: 0 };
+
+/**
+ * Un arbre que l'incendie de ce journal a tué, tel que l'appelant le connaît.
+ *
+ * **L'état d'AVANT le feu est passé par l'appelant, et c'est le point délicat
+ * de tout le torchage.** L'instantané décrit l'arbre APRÈS l'incendie : un
+ * tronc charbonné, sans feuilles. Une mise en scène qui partirait de là
+ * n'aurait rien à animer — elle interpolerait de « sans feuilles » vers « sans
+ * feuilles ».
+ *
+ * Ce que le rendu reconstruit n'est pourtant pas une invention : c'est ce que
+ * le MOTEUR dit d'un arbre de cette espèce, de cette hauteur, à cette semaine
+ * de l'année — `partFoliaireOmbrageanteDans` et `senescenceDans` le calculent
+ * depuis le contexte phénologique que l'instantané porte. Le rendu ne fabrique
+ * donc que l'entre-deux, comme pour toutes les autres morts.
+ *
+ * **Et c'est un défaut que le §6.3 avait aussi, sans qu'on l'ait vu** : un
+ * arbre que le journal déclare mort cette semaine est DÉJÀ une chandelle dans
+ * l'instantané, donc les onze mises en scène de mort partaient elles aussi d'un
+ * feuillage nul. Elles ne montraient rien. Le banc ne l'avait pas attrapé
+ * parce qu'il choisit exprès des arbres vivants (`?mort=<cause>`).
+ */
+export interface ArbreATorcher {
+  id: number;
+  x: number;
+  y: number;
+  hauteurM: number;
+  baseHouppierM: number;
+  rayonHouppierM: number;
+  /** ce que le moteur dit de cet arbre AVANT que le feu passe */
+  avantLeFeu: ArbreVivant;
+}
+
+/** Les arbres que le front torche, indexés par identifiant. */
+export interface TorchesIndexees {
+  acte?: Acte;
+  front?: FrontDIncendie;
+  arbres: Map<number, { torche: ArbreQuiSeTorche; avantLeFeu: ArbreVivant }>;
+}
+
+/** Rien ne brûle : l'index vide, partagé — donc sans allocation par image. */
+export const AUCUNE_TORCHE: TorchesIndexees = { arbres: new Map() };
+
+/**
+ * Indexe les arbres que l'incendie torche, avec le RANG du front sur chacun.
+ *
+ * Une fois par ellipse et non une fois par image : c'est une jointure entre le
+ * front (des milliers de cellules) et les arbres tués (des milliers aussi), et
+ * la refaire soixante fois par seconde coûterait plus que tout le reste de la
+ * pose.
+ *
+ * Un candidat dont la cellule n'a PAS brûlé est écarté sans bruit. Ça ne
+ * devrait pas arriver — le moteur ne tue par le feu que dans les cellules
+ * brûlées — mais un instantané qui décrirait un arbre brûlé hors du front est
+ * un instantané dont on ne peut rien tirer, et le placer quelque part serait
+ * pire que de l'ignorer.
+ */
+export function indexerLesTorches(
+  trouve: IncendieTrouve | undefined,
+  candidats: readonly ArbreATorcher[],
+  coteM: number,
+): TorchesIndexees {
+  if (!trouve || candidats.length === 0) return AUCUNE_TORCHE;
+  const rangDe = new Map<number, number>();
+  const n = Math.min(trouve.feu.brulees.length, trouve.feu.rangs.length);
+  for (let i = 0; i < n; i++) rangDe.set(trouve.feu.brulees[i] ?? 0, trouve.feu.rangs[i] ?? 0);
+  const arbres = new Map<number, { torche: ArbreQuiSeTorche; avantLeFeu: ArbreVivant }>();
+  for (const a of candidats) {
+    const cellule =
+      Math.min(coteM - 1, Math.max(0, Math.floor(a.y))) * coteM +
+      Math.min(coteM - 1, Math.max(0, Math.floor(a.x)));
+    const rang = rangDe.get(cellule);
+    if (rang === undefined) continue;
+    arbres.set(a.id, {
+      avantLeFeu: a.avantLeFeu,
+      torche: {
+        id: a.id,
+        x: a.x,
+        y: a.y,
+        cellule,
+        hauteurM: a.hauteurM,
+        baseHouppierM: a.baseHouppierM,
+        rayonHouppierM: a.rayonHouppierM,
+        rang,
+      },
+    });
+  }
+  return { acte: trouve.acte, front: trouve.feu, arbres };
+}
+
+/** Où en est le front, en rangs, à cet instant de l'ellipse. */
+function teteALInstant(index: TorchesIndexees, ecouleMs: number): number | undefined {
+  const { acte, front } = index;
+  if (!acte || !front) return undefined;
+  if (ecouleMs < acte.debutMs) return undefined;
+  const a =
+    ecouleMs >= acte.debutMs + acte.dureeMs
+      ? 1
+      : (ecouleMs - acte.debutMs) / Math.max(1, acte.dureeMs);
+  return teteDuFront(front, a);
+}
+
+/**
+ * Ce qu'il faut faire de l'arbre `idArbre` si le front est en train de le
+ * torcher.
+ *
+ * Rend `undefined` quand il ne brûle pas dans cette ellipse — l'immense
+ * majorité — et AUSSI avant que le front l'atteigne : jusque-là, il doit se
+ * dessiner tel que l'appelant l'a préparé, c'est-à-dire vivant.
+ *
+ * **Après l'acte, le torchage reste accompli**, comme une mort : sans ça, un
+ * arbre brûlé au premier acte reverdirait au second.
+ */
+export function etatDuTorchage(
+  index: TorchesIndexees,
+  ecouleMs: number,
+  idArbre: number,
+): EtatMourant | undefined {
+  const trouve = index.arbres.get(idArbre);
+  if (!trouve) return undefined;
+  const tete = teteALInstant(index, ecouleMs);
+  if (tete === undefined) return undefined;
+  const u = avancementDuTorchage(tete, trouve.torche.rang);
+  return u === undefined ? undefined : torchageEnCours(trouve.avantLeFeu, u);
+}
+
+/**
+ * Les flammes et les braises de toutes les couronnes qui flambent à cet
+ * instant.
+ *
+ * Échantillonnées à pas régulier sous `TORCHES_MAX` : la friche de démonstration
+ * perd deux mille sept cent cinquante et une tiges dans le même incendie, et un
+ * feu qui traverse un peuplement dense en embraserait plus qu'on ne peut poser.
+ * Le pas balaie l'ensemble au lieu d'en garder le début, sinon les torches
+ * visibles seraient toutes du même côté du front.
+ */
+export function flammesDesTorches(index: TorchesIndexees, ecouleMs: number): Particule[] {
+  const tete = teteALInstant(index, ecouleMs);
+  if (tete === undefined || index.arbres.size === 0) return [];
+  const enFeu: { torche: ArbreQuiSeTorche; u: number }[] = [];
+  for (const { torche } of index.arbres.values()) {
+    const u = avancementDuTorchage(tete, torche.rang);
+    if (u === undefined || vivaciteDeLaTorche(u) <= 0) continue;
+    enFeu.push({ torche, u });
+  }
+  if (enFeu.length === 0) return [];
+  const pas = Math.max(1, Math.ceil(enFeu.length / TORCHES_MAX));
+  const sorties: Particule[] = [];
+  for (let i = 0; i < enFeu.length; i += pas) {
+    const t = enFeu[i];
+    if (t) sorties.push(...flammesDeTorche(t.torche, t.u, ecouleMs));
+  }
+  return sorties;
+}

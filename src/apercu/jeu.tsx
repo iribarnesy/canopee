@@ -35,11 +35,14 @@ import {
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
 import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
 import {
+  AUCUNE_TORCHE,
   deformationDe,
+  etatDuTorchage,
   etatMourantDe,
   feuEnCours,
   indexerLesChutes,
   indexerLesMorts,
+  indexerLesTorches,
   indexerLesVoiles,
   particulesDuFeu,
   poseDeLaMort,
@@ -293,6 +296,46 @@ function Demo(): React.ReactElement {
       // repères sans estomper, ce qui isole ce que chaque mécanisme apporte.
       const quoi = params.get("calque") ?? "estompe";
       const recrues = recruesDuSnapshot(scene?.trees ?? [], reel.semaines ?? 0);
+      // **Les arbres que l'incendie a torchés**, reconnus à `brulEeSemaine` et
+      // non au journal : le moteur ne rapporte une mort par le feu qu'un an
+      // plus tard (issue #52), donc un incendie et ses victimes n'arrivent
+      // jamais ensemble. Même raisonnement que pour les recrues, reconnues à
+      // leur `ageWeeks`.
+      const semaines = reel.semaines ?? 0;
+      const saison = scene?.sol.pheno;
+      const torchees = (scene?.trees ?? []).filter(
+        (t) =>
+          t.brulEeSemaine !== undefined &&
+          (scene?.week ?? 0) - t.brulEeSemaine < Math.max(1, semaines),
+      );
+      const torches = indexerLesTorches(
+        trouverLeFeu(plan),
+        torchees.map((t) => {
+          const espece = getEspece(t.especeId);
+          const ratio = espece?.lumiere.houppierRatio ?? 0.4;
+          return {
+            id: t.id,
+            x: t.x,
+            y: t.y,
+            hauteurM: t.heightM,
+            baseHouppierM: t.baseHouppierM ?? 0,
+            // Le rayon du houppier, de la même fiche que le dessin de l'arbre.
+            rayonHouppierM: Math.max(0.3, t.heightM * ratio * 0.5),
+            // **Ce qu'il était AVANT le feu**, calculé par la phénologie du
+            // moteur et non deviné : `partFoliaireOmbrageanteDans` dit ce que
+            // cette espèce porte à cette semaine de l'année. Sans ça, la mise
+            // en scène partirait du tronc charbonné que l'instantané décrit et
+            // n'aurait rien à animer.
+            avantLeFeu: {
+              partFoliaire: espece && saison ? partFoliaireOmbrageanteDans(espece, saison) : 1,
+              senescence: espece && saison ? senescenceDans(espece, saison) : 0,
+              vigueur: 1,
+              dommageHydraulique: 0,
+            },
+          };
+        }),
+        scene?.coteM ?? 1,
+      );
       const tous = marqueursDuJournal(journalReel, (id) => ou.get(id), scene?.coteM ?? 1);
       // **L'estompe ET les marqueurs, et la mesure a tranché contre mon premier
       // choix.** J'avais mis l'estompe seule par défaut, en pensant qu'elle
@@ -311,6 +354,7 @@ function Demo(): React.ReactElement {
         voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
         morts: indexerLesMorts(plan),
         feu: trouverLeFeu(plan),
+        torches,
         marqueurs: calque.marqueurs,
         omis: calque.omis,
         recrues: recrues.ids.size,
@@ -387,6 +431,7 @@ function Demo(): React.ReactElement {
       voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
       morts: indexerLesMorts(plan),
       feu: trouverLeFeu(plan),
+      torches: AUCUNE_TORCHE,
       marqueurs: [] as Marqueur[],
       omis: 0,
       recrues: 0,
@@ -433,6 +478,14 @@ function Demo(): React.ReactElement {
     .map((t) => {
       const espece = getEspece(t.especeId);
       const part = espece && pheno ? partFoliaireOmbrageanteDans(espece, pheno) : 1;
+      // **Un arbre que l'ellipse va torcher part VIVANT**, et c'est la seule
+      // façon d'avoir quoi que ce soit à animer : l'instantané le décrit après
+      // l'incendie — tronc charbonné, sans feuilles — et une mise en scène qui
+      // partirait de là interpolerait du néant vers le néant. Ce qu'on remet
+      // n'est pas inventé : c'est ce que la phénologie du moteur dit de cette
+      // espèce à cette semaine. La mise en scène le rend ensuite à l'état que
+      // l'instantané décrit, et le canal `mourant` la porte à chaque image.
+      const torche = ellipse.torches.arbres.get(t.id);
       return {
         id: t.id,
         especeId: t.especeId,
@@ -447,8 +500,8 @@ function Demo(): React.ReactElement {
         houppierRatio: espece?.lumiere.houppierRatio ?? 0.4,
         baseHouppierM: t.baseHouppierM ?? 0,
         ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
-        ...(t.chandelle ? { chandelle: true } : {}),
-        ...(t.brulEeSemaine === undefined ? {} : { brulee: true }),
+        ...(t.chandelle && !torche ? { chandelle: true } : {}),
+        ...(t.brulEeSemaine === undefined || torche ? {} : { brulee: true }),
         ...(t.protege ? { protege: true } : {}),
         ...(t.recepages ? { recepages: t.recepages } : {}),
         ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
@@ -460,9 +513,9 @@ function Demo(): React.ReactElement {
         ...(t.derniereLeveeSemaine === undefined
           ? {}
           : { semainesDepuisLevee: Math.max(0, scene.week - t.derniereLeveeSemaine) }),
-        partFoliaire: t.chandelle ? 0 : part,
+        partFoliaire: t.chandelle && !torche ? 0 : part,
         senescence: espece && pheno ? senescenceDans(espece, pheno) : 0,
-        vigueur: t.vigueur ?? 1,
+        vigueur: torche ? 1 : (t.vigueur ?? 1),
         ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
       };
     });
@@ -500,9 +553,16 @@ function Demo(): React.ReactElement {
           estompe,
         );
       }}
-      mourant={(id, maintenantMs, vivant) =>
-        etatMourantDe(ellipse.morts, ouLire(maintenantMs, fige, ellipse.dureeMs), id, vivant)
-      }
+      mourant={(id, maintenantMs, vivant) => {
+        const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
+        // Les deux mises en scène ne se croisent jamais sur un même arbre — le
+        // moteur ne rapporte pas une mort par le feu et le torchage ne touche
+        // que les brûlés — mais l'ordre est écrit quand même : c'est l'incendie
+        // qui décide de ce qu'il a tué.
+        return (
+          etatDuTorchage(ellipse.torches, ou, id) ?? etatMourantDe(ellipse.morts, ou, id, vivant)
+        );
+      }}
       voiler={(maintenantMs) => {
         const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
         // Le front d'incendie et le voile d'un geste passent par la MÊME
@@ -515,6 +575,7 @@ function Demo(): React.ReactElement {
           ouLire(maintenantMs, fige, ellipse.dureeMs),
           scene.coteM,
           scene.ventExposition ?? EXPOSITION_INCONNUE,
+          ellipse.torches,
         )
       }
       // **Cadrer le DÉPART de l'incendie** (§6.4). Le moteur met déjà le jeu en
