@@ -1500,13 +1500,25 @@ donnés :**
   transparentes : le panache grossissait en devenant invisible. Un PLATEAU la
   remplace — pleine densité sur les deux tiers de la montée, dilution au
   sommet ;
-- **l'incendie avait des cheminées.** Douze colonnes pour trente-deux mailles de
-  front traversées, choisies dans l'ordre des rangs, ne retenaient que le bord
-  intérieur du front : les colonnes sortaient de la cendre. Vingt-deux,
-  échantillonnées à pas régulier sur tout l'ensemble en flammes.
+- **l'incendie avait des cheminées, et le trou noir du milieu ne fumait pas.**
+  Douze colonnes choisies dans l'ordre des rangs ne retenaient que le bord
+  intérieur du front — les colonnes sortaient de la cendre — et surtout, un
+  incendie ne cesse pas de fumer dès que la flamme est passée. D'où la TRAÎNE :
+  une brume basse et large sur les seize rangs derrière le front, qui relie la
+  ligne de feu à son panache au lieu de laisser des ballons flotter au-dessus
+  du vide. Trente colonnes espacées de neuf mètres, échantillonnées à pas
+  régulier sur tout l'ensemble en flammes.
 
-Et le coût mesuré tient la règle du §5.11 : **zéro classe de vignette recuite**
-à toutes les lectures de l'acte, pose de 2 à 9 ms.
+**Et une leçon de méthode, payée d'une capture** : en resserrant les colonnes et
+en diluant leur sommet, j'avais aussi baissé leur nombre et leur opacité —
+**trois coupes de densité à la fois**, et le panache le plus large de l'acte
+n'était plus qu'un voile pâle autour du front. Une densité se règle sur une
+grandeur à la fois.
+
+Le coût mesuré tient la règle du §5.11 : **zéro classe de vignette recuite** à
+toutes les lectures de l'acte, pose médiane de 2 à 7 ms pour 6 300 sprites au
+plus large du front (dont environ 800 particules : 48 lueurs, 129 langues et
+autant de cœurs, 480 bouffées, 56 traînées, 86 braises).
 
 Ce qui reste du §6.4 : le cadrage caméra sur le départ, le ciel orangé, et la
 direction de vent de l'issue #50. Le torchage, lui, est déjà là par la cuisson :

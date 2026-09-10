@@ -258,15 +258,18 @@ export const FUMEE_PALE: Teinte = { r: 148, g: 141, b: 134 };
  * construit un dégradé continu — la colonne est dense en son cœur, où elles se
  * recouvrent le plus, et floue sur ses bords, où une seule passe.
  */
-export const OPACITE_DE_LA_FUMEE = 0.34;
+export const OPACITE_DE_LA_FUMEE = 0.42;
 
 /**
  * Sur quelle part du haut du panache la fumée se dilue.
  *
- * Un tiers : la bouffée garde sa densité pendant les deux tiers de sa montée,
- * puis s'efface. C'est ce qui donne une colonne et non un filet.
+ * **La moitié, et pas un tiers : c'est ce qui remplace le chapeau du
+ * champignon par une dissolution.** Une dilution tardive rend les plus grosses
+ * bouffées — celles du sommet — encore pleinement opaques, donc le panache
+ * finit sur un bord franc, ce qui est le contraire de la fumée. En diluant sur
+ * la moitié haute, la colonne s'épaissit et pâlit en même temps, et se perd.
  */
-export const DILUTION_DU_SOMMET = 0.34;
+export const DILUTION_DU_SOMMET = 0.55;
 
 /** Opacité de la lueur posée au sol. */
 export const OPACITE_DE_LA_LUEUR = 0.42;
@@ -342,7 +345,7 @@ export const LUEURS_MAX = 48;
  * grandit, et les colonnes se téléporteraient. Une maille SPATIALE tient une
  * colonne en place tant que le front traverse son carré.
  */
-export const MAILLE_DES_COLONNES_M = 12;
+export const MAILLE_DES_COLONNES_M = 9;
 
 /**
  * Combien de colonnes de fumée au plus.
@@ -353,16 +356,32 @@ export const MAILLE_DES_COLONNES_M = 12;
  * cheminées — des panaches isolés au lieu d'une masse. Vingt-deux les fait se
  * rejoindre.
  */
-export const COLONNES_MAX = 22;
+export const COLONNES_MAX = 30;
 
-/** Combien de bouffées dans une colonne. */
+/**
+ * Combien de bouffées dans une colonne.
+ *
+ * Seize, et il a fallu deux captures pour retrouver ce nombre : en resserrant
+ * les colonnes et en diluant leur sommet, j'avais aussi baissé leur nombre et
+ * leur opacité — trois coupes à la fois, et le panache le plus large de l'acte
+ * n'était plus qu'un voile pâle autour du front. **Une densité se règle sur une
+ * grandeur à la fois.**
+ */
 export const BOUFFEES_PAR_COLONNE = 16;
 
 /** Jusqu'où monte le panache, en mètres. */
 export const HAUTEUR_DU_PANACHE_M = 28;
 
-/** Taille d'une bouffée au ras du feu, puis au sommet du panache, en mètres. */
-export const BOUFFEE_LA_PLUS_PETITE_M = 3.5;
+/**
+ * Taille d'une bouffée au ras du feu, puis au sommet du panache, en mètres.
+ *
+ * **Le RAPPORT entre les deux compte plus que les deux nombres, et la capture
+ * l'a montré : à un contre cinq, chaque colonne se lisait comme un
+ * champignon** — un pied fin et un chapeau. Une colonne de fumée ne pousse pas
+ * comme ça : elle part déjà large, parce qu'elle part de plusieurs mètres de
+ * flammes. Six mètres au pied, dix-sept au sommet.
+ */
+export const BOUFFEE_LA_PLUS_PETITE_M = 6;
 export const BOUFFEE_LA_PLUS_GRANDE_M = 17;
 
 /** Temps qu'une bouffée met à monter, en millisecondes de l'ellipse. */
@@ -396,8 +415,8 @@ export const DERIVE_LA_PLUS_FORTE_M = 30;
 export const RANGS_QUI_FUMENT = 16;
 
 /** Maille de la traîne, en mètres, et combien de bouffées basses au plus. */
-export const MAILLE_DE_LA_TRAINE_M = 11;
-export const TRAINEES_MAX = 44;
+export const MAILLE_DE_LA_TRAINE_M = 9;
+export const TRAINEES_MAX = 70;
 
 /** Ce qu'une bouffée de traîne mesure et jusqu'où elle s'élève, en mètres. */
 export const TRAINE_LA_PLUS_PETITE_M = 8;
@@ -411,7 +430,7 @@ export const HAUTEUR_DE_LA_TRAINE_M = 6;
  * cendre en dessous — sinon elle remplace l'état du sol par une couverture
  * grise, et le joueur ne verra pas ce que le feu a laissé.
  */
-export const OPACITE_DE_LA_TRAINE = 0.17;
+export const OPACITE_DE_LA_TRAINE = 0.22;
 
 /** Le temps qu'une bouffée de traîne met à se dissiper, en millisecondes. */
 export const DISSIPATION_MS = 1500;
@@ -430,10 +449,10 @@ export const VOL_DE_BRAISE_MS = 1050;
  * parcelle, un mètre fait quatre pixels : une escarbille de dix centimètres
  * serait un demi-pixel, c'est-à-dire rien. Ce qu'on dessine ici n'est pas la
  * braise mais l'étincelle qu'on en voit — et une étincelle se voit de loin
- * parce qu'elle brille, pas parce qu'elle est grande. Un mètre dix la rend
+ * parce qu'elle brille, pas parce qu'elle est grande. Un mètre quarante la rend
  * visible sans qu'elle se lise comme un objet.
  */
-export const TAILLE_DE_BRAISE_M = 1.1;
+export const TAILLE_DE_BRAISE_M = 1.4;
 
 /** Combien de variantes de langue de flamme et de bouffée sont cuites. */
 export const VARIANTES = 3;
