@@ -41,6 +41,7 @@ import {
   indexerLesChutes,
   indexerLesMorts,
   indexerLesVoiles,
+  particulesDuFeu,
   poseDeLaMort,
   trouverLeFeu,
   voilesEnCours,
@@ -49,6 +50,15 @@ import {
 interface Scene {
   coteM: number;
   week: number;
+  /**
+   * `StationInfo.ventExposition` : l'exposition au vent de la parcelle ∈ [0,1],
+   * telle que les bordures la font (`paysage.ts`).
+   *
+   * **Absent des scènes cuites avant le 2026-09-10.** C'est l'amplitude de
+   * l'inclinaison du panache d'un incendie ; à défaut, on prend le milieu de
+   * l'échelle plutôt que d'incliner au hasard.
+   */
+  ventExposition?: number;
   /**
    * Ce qui a changé depuis l'instantané précédent, tel que le moteur le
    * rapporte (`advanceWeek`), accumulé par le constructeur de scènes.
@@ -173,6 +183,15 @@ function donneesDe(scene: Scene): DonneesSol {
  * temps, l'un voyant quatre actes et l'autre quarante.
  */
 const DUREE_ELLIPSE_MS = 2500;
+
+/**
+ * L'exposition au vent qu'on prend quand la scène n'en porte pas.
+ *
+ * Le milieu de l'échelle, et pas zéro : à zéro le panache monterait parfaitement
+ * droit, ce qui est l'état d'un vallon abrité et non l'état « on ne sait pas ».
+ * Une vieille scène ne doit pas se lire comme une parcelle particulière.
+ */
+const EXPOSITION_INCONNUE = 0.5;
 
 /**
  * Où en est la lecture : l'horloge, ou l'avancement figé par `?ellipse=`.
@@ -490,6 +509,14 @@ function Demo(): React.ReactElement {
         // couche : deux choses différentes qui se dessinent pareil.
         return [...voilesEnCours(ellipse.voiles, ou), ...feuEnCours(ellipse.feu, ou)];
       }}
+      feu={(maintenantMs) =>
+        particulesDuFeu(
+          ellipse.feu,
+          ouLire(maintenantMs, fige, ellipse.dureeMs),
+          scene.coteM,
+          scene.ventExposition ?? EXPOSITION_INCONNUE,
+        )
+      }
     />
   );
 }

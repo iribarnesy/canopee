@@ -32,7 +32,7 @@ import type { CauseMort } from "../../engine/trees";
 import type { Vue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
 import type { Acte, PlanDEllipse } from "./ellipse";
-import { type FrontDIncendie, frontEnCours } from "./feu";
+import { type FrontDIncendie, feuAuSol, frontEnCours, type Particule, panacheDuFeu } from "./feu";
 import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
@@ -290,12 +290,43 @@ const VIVANT_NEUTRE: ArbreVivant = {
  * le dernier incendie d'un lot d'instantanés (`worker.ts`) — deux incendies
  * dans la même semaine sont un cas que le moteur a déjà tranché.
  */
-export function trouverLeFeu(plan: PlanDEllipse): { acte: Acte; feu: FrontDIncendie } | undefined {
+export function trouverLeFeu(plan: PlanDEllipse): IncendieTrouve | undefined {
   for (const acte of plan.actes) {
     if (acte.sujet.quoi !== "feu") continue;
-    return { acte, feu: { brulees: acte.sujet.brulees, rangs: acte.sujet.rangs } };
+    return {
+      acte,
+      // **L'ORIGINE compte autant que les rangs**, et pas seulement pour cadrer
+      // la caméra : c'est elle qui donne le sens dans lequel le panache
+      // penche, faute d'une direction de vent dans le moteur (`feu.ts`).
+      origine: acte.sujet.origine,
+      feu: { brulees: acte.sujet.brulees, rangs: acte.sujet.rangs },
+    };
   }
   return undefined;
+}
+
+/** Un incendie du plan, avec son acte et son origine. */
+export interface IncendieTrouve {
+  acte: Acte;
+  origine: number;
+  feu: FrontDIncendie;
+}
+
+/**
+ * Où en est l'acte d'un incendie, entre 0 et 1.
+ *
+ * **Après l'acte, la cendre RESTE**, à la différence du voile d'un geste : un
+ * sol brûlé est un état, pas un passage. L'instantané d'après le dira dans ses
+ * grilles — l'herbe a disparu — mais tant que l'ellipse joue, c'est ce calque
+ * qui le porte, et l'éteindre ferait reverdir la parcelle.
+ *
+ * Rend `undefined` avant le départ du feu, ce qui laisse la parcelle intacte.
+ */
+function avancementDuFeu(trouve: IncendieTrouve, ecouleMs: number): number | undefined {
+  const { acte } = trouve;
+  if (ecouleMs < acte.debutMs) return undefined;
+  if (ecouleMs >= acte.debutMs + acte.dureeMs) return 1;
+  return (ecouleMs - acte.debutMs) / Math.max(1, acte.dureeMs);
 }
 
 /**
@@ -305,20 +336,40 @@ export function trouverLeFeu(plan: PlanDEllipse): { acte: Acte; feu: FrontDIncen
  * même couche : une flamme au sol et un nuage de chaux ne sont pas la même
  * chose, mais ils se dessinent de la même façon.
  */
-export function feuEnCours(
-  trouve: { acte: Acte; feu: FrontDIncendie } | undefined,
-  ecouleMs: number,
-): CelluleVoilee[] {
+export function feuEnCours(trouve: IncendieTrouve | undefined, ecouleMs: number): CelluleVoilee[] {
   if (!trouve) return [];
-  const { acte, feu } = trouve;
-  if (ecouleMs < acte.debutMs) return [];
-  // **Après l'acte, la cendre RESTE**, à la différence du voile d'un geste :
-  // un sol brûlé est un état, pas un passage. L'instantané d'après le dira
-  // dans ses grilles — l'herbe a disparu — mais tant que l'ellipse joue, c'est
-  // ce calque qui le porte, et l'éteindre ferait reverdir la parcelle.
-  const avancement =
-    ecouleMs >= acte.debutMs + acte.dureeMs
-      ? 1
-      : (ecouleMs - acte.debutMs) / Math.max(1, acte.dureeMs);
-  return frontEnCours(feu, avancement);
+  const a = avancementDuFeu(trouve, ecouleMs);
+  return a === undefined ? [] : frontEnCours(trouve.feu, a);
+}
+
+/**
+ * Les PARTICULES du feu à cet instant : la lueur, les flammes, le panache et
+ * les braises.
+ *
+ * Rendues en un seul tableau, et c'est la couche de pose qui les répartit entre
+ * ses deux conteneurs — ce qui brûle au sol passe sous les arbres, ce qui monte
+ * passe par-dessus. L'appelant n'a donc qu'un canal à brancher.
+ *
+ * **L'horloge de phase est celle de l'ELLIPSE et non celle du navigateur.**
+ * C'est ce qui fait qu'une lecture figée (`?ellipse=0.7`) l'est vraiment,
+ * jusqu'au battement des flammes, et qu'une capture est reproductible.
+ *
+ * `exposition` est le `ventExposition` de la station (`StationInfo`) : un
+ * scalaire ∈ [0,1] qui donne l'AMPLITUDE de l'inclinaison du panache. Le sens,
+ * lui, vient de l'origine de l'incendie, faute d'une direction de vent dans le
+ * moteur — la convention est décrite dans `feu.ts`.
+ */
+export function particulesDuFeu(
+  trouve: IncendieTrouve | undefined,
+  ecouleMs: number,
+  coteM: number,
+  exposition: number,
+): Particule[] {
+  if (!trouve) return [];
+  const a = avancementDuFeu(trouve, ecouleMs);
+  if (a === undefined) return [];
+  return [
+    ...feuAuSol(trouve.feu, a, ecouleMs, coteM),
+    ...panacheDuFeu(trouve.feu, a, ecouleMs, coteM, trouve.origine, exposition),
+  ];
 }

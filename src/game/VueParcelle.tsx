@@ -32,6 +32,7 @@ import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, SceneParcelle } from "../render/pixi/scene";
 import type { Marqueur } from "../render/temps/changements";
 import type { Deformation } from "../render/temps/chute";
+import type { Particule } from "../render/temps/feu";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
 
@@ -81,6 +82,16 @@ export interface VueParcelleProps {
    * l'arbre part alors tel que l'instantané le donne, sans copie.
    */
   mourant?: (idArbre: number, maintenantMs: number, vivant: ArbreVivant) => EtatMourant | undefined;
+  /**
+   * Les particules du feu en cours d'animation, s'il y a lieu (§6.4).
+   *
+   * Le pendant de `voiler` pour ce qui BRÛLE, et séparé de lui pour une raison
+   * de dessin : un voile est un losange plaqué au sol, une flamme est un panneau
+   * qui se lève et une bouffée un panneau qui monte au-dessus du couvert. Les
+   * trois ne passent donc pas par la même couche. Pas de VUE ici non plus : une
+   * particule est placée dans le MONDE, la scène la projette.
+   */
+  feu?: (maintenantMs: number) => readonly Particule[];
   /**
    * Le calque des changements (§6.8 №1) : où la parcelle a changé.
    *
@@ -228,6 +239,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         const rappel = p.deformer;
         scene.current?.deformerLesArbres(rappel ? (id) => rappel(id, horloge, v) : undefined);
         scene.current?.voilerLesCellules(p.voiler?.(horloge) ?? []);
+        scene.current?.embraser(p.feu?.(horloge) ?? []);
         scene.current?.montrerLesChangements(p.marqueurs ?? []);
         const compte = scene.current?.rafraichir(
           {

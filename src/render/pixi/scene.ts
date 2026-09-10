@@ -19,11 +19,16 @@
  *   vectorielle : c'est la règle que L0 a produite en mesurant un facteur trente
  *   sur les ombres, et le montage la rend structurelle plutôt que disciplinaire.
  *
- * **Quatre couches, dans cet ordre**, chacune un conteneur : le décor, le sol,
- * les ombres, les arbres. Elles ne sont pas encore entrelacées — la décision D3
- * l'exigera quand une butte devra masquer le pied des arbres derrière elle — et
- * les listes sont déjà triées par la même clé de profondeur, ce qui rendra la
- * fusion mécanique.
+ * **Sept couches, dans cet ordre**, chacune un conteneur : le décor, le sol, le
+ * voile des gestes, les ombres, le feu au sol, les arbres, le panache, les
+ * marqueurs. Les trois premières et les arbres ne sont pas encore entrelacés —
+ * la décision D3 l'exigera quand une butte devra masquer le pied des arbres
+ * derrière elle — et les listes sont déjà triées par la même clé de profondeur,
+ * ce qui rendra la fusion mécanique.
+ *
+ * **L'ordre porte une règle, et une seule** : ce qui ÉCLAIRE passe après ce qui
+ * assombrit, et ce qui MONTE passe après ce qui est planté. D'où le feu entre
+ * l'ombre et les arbres, et la fumée par-dessus les arbres.
  *
  * **Les ombres passent par une texture de rendu**, et pas par des sprites en
  * `multiply` posés directement. Deux ombres qui se recouvrent ne doivent pas
@@ -47,6 +52,7 @@ import {
   tailleDePose,
 } from "../couches/arbres";
 import { BRUME, type DecorBordures, OPACITE_DU_DECOR } from "../couches/decor";
+import { cuireBouffee, cuireBraise, cuireFlamme, cuireLueur } from "../couches/feu";
 import {
   cuireHalo,
   cuireLisere,
@@ -67,9 +73,10 @@ import {
 import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
 import { cuireLosangeVoile } from "../couches/voile";
 import { versCss, versEntier } from "../palette";
-import { TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
+import { METRE_VERTICAL_PX, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
+import type { Particule } from "../temps/feu";
 import type { CelluleVoilee } from "../temps/voile";
 
 /** Budget de cuisson par image, en morceaux de terrain. */
@@ -152,7 +159,9 @@ export class SceneParcelle {
     sol: new Container(),
     voiles: new Container(),
     ombres: new Container(),
+    feu: new Container(),
     arbres: new Container(),
+    panache: new Container(),
     marqueurs: new Container(),
   };
   private terrain?: Terrain;
@@ -214,6 +223,22 @@ export class SceneParcelle {
   private formes?: Record<Marqueur["sorte"], Texture>;
   /** Le losange blanc, cuit une fois : c'est la seule forme d'un voile. */
   private textureVoile?: Texture;
+  /**
+   * Les particules du feu de cette image, s'il y en a.
+   *
+   * Un TABLEAU, comme les voiles et pour la même raison : le lecteur rend d'un
+   * coup les quelques centaines de particules qu'un front produit, alors qu'un
+   * arbre s'interroge par identifiant. Vide au repos, c'est-à-dire toujours,
+   * sauf pendant l'acte d'un incendie.
+   */
+  private particules: readonly Particule[] = [];
+  /** Les formes du feu, cuites une fois pour la partie. */
+  private formesDuFeu?: {
+    flammes: Texture[];
+    bouffees: Texture[];
+    lueur: Texture;
+    braise: Texture;
+  };
   /** textures posées à l'image précédente, à libérer quand elles changent */
   private readonly posees = new Map<string, Texture>();
   private monte = false;
@@ -266,7 +291,19 @@ export class SceneParcelle {
       // poussière de chaux.
       this.couches.voiles,
       this.couches.ombres,
+      // **Les flammes sont SUR l'ombre et SOUS les arbres.** Sur l'ombre,
+      // parce qu'un feu éclaire au lieu d'être éclairé : une flamme assombrie
+      // par l'ombre du houppier qu'elle est en train de brûler serait une
+      // absurdité. Sous les arbres, parce qu'un feu courant est à leurs pieds
+      // et qu'on le voit entre les troncs — c'est même ce qui rend le torchage
+      // lisible, quand la flamme monte derrière une tige et pas devant.
+      this.couches.feu,
       this.couches.arbres,
+      // **Le panache est AU-DESSUS des arbres, et c'est le seul calque du monde
+      // qui ait le droit de masquer un houppier** : de la fumée passe devant ce
+      // qu'elle survole, sinon ce n'est pas de la fumée. Le calque des
+      // changements, lui, passe encore par-dessus : c'est de l'interface.
+      this.couches.panache,
       // **Le calque des changements est AU-DESSUS de tout**, y compris des
       // arbres et de l'ombre : c'est de l'interface posée sur la carte, et un
       // repère caché derrière un houppier ne repère rien. C'est aussi ce qui le
@@ -299,6 +336,17 @@ export class SceneParcelle {
    */
   public voilerLesCellules(cellules: readonly CelluleVoilee[]): void {
     this.voiles = cellules;
+  }
+
+  /**
+   * Branche (ou débranche) les particules du feu.
+   *
+   * **Un seul canal pour deux couches**, et c'est délibéré : l'appelant n'a pas
+   * à savoir que la fumée se pose au-dessus des arbres et les flammes en
+   * dessous. Il donne les particules, la scène les répartit par leur forme.
+   */
+  public embraser(particules: readonly Particule[]): void {
+    this.particules = particules;
   }
 
   /**
@@ -383,6 +431,7 @@ export class SceneParcelle {
     spritesPoses += this.poserDecor(vue);
     spritesPoses += this.poserSol(vue);
     spritesPoses += this.poserVoiles(etat, vue);
+    spritesPoses += this.poserFeu(etat, vue);
     spritesPoses += this.poserArbres(poses, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
     // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
@@ -593,6 +642,107 @@ export class SceneParcelle {
     }
     SceneParcelle.tailler(this.couches.voiles, n);
     return n;
+  }
+
+  /**
+   * Le FEU : la lueur, les langues de flamme, le panache et les braises.
+   *
+   * **Deux conteneurs et un seul canal.** Ce qui brûle au sol va sous les
+   * arbres, ce qui monte va par-dessus ; c'est la FORME de la particule qui le
+   * décide, parce que c'est elle qui dit de quoi il s'agit. L'appelant n'a rien
+   * à savoir de cet arrangement.
+   *
+   * **Le mode de fusion est ce qui fait la différence entre du feu et du papier
+   * orange.** Une flamme, une braise, une lueur s'AJOUTENT à ce qu'elles
+   * éclairent — c'est de la lumière, elle ne remplace pas le sol, elle s'y
+   * ajoute, et deux flammes qui se recouvrent sont plus claires que chacune. La
+   * fumée est la seule à se poser en opacité normale : elle masque.
+   *
+   * **Trié par ordonnée d'écran**, ce qui est l'ordre du peintre pour des
+   * panneaux : une bouffée plus haute est dessinée avant celle qui la précède au
+   * ras du feu, donc la plus dense reste devant. Un tri par profondeur serait
+   * plus juste pour deux colonnes côte à côte, mais des panneaux translucides ne
+   * le montrent pas — et celui-ci coûte un tri de quelques centaines d'éléments.
+   */
+  private poserFeu(etat: EtatScene, vue: Vue): number {
+    if (this.particules.length === 0) {
+      SceneParcelle.tailler(this.couches.feu, 0);
+      SceneParcelle.tailler(this.couches.panache, 0);
+      return 0;
+    }
+    this.formesDuFeu ??= this.cuireLeFeu();
+    const formes = this.formesDuFeu;
+    // Un mètre vaut autant en largeur qu'en hauteur d'écran, par construction de
+    // la projection dimétrique (décision D2) : l'échelle est donc uniforme et
+    // une particule se pose sans déformation.
+    const parMetre = METRE_VERTICAL_PX * vue.cam.zoom;
+    const places = this.particules.map((p) => {
+      const z = (etat.sol.altitudesM[p.cellule] ?? 0) + p.hM;
+      return { p, e: versEcranVue({ x: p.x, y: p.y, z }, vue) };
+    });
+    places.sort((a, b) => a.e.sy - b.e.sy);
+    let auSol = 0;
+    let enHaut = 0;
+    for (const { p, e } of places) {
+      // **La TRAÎNE reste au sol**, avec les flammes, et pas avec le panache :
+      // c'est une brume qui rampe sur ce qui vient de brûler, à hauteur de
+      // buisson. Passée par-dessus les arbres, elle les effacerait à travers
+      // toute la parcelle brûlée alors qu'elle est censée passer entre eux.
+      const monte = p.forme === "fumee" || p.forme === "braise";
+      const couche = monte ? this.couches.panache : this.couches.feu;
+      const texture =
+        p.forme === "flamme" || p.forme === "coeur"
+          ? (formes.flammes[p.variante % formes.flammes.length] as Texture)
+          : p.forme === "fumee" || p.forme === "traine"
+            ? (formes.bouffees[p.variante % formes.bouffees.length] as Texture)
+            : p.forme === "lueur"
+              ? formes.lueur
+              : formes.braise;
+      const sprite = SceneParcelle.sprite(couche, monte ? enHaut++ : auSol++, texture);
+      // **Une flamme est ancrée par son PIED**, tout le reste par son centre :
+      // une langue de feu pousse depuis le sol de sa cellule, une bouffée et une
+      // braise flottent autour de leur position.
+      const parLePied = p.forme === "flamme" || p.forme === "coeur";
+      sprite.anchor.set(0.5, parLePied ? 1 : 0.5);
+      sprite.width = Math.max(1, p.largeurM * parMetre);
+      sprite.height = Math.max(1, p.hauteurM * parMetre);
+      sprite.x = e.sx;
+      sprite.y = e.sy;
+      sprite.tint = versEntier(p.teinte);
+      sprite.alpha = p.opacite;
+      // Reposé à chaque image parce que le sprite est RECYCLÉ : il peut porter
+      // le mode d'une bouffée alors qu'il sert maintenant une braise.
+      sprite.blendMode = p.forme === "fumee" || p.forme === "traine" ? "normal" : "add";
+    }
+    SceneParcelle.tailler(this.couches.feu, auSol);
+    SceneParcelle.tailler(this.couches.panache, enHaut);
+    return auSol + enHaut;
+  }
+
+  /**
+   * Cuit les formes du feu, une fois pour la partie.
+   *
+   * **Toutes en mipmap, et c'est le même défaut que le voile a révélé** : une
+   * texture de soixante-douze pixels posée sur vingt sort en damier si Pixi
+   * échantillonne un pixel sur quatre. C'est le seul cas où le rendu réduit une
+   * image de beaucoup — partout ailleurs il cuit à la taille où il pose — et les
+   * particules y tombent toutes, puisqu'une flamme d'un mètre ne fait que
+   * quelques pixels au zoom de parcelle.
+   */
+  private cuireLeFeu(): NonNullable<SceneParcelle["formesDuFeu"]> {
+    const lisser = (canvas: HTMLCanvasElement): Texture => {
+      const t = Texture.from(canvas);
+      t.source.scaleMode = "linear";
+      t.source.autoGenerateMipmaps = true;
+      t.source.update();
+      return t;
+    };
+    return {
+      flammes: [0, 1, 2].map((v) => lisser(cuireFlamme(this.fabriquer, v))),
+      bouffees: [0, 1, 2].map((v) => lisser(cuireBouffee(this.fabriquer, v))),
+      lueur: lisser(cuireLueur(this.fabriquer)),
+      braise: lisser(cuireBraise(this.fabriquer)),
+    };
   }
 
   /**

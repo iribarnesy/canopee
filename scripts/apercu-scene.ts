@@ -541,6 +541,11 @@ function main() {
         `${JSON.stringify({
           coteM: COTE_M,
           week: i,
+          // L'exposition au vent de la station : c'est l'amplitude dont le
+          // panache d'un incendie s'incline (`render/temps/feu.ts`). Le moteur
+          // ne dit pas d'où le vent vient — seulement combien la parcelle y est
+          // exposée — et le rendu ne fait pas semblant de savoir le reste.
+          ventExposition: station.ventExposition,
           trees: figer(state),
           // L'incendie n'y est pas : ses champs sont des `Int32Array`, que JSON
           // transforme en objets indexés, et aucune de ces scènes ne brûle. Le
@@ -576,6 +581,7 @@ function main() {
       `${JSON.stringify({
         coteM: COTE_M,
         week: an * 52,
+        ventExposition: station.ventExposition,
         trees,
         sol: figerLeSol(state, station, dernierDebordement, derniereLumiere, (an * 52 - 1) % 52),
       })}\n`,

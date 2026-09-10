@@ -1449,10 +1449,69 @@ front de 116 rangs. C'est la pédagogie du tableau ci-dessus — « s'essouffle
 dans le feuillu frais, fonce dans la lande » — obtenue sans une ligne de dessin,
 et le banc la porte (`bash scripts/apercu-scenes.sh feu`).
 
-Ce qui reste du §6.4 : la **fumée** (un système de particules, donc un autre
-lot), et le cadrage caméra sur le départ. Le torchage, lui, est déjà là par la
-cuisson : la vignette porte `brulee`, et la mort de cause `feu` la met en place
-dès le premier instant.
+**La fumée et les flammes, construites le 2026-09-10**
+(`render/temps/feu.ts`, `render/couches/feu.ts`). Un système de particules,
+donc — mais un système **sans état** : la position d'une flamme, d'une bouffée
+ou d'une braise est une fonction PURE de (ce que le moteur a brûlé, l'avancement
+de l'acte, l'horloge de l'ellipse). Rien ne s'accumule d'une image à l'autre, il
+n'y a pas de tableau de particules vivantes, pas d'intégration. C'est ce qui
+rend une capture figée (`?ellipse=0.7`) reproductible au pixel, et c'est aussi
+ce qui permet de tester un panache sans navigateur — vingt-huit essais.
+
+**Quatre formes cuites une fois, et le feu n'est fait que de taches.** Une
+flamme tracée au bézier a un bord net, et un bord net se lit comme du carton
+découpé quel que soit le mouvement qu'on lui donne. Une langue de flamme est
+donc une pile de dégradés radiaux le long d'un axe qui s'affine, composés en
+`lighter` — ce qui fabrique tout seul un cœur brûlant au pied et une pointe qui
+se dissout. Le même procédé donne une bouffée, à ceci près que ses taches sont
+dispersées. Et ce qui BRÛLE se pose en `add` : une flamme, une braise, une
+lueur s'ajoutent à ce qu'elles éclairent, la fumée seule masque.
+
+**L'ordre des couches porte une règle, et une seule** : ce qui éclaire passe
+après ce qui assombrit, ce qui monte passe après ce qui est planté. Le feu est
+donc entre l'ombre et les arbres — un feu courant est à leurs pieds, on le voit
+entre les troncs, et il ne se fait pas assombrir par l'ombre du houppier qu'il
+brûle — et le panache par-dessus les arbres, seul calque du monde qui ait le
+droit de masquer un houppier.
+
+**Ce que le moteur ne sait pas, et qu'il fallait dire au lieu de l'inventer :
+d'où vient le vent** (issue #50). `ventExposition` est un scalaire ∈ [0,1] —
+l'abri que les boisements voisins donnent — et `WeekWeather` ne porte ni
+direction ni vitesse. La convention retenue **infère le vent de l'avance nette
+du front** : ce qui pousse un feu, c'est le vent, donc un front qui a
+globalement progressé vers le nord-est a eu du vent de sud-ouest, et son panache
+penche vers le nord-est. La direction se lit sur deux données du moteur
+(l'origine, les cellules qui flambent), l'amplitude vient de `ventExposition`,
+et un front parfaitement symétrique donne une colonne droite — la bonne lecture,
+puisque ce feu-là n'a montré aucune direction. Mesuré sur la scène de
+démonstration : l'avance nette vaut de 10 à 23 % du rayon moyen du front, et
+100 % à la fin, quand il ne reste qu'un coin à brûler.
+
+**Trois défauts que la capture a attrapés, et qu'aucun raisonnement n'aurait
+donnés :**
+
+- **le panache s'ouvrait en éventail.** Le premier jet faisait pencher chaque
+  colonne à l'opposé de l'origine, LOCALEMENT : ça revenait à dessiner un vent
+  qui souffle vers l'extérieur dans toutes les directions à la fois. Un vent est
+  uniforme sur un hectare — une seule direction pour tout l'incendie, et les
+  colonnes se rejoignent en altitude au lieu de s'écarter ;
+- **la fumée se lisait comme un filet de vapeur.** L'opacité tombait dès la
+  naissance de la bouffée, donc les grosses bouffées du haut étaient les plus
+  transparentes : le panache grossissait en devenant invisible. Un PLATEAU la
+  remplace — pleine densité sur les deux tiers de la montée, dilution au
+  sommet ;
+- **l'incendie avait des cheminées.** Douze colonnes pour trente-deux mailles de
+  front traversées, choisies dans l'ordre des rangs, ne retenaient que le bord
+  intérieur du front : les colonnes sortaient de la cendre. Vingt-deux,
+  échantillonnées à pas régulier sur tout l'ensemble en flammes.
+
+Et le coût mesuré tient la règle du §5.11 : **zéro classe de vignette recuite**
+à toutes les lectures de l'acte, pose de 2 à 9 ms.
+
+Ce qui reste du §6.4 : le cadrage caméra sur le départ, le ciel orangé, et la
+direction de vent de l'issue #50. Le torchage, lui, est déjà là par la cuisson :
+la vignette porte `brulee`, et la mort de cause `feu` la met en place dès le
+premier instant.
 
 ### 6.5 La crue
 
