@@ -18,6 +18,7 @@ import { versLAval } from "../../src/engine/boisMort";
 import { CARBON_FRACTION } from "../../src/engine/carbon";
 import { chargeCombustible } from "../../src/engine/feu";
 import { runJournal } from "../../src/engine/game";
+import { indiceDuMarche } from "../../src/engine/marche";
 import { syntheticYear } from "../../src/engine/meteo";
 import { altitudeParCellule } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -123,7 +124,7 @@ describe("plafonds économiques (déterministes)", () => {
     expect(refusals[0]?.reason).toContain("trop proche");
   });
 
-  it("la vente rapporte volume × prix", () => {
+  it("la vente rapporte volume × prix × indice du marché", () => {
     let state = createGameState(STATION, rngStateFromSeed(1));
     state = plantAt(state, "pinus_sylvestris", 10, 10, 20);
     const { state: after } = applyAction(state, {
@@ -132,7 +133,15 @@ describe("plafonds économiques (déterministes)", () => {
       treeIds: [1],
       devenir: "vendre",
     });
-    expect(after.economy.treasuryEur).toBeCloseTo(20_000 + woodVolumeM3(20) * WOOD_PRICE_EUR_M3, 6);
+    // Le prix n'est plus fixe : l'indice de l'année s'y applique (marche.ts).
+    // On vérifie la RELATION plutôt qu'un nombre — épingler le montant exact
+    // reviendrait à réécrire ici la formule du marché, et l'essai ne
+    // prouverait plus que lui-même.
+    const marche = indiceDuMarche(state.graineMarche, 0);
+    expect(after.economy.treasuryEur).toBeCloseTo(
+      20_000 + woodVolumeM3(20) * WOOD_PRICE_EUR_M3 * marche,
+      6,
+    );
     expect(after.economy.hoursUsedWeek).toBeCloseTo(fellingHours(20), 6);
     expect(after.trees).toHaveLength(0);
   });

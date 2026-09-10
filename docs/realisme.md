@@ -209,7 +209,7 @@ mesurer que ce qu'on sait déjà faire.*
 | H4 | La cadence de récolte dépend de l'espèce (pommes vs noisettes) | ✅ | `fruits.recolteHKg` |
 | H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |
 | H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ✅ | `valeurSurPied` ; `sylviculture.test.ts` — il faut une bille élaguée ET du diamètre |
-| H7 | Les prix varient (marché, saturation locale) | ❌ | Prix fixes |
+| H7 | Les prix varient (marché, saturation locale) | 🟡 | `marche.ts` : indice annuel (cycle de 11 ans + bruit, borné 0,6-1,5) calé sur la volatilité réelle des bois sur pied, et DÉCOTE D'ENGORGEMENT du débouché local — vendre tout la même année rapporte moins. Ne joue que si l'économie compte |
 | H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, éclaircie par critère et **trogne** (`trogner` ; `trogne.test.ts`) — quatre gestes qui ne se confondent pas |
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
@@ -1578,6 +1578,47 @@ gland fait un semis de vingt centimètres, une graine de callune, qui est une
 poussière, fait une plantule de quelques millimètres. La taille des graines
 n'est pas dans l'atlas, et elle suit grossièrement celle de la plante. C'est
 une approximation, mais elle corrige le SENS de l'erreur.
+
+## Le marché : un prix qui bouge, et qui s'effondre quand tout le monde vend
+
+Les prix étaient FIXES — 35 €/m³ pour le chauffage, une valeur par espèce pour
+l'œuvre, quelle que soit l'année et quelle que soit la quantité mise sur le
+marché. C'est faux de deux façons, et les deux comptent pour un gestionnaire.
+
+### Le cycle
+
+L'indice des prix des bois sur pied en forêt privée française a fait **+7 % en
+2024, −4 % en 2025, et +46 % depuis 2020** (Observatoire économique France Bois
+Forêt). Les écarts par essence sont plus larges encore sur une seule année : le
+douglas a pris 24 % et le peuplier 26 % en 2024, quand le chêne reculait de 3 %.
+Des variations annuelles de l'ordre de ±10 %, avec des cycles pluriannuels qui
+s'additionnent, sont donc la norme et non l'accident.
+
+L'indice du moteur combine un cycle de onze ans et un bruit annuel, borné entre
+0,6 et 1,5 : le marché bouge, il ne s'envole pas. Il est **déterministe et
+dérivé de la graine de la partie** — deux parties identiques voient le même
+marché — et il ne puise PAS dans le flux aléatoire principal, un tirage de plus
+y décalant tous les suivants.
+
+### L'engorgement, qui est le vrai levier
+
+**Le prix s'effondre quand tout le monde vend en même temps.** C'est ce que la
+France a vécu après Lothar en 1999 et Klaus en 2009 : des millions de m³ de
+chablis jetés d'un coup sur un marché qui ne pouvait pas les absorber, et des
+cours divisés par deux.
+
+Le moteur ne simule pas le marché national — il simule une parcelle. Ce qu'on
+modélise est donc l'engorgement du débouché **local** : au-delà d'une trentaine
+de m³ vendus dans l'année, le prix baisse, jusqu'à la moitié. Le même bois vendu
+en quatre fois rapporte plus qu'en une seule, et l'essai le vérifie sur une
+partie complète.
+
+**C'est la raison d'étaler ses coupes, et elle n'est écrite nulle part
+ailleurs.** La décote est continue, sans falaise qu'un joueur pourrait raser au
+m³ près.
+
+*(À calibrer : l'ampleur des chutes post-tempête est documentée, le seuil local
+ne l'est pas — une parcelle d'un hectare n'a pas de marché à elle.)*
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 
