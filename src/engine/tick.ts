@@ -10,6 +10,7 @@
 
 import type { GesteVisible } from "./actions";
 import { type AidesAnnuelles, aidesAnnuelles } from "./aides";
+import { intensiteAllelopathique } from "./allelopathie";
 import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
   type CelluleSousLeTronc,
@@ -414,6 +415,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const partOmbrageanteDe: PartOmbrageante = (tree) =>
     partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno);
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partOmbrageanteDe);
+  /**
+   * Ce que les émetteurs d'allélopathie déversent en un point (allelopathie.ts).
+   * Le sable lessive la juglone, le limon lourd la retient : l'intensité dépend
+   * donc de la TEXTURE du sol, que la station connaît déjà.
+   */
+  const partSableSurface = station.profil[0]?.sable ?? 0;
+  const emetteurs = trees.filter((t) => t.alive && getEspece(t.especeId).allelopathie);
+  const intensiteAllelopathiqueEn = (x: number, y: number): number => {
+    let total = 0;
+    for (const e of emetteurs) {
+      const portee = getEspece(e.especeId).allelopathie?.porteeM ?? 0;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d <= 0.01) continue; // l'émetteur ne s'inhibe pas lui-même
+      total += intensiteAllelopathique(d, portee, partSableSurface);
+    }
+    return Math.min(1, total);
+  };
   const light = computeLight(trees, partOmbrageanteDe);
 
   // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
@@ -1289,6 +1307,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       light: light[t] ?? 1,
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
       phosphoreSatisfaction: pSatisfaction[t] ?? 1,
+      intensiteAllelopathique: intensiteAllelopathiqueEn(tree.x, tree.y),
       potassiumSatisfaction: kSatisfaction[t] ?? 1,
       phMean: phMean[t] ?? 7,
       solPenetrableCm,

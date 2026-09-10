@@ -80,6 +80,25 @@ export interface EspeceV0 {
      */
     profondeurMaxCm: number;
   };
+  /**
+   * ALLÉLOPATHIE : ce que l'espèce libère pour empêcher les autres de pousser
+   * chez elle. Le seul cas de l'atlas est le noyer et sa juglone, qui inhibe la
+   * germination et la croissance dans un rayon de quinze à vingt mètres.
+   *
+   * Le mécanisme n'a rien d'anecdotique pour ce jeu : il rend le choix des
+   * VOISINS décisif là où, ailleurs, seule la lumière compte.
+   */
+  allelopathie?: { porteeM: number };
+  /**
+   * Sensibilité à l'allélopathie ∈ [0,1] : 0 = indifférent, 1 = inhibé de plein
+   * fouet.
+   *
+   * La littérature de terrain ne donne que des LISTES — le pommier, le pin et
+   * le bouleau souffrent, les graminées et beaucoup de vivaces ne bronchent
+   * pas. Faute de mesure espèce par espèce, les fiches où l'on ne sait pas
+   * portent la valeur médiane par défaut, et c'est écrit *(à calibrer)*.
+   */
+  sensibiliteAllelopathie?: number;
   /** °C moyenne hebdo de démarrage de la croissance (proxy du tempérament thermique) */
   tBaseCroissanceC: number;
   azote: {
@@ -495,6 +514,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     lumiere: { compensation: 0.25, saturation: 0.7, lai: 1.2, houppierRatio: 0.25, caduc: false },
     racines: { profondeurMaxCm: 200 }, // pivot, d'où sa résistance sur sols filtrants
+    // Les pins figurent parmi les sensibles documentés.
+    sensibiliteAllelopathie: 0.9,
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.25, fixateur: false },
     regeneration: { maturiteAns: 15, longeviteAns: 250, dissemination: "vent", semisParAn: 3 },
@@ -534,6 +555,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : très héliophile ; ombre légère (couronne aérée) — le bon parasol de nurse.
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.3, houppierRatio: 0.3, caduc: true },
     racines: { profondeurMaxCm: 100 }, // traçant superficiel de pionnier
+    // Le bouleau aussi, et il partage avec le pin d'être un pionnier de lumière — la juglone s'ajoute à l'ombre.
+    sensibiliteAllelopathie: 0.9,
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.35, fixateur: false },
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
@@ -549,6 +572,61 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.1, rejetteApresFeu: true },
+    sources: [ATLAS],
+  },
+  {
+    id: "juglans_regia",
+    nom: "Noyer commun",
+    nomLatin: "Juglans regia",
+    hauteurMaxM: 25,
+    // NON calé sur table : aucune table de production française de noyer n'a
+    // été trouvée. Ordre de grandeur d'un noyer de plein champ conduit pour le
+    // bois *(à confirmer)*.
+    pousseMaxMAn: 0.5,
+    // Atlas : héliophile, mésoxérophile, EUTROPHE — il exige le riche, et c'est
+    // ce qui limite l'agroforesterie au noyer aux bonnes terres.
+    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
+    // Il fuit l'acide : c'est un arbre de sols neutres à calcaires.
+    ph: [6, 8.5],
+    lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
+    racines: { profondeurMaxCm: 160 }, // pivot profond
+    tBaseCroissanceC: 8,
+    azote: { demandeRelative: 0.9, fixateur: false },
+    // Les noix sont cachées par les corvidés, comme les glands : le même noyau
+    // de dispersion, en terrain découvert où l'oiseau les retrouvera.
+    regeneration: { maturiteAns: 12, longeviteAns: 150, dissemination: "geai", semisParAn: 0.5 },
+    litiere: { cnRatio: 35 },
+    // LE plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
+    // permet d'échapper aux gels d'avril, et ce qui rend l'agroforesterie au
+    // noyer possible — la culture intercalaire pousse avant que l'ombre arrive.
+    phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
+    economie: { prixPlantEur: 15 },
+    // Bois précieux : le noyer se vend à la bille, plusieurs fois le chêne.
+    bois: { densite: 0.65, prixOeuvreEurM3: 600, rejetteDeSouche: false },
+    fruits: {
+      floraisonDJ: 320, // mai : il fleurit après avoir feuillé, donc tard
+      gelFatalC: -1,
+      recolteWeek: 40,
+      fenetreRecolteWeeks: 3,
+      croissanceSem: 16,
+      rendementMaxKg: 40,
+      prixEurKg: 3.5,
+      recolteHKg: 0.03,
+      autofertile: false,
+    },
+    /**
+     * ALLÉLOPATHIE. Le noyer libère de la juglone par ses racines et sa
+     * litière, et elle inhibe la germination et la croissance de nombreuses
+     * espèces dans un rayon de QUINZE À VINGT MÈTRES autour de l'arbre. C'est
+     * la contrainte classique de l'agroforesterie au noyer, et la première
+     * chose qu'on apprend en plantant un verger à côté.
+     */
+    allelopathie: { porteeM: 17.5 },
+    exigenceMinerale: 2.5,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.4 },
+    gibier: { appetence: 0.4 },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: false },
     sources: [ATLAS],
   },
   {
@@ -569,6 +647,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ph: [5.5, 8],
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 120 }, // fruitier greffé, enracinement moyen
+    // Le pommier est en tête de toutes les listes de sensibles à la juglone : ne pas planter de verger sous un noyer est le conseil le plus répété.
+    sensibiliteAllelopathie: 1,
     tBaseCroissanceC: 6,
     azote: { demandeRelative: 0.6, fixateur: false },
     // Cultivar greffé : pas de régénération naturelle fidèle.
