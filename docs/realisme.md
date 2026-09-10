@@ -160,7 +160,7 @@ mesurer que ce qu'on sait déjà faire.*
 | E4 | Les espèces xérophiles transpirent moins par unité de feuillage (WUE) | 🟡 | dérivé du tempérament, à calibrer sur données |
 | E11 | Un pivot résiste à la sécheresse là où un traçant souffre | ✅ | `racines.test.ts` (sable sur limon : le pivot survit, le traçant meurt) |
 | E5 | Une haie brise-vent améliore la production sur 10-20 fois sa hauteur | ✅ | `windShelterAt` |
-| E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | ❌ | Champ prévu, non implémenté |
+| E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | 🟡 | `allelopathie.ts` + le NOYER entre à l'atlas. Portée 17,5 m (littérature : 15-20), intensité décroissante, sensibilité par espèce — pommier, pin et bouleau documentés sensibles. Et le SOL décide autant que l'arbre : le sable lessive la juglone, le limon lourd la retient. Sensibilité médiane par défaut là où la littérature ne dit rien |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
@@ -1613,6 +1613,46 @@ et en vingt-cinq ans, les oiseaux ont le temps de semer partout. La différence
 n'est donc pas dans l'emprise mais dans la DENSITÉ. Mesurer une tache qui avance
 demanderait une parcelle plus grande et une partie plus longue que ce qu'une
 suite d'essais peut se payer.
+
+## L'allélopathie : empêcher les autres de pousser chez soi
+
+Le moteur ne connaissait que la CONCURRENCE — pour la lumière, l'eau, les
+minéraux. Or certaines plantes ne se contentent pas de prendre : elles
+**émettent**. Le noyer libère de la juglone par ses racines et sa litière, et
+elle inhibe la germination et la croissance dans un rayon de **quinze à vingt
+mètres**.
+
+C'est la contrainte classique de l'agroforesterie au noyer, et la première
+chose qu'on apprend en plantant un verger à côté. Pour ce jeu, elle rend le
+choix des **voisins** décisif là où, ailleurs, seule la lumière compte.
+
+**Le noyer entre donc à l'atlas** — il y était déjà côté fiches, pas côté
+moteur. C'est l'arbre emblématique de l'agroforesterie française, et sa
+phénologie très tardive n'est pas un détail : il feuille en mai, ce qui laisse
+à la culture intercalaire le temps de pousser avant que l'ombre n'arrive.
+
+### Le sol décide autant que l'arbre
+
+> « Dans un sol lourd et peu drainé, les concentrations peuvent rester élevées
+> près des racines pendant de longues périodes, tandis qu'un sol sableux
+> facilitera le lessivage et une moindre accumulation. »
+
+C'est ce qui permet d'en faire une **règle** plutôt qu'une constante :
+l'intensité dépend de la texture, que le moteur connaît déjà. Un noyer sur limon
+lourd stérilise autour de lui ; le même sur sable gêne beaucoup moins.
+
+### Ce que la littérature ne donne pas
+
+Elle donne un rayon et des **listes** — pommier, pin, bouleau et myrtillier
+souffrent ; la plupart des graminées ne bronchent pas. Elle ne donne pas de
+courbe dose-réponse espèce par espèce, et on ne l'invente pas : les fiches où
+l'on ne sait pas portent une sensibilité **médiane**, marquée comme telle.
+
+**Mesuré** : un pommier planté à trois mètres d'un noyer de dix-huit mètres
+reste sous 70 % de la taille du même pommier à trente mètres — au-delà de la
+portée de la juglone, la distance que conseille tout guide de plantation. Le
+moteur y arrive sans qu'on l'écrive : le pommier n'a pas de règle « éviter le
+noyer », il a une sensibilité, et le noyer une portée.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 
