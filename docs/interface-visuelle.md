@@ -1417,6 +1417,43 @@ sait déjà où le feu part, où il passe, qui il tue, qui rejette.
 | Après | sol noir, cendres, chandelles, puis **rejets de souche verts au printemps suivant** (`rejetteApresFeu`) — le feu n'élimine pas, il trie | `M` |
 | Caméra | le moteur met déjà le jeu en pause (`autopause`) sur incendie : la vue peut cadrer le départ | `S` |
 
+**Le front, construit le 2026-09-10** (`render/temps/feu.ts`). Le moteur avait
+tout préparé et l'avait écrit noir sur blanc — le commentaire de `rangsDuFront`
+dit « c'est ce qui permet de faire COURIR une ligne de flammes au lieu de
+noircir un patch d'un coup ». Le rendu ne refait aucune propagation : il compare
+un rang d'arrivée à l'avancement de l'acte.
+
+**Et il n'a presque aucune machinerie à ajouter**, ce qui est le signe que le
+découpage précédent était bon : un front est un ensemble de cellules teintées
+animées à la pose, c'est-à-dire exactement ce que le voile des gestes de zone
+dessine déjà. Les deux passent par la même couche de losanges. Une flamme au sol
+et un nuage de chaux ne sont pas la même chose, mais ils se DESSINENT de la même
+façon.
+
+Deux défauts attrapés, l'un par un essai et l'autre par le moteur lui-même :
+
+- **le sujet « feu » du plan laissait tomber les rangs.** `ellipse.ts` ne
+  portait que les cellules brûlées : le dessin aurait été obligé de noircir d'un
+  coup, c'est-à-dire de perdre la seule chose qui rend un incendie pédagogique.
+  Corrigé dans le plan ;
+- **les dernières cellules atteintes finissaient en BRAISE et non en cendre**,
+  parce que le front ne dépassait le dernier rang que de sa largeur, sans le
+  rang de refroidissement. L'état final doit être celui que l'instantané
+  d'après décrira : du sol brûlé.
+
+**La scène de démonstration a appris quelque chose avant qu'on regarde
+l'image** : à huit ans, le couvert s'est refermé, le combustible de surface
+reste humide (`PORTANCE_SOUS_COUVERT`) et **l'allumage ne prend pas** — zéro
+cellule brûlée. À trois ans, friche herbeuse et ouverte : 6 505 cellules et un
+front de 116 rangs. C'est la pédagogie du tableau ci-dessus — « s'essouffle
+dans le feuillu frais, fonce dans la lande » — obtenue sans une ligne de dessin,
+et le banc la porte (`bash scripts/apercu-scenes.sh feu`).
+
+Ce qui reste du §6.4 : la **fumée** (un système de particules, donc un autre
+lot), et le cadrage caméra sur le départ. Le torchage, lui, est déjà là par la
+cuisson : la vignette porte `brulee`, et la mort de cause `feu` la met en place
+dès le premier instant.
+
 ### 6.5 La crue
 
 | Étape | Mise en scène | Honnêteté |

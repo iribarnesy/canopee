@@ -70,6 +70,18 @@ if veut pelouse; then
     npx tsx scripts/apercu-scene.ts
 fi
 
+# ── L'incendie ─────────────────────────────────────────────────────────────
+# **Trois ans et pas huit, et c'est le moteur qui l'a décidé** : à huit ans le
+# couvert s'est refermé, le combustible de surface reste humide
+# (`PORTANCE_SOUS_COUVERT`), et l'allumage ne prend pas — zéro cellule brûlée.
+# Une friche de trois ans, herbeuse et ouverte, brûle : 6 505 cellules et un
+# front de 116 rangs. C'est exactement la pédagogie que le §6.4 attend, et elle
+# s'est manifestée avant même qu'on regarde l'image.
+if veut feu; then
+  APERCU_NOM=feu.json APERCU_ANS=3 APERCU_SEMAINES=30 APERCU_FEU=1 \
+    npx tsx scripts/apercu-scene.ts
+fi
+
 # ── Le banc du bois couché ─────────────────────────────────────────────────
 # Deux troncs de vingt-cinq mètres, à deux azimuts. La transversalité n'est pas
 # forcée : `transversalite` du moteur la calcule depuis l'azimut posé et l'aval
