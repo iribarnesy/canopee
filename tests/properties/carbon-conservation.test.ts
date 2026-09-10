@@ -350,5 +350,10 @@ describe("un feu qui fait rejeter de souche", () => {
     // ci-dessus ne vérifie plus que le tick ordinaire, et c'est ce qui est
     // arrivé à la version qui vivait dans `feu.test.ts`.
     expect(rejets).toBeGreaterThan(0);
-  });
+    // Le délai est explicite parce que l'essai est cher par construction : il
+    // vérifie le bilan carbone à CHAQUE semaine d'une partie qu'il faut mener
+    // assez loin pour qu'un incendie y fasse rejeter. Il tenait dans les 120 s
+    // par défaut sur ma machine et les dépassait sur le runner d'intégration,
+    // qui est plus lent.
+  }, 600_000);
 });
