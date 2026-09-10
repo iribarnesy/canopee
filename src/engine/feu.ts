@@ -54,8 +54,8 @@ const VENT_ATTISANT_MS = 6;
  * vitesse (0,9 et au-delà à vent modéré) donnerait ici un trait d'une cellule
  * de large, pas une ellipse.
  *
- * À 0,5 : la tête voit sa chance DOUBLÉE, le flanc inchangé, l'arrière réduit
- * d'un tiers — soit un rapport tête/arrière de 3 par pas.
+ * À 0,5 : l'arrière inchangé, le flanc une fois et demie, la tête trois fois —
+ * soit un rapport tête/arrière de 3 par pas.
  */
 const EXCENTRICITE_MAX = 0.5;
 
@@ -86,35 +86,51 @@ export function excentriciteDuFront(vitesseMs: number): number {
 }
 
 /**
- * Ce que le vent fait d'un pas du front selon son cap. > 1 en tête, < 1 contre
- * le vent.
+ * Ce que le vent AJOUTE à un pas du front selon son cap, ≥ 1.
  *
  * Forme polaire de l'ellipse dont le point d'allumage occupe un FOYER — la
  * géométrie classique du comportement du feu, et un fait de terrain avant
  * d'être un modèle : un feu poussé par le vent s'allonge en ellipse, avance
  * vite en tête, moins sur les flancs, et recule à peine contre le vent.
  *
- *     f(θ) = 1 / (1 − e·cos θ)
+ *     f(θ) = (1 + e) / (1 − e·cos θ)
  *
- * avec θ l'angle entre le pas et le vent : 1/(1 − e) dans le vent (tête), 1 sur
- * le flanc, 1/(1 + e) contre le vent (arrière). Les RAPPORTS sont ceux de
- * l'ellipse ; ce qui est choisi ici, c'est où placer le 1 — sur le FLANC.
+ * avec θ l'angle entre le pas et le vent : (1 + e)/(1 − e) dans le vent (tête),
+ * (1 + e) sur le flanc, 1 contre le vent (arrière). Les RAPPORTS sont ceux de
+ * l'ellipse et c'est la partie sourcée ; ce qui est CHOISI ici, c'est où placer
+ * le 1 — et il va sur l'arrière, de sorte qu'aucun cap ne brûle moins qu'il
+ * n'aurait brûlé sans vent.
  *
- * Le normaliser sur la tête (donc plafonner à 1) était ma première version, et
- * elle était fausse dans le sens le plus visible : tout pas, même sous le vent,
- * se voyait alors RETIRER quelque chose, et un feu venté brûlait moins qu'un feu
- * par temps calme. C'est l'inverse du fait à modéliser — le vent augmente la
- * vitesse du front et la surface parcourue, et l'allonge. Le flanc est le seul
- * cap que le vent ne sert ni ne freine : c'est donc là que va le 1.
+ * Deux versions ont précédé celle-ci, et leurs deux erreurs disent pourquoi le
+ * 1 est là :
  *
- * Conséquence voulue, dans un combustible saturé : le pas sous le vent dépasse
- * 1, ne tire donc pas, et passe — comme avant le vent — tandis que le pas
- * contre le vent, lui, doit désormais tirer. Un vent nul rend 1 partout.
+ * 1. Normalisé sur la TÊTE (donc plafonné à 1), tout pas se voyait RETIRER
+ *    quelque chose et un feu venté brûlait moins qu'un feu par temps calme —
+ *    l'inverse du fait à modéliser.
+ * 2. Normalisé sur le FLANC, le défaut restait, en plus discret. `propager` est
+ *    une percolation SANS BUDGET DE TEMPS : elle tourne jusqu'à épuisement. Dans
+ *    un combustible saturé, le pas sous le vent passait DÉJÀ sans tirage, donc
+ *    le bonus du vent y était perdu, tandis que la pénalité contre le vent,
+ *    elle, mordait pour de bon. Le vent ne pouvait alors que retirer de la
+ *    surface. C'est un test de conservation du carbone, écrit pour tout autre
+ *    chose, qui l'a montré : son feu de chandelles ne nettoyait plus la
+ *    parcelle.
+ *
+ * Ancrer le 1 sur l'arrière lève les deux : le vent ne peut plus qu'ajouter, la
+ * forme reste l'ellipse, et un feu en combustible saturé brûle exactement ce
+ * qu'il brûlait avant — mêmes cellules, aucun tirage consommé — parce que tous
+ * les facteurs sont ≥ 1 et qu'aucun pas ne se met donc à tirer.
+ *
+ * Ce que ça surestime, et il faut le dire : un vrai feu d'arrière recule PLUS
+ * lentement qu'un feu sans vent, les flammes étant couchées à l'écart du
+ * combustible. Ici il recule à la même vitesse. C'est le prix de ne jamais
+ * faire mentir le modèle dans le sens « le vent éteint les feux » *(à
+ * calibrer)*. Un vent nul rend 1 partout.
  */
 export function anisotropieDuFront(capDuPasRad: number, vent: VentDuFeu): number {
   const e = excentriciteDuFront(vent.vitesseMs);
   if (e <= 0) return 1;
-  return 1 / (1 - e * Math.cos(capDuPasRad - vent.versRad));
+  return (1 + e) / (1 - e * Math.cos(capDuPasRad - vent.versRad));
 }
 
 export interface ChargeCombustible {
@@ -462,18 +478,17 @@ const PAS_DU_FRONT: readonly { dx: number; dy: number; capRad: number }[] = [
  * sous le vent le pas passe presque toujours, contre le vent presque jamais.
  * C'est ce qui fait une ellipse au lieu d'une tache. Tirages seedés.
  *
- * Deux choses ont changé ici le jour où le vent est arrivé, et elles déplacent
- * l'empreinte de toute partie où un feu se déclenche :
+ * Ce que ça change à l'empreinte des parties, et qui est assumé : la
+ * probabilité d'un pas n'est plus celle de la seule cellule visée, donc un pas
+ * qui tirait passe parfois librement maintenant, et l'ordre des tirages suit
+ * l'ordre d'empilement, qui suit le vent. Toute partie où un feu court en
+ * combustible MARGINAL est donc déplacée.
  *
- * 1. La probabilité d'un pas n'est plus celle de la seule cellule visée, donc
- *    des pas qui passaient sans tirage (charge saturée, `proba === 1`) en
- *    consomment un maintenant.
- * 2. Les voisines sont empilées dans l'ordre du vent (voir plus bas), donc
- *    dépilées dans un autre ordre qu'avant.
- *
- * À `SANS_VENT` en revanche, l'excentricité est nulle, l'anisotropie vaut 1
- * partout, l'ordre d'empilement est celui d'origine, et la propagation est
- * identique tirage par tirage à celle d'avant le vent.
+ * Deux cas ne bougent pas, et ce n'est pas un hasard :
+ * - `SANS_VENT` : excentricité nulle, anisotropie 1 partout, ordre d'empilement
+ *   d'origine — propagation identique tirage par tirage à celle d'avant le vent.
+ * - combustible SATURÉ : tous les facteurs valant ≥ 1, aucun pas ne tire, donc
+ *   le même ensemble brûle sans consommer un seul tirage, comme avant.
  */
 export function propager(
   origine: number,

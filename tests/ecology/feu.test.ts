@@ -665,21 +665,43 @@ describe("le vent : une direction et une vitesse, pas un scalaire d'abri", () =>
 describe("le front s'allonge dans le vent", () => {
   const CAP_EST = 0;
 
-  it("le vent SERT la tête et freine l'arrière — il n'ampute pas le feu", () => {
-    // La première version normalisait l'ellipse sur la TÊTE, donc plafonnait à
-    // 1 : tout pas se voyait retirer quelque chose et un feu venté brûlait
-    // MOINS qu'un feu par temps calme. C'est l'inverse du fait à modéliser.
+  it("le vent AJOUTE : il sert la tête, et n'ampute aucun cap", () => {
+    // Deux versions ont échoué ici, dans le même sens. Normaliser l'ellipse sur
+    // la tête, puis sur le flanc, faisait RETIRER quelque chose à des pas que
+    // le vent n'aurait pas dû freiner — et comme `propager` est une percolation
+    // sans budget de temps, où le pas sous le vent passait déjà librement en
+    // combustible saturé, le bonus y était perdu et seule la pénalité mordait.
+    // Un feu venté brûlait donc MOINS qu'un feu calme, l'inverse du fait à
+    // modéliser. Le 1 est maintenant sur l'ARRIÈRE : aucun cap ne peut plus
+    // brûler moins qu'il n'aurait brûlé sans vent.
     const vent = { versRad: CAP_EST, vitesseMs: 6 };
     const tete = anisotropieDuFront(CAP_EST, vent);
     const flanc = anisotropieDuFront(Math.PI / 2, vent);
     const arriere = anisotropieDuFront(Math.PI, vent);
-    expect(tete).toBeGreaterThan(1);
     expect(tete).toBeGreaterThan(flanc);
     expect(flanc).toBeGreaterThan(arriere);
-    expect(arriere).toBeLessThan(1);
-    // Les rapports sont ceux de l'ellipse : tête/arrière = (1+e)/(1−e).
+    for (const f of [tete, flanc, arriere]) expect(f).toBeGreaterThanOrEqual(1);
+    // Les RAPPORTS restent ceux de l'ellipse : tête/arrière = (1+e)/(1−e).
     const e = excentriciteDuFront(6);
     expect(tete / arriere).toBeCloseTo((1 + e) / (1 - e), 10);
+  });
+
+  it("en combustible saturé, le vent ne retire pas une cellule", () => {
+    // La conséquence directe du 1 sur l'arrière, et ce qu'un test de
+    // conservation du carbone — écrit pour tout autre chose — avait pris en
+    // défaut : son feu de chandelles ne nettoyait plus la parcelle. Tous les
+    // facteurs valant ≥ 1, aucun pas ne se met à tirer, donc le même ensemble
+    // brûle et AUCUN tirage n'est consommé.
+    const cote = 21;
+    const charge = { parCellule: new Array(cote * cote).fill(1), moyenne: 1 };
+    const calme = propager(0, charge, cote, rngStateFromSeed(2));
+    const vente = propager(0, charge, cote, rngStateFromSeed(2), {
+      versRad: CAP_EST,
+      vitesseMs: 6,
+    });
+    expect(vente.brulees.size).toBe(cote * cote);
+    expect(vente.brulees.size).toBe(calme.brulees.size);
+    expect(vente.rng).toEqual(calme.rng);
   });
 
   it("sans vent, aucun cap n'est privilégié", () => {
@@ -690,9 +712,13 @@ describe("le front s'allonge dans le vent", () => {
 
   it("un feu venté fait une ellipse, un feu calme une tache", () => {
     // Combustible marginal et homogène : la FORME ne peut venir que du vent.
+    // 0,35 de charge met le pas de flanc SOUS le seuil de percolation d'un
+    // réseau carré à quatre voisins (≈ 0,59) et le pas de tête au-dessus : les
+    // flancs s'éteignent, la tête court. Sur un combustible saturé il n'y
+    // aurait rien à voir — tout brûle, vent ou pas.
     const cote = 41;
     const centre = 20 * cote + 20;
-    const charge = { parCellule: new Array(cote * cote).fill(0.5), moyenne: 0.5 };
+    const charge = { parCellule: new Array(cote * cote).fill(0.35), moyenne: 0.35 };
     const etendues = (brulees: ReadonlySet<number>) => {
       let long = 0;
       let large = 0;
@@ -717,7 +743,7 @@ describe("le front s'allonge dans le vent", () => {
 
   it("un feu venté brûle plus large qu'un feu calme, à combustible égal", () => {
     const cote = 41;
-    const charge = { parCellule: new Array(cote * cote).fill(0.5), moyenne: 0.5 };
+    const charge = { parCellule: new Array(cote * cote).fill(0.35), moyenne: 0.35 };
     let vente = 0;
     let calme = 0;
     // Plusieurs graines : l'affaire est statistique, pas anecdotique.
