@@ -21,6 +21,7 @@ import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { forEachDiscCell } from "./grid";
 import { crownRadiusM } from "./light";
+import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { altitudeParCellule } from "./relief";
@@ -203,6 +204,12 @@ export interface EconomyState {
   saisonniersFinSemaine: number[];
   bankrupt: boolean;
   /**
+   * Volume de bois vendu depuis le début de l'année civile, m³. Remis à zéro
+   * chaque 1er janvier. Il sert à l'engorgement du débouché local : au-delà
+   * d'un certain volume, le prix baisse (marche.ts).
+   */
+  volumeVenduAnneeM3: number;
+  /**
    * L'économie compte-t-elle dans cette partie ?
    *
    * Certaines questions ne sont pas économiques. « Quelle succession sur cette
@@ -233,6 +240,7 @@ export function createEconomy(treasuryEur: number, active = true): EconomyState 
     ouvriersCdi: 0,
     saisonniersFinSemaine: [],
     bankrupt: false,
+    volumeVenduAnneeM3: 0,
   };
 }
 
@@ -722,6 +730,7 @@ function applyCouper(
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
   let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC } = state.carbon;
+  let volumeVenduAnneeM3 = state.economy.volumeVenduAnneeM3;
   let stockBrf = state.stockBrf;
   const coupes: number[] = [];
   const retire: ArbreRetire[] = [];
@@ -853,15 +862,26 @@ function applyCouper(
     } else if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
       const brule = tree.brulEeSemaine !== undefined;
+      // Le marché n'est ni fixe ni infini (marche.ts). L'indice de l'année
+      // porte le cycle des cours ; la décote d'engorgement punit celui qui met
+      // tout son bois sur le marché la même année — c'est ce que la France a
+      // vécu après Lothar et Klaus, des cours divisés par deux sous le poids
+      // des chablis. Les deux ne jouent que si l'économie compte.
+      const volumeVendu = woodVolumeM3(tree.heightM);
+      const marche = state.economy.active
+        ? indiceDuMarche(state.graineMarche, Math.floor(state.week / 52)) *
+          decoteEngorgement(volumeVenduAnneeM3)
+        : 1;
+      volumeVenduAnneeM3 += volumeVendu;
       if (dejaEnBoisMort) {
         // Une chandelle ne fait JAMAIS d'œuvre, même si elle a été élaguée de
         // son vivant : le bois est fendillé, l'aubier parti, les insectes
         // passés. Elle se vend au volume, au prix du chauffage, décotée — et
         // un fût noirci par le feu vaut encore moins qu'un fût gris.
         const decote = brule ? DECOTE_CHABLIS : DECOTE_CHANDELLE;
-        treasuryEur += woodVolumeM3(tree.heightM) * WOOD_PRICE_EUR_M3 * decote;
+        treasuryEur += volumeVendu * WOOD_PRICE_EUR_M3 * decote * marche;
       } else {
-        treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1);
+        treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1) * marche;
       }
       if (vente.qualite === "oeuvre" && !brule && !dejaEnBoisMort) {
         // Bois d'œuvre : le carbone reste piégé dans le produit (charpente,
@@ -937,7 +957,13 @@ function applyCouper(
       soil: { ...state.soil, litterNG, litterCG, litterK, boisAuSolCG, boisEnTraversPart },
       stockBrf,
       carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC },
-      economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
+      economy: {
+        ...state.economy,
+        treasuryEur,
+        hoursUsedWeek,
+        hoursUsedYear,
+        volumeVenduAnneeM3,
+      },
     },
     refusals,
     // Les tiges RÉELLEMENT tombées, pas celles qu'on a demandées : le plafond
