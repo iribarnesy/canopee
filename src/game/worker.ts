@@ -365,9 +365,11 @@ function stationAvecPaysage(base: Station): Station {
 
 function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWeather[] {
   const serie = mode === "reelle" ? serieMeteoPour(stationId) : undefined;
-  if (serie) return serieToWeeks(serie);
   const station = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!station) throw new Error(`station inconnue : ${stationId}`);
+  // La série est cherchée d'abord, mais le climat de la station est chargé dans
+  // les deux cas : une série mesure la température et la pluie, pas le vent.
+  if (serie) return serieToWeeks(serie, station.climat);
   return syntheticYear(station.climat);
 }
 

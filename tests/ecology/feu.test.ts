@@ -14,16 +14,20 @@ import { livingCarbonKg, treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import {
   accessibiliteDuHouppier,
+  anisotropieDuFront,
   chargeCombustible,
   departDeFeu,
+  excentriciteDuFront,
   indiceRisqueFeu,
   portanceDuFeu,
   propager,
   rangsDuFront,
+  SANS_VENT,
   survitAuFeu,
+  ventRecuParLeSite,
 } from "../../src/engine/feu";
 import { advanceWeek } from "../../src/engine/game";
-import { serieToWeeks } from "../../src/engine/meteo";
+import { serieToWeeks, VENT_DOMINANT_VERS_RAD, ventDeLaSemaine } from "../../src/engine/meteo";
 import { frequentationHumaine, getPaysage } from "../../src/engine/paysage";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
@@ -95,8 +99,15 @@ describe("le risque de feu émerge des conditions, il n'est pas décrété", () 
     expect(chaudEtSec).toBeLessThanOrEqual(1);
   });
 
-  it("à conditions égales, le vent aggrave le risque", () => {
-    expect(indiceRisqueFeu(0.05, 32, 1, 1)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 0));
+  it("à conditions égales, le vent aggrave le risque — et il lui faut une VITESSE", () => {
+    // Le même vent régional expose une lande découverte plus qu'un vallon fermé.
+    expect(indiceRisqueFeu(0.05, 32, 1, 1, 6)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 0, 6));
+    // Et à abri égal, c'est la vitesse qui décide.
+    expect(indiceRisqueFeu(0.05, 32, 1, 1, 6)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 1, 1));
+    // L'exposition SEULE n'est plus un vent : découvert par temps calme, le
+    // site ne reçoit rien de plus qu'un vallon abrité par temps calme. C'était
+    // toute la confusion — un scalaire d'abri tenait lieu de vent.
+    expect(indiceRisqueFeu(0.05, 32, 1, 1, 0)).toBe(indiceRisqueFeu(0.05, 32, 1, 0, 0));
   });
 
   it("un été qui se réchauffe de 6 °C fait apparaître un risque là où il n'y en avait pas", () => {
@@ -460,6 +471,8 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
 describe("il faut une SOURCE, et un combustible qui porte", () => {
   const charge = { parCellule: new Array(100).fill(1), moyenne: 1 };
   const CANICULE = 32;
+  /** Vent d'un été océanique, m/s : sans vitesse, plus aucun départ à compter. */
+  const VENT_ESTIVAL_MS = 4;
 
   it("à conditions identiques, un massif isolé s'enflamme moins qu'une lisière de banlieue", () => {
     // La quasi-totalité des départs français est d'origine humaine — mégot,
@@ -470,7 +483,7 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
       let n = 0;
       const freq = frequentationHumaine(getPaysage(paysageId));
       for (let i = 0; i < 400; i++) {
-        const r = departDeFeu(rng, 30, 0.03, CANICULE, charge, 0.6, 10, freq);
+        const r = departDeFeu(rng, 30, 0.03, CANICULE, charge, 0.6, 10, freq, VENT_ESTIVAL_MS);
         rng = r.rng;
         if (r.origine !== undefined) n++;
       }
@@ -614,5 +627,124 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
       ouvert,
     );
     expect(lande.moyenne).toBeGreaterThan(hetraie.moyenne);
+  });
+});
+
+describe("le vent : une direction et une vitesse, pas un scalaire d'abri", () => {
+  it("le vent d'une semaine est purement déterministe", () => {
+    // Aucun tirage : deux appels rendent le même vent, et la seule présence des
+    // champs ne peut donc pas déplacer l'empreinte d'une partie.
+    expect(ventDeLaSemaine(30)).toEqual(ventDeLaSemaine(30));
+  });
+
+  it("le cap ne vire pas dans l'année : un régime dominant se maintient", () => {
+    // C'est ce qui règle le vrai grief de l'issue #50 — deux incendies de la
+    // même parcelle penchaient en éventail autour de leur origine, alors qu'un
+    // vent les incline tous du même côté.
+    const caps = new Set(Array.from({ length: 52 }, (_, w) => ventDeLaSemaine(w).ventVersRad));
+    expect(caps).toEqual(new Set([VENT_DOMINANT_VERS_RAD]));
+  });
+
+  it("il vente plus en hiver qu'au cœur de l'été", () => {
+    // Sous régime océanique, la vitesse moyenne passe par un maximum en hiver
+    // (rail des dépressions) et un minimum en été. Conséquence assumée : la
+    // saison des feux tombe dans le BAS de la plage de vent.
+    const juillet = ventDeLaSemaine(29).ventMoyMs;
+    const janvier = ventDeLaSemaine(3).ventMoyMs;
+    expect(janvier).toBeGreaterThan(juillet);
+    expect(juillet).toBeGreaterThan(0);
+  });
+
+  it("un vallon sous tempête reçoit plus qu'une lande par temps calme", () => {
+    // L'abri et le vent ne sont pas interchangeables : c'était tout le
+    // problème. `ventExposition` seul ne pouvait pas dire cela.
+    expect(ventRecuParLeSite(15, 0.1)).toBeGreaterThan(ventRecuParLeSite(1, 0.95));
+  });
+});
+
+describe("le front s'allonge dans le vent", () => {
+  const CAP_EST = 0;
+
+  it("le vent SERT la tête et freine l'arrière — il n'ampute pas le feu", () => {
+    // La première version normalisait l'ellipse sur la TÊTE, donc plafonnait à
+    // 1 : tout pas se voyait retirer quelque chose et un feu venté brûlait
+    // MOINS qu'un feu par temps calme. C'est l'inverse du fait à modéliser.
+    const vent = { versRad: CAP_EST, vitesseMs: 6 };
+    const tete = anisotropieDuFront(CAP_EST, vent);
+    const flanc = anisotropieDuFront(Math.PI / 2, vent);
+    const arriere = anisotropieDuFront(Math.PI, vent);
+    expect(tete).toBeGreaterThan(1);
+    expect(tete).toBeGreaterThan(flanc);
+    expect(flanc).toBeGreaterThan(arriere);
+    expect(arriere).toBeLessThan(1);
+    // Les rapports sont ceux de l'ellipse : tête/arrière = (1+e)/(1−e).
+    const e = excentriciteDuFront(6);
+    expect(tete / arriere).toBeCloseTo((1 + e) / (1 - e), 10);
+  });
+
+  it("sans vent, aucun cap n'est privilégié", () => {
+    for (const cap of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      expect(anisotropieDuFront(cap, SANS_VENT)).toBe(1);
+    }
+  });
+
+  it("un feu venté fait une ellipse, un feu calme une tache", () => {
+    // Combustible marginal et homogène : la FORME ne peut venir que du vent.
+    const cote = 41;
+    const centre = 20 * cote + 20;
+    const charge = { parCellule: new Array(cote * cote).fill(0.5), moyenne: 0.5 };
+    const etendues = (brulees: ReadonlySet<number>) => {
+      let long = 0;
+      let large = 0;
+      for (const c of brulees) {
+        long = Math.max(long, Math.abs((c % cote) - 20));
+        large = Math.max(large, Math.abs(Math.floor(c / cote) - 20));
+      }
+      return { long, large };
+    };
+    const calme = etendues(propager(centre, charge, cote, rngStateFromSeed(7)).brulees);
+    const vente = etendues(
+      propager(centre, charge, cote, rngStateFromSeed(7), {
+        versRad: CAP_EST,
+        vitesseMs: 6,
+      }).brulees,
+    );
+    // Vent d'est : le front court le long de x, pas de y.
+    expect(vente.long).toBeGreaterThan(2 * vente.large);
+    // Et il court plus loin que sans vent : le vent attise, il n'ampute pas.
+    expect(vente.long).toBeGreaterThan(calme.long);
+  });
+
+  it("un feu venté brûle plus large qu'un feu calme, à combustible égal", () => {
+    const cote = 41;
+    const charge = { parCellule: new Array(cote * cote).fill(0.5), moyenne: 0.5 };
+    let vente = 0;
+    let calme = 0;
+    // Plusieurs graines : l'affaire est statistique, pas anecdotique.
+    for (let graine = 1; graine <= 12; graine++) {
+      const centre = 20 * cote + 20;
+      calme += propager(centre, charge, cote, rngStateFromSeed(graine)).brulees.size;
+      vente += propager(centre, charge, cote, rngStateFromSeed(graine), {
+        versRad: CAP_EST,
+        vitesseMs: 6,
+      }).brulees.size;
+    }
+    expect(vente).toBeGreaterThan(calme);
+  });
+
+  it("le vent n'allume pas ce qui n'a rien à brûler : la coupure tient", () => {
+    // L'anisotropie est un FACTEUR : elle ne peut pas franchir un zéro. Sans
+    // quoi le vent aurait effacé la seule défense que le joueur puisse
+    // construire (ch5 « concevoir contre le FEU »).
+    const cote = 21;
+    const parCellule = new Array(cote * cote).fill(1);
+    for (let y = 0; y < cote; y++) parCellule[y * cote + 10] = 0;
+    // Vent d'est plein sur la coupure : le pire cas.
+    const { brulees } = propager(0, { parCellule, moyenne: 1 }, cote, rngStateFromSeed(2), {
+      versRad: CAP_EST,
+      vitesseMs: 6,
+    });
+    expect([...brulees].filter((i) => i % cote > 10)).toHaveLength(0);
+    expect(brulees.size).toBeGreaterThan(30);
   });
 });

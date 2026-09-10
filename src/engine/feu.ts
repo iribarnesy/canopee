@@ -31,6 +31,91 @@ const CHARGE_MINIMALE = 0.2;
 const CHARGE_PROPAGATION_CERTAINE = 0.8;
 /** Hauteur au-delà de laquelle un arbre est trop haut pour qu'un feu courant l'atteigne. */
 const HAUTEUR_REFUGE_M = 12;
+/**
+ * Vitesse de vent, à 10 m, au-delà de laquelle le feu ne gagne plus rien à ce
+ * que le vent forcisse, en m/s *(à calibrer)*.
+ *
+ * 6 m/s ≈ 22 km/h. L'ordre de grandeur est celui où les indices de danger
+ * opérationnels comptent déjà le vent comme aggravant — bien avant les
+ * « vents forts » de bulletin. Ce n'est pas un plafond physique : c'est le
+ * point où ce modèle-ci cesse de savoir distinguer plus fort de très fort.
+ */
+const VENT_ATTISANT_MS = 6;
+/**
+ * Excentricité maximale de l'ellipse du front, atteinte à `VENT_ATTISANT_MS`
+ * *(à calibrer)*.
+ *
+ * Volontairement modeste, et il faut dire pourquoi. Le modèle elliptique
+ * chiffre une anisotropie de VITESSE de propagation ; ici le facteur pondère la
+ * probabilité d'UN PAS de cellule, et les probabilités se composent le long du
+ * chemin : un flanc à 0,5 par pas ne vaut pas 0,5 à dix cellules, il vaut
+ * 0,5¹⁰. L'allongement réellement obtenu dépasse donc largement le rapport
+ * nominal. Reprendre telle quelle une excentricité juste au sens du modèle de
+ * vitesse (0,9 et au-delà à vent modéré) donnerait ici un trait d'une cellule
+ * de large, pas une ellipse.
+ *
+ * À 0,5 : la tête voit sa chance DOUBLÉE, le flanc inchangé, l'arrière réduit
+ * d'un tiers — soit un rapport tête/arrière de 3 par pas.
+ */
+const EXCENTRICITE_MAX = 0.5;
+
+/**
+ * Le vent tel que le feu le lit : un cap et une vitesse.
+ *
+ * Le cap suit la convention « vers » de tout le moteur (`WeekWeather.ventVersRad`,
+ * `directionRad`, `versLAval`) — la direction du mouvement, pas la provenance.
+ */
+export interface VentDuFeu {
+  /** cap vers lequel le vent souffle, radians */
+  readonly versRad: number;
+  /** vitesse moyenne à 10 m, m/s */
+  readonly vitesseMs: number;
+}
+
+/**
+ * Absence de vent. Ce n'est pas « pas de donnée » mais un vent nul : à
+ * `vitesseMs = 0` l'excentricité est nulle, le front est isotrope, et la
+ * propagation retrouve exactement — tirage par tirage — celle d'avant que le
+ * vent n'existe. C'est ce qui permet de tester la propagation sans vent.
+ */
+export const SANS_VENT: VentDuFeu = { versRad: 0, vitesseMs: 0 };
+
+/** Excentricité du front pour une vitesse de vent donnée. 0 = feu en tache. */
+export function excentriciteDuFront(vitesseMs: number): number {
+  return EXCENTRICITE_MAX * Math.min(1, Math.max(0, vitesseMs) / VENT_ATTISANT_MS);
+}
+
+/**
+ * Ce que le vent fait d'un pas du front selon son cap. > 1 en tête, < 1 contre
+ * le vent.
+ *
+ * Forme polaire de l'ellipse dont le point d'allumage occupe un FOYER — la
+ * géométrie classique du comportement du feu, et un fait de terrain avant
+ * d'être un modèle : un feu poussé par le vent s'allonge en ellipse, avance
+ * vite en tête, moins sur les flancs, et recule à peine contre le vent.
+ *
+ *     f(θ) = 1 / (1 − e·cos θ)
+ *
+ * avec θ l'angle entre le pas et le vent : 1/(1 − e) dans le vent (tête), 1 sur
+ * le flanc, 1/(1 + e) contre le vent (arrière). Les RAPPORTS sont ceux de
+ * l'ellipse ; ce qui est choisi ici, c'est où placer le 1 — sur le FLANC.
+ *
+ * Le normaliser sur la tête (donc plafonner à 1) était ma première version, et
+ * elle était fausse dans le sens le plus visible : tout pas, même sous le vent,
+ * se voyait alors RETIRER quelque chose, et un feu venté brûlait moins qu'un feu
+ * par temps calme. C'est l'inverse du fait à modéliser — le vent augmente la
+ * vitesse du front et la surface parcourue, et l'allonge. Le flanc est le seul
+ * cap que le vent ne sert ni ne freine : c'est donc là que va le 1.
+ *
+ * Conséquence voulue, dans un combustible saturé : le pas sous le vent dépasse
+ * 1, ne tire donc pas, et passe — comme avant le vent — tandis que le pas
+ * contre le vent, lui, doit désormais tirer. Un vent nul rend 1 partout.
+ */
+export function anisotropieDuFront(capDuPasRad: number, vent: VentDuFeu): number {
+  const e = excentriciteDuFront(vent.vitesseMs);
+  if (e <= 0) return 1;
+  return 1 / (1 - e * Math.cos(capDuPasRad - vent.versRad));
+}
 
 export interface ChargeCombustible {
   /** indice de combustible par cellule ∈ [0,~1,5] : herbe sèche + litière + ligneux */
@@ -272,13 +357,30 @@ export function indiceRisqueFeu(
   tMaxC: number,
   chargeMoyenne: number,
   ventExposition: number,
+  ventMoyMs = 0,
 ): number {
   if (secheresseSurface > SECHERESSE_CRITIQUE || chargeMoyenne < CHARGE_MINIMALE) return 0;
   const fSecheresse = Math.min(1, (SECHERESSE_CRITIQUE - secheresseSurface) / SECHERESSE_CRITIQUE);
   const fChaleur = Math.min(1, Math.max(0, (tMaxC - CHALEUR_SEUIL_C) / 10));
   const fCombustible = Math.min(1, chargeMoyenne);
-  const fVent = 0.5 + 0.5 * ventExposition;
+  // Plage inchangée — [0,5 ; 1] — mais elle se parcourt maintenant à la
+  // VITESSE du vent reçu, et non au seul degré de découvert du site.
+  const fVent =
+    0.5 + 0.5 * Math.min(1, ventRecuParLeSite(ventMoyMs, ventExposition) / VENT_ATTISANT_MS);
   return fSecheresse * fChaleur * fCombustible * fVent;
+}
+
+/**
+ * Le vent que la parcelle REÇOIT, m/s : le vent régional, rabattu par l'abri.
+ *
+ * Les deux grandeurs ne sont pas interchangeables et c'était tout le problème :
+ * `ventExposition` disait à quel point un site est découvert (0,1 = vallon
+ * fermé, 1 = lande atlantique) sans jamais dire s'il ventait ce jour-là. Un
+ * vallon abrité sous tempête reçoit plus qu'une lande par temps calme, ce
+ * qu'un scalaire d'abri seul ne pouvait pas exprimer.
+ */
+export function ventRecuParLeSite(ventMoyMs: number, ventExposition: number): number {
+  return Math.max(0, ventMoyMs) * Math.max(0, ventExposition);
 }
 
 /**
@@ -294,9 +396,16 @@ export function departDeFeu(
   ventExposition: number,
   coteM: number,
   frequentationHumaine = 1,
+  ventMoyMs = 0,
 ): DepartFeu {
   if (semaineAnnee < SAISON_FEU[0] || semaineAnnee > SAISON_FEU[1]) return { rng };
-  const risque = indiceRisqueFeu(secheresseSurface, tMaxC, charge.moyenne, ventExposition);
+  const risque = indiceRisqueFeu(
+    secheresseSurface,
+    tMaxC,
+    charge.moyenne,
+    ventExposition,
+    ventMoyMs,
+  );
   if (risque <= 0) return { rng };
   const tirage = rngFloat(rng);
   // Il ne suffit pas que les conditions soient réunies : il faut une SOURCE.
@@ -338,27 +447,72 @@ export function probabilitePropagation(chargeLocale: number): number {
   );
 }
 
+/** Les quatre pas possibles du front, avec leur cap (+x = est, +y = nord). */
+const PAS_DU_FRONT: readonly { dx: number; dy: number; capRad: number }[] = [
+  { dx: -1, dy: 0, capRad: Math.PI },
+  { dx: 1, dy: 0, capRad: 0 },
+  { dx: 0, dy: -1, capRad: -Math.PI / 2 },
+  { dx: 0, dy: 1, capRad: Math.PI / 2 },
+];
+
 /**
  * Propage le feu de proche en proche depuis l'origine. Chaque cellule prend
- * feu selon sa combustibilité : le front s'essouffle dans ce qui brûle mal et
- * fonce dans ce qui brûle bien. Tirages seedés (rejoués à l'identique).
+ * feu selon sa combustibilité — le front s'essouffle dans ce qui brûle mal et
+ * fonce dans ce qui brûle bien — ET selon le CAP par lequel le front l'aborde :
+ * sous le vent le pas passe presque toujours, contre le vent presque jamais.
+ * C'est ce qui fait une ellipse au lieu d'une tache. Tirages seedés.
+ *
+ * Deux choses ont changé ici le jour où le vent est arrivé, et elles déplacent
+ * l'empreinte de toute partie où un feu se déclenche :
+ *
+ * 1. La probabilité d'un pas n'est plus celle de la seule cellule visée, donc
+ *    des pas qui passaient sans tirage (charge saturée, `proba === 1`) en
+ *    consomment un maintenant.
+ * 2. Les voisines sont empilées dans l'ordre du vent (voir plus bas), donc
+ *    dépilées dans un autre ordre qu'avant.
+ *
+ * À `SANS_VENT` en revanche, l'excentricité est nulle, l'anisotropie vaut 1
+ * partout, l'ordre d'empilement est celui d'origine, et la propagation est
+ * identique tirage par tirage à celle d'avant le vent.
  */
 export function propager(
   origine: number,
   charge: ChargeCombustible,
   coteM: number,
   rng: RngState,
+  vent: VentDuFeu = SANS_VENT,
 ): { brulees: Set<number>; rng: RngState } {
   const brulees = new Set<number>();
   const vues = new Set<number>();
   let etat = rng;
-  const file = [origine];
+  // Le vent ne change pas pendant un incendie : l'ordre d'exploration se
+  // calcule UNE fois. Et il compte, parce qu'une cellule n'est décidée qu'à sa
+  // PREMIÈRE visite : atteinte d'abord par un pas de flanc, elle serait
+  // refusée puis jamais retentée depuis la tête. On empile donc le pas le plus
+  // sous le vent EN DERNIER — `file.pop()` dépile par la fin — pour que le
+  // front explore d'abord là où il court vite, comme une tête de feu qui
+  // prend de l'avance sur ses flancs.
+  const pas =
+    excentriciteDuFront(vent.vitesseMs) > 0
+      ? [...PAS_DU_FRONT].sort(
+          (a, b) => Math.cos(a.capRad - vent.versRad) - Math.cos(b.capRad - vent.versRad),
+        )
+      : PAS_DU_FRONT;
+  // Le point d'allumage n'est pas un pas : rien ne l'a « abordé », le vent ne
+  // peut donc rien lui retirer. D'où l'anisotropie neutre de sa première ligne.
+  const file: { cellule: number; anisotropie: number }[] = [{ cellule: origine, anisotropie: 1 }];
   while (file.length > 0) {
-    const cellule = file.pop();
-    if (cellule === undefined || vues.has(cellule)) continue;
+    const tete = file.pop();
+    if (tete === undefined || vues.has(tete.cellule)) continue;
+    const cellule = tete.cellule;
     vues.add(cellule);
-    const proba = probabilitePropagation(charge.parCellule[cellule] ?? 0);
+    const proba = probabilitePropagation(charge.parCellule[cellule] ?? 0) * tete.anisotropie;
+    // Le vent n'allume rien qui n'ait de quoi brûler : l'anisotropie est un
+    // FACTEUR, donc une cellule sous le seuil de charge reste à zéro, aussi
+    // fort qu'il vente. C'est ce qui garde leur sens aux coupures.
     if (proba <= 0) continue;
+    // `proba` peut dépasser 1 en tête de feu : pas de tirage, le pas passe —
+    // exactement ce que faisait un combustible saturé avant que le vent existe.
     if (proba < 1) {
       const tirage = rngFloat(etat);
       etat = tirage.state;
@@ -367,10 +521,12 @@ export function propager(
     brulees.add(cellule);
     const x = cellule % coteM;
     const y = Math.floor(cellule / coteM);
-    if (x > 0) file.push(cellule - 1);
-    if (x < coteM - 1) file.push(cellule + 1);
-    if (y > 0) file.push(cellule - coteM);
-    if (y < coteM - 1) file.push(cellule + coteM);
+    for (const { dx, dy, capRad } of pas) {
+      const vx = x + dx;
+      const vy = y + dy;
+      if (vx < 0 || vx >= coteM || vy < 0 || vy >= coteM) continue;
+      file.push({ cellule: vy * coteM + vx, anisotropie: anisotropieDuFront(capRad, vent) });
+    }
   }
   return { brulees, rng: etat };
 }
@@ -392,10 +548,17 @@ export function survitAuFeu(tree: TreeState, intensite: number): boolean {
  * comptée en cellules à travers ce qui a brûlé. C'est ce qui permet de faire
  * COURIR une ligne de flammes au lieu de noircir un patch d'un coup.
  *
- * Passe pure et postérieure : on ne touche pas au parcours de `propager`. Il
- * dépile (`file.pop()`), et l'ordre de consommation du PRNG en dépend — passer
- * en file changerait les tirages, donc les parties. Ici, aucun tirage : un
- * simple BFS sur l'ensemble déjà brûlé, qui ne peut rien changer au résultat.
+ * Passe pure et POSTÉRIEURE, et c'est ce qui la rend inoffensive : elle lit
+ * l'ensemble déjà brûlé et ne consomme aucun tirage. `propager` dépile
+ * (`file.pop()`) et l'ordre de consommation du PRNG en dépend, donc tout ce
+ * qui touche à SON parcours déplace les parties — le vent l'a fait, en
+ * connaissance de cause. Ici, rien : un simple BFS sur un ensemble figé, qui ne
+ * peut par construction rien changer au résultat.
+ *
+ * Le rang reste une distance ISOTROPE en cellules, pas un temps d'arrivée.
+ * Sous le vent, le front réel court plus vite en tête que sur les flancs, donc
+ * deux cellules de même rang ne s'enflamment pas au même instant. C'est une
+ * approximation assumée : la forme allongée, elle, est bien dans `brulees`.
  *
  * Chaque cellule brûlée est joignable depuis l'origine à travers des cellules
  * brûlées (le feu ne saute pas), donc tout l'ensemble est atteint.

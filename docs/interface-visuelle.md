@@ -199,6 +199,7 @@ semaine simulée.
 | **Tapis** | `soilLitiereCG` | les feuilles de novembre, le paillage, le noir des cendres |
 | **Floraison, gel, brout, liège** | `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`, `derniereLeveeSemaine` | voile de fleurs, fleurs brunies par le gel, rameaux coupés net, écorce arrachée, tronc ocre-rouge |
 | **Météo** | `Snapshot.weather` (déjà là avant) | pluie, neige, gel, canicule — `rainMm` suffit |
+| **Vent** | `Snapshot.weather.ventVersRad` + `.ventMoyMs` | le panache d'incendie **incliné pour de bon** (§6.4), le balancement des houppiers (§6.1), l'orientation d'un rideau de pluie. `ventVersRad` est le cap vers lequel le vent SOUFFLE (+x = est, +y = nord), pas sa provenance : un vent d'ouest vaut 0. L'amplitude visible veut le vent **reçu** — `ventMoyMs × ventExposition` — et pas la vitesse brute. Le cap ne vire pas dans l'année : un panache ne tourne pas pendant un acte, mais deux feux de la même parcelle penchent enfin du même côté |
 
 Trois choses qui ont été faites **mieux** que ce que ce document demandait, et
 qui méritent d'être sues avant de coder :
@@ -653,7 +654,7 @@ Des couches d'ambiance pilotées par l'état, mixées en continu (Web Audio) :
 
 | Couche | Pilotée par | Charge |
 |---|---|---|
-| Vent dans les feuilles | `ventExposition` de la station × densité du couvert × feuillaison (un couvert nu siffle, un couvert plein bruisse) | `M` |
+| Vent dans les feuilles | `weather.ventMoyMs × ventExposition` de la station × densité du couvert × feuillaison (un couvert nu siffle, un couvert plein bruisse). L'abri seul ne suffisait pas : il ne disait pas s'il ventait cette semaine-là | `M` |
 | Oiseaux | saison + indice de biodiversité (une parcelle riche est bruyante ; une pinède pure, silencieuse) | `M` |
 | Pluie, grêle, vent fort | `rainMm`, `tMinAbsC` | `S` |
 | Ruisseau, mare | proximité de l'eau libre à la caméra | `S` |
