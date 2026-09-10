@@ -1545,6 +1545,40 @@ de démarrage). Sans elle, le compte tourne pour information seulement, et y
 verser des aides le fausserait : on montrerait une trésorerie qui monte sans que
 rien de ce qui la fait monter ne compte.
 
+## Un semis n'a pas la même taille selon ce qu'il deviendra
+
+Tous les semis naissaient à **trente centimètres**. C'est la bonne taille pour
+un chêne, dont le gland porte les réserves qu'il faut. C'est la MOITIÉ de sa
+taille adulte pour la callune, qui plafonne à soixante : elle naissait presque
+faite, et sautait entièrement sa phase pionnière — celle qui dure des années
+dans la nature, et pendant laquelle un sous-arbrisseau est vulnérable au
+broutage, à la concurrence herbacée et au piétinement. Le défaut touchait tous
+les sous-arbrisseaux de l'atlas, et il faussait **dans le sens de la facilité**.
+
+Un semis naît maintenant à un dixième de sa taille adulte, **borné à trente
+centimètres**. Le plafond joue dès trois mètres d'adulte, donc pour tous les
+arbres : eux ne bougent pas d'un centimètre, et c'est cette borne qui permet de
+corriger les arbustes sans toucher au reste.
+
+| espèce | adulte | semis avant | semis après |
+|---|---|---|---|
+| callune | 0,6 m | 0,30 m | **0,06 m** |
+| ajonc | 2,5 m | 0,30 m | 0,25 m |
+| chêne pubescent | 20 m | 0,30 m | 0,30 m |
+
+**Les deux moitiés du résultat comptent.** Une callune met désormais quinze ans
+à faire sa taille au lieu de partir presque faite — c'est le correctif. Mais
+elle y arrive, et vingt sur vingt survivent sur la lande : on n'a pas rendu les
+sous-arbrisseaux incapables de s'installer sur leur propre terrain. L'essai
+vérifie les deux.
+
+*Approximation assumée* : on passe par la taille ADULTE faute de mieux. Ce qui
+détermine vraiment la taille d'une plantule, c'est la réserve de la GRAINE — un
+gland fait un semis de vingt centimètres, une graine de callune, qui est une
+poussière, fait une plantule de quelques millimètres. La taille des graines
+n'est pas dans l'atlas, et elle suit grossièrement celle de la plante. C'est
+une approximation, mais elle corrige le SENS de l'erreur.
+
 ## Les profils livrés : un cas réel, prêt à éprouver
 
 Décrire une situation réelle demande de poser une vingtaine de réglages —

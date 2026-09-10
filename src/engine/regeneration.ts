@@ -38,7 +38,38 @@ const WIND_MEAN_DISTANCE_M = 25;
  */
 const RECOUVREMENT_MAX = 2.5;
 const MIN_SPACING_M = 1.2;
-const SEEDLING_HEIGHT_M = 0.3;
+/**
+ * Taille d'un semis qui vient de s'installer, m — PLAFOND, pas valeur fixe.
+ *
+ * Trente centimètres conviennent à un chêne, dont le gland porte assez de
+ * réserves pour ça. Ils ne conviennent pas à la callune, dont l'adulte plafonne
+ * à SOIXANTE centimètres : elle naissait à la moitié de sa taille finale et
+ * sautait entièrement sa phase pionnière — celle qui dure des années dans la
+ * nature, et pendant laquelle elle est vulnérable au broutage, à la concurrence
+ * herbacée et au piétinement. Le défaut touchait tous les sous-arbrisseaux de
+ * l'atlas, et il faussait dans le sens de la facilité.
+ */
+const SEEDLING_HEIGHT_MAX_M = 0.3;
+
+/**
+ * Part de la hauteur adulte qu'un semis atteint à l'installation.
+ *
+ * On passe par la taille ADULTE faute de mieux. Ce qui détermine vraiment la
+ * taille d'une plantule, c'est la réserve de la GRAINE : un gland fait un semis
+ * de vingt centimètres, une graine de callune — qui est une poussière — fait
+ * une plantule de quelques millimètres. Or la taille des graines n'est pas dans
+ * l'atlas, et elle suit grossièrement celle de la plante. C'est donc une
+ * approximation, mais elle corrige le SENS de l'erreur *(à calibrer)*.
+ *
+ * Le plafond joue dès trois mètres de hauteur adulte, c'est-à-dire pour tous
+ * les arbres : eux ne changent pas d'un centimètre.
+ */
+const PART_ADULTE_AU_SEMIS = 0.1;
+
+/** Taille à l'installation, bornée par le plafond. */
+export function hauteurDuSemisM(hauteurAdulteM: number): number {
+  return Math.min(SEEDLING_HEIGHT_MAX_M, PART_ADULTE_AU_SEMIS * hauteurAdulteM);
+}
 
 export interface RecruitmentInput {
   trees: readonly TreeState[];
@@ -216,7 +247,9 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       const dy = t.y - pos.y;
       if (dx * dx + dy * dy < MIN_SPACING_M * MIN_SPACING_M) return;
     }
-    couronnesM2 += Math.PI * crownRadiusM(SEEDLING_HEIGHT_M, espece.lumiere.houppierRatio) ** 2;
+    couronnesM2 +=
+      Math.PI *
+      crownRadiusM(hauteurDuSemisM(espece.hauteurMaxM), espece.lumiere.houppierRatio) ** 2;
     // Un semis naturel a sa vigueur propre, comme un plant de pépinière.
     const tirageVigueur = tirerVigueurIndividuelle(rng);
     rng = tirageVigueur.rng;
@@ -227,7 +260,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       x: pos.x,
       y: pos.y,
       ageWeeks: 0,
-      heightM: SEEDLING_HEIGHT_M,
+      heightM: hauteurDuSemisM(espece.hauteurMaxM),
       stress: 0,
       alive: true,
       uptakeYearG: 0,
