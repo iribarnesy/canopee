@@ -56,6 +56,7 @@ import { getEspece } from "./especes";
 import {
   chargeCombustible,
   departDeFeu,
+  intensiteDuFeu,
   propager,
   rangsDuFront,
   survitAuFeu,
@@ -302,11 +303,56 @@ export interface FranchissementDeStade {
   versStade: StadeDeDeveloppement;
 }
 
+/**
+ * Un arbre que le feu a emporté, rapporté LA SEMAINE DE L'INCENDIE.
+ *
+ * `TickResult.morts` ne pouvait pas s'en charger, et pas par négligence : un
+ * arbre tué par le feu reste debout, récupérable en coupe sanitaire, et n'entre
+ * dans `morts` qu'au bout de `CHABLIS_RECUPERABLE_SEMAINES` — un an plus tard,
+ * une semaine où `incendie` est `undefined`. L'incendie et ses victimes ne
+ * pouvaient donc jamais figurer dans le même journal.
+ *
+ * Les y pousser DEUX fois — à l'incendie puis à la chute — aurait été pire : un
+ * consommateur qui compte les morts en aurait compté le double. C'est pourquoi
+ * les identités arrivent ici, dans le récit de l'incendie, et non dans `morts`.
+ *
+ * `id` suffit à faire la jointure : dans les deux cas l'arbre est TOUJOURS dans
+ * `state.trees`, donc dans l'instantané — en chandelle, ou rabattu sur son
+ * rejet. Position et espèce s'y lisent, et l'intensité qui l'a tué se recalcule
+ * avec `intensiteDuFeu(charges[i])` (feu.ts). Seule la hauteur d'AVANT ne se
+ * lit nulle part, parce qu'un rejet a écrasé la sienne.
+ */
+export interface VictimeDuFeu {
+  id: number;
+  /** hauteur juste avant le feu, m — écrasée chez un rejet */
+  hauteurAvantM: number;
+  /**
+   * La souche a rejeté : l'arbre reste EN JEU, rabattu à `HAUTEUR_REJET_M`, au
+   * lieu de laisser une chandelle noire. Ça ne s'anime pas pareil — la couronne
+   * s'embrase dans les deux cas, mais l'un repart d'en bas et l'autre pas — et
+   * c'est ce qui fait des pyrophytes des gagnants du feu.
+   */
+  rejet: boolean;
+}
+
 /** L'incendie de la semaine, tel qu'on peut le raconter ET le dessiner. */
 export interface IncendieResult {
   cellulesBrulees: number;
   arbresTues: number;
   rejets: number;
+  /**
+   * QUI le feu a emporté, et non plus seulement combien. `arbresTues` en donnait
+   * le nombre, jamais les identités : le rendu devait reconnaître les arbres
+   * torchés en comparant `brulEeSemaine` à la fenêtre du journal, une jointure
+   * qu'il refaisait faute que le moteur la donne — et fragile, puisqu'un arbre
+   * brûlé lors d'un incendie PRÉCÉDENT garde son `brulEeSemaine`.
+   *
+   * La liste couvre exactement ce que compte `arbresTues` : les vivants dont le
+   * feu a emporté l'aérien, rejets compris (distingués par `rejet`). Une
+   * chandelle qui rebrûle n'y est pas — elle était déjà morte, et elle ne
+   * compte pas non plus dans `arbresTues`.
+   */
+  victimes: readonly VictimeDuFeu[];
   carboneTHa: number;
   /** cellule où le feu est parti */
   origine: number;
@@ -1974,6 +2020,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const brulees = propagation.brulees;
       let tues = 0;
       let rejets = 0;
+      const victimes: VictimeDuFeu[] = [];
       const apresFeu: TreeState[] = [];
       for (const tree of nextTrees) {
         const cellule =
@@ -1983,8 +2030,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           apresFeu.push(tree);
           continue;
         }
-        // L'intensité suit le combustible local.
-        const intensite = Math.min(1, (charge.parCellule[cellule] ?? 0) / 1.2);
+        // L'intensité suit le combustible local. La règle vit dans `feu.ts`,
+        // nommée, pour que le rendu et le banc de scènes la lisent au lieu de
+        // la recopier.
+        const intensite = intensiteDuFeu(charge.parCellule[cellule] ?? 0);
         const espece = getEspece(tree.especeId);
         if (survitAuFeu(tree, intensite)) {
           apresFeu.push(tree);
@@ -2015,7 +2064,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           continue;
         }
         tues++;
-        if (espece.feu.rejetteApresFeu && tree.heightM > 0.6) {
+        const rejette = espece.feu.rejetteApresFeu && tree.heightM > 0.6;
+        // Relevé ICI, une fois, juste après `tues++` : les deux comptes ne
+        // peuvent donc pas diverger, et la hauteur est encore celle d'avant le
+        // feu — dans un instant, un rejet l'aura écrasée.
+        victimes.push({ id: tree.id, hauteurAvantM: tree.heightM, rejet: rejette });
+        if (rejette) {
           // Rejet de souche : l'arbre repart d'en bas, sur un système
           // racinaire qui a tenu — c'est ce qui fait des pyrophytes des
           // gagnants du feu.
@@ -2079,6 +2133,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cellulesBrulees: brulees.size,
         arbresTues: tues,
         rejets,
+        victimes,
         carboneTHa: carboneFeuKgC / 1000 / areaHa,
         origine: depart.origine,
         brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),

@@ -19,6 +19,7 @@ import {
   departDeFeu,
   excentriciteDuFront,
   indiceRisqueFeu,
+  intensiteDuFeu,
   portanceDuFeu,
   propager,
   rangsDuFront,
@@ -349,6 +350,13 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   const mortsTotales: Record<string, number> = {};
   /** Effectif vivant de chaque espèce PRÉSENT dans les cellules brûlées. */
   const dansLeFront: Record<string, number> = {};
+  /** Un relevé par semaine d'incendie, pour vérifier ce qui arrive ENSEMBLE. */
+  const semainesDIncendie: {
+    victimes: readonly { id: number; hauteurAvantM: number; rejet: boolean }[];
+    arbresTues: number;
+    mortsFeuLaMemeSemaine: number;
+    idsEnJeu: ReadonlySet<number>;
+  }[] = [];
   const celluleDe = (x: number, y: number) =>
     Math.min(station.coteM - 1, Math.max(0, Math.floor(y))) * station.coteM +
     Math.min(station.coteM - 1, Math.max(0, Math.floor(x)));
@@ -386,6 +394,13 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
           dansLeFront[t.especeId] = (dansLeFront[t.especeId] ?? 0) + 1;
         }
       }
+      semainesDIncendie.push({
+        victimes: r.incendie.victimes,
+        arbresTues: r.incendie.arbresTues,
+        mortsFeuLaMemeSemaine: r.morts.filter((m) => m.cause === "feu").length,
+        // Après le tick : c'est là que le rendu ferait la jointure.
+        idsEnJeu: new Set(state.trees.map((t) => t.id)),
+      });
     }
   }
 
@@ -471,6 +486,48 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     expect(dansLeFront.pinus_sylvestris ?? 0).toBeGreaterThan(0);
     expect(dansLeFront.quercus_suber ?? 0).toBeGreaterThan(0);
     expect(taux("pinus_sylvestris")).toBeGreaterThan(2 * taux("quercus_suber"));
+  });
+
+  it("l'incendie dit QUI il a emporté, et le dit la semaine où il brûle", () => {
+    // Le grief de l'issue #52. `arbresTues` donnait le nombre, jamais les
+    // identités, et `TickResult.morts` ne pouvait pas suppléer : un arbre tué
+    // par le feu reste debout, récupérable en coupe sanitaire, et n'entre dans
+    // `morts` qu'un an plus tard — une semaine où `incendie` est `undefined`.
+    // L'incendie et ses victimes ne pouvaient donc jamais figurer dans le même
+    // journal, et une mise en scène du torchage n'avait rien à animer.
+    expect(semainesDIncendie.length).toBeGreaterThan(0);
+    let victimesEnTout = 0;
+    for (const s of semainesDIncendie) {
+      // Les deux comptes sortent du même endroit : ils ne peuvent pas diverger.
+      expect(s.victimes.length).toBe(s.arbresTues);
+      victimesEnTout += s.victimes.length;
+      for (const v of s.victimes) {
+        // La jointure du rendu marche : l'arbre est encore dans l'instantané,
+        // en chandelle ou rabattu sur son rejet.
+        expect(s.idsEnJeu.has(v.id)).toBe(true);
+        expect(v.hauteurAvantM).toBeGreaterThan(0);
+      }
+      // Et voici POURQUOI le champ existe : la même semaine, `morts` ne
+      // rapporte aucune mort par le feu. Si un jour cette ligne casse, c'est
+      // que le rapport de mortalité a changé — et que `victimes` mérite d'être
+      // rediscuté, pas rafistolé.
+      expect(s.mortsFeuLaMemeSemaine).toBe(0);
+    }
+    expect(victimesEnTout).toBeGreaterThan(0);
+  });
+
+  it("une victime dit sa hauteur d'AVANT, que le rejet écrase", () => {
+    // Chez un rejet, `heightM` est rabattue dans le même tick : la hauteur
+    // d'avant le feu ne se lit plus nulle part dans l'instantané. C'est la
+    // seule chose que `id` ne suffit pas à retrouver, donc la seule qui voyage
+    // en plus de lui.
+    const toutes = semainesDIncendie.flatMap((s) => [...s.victimes]);
+    const rejets = toutes.filter((v) => v.rejet);
+    const chandelles = toutes.filter((v) => !v.rejet);
+    // Le scénario tue des pins, qui ne rejettent pas : il y a des chandelles.
+    expect(chandelles.length).toBeGreaterThan(0);
+    // Une hauteur d'avant est une hauteur d'arbre sur pied, pas de rejet.
+    for (const v of [...rejets, ...chandelles]) expect(v.hauteurAvantM).toBeGreaterThan(0.6);
   });
 
   it("le feu est déterministe : même graine, mêmes incendies", () => {
@@ -800,5 +857,28 @@ describe("le front s'allonge dans le vent", () => {
     });
     expect([...brulees].filter((i) => i % cote > 10)).toHaveLength(0);
     expect(brulees.size).toBeGreaterThan(30);
+  });
+});
+
+describe("l'intensité du feu a un nom et un seul propriétaire", () => {
+  it("elle suit le combustible local, bornée à [0,1]", () => {
+    // Elle vivait en une ligne anonyme au milieu du tick, ce qui obligeait
+    // quiconque veut reproduire la sélection du moteur à la recopier.
+    expect(intensiteDuFeu(0)).toBe(0);
+    expect(intensiteDuFeu(0.6)).toBeGreaterThan(0);
+    expect(intensiteDuFeu(1.2)).toBe(1);
+    // Saturée au-delà : la charge peut monter à ~1,5 (fourré d'ajoncs).
+    expect(intensiteDuFeu(1.5)).toBe(1);
+    expect(intensiteDuFeu(1)).toBeGreaterThan(intensiteDuFeu(0.5));
+  });
+
+  it("c'est elle qui fait le tri des espèces, en face de l'écorce", () => {
+    // Le lien avec `survitAuFeu` : à charge de lande, le pin y passe et le
+    // liège en réchappe. Sans un nom partagé, les deux règles dérivent.
+    const arbrePin = { ...arbre("pinus_sylvestris", 8) };
+    const arbreLiege = { ...arbre("quercus_suber", 8) };
+    const intensite = intensiteDuFeu(1.1);
+    expect(survitAuFeu(arbrePin, intensite)).toBe(false);
+    expect(survitAuFeu(arbreLiege, intensite)).toBe(true);
   });
 });

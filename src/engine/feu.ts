@@ -457,6 +457,29 @@ export function departDeFeu(
 }
 
 /**
+ * Charge de combustible à laquelle un feu atteint son intensité maximale
+ * *(à calibrer)*.
+ */
+const CHARGE_INTENSITE_MAX = 1.2;
+
+/**
+ * Intensité du feu sur une cellule ∈ [0,1], d'après ce qu'elle avait à brûler.
+ *
+ * C'est ELLE qui décide qui meurt, en face de la protection que `survitAuFeu`
+ * accorde à chaque espèce : l'écorce de liège traverse ce qui carbonise un pin.
+ * Elle vivait en une ligne anonyme au milieu du tick, ce qui obligeait
+ * quiconque veut reproduire la sélection du moteur — un banc de scènes, le
+ * rendu — à la recopier. Deux copies d'une règle dérivent ; elle a maintenant
+ * un nom et un seul propriétaire.
+ *
+ * Le rendu peut la recalculer sans rien demander : `IncendieResult.charges`
+ * porte la charge de chaque cellule brûlée, dans le même ordre que `brulees`.
+ */
+export function intensiteDuFeu(chargeLocale: number): number {
+  return Math.min(1, Math.max(0, chargeLocale) / CHARGE_INTENSITE_MAX);
+}
+
+/**
  * Chance qu'une cellule s'enflamme quand le feu arrive à sa porte : elle suit
  * ce qu'elle a à offrir au feu. Une lande d'ajoncs ou une pinède s'embrasent à
  * coup sûr ; un sous-bois de feuillus frais et peu chargé éteint souvent le
