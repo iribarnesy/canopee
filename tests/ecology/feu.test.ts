@@ -99,15 +99,12 @@ describe("le risque de feu émerge des conditions, il n'est pas décrété", () 
     expect(chaudEtSec).toBeLessThanOrEqual(1);
   });
 
-  it("à conditions égales, le vent aggrave le risque — et il lui faut une VITESSE", () => {
-    // Le même vent régional expose une lande découverte plus qu'un vallon fermé.
-    expect(indiceRisqueFeu(0.05, 32, 1, 1, 6)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 0, 6));
-    // Et à abri égal, c'est la vitesse qui décide.
-    expect(indiceRisqueFeu(0.05, 32, 1, 1, 6)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 1, 1));
-    // L'exposition SEULE n'est plus un vent : découvert par temps calme, le
-    // site ne reçoit rien de plus qu'un vallon abrité par temps calme. C'était
-    // toute la confusion — un scalaire d'abri tenait lieu de vent.
-    expect(indiceRisqueFeu(0.05, 32, 1, 1, 0)).toBe(indiceRisqueFeu(0.05, 32, 1, 0, 0));
+  it("à conditions égales, l'exposition au vent aggrave le risque", () => {
+    // Ce facteur reste l'EXPOSITION, pas la vitesse hebdomadaire : le vent est
+    // désormais dans la météo, et le déclenchement ne le lit volontairement pas
+    // (`feu.ts`). Il demanderait une grandeur de rafale et une recalibration
+    // assumée de la fréquence des départs.
+    expect(indiceRisqueFeu(0.05, 32, 1, 1)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 0));
   });
 
   it("un été qui se réchauffe de 6 °C fait apparaître un risque là où il n'y en avait pas", () => {
@@ -471,8 +468,6 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
 describe("il faut une SOURCE, et un combustible qui porte", () => {
   const charge = { parCellule: new Array(100).fill(1), moyenne: 1 };
   const CANICULE = 32;
-  /** Vent d'un été océanique, m/s : sans vitesse, plus aucun départ à compter. */
-  const VENT_ESTIVAL_MS = 4;
 
   it("à conditions identiques, un massif isolé s'enflamme moins qu'une lisière de banlieue", () => {
     // La quasi-totalité des départs français est d'origine humaine — mégot,
@@ -483,7 +478,7 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
       let n = 0;
       const freq = frequentationHumaine(getPaysage(paysageId));
       for (let i = 0; i < 400; i++) {
-        const r = departDeFeu(rng, 30, 0.03, CANICULE, charge, 0.6, 10, freq, VENT_ESTIVAL_MS);
+        const r = departDeFeu(rng, 30, 0.03, CANICULE, charge, 0.6, 10, freq);
         rng = r.rng;
         if (r.origine !== undefined) n++;
       }
@@ -712,38 +707,43 @@ describe("le front s'allonge dans le vent", () => {
 
   it("un feu venté fait une ellipse, un feu calme une tache", () => {
     // Combustible marginal et homogène : la FORME ne peut venir que du vent.
-    // 0,35 de charge met le pas de flanc SOUS le seuil de percolation d'un
+    // 0,4 de charge met le pas de flanc SOUS le seuil de percolation d'un
     // réseau carré à quatre voisins (≈ 0,59) et le pas de tête au-dessus : les
     // flancs s'éteignent, la tête court. Sur un combustible saturé il n'y
-    // aurait rien à voir — tout brûle, vent ou pas.
+    // aurait rien à voir — tout brûle, vent ou pas (cf. l'essai précédent).
     const cote = 41;
     const centre = 20 * cote + 20;
-    const charge = { parCellule: new Array(cote * cote).fill(0.35), moyenne: 0.35 };
+    const charge = { parCellule: new Array(cote * cote).fill(0.4), moyenne: 0.4 };
+    // On mesure les deux sens de x SÉPARÉMENT. Les confondre en une « longueur »
+    // ne disait rien : la tête atteint le bord de la parcelle, donc la mesure
+    // saturait à la moitié du côté et le rapport à la largeur ne prouvait plus
+    // rien. L'asymétrie tête/arrière, elle, ne dépend pas du bord.
     const etendues = (brulees: ReadonlySet<number>) => {
-      let long = 0;
-      let large = 0;
+      let tete = 0;
+      let arriere = 0;
+      let flanc = 0;
       for (const c of brulees) {
-        long = Math.max(long, Math.abs((c % cote) - 20));
-        large = Math.max(large, Math.abs(Math.floor(c / cote) - 20));
+        tete = Math.max(tete, (c % cote) - 20);
+        arriere = Math.max(arriere, 20 - (c % cote));
+        flanc = Math.max(flanc, Math.abs(Math.floor(c / cote) - 20));
       }
-      return { long, large };
+      return { tete, arriere, flanc };
     };
-    const calme = etendues(propager(centre, charge, cote, rngStateFromSeed(7)).brulees);
-    const vente = etendues(
-      propager(centre, charge, cote, rngStateFromSeed(7), {
-        versRad: CAP_EST,
-        vitesseMs: 6,
-      }).brulees,
-    );
-    // Vent d'est : le front court le long de x, pas de y.
-    expect(vente.long).toBeGreaterThan(2 * vente.large);
-    // Et il court plus loin que sans vent : le vent attise, il n'ampute pas.
-    expect(vente.long).toBeGreaterThan(calme.long);
+    const vent = { versRad: CAP_EST, vitesseMs: 6 };
+    const calme = propager(centre, charge, cote, rngStateFromSeed(7)).brulees;
+    const vente = propager(centre, charge, cote, rngStateFromSeed(7), vent).brulees;
+    const e = etendues(vente);
+    // Vent d'est : le front part vers l'est et ne remonte pas au vent.
+    expect(e.tete).toBeGreaterThan(3 * e.arriere);
+    // Et il est plus long que large : c'est l'ellipse, pas la tache.
+    expect(e.tete).toBeGreaterThan(e.flanc);
+    // Par temps calme, à la même charge, le départ s'éteint sur place.
+    expect(vente.size).toBeGreaterThan(10 * calme.size);
   });
 
   it("un feu venté brûle plus large qu'un feu calme, à combustible égal", () => {
     const cote = 41;
-    const charge = { parCellule: new Array(cote * cote).fill(0.35), moyenne: 0.35 };
+    const charge = { parCellule: new Array(cote * cote).fill(0.4), moyenne: 0.4 };
     let vente = 0;
     let calme = 0;
     // Plusieurs graines : l'affaire est statistique, pas anecdotique.
