@@ -34,6 +34,7 @@ import {
 } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
 import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
+import { SANS_VENT } from "../render/temps/feu";
 import {
   AUCUNE_TORCHE,
   deformationDe,
@@ -63,6 +64,16 @@ interface Scene {
    */
   ventExposition?: number;
   /**
+   * `TickResult.vent` : le vent de la semaine, tel que le moteur le rapporte
+   * (`engine/vent.ts`).
+   *
+   * **Absent des scènes cuites avant le 2026-09-11.** C'est LUI qui incline le
+   * panache ; `ventExposition` n'en donne que l'échelle. À défaut, on ne
+   * penche pas — une colonne droite est la lecture honnête de « on ne sait pas »
+   * (`SANS_VENT`).
+   */
+  vent?: { deDeg: number; versRad: number; force: number };
+  /**
    * Ce qui a changé depuis l'instantané précédent, tel que le moteur le
    * rapporte (`advanceWeek`), accumulé par le constructeur de scènes.
    *
@@ -89,7 +100,7 @@ interface Scene {
      * En tableaux et non en `Int32Array` : JSON transforme les tableaux typés
      * en objets indexés, et le front y perdrait son ordre.
      */
-    incendie?: { origine: number; brulees: number[]; rangs: number[] };
+    incendie?: { origine: number; brulees: number[]; rangs: number[]; charges?: number[] };
   };
   trees: {
     id: number;
@@ -188,15 +199,6 @@ function donneesDe(scene: Scene): DonneesSol {
 const DUREE_ELLIPSE_MS = 2500;
 
 /**
- * L'exposition au vent qu'on prend quand la scène n'en porte pas.
- *
- * Le milieu de l'échelle, et pas zéro : à zéro le panache monterait parfaitement
- * droit, ce qui est l'état d'un vallon abrité et non l'état « on ne sait pas ».
- * Une vieille scène ne doit pas se lire comme une parcelle particulière.
- */
-const EXPOSITION_INCONNUE = 0.5;
-
-/**
  * Où en est la lecture : l'horloge, ou l'avancement figé par `?ellipse=`.
  *
  * Partagée par les deux rappels — la déformation des arbres et le voile des
@@ -282,6 +284,7 @@ function Demo(): React.ReactElement {
                 origine: incendieBrut.origine,
                 brulees: Int32Array.from(incendieBrut.brulees),
                 rangs: Int32Array.from(incendieBrut.rangs),
+                charges: Float32Array.from(incendieBrut.charges ?? []),
                 cellulesBrulees: incendieBrut.brulees.length,
                 arbresTues: 0,
                 rejets: 0,
@@ -574,7 +577,7 @@ function Demo(): React.ReactElement {
           ellipse.feu,
           ouLire(maintenantMs, fige, ellipse.dureeMs),
           scene.coteM,
-          scene.ventExposition ?? EXPOSITION_INCONNUE,
+          scene.vent ?? SANS_VENT,
           ellipse.torches,
         )
       }

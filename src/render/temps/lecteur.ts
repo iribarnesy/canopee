@@ -45,6 +45,7 @@ import {
   TORCHES_MAX,
   teteDuFront,
   torchageEnCours,
+  type VentAPencher,
   vivaciteDeLaTorche,
 } from "./feu";
 import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
@@ -368,16 +369,16 @@ export function feuEnCours(trouve: IncendieTrouve | undefined, ecouleMs: number)
  * C'est ce qui fait qu'une lecture figée (`?ellipse=0.7`) l'est vraiment,
  * jusqu'au battement des flammes, et qu'une capture est reproductible.
  *
- * `exposition` est le `ventExposition` de la station (`StationInfo`) : un
- * scalaire ∈ [0,1] qui donne l'AMPLITUDE de l'inclinaison du panache. Le sens,
- * lui, vient de l'origine de l'incendie, faute d'une direction de vent dans le
- * moteur — la convention est décrite dans `feu.ts`.
+ * `vent` est le vent de la semaine tel que le moteur le rapporte
+ * (`TickResult.vent`) : une direction et une force. Il n'y a plus de convention
+ * à déclarer — les deux que le rendu a portées en attendant sont racontées dans
+ * `feu.ts`. `SANS_VENT` pour un instantané qui n'en porte pas.
  */
 export function particulesDuFeu(
   trouve: IncendieTrouve | undefined,
   ecouleMs: number,
   coteM: number,
-  exposition: number,
+  vent: VentAPencher,
   torches: TorchesIndexees = AUCUNE_TORCHE,
 ): IncendieAPoser {
   if (!trouve) return RIEN_NE_BRULE;
@@ -391,7 +392,7 @@ export function particulesDuFeu(
       // devant elle et devant ceux qui sont derrière, ce que le tri par
       // ordonnée d'écran donne gratuitement.
       ...flammesDesTorches(torches, ecouleMs),
-      ...panacheDuFeu(trouve.feu, a, ecouleMs, coteM, trouve.origine, exposition),
+      ...panacheDuFeu(trouve.feu, a, ecouleMs, coteM, vent),
     ],
     ciel: chargeDuCiel(trouve.feu, a),
   };

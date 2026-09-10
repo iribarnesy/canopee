@@ -46,6 +46,7 @@ const feu = (origine: number): IncendieResult => ({
   origine,
   brulees: Int32Array.from([origine, origine + 1, origine + 2]),
   rangs: Int32Array.from([0, 1, 2]),
+  charges: Float32Array.from([1.2, 0.8, 0.4]),
 });
 
 const geste = (type: GesteVisible["type"], ids: number[]): GesteVisible =>

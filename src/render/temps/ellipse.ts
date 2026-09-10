@@ -75,6 +75,16 @@ export type Sujet =
        * incendie pédagogique.
        */
       rangs: readonly number[];
+      /**
+       * Charge de combustible de chaque cellule de `brulees`, même ordre.
+       *
+       * **C'est DANS QUOI le feu a brûlé**, et le moteur le dit depuis qu'il
+       * expose `IncendieResult.charges`. Le rang dit où le front passe et
+       * quand ; la charge dit avec quelle violence, et c'est elle qui donne la
+       * hauteur des flammes — hautes dans l'ajonc, basses dans le pré. Sans
+       * elle le rendu les dessinait toutes à la même hauteur de convention.
+       */
+      charges: readonly number[];
     }
   | { quoi: "chute"; chutes: readonly ChuteDeChandelle[] }
   | { quoi: "mort"; cause: CauseMort; morts: readonly MortDeLaSemaine[] }
@@ -207,6 +217,7 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
       origine: f.origine,
       brulees: [...f.brulees],
       rangs: [...f.rangs],
+      charges: [...f.charges],
     });
   }
   for (const [cause, morts] of parCause) sujets.push({ quoi: "mort", cause, morts });

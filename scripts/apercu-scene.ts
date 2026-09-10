@@ -45,12 +45,13 @@ import { cellulesEnEau } from "../src/engine/eau_surface";
 import {
   chargeCombustible,
   departDeFeu,
+  intensiteDuFeu,
   propager,
   rangsDuFront,
   survitAuFeu,
 } from "../src/engine/feu";
 import { advanceWeek } from "../src/engine/game";
-import { serieToWeeks } from "../src/engine/meteo";
+import { serieToWeeks, type WeekWeather } from "../src/engine/meteo";
 import { frequentationDesBordures, getPaysage } from "../src/engine/paysage";
 import { contextePhenologique } from "../src/engine/phenologie";
 import { altitudeParCellule } from "../src/engine/relief";
@@ -58,6 +59,7 @@ import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
 import { FRICHE_LIMON } from "../src/engine/stations";
 import type { ChuteDeChandelle, MortDeLaSemaine } from "../src/engine/tick";
+import { ROSE_ATLANTIQUE, ventDeLaSemaine } from "../src/engine/vent";
 import { arbreDuSnapshot } from "../src/game/snapshot";
 
 const GRAINE = 42;
@@ -364,7 +366,13 @@ function incendieDeDemonstration(
   state: GameState,
   station: Station,
   lumiereAuSol: Float32Array<ArrayBufferLike>,
-): { origine: number; brulees: number[]; rangs: number[]; tues: number[] } {
+): {
+  origine: number;
+  brulees: number[];
+  rangs: number[];
+  charges: number[];
+  tues: number[];
+} {
   const charge = chargeCombustible(
     state.trees,
     state.soil.herbeCouverture,
@@ -423,20 +431,15 @@ function incendieDeDemonstration(
     if (!brulees.has(cellule)) continue;
     if (!survitAuFeu(tree, intensiteDuFeu(charge.parCellule[cellule] ?? 0))) tues.push(tree.id);
   }
-  return { origine, brulees: liste, rangs: liste.map((c) => rangs.get(c) ?? 0), tues };
-}
-
-/**
- * L'intensité du feu dans une cellule, d'après sa charge de combustible.
- *
- * **Recopiée de `tick.ts` et c'est un défaut assumé** : le moteur la calcule en
- * une ligne au milieu de sa section incendie (« l'intensité suit le combustible
- * local ») sans l'exposer, alors que c'est elle qui décide qui meurt avec
- * `survitAuFeu`. Deux copies d'une règle dérivent — l'issue #52 est ouverte pour
- * qu'elle sorte du tick.
- */
-function intensiteDuFeu(chargeLocale: number): number {
-  return Math.min(1, chargeLocale / 1.2);
+  return {
+    origine,
+    brulees: liste,
+    rangs: liste.map((c) => rangs.get(c) ?? 0),
+    // La charge de chaque cellule brûlée : c'est DANS QUOI le feu a brûlé, et
+    // c'est elle qui donne la hauteur des flammes côté rendu.
+    charges: liste.map((c) => Number((charge.parCellule[c] ?? 0).toFixed(3))),
+    tues,
+  };
 }
 
 /** La graine de l'allumage de démonstration. Fixe : une scène est reproductible. */
@@ -454,6 +457,24 @@ const GRAINE_DU_FEU = 7717;
 const SEMAINE_DE_CANICULE = 30;
 const SECHERESSE_DE_CANICULE = 0;
 const CHALEUR_DE_CANICULE_C = 34;
+
+/**
+ * La météo que la scène de feu DÉCLARE, pour l'allumage ET pour le vent.
+ *
+ * **Une seule déclaration pour les deux, et c'est une incohérence attrapée en
+ * regardant les chiffres** : la scène forçait la canicule pour l'allumage et
+ * prenait le vent de la semaine RÉELLE, qui se trouve être arrosée. Elle
+ * décrivait donc un incendie sous vent d'ouest soutenu de régime perturbé —
+ * c'est-à-dire un feu de forêt un jour de pluie. Le régime doit être le même
+ * pour tout ce qu'on en déduit.
+ */
+const METEO_DE_CANICULE: WeekWeather = {
+  tMean: CHALEUR_DE_CANICULE_C - 8,
+  tMin: CHALEUR_DE_CANICULE_C - 12,
+  tMax: CHALEUR_DE_CANICULE_C,
+  rainMm: 0,
+  tMinAbsC: CHALEUR_DE_CANICULE_C - 14,
+};
 
 /**
  * Combien de tirages d'allumage on laisse passer avant d'abandonner.
@@ -652,6 +673,28 @@ function main() {
           // ne dit pas d'où le vent vient — seulement combien la parcelle y est
           // exposée — et le rendu ne fait pas semblant de savoir le reste.
           ventExposition: station.ventExposition,
+          // **Le VENT de la semaine, tel que le moteur le rapporte.** C'est lui
+          // qui incline le panache d'un incendie ; l'exposition ne dit que
+          // l'échelle. Les deux voyagent, parce qu'elles ne disent pas la même
+          // chose — un lieu et un événement.
+          // Sur une scène de feu, le vent est celui de la canicule déclarée,
+          // comme l'allumage : un incendie sous vent d'ouest de régime perturbé
+          // serait un feu de forêt un jour de pluie.
+          vent: (() => {
+            const v = FEU
+              ? ventDeLaSemaine(
+                  station.rose ?? ROSE_ATLANTIQUE,
+                  station.ventExposition,
+                  i,
+                  METEO_DE_CANICULE,
+                )
+              : semaine.vent;
+            return {
+              deDeg: Number(v.deDeg.toFixed(1)),
+              versRad: Number(v.versRad.toFixed(4)),
+              force: Number(v.force.toFixed(3)),
+            };
+          })(),
           trees: figer(state, new Set(incendie?.tues ?? [])),
           journal: {
             ...enAttente,

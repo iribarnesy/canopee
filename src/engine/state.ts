@@ -22,6 +22,7 @@ import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
 import { ruHorizonMm } from "./soil";
 import { type TreeState, tirerVigueurIndividuelle } from "./trees";
+import type { RoseDesVents } from "./vent";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
@@ -60,8 +61,23 @@ export interface Station {
    * Exposition au vent ∈ [0,1] : 0 = vallon abrité, 1 = lande atlantique ou
    * plateau ouvert. Le vent dessèche les sujets découverts — c'est ce qui rend
    * l'effet brise-vent d'une haie ou d'une nurse payant (ch5, docs §9).
+   *
+   * C'est l'ÉCHELLE du vent, pas le vent : sa direction et sa force semaine par
+   * semaine se calculent (`vent.ts`), et la force moyenne d'une année retombe
+   * sur cette exposition.
    */
   ventExposition: number;
+  /**
+   * La rose des vents de la station : d'où le vent souffle en régime perturbé
+   * et en régime anticyclonique sec (`vent.ts`).
+   *
+   * **Déclarée et non dérivée**, comme la latitude et pour la même raison :
+   * c'est un fait géographique relevé, pas une conséquence du sol. Absente, on
+   * prend la rose atlantique — celle de la plus grande partie du territoire, et
+   * la seule qu'on puisse appliquer sans savoir où est la station, le moteur ne
+   * tenant pas de longitude.
+   */
+  rose?: RoseDesVents;
   /** relief de la parcelle : altitude, pente, exposition, forme (relief.ts) */
   relief: Relief;
   /** eau libre permanente : ruisseau longeant un côté, mare (eau_surface.ts) */

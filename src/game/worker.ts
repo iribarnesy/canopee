@@ -49,6 +49,7 @@ import { sourcesDeLaParcelle } from "../engine/terrain";
 import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
+import type { VentDeLaSemaine } from "../engine/vent";
 import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 
@@ -81,6 +82,15 @@ let fractionalWeeks = 0;
 let prevFruitsReadyKg = 0;
 let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
+/**
+ * Le vent de la dernière semaine simulée.
+ *
+ * Il vente toutes les semaines, donc il n'y a rien à accumuler : ce qui compte
+ * pour l'instantané est le vent de la semaine qu'il décrit, pas la liste des
+ * vents traversés. C'est le contraire des morts et des gestes, qui s'accumulent
+ * parce que le joueur a sauté du temps.
+ */
+let dernierVent: VentDeLaSemaine | undefined;
 // Ce qui s'est passé depuis le dernier instantané et que le rendu doit ANIMER.
 let pendingMorts: MortDeLaSemaine[] = [];
 let pendingGestes: GesteVisible[] = [];
@@ -424,6 +434,9 @@ function postSnapshot() {
     gestes: pendingGestes,
     chutes: pendingChutes,
     incendie: pendingIncendie,
+    // Le vent du DERNIER tick du lot : c'est celui de la semaine que
+    // l'instantané décrit, et c'est lui qui inclinera le panache.
+    ...(dernierVent ? { vent: dernierVent } : {}),
   });
   pendingRefusals = [];
   pendingEvents = [];
@@ -463,6 +476,7 @@ function stepWeeks(n: number) {
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
     if (ticked.incendie) pendingIncendie = ticked.incendie;
+    dernierVent = ticked.vent;
     state = beginWeek(ticked.state);
     const finis =
       before.economy.saisonniersFinSemaine.length - state.economy.saisonniersFinSemaine.length;

@@ -14,12 +14,14 @@ import {
   BOUFFEES_PAR_COLONNE,
   BRAISES_MAX,
   CENDRE,
+  CHARGE_DE_REFERENCE,
   COEUR,
   COLONNES_MAX,
   cellulesEnFlammes,
   cellulesQuiFument,
   FLAMME,
   FLAMME_LA_PLUS_BASSE_M,
+  FLAMME_LA_PLUS_HAUTE,
   FLAMMES_MAX,
   type FrontDIncendie,
   feuAuSol,
@@ -29,8 +31,10 @@ import {
   OPACITE_DE_LA_CENDRE,
   OPACITE_DE_LA_FLAMME,
   panacheDuFeu,
+  partDeLaCharge,
   porteeDuFront,
   RANGS_DU_FRONT,
+  SANS_VENT,
   VARIANTES_DE_BRULURE,
 } from "../../src/render/temps/feu";
 
@@ -199,8 +203,11 @@ describe("les particules du feu", () => {
   const brulees = new Set(front.brulees as number[]);
 
   const auSol = (a: number, t = 0) => feuAuSol(front, a, t, COTE_P);
-  const enHaut = (a: number, t = 0, exposition = 0.6) =>
-    panacheDuFeu(front, a, t, COTE_P, front.origine, exposition);
+  // **Un vent EST vent, et le moteur le dit maintenant** : le panache ne devine
+  // plus sa direction depuis l'avance du front. On souffle donc vers l'est-nord-
+  // est pour les essais, avec une force qu'on fait varier.
+  const enHaut = (a: number, t = 0, force = 0.6) =>
+    panacheDuFeu(front, a, t, COTE_P, { versRad: 0.4, force });
 
   it("ne produit RIEN avant que le feu ne parte", () => {
     expect(auSol(0)).toEqual([]);
@@ -349,32 +356,29 @@ describe("les particules du feu", () => {
     for (const v of sens) expect(v.dx * premier.dx + v.dy * premier.dy).toBeGreaterThan(0.7);
   });
 
-  it("penche vers où le front A AVANCÉ, pas vers d'où il vient", () => {
-    // La direction est INFÉRÉE de l'avance nette du front : ce qui pousse un
-    // feu, c'est le vent, donc un front qui a progressé vers le nord-est a eu
-    // du vent de sud-ouest et son panache penche vers le nord-est.
-    const o = { x: (front.origine % COTE_P) + 0.5, y: Math.floor(front.origine / COTE_P) + 0.5 };
-    let sx = 0;
-    let sy = 0;
-    for (const c of cellulesEnFlammes(front, 0.6)) {
-      sx += (c.cellule % COTE_P) + 0.5 - o.x;
-      sy += Math.floor(c.cellule / COTE_P) + 0.5 - o.y;
-    }
-    const d = Math.hypot(sx, sy);
-    expect(d).toBeGreaterThan(0);
-    for (const p of enHaut(0.6, 400).filter((q) => q.forme === "fumee" && q.hM > 15)) {
-      const dx = p.x - ((p.cellule % COTE_P) + 0.5);
-      const dy = p.y - (Math.floor(p.cellule / COTE_P) + 0.5);
-      // La composante le long de l'avance nette est positive : la bouffée haute
-      // est en aval de son pied, jamais en amont.
-      expect((dx * sx + dy * sy) / d).toBeGreaterThan(0);
+  it("penche dans le sens du VENT, et le moteur le dit maintenant", () => {
+    // Ce que ça change à l'image : un front qui descend le vent et un front qui
+    // le REMONTE se dessinaient pareil, puisque la seule direction disponible
+    // était celle de l'avance du front. Maintenant, non.
+    for (const versRad of [0, 1.2, Math.PI, -2]) {
+      const dx = Math.cos(versRad);
+      const dy = Math.sin(versRad);
+      for (const p of panacheDuFeu(front, 0.6, 400, COTE_P, { versRad, force: 0.8 })) {
+        if (p.forme !== "fumee" || p.hM < 15) continue;
+        const ex = p.x - ((p.cellule % COTE_P) + 0.5);
+        const ey = p.y - (Math.floor(p.cellule / COTE_P) + 0.5);
+        // La composante le long du vent est positive : la bouffée haute est en
+        // AVAL de son pied, quel que soit le sens où le feu court.
+        expect(ex * dx + ey * dy).toBeGreaterThan(0);
+      }
     }
   });
 
-  it("penche PLUS sur un plateau ouvert que dans un vallon abrité", () => {
-    // L'amplitude, elle, vient honnêtement du moteur : `ventExposition`.
-    const derive = (exposition: number) => {
-      const bouffees = enHaut(0.6, 400, exposition).filter((p) => p.forme === "fumee");
+  it("penche PLUS quand le vent est fort", () => {
+    // L'amplitude vient de la force du vent de la semaine, qui vient elle-même
+    // de la rose de la station et du régime de la semaine (`engine/vent.ts`).
+    const derive = (force: number) => {
+      const bouffees = enHaut(0.6, 400, force).filter((p) => p.forme === "fumee");
       let somme = 0;
       for (const p of bouffees) {
         somme += Math.hypot(
@@ -384,7 +388,7 @@ describe("les particules du feu", () => {
       }
       return somme / Math.max(1, bouffees.length);
     };
-    expect(derive(1)).toBeGreaterThan(derive(0.1) * 1.5);
+    expect(derive(1)).toBeGreaterThan(derive(0.2) * 1.5);
   });
 
   it("SUIT le front : la fumée s'éloigne de l'origine à mesure que le feu court", () => {
@@ -412,6 +416,56 @@ describe("les particules du feu", () => {
     }
   });
 
+  it("fait la FLAMME PLUS HAUTE là où le combustible est plus lourd", () => {
+    // **C'est la pédagogie du §6.4 portée par la flamme elle-même** et plus
+    // seulement par la vitesse du front : « s'essouffle dans le feuillu frais,
+    // fonce dans la lande ». Le moteur donne la charge de chaque cellule brûlée
+    // (`IncendieResult.charges`) ; jusque-là le rendu dessinait toutes ses
+    // flammes à la même hauteur de convention.
+    const n = front.brulees.length;
+    const chargeUniforme = (c: number) => ({
+      brulees: front.brulees,
+      rangs: front.rangs,
+      charges: new Array<number>(n).fill(c),
+    });
+    const mediane = (charge: number) => {
+      const h = feuAuSol(chargeUniforme(charge), 0.4, 500, COTE_P)
+        .filter((p) => p.forme === "flamme")
+        .map((p) => p.hauteurM)
+        .sort((a, b) => a - b);
+      return h[Math.floor(h.length / 2)] ?? 0;
+    };
+    // un sous-bois frais, une pelouse ordinaire, une lande d'ajoncs
+    const frais = mediane(0.2);
+    const pelouse = mediane(CHARGE_DE_REFERENCE);
+    const ajonc = mediane(2);
+    expect(frais).toBeLessThan(pelouse);
+    expect(pelouse).toBeLessThan(ajonc);
+    // et l'écart se VOIT : plus du double du frais à l'ajonc
+    expect(ajonc).toBeGreaterThan(frais * 2);
+  });
+
+  it("ne fait pas des flammes DIX fois plus hautes pour dix fois la charge", () => {
+    // La longueur de flamme croît comme une puissance de l'intensité nettement
+    // inférieure à un (Byram) : la racine en est l'approximation habituelle, et
+    // elle a la bonne propriété de dessin — un pré ras garde une flamme visible
+    // au lieu de disparaître, un tas de rémanents ne fait pas un mur.
+    expect(partDeLaCharge(CHARGE_DE_REFERENCE)).toBeCloseTo(1, 6);
+    expect(partDeLaCharge(CHARGE_DE_REFERENCE * 4)).toBeCloseTo(2, 6);
+    expect(partDeLaCharge(0)).toBe(0);
+    expect(partDeLaCharge(1e6)).toBe(FLAMME_LA_PLUS_HAUTE);
+  });
+
+  it("retombe sur la hauteur de convention quand la scène ne porte pas de charge", () => {
+    // Les scènes cuites avant que le moteur n'expose les charges n'en ont pas,
+    // et une flamme de hauteur moyenne vaut mieux qu'un plantage.
+    const sans = feuAuSol({ brulees: front.brulees, rangs: front.rangs }, 0.4, 500, COTE_P);
+    for (const c of cellulesEnFlammes({ brulees: front.brulees, rangs: front.rangs }, 0.4)) {
+      expect(c.charge).toBe(CHARGE_DE_REFERENCE);
+    }
+    expect(sans.length).toBeGreaterThan(0);
+  });
+
   it("porte un CŒUR clair par flamme : c'est le dégradé de température", () => {
     const sol = auSol(0.4, 200);
     const flammes = sol.filter((p) => p.forme === "flamme");
@@ -436,26 +490,22 @@ describe("les particules du feu", () => {
     expect(lueurs.length).toBeLessThan(cellulesEnFlammes(front, 0.3).length);
   });
 
-  it("monte DROIT quand le front n'a montré aucune direction", () => {
-    // Un front parfaitement symétrique a une avance nette nulle : la colonne
-    // est droite, et c'est la bonne lecture — ce feu-là n'a pas eu de vent
-    // qu'on puisse déduire. C'est aussi ce que le §6.4 ne pourra pas obtenir
-    // autrement sans une direction de vent dans le moteur (issue #50).
-    const o = 50 * COTE_P + 50;
-    const symetrique = {
-      brulees: [o, o - 1, o + 1, o - COTE_P, o + COTE_P],
-      rangs: [0, 1, 1, 1, 1],
-    };
-    const centre = { x: (o % COTE_P) + 0.5, y: Math.floor(o / COTE_P) + 0.5 };
-    const droite = panacheDuFeu(symetrique, 0.3, 300, COTE_P, o, 1);
+  it("monte DROIT quand il n'y a pas de vent", () => {
+    // Force nulle : la colonne est droite, et c'est la lecture honnête d'un
+    // jour calme comme d'un instantané qui n'en porte pas (`SANS_VENT`).
+    const droite = panacheDuFeu(front, 0.4, 300, COTE_P, SANS_VENT);
     expect(droite.length).toBeGreaterThan(0);
-    // seul le serpentement écarte la colonne, et il est petit
-    for (const p of droite) expect(Math.hypot(p.x - centre.x, p.y - centre.y)).toBeLessThan(3);
+    for (const p of droite) {
+      const ex = p.x - ((p.cellule % COTE_P) + 0.5);
+      const ey = p.y - (Math.floor(p.cellule / COTE_P) + 0.5);
+      // seuls le serpentement et le zigzag des braises écartent la colonne
+      expect(Math.hypot(ex, ey)).toBeLessThan(2);
+    }
   });
 
   it("accepte un incendie vide sans se plaindre", () => {
     expect(feuAuSol({ brulees: [], rangs: [] }, 0.5, 0, COTE_P)).toEqual([]);
-    expect(panacheDuFeu({ brulees: [], rangs: [] }, 0.5, 0, COTE_P, 0, 0.5)).toEqual([]);
+    expect(panacheDuFeu({ brulees: [], rangs: [] }, 0.5, 0, COTE_P, SANS_VENT)).toEqual([]);
     expect(cellulesEnFlammes({ brulees: [], rangs: [] }, 0.5)).toEqual([]);
   });
 });

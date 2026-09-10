@@ -217,6 +217,7 @@ describe("indexerLesTorches et le canal de la mise en scène", () => {
       origine: front.origine,
       brulees: front.brulees as number[],
       rangs: front.rangs as number[],
+      charges: (front.brulees as number[]).map(() => 1.2),
     },
   };
   const trouve = { acte, origine: front.origine, feu: front as FrontDIncendie };
@@ -257,7 +258,7 @@ describe("indexerLesTorches et le canal de la mise en scène", () => {
     // Un instantané qui décrirait un arbre brûlé hors du front est un
     // instantané dont on ne peut rien tirer ; le placer quelque part serait
     // pire que de l'ignorer.
-    const petit = { brulees: [23 * COTE + 26], rangs: [0] };
+    const petit = { brulees: [23 * COTE + 26], rangs: [0], charges: [1.2] };
     const index = indexerLesTorches({ ...trouve, feu: petit }, candidats, COTE);
     expect(index.arbres.has(1)).toBe(true);
     expect(index.arbres.has(2)).toBe(false);

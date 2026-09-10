@@ -271,13 +271,22 @@ export function indiceRisqueFeu(
   secheresseSurface: number,
   tMaxC: number,
   chargeMoyenne: number,
-  ventExposition: number,
+  ventForce: number,
 ): number {
   if (secheresseSurface > SECHERESSE_CRITIQUE || chargeMoyenne < CHARGE_MINIMALE) return 0;
   const fSecheresse = Math.min(1, (SECHERESSE_CRITIQUE - secheresseSurface) / SECHERESSE_CRITIQUE);
   const fChaleur = Math.min(1, Math.max(0, (tMaxC - CHALEUR_SEUIL_C) / 10));
   const fCombustible = Math.min(1, chargeMoyenne);
-  const fVent = 0.5 + 0.5 * ventExposition;
+  // **La FORCE du vent de la semaine, et non plus l'exposition de la
+  // parcelle.** Les deux se ressemblent — la force moyenne d'une année vaut
+  // l'exposition, c'est la calibration de `vent.ts` — mais elles ne disent pas
+  // la même chose : l'exposition est une propriété du lieu, la force est un
+  // événement. Le risque se concentre donc sur les semaines où le vent souffle
+  // vraiment, au lieu d'être étalé sur toutes, et c'est ce que le §3 des règles
+  // annonçait en écrivant « vent (événements) ».
+  // Bornée ici et non à la source : un mistral dépasse l'échelle de
+  // l'exposition (`vent.ts`), et c'est à l'usage de décider ce qu'il en fait.
+  const fVent = 0.5 + 0.5 * Math.min(1, Math.max(0, ventForce));
   return fSecheresse * fChaleur * fCombustible * fVent;
 }
 
@@ -291,12 +300,12 @@ export function departDeFeu(
   secheresseSurface: number,
   tMaxC: number,
   charge: ChargeCombustible,
-  ventExposition: number,
+  ventForce: number,
   coteM: number,
   frequentationHumaine = 1,
 ): DepartFeu {
   if (semaineAnnee < SAISON_FEU[0] || semaineAnnee > SAISON_FEU[1]) return { rng };
-  const risque = indiceRisqueFeu(secheresseSurface, tMaxC, charge.moyenne, ventExposition);
+  const risque = indiceRisqueFeu(secheresseSurface, tMaxC, charge.moyenne, ventForce);
   if (risque <= 0) return { rng };
   const tirage = rngFloat(rng);
   // Il ne suffit pas que les conditions soient réunies : il faut une SOURCE.
@@ -373,6 +382,25 @@ export function propager(
     if (y < coteM - 1) file.push(cellule + coteM);
   }
   return { brulees, rng: etat };
+}
+
+/**
+ * L'intensité du feu dans une cellule, ∈ [0,1], d'après sa charge de
+ * combustible.
+ *
+ * **Sortie du tick où elle vivait en une ligne anonyme.** C'est elle qui décide
+ * qui meurt, via `survitAuFeu` — donc une règle écologique, qui n'a rien à faire
+ * au milieu d'une boucle. Le banc de scènes avait dû la recopier pour reproduire
+ * la sélection du moteur, et deux copies d'une règle dérivent.
+ *
+ * La charge de référence est celle au-delà de laquelle le feu est pleinement
+ * intense : un ajonc ou une lande sèche l'atteignent, un sous-bois de feuillus
+ * frais reste loin en dessous *(à calibrer)*.
+ */
+export const CHARGE_PLEINE_INTENSITE = 1.2;
+
+export function intensiteDuFeu(chargeLocale: number): number {
+  return Math.min(1, Math.max(0, chargeLocale) / CHARGE_PLEINE_INTENSITE);
 }
 
 /**

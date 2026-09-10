@@ -50,7 +50,14 @@ import {
   terreArracheeKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
-import { chargeCombustible, departDeFeu, propager, rangsDuFront, survitAuFeu } from "./feu";
+import {
+  chargeCombustible,
+  departDeFeu,
+  intensiteDuFeu,
+  propager,
+  rangsDuFront,
+  survitAuFeu,
+} from "./feu";
 import {
   brouter,
   DIGESTIBILITE,
@@ -174,6 +181,7 @@ import {
   treeNitrogenNeedGWeek,
   treeWaterDemandL,
 } from "./trees";
+import { ROSE_ATLANTIQUE, type VentDeLaSemaine, ventDeLaSemaine } from "./vent";
 import type { HorizonHydro } from "./water";
 import { drynessFactor, profilHydro } from "./water";
 
@@ -259,6 +267,19 @@ export interface IncendieResult {
    * ligne de flammes au lieu de noircir la tache d'un coup (feu.ts).
    */
   rangs: Int32Array;
+  /**
+   * Charge de combustible de chaque cellule de `brulees`, même ordre, en
+   * kg C/m² équivalents (`chargeCombustible`).
+   *
+   * **C'est DANS QUOI le feu a brûlé, et ça manquait.** Le rang dit où le front
+   * est passé et quand ; la charge dit avec quelle violence. Elle décide déjà de
+   * l'intensité, donc de qui meurt (`intensiteDuFeu`, `survitAuFeu`) — mais
+   * personne ne pouvait la relire, et le rendu dessinait toutes ses flammes à la
+   * même hauteur de convention. Avec elle, une flamme est haute dans l'ajonc et
+   * basse dans le pré : c'est la carte de combustibilité qui devient visible sur
+   * la flamme elle-même et plus seulement sur la vitesse du front.
+   */
+  charges: Float32Array;
 }
 
 /**
@@ -287,6 +308,15 @@ export interface TickResult {
   morts: MortDeLaSemaine[];
   /** incendie de la semaine, s'il y en a eu un */
   incendie?: IncendieResult;
+  /**
+   * Le vent de la semaine : d'où il souffle, vers où, et avec quelle force
+   * (`vent.ts`).
+   *
+   * TOUJOURS présent, à la différence de l'incendie : il vente toutes les
+   * semaines. C'est lui qui incline le panache d'un incendie (§6.4 de
+   * l'interface) et qui attise le risque de départ.
+   */
+  vent: VentDeLaSemaine;
   /**
    * Ce que le GIBIER a fait subir à quels arbres cette semaine (broutage,
    * frottis). Les gestes du joueur remontent par `applyAction` (actions.ts) ;
@@ -1823,6 +1853,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // puis se propage là où il trouve à brûler — d'où l'intérêt des coupures.
   let incendie: TickResult["incendie"];
   let carboneFeuKgC = 0;
+  // **Le vent de la semaine se calcule d'abord**, parce que le risque de départ
+  // en dépend. Il ne PUISE PAS dans le flux principal : sa dispersion se tire
+  // sur une graine propre (`vent.ts`), pour la même raison que la direction de
+  // chute d'une chandelle — un tirage de plus dans le flux décalerait tous les
+  // suivants et rebattrait les cartes de tous les autres mécanismes.
+  const vent = ventDeLaSemaine(
+    station.rose ?? ROSE_ATLANTIQUE,
+    station.ventExposition,
+    state.week,
+    weather,
+  );
   {
     let secheresseSum = 0;
     for (let i = 0; i < nCells; i++) secheresseSum += (waterMm[i * nH] ?? 0) / ruSurface;
@@ -1840,7 +1881,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       secheresseSum / nCells,
       weather.tMax,
       charge,
-      station.ventExposition,
+      vent.force,
       station.coteM,
       frequentationDesBordures(station.bordures),
     );
@@ -1860,8 +1901,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           apresFeu.push(tree);
           continue;
         }
-        // L'intensité suit le combustible local.
-        const intensite = Math.min(1, (charge.parCellule[cellule] ?? 0) / 1.2);
+        // L'intensité suit le combustible local (`intensiteDuFeu`).
+        const intensite = intensiteDuFeu(charge.parCellule[cellule] ?? 0);
         const espece = getEspece(tree.especeId);
         if (survitAuFeu(tree, intensite)) {
           apresFeu.push(tree);
@@ -1960,6 +2001,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         origine: depart.origine,
         brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
         rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
+        // La charge est relevée AVANT que le feu ne consume l'herbe et la
+        // litière : c'est dans quoi il a brûlé, pas ce qu'il en reste.
+        charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
       };
     }
   }
@@ -2047,6 +2091,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     morts,
     chutes,
     incendie,
+    vent,
     gestes,
     // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne
     // sont pas de l'état (la semaine suivante les recalcule), mais sans elles

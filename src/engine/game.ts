@@ -15,6 +15,7 @@ import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
 import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "./tick";
 import { tick } from "./tick";
+import type { VentDeLaSemaine } from "./vent";
 
 export interface Journal {
   stationId: string;
@@ -61,6 +62,8 @@ export function advanceWeek(
   fluxes: TickFluxes;
   morts: MortDeLaSemaine[];
   incendie?: IncendieResult;
+  /** le vent de la semaine : d'où il souffle, vers où, avec quelle force (vent.ts) */
+  vent: VentDeLaSemaine;
   /** gestes du joueur ET du gibier de la semaine, pour le rendu (tick.ts) */
   gestes: GesteVisible[];
   /** chandelles abattues cette semaine (boisMort.ts) */
@@ -87,6 +90,7 @@ export function advanceWeek(
     fluxes: ticked.fluxes,
     morts: ticked.morts,
     incendie: ticked.incendie,
+    vent: ticked.vent,
     gestes: [...gestes, ...ticked.gestes],
     chutes: ticked.chutes,
     debordementParCellule: ticked.debordementParCellule,

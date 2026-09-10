@@ -1606,11 +1606,51 @@ calculent ce que cette espèce porte à cette semaine.
   plafonnées à soixante posées, et tout s'éteint à la fin de l'acte. Pose de 6 à
   15 ms pour 9 900 sprites, et toujours zéro classe de vignette recuite.
 
-Ce qui reste du §6.4 : la direction de vent de l'issue #50, la charge de
-combustible par cellule brûlée (qui donnerait une hauteur de flamme réelle au
-lieu d'une constante de convention), et les rejets de souche du printemps
-suivant — que le calque des changements pointera comme des recrues, sans rien de
-plus.
+### Le vent et la charge de combustible : les deux grandeurs sont arrivées
+
+Les deux manques nommés par les issues #50 et #52 sont comblés côté MOTEUR
+(voir `docs/regles.md` §3), et le rendu n'a plus de convention à déclarer.
+
+**Le vent** est désormais dérivé comme l'ETP : une rose à deux secteurs par
+station, la pluie comme marqueur de régime, une graine propre à la semaine et
+non à la partie. `TickResult.vent` porte un secteur, une direction dans le
+repère de la grille et une force. Le panache lit ça, et **les deux conventions
+que le rendu avait portées en attendant disparaissent** — d'abord « chaque
+colonne penche à l'opposé de l'origine », qui dessinait un vent soufflant vers
+l'extérieur dans toutes les directions à la fois ; puis « toutes penchent dans
+le sens de l'avance nette du front », qui était cohérent mais confondait la
+cause et l'effet. Ce que ça change à l'image : **un front qui descend le vent et
+un front qui le remonte ne se dessinent plus pareil.**
+
+**La charge de combustible par cellule brûlée** (`IncendieResult.charges`) donne
+la hauteur des flammes, et c'est la pédagogie du §6.4 portée par la flamme
+elle-même et plus seulement par la vitesse du front. La loi est une RACINE et
+non une proportionnelle : la longueur de flamme croît comme une puissance de
+l'intensité nettement inférieure à un (Byram), et la racine a en plus la bonne
+propriété de dessin — un pré ras garde une flamme visible au lieu de
+disparaître, un tas de rémanents ne fait pas un mur de dix mètres.
+
+**Et deux calibrations que la mesure a corrigées, dont une élégante et fausse :**
+
+- j'avais calé la hauteur de flamme sur `CHARGE_PLEINE_INTENSITE` du moteur —
+  1,2, la charge à laquelle le feu tue tout ce qui n'a pas d'écorce — en
+  trouvant l'accord élégant. Or les deux nombres répondent à deux questions
+  différentes : « à quelle charge le feu devient-il létal » est une question
+  d'écologie, « quelle est la charge d'une pelouse ordinaire » est la question
+  de DESSIN, parce que c'est elle que le joueur voit brûler la plupart du temps.
+  Mesuré : les scènes de feu brûlent à 0,53–0,73 de charge médiane, donc toutes
+  leurs flammes sortaient à 0,7 de la hauteur de référence — trois pixels au
+  zoom de parcelle, une ligne brillante au lieu de langues. Référence ramenée à
+  0,6, et la médiane remonte à 0,85–1,10 m avec des pointes à 3,8 m sur les
+  cellules chargées ;
+- côté moteur, j'avais **estimé** la zonalité moyenne des séries à 0,42 sans
+  regarder ; elle vaut 0,51 à 0,58. Le facteur de force donnait donc une moyenne
+  7 % au-dessus de l'exposition, ce qui aurait déplacé la climatologie du feu de
+  chaque station.
+
+Ce qui reste du §6.4 : les rejets de souche du printemps suivant — que le calque
+des changements pointera comme des recrues, sans rien de plus — et, côté moteur,
+la propagation anisotrope dans le sens du vent.
 
 ### 6.5 La crue
 

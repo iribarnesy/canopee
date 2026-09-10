@@ -55,6 +55,16 @@ export interface FrontDIncendie {
   brulees: ArrayLike<number>;
   /** rang d'arrivée du front sur chaque cellule de `brulees`, même ordre */
   rangs: ArrayLike<number>;
+  /**
+   * Charge de combustible de chaque cellule, même ordre — ce DANS QUOI le feu
+   * a brûlé (`IncendieResult.charges`).
+   *
+   * Optionnelle, et c'est le seul champ qui le soit : les scènes cuites avant
+   * que le moteur ne l'expose n'en portent pas, et une flamme de hauteur
+   * moyenne vaut mieux qu'un plantage. Mais quand elle est là, c'est elle qui
+   * décide de la hauteur des flammes.
+   */
+  charges?: ArrayLike<number>;
 }
 
 /**
@@ -342,18 +352,62 @@ export const DILUTION_DU_SOMMET = 0.55;
 export const OPACITE_DE_LA_LUEUR = 0.42;
 
 /**
- * Hauteur d'une flamme de feu courant, en mètres.
+ * Hauteur d'une flamme, en mètres, sur la charge de combustible de référence.
  *
- * **C'est une convention de dessin, et elle est déclarée comme telle** : le
- * moteur sait ce qui a brûlé et dans quel ordre, il ne dit pas la hauteur de
- * flamme. Deux mètres et demi, c'est ce que fait un feu d'herbe haute — la
- * flamme monte à peu près à deux fois la hauteur du combustible. Ce qui serait
- * une INVENTION, en revanche, ce serait de la faire varier d'une cellule à
- * l'autre en prétendant montrer le combustible : `IncendieResult` ne porte pas
- * la charge par cellule (issue ouverte). Elle varie donc de ce que le rendu
- * sait vraiment — la position dans le front — et d'un battement.
+ * **Elle VARIE maintenant d'une cellule à l'autre, et c'est le moteur qui le
+ * dit.** `IncendieResult.charges` porte la charge de chaque cellule brûlée
+ * depuis que le moteur l'expose ; le rendu n'a donc plus à dessiner toutes ses
+ * flammes à la même hauteur de convention. Deux mètres et demi restent la
+ * hauteur sur la charge de référence — celle d'une pelouse ordinaire, voir
+ * `CHARGE_DE_REFERENCE` — et la loi ci-dessous en écarte les autres cellules.
+ *
+ * Une flamme d'herbe haute monte à peu près à deux fois la hauteur du
+ * combustible, d'où l'ordre de grandeur *(à calibrer : les modèles de
+ * comportement du feu donnent la longueur de flamme en fonction de l'intensité
+ * de Byram, que le moteur ne calcule pas)*.
  */
 export const HAUTEUR_DE_FLAMME_M = 2.5;
+
+/**
+ * La charge de combustible sur laquelle `HAUTEUR_DE_FLAMME_M` est calée.
+ *
+ * **Ce n'est PAS `CHARGE_PLEINE_INTENSITE` du moteur, et le premier jet s'y est
+ * trompé.** J'avais pris la charge à laquelle le feu tue tout ce qui n'a pas
+ * d'écorce (1,2), en trouvant l'accord élégant. Mesuré ensuite : la friche de
+ * démonstration brûle à 0,53–0,60 de charge médiane, donc toutes ses flammes
+ * sortaient à 0,7 de la hauteur de référence — trois pixels au zoom de
+ * parcelle, une ligne brillante au lieu de langues.
+ *
+ * Les deux nombres répondent à deux questions différentes. « À quelle charge le
+ * feu devient-il létal » est une question d'écologie ; « quelle est la charge
+ * d'une pelouse ordinaire » est la question de dessin, parce que c'est ELLE que
+ * le joueur voit brûler la plupart du temps et c'est sur elle qu'il faut caler
+ * l'échelle. Six dixièmes, soit la médiane mesurée de ce qui brûle sur les deux
+ * scènes de feu. Une lande d'ajoncs à 1,7 monte alors à une fois et demie cette
+ * hauteur, et un sous-bois frais à 0,2 tombe à la moitié : c'est le rapport
+ * qu'on veut voir, et il est maintenant dans la bonne plage de lisibilité.
+ */
+export const CHARGE_DE_REFERENCE = 0.6;
+
+/**
+ * Ce que la charge locale fait à la hauteur d'une flamme, en multiple.
+ *
+ * **Une racine et non une proportionnelle.** Une cellule dix fois plus chargée
+ * ne fait pas des flammes dix fois plus hautes : la longueur de flamme croît
+ * comme une puissance de l'intensité nettement inférieure à un (modèles de
+ * Byram, exposant voisin de 0,46 sur l'intensité). La racine carrée en est
+ * l'approximation habituelle, et elle a la bonne propriété de dessin : un pré
+ * ras garde une flamme visible au lieu de disparaître, et un ajonc ne fait pas
+ * un mur de dix mètres.
+ *
+ * Bornée en haut, parce qu'une charge exceptionnelle — un tas de rémanents —
+ * ne doit pas produire une flamme plus haute que les arbres.
+ */
+export const FLAMME_LA_PLUS_HAUTE = 2.2;
+
+export function partDeLaCharge(charge: number): number {
+  return Math.min(FLAMME_LA_PLUS_HAUTE, Math.sqrt(Math.max(0, charge) / CHARGE_DE_REFERENCE));
+}
 
 /** Largeur d'une flamme, en mètres. Une langue est plus haute que large. */
 export const LARGEUR_DE_FLAMME_M = 1.6;
@@ -546,15 +600,21 @@ function cycle(v: number): number {
 export function cellulesEnFlammes(
   front: FrontDIncendie,
   avancement: number,
-): { cellule: number; part: number }[] {
+): { cellule: number; part: number; charge: number }[] {
   const n = Math.min(front.brulees.length, front.rangs.length);
   if (n === 0) return [];
   const tete = teteDuFront(front, avancement);
-  const sorties: { cellule: number; part: number }[] = [];
+  const sorties: { cellule: number; part: number; charge: number }[] = [];
   for (let i = 0; i < n; i++) {
     const depuis = tete - (front.rangs[i] ?? 0);
     if (depuis <= 0 || depuis >= RANGS_DU_FRONT) continue;
-    sorties.push({ cellule: front.brulees[i] ?? 0, part: depuis / RANGS_DU_FRONT });
+    sorties.push({
+      cellule: front.brulees[i] ?? 0,
+      part: depuis / RANGS_DU_FRONT,
+      // Absente sur une vieille scène : on prend la charge de référence, ce qui
+      // redonne exactement la hauteur de convention d'avant.
+      charge: front.charges?.[i] ?? CHARGE_DE_REFERENCE,
+    });
   }
   return sorties;
 }
@@ -590,57 +650,53 @@ function centreDe(cellule: number, coteM: number): { x: number; y: number } {
 /**
  * Vers où la fumée penche, et de combien.
  *
- * **Le moteur ne sait pas d'où vient le vent, et il faut le dire clairement.**
- * `ventExposition` est un SCALAIRE ∈ [0,1] — l'abri que les boisements voisins
- * donnent à la parcelle (`paysage.ts`) — et `WeekWeather` ne porte ni direction
- * ni vitesse de vent. Le §6.4 demande pourtant « un panache incliné par le
- * vent ». Il y a donc une grandeur qui manque, et l'issue #50 est ouverte pour
- * elle.
+ * **Le moteur le SAIT maintenant, et cette fonction ne devine plus rien.**
+ * Elle a d'abord fait pencher chaque colonne à l'opposé de l'origine de
+ * l'incendie, puis toutes dans le sens de l'avance nette du front : deux
+ * conventions déclarées, en attendant que `WeekWeather` porte un vent. Le
+ * moteur porte désormais `TickResult.vent` — un secteur et une force, dérivés
+ * de la rose de la station et du régime de la semaine (`engine/vent.ts`) —
+ * et c'est lui qu'on lit.
  *
- * **En attendant, la convention retenue est la seule qui ne soit pas une
- * invention : le vent est INFÉRÉ de l'avance nette du front.** Ce qui pousse un
- * feu, c'est le vent ; un front qui a globalement progressé vers le nord-est a
- * donc eu du vent de sud-ouest, et son panache penche vers le nord-est. La
- * direction se lit sur l'origine de l'incendie et sur les cellules qui flambent
- * à cet instant — deux données du moteur — et l'AMPLITUDE vient honnêtement de
- * `ventExposition` : un vallon abrité garde une colonne droite, un plateau
- * ouvert la couche.
+ * Ce que ça change à l'image, et ce n'est pas rien : **le panache d'un incendie
+ * penche du même côté que celui du voisin, et il ne penche pas dans le sens du
+ * feu quand le feu remonte le vent.** Un front qui descend le vent et un front
+ * qui le remonte se dessinaient pareil ; maintenant, non.
  *
- * **Une seule direction pour tout l'incendie, et c'est une correction contre le
- * premier jet.** Il faisait pencher chaque colonne à l'opposé de l'origine,
- * localement : la capture montrait une gerbe qui s'ouvrait en éventail, c'est-à-
- * dire un vent qui souffle vers l'extérieur dans toutes les directions à la
- * fois. Un vent est uniforme sur un hectare ; les colonnes penchent donc toutes
- * du même côté, et c'est aussi ce qui les fait se rejoindre en altitude au lieu
- * de s'écarter.
- *
- * Un front parfaitement symétrique donne une avance nette nulle, donc une
- * colonne droite — et c'est la bonne lecture : ce feu-là n'a montré aucune
- * direction. Mesuré sur la scène de démonstration, l'avance nette vaut de 10 à
- * 23 % du rayon moyen du front, et 100 % à la fin, quand il ne reste que le
- * dernier coin à brûler.
+ * `force` est le `force` du vent de la semaine ∈ [0,1], donc l'inclinaison
+ * suit la météo : une colonne droite un jour calme, couchée un jour de vent.
  */
-function penchantDuFront(
-  flambent: readonly { cellule: number }[],
-  origine: number,
-  coteM: number,
-  exposition: number,
-): { dx: number; dy: number; force: number } {
-  const force = 0.3 + 0.7 * Math.min(1, Math.max(0, exposition));
-  const o = centreDe(origine, coteM);
-  let sx = 0;
-  let sy = 0;
-  for (const f of flambent) {
-    const c = centreDe(f.cellule, coteM);
-    sx += c.x - o.x;
-    sy += c.y - o.y;
-  }
-  const d = Math.hypot(sx, sy);
-  // Au départ du feu, le front EST l'origine : la colonne monte droite, ce qui
-  // est exactement ce qu'on voit d'un feu qui vient de prendre.
-  if (d < 1e-6) return { dx: 0, dy: 0, force };
-  return { dx: sx / d, dy: sy / d, force };
+function penchantDuVent(vent: VentAPencher): { dx: number; dy: number; force: number } {
+  return {
+    dx: Math.cos(vent.versRad),
+    dy: Math.sin(vent.versRad),
+    force: Math.min(1, Math.max(0, vent.force)),
+  };
 }
+
+/**
+ * Ce que le rendu lit du vent : où il souffle, et combien il pousse.
+ *
+ * Le sous-ensemble de `VentDeLaSemaine` dont le dessin a besoin — écrit en
+ * clair pour que ce module se teste sans fabriquer un résultat de moteur
+ * complet, comme `FrontDIncendie`.
+ */
+export interface VentAPencher {
+  /** direction VERS laquelle il souffle, radians (0 = +x = est, sens trigo) */
+  versRad: number;
+  /** force ∈ [0,1] */
+  force: number;
+}
+
+/**
+ * Le vent qu'on prend quand l'instantané n'en porte pas.
+ *
+ * Nul, et pas « un vent moyen » : une scène cuite avant que le moteur ne
+ * rapporte le vent ne doit pas se lire comme une parcelle particulière. Force
+ * zéro donne une colonne droite, ce qui est la lecture honnête de « on ne sait
+ * pas ».
+ */
+export const SANS_VENT: VentAPencher = { versRad: 0, force: 0 };
 
 /**
  * Ce qui brûle AU SOL : la lueur et les langues de flamme.
@@ -703,8 +759,18 @@ export function feuAuSol(
     // tête du front : au fond, c'est de la braise et non plus une flamme.
     const ondule = 0.6 + 0.4 * Math.sin(2 * Math.PI * bat);
     const vigueur = (1 - 0.6 * f.part) * (0.7 + 0.6 * alea(f.cellule, 2));
-    const haut = Math.max(FLAMME_LA_PLUS_BASSE_M, HAUTEUR_DE_FLAMME_M * ondule * vigueur);
-    const large = LARGEUR_DE_FLAMME_M * (0.75 + 0.5 * alea(f.cellule, 4));
+    // **La charge de la cellule décide de la hauteur**, et c'est ce qui rend la
+    // carte de combustibilité visible sur la flamme elle-même et plus seulement
+    // sur la vitesse du front (§6.4).
+    const haut = Math.max(
+      FLAMME_LA_PLUS_BASSE_M,
+      HAUTEUR_DE_FLAMME_M * partDeLaCharge(f.charge) * ondule * vigueur,
+    );
+    // La largeur suit la hauteur, mais moins : une langue reste une langue.
+    const large =
+      LARGEUR_DE_FLAMME_M *
+      (0.75 + 0.5 * alea(f.cellule, 4)) *
+      (0.6 + 0.4 * partDeLaCharge(f.charge));
     const teinte = melanger(FLAMME, BRAISE, f.part * 0.85);
     sorties.push({
       cellule: f.cellule,
@@ -749,8 +815,7 @@ export function panacheDuFeu(
   avancement: number,
   phaseMs: number,
   coteM: number,
-  origine: number,
-  exposition: number,
+  vent: VentAPencher,
 ): Particule[] {
   const flambent = cellulesEnFlammes(front, avancement);
   // **Plus rien qui flambe, plus rien qui fume.** La traîne aussi s'arrête ici,
@@ -761,7 +826,7 @@ export function panacheDuFeu(
   if (flambent.length === 0) return [];
   const sorties: Particule[] = [];
   // Une seule pour tout l'incendie : un vent est uniforme sur un hectare.
-  const pente = penchantDuFront(flambent, origine, coteM, exposition);
+  const pente = penchantDuVent(vent);
 
   // Les COLONNES, une par maille de front traversée.
   //
