@@ -147,6 +147,39 @@ function draw(rng: RngState): { rng: RngState; value: number } {
  * Où atterrit un semis : le noyau de dispersion dépend entièrement du mode de
  * dissémination de l'espèce (exporté pour les tests écologiques).
  */
+/**
+ * Où sort un drageon : dans un anneau serré autour de la mère.
+ *
+ * Un drageon naît sur une racine traçante, à quelques mètres du pied au plus.
+ * Le noyau est donc tout autre que celui d'une graine — pas de queue lointaine,
+ * pas de dépendance au mode de dissémination : la tache avance par son bord.
+ *
+ * On tire dans l'anneau [portée/3, portée] plutôt que dans le disque entier :
+ * un drageon qui sortirait au pied de sa mère serait de toute façon écarté par
+ * l'espacement minimal, et le tirer là ne ferait que gâcher des tentatives.
+ */
+export function positionDeDrageon(
+  rng: RngState,
+  parent: TreeState | null,
+  coteM: number,
+  espece: EspeceV0,
+): { rng: RngState; x: number; y: number } {
+  const portee = espece.regeneration.drageonne?.porteeM ?? 0;
+  if (!parent || portee <= 0) {
+    const r = draw(rng);
+    return { rng: r.rng, x: -1, y: -1 };
+  }
+  const a = draw(rng);
+  const b = draw(a.rng);
+  const distance = portee * (1 / 3 + (2 / 3) * a.value);
+  const angle = 2 * Math.PI * b.value;
+  return {
+    rng: b.rng,
+    x: parent.x + distance * Math.cos(angle),
+    y: parent.y + distance * Math.sin(angle),
+  };
+}
+
 export function drawPosition(
   rng: RngState,
   espece: EspeceV0,
@@ -224,14 +257,29 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     couronnesM2 += Math.PI * r * r;
   }
 
-  const tryEstablish = (especeId: string, parent: TreeState | null) => {
+  /**
+   * `parDrageon` change une chose, et c'est toute la différence : un drageon
+   * n'est pas un semis. Il reste RELIÉ à sa mère, qui le nourrit le temps qu'il
+   * s'installe, et il n'a donc pas besoin de trouver sa lumière tout seul.
+   * C'est précisément ce qui permet à un fourré de prunelliers d'avancer sous
+   * son propre couvert, là où aucune graine de la même espèce ne lèverait.
+   */
+  const tryEstablish = (especeId: string, parent: TreeState | null, parDrageon = false) => {
     const espece = getEspece(especeId);
-    const pos = drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
+    const pos = parDrageon
+      ? positionDeDrageon(rng, parent, coteM, espece)
+      : drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
     rng = pos.rng;
     if (couronnesM2 >= placeMaxM2) return;
     if (pos.x < 0 || pos.x >= coteM || pos.y < 0 || pos.y >= coteM) return; // perdu hors parcelle
-    // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme.
-    if (lightAtPoint(trees, pos.x, pos.y, partOmbrageante) < 2 * espece.lumiere.compensation)
+    // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme. Le
+    // drageon échappe au filtre lumière, et à lui seul : le pH du sol où il
+    // sort, la place disponible et la concurrence immédiate le concernent
+    // autant qu'un semis.
+    if (
+      !parDrageon &&
+      lightAtPoint(trees, pos.x, pos.y, partOmbrageante) < 2 * espece.lumiere.compensation
+    )
       return;
     const cellPh = input.ph[Math.floor(pos.y) * coteM + Math.floor(pos.x)] ?? 7;
     if (phFactor(espece, cellPh) < 0.2) return;
@@ -311,6 +359,20 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     const levees = leveeParM2(espece, stockParM2, input.aBrule ?? false) * coteM * coteM;
     const n = Math.min(MAX_LEVEES_PAR_AN, tentatives(levees * ETABLISSEMENTS_PAR_LEVEE));
     for (let k = 0; k < n; k++) tryEstablish(especeId, null);
+  }
+
+  // 1 ter. Les DRAGEONS : la conquête par la racine, pas par la graine. Un
+  // fourré de prunelliers n'avance pas en semant au loin, il pousse sa tache
+  // d'un mètre par an depuis ses propres racines — et c'est ce qui en fait un
+  // problème de gestion dans une haie, puisque la tache avance dans le champ.
+  for (const tree of trees) {
+    if (!tree.alive) continue;
+    const espece = getEspece(tree.especeId);
+    const drageon = espece.regeneration.drageonne;
+    if (!drageon) continue;
+    if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+    const n = tentatives(drageon.parAn);
+    for (let k = 0; k < n; k++) tryEstablish(tree.especeId, tree, true);
   }
 
   // 2. Semis des adultes de la parcelle en âge de grainer.

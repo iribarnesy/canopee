@@ -111,6 +111,25 @@ export interface EspeceV0 {
     /** établissements potentiels par adulte et par an (APRÈS l'entonnoir de mortalité, ch4-B) */
     semisParAn: number;
     /**
+     * DRAGEONNEMENT : la conquête par la racine, pour les espèces qui en font.
+     *
+     * Un drageon n'est pas un semis. Il naît sur une racine traçante, à
+     * quelques mètres du pied au plus, et il reste RELIÉ à sa mère le temps de
+     * s'installer. Deux conséquences, et ce sont les deux qui comptent : la
+     * tache avance par son BORD au lieu d'essaimer au loin, et le drageon
+     * n'a pas besoin de trouver sa lumière tout seul — il pousse sous le
+     * couvert de sa propre espèce, là où aucune graine ne lèverait.
+     *
+     * C'est ce qui fait du prunellier un problème de gestion dans une haie : le
+     * fourré ne se contente pas de tenir sa place, il avance dans le champ.
+     */
+    drageonne?: {
+      /** distance maximale entre la mère et son drageon, m */
+      porteeM: number;
+      /** drageons qui s'installent par pied mature et par an */
+      parAn: number;
+    };
+    /**
      * BANQUE DE GRAINES du sol, pour les espèces qui en font une. Absente pour
      * la plupart : un gland ou une faîne est une graine RÉCALCITRANTE, elle ne
      * survit pas à un hiver sec et ne fait aucune mémoire du passé.
@@ -696,9 +715,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: false },
     // Drupes emportées par les oiseaux, mais la vraie conquête se fait par
-    // DRAGEONS : le fourré avance en tache. Faute de savoir modéliser le
-    // drageonnement, on compense par un taux de semis généreux *(à calibrer)*.
-    regeneration: { maturiteAns: 5, longeviteAns: 50, dissemination: "oiseaux", semisParAn: 1.2 },
+    // DRAGEONS : le fourré avance en tache, d'un mètre par an environ, et c'est
+    // ce qui en fait un problème de gestion dans une haie. On modélisait ce
+    // mécanisme en gonflant le taux de semis ; il est maintenant modélisé pour
+    // ce qu'il est, et le semis revient à une valeur d'oiseaux ordinaire.
+    regeneration: {
+      maturiteAns: 5,
+      longeviteAns: 50,
+      dissemination: "oiseaux",
+      semisParAn: 0.4,
+      drageonne: { porteeM: 2.5, parAn: 0.8 },
+    },
     litiere: { cnRatio: 28 },
     // L'épine noire fleurit avant de feuiller, dès mars.
     phenologie: { debourrementDJ: 115, seuilJourH: 11.3, besoinFroidSemaines: 10 },
