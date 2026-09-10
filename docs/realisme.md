@@ -178,7 +178,7 @@ mesurer que ce qu'on sait déjà faire.*
 | F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
 | F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | plafond de densité arbitraire + ombrage codominant |
 | F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
-| F8 | Certaines espèces rejettent de souche ou drageonnent | ❌ | Champs prévus, non implémentés |
+| F8 | Certaines espèces rejettent de souche ou drageonnent | 🟡 | Rejet de souche : `rejetteDeSouche`, éprouvé après feu et après recépage. DRAGEONNEMENT : `regeneration.drageonne` (prunellier), un drageon sort dans un anneau serré autour de sa mère ET échappe au filtre de lumière, parce qu'elle le nourrit. Reste sans drageonnement : robinier et peuplier, absents de l'atlas |
 | F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
@@ -1578,6 +1578,41 @@ gland fait un semis de vingt centimètres, une graine de callune, qui est une
 poussière, fait une plantule de quelques millimètres. La taille des graines
 n'est pas dans l'atlas, et elle suit grossièrement celle de la plante. C'est
 une approximation, mais elle corrige le SENS de l'erreur.
+
+## Le drageonnement : la conquête par la racine
+
+La fiche du prunellier le disait elle-même : « faute de savoir modéliser le
+drageonnement, on compense par un taux de semis généreux ». La compensation
+donnait à peu près le bon NOMBRE de prunelliers et la mauvaise MANIÈRE — des
+semis d'oiseaux essaimés au hasard au lieu d'un fourré qui s'épaissit.
+
+Un drageon n'est pas un semis, et deux choses le distinguent :
+
+- il naît sur une **racine traçante**, donc à quelques mètres de sa mère — la
+  tache avance par son bord au lieu d'essaimer au loin ;
+- il reste **relié** à elle, qui le nourrit le temps qu'il s'installe, donc il
+  n'a pas besoin de trouver sa lumière tout seul.
+
+**C'est la seconde qui fait le fourré.** Un drageon s'installe sous le couvert
+de sa propre espèce, là où aucune graine de la même espèce ne lèverait. C'est
+aussi ce qui fait du prunellier un problème de gestion dans une haie : le
+fourré ne tient pas sa place.
+
+Le drageon échappe au filtre de lumière, et à lui seul : le pH du sol où il
+sort, la place disponible et la concurrence immédiate le concernent autant qu'un
+semis.
+
+**Mesuré**, cinq pieds au milieu d'une parcelle nue et vingt-cinq ans : le
+prunellier fait **423 pieds contre 170** à l'aubépine, et les serre plus — 1,36 m
+entre voisins contre 1,78. Le nombre de TENTATIVES est pourtant le même qu'avant
+(0,4 semis + 0,8 drageons contre 1,2 semis) : ce qui change est le taux de
+RÉUSSITE.
+
+*Ce que l'essai ne montre pas, et qu'il vaut mieux dire* : sur quarante mètres
+et en vingt-cinq ans, les oiseaux ont le temps de semer partout. La différence
+n'est donc pas dans l'emprise mais dans la DENSITÉ. Mesurer une tache qui avance
+demanderait une parcelle plus grande et une partie plus longue que ce qu'une
+suite d'essais peut se payer.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 
