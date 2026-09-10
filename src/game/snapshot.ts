@@ -289,6 +289,8 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilLumiere.buffer,
     s.soilLitiereCG.buffer,
   ];
-  if (s.incendie) buffers.push(s.incendie.brulees.buffer, s.incendie.rangs.buffer);
+  if (s.incendie) {
+    buffers.push(s.incendie.brulees.buffer, s.incendie.rangs.buffer, s.incendie.charges.buffer);
+  }
   return buffers as Transferable[];
 }
