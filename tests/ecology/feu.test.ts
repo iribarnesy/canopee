@@ -347,6 +347,11 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   let arbresTues = 0;
   const tuesParLeFeu: Record<string, number> = {};
   const mortsTotales: Record<string, number> = {};
+  /** Effectif vivant de chaque espèce PRÉSENT dans les cellules brûlées. */
+  const dansLeFront: Record<string, number> = {};
+  const celluleDe = (x: number, y: number) =>
+    Math.min(station.coteM - 1, Math.max(0, Math.floor(y))) * station.coteM +
+    Math.min(station.coteM - 1, Math.max(0, Math.floor(x)));
   let dernier: NonNullable<ReturnType<typeof advanceWeek>["incendie"]> | undefined;
   // Ce scénario portait aussi un relevé de carbone sur les rejets de souche.
   // Il ne relevait rien, et pour une raison structurelle : le pin est tué mais
@@ -361,6 +366,7 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
+    const avant = state;
     const r = advanceWeek(state, w, []);
     state = r.state;
     for (const m of r.morts) {
@@ -371,6 +377,15 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
       incendies++;
       arbresTues += r.incendie.arbresTues;
       dernier = r.incendie;
+      // Le DÉNOMINATEUR du tri : qui était sur le passage du front, relevé
+      // AVANT le tick, donc avant que le feu n'en retire personne.
+      const brulees = new Set(r.incendie.brulees);
+      for (const t of avant.trees) {
+        if (!t.alive) continue;
+        if (brulees.has(celluleDe(t.x, t.y))) {
+          dansLeFront[t.especeId] = (dansLeFront[t.especeId] ?? 0) + 1;
+        }
+      }
     }
   }
 
@@ -435,14 +450,27 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     // dépend de la date du dernier incendie et bascule pour un rien. Ce qui
     // est structurel, c'est l'écorce : le liège est la réponse évolutive au
     // feu, et ça doit se lire dans les causes de mort.
-    // On compare les PERTES au feu rapportées aux effectifs plantés, et non la
-    // part du feu dans les causes de mort : quand le feu devient la seule
-    // cause de mort — ce qui arrive dès que la station est confortable par
-    // ailleurs — cette part vaut 1 pour tout le monde et ne trie plus rien.
-    expect(tuesParLeFeu.pinus_sylvestris ?? 0).toBeGreaterThan(0);
-    expect(tuesParLeFeu.pinus_sylvestris ?? 0).toBeGreaterThan(
-      2 * (tuesParLeFeu.quercus_suber ?? 0),
-    );
+    //
+    // On compare des TAUX : les pertes au feu rapportées à l'effectif de
+    // l'espèce qui était sur le passage du front. C'est ce que cette
+    // vérification annonçait depuis toujours, mais elle comparait en fait des
+    // effectifs BRUTS, et ça ne tenait que par accident — le liège affichait
+    // zéro mort, si bien que « 20 > 2 × 0 » passait sans rien démontrer. Dès
+    // que le front s'est allongé sous le vent, il a atteint des cellules à
+    // très forte charge, où même le liège y passe : 30 lièges morts contre 20
+    // pins, et la comparaison brute s'effondrait — alors qu'il y avait dix
+    // fois plus de lièges que de pins sur le passage du feu. Comparer des
+    // effectifs bruts entre populations d'un ordre de grandeur d'écart ne
+    // mesure rien.
+    //
+    // En taux, le tri est net et bien plus fort que ce que l'ancienne
+    // assertion pouvait montrer : le pin y passe en entier, le liège en
+    // réchappe largement.
+    const taux = (id: string) => (tuesParLeFeu[id] ?? 0) / (dansLeFront[id] ?? 1);
+    // Les deux espèces ont bien été exposées : sans ça, un taux ne veut rien dire.
+    expect(dansLeFront.pinus_sylvestris ?? 0).toBeGreaterThan(0);
+    expect(dansLeFront.quercus_suber ?? 0).toBeGreaterThan(0);
+    expect(taux("pinus_sylvestris")).toBeGreaterThan(2 * taux("quercus_suber"));
   });
 
   it("le feu est déterministe : même graine, mêmes incendies", () => {
