@@ -173,6 +173,11 @@ import {
 import { type StadeDeDeveloppement, stadeDe } from "./stades";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
+import {
+  facteurCroissanceTassement,
+  facteurInfiltration,
+  tassementApresUneAnnee,
+} from "./tassement";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
 import type { CauseMort, TreeState } from "./trees";
 import {
@@ -496,6 +501,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const excessMm = state.soil.excessMm.slice();
   const mineralNG = state.soil.mineralNG.slice();
   const litterNG = state.soil.litterNG.slice();
+  // La structure du sol : ce que les engins tassent et ce que les racines
+  // réparent (tassement.ts). Déclaré tôt parce que le bilan hydrique en dépend
+  // — un sol tassé infiltre moins et ruisselle plus.
+  const tassement = state.soil.tassement.slice();
   const litterCG = state.soil.litterCG.slice();
   const humusCG = state.soil.humusCG.slice();
   const phosphoreG = state.soil.phosphoreG.slice();
@@ -679,9 +688,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     const saturationSurface = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     const amontIci = apportCelluleMm(i);
+    // Un sol tassé infiltre moins, donc ruisselle plus — et ce qui ruisselle
+    // emporte la terre (tassement.ts, erosion.ts). C'est la chaîne qui relie
+    // un passage de tracteur à une ravine, et elle n'existait pas.
+    const infiltration = facteurInfiltration(tassement[i] ?? 0);
     const ruissele =
       (weather.rainMm + amontIci) *
-      coefficientRuissellement(pentes[i] ?? 0, couvertureSol, saturationSurface);
+      Math.min(
+        1,
+        coefficientRuissellement(pentes[i] ?? 0, couvertureSol, saturationSurface) /
+          Math.max(0.1, infiltration),
+      );
     const bilan = profilHydro(
       {
         horizons: horizonsCellule,
@@ -1251,7 +1268,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     herbeHumidite[i] = humiditeVecue(herbeHumidite[i] ?? remplissage, remplissage);
-    const cible = couvertureMax(groundLight[i] ?? 1, herbeHumidite[i] ?? remplissage);
+    // Le tassement plafonne aussi la strate herbacée — c'est même sur elle que
+    // les essais d'Arvalis ont mesuré la perte. La boucle qui se referme :
+    // moins de couverture, donc plus de ruissellement, sur un sol qui infiltre
+    // déjà moins (tassement.ts).
+    const cible =
+      couvertureMax(groundLight[i] ?? 1, herbeHumidite[i] ?? remplissage) *
+      facteurCroissanceTassement(tassement[i] ?? 0);
     herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
     // La biomasse suit la croissance mais ne suit pas la régression : le foin
     // reste debout et ne part qu'avec la décomposition, la fauche ou le feu.
@@ -1329,6 +1352,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
       phosphoreSatisfaction: pSatisfaction[t] ?? 1,
       intensiteAllelopathique: intensiteAllelopathiqueEn(tree.x, tree.y),
+      // Le tassement est LOCAL : deux arbres de la même parcelle n'ont pas le
+      // même sol sous les pieds selon que le tracteur est passé sous eux ou
+      // non (tassement.ts).
+      tassement: tassement[cellIndexAt(dims, tree.x, tree.y)] ?? 0,
       potassiumSatisfaction: kSatisfaction[t] ?? 1,
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
@@ -2102,6 +2129,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
 
+  // La structure se répare une fois l'an, à proportion de ce qui l'occupe :
+  // sous des racines denses, bien plus vite qu'à nu (tassement.ts).
+  if (week === RECRUITMENT_WEEK) {
+    for (let i = 0; i < nCells; i++) {
+      const t = tassement[i] ?? 0;
+      if (t <= 0) continue;
+      tassement[i] = tassementApresUneAnnee(t, 1 - (groundLight[i] ?? 1));
+    }
+  }
+
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
   // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
   // Versées à la semaine du recrutement, qui vaut « début de campagne ». Elles
@@ -2198,6 +2235,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         excessMm,
         boisAuSolCG,
         boisEnTraversPart,
+        tassement,
         mineralNG,
         litterNG,
         litterCG,

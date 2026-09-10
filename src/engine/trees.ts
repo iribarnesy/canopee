@@ -15,6 +15,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import { type RngState, rngFloat } from "./rng";
+import { facteurCroissanceTassement } from "./tassement";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
 export type CauseMort =
@@ -210,6 +211,14 @@ export interface TreeEnvironment {
   phMean: number;
   /** profondeur de sol pénétrable de la station, cm */
   solPenetrableCm: number;
+  /**
+   * Tassement de la cellule ∈ [0,1] (tassement.ts). Il n'entre PAS dans la loi
+   * du minimum : ce n'est pas une ressource qui manque, c'est une contrainte
+   * physique sur l'exploration racinaire, qui s'applique par-dessus tout le
+   * reste — un sol tassé rend moins accessible l'eau ET les éléments qu'il
+   * contient pourtant.
+   */
+  tassement?: number;
   /** °C moyenne de la semaine */
   tMean: number;
   /**
@@ -706,9 +715,17 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // l'arbre TIRE de conditions données, pas les conditions elles-mêmes. Deux
   // voisins ont la même eau et la même lumière ; l'un en fait plus que l'autre,
   // et c'est ce qui crée les dominants et les dominés.
+  // Le tassement se multiplie au lieu d'entrer dans le minimum, pour la raison
+  // dite au champ `tassement` : il ne remplace aucun facteur limitant, il les
+  // aggrave tous. Essais Arvalis : jusqu'à 30 % de perte sur sol tassé.
+  const fTassement = facteurCroissanceTassement(env.tassement ?? 0);
   const heightM =
     tree.heightM +
-    Math.max(0, potentialM) * limitingFactor * stressPenalty * tree.vigueurIndividuelle;
+    Math.max(0, potentialM) *
+      limitingFactor *
+      stressPenalty *
+      fTassement *
+      tree.vigueurIndividuelle;
 
   // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.
   let stress = tree.stress;
