@@ -26,6 +26,7 @@ import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
+import { tassementApresPassage } from "./tassement";
 import { tirerVigueurIndividuelle, treeNitrogenNeedGWeek } from "./trees";
 
 /** plafond d'heures de travail par UTH et par semaine (docs/regles.md §10) */
@@ -1499,6 +1500,13 @@ function applyLabourer(
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
   const labourees: number[] = [];
+  // L'engin tasse là où il PASSE, et seulement là. `part` dit quelle fraction
+  // de la zone lui est accessible selon la façon dont c'est planté
+  // (mecanisation.ts) : une parcelle plantée serré ne se tasse pas, parce que
+  // le tracteur n'y entre pas. La densité d'arbres protège donc la structure —
+  // un bénéfice de l'agroforesterie que personne n'a écrit dans une règle
+  // (tassement.ts).
+  const tassement = state.soil.tassement.slice();
   let emisKgC = 0;
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
@@ -1507,6 +1515,7 @@ function applyLabourer(
       if (dx * dx + dy * dy > r2) continue;
       const i = y * cote + x;
       labourees.push(i);
+      tassement[i] = tassementApresPassage(tassement[i] ?? 0, part);
       // Le coup de fouet : de l'humus part en fumée, son azote reste.
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;
@@ -1550,6 +1559,7 @@ function applyLabourer(
         herbeCouverture,
         herbeBiomasse,
         mycorhizes,
+        tassement,
       },
       carbon: {
         ...state.carbon,

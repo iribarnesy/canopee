@@ -182,6 +182,14 @@ export interface SoilState {
    */
   boisEnTraversPart: number[];
   /**
+   * TASSEMENT du sol par cellule ∈ [0,1] : 0 = structure intacte, 1 = tassé.
+   *
+   * Ce qui change vraiment sous une conduite agricole n'est pas la texture ni
+   * le pH, c'est l'ARRANGEMENT des particules. Un limon tassé et le même limon
+   * en bonne structure ne se comportent pas pareil (tassement.ts).
+   */
+  tassement: number[];
+  /**
    * Phosphore ASSIMILABLE, g/m². Il ne diffuse pas : ce qui est dans une
    * cellule n'y bougera pas (pk.ts).
    */
@@ -420,6 +428,7 @@ export function createGameState(
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Array(n).fill(0),
       boisEnTraversPart: new Array(n).fill(0),
+      tassement: new Array(n).fill(0),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,
