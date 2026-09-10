@@ -138,6 +138,34 @@ l'ombre. Elle remplace l'approximation que le rendu s'était faite
 (`conifereBase`, 0,3 pour un caduc et 0,2 pour un conifère), laquelle dessinait
 deux chênes voisins pareillement alors que le moteur ne les traite pas pareil.
 
+**L'incendie** (`Snapshot.incendie`) dit désormais **qui** il a emporté, et pas
+seulement combien : `victimes: { id, hauteurAvantM, rejet }[]`, la semaine même
+de l'incendie.
+
+C'est une jointure que le rendu refaisait faute que le moteur la donne — il
+reconnaissait les arbres torchés en comparant `brulEeSemaine` à la fenêtre du
+journal — et elle était fragile, un arbre brûlé lors d'un incendie PRÉCÉDENT
+gardant son `brulEeSemaine`.
+
+Pourquoi ce n'est pas dans `morts` : un arbre tué par le feu **reste debout**,
+récupérable en coupe sanitaire, et n'entre dans `TickResult.morts` qu'au bout
+d'un an — une semaine où `incendie` vaut `undefined`. Les y pousser deux fois,
+à l'incendie puis à la chute, aurait fait compter double à qui compte les morts.
+Les identités arrivent donc dans le récit de l'incendie.
+
+`id` suffit à la jointure : dans les deux cas l'arbre est **toujours** dans
+l'instantané — en chandelle, ou rabattu sur son rejet — donc position, espèce et
+hauteur actuelle s'y lisent. `rejet` distingue les deux, parce qu'ils ne
+s'animent pas pareil : la couronne s'embrase dans les deux cas, mais l'un repart
+d'en bas. `hauteurAvantM` est la seule chose qui voyage en plus de `id`, parce
+qu'un rejet écrase sa hauteur dans le même tick et qu'elle ne se lit alors plus
+nulle part.
+
+L'**intensité** qui a décidé de cette mort n'a pas besoin de voyager : elle se
+recalcule avec `intensiteDuFeu(charges[i])`, désormais exportée de
+`src/engine/feu.ts` — la règle a un nom et un seul propriétaire, pour que
+personne ne la recopie.
+
 `brouteSemaine` dit qu'un plant a été brouté, et QUAND. `pousseTendreM` ne le
 dit pas : c'est un stock, qui baisse par lignification et par dormance autant
 que par la dent du chevreuil — le peindre en « brouté » couvrirait surtout des
