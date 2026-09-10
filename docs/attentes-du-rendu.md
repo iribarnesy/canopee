@@ -68,6 +68,39 @@ CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick
 pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 (`pheno`).
 
+La météo (`weather`, un `WeekWeather` entier) porte depuis peu **le vent** :
+
+| Champ | Ce qu'il porte |
+|---|---|
+| `ventVersRad` | cap vers lequel le vent SOUFFLE, radians, repère de la carte (+x = est, +y = nord) |
+| `ventMoyMs` | vitesse moyenne de la semaine à 10 m, m/s |
+
+Trois mises en garde, parce que chacune est un contresens possible à l'écran :
+
+1. **`Vers`, pas « d'où »**. La météo nomme un vent par sa provenance — un
+   « vent d'ouest » vient de l'ouest. Ici c'est la direction du MOUVEMENT, comme
+   `directionRad` d'une tige tombée ou `versLAval` : un vent d'ouest vaut
+   `ventVersRad = 0`, puisqu'il pousse vers l'est. Incliner un panache avec le
+   signe inverse le ferait pencher face au feu.
+2. **`ventMoyMs` n'est pas `ventExposition`.** Le premier est le vent régional,
+   le second (dans `StationInfo`) un ABRI ∈ [0,1]. Ce que la parcelle reçoit,
+   c'est le produit des deux — `ventRecuParLeSite()` dans `feu.ts` le calcule, et
+   c'est cette valeur-là qui pousse le front. Pour l'amplitude d'un panache ou
+   d'un balancement de houppier, c'est aussi le produit qu'il faut, pas la
+   vitesse brute : un vallon fermé ne balance pas comme une lande.
+3. **Le cap ne vire pas dans l'année, et la vitesse est un vent MOYEN
+   hebdomadaire.** Le régime dominant est constant (flux d'ouest à sud-ouest,
+   `VENT_DOMINANT_VERS_RAD`), la vitesse suit la saison — maximum en hiver,
+   minimum fin juillet. Donc : un panache ne tournera pas pendant un acte, et un
+   vent hebdomadaire moyen sous-estime toujours la rafale qui fait courir un vrai
+   incendie. Ce que le vent règle, c'est que deux feux de la même parcelle
+   penchent maintenant **du même côté** au lieu de s'éventer autour de leur
+   origine.
+
+Une rose des vents par station reste à faire : les quatre stations partagent
+aujourd'hui le même régime, faute de données (`SyntheticClimate.ventDominantVersRad`
+est là pour qu'une station le déclare quand on l'aura).
+
 **Par cellule**, en `Float32Array`/`Uint8Array` transférés :
 
 | Grille | Ce qu'elle porte |

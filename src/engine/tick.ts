@@ -52,7 +52,14 @@ import {
   terreArracheeKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
-import { chargeCombustible, departDeFeu, propager, rangsDuFront, survitAuFeu } from "./feu";
+import {
+  chargeCombustible,
+  departDeFeu,
+  propager,
+  rangsDuFront,
+  survitAuFeu,
+  ventRecuParLeSite,
+} from "./feu";
 import {
   brouter,
   DIGESTIBILITE,
@@ -1933,10 +1940,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       station.ventExposition,
       station.coteM,
       frequentationDesBordures(station.bordures),
+      weather.ventMoyMs,
     );
     rng = depart.rng;
     if (depart.origine !== undefined) {
-      const propagation = propager(depart.origine, charge, station.coteM, rng);
+      // Le feu lit le vent de la semaine, rabattu par l'abri du site : c'est
+      // le vent que la PARCELLE reçoit qui pousse le front, pas celui du
+      // bulletin régional.
+      const vent = {
+        versRad: weather.ventVersRad,
+        vitesseMs: ventRecuParLeSite(weather.ventMoyMs, station.ventExposition),
+      };
+      const propagation = propager(depart.origine, charge, station.coteM, rng, vent);
       rng = propagation.rng;
       const brulees = propagation.brulees;
       let tues = 0;
