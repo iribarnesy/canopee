@@ -118,9 +118,13 @@ parcelle. Les recalculer au rendu, c'est prendre le risque de dessiner une tête
 qui ne vaut pas ce que le moteur lui accorde.
 
 **Ce qui s'est passé depuis le dernier instantané** : `events`, `refusals`,
-`morts` (avec `id` et position), `chutes` (chandelles abattues : direction et
-empreinte du tronc), `incendie` (compteurs + `origine`, `brulees` et `rangs` du
-front), et `gestes`, qui ont DEUX mailles :
+`morts` (avec `id` et position), `naissances` (semis installés : `id`, position,
+espèce, hauteur à la levée — la moitié positive de `morts`, même forme ; à ne
+PAS confondre avec « arbre jeune », voir plus bas),
+`franchissements` (`{ id, deStade, versStade }` : les tiges que la CROISSANCE a
+fait changer de stade), `chutes` (chandelles abattues : direction et empreinte
+du tronc), `incendie` (compteurs + `origine`, `brulees` et `rangs` du front),
+et `gestes`, qui ont DEUX mailles :
 
 - `{ type, ids }` pour ce qui désigne des arbres — `couper`, `eclaircir`,
   `elaguer`, `trogner`, `receper`, `brouter`, `frotter` ;
@@ -149,6 +153,27 @@ Pour `elaguer` et `trogner` la charpente est démontée sur place, le moteur n'y
 voit pas de direction unique et n'en invente pas. `brouter` et `frotter` n'ont
 pas de `retire` : le gibier prélève un stock (`pousseTendreM`), pas un volume
 géométrique, et sa date voyage par `brouteSemaine`.
+
+Une **naissance n'est pas un arbre jeune**, et `ageWeeks` ne suffit pas à les
+confondre impunément : les trois endroits qui créent un arbre — recrutement
+naturel, geste `planter`, semis en vrac — posent tous `ageWeeks: 0` et
+l'incrémentent d'un par tick. Un plant acheté et un semis levé la même semaine
+portent donc le même âge pour toujours. Une règle du genre « `ageWeeks` plus
+petit que le nombre de semaines écoulées » pointerait donc d'un point vert la
+plantation du joueur au même titre qu'une recrue — ce n'est pas la même image,
+et l'erreur ne se voit pas avant de planter deux cents tiges d'un coup.
+`naissances` ne contient que ce que le recrutement a installé. Un test le fixe.
+
+Le **stade** d'une tige (`semis`, `gaulis`, `perchis`, `futaie`) ne voyage PAS
+par arbre, et c'est volontaire : `stadeDe(heightM)` est pure et importable
+depuis l'UI (`src/engine/stades.ts`), donc le rendu la calcule sans rien
+demander. Seul le FRANCHISSEMENT voyage, parce que lui seul demande de comparer
+deux instants. Il ne couvre que la croissance : un arbre rabattu par une trogne
+ou un recépage descend l'échelle, et cette chute-là se lit déjà dans `retire`
+(`hauteurAvantM` / `hauteurApresM`), dont le rendu tire les deux stades. Les
+bornes sont celles de la sylviculture française, en DIAMÈTRE (2,5 / 7,5 /
+17,5 cm), et passent par `diametreCm` — un proxy assumé, dont elles héritent
+l'approximation. Le module le dit en détail, fourré compris.
 
 **Et ce que le rendu peut calculer lui-même**, sans rien demander : tout ce qui
 est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur
