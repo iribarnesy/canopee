@@ -42,10 +42,10 @@ import type { GesteVisible } from "../src/engine/actions";
 import { transversalite } from "../src/engine/boisMort";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
-import { chargeCombustible, propager, rangsDuFront } from "../src/engine/feu";
+import { chargeCombustible, departDeFeu, propager, rangsDuFront } from "../src/engine/feu";
 import { advanceWeek } from "../src/engine/game";
 import { serieToWeeks } from "../src/engine/meteo";
-import { getPaysage } from "../src/engine/paysage";
+import { frequentationDesBordures, getPaysage } from "../src/engine/paysage";
 import { contextePhenologique } from "../src/engine/phenologie";
 import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
@@ -166,15 +166,19 @@ const SANS_ARBRES = process.env.APERCU_SANS_ARBRES === "1";
  * **Propagé par le MOTEUR et non fabriqué**, et c'est la leçon du banc de bois
  * mort : un banc qui fabrique un état inatteignable accuse le rendu. On prend
  * donc la charge de combustible réelle de la parcelle (`chargeCombustible`), on
- * allume au centre, et on laisse `propager` faire son travail avec le PRNG de la
- * partie. Le front qui en sort est celui qu'un vrai été sec produirait — y
- * compris son irrégularité, qui est justement ce que le §6.4 veut montrer.
+ * demande à `departDeFeu` OÙ ça s'allume, et on laisse `propager` faire son
+ * travail avec le PRNG de la partie. Le front qui en sort est celui qu'un vrai
+ * été sec produirait — y compris son irrégularité, qui est justement ce que le
+ * §6.4 veut montrer.
  *
- * On n'attend PAS qu'un départ de feu arrive tout seul : `departDeFeu` demande
- * une sécheresse et un tirage, et une scène de démonstration ne peut pas
- * dépendre de la météo de 2026. Ce qu'on force est l'ALLUMAGE, pas la
- * propagation — et l'allumage est de toute façon d'origine humaine dans la
- * grande majorité des cas (`feu.ts`).
+ * **Ce que le banc déclare est la MÉTÉO de la semaine, et rien d'autre** : une
+ * canicule sur un sol de surface épuisé. Sans elle, l'indice de risque est nul
+ * sur un limon du Nord et rien ne s'allume jamais — une scène de démonstration
+ * ne peut pas dépendre de la météo de 2026. Le lieu du départ, lui, n'est plus
+ * choisi par le banc : le premier jet allumait au centre de la parcelle, ce qui
+ * était faux de deux façons — un feu part là où il y a de quoi s'enflammer, et
+ * un centre de parcelle est déjà cadré, donc le cadrage caméra du §6.4 ne se
+ * voyait pas.
  */
 const FEU = process.env.APERCU_FEU === "1";
 /**
@@ -342,6 +346,7 @@ function recensement(an: number, fichier: string, trees: ArbreScene[]): string {
  */
 function incendieDeDemonstration(
   state: GameState,
+  station: Station,
   lumiereAuSol: Float32Array<ArrayBufferLike>,
 ): { origine: number; brulees: number[]; rangs: number[] } {
   const charge = chargeCombustible(
@@ -352,8 +357,38 @@ function incendieDeDemonstration(
     [...lumiereAuSol],
     state.soil.boisAuSolCG,
   );
-  const origine = Math.floor(COTE_M / 2) * COTE_M + Math.floor(COTE_M / 2);
-  const { brulees } = propager(origine, charge, COTE_M, rngStateFromSeed(GRAINE_DU_FEU));
+  // **Le DÉPART est choisi par le moteur, pas par le banc.** Le premier jet
+  // allumait au centre de la parcelle : c'était commode, et c'était faux de
+  // deux façons — un feu ne part pas au milieu d'un carré, et le cadrage caméra
+  // du §6.4 devenait invisible puisque le centre de la parcelle était déjà
+  // cadré. `departDeFeu` tire la cellule AU PRORATA de sa combustibilité (« un
+  // fourré d'ajoncs part bien plus souvent qu'un sous-bois frais »), et c'est
+  // exactement la pédagogie qu'on veut montrer.
+  //
+  // Ce que le banc DÉCLARE, en revanche, c'est la semaine : une canicule sur un
+  // sol de surface épuisé. Sans elle l'indice de risque est nul sur un limon du
+  // Nord et rien ne s'allume jamais — ce qui est juste, et ce qui fait qu'une
+  // scène de démonstration doit poser ses conditions au lieu de les attendre.
+  // Tout le reste — le risque, la fréquentation humaine, le tirage pondéré —
+  // vient du moteur.
+  let tirage = rngStateFromSeed(GRAINE_DU_FEU);
+  let origine: number | undefined;
+  for (let essai = 0; essai < ESSAIS_D_ALLUMAGE && origine === undefined; essai++) {
+    const depart = departDeFeu(
+      tirage,
+      SEMAINE_DE_CANICULE,
+      SECHERESSE_DE_CANICULE,
+      CHALEUR_DE_CANICULE_C,
+      charge,
+      station.ventExposition,
+      COTE_M,
+      frequentationDesBordures(station.bordures),
+    );
+    tirage = depart.rng;
+    origine = depart.origine;
+  }
+  if (origine === undefined) throw new Error("aucun allumage : la parcelle ne brûle pas");
+  const { brulees } = propager(origine, charge, COTE_M, tirage);
   const rangs = rangsDuFront(brulees, origine, COTE_M);
   // Rangées par rang d'arrivée, comme le moteur les rend : c'est ce que le
   // rendu attend pour faire courir le front.
@@ -363,6 +398,28 @@ function incendieDeDemonstration(
 
 /** La graine de l'allumage de démonstration. Fixe : une scène est reproductible. */
 const GRAINE_DU_FEU = 7717;
+
+/**
+ * Les conditions de la semaine que la scène de feu DÉCLARE.
+ *
+ * Une canicule de plein été sur un horizon de surface épuisé : c'est ce qu'il
+ * faut pour que `indiceRisqueFeu` sorte du zéro, et c'est un état que le climat
+ * du scénario atteindra de lui-même en se réchauffant (ch8). Le banc ne
+ * court-circuite donc pas une règle, il place la scène au moment où la règle
+ * mord.
+ */
+const SEMAINE_DE_CANICULE = 30;
+const SECHERESSE_DE_CANICULE = 0;
+const CHALEUR_DE_CANICULE_C = 34;
+
+/**
+ * Combien de tirages d'allumage on laisse passer avant d'abandonner.
+ *
+ * La probabilité de départ plafonne à 1,5 % par semaine et par parcelle : même
+ * en canicule, l'allumage se fait attendre. Mille tirages en donnent
+ * pratiquement toujours un, et l'échec lève au lieu de rendre une scène muette.
+ */
+const ESSAIS_D_ALLUMAGE = 1000;
 
 function figerLeSol(
   state: GameState,
@@ -553,7 +610,9 @@ function main() {
           // main.
           journal: {
             ...enAttente,
-            ...(FEU ? { incendie: incendieDeDemonstration(state, semaine.lumiereAuSol) } : {}),
+            ...(FEU
+              ? { incendie: incendieDeDemonstration(state, station, semaine.lumiereAuSol) }
+              : {}),
           },
           sol: figerLeSol(
             state,

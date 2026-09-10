@@ -80,8 +80,21 @@ export const FLAMME: Teinte = { r: 252, g: 196, b: 82 };
 export const BRAISE: Teinte = { r: 196, g: 84, b: 34 };
 export const CENDRE: Teinte = { r: 34, g: 30, b: 28 };
 
-/** Opacité de la flamme, au plus fort du front. */
-export const OPACITE_DE_LA_FLAMME = 0.92;
+/**
+ * Opacité de la flamme au sol, au plus fort du front.
+ *
+ * **Baissée quand les carreaux sont devenus des taches étalées.** Une tache
+ * fait deux fois la cellule et se recouvre donc avec ses voisines : à 0,92,
+ * l'intérieur du front devenait un aplati opaque. Une tache seule reste
+ * maintenant translucide — c'est le bord de la brûlure — et les taches empilées
+ * font le cœur opaque du brûlé, dégradé compris.
+ *
+ * **Deux tiers et non la moitié, et c'est la capture qui a repris la main** :
+ * une tache fondue couvre bien moins que le carré qu'elle occupe, donc
+ * l'empilement compense moins que je ne l'avais estimé. À 0,46, le brûlé sortait
+ * vert olive et la trame de cellules du terrain se voyait à travers.
+ */
+export const OPACITE_DE_LA_FLAMME = 0.68;
 
 /**
  * Opacité de la cendre.
@@ -90,7 +103,31 @@ export const OPACITE_DE_LA_FLAMME = 0.92;
  * couché, une souche — doit rester lisible dessous. C'est aussi ce qui évite
  * qu'un incendie laisse un trou noir découpé au ciseau dans la parcelle.
  */
-export const OPACITE_DE_LA_CENDRE = 0.78;
+export const OPACITE_DE_LA_CENDRE = 0.6;
+
+/**
+ * Combien de variantes de TACHE DE BRÛLURE sont cuites.
+ *
+ * Quatre et non trois : une tache de brûlure est posée sur des milliers de
+ * cellules d'un seul coup, là où une flamme n'apparaît qu'à cent soixante
+ * exemplaires. Une variante de plus se remarque à cette échelle-là.
+ */
+export const VARIANTES_DE_BRULURE = 4;
+
+/**
+ * Un nombre reproductible tiré de deux entiers.
+ *
+ * **Pas un générateur, une FONCTION.** Un générateur à état donnerait des
+ * particules qui changent de place à chaque image alors qu'elles sont censées
+ * être les mêmes, et une capture figée ne serait pas reproductible. Ici, la
+ * phase d'une flamme est une fonction de sa cellule : elle est stable d'une
+ * image à l'autre sans que rien ne soit gardé.
+ */
+function alea(a: number, b: number): number {
+  let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
 
 /** Mélange linéaire de deux teintes. */
 function melanger(a: Teinte, b: Teinte, part: number): Teinte {
@@ -140,6 +177,10 @@ export function frontEnCours(front: FrontDIncendie, avancement: number): Cellule
     const cellule = front.brulees[i] ?? 0;
     const depuis = tete - (front.rangs[i] ?? 0);
     if (depuis <= 0) continue;
+    // La variante de tache, tirée de la cellule : deux voisines ne portent pas
+    // la même, sinon l'étalement reforme une trame — plus grosse, mais une
+    // trame quand même.
+    const brulure = Math.floor(alea(cellule, 31) * VARIANTES_DE_BRULURE) % VARIANTES_DE_BRULURE;
     if (depuis < RANGS_DU_FRONT) {
       // Dans le front : la flamme s'assombrit vers la braise à mesure qu'on
       // s'éloigne de sa tête.
@@ -148,6 +189,7 @@ export function frontEnCours(front: FrontDIncendie, avancement: number): Cellule
         cellule,
         teinte: melanger(FLAMME, BRAISE, part),
         opacite: OPACITE_DE_LA_FLAMME,
+        brulure,
       });
       continue;
     }
@@ -158,6 +200,7 @@ export function frontEnCours(front: FrontDIncendie, avancement: number): Cellule
       cellule,
       teinte: melanger(BRAISE, CENDRE, refroidi),
       opacite: OPACITE_DE_LA_FLAMME + (OPACITE_DE_LA_CENDRE - OPACITE_DE_LA_FLAMME) * refroidi,
+      brulure,
     });
   }
   return sorties;
@@ -456,21 +499,6 @@ export const TAILLE_DE_BRAISE_M = 1.4;
 
 /** Combien de variantes de langue de flamme et de bouffée sont cuites. */
 export const VARIANTES = 3;
-
-/**
- * Un nombre reproductible tiré de deux entiers.
- *
- * **Pas un générateur, une FONCTION.** Un générateur à état donnerait des
- * particules qui changent de place à chaque image alors qu'elles sont censées
- * être les mêmes, et une capture figée ne serait pas reproductible. Ici, la
- * phase d'une flamme est une fonction de sa cellule : elle est stable d'une
- * image à l'autre sans que rien ne soit gardé.
- */
-function alea(a: number, b: number): number {
-  let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
 
 /** Partie fractionnaire, positive. C'est le cycle de vie d'une particule. */
 function cycle(v: number): number {
@@ -838,4 +866,50 @@ export function panacheDuFeu(
     });
   }
   return sorties;
+}
+
+/**
+ * La teinte dont un incendie charge le CIEL (§6.4, « ciel orangé »).
+ *
+ * Un feu de cette taille éclaire tout ce qui est autour de lui : la brume du
+ * hors-parcelle, les champs voisins, la fumée elle-même. C'est un ajout de
+ * lumière et non un filtre — d'où une teinte franche, posée en fusion additive
+ * et à faible opacité.
+ */
+export const CIEL: Teinte = { r: 255, g: 146, b: 56 };
+
+/**
+ * Combien de cellules doivent flamber en même temps pour que le ciel soit
+ * pleinement chargé.
+ *
+ * Trois cents, mesuré sur la scène de démonstration : le front y culmine à 257
+ * cellules en flammes au plus large de sa course, ce qui donne un ciel presque
+ * plein. Un départ de feu de quarante cellules, lui, ne charge le ciel qu'au
+ * huitième — un feu naissant n'orange pas l'horizon, et c'est bien ce que le
+ * §6.4 décrit en distinguant « une lueur sur la cellule d'origine » de la
+ * colonne et du ciel.
+ */
+export const CELLULES_POUR_UN_CIEL_PLEIN = 300;
+
+/**
+ * Opacité de l'embrasement du ciel, au plus fort.
+ *
+ * Faible, et c'est une contrainte plus qu'un réglage : ce voile couvre TOUTE
+ * l'image, y compris l'interface de la carte et le décor. Au-delà, il ne
+ * raconte plus un incendie, il déteint sur le jeu — et le joueur perd la
+ * lecture des couleurs de sol dont il a besoin pour décider.
+ */
+export const CIEL_LE_PLUS_CHARGE = 0.17;
+
+/**
+ * De combien le ciel est chargé par l'incendie, ∈ [0,1].
+ *
+ * **La grandeur vient du moteur** : c'est le nombre de cellules qui flambent au
+ * même instant, rapporté à ce qui fait un ciel plein. Rien d'inventé, et rien
+ * de constant — le ciel s'allume quand le front s'élargit et s'éteint quand il
+ * s'essouffle, ce qui est la même pédagogie que le front lui-même, vue de loin.
+ */
+export function chargeDuCiel(front: FrontDIncendie, avancement: number): number {
+  const n = cellulesEnFlammes(front, avancement).length;
+  return Math.min(1, n / CELLULES_POUR_UN_CIEL_PLEIN);
 }

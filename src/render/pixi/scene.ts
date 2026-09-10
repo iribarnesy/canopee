@@ -52,7 +52,14 @@ import {
   tailleDePose,
 } from "../couches/arbres";
 import { BRUME, type DecorBordures, OPACITE_DU_DECOR } from "../couches/decor";
-import { cuireBouffee, cuireBraise, cuireFlamme, cuireLueur } from "../couches/feu";
+import {
+  cuireBouffee,
+  cuireBraise,
+  cuireBrulure,
+  cuireFlamme,
+  cuireLueur,
+  ETALEMENT_DE_LA_BRULURE,
+} from "../couches/feu";
 import {
   cuireHalo,
   cuireLisere,
@@ -76,7 +83,7 @@ import { versCss, versEntier } from "../palette";
 import { METRE_VERTICAL_PX, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
-import type { Particule } from "../temps/feu";
+import { CIEL, CIEL_LE_PLUS_CHARGE, type Particule } from "../temps/feu";
 import type { CelluleVoilee } from "../temps/voile";
 
 /** Budget de cuisson par image, en morceaux de terrain. */
@@ -162,6 +169,7 @@ export class SceneParcelle {
     feu: new Container(),
     arbres: new Container(),
     panache: new Container(),
+    ciel: new Container(),
     marqueurs: new Container(),
   };
   private terrain?: Terrain;
@@ -224,6 +232,14 @@ export class SceneParcelle {
   /** Le losange blanc, cuit une fois : c'est la seule forme d'un voile. */
   private textureVoile?: Texture;
   /**
+   * Les taches de brûlure, cuites une fois.
+   *
+   * Elles passent par la même couche que le voile des gestes et le même
+   * poseur : ce qui change n'est pas où la marque se dessine, c'est sa FORME —
+   * un carreau pour un geste, une tache étalée pour une brûlure (`voile.ts`).
+   */
+  private brulures?: Texture[];
+  /**
    * Les particules du feu de cette image, s'il y en a.
    *
    * Un TABLEAU, comme les voiles et pour la même raison : le lecteur rend d'un
@@ -232,6 +248,10 @@ export class SceneParcelle {
    * sauf pendant l'acte d'un incendie.
    */
   private particules: readonly Particule[] = [];
+  /** De combien l'incendie charge le ciel, ∈ [0,1]. 0 = rien ne brûle. */
+  private ciel = 0;
+  /** Le voile plein cadre du ciel embrasé, posé une fois puis retaillé. */
+  private spriteCiel?: Sprite;
   /** Les formes du feu, cuites une fois pour la partie. */
   private formesDuFeu?: {
     flammes: Texture[];
@@ -304,6 +324,12 @@ export class SceneParcelle {
       // qu'elle survole, sinon ce n'est pas de la fumée. Le calque des
       // changements, lui, passe encore par-dessus : c'est de l'interface.
       this.couches.panache,
+      // **Le ciel orangé passe sur TOUT le monde, fumée comprise** (§6.4) : un
+      // incendie de cette taille éclaire la brume du hors-parcelle, les champs
+      // voisins et son propre panache. Il reste sous les marqueurs — le calque
+      // des changements est de l'interface, et l'interface ne prend pas la
+      // couleur du feu.
+      this.couches.ciel,
       // **Le calque des changements est AU-DESSUS de tout**, y compris des
       // arbres et de l'ombre : c'est de l'interface posée sur la carte, et un
       // repère caché derrière un houppier ne repère rien. C'est aussi ce qui le
@@ -345,8 +371,9 @@ export class SceneParcelle {
    * à savoir que la fumée se pose au-dessus des arbres et les flammes en
    * dessous. Il donne les particules, la scène les répartit par leur forme.
    */
-  public embraser(particules: readonly Particule[]): void {
-    this.particules = particules;
+  public embraser(incendie: { particules: readonly Particule[]; ciel: number }): void {
+    this.particules = incendie.particules;
+    this.ciel = incendie.ciel;
   }
 
   /**
@@ -432,6 +459,7 @@ export class SceneParcelle {
     spritesPoses += this.poserSol(vue);
     spritesPoses += this.poserVoiles(etat, vue);
     spritesPoses += this.poserFeu(etat, vue);
+    spritesPoses += this.poserLeCiel();
     spritesPoses += this.poserArbres(poses, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
     // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
@@ -619,6 +647,16 @@ export class SceneParcelle {
       this.textureVoile.source.autoGenerateMipmaps = true;
       this.textureVoile.source.update();
     }
+    if (!this.brulures) {
+      this.brulures = [0, 1, 2, 3].map((v) => {
+        const t = Texture.from(cuireBrulure(this.fabriquer, v));
+        t.source.scaleMode = "linear";
+        t.source.autoGenerateMipmaps = true;
+        t.source.update();
+        return t;
+      });
+    }
+    const brulures = this.brulures;
     const cote = etat.sol.coteM;
     // Le demi-débord des pavés de terrain, pour la même raison qu'eux : deux
     // losanges voisins doivent se toucher, sinon le voile est un grillage.
@@ -630,10 +668,16 @@ export class SceneParcelle {
       const y = Math.floor(c.cellule / cote) + 0.5;
       const z = etat.sol.altitudesM[c.cellule] ?? 0;
       const p = versEcranVue({ x, y, z }, vue);
-      const sprite = SceneParcelle.sprite(this.couches.voiles, n, this.textureVoile);
+      // **Un carreau pour un geste, une tache étalée pour une brûlure**, et
+      // c'est la cellule qui le dit. Le bord franc d'un chaulage veut dire « ce
+      // mètre-là a été travaillé » ; une brûlure, elle, bave sur ses voisines,
+      // et dessinée au carreau elle donne un damier.
+      const tache = c.brulure === undefined ? undefined : brulures[c.brulure % brulures.length];
+      const sprite = SceneParcelle.sprite(this.couches.voiles, n, tache ?? this.textureVoile);
+      const etale = tache !== undefined;
       sprite.anchor.set(0.5, 0.5);
-      sprite.width = largeur;
-      sprite.height = hauteur;
+      sprite.width = etale ? largeur * ETALEMENT_DE_LA_BRULURE : largeur;
+      sprite.height = etale ? hauteur * ETALEMENT_DE_LA_BRULURE : hauteur;
       sprite.x = p.sx;
       sprite.y = p.sy;
       sprite.tint = versEntier(c.teinte);
@@ -743,6 +787,40 @@ export class SceneParcelle {
       lueur: lisser(cuireLueur(this.fabriquer)),
       braise: lisser(cuireBraise(this.fabriquer)),
     };
+  }
+
+  /**
+   * Le CIEL ORANGÉ d'un incendie : un seul sprite, plein cadre, en fusion
+   * additive (§6.4).
+   *
+   * **De la lumière ajoutée et non un filtre posé.** Un calque en opacité
+   * normale délave l'image vers l'orange, ce qui donne un vieux papier ; en
+   * additif, il n'éclaircit que ce qui peut l'être et pousse les teintes vers
+   * le chaud sans écraser les sombres — la cendre reste noire, la brume devient
+   * cuivrée. C'est ce que fait un ciel d'incendie.
+   *
+   * `Texture.WHITE` : rien à cuire. La teinte vient du `tint`, l'intensité de
+   * l'alpha, et la taille du cadre — le seul cas du rendu où une texture d'un
+   * pixel suffit, parce que c'est le seul aplat uniforme qu'il dessine.
+   */
+  private poserLeCiel(): number {
+    if (this.ciel <= 0) {
+      if (this.spriteCiel) this.spriteCiel.visible = false;
+      return 0;
+    }
+    if (!this.spriteCiel) {
+      this.spriteCiel = new Sprite(Texture.WHITE);
+      this.couches.ciel.addChild(this.spriteCiel);
+    }
+    const s = this.spriteCiel;
+    s.visible = true;
+    s.blendMode = "add";
+    s.tint = versEntier(CIEL);
+    s.alpha = CIEL_LE_PLUS_CHARGE * Math.min(1, this.ciel);
+    s.x = 0;
+    s.y = 0;
+    s.setSize(this.app.renderer.width, this.app.renderer.height);
+    return 1;
   }
 
   /**

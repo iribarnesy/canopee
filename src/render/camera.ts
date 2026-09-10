@@ -184,6 +184,24 @@ export function deplacer(vue: Vue, dxPx: number, dyPx: number): Vue {
 }
 
 /**
+ * CADRER un point de la parcelle : il vient au centre de la vue.
+ *
+ * **Le zoom ne change PAS, et c'est la décision qui compte.** Le §6.4 demande
+ * que la vue puisse cadrer le départ d'un incendie — le moteur met déjà le jeu
+ * en pause dessus (`autopause`) — mais un cadrage qui zoomerait aussi
+ * reprendrait au joueur le réglage qu'il vient de faire, et le lui rendrait
+ * ailleurs. Recentrer répond à la question posée (« où est-ce que ça se
+ * passe ? ») sans en poser une autre (« à quelle distance est-ce que je
+ * regardais ? »).
+ *
+ * Le centre est borné à la parcelle par la même règle que le glissement : on ne
+ * cadre jamais le vide, même si l'événement est sur un bord.
+ */
+export function cadrer(vue: Vue, cible: { x: number; y: number }): Vue {
+  return { ...vue, centre: borner(cible, vue.cam.coteM) };
+}
+
+/**
  * Quart de tour. `sens` = +1 (horaire) ou −1.
  *
  * Le centre est exprimé en nord VRAI, donc il n'a pas à bouger : c'est la

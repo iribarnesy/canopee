@@ -517,6 +517,18 @@ function Demo(): React.ReactElement {
           scene.ventExposition ?? EXPOSITION_INCONNUE,
         )
       }
+      // **Cadrer le DÉPART de l'incendie** (§6.4). Le moteur met déjà le jeu en
+      // pause dessus (`autopause`), donc la vue a le droit d'y aller — et c'est
+      // le seul événement du jeu qui le mérite, parce que c'est le seul qui
+      // puisse tout changer en une semaine.
+      {...(ellipse.feu
+        ? {
+            cadrerSur: {
+              x: (ellipse.feu.origine % scene.coteM) + 0.5,
+              y: Math.floor(ellipse.feu.origine / scene.coteM) + 0.5,
+            },
+          }
+        : {})}
     />
   );
 }

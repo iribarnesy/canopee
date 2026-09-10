@@ -32,7 +32,14 @@ import type { CauseMort } from "../../engine/trees";
 import type { Vue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
 import type { Acte, PlanDEllipse } from "./ellipse";
-import { type FrontDIncendie, feuAuSol, frontEnCours, type Particule, panacheDuFeu } from "./feu";
+import {
+  chargeDuCiel,
+  type FrontDIncendie,
+  feuAuSol,
+  frontEnCours,
+  type Particule,
+  panacheDuFeu,
+} from "./feu";
 import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
@@ -364,12 +371,32 @@ export function particulesDuFeu(
   ecouleMs: number,
   coteM: number,
   exposition: number,
-): Particule[] {
-  if (!trouve) return [];
+): IncendieAPoser {
+  if (!trouve) return RIEN_NE_BRULE;
   const a = avancementDuFeu(trouve, ecouleMs);
-  if (a === undefined) return [];
-  return [
-    ...feuAuSol(trouve.feu, a, ecouleMs, coteM),
-    ...panacheDuFeu(trouve.feu, a, ecouleMs, coteM, trouve.origine, exposition),
-  ];
+  if (a === undefined) return RIEN_NE_BRULE;
+  return {
+    particules: [
+      ...feuAuSol(trouve.feu, a, ecouleMs, coteM),
+      ...panacheDuFeu(trouve.feu, a, ecouleMs, coteM, trouve.origine, exposition),
+    ],
+    ciel: chargeDuCiel(trouve.feu, a),
+  };
 }
+
+/**
+ * Ce qu'un incendie donne à poser : des particules, et une charge de ciel.
+ *
+ * **Les deux ensemble et non deux canaux**, parce que c'est un seul phénomène
+ * et une seule lecture d'horloge. Le ciel n'est pas une particule — il n'a pas
+ * de place dans le monde, il couvre l'image entière — mais il vient du même
+ * front au même instant, et l'appelant n'a pas à le demander séparément.
+ */
+export interface IncendieAPoser {
+  particules: readonly Particule[];
+  /** de combien le ciel est orangé, ∈ [0,1] ; 0 = rien ne brûle */
+  ciel: number;
+}
+
+/** Le repos : ni particule, ni ciel. Partagé, donc sans allocation par image. */
+export const RIEN_NE_BRULE: IncendieAPoser = { particules: [], ciel: 0 };

@@ -31,6 +31,7 @@ import {
   panacheDuFeu,
   porteeDuFront,
   RANGS_DU_FRONT,
+  VARIANTES_DE_BRULURE,
 } from "../../src/render/temps/feu";
 
 const COTE = 40;
@@ -130,6 +131,24 @@ describe("frontEnCours", () => {
     for (let a = 0; a <= 1; a += 0.05) {
       for (const c of frontEnCours(front, a)) expect(permises.has(c.cellule)).toBe(true);
     }
+  });
+
+  it("marque chaque cellule brûlée comme une TACHE ÉTALÉE, pas comme un carreau", () => {
+    // C'est ce qui distingue une brûlure d'un chaulage : le geste s'applique au
+    // mètre carré et son bord franc le dit, la brûlure bave sur ses voisines.
+    // Dessinée au carreau, elle donnait un damier — et les cellules que la
+    // propagation avait sautées à l'intérieur du brûlé ressortaient en losanges
+    // verts nets, ce qui se lit comme du bruit d'écran.
+    const milieu = frontEnCours(front, 0.5);
+    expect(milieu.length).toBeGreaterThan(0);
+    for (const c of milieu) {
+      expect(c.brulure).toBeDefined();
+      expect(c.brulure).toBeGreaterThanOrEqual(0);
+      expect(c.brulure).toBeLessThan(VARIANTES_DE_BRULURE);
+    }
+    // Les variantes sont VRAIMENT réparties : une seule reformerait une trame,
+    // plus grosse qu'un damier de cellules mais une trame quand même.
+    expect(new Set(milieu.map((c) => c.brulure)).size).toBe(VARIANTES_DE_BRULURE);
   });
 
   it("la flamme est CLAIRE et la cendre est SOMBRE", () => {

@@ -25,14 +25,14 @@
 
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { deplacer, tournerVue, type Vue, vueInitiale, zoomer } from "../render/camera";
+import { cadrer, deplacer, tournerVue, type Vue, vueInitiale, zoomer } from "../render/camera";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, SceneParcelle } from "../render/pixi/scene";
 import type { Marqueur } from "../render/temps/changements";
 import type { Deformation } from "../render/temps/chute";
-import type { Particule } from "../render/temps/feu";
+import { type IncendieAPoser, RIEN_NE_BRULE } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
 
@@ -91,7 +91,16 @@ export interface VueParcelleProps {
    * trois ne passent donc pas par la même couche. Pas de VUE ici non plus : une
    * particule est placée dans le MONDE, la scène la projette.
    */
-  feu?: (maintenantMs: number) => readonly Particule[];
+  feu?: (maintenantMs: number) => IncendieAPoser;
+  /**
+   * Un point de la parcelle à CADRER, s'il y a lieu (§6.4).
+   *
+   * Appliqué une fois par cible et non à chaque image : le joueur doit pouvoir
+   * glisser aussitôt après, sans que la vue le ramène. C'est un coup d'œil
+   * qu'on lui offre, pas une caméra qu'on lui prend — et c'est pour ça que le
+   * zoom ne change pas (`cadrer`).
+   */
+  cadrerSur?: { x: number; y: number };
   /**
    * Le calque des changements (§6.8 №1) : où la parcelle a changé.
    *
@@ -209,6 +218,23 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
     );
   }, [pret, taille.largeur, taille.hauteur, props.sol.coteM]);
 
+  // ── Le cadrage d'un événement ───────────────────────────────────────────
+  //
+  // **Une fois par CIBLE, et pas à chaque rendu.** Sans la référence, l'effet
+  // se rejouerait à chaque nouveau rendu de React — donc à chaque changement de
+  // caméra — et la vue reviendrait se coller sur l'incendie dès que le joueur
+  // essaierait de glisser ailleurs. Ce serait le contraire de ce que le §6.4
+  // demande : un coup d'œil offert, pas une caméra prise.
+  const cadre = useRef<string>("");
+  useEffect(() => {
+    const cible = props.cadrerSur;
+    if (!pret || !cible) return;
+    const clef = `${cible.x},${cible.y}`;
+    if (cadre.current === clef) return;
+    cadre.current = clef;
+    setVue((v) => (v ? cadrer(v, cible) : v));
+  }, [pret, props.cadrerSur]);
+
   // ── L'image ─────────────────────────────────────────────────────────────
   //
   // **La boucle d'images n'est PAS un effet de React**, et le premier jet l'a
@@ -239,7 +265,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         const rappel = p.deformer;
         scene.current?.deformerLesArbres(rappel ? (id) => rappel(id, horloge, v) : undefined);
         scene.current?.voilerLesCellules(p.voiler?.(horloge) ?? []);
-        scene.current?.embraser(p.feu?.(horloge) ?? []);
+        scene.current?.embraser(p.feu?.(horloge) ?? RIEN_NE_BRULE);
         scene.current?.montrerLesChangements(p.marqueurs ?? []);
         const compte = scene.current?.rafraichir(
           {

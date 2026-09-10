@@ -192,3 +192,17 @@ describe("cellulesVoilees", () => {
     }
   });
 });
+
+describe("ce qu'un voile de geste n'est pas", () => {
+  it("ne s'ÉTALE pas : une cellule travaillée est un carreau", () => {
+    // Le pendant de la brûlure du feu, et la raison est la même vue à
+    // l'envers : l'épandeur passe ou ne passe pas sur un mètre carré, et le
+    // bord franc est ce qui dit « ce mètre-là a été travaillé ». Un chaulage
+    // aux bords bavés se lirait comme une tache et non comme un chantier.
+    const geste = { type: "chauler" as const, cellules: [0, 1, 2, 100, 101] };
+    const rangs = rangsDuBalayage(geste, 100);
+    const cellules = cellulesVoilees(geste, rangs, 0.5);
+    expect(cellules.length).toBeGreaterThan(0);
+    for (const c of cellules) expect(c.brulure).toBeUndefined();
+  });
+});

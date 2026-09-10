@@ -97,6 +97,26 @@ export interface CelluleVoilee {
   cellule: number;
   teinte: Teinte;
   opacite: number;
+  /**
+   * Dessiner cette cellule comme une TACHE ÉTALÉE, et non comme un carreau —
+   * avec cette variante de forme.
+   *
+   * **Absent pour un geste, présent pour le feu, et c'est une question
+   * d'unité.** Une cellule chaulée EST un carreau : le geste s'applique au
+   * mètre carré, l'épandeur passe ou ne passe pas, et le bord franc est ce qui
+   * dit « ce mètre-là a été travaillé ». Une brûlure n'est pas un carreau : le
+   * feu passe, le sol noircit, et la trace bave sur ses voisines. Dessinée au
+   * carreau, elle donne un damier — et pire, les cellules que la propagation a
+   * sautées à l'intérieur du brûlé (`probabilitePropagation` n'est pas 1)
+   * ressortent en petits losanges verts nets au milieu du noir, ce qui se lit
+   * comme du bruit et non comme une cicatrice d'incendie.
+   *
+   * Les données ne changent pas : le moteur dit toujours quelles cellules ont
+   * brûlé et lesquelles ont été épargnées. C'est la TAILLE du pinceau qui
+   * change, et une tache plus large qu'une cellule fait exactement ce que fait
+   * un feu — elle noie les îlots isolés et laisse ressortir les grands.
+   */
+  brulure?: number;
 }
 
 /**

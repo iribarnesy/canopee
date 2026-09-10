@@ -164,3 +164,58 @@ export function cuireBraise(
   tache(ctx, c, c, c * 0.34, 0.95);
   return canvas;
 }
+
+/** Côté de la texture d'une tache de brûlure, en pixels. */
+export const COTE_BRULURE_PX = 64;
+
+/**
+ * De combien une tache de brûlure DÉPASSE sa cellule.
+ *
+ * **C'est le nombre qui règle « ça fait des petits carrés ».** À un, chaque
+ * cellule brûlée est un losange net et le brûlé est un damier ; pire, les
+ * cellules que la propagation a sautées à l'intérieur (`probabilitePropagation`
+ * n'est pas 1) ressortent en losanges verts au milieu du noir, ce qui se lit
+ * comme du bruit d'écran. À deux fois la cellule, les taches se recouvrent :
+ * les îlots isolés d'un mètre disparaissent sous leurs voisines, les grands
+ * restent, et le bord de la cicatrice s'effrange. Ce sont exactement les deux
+ * choses qu'un feu fait.
+ *
+ * Les données n'ont pas changé pour autant : le moteur dit toujours quelles
+ * cellules ont brûlé. C'est la taille du pinceau qui change.
+ */
+export const ETALEMENT_DE_LA_BRULURE = 2;
+
+/**
+ * Une TACHE de brûlure : des lobes irréguliers, aux bords fondus.
+ *
+ * Quatre variantes, et elles diffèrent par la place de leurs lobes : sans ça,
+ * l'étalement reforme une trame — plus grosse qu'un damier de cellules, mais
+ * une trame quand même, et c'est le genre de motif que l'œil trouve tout seul.
+ *
+ * Un noyau presque opaque et des lobes plus légers : le cœur d'une cellule
+ * brûlée est noir, ses bords bavent. C'est ce dégradé-là qui fait que trois
+ * taches empilées donnent du noir franc et qu'une tache seule reste
+ * translucide, donc que le bord du brûlé est une frange et non une découpe.
+ */
+export function cuireBrulure(
+  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+  variante: number,
+): HTMLCanvasElement {
+  const canvas = fabriquer(COTE_BRULURE_PX, COTE_BRULURE_PX);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  const c = COTE_BRULURE_PX / 2;
+  // Le noyau : centré, dense, et il ne remplit qu'un peu plus d'une cellule sur
+  // les deux que la tache occupe — sinon l'étalement ne sert à rien.
+  tache(ctx, c, c, c * 0.42, 0.95);
+  const lobes = 6;
+  const depart = (variante % 4) * ((Math.PI * 2) / (lobes * 4));
+  for (let i = 0; i < lobes; i++) {
+    const angle = depart + (i / lobes) * Math.PI * 2;
+    // Rayon et distance alternés : des lobes réguliers donnent une fleur.
+    const loin = c * (i % 2 === 0 ? 0.36 : 0.26);
+    const large = c * (i % 3 === 0 ? 0.3 : 0.22);
+    tache(ctx, c + Math.cos(angle) * loin, c + Math.sin(angle) * loin, large, 0.5);
+  }
+  return canvas;
+}
