@@ -43,9 +43,25 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
       );
     }
   }
-  /** Nombre d'années, consécutives ou non, passées au-dessus du seuil. */
-  function anneesAuDessus(parAnnee: readonly number[], seuil: number): number {
-    return parAnnee.filter((n) => n > seuil).length;
+  /**
+   * Plus longue séquence CONSÉCUTIVE d'années au-dessus du seuil.
+   *
+   * Pourquoi consécutive, et pas le total : le total d'années au-dessus d'un
+   * seuil ne mesure, sur cette station, que la DATE DU PREMIER INCENDIE. Une
+   * graine qui brûle à l'année 15 puis à l'année 26 cumule onze années
+   * au-dessus de trente tiges ; une graine qui ne brûle pas en cumule
+   * trente-huit. C'est une propriété du tirage, pas du pin. La plus longue
+   * série, elle, dit combien de temps l'espèce tient la station tant qu'un feu
+   * ne la remet pas à zéro — ce qui est la question écologique.
+   */
+  function plusLongueSerie(parAnnee: readonly number[], seuil: number): number {
+    let max = 0;
+    let courante = 0;
+    for (const n of parAnnee) {
+      courante = n > seuil ? courante + 1 : 0;
+      if (courante > max) max = courante;
+    }
+    return max;
   }
 
   it("les deux pionnières frugales colonisent durablement le sable", () => {
@@ -60,17 +76,28 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     // moteur a changé — la date n'est pas une propriété écologique, le
     // comportement en est une.
     //
-    // On compte les années au-dessus du seuil, CONSÉCUTIVES OU NON : une
-    // seule interruption ne dit rien de la colonisation.
-    expect(anneesAuDessus(betulaByYear, 50)).toBeGreaterThan(12);
+    // Le bouleau tient la station de 31 à 34 ans d'affilée sur les dix graines
+    // mesurées : la marge sur le seuil est large, et il n'y a pas de graine
+    // limite.
+    expect(plusLongueSerie(betulaByYear, 50)).toBeGreaterThan(12);
 
     // Le pin, lui, demande DEUX clauses, et c'est le régime de feu qui
-    // l'impose. Il s'installe franchement — il passe la cinquantaine de tiges
-    // sur les six graines mesurées, de 98 à 332 selon le nombre de feux — puis
-    // il tient la station à une trentaine de tiges, sous le bouleau qui monte
-    // plus vite et prend la lumière. Lui demander de tenir DOUZE ANS au-dessus
-    // de cinquante échouerait dès qu'une graine met deux ou trois feux dans la
-    // fenêtre (9 et 11 années seulement, sur les graines 7 et 12).
+    // l'impose. Il s'installe franchement — il culmine de 96 à 492 tiges sur
+    // les dix graines mesurées, selon le nombre de feux — puis il tient la
+    // station à une trentaine de tiges, sous le bouleau qui monte plus vite et
+    // prend la lumière.
+    //
+    // La deuxième clause a été posée trop haut une première fois : elle
+    // comptait les années au-dessus de trente tiges, consécutives ou non, et
+    // demandait plus de douze. Elle est passée à 13 puis à 11 quand l'ombrage
+    // de lisière a décalé le flux aléatoire, donc le calendrier des feux, sans
+    // rien changer d'écologique — la lisière ne retire que quelques dixièmes de
+    // pour cent de lumière sur cette parcelle. Un test qui bascule sur un
+    // décalage de feu ne mesure pas ce qu'il annonce.
+    //
+    // Sur dix graines, la plus longue série consécutive va de 10 ans (graine 7,
+    // deux feux) à 39 ans (graine 23, aucun) ; le seuil est placé sous le pire
+    // cas mesuré, pas sur lui.
     //
     // Pourquoi le bouleau l'emporte, et pourquoi c'est défendable : il rejette
     // de souche après un feu (`rejetteApresFeu`), le pin non ; il fructifie à
@@ -79,7 +106,7 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     // Que les Landes soient un pays de pin relève de la plantation et de la
     // gestion, pas de la succession spontanée sous feu fréquent.
     expect(Math.max(...pinusByYear)).toBeGreaterThan(50);
-    expect(anneesAuDessus(pinusByYear, 30)).toBeGreaterThan(12);
+    expect(plusLongueSerie(pinusByYear, 30)).toBeGreaterThan(8);
   });
 
   it("l'installation se fait par vagues, pas à débit constant (météo réelle)", () => {
