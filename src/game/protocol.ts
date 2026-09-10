@@ -14,7 +14,13 @@ import type { Bordures } from "../engine/paysage";
 import type { ContextePhenologique } from "../engine/phenologie";
 import type { Relief } from "../engine/relief";
 import type { TickFluxes } from "../engine/state";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
@@ -290,6 +296,19 @@ export interface Snapshot {
    * qui déclenche les animations de mort, une par cause.
    */
   morts: MortDeLaSemaine[];
+  /**
+   * Semis installés depuis le dernier instantané, avec leur position : la
+   * moitié positive de l'histoire, sans quoi le calque des changements ne sait
+   * montrer que ce qui meurt (tick.ts).
+   */
+  naissances: NaissanceDeLaSemaine[];
+  /**
+   * Tiges que la CROISSANCE a fait changer de stade depuis le dernier
+   * instantané (stades.ts). Le stade lui-même se calcule côté rendu depuis
+   * `heightM` (`stadeDe`) ; c'est le franchissement, qui demande de comparer
+   * deux instants, que le moteur seul peut voir.
+   */
+  franchissements: FranchissementDeStade[];
   /**
    * Gestes subis par des arbres nommés depuis le dernier instantané (coupe,
    * éclaircie, élagage, étêtage, recépage, broutage, frottis).

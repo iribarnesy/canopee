@@ -46,7 +46,13 @@ import {
 } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { sourcesDeLaParcelle } from "../engine/terrain";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
@@ -85,6 +91,8 @@ let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
 // Ce qui s'est passé depuis le dernier instantané et que le rendu doit ANIMER.
 let pendingMorts: MortDeLaSemaine[] = [];
+let pendingNaissances: NaissanceDeLaSemaine[] = [];
+let pendingFranchissements: FranchissementDeStade[] = [];
 let pendingGestes: GesteVisible[] = [];
 let pendingChutes: ChuteDeChandelle[] = [];
 let pendingIncendie: IncendieResult | undefined;
@@ -423,6 +431,8 @@ function postSnapshot() {
     refusals: pendingRefusals,
     events: pendingEvents,
     morts: pendingMorts,
+    naissances: pendingNaissances,
+    franchissements: pendingFranchissements,
     gestes: pendingGestes,
     chutes: pendingChutes,
     incendie: pendingIncendie,
@@ -430,6 +440,8 @@ function postSnapshot() {
   pendingRefusals = [];
   pendingEvents = [];
   pendingMorts = [];
+  pendingNaissances = [];
+  pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
   // Les tampons du feu partent avec l'instantané : on ne les garde pas pour le
@@ -460,6 +472,8 @@ function stepWeeks(n: number) {
     lastDebordement = ticked.debordementParCellule;
     lastLumiereAuSol = ticked.lumiereAuSol;
     pendingMorts.push(...ticked.morts);
+    pendingNaissances.push(...ticked.naissances);
+    pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
     pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
@@ -538,7 +552,10 @@ function stepWeeks(n: number) {
     }
     // Semis naturels (semaine du recrutement)
     if (weekOfYear === 14) {
-      const recruits = state.trees.length - before.trees.length + ticked.morts.length;
+      // Le compte EXACT, depuis `naissances`. La soustraction d'effectifs
+      // qu'on faisait ici se trompait dès qu'un geste de la même semaine avait
+      // retiré des tiges : une éclaircie en semaine 14 gonflait le chiffre.
+      const recruits = ticked.naissances.length;
       if (recruits > 0) event("🌿", `${recruits} semis naturels se sont installés`);
     }
     // Sécheresse (sol moyen presque à sec en saison de végétation)
@@ -727,6 +744,8 @@ function init(
   pendingRefusals = [];
   pendingEvents = [];
   pendingMorts = [];
+  pendingNaissances = [];
+  pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
   pendingIncendie = undefined;
@@ -805,6 +824,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       pendingRefusals = [];
       pendingEvents = [];
       pendingMorts = [];
+      pendingNaissances = [];
+      pendingFranchissements = [];
       pendingGestes = [];
       pendingChutes = [];
       pendingIncendie = undefined;

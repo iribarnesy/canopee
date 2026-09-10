@@ -52,6 +52,8 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     refusals: [],
     events: [],
     morts: ticked.morts,
+    naissances: ticked.naissances,
+    franchissements: ticked.franchissements,
     gestes: ticked.gestes,
     chutes: ticked.chutes,
     incendie: ticked.incendie,

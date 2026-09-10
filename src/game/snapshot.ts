@@ -21,7 +21,13 @@ import { contextePhenologique, partFloraison } from "../engine/phenologie";
 import { porositeDrainageMm } from "../engine/soil";
 import type { GameState, TickFluxes } from "../engine/state";
 import { weekOfYear } from "../engine/state";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../engine/tick";
 import type { TreeState } from "../engine/trees";
 import { diametreTeteCm, volumeCaviteL } from "../engine/trogne";
 import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
@@ -145,6 +151,8 @@ export interface EntreesSnapshot {
   refusals: ActionRefusal[];
   events: GameEvent[];
   morts: MortDeLaSemaine[];
+  naissances: NaissanceDeLaSemaine[];
+  franchissements: FranchissementDeStade[];
   gestes: GesteVisible[];
   /** chandelles abattues depuis le dernier instantané (`TickResult`) */
   chutes: ChuteDeChandelle[];
@@ -242,6 +250,8 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     refusals: e.refusals,
     events: e.events,
     morts: e.morts,
+    naissances: e.naissances,
+    franchissements: e.franchissements,
     gestes: e.gestes,
     chutes: e.chutes,
     incendie: e.incendie,

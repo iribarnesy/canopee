@@ -161,6 +161,7 @@ import {
   profondeurPenetrableCm,
   ruHorizonMm,
 } from "./soil";
+import { type StadeDeDeveloppement, stadeDe } from "./stades";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
@@ -246,6 +247,53 @@ export interface MortDeLaSemaine {
   heightM: number;
 }
 
+/**
+ * Un semis RÉELLEMENT installé cette semaine. Le pendant positif de
+ * `MortDeLaSemaine`, et volontairement la même forme : le rendu pointe une
+ * naissance comme il pointe une mort, au même endroit de son calque.
+ *
+ * Pourquoi ça voyage alors que `ageWeeks` est déjà dans l'instantané, et
+ * qu'un arbre jeune s'y repère : parce que les TROIS endroits qui créent un
+ * arbre — le recrutement naturel (regeneration.ts), le geste `planter` et le
+ * semis en vrac (state.ts) — posent tous `ageWeeks: 0`. Un plant acheté et un
+ * semis levé la même semaine portent donc le même âge pour toujours, et
+ * aucune règle lisant `ageWeeks` ne les sépare. Cette liste-ci ne contient que
+ * ce que le recrutement a installé : c'est la seule façon de pointer une
+ * recrue sans pointer aussi la plantation du joueur.
+ *
+ * Accessoirement, le tick avait déjà tout ça sous la main et le jetait —
+ * `yearlyRecruitment` rend des `TreeState` complets. Le worker en déduisait un
+ * NOMBRE par soustraction d'effectifs, faux dès qu'un geste de la semaine
+ * avait retiré des tiges ; il lit cette liste.
+ */
+export interface NaissanceDeLaSemaine {
+  id: number;
+  /** position du semis, m */
+  x: number;
+  y: number;
+  especeId: string;
+  /** hauteur à la levée, m */
+  heightM: number;
+}
+
+/**
+ * Une tige qui vient de changer de stade (stades.ts). Le franchissement se
+ * rapporte ici, et PAS sous forme d'un `stade` par arbre dans l'instantané :
+ * le stade lui-même est une fonction pure de `heightM`, que le rendu calcule
+ * déjà sans nous (`stadeDe`). Ce qu'il ne peut pas faire, c'est comparer deux
+ * instants — d'où l'événement, et lui seul.
+ *
+ * Ne couvre que ce que la CROISSANCE a fait franchir. Un arbre rabattu par une
+ * trogne ou un recépage descend l'échelle, et cette chute-là voyage déjà :
+ * `ArbreRetire` porte `hauteurAvantM` et `hauteurApresM` (actions.ts), dont le
+ * rendu tire les deux stades. La redire ici serait la même vérité deux fois.
+ */
+export interface FranchissementDeStade {
+  id: number;
+  deStade: StadeDeDeveloppement;
+  versStade: StadeDeDeveloppement;
+}
+
 /** L'incendie de la semaine, tel qu'on peut le raconter ET le dessiner. */
 export interface IncendieResult {
   cellulesBrulees: number;
@@ -288,6 +336,10 @@ export interface TickResult {
   fluxes: TickFluxes;
   /** arbres morts pendant ce tick, avec ce qui les a tués et où ils sont */
   morts: MortDeLaSemaine[];
+  /** semis réellement installés cette semaine, avec leur position */
+  naissances: NaissanceDeLaSemaine[];
+  /** tiges que la croissance a fait changer de stade cette semaine */
+  franchissements: FranchissementDeStade[];
   /** incendie de la semaine, s'il y en a eu un */
   incendie?: IncendieResult;
   /**
@@ -1215,6 +1267,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let nppKgC = 0; // production primaire nette de la semaine (bois + racines)
   let importedPlantsKgC = 0; // carbone des recrues, venu de la graine
   const limitingFactors = new Array<number>(nTrees).fill(0);
+  const franchissements: FranchissementDeStade[] = [];
   let nextTrees: TreeState[] = trees.map((tree, t) => {
     const result = tickTree(tree, {
       waterSatisfaction: waterSatisfaction[t] ?? 1,
@@ -1257,6 +1310,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const cible = baseHouppierCible(next.heightM, light[t] ?? 1, lumiere.compensation, lumiere.lai);
     // La scie compte autant que l'ombre, et l'arbre ne les distingue pas.
     const baseHouppierM = Math.max(tree.baseHouppierM ?? 0, cible, next.hauteurElagueeM);
+    // Franchissement de stade : on a les deux instants sous la main ici, et
+    // c'est le seul endroit du programme où c'est vrai. Un arbre mort ne
+    // franchit rien — une chandelle qui grisonne ne « passe pas futaie ».
+    if (next.alive) {
+      const avant = stadeDe(tree.heightM);
+      const apres = stadeDe(next.heightM);
+      if (avant !== apres) {
+        franchissements.push({ id: tree.id, deStade: avant, versStade: apres });
+      }
+    }
     return {
       ...next,
       vigueur,
@@ -2001,6 +2064,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // jusqu'à la semaine de recrutement, où la banque se réveille (banqueGraines.ts).
   let aBruleDepuisLaLevee = state.aBruleDepuisLaLevee || incendie !== undefined;
   let banqueGraines = state.banqueGraines;
+  const naissances: NaissanceDeLaSemaine[] = [];
   if (week === RECRUITMENT_WEEK) {
     const recruitment = yearlyRecruitment({
       trees: nextTrees,
@@ -2020,6 +2084,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // le bilan carbone fabrique de la matière à chaque printemps.
     for (const recrue of recruitment.newTrees) {
       importedPlantsKgC += treeTotalCarbonKg(getEspece(recrue.especeId), recrue.heightM);
+      // Ce sont les semis RÉELLEMENT installés : `yearlyRecruitment` a déjà
+      // écarté ceux que le plafond de densité, le pH ou l'ombre refusaient.
+      naissances.push({
+        id: recrue.id,
+        x: recrue.x,
+        y: recrue.y,
+        especeId: recrue.especeId,
+        heightM: recrue.heightM,
+      });
     }
     nextTrees = [...nextTrees, ...recruitment.newTrees];
     rng = recruitment.rng;
@@ -2112,6 +2185,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nextTreeId,
     },
     morts,
+    naissances,
+    franchissements,
     chutes,
     aides: aidesVersees,
     incendie,

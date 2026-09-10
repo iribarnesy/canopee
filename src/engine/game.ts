@@ -14,7 +14,13 @@ import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "./tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "./tick";
 import { tick } from "./tick";
 
 export interface Journal {
@@ -75,6 +81,10 @@ export function advanceWeek(
   refusals: ActionRefusal[];
   fluxes: TickFluxes;
   morts: MortDeLaSemaine[];
+  /** semis installés cette semaine, avec leur position (tick.ts) */
+  naissances: NaissanceDeLaSemaine[];
+  /** tiges que la croissance a fait changer de stade (stades.ts) */
+  franchissements: FranchissementDeStade[];
   incendie?: IncendieResult;
   /** gestes du joueur ET du gibier de la semaine, pour le rendu (tick.ts) */
   gestes: GesteVisible[];
@@ -103,6 +113,8 @@ export function advanceWeek(
     refusals,
     fluxes: ticked.fluxes,
     morts: ticked.morts,
+    naissances: ticked.naissances,
+    franchissements: ticked.franchissements,
     aides: ticked.aides,
     incendie: ticked.incendie,
     gestes: [...gestes, ...ticked.gestes],
