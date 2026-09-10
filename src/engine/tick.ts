@@ -56,6 +56,7 @@ import { getEspece } from "./especes";
 import {
   chargeCombustible,
   departDeFeu,
+  intensiteDuFeu,
   propager,
   rangsDuFront,
   survitAuFeu,
@@ -333,6 +334,33 @@ export interface IncendieResult {
    * soit : c'est la charge qui a porté le front, pas ce qu'il en reste.
    */
   charges: Float32Array;
+  /**
+   * Intensité du feu sur chaque cellule de `brulees`, même ordre ∈ [0,1]
+   * (`intensiteDuFeu`, feu.ts). C'est la grandeur que l'écorce de chaque arbre
+   * affronte, et le rendu la recalculait faute qu'on la donne.
+   */
+  intensites: Float32Array;
+  /**
+   * IDENTITÉS des arbres que ce feu a torchés — le même ensemble que compte
+   * `arbresTues`, qui n'en donnait que le nombre.
+   *
+   * Sans elles, une mort par le feu n'arrivait dans `TickResult.morts` qu'un an
+   * plus tard (`CHABLIS_RECUPERABLE_SEMAINES`), à une semaine où `incendie`
+   * vaut `undefined` : l'incendie et ses victimes ne pouvaient jamais figurer
+   * au même journal. Le rendu refaisait la jointure lui-même en comparant
+   * `brulEeSemaine` à la fenêtre du journal — une reconstitution fragile, qu'un
+   * arbre brûlé lors d'un feu PRÉCÉDENT suffisait à tromper.
+   *
+   * Rester debout et récupérable est un ÉTAT de l'arbre ; ce n'est pas une
+   * raison de différer le rapport de sa mort.
+   */
+  idsTues: Int32Array;
+  /**
+   * Identités du sous-ensemble qui REPART de souche — le même ensemble que
+   * compte `rejets`. Un pyrophyte torché et un arbre torché mort ne se
+   * racontent pas pareil, et le moteur seul sait lequel est lequel.
+   */
+  idsRejets: Int32Array;
 }
 
 /**
@@ -1988,6 +2016,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const brulees = propagation.brulees;
       let tues = 0;
       let rejets = 0;
+      const idsTues: number[] = [];
+      const idsRejets: number[] = [];
       const apresFeu: TreeState[] = [];
       for (const tree of nextTrees) {
         const cellule =
@@ -1998,7 +2028,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           continue;
         }
         // L'intensité suit le combustible local.
-        const intensite = Math.min(1, (charge.parCellule[cellule] ?? 0) / 1.2);
+        const intensite = intensiteDuFeu(charge.parCellule[cellule] ?? 0);
         const espece = getEspece(tree.especeId);
         if (survitAuFeu(tree, intensite)) {
           apresFeu.push(tree);
@@ -2029,11 +2059,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           continue;
         }
         tues++;
+        idsTues.push(tree.id);
         if (espece.feu.rejetteApresFeu && tree.heightM > 0.6) {
           // Rejet de souche : l'arbre repart d'en bas, sur un système
           // racinaire qui a tenu — c'est ce qui fait des pyrophytes des
           // gagnants du feu.
           rejets++;
+          idsRejets.push(tree.id);
           // La partie aérienne a brûlé, la souche repart : ce qui est parti en
           // fumée, c'est l'aérien MOINS le rejet qui reste debout. L'imputer
           // entier émettait un carbone que l'arbre porte toujours.
@@ -2098,6 +2130,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
         rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
         charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
+        intensites: Float32Array.from(ordonnees, ([cellule]) =>
+          intensiteDuFeu(charge.parCellule[cellule] ?? 0),
+        ),
+        idsTues: Int32Array.from(idsTues),
+        idsRejets: Int32Array.from(idsRejets),
       };
     }
   }

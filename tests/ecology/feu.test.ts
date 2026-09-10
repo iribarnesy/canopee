@@ -19,6 +19,7 @@ import {
   departDeFeu,
   excentriciteDuFront,
   indiceRisqueFeu,
+  intensiteDuFeu,
   portanceDuFeu,
   propager,
   rangsDuFront,
@@ -363,6 +364,9 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   // L'invariant est maintenant testé sur une lande de genêts qui rejette pour
   // de bon, avec la comptabilité complète : voir
   // `tests/properties/carbon-conservation.test.ts`.
+  /** Ce qui a cloché dans les identités rapportées par les incendies. */
+  const anomalies: string[] = [];
+  let idsRapportes = 0;
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
@@ -377,6 +381,46 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
       incendies++;
       arbresTues += r.incendie.arbresTues;
       dernier = r.incendie;
+      // Les identités que l'incendie rapporte, confrontées à l'état d'AVANT et
+      // d'APRÈS le tick : c'est la seule façon de vérifier qu'elles désignent
+      // les bons arbres et pas simplement le bon nombre.
+      const apres = new Map(r.state.trees.map((t) => [t.id, t]));
+      const avantParId = new Map(avant.trees.map((t) => [t.id, t]));
+      if (r.incendie.idsTues.length !== r.incendie.arbresTues) {
+        anomalies.push(`compte : ${r.incendie.idsTues.length} ≠ ${r.incendie.arbresTues}`);
+      }
+      if (r.incendie.idsRejets.length !== r.incendie.rejets) {
+        anomalies.push(`rejets : ${r.incendie.idsRejets.length} ≠ ${r.incendie.rejets}`);
+      }
+      const rejets = new Set(r.incendie.idsRejets);
+      for (const id of r.incendie.idsTues) {
+        idsRapportes++;
+        if (avantParId.get(id)?.alive !== true) anomalies.push(`${id} n'était pas vivant`);
+        const t = apres.get(id);
+        if (!t) continue;
+        // Un torché est soit reparti de souche, soit mort CETTE semaine-là —
+        // c'est tout le sujet : la mort et l'incendie au même journal.
+        if (rejets.has(id)) {
+          if (t.alive !== true) anomalies.push(`${id} rejette et n'est pas vivant`);
+        } else if (t.alive !== false || t.brulEeSemaine !== avant.week) {
+          anomalies.push(`${id} tué mais non marqué à la semaine ${avant.week}`);
+        }
+      }
+      for (const id of rejets) {
+        if (!r.incendie.idsTues.includes(id)) anomalies.push(`${id} rejette sans être torché`);
+      }
+      // Les intensités suivent les charges, cellule par cellule et dans
+      // l'ordre. À une tolérance près, et ce n'est pas une facilité : les deux
+      // tableaux sont des `Float32Array`, donc l'intensité stockée est le
+      // rapport calculé en double PUIS arrondi, tandis que le témoin est
+      // calculé sur une charge DÉJÀ arrondie. Deux arrondis différents du même
+      // nombre ne sont jamais égaux au bit près.
+      for (let k = 0; k < r.incendie.brulees.length; k++) {
+        const ecart = Math.abs(
+          (r.incendie.intensites[k] ?? 0) - intensiteDuFeu(r.incendie.charges[k] ?? 0),
+        );
+        if (ecart > 1e-6) anomalies.push(`intensité désalignée en ${k} (écart ${ecart})`);
+      }
       // Le DÉNOMINATEUR du tri : qui était sur le passage du front, relevé
       // AVANT le tick, donc avant que le feu n'en retire personne.
       const brulees = new Set(r.incendie.brulees);
@@ -388,6 +432,20 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
       }
     }
   }
+
+  it("l'incendie nomme ses victimes, et il les nomme la semaine même", () => {
+    // Avant, une mort par le feu n'entrait dans `morts` qu'un an plus tard
+    // (`CHABLIS_RECUPERABLE_SEMAINES`), à une semaine où `incendie` vaut
+    // `undefined` : l'incendie et ses victimes ne pouvaient jamais figurer au
+    // même journal, et le rendu refaisait la jointure lui-même.
+    //
+    // La première assertion n'est pas décorative : sans elle, un moteur qui ne
+    // rapporterait AUCUNE identité passerait le test, faute d'anomalie à
+    // trouver. C'est exactement la panne qui a déjà rendu un test incapable
+    // d'échouer.
+    expect(idsRapportes).toBeGreaterThan(5);
+    expect(anomalies).toEqual([]);
+  });
 
   it("la lande finit par brûler et le feu tue", () => {
     expect(incendies).toBeGreaterThan(0);

@@ -559,6 +559,23 @@ export function propager(
  * (un feu courant n'atteint pas la cime d'un grand arbre), l'intensité locale
  * décide du reste.
  */
+/**
+ * Charge de combustible à partir de laquelle un feu brûle à pleine intensité.
+ *
+ * Elle était écrite en clair au milieu de `tick.ts`, ce qui la rendait
+ * invisible à qui lit `feu.ts` et impossible à réutiliser : le rendu ne pouvait
+ * pas retrouver l'intensité d'une cellule sans recopier la division.
+ */
+export const CHARGE_INTENSITE_MAX = 1.2;
+
+/**
+ * Intensité du feu sur une cellule ∈ [0,1], d'après le combustible qu'il y a
+ * trouvé. C'est elle que `survitAuFeu` oppose à l'écorce de chaque arbre.
+ */
+export function intensiteDuFeu(charge: number): number {
+  return Math.min(1, Math.max(0, charge) / CHARGE_INTENSITE_MAX);
+}
+
 export function survitAuFeu(tree: TreeState, intensite: number): boolean {
   const espece = getEspece(tree.especeId);
   const protectionTaille = Math.min(0.5, tree.heightM / HAUTEUR_REFUGE_M / 2);
