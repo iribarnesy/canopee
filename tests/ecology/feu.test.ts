@@ -526,8 +526,18 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     const chandelles = toutes.filter((v) => !v.rejet);
     // Le scénario tue des pins, qui ne rejettent pas : il y a des chandelles.
     expect(chandelles.length).toBeGreaterThan(0);
-    // Une hauteur d'avant est une hauteur d'arbre sur pied, pas de rejet.
-    for (const v of [...rejets, ...chandelles]) expect(v.hauteurAvantM).toBeGreaterThan(0.6);
+    // Toute victime avait une hauteur, aussi petite soit-elle. Et elle peut
+    // être TRÈS petite : un semis de 55 cm qui ne rejette pas meurt et laisse
+    // une chandelle minuscule. Ma première version prenait le seuil de rejet
+    // (60 cm) pour un plancher valable pour tout le monde — il ne vaut que
+    // pour les rejets, et un pin de 55 cm l'a démentie.
+    for (const v of toutes) expect(v.hauteurAvantM).toBeGreaterThan(0);
+    // Chez un rejet, en revanche, le seuil est structurel : une souche ne
+    // repart que si la tige faisait plus de 60 cm. Et c'est bien au-dessus des
+    // 40 cm auxquels le tick la rabat DANS LE MÊME TICK — donc `hauteurAvantM`
+    // porte une information que l'instantané a déjà perdue. C'est sa raison
+    // d'être. (Vide si le scénario n'a tué aucun pyrophyte : le pin domine.)
+    for (const v of rejets) expect(v.hauteurAvantM).toBeGreaterThan(0.6);
   });
 
   it("le feu est déterministe : même graine, mêmes incendies", () => {
