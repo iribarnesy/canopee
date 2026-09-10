@@ -373,21 +373,36 @@ export function indiceRisqueFeu(
   tMaxC: number,
   chargeMoyenne: number,
   ventExposition: number,
-  ventMoyMs = 0,
 ): number {
   if (secheresseSurface > SECHERESSE_CRITIQUE || chargeMoyenne < CHARGE_MINIMALE) return 0;
   const fSecheresse = Math.min(1, (SECHERESSE_CRITIQUE - secheresseSurface) / SECHERESSE_CRITIQUE);
   const fChaleur = Math.min(1, Math.max(0, (tMaxC - CHALEUR_SEUIL_C) / 10));
   const fCombustible = Math.min(1, chargeMoyenne);
-  // Plage inchangée — [0,5 ; 1] — mais elle se parcourt maintenant à la
-  // VITESSE du vent reçu, et non au seul degré de découvert du site.
-  const fVent =
-    0.5 + 0.5 * Math.min(1, ventRecuParLeSite(ventMoyMs, ventExposition) / VENT_ATTISANT_MS);
+  // Le vent est arrivé dans la météo (`WeekWeather.ventMoyMs`) et ce facteur-ci
+  // ne le lit VOLONTAIREMENT pas. Le remplacer par la vitesse hebdomadaire
+  // reçue a été essayé, et c'était une erreur de deux façons :
+  //
+  // 1. C'est une recalibration écologique déguisée. Sous régime océanique la
+  //    vitesse moyenne est MINIMALE en été, donc en pleine saison des feux :
+  //    brancher la moyenne hebdomadaire faisait tomber la fréquence des
+  //    départs d'un quart sur la lande, sans que personne l'ait décidé.
+  // 2. C'est la mauvaise grandeur. Ce que ce facteur représente, c'est à quel
+  //    point un site est exposé aux conditions qui font PARTIR un feu — donc
+  //    une climatologie de rafales, pas une moyenne sur sept jours, laquelle
+  //    efface précisément les journées de vent qui allument les incendies
+  //    français.
+  //
+  // Le vent sert donc à la FORME du front (`propager`), pas au déclenchement.
+  // Faire lire le vent au départ de feu demande une grandeur de rafale et une
+  // recalibration assumée de `PROBA_DEPART_MAX` *(à instruire)*.
+  const fVent = 0.5 + 0.5 * ventExposition;
   return fSecheresse * fChaleur * fCombustible * fVent;
 }
 
 /**
  * Le vent que la parcelle REÇOIT, m/s : le vent régional, rabattu par l'abri.
+ * C'est lui qui pousse le front (`propager`), et lui que le rendu doit prendre
+ * pour l'amplitude d'un panache ou d'un balancement de houppier.
  *
  * Les deux grandeurs ne sont pas interchangeables et c'était tout le problème :
  * `ventExposition` disait à quel point un site est découvert (0,1 = vallon
@@ -412,16 +427,9 @@ export function departDeFeu(
   ventExposition: number,
   coteM: number,
   frequentationHumaine = 1,
-  ventMoyMs = 0,
 ): DepartFeu {
   if (semaineAnnee < SAISON_FEU[0] || semaineAnnee > SAISON_FEU[1]) return { rng };
-  const risque = indiceRisqueFeu(
-    secheresseSurface,
-    tMaxC,
-    charge.moyenne,
-    ventExposition,
-    ventMoyMs,
-  );
+  const risque = indiceRisqueFeu(secheresseSurface, tMaxC, charge.moyenne, ventExposition);
   if (risque <= 0) return { rng };
   const tirage = rngFloat(rng);
   // Il ne suffit pas que les conditions soient réunies : il faut une SOURCE.

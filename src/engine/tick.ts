@@ -1959,7 +1959,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       station.ventExposition,
       station.coteM,
       frequentationDesBordures(station.bordures),
-      weather.ventMoyMs,
     );
     rng = depart.rng;
     if (depart.origine !== undefined) {
