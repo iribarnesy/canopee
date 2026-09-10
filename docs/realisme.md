@@ -24,7 +24,7 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
-| A. Sol, eau, atmosphère | 15 | 2 | 3 | 20 |
+| A. Sol, eau, atmosphère | 16 | 2 | 2 | 20 |
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
 | C. Nutriments et cycles | 9 | 3 | 1 | 13 |
 | D. Climat et phénologie | 7 | 3 | 1 | 11 |
@@ -34,9 +34,9 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **79** | **26** | **17** | **122** |
+| **Total** | **80** | **26** | **16** | **122** |
 
-**Score de réalisme : 79 pleins + 26 partiels sur 122 → 75 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 80 pleins + 26 partiels sur 122 → 76 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -54,7 +54,7 @@ l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
 arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai) → 76 % (relief, écoulement
 latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
-production).*
+production) → 76 % (structure du sol : le tassement et sa réparation).*
 
 *Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
 hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
@@ -96,7 +96,7 @@ mesurer que ce qu'on sait déjà faire.*
 | A14 | L'altitude refroidit et l'exposition décide du rayonnement (adret/ubac) | ✅ | 0,6 °C/100 m ; ±25 % d'ETP ET ±1,5 °C entre adret et ubac — c'est la même énergie qui fait les deux, un versant sud n'est pas seulement plus sec |
 | A28 | La nappe se voit : profondeur et engorgement, cellule par cellule | ✅ | calques « Nappe » et « Engorgement » alimentés par l'instantané |
 | A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` + réserve de surface recalculée par cellule selon son humus ; `sol-vivant.test.ts` |
-| A13 | La structure/compaction évolue (tassement, restauration par les racines) | ❌ | Pas de variable structure |
+| A13 | La structure/compaction évolue (tassement, restauration par les racines) | ✅ | `tassement.ts` ; `tassement.test.ts` — un passage d'engin tasse la seule part MÉCANISABLE de la zone (`mecanisation.ts`) : une parcelle plantée serré ne se tasse pas. Le tassement ferme le sol à l'eau (ruissellement, donc érosion), coûte jusqu'à 30 % de croissance aux arbres ET à la strate herbacée (fourchette Arvalis 5–30 %), et se répare chaque année d'autant plus vite que l'enracinement est dense *(vitesse de retour à calibrer : aucune source consultée ne la chiffre)*. **Limite assumée** : toute partie démarre à structure intacte, y compris sur une parcelle de grande culture qui arriverait déjà tassée — l'historique de la parcelle n'est pas déclaré |
 | A14 | Deux plantes voisines se disputent réellement l'eau de leurs cellules communes | ✅ | Allocation spatiale en 2 passes ; `nurse.test.ts` |
 
 ## B. Lumière et structure
