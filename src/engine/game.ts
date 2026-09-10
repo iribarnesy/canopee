@@ -53,6 +53,10 @@ export function beginWeek(state: GameState): GameState {
       saisonniersFinSemaine: saisonniers,
       hoursUsedWeek: 0,
       hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
+      // Le volume vendu se compte par année civile : c'est l'engorgement du
+      // débouché LOCAL qu'on modélise, et un acheteur reprend son appétit d'une
+      // campagne à l'autre (marche.ts).
+      volumeVenduAnneeM3: state.week % 52 === 0 ? 0 : state.economy.volumeVenduAnneeM3,
       // Économie désactivée : le compte tourne et s'affiche, mais il ne met
       // plus personne en faillite (actions.ts).
       bankrupt:

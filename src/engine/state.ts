@@ -291,6 +291,13 @@ export interface GameState {
    */
   banqueGraines: Record<string, number>;
   /**
+   * Identifiant stable de la partie, figé à sa création. Le marché du bois en
+   * tire ses variations annuelles : deux parties de même graine voient le même
+   * marché, et le marché ne consomme pas le flux aléatoire principal
+   * (marche.ts).
+   */
+  graineMarche: number;
+  /**
    * La parcelle a-t-elle brûlé depuis la dernière levée annuelle ? Le feu
    * scarifie les téguments durs : c'est lui qui fait lever d'un coup une banque
    * que rien d'autre n'aurait réveillée.
@@ -392,6 +399,10 @@ export function createGameState(
     week: 0,
     station,
     economy: createEconomy(options.treasuryEur ?? 20_000, options.economie ?? true),
+    // Un identifiant stable de la partie, figé à la création. Le marché du bois
+    // en tire ses variations annuelles sans puiser dans le flux aléatoire
+    // principal, qui lui change à chaque tick (marche.ts).
+    graineMarche: (rng[0] ?? 1) >>> 0,
     carbon: createCarbonState(),
     ddYearBase5: 0,
     // Une partie démarre au 1ᵉʳ janvier : l'hiver qui précède est supposé
