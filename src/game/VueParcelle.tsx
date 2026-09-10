@@ -30,6 +30,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, SceneParcelle } from "../render/pixi/scene";
+import type { Marqueur } from "../render/temps/changements";
 import type { Deformation } from "../render/temps/chute";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
@@ -80,6 +81,14 @@ export interface VueParcelleProps {
    * l'arbre part alors tel que l'instantané le donne, sans copie.
    */
   mourant?: (idArbre: number, maintenantMs: number, vivant: ArbreVivant) => EtatMourant | undefined;
+  /**
+   * Le calque des changements (§6.8 №1) : où la parcelle a changé.
+   *
+   * Un TABLEAU et non un rappel : les marqueurs ne bougent pas dans le temps,
+   * ils s'accumulent. Vide = calque éteint, l'état d'une partie qu'on regarde
+   * sans avoir rien sauté.
+   */
+  marqueurs?: readonly Marqueur[];
 }
 
 /**
@@ -219,6 +228,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         const rappel = p.deformer;
         scene.current?.deformerLesArbres(rappel ? (id) => rappel(id, horloge, v) : undefined);
         scene.current?.voilerLesCellules(p.voiler?.(horloge) ?? []);
+        scene.current?.montrerLesChangements(p.marqueurs ?? []);
         const compte = scene.current?.rafraichir(
           {
             sol: p.sol,

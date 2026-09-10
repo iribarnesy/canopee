@@ -48,6 +48,14 @@ import {
 } from "../couches/arbres";
 import { BRUME, type DecorBordures, OPACITE_DU_DECOR } from "../couches/decor";
 import {
+  cuireHalo,
+  cuireLisere,
+  cuireRepere,
+  HAUTEUR_DU_MARQUEUR_PX,
+  OPACITE_DU_MARQUEUR,
+  TAILLE_MARQUEUR_PX,
+} from "../couches/marqueurs";
+import {
   type ArbreOmbre,
   cuireTachesOmbre,
   MODE_ACCUMULATION_GPU,
@@ -58,6 +66,7 @@ import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
 import { cuireLosangeVoile } from "../couches/voile";
 import { versCss, versEntier } from "../palette";
 import { TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
+import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
 import type { CelluleVoilee } from "../temps/voile";
 
@@ -142,6 +151,7 @@ export class SceneParcelle {
     voiles: new Container(),
     ombres: new Container(),
     arbres: new Container(),
+    marqueurs: new Container(),
   };
   private terrain?: Terrain;
   private decor?: Decor;
@@ -193,6 +203,13 @@ export class SceneParcelle {
    * ordinaire.
    */
   private voiles: readonly CelluleVoilee[] = [];
+  /**
+   * Les marqueurs du calque des changements. Vide = calque éteint, l'état
+   * normal d'une partie qu'on regarde sans avoir rien sauté.
+   */
+  private marqueurs: readonly Marqueur[] = [];
+  /** Les trois formes du calque, cuites une fois. */
+  private formes?: Record<Marqueur["sorte"], Texture>;
   /** Le losange blanc, cuit une fois : c'est la seule forme d'un voile. */
   private textureVoile?: Texture;
   /** textures posées à l'image précédente, à libérer quand elles changent */
@@ -248,6 +265,12 @@ export class SceneParcelle {
       this.couches.voiles,
       this.couches.ombres,
       this.couches.arbres,
+      // **Le calque des changements est AU-DESSUS de tout**, y compris des
+      // arbres et de l'ombre : c'est de l'interface posée sur la carte, et un
+      // repère caché derrière un houppier ne repère rien. C'est aussi ce qui le
+      // distingue de tout le reste — rien d'autre dans cette scène ne passe
+      // devant un arbre.
+      this.couches.marqueurs,
     );
     // Les taches d'ombre sont cuites UNE fois pour la partie : ce sont des
     // dégradés radiaux, ils ne dépendent ni du zoom ni de la saison.
@@ -274,6 +297,18 @@ export class SceneParcelle {
    */
   public voilerLesCellules(cellules: readonly CelluleVoilee[]): void {
     this.voiles = cellules;
+  }
+
+  /**
+   * Pose (ou retire) le calque des changements.
+   *
+   * Un TABLEAU et non un rappel, à la différence des deux autres canaux : les
+   * marqueurs ne bougent pas dans le temps, ils apparaissent et s'accumulent.
+   * L'appelant en donne la liste quand elle change, et rien ne se recalcule
+   * entre-temps.
+   */
+  public montrerLesChangements(marqueurs: readonly Marqueur[]): void {
+    this.marqueurs = marqueurs;
   }
 
   /** Redimensionne le rendu. Le masque d'ombre suit, sinon il se décadre. */
@@ -347,6 +382,7 @@ export class SceneParcelle {
     spritesPoses += this.poserSol(vue);
     spritesPoses += this.poserVoiles(etat, vue);
     spritesPoses += this.poserArbres(poses, vue);
+    spritesPoses += this.poserMarqueurs(etat, vue);
     // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
     // laissait une découpe périmée. La signature ne regarde que les arbres et
     // la caméra ; or l'ombre est aussi découpée à la SILHOUETTE de la parcelle,
@@ -554,6 +590,49 @@ export class SceneParcelle {
       n++;
     }
     SceneParcelle.tailler(this.couches.voiles, n);
+    return n;
+  }
+
+  /**
+   * Le calque des changements : un marqueur par changement, à taille FIXE.
+   *
+   * **La taille en pixels et non en mètres est tout l'intérêt.** Un halo de
+   * dix-huit pixels se voit au zoom de parcelle comme au zoom rapproché ; s'il
+   * grandissait avec le zoom, il serait invisible là où on en a le plus besoin
+   * — précisément au zoom où une tige fait dix pixels et où une mort ne se
+   * remarque pas.
+   *
+   * Placé à MI-HAUTEUR de l'arbre et non à son pied : au pied, le marqueur
+   * disparaît sous le houppier de la tige de devant.
+   */
+  private poserMarqueurs(etat: EtatScene, vue: Vue): number {
+    if (this.marqueurs.length === 0) {
+      SceneParcelle.tailler(this.couches.marqueurs, 0);
+      return 0;
+    }
+    this.formes ??= {
+      halo: Texture.from(cuireHalo(this.fabriquer)),
+      liseré: Texture.from(cuireLisere(this.fabriquer)),
+      zone: Texture.from(cuireRepere(this.fabriquer)),
+    };
+    const cote = etat.sol.coteM;
+    let n = 0;
+    for (const m of this.marqueurs) {
+      const cx = Math.min(cote - 1, Math.max(0, Math.floor(m.x)));
+      const cy = Math.min(cote - 1, Math.max(0, Math.floor(m.y)));
+      const z = etat.sol.altitudesM[cy * cote + cx] ?? 0;
+      const p = versEcranVue({ x: m.x, y: m.y, z }, vue);
+      const sprite = SceneParcelle.sprite(this.couches.marqueurs, n, this.formes[m.sorte]);
+      sprite.anchor.set(0.5, 0.5);
+      sprite.width = TAILLE_MARQUEUR_PX;
+      sprite.height = TAILLE_MARQUEUR_PX;
+      sprite.x = p.sx;
+      sprite.y = p.sy - HAUTEUR_DU_MARQUEUR_PX;
+      sprite.tint = versEntier(m.teinte);
+      sprite.alpha = OPACITE_DU_MARQUEUR;
+      n++;
+    }
+    SceneParcelle.tailler(this.couches.marqueurs, n);
     return n;
   }
 

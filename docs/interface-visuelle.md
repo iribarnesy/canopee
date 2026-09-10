@@ -1491,7 +1491,57 @@ voir les animations » : suivre le journal texte est effectivement pénible, don
 
 Trois mécanismes, qui se complètent :
 
-#### 1. Le calque des changements (`animations/changements.ts`)
+#### 1. Le calque des changements — **construit le 2026-09-10**
+
+`src/render/temps/changements.ts` (pur) + `couches/marqueurs.ts` (les trois
+formes) + une couche Pixi au-dessus de tout.
+
+**Il a changé de statut en cours de route.** Cette section le rangeait au REPLI
+de l'animation, pour quand celle-ci déborde : mille morts ne tiennent pas dans
+deux secondes. La mesure du §6.3 a montré le problème SYMÉTRIQUE, et il est
+plus gênant : en jouant le vrai journal, une ellipse entière ne change que
+**196 pixels sur 880 000**. À grande vitesse il y a trop à montrer ; à vitesse
+normale il y en a trop peu pour qu'on le TROUVE. Le calque n'est donc pas un
+repli, c'est la moitié manquante.
+
+**Ce qui distingue un marqueur d'un objet du monde** — et c'est tout ce qui
+compte : il a une taille en PIXELS, pas en mètres. Dix-huit pixels au zoom de
+parcelle comme au zoom rapproché ; s'il grandissait avec le zoom, il serait
+invisible là où on en a le plus besoin. Chaque forme est tracée deux fois — un
+liseré sombre puis un trait clair — pour porter son propre contraste : les
+premiers halos beiges se fondaient dans le feuillage.
+
+La forme dit la NATURE du changement, la teinte en dit la cause : un **halo**
+(anneau ouvert) sur un arbre mort, teinté par la cause ; un **liseré** (arc
+bas) sur un arbre travaillé ; un **repère** (croix ajourée) au centre d'une
+zone. Deux canaux, parce qu'un joueur sur deux ne distingue pas le roux du
+brun. Les douze teintes de cause sont distinctes deux à deux, et un essai le
+tient.
+
+**Ce qu'il refuse de pointer, et c'est le point de conception le plus utile.**
+Le premier jet rendait **7 966 marqueurs** sur une semaine de friche : la
+cause est que `brouter` rapporte deux mille tiges par geste, et une semaine en
+porte quatre. Ce ne sont pas huit mille événements, c'est « le gibier a brouté
+partout, encore » — et ça se dit en trois mots. Au-delà de vingt-quatre tiges,
+un geste n'est donc plus pointé tige par tige, et le compte des changements
+non pointés (`Calque.omis`) revient à l'appelant : c'est le même aveu que
+`PlanDEllipse.deborde`, et c'est lui qui désigne le bilan de période (№2) comme
+le bon outil dans ce cas. Sur `friche-s28` : **45 marqueurs, 7 966 changements
+non pointés**.
+
+**Une chute n'est PAS marquée**, délibérément : c'est le seul changement de la
+liste qui se voit tout seul — vingt mètres de mouvement. Le marquer ajouterait
+un repère là où l'œil va déjà.
+
+**Ce qui manque au calque**, et c'est la moitié positive de l'histoire :
+le point vert des recrues et l'anneau des franchissements de stade. Le moteur
+calcule les recrues (`recruitment.newTrees`, avec position et espèce) et les
+jette ; les stades n'existent pas dans le protocole —
+[#46](https://github.com/iribarnesy/canopee/issues/46). **Un calque qui ne sait
+montrer que ce qui meurt donne une lecture fausse de la parcelle** : une friche
+qui se boise est le sujet même du jeu, et elle n'y laisse aucune trace.
+
+#### La demande d'origine (v0.2)
 
 Un calque qui **marque tout ce qui a changé depuis la dernière fois que le
 joueur a regardé**, et qui *persiste* au lieu de défiler :

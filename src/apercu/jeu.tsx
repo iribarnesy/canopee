@@ -25,6 +25,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import type { Compte } from "../render/pixi/scene";
+import { type Marqueur, marqueursDuJournal } from "../render/temps/changements";
 import { combiner } from "../render/temps/chute";
 import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
 import {
@@ -220,10 +221,20 @@ function Demo(): React.ReactElement {
     const reel = scene?.journal;
     if (reel && !tout && !cause) {
       const plan = planDEllipse([reel], DUREE_ELLIPSE_MS);
+      // Le calque des changements sort du MÊME journal que le plan : c'est ce
+      // qui garantit qu'il montre exactement ce que l'ellipse a joué, ni plus
+      // ni moins. `?calque=0` l'éteint, pour comparer.
+      const ou = new Map((scene?.trees ?? []).map((t) => [t.id, { x: t.x, y: t.y }]));
+      const calque =
+        params.get("calque") === "0"
+          ? { marqueurs: [] as Marqueur[], omis: 0 }
+          : marqueursDuJournal(reel, (id) => ou.get(id), scene?.coteM ?? 1);
       return {
         index: indexerLesChutes(plan),
         voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
         morts: indexerLesMorts(plan),
+        marqueurs: calque.marqueurs,
+        omis: calque.omis,
         dureeMs: plan.dureeMs,
       };
     }
@@ -294,6 +305,8 @@ function Demo(): React.ReactElement {
       index: indexerLesChutes(plan),
       voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
       morts: indexerLesMorts(plan),
+      marqueurs: [] as Marqueur[],
+      omis: 0,
       dureeMs: plan.dureeMs,
     };
   }, [scene]);
@@ -315,6 +328,16 @@ function Demo(): React.ReactElement {
         ].join("\n")
       : "";
   }, [compte]);
+
+  useEffect(() => {
+    const etat = document.getElementById("etat");
+    if (!etat || !scene) return;
+    // Le calque et ce qu'il a renoncé à montrer : sans ce chiffre à l'écran,
+    // un calque vide et un calque débordé se ressemblent.
+    etat.textContent = `calque : ${ellipse.marqueurs.length} marqueurs${
+      ellipse.omis > 0 ? `, ${ellipse.omis} changements non pointés` : ""
+    }`;
+  }, [ellipse, scene]);
 
   if (!scene) return <div />;
   const pheno = scene.sol.pheno;
@@ -372,6 +395,7 @@ function Demo(): React.ReactElement {
       hauteurMaxDe={(especeId) => getEspece(especeId)?.hauteurMaxM ?? 20}
       ombreDe={(a) => a.partFoliaire}
       surCompte={setCompte}
+      marqueurs={ellipse.marqueurs}
       deformer={(id, maintenantMs, vue) => {
         const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
         // Les deux canaux de pose se COMPOSENT : franchir dix ans, c'est voir
