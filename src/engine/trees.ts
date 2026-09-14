@@ -650,20 +650,25 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * moteur le calcule déjà (`light.ts:baseHouppierCible`) : il a donc été essayé
  * en premier. Il a été ÉCARTÉ par la mesure — piloté par lui, l'élancement se
  * resserrait sur 36–39 au lieu de s'étaler, parce que dans ce moteur la base
- * du houppier ne remonte pas assez pour discriminer. La lumière, elle, étale
- * H/D de 27 à 67 sur le même peuplement.
+ * du houppier ne remonte pas assez pour discriminer. La lumière, elle, produit
+ * un gradient MONOTONE avec la densité (`elancement.test.ts`) : à 2 / 4 / 6 /
+ * 10 m d'écartement, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4.
  *
  * **Les deux constantes font DEUX choses à la fois, et c'est ce qui les cale :**
  * leur moyenne fixe le niveau de volume du peuplement, leur écart fixe
- * l'amplitude de H/D. Une hêtraie de 80 ans à 400 tiges/ha donne ici 380 m³/ha,
- * ce qui tombe dans la fourchette de 350 à 450 attendue pour une futaie de cet
- * âge — l'ancien moteur en annonçait 2 388.
+ * l'amplitude de H/D. La médiane vaut 2, la valeur qui reproduit les 2,45 m³ de
+ * tige d'un hêtre de 25 m et 50 cm — vérifiés contre le réel, et c'est l'ancre.
+ * Une hêtraie de 80 ans à 400 tiges/ha donne alors 507 m³/ha, contre 2 388 pour
+ * l'ancien moteur. Les 350 à 450 m³/ha des tables valent pour une futaie
+ * GÉRÉE ; ce banc-là n'est jamais éclairci, et accumule donc davantage.
  *
- * **Réserve honnête** : H/D culmine autour de 67 et n'atteint pas encore les 80
- * du seuil de risque. Les tiges vraiment dominées meurent dans ce moteur au
- * lieu de filer, ce qui tronque le haut de la gamme. L'écart entre une tige à
- * 38 et une tige à 67 suffit déjà à trier au vent, mais le seuil lui-même
- * restera à instruire avec le modèle de chablis (#55).
+ * **Réserve honnête, et sa cause est ailleurs.** Le moteur couvre H/D de 35 à
+ * 49 quand la sylviculture mesure 25–40 au large et 90–100 en perche : le bon
+ * ordre, un cinquième de l'étendue. Ce n'est pas cette allocation qui borne —
+ * c'est le poids d'ombrage des codominants (0,4 dans `light.ts:extinctionAt`),
+ * qui atténue la concurrence latérale précisément là où elle est la plus forte.
+ * Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger
+ * mérite son propre lot.
  *
  * **La hauteur, elle, n'est pas touchée.** Elle est calée sur des tables de
  * production (Jansen 1996, `hauteurs.test.ts`) : c'est une vraie ancre, et on
