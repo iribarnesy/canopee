@@ -4,6 +4,15 @@ Le développement de Canopée se répartit entre trois agents dont les périmèt
 ne se recouvrent pas. Chacun a sa note dans ce dossier. Ce fichier dit ce qui
 vaut pour les trois.
 
+**Ce que la version en cours doit contenir est dans [`../v1.md`](../v1.md).** Il
+dit aussi ce qu'elle doit refuser, et c'est la partie qui compte : rien ne
+s'ajoute entre deux versions, même une bonne idée, même petite.
+
+Le rôle du jeu couvre **tout ce qui n'est pas `src/engine`** — niveaux,
+objectifs, interface, couche visuelle. Il couvrait au départ le seul rendu ; il
+a été élargi parce que ces trois choses se rejoignent dans `GameView.tsx`, et
+que deux agents qui y travaillent en même temps se marchent dessus.
+
 ## La règle qui vient avant les autres
 
 **S'assigner l'issue avant de commencer.** `gh issue edit <n> --add-assignee @me`.
@@ -19,7 +28,7 @@ mesurées et relues.
 
 | Label | Pour qui | Sens |
 |---|---|---|
-| `rendu` | agent de rendu | Couche visuelle. N'entre jamais dans `src/engine`. |
+| `rendu` | agent du jeu | Tout ce qui n'est pas `src/engine` : niveaux, objectifs, interface, couche visuelle. |
 | `moteur:maintenance` | agent de maintenance | Corriger un mécanisme existant : défaut, dérive de calibration, hygiène des tests. |
 | `moteur:évolution` | agent d'évolution | Ajouter un mécanisme que le moteur ne sait pas faire. |
 | `réalisme` | celui qui livre | Touche `docs/realisme.md` : un critère change d'état ou de justification. |
@@ -28,6 +37,20 @@ mesurées et relues.
 
 Les trois derniers ne routent pas, ils avertissent. Ils se cumulent avec les
 trois premiers.
+
+## Où en est le projet
+
+Le **moteur** est largement en avance sur ce que le jeu sait montrer : 104
+critères de réalisme sur 134 sont acquis, et les issues ouvertes portent des
+mécanismes de plus en plus fins.
+
+Le **jeu**, lui, est un bac à sable sans jeu : une vingtaine de gestes jouables,
+un HUD, une sauvegarde, une économie qui peut mener à la faillite — et aucune
+notion d'objectif, de niveau, de progression ni de fin. C'est là qu'est l'écart,
+et c'est ce que la V1 comble.
+
+Conséquence pratique pour les deux agents du moteur : **le moteur n'est pas le
+chemin critique.** Un mécanisme de plus ne rapproche pas d'une version finie.
 
 ## Ce que personne n'a le droit de casser
 
