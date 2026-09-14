@@ -629,7 +629,7 @@ interface Planche {
 /**
  * Les arbres de futaie et les fruitiers, dans l'ordre des familles de port.
  *
- * Douze sujets à seize mètres : c'est la hauteur à laquelle ces essences-là se
+ * Treize sujets à seize mètres : c'est la hauteur à laquelle ces essences-là se
  * comparent. Les arbustes de haie ont leur propre planche, plus bas — les
  * mettre ici les réduirait à des points, puisque `heightM` est plafonné par la
  * hauteur maximale de l'espèce et qu'une aubépine n'en fait que huit.
@@ -639,6 +639,7 @@ const FUTAIE = [
   "quercus_pubescens",
   "castanea_sativa",
   "fraxinus_excelsior",
+  "juglans_regia",
   "carpinus_betulus",
   "betula_pendula",
   "alnus_glutinosa",
@@ -675,14 +676,17 @@ const HAIE = [
  * Les espèces dont le MOTEUR suit la fructification, dans l'ordre des tailles
  * de fruit.
  *
- * Dix, et la liste n'est pas un choix de dessin : c'est exactement l'ensemble
- * des espèces qui ont un bloc `fruits` dans `especes.ts`. L'aubépine, le houx
+ * Onze, et la liste n'est pas un choix de dessin : c'est exactement l'ensemble
+ * des espèces qui ont un bloc `fruits` dans `especes.ts` — le noyer s'y est
+ * ajouté avec l'allélopathie, et son BROU (une drupe verte, la noix n'apparaît
+ * qu'au sol) se range entre la bogue du châtaignier et l'abricot. L'aubépine, le houx
  * et le fusain en portent de bien visibles et n'y sont pas — le moteur ne suit
  * pas leur fructification, donc le rendu n'en dessine pas.
  */
 const FRUITIERS = [
   "malus_domestica",
   "castanea_sativa",
+  "juglans_regia",
   "prunus_armeniaca",
   "arbutus_unedo",
   "corylus_avellana",
