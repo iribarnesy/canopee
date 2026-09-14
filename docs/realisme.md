@@ -20,6 +20,38 @@
 
 Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
+## Ce qu'un test écologique a le droit d'affirmer
+
+Trois pièges se sont refermés assez souvent sur ce dépôt pour mériter d'être
+écrits une fois pour toutes.
+
+**Un rapport entre deux quantités composites n'est pas une propriété du monde.**
+« Le mélange perd deux fois moins d'aulnes », « le réchauffement double les
+ravageurs », « épandre vaut +9 % » : ces rapports ont tous été rabaissés deux ou
+trois fois, chaque fois pour une cause réelle et documentée — vitesses de
+croissance calées sur les tables, allométrie corrigée, élancement individualisé.
+Mais un seuil qu'on rabaisse à chaque changement de mécanisme n'enregistre plus
+que le moteur : il a cessé de le contraindre. Ce qui résiste, c'est la
+DIRECTION, et elle s'exige graine par graine plutôt qu'en moyenne — trois
+directions concordantes valent mieux qu'un ratio moyen.
+
+**Une ancre écrite d'après le moteur n'est pas une ancre.** Le seul test qui
+confrontait le carbone à une valeur absolue exigeait qu'un hêtre de 25 m stocke
+« quelques tonnes ». La borne avait été posée sur le volume du moteur, lequel
+était faux d'un facteur cinq : elle entérinait l'erreur au lieu de l'attraper.
+Une valeur absolue se cale sur une source extérieure, ou ne se cale pas.
+
+**La conservation ne valide rien.** Un stock faux d'un facteur cinq se conserve
+parfaitement. Les invariants attrapent les fuites, jamais les niveaux — c'est
+d'ailleurs pour ça qu'ils sont précieux : ils ont trouvé, le jour même, une
+fuite de 0,133 kg due à un grand livre de test qui mesurait le même arbre avec
+deux règles. Mais un critère noté ✅ sur la seule foi d'un test de conservation
+n'est pas prouvé.
+
+Corollaire pratique : un seuil mesuré au milieu d'un lot périme avant la fin du
+lot. Les chiffres cités dans les commentaires de test sont datés par le
+mécanisme qui les a produits, et se remesurent quand il change.
+
 ## Score actuel
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
