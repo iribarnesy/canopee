@@ -52,6 +52,15 @@ Corollaire pratique : un seuil mesuré au milieu d'un lot périme avant la fin d
 lot. Les chiffres cités dans les commentaires de test sont datés par le
 mécanisme qui les a produits, et se remesurent quand il change.
 
+Le même piège se referme sur les MESURES QU'ON CITE, et pas seulement sur les
+seuils : un chiffre porté dans un commentaire, une PR ou ce référentiel doit
+être remesuré sur le code qu'on LIVRE, pas sur celui qu'on avait à mi-parcours.
+Une PR de ce dépôt a annoncé une amplitude d'élancement obtenue avec des
+constantes annulées depuis — les chiffres étaient sincères et faux.
+
+Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues.
+« Plus de 0,9 × TOTAL » survit à un changement d'échelle, « plus de 900 kg » non.
+
 ## Score actuel
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
@@ -60,15 +69,15 @@ mécanisme qui les a produits, et se remesurent quand il change.
 | B. Lumière et structure | 5 | 5 | 0 | 10 |
 | C. Nutriments et cycles | 12 | 1 | 0 | 13 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
-| E. Interactions entre plantes | 7 | 3 | 2 | 12 |
+| E. Interactions entre plantes | 7 | 4 | 1 | 12 |
 | F. Dynamique des peuplements | 8 | 5 | 0 | 13 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 6 | 3 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **104** | **28** | **2** | **134** |
+| **Total** | **104** | **29** | **1** | **134** |
 
-**Score de réalisme : 104 pleins + 28 partiels sur 134 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 104 pleins + 29 partiels sur 134 → 88 %** *(un partiel compte 1/2)*.
 
 > **Ce tableau venait d'être recompté, et il était faux.** Il annonçait
 > 80 / 26 / 16 sur 122 — soit 76 % — là où les lignes du document en portaient
@@ -162,7 +171,7 @@ mesurer que ce qu'on sait déjà faire.*
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
-| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le RAYON, lui, reste `houppierRatio × hauteur` : pas de port serré |
+| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré |
 
 ## C. Nutriments et cycles
 
@@ -215,7 +224,7 @@ mesurer que ce qu'on sait déjà faire.*
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
-| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ❌ | Dépend de B10 |
+| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `trees.ts` (`allocationDiametreCmParM`) ; `elancement.test.ts` — le diamètre est porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, dans une proportion que la lumière décide. Rien n'est déclaré par essence : à écartement 2 / 4 / 6 / 10 m, même espèce et même graine, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4 — gradient MONOTONE, sans palier sur la gamme testée. **Reste 🟡 sur l'AMPLITUDE** : la sylviculture mesure 25–40 au large et 90–100 en perche, le moteur ne couvre que 35–49. La cause est identifiée et ANTÉRIEURE — dans `light.ts:extinctionAt` un codominant n'ombrage qu'au poids 0,4, or en plantation régulière tout le monde est codominant de tout le monde. Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger mérite son propre lot |
 
 ## F. Dynamique des peuplements
 
@@ -283,7 +292,7 @@ mesurer que ce qu'on sait déjà faire.*
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
-| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | proxy 0,015·H² × densité, à caler sur l'IFN |
+| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. Un hêtre de 25 m et 50 cm stocke maintenant 1 333 kg C contre 3 917 avant, pour 1 000 à 1 400 attendus. **Reste 🟡** : `bois.densite` est une densité commerciale à 12 % d'humidité là où la biomasse demande l'infradensité, soit environ 20 % de surestimation résiduelle |
 | I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
 
 ---
