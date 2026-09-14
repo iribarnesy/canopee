@@ -27,7 +27,12 @@ import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tassementApresPassage } from "./tassement";
-import { tirerVigueurIndividuelle, treeNitrogenNeedGWeek } from "./trees";
+import {
+  diametreInitialCm,
+  tirerVigueurIndividuelle,
+  treeNitrogenNeedGWeek,
+  volumeTigeM3,
+} from "./trees";
 
 /** plafond d'heures de travail par UTH et par semaine (docs/regles.md §10) */
 export const WEEK_HOURS_CAP = 60;
@@ -583,19 +588,6 @@ export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
   return "cellules" in geste;
 }
 
-/** Volume de bois récoltable, m³ — proxy allométrique V0 *(à calibrer IFN)*. */
-export function woodVolumeM3(heightM: number): number {
-  return 0.015 * heightM * heightM;
-}
-
-/**
- * Diamètre à hauteur de poitrine, cm — proxy tiré de la hauteur *(à calibrer)*.
- * Un arbre de 20 m fait environ 40 cm de diamètre.
- */
-export function diametreCm(heightM: number): number {
-  return 2 * heightM;
-}
-
 /**
  * Ce que vaut un arbre sur pied, € — et à quel titre. Une bille droite,
  * élaguée et de bon diamètre part en scierie à plusieurs centaines d'euros le
@@ -604,10 +596,10 @@ export function diametreCm(heightM: number): number {
  */
 export function valeurSurPied(
   espece: EspeceV0,
-  tree: { heightM: number; hauteurElagueeM: number },
+  tree: { heightM: number; diametreCm: number; hauteurElagueeM: number },
 ): { eur: number; qualite: "oeuvre" | "chauffage" } {
-  const volume = woodVolumeM3(tree.heightM);
-  const assezGros = diametreCm(tree.heightM) >= DIAMETRE_OEUVRE_MIN_CM;
+  const volume = volumeTigeM3(tree.diametreCm, tree.heightM);
+  const assezGros = tree.diametreCm >= DIAMETRE_OEUVRE_MIN_CM;
   const assezElague = tree.hauteurElagueeM >= BILLE_OEUVRE_MIN_M;
   if (assezGros && assezElague) {
     // Seule la bille élaguée fait de l'œuvre ; le houppier reste du chauffage.
@@ -683,6 +675,7 @@ function applyPlanter(
       y: pos.y,
       ageWeeks: 0,
       heightM: 0.3,
+      diametreCm: diametreInitialCm(0.3),
       stress: 0,
       alive: true,
       uptakeYearG: 0,
@@ -701,7 +694,7 @@ function applyPlanter(
     treasuryEur -= euroParPlant;
     hoursUsedWeek += heuresParPlant;
     hoursUsedYear += heuresParPlant;
-    importedKgC += treeTotalCarbonKg(espece, 0.3); // le plant arrive avec sa biomasse
+    importedKgC += treeTotalCarbonKg(espece, diametreInitialCm(0.3), 0.3); // le plant arrive avec sa biomasse
   }
 
   return {
@@ -798,7 +791,7 @@ function applyCouper(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
-    const aerienKgC = treeAboveCarbonKg(espece, tree.heightM);
+    const aerienKgC = treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM);
     /**
      * Carbone qui quitte réellement la parcelle avec le fût.
      *
@@ -821,7 +814,7 @@ function applyCouper(
       deadWoodKgC -= emporteKgC;
     } else {
       // Les souches et racines restent au sol dans les trois cas (bois mort).
-      deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
+      deadWoodKgC += treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) - aerienKgC;
     }
     /**
      * Le fût est couché EN TRAVERS de la pente. Pour le bois qu'on laisse sur
@@ -868,7 +861,7 @@ function applyCouper(
       // tout son bois sur le marché la même année — c'est ce que la France a
       // vécu après Lothar et Klaus, des cours divisés par deux sous le poids
       // des chablis. Les deux ne jouent que si l'économie compte.
-      const volumeVendu = woodVolumeM3(tree.heightM);
+      const volumeVendu = volumeTigeM3(tree.diametreCm, tree.heightM);
       const marche = state.economy.active
         ? indiceDuMarche(state.graineMarche, Math.floor(state.week / 52)) *
           decoteEngorgement(volumeVenduAnneeM3)
@@ -895,7 +888,8 @@ function applyCouper(
     } else if (action.devenir === "broyer") {
       // Le broyat rejoint le tas : rien ne touche le sol pour l'instant.
       stockBrf = {
-        carboneG: stockBrf.carboneG + treeAboveCarbonKg(espece, tree.heightM) * 1000,
+        carboneG:
+          stockBrf.carboneG + treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000,
         azoteG:
           stockBrf.azoteG +
           0.5 * tree.uptakeYearG +
@@ -925,7 +919,8 @@ function applyCouper(
       if (cells.length === 0) cells.push(0);
       const share = depositG / cells.length;
       // Tout le carbone aérien broyé reste sur place, dans la litière.
-      const shareC = (treeAboveCarbonKg(espece, tree.heightM) * 1000) / cells.length;
+      const shareC =
+        (treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000) / cells.length;
       const kSpecies = 0.6 / BRF_CN_RATIO;
       for (const i of cells) {
         const oldN = litterNG[i] ?? 0;
@@ -1369,11 +1364,14 @@ function applyTrogner(
     });
     // Ce qu'on emporte : tout ce qui dépassait la tête, en bois de chauffage.
     const emporte =
-      treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, hauteurTete);
-    treasuryEur += (woodVolumeM3(tree.heightM) - woodVolumeM3(hauteurTete)) * WOOD_PRICE_EUR_M3;
+      treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
+      treeAboveCarbonKg(espece, tree.diametreCm, hauteurTete);
+    treasuryEur +=
+      (volumeTigeM3(tree.diametreCm, tree.heightM) - volumeTigeM3(tree.diametreCm, hauteurTete)) *
+      WOOD_PRICE_EUR_M3;
     exportedEnergyCumKgC += Math.max(0, emporte);
     // Même chose qu'au recépage : ce que la tête perd en racines reste au sol.
-    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, hauteurTete);
+    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.diametreCm, tree.heightM, hauteurTete);
     trees[idx] = {
       ...tree,
       heightM: hauteurTete,
@@ -1674,12 +1672,20 @@ function applyReceper(
     // compter entière vendait un demi-mètre de bois resté debout, et créait
     // le carbone correspondant.
     treasuryEur +=
-      (woodVolumeM3(tree.heightM) - woodVolumeM3(RECEPAGE_HAUTEUR_M)) * WOOD_PRICE_EUR_M3;
+      (volumeTigeM3(tree.diametreCm, tree.heightM) -
+        volumeTigeM3(tree.diametreCm, RECEPAGE_HAUTEUR_M)) *
+      WOOD_PRICE_EUR_M3;
     exportedEnergyCumKgC +=
-      treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, RECEPAGE_HAUTEUR_M);
+      treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
+      treeAboveCarbonKg(espece, tree.diametreCm, RECEPAGE_HAUTEUR_M);
     // Les racines que l'arbre cesse de porter restent dans le sol : elles ne
     // s'exportent pas avec la tige, elles se décomposent sur place (carbon.ts).
-    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, RECEPAGE_HAUTEUR_M);
+    deadWoodKgC += racinesPerduesEnRabattant(
+      espece,
+      tree.diametreCm,
+      tree.heightM,
+      RECEPAGE_HAUTEUR_M,
+    );
     trees[idx] = {
       ...tree,
       heightM: RECEPAGE_HAUTEUR_M,

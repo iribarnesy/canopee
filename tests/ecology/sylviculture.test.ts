@@ -10,11 +10,9 @@
 import { describe, expect, it } from "vitest";
 import {
   applyAction,
-  diametreCm,
   type GameAction,
   valeurSurPied,
   WOOD_PRICE_EUR_M3,
-  woodVolumeM3,
 } from "../../src/engine/actions";
 import { getEspece } from "../../src/engine/especes";
 import { runJournal } from "../../src/engine/game";
@@ -22,6 +20,7 @@ import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
+import { diametreInitialCm, volumeTigeM3 } from "../../src/engine/trees";
 
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
 const STATION = { ...LIMON_RICHE.station, coteM: 40, voisinage: [] };
@@ -30,8 +29,16 @@ describe("ce qui fait la valeur d'un arbre", () => {
   const chene = getEspece("quercus_pubescens");
 
   it("une bille élaguée et grosse part en scierie, pas en bûches", () => {
-    const branchu = valeurSurPied(chene, { heightM: 18, hauteurElagueeM: 0 });
-    const elague = valeurSurPied(chene, { heightM: 18, hauteurElagueeM: 6 });
+    const branchu = valeurSurPied(chene, {
+      heightM: 18,
+      diametreCm: diametreInitialCm(18),
+      hauteurElagueeM: 0,
+    });
+    const elague = valeurSurPied(chene, {
+      heightM: 18,
+      diametreCm: diametreInitialCm(18),
+      hauteurElagueeM: 6,
+    });
     expect(branchu.qualite).toBe("chauffage");
     expect(elague.qualite).toBe("oeuvre");
     // Seule la bille de pied part en œuvre (un tiers du volume ici), mais à
@@ -40,14 +47,23 @@ describe("ce qui fait la valeur d'un arbre", () => {
   });
 
   it("un arbre trop petit ne fait pas d'œuvre, même élagué", () => {
-    expect(diametreCm(10)).toBeLessThan(30);
-    expect(valeurSurPied(chene, { heightM: 10, hauteurElagueeM: 5 }).qualite).toBe("chauffage");
+    // À l'allocation médiane, dix mètres font vingt centimètres : sous le
+    // seuil de l'œuvre, quel que soit l'élagage.
+    expect(diametreInitialCm(10)).toBeLessThan(30);
+    expect(
+      valeurSurPied(chene, { heightM: 10, diametreCm: diametreInitialCm(10), hauteurElagueeM: 5 })
+        .qualite,
+    ).toBe("chauffage");
   });
 
   it("le chauffage reste payé au volume, quelle que soit l'essence", () => {
     const pin = getEspece("pinus_sylvestris");
-    const v = valeurSurPied(pin, { heightM: 12, hauteurElagueeM: 0 });
-    expect(v.eur).toBeCloseTo(woodVolumeM3(12) * WOOD_PRICE_EUR_M3, 6);
+    const v = valeurSurPied(pin, {
+      heightM: 12,
+      diametreCm: diametreInitialCm(12),
+      hauteurElagueeM: 0,
+    });
+    expect(v.eur).toBeCloseTo(volumeTigeM3(diametreInitialCm(12), 12) * WOOD_PRICE_EUR_M3, 6);
   });
 });
 

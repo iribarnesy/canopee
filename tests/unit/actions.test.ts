@@ -12,7 +12,6 @@ import {
   RECEPAGE_HAUTEUR_M,
   WEEK_HOURS_CAP,
   WOOD_PRICE_EUR_M3,
-  woodVolumeM3,
 } from "../../src/engine/actions";
 import { versLAval } from "../../src/engine/boisMort";
 import { CARBON_FRACTION } from "../../src/engine/carbon";
@@ -25,6 +24,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { stateHash } from "../../src/engine/tick";
+import { diametreInitialCm, volumeTigeM3 } from "../../src/engine/trees";
 
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
 const STATION = { ...LIMON_RICHE.station, coteM: 50 };
@@ -139,7 +139,7 @@ describe("plafonds économiques (déterministes)", () => {
     // prouverait plus que lui-même.
     const marche = indiceDuMarche(state.graineMarche, 0);
     expect(after.economy.treasuryEur).toBeCloseTo(
-      20_000 + woodVolumeM3(20) * WOOD_PRICE_EUR_M3 * marche,
+      20_000 + volumeTigeM3(diametreInitialCm(20), 20) * WOOD_PRICE_EUR_M3 * marche,
       6,
     );
     expect(after.economy.hoursUsedWeek).toBeCloseTo(fellingHours(20), 6);

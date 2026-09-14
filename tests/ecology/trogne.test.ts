@@ -19,7 +19,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
-import { tickTree } from "../../src/engine/trees";
+import { diametreInitialCm, tickTree } from "../../src/engine/trees";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -43,6 +43,7 @@ function frene(recepages: number, heightM = 8): TreeState {
     y: 10,
     ageWeeks: 52 * 190,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 0,
     alive: true,
     uptakeYearG: 0,

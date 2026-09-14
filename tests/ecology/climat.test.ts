@@ -29,7 +29,7 @@ import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantScattered, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
-import { tickTree } from "../../src/engine/trees";
+import { diametreInitialCm, tickTree } from "../../src/engine/trees";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -135,6 +135,7 @@ describe("le CO₂ : ce qu'il donne et ce qu'il ne donne pas", () => {
       y: 5,
       ageWeeks: 52 * 15,
       heightM: 6,
+      diametreCm: diametreInitialCm(6),
       stress: 0,
       alive: true,
       uptakeYearG: 0,

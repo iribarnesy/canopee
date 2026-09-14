@@ -25,6 +25,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -40,6 +41,7 @@ function arbre(id: number, especeId: string, x: number, y: number, heightM: numb
     y,
     ageWeeks: 52 * 20,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 0,
     alive: true,
     uptakeYearG: 0,

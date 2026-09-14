@@ -16,6 +16,7 @@ import { getEspece } from "../../src/engine/especes";
 import { drawPosition } from "../../src/engine/regeneration";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 
 const COTE = 40;
 
@@ -27,6 +28,7 @@ function parent(especeId: string): TreeState {
     y: 20,
     ageWeeks: 52 * 60,
     heightM: 18,
+    diametreCm: diametreInitialCm(18),
     stress: 0,
     alive: true,
     uptakeYearG: 0,

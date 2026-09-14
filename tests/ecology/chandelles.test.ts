@@ -31,6 +31,7 @@ import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import {
   CHANDELLE_ANS_PAR_DENSITE,
+  diametreInitialCm,
   dureeChandelleSemaines,
   type TreeState,
 } from "../../src/engine/trees";
@@ -46,6 +47,7 @@ function chandelle(heightM = 18): TreeState {
     x: 10,
     y: 10,
     ageWeeks: 80 * 52,
+    diametreCm: diametreInitialCm(heightM),
     heightM,
     stress: 0,
     alive: false,
@@ -248,7 +250,7 @@ describe("un tronc qui tombe tombe quelque part", () => {
       nextTreeId: 2,
       carbon: {
         ...state.carbon,
-        deadWoodKgC: treeTotalCarbonKg(getEspece("fagus_sylvatica"), 18),
+        deadWoodKgC: treeTotalCarbonKg(getEspece("fagus_sylvatica"), diametreInitialCm(18), 18),
       },
     };
     for (let i = 0; i < duree + 20; i++) {
@@ -320,9 +322,9 @@ describe("un tronc qui tombe tombe quelque part", () => {
 
   it("ce qui pousse dessous casse si le tronc pèse plus lourd que lui", () => {
     const hetre = getEspece("fagus_sylvatica");
-    const tronc = treeTotalCarbonKg(hetre, 18);
-    const semis = treeTotalCarbonKg(hetre, 0.5);
-    const adulte = treeTotalCarbonKg(hetre, 20);
+    const tronc = treeTotalCarbonKg(hetre, diametreInitialCm(18), 18);
+    const semis = treeTotalCarbonKg(hetre, diametreInitialCm(0.5), 0.5);
+    const adulte = treeTotalCarbonKg(hetre, diametreInitialCm(20), 20);
     // Le tronc se répartit sur sa longueur : c'est la part reçue par la
     // cellule qui compte, pas la masse entière.
     const parCellule = tronc / 18;
