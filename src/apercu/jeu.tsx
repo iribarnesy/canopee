@@ -17,7 +17,12 @@ import {
   partFoliaireOmbrageanteDans,
   senescenceDans,
 } from "../engine/phenologie";
-import type { ChuteDeChandelle, MortDeLaSemaine } from "../engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 import { VueParcelle } from "../game/VueParcelle";
 import { ficheDe } from "../render/arbres/especes";
@@ -29,7 +34,6 @@ import {
   type Marqueur,
   marqueursDuJournal,
   OPACITE_HORS_SUJET,
-  recruesDuSnapshot,
   sujetsDuJournal,
 } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
@@ -86,12 +90,17 @@ interface Scene {
     morts: MortDeLaSemaine[];
     gestes: GesteVisible[];
     chutes: ChuteDeChandelle[];
+    /** `Snapshot.naissances` : les semis installés, avec leur position */
+    naissances?: NaissanceDeLaSemaine[];
+    /** `Snapshot.franchissements` : les tiges qui ont changé de stade */
+    franchissements?: FranchissementDeStade[];
     /**
      * Sur combien de semaines ce journal a été accumulé.
      *
-     * C'est ce qui reconnaît une RECRUE sans rien garder : un arbre dont l'âge
-     * est inférieur à cet intervalle est arrivé depuis la dernière fois qu'on a
-     * regardé (`recruesDuSnapshot`).
+     * Servait à reconnaître les recrues à leur `ageWeeks` ; depuis que le
+     * moteur rapporte les naissances, il ne reste qu'un usage — reconnaître
+     * les arbres que l'incendie a torchés à leur `brulEeSemaine`, faute que la
+     * mort par le feu voyage avec l'incendie (issue #52).
      */
     semaines?: number;
     /**
@@ -298,12 +307,12 @@ function Demo(): React.ReactElement {
       // `?calque=0` éteint tout, pour comparer ; `?calque=marqueurs` garde les
       // repères sans estomper, ce qui isole ce que chaque mécanisme apporte.
       const quoi = params.get("calque") ?? "estompe";
-      const recrues = recruesDuSnapshot(scene?.trees ?? [], reel.semaines ?? 0);
       // **Les arbres que l'incendie a torchés**, reconnus à `brulEeSemaine` et
       // non au journal : le moteur ne rapporte une mort par le feu qu'un an
       // plus tard (issue #52), donc un incendie et ses victimes n'arrivent
-      // jamais ensemble. Même raisonnement que pour les recrues, reconnues à
-      // leur `ageWeeks`.
+      // jamais ensemble. C'est le dernier endroit du rendu qui doive déduire un
+      // événement d'un instantané : les naissances et les montées de stade, qui
+      // l'étaient aussi, voyagent maintenant dans le journal.
       const semaines = reel.semaines ?? 0;
       const saison = scene?.sol.pheno;
       const torchees = (scene?.trees ?? []).filter(
@@ -349,9 +358,8 @@ function Demo(): React.ReactElement {
       const calque =
         quoi === "0"
           ? { marqueurs: [] as Marqueur[], omis: 0 }
-          : { marqueurs: [...tous.marqueurs, ...recrues.marqueurs], omis: tous.omis };
+          : { marqueurs: tous.marqueurs, omis: tous.omis };
       const sujets = quoi === "0" ? new Set<number>() : sujetsDuJournal(journalReel);
-      for (const id of recrues.ids) sujets.add(id);
       return {
         index: indexerLesChutes(plan),
         voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
@@ -360,7 +368,7 @@ function Demo(): React.ReactElement {
         torches,
         marqueurs: calque.marqueurs,
         omis: calque.omis,
-        recrues: recrues.ids.size,
+        naissances: (reel.naissances ?? []).length,
         sujets,
         estompe: quoi !== "0" && quoi !== "marqueurs" && sujets.size > 0,
         dureeMs: plan.dureeMs,
@@ -437,7 +445,7 @@ function Demo(): React.ReactElement {
       torches: AUCUNE_TORCHE,
       marqueurs: [] as Marqueur[],
       omis: 0,
-      recrues: 0,
+      naissances: 0,
       sujets: new Set<number>(),
       estompe: false,
       dureeMs: plan.dureeMs,
@@ -469,7 +477,7 @@ function Demo(): React.ReactElement {
     // un calque vide et un calque débordé se ressemblent.
     etat.textContent = `${ellipse.estompe ? "estompe" : "marqueurs"} : ${
       ellipse.sujets.size
-    } sujets nets, ${ellipse.recrues} recrues, ${ellipse.marqueurs.length} repères${
+    } sujets nets, ${ellipse.naissances} naissances, ${ellipse.marqueurs.length} repères${
       ellipse.omis > 0 ? `, ${ellipse.omis} changements non pointés` : ""
     }${ellipse.feu ? ` — INCENDIE de ${ellipse.feu.feu.brulees.length} cellules` : ""}`;
   }, [ellipse, scene]);

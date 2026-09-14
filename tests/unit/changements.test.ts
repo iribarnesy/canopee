@@ -16,7 +16,10 @@ import {
   type Marqueur,
   marqueursDuJournal,
   PLAFOND_DE_MARQUEURS,
+  sujetsDuJournal,
   TEINTE_DE_LA_CAUSE,
+  TEINTE_DE_LA_RECRUE,
+  TEINTE_DU_STADE,
   TIGES_PAR_GESTE_MAX,
 } from "../../src/render/temps/changements";
 import type { JournalDeSemaine } from "../../src/render/temps/ellipse";
@@ -95,6 +98,69 @@ describe("marqueursDuJournal", () => {
     expect(
       marqueursDuJournal({ gestes: [{ type: "faucher", cellules: [] }] }, ou, COTE).marqueurs,
     ).toEqual([]);
+  });
+
+  it("pointe les NAISSANCES que le moteur rapporte, et pas celles qu'il déduisait", () => {
+    // **Le rendu les déduisait d'un `ageWeeks` inférieur à l'intervalle du
+    // journal.** Ça marchait, mais ça confondait « arrivé depuis la dernière
+    // fois » avec « jeune », et surtout ça perdait toute naissance suivie d'une
+    // mort dans le même intervalle : un semis qui lève et se fait brouter dans
+    // la même saison n'existait jamais. Le moteur les rapporte maintenant, avec
+    // leur position — donc même un semis déjà disparu de l'instantané est
+    // pointé.
+    const journal: JournalDeSemaine = {
+      naissances: [
+        { id: 900, x: 4.5, y: 8.5, especeId: "betula_pendula", heightM: 0.3 },
+        { id: 901, x: 60, y: 12, especeId: "quercus_robur", heightM: 0.2 },
+      ],
+    };
+    const { marqueurs: m } = marqueursDuJournal(journal, ou, COTE);
+    expect(m.length).toBe(2);
+    expect(m[0]).toEqual({ x: 4.5, y: 8.5, sorte: "recrue", teinte: TEINTE_DE_LA_RECRUE });
+    // `ou` ne connaît NI 900 NI 901 : la naissance porte sa position, elle n'a
+    // rien à demander à l'instantané.
+    expect(ou(900)).toBeUndefined();
+  });
+
+  it("pointe les MONTÉES de stade, teintées par le stade atteint", () => {
+    // La seule bonne nouvelle du calque qui ne soit pas une naissance. Le stade
+    // se calcule de la hauteur côté rendu ; c'est le FRANCHISSEMENT, qui demande
+    // de comparer deux instants, que seul le moteur peut voir.
+    const journal: JournalDeSemaine = {
+      franchissements: [
+        { id: 1, deStade: "semis", versStade: "gaulis" },
+        { id: 2, deStade: "perchis", versStade: "futaie" },
+      ],
+    };
+    const { marqueurs: m } = marqueursDuJournal(journal, ou, COTE);
+    expect(m.map((x) => x.sorte)).toEqual(["montée", "montée"]);
+    expect(m[0]).toMatchObject({ x: 10, y: 20, teinte: TEINTE_DU_STADE.gaulis });
+    expect(m[1]).toMatchObject({ x: 30, y: 40, teinte: TEINTE_DU_STADE.futaie });
+  });
+
+  it("teinte les montées dans un ORDRE : plus c'est gros, plus c'est sombre", () => {
+    // C'est le seul endroit du calque où la teinte encode un ordre plutôt
+    // qu'une catégorie, et l'ordre doit se lire sans légende.
+    const clarte = (t: { r: number; g: number; b: number }) => (t.r + t.g + t.b) / 3;
+    const echelle = ["semis", "gaulis", "perchis", "futaie"] as const;
+    for (let i = 1; i < echelle.length; i++) {
+      const avant = echelle[i - 1];
+      const apres = echelle[i];
+      if (!avant || !apres) continue;
+      expect(clarte(TEINTE_DU_STADE[apres])).toBeLessThan(clarte(TEINTE_DU_STADE[avant]));
+    }
+  });
+
+  it("SAUTE une montée dont l'arbre a disparu de l'instantané", () => {
+    // Une tige que le même intervalle a fait monter PUIS mourir n'a plus de
+    // position, et c'est la bonne lecture : son halo de mort dit tout ce qu'il
+    // y a à dire, et un chevron sur un mort serait un contresens.
+    const { marqueurs: m } = marqueursDuJournal(
+      { franchissements: [{ id: 999, deStade: "semis", versStade: "gaulis" }] },
+      ou,
+      COTE,
+    );
+    expect(m).toEqual([]);
   });
 
   it("ne marque PAS les chutes : une chute, on la voit", () => {
@@ -195,6 +261,20 @@ describe("accumuler", () => {
 
   it("respecte un plafond donné", () => {
     expect(accumuler(faux(10), faux(10), 7).length).toBe(7);
+  });
+});
+
+describe("ce que l'estompe laisse net", () => {
+  it("garde NETTES les naissances et les montées, pas seulement les morts", () => {
+    // **Sans ça, l'estompe ne laisserait net que ce qui meurt**, ce qui est
+    // exactement la lecture fausse que le §6.8 reproche à un calque de
+    // mortalité : une friche qui se boise est le sujet même du jeu.
+    const sujets = sujetsDuJournal({
+      morts: [mort(1, 1, 1, "secheresse")],
+      naissances: [{ id: 900, x: 4, y: 8, especeId: "betula_pendula", heightM: 0.3 }],
+      franchissements: [{ id: 2, deStade: "semis", versStade: "gaulis" }],
+    });
+    expect([...sujets].sort((a, b) => a - b)).toEqual([1, 2, 900]);
   });
 });
 

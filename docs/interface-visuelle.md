@@ -1804,17 +1804,37 @@ Trois erreurs en chemin, toutes attrapées par la capture :
   restaient nets et l'image était uniformément délavée. Même seuil, même
   raison : un phénomène de masse ne se cherche pas, il se lit dans une phrase.
 
-**Les RECRUES sont là, et il a fallu me corriger pour ça.** J'avais ouvert
-[#46](https://github.com/iribarnesy/canopee/issues/46) en affirmant que les
-naissances ne voyageaient pas — sans avoir cherché le champ.
-`Snapshot.trees[].ageWeeks` existe et arrive au rendu : une recrue est un arbre
-plus jeune que l'intervalle du journal, ce qui se lit dans l'instantané SEUL,
-sans diff et sans état gardé. C'est même plus robuste qu'une liste de
-naissances, qui se perdrait si un message était sauté. Sur `friche-s17` — la
-seule scène dont la fenêtre contient la semaine 14, celle du recrutement
-annuel — **359 semis**, et ils se voient. L'issue ne porte plus que sur les
-franchissements de stade, qui n'existent nulle part dans le protocole et dont
-il n'est pas sûr que le moteur veuille les porter.
+**Les RECRUES sont là, et il a fallu me corriger DEUX fois pour ça.** J'avais
+ouvert [#46](https://github.com/iribarnesy/canopee/issues/46) en affirmant que
+les naissances ne voyageaient pas — sans avoir cherché le champ. Première
+correction : `Snapshot.trees[].ageWeeks` existait, et une recrue se lisait comme
+un arbre plus jeune que l'intervalle du journal, dans l'instantané SEUL. J'ai
+écrit ici que c'était « même plus robuste qu'une liste de naissances, qui se
+perdrait si un message était sauté ».
+
+Seconde correction, et le moteur a tranché contre moi : il rapporte maintenant
+`Snapshot.naissances`, avec leur position — et cette liste-là voit ce que la
+déduction ne voyait pas. **Un semis qui lève et se fait brouter dans le même
+intervalle n'a jamais existé pour la déduction**, puisqu'il n'est plus dans
+l'instantané pour porter son âge. Déduire confondait aussi « arrivé depuis la
+dernière fois » avec « jeune ». Le rendu lit donc l'événement, et
+`recruesDuSnapshot` est supprimée.
+
+**Les FRANCHISSEMENTS de stade sont arrivés avec, et ils closent l'issue.** Le
+moteur a fait le bon partage : le stade lui-même est une fonction pure de la
+hauteur (`stadeDe`), que le rendu calcule sans lui ; ce qu'il ne peut pas faire,
+c'est comparer deux instants. D'où l'événement, et lui seul. Le calque leur donne
+un **chevron vers le haut** — le seul marqueur qui ait une orientation, parce
+que c'est le seul qui dise une direction — teinté par le stade ATTEINT, sur une
+échelle qui se fonce en montant. C'est le seul endroit du calque où la teinte
+encode un ORDRE plutôt qu'une catégorie, et l'ordre se lit sans légende.
+
+Mesuré sur les deux scènes de feu, et les deux lectures sont complémentaires :
+la friche de trois ans donne **85 naissances et zéro franchissement** — rien n'y
+a encore deux centimètres et demi de diamètre — tandis que le taillis de dix-huit
+ans donne **zéro naissance et 267 franchissements** (239 vers le gaulis, 19 vers
+le perchis, 9 vers la futaie). Une friche qui se boise et un taillis qui
+grossit ne racontent pas la même histoire, et le calque les distingue.
 
 #### La demande d'origine (v0.2)
 

@@ -41,6 +41,7 @@
  */
 
 import { estGesteSurZone } from "../../engine/actions";
+import type { StadeDeDeveloppement } from "../../engine/stades";
 import type { CauseMort } from "../../engine/trees";
 import type { Teinte } from "../palette";
 import type { JournalDeSemaine } from "./ellipse";
@@ -58,7 +59,17 @@ export type SorteDeMarqueur =
   /** une zone a été travaillée : un repère à son centre */
   | "zone"
   /** un semis s'est installé : un point, parce que deux pixels ne se trouvent pas */
-  | "recrue";
+  | "recrue"
+  /**
+   * une tige a changé de STADE en grandissant : un chevron vers le haut.
+   *
+   * **La seule bonne nouvelle du calque qui ne soit pas une naissance**, et le
+   * moteur a dû apprendre à la dire : le stade se calcule de la hauteur
+   * (`stadeDe`), donc le rendu le connaît déjà — mais le FRANCHISSEMENT demande
+   * de comparer deux instants, ce que seul le moteur peut faire. D'où
+   * `Snapshot.franchissements`.
+   */
+  | "montée";
 
 export interface Marqueur {
   /** position en mètres de parcelle */
@@ -175,38 +186,33 @@ export function sujetsDuJournal(journal: JournalDeSemaine): Set<number> {
     if (geste.ids.length > TIGES_PAR_GESTE_MAX) continue;
     for (const id of geste.ids) sujets.add(id);
   }
+  // Les naissances et les montées de stade sont des sujets comme les autres :
+  // ce sont les seules bonnes nouvelles du calque, et les estomper reviendrait
+  // à ne laisser nette que la mortalité — exactement la lecture fausse que le
+  // §6.8 reproche à un calque qui ne montre que ce qui meurt.
+  for (const n of journal.naissances ?? []) sujets.add(n.id);
+  for (const f of journal.franchissements ?? []) sujets.add(f.id);
   return sujets;
 }
 
 /**
- * Les RECRUES d'un instantané : les arbres arrivés depuis le précédent.
+ * La teinte d'une montée de stade, par le stade ATTEINT.
  *
- * **Dérivées de `ageWeeks`, et il a fallu se corriger pour le voir.** J'avais
- * ouvert une issue en affirmant que les naissances ne voyageaient pas — sans
- * avoir cherché le champ. `Snapshot.trees[].ageWeeks` existe et arrive au
- * rendu : une recrue est un arbre plus jeune que l'intervalle écoulé, ce qui se
- * lit dans l'instantané SEUL. Pas de diff, pas d'état gardé, donc rien
- * n'enfreint le §2.1 — c'est même plus robuste qu'une liste de naissances, qui
- * se perdrait si un message était sauté.
+ * **Teintée par l'arrivée et non par le départ**, parce que c'est l'arrivée qui
+ * est la nouvelle : « celui-là est passé perchis » se lit, « celui-là a quitté
+ * le gaulis » demande de se souvenir d'où il venait.
  *
- * Elles restent NETTES sous l'estompe et reçoivent un point vert : un semis de
- * trente centimètres fait deux pixels au zoom de parcelle, et aucune opacité au
- * monde ne rend deux pixels trouvables.
+ * Une échelle qui se fonce et se sature en montant, du vert tendre d'un semis
+ * qui prend au vert profond d'une tige de futaie. C'est le seul endroit du
+ * calque où la teinte encode un ORDRE plutôt qu'une catégorie, et l'ordre se lit
+ * sans légende : plus c'est sombre, plus c'est gros.
  */
-export function recruesDuSnapshot(
-  arbres: readonly { id: number; x: number; y: number; ageWeeks: number }[],
-  semainesEcoulees: number,
-): { ids: Set<number>; marqueurs: Marqueur[] } {
-  const ids = new Set<number>();
-  const marqueurs: Marqueur[] = [];
-  if (semainesEcoulees <= 0) return { ids, marqueurs };
-  for (const a of arbres) {
-    if (a.ageWeeks > semainesEcoulees) continue;
-    ids.add(a.id);
-    marqueurs.push({ x: a.x, y: a.y, sorte: "recrue", teinte: TEINTE_DE_LA_RECRUE });
-  }
-  return { ids, marqueurs };
-}
+export const TEINTE_DU_STADE: Record<StadeDeDeveloppement, Teinte> = {
+  semis: { r: 150, g: 214, b: 126 },
+  gaulis: { r: 110, g: 188, b: 96 },
+  perchis: { r: 72, g: 156, b: 74 },
+  futaie: { r: 38, g: 120, b: 58 },
+};
 
 /** Ce que le calque montre, et ce qu'il a renoncé à montrer. */
 export interface Calque {
@@ -273,6 +279,23 @@ export function marqueursDuJournal(
         marqueurs.push({ x: p.x, y: p.y, sorte: "liseré", teinte: TEINTE_DU_MARQUEUR_DE_GESTE });
       }
     }
+  }
+  // **Les naissances, que le moteur rapporte désormais.** Le rendu les déduisait
+  // d'un `ageWeeks` inférieur à l'intervalle du journal : ça marchait, mais ça
+  // confondait « arrivé depuis la dernière fois » avec « jeune », et surtout ça
+  // perdait toute naissance suivie d'une mort dans le même intervalle — un semis
+  // qui lève et se fait brouter dans la même saison n'existait jamais.
+  for (const n of journal.naissances ?? []) {
+    marqueurs.push({ x: n.x, y: n.y, sorte: "recrue", teinte: TEINTE_DE_LA_RECRUE });
+  }
+  // **Les montées de stade**, teintées par le stade ATTEINT. Elles n'ont pas de
+  // position dans l'événement — le moteur ne donne que l'identifiant — donc on
+  // la demande à l'appelant, comme pour un geste sur arbres. Une tige que le
+  // même intervalle a fait monter puis mourir n'est pas trouvée, et c'est la
+  // bonne lecture : son halo de mort dit tout ce qu'il y a à dire.
+  for (const f of journal.franchissements ?? []) {
+    const p = positionDe(f.id);
+    if (p) marqueurs.push({ ...p, sorte: "montée", teinte: TEINTE_DU_STADE[f.versStade] });
   }
   // Les chandelles qui tombent ne sont PAS marquées, et c'est un choix : une
   // chute est le seul changement de la liste qu'on VOIT — c'est un mouvement de

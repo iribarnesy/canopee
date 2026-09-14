@@ -58,7 +58,12 @@ import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
 import { FRICHE_LIMON } from "../src/engine/stations";
-import type { ChuteDeChandelle, MortDeLaSemaine } from "../src/engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../src/engine/tick";
 import { arbreDuSnapshot } from "../src/game/snapshot";
 
 const GRAINE = 42;
@@ -647,9 +652,13 @@ function main() {
     morts: MortDeLaSemaine[];
     gestes: GesteVisible[];
     chutes: ChuteDeChandelle[];
+    /** les semis installés : la moitié POSITIVE de l'histoire (tick.ts) */
+    naissances: NaissanceDeLaSemaine[];
+    /** les tiges que la croissance a fait changer de stade (stades.ts) */
+    franchissements: FranchissementDeStade[];
     /** sur combien de semaines il a été accumulé — voir `recruesDuSnapshot` */
     semaines: number;
-  } = { morts: [], gestes: [], chutes: [], semaines: 0 };
+  } = { morts: [], gestes: [], chutes: [], naissances: [], franchissements: [], semaines: 0 };
   for (let i = 0; i < dernierAn * 52; i++) {
     const base = weather[i % weather.length];
     if (!base) throw new Error("météo manquante");
@@ -668,6 +677,8 @@ function main() {
       enAttente.morts.push(...semaine.morts);
       enAttente.gestes.push(...semaine.gestes);
       enAttente.chutes.push(...semaine.chutes);
+      enAttente.naissances.push(...semaine.naissances);
+      enAttente.franchissements.push(...semaine.franchissements);
       enAttente.semaines++;
     }
     // Les semaines demandées de la DERNIÈRE année, figées au passage.
@@ -720,7 +731,14 @@ function main() {
           ),
         })}\n`,
       );
-      enAttente = { morts: [], gestes: [], chutes: [], semaines: 0 };
+      enAttente = {
+        morts: [],
+        gestes: [],
+        chutes: [],
+        naissances: [],
+        franchissements: [],
+        semaines: 0,
+      };
     }
     if ((i + 1) % 52 !== 0) continue;
     const an = (i + 1) / 52;

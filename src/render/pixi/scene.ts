@@ -61,12 +61,14 @@ import {
   ETALEMENT_DE_LA_BRULURE,
 } from "../couches/feu";
 import {
+  cuireChevron,
   cuireHalo,
   cuireLisere,
   cuirePoint,
   cuireRepere,
   HAUTEUR_DU_MARQUEUR_PX,
   OPACITE_DU_MARQUEUR,
+  PART_DU_CHEVRON,
   PART_DU_POINT,
   TAILLE_MARQUEUR_PX,
 } from "../couches/marqueurs";
@@ -845,6 +847,7 @@ export class SceneParcelle {
       liseré: Texture.from(cuireLisere(this.fabriquer)),
       zone: Texture.from(cuireRepere(this.fabriquer)),
       recrue: Texture.from(cuirePoint(this.fabriquer)),
+      montée: Texture.from(cuireChevron(this.fabriquer)),
     };
     const formes = this.formes;
     const cote = etat.sol.coteM;
@@ -858,7 +861,9 @@ export class SceneParcelle {
       sprite.anchor.set(0.5, 0.5);
       // Un point de recrue est plus petit : une naissance est une bonne
       // nouvelle discrète, et il y en a des centaines.
-      const taille = TAILLE_MARQUEUR_PX * (m.sorte === "recrue" ? PART_DU_POINT : 1);
+      const taille =
+        TAILLE_MARQUEUR_PX *
+        (m.sorte === "recrue" ? PART_DU_POINT : m.sorte === "montée" ? PART_DU_CHEVRON : 1);
       sprite.width = taille;
       sprite.height = taille;
       sprite.x = p.sx;

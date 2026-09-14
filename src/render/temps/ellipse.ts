@@ -33,7 +33,13 @@
  */
 
 import type { GesteVisible } from "../../engine/actions";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../../engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
 
 /**
@@ -55,6 +61,25 @@ export interface JournalDeSemaine {
   chutes?: readonly ChuteDeChandelle[];
   gestes?: readonly GesteVisible[];
   incendie?: IncendieResult;
+  /**
+   * Les semis installés depuis le dernier instantané (`Snapshot.naissances`).
+   *
+   * **Le rendu les DÉDUISAIT, et il avait tort de devoir le faire.** Il
+   * reconnaissait une recrue à son `ageWeeks` inférieur à l'intervalle du
+   * journal — ce qui marchait, mais confondait « arrivé depuis la dernière
+   * fois » avec « jeune », et perdait toute naissance suivie d'une mort dans le
+   * même intervalle. Le moteur les rapporte maintenant, avec leur position.
+   */
+  naissances?: readonly NaissanceDeLaSemaine[];
+  /**
+   * Les tiges que la CROISSANCE a fait changer de stade
+   * (`Snapshot.franchissements`).
+   *
+   * Le stade lui-même se calcule de la hauteur (`stadeDe`), donc le rendu le
+   * connaît déjà ; ce qu'il ne peut pas faire, c'est comparer deux instants.
+   * D'où l'événement, et lui seul.
+   */
+  franchissements?: readonly FranchissementDeStade[];
 }
 
 /** Ce qu'un acte montre. Une union, pour que le dessin sache quoi faire. */

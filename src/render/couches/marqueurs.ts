@@ -179,3 +179,40 @@ export function cuirePoint(
 
 /** Part de la taille d'un marqueur que prend un point de recrue. */
 export const PART_DU_POINT = 0.6;
+
+/**
+ * Une MONTÉE : un chevron vers le haut.
+ *
+ * Ouvert vers le bas et pointant vers le haut : c'est le seul marqueur du
+ * calque qui ait une ORIENTATION, et il en a une parce qu'il dit une direction
+ * — cette tige a monté d'un cran. Un cercle ou une croix diraient « il s'est
+ * passé quelque chose ici » ; un chevron dit lequel.
+ *
+ * Deux traits et pas trois : un double chevron se lit comme un bouton d'avance
+ * rapide, et le calque n'est pas une télécommande.
+ */
+export function cuireChevron(
+  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+): HTMLCanvasElement {
+  const canvas = fabriquer(COTE_MARQUEUR_PX, COTE_MARQUEUR_PX);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  const c = COTE_MARQUEUR_PX / 2;
+  const demi = COTE_MARQUEUR_PX * 0.3;
+  ctx.lineJoin = "round";
+  doubleTrait(ctx, () => {
+    ctx.moveTo(c - demi, c + demi * 0.55);
+    ctx.lineTo(c, c - demi * 0.55);
+    ctx.lineTo(c + demi, c + demi * 0.55);
+  });
+  return canvas;
+}
+
+/**
+ * Part de la taille d'un marqueur que prend un chevron de montée.
+ *
+ * Plus petit qu'un halo de mort et plus grand qu'un point de recrue : une
+ * promotion est une bonne nouvelle qui mérite d'être vue, mais il y en a
+ * beaucoup plus qu'il n'y a de morts dans une friche qui se boise.
+ */
+export const PART_DU_CHEVRON = 0.78;
