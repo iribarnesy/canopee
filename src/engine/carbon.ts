@@ -61,9 +61,26 @@ export const T_HA_TO_G_M2 = 100;
  * qui reste, et c'est ainsi que la trogne et le recépage comptent ce qu'ils
  * emportent.
  *
- * *(Réserve connue : `bois.densite` est une densité commerciale à 12 %
- * d'humidité, là où la biomasse demande l'infradensité. Le carbone reste donc
- * surestimé d'environ 20 %. À instruire essence par essence, hors de ce lot.)*
+ * RÉSERVE CONNUE, et elle est instruite à moitié (#68). `bois.densite` porte
+ * une densité commerciale à 12 % d'humidité là où la biomasse demande
+ * l'INFRADENSITÉ (masse anhydre sur volume vert) : le carbone vivant reste
+ * surestimé d'environ 20 %.
+ *
+ * Ce que le recensement des lecteurs a tranché : il faut UN champ, pas deux.
+ * Personne ne réclame la densité commerciale — le prix se compte au m³ et la
+ * durée de chandelle ne lit ce champ que comme un proxy de dureté, que les deux
+ * grandeurs classent pareil. Reste à saisir les infradensités essence par
+ * essence depuis une source citée, et cela n'a pas été fait ici plutôt que fait
+ * de mémoire.
+ *
+ * CE QUE PERSONNE NE VERRAIT : l'unique ancre extérieure du dépôt
+ * (`carbon.test.ts`, un hêtre de 25 m et 50 cm entre 1 000 et 1 400 kg C) NE
+ * DISCRIMINE PAS. Elle donne 1 333 kg avec la densité d'aujourd'hui et
+ * 1 078 avec une infradensité de 0,55 : les deux passent. Le correctif ne fera
+ * donc basculer aucun essai, et son absence n'en fait échouer aucun — c'est
+ * précisément pourquoi ce défaut a pu vivre si longtemps, et pourquoi la
+ * campagne de correction devra resserrer l'ancre en même temps qu'elle corrige
+ * les valeurs.
  */
 export function treeAboveCarbonKg(espece: EspeceV0, diametreCm: number, heightM: number): number {
   return volumeAerienM3(diametreCm, heightM) * espece.bois.densite * 1000 * CARBON_FRACTION;
