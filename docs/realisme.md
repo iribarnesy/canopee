@@ -70,14 +70,14 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | C. Nutriments et cycles | 12 | 1 | 0 | 13 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 7 | 4 | 1 | 12 |
-| F. Dynamique des peuplements | 8 | 5 | 0 | 13 |
+| F. Dynamique des peuplements | 9 | 4 | 0 | 13 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
-| I. Carbone | 6 | 3 | 0 | 9 |
+| I. Carbone | 7 | 2 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **104** | **29** | **1** | **134** |
+| **Total** | **106** | **27** | **1** | **134** |
 
-**Score de réalisme : 104 pleins + 29 partiels sur 134 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 106 pleins + 27 partiels sur 134 → 89 %** *(un partiel compte 1/2)*.
 
 > **Ce tableau venait d'être recompté, et il était faux.** Il annonçait
 > 80 / 26 / 16 sur 122 — soit 76 % — là où les lignes du document en portaient
@@ -113,7 +113,9 @@ aux cultures) → 74 % (frêne, trogne,
 arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai) → 76 % (relief, écoulement
 latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
 production) → 76 % (structure du sol : le tassement et sa réparation)
-→ **88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)**.*
+→ 88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)
+→ **89 % (les trouées et le bilan carbone d'une plantation sont enfin mis à
+l'épreuve — F7 et I8)**.*
 
 *Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
 hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
@@ -236,7 +238,7 @@ mesurer que ce qu'on sait déjà faire.*
 | F4 | Les arbres vieillissent et meurent (sénescence) | ✅ | `fAge` ; `succession.test.ts` |
 | F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
 | F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | plafond de densité arbitraire + ombrage codominant |
-| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
+| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | ✅ | `regeneration.ts` + `light.ts` ; `trouees.test.ts` — comparateur APPARIÉ, la même zone avec et sans trouée sur cinq graines : 12 / 23 / 15 / 24 / 20 recrues contre 3 / 8 / 11 / 10 / 7. Et ce n'est pas « plus de semis » mais un TRI — le bouleau (compensation 0,25) n'entre que par l'ouverture, le charme (0,03) recrute jusque sous le couvert. **Limite** : le plafond de recouvrement des couronnes est PARCELLAIRE et non local ; au-delà, plus rien ne s'installe nulle part, trouée comprise |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | 🟡 | Rejet de souche : `rejetteDeSouche`, éprouvé après feu et après recépage. DRAGEONNEMENT : `regeneration.drageonne` (prunellier), un drageon sort dans un anneau serré autour de sa mère ET échappe au filtre de lumière, parce qu'elle le nourrit. Reste sans drageonnement : robinier et peuplier, absents de l'atlas |
 | F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
@@ -293,7 +295,7 @@ mesurer que ce qu'on sait déjà faire.*
 | I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
 | I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. Un hêtre de 25 m et 50 cm stocke maintenant 1 333 kg C contre 3 917 avant, pour 1 000 à 1 400 attendus. **Reste 🟡** : `bois.densite` est une densité commerciale à 12 % d'humidité là où la biomasse demande l'infradensité, soit environ 20 % de surestimation résiduelle |
-| I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
+| I8 | Le bilan peut être négatif au début d'une plantation | ✅ | `bilan-carbone-plantation.test.ts` — le total des stocks perd 11,1 à 11,4 t C/ha après labour, creux à la 12ᵉ année, retour au-dessus du départ à la 24ᵉ. **Et la mesure corrige l'énoncé** : le creux existe SANS labour (−7,7 à −8,1 t C/ha, croisement à la 22ᵉ année). Ce n'est pas le travail du sol qui rend le bilan négatif — c'est la jeunesse du peuplement, qui ne rend rien à la litière pendant que l'humus se minéralise à 1,5 %/an. Le labour aggrave d'un tiers et retarde de deux ans |
 
 ---
 
@@ -365,17 +367,27 @@ récupération après un feu, le contact au sol d'une chandelle.
 
 ### 4. Les moins chers : un test, et le critère passe
 
-Trois critères sont 🟡 non parce que le mécanisme manque, mais parce que
-personne ne l'a mis à l'épreuve. Ce sont les seuls points du référentiel qui
-s'achètent au prix d'un fichier de test :
+Il n'en reste plus qu'un. **F13** — les hauteurs tombent dans les tables de
+production : le test existe, c'est la couverture par essence qui est partielle.
 
-- **F7** — les trouées déclenchent une régénération : « émergent, non testé ».
-- **I8** — le bilan carbone est négatif au début d'une plantation : « observé
-  dans le jeu, non testé ».
-- **F13** — les hauteurs tombent dans les tables de production : le test existe,
-  c'est la couverture par essence qui est partielle.
+**F7** et **I8** étaient les deux autres ; ils sont passés ✅ (issue #74), et ce
+qu'ils ont appris mérite d'être retenu pour le suivant.
 
-Attention à la règle de la section « ce qu'un test écologique a le droit
+Un test de ce genre COÛTE ce qu'il vaut. Celui de F7 a échoué dans sa première
+version, et pas à cause du mécanisme visé : la hêtraie serrée qui devait servir
+de couvert atteignait un recouvrement de couronnes de 9 pour un plafond de 2,5,
+et le plafond étant PARCELLAIRE, plus aucun semis ne s'installait nulle part —
+trouée comprise. Un « zéro recrue sous couvert » aurait décroché le ✅ pour la
+mauvaise raison. D'où le témoin qui est resté dans l'essai : une seconde espèce,
+tolérante à l'ombre, dont la présence prouve qu'il y avait quelque chose à
+mesurer.
+
+Celui de I8 a CORRIGÉ son propre critère. L'énoncé attribuait le bilan négatif
+au travail du sol ; le témoin sans labour montre que le creux existe quand même,
+et que le labour ne fait que l'aggraver d'un tiers. La cause est la jeunesse du
+peuplement, pas la charrue.
+
+Attention, donc, à la règle de la section « ce qu'un test écologique a le droit
 d'affirmer » : un test écrit vite fait pour décrocher un ✅ vaut moins que le 🟡
 qu'il remplace.
 

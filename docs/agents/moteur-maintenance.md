@@ -63,6 +63,12 @@ mécanisme : neutraliser le tirage et remesurer.
 - La CI est plus lente que la machine de dev. Deux tests ont eu besoin d'un
   `timeout` explicite (900 s et 600 s). Préférer allonger le délai à réduire
   l'échantillon.
+- **Et ce délai doit porter là où le temps passe.** Une campagne lancée dans le
+  corps d'un `describe` tourne à la COLLECTE, que ni `testTimeout` ni un délai
+  posé sur le `describe` ne couvrent : si elle s'emballe, la suite bloque au
+  lieu d'échouer. La mettre dans un `beforeAll` avec son `hookTimeout` rend la
+  panne lisible. `elancement.test.ts` est l'ancien usage, `trouees.test.ts` le
+  nouveau.
 
 ## Le référentiel est la mémoire du projet
 
@@ -70,9 +76,15 @@ mécanisme : neutraliser le tirage et remesurer.
 jour la ligne du critère, le tableau de score et la ligne d'historique laisse le
 document mentir — et c'est déjà arrivé.
 
-**Dette connue, non traitée :** le tableau contient deux critères numérotés A13
-et deux numérotés A14, et compte **134 lignes pour un score annoncé sur 122**.
-Le pourcentage affiché est donc faux. À réconcilier en une passe dédiée.
+**Cette dette-là est soldée.** Le tableau comptait 134 lignes pour un score
+annoncé sur 122, et deux critères portaient un numéro déjà pris (A13, A14) : la
+passe dédiée a eu lieu (#76), les doublons sont renumérotés A29 et A30, et
+l'en-tête se recompte désormais DEPUIS LES LIGNES.
+
+Ce qui reste de la leçon : **un compte tenu à la main diverge.** Recompter en
+parsant le document coûte dix lignes de script et attrape ce qu'un œil ne voit
+pas. Un tel recompte a resservi en livrant #74, et il a confirmé les deux
+colonnes touchées au lieu de les croire.
 
 ## File d'attente
 
@@ -83,9 +95,14 @@ Le pourcentage affiché est donc faux. À réconcilier en une passe dédiée.
   donnent le même résultat. Attention : ce coefficient gouverne aussi
   l'auto-éclaircie, la succession et le tri des espèces. Label `à-mesurer` : la
   campagne vient avant le code.
-- **Instruire `bois.densite`** (pas encore d'issue). L'atlas donne 0,68 pour le
-  hêtre, ce qui ressemble à une densité à 12 % d'humidité — la valeur du
-  commerce. La biomasse demande l'**infradensité** (masse anhydre sur volume
-  vert), ~0,55 pour le hêtre. Si c'est le cas partout, il reste ~20 % de
-  surestimation. Vérifier essence par essence, et vérifier à quoi d'autre le
-  champ sert avant d'y toucher.
+- **#68** — `bois.densite` porte une densité du commerce (0,68 pour le hêtre) là
+  où la biomasse demande l'**infradensité** (~0,55). Il reste ~20 % de
+  surestimation du carbone vivant. **Le recensement est fait** : deux lecteurs
+  seulement, dont un seul (`treeAboveCarbonKg`) veut l'infradensité — l'autre
+  (`dureeChandelleSemaines`) n'y lit qu'un proxy de dureté. Donc **un champ, pas
+  deux**. Ne reste que le plus dur : une table d'infradensités SOURCÉE, essence
+  par essence. Deux avertissements pour qui la reprendra — un facteur global
+  appliqué à l'aveugle remplacerait une erreur par une autre, et l'unique ancre
+  extérieure du dépôt (1 000–1 400 kg C pour un hêtre de 25 m) accepte les DEUX
+  valeurs : elle est à resserrer dans le même lot, sans quoi le correctif ne
+  fera basculer aucun essai.
