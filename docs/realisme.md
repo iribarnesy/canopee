@@ -66,18 +66,24 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
-| B. Lumière et structure | 5 | 5 | 0 | 10 |
+| B. Lumière et structure | 6 | 4 | 0 | 10 |
 | C. Nutriments et cycles | 12 | 1 | 0 | 13 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
-| E. Interactions entre plantes | 7 | 4 | 1 | 12 |
+| E. Interactions entre plantes | 8 | 4 | 0 | 12 |
 | F. Dynamique des peuplements | 8 | 5 | 0 | 13 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 6 | 3 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **104** | **29** | **1** | **134** |
+| **Total** | **106** | **28** | **0** | **134** |
 
-**Score de réalisme : 104 pleins + 29 partiels sur 134 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 106 pleins + 28 partiels sur 134 → 90 %** *(un partiel compte 1/2)*.
+
+> **Plus aucun ❌.** C'est un jalon, et il vaut surtout comme avertissement : la
+> colonne des absences est vide parce que le référentiel ne liste que ce qu'on a
+> pensé à écrire. Les vingt-huit partiels, eux, disent chacun ce qui manque, et
+> c'est là que se trouve le travail. Un référentiel qui ne s'allonge jamais finit
+> par ne plus mesurer que ce qu'on sait déjà faire.
 
 > **Ce tableau venait d'être recompté, et il était faux.** Il annonçait
 > 80 / 26 / 16 sur 122 — soit 76 % — là où les lignes du document en portaient
@@ -113,7 +119,9 @@ aux cultures) → 74 % (frêne, trogne,
 arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai) → 76 % (relief, écoulement
 latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
 production) → 76 % (structure du sol : le tassement et sa réparation)
-→ **88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)**.*
+→ 88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)
+→ **90 % (la strate herbacée a des espèces : trois calendriers, trois sols, et
+la fenêtre de printemps)**.*
 
 *Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
 hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
@@ -166,10 +174,10 @@ mesurer que ce qu'on sait déjà faire.*
 | B2 | L'ombre est portée vers le nord (soleil au sud) : l'orientation des lignes compte | ✅ | `SHADOW_NORTH_OFFSET` |
 | B3 | L'ombre est dégradée : pénombre en bordure de houppier | ✅ | atténuation en (1 − d²/r²) |
 | B4 | Un héliophile meurt sous couvert fermé ; un sciaphile y patiente | ✅ | points de compensation ; `lumiere.test.ts` |
-| B5 | Les caducs n'ombragent pas hors saison (fenêtre des vernales) | ✅ | `leavesOn` ; pas encore de strate herbacée pour en profiter |
+| B5 | Les caducs n'ombragent pas hors saison (fenêtre des vernales) | ✅ | `phenologie.ts` ; et la strate herbacée en profite enfin (E9) : sous la hêtraie mesurée, la lumière au sol passe de 0,69 à 0,30 entre la semaine 16 et la semaine 18 |
 | B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main |
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
-| B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
+| B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | ✅ | `herbacees.ts` : trois herbacées, chacune avec son point de compensation, sa gamme de pH et son calendrier, se partagent le sol d'une cellule sur la place que les autres laissent ; `herbacees.test.ts` (le pH seul trie les deux graminées : molinie sur podzol à 4,5, dactyle sur limon à 7). **Limite** : pas de hiérarchie de hauteur DANS la strate — une graminée haute n'étouffe pas une rosette qui se maintient, elle n'occupe que la place lâchée |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
 | B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré |
 
@@ -222,8 +230,8 @@ mesurer que ce qu'on sait déjà faire.*
 | E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | 🟡 | `allelopathie.ts` + le NOYER entre à l'atlas. Portée 17,5 m (littérature : 15-20), intensité décroissante, sensibilité par espèce — pommier, pin et bouleau documentés sensibles. Et le SOL décide autant que l'arbre : le sable lessive la juglone, le limon lourd la retient. Sensibilité médiane par défaut là où la littérature ne dit rien |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
-| E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
-| E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
+| E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ✅ | `herbacees.ts` : une vernale ne bouge son emprise que pendant SA saison, donc elle juge la station en mars ; `herbacees.test.ts`. Sous hêtraie, la couverture du sol vaut 3 fois plus mi-avril que fin juillet et la vernale tient 36-40 % de l'emprise ; sous pinède, 1,25 et 19 % ; à découvert, 1,04 et 3 % — gradient monotone, deux graines. **Limite** : le moteur ne produit pas, sur cette station, de peuplement sempervirent assez sombre pour l'exclure tout à fait (le pin sylvestre s'auto-éclaircit) ; ce que vaut la fenêtre se lit alors sur la capacité, nulle à 4 % de lumière |
+| E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts`, `herbacees.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre. La fauche emporte le FEUILLAGE et laisse l'emprise : la repousse est celle d'un chaume, pas d'une réinstallation |
 | E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `trees.ts` (`allocationDiametreCmParM`) ; `elancement.test.ts` — le diamètre est porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, dans une proportion que la lumière décide. Rien n'est déclaré par essence : à écartement 2 / 4 / 6 / 10 m, même espèce et même graine, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4 — gradient MONOTONE, sans palier sur la gamme testée. **Reste 🟡 sur l'AMPLITUDE** : la sylviculture mesure 25–40 au large et 90–100 en perche, le moteur ne couvre que 35–49. La cause est identifiée et ANTÉRIEURE — dans `light.ts:extinctionAt` un codominant n'ombrage qu'au poids 0,4, or en plantation régulière tout le monde est codominant de tout le monde. Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger mérite son propre lot |
 
 ## F. Dynamique des peuplements
@@ -254,7 +262,7 @@ mesurer que ce qu'on sait déjà faire.*
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; aulnaie pure décimée, mélange épargné |
-| G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison |
+| G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison. Les espèces herbacées existent maintenant (`herbacees.ts`) mais aucune ne déclare de floraison : la fiche s'arrête au calendrier FOLIAIRE |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
 | G6 | Les maladies datées frappent (chalarose du frêne) | ✅ | `maladies.ts` ; `maladies.test.ts` — mieux qu'une date : une année d'arrivée historique, puis une pression qui suit la densité d'hôtes et l'humidité. Une frênaie pure perd un tiers de ses tiges en trente ans, le même nombre de frênes en mélange s'en tire deux fois mieux |
 
@@ -311,7 +319,7 @@ inventaire.
 | J8 | Un arbre mort reste debout des années : c'est LE bois mort qui compte pour la faune | ✅ | `dureeChandelleSemaines` (densité du bois × 15 ans) ; `chandelles.test.ts` |
 | J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | 🟡 | strates et sempervirence comptées ; pas de lisières ni de structure horizontale |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
-| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C) |
+| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C). `indiceBiodiversite` ne compte que les floraisons LIGNEUSES ; la strate basse, qui est justement ce qui nourrit en soudure, n'y entre pas |
 
 ## Ce qui débloquerait le plus de critères
 
@@ -321,21 +329,35 @@ couplage humus ↔ azote, la variabilité individuelle — et sa numérotation a
 de 2 à 4 sans passer par 1. Une feuille de route qui ne se relit pas devient un
 piège pour celui qui la suit.*
 
-### 1. Une vraie strate herbacée, avec des espèces distinctes
+### 1. Le calendrier de floraison de la strate basse
 
-Le plus gros verrou du référentiel, et de loin. La strate existe aujourd'hui
-comme une COUVERTURE (`herbe.ts`) : un taux par cellule, sans espèces. Tant
-qu'il n'y a pas d'herbacées distinctes, quatre critères restent bloqués et l'un
-d'eux est l'une des deux seules absences qui subsistent :
+Ce qui reste du plus gros verrou du référentiel. La strate herbacée a
+maintenant des espèces (`herbacees.ts`), et E9 comme B8 sont tombés avec — mais
+la fiche herbacée s'arrête au calendrier FOLIAIRE. Aucune des trois espèces ne
+déclare de floraison, si bien que les deux critères qui en dépendaient restent
+où ils étaient :
 
-- **E9** (❌) — les vernales profitent de la fenêtre de printemps. Sa
-  justification dit déjà « dépend d'espèces herbacées distinctes ».
-- **B8** (🟡) — « pas encore d'espèces herbacées distinctes ».
 - **G4** (🟡) — les pollinisateurs manquent d'un calendrier de floraison.
-- **J6** (🟡) — des floraisons étalées nourrissent sans rupture.
+- **J6** (🟡) — des floraisons étalées nourrissent sans rupture. Et c'est
+  précisément la strate basse qui nourrit pendant les deux périodes de soudure
+  (ch4-C), là où `indiceBiodiversite` ne compte encore que les ligneux.
 
-C'est aussi ce qui donnerait un sens au sous-étage d'une parcelle
-agroforestière, où la culture EST la strate basse.
+Le chemin est court : les ligneux ont déjà un `floraisonDJ` et
+`partFloraison` (`phenologie.ts`) sait en faire une part de couronne en fleur.
+Il faut le même champ sur la fiche herbacée, une ressource florale par cellule
+— l'emprise multipliée par cette part —, et que `biodiversite.ts` et le service
+de pollinisation la lisent.
+
+Ce qui manque ENCORE à la strate, par ordre de gain :
+
+- **une rudérale nitrophile** — l'ortie. La capacité d'une herbacée lit la
+  lumière et le pH, pas l'azote : un épandage ne se voit donc pas au sol, alors
+  que c'est la bio-indication la plus lisible qui soit.
+- **la hiérarchie de hauteur** dans la strate, seule limite écrite de B8.
+- **la CULTURE comme strate basse**, ce qui est le sujet de l'agroforesterie :
+  une fiche herbacée avec un rendement et une exigence minérale ferait poser au
+  jeu sa question centrale — quelle culture sous quels arbres, à quel
+  écartement.
 
 ### 2. Le poids latéral des codominants (issue #65)
 
@@ -670,6 +692,139 @@ podzol landais pour qu'un massif forestier y devienne une forêt de houx pur,
 les autres essences étant écartées et le repli jamais déclenché. Le voisinage
 sème maintenant autant quel que soit le sol — ce qui change, c'est QUI : on
 garde les espèces qui tiennent et on complète avec celles qui poussent là.
+
+## La strate herbacée : trois espèces, deux grandeurs, une fenêtre
+
+La strate existait comme une COUVERTURE : un taux par cellule, qui montait avec
+la lumière et l'humidité. Un bon mécanisme, qui rendait déjà des services — il
+freinait l'évaporation, nourrissait le feu, concurrençait les semis. Mais
+c'était **une seule plante moyenne**, et un taux de couverture n'a pas de
+printemps.
+
+### Deux grandeurs, parce qu'une seule ne suffisait pas
+
+`herbacees.ts` sépare ce que la couverture confondait :
+
+- **l'emprise**, la place qu'une espèce TIENT au sol, bulbes et rhizomes
+  compris. Elle est pérenne et lente ;
+- **le feuillage**, ce qui est VERT cette semaine. Il vise l'emprise, ramenée à
+  ce que la saison et la sécheresse en laissent, et il y monte à une vitesse de
+  repousse — freinée par le froid, sans quoi une pelouse rasée en décembre se
+  referme en janvier.
+
+La distinction n'est pas cosmétique, et on l'a apprise en la ratant : avec une
+seule variable, chaque bouchée de chevreuil était prise sur les rhizomes, et la
+lande mesurée perdait son tapis en un hiver. Une fauche, un feu, une dent
+emportent le feuillage ; seule la charrue va chercher l'emprise.
+
+### La règle de la fenêtre TOMBE du découpage
+
+Une espèce ne fait bouger son emprise que **pendant sa saison de croissance** :
+dormante, elle est gelée. Donc chacune juge sa station au moment où elle pousse.
+L'anémone la juge en mars, sous un couvert caduc encore nu ; le dactyle la juge
+en mai, sous le même couvert refermé. Rien de cela n'est écrit : ça sort de la
+phénologie de chaque fiche et de la lumière hebdomadaire que `light.ts`
+calculait déjà (B5).
+
+Mesuré en année 40 sur limon riche, parcelle de 20 m, semaines 16 et 30, deux
+graines :
+
+| couvert | lumière au sol | couverture | rapport | part de la vernale |
+|---|---|---|---|---|
+| hêtraie | 0,68 → 0,28 | 0,99 → 0,31 | **2,98-3,45** | **36-40 %** |
+| pinède | 0,50 → 0,49 | 0,95 → 0,76 | 1,24-1,25 | 19 % |
+| découvert | 0,96 → 0,96 | 1,00 → 0,96 | 1,04 | 3 % |
+
+Le sol d'une hêtraie est vert mi-avril et nu fin juillet ; celui d'une pinède ne
+connaît pas ce rythme. Et plus l'été est sombre, plus la strate appartient à la
+vernale — gradient monotone sur les trois couverts, graine par graine.
+
+**Ce que le dispositif ne montre pas**, et il faut le dire : le moteur ne
+produit pas, sur cette station, de peuplement sempervirent assez SOMBRE pour
+exclure la vernale tout à fait. Le pin sylvestre est une essence de lumière et
+s'auto-éclaircit ; le houx ne s'installe pas en plein découvert ; le chêne-liège
+et le châtaignier, sur la lande où ils poussent, plafonnent à trois et cinq
+mètres en quarante ans. Ce que vaudrait une pessière se lit donc sur la capacité
+seule, qui tombe sous 0,1 à 4 % de lumière.
+
+### La bio-indication descend d'un étage
+
+Le pH décide, comme il décide déjà pour les ligneux (`soil.ts:facteurGammePh`,
+la même bordure douce de ±0,7). À découvert, en année 11 : sur le limon neutre,
+dactyle 0,96 et molinie 0 ; sur le podzol landais à 4,5, molinie 1,00 et les
+deux autres 0. Aucune ligne du moteur ne nomme d'espèce — c'est la gamme
+déclarée dans l'atlas, confrontée au pH de la cellule.
+
+Le calendrier suit : la lande girondine reste à 0,46 de couverture mi-avril
+quand le limon est à 0,99, parce que la molinie démarre notoirement tard. La
+protection du sol au printemps n'est plus la même partout.
+
+**Une borne de pH vaut un mécanisme.** L'anémone acceptait d'abord jusqu'à
+pH 4,0, ce qui l'installait sous les ajoncs d'une lande girondine — et y
+RENVERSAIT l'effet nurse (critère E1), le pin abrité passant sous le pin à
+découvert parce qu'une vernale lui disputait son printemps. Ramenée à 4,5, elle
+reste ce que sa source en dit : une plante de mull et de moder, pas de podzol.
+Un trait mal borné dans l'atlas fait plus de dégâts qu'une formule fausse dans
+le moteur, parce qu'il ne ressemble pas à un bug.
+
+### Le tapis d'avant ce lot était un dactyle qui s'ignorait
+
+Les seuils du dactyle — lumière 0,12 et 0,47, humidité 0,35, reconquête 0,12 par
+semaine — sont ceux que `herbe.ts` appliquait au tapis entier, repris tels
+quels. Ce lot AJOUTE des espèces sous ce plancher et à côté de lui ; il ne le
+déplace pas. Les relever « parce que le tapis moyennait aussi des plantes
+d'ombre » était tentant, et c'était déplacer une calibration acquise sans la
+remesurer.
+
+Une seule chose distingue vraiment le dactyle de ce tapis : il n'a **ni porte
+photopériodique ni sénescence d'automne**, parce qu'une hémicryptophyte n'a pas
+de bourgeon en dormance à lever — elle repart au premier redoux. Lui en donner
+une, par imitation des ligneux, lui coûtait un cinquième de sa couverture
+annuelle sous futaie feuillue (0,61 contre 0,77 sur soixante ans, mesuré) : la
+fenêtre qui compte pour une graminée de sous-bois n'est pas celle d'avril mais
+celle d'**octobre à mars**, quand le couvert caduc est ouvert et qu'il fait
+encore assez doux pour pousser. C'est le défaut qui a coûté le plus cher de ce
+lot, et il ne se voyait pas à la lecture : il a fallu tracer la couverture
+semaine par semaine, sur soixante ans, avant et après.
+
+### Ce que ce lot a déplacé ailleurs, et de combien
+
+Un mécanisme qui touche l'eau, l'azote et la couverture du sol de toutes les
+cellules déplace ce qui en dépend. Quatre seuils ont été remesurés, et ils sont
+listés ici pour qu'on puisse en juger d'un coup d'œil :
+
+| Test | Avant | Après | Ce qui a bougé |
+|---|---|---|---|
+| `litiere` — l'aulne fait pousser le hêtre | 1,1006 pour un seuil à 1,1 | 1,095, seuil à 1,08 | le témoin isolé profite un peu plus de l'azote que le tapis n'éponge plus |
+| `succession` — la banque de hêtres à 120 ans | 19 ≥ 19 | 17 ≥ 0,85 × 19 | la vernale prélève en avril, au même endroit que les semis |
+| `bois-en-travers` — la terre piégée | 0,135 | 0,093, seuil de 0,1 à 0,08 | « un piège ne retient que ce qui passe », pour la quatrième fois |
+| `feu` — conservation du carbone au feu | passait | passe | le grand livre du TEST oubliait l'érosion ; corrigé, pas contourné |
+
+Les trois premiers gardent leur direction ; aucun ne la doit à son seuil. Le
+quatrième n'était pas un seuil mais un trou dans un test, resté invisible tant
+qu'aucune érosion notable ne tombait la semaine d'un incendie.
+
+Et un cinquième a été rattrapé en cours de route plutôt que remesuré : le
+rapport « le réchauffement fait flamber les ravageurs » était tombé de 1,6 à
+1,06 — c'est-à-dire annulé — parce que la strate herbacée fournit un cinquième
+de l'habitat des auxiliaires et que la sénescence d'automne de trop la faisait
+disparaître tout l'hiver. Il est revenu au-dessus de son seuil une fois le
+dactyle rendu à sa vraie phénologie. **C'est ce genre de conclusion qu'un lot de
+mécanisme peut annuler sans le dire**, et c'est pour ça qu'on relance la suite
+entière plutôt que les tests du lot.
+
+### Trois espèces, et pourquoi trois
+
+Une vernale (anémone des bois), une graminée sociale de sol riche (dactyle) et
+son homologue de sol acide (molinie) — trois STRATÉGIES qu'on voulait pouvoir
+opposer, pas trois espèces représentatives. Chaque fiche porte sa source
+(Biological Flora of the British Isles) et les valeurs traduites en paramètres
+portent leur *(à calibrer)*.
+
+Trois, et pas trente, parce que la strate tourne sur toutes les cellules toutes
+les semaines. **Coût mesuré** : 6,8 → 7,6 ms par semaine sur une hêtraie 30 × 30
+de quarante ans, soit **+11 %**, machine au repos, médiane de cinq passes. C'est le prix à connaître
+avant d'ajouter la quatrième.
 
 ## La phénologie : chaque espèce a son calendrier
 

@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
-import { couvertureMax } from "../../src/engine/herbe";
+import { capaciteHerbacee, facteurEauHerbacee, HERBACEES } from "../../src/engine/herbacees";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
@@ -61,13 +61,30 @@ describe("dynamique du tapis herbacé", () => {
     expect(couverture).toBeGreaterThan(0.5);
   });
 
-  it("sous un couvert fermé, la strate disparaît", () => {
-    expect(couvertureMax(0.05, 1)).toBe(0);
-    expect(couvertureMax(0.6, 1)).toBeGreaterThan(0.8);
+  it("sous un couvert fermé, les graminées disparaissent", () => {
+    // Le seuil de lumière n'est plus unique : c'est le point de compensation de
+    // chaque espèce (herbacees.ts). Les deux graminées lâchent sous 12-15 % de
+    // la pleine lumière ; ce qui tient plus bas est de la plante d'ombre, et
+    // c'est le sujet de `herbacees.test.ts`.
+    const graminees = HERBACEES.filter((h) => h.lumiere.compensation >= 0.1);
+    expect(graminees.length).toBeGreaterThan(0);
+    for (const h of graminees) {
+      expect(capaciteHerbacee(h, 0.05, 6)).toBe(0);
+    }
+    // À 60 % de lumière, au moins une espèce couvre presque tout, quel que soit
+    // le pH : c'est ce qui fait qu'une trouée s'enherbe.
+    for (const ph of [4.5, 6, 7.5]) {
+      const meilleure = Math.max(...HERBACEES.map((h) => capaciteHerbacee(h, 0.6, ph)));
+      expect(meilleure).toBeGreaterThan(0.8);
+    }
   });
 
   it("elle recule quand le sol de surface s'assèche (l'herbe grille la première)", () => {
-    expect(couvertureMax(1, 0.1)).toBeLessThan(couvertureMax(1, 1));
+    // La sécheresse joue sur ce qui est VERT, pas sur l'emprise (herbacees.ts) :
+    // c'est le feuillage qui grille, la souche reste.
+    for (const h of HERBACEES) {
+      expect(facteurEauHerbacee(h, 0.1)).toBeLessThan(facteurEauHerbacee(h, 1));
+    }
   });
 });
 

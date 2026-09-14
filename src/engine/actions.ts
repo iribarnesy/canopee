@@ -20,6 +20,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { forEachDiscCell } from "./grid";
+import { N_HERBACEES, rabattreParEspece } from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
@@ -1142,6 +1143,7 @@ function applyFaucher(
     return { state, refusals: [refuse(action.week, "faucher", "plafond hebdomadaire atteint")] };
   }
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
@@ -1162,6 +1164,10 @@ function applyFaucher(
       const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
       herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       herbeBiomasse[i] = FAUCHE_COUVERTURE_RESIDUELLE;
+      // La coupe se répartit sur les feuillages, dans la même proportion. Une
+      // espèce déjà rentrée sous terre n'a rien à perdre : c'est ce qui laisse
+      // une prairie de fauche garder sa flore de printemps (herbacees.ts).
+      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, FAUCHE_COUVERTURE_RESIDUELLE / avant);
       // L'herbe coupée reste sur place : litière tendre, vite recyclée.
       litterNG[i] = (litterNG[i] ?? 0) + coupe * 4;
       litterCG[i] = (litterCG[i] ?? 0) + coupe * 4 * 25;
@@ -1170,7 +1176,7 @@ function applyFaucher(
   return {
     state: {
       ...state,
-      soil: { ...state.soil, herbeCouverture, herbeBiomasse, litterNG, litterCG },
+      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse, litterNG, litterCG },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,
@@ -1503,6 +1509,8 @@ function applyLabourer(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
@@ -1538,9 +1546,14 @@ function applyLabourer(
       emisKgC += (litterCG[i] ?? 0) / 1000;
       litterNG[i] = 0;
       litterCG[i] = 0;
-      // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix.
+      // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
+      // charrue est le seul geste du jeu qui aille sous terre : elle retourne
+      // les bulbes et tranche les rhizomes, donc l'emprise part avec le
+      // feuillage et la strate se reconstitue à sa vitesse d'installation.
       herbeCouverture[i] = 0;
       herbeBiomasse[i] = 0;
+      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 0);
+      rabattreParEspece(herbeEmprise, i * N_HERBACEES, 0);
       // Et le prix qu'on ne voit pas sur la facture : les hyphes sont
       // tranchées. Le réseau mettra des années à se retisser (§7.5).
       for (const type of TYPES_MYCORHIZE) {
@@ -1569,6 +1582,8 @@ function applyLabourer(
         litterNG,
         litterCG,
         herbeCouverture,
+        herbeEmprise,
+        herbeFeuillage,
         herbeBiomasse,
         mycorhizes,
         tassement,
