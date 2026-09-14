@@ -47,6 +47,7 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     x: t.x,
     y: t.y,
     heightM: t.heightM,
+    diametreCm: t.diametreCm,
     ageWeeks: t.ageWeeks,
     stress: t.stress,
     fruitsKg: t.fruitsKg,

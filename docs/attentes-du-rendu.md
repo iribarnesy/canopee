@@ -123,7 +123,7 @@ est là pour qu'une station le déclare quand on l'aura).
 | `soilCloture` | cellules closes (1) |
 
 **Par arbre** (`SnapshotTree`, chandelles comprises) : `id`, `especeId`, `x`,
-`y`, `heightM`, `ageWeeks`, `stress`, `fruitsKg`, `hauteurElagueeM`,
+`y`, `heightM`, `diametreCm`, `ageWeeks`, `stress`, `fruitsKg`, `hauteurElagueeM`,
 `baseHouppierM`, `protege`, `chandelle`, `teteTrogneM`, `recepages`,
 `diametreTeteCm`, `caviteTeteL`, `vigueur`,
 `dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
@@ -226,15 +226,23 @@ et l'erreur ne se voit pas avant de planter deux cents tiges d'un coup.
 `naissances` ne contient que ce que le recrutement a installé. Un test le fixe.
 
 Le **stade** d'une tige (`semis`, `gaulis`, `perchis`, `futaie`) ne voyage PAS
-par arbre, et c'est volontaire : `stadeDe(heightM)` est pure et importable
+par arbre, et c'est volontaire : `stadeDe(diametreCm)` est pure et importable
 depuis l'UI (`src/engine/stades.ts`), donc le rendu la calcule sans rien
-demander. Seul le FRANCHISSEMENT voyage, parce que lui seul demande de comparer
-deux instants. Il ne couvre que la croissance : un arbre rabattu par une trogne
-ou un recépage descend l'échelle, et cette chute-là se lit déjà dans `retire`
-(`hauteurAvantM` / `hauteurApresM`), dont le rendu tire les deux stades. Les
-bornes sont celles de la sylviculture française, en DIAMÈTRE (2,5 / 7,5 /
-17,5 cm), et passent par `diametreCm` — un proxy assumé, dont elles héritent
-l'approximation. Le module le dit en détail, fourré compris.
+demander — **à condition que le diamètre voyage, et c'est pour ça qu'il voyage
+depuis #62.** Seul le FRANCHISSEMENT voyage, parce que lui seul demande de
+comparer deux instants.
+
+Les bornes sont celles de la sylviculture française, en DIAMÈTRE (2,5 / 7,5 /
+17,5 cm), et elles se lisent désormais sur le diamètre que l'arbre PORTE. Tant
+qu'il se déduisait de la hauteur par un proxy linéaire, ces bornes n'étaient
+que des bornes de hauteur déguisées.
+
+**Un changement de sens, à connaître côté rendu** : un arbre rabattu par une
+trogne ou un recépage **ne descend plus l'échelle**. Rabattre la cime n'amincit
+pas le tronc à 1,30 m — un fût de quarante centimètres coupé à deux mètres
+reste un gros bois. `retire` porte donc maintenant `diametreCm` en plus des
+deux hauteurs, et c'est lui qui donne le stade, le même des deux côtés du
+geste.
 
 **Et ce que le rendu peut calculer lui-même**, sans rien demander : tout ce qui
 est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur

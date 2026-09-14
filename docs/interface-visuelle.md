@@ -528,7 +528,16 @@ et on n'accepte pas non plus que quatre espèces se ressemblent.
 | **Arbuste en cépée** | noisetier, sureau, prunellier, aubépine | Noisetier : brins arqués, grande feuille cordée, chatons. Sureau : rameaux épais à moelle, feuille composée, corymbes blancs puis baies noires. Prunellier : **épineux**, floraison blanche sur bois nu, prunelles bleu-noir. Aubépine : épineux, feuille lobée, cenelles rouges. |
 | **Fourré bas / lande** | ronce, ajonc, genêt, callune | Dessinés **par cellule agrégée**. Ronce : masse hérissée, mûres. Ajonc : boule épineuse jaune vif en fleur. Genêt : rameaux verts dressés, fleurs jaunes. Callune : tapis violet ras en fin d'été. |
 
-**Les stades** restent une fonction continue de `heightM / hauteurMaxM`, mais
+**L'ÉPAISSEUR DU FÛT NE S'INVENTE PLUS.** `SnapshotTree.diametreCm` porte le
+diamètre à 1,30 m que l'arbre a réellement, et non plus un proxy tiré de sa
+hauteur (#62). Deux arbres de même taille se dessinent donc à des grosseurs
+différentes selon qu'ils ont poussé serrés ou au large, ce qui est visible sur
+le terrain et ne l'était pas ici. C'est aussi lui, et non la hauteur, qui donne
+le stade forestier (`stadeDe`, docs/attentes-du-rendu.md).
+
+**Les stades** ci-dessous sont l'échelle VISUELLE du rendu, distincte de
+l'échelle forestière en diamètre. Ils restent une fonction continue de
+`heightM / hauteurMaxM`, mais
 avec D4 c'est le squelette qui les porte : semis (< 0,5 m), gaulis (0,5–3 m),
 perchis (3–10 m), futaie (10 m–max), sénescent (`fAge < 1` : cime dégarnie,
 grosses charpentières mortes, houppier étalé), **chandelle** (fût gris ou noir,
