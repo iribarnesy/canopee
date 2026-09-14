@@ -1,9 +1,14 @@
 /**
- * La strate herbacée (docs/regles.md §5, ch4-B, ch7 « zéro sol nu »).
+ * La strate herbacée, prise dans son ENSEMBLE (docs/regles.md §5, ch4-B, ch7
+ * « zéro sol nu »).
  *
- * Elle n'est pas modélisée en individus mais en TAUX DE COUVERTURE par cellule :
- * graminées, ronces, molinie… tout ce qui occupe le sol entre les arbres. Elle
- * change tout pour un jeune plant :
+ * Ce fichier tient ce que la strate fait au reste du monde — sa soif, sa faim
+ * d'azote, la mémoire hydrique qui l'empêche d'osciller. QUI la compose, et
+ * selon quel calendrier, est dans `herbacees.ts` : l'atlas des espèces
+ * herbacées et le partage du sol entre elles.
+ *
+ * Elle n'est pas modélisée en individus mais en TAUX DE COUVERTURE par cellule.
+ * Elle change tout pour un jeune plant :
  *  - elle lui dispute l'eau et l'azote de l'horizon de surface — c'est la
  *    première cause d'échec des plantations (ch4-B) ;
  *  - mais elle couvre le sol, ce qui limite l'évaporation et l'érosion ;
@@ -24,15 +29,6 @@ export const HERBE_TRANSPIRATION_COEFF = 0.3;
  * herbacée spontanée *(à calibrer)*.
  */
 export const HERBE_AZOTE_G_M2_SEMAINE = 0.06;
-/** Vitesse de reconquête d'un sol nu, par semaine de pleine végétation. */
-const REPRISE_PAR_SEMAINE = 0.12;
-/** Vitesse de régression quand les conditions ne suivent plus. */
-const REGRESSION_PAR_SEMAINE = 0.2;
-/**
- * Lumière au sol en dessous de laquelle la strate ne se maintient plus :
- * sous un couvert fermé, le tapis herbacé disparaît (ch4-A).
- */
-const LUMIERE_MINIMALE = 0.12;
 
 /**
  * Inertie du tapis face à l'humidité : part de l'écart rattrapée chaque semaine
@@ -63,35 +59,12 @@ export function humiditeVecue(precedente: number, remplissageActuel: number): nu
 }
 
 /**
- * Couverture que la cellule peut porter, d'après la lumière qui atteint le sol
- * et l'humidité VÉCUE de l'horizon de surface (lissée sur plusieurs semaines,
- * et non la satisfaction de l'herbe elle-même : sinon la couverture se nourrit
- * de sa propre consommation et le tapis se met à osciller).
- * Une lande rase ou un sous-bois sombre plafonnent bas ; une trouée fraîche se
- * referme vite. L'herbe grille la première en été : ses racines sont fines et
- * superficielles, elle recule avant que les arbres ne souffrent.
+ * Ce que la cellule peut porter, et à quelle vitesse elle y va, ne se calcule
+ * plus ici : chaque espèce a sa capacité et sa saison (`herbacees.ts`). La
+ * couverture de la cellule est la somme de ce que les espèces couvrent, et le
+ * seuil unique de lumière qui vivait ici — 0,12, le même pour tout le monde —
+ * est devenu le point de compensation de chacune.
  */
-export function couvertureMax(lumiereAuSol: number, remplissageEauSurface: number): number {
-  if (lumiereAuSol <= LUMIERE_MINIMALE) return 0;
-  const parLumiere = Math.min(1, (lumiereAuSol - LUMIERE_MINIMALE) / 0.35);
-  const parEau = Math.min(1, remplissageEauSurface / 0.35);
-  return Math.max(0, parLumiere * parEau);
-}
-
-/**
- * Fait évoluer la couverture d'une cellule vers sa capacité : reconquête
- * progressive d'un sol nu, régression sous l'ombre ou la sécheresse.
- */
-export function prochaineCouverture(
-  couverture: number,
-  couvertureCible: number,
-  saison: number,
-): number {
-  if (couvertureCible > couverture) {
-    return Math.min(couvertureCible, couverture + REPRISE_PAR_SEMAINE * saison);
-  }
-  return Math.max(couvertureCible, couverture - REGRESSION_PAR_SEMAINE);
-}
 
 /** Demande en eau d'une cellule d'herbe, L/semaine (1 m² : 1 mm = 1 L). */
 export function herbeDemandeEauL(

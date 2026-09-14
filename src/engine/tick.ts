@@ -72,12 +72,18 @@ import {
 } from "./gibier";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
-  couvertureMax,
-  herbeDemandeAzoteG,
-  herbeDemandeEauL,
-  humiditeVecue,
-  prochaineCouverture,
-} from "./herbe";
+  capaciteHerbacee,
+  evoluerEmprises,
+  facteurEauHerbacee,
+  facteurThermique,
+  HERBACEES,
+  N_HERBACEES,
+  partSaisonniere,
+  rabattreParEspece,
+  suivreFeuillage,
+  vigueurHerbacee,
+} from "./herbacees";
+import { herbeDemandeAzoteG, herbeDemandeEauL, humiditeVecue } from "./herbe";
 import {
   baseHouppierCible,
   computeGroundLight,
@@ -559,6 +565,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const potassiumReserveG = state.soil.potassiumReserveG.slice();
   const litterK = state.soil.litterK.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
   /** engorgement par (cellule, horizon) */
@@ -1310,6 +1318,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // La strate évolue selon la lumière reçue et l'humidité qui RESTE en surface
   // après le passage de tout le monde (état du sol, pas flux : cf. herbe.ts).
+  //
+  // Espèce par espèce (herbacees.ts) : chacune a son point de compensation, sa
+  // gamme de pH et sa saison, et ne fait bouger son emprise que pendant la
+  // sienne. C'est de là que sort la fenêtre vernale — une anémone juge sa
+  // station en mars, sous un couvert caduc encore nu ; une graminée la juge en
+  // mai, sous le même couvert refermé.
+  //
+  // Ce qui ne dépend que de la semaine se calcule une fois pour toute la
+  // parcelle, et les deux tampons par cellule sont alloués une fois pour
+  // toutes : la strate tourne sur toutes les cellules toutes les semaines, et
+  // ce lot coûte déjà 11 % de temps de tick.
+  const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
+  const saisonnieres = HERBACEES.map((h) => partSaisonniere(h, pheno));
+  const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
+  const capacites = new Array<number>(N_HERBACEES).fill(0);
+  const facteursEau = new Array<number>(N_HERBACEES).fill(0);
   let herbeSum = 0;
   for (let i = 0; i < nCells; i++) {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
@@ -1318,17 +1342,30 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // les essais d'Arvalis ont mesuré la perte. La boucle qui se referme :
     // moins de couverture, donc plus de ruissellement, sur un sol qui infiltre
     // déjà moins (tassement.ts).
-    const cible =
-      couvertureMax(groundLight[i] ?? 1, herbeHumidite[i] ?? remplissage) *
-      facteurCroissanceTassement(tassement[i] ?? 0);
-    herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
+    const plafondTassement = facteurCroissanceTassement(tassement[i] ?? 0);
+    const lumiere = groundLight[i] ?? 1;
+    const humidite = herbeHumidite[i] ?? remplissage;
+    const ph = state.soil.ph[i] ?? 7;
+    for (let s = 0; s < N_HERBACEES; s++) {
+      const h = HERBACEES[s];
+      capacites[s] = h ? capaciteHerbacee(h, lumiere, ph) * plafondTassement : 0;
+      facteursEau[s] = h ? facteurEauHerbacee(h, humidite) : 0;
+    }
+    const base = i * N_HERBACEES;
+    evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
+    suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
+    // Ce que la cellule COUVRE : la somme des feuillages. Tout le reste du
+    // moteur lit cette ligne et ignore les espèces.
+    let couverture = 0;
+    for (let s = 0; s < N_HERBACEES; s++) couverture += herbeFeuillage[base + s] ?? 0;
+    herbeCouverture[i] = couverture;
     // La biomasse suit la croissance mais ne suit pas la régression : le foin
     // reste debout et ne part qu'avec la décomposition, la fauche ou le feu.
     herbeBiomasse[i] = Math.max(
-      herbeCouverture[i] ?? 0,
+      couverture,
       (herbeBiomasse[i] ?? 0) * (1 - (0.01 * climateSum) / nCells),
     );
-    herbeSum += herbeCouverture[i] ?? 0;
+    herbeSum += couverture;
   }
 
   const waterSatisfaction = new Array<number>(nTrees).fill(1);
@@ -1618,7 +1655,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   if (broutage.preleveKg > 0) {
     for (let i = 0; i < nCells; i++) {
       const consommee = broutage.parCellule[i]?.herbeConsommee ?? 0;
-      if (consommee > 0) herbeCouverture[i] = Math.max(0, (herbeCouverture[i] ?? 0) - consommee);
+      if (consommee > 0) {
+        const avant = herbeCouverture[i] ?? 0;
+        herbeCouverture[i] = Math.max(0, avant - consommee);
+        // Ce qui est brouté est pris sur le FEUILLAGE, et sur lui seul : la
+        // dent du chevreuil ne va pas chercher les rhizomes, et l'espèce qui
+        // n'était pas sortie n'a rien perdu.
+        if (avant > 0) {
+          rabattreParEspece(herbeFeuillage, i * N_HERBACEES, (herbeCouverture[i] ?? 0) / avant);
+        }
+      }
     }
     nextTrees = nextTrees.map((tree) => {
       const degat = broutage.parArbre.get(tree.id);
@@ -2167,6 +2213,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       for (const i of brulees) {
         herbeCouverture[i] = 0;
         herbeBiomasse[i] = 0;
+        // Le feu emporte tout le feuillage ; les souches restent et la lande
+        // repart d'elles, à la vitesse de repousse (herbacees.ts).
+        rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 0);
         carboneFeuKgC += (litterCG[i] ?? 0) / 1000;
         litterCG[i] = 0;
         // L'azote de la litière part en fumée pour l'essentiel ; le reste
@@ -2329,6 +2378,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         potassiumReserveG,
         litterK,
         herbeCouverture,
+        herbeEmprise,
+        herbeFeuillage,
         herbeBiomasse,
         herbeHumidite,
         ravageurs,

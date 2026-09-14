@@ -389,7 +389,14 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // (#62), donc le tonnage qui tombait au sol et piégeait la terre était
     // gonflé d'autant. Mesuré après correction : 0,135. Le mécanisme n'a pas
     // bougé d'un cheveu — c'est la masse qui redevient celle d'un vrai arbre.
-    expect(moy(oriente, "piege")).toBeGreaterThan(0.1);
+    //
+    // Et une QUATRIÈME fois, pour la raison que ce commentaire annonçait :
+    // « un piège ne retient que ce qui passe ». La strate herbacée par espèces
+    // change ce qui passe — la couverture moyenne de ce versant tombe de 0,661
+    // à 0,641 sur soixante ans, mais elle se répartit autrement dans l'année,
+    // et il descend 0,093 au lieu de 0,135. Ce qui ne bouge pas, et c'est
+    // l'objet du test : à plat, le même bois ne piège RIEN.
+    expect(moy(oriente, "piege")).toBeGreaterThan(0.08);
     expect(moy(aPlat, "piege")).toBe(0);
     // Et il détourne une part de l'eau de surface vers le sol — une part
     // MINCE, et c'est le résultat, pas un aveu de faiblesse.

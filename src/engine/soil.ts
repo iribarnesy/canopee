@@ -87,6 +87,20 @@ export function facteurPhBiologie(ph: number): number {
 }
 
 /**
+ * Tolérance d'une espèce à l'acidité ∈ [0,1] : 1 dans sa gamme, bordure douce
+ * de ±0,7 pH, 0 au-delà — la bio-indication de l'atlas, calcicoles contre
+ * acidiphiles.
+ *
+ * Elle vit ici, et pas dans `trees.ts`, parce que la strate herbacée la lit
+ * aussi (`herbacees.ts`) : c'est une propriété du SOL confrontée à une gamme,
+ * elle ne suppose rien d'un tronc.
+ */
+export function facteurGammePh(gamme: readonly [number, number], ph: number): number {
+  const [min, max] = gamme;
+  return Math.min(1, Math.max(0, Math.min((ph - min) / 0.7, (max - ph) / 0.7)));
+}
+
+/**
  * Poids d'un horizon dans la vie du sol : l'activité biologique se concentre en
  * surface, la MO profonde est plus stable et moins accessible.
  */
