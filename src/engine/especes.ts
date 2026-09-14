@@ -215,7 +215,32 @@ export interface EspeceV0 {
     prixPlantEur: number;
   };
   bois: {
-    /** densité du bois sec, t/m³ (infradensité, pour la biomasse et le carbone) */
+    /**
+     * Densité du bois, t/m³.
+     *
+     * CE COMMENTAIRE A MENTI, et c'est le défaut que recense l'issue #68. Il
+     * annonçait une INFRADENSITÉ — masse anhydre sur volume VERT, la grandeur
+     * qu'exige un calcul de biomasse. Les valeurs saisies n'en sont pas : 0,68
+     * pour le hêtre, c'est sa densité à 12 % d'humidité, celle du commerce et
+     * des tables de menuiserie. L'infradensité du hêtre vaut ~0,55, et l'écart
+     * ne vaut pas un facteur unique d'une essence à l'autre.
+     *
+     * Conséquence, écrite noir sur blanc dans `carbon.ts` : le carbone vivant
+     * reste surestimé d'environ 20 %. Le champ garde sa valeur d'aujourd'hui
+     * parce que la corriger demande une table d'infradensités SOURCÉE, essence
+     * par essence — pas un coefficient global, qui remplacerait une erreur par
+     * une autre.
+     *
+     * Le recensement des lecteurs, lui, est fait, et il tranche la question que
+     * posait #68 (un champ ou deux ?) : **un seul suffit**. Les deux seuls
+     * lecteurs sont `treeAboveCarbonKg` (carbon.ts), qui veut l'infradensité,
+     * et `dureeChandelleSemaines` (trees.ts), qui ne s'en sert que comme proxy
+     * de dureté — un bois dense tient debout plus longtemps — et que les deux
+     * grandeurs classent dans le même ordre. Le PRIX, lui, ne lit pas ce champ :
+     * il se compte au m³ (`prixOeuvreEurM3`), pas au kilo. Aucun lecteur ne
+     * réclame donc une densité commerciale, et il n'y a pas deux grandeurs à
+     * séparer.
+     */
     densite: number;
     /**
      * Prix du m³ de BOIS D'ŒUVRE de cette essence, € — sans commune mesure

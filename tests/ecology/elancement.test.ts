@@ -13,7 +13,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
-import { elancement } from "../../src/engine/trees";
+import { allocationDiametreCmParM, diametreInitialCm, elancement } from "../../src/engine/trees";
 
 const COTE = 40;
 const ANS = 30;
@@ -66,21 +66,74 @@ describe("la densité de plantation fait la forme de la tige", () => {
     expect(clair.diametreDom).toBeGreaterThan(serre.diametreDom);
   });
 
-  it("l'amplitude reste TROP FAIBLE, et la cause est ailleurs", () => {
+  it("l'amplitude reste TROP FAIBLE, et j'avais accusé le mauvais coupable", () => {
     // La sylviculture mesure H/D de 25–40 pour un sujet de plein vent et de
     // 90–100 pour une perche de plantation serrée. Le moteur couvre 35–49 : le
     // bon ORDRE, un cinquième de l'étendue.
     //
-    // La cause est identifiée et ANTÉRIEURE à l'élancement : dans
-    // `light.ts:extinctionAt`, un codominant n'ombrage qu'au poids 0,4 contre 1
-    // pour un dominant — or en plantation régulière tout le monde est
-    // codominant de tout le monde, soit précisément le cas où la concurrence
-    // latérale est la plus forte dans la réalité.
+    // CE COMMENTAIRE DÉSIGNAIT `light.ts` ET IL AVAIT TORT. Il accusait le
+    // poids 0,4 des codominants (#65) : en plantation régulière tout le monde
+    // est codominant de tout le monde, donc la concurrence latérale serait
+    // atténuée là où elle est la plus forte. C'était plausible et c'est faux.
+    // La campagne de #65 a porté ce poids à 1 — l'atténuation supprimée — et
+    // les dominants de la hêtraie à 2 m sont passés de H/D 42,1 à 41,7. Avec en
+    // plus le seuil à 0 (tout voisin plus court ombrage à plein) et le plafond
+    // d'extinction doublé : 45,0. Rien dans `light.ts` n'ouvre cette amplitude.
     //
-    // Ce coefficient gouverne aussi l'auto-éclaircie, la succession et le tri
-    // des espèces : le bouger déplacerait toutes les conclusions écologiques du
-    // dépôt d'un coup. Cet essai FIXE donc l'insuffisance au lieu de la taire,
-    // pour qu'elle soit retrouvée le jour où ce lot-là sera pris.
+    // Ce qui borne, c'est la paire d'allocation de CE fichier, et c'est de
+    // l'arithmétique — d'où l'essai suivant, qui l'épingle.
     expect(serre.elancementDom).toBeLessThan(60);
+  });
+});
+
+describe("ce que la paire d'allocation rend ATTEIGNABLE", () => {
+  // La borne qui manquait, et qui a laissé chercher la cause dans le mauvais
+  // fichier pendant deux lots. Elle ne coûte aucune simulation : un arbre qui
+  // pousse de bout en bout à l'allocation `a` porte H/D = 100/a, et `a` est
+  // bornée par les deux constantes. Aucun réglage de la lumière ne peut sortir
+  // de cette fenêtre — c'est ce qu'il faut savoir AVANT d'aller régler la
+  // lumière.
+
+  /** H/D d'un semis de 0,3 m mené jusqu'à 20 m à lumière constante. */
+  function elancementApresUneVie(lumiere: number): number {
+    let h = 0.3;
+    let d = diametreInitialCm(0.3);
+    for (let i = 0; i < 400; i++) {
+      d += 0.05 * allocationDiametreCmParM(lumiere);
+      h += 0.05;
+    }
+    return elancement(d, h);
+  }
+
+  it("la pleine lumière plafonne l'arbre à H/D 40, l'ombre la plus noire à 79", () => {
+    // Mesuré sur le code livré : 40,1 en pleine lumière, 78,5 sous
+    // exp(−MAX_EXTINCTION), la lumière la plus faible que `light.ts` produise.
+    const auLarge = elancementApresUneVie(1);
+    const sousCouvert = elancementApresUneVie(Math.exp(-4.5));
+    expect(auLarge).toBeGreaterThan(39);
+    expect(auLarge).toBeLessThan(42);
+    expect(sousCouvert).toBeGreaterThan(75);
+    expect(sousCouvert).toBeLessThan(80);
+  });
+
+  it("donc 90–100 est hors d'atteinte, et 25 aussi : la sylviculture déborde des deux côtés", () => {
+    // L'énoncé de E10 demande 25–40 au large et 90–100 en perche. Les deux
+    // bouts sont HORS de ce que ces constantes permettent, quelle que soit la
+    // lumière. Tant que cette assertion tient, le critère ne peut pas passer ✅,
+    // et ce n'est pas en réglant l'ombrage qu'on le fera passer.
+    //
+    // Élargir la fenêtre demande d'écarter la paire en gardant sa médiane à 2 —
+    // l'ancre de volume — par exemple 1,0 / 3,0, qui donne [33 ; 100].
+    expect(elancementApresUneVie(0)).toBeLessThan(90);
+    expect(elancementApresUneVie(1)).toBeGreaterThan(25);
+  });
+
+  it("et le gradient va bien dans le sens de la lumière, sans trou", () => {
+    // Le garde-fou des deux précédents : une fenêtre bornée ne vaut rien si la
+    // grandeur n'y varie pas de façon monotone.
+    const paliers = [0, 0.25, 0.5, 0.75, 1].map(elancementApresUneVie);
+    for (let i = 1; i < paliers.length; i++) {
+      expect(paliers[i]).toBeLessThan(paliers[i - 1] as number);
+    }
   });
 });

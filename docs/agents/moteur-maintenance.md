@@ -63,6 +63,12 @@ mécanisme : neutraliser le tirage et remesurer.
 - La CI est plus lente que la machine de dev. Deux tests ont eu besoin d'un
   `timeout` explicite (900 s et 600 s). Préférer allonger le délai à réduire
   l'échantillon.
+- **Et ce délai doit porter là où le temps passe.** Une campagne lancée dans le
+  corps d'un `describe` tourne à la COLLECTE, que ni `testTimeout` ni un délai
+  posé sur le `describe` ne couvrent : si elle s'emballe, la suite bloque au
+  lieu d'échouer. La mettre dans un `beforeAll` avec son `hookTimeout` rend la
+  panne lisible. `elancement.test.ts` est l'ancien usage, `trouees.test.ts` le
+  nouveau.
 
 ## Le référentiel est la mémoire du projet
 
@@ -70,22 +76,48 @@ mécanisme : neutraliser le tirage et remesurer.
 jour la ligne du critère, le tableau de score et la ligne d'historique laisse le
 document mentir — et c'est déjà arrivé.
 
-**Dette connue, non traitée :** le tableau contient deux critères numérotés A13
-et deux numérotés A14, et compte **134 lignes pour un score annoncé sur 122**.
-Le pourcentage affiché est donc faux. À réconcilier en une passe dédiée.
+**Cette dette-là est soldée.** Le tableau comptait 134 lignes pour un score
+annoncé sur 122, et deux critères portaient un numéro déjà pris (A13, A14) : la
+passe dédiée a eu lieu (#76), les doublons sont renumérotés A29 et A30, et
+l'en-tête se recompte désormais DEPUIS LES LIGNES.
+
+Ce qui reste de la leçon : **un compte tenu à la main diverge.** Recompter en
+parsant le document coûte dix lignes de script et attrape ce qu'un œil ne voit
+pas. Un tel recompte a resservi en livrant #74, et il a confirmé les deux
+colonnes touchées au lieu de les croire.
+
+**Et le document ne ment pas qu'en chiffres.** Une justification de critère est
+une AFFIRMATION, au même titre qu'un `expect`. Celle de E10 désignait le poids
+0,4 des codominants comme la cause de l'amplitude manquante ; elle a été recopiée
+dans `trees.ts` et dans `elancement.test.ts`, si bien que trois endroits du dépôt
+disaient la même chose fausse, et que chaque lot suivant y lisait une
+confirmation. Personne ne l'avait mesurée. La mesure a demandé une demi-heure de
+calcul et a renvoyé le verrou dans un autre fichier (#79).
+
+La règle qui en sort : **une cause écrite dans le référentiel se mesure ou
+s'annonce comme une hypothèse.** Et quand elle se mesure, elle se mesure une
+fois — pas trois copies d'une même intuition.
 
 ## File d'attente
 
-- **#65** — dans `extinctionAt` (`light.ts`), un codominant n'ombrage qu'au poids
-  0,4. En plantation régulière tout le monde est codominant de tout le monde :
-  l'élancement est bridé (le moteur couvre 27–67 là où la sylviculture va de 25 à
-  100) et le terme **sature** — deux écartements dans un rapport de quatre
-  donnent le même résultat. Attention : ce coefficient gouverne aussi
-  l'auto-éclaircie, la succession et le tri des espèces. Label `à-mesurer` : la
-  campagne vient avant le code.
-- **Instruire `bois.densite`** (pas encore d'issue). L'atlas donne 0,68 pour le
-  hêtre, ce qui ressemble à une densité à 12 % d'humidité — la valeur du
-  commerce. La biomasse demande l'**infradensité** (masse anhydre sur volume
-  vert), ~0,55 pour le hêtre. Si c'est le cas partout, il reste ~20 % de
-  surestimation. Vérifier essence par essence, et vérifier à quoi d'autre le
-  champ sert avant d'y toucher.
+- **#65** — le poids 0,4 des codominants dans `extinctionAt` (`light.ts`).
+  **La campagne est faite, et elle a RÉFUTÉ la cause annoncée.** Porter ce poids
+  à 1 — l'atténuation supprimée — fait passer les dominants d'une hêtraie serrée
+  de H/D 42,1 à 41,7 ; poids 1, seuil 0 et plafond d'extinction doublé
+  n'atteignent que 45,0. Ce qui bornait l'élancement est arithmétique et vit
+  dans `trees.ts` : c'est **#79**. Aucune ligne de code n'a été touchée, et c'est
+  la campagne qui l'a évité — le meilleur argument qu'on ait pour `à-mesurer`.
+  Ce qui RESTE de #65 : ce que ce poids fait à l'auto-éclaircie (B6) et à la
+  succession n'a pas été mesuré, une hêtraie de trente ans ne s'éclaircissant
+  pas assez pour trancher. L'issue vaut encore, sur cette question-là seulement.
+- **#68** — `bois.densite` porte une densité du commerce (0,68 pour le hêtre) là
+  où la biomasse demande l'**infradensité** (~0,55). Il reste ~20 % de
+  surestimation du carbone vivant. **Le recensement est fait** : deux lecteurs
+  seulement, dont un seul (`treeAboveCarbonKg`) veut l'infradensité — l'autre
+  (`dureeChandelleSemaines`) n'y lit qu'un proxy de dureté. Donc **un champ, pas
+  deux**. Ne reste que le plus dur : une table d'infradensités SOURCÉE, essence
+  par essence. Deux avertissements pour qui la reprendra — un facteur global
+  appliqué à l'aveugle remplacerait une erreur par une autre, et l'unique ancre
+  extérieure du dépôt (1 000–1 400 kg C pour un hêtre de 25 m) accepte les DEUX
+  valeurs : elle est à resserrer dans le même lot, sans quoi le correctif ne
+  fera basculer aucun essai.

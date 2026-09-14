@@ -662,13 +662,38 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * l'ancien moteur. Les 350 à 450 m³/ha des tables valent pour une futaie
  * GÉRÉE ; ce banc-là n'est jamais éclairci, et accumule donc davantage.
  *
- * **Réserve honnête, et sa cause est ailleurs.** Le moteur couvre H/D de 35 à
- * 49 quand la sylviculture mesure 25–40 au large et 90–100 en perche : le bon
- * ordre, un cinquième de l'étendue. Ce n'est pas cette allocation qui borne —
- * c'est le poids d'ombrage des codominants (0,4 dans `light.ts:extinctionAt`),
- * qui atténue la concurrence latérale précisément là où elle est la plus forte.
- * Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger
- * mérite son propre lot.
+ * **Réserve honnête. J'ai d'abord accusé le mauvais coupable, et la campagne
+ * de #65 l'a mesuré.** Le moteur couvre H/D de 35 à 49 quand la sylviculture
+ * mesure 25–40 au large et 90–100 en perche : le bon ordre, un cinquième de
+ * l'étendue. Ce commentaire a longtemps désigné le poids d'ombrage des
+ * codominants (0,4 dans `light.ts:extinctionAt`) comme la cause, et
+ * `elancement.test.ts` le répétait. **C'est faux, et le balayage le montre** :
+ * porter ce poids à 1 — c'est-à-dire supprimer toute l'atténuation — fait
+ * passer les dominants d'une hêtraie plantée à 2 m de H/D 42,1 à 41,7. Poids 1,
+ * seuil 0 (tout voisin plus court ombrage à plein) ET plafond d'extinction
+ * doublé : 45,0. Rien dans `light.ts` n'ouvre cette amplitude.
+ *
+ * **Ce sont bien CES DEUX CONSTANTES qui bornent, et c'est de l'arithmétique.**
+ * Un arbre qui pousse de bout en bout à une allocation `a` porte H/D = 100/a.
+ * La fenêtre atteignable par la croissance est donc [40 ; 79] — 40,1 mesuré sur
+ * un semis élevé en pleine lumière, 78,5 dans l'ombre la plus noire que le
+ * moteur sache faire. Les 90–100 de la perche sont HORS D'ATTEINTE quelle que
+ * soit la lumière, et les 25 du plein vent aussi. (En dessous de 40, on trouve
+ * quand même des tiges : c'est l'abroutissement, qui retire de la hauteur sans
+ * toucher au diamètre.)
+ *
+ * **Et H/D est une INTÉGRALE, pas un état.** À 2 m et trente ans, les dominants
+ * reçoivent 0,40 de lumière, ce qui vaut une allocation instantanée de
+ * 1,75 cm/m, donc H/D 57 pour un arbre qui aurait vécu là depuis toujours. Ils
+ * en portent 42. L'écart, c'est leur jeunesse : toute plantation est ouverte
+ * ses premières années, le diamètre posé alors à 2,5 cm/m est acquis pour
+ * toujours, et le diamètre ne rétrécit jamais. L'ombre n'agit donc que sur la
+ * fin de la vie de l'arbre.
+ *
+ * Élargir l'amplitude demande d'écarter cette paire en gardant sa médiane à 2
+ * (l'ancre de volume) — par exemple 1,0 / 3,0, qui ouvre la fenêtre à
+ * [33 ; 100]. C'est un lot à soi : la médiane tient le volume du peuplement,
+ * l'écart tient l'amplitude, et les deux se remesurent ensemble.
  *
  * **La hauteur, elle, n'est pas touchée.** Elle est calée sur des tables de
  * production (Jansen 1996, `hauteurs.test.ts`) : c'est une vraie ancre, et on
