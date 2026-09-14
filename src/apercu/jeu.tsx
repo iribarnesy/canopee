@@ -297,6 +297,13 @@ function Demo(): React.ReactElement {
                 cellulesBrulees: incendieBrut.brulees.length,
                 arbresTues: 0,
                 rejets: 0,
+                // Vide, et ce n'est pas un oubli : les scènes cuites ne portent
+                // pas encore les identités que le moteur rapporte désormais
+                // (`IncendieResult.victimes`, c1908b7). Tant qu'elles ne les
+                // portent pas, le banc reconnaît les torchés à leur
+                // `brulEeSemaine` — la jointure fragile que ce champ existe
+                // justement pour supprimer (issue #78).
+                victimes: [],
                 carboneTHa: 0,
               },
             }

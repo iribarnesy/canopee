@@ -42,6 +42,7 @@ const feu = (origine: number): IncendieResult => ({
   cellulesBrulees: 3,
   arbresTues: 2,
   rejets: 1,
+  victimes: [],
   carboneTHa: 0.4,
   origine,
   brulees: Int32Array.from([origine, origine + 1, origine + 2]),
