@@ -89,7 +89,7 @@ pas contradictoire, c'est exactement ce que fait une planche botanique.
    botaniques (§4). Conséquences : le style est paramétrable d'un seul endroit,
    chaque combinaison (essence × stade × saison × gestion) est gratuite, et le
    dépôt ne grossit pas. C'est ce qui rend tenable l'exigence de **reconnaître
-   chaque essence** sur vingt-cinq espèces (et quarante à terme).
+   chaque essence** sur vingt-six espèces (et quarante à terme).
    *Une seule exception, assumée* : le **son** (§5.10) suppose des fichiers
    audio. Ils vivront dans `data/sons/` avec leur licence et leur provenance,
    au même titre que les valeurs écologiques sont sourcées.
@@ -1990,10 +1990,28 @@ fiche par fiche, sans bloquer personne. L8, L9, L10 à la fin, en continu.
 C'est **le double**, et la quasi-totalité de l'écart vient de D4 : reconnaître
 vingt-cinq essences est de loin la décision la plus chère du lot — et c'est
 probablement celle qui compte le plus pour ce jeu-là. Le compte a d'ailleurs
-déjà bougé : le catalogue est passé de 19 à 25 essences pendant que j'écrivais
-ce document (charme, houx, saule blanc, cornouiller mâle, fusain, troène). Le
+déjà bougé deux fois : le catalogue est passé de 19 à 25 essences pendant que
+j'écrivais ce document (charme, houx, saule blanc, cornouiller mâle, fusain,
+troène), puis à 26 quand le moteur a ajouté le **noyer** pour l'allélopathie. Le
 chantier des fiches graphiques **suit la croissance du catalogue** — c'est un
-coût récurrent, pas un lot qu'on ferme. Autant le savoir : chaque essence
+coût récurrent, pas un lot qu'on ferme.
+
+**Et la récurrence se gère toute seule, ce qui est le vrai acquis.** Le noyer
+n'a pas été remarqué par quelqu'un qui relisait le catalogue : c'est l'essai de
+couverture qui l'a signalé, en une ligne, à la première passe de tests après la
+fusion du moteur. Deux leçons du passage :
+
+- **le manque n'était pas décoratif.** Le noyer est l'espèce qui empêche les
+  autres de pousser chez elle ; sans silhouette reconnaissable, la leçon du
+  juglone — le sol nu sous le houppier — passe inaperçue faute qu'on identifie
+  l'arbre qui la cause. Une fiche générique aurait coûté une règle écologique,
+  pas un détail de dessin ;
+- **l'essai de couverture ne couvre pas tout.** Les planches d'aperçu portent
+  leur propre liste d'espèces en dur : le noyer avait sa fiche et restait
+  invisible au banc, c'est-à-dire invisible à l'endroit exact où l'on juge si
+  une essence se reconnaît sans étiquette. Il a fallu regarder la planche pour
+  s'en apercevoir — et pour voir, du même coup, que son BROU vert disparaissait
+  dans le feuillage. Autant le savoir : chaque essence
 ajoutée au moteur coûtera désormais une demi-journée à une journée de dessin
 pour rester reconnaissable. Trois choses rendent le
 chiffre supportable :

@@ -65,7 +65,13 @@ export const NOYER: FicheGraphique = {
     // qu'au sol, une fois le brou fendu et noirci — même distinction que la
     // bogue du châtaignier.
     forme: "charnu",
-    couleur: { r: 118, g: 142, b: 74 },
+    // **Jaune-vert et non vert, et la planche l'a imposé** : au vert du brou sur
+    // l'arbre (118, 142, 74), le fruit disparaissait dans le feuillage — un
+    // fruit qu'on ne distingue pas ne dit pas « il y a quelque chose à
+    // récolter », qui est toute la question que cette planche pose. Et le jaune
+    // est honnête au moment où le rendu le dessine : cette planche montre le
+    // fruit MÛR, et un brou mûr jaunit avant de se fendre.
+    couleur: { r: 186, g: 194, b: 106 },
     longueurM: 0.045,
     parRameau: 2,
   },
