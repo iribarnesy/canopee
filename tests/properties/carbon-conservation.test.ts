@@ -12,6 +12,7 @@ import {
   livingCarbonKg,
   racinesPerduesEnRabattant,
   treeAboveCarbonKg,
+  treeRootCarbonKg,
   treeTotalCarbonKg,
 } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
@@ -281,7 +282,12 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
       12,
       RECEPAGE_HAUTEUR_M,
     );
-    expect(attendu).toBeGreaterThan(100);
+    // Ce qu'on épingle est que la part racinaire perdue est SUBSTANTIELLE, pas
+    // qu'elle vaut tant de kilos : un seuil en valeur absolue ne décrirait que
+    // le niveau de l'allométrie du jour, et celui-ci a déjà changé d'un facteur
+    // six (#62). Rabattre un arbre de douze mètres à hauteur de souche lui
+    // retire l'essentiel de ses racines, quelle que soit l'échelle.
+    expect(attendu).toBeGreaterThan(0.8 * treeRootCarbonKg(espece, diametreInitialCm(12), 12));
     expect(r.state.carbon.deadWoodKgC - state.carbon.deadWoodKgC).toBeCloseTo(attendu, 6);
   });
 

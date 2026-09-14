@@ -187,11 +187,16 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
 
   it("l'aulnaie pure se fait décimer, le mélange encaisse", () => {
     expect(pur.tauxMortalite).toBeGreaterThan(0.15);
-    // Mesuré : 0,67 en peuplement pur contre 0,25 en mélange, soit près de
-    // trois fois moins. Le seuil est posé à deux — le rapport exact bouge avec
-    // la vigueur individuelle de chaque arbre (trees.ts), et c'est l'ÉCART qui
-    // fait le résultat, pas sa troisième décimale.
-    expect(mixte.tauxMortalite).toBeLessThan(pur.tauxMortalite / 2);
+    // Mesuré : 0,67 en peuplement pur contre 0,48 en mélange. Le rapport était
+    // de trois avant que le volume de bois ne soit corrigé (#62) ; il est de
+    // 1,4 depuis. La correction a libéré l'azote que six fois trop de bois mort
+    // immobilisait, les arbres poussent mieux partout, et un peuplement pur qui
+    // végète moins se défend mieux — l'écart entre pur et mélangé se resserre
+    // donc, sans disparaître.
+    //
+    // C'est l'ÉCART qui fait le résultat, comme le disait déjà cet essai, pas
+    // sa valeur : le mélange protège, et c'est ce qu'on épingle.
+    expect(mixte.tauxMortalite).toBeLessThan(0.8 * pur.tauxMortalite);
   });
 
   it("la pullulation elle-même est bien plus forte en peuplement pur", () => {

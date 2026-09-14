@@ -116,9 +116,12 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
   });
 
   it("vendre rapporte de l'argent, épandre coûte du temps pour rien... en euros", () => {
-    expect(vendre.state.economy.treasuryEur).toBeGreaterThan(
-      epandre.state.economy.treasuryEur + 20,
-    );
+    // La marge de vingt euros était un chiffre absolu, et elle est tombée avec
+    // la correction du volume : un arbre ne vend plus six fois le bois qu'il
+    // porte (#62), donc l'écart entre vendre et épandre se resserre en euros
+    // sans que la leçon change. Ce qui doit être vrai, c'est le SENS — vendre
+    // rapporte, épandre coûte — pas un montant que l'allométrie fixe.
+    expect(vendre.state.economy.treasuryEur).toBeGreaterThan(epandre.state.economy.treasuryEur);
     expect(epandre.state.economy.hoursUsedYear).toBeGreaterThanOrEqual(0);
   });
 
@@ -159,8 +162,20 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // mécanique fondatrice « couper les légumineuses et les épandre » tient
     // donc, et elle tient mieux qu'on ne le croyait ; ce sont les mesures
     // précédentes (+5 %, puis +2 %) qui la lisaient pendant son creux.
-    expect(gainA(16)).toBeLessThan(1.02);
+    // LE CREUX S'EST COMBLÉ, ET C'EST UN PROGRÈS (#62). Cet essai exigeait
+    // qu'à seize ans le gain soit encore NUL (< 1,02), parce que le moteur
+    // mesurait alors une faim d'azote qui durait plus de huit ans. Elle durait
+    // si longtemps parce que le volume de bois était faux : on épandait six
+    // fois trop de carbone, donc six fois trop de C/N à digérer. Un BRF réel
+    // affame le sol un à trois ans, pas huit.
+    //
+    // Mesuré après correction : 1,043 à seize ans. Le creux existe toujours —
+    // il est simplement à l'échelle du broyat qu'on épand vraiment. Ce que
+    // l'essai épingle désormais est la FORME de la courbe, qui est la propriété
+    // écologique : le gain est déjà là, et il continue de croître.
+    expect(gainA(16)).toBeGreaterThan(1);
     expect(gainA(35)).toBeGreaterThan(1.05);
+    expect(gainA(35)).toBeGreaterThan(gainA(16));
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.

@@ -382,7 +382,14 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // plus intéressante : le chablis tombe avec son houppier et repose dessus.
     // Une forêt livrée à elle-même arme mal son versant, et c'est précisément
     // pour ça que le geste d'abattre et de coucher en travers a un sens.
-    expect(moy(oriente, "piege")).toBeGreaterThan(0.15);
+    //
+    // Et il a fallu l'abaisser une TROISIÈME fois, pour la raison la plus
+    // franche des trois : le volume de bois était faux. Le moteur faisait peser
+    // à ses arbres jusqu'à neuf fois un cylindre plein de leur propre diamètre
+    // (#62), donc le tonnage qui tombait au sol et piégeait la terre était
+    // gonflé d'autant. Mesuré après correction : 0,135. Le mécanisme n'a pas
+    // bougé d'un cheveu — c'est la masse qui redevient celle d'un vrai arbre.
+    expect(moy(oriente, "piege")).toBeGreaterThan(0.1);
     expect(moy(aPlat, "piege")).toBe(0);
     // Et il détourne une part nette de l'eau de surface vers le sol.
     expect(moy(oriente, "eau")).toBeLessThan(0.97 * moy(aPlat, "eau"));
