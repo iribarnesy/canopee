@@ -226,7 +226,7 @@ mesurer que ce qu'on sait déjà faire.*
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
-| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `trees.ts` (`allocationDiametreCmParM`) ; `elancement.test.ts` — le diamètre est porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, dans une proportion que la lumière décide. Rien n'est déclaré par essence : à écartement 2 / 4 / 6 / 10 m, même espèce et même graine, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4 — gradient MONOTONE, sans palier sur la gamme testée. **Reste 🟡 sur l'AMPLITUDE** : la sylviculture mesure 25–40 au large et 90–100 en perche, le moteur ne couvre que 35–49. La cause est identifiée et ANTÉRIEURE — dans `light.ts:extinctionAt` un codominant n'ombrage qu'au poids 0,4, or en plantation régulière tout le monde est codominant de tout le monde. Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger mérite son propre lot |
+| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `trees.ts` (`allocationDiametreCmParM`) ; `elancement.test.ts` — le diamètre est porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, dans une proportion que la lumière décide. Rien n'est déclaré par essence : à écartement 2 / 4 / 6 / 10 m, même espèce et même graine, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4 — gradient MONOTONE, sans palier sur la gamme testée. **Reste 🟡 sur l'AMPLITUDE, et la cause annoncée était fausse** : la sylviculture mesure 25–40 au large et 90–100 en perche, le moteur ne couvre que 35–49. Cette ligne accusait le poids 0,4 des codominants (`light.ts`, #65) ; la campagne l'a réfuté — porter ce poids à 1 fait passer les dominants de H/D 42,1 à 41,7, et pousser les trois constantes de la lumière à fond n'atteint que 45,0. Ce qui borne est ARITHMÉTIQUE et vit dans `trees.ts` : un arbre qui pousse à l'allocation `a` porte H/D = 100/a, donc la fenêtre atteignable est [40 ; 79] (`elancement.test.ts`) — 90–100 et 25 sont hors d'atteinte quelle que soit la lumière. Et H/D est une INTÉGRALE : les dominants serrés reçoivent 0,40 de lumière, ce qui vaudrait H/D 57, mais portent 42, parce que le diamètre posé dans la jeunesse ouverte de la plantation est acquis pour toujours. Élargir demande d'écarter la paire d'allocation en gardant sa médiane à 2 (l'ancre de volume) — voir #79 |
 
 ## F. Dynamique des peuplements
 
@@ -339,20 +339,35 @@ d'eux est l'une des deux seules absences qui subsistent :
 C'est aussi ce qui donnerait un sens au sous-étage d'une parcelle
 agroforestière, où la culture EST la strate basse.
 
-### 2. Le poids latéral des codominants (issue #65)
+### 2. L'écart de la paire d'allocation (issue #79)
 
-Un seul coefficient, quatre critères. Dans `extinctionAt` (`light.ts`), un
-voisin plus haut ombrage à plein poids et un codominant ne compte que pour 0,4 —
-« calibré à la main », dit la justification de B6. Or en plantation régulière
-tout le monde est codominant de tout le monde.
+Cette section promettait « un seul coefficient, quatre critères » : le poids 0,4
+des codominants dans `extinctionAt` (`light.ts`, #65), qui atténue la
+concurrence latérale précisément là où la plantation régulière la rend maximale.
+C'était plausible. **La campagne de #65 l'a réfuté**, et c'est le meilleur
+argument qu'on ait pour la règle `à-mesurer` : porter ce poids à 1 fait passer
+les dominants d'une hêtraie serrée de H/D 42,1 à 41,7 ; poids 1, seuil 0 et
+plafond d'extinction doublé n'atteignent que 45,0. Le code n'a pas été touché,
+et c'est la campagne qui l'a évité.
 
-- **B6** (🟡) — l'auto-éclaircie repose directement dessus.
+Ce qui borne E10 est ARITHMÉTIQUE et vit dans `trees.ts` : le diamètre gagne
+entre 1,25 et 2,5 cm par mètre de hauteur selon la lumière, donc un arbre qui
+pousse à l'allocation `a` porte H/D = 100/a, et la fenêtre atteignable est
+[40 ; 79]. Les 90–100 de la perche sont hors d'atteinte quelle que soit
+l'ombre. Écarter la paire en gardant sa médiane à 2 — l'ancre de volume —
+ouvrirait la fenêtre : c'est **#79**, et c'est `à-mesurer` parce que la médiane
+tient le volume du peuplement pendant que l'écart tient l'amplitude.
+
+Restent, sur le poids des codominants lui-même :
+
+- **B6** (🟡) — l'auto-éclaircie repose directement dessus. **Non mesuré** : la
+  campagne n'a regardé que l'élancement, et une hêtraie de trente ans ne
+  s'éclaircit pas assez pour trancher. Ce que le poids fait à la mortalité reste
+  entier.
 - **F6** (🟡) — « plafond de densité arbitraire + ombrage codominant ».
-- **B10** (🟡) — le port serré.
-- **E10** — l'amplitude de l'élancement, bridée par le même terme.
-
-Chantier `à-mesurer` : ce coefficient gouverne aussi la succession et le tri des
-espèces, donc la campagne de mesure vient avant le code.
+- **B10** (🟡) — le port serré, qui demande un rayon de houppier réactif et pas
+  un coefficient.
+- **E10** — plus ici : son verrou est #79.
 
 ### 3. Les tempêtes (issue #55) — et d'abord leurs critères
 

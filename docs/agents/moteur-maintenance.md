@@ -86,15 +86,30 @@ parsant le document coûte dix lignes de script et attrape ce qu'un œil ne voit
 pas. Un tel recompte a resservi en livrant #74, et il a confirmé les deux
 colonnes touchées au lieu de les croire.
 
+**Et le document ne ment pas qu'en chiffres.** Une justification de critère est
+une AFFIRMATION, au même titre qu'un `expect`. Celle de E10 désignait le poids
+0,4 des codominants comme la cause de l'amplitude manquante ; elle a été recopiée
+dans `trees.ts` et dans `elancement.test.ts`, si bien que trois endroits du dépôt
+disaient la même chose fausse, et que chaque lot suivant y lisait une
+confirmation. Personne ne l'avait mesurée. La mesure a demandé une demi-heure de
+calcul et a renvoyé le verrou dans un autre fichier (#79).
+
+La règle qui en sort : **une cause écrite dans le référentiel se mesure ou
+s'annonce comme une hypothèse.** Et quand elle se mesure, elle se mesure une
+fois — pas trois copies d'une même intuition.
+
 ## File d'attente
 
-- **#65** — dans `extinctionAt` (`light.ts`), un codominant n'ombrage qu'au poids
-  0,4. En plantation régulière tout le monde est codominant de tout le monde :
-  l'élancement est bridé (le moteur couvre 27–67 là où la sylviculture va de 25 à
-  100) et le terme **sature** — deux écartements dans un rapport de quatre
-  donnent le même résultat. Attention : ce coefficient gouverne aussi
-  l'auto-éclaircie, la succession et le tri des espèces. Label `à-mesurer` : la
-  campagne vient avant le code.
+- **#65** — le poids 0,4 des codominants dans `extinctionAt` (`light.ts`).
+  **La campagne est faite, et elle a RÉFUTÉ la cause annoncée.** Porter ce poids
+  à 1 — l'atténuation supprimée — fait passer les dominants d'une hêtraie serrée
+  de H/D 42,1 à 41,7 ; poids 1, seuil 0 et plafond d'extinction doublé
+  n'atteignent que 45,0. Ce qui bornait l'élancement est arithmétique et vit
+  dans `trees.ts` : c'est **#79**. Aucune ligne de code n'a été touchée, et c'est
+  la campagne qui l'a évité — le meilleur argument qu'on ait pour `à-mesurer`.
+  Ce qui RESTE de #65 : ce que ce poids fait à l'auto-éclaircie (B6) et à la
+  succession n'a pas été mesuré, une hêtraie de trente ans ne s'éclaircissant
+  pas assez pour trancher. L'issue vaut encore, sur cette question-là seulement.
 - **#68** — `bois.densite` porte une densité du commerce (0,68 pour le hêtre) là
   où la biomasse demande l'**infradensité** (~0,55). Il reste ~20 % de
   surestimation du carbone vivant. **Le recensement est fait** : deux lecteurs
