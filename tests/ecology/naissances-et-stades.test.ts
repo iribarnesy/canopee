@@ -28,6 +28,7 @@ import {
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { ALLOCATION_DIAMETRE_MEDIANE } from "../../src/engine/trees";
 
 const METEO = syntheticYear(LIMON_RICHE.climat);
 
@@ -44,24 +45,30 @@ function friche(seed: number, coteM = 30) {
 
 describe("l'échelle des stades", () => {
   it("monte dans l'ordre du tableau, et chaque borne fait basculer", () => {
-    // Les bornes sont en DIAMÈTRE, et passent par `diametreCm` : on les
-    // franchit donc en hauteur là où ce proxy les place.
+    // Les bornes sont en DIAMÈTRE et se lisent maintenant EN DIAMÈTRE : plus
+    // de conversion par un proxy. L'essai en devient plus court, ce qui est le
+    // signe que la grandeur testée est enfin celle que le moteur porte (#62).
     expect(STADES).toEqual(["semis", "gaulis", "perchis", "futaie"]);
-    expect(stadeDe(0.3)).toBe("semis");
-    expect(stadeDe(SEUIL_GAULIS_CM / 2 - 0.01)).toBe("semis");
-    expect(stadeDe(SEUIL_GAULIS_CM / 2)).toBe("gaulis");
-    expect(stadeDe(SEUIL_PERCHIS_CM / 2 - 0.01)).toBe("gaulis");
-    expect(stadeDe(SEUIL_PERCHIS_CM / 2)).toBe("perchis");
-    expect(stadeDe(SEUIL_FUTAIE_CM / 2 - 0.01)).toBe("perchis");
-    expect(stadeDe(SEUIL_FUTAIE_CM / 2)).toBe("futaie");
-    expect(stadeDe(30)).toBe("futaie");
+    expect(stadeDe(0)).toBe("semis");
+    expect(stadeDe(SEUIL_GAULIS_CM - 0.01)).toBe("semis");
+    expect(stadeDe(SEUIL_GAULIS_CM)).toBe("gaulis");
+    expect(stadeDe(SEUIL_PERCHIS_CM - 0.01)).toBe("gaulis");
+    expect(stadeDe(SEUIL_PERCHIS_CM)).toBe("perchis");
+    expect(stadeDe(SEUIL_FUTAIE_CM - 0.01)).toBe("perchis");
+    expect(stadeDe(SEUIL_FUTAIE_CM)).toBe("futaie");
+    expect(stadeDe(60)).toBe("futaie");
   });
 
   it("la borne basse est la hauteur de poitrine, là où le diamètre existe", () => {
     // Un arbre plus court que 1,30 m n'a pas de diamètre à 1,30 m : on ne peut
     // pas le mesurer. « Semis » et « pas mesurable » doivent désigner le même
     // arbre, sinon le bas de l'échelle raconte une mesure qui n'existe pas.
-    const hauteurDeLaBorne = SEUIL_GAULIS_CM / 2;
+    //
+    // La hauteur à laquelle la borne tombe se lit par l'allocation médiane,
+    // celle d'une tige sans histoire : c'est le seul endroit où l'échelle
+    // touche encore à une hauteur, et il faut qu'elle tombe à hauteur de
+    // poitrine.
+    const hauteurDeLaBorne = SEUIL_GAULIS_CM / ALLOCATION_DIAMETRE_MEDIANE;
     expect(hauteurDeLaBorne).toBeGreaterThan(1);
     expect(hauteurDeLaBorne).toBeLessThan(1.4);
   });
@@ -153,9 +160,15 @@ describe("les franchissements de stade", () => {
     // Un bouleau planté juste sous la borne du perchis la passera en grandissant.
     const station = { ...LIMON_RICHE.station, coteM: 20, gibierParHa: 0, voisinage: [] };
     let state = createGameState(station, rngStateFromSeed(11));
-    state = plantAt(state, "betula_pendula", 10, 10, SEUIL_PERCHIS_CM / 2 - 0.05);
+    state = plantAt(
+      state,
+      "betula_pendula",
+      10,
+      10,
+      (SEUIL_PERCHIS_CM - 0.1) / ALLOCATION_DIAMETRE_MEDIANE,
+    );
     const id = state.trees[0]?.id ?? 0;
-    expect(stadeDe(state.trees[0]?.heightM ?? 0)).toBe("gaulis");
+    expect(stadeDe(state.trees[0]?.diametreCm ?? 0)).toBe("gaulis");
 
     const vus: ReturnType<typeof tick>["franchissements"] = [];
     for (let i = 0; i < 52; i++) {
@@ -166,7 +179,7 @@ describe("les franchissements de stade", () => {
     // Une seule fois : on annonce la traversée, pas l'état d'après.
     expect(vus).toEqual([{ id, deStade: "gaulis", versStade: "perchis" }]);
     // Et l'état confirme : le franchissement n'est pas une annonce en l'air.
-    expect(stadeDe(state.trees.find((t) => t.id === id)?.heightM ?? 0)).toBe("perchis");
+    expect(stadeDe(state.trees.find((t) => t.id === id)?.diametreCm ?? 0)).toBe("perchis");
   });
 
   it("un arbre qui ne change pas de classe ne franchit rien", () => {
@@ -183,22 +196,29 @@ describe("les franchissements de stade", () => {
     expect(total).toBe(0);
   });
 
-  it("une trogne rabattue ne remonte pas ici : sa chute voyage par `retire`", () => {
-    // Le moteur ne dit pas deux fois la même chose. Un étêtage fait descendre
-    // l'échelle, et `ArbreRetire` porte déjà les deux hauteurs (actions.ts) —
-    // le rendu en tire les deux stades lui-même.
+  it("étêter une trogne ne l'amincit pas : son stade ne descend pas", () => {
+    // CE QUE CET ESSAI AFFIRMAIT ÉTAIT UN ARTEFACT (#62). Il attendait qu'un
+    // étêtage fasse descendre l'échelle de « futaie » à « gaulis », parce que
+    // le stade se lisait alors sur la HAUTEUR. Or le stade est une classe de
+    // DIAMÈTRE, et rabattre la cime d'un arbre ne rabote pas son tronc à 1,30 m.
+    //
+    // Un fût de quarante centimètres coupé à deux mètres reste un gros bois :
+    // aucun forestier ne l'appellerait un gaulis. Le moteur le dit maintenant,
+    // et `ArbreRetire` porte le diamètre pour que le rendu puisse le dire aussi.
     const station = { ...LIMON_RICHE.station, coteM: 20, gibierParHa: 0, voisinage: [] };
     let state = createGameState(station, rngStateFromSeed(13));
     state = plantAt(state, "castanea_sativa", 10, 10, 12);
     const id = state.trees[0]?.id ?? 0;
-    expect(stadeDe(12)).toBe("futaie");
+    expect(stadeDe(state.trees[0]?.diametreCm ?? 0)).toBe("futaie");
 
     const r = applyAction(state, { type: "trogner", week: 0, treeIds: [id], hauteurTeteM: 2 });
     const geste = (r.gestes ?? []).filter(estGesteSurArbres).find((g) => g.type === "trogner");
     const retire = geste?.retire?.[0];
     expect(retire).toBeDefined();
-    expect(stadeDe(retire?.hauteurAvantM ?? 0)).toBe("futaie");
-    expect(stadeDe(retire?.hauteurApresM ?? 0)).toBe("gaulis");
+    // Le diamètre voyage, et il est le même des deux côtés du geste : c'est
+    // exactement ce que l'essai doit épingler.
+    expect(stadeDe(retire?.diametreCm ?? 0)).toBe("futaie");
+    expect(retire?.hauteurApresM).toBeLessThan(retire?.hauteurAvantM ?? 0);
 
     // Le tick qui suit ne réannonce pas la descente.
     const apres = tick(r.state, METEO[0] as never);

@@ -1443,8 +1443,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // c'est le seul endroit du programme où c'est vrai. Un arbre mort ne
     // franchit rien — une chandelle qui grisonne ne « passe pas futaie ».
     if (next.alive) {
-      const avant = stadeDe(tree.heightM);
-      const apres = stadeDe(next.heightM);
+      const avant = stadeDe(tree.diametreCm);
+      const apres = stadeDe(next.diametreCm);
       if (avant !== apres) {
         franchissements.push({ id: tree.id, deStade: avant, versStade: apres });
       }

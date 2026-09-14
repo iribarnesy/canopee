@@ -525,6 +525,17 @@ export interface ArbreRetire {
   x: number;
   y: number;
   especeId: string;
+  /**
+   * Diamètre à 1,30 m, cm — inchangé par le geste, et c'est tout l'intérêt de
+   * le porter. Le stade de développement est une classe de DIAMÈTRE
+   * (`stades.ts`) : sans ce champ, le rendu ne pourrait plus le calculer, car
+   * les deux hauteurs ne suffisent plus à le déduire depuis #62.
+   *
+   * Il dit aussi quelque chose que les hauteurs taisent : étêter une trogne
+   * n'amincit pas son tronc. Un fût de quarante centimètres rabattu à deux
+   * mètres reste un gros bois, et ne redevient pas un gaulis.
+   */
+  diametreCm: number;
   /** hauteur avant le geste, m */
   hauteurAvantM: number;
   /** hauteur qui reste debout après, m ; 0 = la tige a quitté la carte */
@@ -935,6 +946,7 @@ function applyCouper(
       x: tree.x,
       y: tree.y,
       especeId: tree.especeId,
+      diametreCm: tree.diametreCm,
       hauteurAvantM: tree.heightM,
       // Rien ne reste debout : c'est ce qui oblige à tout dire ici, l'arbre
       // n'est plus dans l'instantané où le rendu irait chercher le reste.
@@ -1283,6 +1295,7 @@ function applyElaguer(
       especeId: tree.especeId,
       // La tige ne raccourcit pas d'un élagage : ce qui part, c'est la
       // hauteur de branches entre l'ancienne base de houppier et la nouvelle.
+      diametreCm: tree.diametreCm,
       hauteurAvantM: tree.heightM,
       hauteurApresM: tree.heightM,
       baseHouppierAvantM: tree.baseHouppierM ?? 0,
@@ -1356,6 +1369,7 @@ function applyTrogner(
       x: tree.x,
       y: tree.y,
       especeId: tree.especeId,
+      diametreCm: tree.diametreCm,
       hauteurAvantM: tree.heightM,
       // La tête reste debout, c'est toute la différence avec une coupe.
       hauteurApresM: hauteurTete,
@@ -1660,6 +1674,7 @@ function applyReceper(
       x: tree.x,
       y: tree.y,
       especeId: tree.especeId,
+      diametreCm: tree.diametreCm,
       hauteurAvantM: tree.heightM,
       // Il reste la souche, et c'est d'elle que repartiront les rejets.
       hauteurApresM: RECEPAGE_HAUTEUR_M,
