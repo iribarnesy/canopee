@@ -11,6 +11,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  celluleSousLeCurseurVue,
   celluleVisibles,
   deplacer,
   LARGEUR_MIN_VISIBLE_M,
@@ -233,6 +234,66 @@ describe("l'emprise visible", () => {
     expect(e.y0).toBeGreaterThanOrEqual(0);
     expect(e.x1).toBeLessThanOrEqual(COTE - 1);
     expect(e.y1).toBeLessThanOrEqual(COTE - 1);
+  });
+});
+
+describe("la cellule sous le curseur", () => {
+  const plat = () => 0;
+
+  it("désigne la cellule que le point d'écran recouvre, à plat", () => {
+    // À plat, la réponse doit être celle de l'inversion analytique : c'est le
+    // cas facile, et il sert de garde-fou au cas difficile.
+    const v = zoomer(vue(), 4, { sx: LARGEUR / 2, sy: HAUTEUR / 2 });
+    for (const p of [
+      { sx: LARGEUR / 2, sy: HAUTEUR / 2 },
+      { sx: LARGEUR * 0.4, sy: HAUTEUR * 0.6 },
+      { sx: LARGEUR * 0.6, sy: HAUTEUR * 0.45 },
+    ]) {
+      const attendu = versParcelleVue(p, v);
+      const c = celluleSousLeCurseurVue(p, v, plat);
+      expect(c).toBeDefined();
+      if (!c) continue;
+      expect(c.x).toBe(Math.floor(attendu.x));
+      expect(c.y).toBe(Math.floor(attendu.y));
+    }
+  });
+
+  it("fait l'aller-retour : le centre d'une cellule se retrouve", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(0, 1, 2, 3),
+        fc.integer({ min: 0, max: COTE - 1 }),
+        fc.integer({ min: 0, max: COTE - 1 }),
+        (o, x, y) => {
+          let v = vue();
+          for (let i = 0; i < o; i++) v = tournerVue(v, 1);
+          const e = versEcranVue({ x: x + 0.5, y: y + 0.5, z: 0 }, v);
+          expect(celluleSousLeCurseurVue(e, v, plat)).toEqual({ x, y });
+        },
+      ),
+    );
+  });
+
+  it("rend la cellule qu'on VOIT et non celle qui est derrière la butte", () => {
+    // Le cas pour lequel cette fonction existe. Sur un relief, un même pixel
+    // peut correspondre à plusieurs cellules : l'inversion à plat en désigne
+    // une arbitrairement, celle-ci prend la plus proche de la caméra.
+    const butteX = 60;
+    const relief = (x: number, _y: number) => (x >= butteX ? 30 : 0);
+    const v = vue();
+    // Le sommet de la butte se projette LÀ où une cellule plus lointaine se
+    // projetterait si le terrain était plat.
+    const e = versEcranVue({ x: butteX + 0.5, y: 50.5, z: 30 }, v);
+    const aPlat = versParcelleVue(e, v);
+    const vu = celluleSousLeCurseurVue(e, v, relief);
+    expect(vu).toEqual({ x: butteX, y: 50 });
+    // et ce n'est PAS ce que l'inversion à plat aurait répondu
+    expect(Math.floor(aPlat.x)).not.toBe(butteX);
+  });
+
+  it("ne désigne rien quand on clique hors de la parcelle", () => {
+    const v = vue();
+    expect(celluleSousLeCurseurVue({ sx: -500, sy: HAUTEUR / 2 }, v, plat)).toBeUndefined();
   });
 });
 

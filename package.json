@@ -13,6 +13,7 @@
     "check:boundaries": "bash scripts/check-boundaries.sh",
     "apercu:scene": "tsx scripts/apercu-scene.ts",
     "apercu:capture": "node scripts/apercu-capture.mjs",
+    "apercu:jeu": "node scripts/capture-jeu.mjs",
     "apercu:classes": "tsx scripts/apercu-classes.ts",
     "apercu:decor": "node scripts/apercu-decor.mjs",
     "apercu:ellipse": "node scripts/apercu-ellipse.mjs",

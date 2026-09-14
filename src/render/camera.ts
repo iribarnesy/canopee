@@ -23,6 +23,7 @@
 
 import {
   type Camera,
+  celluleSousLeCurseur,
   METRE_VERTICAL_PX,
   type Orientation,
   type PointEcran,
@@ -114,6 +115,35 @@ export function versParcelleVue(e: PointEcran, vue: Vue, z = 0): PointParcelle {
     },
     vue.cam,
     z,
+  );
+}
+
+/**
+ * Écran → CELLULE, sur le terrain tel qu'il est.
+ *
+ * Le pendant de `versParcelleVue` pour un joueur qui clique, et il ne s'y
+ * ramène pas : `versParcelleVue` inverse la projection sur un plan d'altitude
+ * donnée, ce qui est exact pour un sol plat et faux dès qu'il y a du relief —
+ * cliquer sur le flanc d'une butte désignerait la cellule qui se trouve
+ * derrière elle. `celluleSousLeCurseur` remonte le rayon de vue et rend celle
+ * qu'on VOIT, ce qui est la seule réponse juste à « sur quoi ai-je cliqué ».
+ *
+ * Rend `undefined` quand le pixel ne touche aucune cellule — hors parcelle, ou
+ * ciel au-dessus.
+ */
+export function celluleSousLeCurseurVue(
+  e: PointEcran,
+  vue: Vue,
+  altitudeM: (x: number, y: number) => number,
+): { x: number; y: number } | undefined {
+  const centre = versEcran({ x: vue.centre.x, y: vue.centre.y, z: 0 }, vue.cam);
+  return celluleSousLeCurseur(
+    {
+      sx: e.sx + centre.sx - vue.largeurPx / 2,
+      sy: e.sy + centre.sy - vue.hauteurPx / 2,
+    },
+    vue.cam,
+    altitudeM,
   );
 }
 

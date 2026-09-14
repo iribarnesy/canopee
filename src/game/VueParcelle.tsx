@@ -25,7 +25,15 @@
 
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { cadrer, deplacer, tournerVue, type Vue, vueInitiale, zoomer } from "../render/camera";
+import {
+  cadrer,
+  celluleSousLeCurseurVue,
+  deplacer,
+  tournerVue,
+  type Vue,
+  vueInitiale,
+  zoomer,
+} from "../render/camera";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
@@ -109,6 +117,22 @@ export interface VueParcelleProps {
    * sans avoir rien sauté.
    */
   marqueurs?: readonly Marqueur[];
+  /**
+   * Un clic sur le SOL, rendu en cellule de parcelle — ce par quoi le joueur
+   * agit (§6.7).
+   *
+   * **Une cellule et non un point en mètres**, et c'est la relief qui tranche :
+   * sur un terrain accidenté, un même pixel recouvre plusieurs cellules
+   * d'altitudes différentes, et l'inversion analytique sur un plan désignerait
+   * celle qui se trouve DERRIÈRE la butte. `celluleSousLeCurseurVue` remonte le
+   * rayon de vue et rend celle qu'on voit ; elle ne sait pas répondre au
+   * sous-carreau près, et c'est sans importance — un geste du jeu porte sur une
+   * cellule ou sur un disque de plusieurs mètres.
+   *
+   * Non appelé quand le pointeur a GLISSÉ : faire tourner la parcelle ne doit
+   * pas planter un arbre au passage.
+   */
+  surClic?: (cellule: { x: number; y: number }, multiple: boolean) => void;
 }
 
 /**
@@ -167,6 +191,15 @@ const PAS_DE_ZOOM = 1.18;
 /** Intervalle d'annonce du coût d'une image, en millisecondes. */
 const ANNONCE_MS = 250;
 
+/**
+ * Déplacement en deçà duquel un appui reste un CLIC, en pixels.
+ *
+ * Sans ce seuil il n'y a plus de clic du tout : un pointeur bouge toujours d'un
+ * pixel ou deux entre l'appui et le relâchement, et la vue interpréterait
+ * chaque geste comme un glissement.
+ */
+const SEUIL_DE_CLIC_PX = 4;
+
 export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const hote = useRef<HTMLDivElement>(null);
   const scene = useRef<SceneParcelle | null>(null);
@@ -174,6 +207,8 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const [vue, setVue] = useState<Vue>();
   const [pret, setPret] = useState(false);
   const glisse = useRef<{ x: number; y: number } | null>(null);
+  /** Distance parcourue depuis l'appui, px : ce qui distingue un clic d'un glissement. */
+  const parcouru = useRef(0);
 
   const altitudeMax = useRef(0);
   altitudeMax.current = props.sol.altitudesM.reduce((m, z) => Math.max(m, z), 0);
@@ -319,6 +354,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
 
   const surAppui = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     glisse.current = { x: e.clientX, y: e.clientY };
+    parcouru.current = 0;
     e.currentTarget.setPointerCapture(e.pointerId);
   }, []);
 
@@ -328,12 +364,27 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
     const dx = e.clientX - depart.x;
     const dy = e.clientY - depart.y;
     glisse.current = { x: e.clientX, y: e.clientY };
+    parcouru.current += Math.abs(dx) + Math.abs(dy);
     setVue((v) => (v ? deplacer(v, dx, dy) : v));
   }, []);
 
   const surRelachement = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const glissait = parcouru.current > SEUIL_DE_CLIC_PX;
     glisse.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
+    if (glissait) return;
+    const { props: p, vue: v } = dernier.current;
+    const cible = hote.current;
+    if (!p.surClic || !v || !cible) return;
+    const r = cible.getBoundingClientRect();
+    const cellule = celluleSousLeCurseurVue(
+      { sx: e.clientX - r.left, sy: e.clientY - r.top },
+      v,
+      (x, y) => p.sol.altitudesM[y * p.sol.coteM + x] ?? 0,
+    );
+    // Hors parcelle : rien. Un clic dans le décor n'est pas un geste manqué,
+    // c'est un clic sur ce qui n'appartient pas au joueur.
+    if (cellule) p.surClic(cellule, e.shiftKey || e.metaKey || e.ctrlKey);
   }, []);
 
   const surTouche = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {

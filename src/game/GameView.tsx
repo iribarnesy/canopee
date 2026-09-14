@@ -5,7 +5,7 @@
  * Rendu Canvas 2D — l'isométrique complète viendra comme couche visuelle.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { GameAction } from "../engine/actions";
 import {
   formeSaisonniere,
@@ -40,6 +40,7 @@ import { STATIONS_V0 } from "../engine/stations";
 import { COULEUR_AUTRES, SPECIES_COLORS } from "../ui/couleurs";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { PlanEau } from "./PlanEau";
+import { arbresAPoser, donneesSolDe } from "./parcelle";
 import {
   chargerProfils,
   enregistrerProfil,
@@ -50,6 +51,7 @@ import {
 } from "./profils";
 import type { Snapshot, SnapshotTree } from "./protocol";
 import { loadSave, useGame } from "./useGame";
+import { VueParcelle } from "./VueParcelle";
 
 const MOIS = [
   "janvier",
@@ -115,6 +117,12 @@ type Mode =
   | "cloturer";
 type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement";
 
+/**
+ * Côté de la carte du sol, px. Petite exprès : c'est un diagnostic qu'on
+ * consulte, pas la parcelle qu'on regarde.
+ */
+const CARTE_PX = 210;
+
 const panel: React.CSSProperties = {
   border: "1px solid var(--trait)",
   borderRadius: 8,
@@ -147,137 +155,24 @@ function rayonCliquableM(tree: SnapshotTree): number {
   return Math.max(1, tree.chandelle ? houppier * 0.3 : houppier);
 }
 
-/** hauteur à l'écran d'un mètre d'arbre, en fraction de l'échelle horizontale */
-const VERTICAL = 0.55;
-
-function drawTreeOblique(
-  ctx: CanvasRenderingContext2D,
-  tree: SnapshotTree,
-  scale: number,
-  coteM: number,
-  selected: boolean,
-) {
-  const espece = getEspece(tree.especeId);
-  const bx = tree.x * scale;
-  const by = (coteM - tree.y) * scale;
-  const hPx = Math.max(4, tree.heightM * scale * VERTICAL);
-  const crownR = Math.max(2.5, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio) * scale);
-  const color = SPECIES_COLORS[tree.especeId] ?? "#4a6b4a";
-
-  if (tree.chandelle) {
-    // Une chandelle : un fût gris, sans houppier, plus court que l'arbre qu'il
-    // fut — la cime est la première à tomber. On la dessine quand même, parce
-    // qu'elle occupe la place et qu'elle vaut un arbre-habitat.
-    const hMort = hPx * 0.75;
-    ctx.beginPath();
-    ctx.ellipse(bx, by, crownR * 0.3, crownR * 0.12, 0, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(40,50,30,0.14)";
-    ctx.fill();
-    const largeur = Math.max(1.5, hPx * 0.07);
-    ctx.fillStyle = "#8d8577";
-    ctx.fillRect(bx - largeur / 2, by - hMort, largeur, hMort);
-    // Deux moignons de branches : c'est ce qui distingue une chandelle d'un
-    // piquet, et ce à quoi on la reconnaît de loin sur le terrain.
-    ctx.strokeStyle = "#8d8577";
-    ctx.lineWidth = Math.max(1, largeur * 0.5);
-    ctx.beginPath();
-    ctx.moveTo(bx, by - hMort * 0.8);
-    ctx.lineTo(bx - crownR * 0.5, by - hMort * 0.95);
-    ctx.moveTo(bx, by - hMort * 0.6);
-    ctx.lineTo(bx + crownR * 0.45, by - hMort * 0.8);
-    ctx.stroke();
-    if (selected) {
-      ctx.beginPath();
-      ctx.ellipse(bx, by, crownR * 0.3 + 2, crownR * 0.12 + 2, 0, 0, 2 * Math.PI);
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    return;
-  }
-
-  // ombre au sol : ancre l'arbre
-  ctx.beginPath();
-  ctx.ellipse(bx, by, crownR, crownR * 0.35, 0, 0, 2 * Math.PI);
-  ctx.fillStyle = "rgba(40,50,30,0.18)";
-  ctx.fill();
-
-  // Un arbre au fût nu se RECONNAÎT : la bille est propre jusqu'à la base du
-  // houppier, qui commence au-dessus. C'est toute la silhouette de l'arbre de
-  // futaie, par opposition au branchu de plein vent.
-  //
-  // Cette base vient du MOTEUR (`baseHouppierM`), et c'est un changement de
-  // nature : le rendu en fabriquait une approximation par espèce — 0,3 pour un
-  // caduc, 0,2 pour un conifère — qui ne disait rien de la compétition subie.
-  // Deux chênes voisins, l'un serré l'autre au large, se dessinaient pareil
-  // alors que le moteur ne les traite plus pareil.
-  const baseHouppier =
-    tree.heightM > 0 ? Math.min(0.75, Math.max(0, tree.baseHouppierM / tree.heightM)) : 0;
-  // tronc
-  const trunkW = Math.max(1.5, hPx * 0.06);
-  ctx.fillStyle = "#6b4d2f";
-  const hautTronc = Math.max(0.45, baseHouppier + 0.05);
-  ctx.fillRect(bx - trunkW / 2, by - hPx * hautTronc, trunkW, hPx * hautTronc);
-
-  const conifere = !espece.lumiere.caduc;
-  if (conifere) {
-    // silhouette en triangle (pin)
-    ctx.beginPath();
-    ctx.moveTo(bx, by - hPx);
-    ctx.lineTo(bx - crownR, by - hPx * baseHouppier);
-    ctx.lineTo(bx + crownR, by - hPx * baseHouppier);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-  } else {
-    // houppier en ellipse (feuillu)
-    const centre = (1 + baseHouppier) / 2;
-    ctx.beginPath();
-    ctx.ellipse(bx, by - hPx * centre, crownR, (hPx * (1 - baseHouppier)) / 2, 0, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-
-  if (tree.fruitsKg > 0.5) {
-    // fruits mûrs : points orange sur le houppier, impossibles à rater
-    ctx.fillStyle = "#ff8c1a";
-    for (const [dx, dy] of [
-      [-0.5, -0.6],
-      [0.4, -0.75],
-      [0, -0.5],
-      [0.55, -0.5],
-      [-0.3, -0.85],
-    ] as const) {
-      ctx.beginPath();
-      ctx.arc(bx + dx * crownR, by + dy * hPx, Math.max(1.8, scale * 0.35), 0, 2 * Math.PI);
-      ctx.fill();
-    }
-  }
-
-  if (tree.protege && tree.heightM <= 1.5) {
-    // Manchon : un petit fût clair au pied du plant, pour voir d'un coup d'œil
-    // ce qui est encore à la merci du gibier.
-    ctx.fillStyle = "#d8d2c4";
-    const w = Math.max(1.5, scale * 0.5);
-    ctx.fillRect(bx - w / 2, by - Math.min(hPx, scale * 1.2), w, Math.min(hPx, scale * 1.2));
-  }
-
-  if (selected) {
-    ctx.beginPath();
-    ctx.ellipse(bx, by, crownR + 2, crownR * 0.35 + 2, 0, 0, 2 * Math.PI);
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-}
-
-function drawParcel(
+/**
+ * La CARTE DU SOL : une vue de dessus, un pixel par cellule, qui montre ce que
+ * la parcelle cache.
+ *
+ * **Elle ne dessine plus les arbres**, et c'est ce qui lui reste à faire. La
+ * parcelle elle-même se voit maintenant en isométrique (`VueParcelle`), où le
+ * peuplement se lit comme un peuplement et non comme des taches triées du fond
+ * vers l'avant. Ce que la vue isométrique ne peut PAS montrer, c'est le pH, la
+ * nappe ou l'azote : ce sont des grandeurs d'un sol qu'on ne voit pas, et une
+ * carte à plat reste la bonne forme pour elles — le §5 n'a jamais prétendu
+ * qu'un rendu joli remplaçait un diagnostic.
+ */
+function dessinerCarteDuSol(
   canvas: HTMLCanvasElement,
   snapshot: Snapshot,
   coteM: number,
   ruMm: number,
   overlay: Overlay,
-  selectedIds: ReadonlySet<number>,
   nappeCm: Float32Array | undefined,
   enEau: readonly boolean[] | undefined,
 ) {
@@ -372,12 +267,6 @@ function drawParcel(
     }
   }
   ctx.stroke();
-
-  // du fond (nord, haut de l'écran) vers l'avant : l'occlusion raconte la profondeur
-  const sorted = [...snapshot.trees].sort((a, b) => b.y - a.y);
-  for (const tree of sorted) {
-    drawTreeOblique(ctx, tree, scale, coteM, selectedIds.has(tree.id));
-  }
 }
 
 function StartScreen({
@@ -1310,20 +1199,61 @@ export function GameView() {
 
   const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
 
+  /**
+   * Le sol et les arbres dans la forme que la couche visuelle attend
+   * (`src/game/parcelle.ts`). Rien n'est calculé ici : chaque champ vient du
+   * protocole, et les deux conversions sont mémorisées parce que la scène
+   * compare des RÉFÉRENCES pour décider ce qu'elle doit recuire — lui donner un
+   * tableau neuf à chaque rendu de React lui ferait tout refaire.
+   */
+  const solAPoser = useMemo(
+    () =>
+      station && snapshot
+        ? donneesSolDe({
+            coteM: station.coteM,
+            ruMm: station.ruMm,
+            altitudesM: station.altitudesM,
+            waterMm: snapshot.soilWater,
+            herbe: snapshot.soilHerbe,
+            herbeBiomasse: snapshot.soilHerbeBiomasse,
+            litiereCG: snapshot.soilLitiereCG,
+            lumiere: snapshot.soilLumiere,
+            herbeHumidite: snapshot.soilHerbeHumidite,
+            enEau: station.enEau,
+            debordementMm: snapshot.soilDebordementMm,
+            boisAuSol: snapshot.soilBoisAuSol,
+            boisEnTravers: snapshot.soilBoisEnTravers,
+          })
+        : undefined,
+    [station, snapshot],
+  );
+
+  const arbresPoses = useMemo(
+    () =>
+      station && snapshot
+        ? arbresAPoser(snapshot.trees, {
+            coteM: station.coteM,
+            week: snapshot.week,
+            altitudesM: station.altitudesM,
+            pheno: snapshot.pheno,
+          })
+        : [],
+    [station, snapshot],
+  );
+
   useEffect(() => {
     if (canvasRef.current && snapshot && station) {
-      drawParcel(
+      dessinerCarteDuSol(
         canvasRef.current,
         snapshot,
         station.coteM,
         station.ruMm,
         overlay,
-        selectedIds,
         station.nappeCm,
         station.enEau,
       );
     }
-  }, [snapshot, station, overlay, selectedIds]);
+  }, [snapshot, station, overlay]);
 
   if (!station || !snapshot) {
     return (
@@ -1349,13 +1279,24 @@ export function GameView() {
   const annee = Math.floor(snapshot.week / 52) + 1;
   const semaine = snapshot.week % 52;
   const mois = MOIS[Math.min(11, Math.floor(semaine / 4.34))];
-  const canvasPx = 620;
+  /** Largeur de la vue de parcelle, px. C'est l'objet principal de l'écran. */
+  const canvasPx = 700;
   const tresorerie = snapshot.economy.treasuryEur;
 
-  const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mx = ((e.clientX - rect.left) / rect.width) * station.coteM;
-    const my = station.coteM - ((e.clientY - rect.top) / rect.height) * station.coteM;
+  /**
+   * Un clic sur la parcelle : le geste en cours s'applique là, ou bien on
+   * sélectionne l'arbre qui s'y trouve.
+   *
+   * **La vue rend une CELLULE et le jeu vise son centre.** La vue isométrique
+   * ne peut pas faire mieux sans mentir : sur un terrain accidenté un même
+   * pixel recouvre plusieurs cellules, et `celluleSousLeCurseurVue` rend celle
+   * qu'on voit. Un demi-mètre d'approximation ne change rien à un geste — le
+   * plus fin porte sur un disque de huit mètres, et le rayon cliquable d'un
+   * arbre vaut son houppier.
+   */
+  const surClicParcelle = (cellule: { x: number; y: number }, multiple: boolean) => {
+    const mx = cellule.x + 0.5;
+    const my = cellule.y + 0.5;
     if (mode === "planter") {
       game.dispatch({
         type: "planter",
@@ -1395,7 +1336,7 @@ export function GameView() {
           bestD = d;
         }
       }
-      if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      if (multiple) {
         if (best) {
           const next = new Set(selectedIds);
           if (next.has(best.id)) next.delete(best.id);
@@ -1462,37 +1403,79 @@ export function GameView() {
             Quitter
           </button>
         </p>
-        <canvas
-          ref={canvasRef}
-          width={canvasPx}
-          height={canvasPx}
+        {/*
+          La parcelle, en isométrique. La scène PixiJS vit dans `VueParcelle` et
+          se redimensionne avec son conteneur — d'où la taille portée ici et non
+          en attributs de canvas.
+        */}
+        <div
           style={{
             width: canvasPx,
+            height: Math.round(canvasPx * 0.72),
             border: "1px solid var(--trait)",
             borderRadius: 8,
             boxShadow: "var(--ombre)",
-            cursor: mode === "selection" ? "default" : "crosshair",
+            overflow: "hidden",
+            background: "var(--carte)",
           }}
-          onClick={onCanvasClick}
-        />
+        >
+          {solAPoser && (
+            <VueParcelle
+              sol={solAPoser}
+              semaineAnnee={snapshot.week % 52}
+              arbres={arbresPoses}
+              bordures={station.bordures}
+              hauteurMaxDe={(id) => getEspece(id)?.hauteurMaxM ?? 20}
+              ombreDe={(a) => a.partFoliaire}
+              surClic={surClicParcelle}
+            />
+          )}
+        </div>
         <p style={{ margin: "6px 0 0", color: "var(--encre-douce)", fontSize: 13 }}>
-          Sol :{" "}
-          {(
-            [
-              ["eau", "Eau"],
-              ["ph", "pH"],
-              ["azote", "Azote"],
-              ["herbe", "Herbe"],
-              ["nappe", "Nappe"],
-              ["engorgement", "Engorgement"],
-            ] as const
-          ).map(([o, libelle]) => (
-            <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
-              {libelle}
-            </button>
-          ))}
-          — nord au fond · points orange = fruits mûrs · maj+clic = sélection multiple
+          Glisser pour déplacer · molette pour zoomer · ← → pour tourner d'un quart de tour ·
+          maj+clic = sélection multiple
         </p>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "flex-start" }}>
+          <canvas
+            ref={canvasRef}
+            width={CARTE_PX}
+            height={CARTE_PX}
+            style={{
+              width: CARTE_PX,
+              border: "1px solid var(--trait)",
+              borderRadius: 6,
+            }}
+          />
+          <p style={{ margin: 0, color: "var(--encre-douce)", fontSize: 13 }}>
+            {/*
+              La carte du sol montre ce que la vue ne peut pas montrer : le pH,
+              la nappe, l'azote. Ce sont des grandeurs d'un sol qu'on ne voit
+              pas, et une vue jolie ne remplace pas un diagnostic.
+            */}
+            Carte du sol — nord en haut
+            <br />
+            {(
+              [
+                ["eau", "Eau"],
+                ["ph", "pH"],
+                ["azote", "Azote"],
+                ["herbe", "Herbe"],
+                ["nappe", "Nappe"],
+                ["engorgement", "Engorgement"],
+              ] as const
+            ).map(([o, libelle]) => (
+              <button
+                key={o}
+                type="button"
+                style={btn(overlay === o)}
+                onClick={() => setOverlay(o)}
+              >
+                {libelle}
+              </button>
+            ))}
+          </p>
+        </div>
       </div>
 
       <div style={{ width: 380, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1952,24 +1935,31 @@ export function GameView() {
               {composition.length === 0
                 ? "aucun arbre"
                 : composition.map((c, rang) => (
-                    <span key={c.especeId} style={{ whiteSpace: "nowrap" }}>
+                    // Le séparateur est DEHORS, et c'est ce qui laisse la ligne
+                    // se replier : deux `nowrap` collés l'un à l'autre sans
+                    // espace entre eux n'offrent aucune coupure, et la liste
+                    // débordait du panneau dès la troisième essence.
+                    <Fragment key={c.especeId}>
                       {rang > 0 && " · "}
-                      <span
-                        style={{
-                          display: "inline-block",
-                          width: 8,
-                          height: 8,
-                          borderRadius: 2,
-                          background: SPECIES_COLORS[c.especeId] ?? COULEUR_AUTRES,
-                          marginRight: 4,
-                        }}
-                      />
-                      {c.nom} <strong>{c.part}</strong> %
-                      <span className="detail">
-                        {" "}
-                        ({c.hauteurMax < 10 ? c.hauteurMax.toFixed(1) : c.hauteurMax.toFixed(0)} m)
+                      <span style={{ whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            width: 8,
+                            height: 8,
+                            borderRadius: 2,
+                            background: SPECIES_COLORS[c.especeId] ?? COULEUR_AUTRES,
+                            marginRight: 4,
+                          }}
+                        />
+                        {c.nom} <strong>{c.part}</strong> %
+                        <span className="detail">
+                          {" "}
+                          ({c.hauteurMax < 10 ? c.hauteurMax.toFixed(1) : c.hauteurMax.toFixed(0)}{" "}
+                          m)
+                        </span>
                       </span>
-                    </span>
+                    </Fragment>
                   ))}
             </dd>
             <dt>Sol</dt>
