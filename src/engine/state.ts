@@ -21,7 +21,7 @@ import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
 import { ruHorizonMm } from "./soil";
-import { type TreeState, tirerVigueurIndividuelle } from "./trees";
+import { diametreInitialCm, type TreeState, tirerVigueurIndividuelle } from "./trees";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
@@ -498,6 +498,7 @@ export function plantAt(
     y,
     ageWeeks: 0,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 0,
     alive: true,
     uptakeYearG: 0,
@@ -547,6 +548,7 @@ export function plantScattered(
       y: ry.value * side,
       ageWeeks: 0,
       heightM,
+      diametreCm: diametreInitialCm(heightM),
       stress: 0,
       alive: true,
       uptakeYearG: 0,

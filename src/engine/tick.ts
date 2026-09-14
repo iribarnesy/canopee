@@ -1415,7 +1415,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     limitingFactors[t] = result.limitingFactor;
     if (tree.alive && next.heightM > tree.heightM) {
       const espece = getEspece(tree.especeId);
-      nppKgC += treeTotalCarbonKg(espece, next.heightM) - treeTotalCarbonKg(espece, tree.heightM);
+      nppKgC +=
+        treeTotalCarbonKg(espece, next.diametreCm, next.heightM) -
+        treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
     }
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
@@ -1633,7 +1635,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const hauteur = Math.max(0.05, tree.heightM - degat.pousseMangeeM);
       // Le carbone mangé ne s'évapore pas : il part en respiration du gibier,
       // et ce qui n'est pas digéré revient au sol en déjections.
-      const mangeKgC = treeTotalCarbonKg(espece, tree.heightM) - treeTotalCarbonKg(espece, hauteur);
+      const mangeKgC =
+        treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) -
+        treeTotalCarbonKg(espece, tree.diametreCm, hauteur);
       // L'azote suit le même chemin : ce qui partait dans le rameau quitte
       // l'arbre et revient au sol. L'herbivore ne détruit rien, il déplace.
       const cell = Math.floor(tree.y) * station.coteM + Math.floor(tree.x);
@@ -1897,7 +1901,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // bois mort. Ce transfert n'a lieu qu'UNE fois — ensuite l'arbre reste
       // en jeu comme chandelle, sans plus rien à donner.
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
-      deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM);
+      deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM);
       morts.push({
         id: tree.id,
         x: tree.x,
@@ -1938,7 +1942,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const anneesDebout = (state.week - tree.mortSemaine) / 52;
     const restantKgC = Math.min(
       Math.max(0, deadWoodKgC),
-      treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM) *
+      treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM) *
         Math.exp(-DEADWOOD_DECAY_PER_YEAR * anneesDebout),
     );
     deadWoodKgC -= restantKgC;
@@ -1984,7 +1988,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const cellule = cellIndexAt(dims, tree.x, tree.y);
       const recu = massePosee.get(cellule);
       const espece = getEspece(tree.especeId);
-      const masse = treeTotalCarbonKg(espece, tree.heightM);
+      const masse = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
       if (!tree.alive || recu === undefined || !ecrasePar(recu.part, masse)) {
         debout.push(tree);
         continue;
@@ -2085,14 +2089,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // DÉJÀ compté quelque part : l'émettre sans l'en retirer fabriquerait
           // du carbone. Et un arbre déjà mort ne rejette pas de souche, ni ne
           // compte une deuxième fois parmi les arbres tués par le feu.
-          const aerienKgC = treeAboveCarbonKg(espece, tree.heightM);
+          const aerienKgC = treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM);
           if (tree.mortSemaine === undefined) {
             // Tué par un feu précédent et encore récupérable : son carbone
             // attendait sur pied, personne ne l'avait encore versé. L'aérien
             // s'envole, les racines rejoignent le bois mort — le versement que
             // sa mort n'avait fait que différer.
             carboneFeuKgC += aerienKgC;
-            deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
+            deadWoodKgC += treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) - aerienKgC;
           } else {
             // Chandelle déjà versée au pool, qui se décompose depuis : on n'en
             // émet pas plus qu'il n'en reste (même borne qu'à la coupe).
@@ -2119,7 +2123,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // fumée, c'est l'aérien MOINS le rejet qui reste debout. L'imputer
           // entier émettait un carbone que l'arbre porte toujours.
           carboneFeuKgC +=
-            treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, HAUTEUR_REJET_M);
+            treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
+            treeAboveCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M);
           // Elle ne porte plus pour autant les racines d'un arbre de dix
           // mètres : l'excédent meurt et se décompose sur place (carbon.ts).
           // Sans ce versement, le feu ferait DISPARAÎTRE ce carbone.
@@ -2129,7 +2134,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // verser des racines en plus créerait du carbone. Qu'un tronc mort
           // « rejette » est une autre affaire, et pas la mienne ici.
           if (tree.alive) {
-            deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, HAUTEUR_REJET_M);
+            deadWoodKgC += racinesPerduesEnRabattant(
+              espece,
+              tree.diametreCm,
+              tree.heightM,
+              HAUTEUR_REJET_M,
+            );
           }
           apresFeu.push({
             ...tree,
@@ -2237,7 +2247,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // pas. C'est donc une ENTRÉE, au même titre qu'un plant acheté — sans quoi
     // le bilan carbone fabrique de la matière à chaque printemps.
     for (const recrue of recruitment.newTrees) {
-      importedPlantsKgC += treeTotalCarbonKg(getEspece(recrue.especeId), recrue.heightM);
+      importedPlantsKgC += treeTotalCarbonKg(
+        getEspece(recrue.especeId),
+        recrue.diametreCm,
+        recrue.heightM,
+      );
       // Ce sont les semis RÉELLEMENT installés : `yearlyRecruitment` a déjà
       // écarté ceux que le plafond de densité, le pH ou l'ombre refusaient.
       naissances.push({

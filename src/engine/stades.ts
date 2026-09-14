@@ -14,28 +14,22 @@
  * que de recopier des hauteurs : le jour où ce proxy sera calibré sur l'IFN,
  * les stades suivront sans qu'on y retouche.
  *
- * Deux choses à savoir sur ce que ces bornes valent aujourd'hui :
+ * **Ces bornes sont redevenues des bornes.** Elles lisent maintenant le
+ * diamètre que l'arbre PORTE (`TreeState.diametreCm`), et non plus un proxy
+ * tiré de sa hauteur. Tant que ce proxy était linéaire (`2 × hauteur`), ces
+ * bornes-là n'étaient que des bornes de hauteur déguisées — ce fichier le
+ * disait déjà, en attendant le jour où le diamètre serait calibré (#62).
  *
- * - `diametreCm` est un proxy assumé (`2 × hauteur`, « à calibrer »). Les
- *   bornes en diamètre sont conventionnelles, les hauteurs auxquelles elles
- *   tombent en héritent : 1,25 m, 3,75 m, 8,75 m. Tant que le proxy est
- *   linéaire, ces bornes-là sont des bornes de hauteur déguisées, et il faut
- *   les lire comme telles.
- * - le **fourré** ne figure pas dans l'échelle, pour deux raisons. D'abord il
- *   décrit un PEUPLEMENT dense, pas un individu : un arbre n'est pas un
- *   fourré. Ensuite, avec ce proxy, sa classe serait vide — une tige qui
- *   atteint 1,30 m aurait déjà 2,6 cm de diamètre, au-dessus de la borne du
- *   fourré (2,5 cm). Le proxy surestime le diamètre des petites tiges, et
- *   c'est là qu'il le montre.
+ * Ce que ça change concrètement : deux arbres de même hauteur peuvent
+ * désormais être à des stades différents, parce que celui qui a poussé au
+ * large a épaissi quand l'autre filait à l'ombre. C'est exactement ce qu'un
+ * forestier voit sur le terrain, et que l'échelle ne pouvait pas exprimer.
  *
- * La borne basse tombe bien : à 2,5 cm de diamètre, ce proxy place la tige à
- * 1,25 m, soit la hauteur de poitrine. En dessous, un arbre n'a pas de
- * diamètre à 1,30 m — on ne peut pas le mesurer. « Semis » et « trop court
- * pour avoir un diamètre » désignent donc le même arbre, ce qui est la seule
- * façon honnête de border le bas de l'échelle.
+ * Le **fourré** reste hors de l'échelle, mais pour UNE seule raison
+ * maintenant, et c'est la bonne : il décrit un PEUPLEMENT dense, pas un
+ * individu — un arbre n'est pas un fourré. La seconde raison a disparu avec le
+ * proxy : sa classe n'est plus structurellement vide.
  */
-
-import { diametreCm } from "./actions";
 
 /**
  * Les quatre stades, du plus petit au plus grand. L'ordre du tableau EST
@@ -51,9 +45,15 @@ export const SEUIL_GAULIS_CM = 2.5;
 export const SEUIL_PERCHIS_CM = 7.5;
 export const SEUIL_FUTAIE_CM = 17.5;
 
-/** Le stade d'une tige, d'après sa seule hauteur. Pur, sans état. */
-export function stadeDe(heightM: number): StadeDeDeveloppement {
-  const d = diametreCm(heightM);
+/**
+ * Le stade d'une tige, d'après son diamètre à 1,30 m. Pur, sans état.
+ *
+ * En dessous de la borne du gaulis, un arbre est trop court pour avoir un
+ * diamètre à hauteur de poitrine : « semis » et « pas mesurable » désignent le
+ * même arbre, ce qui est la seule façon honnête de border le bas de l'échelle.
+ */
+export function stadeDe(diametreCm: number): StadeDeDeveloppement {
+  const d = diametreCm;
   if (d < SEUIL_GAULIS_CM) return "semis";
   if (d < SEUIL_PERCHIS_CM) return "gaulis";
   if (d < SEUIL_FUTAIE_CM) return "perchis";

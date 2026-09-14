@@ -23,6 +23,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 
 function arbre(id: number, especeId: string, x: number, y: number, vigueur: number): TreeState {
   return {
@@ -32,6 +33,7 @@ function arbre(id: number, especeId: string, x: number, y: number, vigueur: numb
     y,
     ageWeeks: 52 * 20,
     heightM: 8,
+    diametreCm: diametreInitialCm(8),
     stress: 0,
     alive: true,
     uptakeYearG: 0,

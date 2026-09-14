@@ -25,6 +25,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { FRICHE_LIMON } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 import { arbreDuSnapshot } from "../../src/game/snapshot";
 
 const serie = serieMeteoPour("friche-limon");
@@ -152,6 +153,7 @@ describe("mécanique du broutage", () => {
       y: 5.5,
       ageWeeks: 200,
       heightM,
+      diametreCm: diametreInitialCm(heightM),
       stress: 0,
       alive: true,
       uptakeYearG: 0,
@@ -383,6 +385,7 @@ function arbreNu(heightM: number): TreeState {
     y: 20,
     ageWeeks: 52 * 10,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 0,
     alive: true,
     uptakeYearG: 0,

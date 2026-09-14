@@ -34,6 +34,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { LANDE_SECHE } from "../../src/engine/stations";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 
 const serie = serieMeteoPour("lande-seche");
 if (!serie) throw new Error("série manquante");
@@ -47,6 +48,7 @@ function arbre(especeId: string, heightM: number): TreeState {
     y: 5,
     ageWeeks: 52 * 20,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 0,
     alive: true,
     uptakeYearG: 0,
@@ -187,7 +189,7 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
       let enSuspensKgC = 0;
       for (const t of s.trees) {
         if (!t.alive && t.mortSemaine === undefined) {
-          enSuspensKgC += treeTotalCarbonKg(getEspece(t.especeId), t.heightM);
+          enSuspensKgC += treeTotalCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
         }
       }
       return (

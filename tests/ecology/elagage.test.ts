@@ -26,6 +26,7 @@ import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 
 function arbre(especeId: string, baseHouppierM: number, heightM = 16): TreeState {
   return {
@@ -35,6 +36,7 @@ function arbre(especeId: string, baseHouppierM: number, heightM = 16): TreeState
     y: 10,
     ageWeeks: 40 * 52,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 1,
     alive: true,
     uptakeYearG: 0,

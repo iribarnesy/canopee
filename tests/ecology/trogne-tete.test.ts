@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { indiceBiodiversite } from "../../src/engine/biodiversite";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 import {
   CAVITE_HABITAT_L,
   CAVITE_PART_MAX,
@@ -38,6 +39,7 @@ function tetard(recepages: number, avecTete = true): TreeState {
     y: 5,
     ageWeeks: 60 * 52,
     heightM: 6,
+    diametreCm: diametreInitialCm(6),
     stress: 1,
     alive: true,
     uptakeYearG: 0,
