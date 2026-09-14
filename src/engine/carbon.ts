@@ -88,9 +88,10 @@ export const T_HA_TO_G_M2 = 100;
  * qui reste, et c'est ainsi que la trogne et le recépage comptent ce qu'ils
  * emportent.
  *
- * *(Réserve connue : `bois.densite` est une densité commerciale à 12 %
- * d'humidité, là où la biomasse demande l'infradensité. Le carbone reste donc
- * surestimé d'environ 20 %. À instruire essence par essence, hors de ce lot.)*
+ * `bois.densite` porte bien l'INFRADENSITÉ depuis #68 — masse anhydre sur
+ * volume vert, essence par essence et depuis une source citée. C'était la
+ * réserve de ce module : elle est levée, et l'ancre de `carbon.test.ts` la
+ * tient désormais sur la tige, où elle discrimine.
  */
 export function treeAboveCarbonKg(espece: EspeceV0, diametreCm: number, heightM: number): number {
   return volumeAerienM3(diametreCm, heightM) * espece.bois.densite * 1000 * CARBON_FRACTION;
