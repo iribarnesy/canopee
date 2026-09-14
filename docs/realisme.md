@@ -70,20 +70,24 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | C. Nutriments et cycles | 12 | 1 | 0 | 13 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 8 | 4 | 0 | 12 |
-| F. Dynamique des peuplements | 8 | 5 | 0 | 13 |
+| F. Dynamique des peuplements | 11 | 5 | 3 | 19 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 6 | 3 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **106** | **28** | **0** | **134** |
+| **Total** | **109** | **28** | **3** | **140** |
 
-**Score de réalisme : 106 pleins + 28 partiels sur 134 → 90 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 109 pleins + 28 partiels sur 140 → 88 %** *(un partiel compte 1/2)*.
 
-> **Plus aucun ❌.** C'est un jalon, et il vaut surtout comme avertissement : la
-> colonne des absences est vide parce que le référentiel ne liste que ce qu'on a
-> pensé à écrire. Les vingt-huit partiels, eux, disent chacun ce qui manque, et
-> c'est là que se trouve le travail. Un référentiel qui ne s'allonge jamais finit
-> par ne plus mesurer que ce qu'on sait déjà faire.
+> **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
+> Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
+> jour-là — « la colonne est vide parce que le référentiel ne liste que ce qu'on
+> a pensé à écrire » — a été vérifié en un lot. Il n'existait AUCUNE ligne sur la
+> tempête, le chablis ou la casse mécanique : le moteur ne savait pas coucher un
+> arbre et personne ne comptait le point. En écrire six fait gagner trois ✅ et
+> perdre deux points de score, parce que trois des six restent hors de portée
+> (F17, F18, F19). Les deux points sont le prix d'un référentiel qui mesure
+> encore quelque chose.
 
 > **Ce tableau venait d'être recompté, et il était faux.** Il annonçait
 > 80 / 26 / 16 sur 122 — soit 76 % — là où les lignes du document en portaient
@@ -120,14 +124,16 @@ arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai
 latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
 production) → 76 % (structure du sol : le tassement et sa réparation)
 → 88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)
-→ **90 % (la strate herbacée a des espèces : trois calendriers, trois sols, et
-la fenêtre de printemps)**.*
+→ 90 % (la strate herbacée a des espèces : trois calendriers, trois sols, et
+la fenêtre de printemps) → **88 % (le vent devient un agent CASSANT : tempête,
+chablis, et six critères là où il n'y en avait aucun)**.*
 
-*Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
-hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
-un critère qu'on ne remplit qu'à moitié (F13) là où, avant, personne ne
-comptait les points. Un référentiel qui ne s'allonge jamais finit par ne plus
-mesurer que ce qu'on sait déjà faire.*
+*Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
+hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
+c'est le référentiel qui s'est mis à compter des points que personne ne comptait.
+Un référentiel qui ne s'allonge jamais finit par ne plus mesurer que ce qu'on
+sait déjà faire, et un score qui ne fait que monter est le symptôme de cette
+maladie-là, pas une preuve de santé.*
 
 ---
 
@@ -250,6 +256,12 @@ mesurer que ce qu'on sait déjà faire.*
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
+| F14 | Une tempête couche des arbres : le chablis existe, et il est l'accident le plus brutal de la vie d'un peuplement | ✅ | `tempete.ts` ; `tempete.test.ts` — une rafale hebdomadaire dérivée de la graine de partie (queue exponentielle sur le vent moyen), cinquantennale à 40-45 m/s. Le seuil de dégât est celui de l'ARBRE, pas celui de la rafale : les coups de vent ordinaires reviennent chaque hiver et ne couchent rien |
+| F15 | La vulnérabilité au vent se trie par INDIVIDU, et rien n'est déclaré espèce par espèce | ✅ | `vitesseCritiqueMs` : élancement H/D, ancrage rapporté au bras de levier (`rootDepthCm / hauteur`), sol gorgé au-delà de ce que l'espèce tolère, prise au vent foliaire de la semaine, souplesse des jeunes tiges. Aucun trait nouveau à l'atlas — tout se lit sur l'état de l'arbre. Deux faits de terrain TOMBENT de là sans être écrits : les tempêtes sont hivernales (le vent moyen l'est), et le caduc nu paie moins que le sempervirent (mesuré à 60 ans : 4-11 tiges couchées contre 65-88). Deux des cinq facteurs trient mal, et le disent : l'élancement parce que le moteur n'en produit qu'un cinquième de la gamme réelle (#79), l'ancrage parce que la profondeur racinaire d'un arbre mûr est elle-même douteuse (#84) |
+| F16 | Ce qui dépasse prend le vent : un sous-étage est abrité, une futaie régulière ne s'abrite pas elle-même | ✅ | `abriAuVent` ne somme que le DÉPASSEMENT des voisins plus hauts, là où l'abri de haie (`windShelterAt`, E5) sature à 1 dans n'importe quel peuplement. C'est Klaus dans les pins landais alignés |
+| F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | ❌ | le moteur ne connaît qu'un renversement entier — un arbre tient ou il verse. Ni cime cassée, ni arbre penché qui survit avec une plaie, alors que c'est la moitié des dégâts d'une tempête réelle |
+| F18 | Un peuplement qu'on vient d'ouvrir (éclaircie, lisière neuve) verse pendant quelques années | ❌ | `abriAuVent` recalcule l'abri dans la semaine qui suit la coupe : les survivants sont réputés adaptés instantanément. Il y faudrait une mémoire par arbre de l'ouverture récente |
+| F19 | La fréquence des tempêtes suit la dérive du climat | ❌ | `AMPLIFICATION_EXTREMES` (D11) joue sur la chaleur et la pluie, pas sur le vent. Les deux moitiés sont dans deux fonctions qui ne se voient pas : `meteoDerivee` connaît le scénario mais pas la graine de partie, donc ne peut tirer de rafale ; `tick` la tire et ignore le scénario |
 | F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` : six essences contre des tables (Jansen 1996 aux Pays-Bas, Lockow 2009 pour le charme, Lemaire 2005 pour le châtaignier) et quatre arbustes contre des mesures de terrain britanniques et bretonnes, faute de table. Deux essences seulement y sont CALÉES (hêtre, charme) : l'essai les garde plus qu'il ne les valide. Les huit autres sont une validation entière, et la vérification tenue à l'écart est à vingt ans (−13 % à +10 %). Restent hors référence, et le disent : bouleau, chêne pubescent, saule blanc, prunellier — plus le chêne-liège, faute de station méditerranéenne où le confronter |
 
 ## G. Faune et santé
@@ -279,7 +291,7 @@ mesurer que ce qu'on sait déjà faire.*
 | H7 | Les prix varient (marché, saturation locale) | 🟡 | `marche.ts` : indice annuel (cycle de 11 ans + bruit, borné 0,6-1,5) calé sur la volatilité réelle des bois sur pied, et DÉCOTE D'ENGORGEMENT du débouché local — vendre tout la même année rapporte moins. Ne joue que si l'économie compte |
 | H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, éclaircie par critère et **trogne** (`trogner` ; `trogne.test.ts`) — quatre gestes qui ne se confondent pas |
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
-| H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
+| H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue. Les deux constantes s'appelaient « chablis » quand seul le FEU savait en produire ; depuis `tempete.ts` elles portent enfin leur nom. Et la ruine des cours après une tempête est là sans qu'on l'écrive : sortir d'un coup tout ce que le vent a couché tombe sous la décote d'engorgement du débouché (H7) |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche, protections individuelles et **clôtures** ; irrigation et fertilisation absentes |
 | H18 | Le gibier se régule aussi par la chasse — et l'immigration compense | ✅ | `chasser` ; `gibier.test.ts` — une journée fait reculer la pression, un an plus tard elle est revenue |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
@@ -374,16 +386,24 @@ tout le monde est codominant de tout le monde.
 Chantier `à-mesurer` : ce coefficient gouverne aussi la succession et le tri des
 espèces, donc la campagne de mesure vient avant le code.
 
-### 3. Les tempêtes (issue #55) — et d'abord leurs critères
+### 3. Ce que la tempête n'a pas emporté (suites de l'issue #55)
 
-Le référentiel ne contient AUCUNE ligne sur la tempête, le chablis ou la casse
-mécanique. Ce n'est pas un ❌, c'est une absence du référentiel lui-même, ce qui
-est pire : personne ne comptait le point. Le premier geste de ce lot est donc
-d'écrire les critères, pas le code.
+Les critères existent maintenant (F14 à F19), le vent couche des arbres, et
+trois des six lignes écrites sont des ❌ assumés. Par ordre de gain :
 
-Le mot « chablis » est pourtant partout dans le vocabulaire du moteur, où il
-désigne toujours autre chose — la décote d'un bois brûlé, le délai de
-récupération après un feu, le contact au sol d'une chandelle.
+- **F19, l'amplification climatique** — c'est le plus important des trois,
+  parce que la fréquence des tempêtes est le bon endroit où brancher la dérive
+  du climat, et le vent moyen le mauvais. Le blocage est de PLOMBERIE, pas
+  d'écologie : `meteoDerivee` connaît le scénario et pas la graine de partie,
+  `tick` tire la rafale et ignore le scénario. Réunir les deux moitiés est un
+  petit lot, et il rend D11 vrai du vent aussi.
+- **F18, la fragilité d'après-éclaircie** — il y faut une mémoire par arbre de
+  l'ouverture récente. C'est ce qui rendrait DANGEREUSE une éclaircie tardive et
+  forte, ce qui est la leçon sylvicole la plus chère de Lothar.
+- **F17, la casse partielle** — un arbre penché qui survit avec une plaie est
+  aussi une porte d'entrée pour les maladies (G6) et une branche arrachée est du
+  bois mort au sol (`boisMort.ts`). Le mécanisme existerait presque ; c'est
+  l'état « blessé » qui manque à l'arbre.
 
 ### 4. Les moins chers : un test, et le critère passe
 
@@ -825,6 +845,130 @@ Trois, et pas trente, parce que la strate tourne sur toutes les cellules toutes
 les semaines. **Coût mesuré** : 6,8 → 7,6 ms par semaine sur une hêtraie 30 × 30
 de quarante ans, soit **+11 %**, machine au repos, médiane de cinq passes. C'est le prix à connaître
 avant d'ajouter la quatrième.
+
+## La tempête : le vent cesse d'être seulement desséchant
+
+Le moteur connaissait trois vents. Celui qui gonfle la demande évaporative (A7),
+celui qu'une haie brise (E5), celui qui pousse le feu (F12). Aucun ne cassait
+quoi que ce soit. Un arbre pouvait mourir de soif à cause du vent ; il ne
+pouvait pas verser. Les seules façons de se retrouver au sol étaient le joueur
+qui abat et la chandelle déjà morte qui finit par tomber.
+
+Le symptôme était lexical, et il traînait depuis longtemps : le mot **chablis**
+est partout dans le vocabulaire du moteur et n'y désignait jamais une tempête.
+`DECOTE_CHABLIS` était la décote d'un bois BRÛLÉ, `CHABLIS_RECUPERABLE_SEMAINES`
+le délai de récupération d'un arbre tué par le FEU. Pire : `marche.ts` explique
+sur dix lignes l'effondrement des cours après Lothar et Klaus. **Le moteur
+enseignait la conséquence d'un événement qu'il ne savait pas produire.**
+
+### La rafale, et non le vent moyen
+
+Le choix de grandeur décide de tout le reste. La casse mécanique ne se joue pas
+sur une moyenne hebdomadaire — c'est structurellement la mauvaise variable —
+mais sur la RAFALE, le pic de quelques secondes. `tempete.ts` tire donc pour
+chaque semaine un maximum de rafale dont le vent moyen fixe le pied et dont une
+queue exponentielle fait le sommet, calée sur la cinquantennale française de
+40-45 m/s (la classe de Klaus dans les Landes, de Lothar sur le Bassin
+parisien).
+
+Deux faits de terrain TOMBENT de ce seul choix, sans qu'on ait eu à les écrire :
+
+- **les tempêtes sont hivernales**, parce que le vent moyen l'est déjà
+  (`meteo.ts` : maximum en janvier, plancher fin juillet). Une rafale de 40 m/s
+  demande un tirage sur mille en janvier et un sur un million en juillet. Sur
+  quatre parties de soixante ans, aucun chablis entre les semaines 23 et 37 ;
+- **le caduc nu paie moins que le sempervirent**, parce que la prise au vent se
+  lit sur la part foliaire ombrageante et que les tempêtes atlantiques arrivent
+  quand les feuillus sont dénudés. Mesuré, soixante ans sur limon riche : la
+  pinède couche 65 à 88 tiges, la hêtraie 4 à 11.
+
+Un troisième tombe d'un mécanisme qui n'avait rien à voir : **les hivers doux et
+humides font des arbres qui versent**. Un arbre qui n'a jamais eu soif garde un
+chevelu superficiel (`nouvelleProfondeurRacines`), donc un ancrage médiocre. Ça
+n'est écrit nulle part ; c'est la rencontre de la plasticité racinaire et du
+bras de levier.
+
+### Ce que quatre erreurs de conception ont appris
+
+Aucune n'a été vue en relisant le code. Les quatre ont été trouvées en mesurant,
+et la dernière seulement en relançant la suite ENTIÈRE.
+
+**Zéro tempête en soixante ans.** Le premier jet réutilisait `windShelterAt`, qui
+existait déjà et calculait un abri. Mais il répond à une AUTRE question : il a
+été écrit pour la haie brise-vent — de quoi un jeune plant est-il protégé, près
+du sol — et compte tout voisin d'une certaine taille, où qu'il soit. Dans un
+peuplement il sature donc à 1 pour tout le monde : chacun s'abrite de ses
+semblables, et plus rien ne verse. Ce qui abrite une CIME, c'est ce qui la
+dépasse. `abriAuVent` ne somme que le dépassement des voisins plus hauts, et de
+là sortent trois comportements de terrain qu'on n'a pas eu à écrire : une futaie
+régulière ne s'abrite pas elle-même (c'est Klaus dans les pins alignés), un
+sous-étage est protégé par sa canopée, un dominant qui émerge prend tout.
+
+**Les semis couchés, les dominants épargnés.** Cent vingt-deux arbres pour
+2,4 m³, soit l'exact inverse d'une tempête. L'ancrage était écrit comme une
+profondeur ABSOLUE — trente centimètres de racines, mal ancré. Or le
+renversement est une affaire de MOMENTS : le vent pousse sur la cime avec un
+bras de levier qui est la hauteur, la motte résiste avec un bras qui est sa
+profondeur. Le rapport `profondeur / hauteur` a remis le tri à l'endroit.
+
+**Et le seuil de ce rapport a été calé sur un échantillon qui n'en était pas
+un** — c'est la quatrième erreur, et la seule que la suite entière a trouvée
+alors que les tests du lot passaient tous. Six pour cent semblaient être le
+niveau normal : c'est ce que tiennent les hêtraies et les aulnaies de quarante
+ans mesurées sur la série de Limon-riche (0,054 à 0,073). Mais ces racines-là
+sont descendues parce que l'ÉTÉ LES Y A FORCÉES. Le même hêtre poussé
+quatre-vingt-dix ans sur un site jamais sec tient 0,019 à 0,035 : il n'a jamais
+eu soif, il n'est jamais descendu, et la plasticité racinaire fait exactement
+ce qu'on lui demande. Toute une population légitime se retrouvait donc au fond
+du barème, et le test de lumière — une futaie de soixante-quatre hêtres de 25 m
+sur limon frais, qui ne parle pas du tout de vent — perdait seize arbres en
+cinq ans, ouvrait sa canopée et laissait survivre un semis de pin qui devait
+mourir d'ombre.
+
+Deux corrections, et la seconde compte autant que la première : le seuil passe
+à 4 % pour couvrir les deux régimes hydriques, et **l'ancrage cesse d'être le
+terme dominant** de la vitesse critique. Un enracinement superficiel retire un
+cinquième de la résistance et non deux, ce qui est l'ordre de grandeur des
+classes d'enracinement de la famille ForestGALES. Le tri, lui, survit : 65-88
+pins couchés contre 4-11 hêtres, et zéro sur un site abrité.
+
+Reste une question qui n'est PAS celle de ce lot : que le moteur donne 44 cm de
+racines à un hêtre de vingt mètres sur sol frais est une calibration de
+`RACINES_PLANCHER` (`trees.ts`), et elle revient à la maintenance.
+
+**L'aulnaie rasée tous les deux ans.** L'engorgement est LE facteur des grandes
+tempêtes : Lothar et Klaus se sont concentrés là où le sol était gorgé. Mais
+appliqué brut, il couchait l'aulne du fond de vallée — une espèce dont c'est
+l'habitat. Ce qui compte est l'engorgement AU-DELÀ de ce que l'espèce supporte,
+la forme même que `waterloggingFactor` utilise déjà pour la croissance. Un arbre
+qui vit là a des racines faites pour ce sol ; c'est le hêtre égaré dans le
+bas-fond qui verse.
+
+### Le label `flux-aléatoire` n'a pas eu lieu d'être
+
+L'issue prévoyait que le mécanisme déplace le flux du PRNG, ce qui aurait obligé
+à revérifier tous les scénarios. Il n'en a rien été : la rafale dérive de la
+graine de partie et de la semaine (comme l'indice du marché, `marche.ts`), le
+renversement de l'identité de l'arbre et de la semaine (comme la direction de
+chute, `boisMort.ts`). **Aucune partie sans tempête ne change d'un cheveu.** La
+règle vaut d'être généralisée : un mécanisme qui tire au sort n'a presque jamais
+besoin du flux séquentiel, et le prix d'une graine dérivée est deux lignes.
+
+### Ce que ça coûte
+
+Le tirage de rafale tourne à chaque semaine de chaque partie : **0,2 µs**. Le
+balayage du peuplement, lui, ne tourne que les semaines où la rafale dépasse
+25 m/s — `RAFALE_MINIMALE_MS` n'est pas un seuil de dégât mais un filtre de
+calcul, et il doit rester SOUS le plus fragile des cas possibles. Il coûte
+**0,15 ms** sur une hêtraie de quarante ans (96 tiges, 30 × 30 m), et il est
+quadratique en nombre d'arbres parce que `abriAuVent` regarde tous les voisins.
+
+Au niveau du tick complet, la différence ne se mesure pas : 8,17 ms/semaine sur
+un site exposé contre 8,11 sur le même site abrité, quand l'écart entre deux
+passes de la même configuration va de 7,75 à 8,70. **Le mécanisme est gratuit à
+cette échelle**, et le dire ainsi vaut mieux que d'annoncer un +0,7 % qui n'est
+que du bruit. À surveiller le jour où une parcelle portera mille tiges : c'est
+le balayage quadratique qui parlera le premier.
 
 ## La phénologie : chaque espèce a son calendrier
 
