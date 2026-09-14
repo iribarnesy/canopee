@@ -175,30 +175,42 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // dose-là — que ce test ne simule pas *(le tas de broyat, plus bas, est le
     // geste qui s'en approche)*.
     //
-    // ─── ET LA TRAJECTOIRE S'INVERSE ────────────────────────────────────────
-    // Le gain à trente-cinq ans tombe de +9 % à +3,8 %. Il reste donc un gain,
-    // mais la lecture change du tout au tout : on décrivait un bénéfice
-    // DIFFÉRÉ — creux d'abord, puis récompense — et on mesure un bénéfice
-    // IMMÉDIAT QUI S'ESTOMPE.
+    // ─── ON N'AFFIRME PAS LA FORME DE CETTE COURBE ──────────────────────────
+    // Elle a changé trois fois en une journée, et chaque fois pour une cause
+    // réelle :
     //
-    // Ce qui se comprend : l'épandage est un apport UNIQUE. Il pèse lourd dans
-    // la nutrition de jeunes hêtres, et de moins en moins à mesure qu'ils
-    // grossissent et que le témoin les rattrape. C'était l'immobilisation
-    // surdimensionnée qui retardait artificiellement le rendez-vous.
+    //   état du moteur                       16 ans    35 ans   lecture
+    //   ───────────────────────────────────  ───────   ──────   ────────────
+    //   allométrie gonflée                    0,99      1,09    bénéfice différé
+    //   allométrie corrigée                   1,068     1,038   bénéfice qui s'estompe
+    //   élancement individualisé              1,035     1,039   bénéfice plat
     //
-    // Les trois graines sont remarquablement serrées — 1,071 / 1,066 / 1,066 à
-    // seize ans, 1,037 / 1,038 / 1,039 à trente-cinq —, ce qui autorise à
-    // affirmer la FORME de la courbe et pas seulement son signe.
+    // Le creux initial était un artefact : le moteur épandait cinq fois trop de
+    // carbone sur la même surface, donc immobilisait cinq fois trop d'azote
+    // (`dendrometrie.ts`). Mais la lecture SUIVANTE — « un apport unique dont
+    // l'avantage s'estompe » — n'a pas mieux tenu : elle est tombée dès que le
+    // diamètre est devenu individuel, parce que le carbone d'un arbre, donc sa
+    // litière, donc l'azote du sol, dépendent maintenant de sa forme.
+    //
+    // On en tire la règle du dépôt (realisme.md, « ce qu'un test écologique a
+    // le droit d'affirmer ») : la forme de cette courbe est une quantité
+    // composite, pas une propriété du monde. Ce qui résiste aux trois états du
+    // moteur, c'est le SIGNE — épandre bat vendre, de quelques pour cent, aux
+    // deux horizons et sur chaque graine.
+    //
+    // Ce qui reste vrai du creux d'azote, et qui n'est pas mesuré ici : épandre
+    // ce qu'on coupe est une dose FAIBLE. Une vraie planche de BRF, c'est
+    // plusieurs centimètres rapportés d'ailleurs, et le creux de l'agronome se
+    // mesure à cette dose-là *(le tas de broyat, plus bas, est le geste qui
+    // s'en approche)*.
     const aSeizeAns = gains.get(16) ?? [];
     const aTrenteCinq = gains.get(35) ?? [];
     expect(aSeizeAns).toHaveLength(GRAINES.length);
     expect(aTrenteCinq).toHaveLength(GRAINES.length);
     // Épandre bat vendre sur CHAQUE graine, aux deux horizons.
-    expect([...aSeizeAns, ...aTrenteCinq].filter((g) => g <= 1)).toEqual([]);
-    expect(gainA(16)).toBeGreaterThan(1.05);
-    expect(gainA(35)).toBeGreaterThan(1.03);
-    // Et le gain décroît : c'est un apport unique, pas une rente.
-    expect(gainA(35)).toBeLessThan(gainA(16));
+    expect([...aSeizeAns, ...aTrenteCinq].filter((g) => g <= 1.01)).toEqual([]);
+    expect(gainA(16)).toBeGreaterThan(1.02);
+    expect(gainA(35)).toBeGreaterThan(1.02);
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.

@@ -11,6 +11,7 @@
  */
 
 import { facteurAllelopathie, SENSIBILITE_MEDIANE } from "./allelopathie";
+import { diametreApresPousse, diametreDeReferenceCm } from "./dendrometrie";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
@@ -54,6 +55,16 @@ export interface TreeState {
   y: number;
   ageWeeks: number;
   heightM: number;
+  /**
+   * Diamètre à 1,30 m, cm. ABSENT vaut « à l'élancement de référence », ce qui
+   * est exactement le comportement d'avant : un arbre venu d'une vieille partie
+   * ou construit par un test garde H/D = 50 (`dendrometrie.ts`).
+   *
+   * Il est porté par l'individu parce que c'est la CONCURRENCE qui le décide,
+   * pas l'espèce : deux chênes de même hauteur n'ont pas la même forme selon
+   * qu'ils ont poussé au large ou serrés.
+   */
+  diametreCm?: number;
   /** points de stress cumulés ; l'arbre meurt à STRESS_LETHAL */
   stress: number;
   alive: boolean;
@@ -709,6 +720,14 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const heightM =
     tree.heightM +
     Math.max(0, potentialM) * limitingFactor * stressPenalty * tree.vigueurIndividuelle;
+  // Le tronc s'épaissit à la mesure de ce qu'il monte, divisé par l'élancement
+  // que la LUMIÈRE lui impose : au large il épaissit, sous couvert il file en
+  // perche. L'arbre garde ainsi la mémoire de son histoire (dendrometrie.ts).
+  const diametreCm = diametreApresPousse(
+    tree.diametreCm ?? diametreDeReferenceCm(tree.heightM),
+    heightM - tree.heightM,
+    env.light,
+  );
 
   // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.
   let stress = tree.stress;
@@ -741,7 +760,16 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   }
 
   return {
-    tree: { ...tree, ageWeeks: tree.ageWeeks + 1, heightM, stress, alive, rootDepthCm, causeMort },
+    tree: {
+      ...tree,
+      ageWeeks: tree.ageWeeks + 1,
+      heightM,
+      diametreCm,
+      stress,
+      alive,
+      rootDepthCm,
+      causeMort,
+    },
     limitingFactor,
   };
 }

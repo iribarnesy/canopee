@@ -83,3 +83,58 @@ export function volumeTigeM3(heightM: number, diametreCm: number): number {
 export function volumeAerienM3(heightM: number, diametreCm: number): number {
   return volumeTigeM3(heightM, diametreCm) * EXPANSION_BRANCHES;
 }
+
+/**
+ * ─── L'ÉLANCEMENT DEVIENT UNE PROPRIÉTÉ DE L'INDIVIDU ────────────────────────
+ *
+ * Le coefficient d'élancement H/D est L'indicateur du risque de chablis en
+ * sylviculture française : au-dessus de 80, un peuplement est réputé fragile ;
+ * en dessous de 70, stable. Tant qu'il vaut 50 pour tout arbre, le moteur ne
+ * peut ni le dire ni le faire sentir.
+ *
+ * Ce qui le fait varier n'est pas l'essence mais la CONCURRENCE. Un arbre venu
+ * au large épaissit : il a de la lumière partout, rien ne le presse de monter,
+ * et il investit dans un tronc conique et ferme. Un arbre en peuplement serré
+ * court après la lumière de ses voisins et file en hauteur sans grossir — c'est
+ * la perche, et c'est elle qui casse.
+ *
+ * On module donc l'élancement MARGINAL — celui du bois déposé cette semaine —
+ * par la lumière que l'arbre reçoit. Un individu garde ainsi la mémoire de son
+ * histoire : ce qu'il a poussé à l'ombre reste élancé même s'il est dégagé
+ * ensuite, ce qui est précisément ce qu'on observe après une éclaircie trop
+ * tardive.
+ *
+ * *(Les deux bornes sont raisonnées à partir des fourchettes usuelles — 25 à 40
+ * pour un sujet de plein vent, 90 à 100 pour une perche de plantation serrée —
+ * et non tirées d'une table : à calibrer.)*
+ */
+
+/** Élancement d'un arbre venu au large : trapu, conique, ferme au vent. */
+export const ELANCEMENT_AU_LARGE = 35;
+
+/** Élancement d'une tige qui court après la lumière : la perche. */
+export const ELANCEMENT_SOUS_COUVERT = 100;
+
+/** Élancement que vise le bois déposé cette semaine, selon la lumière reçue. */
+export function elancementCible(lumiere: number): number {
+  const l = Math.min(1, Math.max(0, lumiere));
+  return ELANCEMENT_SOUS_COUVERT + (ELANCEMENT_AU_LARGE - ELANCEMENT_SOUS_COUVERT) * l;
+}
+
+/**
+ * Diamètre après une pousse de `dHauteurM`, cm. Le tronc s'épaissit à la
+ * mesure de ce qu'il monte, divisé par l'élancement que la lumière lui impose.
+ */
+export function diametreApresPousse(
+  diametreCm: number,
+  dHauteurM: number,
+  lumiere: number,
+): number {
+  if (dHauteurM <= 0) return diametreCm;
+  return diametreCm + (100 * dHauteurM) / elancementCible(lumiere);
+}
+
+/** Élancement H/D d'un arbre, sans unité : hauteur et diamètre en cm. */
+export function elancementDe(heightM: number, diametreCm: number): number {
+  return diametreCm > 0 ? (100 * heightM) / diametreCm : Number.POSITIVE_INFINITY;
+}

@@ -14,6 +14,7 @@ import type { ActionRefusal, GesteVisible } from "../engine/actions";
 import { indiceBiodiversite } from "../engine/biodiversite";
 import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import { CO2_ACTUEL_PPM } from "../engine/climat";
+import { diametreDeReferenceCm } from "../engine/dendrometrie";
 import { getEspece } from "../engine/especes";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
@@ -47,6 +48,7 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     x: t.x,
     y: t.y,
     heightM: t.heightM,
+    diametreCm: t.diametreCm ?? diametreDeReferenceCm(t.heightM),
     ageWeeks: t.ageWeeks,
     stress: t.stress,
     fruitsKg: t.fruitsKg,

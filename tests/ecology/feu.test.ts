@@ -186,7 +186,7 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
       let enSuspensKgC = 0;
       for (const t of s.trees) {
         if (!t.alive && t.mortSemaine === undefined) {
-          enSuspensKgC += treeTotalCarbonKg(getEspece(t.especeId), t.heightM);
+          enSuspensKgC += treeTotalCarbonKg(getEspece(t.especeId), t.heightM, t.diametreCm);
         }
       }
       return (

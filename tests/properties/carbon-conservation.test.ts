@@ -44,7 +44,10 @@ function totalStockKgC(state: GameState): number {
   let surPiedKgC = 0;
   for (const t of state.trees) {
     if (!t.alive && t.mortSemaine === undefined) {
-      surPiedKgC += treeTotalCarbonKg(getEspece(t.especeId), t.heightM);
+      // Au DIAMÈTRE de l'arbre, comme partout ailleurs : recalculer ce même
+      // arbre à l'élancement de référence ferait voir une fuite là où il n'y a
+      // qu'une mesure faite deux fois avec deux règles (`dendrometrie.ts`).
+      surPiedKgC += treeTotalCarbonKg(getEspece(t.especeId), t.heightM, t.diametreCm);
     }
   }
   return livingCarbonKg(state.trees) + surPiedKgC + state.carbon.deadWoodKgC + soilG / 1000;

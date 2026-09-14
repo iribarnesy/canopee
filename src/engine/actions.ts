@@ -595,8 +595,8 @@ export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
  * (`boisVolumeM3`, carbon.ts) mais ne part pas en scierie. Le moteur vendait
  * jusqu'ici les branches au prix du tronc, faute de distinguer les deux.
  */
-export function woodVolumeM3(heightM: number): number {
-  return volumeTigeM3(heightM, diametreCm(heightM));
+export function woodVolumeM3(heightM: number, diametreDeLArbreCm?: number): number {
+  return volumeTigeM3(heightM, diametreDeLArbreCm ?? diametreCm(heightM));
 }
 
 /**
@@ -620,10 +620,13 @@ export function diametreCm(heightM: number): number {
  */
 export function valeurSurPied(
   espece: EspeceV0,
-  tree: { heightM: number; hauteurElagueeM: number },
+  tree: { heightM: number; hauteurElagueeM: number; diametreCm?: number },
 ): { eur: number; qualite: "oeuvre" | "chauffage" } {
-  const volume = woodVolumeM3(tree.heightM);
-  const assezGros = diametreCm(tree.heightM) >= DIAMETRE_OEUVRE_MIN_CM;
+  const volume = woodVolumeM3(tree.heightM, tree.diametreCm);
+  // Le diamètre de l'ARBRE, pas celui de sa hauteur : deux tiges de vingt
+  // mètres ne font pas la même bille selon qu'elles ont poussé au large ou
+  // serrées, et c'est exactement ce que le sylviculteur regarde.
+  const assezGros = (tree.diametreCm ?? diametreCm(tree.heightM)) >= DIAMETRE_OEUVRE_MIN_CM;
   const assezElague = tree.hauteurElagueeM >= BILLE_OEUVRE_MIN_M;
   if (assezGros && assezElague) {
     // Seule la bille élaguée fait de l'œuvre ; le houppier reste du chauffage.
@@ -814,7 +817,7 @@ function applyCouper(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
-    const aerienKgC = treeAboveCarbonKg(espece, tree.heightM);
+    const aerienKgC = treeAboveCarbonKg(espece, tree.heightM, tree.diametreCm);
     /**
      * Carbone qui quitte réellement la parcelle avec le fût.
      *
@@ -837,7 +840,7 @@ function applyCouper(
       deadWoodKgC -= emporteKgC;
     } else {
       // Les souches et racines restent au sol dans les trois cas (bois mort).
-      deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
+      deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM, tree.diametreCm) - aerienKgC;
     }
     /**
      * Le fût est couché EN TRAVERS de la pente. Pour le bois qu'on laisse sur
@@ -884,7 +887,7 @@ function applyCouper(
       // tout son bois sur le marché la même année — c'est ce que la France a
       // vécu après Lothar et Klaus, des cours divisés par deux sous le poids
       // des chablis. Les deux ne jouent que si l'économie compte.
-      const volumeVendu = woodVolumeM3(tree.heightM);
+      const volumeVendu = woodVolumeM3(tree.heightM, tree.diametreCm);
       const marche = state.economy.active
         ? indiceDuMarche(state.graineMarche, Math.floor(state.week / 52)) *
           decoteEngorgement(volumeVenduAnneeM3)
@@ -911,7 +914,8 @@ function applyCouper(
     } else if (action.devenir === "broyer") {
       // Le broyat rejoint le tas : rien ne touche le sol pour l'instant.
       stockBrf = {
-        carboneG: stockBrf.carboneG + treeAboveCarbonKg(espece, tree.heightM) * 1000,
+        carboneG:
+          stockBrf.carboneG + treeAboveCarbonKg(espece, tree.heightM, tree.diametreCm) * 1000,
         azoteG:
           stockBrf.azoteG +
           0.5 * tree.uptakeYearG +
@@ -941,7 +945,8 @@ function applyCouper(
       if (cells.length === 0) cells.push(0);
       const share = depositG / cells.length;
       // Tout le carbone aérien broyé reste sur place, dans la litière.
-      const shareC = (treeAboveCarbonKg(espece, tree.heightM) * 1000) / cells.length;
+      const shareC =
+        (treeAboveCarbonKg(espece, tree.heightM, tree.diametreCm) * 1000) / cells.length;
       const kSpecies = 0.6 / BRF_CN_RATIO;
       for (const i of cells) {
         const oldN = litterNG[i] ?? 0;
@@ -1385,14 +1390,19 @@ function applyTrogner(
     });
     // Ce qu'on emporte : tout ce qui dépassait la tête, en bois de chauffage.
     const emporte =
-      treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, hauteurTete);
-    treasuryEur += (woodVolumeM3(tree.heightM) - woodVolumeM3(hauteurTete)) * WOOD_PRICE_EUR_M3;
+      treeAboveCarbonKg(espece, tree.heightM, tree.diametreCm) -
+      treeAboveCarbonKg(espece, hauteurTete);
+    treasuryEur +=
+      (woodVolumeM3(tree.heightM, tree.diametreCm) - woodVolumeM3(hauteurTete)) * WOOD_PRICE_EUR_M3;
     exportedEnergyCumKgC += Math.max(0, emporte);
     // Même chose qu'au recépage : ce que la tête perd en racines reste au sol.
-    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, hauteurTete);
+    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, hauteurTete, tree.diametreCm);
     trees[idx] = {
       ...tree,
       heightM: hauteurTete,
+      // La tête repart neuve : son élancement redevient celui de référence, et
+      // le tronc qu'elle portait est parti au bois mort ci-dessus.
+      diametreCm: undefined,
       teteTrogneM: hauteurTete,
       recepages: tree.recepages + 1,
       hauteurElagueeM: Math.min(tree.hauteurElagueeM, hauteurTete),
@@ -1681,15 +1691,24 @@ function applyReceper(
     // compter entière vendait un demi-mètre de bois resté debout, et créait
     // le carbone correspondant.
     treasuryEur +=
-      (woodVolumeM3(tree.heightM) - woodVolumeM3(RECEPAGE_HAUTEUR_M)) * WOOD_PRICE_EUR_M3;
+      (woodVolumeM3(tree.heightM, tree.diametreCm) - woodVolumeM3(RECEPAGE_HAUTEUR_M)) *
+      WOOD_PRICE_EUR_M3;
     exportedEnergyCumKgC +=
-      treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, RECEPAGE_HAUTEUR_M);
+      treeAboveCarbonKg(espece, tree.heightM, tree.diametreCm) -
+      treeAboveCarbonKg(espece, RECEPAGE_HAUTEUR_M);
     // Les racines que l'arbre cesse de porter restent dans le sol : elles ne
     // s'exportent pas avec la tige, elles se décomposent sur place (carbon.ts).
-    deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, RECEPAGE_HAUTEUR_M);
+    deadWoodKgC += racinesPerduesEnRabattant(
+      espece,
+      tree.heightM,
+      RECEPAGE_HAUTEUR_M,
+      tree.diametreCm,
+    );
     trees[idx] = {
       ...tree,
       heightM: RECEPAGE_HAUTEUR_M,
+      // Le rejet est une tige neuve : élancement de référence (dendrometrie.ts).
+      diametreCm: undefined,
       hauteurElagueeM: 0,
       // La souche repart branchu : le fût nu de la tige coupée ne se transmet
       // pas aux rejets, c'est même tout l'inverse d'un taillis.

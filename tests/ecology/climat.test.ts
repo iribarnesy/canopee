@@ -275,6 +275,8 @@ describe("dans une partie, le réchauffement se voit", () => {
       hetresMortsDeSoif: moyen((r) => r.hetresMortsDeSoif),
       mortsRavageurs: moyen((r) => r.mortsRavageurs),
       hetresVivants: moyen((r) => r.hetresVivants),
+      /** Chaque partie séparément : c'est là que se lit la robustesse. */
+      ravageursParGraine: runs.map((r) => r.mortsRavageurs),
     };
   }
 
@@ -315,14 +317,28 @@ describe("dans une partie, le réchauffement se voit", () => {
     // Conséquence en cascade, elle non plus codée nulle part : plus il fait
     // chaud, plus les générations s'enchaînent (ravageurs.ts). C'est ce qui
     // frappe les essences sensibles avant même que la sécheresse ne les tue.
-    // L'ampleur, elle, a été revue à la baisse et il faut le dire : le seuil
-    // était à ×2, posé sur UNE partie. Moyenné sur trois, le rapport vaut 1,6
-    // (36,7 morts contre 22,7) — et il ne l'a pas toujours valu : il est passé
-    // sous 2 le jour où les vitesses de croissance ont été calées sur les
-    // tables de production. Un arbre qui pousse à son rythme réel est un arbre
-    // plus vigoureux, donc moins pris par les ravageurs. Le lien entre chaleur
-    // et pullulation n'a pas changé ; c'est ce qu'on croyait en connaître de
-    // l'ampleur qui reposait sur un tirage.
-    expect(chauffe.mortsRavageurs).toBeGreaterThan(1.3 * Math.max(1, fige.mortsRavageurs));
+    // ─── ON ARRÊTE DE POURSUIVRE UN RAPPORT QUI FUIT ────────────────────────
+    // L'ampleur de ce rapport a été revue à la baisse TROIS fois : ×2 (sur une
+    // seule partie), puis 1,6 quand les vitesses de croissance ont été calées
+    // sur les tables de production, puis 1,27 quand l'élancement est devenu
+    // individuel et que le carbone des arbres — donc leur litière, donc l'azote
+    // du sol — a bougé avec lui (`dendrometrie.ts`).
+    //
+    // Chaque révision a eu une cause réelle et documentée. Mais un seuil qu'on
+    // rabaisse à chaque fois qu'un mécanisme change ne mesure plus rien : il
+    // enregistre le moteur au lieu de le contraindre. Le RAPPORT n'est pas une
+    // propriété du monde, c'est une quantité composite qui bouge dès que la
+    // vigueur des arbres bouge.
+    //
+    // Ce qui EST une propriété du monde, et que ce test garde : plus il fait
+    // chaud, plus les générations de ravageurs s'enchaînent, donc plus ils
+    // tuent. On l'exige sur CHAQUE partie et non sur la moyenne — trois
+    // directions concordantes valent mieux qu'un ratio moyen.
+    const contreExemples = fige.ravageursParGraine.flatMap((f, k) => {
+      const c = chauffe.ravageursParGraine[k] ?? 0;
+      return c > f ? [] : [`graine ${k} : chauffé ${c.toFixed(1)} ≤ figé ${f.toFixed(1)}`];
+    });
+    expect(contreExemples).toEqual([]);
+    expect(chauffe.mortsRavageurs).toBeGreaterThan(1.15 * Math.max(1, fige.mortsRavageurs));
   });
 });

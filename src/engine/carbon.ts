@@ -56,18 +56,26 @@ export const T_HA_TO_G_M2 = 100;
  * pourtant, et c'est ce qu'on leur demande ici (`EXPANSION_BRANCHES`,
  * dendrometrie.ts).
  */
-export function boisVolumeM3(heightM: number): number {
-  return volumeAerienM3(heightM, diametreDeReferenceCm(heightM));
+export function boisVolumeM3(heightM: number, diametreCm?: number): number {
+  return volumeAerienM3(heightM, diametreCm ?? diametreDeReferenceCm(heightM));
 }
 
-/** Carbone aérien d'un arbre, kg C. */
-export function treeAboveCarbonKg(espece: EspeceV0, heightM: number): number {
-  return boisVolumeM3(heightM) * espece.bois.densite * 1000 * CARBON_FRACTION;
+/**
+ * Carbone aérien d'un arbre, kg C.
+ *
+ * `diametreCm` ABSENT vaut « à l'élancement de référence », soit exactement le
+ * comportement d'avant. Il faut le passer partout où l'on tient un arbre réel,
+ * sous peine de casser la CONSERVATION : compter le même arbre à son diamètre
+ * ici et au diamètre de référence là ferait apparaître ou disparaître du
+ * carbone à chaque transfert.
+ */
+export function treeAboveCarbonKg(espece: EspeceV0, heightM: number, diametreCm?: number): number {
+  return boisVolumeM3(heightM, diametreCm) * espece.bois.densite * 1000 * CARBON_FRACTION;
 }
 
 /** Carbone total (aérien + racinaire) d'un arbre, kg C. */
-export function treeTotalCarbonKg(espece: EspeceV0, heightM: number): number {
-  return treeAboveCarbonKg(espece, heightM) * (1 + ROOT_SHOOT_RATIO);
+export function treeTotalCarbonKg(espece: EspeceV0, heightM: number, diametreCm?: number): number {
+  return treeAboveCarbonKg(espece, heightM, diametreCm) * (1 + ROOT_SHOOT_RATIO);
 }
 
 /**
@@ -81,8 +89,8 @@ export function treeTotalCarbonKg(espece: EspeceV0, heightM: number): number {
  * verser la part perdue au bois mort (`racinesPerduesEnRabattant`) plutôt que
  * de la laisser disparaître.
  */
-export function treeRootCarbonKg(espece: EspeceV0, heightM: number): number {
-  return treeAboveCarbonKg(espece, heightM) * ROOT_SHOOT_RATIO;
+export function treeRootCarbonKg(espece: EspeceV0, heightM: number, diametreCm?: number): number {
+  return treeAboveCarbonKg(espece, heightM, diametreCm) * ROOT_SHOOT_RATIO;
 }
 
 /**
@@ -98,10 +106,17 @@ export function racinesPerduesEnRabattant(
   espece: EspeceV0,
   hauteurAvantM: number,
   hauteurApresM: number,
+  diametreAvantCm?: number,
 ): number {
+  // Le rejet qui repart est une TIGE NEUVE, pas la souche conservée : son
+  // diamètre revient à la référence de sa nouvelle hauteur, et le tronc de
+  // l'ancienne part au bois mort. Garder le diamètre de la souche ferait
+  // grossir indéfiniment un taillis recépé, qui deviendrait une tige de plus en
+  // plus trapue à chaque coupe (`dendrometrie.ts`).
   return Math.max(
     0,
-    treeRootCarbonKg(espece, hauteurAvantM) - treeRootCarbonKg(espece, hauteurApresM),
+    treeRootCarbonKg(espece, hauteurAvantM, diametreAvantCm) -
+      treeRootCarbonKg(espece, hauteurApresM),
   );
 }
 
@@ -164,7 +179,7 @@ export interface CarbonInventory {
 export function livingCarbonKg(trees: readonly TreeState[]): number {
   let sum = 0;
   for (const t of trees) {
-    if (t.alive) sum += treeTotalCarbonKg(getEspece(t.especeId), t.heightM);
+    if (t.alive) sum += treeTotalCarbonKg(getEspece(t.especeId), t.heightM, t.diametreCm);
   }
   return sum;
 }

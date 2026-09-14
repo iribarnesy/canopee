@@ -52,8 +52,11 @@ export const SEUIL_PERCHIS_CM = 7.5;
 export const SEUIL_FUTAIE_CM = 17.5;
 
 /** Le stade d'une tige, d'après sa seule hauteur. Pur, sans état. */
-export function stadeDe(heightM: number): StadeDeDeveloppement {
-  const d = diametreCm(heightM);
+export function stadeDe(heightM: number, diametreDeLArbreCm?: number): StadeDeDeveloppement {
+  // Le diamètre de L'ARBRE quand on l'a : une perche de peuplement serré reste
+  // au perchis bien plus longtemps qu'un sujet de même hauteur venu au large,
+  // et c'est exactement ce que le mot « perchis » désigne (`dendrometrie.ts`).
+  const d = diametreDeLArbreCm ?? diametreCm(heightM);
   if (d < SEUIL_GAULIS_CM) return "semis";
   if (d < SEUIL_PERCHIS_CM) return "gaulis";
   if (d < SEUIL_FUTAIE_CM) return "perchis";

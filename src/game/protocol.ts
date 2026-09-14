@@ -68,6 +68,14 @@ export interface SnapshotTree {
   x: number;
   y: number;
   heightM: number;
+  /**
+   * Diamètre à 1,30 m, cm. Il voyage parce qu'il ne se déduit PAS de la
+   * hauteur : deux tiges de vingt mètres n'ont pas la même grosseur selon
+   * qu'elles ont poussé au large ou serrées (`dendrometrie.ts`). Le rendu en a
+   * besoin pour dessiner un tronc à sa vraie épaisseur — une perche et un
+   * sujet de plein vent ne se ressemblent pas.
+   */
+  diametreCm: number;
   ageWeeks: number;
   stress: number;
   fruitsKg: number;

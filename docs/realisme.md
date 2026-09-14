@@ -20,6 +20,38 @@
 
 Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
+## Ce qu'un test écologique a le droit d'affirmer
+
+Trois pièges se sont refermés assez souvent sur ce dépôt pour mériter d'être
+écrits une fois pour toutes.
+
+**Un rapport entre deux quantités composites n'est pas une propriété du monde.**
+« Le mélange perd deux fois moins d'aulnes », « le réchauffement double les
+ravageurs », « épandre vaut +9 % » : ces rapports ont tous été rabaissés deux ou
+trois fois, chaque fois pour une cause réelle et documentée — vitesses de
+croissance calées sur les tables, allométrie corrigée, élancement individualisé.
+Mais un seuil qu'on rabaisse à chaque changement de mécanisme n'enregistre plus
+que le moteur : il a cessé de le contraindre. Ce qui résiste, c'est la
+DIRECTION, et elle s'exige graine par graine plutôt qu'en moyenne — trois
+directions concordantes valent mieux qu'un ratio moyen.
+
+**Une ancre écrite d'après le moteur n'est pas une ancre.** Le seul test qui
+confrontait le carbone à une valeur absolue exigeait qu'un hêtre de 25 m stocke
+« quelques tonnes ». La borne avait été posée sur le volume du moteur, lequel
+était faux d'un facteur cinq : elle entérinait l'erreur au lieu de l'attraper.
+Une valeur absolue se cale sur une source extérieure, ou ne se cale pas.
+
+**La conservation ne valide rien.** Un stock faux d'un facteur cinq se conserve
+parfaitement. Les invariants attrapent les fuites, jamais les niveaux — c'est
+d'ailleurs pour ça qu'ils sont précieux : ils ont trouvé, le jour même, une
+fuite de 0,133 kg due à un grand livre de test qui mesurait le même arbre avec
+deux règles. Mais un critère noté ✅ sur la seule foi d'un test de conservation
+n'est pas prouvé.
+
+Corollaire pratique : un seuil mesuré au milieu d'un lot périme avant la fin du
+lot. Les chiffres cités dans les commentaires de test sont datés par le
+mécanisme qui les a produits, et se remesurent quand il change.
+
 ## Score actuel
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
@@ -28,15 +60,15 @@ Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 | B. Lumière et structure | 5 | 3 | 2 | 10 |
 | C. Nutriments et cycles | 9 | 3 | 1 | 13 |
 | D. Climat et phénologie | 7 | 3 | 1 | 11 |
-| E. Interactions entre plantes | 7 | 2 | 3 | 12 |
+| E. Interactions entre plantes | 7 | 3 | 2 | 12 |
 | F. Dynamique des peuplements | 7 | 3 | 3 | 13 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
 | I. Carbone | 5 | 3 | 1 | 9 |
 | J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **79** | **26** | **17** | **122** |
+| **Total** | **79** | **27** | **16** | **122** |
 
-**Score de réalisme : 79 pleins + 26 partiels sur 122 → 75 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 79 pleins + 27 partiels sur 122 → 76 %** *(un partiel compte 1/2)*.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -54,7 +86,7 @@ l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
 arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai) → 76 % (relief, écoulement
 latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
-production).*
+production) → 76 % (le volume découle de la géométrie ; l'élancement devient individuel).*
 
 *Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
 hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
@@ -112,7 +144,7 @@ mesurer que ce qu'on sait déjà faire.*
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
-| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le RAYON, lui, reste `houppierRatio × hauteur` : pas de port serré |
+| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré |
 
 ## C. Nutriments et cycles
 
@@ -165,7 +197,7 @@ mesurer que ce qu'on sait déjà faire.*
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
-| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ❌ | Dépend de B10 |
+| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `dendrometrie.ts` ; `elancement.test.ts` — le diamètre est désormais porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, divisé par l'élancement que la lumière lui impose. Rien n'est déclaré par essence : à écartement 2 / 4 / 6 / 10 m, mêmes espèces et même graine, les dominants sortent à H/D 43,8 / 43,2 / 38,6 / 35,5. **Reste 🟡 sur l'AMPLITUDE** : la sylviculture mesure 25–40 au large et 90–100 en perche, le moteur ne couvre que 35–44. La cause est identifiée et antérieure — dans `extinctionAt` un codominant n'ombrage qu'au poids 0,4, or en plantation régulière tout le monde est codominant de tout le monde. Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger mérite son propre lot |
 
 ## F. Dynamique des peuplements
 
