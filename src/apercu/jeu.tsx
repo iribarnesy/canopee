@@ -24,6 +24,7 @@ import type {
   NaissanceDeLaSemaine,
 } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
+import { arbresAPoser, donneesSolDe } from "../game/parcelle";
 import { VueParcelle } from "../game/VueParcelle";
 import { ficheDe } from "../render/arbres/especes";
 import type { ArbreAPoser } from "../render/couches/arbres";
@@ -109,7 +110,23 @@ interface Scene {
      * En tableaux et non en `Int32Array` : JSON transforme les tableaux typés
      * en objets indexés, et le front y perdrait son ordre.
      */
-    incendie?: { origine: number; brulees: number[]; rangs: number[]; charges?: number[] };
+    incendie?: {
+      origine: number;
+      brulees: number[];
+      rangs: number[];
+      charges?: number[];
+      /**
+       * `IncendieResult.victimes` : QUI le feu a emporté, et non plus seulement
+       * combien.
+       *
+       * **Absent des scènes cuites avant le 2026-09-14.** Celles-là obligent à
+       * reconnaître les torchés à leur `brulEeSemaine`, une jointure fausse dès
+       * qu'un arbre a brûlé lors d'un incendie PRÉCÉDENT — il en garde la
+       * semaine. Le repli existe donc encore, mais il n'est plus le chemin
+       * normal.
+       */
+      victimes?: { id: number; hauteurAvantM: number; rejet: boolean }[];
+    };
   };
   trees: {
     id: number;
@@ -170,32 +187,29 @@ interface Scene {
   };
 }
 
+/**
+ * Les grilles du sol de la scène, dans la forme du terrain.
+ *
+ * Le corps de la conversion est partagé avec le jeu (`src/game/parcelle.ts`) :
+ * ici il ne reste que le RANGEMENT — la scène cuite niche ses grilles sous
+ * `sol`, l'instantané les porte à plat — et pas une règle.
+ */
 function donneesDe(scene: Scene): DonneesSol {
-  const n = scene.coteM * scene.coteM;
-  const humidite = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    humidite[i] = Math.min(1, Math.max(0, (scene.sol.waterMm[i] ?? 0) / scene.sol.ruMm));
-  }
-  return {
+  return donneesSolDe({
     coteM: scene.coteM,
+    ruMm: scene.sol.ruMm,
     altitudesM: scene.sol.altitudesM,
-    humidite,
-    herbe: Float32Array.from(scene.sol.herbeCouverture),
-    herbeBiomasse: Float32Array.from(scene.sol.herbeBiomasse),
-    litiereCG: Float32Array.from(scene.sol.litiereCG),
-    ...(scene.sol.lumiere ? { lumiere: Float32Array.from(scene.sol.lumiere) } : {}),
-    ...(scene.sol.herbeHumidite
-      ? { herbeHumidite: Float32Array.from(scene.sol.herbeHumidite) }
-      : {}),
+    waterMm: scene.sol.waterMm,
+    herbe: scene.sol.herbeCouverture,
+    herbeBiomasse: scene.sol.herbeBiomasse,
+    litiereCG: scene.sol.litiereCG,
+    ...(scene.sol.lumiere ? { lumiere: scene.sol.lumiere } : {}),
+    ...(scene.sol.herbeHumidite ? { herbeHumidite: scene.sol.herbeHumidite } : {}),
     ...(scene.sol.enEau ? { enEau: scene.sol.enEau } : {}),
-    ...(scene.sol.boisAuSol ? { boisAuSol: Float32Array.from(scene.sol.boisAuSol) } : {}),
-    ...(scene.sol.boisEnTravers
-      ? { boisEnTravers: Float32Array.from(scene.sol.boisEnTravers) }
-      : {}),
-    ...(scene.sol.debordementMm
-      ? { debordementMm: Float32Array.from(scene.sol.debordementMm) }
-      : {}),
-  };
+    ...(scene.sol.debordementMm ? { debordementMm: scene.sol.debordementMm } : {}),
+    ...(scene.sol.boisAuSol ? { boisAuSol: scene.sol.boisAuSol } : {}),
+    ...(scene.sol.boisEnTravers ? { boisEnTravers: scene.sol.boisEnTravers } : {}),
+  });
 }
 
 /**
@@ -295,15 +309,9 @@ function Demo(): React.ReactElement {
                 rangs: Int32Array.from(incendieBrut.rangs),
                 charges: Float32Array.from(incendieBrut.charges ?? []),
                 cellulesBrulees: incendieBrut.brulees.length,
-                arbresTues: 0,
-                rejets: 0,
-                // Vide, et ce n'est pas un oubli : les scènes cuites ne portent
-                // pas encore les identités que le moteur rapporte désormais
-                // (`IncendieResult.victimes`, c1908b7). Tant qu'elles ne les
-                // portent pas, le banc reconnaît les torchés à leur
-                // `brulEeSemaine` — la jointure fragile que ce champ existe
-                // justement pour supprimer (issue #78).
-                victimes: [],
+                arbresTues: incendieBrut.victimes?.length ?? 0,
+                rejets: (incendieBrut.victimes ?? []).filter((v) => v.rejet).length,
+                victimes: incendieBrut.victimes ?? [],
                 carboneTHa: 0,
               },
             }
@@ -314,19 +322,31 @@ function Demo(): React.ReactElement {
       // `?calque=0` éteint tout, pour comparer ; `?calque=marqueurs` garde les
       // repères sans estomper, ce qui isole ce que chaque mécanisme apporte.
       const quoi = params.get("calque") ?? "estompe";
-      // **Les arbres que l'incendie a torchés**, reconnus à `brulEeSemaine` et
-      // non au journal : le moteur ne rapporte une mort par le feu qu'un an
-      // plus tard (issue #52), donc un incendie et ses victimes n'arrivent
-      // jamais ensemble. C'est le dernier endroit du rendu qui doive déduire un
-      // événement d'un instantané : les naissances et les montées de stade, qui
-      // l'étaient aussi, voyagent maintenant dans le journal.
+      // **Les arbres que l'incendie a torchés, nommés par l'incendie lui-même.**
+      // Le moteur les rapporte maintenant (`IncendieResult.victimes`) la semaine
+      // où il brûle, et c'était tout le problème : une mort par le feu
+      // n'apparaît dans `morts` qu'un an plus tard, une semaine sans incendie,
+      // si bien que le feu et ses victimes ne pouvaient jamais figurer dans le
+      // même journal. Le rendu les reconnaissait donc à leur `brulEeSemaine` —
+      // ce qui marchait, sauf pour un arbre brûlé lors d'un incendie PRÉCÉDENT,
+      // qui garde la sienne.
+      //
+      // Le repli sur `brulEeSemaine` ne sert plus qu'aux scènes cuites avant
+      // que le champ n'existe.
       const semaines = reel.semaines ?? 0;
       const saison = scene?.sol.pheno;
-      const torchees = (scene?.trees ?? []).filter(
-        (t) =>
-          t.brulEeSemaine !== undefined &&
-          (scene?.week ?? 0) - t.brulEeSemaine < Math.max(1, semaines),
-      );
+      const nommees = journalReel.incendie?.victimes;
+      const torchees =
+        nommees && nommees.length > 0
+          ? (() => {
+              const ids = new Set(nommees.map((v) => v.id));
+              return (scene?.trees ?? []).filter((t) => ids.has(t.id));
+            })()
+          : (scene?.trees ?? []).filter(
+              (t) =>
+                t.brulEeSemaine !== undefined &&
+                (scene?.week ?? 0) - t.brulEeSemaine < Math.max(1, semaines),
+            );
       const torches = indexerLesTorches(
         trouverLeFeu(plan),
         torchees.map((t) => {
@@ -491,52 +511,17 @@ function Demo(): React.ReactElement {
 
   if (!scene) return <div />;
   const pheno = scene.sol.pheno;
-  const arbres: ArbreAPoser[] = scene.trees
-    .filter((t) => t.heightM > 0)
-    .map((t) => {
-      const espece = getEspece(t.especeId);
-      const part = espece && pheno ? partFoliaireOmbrageanteDans(espece, pheno) : 1;
-      // **Un arbre que l'ellipse va torcher part VIVANT**, et c'est la seule
-      // façon d'avoir quoi que ce soit à animer : l'instantané le décrit après
-      // l'incendie — tronc charbonné, sans feuilles — et une mise en scène qui
-      // partirait de là interpolerait du néant vers le néant. Ce qu'on remet
-      // n'est pas inventé : c'est ce que la phénologie du moteur dit de cette
-      // espèce à cette semaine. La mise en scène le rend ensuite à l'état que
-      // l'instantané décrit, et le canal `mourant` la porte à chaque image.
-      const torche = ellipse.torches.arbres.get(t.id);
-      return {
-        id: t.id,
-        especeId: t.especeId,
-        x: t.x,
-        y: t.y,
-        z:
-          scene.sol.altitudesM[
-            Math.min(scene.coteM - 1, Math.floor(t.y)) * scene.coteM +
-              Math.min(scene.coteM - 1, Math.floor(t.x))
-          ] ?? 0,
-        heightM: t.heightM,
-        houppierRatio: espece?.lumiere.houppierRatio ?? 0.4,
-        baseHouppierM: t.baseHouppierM ?? 0,
-        ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
-        ...(t.chandelle && !torche ? { chandelle: true } : {}),
-        ...(t.brulEeSemaine === undefined || torche ? {} : { brulee: true }),
-        ...(t.protege ? { protege: true } : {}),
-        ...(t.recepages ? { recepages: t.recepages } : {}),
-        ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
-        ...(t.brouteSemaine === undefined ? {} : { broute: true }),
-        ...(t.diametreTeteCm ? { diametreTeteCm: t.diametreTeteCm } : {}),
-        ...(t.caviteTeteL ? { caviteTeteL: t.caviteTeteL } : {}),
-        // Une DURÉE, pas une présence : le moteur donne la rotation, donc on
-        // peut dire où en est l'écorce et pas seulement qu'elle a été levée.
-        ...(t.derniereLeveeSemaine === undefined
-          ? {}
-          : { semainesDepuisLevee: Math.max(0, scene.week - t.derniereLeveeSemaine) }),
-        partFoliaire: t.chandelle && !torche ? 0 : part,
-        senescence: espece && pheno ? senescenceDans(espece, pheno) : 0,
-        vigueur: torche ? 1 : (t.vigueur ?? 1),
-        ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
-      };
-    });
+  // Le même adaptateur que le jeu (`src/game/parcelle.ts`). Le banc ne
+  // fabrique donc plus sa propre traduction : c'est précisément parce qu'il en
+  // avait une à lui que `floraison`, `fruitProgress` et `fruitsKg` s'y
+  // perdaient en route, déclarés dans la scène et posés nulle part.
+  const arbres: ArbreAPoser[] = arbresAPoser(scene.trees, {
+    coteM: scene.coteM,
+    week: scene.week,
+    altitudesM: scene.sol.altitudesM,
+    ...(pheno ? { pheno } : {}),
+    seTorche: (id) => ellipse.torches.arbres.has(id),
+  });
 
   // `?ellipse=0.4` FIGE la lecture à cet avancement, et c'est ce qui rend la
   // démonstration jugeable : une animation qui tourne à une image par seconde

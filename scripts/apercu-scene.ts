@@ -42,6 +42,7 @@ import type { GesteVisible } from "../src/engine/actions";
 import { transversalite } from "../src/engine/boisMort";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
+import { getEspece } from "../src/engine/especes";
 import {
   chargeCombustible,
   departDeFeu,
@@ -375,7 +376,7 @@ function incendieDeDemonstration(
   brulees: number[];
   rangs: number[];
   charges: number[];
-  tues: number[];
+  victimes: { id: number; hauteurAvantM: number; rejet: boolean }[];
 } {
   const charge = chargeCombustible(
     state.trees,
@@ -426,14 +427,25 @@ function incendieDeDemonstration(
   // le torchage du §6.4 n'avait rien à mettre en scène. C'est `survitAuFeu` qui
   // décide — l'écorce de l'espèce contre l'intensité locale — donc la
   // démonstration montre la vraie sélection, chêne-liège compris.
-  const tues: number[] = [];
+  //
+  // La liste a la forme de `IncendieResult.victimes` (tick.ts), et pour cause :
+  // c'est ce que le moteur rapporte désormais, et ce que le rendu doit lire.
+  // Chaque arbre y entre avec la hauteur qu'il avait AVANT le feu et le fait
+  // que sa souche rejette ou non — la même règle que le moteur applique,
+  // `espece.feu.rejetteApresFeu` sur une tige d'au moins 60 cm.
+  const victimes: { id: number; hauteurAvantM: number; rejet: boolean }[] = [];
   for (const tree of state.trees) {
     if (!tree.alive) continue;
     const cellule =
       Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.y))) * COTE_M +
       Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.x)));
     if (!brulees.has(cellule)) continue;
-    if (!survitAuFeu(tree, intensiteDuFeu(charge.parCellule[cellule] ?? 0))) tues.push(tree.id);
+    if (survitAuFeu(tree, intensiteDuFeu(charge.parCellule[cellule] ?? 0))) continue;
+    victimes.push({
+      id: tree.id,
+      hauteurAvantM: tree.heightM,
+      rejet: getEspece(tree.especeId).feu.rejetteApresFeu && tree.heightM > 0.6,
+    });
   }
   return {
     origine,
@@ -442,7 +454,7 @@ function incendieDeDemonstration(
     // La charge de chaque cellule brûlée : c'est DANS QUOI le feu a brûlé, et
     // c'est elle qui donne la hauteur des flammes côté rendu.
     charges: liste.map((c) => Number((charge.parCellule[c] ?? 0).toFixed(3))),
-    tues,
+    victimes,
   };
 }
 
@@ -717,7 +729,7 @@ function main() {
               recuMs: Number(ventRecuParLeSite(m.ventMoyMs, station.ventExposition).toFixed(2)),
             };
           })(),
-          trees: figer(state, new Set(incendie?.tues ?? [])),
+          trees: figer(state, new Set((incendie?.victimes ?? []).map((v) => v.id))),
           journal: {
             ...enAttente,
             ...(incendie ? { incendie } : {}),
