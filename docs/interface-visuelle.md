@@ -209,7 +209,7 @@ semaine simulée.
 | **Naissances** | `Snapshot.naissances` (`NaissanceDeLaSemaine{id,x,y,especeId,heightM}`) | le point vert du calque des changements sur chaque nouvelle recrue. Même forme et même accumulation que `morts` : une friche qui se boise laisse enfin une trace |
 | **Franchissements** | `Snapshot.franchissements` (`{id,deStade,versStade}`) | l'anneau sur l'arbre qui vient de passer gaulis, perchis ou futaie. Le stade lui-même se calcule côté rendu (`stadeDe`) ; seul le passage voyage |
 | **Gestes** | `Snapshot.gestes` (`GesteVisible`) | l'arbre qui **tombe** au lieu de s'escamoter ; élagage, étêtage, recépage, broutage, frottis. Ils disent ce qui a été *réellement* touché — le plafond horaire arrête souvent le chantier en cours de route. Les cinq gestes du joueur portent `retire: ArbreRetire[]` : position, espèce, hauteurs et bases de houppier avant/après, et `directionRad` quand une tige entière est tombée — de quoi animer un arbre qui a déjà quitté `state.trees` |
-| **Incendie** | `Snapshot.incendie` (`IncendieResult{origine,brulees,rangs,charges}`) | le front qui court : les cellules sont rangées **par rang croissant**, le rendu n'a qu'à les découper en tranches. `charges` dit dans QUOI chaque cellule a brûlé (indice de `chargeCombustible`, relevé avant consommation) : flamme haute dans l'ajonc, basse dans un pré ras |
+| **Incendie** | `Snapshot.incendie` (`IncendieResult{origine,brulees,rangs,charges}`) | le front qui court : les cellules sont rangées **par rang croissant**, le rendu n'a qu'à les découper en tranches. `charges` dit dans QUOI chaque cellule a brûlé (indice de `chargeCombustible`, relevé avant consommation) : flamme haute dans l'ajonc, basse dans un pré ras. Et `victimes: {id, hauteurAvantM, rejet}[]` : QUI le feu a emporté, la semaine même — le torchage a enfin de quoi s'animer, sans que le rendu ait à reconnaître les arbres brûlés par leur `brulEeSemaine`. `rejet` sépare la chandelle noire du pyrophyte qui repart d'en bas |
 | **Eau de surface** | `soilDebordementMm` | la crue, la lame d'eau qui court, les ravines |
 | **Ambiance** | `soilLumiere` | le sous-bois sombre, les taches de lumière, la clairière |
 | **Tapis** | `soilLitiereCG` | les feuilles de novembre, le paillage, le noir des cendres |
@@ -852,7 +852,16 @@ et on n'accepte pas non plus que quatre espèces se ressemblent.
 | **Arbuste en cépée** | noisetier, sureau, prunellier, aubépine | Noisetier : brins arqués, grande feuille cordée, chatons. Sureau : rameaux épais à moelle, feuille composée, corymbes blancs puis baies noires. Prunellier : **épineux**, floraison blanche sur bois nu, prunelles bleu-noir. Aubépine : épineux, feuille lobée, cenelles rouges. |
 | **Fourré bas / lande** | ronce, ajonc, genêt, callune | Dessinés **par cellule agrégée**. Ronce : masse hérissée, mûres. Ajonc : boule épineuse jaune vif en fleur. Genêt : rameaux verts dressés, fleurs jaunes. Callune : tapis violet ras en fin d'été. |
 
-**Les stades** restent une fonction continue de `heightM / hauteurMaxM`, mais
+**L'ÉPAISSEUR DU FÛT NE S'INVENTE PLUS.** `SnapshotTree.diametreCm` porte le
+diamètre à 1,30 m que l'arbre a réellement, et non plus un proxy tiré de sa
+hauteur (#62). Deux arbres de même taille se dessinent donc à des grosseurs
+différentes selon qu'ils ont poussé serrés ou au large, ce qui est visible sur
+le terrain et ne l'était pas ici. C'est aussi lui, et non la hauteur, qui donne
+le stade forestier (`stadeDe`, docs/attentes-du-rendu.md).
+
+**Les stades** ci-dessous sont l'échelle VISUELLE du rendu, distincte de
+l'échelle forestière en diamètre. Ils restent une fonction continue de
+`heightM / hauteurMaxM`, mais
 avec D4 c'est le squelette qui les porte : semis (< 0,5 m), gaulis (0,5–3 m),
 perchis (3–10 m), futaie (10 m–max), sénescent (`fAge < 1` : cime dégarnie,
 grosses charpentières mortes, houppier étalé), **chandelle** (fût gris ou noir,

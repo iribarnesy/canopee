@@ -17,6 +17,7 @@ import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 import {
   arbreDuSnapshot,
   construireSnapshot,
@@ -68,6 +69,7 @@ describe("les arbres de l'instantané", () => {
     y: 4,
     ageWeeks: 520,
     heightM: 9,
+    diametreCm: diametreInitialCm(9),
     stress: 1,
     alive: true,
     uptakeYearG: 10,
@@ -283,6 +285,7 @@ describe("les chutes de chandelle", () => {
       y: 6.25,
       especeId: "carpinus_betulus",
       heightM: 14,
+      diametreCm: diametreInitialCm(14),
       directionRad: 1.2,
       masseKgC: 210,
       empreinte: [
@@ -376,6 +379,7 @@ describe("ce qui s'est passé cette semaine", () => {
       y: 8.25,
       ageWeeks: 1040,
       heightM: 7,
+      diametreCm: diametreInitialCm(7),
       stress: 12,
       alive: false,
       causeMort: "secheresse",

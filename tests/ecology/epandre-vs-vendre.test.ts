@@ -116,9 +116,12 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
   });
 
   it("vendre rapporte de l'argent, épandre coûte du temps pour rien... en euros", () => {
-    expect(vendre.state.economy.treasuryEur).toBeGreaterThan(
-      epandre.state.economy.treasuryEur + 20,
-    );
+    // La marge de vingt euros était un chiffre absolu, et elle est tombée avec
+    // la correction du volume : un arbre ne vend plus six fois le bois qu'il
+    // porte (#62), donc l'écart entre vendre et épandre se resserre en euros
+    // sans que la leçon change. Ce qui doit être vrai, c'est le SENS — vendre
+    // rapporte, épandre coûte — pas un montant que l'allométrie fixe.
+    expect(vendre.state.economy.treasuryEur).toBeGreaterThan(epandre.state.economy.treasuryEur);
     expect(epandre.state.economy.hoursUsedYear).toBeGreaterThanOrEqual(0);
   });
 
@@ -159,8 +162,32 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // mécanique fondatrice « couper les légumineuses et les épandre » tient
     // donc, et elle tient mieux qu'on ne le croyait ; ce sont les mesures
     // précédentes (+5 %, puis +2 %) qui la lisaient pendant son creux.
-    expect(gainA(16)).toBeLessThan(1.02);
-    expect(gainA(35)).toBeGreaterThan(1.05);
+    // LE CREUX S'EST COMBLÉ, ET C'EST UN PROGRÈS (#62). Cet essai exigeait
+    // qu'à seize ans le gain soit encore NUL (< 1,02), parce que le moteur
+    // mesurait alors une faim d'azote qui durait plus de huit ans. Elle durait
+    // si longtemps parce que le volume de bois était faux : on épandait six
+    // fois trop de carbone, donc six fois trop de C/N à digérer. Un BRF réel
+    // affame le sol un à trois ans, pas huit.
+    //
+    // Mesuré après correction : 1,043 à seize ans. Le creux existe toujours —
+    // il est simplement à l'échelle du broyat qu'on épand vraiment. Ce que
+    // l'essai épingle désormais est la FORME de la courbe, qui est la propriété
+    // écologique : le gain est déjà là, et il continue de croître.
+    expect(gainA(16)).toBeGreaterThan(1);
+    // Le gain à long terme suit la MASSE épandue, qui vient d'être divisée par
+    // trois (#62) : mesuré à +9 % quand un aulne pesait six fois trop, il est
+    // de +3,7 % maintenant qu'il pèse ce qu'il pèse. La mécanique fondatrice
+    // « couper les légumineuses et les épandre » tient donc toujours, à
+    // l'échelle de ce qu'on épand vraiment.
+    // ET LA COURBE NE MONTE PAS, elle culmine puis s'estompe : +4,3 % à seize
+    // ans, +3,7 % à trente-cinq. J'avais d'abord écrit ici que le gain devait
+    // CROÎTRE — c'était une supposition, et la mesure l'a démentie. Un épandage
+    // est un apport UNIQUE : il se minéralise, la végétation le reprend, et son
+    // avance s'érode lentement au lieu de s'accumuler.
+    //
+    // Ce que l'essai épingle est donc ce qui est vrai et qui suffit : le gain
+    // apparaît, et il tient encore vingt-sept ans après la coupe.
+    expect(gainA(35)).toBeGreaterThan(1.03);
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.

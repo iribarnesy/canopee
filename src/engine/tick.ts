@@ -56,6 +56,7 @@ import { getEspece } from "./especes";
 import {
   chargeCombustible,
   departDeFeu,
+  intensiteDuFeu,
   propager,
   rangsDuFront,
   survitAuFeu,
@@ -173,6 +174,11 @@ import {
 import { type StadeDeDeveloppement, stadeDe } from "./stades";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
+import {
+  facteurCroissanceTassement,
+  facteurInfiltration,
+  tassementApresUneAnnee,
+} from "./tassement";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
 import type { CauseMort, TreeState } from "./trees";
 import {
@@ -303,11 +309,56 @@ export interface FranchissementDeStade {
   versStade: StadeDeDeveloppement;
 }
 
+/**
+ * Un arbre que le feu a emporté, rapporté LA SEMAINE DE L'INCENDIE.
+ *
+ * `TickResult.morts` ne pouvait pas s'en charger, et pas par négligence : un
+ * arbre tué par le feu reste debout, récupérable en coupe sanitaire, et n'entre
+ * dans `morts` qu'au bout de `CHABLIS_RECUPERABLE_SEMAINES` — un an plus tard,
+ * une semaine où `incendie` est `undefined`. L'incendie et ses victimes ne
+ * pouvaient donc jamais figurer dans le même journal.
+ *
+ * Les y pousser DEUX fois — à l'incendie puis à la chute — aurait été pire : un
+ * consommateur qui compte les morts en aurait compté le double. C'est pourquoi
+ * les identités arrivent ici, dans le récit de l'incendie, et non dans `morts`.
+ *
+ * `id` suffit à faire la jointure : dans les deux cas l'arbre est TOUJOURS dans
+ * `state.trees`, donc dans l'instantané — en chandelle, ou rabattu sur son
+ * rejet. Position et espèce s'y lisent, et l'intensité qui l'a tué se recalcule
+ * avec `intensiteDuFeu(charges[i])` (feu.ts). Seule la hauteur d'AVANT ne se
+ * lit nulle part, parce qu'un rejet a écrasé la sienne.
+ */
+export interface VictimeDuFeu {
+  id: number;
+  /** hauteur juste avant le feu, m — écrasée chez un rejet */
+  hauteurAvantM: number;
+  /**
+   * La souche a rejeté : l'arbre reste EN JEU, rabattu à `HAUTEUR_REJET_M`, au
+   * lieu de laisser une chandelle noire. Ça ne s'anime pas pareil — la couronne
+   * s'embrase dans les deux cas, mais l'un repart d'en bas et l'autre pas — et
+   * c'est ce qui fait des pyrophytes des gagnants du feu.
+   */
+  rejet: boolean;
+}
+
 /** L'incendie de la semaine, tel qu'on peut le raconter ET le dessiner. */
 export interface IncendieResult {
   cellulesBrulees: number;
   arbresTues: number;
   rejets: number;
+  /**
+   * QUI le feu a emporté, et non plus seulement combien. `arbresTues` en donnait
+   * le nombre, jamais les identités : le rendu devait reconnaître les arbres
+   * torchés en comparant `brulEeSemaine` à la fenêtre du journal, une jointure
+   * qu'il refaisait faute que le moteur la donne — et fragile, puisqu'un arbre
+   * brûlé lors d'un incendie PRÉCÉDENT garde son `brulEeSemaine`.
+   *
+   * La liste couvre exactement ce que compte `arbresTues` : les vivants dont le
+   * feu a emporté l'aérien, rejets compris (distingués par `rejet`). Une
+   * chandelle qui rebrûle n'y est pas — elle était déjà morte, et elle ne
+   * compte pas non plus dans `arbresTues`.
+   */
+  victimes: readonly VictimeDuFeu[];
   carboneTHa: number;
   /** cellule où le feu est parti */
   origine: number;
@@ -496,6 +547,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const excessMm = state.soil.excessMm.slice();
   const mineralNG = state.soil.mineralNG.slice();
   const litterNG = state.soil.litterNG.slice();
+  // La structure du sol : ce que les engins tassent et ce que les racines
+  // réparent (tassement.ts). Déclaré tôt parce que le bilan hydrique en dépend
+  // — un sol tassé infiltre moins et ruisselle plus.
+  const tassement = state.soil.tassement.slice();
   const litterCG = state.soil.litterCG.slice();
   const humusCG = state.soil.humusCG.slice();
   const phosphoreG = state.soil.phosphoreG.slice();
@@ -679,9 +734,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     const saturationSurface = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     const amontIci = apportCelluleMm(i);
+    // Un sol tassé infiltre moins, donc ruisselle plus — et ce qui ruisselle
+    // emporte la terre (tassement.ts, erosion.ts). C'est la chaîne qui relie
+    // un passage de tracteur à une ravine, et elle n'existait pas.
+    const infiltration = facteurInfiltration(tassement[i] ?? 0);
     const ruissele =
       (weather.rainMm + amontIci) *
-      coefficientRuissellement(pentes[i] ?? 0, couvertureSol, saturationSurface);
+      Math.min(
+        1,
+        coefficientRuissellement(pentes[i] ?? 0, couvertureSol, saturationSurface) /
+          Math.max(0.1, infiltration),
+      );
     const bilan = profilHydro(
       {
         horizons: horizonsCellule,
@@ -1251,7 +1314,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     herbeHumidite[i] = humiditeVecue(herbeHumidite[i] ?? remplissage, remplissage);
-    const cible = couvertureMax(groundLight[i] ?? 1, herbeHumidite[i] ?? remplissage);
+    // Le tassement plafonne aussi la strate herbacée — c'est même sur elle que
+    // les essais d'Arvalis ont mesuré la perte. La boucle qui se referme :
+    // moins de couverture, donc plus de ruissellement, sur un sol qui infiltre
+    // déjà moins (tassement.ts).
+    const cible =
+      couvertureMax(groundLight[i] ?? 1, herbeHumidite[i] ?? remplissage) *
+      facteurCroissanceTassement(tassement[i] ?? 0);
     herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
     // La biomasse suit la croissance mais ne suit pas la régression : le foin
     // reste debout et ne part qu'avec la décomposition, la fauche ou le feu.
@@ -1329,6 +1398,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
       phosphoreSatisfaction: pSatisfaction[t] ?? 1,
       intensiteAllelopathique: intensiteAllelopathiqueEn(tree.x, tree.y),
+      // Le tassement est LOCAL : deux arbres de la même parcelle n'ont pas le
+      // même sol sous les pieds selon que le tracteur est passé sous eux ou
+      // non (tassement.ts).
+      tassement: tassement[cellIndexAt(dims, tree.x, tree.y)] ?? 0,
       potassiumSatisfaction: kSatisfaction[t] ?? 1,
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
@@ -1342,7 +1415,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     limitingFactors[t] = result.limitingFactor;
     if (tree.alive && next.heightM > tree.heightM) {
       const espece = getEspece(tree.especeId);
-      nppKgC += treeTotalCarbonKg(espece, next.heightM) - treeTotalCarbonKg(espece, tree.heightM);
+      nppKgC +=
+        treeTotalCarbonKg(espece, next.diametreCm, next.heightM) -
+        treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
     }
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
@@ -1368,8 +1443,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // c'est le seul endroit du programme où c'est vrai. Un arbre mort ne
     // franchit rien — une chandelle qui grisonne ne « passe pas futaie ».
     if (next.alive) {
-      const avant = stadeDe(tree.heightM);
-      const apres = stadeDe(next.heightM);
+      const avant = stadeDe(tree.diametreCm);
+      const apres = stadeDe(next.diametreCm);
       if (avant !== apres) {
         franchissements.push({ id: tree.id, deStade: avant, versStade: apres });
       }
@@ -1560,7 +1635,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const hauteur = Math.max(0.05, tree.heightM - degat.pousseMangeeM);
       // Le carbone mangé ne s'évapore pas : il part en respiration du gibier,
       // et ce qui n'est pas digéré revient au sol en déjections.
-      const mangeKgC = treeTotalCarbonKg(espece, tree.heightM) - treeTotalCarbonKg(espece, hauteur);
+      const mangeKgC =
+        treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) -
+        treeTotalCarbonKg(espece, tree.diametreCm, hauteur);
       // L'azote suit le même chemin : ce qui partait dans le rameau quitte
       // l'arbre et revient au sol. L'herbivore ne détruit rien, il déplace.
       const cell = Math.floor(tree.y) * station.coteM + Math.floor(tree.x);
@@ -1824,7 +1901,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // bois mort. Ce transfert n'a lieu qu'UNE fois — ensuite l'arbre reste
       // en jeu comme chandelle, sans plus rien à donner.
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
-      deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM);
+      deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM);
       morts.push({
         id: tree.id,
         x: tree.x,
@@ -1881,7 +1958,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const anneesDebout = (state.week - tree.mortSemaine) / 52;
     const restantKgC = Math.min(
       Math.max(0, deadWoodKgC),
-      treeTotalCarbonKg(getEspece(tree.especeId), tree.heightM) *
+      treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM) *
         Math.exp(-DEADWOOD_DECAY_PER_YEAR * anneesDebout),
     );
     deadWoodKgC -= restantKgC;
@@ -1927,7 +2004,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const cellule = cellIndexAt(dims, tree.x, tree.y);
       const recu = massePosee.get(cellule);
       const espece = getEspece(tree.especeId);
-      const masse = treeTotalCarbonKg(espece, tree.heightM);
+      const masse = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
       if (!tree.alive || recu === undefined || !ecrasePar(recu.part, masse)) {
         debout.push(tree);
         continue;
@@ -2004,6 +2081,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const brulees = propagation.brulees;
       let tues = 0;
       let rejets = 0;
+      const victimes: VictimeDuFeu[] = [];
       const apresFeu: TreeState[] = [];
       for (const tree of nextTrees) {
         const cellule =
@@ -2013,8 +2091,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           apresFeu.push(tree);
           continue;
         }
-        // L'intensité suit le combustible local.
-        const intensite = Math.min(1, (charge.parCellule[cellule] ?? 0) / 1.2);
+        // L'intensité suit le combustible local. La règle vit dans `feu.ts`,
+        // nommée, pour que le rendu et le banc de scènes la lisent au lieu de
+        // la recopier.
+        const intensite = intensiteDuFeu(charge.parCellule[cellule] ?? 0);
         const espece = getEspece(tree.especeId);
         if (survitAuFeu(tree, intensite)) {
           apresFeu.push(tree);
@@ -2025,14 +2105,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // DÉJÀ compté quelque part : l'émettre sans l'en retirer fabriquerait
           // du carbone. Et un arbre déjà mort ne rejette pas de souche, ni ne
           // compte une deuxième fois parmi les arbres tués par le feu.
-          const aerienKgC = treeAboveCarbonKg(espece, tree.heightM);
+          const aerienKgC = treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM);
           if (tree.mortSemaine === undefined) {
             // Tué par un feu précédent et encore récupérable : son carbone
             // attendait sur pied, personne ne l'avait encore versé. L'aérien
             // s'envole, les racines rejoignent le bois mort — le versement que
             // sa mort n'avait fait que différer.
             carboneFeuKgC += aerienKgC;
-            deadWoodKgC += treeTotalCarbonKg(espece, tree.heightM) - aerienKgC;
+            deadWoodKgC += treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) - aerienKgC;
           } else {
             // Chandelle déjà versée au pool, qui se décompose depuis : on n'en
             // émet pas plus qu'il n'en reste (même borne qu'à la coupe).
@@ -2045,7 +2125,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           continue;
         }
         tues++;
-        if (espece.feu.rejetteApresFeu && tree.heightM > 0.6) {
+        const rejette = espece.feu.rejetteApresFeu && tree.heightM > 0.6;
+        // Relevé ICI, une fois, juste après `tues++` : les deux comptes ne
+        // peuvent donc pas diverger, et la hauteur est encore celle d'avant le
+        // feu — dans un instant, un rejet l'aura écrasée.
+        victimes.push({ id: tree.id, hauteurAvantM: tree.heightM, rejet: rejette });
+        if (rejette) {
           // Rejet de souche : l'arbre repart d'en bas, sur un système
           // racinaire qui a tenu — c'est ce qui fait des pyrophytes des
           // gagnants du feu.
@@ -2054,7 +2139,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // fumée, c'est l'aérien MOINS le rejet qui reste debout. L'imputer
           // entier émettait un carbone que l'arbre porte toujours.
           carboneFeuKgC +=
-            treeAboveCarbonKg(espece, tree.heightM) - treeAboveCarbonKg(espece, HAUTEUR_REJET_M);
+            treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
+            treeAboveCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M);
           // Elle ne porte plus pour autant les racines d'un arbre de dix
           // mètres : l'excédent meurt et se décompose sur place (carbon.ts).
           // Sans ce versement, le feu ferait DISPARAÎTRE ce carbone.
@@ -2064,7 +2150,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // verser des racines en plus créerait du carbone. Qu'un tronc mort
           // « rejette » est une autre affaire, et pas la mienne ici.
           if (tree.alive) {
-            deadWoodKgC += racinesPerduesEnRabattant(espece, tree.heightM, HAUTEUR_REJET_M);
+            deadWoodKgC += racinesPerduesEnRabattant(
+              espece,
+              tree.diametreCm,
+              tree.heightM,
+              HAUTEUR_REJET_M,
+            );
           }
           apresFeu.push({
             ...tree,
@@ -2109,12 +2200,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cellulesBrulees: brulees.size,
         arbresTues: tues,
         rejets,
+        victimes,
         carboneTHa: carboneFeuKgC / 1000 / areaHa,
         origine: depart.origine,
         brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
         rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
         charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
       };
+    }
+  }
+
+  // La structure se répare une fois l'an, à proportion de ce qui l'occupe :
+  // sous des racines denses, bien plus vite qu'à nu (tassement.ts).
+  if (week === RECRUITMENT_WEEK) {
+    for (let i = 0; i < nCells; i++) {
+      const t = tassement[i] ?? 0;
+      if (t <= 0) continue;
+      tassement[i] = tassementApresUneAnnee(t, 1 - (groundLight[i] ?? 1));
     }
   }
 
@@ -2161,7 +2263,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // pas. C'est donc une ENTRÉE, au même titre qu'un plant acheté — sans quoi
     // le bilan carbone fabrique de la matière à chaque printemps.
     for (const recrue of recruitment.newTrees) {
-      importedPlantsKgC += treeTotalCarbonKg(getEspece(recrue.especeId), recrue.heightM);
+      importedPlantsKgC += treeTotalCarbonKg(
+        getEspece(recrue.especeId),
+        recrue.diametreCm,
+        recrue.heightM,
+      );
       // Ce sont les semis RÉELLEMENT installés : `yearlyRecruitment` a déjà
       // écarté ceux que le plafond de densité, le pH ou l'ombre refusaient.
       naissances.push({
@@ -2214,6 +2320,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         excessMm,
         boisAuSolCG,
         boisEnTraversPart,
+        tassement,
         mineralNG,
         litterNG,
         litterCG,

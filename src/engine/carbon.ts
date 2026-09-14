@@ -15,7 +15,7 @@
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import type { GameState } from "./state";
-import type { TreeState } from "./trees";
+import { type TreeState, volumeAerienM3 } from "./trees";
 
 /** fraction de carbone de la matière sèche (§12 : 47-50 %) */
 export const CARBON_FRACTION = 0.48;
@@ -47,19 +47,31 @@ export const CN_HUMUS = 11;
 /** 1 t/ha = 100 g/m² */
 export const T_HA_TO_G_M2 = 100;
 
-/** Volume de bois aérien, m³ — même proxy allométrique que la vente (actions.ts). */
-export function boisVolumeM3(heightM: number): number {
-  return 0.015 * heightM * heightM;
-}
-
-/** Carbone aérien d'un arbre, kg C. */
-export function treeAboveCarbonKg(espece: EspeceV0, heightM: number): number {
-  return boisVolumeM3(heightM) * espece.bois.densite * 1000 * CARBON_FRACTION;
+/**
+ * Carbone aérien d'un arbre, kg C.
+ *
+ * Le volume ne se déduit plus de la seule hauteur : il se lit sur le diamètre
+ * que l'arbre PORTE (`volumeAerienM3`, trees.ts). Ce module gardait sa propre
+ * copie de la règle allométrique — deux copies d'une même règle finissent
+ * toujours par diverger, et celle-ci impliquait un tronc plus lourd que son
+ * cylindre (#62).
+ *
+ * Le diamètre et la hauteur restent SÉPARÉS, et ce n'est pas une coquetterie :
+ * rabattre un arbre lui retire de la hauteur sans toucher au diamètre de ce
+ * qui reste, et c'est ainsi que la trogne et le recépage comptent ce qu'ils
+ * emportent.
+ *
+ * *(Réserve connue : `bois.densite` est une densité commerciale à 12 %
+ * d'humidité, là où la biomasse demande l'infradensité. Le carbone reste donc
+ * surestimé d'environ 20 %. À instruire essence par essence, hors de ce lot.)*
+ */
+export function treeAboveCarbonKg(espece: EspeceV0, diametreCm: number, heightM: number): number {
+  return volumeAerienM3(diametreCm, heightM) * espece.bois.densite * 1000 * CARBON_FRACTION;
 }
 
 /** Carbone total (aérien + racinaire) d'un arbre, kg C. */
-export function treeTotalCarbonKg(espece: EspeceV0, heightM: number): number {
-  return treeAboveCarbonKg(espece, heightM) * (1 + ROOT_SHOOT_RATIO);
+export function treeTotalCarbonKg(espece: EspeceV0, diametreCm: number, heightM: number): number {
+  return treeAboveCarbonKg(espece, diametreCm, heightM) * (1 + ROOT_SHOOT_RATIO);
 }
 
 /**
@@ -73,8 +85,8 @@ export function treeTotalCarbonKg(espece: EspeceV0, heightM: number): number {
  * verser la part perdue au bois mort (`racinesPerduesEnRabattant`) plutôt que
  * de la laisser disparaître.
  */
-export function treeRootCarbonKg(espece: EspeceV0, heightM: number): number {
-  return treeAboveCarbonKg(espece, heightM) * ROOT_SHOOT_RATIO;
+export function treeRootCarbonKg(espece: EspeceV0, diametreCm: number, heightM: number): number {
+  return treeAboveCarbonKg(espece, diametreCm, heightM) * ROOT_SHOOT_RATIO;
 }
 
 /**
@@ -88,12 +100,14 @@ export function treeRootCarbonKg(espece: EspeceV0, heightM: number): number {
  */
 export function racinesPerduesEnRabattant(
   espece: EspeceV0,
+  diametreCm: number,
   hauteurAvantM: number,
   hauteurApresM: number,
 ): number {
   return Math.max(
     0,
-    treeRootCarbonKg(espece, hauteurAvantM) - treeRootCarbonKg(espece, hauteurApresM),
+    treeRootCarbonKg(espece, diametreCm, hauteurAvantM) -
+      treeRootCarbonKg(espece, diametreCm, hauteurApresM),
   );
 }
 
@@ -156,7 +170,7 @@ export interface CarbonInventory {
 export function livingCarbonKg(trees: readonly TreeState[]): number {
   let sum = 0;
   for (const t of trees) {
-    if (t.alive) sum += treeTotalCarbonKg(getEspece(t.especeId), t.heightM);
+    if (t.alive) sum += treeTotalCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
   }
   return sum;
 }

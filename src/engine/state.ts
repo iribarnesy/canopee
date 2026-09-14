@@ -21,7 +21,7 @@ import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
 import { ruHorizonMm } from "./soil";
-import { type TreeState, tirerVigueurIndividuelle } from "./trees";
+import { diametreInitialCm, type TreeState, tirerVigueurIndividuelle } from "./trees";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
@@ -185,6 +185,14 @@ export interface SoilState {
    * change que lorsqu'un nouveau tronc se pose.
    */
   boisEnTraversPart: number[];
+  /**
+   * TASSEMENT du sol par cellule ∈ [0,1] : 0 = structure intacte, 1 = tassé.
+   *
+   * Ce qui change vraiment sous une conduite agricole n'est pas la texture ni
+   * le pH, c'est l'ARRANGEMENT des particules. Un limon tassé et le même limon
+   * en bonne structure ne se comportent pas pareil (tassement.ts).
+   */
+  tassement: number[];
   /**
    * Phosphore ASSIMILABLE, g/m². Il ne diffuse pas : ce qui est dans une
    * cellule n'y bougera pas (pk.ts).
@@ -424,6 +432,7 @@ export function createGameState(
       humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Array(n).fill(0),
       boisEnTraversPart: new Array(n).fill(0),
+      tassement: new Array(n).fill(0),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,
@@ -493,6 +502,7 @@ export function plantAt(
     y,
     ageWeeks: 0,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 0,
     alive: true,
     uptakeYearG: 0,
@@ -542,6 +552,7 @@ export function plantScattered(
       y: ry.value * side,
       ageWeeks: 0,
       heightM,
+      diametreCm: diametreInitialCm(heightM),
       stress: 0,
       alive: true,
       uptakeYearG: 0,

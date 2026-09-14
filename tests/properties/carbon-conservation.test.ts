@@ -12,6 +12,7 @@ import {
   livingCarbonKg,
   racinesPerduesEnRabattant,
   treeAboveCarbonKg,
+  treeRootCarbonKg,
   treeTotalCarbonKg,
 } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
@@ -20,6 +21,7 @@ import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, plantScattered } from "../../src/engine/state";
 import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
+import { diametreInitialCm } from "../../src/engine/trees";
 
 const STATION = { ...LIMON_RICHE.station, coteM: 50 };
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
@@ -43,7 +45,7 @@ function totalStockKgC(state: GameState): number {
   let surPiedKgC = 0;
   for (const t of state.trees) {
     if (!t.alive && t.mortSemaine === undefined) {
-      surPiedKgC += treeTotalCarbonKg(getEspece(t.especeId), t.heightM);
+      surPiedKgC += treeTotalCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
     }
   }
   return livingCarbonKg(state.trees) + surPiedKgC + state.carbon.deadWoodKgC + soilG / 1000;
@@ -135,7 +137,7 @@ describe("couper une chandelle brûlée passé le délai de récupération", () 
       ...state,
       trees: state.trees.map((t) => ({ ...t, alive: false, causeMort: "feu", brulEeSemaine: 0 })),
     };
-    const arbreKgC = treeTotalCarbonKg(getEspece("pinus_sylvestris"), 15);
+    const arbreKgC = treeTotalCarbonKg(getEspece("pinus_sylvestris"), diametreInitialCm(15), 15);
 
     let poolAvantCoupe = 0;
     let exporteALaCoupe = 0;
@@ -274,8 +276,18 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
     // le bilan se referme exactement.
     expect(bilanKgC(r.state)).toBeCloseTo(bilanKgC(state), 6);
     // Et ce qui reste au sol est bien la part racinaire perdue, pas zéro.
-    const attendu = racinesPerduesEnRabattant(espece, 12, RECEPAGE_HAUTEUR_M);
-    expect(attendu).toBeGreaterThan(100);
+    const attendu = racinesPerduesEnRabattant(
+      espece,
+      diametreInitialCm(12),
+      12,
+      RECEPAGE_HAUTEUR_M,
+    );
+    // Ce qu'on épingle est que la part racinaire perdue est SUBSTANTIELLE, pas
+    // qu'elle vaut tant de kilos : un seuil en valeur absolue ne décrirait que
+    // le niveau de l'allométrie du jour, et celui-ci a déjà changé d'un facteur
+    // six (#62). Rabattre un arbre de douze mètres à hauteur de souche lui
+    // retire l'essentiel de ses racines, quelle que soit l'échelle.
+    expect(attendu).toBeGreaterThan(0.8 * treeRootCarbonKg(espece, diametreInitialCm(12), 12));
     expect(r.state.carbon.deadWoodKgC - state.carbon.deadWoodKgC).toBeCloseTo(attendu, 6);
   });
 
@@ -290,7 +302,7 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
     expect(r.refusals).toEqual([]);
     expect(bilanKgC(r.state)).toBeCloseTo(bilanKgC(state), 6);
     expect(r.state.carbon.deadWoodKgC - state.carbon.deadWoodKgC).toBeCloseTo(
-      racinesPerduesEnRabattant(espece, 12, 2),
+      racinesPerduesEnRabattant(espece, diametreInitialCm(12), 12, 2),
       6,
     );
   });
@@ -302,10 +314,11 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
     const r = applyAction(state, { type: "receper", week: 0, treeIds: [id] });
     const exporte = r.state.carbon.exportedEnergyCumKgC - state.carbon.exportedEnergyCumKgC;
     expect(exporte).toBeCloseTo(
-      treeAboveCarbonKg(espece, 12) - treeAboveCarbonKg(espece, RECEPAGE_HAUTEUR_M),
+      treeAboveCarbonKg(espece, diametreInitialCm(12), 12) -
+        treeAboveCarbonKg(espece, diametreInitialCm(12), RECEPAGE_HAUTEUR_M),
       6,
     );
-    expect(exporte).toBeLessThan(treeAboveCarbonKg(espece, 12));
+    expect(exporte).toBeLessThan(treeAboveCarbonKg(espece, diametreInitialCm(12), 12));
   });
 });
 

@@ -7,20 +7,38 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { diametreInitialCm } from "../../src/engine/trees";
 import { runYears } from "../helpers";
 
 describe("allométrie carbone", () => {
-  it("un grand hêtre (25 m) stocke quelques tonnes de carbone", () => {
-    const kg = treeTotalCarbonKg(getEspece("fagus_sylvatica"), 25);
-    expect(kg).toBeGreaterThan(1500);
-    expect(kg).toBeLessThan(6000);
+  it("un grand hêtre (25 m, 50 cm) pèse ce que pèse un hêtre de 25 m et 50 cm", () => {
+    // CETTE ANCRE A DÉJÀ MENTI UNE FOIS, et il faut dire comment (#62).
+    //
+    // Elle exigeait « plus de 1 500 kg », bornes écrites d'après le moteur
+    // d'alors — qui donnait 3 917 kg pour cet arbre, soit trois à quatre fois
+    // le réel. Une borne basse posée sous un chiffre faux ENTÉRINE l'erreur au
+    // lieu de l'attraper : une ancre écrite d'après le moteur n'est pas une
+    // ancre, c'est un miroir.
+    //
+    // Les bornes ci-dessous viennent donc du DEHORS. Une tige de hêtre de 25 m
+    // et 50 cm de diamètre porte de l'ordre de 2,4 m³ de tige et 3,2 m³
+    // d'aérien, soit 0,8 à 1,1 t C aérien ; avec les racines
+    // (`ROOT_SHOOT_RATIO`), le total attendu tombe entre 1,0 et 1,4 t.
+    // Le moteur y place 1 333 kg.
+    const kg = treeTotalCarbonKg(getEspece("fagus_sylvatica"), 50, 25);
+    expect(kg).toBeGreaterThan(1000);
+    expect(kg).toBeLessThan(1500);
   });
 
   it("un semis stocke un carbone négligeable, et racines < aérien", () => {
     const espece = getEspece("betula_pendula");
-    expect(treeTotalCarbonKg(espece, 0.3)).toBeLessThan(1);
-    expect(treeTotalCarbonKg(espece, 10)).toBeGreaterThan(treeAboveCarbonKg(espece, 10));
-    expect(treeTotalCarbonKg(espece, 10)).toBeLessThan(2 * treeAboveCarbonKg(espece, 10));
+    expect(treeTotalCarbonKg(espece, diametreInitialCm(0.3), 0.3)).toBeLessThan(1);
+    expect(treeTotalCarbonKg(espece, diametreInitialCm(10), 10)).toBeGreaterThan(
+      treeAboveCarbonKg(espece, diametreInitialCm(10), 10),
+    );
+    expect(treeTotalCarbonKg(espece, diametreInitialCm(10), 10)).toBeLessThan(
+      2 * treeAboveCarbonKg(espece, diametreInitialCm(10), 10),
+    );
   });
 });
 
@@ -56,8 +74,8 @@ describe("couper une chandelle déjà versée au bois mort", () => {
   const STATION = { ...LIMON_RICHE.station, coteM: 50 };
   const WEATHER = syntheticYear(LIMON_RICHE.climat);
   const PIN = getEspece("pinus_sylvestris");
-  const AERIEN = treeAboveCarbonKg(PIN, 15);
-  const TOTAL = treeTotalCarbonKg(PIN, 15);
+  const AERIEN = treeAboveCarbonKg(PIN, diametreInitialCm(15), 15);
+  const TOTAL = treeTotalCarbonKg(PIN, diametreInitialCm(15), 15);
 
   /** Un pin de 15 m tué par le feu en semaine 0, laissé debout `semaines`. */
   function pinBrule(semaines: number): GameState {
@@ -97,10 +115,13 @@ describe("couper une chandelle déjà versée au bois mort", () => {
 
   it("passé le délai : le bois est déjà au pool, la coupe l'en RETIRE", () => {
     const avant = pinBrule(60);
-    // Le tick a posé la mort en semaine 52 et versé les 933 kgC de l'arbre.
+    // Le tick a posé la mort en semaine 52 et versé l'arbre ENTIER au pool.
+    // On le dit relativement à `TOTAL` et non en kilos : un nombre en dur ici
+    // ne décrirait que l'allométrie du jour, et celle-ci a déjà changé une fois
+    // d'un facteur six (#62).
     expect(avant.trees.find((t) => t.id === 1)?.mortSemaine).toBe(52);
     const poolAvant = avant.carbon.deadWoodKgC;
-    expect(poolAvant).toBeGreaterThan(900);
+    expect(poolAvant).toBeGreaterThan(0.9 * TOTAL);
 
     const apres = couper(avant);
     expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(AERIEN, 6);
@@ -115,10 +136,14 @@ describe("couper une chandelle déjà versée au bois mort", () => {
 
   it("on n'en sort pas plus que ce que la décomposition a laissé", () => {
     const vieilli = pinBrule(60);
-    // Une chandelle presque entièrement retournée au sol : 100 kgC au pool.
-    const avant = { ...vieilli, carbon: { ...vieilli.carbon, deadWoodKgC: 100 } };
+    // Une chandelle à moitié retournée au sol. Le reste à prélever se dit en
+    // part de l'aérien, pas en kilos : ce qu'on épingle est un PLAFOND — on ne
+    // sort pas du pool plus qu'il ne contient — et ce plafond ne dépend pas du
+    // niveau absolu de l'allométrie.
+    const restant = AERIEN / 2;
+    const avant = { ...vieilli, carbon: { ...vieilli.carbon, deadWoodKgC: restant } };
     const apres = couper(avant);
-    expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(100, 6);
+    expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(restant, 6);
     expect(apres.carbon.deadWoodKgC).toBeCloseTo(0, 9);
     expect(apres.carbon.deadWoodKgC).toBeGreaterThanOrEqual(0);
   });

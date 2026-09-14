@@ -20,23 +20,81 @@
 
 Chaque critère indique le mécanisme qui le porte et, quand il existe, le test.
 
+## Ce qu'un test écologique a le droit d'affirmer
+
+Trois pièges se sont refermés assez souvent sur ce dépôt pour mériter d'être
+écrits une fois pour toutes.
+
+**Un rapport entre deux quantités composites n'est pas une propriété du monde.**
+« Le mélange perd deux fois moins d'aulnes », « le réchauffement double les
+ravageurs », « épandre vaut +9 % » : ces rapports ont tous été rabaissés deux ou
+trois fois, chaque fois pour une cause réelle et documentée — vitesses de
+croissance calées sur les tables, allométrie corrigée, élancement individualisé.
+Mais un seuil qu'on rabaisse à chaque changement de mécanisme n'enregistre plus
+que le moteur : il a cessé de le contraindre. Ce qui résiste, c'est la
+DIRECTION, et elle s'exige graine par graine plutôt qu'en moyenne — trois
+directions concordantes valent mieux qu'un ratio moyen.
+
+**Une ancre écrite d'après le moteur n'est pas une ancre.** Le seul test qui
+confrontait le carbone à une valeur absolue exigeait qu'un hêtre de 25 m stocke
+« quelques tonnes ». La borne avait été posée sur le volume du moteur, lequel
+était faux d'un facteur cinq : elle entérinait l'erreur au lieu de l'attraper.
+Une valeur absolue se cale sur une source extérieure, ou ne se cale pas.
+
+**La conservation ne valide rien.** Un stock faux d'un facteur cinq se conserve
+parfaitement. Les invariants attrapent les fuites, jamais les niveaux — c'est
+d'ailleurs pour ça qu'ils sont précieux : ils ont trouvé, le jour même, une
+fuite de 0,133 kg due à un grand livre de test qui mesurait le même arbre avec
+deux règles. Mais un critère noté ✅ sur la seule foi d'un test de conservation
+n'est pas prouvé.
+
+Corollaire pratique : un seuil mesuré au milieu d'un lot périme avant la fin du
+lot. Les chiffres cités dans les commentaires de test sont datés par le
+mécanisme qui les a produits, et se remesurent quand il change.
+
+Le même piège se referme sur les MESURES QU'ON CITE, et pas seulement sur les
+seuils : un chiffre porté dans un commentaire, une PR ou ce référentiel doit
+être remesuré sur le code qu'on LIVRE, pas sur celui qu'on avait à mi-parcours.
+Une PR de ce dépôt a annoncé une amplitude d'élancement obtenue avec des
+constantes annulées depuis — les chiffres étaient sincères et faux.
+
+Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues.
+« Plus de 0,9 × TOTAL » survit à un changement d'échelle, « plus de 900 kg » non.
+
 ## Score actuel
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
-| A. Sol, eau, atmosphère | 15 | 2 | 3 | 20 |
-| B. Lumière et structure | 5 | 3 | 2 | 10 |
-| C. Nutriments et cycles | 9 | 3 | 1 | 13 |
-| D. Climat et phénologie | 7 | 3 | 1 | 11 |
-| E. Interactions entre plantes | 7 | 2 | 3 | 12 |
-| F. Dynamique des peuplements | 7 | 3 | 3 | 13 |
+| A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
+| B. Lumière et structure | 5 | 5 | 0 | 10 |
+| C. Nutriments et cycles | 12 | 1 | 0 | 13 |
+| D. Climat et phénologie | 9 | 4 | 0 | 13 |
+| E. Interactions entre plantes | 7 | 4 | 1 | 12 |
+| F. Dynamique des peuplements | 8 | 5 | 0 | 13 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
-| H. Gestion, économie, travail | 12 | 4 | 3 | 19 |
-| I. Carbone | 5 | 3 | 1 | 9 |
-| J. Biodiversité et structure | 4 | 2 | 0 | 6 |
-| **Total** | **79** | **26** | **17** | **122** |
+| H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
+| I. Carbone | 6 | 3 | 0 | 9 |
+| J. Biodiversité et structure | 5 | 2 | 0 | 7 |
+| **Total** | **104** | **29** | **1** | **134** |
 
-**Score de réalisme : 79 pleins + 26 partiels sur 122 → 75 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 104 pleins + 29 partiels sur 134 → 88 %** *(un partiel compte 1/2)*.
+
+> **Ce tableau venait d'être recompté, et il était faux.** Il annonçait
+> 80 / 26 / 16 sur 122 — soit 76 % — là où les lignes du document en portaient
+> 104 / 28 / 2 sur 134. Personne n'a livré douze critères ce jour-là : l'en-tête
+> était tenu à la main, chaque lot mettant à jour une case et le total, et la
+> dérive s'est accumulée sur une trentaine de lots. Le référentiel s'est allongé
+> de douze lignes sans que le total suive, et des critères sont passés de 🟡 ou
+> ❌ à ✅ sans que leur colonne bouge.
+>
+> Deux critères portaient de surcroît un NUMÉRO DÉJÀ PRIS : le lot du relief
+> avait réutilisé A13 et A14, qui désignaient déjà la structure du sol et la
+> concurrence pour l'eau. Ils sont renumérotés A29 et A30 — aucun code ni aucun
+> test n'y faisait référence.
+>
+> La leçon vaut pour la suite : **un compte tenu à la main diverge**. Il se
+> recompte depuis les lignes à chaque lot, et pas seulement la case qu'on vient
+> de changer.
 
 *Historique : 47 % (référentiel initial) → 53 % (horizons de sol, dérivation
 physique, profondeur et plasticité racinaires) → 55 % (strate herbacée) →
@@ -54,7 +112,8 @@ l'exigence minérale devient une propriété des espèces (ce qui ouvre la porte
 aux cultures) → 74 % (frêne, trogne,
 arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai) → 76 % (relief, écoulement
 latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
-production).*
+production) → 76 % (structure du sol : le tassement et sa réparation)
+→ **88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)**.*
 
 *Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
 hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
@@ -92,11 +151,11 @@ mesurer que ce qu'on sait déjà faire.*
 | A27 | Ce que l'eau emporte est plus riche que le sol moyen, et se dépose plus bas | ✅ | enrichissement ×3, dépôt fonction du couvert de la cellule d'arrivée — le versant se déshabille par le sommet |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
-| A13 | L'eau ruisselle d'une cellule à l'autre : bas de pente frais, crête sèche | ✅ | `relief.ts` ; `relief.test.ts` — le coefficient de ruissellement dépend de la pente, de la COUVERTURE DU SOL et de la saturation |
-| A14 | L'altitude refroidit et l'exposition décide du rayonnement (adret/ubac) | ✅ | 0,6 °C/100 m ; ±25 % d'ETP ET ±1,5 °C entre adret et ubac — c'est la même énergie qui fait les deux, un versant sud n'est pas seulement plus sec |
+| A29 | L'eau ruisselle d'une cellule à l'autre : bas de pente frais, crête sèche | ✅ | `relief.ts` ; `relief.test.ts` — le coefficient de ruissellement dépend de la pente, de la COUVERTURE DU SOL et de la saturation |
+| A30 | L'altitude refroidit et l'exposition décide du rayonnement (adret/ubac) | ✅ | 0,6 °C/100 m ; ±25 % d'ETP ET ±1,5 °C entre adret et ubac — c'est la même énergie qui fait les deux, un versant sud n'est pas seulement plus sec |
 | A28 | La nappe se voit : profondeur et engorgement, cellule par cellule | ✅ | calques « Nappe » et « Engorgement » alimentés par l'instantané |
 | A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` + réserve de surface recalculée par cellule selon son humus ; `sol-vivant.test.ts` |
-| A13 | La structure/compaction évolue (tassement, restauration par les racines) | ❌ | Pas de variable structure |
+| A13 | La structure/compaction évolue (tassement, restauration par les racines) | ✅ | `tassement.ts` ; `tassement.test.ts` — un passage d'engin tasse la seule part MÉCANISABLE de la zone (`mecanisation.ts`) : une parcelle plantée serré ne se tasse pas. Le tassement ferme le sol à l'eau (ruissellement, donc érosion), coûte jusqu'à 30 % de croissance aux arbres ET à la strate herbacée (fourchette Arvalis 5–30 %), et se répare chaque année d'autant plus vite que l'enracinement est dense *(vitesse de retour à calibrer : aucune source consultée ne la chiffre)*. **Limite assumée** : toute partie démarre à structure intacte, y compris sur une parcelle de grande culture qui arriverait déjà tassée — l'historique de la parcelle n'est pas déclaré |
 | A14 | Deux plantes voisines se disputent réellement l'eau de leurs cellules communes | ✅ | Allocation spatiale en 2 passes ; `nurse.test.ts` |
 
 ## B. Lumière et structure
@@ -112,7 +171,7 @@ mesurer que ce qu'on sait déjà faire.*
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
-| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le RAYON, lui, reste `houppierRatio × hauteur` : pas de port serré |
+| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré |
 
 ## C. Nutriments et cycles
 
@@ -165,7 +224,7 @@ mesurer que ce qu'on sait déjà faire.*
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
-| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ❌ | Dépend de B10 |
+| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `trees.ts` (`allocationDiametreCmParM`) ; `elancement.test.ts` — le diamètre est porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, dans une proportion que la lumière décide. Rien n'est déclaré par essence : à écartement 2 / 4 / 6 / 10 m, même espèce et même graine, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4 — gradient MONOTONE, sans palier sur la gamme testée. **Reste 🟡 sur l'AMPLITUDE** : la sylviculture mesure 25–40 au large et 90–100 en perche, le moteur ne couvre que 35–49. La cause est identifiée et ANTÉRIEURE — dans `light.ts:extinctionAt` un codominant n'ombrage qu'au poids 0,4, or en plantation régulière tout le monde est codominant de tout le monde. Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger mérite son propre lot |
 
 ## F. Dynamique des peuplements
 
@@ -233,7 +292,7 @@ mesurer que ce qu'on sait déjà faire.*
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
-| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | proxy 0,015·H² × densité, à caler sur l'IFN |
+| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. Un hêtre de 25 m et 50 cm stocke maintenant 1 333 kg C contre 3 917 avant, pour 1 000 à 1 400 attendus. **Reste 🟡** : `bois.densite` est une densité commerciale à 12 % d'humidité là où la biomasse demande l'infradensité, soit environ 20 % de surestimation résiduelle |
 | I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
 
 ---
@@ -256,12 +315,79 @@ inventaire.
 
 ## Ce qui débloquerait le plus de critères
 
-2. **Le sanglier** : retournement du sol, consommation des glands et des
-   châtaignes — le dernier grand absent du module biotique.
-3. **Variabilité individuelle** (v2) : tous les individus d'une espèce sont
-   aujourd'hui identiques, ce qui rend certains résultats en tout-ou-rien.
-3. **Climat qui dérive** : trajectoires SSP + effet CO₂ (D8, D9).
-4. **Couplage humus ↔ azote et labour** (C8, C9, I6) — et l'humus qui gagne de la réserve utile (A12 dynamique).
+*Cette liste a été réécrite depuis les lignes du tableau. La précédente
+proposait quatre chantiers dont trois étaient faits — la dérive climatique, le
+couplage humus ↔ azote, la variabilité individuelle — et sa numérotation allait
+de 2 à 4 sans passer par 1. Une feuille de route qui ne se relit pas devient un
+piège pour celui qui la suit.*
+
+### 1. Une vraie strate herbacée, avec des espèces distinctes
+
+Le plus gros verrou du référentiel, et de loin. La strate existe aujourd'hui
+comme une COUVERTURE (`herbe.ts`) : un taux par cellule, sans espèces. Tant
+qu'il n'y a pas d'herbacées distinctes, quatre critères restent bloqués et l'un
+d'eux est l'une des deux seules absences qui subsistent :
+
+- **E9** (❌) — les vernales profitent de la fenêtre de printemps. Sa
+  justification dit déjà « dépend d'espèces herbacées distinctes ».
+- **B8** (🟡) — « pas encore d'espèces herbacées distinctes ».
+- **G4** (🟡) — les pollinisateurs manquent d'un calendrier de floraison.
+- **J6** (🟡) — des floraisons étalées nourrissent sans rupture.
+
+C'est aussi ce qui donnerait un sens au sous-étage d'une parcelle
+agroforestière, où la culture EST la strate basse.
+
+### 2. Le poids latéral des codominants (issue #65)
+
+Un seul coefficient, quatre critères. Dans `extinctionAt` (`light.ts`), un
+voisin plus haut ombrage à plein poids et un codominant ne compte que pour 0,4 —
+« calibré à la main », dit la justification de B6. Or en plantation régulière
+tout le monde est codominant de tout le monde.
+
+- **B6** (🟡) — l'auto-éclaircie repose directement dessus.
+- **F6** (🟡) — « plafond de densité arbitraire + ombrage codominant ».
+- **B10** (🟡) — le port serré.
+- **E10** — l'amplitude de l'élancement, bridée par le même terme.
+
+Chantier `à-mesurer` : ce coefficient gouverne aussi la succession et le tri des
+espèces, donc la campagne de mesure vient avant le code.
+
+### 3. Les tempêtes (issue #55) — et d'abord leurs critères
+
+Le référentiel ne contient AUCUNE ligne sur la tempête, le chablis ou la casse
+mécanique. Ce n'est pas un ❌, c'est une absence du référentiel lui-même, ce qui
+est pire : personne ne comptait le point. Le premier geste de ce lot est donc
+d'écrire les critères, pas le code.
+
+Le mot « chablis » est pourtant partout dans le vocabulaire du moteur, où il
+désigne toujours autre chose — la décote d'un bois brûlé, le délai de
+récupération après un feu, le contact au sol d'une chandelle.
+
+### 4. Les moins chers : un test, et le critère passe
+
+Trois critères sont 🟡 non parce que le mécanisme manque, mais parce que
+personne ne l'a mis à l'épreuve. Ce sont les seuls points du référentiel qui
+s'achètent au prix d'un fichier de test :
+
+- **F7** — les trouées déclenchent une régénération : « émergent, non testé ».
+- **I8** — le bilan carbone est négatif au début d'une plantation : « observé
+  dans le jeu, non testé ».
+- **F13** — les hauteurs tombent dans les tables de production : le test existe,
+  c'est la couverture par essence qui est partielle.
+
+Attention à la règle de la section « ce qu'un test écologique a le droit
+d'affirmer » : un test écrit vite fait pour décrocher un ✅ vaut moins que le 🟡
+qu'il remplace.
+
+### 5. Les chantiers autonomes, sans dépendance
+
+- **C10** — la dérive du pH. « Chaulage seul ; pas de dérive » : les litières
+  acidifiantes et le lessivage ne font rien bouger. Autonome, bien borné.
+- **I4** — la fin de vie des produits bois. Le stock est compté
+  (`oeuvreCumKgC`), sa restitution non.
+- **Le sanglier** — retournement du sol, consommation des glands et des
+  châtaignes. Le dernier grand absent du module biotique, et il ne dépend de
+  rien.
 
 ## Le paysage : ce que l'entourage décide
 

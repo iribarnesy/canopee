@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { indiceBiodiversite } from "../../src/engine/biodiversite";
 import type { TreeState } from "../../src/engine/trees";
+import { diametreInitialCm } from "../../src/engine/trees";
 
 function arbre(id: number, especeId: string, heightM: number): TreeState {
   return {
@@ -16,6 +17,7 @@ function arbre(id: number, especeId: string, heightM: number): TreeState {
     y: Math.floor(id / 50),
     ageWeeks: 52 * 30,
     heightM,
+    diametreCm: diametreInitialCm(heightM),
     stress: 0,
     alive: true,
     uptakeYearG: 0,

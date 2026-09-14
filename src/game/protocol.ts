@@ -68,6 +68,17 @@ export interface SnapshotTree {
   x: number;
   y: number;
   heightM: number;
+  /**
+   * Diamètre à 1,30 m, cm. Il ne se déduit PLUS de la hauteur : deux arbres de
+   * même taille n'ont pas la même grosseur selon qu'ils ont poussé serrés ou
+   * au large (#62).
+   *
+   * Sans lui, le rendu ne pourrait plus calculer le stade de développement,
+   * qui est une classe de diamètre (`stades.ts`) — et il ne pourrait pas
+   * dessiner un tronc à la bonne épaisseur, ce qu'il déduisait jusqu'ici d'un
+   * proxy faux.
+   */
+  diametreCm: number;
   ageWeeks: number;
   stress: number;
   fruitsKg: number;

@@ -17,7 +17,7 @@ import { getEspece } from "./especes";
 import { crownRadiusM, lightAtPoint, type PartOmbrageante } from "./light";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
-import { phFactor, type TreeState, tirerVigueurIndividuelle } from "./trees";
+import { diametreInitialCm, phFactor, type TreeState, tirerVigueurIndividuelle } from "./trees";
 
 /** distance moyenne de dispersion par le vent, m (exponentielle) */
 const WIND_MEAN_DISTANCE_M = 25;
@@ -309,6 +309,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       y: pos.y,
       ageWeeks: 0,
       heightM: hauteurDuSemisM(espece.hauteurMaxM),
+      diametreCm: diametreInitialCm(hauteurDuSemisM(espece.hauteurMaxM)),
       stress: 0,
       alive: true,
       uptakeYearG: 0,

@@ -15,6 +15,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import { type RngState, rngFloat } from "./rng";
+import { facteurCroissanceTassement } from "./tassement";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
 export type CauseMort =
@@ -54,6 +55,16 @@ export interface TreeState {
   y: number;
   ageWeeks: number;
   heightM: number;
+  /**
+   * Diamètre à 1,30 m, cm — une grandeur PORTÉE par l'arbre, pas déduite de sa
+   * hauteur.
+   *
+   * C'est la différence qui rend le reste possible : deux arbres de même
+   * hauteur n'ont pas le même diamètre si l'un a poussé à l'ombre et l'autre au
+   * large, et c'est cet écart qui décide lequel casse au vent (`elancement`).
+   * Le volume, donc le carbone et le prix, en découlent (`volumeTigeM3`).
+   */
+  diametreCm: number;
   /** points de stress cumulés ; l'arbre meurt à STRESS_LETHAL */
   stress: number;
   alive: boolean;
@@ -210,6 +221,14 @@ export interface TreeEnvironment {
   phMean: number;
   /** profondeur de sol pénétrable de la station, cm */
   solPenetrableCm: number;
+  /**
+   * Tassement de la cellule ∈ [0,1] (tassement.ts). Il n'entre PAS dans la loi
+   * du minimum : ce n'est pas une ressource qui manque, c'est une contrainte
+   * physique sur l'exploration racinaire, qui s'applique par-dessus tout le
+   * reste — un sol tassé rend moins accessible l'eau ET les éléments qu'il
+   * contient pourtant.
+   */
+  tassement?: number;
   /** °C moyenne de la semaine */
   tMean: number;
   /**
@@ -557,6 +576,137 @@ export const AZOTE_HOUPPIER_G_M2_AN = 8;
  */
 const HOUPPIER_REFERENCE = 0.4;
 
+/**
+ * ─── L'ALLOMÉTRIE DU TRONC ───────────────────────────────────────────────────
+ *
+ * Le moteur portait deux règles allométriques écrites séparément et jamais
+ * confrontées : un volume en `0,015 h²` et un diamètre en `2 h`. Mises face à
+ * face, elles impliquaient un facteur de forme — la part du cylindre
+ * circonscrit que le tronc occupe — allant de 1,6 à 9,6 selon la taille.
+ *
+ * **Un facteur de forme supérieur à 1 est impossible par construction** : un
+ * tronc ne peut pas contenir plus de bois que le cylindre qui l'enveloppe. Les
+ * deux fonctions décrivaient donc des arbres différents, l'une montant en `h²`
+ * quand l'autre impliquait `h³`. Le volume, et avec lui tout le carbone et
+ * toute l'économie, étaient faux d'un facteur ~6 (#62).
+ *
+ * Le remède n'est pas de recaler un coefficient, c'est de renverser la
+ * dépendance : **le diamètre devient une grandeur portée par l'arbre**, et le
+ * volume en découle par la formule des forestiers, `V = f × g × h`. Une seule
+ * règle, un seul endroit, plus de copie qui dérive.
+ */
+
+/**
+ * Facteur de forme : la part du cylindre circonscrit qu'un tronc occupe
+ * réellement. Toujours < 1, autour de 0,5 pour une tige forestière — un tronc
+ * s'effile, il n'est pas un cylindre.
+ *
+ * Vérification : un hêtre de 25 m et 50 cm de diamètre donne ici 2,45 m³ de
+ * tige, ce qui est l'ordre de grandeur attendu pour une telle tige.
+ */
+export const FACTEUR_DE_FORME = 0.5;
+
+/**
+ * Ce que le houppier ajoute à la tige pour faire le volume aérien total.
+ * Le carbone compte les branches ; la scierie non.
+ */
+export const EXPANSION_BRANCHES = 1.3;
+
+/** Section à 1,30 m, m² — la « surface terrière » d'une tige. */
+export function sectionM2(diametreCm: number): number {
+  const d = Math.max(0, diametreCm) / 100;
+  return (Math.PI / 4) * d * d;
+}
+
+/** Volume de la TIGE, m³ : ce qui part en scierie. `V = f × g × h`. */
+export function volumeTigeM3(diametreCm: number, heightM: number): number {
+  return FACTEUR_DE_FORME * sectionM2(diametreCm) * Math.max(0, heightM);
+}
+
+/** Volume AÉRIEN, m³ : la tige et ses branches. C'est lui que le carbone compte. */
+export function volumeAerienM3(diametreCm: number, heightM: number): number {
+  return volumeTigeM3(diametreCm, heightM) * EXPANSION_BRANCHES;
+}
+
+/**
+ * ─── L'ÉLANCEMENT, ET POURQUOI IL DOIT VARIER ────────────────────────────────
+ *
+ * Le coefficient d'élancement H/D décide de qui casse au vent : c'est la
+ * grandeur sur laquelle les modèles de chablis (GALES, HWIND) appuient leur
+ * vitesse critique, et la sylviculture européenne retient **H/D > 80** comme
+ * seuil de risque.
+ *
+ * Avec l'ancien proxy `D = 2 h`, H/D valait 50 pour tout arbre, toute espèce,
+ * toute densité, à jamais : le moteur ne pouvait pas distinguer une tige
+ * élancée d'un arbre trapu, donc pas exprimer la leçon qui compte — *un
+ * peuplement trop dense, éclairci trop tard, tombe à la première tempête.*
+ *
+ * Ce qui fait varier H/D est l'ALLOCATION : un arbre serré court après la
+ * lumière et met ce qu'il gagne dans la hauteur ; un arbre de plein vent
+ * épaissit.
+ *
+ * **Le pilote est la lumière reçue, et ce choix est mesuré, pas supposé.**
+ * Le rapport de houppier est le prédicteur classique des forestiers, et le
+ * moteur le calcule déjà (`light.ts:baseHouppierCible`) : il a donc été essayé
+ * en premier. Il a été ÉCARTÉ par la mesure — piloté par lui, l'élancement se
+ * resserrait sur 36–39 au lieu de s'étaler, parce que dans ce moteur la base
+ * du houppier ne remonte pas assez pour discriminer. La lumière, elle, produit
+ * un gradient MONOTONE avec la densité (`elancement.test.ts`) : à 2 / 4 / 6 /
+ * 10 m d'écartement, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4.
+ *
+ * **Les deux constantes font DEUX choses à la fois, et c'est ce qui les cale :**
+ * leur moyenne fixe le niveau de volume du peuplement, leur écart fixe
+ * l'amplitude de H/D. La médiane vaut 2, la valeur qui reproduit les 2,45 m³ de
+ * tige d'un hêtre de 25 m et 50 cm — vérifiés contre le réel, et c'est l'ancre.
+ * Une hêtraie de 80 ans à 400 tiges/ha donne alors 507 m³/ha, contre 2 388 pour
+ * l'ancien moteur. Les 350 à 450 m³/ha des tables valent pour une futaie
+ * GÉRÉE ; ce banc-là n'est jamais éclairci, et accumule donc davantage.
+ *
+ * **Réserve honnête, et sa cause est ailleurs.** Le moteur couvre H/D de 35 à
+ * 49 quand la sylviculture mesure 25–40 au large et 90–100 en perche : le bon
+ * ordre, un cinquième de l'étendue. Ce n'est pas cette allocation qui borne —
+ * c'est le poids d'ombrage des codominants (0,4 dans `light.ts:extinctionAt`),
+ * qui atténue la concurrence latérale précisément là où elle est la plus forte.
+ * Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger
+ * mérite son propre lot.
+ *
+ * **La hauteur, elle, n'est pas touchée.** Elle est calée sur des tables de
+ * production (Jansen 1996, `hauteurs.test.ts`) : c'est une vraie ancre, et on
+ * ne redistribue pas une croissance validée pour en tirer une autre grandeur.
+ * Le diamètre s'ajoute à côté.
+ */
+
+/** Diamètre gagné par mètre de hauteur, à l'ombre : la tige file. cm/m. */
+export const ALLOCATION_DIAMETRE_OMBRE = 1.25;
+/** Diamètre gagné par mètre de hauteur, en pleine lumière : l'arbre épaissit. cm/m. */
+export const ALLOCATION_DIAMETRE_LUMIERE = 2.5;
+/**
+ * Le milieu de la gamme, et le diamètre qu'on prête à une tige sans histoire.
+ * L'ancien proxy posait `D = 2 h` pour tout le monde ; cette valeur-ci est plus
+ * basse parce qu'elle a été calée sur le VOLUME du peuplement, que le proxy
+ * surestimait d'un facteur six.
+ */
+export const ALLOCATION_DIAMETRE_MEDIANE = 2;
+
+/** Diamètre gagné par mètre de hauteur pour ce rapport de houppier, cm/m. */
+export function allocationDiametreCmParM(lumiere: number): number {
+  const l = Math.min(1, Math.max(0, lumiere));
+  return ALLOCATION_DIAMETRE_OMBRE + (ALLOCATION_DIAMETRE_LUMIERE - ALLOCATION_DIAMETRE_OMBRE) * l;
+}
+
+/**
+ * Diamètre d'une tige qui vient d'apparaître, cm. On la pose sur l'allocation
+ * médiane : un semis n'a pas encore d'histoire lumineuse à raconter.
+ */
+export function diametreInitialCm(heightM: number): number {
+  return ALLOCATION_DIAMETRE_MEDIANE * Math.max(0, heightM);
+}
+
+/** Coefficient d'élancement H/D, sans dimension. `> 80` = tige en danger au vent. */
+export function elancement(diametreCm: number, heightM: number): number {
+  return diametreCm > 0 ? (100 * heightM) / diametreCm : Number.POSITIVE_INFINITY;
+}
+
 /** Taille « métabolique » d'un arbre (proxy feuillage + bois neuf), g N/semaine max. */
 function metabolicSizeGWeek(heightM: number): number {
   const r = HOUPPIER_REFERENCE * heightM;
@@ -706,9 +856,23 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // l'arbre TIRE de conditions données, pas les conditions elles-mêmes. Deux
   // voisins ont la même eau et la même lumière ; l'un en fait plus que l'autre,
   // et c'est ce qui crée les dominants et les dominés.
-  const heightM =
-    tree.heightM +
-    Math.max(0, potentialM) * limitingFactor * stressPenalty * tree.vigueurIndividuelle;
+  // Le tassement se multiplie au lieu d'entrer dans le minimum, pour la raison
+  // dite au champ `tassement` : il ne remplace aucun facteur limitant, il les
+  // aggrave tous. Essais Arvalis : jusqu'à 30 % de perte sur sol tassé.
+  const fTassement = facteurCroissanceTassement(env.tassement ?? 0);
+  const pousseM =
+    Math.max(0, potentialM) *
+    limitingFactor *
+    stressPenalty *
+    fTassement *
+    tree.vigueurIndividuelle;
+  const heightM = tree.heightM + pousseM;
+  // Le diamètre se gagne sur la MÊME pousse — tassement compris, car un arbre
+  // gêné par un sol tassé ne grossit pas davantage qu'il ne monte —, mais dans
+  // une proportion que la lumière décide : à l'ombre la tige file, au large
+  // elle épaissit. C'est de là que vient l'élancement individuel, et donc la
+  // vulnérabilité au vent, que la constante `D = 2 h` rendait impossible.
+  const diametreCm = tree.diametreCm + pousseM * allocationDiametreCmParM(env.light);
 
   // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.
   let stress = tree.stress;
@@ -741,7 +905,16 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   }
 
   return {
-    tree: { ...tree, ageWeeks: tree.ageWeeks + 1, heightM, stress, alive, rootDepthCm, causeMort },
+    tree: {
+      ...tree,
+      ageWeeks: tree.ageWeeks + 1,
+      heightM,
+      diametreCm,
+      stress,
+      alive,
+      rootDepthCm,
+      causeMort,
+    },
     limitingFactor,
   };
 }
