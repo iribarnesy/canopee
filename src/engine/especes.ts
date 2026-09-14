@@ -232,7 +232,22 @@ export interface EspeceV0 {
     prixPlantEur: number;
   };
   bois: {
-    /** densité du bois sec, t/m³ (infradensité, pour la biomasse et le carbone) */
+    /**
+     * INFRADENSITÉ du bois : masse anhydre rapportée au volume VERT, t/m³.
+     * C'est la grandeur que demande la biomasse — et non la densité à 12 %
+     * d'humidité, celle du commerce et des tables de menuiserie, que ce champ
+     * a portée jusqu'à #68 tout en se décrivant déjà comme une infradensité.
+     *
+     * Deux lecteurs, et ils veulent la même chose : `treeAboveCarbonKg`
+     * (carbon.ts) en a besoin telle quelle, `dureeChandelleSemaines`
+     * (trees.ts) n'y lit qu'un proxy de dureté — les deux grandeurs classent
+     * les essences dans le même ordre. Le prix, lui, se compte au m³
+     * (`prixOeuvreEurM3`) et ne lit pas ce champ.
+     *
+     * Chaque valeur couverte par une source la cite dans le `sources` de sa
+     * fiche ; celles qu'aucune des deux ne couvre le disent en commentaire et
+     * restent à leur valeur d'avant, faute de mieux.
+     */
     densite: number;
     /**
      * Prix du m³ de BOIS D'ŒUVRE de cette essence, € — sans commune mesure
@@ -385,6 +400,26 @@ const ASENSIO_2008 =
 const PEPINIERES_DE =
   "catalogues de pépiniéristes et bases horticoles allemands (Garten von Ehren, Baumschule Horstmann, NaturaDB) — ordre de grandeur commercial, pas une mesure";
 
+/**
+ * SOURCES D'INFRADENSITÉ (`bois.densite`, #68). Deux, et dans cet ordre : la
+ * table française d'abord, la base mondiale pour ce qu'elle ne couvre pas.
+ * Aucune des deux ne descend jusqu'aux sous-arbrisseaux de lande et de haie —
+ * ceux-là gardent leur valeur d'avant, et leur fiche le dit.
+ *
+ * Les deux se recoupent là où elles se rencontrent. Des huit espèces que
+ * l'IGN couvre ici, sept sont aussi au GWDD, et les valeurs s'accordent à
+ * moins de 0,09 t/m³ près — aulne 0,42 / 0,42 ; noisetier 0,52 / 0,52 ;
+ * châtaignier 0,47 / 0,46 ; frêne 0,56 / 0,57 ; hêtre 0,55 / 0,585 ;
+ * chêne-liège 0,70 / 0,77 ; charme 0,61 / 0,69 (le pire écart). Les chênes
+ * de l'IGN qui ne sont pas dans le référentiel concordent aussi (pédonculé
+ * 0,54 / 0,575 ; rouvre 0,58 / 0,57). C'est ce recoupement qui les valide
+ * l'une par l'autre — aucune des deux n'a été retenue sur sa seule parole.
+ */
+const IGN_DUPOUEY_2002 =
+  "IGN d'après Dupouey 2002 (note non publiée), infradensités des essences françaises de taillis, tMS/m³ — table reproduite en annexe 3 de CNPF 2020, Méthode conversion de taillis en futaie sur souches v2 (label bas-carbone), et utilisée par l'inventaire national des GES";
+const GWDD_2009 =
+  "Zanne, Lopez-Gonzalez, Coomes, Ilic, Jansen, Lewis, Miller, Swenson, Wiemann & Chave 2009, Global Wood Density Database, Dryad doi:10.5061/dryad.234 (exemplaire consulté : miroir Zenodo 13322441) — « oven dry mass/fresh volume », moyenne des mesures de l'espèce";
+
 export const ESPECES_V0: readonly EspeceV0[] = [
   {
     id: "alnus_glutinosa",
@@ -411,7 +446,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // L'aulne est des premiers, avec le bouleau : début avril.
     phenologie: { debourrementDJ: 90, seuilJourH: 11.0, besoinFroidSemaines: 9 },
     economie: { prixPlantEur: 2 },
-    bois: { densite: 0.45, prixOeuvreEurM3: 90, rejetteDeSouche: true },
+    // Infradensité : IGN/Dupouey, « Grands aulnes ».
+    bois: { densite: 0.42, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     // brouté sans être recherché
     // phytophthora de l'aulne : réel, et mortel sur les berges
     // double symbiose : Frankia pour l'azote, ectomycorhizes pour le reste
@@ -420,7 +456,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.55 },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, JANSEN_1996],
+    sources: [ATLAS, JANSEN_1996, IGN_DUPOUEY_2002],
   },
   {
     id: "fagus_sylvatica",
@@ -463,7 +499,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le hêtre attend : dix à vingt jours après le chêne dans l'ouest, et il est parmi les plus photopériodiques.
     phenologie: { debourrementDJ: 240, seuilJourH: 13.0, besoinFroidSemaines: 16 },
     economie: { prixPlantEur: 3 },
-    bois: { densite: 0.68, prixOeuvreEurM3: 180, rejetteDeSouche: false },
+    // Infradensité : IGN/Dupouey, « Hêtre ». C'est l'essence par laquelle le
+    // défaut s'est vu : 0,68 était la densité à 12 % d'humidité (#68).
+    bois: { densite: 0.55, prixOeuvreEurM3: 180, rejetteDeSouche: false },
     // peu appété, mais consommé l'hiver faute de mieux
     // peu attaqué tant qu'il n'a pas soif
     exigenceMinerale: 1,
@@ -471,7 +509,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
-    sources: [ATLAS, JANSEN_1996],
+    sources: [ATLAS, JANSEN_1996, IGN_DUPOUEY_2002],
   },
   {
     id: "quercus_pubescens",
@@ -507,7 +545,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le chêne débourre fin avril, et il est photopériodique.
     phenologie: { debourrementDJ: 190, seuilJourH: 12.5, besoinFroidSemaines: 9 },
     economie: { prixPlantEur: 3 },
-    bois: { densite: 0.75, prixOeuvreEurM3: 220, rejetteDeSouche: true },
+    // Infradensité : IGN/Dupouey, « Chêne pubescent ».
+    bois: { densite: 0.65, prixOeuvreEurM3: 220, rejetteDeSouche: true },
     // les chênes sont en tête des listes d'appétence
     // défoliateurs (bombyx, tordeuse) sur les chênes
     exigenceMinerale: 1,
@@ -515,7 +554,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.75 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.5, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, IGN_DUPOUEY_2002],
   },
   {
     id: "pinus_sylvestris",
@@ -541,7 +580,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : ces valeurs ne servent pas, mais le champ reste renseigné.
     phenologie: { debourrementDJ: 150, seuilJourH: 11.0, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 1.5 },
-    bois: { densite: 0.45, prixOeuvreEurM3: 110, rejetteDeSouche: false },
+    // Infradensité : GWDD, moyenne de cinq mesures (0,370 à 0,422). La table
+    // française ne liste que des feuillus de taillis.
+    bois: { densite: 0.4, prixOeuvreEurM3: 110, rejetteDeSouche: false },
     // résineux dédaigné (il subit surtout les frottis, v2)
     // scolytes et processionnaire : le cas d'école du résineux pur
     exigenceMinerale: 1,
@@ -549,7 +590,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.75 },
     gibier: { appetence: 0.2 },
     feu: { inflammabilite: 0.9, resistanceEcorce: 0.35, rejetteApresFeu: false },
-    sources: [ATLAS, JANSEN_1996],
+    sources: [ATLAS, JANSEN_1996, GWDD_2009],
   },
   {
     id: "betula_pendula",
@@ -581,7 +622,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le bouleau ouvre le bal, début avril — c'est le pionnier jusque dans son calendrier.
     phenologie: { debourrementDJ: 85, seuilJourH: 10.8, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 1.5 },
-    bois: { densite: 0.55, prixOeuvreEurM3: 120, rejetteDeSouche: true },
+    // Infradensité : GWDD, moyenne de deux mesures (0,500 et 0,525).
+    bois: { densite: 0.51, prixOeuvreEurM3: 120, rejetteDeSouche: true },
     // rameaux tendres, brouté en pionnier
     // pionnier peu sujet
     exigenceMinerale: 1,
@@ -589,7 +631,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, GWDD_2009],
   },
   {
     id: "juglans_regia",
@@ -619,7 +661,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
     economie: { prixPlantEur: 15 },
     // Bois précieux : le noyer se vend à la bille, plusieurs fois le chêne.
-    bois: { densite: 0.65, prixOeuvreEurM3: 600, rejetteDeSouche: false },
+    // Infradensité : GWDD, moyenne de trois mesures (0,533 à 0,591).
+    bois: { densite: 0.56, prixOeuvreEurM3: 600, rejetteDeSouche: false },
     fruits: {
       floraisonDJ: 320, // mai : il fleurit après avoir feuillé, donc tard
       gelFatalC: -1,
@@ -644,7 +687,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.4 },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: false },
-    sources: [ATLAS],
+    sources: [ATLAS, GWDD_2009],
   },
   {
     id: "malus_domestica",
@@ -674,6 +717,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Fruitier de plaine : feuillaison après la floraison, mi-avril.
     phenologie: { debourrementDJ: 150, seuilJourH: 11.5, besoinFroidSemaines: 13 },
     economie: { prixPlantEur: 12 },
+    // Infradensité NON SOURCÉE : le pommier cultivé est absent des deux sources,
+    // et le pommier sauvage (Malus sylvestris, 0,60 au GWDD) est une AUTRE espèce.
+    // Valeur laissée en l'état plutôt qu'empruntée (#68).
     bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
     fruits: {
       floraisonDJ: 200, // fin avril — après la plupart des gels
@@ -718,7 +764,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // L'abricotier part très tôt, et c'est bien là son problème : le gel le rattrape.
     phenologie: { debourrementDJ: 110, seuilJourH: 11.2, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 14 },
-    bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
+    // Infradensité : GWDD, mesure UNIQUE (0,675, Asie du Sud-Est) — sourcée, mais
+    // sur un seul échantillon, et hors d'Europe.
+    bois: { densite: 0.68, prixOeuvreEurM3: 150, rejetteDeSouche: false },
     fruits: {
       floraisonDJ: 60, // fin février-mars : LE pari du gel tardif (atlas)
       gelFatalC: -1.5,
@@ -737,7 +785,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.8 },
     gibier: { appetence: 0.8 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
-    sources: [ATLAS, RHS],
+    sources: [ATLAS, RHS, GWDD_2009],
   },
   {
     id: "corylus_avellana",
@@ -770,7 +818,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le noisetier est précoce — il fleurit même en plein hiver.
     phenologie: { debourrementDJ: 95, seuilJourH: 11.0, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 8 },
-    bois: { densite: 0.62, prixOeuvreEurM3: 70, rejetteDeSouche: true },
+    // Infradensité : IGN/Dupouey, « Noisetier ».
+    bois: { densite: 0.52, prixOeuvreEurM3: 70, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 15, // chatons d'hiver (janv.-fév.), pollinisation par le vent
       gelFatalC: -8, // les chatons encaissent le froid — pas de pari climatique
@@ -790,7 +839,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45 },
     gibier: { appetence: 0.9 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    sources: [ATLAS, HARMER_2004],
+    sources: [ATLAS, HARMER_2004, IGN_DUPOUEY_2002],
   },
   {
     id: "prunus_spinosa",
@@ -827,6 +876,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // L'épine noire fleurit avant de feuiller, dès mars.
     phenologie: { debourrementDJ: 115, seuilJourH: 11.3, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 4 },
+    // Infradensité NON SOURCÉE : absente des deux sources. Valeur d'avant #68,
+    // donc vraisemblablement une densité à 12 % d'humidité, donc surestimée.
     bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 60, // fleurit AVANT les feuilles, dès mars : exposé au gel
@@ -872,6 +923,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // L'aubépine suit l'épine noire de quelques semaines.
     phenologie: { debourrementDJ: 135, seuilJourH: 11.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 4 },
+    // Infradensité NON SOURCÉE : le GWDD ne porte que « Crataegus oxyacantha »,
+    // nom historiquement ambigu entre C. laevigata et C. monogyna — on ne s'en
+    // sert pas. Valeur d'avant #68, donc vraisemblablement surestimée.
     bois: { densite: 0.8, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     // Épines longues : c'est l'abri sous lequel un chêne passe ses dix
     // premières années sans se faire brouter.
@@ -922,6 +976,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // La ronce ne perd qu'une partie de son feuillage : elle repart tôt.
     phenologie: { debourrementDJ: 120, seuilJourH: 11.3, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 2 },
+    // Infradensité NON SOURCÉE : absente des deux sources, comme tous les
+    // sous-arbrisseaux. Valeur d'avant #68.
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 900, // juin : hors d'atteinte des gels
@@ -967,6 +1023,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le sureau est l'un des tout premiers à verdir dans les haies.
     phenologie: { debourrementDJ: 105, seuilJourH: 11.2, besoinFroidSemaines: 8 }, // litière tendre, azotée : elle se minéralise vite
     economie: { prixPlantEur: 5 },
+    // Infradensité NON SOURCÉE : le GWDD n'a que des sureaux d'Amérique (0,43 à
+    // 0,46) ; on ne prête pas leur valeur au nôtre. Valeur d'avant #68.
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 700, // juin
@@ -1030,13 +1088,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 3 },
     // Bois très dur : c'est LE bois de chauffage, et le taillis de charme
     // repart indéfiniment — d'où sa place dans toutes les haies plessées.
-    bois: { densite: 0.8, prixOeuvreEurM3: 90, rejetteDeSouche: true },
+    // Infradensité : IGN/Dupouey, « Charme ». Il reste parmi les plus denses des
+    // feuillus français, mais 0,80 était sa densité du commerce.
+    bois: { densite: 0.61, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     exigenceMinerale: 2,
     mycorhize: "ecto",
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.55 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, LOCKOW_2009],
+    sources: [ATLAS, LOCKOW_2009, IGN_DUPOUEY_2002],
   },
   {
     id: "ilex_aquifolium",
@@ -1064,14 +1124,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 35, calciumMgG: 7 }, // feuille coriace et cireuse : elle met des années
     phenologie: { debourrementDJ: 200, seuilJourH: 11.5, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 7 },
-    bois: { densite: 0.8, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Infradensité : GWDD, mesure unique (0,65).
+    bois: { densite: 0.65, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     exigenceMinerale: 1.2,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.2 },
     // Piquant, mais le chevreuil s'y met quand même en hiver, faute de mieux.
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, PETERKEN_1967],
+    sources: [ATLAS, PETERKEN_1967, GWDD_2009],
   },
   {
     id: "salix_alba",
@@ -1102,7 +1163,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Il débourre parmi les tout premiers, avec le bouleau.
     phenologie: { debourrementDJ: 80, seuilJourH: 10.8, besoinFroidSemaines: 7 },
     economie: { prixPlantEur: 3 }, // une bouture suffit
-    bois: { densite: 0.4, prixOeuvreEurM3: 60, rejetteDeSouche: true },
+    // Infradensité : GWDD, mesure UNIQUE (0,284, Europe) — la plus basse du
+    // référentiel, et basse même pour un saule (les autres Salix du GWDD vont de
+    // 0,32 à 0,53). Sourcée, mais sur un seul échantillon.
+    bois: { densite: 0.28, prixOeuvreEurM3: 60, rejetteDeSouche: true },
     exigenceMinerale: 2,
     // L'atlas le donne à double mycorhization ; le moteur ne connaît qu'un
     // réseau par espèce, on retient l'ectomycorhize.
@@ -1110,7 +1174,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, GWDD_2009],
   },
   {
     id: "cornus_mas",
@@ -1137,6 +1201,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 25, calciumMgG: 14 },
     phenologie: { debourrementDJ: 110, seuilJourH: 11.3, besoinFroidSemaines: 11 },
     economie: { prixPlantEur: 6 },
+    // Infradensité NON SOURCÉE : le cornouiller mâle est absent des deux sources
+    // (le GWDD n'a que le sanguin, 0,68). Valeur d'avant #68, et c'est désormais
+    // la plus haute du référentiel, donc la plus suspecte.
     bois: { densite: 0.9, prixOeuvreEurM3: 0, rejetteDeSouche: true }, // le bois le plus dur d'Europe
     fruits: {
       floraisonDJ: 25, // février, sur bois nu : c'est sa signature
@@ -1180,7 +1247,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 26, calciumMgG: 14 },
     phenologie: { debourrementDJ: 125, seuilJourH: 11.4, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 5 },
-    bois: { densite: 0.7, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Infradensité : GWDD, mesure unique (0,603, Europe).
+    bois: { densite: 0.6, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     exigenceMinerale: 1.7,
     mycorhize: "arbusculaire",
     // Hôte d'HIVER du puceron noir : il l'héberge à la mauvaise saison et le
@@ -1189,7 +1257,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45, hoteHivernal: true },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, WILLOUGHBY_2007],
+    sources: [ATLAS, WILLOUGHBY_2007, GWDD_2009],
   },
   {
     id: "ligustrum_vulgare",
@@ -1225,7 +1293,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 27, calciumMgG: 12 },
     phenologie: { debourrementDJ: 120, seuilJourH: 11.4, besoinFroidSemaines: 9 },
     economie: { prixPlantEur: 4 },
-    bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Infradensité : GWDD, mesure unique (0,805, Europe). Elle MONTE — preuve
+    // qu'un facteur global appliqué aux anciennes valeurs aurait eu tort ici.
+    bois: { densite: 0.81, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     fruits: {
       // Très mellifère en juin : ses fleurs comptent dans l'étalement des
       // floraisons, même si ses baies sont toxiques et ne se récoltent pas.
@@ -1244,7 +1314,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, GRUBB_1999],
+    sources: [ATLAS, GRUBB_1999, GWDD_2009],
   },
   {
     id: "ulex_europaeus",
@@ -1284,6 +1354,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 3 },
+    // Infradensité NON SOURCÉE : aucun Ulex au GWDD, et la table française ne
+    // descend pas jusqu'à la lande. Valeur d'avant #68.
     bois: { densite: 0.6, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // épines dissuasives, mais brouté en hiver sur la lande
     // rien ne s'y attaque vraiment
@@ -1330,6 +1402,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 2.5 },
+    // Infradensité NON SOURCÉE : aucun Cytisus au GWDD. Valeur d'avant #68.
     bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // genêt appété, sans épines
     exigenceMinerale: 1,
@@ -1379,6 +1452,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 2 },
+    // Infradensité NON SOURCÉE : ni Calluna ni Erica au GWDD. Valeur d'avant #68.
     bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
     // consommée l'hiver quand il n'y a rien d'autre
     // le type des landes : il va chercher l'azote organique des sols acides
@@ -1418,7 +1492,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le châtaignier est tardif : mi-mai. *(Des observations de terrain le donnent parfois plus précoce que le chêne ; on suit ici la vue forestière courante.)*
     phenologie: { debourrementDJ: 300, seuilJourH: 12.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 4 },
-    bois: { densite: 0.6, prixOeuvreEurM3: 200, rejetteDeSouche: true },
+    // Infradensité : IGN/Dupouey, « Châtaignier » — l'essence de taillis par
+    // excellence, et la table est faite pour les taillis.
+    bois: { densite: 0.47, prixOeuvreEurM3: 200, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 750, // juin : bien après les gels tardifs
       gelFatalC: -2,
@@ -1437,7 +1513,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.7 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
-    sources: [ATLAS, LEMAIRE_2005],
+    sources: [ATLAS, LEMAIRE_2005, IGN_DUPOUEY_2002],
   },
   {
     id: "quercus_suber",
@@ -1471,6 +1547,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 150, seuilJourH: 11.5, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 5 },
+    // Infradensité : IGN/Dupouey, « Chêne-liège ». La valeur ne bouge pas — elle
+    // était juste par chance, elle est maintenant sourcée.
     bois: { densite: 0.7, prixOeuvreEurM3: 160, rejetteDeSouche: true },
     // Le liège se lève tous les ~10 ans SANS abattre l'arbre : une subéraie
     // produit pendant un siècle et demi. C'est la vraie raison de la planter,
@@ -1491,7 +1569,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
-    sources: [ATLAS, SANCHEZ_2010],
+    sources: [ATLAS, SANCHEZ_2010, IGN_DUPOUEY_2002],
   },
   {
     id: "fraxinus_excelsior",
@@ -1522,7 +1600,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 3 },
     // Bois d'œuvre de premier ordre (manches, sport, ébénisterie) et rejet
     // vigoureux : c'est l'arbre à trogne par excellence.
-    bois: { densite: 0.68, prixOeuvreEurM3: 200, rejetteDeSouche: true },
+    // Infradensité : IGN/Dupouey, « Frênes ».
+    bois: { densite: 0.56, prixOeuvreEurM3: 200, rejetteDeSouche: true },
     feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
     // Très appété : un jeune frêne non protégé n'a aucune chance.
     gibier: { appetence: 0.8 },
@@ -1531,7 +1610,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // La chalarose (Hymenoscyphus fraxineus) frappe l'espèce depuis 2008 :
     // c'est l'essence la plus menacée de France.
     ravageurs: { sensibilite: 0.9 },
-    sources: [ATLAS, JANSEN_1996],
+    sources: [ATLAS, JANSEN_1996, IGN_DUPOUEY_2002],
   },
   {
     id: "arbutus_unedo",
@@ -1558,7 +1637,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 120, seuilJourH: 11.0, besoinFroidSemaines: 5 },
     economie: { prixPlantEur: 9 },
-    bois: { densite: 0.7, prixOeuvreEurM3: 90, rejetteDeSouche: true },
+    // Infradensité : GWDD, mesure unique (0,65).
+    bois: { densite: 0.65, prixOeuvreEurM3: 90, rejetteDeSouche: true },
     fruits: {
       floraisonDJ: 1150, // fleurit en automne (atlas : ressource des pollinisateurs)
       gelFatalC: -4,
@@ -1576,7 +1656,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.7, resistanceEcorce: 0.35, rejetteApresFeu: true },
-    sources: [ATLAS, ASENSIO_2008],
+    sources: [ATLAS, ASENSIO_2008, GWDD_2009],
   },
 ];
 

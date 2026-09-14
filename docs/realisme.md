@@ -73,11 +73,11 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | F. Dynamique des peuplements | 11 | 5 | 3 | 19 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
-| I. Carbone | 7 | 2 | 0 | 9 |
+| I. Carbone | 8 | 1 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **112** | **26** | **4** | **142** |
+| **Total** | **113** | **25** | **4** | **142** |
 
-**Score de réalisme : 112 pleins + 26 partiels sur 142 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 113 pleins + 25 partiels sur 142 → 88 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -128,7 +128,9 @@ production) → 76 % (structure du sol : le tassement et sa réparation)
 la fenêtre de printemps) → 88 % (le vent devient un agent CASSANT : tempête,
 chablis, et six critères là où il n'y en avait aucun) → 88 % (le pH cesse
 d'être un état : il se lit sur un pool de bases que la litière fait pencher)
-→ **88 % (le bois d'œuvre cesse d'être un puits éternel)**.*
+→ 88 % (le bois d'œuvre cesse d'être un puits éternel) → **88 %
+(l'infradensité : la biomasse cesse de se peser avec la densité du
+commerce)**.*
 
 *Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
 hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -277,7 +279,7 @@ maladie-là, pas une preuve de santé.*
 | G7 | Sa sélectivité réoriente la composition (le noisetier trinque, le pin passe) | ✅ | `especes.gibier.appetence` ; émergent, rien n'est codé espèce par espèce |
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
-| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; aulnaie pure décimée, mélange épargné |
+| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; l'aulnaie pure se fait décimer sur chacune des trois graines, le mélange y perd trois à quatre fois moins d'aulnes (0,34 / 0,34 / 0,23) et y écrête la pullulation d'un facteur 2,8 à 3,1. Les deux sont épinglés GRAINE PAR GRAINE depuis #68, et non plus en moyenne : l'écart de mortalité avait failli s'annuler sur une graine sans que la moyenne le dise |
 | G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison. Les espèces herbacées existent maintenant (`herbacees.ts`) mais aucune ne déclare de floraison : la fiche s'arrête au calendrier FOLIAIRE |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
 | G6 | Les maladies datées frappent (chalarose du frêne) | ✅ | `maladies.ts` ; `maladies.test.ts` — mieux qu'une date : une année d'arrivée historique, puis une pression qui suit la densité d'hôtes et l'humidité. Une frênaie pure perd un tiers de ses tiges en trente ans, le même nombre de frênes en mélange s'en tire deux fois mieux |
@@ -316,7 +318,7 @@ maladie-là, pas une preuve de santé.*
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
-| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. Un hêtre de 25 m et 50 cm stocke maintenant 1 333 kg C contre 3 917 avant, pour 1 000 à 1 400 attendus. **Reste 🟡** : `bois.densite` est une densité commerciale à 12 % d'humidité là où la biomasse demande l'infradensité, soit environ 20 % de surestimation résiduelle |
+| I7 | L'allométrie biomasse→carbone est plausible par espèce | ✅ | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. La densité qui convertit ce volume en matière sèche est désormais une INFRADENSITÉ (masse anhydre / volume vert) et non plus une densité du commerce à 12 % d'humidité : 17 des 26 espèces la tiennent d'une source ouverte — table IGN d'après Dupouey 2002 (annexe 3 de la méthode CNPF du label bas-carbone) pour les feuillus français, Global Wood Density Database (Zanne et al. 2009, doi:10.5061/dryad.234) pour le reste — et les 9 autres, sous-arbrisseaux de lande et de haie qu'aucune des deux ne couvre, gardent leur valeur d'avant en le disant dans leur fiche. Aucun facteur global : le troène MONTE (0,75 → 0,81), le chêne-liège ne bouge pas, le charme perd un quart (#68). Un hêtre de 25 m et 50 cm stocke 1 078 kg C contre 1 333 avant et 3 917 avant #62. **L'ancre discrimine enfin** : elle porte sur la TIGE, dont le volume ne fait pas débat (2,454 m³ ici, 2,528 par le tarif français EMERGE), et la borne à 1 307–1 624 kg de matière sèche — enveloppe des quatre équations de biomasse de tige applicables à cet arbre dans Zianis et al. 2005, Silva Fennica Monographs 4. Le moteur y place 1 350 kg ; à l'ancienne densité il en plaçait 1 669 et l'essai TOMBE, ce qui est la preuve que le correctif en est un |
 | I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
 
 ---
@@ -2351,6 +2353,150 @@ personne ne puisse le charger.
 composition brûle de 0 à 4 500 m² selon le tirage. C'est en changeant la graine
 qu'on distingue ce qui tient du terrain de ce qui tient de la chance, et le
 profil est fait pour être rejoué.
+
+## L'infradensité : la biomasse se pesait avec la densité du commerce
+
+`bois.densite` valait 0,68 pour le hêtre. La valeur est juste — pour la
+mauvaise grandeur : c'est la densité à 12 % d'humidité, celle des tables de
+menuiserie. La biomasse demande l'**infradensité**, masse anhydre rapportée au
+volume VERT, de l'ordre de 0,55 pour le hêtre. Le champ se décrivait déjà comme
+une infradensité : le code se mentait à lui-même depuis le début (#68).
+
+### Un champ, pas deux
+
+Le recensement des lecteurs a tranché la première question. `bois.densite` n'en
+a que deux : `treeAboveCarbonKg` (`carbon.ts`), qui veut l'infradensité, et
+`dureeChandelleSemaines` (`trees.ts`), qui n'y lit qu'un proxy de dureté — et
+les deux grandeurs classent les essences dans le même ordre. Le prix ne lit pas
+ce champ : il se compte au m³ (`prixOeuvreEurM3`). Personne ne réclamait une
+densité commerciale, donc le champ garde son nom et reçoit l'infradensité.
+
+### Deux sources, et aucun facteur global
+
+Les valeurs ont été saisies essence par essence depuis deux sources ouvertes,
+dans cet ordre :
+
+1. la table **IGN d'après Dupouey 2002** — infradensités des essences
+   françaises de taillis, reproduite en annexe 3 de la méthode CNPF
+   « conversion de taillis en futaie sur souches » v2 du label bas-carbone, et
+   celle qu'emploie l'inventaire national des gaz à effet de serre. Huit
+   espèces du référentiel y figurent ;
+2. la **Global Wood Density Database** (Zanne et al. 2009, Dryad
+   doi:10.5061/dryad.234), dont la mesure est littéralement « oven dry mass /
+   fresh volume ». Neuf espèces de plus.
+
+Les deux se recoupent là où elles se rencontrent : sept des huit espèces que
+l'IGN couvre ici figurent aussi au GWDD, et les valeurs s'y accordent à moins de
+0,09 t/m³ près (le pire écart est le charme, 0,61 contre 0,69). C'est ce
+recoupement qui les valide l'une par l'autre, plutôt que leur seule autorité.
+
+Les neuf restantes — pommier cultivé, prunellier, aubépine, ronce, sureau,
+cornouiller mâle, ajonc, genêt, callune — ne sont dans aucune des deux. Elles
+**gardent leur valeur d'avant et leur fiche le dit**, plutôt que d'emprunter
+celle d'un congénère ou d'être inventées.
+
+Surtout, **aucun facteur global n'a été appliqué**. C'était la tentation, et
+elle aurait remplacé une erreur par une autre : l'écart entre densité à 12 % et
+infradensité n'est pas le même d'une essence à l'autre. Le charme perd un quart
+(0,80 → 0,61), le chêne-liège ne bouge pas (0,70), et le troène **monte**
+(0,75 → 0,81). Un coefficient unique se serait trompé sur les trois.
+
+### L'ancre, et pourquoi elle porte sur la tige
+
+C'est le point qui rendait le correctif démontrable ou pas. L'unique ancre
+extérieure du dépôt exigeait qu'un hêtre de 25 m et 50 cm pèse entre 1 000 et
+1 500 kg C. Le moteur en donnait 1 333 avec 0,68 et 1 078 avec 0,55 : **les
+deux passaient**. Une ancre que la correction ne fait pas basculer ne prouve
+rien, et c'est exactement pour ça que le défaut a pu vivre si longtemps sous un
+essai vert.
+
+L'ancre a donc été déplacée sur la **tige**, parce que son volume ne fait pas
+débat : le moteur en donne 2,454 m³ pour cet arbre et le tarif français EMERGE
+(Deleuze et al. 2014, constante Fagus sylvatica 0,515) 2,528 m³, soit 3 %
+d'écart. Sur un volume aussi bien tenu, la masse sèche ne mesure plus qu'une
+chose : l'infradensité.
+
+Les bornes viennent de Zianis, Muukkonen, Mäkipää & Mencuccini 2005, *Biomass
+and Stem Volume Equations for Tree Species in Europe*, Silva Fennica
+Monographs 4, annexe A — les quatre équations de biomasse de tige applicables à
+un hêtre adulte de cette dimension, c'est-à-dire ni hors de leur plage de
+diamètre ni calées sur une autre classe d'âge :
+
+| Équation | Tige sèche à 50 cm et 25 m |
+|---|---|
+| Cienciala 2005 (Tchéquie, D 5,7–62,1, n=20) | 1 624 kg |
+| Calamini & Gregori 2001 (Italie, adultes) | 1 512 kg |
+| Bartelink 1997 (Pays-Bas, D seul, n=38) | 1 474 kg |
+| Bartelink 1997 (Pays-Bas, D et H, n=38) | 1 307 kg |
+
+Rapportée au volume de tige, cette enveloppe borne l'infradensité du hêtre
+entre 0,53 et 0,66 : elle contient les 0,55 de l'IGN et les 0,585 du GWDD, et
+**exclut les 0,68 d'avant**. Le moteur place 1 350 kg ; à l'ancienne valeur il
+en plaçait 1 669 et l'essai tombe. C'est cette bascule, et elle seule, qui
+prouve que le correctif en est un.
+
+L'ancre sur l'arbre entier est conservée, mais rebaptisée pour ce qu'elle est :
+un garde-fou d'ordre de grandeur, qui ne discrimine pas l'infradensité.
+
+### Ce que ça déplace ailleurs
+
+La durée des chandelles vaut `densite × 15 × 52` : baisser les densités les a
+raccourcies d'environ un cinquième. L'éventail reste dans la fourchette de
+terrain annoncée par le commentaire (2 à 20 ans) — du saule blanc à 4,2 ans au
+cornouiller mâle à 13,5 ans. `chandelles.test.ts` et `bois-en-travers.test.ts`
+passent sans retouche, et c'était attendu : le changement ne consomme aucun
+tirage, il ne peut donc pas décaler le flux aléatoire.
+
+### Les essais d'écologie : ce qui s'exige par graine, et ce qui ne s'exige plus
+
+Le changement ne consomme aucun tirage : il ne peut donc pas décaler le flux
+aléatoire, et toute bascule est causale. Deux essais ont basculé — et les deux
+étaient des **rapports entre quantités composites**, exactement ceux que la
+section « ce qu'un test écologique a le droit d'affirmer » cite en exemple.
+
+**`ravageurs`, le mélange contre le peuplement pur.** Ce rapport avait déjà été
+rabaissé deux fois (de trois à 1,4 lors de la correction du volume, #62). Sur la
+base d'avant les tempêtes, l'infradensité l'a fait passer à 1,03 / 0,76 / 0,88 :
+**une graine sur trois donnait le mélange perdant**, et seule la moyenne le
+cachait. Le lot des tempêtes (#85) l'a rétabli largement — mesuré sur le code
+livré, 0,34 / 0,34 / 0,23. L'écart est donc de nouveau épinglé, mais désormais
+**par graine** : une moyenne ne pourra plus masquer une partie qui dit le
+contraire des deux autres.
+
+**`climat`, le réchauffement contre le climat figé.** Celui-là ne s'est pas
+rétabli, et il ne le méritait pas. Son seuil était déjà descendu de ×2 à ×1,3 ;
+sur soixante ans une partie compte entre vingt et quarante-cinq morts par
+ravageurs, et le bruit de graine mange le signal. Mesuré sur le code livré :
+34 → 40, **32 → 21**, 25 → 38. Une graine dit l'inverse des deux autres et la
+moyenne ne franchit plus l'ancien seuil. Un troisième rabais en aurait fait un
+enregistrement du moteur.
+
+Il est donc reporté sur la grandeur que le mécanisme produit **directement** —
+la pullulation — là où le compte de morts mélange pullulation, vigueur et
+sécheresse concurrente :
+
+| Essai | Grandeur épinglée | Mesuré sur le code livré |
+|---|---|---|
+| `ravageurs` — pullulation pur / mélange | `ravageurMoyen` max | 2,82 × / 3,02 × / 3,06 × |
+| `climat` — pullulation chaud / figé | `ravageurMoyen` max | 1,45 × / 1,35 × / 1,31 × |
+
+Directionnelles sur les trois graines, et **éprouvées en neutralisant leur
+cause** — `facteurChaleur` pour l'une, le lien habitat → prédation pour
+l'autre : les deux tombent. Elles lisent le mécanisme, pas le jet de dés.
+
+### Ce que ce lot n'a PAS fait
+
+Le carbone total du hêtre tombe à 1 078 kg C, soit 3 % sous le plancher de ce
+que les équations de biomasse aérienne de Zianis donnent pour cet arbre (1 819
+à 2 302 kg de matière sèche, soit 1 118 à 1 414 kg C une fois les racines
+ajoutées). L'écart ne vient pas de l'infradensité : il vient de ce que
+l'expansion de branchage (1,30) et la valeur de l'IGN (0,55) sont toutes deux
+au bas de leur fourchette et que les deux se cumulent. Le garde-fou sur l'arbre
+entier a donc été élargi vers le bas jusqu'à la plus petite tige publiée
+augmentée du plus faible rapport aérien/tige observé (1 307 × 1,20), plutôt que
+resserré sur un plancher que le moteur ne tient pas. C'est à regarder — séparément, et pas dans le même lot
+qu'une autre correction de biomasse, faute de quoi les deux se masqueraient.
+
 
 ## Règle de travail
 

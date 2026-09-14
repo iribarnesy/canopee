@@ -83,9 +83,11 @@ Le pourcentage affiché est donc faux. À réconcilier en une passe dédiée.
   donnent le même résultat. Attention : ce coefficient gouverne aussi
   l'auto-éclaircie, la succession et le tri des espèces. Label `à-mesurer` : la
   campagne vient avant le code.
-- **Instruire `bois.densite`** (pas encore d'issue). L'atlas donne 0,68 pour le
-  hêtre, ce qui ressemble à une densité à 12 % d'humidité — la valeur du
-  commerce. La biomasse demande l'**infradensité** (masse anhydre sur volume
-  vert), ~0,55 pour le hêtre. Si c'est le cas partout, il reste ~20 % de
-  surestimation. Vérifier essence par essence, et vérifier à quoi d'autre le
-  champ sert avant d'y toucher.
+- **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
+  l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à
+  1 078 kg, soit 3 % SOUS le plancher des équations de biomasse aérienne de
+  Zianis 2005 pour cet arbre. Ni `EXPANSION_BRANCHES` (1,30) ni l'infradensité
+  de l'IGN (0,55) n'est fautive prise seule — chacune est dans sa fourchette
+  publiée — mais toutes deux sont au bas de la leur et l'écart se cumule. À
+  regarder SÉPARÉMENT de #79 : deux corrections de biomasse dans le même lot se
+  masquent l'une l'autre, et c'est précisément ce que #68 a évité.
