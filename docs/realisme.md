@@ -233,7 +233,7 @@ mesurer que ce qu'on sait déjà faire.*
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
-| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | proxy 0,015·H² × densité, à caler sur l'IFN |
+| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | `dendrometrie.ts` — le volume découle enfin de la géométrie (`V = f × g × h`, facteur de forme 0,5) au lieu d'un `0,015·H²` qui donnait à l'arbre jusqu'à 9,6 fois un CYLINDRE PLEIN de son propre diamètre. Tige et aérien sont désormais distingués : on ne vend plus les branches au prix du tronc. **Reste 🟡 pour deux raisons** : l'élancement H/D vaut 50 pour tout arbre, toujours, donc la forme ne dépend pas de l'histoire du peuplement (cf. B10/E10) ; et `bois.densite` ressemble à une densité à 12 % d'humidité là où la biomasse demande l'infradensité, ce qui laisserait ~20 % de surestimation *(à instruire essence par essence)* |
 | I8 | Le bilan peut être négatif au début d'une plantation | 🟡 | observé dans le jeu, non testé |
 
 ---

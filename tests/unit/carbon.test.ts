@@ -10,10 +10,26 @@ import { tick } from "../../src/engine/tick";
 import { runYears } from "../helpers";
 
 describe("allométrie carbone", () => {
-  it("un grand hêtre (25 m) stocke quelques tonnes de carbone", () => {
+  it("un grand hêtre (25 m) stocke autour d'une tonne de carbone", () => {
+    // Les bornes précédentes, 1,5 à 6 t, ont été posées SUR le moteur et non
+    // sur une source : elles entérinaient une allométrie qui donnait à cet
+    // arbre cinq fois son volume, au point qu'il pesait plus qu'un cylindre
+    // plein de son propre diamètre (`dendrometrie.ts`). Une ancre écrite
+    // d'après le moteur n'est pas une ancre — c'est le piège exact dans lequel
+    // les hauteurs étaient tombées avant leur calage sur Jansen 1996.
+    //
+    // Le repère, cette fois, se calcule : un hêtre de 25 m porte environ 50 cm
+    // de diamètre, soit 2,45 m³ de tige (facteur de forme 0,5) et 3,2 m³
+    // d'aérien branchage compris. À la densité de l'atlas, cela fait de l'ordre
+    // d'une tonne de carbone aérien, un tiers de plus avec les racines.
+    //
+    // La fourchette reste large à dessein *(la densité de l'atlas, 0,68 pour le
+    // hêtre, ressemble à une densité à 12 % d'humidité là où la biomasse
+    // demande l'infradensité, ~0,55 : la valeur pourrait encore baisser d'un
+    // cinquième — à instruire)*.
     const kg = treeTotalCarbonKg(getEspece("fagus_sylvatica"), 25);
-    expect(kg).toBeGreaterThan(1500);
-    expect(kg).toBeLessThan(6000);
+    expect(kg).toBeGreaterThan(800);
+    expect(kg).toBeLessThan(2000);
   });
 
   it("un semis stocke un carbone négligeable, et racines < aérien", () => {
@@ -97,10 +113,15 @@ describe("couper une chandelle déjà versée au bois mort", () => {
 
   it("passé le délai : le bois est déjà au pool, la coupe l'en RETIRE", () => {
     const avant = pinBrule(60);
-    // Le tick a posé la mort en semaine 52 et versé les 933 kgC de l'arbre.
+    // Le tick a posé la mort en semaine 52 et versé la TOTALITÉ du carbone de
+    // l'arbre. On l'exprime en part de ce carbone-là, et non en kilos : la
+    // borne de 900 kg écrite en dur datait d'une allométrie qui donnait à cet
+    // arbre cinq fois son volume (`dendrometrie.ts`), et elle est tombée avec
+    // elle. Une ancre calée sur le moteur ne protège de rien.
     expect(avant.trees.find((t) => t.id === 1)?.mortSemaine).toBe(52);
     const poolAvant = avant.carbon.deadWoodKgC;
-    expect(poolAvant).toBeGreaterThan(900);
+    expect(poolAvant).toBeGreaterThan(0.8 * TOTAL);
+    expect(poolAvant).toBeLessThanOrEqual(TOTAL);
 
     const apres = couper(avant);
     expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(AERIEN, 6);

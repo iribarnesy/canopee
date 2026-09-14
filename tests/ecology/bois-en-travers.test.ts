@@ -382,10 +382,30 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // plus intéressante : le chablis tombe avec son houppier et repose dessus.
     // Une forêt livrée à elle-même arme mal son versant, et c'est précisément
     // pour ça que le geste d'abattre et de coucher en travers a un sens.
-    expect(moy(oriente, "piege")).toBeGreaterThan(0.15);
+    //
+    // Puis il a fallu le rabaisser encore, et cette fois le mécanisme n'y est
+    // pour rien : `longueurDeTroncM` relit une masse de carbone comme une
+    // LONGUEUR de tronc. Tant que l'allométrie donnait à un pin de vingt mètres
+    // cinq fois son volume (`dendrometrie.ts`), elle couchait quatre-vingt-six
+    // mètres de tronc pour un arbre qui en faisait vingt. À l'échelle corrigée
+    // il en couche vingt-trois — branchage compris, ce qui est le bon ordre —
+    // et le piégeage suit. Le seuil précédent mesurait des troncs impossibles.
+    expect(moy(oriente, "piege")).toBeGreaterThan(0.08);
     expect(moy(aPlat, "piege")).toBe(0);
-    // Et il détourne une part nette de l'eau de surface vers le sol.
-    expect(moy(oriente, "eau")).toBeLessThan(0.97 * moy(aPlat, "eau"));
+    // ─── CE QUE CE TEST N'AFFIRME PLUS ──────────────────────────────────────
+    // Il exigeait que le barrage spontané détourne « une part nette » de l'eau
+    // de surface : au moins 3 %. À l'échelle corrigée du bois (voir ci-dessus),
+    // il n'en détourne plus que 0,5 % sur soixante ans — c'est-à-dire rien de
+    // mesurable. Les 3 % se lisaient sur quatre fois trop de tronc au sol.
+    //
+    // On garde donc le SENS, qui est un invariant physique et non un seuil
+    // ajusté : du bois en travers ne peut pas faire ruisseler davantage. Et on
+    // ne prétend plus à une ampleur qu'on ne mesure pas.
+    //
+    // Le versant armé POUR DE BON est mesuré plus bas, sur le geste délibéré
+    // d'abattre et de coucher en travers — là où le mécanisme a l'ampleur que
+    // ce scénario spontané n'a jamais eue.
+    expect(moy(oriente, "eau")).toBeLessThanOrEqual(moy(aPlat, "eau"));
   });
 });
 

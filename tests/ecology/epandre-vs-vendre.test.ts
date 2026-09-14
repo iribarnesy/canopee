@@ -116,9 +116,16 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
   });
 
   it("vendre rapporte de l'argent, épandre coûte du temps pour rien... en euros", () => {
-    expect(vendre.state.economy.treasuryEur).toBeGreaterThan(
-      epandre.state.economy.treasuryEur + 20,
-    );
+    // L'écart était de plusieurs centaines d'euros tant que le moteur vendait
+    // aux arbres cinq fois leur volume (`dendrometrie.ts`). À l'échelle
+    // corrigée, une coupe d'aulnes de seize ans — des tiges de dix mètres,
+    // 0,16 m³ chacune — ne pèse plus lourd : il reste quelques euros, et le
+    // seuil de 20 € posé sur l'ancienne échelle est tombé avec elle.
+    //
+    // Le SIGNE est ce qui compte ici, et il ne bouge pas : vendre rapporte,
+    // épandre ne rapporte rien. Le reste du fichier mesure ce qu'épandre
+    // rapporte VRAIMENT, qui ne se compte pas en euros.
+    expect(vendre.state.economy.treasuryEur).toBeGreaterThan(epandre.state.economy.treasuryEur);
     expect(epandre.state.economy.hoursUsedYear).toBeGreaterThanOrEqual(0);
   });
 
@@ -147,20 +154,51 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
   it("les hêtres voisins poussent mieux quand les aulnes ont été épandus", () => {
     expect(hauteurMoyenneDesHetres(epandre.state)).toBeGreaterThan(0);
 
-    // Le gain ne se voit PAS à seize ans — huit ans après la coupe, épandre
-    // vaut 0,99 fois vendre, moyenné sur quatre parties. Ce n'est pas une panne
-    // du mécanisme, c'est la FAIM D'AZOTE du broyat : le bois raméal a un C/N
-    // élevé, les décomposeurs qui l'attaquent puisent d'abord l'azote du sol
-    // pour construire leur propre biomasse, et le sol en manque avant d'en
-    // avoir plus. Tout agronome qui a épandu du BRF connaît ce creux.
+    // ─── LE CREUX D'AZOTE ÉTAIT UN ARTEFACT, ET IL FAUT LE DIRE ─────────────
+    // Ce test affirmait que le gain ne se voit PAS à seize ans : épandre valait
+    // 0,99 fois vendre, et on l'attribuait à la FAIM D'AZOTE du broyat — le
+    // bois raméal a un C/N élevé, les décomposeurs qui l'attaquent puisent
+    // d'abord l'azote du sol. Le phénomène est réel en agronomie, et
+    // l'explication était confortable.
     //
-    // À trente-cinq ans — vingt-sept après la coupe — le gain est de +9 %, et
-    // il est régulier : 1,079 / 1,097 / 1,106 / 1,083 selon la graine. La
-    // mécanique fondatrice « couper les légumineuses et les épandre » tient
-    // donc, et elle tient mieux qu'on ne le croyait ; ce sont les mesures
-    // précédentes (+5 %, puis +2 %) qui la lisaient pendant son creux.
-    expect(gainA(16)).toBeLessThan(1.02);
-    expect(gainA(35)).toBeGreaterThan(1.05);
+    // Elle était fausse ici. Le creux tenait à l'allométrie : le moteur donnait
+    // aux arbres jusqu'à cinq fois leur volume (`dendrometrie.ts`), donc la
+    // coupe épandait cinq fois trop de carbone sur la même surface, donc elle
+    // immobilisait cinq fois trop d'azote. À la dose corrigée — celle des
+    // arbres qu'on vient réellement de couper, étalés sur l'emprise qu'ils
+    // occupaient — l'immobilisation ne creuse plus rien : le gain est déjà là à
+    // seize ans, +6,8 % en moyenne.
+    //
+    // Ce que ça dit, et qui reste vrai : épandre ce qu'on coupe est une dose
+    // FAIBLE. Une vraie planche de BRF, c'est plusieurs centimètres d'épaisseur
+    // rapportés d'ailleurs, et le creux d'azote de l'agronome se mesure à cette
+    // dose-là — que ce test ne simule pas *(le tas de broyat, plus bas, est le
+    // geste qui s'en approche)*.
+    //
+    // ─── ET LA TRAJECTOIRE S'INVERSE ────────────────────────────────────────
+    // Le gain à trente-cinq ans tombe de +9 % à +3,8 %. Il reste donc un gain,
+    // mais la lecture change du tout au tout : on décrivait un bénéfice
+    // DIFFÉRÉ — creux d'abord, puis récompense — et on mesure un bénéfice
+    // IMMÉDIAT QUI S'ESTOMPE.
+    //
+    // Ce qui se comprend : l'épandage est un apport UNIQUE. Il pèse lourd dans
+    // la nutrition de jeunes hêtres, et de moins en moins à mesure qu'ils
+    // grossissent et que le témoin les rattrape. C'était l'immobilisation
+    // surdimensionnée qui retardait artificiellement le rendez-vous.
+    //
+    // Les trois graines sont remarquablement serrées — 1,071 / 1,066 / 1,066 à
+    // seize ans, 1,037 / 1,038 / 1,039 à trente-cinq —, ce qui autorise à
+    // affirmer la FORME de la courbe et pas seulement son signe.
+    const aSeizeAns = gains.get(16) ?? [];
+    const aTrenteCinq = gains.get(35) ?? [];
+    expect(aSeizeAns).toHaveLength(GRAINES.length);
+    expect(aTrenteCinq).toHaveLength(GRAINES.length);
+    // Épandre bat vendre sur CHAQUE graine, aux deux horizons.
+    expect([...aSeizeAns, ...aTrenteCinq].filter((g) => g <= 1)).toEqual([]);
+    expect(gainA(16)).toBeGreaterThan(1.05);
+    expect(gainA(35)).toBeGreaterThan(1.03);
+    // Et le gain décroît : c'est un apport unique, pas une rente.
+    expect(gainA(35)).toBeLessThan(gainA(16));
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.

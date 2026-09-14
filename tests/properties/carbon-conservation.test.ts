@@ -12,6 +12,7 @@ import {
   livingCarbonKg,
   racinesPerduesEnRabattant,
   treeAboveCarbonKg,
+  treeRootCarbonKg,
   treeTotalCarbonKg,
 } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
@@ -275,7 +276,11 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
     expect(bilanKgC(r.state)).toBeCloseTo(bilanKgC(state), 6);
     // Et ce qui reste au sol est bien la part racinaire perdue, pas zéro.
     const attendu = racinesPerduesEnRabattant(espece, 12, RECEPAGE_HAUTEUR_M);
-    expect(attendu).toBeGreaterThan(100);
+    // « Pas zéro » se mesure contre le carbone racinaire de l'arbre, pas en
+    // kilos : recéper à hauteur de souche lui en retire l'essentiel. La borne
+    // de 100 kg écrite en dur datait d'une allométrie cinq fois trop généreuse
+    // (`dendrometrie.ts`) et est tombée avec elle.
+    expect(attendu).toBeGreaterThan(0.8 * treeRootCarbonKg(espece, 12));
     expect(r.state.carbon.deadWoodKgC - state.carbon.deadWoodKgC).toBeCloseTo(attendu, 6);
   });
 

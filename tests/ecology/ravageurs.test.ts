@@ -168,11 +168,14 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
    * compte d'une graine à l'autre, et c'est l'écart entre les deux
    * peuplements — pas sa troisième décimale — qui est le résultat.
    */
+  const GRAINES = [4, 17, 29];
   function moyenneSurGraines(especes: string[], focal: string, ans: number) {
-    const runs = [4, 17, 29].map((g) => peuplement(especes, focal, ans, g));
+    const runs = GRAINES.map((g) => peuplement(especes, focal, ans, g));
     return {
       tauxMortalite: runs.reduce((s, r) => s + r.tauxMortalite, 0) / runs.length,
       pressionMax: runs.reduce((s, r) => s + r.pressionMax, 0) / runs.length,
+      /** Chaque graine séparément : c'est là que se lit la ROBUSTESSE. */
+      parGraine: runs.map((r) => r.tauxMortalite),
     };
   }
 
@@ -185,11 +188,28 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
 
   it("l'aulnaie pure se fait décimer, le mélange encaisse", () => {
     expect(pur.tauxMortalite).toBeGreaterThan(0.15);
-    // Mesuré : 0,67 en peuplement pur contre 0,25 en mélange, soit près de
-    // trois fois moins. Le seuil est posé à deux — le rapport exact bouge avec
-    // la vigueur individuelle de chaque arbre (trees.ts), et c'est l'ÉCART qui
-    // fait le résultat, pas sa troisième décimale.
-    expect(mixte.tauxMortalite).toBeLessThan(pur.tauxMortalite / 2);
+    // ─── POURQUOI LA DIRECTION, ET PLUS LE RAPPORT ───────────────────────────
+    // Ce test demandait « moins de la moitié », d'après un 0,67 contre 0,25
+    // mesuré sur trois graines. Le rapport est tombé à 1,7 quand l'allométrie a
+    // été corrigée (`dendrometrie.ts`) : la biomasse divisée par cinq divise
+    // d'autant la LITIÈRE, donc l'azote que le sol rend. L'aulne fixe le sien
+    // et ne le sent pas ; ses compagnons de mélange, si. Le mélange dilue donc
+    // un peu moins bien qu'avec un sol artificiellement nourri.
+    //
+    // Remesuré sur six graines, le rapport va de 1,11 à 2,45 — il n'a jamais
+    // été une propriété stable, seulement une moyenne sur trois tirages qui
+    // tombaient bien. Ce qui EST stable, et sur les six : le mélange perd moins
+    // d'aulnes que le peuplement pur, à chaque fois.
+    //
+    // On assied donc le test sur la direction, graine par graine, plus un ordre
+    // de grandeur moyen dont le seuil est placé sous le pire cas mesuré.
+    const contreExemples = GRAINES.flatMap((g, k) => {
+      const p = pur.parGraine[k] ?? 0;
+      const m = mixte.parGraine[k] ?? 0;
+      return m < p ? [] : [`graine ${g} : mixte ${m.toFixed(3)} ≥ pur ${p.toFixed(3)}`];
+    });
+    expect(contreExemples).toEqual([]);
+    expect(mixte.tauxMortalite).toBeLessThan(0.8 * pur.tauxMortalite);
   });
 
   it("la pullulation elle-même est bien plus forte en peuplement pur", () => {

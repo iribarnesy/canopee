@@ -16,6 +16,7 @@ import {
   treeAboveCarbonKg,
   treeTotalCarbonKg,
 } from "./carbon";
+import { diametreDeReferenceCm, volumeTigeM3 } from "./dendrometrie";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
@@ -582,17 +583,33 @@ export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
   return "cellules" in geste;
 }
 
-/** Volume de bois récoltable, m³ — proxy allométrique V0 *(à calibrer IFN)*. */
+/**
+ * Volume de bois récoltable, m³ : la TIGE, et elle seule.
+ *
+ * Il valait `0,015 h²`, une loi écrite à côté du diamètre sans jamais lui être
+ * confrontée — et incompatible avec lui, puisqu'elle donnait à l'arbre jusqu'à
+ * 9,6 fois le volume d'un cylindre plein de son propre diamètre
+ * (`dendrometrie.ts`). Il découle maintenant de la géométrie.
+ *
+ * Ce qui se vend est le tronc : le branchage compte dans la BIOMASSE
+ * (`boisVolumeM3`, carbon.ts) mais ne part pas en scierie. Le moteur vendait
+ * jusqu'ici les branches au prix du tronc, faute de distinguer les deux.
+ */
 export function woodVolumeM3(heightM: number): number {
-  return 0.015 * heightM * heightM;
+  return volumeTigeM3(heightM, diametreCm(heightM));
 }
 
 /**
- * Diamètre à hauteur de poitrine, cm — proxy tiré de la hauteur *(à calibrer)*.
- * Un arbre de 20 m fait environ 40 cm de diamètre.
+ * Diamètre à hauteur de poitrine, cm. Un arbre de 20 m en fait 40 — soit un
+ * élancement H/D de 50, la valeur courante d'une tige de futaie.
+ *
+ * Ce n'est PAS lui qui était faux, contrairement à ce que son ancien
+ * « à calibrer » laissait croire ; c'était le volume qui le contredisait. Ce
+ * qui lui manque en revanche, c'est de VARIER d'un arbre à l'autre
+ * (`ELANCEMENT_REFERENCE`, dendrometrie.ts).
  */
 export function diametreCm(heightM: number): number {
-  return 2 * heightM;
+  return diametreDeReferenceCm(heightM);
 }
 
 /**

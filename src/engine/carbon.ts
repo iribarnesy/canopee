@@ -12,6 +12,7 @@
  * minéralisation N ↔ humus C (prairie retournée).
  */
 
+import { diametreDeReferenceCm, volumeAerienM3 } from "./dendrometrie";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import type { GameState } from "./state";
@@ -47,9 +48,16 @@ export const CN_HUMUS = 11;
 /** 1 t/ha = 100 g/m² */
 export const T_HA_TO_G_M2 = 100;
 
-/** Volume de bois aérien, m³ — même proxy allométrique que la vente (actions.ts). */
+/**
+ * Volume de bois AÉRIEN, m³ : la tige ET le branchage.
+ *
+ * Il partageait jusqu'ici sa formule avec le volume vendable, ce qui revenait à
+ * dire qu'un arbre pèse exactement ce qu'on peut en scier. Les branches pèsent
+ * pourtant, et c'est ce qu'on leur demande ici (`EXPANSION_BRANCHES`,
+ * dendrometrie.ts).
+ */
 export function boisVolumeM3(heightM: number): number {
-  return 0.015 * heightM * heightM;
+  return volumeAerienM3(heightM, diametreDeReferenceCm(heightM));
 }
 
 /** Carbone aérien d'un arbre, kg C. */
