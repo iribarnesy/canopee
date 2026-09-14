@@ -1854,6 +1854,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       tree.x,
       tree.y,
       graineDeChute(tree.id, state.week),
+      // **Aucun vent n'est passé ici, et c'est une décision mesurée.**
+      // `directionDeChute` sait composer la pente et le vent (boisMort.ts), et
+      // le mécanisme est juste : ce qui abat une chandelle est presque toujours
+      // un coup de vent. Mais la seule grandeur disponible est une MOYENNE
+      // hebdomadaire, qui efface précisément les rafales qui jettent les arbres
+      // — et la brancher détruit une conclusion écologique mesurée : le versant
+      // raide barre moins l'eau que le plat (`bois-en-travers.test.ts`), un
+      // rapport de 0,79 qui remonte à 0,88 même avec un poids de vent de 0,11,
+      // et à 1,00 au poids que la vitesse reçue justifierait. Le vent dominant
+      // étant à peu près perpendiculaire à l'aval de ce banc, il ne fait que
+      // brouiller un alignement réel.
+      //
+      // C'est le même verdict que le moteur a rendu pour le DÉCLENCHEMENT d'un
+      // feu, et pour la même raison : bonne intuition, mauvaise grandeur. Le
+      // jour où une climatologie de rafales existera, il n'y aura qu'un
+      // argument à ajouter à cet appel.
     );
     const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, radians, dims);
     const longueurTotale = empreinte.reduce((somme, c) => somme + c.longueurM, 0);

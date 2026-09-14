@@ -74,10 +74,58 @@ export const EMPRISE_PAR_METRE_DE_TRONC = 0.3;
 export const MASSE_LINEIQUE_TRONC_KGC_PAR_M = 15;
 
 /**
+ * Vitesse de vent REÇUE par le site au-delà de laquelle le vent oriente la
+ * chute autant qu'une pente franche, en m/s.
+ *
+ * **Six mètres par seconde de RAFALE, et c'est pour ça que le tick ne passe
+ * aucun vent ici aujourd'hui.** Ce qui abat une chandelle, c'est un coup de
+ * vent ; la seule grandeur que le moteur tienne est `ventMoyMs`, une moyenne
+ * sur sept jours, qui efface précisément les rafales. J'ai essayé de m'en
+ * servir comme procuration, et la mesure a tranché contre : le banc du bois en
+ * travers établit qu'un versant raide barre moins l'eau que le plat, dans un
+ * rapport de 0,79 — et brancher la moyenne hebdomadaire le remonte à 1,00,
+ * c'est-à-dire efface complètement l'alignement par la pente. Même un poids de
+ * vent de 0,11 le remonte à 0,88. Le vent dominant du moteur étant à peu près
+ * perpendiculaire à l'aval de ce banc, il ne fait que brouiller une tendance
+ * réelle, sans en apporter une vraie.
+ *
+ * Le mécanisme reste donc écrit, testé, et DÉBRANCHÉ : le jour où une
+ * climatologie de rafales existera, il n'y aura qu'un argument à ajouter à
+ * l'appel du tick. C'est le même verdict que le moteur a rendu pour le
+ * déclenchement d'un feu — bonne intuition, mauvaise grandeur *(à calibrer :
+ * la valeur ci-dessous est une échelle de rafale plausible, jamais mesurée
+ * contre des relevés de chablis)*.
+ */
+export const VENT_ORIENTANT_LA_CHUTE_MS = 6;
+
+/** Un vent nul : la chute ne suit alors que la pente, comme avant. */
+export const SANS_VENT_AU_SOL = { versRad: 0, recuMs: 0 };
+
+/**
  * Direction dans laquelle une chandelle s'abat, en radians (0 = +x, sens
- * trigonométrique). Sur une pente marquée, l'arbre tombe vers l'aval ; à plat,
- * il tombe n'importe où. Entre les deux, le hasard est resserré autour de
- * l'aval à mesure que la pente se redresse — une seule formule, pas deux cas.
+ * trigonométrique).
+ *
+ * **DEUX tendances, pas une, et elles se composent en vecteurs.** Sur une pente
+ * marquée l'arbre tombe vers l'aval ; par vent soutenu il tombe sous le vent ;
+ * à plat et par temps calme il tombe n'importe où. Additionner les deux
+ * tendances comme des vecteurs donne les trois cas d'un coup, et surtout le
+ * quatrième, qui est le plus intéressant : **deux tendances qui s'ACCORDENT
+ * resserrent la chute plus que chacune séparément, deux qui s'OPPOSENT
+ * s'annulent et rendent la main au hasard.** Un versant dont l'aval regarde le
+ * vent dominant couche donc ses troncs en faisceau ; un versant qui lui tourne
+ * le dos les couche dans tous les sens. C'est exactement ce qu'on veut voir sur
+ * la carte du bois mort.
+ *
+ * **La littérature que ce module cite déjà encadre l'ampleur, et elle est
+ * modeste.** Rentch et al. concluent que « la forte variation des directions de
+ * chute empêche d'établir une relation statistique constante » avec la pente OU
+ * LE VENT — le vent y est nommé au même titre que la pente, ni plus ni moins
+ * fort. D'où deux poids de même échelle, et la dispersion résiduelle qui
+ * survit à leur accord : même quand tout pousse dans le même sens, il reste
+ * ±63° de hasard, parce que l'asymétrie du houppier ne se laisse pas prédire.
+ *
+ * Le vent est OPTIONNEL et vaut zéro par défaut : sans lui, la fonction rend
+ * exactement ce qu'elle rendait avant, ce qui permet de la tester sans météo.
  */
 export function directionDeChute(
   altitudes: readonly number[],
@@ -85,12 +133,23 @@ export function directionDeChute(
   x: number,
   y: number,
   graine: number,
+  vent: { versRad: number; recuMs: number } = SANS_VENT_AU_SOL,
 ): number {
   const { radians: aval, pentePct } = versLAval(altitudes, dims, x, y);
-  const contrainte =
-    (1 - DISPERSION_RESIDUELLE) * Math.min(1, pentePct / PENTE_ORIENTANT_LA_CHUTE_PCT);
+  const poidsPente = Math.min(1, pentePct / PENTE_ORIENTANT_LA_CHUTE_PCT);
+  const poidsVent = Math.min(1, Math.max(0, vent.recuMs) / VENT_ORIENTANT_LA_CHUTE_MS);
+  const dx = poidsPente * Math.cos(aval) + poidsVent * Math.cos(vent.versRad);
+  const dy = poidsPente * Math.sin(aval) + poidsVent * Math.sin(vent.versRad);
+  const resultante = Math.hypot(dx, dy);
+  // Résultante nulle : ou bien rien ne pousse (plaine, temps calme), ou bien
+  // les deux tendances se sont exactement annulées. Dans les deux cas la
+  // contrainte est nulle et l'angle de départ n'a aucune importance — mais il
+  // faut en choisir un, et `atan2(0, 0)` vaut zéro, ce qui serait un est
+  // arbitraire plutôt qu'un aval sans force.
+  const tendance = resultante < 1e-9 ? aval : Math.atan2(dy, dx);
+  const contrainte = (1 - DISPERSION_RESIDUELLE) * Math.min(1, resultante);
   const ecart = (rngFloat(rngStateFromSeed(graine)).value * 2 - 1) * Math.PI;
-  return aval + ecart * (1 - contrainte);
+  return tendance + ecart * (1 - contrainte);
 }
 
 /**
