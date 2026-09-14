@@ -206,13 +206,16 @@ semaine simulée.
 | **Santé** | `vigueur`, `dommageHydraulique` | feuillage clairsemé et pâle ; **cime sèche** des sécheresses passées |
 | **Chandelles** | `chandelle`, `mortSemaine`, `brulEeSemaine` | le fût qui grisonne et se creuse ; la **noire** du feu contre la **grise** du temps |
 | **Morts** | `Snapshot.morts` (`MortDeLaSemaine{id,x,y,especeId,cause,heightM}`) | les onze animations de mort, chacune à sa place — et elles **s'accumulent** entre deux instantanés, donc rien ne passe à la trappe à grande vitesse |
-| **Gestes** | `Snapshot.gestes` (`GesteVisible`) | l'arbre qui **tombe** au lieu de s'escamoter ; élagage, étêtage, recépage, broutage, frottis. Ils disent ce qui a été *réellement* touché — le plafond horaire arrête souvent le chantier en cours de route |
-| **Incendie** | `Snapshot.incendie` (`IncendieResult{origine,brulees,rangs}`) | le front qui court : les cellules sont rangées **par rang croissant**, le rendu n'a qu'à les découper en tranches |
+| **Naissances** | `Snapshot.naissances` (`NaissanceDeLaSemaine{id,x,y,especeId,heightM}`) | le point vert du calque des changements sur chaque nouvelle recrue. Même forme et même accumulation que `morts` : une friche qui se boise laisse enfin une trace |
+| **Franchissements** | `Snapshot.franchissements` (`{id,deStade,versStade}`) | l'anneau sur l'arbre qui vient de passer gaulis, perchis ou futaie. Le stade lui-même se calcule côté rendu (`stadeDe`) ; seul le passage voyage |
+| **Gestes** | `Snapshot.gestes` (`GesteVisible`) | l'arbre qui **tombe** au lieu de s'escamoter ; élagage, étêtage, recépage, broutage, frottis. Ils disent ce qui a été *réellement* touché — le plafond horaire arrête souvent le chantier en cours de route. Les cinq gestes du joueur portent `retire: ArbreRetire[]` : position, espèce, hauteurs et bases de houppier avant/après, et `directionRad` quand une tige entière est tombée — de quoi animer un arbre qui a déjà quitté `state.trees` |
+| **Incendie** | `Snapshot.incendie` (`IncendieResult{origine,brulees,rangs,charges}`) | le front qui court : les cellules sont rangées **par rang croissant**, le rendu n'a qu'à les découper en tranches. `charges` dit dans QUOI chaque cellule a brûlé (indice de `chargeCombustible`, relevé avant consommation) : flamme haute dans l'ajonc, basse dans un pré ras |
 | **Eau de surface** | `soilDebordementMm` | la crue, la lame d'eau qui court, les ravines |
 | **Ambiance** | `soilLumiere` | le sous-bois sombre, les taches de lumière, la clairière |
 | **Tapis** | `soilLitiereCG` | les feuilles de novembre, le paillage, le noir des cendres |
 | **Floraison, gel, brout, liège** | `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`, `derniereLeveeSemaine` | voile de fleurs, fleurs brunies par le gel, rameaux coupés net, écorce arrachée, tronc ocre-rouge |
 | **Météo** | `Snapshot.weather` (déjà là avant) | pluie, neige, gel, canicule — `rainMm` suffit |
+| **Vent** | `Snapshot.weather.ventVersRad` + `.ventMoyMs` | le panache d'incendie **incliné pour de bon** (§6.4), le balancement des houppiers (§6.1), l'orientation d'un rideau de pluie. `ventVersRad` est le cap vers lequel le vent SOUFFLE (+x = est, +y = nord), pas sa provenance : un vent d'ouest vaut 0. L'amplitude visible veut le vent **reçu** — `ventMoyMs × ventExposition` — et pas la vitesse brute. Le cap ne vire pas dans l'année : un panache ne tourne pas pendant un acte, mais deux feux de la même parcelle penchent enfin du même côté |
 
 Trois choses qui ont été faites **mieux** que ce que ce document demandait, et
 qui méritent d'être sues avant de coder :
@@ -1128,7 +1131,7 @@ Des couches d'ambiance pilotées par l'état, mixées en continu (Web Audio) :
 
 | Couche | Pilotée par | Charge |
 |---|---|---|
-| Vent dans les feuilles | `ventExposition` de la station × densité du couvert × feuillaison (un couvert nu siffle, un couvert plein bruisse) | `M` |
+| Vent dans les feuilles | `weather.ventMoyMs × ventExposition` de la station × densité du couvert × feuillaison (un couvert nu siffle, un couvert plein bruisse). L'abri seul ne suffisait pas : il ne disait pas s'il ventait cette semaine-là | `M` |
 | Oiseaux | saison + indice de biodiversité (une parcelle riche est bruyante ; une pinède pure, silencieuse) | `M` |
 | Pluie, grêle, vent fort | `rainMm`, `tMinAbsC` | `S` |
 | Ruisseau, mare | proximité de l'eau libre à la caméra | `S` |

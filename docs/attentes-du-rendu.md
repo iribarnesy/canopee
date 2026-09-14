@@ -68,6 +68,39 @@ CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick
 pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 (`pheno`).
 
+La météo (`weather`, un `WeekWeather` entier) porte depuis peu **le vent** :
+
+| Champ | Ce qu'il porte |
+|---|---|
+| `ventVersRad` | cap vers lequel le vent SOUFFLE, radians, repère de la carte (+x = est, +y = nord) |
+| `ventMoyMs` | vitesse moyenne de la semaine à 10 m, m/s |
+
+Trois mises en garde, parce que chacune est un contresens possible à l'écran :
+
+1. **`Vers`, pas « d'où »**. La météo nomme un vent par sa provenance — un
+   « vent d'ouest » vient de l'ouest. Ici c'est la direction du MOUVEMENT, comme
+   `directionRad` d'une tige tombée ou `versLAval` : un vent d'ouest vaut
+   `ventVersRad = 0`, puisqu'il pousse vers l'est. Incliner un panache avec le
+   signe inverse le ferait pencher face au feu.
+2. **`ventMoyMs` n'est pas `ventExposition`.** Le premier est le vent régional,
+   le second (dans `StationInfo`) un ABRI ∈ [0,1]. Ce que la parcelle reçoit,
+   c'est le produit des deux — `ventRecuParLeSite()` dans `feu.ts` le calcule, et
+   c'est cette valeur-là qui pousse le front. Pour l'amplitude d'un panache ou
+   d'un balancement de houppier, c'est aussi le produit qu'il faut, pas la
+   vitesse brute : un vallon fermé ne balance pas comme une lande.
+3. **Le cap ne vire pas dans l'année, et la vitesse est un vent MOYEN
+   hebdomadaire.** Le régime dominant est constant (flux d'ouest à sud-ouest,
+   `VENT_DOMINANT_VERS_RAD`), la vitesse suit la saison — maximum en hiver,
+   minimum fin juillet. Donc : un panache ne tournera pas pendant un acte, et un
+   vent hebdomadaire moyen sous-estime toujours la rafale qui fait courir un vrai
+   incendie. Ce que le vent règle, c'est que deux feux de la même parcelle
+   penchent maintenant **du même côté** au lieu de s'éventer autour de leur
+   origine.
+
+Une rose des vents par station reste à faire : les quatre stations partagent
+aujourd'hui le même régime, faute de données (`SyntheticClimate.ventDominantVersRad`
+est là pour qu'une station le déclare quand on l'aura).
+
 **Par cellule**, en `Float32Array`/`Uint8Array` transférés :
 
 | Grille | Ce qu'elle porte |
@@ -118,9 +151,13 @@ parcelle. Les recalculer au rendu, c'est prendre le risque de dessiner une tête
 qui ne vaut pas ce que le moteur lui accorde.
 
 **Ce qui s'est passé depuis le dernier instantané** : `events`, `refusals`,
-`morts` (avec `id` et position), `chutes` (chandelles abattues : direction et
-empreinte du tronc), `incendie` (compteurs + `origine`, `brulees` et `rangs` du
-front), et `gestes`, qui ont DEUX mailles :
+`morts` (avec `id` et position), `naissances` (semis installés : `id`, position,
+espèce, hauteur à la levée — la moitié positive de `morts`, même forme ; à ne
+PAS confondre avec « arbre jeune », voir plus bas),
+`franchissements` (`{ id, deStade, versStade }` : les tiges que la CROISSANCE a
+fait changer de stade), `chutes` (chandelles abattues : direction et empreinte
+du tronc), `incendie` (compteurs + `origine`, `brulees`, `rangs` et `charges` du front),
+et `gestes`, qui ont DEUX mailles :
 
 - `{ type, ids }` pour ce qui désigne des arbres — `couper`, `eclaircir`,
   `elaguer`, `trogner`, `receper`, `brouter`, `frotter` ;
@@ -133,6 +170,43 @@ plafond horaire arrête souvent un chantier en cours de route, et une pelouse
 déjà rase ne se fauche pas. `estGesteSurArbres` et `estGesteSurZone` discriminent
 les deux mailles (`find` rend l'union entière, que TypeScript ne rétrécit pas
 sur le seul `type`).
+
+Les cinq gestes du joueur qui retirent du bois portent en plus `retire`, un
+`ArbreRetire[]` dans le même ordre que `ids` : `id`, `x`, `y`, `especeId`,
+`hauteurAvantM` / `hauteurApresM`, `baseHouppierAvantM` / `baseHouppierApresM`,
+et `directionRad`. C'est un enregistrement COMPLET, pas un delta, parce qu'un
+arbre coupé quitte `state.trees` dans le même tick : son identifiant seul ne
+mène plus à rien dans l'instantané. `hauteurApresM` à 0 signe ce départ ; sinon
+c'est ce qui reste debout — tête de trogne, souche de recépage, tige intacte
+d'un élagage. `directionRad` n'est présent que quand une tige ENTIÈRE est
+tombée (`couper`, `eclaircir`, `receper`) : c'est l'orientation en travers de
+la pente, la seule que le moteur sache justifier — il ne modélise ni
+cloisonnement ni sens de débardage, et sur terrain plat elle ne veut rien dire.
+Pour `elaguer` et `trogner` la charpente est démontée sur place, le moteur n'y
+voit pas de direction unique et n'en invente pas. `brouter` et `frotter` n'ont
+pas de `retire` : le gibier prélève un stock (`pousseTendreM`), pas un volume
+géométrique, et sa date voyage par `brouteSemaine`.
+
+Une **naissance n'est pas un arbre jeune**, et `ageWeeks` ne suffit pas à les
+confondre impunément : les trois endroits qui créent un arbre — recrutement
+naturel, geste `planter`, semis en vrac — posent tous `ageWeeks: 0` et
+l'incrémentent d'un par tick. Un plant acheté et un semis levé la même semaine
+portent donc le même âge pour toujours. Une règle du genre « `ageWeeks` plus
+petit que le nombre de semaines écoulées » pointerait donc d'un point vert la
+plantation du joueur au même titre qu'une recrue — ce n'est pas la même image,
+et l'erreur ne se voit pas avant de planter deux cents tiges d'un coup.
+`naissances` ne contient que ce que le recrutement a installé. Un test le fixe.
+
+Le **stade** d'une tige (`semis`, `gaulis`, `perchis`, `futaie`) ne voyage PAS
+par arbre, et c'est volontaire : `stadeDe(heightM)` est pure et importable
+depuis l'UI (`src/engine/stades.ts`), donc le rendu la calcule sans rien
+demander. Seul le FRANCHISSEMENT voyage, parce que lui seul demande de comparer
+deux instants. Il ne couvre que la croissance : un arbre rabattu par une trogne
+ou un recépage descend l'échelle, et cette chute-là se lit déjà dans `retire`
+(`hauteurAvantM` / `hauteurApresM`), dont le rendu tire les deux stades. Les
+bornes sont celles de la sylviculture française, en DIAMÈTRE (2,5 / 7,5 /
+17,5 cm), et passent par `diametreCm` — un proxy assumé, dont elles héritent
+l'approximation. Le module le dit en détail, fourré compris.
 
 **Et ce que le rendu peut calculer lui-même**, sans rien demander : tout ce qui
 est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur

@@ -10,6 +10,7 @@
  * carbone, §7.3). Pas encore de profondeur racinaire par âge (horizons V1).
  */
 
+import { facteurAllelopathie, SENSIBILITE_MEDIANE } from "./allelopathie";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
@@ -199,6 +200,11 @@ export interface TreeEnvironment {
   nitrogenSatisfaction: number;
   /** satisfaction des besoins en phosphore et en potassium ∈ [0,1] (pk.ts) */
   phosphoreSatisfaction?: number;
+  /**
+   * Intensité de l'inhibition allélopathique subie à cet endroit ∈ [0,1] : la
+   * somme de ce que les émetteurs voisins déversent ici (allelopathie.ts).
+   */
+  intensiteAllelopathique?: number;
   potassiumSatisfaction?: number;
   /** pH moyen de la zone racinaire */
   phMean: number;
@@ -653,8 +659,16 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // les autres. Ils ne freinent presque jamais sur un bon sol — c'est sur les
   // sols acides ou sableux qu'ils prennent la main (pk.ts).
   const fP = env.phosphoreSatisfaction ?? 1;
+  // L'allélopathie entre au même titre que les autres : un arbre inhibé par la
+  // juglone de son voisin ne pousse pas, quoi qu'il ait par ailleurs
+  // (allelopathie.ts). C'est le seul facteur qui vienne d'une AUTRE plante et
+  // non du milieu.
+  const fAllelo = facteurAllelopathie(
+    env.intensiteAllelopathique ?? 0,
+    espece.sensibiliteAllelopathie ?? SENSIBILITE_MEDIANE,
+  );
   const fK = env.potassiumSatisfaction ?? 1;
-  const limitingFactor = Math.min(fSec, fEng, fLum, fPH, fN, fP, fK);
+  const limitingFactor = Math.min(fSec, fEng, fLum, fPH, fN, fP, fK, fAllelo);
   // Seuls l'eau, l'anoxie et l'ombre SOUS le point de compensation épuisent
   // les réserves : au-dessus, l'arbre « survit » même s'il ne pousse plus
   // (méthode pousse / s'épanouit / survit, ch3-C). L'ombre ne compte qu'en

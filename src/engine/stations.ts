@@ -202,6 +202,54 @@ export const LIMON_PAUVRE_N: StationClimat = {
 };
 
 /**
+ * Limon sableux acide de Sologne : le sol lessivé et podzolisant des sables et
+ * argiles de l'Orléanais, entre Loire et Cher.
+ *
+ * Il manquait, et son absence se voyait : la station de référence du moteur est
+ * à pH 7, or le châtaignier s'arrête à 6,5 et le houx à 7. Deux espèces de
+ * l'atlas ne pouvaient donc vivre sur AUCUNE station de comparaison, et l'essai
+ * des hauteurs devait s'en fabriquer une à la volée pour les mesurer. Ce
+ * n'était pas un défaut du modèle de pH — un châtaignier ne pousse pas sur
+ * calcaire, c'est un fait — mais une lacune du catalogue.
+ *
+ * Ce n'est pas « le limon riche avec un pH plus bas » : un sol lessivé et
+ * acide diffère par plus que son pH. Il est plus sableux, sa matière
+ * organique s'accumule parce qu'elle se minéralise lentement, et son azote
+ * minéral disponible est plus bas pour la même raison. L'acidité est plus forte
+ * en surface, où la litière l'entretient, qu'en profondeur.
+ *
+ * Ce qui y est chez soi : châtaignier, houx, bouleau, ajonc, callune, genêt —
+ * une bonne part de l'atlas, et précisément celle qui n'avait pas de terrain.
+ */
+export const LIMON_ACIDE: StationClimat = {
+  station: stationDepuisProfil({
+    id: "limon-acide",
+    relief: { altitudeM: 110, pentePct: 2, expositionDeg: 180, forme: "plan", bassinAmontHa: 0.4 },
+    paysageId: "bocage",
+    nom: "Limon sableux acide (Sologne)",
+    latitudeDeg: 47.5,
+    profil: [
+      horizon(30, { sable: 30, limon: 55, argile: 15 }, { moPct: 3, ph: 5 }),
+      horizon(60, { sable: 35, limon: 50, argile: 15 }, { moPct: 1, ph: 5.4 }),
+    ],
+    // La minéralisation est lente en sol acide : la matière organique
+    // s'accumule, mais elle libère peu.
+    initialMineralNKgHa: 30,
+    profondeurNappeEquilibreCm: 500,
+    remonteeNappeMmSemaine: 0,
+    drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
+    herbeInitiale: 0.3,
+    coteM: 100,
+  }),
+  // Même climat que la vallée engorgée, et pour une bonne raison : la Sologne
+  // est à une heure de Tours, et c'est la série de Tours que la station
+  // partage (data/meteo.ts). Ajouter une série demanderait de reconstruire un
+  // département entier de données Météo-France ; partager celle du voisin le
+  // plus proche est plus honnête que d'en inventer une.
+  climat: VALLEE_ENGORGEE.climat,
+};
+
+/**
  * Friche sur limon moyen, 50 × 50 m : la station du test de succession
  * émergente — on ne plante rien, le paysage voisin colonise.
  */
@@ -237,5 +285,6 @@ export const STATIONS_V0: readonly StationClimat[] = [
   VALLEE_ENGORGEE,
   LIMON_RICHE,
   LIMON_PAUVRE_N,
+  LIMON_ACIDE,
   FRICHE_LIMON,
 ];

@@ -14,16 +14,20 @@ import { livingCarbonKg, treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import {
   accessibiliteDuHouppier,
+  anisotropieDuFront,
   chargeCombustible,
   departDeFeu,
+  excentriciteDuFront,
   indiceRisqueFeu,
   portanceDuFeu,
   propager,
   rangsDuFront,
+  SANS_VENT,
   survitAuFeu,
+  ventRecuParLeSite,
 } from "../../src/engine/feu";
 import { advanceWeek } from "../../src/engine/game";
-import { serieToWeeks } from "../../src/engine/meteo";
+import { serieToWeeks, VENT_DOMINANT_VERS_RAD, ventDeLaSemaine } from "../../src/engine/meteo";
 import { frequentationHumaine, getPaysage } from "../../src/engine/paysage";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
@@ -95,7 +99,11 @@ describe("le risque de feu émerge des conditions, il n'est pas décrété", () 
     expect(chaudEtSec).toBeLessThanOrEqual(1);
   });
 
-  it("à conditions égales, le vent aggrave le risque", () => {
+  it("à conditions égales, l'exposition au vent aggrave le risque", () => {
+    // Ce facteur reste l'EXPOSITION, pas la vitesse hebdomadaire : le vent est
+    // désormais dans la météo, et le déclenchement ne le lit volontairement pas
+    // (`feu.ts`). Il demanderait une grandeur de rafale et une recalibration
+    // assumée de la fréquence des départs.
     expect(indiceRisqueFeu(0.05, 32, 1, 1)).toBeGreaterThan(indiceRisqueFeu(0.05, 32, 1, 0));
   });
 
@@ -339,6 +347,11 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   let arbresTues = 0;
   const tuesParLeFeu: Record<string, number> = {};
   const mortsTotales: Record<string, number> = {};
+  /** Effectif vivant de chaque espèce PRÉSENT dans les cellules brûlées. */
+  const dansLeFront: Record<string, number> = {};
+  const celluleDe = (x: number, y: number) =>
+    Math.min(station.coteM - 1, Math.max(0, Math.floor(y))) * station.coteM +
+    Math.min(station.coteM - 1, Math.max(0, Math.floor(x)));
   let dernier: NonNullable<ReturnType<typeof advanceWeek>["incendie"]> | undefined;
   // Ce scénario portait aussi un relevé de carbone sur les rejets de souche.
   // Il ne relevait rien, et pour une raison structurelle : le pin est tué mais
@@ -353,6 +366,7 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   for (let i = 0; i < 40 * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
+    const avant = state;
     const r = advanceWeek(state, w, []);
     state = r.state;
     for (const m of r.morts) {
@@ -363,6 +377,15 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
       incendies++;
       arbresTues += r.incendie.arbresTues;
       dernier = r.incendie;
+      // Le DÉNOMINATEUR du tri : qui était sur le passage du front, relevé
+      // AVANT le tick, donc avant que le feu n'en retire personne.
+      const brulees = new Set(r.incendie.brulees);
+      for (const t of avant.trees) {
+        if (!t.alive) continue;
+        if (brulees.has(celluleDe(t.x, t.y))) {
+          dansLeFront[t.especeId] = (dansLeFront[t.especeId] ?? 0) + 1;
+        }
+      }
     }
   }
 
@@ -392,19 +415,62 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     }
   });
 
+  /**
+   * La charge de chaque cellule brûlée (issue #50). Sans elle, le rendu dessine
+   * toutes ses flammes à la même hauteur de convention, faute de savoir DANS
+   * QUOI elles brûlent : « le feu s'essouffle dans le feuillu frais, fonce dans
+   * la lande » ne se lit alors que sur la vitesse du front, jamais sur la
+   * flamme. Une lande de pins et d'ajoncs ne brûle pas partout pareil, et c'est
+   * précisément ce que le calque doit montrer.
+   */
+  it("l'incendie rend AUSSI dans quoi chaque cellule a brûlé", () => {
+    expect(dernier).toBeDefined();
+    if (!dernier) return;
+    // Alignée sur `brulees`, cellule par cellule : c'est ce qui permet de lire
+    // les deux ensemble sans table de correspondance.
+    expect(dernier.charges).toHaveLength(dernier.cellulesBrulees);
+    // Une cellule qui a brûlé portait du combustible : une charge nulle
+    // partout voudrait dire qu'on relève la charge APRÈS consommation, ce qui
+    // serait le contraire de ce qu'on veut montrer.
+    const total = [...dernier.charges].reduce((a, b) => a + b, 0);
+    expect(total).toBeGreaterThan(0);
+    for (const c of dernier.charges) {
+      expect(c).toBeGreaterThanOrEqual(0);
+      // Borne haute de l'indice de `chargeCombustible`, avec de la marge.
+      expect(c).toBeLessThan(3);
+    }
+    // Et ça VARIE : une lande de pins et d'ajoncs ne brûle pas partout à la
+    // même intensité. Une charge uniforme rendrait le champ inutile.
+    const distinctes = new Set([...dernier.charges].map((c) => c.toFixed(3)));
+    expect(distinctes.size).toBeGreaterThan(1);
+  });
+
   it("le feu trie : il emporte des pins et épargne les chênes-lièges", () => {
     // On regarde QUI le feu tue, pas qui domine à la fin — ce dernier chiffre
     // dépend de la date du dernier incendie et bascule pour un rien. Ce qui
     // est structurel, c'est l'écorce : le liège est la réponse évolutive au
     // feu, et ça doit se lire dans les causes de mort.
-    // On compare les PERTES au feu rapportées aux effectifs plantés, et non la
-    // part du feu dans les causes de mort : quand le feu devient la seule
-    // cause de mort — ce qui arrive dès que la station est confortable par
-    // ailleurs — cette part vaut 1 pour tout le monde et ne trie plus rien.
-    expect(tuesParLeFeu.pinus_sylvestris ?? 0).toBeGreaterThan(0);
-    expect(tuesParLeFeu.pinus_sylvestris ?? 0).toBeGreaterThan(
-      2 * (tuesParLeFeu.quercus_suber ?? 0),
-    );
+    //
+    // On compare des TAUX : les pertes au feu rapportées à l'effectif de
+    // l'espèce qui était sur le passage du front. C'est ce que cette
+    // vérification annonçait depuis toujours, mais elle comparait en fait des
+    // effectifs BRUTS, et ça ne tenait que par accident — le liège affichait
+    // zéro mort, si bien que « 20 > 2 × 0 » passait sans rien démontrer. Dès
+    // que le front s'est allongé sous le vent, il a atteint des cellules à
+    // très forte charge, où même le liège y passe : 30 lièges morts contre 20
+    // pins, et la comparaison brute s'effondrait — alors qu'il y avait dix
+    // fois plus de lièges que de pins sur le passage du feu. Comparer des
+    // effectifs bruts entre populations d'un ordre de grandeur d'écart ne
+    // mesure rien.
+    //
+    // En taux, le tri est net et bien plus fort que ce que l'ancienne
+    // assertion pouvait montrer : le pin y passe en entier, le liège en
+    // réchappe largement.
+    const taux = (id: string) => (tuesParLeFeu[id] ?? 0) / (dansLeFront[id] ?? 1);
+    // Les deux espèces ont bien été exposées : sans ça, un taux ne veut rien dire.
+    expect(dansLeFront.pinus_sylvestris ?? 0).toBeGreaterThan(0);
+    expect(dansLeFront.quercus_suber ?? 0).toBeGreaterThan(0);
+    expect(taux("pinus_sylvestris")).toBeGreaterThan(2 * taux("quercus_suber"));
   });
 
   it("le feu est déterministe : même graine, mêmes incendies", () => {
@@ -528,6 +594,35 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
     expect(accessibiliteDuHouppier(6, 1)).toBeLessThan(accessibiliteDuHouppier(3, 1));
   });
 
+  it("élaguer est une mesure de prévention, et personne ne l'a écrit", () => {
+    // Trois mécanismes qui existaient chacun de leur côté se rejoignent ici, et
+    // le résultat n'est écrit nulle part : l'élagage relève la base du houppier
+    // (`hauteurElagueeM` entre dans `baseHouppierM`, tick.ts) ; la base du
+    // houppier décide de l'amorçage de feu de cime (`accessibiliteDuHouppier`,
+    // ci-dessus) ; donc élaguer met le couvert hors d'atteinte d'un feu
+    // rampant. C'est exactement ce que prescrit le débroussaillement
+    // réglementaire dans les Landes, et le moteur y arrive tout seul.
+    const cote = 20;
+    const litiere = new Array(cote * cote).fill(400);
+    const herbe = new Array(cote * cote).fill(0.3);
+    const ouvert = new Array(cote * cote).fill(1);
+    const peuplement = (base: number) =>
+      Array.from({ length: 40 }, (_, i) => ({
+        ...arbre("pinus_sylvestris", 14),
+        id: i + 1,
+        x: 2 + (i % 7) * 2.5,
+        y: 2 + Math.floor(i / 7) * 3,
+        baseHouppierM: base,
+      }));
+    const branchu = chargeCombustible(peuplement(1), herbe, litiere, cote, ouvert);
+    const elague = chargeCombustible(peuplement(6), herbe, litiere, cote, ouvert);
+    expect(elague.moyenne).toBeLessThan(0.7 * branchu.moyenne);
+    // Mais l'élagage ne met pas à l'abri : le combustible de SURFACE, lui, n'a
+    // pas bougé d'un gramme. Un pin élagué sur une lande d'herbe sèche brûle
+    // toujours au sol — ce qu'il ne fait plus, c'est passer en cime.
+    expect(elague.moyenne).toBeGreaterThan(0);
+  });
+
   it("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
     const cote = 20;
     const litiere = new Array(cote * cote).fill(400);
@@ -555,5 +650,155 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
       ouvert,
     );
     expect(lande.moyenne).toBeGreaterThan(hetraie.moyenne);
+  });
+});
+
+describe("le vent : une direction et une vitesse, pas un scalaire d'abri", () => {
+  it("le vent d'une semaine est purement déterministe", () => {
+    // Aucun tirage : deux appels rendent le même vent, et la seule présence des
+    // champs ne peut donc pas déplacer l'empreinte d'une partie.
+    expect(ventDeLaSemaine(30)).toEqual(ventDeLaSemaine(30));
+  });
+
+  it("le cap ne vire pas dans l'année : un régime dominant se maintient", () => {
+    // C'est ce qui règle le vrai grief de l'issue #50 — deux incendies de la
+    // même parcelle penchaient en éventail autour de leur origine, alors qu'un
+    // vent les incline tous du même côté.
+    const caps = new Set(Array.from({ length: 52 }, (_, w) => ventDeLaSemaine(w).ventVersRad));
+    expect(caps).toEqual(new Set([VENT_DOMINANT_VERS_RAD]));
+  });
+
+  it("il vente plus en hiver qu'au cœur de l'été", () => {
+    // Sous régime océanique, la vitesse moyenne passe par un maximum en hiver
+    // (rail des dépressions) et un minimum en été. Conséquence assumée : la
+    // saison des feux tombe dans le BAS de la plage de vent.
+    const juillet = ventDeLaSemaine(29).ventMoyMs;
+    const janvier = ventDeLaSemaine(3).ventMoyMs;
+    expect(janvier).toBeGreaterThan(juillet);
+    expect(juillet).toBeGreaterThan(0);
+  });
+
+  it("un vallon sous tempête reçoit plus qu'une lande par temps calme", () => {
+    // L'abri et le vent ne sont pas interchangeables : c'était tout le
+    // problème. `ventExposition` seul ne pouvait pas dire cela.
+    expect(ventRecuParLeSite(15, 0.1)).toBeGreaterThan(ventRecuParLeSite(1, 0.95));
+  });
+});
+
+describe("le front s'allonge dans le vent", () => {
+  const CAP_EST = 0;
+
+  it("le vent AJOUTE : il sert la tête, et n'ampute aucun cap", () => {
+    // Deux versions ont échoué ici, dans le même sens. Normaliser l'ellipse sur
+    // la tête, puis sur le flanc, faisait RETIRER quelque chose à des pas que
+    // le vent n'aurait pas dû freiner — et comme `propager` est une percolation
+    // sans budget de temps, où le pas sous le vent passait déjà librement en
+    // combustible saturé, le bonus y était perdu et seule la pénalité mordait.
+    // Un feu venté brûlait donc MOINS qu'un feu calme, l'inverse du fait à
+    // modéliser. Le 1 est maintenant sur l'ARRIÈRE : aucun cap ne peut plus
+    // brûler moins qu'il n'aurait brûlé sans vent.
+    const vent = { versRad: CAP_EST, vitesseMs: 6 };
+    const tete = anisotropieDuFront(CAP_EST, vent);
+    const flanc = anisotropieDuFront(Math.PI / 2, vent);
+    const arriere = anisotropieDuFront(Math.PI, vent);
+    expect(tete).toBeGreaterThan(flanc);
+    expect(flanc).toBeGreaterThan(arriere);
+    for (const f of [tete, flanc, arriere]) expect(f).toBeGreaterThanOrEqual(1);
+    // Les RAPPORTS restent ceux de l'ellipse : tête/arrière = (1+e)/(1−e).
+    const e = excentriciteDuFront(6);
+    expect(tete / arriere).toBeCloseTo((1 + e) / (1 - e), 10);
+  });
+
+  it("en combustible saturé, le vent ne retire pas une cellule", () => {
+    // La conséquence directe du 1 sur l'arrière, et ce qu'un test de
+    // conservation du carbone — écrit pour tout autre chose — avait pris en
+    // défaut : son feu de chandelles ne nettoyait plus la parcelle. Tous les
+    // facteurs valant ≥ 1, aucun pas ne se met à tirer, donc le même ensemble
+    // brûle et AUCUN tirage n'est consommé.
+    const cote = 21;
+    const charge = { parCellule: new Array(cote * cote).fill(1), moyenne: 1 };
+    const calme = propager(0, charge, cote, rngStateFromSeed(2));
+    const vente = propager(0, charge, cote, rngStateFromSeed(2), {
+      versRad: CAP_EST,
+      vitesseMs: 6,
+    });
+    expect(vente.brulees.size).toBe(cote * cote);
+    expect(vente.brulees.size).toBe(calme.brulees.size);
+    expect(vente.rng).toEqual(calme.rng);
+  });
+
+  it("sans vent, aucun cap n'est privilégié", () => {
+    for (const cap of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      expect(anisotropieDuFront(cap, SANS_VENT)).toBe(1);
+    }
+  });
+
+  it("un feu venté fait une ellipse, un feu calme une tache", () => {
+    // Combustible marginal et homogène : la FORME ne peut venir que du vent.
+    // 0,4 de charge met le pas de flanc SOUS le seuil de percolation d'un
+    // réseau carré à quatre voisins (≈ 0,59) et le pas de tête au-dessus : les
+    // flancs s'éteignent, la tête court. Sur un combustible saturé il n'y
+    // aurait rien à voir — tout brûle, vent ou pas (cf. l'essai précédent).
+    const cote = 41;
+    const centre = 20 * cote + 20;
+    const charge = { parCellule: new Array(cote * cote).fill(0.4), moyenne: 0.4 };
+    // On mesure les deux sens de x SÉPARÉMENT. Les confondre en une « longueur »
+    // ne disait rien : la tête atteint le bord de la parcelle, donc la mesure
+    // saturait à la moitié du côté et le rapport à la largeur ne prouvait plus
+    // rien. L'asymétrie tête/arrière, elle, ne dépend pas du bord.
+    const etendues = (brulees: ReadonlySet<number>) => {
+      let tete = 0;
+      let arriere = 0;
+      let flanc = 0;
+      for (const c of brulees) {
+        tete = Math.max(tete, (c % cote) - 20);
+        arriere = Math.max(arriere, 20 - (c % cote));
+        flanc = Math.max(flanc, Math.abs(Math.floor(c / cote) - 20));
+      }
+      return { tete, arriere, flanc };
+    };
+    const vent = { versRad: CAP_EST, vitesseMs: 6 };
+    const calme = propager(centre, charge, cote, rngStateFromSeed(7)).brulees;
+    const vente = propager(centre, charge, cote, rngStateFromSeed(7), vent).brulees;
+    const e = etendues(vente);
+    // Vent d'est : le front part vers l'est et ne remonte pas au vent.
+    expect(e.tete).toBeGreaterThan(3 * e.arriere);
+    // Et il est plus long que large : c'est l'ellipse, pas la tache.
+    expect(e.tete).toBeGreaterThan(e.flanc);
+    // Par temps calme, à la même charge, le départ s'éteint sur place.
+    expect(vente.size).toBeGreaterThan(10 * calme.size);
+  });
+
+  it("un feu venté brûle plus large qu'un feu calme, à combustible égal", () => {
+    const cote = 41;
+    const charge = { parCellule: new Array(cote * cote).fill(0.4), moyenne: 0.4 };
+    let vente = 0;
+    let calme = 0;
+    // Plusieurs graines : l'affaire est statistique, pas anecdotique.
+    for (let graine = 1; graine <= 12; graine++) {
+      const centre = 20 * cote + 20;
+      calme += propager(centre, charge, cote, rngStateFromSeed(graine)).brulees.size;
+      vente += propager(centre, charge, cote, rngStateFromSeed(graine), {
+        versRad: CAP_EST,
+        vitesseMs: 6,
+      }).brulees.size;
+    }
+    expect(vente).toBeGreaterThan(calme);
+  });
+
+  it("le vent n'allume pas ce qui n'a rien à brûler : la coupure tient", () => {
+    // L'anisotropie est un FACTEUR : elle ne peut pas franchir un zéro. Sans
+    // quoi le vent aurait effacé la seule défense que le joueur puisse
+    // construire (ch5 « concevoir contre le FEU »).
+    const cote = 21;
+    const parCellule = new Array(cote * cote).fill(1);
+    for (let y = 0; y < cote; y++) parCellule[y * cote + 10] = 0;
+    // Vent d'est plein sur la coupure : le pire cas.
+    const { brulees } = propager(0, { parCellule, moyenne: 1 }, cote, rngStateFromSeed(2), {
+      versRad: CAP_EST,
+      vitesseMs: 6,
+    });
+    expect([...brulees].filter((i) => i % cote > 10)).toHaveLength(0);
+    expect(brulees.size).toBeGreaterThan(30);
   });
 });

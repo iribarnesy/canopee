@@ -340,6 +340,14 @@ export function meteoDerivee(
     rainMm: Math.max(0, pluie),
     co2Ppm: co2Ppm(scenario, annee),
     annee,
+    // Le vent traverse le scénario INCHANGÉ. Le réchauffement modifie bel et
+    // bien la circulation, mais dans quel sens et de combien en France, je ne
+    // sais pas le sourcer — et l'appliquer au vent des feux serait décider en
+    // creux si les incendies futurs courent plus vite. Tant que la réponse
+    // n'est pas chiffrée, le champ passe tel quel plutôt que d'être étiré au
+    // hasard *(à instruire)*.
+    ventVersRad: base.ventVersRad,
+    ventMoyMs: base.ventMoyMs,
   };
 }
 

@@ -27,7 +27,7 @@ import {
   FRICHE_LIMON,
   LANDE_SECHE,
   LIMON_RICHE,
-  type STATIONS_V0,
+  STATIONS_V0,
   stationDepuisProfil,
 } from "../engine/stations";
 import { COULEUR_AUTRES, SPECIES_COLORS } from "../ui/couleurs";
@@ -88,7 +88,8 @@ const BLEU = "#3d6ea8";
 function meteo(stationId: string): WeekWeather[] {
   const serie = serieMeteoPour(stationId);
   if (!serie) throw new Error(`série manquante : ${stationId}`);
-  return serieToWeeks(serie);
+  // Le climat de la station complète ce que la série ne mesure pas : le vent.
+  return serieToWeeks(serie, STATIONS_V0.find((s) => s.station.id === stationId)?.climat);
 }
 
 function station(base: (typeof STATIONS_V0)[number], patch: Partial<Station> = {}): Station {

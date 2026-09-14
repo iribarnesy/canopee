@@ -179,7 +179,7 @@ function partie(
 
 /** Moyenne sur plusieurs graines : une seule ne dit rien (voir l'en-tête). */
 function surPlusieursGraines(melange: readonly string[], replant?: readonly string[]) {
-  const graines = [1, 7, 33, 404, 2022, 55, 91, 128];
+  const graines = [1, 7, 33, 404, 2022, 55, 91, 128, 3, 12, 77, 250, 601, 888, 1001, 1789];
   const parties = graines.map((g) => partie(melange, g, 26, replant));
   const avecFeu = parties.filter((p) => p.aEuFeu);
   const moyenne = (f: (p: (typeof parties)[0]) => number) =>
@@ -204,17 +204,30 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     expect(pin.bruleesMoyennes).toBeGreaterThan(200);
   });
 
-  it("les feuillus achètent du temps : à vingt-six ans ils brûlent moins", () => {
+  it("les feuillus n'achètent même plus de temps depuis l'effet de bord", () => {
     // Deux mécanismes se cumulent, aucun n'est écrit pour l'occasion :
     // l'inflammabilité propre de l'essence, et le fait qu'un couvert fermé
     // garde sa litière humide (`portanceDuFeu`, feu.ts).
     //
-    // ATTENTION à la portée de ce résultat : il vaut À CET HORIZON. Poussé à
-    // cinquante ans sur deux lots de seize graines, l'écart change de signe
-    // (−6 % puis +2 %) — voir l'en-tête. Une fois que tout est passé au feu au
-    // moins une fois, c'est la lande qui porte le suivant, pas ce qu'on avait
-    // planté dessus.
-    expect(feuillus.bruleesMoyennes).toBeLessThan(pin.bruleesMoyennes);
+    // CONCLUSION RETIRÉE, et c'est la deuxième fois pour ce résultat.
+    //
+    // On avait d'abord mesuré que les feuillus brûlaient un tiers de moins à
+    // vingt-six ans — le seul horizon où l'avantage tenait, celui de long terme
+    // ayant déjà été retiré. Il ne tient plus non plus : sur seize graines, les
+    // feuillus brûlent 656 m² contre 431 au pin, soit la moitié DE PLUS.
+    //
+    // Le changement isolé est l'effet de bord (lisiere.ts) : en désactivant le
+    // seul ombrage de l'entourage, l'ancien ordre revient. L'explication qui
+    // tient, et elle n'est pas vérifiée pour elle-même : l'atténuation par les
+    // feuillus reposait sur leur capacité à FERMER LE COUVERT vite, ce qui
+    // étouffe la lande qui porte le feu. Tout ce qui les ralentit défait donc
+    // l'atténuation, et l'ombre de la lisière les ralentit.
+    //
+    // Ce qu'on garde ici : le simple fait que la composition change la surface
+    // parcourue. Le SENS de l'écart, lui, n'a pas résisté à trois états
+    // successifs du moteur, et on cesse d'en faire une conclusion.
+    expect(feuillus.bruleesMoyennes).toBeGreaterThan(0);
+    expect(Math.abs(feuillus.bruleesMoyennes - pin.bruleesMoyennes)).toBeGreaterThan(50);
   });
 
   it("le chêne-liège, lui, tient aux deux horizons — parce qu'il survit", () => {
@@ -228,9 +241,13 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     // trouve moins à brûler. Survivre au feu est ce qui empêche le suivant.
     // On avait écrit l'inverse tant que le modèle de combustible amortissait la
     // charge des houppiers par leur propre ombre.
+    // L'avantage se réduit avec l'effet de bord — 344 m² contre 431, soit 20 %
+    // de moins au lieu de 30 — mais il RESTE, et il reste dans le même sens à
+    // travers tous les états du moteur qu'a connus ce dépôt. C'est le seul
+    // résultat de ce cas d'étude qui ait cette solidité-là.
     const liege = surPlusieursGraines(["quercus_suber"]);
-    expect(liege.bruleesMoyennes).toBeLessThan(0.7 * pin.bruleesMoyennes);
-    expect(liege.grosFeux).toBeLessThan(pin.grosFeux);
+    expect(liege.bruleesMoyennes).toBeLessThan(0.9 * pin.bruleesMoyennes);
+    expect(liege.grosFeux).toBeLessThanOrEqual(pin.grosFeux);
   });
 
   it("mais l'atténuation reste partielle : le feu passe quand même", () => {

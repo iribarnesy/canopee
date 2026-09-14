@@ -14,9 +14,14 @@ import type { Bordures } from "../engine/paysage";
 import type { ContextePhenologique } from "../engine/phenologie";
 import type { Relief } from "../engine/relief";
 import type { TickFluxes } from "../engine/state";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
-import type { VentDeLaSemaine } from "../engine/vent";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
 type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
@@ -44,6 +49,12 @@ export interface SaveGame {
   partBassin?: number;
   /** années simulées à vide avant l'arrivée du joueur ; absent = 0 */
   maturationAns?: number;
+  /**
+   * L'argent contraignait-il la partie ? Absent = oui, pour que les
+   * sauvegardes d'avant restent lisibles. Sans ce champ, une partie jouée sans
+   * contrainte se rejouerait AVEC, et divergerait.
+   */
+  economie?: boolean;
   /** année civile du début de partie */
   anneeDepart: number;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
@@ -286,6 +297,19 @@ export interface Snapshot {
    */
   morts: MortDeLaSemaine[];
   /**
+   * Semis installés depuis le dernier instantané, avec leur position : la
+   * moitié positive de l'histoire, sans quoi le calque des changements ne sait
+   * montrer que ce qui meurt (tick.ts).
+   */
+  naissances: NaissanceDeLaSemaine[];
+  /**
+   * Tiges que la CROISSANCE a fait changer de stade depuis le dernier
+   * instantané (stades.ts). Le stade lui-même se calcule côté rendu depuis
+   * `heightM` (`stadeDe`) ; c'est le franchissement, qui demande de comparer
+   * deux instants, que le moteur seul peut voir.
+   */
+  franchissements: FranchissementDeStade[];
+  /**
    * Gestes subis par des arbres nommés depuis le dernier instantané (coupe,
    * éclaircie, élagage, étêtage, recépage, broutage, frottis).
    */
@@ -299,16 +323,6 @@ export interface Snapshot {
   chutes: ChuteDeChandelle[];
   /** l'incendie de la semaine, avec son front, s'il y en a eu un (feu.ts) */
   incendie?: IncendieResult;
-  /**
-   * Le vent de la semaine : d'où il souffle, vers où, et avec quelle force
-   * (vent.ts).
-   *
-   * **Il voyage avec l'instantané et non avec la station**, à la différence de
-   * `ventExposition` : l'exposition est une propriété du lieu, le vent est un
-   * événement de la semaine. C'est lui qui incline le panache d'un incendie
-   * (§6.4 de l'interface) et qui pourra faire pencher les houppiers.
-   */
-  vent?: VentDeLaSemaine;
 }
 
 export interface StationInfo {
@@ -359,6 +373,8 @@ export type ToWorker =
       /** années à faire passer sur le terrain avant que le joueur n'arrive */
       maturationAns: number;
       anneeDepart: number;
+      /** l'argent contraint-il la partie ? (actions.ts) */
+      economie: boolean;
     }
   | { type: "resume"; save: SaveGame }
   | { type: "speed"; weeksPerSecond: number }

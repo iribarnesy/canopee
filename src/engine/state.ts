@@ -22,7 +22,6 @@ import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
 import { ruHorizonMm } from "./soil";
 import { type TreeState, tirerVigueurIndividuelle } from "./trees";
-import type { RoseDesVents } from "./vent";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
@@ -62,22 +61,11 @@ export interface Station {
    * plateau ouvert. Le vent dessèche les sujets découverts — c'est ce qui rend
    * l'effet brise-vent d'une haie ou d'une nurse payant (ch5, docs §9).
    *
-   * C'est l'ÉCHELLE du vent, pas le vent : sa direction et sa force semaine par
-   * semaine se calculent (`vent.ts`), et la force moyenne d'une année retombe
-   * sur cette exposition.
+   * C'est l'ABRI du site, pas le vent : la vitesse régionale de la semaine est
+   * dans `WeekWeather.ventMoyMs`, et ce que la parcelle reçoit vraiment est le
+   * produit des deux (`ventRecuParLeSite`, feu.ts).
    */
   ventExposition: number;
-  /**
-   * La rose des vents de la station : d'où le vent souffle en régime perturbé
-   * et en régime anticyclonique sec (`vent.ts`).
-   *
-   * **Déclarée et non dérivée**, comme la latitude et pour la même raison :
-   * c'est un fait géographique relevé, pas une conséquence du sol. Absente, on
-   * prend la rose atlantique — celle de la plus grande partie du territoire, et
-   * la seule qu'on puisse appliquer sans savoir où est la station, le moteur ne
-   * tenant pas de longitude.
-   */
-  rose?: RoseDesVents;
   /** relief de la parcelle : altitude, pente, exposition, forme (relief.ts) */
   relief: Relief;
   /** eau libre permanente : ruisseau longeant un côté, mare (eau_surface.ts) */
@@ -300,6 +288,25 @@ export interface GameState {
    * (phenologie.ts). Un hiver doux en compte peu, et le débourrement recule.
    */
   semainesDeFroid: number;
+  /**
+   * Banque de graines du sol, graines/m² par espèce (banqueGraines.ts). La
+   * mémoire du passé de la parcelle : ce qui y a grainé y attend sous terre,
+   * parfois des décennies, et le feu la réveille.
+   */
+  banqueGraines: Record<string, number>;
+  /**
+   * Identifiant stable de la partie, figé à sa création. Le marché du bois en
+   * tire ses variations annuelles : deux parties de même graine voient le même
+   * marché, et le marché ne consomme pas le flux aléatoire principal
+   * (marche.ts).
+   */
+  graineMarche: number;
+  /**
+   * La parcelle a-t-elle brûlé depuis la dernière levée annuelle ? Le feu
+   * scarifie les téguments durs : c'est lui qui fait lever d'un coup une banque
+   * que rien d'autre n'aurait réveillée.
+   */
+  aBruleDepuisLaLevee: boolean;
   rng: RngState;
 }
 
@@ -383,7 +390,7 @@ export interface TickFluxes {
 export function createGameState(
   station: Station,
   rng: RngState,
-  options: { treasuryEur?: number } = {},
+  options: { treasuryEur?: number; economie?: boolean } = {},
 ): GameState {
   const n = cellCount(gridDims(station));
   const nH = Math.max(1, station.profil.length);
@@ -395,12 +402,18 @@ export function createGameState(
   return {
     week: 0,
     station,
-    economy: createEconomy(options.treasuryEur ?? 20_000),
+    economy: createEconomy(options.treasuryEur ?? 20_000, options.economie ?? true),
+    // Un identifiant stable de la partie, figé à la création. Le marché du bois
+    // en tire ses variations annuelles sans puiser dans le flux aléatoire
+    // principal, qui lui change à chaque tick (marche.ts).
+    graineMarche: (rng[0] ?? 1) >>> 0,
     carbon: createCarbonState(),
     ddYearBase5: 0,
     // Une partie démarre au 1ᵉʳ janvier : l'hiver qui précède est supposé
     // normal, sans quoi la première année débourrerait en retard sans raison.
     semainesDeFroid: 20,
+    banqueGraines: {},
+    aBruleDepuisLaLevee: false,
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: eauInitiale,

@@ -80,6 +80,25 @@ export interface EspeceV0 {
      */
     profondeurMaxCm: number;
   };
+  /**
+   * ALLÉLOPATHIE : ce que l'espèce libère pour empêcher les autres de pousser
+   * chez elle. Le seul cas de l'atlas est le noyer et sa juglone, qui inhibe la
+   * germination et la croissance dans un rayon de quinze à vingt mètres.
+   *
+   * Le mécanisme n'a rien d'anecdotique pour ce jeu : il rend le choix des
+   * VOISINS décisif là où, ailleurs, seule la lumière compte.
+   */
+  allelopathie?: { porteeM: number };
+  /**
+   * Sensibilité à l'allélopathie ∈ [0,1] : 0 = indifférent, 1 = inhibé de plein
+   * fouet.
+   *
+   * La littérature de terrain ne donne que des LISTES — le pommier, le pin et
+   * le bouleau souffrent, les graminées et beaucoup de vivaces ne bronchent
+   * pas. Faute de mesure espèce par espèce, les fiches où l'on ne sait pas
+   * portent la valeur médiane par défaut, et c'est écrit *(à calibrer)*.
+   */
+  sensibiliteAllelopathie?: number;
   /** °C moyenne hebdo de démarrage de la croissance (proxy du tempérament thermique) */
   tBaseCroissanceC: number;
   azote: {
@@ -110,6 +129,55 @@ export interface EspeceV0 {
     dissemination: "vent" | "oiseaux" | "gravite" | "geai";
     /** établissements potentiels par adulte et par an (APRÈS l'entonnoir de mortalité, ch4-B) */
     semisParAn: number;
+    /**
+     * DRAGEONNEMENT : la conquête par la racine, pour les espèces qui en font.
+     *
+     * Un drageon n'est pas un semis. Il naît sur une racine traçante, à
+     * quelques mètres du pied au plus, et il reste RELIÉ à sa mère le temps de
+     * s'installer. Deux conséquences, et ce sont les deux qui comptent : la
+     * tache avance par son BORD au lieu d'essaimer au loin, et le drageon
+     * n'a pas besoin de trouver sa lumière tout seul — il pousse sous le
+     * couvert de sa propre espèce, là où aucune graine ne lèverait.
+     *
+     * C'est ce qui fait du prunellier un problème de gestion dans une haie : le
+     * fourré ne se contente pas de tenir sa place, il avance dans le champ.
+     */
+    drageonne?: {
+      /** distance maximale entre la mère et son drageon, m */
+      porteeM: number;
+      /** drageons qui s'installent par pied mature et par an */
+      parAn: number;
+    };
+    /**
+     * BANQUE DE GRAINES du sol, pour les espèces qui en font une. Absente pour
+     * la plupart : un gland ou une faîne est une graine RÉCALCITRANTE, elle ne
+     * survit pas à un hiver sec et ne fait aucune mémoire du passé.
+     *
+     * Les légumineuses à tégument dur, elles, en font une qui dure des
+     * décennies — et le feu la réveille. C'est ce qui fait qu'une lande brûlée
+     * revient en lande : l'ajonc ne recolonise pas depuis le voisinage, il
+     * remonte du sol sur place.
+     */
+    banqueGraines?: {
+      /**
+       * Durée pendant laquelle une graine reste viable dans le sol, années.
+       * L'ajonc tient 25 à 30 ans dans les six premiers centimètres.
+       */
+      persistanceAns: number;
+      /**
+       * Part de la banque qui lève APRÈS UN PASSAGE DE FEU ∈ [0,1]. Le feu
+       * scarifie le tégument sans détruire la banque : le sol isole assez pour
+       * que même un feu intense laisse intactes les graines enfouies, et c'est
+       * la chaleur reçue qui lève leur dormance.
+       */
+      leveeParLeFeu: number;
+      /**
+       * Part qui lève une année ordinaire, sans feu. Faible par construction —
+       * une graine à tégument dur ne germe pas toute seule, c'est tout son
+       * intérêt.
+       */
+      leveeSpontanee: number;
+    };
   };
   litiere: {
     /** rapport C/N de la litière : bas = minéralisation rapide (ch2-B) */
@@ -260,12 +328,55 @@ export interface EspeceV0 {
 
 const ATLAS = "atlas Espèces - référence (nuanciers eau/trophie/lumière)";
 
+/**
+ * SOURCES DE CROISSANCE EN HAUTEUR. L'atlas n'en contient AUCUNE : il ne donne
+ * que des traits écologiques. Chaque `pousseMaxMAn` a donc été soit posé à la
+ * main pendant le développement, soit confronté à une des références
+ * ci-dessous. Une fiche qui ne cite aucune de ces constantes porte une vitesse
+ * qui reste inventée, et son commentaire le dit.
+ */
+const JANSEN_1996 =
+  "Jansen, Sevenster & Faber 1996, Opbrengsttabellen voor belangrijke boomsoorten in Nederland (Pays-Bas) — hauteur dominante, classe médiane";
+const LOCKOW_2009 =
+  "Lockow & Lockow 2009, Ertragstafel Hainbuche, Eberswalder Forstliche Schriftenreihe 41 (Brandebourg, Allemagne)";
+const LEMAIRE_2005 =
+  "Lemaire 2005 (SUF-IDF), faisceau de courbes des taillis de châtaignier, publié par le CRPF Île-de-France–Centre 2013 (France)";
+const SANCHEZ_2010 =
+  "Sánchez-González, Stiti, Chaar & Cañellas 2010, Dynamic dominant height growth model for cork oak, Forest Systems 19(3) (Espagne, Tunisie)";
+const GRUBB_1999 =
+  "Grubb, Kollmann & Lee 1999, Plant Biology 1:226-234, essai en jardin de onze ligneux européens (sud de l'Angleterre), via les Biological Flora";
+const WILLOUGHBY_2007 =
+  "Willoughby et al. 2007, Forestry 80:531-553, plantations des Midlands, via Thomas, El-Barghathi & Polwart 2011 (Angleterre)";
+const HARMER_2004 =
+  "Harmer 2004, Restoration of Neglected Hazel Coppice, Forestry Commission FCIN56 (Hampshire, Angleterre) — REJETS de cépée";
+const PETERKEN_1967 =
+  "Peterken & Lloyd 1967, Biological Flora: Ilex aquifolium (Grande-Bretagne), cité par la fiche BSBI Fermanagh";
+const ATKINSON_2002 =
+  "Atkinson & Atkinson 2002, Biological Flora: Sambucus nigra (Angleterre) — mesure de Gilbert 1991 sur gravats";
+const THOMAS_2025 =
+  "Thomas et al. 2025, Biological Flora: Cytisus scoparius, J. Ecology 113 (mesures de Waloff & Richards 1977, Londres)";
+const HORNOY_2011 =
+  "Hornoy, Tarayre, Hervé, Gigord & Atlan 2011, PLOS ONE 6:e26275, jardin commun d'ajoncs près de Rennes (Bretagne)";
+const SCHELLENBERG_2021 =
+  "Schellenberg & Bergmeier 2021, The Calluna life cycle concept revisited (nord-est de l'Allemagne) ; classes de hauteur JNCC 2009 (Royaume-Uni)";
+const STREUOBST_DE =
+  "Bannier, Erziehung muss sein (Westphalie) et LfL Bayern 2022, Streuobstwiesen des Alpenvorlands — pré-vergers haute tige, dire d'expert et mesures";
+const RHS =
+  "Royal Horticultural Society, fiches d'espèces (Royaume-Uni) — base horticole, pas une mesure de terrain";
+const ASENSIO_2008 =
+  "Asensio, Casaleiro & Montalvo 2008, Aptitudes de madroño para reforestación en Galicia, Cuadernos SECF 28 (Galice, Espagne) — première année de plantation seulement";
+const PEPINIERES_DE =
+  "catalogues de pépiniéristes et bases horticoles allemands (Garten von Ehren, Baumschule Horstmann, NaturaDB) — ordre de grandeur commercial, pas une mesure";
+
 export const ESPECES_V0: readonly EspeceV0[] = [
   {
     id: "alnus_glutinosa",
     nom: "Aulne glutineux",
     nomLatin: "Alnus glutinosa",
     hauteurMaxM: 25,
+    // Non calé, et VALIDÉ pour autant : 17,6 m simulés à quarante ans contre
+    // 18,0 m dans la table néerlandaise (zwarte els, GK 6). C'est une vraie
+    // vérification, puisque personne n'a touché ce chiffre pour l'obtenir.
     pousseMaxMAn: 0.8,
     // Atlas : « très hygrophile (tolère l'engorgement) », berges — vit en marais
     // mais souffre vite en sol sec (seuil de confort élevé).
@@ -292,7 +403,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.55 },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.25, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, JANSEN_1996],
   },
   {
     id: "fagus_sylvatica",
@@ -343,13 +454,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
-    sources: [ATLAS],
+    sources: [ATLAS, JANSEN_1996],
   },
   {
     id: "quercus_pubescens",
     nom: "Chêne pubescent",
     nomLatin: "Quercus pubescens",
     hauteurMaxM: 20,
+    // **INVENTÉ, et il le reste** *(à calibrer)*. Il n'existe aucune table de
+    // production du chêne pubescent en climat tempéré océanique : la seule
+    // recensée par le CNPF (2025) est roumaine, les autres sont croates,
+    // provençales ou valaisannes — d'autres climats. La pratique française
+    // l'assimile au chêne sessile en sachant que cela le SURESTIME ; on reste
+    // donc sous les 15,4 m à quarante ans de la table néerlandaise de chêne.
     pousseMaxMAn: 0.35,
     // Atlas : xérophile, thermophile ; craint les sols engorgés.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.05 },
@@ -388,6 +505,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Pin sylvestre",
     nomLatin: "Pinus sylvestris",
     hauteurMaxM: 30,
+    // Non calé, et validé : 16,4 m simulés à quarante ans contre 15,5 m dans
+    // la table néerlandaise (groveden, GK 8).
     pousseMaxMAn: 0.5,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
@@ -395,6 +514,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     lumiere: { compensation: 0.25, saturation: 0.7, lai: 1.2, houppierRatio: 0.25, caduc: false },
     racines: { profondeurMaxCm: 200 }, // pivot, d'où sa résistance sur sols filtrants
+    // Les pins figurent parmi les sensibles documentés.
+    sensibiliteAllelopathie: 0.9,
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.25, fixateur: false },
     regeneration: { maturiteAns: 15, longeviteAns: 250, dissemination: "vent", semisParAn: 3 },
@@ -411,7 +532,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.75 },
     gibier: { appetence: 0.2 },
     feu: { inflammabilite: 0.9, resistanceEcorce: 0.35, rejetteApresFeu: false },
-    sources: [ATLAS],
+    sources: [ATLAS, JANSEN_1996],
   },
   {
     id: "betula_pendula",
@@ -434,6 +555,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : très héliophile ; ombre légère (couronne aérée) — le bon parasol de nurse.
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.3, houppierRatio: 0.3, caduc: true },
     racines: { profondeurMaxCm: 100 }, // traçant superficiel de pionnier
+    // Le bouleau aussi, et il partage avec le pin d'être un pionnier de lumière — la juglone s'ajoute à l'ombre.
+    sensibiliteAllelopathie: 0.9,
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.35, fixateur: false },
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
@@ -452,16 +575,80 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     sources: [ATLAS],
   },
   {
+    id: "juglans_regia",
+    nom: "Noyer commun",
+    nomLatin: "Juglans regia",
+    hauteurMaxM: 25,
+    // NON calé sur table : aucune table de production française de noyer n'a
+    // été trouvée. Ordre de grandeur d'un noyer de plein champ conduit pour le
+    // bois *(à confirmer)*.
+    pousseMaxMAn: 0.5,
+    // Atlas : héliophile, mésoxérophile, EUTROPHE — il exige le riche, et c'est
+    // ce qui limite l'agroforesterie au noyer aux bonnes terres.
+    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
+    // Il fuit l'acide : c'est un arbre de sols neutres à calcaires.
+    ph: [6, 8.5],
+    lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
+    racines: { profondeurMaxCm: 160 }, // pivot profond
+    tBaseCroissanceC: 8,
+    azote: { demandeRelative: 0.9, fixateur: false },
+    // Les noix sont cachées par les corvidés, comme les glands : le même noyau
+    // de dispersion, en terrain découvert où l'oiseau les retrouvera.
+    regeneration: { maturiteAns: 12, longeviteAns: 150, dissemination: "geai", semisParAn: 0.5 },
+    litiere: { cnRatio: 35 },
+    // LE plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
+    // permet d'échapper aux gels d'avril, et ce qui rend l'agroforesterie au
+    // noyer possible — la culture intercalaire pousse avant que l'ombre arrive.
+    phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
+    economie: { prixPlantEur: 15 },
+    // Bois précieux : le noyer se vend à la bille, plusieurs fois le chêne.
+    bois: { densite: 0.65, prixOeuvreEurM3: 600, rejetteDeSouche: false },
+    fruits: {
+      floraisonDJ: 320, // mai : il fleurit après avoir feuillé, donc tard
+      gelFatalC: -1,
+      recolteWeek: 40,
+      fenetreRecolteWeeks: 3,
+      croissanceSem: 16,
+      rendementMaxKg: 40,
+      prixEurKg: 3.5,
+      recolteHKg: 0.03,
+      autofertile: false,
+    },
+    /**
+     * ALLÉLOPATHIE. Le noyer libère de la juglone par ses racines et sa
+     * litière, et elle inhibe la germination et la croissance de nombreuses
+     * espèces dans un rayon de QUINZE À VINGT MÈTRES autour de l'arbre. C'est
+     * la contrainte classique de l'agroforesterie au noyer, et la première
+     * chose qu'on apprend en plantant un verger à côté.
+     */
+    allelopathie: { porteeM: 17.5 },
+    exigenceMinerale: 2.5,
+    mycorhize: "arbusculaire",
+    ravageurs: { sensibilite: 0.4 },
+    gibier: { appetence: 0.4 },
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: false },
+    sources: [ATLAS],
+  },
+  {
     id: "malus_domestica",
     nom: "Pommier",
     nomLatin: "Malus domestica",
     hauteurMaxM: 8,
+    // Ordre de grandeur COHÉRENT avec le pré-verger allemand, pas calé dessus
+    // *(à confirmer)* : un plein vent sur franc plafonne à 6-8 m (chambre
+    // d'agriculture de Rhénanie-du-Nord-Westphalie), et 60 arbres de 10 à 70
+    // ans d'un pré-verger bavarois mesurent 7,5 m en moyenne — le moteur en
+    // fait 7,6 à quarante ans, donc un peu vite mais dans la fourchette
+    // mesurée (3,8 à 12,6 m). La pousse annuelle des rameaux d'un jeune arbre
+    // formé (60 cm à 1 m) n'est PAS un gain de hauteur : on ne s'en sert pas.
     pousseMaxMAn: 0.5,
     // Atlas : « fruitier clé » ; mésophile de plaine.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.15 },
     ph: [5.5, 8],
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 120 }, // fruitier greffé, enracinement moyen
+    // Le pommier est en tête de toutes les listes de sensibles à la juglone : ne pas planter de verger sous un noyer est le conseil le plus répété.
+    sensibiliteAllelopathie: 1,
     tBaseCroissanceC: 6,
     azote: { demandeRelative: 0.6, fixateur: false },
     // Cultivar greffé : pas de régénération naturelle fidèle.
@@ -489,13 +676,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.85 },
     gibier: { appetence: 0.85 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
-    sources: [ATLAS],
+    sources: [ATLAS, STREUOBST_DE],
   },
   {
     id: "prunus_armeniaca",
     nom: "Abricotier",
     nomLatin: "Prunus armeniaca",
     hauteurMaxM: 6,
+    // Aucune pousse annuelle mesurée en climat océanique — l'abricotier de
+    // plein champ est méridional, et les données françaises viennent du Gard
+    // ou de la Drôme *(à confirmer)*. Le seul couple hauteur/âge en climat
+    // conforme est horticole : 4 à 8 m atteints en 10 à 20 ans (RHS), ce que
+    // le moteur fait (3,6 m à dix ans, 5,0 m à vingt).
     pousseMaxMAn: 0.5,
     // Atlas : « gel des fleurs = risque ; sec » — xérophile, floraison très précoce.
     eau: { seuilConfortSecheresse: 0.4, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.05 },
@@ -528,13 +720,21 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.8 },
     gibier: { appetence: 0.8 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: false },
-    sources: [ATLAS],
+    sources: [ATLAS, RHS],
   },
   {
     id: "corylus_avellana",
     nom: "Noisetier",
     nomLatin: "Corylus avellana",
     hauteurMaxM: 8,
+    // Calé sur RIEN, mais confronté : le moteur fait 2,5 m à quatre ans et
+    // 3,0 m à cinq, ce qui est exactement la REPOUSSE DE CÉPÉE mesurée en
+    // taillis anglais (1,5-1,75 m la première année puis ~50 cm/an, Harmer
+    // 2004 ; 2,4-2,8 m à la 4ᵉ année, Buckley 1992). Or une souche établie
+    // part plus vite qu'un semis, et le moteur ne sait pas faire la
+    // différence — sa forme de croissance dépend de la TAILLE, pas de l'âge
+    // (trees.ts). Le noisetier du jeu est donc un noisetier de taillis, ce
+    // qui est son emploi réel en haie *(à confirmer)*.
     pousseMaxMAn: 0.6,
     // Atlas : demi-ombre, cépée — l'arbuste des sous-étages agroforestiers.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
@@ -573,13 +773,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45 },
     gibier: { appetence: 0.9 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, HARMER_2004],
   },
   {
     id: "prunus_spinosa",
     nom: "Prunellier",
     nomLatin: "Prunus spinosa",
     hauteurMaxM: 4,
+    // **INVENTÉ, et il le reste** *(à calibrer)*. Aucune mesure de croissance
+    // du prunellier n'a été trouvée en climat océanique : pas de Biological
+    // Flora, rien dans la littérature de haies. La seule contrainte publiée
+    // est ORDINALE — Grubb range le prunellier dans le groupe « à croissance
+    // rapide », devant l'aubépine, ce que le moteur respecte (37 cm/an contre
+    // 29 sur les trois premières années).
     pousseMaxMAn: 0.4,
     // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
@@ -589,9 +795,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: false },
     // Drupes emportées par les oiseaux, mais la vraie conquête se fait par
-    // DRAGEONS : le fourré avance en tache. Faute de savoir modéliser le
-    // drageonnement, on compense par un taux de semis généreux *(à calibrer)*.
-    regeneration: { maturiteAns: 5, longeviteAns: 50, dissemination: "oiseaux", semisParAn: 1.2 },
+    // DRAGEONS : le fourré avance en tache, d'un mètre par an environ, et c'est
+    // ce qui en fait un problème de gestion dans une haie. On modélisait ce
+    // mécanisme en gonflant le taux de semis ; il est maintenant modélisé pour
+    // ce qu'il est, et le semis revient à une valeur d'oiseaux ordinaire.
+    regeneration: {
+      maturiteAns: 5,
+      longeviteAns: 50,
+      dissemination: "oiseaux",
+      semisParAn: 0.4,
+      drageonne: { porteeM: 2.5, parAn: 0.8 },
+    },
     litiere: { cnRatio: 28 },
     // L'épine noire fleurit avant de feuiller, dès mars.
     phenologie: { debourrementDJ: 115, seuilJourH: 11.3, besoinFroidSemaines: 10 },
@@ -614,13 +828,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.4 },
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, GRUBB_1999],
   },
   {
     id: "crataegus_monogyna",
     nom: "Aubépine",
     nomLatin: "Crataegus monogyna",
     hauteurMaxM: 8,
+    // ENCADRÉ par deux mesures anglaises, non calé sur l'une d'elles : 37
+    // cm/an sur douze ans en jardin (Grubb 1999, via la Biological Flora du
+    // genre) et ~28 cm/an sur cinq ans en plantation forestière (Willoughby
+    // 2007). Le moteur donne 29 cm/an sur douze ans : dans la bande, à son
+    // bord bas. On n'a pas déplacé la valeur pour aller chercher le milieu —
+    // ce serait caler sur une moyenne de deux protocoles différents.
     pousseMaxMAn: 0.3,
     // Atlas : « nurse épineuse », pionnière, très commune.
     eau: { seuilConfortSecheresse: 0.55, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
@@ -643,14 +863,22 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.25 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.2, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, GRUBB_1999, WILLOUGHBY_2007],
   },
   {
     id: "rubus_fruticosus",
     nom: "Ronce",
     nomLatin: "Rubus fruticosus",
     hauteurMaxM: 2.5,
-    pousseMaxMAn: 1.4, // la plus rapide de l'atlas : elle prend une friche en trois ans
+    // La plus rapide de l'atlas : elle prend une friche en trois ans. Aucune
+    // mesure scientifique de hauteur de roncier n'a été trouvée ; les bases
+    // horticoles allemandes donnent 50 à 250 cm/an pour une hauteur finale de
+    // 1 à 3 m *(à confirmer)*. Le piège, signalé par la littérature : un
+    // turion s'allonge de 3 à 6 m par saison mais s'arque et se marcotte —
+    // l'allongement N'EST PAS un gain de hauteur, et la roncière plafonne
+    // bas. Le moteur plafonne à 2,5 m atteints en trois ans : c'est la bonne
+    // lecture.
+    pousseMaxMAn: 1.4,
     // Atlas : « nurse (fruticée) », pionnière, cosmopolite tempéré.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.25 },
     ph: [4.5, 8],
@@ -661,7 +889,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.7, fixateur: false },
     // Les mûres sont mangées par tout ce qui vole : c'est LE colonisateur.
-    regeneration: { maturiteAns: 2, longeviteAns: 15, dissemination: "oiseaux", semisParAn: 2 },
+    regeneration: {
+      maturiteAns: 2,
+      longeviteAns: 15,
+      dissemination: "oiseaux",
+      semisParAn: 2,
+      // La ronce sème par les oiseaux et garde une réserve au sol : c'est ce qui la fait surgir dans une trouée où personne ne l'avait vue.
+      banqueGraines: {
+        persistanceAns: 15,
+        leveeParLeFeu: 0.2,
+        leveeSpontanee: 0.1,
+      },
+    },
     litiere: { cnRatio: 24 },
     // La ronce ne perd qu'une partie de son feuillage : elle repart tôt.
     phenologie: { debourrementDJ: 120, seuilJourH: 11.3, besoinFroidSemaines: 8 },
@@ -683,13 +922,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.45 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.05, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, PEPINIERES_DE],
   },
   {
     id: "sambucus_nigra",
     nom: "Sureau noir",
     nomLatin: "Sambucus nigra",
     hauteurMaxM: 7,
+    // La seule mesure publiée est un PLANCHER : 37 cm/an sur gravats de
+    // brique en friche urbaine (Gilbert 1991, via la Biological Flora). Le
+    // moteur en fait 58 à 64 sur un limon riche, soit 1,6 fois plus sur un
+    // sol qui n'a rien à voir — plausible pour un nitrophile réputé vif, mais
+    // ce n'est pas une validation *(à confirmer : il manque une mesure sur
+    // sol fertile)*.
     pousseMaxMAn: 0.9,
     // Atlas : « nitrophile, pousse vite », pionnier, très commun.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.3 },
@@ -722,14 +967,26 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.2 }, // feuillage rebutant : le chevreuil s'en détourne
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, ATKINSON_2002],
   },
   {
     id: "carpinus_betulus",
     nom: "Charme",
     nomLatin: "Carpinus betulus",
     hauteurMaxM: 25,
-    pousseMaxMAn: 0.4,
+    // 0,40 → 0,53, CALÉ sur la première table de production du charme jamais
+    // publiée (Lockow & Lockow 2009) : 16,3 m de hauteur dominante à quarante
+    // ans en bonité médiane (HO100 = 25 m, gamme 18→31 m). Avant elle, le
+    // charme se taxait par analogie avec le hêtre — c'est dire le vide.
+    //
+    // La géographie est à décoter, et on le dit : la table vient du
+    // Brandebourg, plaine subcontinentale plus sèche que le bocage. Le
+    // recoupement dans la bonne zone est l'équivalence que le CNPF (2025)
+    // recommande pour le charme français, les tables NÉERLANDAISES de chêne :
+    // 15,4 m à quarante ans, 6 % sous la table allemande. Le moteur était à
+    // 13,4 m, sous les deux — c'est ça qui justifie de le monter, pas le
+    // choix d'une source contre l'autre. Voir `hauteurs.test.ts`.
+    pousseMaxMAn: 0.53,
     // Atlas : sciaphile climacique, « haies ». Il comblait un vrai trou — le
     // hêtre était la seule essence d'ombre du moteur, et une forêt n'a jamais
     // un seul candidat au sous-étage.
@@ -762,14 +1019,21 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.55 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, LOCKOW_2009],
   },
   {
     id: "ilex_aquifolium",
     nom: "Houx",
     nomLatin: "Ilex aquifolium",
     hauteurMaxM: 8,
-    pousseMaxMAn: 0.15, // l'un des plus lents de l'atlas
+    // L'un des plus lents de l'atlas, et la lenteur est confirmée : un houx
+    // « bien éclairé » fait 1,5 à 3,0 m entre huit et quinze ans (Peterken &
+    // Lloyd 1967, relayé par la fiche BSBI), le moteur 2,0 m à dix ans — dans
+    // la bande, sans avoir été calé dessus. Ce que le moteur ne rend pas :
+    // la source décrit une courbe en trois temps (1 cm/an les cinq premières
+    // années, puis une poussée à plus de 50 cm/an, puis 2 cm/an après trente
+    // ans) là où la sigmoïde du moteur est plus douce *(à confirmer)*.
+    pousseMaxMAn: 0.15,
     // Atlas : « persistant », sciaphile climacique. C'est le seul couvert
     // PERMANENT de sous-bois : en janvier, sous une hêtraie nue, c'est lui qui
     // abrite et nourrit.
@@ -790,13 +1054,20 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Piquant, mais le chevreuil s'y met quand même en hiver, faute de mieux.
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, PETERKEN_1967],
   },
   {
     id: "salix_alba",
     nom: "Saule blanc",
     nomLatin: "Salix alba",
     hauteurMaxM: 20,
+    // **INVENTÉ, et il le reste** *(à calibrer)*. Il n'existe aucune table de
+    // production du saule blanc de plein vent : ce qui existe est de
+    // l'osiériculture, du têtard ou du clone à courte rotation. Jansen 1996
+    // prescrit de le taxer comme un PEUPLIER cv. Robusta, dont la table donne
+    // 24,7 m à vingt ans — manifestement trop rapide pour un saule, et une
+    // hauteur moyenne, pas dominante. Le moteur en fait 13,0 : plus lent que
+    // le peuplier, ce qui est la seule chose qu'on puisse défendre ici.
     pousseMaxMAn: 1.2,
     // Atlas : « bouture facile, pH indifférent », bords d'eau, pionnier. Avec
     // l'aulne, c'est l'essence des ripisylves — et la seule qui accepte d'avoir
@@ -829,6 +1100,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Cornouiller mâle",
     nomLatin: "Cornus mas",
     hauteurMaxM: 6,
+    // Aucune mesure scientifique trouvée. Les seules valeurs en climat
+    // océanique sont des catalogues de pépiniéristes allemands : 10-30 cm/an
+    // *(à confirmer — c'est du commerce, pas de la mesure)*. Le moteur en
+    // fait 24 à 26, dans le haut de cette fourchette, et respecte le seul
+    // fait sur lequel toutes les sources s'accordent : le cornouiller mâle
+    // est trois à cinq fois plus lent que le noisetier.
     pousseMaxMAn: 0.25,
     // Atlas : « calcicole, floraison précoce ». Il fleurit en février, avant
     // tout le monde — c'est la première ressource de l'année pour les
@@ -860,13 +1137,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.25 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, PEPINIERES_DE],
   },
   {
     id: "euonymus_europaeus",
     nom: "Fusain d'Europe",
     nomLatin: "Euonymus europaeus",
     hauteurMaxM: 6,
+    // Confronté, non calé : +135,9 cm en cinq ans sur limon de marne
+    // calcaire dans les Midlands (Willoughby 2007, via la Biological Flora),
+    // soit 27 cm/an, contre 29 pour le moteur. La même source donne 7 cm/an
+    // sur un substrat dégradé — un rapport de quatre entre stations, que le
+    // moteur doit rendre par ses facteurs, pas par sa fiche.
     pousseMaxMAn: 0.3,
     // Atlas : arbuste de demi-ombre à ombre, haies et lisières, surtout sur
     // calcaire. Ses capsules roses à quatre lobes et ses arilles orange sont
@@ -890,13 +1172,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45, hoteHivernal: true },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, WILLOUGHBY_2007],
   },
   {
     id: "ligustrum_vulgare",
     nom: "Troène commun",
     nomLatin: "Ligustrum vulgare",
     hauteurMaxM: 5,
+    // Presque rien : pas de Biological Flora pour le troène, et le seul point
+    // publié est 104 cm de haut à deux ans en jardin (Grubb 1999) — mesure
+    // qui inclut la croissance en pépinière avant repiquage, donc inutilisable
+    // comme taux *(à calibrer)*. Ce qu'on en garde est ordinal : le troène est
+    // dans le groupe « à croissance rapide » de cet essai, devant le fusain,
+    // ce que le moteur respecte.
     pousseMaxMAn: 0.35,
     // Atlas : « semi-persistant ; calcicole ; très mellifère (juin) ; supporte
     // la taille → haies ». Ourlets et lisières, surtout sur calcaire.
@@ -939,13 +1227,20 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, GRUBB_1999],
   },
   {
     id: "ulex_europaeus",
     nom: "Ajonc d'Europe",
     nomLatin: "Ulex europaeus",
     hauteurMaxM: 2.5,
+    // Confronté à la meilleure géographie possible, sans être calé dessus :
+    // des ajoncs bretons et écossais semés en jardin commun près de Rennes
+    // font 110 à 130 cm à deux ans (Hornoy 2011 — valeur lue sur la figure,
+    // le texte ne donne que des écarts relatifs). Le moteur en fait 118. Les
+    // catalogues britanniques (15-30 cm/an) et les rejets après brûlage
+    // dirigé en Galice (57 cm à trois ans) sont bien plus lents : ce sont
+    // d'autres régimes, taille commerciale et lande brûlée.
     pousseMaxMAn: 0.45,
     // Atlas : « épineux, landes acides », façade atlantique — LA nurse de lande.
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.15 },
@@ -956,7 +1251,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     // Fabacée fixatrice (Rhizobium) : elle enrichit le sable qu'elle colonise.
     azote: { demandeRelative: 0.5, fixateur: true },
-    regeneration: { maturiteAns: 3, longeviteAns: 25, dissemination: "gravite", semisParAn: 5 },
+    regeneration: {
+      maturiteAns: 3,
+      longeviteAns: 25,
+      dissemination: "gravite",
+      semisParAn: 5,
+      // L'ajonc est LE cas d'école. Sa banque atteint 500 à 2 000 graines/m² sous une lande installée, et jusqu'à des dizaines de milliers ; les graines tiennent 25 à 30 ans dans les six premiers centimètres du sol, et le feu les scarifie sans les détruire — le sol isole assez pour ça. C'est la raison pour laquelle une lande brûlée revient en lande.
+      banqueGraines: {
+        persistanceAns: 28,
+        leveeParLeFeu: 0.45,
+        leveeSpontanee: 0.03,
+      },
+    },
     litiere: { cnRatio: 25 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
@@ -969,13 +1275,20 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.15 },
     gibier: { appetence: 0.25 },
     feu: { inflammabilite: 0.98, resistanceEcorce: 0.0, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, HORNOY_2011],
   },
   {
     id: "cytisus_scoparius",
     nom: "Genêt à balais",
     nomLatin: "Cytisus scoparius",
     hauteurMaxM: 2.5,
+    // La confrontation la plus nette de tout l'atlas arbustif, et elle tombe
+    // juste sans qu'on ait rien touché : à Londres, un genêt fait ~160 cm à
+    // trois ans puis ~220 cm à huit (Waloff & Richards 1977, via la
+    // Biological Flora 2025) ; le moteur fait 156 et 220. Attention en
+    // relisant la source : son autre chiffre (80 cm à 24 mois, 210 cm à 63)
+    // est attribué à la Grande-Bretagne mais vient de placettes catalanes et
+    // cévenoles — deux climats, encore une fois.
     pousseMaxMAn: 0.5,
     // Atlas : « landes acides, améliore le sol » — l'autre pionnière fixatrice.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.1 },
@@ -984,7 +1297,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 130 }, // pivot de fabacée
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: true },
-    regeneration: { maturiteAns: 3, longeviteAns: 20, dissemination: "gravite", semisParAn: 4 },
+    regeneration: {
+      maturiteAns: 3,
+      longeviteAns: 20,
+      dissemination: "gravite",
+      semisParAn: 4,
+      // Même famille, même tégument dur, même stratégie : le genêt attend sous terre que quelque chose ouvre le milieu.
+      banqueGraines: {
+        persistanceAns: 20,
+        leveeParLeFeu: 0.4,
+        leveeSpontanee: 0.04,
+      },
+    },
     litiere: { cnRatio: 22 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
@@ -996,13 +1320,23 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.55 },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, THOMAS_2025],
   },
   {
     id: "calluna_vulgaris",
     nom: "Callune",
     nomLatin: "Calluna vulgaris",
     hauteurMaxM: 0.6,
+    // Cohérent avec la mesure, à une réserve de méthode près. Les landes du
+    // nord-est de l'Allemagne donnent ~10 cm/an d'allongement de pousse
+    // (Schellenberg 2021, 11 cm/an en Écosse), et les guides britanniques une
+    // hauteur de couvert qui va de moins de 10-15 cm en phase pionnière à
+    // 50-60 cm à maturité, vers vingt ans. Le moteur gagne 6 cm/an les
+    // premières années et plafonne à 0,60 m vers vingt ans : la bonne
+    // trajectoire. MAIS il fait naître tous ses semis à 30 cm (`regeneration.ts`),
+    // si bien que la callune du jeu SAUTE sa phase pionnière — ce n'est pas
+    // la fiche qui est en cause, c'est une hauteur de semis unique pour un
+    // atlas qui va du sous-arbrisseau au chêne *(à confirmer)*.
     pousseMaxMAn: 0.12,
     // Atlas : « lande acide pauvre, bio-indicatrice acidité » — couvre-sol.
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.2 },
@@ -1011,7 +1345,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 40 }, // sous-arbrisseau à racines fines superficielles
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.15, fixateur: false },
-    regeneration: { maturiteAns: 3, longeviteAns: 30, dissemination: "vent", semisParAn: 6 },
+    regeneration: {
+      maturiteAns: 3,
+      longeviteAns: 30,
+      dissemination: "vent",
+      semisParAn: 6,
+      // La callune fait une banque très durable, mais sa levée doit moins au feu qu'à l'ouverture du milieu : elle germe surtout parce que la lumière revient *(à confirmer : moins documenté que l'ajonc)*.
+      banqueGraines: {
+        persistanceAns: 30,
+        leveeParLeFeu: 0.25,
+        leveeSpontanee: 0.06,
+      },
+    },
     // Litière éricacée : lente et acidifiante (voie fongique, ch2-B).
     litiere: { cnRatio: 45 },
     // Sempervirent : valeurs sans effet.
@@ -1025,13 +1370,23 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.15 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.95, resistanceEcorce: 0.0, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, SCHELLENBERG_2021],
   },
   {
     id: "castanea_sativa",
     nom: "Châtaignier",
     nomLatin: "Castanea sativa",
     hauteurMaxM: 30,
+    // Non calé, et il tombe juste : 19,0 m simulés à quarante ans contre
+    // ~18,7 m au faisceau de courbes des taillis français (Lemaire 2005, publié
+    // par le CRPF Île-de-France–Centre). Deux réserves honnêtes — les seules
+    // valeurs ÉCRITES de ce faisceau sont les hauteurs dominantes à 25 ans
+    // (21 / 18,5 / 16 / 13,5 / 11 / 8,5 m des classes 1 à 6), celles à
+    // quarante ans se lisent sur le graphique *(à confirmer)* ; et ce sont des
+    // courbes de TAILLIS, où un rejet de souche devance un semis en jeunesse.
+    // C'est bien ce qu'on mesure : 13,0 m simulés à 25 ans contre 14,75 m à
+    // la médiane du faisceau. Le calcifuge se mesure sur limon ACIDE : sur le
+    // limon riche à pH 7, il meurt de chlorose (`hauteurs.test.ts`).
     pousseMaxMAn: 0.65,
     // Atlas : mésoxérophile, **acidiphile (calcifuge)** — l'arbre à valoriser
     // sur la lande, mais qui a besoin d'être abrité pour s'installer.
@@ -1065,13 +1420,22 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.7 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, LEMAIRE_2005],
   },
   {
     id: "quercus_suber",
     nom: "Chêne-liège",
     nomLatin: "Quercus suber",
     hauteurMaxM: 20,
+    // **NON VÉRIFIABLE ICI, et donc toujours à calibrer.** Les données
+    // existent — le modèle de hauteur dominante espagnol et tunisien
+    // (Sánchez-González 2010) donne 5,0 m à quarante ans en classe médiane
+    // pour des suberaies naturelles denses, quand les jeunes plantations
+    // portugaises tournent plutôt vers 11 m — mais le moteur n'a aucune
+    // station méditerranéenne où les confronter : le comparer sur un limon du
+    // Nord serait comparer deux climats. Le rapport de deux entre suberaie
+    // spontanée et plantation soignée dit assez qu'aucune de ces valeurs
+    // n'est « la » vitesse de l'essence.
     pousseMaxMAn: 0.3,
     // Atlas : xérophile, **silice/acide**, sempervirent, résiste au feu.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.25 },
@@ -1110,13 +1474,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, SANCHEZ_2010],
   },
   {
     id: "fraxinus_excelsior",
     nom: "Frêne commun",
     nomLatin: "Fraxinus excelsior",
     hauteurMaxM: 35,
+    // Non calé, et validé : 16,8 m simulés à quarante ans contre 16,5 m dans
+    // la table néerlandaise (es, GK 6).
     pousseMaxMAn: 0.7,
     // Atlas : mésophile à hygrocline, il aime les sols frais et riches et
     // souffre vite en sol sec — c'est LE frêne des fonds de vallée et des
@@ -1148,13 +1514,20 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // La chalarose (Hymenoscyphus fraxineus) frappe l'espèce depuis 2008 :
     // c'est l'essence la plus menacée de France.
     ravageurs: { sensibilite: 0.9 },
-    sources: [ATLAS],
+    sources: [ATLAS, JANSEN_1996],
   },
   {
     id: "arbutus_unedo",
     nom: "Arbousier",
     nomLatin: "Arbutus unedo",
     hauteurMaxM: 5,
+    // Aucune courbe hauteur-âge n'existe pour l'arbousier, nulle part. Le
+    // seul appui est une plantation de restauration en Galice (nord de
+    // l'Espagne, donc océanique) : 29 à 42 cm la première année dans les
+    // secteurs secs, plus de 85 cm dans un talweg à nappe. Le moteur fait 25
+    // cm/an les premières années, au bas de cette fourchette *(à confirmer)*.
+    // Les taillis catalans d'après incendie (1,55 m à quinze ans) sont bien
+    // plus lents, mais ce sont des rejets serrés que la concurrence bride.
     pousseMaxMAn: 0.25,
     // Atlas : « méditerranéen, acidiphile, rejette après feu », mycorhize éricoïde.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.05 },
@@ -1186,7 +1559,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.7, resistanceEcorce: 0.35, rejetteApresFeu: true },
-    sources: [ATLAS],
+    sources: [ATLAS, ASENSIO_2008],
   },
 ];
 

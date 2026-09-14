@@ -64,15 +64,15 @@ interface Scene {
    */
   ventExposition?: number;
   /**
-   * `TickResult.vent` : le vent de la semaine, tel que le moteur le rapporte
-   * (`engine/vent.ts`).
+   * Le vent de la semaine, tel que la météo du moteur le porte
+   * (`WeekWeather.ventVersRad`, `ventMoyMs`) plus ce que le SITE en reçoit
+   * (`ventRecuParLeSite`, produit de la vitesse régionale et de l'abri).
    *
-   * **Absent des scènes cuites avant le 2026-09-11.** C'est LUI qui incline le
-   * panache ; `ventExposition` n'en donne que l'échelle. À défaut, on ne
-   * penche pas — une colonne droite est la lecture honnête de « on ne sait pas »
-   * (`SANS_VENT`).
+   * **Absent des scènes cuites avant le 2026-09-14.** C'est lui qui incline le
+   * panache ; à défaut on ne penche pas — une colonne droite est la lecture
+   * honnête de « on ne sait pas » (`SANS_VENT`).
    */
-  vent?: { deDeg: number; versRad: number; force: number };
+  vent?: { versRad: number; moyMs: number; recuMs: number };
   /**
    * Ce qui a changé depuis l'instantané précédent, tel que le moteur le
    * rapporte (`advanceWeek`), accumulé par le constructeur de scènes.

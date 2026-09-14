@@ -45,13 +45,13 @@ import { cellulesEnEau } from "../src/engine/eau_surface";
 import {
   chargeCombustible,
   departDeFeu,
-  intensiteDuFeu,
   propager,
   rangsDuFront,
   survitAuFeu,
+  ventRecuParLeSite,
 } from "../src/engine/feu";
 import { advanceWeek } from "../src/engine/game";
-import { serieToWeeks, type WeekWeather } from "../src/engine/meteo";
+import { serieToWeeks, ventDeLaSemaine, type WeekWeather } from "../src/engine/meteo";
 import { frequentationDesBordures, getPaysage } from "../src/engine/paysage";
 import { contextePhenologique } from "../src/engine/phenologie";
 import { altitudeParCellule } from "../src/engine/relief";
@@ -59,7 +59,6 @@ import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
 import { FRICHE_LIMON } from "../src/engine/stations";
 import type { ChuteDeChandelle, MortDeLaSemaine } from "../src/engine/tick";
-import { ROSE_ATLANTIQUE, ventDeLaSemaine } from "../src/engine/vent";
 import { arbreDuSnapshot } from "../src/game/snapshot";
 
 const GRAINE = 42;
@@ -442,6 +441,19 @@ function incendieDeDemonstration(
   };
 }
 
+/**
+ * L'intensité du feu dans une cellule, d'après sa charge de combustible.
+ *
+ * **Recopiée de `tick.ts` et c'est un défaut assumé** : le moteur la calcule en
+ * une ligne au milieu de sa section incendie (« l'intensité suit le combustible
+ * local ») sans l'exposer, alors que c'est elle qui décide qui meurt avec
+ * `survitAuFeu`. Deux copies d'une règle dérivent — l'issue #52 est ouverte pour
+ * qu'elle sorte du tick.
+ */
+function intensiteDuFeu(chargeLocale: number): number {
+  return Math.min(1, Math.max(0, chargeLocale) / 1.2);
+}
+
 /** La graine de l'allumage de démonstration. Fixe : une scène est reproductible. */
 const GRAINE_DU_FEU = 7717;
 
@@ -474,6 +486,11 @@ const METEO_DE_CANICULE: WeekWeather = {
   tMax: CHALEUR_DE_CANICULE_C,
   rainMm: 0,
   tMinAbsC: CHALEUR_DE_CANICULE_C - 14,
+  // Le vent de la semaine 30 du régime par défaut : c'est la loi saisonnière du
+  // moteur (`ventDeLaSemaine`), pas un chiffre posé ici. Une canicule de fin
+  // juillet tombe au creux annuel de vitesse, et c'est bien ce qu'on veut
+  // montrer — un feu d'été français court par vent faible.
+  ...ventDeLaSemaine(SEMAINE_DE_CANICULE),
 };
 
 /**
@@ -670,29 +687,23 @@ function main() {
           week: i,
           // L'exposition au vent de la station : c'est l'amplitude dont le
           // panache d'un incendie s'incline (`render/temps/feu.ts`). Le moteur
-          // ne dit pas d'où le vent vient — seulement combien la parcelle y est
-          // exposée — et le rendu ne fait pas semblant de savoir le reste.
+          // est l'ABRI du site, pas le vent : ce que la parcelle reçoit vraiment
+          // est le produit des deux (`ventRecuParLeSite`).
           ventExposition: station.ventExposition,
-          // **Le VENT de la semaine, tel que le moteur le rapporte.** C'est lui
-          // qui incline le panache d'un incendie ; l'exposition ne dit que
-          // l'échelle. Les deux voyagent, parce qu'elles ne disent pas la même
-          // chose — un lieu et un événement.
-          // Sur une scène de feu, le vent est celui de la canicule déclarée,
-          // comme l'allumage : un incendie sous vent d'ouest de régime perturbé
-          // serait un feu de forêt un jour de pluie.
+          // **Le VENT de la semaine, tel que le moteur le rapporte** dans la
+          // météo (`WeekWeather.ventVersRad`, `ventMoyMs`). C'est lui qui
+          // incline le panache d'un incendie ; l'exposition ne dit que
+          // l'échelle. Sur une scène de feu, c'est le vent de la canicule
+          // déclarée, comme l'allumage : le régime doit être le même pour tout
+          // ce qu'on en déduit.
           vent: (() => {
-            const v = FEU
-              ? ventDeLaSemaine(
-                  station.rose ?? ROSE_ATLANTIQUE,
-                  station.ventExposition,
-                  i,
-                  METEO_DE_CANICULE,
-                )
-              : semaine.vent;
+            const m = FEU ? METEO_DE_CANICULE : w;
             return {
-              deDeg: Number(v.deDeg.toFixed(1)),
-              versRad: Number(v.versRad.toFixed(4)),
-              force: Number(v.force.toFixed(3)),
+              versRad: Number(m.ventVersRad.toFixed(4)),
+              moyMs: Number(m.ventMoyMs.toFixed(2)),
+              // Ce que le site reçoit, calculé par le moteur : le rendu n'a
+              // plus qu'à le lire.
+              recuMs: Number(ventRecuParLeSite(m.ventMoyMs, station.ventExposition).toFixed(2)),
             };
           })(),
           trees: figer(state, new Set(incendie?.tues ?? [])),

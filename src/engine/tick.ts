@@ -9,6 +9,9 @@
  */
 
 import type { GesteVisible } from "./actions";
+import { type AidesAnnuelles, aidesAnnuelles } from "./aides";
+import { intensiteAllelopathique } from "./allelopathie";
+import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
   type CelluleSousLeTronc,
   CONTACT_CHABLIS_BRANCHU,
@@ -53,10 +56,10 @@ import { getEspece } from "./especes";
 import {
   chargeCombustible,
   departDeFeu,
-  intensiteDuFeu,
   propager,
   rangsDuFront,
   survitAuFeu,
+  ventRecuParLeSite,
 } from "./feu";
 import {
   brouter,
@@ -82,9 +85,11 @@ import {
   type PartOmbrageante,
   windShelterAt,
 } from "./light";
+import { lumiereApresBordures } from "./lisiere";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
 import { weeklyEtpHargreaves } from "./meteo";
+import { fermetureDuCouvert, tMinimumSousCouvert } from "./microclimat";
 import {
   cibleReseau,
   facteurAbsorption,
@@ -165,6 +170,7 @@ import {
   profondeurPenetrableCm,
   ruHorizonMm,
 } from "./soil";
+import { type StadeDeDeveloppement, stadeDe } from "./stades";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
@@ -181,7 +187,6 @@ import {
   treeNitrogenNeedGWeek,
   treeWaterDemandL,
 } from "./trees";
-import { ROSE_ATLANTIQUE, type VentDeLaSemaine, ventDeLaSemaine } from "./vent";
 import type { HorizonHydro } from "./water";
 import { drynessFactor, profilHydro } from "./water";
 
@@ -251,6 +256,53 @@ export interface MortDeLaSemaine {
   heightM: number;
 }
 
+/**
+ * Un semis RÉELLEMENT installé cette semaine. Le pendant positif de
+ * `MortDeLaSemaine`, et volontairement la même forme : le rendu pointe une
+ * naissance comme il pointe une mort, au même endroit de son calque.
+ *
+ * Pourquoi ça voyage alors que `ageWeeks` est déjà dans l'instantané, et
+ * qu'un arbre jeune s'y repère : parce que les TROIS endroits qui créent un
+ * arbre — le recrutement naturel (regeneration.ts), le geste `planter` et le
+ * semis en vrac (state.ts) — posent tous `ageWeeks: 0`. Un plant acheté et un
+ * semis levé la même semaine portent donc le même âge pour toujours, et
+ * aucune règle lisant `ageWeeks` ne les sépare. Cette liste-ci ne contient que
+ * ce que le recrutement a installé : c'est la seule façon de pointer une
+ * recrue sans pointer aussi la plantation du joueur.
+ *
+ * Accessoirement, le tick avait déjà tout ça sous la main et le jetait —
+ * `yearlyRecruitment` rend des `TreeState` complets. Le worker en déduisait un
+ * NOMBRE par soustraction d'effectifs, faux dès qu'un geste de la semaine
+ * avait retiré des tiges ; il lit cette liste.
+ */
+export interface NaissanceDeLaSemaine {
+  id: number;
+  /** position du semis, m */
+  x: number;
+  y: number;
+  especeId: string;
+  /** hauteur à la levée, m */
+  heightM: number;
+}
+
+/**
+ * Une tige qui vient de changer de stade (stades.ts). Le franchissement se
+ * rapporte ici, et PAS sous forme d'un `stade` par arbre dans l'instantané :
+ * le stade lui-même est une fonction pure de `heightM`, que le rendu calcule
+ * déjà sans nous (`stadeDe`). Ce qu'il ne peut pas faire, c'est comparer deux
+ * instants — d'où l'événement, et lui seul.
+ *
+ * Ne couvre que ce que la CROISSANCE a fait franchir. Un arbre rabattu par une
+ * trogne ou un recépage descend l'échelle, et cette chute-là voyage déjà :
+ * `ArbreRetire` porte `hauteurAvantM` et `hauteurApresM` (actions.ts), dont le
+ * rendu tire les deux stades. La redire ici serait la même vérité deux fois.
+ */
+export interface FranchissementDeStade {
+  id: number;
+  deStade: StadeDeDeveloppement;
+  versStade: StadeDeDeveloppement;
+}
+
 /** L'incendie de la semaine, tel qu'on peut le raconter ET le dessiner. */
 export interface IncendieResult {
   cellulesBrulees: number;
@@ -268,16 +320,17 @@ export interface IncendieResult {
    */
   rangs: Int32Array;
   /**
-   * Charge de combustible de chaque cellule de `brulees`, même ordre, en
-   * kg C/m² équivalents (`chargeCombustible`).
+   * Charge de combustible de chaque cellule de `brulees`, même ordre : l'indice
+   * de `chargeCombustible` (feu.ts), herbe sèche + litière + ligneux, ∈ [0, ~1,5].
    *
-   * **C'est DANS QUOI le feu a brûlé, et ça manquait.** Le rang dit où le front
-   * est passé et quand ; la charge dit avec quelle violence. Elle décide déjà de
-   * l'intensité, donc de qui meurt (`intensiteDuFeu`, `survitAuFeu`) — mais
-   * personne ne pouvait la relire, et le rendu dessinait toutes ses flammes à la
-   * même hauteur de convention. Avec elle, une flamme est haute dans l'ajonc et
-   * basse dans le pré : c'est la carte de combustibilité qui devient visible sur
-   * la flamme elle-même et plus seulement sur la vitesse du front.
+   * C'est DANS QUOI la cellule a brûlé, et ça décide de la hauteur de flamme :
+   * haute dans l'ajonc, basse dans un pré ras. Sans elle le rendu dessine
+   * toutes ses flammes à la même hauteur de convention, et « le feu s'essouffle
+   * dans le feuillu frais, fonce dans la lande » ne se lit que sur la vitesse
+   * du front, jamais sur la flamme elle-même.
+   *
+   * Relevée telle que le feu l'a trouvée, avant qu'il ne consume quoi que ce
+   * soit : c'est la charge qui a porté le front, pas ce qu'il en reste.
    */
   charges: Float32Array;
 }
@@ -306,17 +359,12 @@ export interface TickResult {
   fluxes: TickFluxes;
   /** arbres morts pendant ce tick, avec ce qui les a tués et où ils sont */
   morts: MortDeLaSemaine[];
+  /** semis réellement installés cette semaine, avec leur position */
+  naissances: NaissanceDeLaSemaine[];
+  /** tiges que la croissance a fait changer de stade cette semaine */
+  franchissements: FranchissementDeStade[];
   /** incendie de la semaine, s'il y en a eu un */
   incendie?: IncendieResult;
-  /**
-   * Le vent de la semaine : d'où il souffle, vers où, et avec quelle force
-   * (`vent.ts`).
-   *
-   * TOUJOURS présent, à la différence de l'incendie : il vente toutes les
-   * semaines. C'est lui qui incline le panache d'un incendie (§6.4 de
-   * l'interface) et qui attise le risque de départ.
-   */
-  vent: VentDeLaSemaine;
   /**
    * Ce que le GIBIER a fait subir à quels arbres cette semaine (broutage,
    * frottis). Les gestes du joueur remontent par `applyAction` (actions.ts) ;
@@ -333,6 +381,11 @@ export interface TickResult {
   lumiereAuSol: Float32Array;
   /** chandelles abattues cette semaine, avec où et comment elles sont tombées */
   chutes: ChuteDeChandelle[];
+  /**
+   * Aides publiques versées cette semaine, s'il y en a eu. Une fois l'an, et
+   * seulement si l'économie compte dans cette partie (aides.ts).
+   */
+  aides?: AidesAnnuelles;
 }
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
@@ -370,7 +423,37 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const partOmbrageanteDe: PartOmbrageante = (tree) =>
     partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno);
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partOmbrageanteDe);
+  /**
+   * Ce que les émetteurs d'allélopathie déversent en un point (allelopathie.ts).
+   * Le sable lessive la juglone, le limon lourd la retient : l'intensité dépend
+   * donc de la TEXTURE du sol, que la station connaît déjà.
+   */
+  const partSableSurface = station.profil[0]?.sable ?? 0;
+  const emetteurs = trees.filter((t) => t.alive && getEspece(t.especeId).allelopathie);
+  const intensiteAllelopathiqueEn = (x: number, y: number): number => {
+    let total = 0;
+    for (const e of emetteurs) {
+      const portee = getEspece(e.especeId).allelopathie?.porteeM ?? 0;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d <= 0.01) continue; // l'émetteur ne s'inhibe pas lui-même
+      total += intensiteAllelopathique(d, portee, partSableSurface);
+    }
+    return Math.min(1, total);
+  };
   const light = computeLight(trees, partOmbrageanteDe);
+  // L'ENTOURAGE ombrage les lisières : un carré de bocage au milieu d'un massif
+  // n'est pas une clairière isolée (lisiere.ts). Et la géométrie n'est pas
+  // symétrique — c'est ce qui est au SUD qui ombrage.
+  for (let t = 0; t < light.length; t++) {
+    const arbre = trees[t];
+    if (!arbre) continue;
+    light[t] = (light[t] ?? 1) * lumiereApresBordures(arbre.x, arbre.y, dims, station.bordures);
+  }
+  for (let i = 0; i < nCells; i++) {
+    const x = (i % dims.widthM) + 0.5;
+    const y = Math.floor(i / dims.widthM) + 0.5;
+    groundLight[i] = (groundLight[i] ?? 1) * lumiereApresBordures(x, y, dims, station.bordures);
+  }
 
   // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
   const profil = station.profil;
@@ -1237,6 +1320,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let nppKgC = 0; // production primaire nette de la semaine (bois + racines)
   let importedPlantsKgC = 0; // carbone des recrues, venu de la graine
   const limitingFactors = new Array<number>(nTrees).fill(0);
+  const franchissements: FranchissementDeStade[] = [];
   let nextTrees: TreeState[] = trees.map((tree, t) => {
     const result = tickTree(tree, {
       waterSatisfaction: waterSatisfaction[t] ?? 1,
@@ -1244,6 +1328,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       light: light[t] ?? 1,
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
       phosphoreSatisfaction: pSatisfaction[t] ?? 1,
+      intensiteAllelopathique: intensiteAllelopathiqueEn(tree.x, tree.y),
       potassiumSatisfaction: kSatisfaction[t] ?? 1,
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
@@ -1279,6 +1364,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const cible = baseHouppierCible(next.heightM, light[t] ?? 1, lumiere.compensation, lumiere.lai);
     // La scie compte autant que l'ombre, et l'arbre ne les distingue pas.
     const baseHouppierM = Math.max(tree.baseHouppierM ?? 0, cible, next.hauteurElagueeM);
+    // Franchissement de stade : on a les deux instants sous la main ici, et
+    // c'est le seul endroit du programme où c'est vrai. Un arbre mort ne
+    // franchit rien — une chandelle qui grisonne ne « passe pas futaie ».
+    if (next.alive) {
+      const avant = stadeDe(tree.heightM);
+      const apres = stadeDe(next.heightM);
+      if (avant !== apres) {
+        franchissements.push({ id: tree.id, deStade: avant, versStade: apres });
+      }
+    }
     return {
       ...next,
       vigueur,
@@ -1328,7 +1423,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (
         ddPrev < bloomEnd &&
         ddYearBase5 >= fruits.floraisonDJ &&
-        weather.tMinAbsC <= fruits.gelFatalC
+        // Le gel se juge SOUS LE COUVERT de cet arbre-là, pas au-dessus de la
+        // parcelle : la nuit, un couvert renvoie vers le sol le rayonnement que
+        // le ciel clair emporterait, et la floraison qu'il abrite y échappe
+        // (microclimat.ts). C'est l'argument agroforestier pour mettre les
+        // fruitiers à l'abri d'une haie plutôt qu'en plein découvert.
+        tMinimumSousCouvert(weather.tMinAbsC, fermetureDuCouvert(light[t] ?? 1)) <= fruits.gelFatalC
       ) {
         bloomFrosted = true;
       }
@@ -1853,17 +1953,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // puis se propage là où il trouve à brûler — d'où l'intérêt des coupures.
   let incendie: TickResult["incendie"];
   let carboneFeuKgC = 0;
-  // **Le vent de la semaine se calcule d'abord**, parce que le risque de départ
-  // en dépend. Il ne PUISE PAS dans le flux principal : sa dispersion se tire
-  // sur une graine propre (`vent.ts`), pour la même raison que la direction de
-  // chute d'une chandelle — un tirage de plus dans le flux décalerait tous les
-  // suivants et rebattrait les cartes de tous les autres mécanismes.
-  const vent = ventDeLaSemaine(
-    station.rose ?? ROSE_ATLANTIQUE,
-    station.ventExposition,
-    state.week,
-    weather,
-  );
   {
     let secheresseSum = 0;
     for (let i = 0; i < nCells; i++) secheresseSum += (waterMm[i * nH] ?? 0) / ruSurface;
@@ -1881,13 +1970,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       secheresseSum / nCells,
       weather.tMax,
       charge,
-      vent.force,
+      station.ventExposition,
       station.coteM,
       frequentationDesBordures(station.bordures),
     );
     rng = depart.rng;
     if (depart.origine !== undefined) {
-      const propagation = propager(depart.origine, charge, station.coteM, rng);
+      // Le feu lit le vent de la semaine, rabattu par l'abri du site : c'est
+      // le vent que la PARCELLE reçoit qui pousse le front, pas celui du
+      // bulletin régional.
+      const vent = {
+        versRad: weather.ventVersRad,
+        vitesseMs: ventRecuParLeSite(weather.ventMoyMs, station.ventExposition),
+      };
+      const propagation = propager(depart.origine, charge, station.coteM, rng, vent);
       rng = propagation.rng;
       const brulees = propagation.brulees;
       let tues = 0;
@@ -1901,8 +1997,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           apresFeu.push(tree);
           continue;
         }
-        // L'intensité suit le combustible local (`intensiteDuFeu`).
-        const intensite = intensiteDuFeu(charge.parCellule[cellule] ?? 0);
+        // L'intensité suit le combustible local.
+        const intensite = Math.min(1, (charge.parCellule[cellule] ?? 0) / 1.2);
         const espece = getEspece(tree.especeId);
         if (survitAuFeu(tree, intensite)) {
           apresFeu.push(tree);
@@ -2001,15 +2097,36 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         origine: depart.origine,
         brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
         rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
-        // La charge est relevée AVANT que le feu ne consume l'herbe et la
-        // litière : c'est dans quoi il a brûlé, pas ce qu'il en reste.
         charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
       };
     }
   }
 
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
+  // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
+  // Versées à la semaine du recrutement, qui vaut « début de campagne ». Elles
+  // ne tombent que si l'économie compte dans cette partie : sans elle, le
+  // compte tourne pour information et les aides le fausseraient (aides.ts).
+  let aidesVersees: AidesAnnuelles | undefined;
+  let treasuryApresAides = state.economy.treasuryEur;
+  if (week === RECRUITMENT_WEEK && state.economy.active) {
+    const surfaceHa = (station.coteM * station.coteM) / 10_000;
+    let couvertSomme = 0;
+    for (let i = 0; i < nCells; i++) couvertSomme += 1 - (groundLight[i] ?? 1);
+    aidesVersees = aidesAnnuelles(
+      surfaceHa,
+      nextTrees.filter((t) => t.alive).length,
+      couvertSomme / nCells,
+    );
+    treasuryApresAides += aidesVersees.totalEur;
+  }
+
   let nextTreeId = state.nextTreeId;
+  // Le feu de la semaine arme la levée de l'année : le drapeau reste levé
+  // jusqu'à la semaine de recrutement, où la banque se réveille (banqueGraines.ts).
+  let aBruleDepuisLaLevee = state.aBruleDepuisLaLevee || incendie !== undefined;
+  let banqueGraines = state.banqueGraines;
+  const naissances: NaissanceDeLaSemaine[] = [];
   if (week === RECRUITMENT_WEEK) {
     const recruitment = yearlyRecruitment({
       trees: nextTrees,
@@ -2019,6 +2136,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       partOmbrageante: partOmbrageanteDe,
       ph: state.soil.ph,
       lumiereAuSol: groundLight,
+      banqueGraines: state.banqueGraines,
+      aBrule: aBruleDepuisLaLevee,
       nextTreeId,
     });
     // Le carbone des recrues vient d'ailleurs : de la graine, produite par un
@@ -2027,16 +2146,53 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // le bilan carbone fabrique de la matière à chaque printemps.
     for (const recrue of recruitment.newTrees) {
       importedPlantsKgC += treeTotalCarbonKg(getEspece(recrue.especeId), recrue.heightM);
+      // Ce sont les semis RÉELLEMENT installés : `yearlyRecruitment` a déjà
+      // écarté ceux que le plafond de densité, le pH ou l'ombre refusaient.
+      naissances.push({
+        id: recrue.id,
+        x: recrue.x,
+        y: recrue.y,
+        especeId: recrue.especeId,
+        heightM: recrue.heightM,
+      });
     }
     nextTrees = [...nextTrees, ...recruitment.newTrees];
     rng = recruitment.rng;
     nextTreeId = recruitment.nextTreeId;
+    // La banque vieillit, perd ce qui a levé, et reçoit la graine de l'année.
+    // Seuls les adultes en âge de grainer alimentent : un semis ne sème pas.
+    const adultes = new Map<string, number>();
+    for (const arbre of nextTrees) {
+      if (!arbre.alive) continue;
+      const espece = getEspece(arbre.especeId);
+      if (!espece.regeneration.banqueGraines) continue;
+      if (arbre.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+      adultes.set(arbre.especeId, (adultes.get(arbre.especeId) ?? 0) + 1);
+    }
+    const surfaceM2 = station.coteM * station.coteM;
+    const suivante: Record<string, number> = {};
+    for (const especeId of new Set([...Object.keys(banqueGraines), ...adultes.keys()])) {
+      const espece = getEspece(especeId);
+      const depot = (DEPOT_PAR_ADULTE_PAR_AN * (adultes.get(especeId) ?? 0)) / surfaceM2;
+      const stock = banqueApresUneAnnee(
+        espece,
+        banqueGraines[especeId] ?? 0,
+        depot,
+        aBruleDepuisLaLevee,
+      );
+      if (stock > 0) suivante[especeId] = stock;
+    }
+    banqueGraines = suivante;
+    aBruleDepuisLaLevee = false;
   }
 
   return {
     state: {
       ...state,
       week: state.week + 1,
+      // Les aides tombent une fois l'an sur la trésorerie ; le reste du temps
+      // l'économie traverse le tick sans changer (aides.ts).
+      economy: aidesVersees ? { ...state.economy, treasuryEur: treasuryApresAides } : state.economy,
       soil: {
         waterMm,
         excessMm,
@@ -2074,6 +2230,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       trees: nextTrees,
       ddYearBase5,
       semainesDeFroid,
+      banqueGraines,
+      aBruleDepuisLaLevee,
       // Le vide laissé par la chasse se comble : les voisins arrivent.
       pressionGibier: state.pressionGibier + (1 - state.pressionGibier) * RETOUR_IMMIGRATION,
       carbon: {
@@ -2089,9 +2247,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nextTreeId,
     },
     morts,
+    naissances,
+    franchissements,
     chutes,
+    aides: aidesVersees,
     incendie,
-    vent,
     gestes,
     // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne
     // sont pas de l'état (la semaine suivante les recalcule), mais sans elles

@@ -36,6 +36,7 @@ import {
   RANGS_DU_FRONT,
   SANS_VENT,
   VARIANTES_DE_BRULURE,
+  VENT_QUI_COUCHE_MS,
 } from "../../src/render/temps/feu";
 
 const COTE = 40;
@@ -206,8 +207,8 @@ describe("les particules du feu", () => {
   // **Un vent EST vent, et le moteur le dit maintenant** : le panache ne devine
   // plus sa direction depuis l'avance du front. On souffle donc vers l'est-nord-
   // est pour les essais, avec une force qu'on fait varier.
-  const enHaut = (a: number, t = 0, force = 0.6) =>
-    panacheDuFeu(front, a, t, COTE_P, { versRad: 0.4, force });
+  const enHaut = (a: number, t = 0, recuMs = 5) =>
+    panacheDuFeu(front, a, t, COTE_P, { versRad: 0.4, recuMs });
 
   it("ne produit RIEN avant que le feu ne parte", () => {
     expect(auSol(0)).toEqual([]);
@@ -363,7 +364,7 @@ describe("les particules du feu", () => {
     for (const versRad of [0, 1.2, Math.PI, -2]) {
       const dx = Math.cos(versRad);
       const dy = Math.sin(versRad);
-      for (const p of panacheDuFeu(front, 0.6, 400, COTE_P, { versRad, force: 0.8 })) {
+      for (const p of panacheDuFeu(front, 0.6, 400, COTE_P, { versRad, recuMs: 6 })) {
         if (p.forme !== "fumee" || p.hM < 15) continue;
         const ex = p.x - ((p.cellule % COTE_P) + 0.5);
         const ey = p.y - (Math.floor(p.cellule / COTE_P) + 0.5);
@@ -375,10 +376,10 @@ describe("les particules du feu", () => {
   });
 
   it("penche PLUS quand le vent est fort", () => {
-    // L'amplitude vient de la force du vent de la semaine, qui vient elle-même
-    // de la rose de la station et du régime de la semaine (`engine/vent.ts`).
-    const derive = (force: number) => {
-      const bouffees = enHaut(0.6, 400, force).filter((p) => p.forme === "fumee");
+    // L'amplitude vient de la vitesse que le SITE reçoit — la vitesse régionale
+    // de la semaine multipliée par l'abri de la parcelle (`ventRecuParLeSite`).
+    const derive = (recuMs: number) => {
+      const bouffees = enHaut(0.6, 400, recuMs).filter((p) => p.forme === "fumee");
       let somme = 0;
       for (const p of bouffees) {
         somme += Math.hypot(
@@ -388,7 +389,7 @@ describe("les particules du feu", () => {
       }
       return somme / Math.max(1, bouffees.length);
     };
-    expect(derive(1)).toBeGreaterThan(derive(0.2) * 1.5);
+    expect(derive(VENT_QUI_COUCHE_MS)).toBeGreaterThan(derive(1.5) * 1.5);
   });
 
   it("SUIT le front : la fumée s'éloigne de l'origine à mesure que le feu court", () => {

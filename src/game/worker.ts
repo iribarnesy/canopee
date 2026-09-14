@@ -46,10 +46,15 @@ import {
 } from "../engine/state";
 import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { sourcesDeLaParcelle } from "../engine/terrain";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "../engine/tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
-import type { VentDeLaSemaine } from "../engine/vent";
 import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 
@@ -65,6 +70,8 @@ let bordures: Bordures = bordersUniformes("bocage");
 // Relief choisi au lancement ; à défaut, celui d'origine de la station.
 let relief: Relief | undefined;
 let maturationAns = 0;
+/** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
+let economie = true;
 // Eau libre choisie au lancement (ruisseau, mare) ; à défaut, aucune.
 let eau: EauDeSurface | undefined;
 // Profondeur d'équilibre de la nappe choisie au lancement, cm.
@@ -82,17 +89,10 @@ let fractionalWeeks = 0;
 let prevFruitsReadyKg = 0;
 let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
-/**
- * Le vent de la dernière semaine simulée.
- *
- * Il vente toutes les semaines, donc il n'y a rien à accumuler : ce qui compte
- * pour l'instantané est le vent de la semaine qu'il décrit, pas la liste des
- * vents traversés. C'est le contraire des morts et des gestes, qui s'accumulent
- * parce que le joueur a sauté du temps.
- */
-let dernierVent: VentDeLaSemaine | undefined;
 // Ce qui s'est passé depuis le dernier instantané et que le rendu doit ANIMER.
 let pendingMorts: MortDeLaSemaine[] = [];
+let pendingNaissances: NaissanceDeLaSemaine[] = [];
+let pendingFranchissements: FranchissementDeStade[] = [];
 let pendingGestes: GesteVisible[] = [];
 let pendingChutes: ChuteDeChandelle[] = [];
 let pendingIncendie: IncendieResult | undefined;
@@ -365,9 +365,11 @@ function stationAvecPaysage(base: Station): Station {
 
 function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWeather[] {
   const serie = mode === "reelle" ? serieMeteoPour(stationId) : undefined;
-  if (serie) return serieToWeeks(serie);
   const station = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!station) throw new Error(`station inconnue : ${stationId}`);
+  // La série est cherchée d'abord, mais le climat de la station est chargé dans
+  // les deux cas : une série mesure la température et la pluie, pas le vent.
+  if (serie) return serieToWeeks(serie, station.climat);
   return syntheticYear(station.climat);
 }
 
@@ -431,16 +433,17 @@ function postSnapshot() {
     refusals: pendingRefusals,
     events: pendingEvents,
     morts: pendingMorts,
+    naissances: pendingNaissances,
+    franchissements: pendingFranchissements,
     gestes: pendingGestes,
     chutes: pendingChutes,
     incendie: pendingIncendie,
-    // Le vent du DERNIER tick du lot : c'est celui de la semaine que
-    // l'instantané décrit, et c'est lui qui inclinera le panache.
-    ...(dernierVent ? { vent: dernierVent } : {}),
   });
   pendingRefusals = [];
   pendingEvents = [];
   pendingMorts = [];
+  pendingNaissances = [];
+  pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
   // Les tampons du feu partent avec l'instantané : on ne les garde pas pour le
@@ -471,12 +474,32 @@ function stepWeeks(n: number) {
     lastDebordement = ticked.debordementParCellule;
     lastLumiereAuSol = ticked.lumiereAuSol;
     pendingMorts.push(...ticked.morts);
+    pendingNaissances.push(...ticked.naissances);
+    pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
     pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
     if (ticked.incendie) pendingIncendie = ticked.incendie;
-    dernierVent = ticked.vent;
+    // Les aides publiques, une fois l'an. On raconte surtout le cas où elles
+    // NE tombent PAS : perdre l'éligibilité en plantant un arbre de trop est
+    // la décision que ce mécanisme met sur la table (aides.ts).
+    if (ticked.aides) {
+      const a = ticked.aides;
+      if (a.eligible) {
+        event(
+          "🇪🇺",
+          `Aides PAC : ${a.totalEur.toFixed(0)} € (${a.densiteParHa.toFixed(0)} arbres/ha, ` +
+            `${(a.partIae * 100).toFixed(0)} % d'infrastructures agroécologiques)`,
+        );
+      } else {
+        event(
+          "🚫",
+          `Aucune aide PAC : ${a.densiteParHa.toFixed(0)} arbres/ha dépasse le plafond de 100. ` +
+            `La parcelle n'est plus agricole aux yeux de la PAC, c'est un boisement`,
+        );
+      }
+    }
     state = beginWeek(ticked.state);
     const finis =
       before.economy.saisonniersFinSemaine.length - state.economy.saisonniersFinSemaine.length;
@@ -531,7 +554,10 @@ function stepWeeks(n: number) {
     }
     // Semis naturels (semaine du recrutement)
     if (weekOfYear === 14) {
-      const recruits = state.trees.length - before.trees.length + ticked.morts.length;
+      // Le compte EXACT, depuis `naissances`. La soustraction d'effectifs
+      // qu'on faisait ici se trompait dès qu'un geste de la même semaine avait
+      // retiré des tiges : une éclaircie en semaine 14 gonflait le chiffre.
+      const recruits = ticked.naissances.length;
       if (recruits > 0) event("🌿", `${recruits} semis naturels se sont installés`);
     }
     // Sécheresse (sol moyen presque à sec en saison de végétation)
@@ -693,6 +719,7 @@ function init(
   partBassinChoisie: number,
   maturation: number,
   annee: number,
+  economieActive: boolean,
 ) {
   scenario = scenarioId;
   anneeDepart = annee;
@@ -702,6 +729,7 @@ function init(
   nappeCm = nappeChoisieCm;
   partBassin = partBassinChoisie;
   maturationAns = maturation;
+  economie = economieActive;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -710,12 +738,16 @@ function init(
   normales = normalesHebdo(weather);
   // Le paysage choisi remplace celui de la station : c'est la même terre, mais
   // au milieu d'une hêtraie, de champs ou d'un lotissement (paysage.ts).
-  const neuf = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed));
+  const neuf = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed), {
+    economie,
+  });
   state = beginWeek(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
   journal = [];
   pendingRefusals = [];
   pendingEvents = [];
   pendingMorts = [];
+  pendingNaissances = [];
+  pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
   pendingIncendie = undefined;
@@ -749,6 +781,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         msg.partBassin,
         msg.maturationAns,
         msg.anneeDepart,
+        msg.economie,
       );
       break;
     case "resume": {
@@ -763,12 +796,17 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       nappeCm = msg.save.nappeCm;
       partBassin = msg.save.partBassin;
       maturationAns = msg.save.maturationAns ?? 0;
+      // Absent = vrai : une sauvegarde d'avant l'option a été jouée AVEC
+      // l'économie, et doit se rejouer ainsi ou elle divergerait.
+      economie = msg.save.economie ?? true;
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
       normales = normalesHebdo(weather);
       journal = msg.save.actions;
-      let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed));
+      let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed), {
+        economie,
+      });
       // Le vieillissement fait partie de l'histoire de la parcelle : il se
       // rejoue à l'identique avant les actions du joueur.
       if (maturationAns > 0) replayed = faireVieillir(replayed, maturationAns);
@@ -788,6 +826,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       pendingRefusals = [];
       pendingEvents = [];
       pendingMorts = [];
+      pendingNaissances = [];
+      pendingFranchissements = [];
       pendingGestes = [];
       pendingChutes = [];
       pendingIncendie = undefined;
@@ -826,6 +866,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         nappeCm: nappeCm ?? sc?.station.profondeurNappeEquilibreCm,
         partBassin: partBassin ?? sc?.station.partBassinSemblable,
         maturationAns,
+        economie,
         anneeDepart,
         weeks: state.week,
         actions: journal,

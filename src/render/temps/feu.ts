@@ -648,55 +648,78 @@ function centreDe(cellule: number, coteM: number): { x: number; y: number } {
 }
 
 /**
+ * Ce que le rendu lit du vent : où il souffle, et à quelle vitesse le site le
+ * reçoit.
+ *
+ * Le sous-ensemble de ce que la météo du moteur porte — `ventVersRad` et
+ * `ventMoyMs` dans `WeekWeather` — écrit en clair pour que ce module se teste
+ * sans fabriquer un instantané complet, comme `FrontDIncendie`.
+ *
+ * **Deux pièges que `docs/attentes-du-rendu.md` signale, et qui sont des
+ * contresens à l'écran :**
+ *
+ *  - **`vers`, pas « d'où »**. La météo nomme un vent par sa provenance — un
+ *    « vent d'ouest » vient de l'ouest. Ici c'est la direction du MOUVEMENT,
+ *    comme `directionRad` d'une tige tombée : un vent d'ouest vaut
+ *    `versRad = 0`, puisqu'il pousse vers l'est. Le signe inverse ferait
+ *    pencher le panache face au feu ;
+ *  - **la vitesse REÇUE, pas la vitesse régionale.** `ventMoyMs` est le vent de
+ *    la région, `ventExposition` l'abri du site, et ce que la parcelle prend est
+ *    le produit des deux (`ventRecuParLeSite` du moteur). Un vallon fermé ne
+ *    couche pas son panache comme une lande.
+ */
+export interface VentAPencher {
+  /** direction VERS laquelle il souffle, radians (0 = +x = est, sens trigo) */
+  versRad: number;
+  /** vitesse que le SITE reçoit, m/s (`ventRecuParLeSite`) */
+  recuMs: number;
+}
+
+/**
+ * Vitesse à laquelle le panache est couché au maximum, en m/s.
+ *
+ * **Une convention de dessin, et il faut le dire.** L'inclinaison d'un panache
+ * est le rapport entre la vitesse du vent et la vitesse d'ASCENSION de la
+ * colonne — c'est de la physique, et elle est bien connue. Mais la vitesse
+ * d'ascension du panache dessiné ici n'est pas une vitesse du monde : le
+ * panache monte `HAUTEUR_DU_PANACHE_M` en `MONTEE_DU_PANACHE_MS`, qui sont des
+ * millisecondes d'ELLIPSE, c'est-à-dire du temps de cinéma. Le rapport honnête
+ * n'est donc pas calculable, et ce nombre-ci le remplace : huit mètres par
+ * seconde, soit une bonne brise, couchent la colonne autant que le dessin sait
+ * la coucher. En dessous elle se redresse proportionnellement.
+ */
+export const VENT_QUI_COUCHE_MS = 8;
+
+/**
  * Vers où la fumée penche, et de combien.
  *
- * **Le moteur le SAIT maintenant, et cette fonction ne devine plus rien.**
- * Elle a d'abord fait pencher chaque colonne à l'opposé de l'origine de
- * l'incendie, puis toutes dans le sens de l'avance nette du front : deux
- * conventions déclarées, en attendant que `WeekWeather` porte un vent. Le
- * moteur porte désormais `TickResult.vent` — un secteur et une force, dérivés
- * de la rose de la station et du régime de la semaine (`engine/vent.ts`) —
- * et c'est lui qu'on lit.
+ * **Le moteur le SAIT, et cette fonction ne devine plus rien.** Elle a d'abord
+ * fait pencher chaque colonne à l'opposé de l'origine de l'incendie — ce qui
+ * dessinait un vent soufflant vers l'extérieur dans toutes les directions à la
+ * fois — puis toutes dans le sens de l'avance nette du front, ce qui confondait
+ * la cause et l'effet. Les deux étaient des conventions déclarées, en attendant
+ * que la météo porte un vent. Elle le porte.
  *
- * Ce que ça change à l'image, et ce n'est pas rien : **le panache d'un incendie
- * penche du même côté que celui du voisin, et il ne penche pas dans le sens du
- * feu quand le feu remonte le vent.** Un front qui descend le vent et un front
- * qui le remonte se dessinaient pareil ; maintenant, non.
- *
- * `force` est le `force` du vent de la semaine ∈ [0,1], donc l'inclinaison
- * suit la météo : une colonne droite un jour calme, couchée un jour de vent.
+ * Ce que ça change à l'image, et ce n'est pas rien : **deux feux de la même
+ * parcelle penchent du même côté, et un front qui remonte le vent ne se dessine
+ * plus comme un front qui le descend.**
  */
 function penchantDuVent(vent: VentAPencher): { dx: number; dy: number; force: number } {
   return {
     dx: Math.cos(vent.versRad),
     dy: Math.sin(vent.versRad),
-    force: Math.min(1, Math.max(0, vent.force)),
+    force: Math.min(1, Math.max(0, vent.recuMs) / VENT_QUI_COUCHE_MS),
   };
-}
-
-/**
- * Ce que le rendu lit du vent : où il souffle, et combien il pousse.
- *
- * Le sous-ensemble de `VentDeLaSemaine` dont le dessin a besoin — écrit en
- * clair pour que ce module se teste sans fabriquer un résultat de moteur
- * complet, comme `FrontDIncendie`.
- */
-export interface VentAPencher {
-  /** direction VERS laquelle il souffle, radians (0 = +x = est, sens trigo) */
-  versRad: number;
-  /** force ∈ [0,1] */
-  force: number;
 }
 
 /**
  * Le vent qu'on prend quand l'instantané n'en porte pas.
  *
- * Nul, et pas « un vent moyen » : une scène cuite avant que le moteur ne
- * rapporte le vent ne doit pas se lire comme une parcelle particulière. Force
- * zéro donne une colonne droite, ce qui est la lecture honnête de « on ne sait
- * pas ».
+ * Nul, et pas « un vent moyen » : une scène cuite avant que la météo ne porte le
+ * vent ne doit pas se lire comme une parcelle particulière. Vitesse zéro donne
+ * une colonne droite, ce qui est la lecture honnête de « on ne sait pas ».
  */
-export const SANS_VENT: VentAPencher = { versRad: 0, force: 0 };
+export const SANS_VENT: VentAPencher = { versRad: 0, recuMs: 0 };
 
 /**
  * Ce qui brûle AU SOL : la lueur et les langues de flamme.

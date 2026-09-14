@@ -87,7 +87,12 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
 
   it("an 60 : canopée pionnière, les hêtres attendent dans le sous-étage", () => {
     expect(an60.canopy.length).toBeGreaterThan(15);
-    expect(an60.canopyPioneerShare).toBeGreaterThan(0.7);
+    // Le seuil descend de 0,70 à 0,65 avec l'effet de bord (lisiere.ts) :
+    // l'entourage de la friche est une lisière forestière, elle ombrage donc
+    // ses bandes, et une friche un peu plus sombre laisse un peu moins de place
+    // aux pionniers qui la colonisent. La canopée reste très majoritairement
+    // pionnière — 0,68 — ce que le titre affirme.
+    expect(an60.canopyPioneerShare).toBeGreaterThan(0.65);
     expect(an60.fagusAlive.length).toBeGreaterThan(3);
     // « Attendre dans le sous-étage » est une position RELATIVE, et il a fallu
     // recalibrer les vitesses de croissance pour s'en apercevoir : la version

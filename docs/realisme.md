@@ -111,7 +111,7 @@ mesurer que ce qu'on sait déjà faire.*
 | B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main |
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
-| B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | ❌ | Pas d'effet de bord |
+| B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
 | B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le RAYON, lui, reste `houppierRatio × hauteur` : pas de port serré |
 
 ## C. Nutriments et cycles
@@ -141,7 +141,7 @@ mesurer que ce qu'on sait déjà faire.*
 | D3 | La floraison suit un cumul de degrés-jours | ✅ | `ddYearBase5` ; `fruits.test.ts` |
 | D4 | Un gel tardif détruit les fleurs ouvertes : les précoces sont un pari | ✅ | `tMinAbsC` ; `fruits.test.ts` |
 | D5 | La variabilité climatique ouvre des fenêtres d'installation | 🟡 | visible (`fenetres-installation.test.ts`), non piloté par un mécanisme dédié |
-| D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | ❌ | Microclimat = humidité seulement |
+| D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | 🟡 | `microclimat.ts` : les trois offsets de De Frenne et al. 2019 (max −4,1 °C, moyenne −1,7, min **+1,1**), appliqués à proportion de la fermeture. Branché sur le GEL DE FLORAISON — un fruitier abrité échappe au gel tardif qui tue celui d'à côté. Pas encore sur la phénologie ni sur le stress thermique |
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
 | D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
 | D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler AVANT de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
@@ -160,7 +160,7 @@ mesurer que ce qu'on sait déjà faire.*
 | E4 | Les espèces xérophiles transpirent moins par unité de feuillage (WUE) | 🟡 | dérivé du tempérament, à calibrer sur données |
 | E11 | Un pivot résiste à la sécheresse là où un traçant souffre | ✅ | `racines.test.ts` (sable sur limon : le pivot survit, le traçant meurt) |
 | E5 | Une haie brise-vent améliore la production sur 10-20 fois sa hauteur | ✅ | `windShelterAt` |
-| E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | ❌ | Champ prévu, non implémenté |
+| E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | 🟡 | `allelopathie.ts` + le NOYER entre à l'atlas. Portée 17,5 m (littérature : 15-20), intensité décroissante, sensibilité par espèce — pommier, pin et bouleau documentés sensibles. Et le SOL décide autant que l'arbre : le sable lessive la juglone, le limon lourd la retient. Sensibilité médiane par défaut là où la littérature ne dit rien |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
@@ -178,12 +178,12 @@ mesurer que ce qu'on sait déjà faire.*
 | F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
 | F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | plafond de densité arbitraire + ombrage codominant |
 | F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
-| F8 | Certaines espèces rejettent de souche ou drageonnent | ❌ | Champs prévus, non implémentés |
-| F9 | La banque de graines du sol garde une mémoire du passé | ❌ | Absente |
+| F8 | Certaines espèces rejettent de souche ou drageonnent | 🟡 | Rejet de souche : `rejetteDeSouche`, éprouvé après feu et après recépage. DRAGEONNEMENT : `regeneration.drageonne` (prunellier), un drageon sort dans un anneau serré autour de sa mère ET échappe au filtre de lumière, parce qu'elle le nourrit. Reste sans drageonnement : robinier et peuplier, absents de l'atlas |
+| F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
-| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` contre Jansen 1996 (hauteur dominante, classe médiane). Quatre essences à ±15 % à quarante ans — mais le hêtre y est CALÉ, donc l'essai le garde plus qu'il ne le valide ; pin, aulne et frêne, non touchés, sont une validation entière. La vérification tenue à l'écart est à vingt ans : −13 % à +10 %. Le bouleau reste hors table, faute de référence transposable |
+| F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` : six essences contre des tables (Jansen 1996 aux Pays-Bas, Lockow 2009 pour le charme, Lemaire 2005 pour le châtaignier) et quatre arbustes contre des mesures de terrain britanniques et bretonnes, faute de table. Deux essences seulement y sont CALÉES (hêtre, charme) : l'essai les garde plus qu'il ne les valide. Les huit autres sont une validation entière, et la vérification tenue à l'écart est à vingt ans (−13 % à +10 %). Restent hors référence, et le disent : bouleau, chêne pubescent, saule blanc, prunellier — plus le chêne-liège, faute de station méditerranéenne où le confronter |
 
 ## G. Faune et santé
 
@@ -209,7 +209,7 @@ mesurer que ce qu'on sait déjà faire.*
 | H4 | La cadence de récolte dépend de l'espèce (pommes vs noisettes) | ✅ | `fruits.recolteHKg` |
 | H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |
 | H6 | Le bois d'œuvre vaut beaucoup plus que le bois énergie (qualité, diamètre) | ✅ | `valeurSurPied` ; `sylviculture.test.ts` — il faut une bille élaguée ET du diamètre |
-| H7 | Les prix varient (marché, saturation locale) | ❌ | Prix fixes |
+| H7 | Les prix varient (marché, saturation locale) | 🟡 | `marche.ts` : indice annuel (cycle de 11 ans + bruit, borné 0,6-1,5) calé sur la volatilité réelle des bois sur pied, et DÉCOTE D'ENGORGEMENT du débouché local — vendre tout la même année rapporte moins. Ne joue que si l'économie compte |
 | H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, éclaircie par critère et **trogne** (`trogner` ; `trogne.test.ts`) — quatre gestes qui ne se confondent pas |
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
@@ -218,7 +218,7 @@ mesurer que ce qu'on sait déjà faire.*
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
-| H10 | Les aides publiques et paiements pour services existent | ❌ | Absents |
+| H10 | Les aides publiques et paiements pour services existent | 🟡 | `aides.ts` : aide de base au revenu (127 €/ha), écorégime (54 ou 76 €/ha selon la part d'infrastructures agroécologiques), bonus haies (7 €/ha). Et surtout le PLAFOND DE 100 ARBRES/HA au-delà duquel la parcelle n'est plus agricole et perd tout. Règles FIGÉES sur la programmation 2023-2027, ce que la réalité n'est pas |
 | H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |
 | H12 | Le sol se découvre par observation ou analyse payante | 🟡 | tout est visible dans l'UI (calques) |
 
@@ -737,6 +737,97 @@ et elles tombent entre −13 % et +10 % des tables. C'est ce chiffre-là qui dit
 quelque chose du moteur. Les trois essences non recalées (pin, aulne, frêne)
 restent, elles, une validation à part entière aux deux âges.
 
+### Vingt vitesses posées à la main, passées à la littérature
+
+Le constat de la section précédente — « l'atlas de référence ne contient aucune
+donnée de croissance, les vitesses ont été inventées pendant le développement »
+— valait pour vingt fiches sur vingt-cinq. On les a toutes reprises, une par
+une, avec une règle et une méthode.
+
+**La règle est géographique**, et c'est la leçon du bouleau : une mesure n'est
+recevable que si elle vient d'un climat tempéré océanique ou semi-continental
+comparable au nord de la France — France, Belgique, Pays-Bas, Allemagne de
+l'Ouest, sud de l'Angleterre, et nord de l'Espagne pour les méditerranéennes.
+Sont écartées, explicitement et en le disant : la Scandinavie, l'Amérique du
+Nord, la Nouvelle-Zélande (où l'ajonc est étudié comme invasive), la haute
+montagne, le bassin méditerranéen sec.
+
+**La méthode est celle déjà établie** : un seul paramètre ajusté, sur un seul
+âge, le reste tenu à l'écart. Résultat : **une seule valeur a bougé.**
+
+| Espèce | Avant | Après | Référence retenue (pays) | Statut |
+|---|---|---|---|---|
+| Charme | 0,40 | **0,53** | Lockow & Lockow 2009, première table de production du charme, bonité médiane HO100 = 25 m (Brandebourg) | **CALÉ** sur 16,3 m à 40 ans |
+| Châtaignier | 0,65 | 0,65 | Lemaire 2005, faisceau des taillis, publié par le CRPF IDF-Centre (France) | VALIDÉ : 19,0 m simulés contre ~18,7 |
+| Genêt à balais | 0,50 | 0,50 | Waloff & Richards 1977, via la *Biological Flora* 2025 (Londres) | VALIDÉ : 1,55 et 2,26 m contre 1,60 et 2,20 |
+| Houx | 0,15 | 0,15 | Peterken & Lloyd 1967 (Grande-Bretagne) | VALIDÉ : 2,02 m à 10 ans contre 1,5-3,0 m à 8-15 |
+| Fusain | 0,30 | 0,30 | Willoughby 2007, plantations des Midlands (Angleterre) | VALIDÉ : 29 cm/an contre 27 |
+| Aubépine | 0,30 | 0,30 | Grubb 1999 et Willoughby 2007 (Angleterre) | ENCADRÉ : 28,4 cm/an dans la bande 28-37 |
+| Ajonc | 0,45 | 0,45 | Hornoy 2011, jardin commun près de Rennes (Bretagne) | ENCADRÉ : 118 cm à 2 ans contre 110-130 |
+| Callune | 0,12 | 0,12 | Schellenberg 2021 (Allemagne du Nord), classes JNCC (R.-U.) | ENCADRÉ : 6 cm/an de hauteur sous 10 cm/an d'allongement |
+| Noisetier | 0,60 | 0,60 | Harmer 2004, taillis du Hampshire (Angleterre) | ENCADRÉ, mais sur des REJETS de cépée |
+| Pommier | 0,50 | 0,50 | LfL Bayern 2022 et guides de pré-verger (Allemagne) | ENCADRÉ : 7,6 m à 40 ans contre 7,5 m mesurés (10-70 ans) |
+| Sureau | 0,90 | 0,90 | Gilbert 1991, via Atkinson 2002 (Angleterre) | PLANCHER seulement : 37 cm/an sur gravats, le moteur en fait 58 |
+| Cornouiller mâle | 0,25 | 0,25 | catalogues de pépiniéristes allemands | 24-26 cm/an dans la fourchette 10-30 — du commerce, pas de la mesure |
+| Ronce | 1,40 | 1,40 | bases horticoles allemandes | plafond à 2,5 m en trois ans, cohérent avec 1-3 m |
+| Abricotier | 0,50 | 0,50 | fiche RHS (Royaume-Uni) | 4-8 m en 10-20 ans : le moteur y est, mais c'est une base horticole |
+| Troène | 0,35 | 0,35 | Grubb 1999 (Angleterre) | ORDINAL seulement : « groupe rapide », devant le fusain |
+| Prunellier | 0,40 | 0,40 | — | ORDINAL seulement (même essai) : **reste inventé** |
+| Chêne pubescent | 0,35 | 0,35 | — | **reste inventé** : aucune table hors Roumanie, Croatie, Provence |
+| Saule blanc | 1,20 | 1,20 | — | **reste inventé** : aucune table de saule de plein vent nulle part |
+| Chêne-liège | 0,30 | 0,30 | Sánchez-González 2010 (Espagne, Tunisie) | **NON VÉRIFIABLE** : pas de station méditerranéenne au moteur |
+| Arbousier | 0,25 | 0,25 | Asensio 2008, plantation en Galice (nord de l'Espagne) | première année seulement : 25 cm/an contre 29-42 mesurés |
+
+**Le charme était sous TOUTES ses références, et c'est ce qui a décidé.** La
+seule table qui existe pour lui vient du Brandebourg, plaine subcontinentale
+plus sèche que le bocage — géographie à décoter, donc. Mais l'équivalence que
+le CNPF (2025) recommande pour le charme français, les tables *néerlandaises*
+de chêne, donne 15,4 m à quarante ans, à 6 % de la table allemande. Le moteur
+était à 13,4 m, sous les deux : le monter ne demande pas de choisir une source
+contre l'autre. Sa hauteur à vingt ans, tenue à l'écart du calage, tombe alors
+à **−2,7 %** de la table.
+
+**Trois pièges que la littérature signale, et qu'on aurait mangés sans elle.**
+
+1. **Les courbes de châtaignier sont des courbes de TAILLIS.** Un rejet de
+   souche part sur un système racinaire déjà fait ; le moteur, dont la forme de
+   croissance dépend de la taille et non de l'âge, ne sait pas rendre cette
+   avance. On ne compare donc pas le châtaignier à vingt ans — on vérifie le
+   SIGNE de l'écart (le semis simulé doit rester derrière, et il l'est :
+   10,5 m contre 13).
+2. **Un turion de ronce s'allonge de trois à six mètres par saison, et la
+   roncière fait un mètre cinquante.** Les cannes s'arquent et se marcottent :
+   l'allongement n'est pas un gain de hauteur. Caler la ronce sur le premier
+   chiffre l'aurait rendue trois fois trop haute.
+3. **Un chiffre de *Biological Flora* attribué à la Grande-Bretagne peut venir
+   de Catalogne.** La monographie 2025 du genêt donne « 80 cm à 24 mois, 210 cm
+   à 63 mois » comme britannique ; la source primaire (Paynter 2003) n'a de
+   placettes européennes qu'en Catalogne et dans les Cévennes. C'est la même
+   erreur que Braastad, en plus discrète — vérifier la géographie veut dire
+   remonter d'un cran.
+
+**Ce que la confrontation a révélé du moteur, et qui n'était pas cherché.**
+
+- **Tous les semis naissent à trente centimètres** (`SEEDLING_HEIGHT_M`,
+  regeneration.ts), plantations comprises. Pour un chêne, c'est un plant de
+  pépinière ; pour la callune, dont la hauteur adulte est de soixante
+  centimètres, c'est la moitié de sa taille finale — la callune du jeu saute sa
+  phase pionnière, celle qui dure six ans dans la nature. Sa vitesse n'est pas
+  en cause ; la hauteur de semis unique l'est *(à confirmer : il faudrait la
+  dériver de la taille adulte)*.
+- **Le houx et le châtaignier meurent sur le limon riche.** Il titre pH 7,0 en
+  surface, et leurs gammes s'arrêtent à 7 et 6,5. C'est cohérent avec leur
+  autécologie — ce sont des calcifuges — mais cela veut dire que la station
+  phare du dépôt ne peut pas les héberger, et que les mesurer demande un limon
+  ACIDE, que `hauteurs.test.ts` construit pour eux.
+
+**Le coût est resté tenu** : l'essai passe de 110 à **112 secondes** en
+gagnant six espèces et sept assertions. Deux leviers, aucun compromis sur la
+statistique (toujours huit sujets × deux graines) : la mémoïsation des parties
+— le hêtre servait trois fois, il n'est calculé qu'une — et des jalons courts,
+un arbuste dont la mesure de terrain s'arrête à cinq ans ne coûtant plus une
+partie de quarante ans.
+
 ### L'exposant de forme se déduit de la longévité
 
 Les tables de production distinguent trois profils de croissance en hauteur —
@@ -824,11 +915,15 @@ nouvelle.**
    découvert.
 4. *Le noisetier non protégé sort de la dent un peu plus tôt* — 1,59 m à douze
    ans pour une dent à 1,50.
-5. *Le prélèvement de potasse monte à 70 kg/ha/an* sur limon riche. C'est le
-   haut de ce qu'on lit en forêt tempérée feuillue, et **c'est le seul chiffre
-   qui me gêne**. *(À confirmer : je n'ai pas trouvé de prélèvement annuel en
-   potassium directement citable pour une hêtraie — les sources donnent le
-   retour par litière, qui n'en est qu'une part.)*
+5. *Le prélèvement de potasse monte à 70 kg/ha/an* sur limon riche. Ce chiffre
+   m'avait gêné ; **il tient**. Le piège est qu'on lit partout des valeurs bien
+   plus basses — 3 à 16 kg K/ha/an sous une hêtraie — mais ce sont des RETOURS
+   PAR LITIÈRE, pas des prélèvements : le potassium est le plus mobile des
+   cations, l'arbre en retransloque une grande part avant la chute des feuilles
+   et la pluie lessive le reste du feuillage avant qu'il ne tombe. Les bilans
+   qui mesurent le prélèvement montent à 80 kg/ha/an en peuplement feuillu
+   productif. *(À confirmer : pas de bilan français de hêtraie directement
+   citable, seulement des ordres de grandeur concordants.)*
 
 - **Le vrai réglage du frein d'extraction est ailleurs.**
   `AVAILABILITY_SATURATION_G_M2` = 3 g/m², soit 30 kg N/ha, est le stock
@@ -1337,6 +1432,329 @@ base est à quatre mètres. *(À confirmer.)*
 *Et une conséquence contre-intuitive n'est toujours pas rendue* : Banerjee et
 al. (2020) mesurent en simulation fine qu'ouvrir un sous-étage ACCÉLÈRE la
 propagation en laissant entrer le vent, même si l'intensité baisse.
+
+**Une conséquence de jeu que personne n'a écrite.** Trois mécanismes existaient
+chacun de leur côté : l'élagage relève la base du houppier (`hauteurElagueeM`
+entre dans `baseHouppierM`) ; la base du houppier décide de l'amorçage de feu de
+cime ; donc **élaguer met le couvert hors d'atteinte d'un feu rampant**. Mesuré,
+un peuplement élagué à six mètres porte un tiers de charge en moins que le même
+peuplement branchu jusqu'à un mètre. C'est exactement ce que prescrit le
+débroussaillement réglementaire dans les Landes, et le moteur y arrive tout
+seul — aucune règle « élaguer réduit le feu » n'est écrite nulle part.
+
+Ce qui ne bouge pas, et l'essai le vérifie aussi : le combustible de SURFACE.
+Un pin élagué sur une lande d'herbe sèche brûle toujours au sol ; ce qu'il ne
+fait plus, c'est passer en cime.
+
+## Le couvert ne fait pas que de l'ombre : il tamponne la température
+
+Le moteur savait qu'une litière reste humide sous les arbres. Il ignorait
+l'autre moitié du microclimat forestier, pourtant la mieux mesurée de toutes :
+sous un couvert, les jours sont plus frais, les nuits plus douces, et les
+extrêmes rabotés des deux côtés.
+
+De Frenne et al. (2019), *Nature Ecology & Evolution* 3:744-749 — méta-analyse
+de **98 sites, 74 études, cinq continents, 714 paires** intérieur de forêt /
+milieu ouvert adjacent :
+
+| | écart forêt − ouvert |
+|---|---|
+| température **maximale** | **−4,1 ± 0,5 °C** — la forêt est plus fraîche le jour |
+| température **moyenne** | −1,7 ± 0,3 °C |
+| température **minimale** | **+1,1 ± 0,2 °C** — la forêt est plus douce la nuit |
+
+Toutes à p < 0,001, et l'écart se creuse à mesure que le climat général devient
+plus extrême — ce qui en fait un mécanisme d'autant plus important quand le
+scénario climatique se réchauffe. Un suivi indépendant en forêt tempérée donne
+le même ordre : +7,8 °C de maximum journalier en peuplement ouvert (Breigenzer
+et al. 2026).
+
+Le tampon s'applique **à proportion de la fermeture du couvert au-dessus du
+point considéré** : pas de seuil, pas de palier. Un arbre en plein découvert ne
+gagne rien, un semis sous futaie fermée gagne tout, et à mi-ombre exactement la
+moitié — l'essai le vérifie, parce que c'est ce qui garantit qu'aucun cas
+particulier n'est codé en dur.
+
+**Ce qu'on en fait pour l'instant : le gel de floraison.** Le gel se juge
+désormais sous le couvert de CHAQUE arbre, pas au-dessus de la parcelle. La
+nuit, un couvert renvoie vers le sol le rayonnement que le ciel clair
+emporterait, et la floraison qu'il abrite y échappe. C'est l'argument
+agroforestier pour mettre les fruitiers à l'abri d'une haie plutôt qu'en plein
+découvert, et il n'est écrit nulle part dans le moteur : il tombe de la
+composition du tampon nocturne et du seuil de gel de l'espèce. Mesuré, un
+abricotier entouré de charmes garde sa floraison là où celui d'à côté la perd.
+
+*Ce qui reste à faire* : le tampon n'agit encore ni sur la phénologie — un
+débourrement retardé sous couvert, ce qui est justement une protection
+supplémentaire contre le gel tardif — ni sur le stress thermique d'été, où
+−4,1 °C sur les maxima devraient compter beaucoup.
+
+*Limite assumée* : les chiffres de De Frenne portent sur des moyennes de maxima
+et de minima, pas sur les extrêmes absolus. Pour un gel radiatif — la nuit
+claire et calme où le couvert compte le plus — le tampon réel est probablement
+PLUS grand que 1,1 °C, puisque c'est précisément le rayonnement nocturne que le
+couvert intercepte. On reste sur la valeur publiée plutôt que d'extrapoler.
+
+## Les aides publiques, et l'hypothèse qu'on gèle pour pouvoir en parler
+
+**L'avertissement d'abord.** Les règles simulées sont FIGÉES, et la réalité ne
+l'est pas : la PAC se renégocie tous les cinq à sept ans, ses montants sont
+révisés en cours de programmation, les enveloppes régionales varient. Ce module
+prend les règles françaises 2023-2027, suppose qu'elles ne bougent plus, et le
+dit — parce qu'un jeu qui simule deux siècles avec la PAC de 2023 ment
+forcément, et qu'il vaut mieux mentir en le disant.
+
+Ce qui reste vrai malgré le gel, c'est la **structure de l'arbitrage** : une
+aide à l'hectare conditionnée à un plafond d'arbres, un bonus pour les
+infrastructures agroécologiques, un autre pour les haies. Ces trois leviers
+existent sous une forme ou une autre depuis vingt ans et existeront encore ; ce
+sont les montants qui bougent.
+
+### La règle qui fait la décision
+
+Une parcelle agroforestière reste éligible aux aides surfaciques tant qu'elle
+porte **au plus 100 arbres par hectare** — plafond maintenu pour 2023-2027.
+Au-delà, ce n'est plus une parcelle agricole avec des arbres, c'est un
+boisement : elle sort du régime, et l'aide avec elle.
+
+**C'est le seul endroit du jeu où planter un arbre de plus peut coûter de
+l'argent**, et c'est un vrai arbitrage de terrain. L'essai le vérifie dans les
+deux sens : cent arbres passent, cent un ne passent pas, et la moitié de la
+parcelle en infrastructures agroécologiques ne rattrape rien — l'éligibilité
+vient AVANT les bonus.
+
+### Les montants retenus
+
+| aide | montant | condition |
+|---|---|---|
+| aide de base au revenu (ex-DPB) | **127 €/ha/an** | moyenne visée 2023, contre 114 en 2021 |
+| écorégime, niveau de base | 54 €/ha/an | — |
+| écorégime, niveau supérieur | **76 €/ha/an** | ≥ 10 % d'infrastructures agroécologiques |
+| bonus haies | 7 €/ha/an | ≥ 6 % de haies, sous certification |
+
+*(Sur le bonus haies, une source donne 20 €/ha et les documents départementaux
+consultés 7 €/ha sous certification. On retient 7 et on signale l'écart — à
+confirmer.)*
+
+*Approximation assumée* : la part d'infrastructures agroécologiques est mesurée
+par le couvert arboré, alors que la PAC compte des LINÉAIRES de haies convertis
+en surface équivalente. Ce n'est pas la même chose.
+
+**Les aides ne tombent que si l'économie compte** dans la partie (voir l'option
+de démarrage). Sans elle, le compte tourne pour information seulement, et y
+verser des aides le fausserait : on montrerait une trésorerie qui monte sans que
+rien de ce qui la fait monter ne compte.
+
+## Un semis n'a pas la même taille selon ce qu'il deviendra
+
+Tous les semis naissaient à **trente centimètres**. C'est la bonne taille pour
+un chêne, dont le gland porte les réserves qu'il faut. C'est la MOITIÉ de sa
+taille adulte pour la callune, qui plafonne à soixante : elle naissait presque
+faite, et sautait entièrement sa phase pionnière — celle qui dure des années
+dans la nature, et pendant laquelle un sous-arbrisseau est vulnérable au
+broutage, à la concurrence herbacée et au piétinement. Le défaut touchait tous
+les sous-arbrisseaux de l'atlas, et il faussait **dans le sens de la facilité**.
+
+Un semis naît maintenant à un dixième de sa taille adulte, **borné à trente
+centimètres**. Le plafond joue dès trois mètres d'adulte, donc pour tous les
+arbres : eux ne bougent pas d'un centimètre, et c'est cette borne qui permet de
+corriger les arbustes sans toucher au reste.
+
+| espèce | adulte | semis avant | semis après |
+|---|---|---|---|
+| callune | 0,6 m | 0,30 m | **0,06 m** |
+| ajonc | 2,5 m | 0,30 m | 0,25 m |
+| chêne pubescent | 20 m | 0,30 m | 0,30 m |
+
+**Les deux moitiés du résultat comptent.** Une callune met désormais quinze ans
+à faire sa taille au lieu de partir presque faite — c'est le correctif. Mais
+elle y arrive, et vingt sur vingt survivent sur la lande : on n'a pas rendu les
+sous-arbrisseaux incapables de s'installer sur leur propre terrain. L'essai
+vérifie les deux.
+
+*Approximation assumée* : on passe par la taille ADULTE faute de mieux. Ce qui
+détermine vraiment la taille d'une plantule, c'est la réserve de la GRAINE — un
+gland fait un semis de vingt centimètres, une graine de callune, qui est une
+poussière, fait une plantule de quelques millimètres. La taille des graines
+n'est pas dans l'atlas, et elle suit grossièrement celle de la plante. C'est
+une approximation, mais elle corrige le SENS de l'erreur.
+
+## Le marché : un prix qui bouge, et qui s'effondre quand tout le monde vend
+
+Les prix étaient FIXES — 35 €/m³ pour le chauffage, une valeur par espèce pour
+l'œuvre, quelle que soit l'année et quelle que soit la quantité mise sur le
+marché. C'est faux de deux façons, et les deux comptent pour un gestionnaire.
+
+### Le cycle
+
+L'indice des prix des bois sur pied en forêt privée française a fait **+7 % en
+2024, −4 % en 2025, et +46 % depuis 2020** (Observatoire économique France Bois
+Forêt). Les écarts par essence sont plus larges encore sur une seule année : le
+douglas a pris 24 % et le peuplier 26 % en 2024, quand le chêne reculait de 3 %.
+Des variations annuelles de l'ordre de ±10 %, avec des cycles pluriannuels qui
+s'additionnent, sont donc la norme et non l'accident.
+
+L'indice du moteur combine un cycle de onze ans et un bruit annuel, borné entre
+0,6 et 1,5 : le marché bouge, il ne s'envole pas. Il est **déterministe et
+dérivé de la graine de la partie** — deux parties identiques voient le même
+marché — et il ne puise PAS dans le flux aléatoire principal, un tirage de plus
+y décalant tous les suivants.
+
+### L'engorgement, qui est le vrai levier
+
+**Le prix s'effondre quand tout le monde vend en même temps.** C'est ce que la
+France a vécu après Lothar en 1999 et Klaus en 2009 : des millions de m³ de
+chablis jetés d'un coup sur un marché qui ne pouvait pas les absorber, et des
+cours divisés par deux.
+
+Le moteur ne simule pas le marché national — il simule une parcelle. Ce qu'on
+modélise est donc l'engorgement du débouché **local** : au-delà d'une trentaine
+de m³ vendus dans l'année, le prix baisse, jusqu'à la moitié. Le même bois vendu
+en quatre fois rapporte plus qu'en une seule, et l'essai le vérifie sur une
+partie complète.
+
+**C'est la raison d'étaler ses coupes, et elle n'est écrite nulle part
+ailleurs.** La décote est continue, sans falaise qu'un joueur pourrait raser au
+m³ près.
+
+*(À calibrer : l'ampleur des chutes post-tempête est documentée, le seuil local
+ne l'est pas — une parcelle d'un hectare n'a pas de marché à elle.)*
+
+## Le drageonnement : la conquête par la racine
+
+La fiche du prunellier le disait elle-même : « faute de savoir modéliser le
+drageonnement, on compense par un taux de semis généreux ». La compensation
+donnait à peu près le bon NOMBRE de prunelliers et la mauvaise MANIÈRE — des
+semis d'oiseaux essaimés au hasard au lieu d'un fourré qui s'épaissit.
+
+Un drageon n'est pas un semis, et deux choses le distinguent :
+
+- il naît sur une **racine traçante**, donc à quelques mètres de sa mère — la
+  tache avance par son bord au lieu d'essaimer au loin ;
+- il reste **relié** à elle, qui le nourrit le temps qu'il s'installe, donc il
+  n'a pas besoin de trouver sa lumière tout seul.
+
+**C'est la seconde qui fait le fourré.** Un drageon s'installe sous le couvert
+de sa propre espèce, là où aucune graine de la même espèce ne lèverait. C'est
+aussi ce qui fait du prunellier un problème de gestion dans une haie : le
+fourré ne tient pas sa place.
+
+Le drageon échappe au filtre de lumière, et à lui seul : le pH du sol où il
+sort, la place disponible et la concurrence immédiate le concernent autant qu'un
+semis.
+
+**Mesuré**, cinq pieds au milieu d'une parcelle nue et vingt-cinq ans : le
+prunellier fait **423 pieds contre 170** à l'aubépine, et les serre plus — 1,36 m
+entre voisins contre 1,78. Le nombre de TENTATIVES est pourtant le même qu'avant
+(0,4 semis + 0,8 drageons contre 1,2 semis) : ce qui change est le taux de
+RÉUSSITE.
+
+*Ce que l'essai ne montre pas, et qu'il vaut mieux dire* : sur quarante mètres
+et en vingt-cinq ans, les oiseaux ont le temps de semer partout. La différence
+n'est donc pas dans l'emprise mais dans la DENSITÉ. Mesurer une tache qui avance
+demanderait une parcelle plus grande et une partie plus longue que ce qu'une
+suite d'essais peut se payer.
+
+## L'allélopathie : empêcher les autres de pousser chez soi
+
+Le moteur ne connaissait que la CONCURRENCE — pour la lumière, l'eau, les
+minéraux. Or certaines plantes ne se contentent pas de prendre : elles
+**émettent**. Le noyer libère de la juglone par ses racines et sa litière, et
+elle inhibe la germination et la croissance dans un rayon de **quinze à vingt
+mètres**.
+
+C'est la contrainte classique de l'agroforesterie au noyer, et la première
+chose qu'on apprend en plantant un verger à côté. Pour ce jeu, elle rend le
+choix des **voisins** décisif là où, ailleurs, seule la lumière compte.
+
+**Le noyer entre donc à l'atlas** — il y était déjà côté fiches, pas côté
+moteur. C'est l'arbre emblématique de l'agroforesterie française, et sa
+phénologie très tardive n'est pas un détail : il feuille en mai, ce qui laisse
+à la culture intercalaire le temps de pousser avant que l'ombre n'arrive.
+
+### Le sol décide autant que l'arbre
+
+> « Dans un sol lourd et peu drainé, les concentrations peuvent rester élevées
+> près des racines pendant de longues périodes, tandis qu'un sol sableux
+> facilitera le lessivage et une moindre accumulation. »
+
+C'est ce qui permet d'en faire une **règle** plutôt qu'une constante :
+l'intensité dépend de la texture, que le moteur connaît déjà. Un noyer sur limon
+lourd stérilise autour de lui ; le même sur sable gêne beaucoup moins.
+
+### Ce que la littérature ne donne pas
+
+Elle donne un rayon et des **listes** — pommier, pin, bouleau et myrtillier
+souffrent ; la plupart des graminées ne bronchent pas. Elle ne donne pas de
+courbe dose-réponse espèce par espèce, et on ne l'invente pas : les fiches où
+l'on ne sait pas portent une sensibilité **médiane**, marquée comme telle.
+
+**Mesuré** : un pommier planté à trois mètres d'un noyer de dix-huit mètres
+reste sous 70 % de la taille du même pommier à trente mètres — au-delà de la
+portée de la juglone, la distance que conseille tout guide de plantation. Le
+moteur y arrive sans qu'on l'écrive : le pommier n'a pas de règle « éviter le
+noyer », il a une sensibilité, et le noyer une portée.
+
+## L'effet de bord : la parcelle n'est pas seule au monde
+
+Le moteur traitait la limite de parcelle comme une limite du monde : au-delà,
+rien. Un carré de bocage au milieu d'un massif forestier recevait donc autant de
+lumière sur ses bords qu'une clairière isolée — faux, et faux dans le sens qui
+compte, puisque la lisière est justement l'endroit où l'agroforesterie se joue.
+
+### La géométrie n'est pas symétrique
+
+**Ce qui vous ombrage est ce qui est au SUD.** Le soleil est au sud en France,
+les ombres tombent vers le nord (`SHADOW_NORTH_OFFSET`), et un bois planté au
+NORD d'une parcelle ne lui coûte pas une heure de soleil — c'est elle qui
+l'ombrage.
+
+Les quatre bordures ne pèsent donc pas pareil : le sud à plein, l'est et l'ouest
+au tiers (le soleil y est bas et son rayonnement faible), le nord pas du tout.
+La profondeur de la bande ombragée reprend la géométrie du moteur plutôt qu'un
+chiffre importé — un peuplement projette son ombre sur `SHADOW_NORTH_OFFSET`
+fois sa hauteur, comme un arbre.
+
+*Hypothèse assumée* : le modèle de paysage ne dit pas la HAUTEUR du bois voisin,
+seulement sa part boisée. On prend une futaie mûre, à lever le jour où les
+bordures porteront une hauteur.
+
+### Un résultat contre-intuitif, et il est juste
+
+Le premier essai attendait qu'un arbre de lisière sud pousse MOINS à l'ombre
+d'un massif. C'est vrai d'un héliophile — le pin y perd. Mais le hêtre, lui,
+**y gagne** : 8,7 m contre 7,4 en plaine découverte.
+
+La raison tient en une ligne : sur le limon riche, à 750 mm de pluie, le hêtre
+est limité par l'**eau** et non par la lumière. Moins de rayonnement, c'est
+moins de transpiration, donc moins de stress hydrique — et il supporte l'ombre
+par tempérament. C'est exactement le mécanisme de l'effet nurse, appliqué à une
+lisière.
+
+Les deux sont éprouvés, le second surtout : pour qu'il ne passe pas pour une
+régression le jour où quelqu'un le remarquera.
+
+### Et il retire une conclusion du cas Saumos, pour la deuxième fois
+
+« Les feuillus achètent du temps » ne tient plus. On l'avait déjà réduit une
+fois — l'avantage de long terme ne répliquait pas, seul celui à vingt-six ans
+restait. Avec l'effet de bord, ce dernier s'inverse : sur seize graines, les
+feuillus brûlent **656 m² contre 431 au pin**, soit la moitié DE PLUS.
+
+Le changement a été isolé — en désactivant le seul ombrage de l'entourage,
+l'ancien ordre revient. L'explication qui tient, et elle n'est pas vérifiée pour
+elle-même : l'atténuation par les feuillus reposait sur leur capacité à FERMER
+LE COUVERT vite, ce qui étouffe la lande qui porte le feu. Tout ce qui les
+ralentit défait donc l'atténuation, et l'ombre de la lisière les ralentit.
+
+Ce qui survit : le chêne-liège brûle toujours moins que le pin — 344 m² contre
+431, soit 20 % de moins au lieu de 30. C'est le seul résultat de ce cas d'étude
+qui garde le même sens à travers tous les états du moteur qu'a connus ce dépôt.
+
+*Une inconsistance à noter* : le profil Saumos suppose un incendie de MASSIF,
+tout le bassin logé à la même enseigne. Or l'ombrage de bordure suppose un
+entourage boisé intact et permanent — après un feu de massif, les voisins ont
+brûlé aussi. Le moteur ne le sait pas.
 
 ## Les profils livrés : un cas réel, prêt à éprouver
 

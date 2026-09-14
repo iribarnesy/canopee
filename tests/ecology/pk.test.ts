@@ -136,11 +136,18 @@ describe("les cycles, et ce qui leur manque encore", () => {
     // Le plafond est passé de 60 à 80 le jour où le frein d'extraction de
     // l'azote a cessé de brider les arbres en permanence (nitrogen.ts) : ils
     // poussent à leur rythme réel, et un arbre plus gros prélève plus de
-    // potasse. On mesure 70 kg/ha/an sur un limon riche — c'est le HAUT de ce
-    // qu'on lit en forêt tempérée feuillue, et c'est à surveiller.
-    // *(À confirmer : je n'ai pas trouvé de chiffre de prélèvement annuel en
-    // potassium directement citable pour une hêtraie ; les sources donnent le
-    // retour par litière, qui n'est qu'une part du prélèvement.)*
+    // potasse. On mesure 70 kg/ha/an sur un limon riche.
+    //
+    // Ce chiffre m'avait gêné, et il tient. Le piège est qu'on lit partout des
+    // valeurs bien plus basses — 3 à 16 kg K/ha/an sous une hêtraie — mais ce
+    // sont des RETOURS PAR LITIÈRE, pas des prélèvements. Le potassium est le
+    // plus mobile des cations : l'arbre en retransloque une grande part avant
+    // la chute des feuilles, et la pluie lessive le reste du feuillage avant
+    // qu'il ne tombe. La litière n'en garde donc qu'une fraction. Les bilans
+    // qui mesurent le PRÉLÈVEMENT, eux, montent à 80 kg/ha/an en peuplement
+    // feuillu productif. Soixante-dix est dans la gamme, à son haut.
+    // *(À confirmer : je n'ai pas trouvé de bilan français de hêtraie
+    // directement citable, seulement des ordres de grandeur concordants.)*
     expect(run.parAn.k).toBeLessThan(80);
     expect(run.parAn.lessivageK).toBeLessThan(15);
   });

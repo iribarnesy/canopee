@@ -11,6 +11,7 @@
  * La suite (sécheresse, ombre croissante) relève de la mortalité normale.
  */
 
+import { leveeParM2 } from "./banqueGraines";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM, lightAtPoint, type PartOmbrageante } from "./light";
@@ -37,7 +38,38 @@ const WIND_MEAN_DISTANCE_M = 25;
  */
 const RECOUVREMENT_MAX = 2.5;
 const MIN_SPACING_M = 1.2;
-const SEEDLING_HEIGHT_M = 0.3;
+/**
+ * Taille d'un semis qui vient de s'installer, m — PLAFOND, pas valeur fixe.
+ *
+ * Trente centimètres conviennent à un chêne, dont le gland porte assez de
+ * réserves pour ça. Ils ne conviennent pas à la callune, dont l'adulte plafonne
+ * à SOIXANTE centimètres : elle naissait à la moitié de sa taille finale et
+ * sautait entièrement sa phase pionnière — celle qui dure des années dans la
+ * nature, et pendant laquelle elle est vulnérable au broutage, à la concurrence
+ * herbacée et au piétinement. Le défaut touchait tous les sous-arbrisseaux de
+ * l'atlas, et il faussait dans le sens de la facilité.
+ */
+const SEEDLING_HEIGHT_MAX_M = 0.3;
+
+/**
+ * Part de la hauteur adulte qu'un semis atteint à l'installation.
+ *
+ * On passe par la taille ADULTE faute de mieux. Ce qui détermine vraiment la
+ * taille d'une plantule, c'est la réserve de la GRAINE : un gland fait un semis
+ * de vingt centimètres, une graine de callune — qui est une poussière — fait
+ * une plantule de quelques millimètres. Or la taille des graines n'est pas dans
+ * l'atlas, et elle suit grossièrement celle de la plante. C'est donc une
+ * approximation, mais elle corrige le SENS de l'erreur *(à calibrer)*.
+ *
+ * Le plafond joue dès trois mètres de hauteur adulte, c'est-à-dire pour tous
+ * les arbres : eux ne changent pas d'un centimètre.
+ */
+const PART_ADULTE_AU_SEMIS = 0.1;
+
+/** Taille à l'installation, bornée par le plafond. */
+export function hauteurDuSemisM(hauteurAdulteM: number): number {
+  return Math.min(SEEDLING_HEIGHT_MAX_M, PART_ADULTE_AU_SEMIS * hauteurAdulteM);
+}
 
 export interface RecruitmentInput {
   trees: readonly TreeState[];
@@ -54,6 +86,14 @@ export interface RecruitmentInput {
    * terrain découvert pour les retrouver.
    */
   lumiereAuSol: readonly number[];
+  /**
+   * Banque de graines du sol, graines/m² par espèce (banqueGraines.ts). C'est
+   * la mémoire du passé de la parcelle : ce qui y a poussé et grainé y attend
+   * sous terre, parfois des décennies.
+   */
+  banqueGraines?: Readonly<Record<string, number>>;
+  /** La parcelle a-t-elle brûlé depuis la dernière levée ? Le feu scarifie. */
+  aBrule?: boolean;
   nextTreeId: number;
 }
 
@@ -62,6 +102,40 @@ export interface RecruitmentResult {
   rng: RngState;
   nextTreeId: number;
 }
+
+/**
+ * Combien d'ÉTABLISSEMENTS pour une graine levée de la banque.
+ *
+ * Le rapport est écrasant, et il doit l'être : sous une lande installée, la
+ * banque d'ajoncs compte des centaines de graines par m², et un feu en fait
+ * lever la moitié. Cela ferait des millions de plantules sur une parcelle d'un
+ * hectare — dont l'immense majorité meurt dans l'année, et dont ce moteur, qui
+ * suit ses ligneux un par un, ne peut de toute façon pas tenir le compte.
+ *
+ * La valeur est donc CALÉE sur l'échelle de représentation du moteur, pas sur
+ * la démographie réelle : une lande brûlée doit y revenir en lande, à la
+ * densité d'ajoncs que le moteur manipule habituellement (quelques centièmes de
+ * pied au m²), pas à celle du terrain. Le plafond de recouvrement des couronnes
+ * fait le reste du travail *(à calibrer)*.
+ */
+const ETABLISSEMENTS_PAR_LEVEE = 0.00002;
+
+/**
+ * Plafond de tentatives issues de la banque, par an et pour toute la parcelle.
+ *
+ * Ce n'est pas de l'écologie, c'est une protection, et elle a été gagnée à la
+ * dure : la première version sans plafond a fait passer la suite d'essais de
+ * deux minutes à DEUX HEURES ET DEMIE. Une banque d'ajoncs bien remplie lève
+ * des centaines de milliers de graines au m² après un feu ; même avec un taux
+ * d'établissement minuscule, cela crée assez d'individus pour que chaque tick
+ * suivant coûte dix fois plus cher.
+ *
+ * Le plafond n'enlève rien au mécanisme : le peuplement d'après-feu est de
+ * toute façon limité par le recouvrement des couronnes quelques années plus
+ * tard. Il empêche seulement le moteur de matérialiser un à un des semis qui
+ * mourront tous.
+ */
+const MAX_LEVEES_PAR_AN = 300;
 
 function draw(rng: RngState): { rng: RngState; value: number } {
   const r = rngFloat(rng);
@@ -73,6 +147,39 @@ function draw(rng: RngState): { rng: RngState; value: number } {
  * Où atterrit un semis : le noyau de dispersion dépend entièrement du mode de
  * dissémination de l'espèce (exporté pour les tests écologiques).
  */
+/**
+ * Où sort un drageon : dans un anneau serré autour de la mère.
+ *
+ * Un drageon naît sur une racine traçante, à quelques mètres du pied au plus.
+ * Le noyau est donc tout autre que celui d'une graine — pas de queue lointaine,
+ * pas de dépendance au mode de dissémination : la tache avance par son bord.
+ *
+ * On tire dans l'anneau [portée/3, portée] plutôt que dans le disque entier :
+ * un drageon qui sortirait au pied de sa mère serait de toute façon écarté par
+ * l'espacement minimal, et le tirer là ne ferait que gâcher des tentatives.
+ */
+export function positionDeDrageon(
+  rng: RngState,
+  parent: TreeState | null,
+  coteM: number,
+  espece: EspeceV0,
+): { rng: RngState; x: number; y: number } {
+  const portee = espece.regeneration.drageonne?.porteeM ?? 0;
+  if (!parent || portee <= 0) {
+    const r = draw(rng);
+    return { rng: r.rng, x: -1, y: -1 };
+  }
+  const a = draw(rng);
+  const b = draw(a.rng);
+  const distance = portee * (1 / 3 + (2 / 3) * a.value);
+  const angle = 2 * Math.PI * b.value;
+  return {
+    rng: b.rng,
+    x: parent.x + distance * Math.cos(angle),
+    y: parent.y + distance * Math.sin(angle),
+  };
+}
+
 export function drawPosition(
   rng: RngState,
   espece: EspeceV0,
@@ -150,14 +257,29 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     couronnesM2 += Math.PI * r * r;
   }
 
-  const tryEstablish = (especeId: string, parent: TreeState | null) => {
+  /**
+   * `parDrageon` change une chose, et c'est toute la différence : un drageon
+   * n'est pas un semis. Il reste RELIÉ à sa mère, qui le nourrit le temps qu'il
+   * s'installe, et il n'a donc pas besoin de trouver sa lumière tout seul.
+   * C'est précisément ce qui permet à un fourré de prunelliers d'avancer sous
+   * son propre couvert, là où aucune graine de la même espèce ne lèverait.
+   */
+  const tryEstablish = (especeId: string, parent: TreeState | null, parDrageon = false) => {
     const espece = getEspece(especeId);
-    const pos = drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
+    const pos = parDrageon
+      ? positionDeDrageon(rng, parent, coteM, espece)
+      : drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
     rng = pos.rng;
     if (couronnesM2 >= placeMaxM2) return;
     if (pos.x < 0 || pos.x >= coteM || pos.y < 0 || pos.y >= coteM) return; // perdu hors parcelle
-    // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme.
-    if (lightAtPoint(trees, pos.x, pos.y, partOmbrageante) < 2 * espece.lumiere.compensation)
+    // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme. Le
+    // drageon échappe au filtre lumière, et à lui seul : le pH du sol où il
+    // sort, la place disponible et la concurrence immédiate le concernent
+    // autant qu'un semis.
+    if (
+      !parDrageon &&
+      lightAtPoint(trees, pos.x, pos.y, partOmbrageante) < 2 * espece.lumiere.compensation
+    )
       return;
     const cellPh = input.ph[Math.floor(pos.y) * coteM + Math.floor(pos.x)] ?? 7;
     if (phFactor(espece, cellPh) < 0.2) return;
@@ -173,7 +295,9 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       const dy = t.y - pos.y;
       if (dx * dx + dy * dy < MIN_SPACING_M * MIN_SPACING_M) return;
     }
-    couronnesM2 += Math.PI * crownRadiusM(SEEDLING_HEIGHT_M, espece.lumiere.houppierRatio) ** 2;
+    couronnesM2 +=
+      Math.PI *
+      crownRadiusM(hauteurDuSemisM(espece.hauteurMaxM), espece.lumiere.houppierRatio) ** 2;
     // Un semis naturel a sa vigueur propre, comme un plant de pépinière.
     const tirageVigueur = tirerVigueurIndividuelle(rng);
     rng = tirageVigueur.rng;
@@ -184,7 +308,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       x: pos.x,
       y: pos.y,
       ageWeeks: 0,
-      heightM: SEEDLING_HEIGHT_M,
+      heightM: hauteurDuSemisM(espece.hauteurMaxM),
       stress: 0,
       alive: true,
       uptakeYearG: 0,
@@ -221,6 +345,34 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   for (const v of voisinage) {
     const n = tentatives(v.semisParAn);
     for (let k = 0; k < n; k++) tryEstablish(v.especeId, null);
+  }
+
+  // 1 bis. La BANQUE DE GRAINES du sol, pour les espèces qui en font une. Elle
+  // ne dépend ni des adultes présents ni du voisinage : c'est ce que la
+  // parcelle a gardé de son passé, et le feu la réveille (banqueGraines.ts).
+  //
+  // Les levées passent par le MÊME entonnoir que les autres semis — lumière,
+  // pH, place disponible, concurrence immédiate — parce qu'une graine réveillée
+  // par le feu n'est pas dispensée d'écologie.
+  for (const [especeId, stockParM2] of Object.entries(input.banqueGraines ?? {})) {
+    const espece = getEspece(especeId);
+    const levees = leveeParM2(espece, stockParM2, input.aBrule ?? false) * coteM * coteM;
+    const n = Math.min(MAX_LEVEES_PAR_AN, tentatives(levees * ETABLISSEMENTS_PAR_LEVEE));
+    for (let k = 0; k < n; k++) tryEstablish(especeId, null);
+  }
+
+  // 1 ter. Les DRAGEONS : la conquête par la racine, pas par la graine. Un
+  // fourré de prunelliers n'avance pas en semant au loin, il pousse sa tache
+  // d'un mètre par an depuis ses propres racines — et c'est ce qui en fait un
+  // problème de gestion dans une haie, puisque la tache avance dans le champ.
+  for (const tree of trees) {
+    if (!tree.alive) continue;
+    const espece = getEspece(tree.especeId);
+    const drageon = espece.regeneration.drageonne;
+    if (!drageon) continue;
+    if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+    const n = tentatives(drageon.parAn);
+    for (let k = 0; k < n; k++) tryEstablish(tree.especeId, tree, true);
   }
 
   // 2. Semis des adultes de la parcelle en âge de grainer.

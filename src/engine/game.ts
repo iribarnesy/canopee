@@ -9,18 +9,31 @@
 
 import type { ActionRefusal, GameAction, GesteVisible } from "./actions";
 import { applyAction, OVERDRAFT_LIMIT_EUR, SALARY_EUR_WEEK } from "./actions";
+import type { AidesAnnuelles } from "./aides";
 import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
-import type { ChuteDeChandelle, IncendieResult, MortDeLaSemaine } from "./tick";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "./tick";
 import { tick } from "./tick";
-import type { VentDeLaSemaine } from "./vent";
 
 export interface Journal {
   stationId: string;
   seed: number;
   treasuryEur?: number;
+  /**
+   * L'économie comptait-elle dans cette partie ? Sans ce champ, une partie
+   * jouée sans contrainte d'argent se REJOUERAIT avec, et divergerait : un
+   * plant refusé pour découvert au rejeu n'est pas le plant qui avait poussé.
+   * Absent = vrai, pour que les journaux d'avant restent lisibles.
+   */
+  economie?: boolean;
   actions: GameAction[];
 }
 
@@ -46,7 +59,14 @@ export function beginWeek(state: GameState): GameState {
       saisonniersFinSemaine: saisonniers,
       hoursUsedWeek: 0,
       hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
-      bankrupt: state.economy.bankrupt || treasuryEur < OVERDRAFT_LIMIT_EUR,
+      // Le volume vendu se compte par année civile : c'est l'engorgement du
+      // débouché LOCAL qu'on modélise, et un acheteur reprend son appétit d'une
+      // campagne à l'autre (marche.ts).
+      volumeVenduAnneeM3: state.week % 52 === 0 ? 0 : state.economy.volumeVenduAnneeM3,
+      // Économie désactivée : le compte tourne et s'affiche, mais il ne met
+      // plus personne en faillite (actions.ts).
+      bankrupt:
+        state.economy.active && (state.economy.bankrupt || treasuryEur < OVERDRAFT_LIMIT_EUR),
     },
   };
 }
@@ -61,13 +81,17 @@ export function advanceWeek(
   refusals: ActionRefusal[];
   fluxes: TickFluxes;
   morts: MortDeLaSemaine[];
+  /** semis installés cette semaine, avec leur position (tick.ts) */
+  naissances: NaissanceDeLaSemaine[];
+  /** tiges que la croissance a fait changer de stade (stades.ts) */
+  franchissements: FranchissementDeStade[];
   incendie?: IncendieResult;
-  /** le vent de la semaine : d'où il souffle, vers où, avec quelle force (vent.ts) */
-  vent: VentDeLaSemaine;
   /** gestes du joueur ET du gibier de la semaine, pour le rendu (tick.ts) */
   gestes: GesteVisible[];
   /** chandelles abattues cette semaine (boisMort.ts) */
   chutes: ChuteDeChandelle[];
+  /** aides publiques versées cette semaine, une fois l'an (aides.ts) */
+  aides?: AidesAnnuelles;
   /** débordement de la semaine, mm par cellule (tick.ts) */
   debordementParCellule: Float32Array;
   /** lumière arrivant au sol, par cellule (tick.ts) */
@@ -89,8 +113,10 @@ export function advanceWeek(
     refusals,
     fluxes: ticked.fluxes,
     morts: ticked.morts,
+    naissances: ticked.naissances,
+    franchissements: ticked.franchissements,
+    aides: ticked.aides,
     incendie: ticked.incendie,
-    vent: ticked.vent,
     gestes: [...gestes, ...ticked.gestes],
     chutes: ticked.chutes,
     debordementParCellule: ticked.debordementParCellule,
@@ -107,6 +133,7 @@ export function runJournal(
 ): RunResult {
   let state = createGameState(station, rngStateFromSeed(journal.seed), {
     treasuryEur: journal.treasuryEur,
+    economie: journal.economie,
   });
   const refusals: ActionRefusal[] = [];
   for (let i = 0; i < weeks; i++) {
