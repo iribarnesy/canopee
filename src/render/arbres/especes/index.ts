@@ -9,11 +9,15 @@
  * `brinsDeCepee` est devenu nécessaire — deux champs qu'il aurait fallu
  * rétro-ajouter à vingt-cinq fiches si l'ordre avait été alphabétique.
  *
- * **Le catalogue est maintenant complet** : les vingt-cinq espèces du moteur
- * ont leur fiche, et un test le vérifie dans les deux sens — aucune fiche ne
- * désigne une espèce absente, aucune espèce n'est laissée au port générique.
- * Le repli sur le port de famille (`ficheDe` rend `undefined`) reste en place,
- * mais il ne sert plus qu'aux espèces à venir.
+ * **Le catalogue est complet, et il le REDEVIENT à chaque fois que le moteur
+ * grandit.** Vingt-six espèces aujourd'hui, et un test le vérifie dans les deux
+ * sens — aucune fiche ne désigne une espèce absente, aucune espèce n'est laissée
+ * au port générique. C'est ce test qui a signalé l'arrivée du NOYER, que le
+ * moteur a ajouté pour l'allélopathie : sans lui, le noyer serait resté un
+ * feuillu générique de plus, et la leçon du juglone — le sol nu sous le
+ * houppier — serait passée inaperçue faute qu'on reconnaisse l'arbre qui le
+ * cause. Le repli sur le port de famille (`ficheDe` rend `undefined`) reste en
+ * place, mais il ne sert qu'aux espèces à venir.
  *
  * La huitième famille — **fourré bas** (ronce, ajonc, genêt, callune) — a bien
  * ses fiches, mais elles portent `fourre: true` et ne sont pas lues de la même
@@ -23,7 +27,7 @@
  *
  * **Ce que « complet » ne veut PAS dire.** Le critère de fin est ailleurs :
  * *une essence n'est finie que si quelqu'un d'autre la reconnaît sans
- * étiquette.* Aucune des vingt-cinq ne l'a passé — elles ont passé celui du
+ * étiquette.* Aucune des vingt-six ne l'a passé — elles ont passé celui du
  * générateur, qui n'est pas le même. Ce fichier dit qu'il n'y a plus de trou,
  * pas que le travail est fini.
  */
@@ -47,6 +51,7 @@ import { GENET } from "./genet";
 import { HETRE } from "./hetre";
 import { HOUX } from "./houx";
 import { NOISETIER } from "./noisetier";
+import { NOYER } from "./noyer";
 import { PIN_SYLVESTRE } from "./pin_sylvestre";
 import { POMMIER } from "./pommier";
 import { PRUNELLIER } from "./prunellier";
@@ -61,6 +66,7 @@ export const FICHES: readonly FicheGraphique[] = [
   CHENE_PUBESCENT,
   CHATAIGNIER,
   FRENE,
+  NOYER,
   CHARME,
   BOULEAU,
   AULNE_GLUTINEUX,
@@ -113,6 +119,7 @@ export {
   HETRE,
   HOUX,
   NOISETIER,
+  NOYER,
   PIN_SYLVESTRE,
   POMMIER,
   PRUNELLIER,
