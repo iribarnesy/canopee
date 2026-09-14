@@ -26,7 +26,7 @@
  * écoulé, il rend des nombres.
  */
 
-import { estGesteSurZone, type GesteSurZone } from "../../engine/actions";
+import { type ArbreRetire, estGesteSurZone, type GesteSurZone } from "../../engine/actions";
 import type { ChuteDeChandelle } from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
 import type { Vue } from "../camera";
@@ -48,6 +48,7 @@ import {
   type VentAPencher,
   vivaciteDeLaTorche,
 } from "./feu";
+import { type ArbreRemodele, remodelageEnCours, type TigeAbattue, tigeAbattueDe } from "./geste";
 import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
@@ -157,6 +158,100 @@ function decalageDe(id: number): number {
   let h = Math.imul(id | 0, 0x27d4eb2d) >>> 0;
   h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
   return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+}
+
+/**
+ * Les gestes sur ARBRES d'un plan, indexés par identifiant (§6.2).
+ *
+ * Deux tables plutôt qu'une, parce que les deux mises en scène ne s'adressent
+ * pas au même objet : `tiges` porte ce qui TOMBE, sous l'identifiant de la tige
+ * abattue — un arbre que l'instantané n'a plus ; `remodeles` porte ce qui reste
+ * DEBOUT et change de forme, sous l'identifiant de l'arbre, qui est bien dans
+ * l'instantané. Un recépage alimente les deux : la cépée tombe, la souche
+ * reste.
+ */
+export interface GestesIndexes {
+  /** les tiges abattues, par identifiant de tige */
+  tiges: Map<number, { acte: Acte; tige: TigeAbattue }>;
+  /** ce qui reste debout et change de forme, par identifiant d'arbre */
+  remodeles: Map<number, { acte: Acte; retire: ArbreRetire }>;
+}
+
+/** Aucun geste sur arbre : les tables vides, partagées — donc sans allocation. */
+export const AUCUN_GESTE: GestesIndexes = { tiges: new Map(), remodeles: new Map() };
+
+/** Indexe les gestes sur arbres d'un plan. Une fois par ellipse, comme les chutes. */
+export function indexerLesGestes(plan: PlanDEllipse): GestesIndexes {
+  const tiges = new Map<number, { acte: Acte; tige: TigeAbattue }>();
+  const remodeles = new Map<number, { acte: Acte; retire: ArbreRetire }>();
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "geste") continue;
+    const geste = acte.sujet.geste;
+    if (estGesteSurZone(geste)) continue;
+    // Absent pour `brouter` et `frotter` : le gibier ne retire aucun volume
+    // géométrique, et sa marque est déjà dans la classe de vignette.
+    for (const retire of geste.retire ?? []) {
+      const tige = tigeAbattueDe(retire);
+      if (tige) tiges.set(tige.id, { acte, tige });
+      if (remodelageEnCours(retire, 0)) remodeles.set(retire.id, { acte, retire });
+    }
+  }
+  return tiges.size === 0 && remodeles.size === 0 ? AUCUN_GESTE : { tiges, remodeles };
+}
+
+/**
+ * Toutes les tiges abattues du plan, à poser pour la DURÉE de l'ellipse.
+ *
+ * Pas d'argument de temps, et c'est une décision de coût : la liste ne change
+ * pas pendant que le plan se joue, alors que le tableau d'arbres passé à la
+ * scène sert de clé de cache pour la cuisson. Lui donner une liste qui grandit
+ * et rétrécit image après image ferait recuire à chaque image. Ce qui varie
+ * dans le temps est la DÉFORMATION de chaque tige, qui est un canal de pose.
+ */
+export function tigesAbattues(index: GestesIndexes): TigeAbattue[] {
+  return [...index.tiges.values()].map((t) => t.tige);
+}
+
+/**
+ * La déformation d'une tige abattue, à cet instant de l'ellipse.
+ *
+ * Trois moments : debout avant son acte — c'est l'arbre tel qu'il était, et
+ * c'est pour ça qu'on le repose ; en train de tomber pendant ; effacé après,
+ * parce que le fût au sol est désormais l'affaire du terrain (`soilBoisAuSol`)
+ * ou de la caisse du joueur, et que le laisser couché en dessinerait deux.
+ */
+export function chuteDeLaTige(
+  index: GestesIndexes,
+  ecouleMs: number,
+  idTige: number,
+  vue: Vue,
+): Deformation {
+  const trouve = index.tiges.get(idTige);
+  if (!trouve) return DEBOUT;
+  const { acte, tige } = trouve;
+  if (ecouleMs >= acte.debutMs + acte.dureeMs) return { ...chuteEnCours(tige, 1, vue), opacite: 0 };
+  if (ecouleMs < acte.debutMs) return DEBOUT;
+  const t = avancementDuSujet(acte, idTige, ecouleMs);
+  return t <= 0 ? DEBOUT : chuteEnCours(tige, t, vue);
+}
+
+/**
+ * La forme d'un arbre que le geste remodèle, à cet instant de l'ellipse.
+ *
+ * Rend `undefined` pour tout arbre qu'aucun geste ne touche — le cas normal —
+ * et l'arbre part alors tel que l'instantané le donne, sans copie.
+ */
+export function remodelageDe(
+  index: GestesIndexes,
+  ecouleMs: number,
+  idArbre: number,
+): ArbreRemodele | undefined {
+  const trouve = index.remodeles.get(idArbre);
+  if (!trouve) return undefined;
+  const { acte, retire } = trouve;
+  if (ecouleMs >= acte.debutMs + acte.dureeMs) return undefined;
+  if (ecouleMs < acte.debutMs) return remodelageEnCours(retire, 0);
+  return remodelageEnCours(retire, avancementDuSujet(acte, idArbre, ecouleMs));
 }
 
 /**

@@ -253,9 +253,29 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
   return sujets.sort((a, b) => ORDRE.indexOf(a.quoi) - ORDRE.indexOf(b.quoi));
 }
 
-/** Fusionne deux gestes de même type : leurs arbres, ou leurs cellules. */
+/**
+ * Fusionne deux gestes de même type : leurs arbres, ou leurs cellules.
+ *
+ * **`retire` se fusionne AUSSI, et c'était un défaut.** Cette fonction a été
+ * écrite avant que le champ n'existe : elle reconstruisait `{ type, ids }` et
+ * laissait tomber le reste. Tant que personne ne lisait `retire`, la perte ne
+ * se voyait pas ; depuis que la mise en scène des gestes s'y appuie (§6.2),
+ * deux éclaircies dans la même ellipse auraient fait disparaître les arbres de
+ * la première sans les faire tomber.
+ *
+ * Absent des deux côtés, il reste absent — `brouter` et `frotter` n'en ont pas,
+ * et une liste vide ne veut pas dire la même chose que « pas de volume
+ * retiré ».
+ */
 function fusionnerGestes(a: GesteVisible, b: GesteVisible): GesteVisible {
-  if ("ids" in a && "ids" in b) return { type: a.type, ids: [...a.ids, ...b.ids] };
+  if ("ids" in a && "ids" in b) {
+    const retire = [...(a.retire ?? []), ...(b.retire ?? [])];
+    return {
+      type: a.type,
+      ids: [...a.ids, ...b.ids],
+      ...(retire.length > 0 ? { retire } : {}),
+    };
+  }
   if ("cellules" in a && "cellules" in b) {
     return { type: a.type, cellules: [...a.cellules, ...b.cellules] };
   }
