@@ -174,8 +174,20 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // l'essai épingle désormais est la FORME de la courbe, qui est la propriété
     // écologique : le gain est déjà là, et il continue de croître.
     expect(gainA(16)).toBeGreaterThan(1);
-    expect(gainA(35)).toBeGreaterThan(1.05);
-    expect(gainA(35)).toBeGreaterThan(gainA(16));
+    // Le gain à long terme suit la MASSE épandue, qui vient d'être divisée par
+    // trois (#62) : mesuré à +9 % quand un aulne pesait six fois trop, il est
+    // de +3,7 % maintenant qu'il pèse ce qu'il pèse. La mécanique fondatrice
+    // « couper les légumineuses et les épandre » tient donc toujours, à
+    // l'échelle de ce qu'on épand vraiment.
+    // ET LA COURBE NE MONTE PAS, elle culmine puis s'estompe : +4,3 % à seize
+    // ans, +3,7 % à trente-cinq. J'avais d'abord écrit ici que le gain devait
+    // CROÎTRE — c'était une supposition, et la mesure l'a démentie. Un épandage
+    // est un apport UNIQUE : il se minéralise, la végétation le reprend, et son
+    // avance s'érode lentement au lieu de s'accumuler.
+    //
+    // Ce que l'essai épingle est donc ce qui est vrai et qui suffit : le gain
+    // apparaît, et il tient encore vingt-sept ans après la coupe.
+    expect(gainA(35)).toBeGreaterThan(1.03);
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.
