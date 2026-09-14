@@ -672,16 +672,16 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  */
 
 /** Diamètre gagné par mètre de hauteur, à l'ombre : la tige file. cm/m. */
-export const ALLOCATION_DIAMETRE_OMBRE = 1;
+export const ALLOCATION_DIAMETRE_OMBRE = 1.25;
 /** Diamètre gagné par mètre de hauteur, en pleine lumière : l'arbre épaissit. cm/m. */
-export const ALLOCATION_DIAMETRE_LUMIERE = 2.2;
+export const ALLOCATION_DIAMETRE_LUMIERE = 2.5;
 /**
  * Le milieu de la gamme, et le diamètre qu'on prête à une tige sans histoire.
  * L'ancien proxy posait `D = 2 h` pour tout le monde ; cette valeur-ci est plus
  * basse parce qu'elle a été calée sur le VOLUME du peuplement, que le proxy
  * surestimait d'un facteur six.
  */
-export const ALLOCATION_DIAMETRE_MEDIANE = 1.6;
+export const ALLOCATION_DIAMETRE_MEDIANE = 2;
 
 /** Diamètre gagné par mètre de hauteur pour ce rapport de houppier, cm/m. */
 export function allocationDiametreCmParM(lumiere: number): number {

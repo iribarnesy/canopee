@@ -115,10 +115,13 @@ describe("couper une chandelle déjà versée au bois mort", () => {
 
   it("passé le délai : le bois est déjà au pool, la coupe l'en RETIRE", () => {
     const avant = pinBrule(60);
-    // Le tick a posé la mort en semaine 52 et versé les 933 kgC de l'arbre.
+    // Le tick a posé la mort en semaine 52 et versé l'arbre ENTIER au pool.
+    // On le dit relativement à `TOTAL` et non en kilos : un nombre en dur ici
+    // ne décrirait que l'allométrie du jour, et celle-ci a déjà changé une fois
+    // d'un facteur six (#62).
     expect(avant.trees.find((t) => t.id === 1)?.mortSemaine).toBe(52);
     const poolAvant = avant.carbon.deadWoodKgC;
-    expect(poolAvant).toBeGreaterThan(900);
+    expect(poolAvant).toBeGreaterThan(0.9 * TOTAL);
 
     const apres = couper(avant);
     expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(AERIEN, 6);
@@ -133,10 +136,14 @@ describe("couper une chandelle déjà versée au bois mort", () => {
 
   it("on n'en sort pas plus que ce que la décomposition a laissé", () => {
     const vieilli = pinBrule(60);
-    // Une chandelle presque entièrement retournée au sol : 100 kgC au pool.
-    const avant = { ...vieilli, carbon: { ...vieilli.carbon, deadWoodKgC: 100 } };
+    // Une chandelle à moitié retournée au sol. Le reste à prélever se dit en
+    // part de l'aérien, pas en kilos : ce qu'on épingle est un PLAFOND — on ne
+    // sort pas du pool plus qu'il ne contient — et ce plafond ne dépend pas du
+    // niveau absolu de l'allométrie.
+    const restant = AERIEN / 2;
+    const avant = { ...vieilli, carbon: { ...vieilli.carbon, deadWoodKgC: restant } };
     const apres = couper(avant);
-    expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(100, 6);
+    expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(restant, 6);
     expect(apres.carbon.deadWoodKgC).toBeCloseTo(0, 9);
     expect(apres.carbon.deadWoodKgC).toBeGreaterThanOrEqual(0);
   });
