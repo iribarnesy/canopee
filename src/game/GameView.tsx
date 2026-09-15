@@ -50,6 +50,7 @@ import {
   supprimerProfil,
 } from "./profils";
 import type { Snapshot, SnapshotTree } from "./protocol";
+import { useEllipse } from "./useEllipse";
 import { loadSave, useGame } from "./useGame";
 import { VueParcelle } from "./VueParcelle";
 
@@ -1228,17 +1229,35 @@ export function GameView() {
     [station, snapshot],
   );
 
+  /**
+   * Le journal du dernier instantané, joué comme une ellipse (§5.11) : les
+   * morts, les chutes, les gestes, l'incendie. C'est ce qui fait qu'un arbre
+   * coupé TOMBE au lieu de s'escamoter.
+   */
+  const ellipse = useEllipse(snapshot, station, game.speed);
+  /** Hauteur de coupe de chaque tige abattue, par identifiant de tige. */
+  const coupeDeLaTige = useMemo(
+    () => new Map(ellipse.tiges.map((t) => [t.id, t.hauteurDeCoupeM])),
+    [ellipse],
+  );
+
   const arbresPoses = useMemo(
     () =>
       station && snapshot
-        ? arbresAPoser(snapshot.trees, {
+        ? arbresAPoser([...snapshot.trees, ...ellipse.tiges], {
             coteM: station.coteM,
             week: snapshot.week,
             altitudesM: station.altitudesM,
             pheno: snapshot.pheno,
-          })
+            seTorche: ellipse.seTorche,
+          }).map((a) =>
+            // Une tige abattue pivote autour de sa COUPE et non du sol : à fort
+            // zoom, une souche de recépage fait une vingtaine de pixels, et une
+            // cépée qui tomberait au ras du sol traverserait sa propre souche.
+            a.id < 0 ? { ...a, z: a.z + (coupeDeLaTige.get(a.id) ?? 0) } : a,
+          )
         : [],
-    [station, snapshot],
+    [station, snapshot, ellipse, coupeDeLaTige],
   );
 
   useEffect(() => {
@@ -1428,6 +1447,13 @@ export function GameView() {
               hauteurMaxDe={(id) => getEspece(id)?.hauteurMaxM ?? 20}
               ombreDe={(a) => a.partFoliaire}
               surClic={surClicParcelle}
+              deformer={ellipse.deformer}
+              mourant={ellipse.mourant}
+              remodeler={ellipse.remodeler}
+              voiler={ellipse.voiler}
+              feu={ellipse.feu}
+              marqueurs={ellipse.marqueurs}
+              {...(ellipse.cadrerSur ? { cadrerSur: ellipse.cadrerSur } : {})}
             />
           )}
         </div>

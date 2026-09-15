@@ -40,6 +40,7 @@ import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, SceneParcelle } from "../render/pixi/scene";
 import type { Marqueur } from "../render/temps/changements";
 import type { Deformation } from "../render/temps/chute";
+import type { ArbreRemodele } from "../render/temps/geste";
 import { type IncendieAPoser, RIEN_NE_BRULE } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
@@ -133,10 +134,26 @@ export interface VueParcelleProps {
    * pas planter un arbre au passage.
    */
   surClic?: (cellule: { x: number; y: number }, multiple: boolean) => void;
+  /**
+   * Comment un geste remodèle un arbre qui RESTE debout, s'il y a lieu (§6.2).
+   *
+   * Le quatrième canal, et il ressemble au troisième : il ne déforme pas un
+   * sprite, il change la GÉOMÉTRIE de l'arbre avant qu'on en calcule la classe
+   * de vignette. Un élagage dont la base du houppier monte ne s'obtient pas en
+   * inclinant une image déjà cuite ; il faut la recuire, comme un feuillage qui
+   * jaunit. Le coût reste borné par la quantification de la classe.
+   *
+   * Séparé de `mourant` parce que les deux se composent : franchir dix ans,
+   * c'est voir un arbre élagué puis mourir. Rend `undefined` pour tout arbre
+   * qu'aucun geste ne touche — le cas normal — et l'arbre part alors tel que
+   * l'instantané le donne, sans copie.
+   */
+  remodeler?: (idArbre: number, maintenantMs: number) => ArbreRemodele | undefined;
 }
 
 /**
- * Remplace l'état des arbres qui meurent, et laisse les autres tels quels.
+ * Remplace l'état des arbres que la mise en scène touche — ceux qui meurent
+ * (§6.3) et ceux qu'un geste remodèle (§6.2) — et laisse les autres tels quels.
  *
  * **Le tableau d'origine est rendu TEL QUEL quand personne ne meurt**, ce qui
  * est le cas à toutes les images sauf pendant une ellipse : la scène compare
@@ -146,24 +163,31 @@ export interface VueParcelleProps {
  * Quand quelqu'un meurt, seuls les arbres concernés sont copiés — les autres
  * gardent leur objet, donc leur classe de vignette, donc leur texture.
  */
-function appliquerLesMorts(
+function appliquerLesActes(
   arbres: readonly ArbreAPoser[],
   mourant: VueParcelleProps["mourant"],
+  remodeler: VueParcelleProps["remodeler"],
   maintenantMs: number,
 ): readonly ArbreAPoser[] {
-  if (!mourant) return arbres;
+  if (!mourant && !remodeler) return arbres;
   let touche = false;
   const sortie = arbres.map((a) => {
-    const e = mourant(a.id, maintenantMs, {
+    // Les deux canaux de CUISSON se composent, et dans cet ordre : le geste dit
+    // quelle forme avait l'arbre, la mort dit dans quel état il est. Un arbre
+    // élagué qui meurt la même semaine doit montrer les deux.
+    const forme = remodeler?.(a.id, maintenantMs);
+    const base = forme ? { ...a, heightM: forme.heightM, baseHouppierM: forme.baseHouppierM } : a;
+    if (forme) touche = true;
+    const e = mourant?.(a.id, maintenantMs, {
       partFoliaire: a.partFoliaire,
       senescence: a.senescence,
       vigueur: a.vigueur,
       dommageHydraulique: a.dommageHydraulique ?? 0,
     });
-    if (!e) return a;
+    if (!e) return base;
     touche = true;
     return {
-      ...a,
+      ...base,
       partFoliaire: e.partFoliaire,
       senescence: e.senescence,
       vigueur: e.vigueur,
@@ -317,7 +341,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
           {
             sol: p.sol,
             semaineAnnee: p.semaineAnnee,
-            arbres: appliquerLesMorts(p.arbres, p.mourant, horloge),
+            arbres: appliquerLesActes(p.arbres, p.mourant, p.remodeler, horloge),
             ...(p.bordures ? { bordures: p.bordures } : {}),
             hauteurMaxDe: p.hauteurMaxDe,
             ombreDe: p.ombreDe,

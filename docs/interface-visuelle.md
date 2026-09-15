@@ -1231,7 +1231,29 @@ que le moteur en DIT :
 |---|---|---|
 | `chauler` `epandreBrf` `labourer` `faucher` `ramasserBoisMort` `cloturer` | ✅ un voile qui couvre les cellules nommées, puis retombe | pose |
 | `brouter` `frotter` | ✅ une marque d'écorce, déjà dans la classe de vignette | cuisson |
-| `couper` `eclaircir` `elaguer` `trogner` `receper` | ❌ il faudrait savoir ce qui TOMBE — [#37](https://github.com/iribarnesy/canopee/issues/37) | — |
+| `couper` `eclaircir` `receper` | ✅ une TIGE ABATTUE pivote autour de sa coupe et se couche, puis s'efface | pose |
+| `elaguer` `trogner` | ✅ l'arbre RESTE, et sa forme passe d'avant à après | cuisson |
+
+**Le partage ne suit pas le type du geste mais ce que le moteur en DIT** —
+`ArbreRetire.directionRad` est présent quand une tige entière est tombée, absent
+quand « la charpente est démontée sur place : le moteur n'y voit pas une
+direction unique et n'en invente pas ». Trancher sur le type dessinerait un
+élagage comme un abattage le jour où un geste change de nature. Et un recépage
+alimente les DEUX : la cépée tombe, la souche reste — c'est le seul, et c'est
+lui qui casse une implémentation qui aurait supposé l'exclusivité.
+
+**Ce qui tombe demande un arbre que l'instantané n'a plus.** Une tige abattue
+quitte `state.trees` dans le même tick. Elle est donc reposée à partir du seul
+`ArbreRetire`, sous un identifiant NÉGATIF — un recépage laisse la souche en jeu
+avec le sien, et deux sprites sous la même clé feraient tomber la souche avec la
+cépée. La liste des tiges ne change pas pendant que le plan se joue : le tableau
+d'arbres sert de clé de cache à la cuisson, et une liste qui grandit et
+rétrécit image après image ferait tout recuire.
+
+**Le banc : `?geste-arbres=receper`**, au même titre que `?mort=` et
+`?ellipse-tout=1`, et pour une raison mesurée en JOUANT — trois cépées recépées
+dans une friche de quatre mille bouleaux ne se voient pas. Ce qu'on vient juger
+là, c'est le dessin du geste, et il lui faut un sujet visible.
 
 **Le voile ne laisse rien derrière lui, et c'est ce qui garde les deux canaux
 étanches.** Ce qu'un chaulage change durablement est dans les grilles de
@@ -1286,13 +1308,33 @@ nécessaire. À grande vitesse le plan le signale déjà (`deborde`) ; ce qu'on
 découvre ici, c'est qu'à vitesse NORMALE le problème est le même pour la raison
 inverse : il n'y a pas trop à montrer, il y en a trop peu pour qu'on le trouve.
 
-**Ce qui manque encore.** Les cinq gestes de l'issue #37 (ce qui tombe d'une
-coupe, d'un étêtage, d'un recépage), le front de feu (§6.4), et le calque des
-changements ci-dessus. Une clôture n'est pas DESSINÉE non plus — le moteur
-donne ses cellules, le rendu n'a pas encore de piquets ; le voile en montre le
-tracé, ce qui est un pis-aller assumé. Enfin, seules les scènes `friche-*` ont
-été régénérées avec leur journal : les autres tombent sur le repli, et
+**Ce qui manque encore.** Une clôture n'est pas DESSINÉE : le moteur donne ses
+cellules, le rendu n'a pas encore de piquets, et le voile en montre le tracé —
+un pis-aller assumé. Et seules les scènes `friche-*` et `feu-bois-*` ont été
+régénérées avec leur journal : les autres tombent sur le repli, et
 `apercu-scenes.sh` sait les refaire.
+
+**Le journal du JEU est branché depuis le 2026-09-15** (`game/useEllipse.ts`).
+Jusque-là, toute cette machinerie ne tournait que dans le harnais d'aperçu, qui
+relit des scènes cuites ; le jeu recevait pourtant `morts`, `chutes`, `gestes`,
+`naissances`, `franchissements` et `incendie` à chaque instantané, et ne les
+lisait pas. Un instantané fait un journal — le worker accumule depuis le
+précédent puis vide ses listes, ce qui est exactement la sémantique de
+`JournalDeSemaine` — donc il n'y a rien à accumuler côté rendu, et surtout rien
+à déduire d'un état.
+
+**Le budget suit la vitesse, et c'est la politique du §5.11 appliquée.**
+« Passer d'une semaine à la suivante est INSTANTANÉ » : à grande vitesse les
+instantanés arrivent plus vite qu'une ellipse ne se joue, et une animation
+remplacée avant sa fin bouge sans rien dire. Le temps d'écran d'une semaine est
+donc le plafond (`min(2 500 ms, 1 000 / vitesse)`), et la pause a droit au
+budget entier — ce qui est le cas du §6.2 de toute façon : on clique
+« abattre » à l'arrêt, l'action s'applique sur-le-champ (`worker.ts` :
+« la semaine est déjà ouverte ») et son instantané arrive aussitôt.
+
+**L'estompe reste éteinte dans le jeu**, les marqueurs non. Griser la parcelle
+entière parce que trois arbres sont morts serait violent pour rien ; le doigt
+qui montre, lui, répond au défaut mesuré juste au-dessus.
 
 **Le fourré ne peut pas s'animer, et il faut le savoir.** `separerLeFourre`
 agrège les ronces par carreau : elles n'ont pas d'identité individuelle, donc

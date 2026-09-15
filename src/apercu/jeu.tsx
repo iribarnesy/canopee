@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { GesteTypeZone, GesteVisible } from "../engine/actions";
+import type { GesteTypeArbre, GesteTypeZone, GesteVisible } from "../engine/actions";
 import { getEspece } from "../engine/especes";
 import {
   type ContextePhenologique,
@@ -42,16 +42,20 @@ import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
 import { SANS_VENT } from "../render/temps/feu";
 import {
   AUCUNE_TORCHE,
+  chuteDeLaTige,
   deformationDe,
   etatDuTorchage,
   etatMourantDe,
   feuEnCours,
   indexerLesChutes,
+  indexerLesGestes,
   indexerLesMorts,
   indexerLesTorches,
   indexerLesVoiles,
   particulesDuFeu,
   poseDeLaMort,
+  remodelageDe,
+  tigesAbattues,
   trouverLeFeu,
   voilesEnCours,
 } from "../render/temps/lecteur";
@@ -286,12 +290,16 @@ function Demo(): React.ReactElement {
     // onze mises en scène : une semaine ordinaire en produit deux ou trois, sur
     // des arbres de dix pixels.
     const cause = params.get("mort") as CauseMort | null;
+    // `?geste-arbres=receper` force lui aussi un sujet que la scène n'a pas :
+    // il appartient donc aux bancs de MÉCANISME, et court-circuite le journal
+    // réel comme les deux autres.
+    const surArbres = params.get("geste-arbres") as GesteTypeArbre | null;
     // **Le journal RÉEL quand la scène en porte un**, et c'est le seul cas
     // normal. Les deux bancs de mécanisme le remplacent exprès — ils fabriquent
     // un sujet que la scène n'a pas — et c'est pour ça qu'ils portent un nom
     // qui dit qu'ils forcent quelque chose.
     const reel = scene?.journal;
-    if (reel && !tout && !cause) {
+    if (reel && !tout && !cause && !surArbres) {
       // L'incendie rejoint le journal sous la forme que le plan attend. Les
       // trois nombres que `IncendieResult` porte en plus — cellules brûlées,
       // arbres tués, carbone — ne servent qu'au fil d'actualité.
@@ -399,6 +407,9 @@ function Demo(): React.ReactElement {
         sujets,
         estompe: quoi !== "0" && quoi !== "marqueurs" && sujets.size > 0,
         dureeMs: plan.dureeMs,
+        gestes: indexerLesGestes(plan),
+        apres: new Map<number, { heightM: number; baseHouppierM: number }>(),
+        partis: new Set<number>(),
       };
     }
     const journal: JournalDeSemaine = {
@@ -460,6 +471,63 @@ function Demo(): React.ReactElement {
       }
       journal.gestes = [{ type: quel as GesteTypeZone, cellules }];
     }
+    // **`?geste-arbres=receper` : le banc des cinq gestes sur ARBRES** (§6.2).
+    //
+    // Banc de mécanisme au même titre que `?mort=` et `?ellipse-tout=1`, et
+    // pour la même raison, mesurée en jouant : trois cépées recépées dans une
+    // friche de quatre mille bouleaux ne se voient pas. Ce qu'on vient juger
+    // ici, c'est le DESSIN du geste, et il lui faut un sujet visible — donc les
+    // plus grosses tiges de la scène, et beaucoup.
+    //
+    // Le banc fabrique l'`ArbreRetire` ET applique l'après à la scène, comme le
+    // moteur le fait : sans ça, un arbre coupé resterait debout à côté de son
+    // fantôme et on en verrait deux.
+    let apres = new Map<number, { heightM: number; baseHouppierM: number }>();
+    let partis = new Set<number>();
+    if (surArbres && scene) {
+      const combien = Number(params.get("geste-combien") ?? 60);
+      const sujets = (scene.trees ?? [])
+        .filter((t) => !t.chandelle && t.heightM > 1 && !ficheDe(t.especeId)?.fourre)
+        .sort((a, b) => b.heightM - a.heightM)
+        .slice(0, combien);
+      const retire = sujets.map((t) => {
+        const baseAvant = t.baseHouppierM ?? t.heightM * 0.3;
+        // Ce que chaque geste laisse debout, tel que le moteur le définit.
+        const reste =
+          surArbres === "elaguer"
+            ? t.heightM
+            : surArbres === "trogner"
+              ? Math.max(1.5, t.heightM * 0.25)
+              : surArbres === "receper"
+                ? 0.3
+                : 0;
+        const baseApres =
+          surArbres === "elaguer" ? Math.min(t.heightM * 0.6, baseAvant + 4) : reste;
+        return {
+          id: t.id,
+          x: t.x,
+          y: t.y,
+          especeId: t.especeId,
+          diametreCm: 30,
+          hauteurAvantM: t.heightM,
+          hauteurApresM: reste,
+          baseHouppierAvantM: baseAvant,
+          baseHouppierApresM: baseApres,
+          // Absente pour l'élagage et l'étêtage : « la charpente est démontée
+          // sur place, le moteur n'y voit pas une direction unique ».
+          ...(surArbres === "elaguer" || surArbres === "trogner"
+            ? {}
+            : { directionRad: ((t.id % 360) * Math.PI) / 180 }),
+        };
+      });
+      journal.gestes = [{ type: surArbres, ids: retire.map((r) => r.id), retire }];
+      apres = new Map(
+        retire
+          .filter((r) => r.hauteurApresM > 0)
+          .map((r) => [r.id, { heightM: r.hauteurApresM, baseHouppierM: r.baseHouppierApresM }]),
+      );
+      partis = new Set(retire.filter((r) => r.hauteurApresM <= 0).map((r) => r.id));
+    }
     const plan = planDEllipse([journal], DUREE_ELLIPSE_MS);
     // La DURÉE du plan et non le budget : un plan vide dure zéro, et c'est ce
     // zéro-là qu'il faut porter pour que `?ellipse=` ne prétende pas figer une
@@ -476,6 +544,9 @@ function Demo(): React.ReactElement {
       sujets: new Set<number>(),
       estompe: false,
       dureeMs: plan.dureeMs,
+      gestes: indexerLesGestes(plan),
+      apres,
+      partis,
     };
   }, [scene]);
 
@@ -515,7 +586,20 @@ function Demo(): React.ReactElement {
   // fabrique donc plus sa propre traduction : c'est précisément parce qu'il en
   // avait une à lui que `floraison`, `fruitProgress` et `fruitsKg` s'y
   // perdaient en route, déclarés dans la scène et posés nulle part.
-  const arbres: ArbreAPoser[] = arbresAPoser(scene.trees, {
+  // La scène telle que le geste l'a laissée : ce qui est parti n'est plus là,
+  // ce qui reste debout porte son état d'APRÈS. C'est le rôle du moteur dans
+  // une vraie partie, et le banc doit le tenir — sans quoi un arbre coupé
+  // resterait debout à côté de son fantôme.
+  const restants =
+    ellipse.partis.size === 0 && ellipse.apres.size === 0
+      ? scene.trees
+      : scene.trees
+          .filter((t) => !ellipse.partis.has(t.id))
+          .map((t) => {
+            const a = ellipse.apres.get(t.id);
+            return a ? { ...t, heightM: a.heightM, baseHouppierM: a.baseHouppierM } : t;
+          });
+  const arbres: ArbreAPoser[] = arbresAPoser([...restants, ...tigesAbattues(ellipse.gestes)], {
     coteM: scene.coteM,
     week: scene.week,
     altitudesM: scene.sol.altitudesM,
@@ -551,11 +635,17 @@ function Demo(): React.ReactElement {
           ellipse.estompe && !ellipse.sujets.has(id)
             ? { rotationRad: 0, hauteur: 1, opacite: OPACITE_HORS_SUJET }
             : DEBOUT;
+        // Une tige abattue n'est pas un arbre de l'instantané : identifiant
+        // négatif, et c'est son geste qui la fait tomber (§6.2).
+        if (id < 0) return chuteDeLaTige(ellipse.gestes, ou, id, vue);
         return combiner(
           combiner(deformationDe(ellipse.index, ou, id, vue), poseDeLaMort(ellipse.morts, ou, id)),
           estompe,
         );
       }}
+      remodeler={(id, maintenantMs) =>
+        remodelageDe(ellipse.gestes, ouLire(maintenantMs, fige, ellipse.dureeMs), id)
+      }
       mourant={(id, maintenantMs, vivant) => {
         const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
         // Les deux mises en scène ne se croisent jamais sur un même arbre — le
