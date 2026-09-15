@@ -15,6 +15,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import { type RngState, rngFloat } from "./rng";
+import { facteurGammePh } from "./soil";
 import { facteurCroissanceTassement } from "./tassement";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
@@ -761,8 +762,7 @@ function waterloggingFactor(espece: EspeceV0, waterlogging: number): number {
  * (chlorose puis mort — la bio-indication de l'atlas : calcicoles vs acidiphiles).
  */
 export function phFactor(espece: EspeceV0, ph: number): number {
-  const [min, max] = espece.ph;
-  return Math.min(1, Math.max(0, Math.min((ph - min) / 0.7, (max - ph) / 0.7)));
+  return facteurGammePh(espece.ph, ph);
 }
 
 /**

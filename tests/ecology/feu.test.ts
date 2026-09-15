@@ -174,12 +174,20 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
      * création de carbone là où il n'y a qu'un transfert.
      */
     /**
-     * Le grand livre complet, à la semaine. Trois termes s'y invitent qu'on
+     * Le grand livre complet, à la semaine. QUATRE termes s'y invitent qu'on
      * oublie facilement, et chacun ferait voir une fausse fuite : la litière
-     * et l'humus, qu'un feu convertit en fumée ; le bois couché ; et le bois
+     * et l'humus, qu'un feu convertit en fumée ; le bois couché ; le bois
      * des arbres TUÉS mais pas encore enregistrés morts — un arbre brûlé
      * reste debout et récupérable un an, son carbone quitte le stock vivant à
-     * l'instant du feu et ne rejoint le pool des morts qu'à l'enregistrement.
+     * l'instant du feu et ne rejoint le pool des morts qu'à l'enregistrement ;
+     * et l'ÉROSION, qui est une sortie comme une autre.
+     *
+     * Le quatrième manquait, et c'est le lot de la strate herbacée par espèces
+     * qui l'a révélé : sur la lande, la molinie démarre tard, le sol de mars y
+     * est donc moins couvert, il ruisselle plus — et l'humus emporté hors
+     * parcelle (0,5 kg cette semaine-là) s'en allait dans `erosionCumKgC` sans
+     * que ce grand livre le compte. `carbon-conservation.test.ts`, lui, le
+     * comptait depuis toujours.
      */
     const bilan = (s: GameState) => {
       let solG = 0;
@@ -199,6 +207,7 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
         solG / 1000 +
         s.carbon.exportedEnergyCumKgC +
         s.carbon.oeuvreCumKgC +
+        s.carbon.erosionCumKgC +
         s.carbon.emittedCumKgC
       );
     };

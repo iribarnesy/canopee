@@ -12,6 +12,7 @@ import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
+import { empriseInitiale } from "./herbacees";
 import { stockEquilibreMm, stocksEquilibreParCellule } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
@@ -236,8 +237,28 @@ export interface SoilState {
   /**
    * Couverture de la strate herbacée ∈ [0,1] par cellule (herbe.ts) : la
    * concurrence que subissent les jeunes plants, et la protection du sol.
+   *
+   * C'est une SOMME, recalculée chaque semaine depuis `herbeEmprise` : ce que
+   * les espèces présentes couvrent VRAIMENT cette semaine-là. Tout ce qui lit
+   * la strate — le feu, l'érosion, l'évaporation, le gibier — lit cette ligne
+   * et n'a pas à connaître les espèces.
    */
   herbeCouverture: number[];
+  /**
+   * Emprise de chaque espèce herbacée sur chaque cellule ∈ [0,1], à plat :
+   * `herbeEmprise[i * N_HERBACEES + s]` (herbacees.ts). C'est la place que
+   * l'espèce TIENT — bulbes et rhizomes compris —, pas ce qu'elle montre : une
+   * anémone tient son mètre carré toute l'année et ne le couvre qu'en avril.
+   * La somme sur une cellule ne dépasse jamais 1 : le sol est fini.
+   */
+  herbeEmprise: number[];
+  /**
+   * Feuillage de chaque espèce herbacée, même indexation à plat : ce qui est
+   * VERT. Il suit l'emprise à travers la saison et la sécheresse, et c'est lui
+   * que la fauche, le feu et le gibier emportent — l'emprise, elle, reste.
+   * `herbeCouverture` en est la somme par cellule.
+   */
+  herbeFeuillage: number[];
   /**
    * Biomasse herbacée présente ∈ [0,1] : elle SUIT la couverture mais ne
    * disparaît pas quand l'herbe jaunit — le foin sur pied reste le meilleur
@@ -407,6 +428,9 @@ export function createGameState(
   for (let i = 0; i < n; i++) {
     for (let h = 0; h < nH; h++) eauInitiale.push(ruHorizonMm(station.profil[h] as Horizon));
   }
+  // La même friche de départ dans toutes les cellules : la station ne décrit
+  // qu'un taux d'enherbement, l'atlas dit qui le compose (herbacees.ts).
+  const depart = empriseInitiale(station.herbeInitiale, station.phInitial);
   return {
     week: 0,
     station,
@@ -459,8 +483,15 @@ export function createGameState(
       phosphoreFixeG: new Array(n).fill(station.phosphoreInitialGM2 * 10),
       potassiumG: new Array(n).fill(station.potassiumInitialGM2),
       potassiumReserveG: new Array(n).fill(station.potassiumInitialGM2 * 10),
-      // Une parcelle nue au départ : la strate s'installe d'elle-même.
+      // Une parcelle nue au départ : la strate s'installe d'elle-même. Qui la
+      // compose au premier jour, c'est l'atlas qui le dit, d'après le pH de la
+      // station et la vitesse d'installation de chacune (herbacees.ts).
       herbeCouverture: new Array(n).fill(station.herbeInitiale),
+      herbeEmprise: Array.from({ length: n }, () => depart).flat(),
+      // Le feuillage part au niveau de l'emprise : la station dit un sol déjà
+      // couvert, pas des souches nues. La première semaine le ramènera à ce
+      // que la saison permet.
+      herbeFeuillage: Array.from({ length: n }, () => depart).flat(),
       herbeBiomasse: new Array(n).fill(station.herbeInitiale),
       // Le 1er janvier, la réserve de surface est pleine.
       herbeHumidite: new Array(n).fill(1),

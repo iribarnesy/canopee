@@ -61,7 +61,65 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
+## Ce que le dernier lot a appris (la strate herbacée, #70)
+
+**Une variable d'état ne suffisait pas.** On a d'abord tenu une seule grandeur
+par espèce et par cellule — la place occupée — en calculant la couverture comme
+son produit par l'activité de la saison. C'est faux dès qu'un geste rabat le
+tapis : chaque bouchée de chevreuil était alors prise sur les rhizomes, et la
+lande mesurée perdait son tapis en un hiver. Il en faut deux, l'emprise pérenne
+et le feuillage de l'année, et alors une règle tombe toute seule — une fauche de
+juin n'atteint pas une vernale déjà rentrée sous terre.
+
+**La mesure a tranché quatre fois**, et chaque fois contre le premier jet : la
+sécheresse devait porter sur le feuillage et non sur l'emprise, la repousse
+devait être freinée par le froid, le partage de la place libre devait se faire
+au prorata des vitesses — et surtout, une graminée ne devait avoir NI porte
+photopériodique NI sénescence d'automne. Copier la phénologie des ligneux sur
+une hémicryptophyte lui coûtait un cinquième de sa couverture annuelle sous
+futaie feuillue, parce que la fenêtre qui compte pour elle n'est pas avril mais
+octobre-mars. Aucun de ces quatre défauts ne se voyait à la lecture.
+
+**Reprendre les constantes acquises plutôt que les réinventer.** Les seuils du
+dactyle sont ceux que `herbe.ts` appliquait au tapis entier, repris tels quels :
+le tapis d'avant était un dactyle qui s'ignorait. Les relever de quelques
+centièmes « parce que ce tapis moyennait aussi des plantes d'ombre » se défend
+en une phrase et déplace une calibration acquise sans la remesurer. Un lot qui
+AJOUTE des espèces ajoute sous le plancher ; il ne bouge pas le plancher.
+
+**Relancer la suite ENTIÈRE, et lire ce qu'elle dit.** Six tests écologiques ont
+bougé, dont un qui annulait une conclusion : le rapport « le réchauffement fait
+flamber les ravageurs » était passé de 1,6 à 1,06, parce que la strate fournit
+un cinquième de l'habitat des auxiliaires. Il est revenu de lui-même une fois la
+phénologie du dactyle corrigée. Les tests du lot, eux, passaient tous.
+
+**Le coût se mesure aussi** : trois espèces au lieu d'une moyenne, c'est +11 %
+de temps par semaine (6,8 → 7,6 ms sur une hêtraie 30 × 30 de quarante ans,
+médiane de cinq passes, machine au repos). À savoir avant d'ajouter la
+quatrième — et le délai des tests est passé de 120 à 180 s pour la même raison.
+
+**Une borne de trait mal posée fait plus de dégâts qu'une formule fausse.**
+L'anémone acceptait pH 4,0 : elle s'installait donc sous les ajoncs d'une lande
+girondine et y renversait l'effet nurse (E1), le pin abrité passant sous le pin
+à découvert. Ramenée à 4,5 — ce que sa source dit —, tout rentre dans l'ordre.
+Une formule fausse ressemble à un bug ; une borne trop large ressemble à une
+fiche.
+
+**Un dispositif expérimental peut manquer son témoin.** Comparer une vernale
+sous couvert caduc et sous couvert sempervirent supposait un sempervirent
+SOMBRE : le moteur n'en produit pas sur ces stations (le pin s'auto-éclaircit,
+le houx ne s'installe pas à découvert, le chêne-liège plafonne à trois mètres
+sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
+montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
+
 ## File d'attente
+
+**Ce qui reste de #70 — le calendrier de floraison.** La strate a ses espèces,
+E9 et B8 sont tombés, mais la fiche herbacée s'arrête au calendrier FOLIAIRE.
+G4 et J6 attendent un `floraisonDJ` sur la fiche, une ressource florale par
+cellule, et que `biodiversite.ts` la lise. Manquent aussi une rudérale
+nitrophile — la capacité ne lit pas l'azote — et la CULTURE comme strate basse,
+qui est le sujet de l'agroforesterie.
 
 **#55 — les tempêtes.** Le gros morceau, et le plus embarrassant : `marche.ts`
 explique longuement l'effondrement des prix après Lothar et Klaus, donc le

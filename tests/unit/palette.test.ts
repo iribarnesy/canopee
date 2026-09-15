@@ -8,7 +8,7 @@
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { couvertureMax } from "../../src/engine/herbe";
+import { facteurEauHerbacee, HERBACEES } from "../../src/engine/herbacees";
 import {
   type CelluleSol,
   COUVERT_LE_PLUS_SOMBRE,
@@ -235,7 +235,7 @@ describe("la soif de l'herbe, lue du moteur et non décrétée", () => {
     // Le garde-fou de la faute, et il est précis. Le premier jet décrétait
     // `SEUIL_GRILLE = 0.42` sur la réserve utile : faux de valeur, faux de
     // grandeur, faux de nature. La valeur juste — 0,35 de l'eau de SURFACE —
-    // vit dans `couvertureMax`, et le rendu l'obtient en APPELANT cette
+    // vit dans `facteurEauHerbacee`, et le rendu l'obtient en APPELANT cette
     // fonction plutôt qu'en recopiant son seuil.
     //
     // Recopier serait l'autre façon de se tromper, celle du §2.1 : deux copies
@@ -243,7 +243,10 @@ describe("la soif de l'herbe, lue du moteur et non décrétée", () => {
     // l'égalité exacte avec le moteur, à plusieurs valeurs — il casse si l'un
     // des deux bouge sans l'autre.
     for (const h of [0, 0.1, 0.2, 0.35, 0.5, 1]) {
-      expect(satisfactionEnEau(h), `humidité ${h}`).toBeCloseTo(couvertureMax(1, h), 10);
+      const dactyle = HERBACEES.find((x) => x.id === "dactylis_glomerata");
+      expect(dactyle).toBeDefined();
+      if (!dactyle) return;
+      expect(satisfactionEnEau(h), `humidité ${h}`).toBeCloseTo(facteurEauHerbacee(dactyle, h), 10);
     }
   });
 
@@ -276,7 +279,7 @@ describe("ce que le rendu N'A PAS le droit d'inventer", () => {
     // Le troisième paramètre est revenu, mais il a changé de nature : ce n'est
     // plus une « sécheresse » calculée ici depuis un seuil décrété, c'est
     // `soilHerbeHumidite` transporté tel quel, dont la lecture passe par
-    // `satisfactionEnEau` — donc par `couvertureMax`, donc par le moteur.
+    // `satisfactionEnEau` — donc par `facteurEauHerbacee`, donc par le moteur.
     //
     // L'essai vérifie ce qui compte : que la valeur neutre soit l'ABSENCE
     // d'affirmation. Une scène qui ne transporte pas la grandeur doit rendre

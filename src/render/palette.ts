@@ -38,7 +38,28 @@
  * Module **pur** : pas de canvas, pas de DOM, aucun état.
  */
 
-import { couvertureMax } from "../engine/herbe";
+import { facteurEauHerbacee, HERBACEES } from "../engine/herbacees";
+
+/**
+ * L'herbacée dont le tapis porte le seuil d'eau.
+ *
+ * **Le dactyle, et ce n'est pas un choix du rendu.** Jusqu'au lot des
+ * herbacées, la strate n'était qu'un taux de couverture et son facteur d'eau
+ * vivait dans `couvertureMax` ; ce lot l'a remplacée par une fiche par espèce,
+ * et son message dit laquelle porte l'héritage : « le tapis d'avant ce lot
+ * était un dactyle qui s'ignorait, ses seuils sont repris tels quels de
+ * `herbe.ts` ». Lire le seuil chez lui rend donc EXACTEMENT ce que le rendu
+ * lisait avant — vérifié : l'ancienne `couvertureMax(1, x)` valait
+ * `min(1, x / 0,35)`, et c'est le `seuilConfort` du dactyle.
+ *
+ * **Ce qui manque pour faire mieux**, et qui n'est pas au rendu de l'inventer :
+ * l'instantané ne dit pas QUELLE espèce tient la cellule. Il porte une
+ * couverture et une humidité, pas le partage de l'emprise. Le jour où il le
+ * portera, la satisfaction se lira espèce par espèce — une anémone souffre à
+ * 0,5 quand une molinie tient à 0,35, et la même cellule ne jaunit pas au même
+ * moment selon qui l'occupe.
+ */
+const HERBACEE_DU_TAPIS = HERBACEES.find((h) => h.id === "dactylis_glomerata") ?? HERBACEES[0];
 
 /** Paliers de quantification d'une grandeur continue du sol (§3). */
 export const NIVEAUX = 8;
@@ -355,12 +376,13 @@ export const SOIF_LA_PLUS_BRUNE = 0.72;
 /**
  * Ce que vaut l'eau vécue par le tapis, en satisfaction ∈ [0,1].
  *
- * **La valeur vient du MOTEUR, par sa propre fonction.** `couvertureMax` décide
- * de la couverture qu'une cellule peut porter à partir de la lumière et de
- * l'eau de surface ; à pleine lumière, ce qu'elle rend EST le facteur d'eau. On
- * l'appelle donc au lieu de recopier son seuil — recopier serait la seconde
- * façon de se tromper, celle que le §2.1 nomme : deux copies d'une règle
- * dérivent, et personne ne le voit.
+ * **La valeur vient du MOTEUR, par sa propre fonction.** `facteurEauHerbacee`
+ * dit ce qu'une herbacée voit de son confort en eau ; on l'appelle au lieu de
+ * recopier son seuil — recopier serait la seconde façon de se tromper, celle
+ * que le §2.1 nomme : deux copies d'une règle dérivent, et personne ne le voit.
+ * C'est d'ailleurs ce qui vient d'arriver dans l'autre sens : le moteur a
+ * remplacé `couvertureMax` par une fiche par espèce, et le rendu ne l'a su
+ * qu'en refusant de compiler — ce qui est la bonne façon de l'apprendre.
  *
  * **La première tentative faisait pire.** Elle décrétait ici un seuil sur la
  * réserve utile : faux de valeur (0,42 contre 0,35), faux de grandeur (le
@@ -370,7 +392,8 @@ export const SOIF_LA_PLUS_BRUNE = 0.72;
  * moteur y a répondu, et le rendu se contente maintenant de lire.
  */
 export function satisfactionEnEau(herbeHumidite: number): number {
-  return couvertureMax(1, Math.min(1, Math.max(0, herbeHumidite)));
+  if (!HERBACEE_DU_TAPIS) return 1;
+  return facteurEauHerbacee(HERBACEE_DU_TAPIS, Math.min(1, Math.max(0, herbeHumidite)));
 }
 
 /**
