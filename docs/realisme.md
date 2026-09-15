@@ -900,7 +900,28 @@ ancrées (frêne, hêtre, chêne par un congénère nord-américain ; pin par le
 rapport épicéa/pin) et vingt-deux sont des placements dans une gamme mesurée.
 Le tableau de `bases.ts` le dit fiche par fiche.
 
-### Deux erreurs d'échelle, toutes deux trouvées en mesurant
+### Le pin s'acidifie le sol jusqu'à s'y trouver bien
+
+C'est le résultat que ce lot n'a pas écrit, et le seul qu'on n'aurait pas pu
+prévoir. Le versant du test `bois-en-travers` est un limon riche à pH 7,0 planté
+de hêtre et de pin. Les deux litières sont pauvres en calcium, donc le
+peuplement acidifie son propre sol : **7,00 → 6,94 → 6,82 → 6,62** sur soixante
+ans. Or le pin sylvestre était à la limite HAUTE de sa gamme (4 à 7,5, soit un
+facteur de 0,80 à pH 7). Au fil de la dérive, ce facteur monte : **0,80 → 0,97 →
+1,00**. Le pin pousse mieux, monte à 23 m au lieu de rester bridé, et domine le
+peuplement.
+
+Personne n'a écrit « le pin améliore son sort en l'acidifiant ». Ça tombe de la
+rencontre de la dérive du pH (C10, neuf) et du filtre de gamme (C7, ancien), qui
+ne se connaissaient pas. Et c'est de la bonne écologie : c'est exactement ce que
+fait un pin sur un sol qui n'est pas le sien.
+
+La conséquence s'est propagée jusqu'à un test qui ne parle ni de pH ni de pin —
+le bois en travers piège moins de terre, parce qu'un versant mieux couvert en
+laisse moins passer. Son seuil bouge pour la cinquième fois, et pour la
+cinquième fois avec sa raison écrite.
+
+### Trois erreurs d'échelle, toutes trouvées en mesurant
 
 **Le lessivage repris du potassium.** Même forme, même fonction, même
 signature — et trois ordres de grandeur d'écart. Le potassium échangeable du
@@ -908,6 +929,18 @@ moteur est un petit pool mobile ; les bases du complexe font un demi-million
 d'eq/ha. Au taux du potassium, un limon neutre tombait au plancher d'acidité en
 **vingt-cinq ans**, et une hêtraie de test perdait son sol sous elle. Recalé sur
 le flux, qui lui est mesuré — quelques centaines d'eq/ha/an sous forêt tempérée.
+
+**Les embruns comptés comme un apport de bases.** Le premier jet retenait
+300 eq/ha/an de dépôts atmosphériques, poussières et embruns confondus. Mais le
+sel marin n'apporte AUCUNE alcalinité nette : le sodium et le magnésium arrivent
+avec leurs chlorures, traversent le complexe et ressortent au drainage. Seule la
+fraction non marine compte, et 120 eq/ha/an est l'ordre de grandeur honnête. Ce
+que l'erreur faisait : la lande sèche REMONTAIT de 4,50 à 4,56 en cinquante ans,
+alors que c'est le type même du sol qui s'acidifie tout seul. Et ce n'était pas
+cosmétique — le chêne-liège est exactement à sa borne sur cette station (gamme
+4,5-8, donc facteur NUL à pH 4,50) : deux centièmes de pH le faisaient passer
+d'exclu à viable, ce qui changeait le peuplement, donc le combustible, donc les
+incendies. Cinq tests du feu sont tombés là-dessus, et ils avaient raison.
 
 **L'altération créditée de ce que les racines lui arrachent.** Le phosphore et
 le potassium bénéficient d'un facteur rhizosphère (les mycorhizes dissolvent la

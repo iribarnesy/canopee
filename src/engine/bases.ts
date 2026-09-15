@@ -128,14 +128,15 @@ export function capaciteEchangeEqM2(h: Horizon): number {
  * n'est justement pas réalimenté, c'est toute son histoire *(à calibrer)*.
  *
  * Ce que le profil entier donne, mesuré : environ 290 eq/ha/an sur le limon
- * riche et 140 sur la lande. Avec 300 eq/ha/an de dépôts en face, l'entrée
- * totale se tient au niveau du lessivage sorti (650 et 430) — c'est-à-dire que
- * **le budget minéral d'un sol forestier est proche de l'équilibre, et que ce
- * qui le fait pencher est la végétation.** C'est le résultat qu'on cherchait :
- * si l'altération dominait, aucune essence ne pourrait acidifier quoi que ce
- * soit. Le premier jet le faisait, et tous les sols remontaient vers la
- * neutralité — un limon passait de 7,0 à 7,2 en cinquante ans, une lande de
- * 4,5 à 5,0, ce qu'aucune lande n'a jamais fait.
+ * riche et 140 sur la lande. Avec les dépôts en face (120), l'entrée totale
+ * reste SOUS le lessivage sorti (650 et 295) — c'est-à-dire qu'un sol forestier
+ * qui ne reçoit rien de sa végétation se décalcifie lentement, et que **c'est
+ * la litière qui décide du signe**. C'est le résultat qu'on cherchait : si
+ * l'altération dominait, aucune essence ne pourrait acidifier quoi que ce soit.
+ * Le premier jet le faisait — altération quadruplée par le facteur rhizosphère
+ * et dépôts comptés le triple —, et tous les sols remontaient vers la
+ * neutralité : un limon de 7,0 à 7,2 en cinquante ans, une lande de 4,5 à 5,0,
+ * ce qu'aucune lande n'a jamais fait.
  */
 export const ALTERATION_BASES_EQ_HA_AN_POUR_30CM = 450;
 
@@ -153,13 +154,25 @@ export function alterationBasesEqM2Semaine(profil: readonly Horizon[]): number {
 }
 
 /**
- * Dépôts atmosphériques de bases, eq/ha/an.
+ * Dépôts atmosphériques de bases, eq/ha/an — et ce qu'il faut n'y PAS compter.
  *
- * Poussières calcaires, embruns, particules agricoles. L'ordre de grandeur
- * retenu en France est de quelques centaines d'eq/ha/an, très variable — bien
- * plus près d'une carrière ou de la côte *(à confirmer)*.
+ * Le premier jet retenait 300, en additionnant poussières calcaires, embruns et
+ * particules agricoles. C'est trop, et pour une raison chimique : **les embruns
+ * n'apportent aucune alcalinité nette.** Le sodium et le magnésium de la mer
+ * arrivent avec leurs anions, chlorure en tête ; c'est un sel neutre, il
+ * traverse le complexe et ressort au drainage. Seule la fraction NON MARINE —
+ * carbonates des poussières, calcium des particules agricoles — ajoute
+ * réellement des bases.
+ *
+ * Ce que l'erreur faisait, mesuré : la lande sèche REMONTAIT de 4,50 à 4,56 en
+ * cinquante ans, alors que c'est le type même du sol qui s'acidifie tout seul.
+ * Et ce n'était pas cosmétique — le chêne-liège est exactement à sa borne de pH
+ * sur cette station (gamme 4,5-8, donc facteur nul à 4,50) : deux centièmes de
+ * pH le faisaient passer de « exclu » à « viable », ce qui change le
+ * peuplement, donc le combustible, donc les incendies
+ * *(à confirmer sur les relevés MERA de dépôts hors sel marin)*.
  */
-export const DEPOSITION_BASES_EQ_HA_AN = 300;
+export const DEPOSITION_BASES_EQ_HA_AN = 120;
 
 /** Dépôts hebdomadaires, eq/m². */
 export const DEPOSITION_BASES_EQ_M2_SEMAINE = DEPOSITION_BASES_EQ_HA_AN / 10_000 / 52;
