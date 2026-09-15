@@ -6,6 +6,7 @@
 
 import type { EconomyState } from "./actions";
 import { createEconomy } from "./actions";
+import { CALCIUM_NEUTRE_MG_G, capaciteEchangeEqM2, saturationDepuisPh } from "./bases";
 import type { CarbonState } from "./carbon";
 import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
 import type { EauDeSurface } from "./eau_surface";
@@ -228,7 +229,27 @@ export interface SoilState {
    * ruisselle davantage, donc s'érode plus vite (erosion.ts).
    */
   epaisseurPerdueCm: number[];
-  /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
+  /**
+   * BASES ÉCHANGEABLES de la cellule, eq/m² : le calcium, le magnésium, le
+   * potassium et le sodium fixés sur le complexe argilo-humique (`bases.ts`).
+   *
+   * C'est ce pool-là qui est l'état ; le pH n'en est que la lecture.
+   */
+  basesEq: number[];
+  /**
+   * Teneur en calcium de la litière PRÉSENTE sur la cellule, mg/g de matière
+   * sèche : moyenne pondérée par les masses déposées, tenue comme l'est déjà la
+   * vitesse de décomposition (`litterK`). C'est elle qui décide si ce qui se
+   * décompose ici acidifie le complexe ou l'alimente.
+   */
+  litterCaMgG: number[];
+  /**
+   * pH de la cellule. **Ce n'est plus un état : c'est une LECTURE** du taux de
+   * saturation du complexe, recalculée à chaque tick depuis `basesEq`
+   * (`bases.ts`). Le chaulage n'écrit plus ici — il apporte des bases, et le pH
+   * suit. Le tableau est conservé parce que tout le moteur lit un pH par
+   * cellule et n'a aucune raison de connaître la chimie qui le produit.
+   */
   ph: number[];
   /**
    * Couverture de la strate herbacée ∈ [0,1] par cellule (herbe.ts) : la
@@ -359,6 +380,18 @@ export interface TickFluxes {
   uptakeKKgHa: number;
   /** potassium lessivé, kg/ha */
   leachedKKgHa: number;
+  /**
+   * LE BUDGET DE BASES de la semaine, eq/ha, terme par terme (bases.ts). Il est
+   * exposé pour être VÉRIFIÉ : la variation du pool doit valoir apports +
+   * litière − lessivage − charge acide, à l'arrondi près. Un pool dont on ne
+   * publie pas le budget est un pool qu'on ne peut pas mettre en défaut.
+   */
+  basesApportEqHa: number;
+  basesLessiveEqHa: number;
+  basesLitiereEqHa: number;
+  basesAcideEqHa: number;
+  /** taux de saturation moyen du complexe ∈ [0,1] — le pH en est la lecture */
+  saturationMoyenne: number;
   /** eau arrivée de l'amont par ruissellement, mm */
   ruissellementEntrantMm: number;
   /** eau partie de la parcelle par ruissellement, mm */
@@ -427,6 +460,10 @@ export function createGameState(
   // La même friche de départ dans toutes les cellules : la station ne décrit
   // qu'un taux d'enherbement, l'atlas dit qui le compose (herbacees.ts).
   const depart = empriseInitiale(station.herbeInitiale, station.phInitial);
+  // Le complexe d'échange de l'horizon de surface, et ce que le pH de la
+  // station implique qu'il porte de bases (bases.ts).
+  const cecDepart = station.profil[0] ? capaciteEchangeEqM2(station.profil[0]) : 0;
+  const basesDepart = cecDepart * saturationDepuisPh(station.phInitial);
   return {
     week: 0,
     station,
@@ -453,6 +490,11 @@ export function createGameState(
       boisAuSolCG: new Array(n).fill(0),
       boisEnTraversPart: new Array(n).fill(0),
       tassement: new Array(n).fill(0),
+      // Les bases sont INVERSÉES depuis le pH déclaré par la station, et non
+      // l'inverse : les stations décrivent un pH, pas un taux de saturation, et
+      // une partie doit démarrer exactement au pH annoncé (bases.ts).
+      basesEq: new Array(n).fill(basesDepart),
+      litterCaMgG: new Array(n).fill(CALCIUM_NEUTRE_MG_G),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,

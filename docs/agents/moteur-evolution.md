@@ -61,7 +61,41 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les tempêtes, #55)
+## Ce que le dernier lot a appris (la dérive du pH, #71)
+
+**Remplacer un ÉTAT par une LECTURE, quand c'en est une.** Le pH était une
+variable libre ; il est devenu le taux de saturation d'un pool de bases. Le
+refactor coûte peu — le tableau `soil.ph` reste, plus personne ne l'écrit sauf
+un endroit — et il rend gratuites trois règles qu'il aurait fallu écrire, dont
+« le même chaulage déplace un sable plus qu'une argile ». **Avant d'ajouter une
+dérive à une grandeur, se demander si cette grandeur n'est pas déjà la
+conséquence d'autre chose.** Et inverser la relation au démarrage, pour que les
+stations partent exactement où elles déclarent partir.
+
+**Reprendre une fonction voisine sans reprendre son ÉCHELLE.** Le lessivage des
+bases a été copié de celui du potassium : bonne forme, bonne physique, trois
+ordres de grandeur d'écart, parce que les deux pools n'ont pas la même taille.
+Un limon neutre tombait au plancher d'acidité en vingt-cinq ans. **Quand on
+copie une loi d'un autre élément, recaler sa constante sur un FLUX mesuré, pas
+sur la ressemblance des formules.**
+
+**Un facteur d'accélération n'est gratuit que si son débit l'est aussi.** Les
+mycorhizes accélèrent l'altération de la roche (×2 à ×5) et le moteur en
+crédite le phosphore et le potassium — qu'il débite aussi au prélèvement.
+Appliqué aux bases, qui ne sont pas débitées, le même facteur fabriquait de la
+matière : une hêtraie faisait REMONTER le pH de son sol. **Un crédit sans
+débit est un bug, même quand le mécanisme physique existe.**
+
+**L'issue peut se tromper sur l'écologie, et il faut le vérifier avant de
+coder.** Celle-ci posait « les résineux acidifient, les feuillus maintiennent ».
+Les mesures disent que le hêtre acidifie la profondeur plus que l'épicéa, et que
+la litière d'épicéa porte deux fois le calcium de celle du pin sylvestre. Le
+trait retenu n'est donc pas un type de feuillage mais une teneur en calcium —
+une grandeur qui se mesure, et dont toute la chaîne causale a été mesurée
+(Reich et al. 2005, jardin commun de quatorze essences). **Une heure de
+littérature avant d'écrire a changé le découpage, pas seulement les chiffres.**
+
+## Ce que l'avant-dernier lot a appris (les tempêtes, #55)
 
 **Réutiliser une fonction qui porte le bon NOM et répond à une autre question.**
 `windShelterAt` calculait déjà un abri au vent, et le premier jet s'en est servi
@@ -112,7 +146,7 @@ coucher un arbre et personne ne comptait le point. Six lignes plus tard, trois
 ✅ et trois ❌ assumés, et deux points de moins. La colonne des absences venait
 d'atteindre zéro ; elle était vide parce qu'on n'avait pas regardé.
 
-## Ce que l'avant-dernier lot a appris (la strate herbacée, #70)
+## Ce qu'un lot plus ancien a appris (la strate herbacée, #70)
 
 **Une variable d'état ne suffisait pas.** On a d'abord tenu une seule grandeur
 par espèce et par cellule — la place occupée — en calculant la couverture comme
@@ -164,6 +198,15 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce qui reste de #71 — la pompe à bases (C15, ❌).** Le pool de bases est de
+SURFACE, comme ceux de N, P et K. Le moteur dit donc qu'un frêne entretient son
+horizon de surface, et rien de ce qu'il prend en dessous — alors que c'est par
+là que le hêtre acidifie la profondeur plus que l'épicéa. Il y faudrait un pool
+par horizon, ce que le moteur ne fait pour aucun nutriment : le lot dépasse #71.
+Manque aussi une litière herbacée porteuse de calcium (la strate basse ne pèse
+pas sur le complexe) et l'ortie nitrophile, qui rendrait la bio-indication
+lisible.
 
 **Ce qui reste de #70 — le calendrier de floraison.** La strate a ses espèces,
 E9 et B8 sont tombés, mais la fiche herbacée s'arrête au calendrier FOLIAIRE.

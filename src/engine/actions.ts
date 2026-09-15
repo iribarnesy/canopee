@@ -8,6 +8,7 @@
  * plafond (heures ou découvert).
  */
 
+import { CHAULAGE_EQ_M2, capaciteEchangeEqM2, phDepuisSaturation } from "./bases";
 import { CONTACT_TRONC_EBRANCHE, empreinteDeChute, poserBoisAuSol, versLAval } from "./boisMort";
 import {
   CARBON_FRACTION,
@@ -186,7 +187,15 @@ export const CLOTURE_EUR_M = 14;
 export const CLOTURE_HEURES_M = 0.12;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
-/** effet d'un chaulage sur le pH (plafonné à 7,5) */
+/**
+ * Ce qu'un chaulage montait le pH, partout et quel que soit le sol.
+ *
+ * **Plus personne ne s'en sert** : depuis `bases.ts`, le chaulage apporte des
+ * bases au complexe d'échange et le pH suit — beaucoup sur un sable, peu sur
+ * une argile. La constante reste ici comme repère de calibration :
+ * `CHAULAGE_EQ_M2` a été choisi pour reproduire cet ordre de grandeur sur un
+ * sol moyen, et c'est la seule raison de ne pas l'effacer.
+ */
 export const LIME_PH_STEP = 0.5;
 /**
  * C/N du bois raméal fragmenté épandu : du BOIS, pas des feuilles — libération
@@ -1107,7 +1116,13 @@ function applyChauler(
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
   }
+  // Le chaulage n'écrit plus le pH : il apporte des BASES, et le pH suit au
+  // tick suivant (bases.ts). Ce n'est pas un détour — c'est ce qui fait qu'un
+  // podzol sableux, dont le complexe est petit, monte beaucoup pour la même
+  // chaux et le reperd vite, là où un limon argileux encaisse et retient.
+  const basesEq = state.soil.basesEq.slice();
   const ph = state.soil.ph.slice();
+  const cecEq = state.station.profil[0] ? capaciteEchangeEqM2(state.station.profil[0]) : 0;
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
   const chaulees: number[] = [];
@@ -1118,14 +1133,17 @@ function applyChauler(
       if (dx * dx + dy * dy <= r2) {
         const i = y * cote + x;
         chaulees.push(i);
-        ph[i] = Math.min(7.5, (ph[i] ?? 7) + LIME_PH_STEP);
+        basesEq[i] = Math.min(cecEq, (basesEq[i] ?? 0) + CHAULAGE_EQ_M2);
+        // Le pH affiché suit tout de suite : un joueur qui chaule doit voir le
+        // calque bouger dans la semaine, pas la semaine d'après.
+        ph[i] = cecEq > 0 ? phDepuisSaturation((basesEq[i] ?? 0) / cecEq) : (ph[i] ?? 7);
       }
     }
   }
   return {
     state: {
       ...state,
-      soil: { ...state.soil, ph },
+      soil: { ...state.soil, basesEq, ph },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - cost,
