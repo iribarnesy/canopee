@@ -67,7 +67,7 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
 | B. Lumière et structure | 6 | 4 | 0 | 10 |
-| C. Nutriments et cycles | 12 | 1 | 0 | 13 |
+| C. Nutriments et cycles | 14 | 0 | 1 | 15 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 8 | 4 | 0 | 12 |
 | F. Dynamique des peuplements | 11 | 5 | 3 | 19 |
@@ -75,9 +75,9 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 6 | 3 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **109** | **28** | **3** | **140** |
+| **Total** | **111** | **27** | **4** | **142** |
 
-**Score de réalisme : 109 pleins + 28 partiels sur 140 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 111 pleins + 27 partiels sur 142 → 88 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -125,8 +125,9 @@ latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
 production) → 76 % (structure du sol : le tassement et sa réparation)
 → 88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)
 → 90 % (la strate herbacée a des espèces : trois calendriers, trois sols, et
-la fenêtre de printemps) → **88 % (le vent devient un agent CASSANT : tempête,
-chablis, et six critères là où il n'y en avait aucun)**.*
+la fenêtre de printemps) → 88 % (le vent devient un agent CASSANT : tempête,
+chablis, et six critères là où il n'y en avait aucun) → **88 % (le pH cesse
+d'être un état : il se lit sur un pool de bases que la litière fait pencher)**.*
 
 *Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
 hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -201,7 +202,9 @@ maladie-là, pas une preuve de santé.*
 | C8 | Le carbone du sol et l'azote sont couplés (retourner une prairie libère N et C) | ✅ | la minéralisation de l'humus rend C ET N au C/N de l'humus ; action `labourer` ; `sol-vivant.test.ts` |
 | C13 | Les dépôts atmosphériques apportent de l'azote (et fertilisent les milieux pauvres) | ✅ | `station.depositionNKgHaAn` ; 9 à 20 kg/ha/an selon la région |
 | C9 | Enfouir un matériau à C/N élevé provoque une faim d'azote | ✅ | `azoteNetDecomposition` (bascule vers C/N 27) ; l'azote est immobilisé, pas perdu ; `sol-vivant.test.ts` |
-| C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | 🟡 | Chaulage seul ; pas de dérive |
+| C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | ✅ | `bases.ts` ; `bases.test.ts` — **le pH cesse d'être un état** : il se lit sur le taux de saturation d'un pool de bases échangeables, alimenté par l'altération et les dépôts, vidé par le lessivage, et penché par la teneur en CALCIUM de la litière (un trait de l'atlas, mesuré, aucune espèce nommée). Mesuré sur cinquante ans : un châtaignier fait passer un limon acide de 5,00 à 4,76, un hêtre un limon riche de 7,00 à 6,77, un frêne le même de 7,00 à 7,14 — des dixièmes, comme la podzolisation réelle. Et le chaulage cesse d'être un geste à effet fixe : la même chaux déplace un sable bien plus qu'une argile, parce que le complexe est au dénominateur |
+| C14 | Les bases échangeables suivent un bilan conservatif | ✅ | `bases.test.ts` — la variation du pool vaut altération + dépôts + litière − lessivage − charge acide, à l'arrondi près. Comme pour N, P et K, et avec la même réserve : la conservation ne valide pas le NIVEAU |
+| C15 | La POMPE À BASES : un feuillu remonte les bases du sous-sol et les dépose en surface, appauvrissant la profondeur | ❌ | le moteur ne tient qu'un pool de bases de SURFACE, comme pour N, P et K. Il dit donc qu'un frêne entretient son horizon de surface, et rien de ce qu'il prend en dessous. Ce n'est pas un détail : c'est par là que Foltran et al. mesurent un hêtre acidifiant le sol minéral profond PLUS qu'un épicéa (−0,5 unité en vingt ans) — l'intuition « les résineux acidifient » est une demi-vérité, et c'est la moitié que ce lot ne dit pas |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
 | C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche** — c'est là qu'ils gagnent leur vie |
 
@@ -845,6 +848,113 @@ Trois, et pas trente, parce que la strate tourne sur toutes les cellules toutes
 les semaines. **Coût mesuré** : 6,8 → 7,6 ms par semaine sur une hêtraie 30 × 30
 de quarante ans, soit **+11 %**, machine au repos, médiane de cinq passes. C'est le prix à connaître
 avant d'ajouter la quatrième.
+
+## Le pH : un état de moins, une lecture de plus
+
+Le pH était une constante que seul le joueur pouvait changer. Le moteur savait
+pourtant déjà exclure une espèce hors de sa gamme (C7) : la conséquence était en
+place, c'est la cause qui manquait.
+
+Le lot ne fait pas dériver le pH par incréments. Il tient un pool de **bases
+échangeables** — le calcium, le magnésium, le potassium et le sodium fixés sur
+le complexe argilo-humique — et le pH s'y LIT, comme taux de saturation de ce
+complexe. C'est le sens physique du pH d'un sol, et le gain n'est pas
+esthétique : trois règles tombent de ce choix sans qu'on les écrive.
+
+- **Le chaulage cesse d'être un geste à effet fixe.** Il montait de 0,5 partout ;
+  il apporte maintenant des bases, et le pH suit. La même chaux déplace donc
+  beaucoup un podzol sableux — petit complexe, donc grand dénominateur — et peu
+  un limon argileux. Mesuré, et c'est un test.
+- **Un sol déjà acide s'acidifie de moins en moins**, parce que la courbe
+  s'aplatit par le bas. Ce n'est pas un garde-fou de programmeur : c'est la
+  gamme tampon de l'aluminium d'Ulrich, où les hydroxydes prennent le relais du
+  complexe.
+- **Une partie démarre exactement au pH que sa station déclare**, parce que la
+  saturation initiale est INVERSÉE depuis ce pH. Une dérive qui commence par
+  déplacer son point de départ n'est pas une dérive, c'est un bug.
+
+### La littérature dit le contraire de l'intuition, et il a fallu la suivre
+
+L'issue posait « une pessière podzolise, un feuillu maintient le pH ». C'est une
+demi-vérité, et la moitié fausse valait le détour :
+
+- Foltran et al. mesurent, après 63 et 82 ans de conversion en Allemagne
+  centrale, que le **hêtre acidifie le sol minéral profond PLUS que l'épicéa**
+  (−0,5 unité en vingt ans) — précisément à cause de la pompe à bases, qui les
+  remonte en surface et appauvrit la profondeur.
+- Dans des peuplements appariés, la litière d'**épicéa contient deux fois plus
+  de calcium que celle du pin sylvestre**, et la pruche se place au-dessus du
+  chêne rouge. « Résineux » n'est pas une grandeur chimique.
+
+D'où le trait retenu : non pas un « pouvoir acidifiant » par type de feuillage,
+mais la **teneur en calcium de la litière**, qui se mesure et se publie. Et la
+chaîne causale entière a été mesurée en jardin commun — Reich et al. 2005,
+quatorze essences en Pologne centrale, trente ans : le calcium de la litière
+varie du simple au quadruple entre essences, et c'est lui qui explique le pH du
+sol, le calcium échangeable, le taux de saturation, la vitesse de dégradation du
+plancher forestier et jusqu'aux vers de terre. Le mécanisme de ce lot n'est donc
+pas une hypothèse : il a été observé.
+
+**Ce que ça coûte en honnêteté** : sur vingt-six fiches, quatre valeurs sont
+ancrées (frêne, hêtre, chêne par un congénère nord-américain ; pin par le
+rapport épicéa/pin) et vingt-deux sont des placements dans une gamme mesurée.
+Le tableau de `bases.ts` le dit fiche par fiche.
+
+### Le pin s'acidifie le sol jusqu'à s'y trouver bien
+
+C'est le résultat que ce lot n'a pas écrit, et le seul qu'on n'aurait pas pu
+prévoir. Le versant du test `bois-en-travers` est un limon riche à pH 7,0 planté
+de hêtre et de pin. Les deux litières sont pauvres en calcium, donc le
+peuplement acidifie son propre sol : **7,00 → 6,94 → 6,82 → 6,62** sur soixante
+ans. Or le pin sylvestre était à la limite HAUTE de sa gamme (4 à 7,5, soit un
+facteur de 0,80 à pH 7). Au fil de la dérive, ce facteur monte : **0,80 → 0,97 →
+1,00**. Le pin pousse mieux, monte à 23 m au lieu de rester bridé, et domine le
+peuplement.
+
+Personne n'a écrit « le pin améliore son sort en l'acidifiant ». Ça tombe de la
+rencontre de la dérive du pH (C10, neuf) et du filtre de gamme (C7, ancien), qui
+ne se connaissaient pas. Et c'est de la bonne écologie : c'est exactement ce que
+fait un pin sur un sol qui n'est pas le sien.
+
+La conséquence s'est propagée jusqu'à un test qui ne parle ni de pH ni de pin —
+le bois en travers piège moins de terre, parce qu'un versant mieux couvert en
+laisse moins passer. Son seuil bouge pour la cinquième fois, et pour la
+cinquième fois avec sa raison écrite.
+
+### Trois erreurs d'échelle, toutes trouvées en mesurant
+
+**Le lessivage repris du potassium.** Même forme, même fonction, même
+signature — et trois ordres de grandeur d'écart. Le potassium échangeable du
+moteur est un petit pool mobile ; les bases du complexe font un demi-million
+d'eq/ha. Au taux du potassium, un limon neutre tombait au plancher d'acidité en
+**vingt-cinq ans**, et une hêtraie de test perdait son sol sous elle. Recalé sur
+le flux, qui lui est mesuré — quelques centaines d'eq/ha/an sous forêt tempérée.
+
+**Les embruns comptés comme un apport de bases.** Le premier jet retenait
+300 eq/ha/an de dépôts atmosphériques, poussières et embruns confondus. Mais le
+sel marin n'apporte AUCUNE alcalinité nette : le sodium et le magnésium arrivent
+avec leurs chlorures, traversent le complexe et ressortent au drainage. Seule la
+fraction non marine compte, et 120 eq/ha/an est l'ordre de grandeur honnête. Ce
+que l'erreur faisait : la lande sèche REMONTAIT de 4,50 à 4,56 en cinquante ans,
+alors que c'est le type même du sol qui s'acidifie tout seul. Et ce n'était pas
+cosmétique — le chêne-liège est exactement à sa borne sur cette station (gamme
+4,5-8, donc facteur NUL à pH 4,50) : deux centièmes de pH le faisaient passer
+d'exclu à viable, ce qui changeait le peuplement, donc le combustible, donc les
+incendies. Cinq tests du feu sont tombés là-dessus, et ils avaient raison.
+
+**L'altération créditée de ce que les racines lui arrachent.** Le phosphore et
+le potassium bénéficient d'un facteur rhizosphère (les mycorhizes dissolvent la
+roche, ×2 à ×5). Appliqué aux bases, il faisait **remonter le pH sous un
+peuplement de hêtres** — l'inverse exact de ce qu'un hêtre fait. La raison est
+comptable : ce fichier ne débite pas le prélèvement des arbres, donc créditer
+l'accélération qui le nourrit fabrique des bases à partir de rien. Le facteur a
+sauté, et c'est écrit à l'endroit où il aurait été tentant de le remettre.
+
+Une fois les deux corrigées, le budget minéral d'un sol forestier se retrouve
+**proche de l'équilibre** — 290 eq/ha/an d'altération et 300 de dépôts contre
+650 de lessivage sur le limon riche — et c'est la végétation qui le fait
+pencher. C'est le résultat qu'on cherchait sans le savoir : si l'altération
+dominait, aucune essence ne pourrait acidifier quoi que ce soit.
 
 ## La tempête : le vent cesse d'être seulement desséchant
 

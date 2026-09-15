@@ -13,6 +13,16 @@ import { type AidesAnnuelles, aidesAnnuelles } from "./aides";
 import { intensiteAllelopathique } from "./allelopathie";
 import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
+  alterationBasesEqM2Semaine,
+  CALCIUM_NEUTRE_MG_G,
+  capaciteEchangeEqM2,
+  DEPOSITION_BASES_EQ_M2_SEMAINE,
+  effetLitiereEq,
+  lessivageBasesEq,
+  PH_PLANCHER,
+  phDepuisSaturation,
+} from "./bases";
+import {
   type CelluleSousLeTronc,
   CONTACT_CHABLIS_BRANCHU,
   couvertureDuBoisAuSol,
@@ -594,6 +604,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const potassiumG = state.soil.potassiumG.slice();
   const potassiumReserveG = state.soil.potassiumReserveG.slice();
   const litterK = state.soil.litterK.slice();
+  // Les bases échangeables, et le calcium de la litière qui les nourrit ou les
+  // consomme (bases.ts). C'est ce pool-là qui porte le pH de la cellule.
+  const basesEq = state.soil.basesEq.slice();
+  const litterCaMgG = state.soil.litterCaMgG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
@@ -608,6 +622,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let overflowSum = 0;
   let waterloggingSum = 0;
   let mineralizationSumG = 0;
+  // Le budget de bases de la semaine, terme par terme : c'est lui que le test
+  // de conservation confronte à la variation du pool (bases.ts).
+  let basesApportSumEq = 0;
+  let basesLessiveSumEq = 0;
+  let basesLitiereSumEq = 0;
+  let basesAcideSumEq = 0;
   let litterDecaySumG = 0;
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
@@ -619,6 +639,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const depositionPSemaine = DEPOSITION_P_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
   const depositionKSemaine = DEPOSITION_K_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
   const cecSurface = horizonSurface0 ? capaciteEchange(horizonSurface0) : 10;
+  // Le même complexe, vu comme un STOCK par mètre carré et non comme une
+  // densité : c'est lui le dénominateur du taux de saturation, donc du pH.
+  const cecSurfaceEq = horizonSurface0 ? capaciteEchangeEqM2(horizonSurface0) : 0;
+  const alterationBasesSemaine = alterationBasesEqM2Semaine(profil);
   let uptakePSumG = 0;
   let uptakeKSumG = 0;
   let leachedKSumG = 0;
@@ -878,6 +902,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
     litterNG[i] = (litterNG[i] ?? 0) - transfere;
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
+    // ── Ce que cette litière-là fait au complexe d'échange (bases.ts) ───────
+    // La décomposition produit des acides organiques ; les bases de la litière
+    // en neutralisent une part. Au-dessus du seuil de calcium elle rend au
+    // complexe, en dessous elle lui prend — et c'est tout ce qui sépare une
+    // essence acidifiante d'une essence améliorante. Aucun nom d'espèce ici :
+    // la teneur en calcium de ce qui est tombé sur CETTE cellule suffit.
+    const effetBases = effetLitiereEq(decayedC, litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G);
+    basesEq[i] = (basesEq[i] ?? 0) + effetBases;
+    if (effetBases >= 0) basesLitiereSumEq += effetBases;
+    else basesAcideSumEq -= effetBases;
     humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
     emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
     // L'humus est LE stock d'azote organique du sol : ce qui s'en minéralise
@@ -917,6 +951,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     phosphoreG[i] =
       (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine * bio + depositionPSemaine;
     potassiumG[i] = (potassiumG[i] ?? 0) + alterationKSemaine * bio + depositionKSemaine;
+    // Les bases suivent la même plomberie que le potassium — et pour cause, le
+    // potassium EST une de ces bases. L'altération les libère dans tout le
+    // profil, la rhizosphère l'accélère, l'atmosphère en dépose (bases.ts).
+    // Sans le facteur rhizosphère, à la différence du phosphore et du
+    // potassium — et c'est délibéré. Les racines et les mycorhizes dissolvent
+    // bel et bien la roche et en libèrent des bases, mais elles le font POUR
+    // LES PRENDRE, et ce fichier ne débite pas le prélèvement des arbres
+    // (bases.ts). Créditer l'accélération sans débiter ce qu'elle nourrit
+    // fabriquait des bases : un peuplement de hêtres faisait remonter le pH de
+    // son sol, l'inverse exact de ce qu'il fait.
+    const apportBases = alterationBasesSemaine + DEPOSITION_BASES_EQ_M2_SEMAINE;
+    basesEq[i] = (basesEq[i] ?? 0) + apportBases;
+    basesApportSumEq += apportBases;
     // Le tampon du sol : la réserve suit ce que les racines prennent.
     const echange = echangeReserveK(
       potassiumG[i] ?? 0,
@@ -1450,6 +1497,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     potassiumG[i] = (potassiumG[i] ?? 0) - perduK;
     leachedKSumG += perduK;
+    // Les bases partent avec la même eau, retenues par le même complexe. C'est
+    // le terme qui fait qu'un sol lessive vers l'acide quand plus rien ne le
+    // réalimente — le versant « lessivage » de l'issue #71 (bases.ts).
+    const perduBases = lessivageBasesEq(
+      basesEq[i] ?? 0,
+      drainageMmArr[i] ?? 0,
+      waterMm[i * nH] ?? 0,
+      cecSurface,
+    );
+    basesEq[i] = (basesEq[i] ?? 0) - perduBases;
+    basesLessiveSumEq += perduBases;
+  }
+
+  // ── 4 bis. Le pH n'est pas un état : il se RELIT (bases.ts) ───────────────
+  // Après tous les mouvements de bases de la semaine, chaque cellule relit son
+  // pH sur le taux de saturation de son complexe. C'est ici, et nulle part
+  // ailleurs, que `soil.ph` est écrit — le chaulage lui-même passe par les
+  // bases (actions.ts).
+  const ph = new Array<number>(nCells);
+  for (let i = 0; i < nCells; i++) {
+    ph[i] = cecSurfaceEq > 0 ? phDepuisSaturation((basesEq[i] ?? 0) / cecSurfaceEq) : PH_PLANCHER;
   }
 
   // ── 5. Croissance de chaque arbre — loi du minimum, facteurs locaux ───────
@@ -1852,6 +1920,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
       const oldN = litterNG[i] ?? 0;
       litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
+      // Le calcium de ce qui tombe se mélange à celui qui était déjà là, au
+      // prorata des masses : une cellule sous deux essences porte la litière
+      // des deux, et c'est le mélange qui décide de l'acidité (bases.ts).
+      litterCaMgG[i] =
+        (oldN * (litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G) + share * espece.litiere.calciumMgG) /
+        (oldN + share);
       litterNG[i] = oldN + share;
       litterCG[i] = (litterCG[i] ?? 0) + shareC;
       // Le phosphore de la feuille rentre au sol avec elle. On le rend
@@ -2455,7 +2529,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterNG,
         litterCG,
         humusCG,
-        ph: state.soil.ph,
+        basesEq,
+        litterCaMgG,
+        ph,
         cloture: state.soil.cloture,
         nappeMm: nappeStockMm,
         epaisseurPerdueCm,
@@ -2552,6 +2628,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       uptakePKgHa: (uptakePSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKKgHa: (uptakeKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKKgHa: (leachedKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      basesApportEqHa: (basesApportSumEq / nCells) * 10_000,
+      basesLessiveEqHa: (basesLessiveSumEq / nCells) * 10_000,
+      basesLitiereEqHa: (basesLitiereSumEq / nCells) * 10_000,
+      basesAcideEqHa: (basesAcideSumEq / nCells) * 10_000,
+      saturationMoyenne:
+        cecSurfaceEq > 0 ? basesEq.reduce((a, b) => a + b, 0) / nCells / cecSurfaceEq : 0,
       litterfallKgHa: (litterfallSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       litterDecayKgHa: (litterDecaySumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       fixationKgHa: (fixationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

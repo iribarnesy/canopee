@@ -375,6 +375,11 @@ function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWea
 
 function emptyFluxes(): TickFluxes {
   return {
+    basesApportEqHa: 0,
+    basesLessiveEqHa: 0,
+    basesLitiereEqHa: 0,
+    basesAcideEqHa: 0,
+    saturationMoyenne: 0,
     partInondee: 0,
     erosionArracheeKgM2: 0,
     erosionSortieKgM2: 0,
