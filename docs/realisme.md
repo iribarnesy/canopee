@@ -73,11 +73,11 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | F. Dynamique des peuplements | 11 | 5 | 3 | 19 |
 | G. Faune et santé | 8 | 1 | 0 | 9 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
-| I. Carbone | 6 | 3 | 0 | 9 |
+| I. Carbone | 7 | 2 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **111** | **27** | **4** | **142** |
+| **Total** | **112** | **26** | **4** | **142** |
 
-**Score de réalisme : 111 pleins + 27 partiels sur 142 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 112 pleins + 26 partiels sur 142 → 88 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -126,8 +126,9 @@ production) → 76 % (structure du sol : le tassement et sa réparation)
 → 88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)
 → 90 % (la strate herbacée a des espèces : trois calendriers, trois sols, et
 la fenêtre de printemps) → 88 % (le vent devient un agent CASSANT : tempête,
-chablis, et six critères là où il n'y en avait aucun) → **88 % (le pH cesse
-d'être un état : il se lit sur un pool de bases que la litière fait pencher)**.*
+chablis, et six critères là où il n'y en avait aucun) → 88 % (le pH cesse
+d'être un état : il se lit sur un pool de bases que la litière fait pencher)
+→ **88 % (le bois d'œuvre cesse d'être un puits éternel)**.*
 
 *Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
 hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -311,7 +312,7 @@ maladie-là, pas une preuve de santé.*
 | I1 | Le carbone suit un bilan conservatif entre tous les pools | ✅ | `carbon-conservation.test.ts` |
 | I2 | Le sol est le plus gros stock en tempéré | ✅ | `carbon.test.ts` |
 | I3 | Le bois énergie vendu est émis immédiatement (il ne stocke rien) | ✅ | `epandre-vs-vendre.test.ts` |
-| I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | 🟡 | comptabilisé comme stock (`oeuvreCumKgC`) ; pas encore de fin de vie du produit |
+| I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | ✅ | `DEMI_VIE_OEUVRE_ANS` ; `produits-bois.test.ts` — décroissance de premier ordre sur la demi-vie par défaut de l'IPCC pour les sciages (35 ans ; 25 pour les panneaux, 2 pour le papier, mais le moteur ne produit que du sciage). Le crédit au bilan net est le STOCK et non le cumul : **un puits qui ne se vide jamais n'est pas un puits**. Et le carbone se partage enfin comme la CAISSE — seule la bille élaguée part en scierie, le houppier part en bûches et brûle, là où un arbre classé « œuvre » envoyait auparavant tout son carbone au produit |
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
@@ -848,6 +849,47 @@ Trois, et pas trente, parce que la strate tourne sur toutes les cellules toutes
 les semaines. **Coût mesuré** : 6,8 → 7,6 ms par semaine sur une hêtraie 30 × 30
 de quarante ans, soit **+11 %**, machine au repos, médiane de cinq passes. C'est le prix à connaître
 avant d'ajouter la quatrième.
+
+## Le bois d'œuvre : un puits qui ne se vide jamais n'est pas un puits
+
+Le carbone vendu en scierie entrait dans `oeuvreCumKgC` et n'en sortait jamais.
+Une palette stockait autant qu'une charpente, pour toujours, et vendre du bois
+devenait un geste climatique gratuit et définitif — faux dans le sens qui flatte
+le joueur, ce qui est la pire direction pour une erreur de comptabilité.
+
+Le stock sort maintenant d'usage en décroissance de premier ordre, la méthode
+des inventaires nationaux, sur la **demi-vie par défaut de l'IPCC pour les
+sciages : trente-cinq ans** (la même table donne 25 ans pour les panneaux et
+2 ans pour le papier ; le moteur ne produit que du sciage). Le crédit au bilan
+net devient le STOCK et non le cumul.
+
+### Le carbone se partage enfin comme la caisse
+
+En ouvrant le dossier, un défaut plus ancien est apparu, et il était silencieux.
+`valeurSurPied` facture depuis toujours un arbre d'œuvre en DEUX parts : la
+bille élaguée au prix de la scierie, le houppier au prix des bûches. La
+comptabilité carbone, elle, envoyait **tout** l'arbre au stock de produits dès
+lors qu'il était classé « œuvre ». Le prix disait 60 % d'œuvre et le carbone
+disait 100 %. Les deux partages sont maintenant le même.
+
+C'est aussi ce qui donne au lot sa leçon sylvicole sans qu'on ait à l'écrire :
+la part qui devient un produit durable est celle qu'on a ÉLAGUÉE. Tailler tôt,
+c'est fabriquer du carbone qui dure — et le moteur n'a pas eu besoin d'une
+décision de jeu supplémentaire pour le dire, ce que l'issue redoutait.
+
+### L'issue se trompait sur ce qu'on verrait, et la mesure le dit
+
+Elle prévenait : « une charpente centenaire ne rendra rien pendant la partie, ce
+qui est le bon comportement — ne pas raccourcir les durées pour que ça se voie ».
+La mise en garde est juste, mais sa prémisse ne l'est pas. Elle demandait dans le
+même paragraphe **une seule durée moyenne**, et une moyenne sur charpente, meuble
+et emballage ne vaut pas un siècle : l'IPCC la place à trente-cinq ans.
+
+Mesuré : un produit vendu au début d'une partie de cinquante ans en a rendu
+**63 %** à la fin. On voit donc le puits se vider, sans avoir rien raccourci — et
+la leçon est plus dure que celle que l'issue imaginait. **À l'échelle d'une vie
+de gestionnaire, vendre du bois n'est pas un geste climatique définitif. Ce qui
+reste définitif, c'est ce qu'on laisse pousser.**
 
 ## Le pH : un état de moins, une lecture de plus
 
