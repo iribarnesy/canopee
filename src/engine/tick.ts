@@ -44,6 +44,7 @@ import {
   HUMUS_DECAY_PER_YEAR,
   LITTER_HUMIFICATION,
   racinesPerduesEnRabattant,
+  SORTIE_OEUVRE_PAR_SEMAINE,
   T_HA_TO_G_M2,
   treeAboveCarbonKg,
   treeTotalCarbonKg,
@@ -2424,6 +2425,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
 
+  // ── 6 quinquies. Les produits bois sortent d'usage (§12, issue #72) ───────
+  // Un puits qui ne se vide jamais n'est pas un puits : le bois d'œuvre vendu
+  // restait crédité pour toujours, si bien qu'une palette de 2030 comptait
+  // encore en 2090. Il sort maintenant au rythme de sa demi-vie (carbon.ts).
+  const sortieOeuvreKgC = state.carbon.oeuvreStockKgC * SORTIE_OEUVRE_PAR_SEMAINE;
+
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
   // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
   // Versées à la semaine du recrutement, qui vaut « début de campagne ». Elles
@@ -2573,6 +2580,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
         erosionCumKgC:
           state.carbon.erosionCumKgC + (erosionSortieHumusCG + erosionSortieLitiereCG) / 1000,
+        // Les produits bois sortent d'usage, semaine après semaine (§12,
+        // issue #72). Décroissance de premier ordre sur la demi-vie des
+        // sciages de l'IPCC : la charpente d'hier n'est pas éternelle, et le
+        // crédit carbone d'une vente s'éteint lentement derrière elle.
+        oeuvreStockKgC: state.carbon.oeuvreStockKgC - sortieOeuvreKgC,
+        oeuvreFinDeVieCumKgC: state.carbon.oeuvreFinDeVieCumKgC + sortieOeuvreKgC,
       },
       rng,
       nextTreeId,

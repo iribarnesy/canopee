@@ -27,6 +27,33 @@ export const LITTER_HUMIFICATION = 0.3;
 export const DEADWOOD_HUMIFICATION = 0.25;
 /** décomposition du bois mort, /an à climat optimal *(à calibrer)* */
 export const DEADWOOD_DECAY_PER_YEAR = 0.05;
+
+/**
+ * Demi-vie d'un produit en bois de SCIAGE, années.
+ *
+ * Trente-cinq ans, et ce n'est pas un chiffre de confort : c'est la valeur par
+ * défaut de l'IPCC pour les sciages (lignes directrices 2006, volume 4,
+ * chapitre 12 « Harvested Wood Products »), celle qu'utilisent les inventaires
+ * nationaux dans la méthode de décroissance de premier ordre. Les deux autres
+ * catégories de la même table donnent 25 ans pour les panneaux et 2 ans pour le
+ * papier ; le moteur ne sait pas distinguer ce que devient une bille, donc il
+ * retient celle qui correspond à ce qu'il produit — du sciage.
+ *
+ * Une demi-vie n'est PAS une durée de vie : au bout de trente-cinq ans il reste
+ * la moitié du carbone, au bout de soixante-dix le quart. Une charpente vendue
+ * au début d'une partie de cinquante ans en aura rendu à peine plus du tiers à
+ * la fin, ce qui est le bon comportement — l'issue #72 prévient explicitement
+ * contre la tentation de raccourcir « pour que ça se voie ».
+ */
+export const DEMI_VIE_OEUVRE_ANS = 35;
+
+/**
+ * Part du stock de produits bois qui sort d'usage chaque semaine.
+ *
+ * Décroissance de premier ordre, la méthode de l'IPCC : un taux constant
+ * appliqué au stock, dérivé de la demi-vie par ln(2) / durée.
+ */
+export const SORTIE_OEUVRE_PAR_SEMAINE = Math.LN2 / (DEMI_VIE_OEUVRE_ANS * 52);
 /**
  * Minéralisation de l'humus, /an à climat optimal (le « k2 » des agronomes).
  *
@@ -124,10 +151,27 @@ export interface CarbonState {
   /** carbone importé par les plants achetés en pépinière, kg C */
   importedPlantsCumKgC: number;
   /**
-   * Bois d'ŒUVRE vendu, kg C : contrairement au bois de chauffage, il reste
-   * stocké dans le produit (charpente, meuble) pendant sa durée de vie (§12).
+   * Bois d'ŒUVRE vendu, kg C, CUMULÉ depuis le début de la partie : tout ce
+   * qui est un jour parti en scierie. Ce n'est plus un stock — c'est
+   * l'historique, et il ne redescend jamais.
+   *
+   * L'invariant qui le relie aux deux suivants, et que le test vérifie :
+   * `oeuvreCumKgC === oeuvreStockKgC + oeuvreFinDeVieCumKgC`.
    */
   oeuvreCumKgC: number;
+  /**
+   * Ce qui est ENCORE dans les produits, kg C — la charpente qui tient, le
+   * plancher qui sert. C'est lui, et non le cumul, qui compte au crédit du
+   * bilan : un puits qui ne se vide jamais n'est pas un puits, c'est une
+   * erreur de comptabilité (issue #72, critère I4).
+   */
+  oeuvreStockKgC: number;
+  /**
+   * Ce que les produits ont rendu à l'atmosphère en fin de vie, kg C, cumulé.
+   * Séparé des émissions de décomposition parce qu'il ne se passe PAS sur la
+   * parcelle : c'est la benne, la chaudière ou la décharge du client.
+   */
+  oeuvreFinDeVieCumKgC: number;
   /**
    * Carbone du sol emporté hors de la parcelle par l'érosion, kg C. Il n'est
    * ni émis ni vendu : il est parti ailleurs, et sans ce compteur il
@@ -144,6 +188,8 @@ export function createCarbonState(): CarbonState {
     exportedEnergyCumKgC: 0,
     importedPlantsCumKgC: 0,
     oeuvreCumKgC: 0,
+    oeuvreStockKgC: 0,
+    oeuvreFinDeVieCumKgC: 0,
     erosionCumKgC: 0,
   };
 }
@@ -161,8 +207,12 @@ export interface CarbonInventory {
   nppCumTHa: number;
   emisCumTHa: number;
   exporteCumTHa: number;
-  /** bois d'œuvre vendu, t C/ha — stocké dans les produits, pas émis */
+  /** bois d'œuvre vendu depuis le début, t C/ha — l'historique, pas un stock */
   oeuvreCumTHa: number;
+  /** ce qui est ENCORE dans les produits, t C/ha — c'est lui qui compte au crédit */
+  oeuvreStockTHa: number;
+  /** ce que les produits ont rendu en fin de vie, t C/ha, cumulé */
+  oeuvreFinDeVieCumTHa: number;
   /** bilan net de la partie : Δstocks depuis le départ, t C/ha (>0 = la parcelle stocke) */
   bilanNetTHa: number;
 }
@@ -204,8 +254,12 @@ export function carbonInventory(state: GameState, initialHumusTHa: number): Carb
     emisCumTHa: state.carbon.emittedCumKgC / 1000 / areaHa,
     exporteCumTHa: state.carbon.exportedEnergyCumKgC / 1000 / areaHa,
     oeuvreCumTHa: state.carbon.oeuvreCumKgC / 1000 / areaHa,
-    // Le bois d'œuvre compte au crédit : il a quitté la parcelle sans revenir
-    // à l'atmosphère.
-    bilanNetTHa: totalTHa + state.carbon.oeuvreCumKgC / 1000 / areaHa - initialHumusTHa,
+    oeuvreStockTHa: state.carbon.oeuvreStockKgC / 1000 / areaHa,
+    oeuvreFinDeVieCumTHa: state.carbon.oeuvreFinDeVieCumKgC / 1000 / areaHa,
+    // Le bois d'œuvre compte au crédit — mais seulement CE QUI EST ENCORE
+    // DEDANS. Avant l'issue #72, c'est le cumul qui était crédité : une
+    // palette vendue en 2030 comptait encore en 2090, et vendre du bois
+    // devenait un geste climatique gratuit et définitif.
+    bilanNetTHa: totalTHa + state.carbon.oeuvreStockKgC / 1000 / areaHa - initialHumusTHa,
   };
 }

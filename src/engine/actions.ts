@@ -622,7 +622,7 @@ export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
 export function valeurSurPied(
   espece: EspeceV0,
   tree: { heightM: number; diametreCm: number; hauteurElagueeM: number },
-): { eur: number; qualite: "oeuvre" | "chauffage" } {
+): { eur: number; qualite: "oeuvre" | "chauffage"; partOeuvre: number } {
   const volume = volumeTigeM3(tree.diametreCm, tree.heightM);
   const assezGros = tree.diametreCm >= DIAMETRE_OEUVRE_MIN_CM;
   const assezElague = tree.hauteurElagueeM >= BILLE_OEUVRE_MIN_M;
@@ -634,9 +634,12 @@ export function valeurSurPied(
         volume * partOeuvre * espece.bois.prixOeuvreEurM3 +
         volume * (1 - partOeuvre) * WOOD_PRICE_EUR_M3,
       qualite: "oeuvre",
+      // Cette part-là ne servait qu'au PRIX ; elle sort maintenant, parce que
+      // le carbone doit suivre le même partage que la caisse (issue #72).
+      partOeuvre,
     };
   }
-  return { eur: volume * WOOD_PRICE_EUR_M3, qualite: "chauffage" };
+  return { eur: volume * WOOD_PRICE_EUR_M3, qualite: "chauffage", partOeuvre: 0 };
 }
 
 /** Temps d'abattage + façonnage d'un arbre, h *(à calibrer)*. */
@@ -748,7 +751,7 @@ function applyCouper(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
-  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC } = state.carbon;
+  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC } = state.carbon;
   let volumeVenduAnneeM3 = state.economy.volumeVenduAnneeM3;
   let stockBrf = state.stockBrf;
   const coupes: number[] = [];
@@ -908,9 +911,16 @@ function applyCouper(
         treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1) * marche;
       }
       if (vente.qualite === "oeuvre" && !brule && !dejaEnBoisMort) {
-        // Bois d'œuvre : le carbone reste piégé dans le produit (charpente,
-        // meuble) pour des décennies — ce n'est pas une émission (§12).
-        oeuvreCumKgC += emporteKgC;
+        // Le carbone se partage comme la CAISSE, et c'est nouveau : seule la
+        // bille élaguée part en scierie et reste piégée dans le produit ; le
+        // houppier part en bûches et brûle chez le client. Avant l'issue #72,
+        // le prix comptait ce partage et le carbone non — un arbre classé
+        // œuvre envoyait TOUT son carbone au stock de produits, houppier
+        // compris, alors même que la vente le facturait en chauffage.
+        const enScierie = emporteKgC * vente.partOeuvre;
+        oeuvreCumKgC += enScierie;
+        oeuvreStockKgC += enScierie;
+        exportedEnergyCumKgC += emporteKgC - enScierie;
       } else {
         // Bois de chauffage : brûlé chez le client → émis immédiatement.
         exportedEnergyCumKgC += emporteKgC;
@@ -983,7 +993,13 @@ function applyCouper(
       trees,
       soil: { ...state.soil, litterNG, litterCG, litterK, boisAuSolCG, boisEnTraversPart },
       stockBrf,
-      carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC },
+      carbon: {
+        ...state.carbon,
+        deadWoodKgC,
+        exportedEnergyCumKgC,
+        oeuvreCumKgC,
+        oeuvreStockKgC,
+      },
       economy: {
         ...state.economy,
         treasuryEur,
