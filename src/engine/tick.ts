@@ -183,6 +183,7 @@ import {
 import {
   attraitCellule,
   effortSemaine,
+  HERBE_ARRACHEE,
   LITIERE_ENFOUIE,
   partGlandeeRestante,
   retournee,
@@ -1842,8 +1843,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (const tree of nextTrees) {
       if (!tree.alive) continue;
       const espece = getEspece(tree.especeId);
-      const mode = espece.regeneration.dissemination;
-      if (mode !== "geai" && mode !== "gravite") continue;
+      // `geai` seul : c'est le marqueur des GROSSES graines nutritives, celles
+      // qu'un geai cache et qu'un sanglier mange (regeneration.ts dit pourquoi
+      // `gravite` ne convient pas).
+      if (espece.regeneration.dissemination !== "geai") continue;
       if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
       const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
       forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
@@ -1881,7 +1884,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       tassement[i] = (tassement[i] ?? 0) * (1 - TASSEMENT_CASSE);
       // Et le tapis est déchiré : c'est ce qui met la terre à nu, donc ce qui
       // la fait partir — et ce qui ouvre le lit des petites graines.
-      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 1 - LITIERE_ENFOUIE);
+      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 1 - HERBE_ARRACHEE);
     }
   }
   // Ce que le sanglier a retourné depuis un an : la régénération le lit à la

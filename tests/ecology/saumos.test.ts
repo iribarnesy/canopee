@@ -107,6 +107,25 @@ function saumos(): Station {
     // Tout le bassin subit le même sort : c'est un incendie de MASSIF.
     partBassinSemblable: 1,
     ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),
+    // PAS DE SANGLIER, et c'est un choix d'expérience, pas un contournement.
+    //
+    // Cet essai isole la COMPOSITION — comme il isole déjà le voisinage
+    // semencier. Or le sanglier l'écrase : il mange la châtaigne (mode `geai`),
+    // donc le mélange feuillu ne se ressème pas, donc il ne referme pas le
+    // couvert, donc il n'étouffe plus la lande qui porte le feu. Mesuré sur les
+    // mêmes seize graines :
+    //
+    //   sans sanglier      : pin 821 m², feuillus 525 m² → les feuillus
+    //                        atténuent d'un bon tiers ;
+    //   densité du paysage : pin 720 m², feuillus 747 m² → plus aucun écart.
+    //
+    // **Le sanglier annule l'atténuation qu'apporte la plantation feuillue.**
+    // C'est un résultat, pas un bruit — il est écrit dans `docs/realisme.md` —
+    // et c'est exactement ce que ce fichier annonçait déjà : « l'atténuation
+    // par les feuillus reposait sur leur capacité à fermer le couvert vite, et
+    // tout ce qui les ralentit la défait ». On le met de côté ICI pour que
+    // l'essai continue de mesurer ce pour quoi il a été écrit.
+    sanglierParHa: 0,
   };
 }
 

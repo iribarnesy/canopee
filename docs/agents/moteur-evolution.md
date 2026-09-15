@@ -76,6 +76,30 @@ toujours les graines lourdes (`geai`, `gravite`) des légères. Aucun trait neuf
 aucune espèce nommée, et la tension geai ↔ sanglier sur le chêne tombe toute
 seule. Le bon découpage se reconnaît à ça.
 
+**Un trait qui porte le bon nom et ne dit pas la bonne chose.** Le sanglier
+mangeait d'abord tout ce qui se disséminait par `geai` OU `gravite`, lu comme
+« graine lourde ». Or `gravite` dit seulement que la graine tombe sous sa mère :
+l'ajonc et le genêt y sont, avec leurs graines de deux millimètres. Le sanglier
+s'est mis à manger de l'ajonc, les landes ont cessé de se ressemer, et un test
+d'effet nurse est tombé — un pin abrité passait sous un pin nu. C'est la
+deuxième fois de la session, après `windShelterAt` : **relire la DÉFINITION de
+ce qu'on réutilise, jamais son nom.**
+
+**Une normalisation au prorata concentre sans limite si on ne la plafonne pas.**
+La part de parcelle retournée par an restait exacte — c'est une somme — mais sur
+une lande sèche où deux cellules sur cent retiennent l'humidité, ces deux-là
+étaient retournées 2,6 fois par an, indéfiniment : la strate herbacée n'y
+repoussait plus et la callune disparaissait. Six conclusions écologiques sont
+tombées ensemble. **Quand un effort se redistribue au prorata d'un attrait,
+vérifier ce que devient la cellule la plus attirante**, pas seulement le total.
+
+**Un anchor tiré de populations INVASIVES n'est pas un anchor pour la France.**
+Les 7 à 11 %/an de sol retourné venaient de porcs féraux de Californie et
+d'Argentine — sans prédateurs, sans chasse, à des densités sans rapport. La
+prairie européenne donne 0,2 à 0,7 %. Deux pour cent situe un massif français
+entre les deux. Même famille d'erreur que le seuil d'ancrage calé sur une seule
+station : **vérifier d'où vient la population mesurée, pas seulement le milieu.**
+
 **Le zéro dur, pour la TROISIÈME fois.** La consommation de la glandée
 soustrayait linéairement : passé 1,8 fois la densité de référence il ne restait
 exactement rien, et la régénération du chêne s'éteignait d'un coup. Avant, c'était

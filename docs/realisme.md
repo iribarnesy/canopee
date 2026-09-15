@@ -883,6 +883,29 @@ plante les chênes, le sanglier les mange**, et pendant ce temps il prépare le 
 du bouleau. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à
 densité ordinaire, 22 sous forte densité.
 
+### Le sanglier annule l'atténuation qu'apporte la plantation feuillue
+
+C'est le résultat le plus fort du lot, et personne ne l'a demandé. Le cas
+d'étude de Saumos compare, sur seize graines et vingt-six ans, une pinède et un
+mélange bouleau-châtaignier sur la même lande. Mesuré :
+
+| | pin | feuillus | écart |
+|---|---|---|---|
+| sans sanglier | 821 m² | 525 m² | **296 m²** |
+| à la densité du paysage | 720 m² | 747 m² | **27 m²** |
+
+Sans sanglier, les feuillus brûlent un bon tiers de moins. Avec, **l'avantage
+disparaît entièrement**. La chaîne est celle que le fichier d'essai annonçait
+depuis longtemps sans pouvoir la refermer : l'atténuation feuillue repose sur la
+capacité à FERMER LE COUVERT vite, ce qui étouffe la lande qui porte le feu ; le
+châtaignier est en `geai`, donc le sanglier mange sa châtaigne, donc le mélange
+ne se ressème pas, donc il ne referme pas, donc il n'étouffe plus rien.
+
+Un gestionnaire qui plante des feuillus pour réduire le risque d'incendie et qui
+ne compte pas ses sangliers plante donc pour rien. L'essai de Saumos met
+maintenant le sanglier de côté pour continuer de mesurer la composition seule ;
+l'interaction, elle, est ici.
+
 ### Ce qu'on n'attend pas d'un dégât
 
 Un boutis est un **enfouissement**, pas une destruction. La litière passe au pool
@@ -891,6 +914,29 @@ sangliers. La structure y gagne aussi — la croûte est cassée, la porosité
 revient dans les dix premiers centimètres, ce qui est d'ailleurs la raison pour
 laquelle les sites de germination s'ouvrent. Ce que le sanglier coûte est
 ailleurs : la terre est à nu, donc elle part.
+
+### Un trait qui porte le bon nom et ne dit pas la bonne chose
+
+Le premier jet faisait manger au sanglier tout ce dont le mode de dissémination
+valait `geai` OU `gravite`, en croyant lire « graine lourde ». Mais `gravite` ne
+dit pas le poids : il dit que la graine **tombe sous sa mère**, ce qui range
+l'ajonc et le genêt — graines dures de deux millimètres — à côté de la faîne.
+
+Le sanglier s'est donc mis à manger des graines d'ajonc, les landes ont cessé de
+se ressemer, et l'effet nurse est tombé : un pin abrité par six ajoncs passait
+de 1,38 m à 0,92 m en huit ans, sous celui d'un pin nu. Un test d'abri au vent,
+cassé par un sanglier mangeant ce qu'aucun sanglier ne mange.
+
+`geai` seul est le bon marqueur, et ce n'est pas un hasard : un geai ne cache que
+de grosses graines nutritives, si bien que l'atlas le pose exactement sur les
+chênes, le chêne-liège, le châtaignier et le noisetier — les glands et les
+châtaignes que l'issue nommait. **Ce que ça laisse de côté** : la faîne du hêtre,
+classée `gravite`, est bien mangée. La rattraper proprement demanderait un trait
+de TAILLE DE GRAINE dans l'atlas.
+
+C'est la deuxième fois de la session qu'une réutilisation échoue ainsi — après
+`windShelterAt`, qui calculait bien un abri, mais celui d'une haie pour un jeune
+plant. **Relire la DÉFINITION de ce qu'on réutilise, jamais son nom.**
 
 ### Le couperet évité, pour la troisième fois
 

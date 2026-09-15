@@ -54,11 +54,18 @@ import { rngFloat, rngStateFromSeed } from "./rng";
  *  - **en forêt, c'est dix fois plus** : 7,4 %/an pour les porcs féraux de
  *    Californie, 10,9 % puis 8,0 % sur deux années dans le Monte argentin.
  *
- * Cinq pour cent place une parcelle boisée dans le bas de la fourchette
- * forestière, ce qui convient à une densité française ordinaire plutôt qu'à une
- * pullulation *(à calibrer)*.
+ * **Et les deux chiffres forestiers sont des populations INVASIVES** : les porcs
+ * féraux de Californie et du Monte argentin n'ont pas de prédateurs, pas de
+ * chasse réglée, et des densités sans rapport avec un massif français. Les
+ * prendre pour référence était une erreur d'échantillon, de la même famille que
+ * celle du lot des tempêtes (un seuil calé sur des arbres d'une seule station).
+ * Deux pour cent situe une parcelle boisée française entre la prairie
+ * européenne et la forêt envahie, ce qui est sa place *(à calibrer)*.
+ *
+ * Le premier jet retenait 5 %, et six conclusions écologiques sont tombées avec
+ * — dont la callune de la lande, qui disparaissait entièrement.
  */
-export const PART_RETOURNEE_PAR_AN = 0.05;
+export const PART_RETOURNEE_PAR_AN = 0.02;
 
 /**
  * Densité de sangliers à laquelle correspond la part ci-dessus, individus/ha.
@@ -139,7 +146,7 @@ export function retournee(
   attraitMoyen: number,
 ): boolean {
   if (attrait <= 0 || effortSemaine <= 0 || attraitMoyen <= 0) return false;
-  const p = Math.min(1, (effortSemaine * attrait) / attraitMoyen);
+  const p = Math.min(PLAFOND_PAR_SEMAINE, (effortSemaine * attrait) / attraitMoyen);
   return rngFloat(rngStateFromSeed(graineDeBoutis(cellule, semaine))).value < p;
 }
 
@@ -194,8 +201,36 @@ export function partGlandeeRestante(sanglierParHa: number): number {
   return Math.exp(-pression);
 }
 
+/**
+ * Ce qu'une même cellule peut être retournée, au plus, en une semaine.
+ *
+ * **Sans ce plafond, la répartition au prorata de l'attrait concentrait sans
+ * limite.** La part de parcelle retournée par an restait juste — c'est une
+ * somme —, mais sur une lande sèche où deux cellules sur cent retiennent
+ * l'humidité, ces deux-là étaient retournées 2,6 fois par an, indéfiniment. La
+ * strate herbacée n'y repoussait jamais et la callune disparaissait : mesuré,
+ * et c'est ce qui a fait tomber six conclusions écologiques d'un coup.
+ *
+ * Une fois l'an au plus, donc, et c'est physique : un boutis épuise son site.
+ * Le sanglier revient l'année suivante, pas le mois suivant. Sur un sol partout
+ * attirant le plafond ne mord pas — il ne fait que refuser la concentration
+ * absurde.
+ */
+export const PLAFOND_PAR_SEMAINE = 1 / 52;
+
 /** Part de la litière d'une cellule que le boutis enfouit. */
 export const LITIERE_ENFOUIE = 0.6;
+
+/**
+ * Part du feuillage herbacé qu'un boutis emporte.
+ *
+ * Distincte de l'enfouissement de litière, dont elle partageait la constante au
+ * premier jet — deux grandeurs sans rapport qui se trouvaient valoir pareil, ce
+ * qui est le meilleur moyen de les faire diverger un jour sans s'en rendre
+ * compte. Un boutis d'un mètre carré n'emporte pas tout le tapis : il en laisse
+ * les bords *(à calibrer)*.
+ */
+export const HERBE_ARRACHEE = 0.5;
 
 /**
  * Ce qu'un boutis retire au tassement : le sanglier AMEUBLIT.

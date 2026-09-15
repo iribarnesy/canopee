@@ -414,9 +414,26 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     if (!tree.alive) continue;
     const espece = getEspece(tree.especeId);
     if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
-    const mode = espece.regeneration.dissemination;
-    const lourde = mode === "geai" || mode === "gravite";
-    const taux = espece.regeneration.semisParAn * (lourde ? restant : litOuvert);
+    // `geai` et RIEN D'AUTRE, et le détour vaut d'être écrit. Le premier jet
+    // prenait aussi `gravite`, en croyant lire « graine lourde ». Mais ce mode
+    // ne dit pas le poids : il dit que la graine TOMBE SOUS SA MÈRE, ce qui
+    // range l'ajonc et le genêt — graines dures de deux millimètres, dont
+    // aucun sanglier ne se nourrit — à côté de la faîne. Résultat mesuré : les
+    // ajoncs d'une lande ne se ressemaient plus, la nurse qu'ils forment ne se
+    // refermait plus, et un pin abrité poussait moins qu'un pin nu (1,38 m →
+    // 0,92 m). L'effet nurse tombait à cause d'un sanglier mangeant des
+    // graines d'ajonc.
+    //
+    // `geai` est le bon marqueur, et il ne doit rien au hasard : un geai ne
+    // cache que de GROSSES graines nutritives, donc l'atlas le pose exactement
+    // sur les chênes, le chêne-liège, le châtaignier et le noisetier — les
+    // glands et les châtaignes que l'issue nommait. **Ce que ça laisse de
+    // côté** : la faîne du hêtre, classée `gravite`, est bien mangée par les
+    // sangliers. La corriger proprement demanderait un trait de TAILLE DE
+    // GRAINE dans l'atlas, ce qui dépasse ce lot *(à instruire)*.
+    const taux =
+      espece.regeneration.semisParAn *
+      (espece.regeneration.dissemination === "geai" ? restant : litOuvert);
     const n = tentatives(taux);
     for (let k = 0; k < n; k++) tryEstablish(tree.especeId, tree);
   }
