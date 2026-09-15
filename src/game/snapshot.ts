@@ -188,6 +188,9 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
       state.trees,
       state.carbon.deadWoodKgC + somme(state.soil.boisAuSolCG) / 1000,
       areaHa,
+      // Le côté de la parcelle : c'est lui qui permet de voir la MOSAÏQUE et
+      // l'étagement local, donc de récompenser la disposition (biodiversite.ts).
+      state.station.coteM,
     ),
     fluxes: e.fluxes,
     // Le calendrier foliaire se RECALCULE à l'identique : mêmes entrées que

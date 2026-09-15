@@ -74,10 +74,10 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | G. Faune et santé | 10 | 1 | 0 | 11 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 7 | 2 | 0 | 9 |
-| J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **114** | **26** | **4** | **144** |
+| J. Biodiversité et structure | 7 | 1 | 0 | 8 |
+| **Total** | **116** | **25** | **4** | **145** |
 
-**Score de réalisme : 114 pleins + 26 partiels sur 144 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 116 pleins + 25 partiels sur 145 → 89 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -129,7 +129,8 @@ la fenêtre de printemps) → 88 % (le vent devient un agent CASSANT : tempête,
 chablis, et six critères là où il n'y en avait aucun) → 88 % (le pH cesse
 d'être un état : il se lit sur un pool de bases que la litière fait pencher)
 → 88 % (le bois d'œuvre cesse d'être un puits éternel)
-→ **88 % (le sanglier : un herbivore qui mange la régénération ET la favorise)**.*
+→ 88 % (le sanglier : un herbivore qui mange la régénération ET la favorise)
+→ **89 % (la disposition paie : lisière, cœur, étagement local)**.*
 
 *Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
 hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -336,7 +337,8 @@ inventaire.
 | J2 | Le bois mort est un habitat, pas un déchet | ✅ | pool `deadWoodKgC` intégré à l'indice (ch4-A) |
 | J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | ✅ | gros sujets, trognes recoupées ET chandelles (`biodiversite.ts` ; `trogne.test.ts`, `chandelles.test.ts`) |
 | J8 | Un arbre mort reste debout des années : c'est LE bois mort qui compte pour la faune | ✅ | `dureeChandelleSemaines` (densité du bois × 15 ans) ; `chandelles.test.ts` |
-| J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | 🟡 | strates et sempervirence comptées ; pas de lisières ni de structure horizontale |
+| J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | ✅ | strates, sempervirence, et depuis l'issue #75 l'ÉTAGEMENT LOCAL (`heterogeneiteVerticale`) — l'écart-type des hauteurs dans un voisinage de 3 m, qui distingue enfin une forêt étagée d'un damier de blocs monostrates que le décompte de strates notait pareil : 0,00 contre 0,68 |
+| J9 | L'ARRANGEMENT compte autant que la composition : lisière, cœur, mosaïque | ✅ | `structureHorizontale` ; `mosaique.test.ts` — à espèces, nombre et âge identiques, une mosaïque de bosquets note mieux qu'un bloc et qu'une plantation régulière (0,79 / 0,23 / 0,00). **Et le mitage ne paie pas** : des houppiers disjoints donnent 94 % de lisière et zéro cœur, donc zéro. La courbe n'est pas ajustée — c'est le PRODUIT lisière × cœur, qui tombe de l'énoncé « il faut les deux » |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
 | J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C). `indiceBiodiversite` ne compte que les floraisons LIGNEUSES ; la strate basse, qui est justement ce qui nourrit en soudure, n'y entre pas |
 
@@ -852,6 +854,59 @@ Trois, et pas trente, parce que la strate tourne sur toutes les cellules toutes
 les semaines. **Coût mesuré** : 6,8 → 7,6 ms par semaine sur une hêtraie 30 × 30
 de quarante ans, soit **+11 %**, machine au repos, médiane de cinq passes. C'est le prix à connaître
 avant d'ajouter la quatrième.
+
+## La mosaïque : un sommet de courbe qu'on n'a pas eu à choisir
+
+L'indice de biodiversité comptait ce qu'il Y A — les espèces, leur équilibre,
+les strates, le bois mort, les gros sujets — et jamais COMMENT C'EST ARRANGÉ.
+Deux parcelles portant les mêmes espèces aux mêmes hauteurs recevaient la même
+note qu'elles forment un bloc plein ou une mosaïque de bosquets.
+
+### La difficulté que l'issue pose et laisse ouverte
+
+« Ne pas récompenser le mitage. Une lisière a de la valeur, un peuplement qui
+n'est QUE de la lisière n'en a pas — les espèces de cœur de massif existent
+aussi. La forme de la courbe est le vrai sujet de ce lot. »
+
+Il fallait donc une courbe qui monte puis redescend. Tailler une cloche aurait
+demandé d'en choisir le sommet à la main — un chiffre de plus sans ancre. Le
+**produit** de deux parts mesurées l'évite :
+
+- la part de cellules en LISIÈRE — voisinage contrasté entre couvert et ouvert ;
+- la part de cellules de CŒUR — voisinage entièrement couvert.
+
+Il vaut zéro quand il n'y a que de la lisière, zéro quand il n'y a que du bloc,
+et il est maximal quand les deux s'équilibrent. **Le sommet n'est pas choisi, il
+tombe** de l'énoncé « il faut les deux », qui est ce que dit l'écologie du
+paysage.
+
+Mesuré sur trente-six chênes de 14 m, même espèce, même nombre, même âge :
+
+| disposition | lisière | cœur | mosaïque |
+|---|---|---|---|
+| quatre bosquets | 0,72 | 0,28 | **0,79** |
+| bloc serré | 0,23 | 0,25 | 0,23 |
+| plantation régulière pleine | 0,00 | 1,00 | **0,00** |
+| mitage (houppiers disjoints) | 0,94 | 0,00 | **0,00** |
+
+Les deux extrêmes tombent à zéro, et le mitage aussi franchement que le bloc.
+
+### Ce que le décompte des strates confondait
+
+L'indice comptait les étages à l'échelle de la PARCELLE. Il notait donc
+identiquement une forêt où chaque mètre carré porte trois strates et un damier
+où un tiers porte des arbres, un tiers des arbustes, un tiers de l'herbe.
+L'écart-type local des hauteurs les sépare : **0,00 pour un peuplement équienne,
+0,68 pour trois hauteurs entremêlées**. Les sept points que cette grandeur prend
+au décompte de strates ne sont pas un arbitrage de place — c'est `etagement` qui
+mesure ce que `strates` croyait mesurer.
+
+### Ce que l'issue disait de vérifier, et qui était faux
+
+Elle demandait de regarder J3 et B9 avant d'écrire, « qui voisinent ». Vérifié :
+**J3 ne parle pas de mosaïque** mais des gros arbres et des cavités, et B9 parle
+de la LUMIÈRE latérale d'une bordure, pas de son habitat. Aucun recouvrement —
+la structure horizontale était bien un trou, et c'est J9 qui le comble.
 
 ## Le sanglier : le seul herbivore qui mange la régénération ET la favorise
 
