@@ -61,7 +61,55 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la dérive du pH, #71)
+## Ce que le dernier lot a appris (le sanglier, #73)
+
+**Refuser la généralisation que l'issue demande, quand elle ne décrirait rien.**
+L'issue proposait d'élargir `gibier.ts` pour y loger le sanglier. Ce module est
+bâti sur le broutage ; un sanglier ne broute pas. Un module à part, et le PATRON
+partagé plutôt que le code : densité de contexte venue du paysage, répartition
+au prorata de ce que la cellule offre, comptabilité qui tient. **Une abstraction
+qui couvre deux cas en n'en décrivant aucun coûte plus cher que deux modules.**
+
+**Chercher le trait qui existe déjà avant d'en ajouter un.** Les deux effets du
+sanglier se lisent sur `regeneration.dissemination`, qui distinguait depuis
+toujours les graines lourdes (`geai`, `gravite`) des légères. Aucun trait neuf,
+aucune espèce nommée, et la tension geai ↔ sanglier sur le chêne tombe toute
+seule. Le bon découpage se reconnaît à ça.
+
+**Un trait qui porte le bon nom et ne dit pas la bonne chose.** Le sanglier
+mangeait d'abord tout ce qui se disséminait par `geai` OU `gravite`, lu comme
+« graine lourde ». Or `gravite` dit seulement que la graine tombe sous sa mère :
+l'ajonc et le genêt y sont, avec leurs graines de deux millimètres. Le sanglier
+s'est mis à manger de l'ajonc, les landes ont cessé de se ressemer, et un test
+d'effet nurse est tombé — un pin abrité passait sous un pin nu. C'est la
+deuxième fois de la session, après `windShelterAt` : **relire la DÉFINITION de
+ce qu'on réutilise, jamais son nom.**
+
+**Une normalisation au prorata concentre sans limite si on ne la plafonne pas.**
+La part de parcelle retournée par an restait exacte — c'est une somme — mais sur
+une lande sèche où deux cellules sur cent retiennent l'humidité, ces deux-là
+étaient retournées 2,6 fois par an, indéfiniment : la strate herbacée n'y
+repoussait plus et la callune disparaissait. Six conclusions écologiques sont
+tombées ensemble. **Quand un effort se redistribue au prorata d'un attrait,
+vérifier ce que devient la cellule la plus attirante**, pas seulement le total.
+
+**Un anchor tiré de populations INVASIVES n'est pas un anchor pour la France.**
+Les 7 à 11 %/an de sol retourné venaient de porcs féraux de Californie et
+d'Argentine — sans prédateurs, sans chasse, à des densités sans rapport. La
+prairie européenne donne 0,2 à 0,7 %. Deux pour cent situe un massif français
+entre les deux. Même famille d'erreur que le seuil d'ancrage calé sur une seule
+station : **vérifier d'où vient la population mesurée, pas seulement le milieu.**
+
+**Le zéro dur, pour la TROISIÈME fois.** La consommation de la glandée
+soustrayait linéairement : passé 1,8 fois la densité de référence il ne restait
+exactement rien, et la régénération du chêne s'éteignait d'un coup. Avant, c'était
+l'anémone à pH 4,0, puis le chêne-liège à pH 4,50 — dont le facteur de gamme vaut
+zéro PILE à la borne. **Une grandeur qui peut atteindre un zéro dur bascule d'un
+extrême à l'autre pour un centième de rien.** Préférer une forme exponentielle,
+qui dit « presque plus rien » sans dire « plus jamais », et la chercher
+systématiquement dans tout nouveau mécanisme.
+
+## Ce que l'avant-dernier lot a appris (la dérive du pH, #71)
 
 **Remplacer un ÉTAT par une LECTURE, quand c'en est une.** Le pH était une
 variable libre ; il est devenu le taux de saturation d'un pool de bases. Le
@@ -95,7 +143,7 @@ une grandeur qui se mesure, et dont toute la chaîne causale a été mesurée
 (Reich et al. 2005, jardin commun de quatorze essences). **Une heure de
 littérature avant d'écrire a changé le découpage, pas seulement les chiffres.**
 
-## Ce que l'avant-dernier lot a appris (les tempêtes, #55)
+## Ce qu'un lot plus ancien a appris (les tempêtes, #55)
 
 **Réutiliser une fonction qui porte le bon NOM et répond à une autre question.**
 `windShelterAt` calculait déjà un abri au vent, et le premier jet s'en est servi
