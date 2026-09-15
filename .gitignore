@@ -12,3 +12,7 @@ l0-mesures/
 # Scènes de l'aperçu : un mégaoctet par instantané, régénérables par
 # `npm run apercu:scene`.
 apercu/scenes/
+
+# Outils de capture jetables, propres à une session.
+.apercu.mjs
+.p*.mts

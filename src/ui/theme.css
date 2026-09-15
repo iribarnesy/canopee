@@ -241,7 +241,11 @@ select {
    la valeur à droite. Bien plus lisible qu'une coulée de texte à émojis. */
 .stats {
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* `minmax(0, 1fr)` et non `1fr` : une piste `1fr` a une largeur minimale
+     égale à son contenu, si bien qu'une ligne insécable — la liste des
+     essences, dont chaque nom est en `nowrap` — élargissait la grille au-delà
+     du panneau et débordait par la droite, texte coupé au bord de la page. */
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 3px 12px;
   margin: 0;
   font-size: 12.5px;

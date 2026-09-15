@@ -55,6 +55,7 @@ import type {
 } from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
+import { decorDesBordures } from "./parcelle";
 import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 
@@ -714,6 +715,11 @@ function stationInfo(): StationInfo {
     // Le relief, celui-là même qui a servi à placer l'eau libre. Il ne change
     // pas d'une semaine à l'autre : il part une fois, avec la station.
     altitudesM: altitudes,
+    // Et ce qu'il y a AUTOUR, réduit à ce que le décor en dessine. Même
+    // raison : les bordures sont choisies au départ et ne bougent plus. La vue
+    // ne peut pas les retrouver seule — une partie reprise d'une sauvegarde
+    // n'a jamais vu passer les réglages.
+    bordures: decorDesBordures(station.bordures),
     id: sc.station.id,
     nom: sc.station.nom,
     coteM: sc.station.coteM,
