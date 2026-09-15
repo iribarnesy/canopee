@@ -125,6 +125,12 @@ export interface Station {
    * dessus. L'ignorer rendait nos stations pauvres invivables.
    */
   depositionNKgHaAn: number;
+  /**
+   * Densité de sangliers du paysage, individus/ha (`sanglier.ts`). Donnée de
+   * CONTEXTE comme celle des cervidés, et pour une raison plus forte encore :
+   * le domaine vital d'un sanglier fait 500 à 2000 hectares.
+   */
+  sanglierParHa: number;
   /** phosphore assimilable au départ, g/m² (dérivé du profil) */
   phosphoreInitialGM2: number;
   /** potassium échangeable au départ, g/m² (dérivé du profil) */

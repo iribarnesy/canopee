@@ -65,6 +65,26 @@ export function gibierParHa(p: Paysage): number {
 }
 
 /**
+ * Densité de sangliers, individus/ha (`sanglier.ts`).
+ *
+ * Elle ne suit pas la même logique que celle des cervidés, et c'est tout
+ * l'intérêt d'en faire une fonction à part : le sanglier a besoin de COUVERT
+ * pour se remiser, comme le chevreuil, mais aussi de NOURRITURE cultivée — le
+ * maïs est la raison de sa multiplication par six en trente ans. Un massif
+ * bordé de champs en porte donc bien plus qu'un massif isolé, et un paysage
+ * urbain le dérange moins qu'on ne croit : il y vient la nuit.
+ *
+ * Les densités françaises se comptent en unités par cent hectares : deux à dix
+ * en boisement ordinaire *(à confirmer)*.
+ */
+export function sanglierParHa(p: Paysage): number {
+  const remise = 0.15 + 0.85 * p.partBoisee;
+  const garde_manger = 1 + 1.2 * p.partCultivee;
+  const derangement = 1 - 0.5 * p.partUrbaine;
+  return Math.max(0, 0.05 * remise * garde_manger * derangement);
+}
+
+/**
  * Dépôts atmosphériques d'azote, kg/ha/an. L'ammoniac vient de l'élevage et
  * des cultures, les oxydes d'azote de la circulation : une forêt de montagne
  * en reçoit trois fois moins qu'une parcelle coincée entre une nationale et un
@@ -335,6 +355,11 @@ export function gibierDesBordures(b: Bordures): number {
   return c.reduce((somme, p) => somme + gibierParHa(p), 0) / c.length;
 }
 
+export function sanglierDesBordures(b: Bordures): number {
+  const c = cotes(b);
+  return c.reduce((somme, p) => somme + sanglierParHa(p), 0) / c.length;
+}
+
 export function depositionDesBordures(b: Bordures): number {
   const c = cotes(b);
   return c.reduce((somme, p) => somme + depositionNKgHaAn(p), 0) / c.length;
@@ -387,6 +412,8 @@ export function entourageDeLaStation(
 ): {
   voisinage: { especeId: string; semisParAn: number }[];
   gibierParHa: number;
+  /** densité de sangliers du paysage, individus/ha (sanglier.ts) */
+  sanglierParHa: number;
   depositionNKgHaAn: number;
   ventExposition: number;
 } {
@@ -396,6 +423,7 @@ export function entourageDeLaStation(
   return {
     voisinage: voisinageDesBordures(bordures, tenable, substituts),
     gibierParHa: gibierDesBordures(bordures),
+    sanglierParHa: sanglierDesBordures(bordures),
     depositionNKgHaAn: depositionDesBordures(bordures),
     ventExposition: ventDesBordures(bordures),
   };

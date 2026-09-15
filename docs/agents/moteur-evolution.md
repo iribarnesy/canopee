@@ -61,7 +61,31 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la dérive du pH, #71)
+## Ce que le dernier lot a appris (le sanglier, #73)
+
+**Refuser la généralisation que l'issue demande, quand elle ne décrirait rien.**
+L'issue proposait d'élargir `gibier.ts` pour y loger le sanglier. Ce module est
+bâti sur le broutage ; un sanglier ne broute pas. Un module à part, et le PATRON
+partagé plutôt que le code : densité de contexte venue du paysage, répartition
+au prorata de ce que la cellule offre, comptabilité qui tient. **Une abstraction
+qui couvre deux cas en n'en décrivant aucun coûte plus cher que deux modules.**
+
+**Chercher le trait qui existe déjà avant d'en ajouter un.** Les deux effets du
+sanglier se lisent sur `regeneration.dissemination`, qui distinguait depuis
+toujours les graines lourdes (`geai`, `gravite`) des légères. Aucun trait neuf,
+aucune espèce nommée, et la tension geai ↔ sanglier sur le chêne tombe toute
+seule. Le bon découpage se reconnaît à ça.
+
+**Le zéro dur, pour la TROISIÈME fois.** La consommation de la glandée
+soustrayait linéairement : passé 1,8 fois la densité de référence il ne restait
+exactement rien, et la régénération du chêne s'éteignait d'un coup. Avant, c'était
+l'anémone à pH 4,0, puis le chêne-liège à pH 4,50 — dont le facteur de gamme vaut
+zéro PILE à la borne. **Une grandeur qui peut atteindre un zéro dur bascule d'un
+extrême à l'autre pour un centième de rien.** Préférer une forme exponentielle,
+qui dit « presque plus rien » sans dire « plus jamais », et la chercher
+systématiquement dans tout nouveau mécanisme.
+
+## Ce que l'avant-dernier lot a appris (la dérive du pH, #71)
 
 **Remplacer un ÉTAT par une LECTURE, quand c'en est une.** Le pH était une
 variable libre ; il est devenu le taux de saturation d'un pool de bases. Le
@@ -95,7 +119,7 @@ une grandeur qui se mesure, et dont toute la chaîne causale a été mesurée
 (Reich et al. 2005, jardin commun de quatorze essences). **Une heure de
 littérature avant d'écrire a changé le découpage, pas seulement les chiffres.**
 
-## Ce que l'avant-dernier lot a appris (les tempêtes, #55)
+## Ce qu'un lot plus ancien a appris (les tempêtes, #55)
 
 **Réutiliser une fonction qui porte le bon NOM et répond à une autre question.**
 `windShelterAt` calculait déjà un abri au vent, et le premier jet s'en est servi

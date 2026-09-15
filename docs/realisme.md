@@ -71,13 +71,13 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 8 | 4 | 0 | 12 |
 | F. Dynamique des peuplements | 11 | 5 | 3 | 19 |
-| G. Faune et santé | 8 | 1 | 0 | 9 |
+| G. Faune et santé | 10 | 1 | 0 | 11 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 7 | 2 | 0 | 9 |
 | J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **112** | **26** | **4** | **142** |
+| **Total** | **114** | **26** | **4** | **144** |
 
-**Score de réalisme : 112 pleins + 26 partiels sur 142 → 88 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 114 pleins + 26 partiels sur 144 → 88 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -128,7 +128,8 @@ production) → 76 % (structure du sol : le tassement et sa réparation)
 la fenêtre de printemps) → 88 % (le vent devient un agent CASSANT : tempête,
 chablis, et six critères là où il n'y en avait aucun) → 88 % (le pH cesse
 d'être un état : il se lit sur un pool de bases que la litière fait pencher)
-→ **88 % (le bois d'œuvre cesse d'être un puits éternel)**.*
+→ 88 % (le bois d'œuvre cesse d'être un puits éternel)
+→ **88 % (le sanglier : un herbivore qui mange la régénération ET la favorise)**.*
 
 *Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
 hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -280,6 +281,8 @@ maladie-là, pas une preuve de santé.*
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; aulnaie pure décimée, mélange épargné |
 | G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison. Les espèces herbacées existent maintenant (`herbacees.ts`) mais aucune ne déclare de floraison : la fiche s'arrête au calendrier FOLIAIRE |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
+| G10 | Le sanglier retourne le sol et mange la glandée — un herbivore qui FAVORISE aussi la régénération | ✅ | `sanglier.ts` ; `sanglier.test.ts` — 5 % de la parcelle retournée par an à densité de référence (relevés : 0,2-0,7 %/an en prairie, 7-11 %/an en forêt), en automne et en hiver, sur les cellules qui offrent de la glandée, du couvert et un sol humide. **Deux effets de signe opposé, et aucun n'est écrit par espèce** : il mange ce qui tombe et reste (les graines dont le mode de dissémination est `geai` ou `gravite`), il ouvre un lit de germination pour ce qu'apporte le vent. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à densité ordinaire, 22 sous forte densité — difficile, jamais impossible |
+| G11 | Un boutis est un ENFOUISSEMENT, pas une destruction : la litière passe au pool lent | ✅ | le carbone enfoui rejoint l'humus et l'azote le pool minéral ; le stock d'humus MONTE avec la densité de sangliers. Et la structure y gagne — un boutis casse la croûte, ce qu'on n'attend pas d'un dégât. Ce qu'il coûte est ailleurs : la terre est à nu, donc elle part |
 | G6 | Les maladies datées frappent (chalarose du frêne) | ✅ | `maladies.ts` ; `maladies.test.ts` — mieux qu'une date : une année d'arrivée historique, puis une pression qui suit la densité d'hôtes et l'humidité. Une frênaie pure perd un tiers de ses tiges en trente ans, le même nombre de frênes en mélange s'en tire deux fois mieux |
 
 ## H. Gestion, économie, travail
@@ -849,6 +852,58 @@ Trois, et pas trente, parce que la strate tourne sur toutes les cellules toutes
 les semaines. **Coût mesuré** : 6,8 → 7,6 ms par semaine sur une hêtraie 30 × 30
 de quarante ans, soit **+11 %**, machine au repos, médiane de cinq passes. C'est le prix à connaître
 avant d'ajouter la quatrième.
+
+## Le sanglier : le seul herbivore qui mange la régénération ET la favorise
+
+Le chevreuil était complet depuis longtemps. Le sanglier manquait, et l'issue
+suggérait de généraliser l'architecture du gibier pour l'y loger. **Après
+lecture, non.** `gibier.ts` est bâti de bout en bout sur le BROUTAGE — hauteur
+de dent, fourrage par cellule, appétence, longueur de pousse mangée — et un
+sanglier ne broute pas. Généraliser aurait produit une abstraction qui ne décrit
+ni l'un ni l'autre. Ce qui se partage n'est pas le code mais le PATRON : une
+densité de contexte imposée par le paysage (domaine vital de 500 à 2000 ha selon
+l'OFB — la parcelle n'a pas de population, elle en reçoit une part), une
+répartition locale au prorata de ce que chaque cellule offre, une comptabilité
+qui tient.
+
+### Deux effets de signe opposé, et aucun n'est écrit par espèce
+
+C'est ce qui fait de cet animal autre chose qu'un décor, et les deux tombent de
+traits que l'atlas déclarait déjà :
+
+- **il mange ce qui tombe et reste.** Le mode de dissémination distingue depuis
+  toujours `geai` et `gravite` — les grosses graines lourdes — de `vent` et
+  `oiseaux`. Un sanglier mange les premières au sol ;
+- **il ouvre un lit de germination.** Un boutis enlève le matelas de feuilles et
+  met la terre à nu, ce dont profitent précisément les petites graines, celles
+  qui ne lèvent pas sous une litière fermée.
+
+D'où la tension que l'issue espérait, sans qu'on ait eu à l'écrire : **le geai
+plante les chênes, le sanglier les mange**, et pendant ce temps il prépare le lit
+du bouleau. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à
+densité ordinaire, 22 sous forte densité.
+
+### Ce qu'on n'attend pas d'un dégât
+
+Un boutis est un **enfouissement**, pas une destruction. La litière passe au pool
+lent, l'azote au pool minéral, et le stock d'humus MONTE avec la densité de
+sangliers. La structure y gagne aussi — la croûte est cassée, la porosité
+revient dans les dix premiers centimètres, ce qui est d'ailleurs la raison pour
+laquelle les sites de germination s'ouvrent. Ce que le sanglier coûte est
+ailleurs : la terre est à nu, donc elle part.
+
+### Le couperet évité, pour la troisième fois
+
+La consommation de la glandée soustrayait d'abord linéairement. Résultat mesuré :
+à 1,8 fois la densité de référence il ne restait **exactement rien**, et la
+régénération du chêne s'éteignait d'un coup — zéro recrue en quarante ans. Une
+forme exponentielle garde la bonne écologie (sous forte densité la glandée ne
+passe presque plus) sans jamais promettre l'extinction.
+
+Ce dépôt a maintenant payé trois fois le même défaut : l'anémone à pH 4,0, le
+chêne-liège à pH 4,50, et cette glandée. **Une grandeur qui touche un zéro dur
+bascule d'un extrême à l'autre pour un centième de rien.** À chercher
+systématiquement dans tout nouveau mécanisme.
 
 ## Le bois d'œuvre : un puits qui ne se vide jamais n'est pas un puits
 

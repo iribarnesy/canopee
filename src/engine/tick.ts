@@ -181,6 +181,14 @@ import {
   voisineAval,
 } from "./relief";
 import {
+  attraitCellule,
+  effortSemaine,
+  LITIERE_ENFOUIE,
+  partGlandeeRestante,
+  retournee,
+  TASSEMENT_CASSE,
+} from "./sanglier";
+import {
   conductiviteHorizonMmSemaine,
   densiteApparente,
   facteurPhBiologie,
@@ -1817,6 +1825,69 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
   }
 
+  // ── 5 ter ter. Le sanglier retourne le sol (§7.4, issue #73) ──────────────
+  // Il n'est pas dans `gibier.ts` et ce n'est pas un oubli : ce module est bâti
+  // sur le broutage, et un sanglier ne broute pas (sanglier.ts). Ce qu'il fait
+  // ici, c'est enfouir la litière, casser la croûte et mettre la terre à nu —
+  // trois conséquences d'un seul geste, dont deux se contredisent.
+  //
+  // Aucun tirage dans le flux principal : la cellule retournée dérive d'une
+  // graine locale, comme le chablis et la chute des chandelles.
+  let cellulesRetournees = 0;
+  if (station.sanglierParHa > 0) {
+    // Où il y a de la glandée : sous les couronnes des arbres mûrs dont la
+    // graine est LOURDE — celle qui tombe et reste. Le trait suffit à le dire
+    // (`dissemination` vaut `geai` ou `gravite`), aucune espèce n'est nommée.
+    const mastAuSol = new Array<number>(nCells).fill(0);
+    for (const tree of nextTrees) {
+      if (!tree.alive) continue;
+      const espece = getEspece(tree.especeId);
+      const mode = espece.regeneration.dissemination;
+      if (mode !== "geai" && mode !== "gravite") continue;
+      if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+      const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+      forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
+        mastAuSol[i] = Math.min(1, (mastAuSol[i] ?? 0) + 1);
+      });
+    }
+    const effort = effortSemaine(station.sanglierParHa, week);
+    // L'attrait de chaque cellule, et sa moyenne : le sanglier va où il y a à
+    // manger, à l'abri, et où la terre se laisse faire.
+    const attraits = new Array<number>(nCells);
+    let attraitTotal = 0;
+    for (let i = 0; i < nCells; i++) {
+      const a = attraitCellule({
+        mast: mastAuSol[i] ?? 0,
+        couvert: 1 - (groundLight[i] ?? 1),
+        humidite: ruSurface > 0 ? Math.min(1, (waterMm[i * nH] ?? 0) / ruSurface) : 0,
+      });
+      attraits[i] = a;
+      attraitTotal += a;
+    }
+    const attraitMoyen = attraitTotal / nCells;
+    for (let i = 0; i < nCells; i++) {
+      if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
+      cellulesRetournees++;
+      // La litière est ENFOUIE : elle ne disparaît pas, elle passe au pool
+      // lent. Un boutis est un enfouissement, pas une combustion.
+      const litiereC = (litterCG[i] ?? 0) * LITIERE_ENFOUIE;
+      const litiereN = (litterNG[i] ?? 0) * LITIERE_ENFOUIE;
+      litterCG[i] = (litterCG[i] ?? 0) - litiereC;
+      litterNG[i] = (litterNG[i] ?? 0) - litiereN;
+      humusCG[i] = (humusCG[i] ?? 0) + litiereC;
+      mineralNG[i] = (mineralNG[i] ?? 0) + litiereN;
+      // La croûte est cassée : la structure y GAGNE, ce qu'on n'attend pas
+      // d'un dégât (sanglier.ts).
+      tassement[i] = (tassement[i] ?? 0) * (1 - TASSEMENT_CASSE);
+      // Et le tapis est déchiré : c'est ce qui met la terre à nu, donc ce qui
+      // la fait partir — et ce qui ouvre le lit des petites graines.
+      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 1 - LITIERE_ENFOUIE);
+    }
+  }
+  // Ce que le sanglier a retourné depuis un an : la régénération le lit à la
+  // semaine de recrutement, et c'est là que son second effet se joue.
+  const partRetourneeAn = Math.min(1, (cellulesRetournees / nCells) * 52);
+
   // ── 5 ter bis. Réseaux mycorhiziens (§7.5) ────────────────────────────────
   // Ils suivent les hôtes compatibles, très lentement : c'est ce qui fait
   // qu'un sol forestier ancien n'a rien à voir avec un labour de l'an dernier.
@@ -2467,6 +2538,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       lumiereAuSol: groundLight,
       banqueGraines: state.banqueGraines,
       aBrule: aBruleDepuisLaLevee,
+      // Le sanglier, des deux côtés : ce qu'il a mangé des glands, et le lit
+      // qu'il a ouvert pour les petites graines (sanglier.ts).
+      partGlandeeRestante: partGlandeeRestante(station.sanglierParHa),
+      partRetournee: partRetourneeAn,
       nextTreeId,
     });
     // Le carbone des recrues vient d'ailleurs : de la graine, produite par un
