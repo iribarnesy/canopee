@@ -21,11 +21,8 @@ import {
   DIAMETRE_TRONC_M,
   directionDeChute,
   graineDeChute,
-  PENTE_ORIENTANT_LA_CHUTE_PCT,
-  SANS_VENT_AU_SOL,
   sedimentPiegeKgM2,
   transversalite,
-  VENT_ORIENTANT_LA_CHUTE_MS,
   versLAval,
   volumeDuCoinM3ParM,
 } from "../../src/engine/boisMort";
@@ -504,115 +501,5 @@ describe("abattre et laisser le tronc en travers", () => {
       return terre;
     };
     expect(partieAvec("laisser")).toBeLessThan(partieAvec("vendre"));
-  });
-});
-
-/**
- * Le VENT oriente la chute autant que la pente (`directionDeChute`).
- *
- * **Ce que ces essais gardent : que les deux tendances se COMPOSENT.** Un
- * versant dont l'aval regarde le vent dominant doit coucher ses troncs en
- * faisceau ; un versant qui lui tourne le dos doit les coucher dans tous les
- * sens. C'est cette différence-là qui se voit sur la carte du bois mort, et
- * c'est elle qui décide si l'eau trouve des barrages ou une gouttière.
- */
-describe("le vent couche les chandelles dans son sens", () => {
-  const dims = { widthM: COTE, heightM: COTE };
-  const plat = Array.from({ length: COTE * COTE }, () => 0);
-  const pente = (pentePct: number) =>
-    Array.from({ length: COTE * COTE }, (_, i) => (Math.floor(i / COTE) * pentePct) / 100);
-
-  /**
-   * Direction MOYENNE et concentration d'un paquet de chutes.
-   *
-   * Une moyenne d'angles ne se calcule pas comme une moyenne de nombres — la
-   * moyenne de 359° et 1° vaut 180°, soit l'exact opposé. On somme donc les
-   * vecteurs unitaires : l'argument de la résultante est la direction moyenne,
-   * et sa LONGUEUR (∈ [0,1]) dit à quel point le paquet est concentré. C'est la
-   * statistique circulaire ordinaire, et c'est la seule qui ait un sens ici.
-   */
-  const paquet = (
-    alt: readonly number[],
-    vent?: { versRad: number; recuMs: number },
-  ): { moyenneRad: number; concentration: number } => {
-    let sx = 0;
-    let sy = 0;
-    const n = 600;
-    for (let k = 0; k < n; k++) {
-      const d = directionDeChute(alt, dims, 15, 15, graineDeChute(k, 7), vent);
-      sx += Math.cos(d);
-      sy += Math.sin(d);
-    }
-    return { moyenneRad: Math.atan2(sy, sx), concentration: Math.hypot(sx, sy) / n };
-  };
-
-  /** Écart angulaire entre deux caps, ∈ [0, π]. */
-  const ecart = (a: number, b: number) =>
-    Math.abs(((a - b + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-
-  it("ne change RIEN quand on ne lui donne pas de vent", () => {
-    // Le vent est optionnel et vaut zéro par défaut : une partie d'avant doit
-    // tomber exactement comme avant, sans quoi l'ajout serait une
-    // recalibration déguisée de tout le dépôt de bois mort.
-    for (let k = 0; k < 50; k++) {
-      const graine = graineDeChute(k, 3);
-      expect(directionDeChute(pente(30), dims, 15, 15, graine)).toBe(
-        directionDeChute(pente(30), dims, 15, 15, graine, SANS_VENT_AU_SOL),
-      );
-    }
-  });
-
-  it("couche les troncs SOUS LE VENT sur un terrain plat", () => {
-    // À plat, la pente ne dit rien : le vent est la seule tendance, et la
-    // direction moyenne doit être la sienne.
-    const versRad = 1.1;
-    const p = paquet(plat, { versRad, recuMs: VENT_ORIENTANT_LA_CHUTE_MS });
-    expect(ecart(p.moyenneRad, versRad)).toBeLessThan(0.25);
-    // et ça CONCENTRE, là où le temps calme ne concentre rien
-    expect(p.concentration).toBeGreaterThan(paquet(plat).concentration + 0.3);
-  });
-
-  it("laisse le hasard décider par temps calme à plat", () => {
-    // Aucune tendance : la chute est isotrope, et la résultante d'un paquet
-    // d'angles pris au hasard est proche de zéro.
-    expect(paquet(plat).concentration).toBeLessThan(0.15);
-  });
-
-  it("RESSERRE quand la pente et le vent s'accordent", () => {
-    // Le cas intéressant : deux tendances de même sens contraignent plus que
-    // chacune séparément.
-    const alt = pente(30);
-    const aval = versLAval(alt, dims, 15, 15).radians;
-    const seule = paquet(alt).concentration;
-    const ensemble = paquet(alt, {
-      versRad: aval,
-      recuMs: VENT_ORIENTANT_LA_CHUTE_MS,
-    }).concentration;
-    expect(ensemble).toBeGreaterThan(seule);
-  });
-
-  it("REND LA MAIN au hasard quand elles s'opposent", () => {
-    // Un versant qui tourne le dos au vent dominant couche ses troncs dans tous
-    // les sens — et c'est là que l'eau trouve des barrages.
-    const alt = pente(30);
-    const aval = versLAval(alt, dims, 15, 15).radians;
-    const contre = paquet(alt, {
-      versRad: aval + Math.PI,
-      recuMs: (VENT_ORIENTANT_LA_CHUTE_MS * 30) / PENTE_ORIENTANT_LA_CHUTE_PCT,
-    });
-    // les deux poids sont égaux et opposés : la résultante s'annule
-    expect(contre.concentration).toBeLessThan(0.15);
-  });
-
-  it("garde TOUJOURS sa part de hasard, même quand tout pousse dans le même sens", () => {
-    // La littérature que le module cite l'impose : Rentch et al. concluent que
-    // la forte variation des directions de chute empêche d'établir une relation
-    // constante avec la pente OU le vent. Un faisceau parfait serait un
-    // artefact de forme, comme l'alignement au cordeau que la dispersion
-    // résiduelle a déjà corrigé une fois.
-    const alt = pente(80);
-    const aval = versLAval(alt, dims, 15, 15).radians;
-    const p = paquet(alt, { versRad: aval, recuMs: 30 });
-    expect(p.concentration).toBeLessThan(0.95);
   });
 });

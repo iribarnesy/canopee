@@ -141,7 +141,8 @@ interface Trajectoire {
 }
 
 /**
- * Les onze causes, telles que le §6.3 les décrit.
+ * Les douze causes, telles que le §6.3 les décrit — onze qu'il énumère, plus
+ * le chablis, que le moteur a ajouté avec les tempêtes.
  *
  * On lit la table du cahier ligne à ligne ; ce qui suit n'est que sa
  * traduction. Les commentaires citent le cahier plutôt que de le paraphraser,
@@ -248,6 +249,24 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   ecrasement: {
     rapetisseEntre: [0, 0.25],
     seffaceEntre: [0, 0.35],
+    chandelleA: 1.1,
+  },
+  // « couchés par la tempête ». Le moteur est net : « un CHABLIS n'en est pas
+  // une [chandelle] : il est déjà par terre », et la mort n'est rapportée qu'un
+  // an après le coup de vent, sur un arbre couché depuis. Il n'y a donc ni
+  // jaunissement ni défeuillaison à jouer — ce qui restait s'en va, et le bois
+  // est désormais l'affaire du terrain (`soilBoisAuSol`). D'où la même forme
+  // que l'écrasement, sans le rapetissement : un chablis ne rentre pas en
+  // boule, il s'est couché il y a un an.
+  //
+  // **Et c'est un pis-aller qu'il faut dire.** La tempête elle-même ne se
+  // dessine pas : ni `renverseSemaine` ni `TickResult.tempete` n'arrivent au
+  // protocole, donc le rendu ne sait ni QUELS arbres sont couchés, ni quand, ni
+  // dans quel sens — alors que le moteur tient les trois, `chuteRad` compris.
+  // Le §6.6 demande pourtant que les coups durs se voient. Issue ouverte ; en
+  // attendant, un chablis s'efface là où il devrait basculer.
+  chablis: {
+    seffaceEntre: [0.1, 0.5],
     chandelleA: 1.1,
   },
 };

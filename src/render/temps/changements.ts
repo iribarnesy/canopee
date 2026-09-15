@@ -112,6 +112,9 @@ export const TEINTE_DE_LA_CAUSE: Record<CauseMort, Teinte> = {
   ecrasement: { r: 158, g: 140, b: 108 },
   // Le labour : la terre retournée, la même que son voile.
   labour: { r: 74, g: 57, b: 44 },
+  // La tempête : le gris-bleu froid d'un ciel de coup de vent. Ni fauve — ce
+  // n'est pas le gibier — ni gris neutre, qui est déjà l'ombre.
+  chablis: { r: 108, g: 128, b: 152 },
 };
 
 /** La teinte d'un geste — celle du travail, pas celle d'une cause. */

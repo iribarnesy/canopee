@@ -187,7 +187,7 @@ describe("marqueursDuJournal", () => {
     expect(marqueursDuJournal({}, ou, COTE)).toEqual({ marqueurs: [], omis: 0 });
   });
 
-  it("distingue les douze causes DEUX À DEUX", () => {
+  it("distingue toutes les causes DEUX À DEUX", () => {
     // Un calque dont deux causes ont la même couleur ne dit pas pourquoi ça
     // meurt — il dit seulement que ça meurt, ce que la vignette dit déjà.
     const vues = new Map<string, CauseMort>();
@@ -196,7 +196,7 @@ describe("marqueursDuJournal", () => {
       expect(vues.get(cle), `${cause} a la couleur de ${vues.get(cle)}`).toBeUndefined();
       vues.set(cle, cause);
     }
-    expect(vues.size).toBe(12);
+    expect(vues.size).toBe(13);
   });
 
   it("garde les teintes que le §6.8 nomme", () => {

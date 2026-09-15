@@ -61,7 +61,58 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la strate herbacée, #70)
+## Ce que le dernier lot a appris (les tempêtes, #55)
+
+**Réutiliser une fonction qui porte le bon NOM et répond à une autre question.**
+`windShelterAt` calculait déjà un abri au vent, et le premier jet s'en est servi
+— zéro tempête en soixante ans. Il avait été écrit pour la haie brise-vent (de
+quoi un jeune plant est-il protégé près du sol) et compte tout voisin d'une
+certaine taille, donc il sature à 1 dans n'importe quel peuplement : chacun
+s'abrite de ses semblables. Ce qui abrite une CIME, c'est ce qui la dépasse.
+Avant de réutiliser, relire la question à laquelle la fonction répond, pas son
+nom.
+
+**Une profondeur absolue là où il fallait un rapport.** L'ancrage écrit en
+centimètres couchait les semis et épargnait les dominants — l'exact inverse
+d'une tempête, et visible seulement en comptant les victimes par classe de
+taille. Le renversement est une affaire de moments : le vent pousse avec un bras
+de levier qui est la hauteur, la motte résiste avec un bras qui est sa
+profondeur. Le rapport a remis le tri à l'endroit du premier coup. **Quand un
+mécanisme compare deux forces, chercher la grandeur SANS DIMENSION avant
+d'écrire un seuil.**
+
+**Un échantillon de calibration qui n'en est pas un.** Le seuil d'ancrage a été
+calé sur les arbres du moteur mesurés à quarante ans, ce qui semblait
+irréprochable — sauf qu'ils venaient tous de la même station, où l'été sec force
+les racines vers le bas. Le même hêtre poussé sur un site jamais sec tient un
+rapport trois fois plus faible, sans rien d'anormal : la plasticité racinaire
+fait son travail. Une futaie de test perdait donc seize arbres sur
+soixante-quatre en cinq ans, dans un fichier qui ne parle pas de vent. **Caler
+un seuil sur le moteur demande de balayer les RÉGIMES, pas seulement les
+graines** : plusieurs stations, plusieurs climats, plusieurs âges. Et quand le
+mécanisme lit une variable d'état existante, regarder d'abord toute l'étendue
+que cette variable prend en jeu.
+
+**Un facteur d'habitat rendu brutal faute de lire la tolérance.** L'engorgement
+est le bon levier — les grandes tempêtes couchent là où le sol est gorgé — mais
+appliqué brut il rasait l'aulnaie de fond de vallée tous les deux ans. Ce qui
+compte est l'excès AU-DELÀ de ce que l'espèce tolère, la forme que
+`waterloggingFactor` utilisait déjà. La bonne forme existait à trois fichiers de
+là.
+
+**Le label `flux-aléatoire` ne s'impose presque jamais.** L'issue l'annonçait ;
+deux graines dérivées (rafale ← graine de partie + semaine, renversement ←
+identité de l'arbre + semaine) l'ont rendu inutile. Aucune partie sans tempête
+ne bouge. Avant d'accepter de décaler le flux, chercher la graine locale — le
+prix est de deux lignes.
+
+**Écrire les critères manquants fait BAISSER le score, et c'est le travail.** Le
+référentiel n'avait aucune ligne sur la tempête : le moteur ne savait pas
+coucher un arbre et personne ne comptait le point. Six lignes plus tard, trois
+✅ et trois ❌ assumés, et deux points de moins. La colonne des absences venait
+d'atteindre zéro ; elle était vide parce qu'on n'avait pas regardé.
+
+## Ce que l'avant-dernier lot a appris (la strate herbacée, #70)
 
 **Une variable d'état ne suffisait pas.** On a d'abord tenu une seule grandeur
 par espèce et par cellule — la place occupée — en calculant la couverture comme
@@ -121,25 +172,18 @@ cellule, et que `biodiversite.ts` la lise. Manquent aussi une rudérale
 nitrophile — la capacité ne lit pas l'azote — et la CULTURE comme strate basse,
 qui est le sujet de l'agroforesterie.
 
-**#55 — les tempêtes.** Le gros morceau, et le plus embarrassant : `marche.ts`
-explique longuement l'effondrement des prix après Lothar et Klaus, donc le
-moteur enseigne la conséquence d'un événement qu'il est incapable de produire.
-Le mot « chablis » est partout dans le vocabulaire et ne désigne jamais une
-tempête.
+**Ce qui reste de #55 — les trois ❌ que le lot a écrits.** Par ordre de gain :
+**F19**, la fréquence des tempêtes sous dérive climatique — le blocage est de
+plomberie, `meteoDerivee` connaît le scénario et pas la graine de partie,
+`tick` tire la rafale et ignore le scénario ; **F18**, la fragilité
+d'après-éclaircie, qui demande une mémoire par arbre de l'ouverture récente et
+rendrait dangereuse une éclaircie tardive et forte ; **F17**, la casse
+partielle, qui demande un état « blessé » sur l'arbre.
 
-L'issue pose elle-même son séquençage, et ses deux préalables sont **levés** :
-le volume découle maintenant de la géométrie et l'élancement est porté par
-l'individu, donc une tempête peut trier sur l'histoire du peuplement et pas
-seulement sur la hauteur. Reste une réserve : l'amplitude de l'élancement est
-bridée par #65 (`moteur:maintenance`). Une tempête calibrée sur un élancement
-trop resserré trierait mal — traiter #65 d'abord, ou accepter et écrire la
-limite.
-
-Deux pièges nommés dans l'issue : ne pas étirer le vent **moyen** avec le
-scénario climatique (c'est la variable la moins contrainte des projections
-européennes), et ne pas faire de la tempête une loterie qui annule la stratégie
-du joueur — l'essence, l'espacement, le sol et le moment de l'éclaircie doivent
-changer l'issue.
+Et une réserve héritée : le tri par l'élancement est écrit sur toute la gamme
+réelle (H/D de 25 à 100) mais le moteur n'en produit qu'un cinquième, 35 à 49
+(#79, et #65 pour la cause). Le jour où l'amplitude s'ouvre, ce tri se met à
+parler sans qu'on y touche.
 
 **#58 — le vent dans la propagation et dans la chute.** Deux endroits où le vent
 existe désormais (`src/engine/vent.ts`) mais n'agit pas : `propager` s'étale en

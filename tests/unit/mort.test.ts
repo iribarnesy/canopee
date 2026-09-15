@@ -1,8 +1,8 @@
 /**
- * Les onze mises en scène de mort.
+ * Les mises en scène de mort, une par cause.
  *
  * **Ce que ces essais gardent, c'est la LISIBILITÉ des causes** : le §6.3 ne
- * demande pas onze animations jolies, il demande onze animations qu'on
+ * demande pas des animations jolies, il demande des animations qu'on
  * distingue. Deux causes qui donneraient la même suite d'images ne diraient
  * rien au joueur, et c'est une propriété qui se teste sans regarder.
  */
@@ -69,11 +69,11 @@ describe("dansLaFenetre", () => {
   });
 });
 
-describe("les onze causes", () => {
+describe("les causes de mort", () => {
   it("ont toutes une trajectoire : la table est exhaustive", () => {
     // Le type l'impose déjà, mais une valeur ajoutée au moteur doit CASSER ici
     // et non passer silencieusement.
-    expect(CAUSES.length).toBe(12);
+    expect(CAUSES.length).toBe(13);
   });
 
   it("se distinguent DEUX À DEUX : aucune paire ne donne la même suite", () => {
@@ -199,7 +199,7 @@ describe("ce que chaque cause raconte", () => {
   });
 
   it("solHorsGamme : meurt en GARDANT sa couronne, jaune", () => {
-    // La chlorose est la seule des onze où la couronne reste entière presque
+    // La chlorose est la seule où la couronne reste entière presque
     // jusqu'au bout : « jaunit entre les nervures en gardant sa forme ».
     const e = mourirEnCours("solHorsGamme", vif, 0.8);
     expect(e.senescence).toBeGreaterThan(0.6);
@@ -251,11 +251,18 @@ describe("ce que chaque cause raconte", () => {
     expect(tot.partFoliaire).toBe(1);
   });
 
-  it("les trois causes qui font DISPARAÎTRE sont les seules à s'effacer", () => {
+  it("seules s'effacent les causes qui font DISPARAÎTRE l'arbre", () => {
     // Un arbre mort de sécheresse reste debout en chandelle : le moteur le
-    // garde en jeu, et l'effacer serait le contredire.
+    // garde en jeu, et l'effacer serait le contredire. Le chablis rejoint la
+    // liste avec les tempêtes, et pour une raison différente des quatre
+    // autres : il ne disparaît pas, il est déjà couché depuis un an quand sa
+    // mort est rapportée — d'où une issue pour qu'il BASCULE au lieu de
+    // s'effacer, le jour où le moteur dira lesquels sont tombés et dans quel
+    // sens.
     const effacent = CAUSES.filter((c) => mortAccomplie(c, vif).opacite < 1);
-    expect(new Set(effacent)).toEqual(new Set(["labour", "abroutissement", "ombre", "ecrasement"]));
+    expect(new Set(effacent)).toEqual(
+      new Set(["labour", "abroutissement", "ombre", "ecrasement", "chablis"]),
+    );
   });
 
   it("les morts qui laissent une chandelle la laissent, les autres non", () => {

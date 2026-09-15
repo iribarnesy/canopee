@@ -185,6 +185,13 @@ import {
   facteurInfiltration,
   tassementApresUneAnnee,
 } from "./tassement";
+import {
+  abriAuVent,
+  candidatAuChablis,
+  RAFALE_MINIMALE_MS,
+  rafaleDeLaSemaine,
+  verse,
+} from "./tempete";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
 import type { CauseMort, TreeState } from "./trees";
 import {
@@ -198,6 +205,7 @@ import {
   treeExtractionCapacityGWeek,
   treeNitrogenNeedGWeek,
   treeWaterDemandL,
+  volumeTigeM3,
 } from "./trees";
 import type { HorizonHydro } from "./water";
 import { drynessFactor, profilHydro } from "./water";
@@ -393,6 +401,26 @@ export interface IncendieResult {
 }
 
 /**
+ * La tempête de la semaine, telle qu'on peut la raconter ET la dessiner.
+ *
+ * Elle n'est renseignée que si elle a COUCHÉ quelque chose : une rafale qui
+ * passe sans rien casser n'est pas un événement, c'est du temps qu'il fait. Les
+ * victimes arrivent ici et non dans `morts`, pour la même raison que celles du
+ * feu — un chablis reste récupérable un an et n'entre dans `morts` qu'ensuite,
+ * une semaine où `tempete` est `undefined` (tempete.ts).
+ */
+export interface TempeteResult {
+  /** rafale de référence à 10 m, m/s */
+  rafaleMs: number;
+  /** cap vers lequel le vent poussait, radians — le sens où les troncs sont partis */
+  versRad: number;
+  arbresVerses: number;
+  /** volume de tige couché, m³ : ce que le joueur peut encore vendre, décoté */
+  volumeM3: number;
+  victimes: readonly { id: number; hauteurM: number }[];
+}
+
+/**
  * Une chandelle qui s'abat, telle qu'on peut la raconter ET la dessiner : le
  * rendu a besoin de la direction pour coucher le tronc dans le bon sens, et de
  * l'empreinte pour savoir où le poser (boisMort.ts).
@@ -422,6 +450,8 @@ export interface TickResult {
   franchissements: FranchissementDeStade[];
   /** incendie de la semaine, s'il y en a eu un */
   incendie?: IncendieResult;
+  /** tempête de la semaine, si elle a couché au moins un arbre */
+  tempete?: TempeteResult;
   /**
    * Ce que le GIBIER a fait subir à quels arbres cette semaine (broutage,
    * frottis). Les gestes du joueur remontent par `applyAction` (actions.ts) ;
@@ -1933,12 +1963,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       survivors.push(tree);
       continue;
     }
-    if (
-      tree.brulEeSemaine !== undefined &&
-      state.week - tree.brulEeSemaine < CHABLIS_RECUPERABLE_SEMAINES
-    ) {
-      // Sur pied et encore commercialisable : on le garde tel quel, le temps
-      // que le joueur décide d'aller le chercher.
+    // Encore commercialisable : on le garde tel quel, le temps que le joueur
+    // décide d'aller le chercher. Deux façons d'en arriver là, et le même
+    // délai : le feu l'a tué sur pied, ou la tempête l'a couché (tempete.ts).
+    const abattuSemaine = tree.brulEeSemaine ?? tree.renverseSemaine;
+    if (abattuSemaine !== undefined && state.week - abattuSemaine < CHABLIS_RECUPERABLE_SEMAINES) {
       survivors.push(tree);
       continue;
     }
@@ -1962,7 +1991,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Chandelle : un tronc mort tient debout des années avant de s'abattre.
     // Elle ne fait pas d'ombre (les morts sont ignorés du calcul de lumière)
     // mais elle occupe la place et sert d'habitat (trees.ts, biodiversite.ts).
-    if (state.week - tree.mortSemaine < dureeChandelleSemaines(getEspece(tree.especeId))) {
+    //
+    // Un CHABLIS n'en est pas une : il est déjà par terre. Il ne fait donc pas
+    // de chandelle et son bois se couche dès la fin du délai de récupération.
+    const chablis = tree.renverseSemaine !== undefined;
+    if (
+      !chablis &&
+      state.week - tree.mortSemaine < dureeChandelleSemaines(getEspece(tree.especeId))
+    ) {
       survivors.push(tree);
       continue;
     }
@@ -1971,29 +2007,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // La direction se tire sur un flux PROPRE à cette chute (boisMort.ts) : le
     // flux principal est unique et séquentiel, un tirage de plus y décalerait
     // tous les suivants et rebattrait les cartes de tous les autres mécanismes.
-    const radians = directionDeChute(
-      altitudes,
-      dims,
-      tree.x,
-      tree.y,
-      graineDeChute(tree.id, state.week),
-      // **Aucun vent n'est passé ici, et c'est une décision mesurée.**
-      // `directionDeChute` sait composer la pente et le vent (boisMort.ts), et
-      // le mécanisme est juste : ce qui abat une chandelle est presque toujours
-      // un coup de vent. Mais la seule grandeur disponible est une MOYENNE
-      // hebdomadaire, qui efface précisément les rafales qui jettent les arbres
-      // — et la brancher détruit une conclusion écologique mesurée : le versant
-      // raide barre moins l'eau que le plat (`bois-en-travers.test.ts`), un
-      // rapport de 0,79 qui remonte à 0,88 même avec un poids de vent de 0,11,
-      // et à 1,00 au poids que la vitesse reçue justifierait. Le vent dominant
-      // étant à peu près perpendiculaire à l'aval de ce banc, il ne fait que
-      // brouiller un alignement réel.
-      //
-      // C'est le même verdict que le moteur a rendu pour le DÉCLENCHEMENT d'un
-      // feu, et pour la même raison : bonne intuition, mauvaise grandeur. Le
-      // jour où une climatologie de rafales existera, il n'y aura qu'un
-      // argument à ajouter à cet appel.
-    );
+    // Un chablis est parti dans le sens du coup de vent, et il l'a retenu
+    // (`chuteRad`). Une chandelle, elle, n'a que la pente pour l'orienter.
+    const radians =
+      tree.chuteRad ??
+      directionDeChute(altitudes, dims, tree.x, tree.y, graineDeChute(tree.id, state.week));
     const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, radians, dims);
     const longueurTotale = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
     if (longueurTotale <= 0) continue;
@@ -2259,6 +2277,69 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
 
+  // ── 6 ter. La tempête (§7.4, issue #55) ───────────────────────────────────
+  // Placée juste après le feu, et pour la même raison : ce sont deux événements
+  // qui MARQUENT des arbres cette semaine — le feu les brûle, la tempête les
+  // couche — et laissent la passe de mortalité de la semaine suivante en tirer
+  // les conséquences. Un chablis est donc récupérable un an, exactement comme
+  // un bois brûlé, et c'est enfin `CHABLIS_RECUPERABLE_SEMAINES` qui porte son
+  // propre nom.
+  //
+  // Aucun tirage dans le flux principal : la rafale dérive de la graine de
+  // partie, le renversement de l'identité de l'arbre (tempete.ts).
+  let tempete: TickResult["tempete"];
+  const rafaleMs = rafaleDeLaSemaine(state.graineMarche, state.week, weather.ventMoyMs);
+  if (rafaleMs >= RAFALE_MINIMALE_MS && station.ventExposition > 0) {
+    const verses: TreeState[] = [];
+    nextTrees = nextTrees.map((tree) => {
+      if (!candidatAuChablis(tree)) return tree;
+      const espece = getEspece(tree.especeId);
+      const cellule = cellIndexAt(dims, tree.x, tree.y);
+      const exposition = {
+        rafaleMs,
+        ventExposition: station.ventExposition,
+        // L'abri qui compte pour une CIME, celui que les voisins PLUS HAUTS
+        // donnent — et non l'abri de haie de `windShelterAt`, qui sature à 1
+        // dans n'importe quel peuplement (tempete.ts).
+        //
+        // Sur le peuplement du DÉBUT de semaine, volontairement : un voisin
+        // couché par la même rafale était debout quand elle est arrivée. Ça
+        // rend aussi la passe indépendante de l'ordre des arbres, ce qu'une
+        // tempête doit être — elle frappe tout d'un coup, pas de proche en
+        // proche comme un feu.
+        abriVent: abriAuVent(trees, tree),
+        // L'engorgement de SURFACE : c'est là que sont les racines qui tiennent
+        // l'arbre debout, et c'est un sol saturé qui les lâche.
+        engorgement: waterlogging[cellule * nH] ?? 0,
+        toleranceEngorgement: espece.eau.toleranceEngorgement,
+        partFoliaire: partFoliaireOmbrageanteDans(espece, pheno),
+        // La profondeur que CET arbre a explorée, pas celle que sa fiche vise :
+        // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
+        profondeurEffectiveCm: tree.rootDepthCm,
+      };
+      if (!verse(tree, exposition, state.week)) return tree;
+      verses.push(tree);
+      return {
+        ...tree,
+        alive: false,
+        causeMort: "chablis" as const,
+        renverseSemaine: state.week,
+        // Le vent devient l'arbitre de la direction de chute, là où la pente
+        // décidait seule (boisMort.ts) : un chablis part dans le sens du coup.
+        chuteRad: weather.ventVersRad,
+      };
+    });
+    if (verses.length > 0) {
+      tempete = {
+        rafaleMs,
+        versRad: weather.ventVersRad,
+        arbresVerses: verses.length,
+        volumeM3: verses.reduce((s, t) => s + volumeTigeM3(t.diametreCm, t.heightM), 0),
+        victimes: verses.map((t) => ({ id: t.id, hauteurM: t.heightM })),
+      };
+    }
+  }
+
   // La structure se répare une fois l'an, à proportion de ce qui l'occupe :
   // sous des racines denses, bien plus vite qu'à nu (tassement.ts).
   if (week === RECRUITMENT_WEEK) {
@@ -2426,6 +2507,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     chutes,
     aides: aidesVersees,
     incendie,
+    tempete,
     gestes,
     // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne
     // sont pas de l'état (la semaine suivante les recalcule), mais sans elles
