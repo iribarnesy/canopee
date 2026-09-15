@@ -40,8 +40,8 @@ trois premiers.
 
 ## Où en est le projet
 
-Le **moteur** est largement en avance sur ce que le jeu sait montrer : 104
-critères de réalisme sur 134 sont acquis, et les issues ouvertes portent des
+Le **moteur** est largement en avance sur ce que le jeu sait montrer : 109
+critères de réalisme sur 140 sont acquis, et les issues ouvertes portent des
 mécanismes de plus en plus fins.
 
 Le **jeu**, lui, est un bac à sable sans jeu : une vingtaine de gestes jouables,

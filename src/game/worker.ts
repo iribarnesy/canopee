@@ -592,6 +592,19 @@ function stepWeeks(n: number) {
       event("🌊", `Crue : la nappe affleure sur ${Math.round(inondee * 100)} % de la parcelle`);
     }
     partInondeePrecedente = inondee;
+    // Tempête : elle arrive en une semaine et doit se dire, sinon des arbres
+    // s'escamotent. Pas d'auto-pause en revanche, à la différence du feu — un
+    // chablis reste récupérable un an (`tempete.ts`), le joueur a le temps de
+    // décider s'il sort le bois ou s'il le laisse.
+    if (ticked.tempete) {
+      const t = ticked.tempete;
+      event(
+        "🌬️",
+        `TEMPÊTE : rafale à ${Math.round(t.rafaleMs * 3.6)} km/h, ${t.arbresVerses} arbre` +
+          `${t.arbresVerses > 1 ? "s couchés" : " couché"} — ${t.volumeM3.toFixed(1)} m³ ` +
+          `à sortir dans l'année avant que le bois ne se déprécie`,
+      );
+    }
     // Incendie : l'événement le plus marquant d'une partie sur lande.
     if (ticked.incendie) {
       const f = ticked.incendie;

@@ -107,8 +107,12 @@ export const RECEPAGE_HOURS = 0.8;
 /** Hauteur à laquelle la souche repart après recépage, m. */
 export const RECEPAGE_HAUTEUR_M = 0.5;
 /**
- * Décote d'un bois brûlé récupéré en coupe sanitaire : il vaut encore quelque
- * chose (chauffage, trituration), mais l'œuvre est perdue *(à calibrer)*.
+ * Décote d'un bois ACCIDENTÉ récupéré en coupe sanitaire — brûlé sur pied ou
+ * couché par la tempête : il vaut encore quelque chose (chauffage,
+ * trituration), mais l'œuvre est perdue *(à calibrer)*.
+ *
+ * La constante s'appelait déjà « chablis » quand seul le feu savait la
+ * déclencher ; depuis `tempete.ts`, elle couvre enfin ce que son nom dit.
  */
 export const DECOTE_CHABLIS = 0.4;
 /**
@@ -867,7 +871,12 @@ function applyCouper(
       }
     } else if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
-      const brule = tree.brulEeSemaine !== undefined;
+      // Un bois accidenté, quelle que soit l'origine de l'accident : brûlé sur
+      // pied, ou couché par la tempête (tempete.ts). Les deux se récupèrent en
+      // coupe sanitaire, et les deux ont perdu leur bille — c'est exactement ce
+      // que `DECOTE_CHABLIS` a toujours voulu dire, et que le moteur ne savait
+      // appliquer qu'au feu faute de savoir produire un vrai chablis.
+      const brule = tree.brulEeSemaine !== undefined || tree.renverseSemaine !== undefined;
       // Le marché n'est ni fixe ni infini (marche.ts). L'indice de l'année
       // porte le cycle des cours ; la décote d'engorgement punit celui qui met
       // tout son bois sur le marché la même année — c'est ce que la France a

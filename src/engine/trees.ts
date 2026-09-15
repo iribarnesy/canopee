@@ -31,6 +31,7 @@ export type CauseMort =
   | "labour"
   | "maladie"
   | "frottis"
+  | "chablis"
   | "ecrasement";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
@@ -46,6 +47,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   labour: "retournés par le labour",
   maladie: "emportés par la maladie",
   frottis: "annelés par les frottis de cervidés",
+  chablis: "couchés par la tempête",
 };
 
 export interface TreeState {
@@ -137,6 +139,20 @@ export interface TreeState {
    * bleuisse et que les insectes ne s'y mettent.
    */
   brulEeSemaine?: number;
+  /**
+   * Semaine où une tempête l'a couché (tempete.ts). Même statut qu'un arbre
+   * brûlé : il reste récupérable un an en coupe sanitaire, à prix déprécié,
+   * avant que le bois ne bleuisse — c'est le VRAI chablis, celui dont
+   * `DECOTE_CHABLIS` porte le nom depuis toujours sans le désigner.
+   */
+  renverseSemaine?: number;
+  /**
+   * Direction dans laquelle le tronc est parti, radians — posée au moment du
+   * coup de vent, relue quand le bois se couche au sol (`boisMort.ts`). Sans
+   * elle, un chablis retomberait dans le sens de la PENTE un an plus tard,
+   * comme une chandelle, et la trace du vent serait perdue.
+   */
+  chuteRad?: number;
   /**
    * Semaine où la mort a été enregistrée. Tant qu'elle est absente, l'arbre
    * vient de mourir et son bois n'a pas encore rejoint le sol ; une fois
