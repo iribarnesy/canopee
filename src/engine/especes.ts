@@ -182,6 +182,23 @@ export interface EspeceV0 {
   litiere: {
     /** rapport C/N de la litière : bas = minéralisation rapide (ch2-B) */
     cnRatio: number;
+    /**
+     * Calcium de la litière, mg/g de matière sèche — le trait qui décide si
+     * une essence ACIDIFIE le sol qu'elle occupe ou l'entretient (`bases.ts`).
+     *
+     * Ce n'est pas un « pouvoir acidifiant » abstrait : c'est une grandeur
+     * qu'on mesure et qu'on publie, et la chaîne causale qui en découle a été
+     * mesurée aussi (Reich et al. 2005, jardin commun de quatorze essences en
+     * Pologne centrale, trente ans : la teneur en calcium de la litière varie
+     * du simple au quadruple entre essences, et c'est elle qui explique le pH
+     * du sol, le calcium échangeable, le taux de saturation, la vitesse de
+     * dégradation du plancher forestier et les vers de terre).
+     *
+     * Le tableau de `bases.ts` dit d'où vient chaque valeur. Attention : « un
+     * résineux acidifie » n'est PAS ce que disent les mesures — la litière
+     * d'épicéa contient deux fois plus de calcium que celle du pin sylvestre.
+     */
+    calciumMgG: number;
   };
   /**
    * Calendrier foliaire (phenologie.ts). L'ORDRE de débourrement est un fait
@@ -390,7 +407,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.8, fixateur: true },
     regeneration: { maturiteAns: 12, longeviteAns: 100, dissemination: "vent", semisParAn: 4 },
     // Litière tendre, très riche en N (C/N ~15) : l'aulne améliore son sol (ch2-B).
-    litiere: { cnRatio: 15 },
+    litiere: { cnRatio: 15, calciumMgG: 12 },
     // L'aulne est des premiers, avec le bouleau : début avril.
     phenologie: { debourrementDJ: 90, seuilJourH: 11.0, besoinFroidSemaines: 9 },
     economie: { prixPlantEur: 2 },
@@ -442,7 +459,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.7, fixateur: false },
     regeneration: { maturiteAns: 40, longeviteAns: 300, dissemination: "gravite", semisParAn: 3 },
     // Litière coriace, lente (C/N ~50) — la voie fongique (ch2-B).
-    litiere: { cnRatio: 50 },
+    litiere: { cnRatio: 50, calciumMgG: 7.5 },
     // Le hêtre attend : dix à vingt jours après le chêne dans l'ouest, et il est parmi les plus photopériodiques.
     phenologie: { debourrementDJ: 240, seuilJourH: 13.0, besoinFroidSemaines: 16 },
     economie: { prixPlantEur: 3 },
@@ -486,7 +503,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "geai", semisParAn: 2 },
-    litiere: { cnRatio: 40 },
+    litiere: { cnRatio: 40, calciumMgG: 6 },
     // Le chêne débourre fin avril, et il est photopériodique.
     phenologie: { debourrementDJ: 190, seuilJourH: 12.5, besoinFroidSemaines: 9 },
     economie: { prixPlantEur: 3 },
@@ -520,7 +537,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.25, fixateur: false },
     regeneration: { maturiteAns: 15, longeviteAns: 250, dissemination: "vent", semisParAn: 3 },
     // Aiguilles à C/N ~60 : minéralisation lente et acidifiante (ch2-B).
-    litiere: { cnRatio: 60 },
+    litiere: { cnRatio: 60, calciumMgG: 3.8 },
     // Sempervirent : ces valeurs ne servent pas, mais le champ reste renseigné.
     phenologie: { debourrementDJ: 150, seuilJourH: 11.0, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 1.5 },
@@ -560,7 +577,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.35, fixateur: false },
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
-    litiere: { cnRatio: 25 },
+    litiere: { cnRatio: 25, calciumMgG: 9 },
     // Le bouleau ouvre le bal, début avril — c'est le pionnier jusque dans son calendrier.
     phenologie: { debourrementDJ: 85, seuilJourH: 10.8, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 1.5 },
@@ -595,7 +612,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Les noix sont cachées par les corvidés, comme les glands : le même noyau
     // de dispersion, en terrain découvert où l'oiseau les retrouvera.
     regeneration: { maturiteAns: 12, longeviteAns: 150, dissemination: "geai", semisParAn: 0.5 },
-    litiere: { cnRatio: 35 },
+    litiere: { cnRatio: 35, calciumMgG: 14 },
     // LE plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
     // permet d'échapper aux gels d'avril, et ce qui rend l'agroforesterie au
     // noyer possible — la culture intercalaire pousse avant que l'ombre arrive.
@@ -653,7 +670,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.6, fixateur: false },
     // Cultivar greffé : pas de régénération naturelle fidèle.
     regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "gravite", semisParAn: 0 },
-    litiere: { cnRatio: 30 },
+    litiere: { cnRatio: 30, calciumMgG: 13 },
     // Fruitier de plaine : feuillaison après la floraison, mi-avril.
     phenologie: { debourrementDJ: 150, seuilJourH: 11.5, besoinFroidSemaines: 13 },
     economie: { prixPlantEur: 12 },
@@ -697,7 +714,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 4, longeviteAns: 60, dissemination: "gravite", semisParAn: 0 },
-    litiere: { cnRatio: 30 },
+    litiere: { cnRatio: 30, calciumMgG: 13 },
     // L'abricotier part très tôt, et c'est bien là son problème : le gel le rattrape.
     phenologie: { debourrementDJ: 110, seuilJourH: 11.2, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 14 },
@@ -749,7 +766,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // un nombre d'établissements POTENTIELS, après l'entonnoir de mortalité
     // graine→semis, et cet entonnoir est ici très étroit *(à calibrer)*.
     regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "geai", semisParAn: 0.4 },
-    litiere: { cnRatio: 25 },
+    litiere: { cnRatio: 25, calciumMgG: 13 },
     // Le noisetier est précoce — il fleurit même en plein hiver.
     phenologie: { debourrementDJ: 95, seuilJourH: 11.0, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 8 },
@@ -806,7 +823,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       semisParAn: 0.4,
       drageonne: { porteeM: 2.5, parAn: 0.8 },
     },
-    litiere: { cnRatio: 28 },
+    litiere: { cnRatio: 28, calciumMgG: 11 },
     // L'épine noire fleurit avant de feuiller, dès mars.
     phenologie: { debourrementDJ: 115, seuilJourH: 11.3, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 4 },
@@ -851,7 +868,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: false },
     // Cenelles avalées par les grives : elles ressortent n'importe où.
     regeneration: { maturiteAns: 8, longeviteAns: 200, dissemination: "oiseaux", semisParAn: 0.9 },
-    litiere: { cnRatio: 26 },
+    litiere: { cnRatio: 26, calciumMgG: 13 },
     // L'aubépine suit l'épine noire de quelques semaines.
     phenologie: { debourrementDJ: 135, seuilJourH: 11.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 4 },
@@ -901,7 +918,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
         leveeSpontanee: 0.1,
       },
     },
-    litiere: { cnRatio: 24 },
+    litiere: { cnRatio: 24, calciumMgG: 10 },
     // La ronce ne perd qu'une partie de son feuillage : elle repart tôt.
     phenologie: { debourrementDJ: 120, seuilJourH: 11.3, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 2 },
@@ -946,7 +963,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // tas de fumier, pieds de haie. C'est un indicateur, pas un passe-partout.
     azote: { demandeRelative: 1, fixateur: false },
     regeneration: { maturiteAns: 4, longeviteAns: 40, dissemination: "oiseaux", semisParAn: 1.5 },
-    litiere: { cnRatio: 20 },
+    litiere: { cnRatio: 20, calciumMgG: 15 },
     // Le sureau est l'un des tout premiers à verdir dans les haies.
     phenologie: { debourrementDJ: 105, seuilJourH: 11.2, besoinFroidSemaines: 8 }, // litière tendre, azotée : elle se minéralise vite
     economie: { prixPlantEur: 5 },
@@ -1007,7 +1024,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.6, fixateur: false },
     regeneration: { maturiteAns: 20, longeviteAns: 150, dissemination: "vent", semisParAn: 2 },
-    litiere: { cnRatio: 28 },
+    litiere: { cnRatio: 28, calciumMgG: 11 },
     // Le charme débourre tôt, avant le hêtre et le chêne.
     phenologie: { debourrementDJ: 130, seuilJourH: 11.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 3 },
@@ -1044,7 +1061,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.4, fixateur: false },
     regeneration: { maturiteAns: 15, longeviteAns: 200, dissemination: "oiseaux", semisParAn: 1.5 },
-    litiere: { cnRatio: 35 }, // feuille coriace et cireuse : elle met des années
+    litiere: { cnRatio: 35, calciumMgG: 7 }, // feuille coriace et cireuse : elle met des années
     phenologie: { debourrementDJ: 200, seuilJourH: 11.5, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 7 },
     bois: { densite: 0.8, prixOeuvreEurM3: 0, rejetteDeSouche: true },
@@ -1081,7 +1098,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Graines plumeuses, emportées loin par le vent — mais qui ne germent que
     // sur limon frais et nu, ce que le moteur traduit par sa soif.
     regeneration: { maturiteAns: 5, longeviteAns: 60, dissemination: "vent", semisParAn: 4 },
-    litiere: { cnRatio: 22 },
+    litiere: { cnRatio: 22, calciumMgG: 12 },
     // Il débourre parmi les tout premiers, avec le bouleau.
     phenologie: { debourrementDJ: 80, seuilJourH: 10.8, besoinFroidSemaines: 7 },
     economie: { prixPlantEur: 3 }, // une bouture suffit
@@ -1117,7 +1134,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 6, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 1 },
-    litiere: { cnRatio: 25 },
+    litiere: { cnRatio: 25, calciumMgG: 14 },
     phenologie: { debourrementDJ: 110, seuilJourH: 11.3, besoinFroidSemaines: 11 },
     economie: { prixPlantEur: 6 },
     bois: { densite: 0.9, prixOeuvreEurM3: 0, rejetteDeSouche: true }, // le bois le plus dur d'Europe
@@ -1160,7 +1177,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 1 },
-    litiere: { cnRatio: 26 },
+    litiere: { cnRatio: 26, calciumMgG: 14 },
     phenologie: { debourrementDJ: 125, seuilJourH: 11.4, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 5 },
     bois: { densite: 0.7, prixOeuvreEurM3: 0, rejetteDeSouche: true },
@@ -1205,7 +1222,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 5, longeviteAns: 70, dissemination: "oiseaux", semisParAn: 1.5 },
-    litiere: { cnRatio: 27 },
+    litiere: { cnRatio: 27, calciumMgG: 12 },
     phenologie: { debourrementDJ: 120, seuilJourH: 11.4, besoinFroidSemaines: 9 },
     economie: { prixPlantEur: 4 },
     bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
@@ -1263,7 +1280,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
         leveeSpontanee: 0.03,
       },
     },
-    litiere: { cnRatio: 25 },
+    litiere: { cnRatio: 25, calciumMgG: 4.5 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 3 },
@@ -1309,7 +1326,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
         leveeSpontanee: 0.04,
       },
     },
-    litiere: { cnRatio: 22 },
+    litiere: { cnRatio: 22, calciumMgG: 5 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 2.5 },
@@ -1358,7 +1375,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       },
     },
     // Litière éricacée : lente et acidifiante (voie fongique, ch2-B).
-    litiere: { cnRatio: 45 },
+    litiere: { cnRatio: 45, calciumMgG: 3.5 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 2 },
@@ -1397,7 +1414,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 7,
     azote: { demandeRelative: 0.45, fixateur: false },
     regeneration: { maturiteAns: 20, longeviteAns: 300, dissemination: "geai", semisParAn: 2 },
-    litiere: { cnRatio: 45 },
+    litiere: { cnRatio: 45, calciumMgG: 6 },
     // Le châtaignier est tardif : mi-mai. *(Des observations de terrain le donnent parfois plus précoce que le chêne ; on suit ici la vue forestière courante.)*
     phenologie: { debourrementDJ: 300, seuilJourH: 12.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 4 },
@@ -1450,7 +1467,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 7,
     azote: { demandeRelative: 0.4, fixateur: false },
     regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "geai", semisParAn: 2 },
-    litiere: { cnRatio: 50 },
+    litiere: { cnRatio: 50, calciumMgG: 6 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 150, seuilJourH: 11.5, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 5 },
@@ -1499,7 +1516,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 25, longeviteAns: 200, dissemination: "vent", semisParAn: 5 },
     // Litière tendre et riche (C/N ~25) : le frêne améliore son sol, c'est une
     // des raisons de sa place dans les haies.
-    litiere: { cnRatio: 25 },
+    litiere: { cnRatio: 25, calciumMgG: 16 },
     // Le frêne est le dernier des grands feuillus à sortir, mi-mai passée.
     phenologie: { debourrementDJ: 310, seuilJourH: 12.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 3 },
@@ -1537,7 +1554,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.3, fixateur: false },
     regeneration: { maturiteAns: 5, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 2 },
-    litiere: { cnRatio: 45 },
+    litiere: { cnRatio: 45, calciumMgG: 5.5 },
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 120, seuilJourH: 11.0, besoinFroidSemaines: 5 },
     economie: { prixPlantEur: 9 },
