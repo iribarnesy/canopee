@@ -151,7 +151,7 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
   it("un châtaignier acidifie le limon acide qu'il occupe", () => {
     // Le mécanisme que l'issue demandait, et le seul qui compte pour le joueur :
     // planter une essence à litière pauvre referme la porte à une partie de
-    // l'atlas. Relevé à l'écriture sur cinquante ans : 5,00 → 4,86.
+    // l'atlas. Relevé à l'écriture sur cinquante ans : 5,00 → 4,76.
     const boise = parcelle(LIMON_ACIDE, "castanea_sativa", 50);
     const nu = parcelle(LIMON_ACIDE, null, 50);
     expect(boise.ph).toBeLessThan(boise.ph0);
@@ -160,7 +160,7 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
 
   it("un frêne entretient le sien, et la différence est l'essence seule", () => {
     // Même station, même graine, même météo : seule la fiche change. Relevé sur
-    // cinquante ans : hêtre 7,00 → 6,85, frêne 7,00 → 7,21.
+    // cinquante ans : hêtre 7,00 → 6,77, frêne 7,00 → 7,14.
     const hetre = parcelle(LIMON_RICHE, "fagus_sylvatica", 50);
     const frene = parcelle(LIMON_RICHE, "fraxinus_excelsior", 50);
     expect(hetre.ph).toBeLessThan(hetre.ph0);
