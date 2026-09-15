@@ -23,6 +23,12 @@ const LECTURES = (process.env.LECTURES ?? "0,0.35,0.7,1").split(",");
 // journal, ils lavent l'image et cachent précisément ce qu'on veut juger — un
 // incendie, par exemple, n'est pas un « changement à pointer », c'est le sujet.
 const CALQUE = process.env.CALQUE;
+// `GESTE_ARBRES=couper` joue le banc des cinq gestes sur arbres (§6.2) sur les
+// plus grosses tiges de la scène. Banc de MÉCANISME comme `TOUT` : il fabrique
+// un sujet que la scène n'a pas, parce que trois cépées recépées dans une
+// friche de quatre mille bouleaux ne se voient pas — mesuré en jouant.
+const GESTE_ARBRES = process.env.GESTE_ARBRES;
+const GESTE_COMBIEN = process.env.GESTE_COMBIEN ?? "40";
 mkdirSync(DIR, { recursive: true });
 
 const nav = await chromium.launch({
@@ -38,7 +44,9 @@ const nombre = (s, quoi) => Number(new RegExp(`${quoi}\\s+([\\d.]+)`).exec(s)?.[
 for (const t of LECTURES) {
   const url = `http://localhost:5173/apercu/jeu.html?scene=${SCENE}${
     TOUT ? "&ellipse-tout=1" : ""
-  }${CALQUE === undefined ? "" : `&calque=${CALQUE}`}&ellipse=${t}`;
+  }${CALQUE === undefined ? "" : `&calque=${CALQUE}`}${
+    GESTE_ARBRES === undefined ? "" : `&geste-arbres=${GESTE_ARBRES}&geste-combien=${GESTE_COMBIEN}`
+  }&ellipse=${t}`;
   await page.goto(url, { waitUntil: "load" });
   await page
     .waitForFunction(
