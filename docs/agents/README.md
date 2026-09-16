@@ -38,6 +38,26 @@ mesurées et relues.
 Les trois derniers ne routent pas, ils avertissent. Ils se cumulent avec les
 trois premiers.
 
+### Une demande d'un périmètre à l'autre porte DEUX labels
+
+`rendu` dit d'où vient le besoin ; il ne dit pas qui écrit le code. Quand le jeu
+a besoin d'une grandeur que seul `src/engine` peut donner, l'issue porte `rendu`
+**et** le label moteur qui route :
+
+- `moteur:maintenance` si le mécanisme existe déjà et qu'il suffit de
+  l'**exposer** — une grandeur que le moteur calcule mais ne met pas dans
+  l'instantané, une action qui s'applique mais ne se rapporte pas ;
+- `moteur:évolution` s'il faut **inventer** ce que le moteur ne sait pas faire.
+
+Sans le second label, la demande atterrit dans la file de celui qui l'a écrite.
+Ce n'est pas une hypothèse : **#86** et **#87** sont restées ouvertes et non
+assignées parce qu'elles ne portaient que `rendu`, alors que tout le travail
+était côté moteur. Les deux labels ne se contredisent pas — le premier dit
+pourquoi on le demande, le second dit qui le fait.
+
+La même règle vaut dans l'autre sens : un mécanisme du moteur qui ne se verra
+que si le jeu l'affiche porte son label moteur **et** `rendu`.
+
 ## Où en est le projet
 
 Le **moteur** est largement en avance sur ce que le jeu sait montrer : 109
