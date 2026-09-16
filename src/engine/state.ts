@@ -22,8 +22,13 @@ import { altitudeParCellule } from "./relief";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
-import { ruHorizonMm } from "./soil";
-import { diametreInitialCm, type TreeState, tirerVigueurIndividuelle } from "./trees";
+import { profondeurPenetrableCm, ruHorizonMm } from "./soil";
+import {
+  diametreInitialCm,
+  profondeurRacinesCm,
+  type TreeState,
+  tirerVigueurIndividuelle,
+} from "./trees";
 
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
@@ -558,6 +563,31 @@ export function createGameState(
 }
 
 /** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
+/**
+ * Part du potentiel qu'on prête aux racines d'un arbre instancié : la même que
+ * `RACINES_PLANCHER` dans `trees.ts`, dont c'est exactement la définition.
+ */
+const RACINES_PLANCHER_INSTANCIE = 0.35;
+
+/**
+ * Profondeur racinaire d'un arbre qu'on INSTANCIE à une taille donnée, cm.
+ *
+ * Les deux semeurs posaient 20 cm quelle que soit la hauteur demandée (#84) :
+ * un arbre instancié à vingt-cinq mètres — ce que font une bonne part des essais
+ * écologiques et le laboratoire — avait donc les racines d'un semis pendant sa
+ * première semaine. Tout le reste de son état est pourtant dérivé de sa hauteur,
+ * le diamètre compris.
+ *
+ * On lui donne donc le PLANCHER que `nouvelleProfondeurRacines` lui garantirait
+ * de toute façon, et jamais moins que les 20 cm d'un semis. Ce n'est pas une
+ * faveur : c'est l'état qu'il aurait s'il avait poussé jusque-là.
+ */
+function racinesInitialesCm(especeId: string, heightM: number, station: Station): number {
+  const penetrable = profondeurPenetrableCm(station.profil);
+  const potentiel = profondeurRacinesCm(getEspece(especeId), heightM, penetrable);
+  return Math.max(20, Math.min(potentiel, RACINES_PLANCHER_INSTANCIE * potentiel));
+}
+
 export function plantAt(
   state: GameState,
   especeId: string,
@@ -584,7 +614,7 @@ export function plantAt(
     fruitsKg: 0,
     fruitProgress: 0,
     bloomFrosted: false,
-    rootDepthCm: 20,
+    rootDepthCm: racinesInitialesCm(especeId, heightM, state.station),
     hauteurElagueeM: 0,
     pousseTendreM: 0,
     vigueur: 1,
@@ -634,7 +664,7 @@ export function plantScattered(
       fruitsKg: 0,
       fruitProgress: 0,
       bloomFrosted: false,
-      rootDepthCm: 20,
+      rootDepthCm: racinesInitialesCm(especeId, heightM, state.station),
       hauteurElagueeM: 0,
       pousseTendreM: 0,
       vigueur: 1,
