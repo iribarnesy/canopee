@@ -22,6 +22,7 @@ import type {
   NaissanceDeLaSemaine,
 } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
+import type { DecorBordures } from "../render/couches/decor";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
 type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
@@ -365,6 +366,16 @@ export interface StationInfo {
    * pas de vue isométrique du tout.
    */
   altitudesM: readonly number[];
+  /**
+   * Ce qui entoure la parcelle, réduit à ce que le DÉCOR en dessine : trois
+   * parts de couvert et les semenciers, par côté (`decorDesBordures`).
+   *
+   * Les bordures sont choisies au départ et ne changent plus : elles partent
+   * une fois, comme le relief. La vue ne peut pas les redemander au moteur —
+   * elle ne garde pas les réglages de la partie, et une partie reprise d'une
+   * sauvegarde ne les a jamais vus passer.
+   */
+  bordures: DecorBordures;
 }
 
 export type ToWorker =

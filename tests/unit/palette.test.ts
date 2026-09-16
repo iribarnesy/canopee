@@ -8,17 +8,21 @@
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { facteurEauHerbacee, HERBACEES } from "../../src/engine/herbacees";
 import {
   type CelluleSol,
+  COUVERT_LE_PLUS_SOMBRE,
   couleurHerbe,
   couleurSol,
   eclairer,
   LITIERE_PLEINE_CG,
   melange,
   NIVEAUX,
+  ombreDuCouvert,
   palier,
   phaseAnnuelle,
   quantifier,
+  satisfactionEnEau,
   signatureCellule,
   valeurDuPalier,
   versEntier,
@@ -69,7 +73,16 @@ describe("la quantification, qui fait vivre le cache de morceaux", () => {
       for (let b = 0; b < NIVEAUX; b++) {
         for (let c = 0; c < NIVEAUX; c++) {
           for (let d = 0; d < NIVEAUX; d++) {
-            vues.add(signatureCellule({ humidite: a, herbe: b, herbeBiomasse: c, litiere: d }));
+            vues.add(
+              signatureCellule({
+                humidite: a,
+                herbe: b,
+                herbeBiomasse: c,
+                litiere: d,
+                lumiere: 0,
+                herbeHumidite: 0,
+              }),
+            );
             compte++;
           }
         }
@@ -114,7 +127,14 @@ describe("le sol dit ce que le moteur calcule", () => {
           for (let l = 0; l < NIVEAUX; l++) {
             for (const semaine of [5, 18, 30, 45]) {
               const t = couleurSol(
-                { humidite: h, herbe: g, herbeBiomasse: b, litiere: l },
+                {
+                  humidite: h,
+                  herbe: g,
+                  herbeBiomasse: b,
+                  litiere: l,
+                  lumiere: NIVEAUX - 1,
+                  herbeHumidite: NIVEAUX - 1,
+                },
                 semaine,
               );
               expect(clarte(t)).toBeLessThan(190);
@@ -134,7 +154,17 @@ describe("le sol dit ce que le moteur calcule", () => {
         fc.double({ min: 0.5, max: 1.5, noNaN: true }),
         (h, g, semaine, facteur) => {
           const t = eclairer(
-            couleurSol({ humidite: h, herbe: g, herbeBiomasse: g, litiere: 0 }, semaine),
+            couleurSol(
+              {
+                humidite: h,
+                herbe: g,
+                herbeBiomasse: g,
+                litiere: 0,
+                lumiere: palier(1),
+                herbeHumidite: palier(1),
+              },
+              semaine,
+            ),
             facteur,
           );
           const e = versEntier(t);
@@ -182,5 +212,148 @@ describe("le mélange", () => {
     expect(melange(a, b, -1)).toEqual(a);
     expect(melange(a, b, 2)).toEqual(b);
     expect(melange(a, b, 0.5)).toEqual({ r: 50, g: 100, b: 25 });
+  });
+});
+
+describe("la soif de l'herbe, lue du moteur et non décrétée", () => {
+  const chaleur = (t: { r: number; g: number; b: number }) => t.r - t.b;
+  const pleine = (herbeHumidite: number) =>
+    couleurSol(
+      quantifier({ humidite: 0.5, herbe: 1, herbeBiomasse: 0.25, litiereCG: 0, herbeHumidite }),
+      28,
+    );
+
+  it("**une pelouse pleine brunit quand l'eau de SURFACE manque**", () => {
+    // Ce que le rendu ne pouvait pas montrer avant que le moteur ne l'expose
+    // (issue #12) : sur une cellule bien couverte — c'est-à-dire partout où
+    // l'herbe compte — la soif était strictement invisible, parce que
+    // l'humidité ne colorait que le sol nu et que l'herbe le recouvre.
+    expect(chaleur(pleine(0.02))).toBeGreaterThan(chaleur(pleine(0.9)) + 15);
+  });
+
+  it("**le seuil est celui du MOTEUR, pas une constante d'ici**", () => {
+    // Le garde-fou de la faute, et il est précis. Le premier jet décrétait
+    // `SEUIL_GRILLE = 0.42` sur la réserve utile : faux de valeur, faux de
+    // grandeur, faux de nature. La valeur juste — 0,35 de l'eau de SURFACE —
+    // vit dans `facteurEauHerbacee`, et le rendu l'obtient en APPELANT cette
+    // fonction plutôt qu'en recopiant son seuil.
+    //
+    // Recopier serait l'autre façon de se tromper, celle du §2.1 : deux copies
+    // d'une règle dérivent, et personne ne le voit. Cet essai vérifie donc
+    // l'égalité exacte avec le moteur, à plusieurs valeurs — il casse si l'un
+    // des deux bouge sans l'autre.
+    for (const h of [0, 0.1, 0.2, 0.35, 0.5, 1]) {
+      const dactyle = HERBACEES.find((x) => x.id === "dactylis_glomerata");
+      expect(dactyle).toBeDefined();
+      if (!dactyle) return;
+      expect(satisfactionEnEau(h), `humidité ${h}`).toBeCloseTo(facteurEauHerbacee(dactyle, h), 10);
+    }
+  });
+
+  it("au-dessus du seuil du moteur, l'herbe ne brunit plus du tout", () => {
+    // La conséquence de lire la bonne fonction : le plateau est là où le
+    // moteur le met. Un sol à moitié plein n'a aucune raison de jaunir, et le
+    // faire jaunir rendrait la couleur illisible — tout serait toujours un peu
+    // grillé.
+    expect(satisfactionEnEau(0.5)).toBe(1);
+    expect(chaleur(pleine(0.5))).toBeCloseTo(chaleur(pleine(0.95)), 6);
+  });
+});
+
+describe("ce que le rendu N'A PAS le droit d'inventer", () => {
+  it("la couleur de l'herbe prend sa soif du moteur, jamais d'un seuil local", () => {
+    // Le garde-fou de la règle, et il vient d'une faute réelle : j'avais ajouté
+    // ici un troisième paramètre `secheresse`, dérivé d'un seuil sur la réserve
+    // utile décrété dans le rendu. Le rendu n'a pas à décider à partir de quelle
+    // humidité une herbe souffre — c'est une affirmation de modèle.
+    //
+    // Le moteur, lui, sait le dire : `herbe.ts` porte `humiditeVecue`,
+    // l'humidité de l'horizon de surface lissée sur ~6 semaines, et son seuil
+    // d'eau pour l'herbe vaut 0,35 de l'eau de SURFACE — ni la même valeur, ni
+    // la même grandeur que ce que j'avais inventé. Elle n'est pas encore dans
+    // l'instantané : c'est une issue moteur, pas une constante de palette.
+    //
+    // Cet essai compte les paramètres. C'est grossier, et c'est exactement ce
+    // qu'il faut : il se déclenche à la SIGNATURE, donc avant qu'on ait eu le
+    // temps de rebrancher un seuil quelque part.
+    // Le troisième paramètre est revenu, mais il a changé de nature : ce n'est
+    // plus une « sécheresse » calculée ici depuis un seuil décrété, c'est
+    // `soilHerbeHumidite` transporté tel quel, dont la lecture passe par
+    // `satisfactionEnEau` — donc par `facteurEauHerbacee`, donc par le moteur.
+    //
+    // L'essai vérifie ce qui compte : que la valeur neutre soit l'ABSENCE
+    // d'affirmation. Une scène qui ne transporte pas la grandeur doit rendre
+    // une herbe non assoiffée, jamais une herbe grillée par défaut.
+    expect(couleurHerbe(28, 0.25)).toEqual(couleurHerbe(28, 0.25, 1));
+  });
+
+  it("aucune constante de palette ne porte un seuil sur une grandeur du moteur", () => {
+    // La palette a le droit de choisir des COULEURS et des façons de les
+    // afficher — `LITIERE_PLEINE_CG` est un plafond visuel, `OPACITE_OMBRE` un
+    // choix de dessin, `COUVERT_LE_PLUS_SOMBRE` une correspondance entre une
+    // lumière que le moteur calcule et une clarté à l'écran. Ce qu'elle n'a pas
+    // le droit de faire, c'est décider qu'une grandeur physique fait basculer
+    // un état — « en dessous de tant, l'herbe grille ».
+    //
+    // La distinction en une phrase : le rendu choisit COMMENT montrer ce que le
+    // moteur dit ; il ne choisit pas CE QUE le moteur dit.
+    expect(ombreDuCouvert(1)).toBeCloseTo(1, 6);
+    expect(ombreDuCouvert(0)).toBeGreaterThan(0);
+  });
+});
+
+describe("l'ombre du couvert : ce que le moteur savait et que le rendu ignorait", () => {
+  it("**un sol sous couvert fermé est plus sombre qu'une trouée**", () => {
+    // Le défaut, et c'est celui qui empêchait le plus la scène de ressembler à
+    // une forêt : `computeGroundLight` calcule la lumière au sol de chaque
+    // cellule à chaque tick, le protocole la transporte sous
+    // `soilLumiere`, et le rendu ne la lisait pas. Le sol d'une futaie fermée
+    // avait donc exactement la couleur de celui d'une clairière.
+    //
+    // L'ombre PORTÉE ne pouvait pas y suppléer, et pas par accident : elle
+    // SATURE à l'opacité d'un seul arbre (`OPACITE_OMBRE`), ce qui est voulu
+    // pour éviter les puits d'encre. Un couvert fermé ne pouvait donc jamais
+    // assombrir le sol de plus d'un tiers, quel que soit le nombre d'arbres.
+    const sol = (lumiere: number) =>
+      couleurSol(
+        quantifier({ humidite: 0.5, herbe: 0.6, herbeBiomasse: 0.4, litiereCG: 200, lumiere }),
+        28,
+      );
+    expect(clarte(sol(0.02))).toBeLessThan(clarte(sol(1)) * 0.75);
+  });
+
+  it("croît avec la lumière, sans saut ni palier vide", () => {
+    let precedent = -1;
+    for (const l of [0, 0.05, 0.2, 0.4, 0.7, 1]) {
+      const c = ombreDuCouvert(l);
+      expect(c).toBeGreaterThanOrEqual(precedent);
+      precedent = c;
+    }
+    expect(ombreDuCouvert(1)).toBeCloseTo(1, 6);
+    expect(ombreDuCouvert(0)).toBeCloseTo(COUVERT_LE_PLUS_SOMBRE, 6);
+  });
+
+  it("**ne descend jamais au noir, même sous une hêtraie fermée**", () => {
+    // La physique dirait ~1 % de lumière sous un couvert fermé
+    // (`MAX_EXTINCTION`). La rendre au pied de la lettre ferait un trou d'encre
+    // au milieu de la parcelle, et on ne verrait plus rien de ce qui s'y
+    // passe : ni les semis, ni le bois au sol, ni les marques d'action. C'est
+    // un choix de dessin, et il est borné pour qu'on ne puisse pas le
+    // durcir par inadvertance jusqu'à rendre le sous-bois illisible.
+    expect(COUVERT_LE_PLUS_SOMBRE).toBeGreaterThan(0.4);
+  });
+
+  it("la grandeur absente vaut PLEINE LUMIÈRE, jamais l'obscurité", () => {
+    // Le repli compte : une scène qui ne transporte pas la lumière au sol doit
+    // rendre ce qu'elle rendait avant, pas une parcelle noire.
+    const sans = quantifier({ humidite: 0.5, herbe: 0.6, herbeBiomasse: 0.4, litiereCG: 200 });
+    const pleine = quantifier({
+      humidite: 0.5,
+      herbe: 0.6,
+      herbeBiomasse: 0.4,
+      litiereCG: 200,
+      lumiere: 1,
+    });
+    expect(sans.lumiere).toBe(pleine.lumiere);
   });
 });

@@ -102,8 +102,22 @@ function Graphe({ resultat }: { resultat: ResultatExperience }) {
   );
 }
 
+/**
+ * Où en est la sonde de station.
+ *
+ * **Trois états et non un booléen, parce que le calcul est bloquant.** Monter
+ * la sonde lance vingt ans de moteur EN SYNCHRONE pendant le rendu (voir
+ * `ui/App.tsx`) : si on la montait dans la foulée du clic, le navigateur
+ * n'aurait jamais l'occasion de peindre le panneau ouvert et le joueur
+ * regarderait une page morte pendant plusieurs minutes. « demandee » existe
+ * donc pour laisser passer une image — celle qui dit qu'on calcule — avant de
+ * rendre la main au moteur.
+ */
+type EtatSonde = "fermee" | "demandee" | "montee";
+
 export function LabView() {
   const workerRef = useRef<Worker | undefined>(undefined);
+  const [sonde, setSonde] = useState<EtatSonde>("fermee");
   const [resultats, setResultats] = useState<Record<string, ResultatExperience>>({});
   const [enCours, setEnCours] = useState<string | undefined>();
   const [durees, setDurees] = useState<Record<string, number>>({});
@@ -123,6 +137,23 @@ export function LabView() {
     workerRef.current = w;
     return () => w.terminate();
   }, []);
+
+  // Deux images d'attente, et il en faut deux : un seul `requestAnimationFrame`
+  // s'exécute AVANT la peinture, donc le message « calcul en cours » ne serait
+  // pas encore à l'écran quand le moteur reprendrait la main.
+  useEffect(() => {
+    if (sonde !== "demandee") return;
+    let annule = false;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!annule) setSonde("montee");
+      });
+    });
+    return () => {
+      annule = true;
+      cancelAnimationFrame(id);
+    };
+  }, [sonde]);
 
   const [reglages, setReglages] = useState<Record<string, Reglages>>(() =>
     Object.fromEntries(
@@ -251,13 +282,34 @@ export function LabView() {
           </div>
         );
       })}
-      <details style={{ ...CADRE, marginBottom: 14 }}>
+      {/*
+        Le contenu n'est monté QUE si le panneau est ouvert. Un `<details>`
+        replié CACHE ses enfants, il ne les empêche pas d'être rendus : la
+        sonde partait donc à chaque affichage de l'onglet, et ses vingt ans de
+        moteur gelaient la page avant même qu'elle ne s'affiche. Une fois
+        montée elle le reste — refermer le panneau ne doit pas faire repayer le
+        calcul à qui le rouvre.
+      */}
+      <details
+        style={{ ...CADRE, marginBottom: 14 }}
+        onToggle={(e) => {
+          if (e.currentTarget.open) setSonde((s) => (s === "montee" ? s : "demandee"));
+          else setSonde((s) => (s === "montee" ? s : "fermee"));
+        }}
+      >
         <summary style={{ cursor: "pointer" }}>
           <strong>Sonde d'une station</strong> — une seule parcelle, semaine par semaine (eau des
-          horizons, hauteurs, carte)
+          horizons, hauteurs, carte){" "}
+          <em style={{ color: "#8a6d3b" }}>— plusieurs minutes de calcul</em>
         </summary>
         <div style={{ marginTop: 12 }}>
-          <SondeStation />
+          {sonde === "montee" ? (
+            <SondeStation />
+          ) : sonde === "demandee" ? (
+            <p style={{ margin: 0, color: "#666" }}>
+              Vingt ans de simulation en cours — la page ne répondra plus jusqu'au bout.
+            </p>
+          ) : null}
         </div>
       </details>
     </div>

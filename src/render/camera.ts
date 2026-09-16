@@ -23,6 +23,7 @@
 
 import {
   type Camera,
+  celluleSousLeCurseur,
   METRE_VERTICAL_PX,
   type Orientation,
   type PointEcran,
@@ -117,6 +118,35 @@ export function versParcelleVue(e: PointEcran, vue: Vue, z = 0): PointParcelle {
   );
 }
 
+/**
+ * Écran → CELLULE, sur le terrain tel qu'il est.
+ *
+ * Le pendant de `versParcelleVue` pour un joueur qui clique, et il ne s'y
+ * ramène pas : `versParcelleVue` inverse la projection sur un plan d'altitude
+ * donnée, ce qui est exact pour un sol plat et faux dès qu'il y a du relief —
+ * cliquer sur le flanc d'une butte désignerait la cellule qui se trouve
+ * derrière elle. `celluleSousLeCurseur` remonte le rayon de vue et rend celle
+ * qu'on VOIT, ce qui est la seule réponse juste à « sur quoi ai-je cliqué ».
+ *
+ * Rend `undefined` quand le pixel ne touche aucune cellule — hors parcelle, ou
+ * ciel au-dessus.
+ */
+export function celluleSousLeCurseurVue(
+  e: PointEcran,
+  vue: Vue,
+  altitudeM: (x: number, y: number) => number,
+): { x: number; y: number } | undefined {
+  const centre = versEcran({ x: vue.centre.x, y: vue.centre.y, z: 0 }, vue.cam);
+  return celluleSousLeCurseur(
+    {
+      sx: e.sx + centre.sx - vue.largeurPx / 2,
+      sy: e.sy + centre.sy - vue.hauteurPx / 2,
+    },
+    vue.cam,
+    altitudeM,
+  );
+}
+
 /** Ramène le centre dans la parcelle : on ne cadre jamais le vide. */
 function borner(centre: { x: number; y: number }, coteM: number): { x: number; y: number } {
   return {
@@ -156,6 +186,49 @@ export function zoomer(vue: Vue, facteur: number, curseur: PointEcran, altitudeM
       vue.cam.coteM,
     ),
   };
+}
+
+/**
+ * Déplace la vue d'un glissement écran.
+ *
+ * **En coordonnées de PARCELLE, et pas en pixels.** On pourrait retrancher le
+ * décalage au centre en pixels, mais alors le déplacement dépendrait de
+ * l'orientation de la caméra et il faudrait la défaire à la main — exactement
+ * le genre de calcul qui se désynchronise de `tourner()` un jour. En inversant
+ * deux points d'écran vers la parcelle et en prenant leur écart, la rotation et
+ * le zoom sont pris en compte par construction : glisser de dix pixels vers la
+ * droite déplace toujours la vue de ce que dix pixels valent, vu d'où l'on est.
+ *
+ * Le centre reste borné dans la parcelle : on ne se perd pas dans le vide.
+ */
+export function deplacer(vue: Vue, dxPx: number, dyPx: number): Vue {
+  const origine = versParcelleVue({ sx: 0, sy: 0 }, vue);
+  const glisse = versParcelleVue({ sx: dxPx, sy: dyPx }, vue);
+  return {
+    ...vue,
+    centre: borner(
+      { x: vue.centre.x - (glisse.x - origine.x), y: vue.centre.y - (glisse.y - origine.y) },
+      vue.cam.coteM,
+    ),
+  };
+}
+
+/**
+ * CADRER un point de la parcelle : il vient au centre de la vue.
+ *
+ * **Le zoom ne change PAS, et c'est la décision qui compte.** Le §6.4 demande
+ * que la vue puisse cadrer le départ d'un incendie — le moteur met déjà le jeu
+ * en pause dessus (`autopause`) — mais un cadrage qui zoomerait aussi
+ * reprendrait au joueur le réglage qu'il vient de faire, et le lui rendrait
+ * ailleurs. Recentrer répond à la question posée (« où est-ce que ça se
+ * passe ? ») sans en poser une autre (« à quelle distance est-ce que je
+ * regardais ? »).
+ *
+ * Le centre est borné à la parcelle par la même règle que le glissement : on ne
+ * cadre jamais le vide, même si l'événement est sur un bord.
+ */
+export function cadrer(vue: Vue, cible: { x: number; y: number }): Vue {
+  return { ...vue, centre: borner(cible, vue.cam.coteM) };
 }
 
 /**

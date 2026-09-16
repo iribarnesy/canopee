@@ -69,6 +69,7 @@ export interface OmbreAPoser {
   sy: number;
   largeurPx: number;
   hauteurPx: number;
+
   /** index de la tache cuite à poser, ∈ [0, DENSITES[ */
   densite: number;
   /** clé de tri, la même que pour le sol et les arbres */
@@ -110,6 +111,41 @@ export const DENSITES = 4;
  * « aucune primitive vectorielle par image » respectée jusqu'au bout.
  */
 export const MODE_ACCUMULATION = "darken" as const;
+
+/**
+ * Le même mode, **écrit pour le GPU** : `min`, et non `darken`.
+ *
+ * Les deux disent la même chose — garder le minimum de la source et du fond —
+ * mais pas au même prix, et l'un des deux ment sur un GPU.
+ *
+ * **Ce que ça a donné, et comment on l'a su.** La vue Pixi montrait un
+ * escalier de RECTANGLES sombres le long du bord de la parcelle, absent de la
+ * même scène passée par le compositeur Canvas. La comparaison des deux rendus
+ * a écarté la cuisson : le défaut naissait à la composition. Une ablation l'a
+ * ensuite désigné sans ambiguïté — en sautant les taches, les rectangles
+ * disparaissaient, et chacun avait sa tache ronde inscrite dedans. C'était donc
+ * le QUAD de la tache qui s'assombrissait, et non son disque.
+ *
+ * La raison tient à la classification de Pixi : `darken` est un mode
+ * **avancé**, implémenté par un shader qui doit lire le fond déjà dessiné.
+ * Dans une `RenderTexture` rendue avec `clear: true`, cette lecture ne trouve
+ * pas le rectangle blanc posé juste avant dans la même passe — le fond vu par
+ * le shader est du noir transparent, et `min(blanc, noir)` vaut noir sur toute
+ * l'étendue du quad. Le carré opaque blanc qui entoure le disque, inoffensif
+ * en Canvas 2D, devenait donc une tache carrée.
+ *
+ * `min` est en revanche un mode **de base** : il se traduit directement en
+ * `gl.MIN` sur l'équation de mélange, sans lecture de fond et sans shader. Le
+ * blanc y redevient neutre, et la saturation — deux ombres superposées ne sont
+ * pas plus sombres qu'une seule — est conservée exactement.
+ *
+ * **`multiply` a été essayé et écarté**, bien qu'il soit lui aussi de base et
+ * qu'il fasse disparaître les rectangles : il COMPOSE au lieu de saturer, et la
+ * capture le montrait tout de suite — sous une lisière de houppiers qui se
+ * recouvrent, le sol virait au noir et le liseré sableux du bord disparaissait.
+ * C'est précisément le puits d'encre que la saturation existe pour éviter.
+ */
+export const MODE_ACCUMULATION_GPU = "min" as const;
 export const MODE_COMPOSITION = "multiply" as const;
 
 /**
@@ -213,13 +249,35 @@ export function ombreDeLArbre(arbre: ArbreOmbre, vue: Vue): OmbreAPoser | undefi
   const pied = versEcranVue({ x: arbre.x, y: arbre.y, z: arbre.z }, vue);
   const direction = directionOmbreEcran(vue.cam);
   const longueur = longueurOmbreEcran(arbre.heightM, vue.cam);
-  const largeurPx = 2 * rayonM * TUILE_LARGEUR_PX * vue.cam.zoom;
+  const largeurDisque = 2 * rayonM * TUILE_LARGEUR_PX * vue.cam.zoom;
+
+  // **L'ombre est le BALAYAGE du houppier, pas un disque posé au loin**, et
+  // c'est ce qui faisait flotter les arbres. La tache était un disque centré à
+  // la distance que le moteur donne — plus de six mètres au nord du tronc pour
+  // un sujet de seize mètres — si bien que son bord n'atteignait jamais le
+  // pied : on voyait un arbre, puis un trou de lumière, puis une tache sombre
+  // sans rapport visible avec lui.
+  //
+  // Ce que couvre réellement un houppier de rayon `r` dont l'ombre se décale de
+  // `d`, c'est la somme de Minkowski du disque et du segment — un stade, dont
+  // le bord proche revient sous l'arbre. On en prend l'ellipse enveloppe : même
+  // centre, demi-axes augmentés d'une demi-composante du décalage. Elle
+  // déborde un peu aux quatre coins du stade, ce que le bord doux de la tache
+  // rend invisible, et elle n'oblige NI à faire tourner le sprite ni à projeter
+  // une ellipse du sol — deux complications pour un gain que l'œil ne verrait
+  // pas.
+  //
+  // Le décalage du moteur est respecté au pixel près : c'est toujours lui qui
+  // place l'extrémité. On cesse seulement de prétendre que l'ombre est
+  // ponctuelle.
+  const dx = direction.sx * longueur;
+  const dy = direction.sy * longueur;
 
   return {
-    sx: pied.sx + direction.sx * longueur,
-    sy: pied.sy + direction.sy * longueur,
-    largeurPx,
-    hauteurPx: largeurPx * APLATISSEMENT,
+    sx: pied.sx + dx / 2,
+    sy: pied.sy + dy / 2,
+    largeurPx: largeurDisque + Math.abs(dx),
+    hauteurPx: largeurDisque * APLATISSEMENT + Math.abs(dy),
     // Un houppier à moitié sorti porte une ombre à moitié dense : c'est ce que
     // `partFoliaireOmbrageante` dit, et c'est ce qui rend le printemps visible
     // au sol avant qu'il ne le soit dans les houppiers. La densité choisit la
