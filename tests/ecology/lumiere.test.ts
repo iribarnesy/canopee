@@ -13,6 +13,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE, type StationClimat } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { STRESS_ONSET } from "../../src/engine/trees";
 import { aliveCount, meanHeight, runYears } from "../helpers";
 
 /** Limon riche à climat plus arrosé et régulier : la vieille futaie ne manque pas d'eau. */
@@ -88,11 +89,19 @@ describe("lumière — en plein découvert, personne n'est limité", () => {
 /**
  * LE PLANCHER DE LUMIÈRE, et ce qu'il rend impossible.
  *
- * `MAX_EXTINCTION` borne l'empilement des couronnes : sous le couvert le plus
- * sombre que le moteur sache produire, il reste `exp(−MAX_EXTINCTION)` de
- * lumière. Une espèce dont le point de compensation passe SOUS ce plancher ne
- * peut alors plus jamais mourir d'ombre, où qu'elle soit et quoi qu'on plante
- * autour d'elle.
+ * `MAX_EXTINCTION` borne l'empilement des couronnes par une ASYMPTOTE : quelle
+ * que soit l'extinction brute — huit, vingt, un million — la valeur rendue tend
+ * vers 4,5 sans l'atteindre, donc il reste toujours `exp(−MAX_EXTINCTION)` de
+ * lumière. L'intention est physique et juste : des couronnes ne s'empilent pas
+ * comme des filtres parfaits, elles laissent des trouées de ciel et des taches
+ * de soleil. La VALEUR, elle, porte *(à calibrer)* — les sous-bois réels
+ * descendent sous 2 % et n'ont pas de mur.
+ *
+ * Le stress d'ombre ne monte pas au point de compensation mais à 0,9 fois
+ * celui-ci : `fLumSurvival = min(1, 0,5 × lumière / compensation)` doit passer
+ * sous `STRESS_ONSET` = 0,45. Une espèce dont 0,9 × la compensation passe sous
+ * le plancher ne peut donc plus jamais accumuler de stress d'ombre, où qu'elle
+ * soit et quoi qu'on plante autour d'elle.
  *
  * Ces essais ne coûtent aucune simulation — c'est une comparaison de deux
  * constantes — et ils auraient épargné une campagne de cent vingt ans. La
@@ -101,20 +110,36 @@ describe("lumière — en plein découvert, personne n'est limité", () => {
  */
 describe("ce que le plancher de lumière rend impossible", () => {
   const plancher = Math.exp(-MAX_EXTINCTION);
+  /**
+   * Lumière en dessous de laquelle une espèce commence à accumuler du stress
+   * d'ombre. `fLumSurvival = min(1, 0,5 × lumière / compensation)` doit passer
+   * sous `STRESS_ONSET` (0,45), d'où 0,9 × compensation — et non la
+   * compensation elle-même, qui ne gouverne que l'arrêt de la CROISSANCE.
+   */
+  const seuilStress = (id: string) => 2 * STRESS_ONSET * getEspece(id).lumiere.compensation;
 
   it("le hêtre est hors d'atteinte de l'ombre, et il est le seul", () => {
-    // Plancher 0,0111 contre une compensation de 0,01 : il reste toujours au
-    // hêtre un peu plus de lumière qu'il ne lui en faut pour respirer. C'est
-    // une propriété ARITHMÉTIQUE du couple de constantes, pas un résultat de
-    // simulation, et elle explique qu'une cohorte dense de hêtres ne s'éclaircit
-    // jamais (361 tiges plantées, 361 vivantes à cent vingt ans).
-    const hetre = getEspece("fagus_sylvatica").lumiere.compensation;
-    expect(hetre).toBeLessThan(plancher);
+    // Le seuil est 0,9 × compensation, pas la compensation : 0,0090 pour le
+    // hêtre, contre un plancher de 0,0111. Il reste donc toujours au hêtre 23 %
+    // de lumière de plus qu'il ne lui en faudrait pour commencer à souffrir.
+    // C'est une propriété ARITHMÉTIQUE du couple de constantes, pas un résultat
+    // de simulation, et elle explique qu'une cohorte dense de hêtres ne
+    // s'éclaircit jamais (361 tiges plantées, 361 vivantes à cent vingt ans).
+    //
+    // VINGT-TROIS POUR CENT, C'EST PEU, et c'est le vrai enseignement. Deux
+    // constantes indépendantes se croisent à cette distance : la prochaine
+    // recalibration de l'une ou de l'autre renversera le résultat dans un sens
+    // ou dans l'autre, sans que personne ait voulu décider que le hêtre meurt
+    // ou survit. Ce que la réalité fait — le hêtre dominé MEURT, par famine
+    // carbonée, et une hêtraie de 120 ans porte quelques centaines de tiges et
+    // non 2 256 — demande un mécanisme cumulé, pas un seuil instantané mieux
+    // placé (#96).
+    expect(seuilStress("fagus_sylvatica")).toBeLessThan(plancher);
 
     // Et c'est bien une exception, pas la règle : toutes les autres espèces de
     // l'atlas peuvent être étouffées. La suivante par l'ombre est le houx
-    // (0,02), qui garde près du double du plancher.
-    const exceptions = ESPECES_V0.filter((e) => e.lumiere.compensation < plancher);
+    // (0,02), dont le seuil de stress vaut 0,018, soit 1,6 fois le plancher.
+    const exceptions = ESPECES_V0.filter((e) => seuilStress(e.id) < plancher);
     expect(exceptions.map((e) => e.id)).toEqual(["fagus_sylvatica"]);
   });
 
@@ -122,7 +147,7 @@ describe("ce que le plancher de lumière rend impossible", () => {
     // Le garde-fou de l'essai précédent : si le plancher montait au point de
     // mettre tout le monde à l'abri, l'égalité ci-dessus passerait encore et ne
     // voudrait plus rien dire.
-    expect(getEspece("ilex_aquifolium").lumiere.compensation).toBeGreaterThan(plancher);
-    expect(getEspece("carpinus_betulus").lumiere.compensation).toBeGreaterThan(plancher);
+    expect(seuilStress("ilex_aquifolium")).toBeGreaterThan(plancher);
+    expect(seuilStress("carpinus_betulus")).toBeGreaterThan(plancher);
   });
 });

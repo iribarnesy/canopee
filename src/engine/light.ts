@@ -31,12 +31,26 @@ const BUCKET_M = 12;
  * couches parfaites. exp(−4,5) ≈ 1,1 % de lumière au sol — l'ordre de grandeur
  * mesuré sous les couverts les plus sombres *(à calibrer)*.
  *
- * EXPORTÉE parce qu'elle porte une conséquence qu'aucune simulation ne révèle :
- * `exp(−MAX_EXTINCTION)` est le PLANCHER de lumière du moteur, et toute espèce
- * dont le point de compensation passe dessous devient immortelle à l'ombre. Le
- * hêtre (compensation 0,01 contre un plancher de 0,0111) est dans ce cas, et
+ * C'est une ASYMPTOTE : l'extinction brute a beau valoir huit, vingt ou un
+ * million, la valeur rendue tend vers 4,5 sans jamais l'atteindre. Il reste donc
+ * toujours `exp(−MAX_EXTINCTION)` = 1,11 % de lumière, partout, quoi qu'on
+ * empile. L'intention est juste — un sous-bois n'est jamais noir, il y a des
+ * trouées de ciel et des taches de soleil — mais la VALEUR n'est pas sourcée :
+ * les sous-bois mesurés descendent sous 2 % et n'ont pas de mur.
+ *
+ * EXPORTÉE parce que ce plancher porte une conséquence qu'aucune simulation ne
+ * révèle : une espèce dont le seuil de stress d'ombre passe dessous devient
+ * immortelle à l'ombre. Ce seuil vaut `2 × STRESS_ONSET × compensation`, soit
+ * 0,9 fois la compensation — et non la compensation, qui ne gouverne que
+ * l'arrêt de la croissance. Le hêtre est dans ce cas (0,0090 contre 0,0111), et
  * c'est pourquoi une hêtraie plantée à deux mètres garde ses 361 tiges au bout
- * de cent vingt ans (#65). `lumiere.test.ts` épingle le rapport entre les deux.
+ * de cent vingt ans (#65).
+ *
+ * VINGT-TROIS POUR CENT D'ÉCART, c'est-à-dire un équilibre sur le fil : deux
+ * constantes indépendantes se croisent là, et recalibrer l'une ou l'autre
+ * renverserait le résultat sans que personne l'ait décidé. Dans la réalité le
+ * hêtre dominé MEURT, par famine carbonée — un budget cumulé, pas un seuil
+ * instantané (#96). `lumiere.test.ts` épingle le rapport entre les deux.
  */
 export const MAX_EXTINCTION = 4.5;
 
@@ -93,8 +107,10 @@ export function baseHouppierCible(
   if (opacite <= 0 || compensation <= 0) return 0;
   // Une cime déjà sous son point de compensation : plus une seule branche ne
   // paie sa respiration, pas même la plus haute. C'est la limite continue du
-  // calcul (ln(1) = 0), et c'est un arbre qui se meurt — le point de
-  // compensation est précisément le seuil de mortalité (especes.ts).
+  // calcul (ln(1) = 0), et c'est un arbre qui ne pousse plus. Il ne MEURT pas
+  // pour autant : le stress ne monte qu'à 0,9 fois la compensation
+  // (`fLumSurvival`, trees.ts), et entre les deux l'arbre patiente sur ses
+  // réserves.
   if (lumiereCime <= compensation) return heightM;
   const profondeurVivante = Math.log(lumiereCime / compensation) / opacite;
   const profondeur = Math.min(PROFONDEUR_HOUPPIER_MAX, profondeurVivante);

@@ -38,8 +38,19 @@ export interface EspeceV0 {
   lumiere: {
     /**
      * Point de compensation ∈ [0,1] : part de la pleine lumière en dessous de
-     * laquelle l'arbre vit sur ses réserves et meurt (ch3-B). Sciaphile ≈ 0,03,
-     * héliophile ≈ 0,2-0,3.
+     * laquelle l'arbre cesse de croître et vit sur ses réserves (ch3-B).
+     * Sciaphile ≈ 0,03, héliophile ≈ 0,2-0,3.
+     *
+     * CE N'EST PAS LE SEUIL DE MORT, et la nuance a déjà trompé deux
+     * commentaires. La croissance s'annule à `compensation` (`fLum`) ; le
+     * STRESS, lui, ne monte qu'à `2 × STRESS_ONSET × compensation`, soit 0,9
+     * fois celui-ci (`fLumSurvival`, trees.ts). Entre les deux, l'arbre ne
+     * pousse plus et ne meurt pas — c'est le semis qui patiente sous couvert,
+     * et c'est voulu.
+     *
+     * Conséquence à connaître : le hêtre (0,01) a un seuil de stress de 0,0090,
+     * SOUS le plancher de lumière du moteur (0,0111). Il ne peut donc jamais
+     * mourir d'ombre (#65, `lumiere.test.ts`).
      */
     compensation: number;
     /** saturation ∈ [0,1] : lumière au-delà de laquelle la croissance plafonne */

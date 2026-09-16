@@ -310,8 +310,14 @@ export function prochainDommageHydraulique(
  * Facteur de survie sous ce seuil → l'arbre puise dans ses réserves. Les
  * facteurs sont déjà normalisés par les tolérances de l'espèce, donc ce seuil
  * unique produit des mortalités différenciées par espèce.
+ *
+ * EXPORTÉE parce qu'elle décale un seuil qu'on lit de travers. Pour l'ombre,
+ * `fLumSurvival = min(1, 0,5 × lumière / compensation)` : le stress ne monte
+ * donc PAS au point de compensation, mais à `2 × STRESS_ONSET × compensation`,
+ * soit 0,9 fois celui-ci. La compensation, elle, ne gouverne que l'arrêt de la
+ * croissance. `lumiere.test.ts` compare ce seuil-là au plancher de lumière.
  */
-const STRESS_ONSET = 0.45;
+export const STRESS_ONSET = 0.45;
 const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération lente
 /**
  * Semaines de végétation effectives par an, pour convertir la pousse annuelle
