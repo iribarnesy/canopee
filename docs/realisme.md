@@ -226,7 +226,7 @@ maladie-là, pas une preuve de santé.*
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
 | D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
 | D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler AVANT de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
-| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent |
+| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent. Deux conséquences sont épinglées GRAINE PAR GRAINE : la pullulation de ravageurs (1,45 / 1,35 / 1,31 ×) et la mortalité qu'elle entraîne, comptée soif + ravageurs ENSEMBLE parce qu'un arbre ne meurt qu'une fois (1,88 / 4,00 / 3,29 ×, #93) |
 | D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
 | D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | ✅ | écarts chauds et déficits de pluie amplifiés (`normalesHebdo`) ; et la mémoire pluriannuelle existe — non dans le sol (qui se recharge chaque hiver, mesuré à 94-100 %) mais dans l'arbre, par la cavitation (`dommageHydraulique`) |
 | D10 | L'altitude et l'exposition modifient températures et rayonnement | 🟡 | latitude seule ; pas d'altitude ni d'adret/ubac |
@@ -2639,6 +2639,43 @@ sécheresse concurrente :
 Directionnelles sur les trois graines, et **éprouvées en neutralisant leur
 cause** — `facteurChaleur` pour l'une, le lien habitat → prédation pour
 l'autre : les deux tombent. Elles lisent le mécanisme, pas le jet de dés.
+
+#### Et le maillon qui manquait : compter les causes ENSEMBLE (#93)
+
+Reporter l'essai du climat sur la pullulation laissait un trou : il affirmait
+que le réchauffement fait pulluler les ravageurs, plus qu'il **tue** des arbres.
+La campagne de #93 a montré comment le combler, et au passage pourquoi le compte
+par cause unique était condamné d'avance.
+
+**Un arbre ne meurt qu'une fois, et sa mort n'est imputée qu'à UNE cause.**
+Compter la seule case « ravageurs » revient donc à soustraire les arbres que la
+sécheresse a pris de vitesse — le réchauffement pousse ce compte dans les deux
+sens à la fois. Ce n'est pas une hypothèse : le même chiffre, mesuré à trois
+lots d'écart, a inversé sa direction sur une graine puis l'a retrouvée, sans que
+le lien entre chaleur et mortalité ait bougé.
+
+| morts par ravageurs | graine 11 | graine 23 | graine 37 |
+|---|---|---|---|
+| avant sanglier / lisière | 34 → 40 (1,18 ×) | 32 → 21 (**0,66 ×**) | 25 → 38 (1,52 ×) |
+| après | 24 → 33 (1,38 ×) | 23 → 31 (1,35 ×) | 19 → 37 (1,95 ×) |
+
+Comptées **ensemble**, les deux voies par lesquelles la chaleur tue donnent au
+contraire un signal franc et stable :
+
+| morts soif + ravageurs | graine 11 | graine 23 | graine 37 |
+|---|---|---|---|
+| figé → chauffé | 26 → 49 (1,88 ×) | 23 → 92 (4,00 ×) | 21 → 69 (3,29 ×) |
+
+Le seuil est posé à 1,5 : sous le minimum mesuré, très au-dessus de 1. Il ne
+demande plus le garde contre la division par zéro que le compte par ravageurs
+seuls exigeait — le dénominateur combiné ne descend jamais sous vingt.
+
+**Une hypothèse est tombée en chemin, et il faut le dire :** on soupçonnait
+l'ombre d'être un troisième puits concurrent, l'auto-éclaircie se renforçant
+avec la saison de végétation. C'est l'inverse — les morts par ombre BAISSENT
+sous réchauffement (0,80 / 0,25 / 0,87). L'ajouter au compte ne ferait que
+diluer le signal (1,09 / 1,16 / 1,49), donc on ne l'ajoute pas. `maladie` et
+`vieillesse` sont à zéro dans toutes les parties.
 
 ### Ce que ce lot n'a PAS fait
 
