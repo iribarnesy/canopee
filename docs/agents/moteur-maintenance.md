@@ -63,6 +63,26 @@ mécanisme : neutraliser le tirage et remesurer.
 - La CI est plus lente que la machine de dev. Deux tests ont eu besoin d'un
   `timeout` explicite (900 s et 600 s). Préférer allonger le délai à réduire
   l'échantillon.
+- **Compter une cohorte, c'est deux pièges.** Le moteur PURGE les morts de
+  `state.trees` une fois leur bois retourné au sol : un relevé des causes de
+  mort fait à la fin d'une partie n'en retrouve que les derniers tombés — 2 sur
+  314 dans la campagne de #65. La cause se lit à la semaine de la mort. Et
+  au-delà de la maturité, l'espèce se ressème : compter « les tiges vivantes »
+  mélange la cohorte plantée et ses propres descendants, ce qui masque
+  exactement la mortalité qu'on mesure. Ne compter que les ids initiaux.
+- **Une constante peut rendre un essai impossible sans qu'aucun essai le dise.**
+  Le plancher de lumière `exp(−MAX_EXTINCTION)` vaut 0,0111 et la compensation
+  du hêtre 0,01 : aucun hêtre ne peut mourir d'ombre, nulle part, jamais. Il a
+  fallu une campagne de cent vingt ans pour s'en apercevoir, là où comparer deux
+  nombres suffisait. Quand une simulation ne bouge pas, chercher d'abord si elle
+  PEUT bouger — `lumiere.test.ts` et `elancement.test.ts` portent maintenant ces
+  bornes-là, et elles ne coûtent rien.
+- **Et ce délai doit porter là où le temps passe.** Une campagne lancée dans le
+  corps d'un `describe` tourne à la COLLECTE, que ni `testTimeout` ni un délai
+  posé sur le `describe` ne couvrent : si elle s'emballe, la suite bloque au
+  lieu d'échouer. La mettre dans un `beforeAll` avec son `hookTimeout` rend la
+  panne lisible. `elancement.test.ts` est l'ancien usage, `trouees.test.ts` le
+  nouveau.
 
 ## Le référentiel est la mémoire du projet
 
@@ -70,19 +90,40 @@ mécanisme : neutraliser le tirage et remesurer.
 jour la ligne du critère, le tableau de score et la ligne d'historique laisse le
 document mentir — et c'est déjà arrivé.
 
-**Dette connue, non traitée :** le tableau contient deux critères numérotés A13
-et deux numérotés A14, et compte **134 lignes pour un score annoncé sur 122**.
-Le pourcentage affiché est donc faux. À réconcilier en une passe dédiée.
+**Cette dette-là est soldée.** Le tableau comptait 134 lignes pour un score
+annoncé sur 122, et deux critères portaient un numéro déjà pris (A13, A14) : la
+passe dédiée a eu lieu (#76), les doublons sont renumérotés A29 et A30, et
+l'en-tête se recompte désormais DEPUIS LES LIGNES.
+
+Ce qui reste de la leçon : **un compte tenu à la main diverge.** Recompter en
+parsant le document coûte dix lignes de script et attrape ce qu'un œil ne voit
+pas. Un tel recompte a resservi en livrant #74, et il a confirmé les deux
+colonnes touchées au lieu de les croire.
+
+**Et le document ne ment pas qu'en chiffres.** Une justification de critère est
+une AFFIRMATION, au même titre qu'un `expect`. Celle de E10 désignait le poids
+0,4 des codominants comme la cause de l'amplitude manquante ; elle a été recopiée
+dans `trees.ts` et dans `elancement.test.ts`, si bien que trois endroits du dépôt
+disaient la même chose fausse, et que chaque lot suivant y lisait une
+confirmation. Personne ne l'avait mesurée. La mesure a demandé une demi-heure de
+calcul et a renvoyé le verrou dans un autre fichier (#79).
+
+La règle qui en sort : **une cause écrite dans le référentiel se mesure ou
+s'annonce comme une hypothèse.** Et quand elle se mesure, elle se mesure une
+fois — pas trois copies d'une même intuition.
 
 ## File d'attente
 
-- **#65** — dans `extinctionAt` (`light.ts`), un codominant n'ombrage qu'au poids
-  0,4. En plantation régulière tout le monde est codominant de tout le monde :
-  l'élancement est bridé (le moteur couvre 27–67 là où la sylviculture va de 25 à
-  100) et le terme **sature** — deux écartements dans un rapport de quatre
-  donnent le même résultat. Attention : ce coefficient gouverne aussi
-  l'auto-éclaircie, la succession et le tri des espèces. Label `à-mesurer` : la
-  campagne vient avant le code.
+- **#65 est CLOSE, et sans qu'une ligne de moteur ait bougé.** Le poids 0,4 des
+  codominants ne porte rien de ce qu'on lui prêtait, et les deux campagnes l'ont
+  mesuré : ni l'élancement (poids porté à 1, les dominants passent de H/D 42,1 à
+  41,7), ni l'auto-éclaircie (terme ANNULÉ, une pineraie dense passe quand même
+  de 361 à 59-69 tiges en 120 ans contre 47-54), ni le tempo de la succession,
+  ni le tri des espèces. Ce qui éclaircit ce moteur, ce sont les RAVAGEURS et
+  les CHABLIS : sur ~310 morts, 205-244 et 55-98 contre 4-7 pour l'ombre.
+  Le verrou de l'élancement est parti dans #79, celui de la mortalité d'ombre
+  dans une issue d'évolution.
+
 - **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
   l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à
   1 078 kg, soit 3 % SOUS le plancher des équations de biomasse aérienne de

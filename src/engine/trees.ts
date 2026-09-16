@@ -310,8 +310,14 @@ export function prochainDommageHydraulique(
  * Facteur de survie sous ce seuil → l'arbre puise dans ses réserves. Les
  * facteurs sont déjà normalisés par les tolérances de l'espèce, donc ce seuil
  * unique produit des mortalités différenciées par espèce.
+ *
+ * EXPORTÉE parce qu'elle décale un seuil qu'on lit de travers. Pour l'ombre,
+ * `fLumSurvival = min(1, 0,5 × lumière / compensation)` : le stress ne monte
+ * donc PAS au point de compensation, mais à `2 × STRESS_ONSET × compensation`,
+ * soit 0,9 fois celui-ci. La compensation, elle, ne gouverne que l'arrêt de la
+ * croissance. `lumiere.test.ts` compare ce seuil-là au plancher de lumière.
  */
-const STRESS_ONSET = 0.45;
+export const STRESS_ONSET = 0.45;
 const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération lente
 /**
  * Semaines de végétation effectives par an, pour convertir la pousse annuelle
@@ -679,13 +685,47 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * l'ancien moteur. Les 350 à 450 m³/ha des tables valent pour une futaie
  * GÉRÉE ; ce banc-là n'est jamais éclairci, et accumule donc davantage.
  *
- * **Réserve honnête, et sa cause est ailleurs.** Le moteur couvre H/D de 35 à
- * 49 quand la sylviculture mesure 25–40 au large et 90–100 en perche : le bon
- * ordre, un cinquième de l'étendue. Ce n'est pas cette allocation qui borne —
- * c'est le poids d'ombrage des codominants (0,4 dans `light.ts:extinctionAt`),
- * qui atténue la concurrence latérale précisément là où elle est la plus forte.
- * Ce coefficient gouverne aussi l'auto-éclaircie et la succession : le bouger
- * mérite son propre lot.
+ * **Réserve honnête. J'ai d'abord accusé le mauvais coupable, et la campagne
+ * de #65 l'a mesuré.** Le moteur couvre H/D de 35 à 49 quand la sylviculture
+ * mesure 25–40 au large et 90–100 en perche : le bon ordre, un cinquième de
+ * l'étendue. Ce commentaire a longtemps désigné le poids d'ombrage des
+ * codominants (0,4 dans `light.ts:extinctionAt`) comme la cause, et
+ * `elancement.test.ts` le répétait. **C'est faux, et le balayage le montre** :
+ * porter ce poids à 1 — c'est-à-dire supprimer toute l'atténuation — fait
+ * passer les dominants d'une hêtraie plantée à 2 m de H/D 42,1 à 41,7. Poids 1,
+ * seuil 0 (tout voisin plus court ombrage à plein) ET plafond d'extinction
+ * doublé : 45,0. Rien dans `light.ts` n'ouvre cette amplitude.
+ *
+ * **Ces deux constantes bornent une FENÊTRE, et c'est de l'arithmétique.** Un
+ * arbre qui pousse de bout en bout à une allocation `a` porte H/D = 100/a. La
+ * fenêtre atteignable est [40 ; 80]. Elle est trop étroite d'un bout — elle
+ * rend `ELANCEMENT_CRITIQUE` (tempete.ts) inatteignable — et #79 a essayé de
+ * l'ouvrir en descendant l'allocation d'ombre à 1,0 ; la mesure a dit non, et le
+ * compte rendu est sur la constante elle-même. (En dessous de 40, on trouve
+ * quand même des tiges : c'est l'abroutissement, qui retire de la hauteur sans
+ * toucher au diamètre.)
+ *
+ * **Et élargir la fenêtre n'élargirait presque pas l'AMPLITUDE, ce qui est le
+ * résultat de #79.** Une hêtraie plantée à 2 m, trente ans, va de H/D 37–49 à 37–53 ;
+ * poussée à l'absurde — allocation d'ombre à 0,5, fenêtre [40 ; 200] — elle
+ * n'atteint que 38–62. Le peuplement de quatre-vingts ans plafonne à 58, et le
+ * PIN, pourtant héliophile et là où la sylviculture mesure ses perches, reste
+ * plus plat encore : 41,0 à 2 m contre 38,9 à 10 m.
+ *
+ * **Parce que H/D est une INTÉGRALE, pas un état, et c'est ÇA le verrou.** À 2 m
+ * et trente ans, les dominants reçoivent 0,40 de lumière, ce qui vaut une
+ * allocation instantanée de 1,75 cm/m, donc H/D 57 pour un arbre qui aurait vécu
+ * là depuis toujours. Ils en portent 42. Deux causes se cumulent : toute
+ * plantation est OUVERTE ses premières années, et le diamètre posé alors à
+ * 2,5 cm/m est acquis pour toujours puisqu'un diamètre ne rétrécit jamais ; puis
+ * un semis naît à H/D 50 (`diametreInitialCm`), si bien qu'une tige qui pousse
+ * peu reste près de 50 quoi qu'il arrive. L'ombre n'agit donc que sur la fin de
+ * la vie de l'arbre, et seulement sur ce qu'il lui reste à pousser.
+ *
+ * Atteindre les 90–100 de la perche demanderait un arbre qui monte VITE en
+ * restant à l'ombre. Ce moteur ne sait pas le faire : l'ombre entre dans la loi
+ * du minimum, donc elle rabote la pousse totale au lieu de la rediriger vers la
+ * hauteur. Il manque l'étiolement, et c'est une évolution, pas un réglage.
  *
  * **La hauteur, elle, n'est pas touchée.** Elle est calée sur des tables de
  * production (Jansen 1996, `hauteurs.test.ts`) : c'est une vraie ancre, et on
@@ -693,7 +733,35 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * Le diamètre s'ajoute à côté.
  */
 
-/** Diamètre gagné par mètre de hauteur, à l'ombre : la tige file. cm/m. */
+/**
+ * Diamètre gagné par mètre de hauteur, à l'ombre : la tige file. cm/m.
+ *
+ * ELLE A ÉTÉ PORTÉE À 1,0 PENDANT #79, PUIS RENDUE À 1,25, et il faut dire
+ * pourquoi — sans quoi quelqu'un refera le chemin.
+ *
+ * L'argument POUR était bon et il tient toujours : à 1,25, H/D plafonne à 80,
+ * alors que `tempete.ts` porte `ELANCEMENT_CRITIQUE = 100`, le seuil sylvicole
+ * d'instabilité. La moitié haute de la rampe de `facteurElancement` est donc
+ * inatteignable par construction. À 1,0, la fenêtre devient [40 ; 100] et les
+ * deux modules s'accordent ; le volume d'une hêtraie de 80 ans passe même de
+ * 490 à 456 m³/ha, soit dans la fourchette des tables.
+ *
+ * Ce que ça COÛTE, mesuré : une tige plus fine résiste moins au feu. Sur la
+ * graine 23 du banc climatique, l'incendie de la partie réchauffée emporte 126
+ * arbres au lieu de 49 — et il les VOLE aux deux causes que `climat.test.ts`
+ * compte pour montrer que le réchauffement tue : la sécheresse tombe de 61 à 18,
+ * les ravageurs de 31 à 6, et le rapport figé→chauffé s'effondre de 4,00 à 1,09.
+ * La pullulation suit, faute d'hôtes survivants.
+ *
+ * Ce que ça RAPPORTE, mesuré aussi : l'amplitude réelle de H/D passe de 37–49 à
+ * 37–53 à trente ans. Quatre points. E10 reste 🟡 dans les deux cas.
+ *
+ * Quatre points d'amplitude contre une conclusion climatique renversée, il n'y a
+ * pas à hésiter. Et surtout, le verrou n'est pas là : c'est #97 (l'étiolement)
+ * qui rendra `ELANCEMENT_CRITIQUE` atteignable pour de bon, en faisant filer les
+ * dominés au lieu de les faire stagner. Bouger cette constante-ci n'était qu'une
+ * façon d'ouvrir la fenêtre sans que rien n'aille l'occuper.
+ */
 export const ALLOCATION_DIAMETRE_OMBRE = 1.25;
 /** Diamètre gagné par mètre de hauteur, en pleine lumière : l'arbre épaissit. cm/m. */
 export const ALLOCATION_DIAMETRE_LUMIERE = 2.5;
