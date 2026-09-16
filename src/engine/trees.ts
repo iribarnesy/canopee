@@ -14,6 +14,7 @@ import { facteurAllelopathie, SENSIBILITE_MEDIANE } from "./allelopathie";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
+import { partPuiseeSurLesReserves, usureParSemaine } from "./reserves";
 import { type RngState, rngFloat } from "./rng";
 import { facteurGammePh } from "./soil";
 import { facteurCroissanceTassement } from "./tassement";
@@ -326,6 +327,13 @@ const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération l
  * étalée sur une saison plus courte, donc amputée d'un dixième *(à calibrer)*.
  */
 const GROWING_WEEKS = 26;
+
+/**
+ * Points de stress par semaine de végétation pour un puisement complet des
+ * réserves — dérivé de `RESERVES_ANS` et de `STRESS_LETHAL`, donc pas une
+ * constante de plus : les réserves SONT ce compteur vu par l'autre bout.
+ */
+const USURE_PAR_SEMAINE = usureParSemaine(STRESS_LETHAL, GROWING_WEEKS);
 
 /**
  * Exposant de forme de la courbe de hauteur (Chapman-Richards).
@@ -989,12 +997,19 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // peut payer avec. Le reste des facteurs, lui, borne les deux.
   const limitantHorsLumiere = Math.min(fSec, fEng, fPH, fN, fP, fK, fAllelo);
   const limitingFactor = Math.min(limitantHorsLumiere, fLum);
-  // Seuls l'eau, l'anoxie et l'ombre SOUS le point de compensation épuisent
-  // les réserves : au-dessus, l'arbre « survit » même s'il ne pousse plus
-  // (méthode pousse / s'épanouit / survit, ch3-C). L'ombre ne compte qu'en
-  // saison de végétation : un arbre dormant ne consomme presque rien.
-  const fLumSurvival =
-    season > 0 ? Math.min(1, (0.5 * env.light) / espece.lumiere.compensation) : 1;
+  // L'eau et l'anoxie épuisent les réserves dès qu'elles s'effondrent : au
+  // -dessus, l'arbre « survit » même s'il ne pousse plus (méthode pousse /
+  // s'épanouit / survit, ch3-C).
+  //
+  // L'OMBRE, elle, n'est plus un facteur de survie instantané. Elle l'a été —
+  // `fLumSurvival` valait `0,5 × lumière / compensation` — et ce seuil ne
+  // pouvait pas représenter un épuisement : il ne se déclenchait qu'en dessous
+  // de 0,0090 pour le hêtre, quand le moteur ne sait pas descendre sous
+  // 0,0111. Le hêtre dominé était littéralement hors d'atteinte. La mort par
+  // l'ombre passe désormais par le BUDGET CARBONE, qui est un stock
+  // (`reserves.ts`) — et elle le remplace, elle ne s'y ajoute pas.
+  const puisementDesReserves =
+    season > 0 ? partPuiseeSurLesReserves(espece, tree.heightM, env.light) : 0;
   // Sénescence : passé ~85 % de la longévité, la vigueur décline puis l'arbre
   // meurt (déterministe) — le moteur du cycle sylvigénétique (ch4-A).
   const ageYears = tree.ageWeeks / 52;
@@ -1007,7 +1022,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     ageYears < 0.85 * longevite
       ? 1
       : Math.max(0, 1 - (ageYears - 0.85 * longevite) / (0.3 * longevite));
-  const survivalFactor = Math.min(fSecSurvie, fEng, fLumSurvival, fPH, fAge);
+  const survivalFactor = Math.min(fSecSurvie, fEng, fPH, fAge);
 
   // Croissance : potentiel × loi du minimum, asymptote vers la hauteur max.
   // Un arbre stressé pousse moins (il puise dans ses réserves, docs/regles.md §7.1).
@@ -1062,11 +1077,21 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // vient l'élancement individuel, donc la vulnérabilité au vent.
   const diametreCm = tree.diametreCm + diametreAchetableCm(boisM - pousseM, elancementCourant);
 
-  // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.
+  // Stress : il s'accumule quand le facteur de survie s'effondre OU quand
+  // l'arbre vit sur ses réserves, et il se résorbe quand ni l'un ni l'autre
+  // n'est vrai — un arbre qui gagne sa vie refait ses réserves.
+  //
+  // Les deux s'AJOUTENT ici, et c'est voulu : un dominé assoiffé meurt plus
+  // vite qu'un dominé à l'aise. Ce qui ne s'additionne pas, c'est la mort —
+  // les ravageurs prennent les mêmes arbres, par la `vigueur`, et un arbre
+  // mort ne meurt pas deux fois (reserves.ts).
   let stress = tree.stress;
+  const usure = puisementDesReserves * season * USURE_PAR_SEMAINE;
   if (survivalFactor < STRESS_ONSET) {
     stress += (STRESS_ONSET - survivalFactor) * 5;
-  } else if (survivalFactor > STRESS_RECOVERY) {
+  }
+  stress += usure;
+  if (survivalFactor > STRESS_RECOVERY && usure === 0) {
     stress = Math.max(0, stress - 0.25);
   }
   const alive = stress < STRESS_LETHAL;
@@ -1079,16 +1104,22 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     // parce que tous les facteurs listés valaient 1 et que l'âge était le
     // premier testé. Un pommier de trois ans mort « de vieillesse » sur une
     // lande à pH 4,5, c'était ça.
-    const pire = Math.min(fSecSurvie, fEng, fLumSurvival, fPH, fAge);
+    //
+    // La famine entre dans ce classement par ce qu'elle COÛTE cette semaine,
+    // et non par un facteur : c'est la seule façon de comparer un stock qui se
+    // vide à des facteurs instantanés. Un arbre qui puisait plus qu'il ne
+    // souffrait par ailleurs est mort de l'ombre.
+    const pire = Math.min(fSecSurvie, fEng, fPH, fAge);
+    const parLeManque = pire < STRESS_ONSET ? (STRESS_ONSET - pire) * 5 : 0;
     causeMort =
-      pire === fPH
-        ? "solHorsGamme"
-        : pire === fAge
-          ? "vieillesse"
-          : pire === fEng
-            ? "engorgement"
-            : pire === fLumSurvival
-              ? "ombre"
+      usure > parLeManque
+        ? "ombre"
+        : pire === fPH
+          ? "solHorsGamme"
+          : pire === fAge
+            ? "vieillesse"
+            : pire === fEng
+              ? "engorgement"
               : "secheresse";
   }
 
