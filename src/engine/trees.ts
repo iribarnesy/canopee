@@ -724,6 +724,156 @@ export function elancement(diametreCm: number, heightM: number): number {
   return diametreCm > 0 ? (100 * heightM) / diametreCm : Number.POSITIVE_INFINITY;
 }
 
+/**
+ * ─── L'ÉTIOLEMENT : L'OMBRE DÉPLACE L'ARBITRAGE AVANT DE RABOTER LA POUSSE ───
+ *
+ * Ce que le moteur faisait, et pourquoi ça ne pouvait pas marcher. La lumière
+ * entrait dans la LOI DU MINIMUM, donc elle rabotait la pousse TOTALE ; le
+ * partage hauteur/diamètre ne portait ensuite que sur ce qui restait. Un arbre
+ * à l'ombre poussait donc moins des deux côtés à la fois, et son élancement ne
+ * bougeait quasiment pas — la tige stagnait au lieu de filer. Mesuré : une
+ * hêtraie plantée à 2 m tenait H/D 39–56 à quatre-vingts ans, et les tiges les
+ * MOINS élancées y étaient les plus dominées (3,7 m de haut, H/D 39). La
+ * sylviculture mesure l'inverse : 25–40 au large, 90–100 en perche.
+ *
+ * **Deux faits de terrain gouvernent ce qui suit, et aucun n'est un réglage.**
+ *
+ * 1. *La hauteur ne dépend presque pas de la densité.* C'est le fondement même
+ *    de la dendrométrie : l'indice de fertilité d'une station se lit sur la
+ *    HAUTEUR DOMINANTE précisément parce qu'elle est insensible à la densité du
+ *    peuplement dans de larges limites, là où la surface terrière, elle, en
+ *    dépend entièrement (Assmann 1970, *The Principles of Forest Yield Study*).
+ *    Si le moteur rabotait la hauteur avec la lumière, aucune table de
+ *    production ne serait lisible.
+ * 2. *Le diamètre est le dernier servi.* La hiérarchie des puits de carbone
+ *    place l'entretien, le feuillage, les racines fines et l'allongement du
+ *    plus haut rameau AVANT l'épaississement du tronc, qui encaisse le
+ *    résidu. C'est ce qui produit les cernes manquants des tiges dominées, un
+ *    fait de dendrochronologie ordinaire : l'arbre monte encore quand son
+ *    cambium a déjà cessé de travailler sur une partie de sa circonférence.
+ *
+ * **Le mécanisme tient donc en une phrase** : la lumière décide COMBIEN DE BOIS
+ * l'arbre fait ; l'allongement se sert d'abord, dans la limite de ce que les
+ * autres facteurs permettent ; le diamètre prend ce qui reste.
+ *
+ * **Et le bois se compte exactement**, parce que le moteur a déjà sa fonction de
+ * volume — `V = f × (π/4) × D² × H`. En dérivant :
+ *
+ * ```
+ * dV = f (π/4) (D² dH + 2 D H dD)
+ * ```
+ *
+ * soit, divisé par `f (π/4) D²` — on compte donc le bois en « mètres
+ * d'allongement pur », l'unité naturelle de cette tige-là :
+ *
+ * ```
+ * bois = dH + 2 × (H/D) × dD     (dD en mètres, H/D sans dimension)
+ * ```
+ *
+ * Un mètre de hauteur coûte peu à une tige fine ; un centimètre de diamètre
+ * coûte cher à une tige haute, parce qu'il faut l'ajouter sur toute la
+ * longueur. Ce n'est pas une hypothèse : c'est la dérivée de la fonction de
+ * volume que le moteur utilise pour vendre le bois.
+ *
+ * **Ce lot n'ajoute pas un gramme de bois**, et c'est sa garantie : le budget
+ * `boisM` vaut EXACTEMENT ce que l'ancienne formule produisait déjà (`pousse ×
+ * coût du mètre`). Seule sa répartition change. En particulier, dès que la
+ * lumière n'est PAS le facteur limitant — tout arbre dominant, et tous les
+ * sujets au large sur lesquels les hauteurs sont calées (Jansen 1996) — le
+ * calcul redonne l'identité, hauteur et diamètre au dernier chiffre près. Le
+ * mécanisme ne touche QUE les tiges que l'ombre limite, ce qui est exactement
+ * la population visée.
+ *
+ * **Ce qui en tombe sans être écrit** : l'élancement d'équilibre. Une tige
+ * cesse de filer quand son bois suffit à payer l'allongement plein, c'est-à-dire
+ * à `H/D = (1/f_lum − 1) × 50 / allocation`. Personne ne l'a choisi ; il sort du
+ * facteur lumière de l'individu et de sa forme du moment, et il monte donc
+ * quand l'ombre s'épaissit — ce qui est le bon sens de la perche.
+ */
+
+/**
+ * **Et il fallait l'autre moitié : une tige ne file pas indéfiniment.**
+ *
+ * Écrit seul, le partage ci-dessus s'emballe, et la mesure l'a montré avant
+ * qu'on le croie sur parole : sous une ombre constante, une perche passait H/D
+ * 166 en quarante ans et se dirigeait vers 295. L'équilibre existe pourtant —
+ * le bois finit par dépasser ce que l'allongement peut absorber, et le reste
+ * repart au diamètre — mais il se pose à `H/D = (3/f_lum − 1) × 50 /
+ * allocation`, ce qui pour une ombre ordinaire vaut trois cents. Une tige
+ * pareille n'existe pas : elle FLAMBE.
+ *
+ * C'est donc la mécanique qui ferme le mécanisme, et elle a sa loi. Une colonne
+ * qui porte son propre poids flambe au-delà d'une hauteur critique
+ * `H ∝ D^(2/3)` (Greenhill 1881) — exposant vérifié sur les arbres records de
+ * nombreuses essences par McMahon & Kronauer (1976), qui en ont fait le
+ * classique de l'allométrie des arbres. L'élancement maximal décroît donc comme
+ * `D^(−1/3)` : une perche fine peut être très élancée, un gros arbre non.
+ *
+ * **Le niveau, lui, est calé sur la sylviculture** : la perche de plantation
+ * serrée monte à H/D 90–100 (le seuil de risque européen est à 80, cf.
+ * `elancement`), et elle n'y reste pas — elle casse ou ploie sous la neige. On
+ * retient donc 100 pour une tige de douze centimètres, soit douze mètres de
+ * haut *(à calibrer : la littérature donne une gamme, pas un point)*.
+ *
+ * *Recoupement par le flambage élastique* : pour du bois vert (E ≈ 9 GPa,
+ * ρ ≈ 900 kg/m³), `H_crit = 0,792 (E/ρg)^(1/3) D^(2/3)` donne 19,4 m pour
+ * douze centimètres, soit H/D 162. La limite retenue est à 62 % de là, une
+ * marge de sécurité de 1,6 — l'ordre de grandeur rapporté pour les tiges
+ * forestières les plus élancées, et bien en dessous du 4 des sujets de plein
+ * vent, qui est le bon sens : c'est l'arbre dominé qui vit près de sa limite.
+ *
+ * Ce plafond n'est PAS un couperet : la marge `H_stable − H` se referme
+ * progressivement, l'allongement s'étrangle tout seul, et tout le bois part
+ * alors au diamètre. La tige ne s'arrête pas de grandir — elle grimpe le long
+ * de l'enveloppe en s'épaississant, ce que fait une perche réelle.
+ */
+
+/** Élancement maximal retenu pour une tige de `DIAMETRE_REFERENCE_CM`. */
+export const ELANCEMENT_LIMITE_REFERENCE = 100;
+/** Le diamètre de perche sur lequel ce niveau est calé, cm. */
+export const DIAMETRE_REFERENCE_CM = 12;
+
+/** Élancement au-delà duquel la tige flambe, pour ce diamètre. */
+export function elancementLimite(diametreCm: number): number {
+  if (!(diametreCm > 0)) return Number.POSITIVE_INFINITY;
+  return ELANCEMENT_LIMITE_REFERENCE * Math.cbrt(DIAMETRE_REFERENCE_CM / diametreCm);
+}
+
+/** Hauteur au-delà de laquelle une tige de ce diamètre flambe, m. */
+export function hauteurStableM(diametreCm: number): number {
+  const d = Math.max(0, diametreCm);
+  return (ELANCEMENT_LIMITE_REFERENCE * Math.cbrt(DIAMETRE_REFERENCE_CM) * Math.cbrt(d * d)) / 100;
+}
+
+/**
+ * Ce qu'un mètre de hauteur coûte à cette tige-là, en bois, quand le diamètre
+ * suit l'allocation donnée. Sans dimension (le bois est compté en mètres
+ * d'allongement pur). Vaut 1 pour une tige qui n'épaissirait pas du tout.
+ */
+export function coutDuMetreEnBois(elancementCourant: number, allocationCmParM: number): number {
+  return 1 + (2 * elancementCourant * allocationCmParM) / 100;
+}
+
+/**
+ * Diamètre que le bois restant achète, cm. L'inverse de la relation ci-dessus :
+ * `bois = 2 × (H/D) × dD`, avec `dD` ramené des mètres aux centimètres.
+ */
+export function diametreAchetableCm(boisRestantM: number, elancementCourant: number): number {
+  if (!(elancementCourant > 0) || !Number.isFinite(elancementCourant)) return 0;
+  return (Math.max(0, boisRestantM) * 50) / elancementCourant;
+}
+
+/**
+ * L'élancement sur lequel raisonner cette semaine. Une tige sans diamètre
+ * enregistré — un semis posé à hauteur nulle — est traitée comme une tige
+ * d'allocation médiane, la même convention que `diametreInitialCm`, plutôt que
+ * comme une tige infiniment élancée qui ne pourrait plus jamais épaissir.
+ */
+export function elancementDeTravail(diametreCm: number, heightM: number): number {
+  const e = elancement(diametreCm, heightM);
+  return Number.isFinite(e) && e > 0 ? e : 100 / ALLOCATION_DIAMETRE_MEDIANE;
+}
+
 /** Taille « métabolique » d'un arbre (proxy feuillage + bois neuf), g N/semaine max. */
 function metabolicSizeGWeek(heightM: number): number {
   const r = HOUPPIER_REFERENCE * heightM;
@@ -834,7 +984,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     espece.sensibiliteAllelopathie ?? SENSIBILITE_MEDIANE,
   );
   const fK = env.potassiumSatisfaction ?? 1;
-  const limitingFactor = Math.min(fSec, fEng, fLum, fPH, fN, fP, fK, fAllelo);
+  // La lumière est mise à part du minimum, et c'est tout l'objet de
+  // l'étiolement : elle borne le BOIS que l'arbre fait, pas l'allongement qu'il
+  // peut payer avec. Le reste des facteurs, lui, borne les deux.
+  const limitantHorsLumiere = Math.min(fSec, fEng, fPH, fN, fP, fK, fAllelo);
+  const limitingFactor = Math.min(limitantHorsLumiere, fLum);
   // Seuls l'eau, l'anoxie et l'ombre SOUS le point de compensation épuisent
   // les réserves : au-dessus, l'arbre « survit » même s'il ne pousse plus
   // (méthode pousse / s'épanouit / survit, ch3-C). L'ombre ne compte qu'en
@@ -876,19 +1030,37 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // dite au champ `tassement` : il ne remplace aucun facteur limitant, il les
   // aggrave tous. Essais Arvalis : jusqu'à 30 % de perte sur sol tassé.
   const fTassement = facteurCroissanceTassement(env.tassement ?? 0);
-  const pousseM =
-    Math.max(0, potentialM) *
-    limitingFactor *
-    stressPenalty *
-    fTassement *
-    tree.vigueurIndividuelle;
+  const commun = Math.max(0, potentialM) * stressPenalty * fTassement * tree.vigueurIndividuelle;
+  // Ce que la tige pourrait allonger si le carbone suivait : tous les facteurs
+  // SAUF la lumière. C'est la hauteur insensible à la densité d'Assmann.
+  const allongementPossibleM = commun * limitantHorsLumiere;
+  // Le bois de la semaine, lumière comprise. Il vaut exactement ce que
+  // l'ancienne formule produisait — `pousse × coût du mètre` —, ce qui est la
+  // garantie que ce partage ne crée pas de matière.
+  const allocationCmParM = allocationDiametreCmParM(env.light);
+  const elancementCourant = elancementDeTravail(tree.diametreCm, tree.heightM);
+  const boisM = commun * limitingFactor * coutDuMetreEnBois(elancementCourant, allocationCmParM);
+  // Ce que la mécanique laisse encore monter avant le flambage. Tant que la
+  // tige n'a pas de diamètre enregistré, la mécanique n'a rien à dire : c'est
+  // un semis, pas une perche.
+  const margeAuFlambageM =
+    tree.diametreCm > 0
+      ? Math.max(0, hauteurStableM(tree.diametreCm) - tree.heightM)
+      : Number.POSITIVE_INFINITY;
+  // L'allongement se sert d'abord, le diamètre encaisse le résidu : c'est la
+  // hiérarchie des puits, et c'est elle qui fait filer la perche. Le résidu est
+  // souvent NUL — c'est le cerne manquant d'une tige dominée, un fait de
+  // dendrochronologie ordinaire — et ce zéro est borné par le flambage : la
+  // tige finit par se heurter à son enveloppe, et tout son bois repart alors au
+  // diamètre.
+  const pousseM = Math.min(allongementPossibleM, boisM, margeAuFlambageM);
   const heightM = tree.heightM + pousseM;
-  // Le diamètre se gagne sur la MÊME pousse — tassement compris, car un arbre
-  // gêné par un sol tassé ne grossit pas davantage qu'il ne monte —, mais dans
-  // une proportion que la lumière décide : à l'ombre la tige file, au large
-  // elle épaissit. C'est de là que vient l'élancement individuel, et donc la
-  // vulnérabilité au vent, que la constante `D = 2 h` rendait impossible.
-  const diametreCm = tree.diametreCm + pousseM * allocationDiametreCmParM(env.light);
+  // Le diamètre se gagne sur le bois RESTANT — tassement compris, car un arbre
+  // gêné par un sol tassé ne grossit pas davantage qu'il ne monte. En pleine
+  // lumière le reste vaut `pousse × allocation` au dernier chiffre près, donc
+  // rien ne change pour un dominant ; à l'ombre il fond, et c'est de là que
+  // vient l'élancement individuel, donc la vulnérabilité au vent.
+  const diametreCm = tree.diametreCm + diametreAchetableCm(boisM - pousseM, elancementCourant);
 
   // Stress : il s'accumule quand le facteur de survie s'effondre, se résorbe sinon.
   let stress = tree.stress;
