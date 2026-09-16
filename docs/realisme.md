@@ -66,18 +66,28 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
-| B. Lumière et structure | 5 | 5 | 0 | 10 |
-| C. Nutriments et cycles | 12 | 1 | 0 | 13 |
+| B. Lumière et structure | 6 | 4 | 0 | 10 |
+| C. Nutriments et cycles | 14 | 0 | 1 | 15 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
-| E. Interactions entre plantes | 7 | 4 | 1 | 12 |
-| F. Dynamique des peuplements | 9 | 4 | 0 | 13 |
-| G. Faune et santé | 8 | 1 | 0 | 9 |
+| E. Interactions entre plantes | 8 | 4 | 0 | 12 |
+| F. Dynamique des peuplements | 12 | 4 | 3 | 19 |
+| G. Faune et santé | 10 | 1 | 0 | 11 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
-| I. Carbone | 7 | 2 | 0 | 9 |
-| J. Biodiversité et structure | 5 | 2 | 0 | 7 |
-| **Total** | **106** | **27** | **1** | **134** |
+| I. Carbone | 9 | 0 | 0 | 9 |
+| J. Biodiversité et structure | 7 | 1 | 0 | 8 |
+| **Total** | **119** | **22** | **4** | **145** |
 
-**Score de réalisme : 106 pleins + 27 partiels sur 134 → 89 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 119 pleins + 22 partiels sur 145 → 90 %** *(un partiel compte 1/2)*.
+
+> **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
+> Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
+> jour-là — « la colonne est vide parce que le référentiel ne liste que ce qu'on
+> a pensé à écrire » — a été vérifié en un lot. Il n'existait AUCUNE ligne sur la
+> tempête, le chablis ou la casse mécanique : le moteur ne savait pas coucher un
+> arbre et personne ne comptait le point. En écrire six fait gagner trois ✅ et
+> perdre deux points de score, parce que trois des six restent hors de portée
+> (F17, F18, F19). Les deux points sont le prix d'un référentiel qui mesure
+> encore quelque chose.
 
 > **Ce tableau venait d'être recompté, et il était faux.** Il annonçait
 > 80 / 26 / 16 sur 122 — soit 76 % — là où les lignes du document en portaient
@@ -114,14 +124,23 @@ arbres-habitats, chalarose, mémoire hydraulique des sécheresses, frottis, geai
 latéral, adret/ubac) → 75 % (hauteurs absolues calées sur les tables de
 production) → 76 % (structure du sol : le tassement et sa réparation)
 → 88 % (aucun travail livré : l'en-tête a été recompté depuis les lignes)
-→ **89 % (les trouées et le bilan carbone d'une plantation sont enfin mis à
-l'épreuve — F7 et I8)**.*
+→ 90 % (la strate herbacée a des espèces : trois calendriers, trois sols, et
+la fenêtre de printemps) → 88 % (le vent devient un agent CASSANT : tempête,
+chablis, et six critères là où il n'y en avait aucun) → 88 % (le pH cesse
+d'être un état : il se lit sur un pool de bases que la litière fait pencher)
+→ 88 % (le bois d'œuvre cesse d'être un puits éternel)
+→ 88 % (le sanglier : un herbivore qui mange la régénération ET la favorise)
+→ 89 % (la disposition paie : lisière, cœur, étagement local)
+→ 89 % (l'infradensité : la biomasse cesse de se peser avec la densité du
+commerce) → **90 % (les trouées et le bilan carbone d'une plantation sont enfin
+mis à l'épreuve — F7 et I8 ; le domaine du carbone n'a plus une seule lacune)**.*
 
-*Oui, le score BAISSE d'un point au dernier chantier, et c'est voulu : les
-hauteurs ont été multipliées par deux à trois, mais on a ajouté au référentiel
-un critère qu'on ne remplit qu'à moitié (F13) là où, avant, personne ne
-comptait les points. Un référentiel qui ne s'allonge jamais finit par ne plus
-mesurer que ce qu'on sait déjà faire.*
+*Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
+hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
+c'est le référentiel qui s'est mis à compter des points que personne ne comptait.
+Un référentiel qui ne s'allonge jamais finit par ne plus mesurer que ce qu'on
+sait déjà faire, et un score qui ne fait que monter est le symptôme de cette
+maladie-là, pas une preuve de santé.*
 
 ---
 
@@ -168,10 +187,10 @@ mesurer que ce qu'on sait déjà faire.*
 | B2 | L'ombre est portée vers le nord (soleil au sud) : l'orientation des lignes compte | ✅ | `SHADOW_NORTH_OFFSET` |
 | B3 | L'ombre est dégradée : pénombre en bordure de houppier | ✅ | atténuation en (1 − d²/r²) |
 | B4 | Un héliophile meurt sous couvert fermé ; un sciaphile y patiente | ✅ | points de compensation ; `lumiere.test.ts` |
-| B5 | Les caducs n'ombragent pas hors saison (fenêtre des vernales) | ✅ | `leavesOn` ; pas encore de strate herbacée pour en profiter |
+| B5 | Les caducs n'ombragent pas hors saison (fenêtre des vernales) | ✅ | `phenologie.ts` ; et la strate herbacée en profite enfin (E9) : sous la hêtraie mesurée, la lumière au sol passe de 0,69 à 0,30 entre la semaine 16 et la semaine 18 |
 | B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main |
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
-| B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | 🟡 | strate herbacée en couverture (`herbe.ts`) ; pas encore d'espèces herbacées distinctes |
+| B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | ✅ | `herbacees.ts` : trois herbacées, chacune avec son point de compensation, sa gamme de pH et son calendrier, se partagent le sol d'une cellule sur la place que les autres laissent ; `herbacees.test.ts` (le pH seul trie les deux graminées : molinie sur podzol à 4,5, dactyle sur limon à 7). **Limite** : pas de hiérarchie de hauteur DANS la strate — une graminée haute n'étouffe pas une rosette qui se maintient, elle n'occupe que la place lâchée |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
 | B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré |
 
@@ -189,7 +208,9 @@ mesurer que ce qu'on sait déjà faire.*
 | C8 | Le carbone du sol et l'azote sont couplés (retourner une prairie libère N et C) | ✅ | la minéralisation de l'humus rend C ET N au C/N de l'humus ; action `labourer` ; `sol-vivant.test.ts` |
 | C13 | Les dépôts atmosphériques apportent de l'azote (et fertilisent les milieux pauvres) | ✅ | `station.depositionNKgHaAn` ; 9 à 20 kg/ha/an selon la région |
 | C9 | Enfouir un matériau à C/N élevé provoque une faim d'azote | ✅ | `azoteNetDecomposition` (bascule vers C/N 27) ; l'azote est immobilisé, pas perdu ; `sol-vivant.test.ts` |
-| C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | 🟡 | Chaulage seul ; pas de dérive |
+| C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | ✅ | `bases.ts` ; `bases.test.ts` — **le pH cesse d'être un état** : il se lit sur le taux de saturation d'un pool de bases échangeables, alimenté par l'altération et les dépôts, vidé par le lessivage, et penché par la teneur en CALCIUM de la litière (un trait de l'atlas, mesuré, aucune espèce nommée). Mesuré sur cinquante ans : un châtaignier fait passer un limon acide de 5,00 à 4,76, un hêtre un limon riche de 7,00 à 6,77, un frêne le même de 7,00 à 7,14 — des dixièmes, comme la podzolisation réelle. Et le chaulage cesse d'être un geste à effet fixe : la même chaux déplace un sable bien plus qu'une argile, parce que le complexe est au dénominateur |
+| C14 | Les bases échangeables suivent un bilan conservatif | ✅ | `bases.test.ts` — la variation du pool vaut altération + dépôts + litière − lessivage − charge acide, à l'arrondi près. Comme pour N, P et K, et avec la même réserve : la conservation ne valide pas le NIVEAU |
+| C15 | La POMPE À BASES : un feuillu remonte les bases du sous-sol et les dépose en surface, appauvrissant la profondeur | ❌ | le moteur ne tient qu'un pool de bases de SURFACE, comme pour N, P et K. Il dit donc qu'un frêne entretient son horizon de surface, et rien de ce qu'il prend en dessous. Ce n'est pas un détail : c'est par là que Foltran et al. mesurent un hêtre acidifiant le sol minéral profond PLUS qu'un épicéa (−0,5 unité en vingt ans) — l'intuition « les résineux acidifient » est une demi-vérité, et c'est la moitié que ce lot ne dit pas |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
 | C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche** — c'est là qu'ils gagnent leur vie |
 
@@ -206,7 +227,7 @@ mesurer que ce qu'on sait déjà faire.*
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
 | D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
 | D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler AVANT de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
-| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent |
+| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent. Deux conséquences sont épinglées GRAINE PAR GRAINE : la pullulation de ravageurs (1,45 / 1,35 / 1,31 ×) et la mortalité qu'elle entraîne, comptée soif + ravageurs ENSEMBLE parce qu'un arbre ne meurt qu'une fois (1,88 / 4,00 / 3,29 ×, #93) |
 | D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
 | D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | ✅ | écarts chauds et déficits de pluie amplifiés (`normalesHebdo`) ; et la mémoire pluriannuelle existe — non dans le sol (qui se recharge chaque hiver, mesuré à 94-100 %) mais dans l'arbre, par la cavitation (`dommageHydraulique`) |
 | D10 | L'altitude et l'exposition modifient températures et rayonnement | 🟡 | latitude seule ; pas d'altitude ni d'adret/ubac |
@@ -224,8 +245,8 @@ mesurer que ce qu'on sait déjà faire.*
 | E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | 🟡 | `allelopathie.ts` + le NOYER entre à l'atlas. Portée 17,5 m (littérature : 15-20), intensité décroissante, sensibilité par espèce — pommier, pin et bouleau documentés sensibles. Et le SOL décide autant que l'arbre : le sable lessive la juglone, le limon lourd la retient. Sensibilité médiane par défaut là où la littérature ne dit rien |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
-| E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ❌ | Dépend d'espèces herbacées distinctes |
-| E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre |
+| E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ✅ | `herbacees.ts` : une vernale ne bouge son emprise que pendant SA saison, donc elle juge la station en mars ; `herbacees.test.ts`. Sous hêtraie, la couverture du sol vaut 3 fois plus mi-avril que fin juillet et la vernale tient 36-40 % de l'emprise ; sous pinède, 1,25 et 19 % ; à découvert, 1,04 et 3 % — gradient monotone, deux graines. **Limite** : le moteur ne produit pas, sur cette station, de peuplement sempervirent assez sombre pour l'exclure tout à fait (le pin sylvestre s'auto-éclaircit) ; ce que vaut la fenêtre se lit alors sur la capacité, nulle à 4 % de lumière |
+| E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts`, `herbacees.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre. La fauche emporte le FEUILLAGE et laisse l'emprise : la repousse est celle d'un chaume, pas d'une réinstallation |
 | E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `trees.ts` (`allocationDiametreCmParM`) ; `elancement.test.ts` — le diamètre est porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, dans une proportion que la lumière décide. Rien n'est déclaré par essence : à écartement 2 / 4 / 6 / 10 m, même espèce et même graine, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4 — gradient MONOTONE, sans palier sur la gamme testée. **Reste 🟡 sur l'AMPLITUDE, et la cause annoncée était fausse** : la sylviculture mesure 25–40 au large et 90–100 en perche, le moteur ne couvre que 35–49. Cette ligne accusait le poids 0,4 des codominants (`light.ts`, #65) ; la campagne l'a réfuté — porter ce poids à 1 fait passer les dominants de H/D 42,1 à 41,7, et pousser les trois constantes de la lumière à fond n'atteint que 45,0. Ce qui borne est ARITHMÉTIQUE et vit dans `trees.ts` : un arbre qui pousse à l'allocation `a` porte H/D = 100/a, donc la fenêtre atteignable est [40 ; 79] (`elancement.test.ts`) — 90–100 et 25 sont hors d'atteinte quelle que soit la lumière. Et H/D est une INTÉGRALE : les dominants serrés reçoivent 0,40 de lumière, ce qui vaudrait H/D 57, mais portent 42, parce que le diamètre posé dans la jeunesse ouverte de la plantation est acquis pour toujours. Élargir demande d'écarter la paire d'allocation en gardant sa médiane à 2 (l'ancre de volume) — voir #79 |
 
 ## F. Dynamique des peuplements
@@ -238,12 +259,18 @@ mesurer que ce qu'on sait déjà faire.*
 | F4 | Les arbres vieillissent et meurent (sénescence) | ✅ | `fAge` ; `succession.test.ts` |
 | F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
 | F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | plafond de densité arbitraire + ombrage codominant |
-| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | ✅ | `regeneration.ts` + `light.ts` ; `trouees.test.ts` — comparateur APPARIÉ, la même zone avec et sans trouée sur cinq graines : 12 / 23 / 15 / 24 / 20 recrues contre 3 / 8 / 11 / 10 / 7. Et ce n'est pas « plus de semis » mais un TRI — le bouleau (compensation 0,25) n'entre que par l'ouverture, le charme (0,03) recrute jusque sous le couvert. **Limite** : le plafond de recouvrement des couronnes est PARCELLAIRE et non local ; au-delà, plus rien ne s'installe nulle part, trouée comprise |
+| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | ✅ | `regeneration.ts` + `light.ts` ; `trouees.test.ts` — comparateur APPARIÉ, la même zone avec et sans trouée sur cinq graines : 16 / 22 / 17 / 25 / 17 recrues contre 4 / 8 / 11 / 11 / 7 (et 8/8 sur la campagne élargie). Et ce n'est pas « plus de semis » mais un TRI — le bouleau (compensation 0,25) n'entre que par l'ouverture, le charme (0,03) recrute jusque sous le couvert. **Deux limites, trouvées en mesurant.** Le plafond de recouvrement des couronnes est PARCELLAIRE et non local : au-delà, plus rien ne s'installe nulle part, trouée comprise. Et un point quelconque du peuplement ne fait PAS un témoin fermé — sur certaines graines la zone témoin porte 17 recrues dont 9 bouleaux sans qu'on ait rien creusé, ce qui a coûté un comparateur croisé (retiré : sa prémisse était fausse, pas son seuil) |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | 🟡 | Rejet de souche : `rejetteDeSouche`, éprouvé après feu et après recépage. DRAGEONNEMENT : `regeneration.drageonne` (prunellier), un drageon sort dans un anneau serré autour de sa mère ET échappe au filtre de lumière, parce qu'elle le nourrit. Reste sans drageonnement : robinier et peuplier, absents de l'atlas |
 | F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
+| F14 | Une tempête couche des arbres : le chablis existe, et il est l'accident le plus brutal de la vie d'un peuplement | ✅ | `tempete.ts` ; `tempete.test.ts` — une rafale hebdomadaire dérivée de la graine de partie (queue exponentielle sur le vent moyen), cinquantennale à 40-45 m/s. Le seuil de dégât est celui de l'ARBRE, pas celui de la rafale : les coups de vent ordinaires reviennent chaque hiver et ne couchent rien |
+| F15 | La vulnérabilité au vent se trie par INDIVIDU, et rien n'est déclaré espèce par espèce | ✅ | `vitesseCritiqueMs` : élancement H/D, ancrage rapporté au bras de levier (`rootDepthCm / hauteur`), sol gorgé au-delà de ce que l'espèce tolère, prise au vent foliaire de la semaine, souplesse des jeunes tiges. Aucun trait nouveau à l'atlas — tout se lit sur l'état de l'arbre. Deux faits de terrain TOMBENT de là sans être écrits : les tempêtes sont hivernales (le vent moyen l'est), et le caduc nu paie moins que le sempervirent (mesuré à 60 ans : 4-11 tiges couchées contre 65-88). Deux des cinq facteurs trient mal, et le disent : l'élancement parce que le moteur n'en produit qu'un cinquième de la gamme réelle (#79), l'ancrage parce que la profondeur racinaire d'un arbre mûr est elle-même douteuse (#84) |
+| F16 | Ce qui dépasse prend le vent : un sous-étage est abrité, une futaie régulière ne s'abrite pas elle-même | ✅ | `abriAuVent` ne somme que le DÉPASSEMENT des voisins plus hauts, là où l'abri de haie (`windShelterAt`, E5) sature à 1 dans n'importe quel peuplement. C'est Klaus dans les pins landais alignés |
+| F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | ❌ | le moteur ne connaît qu'un renversement entier — un arbre tient ou il verse. Ni cime cassée, ni arbre penché qui survit avec une plaie, alors que c'est la moitié des dégâts d'une tempête réelle |
+| F18 | Un peuplement qu'on vient d'ouvrir (éclaircie, lisière neuve) verse pendant quelques années | ❌ | `abriAuVent` recalcule l'abri dans la semaine qui suit la coupe : les survivants sont réputés adaptés instantanément. Il y faudrait une mémoire par arbre de l'ouverture récente |
+| F19 | La fréquence des tempêtes suit la dérive du climat | ❌ | `AMPLIFICATION_EXTREMES` (D11) joue sur la chaleur et la pluie, pas sur le vent. Les deux moitiés sont dans deux fonctions qui ne se voient pas : `meteoDerivee` connaît le scénario mais pas la graine de partie, donc ne peut tirer de rafale ; `tick` la tire et ignore le scénario |
 | F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` : six essences contre des tables (Jansen 1996 aux Pays-Bas, Lockow 2009 pour le charme, Lemaire 2005 pour le châtaignier) et quatre arbustes contre des mesures de terrain britanniques et bretonnes, faute de table. Deux essences seulement y sont CALÉES (hêtre, charme) : l'essai les garde plus qu'il ne les valide. Les huit autres sont une validation entière, et la vérification tenue à l'écart est à vingt ans (−13 % à +10 %). Restent hors référence, et le disent : bouleau, chêne pubescent, saule blanc, prunellier — plus le chêne-liège, faute de station méditerranéenne où le confronter |
 
 ## G. Faune et santé
@@ -255,9 +282,11 @@ mesurer que ce qu'on sait déjà faire.*
 | G7 | Sa sélectivité réoriente la composition (le noisetier trinque, le pin passe) | ✅ | `especes.gibier.appetence` ; émergent, rien n'est codé espèce par espèce |
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
-| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; aulnaie pure décimée, mélange épargné |
-| G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison |
+| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; l'aulnaie pure se fait décimer sur chacune des trois graines, le mélange y perd trois à quatre fois moins d'aulnes (0,34 / 0,34 / 0,23) et y écrête la pullulation d'un facteur 2,8 à 3,1. Les deux sont épinglés GRAINE PAR GRAINE depuis #68, et non plus en moyenne : l'écart de mortalité avait failli s'annuler sur une graine sans que la moyenne le dise |
+| G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison. Les espèces herbacées existent maintenant (`herbacees.ts`) mais aucune ne déclare de floraison : la fiche s'arrête au calendrier FOLIAIRE |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
+| G10 | Le sanglier retourne le sol et mange la glandée — un herbivore qui FAVORISE aussi la régénération | ✅ | `sanglier.ts` ; `sanglier.test.ts` — 5 % de la parcelle retournée par an à densité de référence (relevés : 0,2-0,7 %/an en prairie, 7-11 %/an en forêt), en automne et en hiver, sur les cellules qui offrent de la glandée, du couvert et un sol humide. **Deux effets de signe opposé, et aucun n'est écrit par espèce** : il mange ce qui tombe et reste (les graines dont le mode de dissémination est `geai` ou `gravite`), il ouvre un lit de germination pour ce qu'apporte le vent. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à densité ordinaire, 22 sous forte densité — difficile, jamais impossible |
+| G11 | Un boutis est un ENFOUISSEMENT, pas une destruction : la litière passe au pool lent | ✅ | le carbone enfoui rejoint l'humus et l'azote le pool minéral ; le stock d'humus MONTE avec la densité de sangliers. Et la structure y gagne — un boutis casse la croûte, ce qu'on n'attend pas d'un dégât. Ce qu'il coûte est ailleurs : la terre est à nu, donc elle part |
 | G6 | Les maladies datées frappent (chalarose du frêne) | ✅ | `maladies.ts` ; `maladies.test.ts` — mieux qu'une date : une année d'arrivée historique, puis une pression qui suit la densité d'hôtes et l'humidité. Une frênaie pure perd un tiers de ses tiges en trente ans, le même nombre de frênes en mélange s'en tire deux fois mieux |
 
 ## H. Gestion, économie, travail
@@ -273,7 +302,7 @@ mesurer que ce qu'on sait déjà faire.*
 | H7 | Les prix varient (marché, saturation locale) | 🟡 | `marche.ts` : indice annuel (cycle de 11 ans + bruit, borné 0,6-1,5) calé sur la volatilité réelle des bois sur pied, et DÉCOTE D'ENGORGEMENT du débouché local — vendre tout la même année rapporte moins. Ne joue que si l'économie compte |
 | H8 | Éclaircies, élagage, taillis, trognes : la sylviculture a des gestes distincts | ✅ | élagage, recépage, éclaircie par critère et **trogne** (`trogner` ; `trogne.test.ts`) — quatre gestes qui ne se confondent pas |
 | H14 | Certaines récoltes ne tuent pas l'arbre et suivent une rotation (liège) | ✅ | `leverEcorce` ; `especes.ecorce` ; `sylviculture.test.ts` |
-| H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue |
+| H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue. Les deux constantes s'appelaient « chablis » quand seul le FEU savait en produire ; depuis `tempete.ts` elles portent enfin leur nom. Et la ruine des cours après une tempête est là sans qu'on l'écrive : sortir d'un coup tout ce que le vent a couché tombe sous la décote d'engorgement du débouché (H7) |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche, protections individuelles et **clôtures** ; irrigation et fertilisation absentes |
 | H18 | Le gibier se régule aussi par la chasse — et l'immigration compense | ✅ | `chasser` ; `gibier.test.ts` — une journée fait reculer la pression, un an plus tard elle est revenue |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
@@ -290,12 +319,12 @@ mesurer que ce qu'on sait déjà faire.*
 | I1 | Le carbone suit un bilan conservatif entre tous les pools | ✅ | `carbon-conservation.test.ts` |
 | I2 | Le sol est le plus gros stock en tempéré | ✅ | `carbon.test.ts` |
 | I3 | Le bois énergie vendu est émis immédiatement (il ne stocke rien) | ✅ | `epandre-vs-vendre.test.ts` |
-| I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | 🟡 | comptabilisé comme stock (`oeuvreCumKgC`) ; pas encore de fin de vie du produit |
+| I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | ✅ | `DEMI_VIE_OEUVRE_ANS` ; `produits-bois.test.ts` — décroissance de premier ordre sur la demi-vie par défaut de l'IPCC pour les sciages (35 ans ; 25 pour les panneaux, 2 pour le papier, mais le moteur ne produit que du sciage). Le crédit au bilan net est le STOCK et non le cumul : **un puits qui ne se vide jamais n'est pas un puits**. Et le carbone se partage enfin comme la CAISSE — seule la bille élaguée part en scierie, le houppier part en bûches et brûle, là où un arbre classé « œuvre » envoyait auparavant tout son carbone au produit |
 | I5 | Le bois mort et la litière s'humifient partiellement | ✅ | coefficients d'humification |
 | I6 | Le travail du sol déstocke massivement le carbone | ✅ | `labourer` : 5 % de l'humus par passage, émis et comptés dans le bilan |
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
-| I7 | L'allométrie biomasse→carbone est plausible par espèce | 🟡 | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. Un hêtre de 25 m et 50 cm stocke maintenant 1 333 kg C contre 3 917 avant, pour 1 000 à 1 400 attendus. **Reste 🟡** : `bois.densite` est une densité commerciale à 12 % d'humidité là où la biomasse demande l'infradensité, soit environ 20 % de surestimation résiduelle |
-| I8 | Le bilan peut être négatif au début d'une plantation | ✅ | `bilan-carbone-plantation.test.ts` — le total des stocks perd 11,1 à 11,4 t C/ha après labour, creux à la 12ᵉ année, retour au-dessus du départ à la 24ᵉ. **Et la mesure corrige l'énoncé** : le creux existe SANS labour (−7,7 à −8,1 t C/ha, croisement à la 22ᵉ année). Ce n'est pas le travail du sol qui rend le bilan négatif — c'est la jeunesse du peuplement, qui ne rend rien à la litière pendant que l'humus se minéralise à 1,5 %/an. Le labour aggrave d'un tiers et retarde de deux ans |
+| I7 | L'allométrie biomasse→carbone est plausible par espèce | ✅ | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. La densité qui convertit ce volume en matière sèche est désormais une INFRADENSITÉ (masse anhydre / volume vert) et non plus une densité du commerce à 12 % d'humidité : 17 des 26 espèces la tiennent d'une source ouverte — table IGN d'après Dupouey 2002 (annexe 3 de la méthode CNPF du label bas-carbone) pour les feuillus français, Global Wood Density Database (Zanne et al. 2009, doi:10.5061/dryad.234) pour le reste — et les 9 autres, sous-arbrisseaux de lande et de haie qu'aucune des deux ne couvre, gardent leur valeur d'avant en le disant dans leur fiche. Aucun facteur global : le troène MONTE (0,75 → 0,81), le chêne-liège ne bouge pas, le charme perd un quart (#68). Un hêtre de 25 m et 50 cm stocke 1 078 kg C contre 1 333 avant et 3 917 avant #62. **L'ancre discrimine enfin** : elle porte sur la TIGE, dont le volume ne fait pas débat (2,454 m³ ici, 2,528 par le tarif français EMERGE), et la borne à 1 307–1 624 kg de matière sèche — enveloppe des quatre équations de biomasse de tige applicables à cet arbre dans Zianis et al. 2005, Silva Fennica Monographs 4. Le moteur y place 1 350 kg ; à l'ancienne densité il en plaçait 1 669 et l'essai TOMBE, ce qui est la preuve que le correctif en est un |
+| I8 | Le bilan peut être négatif au début d'une plantation | ✅ | `bilan-carbone-plantation.test.ts` — le total des stocks perd 11,6 à 11,8 t C/ha après labour, creux aux 12ᵉ–13ᵉ années, retour au-dessus du départ aux 25ᵉ–26ᵉ. **Et la mesure corrige l'énoncé** : le creux existe SANS labour (−8,2 à −8,5 t C/ha, croisement aux 23ᵉ–24ᵉ années). Ce n'est pas le travail du sol qui rend le bilan négatif — c'est la jeunesse du peuplement, qui ne rend rien à la litière pendant que l'humus se minéralise à 1,5 %/an. Le labour aggrave de 40 % et retarde de deux ans |
 
 ---
 
@@ -311,9 +340,10 @@ inventaire.
 | J2 | Le bois mort est un habitat, pas un déchet | ✅ | pool `deadWoodKgC` intégré à l'indice (ch4-A) |
 | J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | ✅ | gros sujets, trognes recoupées ET chandelles (`biodiversite.ts` ; `trogne.test.ts`, `chandelles.test.ts`) |
 | J8 | Un arbre mort reste debout des années : c'est LE bois mort qui compte pour la faune | ✅ | `dureeChandelleSemaines` (densité du bois × 15 ans) ; `chandelles.test.ts` |
-| J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | 🟡 | strates et sempervirence comptées ; pas de lisières ni de structure horizontale |
+| J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | ✅ | strates, sempervirence, et depuis l'issue #75 l'ÉTAGEMENT LOCAL (`heterogeneiteVerticale`) — l'écart-type des hauteurs dans un voisinage de 3 m, qui distingue enfin une forêt étagée d'un damier de blocs monostrates que le décompte de strates notait pareil : 0,00 contre 0,68 |
+| J9 | L'ARRANGEMENT compte autant que la composition : lisière, cœur, mosaïque | ✅ | `structureHorizontale` ; `mosaique.test.ts` — à espèces, nombre et âge identiques, une mosaïque de bosquets note mieux qu'un bloc et qu'une plantation régulière (0,79 / 0,23 / 0,00). **Et le mitage ne paie pas** : des houppiers disjoints donnent 94 % de lisière et zéro cœur, donc zéro. La courbe n'est pas ajustée — c'est le PRODUIT lisière × cœur, qui tombe de l'énoncé « il faut les deux » |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
-| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C) |
+| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C). `indiceBiodiversite` ne compte que les floraisons LIGNEUSES ; la strate basse, qui est justement ce qui nourrit en soudure, n'y entre pas |
 
 ## Ce qui débloquerait le plus de critères
 
@@ -323,21 +353,35 @@ couplage humus ↔ azote, la variabilité individuelle — et sa numérotation a
 de 2 à 4 sans passer par 1. Une feuille de route qui ne se relit pas devient un
 piège pour celui qui la suit.*
 
-### 1. Une vraie strate herbacée, avec des espèces distinctes
+### 1. Le calendrier de floraison de la strate basse
 
-Le plus gros verrou du référentiel, et de loin. La strate existe aujourd'hui
-comme une COUVERTURE (`herbe.ts`) : un taux par cellule, sans espèces. Tant
-qu'il n'y a pas d'herbacées distinctes, quatre critères restent bloqués et l'un
-d'eux est l'une des deux seules absences qui subsistent :
+Ce qui reste du plus gros verrou du référentiel. La strate herbacée a
+maintenant des espèces (`herbacees.ts`), et E9 comme B8 sont tombés avec — mais
+la fiche herbacée s'arrête au calendrier FOLIAIRE. Aucune des trois espèces ne
+déclare de floraison, si bien que les deux critères qui en dépendaient restent
+où ils étaient :
 
-- **E9** (❌) — les vernales profitent de la fenêtre de printemps. Sa
-  justification dit déjà « dépend d'espèces herbacées distinctes ».
-- **B8** (🟡) — « pas encore d'espèces herbacées distinctes ».
 - **G4** (🟡) — les pollinisateurs manquent d'un calendrier de floraison.
-- **J6** (🟡) — des floraisons étalées nourrissent sans rupture.
+- **J6** (🟡) — des floraisons étalées nourrissent sans rupture. Et c'est
+  précisément la strate basse qui nourrit pendant les deux périodes de soudure
+  (ch4-C), là où `indiceBiodiversite` ne compte encore que les ligneux.
 
-C'est aussi ce qui donnerait un sens au sous-étage d'une parcelle
-agroforestière, où la culture EST la strate basse.
+Le chemin est court : les ligneux ont déjà un `floraisonDJ` et
+`partFloraison` (`phenologie.ts`) sait en faire une part de couronne en fleur.
+Il faut le même champ sur la fiche herbacée, une ressource florale par cellule
+— l'emprise multipliée par cette part —, et que `biodiversite.ts` et le service
+de pollinisation la lisent.
+
+Ce qui manque ENCORE à la strate, par ordre de gain :
+
+- **une rudérale nitrophile** — l'ortie. La capacité d'une herbacée lit la
+  lumière et le pH, pas l'azote : un épandage ne se voit donc pas au sol, alors
+  que c'est la bio-indication la plus lisible qui soit.
+- **la hiérarchie de hauteur** dans la strate, seule limite écrite de B8.
+- **la CULTURE comme strate basse**, ce qui est le sujet de l'agroforesterie :
+  une fiche herbacée avec un rendement et une exigence minérale ferait poser au
+  jeu sa question centrale — quelle culture sous quels arbres, à quel
+  écartement.
 
 ### 2. L'écart de la paire d'allocation (issue #79)
 
@@ -369,16 +413,24 @@ Restent, sur le poids des codominants lui-même :
   un coefficient.
 - **E10** — plus ici : son verrou est #79.
 
-### 3. Les tempêtes (issue #55) — et d'abord leurs critères
+### 3. Ce que la tempête n'a pas emporté (suites de l'issue #55)
 
-Le référentiel ne contient AUCUNE ligne sur la tempête, le chablis ou la casse
-mécanique. Ce n'est pas un ❌, c'est une absence du référentiel lui-même, ce qui
-est pire : personne ne comptait le point. Le premier geste de ce lot est donc
-d'écrire les critères, pas le code.
+Les critères existent maintenant (F14 à F19), le vent couche des arbres, et
+trois des six lignes écrites sont des ❌ assumés. Par ordre de gain :
 
-Le mot « chablis » est pourtant partout dans le vocabulaire du moteur, où il
-désigne toujours autre chose — la décote d'un bois brûlé, le délai de
-récupération après un feu, le contact au sol d'une chandelle.
+- **F19, l'amplification climatique** — c'est le plus important des trois,
+  parce que la fréquence des tempêtes est le bon endroit où brancher la dérive
+  du climat, et le vent moyen le mauvais. Le blocage est de PLOMBERIE, pas
+  d'écologie : `meteoDerivee` connaît le scénario et pas la graine de partie,
+  `tick` tire la rafale et ignore le scénario. Réunir les deux moitiés est un
+  petit lot, et il rend D11 vrai du vent aussi.
+- **F18, la fragilité d'après-éclaircie** — il y faut une mémoire par arbre de
+  l'ouverture récente. C'est ce qui rendrait DANGEREUSE une éclaircie tardive et
+  forte, ce qui est la leçon sylvicole la plus chère de Lothar.
+- **F17, la casse partielle** — un arbre penché qui survit avec une plaie est
+  aussi une porte d'entrée pour les maladies (G6) et une branche arrachée est du
+  bois mort au sol (`boisMort.ts`). Le mécanisme existerait presque ; c'est
+  l'état « blessé » qui manque à l'arbre.
 
 ### 4. Les moins chers : un test, et le critère passe
 
@@ -697,6 +749,562 @@ podzol landais pour qu'un massif forestier y devienne une forêt de houx pur,
 les autres essences étant écartées et le repli jamais déclenché. Le voisinage
 sème maintenant autant quel que soit le sol — ce qui change, c'est QUI : on
 garde les espèces qui tiennent et on complète avec celles qui poussent là.
+
+## La strate herbacée : trois espèces, deux grandeurs, une fenêtre
+
+La strate existait comme une COUVERTURE : un taux par cellule, qui montait avec
+la lumière et l'humidité. Un bon mécanisme, qui rendait déjà des services — il
+freinait l'évaporation, nourrissait le feu, concurrençait les semis. Mais
+c'était **une seule plante moyenne**, et un taux de couverture n'a pas de
+printemps.
+
+### Deux grandeurs, parce qu'une seule ne suffisait pas
+
+`herbacees.ts` sépare ce que la couverture confondait :
+
+- **l'emprise**, la place qu'une espèce TIENT au sol, bulbes et rhizomes
+  compris. Elle est pérenne et lente ;
+- **le feuillage**, ce qui est VERT cette semaine. Il vise l'emprise, ramenée à
+  ce que la saison et la sécheresse en laissent, et il y monte à une vitesse de
+  repousse — freinée par le froid, sans quoi une pelouse rasée en décembre se
+  referme en janvier.
+
+La distinction n'est pas cosmétique, et on l'a apprise en la ratant : avec une
+seule variable, chaque bouchée de chevreuil était prise sur les rhizomes, et la
+lande mesurée perdait son tapis en un hiver. Une fauche, un feu, une dent
+emportent le feuillage ; seule la charrue va chercher l'emprise.
+
+### La règle de la fenêtre TOMBE du découpage
+
+Une espèce ne fait bouger son emprise que **pendant sa saison de croissance** :
+dormante, elle est gelée. Donc chacune juge sa station au moment où elle pousse.
+L'anémone la juge en mars, sous un couvert caduc encore nu ; le dactyle la juge
+en mai, sous le même couvert refermé. Rien de cela n'est écrit : ça sort de la
+phénologie de chaque fiche et de la lumière hebdomadaire que `light.ts`
+calculait déjà (B5).
+
+Mesuré en année 40 sur limon riche, parcelle de 20 m, semaines 16 et 30, deux
+graines :
+
+| couvert | lumière au sol | couverture | rapport | part de la vernale |
+|---|---|---|---|---|
+| hêtraie | 0,68 → 0,28 | 0,99 → 0,31 | **2,98-3,45** | **36-40 %** |
+| pinède | 0,50 → 0,49 | 0,95 → 0,76 | 1,24-1,25 | 19 % |
+| découvert | 0,96 → 0,96 | 1,00 → 0,96 | 1,04 | 3 % |
+
+Le sol d'une hêtraie est vert mi-avril et nu fin juillet ; celui d'une pinède ne
+connaît pas ce rythme. Et plus l'été est sombre, plus la strate appartient à la
+vernale — gradient monotone sur les trois couverts, graine par graine.
+
+**Ce que le dispositif ne montre pas**, et il faut le dire : le moteur ne
+produit pas, sur cette station, de peuplement sempervirent assez SOMBRE pour
+exclure la vernale tout à fait. Le pin sylvestre est une essence de lumière et
+s'auto-éclaircit ; le houx ne s'installe pas en plein découvert ; le chêne-liège
+et le châtaignier, sur la lande où ils poussent, plafonnent à trois et cinq
+mètres en quarante ans. Ce que vaudrait une pessière se lit donc sur la capacité
+seule, qui tombe sous 0,1 à 4 % de lumière.
+
+### La bio-indication descend d'un étage
+
+Le pH décide, comme il décide déjà pour les ligneux (`soil.ts:facteurGammePh`,
+la même bordure douce de ±0,7). À découvert, en année 11 : sur le limon neutre,
+dactyle 0,96 et molinie 0 ; sur le podzol landais à 4,5, molinie 1,00 et les
+deux autres 0. Aucune ligne du moteur ne nomme d'espèce — c'est la gamme
+déclarée dans l'atlas, confrontée au pH de la cellule.
+
+Le calendrier suit : la lande girondine reste à 0,46 de couverture mi-avril
+quand le limon est à 0,99, parce que la molinie démarre notoirement tard. La
+protection du sol au printemps n'est plus la même partout.
+
+**Une borne de pH vaut un mécanisme.** L'anémone acceptait d'abord jusqu'à
+pH 4,0, ce qui l'installait sous les ajoncs d'une lande girondine — et y
+RENVERSAIT l'effet nurse (critère E1), le pin abrité passant sous le pin à
+découvert parce qu'une vernale lui disputait son printemps. Ramenée à 4,5, elle
+reste ce que sa source en dit : une plante de mull et de moder, pas de podzol.
+Un trait mal borné dans l'atlas fait plus de dégâts qu'une formule fausse dans
+le moteur, parce qu'il ne ressemble pas à un bug.
+
+### Le tapis d'avant ce lot était un dactyle qui s'ignorait
+
+Les seuils du dactyle — lumière 0,12 et 0,47, humidité 0,35, reconquête 0,12 par
+semaine — sont ceux que `herbe.ts` appliquait au tapis entier, repris tels
+quels. Ce lot AJOUTE des espèces sous ce plancher et à côté de lui ; il ne le
+déplace pas. Les relever « parce que le tapis moyennait aussi des plantes
+d'ombre » était tentant, et c'était déplacer une calibration acquise sans la
+remesurer.
+
+Une seule chose distingue vraiment le dactyle de ce tapis : il n'a **ni porte
+photopériodique ni sénescence d'automne**, parce qu'une hémicryptophyte n'a pas
+de bourgeon en dormance à lever — elle repart au premier redoux. Lui en donner
+une, par imitation des ligneux, lui coûtait un cinquième de sa couverture
+annuelle sous futaie feuillue (0,61 contre 0,77 sur soixante ans, mesuré) : la
+fenêtre qui compte pour une graminée de sous-bois n'est pas celle d'avril mais
+celle d'**octobre à mars**, quand le couvert caduc est ouvert et qu'il fait
+encore assez doux pour pousser. C'est le défaut qui a coûté le plus cher de ce
+lot, et il ne se voyait pas à la lecture : il a fallu tracer la couverture
+semaine par semaine, sur soixante ans, avant et après.
+
+### Ce que ce lot a déplacé ailleurs, et de combien
+
+Un mécanisme qui touche l'eau, l'azote et la couverture du sol de toutes les
+cellules déplace ce qui en dépend. Quatre seuils ont été remesurés, et ils sont
+listés ici pour qu'on puisse en juger d'un coup d'œil :
+
+| Test | Avant | Après | Ce qui a bougé |
+|---|---|---|---|
+| `litiere` — l'aulne fait pousser le hêtre | 1,1006 pour un seuil à 1,1 | 1,095, seuil à 1,08 | le témoin isolé profite un peu plus de l'azote que le tapis n'éponge plus |
+| `succession` — la banque de hêtres à 120 ans | 19 ≥ 19 | 17 ≥ 0,85 × 19 | la vernale prélève en avril, au même endroit que les semis |
+| `bois-en-travers` — la terre piégée | 0,135 | 0,093, seuil de 0,1 à 0,08 | « un piège ne retient que ce qui passe », pour la quatrième fois |
+| `feu` — conservation du carbone au feu | passait | passe | le grand livre du TEST oubliait l'érosion ; corrigé, pas contourné |
+
+Les trois premiers gardent leur direction ; aucun ne la doit à son seuil. Le
+quatrième n'était pas un seuil mais un trou dans un test, resté invisible tant
+qu'aucune érosion notable ne tombait la semaine d'un incendie.
+
+Et un cinquième a été rattrapé en cours de route plutôt que remesuré : le
+rapport « le réchauffement fait flamber les ravageurs » était tombé de 1,6 à
+1,06 — c'est-à-dire annulé — parce que la strate herbacée fournit un cinquième
+de l'habitat des auxiliaires et que la sénescence d'automne de trop la faisait
+disparaître tout l'hiver. Il est revenu au-dessus de son seuil une fois le
+dactyle rendu à sa vraie phénologie. **C'est ce genre de conclusion qu'un lot de
+mécanisme peut annuler sans le dire**, et c'est pour ça qu'on relance la suite
+entière plutôt que les tests du lot.
+
+### Trois espèces, et pourquoi trois
+
+Une vernale (anémone des bois), une graminée sociale de sol riche (dactyle) et
+son homologue de sol acide (molinie) — trois STRATÉGIES qu'on voulait pouvoir
+opposer, pas trois espèces représentatives. Chaque fiche porte sa source
+(Biological Flora of the British Isles) et les valeurs traduites en paramètres
+portent leur *(à calibrer)*.
+
+Trois, et pas trente, parce que la strate tourne sur toutes les cellules toutes
+les semaines. **Coût mesuré** : 6,8 → 7,6 ms par semaine sur une hêtraie 30 × 30
+de quarante ans, soit **+11 %**, machine au repos, médiane de cinq passes. C'est le prix à connaître
+avant d'ajouter la quatrième.
+
+## La mosaïque : un sommet de courbe qu'on n'a pas eu à choisir
+
+L'indice de biodiversité comptait ce qu'il Y A — les espèces, leur équilibre,
+les strates, le bois mort, les gros sujets — et jamais COMMENT C'EST ARRANGÉ.
+Deux parcelles portant les mêmes espèces aux mêmes hauteurs recevaient la même
+note qu'elles forment un bloc plein ou une mosaïque de bosquets.
+
+### La difficulté que l'issue pose et laisse ouverte
+
+« Ne pas récompenser le mitage. Une lisière a de la valeur, un peuplement qui
+n'est QUE de la lisière n'en a pas — les espèces de cœur de massif existent
+aussi. La forme de la courbe est le vrai sujet de ce lot. »
+
+Il fallait donc une courbe qui monte puis redescend. Tailler une cloche aurait
+demandé d'en choisir le sommet à la main — un chiffre de plus sans ancre. Le
+**produit** de deux parts mesurées l'évite :
+
+- la part de cellules en LISIÈRE — voisinage contrasté entre couvert et ouvert ;
+- la part de cellules de CŒUR — voisinage entièrement couvert.
+
+Il vaut zéro quand il n'y a que de la lisière, zéro quand il n'y a que du bloc,
+et il est maximal quand les deux s'équilibrent. **Le sommet n'est pas choisi, il
+tombe** de l'énoncé « il faut les deux », qui est ce que dit l'écologie du
+paysage.
+
+Mesuré sur trente-six chênes de 14 m, même espèce, même nombre, même âge :
+
+| disposition | lisière | cœur | mosaïque |
+|---|---|---|---|
+| quatre bosquets | 0,72 | 0,28 | **0,79** |
+| bloc serré | 0,23 | 0,25 | 0,23 |
+| plantation régulière pleine | 0,00 | 1,00 | **0,00** |
+| mitage (houppiers disjoints) | 0,94 | 0,00 | **0,00** |
+
+Les deux extrêmes tombent à zéro, et le mitage aussi franchement que le bloc.
+
+### Ce que le décompte des strates confondait
+
+L'indice comptait les étages à l'échelle de la PARCELLE. Il notait donc
+identiquement une forêt où chaque mètre carré porte trois strates et un damier
+où un tiers porte des arbres, un tiers des arbustes, un tiers de l'herbe.
+L'écart-type local des hauteurs les sépare : **0,00 pour un peuplement équienne,
+0,68 pour trois hauteurs entremêlées**. Les sept points que cette grandeur prend
+au décompte de strates ne sont pas un arbitrage de place — c'est `etagement` qui
+mesure ce que `strates` croyait mesurer.
+
+### Ce que l'issue disait de vérifier, et qui était faux
+
+Elle demandait de regarder J3 et B9 avant d'écrire, « qui voisinent ». Vérifié :
+**J3 ne parle pas de mosaïque** mais des gros arbres et des cavités, et B9 parle
+de la LUMIÈRE latérale d'une bordure, pas de son habitat. Aucun recouvrement —
+la structure horizontale était bien un trou, et c'est J9 qui le comble.
+
+## Le sanglier : le seul herbivore qui mange la régénération ET la favorise
+
+Le chevreuil était complet depuis longtemps. Le sanglier manquait, et l'issue
+suggérait de généraliser l'architecture du gibier pour l'y loger. **Après
+lecture, non.** `gibier.ts` est bâti de bout en bout sur le BROUTAGE — hauteur
+de dent, fourrage par cellule, appétence, longueur de pousse mangée — et un
+sanglier ne broute pas. Généraliser aurait produit une abstraction qui ne décrit
+ni l'un ni l'autre. Ce qui se partage n'est pas le code mais le PATRON : une
+densité de contexte imposée par le paysage (domaine vital de 500 à 2000 ha selon
+l'OFB — la parcelle n'a pas de population, elle en reçoit une part), une
+répartition locale au prorata de ce que chaque cellule offre, une comptabilité
+qui tient.
+
+### Deux effets de signe opposé, et aucun n'est écrit par espèce
+
+C'est ce qui fait de cet animal autre chose qu'un décor, et les deux tombent de
+traits que l'atlas déclarait déjà :
+
+- **il mange ce qui tombe et reste.** Le mode de dissémination distingue depuis
+  toujours `geai` et `gravite` — les grosses graines lourdes — de `vent` et
+  `oiseaux`. Un sanglier mange les premières au sol ;
+- **il ouvre un lit de germination.** Un boutis enlève le matelas de feuilles et
+  met la terre à nu, ce dont profitent précisément les petites graines, celles
+  qui ne lèvent pas sous une litière fermée.
+
+D'où la tension que l'issue espérait, sans qu'on ait eu à l'écrire : **le geai
+plante les chênes, le sanglier les mange**, et pendant ce temps il prépare le lit
+du bouleau. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à
+densité ordinaire, 22 sous forte densité.
+
+### Le sanglier annule l'atténuation qu'apporte la plantation feuillue
+
+C'est le résultat le plus fort du lot, et personne ne l'a demandé. Le cas
+d'étude de Saumos compare, sur seize graines et vingt-six ans, une pinède et un
+mélange bouleau-châtaignier sur la même lande. Mesuré :
+
+| | pin | feuillus | écart |
+|---|---|---|---|
+| sans sanglier | 821 m² | 525 m² | **296 m²** |
+| à la densité du paysage | 720 m² | 747 m² | **27 m²** |
+
+Sans sanglier, les feuillus brûlent un bon tiers de moins. Avec, **l'avantage
+disparaît entièrement**. La chaîne est celle que le fichier d'essai annonçait
+depuis longtemps sans pouvoir la refermer : l'atténuation feuillue repose sur la
+capacité à FERMER LE COUVERT vite, ce qui étouffe la lande qui porte le feu ; le
+châtaignier est en `geai`, donc le sanglier mange sa châtaigne, donc le mélange
+ne se ressème pas, donc il ne referme pas, donc il n'étouffe plus rien.
+
+Un gestionnaire qui plante des feuillus pour réduire le risque d'incendie et qui
+ne compte pas ses sangliers plante donc pour rien. L'essai de Saumos met
+maintenant le sanglier de côté pour continuer de mesurer la composition seule ;
+l'interaction, elle, est ici.
+
+### Ce qu'on n'attend pas d'un dégât
+
+Un boutis est un **enfouissement**, pas une destruction. La litière passe au pool
+lent, l'azote au pool minéral, et le stock d'humus MONTE avec la densité de
+sangliers. La structure y gagne aussi — la croûte est cassée, la porosité
+revient dans les dix premiers centimètres, ce qui est d'ailleurs la raison pour
+laquelle les sites de germination s'ouvrent. Ce que le sanglier coûte est
+ailleurs : la terre est à nu, donc elle part.
+
+### Un trait qui porte le bon nom et ne dit pas la bonne chose
+
+Le premier jet faisait manger au sanglier tout ce dont le mode de dissémination
+valait `geai` OU `gravite`, en croyant lire « graine lourde ». Mais `gravite` ne
+dit pas le poids : il dit que la graine **tombe sous sa mère**, ce qui range
+l'ajonc et le genêt — graines dures de deux millimètres — à côté de la faîne.
+
+Le sanglier s'est donc mis à manger des graines d'ajonc, les landes ont cessé de
+se ressemer, et l'effet nurse est tombé : un pin abrité par six ajoncs passait
+de 1,38 m à 0,92 m en huit ans, sous celui d'un pin nu. Un test d'abri au vent,
+cassé par un sanglier mangeant ce qu'aucun sanglier ne mange.
+
+`geai` seul est le bon marqueur, et ce n'est pas un hasard : un geai ne cache que
+de grosses graines nutritives, si bien que l'atlas le pose exactement sur les
+chênes, le chêne-liège, le châtaignier et le noisetier — les glands et les
+châtaignes que l'issue nommait. **Ce que ça laisse de côté** : la faîne du hêtre,
+classée `gravite`, est bien mangée. La rattraper proprement demanderait un trait
+de TAILLE DE GRAINE dans l'atlas.
+
+C'est la deuxième fois de la session qu'une réutilisation échoue ainsi — après
+`windShelterAt`, qui calculait bien un abri, mais celui d'une haie pour un jeune
+plant. **Relire la DÉFINITION de ce qu'on réutilise, jamais son nom.**
+
+### Le couperet évité, pour la troisième fois
+
+La consommation de la glandée soustrayait d'abord linéairement. Résultat mesuré :
+à 1,8 fois la densité de référence il ne restait **exactement rien**, et la
+régénération du chêne s'éteignait d'un coup — zéro recrue en quarante ans. Une
+forme exponentielle garde la bonne écologie (sous forte densité la glandée ne
+passe presque plus) sans jamais promettre l'extinction.
+
+Ce dépôt a maintenant payé trois fois le même défaut : l'anémone à pH 4,0, le
+chêne-liège à pH 4,50, et cette glandée. **Une grandeur qui touche un zéro dur
+bascule d'un extrême à l'autre pour un centième de rien.** À chercher
+systématiquement dans tout nouveau mécanisme.
+
+## Le bois d'œuvre : un puits qui ne se vide jamais n'est pas un puits
+
+Le carbone vendu en scierie entrait dans `oeuvreCumKgC` et n'en sortait jamais.
+Une palette stockait autant qu'une charpente, pour toujours, et vendre du bois
+devenait un geste climatique gratuit et définitif — faux dans le sens qui flatte
+le joueur, ce qui est la pire direction pour une erreur de comptabilité.
+
+Le stock sort maintenant d'usage en décroissance de premier ordre, la méthode
+des inventaires nationaux, sur la **demi-vie par défaut de l'IPCC pour les
+sciages : trente-cinq ans** (la même table donne 25 ans pour les panneaux et
+2 ans pour le papier ; le moteur ne produit que du sciage). Le crédit au bilan
+net devient le STOCK et non le cumul.
+
+### Le carbone se partage enfin comme la caisse
+
+En ouvrant le dossier, un défaut plus ancien est apparu, et il était silencieux.
+`valeurSurPied` facture depuis toujours un arbre d'œuvre en DEUX parts : la
+bille élaguée au prix de la scierie, le houppier au prix des bûches. La
+comptabilité carbone, elle, envoyait **tout** l'arbre au stock de produits dès
+lors qu'il était classé « œuvre ». Le prix disait 60 % d'œuvre et le carbone
+disait 100 %. Les deux partages sont maintenant le même.
+
+C'est aussi ce qui donne au lot sa leçon sylvicole sans qu'on ait à l'écrire :
+la part qui devient un produit durable est celle qu'on a ÉLAGUÉE. Tailler tôt,
+c'est fabriquer du carbone qui dure — et le moteur n'a pas eu besoin d'une
+décision de jeu supplémentaire pour le dire, ce que l'issue redoutait.
+
+### L'issue se trompait sur ce qu'on verrait, et la mesure le dit
+
+Elle prévenait : « une charpente centenaire ne rendra rien pendant la partie, ce
+qui est le bon comportement — ne pas raccourcir les durées pour que ça se voie ».
+La mise en garde est juste, mais sa prémisse ne l'est pas. Elle demandait dans le
+même paragraphe **une seule durée moyenne**, et une moyenne sur charpente, meuble
+et emballage ne vaut pas un siècle : l'IPCC la place à trente-cinq ans.
+
+Mesuré : un produit vendu au début d'une partie de cinquante ans en a rendu
+**63 %** à la fin. On voit donc le puits se vider, sans avoir rien raccourci — et
+la leçon est plus dure que celle que l'issue imaginait. **À l'échelle d'une vie
+de gestionnaire, vendre du bois n'est pas un geste climatique définitif. Ce qui
+reste définitif, c'est ce qu'on laisse pousser.**
+
+## Le pH : un état de moins, une lecture de plus
+
+Le pH était une constante que seul le joueur pouvait changer. Le moteur savait
+pourtant déjà exclure une espèce hors de sa gamme (C7) : la conséquence était en
+place, c'est la cause qui manquait.
+
+Le lot ne fait pas dériver le pH par incréments. Il tient un pool de **bases
+échangeables** — le calcium, le magnésium, le potassium et le sodium fixés sur
+le complexe argilo-humique — et le pH s'y LIT, comme taux de saturation de ce
+complexe. C'est le sens physique du pH d'un sol, et le gain n'est pas
+esthétique : trois règles tombent de ce choix sans qu'on les écrive.
+
+- **Le chaulage cesse d'être un geste à effet fixe.** Il montait de 0,5 partout ;
+  il apporte maintenant des bases, et le pH suit. La même chaux déplace donc
+  beaucoup un podzol sableux — petit complexe, donc grand dénominateur — et peu
+  un limon argileux. Mesuré, et c'est un test.
+- **Un sol déjà acide s'acidifie de moins en moins**, parce que la courbe
+  s'aplatit par le bas. Ce n'est pas un garde-fou de programmeur : c'est la
+  gamme tampon de l'aluminium d'Ulrich, où les hydroxydes prennent le relais du
+  complexe.
+- **Une partie démarre exactement au pH que sa station déclare**, parce que la
+  saturation initiale est INVERSÉE depuis ce pH. Une dérive qui commence par
+  déplacer son point de départ n'est pas une dérive, c'est un bug.
+
+### La littérature dit le contraire de l'intuition, et il a fallu la suivre
+
+L'issue posait « une pessière podzolise, un feuillu maintient le pH ». C'est une
+demi-vérité, et la moitié fausse valait le détour :
+
+- Foltran et al. mesurent, après 63 et 82 ans de conversion en Allemagne
+  centrale, que le **hêtre acidifie le sol minéral profond PLUS que l'épicéa**
+  (−0,5 unité en vingt ans) — précisément à cause de la pompe à bases, qui les
+  remonte en surface et appauvrit la profondeur.
+- Dans des peuplements appariés, la litière d'**épicéa contient deux fois plus
+  de calcium que celle du pin sylvestre**, et la pruche se place au-dessus du
+  chêne rouge. « Résineux » n'est pas une grandeur chimique.
+
+D'où le trait retenu : non pas un « pouvoir acidifiant » par type de feuillage,
+mais la **teneur en calcium de la litière**, qui se mesure et se publie. Et la
+chaîne causale entière a été mesurée en jardin commun — Reich et al. 2005,
+quatorze essences en Pologne centrale, trente ans : le calcium de la litière
+varie du simple au quadruple entre essences, et c'est lui qui explique le pH du
+sol, le calcium échangeable, le taux de saturation, la vitesse de dégradation du
+plancher forestier et jusqu'aux vers de terre. Le mécanisme de ce lot n'est donc
+pas une hypothèse : il a été observé.
+
+**Ce que ça coûte en honnêteté** : sur vingt-six fiches, quatre valeurs sont
+ancrées (frêne, hêtre, chêne par un congénère nord-américain ; pin par le
+rapport épicéa/pin) et vingt-deux sont des placements dans une gamme mesurée.
+Le tableau de `bases.ts` le dit fiche par fiche.
+
+### Le pin s'acidifie le sol jusqu'à s'y trouver bien
+
+C'est le résultat que ce lot n'a pas écrit, et le seul qu'on n'aurait pas pu
+prévoir. Le versant du test `bois-en-travers` est un limon riche à pH 7,0 planté
+de hêtre et de pin. Les deux litières sont pauvres en calcium, donc le
+peuplement acidifie son propre sol : **7,00 → 6,94 → 6,82 → 6,62** sur soixante
+ans. Or le pin sylvestre était à la limite HAUTE de sa gamme (4 à 7,5, soit un
+facteur de 0,80 à pH 7). Au fil de la dérive, ce facteur monte : **0,80 → 0,97 →
+1,00**. Le pin pousse mieux, monte à 23 m au lieu de rester bridé, et domine le
+peuplement.
+
+Personne n'a écrit « le pin améliore son sort en l'acidifiant ». Ça tombe de la
+rencontre de la dérive du pH (C10, neuf) et du filtre de gamme (C7, ancien), qui
+ne se connaissaient pas. Et c'est de la bonne écologie : c'est exactement ce que
+fait un pin sur un sol qui n'est pas le sien.
+
+La conséquence s'est propagée jusqu'à un test qui ne parle ni de pH ni de pin —
+le bois en travers piège moins de terre, parce qu'un versant mieux couvert en
+laisse moins passer. Son seuil bouge pour la cinquième fois, et pour la
+cinquième fois avec sa raison écrite.
+
+### Trois erreurs d'échelle, toutes trouvées en mesurant
+
+**Le lessivage repris du potassium.** Même forme, même fonction, même
+signature — et trois ordres de grandeur d'écart. Le potassium échangeable du
+moteur est un petit pool mobile ; les bases du complexe font un demi-million
+d'eq/ha. Au taux du potassium, un limon neutre tombait au plancher d'acidité en
+**vingt-cinq ans**, et une hêtraie de test perdait son sol sous elle. Recalé sur
+le flux, qui lui est mesuré — quelques centaines d'eq/ha/an sous forêt tempérée.
+
+**Les embruns comptés comme un apport de bases.** Le premier jet retenait
+300 eq/ha/an de dépôts atmosphériques, poussières et embruns confondus. Mais le
+sel marin n'apporte AUCUNE alcalinité nette : le sodium et le magnésium arrivent
+avec leurs chlorures, traversent le complexe et ressortent au drainage. Seule la
+fraction non marine compte, et 120 eq/ha/an est l'ordre de grandeur honnête. Ce
+que l'erreur faisait : la lande sèche REMONTAIT de 4,50 à 4,56 en cinquante ans,
+alors que c'est le type même du sol qui s'acidifie tout seul. Et ce n'était pas
+cosmétique — le chêne-liège est exactement à sa borne sur cette station (gamme
+4,5-8, donc facteur NUL à pH 4,50) : deux centièmes de pH le faisaient passer
+d'exclu à viable, ce qui changeait le peuplement, donc le combustible, donc les
+incendies. Cinq tests du feu sont tombés là-dessus, et ils avaient raison.
+
+**L'altération créditée de ce que les racines lui arrachent.** Le phosphore et
+le potassium bénéficient d'un facteur rhizosphère (les mycorhizes dissolvent la
+roche, ×2 à ×5). Appliqué aux bases, il faisait **remonter le pH sous un
+peuplement de hêtres** — l'inverse exact de ce qu'un hêtre fait. La raison est
+comptable : ce fichier ne débite pas le prélèvement des arbres, donc créditer
+l'accélération qui le nourrit fabrique des bases à partir de rien. Le facteur a
+sauté, et c'est écrit à l'endroit où il aurait été tentant de le remettre.
+
+Une fois les deux corrigées, le budget minéral d'un sol forestier se retrouve
+**proche de l'équilibre** — 290 eq/ha/an d'altération et 300 de dépôts contre
+650 de lessivage sur le limon riche — et c'est la végétation qui le fait
+pencher. C'est le résultat qu'on cherchait sans le savoir : si l'altération
+dominait, aucune essence ne pourrait acidifier quoi que ce soit.
+
+## La tempête : le vent cesse d'être seulement desséchant
+
+Le moteur connaissait trois vents. Celui qui gonfle la demande évaporative (A7),
+celui qu'une haie brise (E5), celui qui pousse le feu (F12). Aucun ne cassait
+quoi que ce soit. Un arbre pouvait mourir de soif à cause du vent ; il ne
+pouvait pas verser. Les seules façons de se retrouver au sol étaient le joueur
+qui abat et la chandelle déjà morte qui finit par tomber.
+
+Le symptôme était lexical, et il traînait depuis longtemps : le mot **chablis**
+est partout dans le vocabulaire du moteur et n'y désignait jamais une tempête.
+`DECOTE_CHABLIS` était la décote d'un bois BRÛLÉ, `CHABLIS_RECUPERABLE_SEMAINES`
+le délai de récupération d'un arbre tué par le FEU. Pire : `marche.ts` explique
+sur dix lignes l'effondrement des cours après Lothar et Klaus. **Le moteur
+enseignait la conséquence d'un événement qu'il ne savait pas produire.**
+
+### La rafale, et non le vent moyen
+
+Le choix de grandeur décide de tout le reste. La casse mécanique ne se joue pas
+sur une moyenne hebdomadaire — c'est structurellement la mauvaise variable —
+mais sur la RAFALE, le pic de quelques secondes. `tempete.ts` tire donc pour
+chaque semaine un maximum de rafale dont le vent moyen fixe le pied et dont une
+queue exponentielle fait le sommet, calée sur la cinquantennale française de
+40-45 m/s (la classe de Klaus dans les Landes, de Lothar sur le Bassin
+parisien).
+
+Deux faits de terrain TOMBENT de ce seul choix, sans qu'on ait eu à les écrire :
+
+- **les tempêtes sont hivernales**, parce que le vent moyen l'est déjà
+  (`meteo.ts` : maximum en janvier, plancher fin juillet). Une rafale de 40 m/s
+  demande un tirage sur mille en janvier et un sur un million en juillet. Sur
+  quatre parties de soixante ans, aucun chablis entre les semaines 23 et 37 ;
+- **le caduc nu paie moins que le sempervirent**, parce que la prise au vent se
+  lit sur la part foliaire ombrageante et que les tempêtes atlantiques arrivent
+  quand les feuillus sont dénudés. Mesuré, soixante ans sur limon riche : la
+  pinède couche 65 à 88 tiges, la hêtraie 4 à 11.
+
+Un troisième tombe d'un mécanisme qui n'avait rien à voir : **les hivers doux et
+humides font des arbres qui versent**. Un arbre qui n'a jamais eu soif garde un
+chevelu superficiel (`nouvelleProfondeurRacines`), donc un ancrage médiocre. Ça
+n'est écrit nulle part ; c'est la rencontre de la plasticité racinaire et du
+bras de levier.
+
+### Ce que quatre erreurs de conception ont appris
+
+Aucune n'a été vue en relisant le code. Les quatre ont été trouvées en mesurant,
+et la dernière seulement en relançant la suite ENTIÈRE.
+
+**Zéro tempête en soixante ans.** Le premier jet réutilisait `windShelterAt`, qui
+existait déjà et calculait un abri. Mais il répond à une AUTRE question : il a
+été écrit pour la haie brise-vent — de quoi un jeune plant est-il protégé, près
+du sol — et compte tout voisin d'une certaine taille, où qu'il soit. Dans un
+peuplement il sature donc à 1 pour tout le monde : chacun s'abrite de ses
+semblables, et plus rien ne verse. Ce qui abrite une CIME, c'est ce qui la
+dépasse. `abriAuVent` ne somme que le dépassement des voisins plus hauts, et de
+là sortent trois comportements de terrain qu'on n'a pas eu à écrire : une futaie
+régulière ne s'abrite pas elle-même (c'est Klaus dans les pins alignés), un
+sous-étage est protégé par sa canopée, un dominant qui émerge prend tout.
+
+**Les semis couchés, les dominants épargnés.** Cent vingt-deux arbres pour
+2,4 m³, soit l'exact inverse d'une tempête. L'ancrage était écrit comme une
+profondeur ABSOLUE — trente centimètres de racines, mal ancré. Or le
+renversement est une affaire de MOMENTS : le vent pousse sur la cime avec un
+bras de levier qui est la hauteur, la motte résiste avec un bras qui est sa
+profondeur. Le rapport `profondeur / hauteur` a remis le tri à l'endroit.
+
+**Et le seuil de ce rapport a été calé sur un échantillon qui n'en était pas
+un** — c'est la quatrième erreur, et la seule que la suite entière a trouvée
+alors que les tests du lot passaient tous. Six pour cent semblaient être le
+niveau normal : c'est ce que tiennent les hêtraies et les aulnaies de quarante
+ans mesurées sur la série de Limon-riche (0,054 à 0,073). Mais ces racines-là
+sont descendues parce que l'ÉTÉ LES Y A FORCÉES. Le même hêtre poussé
+quatre-vingt-dix ans sur un site jamais sec tient 0,019 à 0,035 : il n'a jamais
+eu soif, il n'est jamais descendu, et la plasticité racinaire fait exactement
+ce qu'on lui demande. Toute une population légitime se retrouvait donc au fond
+du barème, et le test de lumière — une futaie de soixante-quatre hêtres de 25 m
+sur limon frais, qui ne parle pas du tout de vent — perdait seize arbres en
+cinq ans, ouvrait sa canopée et laissait survivre un semis de pin qui devait
+mourir d'ombre.
+
+Deux corrections, et la seconde compte autant que la première : le seuil passe
+à 4 % pour couvrir les deux régimes hydriques, et **l'ancrage cesse d'être le
+terme dominant** de la vitesse critique. Un enracinement superficiel retire un
+cinquième de la résistance et non deux, ce qui est l'ordre de grandeur des
+classes d'enracinement de la famille ForestGALES. Le tri, lui, survit : 65-88
+pins couchés contre 4-11 hêtres, et zéro sur un site abrité.
+
+Reste une question qui n'est PAS celle de ce lot : que le moteur donne 44 cm de
+racines à un hêtre de vingt mètres sur sol frais est une calibration de
+`RACINES_PLANCHER` (`trees.ts`), et elle revient à la maintenance.
+
+**L'aulnaie rasée tous les deux ans.** L'engorgement est LE facteur des grandes
+tempêtes : Lothar et Klaus se sont concentrés là où le sol était gorgé. Mais
+appliqué brut, il couchait l'aulne du fond de vallée — une espèce dont c'est
+l'habitat. Ce qui compte est l'engorgement AU-DELÀ de ce que l'espèce supporte,
+la forme même que `waterloggingFactor` utilise déjà pour la croissance. Un arbre
+qui vit là a des racines faites pour ce sol ; c'est le hêtre égaré dans le
+bas-fond qui verse.
+
+### Le label `flux-aléatoire` n'a pas eu lieu d'être
+
+L'issue prévoyait que le mécanisme déplace le flux du PRNG, ce qui aurait obligé
+à revérifier tous les scénarios. Il n'en a rien été : la rafale dérive de la
+graine de partie et de la semaine (comme l'indice du marché, `marche.ts`), le
+renversement de l'identité de l'arbre et de la semaine (comme la direction de
+chute, `boisMort.ts`). **Aucune partie sans tempête ne change d'un cheveu.** La
+règle vaut d'être généralisée : un mécanisme qui tire au sort n'a presque jamais
+besoin du flux séquentiel, et le prix d'une graine dérivée est deux lignes.
+
+### Ce que ça coûte
+
+Le tirage de rafale tourne à chaque semaine de chaque partie : **0,2 µs**. Le
+balayage du peuplement, lui, ne tourne que les semaines où la rafale dépasse
+25 m/s — `RAFALE_MINIMALE_MS` n'est pas un seuil de dégât mais un filtre de
+calcul, et il doit rester SOUS le plus fragile des cas possibles. Il coûte
+**0,15 ms** sur une hêtraie de quarante ans (96 tiges, 30 × 30 m), et il est
+quadratique en nombre d'arbres parce que `abriAuVent` regarde tous les voisins.
+
+Au niveau du tick complet, la différence ne se mesure pas : 8,17 ms/semaine sur
+un site exposé contre 8,11 sur le même site abrité, quand l'écart entre deux
+passes de la même configuration va de 7,75 à 8,70. **Le mécanisme est gratuit à
+cette échelle**, et le dire ainsi vaut mieux que d'annoncer un +0,7 % qui n'est
+que du bruit. À surveiller le jour où une parcelle portera mille tiges : c'est
+le balayage quadratique qui parlera le premier.
 
 ## La phénologie : chaque espèce a son calendrier
 
@@ -1927,6 +2535,187 @@ personne ne puisse le charger.
 composition brûle de 0 à 4 500 m² selon le tirage. C'est en changeant la graine
 qu'on distingue ce qui tient du terrain de ce qui tient de la chance, et le
 profil est fait pour être rejoué.
+
+## L'infradensité : la biomasse se pesait avec la densité du commerce
+
+`bois.densite` valait 0,68 pour le hêtre. La valeur est juste — pour la
+mauvaise grandeur : c'est la densité à 12 % d'humidité, celle des tables de
+menuiserie. La biomasse demande l'**infradensité**, masse anhydre rapportée au
+volume VERT, de l'ordre de 0,55 pour le hêtre. Le champ se décrivait déjà comme
+une infradensité : le code se mentait à lui-même depuis le début (#68).
+
+### Un champ, pas deux
+
+Le recensement des lecteurs a tranché la première question. `bois.densite` n'en
+a que deux : `treeAboveCarbonKg` (`carbon.ts`), qui veut l'infradensité, et
+`dureeChandelleSemaines` (`trees.ts`), qui n'y lit qu'un proxy de dureté — et
+les deux grandeurs classent les essences dans le même ordre. Le prix ne lit pas
+ce champ : il se compte au m³ (`prixOeuvreEurM3`). Personne ne réclamait une
+densité commerciale, donc le champ garde son nom et reçoit l'infradensité.
+
+### Deux sources, et aucun facteur global
+
+Les valeurs ont été saisies essence par essence depuis deux sources ouvertes,
+dans cet ordre :
+
+1. la table **IGN d'après Dupouey 2002** — infradensités des essences
+   françaises de taillis, reproduite en annexe 3 de la méthode CNPF
+   « conversion de taillis en futaie sur souches » v2 du label bas-carbone, et
+   celle qu'emploie l'inventaire national des gaz à effet de serre. Huit
+   espèces du référentiel y figurent ;
+2. la **Global Wood Density Database** (Zanne et al. 2009, Dryad
+   doi:10.5061/dryad.234), dont la mesure est littéralement « oven dry mass /
+   fresh volume ». Neuf espèces de plus.
+
+Les deux se recoupent là où elles se rencontrent : sept des huit espèces que
+l'IGN couvre ici figurent aussi au GWDD, et les valeurs s'y accordent à moins de
+0,09 t/m³ près (le pire écart est le charme, 0,61 contre 0,69). C'est ce
+recoupement qui les valide l'une par l'autre, plutôt que leur seule autorité.
+
+Les neuf restantes — pommier cultivé, prunellier, aubépine, ronce, sureau,
+cornouiller mâle, ajonc, genêt, callune — ne sont dans aucune des deux. Elles
+**gardent leur valeur d'avant et leur fiche le dit**, plutôt que d'emprunter
+celle d'un congénère ou d'être inventées.
+
+Surtout, **aucun facteur global n'a été appliqué**. C'était la tentation, et
+elle aurait remplacé une erreur par une autre : l'écart entre densité à 12 % et
+infradensité n'est pas le même d'une essence à l'autre. Le charme perd un quart
+(0,80 → 0,61), le chêne-liège ne bouge pas (0,70), et le troène **monte**
+(0,75 → 0,81). Un coefficient unique se serait trompé sur les trois.
+
+### L'ancre, et pourquoi elle porte sur la tige
+
+C'est le point qui rendait le correctif démontrable ou pas. L'unique ancre
+extérieure du dépôt exigeait qu'un hêtre de 25 m et 50 cm pèse entre 1 000 et
+1 500 kg C. Le moteur en donnait 1 333 avec 0,68 et 1 078 avec 0,55 : **les
+deux passaient**. Une ancre que la correction ne fait pas basculer ne prouve
+rien, et c'est exactement pour ça que le défaut a pu vivre si longtemps sous un
+essai vert.
+
+L'ancre a donc été déplacée sur la **tige**, parce que son volume ne fait pas
+débat : le moteur en donne 2,454 m³ pour cet arbre et le tarif français EMERGE
+(Deleuze et al. 2014, constante Fagus sylvatica 0,515) 2,528 m³, soit 3 %
+d'écart. Sur un volume aussi bien tenu, la masse sèche ne mesure plus qu'une
+chose : l'infradensité.
+
+Les bornes viennent de Zianis, Muukkonen, Mäkipää & Mencuccini 2005, *Biomass
+and Stem Volume Equations for Tree Species in Europe*, Silva Fennica
+Monographs 4, annexe A — les quatre équations de biomasse de tige applicables à
+un hêtre adulte de cette dimension, c'est-à-dire ni hors de leur plage de
+diamètre ni calées sur une autre classe d'âge :
+
+| Équation | Tige sèche à 50 cm et 25 m |
+|---|---|
+| Cienciala 2005 (Tchéquie, D 5,7–62,1, n=20) | 1 624 kg |
+| Calamini & Gregori 2001 (Italie, adultes) | 1 512 kg |
+| Bartelink 1997 (Pays-Bas, D seul, n=38) | 1 474 kg |
+| Bartelink 1997 (Pays-Bas, D et H, n=38) | 1 307 kg |
+
+Rapportée au volume de tige, cette enveloppe borne l'infradensité du hêtre
+entre 0,53 et 0,66 : elle contient les 0,55 de l'IGN et les 0,585 du GWDD, et
+**exclut les 0,68 d'avant**. Le moteur place 1 350 kg ; à l'ancienne valeur il
+en plaçait 1 669 et l'essai tombe. C'est cette bascule, et elle seule, qui
+prouve que le correctif en est un.
+
+L'ancre sur l'arbre entier est conservée, mais rebaptisée pour ce qu'elle est :
+un garde-fou d'ordre de grandeur, qui ne discrimine pas l'infradensité.
+
+### Ce que ça déplace ailleurs
+
+La durée des chandelles vaut `densite × 15 × 52` : baisser les densités les a
+raccourcies d'environ un cinquième. L'éventail reste dans la fourchette de
+terrain annoncée par le commentaire (2 à 20 ans) — du saule blanc à 4,2 ans au
+cornouiller mâle à 13,5 ans. `chandelles.test.ts` et `bois-en-travers.test.ts`
+passent sans retouche, et c'était attendu : le changement ne consomme aucun
+tirage, il ne peut donc pas décaler le flux aléatoire.
+
+### Les essais d'écologie : ce qui s'exige par graine, et ce qui ne s'exige plus
+
+Le changement ne consomme aucun tirage : il ne peut donc pas décaler le flux
+aléatoire, et toute bascule est causale. Deux essais ont basculé — et les deux
+étaient des **rapports entre quantités composites**, exactement ceux que la
+section « ce qu'un test écologique a le droit d'affirmer » cite en exemple.
+
+**`ravageurs`, le mélange contre le peuplement pur.** Ce rapport avait déjà été
+rabaissé deux fois (de trois à 1,4 lors de la correction du volume, #62). Sur la
+base d'avant les tempêtes, l'infradensité l'a fait passer à 1,03 / 0,76 / 0,88 :
+**une graine sur trois donnait le mélange perdant**, et seule la moyenne le
+cachait. Le lot des tempêtes (#85) l'a rétabli largement — mesuré sur le code
+livré, 0,34 / 0,34 / 0,23. L'écart est donc de nouveau épinglé, mais désormais
+**par graine** : une moyenne ne pourra plus masquer une partie qui dit le
+contraire des deux autres.
+
+**`climat`, le réchauffement contre le climat figé.** Celui-là ne s'est pas
+rétabli, et il ne le méritait pas. Son seuil était déjà descendu de ×2 à ×1,3 ;
+sur soixante ans une partie compte entre vingt et quarante-cinq morts par
+ravageurs, et le bruit de graine mange le signal. Mesuré sur le code livré :
+34 → 40, **32 → 21**, 25 → 38. Une graine dit l'inverse des deux autres et la
+moyenne ne franchit plus l'ancien seuil. Un troisième rabais en aurait fait un
+enregistrement du moteur.
+
+Il est donc reporté sur la grandeur que le mécanisme produit **directement** —
+la pullulation — là où le compte de morts mélange pullulation, vigueur et
+sécheresse concurrente :
+
+| Essai | Grandeur épinglée | Mesuré sur le code livré |
+|---|---|---|
+| `ravageurs` — pullulation pur / mélange | `ravageurMoyen` max | 2,82 × / 3,02 × / 3,06 × |
+| `climat` — pullulation chaud / figé | `ravageurMoyen` max | 1,45 × / 1,35 × / 1,31 × |
+
+Directionnelles sur les trois graines, et **éprouvées en neutralisant leur
+cause** — `facteurChaleur` pour l'une, le lien habitat → prédation pour
+l'autre : les deux tombent. Elles lisent le mécanisme, pas le jet de dés.
+
+#### Et le maillon qui manquait : compter les causes ENSEMBLE (#93)
+
+Reporter l'essai du climat sur la pullulation laissait un trou : il affirmait
+que le réchauffement fait pulluler les ravageurs, plus qu'il **tue** des arbres.
+La campagne de #93 a montré comment le combler, et au passage pourquoi le compte
+par cause unique était condamné d'avance.
+
+**Un arbre ne meurt qu'une fois, et sa mort n'est imputée qu'à UNE cause.**
+Compter la seule case « ravageurs » revient donc à soustraire les arbres que la
+sécheresse a pris de vitesse — le réchauffement pousse ce compte dans les deux
+sens à la fois. Ce n'est pas une hypothèse : le même chiffre, mesuré à trois
+lots d'écart, a inversé sa direction sur une graine puis l'a retrouvée, sans que
+le lien entre chaleur et mortalité ait bougé.
+
+| morts par ravageurs | graine 11 | graine 23 | graine 37 |
+|---|---|---|---|
+| avant sanglier / lisière | 34 → 40 (1,18 ×) | 32 → 21 (**0,66 ×**) | 25 → 38 (1,52 ×) |
+| après | 24 → 33 (1,38 ×) | 23 → 31 (1,35 ×) | 19 → 37 (1,95 ×) |
+
+Comptées **ensemble**, les deux voies par lesquelles la chaleur tue donnent au
+contraire un signal franc et stable :
+
+| morts soif + ravageurs | graine 11 | graine 23 | graine 37 |
+|---|---|---|---|
+| figé → chauffé | 26 → 49 (1,88 ×) | 23 → 92 (4,00 ×) | 21 → 69 (3,29 ×) |
+
+Le seuil est posé à 1,5 : sous le minimum mesuré, très au-dessus de 1. Il ne
+demande plus le garde contre la division par zéro que le compte par ravageurs
+seuls exigeait — le dénominateur combiné ne descend jamais sous vingt.
+
+**Une hypothèse est tombée en chemin, et il faut le dire :** on soupçonnait
+l'ombre d'être un troisième puits concurrent, l'auto-éclaircie se renforçant
+avec la saison de végétation. C'est l'inverse — les morts par ombre BAISSENT
+sous réchauffement (0,80 / 0,25 / 0,87). L'ajouter au compte ne ferait que
+diluer le signal (1,09 / 1,16 / 1,49), donc on ne l'ajoute pas. `maladie` et
+`vieillesse` sont à zéro dans toutes les parties.
+
+### Ce que ce lot n'a PAS fait
+
+Le carbone total du hêtre tombe à 1 078 kg C, soit 3 % sous le plancher de ce
+que les équations de biomasse aérienne de Zianis donnent pour cet arbre (1 819
+à 2 302 kg de matière sèche, soit 1 118 à 1 414 kg C une fois les racines
+ajoutées). L'écart ne vient pas de l'infradensité : il vient de ce que
+l'expansion de branchage (1,30) et la valeur de l'IGN (0,55) sont toutes deux
+au bas de leur fourchette et que les deux se cumulent. Le garde-fou sur l'arbre
+entier a donc été élargi vers le bas jusqu'à la plus petite tige publiée
+augmentée du plus faible rapport aérien/tige observé (1 307 × 1,20), plutôt que
+resserré sur un plancher que le moteur ne tient pas. C'est à regarder — séparément, et pas dans le même lot
+qu'une autre correction de biomasse, faute de quoi les deux se masqueraient.
+
 
 ## Règle de travail
 

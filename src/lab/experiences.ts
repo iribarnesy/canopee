@@ -702,7 +702,8 @@ export const EXPERIENCES: readonly Experience[] = [
       const st = station(LANDE_SECHE, { gibierParHa: 0 });
       const w = meteo("lande-seche");
       const note = (s: GameState) =>
-        indiceBiodiversite(s.trees, s.carbon.deadWoodKgC, (st.coteM * st.coteM) / 10_000).note;
+        indiceBiodiversite(s.trees, s.carbon.deadWoodKgC, (st.coteM * st.coteM) / 10_000, st.coteM)
+          .note;
       const pinede = courbe(
         st,
         w,

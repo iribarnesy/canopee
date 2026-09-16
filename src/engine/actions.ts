@@ -8,6 +8,7 @@
  * plafond (heures ou découvert).
  */
 
+import { CHAULAGE_EQ_M2, capaciteEchangeEqM2, phDepuisSaturation } from "./bases";
 import { CONTACT_TRONC_EBRANCHE, empreinteDeChute, poserBoisAuSol, versLAval } from "./boisMort";
 import {
   CARBON_FRACTION,
@@ -20,6 +21,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { forEachDiscCell } from "./grid";
+import { N_HERBACEES, rabattreParEspece } from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
@@ -106,8 +108,12 @@ export const RECEPAGE_HOURS = 0.8;
 /** Hauteur à laquelle la souche repart après recépage, m. */
 export const RECEPAGE_HAUTEUR_M = 0.5;
 /**
- * Décote d'un bois brûlé récupéré en coupe sanitaire : il vaut encore quelque
- * chose (chauffage, trituration), mais l'œuvre est perdue *(à calibrer)*.
+ * Décote d'un bois ACCIDENTÉ récupéré en coupe sanitaire — brûlé sur pied ou
+ * couché par la tempête : il vaut encore quelque chose (chauffage,
+ * trituration), mais l'œuvre est perdue *(à calibrer)*.
+ *
+ * La constante s'appelait déjà « chablis » quand seul le feu savait la
+ * déclencher ; depuis `tempete.ts`, elle couvre enfin ce que son nom dit.
  */
 export const DECOTE_CHABLIS = 0.4;
 /**
@@ -181,7 +187,15 @@ export const CLOTURE_EUR_M = 14;
 export const CLOTURE_HEURES_M = 0.12;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
-/** effet d'un chaulage sur le pH (plafonné à 7,5) */
+/**
+ * Ce qu'un chaulage montait le pH, partout et quel que soit le sol.
+ *
+ * **Plus personne ne s'en sert** : depuis `bases.ts`, le chaulage apporte des
+ * bases au complexe d'échange et le pH suit — beaucoup sur un sable, peu sur
+ * une argile. La constante reste ici comme repère de calibration :
+ * `CHAULAGE_EQ_M2` a été choisi pour reproduire cet ordre de grandeur sur un
+ * sol moyen, et c'est la seule raison de ne pas l'effacer.
+ */
 export const LIME_PH_STEP = 0.5;
 /**
  * C/N du bois raméal fragmenté épandu : du BOIS, pas des feuilles — libération
@@ -608,7 +622,7 @@ export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
 export function valeurSurPied(
   espece: EspeceV0,
   tree: { heightM: number; diametreCm: number; hauteurElagueeM: number },
-): { eur: number; qualite: "oeuvre" | "chauffage" } {
+): { eur: number; qualite: "oeuvre" | "chauffage"; partOeuvre: number } {
   const volume = volumeTigeM3(tree.diametreCm, tree.heightM);
   const assezGros = tree.diametreCm >= DIAMETRE_OEUVRE_MIN_CM;
   const assezElague = tree.hauteurElagueeM >= BILLE_OEUVRE_MIN_M;
@@ -620,9 +634,12 @@ export function valeurSurPied(
         volume * partOeuvre * espece.bois.prixOeuvreEurM3 +
         volume * (1 - partOeuvre) * WOOD_PRICE_EUR_M3,
       qualite: "oeuvre",
+      // Cette part-là ne servait qu'au PRIX ; elle sort maintenant, parce que
+      // le carbone doit suivre le même partage que la caisse (issue #72).
+      partOeuvre,
     };
   }
-  return { eur: volume * WOOD_PRICE_EUR_M3, qualite: "chauffage" };
+  return { eur: volume * WOOD_PRICE_EUR_M3, qualite: "chauffage", partOeuvre: 0 };
 }
 
 /** Temps d'abattage + façonnage d'un arbre, h *(à calibrer)*. */
@@ -734,7 +751,7 @@ function applyCouper(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
-  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC } = state.carbon;
+  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC } = state.carbon;
   let volumeVenduAnneeM3 = state.economy.volumeVenduAnneeM3;
   let stockBrf = state.stockBrf;
   const coupes: number[] = [];
@@ -866,7 +883,12 @@ function applyCouper(
       }
     } else if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
-      const brule = tree.brulEeSemaine !== undefined;
+      // Un bois accidenté, quelle que soit l'origine de l'accident : brûlé sur
+      // pied, ou couché par la tempête (tempete.ts). Les deux se récupèrent en
+      // coupe sanitaire, et les deux ont perdu leur bille — c'est exactement ce
+      // que `DECOTE_CHABLIS` a toujours voulu dire, et que le moteur ne savait
+      // appliquer qu'au feu faute de savoir produire un vrai chablis.
+      const brule = tree.brulEeSemaine !== undefined || tree.renverseSemaine !== undefined;
       // Le marché n'est ni fixe ni infini (marche.ts). L'indice de l'année
       // porte le cycle des cours ; la décote d'engorgement punit celui qui met
       // tout son bois sur le marché la même année — c'est ce que la France a
@@ -889,9 +911,16 @@ function applyCouper(
         treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1) * marche;
       }
       if (vente.qualite === "oeuvre" && !brule && !dejaEnBoisMort) {
-        // Bois d'œuvre : le carbone reste piégé dans le produit (charpente,
-        // meuble) pour des décennies — ce n'est pas une émission (§12).
-        oeuvreCumKgC += emporteKgC;
+        // Le carbone se partage comme la CAISSE, et c'est nouveau : seule la
+        // bille élaguée part en scierie et reste piégée dans le produit ; le
+        // houppier part en bûches et brûle chez le client. Avant l'issue #72,
+        // le prix comptait ce partage et le carbone non — un arbre classé
+        // œuvre envoyait TOUT son carbone au stock de produits, houppier
+        // compris, alors même que la vente le facturait en chauffage.
+        const enScierie = emporteKgC * vente.partOeuvre;
+        oeuvreCumKgC += enScierie;
+        oeuvreStockKgC += enScierie;
+        exportedEnergyCumKgC += emporteKgC - enScierie;
       } else {
         // Bois de chauffage : brûlé chez le client → émis immédiatement.
         exportedEnergyCumKgC += emporteKgC;
@@ -964,7 +993,13 @@ function applyCouper(
       trees,
       soil: { ...state.soil, litterNG, litterCG, litterK, boisAuSolCG, boisEnTraversPart },
       stockBrf,
-      carbon: { ...state.carbon, deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC },
+      carbon: {
+        ...state.carbon,
+        deadWoodKgC,
+        exportedEnergyCumKgC,
+        oeuvreCumKgC,
+        oeuvreStockKgC,
+      },
       economy: {
         ...state.economy,
         treasuryEur,
@@ -1097,7 +1132,13 @@ function applyChauler(
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
   }
+  // Le chaulage n'écrit plus le pH : il apporte des BASES, et le pH suit au
+  // tick suivant (bases.ts). Ce n'est pas un détour — c'est ce qui fait qu'un
+  // podzol sableux, dont le complexe est petit, monte beaucoup pour la même
+  // chaux et le reperd vite, là où un limon argileux encaisse et retient.
+  const basesEq = state.soil.basesEq.slice();
   const ph = state.soil.ph.slice();
+  const cecEq = state.station.profil[0] ? capaciteEchangeEqM2(state.station.profil[0]) : 0;
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
   const chaulees: number[] = [];
@@ -1108,14 +1149,17 @@ function applyChauler(
       if (dx * dx + dy * dy <= r2) {
         const i = y * cote + x;
         chaulees.push(i);
-        ph[i] = Math.min(7.5, (ph[i] ?? 7) + LIME_PH_STEP);
+        basesEq[i] = Math.min(cecEq, (basesEq[i] ?? 0) + CHAULAGE_EQ_M2);
+        // Le pH affiché suit tout de suite : un joueur qui chaule doit voir le
+        // calque bouger dans la semaine, pas la semaine d'après.
+        ph[i] = cecEq > 0 ? phDepuisSaturation((basesEq[i] ?? 0) / cecEq) : (ph[i] ?? 7);
       }
     }
   }
   return {
     state: {
       ...state,
-      soil: { ...state.soil, ph },
+      soil: { ...state.soil, basesEq, ph },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - cost,
@@ -1142,6 +1186,7 @@ function applyFaucher(
     return { state, refusals: [refuse(action.week, "faucher", "plafond hebdomadaire atteint")] };
   }
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
@@ -1162,6 +1207,10 @@ function applyFaucher(
       const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
       herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       herbeBiomasse[i] = FAUCHE_COUVERTURE_RESIDUELLE;
+      // La coupe se répartit sur les feuillages, dans la même proportion. Une
+      // espèce déjà rentrée sous terre n'a rien à perdre : c'est ce qui laisse
+      // une prairie de fauche garder sa flore de printemps (herbacees.ts).
+      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, FAUCHE_COUVERTURE_RESIDUELLE / avant);
       // L'herbe coupée reste sur place : litière tendre, vite recyclée.
       litterNG[i] = (litterNG[i] ?? 0) + coupe * 4;
       litterCG[i] = (litterCG[i] ?? 0) + coupe * 4 * 25;
@@ -1170,7 +1219,7 @@ function applyFaucher(
   return {
     state: {
       ...state,
-      soil: { ...state.soil, herbeCouverture, herbeBiomasse, litterNG, litterCG },
+      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse, litterNG, litterCG },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,
@@ -1503,6 +1552,8 @@ function applyLabourer(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
@@ -1538,9 +1589,14 @@ function applyLabourer(
       emisKgC += (litterCG[i] ?? 0) / 1000;
       litterNG[i] = 0;
       litterCG[i] = 0;
-      // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix.
+      // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
+      // charrue est le seul geste du jeu qui aille sous terre : elle retourne
+      // les bulbes et tranche les rhizomes, donc l'emprise part avec le
+      // feuillage et la strate se reconstitue à sa vitesse d'installation.
       herbeCouverture[i] = 0;
       herbeBiomasse[i] = 0;
+      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 0);
+      rabattreParEspece(herbeEmprise, i * N_HERBACEES, 0);
       // Et le prix qu'on ne voit pas sur la facture : les hyphes sont
       // tranchées. Le réseau mettra des années à se retisser (§7.5).
       for (const type of TYPES_MYCORHIZE) {
@@ -1569,6 +1625,8 @@ function applyLabourer(
         litterNG,
         litterCG,
         herbeCouverture,
+        herbeEmprise,
+        herbeFeuillage,
         herbeBiomasse,
         mycorhizes,
         tassement,

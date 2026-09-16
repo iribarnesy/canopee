@@ -94,6 +94,19 @@ export interface RecruitmentInput {
   banqueGraines?: Readonly<Record<string, number>>;
   /** La parcelle a-t-elle brûlé depuis la dernière levée ? Le feu scarifie. */
   aBrule?: boolean;
+  /**
+   * Ce qui reste d'une fructification LOURDE après le passage des sangliers
+   * ∈ [0,1] (`sanglier.ts`). Les grosses graines tombent et restent : elles se
+   * mangent au sol. Celles que le vent ou les oiseaux emportent, non.
+   */
+  partGlandeeRestante?: number;
+  /**
+   * Part de la parcelle retournée par les sangliers dans l'année ∈ [0,1]. Un
+   * boutis déchire le tapis et enfouit la litière : il OUVRE un lit de
+   * germination, ce dont profitent les petites graines — l'exact contraire de
+   * ce que la même bête fait aux glands.
+   */
+  partRetournee?: number;
   nextTreeId: number;
 }
 
@@ -241,6 +254,18 @@ export function drawPosition(
   }
 }
 
+/**
+ * Ce qu'un sol entièrement retourné ajouterait aux semis à graine légère.
+ *
+ * Un boutis enlève le matelas de feuilles et met la terre à nu : c'est le lit
+ * de germination dont une graine de bouleau a besoin et qu'une litière fermée
+ * lui refuse. Doubler les tentatives sur une parcelle intégralement retournée
+ * est un ordre de grandeur, pas une mesure *(à calibrer)* — et la part
+ * réellement retournée en un an se compte en pourcents (sanglier.ts), donc
+ * l'effet réel est petit et progressif.
+ */
+export const BONUS_SOL_RETOURNE = 1;
+
 export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   const { trees, coteM, voisinage, partOmbrageante } = input;
   let rng = input.rng;
@@ -377,11 +402,39 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   }
 
   // 2. Semis des adultes de la parcelle en âge de grainer.
+  //
+  // Le SANGLIER se joue ici, et dans les deux sens (sanglier.ts). Il mange ce
+  // qui tombe et reste — les graines lourdes, celles dont le mode de
+  // dissémination est `geai` ou `gravite` — et il ouvre des lits de germination
+  // en retournant le sol, ce dont profitent celles qui arrivent par le vent ou
+  // par les oiseaux. Aucune espèce n'est nommée : le trait tranche.
+  const restant = input.partGlandeeRestante ?? 1;
+  const litOuvert = 1 + BONUS_SOL_RETOURNE * (input.partRetournee ?? 0);
   for (const tree of trees) {
     if (!tree.alive) continue;
     const espece = getEspece(tree.especeId);
     if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
-    const n = tentatives(espece.regeneration.semisParAn);
+    // `geai` et RIEN D'AUTRE, et le détour vaut d'être écrit. Le premier jet
+    // prenait aussi `gravite`, en croyant lire « graine lourde ». Mais ce mode
+    // ne dit pas le poids : il dit que la graine TOMBE SOUS SA MÈRE, ce qui
+    // range l'ajonc et le genêt — graines dures de deux millimètres, dont
+    // aucun sanglier ne se nourrit — à côté de la faîne. Résultat mesuré : les
+    // ajoncs d'une lande ne se ressemaient plus, la nurse qu'ils forment ne se
+    // refermait plus, et un pin abrité poussait moins qu'un pin nu (1,38 m →
+    // 0,92 m). L'effet nurse tombait à cause d'un sanglier mangeant des
+    // graines d'ajonc.
+    //
+    // `geai` est le bon marqueur, et il ne doit rien au hasard : un geai ne
+    // cache que de GROSSES graines nutritives, donc l'atlas le pose exactement
+    // sur les chênes, le chêne-liège, le châtaignier et le noisetier — les
+    // glands et les châtaignes que l'issue nommait. **Ce que ça laisse de
+    // côté** : la faîne du hêtre, classée `gravite`, est bien mangée par les
+    // sangliers. La corriger proprement demanderait un trait de TAILLE DE
+    // GRAINE dans l'atlas, ce qui dépasse ce lot *(à instruire)*.
+    const taux =
+      espece.regeneration.semisParAn *
+      (espece.regeneration.dissemination === "geai" ? restant : litOuvert);
+    const n = tentatives(taux);
     for (let k = 0; k < n; k++) tryEstablish(tree.especeId, tree);
   }
 

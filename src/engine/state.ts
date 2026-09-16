@@ -6,12 +6,14 @@
 
 import type { EconomyState } from "./actions";
 import { createEconomy } from "./actions";
+import { CALCIUM_NEUTRE_MG_G, capaciteEchangeEqM2, saturationDepuisPh } from "./bases";
 import type { CarbonState } from "./carbon";
 import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
 import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
+import { empriseInitiale } from "./herbacees";
 import { stockEquilibreMm, stocksEquilibreParCellule } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
@@ -123,6 +125,12 @@ export interface Station {
    * dessus. L'ignorer rendait nos stations pauvres invivables.
    */
   depositionNKgHaAn: number;
+  /**
+   * Densité de sangliers du paysage, individus/ha (`sanglier.ts`). Donnée de
+   * CONTEXTE comme celle des cervidés, et pour une raison plus forte encore :
+   * le domaine vital d'un sanglier fait 500 à 2000 hectares.
+   */
+  sanglierParHa: number;
   /** phosphore assimilable au départ, g/m² (dérivé du profil) */
   phosphoreInitialGM2: number;
   /** potassium échangeable au départ, g/m² (dérivé du profil) */
@@ -227,13 +235,53 @@ export interface SoilState {
    * ruisselle davantage, donc s'érode plus vite (erosion.ts).
    */
   epaisseurPerdueCm: number[];
-  /** pH de la cellule (modifiable par chaulage ; dérive lente en V1) */
+  /**
+   * BASES ÉCHANGEABLES de la cellule, eq/m² : le calcium, le magnésium, le
+   * potassium et le sodium fixés sur le complexe argilo-humique (`bases.ts`).
+   *
+   * C'est ce pool-là qui est l'état ; le pH n'en est que la lecture.
+   */
+  basesEq: number[];
+  /**
+   * Teneur en calcium de la litière PRÉSENTE sur la cellule, mg/g de matière
+   * sèche : moyenne pondérée par les masses déposées, tenue comme l'est déjà la
+   * vitesse de décomposition (`litterK`). C'est elle qui décide si ce qui se
+   * décompose ici acidifie le complexe ou l'alimente.
+   */
+  litterCaMgG: number[];
+  /**
+   * pH de la cellule. **Ce n'est plus un état : c'est une LECTURE** du taux de
+   * saturation du complexe, recalculée à chaque tick depuis `basesEq`
+   * (`bases.ts`). Le chaulage n'écrit plus ici — il apporte des bases, et le pH
+   * suit. Le tableau est conservé parce que tout le moteur lit un pH par
+   * cellule et n'a aucune raison de connaître la chimie qui le produit.
+   */
   ph: number[];
   /**
    * Couverture de la strate herbacée ∈ [0,1] par cellule (herbe.ts) : la
    * concurrence que subissent les jeunes plants, et la protection du sol.
+   *
+   * C'est une SOMME, recalculée chaque semaine depuis `herbeEmprise` : ce que
+   * les espèces présentes couvrent VRAIMENT cette semaine-là. Tout ce qui lit
+   * la strate — le feu, l'érosion, l'évaporation, le gibier — lit cette ligne
+   * et n'a pas à connaître les espèces.
    */
   herbeCouverture: number[];
+  /**
+   * Emprise de chaque espèce herbacée sur chaque cellule ∈ [0,1], à plat :
+   * `herbeEmprise[i * N_HERBACEES + s]` (herbacees.ts). C'est la place que
+   * l'espèce TIENT — bulbes et rhizomes compris —, pas ce qu'elle montre : une
+   * anémone tient son mètre carré toute l'année et ne le couvre qu'en avril.
+   * La somme sur une cellule ne dépasse jamais 1 : le sol est fini.
+   */
+  herbeEmprise: number[];
+  /**
+   * Feuillage de chaque espèce herbacée, même indexation à plat : ce qui est
+   * VERT. Il suit l'emprise à travers la saison et la sécheresse, et c'est lui
+   * que la fauche, le feu et le gibier emportent — l'emprise, elle, reste.
+   * `herbeCouverture` en est la somme par cellule.
+   */
+  herbeFeuillage: number[];
   /**
    * Biomasse herbacée présente ∈ [0,1] : elle SUIT la couverture mais ne
    * disparaît pas quand l'herbe jaunit — le foin sur pied reste le meilleur
@@ -338,6 +386,18 @@ export interface TickFluxes {
   uptakeKKgHa: number;
   /** potassium lessivé, kg/ha */
   leachedKKgHa: number;
+  /**
+   * LE BUDGET DE BASES de la semaine, eq/ha, terme par terme (bases.ts). Il est
+   * exposé pour être VÉRIFIÉ : la variation du pool doit valoir apports +
+   * litière − lessivage − charge acide, à l'arrondi près. Un pool dont on ne
+   * publie pas le budget est un pool qu'on ne peut pas mettre en défaut.
+   */
+  basesApportEqHa: number;
+  basesLessiveEqHa: number;
+  basesLitiereEqHa: number;
+  basesAcideEqHa: number;
+  /** taux de saturation moyen du complexe ∈ [0,1] — le pH en est la lecture */
+  saturationMoyenne: number;
   /** eau arrivée de l'amont par ruissellement, mm */
   ruissellementEntrantMm: number;
   /** eau partie de la parcelle par ruissellement, mm */
@@ -403,6 +463,13 @@ export function createGameState(
   for (let i = 0; i < n; i++) {
     for (let h = 0; h < nH; h++) eauInitiale.push(ruHorizonMm(station.profil[h] as Horizon));
   }
+  // La même friche de départ dans toutes les cellules : la station ne décrit
+  // qu'un taux d'enherbement, l'atlas dit qui le compose (herbacees.ts).
+  const depart = empriseInitiale(station.herbeInitiale, station.phInitial);
+  // Le complexe d'échange de l'horizon de surface, et ce que le pH de la
+  // station implique qu'il porte de bases (bases.ts).
+  const cecDepart = station.profil[0] ? capaciteEchangeEqM2(station.profil[0]) : 0;
+  const basesDepart = cecDepart * saturationDepuisPh(station.phInitial);
   return {
     week: 0,
     station,
@@ -429,6 +496,11 @@ export function createGameState(
       boisAuSolCG: new Array(n).fill(0),
       boisEnTraversPart: new Array(n).fill(0),
       tassement: new Array(n).fill(0),
+      // Les bases sont INVERSÉES depuis le pH déclaré par la station, et non
+      // l'inverse : les stations décrivent un pH, pas un taux de saturation, et
+      // une partie doit démarrer exactement au pH annoncé (bases.ts).
+      basesEq: new Array(n).fill(basesDepart),
+      litterCaMgG: new Array(n).fill(CALCIUM_NEUTRE_MG_G),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,
@@ -455,8 +527,15 @@ export function createGameState(
       phosphoreFixeG: new Array(n).fill(station.phosphoreInitialGM2 * 10),
       potassiumG: new Array(n).fill(station.potassiumInitialGM2),
       potassiumReserveG: new Array(n).fill(station.potassiumInitialGM2 * 10),
-      // Une parcelle nue au départ : la strate s'installe d'elle-même.
+      // Une parcelle nue au départ : la strate s'installe d'elle-même. Qui la
+      // compose au premier jour, c'est l'atlas qui le dit, d'après le pH de la
+      // station et la vitesse d'installation de chacune (herbacees.ts).
       herbeCouverture: new Array(n).fill(station.herbeInitiale),
+      herbeEmprise: Array.from({ length: n }, () => depart).flat(),
+      // Le feuillage part au niveau de l'emprise : la station dit un sol déjà
+      // couvert, pas des souches nues. La première semaine le ramènera à ce
+      // que la saison permet.
+      herbeFeuillage: Array.from({ length: n }, () => depart).flat(),
       herbeBiomasse: new Array(n).fill(station.herbeInitiale),
       // Le 1er janvier, la réserve de surface est pleine.
       herbeHumidite: new Array(n).fill(1),

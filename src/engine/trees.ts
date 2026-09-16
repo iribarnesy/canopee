@@ -15,6 +15,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import { type RngState, rngFloat } from "./rng";
+import { facteurGammePh } from "./soil";
 import { facteurCroissanceTassement } from "./tassement";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
@@ -30,6 +31,7 @@ export type CauseMort =
   | "labour"
   | "maladie"
   | "frottis"
+  | "chablis"
   | "ecrasement";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
@@ -45,6 +47,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   labour: "retournés par le labour",
   maladie: "emportés par la maladie",
   frottis: "annelés par les frottis de cervidés",
+  chablis: "couchés par la tempête",
 };
 
 export interface TreeState {
@@ -136,6 +139,20 @@ export interface TreeState {
    * bleuisse et que les insectes ne s'y mettent.
    */
   brulEeSemaine?: number;
+  /**
+   * Semaine où une tempête l'a couché (tempete.ts). Même statut qu'un arbre
+   * brûlé : il reste récupérable un an en coupe sanitaire, à prix déprécié,
+   * avant que le bois ne bleuisse — c'est le VRAI chablis, celui dont
+   * `DECOTE_CHABLIS` porte le nom depuis toujours sans le désigner.
+   */
+  renverseSemaine?: number;
+  /**
+   * Direction dans laquelle le tronc est parti, radians — posée au moment du
+   * coup de vent, relue quand le bois se couche au sol (`boisMort.ts`). Sans
+   * elle, un chablis retomberait dans le sens de la PENTE un an plus tard,
+   * comme une chandelle, et la trace du vent serait perdue.
+   */
+  chuteRad?: number;
   /**
    * Semaine où la mort a été enregistrée. Tant qu'elle est absente, l'arbre
    * vient de mourir et son bois n'a pas encore rejoint le sol ; une fois
@@ -786,8 +803,7 @@ function waterloggingFactor(espece: EspeceV0, waterlogging: number): number {
  * (chlorose puis mort — la bio-indication de l'atlas : calcicoles vs acidiphiles).
  */
 export function phFactor(espece: EspeceV0, ph: number): number {
-  const [min, max] = espece.ph;
-  return Math.min(1, Math.max(0, Math.min((ph - min) / 0.7, (max - ph) / 0.7)));
+  return facteurGammePh(espece.ph, ph);
 }
 
 /**
@@ -952,10 +968,15 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
  * entière — c'est là que les pics creusent, et le trou qu'ils abandonnent
  * sert ensuite à des dizaines d'espèces — et elle ne fait pas d'ombre,
  * puisqu'elle n'a plus de feuilles. Le bois dense tient plus longtemps : un
- * chêne mort reste debout une décennie là où un saule s'écroule en trois ans.
+ * chêne mort reste debout une décennie là où un saule s'écroule en quatre ans.
  *
  * *(à calibrer : les durées de terrain vont de 2 à 20 ans selon l'essence, le
  * diamètre et l'exposition au vent, que le moteur ne connaît pas encore)*
+ *
+ * Le passage de `bois.densite` à l'infradensité (#68) a raccourci toutes les
+ * chandelles d'environ un cinquième. L'éventail reste dans la fourchette de
+ * terrain ci-dessus : du saule blanc à 4,2 ans au cornouiller mâle à 13,5 ans,
+ * le chêne pubescent à 9,8 et le hêtre à 8,3.
  */
 export const CHANDELLE_ANS_PAR_DENSITE = 15;
 

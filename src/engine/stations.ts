@@ -45,6 +45,7 @@ export function stationDepuisProfil(
     | "potassiumInitialGM2"
     | "voisinage"
     | "gibierParHa"
+    | "sanglierParHa"
     | "depositionNKgHaAn"
     | "ventExposition"
     | "bordures"

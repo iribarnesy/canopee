@@ -389,7 +389,26 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // (#62), donc le tonnage qui tombait au sol et piégeait la terre était
     // gonflé d'autant. Mesuré après correction : 0,135. Le mécanisme n'a pas
     // bougé d'un cheveu — c'est la masse qui redevient celle d'un vrai arbre.
-    expect(moy(oriente, "piege")).toBeGreaterThan(0.1);
+    //
+    // Et une QUATRIÈME fois, pour la raison que ce commentaire annonçait :
+    // « un piège ne retient que ce qui passe ». La strate herbacée par espèces
+    // change ce qui passe — la couverture moyenne de ce versant tombe de 0,661
+    // à 0,641 sur soixante ans, mais elle se répartit autrement dans l'année,
+    // et il descend 0,093 au lieu de 0,135. Ce qui ne bouge pas, et c'est
+    // l'objet du test : à plat, le même bois ne piège RIEN.
+    //
+    // Une CINQUIÈME fois, et celle-là est la plus jolie des cinq : le sol
+    // DÉRIVE maintenant (`bases.ts`). Ce versant est un limon riche à pH 7,0,
+    // planté de hêtre et de pin — deux litières pauvres en calcium. En soixante
+    // ans le peuplement acidifie son propre sol jusqu'à 6,62, et le pin, qui
+    // était à la LIMITE HAUTE de sa gamme (4 à 7,5, donc un facteur de 0,80 à
+    // pH 7), y gagne : 0,80 → 0,97 → 1,00 au fil de la dérive. Il pousse donc
+    // mieux, monte à 23 m au lieu de rester bridé, couvre davantage — et il
+    // descend 0,062 au lieu de 0,093. **Le pin s'acidifie le sol jusqu'à s'y
+    // trouver bien**, ce qui n'est écrit nulle part : ça tombe de la rencontre
+    // de la dérive du pH et du filtre de gamme (C7), deux mécanismes qui ne se
+    // connaissaient pas.
+    expect(moy(oriente, "piege")).toBeGreaterThan(0.04);
     expect(moy(aPlat, "piege")).toBe(0);
     // Et il détourne une part de l'eau de surface vers le sol — une part
     // MINCE, et c'est le résultat, pas un aveu de faiblesse.

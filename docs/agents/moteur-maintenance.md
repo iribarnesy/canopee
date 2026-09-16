@@ -110,14 +110,11 @@ fois — pas trois copies d'une même intuition.
   Ce qui RESTE de #65 : ce que ce poids fait à l'auto-éclaircie (B6) et à la
   succession n'a pas été mesuré, une hêtraie de trente ans ne s'éclaircissant
   pas assez pour trancher. L'issue vaut encore, sur cette question-là seulement.
-- **#68** — `bois.densite` porte une densité du commerce (0,68 pour le hêtre) là
-  où la biomasse demande l'**infradensité** (~0,55). Il reste ~20 % de
-  surestimation du carbone vivant. **Le recensement est fait** : deux lecteurs
-  seulement, dont un seul (`treeAboveCarbonKg`) veut l'infradensité — l'autre
-  (`dureeChandelleSemaines`) n'y lit qu'un proxy de dureté. Donc **un champ, pas
-  deux**. Ne reste que le plus dur : une table d'infradensités SOURCÉE, essence
-  par essence. Deux avertissements pour qui la reprendra — un facteur global
-  appliqué à l'aveugle remplacerait une erreur par une autre, et l'unique ancre
-  extérieure du dépôt (1 000–1 400 kg C pour un hêtre de 25 m) accepte les DEUX
-  valeurs : elle est à resserrer dans le même lot, sans quoi le correctif ne
-  fera basculer aucun essai.
+- **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
+  l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à
+  1 078 kg, soit 3 % SOUS le plancher des équations de biomasse aérienne de
+  Zianis 2005 pour cet arbre. Ni `EXPANSION_BRANCHES` (1,30) ni l'infradensité
+  de l'IGN (0,55) n'est fautive prise seule — chacune est dans sa fourchette
+  publiée — mais toutes deux sont au bas de la leur et l'écart se cumule. À
+  regarder SÉPARÉMENT de #79 : deux corrections de biomasse dans le même lot se
+  masquent l'une l'autre, et c'est précisément ce que #68 a évité.

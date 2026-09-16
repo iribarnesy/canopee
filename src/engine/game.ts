@@ -20,6 +20,7 @@ import type {
   IncendieResult,
   MortDeLaSemaine,
   NaissanceDeLaSemaine,
+  TempeteResult,
 } from "./tick";
 import { tick } from "./tick";
 
@@ -86,6 +87,8 @@ export function advanceWeek(
   /** tiges que la croissance a fait changer de stade (stades.ts) */
   franchissements: FranchissementDeStade[];
   incendie?: IncendieResult;
+  /** tempête de la semaine, si elle a couché au moins un arbre (tempete.ts) */
+  tempete?: TempeteResult;
   /** gestes du joueur ET du gibier de la semaine, pour le rendu (tick.ts) */
   gestes: GesteVisible[];
   /** chandelles abattues cette semaine (boisMort.ts) */
@@ -117,6 +120,7 @@ export function advanceWeek(
     franchissements: ticked.franchissements,
     aides: ticked.aides,
     incendie: ticked.incendie,
+    tempete: ticked.tempete,
     gestes: [...gestes, ...ticked.gestes],
     chutes: ticked.chutes,
     debordementParCellule: ticked.debordementParCellule,

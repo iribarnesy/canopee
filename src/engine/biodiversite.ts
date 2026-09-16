@@ -18,6 +18,7 @@
  */
 
 import { getEspece } from "./especes";
+import { crownRadiusM } from "./light";
 import type { TreeState } from "./trees";
 import { partHabitatDeTrogne } from "./trogne";
 
@@ -36,6 +37,15 @@ export interface IndiceBiodiversite {
   couvertPermanent: number;
   /** étalement des floraisons dans l'année ∈ [0,1] */
   floraisonsEtalees: number;
+  /**
+   * La MOSAÏQUE ∈ [0,1] : lisière × cœur, normalisé (issue #75). Ce que
+   * l'indice ne savait pas voir — deux parcelles portant exactement les mêmes
+   * espèces, les mêmes hauteurs et le même bois mort n'abritent pas la même
+   * faune selon qu'elles forment un bloc ou une mosaïque.
+   */
+  mosaique: number;
+  /** étagement LOCAL ∈ [0,1] : l'écart-type des hauteurs dans un voisinage */
+  etagement: number;
   /** note globale ∈ [0,100] */
   note: number;
 }
@@ -48,6 +58,154 @@ export interface IndiceBiodiversite {
 export const CHANDELLE_HABITAT_M = 8;
 
 const STRATES: readonly number[] = [1, 4, 12, Number.POSITIVE_INFINITY];
+
+/**
+ * Rayon du voisinage qui décide si une cellule est en lisière ou au cœur, m.
+ *
+ * Trois mètres : la portée à laquelle un merle, un lézard ou un carabe
+ * « voient » une frontière. Plus court, on compterait chaque trou de couronne
+ * comme une lisière ; plus long, une trouée de dix mètres n'en serait plus une
+ * *(à calibrer)*.
+ */
+export const RAYON_VOISINAGE_M = 3;
+
+/**
+ * Hauteur de canopée par cellule, m : ce que la cellule porte de plus haut.
+ * Zéro là où rien ne pousse — c'est cette carte qui porte les deux grandeurs
+ * spatiales.
+ */
+export function hauteurParCellule(trees: readonly TreeState[], coteM: number): Float32Array {
+  const h = new Float32Array(coteM * coteM);
+  for (const t of trees) {
+    if (!t.alive) continue;
+    const espece = getEspece(t.especeId);
+    const r = crownRadiusM(t.heightM, espece.lumiere.houppierRatio);
+    const x0 = Math.max(0, Math.floor(t.x - r));
+    const x1 = Math.min(coteM - 1, Math.floor(t.x + r));
+    const y0 = Math.max(0, Math.floor(t.y - r));
+    const y1 = Math.min(coteM - 1, Math.floor(t.y + r));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const dx = x + 0.5 - t.x;
+        const dy = y + 0.5 - t.y;
+        if (dx * dx + dy * dy > r * r) continue;
+        const i = y * coteM + x;
+        if (t.heightM > (h[i] ?? 0)) h[i] = t.heightM;
+      }
+    }
+  }
+  return h;
+}
+
+/** Ce que l'ARRANGEMENT des arbres vaut, indépendamment des espèces. */
+export interface StructureHorizontale {
+  /** part de cellules en lisière : voisinage contrasté couvert / ouvert */
+  lisiere: number;
+  /** part de cellules de cœur : voisinage entièrement couvert */
+  coeur: number;
+  /** la mosaïque ∈ [0,1] : le PRODUIT des deux, normalisé */
+  mosaique: number;
+}
+
+/**
+ * La structure horizontale : lisière, cœur, et ce que leur rencontre vaut.
+ *
+ * ## Pourquoi un PRODUIT, et pas une courbe en cloche
+ *
+ * L'issue pose le vrai problème et le laisse ouvert : « ne pas récompenser le
+ * mitage. Une lisière a de la valeur, un peuplement qui n'est QUE de la lisière
+ * n'en a pas — les espèces de cœur de massif existent aussi. » Il fallait donc
+ * une courbe qui monte puis redescend, et tailler une cloche demande de choisir
+ * son sommet à la main.
+ *
+ * Le produit `lisière × cœur` l'évite : il vaut zéro quand il n'y a que de la
+ * lisière (un semis éparpillé n'a pas de cœur), zéro quand il n'y a que du bloc
+ * plein (une futaie pleine n'a pas de lisière), et il est maximal quand les deux
+ * s'équilibrent. **Le sommet n'est pas choisi, il tombe** de l'énoncé « il faut
+ * les deux » — qui est justement ce que dit l'écologie du paysage. Le facteur 4
+ * ne fait que ramener ce maximum (un quart, à moitié-moitié) à 1.
+ */
+export function structureHorizontale(
+  trees: readonly TreeState[],
+  coteM: number,
+): StructureHorizontale {
+  const h = hauteurParCellule(trees, coteM);
+  const r = Math.round(RAYON_VOISINAGE_M);
+  let lisiere = 0;
+  let coeur = 0;
+  const n = coteM * coteM;
+  if (n === 0) return { lisiere: 0, coeur: 0, mosaique: 0 };
+  for (let y = 0; y < coteM; y++) {
+    for (let x = 0; x < coteM; x++) {
+      let couverts = 0;
+      let vus = 0;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const vx = x + dx;
+          const vy = y + dy;
+          if (vx < 0 || vx >= coteM || vy < 0 || vy >= coteM) continue;
+          if (dx * dx + dy * dy > r * r) continue;
+          vus++;
+          if ((h[vy * coteM + vx] ?? 0) > 0) couverts++;
+        }
+      }
+      if (vus === 0) continue;
+      // Une lisière est une FRONTIÈRE : du couvert et de l'ouvert à portée.
+      if (couverts > 0 && couverts < vus) lisiere++;
+      else if (couverts === vus) coeur++;
+    }
+  }
+  const l = lisiere / n;
+  const c = coeur / n;
+  return { lisiere: l, coeur: c, mosaique: Math.min(1, 4 * l * c) };
+}
+
+/**
+ * Hétérogénéité VERTICALE locale ∈ [0,1] : l'étagement, et non le damier.
+ *
+ * L'indice comptait les strates à l'échelle de la PARCELLE, ce qui confond deux
+ * situations que rien ne devrait confondre : une parcelle où chaque mètre carré
+ * porte trois étages, et une parcelle où un tiers porte des arbres, un tiers des
+ * arbustes et un tiers de l'herbe. La première est étagée, la seconde est en
+ * blocs, et l'équitabilité de Shannon leur donne la même note.
+ *
+ * On mesure donc l'écart-type des hauteurs DANS un voisinage, moyenné sur la
+ * parcelle. Il est nul sur un peuplement équienne, maximal là où un sous-étage
+ * pousse sous une canopée.
+ */
+export const ECART_TYPE_REFERENCE_M = 6;
+
+export function heterogeneiteVerticale(trees: readonly TreeState[], coteM: number): number {
+  const h = hauteurParCellule(trees, coteM);
+  const r = Math.round(RAYON_VOISINAGE_M);
+  let somme = 0;
+  let cellules = 0;
+  for (let y = 0; y < coteM; y++) {
+    for (let x = 0; x < coteM; x++) {
+      let n = 0;
+      let s1 = 0;
+      let s2 = 0;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const vx = x + dx;
+          const vy = y + dy;
+          if (vx < 0 || vx >= coteM || vy < 0 || vy >= coteM) continue;
+          if (dx * dx + dy * dy > r * r) continue;
+          const v = h[vy * coteM + vx] ?? 0;
+          n++;
+          s1 += v;
+          s2 += v * v;
+        }
+      }
+      if (n < 2) continue;
+      const variance = Math.max(0, s2 / n - (s1 / n) ** 2);
+      somme += Math.sqrt(variance);
+      cellules++;
+    }
+  }
+  if (cellules === 0) return 0;
+  return Math.min(1, somme / cellules / ECART_TYPE_REFERENCE_M);
+}
 
 /** Entropie de Shannon normalisée : 0 = une seule catégorie, 1 = tout équilibré. */
 function equitabiliteShannon(effectifs: readonly number[]): number {
@@ -66,6 +224,14 @@ export function indiceBiodiversite(
   trees: readonly TreeState[],
   boisMortKgC: number,
   surfaceHa: number,
+  /**
+   * Côté de la parcelle, m. Les deux grandeurs SPATIALES en ont besoin : sans
+   * grille, pas de voisinage, donc ni lisière ni étagement local. Absent, elles
+   * valent zéro et l'indice se comporte comme avant — les appelants qui ne
+   * décrivent pas une vraie parcelle (un essai sur une liste d'arbres) ne sont
+   * pas pénalisés pour une géométrie qu'ils n'ont pas.
+   */
+  coteM?: number,
 ): IndiceBiodiversite {
   const vivants = trees.filter((t) => t.alive);
   // Les CHANDELLES comptent parmi les arbres-habitats, et pas qu'un peu : un
@@ -86,6 +252,8 @@ export function indiceBiodiversite(
       boisMort: 0,
       couvertPermanent: 0,
       floraisonsEtalees: 0,
+      mosaique: 0,
+      etagement: 0,
       note: 0,
     };
   }
@@ -130,14 +298,28 @@ export function indiceBiodiversite(
   const boisMort = Math.min(1, boisMortKgC / 1000 / surfaceHa / 20);
   const couvertPermanent = surfaceTotale > 0 ? surfaceSempervirente / surfaceTotale : 0;
   const floraisonsEtalees = Math.min(1, moisFloraison.size / 4);
+  // L'ARRANGEMENT, enfin (issue #75) : la mosaïque et l'étagement local. Ils
+  // ne coûtent rien aux appelants sans géométrie, qui les reçoivent à zéro.
+  const spatial = coteM && coteM > 0 ? structureHorizontale(vivants, coteM) : undefined;
+  const mosaique = spatial?.mosaique ?? 0;
+  const etagement = coteM && coteM > 0 ? heterogeneiteVerticale(vivants, coteM) : 0;
 
   // Pondération : la richesse et son équilibre pèsent le plus, puis la
   // structure, puis les habitats particuliers.
+  //
+  // Les deux termes spatiaux prennent leurs douze points sur `strates`, qui
+  // passe de 0,20 à 0,08 — et ce n'est pas un arbitrage de place, c'est une
+  // correction. `strates` compte les étages à l'échelle de la PARCELLE, donc
+  // elle note pareil une forêt étagée et un damier de blocs monostrates.
+  // `etagement` mesure ce que `strates` croyait mesurer ; il est juste qu'il en
+  // reprenne le poids *(à calibrer)*.
   const note =
     100 *
     (0.25 * Math.min(1, richesse / 6) +
       0.2 * equitabilite +
-      0.2 * strates +
+      0.08 * strates +
+      0.07 * etagement +
+      0.05 * mosaique +
       0.12 * grosArbres +
       0.1 * boisMort +
       0.08 * couvertPermanent +
@@ -151,6 +333,8 @@ export function indiceBiodiversite(
     boisMort,
     couvertPermanent,
     floraisonsEtalees,
+    mosaique,
+    etagement,
     note,
   };
 }

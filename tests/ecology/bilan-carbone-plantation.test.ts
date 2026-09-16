@@ -9,11 +9,11 @@
  *
  * LA MESURE EN DIT PLUS QUE L'ÉNONCÉ, et c'est la raison d'être du témoin
  * intact. Le creux existe AUSSI sans labour : une parcelle nue plantée de
- * chênes perd 7,7 à 8,1 t C/ha avant de remonter, parce que l'humus se
+ * chênes perd 8,2 à 8,5 t C/ha avant de remonter, parce que l'humus se
  * minéralise à 1,5 %/an (`HUMUS_DECAY_PER_YEAR`) pendant que des plants de
  * trente centimètres ne rendent presque rien à la litière. Le labour n'est donc
- * pas la CAUSE du bilan négatif : il l'aggrave d'un tiers et retarde le retour
- * à l'équilibre de deux ans. Sans le témoin, cet essai aurait attribué au
+ * pas la CAUSE du bilan négatif : il l'aggrave de 40 % et retarde le retour à
+ * l'équilibre de deux ans. Sans le témoin, cet essai aurait attribué au
  * labour un creux qu'il ne fait que creuser.
  *
  * Ce qui est épinglé ici, ce sont des DIRECTIONS vérifiées graine par graine.
@@ -98,8 +98,8 @@ describe("le bilan carbone d'une plantation", () => {
   }, 900_000);
 
   it("passe SOUS son point de départ dans les premières années", () => {
-    // Mesuré sur le code livré, départ à 73,97 t C/ha : le creux vaut −11,14 /
-    // −11,36 / −11,30 t C/ha après labour, toujours à la douzième année.
+    // Mesuré sur le code livré, départ à 73,97 t C/ha : le creux vaut −11,55 /
+    // −11,77 / −11,73 t C/ha après labour, aux douzième et treizième années.
     for (const p of parties) {
       expect(p.laboure.creux).toBeLessThan(0);
       // Et il est atteint TÔT : pas un déclin sans fin, un creux qu'on franchit.
@@ -108,8 +108,10 @@ describe("le bilan carbone d'une plantation", () => {
   });
 
   it("puis repasse au-dessus, sans que la date du croisement soit épinglée", () => {
-    // Croisement relevé : 24ᵉ année après labour, 22ᵉ sans. Le chiffre est là
-    // pour être relu, pas pour contraindre — il tient à toute la croissance.
+    // Croisement relevé : 25ᵉ–26ᵉ année après labour, 23ᵉ–24ᵉ sans. Le chiffre
+    // est là pour être relu, pas pour contraindre — il tient à toute la
+    // croissance, et il a d'ailleurs reculé de deux ans quand l'infradensité
+    // (#68) a allégé le carbone vivant des jeunes tiges.
     for (const p of parties) {
       expect(p.laboure.croisement).toBeGreaterThan(0);
       expect(p.laboure.parAn[ANS - 1]).toBeGreaterThan(p.laboure.depart);
@@ -118,8 +120,8 @@ describe("le bilan carbone d'une plantation", () => {
 
   it("le labour CREUSE le déficit et retarde le retour, graine par graine", () => {
     // C'est ici que le travail du sol se lit, et nulle part ailleurs :
-    // −11,14 / −11,36 / −11,30 avec labour contre −7,82 / −8,05 / −8,00 sans,
-    // et le croisement passe de la 22ᵉ à la 24ᵉ année sur les trois graines.
+    // −11,55 / −11,77 / −11,73 avec labour contre −8,24 / −8,48 / −8,44 sans,
+    // et le croisement recule de deux ans sur les trois graines.
     for (const p of parties) {
       expect(p.laboure.creux).toBeLessThan(p.intact.creux);
       expect(p.laboure.croisement).toBeGreaterThan(p.intact.croisement);
@@ -129,9 +131,9 @@ describe("le bilan carbone d'une plantation", () => {
   it("mais le labour n'est PAS la cause du bilan négatif : le creux existe sans lui", () => {
     // La découverte de cette campagne, et la raison pour laquelle le témoin
     // intact existe. Une parcelle nue plantée sans aucun travail du sol perd
-    // quand même 7,7 à 8,1 t C/ha : l'humus se minéralise à 1,5 %/an et de
-    // jeunes plants ne rendent presque rien à la litière. Le labour ajoute un
-    // tiers à un creux qu'il n'a pas créé.
+    // quand même 8,2 à 8,5 t C/ha : l'humus se minéralise à 1,5 %/an et de
+    // jeunes plants ne rendent presque rien à la litière. Le labour ajoute
+    // 40 % à un creux qu'il n'a pas créé.
     //
     // Cet essai dit donc l'énoncé de I8 plus précisément que I8 lui-même : ce
     // n'est pas le travail du sol qui rend le bilan négatif, c'est la JEUNESSE

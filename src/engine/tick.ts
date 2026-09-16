@@ -13,6 +13,16 @@ import { type AidesAnnuelles, aidesAnnuelles } from "./aides";
 import { intensiteAllelopathique } from "./allelopathie";
 import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
+  alterationBasesEqM2Semaine,
+  CALCIUM_NEUTRE_MG_G,
+  capaciteEchangeEqM2,
+  DEPOSITION_BASES_EQ_M2_SEMAINE,
+  effetLitiereEq,
+  lessivageBasesEq,
+  PH_PLANCHER,
+  phDepuisSaturation,
+} from "./bases";
+import {
   type CelluleSousLeTronc,
   CONTACT_CHABLIS_BRANCHU,
   couvertureDuBoisAuSol,
@@ -34,6 +44,7 @@ import {
   HUMUS_DECAY_PER_YEAR,
   LITTER_HUMIFICATION,
   racinesPerduesEnRabattant,
+  SORTIE_OEUVRE_PAR_SEMAINE,
   T_HA_TO_G_M2,
   treeAboveCarbonKg,
   treeTotalCarbonKg,
@@ -72,12 +83,18 @@ import {
 } from "./gibier";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
-  couvertureMax,
-  herbeDemandeAzoteG,
-  herbeDemandeEauL,
-  humiditeVecue,
-  prochaineCouverture,
-} from "./herbe";
+  capaciteHerbacee,
+  evoluerEmprises,
+  facteurEauHerbacee,
+  facteurThermique,
+  HERBACEES,
+  N_HERBACEES,
+  partSaisonniere,
+  rabattreParEspece,
+  suivreFeuillage,
+  vigueurHerbacee,
+} from "./herbacees";
+import { herbeDemandeAzoteG, herbeDemandeEauL, humiditeVecue } from "./herbe";
 import {
   baseHouppierCible,
   computeGroundLight,
@@ -164,6 +181,15 @@ import {
   voisineAval,
 } from "./relief";
 import {
+  attraitCellule,
+  effortSemaine,
+  HERBE_ARRACHEE,
+  LITIERE_ENFOUIE,
+  partGlandeeRestante,
+  retournee,
+  TASSEMENT_CASSE,
+} from "./sanglier";
+import {
   conductiviteHorizonMmSemaine,
   densiteApparente,
   facteurPhBiologie,
@@ -179,6 +205,13 @@ import {
   facteurInfiltration,
   tassementApresUneAnnee,
 } from "./tassement";
+import {
+  abriAuVent,
+  candidatAuChablis,
+  RAFALE_MINIMALE_MS,
+  rafaleDeLaSemaine,
+  verse,
+} from "./tempete";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
 import type { CauseMort, TreeState } from "./trees";
 import {
@@ -192,6 +225,7 @@ import {
   treeExtractionCapacityGWeek,
   treeNitrogenNeedGWeek,
   treeWaterDemandL,
+  volumeTigeM3,
 } from "./trees";
 import type { HorizonHydro } from "./water";
 import { drynessFactor, profilHydro } from "./water";
@@ -387,6 +421,26 @@ export interface IncendieResult {
 }
 
 /**
+ * La tempête de la semaine, telle qu'on peut la raconter ET la dessiner.
+ *
+ * Elle n'est renseignée que si elle a COUCHÉ quelque chose : une rafale qui
+ * passe sans rien casser n'est pas un événement, c'est du temps qu'il fait. Les
+ * victimes arrivent ici et non dans `morts`, pour la même raison que celles du
+ * feu — un chablis reste récupérable un an et n'entre dans `morts` qu'ensuite,
+ * une semaine où `tempete` est `undefined` (tempete.ts).
+ */
+export interface TempeteResult {
+  /** rafale de référence à 10 m, m/s */
+  rafaleMs: number;
+  /** cap vers lequel le vent poussait, radians — le sens où les troncs sont partis */
+  versRad: number;
+  arbresVerses: number;
+  /** volume de tige couché, m³ : ce que le joueur peut encore vendre, décoté */
+  volumeM3: number;
+  victimes: readonly { id: number; hauteurM: number }[];
+}
+
+/**
  * Une chandelle qui s'abat, telle qu'on peut la raconter ET la dessiner : le
  * rendu a besoin de la direction pour coucher le tronc dans le bon sens, et de
  * l'empreinte pour savoir où le poser (boisMort.ts).
@@ -416,6 +470,8 @@ export interface TickResult {
   franchissements: FranchissementDeStade[];
   /** incendie de la semaine, s'il y en a eu un */
   incendie?: IncendieResult;
+  /** tempête de la semaine, si elle a couché au moins un arbre */
+  tempete?: TempeteResult;
   /**
    * Ce que le GIBIER a fait subir à quels arbres cette semaine (broutage,
    * frottis). Les gestes du joueur remontent par `applyAction` (actions.ts) ;
@@ -558,7 +614,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const potassiumG = state.soil.potassiumG.slice();
   const potassiumReserveG = state.soil.potassiumReserveG.slice();
   const litterK = state.soil.litterK.slice();
+  // Les bases échangeables, et le calcium de la litière qui les nourrit ou les
+  // consomme (bases.ts). C'est ce pool-là qui porte le pH de la cellule.
+  const basesEq = state.soil.basesEq.slice();
+  const litterCaMgG = state.soil.litterCaMgG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
   /** engorgement par (cellule, horizon) */
@@ -570,6 +632,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let overflowSum = 0;
   let waterloggingSum = 0;
   let mineralizationSumG = 0;
+  // Le budget de bases de la semaine, terme par terme : c'est lui que le test
+  // de conservation confronte à la variation du pool (bases.ts).
+  let basesApportSumEq = 0;
+  let basesLessiveSumEq = 0;
+  let basesLitiereSumEq = 0;
+  let basesAcideSumEq = 0;
   let litterDecaySumG = 0;
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
@@ -581,6 +649,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const depositionPSemaine = DEPOSITION_P_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
   const depositionKSemaine = DEPOSITION_K_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
   const cecSurface = horizonSurface0 ? capaciteEchange(horizonSurface0) : 10;
+  // Le même complexe, vu comme un STOCK par mètre carré et non comme une
+  // densité : c'est lui le dénominateur du taux de saturation, donc du pH.
+  const cecSurfaceEq = horizonSurface0 ? capaciteEchangeEqM2(horizonSurface0) : 0;
+  const alterationBasesSemaine = alterationBasesEqM2Semaine(profil);
   let uptakePSumG = 0;
   let uptakeKSumG = 0;
   let leachedKSumG = 0;
@@ -840,6 +912,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
     litterNG[i] = (litterNG[i] ?? 0) - transfere;
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
+    // ── Ce que cette litière-là fait au complexe d'échange (bases.ts) ───────
+    // La décomposition produit des acides organiques ; les bases de la litière
+    // en neutralisent une part. Au-dessus du seuil de calcium elle rend au
+    // complexe, en dessous elle lui prend — et c'est tout ce qui sépare une
+    // essence acidifiante d'une essence améliorante. Aucun nom d'espèce ici :
+    // la teneur en calcium de ce qui est tombé sur CETTE cellule suffit.
+    const effetBases = effetLitiereEq(decayedC, litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G);
+    basesEq[i] = (basesEq[i] ?? 0) + effetBases;
+    if (effetBases >= 0) basesLitiereSumEq += effetBases;
+    else basesAcideSumEq -= effetBases;
     humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
     emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
     // L'humus est LE stock d'azote organique du sol : ce qui s'en minéralise
@@ -879,6 +961,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     phosphoreG[i] =
       (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine * bio + depositionPSemaine;
     potassiumG[i] = (potassiumG[i] ?? 0) + alterationKSemaine * bio + depositionKSemaine;
+    // Les bases suivent la même plomberie que le potassium — et pour cause, le
+    // potassium EST une de ces bases. L'altération les libère dans tout le
+    // profil, la rhizosphère l'accélère, l'atmosphère en dépose (bases.ts).
+    // Sans le facteur rhizosphère, à la différence du phosphore et du
+    // potassium — et c'est délibéré. Les racines et les mycorhizes dissolvent
+    // bel et bien la roche et en libèrent des bases, mais elles le font POUR
+    // LES PRENDRE, et ce fichier ne débite pas le prélèvement des arbres
+    // (bases.ts). Créditer l'accélération sans débiter ce qu'elle nourrit
+    // fabriquait des bases : un peuplement de hêtres faisait remonter le pH de
+    // son sol, l'inverse exact de ce qu'il fait.
+    const apportBases = alterationBasesSemaine + DEPOSITION_BASES_EQ_M2_SEMAINE;
+    basesEq[i] = (basesEq[i] ?? 0) + apportBases;
+    basesApportSumEq += apportBases;
     // Le tampon du sol : la réserve suit ce que les racines prennent.
     const echange = echangeReserveK(
       potassiumG[i] ?? 0,
@@ -1310,6 +1405,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // La strate évolue selon la lumière reçue et l'humidité qui RESTE en surface
   // après le passage de tout le monde (état du sol, pas flux : cf. herbe.ts).
+  //
+  // Espèce par espèce (herbacees.ts) : chacune a son point de compensation, sa
+  // gamme de pH et sa saison, et ne fait bouger son emprise que pendant la
+  // sienne. C'est de là que sort la fenêtre vernale — une anémone juge sa
+  // station en mars, sous un couvert caduc encore nu ; une graminée la juge en
+  // mai, sous le même couvert refermé.
+  //
+  // Ce qui ne dépend que de la semaine se calcule une fois pour toute la
+  // parcelle, et les deux tampons par cellule sont alloués une fois pour
+  // toutes : la strate tourne sur toutes les cellules toutes les semaines, et
+  // ce lot coûte déjà 11 % de temps de tick.
+  const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
+  const saisonnieres = HERBACEES.map((h) => partSaisonniere(h, pheno));
+  const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
+  const capacites = new Array<number>(N_HERBACEES).fill(0);
+  const facteursEau = new Array<number>(N_HERBACEES).fill(0);
   let herbeSum = 0;
   for (let i = 0; i < nCells; i++) {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
@@ -1318,17 +1429,30 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // les essais d'Arvalis ont mesuré la perte. La boucle qui se referme :
     // moins de couverture, donc plus de ruissellement, sur un sol qui infiltre
     // déjà moins (tassement.ts).
-    const cible =
-      couvertureMax(groundLight[i] ?? 1, herbeHumidite[i] ?? remplissage) *
-      facteurCroissanceTassement(tassement[i] ?? 0);
-    herbeCouverture[i] = prochaineCouverture(herbeCouverture[i] ?? 0, cible, saisonHerbe);
+    const plafondTassement = facteurCroissanceTassement(tassement[i] ?? 0);
+    const lumiere = groundLight[i] ?? 1;
+    const humidite = herbeHumidite[i] ?? remplissage;
+    const ph = state.soil.ph[i] ?? 7;
+    for (let s = 0; s < N_HERBACEES; s++) {
+      const h = HERBACEES[s];
+      capacites[s] = h ? capaciteHerbacee(h, lumiere, ph) * plafondTassement : 0;
+      facteursEau[s] = h ? facteurEauHerbacee(h, humidite) : 0;
+    }
+    const base = i * N_HERBACEES;
+    evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
+    suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
+    // Ce que la cellule COUVRE : la somme des feuillages. Tout le reste du
+    // moteur lit cette ligne et ignore les espèces.
+    let couverture = 0;
+    for (let s = 0; s < N_HERBACEES; s++) couverture += herbeFeuillage[base + s] ?? 0;
+    herbeCouverture[i] = couverture;
     // La biomasse suit la croissance mais ne suit pas la régression : le foin
     // reste debout et ne part qu'avec la décomposition, la fauche ou le feu.
     herbeBiomasse[i] = Math.max(
-      herbeCouverture[i] ?? 0,
+      couverture,
       (herbeBiomasse[i] ?? 0) * (1 - (0.01 * climateSum) / nCells),
     );
-    herbeSum += herbeCouverture[i] ?? 0;
+    herbeSum += couverture;
   }
 
   const waterSatisfaction = new Array<number>(nTrees).fill(1);
@@ -1383,6 +1507,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     potassiumG[i] = (potassiumG[i] ?? 0) - perduK;
     leachedKSumG += perduK;
+    // Les bases partent avec la même eau, retenues par le même complexe. C'est
+    // le terme qui fait qu'un sol lessive vers l'acide quand plus rien ne le
+    // réalimente — le versant « lessivage » de l'issue #71 (bases.ts).
+    const perduBases = lessivageBasesEq(
+      basesEq[i] ?? 0,
+      drainageMmArr[i] ?? 0,
+      waterMm[i * nH] ?? 0,
+      cecSurface,
+    );
+    basesEq[i] = (basesEq[i] ?? 0) - perduBases;
+    basesLessiveSumEq += perduBases;
+  }
+
+  // ── 4 bis. Le pH n'est pas un état : il se RELIT (bases.ts) ───────────────
+  // Après tous les mouvements de bases de la semaine, chaque cellule relit son
+  // pH sur le taux de saturation de son complexe. C'est ici, et nulle part
+  // ailleurs, que `soil.ph` est écrit — le chaulage lui-même passe par les
+  // bases (actions.ts).
+  const ph = new Array<number>(nCells);
+  for (let i = 0; i < nCells; i++) {
+    ph[i] = cecSurfaceEq > 0 ? phDepuisSaturation((basesEq[i] ?? 0) / cecSurfaceEq) : PH_PLANCHER;
   }
 
   // ── 5. Croissance de chaque arbre — loi du minimum, facteurs locaux ───────
@@ -1618,7 +1763,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   if (broutage.preleveKg > 0) {
     for (let i = 0; i < nCells; i++) {
       const consommee = broutage.parCellule[i]?.herbeConsommee ?? 0;
-      if (consommee > 0) herbeCouverture[i] = Math.max(0, (herbeCouverture[i] ?? 0) - consommee);
+      if (consommee > 0) {
+        const avant = herbeCouverture[i] ?? 0;
+        herbeCouverture[i] = Math.max(0, avant - consommee);
+        // Ce qui est brouté est pris sur le FEUILLAGE, et sur lui seul : la
+        // dent du chevreuil ne va pas chercher les rhizomes, et l'espèce qui
+        // n'était pas sortie n'a rien perdu.
+        if (avant > 0) {
+          rabattreParEspece(herbeFeuillage, i * N_HERBACEES, (herbeCouverture[i] ?? 0) / avant);
+        }
+      }
     }
     nextTrees = nextTrees.map((tree) => {
       const degat = broutage.parArbre.get(tree.id);
@@ -1671,6 +1825,71 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       };
     });
   }
+
+  // ── 5 ter ter. Le sanglier retourne le sol (§7.4, issue #73) ──────────────
+  // Il n'est pas dans `gibier.ts` et ce n'est pas un oubli : ce module est bâti
+  // sur le broutage, et un sanglier ne broute pas (sanglier.ts). Ce qu'il fait
+  // ici, c'est enfouir la litière, casser la croûte et mettre la terre à nu —
+  // trois conséquences d'un seul geste, dont deux se contredisent.
+  //
+  // Aucun tirage dans le flux principal : la cellule retournée dérive d'une
+  // graine locale, comme le chablis et la chute des chandelles.
+  let cellulesRetournees = 0;
+  if (station.sanglierParHa > 0) {
+    // Où il y a de la glandée : sous les couronnes des arbres mûrs dont la
+    // graine est LOURDE — celle qui tombe et reste. Le trait suffit à le dire
+    // (`dissemination` vaut `geai` ou `gravite`), aucune espèce n'est nommée.
+    const mastAuSol = new Array<number>(nCells).fill(0);
+    for (const tree of nextTrees) {
+      if (!tree.alive) continue;
+      const espece = getEspece(tree.especeId);
+      // `geai` seul : c'est le marqueur des GROSSES graines nutritives, celles
+      // qu'un geai cache et qu'un sanglier mange (regeneration.ts dit pourquoi
+      // `gravite` ne convient pas).
+      if (espece.regeneration.dissemination !== "geai") continue;
+      if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+      const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+      forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
+        mastAuSol[i] = Math.min(1, (mastAuSol[i] ?? 0) + 1);
+      });
+    }
+    const effort = effortSemaine(station.sanglierParHa, week);
+    // L'attrait de chaque cellule, et sa moyenne : le sanglier va où il y a à
+    // manger, à l'abri, et où la terre se laisse faire.
+    const attraits = new Array<number>(nCells);
+    let attraitTotal = 0;
+    for (let i = 0; i < nCells; i++) {
+      const a = attraitCellule({
+        mast: mastAuSol[i] ?? 0,
+        couvert: 1 - (groundLight[i] ?? 1),
+        humidite: ruSurface > 0 ? Math.min(1, (waterMm[i * nH] ?? 0) / ruSurface) : 0,
+      });
+      attraits[i] = a;
+      attraitTotal += a;
+    }
+    const attraitMoyen = attraitTotal / nCells;
+    for (let i = 0; i < nCells; i++) {
+      if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
+      cellulesRetournees++;
+      // La litière est ENFOUIE : elle ne disparaît pas, elle passe au pool
+      // lent. Un boutis est un enfouissement, pas une combustion.
+      const litiereC = (litterCG[i] ?? 0) * LITIERE_ENFOUIE;
+      const litiereN = (litterNG[i] ?? 0) * LITIERE_ENFOUIE;
+      litterCG[i] = (litterCG[i] ?? 0) - litiereC;
+      litterNG[i] = (litterNG[i] ?? 0) - litiereN;
+      humusCG[i] = (humusCG[i] ?? 0) + litiereC;
+      mineralNG[i] = (mineralNG[i] ?? 0) + litiereN;
+      // La croûte est cassée : la structure y GAGNE, ce qu'on n'attend pas
+      // d'un dégât (sanglier.ts).
+      tassement[i] = (tassement[i] ?? 0) * (1 - TASSEMENT_CASSE);
+      // Et le tapis est déchiré : c'est ce qui met la terre à nu, donc ce qui
+      // la fait partir — et ce qui ouvre le lit des petites graines.
+      rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 1 - HERBE_ARRACHEE);
+    }
+  }
+  // Ce que le sanglier a retourné depuis un an : la régénération le lit à la
+  // semaine de recrutement, et c'est là que son second effet se joue.
+  const partRetourneeAn = Math.min(1, (cellulesRetournees / nCells) * 52);
 
   // ── 5 ter bis. Réseaux mycorhiziens (§7.5) ────────────────────────────────
   // Ils suivent les hôtes compatibles, très lentement : c'est ce qui fait
@@ -1776,6 +1995,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
       const oldN = litterNG[i] ?? 0;
       litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
+      // Le calcium de ce qui tombe se mélange à celui qui était déjà là, au
+      // prorata des masses : une cellule sous deux essences porte la litière
+      // des deux, et c'est le mélange qui décide de l'acidité (bases.ts).
+      litterCaMgG[i] =
+        (oldN * (litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G) + share * espece.litiere.calciumMgG) /
+        (oldN + share);
       litterNG[i] = oldN + share;
       litterCG[i] = (litterCG[i] ?? 0) + shareC;
       // Le phosphore de la feuille rentre au sol avec elle. On le rend
@@ -1887,12 +2112,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       survivors.push(tree);
       continue;
     }
-    if (
-      tree.brulEeSemaine !== undefined &&
-      state.week - tree.brulEeSemaine < CHABLIS_RECUPERABLE_SEMAINES
-    ) {
-      // Sur pied et encore commercialisable : on le garde tel quel, le temps
-      // que le joueur décide d'aller le chercher.
+    // Encore commercialisable : on le garde tel quel, le temps que le joueur
+    // décide d'aller le chercher. Deux façons d'en arriver là, et le même
+    // délai : le feu l'a tué sur pied, ou la tempête l'a couché (tempete.ts).
+    const abattuSemaine = tree.brulEeSemaine ?? tree.renverseSemaine;
+    if (abattuSemaine !== undefined && state.week - abattuSemaine < CHABLIS_RECUPERABLE_SEMAINES) {
       survivors.push(tree);
       continue;
     }
@@ -1916,7 +2140,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Chandelle : un tronc mort tient debout des années avant de s'abattre.
     // Elle ne fait pas d'ombre (les morts sont ignorés du calcul de lumière)
     // mais elle occupe la place et sert d'habitat (trees.ts, biodiversite.ts).
-    if (state.week - tree.mortSemaine < dureeChandelleSemaines(getEspece(tree.especeId))) {
+    //
+    // Un CHABLIS n'en est pas une : il est déjà par terre. Il ne fait donc pas
+    // de chandelle et son bois se couche dès la fin du délai de récupération.
+    const chablis = tree.renverseSemaine !== undefined;
+    if (
+      !chablis &&
+      state.week - tree.mortSemaine < dureeChandelleSemaines(getEspece(tree.especeId))
+    ) {
       survivors.push(tree);
       continue;
     }
@@ -1925,13 +2156,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // La direction se tire sur un flux PROPRE à cette chute (boisMort.ts) : le
     // flux principal est unique et séquentiel, un tirage de plus y décalerait
     // tous les suivants et rebattrait les cartes de tous les autres mécanismes.
-    const radians = directionDeChute(
-      altitudes,
-      dims,
-      tree.x,
-      tree.y,
-      graineDeChute(tree.id, state.week),
-    );
+    // Un chablis est parti dans le sens du coup de vent, et il l'a retenu
+    // (`chuteRad`). Une chandelle, elle, n'a que la pente pour l'orienter.
+    const radians =
+      tree.chuteRad ??
+      directionDeChute(altitudes, dims, tree.x, tree.y, graineDeChute(tree.id, state.week));
     const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, radians, dims);
     const longueurTotale = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
     if (longueurTotale <= 0) continue;
@@ -2167,6 +2396,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       for (const i of brulees) {
         herbeCouverture[i] = 0;
         herbeBiomasse[i] = 0;
+        // Le feu emporte tout le feuillage ; les souches restent et la lande
+        // repart d'elles, à la vitesse de repousse (herbacees.ts).
+        rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 0);
         carboneFeuKgC += (litterCG[i] ?? 0) / 1000;
         litterCG[i] = 0;
         // L'azote de la litière part en fumée pour l'essentiel ; le reste
@@ -2194,6 +2426,69 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
 
+  // ── 6 ter. La tempête (§7.4, issue #55) ───────────────────────────────────
+  // Placée juste après le feu, et pour la même raison : ce sont deux événements
+  // qui MARQUENT des arbres cette semaine — le feu les brûle, la tempête les
+  // couche — et laissent la passe de mortalité de la semaine suivante en tirer
+  // les conséquences. Un chablis est donc récupérable un an, exactement comme
+  // un bois brûlé, et c'est enfin `CHABLIS_RECUPERABLE_SEMAINES` qui porte son
+  // propre nom.
+  //
+  // Aucun tirage dans le flux principal : la rafale dérive de la graine de
+  // partie, le renversement de l'identité de l'arbre (tempete.ts).
+  let tempete: TickResult["tempete"];
+  const rafaleMs = rafaleDeLaSemaine(state.graineMarche, state.week, weather.ventMoyMs);
+  if (rafaleMs >= RAFALE_MINIMALE_MS && station.ventExposition > 0) {
+    const verses: TreeState[] = [];
+    nextTrees = nextTrees.map((tree) => {
+      if (!candidatAuChablis(tree)) return tree;
+      const espece = getEspece(tree.especeId);
+      const cellule = cellIndexAt(dims, tree.x, tree.y);
+      const exposition = {
+        rafaleMs,
+        ventExposition: station.ventExposition,
+        // L'abri qui compte pour une CIME, celui que les voisins PLUS HAUTS
+        // donnent — et non l'abri de haie de `windShelterAt`, qui sature à 1
+        // dans n'importe quel peuplement (tempete.ts).
+        //
+        // Sur le peuplement du DÉBUT de semaine, volontairement : un voisin
+        // couché par la même rafale était debout quand elle est arrivée. Ça
+        // rend aussi la passe indépendante de l'ordre des arbres, ce qu'une
+        // tempête doit être — elle frappe tout d'un coup, pas de proche en
+        // proche comme un feu.
+        abriVent: abriAuVent(trees, tree),
+        // L'engorgement de SURFACE : c'est là que sont les racines qui tiennent
+        // l'arbre debout, et c'est un sol saturé qui les lâche.
+        engorgement: waterlogging[cellule * nH] ?? 0,
+        toleranceEngorgement: espece.eau.toleranceEngorgement,
+        partFoliaire: partFoliaireOmbrageanteDans(espece, pheno),
+        // La profondeur que CET arbre a explorée, pas celle que sa fiche vise :
+        // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
+        profondeurEffectiveCm: tree.rootDepthCm,
+      };
+      if (!verse(tree, exposition, state.week)) return tree;
+      verses.push(tree);
+      return {
+        ...tree,
+        alive: false,
+        causeMort: "chablis" as const,
+        renverseSemaine: state.week,
+        // Le vent devient l'arbitre de la direction de chute, là où la pente
+        // décidait seule (boisMort.ts) : un chablis part dans le sens du coup.
+        chuteRad: weather.ventVersRad,
+      };
+    });
+    if (verses.length > 0) {
+      tempete = {
+        rafaleMs,
+        versRad: weather.ventVersRad,
+        arbresVerses: verses.length,
+        volumeM3: verses.reduce((s, t) => s + volumeTigeM3(t.diametreCm, t.heightM), 0),
+        victimes: verses.map((t) => ({ id: t.id, hauteurM: t.heightM })),
+      };
+    }
+  }
+
   // La structure se répare une fois l'an, à proportion de ce qui l'occupe :
   // sous des racines denses, bien plus vite qu'à nu (tassement.ts).
   if (week === RECRUITMENT_WEEK) {
@@ -2203,6 +2498,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       tassement[i] = tassementApresUneAnnee(t, 1 - (groundLight[i] ?? 1));
     }
   }
+
+  // ── 6 quinquies. Les produits bois sortent d'usage (§12, issue #72) ───────
+  // Un puits qui ne se vide jamais n'est pas un puits : le bois d'œuvre vendu
+  // restait crédité pour toujours, si bien qu'une palette de 2030 comptait
+  // encore en 2090. Il sort maintenant au rythme de sa demi-vie (carbon.ts).
+  const sortieOeuvreKgC = state.carbon.oeuvreStockKgC * SORTIE_OEUVRE_PAR_SEMAINE;
 
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
   // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
@@ -2240,6 +2541,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       lumiereAuSol: groundLight,
       banqueGraines: state.banqueGraines,
       aBrule: aBruleDepuisLaLevee,
+      // Le sanglier, des deux côtés : ce qu'il a mangé des glands, et le lit
+      // qu'il a ouvert pour les petites graines (sanglier.ts).
+      partGlandeeRestante: partGlandeeRestante(station.sanglierParHa),
+      partRetournee: partRetourneeAn,
       nextTreeId,
     });
     // Le carbone des recrues vient d'ailleurs : de la graine, produite par un
@@ -2309,7 +2614,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterNG,
         litterCG,
         humusCG,
-        ph: state.soil.ph,
+        basesEq,
+        litterCaMgG,
+        ph,
         cloture: state.soil.cloture,
         nappeMm: nappeStockMm,
         epaisseurPerdueCm,
@@ -2329,6 +2636,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         potassiumReserveG,
         litterK,
         herbeCouverture,
+        herbeEmprise,
+        herbeFeuillage,
         herbeBiomasse,
         herbeHumidite,
         ravageurs,
@@ -2349,6 +2658,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
         erosionCumKgC:
           state.carbon.erosionCumKgC + (erosionSortieHumusCG + erosionSortieLitiereCG) / 1000,
+        // Les produits bois sortent d'usage, semaine après semaine (§12,
+        // issue #72). Décroissance de premier ordre sur la demi-vie des
+        // sciages de l'IPCC : la charpente d'hier n'est pas éternelle, et le
+        // crédit carbone d'une vente s'éteint lentement derrière elle.
+        oeuvreStockKgC: state.carbon.oeuvreStockKgC - sortieOeuvreKgC,
+        oeuvreFinDeVieCumKgC: state.carbon.oeuvreFinDeVieCumKgC + sortieOeuvreKgC,
       },
       rng,
       nextTreeId,
@@ -2359,6 +2674,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     chutes,
     aides: aidesVersees,
     incendie,
+    tempete,
     gestes,
     // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne
     // sont pas de l'état (la semaine suivante les recalcule), mais sans elles
@@ -2403,6 +2719,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       uptakePKgHa: (uptakePSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKKgHa: (uptakeKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKKgHa: (leachedKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      basesApportEqHa: (basesApportSumEq / nCells) * 10_000,
+      basesLessiveEqHa: (basesLessiveSumEq / nCells) * 10_000,
+      basesLitiereEqHa: (basesLitiereSumEq / nCells) * 10_000,
+      basesAcideEqHa: (basesAcideSumEq / nCells) * 10_000,
+      saturationMoyenne:
+        cecSurfaceEq > 0 ? basesEq.reduce((a, b) => a + b, 0) / nCells / cecSurfaceEq : 0,
       litterfallKgHa: (litterfallSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       litterDecayKgHa: (litterDecaySumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       fixationKgHa: (fixationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,

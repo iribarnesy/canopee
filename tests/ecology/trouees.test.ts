@@ -13,9 +13,20 @@
  * `voisinage`, dont les positions sont tirées UNIFORMÉMENT sur la parcelle :
  * sous l'hypothèse nulle — la lumière ne compte pas — les recrues se
  * répartissent au hasard et les deux zones comparées en reçoivent autant. Le
- * comparateur principal est APPARIÉ : la même zone, la même graine, la même
- * météo, avec et sans la trouée. Seule la trouée change, donc seule elle peut
- * expliquer l'écart.
+ * comparateur est APPARIÉ : la même zone, la même graine, la même météo, avec
+ * et sans la trouée. Seule la trouée change, donc seule elle peut expliquer
+ * l'écart.
+ *
+ * ET IL DOIT L'ÊTRE. Cet essai a d'abord porté un second comparateur, croisé :
+ * dans une même partie, la zone ouverte contre une zone témoin restée sous
+ * couvert. Il est tombé au premier déplacement du flux aléatoire, et la
+ * remesure a montré que le défaut était dans le comparateur, pas dans le
+ * moteur — sur certaines graines, la zone témoin est elle-même une ouverture
+ * naturelle (17 recrues dont 9 bouleaux SANS qu'on ait rien creusé). Une
+ * hêtraie n'est pas un couvert homogène, ce qui est précisément l'objet de F7 :
+ * on ne peut donc pas prendre un point quelconque du peuplement pour un témoin
+ * fermé. Apparier la même zone avec elle-même est la seule façon de neutraliser
+ * ça.
  *
  * Deux espèces arrivent ensemble, et ce n'est pas une complication gratuite :
  * le bouleau (compensation 0,25, donc 50 % de lumière exigés) ne peut
@@ -152,8 +163,8 @@ describe("une trouée dans un couvert fermé", () => {
     // ferait passer toutes les assertions suivantes pour de mauvaises raisons —
     // et c'est exactement ce qui est arrivé à la première version.
     //
-    // Mesuré sur le code livré : 125 à 155 recrues par partie fermée, dont 5 à
-    // 11 charmes dans chacune des deux zones comptées.
+    // Mesuré sur le code livré : 128 à 179 recrues par partie fermée, dont 3 à
+    // 9 charmes dans chacune des deux zones comptées.
     for (const p of parties) {
       expect(p.fermee.total).toBeGreaterThan(50);
       expect(p.fermee.charmeTrouee).toBeGreaterThan(0);
@@ -165,24 +176,38 @@ describe("une trouée dans un couvert fermé", () => {
     // LE COMPARATEUR APPARIÉ : la même zone, la même graine, avec et sans la
     // trouée. Tout le reste est identique — position, météo, voisinage.
     //
-    // Mesuré sur le code livré, recrues dans la zone (12,20) : 12 / 23 / 15 /
-    // 24 / 20 avec la trouée, contre 3 / 8 / 11 / 10 / 7 sans elle. La
-    // direction tient sur les cinq graines ; le RAPPORT, lui, va de 1,4 à 4,
-    // et c'est pourquoi il n'est pas épinglé (docs/realisme.md, « ce qu'un test
-    // écologique a le droit d'affirmer »).
+    // Mesuré sur le code livré, recrues dans la zone (12,20) : 16 / 22 / 17 /
+    // 25 / 17 avec la trouée, contre 4 / 8 / 11 / 11 / 7 sans elle. La
+    // direction tient sur les cinq graines — et sur huit, en élargissant la
+    // campagne. Le RAPPORT, lui, va de 1,5 à 4, et c'est pourquoi il n'est pas
+    // épinglé (docs/realisme.md, « ce qu'un test écologique a le droit
+    // d'affirmer »).
     for (const p of parties) {
       expect(p.trouee.trouee).toBeGreaterThan(p.fermee.trouee);
     }
   });
 
-  it("et la trouée en reçoit plus que le couvert voisin, dans la même partie", () => {
-    // Le second comparateur, indépendant du premier : à l'intérieur d'une seule
-    // partie, la zone ouverte contre la zone restée fermée.
-    // Mesuré : 12 / 23 / 15 / 24 / 20 contre 11 / 9 / 6 / 5 / 14.
-    for (const p of parties) {
-      expect(p.trouee.trouee).toBeGreaterThan(p.trouee.temoin);
-    }
-  });
+  // IL Y AVAIT ICI UN TROISIÈME ESSAI, ET IL ÉTAIT MAL FONDÉ. Il comparait, dans
+  // une seule partie, la zone ouverte à la zone témoin restée sous couvert. Le
+  // lot des tempêtes, du sanglier et de la strate herbacée a déplacé le flux
+  // aléatoire, et il est tombé sur la graine 1 : 16 recrues dans la trouée
+  // contre 21 dans le témoin.
+  //
+  // La remesure a montré que ce n'était NI un décalage de flux innocent, NI une
+  // régression du mécanisme, mais un défaut du comparateur lui-même. Dans la
+  // partie SANS trouée de cette graine, la zone témoin porte déjà 17 recrues
+  // dont 9 bouleaux, contre 4 dans la zone de la future trouée : sur cette
+  // graine, le « témoin sous couvert fermé » est lui-même une ouverture
+  // naturelle. Le comparateur supposait un témoin fermé et rien ne le
+  // garantissait — la hêtraie n'est pas un couvert homogène, c'est tout l'objet
+  // de F7.
+  //
+  // Il n'est pas remplacé par un seuil plus bas, ce qui aurait été l'erreur que
+  // `realisme.md` décrit : il est retiré parce que sa prémisse est fausse. Ce
+  // qu'il prétendait montrer est démontré par le comparateur apparié ci-dessus
+  // (5/5, et 8/8 sur la campagne élargie), et la comparaison croisée survit là
+  // où elle est fondée — sur le BOULEAU, qui est l'indicateur d'ouverture et non
+  // une somme de toutes les espèces (essai suivant).
 
   it("ce n'est pas « plus de semis », c'est un TRI : le pionnier n'entre que par la trouée", () => {
     // La trouée ne se contente pas d'ajouter des tiges, elle change QUI
@@ -190,9 +215,13 @@ describe("une trouée dans un couvert fermé", () => {
     // n'a presque nulle part où s'installer sous le couvert, et l'ouverture lui
     // rend toute la place.
     //
-    // Mesuré, bouleaux dans la zone (12,20) : 10 / 17 / 11 / 14 / 15 avec la
-    // trouée, contre 1 / 2 / 3 / 1 / 2 sans elle. Et dans la même partie
-    // trouée, 0 / 2 / 2 / 0 / 3 bouleaux sous le couvert du témoin.
+    // Mesuré, bouleaux dans la zone (12,20) : 13 / 17 / 10 / 15 / 12 avec la
+    // trouée, contre 1 / 2 / 3 / 2 / 2 sans elle. Et dans la même partie
+    // trouée, 10 / 3 / 2 / 0 / 2 bouleaux sous le couvert du témoin.
+    //
+    // La graine 1 est celle qui a fait tomber l'essai retiré ci-dessus, et le
+    // bouleau y tient quand même (13 contre 10) : c'est ce qui montre que la
+    // zone témoin y était ouverte, pas que la trouée n'y faisait rien.
     for (const p of parties) {
       expect(p.trouee.bouleauTrouee).toBeGreaterThan(p.fermee.bouleauTrouee);
       expect(p.trouee.bouleauTrouee).toBeGreaterThan(p.trouee.bouleauTemoin);
