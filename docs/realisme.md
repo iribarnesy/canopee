@@ -152,9 +152,11 @@ d'être un état : il se lit sur un pool de bases que la litière fait pencher)
 → 89 % (l'infradensité : la biomasse cesse de se peser avec la densité du
 commerce) → 90 % (les trouées et le bilan carbone d'une plantation sont enfin
 mis à l'épreuve — F7 et I8 ; le domaine du carbone n'a plus une seule lacune)
-→ **89 % (le plancher racinaire cesse de traiter un arbre mûr comme un semis :
+→ 89 % (le plancher racinaire cesse de traiter un arbre mûr comme un semis :
 l'ancrage revient à sa valeur mesurée, et E11 rend un ✅ qu'un essai tenait par
-une coïncidence de dix centimètres)**.*
+une coïncidence de dix centimètres)
+→ **89 % (la place se dispute là où la graine tombe : le plafond de
+recouvrement devient local, et une futaie vraiment dense redevient testable)**.*
 
 *Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
 hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -279,8 +281,8 @@ maladie-là, pas une preuve de santé.*
 | F3 | Les semis ne s'installent que dans leurs conditions (lumière, pH) | ✅ | filtres d'installation |
 | F4 | Les arbres vieillissent et meurent (sénescence) | ✅ | `fAge` ; `succession.test.ts` |
 | F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
-| F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | La densité se régule bien — 361 pins plantés à 2 m tombent à 47-54 en 120 ans — mais par les RAVAGEURS et les CHABLIS, pas par la lumière (#65). Deux réserves. Le plafond de recouvrement qui borne l'installation est PARCELLAIRE et non local (#95). Et une cohorte de HÊTRES ne s'éclaircit pas du tout : 361 tiges plantées, 361 vivantes à 120 ans, là où le réel en porte quelques centaines. Son seuil de stress d'ombre (0,9 × compensation = 0,0090) passe sous le plancher de lumière du moteur (`exp(−MAX_EXTINCTION)` = 0,0111) : il ne peut littéralement pas mourir d'ombre (`lumiere.test.ts`). **23 % d'écart entre deux constantes indépendantes** — un équilibre sur le fil, que recalibrer l'une ou l'autre renverserait sans qu'on l'ait voulu. Ce qui manque vraiment est la mortalité par famine carbonée, qui est un budget CUMULÉ et non un seuil instantané mieux placé (#96) |
-| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | ✅ | `regeneration.ts` + `light.ts` ; `trouees.test.ts` — comparateur APPARIÉ, la même zone avec et sans trouée sur cinq graines : 17 / 17 / 14 / 23 / 17 recrues contre 6 / 9 / 12 / 10 / 5 (et 8/8 sur la campagne élargie). Et ce n'est pas « plus de semis » mais un TRI — le bouleau (compensation 0,25) n'entre que par l'ouverture, le charme (0,03) recrute jusque sous le couvert. **Deux limites, trouvées en mesurant.** Le plafond de recouvrement des couronnes est PARCELLAIRE et non local : au-delà, plus rien ne s'installe nulle part, trouée comprise. Et un point quelconque du peuplement ne fait PAS un témoin fermé — sur certaines graines la zone témoin porte 17 recrues dont 9 bouleaux sans qu'on ait rien creusé, ce qui a coûté un comparateur croisé (retiré : sa prémisse était fausse, pas son seuil) |
+| F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | La densité se régule bien — 361 pins plantés à 2 m tombent à 47-54 en 120 ans — mais par les RAVAGEURS et les CHABLIS, pas par la lumière (#65). **Une réserve est levée** : le plafond de recouvrement qui borne l'installation était PARCELLAIRE — tant que la somme des couronnes dépassait 2,5 fois la surface, plus rien ne s'installait nulle part, trouée comprise. Il se lit maintenant dans un voisinage de six mètres, l'emprise d'un houppier adulte (#95), et sa VALEUR n'a pas eu à bouger : le recouvrement local moyen d'un peuplement homogène égale son recouvrement global (6,79 contre 6,32 ; 7,69 contre 7,72 ; 2,19 contre 2,14 ; 0,96 contre 1,02). Ce que la portée change n'est pas le niveau, c'est la VARIANCE. **L'autre tient** : une cohorte de HÊTRES ne s'éclaircit pas du tout : 361 tiges plantées, 361 vivantes à 120 ans, là où le réel en porte quelques centaines. Son seuil de stress d'ombre (0,9 × compensation = 0,0090) passe sous le plancher de lumière du moteur (`exp(−MAX_EXTINCTION)` = 0,0111) : il ne peut littéralement pas mourir d'ombre (`lumiere.test.ts`). **23 % d'écart entre deux constantes indépendantes** — un équilibre sur le fil, que recalibrer l'une ou l'autre renverserait sans qu'on l'ait voulu. Ce qui manque vraiment est la mortalité par famine carbonée, qui est un budget CUMULÉ et non un seuil instantané mieux placé (#96) |
+| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | ✅ | `regeneration.ts` + `light.ts` ; `trouees.test.ts` — comparateur APPARIÉ, la même zone avec et sans trouée sur cinq graines : 17 / 17 / 14 / 23 / 17 recrues contre 6 / 9 / 12 / 10 / 5 (et 8/8 sur la campagne élargie). Et ce n'est pas « plus de semis » mais un TRI — le bouleau (compensation 0,25) n'entre que par l'ouverture, le charme (0,03) recrute jusque sous le couvert. **Une limite est tombée, l'autre tient.** Le plafond de recouvrement était PARCELLAIRE : au-delà, plus rien ne s'installait nulle part, trouée comprise, et l'essai avait dû se replier sur un écartement de huit mètres — le seul qui reste sous le plafond — donc sur un couvert perméable au lieu de la futaie dense qui est le cas intéressant. Le plafond est devenu local (#95), et l'essai porte désormais un second banc à TROIS mètres d'écartement, recouvrement 6,8 à 9,5 : **le témoin fermé n'y recrute rien du tout — 0 sur les cinq graines — et la trouée recrute 3 / 2 / 4 / 6 / 4.** C'est F7 sans détour, et sans garde-fou. Ce qui tient, c'est qu'un point quelconque du peuplement ne fait PAS un témoin fermé — sur certaines graines la zone témoin porte 17 recrues dont 9 bouleaux sans qu'on ait rien creusé, ce qui a coûté un comparateur croisé (retiré : sa prémisse était fausse, pas son seuil) |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | 🟡 | Rejet de souche : `rejetteDeSouche`, éprouvé après feu et après recépage. DRAGEONNEMENT : `regeneration.drageonne` (prunellier), un drageon sort dans un anneau serré autour de sa mère ET échappe au filtre de lumière, parce qu'elle le nourrit. Reste sans drageonnement : robinier et peuplier, absents de l'atlas |
 | F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
@@ -469,6 +471,13 @@ trouée comprise. Un « zéro recrue sous couvert » aurait décroché le ✅ po
 mauvaise raison. D'où le témoin qui est resté dans l'essai : une seconde espèce,
 tolérante à l'ombre, dont la présence prouve qu'il y avait quelque chose à
 mesurer.
+
+*Et le défaut trouvé par cet échec a fini par être corrigé* (#95) : le plafond
+se lit désormais dans un voisinage de six mètres. L'essai porte depuis un second
+banc à trois mètres d'écartement — la futaie dense qui lui était interdite — où
+le témoin fermé ne recrute RIEN sur les cinq graines et la trouée recrute. Le
+banc de repli à huit mètres reste en place, parce qu'il mesure autre chose et le
+mesure bien : sous un couvert perméable, la trouée concentre et TRIE.
 
 Celui de I8 a CORRIGÉ son propre critère. L'énoncé attribuait le bilan négatif
 au travail du sol ; le témoin sans labour montre que le creux existe quand même,

@@ -35,8 +35,42 @@ const WIND_MEAN_DISTANCE_M = 25;
  * moteur qui connaît les houppiers : elle donne des milliers de tiges quand
  * elles font trente centimètres, et quelques centaines quand elles font vingt
  * mètres, sans qu'on ait à choisir un chiffre pour chaque étape.
+ *
+ * ET LA VALEUR N'A PAS BOUGÉ EN DEVENANT LOCALE (#95), ce qui n'allait pas de
+ * soi : l'issue prévoyait qu'un plafond local demanderait une autre valeur. La
+ * mesure dit le contraire, et c'est une propriété de la grandeur elle-même. Le
+ * recouvrement local MOYEN d'un peuplement homogène égale son recouvrement
+ * global — mesuré sur quatre peuplements, 6,79 contre 6,32, 7,69 contre 7,72,
+ * 2,19 contre 2,14, 0,96 contre 1,02. Une moyenne de parts vaut la part de la
+ * somme ; ce que la portée change n'est pas le niveau, c'est la VARIANCE. Le
+ * plafond continue donc de dire la même chose des peuplements homogènes, et ne
+ * dit autre chose que là où le peuplement ne l'est pas — ce qui est exactement
+ * ce qu'on voulait corriger.
  */
 const RECOUVREMENT_MAX = 2.5;
+/**
+ * Le rayon où la place se dispute, m — l'emprise d'UN houppier adulte.
+ *
+ * Le plafond était PARCELLAIRE : tant que la somme des couronnes dépassait
+ * 2,5 fois la surface, plus aucun semis ne s'installait nulle part, y compris
+ * sous une ouverture en pleine lumière. Une futaie dense qui perd un bouquet
+ * d'arbres doit régénérer dans son ouverture, quelle que soit la densité du
+ * reste (#95).
+ *
+ * SIX MÈTRES, ET LE CHOIX SE MESURE. Un houppier de hêtre adulte fait sept
+ * mètres de rayon, un de quinze mètres de haut en fait cinq : le disque de six
+ * mètres est l'ordre de grandeur de la place qu'UNE couronne prendra, donc de
+ * ce qu'un semis dispute vraiment. Balayé de trois à huit mètres sur une
+ * hêtraie serrée de quinze mètres, le recouvrement au centre d'une trouée de
+ * huit mètres vaut 0,00 / 0,14 / 0,51 / 0,99 / 1,98 : au-delà de six, le
+ * voisinage recommence à voir la matrice et l'ouverture s'efface — à douze
+ * mètres, la maille des paniers de `light.ts`, il n'en reste presque rien
+ * (1,21 contre 1,02 pour la matrice). La maille de douze mètres reste l'INDEX ;
+ * elle ne peut pas être la portée *(à calibrer)*.
+ */
+const RAYON_VOISINAGE_M = 6;
+/** Maille de l'index spatial, m — la même que `light.ts`, et pour la même raison. */
+const PANIER_M = 12;
 const MIN_SPACING_M = 1.2;
 /**
  * Taille d'un semis qui vient de s'installer, m — PLAFOND, pas valeur fixe.
@@ -266,20 +300,83 @@ export function drawPosition(
  */
 export const BONUS_SOL_RETOURNE = 1;
 
+/** Un houppier vu comme un disque : tout ce dont le plafond local a besoin. */
+interface Houppier {
+  x: number;
+  y: number;
+  r: number;
+}
+
+/**
+ * Aire commune à deux disques, m².
+ *
+ * LE DÉCOUPAGE N'EST PAS UN RAFFINEMENT, il fait la mesure. Compter pour sa
+ * surface ENTIÈRE un houppier dont le centre est dehors mais qui mord sur le
+ * voisinage donne un recouvrement local trois à cinq fois trop haut — mesuré
+ * en écrivant la campagne de #95, où la première version annonçait 17,75 de
+ * médiane là où la parcelle entière tenait 6,32. Un plafond calé sur ce
+ * chiffre-là n'aurait plus rien laissé s'installer nulle part.
+ */
+function aireCommune(r1: number, r2: number, d: number): number {
+  if (d >= r1 + r2) return 0;
+  if (d <= Math.abs(r1 - r2)) return Math.PI * Math.min(r1, r2) ** 2;
+  const a1 = Math.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1));
+  const a2 = Math.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
+  return r1 * r1 * (a1 - Math.sin(2 * a1) / 2) + r2 * r2 * (a2 - Math.sin(2 * a2) / 2);
+}
+
+/**
+ * Range un houppier dans tous les paniers où une TENTATIVE pourrait le voir —
+ * son disque ÉLARGI du rayon de voisinage, pas son disque seul.
+ *
+ * C'est ce qui permet à la lecture de ne consulter qu'un panier, celui du point
+ * tiré, au lieu d'en balayer neuf et d'y dédoublonner : si un houppier peut
+ * mordre sur le voisinage d'un point, il est déjà dans le panier de ce point.
+ * `light.ts` fait le même arrangement pour la même raison — la différence est
+ * qu'une ombre s'interroge en un POINT et la place dans un DISQUE, d'où
+ * l'élargissement.
+ */
+function rangerHouppier(paniers: Map<number, Houppier[]>, h: Houppier): void {
+  const portee = h.r + RAYON_VOISINAGE_M;
+  const bx0 = Math.floor((h.x - portee) / PANIER_M);
+  const bx1 = Math.floor((h.x + portee) / PANIER_M);
+  const by0 = Math.floor((h.y - portee) / PANIER_M);
+  const by1 = Math.floor((h.y + portee) / PANIER_M);
+  for (let by = by0; by <= by1; by++) {
+    for (let bx = bx0; bx <= bx1; bx++) {
+      const key = by * 100_000 + bx;
+      const list = paniers.get(key);
+      if (list) list.push(h);
+      else paniers.set(key, [h]);
+    }
+  }
+}
+
+/** Part du voisinage d'un point déjà couverte par des houppiers. */
+function recouvrementLocal(paniers: Map<number, Houppier[]>, x: number, y: number): number {
+  const key = Math.floor(y / PANIER_M) * 100_000 + Math.floor(x / PANIER_M);
+  const list = paniers.get(key);
+  if (!list) return 0;
+  let aire = 0;
+  for (const h of list) {
+    aire += aireCommune(h.r, RAYON_VOISINAGE_M, Math.hypot(h.x - x, h.y - y));
+  }
+  return aire / (Math.PI * RAYON_VOISINAGE_M * RAYON_VOISINAGE_M);
+}
+
 export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   const { trees, coteM, voisinage, partOmbrageante } = input;
   let rng = input.rng;
   let nextTreeId = input.nextTreeId;
   const newTrees: TreeState[] = [];
-  // Place déjà prise par les couronnes, m². Les semis qu'on ajoute comptent
-  // aussi : c'est ce qui empêche une année exceptionnelle d'en installer mille.
-  let couronnesM2 = 0;
-  const surfaceM2 = coteM * coteM;
-  const placeMaxM2 = RECOUVREMENT_MAX * surfaceM2;
+  // La place déjà prise, rangée par voisinage. Les semis qu'on ajoute y entrent
+  // aussi : c'est ce qui empêche une année exceptionnelle d'en installer mille
+  // au même endroit.
+  const paniers = new Map<number, Houppier[]>();
   for (const t of trees) {
     if (!t.alive) continue;
     const r = crownRadiusM(t.heightM, getEspece(t.especeId).lumiere.houppierRatio);
-    couronnesM2 += Math.PI * r * r;
+    if (r > 0) rangerHouppier(paniers, { x: t.x, y: t.y, r });
   }
 
   /**
@@ -295,7 +392,10 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       ? positionDeDrageon(rng, parent, coteM, espece)
       : drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
     rng = pos.rng;
-    if (couronnesM2 >= placeMaxM2) return;
+    // La place se dispute LÀ OÙ LA GRAINE TOMBE, et plus à l'échelle de la
+    // parcelle (#95). La lecture reste au même endroit du flux aléatoire :
+    // après le tirage de position, avant tout le reste.
+    if (recouvrementLocal(paniers, pos.x, pos.y) >= RECOUVREMENT_MAX) return;
     if (pos.x < 0 || pos.x >= coteM || pos.y < 0 || pos.y >= coteM) return; // perdu hors parcelle
     // Filtres écologiques : lumière ≥ 2 × compensation, pH dans la gamme. Le
     // drageon échappe au filtre lumière, et à lui seul : le pH du sol où il
@@ -320,9 +420,11 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       const dy = t.y - pos.y;
       if (dx * dx + dy * dy < MIN_SPACING_M * MIN_SPACING_M) return;
     }
-    couronnesM2 +=
-      Math.PI *
-      crownRadiusM(hauteurDuSemisM(espece.hauteurMaxM), espece.lumiere.houppierRatio) ** 2;
+    rangerHouppier(paniers, {
+      x: pos.x,
+      y: pos.y,
+      r: crownRadiusM(hauteurDuSemisM(espece.hauteurMaxM), espece.lumiere.houppierRatio),
+    });
     // Un semis naturel a sa vigueur propre, comme un plant de pépinière.
     const tirageVigueur = tirerVigueurIndividuelle(rng);
     rng = tirageVigueur.rng;

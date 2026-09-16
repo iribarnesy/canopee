@@ -243,7 +243,24 @@ describe("dans une partie, le réchauffement se voit", () => {
     let etpDebut = 0;
     let etpFin = 0;
     const morts: { especeId: string; cause: string }[] = [];
-    let pressionMax = 0;
+    /**
+     * Le sommet de la pullulation, RAPPORTÉ AUX HÔTES.
+     *
+     * `ravageurMoyen` est une moyenne sur TOUTES les cellules de la parcelle, y
+     * compris celles qui ne portent aucun arbre. Elle mélange donc deux choses
+     * que le réchauffement pousse en sens CONTRAIRES : le climat devient plus
+     * favorable aux ravageurs (`facteurChaleur`), et il y a de moins en moins
+     * d'hôtes à infester puisqu'il en tue. Le brut a fini par dire l'inverse du
+     * mécanisme sur la graine 23 (#95 : 1,54 / 0,98 / 1,47 ×), et pas parce que
+     * le lien chaleur-pullulation avait bougé — parce que le témoin figé de
+     * cette graine s'était mis à garder ses tiges.
+     *
+     * Divisé par le nombre de tiges vivantes, le confondant part et le signal
+     * devient franc sur les trois parties : 3,17 / 2,64 / 2,99 ×. Ce n'est pas
+     * une grandeur physique — c'est une NORMALISATION, qui rend les deux
+     * parties comparables en neutralisant ce qui les distingue par ailleurs.
+     */
+    let pressionParHoteMax = 0;
     for (let i = 0; i < ans * 52; i++) {
       const base = OBSERVATIONS[i % OBSERVATIONS.length];
       if (!base) throw new Error("météo manquante");
@@ -253,12 +270,16 @@ describe("dans une partie, le réchauffement se voit", () => {
       const r = advanceWeek(state, w, []);
       state = r.state;
       morts.push(...r.morts);
-      pressionMax = Math.max(pressionMax, r.fluxes.ravageurMoyen);
+      const vivantes = state.trees.filter((t) => t.alive).length;
+      pressionParHoteMax = Math.max(
+        pressionParHoteMax,
+        r.fluxes.ravageurMoyen / Math.max(1, vivantes),
+      );
       if (i < 5 * 52) etpDebut += r.fluxes.etpMm;
       if (i >= (ans - 5) * 52) etpFin += r.fluxes.etpMm;
     }
     return {
-      pressionMax,
+      pressionParHoteMax,
       etpDebut: etpDebut / 5,
       etpFin: etpFin / 5,
       hetresMortsDeSoif: morts.filter(
@@ -363,17 +384,38 @@ describe("dans une partie, le réchauffement se voit", () => {
     //
     // La PULLULATION, elle, résiste — c'est elle que la chaleur produit
     // directement (`facteurChaleur`), là où le compte de morts est un
-    // composite. Mesuré sur le code livré : 1,45 × / 1,35 × / 1,31 ×,
-    // directionnelle sur les trois parties. Éprouvée en neutralisant
-    // `facteurChaleur` : elle tombe — c'est le mécanisme qu'elle lit, pas le
-    // jeu de dés.
+    // composite. Éprouvée en neutralisant `facteurChaleur` : elle tombe —
+    // c'est le mécanisme qu'elle lit, pas le jeu de dés.
     //
-    // Que le réchauffement TUE est affirmé par l'essai suivant, sur le compte
-    // combiné soif + ravageurs (#93).
+    // MAIS ELLE SE MESURAIT PAR HABITANT DE LA PARCELLE, PAS PAR HÔTE (#95),
+    // et ça l'a rattrapée. `ravageurMoyen` est une moyenne sur toutes les
+    // cellules, y compris celles qui ne portent aucun arbre : elle mélange
+    // « le climat favorise les ravageurs » et « combien d'hôtes il reste », que
+    // le réchauffement pousse en sens CONTRAIRES. Le brut a tenu tant que les
+    // deux témoins se ressemblaient ; il a dit l'inverse du mécanisme le jour
+    // où le plafond de recouvrement est devenu local et où un peuplement qui
+    // s'éclaircit s'est mis à combler ses propres trouées — le témoin figé de
+    // la graine 23 garde alors ses tiges, donc ses hôtes, et le rapport tombe
+    // sous 1 sans que rien d'écologique ait bougé.
+    //
+    //                 brut (moyenne parcelle)   par hôte, au pic
+    //   graine 11            1,54 ×                  3,17 ×
+    //   graine 23            0,98 ×                  2,64 ×
+    //   graine 37            1,47 ×                  2,99 ×
+    //
+    // Divisée par les tiges vivantes, la pullulation est franche sur les trois
+    // parties et deux fois plus forte qu'au brut. Le seuil est posé à 2 — sous
+    // le minimum mesuré (2,64) pour laisser de la marge, très au-dessus de 1
+    // pour rester une affirmation.
+    //
+    // Que le réchauffement TUE est affirmé par l'essai suivant, sur ce qui
+    // reste DEBOUT de la cohorte plantée (#93, #84).
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
-      expect(c.pressionMax, `graine ${GRAINES[i]}`).toBeGreaterThan(1.25 * f.pressionMax);
+      expect(c.pressionParHoteMax, `graine ${GRAINES[i]}`).toBeGreaterThan(
+        2 * f.pressionParHoteMax,
+      );
     }
   });
 

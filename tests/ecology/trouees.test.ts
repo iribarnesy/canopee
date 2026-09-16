@@ -33,12 +33,22 @@
  * s'installer que dans une ouverture, le charme (0,03, donc 6 %) s'installe
  * aussi sous le couvert. Le charme est le TÉMOIN QU'IL Y A QUELQUE CHOSE À
  * MESURER : s'il ne recrutait nulle part, un « zéro bouleau sous couvert » ne
- * prouverait rien — la parcelle serait bloquée pour une tout autre raison, par
- * exemple le plafond de recouvrement des couronnes, qui est parcellaire et non
- * local. Ce plafond a d'ailleurs fait échouer la première version de cet essai :
- * une hêtraie plantée à trois mètres y atteint un recouvrement de 9, quatre
- * fois le plafond, et plus AUCUN semis ne s'installe nulle part — trouée
- * comprise.
+ * prouverait rien — la parcelle pourrait être bloquée pour une tout autre
+ * raison.
+ *
+ * ELLE L'ÉTAIT, ET C'EST CORRIGÉ (#95). Le plafond de recouvrement des
+ * couronnes se comptait sur la PARCELLE ENTIÈRE : une hêtraie plantée à trois
+ * mètres y atteint un recouvrement de 6 à 16 pour un plafond de 2,5, et plus
+ * aucun semis ne s'installait nulle part — trouée comprise, alors que la
+ * lumière y remontait à 1,00. La première version de cet essai est morte de ça,
+ * et l'écartement de HUIT mètres du `describe` ci-dessous est l'écartement de
+ * repli qu'il a fallu prendre : le seul qui reste sous le plafond parcellaire.
+ *
+ * Le plafond est devenu local, et le second `describe` plante donc à trois
+ * mètres — une futaie vraiment dense, qui était le cas intéressant et qui était
+ * hors de portée. Le dispositif de repli reste ici parce qu'il mesure autre
+ * chose et le mesure bien : sous un couvert PERMÉABLE, la trouée concentre et
+ * trie, là où le couvert serré, lui, oppose un zéro franc.
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
@@ -91,7 +101,7 @@ interface Comptage {
  * que subie parce qu'une mort tirée au sort ne tomberait pas au même endroit
  * d'une graine à l'autre — il n'y aurait plus rien à apparier.
  */
-function hetraie(seed: number, ouvrir: { x: number; y: number } | null): Comptage {
+function hetraie(seed: number, ouvrir: { x: number; y: number } | null, ecart = ECART): Comptage {
   const station = {
     ...LIMON_RICHE.station,
     coteM: COTE,
@@ -103,8 +113,8 @@ function hetraie(seed: number, ouvrir: { x: number; y: number } | null): Comptag
   };
   const meteo = syntheticYear(LIMON_RICHE.climat);
   let state: GameState = createGameState(station, rngStateFromSeed(seed));
-  for (let x = ECART / 2; x < COTE; x += ECART) {
-    for (let y = ECART / 2; y < COTE; y += ECART) {
+  for (let x = ecart / 2; x < COTE; x += ecart) {
+    for (let y = ecart / 2; y < COTE; y += ecart) {
       state = plantAt(state, "fagus_sylvatica", x, y, H_CANOPEE);
     }
   }
@@ -232,5 +242,63 @@ describe("une trouée dans un couvert fermé", () => {
     for (const p of parties) {
       expect(p.trouee.bouleauTrouee).toBeGreaterThan(p.fermee.bouleauTrouee);
     }
+  });
+});
+
+/**
+ * LA LIMITE ÉCRITE DE CET ESSAI EST TOMBÉE (#95).
+ *
+ * Le `describe` ci-dessus plante à HUIT mètres, et pas par choix : au-delà, le
+ * plafond de recouvrement — qui se comptait sur la PARCELLE ENTIÈRE — bloquait
+ * toute installation partout, trouée comprise. Une hêtraie serrée atteint un
+ * recouvrement de 6 à 16 pour un plafond de 2,5, et l'essai ne pouvait donc pas
+ * éprouver la trouée dans une futaie vraiment dense, qui est pourtant le cas
+ * intéressant. Il fallait même un garde-fou — une seconde espèce tolérante,
+ * dont la présence prouvait qu'il y avait quelque chose à mesurer — parce que
+ * sans lui un « zéro recrue sous couvert » aurait décroché le ✅ pour la
+ * mauvaise raison.
+ *
+ * Le plafond est devenu LOCAL. Cette futaie-ci est plantée à TROIS mètres, elle
+ * porte un recouvrement de 6,8 à 9,5, et elle n'a besoin d'aucun garde-fou :
+ * son témoin fermé ne recrute rien parce qu'il est vraiment fermé, et sa
+ * trouée recrute parce qu'elle est vraiment ouverte. C'est F7 sans détour.
+ */
+describe("une trouée dans un couvert VRAIMENT fermé", () => {
+  /** Trois mètres : le recouvrement dépasse trois fois le plafond. */
+  const SERRE = 3;
+  const parties: { seed: number; trouee: Comptage; fermee: Comptage }[] = [];
+
+  beforeAll(() => {
+    for (const seed of GRAINES) {
+      parties.push({
+        seed,
+        trouee: hetraie(seed, TROUEE, SERRE),
+        fermee: hetraie(seed, null, SERRE),
+      });
+    }
+  }, 600_000);
+
+  it("le couvert fermé ne recrute RIEN, et l'ouverture recrute", () => {
+    // Mesuré sur le code livré, recrues dans la zone (12,20) : 3 / 2 / 4 / 6 / 4
+    // avec la trouée, contre 0 / 0 / 0 / 0 / 0 sans elle — et la parcelle
+    // fermée entière n'en compte que 0 à 4. Aucun seuil n'est épinglé : ce qui
+    // est affirmé, c'est un zéro d'un côté et un non-zéro de l'autre, sur les
+    // cinq graines.
+    for (const p of parties) {
+      expect(p.fermee.trouee, `graine ${p.seed}`).toBe(0);
+      expect(p.trouee.trouee, `graine ${p.seed}`).toBeGreaterThan(0);
+    }
+  });
+
+  it("et le pionnier entre par là, alors qu'il n'entrait nulle part", () => {
+    // Le bouleau exige 50 % de lumière : sous ce couvert-là, il n'a aucune
+    // chance. Mesuré : 0 / 1 / 3 / 4 / 1 bouleaux dans la trouée. La direction
+    // ne peut pas s'exiger graine par graine — une trouée de huit mètres dans
+    // une futaie de quinze n'est pas toujours assez claire pour lui, et la
+    // graine 1 n'en installe aucun — mais le total, lui, est sans ambiguïté.
+    const dansLaTrouee = parties.reduce((s, p) => s + p.trouee.bouleauTrouee, 0);
+    const sousCouvert = parties.reduce((s, p) => s + p.fermee.bouleauTrouee, 0);
+    expect(sousCouvert).toBe(0);
+    expect(dansLaTrouee).toBeGreaterThan(3);
   });
 });

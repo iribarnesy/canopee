@@ -145,6 +145,17 @@ fois — pas trois copies d'une même intuition.
   collatéraux, ce sont les créanciers. Trois sont tombés ainsi (`tempete`,
   `feu`, `climat`), et les trois mesuraient effectivement la mauvaise chose.
 
+- **#95 est CLOSE, et la campagne a contredit l'issue sur un point.** Celle-ci
+  annonçait qu'un plafond local demanderait une autre valeur que le plafond
+  parcellaire ; la mesure dit le contraire, et pour une raison qui tient à la
+  grandeur elle-même — le recouvrement local MOYEN d'un peuplement homogène
+  égale son recouvrement global, parce qu'une moyenne de parts vaut la part de
+  la somme. Ce que la portée change n'est pas le niveau mais la VARIANCE.
+  Elle se trompait aussi sur la maille : celle de douze mètres de `light.ts`
+  convient comme INDEX et pas comme portée — à douze mètres le voisinage
+  recommence à voir la matrice et l'ouverture s'efface. Six, l'emprise d'un
+  houppier adulte.
+
 - **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
   l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à
   1 078 kg, soit 3 % SOUS le plancher des équations de biomasse aérienne de
