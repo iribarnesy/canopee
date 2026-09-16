@@ -86,9 +86,21 @@ chemin critique.** Un mécanisme de plus ne rapproche pas d'une version finie.
 
 ## Deux pièges de procédure, vérifiés à nos dépens
 
-**Le mot-clé de fermeture doit être dans le message de commit**, pas seulement
-dans le corps de la PR : le squash reprend le message du commit. L'issue #34 est
-restée ouverte après le merge de la PR qui la réglait.
+**Le mot-clé de fermeture doit être EN ANGLAIS.** GitHub ne reconnaît que
+`close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
+`resolves` / `resolved`. « Ferme #34 » ne ferme rien, où qu'on l'écrive.
+
+C'est la vraie cause de l'issue #34 restée ouverte après le merge de la PR qui
+la réglait — longtemps mise sur le compte du squash, à tort. Revérifié sur #80 :
+« Ferme #78, #83 et #98 » figurait à la fois dans le corps de la PR **et** dans
+le message du commit de squash, les trois issues sont restées ouvertes, et
+`closed_by_pull_requests` était vide. Écrire `Closes #78`, ou fermer à la main
+après la fusion.
+
+D'après la documentation GitHub — pas mesuré ici, faute d'avoir écrit un
+mot-clé anglais — un mot-clé valide est lu aussi bien dans le corps de la PR
+que dans un message de commit de la branche par défaut. Le squash n'est donc
+pas en cause.
 
 **Merger une base avec `--delete-branch` ferme les PR empilées dessus.** Arrivé
 deux fois (#24, #36). Repointer les filles d'abord : `gh pr edit <n> --base main`.
