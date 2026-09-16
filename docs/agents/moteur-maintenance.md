@@ -63,6 +63,20 @@ mécanisme : neutraliser le tirage et remesurer.
 - La CI est plus lente que la machine de dev. Deux tests ont eu besoin d'un
   `timeout` explicite (900 s et 600 s). Préférer allonger le délai à réduire
   l'échantillon.
+- **Compter une cohorte, c'est deux pièges.** Le moteur PURGE les morts de
+  `state.trees` une fois leur bois retourné au sol : un relevé des causes de
+  mort fait à la fin d'une partie n'en retrouve que les derniers tombés — 2 sur
+  314 dans la campagne de #65. La cause se lit à la semaine de la mort. Et
+  au-delà de la maturité, l'espèce se ressème : compter « les tiges vivantes »
+  mélange la cohorte plantée et ses propres descendants, ce qui masque
+  exactement la mortalité qu'on mesure. Ne compter que les ids initiaux.
+- **Une constante peut rendre un essai impossible sans qu'aucun essai le dise.**
+  Le plancher de lumière `exp(−MAX_EXTINCTION)` vaut 0,0111 et la compensation
+  du hêtre 0,01 : aucun hêtre ne peut mourir d'ombre, nulle part, jamais. Il a
+  fallu une campagne de cent vingt ans pour s'en apercevoir, là où comparer deux
+  nombres suffisait. Quand une simulation ne bouge pas, chercher d'abord si elle
+  PEUT bouger — `lumiere.test.ts` et `elancement.test.ts` portent maintenant ces
+  bornes-là, et elles ne coûtent rien.
 - **Et ce délai doit porter là où le temps passe.** Une campagne lancée dans le
   corps d'un `describe` tourne à la COLLECTE, que ni `testTimeout` ni un délai
   posé sur le `describe` ne couvrent : si elle s'emballe, la suite bloque au
@@ -100,16 +114,16 @@ fois — pas trois copies d'une même intuition.
 
 ## File d'attente
 
-- **#65** — le poids 0,4 des codominants dans `extinctionAt` (`light.ts`).
-  **La campagne est faite, et elle a RÉFUTÉ la cause annoncée.** Porter ce poids
-  à 1 — l'atténuation supprimée — fait passer les dominants d'une hêtraie serrée
-  de H/D 42,1 à 41,7 ; poids 1, seuil 0 et plafond d'extinction doublé
-  n'atteignent que 45,0. Ce qui bornait l'élancement est arithmétique et vit
-  dans `trees.ts` : c'est **#79**. Aucune ligne de code n'a été touchée, et c'est
-  la campagne qui l'a évité — le meilleur argument qu'on ait pour `à-mesurer`.
-  Ce qui RESTE de #65 : ce que ce poids fait à l'auto-éclaircie (B6) et à la
-  succession n'a pas été mesuré, une hêtraie de trente ans ne s'éclaircissant
-  pas assez pour trancher. L'issue vaut encore, sur cette question-là seulement.
+- **#65 est CLOSE, et sans qu'une ligne de moteur ait bougé.** Le poids 0,4 des
+  codominants ne porte rien de ce qu'on lui prêtait, et les deux campagnes l'ont
+  mesuré : ni l'élancement (poids porté à 1, les dominants passent de H/D 42,1 à
+  41,7), ni l'auto-éclaircie (terme ANNULÉ, une pineraie dense passe quand même
+  de 361 à 59-69 tiges en 120 ans contre 47-54), ni le tempo de la succession,
+  ni le tri des espèces. Ce qui éclaircit ce moteur, ce sont les RAVAGEURS et
+  les CHABLIS : sur ~310 morts, 205-244 et 55-98 contre 4-7 pour l'ombre.
+  Le verrou de l'élancement est parti dans #79, celui de la mortalité d'ombre
+  dans une issue d'évolution.
+
 - **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
   l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à
   1 078 kg, soit 3 % SOUS le plancher des équations de biomasse aérienne de

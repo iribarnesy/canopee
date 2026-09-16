@@ -30,8 +30,15 @@ const BUCKET_M = 12;
  * chevauchent et laissent des trouées de ciel, elles ne s'empilent pas en
  * couches parfaites. exp(−4,5) ≈ 1,1 % de lumière au sol — l'ordre de grandeur
  * mesuré sous les couverts les plus sombres *(à calibrer)*.
+ *
+ * EXPORTÉE parce qu'elle porte une conséquence qu'aucune simulation ne révèle :
+ * `exp(−MAX_EXTINCTION)` est le PLANCHER de lumière du moteur, et toute espèce
+ * dont le point de compensation passe dessous devient immortelle à l'ombre. Le
+ * hêtre (compensation 0,01 contre un plancher de 0,0111) est dans ce cas, et
+ * c'est pourquoi une hêtraie plantée à deux mètres garde ses 361 tiges au bout
+ * de cent vingt ans (#65). `lumiere.test.ts` épingle le rapport entre les deux.
  */
-const MAX_EXTINCTION = 4.5;
+export const MAX_EXTINCTION = 4.5;
 
 /** Rayon du houppier, m. */
 export function crownRadiusM(heightM: number, houppierRatio: number): number {
@@ -189,8 +196,28 @@ function extinctionAt(
   let extinction = 0;
   for (const s of list) {
     // Plus haut = ombrage plein ; codominant (dans les 25 % sous la cible) =
-    // ombrage latéral partiel. Sans lui, une cohorte dense de même hauteur ne
-    // se gênerait jamais et l'auto-éclaircie n'émergerait pas.
+    // ombrage latéral partiel.
+    //
+    // CE COMMENTAIRE JUSTIFIAIT LE TERME PAR L'AUTO-ÉCLAIRCIE — « sans lui, une
+    // cohorte dense de même hauteur ne se gênerait jamais et l'auto-éclaircie
+    // n'émergerait pas » — et la campagne de #65 a mesuré le contraire. Terme
+    // ANNULÉ (poids 0), une pineraie plantée à 2 m passe quand même de 361 à
+    // 59-69 tiges en cent vingt ans, contre 47-54 au poids d'aujourd'hui. Elle
+    // s'éclaircit donc sans lui, et à peine moins vite.
+    //
+    // Ce qui l'éclaircit n'est pas la lumière : sur ~310 morts, les RAVAGEURS en
+    // prennent 205 à 244 et les CHABLIS 55 à 98 ; l'ombre, 4 à 7. La mortalité
+    // densité-dépendante de ce moteur passe par la pression parasitaire et le
+    // vent. Le poids ne déplace ni l'élancement, ni l'auto-éclaircie, ni le
+    // tempo de la succession, ni le tri des espèces.
+    //
+    // Le terme reste — il est physiquement juste, un voisin de même taille
+    // ombrage bel et bien de côté — mais il ne porte AUCUNE des conclusions
+    // qu'on lui prêtait. Ce qui porte, c'est le SEUIL : le passer de 0,75 à 0
+    // effondre le peuplement (45 tiges au lieu de 276 à cent vingt ans). Ce
+    // n'est pas une piste de calibration pour autant, c'est une absurdité
+    // physique — à seuil nul, un semis de deux mètres ombrage une cime de
+    // vingt-cinq. Ça prouve seulement que le mécanisme est vivant.
     let weight: number;
     if (s.heightM > heightM) weight = 1;
     else if (s.heightM > 0.75 * heightM && s.heightM < heightM) weight = 0.4;
