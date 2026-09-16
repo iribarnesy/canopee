@@ -60,9 +60,10 @@
  *    arbres tués par le feu lui-même, et le corriger touche `feu.ts` plus que
  *    ce fichier.
  *  - **Le tri par l'élancement est faible**, et pour une raison mesurée
- *    ailleurs : le moteur ne produit que des H/D de 35 à 49 (#79), quand la
- *    sylviculture en mesure de 25 à 100. Le facteur d'élancement ci-dessous est
- *    donc écrit sur toute la gamme réelle mais n'en parcourt qu'un cinquième.
+ *    ailleurs : le moteur ne produit que des H/D de 35 à 49, quand la
+ *    sylviculture en mesure de 25 à 100. Deux causes ont été éliminées par la
+ *    mesure (#65, #79) ; celle qui reste est l'étiolement — une tige à l'ombre
+ *    stagne au lieu de filer (#97).
  */
 
 import { rngFloat, rngStateFromSeed } from "./rng";
@@ -185,9 +186,20 @@ export const PERTE_ELANCEMENT = 0.55;
  * sylviculture française : au-delà de 80 on parle de peuplement instable, en
  * dessous de 50 de peuplement ferme. La rampe est écrite sur cette gamme.
  *
- * **Elle ne discrimine presque pas, et ce n'est pas sa faute** : le moteur ne
- * produit que des H/D de 35 à 49 (#79), donc ce facteur ne descend jamais sous
- * 0,92. Quand l'amplitude sera ouverte, ce tri se mettra à parler tout seul.
+ * **`ELANCEMENT_CRITIQUE` est INATTEIGNABLE, et ce n'est pas la faute de ce
+ * fichier.** L'allocation d'ombre de `trees.ts` plafonne H/D à 80 : la moitié
+ * haute de cette rampe est donc du code mort, et en pratique le facteur ne
+ * descend jamais sous 0,92 puisque les peuplements ne produisent que 35 à 49.
+ *
+ * #79 a essayé d'ouvrir la fenêtre en descendant cette allocation, et la mesure
+ * l'a refusé : des tiges plus fines résistent moins au FEU, l'incendie leur
+ * vole les victimes que `climat.test.ts` compte pour montrer que le
+ * réchauffement tue, et une conclusion climatique se renversait pour quatre
+ * points d'amplitude. Le compte rendu est sur `ALLOCATION_DIAMETRE_OMBRE`.
+ *
+ * Ce qui ouvrira cette rampe est ailleurs : une tige à l'ombre doit FILER au
+ * lieu de stagner (#97). Le cadran est écrit sur la bonne gamme ; c'est
+ * l'aiguille qui n'y arrive pas.
  */
 export function facteurElancement(hauteurM: number, diametreCm: number): number {
   if (diametreCm <= 0) return 1;

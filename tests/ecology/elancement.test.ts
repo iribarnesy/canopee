@@ -8,10 +8,16 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { MAX_EXTINCTION } from "../../src/engine/light";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
+import {
+  ELANCEMENT_CRITIQUE,
+  ELANCEMENT_STABLE,
+  facteurElancement,
+} from "../../src/engine/tempete";
 import { tick } from "../../src/engine/tick";
 import { allocationDiametreCmParM, diametreInitialCm, elancement } from "../../src/engine/trees";
 
@@ -54,7 +60,7 @@ describe("la densité de plantation fait la forme de la tige", () => {
 
   it("plus on plante serré, plus la tige est élancée", () => {
     // Mesuré à 2 / 4 / 6 / 10 m d'écartement : H/D des dominants vaut
-    // 42,1 / 38,8 / 38,0 / 37,4. Le gradient est MONOTONE — serrer davantage
+    // 42,0 / 38,8 / 38,0 / 37,4. Le gradient est MONOTONE — serrer davantage
     // élance davantage, sans palier sur la gamme testée.
     expect(serre.elancementDom).toBeGreaterThan(moyen.elancementDom);
     expect(moyen.elancementDom).toBeGreaterThan(clair.elancementDom);
@@ -66,22 +72,30 @@ describe("la densité de plantation fait la forme de la tige", () => {
     expect(clair.diametreDom).toBeGreaterThan(serre.diametreDom);
   });
 
-  it("l'amplitude reste TROP FAIBLE, et j'avais accusé le mauvais coupable", () => {
+  it("l'amplitude reste TROP FAIBLE, et DEUX coupables ont été innocentés", () => {
     // La sylviculture mesure H/D de 25–40 pour un sujet de plein vent et de
-    // 90–100 pour une perche de plantation serrée. Le moteur couvre 35–49 : le
-    // bon ORDRE, un cinquième de l'étendue.
+    // 90–100 pour une perche de plantation serrée. Le moteur couvre 37–53.
     //
-    // CE COMMENTAIRE DÉSIGNAIT `light.ts` ET IL AVAIT TORT. Il accusait le
-    // poids 0,4 des codominants (#65) : en plantation régulière tout le monde
-    // est codominant de tout le monde, donc la concurrence latérale serait
-    // atténuée là où elle est la plus forte. C'était plausible et c'est faux.
-    // La campagne de #65 a porté ce poids à 1 — l'atténuation supprimée — et
-    // les dominants de la hêtraie à 2 m sont passés de H/D 42,1 à 41,7. Avec en
-    // plus le seuil à 0 (tout voisin plus court ombrage à plein) et le plafond
-    // d'extinction doublé : 45,0. Rien dans `light.ts` n'ouvre cette amplitude.
+    // CE COMMENTAIRE A ACCUSÉ DEUX FOIS, ET S'EST TROMPÉ DEUX FOIS.
     //
-    // Ce qui borne, c'est la paire d'allocation de CE fichier, et c'est de
-    // l'arithmétique — d'où l'essai suivant, qui l'épingle.
+    // D'abord `light.ts` et le poids 0,4 des codominants (#65) : porter ce poids
+    // à 1 déplace les dominants serrés de H/D 42,1 à 41,7, et pousser les trois
+    // constantes de la lumière à fond n'atteint que 45,0.
+    //
+    // Ensuite la paire d'allocation de CE fichier (#79). Elle borne bien une
+    // FENÊTRE — [40 ; 80] — mais une fenêtre n'est pas une amplitude : ouverte
+    // à [40 ; 100] elle ne gagne que 49 → 53, et poussée à l'absurde
+    // ([40 ; 200], allocation d'ombre 0,5) la même hêtraie ne monte qu'à 38–62.
+    // Le PIN, héliophile et censé faire les perches, est plus plat encore
+    // (41,0 à 2 m contre 38,9 à 10 m). L'ouverture a d'ailleurs été essayée puis
+    // rendue : voir `ALLOCATION_DIAMETRE_OMBRE`.
+    //
+    // Le vrai verrou est que H/D est une INTÉGRALE : une plantation est ouverte
+    // ses premières années, le diamètre posé alors est acquis, et un semis naît
+    // déjà à H/D 50. Atteindre 90–100 demanderait un arbre qui monte VITE en
+    // restant à l'ombre — l'étiolement, que ce moteur ne sait pas faire puisque
+    // l'ombre rabote la pousse totale au lieu de la rediriger. C'est une
+    // évolution, pas un réglage, et cet essai FIXE l'insuffisance en attendant.
     expect(serre.elancementDom).toBeLessThan(60);
   });
 });
@@ -109,23 +123,32 @@ describe("ce que la paire d'allocation rend ATTEIGNABLE", () => {
     // Mesuré sur le code livré : 40,1 en pleine lumière, 78,5 sous
     // exp(−MAX_EXTINCTION), la lumière la plus faible que `light.ts` produise.
     const auLarge = elancementApresUneVie(1);
-    const sousCouvert = elancementApresUneVie(Math.exp(-4.5));
+    const sousCouvert = elancementApresUneVie(Math.exp(-MAX_EXTINCTION));
     expect(auLarge).toBeGreaterThan(39);
     expect(auLarge).toBeLessThan(42);
     expect(sousCouvert).toBeGreaterThan(75);
     expect(sousCouvert).toBeLessThan(80);
   });
 
-  it("donc 90–100 est hors d'atteinte, et 25 aussi : la sylviculture déborde des deux côtés", () => {
-    // L'énoncé de E10 demande 25–40 au large et 90–100 en perche. Les deux
-    // bouts sont HORS de ce que ces constantes permettent, quelle que soit la
-    // lumière. Tant que cette assertion tient, le critère ne peut pas passer ✅,
-    // et ce n'est pas en réglant l'ombrage qu'on le fera passer.
+  it("et la tempête lit une gamme que le moteur n'atteint PAS : la rampe est à moitié morte", () => {
+    // Le défaut que #79 a trouvé et n'a pas pu réparer, épinglé ici pour qu'il
+    // ne se reperde pas. `facteurElancement` (tempete.ts) interpole entre
+    // ELANCEMENT_STABLE (40) et ELANCEMENT_CRITIQUE (100), deux valeurs de la
+    // sylviculture européenne. Or l'allocation d'ombre plafonne H/D à 79 : la
+    // moitié haute de cette rampe ne peut JAMAIS servir.
     //
-    // Élargir la fenêtre demande d'écarter la paire en gardant sa médiane à 2 —
-    // l'ancre de volume — par exemple 1,0 / 3,0, qui donne [33 ; 100].
-    expect(elancementApresUneVie(0)).toBeLessThan(90);
-    expect(elancementApresUneVie(1)).toBeGreaterThan(25);
+    // Descendre l'allocation d'ombre ouvre bien la fenêtre, et ç'a été essayé :
+    // des tiges plus fines résistent moins au feu, l'incendie vole ses victimes
+    // aux causes que `climat.test.ts` compte, et une conclusion climatique se
+    // renverse pour quatre points d'amplitude. C'est #97 (l'étiolement) qui
+    // lèvera ça, en faisant filer les dominés au lieu de les faire stagner.
+    //
+    // Le jour où cet essai tombera, c'est que la rampe sera devenue utile.
+    const sousCouvert = elancementApresUneVie(Math.exp(-MAX_EXTINCTION));
+    expect(sousCouvert).toBeGreaterThan(ELANCEMENT_STABLE);
+    expect(sousCouvert).toBeLessThan(ELANCEMENT_CRITIQUE);
+    // Ce que la rampe rend au mieux aujourd'hui, contre les 0,45 qu'elle prévoit.
+    expect(facteurElancement(20, (100 * 20) / sousCouvert)).toBeGreaterThan(0.6);
   });
 
   it("et le gradient va bien dans le sens de la lumière, sans trou", () => {
