@@ -61,7 +61,54 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le sanglier, #73)
+## Ce que le dernier lot a appris (l'étiolement, #97)
+
+**Chercher la GARANTIE D'IDENTITÉ avant d'écrire le mécanisme.** Le partage
+hauteur/diamètre a été construit pour redonner l'ancien calcul, au dernier
+chiffre près, dès que la lumière n'est pas le facteur limitant. Ce n'est pas une
+élégance : c'est ce qui borne le rayon d'explosion à la population visée, et ça
+se teste (`toBeCloseTo(..., 9)`). Un seul essai du dépôt a bougé sur 870, sur un
+lot qui touche la croissance de tous les arbres. **Se demander systématiquement
+sur quel sous-ensemble le nouveau mécanisme doit être l'identité, et l'épingler
+par un essai.**
+
+**Dériver le mécanisme d'une fonction que le moteur possède déjà, plutôt
+qu'inventer une loi.** Le budget de bois n'est pas approché : c'est la dérivée
+de `volumeTigeM3`, avec laquelle le moteur vend déjà le bois. Zéro constante
+nouvelle pour la partie « partage », et une propriété qui se démontre au lieu de
+se calibrer — le lot n'ajoute pas un gramme de matière.
+
+**Un équilibre de FLUX n'est pas un équilibre de RATIO, et je me suis trompé
+de point fixe.** J'avais calculé l'élancement d'équilibre en annulant le terme
+qui change de régime (« le bois suffit à payer l'allongement plein ») : H/D 75.
+La mesure a donné 166 et ça montait. Le bon calcul annule la dérivée du
+RAPPORT, c'est-à-dire égalise les croissances *relatives* : H/D 295. **Quand on
+cherche où une proportion se stabilise, dériver la proportion — pas repérer où
+un minimum bascule.** Et, comme toujours ici : mesurer avant de croire son
+propre calcul.
+
+**Un mécanisme qui REDIRIGE a besoin de sa butée.** Le partage seul s'emballe.
+La butée n'était pas dans l'issue, elle est venue de la mesure, et elle est
+physique : une tige trop élancée flambe. Un mécanisme qui déplace une ressource
+d'un puits vers un autre doit se demander ce qui arrête le puits favorisé.
+
+**Le zéro dur, quatrième occurrence — et cette fois il est VOULU.** Sous l'ombre,
+le résidu laissé au diamètre est exactement nul, et c'est juste : c'est le cerne
+manquant d'une tige dominée. La règle s'affine donc au lieu de s'appliquer en
+bloc : **un zéro dur est acceptable quand il a une porte de sortie.** Ici
+l'enveloppe de flambage : la tige finit par la rencontrer, et tout son bois
+repart alors au diamètre. Vérifier la porte, pas seulement le zéro.
+
+**Un essai peut mesurer la bonne chose avec la mauvaise grandeur.** L'effet
+nurse lisait la HAUTEUR du chêne-liège en la prenant pour de la vigueur. Le lot
+a séparé les deux : le sujet collé à sa nurse est devenu le plus HAUT des trois
+et huit fois plus chétif (H/D 90). La conclusion écologique tenait — mesurée en
+volume, elle est identique avant et après — mais le thermomètre était faux.
+**Quand un mécanisme change ce que signifie une grandeur, relire les essais qui
+la lisent, pas seulement ceux qui échouent.** Celui-là échouait ; combien
+passaient pour la mauvaise raison ?
+
+## Ce qu'un lot plus ancien a appris (le sanglier, #73)
 
 **Refuser la généralisation que l'issue demande, quand elle ne décrirait rien.**
 L'issue proposait d'élargir `gibier.ts` pour y loger le sanglier. Ce module est
@@ -109,7 +156,7 @@ extrême à l'autre pour un centième de rien.** Préférer une forme exponentie
 qui dit « presque plus rien » sans dire « plus jamais », et la chercher
 systématiquement dans tout nouveau mécanisme.
 
-## Ce que l'avant-dernier lot a appris (la dérive du pH, #71)
+## Ce qu'un lot plus ancien a appris (la dérive du pH, #71)
 
 **Remplacer un ÉTAT par une LECTURE, quand c'en est une.** Le pH était une
 variable libre ; il est devenu le taux de saturation d'un pool de bases. Le
@@ -247,6 +294,21 @@ montre — un gradient monotone sur trois couverts — et non ce qu'on espérait
 
 ## File d'attente
 
+**#96 — la mort par bilan carbone négatif, et c'est le plus gros gain
+disponible.** Rien ne meurt de manquer de lumière : sur une cohorte de pins
+suivie cent vingt ans, l'ombre tue 4 à 7 tiges quand les ravageurs en prennent
+205 à 244. Et le hêtre ne meurt JAMAIS d'ombre — 361 plantés, 361 vivants à cent
+vingt ans, soit 2 256 tiges/ha quand le réel en porte 200 à 300 — parce que son
+seuil de stress (0,0090) passe sous le plancher de lumière du moteur (0,0111).
+L'issue démontre que ce n'est pas une calibration à retoucher : un seuil
+INSTANTANÉ ne peut pas représenter un épuisement qui prend des années. Deux
+pièges y sont écrits : ne pas EMPILER cette mortalité sur celle des ravageurs
+(ce sont des risques concurrents), et caler sur une courbe de densité de
+peuplement équienne, pas sur un seuil choisi pour que la hêtraie tombe à 300.
+**#97 est son préalable et il est fait** : une tige s'étiole avant de s'épuiser,
+et la calibration du budget carbone se fera donc sur un peuplement dont la forme
+est enfin juste.
+
 **Ce qui reste de #71 — la pompe à bases (C15, ❌).** Le pool de bases est de
 SURFACE, comme ceux de N, P et K. Le moteur dit donc qu'un frêne entretient son
 horizon de surface, et rien de ce qu'il prend en dessous — alors que c'est par
@@ -271,10 +333,14 @@ d'après-éclaircie, qui demande une mémoire par arbre de l'ouverture récente 
 rendrait dangereuse une éclaircie tardive et forte ; **F17**, la casse
 partielle, qui demande un état « blessé » sur l'arbre.
 
-Et une réserve héritée : le tri par l'élancement est écrit sur toute la gamme
-réelle (H/D de 25 à 100) mais le moteur n'en produit qu'un cinquième, 35 à 49
-(#79, et #65 pour la cause). Le jour où l'amplitude s'ouvre, ce tri se met à
-parler sans qu'on y touche.
+La réserve héritée sur l'élancement, elle, est **levée** : #97 a ouvert
+l'amplitude (H/D 39–129 en hêtraie serrée à quatre-vingts ans), et le tri par le
+vent s'est mis à parler tout seul, comme annoncé — cinq tiges couchées là où
+aucune ne tombait. Ce qui reste est l'autre bout de la gamme : au large le
+moteur donne 35–38 quand le réel descend à 25, ce que l'allocation de pleine
+lumière (2,5 cm/m) interdit. C'est une calibration, donc de la maintenance, et
+elle déplace le VOLUME du peuplement autant que la forme — à ne pas toucher sans
+refaire le calage du volume.
 
 **#58 — le vent dans la propagation et dans la chute.** Deux endroits où le vent
 existe désormais (`src/engine/vent.ts`) mais n'agit pas : `propager` s'étale en

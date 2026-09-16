@@ -40,10 +40,20 @@ function hetraie(ecartM: number) {
   const tri = [...vivants].sort((a, b) => b.heightM - a.heightM);
   const dom = tri.slice(0, Math.max(1, Math.round(tri.length * 0.2)));
   const moyenne = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
+  const parElancement = [...vivants].sort(
+    (a, b) => elancement(b.diametreCm, b.heightM) - elancement(a.diametreCm, a.heightM),
+  );
+  const perche = parElancement[0];
+  if (!perche) throw new Error("peuplement vide");
+  const hMax = tri[0]?.heightM ?? 1;
   return {
     tiges: vivants.length,
     elancementDom: moyenne(dom.map((t) => elancement(t.diametreCm, t.heightM))),
     diametreDom: moyenne(dom.map((t) => t.diametreCm)),
+    /** l'élancement de la tige la plus élancée du peuplement */
+    elancementMax: elancement(perche.diametreCm, perche.heightM),
+    /** où cette tige-là se situe dans le peuplement : 1 = c'est la plus haute */
+    rangDeLaPerche: perche.heightM / hMax,
   };
 }
 
@@ -53,9 +63,9 @@ describe("la densité de plantation fait la forme de la tige", () => {
   const clair = hetraie(10);
 
   it("plus on plante serré, plus la tige est élancée", () => {
-    // Mesuré à 2 / 4 / 6 / 10 m d'écartement : H/D des dominants vaut
-    // 42,1 / 38,8 / 38,0 / 37,4. Le gradient est MONOTONE — serrer davantage
-    // élance davantage, sans palier sur la gamme testée.
+    // Mesuré à 2 / 4 / 10 m d'écartement, H/D des dominants : 44,8 / 41,1 /
+    // 37,4. Le gradient est MONOTONE — serrer davantage élance davantage, sans
+    // palier sur la gamme testée.
     expect(serre.elancementDom).toBeGreaterThan(moyen.elancementDom);
     expect(moyen.elancementDom).toBeGreaterThan(clair.elancementDom);
   });
@@ -66,21 +76,29 @@ describe("la densité de plantation fait la forme de la tige", () => {
     expect(clair.diametreDom).toBeGreaterThan(serre.diametreDom);
   });
 
-  it("l'amplitude reste TROP FAIBLE, et la cause est ailleurs", () => {
-    // La sylviculture mesure H/D de 25–40 pour un sujet de plein vent et de
-    // 90–100 pour une perche de plantation serrée. Le moteur couvre 35–49 : le
-    // bon ORDRE, un cinquième de l'étendue.
+  it("le peuplement serré FABRIQUE des perches, le peuplement clair n'en fait aucune", () => {
+    // C'est l'amplitude, et elle a longtemps manqué. La sylviculture mesure
+    // H/D 25–40 pour un sujet de plein vent et 90–100 pour une perche de
+    // plantation serrée ; le moteur ne couvrait que 35–49 — le bon ordre, un
+    // cinquième de l'étendue — parce que l'ombre rabotait la pousse au lieu de
+    // déplacer l'arbitrage (étiolement, #97).
     //
-    // La cause est identifiée et ANTÉRIEURE à l'élancement : dans
-    // `light.ts:extinctionAt`, un codominant n'ombrage qu'au poids 0,4 contre 1
-    // pour un dominant — or en plantation régulière tout le monde est
-    // codominant de tout le monde, soit précisément le cas où la concurrence
-    // latérale est la plus forte dans la réalité.
+    // Mesuré maintenant, à trente ans : la tige la plus élancée vaut H/D 87 à
+    // 2 m d'écartement, 59 à 4 m, 38 à 10 m. À quatre-vingts ans la hêtraie
+    // serrée monte à 129. L'étendue est couverte.
+    expect(serre.elancementMax).toBeGreaterThan(80);
+    expect(clair.elancementMax).toBeLessThan(45);
+  });
+
+  it("et la perche est un arbre de MILIEU DE CANOPÉE, pas un nabot", () => {
+    // Le contrôle qui distingue l'étiolement d'un simple rabougrissement. Une
+    // tige dominée qui stagne finit TRAPUE : elle garde le H/D 50 de sa
+    // naissance. Celle qui file est à mi-hauteur du peuplement — elle a encore
+    // de quoi courir après la lumière, et c'est elle qui casse au vent.
     //
-    // Ce coefficient gouverne aussi l'auto-éclaircie, la succession et le tri
-    // des espèces : le bouger déplacerait toutes les conclusions écologiques du
-    // dépôt d'un coup. Cet essai FIXE donc l'insuffisance au lieu de la taire,
-    // pour qu'elle soit retrouvée le jour où ce lot-là sera pris.
-    expect(serre.elancementDom).toBeLessThan(60);
+    // Mesuré : la plus élancée est à 62 % de la hauteur du plus haut à 2 m
+    // d'écartement, contre 84 % à 10 m (où il n'y a plus de perche du tout).
+    expect(serre.rangDeLaPerche).toBeGreaterThan(0.4);
+    expect(serre.rangDeLaPerche).toBeLessThan(0.85);
   });
 });
