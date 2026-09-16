@@ -77,6 +77,15 @@ mécanisme : neutraliser le tirage et remesurer.
   nombres suffisait. Quand une simulation ne bouge pas, chercher d'abord si elle
   PEUT bouger — `lumiere.test.ts` et `elancement.test.ts` portent maintenant ces
   bornes-là, et elles ne coûtent rien.
+- **Un témoin pris APRÈS le tri n'est pas un témoin.** `tempete.test.ts` posait
+  en hypothèse que les deux peuplements « arrivent à taille comparable », et le
+  vérifiait sur la hauteur des SURVIVANTS à soixante ans — c'est-à-dire après
+  que la tempête a emporté les plus grands. « Le pin était petit » et « le pin
+  s'est fait coucher » y étaient la même mesure, si bien que l'hypothèse tombait
+  d'autant plus vite que la conclusion était vraie. La hauteur ATTEINTE, relevée
+  semaine après semaine, dit ce que la phrase voulait dire. Règle générale :
+  quand un essai mesure un tri, sa prémisse se relève avant le tri, ou sur le
+  témoin non trié (ici, la parcelle abritée).
 - **Et ce délai doit porter là où le temps passe.** Une campagne lancée dans le
   corps d'un `describe` tourne à la COLLECTE, que ni `testTimeout` ni un délai
   posé sur le `describe` ne couvrent : si elle s'emballe, la suite bloque au
@@ -123,6 +132,18 @@ fois — pas trois copies d'une même intuition.
   les CHABLIS : sur ~310 morts, 205-244 et 55-98 contre 4-7 pour l'ombre.
   Le verrou de l'élancement est parti dans #79, celui de la mortalité d'ombre
   dans une issue d'évolution.
+
+- **#84 est CLOSE, et elle a coûté trois essais d'autres lots.** Le plancher
+  racinaire valait 0,35 du potentiel à tout âge : un hêtre de vingt mètres
+  jamais assoiffé avait les racines d'un semis (44 cm). Il croît maintenant avec
+  la maturité (0,35 → 0,80, `partPlancherRacines`), l'extrémité jeune
+  inchangée, et le seuil d'ancrage de `tempete.ts` est REVENU à sa valeur
+  mesurée (6 % au lieu du pansement à 4 %). La leçon de méthode est là :
+  `tempete.ts` écrivait noir sur blanc « le vrai sujet est ailleurs, issue
+  #84 » — une constante calée pour compenser le défaut d'un autre fichier est
+  une DETTE, et les essais qui tombent quand on la solde ne sont pas des dégâts
+  collatéraux, ce sont les créanciers. Trois sont tombés ainsi (`tempete`,
+  `feu`, `climat`), et les trois mesuraient effectivement la mauvaise chose.
 
 - **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
   l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à

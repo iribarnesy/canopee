@@ -128,10 +128,24 @@ describe("ce qui décide qu'un arbre verse", () => {
     // soixante-quatre dans `lumiere.test.ts`, un fichier qui ne parle pas de
     // vent.
     //
-    // Un hêtre de quarante ans entraîné par la sécheresse (95 cm à 16 m) :
-    expect(facteurAncrage(95, 16)).toBe(1);
-    // Le même sur un site jamais sec (44 cm à 20 m) : pénalisé, pas condamné.
-    expect(facteurAncrage(44, 20)).toBeGreaterThan(0.85);
+    //
+    // LES DEUX POPULATIONS ONT ÉTÉ REMESURÉES (#84), parce que celle de
+    // gauche était un artefact : le plancher racinaire traitait un arbre mûr
+    // comme un semis, et le hêtre jamais assoiffé ne tenait que 44 cm à 20 m
+    // (ratio 0,022). Plancher corrigé, quatre-vingt-dix ans de croissance,
+    // graine 7, hêtre isolé sur limon riche :
+    //
+    //                         30 ans            60 ans            90 ans
+    //   série (été sec)   5,9 m /  60 cm    13,3 m / 87 cm    16,4 m / 96 cm
+    //                       ratio 0,101         0,065             0,059
+    //   site jamais sec   9,0 m /  43 cm    16,9 m / 72 cm    20,5 m / 79 cm
+    //                       ratio 0,048         0,043             0,039
+    //
+    // Un hêtre de quatre-vingt-dix ans entraîné par la sécheresse :
+    expect(facteurAncrage(96, 16.4)).toBeGreaterThan(0.99);
+    // Le même sur un site jamais sec : sept points de moins, pas condamné.
+    expect(facteurAncrage(79, 20.5)).toBeGreaterThan(0.9);
+    expect(facteurAncrage(79, 20.5)).toBeLessThan(facteurAncrage(96, 16.4));
     // Et l'ancrage n'est pas le terme dominant : au pire il retire un
     // cinquième, quand la prise au vent en retire plus d'un tiers.
     expect(facteurAncrage(0, 25)).toBe(0.8);
@@ -210,11 +224,23 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
   let verses = 0;
   let volumeM3 = 0;
   const semaines: number[] = [];
+  /**
+   * La plus grande hauteur ATTEINTE, relevée semaine après semaine, et pas
+   * celle des survivants à la fin. La seconde est contaminée par ce que l'essai
+   * cherche justement à mesurer : un peuplement que la tempête décapite finit
+   * avec des survivants courts, donc « il était petit » et « il s'est fait
+   * coucher » deviennent la même phrase. Ce qu'on veut savoir est si les deux
+   * espèces ont atteint une taille comparable AVANT que le vent ne trie.
+   */
+  let hMaxAtteint = 0;
   for (let i = 0; i < 60 * 52; i++) {
     const w = METEO[i % METEO.length];
     if (!w) throw new Error("météo manquante");
     const r = advanceWeek(state, w, []);
     state = r.state;
+    for (const t of state.trees) {
+      if (t.alive && t.heightM > hMaxAtteint) hMaxAtteint = t.heightM;
+    }
     if (!r.tempete) continue;
     tempetes++;
     verses += r.tempete.arbresVerses;
@@ -227,6 +253,7 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
     verses,
     volumeM3,
     semaines,
+    hMaxAtteint,
     hMax: Math.max(0, ...vivants.map((t) => t.heightM)),
   };
 }
@@ -259,8 +286,13 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       const hetre = soixanteAns("fagus_sylvatica", graine, 1);
       // Les deux peuplements arrivent à taille comparable : ce qui les sépare
       // au vent n'est pas leur hauteur, c'est leur feuillage de janvier.
-      expect(pin.hMax).toBeGreaterThan(10);
-      expect(hetre.hMax).toBeGreaterThan(10);
+      //
+      // Se lit sur la hauteur ATTEINTE, pas sur celle des survivants (#84) :
+      // la seconde disait 9,3 m pour le pin, ce qui n'est pas « le pin reste
+      // petit » mais « la tempête lui a pris ses plus grands » — soit la
+      // conclusion de l'essai déguisée en son hypothèse.
+      expect(pin.hMaxAtteint).toBeGreaterThan(10);
+      expect(hetre.hMaxAtteint).toBeGreaterThan(10);
       expect(pin.verses).toBeGreaterThan(3 * Math.max(1, hetre.verses));
       expect(pin.volumeM3).toBeGreaterThan(hetre.volumeM3);
       // Et les tempêtes sont des événements d'hiver. Pas « jamais en été » :

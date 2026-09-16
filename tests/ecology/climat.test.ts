@@ -9,7 +9,7 @@
  * plus le même.
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import {
   amplificationFrance,
@@ -231,6 +231,14 @@ describe("dans une partie, le réchauffement se voit", () => {
     let state = createGameState(station, rngStateFromSeed(graine));
     state = plantScattered(state, "fagus_sylvatica", 60);
     state = plantScattered(state, "quercus_pubescens", 60);
+    /**
+     * Les ids des cent vingt arbres PLANTÉS. Au-delà de la maturité les deux
+     * espèces se ressèment, et un climat plus chaud allonge la saison de
+     * végétation donc en installe davantage : compter « les tiges vivantes »
+     * mélangerait la cohorte et ses descendants, ce qui masque exactement la
+     * mortalité qu'on mesure.
+     */
+    const cohorte = new Set(state.trees.map((t) => t.id));
     const scenario = getScenario(scenarioId);
     let etpDebut = 0;
     let etpFin = 0;
@@ -256,12 +264,13 @@ describe("dans une partie, le réchauffement se voit", () => {
       hetresMortsDeSoif: morts.filter(
         (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
       ).length,
-      mortsRavageurs: morts.filter((m) => m.cause === "ravageurs").length,
-      // Les DEUX voies par lesquelles le réchauffement tue, comptées ensemble.
-      // Séparées, elles se volent leurs victimes : un arbre ne meurt qu'une
-      // fois et sa mort n'est imputée qu'à UNE cause (#93).
-      mortsChaleur: morts.filter((m) => m.cause === "secheresse" || m.cause === "ravageurs").length,
-      hetresVivants: state.trees.filter((t) => t.alive && t.especeId === "fagus_sylvatica").length,
+      // Ce qui reste DEBOUT de la cohorte plantée : la grandeur directe, celle
+      // qu'aucune imputation de cause ne peut déplacer (#84).
+      cohorteDebout: state.trees.filter((t) => t.alive && cohorte.has(t.id)).length,
+      hetresDebout: state.trees.filter(
+        (t) => t.alive && cohorte.has(t.id) && t.especeId === "fagus_sylvatica",
+      ).length,
+      cohorte: cohorte.size,
     };
   }
 
@@ -282,14 +291,24 @@ describe("dans une partie, le réchauffement se voit", () => {
       etpDebut: moyen((r) => r.etpDebut),
       etpFin: moyen((r) => r.etpFin),
       hetresMortsDeSoif: moyen((r) => r.hetresMortsDeSoif),
-      mortsRavageurs: moyen((r) => r.mortsRavageurs),
-      mortsChaleur: moyen((r) => r.mortsChaleur),
-      hetresVivants: moyen((r) => r.hetresVivants),
+      cohorteDebout: moyen((r) => r.cohorteDebout),
+      hetresDebout: moyen((r) => r.hetresDebout),
     };
   }
 
-  const fige = moyenneSurGraines("stable", 60);
-  const chauffe = moyenneSurGraines("ssp585", 60);
+  /**
+   * La campagne tourne dans un `beforeAll`, pas dans le corps du `describe`.
+   * Lancée à la COLLECTE, elle n'est couverte par aucun délai — ni
+   * `testTimeout`, ni un délai posé sur le `describe` — et une campagne qui
+   * s'emballe bloque la suite au lieu de la faire échouer
+   * (docs/agents/moteur-maintenance.md).
+   */
+  let fige: ReturnType<typeof moyenneSurGraines>;
+  let chauffe: ReturnType<typeof moyenneSurGraines>;
+  beforeAll(() => {
+    fige = moyenneSurGraines("stable", 60);
+    chauffe = moyenneSurGraines("ssp585", 60);
+  }, 900_000);
 
   it("la demande en eau de l'atmosphère monte bien plus vite qu'avec le seul climat observé", () => {
     // À noter : même « figée », la parcelle voit l'ETP monter de 16 % en
@@ -358,46 +377,56 @@ describe("dans une partie, le réchauffement se voit", () => {
     }
   });
 
-  it("et il TUE : soif et ravageurs comptés ensemble, sur chacune des trois parties", () => {
+  it("et il TUE : la cohorte plantée compte moins de tiges debout, sur chacune des trois parties", () => {
     // La pullulation seule ne dit pas que le réchauffement tue. Ce maillon-là
-    // s'était perdu (#93), et il se rattrape ici — en comptant ENSEMBLE les
-    // deux voies par lesquelles la chaleur tue, au lieu d'en regarder une.
+    // s'était perdu (#93) et il se rattrape ici — mais PAS avec l'instrument
+    // qu'on lui avait d'abord donné.
     //
-    // POURQUOI ENSEMBLE. Un arbre ne meurt qu'une fois et sa mort n'est
-    // imputée qu'à UNE cause. Compter la seule case « ravageurs » revient donc
-    // à soustraire les arbres que la sécheresse a pris de vitesse : le
-    // réchauffement pousse ce compte dans les deux sens à la fois. Le chiffre
-    // qui en résulte oscille d'un lot de mécanisme à l'autre — il a déjà
-    // inversé sa direction sur une graine, puis l'a retrouvée deux lots plus
-    // tard, sans que le lien entre chaleur et mortalité ait bougé. Les compter
-    // ensemble supprime ce vase communicant.
+    // CE QU'ON MESURAIT, ET POURQUOI C'ÉTAIT FAUX (#84). L'essai comptait le
+    // rapport des morts « soif + ravageurs », figé contre chauffé. Additionner
+    // les deux voies devait supprimer le vase communicant — un arbre ne meurt
+    // qu'une fois et sa mort n'est imputée qu'à UNE cause — mais ça ne fait que
+    // le déplacer : le FEU, les chablis, l'ombre puisent dans le même bassin de
+    // victimes, et le moindre lot de mécanisme qui change l'un des trois
+    // rejoue le partage. Le rapport avait déjà inversé sa direction sur une
+    // graine (#93), il est tombé avec la paire d'allocation (#79 : 4,00 → 1,09
+    // sur la seule graine 23), il est retombé avec le plancher racinaire.
+    // Trois lots, trois chutes, et jamais parce que le lien entre chaleur et
+    // mortalité avait bougé. `docs/realisme.md` le dit dans « ce qu'un test
+    // écologique a le droit d'affirmer » : un rapport entre quantités
+    // COMPOSITES n'est pas une propriété du monde.
     //
-    // Campagne de #93, morts figé → chauffé, soixante ans, trois parties :
+    // CE QU'ON MESURE MAINTENANT est la grandeur directe, celle qu'aucune
+    // imputation de cause ne peut déplacer : combien des CENT VINGT arbres
+    // plantés sont encore debout à soixante ans. Un arbre debout est debout
+    // quelle que soit la case qui l'aurait tué. La cohorte est suivie par ses
+    // ids, pas par un compte d'espèce : au-delà de la maturité le peuplement se
+    // ressème, et un climat chaud installe plus de semis — un peuplement qui
+    // perd plus d'arbres peut très bien en compter plus.
+    //
+    // Campagne de #84, soixante ans, trois parties, figé → chauffé :
     //
     //                      graine 11      graine 23      graine 37
-    //   sécheresse           2 →  16       0 →  61        2 →  32
-    //   ravageurs           24 →  33      23 →  31       19 →  37
-    //   ─────────────────────────────────────────────────────────────
-    //   ENSEMBLE            26 →  49      23 →  92       21 →  69
-    //                        1,88 ×         4,00 ×         3,29 ×
+    //   cohorte debout     88 → 43        49 → 38        80 → 38
+    //                       0,49 ×         0,78 ×         0,48 ×
+    //   dont hêtres        55 → 21        20 →  4        56 → 22
+    //                       0,38 ×         0,20 ×         0,39 ×
+    //   (pour mémoire, le composite : 34 → 40, 10 → 87, 18 → 67)
     //
-    // L'ombre a été mesurée aussi, parce qu'on la soupçonnait d'être un
-    // troisième puits concurrent : elle BAISSE sous réchauffement
-    // (0,80 / 0,25 / 0,87), donc elle ne vole rien, et l'ajouter ne ferait que
-    // diluer le signal (1,09 / 1,16 / 1,49). `maladie` et `vieillesse` sont à
-    // zéro dans toutes les parties.
-    //
-    // Le seuil est posé à 1,5 — sous le minimum mesuré (1,88) pour laisser de
-    // la marge, très au-dessus de 1 pour rester une affirmation. Et il ne
-    // demande AUCUN garde contre la division par zéro, là où le compte par
-    // ravageurs seuls en exigeait un : le dénominateur combiné ne descend
-    // jamais sous vingt.
+    // La graine 23 est la plus dure et c'est normal : son témoin figé s'est
+    // déjà auto-éclairci de moitié, il reste moins à perdre. Le seuil est posé
+    // à 0,85 — au-dessus du pire rapport mesuré (0,78) pour laisser de la
+    // marge, franchement sous 1 pour rester une affirmation.
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
-      // Il y a quelque chose à vérifier : le témoin n'est pas vide.
-      expect(f.mortsChaleur, `graine ${GRAINES[i]}`).toBeGreaterThan(10);
-      expect(c.mortsChaleur, `graine ${GRAINES[i]}`).toBeGreaterThan(1.5 * f.mortsChaleur);
+      // Il y a quelque chose à perdre : le témoin n'est pas déjà vide.
+      expect(f.cohorteDebout, `graine ${GRAINES[i]}`).toBeGreaterThan(30);
+      expect(c.cohorteDebout, `graine ${GRAINES[i]}`).toBeLessThan(0.85 * f.cohorteDebout);
+      // Et le mésophile paie plus cher que le chêne pubescent, qui est chez lui
+      // dans un climat qui se réchauffe : 0,38 / 0,20 / 0,39 contre 0,49 /
+      // 0,78 / 0,48 pour la cohorte entière.
+      expect(c.hetresDebout, `graine ${GRAINES[i]}`).toBeLessThan(0.5 * f.hetresDebout);
     }
   });
 });
