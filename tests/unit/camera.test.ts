@@ -11,7 +11,9 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  celluleSousLeCurseurVue,
   celluleVisibles,
+  deplacer,
   LARGEUR_MIN_VISIBLE_M,
   tailleEmprise,
   tournerVue,
@@ -232,5 +234,104 @@ describe("l'emprise visible", () => {
     expect(e.y0).toBeGreaterThanOrEqual(0);
     expect(e.x1).toBeLessThanOrEqual(COTE - 1);
     expect(e.y1).toBeLessThanOrEqual(COTE - 1);
+  });
+});
+
+describe("la cellule sous le curseur", () => {
+  const plat = () => 0;
+
+  it("désigne la cellule que le point d'écran recouvre, à plat", () => {
+    // À plat, la réponse doit être celle de l'inversion analytique : c'est le
+    // cas facile, et il sert de garde-fou au cas difficile.
+    const v = zoomer(vue(), 4, { sx: LARGEUR / 2, sy: HAUTEUR / 2 });
+    for (const p of [
+      { sx: LARGEUR / 2, sy: HAUTEUR / 2 },
+      { sx: LARGEUR * 0.4, sy: HAUTEUR * 0.6 },
+      { sx: LARGEUR * 0.6, sy: HAUTEUR * 0.45 },
+    ]) {
+      const attendu = versParcelleVue(p, v);
+      const c = celluleSousLeCurseurVue(p, v, plat);
+      expect(c).toBeDefined();
+      if (!c) continue;
+      expect(c.x).toBe(Math.floor(attendu.x));
+      expect(c.y).toBe(Math.floor(attendu.y));
+    }
+  });
+
+  it("fait l'aller-retour : le centre d'une cellule se retrouve", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(0, 1, 2, 3),
+        fc.integer({ min: 0, max: COTE - 1 }),
+        fc.integer({ min: 0, max: COTE - 1 }),
+        (o, x, y) => {
+          let v = vue();
+          for (let i = 0; i < o; i++) v = tournerVue(v, 1);
+          const e = versEcranVue({ x: x + 0.5, y: y + 0.5, z: 0 }, v);
+          expect(celluleSousLeCurseurVue(e, v, plat)).toEqual({ x, y });
+        },
+      ),
+    );
+  });
+
+  it("rend la cellule qu'on VOIT et non celle qui est derrière la butte", () => {
+    // Le cas pour lequel cette fonction existe. Sur un relief, un même pixel
+    // peut correspondre à plusieurs cellules : l'inversion à plat en désigne
+    // une arbitrairement, celle-ci prend la plus proche de la caméra.
+    const butteX = 60;
+    const relief = (x: number, _y: number) => (x >= butteX ? 30 : 0);
+    const v = vue();
+    // Le sommet de la butte se projette LÀ où une cellule plus lointaine se
+    // projetterait si le terrain était plat.
+    const e = versEcranVue({ x: butteX + 0.5, y: 50.5, z: 30 }, v);
+    const aPlat = versParcelleVue(e, v);
+    const vu = celluleSousLeCurseurVue(e, v, relief);
+    expect(vu).toEqual({ x: butteX, y: 50 });
+    // et ce n'est PAS ce que l'inversion à plat aurait répondu
+    expect(Math.floor(aPlat.x)).not.toBe(butteX);
+  });
+
+  it("ne désigne rien quand on clique hors de la parcelle", () => {
+    const v = vue();
+    expect(celluleSousLeCurseurVue({ sx: -500, sy: HAUTEUR / 2 }, v, plat)).toBeUndefined();
+  });
+});
+
+describe("le déplacement", () => {
+  it("suit le glissement : ce qu'on attrape reste sous le doigt", () => {
+    const v = { ...vue(), cam: { ...vue().cam, zoom: 2 } };
+    const avant = versParcelleVue({ sx: 300, sy: 200 }, v);
+    const apres = versParcelleVue({ sx: 340, sy: 230 }, deplacer(v, 40, 30));
+    expect(apres.x).toBeCloseTo(avant.x, 6);
+    expect(apres.y).toBeCloseTo(avant.y, 6);
+  });
+
+  it("tient compte de l'ORIENTATION sans qu'on ait à la défaire", () => {
+    // Le piège évité : retrancher le décalage au centre en pixels ferait
+    // dépendre le déplacement de l'orientation, et il faudrait la corriger à la
+    // main — un calcul qui se désynchronise de `tourner()` le jour où l'un des
+    // deux change.
+    for (const sens of [0, 1, 2, 3]) {
+      let v = { ...vue(), cam: { ...vue().cam, zoom: 2 } };
+      for (let i = 0; i < sens; i++) v = tournerVue(v, 1);
+      const avant = versParcelleVue({ sx: 300, sy: 200 }, v);
+      const apres = versParcelleVue({ sx: 350, sy: 200 }, deplacer(v, 50, 0));
+      expect(apres.x, `orientation ${sens}`).toBeCloseTo(avant.x, 6);
+      expect(apres.y, `orientation ${sens}`).toBeCloseTo(avant.y, 6);
+    }
+  });
+
+  it("garde le centre DANS la parcelle", () => {
+    const v = { ...vue(), cam: { ...vue().cam, zoom: 3 } };
+    const loin = deplacer(v, -100000, -100000);
+    expect(loin.centre.x).toBeGreaterThanOrEqual(0);
+    expect(loin.centre.x).toBeLessThanOrEqual(v.cam.coteM);
+    expect(loin.centre.y).toBeGreaterThanOrEqual(0);
+    expect(loin.centre.y).toBeLessThanOrEqual(v.cam.coteM);
+  });
+
+  it("ne bouge pas pour un glissement nul", () => {
+    const v = vue();
+    expect(deplacer(v, 0, 0).centre).toEqual(v.centre);
   });
 });

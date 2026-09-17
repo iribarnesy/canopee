@@ -66,6 +66,22 @@ pas contradictoire, c'est exactement ce que fait une planche botanique.
    la vague monte là où `soilNappeCm ≤ 5`, nulle part ailleurs. C'est la même
    exigence que le « proxy honnête » de l'indice de biodiversité
    (docs/regles.md §13).
+
+   **Et quand le moteur ne sait pas, on ouvre une ISSUE — on ne comble pas le
+   trou côté rendu.** C'est la règle de procédure, et elle a manqué une fois :
+   pour montrer une pelouse sèche j'ai décrété dans `palette.ts` un seuil de
+   grillage sur la réserve utile, alors qu'un seuil qui décide qu'une herbe
+   souffre est une affirmation de modèle. Elle était fausse en plus d'être
+   déplacée — le moteur travaille sur l'humidité de l'horizon de SURFACE lissée
+   sur six semaines (`humiditeVecue` dans `herbe.ts`, seuil 0,35), pas sur la
+   réserve du profil sans inertie.
+   Le coût réel de la faute n'est pas la valeur : c'est qu'**une teinte inventée
+   pour compenser une donnée absente rend le manque permanent**. Plus personne
+   ne voit qu'il manque quelque chose, puisque l'écran montre quelque chose. Le
+   défaut se fige en fonctionnalité, et il faudra le rétro-trouver.
+   La marche à suivre, donc : le rendu choisit COMMENT montrer ce que le moteur
+   dit ; il ne choisit jamais CE QUE le moteur dit. Le manque part en issue,
+   avec la grandeur qu'il faudrait et l'usage visuel qui la réclame.
 2. **Aucun asset graphique binaire.** Pas de PNG dessinés à la main, pas de
    pipeline d'art. Les silhouettes sont **générées au démarrage** par du code
    vectoriel dans un atlas de textures — y compris les feuilles et les fruits,
@@ -73,7 +89,7 @@ pas contradictoire, c'est exactement ce que fait une planche botanique.
    botaniques (§4). Conséquences : le style est paramétrable d'un seul endroit,
    chaque combinaison (essence × stade × saison × gestion) est gratuite, et le
    dépôt ne grossit pas. C'est ce qui rend tenable l'exigence de **reconnaître
-   chaque essence** sur vingt-cinq espèces (et quarante à terme).
+   chaque essence** sur vingt-six espèces (et quarante à terme).
    *Une seule exception, assumée* : le **son** (§5.10) suppose des fichiers
    audio. Ils vivront dans `data/sons/` avec leur licence et leur provenance,
    au même titre que les valeurs écologiques sont sourcées.
@@ -448,6 +464,123 @@ aux quatre saisons, la couleur et le motif d'écorce, la silhouette d'hiver, et
 un champ `references` — **les sources du dessin, au même titre que les valeurs
 du moteur sont sourcées**. C'est la même discipline appliquée à l'image.
 
+### Quatre grandeurs qui manquaient, et ce que ça a appris
+
+Le retour du 6 septembre a produit trois issues moteur, toutes traitées, plus
+une quatrième trouvée en chemin. Le tableau vaut mieux qu'un récit, parce que la
+colonne de droite est la même à chaque fois :
+
+| Grandeur | Ce que le rendu faisait | Ce qu'il fait |
+|---|---|---|
+| `soilHerbeHumidite` (#12) | un seuil de grillage décrété dans `palette.ts`, sur la réserve utile | lit la grandeur, et lit le SEUIL en appelant `couvertureMax` |
+| `hauteurElagueeM` → lumière (#13) | rien, faute de pouvoir le dire honnêtement | rien non plus — `soilLumiere` s'en charge tout seul |
+| `floraison` (#14) | rien ; `fruitProgress` ne permet pas de l'inférer | dessine la fleur, sans connaître aucune date |
+| `baseHouppierM` | `1 − 2 × houppierRatio`, une formule maison | lit la grandeur, et perd un champ au passage |
+| **taille de tête de trogne** (#19) | une allométrie maison sur le rayon du fût, identique à 3 coupes et à 25 | lit `diametreTeteCm` et `caviteTeteL`, et l'allométrie a disparu |
+| **abroutissement** (#21) | rien ; `pousseTendreM` est un stock, pas un événement | lit `brouteSemaine`, et le premier dégât de gibier lisible du modèle apparaît |
+
+**Ce que les quatre ont en commun** : dans les quatre cas le rendu ne pouvait
+pas obtenir la grandeur en réfléchissant plus fort, parce qu'elle dépend de
+choses qu'il ne voit pas — la compétition subie, l'inertie d'un tapis sur six
+semaines, un cumul de degrés-jours. Deux des quatre avaient été « résolus » par
+une approximation locale, et les deux approximations étaient fausses de la même
+façon : elles ne connaissaient que l'espèce, là où la grandeur dit une
+HISTOIRE.
+
+**Et la leçon inverse, qui compte autant** : #13 n'a demandé aucun travail de
+dessin. Une fois l'élagage entré dans `computeGroundLight`, le sol s'est
+assombri au bon endroit tout seul, parce que le rendu lisait déjà `soilLumiere`.
+Brancher une grandeur bien placée fait souvent apparaître plusieurs effets sans
+qu'on ait rien à peindre — c'est le meilleur argument pour ouvrir l'issue plutôt
+que pour combler le trou sur place.
+
+**Le cinquième cas est le plus instructif, et il est résolu depuis — ce qui le
+rend meilleur encore.** Le
+moteur sait qu'une trogne d'au moins deux étêtages porte de l'habitat
+(`biodiversite.ts`), mais pas combien : une tête de trois coupes et une de
+quinze comptent pareil. Le rendu, lui, aurait pu faire grossir joliment le
+bourrelet à chaque coupe — personne ne s'en serait plaint, et l'image aurait
+menti d'une façon particulièrement propre, en donnant à voir une ressource qui
+ne compte nulle part. Le dessin s'en tient donc au rayon du fût. **Un manque
+visible vaut mieux qu'un manque comblé au mauvais endroit**.
+
+Et la suite a donné raison à ce refus deux fois : le moteur a répondu par un
+module entier (`trogne.ts`) qui porte un diamètre croissant, un volume de
+cavité, et une note d'habitat CONTINUE remplaçant le seuil binaire —
+`biodiversite.ts` compte désormais les litres de creux. Une valeur inventée au
+rendu aurait donné une jolie tête qui grossit devant une biodiversité restée
+plate, et personne n'aurait cherché. Le rendu lit maintenant les deux
+grandeurs, et l'écart qu'on voit est celui que la simulation compte.
+
+**Deux façons de se tromper, pas une.** Inventer un seuil est la première.
+Recopier celui du moteur est la seconde, et elle est plus discrète : deux copies
+d'une règle dérivent, et rien ne le signale (§2.1). D'où la forme finale, qui
+évite les deux — `satisfactionEnEau` APPELLE `couvertureMax` avec une lumière
+pleine, puisque ce que cette fonction rend alors est exactement le facteur
+d'eau. Un essai vérifie l'égalité aux deux bouts de l'échelle : il casse si l'un
+des deux bouge sans l'autre.
+
+### La bonne UNITÉ de dessin, et pourquoi la question revient sans cesse
+
+Trois fois de suite, le même arbitrage a décidé si une fonctionnalité marchait
+ou non, et il vaut d'être énoncé une fois pour toutes :
+
+| Ce qu'on croit dessiner | Ce qu'on dessine en fait | Pourquoi |
+|---|---|---|
+| une feuille | un **bouquet** par rameau | une feuille par rameau donne une brindille décorée, pas une masse foliaire (L0) |
+| une touffe d'herbe | un **grain** serré et continu | sept marques au m² font une lande ; un gazon est un couvert, pas des objets posés dessus |
+| une baie | un **corymbe**, une grappe, un amas | une baie de sureau fait un sixième de pixel ; son corymbe en fait cinq — et c'est le corymbe que l'œil voit |
+
+La règle : **dessiner l'objet que l'œil perçoit à la distance considérée, pas
+l'objet que la botanique nomme.** Ce n'est pas une approximation qu'on
+s'autorise faute de mieux — à cette distance, l'amas EST la perception, et
+dessiner une baie isolée de deux pixels serait le mensonge.
+
+**Et le quatrième cas, qui est le retournement du même arbitrage.** Poser que
+l'unité est le bouquet ne suffit pas : il faut ensuite que le BOUQUET porte
+l'identité de l'espèce, sinon on a simplement déplacé le problème d'un cran.
+C'était le cas — le bouquet était le seul élément du houppier sans caractère
+d'espèce. Chaque essence recevait le même disque déchiqueté, et seules la
+couleur et la densité les séparaient : sur la planche des trois sujets vus de
+près, un hêtre et un bouleau portaient exactement le même objet, et le pin
+sylvestre — dont le code croyait dessiner une brosse, avec un commentaire pour
+l'affirmer — sortait en boules rondes.
+
+Le bouquet a donc maintenant deux caractères : de combien il s'ALLONGE le long
+du rameau, et de combien son bord est DÉCOUPÉ. Une fronde de frêne s'étire et
+se perce entre ses folioles ; une rosette de hêtre est une boule à bord doux ;
+une brosse de pin n'est que son axe. **Rien de nouveau n'est déclaré pour
+autant** : le port d'un bouquet est une conséquence de la feuille qui le
+compose, et la fiche déclare déjà sa forme — on lit la conséquence plutôt que
+d'ajouter une déclaration qui pourrait la contredire (§2.1).
+
+Deux détails qui ont chacun coûté une passe, et qui se généralisent :
+
+- **l'aire est conservée quand le bouquet s'allonge.** Le calibre est calculé
+  pour qu'un nombre donné de taches couvre la part voulue du houppier ; étirer
+  sans compenser aurait changé la transparence de chaque espèce au passage, et
+  un pin serait devenu plus clair qu'un hêtre pour une raison qui n'a rien à
+  voir avec sa densité.
+- **l'irrégularité d'un fuseau est TRANSVERSE.** Appliquée aussi au grand axe,
+  elle découpait la brosse dans sa longueur : le pin sortait en feuilles
+  d'érable dentelées, une silhouette de feuillu là où on voulait l'inverse. Des
+  aiguilles sortent du rameau perpendiculairement — la frange est sur les
+  flancs, la pointe reste une pointe.
+
+Il y avait aussi, avant, DEUX branches de dessin — la brosse du conifère et la
+boule du feuillu — et c'était un faux partage. Entre les deux il y a un
+continuum, et c'est lui qui porte l'identité : une fronde est à mi-chemin. Deux
+branches ne pouvaient pas le dire, et la boule gagnait par défaut pour tout le
+monde sauf le pin.
+
+Son corollaire pratique : quand un détail « ne marche que pour deux espèces »,
+la cause est presque toujours qu'on a pris l'unité trop fine. Le fruit ne
+marchait que pour la pomme et l'abricot ; il marche pour neuf espèces depuis
+qu'on dessine le groupe. Et il a fallu pour ça déclarer la taille RÉELLE du
+groupe dans la fiche (`grappeM`), parce que la déduire de la taille du fruit la
+sous-estime d'un facteur deux à trois — un corymbe de sureau fait dix
+centimètres, que ses baies fassent cinq ou huit millimètres.
+
 ### Ce qui doit se lire sans info-bulle
 
 1. l'**essence** — promue au premier rang par D4 (elle était dernière en v0.1) ;
@@ -455,6 +588,197 @@ du moteur sont sourcées**. C'est la même discipline appliquée à l'image.
 3. la **gestion** subie (élagué, trogné, recépé, manchonné, démasclé) ;
 4. la **souffrance** (vigueur basse, cime sèche, feuillage jauni hors saison) ;
 5. la **structure** du peuplement (qui domine, les trous, la lisière).
+
+### Ce que la première passe de rendu a appris (retour du 2026-09-06)
+
+Le verdict était : « on dirait pas une forêt, on dirait vraiment trop un
+ordinateur qui simule une forêt ». La consigne qui l'accompagne tranche un
+arbitrage qu'il faut écrire, parce qu'il commande tous les choix suivants :
+
+> Quitte à choisir entre réalisme (trop de détails) et minimalisme (pas assez),
+> je préfère le minimalisme avec juste ce qu'il faut pour que ce soit joli. Il
+> faut mettre en avant ce qui est FONCTIONNEL.
+
+Ce qui est fonctionnel est énuméré, et c'est la hiérarchie de dessin :
+
+- le **feuillage** dit si l'arbre sèche ;
+- le **branchage** dit s'il faut élaguer ;
+- un arbre **élagué** fait moins d'ombre en dessous ;
+- les **fruits** quand il y en a ;
+- les **ombres aux bons endroits**.
+
+Et ce qui ne l'est pas : « les taches d'ombre autour de la parcelle, c'est pas
+important ».
+
+**Le diagnostic, et il vaut plus que la liste des corrections.** Quatre des cinq
+défauts trouvés n'étaient pas des défauts de goût : c'étaient des grandeurs du
+moteur qui n'arrivaient pas jusqu'au pixel. La lumière au sol était calculée,
+transportée, jamais lue. La sécheresse ne colorait que le sol nu, donc jamais
+l'herbe qui le couvre. Les paliers étaient lus comme des parts, si bien qu'une
+couverture de 100 % gardait de la terre nue. Le modelé du feuillage était un
+tirage au sort, c'est-à-dire du bruit là où on attendait une direction de
+lumière.
+
+D'où la règle de méthode : **quand une scène « fait synthétique », chercher
+d'abord la grandeur débranchée, pas le réglage à retoucher.** Un rendu qui
+n'affiche pas ce que le moteur sait ne se corrige pas en changeant une teinte.
+
+**Le bois mort couché : six jets pour une ligne, et chacun réfuté par une
+capture.** Le protocole demandait ce dessin en toutes lettres —
+« le rendu peut y poser des troncs », « le rendu doit pouvoir le montrer » —
+et deux `Float32Array` traversaient le worker sans lecteur. L'histoire vaut
+d'être gardée, parce que l'erreur se déplaçait à chaque fois d'un cran :
+
+| Jet | Ce qu'on dessinait | Ce que la capture a montré |
+|---|---|---|
+| 1 | un segment par cellule, orienté par `asin(transversalité)` | des échelles de tirets en travers du vrai tronc |
+| 2 | une tache par cellule, sans direction, à la couverture du moteur | une chaîne de losanges : la couverture réelle est de 30 %, les taches ne se soudent pas |
+| 3 | l'axe du voisinage, quantifié à 45° | un tuyau en marches, avec un trou à chaque décrochement |
+| 4 | le graphe de l'empreinte, cellule à cellule | l'escalier de la rastérisation, fidèlement reproduit |
+| 5 | la direction ajustée par le moment d'ordre deux | des traits parallèles décalés : une direction ne suffit pas à poser une droite |
+| 6 | la droite des moindres carrés — centroïde ET inclinaison | un tronc |
+
+**La leçon n'est pas « il a fallu six essais »**, c'est que la première
+explication était la plus séduisante et la plus fausse. `transversalite` rend
+`|sin(tronc − aval)|` : l'arc sinus semblait l'inverser, et il laisse en
+réalité quatre directions candidates — la valeur absolue est délibérée dans le
+moteur (« un tronc n'a pas de sens »). La direction n'était pas dans cette
+grandeur du tout : elle était dans l'EMPREINTE, que le moteur écrit le long
+des cellules couvertes par la chute. Chercher la grandeur qui porte
+l'information, encore.
+
+Et un dernier détour instructif : le jet 1 avait aussi un banc fautif. Il
+chargeait une rangée de cellules en forçant une transversalité sans rapport,
+donc un état que la simulation ne produit jamais — le moteur tire les deux de
+la même chute. Le banc pose maintenant un azimut de tronc et laisse
+`transversalite` dire ce que ça barre. **Un banc qui fabrique un état
+inatteignable accuse le rendu à tort**, et c'est la deuxième fois (la première
+était la trogne, §5.5).
+
+**Le décor cuisait quatre fois trop.** `Decor.morceauxVisibles` élargissait
+l'emprise de la parcelle d'une PORTÉE scalaire dans les deux axes — donc un
+carré, là où la région visible d'une projection dimétrique est un losange. Les
+quatre coins du carré sont entièrement hors écran et font la majorité de sa
+surface : mesuré à la vue par défaut d'un hectare, **729 morceaux demandés pour
+150 réellement à l'écran**. Quatre sur cinq étaient cuits, gardés en mémoire,
+transformés en texture GPU et posés à chaque image pour rien — à la vue que le
+joueur voit en premier, celle dont la ceinture apparaissait par plaques pendant
+trois secondes. La découpe teste maintenant chaque morceau contre le cadre,
+comme `posesDesArbres` le fait pour les arbres : 336 demandés, image vérifiée
+identique au pixel près.
+
+Là encore une explication plausible a coûté une passe. La première découpe, sur
+les quatre coins au sol, laissait des entailles de ciel en haut du cadre ; j'ai
+accusé les MASSES du décor — un bois monte à seize mètres, donc un morceau dont
+le sol passe au-dessus du bord garderait ses masses visibles. Remonter le bord
+n'a rien changé, au pixel près : une masse se dessine vers le haut, ce qui
+l'éloigne du cadre. Ce qui débordait était l'IMAGE du morceau, cuite avec sa
+propre marge. On gonfle donc l'emprise dans les quatre directions plutôt que de
+chercher de quel côté — large exprès, et toujours très gagnant.
+
+**Et la grandeur débranchée n'est pas toujours du moteur** : elle peut venir du
+rendu lui-même. Les houppiers à ramure opposée sortaient en chapelets de perles
+— des bouquets empilés en colonnes verticales — parce que la projection de la
+vignette ne lisait que `x` et `y` du squelette et jetait `z`. Une ramure opposée
+ne prend que quatre azimuts, dont le cosinus n'a que trois valeurs : les
+décalages horizontaux se quantifiaient et les bouts tombaient sur un réseau.
+Replier la profondeur dans la largeur du panneau, en projection oblique, ajoute
+le sinus et démultiplie ce réseau — mesuré : 35 colonnes distinctes avant, 59
+après, sur les 243 bouts d'un cornouiller.
+
+Le chemin pour y arriver vaut la conclusion. **Deux explications ont été
+proposées et mesurées fausses avant celle-là** : l'allongement du bouquet
+(le cornouiller déclare une feuille ovale, son bouquet est une rosette ronde et
+n'avait aucun allongement à baisser) puis « les branches vers l'objectif
+s'écrasent sur l'axe du tronc » (2 % des bouts seulement passaient près de
+l'axe, et le repli fait plutôt monter ce chiffre). Ce qui s'écrasait n'était pas
+la position absolue mais l'ÉCART. La leçon : **une explication plausible d'un
+défaut visible n'est pas une explication vérifiée**, et le coût de ne pas
+vérifier est de régler la mauvaise molette.
+
+Et son corollaire, qui est le principe n° 1 du §0 et que cette passe a enfreint
+une fois : **si la grandeur n'existe pas dans le moteur, elle part en issue.**
+On ne la fabrique pas côté rendu, même « en attendant », même quand on croit
+connaître le bon ordre de grandeur. Le cas vécu : un seuil de grillage de
+l'herbe décrété dans `palette.ts`, faux de valeur ET de grandeur, et surtout
+faux de nature. Une teinte inventée pour compenser une donnée absente rend le
+manque permanent — l'écran montre quelque chose, donc personne ne cherche plus.
+
+**Ce qui reste ouvert après cette passe :**
+
+- **Un arbre élagué ne fait pas moins d'ombre**, et le rendu ne peut pas le
+  décider seul : `hauteurElagueeM` n'entre dans aucun calcul de lumière du
+  moteur (vérifié sur `light.ts`, `trees.ts`, `tick.ts`). Le dessiner serait
+  inventer une différence que la simulation ne fait pas — exactement la
+  « fausse réalité » que le retour reproche. C'est donc une carte MOTEUR :
+  l'élagage relève la base du houppier, la lumière passe dessous.
+- **Trois manques sont comblés depuis** (issues #12, #13, #14 — le moteur a
+  répondu, le rendu a branché) : la pelouse grille sur `soilHerbeHumidite`,
+  l'arbre élagué rend de la lumière au sous-étage sans une ligne de dessin de
+  plus, et le verger fleurit sur `floraison`. Voir « quatre grandeurs qui
+  manquaient » ci-dessous.
+- **`bloomFrosted` part au lot ANIMATION — tranché.** Le champ voyage, mais un
+  arbre dont la floraison a gelé ne se distingue que par une absence de fruit,
+  trois mois plus tard, et une absence ne se lit pas comme une cause : le joueur
+  voit un pommier sans pommes, pas pourquoi. Les deux façons de le peindre sur
+  une vignette échouent pour la même raison — un gel est un ÉVÉNEMENT d'une
+  semaine, une vignette est un ÉTAT : ou les fleurs brunes restent accrochées
+  jusqu'en novembre (faux), ou elles disparaissent au bout d'une semaine et
+  personne n'aura regardé cette semaine-là. Une fleur qui brunit et tombe au
+  moment du tick, en revanche, se voit — et c'est exactement le modèle du temps
+  du §5.11 : un gel est de ces événements pour lesquels on repasse en temps
+  réel, comme un feu.
+- **Trois espèces qui portent des fruits bien visibles n'en auront pas** :
+  l'aubépine, le houx, le fusain. Aucune n'a de bloc `fruits` dans `especes.ts`,
+  donc le moteur ne suit pas leur fructification, et leur en dessiner serait
+  inventer un état. C'est dommage à l'œil et c'est la bonne décision — un fruit
+  peint sans état derrière ne mûrit jamais, ne se récolte pas, et masque le
+  manque. Un essai le vérifie dans les deux sens.
+- **Deux manques de plus sont comblés** (issues #19 et #21, ouvertes par le
+  rendu et traitées côté moteur) : `trogne.ts` donne le diamètre de tête et le
+  volume de cavité, si bien qu'un têtard de trois coupes et un têtard
+  centenaire n'ont plus la même silhouette ; et `brouteSemaine` rend visible le
+  seul dégât du modèle qui ne l'était pas du tout. Les deux sont branchés.
+  L'allométrie maison du bourrelet (`rayonAuPiedM × 2,2`) a disparu du rendu,
+  et le seuil binaire de cavité avec elle.
+- ~~Le hors-parcelle disparaît au dézoom lointain~~ — **le défaut n'existait
+  pas, et il faut le dire aussi.** Vérifié : `vueInitiale` démarre à `zoomMin`
+  et `zoomer` s'y arrête, donc **il n'y a pas de dézoom au-delà de la parcelle
+  entière**. Ce que j'avais pris pour un dézoom était un recentrage borné — au
+  zoom minimal, `zoomer` recentre la vue — dans une séquence de gestes où un
+  glissement avait précédé. Deux captures comparées venaient en réalité de deux
+  cadrages différents.
+  La mesure a en revanche trouvé un vrai gâchis au même endroit : voir la
+  découpe du décor ci-dessous. À reprendre avec le
+  décor, pas avec le poseur.
+- **Le canal de la POSE ne peut montrer que ce qui bouge.** Une chute passe par
+  lui ; une mort de sécheresse, non — elle jaunit puis se défeuille, ce qui est
+  un changement de COULEUR et de part foliaire, donc de cuisson, et la classe le
+  porte déjà. Les deux canaux existent exprès et il ne faut pas les confondre :
+  faire passer un jaunissement par la pose ne marcherait pas, et faire passer
+  une chute par la cuisson recuirait l'atlas au milieu d'une animation. Les
+  actes du plan qui ne sont pas des chutes ne produisent donc aucune
+  déformation, pour l'instant.
+- **Une masse de fourré ne peut pas être animée individuellement**, et ça a
+  coûté une demi-journée à comprendre. `separerLeFourre` agrège les tiges de
+  fourré par carreau : elles perdent leur identité, donc rien ne peut les
+  déformer une par une. Or **sur une friche à trente ans, 1 874 des 1 918
+  chandelles sont des ronces** — la mort sur pied y est presque entièrement du
+  fourré. La chute ne s'appliquera donc qu'aux 44 autres, hautes de six mètres
+  au plus. Ce n'est pas un défaut : une ronce morte ne tombe pas, elle
+  s'affaisse. Mais il faut le savoir avant de chercher une animation qui ne
+  vient pas.
+- **Aucun tronc ne barre l'eau sur le versant à 12 %** : les 2 027 cellules de
+  bois couché que la simulation y produit ont toutes une transversalité sous le
+  seuil des 30°. La couleur du tronc barrant ne se voit donc que sur le banc,
+  pour l'instant. À revoir avec le moteur : soit les directions de chute
+  s'alignent trop sur la pente, soit c'est juste et un tronc en travers est
+  rare.
+- **Le vent, les oiseaux** : §5.11, et volontairement en dernier.
+- **Le modelé latéral des houppiers reste faible**, parce que la vignette est un
+  panneau face caméra : un côté éclairé franc mentirait dès la première
+  rotation. La sortie serait de cuire deux variantes par orientation, ce qui
+  double l'atlas — à peser quand le reste sera fait.
 
 ### La palette
 
@@ -576,13 +900,69 @@ n'est finie que si quelqu'un d'autre la reconnaît sans étiquette.**
 
 | État | Ce qu'on voit | Donnée |
 |---|---|---|
-| Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` |
-| Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` |
+| Vigueur basse | feuillage clairsemé, ton pâle et jauni | `vigueur` ✅ |
+| Cime sèche | branches mortes en haut du houppier, en proportion du dommage | `dommageHydraulique` ✅ |
 | Défoliation | couronne mangée par les ravageurs | `ravageurs` par cellule — **pas encore envoyé** |
-| Brouté | rameaux coupés net, plant rabougri en boule | `pousseTendreM` |
-| Frotté | écorce arrachée en bas du tronc | `frotteSemaine` |
-| Mort sur pied | chandelle grise, sans feuille | `chandelle`, `mortSemaine` |
-| Brûlé sur pied | chandelle noire | `brulEeSemaine` |
+| Brouté | sections claires au bout des rameaux à portée, la flèche d'abord | `brouteSemaine` ✅ (issue #21) |
+| Bois couché | un tronc au sol, plus sombre s'il barre l'eau | `soilBoisAuSol` + `soilBoisEnTravers` ✅ |
+| Frotté | plaie de bois à nu sur un côté du fût, cernée du lambeau d'écorce | `frotteSemaine` ✅ |
+| Mort sur pied | chandelle grise, sans feuille | `chandelle` ✅ |
+| Brûlé sur pied | chandelle noire | `brulEeSemaine` ✅ |
+| Trogne | tête renflée à son diamètre, creusée à son volume | `teteTrogneM`, `diametreTeteCm`, `caviteTeteL` ✅ (issue #19) |
+| Protégé | manchon translucide, monté à la hauteur de dent | `protege` ✅ |
+| Démasclé | bande ocre-rouge sur le bas du fût, qui grisonne sur la rotation | `derniereLeveeSemaine` + `ecorce.rotationAns` ✅ |
+
+**Le liège est le seul état de cette table dont le moteur donne la DURÉE**, et
+ça change tout ce qu'on peut en dire. Un fût brûlé, une plaie de frottis : le
+moteur pose une semaine et n'en fait rien, donc le rendu ne lit que la présence
+— il ne sait pas à quelle vitesse un charbon pâlit ni une blessure se referme.
+Le liège, lui, a `ecorce.rotationAns`, et `ecorceRecoltable` s'en sert pour
+refuser une levée trop rapprochée : le rapport « où en est l'écorce » est
+exactement celui que le moteur compare à 1. Le rendu peut donc montrer un
+GRADIENT sans rien inventer — et le bout du gradient est directement
+actionnable, puisque « le liège est refait » veut dire « récoltable ». C'est le
+même signal qu'un fruit mûr.
+
+**Deux grandeurs, et il faut les deux** — les confondre serait perdre
+l'essentiel de ce qu'elles disent. La **vigueur** est réversible : elle dit
+« cet arbre ne pousse pas à son potentiel », et le moteur souligne qu'elle
+descend bien avant le moindre stress, donc c'est l'alerte qui laisse encore le
+temps d'agir. Le **dommage hydraulique** ne se répare pas : l'embolie tue des
+vaisseaux, et l'arbre ne récupère qu'en fabriquant du bois neuf, ce qui prend
+des années. C'est ce qui explique les mortalités DIFFÉRÉES — un arbre meurt deux
+ou trois ans après la sécheresse, un été qui n'a rien d'exceptionnel — et un
+joueur qui ne voit pas la cime sèche ne comprend pas pourquoi.
+
+D'où deux dessins distincts : la vigueur éclaircit et PÂLIT le houppier
+entier ; le dommage le décapite. Et la cime sèche sèche par le HAUT, parce que
+c'est une histoire de distance hydraulique aux racines — un arbre qui perdrait
+son feuillage bas serait un arbre broutté ou élagué, ce que l'œil sait
+distinguer.
+
+**La cime sèche DÉPLACE les fruits, elle n'en retire aucun** — et la première
+version faisait l'inverse, ce qui vaut d'être écrit parce que c'est une
+troisième façon de fauter, distincte des deux autres.
+
+Le moteur calcule `fruitsKg` sans le moindre terme de dommage hydraulique :
+`rendementMaxKg × sizeFactor × fruitProgress × gel × pollinisation × service`.
+Il dit donc qu'un arbre à cime sèche porte sa charge ENTIÈRE. En filtrant les
+rameaux secs puis en parcourant le reste avec la même probabilité, je dessinais
+45 % de fruits en moins sur un arbre à 45 % de cime sèche : j'atténuais le
+signal de RÉCOLTE, le seul de l'arbre qui appelle un geste, au nom d'un
+mécanisme que le moteur ne modélise pas.
+
+Et le « bois mort » n'existe même pas côté moteur — `dommageHydraulique` est un
+scalaire sur l'arbre, le squelette est une construction du rendu. L'incohérence
+à résoudre était donc interne au dessin, et elle n'avait aucune raison de se
+payer sur une donnée. On compense le taux d'acceptation par le taux de survie
+des rameaux : la charge dessinée ne bouge pas, seule sa place change — et la
+place a toujours été l'affaire du rendu.
+
+**Les trois façons de fauter, donc**, et il a fallu les trois pour les voir :
+inventer une grandeur que le moteur n'a pas (le seuil de grillage de l'herbe) ;
+recopier une règle qu'il a déjà (son seuil d'eau, s'il n'était pas appelé) ; et
+ÉDITER une grandeur qu'il donne, en la rabotant au passage. La troisième est la
+plus discrète des trois, parce qu'elle se déguise en souci de cohérence.
 
 ### 5.7 Saisons, météo, lumière
 
@@ -605,6 +985,103 @@ il n'y a **rien à demander au moteur** pour cette section.
 Une bande de contexte sur les quatre côtés, dérivée de `bordures` : ça ancre
 la parcelle dans un paysage au lieu de la faire flotter, et ça rend visible une
 donnée qui décide de tout (semis, gibier, vent, feu). `M`.
+
+**Refait le 2026-09-07, sur un signalement en trois mots** : « je vois encore
+plein de taches sur l'extérieur de la parcelle, c'est quoi ? ». C'étaient les
+bosquets du décor, et le diagnostic tient en une phrase — un bois dessiné comme
+une COLLECTION D'OBJETS ne peut pas se lire autrement que comme des taches.
+
+**Cinq réglages, cinq échecs, et le même échec cinq fois.**
+
+| essai | ce qu'on voyait |
+|---|---|
+| rayon 2–5 m, hauteur `6 + hasard × 10` | des ovales isolés d'un seul aplat : des **taches** |
+| rayon = 0,38 × hauteur d'essence | des boules de 20 m à peine recouvrantes : un **éboulis de galets** |
+| rayon d'une cime + hauteur d'essence | un hêtre de 30 m dans 4 m de large : des **quilles** |
+| rayon dérivé d'un aplatissement voulu | des **nénuphars** qui se chevauchent, encore dénombrables |
+| modelé presque supprimé | les **taches** du départ, en plus large |
+
+Le §0 de `couches/decor.ts` portait pourtant la réponse depuis le premier
+jour : « de loin, une forêt n'a pas d'arbres, elle a une **lisière et une
+surface** ». Le dessin contredisait son propre principe. Une surface n'a pas de
+contour à compter : elle a une altitude et un bord.
+
+**Ce qui est dessiné maintenant** : un champ de canopée (`canopee`), tracé par
+les mêmes quads de quatre mètres que la nappe, à quatre coins et trié par
+profondeur — donc continu par construction. La hauteur s'annule avec la
+couverture, ce qui fait de la lisière une PENTE et non un mur. Deux passes par
+quad : la jupe (la face verticale, l'ombre du sous-bois) puis le dessus, avec le
+grain du sol. Les masses ne portent plus que les BÂTIMENTS, seule chose du
+décor qui soit vraiment un objet posé sur le sol et qui se compte.
+
+**La cohérence avec le voisinage choisi**, qui était la deuxième demande. Elle
+existait à moitié et je l'avais niée à tort : `GameState` porte un `paysageId`
+par côté (`paysage.ts`, `Bordures`), et les trois parts — boisé, cultivé,
+urbanisé — arrivaient déjà au rendu. Ce qui était jeté en route, ce sont les
+**semenciers** : `apercu-scene.ts` réduisait chaque côté à trois nombres, donc
+un massif de pins de lande se dessinait comme une hêtraie. Ils voyagent
+maintenant, et la canopée en tire son essence (couleur de la fiche graphique) et
+sa hauteur (`hauteurMaxM` du moteur) par peuplement de vingt-six mètres. C'est
+la même leçon que les houppiers du §4 : **l'unité de dessin doit porter
+l'identité de l'espèce**, sinon le problème n'a fait que monter d'un cran.
+
+**Rester hors du focus**, la troisième demande — « faut trouver un moyen pour
+pas que le joueur croie que c'est à lui ». Trois moyens existaient (brume,
+désaturation, contraste écrasé) et ils disent tous « c'est loin », aucun ne dit
+« c'est à quelqu'un d'autre ». Le quatrième, ajouté, est une **opacité de 0,78
+sur la couche** : ce qu'il y a derrière le décor est le fond de brume de
+l'interface, donc le hors-parcelle se lit comme vu à travers quelque chose, et
+la limite de la parcelle devient une frontière entre deux natures d'image. Posée
+sur la couche Pixi, donc gratuite et sans recuisson.
+
+**Deux corrections de découpe** trouvées en chemin :
+
+- la **levée est plafonnée à sept mètres**. Dessinée à sa hauteur vraie, une
+  canopée de trente mètres présentait au bord du bois une jupe de cent dix
+  pixels d'un seul ton, et le décor sortait en facettes de cristal. La hauteur
+  vraie n'apporte rien au joueur et coûte un mur autour de sa parcelle ; ce qui
+  survit du plafonnement, c'est l'ORDRE (une haie se soulève de trois mètres, un
+  massif du maximum) et la couleur, qui est là où est la cohérence ;
+- chaque morceau de décor **redessine la canopée de ses voisins** sur neuf
+  mètres. Une canopée soulevée se projette dans la zone d'écran du morceau d'à
+  côté, et la nappe opaque de celui-là l'effaçait : le hors-parcelle sortait en
+  filet régulier de bandes pâles, à la période exacte des morceaux de seize
+  mètres.
+
+**Et deux fausses pistes, mesurées fausses** avant celle-là : la variation des
+champs (éteinte, image identique au pixel) et le réseau du bruit de grumeau
+(une octave ajoutée pour rien — elle est restée, elle ne nuit pas). C'est la
+troisième fois de ce chantier qu'une explication convaincante ne survit pas à la
+mesure, et la troisième fois que mesurer coûte moins cher que raisonner.
+
+**Ce qui reste ouvert sur le décor :**
+
+- ~~un liseré pâle sur les deux bords lointains de la parcelle~~ —
+  **trouvé et corrigé, et par la mesure.** J'ai soupçonné à tort la variation
+  des champs, le réseau du bruit, le joint entre les images, puis le masque
+  d'ombre. La réponse est venue d'un décodeur PNG de trente lignes
+  (`scripts/lire-png.mjs`) : en descendant une colonne de pixels à travers le
+  bord, la clarté passait de 78 à 109 sur cinq pixels avant de tomber sur la
+  parcelle. Une bande PLUS CLAIRE que le décor autour, large d'un mètre ou
+  deux : c'était une bande SANS CANOPÉE, et sa cause est un quad à cheval sur
+  la limite dont le CENTRE tombe dans la parcelle, là où la couverture est
+  nulle par définition. La canopée se décide donc sur les quatre coins, et un
+  quad de bord se dessine avec ses coins intérieurs au sol — ce qui donne au
+  passage la lisière qu'on veut voir là. Après correction : 100 des deux côtés
+  du point suspect, plus de marche. **Quatre explications convaincantes, une
+  seule vraie, et c'est la mesure qui a tranché à chaque fois** — d'où l'outil,
+  qui restera.
+- **le décor ignore la saison.** Sa cuisson ne reçoit pas la semaine, donc les
+  bois voisins sont verts en janvier. Les couleurs d'automne et d'hiver sont
+  dans les fiches ; c'est un branchement, pas une inconnue.
+- **le moteur ne distingue pas une haie d'un peuplement.** `partBoisee` et
+  `semenciers` ne disent pas si les 35 % boisés d'un bocage sont des haies de
+  trois mètres ou des bosquets de vingt. Le rendu s'en tire par l'essence, ce
+  qui est une approximation défendable — une haie de bocage est faite d'épine
+  noire et d'aubépine, un massif de hêtres et de charmes.
+- **`semisParAn` sert de classement d'abondance**, faute de mieux : c'est un
+  taux de semis, pas une part de couvert. Une ronce qui sème beaucoup pèse donc
+  autant qu'un hêtre qui sème peu.
 
 ### 5.9 Compte de ce qu'il faut produire (révisé pour D4)
 
@@ -675,6 +1152,197 @@ boucles courtes en `.ogg` (< 500 ko au total), dans `data/sons/`, avec licence
 et provenance documentées — la même exigence de sourcing que pour les valeurs
 écologiques. Un réglage de volume et un bouton muet sont obligatoires.
 
+### 5.11 Le temps qui passe : un seul rendu, plusieurs vitesses
+
+**Précisé par le commanditaire (2026-09-06), et ça change l'ordre des lots plus
+que leur contenu.** La §6.8 décrivait déjà une politique de vitesse — bilan de
+période, calque des changements, rembobinage — mais elle partait du rendu
+au tick et ajoutait des dispositifs pour compenser ce qu'on ne voit pas. La
+demande prend le problème par l'autre bout, et elle est plus simple :
+
+1. **Le rendu TEMPS RÉEL est la brique de base**, pas une option de fin. On y
+   voit le vent sur l'herbe et les feuillages, les oiseaux qui s'envolent —
+   l'ambiance continue de la §6.1. C'est le BONUS au sens du calendrier : il
+   vient quand le reste est fait. Mais c'est la brique dont tout le reste
+   découle, et il ne faut donc rien construire qui l'empêche.
+2. **Passer d'une semaine à la suivante est INSTANTANÉ.** Un tick, et la scène
+   est celle de la semaine d'après. Il n'y a aucun sens à faire souffler le
+   vent pendant cette transition-là : on ne regarde pas le temps s'écouler, on
+   change de semaine.
+3. **Une fois le temps réel acquis, l'ellipse n'est plus un cas particulier :
+   c'est une ANIMATION.** Sauter un mois, c'est jouer l'animation de ce qui a
+   changé dans le mois — par exemple tous les arbres morts pendant la période,
+   animés ensemble. Et le principe ne dépend pas de la durée : une semaine, un
+   mois, dix ans, c'est la même mécanique avec plus ou moins à montrer. C'est
+   ce que la §6.8 appelait « fusionner les animations », mais posé comme la
+   règle générale au lieu d'un palier de vitesse.
+4. **Un feu, une crue : on repasse en temps réel.** Ce sont les moments où le
+   joueur doit voir se dérouler, pas résumer. L'`autopause` existante et le
+   « mode cinéma » de la §6.8 sont la même idée, et deviennent le comportement
+   par défaut de la catastrophe.
+
+**Ce que ça impose au rendu, dès maintenant.** Rien de neuf, et c'est
+rassurant : la règle « aucune primitive vectorielle par image » va déjà dans ce
+sens, puisque du temps réel demande un budget par image tenu, pas un rendu
+étalé sur plusieurs images. Deux points à surveiller quand même :
+
+- **Une animation continue ne doit pas invalider un cache de cuisson.** Le vent
+  sur les feuillages ne peut pas passer par une recuisson des vignettes : ce
+  sera une déformation à la POSE (un sprite qu'on incline), pas un redessin.
+  C'est exactement ce que le montage Pixi rend gratuit et que le Canvas 2D
+  rendrait impossible — une raison de plus pour D1.
+- **L'ellipse a besoin de savoir CE QUI a changé**, pas seulement de l'état
+  d'arrivée. C'est déjà ce que le protocole prépare avec les gestes rapportés
+  par les actions (`actions.ts`) et ce que la §6.8 demande au worker pour le
+  rembobinage. Il faudra la même chose pour les morts et les naissances.
+
+**Ce qui est construit (2026-09-07), et par où ça passe.** Quatre modules, et la
+frontière entre eux est celle du paragraphe ci-dessus — ce qui BOUGE passe par
+la pose, ce qui CHANGE DE COULEUR passe par la cuisson :
+
+| Module | Ce qu'il fait | Pur ? |
+|---|---|---|
+| `render/temps/ellipse.ts` | le PLAN : un journal de changements devient une suite d'actes rangés dans un budget de temps d'écran | oui |
+| `render/temps/chute.ts` | la DÉFORMATION d'un arbre qui tombe, à un avancement donné et pour une vue donnée | oui |
+| `render/temps/lecteur.ts` | OÙ EN EST le plan à un instant, et ce que ça fait à chaque arbre | oui |
+| `render/temps/voile.ts` | le VOILE d'un geste de zone : quelles cellules sont travaillées, et à quelle force | oui |
+| `pixi/scene.ts` `deformerLesArbres` / `voilerLesCellules` | applique la déformation et le voile à la POSE | non (Pixi) |
+
+L'horloge n'est dans aucun des quatre : elle est dans la boucle d'images de
+`game/VueParcelle.tsx`, qui interroge le lecteur avec `performance.now()`. C'est
+ce qui garde `render/temps` testable sans navigateur.
+
+**La propriété qui compte est mesurée, pas supposée.** Sur une friche à
+2 713 sprites, avec le banc `npm run apercu:ellipse` qui fait tomber tous les
+arbres à la fois : **zéro classe recuite** sur trois secondes d'animation, à
+tous les avancements de lecture. Le coût de pose ne dépend pas de ce qui tombe
+— 9,9 ms de médiane avec tout debout, 8,2 ms avec tout par terre (min 5,0,
+max 10,7 sur douze relevés). Un premier relevé unique avait donné 25,7 ms à la
+fin de l'ellipse et je l'avais mis sur le compte des sprites pivotés :
+l'échantillonnage dit que c'était une image malchanceuse et rien d'autre. **Un
+relevé par condition ne distingue pas un surcoût d'une malchance**, et c'est la
+deuxième fois dans ce chantier qu'il fallait l'apprendre.
+
+**Le GESTE, et ce qu'il a fallu séparer.** Les treize gestes du moteur ne se
+mettent pas en scène de la même façon, et le tri ne suit pas leur type mais ce
+que le moteur en DIT :
+
+| geste | mise en scène | où |
+|---|---|---|
+| `chauler` `epandreBrf` `labourer` `faucher` `ramasserBoisMort` `cloturer` | ✅ un voile qui couvre les cellules nommées, puis retombe | pose |
+| `brouter` `frotter` | ✅ une marque d'écorce, déjà dans la classe de vignette | cuisson |
+| `couper` `eclaircir` `receper` | ✅ une TIGE ABATTUE pivote autour de sa coupe et se couche, puis s'efface | pose |
+| `elaguer` `trogner` | ✅ l'arbre RESTE, et sa forme passe d'avant à après | cuisson |
+
+**Le partage ne suit pas le type du geste mais ce que le moteur en DIT** —
+`ArbreRetire.directionRad` est présent quand une tige entière est tombée, absent
+quand « la charpente est démontée sur place : le moteur n'y voit pas une
+direction unique et n'en invente pas ». Trancher sur le type dessinerait un
+élagage comme un abattage le jour où un geste change de nature. Et un recépage
+alimente les DEUX : la cépée tombe, la souche reste — c'est le seul, et c'est
+lui qui casse une implémentation qui aurait supposé l'exclusivité.
+
+**Ce qui tombe demande un arbre que l'instantané n'a plus.** Une tige abattue
+quitte `state.trees` dans le même tick. Elle est donc reposée à partir du seul
+`ArbreRetire`, sous un identifiant NÉGATIF — un recépage laisse la souche en jeu
+avec le sien, et deux sprites sous la même clé feraient tomber la souche avec la
+cépée. La liste des tiges ne change pas pendant que le plan se joue : le tableau
+d'arbres sert de clé de cache à la cuisson, et une liste qui grandit et
+rétrécit image après image ferait tout recuire.
+
+**Le banc : `?geste-arbres=receper`**, au même titre que `?mort=` et
+`?ellipse-tout=1`, et pour une raison mesurée en JOUANT — trois cépées recépées
+dans une friche de quatre mille bouleaux ne se voient pas. Ce qu'on vient juger
+là, c'est le dessin du geste, et il lui faut un sujet visible.
+
+**Le voile ne laisse rien derrière lui, et c'est ce qui garde les deux canaux
+étanches.** Ce qu'un chaulage change durablement est dans les grilles de
+l'instantané, donc dans la cuisson du morceau de terrain ; si le voile
+persistait, la même information serait dessinée deux fois par deux chemins
+différents — le §2.1 dit ce qui arrive alors. À la fin de l'acte, l'opacité est
+donc nulle partout, et c'est un essai et non une intention.
+
+**Deux corrections que seule la capture pouvait donner.** Le premier jet
+faisait suivre le front d'une traîne courte : ça donnait un ANNEAU qui
+s'éloignait du centre, le centre redevenu nu derrière lui — une onde de choc,
+pas un chaulage. Un geste de zone COUVRE une surface, puis la poussière
+retombe. Et le losange du voile, réduit sans mipmap d'une texture de soixante
+pixels à neuf, sortait en DAMIER : le voile se lisait comme un grillage posé
+sur le sol. C'est le seul endroit du rendu qui ait besoin de mipmaps — partout
+ailleurs, les images sont cuites au zoom où elles sont posées.
+
+Le coût, mesuré sur le pire cas atteignable (une fauche d'un hectare, toutes
+les cellules allumées à la fois) : **10 349 losanges pour 5,3 ms de pose
+médiane** (min 2,7, max 6,1) et zéro classe recuite. J'allais grossir la maille
+du voile pour borner ce coût ; la mesure dit que ce n'était pas la peine.
+
+**Le journal est RÉEL depuis le 2026-09-09.** Il l'était déjà de bout en bout
+dans le moteur — `advanceWeek` rend `{morts, gestes, chutes, incendie}` chaque
+semaine et le worker les accumule d'un instantané au suivant (`pendingMorts`) —
+mais les scènes du banc étaient des instantanés muets, et le rendu se
+fabriquait un journal pour avoir quelque chose à animer. `apercu-scene.ts`
+accumule maintenant le vrai, avec la même sémantique que le worker : ce qui a
+changé DEPUIS le dernier instantané. Les deux bancs de mécanisme
+(`?ellipse-tout=1`, `?mort=`) le remplacent toujours, exprès, et leur nom dit
+qu'ils forcent quelque chose.
+
+Ce que le vrai journal donne sur la friche de référence, à l'an trente :
+
+| scène | morts | chutes | gestes |
+|---|---|---|---|
+| `friche-s4` | 81 (78 de vieillesse, 2 ravageurs, 1 écrasé) | 3 | 5 |
+| `friche-s13` | 153, toutes de vieillesse | 3 | 10 |
+| `friche-s28` | 45 (41 écrasés, 4 d'ombre) | 54 | 4 |
+
+**Et une conséquence mesurée qu'il faut regarder en face** : sur `friche-s28`,
+une ellipse entière ne change que **196 pixels sur 880 000 — 0,02 % de
+l'image** (comparaison pixel à pixel du début et de la fin, `lire-png.mjs`).
+Le mécanisme marche, les quarante-cinq morts et les cinquante-quatre chutes
+sont bien jouées ; simplement, sur deux mille huit cents tiges de dix pixels,
+une semaine ordinaire ne se VOIT pas.
+
+Ça ne condamne pas le §5.11, mais ça dit ce qui lui manque : **une ellipse a
+besoin d'un doigt qui montre**. C'est exactement le « calque des changements »
+du §6.8, rangé au lot L8 — et il passe du statut de repli à celui de pièce
+nécessaire. À grande vitesse le plan le signale déjà (`deborde`) ; ce qu'on
+découvre ici, c'est qu'à vitesse NORMALE le problème est le même pour la raison
+inverse : il n'y a pas trop à montrer, il y en a trop peu pour qu'on le trouve.
+
+**Ce qui manque encore.** Une clôture n'est pas DESSINÉE : le moteur donne ses
+cellules, le rendu n'a pas encore de piquets, et le voile en montre le tracé —
+un pis-aller assumé. Et seules les scènes `friche-*` et `feu-bois-*` ont été
+régénérées avec leur journal : les autres tombent sur le repli, et
+`apercu-scenes.sh` sait les refaire.
+
+**Le journal du JEU est branché depuis le 2026-09-15** (`game/useEllipse.ts`).
+Jusque-là, toute cette machinerie ne tournait que dans le harnais d'aperçu, qui
+relit des scènes cuites ; le jeu recevait pourtant `morts`, `chutes`, `gestes`,
+`naissances`, `franchissements` et `incendie` à chaque instantané, et ne les
+lisait pas. Un instantané fait un journal — le worker accumule depuis le
+précédent puis vide ses listes, ce qui est exactement la sémantique de
+`JournalDeSemaine` — donc il n'y a rien à accumuler côté rendu, et surtout rien
+à déduire d'un état.
+
+**Le budget suit la vitesse, et c'est la politique du §5.11 appliquée.**
+« Passer d'une semaine à la suivante est INSTANTANÉ » : à grande vitesse les
+instantanés arrivent plus vite qu'une ellipse ne se joue, et une animation
+remplacée avant sa fin bouge sans rien dire. Le temps d'écran d'une semaine est
+donc le plafond (`min(2 500 ms, 1 000 / vitesse)`), et la pause a droit au
+budget entier — ce qui est le cas du §6.2 de toute façon : on clique
+« abattre » à l'arrêt, l'action s'applique sur-le-champ (`worker.ts` :
+« la semaine est déjà ouverte ») et son instantané arrive aussitôt.
+
+**L'estompe reste éteinte dans le jeu**, les marqueurs non. Griser la parcelle
+entière parce que trois arbres sont morts serait violent pour rien ; le doigt
+qui montre, lui, répond au défaut mesuré juste au-dessus.
+
+**Le fourré ne peut pas s'animer, et il faut le savoir.** `separerLeFourre`
+agrège les ronces par carreau : elles n'ont pas d'identité individuelle, donc
+rien ne peut les faire tomber une par une. Sur une friche à trente ans, 1 874
+des 1 918 chandelles sont des ronces. Ce n'est pas un défaut du rendu — c'est
+un choix du moteur, et le bon — mais ça veut dire que l'ellipse d'une friche
+montre les quelques dizaines d'arbres et pas le fourré.
+
 ## 6. Inventaire des animations
 
 Chaque animation est une entrée de registre : `{ déclencheur, durée réelle,
@@ -734,6 +1402,60 @@ instantanés. Seule réserve, et elle compte : la mort au feu arrive un an en
 retard dans `morts` (§2.2) — le torchage se lit sur `causeMort` et `incendie`,
 pas là.
 
+**Construit le 2026-09-09 (`render/temps/mort.ts`), et par la CUISSON.** C'est
+la décision qui a tout déterminé : une chute est un mouvement, donc un panneau
+qu'on incline ; une mort de sécheresse n'est pas un mouvement, c'est un
+feuillage qui jaunit puis tombe, et ça ne s'obtient pas en déformant une image
+déjà cuite. Ce qui rend l'exercice honnête est que les quatre grandeurs qu'une
+mort fait bouger — `partFoliaire`, `senescence`, `vigueur`,
+`dommageHydraulique` — sont des champs du MOTEUR que la classe de vignette
+quantifie déjà. Une mort part d'un état que le moteur donne et arrive à un
+état qu'il donne aussi ; le rendu ne fabrique que l'entre-deux.
+
+Les onze mises en scène de la table ci-dessus sont traduites en « quelle
+grandeur bouge, dans quelle fenêtre de l'acte ». Trois d'entre elles décrivent
+une DISPARITION (labour, abroutissement, écrasement) : la classe n'y peut
+rien, et celles-là passent par la pose — une opacité, une hauteur.
+
+**Le coût, compté exactement** (`npm run apercu:classes`, hors navigateur) sur
+un banc de 1 868 arbres vivants, 659 classes au repos :
+
+| cause | classes ajoutées |
+|---|---|
+| sécheresse, vieillesse | 4 × le repos |
+| ravageurs, solHorsGamme | 3 × |
+| engorgement, maladie | 2,7 × |
+| ombre | 2 × |
+| feu, frottis | 1 × |
+| **labour, abroutissement, écrasement** | **0** |
+
+Trois leçons, et aucune ne venait du raisonnement :
+
+1. **L'avancement d'une mort doit être QUANTIFIÉ** (`PALIERS_DE_MORT = 5`).
+   J'avais écrit dans le module que la cuisson serait « bon marché, contre
+   toute attente », au motif que la classe est déjà quantifiée. Faux : la clé
+   de classe est un PRODUIT, et une grandeur continue qui y entre annule le
+   cache. Quantifiée, la mort ne traverse que cinq états et le facteur
+   ci-dessus est exactement le nombre d'états que la cause traverse.
+2. **Les trois morts qui font disparaître l'arbre coûtent ZÉRO classe.** La
+   séparation des deux canaux ne relève donc pas que du principe : elle se
+   paie ou se gagne.
+3. **Le coût ne dépend pas du nombre de morts** mais du nombre d'ESPÈCES qui
+   meurent. Le cas pathologique est un banc qui tue toute la parcelle, pas une
+   semaine de jeu.
+
+**Et une mesure qu'il fallait savoir ne pas croire** : j'ai d'abord compté « les
+classes recuites » au navigateur en échantillonnant seize images sur soixante
+et en additionnant. Deux variantes du même code ont donné 965 puis 1 364 — la
+somme d'un échantillon n'est pas un total. Le compte exact énumère les clés, et
+il tient dans un script sans navigateur.
+
+**Un défaut à connaître, découvert en mesurant** : `AtlasArbres` n'évince
+jamais rien. Le cache de vignettes est une `Map` qui grandit pour la partie
+entière — ce qui est très bien pour une friche stable, et discutable dès qu'une
+ellipse en ajoute quatre mille. Personne ne l'a encore payé ; c'est écrit ici
+pour que ce soit une décision et non une surprise.
+
 ### 6.4 L'incendie
 
 Le morceau le plus spectaculaire, et le mieux servi par le moteur — `feu.ts`
@@ -745,9 +1467,244 @@ sait déjà où le feu part, où il passe, qui il tue, qui rejette.
 | Départ | une lueur sur la cellule d'origine, un filet de fumée | `S` |
 | **Le front** | une ligne de flammes qui court de cellule en cellule dans l'ordre du rang d'arrivée, s'essouffle dans le feuillu frais, fonce dans la lande. **C'est la carte de combustibilité qui devient visible** — donc la pédagogie des coupures et du choix d'essences. | `L` |
 | **Arbres qui brûlent** | torchage : la couronne s'embrase, les particules montent, il reste une chandelle noire. Un chêne-liège, lui, **survit** : écorce noircie, houppier intact — la démonstration de l'adaptation, gratuite. | `L` |
-| Fumée | colonne au-dessus du front, panache incliné par le vent, ciel orangé | `M` |
+| **Fumée** | colonne au-dessus du front, panache incliné par le vent, ciel orangé | `M` |
 | Après | sol noir, cendres, chandelles, puis **rejets de souche verts au printemps suivant** (`rejetteApresFeu`) — le feu n'élimine pas, il trie | `M` |
 | Caméra | le moteur met déjà le jeu en pause (`autopause`) sur incendie : la vue peut cadrer le départ | `S` |
+
+**Le front, construit le 2026-09-10** (`render/temps/feu.ts`). Le moteur avait
+tout préparé et l'avait écrit noir sur blanc — le commentaire de `rangsDuFront`
+dit « c'est ce qui permet de faire COURIR une ligne de flammes au lieu de
+noircir un patch d'un coup ». Le rendu ne refait aucune propagation : il compare
+un rang d'arrivée à l'avancement de l'acte.
+
+**Et il n'a presque aucune machinerie à ajouter**, ce qui est le signe que le
+découpage précédent était bon : un front est un ensemble de cellules teintées
+animées à la pose, c'est-à-dire exactement ce que le voile des gestes de zone
+dessine déjà. Les deux passent par la même couche de losanges. Une flamme au sol
+et un nuage de chaux ne sont pas la même chose, mais ils se DESSINENT de la même
+façon.
+
+Deux défauts attrapés, l'un par un essai et l'autre par le moteur lui-même :
+
+- **le sujet « feu » du plan laissait tomber les rangs.** `ellipse.ts` ne
+  portait que les cellules brûlées : le dessin aurait été obligé de noircir d'un
+  coup, c'est-à-dire de perdre la seule chose qui rend un incendie pédagogique.
+  Corrigé dans le plan ;
+- **les dernières cellules atteintes finissaient en BRAISE et non en cendre**,
+  parce que le front ne dépassait le dernier rang que de sa largeur, sans le
+  rang de refroidissement. L'état final doit être celui que l'instantané
+  d'après décrira : du sol brûlé.
+
+**La scène de démonstration a appris quelque chose avant qu'on regarde
+l'image** : à huit ans, le couvert s'est refermé et le combustible de surface
+reste humide (`PORTANCE_SOUS_COUVERT`) — l'allumage ne prenait pas du tout, et
+depuis que le banc déclare une canicule, il ne brûle que 149 cellules contre
+6 545 sur la friche ouverte de trois ans (front de 176 rangs). C'est la pédagogie du tableau ci-dessus — « s'essouffle
+dans le feuillu frais, fonce dans la lande » — obtenue sans une ligne de dessin,
+et le banc la porte (`bash scripts/apercu-scenes.sh feu`).
+
+**La fumée et les flammes, construites le 2026-09-10**
+(`render/temps/feu.ts`, `render/couches/feu.ts`). Un système de particules,
+donc — mais un système **sans état** : la position d'une flamme, d'une bouffée
+ou d'une braise est une fonction PURE de (ce que le moteur a brûlé, l'avancement
+de l'acte, l'horloge de l'ellipse). Rien ne s'accumule d'une image à l'autre, il
+n'y a pas de tableau de particules vivantes, pas d'intégration. C'est ce qui
+rend une capture figée (`?ellipse=0.7`) reproductible au pixel, et c'est aussi
+ce qui permet de tester un panache sans navigateur — vingt-huit essais.
+
+**Quatre formes cuites une fois, et le feu n'est fait que de taches.** Une
+flamme tracée au bézier a un bord net, et un bord net se lit comme du carton
+découpé quel que soit le mouvement qu'on lui donne. Une langue de flamme est
+donc une pile de dégradés radiaux le long d'un axe qui s'affine, composés en
+`lighter` — ce qui fabrique tout seul un cœur brûlant au pied et une pointe qui
+se dissout. Le même procédé donne une bouffée, à ceci près que ses taches sont
+dispersées. Et ce qui BRÛLE se pose en `add` : une flamme, une braise, une
+lueur s'ajoutent à ce qu'elles éclairent, la fumée seule masque.
+
+**L'ordre des couches porte une règle, et une seule** : ce qui éclaire passe
+après ce qui assombrit, ce qui monte passe après ce qui est planté. Le feu est
+donc entre l'ombre et les arbres — un feu courant est à leurs pieds, on le voit
+entre les troncs, et il ne se fait pas assombrir par l'ombre du houppier qu'il
+brûle — et le panache par-dessus les arbres, seul calque du monde qui ait le
+droit de masquer un houppier.
+
+**Ce que le moteur ne sait pas, et qu'il fallait dire au lieu de l'inventer :
+d'où vient le vent** (issue #50). `ventExposition` est un scalaire ∈ [0,1] —
+l'abri que les boisements voisins donnent — et `WeekWeather` ne porte ni
+direction ni vitesse. La convention retenue **infère le vent de l'avance nette
+du front** : ce qui pousse un feu, c'est le vent, donc un front qui a
+globalement progressé vers le nord-est a eu du vent de sud-ouest, et son panache
+penche vers le nord-est. La direction se lit sur deux données du moteur
+(l'origine, les cellules qui flambent), l'amplitude vient de `ventExposition`,
+et un front parfaitement symétrique donne une colonne droite — la bonne lecture,
+puisque ce feu-là n'a montré aucune direction. Mesuré sur la scène de
+démonstration : l'avance nette vaut de 10 à 23 % du rayon moyen du front, et
+100 % à la fin, quand il ne reste qu'un coin à brûler.
+
+**Trois défauts que la capture a attrapés, et qu'aucun raisonnement n'aurait
+donnés :**
+
+- **le panache s'ouvrait en éventail.** Le premier jet faisait pencher chaque
+  colonne à l'opposé de l'origine, LOCALEMENT : ça revenait à dessiner un vent
+  qui souffle vers l'extérieur dans toutes les directions à la fois. Un vent est
+  uniforme sur un hectare — une seule direction pour tout l'incendie, et les
+  colonnes se rejoignent en altitude au lieu de s'écarter ;
+- **la fumée se lisait comme un filet de vapeur.** L'opacité tombait dès la
+  naissance de la bouffée, donc les grosses bouffées du haut étaient les plus
+  transparentes : le panache grossissait en devenant invisible. Un PLATEAU la
+  remplace — pleine densité sur les deux tiers de la montée, dilution au
+  sommet ;
+- **l'incendie avait des cheminées, et le trou noir du milieu ne fumait pas.**
+  Douze colonnes choisies dans l'ordre des rangs ne retenaient que le bord
+  intérieur du front — les colonnes sortaient de la cendre — et surtout, un
+  incendie ne cesse pas de fumer dès que la flamme est passée. D'où la TRAÎNE :
+  une brume basse et large sur les seize rangs derrière le front, qui relie la
+  ligne de feu à son panache au lieu de laisser des ballons flotter au-dessus
+  du vide. Trente colonnes espacées de neuf mètres, échantillonnées à pas
+  régulier sur tout l'ensemble en flammes.
+
+**Et une leçon de méthode, payée d'une capture** : en resserrant les colonnes et
+en diluant leur sommet, j'avais aussi baissé leur nombre et leur opacité —
+**trois coupes de densité à la fois**, et le panache le plus large de l'acte
+n'était plus qu'un voile pâle autour du front. Une densité se règle sur une
+grandeur à la fois.
+
+Le coût mesuré tient la règle du §5.11 : **zéro classe de vignette recuite** à
+toutes les lectures de l'acte, pose médiane de 2 à 7 ms pour 6 300 sprites au
+plus large du front (dont environ 800 particules : 48 lueurs, 129 langues et
+autant de cœurs, 480 bouffées, 56 traînées, 86 braises).
+
+**Le ciel orangé, le cadrage du départ et la fin des petits carrés
+(2026-09-10, suite).**
+
+**Le brûlé était dessiné au CARREAU**, un losange net par cellule, donc un
+damier — et pire, les cellules que la propagation avait sautées à l'intérieur
+(`probabilitePropagation` n'est pas 1) ressortaient en petits losanges verts
+nets au milieu du noir, ce qui se lit comme du bruit d'écran et non comme une
+cicatrice. Le carreau n'était pourtant pas le mauvais choix pour le voile d'un
+GESTE : une cellule chaulée EST un carreau, l'épandeur passe ou ne passe pas, et
+le bord franc dit « ce mètre-là a été travaillé ». Une brûlure, non. Elle est
+donc dessinée à la TACHE — deux fois la cellule, quatre variantes de lobes,
+bords fondus — et **les données n'ont pas changé pour autant : c'est la taille
+du pinceau**. Les îlots isolés d'un mètre disparaissent sous leurs voisines, les
+grands restent, et le bord de la cicatrice s'effrange.
+
+Le **ciel orangé** est un seul sprite plein cadre en fusion ADDITIVE : un calque
+en opacité normale délave l'image et donne du vieux papier, l'additif pousse les
+teintes vers le chaud sans écraser les sombres. Sa charge vient du moteur — le
+nombre de cellules qui flambent au même instant, rapporté à trois cents — donc
+un départ de quarante cellules n'orange pas l'horizon, ce que le §6.4 distingue
+justement de la colonne.
+
+Le **cadrage du départ** (`cadrer`) recentre et ne touche pas au zoom : un
+cadrage qui zoomerait reprendrait au joueur le réglage qu'il vient de faire. Il
+s'applique une fois par cible, sinon la vue revient se coller sur l'incendie dès
+qu'il essaie de glisser ailleurs.
+
+**Et le banc ne choisit plus où le feu part** : il allumait au centre, ce qui
+était faux de deux façons — un feu part là où il y a de quoi s'enflammer, et un
+centre de parcelle est déjà cadré, donc le cadrage ne se voyait pas.
+`departDeFeu` tire la cellule au prorata de sa combustibilité, et la scène a
+changé de tête : le départ tombe sur le bord ouest et le front TRAVERSE la
+parcelle au lieu de s'étaler en anneau.
+
+### Le torchage, et pourquoi il a fallu deux découvertes pour l'obtenir
+
+**Première découverte : un incendie et ses victimes n'arrivent jamais dans le
+même journal** (issue #52). Le tick marque l'arbre tué par le feu
+(`alive: false, causeMort: "feu", brulEeSemaine`) mais ne le pousse pas dans
+`morts` ; et la boucle qui remplit `morts` l'écarte explicitement tant qu'il est
+« récupérable en coupe sanitaire », soit `CHABLIS_RECUPERABLE_SEMAINES = 52`.
+Une mort par le feu est donc rapportée **un an après l'incendie**, à une semaine
+où `incendie` est `undefined`. Une mise en scène qui aurait attendu `morts`
+n'aurait jamais rien eu à animer — et c'est pour ça que `TRAJECTOIRES.feu` de
+`mort.ts` était resté une trajectoire neutre.
+
+Le contournement est le même que pour les recrues : l'INSTANTANÉ le dit.
+`brulEeSemaine` porte la semaine où le feu a tué l'arbre, et un arbre dont cette
+semaine tombe dans l'intervalle du journal a brûlé pendant l'ellipse qu'on joue.
+Et le MOMENT vient du front : **le rang de sa cellule dit quand la ligne de
+flammes l'atteint**. Un arbre ne s'embrase donc pas quand l'acte commence, il
+s'embrase quand le feu arrive à son pied — la seule chose qui rende un torchage
+lisible plutôt que décoratif. Les flammes montent DANS le houppier
+(`baseHouppierM`) et pas dans le fût nu, ce qui est exactement la pédagogie de
+l'élagage contre le feu.
+
+**Seconde découverte, et elle vaut pour tout le §6.3** : un arbre que le journal
+déclare mort cette semaine est DÉJÀ une chandelle dans l'instantané. Les onze
+mises en scène de mort partaient donc d'un feuillage nul et interpolaient du
+néant vers le néant — **elles ne montraient rien**, et le banc ne l'avait pas
+attrapé parce qu'il choisit exprès des arbres vivants (`?mort=<cause>`). Deux
+corrections : `appliquerLesMorts` POSE la chandelle au lieu de l'ajouter (c'est
+la mise en scène qui décide à quel moment l'arbre en devient une, pas
+l'instantané), et l'appelant reconstruit l'état d'avant l'acte — ce qui n'est pas
+une invention, puisque `partFoliaireOmbrageanteDans` et `senescenceDans`
+calculent ce que cette espèce porte à cette semaine.
+
+**Trois choses mesurées, dont deux qui ont changé la scène de démonstration :**
+
+- **la friche de trois ans ne PEUT PAS montrer un torchage.** Elle porte 229
+  tiges dont la plus haute fait 1,13 m, et le feu en tue 222 : ce n'est pas un
+  torchage, c'est un pré fauché. Un torchage a besoin d'une couronne. Le sondage
+  année par année : à 5 et 6 ans, une dizaine de cellules brûlent (rien à voir) ;
+  à 7 et 8 ans, quelques centaines et des tiges de 3 m ; **à 18 ans, 7 039
+  cellules, 2 751 tiges tuées dont la plus haute à 11,6 m, et 55 SURVIVANTES de
+  plus de 4 m** — la sélection par l'écorce (`survitAuFeu`) rendue visible sans
+  une ligne de dessin. D'où une seconde scène,
+  `bash scripts/apercu-scenes.sh torchage` ;
+- **un arbre sur le dernier rang flambait indéfiniment**, attrapé par un essai :
+  la tête du front ne dépassait le dernier rang que de la largeur du front plus
+  un, or un torchage dure sept rangs. Le dépassement doit couvrir la plus longue
+  chose que l'incendie met en scène (`DEPASSEMENT_DU_FRONT`) ;
+- au passage du front, **267 couronnes flambent en même temps** sur cette scène,
+  plafonnées à soixante posées, et tout s'éteint à la fin de l'acte. Pose de 6 à
+  15 ms pour 9 900 sprites, et toujours zéro classe de vignette recuite.
+
+### Le vent et la charge de combustible : les deux grandeurs sont arrivées
+
+Les deux manques nommés par les issues #50 et #52 sont comblés côté MOTEUR
+(voir `docs/regles.md` §3), et le rendu n'a plus de convention à déclarer.
+
+**Le vent** est désormais dérivé comme l'ETP : une rose à deux secteurs par
+station, la pluie comme marqueur de régime, une graine propre à la semaine et
+non à la partie. `TickResult.vent` porte un secteur, une direction dans le
+repère de la grille et une force. Le panache lit ça, et **les deux conventions
+que le rendu avait portées en attendant disparaissent** — d'abord « chaque
+colonne penche à l'opposé de l'origine », qui dessinait un vent soufflant vers
+l'extérieur dans toutes les directions à la fois ; puis « toutes penchent dans
+le sens de l'avance nette du front », qui était cohérent mais confondait la
+cause et l'effet. Ce que ça change à l'image : **un front qui descend le vent et
+un front qui le remonte ne se dessinent plus pareil.**
+
+**La charge de combustible par cellule brûlée** (`IncendieResult.charges`) donne
+la hauteur des flammes, et c'est la pédagogie du §6.4 portée par la flamme
+elle-même et plus seulement par la vitesse du front. La loi est une RACINE et
+non une proportionnelle : la longueur de flamme croît comme une puissance de
+l'intensité nettement inférieure à un (Byram), et la racine a en plus la bonne
+propriété de dessin — un pré ras garde une flamme visible au lieu de
+disparaître, un tas de rémanents ne fait pas un mur de dix mètres.
+
+**Et deux calibrations que la mesure a corrigées, dont une élégante et fausse :**
+
+- j'avais calé la hauteur de flamme sur `CHARGE_PLEINE_INTENSITE` du moteur —
+  1,2, la charge à laquelle le feu tue tout ce qui n'a pas d'écorce — en
+  trouvant l'accord élégant. Or les deux nombres répondent à deux questions
+  différentes : « à quelle charge le feu devient-il létal » est une question
+  d'écologie, « quelle est la charge d'une pelouse ordinaire » est la question
+  de DESSIN, parce que c'est elle que le joueur voit brûler la plupart du temps.
+  Mesuré : les scènes de feu brûlent à 0,53–0,73 de charge médiane, donc toutes
+  leurs flammes sortaient à 0,7 de la hauteur de référence — trois pixels au
+  zoom de parcelle, une ligne brillante au lieu de langues. Référence ramenée à
+  0,6, et la médiane remonte à 0,85–1,10 m avec des pointes à 3,8 m sur les
+  cellules chargées ;
+- côté moteur, j'avais **estimé** la zonalité moyenne des séries à 0,42 sans
+  regarder ; elle vaut 0,51 à 0,58. Le facteur de force donnait donc une moyenne
+  7 % au-dessus de l'exposition, ce qui aurait déplacé la climatologie du feu de
+  chaque station.
+
+Ce qui reste du §6.4 : les rejets de souche du printemps suivant — que le calque
+des changements pointera comme des recrues, sans rien de plus — et, côté moteur,
+la propagation anisotrope dans le sens du vent.
 
 ### 6.5 La crue
 
@@ -776,19 +1733,161 @@ position du plant avec son ombre et sa couronne à maturité (celle-là est
 pédagogique : elle montre l'emprise future), l'emprise de la clôture, la
 sélection d'arbres. `M`.
 
-### 6.8 Voir ce qui a changé, même à grande vitesse (revu en v0.2)
+### 6.8 Voir ce qui a changé, même à grande vitesse (revu en v0.2, corrigé en v0.5)
 
-**Le problème, posé franchement.** Le worker avale jusqu'à 26 semaines entre
-deux instantanés. À ×64, c'est un trimestre par image ; à ×512, une année. On
-ne peut donc pas *animer* ce qui s'est passé — l'animation d'une mort de
-sécheresse dure trois semaines de jeu, elle n'a pas de place. Mais « je veux
-voir ce qui a changé » n'est **pas** la même demande que « je veux voir les
-animations », et c'est ça qui débloque la solution : suivre le journal texte
-est effectivement pénible, donc **c'est la carte qui doit porter le changement**.
+> **La prémisse de cette section était fausse, et le §5.11 la corrige.** Elle
+> partait de « on ne peut pas ANIMER ce qui s'est passé » et en tirait trois
+> mécanismes de remplacement. Le commanditaire a relu son propre §5.11 dans
+> l'autre sens : « quand on saute d'un temps à l'autre, on a les animations
+> pour montrer ce qui a changé ».
+>
+> **Les deux se réconcilient sur un mot** : la durée de l'animation est une
+> durée de PRÉSENTATION, pas une durée de jeu. Une mort de sécheresse ne prend
+> pas trois semaines à montrer — elle prend le temps qu'on lui donne. D'où
+> `src/render/temps/ellipse.ts` : les changements rangés dans un BUDGET de
+> temps d'écran, groupés par cause et par type, dans un ordre où les causes
+> précèdent leurs conséquences. Une semaine et dix ans tiennent dans le même
+> budget ; l'un montre quatre actes, l'autre quarante.
+>
+> Les trois mécanismes ci-dessous ne disparaissent pas : ils deviennent le
+> **repli** de l'animation, et le plan dit lui-même quand il faut y basculer
+> (`deborde`).
+>
+> **La chaîne est branchée de bout en bout** : `ellipse.ts` range le journal
+> dans un budget, `lecteur.ts` dit où on en est et ce que ça fait à chaque
+> arbre, `chute.ts` calcule la déformation, et le poseur Pixi l'applique au
+> sprite déjà cuit. Deux décisions du lecteur ne sont pas évidentes et sont
+> tenues par des essais : **un arbre déjà tombé reste tombé** (sinon chaque
+> arbre se relève à l'acte suivant, et l'ellipse devient une suite de choses
+> qui se défont), et **les sujets d'un acte s'échelonnent** (trente-quatre
+> arbres qui tombent au même millième de seconde font une chorégraphie, pas une
+> forêt).
+>
+> **Une seule chose reste postiche** : l'origine du journal. `jeu.tsx` charge un
+> instantané figé, pas un flux, donc la démonstration se fabrique des chutes à
+> partir des chandelles de la scène. Le jour où le worker livrera
+> `Snapshot.chutes` à la vue, deux champs inventés — la direction et la masse —
+> laisseront place à ceux du message, qui les porte déjà, et rien d'autre ne
+> changera. Mille arbres morts ne tiennent pas dans deux secondes en restant
+> lisibles ; à ce moment-là, et à ce moment-là seulement, c'est la carte qui
+> porte le changement.
+
+**Le problème, tel qu'il était posé.** Le worker avale jusqu'à 26 semaines entre
+deux instantanés. À ×64, c'est un trimestre par image ; à ×512, une année. Et
+« je veux voir ce qui a changé » n'est **pas** la même demande que « je veux
+voir les animations » : suivre le journal texte est effectivement pénible, donc
+**la carte doit pouvoir porter le changement** quand l'animation déborde.
 
 Trois mécanismes, qui se complètent :
 
-#### 1. Le calque des changements (`animations/changements.ts`)
+#### 1. Le calque des changements — **construit le 2026-09-10**
+
+`src/render/temps/changements.ts` (pur) + `couches/marqueurs.ts` (les trois
+formes) + une couche Pixi au-dessus de tout.
+
+**Il a changé de statut en cours de route.** Cette section le rangeait au REPLI
+de l'animation, pour quand celle-ci déborde : mille morts ne tiennent pas dans
+deux secondes. La mesure du §6.3 a montré le problème SYMÉTRIQUE, et il est
+plus gênant : en jouant le vrai journal, une ellipse entière ne change que
+**196 pixels sur 880 000**. À grande vitesse il y a trop à montrer ; à vitesse
+normale il y en a trop peu pour qu'on le TROUVE. Le calque n'est donc pas un
+repli, c'est la moitié manquante.
+
+**Ce qui distingue un marqueur d'un objet du monde** — et c'est tout ce qui
+compte : il a une taille en PIXELS, pas en mètres. Dix-huit pixels au zoom de
+parcelle comme au zoom rapproché ; s'il grandissait avec le zoom, il serait
+invisible là où on en a le plus besoin. Chaque forme est tracée deux fois — un
+liseré sombre puis un trait clair — pour porter son propre contraste : les
+premiers halos beiges se fondaient dans le feuillage.
+
+La forme dit la NATURE du changement, la teinte en dit la cause : un **halo**
+(anneau ouvert) sur un arbre mort, teinté par la cause ; un **liseré** (arc
+bas) sur un arbre travaillé ; un **repère** (croix ajourée) au centre d'une
+zone. Deux canaux, parce qu'un joueur sur deux ne distingue pas le roux du
+brun. Les douze teintes de cause sont distinctes deux à deux, et un essai le
+tient.
+
+**Ce qu'il refuse de pointer, et c'est le point de conception le plus utile.**
+Le premier jet rendait **7 966 marqueurs** sur une semaine de friche : la
+cause est que `brouter` rapporte deux mille tiges par geste, et une semaine en
+porte quatre. Ce ne sont pas huit mille événements, c'est « le gibier a brouté
+partout, encore » — et ça se dit en trois mots. Au-delà de vingt-quatre tiges,
+un geste n'est donc plus pointé tige par tige, et le compte des changements
+non pointés (`Calque.omis`) revient à l'appelant : c'est le même aveu que
+`PlanDEllipse.deborde`, et c'est lui qui désigne le bilan de période (№2) comme
+le bon outil dans ce cas. Sur `friche-s28` : **45 marqueurs, 7 966 changements
+non pointés**.
+
+**Une chute n'est PAS marquée**, délibérément : c'est le seul changement de la
+liste qui se voit tout seul — vingt mètres de mouvement. Le marquer ajouterait
+un repère là où l'œil va déjà.
+
+**L'ESTOMPE, ajoutée le lendemain sur une remarque du commanditaire, et c'est
+un meilleur mécanisme que le mien.** Devant les halos il a demandé : « ce serait
+pas mieux de rendre tout ce qui est moins pertinent transparent pour permettre
+de bien voir les variations et animations ? ». Oui, et pour trois raisons qui
+n'étaient pas évidentes avant qu'il le dise : ça n'ajoute AUCUN objet à une
+image qui en compte trois mille (c'est un travail de soustraction, comme la
+brume du §5.8) ; ça marche pour les ANIMATIONS et pas seulement pour les
+positions — le seul arbre net qui bouge est celui qui tombe ; et ça ne demande
+aucun vocabulaire, là où un anneau ouvert doit s'apprendre. Elle passe par
+l'opacité de la POSE, donc par un canal qui existait déjà.
+
+**Mais elle ne suffit pas seule, et c'est la mesure qui le dit.** L'estompe rend
+trouvable ce qui est CLAIR ou COLORÉ — 359 semis verts sur un peuplement éteint
+sautent aux yeux — et échoue sur ce qui est SOMBRE ou MINUSCULE : les
+quarante-cinq chandelles nues d'une semaine restent invisibles parmi du
+feuillage éteint. Le calque garde donc les deux, avec une règle simple :
+**l'estompe pour trouver, un marqueur là où le contraste ne peut pas suffire.**
+
+Trois erreurs en chemin, toutes attrapées par la capture :
+
+- **le sol ne doit PAS s'estomper.** Je lui ai baissé l'opacité à 0,62 puis à
+  0,88 : derrière lui il y a le fond de brume, qui est PÂLE, donc baisser
+  l'alpha ne le fait pas reculer mais BLANCHIR. La parcelle sortait comme sous
+  un voile de lait. Le sol n'a de toute façon pas changé — c'est la référence
+  sur laquelle on lit les positions. Leçon générale : dans cette scène,
+  l'opacité fait reculer ce qui est posé sur du sombre et blanchir ce qui est
+  posé sur le fond de scène ;
+- **0,3 était trop fort** : à 0,14, le peuplement recule vraiment ;
+- **l'estompe s'est fait défaire par le broutage**, exactement comme les
+  marqueurs. En gardant nets tous les sujets du journal, 2 058 arbres sur 2 831
+  restaient nets et l'image était uniformément délavée. Même seuil, même
+  raison : un phénomène de masse ne se cherche pas, il se lit dans une phrase.
+
+**Les RECRUES sont là, et il a fallu me corriger DEUX fois pour ça.** J'avais
+ouvert [#46](https://github.com/iribarnesy/canopee/issues/46) en affirmant que
+les naissances ne voyageaient pas — sans avoir cherché le champ. Première
+correction : `Snapshot.trees[].ageWeeks` existait, et une recrue se lisait comme
+un arbre plus jeune que l'intervalle du journal, dans l'instantané SEUL. J'ai
+écrit ici que c'était « même plus robuste qu'une liste de naissances, qui se
+perdrait si un message était sauté ».
+
+Seconde correction, et le moteur a tranché contre moi : il rapporte maintenant
+`Snapshot.naissances`, avec leur position — et cette liste-là voit ce que la
+déduction ne voyait pas. **Un semis qui lève et se fait brouter dans le même
+intervalle n'a jamais existé pour la déduction**, puisqu'il n'est plus dans
+l'instantané pour porter son âge. Déduire confondait aussi « arrivé depuis la
+dernière fois » avec « jeune ». Le rendu lit donc l'événement, et
+`recruesDuSnapshot` est supprimée.
+
+**Les FRANCHISSEMENTS de stade sont arrivés avec, et ils closent l'issue.** Le
+moteur a fait le bon partage : le stade lui-même est une fonction pure de la
+hauteur (`stadeDe`), que le rendu calcule sans lui ; ce qu'il ne peut pas faire,
+c'est comparer deux instants. D'où l'événement, et lui seul. Le calque leur donne
+un **chevron vers le haut** — le seul marqueur qui ait une orientation, parce
+que c'est le seul qui dise une direction — teinté par le stade ATTEINT, sur une
+échelle qui se fonce en montant. C'est le seul endroit du calque où la teinte
+encode un ORDRE plutôt qu'une catégorie, et l'ordre se lit sans légende.
+
+Mesuré sur les deux scènes de feu, et les deux lectures sont complémentaires :
+la friche de trois ans donne **85 naissances et zéro franchissement** — rien n'y
+a encore deux centimètres et demi de diamètre — tandis que le taillis de dix-huit
+ans donne **zéro naissance et 267 franchissements** (239 vers le gaulis, 19 vers
+le perchis, 9 vers la futaie). Une friche qui se boise et un taillis qui
+grossit ne racontent pas la même histoire, et le calque les distingue.
+
+#### La demande d'origine (v0.2)
 
 Un calque qui **marque tout ce qui a changé depuis la dernière fois que le
 joueur a regardé**, et qui *persiste* au lieu de défiler :
@@ -914,7 +2013,7 @@ Un rendu ne se teste pas comme un moteur, mais il n'est pas intestable :
 | **L1** | Terrain isométrique : tuiles, **relief à l'échelle vraie**, flancs, ombrage de pente, eau libre, **tri entrelacé sol/arbres**, **rotation**, zoom, picking avec altitude | on tourne autour d'une parcelle vide et belle | `L` |
 | **L2** | **Le générateur d'arbres** : squelette par branchement, stades continus, LOD, atlas à la demande, + **les 6 premières fiches d'espèce** | on reconnaît six essences | `XL` |
 | **L2b** | **Les 19 fiches restantes**, par vagues (fourré, fruitiers, le reste) | on reconnaît tout | `XL` |
-| **L3** | Le temps : interpolation entre instantanés, croissance douce, **phénologie** (débourrement, coloration, chute), saisons, vent, herbe | la parcelle vit | `L` |
+| **L3** | **L'ELLIPSE : animer ce qui a CHANGÉ entre deux temps** — le journal des changements (morts par cause, chutes, gestes, front de feu) rangé dans un budget de temps d'écran, puis joué. La phénologie et les saisons sont faites ; l'interpolation entre instantanés, non — elle n'a pas d'objet (§5.11). **La chaîne est branchée de bout en bout et la chute est jouée** (`render/temps/`, banc `apercu:ellipse`, zéro recuisson mesurée) ; restent les autres mises en scène et le journal réel du worker (§5.11) | on voit ce qui s'est passé pendant qu'on ne regardait pas | `L` |
 | **L4** | Gestion : élagage, **trogne**, recépage, démasclage, manchon, coupe qui tombe, fleurs et fruits, retours d'action | **la demande centrale : on voit ce qu'on fait aux arbres** | `L` |
 | **L5** | **Les morts** : les onze causes, les chandelles qui vieillissent, la chute des feuilles de sécheresse | on comprend pourquoi ça meurt | `L` |
 | **L6** | **L'incendie** : front, torchage, fumée, cendres, rejets, cadrage caméra | l'événement mémorable d'une partie | `L` |
@@ -942,10 +2041,28 @@ fiche par fiche, sans bloquer personne. L8, L9, L10 à la fin, en continu.
 C'est **le double**, et la quasi-totalité de l'écart vient de D4 : reconnaître
 vingt-cinq essences est de loin la décision la plus chère du lot — et c'est
 probablement celle qui compte le plus pour ce jeu-là. Le compte a d'ailleurs
-déjà bougé : le catalogue est passé de 19 à 25 essences pendant que j'écrivais
-ce document (charme, houx, saule blanc, cornouiller mâle, fusain, troène). Le
+déjà bougé deux fois : le catalogue est passé de 19 à 25 essences pendant que
+j'écrivais ce document (charme, houx, saule blanc, cornouiller mâle, fusain,
+troène), puis à 26 quand le moteur a ajouté le **noyer** pour l'allélopathie. Le
 chantier des fiches graphiques **suit la croissance du catalogue** — c'est un
-coût récurrent, pas un lot qu'on ferme. Autant le savoir : chaque essence
+coût récurrent, pas un lot qu'on ferme.
+
+**Et la récurrence se gère toute seule, ce qui est le vrai acquis.** Le noyer
+n'a pas été remarqué par quelqu'un qui relisait le catalogue : c'est l'essai de
+couverture qui l'a signalé, en une ligne, à la première passe de tests après la
+fusion du moteur. Deux leçons du passage :
+
+- **le manque n'était pas décoratif.** Le noyer est l'espèce qui empêche les
+  autres de pousser chez elle ; sans silhouette reconnaissable, la leçon du
+  juglone — le sol nu sous le houppier — passe inaperçue faute qu'on identifie
+  l'arbre qui la cause. Une fiche générique aurait coûté une règle écologique,
+  pas un détail de dessin ;
+- **l'essai de couverture ne couvre pas tout.** Les planches d'aperçu portent
+  leur propre liste d'espèces en dur : le noyer avait sa fiche et restait
+  invisible au banc, c'est-à-dire invisible à l'endroit exact où l'on juge si
+  une essence se reconnaît sans étiquette. Il a fallu regarder la planche pour
+  s'en apercevoir — et pour voir, du même coup, que son BROU vert disparaissait
+  dans le feuillage. Autant le savoir : chaque essence
 ajoutée au moteur coûtera désormais une demi-journée à une journée de dessin
 pour rester reconnaissable. Trois choses rendent le
 chiffre supportable :

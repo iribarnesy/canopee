@@ -16,6 +16,14 @@
  *   APERCU_NOM=friche.json APERCU_ANS=30 APERCU_SEMAINES=4,17,28,42 npm run apercu:scene
  *   APERCU_NOM=mare.json APERCU_EAU=mare npm run apercu:scene
  *
+ * Le banc de pelouse (§5.1), trois scènes :
+ *
+ *   APERCU_NOM=pelouse.json APERCU_ANS=30 APERCU_SEMAINES=28 APERCU_HERBE=1 \
+ *     APERCU_BIOMASSE=0.25 APERCU_LITIERE=0 APERCU_EAU_PART=0.7 \
+ *     APERCU_SANS_ARBRES=1 npm run apercu:scene
+ *   APERCU_NOM=pelouse-seche.json … APERCU_BIOMASSE=1 APERCU_EAU_PART=0.08 …
+ *   APERCU_NOM=pelouse-arbres.json … (sans APERCU_SANS_ARBRES)
+ *
  * Paramètres : station `friche-limon` portée à 1 ha, graine 42, météo réelle,
  * climat figé. Le voisinage de la station est CONSERVÉ — c'est lui qui
  * colonise la friche, et sans lui la parcelle reste nue.
@@ -30,15 +38,34 @@
 
 import { writeFileSync } from "node:fs";
 import { serieMeteoPour } from "../src/data/meteo";
+import type { GesteVisible } from "../src/engine/actions";
+import { transversalite } from "../src/engine/boisMort";
 import { getScenario, meteoDerivee, normalesHebdo } from "../src/engine/climat";
 import { cellulesEnEau } from "../src/engine/eau_surface";
+import { getEspece } from "../src/engine/especes";
+import {
+  chargeCombustible,
+  departDeFeu,
+  propager,
+  rangsDuFront,
+  survitAuFeu,
+  ventRecuParLeSite,
+} from "../src/engine/feu";
 import { advanceWeek } from "../src/engine/game";
-import { serieToWeeks } from "../src/engine/meteo";
-import { getPaysage } from "../src/engine/paysage";
+import { serieToWeeks, ventDeLaSemaine, type WeekWeather } from "../src/engine/meteo";
+import { frequentationDesBordures, getPaysage } from "../src/engine/paysage";
+import { contextePhenologique } from "../src/engine/phenologie";
 import { altitudeParCellule } from "../src/engine/relief";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, type Station } from "../src/engine/state";
 import { FRICHE_LIMON } from "../src/engine/stations";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+} from "../src/engine/tick";
+import { arbreDuSnapshot } from "../src/game/snapshot";
 
 const GRAINE = 42;
 const COTE_M = 100;
@@ -51,6 +78,122 @@ const NOM = process.env.APERCU_NOM;
  */
 const PENTE_PCT = process.env.APERCU_PENTE ? Number(process.env.APERCU_PENTE) : undefined;
 const EAU = process.env.APERCU_EAU as "ruisseau" | "mare" | undefined;
+/**
+ * Le BANC DE PELOUSE : forcer le tapis à une valeur uniforme, arbres compris.
+ *
+ * **Ce n'est pas une scène du moteur, et c'est assumé.** Le critère de la
+ * pelouse porte sur des BOUTS d'échelle — couverture pleine, litière nulle,
+ * réserve vide — que la simulation ne produit à peu près jamais toutes à la
+ * fois sur la même cellule. Les attendre, c'est ne jamais pouvoir juger le
+ * tapis ; les fabriquer à la main dans un JSON qu'on garde sur son disque,
+ * c'est une scène qui devient fausse sans que rien ne le signale — la leçon de
+ * méthode rappelée en tête de ce fichier.
+ *
+ * On les produit donc ici, par le même script, à partir d'un vrai instantané
+ * dont on ne remplace que le tapis. Tout le reste — relief, bordures,
+ * phénologie, arbres — reste ce que le moteur a calculé.
+ */
+const HERBE = process.env.APERCU_HERBE ? Number(process.env.APERCU_HERBE) : undefined;
+const BIOMASSE = process.env.APERCU_BIOMASSE ? Number(process.env.APERCU_BIOMASSE) : undefined;
+const LITIERE = process.env.APERCU_LITIERE ? Number(process.env.APERCU_LITIERE) : undefined;
+/** Remplissage de la réserve utile ∈ [0,1] imposé à toutes les cellules. */
+const EAU_PART = process.env.APERCU_EAU_PART ? Number(process.env.APERCU_EAU_PART) : undefined;
+/**
+ * Le BANC DU BOIS COUCHÉ : forcer une charge de bois et sa transversalité.
+ *
+ * Même raison que le banc de pelouse : la simulation ne met pas côte à côte,
+ * la même semaine, un tronc franchement en travers de la pente et un tronc
+ * franchement dans son sens — c'est pourtant l'écart qu'il faut juger, puisque
+ * l'un barre l'eau et l'autre fait gouttière. La planche impose donc les deux
+ * valeurs que le moteur produirait, comme elle impose une couverture pleine.
+ */
+const BOIS = process.env.APERCU_BOIS ? Number(process.env.APERCU_BOIS) : undefined;
+/** Azimut du tronc couché du banc, en degrés du repère de la parcelle. */
+const BOIS_AZIMUT = process.env.APERCU_BOIS_AZIMUT ? Number(process.env.APERCU_BOIS_AZIMUT) : 0;
+
+/**
+ * Un tronc couché du banc : les cellules qu'il occupe, ET la transversalité
+ * que le moteur en tire.
+ *
+ * **Les deux ensemble, et le premier jet ne l'avait pas fait.** Il chargeait
+ * une rangée de cellules et forçait une transversalité sans rapport : le rendu
+ * dessinait alors, dans chaque cellule, un bout de tronc à l'angle déclaré —
+ * donc des bouts parallèles mais décalés latéralement, une échelle de tirets
+ * au lieu d'un tronc. Le rendu avait raison, le banc fabriquait un état que la
+ * simulation ne produit jamais : le moteur écrit la masse le long de
+ * l'empreinte de la chute et calcule `barre` depuis la MÊME direction, si bien
+ * que les cellules chargées sont toujours alignées sur le tronc.
+ *
+ * Le banc prend donc un AZIMUT de tronc, pose les cellules le long, et laisse
+ * `transversalite` — la fonction du moteur — dire ce que ça barre. Aucune
+ * formule recopiée : `azimutAval` vient du rendu, `transversalite` du moteur.
+ */
+/**
+ * L'azimut de l'AVAL en une cellule, en radians du repère de la parcelle.
+ *
+ * C'est la direction que suit l'eau, et c'est par rapport à elle que le moteur
+ * mesure la transversalité d'un tronc. Le banc en a besoin pour poser un tronc
+ * dont la transversalité déclarée soit celle que le moteur en tirerait ; le
+ * RENDU, lui, n'en a pas besoin — il ne peut de toute façon pas retrouver la
+ * direction d'un tronc depuis une valeur absolue de sinus.
+ */
+function azimutAval(altitudes: readonly number[], coteM: number, x: number, y: number): number {
+  const a = (cx: number, cy: number) =>
+    altitudes[
+      Math.min(coteM - 1, Math.max(0, cy)) * coteM + Math.min(coteM - 1, Math.max(0, cx))
+    ] ?? 0;
+  return Math.atan2(-(a(x, y + 1) - a(x, y - 1)), -(a(x + 1, y) - a(x - 1, y)));
+}
+
+function troncCouche(
+  altitudes: readonly number[],
+  coteM: number,
+  azimutDeg: number,
+): { masse: (i: number) => boolean; travers: (i: number) => number } {
+  const azimut = (azimutDeg * Math.PI) / 180;
+  const occupees = new Set<number>();
+  // Deux troncs de vingt-cinq mètres, pour qu'on en voie un en entier même
+  // après un cadrage. On marche le long de l'azimut, cellule par cellule.
+  for (const [x0, y0] of [
+    [coteM / 3, coteM / 3],
+    [(2 * coteM) / 3, (2 * coteM) / 3],
+  ]) {
+    for (let d = -12.5; d <= 12.5; d += 0.4) {
+      const x = Math.round((x0 ?? 0) + Math.cos(azimut) * d);
+      const y = Math.round((y0 ?? 0) + Math.sin(azimut) * d);
+      if (x < 0 || y < 0 || x >= coteM || y >= coteM) continue;
+      occupees.add(y * coteM + x);
+    }
+  }
+  return {
+    masse: (i) => occupees.has(i),
+    travers: (i) =>
+      transversalite(azimut, azimutAval(altitudes, coteM, i % coteM, Math.floor(i / coteM))),
+  };
+}
+/** Vider la liste des arbres : on juge le tapis, pas ce qui pousse dessus. */
+const SANS_ARBRES = process.env.APERCU_SANS_ARBRES === "1";
+/**
+ * `APERCU_FEU=1` : allume un incendie sur la scène, à la semaine capturée.
+ *
+ * **Propagé par le MOTEUR et non fabriqué**, et c'est la leçon du banc de bois
+ * mort : un banc qui fabrique un état inatteignable accuse le rendu. On prend
+ * donc la charge de combustible réelle de la parcelle (`chargeCombustible`), on
+ * demande à `departDeFeu` OÙ ça s'allume, et on laisse `propager` faire son
+ * travail avec le PRNG de la partie. Le front qui en sort est celui qu'un vrai
+ * été sec produirait — y compris son irrégularité, qui est justement ce que le
+ * §6.4 veut montrer.
+ *
+ * **Ce que le banc déclare est la MÉTÉO de la semaine, et rien d'autre** : une
+ * canicule sur un sol de surface épuisé. Sans elle, l'indice de risque est nul
+ * sur un limon du Nord et rien ne s'allume jamais — une scène de démonstration
+ * ne peut pas dépendre de la météo de 2026. Le lieu du départ, lui, n'est plus
+ * choisi par le banc : le premier jet allumait au centre de la parcelle, ce qui
+ * était faux de deux façons — un feu part là où il y a de quoi s'enflammer, et
+ * un centre de parcelle est déjà cadré, donc le cadrage caméra du §6.4 ne se
+ * voyait pas.
+ */
+const FEU = process.env.APERCU_FEU === "1";
 /**
  * Semaines DANS L'ANNÉE à figer, en plus de la fin d'année.
  *
@@ -76,28 +219,110 @@ interface ArbreScene {
   x: number;
   y: number;
   heightM: number;
+  /** `ageWeeks` du protocole : l'âge en semaines, qui reconnaît une recrue */
+  ageWeeks: number;
   chandelle: boolean;
   hauteurElagueeM: number;
+  /** hauteur de la tête de trogne, m ; absent = jamais étêté */
+  teteTrogneM?: number;
+  /** vigueur ∈ [0,1] : un arbre qui végète a le houppier clairsemé */
+  vigueur: number;
+  /** `dommageHydraulique` : la cime sèche, mémoire des sécheresses passées */
+  dommageHydraulique: number;
+  /** `brulEeSemaine` : la semaine où le feu l'a tué ; absent = pas brûlé */
+  brulEeSemaine?: number;
+  /** `protege` : plant sous manchon */
+  protege: boolean;
+  /** `recepages` : nombre d'étêtages subis */
+  recepages: number;
+  /** `frotteSemaine` : la semaine du dernier frottis ; absent = jamais frotté */
+  frotteSemaine?: number;
+  /** `derniereLeveeSemaine` : la semaine du dernier démasclage ; absent = jamais levé */
+  derniereLeveeSemaine?: number;
+  /** `brouteSemaine` : la semaine du dernier abroutissement ; absent = jamais brouté */
+  brouteSemaine?: number;
+  /** `diametreTeteCm` : diamètre de la tête de trogne, cm ; 0 = pas une trogne */
+  diametreTeteCm: number;
+  /** `caviteTeteL` : volume de la cavité de la tête, litres */
+  caviteTeteL: number;
+  /**
+   * `baseHouppierM` : la base du houppier, m — en dessous, plus une branche
+   * vivante. C'est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce, donc elle
+   * ne se déduit ni de l'essence ni de la hauteur : elle voyage.
+   */
+  baseHouppierM: number;
+  /** `floraison` : part de la couronne en fleur ∈ [0,1] */
+  floraison: number;
+  /** `fruitProgress` : avancement du fruit de l'année ∈ [0,1] */
+  fruitProgress: number;
+  /** `fruitsKg` : fruits mûrs en attente de récolte — l'état qui appelle un geste */
+  fruitsKg: number;
 }
 
 const arrondi = (v: number, n: number) => Math.round(v * 10 ** n) / 10 ** n;
 
 /**
+ * Fige les arbres pour l'aperçu, en passant par `arbreDuSnapshot`.
+ *
  * **Ne pas filtrer les arbres vivants avant de poser `chandelle`.** Le piège
  * historique du dépôt : garder `t.alive` puis calculer le drapeau sur ce qui
  * reste rend toutes les chandelles invisibles — or un mort debout est
  * précisément ce qu'on veut voir.
+ *
+ * **Par la fonction du protocole, et non par une recopie**, et c'est ce qui
+ * fait que l'aperçu voit la même chose que le jeu. La floraison en particulier
+ * se calcule sur un seuil de degrés-jours (`partFloraison`) : la recopier ici
+ * ferait dériver la scène du jeu d'une semaine ou deux sans que rien ne le
+ * signale — c'est la règle du §2.1, et elle vaut pour le banc autant que pour
+ * le rendu.
  */
-function figer(state: GameState): ArbreScene[] {
-  return state.trees.map((t) => ({
-    id: t.id,
-    especeId: t.especeId,
-    x: arrondi(t.x, 2),
-    y: arrondi(t.y, 2),
-    heightM: arrondi(t.heightM, 3),
-    chandelle: !t.alive,
-    hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
-  }));
+function figer(state: GameState, brules: ReadonlySet<number> = new Set()): ArbreScene[] {
+  // Le banc de pelouse juge le TAPIS : les arbres n'y ont rien à faire, ils
+  // couvriraient précisément ce qu'on regarde.
+  if (SANS_ARBRES) return [];
+  return state.trees.map((t) => {
+    const s = arbreDuSnapshot(t, state.ddYearBase5);
+    return {
+      id: t.id,
+      especeId: t.especeId,
+      x: arrondi(t.x, 2),
+      y: arrondi(t.y, 2),
+      heightM: arrondi(t.heightM, 3),
+      // L'ÂGE, et c'est lui qui reconnaît une recrue sans rien garder : un
+      // arbre plus jeune que l'intervalle du journal est arrivé depuis le
+      // dernier instantané (`recruesDuSnapshot`).
+      ageWeeks: t.ageWeeks,
+      // Un arbre que le feu vient de tuer est un TRONC MORT SUR PIED, et le
+      // moteur l'écrit ainsi (`{...tree, alive: false, causeMort: "feu",
+      // brulEeSemaine: state.week}`). L'instantané le dit donc charbonné, et
+      // c'est de là que le rendu apprend qu'il y a un torchage à mettre en
+      // scène — le journal ne peut pas le lui dire, le moteur ne rapporte une
+      // mort par le feu qu'un an plus tard (issue #52).
+      chandelle: !t.alive || brules.has(t.id),
+      hauteurElagueeM: arrondi(t.hauteurElagueeM, 2),
+      ...(t.teteTrogneM === undefined ? {} : { teteTrogneM: arrondi(t.teteTrogneM, 2) }),
+      vigueur: arrondi(t.vigueur, 3),
+      dommageHydraulique: arrondi(s.dommageHydraulique, 3),
+      ...(brules.has(t.id)
+        ? { brulEeSemaine: state.week }
+        : s.brulEeSemaine === undefined
+          ? {}
+          : { brulEeSemaine: s.brulEeSemaine }),
+      protege: s.protege,
+      recepages: s.recepages,
+      ...(s.frotteSemaine === undefined ? {} : { frotteSemaine: s.frotteSemaine }),
+      ...(s.derniereLeveeSemaine === undefined
+        ? {}
+        : { derniereLeveeSemaine: s.derniereLeveeSemaine }),
+      ...(s.brouteSemaine === undefined ? {} : { brouteSemaine: s.brouteSemaine }),
+      diametreTeteCm: s.diametreTeteCm,
+      caviteTeteL: s.caviteTeteL,
+      baseHouppierM: arrondi(s.baseHouppierM, 2),
+      floraison: arrondi(s.floraison, 3),
+      fruitProgress: arrondi(s.fruitProgress, 3),
+      fruitsKg: arrondi(s.fruitsKg, 2),
+    };
+  });
 }
 
 function recensement(an: number, fichier: string, trees: ArbreScene[]): string {
@@ -135,14 +360,176 @@ function recensement(an: number, fichier: string, trees: ArbreScene[]): string {
  * Les valeurs sont arrondies : trois décimales suffisent pour huit paliers de
  * quantification, et le fichier reste lisible.
  */
+/**
+ * Un incendie propagé par le moteur sur la parcelle telle qu'elle est.
+ *
+ * Rend la forme sérialisable de `IncendieResult` — les `Int32Array` de
+ * `brulees` et `rangs` deviendraient des objets indexés en JSON, donc on écrit
+ * des tableaux.
+ */
+function incendieDeDemonstration(
+  state: GameState,
+  station: Station,
+  lumiereAuSol: Float32Array<ArrayBufferLike>,
+): {
+  origine: number;
+  brulees: number[];
+  rangs: number[];
+  charges: number[];
+  victimes: { id: number; hauteurAvantM: number; rejet: boolean }[];
+} {
+  const charge = chargeCombustible(
+    state.trees,
+    state.soil.herbeCouverture,
+    state.soil.litterCG,
+    COTE_M,
+    [...lumiereAuSol],
+    state.soil.boisAuSolCG,
+  );
+  // **Le DÉPART est choisi par le moteur, pas par le banc.** Le premier jet
+  // allumait au centre de la parcelle : c'était commode, et c'était faux de
+  // deux façons — un feu ne part pas au milieu d'un carré, et le cadrage caméra
+  // du §6.4 devenait invisible puisque le centre de la parcelle était déjà
+  // cadré. `departDeFeu` tire la cellule AU PRORATA de sa combustibilité (« un
+  // fourré d'ajoncs part bien plus souvent qu'un sous-bois frais »), et c'est
+  // exactement la pédagogie qu'on veut montrer.
+  //
+  // Ce que le banc DÉCLARE, en revanche, c'est la semaine : une canicule sur un
+  // sol de surface épuisé. Sans elle l'indice de risque est nul sur un limon du
+  // Nord et rien ne s'allume jamais — ce qui est juste, et ce qui fait qu'une
+  // scène de démonstration doit poser ses conditions au lieu de les attendre.
+  // Tout le reste — le risque, la fréquentation humaine, le tirage pondéré —
+  // vient du moteur.
+  let tirage = rngStateFromSeed(GRAINE_DU_FEU);
+  let origine: number | undefined;
+  for (let essai = 0; essai < ESSAIS_D_ALLUMAGE && origine === undefined; essai++) {
+    const depart = departDeFeu(
+      tirage,
+      SEMAINE_DE_CANICULE,
+      SECHERESSE_DE_CANICULE,
+      CHALEUR_DE_CANICULE_C,
+      charge,
+      station.ventExposition,
+      COTE_M,
+      frequentationDesBordures(station.bordures),
+    );
+    tirage = depart.rng;
+    origine = depart.origine;
+  }
+  if (origine === undefined) throw new Error("aucun allumage : la parcelle ne brûle pas");
+  const { brulees } = propager(origine, charge, COTE_M, tirage);
+  const rangs = rangsDuFront(brulees, origine, COTE_M);
+  // Rangées par rang d'arrivée, comme le moteur les rend : c'est ce que le
+  // rendu attend pour faire courir le front.
+  const liste = [...brulees].sort((a, b) => (rangs.get(a) ?? 0) - (rangs.get(b) ?? 0));
+  // **Et le feu TUE, par la règle du moteur.** Sans ça, la scène de feu ne
+  // portait aucun arbre brûlé : `brulEeSemaine` n'était posé sur personne, et
+  // le torchage du §6.4 n'avait rien à mettre en scène. C'est `survitAuFeu` qui
+  // décide — l'écorce de l'espèce contre l'intensité locale — donc la
+  // démonstration montre la vraie sélection, chêne-liège compris.
+  //
+  // La liste a la forme de `IncendieResult.victimes` (tick.ts), et pour cause :
+  // c'est ce que le moteur rapporte désormais, et ce que le rendu doit lire.
+  // Chaque arbre y entre avec la hauteur qu'il avait AVANT le feu et le fait
+  // que sa souche rejette ou non — la même règle que le moteur applique,
+  // `espece.feu.rejetteApresFeu` sur une tige d'au moins 60 cm.
+  const victimes: { id: number; hauteurAvantM: number; rejet: boolean }[] = [];
+  for (const tree of state.trees) {
+    if (!tree.alive) continue;
+    const cellule =
+      Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.y))) * COTE_M +
+      Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.x)));
+    if (!brulees.has(cellule)) continue;
+    if (survitAuFeu(tree, intensiteDuFeu(charge.parCellule[cellule] ?? 0))) continue;
+    victimes.push({
+      id: tree.id,
+      hauteurAvantM: tree.heightM,
+      rejet: getEspece(tree.especeId).feu.rejetteApresFeu && tree.heightM > 0.6,
+    });
+  }
+  return {
+    origine,
+    brulees: liste,
+    rangs: liste.map((c) => rangs.get(c) ?? 0),
+    // La charge de chaque cellule brûlée : c'est DANS QUOI le feu a brûlé, et
+    // c'est elle qui donne la hauteur des flammes côté rendu.
+    charges: liste.map((c) => Number((charge.parCellule[c] ?? 0).toFixed(3))),
+    victimes,
+  };
+}
+
+/**
+ * L'intensité du feu dans une cellule, d'après sa charge de combustible.
+ *
+ * **Recopiée de `tick.ts` et c'est un défaut assumé** : le moteur la calcule en
+ * une ligne au milieu de sa section incendie (« l'intensité suit le combustible
+ * local ») sans l'exposer, alors que c'est elle qui décide qui meurt avec
+ * `survitAuFeu`. Deux copies d'une règle dérivent — l'issue #52 est ouverte pour
+ * qu'elle sorte du tick.
+ */
+function intensiteDuFeu(chargeLocale: number): number {
+  return Math.min(1, Math.max(0, chargeLocale) / 1.2);
+}
+
+/** La graine de l'allumage de démonstration. Fixe : une scène est reproductible. */
+const GRAINE_DU_FEU = 7717;
+
+/**
+ * Les conditions de la semaine que la scène de feu DÉCLARE.
+ *
+ * Une canicule de plein été sur un horizon de surface épuisé : c'est ce qu'il
+ * faut pour que `indiceRisqueFeu` sorte du zéro, et c'est un état que le climat
+ * du scénario atteindra de lui-même en se réchauffant (ch8). Le banc ne
+ * court-circuite donc pas une règle, il place la scène au moment où la règle
+ * mord.
+ */
+const SEMAINE_DE_CANICULE = 30;
+const SECHERESSE_DE_CANICULE = 0;
+const CHALEUR_DE_CANICULE_C = 34;
+
+/**
+ * La météo que la scène de feu DÉCLARE, pour l'allumage ET pour le vent.
+ *
+ * **Une seule déclaration pour les deux, et c'est une incohérence attrapée en
+ * regardant les chiffres** : la scène forçait la canicule pour l'allumage et
+ * prenait le vent de la semaine RÉELLE, qui se trouve être arrosée. Elle
+ * décrivait donc un incendie sous vent d'ouest soutenu de régime perturbé —
+ * c'est-à-dire un feu de forêt un jour de pluie. Le régime doit être le même
+ * pour tout ce qu'on en déduit.
+ */
+const METEO_DE_CANICULE: WeekWeather = {
+  tMean: CHALEUR_DE_CANICULE_C - 8,
+  tMin: CHALEUR_DE_CANICULE_C - 12,
+  tMax: CHALEUR_DE_CANICULE_C,
+  rainMm: 0,
+  tMinAbsC: CHALEUR_DE_CANICULE_C - 14,
+  // Le vent de la semaine 30 du régime par défaut : c'est la loi saisonnière du
+  // moteur (`ventDeLaSemaine`), pas un chiffre posé ici. Une canicule de fin
+  // juillet tombe au creux annuel de vitesse, et c'est bien ce qu'on veut
+  // montrer — un feu d'été français court par vent faible.
+  ...ventDeLaSemaine(SEMAINE_DE_CANICULE),
+};
+
+/**
+ * Combien de tirages d'allumage on laisse passer avant d'abandonner.
+ *
+ * La probabilité de départ plafonne à 1,5 % par semaine et par parcelle : même
+ * en canicule, l'allumage se fait attendre. Mille tirages en donnent
+ * pratiquement toujours un, et l'échec lève au lieu de rendre une scène muette.
+ */
+const ESSAIS_D_ALLUMAGE = 1000;
+
 function figerLeSol(
   state: GameState,
   station: Station,
   debordementMm: Float32Array<ArrayBufferLike>,
+  lumiereAuSol: Float32Array<ArrayBufferLike>,
+  semaineAnnee: number,
 ) {
   const arrondi = (a: readonly number[] | Float32Array<ArrayBufferLike>, d = 3) =>
     Array.from(a, (v) => Number(v.toFixed(d)));
   const dims = { widthM: station.coteM, heightM: station.coteM };
+  const tronc = troncCouche(altitudeParCellule(station.relief, dims), station.coteM, BOIS_AZIMUT);
   return {
     ruMm: station.ruMm,
     // L'eau libre est FIXE avec la station ; le débordement, lui, est de la
@@ -156,19 +543,79 @@ function figerLeSol(
     // `soilDebordementMm` transporte (protocol.ts). Confondre les deux
     // inondait la parcelle entière sur l'aperçu.
     debordementMm: arrondi(debordementMm, 2),
+    // La lumière arrivant au sol, du résultat du tick : c'est elle qui rend un
+    // sous-bois sombre et une trouée claire. Le rendu ne l'avait jamais eue, et
+    // sans elle une futaie fermée a le sol d'une clairière.
+    lumiere: arrondi(lumiereAuSol, 3),
+    // L'humidité VÉCUE par le tapis : l'horizon de surface lissé sur ~6
+    // semaines. C'est elle, et non `waterMm`, qui dit si une pelouse grille —
+    // l'inertie fait partie de la grandeur.
+    herbeHumidite: arrondi(state.soil.herbeHumidite, 3),
+    // Le bois mort couché et sa transversalité. Les deux, parce que la masse
+    // seule ne dit pas si le tronc barre l'eau — et c'est ce qui explique
+    // qu'une cellule soit plus humide que sa voisine.
+    // Un SEUL tronc, pas du bois partout. Charger toutes les cellules donnait
+    // une tapisserie de tirets réguliers — ce qui a d'ailleurs servi : c'est
+    // comme ça qu'on a vu que le rendu dessinait un objet par cellule au lieu
+    // d'un tronc traversant. Le banc pose donc une bande, comme un chablis
+    // couché : la seule chose qu'on veuille juger est si ça se lit comme un
+    // tronc, et à quel angle.
+    boisAuSol:
+      BOIS === undefined
+        ? arrondi(state.soil.boisAuSolCG, 1)
+        : state.soil.boisAuSolCG.map((_, i) => (tronc.masse(i) ? BOIS : 0)),
+    boisEnTravers:
+      BOIS === undefined
+        ? arrondi(state.soil.boisEnTraversPart, 3)
+        : state.soil.boisEnTraversPart.map((_, i) => Number(tronc.travers(i).toFixed(3))),
     altitudesM: arrondi(altitudeParCellule(station.relief, dims), 2),
-    waterMm: arrondi(state.soil.waterMm, 2),
-    herbeCouverture: arrondi(state.soil.herbeCouverture),
-    herbeBiomasse: arrondi(state.soil.herbeBiomasse),
-    litiereCG: arrondi(state.soil.litterCG, 1),
+    waterMm:
+      EAU_PART === undefined
+        ? arrondi(state.soil.waterMm, 2)
+        : state.soil.waterMm.map(() => Number((EAU_PART * station.ruMm).toFixed(2))),
+    herbeCouverture:
+      HERBE === undefined
+        ? arrondi(state.soil.herbeCouverture)
+        : state.soil.herbeCouverture.map(() => HERBE),
+    herbeBiomasse:
+      BIOMASSE === undefined
+        ? arrondi(state.soil.herbeBiomasse)
+        : state.soil.herbeBiomasse.map(() => BIOMASSE),
+    litiereCG:
+      LITIERE === undefined
+        ? arrondi(state.soil.litterCG, 1)
+        : state.soil.litterCG.map(() => LITIERE),
+    // Le contexte phénologique de la semaine figée. **Il ne se recalcule pas
+    // côté rendu** : un seul endroit tient ce calendrier, et deux copies
+    // dériveraient — un houppier doré à l'écran, un houppier vert dans le
+    // moteur (docs/interface-visuelle.md §2.1).
+    pheno: contextePhenologique(
+      station.latitudeDeg,
+      semaineAnnee,
+      state.ddYearBase5,
+      state.semainesDeFroid,
+    ),
     // Les quatre bordures, réduites à ce dont le décor a besoin : trois parts
-    // par côté. Le rendu n'a que faire des semenciers ou du gibier, et lui
-    // passer le `Paysage` entier lui donnerait accès à des données de moteur
-    // qu'il n'a aucune raison de connaître (D6).
+    // et les ESSENCES, par côté. Le rendu n'a toujours que faire du gibier ou
+    // des dépôts d'azote (D6) — mais les semenciers, si : ce sont eux qui
+    // disent de quoi est fait le bois d'à côté, et sans eux un massif de pins
+    // de lande se dessinait comme une hêtraie. Le poids est le `semisParAn` du
+    // paysage, tel quel : c'est le seul classement d'abondance disponible.
     bordures: Object.fromEntries(
       (["nord", "est", "sud", "ouest"] as const).map((cote) => {
         const p = getPaysage(station.bordures[cote]);
-        return [cote, { boise: p.partBoisee, cultive: p.partCultivee, urbain: p.partUrbaine }];
+        return [
+          cote,
+          {
+            boise: p.partBoisee,
+            cultive: p.partCultivee,
+            urbain: p.partUrbaine,
+            especes: p.semenciers.map((s) => ({
+              especeId: s.especeId,
+              poids: s.semisParAn,
+            })),
+          },
+        ];
       }),
     ),
   };
@@ -204,9 +651,26 @@ function main() {
   const aEcrire = new Set(ANS);
   const rapports: string[] = [];
   let dernierDebordement: Float32Array<ArrayBufferLike> = new Float32Array(COTE_M * COTE_M);
+  let derniereLumiere: Float32Array<ArrayBufferLike> = new Float32Array(COTE_M * COTE_M).fill(1);
   // La trajectoire année par année : c'est elle qui dit OÙ est le pire cas,
   // et ce n'est plus là où le premier jet l'avait trouvé.
   process.stderr.write("an\ttiges\tvivantes\tchandelles\thmax\n");
+  // **Le JOURNAL, accumulé d'un instantané au suivant.** C'est la sémantique du
+  // worker (`pendingMorts` et compagnie) et c'est la seule qui ait un sens :
+  // l'ellipse anime ce qui a changé DEPUIS la dernière fois qu'on a regardé.
+  // Sans lui, les scènes du banc étaient des instantanés muets, et le rendu se
+  // fabriquait un journal postiche pour avoir quelque chose à animer.
+  let enAttente: {
+    morts: MortDeLaSemaine[];
+    gestes: GesteVisible[];
+    chutes: ChuteDeChandelle[];
+    /** les semis installés : la moitié POSITIVE de l'histoire (tick.ts) */
+    naissances: NaissanceDeLaSemaine[];
+    /** les tiges que la croissance a fait changer de stade (stades.ts) */
+    franchissements: FranchissementDeStade[];
+    /** sur combien de semaines il a été accumulé — voir `recruesDuSnapshot` */
+    semaines: number;
+  } = { morts: [], gestes: [], chutes: [], naissances: [], franchissements: [], semaines: 0 };
   for (let i = 0; i < dernierAn * 52; i++) {
     const base = weather[i % weather.length];
     if (!base) throw new Error("météo manquante");
@@ -214,19 +678,79 @@ function main() {
     const semaine = advanceWeek(state, w, []);
     state = semaine.state;
     dernierDebordement = semaine.debordementParCellule;
+    derniereLumiere = semaine.lumiereAuSol;
+    // **On n'accumule qu'à partir de la dernière année**, et c'est une
+    // correction attrapée avant la première génération : le journal ne se vide
+    // qu'à l'émission d'une scène, or la première tombe au bout de trente ans.
+    // Le premier fichier aurait porté trente ans de morts — des milliers — et
+    // aurait fait dire à l'ellipse « voilà ce qui a changé depuis la dernière
+    // fois que vous avez regardé », ce qui aurait été faux de trente ans.
+    if (i >= (dernierAn - 1) * 52) {
+      enAttente.morts.push(...semaine.morts);
+      enAttente.gestes.push(...semaine.gestes);
+      enAttente.chutes.push(...semaine.chutes);
+      enAttente.naissances.push(...semaine.naissances);
+      enAttente.franchissements.push(...semaine.franchissements);
+      enAttente.semaines++;
+    }
     // Les semaines demandées de la DERNIÈRE année, figées au passage.
     const anEnCours = Math.floor(i / 52) + 1;
     if (anEnCours === dernierAn && SEMAINES.includes(i % 52)) {
       const nom = NOM ? NOM.replace(/\.json$/, "") : `scene-an${dernierAn}`;
+      // L'incendie est calculé AVANT de figer les arbres : ce sont ses victimes
+      // qui décident lesquels l'instantané décrit comme des troncs charbonnés,
+      // et c'est ce qui donne au rendu de quoi mettre en scène un torchage.
+      const incendie = FEU
+        ? incendieDeDemonstration(state, station, semaine.lumiereAuSol)
+        : undefined;
       writeFileSync(
         `${DOSSIER}/${nom}-s${i % 52}.json`,
         `${JSON.stringify({
           coteM: COTE_M,
           week: i,
-          trees: figer(state),
-          sol: figerLeSol(state, station, semaine.debordementParCellule),
+          // L'exposition au vent de la station : c'est l'amplitude dont le
+          // panache d'un incendie s'incline (`render/temps/feu.ts`). Le moteur
+          // est l'ABRI du site, pas le vent : ce que la parcelle reçoit vraiment
+          // est le produit des deux (`ventRecuParLeSite`).
+          ventExposition: station.ventExposition,
+          // **Le VENT de la semaine, tel que le moteur le rapporte** dans la
+          // météo (`WeekWeather.ventVersRad`, `ventMoyMs`). C'est lui qui
+          // incline le panache d'un incendie ; l'exposition ne dit que
+          // l'échelle. Sur une scène de feu, c'est le vent de la canicule
+          // déclarée, comme l'allumage : le régime doit être le même pour tout
+          // ce qu'on en déduit.
+          vent: (() => {
+            const m = FEU ? METEO_DE_CANICULE : w;
+            return {
+              versRad: Number(m.ventVersRad.toFixed(4)),
+              moyMs: Number(m.ventMoyMs.toFixed(2)),
+              // Ce que le site reçoit, calculé par le moteur : le rendu n'a
+              // plus qu'à le lire.
+              recuMs: Number(ventRecuParLeSite(m.ventMoyMs, station.ventExposition).toFixed(2)),
+            };
+          })(),
+          trees: figer(state, new Set((incendie?.victimes ?? []).map((v) => v.id))),
+          journal: {
+            ...enAttente,
+            ...(incendie ? { incendie } : {}),
+          },
+          sol: figerLeSol(
+            state,
+            station,
+            semaine.debordementParCellule,
+            semaine.lumiereAuSol,
+            i % 52,
+          ),
         })}\n`,
       );
+      enAttente = {
+        morts: [],
+        gestes: [],
+        chutes: [],
+        naissances: [],
+        franchissements: [],
+        semaines: 0,
+      };
     }
     if ((i + 1) % 52 !== 0) continue;
     const an = (i + 1) / 52;
@@ -243,8 +767,9 @@ function main() {
       `${JSON.stringify({
         coteM: COTE_M,
         week: an * 52,
+        ventExposition: station.ventExposition,
         trees,
-        sol: figerLeSol(state, station, dernierDebordement),
+        sol: figerLeSol(state, station, dernierDebordement, derniereLumiere, (an * 52 - 1) % 52),
       })}\n`,
     );
     rapports.push(recensement(an, fichier, trees));

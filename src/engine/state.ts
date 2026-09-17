@@ -67,6 +67,10 @@ export interface Station {
    * Exposition au vent ∈ [0,1] : 0 = vallon abrité, 1 = lande atlantique ou
    * plateau ouvert. Le vent dessèche les sujets découverts — c'est ce qui rend
    * l'effet brise-vent d'une haie ou d'une nurse payant (ch5, docs §9).
+   *
+   * C'est l'ABRI du site, pas le vent : la vitesse régionale de la semaine est
+   * dans `WeekWeather.ventMoyMs`, et ce que la parcelle reçoit vraiment est le
+   * produit des deux (`ventRecuParLeSite`, feu.ts).
    */
   ventExposition: number;
   /** relief de la parcelle : altitude, pente, exposition, forme (relief.ts) */

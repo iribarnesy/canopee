@@ -15,8 +15,11 @@ function Root() {
     color: active ? "#fff" : "var(--encre)",
     cursor: "pointer",
   });
+  // Assez large pour la vue de parcelle ET son panneau : les deux font 1 100 px
+  // à elles deux, et une page plus étroite ne les rétrécissait pas — elle les
+  // laissait déborder, texte coupé au bord droit.
   return (
-    <main style={{ maxWidth: 990, margin: "1.5rem auto", padding: "0 1rem" }}>
+    <main style={{ maxWidth: 1160, margin: "1.5rem auto", padding: "0 1rem" }}>
       <header
         style={{
           display: "flex",

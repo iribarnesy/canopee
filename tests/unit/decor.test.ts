@@ -5,11 +5,15 @@ import {
   attenuation,
   BRUME,
   BRUME_MAX,
+  CANOPEE_LA_PLUS_BASSE_M,
   type CoteDecor,
+  canopee,
   couleurDecor,
   couleurMasse,
+  couvertureDuDecor,
   type DecorBordures,
   distanceAuBord,
+  LEVEE_LA_PLUS_HAUTE_M,
   MAILLE_MASSE_M,
   masseDeLaCase,
   massesDuDecor,
@@ -154,56 +158,6 @@ describe("les masses du décor", () => {
     expect(a.length).toBeGreaterThan(0);
   });
 
-  it("sont plus nombreuses du côté boisé que du côté cultivé", () => {
-    const cotesForet: DecorBordures = {
-      nord: foret,
-      est: foret,
-      sud: plaine,
-      ouest: plaine,
-    };
-    const auNord = massesDuDecor(cotesForet, COTE, 0, COTE, COTE, COTE + 40);
-    const auSud = massesDuDecor(cotesForet, COTE, 0, -40, COTE, 0);
-    expect(auNord.length).toBeGreaterThan(auSud.length);
-  });
-
-  it("se raréfient avec la distance, puisque la brume les mangerait", () => {
-    // Mesuré sur un côté à 40 % boisé, et pas sur la forêt à 90 % : là-bas, le
-    // groupement plaque la probabilité locale à 1 sur des pans entiers, la
-    // raréfaction est noyée, et le test ne mesurerait que le bruit du grumeau.
-    // Trois bandes de même largeur, de plus en plus loin.
-    const moyen: CoteDecor = { boise: 0.4, cultive: 0.3, urbain: 0 };
-    const partout: DecorBordures = { nord: moyen, est: moyen, sud: moyen, ouest: moyen };
-    const bande = (d: number) =>
-      massesDuDecor(partout, COTE, 0, COTE + d, COTE, COTE + d + 30).length;
-    expect(bande(70)).toBeLessThan(bande(10));
-    expect(bande(100)).toBeLessThan(bande(70));
-  });
-
-  it("se GROUPENT au lieu de s'éparpiller : un bois, pas des pois", () => {
-    // Le semis indépendant case par case donnait un motif de Poisson — des
-    // dômes isolés, régulièrement espacés, une colonie bactérienne. Le grumeau
-    // module la probabilité localement, donc la variance du nombre de masses
-    // par bloc doit dépasser celle d'un tirage indépendant, qui vaut np(1−p).
-    const moyen: CoteDecor = { boise: 0.4, cultive: 0.3, urbain: 0 };
-    const partout: DecorBordures = { nord: moyen, est: moyen, sud: moyen, ouest: moyen };
-    const cases = 25; // 5 × 5 cases par bloc
-    const comptes: number[] = [];
-    for (let bx = 0; bx < 8; bx++) {
-      for (let by = 0; by < 8; by++) {
-        const x0 = COTE + 10 + bx * 5 * MAILLE_MASSE_M;
-        const y0 = COTE + 10 + by * 5 * MAILLE_MASSE_M;
-        comptes.push(
-          massesDuDecor(partout, COTE, x0, y0, x0 + 4 * MAILLE_MASSE_M, y0 + 4 * MAILLE_MASSE_M)
-            .length,
-        );
-      }
-    }
-    const moyenne = comptes.reduce((a2, b2) => a2 + b2, 0) / comptes.length;
-    const variance = comptes.reduce((a2, b2) => a2 + (b2 - moyenne) ** 2, 0) / comptes.length;
-    const p = moyenne / cases;
-    expect(variance).toBeGreaterThan(cases * p * (1 - p));
-  });
-
   it("une case rend au plus une masse, et son pied reste dans la case", () => {
     for (let j = -4; j < 20; j++) {
       const m = masseDeLaCase(bordures, -2, j, COTE);
@@ -289,5 +243,209 @@ describe("l'altitude du décor", () => {
 
   it("la moyenne est bien celle de la parcelle", () => {
     expect(altitudeMoyenneParcelle(altitudes, coteM)).toBeCloseTo(0.35, 2);
+  });
+});
+
+/**
+ * La canopée du hors-parcelle.
+ *
+ * **Ces essais gardent des propriétés qui ont CHANGÉ DE PORTEUR.** Elles
+ * étaient vérifiées sur les masses boisées — plus nombreuses du côté boisé, se
+ * raréfiant avec la distance, groupées et non éparpillées. Les bois ne sont
+ * plus des masses dénombrables mais une surface (voir `canopee`), et les trois
+ * propriétés restent vraies et valent d'être tenues : c'est le même paysage,
+ * dessiné autrement.
+ */
+describe("la canopée du décor", () => {
+  const cote = (b: number, especes?: { especeId: string; poids: number }[]): CoteDecor => ({
+    boise: b,
+    cultive: 1 - b,
+    urbain: 0,
+    ...(especes ? { especes } : {}),
+  });
+  const partout = (c: CoteDecor): DecorBordures => ({ nord: c, est: c, sud: c, ouest: c });
+
+  it("ne pousse pas dans la parcelle", () => {
+    expect(canopee(partout(cote(0.9)), 50, 50, COTE).couverture).toBe(0);
+    expect(canopee(partout(cote(0.9)), 50, 50, COTE).hauteurM).toBe(0);
+  });
+
+  it("couvre davantage du côté boisé que du côté cultivé", () => {
+    const cotesForet: DecorBordures = { nord: foret, est: foret, sud: plaine, ouest: plaine };
+    const moyenne = (y0: number, y1: number) => {
+      let somme = 0;
+      let n = 0;
+      for (let y = y0; y < y1; y += 3) {
+        for (let x = 0; x < COTE; x += 3) {
+          somme += canopee(cotesForet, x, y, COTE).couverture;
+          n++;
+        }
+      }
+      return somme / n;
+    };
+    expect(moyenne(COTE + 2, COTE + 40)).toBeGreaterThan(moyenne(-40, -2));
+  });
+
+  it("se raréfie avec la distance, puisque la brume la mangerait", () => {
+    const b = partout(cote(0.4));
+    const bande = (d: number) => {
+      let somme = 0;
+      let n = 0;
+      for (let y = COTE + d; y < COTE + d + 30; y += 2) {
+        for (let x = 0; x < COTE; x += 2) {
+          somme += canopee(b, x, y, COTE).couverture;
+          n++;
+        }
+      }
+      return somme / n;
+    };
+    expect(bande(70)).toBeLessThan(bande(10));
+    expect(bande(100)).toBeLessThan(bande(70));
+  });
+
+  it("se GROUPE au lieu de s'éparpiller : des bois et des clairières", () => {
+    // Le grumeau module la couverture localement : la variance de la couverture
+    // moyenne par bloc doit dépasser largement celle qu'aurait un champ
+    // uniforme, sinon il n'y a ni bois ni clairière mais une purée homogène.
+    const b = partout(cote(0.4));
+    const blocs: number[] = [];
+    for (let bx = 0; bx < 8; bx++) {
+      for (let by = 0; by < 8; by++) {
+        let somme = 0;
+        let n = 0;
+        for (let y = 0; y < 20; y += 4) {
+          for (let x = 0; x < 20; x += 4) {
+            somme += couvertureDuDecor(
+              b,
+              COTE + 10 + bx * 20 + x,
+              COTE + 10 + by * 20 + y,
+              COTE,
+            ).boise;
+            n++;
+          }
+        }
+        blocs.push(somme / n);
+      }
+    }
+    const moyenne = blocs.reduce((p, q) => p + q, 0) / blocs.length;
+    const variance = blocs.reduce((p, q) => p + (q - moyenne) ** 2, 0) / blocs.length;
+    expect(variance).toBeGreaterThan(0.002);
+  });
+
+  it("prend l'essence que le PAYSAGE déclare, et pas une autre", () => {
+    // La règle n° 1 : le rendu n'invente rien. Un paysage de lande porte des
+    // pins et des bouleaux ; la canopée ne doit pas y planter de hêtre.
+    const lande = [
+      { especeId: "pinus_sylvestris", poids: 4 },
+      { especeId: "betula_pendula", poids: 3 },
+    ];
+    const b = partout(cote(0.9, lande));
+    const vues = new Set<string>();
+    for (let y = COTE + 2; y < COTE + 80; y += 3) {
+      for (let x = 0; x < COTE; x += 3) {
+        const e = canopee(b, x, y, COTE).especeId;
+        if (e) vues.add(e);
+      }
+    }
+    expect(vues.size).toBeGreaterThan(1);
+    for (const e of vues) expect(lande.map((l) => l.especeId)).toContain(e);
+  });
+
+  it("ne déclare AUCUNE essence quand le paysage n'en donne pas", () => {
+    // Mieux vaut un bois anonyme qu'une essence tirée au sort : le décor dirait
+    // alors quelque chose que le moteur ne dit pas.
+    const b = partout(cote(0.9));
+    for (let y = COTE + 2; y < COTE + 40; y += 5) {
+      expect(canopee(b, 50, y, COTE).especeId).toBeUndefined();
+    }
+  });
+
+  it("monte plus haut sous une essence haute que sous une basse", () => {
+    // La hauteur vient de `hauteurMaxM` du moteur : un massif de hêtres et une
+    // haie d'épine noire ne peuvent pas se dessiner pareil.
+    const haut = partout(cote(0.9, [{ especeId: "fagus_sylvatica", poids: 1 }]));
+    const bas = partout(cote(0.9, [{ especeId: "prunus_spinosa", poids: 1 }]));
+    const moyenne = (b: DecorBordures) => {
+      let somme = 0;
+      let n = 0;
+      for (let y = COTE + 2; y < COTE + 40; y += 2) {
+        for (let x = 0; x < COTE; x += 2) {
+          somme += canopee(b, x, y, COTE).hauteurM;
+          n++;
+        }
+      }
+      return somme / n;
+    };
+    expect(moyenne(haut)).toBeGreaterThan(moyenne(bas) * 1.5);
+  });
+
+  it("ne dresse jamais un mur : la levée est plafonnée", () => {
+    // Dessinée à sa hauteur vraie, une canopée de trente mètres présentait au
+    // bord du bois une jupe d'un seul ton de cent dix pixels, et le décor
+    // sortait en facettes de cristal.
+    const b = partout(cote(1, [{ especeId: "fagus_sylvatica", poids: 1 }]));
+    for (let y = COTE + 1; y < COTE + 60; y += 1) {
+      for (let x = 0; x < COTE; x += 7) {
+        // l'ondulation des cimes peut dépasser la levée de son amplitude
+        expect(canopee(b, x, y, COTE).hauteurM).toBeLessThan(LEVEE_LA_PLUS_HAUTE_M * 1.2);
+      }
+    }
+  });
+
+  it("a une hauteur CONTINUE : pas de marche entre deux peuplements", () => {
+    // Le premier jet tirait la maturité par peuplement, donc chaque maille de
+    // vingt-six mètres avait son plateau d'altitude, et les quads à cheval
+    // formaient des rampes : le décor sortait en facettes. Un pas de dix
+    // centimètres ne doit pas faire sauter la canopée.
+    const b = partout(cote(0.8, [{ especeId: "fagus_sylvatica", poids: 1 }]));
+    let pire = 0;
+    for (let y = COTE + 2; y < COTE + 50; y += 0.5) {
+      const a = canopee(b, 40, y, COTE).hauteurM;
+      const c = canopee(b, 40, y + 0.1, COTE).hauteurM;
+      pire = Math.max(pire, Math.abs(c - a));
+    }
+    // Dix centimètres de déplacement, dix centimètres de canopée au plus.
+    expect(pire).toBeLessThan(0.1);
+  });
+
+  it("s'annule à la lisière au lieu de s'arrêter net", () => {
+    // Une lisière est une PENTE : la couverture module la hauteur, donc le bord
+    // d'un bois descend au sol au lieu de se terminer par une falaise.
+    const b = partout(cote(0.45, [{ especeId: "fagus_sylvatica", poids: 1 }]));
+    // Sur une AIRE et non sur une ligne : une transversale unique peut tomber
+    // entre deux bois, et l'essai mesurerait alors le hasard du tracé.
+    const hauteurs: number[] = [];
+    for (let y = COTE + 2; y < COTE + 60; y += 2) {
+      for (let x = 0; x < COTE; x += 2) hauteurs.push(canopee(b, x, y, COTE).hauteurM);
+    }
+    // Il y a des bois francs ET des clairières — mais la clairière n'est pas
+    // une hauteur NULLE : avec 45 % de boisé, le grumeau laisse partout au
+    // moins quelques pourcents de couverture, donc un demi-mètre de canopée.
+    // C'est le seuil de tracé qui fait les vraies clairières, et c'est à lui
+    // qu'il faut comparer — j'avais d'abord attendu un zéro qui n'existe pas.
+    expect(hauteurs.some((h) => h > LEVEE_LA_PLUS_HAUTE_M * 0.5)).toBe(true);
+    expect(hauteurs.some((h) => h < CANOPEE_LA_PLUS_BASSE_M)).toBe(true);
+    // ... et des valeurs intermédiaires entre les deux : la lisière.
+    expect(
+      hauteurs.some((h) => h > CANOPEE_LA_PLUS_BASSE_M && h < LEVEE_LA_PLUS_HAUTE_M * 0.5),
+    ).toBe(true);
+  });
+});
+
+describe("les masses du décor, après la canopée", () => {
+  it("ne sème plus AUCUN bois : un bois est une surface", () => {
+    const foretPartout: DecorBordures = { nord: foret, est: foret, sud: foret, ouest: foret };
+    const masses = massesDuDecor(foretPartout, COTE, -60, -60, COTE + 60, COTE + 60);
+    for (const m of masses) expect(m.masse).toBe("bati");
+  });
+
+  it("sème des bâtiments à proportion de la part urbaine", () => {
+    const urbain: DecorBordures = { nord: ville, est: ville, sud: ville, ouest: ville };
+    const rase: CoteDecor = { boise: 0.03, cultive: 0.97, urbain: 0 };
+    const champs: DecorBordures = { nord: rase, est: rase, sud: rase, ouest: rase };
+    const combien = (b: DecorBordures) =>
+      massesDuDecor(b, COTE, 0, COTE + 2, COTE, COTE + 40).length;
+    expect(combien(urbain)).toBeGreaterThan(combien(champs));
+    expect(combien(champs)).toBe(0);
   });
 });
