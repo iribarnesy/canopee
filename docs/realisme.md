@@ -66,18 +66,18 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
-| B. Lumière et structure | 6 | 4 | 0 | 10 |
+| B. Lumière et structure | 7 | 4 | 0 | 11 |
 | C. Nutriments et cycles | 14 | 0 | 1 | 15 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
-| E. Interactions entre plantes | 8 | 4 | 0 | 12 |
+| E. Interactions entre plantes | 9 | 3 | 0 | 12 |
 | F. Dynamique des peuplements | 12 | 4 | 3 | 19 |
 | G. Faune et santé | 10 | 1 | 0 | 11 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 7 | 1 | 0 | 8 |
-| **Total** | **119** | **22** | **4** | **145** |
+| **Total** | **121** | **21** | **4** | **146** |
 
-**Score de réalisme : 119 pleins + 22 partiels sur 145 → 90 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 121 pleins + 21 partiels sur 146 → 90 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -192,7 +192,8 @@ maladie-là, pas une preuve de santé.*
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | ✅ | `herbacees.ts` : trois herbacées, chacune avec son point de compensation, sa gamme de pH et son calendrier, se partagent le sol d'une cellule sur la place que les autres laissent ; `herbacees.test.ts` (le pH seul trie les deux graminées : molinie sur podzol à 4,5, dactyle sur limon à 7). **Limite** : pas de hiérarchie de hauteur DANS la strate — une graminée haute n'étouffe pas une rosette qui se maintient, elle n'occupe que la place lâchée |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
-| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré |
+| B11 | Une tige ne peut pas être plus élancée que sa mécanique ne le permet | ✅ | `trees.ts` (`hauteurStableM`) ; `etiolement.test.ts`. Une colonne qui porte son propre poids flambe au-delà de `H ∝ D^(2/3)` (Greenhill 1881 ; exposant vérifié sur les arbres records par McMahon & Kronauer 1976), donc l'élancement maximal décroît en `D^(−1/3)` : 100 pour une perche de 12 cm, 74 pour 30 cm, 62 pour 50 cm. Le niveau est calé sur la sylviculture (la perche serrée monte à 90–100 et n'y reste pas) et recoupé par le flambage élastique du bois vert, qui donne 162 pour 12 cm — une marge de 1,6 *(à calibrer : la littérature donne une gamme)*. Ce n'est pas un couperet : la marge `H_stable − H` se referme progressivement, l'allongement s'étrangle tout seul et la tige grimpe le long de son enveloppe en s'épaississant. **C'est la mesure qui l'a rendue nécessaire** : sans elle, l'étiolement s'emballe jusqu'à H/D 295 |
+| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré. **Et ce manque a désormais un coût mesuré** — depuis l'étiolement (#97), une tige dominée monte au lieu de stagner, donc le moteur lui attribue un houppier PLUS LARGE quand une perche réelle en a un riquiqui. Les ravageurs lisant la ressource sur le disque du houppier, l'effet protecteur du mélange est passé de 2,66–3,07 × à 1,88–2,24 × (`ravageurs.test.ts`, trois graines). Le jour où le houppier saura se resserrer, ces ratios doivent remonter |
 
 ## C. Nutriments et cycles
 
@@ -247,7 +248,7 @@ maladie-là, pas une preuve de santé.*
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ✅ | `herbacees.ts` : une vernale ne bouge son emprise que pendant SA saison, donc elle juge la station en mars ; `herbacees.test.ts`. Sous hêtraie, la couverture du sol vaut 3 fois plus mi-avril que fin juillet et la vernale tient 36-40 % de l'emprise ; sous pinède, 1,25 et 19 % ; à découvert, 1,04 et 3 % — gradient monotone, deux graines. **Limite** : le moteur ne produit pas, sur cette station, de peuplement sempervirent assez sombre pour l'exclure tout à fait (le pin sylvestre s'auto-éclaircit) ; ce que vaut la fenêtre se lit alors sur la capacité, nulle à 4 % de lumière |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts`, `herbacees.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre. La fauche emporte le FEUILLAGE et laisse l'emprise : la repousse est celle d'un chaume, pas d'une réinstallation |
-| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | 🟡 | `trees.ts` (`allocationDiametreCmParM`) ; `elancement.test.ts` — le diamètre est porté par l'INDIVIDU et s'épaissit à la mesure de ce que l'arbre monte, dans une proportion que la lumière décide. À écartement 2 / 4 / 6 / 10 m, même espèce et même graine, les dominants sortent à H/D 42,0 / 38,8 / 38,0 / 37,4 — gradient MONOTONE. **Reste 🟡 sur l'AMPLITUDE (35–49 contre 25–100), et DEUX causes annoncées ont été réfutées par la mesure.** Ce n'était pas le poids des codominants (#65 : le porter à 1 déplace les dominants serrés de 42,1 à 41,7). Ce n'était pas non plus la paire d'allocation (#79) : ouvrir sa fenêtre de [40 ; 80] à [40 ; 100] ne gagne que 49 → 53, et la pousser à l'absurde ([40 ; 200]) plafonne à 62 — le pin héliophile étant plus plat encore. L'essai a de plus été REFUSÉ par ses effets de bord : des tiges plus fines résistent moins au feu, et l'incendie vole ses victimes aux causes par lesquelles le réchauffement tue (`climat.test.ts`). **Le verrou est que H/D est une INTÉGRALE** : la plantation est ouverte ses premières années, le diamètre posé alors est acquis, et un semis naît déjà à H/D 50. Il faudrait un arbre qui monte vite en restant à l'ombre — l'étiolement, que l'ombre-dans-la-loi-du-minimum ne produit pas (#97). **Effet de bord documenté** : `ELANCEMENT_CRITIQUE` (tempete.ts) vaut 100 et n'est donc pas atteignable ; la moitié haute de la rampe de chablis est du code mort en attendant #97 |
+| E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ✅ | `trees.ts` (`allocationDiametreCmParM` + le partage de l'étiolement) ; `elancement.test.ts`, `etiolement.test.ts`. Le diamètre est porté par l'INDIVIDU, et la lumière décide de l'ARBITRAGE avant de raboter la pousse : l'allongement se sert d'abord, le diamètre encaisse le résidu. Rien n'est déclaré par essence. **L'amplitude est enfin là**, et il a fallu innocenter deux coupables avant d'y arriver — ni le poids des codominants (#65 : le porter à 1 déplace les dominants serrés de 42,1 à 41,7), ni la paire d'allocation (#79 : ouvrir sa fenêtre à [40 ; 200] plafonne à 62). Le verrou était que l'ombre rabotait la pousse au lieu de la rediriger. Mesuré depuis #97 : gradient MONOTONE des dominants à 2 / 4 / 10 m d'écartement, et la tige la plus élancée du peuplement passe de 49 à **87** à 2 m, contre 38 à 10 m ; la hêtraie serrée monte à 129 à quatre-vingts ans, là où la sylviculture mesure 25–40 au large et 90–100 en perche. Et c'est bien une PERCHE, pas un nabot : elle est à 62 % de la hauteur du plus haut, là où le moteur d'avant faisait des dominés TRAPUS. **Ce que ça débloque** : `ELANCEMENT_CRITIQUE` (tempete.ts) vaut 100 et était inatteignable — la moitié haute de la rampe de chablis n'est plus du code mort. **Réserve** : le bas de gamme reste court, au large le moteur donne 35–38 quand le réel descend à 25, ce que l'allocation plafonnée à 2,5 cm/m interdit |
 
 ## F. Dynamique des peuplements
 
@@ -1988,6 +1989,76 @@ pas le voir : il appelait la fonction avec des entiers.
   réservoir fini à seuil de débordement, et non comme une rugosité — ce que
   fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
   des barrages de débris.
+
+## L'étiolement : l'ombre déplace l'arbitrage avant de raboter la pousse
+
+Le moteur mettait la lumière dans la loi du minimum. Un arbre à l'ombre poussait
+donc moins **des deux côtés à la fois**, et son élancement ne bougeait
+quasiment pas : il stagnait au lieu de filer. Mesuré, une hêtraie plantée à 2 m
+tenait H/D 39–56 à quatre-vingts ans — et, retournement révélateur, les tiges
+les MOINS élancées y étaient les plus dominées (3,7 m de haut pour un H/D de
+39). La perche de plantation serrée, celle que la sylviculture mesure à 90–100,
+n'existait pas.
+
+**Deux faits de terrain gouvernent la correction, et aucun n'est un réglage.**
+D'abord, *la hauteur ne dépend presque pas de la densité* : c'est le fondement
+de la dendrométrie, l'indice de fertilité se lit sur la hauteur dominante
+précisément parce qu'elle y est insensible dans de larges limites, là où la
+surface terrière en dépend entièrement (Assmann 1970). Ensuite, *le diamètre est
+le dernier servi* : la hiérarchie des puits de carbone place l'entretien, le
+feuillage, les racines fines et l'allongement du plus haut rameau avant
+l'épaississement du tronc — c'est le cerne manquant des tiges dominées, un fait
+de dendrochronologie ordinaire.
+
+D'où le mécanisme, en une phrase : **la lumière décide combien de bois l'arbre
+fait ; l'allongement se sert d'abord ; le diamètre prend ce qui reste.**
+
+**Et le bois se compte exactement**, parce que le moteur avait déjà sa fonction
+de volume. En dérivant `V = f (π/4) D² H`, puis en divisant par `f (π/4) D²` —
+on compte donc le bois en « mètres d'allongement pur » — il vient
+`bois = dH + 2 (H/D) dD`. Un mètre coûte peu à une tige fine ; un centimètre de
+diamètre coûte cher à une tige haute, puisqu'il faut l'ajouter sur toute la
+longueur. Ce n'est pas une hypothèse de plus : c'est la dérivée de la fonction
+avec laquelle le moteur vend le bois.
+
+**Ce lot n'ajoute pas un gramme de matière**, et c'est sa garantie : le budget
+vaut exactement ce que l'ancienne formule produisait. En particulier, dès que
+la lumière n'est pas le facteur limitant — tout dominant, et tous les sujets au
+large sur lesquels les hauteurs sont calées (Jansen 1996) — le calcul redonne
+l'identité au dernier chiffre près. Un seul essai du dépôt a bougé sur 870.
+
+### Ce que la mesure a refusé : mon point fixe était le mauvais
+
+Écrit seul, le partage s'emballe. J'avais calculé l'élancement d'équilibre en
+posant « la tige cesse de filer quand son bois suffit à payer l'allongement
+plein », ce qui donnait H/D 75. La mesure a donné **166 en quarante ans, et ça
+montait encore**. Le vrai point fixe n'est pas là où un terme change de régime,
+c'est là où les croissances **relatives** s'égalisent — soit `H/D = (3/f_lum −
+1) × 50 / allocation`, c'est-à-dire **295** sous une ombre ordinaire.
+
+Une tige pareille n'existe pas : elle flambe. C'est donc la mécanique qui ferme
+le mécanisme, et elle a sa loi — `H ∝ D^(2/3)` (Greenhill 1881, exposant vérifié
+sur les arbres records par McMahon & Kronauer 1976). Voir B11.
+
+### Ce que ça donne, et ce que ça révèle ailleurs
+
+Hêtraie plantée à 2 m, quatre-vingts ans : H/D **39–129** contre 39–56, médiane
+65 contre 47. À trente ans, la tige la plus élancée vaut 87 à 2 m d'écartement,
+59 à 4 m, 38 à 10 m — et elle est à **62 %** de la hauteur du plus haut, donc
+c'est bien un arbre de milieu de canopée et non un rabougri. Cinq tiges sont
+tombées au vent là où aucune ne tombait : le cadran de `facteurElancement`
+(tempete.ts), qui ne descendait jamais sous 0,84, parle enfin.
+
+**Et un essai a changé de verdict pour la quatrième fois, sans changer de
+conclusion.** L'effet nurse lisait la HAUTEUR du chêne-liège, en la prenant pour
+de la vigueur. Les deux grandeurs viennent de se séparer : collé à sa nurse, le
+liège est désormais le plus HAUT des trois traitements (0,80 m contre 0,76 à
+trois mètres) et de loin le plus chétif — 0,89 cm de diamètre contre 2,66, huit
+fois moins de bois, H/D 90 contre 29. C'est une perche d'ombre, pas un arbre qui
+prospère. Mesuré en volume, le classement est le même avant et après le lot :
+**la conclusion écologique tenait, c'est le thermomètre qui était faux.** À
+retenir bien au-delà de cet essai — une conclusion n'est pas robuste tant qu'on
+n'a pas vérifié que sa grandeur de mesure dit encore ce qu'on croit.
 
 ## La variabilité individuelle : la fin des clones
 

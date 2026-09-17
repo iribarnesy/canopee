@@ -3,6 +3,7 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -q -m ' *)",
+      "Bash(git ls-remote *)",
       "Bash(git commit *)"
     ]
   }

@@ -46,10 +46,20 @@ function hetraie(ecartM: number) {
   const tri = [...vivants].sort((a, b) => b.heightM - a.heightM);
   const dom = tri.slice(0, Math.max(1, Math.round(tri.length * 0.2)));
   const moyenne = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
+  const parElancement = [...vivants].sort(
+    (a, b) => elancement(b.diametreCm, b.heightM) - elancement(a.diametreCm, a.heightM),
+  );
+  const perche = parElancement[0];
+  if (!perche) throw new Error("peuplement vide");
+  const hMax = tri[0]?.heightM ?? 1;
   return {
     tiges: vivants.length,
     elancementDom: moyenne(dom.map((t) => elancement(t.diametreCm, t.heightM))),
     diametreDom: moyenne(dom.map((t) => t.diametreCm)),
+    /** l'élancement de la tige la plus élancée du peuplement */
+    elancementMax: elancement(perche.diametreCm, perche.heightM),
+    /** où cette tige-là se situe dans le peuplement : 1 = c'est la plus haute */
+    rangDeLaPerche: perche.heightM / hMax,
   };
 }
 
@@ -59,9 +69,10 @@ describe("la densité de plantation fait la forme de la tige", () => {
   const clair = hetraie(10);
 
   it("plus on plante serré, plus la tige est élancée", () => {
-    // Mesuré à 2 / 4 / 6 / 10 m d'écartement : H/D des dominants vaut
-    // 42,0 / 38,8 / 38,0 / 37,4. Le gradient est MONOTONE — serrer davantage
-    // élance davantage, sans palier sur la gamme testée.
+    // Le gradient est MONOTONE — serrer davantage élance davantage, sans palier
+    // sur la gamme testée. C'est le résultat le plus ancien de ce fichier, et
+    // le seul que l'étiolement (#97) n'ait pas déplacé : il tenait déjà quand
+    // l'amplitude, elle, manquait.
     expect(serre.elancementDom).toBeGreaterThan(moyen.elancementDom);
     expect(moyen.elancementDom).toBeGreaterThan(clair.elancementDom);
   });
@@ -72,41 +83,78 @@ describe("la densité de plantation fait la forme de la tige", () => {
     expect(clair.diametreDom).toBeGreaterThan(serre.diametreDom);
   });
 
-  it("l'amplitude reste TROP FAIBLE, et DEUX coupables ont été innocentés", () => {
-    // La sylviculture mesure H/D de 25–40 pour un sujet de plein vent et de
-    // 90–100 pour une perche de plantation serrée. Le moteur couvre 37–53.
+  it("le peuplement serré FABRIQUE des perches, le peuplement clair n'en fait aucune", () => {
+    // C'EST L'AMPLITUDE, ET IL A FALLU INNOCENTER DEUX COUPABLES POUR L'AVOIR.
     //
-    // CE COMMENTAIRE A ACCUSÉ DEUX FOIS, ET S'EST TROMPÉ DEUX FOIS.
+    // La sylviculture mesure H/D 25–40 pour un sujet de plein vent et 90–100
+    // pour une perche de plantation serrée. Ce commentaire a longtemps accusé,
+    // et il s'est trompé deux fois.
     //
     // D'abord `light.ts` et le poids 0,4 des codominants (#65) : porter ce poids
     // à 1 déplace les dominants serrés de H/D 42,1 à 41,7, et pousser les trois
     // constantes de la lumière à fond n'atteint que 45,0.
     //
-    // Ensuite la paire d'allocation de CE fichier (#79). Elle borne bien une
-    // FENÊTRE — [40 ; 80] — mais une fenêtre n'est pas une amplitude : ouverte
-    // à [40 ; 100] elle ne gagne que 49 → 53, et poussée à l'absurde
-    // ([40 ; 200], allocation d'ombre 0,5) la même hêtraie ne monte qu'à 38–62.
-    // Le PIN, héliophile et censé faire les perches, est plus plat encore
-    // (41,0 à 2 m contre 38,9 à 10 m). L'ouverture a d'ailleurs été essayée puis
-    // rendue : voir `ALLOCATION_DIAMETRE_OMBRE`.
+    // Ensuite la paire d'allocation (#79). Elle borne bien une FENÊTRE — [40 ;
+    // 80] — mais une fenêtre n'est pas une amplitude : ouverte à [40 ; 100] elle
+    // ne gagne que 49 → 53, et poussée à l'absurde ([40 ; 200]) la même hêtraie
+    // ne monte qu'à 38–62.
     //
-    // Le vrai verrou est que H/D est une INTÉGRALE : une plantation est ouverte
-    // ses premières années, le diamètre posé alors est acquis, et un semis naît
-    // déjà à H/D 50. Atteindre 90–100 demanderait un arbre qui monte VITE en
-    // restant à l'ombre — l'étiolement, que ce moteur ne sait pas faire puisque
-    // l'ombre rabote la pousse totale au lieu de la rediriger. C'est une
-    // évolution, pas un réglage, et cet essai FIXE l'insuffisance en attendant.
-    expect(serre.elancementDom).toBeLessThan(60);
+    // Le vrai verrou était ailleurs, et c'est #97 qui l'a levé : l'ombre
+    // RABOTAIT la pousse au lieu de la rediriger, donc une tige dominée
+    // stagnait au lieu de filer. Depuis que l'allongement se sert avant le
+    // diamètre, la tige la plus élancée du peuplement passe de 49 à 87 à 2 m
+    // d'écartement, contre 38 à 10 m — et la hêtraie serrée atteint 129 à
+    // quatre-vingts ans. L'étendue est couverte.
+    expect(serre.elancementMax).toBeGreaterThan(80);
+    expect(clair.elancementMax).toBeLessThan(45);
+  });
+
+  it("la rampe de chablis n'est plus à moitié morte", () => {
+    // L'essai que ce fichier portait en négatif, et qui vient de basculer.
+    // `facteurElancement` (tempete.ts) interpole entre ELANCEMENT_STABLE (40) et
+    // ELANCEMENT_CRITIQUE (100), deux valeurs de la sylviculture européenne. Or
+    // tant que le diamètre suivait l'allocation pas à pas, H/D plafonnait à 79
+    // (essai arithmétique plus bas) : la moitié haute de cette rampe ne pouvait
+    // JAMAIS servir, et #79 l'avait épinglé comme du code mort en attendant.
+    //
+    // L'étiolement l'a réveillée. Le diamètre ne suit plus l'allocation — il
+    // encaisse le résidu — donc l'élancement réalisé dépasse la projection : la
+    // perche de la hêtraie serrée passe 80 à trente ans et 129 à quatre-vingts,
+    // et la rampe rend enfin ce qu'elle annonce.
+    // Au-delà de la borne basse de la rampe, et bien engagé dans sa moitié
+    // haute : à mi-chemin de ELANCEMENT_CRITIQUE, le facteur passe sous 0,6.
+    expect(serre.elancementMax).toBeGreaterThan(ELANCEMENT_STABLE);
+    expect(serre.elancementMax).toBeGreaterThan((ELANCEMENT_STABLE + ELANCEMENT_CRITIQUE) / 2);
+    expect(facteurElancement(20, (100 * 20) / serre.elancementMax)).toBeLessThan(0.6);
+  });
+
+  it("et la perche est un arbre de MILIEU DE CANOPÉE, pas un nabot", () => {
+    // Le contrôle qui distingue l'étiolement d'un simple rabougrissement, et
+    // qui dit pourquoi l'ancienne intégrale bloquait. Une tige dominée qui
+    // stagne finit TRAPUE : elle garde le H/D 50 de sa naissance, et le moteur
+    // d'avant faisait précisément ça — ses tiges les moins élancées étaient ses
+    // plus dominées. Celle qui file est à mi-hauteur du peuplement : elle a
+    // encore de quoi courir après la lumière, et c'est elle qui casse au vent.
+    //
+    // Mesuré : la plus élancée est à 62 % de la hauteur du plus haut à 2 m
+    // d'écartement, contre 84 % à 10 m (où il n'y a plus de perche du tout).
+    expect(serre.rangDeLaPerche).toBeGreaterThan(0.4);
+    expect(serre.rangDeLaPerche).toBeLessThan(0.85);
   });
 });
 
-describe("ce que la paire d'allocation rend ATTEIGNABLE", () => {
+describe("la fenêtre de la paire d'allocation, et pourquoi le moteur en sort", () => {
   // La borne qui manquait, et qui a laissé chercher la cause dans le mauvais
-  // fichier pendant deux lots. Elle ne coûte aucune simulation : un arbre qui
-  // pousse de bout en bout à l'allocation `a` porte H/D = 100/a, et `a` est
-  // bornée par les deux constantes. Aucun réglage de la lumière ne peut sortir
-  // de cette fenêtre — c'est ce qu'il faut savoir AVANT d'aller régler la
-  // lumière.
+  // fichier pendant deux lots. Elle ne coûte aucune simulation : un arbre dont
+  // le diamètre SUIT l'allocation `a` pas à pas porte H/D = 100/a, et `a` est
+  // bornée par les deux constantes.
+  //
+  // **Ce bloc décrit désormais une PROJECTION, plus le moteur**, et c'est le
+  // résultat de #97 : depuis que le diamètre encaisse le résidu au lieu de
+  // suivre l'allocation, l'élancement réalisé DÉPASSE cette fenêtre — 129
+  // mesurés contre 79 projetés. Les bornes restent justes pour ce qu'elles
+  // disent, et utiles pour comprendre ce que l'allocation seule peut faire ;
+  // elles ne bornent simplement plus la tige.
 
   /** H/D d'un semis de 0,3 m mené jusqu'à 20 m à lumière constante. */
   function elancementApresUneVie(lumiere: number): number {
@@ -128,27 +176,6 @@ describe("ce que la paire d'allocation rend ATTEIGNABLE", () => {
     expect(auLarge).toBeLessThan(42);
     expect(sousCouvert).toBeGreaterThan(75);
     expect(sousCouvert).toBeLessThan(80);
-  });
-
-  it("et la tempête lit une gamme que le moteur n'atteint PAS : la rampe est à moitié morte", () => {
-    // Le défaut que #79 a trouvé et n'a pas pu réparer, épinglé ici pour qu'il
-    // ne se reperde pas. `facteurElancement` (tempete.ts) interpole entre
-    // ELANCEMENT_STABLE (40) et ELANCEMENT_CRITIQUE (100), deux valeurs de la
-    // sylviculture européenne. Or l'allocation d'ombre plafonne H/D à 79 : la
-    // moitié haute de cette rampe ne peut JAMAIS servir.
-    //
-    // Descendre l'allocation d'ombre ouvre bien la fenêtre, et ç'a été essayé :
-    // des tiges plus fines résistent moins au feu, l'incendie vole ses victimes
-    // aux causes que `climat.test.ts` compte, et une conclusion climatique se
-    // renverse pour quatre points d'amplitude. C'est #97 (l'étiolement) qui
-    // lèvera ça, en faisant filer les dominés au lieu de les faire stagner.
-    //
-    // Le jour où cet essai tombera, c'est que la rampe sera devenue utile.
-    const sousCouvert = elancementApresUneVie(Math.exp(-MAX_EXTINCTION));
-    expect(sousCouvert).toBeGreaterThan(ELANCEMENT_STABLE);
-    expect(sousCouvert).toBeLessThan(ELANCEMENT_CRITIQUE);
-    // Ce que la rampe rend au mieux aujourd'hui, contre les 0,45 qu'elle prévoit.
-    expect(facteurElancement(20, (100 * 20) / sousCouvert)).toBeGreaterThan(0.6);
   });
 
   it("et le gradient va bien dans le sens de la lumière, sans trou", () => {
