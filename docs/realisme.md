@@ -48,6 +48,17 @@ fuite de 0,133 kg due à un grand livre de test qui mesurait le même arbre avec
 deux règles. Mais un critère noté ✅ sur la seule foi d'un test de conservation
 n'est pas prouvé.
 
+**Et un invariant ne garde que le côté qu'il ferme.** Le bilan d'azote du tick
+vérifiait « minéralisation = prélèvements + lessivage + Δstock » — un bilan du
+SOL, où « prélèvements » compte ce qui SORT. Pendant tout ce temps, un huitième
+de l'azote prélevé sur un limon pauvre sortait du sol et n'arrivait dans aucune
+plante : la demande d'un arbre était gonflée par son réseau mycorhizien pour
+vider la cellule, puis servie sans ce gain. Le bilan fermait parfaitement, C1
+était ✅, et le mécanisme faisait PERDRE 12 % de son volume au peuplement
+(#115). **Un transfert a deux côtés ; un invariant écrit sur un seul n'en garde
+qu'un.** Quand une grandeur passe d'un pool à un autre, écrire l'égalité du
+DÉPART et celle de l'ARRIVÉE.
+
 Corollaire pratique : un seuil mesuré au milieu d'un lot périme avant la fin du
 lot. Les chiffres cités dans les commentaires de test sont datés par le
 mécanisme qui les a produits, et se remesurent quand il change.
@@ -160,8 +171,10 @@ recouvrement devient local, et une futaie vraiment dense redevient testable)
 → 90 % (une tige à l'ombre ne stagne pas, elle file : l'étiolement)
 → 90 % (on meurt de faim, pas de passer sous un seuil : le budget carbone —
 entrée omise par son propre lot, rattrapée ici)
-→ **90 % (le houppier suit le diamètre, pas la hauteur : le port serré, et
-B10 est enfin complet)**.*
+→ 90 % (le houppier suit le diamètre, pas la hauteur : le port serré, et
+B10 est enfin complet)
+→ **90 % (le réseau mycorhizien cesse de coûter 12 % du volume sur sol
+pauvre — aucun point gagné, un ✅ qui était faux réparé)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -227,7 +240,7 @@ maladie-là, pas une preuve de santé.*
 
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
-| C1 | L'azote suit un bilan conservatif | ✅ | `tick-conservation.test.ts` |
+| C1 | L'azote suit un bilan conservatif | ✅ | `tick-conservation.test.ts`, et il ferme désormais **les deux côtés du transfert**. L'ancien bilan (minéralisation = prélèvements + lessivage + Δstock) ne voyait que le sol : `uptakeKgHa` compte ce qui SORT, si bien qu'un azote prélevé et livré à personne le laissait exact. Il l'était, et 11,6 % de l'azote d'un limon pauvre s'évaporait ainsi (#115). La propriété ajoutée dit l'autre moitié : `uptakeArbresKgHa + uptakeHerbeKgHa = uptakeKgHa`, au milliardième |
 | C2 | La minéralisation dépend de la température, de l'humidité et de l'anoxie | ✅ | `decompositionClimateFactor` |
 | C3 | Les nitrates sont lessivés par le drainage | ✅ | `cellLeachedG` |
 | C4 | Une litière à C/N bas se décompose vite ; les aiguilles, lentement | ✅ | `litterDecayRate` ; `litiere.test.ts` |
@@ -241,7 +254,7 @@ maladie-là, pas une preuve de santé.*
 | C14 | Les bases échangeables suivent un bilan conservatif | ✅ | `bases.test.ts` — la variation du pool vaut altération + dépôts + litière − lessivage − charge acide, à l'arrondi près. Comme pour N, P et K, et avec la même réserve : la conservation ne valide pas le NIVEAU |
 | C15 | La POMPE À BASES : un feuillu remonte les bases du sous-sol et les dépose en surface, appauvrissant la profondeur | ❌ | le moteur ne tient qu'un pool de bases de SURFACE, comme pour N, P et K. Il dit donc qu'un frêne entretient son horizon de surface, et rien de ce qu'il prend en dessous. Ce n'est pas un détail : c'est par là que Foltran et al. mesurent un hêtre acidifiant le sol minéral profond PLUS qu'un épicéa (−0,5 unité en vingt ans) — l'intuition « les résineux acidifient » est une demi-vérité, et c'est la moitié que ce lot ne dit pas |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
-| C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche** — c'est là qu'ils gagnent leur vie |
+| C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche**. **Ce ✅ était faux et personne ne pouvait le voir** : le gain gonflait la demande qui vide la cellule sans gonfler le service, si bien que le réseau COÛTAIT 11,8 % du volume sur limon pauvre et 0,7 % sur limon riche — il nuisait le plus là où il devait aider le plus. Corrigé en rangeant le gain une fois par arbre pour que les deux passes ne PUISSENT plus diverger (#115). Mesuré sur cinq graines et deux stations : **+2,79 % de volume sur limon pauvre, +0,09 % sur limon riche** (azote reçu +5,7 % et +0,7 %), gradient enfin dans le bon sens. **Limite** : le réseau fait GAGNER l'arbre dans la compétition pour l'azote minéral, il n'en AJOUTE pas — le service réel (capter l'azote organique et les pores qu'une racine n'atteint pas) demande un pool organique accessible, et le gain sur l'eau et le phosphore attend toujours |
 
 ## D. Climat et phénologie
 
@@ -2070,6 +2083,76 @@ pas le voir : il appelait la fonction avec des entiers.
   réservoir fini à seuil de débordement, et non comme une rugosité — ce que
   fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
   des barrages de débris.
+
+## Le réseau mycorhizien rendait moins que rien, et le bilan était exact
+
+L'expérience « Planter dans un labour » du labo concluait que détruire 95 % du
+réseau ne coûte rien aux plants. C'était vrai dans le moteur, et pour une raison
+que personne ne pouvait deviner : le réseau ne rapportait pas, il **coûtait**.
+
+### La mesure d'abord
+
+Bouleaux en grille de vingt-cinq, vingt-cinq ans, **cinq graines**, avec pour
+témoin le même banc dont la seule constante du mécanisme (`GAIN_ABSORPTION`) est
+mise à zéro. Volume de tige du peuplement, écart au témoin :
+
+| | limon riche | limon pauvre en N |
+|---|---|---|
+| le réseau, avant ce lot | **−0,72 %** | **−11,78 %** |
+| le réseau, après | **+0,09 %** | **+2,79 %** |
+
+Cinq graines sur cinq dans le même sens, aux deux stations. Et l'azote reçu par
+les arbres suit : +0,7 % sur riche, +5,7 % sur pauvre — le gradient que
+`tick.ts` promettait en toutes lettres (« il compte sur les sols pauvres et pas
+sur les riches ») et qu'il produisait à l'envers.
+
+### Le défaut n'était pas où l'issue le cherchait
+
+L'issue supposait un mécanisme mal placé : un gain porté sur la fraction d'accès
+à un pool minéral ne crée rien, il accélère une course. C'est vrai, mais ce
+n'était pas la cause. Le prélèvement d'azote se fait en **deux passes** — une qui
+déclare ce que chaque plante veut, une qui sert ce que la cellule a pu donner.
+Le gain mycorhizien était appliqué dans la première et absent de la seconde :
+
+```
+passe 1   dispo = min(1, availFactor × gainMyco)     ← vide la cellule
+passe 2   dispo = min(1,  availFactor           )     ← sert l'arbre
+```
+
+La cellule était donc vidée à hauteur d'une demande gonflée, et le partage servi
+au prorata de cette même demande gonflée — mais chaque arbre réclamait sa part
+sur une demande, elle, non gonflée. **L'écart sortait du sol et n'arrivait à
+personne.** Mesuré sur le bilan complet : 11,6 % de l'azote prélevé sur limon
+pauvre, 3,1 % sur limon riche. Avec `GAIN_ABSORPTION = 0`, exactement zéro sur
+les quatre campagnes, au gramme près.
+
+Pourquoi le sol riche s'en tirait : `min(1, availFactor × gain)` sature quand le
+sol est riche, donc le gain n'y gonfle rien. Sur sol pauvre il gonfle à plein.
+**Le mécanisme nuisait exactement là où il devait aider, et c'était
+arithmétique.**
+
+### Ce que le correctif fait, et ce qu'il ne fait pas
+
+Le gain est désormais **rangé une fois par arbre** (`gainMyco[t]`, à côté de
+`rootCells` et `rootFractions`) et relu par les deux passes. Ce n'est pas un
+détail d'écriture : le défaut était que la même grandeur était calculée deux
+fois, et la ranger fait que les deux passes ne PEUVENT plus diverger. La demande
+d'azote du tapis herbacé est rangée pour la même raison.
+
+**Le réseau fait maintenant gagner l'arbre, il ne crée toujours pas d'azote.**
+Ce que les arbres reçoivent en plus vient du tapis (−5 % pour lui) et du
+lessivage évité. C'est un service réel — un arbre mycorhizé prend de vitesse
+l'herbe qui l'entoure — mais ce n'est pas le service que la littérature met en
+avant : les hyphes atteignent l'azote **organique** et les pores où une racine
+n'entre pas, ce qui ajoute au peuplement au lieu de redistribuer. Il y faudrait
+un pool organique accessible, et c'est la moitié de l'issue que ce lot ne fait
+pas. C12 le dit.
+
+### Et le labo va changer d'avis
+
+L'expérience « Planter dans un labour » conclura désormais que le labour coûte
+quelque chose aux plants, ce qui est le fait qu'elle voulait montrer depuis le
+début.
 
 ## Le port serré : le houppier suit le diamètre, pas la hauteur
 

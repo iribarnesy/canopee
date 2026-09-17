@@ -1280,6 +1280,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const kSatisfaction = new Array<number>(nTrees).fill(1);
   const nNeedG = new Array<number>(nTrees).fill(0);
   const rootCells = new Array<number>(nTrees).fill(1);
+  /**
+   * Le gain mycorhizien de chaque arbre, RANGÉ, parce que les deux passes
+   * doivent lire exactement le même nombre (#115). Le recalculer dans la
+   * seconde était le défaut : la demande était gonflée par le réseau, le
+   * service ne l'était pas, et l'écart sortait du sol pour n'arriver nulle
+   * part — 11,6 % de l'azote prélevé sur limon pauvre.
+   */
+  const gainMyco = new Array<number>(nTrees).fill(1);
   const wlMean = new Array<number>(nTrees).fill(0);
   const phMean = new Array<number>(nTrees).fill(7);
   const rootFractions = new Array<number[]>(nTrees);
@@ -1310,7 +1318,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       espece,
       dims,
     );
-    const gainMyco = facteurAbsorption(reseauLocal);
+    gainMyco[t] = facteurAbsorption(reseauLocal);
     const rootR = rootRadiusM(espece, tree.heightM);
     const fractions = fractionsRacinairesParHorizon(epaisseurs, tree.rootDepthCm);
     rootFractions[t] = fractions;
@@ -1373,7 +1381,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // trouverait plus rien : c'est sur ce frein-là qu'il agit, et c'est
       // pourquoi il compte sur les sols pauvres et pas sur les riches
       // (où le frein est déjà levé).
-      const dispo = Math.min(1, (availFactor[i] ?? 0) * gainMyco);
+      const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
       const demandeN = Math.min(needPerCell, capPerCell * dispo);
       cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
     });
@@ -1383,13 +1391,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // C'est la concurrence qui fait échouer les plantations non entretenues.
   const saisonHerbe = Math.min(1, Math.max(0, (weather.tMean - 4) / 8));
   const herbeDemandeL = new Array<number>(nCells).fill(0);
+  /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
+  const herbeDemandeNG = new Array<number>(nCells).fill(0);
   for (let i = 0; i < nCells; i++) {
     const couverture = herbeCouverture[i] ?? 0;
     if (couverture <= 0) continue;
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
     herbeDemandeL[i] = demandeEau;
     cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
-    cellNWanted[i] = (cellNWanted[i] ?? 0) + herbeDemandeAzoteG(couverture, saisonHerbe);
+    herbeDemandeNG[i] = herbeDemandeAzoteG(couverture, saisonHerbe);
+    cellNWanted[i] = (cellNWanted[i] ?? 0) + (herbeDemandeNG[i] ?? 0);
   }
 
   // ── Plafond d'énergie ─────────────────────────────────────────────────────
@@ -1422,6 +1433,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const nServedRatio = new Array<number>(nCells).fill(0);
   let transpirationSumL = 0;
   let uptakeSumG = 0;
+  /**
+   * Ce que le partage SERT réellement, arbres d'un côté, tapis de l'autre.
+   * `uptakeSumG` compte ce qui SORT DU SOL ; tant que les deux passes
+   * s'accordent, la somme des deux le retrouve au gramme près — et c'est
+   * précisément l'égalité que #115 violait sans qu'aucun essai la regarde.
+   */
+  let uptakeArbresSumG = 0;
+  let uptakeHerbeSumG = 0;
   for (let i = 0; i < nCells; i++) {
     const base = i * nH;
     for (let h = 0; h < nH; h++) {
@@ -1439,7 +1458,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (nWanted > 0) {
       const stock = mineralNG[i] ?? 0;
       const taken = Math.min(stock, nWanted);
-      nServedRatio[i] = taken / nWanted;
+      const servi = taken / nWanted;
+      nServedRatio[i] = servi;
+      uptakeHerbeSumG += (herbeDemandeNG[i] ?? 0) * servi;
       mineralNG[i] = stock - taken;
       uptakeSumG += taken;
       azotePris = taken;
@@ -1530,7 +1551,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       for (let h = 0; h < nH; h++) {
         gotW += wPerCell * (fractions[h] ?? 0) * (waterServedRatio[i * nH + h] ?? 0);
       }
-      const demandeCell = Math.min(needPerCell, capPerCell * (availFactor[i] ?? 0));
+      // Le MÊME `dispo` qu'à la passe de demande, et c'est tout le correctif
+      // de #115 : servir sur une demande plus petite que celle qui a vidé la
+      // cellule fait disparaître la différence (mycorhizes.ts, `tick.ts`
+      // passe 3).
+      const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
+      const demandeCell = Math.min(needPerCell, capPerCell * dispo);
       gotN += demandeCell * (nServedRatio[i] ?? 0);
     });
     const wd = waterDemandL[t] ?? 0;
@@ -1544,6 +1570,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     acquiredNG[t] = espece.azote.fixateur
       ? 0.95 * treeNitrogenNeedGWeek(espece, tree.heightM) * seasonFactor(espece, weather.tMean)
       : gotN;
+    // Un fixateur ne prend rien au sol : son azote vient de l'air, et le
+    // compter ici fausserait le bilan que la propriété de conservation lit.
+    if (!espece.azote.fixateur) uptakeArbresSumG += gotN;
   }
 
   // ── 4. Lessivage de l'azote minéral restant ────────────────────────────────
@@ -2769,6 +2798,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       mycorhizesMoyen: mycoSum / (nCells * TYPES_MYCORHIZE.length),
       mineralizationKgHa: (mineralizationSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKgHa: (uptakeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      uptakeArbresKgHa: (uptakeArbresSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      uptakeHerbeKgHa: (uptakeHerbeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKgHa: (leachedSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       phosphoreMoyenGM2: phosphoreG.reduce((a, b) => a + b, 0) / nCells,
       potassiumMoyenGM2: potassiumG.reduce((a, b) => a + b, 0) / nCells,
