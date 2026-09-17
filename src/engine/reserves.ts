@@ -58,7 +58,7 @@
  *
  * | taille | part d'entretien | lumière minimale |
  * |---|---|---|
- * | semis 0,3 m | 0,6 % | **2 %** |
+ * | semis 0,3 m | 0,6 % | **1,2 %** |
  * | perche 10 m | 20 % | **8 %** |
  * | arbre 25 m | 50 % | **18 %** |
  *

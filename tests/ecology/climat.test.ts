@@ -234,6 +234,7 @@ describe("dans une partie, le réchauffement se voit", () => {
     const scenario = getScenario(scenarioId);
     let etpDebut = 0;
     let etpFin = 0;
+    let pressionMax = 0;
     const morts: { especeId: string; cause: string }[] = [];
     for (let i = 0; i < ans * 52; i++) {
       const base = OBSERVATIONS[i % OBSERVATIONS.length];
@@ -246,6 +247,8 @@ describe("dans une partie, le réchauffement se voit", () => {
       morts.push(...r.morts);
       if (i < 5 * 52) etpDebut += r.fluxes.etpMm;
       if (i >= (ans - 5) * 52) etpFin += r.fluxes.etpMm;
+      const p = state.soil.ravageurs;
+      pressionMax = Math.max(pressionMax, p.reduce((a, b) => a + b, 0) / p.length);
     }
     return {
       etpDebut: etpDebut / 5,
@@ -254,6 +257,7 @@ describe("dans une partie, le réchauffement se voit", () => {
         (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
       ).length,
       mortsRavageurs: morts.filter((m) => m.cause === "ravageurs").length,
+      pressionMax,
       hetresVivants: state.trees.filter((t) => t.alive && t.especeId === "fagus_sylvatica").length,
     };
   }
@@ -275,6 +279,7 @@ describe("dans une partie, le réchauffement se voit", () => {
       etpFin: moyen((r) => r.etpFin),
       hetresMortsDeSoif: moyen((r) => r.hetresMortsDeSoif),
       mortsRavageurs: moyen((r) => r.mortsRavageurs),
+      pressionMax: moyen((r) => r.pressionMax),
       hetresVivants: moyen((r) => r.hetresVivants),
     };
   }
@@ -316,14 +321,23 @@ describe("dans une partie, le réchauffement se voit", () => {
     // Conséquence en cascade, elle non plus codée nulle part : plus il fait
     // chaud, plus les générations s'enchaînent (ravageurs.ts). C'est ce qui
     // frappe les essences sensibles avant même que la sécheresse ne les tue.
-    // L'ampleur, elle, a été revue à la baisse et il faut le dire : le seuil
-    // était à ×2, posé sur UNE partie. Moyenné sur trois, le rapport vaut 1,6
-    // (36,7 morts contre 22,7) — et il ne l'a pas toujours valu : il est passé
-    // sous 2 le jour où les vitesses de croissance ont été calées sur les
-    // tables de production. Un arbre qui pousse à son rythme réel est un arbre
-    // plus vigoureux, donc moins pris par les ravageurs. Le lien entre chaleur
-    // et pullulation n'a pas changé ; c'est ce qu'on croyait en connaître de
-    // l'ampleur qui reposait sur un tirage.
-    expect(chauffe.mortsRavageurs).toBeGreaterThan(1.3 * Math.max(1, fige.mortsRavageurs));
+    //
+    // **Cet essai mesure la PULLULATION, et c'est une correction.** Il comptait
+    // les MORTS de ravageurs, et ce compte a cessé de mesurer le climat le jour
+    // où le budget carbone est entré (#96) : un peuplement s'auto-éclaircit
+    // désormais, les dominés s'affament, ne réparent plus, et les ravageurs les
+    // cueillent — dans les DEUX scénarios. Le compte de morts est passé de 22,7
+    // à 65,3 à climat figé, et le signal climatique s'y est noyé (65,3 contre
+    // 72,3, soit 1,1). La pression, elle, dit toujours la même chose : 0,3205
+    // figé contre 0,4332 chaud, soit **1,35**. La cause n'a pas bougé ; c'est
+    // le thermomètre qui s'est mis à mesurer autre chose.
+    //
+    // Historique de l'ampleur, à garder : le seuil était à ×2, posé sur UNE
+    // partie ; moyenné sur trois il valait 1,6 en morts, puis il est passé sous
+    // 2 le jour où les vitesses de croissance ont été calées sur les tables de
+    // production — un arbre qui pousse à son rythme réel est plus vigoureux,
+    // donc moins pris. Seuil posé à 1,2 sur une mesure de 1,35 : la marge
+    // absorbe le tirage, comme la leçon de cet essai l'exige.
+    expect(chauffe.pressionMax).toBeGreaterThan(1.2 * fige.pressionMax);
   });
 });

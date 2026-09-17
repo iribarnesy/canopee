@@ -70,14 +70,14 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | C. Nutriments et cycles | 14 | 0 | 1 | 15 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 9 | 3 | 0 | 12 |
-| F. Dynamique des peuplements | 11 | 5 | 3 | 19 |
+| F. Dynamique des peuplements | 12 | 4 | 3 | 19 |
 | G. Faune et santé | 10 | 1 | 0 | 11 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 7 | 2 | 0 | 9 |
 | J. Biodiversité et structure | 7 | 1 | 0 | 8 |
-| **Total** | **118** | **24** | **4** | **146** |
+| **Total** | **119** | **23** | **4** | **146** |
 
-**Score de réalisme : 118 pleins + 24 partiels sur 146 → 89 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 119 pleins + 23 partiels sur 146 → 89 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -185,7 +185,7 @@ maladie-là, pas une preuve de santé.*
 | B3 | L'ombre est dégradée : pénombre en bordure de houppier | ✅ | atténuation en (1 − d²/r²) |
 | B4 | Un héliophile meurt sous couvert fermé ; un sciaphile y patiente | ✅ | points de compensation ; `lumiere.test.ts` |
 | B5 | Les caducs n'ombragent pas hors saison (fenêtre des vernales) | ✅ | `phenologie.ts` ; et la strate herbacée en profite enfin (E9) : sous la hêtraie mesurée, la lumière au sol passe de 0,69 à 0,30 entre la semaine 16 et la semaine 18 |
-| B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main |
+| B6 | Les arbres de même hauteur se gênent latéralement (auto-éclaircie) | 🟡 | poids 0,4 pour les codominants — calibré à la main. Ce que l'ombrage latéral PRODUIT est désormais juste (l'auto-éclaircie tombe, cf. F6), mais le coefficient qui la dose reste posé à la main, et il gouverne aussi la succession : le bouger mérite son propre lot |
 | B7 | La hauteur du soleil varie avec la saison et la latitude | 🟡 | décalage d'ombre constant, pas de course saisonnière |
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | ✅ | `herbacees.ts` : trois herbacées, chacune avec son point de compensation, sa gamme de pH et son calendrier, se partagent le sol d'une cellule sur la place que les autres laissent ; `herbacees.test.ts` (le pH seul trie les deux graminées : molinie sur podzol à 4,5, dactyle sur limon à 7). **Limite** : pas de hiérarchie de hauteur DANS la strate — une graminée haute n'étouffe pas une rosette qui se maintient, elle n'occupe que la place lâchée |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
@@ -256,7 +256,7 @@ maladie-là, pas une preuve de santé.*
 | F3 | Les semis ne s'installent que dans leurs conditions (lumière, pH) | ✅ | filtres d'installation |
 | F4 | Les arbres vieillissent et meurent (sénescence) | ✅ | `fAge` ; `succession.test.ts` |
 | F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
-| F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | plafond de densité arbitraire + ombrage codominant |
+| F6 | L'auto-éclaircie régule la densité d'un peuplement dense | ✅ | `reserves.ts` (budget carbone) ; `reserves.test.ts`. Plus de plafond arbitraire : la densité se régule parce que les dominés s'affament. Hêtraie plantée à 2 m, deux graines, cent vingt ans — **361 tiges tombent à 413 et 419/ha**, contre 2 231/ha sans le mécanisme (357 survivants sur 361, et un peuplement qui ne s'éclaircissait JAMAIS). Et la trajectoire n'est pas seulement décroissante, elle suit une **ligne d'auto-éclaircie** : pente de −1,48 et −1,52 en moindres carrés de 40 à 120 ans, à comparer au −1,605 de Reineke (1933). Le moteur est donc dans la gamme des pentes mesurées essence par essence, mais plus plat que la valeur canonique — il s'éclaircit un peu moins vite qu'elle à diamètre croissant. Rien dans le mécanisme ne connaît Reineke, et cette pente ne dépend pas du niveau SDI, qui est la seule constante qu'on ne saurait pas ancrer. **Réserve honnête sur l'ATTRIBUTION** : les ravageurs portent le coup final dans 293 cas sur 295, parce qu'un arbre affamé ne répare plus — c'est le syndrome réel, mais le journal du jeu dira « ravageurs » là où la cause est l'ombre |
 | F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | 🟡 | émergent, non testé |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | 🟡 | Rejet de souche : `rejetteDeSouche`, éprouvé après feu et après recépage. DRAGEONNEMENT : `regeneration.drageonne` (prunellier), un drageon sort dans un anneau serré autour de sa mère ET échappe au filtre de lumière, parce qu'elle le nourrit. Reste sans drageonnement : robinier et peuplier, absents de l'atlas |
 | F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
@@ -1961,6 +1961,103 @@ pas le voir : il appelait la fonction avec des entiers.
   réservoir fini à seuil de débordement, et non comme une rugosité — ce que
   fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
   des barrages de débris.
+
+## Le budget carbone : on meurt de faim, pas de passer sous un seuil
+
+Rien ne mourait de manquer de lumière. Sur une cohorte de pins suivie cent vingt
+ans, l'ombre tuait 4 à 7 tiges quand les ravageurs en prenaient 205 à 244. Et le
+hêtre ne mourait **jamais** d'ombre : 361 plantés, 361 vivants à cent vingt ans,
+à tous les réglages d'ombrage essayés. Ce n'était pas une calibration à
+retoucher, c'était une impossibilité arithmétique — son seuil de stress (0,0090
+de lumière) passait sous le plancher que le moteur sait produire (0,0111).
+
+**Pourquoi un seuil ne pouvait pas y suffire.** Le point de compensation est
+instantané : il dit si la feuille gagne ou perd à cet instant. Un arbre dominé ne
+meurt pas parce que la lumière est passée sous une valeur ; il meurt d'avoir
+dépensé plus qu'il n'assimilait des années durant, jusqu'à ne plus avoir de quoi
+refaire des feuilles au printemps. C'est un stock qui se vide.
+
+**Deux constantes, ancrées hors du moteur.** La respiration autotrophe consomme
+la moitié de la production brute d'une futaie tempérée adulte — `NPP/GPP ≈ 0,5`
+(Waring, Landsberg & Williams 1998 ; DeLucia et al. 2007 donnent 0,53 de moyenne
+sur un large corpus). Et un arbre entièrement défolié meurt à la deuxième ou
+troisième année consécutive, ce que font les gradations de bombyx : d'où des
+réserves de deux ans et demi de revenu nul.
+
+**La loi d'échelle vient du modèle du tube** (Shinozaki et al. 1964) : la section
+d'aubier suit la surface foliaire, donc le volume d'aubier à entretenir par unité
+de feuille croît comme la HAUTEUR. D'où le seul contenu qui compte, et qu'un
+seuil ne pouvait pas dire — **la même ombre qu'un semis traverse tue une
+perche.** Pour le hêtre, la lumière minimale de survie tombe toute seule :
+
+| taille | part d'entretien | lumière minimale |
+|---|---|---|
+| semis 0,3 m | 0,6 % | **1,2 %** |
+| perche 10 m | 20 % | **8 %** |
+| arbre 25 m | 50 % | **18 %** |
+
+### Le résultat qui n'a pas été demandé : la pente de Reineke
+
+La validation ne porte pas sur le niveau de densité, qu'on ne saurait pas ancrer
+(l'indice SDI maximal du hêtre est un chiffre qu'on trouve mal), mais sur la
+PENTE de l'auto-éclaircie, qui est le vrai contenu de la loi. Hêtraie plantée à
+2 m, deux graines, de quarante à cent vingt ans :
+
+| | témoin (mécanisme neutralisé) | avec le budget carbone |
+|---|---|---|
+| tiges vivantes à 120 ans | **357 / 361** | **66 et 67 / 361** |
+| densité | 2 231/ha | **413 et 419/ha** |
+| rapport à la densité maximale | 0,79 → **1,63** (il s'en éloigne) | 0,79 → **0,90** (il s'y tient) |
+| pente d'auto-éclaircie | — | **−1,48** et **−1,52** |
+
+Reineke (1933) donne −1,605. Rien dans le mécanisme ne connaît Reineke, et cette
+pente ne dépend pas de la constante incertaine — c'est le genre de résultat qui
+vaut plus que le mécanisme lui-même, parce qu'il n'a pas été visé.
+
+**Mais il ne faut pas le sur-vendre, et j'ai failli le faire.** Une version
+intermédiaire du lot donnait −1,606 et −1,591, une coïncidence à trois décimales
+avec la valeur canonique ; la correction de la cicatrisation hivernale, qui était
+nécessaire pour une tout autre raison, l'a ramenée à −1,48 et −1,52. Ce qui est
+solide, c'est que le peuplement suit une ligne d'auto-éclaircie au lieu de
+dériver, et que sa pente tombe dans la gamme que la littérature mesure essence
+par essence autour de −1,605. Ce qui ne l'était pas, c'est la troisième décimale.
+
+### Ce qu'on n'a pas empilé, et la réserve qui reste
+
+L'issue prévenait qu'ajouter une mortalité de lumière par-dessus celle des
+ravageurs donnerait un peuplement qui s'effondre deux fois. Deux dispositions
+l'évitent : le mécanisme **remplace** l'ancien facteur de survie à l'ombre au
+lieu de s'y ajouter, et la famine converge avec les ravageurs sur le même état —
+le stress — plutôt que de tuer de son côté.
+
+**Mais la réserve est là, et il faut l'écrire** : sur 295 morts de la hêtraie,
+293 portent l'étiquette « ravageurs » et deux « chablis ». Aucune ne dit
+« ombre ». C'est physiquement juste — un arbre affamé ne refait plus ses tanins,
+les ravageurs le trouvent, et l'acte de décès porte leur nom — et le témoin
+ci-dessus montre que la cause est bien la famine, puisque sans elle il ne reste
+que deux chablis. Mais le journal du jeu dira « achevés par les ravageurs » là
+où le joueur avait besoin d'entendre « ils manquaient de lumière ». Distinguer la
+cause du coup final demanderait de retenir, par arbre, d'où son stress est venu :
+c'est de la maintenance, et c'est écrit dans une issue.
+
+### Et deux essais changent de thermomètre sans changer de conclusion
+
+Même famille que l'effet nurse de #97, et c'est la troisième fois de suite.
+
+*Le réchauffement et les ravageurs.* L'essai comptait les MORTS de ravageurs.
+Ce compte a cessé de mesurer le climat : l'auto-éclaircie le remplit dans les
+deux scénarios, il est passé de 22,7 à 65,3 morts à climat figé, et le signal s'y
+est noyé (65,3 contre 72,3, soit 1,1). La PULLULATION, elle, dit toujours la même
+chose : 0,3205 figé contre 0,4332 chaud, soit **1,35**.
+
+*Le frêne et son sol.* L'essai lisait « le frêne remonte son pH au-dessus de son
+point de départ », ce qui mêlait l'effet de la litière — qu'il visait — et la
+biomasse que la parcelle porte — qu'il ne contrôlait pas. Le frêne étant
+héliophile, sa régénération ne passe plus sous couvert : la parcelle est passée
+de 35 à 11 recrues et sa litière cumulée de 15 200 à 7 000 eq/ha. Le témoin
+manquait, et il est éloquent : cette station s'acidifie **toute seule**, 7,00 →
+6,87 sans un arbre. Comparée à lui, la conclusion est plus nette qu'avant —
+frêne 6,94 au-dessus du sol nu, hêtre 6,75 en dessous.
 
 ## L'étiolement : l'ombre déplace l'arbitrage avant de raboter la pousse
 
