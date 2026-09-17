@@ -487,8 +487,15 @@ module pourquoi la première tentative (élargir le rayon prospecté de 15 %) a 
 refusée, elle diluait l'asymétrie entre dominants et dominés au point que le
 hêtre n'atteignait plus la canopée.
 
-Vérifier aussi **l'expérience « Planter dans un labour » du labo** : sa
-conclusion s'inverse avec ce lot, et son texte parle encore d'un labour gratuit.
+**Un second banc pour « Planter dans un labour ».** Le verdict a été corrigé
+dans ce lot, mais l'expérience elle-même tourne sur un limon RICHE, où l'azote
+ne limite pas : la hauteur des plants y est identique au centimètre avec et sans
+labour (4,96 m à cinq ans), et elle l'était déjà avant le correctif. La courbe
+montre donc la moitié de la question — le réseau se coupe vite et revient
+lentement — et le verdict le dit désormais au lieu de conclure que labourer est
+gratuit. L'autre moitié demande le même banc sur limon pauvre en azote, où le
+réseau vaut +2,8 % de volume. C'est une expérience à ajouter, pas une phrase à
+réécrire, donc ça ne tenait pas dans ce lot.
 
 **Ce qui reste de #105 — la racine et la transpiration de la perche.** Le
 houppier suit le diamètre ; le disque racinaire et la demande en eau restent sur

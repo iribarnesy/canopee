@@ -439,7 +439,7 @@ const MYCORHIZES: Experience = {
         },
       ],
       verdict:
-        "Le labour tranche les hyphes : le réseau repart de presque rien et met plus de dix ans à revenir. En revanche — et c'est un résultat, pas un oubli — la HAUTEUR des plants s'en ressent à peine sur ces limons : le coup de fouet azoté du labour compense à peu près la perte du réseau, et l'azote n'est de toute façon pas ce qui limite le plus ici. Le service mycorhizien ne prendra sa vraie valeur qu'avec le cycle du phosphore, qui est l'élément que les hyphes vont vraiment chercher.",
+        "Le labour tranche les hyphes : le réseau repart de presque rien et met plus de dix ans à revenir. En revanche — et c'est un résultat, pas un oubli — la HAUTEUR des plants n'en bouge pas d'un centimètre sur CE limon-là : 4,96 m à cinq ans avec ou sans labour. Il ne faut surtout pas en conclure que labourer est gratuit. Ce banc tourne sur un limon riche, où l'azote n'est pas ce qui limite : le réseau n'y a donc rien à rendre, quel que soit son état. Là où l'azote manque, il rend +2,8 % de volume au peuplement à vingt-cinq ans (mesuré sur cinq graines, limon pauvre en N), et détruire 95 % du réseau coûte cette part-là pendant les dix ans qu'il met à se retisser. Ce que cette courbe montre est donc la MOITIÉ de la question — le réseau se coupe vite et revient lentement — et il faudrait un second banc sur sol pauvre pour montrer l'autre.",
     };
   },
 };
