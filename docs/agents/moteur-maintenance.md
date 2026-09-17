@@ -86,6 +86,24 @@ mécanisme : neutraliser le tirage et remesurer.
   semaine après semaine, dit ce que la phrase voulait dire. Règle générale :
   quand un essai mesure un tri, sa prémisse se relève avant le tri, ou sur le
   témoin non trié (ici, la parcelle abritée).
+- **Profiler à la densité qui fait mal, pas à celle qui est commode.** En
+  cherchant les n² du tick (#99), un profil à 2 300 tiges donnait `windShelterAt`
+  en tête à 9,7 % et `lightAtPoint` à 1,4 %. À 4 000 tiges le classement
+  s'inverse. Un terme quadratique est par définition invisible tant que le
+  peuplement est petit : c'est le cas lourd qui le désigne.
+- **Deux chronos pris à deux endroits ne se comparent pas.** Le même code, au
+  même commit, avec le même `node_modules`, tourne en 69 s depuis un worktree et
+  en 87 s depuis le dépôt — en alternance, donc ce n'est pas du bruit. Un lot
+  entier a failli être accusé d'un surcoût de 24 % qui n'était que le répertoire.
+  Une comparaison de performance se fait au même endroit, et de préférence en
+  alternant les deux versions.
+- **Une optimisation qui change l'ORDRE d'une somme change son résultat.**
+  L'addition de flottants n'est pas associative : ranger les voisins dans un
+  index et les parcourir dans un autre ordre suffit à déplacer les derniers
+  chiffres, donc à faire basculer un seuil dans un tout autre fichier. Insérer
+  dans l'ordre de `trees` conserve l'ordre de parcours, et l'égalité s'exige
+  alors STRICTE (`toBe`, jamais `toBeCloseTo`) — sinon on ne prouve rien.
+  Un comptage d'ENTIERS, lui, est libre : il ne dépend pas de l'ordre.
 - **Et ce délai doit porter là où le temps passe.** Une campagne lancée dans le
   corps d'un `describe` tourne à la COLLECTE, que ni `testTimeout` ni un délai
   posé sur le `describe` ne couvrent : si elle s'emballe, la suite bloque au
@@ -155,6 +173,17 @@ fois — pas trois copies d'une même intuition.
   convient comme INDEX et pas comme portée — à douze mètres le voisinage
   recommence à voir la matrice et l'ouverture s'efface. Six, l'emprise d'un
   houppier adulte.
+
+- **#99 est CLOSE, et sa seconde question reste ouverte ailleurs.** Trois n²
+  hebdomadaires sont tombés (`windShelterAt`, l'index d'ombres reconstruit à
+  chaque tentative d'installation, le comptage de voisins des frottis) : trente
+  ans sur une lande sèche passent de 317 s à 136 s, et la tranche 25-30 ans de
+  152 s à 31 s. Aucune assertion de la suite n'a bougé, ce qui était le but.
+  L'issue demandait aussi si 4 000 tiges sur une lande sèche sont JUSTES :
+  l'ordre de grandeur se défend pour un fourré de bouleau, mais le peuplement
+  GAGNE des tiges entre 20 et 30 ans (2 299 → 3 971) là où un fourré de cet âge
+  devrait en perdre. C'est #96 — rien ne meurt de manquer de lumière — et ça ne
+  se corrige pas en maintenance.
 
 - **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
   l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à

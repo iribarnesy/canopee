@@ -279,6 +279,29 @@ export function lightAtPoint(
 }
 
 /**
+ * L'index d'ombres, bâti une fois pour plusieurs interrogations.
+ *
+ * `lightAtPoint` est commode et coûte cher : elle RECONSTRUIT l'index à chaque
+ * appel. Tant qu'on lui demandait un point, ça ne se voyait pas ; la
+ * régénération, elle, lui en demande des centaines dans la même année, et le
+ * peuplement ne bouge pas entre deux. À quatre mille tiges, cette
+ * reconstruction est le deuxième poste du tick — 11 % du temps, plus 4 % pour
+ * la lecture elle-même (#99).
+ *
+ * Les deux chemins partagent le même index et le même parcours, donc la même
+ * somme dans le même ordre : le résultat est identique au bit près.
+ */
+export type IndexOmbres = ReturnType<typeof buildShadowIndex>;
+
+export function indexerOmbres(trees: readonly TreeState[], part: PartOmbrageante): IndexOmbres {
+  return buildShadowIndex(trees, part);
+}
+
+export function lumiereAuPointIndexee(ombres: IndexOmbres, x: number, y: number): number {
+  return Math.exp(-extinctionAt(ombres, x, y, 0));
+}
+
+/**
  * Abri au vent d'un point ∈ [0,1] (docs/regles.md §3, ch5 « haie brise-vent »).
  * Contrairement à l'ombre et aux racines, la protection au vent PORTE LOIN :
  * une haie abrite sur 10 à 20 fois sa hauteur. C'est ce découplage qui rend
@@ -300,6 +323,84 @@ export function windShelterAt(
     // Au-delà de 12 hauteurs, l'effet est nul ; tout près, il plafonne.
     if (d > 12 * t.heightM) continue;
     shelter += (0.12 * t.heightM) / Math.max(1.5, d);
+    // L'abri SATURE, et c'est ce qui rend l'arrêt exact : tous les termes qui
+    // restent sont positifs (`heightM` vaut au moins 0,5), donc une somme déjà
+    // au-dessus de 1 ne peut plus que monter et le `min` rendra 1 de toute
+    // façon. Sur un fourré de quatre mille tiges, la plupart des points sont
+    // abrités bien avant la fin de la boucle (#99).
+    if (shelter >= 1) return 1;
+  }
+  return Math.min(1, shelter);
+}
+
+/**
+ * L'abri au vent, rangé par paniers — même résultat, sans le balayage complet.
+ *
+ * `windShelterAt` coûtait le PEUPLEMENT ENTIER par arbre et par semaine, donc un
+ * n² hebdomadaire : c'est le premier poste de calcul du tick dès qu'une parcelle
+ * se peuple, 9,7 % du temps à 2 300 tiges et une part qui grandit avec le carré
+ * (#99). Or la boucle jette la plupart des voisins sur un test de distance.
+ *
+ * Chaque arbre est donc rangé dans les paniers que sa PORTÉE couvre — douze fois
+ * sa hauteur, la distance au-delà de laquelle il n'abrite plus rien — et une
+ * interrogation ne lit que le panier de son point. Un sous-arbrisseau de
+ * soixante centimètres porte à sept mètres et n'encombre qu'un panier ; un arbre
+ * de vingt mètres porte plus loin que la parcelle et entre dans tous, ce qui est
+ * exactement ce qu'il faut puisqu'il abrite tout le monde.
+ *
+ * LE RÉSULTAT EST LE MÊME AU BIT PRÈS, et ça ne va pas de soi : une somme de
+ * flottants n'est pas associative, donc changer l'ORDRE des voisins changerait
+ * les derniers chiffres et pourrait déplacer un seuil quelque part dans la
+ * suite. Les arbres sont insérés dans l'ordre de `trees`, si bien que chaque
+ * panier les garde dans cet ordre et que la somme parcourt la même suite de
+ * termes qu'avant. Le test `abri.test.ts` le vérifie sur un vrai peuplement.
+ */
+export type IndexAbriVent = Map<number, TreeState[]>;
+
+export function indexerAbriVent(trees: readonly TreeState[], coteM: number): IndexAbriVent {
+  const paniers: IndexAbriVent = new Map();
+  const bMax = Math.floor(Math.max(0, coteM) / BUCKET_M);
+  for (const t of trees) {
+    // Les mêmes exclus que dans la boucle de référence : ils ne seraient
+    // jamais sommés, autant ne pas les ranger.
+    if (!t.alive || t.heightM < 0.5) continue;
+    const portee = 12 * t.heightM;
+    const bx0 = Math.max(0, Math.floor((t.x - portee) / BUCKET_M));
+    const bx1 = Math.min(bMax, Math.floor((t.x + portee) / BUCKET_M));
+    const by0 = Math.max(0, Math.floor((t.y - portee) / BUCKET_M));
+    const by1 = Math.min(bMax, Math.floor((t.y + portee) / BUCKET_M));
+    for (let by = by0; by <= by1; by++) {
+      for (let bx = bx0; bx <= bx1; bx++) {
+        const key = by * 100_000 + bx;
+        const list = paniers.get(key);
+        if (list) list.push(t);
+        else paniers.set(key, [t]);
+      }
+    }
+  }
+  return paniers;
+}
+
+export function abriVentIndexe(
+  paniers: IndexAbriVent,
+  x: number,
+  y: number,
+  selfId?: number,
+): number {
+  const list = paniers.get(Math.floor(y / BUCKET_M) * 100_000 + Math.floor(x / BUCKET_M));
+  if (!list) return 0;
+  let shelter = 0;
+  for (const t of list) {
+    if (t.id === selfId) continue;
+    const dx = t.x - x;
+    const dy = t.y - y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    // Le panier est un SURENSEMBLE : il retient les arbres dont la portée
+    // touche la maille, pas ceux dont elle atteint le point. Le même test que
+    // la référence tranche, et c'est lui qui garantit l'égalité.
+    if (d > 12 * t.heightM) continue;
+    shelter += (0.12 * t.heightM) / Math.max(1.5, d);
+    if (shelter >= 1) return 1;
   }
   return Math.min(1, shelter);
 }

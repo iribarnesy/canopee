@@ -177,13 +177,25 @@ export interface Frottis {
  * surtout de l'ISOLEMENT — c'est un marquage de territoire, il vise ce qui se
  * voit. Une tige noyée dans un fourré n'intéresse personne.
  */
+/**
+ * Un arbre peut-il être frotté du tout, avant même de regarder son voisinage ?
+ *
+ * Cette question se pose SÉPARÉMENT parce qu'elle est bon marché et que le
+ * comptage des voisins, lui, ne l'est pas : il coûtait le peuplement entier par
+ * arbre, y compris pour les morts, les protégés et les tiges hors gamme de
+ * hauteur — dont l'attrait allait de toute façon ressortir nul (#99).
+ */
+export function frottable(tree: TreeState): boolean {
+  if (tree.protege || !tree.alive) return false;
+  return tree.heightM >= FROTTIS_HAUTEUR_MIN_M && tree.heightM <= FROTTIS_HAUTEUR_MAX_M;
+}
+
 export function attraitFrottis(
   tree: TreeState,
   voisinsProches: number,
   resistanceEcorce: number,
 ): number {
-  if (tree.protege || !tree.alive) return 0;
-  if (tree.heightM < FROTTIS_HAUTEUR_MIN_M || tree.heightM > FROTTIS_HAUTEUR_MAX_M) return 0;
+  if (!frottable(tree)) return 0;
   // Écorce épaisse et crevassée (pin, chêne-liège) : sans intérêt.
   const ecorce = 1 - Math.min(1, resistanceEcorce);
   const isolement = 1 / (1 + voisinsProches);
@@ -233,15 +245,46 @@ export function frottisDeLaSemaine(
   const budget = (densiteParHa * surfaceHa * FROTTIS_PAR_CERVIDE_AN) / semaines;
   if (budget <= 0) return [];
 
+  /**
+   * Les vivants rangés par mailles de la taille du voisinage : compter les
+   * voisins proches coûtait le PEUPLEMENT ENTIER par arbre — un n² sur les
+   * semaines de brame, et le troisième poste de calcul du tick à quatre mille
+   * tiges (#99). Un compte d'entiers ne dépend pas de l'ordre où on le fait :
+   * le résultat est identique, pas seulement proche.
+   */
+  const mailles = new Map<number, TreeState[]>();
+  for (const t of trees) {
+    if (!t.alive) continue;
+    const key =
+      Math.floor(t.y / FROTTIS_RAYON_VOISINAGE_M) * 100_000 +
+      Math.floor(t.x / FROTTIS_RAYON_VOISINAGE_M);
+    const list = mailles.get(key);
+    if (list) list.push(t);
+    else mailles.set(key, [t]);
+  }
+  const compterVoisins = (tree: TreeState): number => {
+    const cx = Math.floor(tree.x / FROTTIS_RAYON_VOISINAGE_M);
+    const cy = Math.floor(tree.y / FROTTIS_RAYON_VOISINAGE_M);
+    let voisins = 0;
+    // Le rayon vaut une maille, donc tout voisin possible est dans les neuf
+    // mailles autour — et le test de distance tranche, comme avant.
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const list = mailles.get((cy + dy) * 100_000 + (cx + dx));
+        if (!list) continue;
+        for (const autre of list) {
+          if (autre.id === tree.id) continue;
+          const ex = autre.x - tree.x;
+          const ey = autre.y - tree.y;
+          if (ex * ex + ey * ey <= FROTTIS_RAYON_VOISINAGE_M * FROTTIS_RAYON_VOISINAGE_M) voisins++;
+        }
+      }
+    }
+    return voisins;
+  };
+
   const candidats: { tree: TreeState; attrait: number }[] = [];
   for (const tree of trees) {
-    let voisins = 0;
-    for (const autre of trees) {
-      if (autre.id === tree.id || !autre.alive) continue;
-      const dx = autre.x - tree.x;
-      const dy = autre.y - tree.y;
-      if (dx * dx + dy * dy <= FROTTIS_RAYON_VOISINAGE_M * FROTTIS_RAYON_VOISINAGE_M) voisins++;
-    }
     // Une clôture arrête les bois autant que les dents.
     if (estEnclos?.(tree)) continue;
     // Le temps que la marque fraîchisse : on ne refrotte pas la semaine
@@ -253,7 +296,10 @@ export function frottisDeLaSemaine(
     ) {
       continue;
     }
-    const attrait = attraitFrottis(tree, voisins, resistanceEcorce(tree.especeId));
+    // Le tri bon marché AVANT le comptage : un arbre qui ne peut pas être
+    // frotté n'a pas besoin qu'on lui compte ses voisins.
+    if (!frottable(tree)) continue;
+    const attrait = attraitFrottis(tree, compterVoisins(tree), resistanceEcorce(tree.especeId));
     if (attrait > 0) candidats.push({ tree, attrait });
   }
   candidats.sort((a, b) => b.attrait - a.attrait || a.tree.id - b.tree.id);

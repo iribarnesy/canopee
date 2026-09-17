@@ -14,7 +14,13 @@
 import { leveeParM2 } from "./banqueGraines";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
-import { crownRadiusM, lightAtPoint, type PartOmbrageante } from "./light";
+import {
+  crownRadiusM,
+  type IndexOmbres,
+  indexerOmbres,
+  lumiereAuPointIndexee,
+  type PartOmbrageante,
+} from "./light";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import { diametreInitialCm, phFactor, type TreeState, tirerVigueurIndividuelle } from "./trees";
@@ -372,6 +378,13 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   // La place déjà prise, rangée par voisinage. Les semis qu'on ajoute y entrent
   // aussi : c'est ce qui empêche une année exceptionnelle d'en installer mille
   // au même endroit.
+  /**
+   * L'index d'ombres, bâti UNE FOIS pour l'année. `lightAtPoint` le
+   * reconstruisait à chaque tentative d'installation, et le peuplement ne bouge
+   * pas entre deux : à quatre mille tiges, c'était le deuxième poste de calcul
+   * du tick (#99).
+   */
+  const ombres: IndexOmbres = indexerOmbres(trees, partOmbrageante);
   const paniers = new Map<number, Houppier[]>();
   for (const t of trees) {
     if (!t.alive) continue;
@@ -403,7 +416,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     // autant qu'un semis.
     if (
       !parDrageon &&
-      lightAtPoint(trees, pos.x, pos.y, partOmbrageante) < 2 * espece.lumiere.compensation
+      lumiereAuPointIndexee(ombres, pos.x, pos.y) < 2 * espece.lumiere.compensation
     )
       return;
     const cellPh = input.ph[Math.floor(pos.y) * coteM + Math.floor(pos.x)] ?? 7;
