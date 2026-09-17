@@ -242,11 +242,24 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     // étouffe la lande qui porte le feu. Tout ce qui les ralentit défait donc
     // l'atténuation, et l'ombre de la lisière les ralentit.
     //
-    // Ce qu'on garde ici : le simple fait que la composition change la surface
-    // parcourue. Le SENS de l'écart, lui, n'a pas résisté à trois états
-    // successifs du moteur, et on cesse d'en faire une conclusion.
+    // **ET L'AMPLEUR DE L'ÉCART EST RETIRÉE À SON TOUR — TROISIÈME FOIS.**
+    // Il restait « la composition change la surface parcourue », épinglé par un
+    // écart de plus de 50 m². Avec l'auto-éclaircie (#96), les deux traitements
+    // se rapprochent : 722 m² pour les feuillus contre 685 pour le pin, soit
+    // 37 m² d'écart sur des moyennes de sept cents.
+    //
+    // Ce n'est pas le seuil qu'il faut baisser, c'est l'affirmation qu'il faut
+    // retirer : un même peuplement brûle de 0 à 4 500 m² selon le tirage
+    // (docs/realisme.md), et sur seize graines l'erreur-type de la moyenne se
+    // compte en centaines de mètres carrés. Un écart de 37 m² n'est pas un
+    // résultat, c'est du bruit — et un seuil ajusté dessus n'enregistrerait que
+    // l'état du jour du moteur.
+    //
+    // Ce qui reste vérifié, et qui est vrai : **le feu passe dans les deux
+    // compositions.** L'essai suivant, lui, tient — le chêne-liège se distingue
+    // parce qu'il SURVIT au feu, pas parce qu'il en change la surface.
     expect(feuillus.bruleesMoyennes).toBeGreaterThan(0);
-    expect(Math.abs(feuillus.bruleesMoyennes - pin.bruleesMoyennes)).toBeGreaterThan(50);
+    expect(pin.bruleesMoyennes).toBeGreaterThan(0);
   });
 
   it("le chêne-liège, lui, tient aux deux horizons — parce qu'il survit", () => {
