@@ -245,41 +245,46 @@ describe("dans une partie, le réchauffement se voit", () => {
       const r = advanceWeek(state, w, []);
       state = r.state;
       morts.push(...r.morts);
+      pressionMax = Math.max(pressionMax, r.fluxes.ravageurMoyen);
       if (i < 5 * 52) etpDebut += r.fluxes.etpMm;
       if (i >= (ans - 5) * 52) etpFin += r.fluxes.etpMm;
-      const p = state.soil.ravageurs;
-      pressionMax = Math.max(pressionMax, p.reduce((a, b) => a + b, 0) / p.length);
     }
     return {
+      pressionMax,
       etpDebut: etpDebut / 5,
       etpFin: etpFin / 5,
       hetresMortsDeSoif: morts.filter(
         (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
       ).length,
       mortsRavageurs: morts.filter((m) => m.cause === "ravageurs").length,
-      pressionMax,
+      // Les DEUX voies par lesquelles le réchauffement tue, comptées ensemble.
+      // Séparées, elles se volent leurs victimes : un arbre ne meurt qu'une
+      // fois et sa mort n'est imputée qu'à UNE cause (#93).
+      mortsChaleur: morts.filter((m) => m.cause === "secheresse" || m.cause === "ravageurs").length,
       hetresVivants: state.trees.filter((t) => t.alive && t.especeId === "fagus_sylvatica").length,
     };
   }
 
+  const GRAINES = [11, 23, 37];
+
   /**
-   * Moyenne sur trois parties. Les comptes de morts sont des ÉVÉNEMENTS
-   * rares : une seule partie en donne un tirage, pas une mesure. Le rapport
-   * ravageurs chaud/figé s'est mis à osciller autour de 2 le jour où les
-   * vitesses de croissance ont été recalées — pas parce que le lien entre
-   * chaleur et pullulation avait changé, mais parce qu'une seule partie ne
-   * sait pas distinguer 1,7 de 2,1.
+   * Trois parties, moyennées ET gardées séparées. Les comptes de morts sont
+   * des ÉVÉNEMENTS rares : une seule partie en donne un tirage, pas une
+   * mesure. Mais la moyenne ne sauve pas tout — elle peut masquer une graine
+   * qui dit le contraire des deux autres, et c'est ce qui se passait ici.
    */
   function moyenneSurGraines(scenarioId: "stable" | "ssp585", ans: number) {
-    const runs = [11, 23, 37].map((g) => partie(scenarioId, ans, g));
+    const runs = GRAINES.map((g) => partie(scenarioId, ans, g));
     const moyen = (f: (r: (typeof runs)[number]) => number) =>
       runs.reduce((s, r) => s + f(r), 0) / runs.length;
     return {
+      runs,
       etpDebut: moyen((r) => r.etpDebut),
       etpFin: moyen((r) => r.etpFin),
       hetresMortsDeSoif: moyen((r) => r.hetresMortsDeSoif),
       mortsRavageurs: moyen((r) => r.mortsRavageurs),
       pressionMax: moyen((r) => r.pressionMax),
+      mortsChaleur: moyen((r) => r.mortsChaleur),
       hetresVivants: moyen((r) => r.hetresVivants),
     };
   }
@@ -317,27 +322,102 @@ describe("dans une partie, le réchauffement se voit", () => {
     // peuplement qui perd plus d'arbres peut très bien en compter plus.
   });
 
-  it("le réchauffement fait aussi flamber les ravageurs", () => {
+  it("le réchauffement fait flamber la pullulation, et sur chacune des trois parties", () => {
     // Conséquence en cascade, elle non plus codée nulle part : plus il fait
-    // chaud, plus les générations s'enchaînent (ravageurs.ts). C'est ce qui
-    // frappe les essences sensibles avant même que la sécheresse ne les tue.
+    // chaud, plus les générations s'enchaînent (`facteurChaleur`, ravageurs.ts).
     //
-    // **Cet essai mesure la PULLULATION, et c'est une correction.** Il comptait
-    // les MORTS de ravageurs, et ce compte a cessé de mesurer le climat le jour
-    // où le budget carbone est entré (#96) : un peuplement s'auto-éclaircit
-    // désormais, les dominés s'affament, ne réparent plus, et les ravageurs les
-    // cueillent — dans les DEUX scénarios. Le compte de morts est passé de 22,7
-    // à 65,3 à climat figé, et le signal climatique s'y est noyé (65,3 contre
-    // 72,3, soit 1,1). La pression, elle, dit toujours la même chose : 0,3205
-    // figé contre 0,4332 chaud, soit **1,35**. La cause n'a pas bougé ; c'est
-    // le thermomètre qui s'est mis à mesurer autre chose.
+    // CET ESSAI A CHANGÉ DE GRANDEUR (#68). Il portait sur le nombre de MORTS
+    // par ravageurs, et son seuil avait déjà été descendu de ×2 à ×1,3 le jour
+    // où les vitesses de croissance ont été calées sur les tables. Ce nombre-là
+    // n'est pas une propriété du monde : il OSCILLE d'un lot de mécanisme à
+    // l'autre, parce qu'un arbre ne meurt qu'une fois et que les causes se
+    // volent leurs victimes. Mesuré deux fois à trois lots d'écart :
     //
-    // Historique de l'ampleur, à garder : le seuil était à ×2, posé sur UNE
-    // partie ; moyenné sur trois il valait 1,6 en morts, puis il est passé sous
-    // 2 le jour où les vitesses de croissance ont été calées sur les tables de
-    // production — un arbre qui pousse à son rythme réel est plus vigoureux,
-    // donc moins pris. Seuil posé à 1,2 sur une mesure de 1,35 : la marge
-    // absorbe le tirage, comme la leçon de cet essai l'exige.
-    expect(chauffe.pressionMax).toBeGreaterThan(1.2 * fige.pressionMax);
+    //                    avant sanglier/lisière      après
+    //   graine 11          34 → 40  (1,18 ×)       24 → 33  (1,38 ×)
+    //   graine 23          32 → 21  (0,66 ×)       23 → 31  (1,35 ×)
+    //   graine 37          25 → 38  (1,52 ×)       19 → 37  (1,95 ×)
+    //
+    // La graine 23 a dit l'inverse des deux autres, puis s'est remise à dire
+    // comme elles, sans que le lien entre chaleur et pullulation ait bougé.
+    // Un seuil accroché à ça n'enregistre que le moteur (docs/realisme.md,
+    // « ce qu'un test écologique a le droit d'affirmer »).
+    //
+    // La PULLULATION, elle, résiste — c'est elle que la chaleur produit
+    // directement (`facteurChaleur`), là où le compte de morts est un
+    // composite. Mesuré sur le code livré : 1,45 × / 1,35 × / 1,31 ×,
+    // directionnelle sur les trois parties. Éprouvée en neutralisant
+    // `facteurChaleur` : elle tombe — c'est le mécanisme qu'elle lit, pas le
+    // jeu de dés.
+    //
+    // Que le réchauffement TUE est affirmé par l'essai suivant, sur le compte
+    // combiné soif + ravageurs (#93).
+    for (const [i, f] of fige.runs.entries()) {
+      const c = chauffe.runs[i];
+      if (!c) throw new Error("partie manquante");
+      expect(c.pressionMax, `graine ${GRAINES[i]}`).toBeGreaterThan(1.25 * f.pressionMax);
+    }
+  });
+
+  it("et il TUE : soif et ravageurs comptés ensemble, sur chacune des trois parties", () => {
+    // La pullulation seule ne dit pas que le réchauffement tue. Ce maillon-là
+    // s'était perdu (#93), et il se rattrape ici — en comptant ENSEMBLE les
+    // deux voies par lesquelles la chaleur tue, au lieu d'en regarder une.
+    //
+    // POURQUOI ENSEMBLE. Un arbre ne meurt qu'une fois et sa mort n'est
+    // imputée qu'à UNE cause. Compter la seule case « ravageurs » revient donc
+    // à soustraire les arbres que la sécheresse a pris de vitesse : le
+    // réchauffement pousse ce compte dans les deux sens à la fois. Le chiffre
+    // qui en résulte oscille d'un lot de mécanisme à l'autre — il a déjà
+    // inversé sa direction sur une graine, puis l'a retrouvée deux lots plus
+    // tard, sans que le lien entre chaleur et mortalité ait bougé. Les compter
+    // ensemble supprime ce vase communicant.
+    //
+    // Campagne de #93, morts figé → chauffé, soixante ans, trois parties :
+    //
+    //                      graine 11      graine 23      graine 37
+    //   sécheresse           2 →  16       0 →  61        2 →  32
+    //   ravageurs           24 →  33      23 →  31       19 →  37
+    //   ─────────────────────────────────────────────────────────────
+    //   ENSEMBLE            26 →  49      23 →  92       21 →  69
+    //                        1,88 ×         4,00 ×         3,29 ×
+    //
+    // L'ombre a été mesurée aussi, parce qu'on la soupçonnait d'être un
+    // troisième puits concurrent : elle BAISSE sous réchauffement
+    // (0,80 / 0,25 / 0,87), donc elle ne vole rien, et l'ajouter ne ferait que
+    // diluer le signal (1,09 / 1,16 / 1,49). `maladie` et `vieillesse` sont à
+    // zéro dans toutes les parties.
+    //
+    // Le seuil était posé à 1,5 — sous le minimum mesuré (1,88) pour laisser de
+    // la marge, très au-dessus de 1 pour rester une affirmation.
+    //
+    // **L'AUTO-ÉCLAIRCIE (#96) A DILUÉ CE COMPTE, ET IL FAUT LE DIRE.** Compter
+    // soif + ravageurs ensemble réparait le vase communicant entre DEUX puits.
+    // Il en existe un troisième depuis que les dominés s'affament : leurs morts
+    // portent l'étiquette « ravageurs » (#103) et n'ont rien à voir avec le
+    // climat. Cette colonne est donc saturée par une mortalité indépendante du
+    // scénario, et elle ne bouge presque plus :
+    //
+    //                 soif        ravageurs      ENSEMBLE
+    //   graine 11    2 →  23      66 → 61       68 →  86   (1,26 ×)
+    //   graine 23    1 →  21      87 → 81       88 → 102   (1,16 ×)
+    //   graine 37    0 →  25      60 → 62       60 →  88   (1,47 ×)
+    //
+    // La SOIF, elle, est intacte et massive. C'est elle qui porte désormais
+    // l'affirmation, et le biais du vase joue en sa faveur : un ravageur qui
+    // prend de vitesse une victime de la sécheresse fait BAISSER ce compte sous
+    // réchauffement, donc l'exigence est conservatrice. On la pose en ÉCART
+    // absolu et non en rapport, parce que le témoin peut valoir zéro (graine
+    // 37) — c'est le garde-fou que le compte combiné évitait et qu'il faut
+    // reprendre ici.
+    //
+    // Le compte combiné reste vérifié, mais seulement en SIGNE : il monte sur
+    // les trois parties, et c'est tout ce qu'il peut encore dire.
+    for (const [i, f] of fige.runs.entries()) {
+      const c = chauffe.runs[i];
+      if (!c) throw new Error("partie manquante");
+      expect(c.hetresMortsDeSoif - f.hetresMortsDeSoif, `graine ${GRAINES[i]}`).toBeGreaterThan(15);
+      expect(c.mortsChaleur, `graine ${GRAINES[i]}`).toBeGreaterThan(f.mortsChaleur);
+    }
   });
 });
