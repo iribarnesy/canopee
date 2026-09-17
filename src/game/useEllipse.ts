@@ -50,6 +50,7 @@ import {
   indexerLesVoiles,
   particulesDuFeu,
   poseDeLaMort,
+  poseDuPlant,
   RIEN_NE_BRULE,
   remodelageDe,
   tigesAbattues,
@@ -89,7 +90,7 @@ export interface EllipseDuJeu {
   seTorche: (id: number) => boolean;
   deformer: (idArbre: number, maintenantMs: number, vue: Vue) => Deformation;
   mourant: (idArbre: number, maintenantMs: number, vivant: ArbreVivant) => EtatMourant | undefined;
-  remodeler: (idArbre: number, maintenantMs: number) => ArbreRemodele | undefined;
+  remodeler: (idArbre: number, maintenantMs: number, especeId: string) => ArbreRemodele | undefined;
   voiler: (maintenantMs: number) => readonly CelluleVoilee[];
   feu: (maintenantMs: number) => IncendieAPoser;
   marqueurs: readonly Marqueur[];
@@ -234,7 +235,13 @@ export function useEllipse(
         // Les canaux de POSE se composent : franchir dix ans, c'est voir un
         // arbre mourir puis tomber, et `DEBOUT` est neutre pour cette
         // composition.
-        return combiner(deformationDe(chutes, ecoule, id, vue), poseDeLaMort(morts, ecoule, id));
+        // Trois canaux de POSE qui se composent : tomber, mourir, et sortir de
+        // terre. `DEBOUT` est neutre pour cette composition, donc on les
+        // additionne sans se demander lequel a lieu.
+        return combiner(
+          combiner(deformationDe(chutes, ecoule, id, vue), poseDeLaMort(morts, ecoule, id)),
+          poseDuPlant(gestes, ecoule, id),
+        );
       },
       mourant: (id, maintenantMs, vivant) => {
         const ecoule = depuis(maintenantMs);
@@ -242,7 +249,8 @@ export function useEllipse(
         // sur un même arbre, mais l'ordre est écrit quand même.
         return etatDuTorchage(torches, ecoule, id) ?? etatMourantDe(morts, ecoule, id, vivant);
       },
-      remodeler: (id, maintenantMs) => remodelageDe(gestes, depuis(maintenantMs), id),
+      remodeler: (id, maintenantMs, especeId) =>
+        remodelageDe(gestes, depuis(maintenantMs), id, especeId),
       voiler: (maintenantMs) => {
         const ecoule = depuis(maintenantMs);
         // Le front d'incendie et le voile d'un geste passent par la MÊME

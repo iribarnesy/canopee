@@ -31,6 +31,8 @@
  */
 
 import type { ArbreRetire } from "../../engine/actions";
+import { getEspece } from "../../engine/especes";
+import { DEBOUT, type Deformation } from "./chute";
 
 /**
  * L'identifiant sous lequel une tige abattue se dessine.
@@ -127,8 +129,25 @@ export function tigeAbattueDe(retire: ArbreRetire): TigeAbattue | undefined {
  * les quelques paliers de base de houppier qui existent déjà.
  */
 export interface ArbreRemodele {
-  heightM: number;
-  baseHouppierM: number;
+  heightM?: number;
+  baseHouppierM?: number;
+  /**
+   * Fruits encore sur l'arbre et pas encore partis, kg — À AJOUTER à ce que
+   * l'instantané porte.
+   *
+   * Ajouté et non posé, parce que le lecteur ne connaît pas l'instantané : il
+   * sait ce que le geste a enlevé (`masseKg`), pas ce qui restait. À
+   * l'avancement 0 la charge d'avant la récolte est donc reconstituée, et à 1
+   * l'apport tombe à zéro — l'arbre reprend exactement la valeur du moteur,
+   * sans copie.
+   */
+  fruitsKgEnPlus?: number;
+  /**
+   * Âge de l'écorce, semaines — POSÉ, lui, parce que c'est une grandeur
+   * absolue dont le geste connaît les deux bouts : l'écorce était refaite
+   * avant (le moteur refuse la levée autrement), elle est à vif après.
+   */
+  semainesDepuisLevee?: number;
 }
 
 /**
@@ -171,4 +190,77 @@ function entre(avant: number, apres: number, avancement: number): number {
   if (avancement <= 0) return avant;
   if (avancement >= 1) return apres;
   return avant + (apres - avant) * avancement;
+}
+
+/**
+ * Les trois gestes qui ne démontent rien : plantation, récolte, démasclage.
+ *
+ * **Ils n'ont pas d'`ArbreRetire`, et c'est le moteur qui le dit** : « un arbre
+ * planté, récolté ou démasclé garde sa géométrie — planter l'AJOUTE, récolter
+ * vide `fruitsKg`, démascler n'enlève que l'écorce » (actions.ts). Il n'y a
+ * donc pas de tige à coucher ni de charpente à remonter : ce qui bouge est un
+ * STOCK, et le geste porte sa masse (`masseKg`).
+ *
+ * Les deux canaux se répartissent selon ce que la classe de vignette contient
+ * déjà : `fruit` et `liege` en font partie (`couches/arbres.ts`), donc récolte
+ * et démasclage sont des CUISSONS — comme l'élagage, et pour la même raison.
+ * La plantation, elle, ne change aucune clé : un plant est un arbre de plus,
+ * qu'on fait simplement grandir à l'écran. C'est une POSE.
+ */
+
+/**
+ * Ce qu'il reste de fruits sur l'arbre pendant que la récolte se fait.
+ *
+ * Décroît de la masse récoltée vers zéro : au début la couronne porte encore
+ * tout, à la fin l'instantané reprend la main. Le §6.2 demande « les fruits
+ * quittent la couronne » — ils la quittent donc progressivement, et non d'un
+ * seul tick.
+ */
+export function recolteEnCours(masseKg: number, avancement: number): ArbreRemodele {
+  const a = Math.min(1, Math.max(0, avancement));
+  // Le zéro est rendu TEL QUEL, comme les bouts d'`entre` : un reliquat d'un
+  // milliardième de kilo garderait la classe `FRUIT_MUR` et l'arbre resterait
+  // chargé alors que la récolte est finie.
+  return { fruitsKgEnPlus: a >= 1 ? 0 : masseKg * (1 - a) };
+}
+
+/**
+ * Où en est l'écorce pendant un démasclage.
+ *
+ * **Les deux bouts viennent du moteur, aucun n'est inventé.** L'arrivée est
+ * zéro : l'instantané d'après porte une écorce à vif. Le départ est la rotation
+ * de l'espèce, parce que `ecorceRecoltable` n'autorise la levée que lorsque
+ * l'écorce est refaite — c'est donc l'état où l'arbre se trouvait forcément
+ * juste avant, et non une valeur choisie pour faire joli.
+ *
+ * Rend `undefined` pour une espèce sans écorce à lever : le moteur ne devrait
+ * pas produire le geste, et une teinte de liège sur un hêtre se verrait.
+ */
+export function demasclageEnCours(especeId: string, avancement: number): ArbreRemodele | undefined {
+  const rotationAns = getEspece(especeId)?.ecorce?.rotationAns;
+  if (!rotationAns) return undefined;
+  const a = Math.min(1, Math.max(0, avancement));
+  return { semainesDepuisLevee: a >= 1 ? 0 : rotationAns * 52 * (1 - a) };
+}
+
+/**
+ * La pose d'un plant qui vient d'être mis en terre.
+ *
+ * Il sort de terre plutôt qu'il n'apparaît : `hauteur` monte de zéro à un, et
+ * l'opacité suit pour que le premier pixel ne soit pas un trait noir. C'est
+ * l'exact inverse de l'effacement d'un mort (§6.3), et ça se compose avec lui
+ * par `combiner` — un plant plantéepuis broyé la même semaine montrerait les
+ * deux.
+ *
+ * Le §6.2 demande aussi « la terre est retournée autour ». Elle ne l'est pas :
+ * `planter` ne rapporte que des identifiants, pas la maille de sol travaillée,
+ * et poser un disque au jugé serait inventer un rayon que le moteur n'a pas
+ * donné. Dit dans #114 plutôt que comblé.
+ */
+export function poseDeLaPlantation(avancement: number): Deformation {
+  const a = Math.min(1, Math.max(0, avancement));
+  if (a >= 1) return DEBOUT;
+  // Un plant de hauteur nulle ne se dessine pas du tout ; on part d'un dixième
+  // pour qu'il y ait quelque chose à voir dès la première image.
+  return { rotationRad: 0, hauteur: 0.1 + 0.9 * a, opacite: a };
 }

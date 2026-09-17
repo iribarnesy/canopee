@@ -148,7 +148,11 @@ export interface VueParcelleProps {
    * qu'aucun geste ne touche — le cas normal — et l'arbre part alors tel que
    * l'instantané le donne, sans copie.
    */
-  remodeler?: (idArbre: number, maintenantMs: number) => ArbreRemodele | undefined;
+  remodeler?: (
+    idArbre: number,
+    maintenantMs: number,
+    especeId: string,
+  ) => ArbreRemodele | undefined;
 }
 
 /**
@@ -175,8 +179,24 @@ function appliquerLesActes(
     // Les deux canaux de CUISSON se composent, et dans cet ordre : le geste dit
     // quelle forme avait l'arbre, la mort dit dans quel état il est. Un arbre
     // élagué qui meurt la même semaine doit montrer les deux.
-    const forme = remodeler?.(a.id, maintenantMs);
-    const base = forme ? { ...a, heightM: forme.heightM, baseHouppierM: forme.baseHouppierM } : a;
+    // Chaque champ n'est posé que si le geste le concerne : un élagage bouge la
+    // géométrie, une récolte le stock de fruits, un démasclage l'âge de
+    // l'écorce — et un arbre qui subit deux gestes la même semaine reçoit les
+    // deux sans que l'un efface l'autre.
+    const forme = remodeler?.(a.id, maintenantMs, a.especeId);
+    const base = forme
+      ? {
+          ...a,
+          ...(forme.heightM !== undefined ? { heightM: forme.heightM } : {}),
+          ...(forme.baseHouppierM !== undefined ? { baseHouppierM: forme.baseHouppierM } : {}),
+          ...(forme.fruitsKgEnPlus !== undefined
+            ? { fruitsKg: (a.fruitsKg ?? 0) + forme.fruitsKgEnPlus }
+            : {}),
+          ...(forme.semainesDepuisLevee !== undefined
+            ? { semainesDepuisLevee: forme.semainesDepuisLevee }
+            : {}),
+        }
+      : a;
     if (forme) touche = true;
     const e = mourant?.(a.id, maintenantMs, {
       partFoliaire: a.partFoliaire,

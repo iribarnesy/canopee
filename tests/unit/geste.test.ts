@@ -16,19 +16,24 @@
 
 import { describe, expect, it } from "vitest";
 import type { ArbreRetire, GesteVisible } from "../../src/engine/actions";
+import { getEspece } from "../../src/engine/especes";
 import { type Vue, vueInitiale } from "../../src/render/camera";
 import { DEBOUT } from "../../src/render/temps/chute";
 import { planDEllipse } from "../../src/render/temps/ellipse";
 import {
+  demasclageEnCours,
   estUneTige,
   idDeLArbre,
   idDeLaTige,
+  poseDeLaPlantation,
+  recolteEnCours,
   remodelageEnCours,
   tigeAbattueDe,
 } from "../../src/render/temps/geste";
 import {
   chuteDeLaTige,
   indexerLesGestes,
+  poseDuPlant,
   remodelageDe,
   tigesAbattues,
 } from "../../src/render/temps/lecteur";
@@ -236,5 +241,124 @@ describe("le plan et sa lecture", () => {
       2000,
     );
     expect(tigesAbattues(indexerLesGestes(p))).toHaveLength(2);
+  });
+});
+
+/**
+ * Les trois gestes qui ne démontent rien (#114) : plantation, récolte,
+ * démasclage.
+ *
+ * **Ce que ces essais gardent : qu'on n'anime que ce que le moteur a dit.** Ces
+ * trois-là n'ont pas d'`ArbreRetire` — « un arbre planté, récolté ou démasclé
+ * garde sa géométrie » — donc rien à interpoler entre deux formes. Ce qui bouge
+ * est un stock, et la seule tentation serait d'en inventer la valeur de départ.
+ */
+describe("les gestes qui déplacent un stock", () => {
+  it("fait partir les fruits, et les fait partir VRAIMENT", () => {
+    // À l'avancement 0 la couronne porte encore toute la récolte ; à 1 elle
+    // rend la main à l'instantané, qui est déjà vide.
+    expect(recolteEnCours(12, 0).fruitsKgEnPlus).toBe(12);
+    expect(recolteEnCours(12, 0.5).fruitsKgEnPlus).toBeCloseTo(6, 6);
+    // Exactement zéro, pas un reliquat : `etatDuFruit` classe tout kilo > 0 en
+    // FRUIT_MUR, donc un milliardième laisserait l'arbre chargé pour toujours.
+    expect(recolteEnCours(12, 1).fruitsKgEnPlus).toBe(0);
+  });
+
+  it("borne l'avancement de la récolte", () => {
+    expect(recolteEnCours(12, -2).fruitsKgEnPlus).toBe(12);
+    expect(recolteEnCours(12, 7).fruitsKgEnPlus).toBe(0);
+  });
+
+  it("lève l'écorce depuis l'état que le moteur EXIGE, pas depuis une valeur choisie", () => {
+    // `ecorceRecoltable` n'autorise la levée que sur une écorce refaite : le
+    // départ est donc la rotation de l'espèce, lue sur sa fiche.
+    const rotationAns = getEspece("quercus_suber")?.ecorce?.rotationAns;
+    expect(rotationAns).toBeGreaterThan(0);
+    const debut = demasclageEnCours("quercus_suber", 0);
+    expect(debut?.semainesDepuisLevee).toBeCloseTo((rotationAns ?? 0) * 52, 6);
+    expect(demasclageEnCours("quercus_suber", 1)?.semainesDepuisLevee).toBe(0);
+  });
+
+  it("ne démascle pas un arbre qui n'a pas d'écorce à lever", () => {
+    // Une teinte de liège sur un bouleau se verrait, et le moteur ne devrait
+    // pas produire le geste : on ne dessine rien plutôt que d'improviser.
+    expect(demasclageEnCours("betula_pendula", 0.5)).toBeUndefined();
+  });
+
+  it("ne touche à AUCUNE géométrie", () => {
+    // C'est le point : ces gestes ne bougent ni la hauteur ni le houppier, et
+    // les laisser indéfinis est ce qui permet à la vue de ne rien écraser.
+    const r = recolteEnCours(3, 0.4);
+    expect(r.heightM).toBeUndefined();
+    expect(r.baseHouppierM).toBeUndefined();
+    const d = demasclageEnCours("quercus_suber", 0.4);
+    expect(d?.heightM).toBeUndefined();
+    expect(d?.baseHouppierM).toBeUndefined();
+  });
+});
+
+describe("le plant qui sort de terre", () => {
+  it("grandit de presque rien à sa taille pleine", () => {
+    expect(poseDeLaPlantation(0).hauteur).toBeLessThan(0.2);
+    expect(poseDeLaPlantation(0).opacite).toBe(0);
+    expect(poseDeLaPlantation(0.5).hauteur).toBeGreaterThan(poseDeLaPlantation(0).hauteur);
+    // Exactement DEBOUT à la fin : un plant posé est un arbre ordinaire, et
+    // `combiner` doit le trouver neutre.
+    expect(poseDeLaPlantation(1)).toEqual(DEBOUT);
+  });
+
+  it("ne part jamais d'une hauteur nulle", () => {
+    // Un sprite de hauteur zéro ne se dessine pas : la première image ne
+    // montrerait rien, ce qui est le contraire d'un plant qui apparaît.
+    expect(poseDeLaPlantation(0).hauteur).toBeGreaterThan(0);
+  });
+});
+
+describe("le plan des trois gestes sans retire", () => {
+  const planter = (): GesteVisible => ({ type: "planter", ids: [21, 22] });
+  const recolter = (): GesteVisible => ({ type: "recolter", ids: [31], masseKg: [8] });
+  const demascler = (): GesteVisible => ({
+    type: "leverEcorce",
+    ids: [41],
+    masseKg: [15],
+  });
+
+  it("range chacun dans sa table, et pas dans celle des tiges", () => {
+    const p = planDEllipse([{ gestes: [planter(), recolter(), demascler()] }], 2000);
+    const index = indexerLesGestes(p);
+    expect([...index.plants.keys()]).toEqual([21, 22]);
+    expect([...index.stocks.keys()].sort((a, b) => a - b)).toEqual([31, 41]);
+    // Aucune tige ne tombe et aucune forme ne bouge : c'est ce qui les sépare
+    // des cinq autres gestes.
+    expect(index.tiges.size).toBe(0);
+    expect(index.remodeles.size).toBe(0);
+  });
+
+  it("ignore une récolte sans masse : on n'anime pas un stock inconnu", () => {
+    const p = planDEllipse([{ gestes: [{ type: "recolter", ids: [31] }] }], 2000);
+    expect(indexerLesGestes(p).stocks.size).toBe(0);
+  });
+
+  it("rend la main à l'instantané une fois l'acte fini", () => {
+    const p = planDEllipse([{ gestes: [recolter(), planter()] }], 2000);
+    const index = indexerLesGestes(p);
+    expect(remodelageDe(index, p.dureeMs + 1, 31)).toBeUndefined();
+    expect(poseDuPlant(index, p.dureeMs + 1, 21)).toEqual(DEBOUT);
+  });
+
+  it("ne déforme pas un arbre qu'aucune plantation ne concerne", () => {
+    const index = indexerLesGestes(planDEllipse([{ gestes: [planter()] }], 2000));
+    expect(poseDuPlant(index, 500, 999)).toEqual(DEBOUT);
+  });
+
+  it("cumule un geste de forme et un geste de stock sur le MÊME arbre", () => {
+    // Un arbre élagué et récolté la même semaine doit montrer les deux : le
+    // houppier qui remonte et les fruits qui partent.
+    const elagage = { ...ELAGAGE, id: 31 };
+    const p = planDEllipse([{ gestes: [geste("elaguer", [elagage]), recolter()] }], 2000);
+    const index = indexerLesGestes(p);
+    const r = remodelageDe(index, 0, 31);
+    expect(r?.baseHouppierM).toBe(3);
+    expect(r?.fruitsKgEnPlus).toBe(8);
   });
 });

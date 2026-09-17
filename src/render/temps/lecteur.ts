@@ -48,7 +48,15 @@ import {
   type VentAPencher,
   vivaciteDeLaTorche,
 } from "./feu";
-import { type ArbreRemodele, remodelageEnCours, type TigeAbattue, tigeAbattueDe } from "./geste";
+import {
+  type ArbreRemodele,
+  demasclageEnCours,
+  poseDeLaPlantation,
+  recolteEnCours,
+  remodelageEnCours,
+  type TigeAbattue,
+  tigeAbattueDe,
+} from "./geste";
 import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from "./mort";
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
@@ -175,15 +183,34 @@ export interface GestesIndexes {
   tiges: Map<number, { acte: Acte; tige: TigeAbattue }>;
   /** ce qui reste debout et change de forme, par identifiant d'arbre */
   remodeles: Map<number, { acte: Acte; retire: ArbreRetire }>;
+  /**
+   * Les gestes qui déplacent un STOCK sans toucher à la forme, par arbre :
+   * récolte et démasclage. Ils n'ont pas d'`ArbreRetire` — le moteur le dit
+   * explicitement — mais ils changent la classe de vignette (`fruit`,
+   * `liege`), donc ils passent par la cuisson comme un élagage.
+   */
+  stocks: Map<number, { acte: Acte; type: "recolter" | "leverEcorce"; masseKg: number }>;
+  /** les plants qui sortent de terre, par arbre — canal de POSE */
+  plants: Map<number, Acte>;
 }
 
 /** Aucun geste sur arbre : les tables vides, partagées — donc sans allocation. */
-export const AUCUN_GESTE: GestesIndexes = { tiges: new Map(), remodeles: new Map() };
+export const AUCUN_GESTE: GestesIndexes = {
+  tiges: new Map(),
+  remodeles: new Map(),
+  stocks: new Map(),
+  plants: new Map(),
+};
 
 /** Indexe les gestes sur arbres d'un plan. Une fois par ellipse, comme les chutes. */
 export function indexerLesGestes(plan: PlanDEllipse): GestesIndexes {
   const tiges = new Map<number, { acte: Acte; tige: TigeAbattue }>();
   const remodeles = new Map<number, { acte: Acte; retire: ArbreRetire }>();
+  const stocks = new Map<
+    number,
+    { acte: Acte; type: "recolter" | "leverEcorce"; masseKg: number }
+  >();
+  const plants = new Map<number, Acte>();
   for (const acte of plan.actes) {
     if (acte.sujet.quoi !== "geste") continue;
     const geste = acte.sujet.geste;
@@ -195,8 +222,23 @@ export function indexerLesGestes(plan: PlanDEllipse): GestesIndexes {
       if (tige) tiges.set(tige.id, { acte, tige });
       if (remodelageEnCours(retire, 0)) remodeles.set(retire.id, { acte, retire });
     }
+    // Les trois gestes sans `retire` : l'arbre garde sa géométrie, c'est un
+    // stock qui bouge — ou un arbre qui s'ajoute.
+    if (geste.type === "planter") {
+      for (const id of geste.ids) plants.set(id, acte);
+    } else if (geste.type === "recolter" || geste.type === "leverEcorce") {
+      geste.ids.forEach((id, i) => {
+        // Sans masse, rien à faire partir : on n'anime pas un stock inconnu.
+        const masseKg = geste.masseKg?.[i];
+        if (masseKg !== undefined && masseKg > 0) {
+          stocks.set(id, { acte, type: geste.type as "recolter" | "leverEcorce", masseKg });
+        }
+      });
+    }
   }
-  return tiges.size === 0 && remodeles.size === 0 ? AUCUN_GESTE : { tiges, remodeles };
+  return tiges.size === 0 && remodeles.size === 0 && stocks.size === 0 && plants.size === 0
+    ? AUCUN_GESTE
+    : { tiges, remodeles, stocks, plants };
 }
 
 /**
@@ -245,6 +287,21 @@ export function remodelageDe(
   index: GestesIndexes,
   ecouleMs: number,
   idArbre: number,
+  especeId?: string,
+): ArbreRemodele | undefined {
+  const forme = formeRemodelee(index, ecouleMs, idArbre);
+  const stock = stockRemodele(index, ecouleMs, idArbre, especeId);
+  // Les deux se cumulent : un arbre récolté ET élagué la même semaine doit
+  // montrer les deux, et chacun ne pose que les champs qui le concernent.
+  if (!forme) return stock;
+  return stock ? { ...forme, ...stock } : forme;
+}
+
+/** La part géométrique : ce qu'un élagage, un étêtage ou un recépage déplace. */
+function formeRemodelee(
+  index: GestesIndexes,
+  ecouleMs: number,
+  idArbre: number,
 ): ArbreRemodele | undefined {
   const trouve = index.remodeles.get(idArbre);
   if (!trouve) return undefined;
@@ -252,6 +309,44 @@ export function remodelageDe(
   if (ecouleMs >= acte.debutMs + acte.dureeMs) return undefined;
   if (ecouleMs < acte.debutMs) return remodelageEnCours(retire, 0);
   return remodelageEnCours(retire, avancementDuSujet(acte, idArbre, ecouleMs));
+}
+
+/**
+ * La part de STOCK : les fruits qui partent, l'écorce qu'on lève.
+ *
+ * `especeId` n'est demandé que pour le démasclage, dont les deux bouts se
+ * lisent sur la fiche de l'espèce. Le geste ne porte pas l'espèce — il ne donne
+ * que des identifiants — et le lecteur ne connaît pas l'instantané : c'est donc
+ * la vue, qui tient l'arbre, qui la fait passer.
+ */
+function stockRemodele(
+  index: GestesIndexes,
+  ecouleMs: number,
+  idArbre: number,
+  especeId?: string,
+): ArbreRemodele | undefined {
+  const trouve = index.stocks.get(idArbre);
+  if (!trouve) return undefined;
+  const { acte, type, masseKg } = trouve;
+  if (ecouleMs >= acte.debutMs + acte.dureeMs) return undefined;
+  const a = ecouleMs < acte.debutMs ? 0 : avancementDuSujet(acte, idArbre, ecouleMs);
+  if (type === "recolter") return recolteEnCours(masseKg, a);
+  return especeId ? demasclageEnCours(especeId, a) : undefined;
+}
+
+/**
+ * La pose d'un plant qui sort de terre, à un instant de l'ellipse.
+ *
+ * `DEBOUT` avant son acte comme après : un plant posé reste un arbre ordinaire,
+ * et c'est la composition avec les autres canaux qui le veut neutre en dehors
+ * de sa fenêtre.
+ */
+export function poseDuPlant(index: GestesIndexes, ecouleMs: number, idArbre: number): Deformation {
+  const acte = index.plants.get(idArbre);
+  if (!acte) return DEBOUT;
+  if (ecouleMs >= acte.debutMs + acte.dureeMs) return DEBOUT;
+  if (ecouleMs < acte.debutMs) return poseDeLaPlantation(0);
+  return poseDeLaPlantation(avancementDuSujet(acte, idArbre, ecouleMs));
 }
 
 /**

@@ -1233,6 +1233,9 @@ que le moteur en DIT :
 | `brouter` `frotter` | ✅ une marque d'écorce, déjà dans la classe de vignette | cuisson |
 | `couper` `eclaircir` `receper` | ✅ une TIGE ABATTUE pivote autour de sa coupe et se couche, puis s'efface | pose |
 | `elaguer` `trogner` | ✅ l'arbre RESTE, et sa forme passe d'avant à après | cuisson |
+| `recolter` | ✅ les fruits quittent la couronne — `masseKg` dit combien | cuisson |
+| `leverEcorce` | ✅ l'écorce passe de refaite à vif ; les planches empilées n'ont pas de maille où se poser | cuisson |
+| `planter` | ✅ le plant sort de terre ; la terre retournée autour n'a pas de maille où se poser | pose |
 
 **Le partage ne suit pas le type du geste mais ce que le moteur en DIT** —
 `ArbreRetire.directionRad` est présent quand une tige entière est tombée, absent
