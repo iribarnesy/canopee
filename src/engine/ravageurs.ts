@@ -183,7 +183,7 @@ export function carteBiotique(
     const strate = STRATES.findIndex((h) => tree.heightM < h);
     const strateBit = strate >= 0 ? 1 << strate : 0;
     const vuln = vulnerabilite(tree.especeId, tree.vigueur);
-    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
     const abrite = espece.ravageurs.hoteHivernal === true;
     forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
       if (abrite) abriHivernal[i] = Math.min(1, (abriHivernal[i] ?? 0) + 1);

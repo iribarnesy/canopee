@@ -278,7 +278,10 @@ function ParcelMap({ state, classement }: { state: GameState; classement: LigneE
     for (const tree of state.trees) {
       if (!tree.alive) continue;
       const espece = getEspece(tree.especeId);
-      const r = Math.max(1.5, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio) * scale);
+      const r = Math.max(
+        1.5,
+        crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm) * scale,
+      );
       ctx.beginPath();
       ctx.arc(tree.x * scale, (side - tree.y) * scale, r, 0, 2 * Math.PI);
       ctx.fillStyle = `${(nommees.has(tree.especeId) ? SPECIES_COLORS[tree.especeId] : COULEUR_AUTRES) ?? "#555"}c0`;

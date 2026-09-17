@@ -638,7 +638,16 @@ export function fractionsRacinairesParHorizon(
 
 /** Rayon de prospection racinaire, m (au moins 1 m — le semis a sa cellule). */
 export function rootRadiusM(espece: EspeceV0, heightM: number): number {
-  return Math.max(1, ROOT_CROWN_RATIO * crownRadiusM(heightM, espece.lumiere.houppierRatio));
+  // FORME DE RÉFÉRENCE, délibérément (#105). Le houppier suit désormais le
+  // diamètre, mais le système RACINAIRE reste sur l'ancienne loi : qu'une tige
+  // dominée prospecte un disque plus petit est une affirmation distincte, qui
+  // demande sa propre mesure. L'empiler ici rendrait le lot du houppier
+  // immesurable — le disque racinaire commande l'eau et tous les nutriments.
+  return Math.max(
+    1,
+    ROOT_CROWN_RATIO *
+      crownRadiusM(heightM, espece.lumiere.houppierRatio, diametreInitialCm(heightM)),
+  );
 }
 
 /**
@@ -672,7 +681,10 @@ export function treeWaterDemandL(
   ventExposition = 0,
   abriVent = 0,
 ): number {
-  const r = crownRadiusM(heightM, espece.lumiere.houppierRatio);
+  // Forme de référence, pour la même raison que `rootRadiusM` : la
+  // transpiration d'une perche est une affirmation distincte de la largeur de
+  // son houppier, et elle se mesure à part (#105).
+  const r = crownRadiusM(heightM, espece.lumiere.houppierRatio, diametreInitialCm(heightM));
   const crownAreaM2 = Math.max(0.05, Math.PI * r * r);
   const rayonnement = SHADE_TRANSPIRATION_FLOOR + (1 - SHADE_TRANSPIRATION_FLOOR) * light;
   const vent = 1 + WIND_MAX_EXTRA * ventExposition * (1 - abriVent);

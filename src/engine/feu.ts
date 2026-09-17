@@ -303,7 +303,10 @@ export function chargeCombustible(
     const morte = !tree.alive && tree.mortSemaine !== undefined;
     if (!tree.alive && !morte) continue;
     const espece = getEspece(tree.especeId);
-    const r = Math.max(1, crownRadiusM(tree.heightM, espece.lumiere.houppierRatio));
+    const r = Math.max(
+      1,
+      crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm),
+    );
     const x0 = Math.max(0, Math.floor(tree.x - r));
     const x1 = Math.min(coteM - 1, Math.floor(tree.x + r));
     const y0 = Math.max(0, Math.floor(tree.y - r));

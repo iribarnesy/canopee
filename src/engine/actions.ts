@@ -985,7 +985,10 @@ function applyCouper(
       const depositG = 0.5 * tree.uptakeYearG + treeNitrogenNeedGWeek(espece, tree.heightM) * 52;
       // On ÉPAND le broyat sur la zone (pas en tas au pied) : rayon large,
       // pour que les racines des voisins y accèdent.
-      const crownR = Math.max(2.5, 2 * crownRadiusM(tree.heightM, espece.lumiere.houppierRatio));
+      const crownR = Math.max(
+        2.5,
+        2 * crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm),
+      );
       const cells: number[] = [];
       const x0 = Math.max(0, Math.floor(tree.x - crownR));
       const x1 = Math.min(dims.widthM - 1, Math.floor(tree.x + crownR));

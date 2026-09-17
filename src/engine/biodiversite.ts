@@ -79,7 +79,7 @@ export function hauteurParCellule(trees: readonly TreeState[], coteM: number): F
   for (const t of trees) {
     if (!t.alive) continue;
     const espece = getEspece(t.especeId);
-    const r = crownRadiusM(t.heightM, espece.lumiere.houppierRatio);
+    const r = crownRadiusM(t.heightM, espece.lumiere.houppierRatio, t.diametreCm);
     const x0 = Math.max(0, Math.floor(t.x - r));
     const x1 = Math.min(coteM - 1, Math.floor(t.x + r));
     const y0 = Math.max(0, Math.floor(t.y - r));

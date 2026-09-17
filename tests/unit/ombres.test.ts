@@ -11,6 +11,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { crownRadiusM, SHADOW_NORTH_OFFSET } from "../../src/engine/light";
+import { diametreInitialCm } from "../../src/engine/trees";
 import { type Vue, versEcranVue, vueInitiale, zoomer } from "../../src/render/camera";
 import {
   APLATISSEMENT,
@@ -112,7 +113,7 @@ describe("la taille de l'ombre", () => {
     const ombre = ombreDeLArbre(a, v);
     expect(ombre).toBeDefined();
     if (!ombre) return;
-    const rayonM = crownRadiusM(a.heightM, a.houppierRatio);
+    const rayonM = crownRadiusM(a.heightM, a.houppierRatio, diametreInitialCm(a.heightM));
     const diametrePx = 2 * rayonM * TUILE_LARGEUR_PX * v.cam.zoom;
     const pied = versEcranVue({ x: a.x, y: a.y, z: a.z }, v);
     const cible = versEcranVue({ x: a.x, y: a.y + SHADOW_NORTH_OFFSET * a.heightM, z: a.z }, v);

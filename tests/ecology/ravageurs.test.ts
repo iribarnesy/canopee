@@ -268,18 +268,23 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
     // rapports, lot par lot :
     //
     //   avant        2,66 ×   3,01 ×   3,07 ×
-    //   après #97    2,18 ×   2,24 ×   1,88 ×   (houppier des perches, #105)
+    //   après #97    2,18 ×   2,24 ×   1,88 ×   (houppier des perches)
     //   après #96    1,75 ×   1,57 ×   1,70 ×   (moins d'hôtes en peuplement pur)
+    //   après #105   2,79 ×   2,53 ×   2,35 ×   (le houppier suit le diamètre)
     //
-    // On garde l'exigence PAR GRAINE — c'est elle qui fait le résultat — en la
-    // posant à 1,4, sous la plus basse des trois mesures. Le mélange protège
-    // toujours, et de plus de moitié ; mais l'amplitude de cette conclusion a
-    // perdu la moitié de sa valeur en deux lots, et le jour où le houppier
-    // saura se resserrer (#105) une partie doit revenir.
+    // **#105 EN A RENDU L'ESSENTIEL**, et c'était la prédiction écrite ici même
+    // — « le jour où le houppier saura se resserrer, ces ratios doivent
+    // remonter ». Une perche ne répand plus la vulnérabilité d'un dominant.
+    //
+    // Le seuil revient donc à 2, sous la plus basse des trois mesures. L'écart
+    // qui subsiste avec l'origine sur deux graines est ATTENDU : #96 en explique
+    // une part défendable — une aulnaie qui s'auto-éclaircit présente moins
+    // d'hôtes au pic, et la pression du peuplement PUR a effectivement baissé
+    // (0,357 → 0,308 sur la graine 4).
     for (const [i, p] of pur.runs.entries()) {
       const m = mixte.runs[i];
       if (!m) throw new Error("partie manquante");
-      expect(p.pressionMax, `graine ${GRAINES[i]}`).toBeGreaterThan(1.4 * m.pressionMax);
+      expect(p.pressionMax, `graine ${GRAINES[i]}`).toBeGreaterThan(2 * m.pressionMax);
     }
   });
 });
