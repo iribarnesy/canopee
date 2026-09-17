@@ -1903,7 +1903,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // `gravite` ne convient pas).
       if (espece.regeneration.dissemination !== "geai") continue;
       if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
-      const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+      const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
       forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
         mastAuSol[i] = Math.min(1, (mastAuSol[i] ?? 0) + 1);
       });
@@ -1987,7 +1987,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   nextTrees = nextTrees.map((tree) => {
     if (!tree.alive) return tree;
     const espece = getEspece(tree.especeId);
-    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
     let somme = 0;
     let n = 0;
     forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
@@ -2040,7 +2040,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const depositLitter = (tree: TreeState, amountG: number) => {
     if (amountG <= 0) return;
     const espece = getEspece(tree.especeId);
-    const crownR = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+    const crownR = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
     let n = 0;
     forEachDiscCell(dims, tree.x, tree.y, crownR, () => {
       n++;

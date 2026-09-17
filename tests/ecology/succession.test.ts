@@ -87,12 +87,19 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
 
   it("an 60 : canopée pionnière, les hêtres attendent dans le sous-étage", () => {
     expect(an60.canopy.length).toBeGreaterThan(15);
-    // Le seuil descend de 0,70 à 0,65 avec l'effet de bord (lisiere.ts) :
-    // l'entourage de la friche est une lisière forestière, elle ombrage donc
-    // ses bandes, et une friche un peu plus sombre laisse un peu moins de place
-    // aux pionniers qui la colonisent. La canopée reste très majoritairement
-    // pionnière — 0,68 — ce que le titre affirme.
-    expect(an60.canopyPioneerShare).toBeGreaterThan(0.65);
+    // **CE SEUIL A DESCENDU TROIS FOIS, ET IL DEVIENT L'ÉNONCÉ.** 0,70 → 0,65
+    // avec l'effet de bord (lisiere.ts), puis 0,68 → 0,57 avec le port serré
+    // (#105) : les pionniers sont des essences ÉLANCÉES, le bouleau le premier,
+    // et leur houppier suit désormais leur diamètre — un bouleau a bel et bien
+    // une couronne étroite quand un chêne de même hauteur l'a large. La canopée
+    // pionnière ombrage donc moins, et les intermédiaires y montent plus tôt.
+    //
+    // Trois descentes du même seuil, c'est le signe que le chiffre enregistrait
+    // le moteur au lieu de contraindre le monde (docs/realisme.md, « ce qu'un
+    // test écologique a le droit d'affirmer »). On le remplace donc par
+    // l'affirmation du titre elle-même — la canopée est MAJORITAIREMENT
+    // pionnière — qui ne se renégocie pas : c'est 0,5, mesuré à 0,57.
+    expect(an60.canopyPioneerShare).toBeGreaterThan(0.5);
     expect(an60.fagusAlive.length).toBeGreaterThan(3);
     // « Attendre dans le sous-étage » est une position RELATIVE, et il a fallu
     // recalibrer les vitesses de croissance pour s'en apercevoir : la version

@@ -54,9 +54,73 @@ const BUCKET_M = 12;
  */
 export const MAX_EXTINCTION = 4.5;
 
-/** Rayon du houppier, m. */
-export function crownRadiusM(heightM: number, houppierRatio: number): number {
-  return houppierRatio * heightM;
+/**
+ * ─── LE HOUPPIER SUIT LE DIAMÈTRE, PAS LA HAUTEUR ────────────────────────────
+ *
+ * Ce que la formule d'avant disait : `rayon = houppierRatio × hauteur`. Une
+ * perche étiolée de dix mètres et onze centimètres recevait donc le houppier
+ * d'un dominant de dix mètres — un parasol sur un fil. C'est le « port serré »
+ * que B10 déclare manquant depuis toujours, et il a fini par coûter quelque
+ * chose de mesurable : l'effet protecteur du mélange contre les ravageurs est
+ * tombé de 2,66–3,07 × à 1,88–2,24 × le jour où l'étiolement (#97) s'est mis à
+ * faire monter les dominés, parce que `ravageurs.ts` épand la vulnérabilité de
+ * chaque hôte sur le disque de son houppier (#105).
+ *
+ * **La loi est celle du tube** (Shinozaki et al. 1964), la même qui gouverne
+ * déjà la charge d'entretien dans `reserves.ts` : la section d'aubier est
+ * proportionnelle à la surface foliaire qu'elle alimente. Une couronne de rayon
+ * `r` et d'indice foliaire `λ` porte `π r² λ` de feuille, alimentée par une
+ * section `∝ D²` — donc **`r ∝ D`**. C'est aussi l'allométrie que les
+ * forestiers emploient depuis toujours : les tables de largeur de houppier se
+ * lisent contre le DIAMÈTRE, jamais contre la hauteur.
+ *
+ * **Et le lot est l'identité pour un arbre normalement conformé.** Le rayon
+ * vaut exactement l'ancien quand la tige porte l'élancement d'une tige sans
+ * histoire — `diametreInitialCm` pose `D = 2 h`, soit H/D 50. En dessous la
+ * couronne s'élargit, au-dessus elle se resserre :
+ *
+ * | H/D | 35 (au large) | 50 (référence) | 90 (perche) | 129 (extrême) |
+ * |---|---|---|---|---|
+ * | rayon / ancien | 1,43 × | **1,00 ×** | 0,56 × | 0,39 × |
+ *
+ * Le gradient va dans le bon sens des deux côtés : l'arbre de plein vent étale
+ * sa couronne — un chêne isolé de vingt mètres porte vingt-cinq mètres de
+ * houppier, ce que l'ancienne formule ne savait pas produire — et la perche la
+ * referme.
+ */
+
+/**
+ * Élancement auquel le rayon vaut exactement l'ancienne formule. C'est celui
+ * que le moteur prête à une tige sans histoire (`trees.ts:diametreInitialCm`,
+ * `D = 2 h`) ; la constante est recopiée ici plutôt qu'importée parce que
+ * `trees.ts` dépend déjà de ce module.
+ */
+export const ELANCEMENT_HOUPPIER_REFERENCE = 50;
+
+/**
+ * Ce que la couronne ne peut pas dépasser, en multiple de l'ancienne formule.
+ *
+ * Garde-fou, pas calibration : il correspond à H/D 31, en dessous de tout ce
+ * que le moteur produit (le plus trapu mesuré est à 35, au large). Il existe
+ * pour qu'une tige anormalement courte — un recépage, une trogne rabattue — ne
+ * reçoive pas une couronne absurde *(à calibrer le jour où une telle tige
+ * apparaîtra vraiment)*.
+ */
+export const ELARGISSEMENT_HOUPPIER_MAX = 1.6;
+
+/**
+ * Rayon du houppier, m. Proportionnel au DIAMÈTRE (modèle du tube), calé pour
+ * redonner `houppierRatio × hauteur` à l'élancement de référence.
+ *
+ * Une tige sans diamètre enregistré retombe sur l'ancienne formule : c'est un
+ * semis qu'on projette, pas un arbre déformé.
+ */
+export function crownRadiusM(heightM: number, houppierRatio: number, diametreCm: number): number {
+  const h = Math.max(0, heightM);
+  const base = houppierRatio * h;
+  if (!(diametreCm > 0) || h <= 0) return base;
+  const elancement = (100 * h) / diametreCm;
+  return base * Math.min(ELARGISSEMENT_HOUPPIER_MAX, ELANCEMENT_HOUPPIER_REFERENCE / elancement);
 }
 
 /**
@@ -168,7 +232,7 @@ function buildShadowIndex(
     const espece = getEspece(tree.especeId);
     const feuillage = part(tree);
     if (feuillage <= 0) continue;
-    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
     if (r <= 0) continue;
     const shadow: Shadow = {
       cx: tree.x,

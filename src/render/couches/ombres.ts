@@ -22,6 +22,7 @@
  */
 
 import { crownRadiusM } from "../../engine/light";
+import { diametreInitialCm } from "../../engine/trees";
 import { type Vue, versEcranVue } from "../camera";
 import { directionOmbreEcran, longueurOmbreEcran } from "../lumiere";
 import { profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
@@ -55,6 +56,15 @@ export interface ArbreOmbre {
   heightM: number;
   /** rapport houppier/hauteur de l'espèce (fiche écologique) */
   houppierRatio: number;
+  /**
+   * Diamètre à 1,30 m, cm. OPTIONNEL, et c'est de l'offre posée d'avance : le
+   * houppier du moteur suit désormais le diamètre et non la hauteur
+   * (`light.ts`, #105), si bien qu'une perche étiolée porte une couronne
+   * étroite. Tant que le rendu ne transmet pas ce champ, l'ombre garde la
+   * forme de référence — elle ne se resserrera que le jour où L2 le câblera
+   * depuis `Snapshot.diametreCm`, qui le porte déjà.
+   */
+  diametreCm?: number;
   /**
    * part du feuillage qui intercepte la lumière ∈ [0,1] — `partFoliaireOmbrageante`.
    * Un caduc nu de janvier ne porte pas d'ombre de houppier, et c'est visible.
@@ -243,7 +253,11 @@ export function indexDensite(partOmbrageante: number): number {
  */
 export function ombreDeLArbre(arbre: ArbreOmbre, vue: Vue): OmbreAPoser | undefined {
   if (arbre.partOmbrageante <= 0 || arbre.heightM <= 0) return undefined;
-  const rayonM = crownRadiusM(arbre.heightM, arbre.houppierRatio);
+  const rayonM = crownRadiusM(
+    arbre.heightM,
+    arbre.houppierRatio,
+    arbre.diametreCm ?? diametreInitialCm(arbre.heightM),
+  );
   if (rayonM <= 0) return undefined;
 
   const pied = versEcranVue({ x: arbre.x, y: arbre.y, z: arbre.z }, vue);

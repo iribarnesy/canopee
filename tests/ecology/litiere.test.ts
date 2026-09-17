@@ -89,6 +89,13 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     // vernale, qui ne prélève rien de l'été — l'azote que le tapis épongeait
     // profite un peu plus au hêtre TÉMOIN qu'à celui du bosquet, déjà servi.
     // Le sens de la facilitation, lui, n'a pas bougé.
-    expect(hetreAvec.heightM).toBeGreaterThan(hetreSeul.heightM * 1.08);
+    //
+    // Et il est retombé à 1,077 avec le port serré (#105) : les aulnes du
+    // bosquet, plus élancés que le hêtre témoin resté au large, portent
+    // désormais un houppier un peu plus étroit, donc ils ombragent un peu moins
+    // et facilitent un peu moins. Troisième glissement du même montant, et
+    // c'est de trop — on garde l'AVANTAGE, qui est l'énoncé de l'essai, avec
+    // une marge de 5 % qui absorbe le tirage sans prétendre mesurer l'ampleur.
+    expect(hetreAvec.heightM).toBeGreaterThan(hetreSeul.heightM * 1.05);
   });
 });

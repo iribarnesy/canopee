@@ -61,7 +61,72 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le budget carbone, #96)
+## Ce que le dernier lot a appris (le port serré, #105)
+
+**Mesurer la grandeur candidate AVANT de la choisir, et accepter qu'elle perde.**
+Le premier jet faisait porter le resserrement sur la PROFONDEUR de houppier
+(`baseHouppierM`), qui est la variable que le moteur fait déjà réagir à l'ombre
+— c'était élégant, et c'était le mécanisme voisin. Relevé sur une hêtraie serrée
+de quatre-vingts ans : 0,90 pour le dominant, 0,90 pour la tige médiane, 0,90
+pour la perche. Elle ne discrimine RIEN, parce qu'une essence tolérante garde son
+houppier bas. L'élancement, lui, donne 49 / 46 / 90 sur les trois mêmes tiges.
+**Une variable candidate ne se juge pas sur sa signification mais sur son
+étendue mesurée dans le peuplement du moteur** : trois lignes de relevé avant
+d'écrire la formule.
+
+**Un manque connu du référentiel peut n'avoir aucun coût, jusqu'au lot qui le
+lui donne.** B10 traînait en 🟡 depuis l'origine et personne n'y perdait rien :
+tant que l'ombre ne faisait pas filer les dominés, un houppier calculé sur la
+hauteur ne mentait pas beaucoup. L'étiolement (#97) l'a rendu cher du jour au
+lendemain — l'effet protecteur du mélange contre les ravageurs est tombé de
+2,66–3,07 × à 1,88–2,24 ×, parce que `ravageurs.ts` épand la vulnérabilité sur le
+disque du houppier et qu'une perche recevait celui d'un dominant. **Après un lot
+qui change une grandeur, relire la liste des MANQUES, pas seulement celle des
+essais** : la file d'attente se réordonne toute seule, et le suivant était déjà
+écrit dans le référentiel.
+
+**La garantie d'identité, deuxième fois de suite — et cette fois elle était
+offerte.** `diametreInitialCm` pose `D = 2 h`, donc H/D 50 ; caler la nouvelle
+loi pour croiser l'ancienne à cet élancement-là ne coûte aucune constante
+calibrée et rend le lot rigoureusement neutre sur toute tige normalement
+conformée. Le rayon d'explosion d'un changement qui touche seize appels est
+ainsi borné aux tiges déformées, et ça se démontre au lieu de s'espérer
+(`toBeCloseTo(..., 10)`). **Chercher l'élancement, le pH, l'âge où la nouvelle
+loi doit rendre l'ancienne : le moteur pose presque toujours ce point
+quelque part.**
+
+**Refuser ce que la formule emporte gratuitement.** `crownRadiusM` est aussi
+appelée par `rootRadiusM` et par `treeWaterDemandL` : il aurait suffi de ne rien
+faire pour qu'une perche prospecte un disque racinaire plus petit et transpire
+moins. Ce sont deux affirmations DISTINCTES de la largeur de sa couronne, chacune
+avec sa propre littérature, et les empiler rendait le lot immesurable — le disque
+racinaire commande l'eau et tous les nutriments. Les deux appels sont restés sur
+la forme de référence, avec le refus écrit dans le code à l'endroit où la
+tentation reviendra. **Quand un lot modifie une fonction que plusieurs mécanismes
+appellent, l'affirmation se vérifie appel par appel** ; « ça vient tout seul »
+n'est pas un argument, c'est l'absence d'un.
+
+**Un garde-fou se reconnaît à ce qu'il ne mord sur rien, et ça se teste.** Le
+plafond d'élargissement (1,6 ×, soit H/D 31) existe pour qu'un recépage ou une
+trogne rabattue ne reçoive pas une couronne absurde. L'essai n'affirme pas sa
+valeur — il affirme qu'il est **sous** tout ce que le moteur produit aujourd'hui
+(le plus trapu mesuré est à 35). Le jour où il se met à mordre, l'essai tombe et
+dit la vraie nouvelle : une tige anormalement courte est apparue. **Un plafond
+qu'on ne sait pas ancrer reste honnête tant qu'on épingle son inactivité** ;
+sinon c'est une calibration déguisée en sécurité.
+
+**Et le thermomètre, quatrième lot de suite — sauf qu'ici le thermomètre était le
+SEUIL.** Trois essais écologiques sont tombés, tous marginalement, et aucun n'a
+été rattrapé en ajustant le chiffre. Celui de la succession avait déjà descendu
+deux fois (0,70 → 0,65, puis 0,68 → 0,57 mesuré) : **un seuil qui descend trois
+fois n'enregistre pas le monde, il enregistre le moteur.** Il a été remplacé par
+l'affirmation de son propre titre — la canopée est MAJORITAIREMENT pionnière,
+donc 0,5 — qui ne se renégociera plus. Les deux autres ont suivi la même règle :
+on garde l'AVANTAGE de l'aulne (marge 5 %) et l'ORDRE de l'aubépine (1,5 ×), pas
+leur ampleur. Quand un essai tombe pour une raison juste, se demander si son
+énoncé a besoin du chiffre.
+
+## Ce qu'un lot plus ancien a appris (le budget carbone, #96)
 
 **Construire le TÉMOIN, et pas seulement la mesure.** Le résultat du lot n'est
 pas « la hêtraie tombe à 415 tiges/ha », c'est l'écart entre 415 et les 2 231 du
@@ -360,6 +425,20 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce qui reste de #105 — la racine et la transpiration de la perche.** Le
+houppier suit le diamètre ; le disque racinaire et la demande en eau restent sur
+la forme de référence, délibérément (le refus est écrit dans `trees.ts`). Ce sont
+deux affirmations à instruire séparément, et la racinaire est la plus lourde de
+conséquences : elle commande l'eau et tous les nutriments, donc elle se prend
+seule, avec son témoin. La littérature ne dit d'ailleurs pas la même chose des
+deux — une tige dominée réduit sa transpiration bien plus que son emprise
+racinaire, qui persiste après que la couronne a cédé.
+
+Reste aussi, côté rendu : `ArbreOmbre.diametreCm` est posé et optionnel, donc
+l'ombre portée garde la forme de référence tant que L2 ne câble pas le champ
+depuis `Snapshot.diametreCm`, qui le porte déjà. Une ligne, et les ombres des
+perches se resserrent comme celles du moteur.
 
 **Ce qui reste de #96 — l'attribution de la cause de mort (issue #103).** Le
 mécanisme est là et F6 est tombé, mais 293 morts de famine sur 295 sortent

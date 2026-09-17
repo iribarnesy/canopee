@@ -152,7 +152,7 @@ const btn = (active = false): React.CSSProperties => ({
  */
 function rayonCliquableM(tree: SnapshotTree): number {
   const espece = getEspece(tree.especeId);
-  const houppier = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio);
+  const houppier = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
   return Math.max(1, tree.chandelle ? houppier * 0.3 : houppier);
 }
 

@@ -282,7 +282,8 @@ export function drawPosition(
     }
     case "gravite": {
       // Sous la couronne et à peine au-delà (faînes, glands roulés).
-      const reach = crownRadiusM(parent.heightM, espece.lumiere.houppierRatio) * 1.5 + 2;
+      const reach =
+        crownRadiusM(parent.heightM, espece.lumiere.houppierRatio, parent.diametreCm) * 1.5 + 2;
       const distance = reach * Math.sqrt(u1);
       const angle = 2 * Math.PI * u2;
       return {
@@ -388,7 +389,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   const paniers = new Map<number, Houppier[]>();
   for (const t of trees) {
     if (!t.alive) continue;
-    const r = crownRadiusM(t.heightM, getEspece(t.especeId).lumiere.houppierRatio);
+    const r = crownRadiusM(t.heightM, getEspece(t.especeId).lumiere.houppierRatio, t.diametreCm);
     if (r > 0) rangerHouppier(paniers, { x: t.x, y: t.y, r });
   }
 
@@ -436,7 +437,13 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     rangerHouppier(paniers, {
       x: pos.x,
       y: pos.y,
-      r: crownRadiusM(hauteurDuSemisM(espece.hauteurMaxM), espece.lumiere.houppierRatio),
+      // Semis PROJETÉ : il n'a pas encore de diamètre propre, on lui prête
+      // celui d'une tige sans histoire — donc la forme de référence.
+      r: crownRadiusM(
+        hauteurDuSemisM(espece.hauteurMaxM),
+        espece.lumiere.houppierRatio,
+        diametreInitialCm(hauteurDuSemisM(espece.hauteurMaxM)),
+      ),
     });
     // Un semis naturel a sa vigueur propre, comme un plant de pépinière.
     const tirageVigueur = tirerVigueurIndividuelle(rng);

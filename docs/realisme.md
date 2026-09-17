@@ -84,7 +84,7 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
-| B. Lumière et structure | 7 | 4 | 0 | 11 |
+| B. Lumière et structure | 8 | 3 | 0 | 11 |
 | C. Nutriments et cycles | 14 | 0 | 1 | 15 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 8 | 4 | 0 | 12 |
@@ -93,9 +93,9 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 7 | 1 | 0 | 8 |
-| **Total** | **121** | **21** | **4** | **146** |
+| **Total** | **122** | **20** | **4** | **146** |
 
-**Score de réalisme : 121 pleins + 21 partiels sur 146 → 90 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 122 pleins + 20 partiels sur 146 → 90 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -157,10 +157,14 @@ l'ancrage revient à sa valeur mesurée, et E11 rend un ✅ qu'un essai tenait p
 une coïncidence de dix centimètres)
 → 89 % (la place se dispute là où la graine tombe : le plafond de
 recouvrement devient local, et une futaie vraiment dense redevient testable)
-→ **90 % (une tige à l'ombre ne stagne pas, elle file : l'étiolement)**.*
+→ 90 % (une tige à l'ombre ne stagne pas, elle file : l'étiolement)
+→ 90 % (on meurt de faim, pas de passer sous un seuil : le budget carbone —
+entrée omise par son propre lot, rattrapée ici)
+→ **90 % (le houppier suit le diamètre, pas la hauteur : le port serré, et
+B10 est enfin complet)**.*
 
-*Le score a BAISSÉ deux chantiers avant celui-ci — comme il avait baissé au
-chantier des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
+*Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
+à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
 c'est le référentiel qui s'est mis à compter des points que personne ne comptait.
 Un référentiel qui ne s'allonge jamais finit par ne plus mesurer que ce qu'on
 sait déjà faire, et un score qui ne fait que monter est le symptôme de cette
@@ -217,7 +221,7 @@ maladie-là, pas une preuve de santé.*
 | B8 | Les strates basses (arbustes, herbacées, couvre-sol) existent et se partagent la lumière | ✅ | `herbacees.ts` : trois herbacées, chacune avec son point de compensation, sa gamme de pH et son calendrier, se partagent le sol d'une cellule sur la place que les autres laissent ; `herbacees.test.ts` (le pH seul trie les deux graminées : molinie sur podzol à 4,5, dactyle sur limon à 7). **Limite** : pas de hiérarchie de hauteur DANS la strate — une graminée haute n'étouffe pas une rosette qui se maintient, elle n'occupe que la place lâchée |
 | B9 | Une lisière reçoit plus de lumière latérale qu'un cœur de massif | 🟡 | `lisiere.ts` : l'entourage ombrage les bandes de bordure, à proportion de sa part boisée et de la distance. Géométrie NON symétrique — c'est le SUD qui ombrage, le nord ne coûte rien. Hauteur du bois voisin supposée (les bordures n'en portent pas) |
 | B11 | Une tige ne peut pas être plus élancée que sa mécanique ne le permet | ✅ | `trees.ts` (`hauteurStableM`) ; `etiolement.test.ts`. Une colonne qui porte son propre poids flambe au-delà de `H ∝ D^(2/3)` (Greenhill 1881 ; exposant vérifié sur les arbres records par McMahon & Kronauer 1976), donc l'élancement maximal décroît en `D^(−1/3)` : 100 pour une perche de 12 cm, 74 pour 30 cm, 62 pour 50 cm. Le niveau est calé sur la sylviculture (la perche serrée monte à 90–100 et n'y reste pas) et recoupé par le flambage élastique du bois vert, qui donne 162 pour 12 cm — une marge de 1,6 *(à calibrer : la littérature donne une gamme)*. Ce n'est pas un couperet : la marge `H_stable − H` se referme progressivement, l'allongement s'étrangle tout seul et la tige grimpe le long de son enveloppe en s'épaississant. **C'est la mesure qui l'a rendue nécessaire** : sans elle, l'étiolement s'emballe jusqu'à H/D 295 |
-| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | 🟡 | Élagage naturel fait : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). Le TRONC réagit lui aussi désormais, par son élancement (cf. E10). Le RAYON du houppier, lui, reste `houppierRatio × hauteur` : pas de port serré. **Et ce manque a désormais un coût mesuré** — depuis l'étiolement (#97), une tige dominée monte au lieu de stagner, donc le moteur lui attribue un houppier PLUS LARGE quand une perche réelle en a un riquiqui. Les ravageurs lisant la ressource sur le disque du houppier, l'effet protecteur du mélange est passé de 2,66–3,07 × à 1,88–2,24 × (`ravageurs.test.ts`, trois graines). Le jour où le houppier saura se resserrer, ces ratios doivent remonter |
+| B10 | La forme du houppier réagit à la compétition (élagage naturel, port serré) | ✅ | Les DEUX moitiés y sont enfin. **L'élagage naturel** : `baseHouppierM` monte avec l'ombre, seuil = point de compensation de l'espèce (`light.ts:baseHouppierCible`, `elagage.test.ts`). **Le port serré** : le rayon du houppier suit le DIAMÈTRE et non la hauteur (`light.ts:crownRadiusM`, `port-serre.test.ts`), par le modèle du tube — la section d'aubier est proportionnelle à la surface foliaire, donc `r ∝ D` — qui est aussi l'allométrie des forestiers, dont les tables de largeur de houppier se lisent contre le diamètre. Calé pour redonner exactement l'ancienne formule à l'élancement d'une tige sans histoire (H/D 50), donc **l'identité pour un arbre normalement conformé** : le lot ne déplace que les tiges déformées. Gradient des deux côtés — 0,56 × pour une perche à H/D 90, 1,43 × pour un sujet de plein vent à 35, ce qui donne enfin au chêne isolé les vingt-cinq mètres de houppier que l'ancienne formule ne savait pas produire. **Et c'est une mesure qui l'a exigé** : `ravageurs.ts` épand la vulnérabilité de chaque hôte sur le disque de son houppier, si bien que l'étiolement (#97) avait fait tomber l'effet protecteur du mélange de 2,66–3,07 × à 1,88–2,24 × — une perche recevait le houppier d'un dominant. Le lot en rend l'essentiel : 2,79 / 2,53 / 2,35 ×. **Limite** : les racines et la transpiration restent sur l'ancienne loi, délibérément — qu'une tige dominée prospecte un disque plus petit est une affirmation distincte, qui demande sa propre mesure |
 
 ## C. Nutriments et cycles
 
@@ -2066,6 +2070,72 @@ pas le voir : il appelait la fonction avec des entiers.
   réservoir fini à seuil de débordement, et non comme une rugosité — ce que
   fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
   des barrages de débris.
+
+## Le port serré : le houppier suit le diamètre, pas la hauteur
+
+Le rayon du houppier valait `houppierRatio × hauteur`, et rien d'autre. Une
+perche étiolée de dix mètres et onze centimètres recevait donc le houppier d'un
+dominant de dix mètres — un parasol sur un fil. Tant que l'ombre ne faisait pas
+filer les dominés, ça ne se voyait pas ; depuis l'étiolement, si.
+
+**Ce qui a rendu le manque mesurable.** `ravageurs.ts` épand la vulnérabilité de
+chaque hôte sur le disque de son houppier. Quand #97 s'est mis à faire monter
+les dominés, le moteur leur a attribué des couronnes de dominants — davantage en
+mélange, où l'essence focale est plus ombragée — et l'effet protecteur du mélange
+est tombé de 2,66–3,07 × à 1,88–2,24 ×. Une conclusion du dépôt perdait un tiers
+de son amplitude à cause d'une formule, pas d'une écologie.
+
+**La loi est celle du tube** (Shinozaki et al. 1964), la même qui gouverne la
+charge d'entretien du budget carbone : la section d'aubier est proportionnelle à
+la surface foliaire qu'elle alimente. Une couronne de rayon `r` et d'indice
+foliaire `λ` porte `π r² λ` de feuille, alimentée par une section `∝ D²` — donc
+**`r ∝ D`**. C'est aussi ce que font les forestiers depuis toujours : les tables
+de largeur de houppier se lisent contre le DIAMÈTRE, jamais contre la hauteur.
+
+**Et le lot est l'identité pour un arbre normalement conformé**, ce qui borne son
+rayon d'explosion alors qu'il touche seize appels. Le rayon vaut exactement
+l'ancienne formule quand la tige porte l'élancement d'une tige sans histoire
+(`diametreInitialCm` pose `D = 2 h`, soit H/D 50) :
+
+| H/D | 35 (au large) | 50 (référence) | 90 (perche) | 129 (extrême) |
+|---|---|---|---|---|
+| rayon / ancien | 1,43 × | **1,00 ×** | 0,56 × | 0,39 × |
+
+Le gradient va dans le bon sens des deux côtés, et le côté « large » est un gain
+qu'on n'avait pas cherché : un chêne isolé de vingt mètres porte enfin
+vingt-cinq mètres de houppier, ce que l'ancienne formule ne savait pas produire.
+
+### Ce que ça rend, et ce qu'on a choisi de ne pas emporter
+
+L'effet mélange remonte à **2,79 / 2,53 / 2,35 ×** sur les trois graines. L'écart
+qui subsiste avec l'origine est attendu et défendable : l'auto-éclaircie fait
+qu'une aulnaie pure présente moins d'hôtes au pic.
+
+**Les racines et la transpiration restent sur l'ancienne loi, délibérément.**
+Qu'une tige dominée prospecte un disque racinaire plus petit et transpire moins
+sont deux affirmations distinctes de la largeur de sa couronne. Les empiler ici
+aurait rendu le lot immesurable — le disque racinaire commande l'eau et tous les
+nutriments. C'est écrit dans le code à l'endroit où la tentation reviendra.
+
+### Trois seuils qui enregistraient le moteur, remplacés par leur énoncé
+
+Le lot déplace qui ombrage qui, donc il déplace la succession. Trois essais sont
+tombés, tous marginalement, et aucun n'a été rattrapé par un seuil ajusté.
+
+*La canopée pionnière à soixante ans* passe de 0,68 à 0,57. La cause est juste :
+les pionniers sont des essences élancées — le bouleau le premier — et un bouleau
+a bel et bien une couronne étroite quand un chêne de même hauteur l'a large. Mais
+ce seuil avait **déjà descendu deux fois** (0,70 puis 0,65), ce qui est le signe
+qu'il enregistrait le moteur. Il devient donc l'affirmation du titre : la canopée
+est MAJORITAIREMENT pionnière, c'est-à-dire 0,5, et ça ne se renégocie plus.
+
+*La facilitation de l'aulne sur le hêtre* retombe de 1,095 à 1,077 — troisième
+glissement du même montant. On garde l'avantage, qui est l'énoncé, avec une marge
+de 5 % qui absorbe le tirage sans prétendre mesurer l'ampleur.
+
+*L'aubépine, dernière debout*, garde son rang mais la ronce revient de 0,0 à
+1,9 % : une canopée d'arbres élancés laisse un peu plus de lumière au sol. On
+garde l'ORDRE, pas le multiple.
 
 ## Le budget carbone : on meurt de faim, pas de passer sous un seuil
 
