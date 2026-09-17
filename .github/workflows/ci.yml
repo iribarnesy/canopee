@@ -23,4 +23,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run check:boundaries
+      # Le référentiel est la mémoire du projet, et un compte tenu à la main
+      # diverge : l'en-tête de `realisme.md` a déjà annoncé 80/26/16 sur 122
+      # quand les lignes en portaient 104/28/2 sur 134 (#76), et deux
+      # divergences sont réapparues le même jour une fois la passe oubliée
+      # (#111). Le script recompte depuis les lignes et vérifie que la dernière
+      # entrée de la progression cite le score courant. `python3` est fourni par
+      # l'image `ubuntu-latest`.
+      - run: npm run check:realisme
       - run: npm test
