@@ -6,7 +6,22 @@ Règle issue de #76 : un compte tenu à la main diverge. L'en-tête a déjà ann
 s'était accumulée sur une trentaine de lots.
 
     python3 scripts/recompte-realisme.py            # vérifie, sort 1 si ça diverge
-    python3 scripts/recompte-realisme.py --ecrire    # réécrit le tableau
+    python3 scripts/recompte-realisme.py --ecrire    # réécrit le tableau (sauf l'historique)
+
+Deux choses sont vérifiées, et la seconde ne se réécrit pas toute seule :
+
+1. le TABLEAU de score, recompté depuis les lignes ;
+2. la LIGNE D'HISTORIQUE — la dernière entrée de la progression doit citer le
+   score courant. Rien ne peut deviner qu'une PR aurait dû ajouter une entrée,
+   mais on peut exiger que la dernière annonce le bon chiffre : un lot qui fait
+   bouger le score sans écrire pourquoi laisse alors la progression sur l'ancien
+   et se fait prendre. C'est arrivé au lot de l'étiolement, dont la hausse était
+   attribuée au chantier précédent.
+
+   LA LIMITE EST CONNUE : le pourcentage est ARRONDI, donc un lot qui déplace des
+   critères sans franchir de dizième passe au travers. Vérifié en basculant un
+   critère de 🟡 à ✅ — le compte change, le pourcentage non, et le garde se
+   tait. Il attrape les lots qui comptent, pas tous.
 
 Un critère est une ligne de tableau dont la première colonne est un identifiant
 `<Lettre><n°>` et la troisième un ✅, 🟡 ou ❌.
@@ -33,6 +48,9 @@ DOMAINES = {
 }
 ETATS = ["✅", "🟡", "❌"]
 LIGNE = re.compile(r"^\|\s*([A-J])(\d+)\s*\|[^|]*\|\s*(✅|🟡|❌)\s*\|")
+# La dernière entrée de la progression : « → **90 % (…)** ». Une seule dans tout
+# le document, et en gras parce que c'est celle du chantier courant.
+DERNIERE_ENTREE = re.compile(r"→ \*\*(\d+) % \(")
 
 
 def recense(texte: str):
@@ -70,6 +88,35 @@ def tableau(compte) -> str:
     return "\n".join(lignes)
 
 
+def score(compte) -> int:
+    """Le pourcentage, calculé comme le tableau le fait."""
+    pleins = sum(compte[d]["✅"] for d in DOMAINES)
+    partiels = sum(compte[d]["🟡"] for d in DOMAINES)
+    total = sum(sum(compte[d].values()) for d in DOMAINES)
+    return round(100 * (pleins + partiels / 2) / total)
+
+
+def verifie_historique(texte: str, attendu: int) -> bool:
+    """La dernière entrée de la progression cite-t-elle le score courant ?"""
+    entrees = DERNIERE_ENTREE.findall(texte)
+    if not entrees:
+        print("HISTORIQUE : aucune entrée en gras « → **NN % (…)** » trouvée.")
+        return False
+    if len(entrees) > 1:
+        print(f"HISTORIQUE : {len(entrees)} entrées en gras, une seule doit l'être (la dernière).")
+        return False
+    annonce = int(entrees[0])
+    if annonce == attendu:
+        return True
+    print(
+        f"HISTORIQUE : la dernière entrée annonce {annonce} % alors que les lignes "
+        f"en donnent {attendu} %.\n"
+        "  Un lot qui fait bouger le score doit ajouter SON entrée à la progression,\n"
+        "  sans quoi la hausse est attribuée au chantier précédent."
+    )
+    return False
+
+
 def main() -> int:
     texte = DOC.read_text(encoding="utf-8")
     compte, vus = recense(texte)
@@ -87,9 +134,10 @@ def main() -> int:
     fin = texte.index("\n\n", texte.index("**Score de réalisme :", debut))
     actuel = texte[debut:fin]
 
+    historique = verifie_historique(texte, score(compte))
     if actuel == attendu:
         print("le tableau est conforme aux lignes")
-        return 1 if doublons else 0
+        return 1 if doublons or not historique else 0
 
     print("DIVERGENCE entre l'en-tête et les lignes.\n--- en-tête actuel ---")
     print(actuel)
@@ -98,7 +146,10 @@ def main() -> int:
     if "--ecrire" in sys.argv:
         DOC.write_text(texte[:debut] + attendu + texte[fin:], encoding="utf-8")
         print("\n→ tableau réécrit.")
-        return 1 if doublons else 0
+        # L'historique, lui, ne se réécrit PAS : personne ne peut deviner ce
+        # qu'un chantier a fait, et une entrée inventée serait pire que pas
+        # d'entrée du tout.
+        return 1 if doublons or not historique else 0
     print("\n(relancer avec --ecrire pour corriger)")
     return 1
 

@@ -11,6 +11,7 @@
     "lint": "biome check src tests scripts",
     "lint:fix": "biome check --write src tests scripts",
     "check:boundaries": "bash scripts/check-boundaries.sh",
+    "check:realisme": "python3 scripts/recompte-realisme.py",
     "apercu:scene": "tsx scripts/apercu-scene.ts",
     "apercu:capture": "node scripts/apercu-capture.mjs",
     "apercu:jeu": "node scripts/capture-jeu.mjs",
@@ -23,7 +24,7 @@
     "apercu:scenes": "bash scripts/apercu-scenes.sh",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm test"
+    "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm run check:realisme && npm test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",
