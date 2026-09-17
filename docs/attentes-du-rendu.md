@@ -310,17 +310,21 @@ leur LOT et leur VERSION, pour que le rendu les prenne au bon moment :
 |---|---|---|
 | l'acte de la tempête (#106) | L3 | v0.3 |
 | le chablis couché, la chandelle qui vieillit (#107) | L5 | v0.5 |
-| la teinte et le seuil du tapis par espèce (#108) | aucun lot écrit | à décider |
-| la défoliation par taches (#109) | aucun lot écrit | à décider |
+| la teinte et le seuil du tapis par espèce (#108) | L1, correction | v0.3 |
+| la défoliation par taches (#109) | L5 | v0.5 |
 | l'érosion et le dépôt de limon (#110) | L7 | v0.7 |
 
 **Ce n'est pas une liste de dettes.** Poser l'offre en avance est légitime quand
 le champ ne se déduit de rien — c'est même préférable à le recalculer côté vue.
 Ce qui ne l'est pas, c'est de l'oublier.
 
-Et **deux de ces cinq sujets n'ont aucun lot**, ce qui est le vrai signal : le
-découpage du §9 ne prévoit ni le tapis herbacé ni la défoliation, alors que le
-moteur les simule tous les deux.
+Et **deux de ces cinq sujets n'ont pas de lot dans le §9** — ni le tapis
+herbacé ni la défoliation n'y sont nommés, alors que le moteur simule les deux.
+Ils sont rattachés au plus proche plutôt que laissés sans date : le tapis au
+terrain (L1, déjà livré, donc une correction à prendre tôt), la défoliation aux
+morts (L5, dont la promesse est « on comprend pourquoi ça meurt » — et une tache
+de pullulation est ce qui rend la mort par ravageurs compréhensible AVANT
+qu'elle arrive). Le découpage gagnerait à les nommer.
 
 La leçon vient de #87 : la seule trace du manque était un COMMENTAIRE dans
 `src/render/temps/mort.ts`, et l'issue le disait elle-même — « un commentaire ne
