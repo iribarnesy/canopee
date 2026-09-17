@@ -325,13 +325,18 @@ depuis longtemps.
 le champ ne se déduit de rien — c'est même préférable à le recalculer côté vue.
 Ce qui ne l'est pas, c'est de l'oublier.
 
-Et **deux de ces cinq sujets n'ont pas de lot dans le §9** — ni le tapis
-herbacé ni la défoliation n'y sont nommés, alors que le moteur simule les deux.
-Ils sont rattachés au plus proche plutôt que laissés sans date : le tapis au
-terrain (L1, déjà livré, donc une correction à prendre tôt), la défoliation aux
-morts (L5, dont la promesse est « on comprend pourquoi ça meurt » — et une tache
-de pullulation est ce qui rend la mort par ravageurs compréhensible AVANT
-qu'elle arrive). Le découpage gagnerait à les nommer.
+**Deux de ces cinq sujets n'avaient pas de lot dans le §9** — ni le tapis
+herbacé ni la défoliation n'y étaient nommés, alors que le moteur simule les
+deux. Ils avaient d'abord été rattachés au plus proche pour ne pas rester sans
+date ; le §9 les nomme maintenant, au même endroit : le tapis au terrain (L1,
+déjà livré, donc une correction à prendre tôt), la défoliation aux morts (L5,
+dont la promesse est « on comprend pourquoi ça meurt » — et une tache de
+pullulation est ce qui rend la mort par ravageurs compréhensible AVANT qu'elle
+arrive).
+
+Ce que ce cas a appris : un sujet que le moteur simule et que le découpage ne
+nomme pas ne se voit que si quelqu'un le remarque. Le rattacher au plus proche
+est un bon réflexe ; l'écrire dans le §9 est ce qui le rend trouvable.
 
 La leçon vient de #87 : la seule trace du manque était un COMMENTAIRE dans
 `src/render/temps/mort.ts`, et l'issue le disait elle-même — « un commentaire ne
