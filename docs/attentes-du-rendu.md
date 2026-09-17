@@ -304,7 +304,9 @@ hors plomberie, et **chaque trouvaille part en issue** plutôt que dans une list
 ici — une donnée tenue à deux endroits diverge.
 
 Les issues portent le préfixe `[attente-rendu]` comme les demandes, et disent
-leur LOT et leur VERSION, pour que le rendu les prenne au bon moment :
+leur LOT et leur VERSION, pour que le rendu les prenne au bon moment. Le lot est
+celui du §9 de `interface-visuelle.md` ; **la version est une décision et non un
+calcul** — il n'existe pas de règle « LN → v0.N », et `v1.md` dit pourquoi :
 
 | sujet | lot | version |
 |---|---|---|
@@ -313,6 +315,11 @@ leur LOT et leur VERSION, pour que le rendu les prenne au bon moment :
 | la teinte et le seuil du tapis par espèce (#108) | L1, correction | v0.3 |
 | la défoliation par taches (#109) | L5 | v0.5 |
 | l'érosion et le dépôt de limon (#110) | L7 | v0.7 |
+
+La seule règle qui contraigne ces versions : une correction à un lot **déjà
+livré** va à la prochaine version ouverte, jamais à celle qui l'a livré. C'est
+ce qui range la teinte du tapis (#108) en v0.3 alors que son lot, L1, est clos
+depuis longtemps.
 
 **Ce n'est pas une liste de dettes.** Poser l'offre en avance est légitime quand
 le champ ne se déduit de rien — c'est même préférable à le recalculer côté vue.

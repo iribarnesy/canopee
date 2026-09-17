@@ -2030,6 +2030,28 @@ terrain, et rien ne s'anime sans arbres). Ensuite L3 et L4 en parallèle. L5,
 L6, L7 indépendants entre eux, tous après L2 et L3. L2b se déroule **en fond**,
 fiche par fiche, sans bloquer personne. L8, L9, L10 à la fin, en continu.
 
+### Ce que ces lots couvrent, et ce qu'ils ne couvrent pas
+
+**Ces lots sont ceux de la COUCHE VISUELLE, et rien d'autre.** Un « L » sans
+autre précision, dans une issue ou dans un autre document, désigne toujours un
+lot de ce tableau.
+
+Ils ne couvrent pas ce qui fait un jeu — niveaux, objectifs, progression, fin de
+niveau, écran de démarrage. Cette part-là est décrite dans
+[`v1.md`](v1.md#v1--un-joueur-apprend-seul), **sous forme de liste et sans
+numéros de lot**, et c'est délibéré : elle ne se découpe pas en morceaux qui se
+livrent l'un après l'autre comme un terrain puis des arbres.
+
+La confusion a eu lieu : un chantier de septembre 2026 a employé en parallèle une
+numérotation « L1 à L6 » désignant cette part-là, jamais écrite nulle part, et
+dont le L2 recouvrait le L4 ci-dessus. Elle est abandonnée.
+
+**Attention aussi au numéro de version.** Dans CE document, « v0.1 » et « v0.2 »
+désignent des révisions du document lui-même (voir le tableau des coûts qui
+suit). Les versions du logiciel, celles que portent les tags git et le tableau
+de [`attentes-du-rendu.md`](attentes-du-rendu.md), sont une autre échelle. Elles
+sont définies dans [`v1.md`](v1.md).
+
 ### Ce que les décisions de la v0.2 coûtent
 
 | | v0.1 | v0.2 | Cause |
