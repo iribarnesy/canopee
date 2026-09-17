@@ -58,6 +58,7 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     gestes: ticked.gestes,
     chutes: ticked.chutes,
     incendie: ticked.incendie,
+    tempete: ticked.tempete,
   };
 }
 
@@ -417,5 +418,77 @@ describe("ce qui s'est passé cette semaine", () => {
     expect(chandelle?.chandelle).toBe(true);
     expect(chandelle?.mortSemaine).toBe(state.week);
     expect(snapshot.morts).toHaveLength(1);
+  });
+});
+
+/**
+ * CE QUE LE MOTEUR SAIT ET QUE L'INSTANTANÉ TAISAIT (#86, #87).
+ *
+ * Les deux défauts sont de la même famille — une donnée que le moteur tient et
+ * qui s'arrête avant le rendu — mais celui du chablis est pire qu'un manque :
+ * l'instantané annonçait DEBOUT un arbre que le moteur a couché.
+ */
+describe("ce que le chablis emporte jusqu'au rendu", () => {
+  /** Un arbre couché par une tempête, tel que `tick.ts` le laisse. */
+  function chablis(): TreeState {
+    const base = plantAt(etatNeuf(), "fagus_sylvatica", 6, 6, 18).trees[0];
+    if (!base) throw new Error("arbre manquant");
+    return {
+      ...base,
+      alive: false,
+      causeMort: "chablis",
+      renverseSemaine: 42,
+      // Le cap du vent de la semaine : tous les chablis d'une même rafale le
+      // partagent, et c'est ce qui rend une tempête lisible sur la carte.
+      chuteRad: 1.25,
+    };
+  }
+
+  it("la semaine du renversement et le SENS de la chute voyagent", () => {
+    const t = arbreDuSnapshot(chablis(), 800);
+    expect(t.renverseSemaine).toBe(42);
+    expect(t.chuteRad).toBe(1.25);
+  });
+
+  it("un arbre qui n'a pas été couché ne porte ni l'un ni l'autre", () => {
+    const debout = plantAt(etatNeuf(), "fagus_sylvatica", 6, 6, 18).trees[0];
+    if (!debout) throw new Error("arbre manquant");
+    const t = arbreDuSnapshot(debout, 800);
+    expect(t.renverseSemaine).toBeUndefined();
+    expect(t.chuteRad).toBeUndefined();
+  });
+
+  it("il arrive marqué chandelle, et c'est justement pourquoi les deux champs manquaient", () => {
+    // `chandelle` vaut `!alive`, donc un chablis le porte aussi. Sans
+    // `renverseSemaine`, le rendu ne pouvait pas distinguer le tronc mort resté
+    // DEBOUT de l'arbre par terre, et dessinait le premier dans les deux cas.
+    const t = arbreDuSnapshot(chablis(), 800);
+    expect(t.chandelle).toBe(true);
+    expect(t.renverseSemaine).toBeDefined();
+  });
+});
+
+describe("l'emprise de chaque herbacée par cellule", () => {
+  it("une grille par espèce, dans l'ordre déclaré, et la somme d'une cellule reste sous 1", () => {
+    const s = construireSnapshot(entrees(etatNeuf()));
+    expect(s.soilHerbeEmprises).toHaveLength(s.herbesIds.length);
+    expect(s.herbesIds.length).toBeGreaterThan(1);
+    const cellules = STATION.coteM * STATION.coteM;
+    for (const grille of s.soilHerbeEmprises) expect(grille).toHaveLength(cellules);
+    // Il y a quelque chose à vérifier : le tapis n'est pas vide.
+    const totalPremier = s.soilHerbeEmprises[0]?.reduce((a, b) => a + b, 0) ?? 0;
+    expect(totalPremier).toBeGreaterThan(0);
+    for (let i = 0; i < cellules; i++) {
+      const somme = s.soilHerbeEmprises.reduce((a, g) => a + (g[i] ?? 0), 0);
+      // 255 = emprise pleine ; le sol est fini, la somme ne le dépasse pas
+      // (une unité de marge pour l'arrondi de chaque espèce).
+      expect(somme, `cellule ${i}`).toBeLessThanOrEqual(255 + s.soilHerbeEmprises.length);
+    }
+  });
+
+  it("les grilles partent avec les autres tampons, sans être recopiées", () => {
+    const s = construireSnapshot(entrees(etatNeuf()));
+    const buffers = transferablesDuSnapshot(s);
+    for (const grille of s.soilHerbeEmprises) expect(buffers).toContain(grille.buffer);
   });
 });

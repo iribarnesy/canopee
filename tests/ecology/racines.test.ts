@@ -52,11 +52,29 @@ describe("profondeur explorée", () => {
   });
 });
 
+/** Épaisseur du manteau de sable : au-delà de ce que le bouleau sait franchir. */
+const SABLE_CM = 120;
+
 describe("complémentarité verticale sur sol contrasté", () => {
   /**
-   * Sol à deux étages très différents : une surface sableuse qui sèche vite,
-   * sur un horizon limoneux profond qui garde l'eau. Le pivot atteint la
-   * réserve profonde, le traçant reste prisonnier de la surface.
+   * Sol à deux étages très différents : un MANTEAU DE SABLE qui sèche vite, sur
+   * un horizon limoneux profond qui garde l'eau. Le pivot atteint la réserve
+   * profonde, le traçant reste prisonnier de la surface.
+   *
+   * LE SABLE FAISAIT 25 cm, ET CE BANC NE DÉMONTRAIT RIEN. Un manteau de vingt-
+   * cinq centimètres n'emprisonne personne : le bouleau est LE pionnier des
+   * sables — il colonise les terrains pauvres et sableux — et l'essentiel de ses
+   * racines occupe les soixante premiers centimètres, sans pivot. Il traversait
+   * donc le sable sans y penser, et s'il mourait quand même, c'est que son
+   * plancher racinaire tombait par hasard À L'INTÉRIEUR de la couche (19 cm pour
+   * 25 cm de sable). La conclusion tenait à dix centimètres, pas à une espèce.
+   *
+   * Le sable fait maintenant 120 cm — un manteau de couverture sur limon, ce qui
+   * est un profil réel du nord de l'Europe — et le contraste tient au TRAIT
+   * D'ESPÈCE que l'atlas déclare : le bouleau plafonne à 100 cm de profondeur
+   * racinaire, le chêne pubescent descend à 250. L'un reste dans le sable parce
+   * qu'il ne sait pas faire mieux, l'autre atteint le limon. C'est ce que
+   * l'essai voulait dire depuis le début.
    */
   const SOL_CONTRASTE: Station = {
     ...LIMON_RICHE.station,
@@ -66,7 +84,7 @@ describe("complémentarité verticale sur sol contrasté", () => {
     id: "sol-contraste",
     nom: "Sable sur limon profond",
     profil: [
-      horizon(25, { sable: 90, limon: 8, argile: 2 }, { moPct: 1.5, ph: 6.5 }),
+      horizon(SABLE_CM, { sable: 90, limon: 8, argile: 2 }, { moPct: 1.5, ph: 6.5 }),
       horizon(120, { sable: 20, limon: 65, argile: 15 }, { moPct: 0.9, ph: 6.8 }),
     ],
     ruMm: 0, // recalculés ci-dessous
@@ -77,7 +95,7 @@ describe("complémentarité verticale sur sol contrasté", () => {
   // Les paramètres dérivés doivent rester cohérents avec le profil.
   const station: Station = {
     ...SOL_CONTRASTE,
-    ruMm: 25 * 0.75 + 120 * 1.5,
+    ruMm: SABLE_CM * 0.75 + 120 * 1.5,
   };
 
   it("le sol est profond et pénétrable", () => {
@@ -97,22 +115,78 @@ describe("complémentarité verticale sur sol contrasté", () => {
     expect(pivot[1] ?? 0).toBeGreaterThan(tracant[1] ?? 0);
   });
 
-  it("le pivot atteint la réserve profonde et survit ; le traçant reste prisonnier du sable", () => {
-    const weather = syntheticYear(LIMON_RICHE.climat);
-    let state = createGameState(station, rngStateFromSeed(4));
-    state = plantAt(state, "quercus_pubescens", 12, 15, 4); // pivot
-    state = plantAt(state, "betula_pendula", 18, 15, 4); // traçant
-    for (let i = 0; i < 12 * 52; i++) {
-      const w = weather[i % weather.length];
-      if (!w) throw new Error("météo manquante");
-      state = advanceWeek(state, w, []).state;
+  /**
+   * CET ESSAI EXIGEAIT LA MORT DU TRAÇANT, ET C'ÉTAIT FAUX DEUX FOIS (#84).
+   *
+   * Faux écologiquement : le bouleau est LE pionnier des sables, et sous
+   * 750 mm/an sur un profil sable-sur-limon aucun des deux arbres n'a de raison
+   * de mourir. Mesuré après correction du plancher racinaire, ni l'un ni l'autre
+   * n'accumule le moindre stress — 0,002 et 0,003 à douze ans, pas même
+   * 0,006 à 320 mm/an, tant la réserve du profil est grande. Le bouleau y
+   * DÉPASSE d'ailleurs le chêne (11,6 m contre 7,2), ce qui est juste : un
+   * pionnier rapide contre un chêne lent.
+   *
+   * Faux mécaniquement : il passait parce que le plancher racinaire du bouleau
+   * tombait par hasard À L'INTÉRIEUR des vingt-cinq centimètres de sable d'alors
+   * (19 cm), donc l'arbre mourait de faim d'eau dans une couche qu'il aurait
+   * traversée sans y penser. Une conclusion écologique portée par une
+   * coïncidence de dix centimètres.
+   *
+   * CE QUI EST VRAI, ET MESURABLE, est plus intéressant : le pivot CONVERTIT LA
+   * SÉCHERESSE EN PROFONDEUR, le traçant ne le peut pas. C'est la
+   * complémentarité verticale que ce `describe` annonce, et elle se lit sur la
+   * réponse des deux espèces au même assèchement.
+   */
+  it("le pivot convertit la sécheresse en profondeur, le traçant plafonne", () => {
+    /** Les deux arbres, douze ans, sous une pluviométrie donnée. */
+    function sousLaPluie(pluieMm: number) {
+      const weather = syntheticYear({ ...LIMON_RICHE.climat, rainAnnualMm: pluieMm });
+      let state = createGameState(station, rngStateFromSeed(4));
+      state = plantAt(state, "quercus_pubescens", 12, 15, 4); // pivot
+      state = plantAt(state, "betula_pendula", 18, 15, 4); // traçant
+      for (let i = 0; i < 12 * 52; i++) {
+        const w = weather[i % weather.length];
+        if (!w) throw new Error("météo manquante");
+        state = advanceWeek(state, w, []).state;
+      }
+      const pivot = state.trees.find((t) => t.id === 1);
+      const tracant = state.trees.find((t) => t.id === 2);
+      if (!pivot?.alive || !tracant?.alive) throw new Error("un arbre du banc est mort");
+      return { pivot, tracant };
     }
-    const pivot = state.trees.find((t) => t.id === 1);
-    const tracant = state.trees.find((t) => t.id === 2);
-    expect(pivot?.alive).toBe(true);
-    // Il est allé chercher l'eau sous le sable superficiel.
-    expect(pivot?.rootDepthCm ?? 0).toBeGreaterThan(50);
-    expect(tracant?.alive ?? false).toBe(false);
+
+    const arrose = sousLaPluie(750);
+    const sec = sousLaPluie(320);
+
+    // Le pivot va chercher le limon sous le manteau de sable ; le traçant reste
+    // dedans. Mesuré à douze ans, année arrosée : 122 cm contre 81.
+    expect(arrose.pivot.rootDepthCm).toBeGreaterThan(SABLE_CM);
+    expect(arrose.tracant.rootDepthCm).toBeLessThan(SABLE_CM);
+
+    // Et l'écart se CREUSE quand on assèche, ce qui est le mécanisme lui-même :
+    // 147 cm contre 81. Le pivot gagne vingt-cinq centimètres, le traçant PAS
+    // UN SEUL.
+    expect(sec.pivot.rootDepthCm).toBeGreaterThan(arrose.pivot.rootDepthCm);
+    expect(sec.pivot.rootDepthCm - arrose.pivot.rootDepthCm).toBeGreaterThan(
+      sec.tracant.rootDepthCm - arrose.tracant.rootDepthCm,
+    );
+
+    // Et c'est bien qu'il NE PEUT PAS, non qu'il n'a pas soif : à 320 mm il est
+    // collé au potentiel que sa taille et son espèce lui accordent (81 cm pour
+    // 81,1 de potentiel), quand le pivot en a encore trente devant lui. Sans
+    // cette ligne, l'essai ne saurait pas distinguer « il plafonne » de « rien
+    // ne lui a été demandé » — et c'est exactement la confusion qui avait fait
+    // écrire la mort du bouleau.
+    const penetrable = profondeurPenetrableCm(station.profil);
+    const potentielTracant = profondeurRacinesCm(
+      getEspece("betula_pendula"),
+      sec.tracant.heightM,
+      penetrable,
+    );
+    expect(sec.tracant.rootDepthCm).toBeGreaterThan(0.98 * potentielTracant);
+    expect(sec.pivot.rootDepthCm).toBeLessThan(
+      0.9 * profondeurRacinesCm(getEspece("quercus_pubescens"), sec.pivot.heightM, penetrable),
+    );
   });
 });
 

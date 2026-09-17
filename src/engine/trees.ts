@@ -492,10 +492,56 @@ export function profondeurRacinesCm(
 }
 
 /**
- * Part du potentiel qu'un arbre développe même sans jamais manquer d'eau :
- * un système de base, proportionné à sa taille, qui l'ancre et le nourrit.
+ * Part du potentiel qu'un arbre développe même sans jamais manquer d'eau : un
+ * système de base qui l'ANCRE et le NOURRIT, indépendamment de ce qu'il cherche
+ * à boire.
+ *
+ * ELLE CROÎT AVEC LA MATURITÉ, et une fraction constante ne pouvait pas marcher
+ * (#84). Aux deux bouts, les contraintes sont contradictoires :
+ *
+ * - un SEMIS démarre en surface quelles que soient les capacités de son espèce,
+ *   et `racines.test.ts` l'exige — un chêne d'un an reste sous 60 cm alors que
+ *   son espèce peut descendre à 250 ;
+ * - un ARBRE MÛR doit tenir debout. À 35 % du potentiel, un hêtre de vingt
+ *   mètres jamais assoiffé portait 36 à 44 cm de racines selon le banc, soit un
+ *   rapport racines/hauteur de 0,018 à 0,022, quand les relevés d'arrachage
+ *   donnent 0,04 à 0,06.
+ *
+ * Ce n'est pas la plasticité qui était en cause — elle est juste, et c'est le
+ * mécanisme qui la porte (`nouvelleProfondeurRacines` ne fait descendre les
+ * racines que sous l'effet de la SOIF). C'est que le plancher ne représente pas
+ * la recherche d'eau : il représente le squelette structurel, et un squelette ne
+ * se dimensionne pas en part du potentiel de l'espèce mais en part de ce que
+ * l'arbre a déjà construit. Un semis n'a rien à ancrer ; un arbre de
+ * vingt-cinq mètres si.
+ *
+ * Mesuré sur le code livré, hêtre isolé, graine 7, limon riche :
+ *
+ * | | 30 ans | 60 ans | 90 ans |
+ * |---|---|---|---|
+ * | série (été sec) | 5,9 m / 60 cm | 13,3 m / 87 cm | 16,4 m / 96 cm |
+ * | site jamais sec | 9,0 m / 43 cm | 16,9 m / 72 cm | 20,5 m / 79 cm |
+ *
+ * En régime sec, la soif atteint le potentiel de toute façon : ce lot ne
+ * déplace RIEN sur les stations sèches. C'est le régime frais qu'il corrige.
+ * Le rapport racines/hauteur y passe de 0,022 — c'est le chiffre que `tempete.ts`
+ * avait relevé et documenté, 44 cm pour un hêtre de vingt mètres — à 0,039,
+ * quand le régime sec tient 0,059. L'écart entre les deux régimes tombe donc de
+ * 2,7 × à 1,5 ×, l'ordre que donnent les comparaisons de terrain, et le barème
+ * d'ancrage de `tempete.ts` en dépendait directement.
  */
-const RACINES_PLANCHER = 0.35;
+const RACINES_PLANCHER_JEUNE = 0.35;
+/** Part du potentiel qu'un arbre ADULTE tient pour son seul ancrage. */
+const RACINES_PLANCHER_MUR = 0.8;
+
+/**
+ * Part du potentiel garantie à cette taille — l'interpolation entre les deux
+ * précédentes, sur la même mesure de maturité que `profondeurRacinesCm`.
+ */
+export function partPlancherRacines(espece: EspeceV0, heightM: number): number {
+  const maturite = Math.min(1, Math.max(0, heightM / (0.6 * espece.hauteurMaxM)) ** 0.7);
+  return RACINES_PLANCHER_JEUNE + (RACINES_PLANCHER_MUR - RACINES_PLANCHER_JEUNE) * maturite;
+}
 /** Vitesse maximale d'approfondissement d'un arbre assoiffé, cm/an *(à calibrer)*. */
 const APPROFONDISSEMENT_CM_AN = 25;
 
@@ -513,7 +559,10 @@ export function nouvelleProfondeurRacines(
   season: number,
 ): number {
   const potentiel = profondeurRacinesCm(espece, tree.heightM, solPenetrableCm);
-  const plancher = Math.min(potentiel, Math.max(15, RACINES_PLANCHER * potentiel));
+  const plancher = Math.min(
+    potentiel,
+    Math.max(15, partPlancherRacines(espece, tree.heightM) * potentiel),
+  );
   // La soif (et elle seule) déclenche l'investissement vers le bas.
   const soif = Math.max(0, 1 - waterSatisfaction);
   const gain = (APPROFONDISSEMENT_CM_AN / 52) * season * soif;

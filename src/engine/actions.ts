@@ -516,12 +516,26 @@ export interface GesteSurArbres {
    * taille pour l'animer. D'où un enregistrement COMPLET plutôt qu'un delta —
    * la même forme que `ChuteDeChandelle` et `MortDeLaSemaine` (tick.ts).
    *
-   * Présent pour les cinq gestes du joueur (`couper`, `eclaircir`, `elaguer`,
-   * `trogner`, `receper`) ; absent pour `brouter` et `frotter`, où le gibier
-   * ne retire aucun volume géométrique — ce qu'il mange est un stock
-   * (`pousseTendreM`), et sa date voyage déjà par `brouteSemaine`.
+   * Présent pour les cinq gestes qui DÉMONTENT une tige (`couper`,
+   * `eclaircir`, `elaguer`, `trogner`, `receper`). Absent partout ailleurs, et
+   * pour la même raison à chaque fois : l'arbre est toujours là après le geste,
+   * donc le rendu le retrouve dans l'instantané. Le gibier ne retire aucun
+   * volume géométrique — ce qu'il mange est un stock (`pousseTendreM`), et sa
+   * date voyage déjà par `brouteSemaine`. Un arbre planté, récolté ou démasclé
+   * garde sa géométrie : planter l'AJOUTE, récolter vide `fruitsKg`, démascler
+   * n'enlève que l'écorce.
    */
   retire?: readonly ArbreRetire[];
+  /**
+   * Ce que le geste a enlevé de chaque arbre nommé dans `ids`, kg, même ordre.
+   *
+   * Renseignée pour les deux gestes qui prélèvent une MASSE sans toucher à la
+   * forme de l'arbre : `recolter` (les fruits qui quittent la couronne) et
+   * `leverEcorce` (les planches de liège empilées au pied). Le rendu en tire
+   * combien en faire partir, là où les seuls `ids` ne diraient que « quelque
+   * chose est parti » (#100).
+   */
+  masseKg?: readonly number[];
 }
 
 /**
@@ -579,7 +593,21 @@ export interface GesteSurZone {
   cellules: readonly number[];
 }
 
-/** Gestes qui désignent des arbres. Le gibier est l'auteur des deux derniers. */
+/**
+ * Gestes qui désignent des arbres. Le gibier est l'auteur de `brouter` et
+ * `frotter` ; tout le reste vient du joueur.
+ *
+ * LES TROIS DERNIERS ONT MANQUÉ LONGTEMPS (#100), et le rendu ne pouvait pas y
+ * suppléer : les actions `planter`, `recolter` et `leverEcorce` s'appliquaient
+ * sans rien rapporter, si bien que le journal de la semaine les taisait et
+ * qu'aucune animation n'avait d'événement où s'accrocher. Un ÉTAT ne suffit
+ * pas à les remplacer, et c'est la même faute qu'ailleurs : des `fruitsKg` qui
+ * passent de présents à absents ne disent pas si on a récolté, si la chute a
+ * eu lieu ou si la floraison a avorté ; `derniereLeveeSemaine` est une DURÉE,
+ * donc un arbre démasclé il y a dix ans porte la même marque que celui qu'on
+ * démascle à l'instant ; et un plant n'est pas une naissance — `naissances`
+ * vient de la régénération, pas de l'action.
+ */
 export type GesteTypeArbre =
   | "couper"
   | "eclaircir"
@@ -587,7 +615,10 @@ export type GesteTypeArbre =
   | "trogner"
   | "receper"
   | "brouter"
-  | "frotter";
+  | "frotter"
+  | "planter"
+  | "recolter"
+  | "leverEcorce";
 
 /** Gestes qui désignent une zone de sol. */
 export type GesteTypeZone =
@@ -662,6 +693,8 @@ function applyPlanter(
   let nextTreeId = state.nextTreeId;
   let planted = 0;
   let importedKgC = 0;
+  /** Les plants RÉELLEMENT posés — pas ceux qu'on avait demandés (#100). */
+  const poses: number[] = [];
   // La vigueur de chaque plant se tire dans le générateur de la partie : deux
   // parties de même graine plantent donc exactement les mêmes individus.
   let rng = state.rng;
@@ -695,6 +728,7 @@ function applyPlanter(
     }
     const tirage = tirerVigueurIndividuelle(rng);
     rng = tirage.rng;
+    poses.push(nextTreeId);
     trees.push({
       vigueurIndividuelle: tirage.vigueur,
       id: nextTreeId++,
@@ -738,6 +772,14 @@ function applyPlanter(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
+    // Pas de geste de ZONE avec celui-ci, et c'est délibéré (#100). Le §6.2
+    // décrit aussi « la terre est retournée autour » du plant ; le moteur ne
+    // retourne rien en plantant — ni `boutis`, ni `laboure`, aucun état de sol
+    // ne bouge. Rapporter une maille retournée serait inventer un geste qui
+    // n'a pas eu lieu, exactement la jointure fausse que #83 a corrigée
+    // ailleurs. Le rendu tient les positions par les `ids` et peut dessiner ce
+    // qu'il veut autour ; le moteur, lui, ne déclare que ce qu'il fait.
+    gestes: poses.length > 0 ? [{ type: "planter", ids: poses }] : [],
   };
 }
 
@@ -1082,6 +1124,9 @@ function applyRecolter(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
+  /** Les arbres réellement cueillis, et ce qu'on leur a pris (#100). */
+  const cueillis: number[] = [];
+  const masses: number[] = [];
 
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
@@ -1106,6 +1151,8 @@ function applyRecolter(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     treasuryEur += tree.fruitsKg * prix;
+    cueillis.push(id);
+    masses.push(tree.fruitsKg);
     trees[idx] = { ...tree, fruitsKg: 0 };
   }
   return {
@@ -1115,6 +1162,7 @@ function applyRecolter(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
+    gestes: cueillis.length > 0 ? [{ type: "recolter", ids: cueillis, masseKg: masses }] : [],
   };
 }
 
@@ -1838,6 +1886,9 @@ function applyLeverEcorce(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
+  /** Les arbres réellement démasclés, et le poids de liège levé (#100). */
+  const demascles: number[] = [];
+  const masses: number[] = [];
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
@@ -1876,6 +1927,8 @@ function applyLeverEcorce(
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     treasuryEur += kg * ecorce.prixEurKg;
+    demascles.push(id);
+    masses.push(kg);
     trees[idx] = { ...tree, derniereLeveeSemaine: action.week };
   }
   return {
@@ -1885,6 +1938,7 @@ function applyLeverEcorce(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
+    gestes: demascles.length > 0 ? [{ type: "leverEcorce", ids: demascles, masseKg: masses }] : [],
   };
 }
 

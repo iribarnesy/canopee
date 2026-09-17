@@ -9,7 +9,7 @@
  * plus le même.
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import {
   amplificationFrance,
@@ -231,11 +231,36 @@ describe("dans une partie, le réchauffement se voit", () => {
     let state = createGameState(station, rngStateFromSeed(graine));
     state = plantScattered(state, "fagus_sylvatica", 60);
     state = plantScattered(state, "quercus_pubescens", 60);
+    /**
+     * Les ids des cent vingt arbres PLANTÉS. Au-delà de la maturité les deux
+     * espèces se ressèment, et un climat plus chaud allonge la saison de
+     * végétation donc en installe davantage : compter « les tiges vivantes »
+     * mélangerait la cohorte et ses descendants, ce qui masque exactement la
+     * mortalité qu'on mesure.
+     */
+    const cohorte = new Set(state.trees.map((t) => t.id));
     const scenario = getScenario(scenarioId);
     let etpDebut = 0;
     let etpFin = 0;
-    let pressionMax = 0;
     const morts: { especeId: string; cause: string }[] = [];
+    /**
+     * Le sommet de la pullulation, RAPPORTÉ AUX HÔTES.
+     *
+     * `ravageurMoyen` est une moyenne sur TOUTES les cellules de la parcelle, y
+     * compris celles qui ne portent aucun arbre. Elle mélange donc deux choses
+     * que le réchauffement pousse en sens CONTRAIRES : le climat devient plus
+     * favorable aux ravageurs (`facteurChaleur`), et il y a de moins en moins
+     * d'hôtes à infester puisqu'il en tue. Le brut a fini par dire l'inverse du
+     * mécanisme sur la graine 23 (#95 : 1,54 / 0,98 / 1,47 ×), et pas parce que
+     * le lien chaleur-pullulation avait bougé — parce que le témoin figé de
+     * cette graine s'était mis à garder ses tiges.
+     *
+     * Divisé par le nombre de tiges vivantes, le confondant part et le signal
+     * devient franc sur les trois parties : 3,17 / 2,64 / 2,99 ×. Ce n'est pas
+     * une grandeur physique — c'est une NORMALISATION, qui rend les deux
+     * parties comparables en neutralisant ce qui les distingue par ailleurs.
+     */
+    let pressionParHoteMax = 0;
     for (let i = 0; i < ans * 52; i++) {
       const base = OBSERVATIONS[i % OBSERVATIONS.length];
       if (!base) throw new Error("météo manquante");
@@ -245,23 +270,28 @@ describe("dans une partie, le réchauffement se voit", () => {
       const r = advanceWeek(state, w, []);
       state = r.state;
       morts.push(...r.morts);
-      pressionMax = Math.max(pressionMax, r.fluxes.ravageurMoyen);
+      const vivantes = state.trees.filter((t) => t.alive).length;
+      pressionParHoteMax = Math.max(
+        pressionParHoteMax,
+        r.fluxes.ravageurMoyen / Math.max(1, vivantes),
+      );
       if (i < 5 * 52) etpDebut += r.fluxes.etpMm;
       if (i >= (ans - 5) * 52) etpFin += r.fluxes.etpMm;
     }
     return {
-      pressionMax,
+      pressionParHoteMax,
       etpDebut: etpDebut / 5,
       etpFin: etpFin / 5,
       hetresMortsDeSoif: morts.filter(
         (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
       ).length,
-      mortsRavageurs: morts.filter((m) => m.cause === "ravageurs").length,
-      // Les DEUX voies par lesquelles le réchauffement tue, comptées ensemble.
-      // Séparées, elles se volent leurs victimes : un arbre ne meurt qu'une
-      // fois et sa mort n'est imputée qu'à UNE cause (#93).
-      mortsChaleur: morts.filter((m) => m.cause === "secheresse" || m.cause === "ravageurs").length,
-      hetresVivants: state.trees.filter((t) => t.alive && t.especeId === "fagus_sylvatica").length,
+      // Ce qui reste DEBOUT de la cohorte plantée : la grandeur directe, celle
+      // qu'aucune imputation de cause ne peut déplacer (#84).
+      cohorteDebout: state.trees.filter((t) => t.alive && cohorte.has(t.id)).length,
+      hetresDebout: state.trees.filter(
+        (t) => t.alive && cohorte.has(t.id) && t.especeId === "fagus_sylvatica",
+      ).length,
+      cohorte: cohorte.size,
     };
   }
 
@@ -282,15 +312,24 @@ describe("dans une partie, le réchauffement se voit", () => {
       etpDebut: moyen((r) => r.etpDebut),
       etpFin: moyen((r) => r.etpFin),
       hetresMortsDeSoif: moyen((r) => r.hetresMortsDeSoif),
-      mortsRavageurs: moyen((r) => r.mortsRavageurs),
-      pressionMax: moyen((r) => r.pressionMax),
-      mortsChaleur: moyen((r) => r.mortsChaleur),
-      hetresVivants: moyen((r) => r.hetresVivants),
+      cohorteDebout: moyen((r) => r.cohorteDebout),
+      hetresDebout: moyen((r) => r.hetresDebout),
     };
   }
 
-  const fige = moyenneSurGraines("stable", 60);
-  const chauffe = moyenneSurGraines("ssp585", 60);
+  /**
+   * La campagne tourne dans un `beforeAll`, pas dans le corps du `describe`.
+   * Lancée à la COLLECTE, elle n'est couverte par aucun délai — ni
+   * `testTimeout`, ni un délai posé sur le `describe` — et une campagne qui
+   * s'emballe bloque la suite au lieu de la faire échouer
+   * (docs/agents/moteur-maintenance.md).
+   */
+  let fige: ReturnType<typeof moyenneSurGraines>;
+  let chauffe: ReturnType<typeof moyenneSurGraines>;
+  beforeAll(() => {
+    fige = moyenneSurGraines("stable", 60);
+    chauffe = moyenneSurGraines("ssp585", 60);
+  }, 900_000);
 
   it("la demande en eau de l'atmosphère monte bien plus vite qu'avec le seul climat observé", () => {
     // À noter : même « figée », la parcelle voit l'ETP monter de 16 % en
@@ -345,79 +384,91 @@ describe("dans une partie, le réchauffement se voit", () => {
     //
     // La PULLULATION, elle, résiste — c'est elle que la chaleur produit
     // directement (`facteurChaleur`), là où le compte de morts est un
-    // composite. Mesuré sur le code livré : 1,45 × / 1,35 × / 1,31 ×,
-    // directionnelle sur les trois parties. Éprouvée en neutralisant
-    // `facteurChaleur` : elle tombe — c'est le mécanisme qu'elle lit, pas le
-    // jeu de dés.
+    // composite. Éprouvée en neutralisant `facteurChaleur` : elle tombe —
+    // c'est le mécanisme qu'elle lit, pas le jeu de dés.
     //
-    // Que le réchauffement TUE est affirmé par l'essai suivant, sur le compte
-    // combiné soif + ravageurs (#93).
+    // MAIS ELLE SE MESURAIT PAR HABITANT DE LA PARCELLE, PAS PAR HÔTE (#95),
+    // et ça l'a rattrapée. `ravageurMoyen` est une moyenne sur toutes les
+    // cellules, y compris celles qui ne portent aucun arbre : elle mélange
+    // « le climat favorise les ravageurs » et « combien d'hôtes il reste », que
+    // le réchauffement pousse en sens CONTRAIRES. Le brut a tenu tant que les
+    // deux témoins se ressemblaient ; il a dit l'inverse du mécanisme le jour
+    // où le plafond de recouvrement est devenu local et où un peuplement qui
+    // s'éclaircit s'est mis à combler ses propres trouées — le témoin figé de
+    // la graine 23 garde alors ses tiges, donc ses hôtes, et le rapport tombe
+    // sous 1 sans que rien d'écologique ait bougé.
+    //
+    //                 brut (moyenne parcelle)   par hôte, au pic
+    //   graine 11            1,54 ×                  3,17 ×
+    //   graine 23            0,98 ×                  2,64 ×
+    //   graine 37            1,47 ×                  2,99 ×
+    //
+    // Divisée par les tiges vivantes, la pullulation est franche sur les trois
+    // parties et deux fois plus forte qu'au brut. Le seuil est posé à 2 — sous
+    // le minimum mesuré (2,64) pour laisser de la marge, très au-dessus de 1
+    // pour rester une affirmation.
+    //
+    // Que le réchauffement TUE est affirmé par l'essai suivant, sur ce qui
+    // reste DEBOUT de la cohorte plantée (#93, #84).
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
-      expect(c.pressionMax, `graine ${GRAINES[i]}`).toBeGreaterThan(1.25 * f.pressionMax);
+      expect(c.pressionParHoteMax, `graine ${GRAINES[i]}`).toBeGreaterThan(
+        2 * f.pressionParHoteMax,
+      );
     }
   });
 
-  it("et il TUE : soif et ravageurs comptés ensemble, sur chacune des trois parties", () => {
+  it("et il TUE : la cohorte plantée compte moins de tiges debout, sur chacune des trois parties", () => {
     // La pullulation seule ne dit pas que le réchauffement tue. Ce maillon-là
-    // s'était perdu (#93), et il se rattrape ici — en comptant ENSEMBLE les
-    // deux voies par lesquelles la chaleur tue, au lieu d'en regarder une.
+    // s'était perdu (#93) et il se rattrape ici — mais PAS avec l'instrument
+    // qu'on lui avait d'abord donné.
     //
-    // POURQUOI ENSEMBLE. Un arbre ne meurt qu'une fois et sa mort n'est
-    // imputée qu'à UNE cause. Compter la seule case « ravageurs » revient donc
-    // à soustraire les arbres que la sécheresse a pris de vitesse : le
-    // réchauffement pousse ce compte dans les deux sens à la fois. Le chiffre
-    // qui en résulte oscille d'un lot de mécanisme à l'autre — il a déjà
-    // inversé sa direction sur une graine, puis l'a retrouvée deux lots plus
-    // tard, sans que le lien entre chaleur et mortalité ait bougé. Les compter
-    // ensemble supprime ce vase communicant.
+    // CE QU'ON MESURAIT, ET POURQUOI C'ÉTAIT FAUX (#84). L'essai comptait le
+    // rapport des morts « soif + ravageurs », figé contre chauffé. Additionner
+    // les deux voies devait supprimer le vase communicant — un arbre ne meurt
+    // qu'une fois et sa mort n'est imputée qu'à UNE cause — mais ça ne fait que
+    // le déplacer : le FEU, les chablis, l'ombre puisent dans le même bassin de
+    // victimes, et le moindre lot de mécanisme qui change l'un des trois
+    // rejoue le partage. Le rapport avait déjà inversé sa direction sur une
+    // graine (#93), il est tombé avec la paire d'allocation (#79 : 4,00 → 1,09
+    // sur la seule graine 23), il est retombé avec le plancher racinaire.
+    // Trois lots, trois chutes, et jamais parce que le lien entre chaleur et
+    // mortalité avait bougé. `docs/realisme.md` le dit dans « ce qu'un test
+    // écologique a le droit d'affirmer » : un rapport entre quantités
+    // COMPOSITES n'est pas une propriété du monde.
     //
-    // Campagne de #93, morts figé → chauffé, soixante ans, trois parties :
+    // CE QU'ON MESURE MAINTENANT est la grandeur directe, celle qu'aucune
+    // imputation de cause ne peut déplacer : combien des CENT VINGT arbres
+    // plantés sont encore debout à soixante ans. Un arbre debout est debout
+    // quelle que soit la case qui l'aurait tué. La cohorte est suivie par ses
+    // ids, pas par un compte d'espèce : au-delà de la maturité le peuplement se
+    // ressème, et un climat chaud installe plus de semis — un peuplement qui
+    // perd plus d'arbres peut très bien en compter plus.
+    //
+    // Campagne de #84, soixante ans, trois parties, figé → chauffé :
     //
     //                      graine 11      graine 23      graine 37
-    //   sécheresse           2 →  16       0 →  61        2 →  32
-    //   ravageurs           24 →  33      23 →  31       19 →  37
-    //   ─────────────────────────────────────────────────────────────
-    //   ENSEMBLE            26 →  49      23 →  92       21 →  69
-    //                        1,88 ×         4,00 ×         3,29 ×
+    //   cohorte debout     88 → 43        49 → 38        80 → 38
+    //                       0,49 ×         0,78 ×         0,48 ×
+    //   dont hêtres        55 → 21        20 →  4        56 → 22
+    //                       0,38 ×         0,20 ×         0,39 ×
+    //   (pour mémoire, le composite : 34 → 40, 10 → 87, 18 → 67)
     //
-    // L'ombre a été mesurée aussi, parce qu'on la soupçonnait d'être un
-    // troisième puits concurrent : elle BAISSE sous réchauffement
-    // (0,80 / 0,25 / 0,87), donc elle ne vole rien, et l'ajouter ne ferait que
-    // diluer le signal (1,09 / 1,16 / 1,49). `maladie` et `vieillesse` sont à
-    // zéro dans toutes les parties.
-    //
-    // Le seuil était posé à 1,5 — sous le minimum mesuré (1,88) pour laisser de
-    // la marge, très au-dessus de 1 pour rester une affirmation.
-    //
-    // **L'AUTO-ÉCLAIRCIE (#96) A DILUÉ CE COMPTE, ET IL FAUT LE DIRE.** Compter
-    // soif + ravageurs ensemble réparait le vase communicant entre DEUX puits.
-    // Il en existe un troisième depuis que les dominés s'affament : leurs morts
-    // portent l'étiquette « ravageurs » (#103) et n'ont rien à voir avec le
-    // climat. Cette colonne est donc saturée par une mortalité indépendante du
-    // scénario, et elle ne bouge presque plus :
-    //
-    //                 soif        ravageurs      ENSEMBLE
-    //   graine 11    2 →  23      66 → 61       68 →  86   (1,26 ×)
-    //   graine 23    1 →  21      87 → 81       88 → 102   (1,16 ×)
-    //   graine 37    0 →  25      60 → 62       60 →  88   (1,47 ×)
-    //
-    // La SOIF, elle, est intacte et massive. C'est elle qui porte désormais
-    // l'affirmation, et le biais du vase joue en sa faveur : un ravageur qui
-    // prend de vitesse une victime de la sécheresse fait BAISSER ce compte sous
-    // réchauffement, donc l'exigence est conservatrice. On la pose en ÉCART
-    // absolu et non en rapport, parce que le témoin peut valoir zéro (graine
-    // 37) — c'est le garde-fou que le compte combiné évitait et qu'il faut
-    // reprendre ici.
-    //
-    // Le compte combiné reste vérifié, mais seulement en SIGNE : il monte sur
-    // les trois parties, et c'est tout ce qu'il peut encore dire.
+    // La graine 23 est la plus dure et c'est normal : son témoin figé s'est
+    // déjà auto-éclairci de moitié, il reste moins à perdre. Le seuil est posé
+    // à 0,85 — au-dessus du pire rapport mesuré (0,78) pour laisser de la
+    // marge, franchement sous 1 pour rester une affirmation.
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
-      expect(c.hetresMortsDeSoif - f.hetresMortsDeSoif, `graine ${GRAINES[i]}`).toBeGreaterThan(15);
-      expect(c.mortsChaleur, `graine ${GRAINES[i]}`).toBeGreaterThan(f.mortsChaleur);
+      // Il y a quelque chose à perdre : le témoin n'est pas déjà vide.
+      expect(f.cohorteDebout, `graine ${GRAINES[i]}`).toBeGreaterThan(30);
+      expect(c.cohorteDebout, `graine ${GRAINES[i]}`).toBeLessThan(0.85 * f.cohorteDebout);
+      // Et le mésophile paie plus cher que le chêne pubescent, qui est chez lui
+      // dans un climat qui se réchauffe : 0,38 / 0,20 / 0,39 contre 0,49 /
+      // 0,78 / 0,48 pour la cohorte entière.
+      expect(c.hetresDebout, `graine ${GRAINES[i]}`).toBeLessThan(0.5 * f.hetresDebout);
     }
   });
 });

@@ -96,12 +96,13 @@ import {
 } from "./herbacees";
 import { herbeDemandeAzoteG, herbeDemandeEauL, humiditeVecue } from "./herbe";
 import {
+  abriVentIndexe,
   baseHouppierCible,
   computeGroundLight,
   computeLight,
   crownRadiusM,
+  indexerAbriVent,
   type PartOmbrageante,
-  windShelterAt,
 } from "./light";
 import { lumiereApresBordures } from "./lisiere";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
@@ -1238,6 +1239,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const rootFractions = new Array<number[]>(nTrees);
   const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
   const cellNWanted = new Array<number>(nCells).fill(0);
+  /**
+   * L'abri au vent, rangé une fois pour la semaine au lieu d'être recalculé en
+   * balayant tout le peuplement pour chaque arbre (#99). Construit seulement
+   * s'il va servir : sur une parcelle abritée, `ventExposition` vaut zéro et
+   * l'abri n'est jamais demandé.
+   */
+  const paniersAbri =
+    station.ventExposition > 0 ? indexerAbriVent(trees, station.coteM) : undefined;
 
   for (let t = 0; t < nTrees; t++) {
     const tree = trees[t];
@@ -1298,7 +1307,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         season,
         light[t] ?? 1,
         station.ventExposition,
-        station.ventExposition > 0 ? windShelterAt(trees, tree.x, tree.y, tree.id) : 0,
+        paniersAbri ? abriVentIndexe(paniersAbri, tree.x, tree.y, tree.id) : 0,
       ) *
       facteurCo2Transpiration(ppmSemaine) *
       // Un arbre embolisé ne peut plus faire monter l'eau qu'il voudrait :

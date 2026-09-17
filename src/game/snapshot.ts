@@ -15,6 +15,7 @@ import { indiceBiodiversite } from "../engine/biodiversite";
 import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import { CO2_ACTUEL_PPM } from "../engine/climat";
 import { getEspece } from "../engine/especes";
+import { HERBACEES, N_HERBACEES } from "../engine/herbacees";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
 import { contextePhenologique, partFloraison } from "../engine/phenologie";
@@ -27,6 +28,7 @@ import type {
   IncendieResult,
   MortDeLaSemaine,
   NaissanceDeLaSemaine,
+  TempeteResult,
 } from "../engine/tick";
 import type { TreeState } from "../engine/trees";
 import { diametreTeteCm, volumeCaviteL } from "../engine/trogne";
@@ -40,6 +42,27 @@ import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
  * c'est le calendrier qui décide de la floraison, et il se lit ici plutôt que
  * de se recopier côté rendu.
  */
+/**
+ * Éclate l'emprise à plat du moteur — `herbeEmprise[i * N_HERBACEES + s]` — en
+ * une grille par espèce, quantifiée sur un octet (#86).
+ *
+ * L'emprise vaut au plus 1 par espèce et la somme d'une cellule ne dépasse
+ * jamais 1 : multiplier par 255 et arrondir garde donc tout l'intervalle, et
+ * 1/255 est bien au-delà de ce qu'une teinte ou un seuil pondéré demandent.
+ */
+export function emprisesParEspece(emprise: readonly number[]): Uint8Array[] {
+  const n = emprise.length / N_HERBACEES;
+  const grilles = Array.from({ length: N_HERBACEES }, () => new Uint8Array(n));
+  for (let i = 0; i < n; i++) {
+    for (let s = 0; s < N_HERBACEES; s++) {
+      const grille = grilles[s];
+      if (grille)
+        grille[i] = Math.round(255 * Math.min(1, Math.max(0, emprise[i * N_HERBACEES + s] ?? 0)));
+    }
+  }
+  return grilles;
+}
+
 export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree {
   return {
     id: t.id,
@@ -67,6 +90,8 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     dommageHydraulique: t.dommageHydraulique,
     mortSemaine: t.mortSemaine,
     brulEeSemaine: t.brulEeSemaine,
+    renverseSemaine: t.renverseSemaine,
+    chuteRad: t.chuteRad,
     causeMort: t.causeMort,
     derniereLeveeSemaine: t.derniereLeveeSemaine,
     fruitProgress: t.fruitProgress,
@@ -158,6 +183,7 @@ export interface EntreesSnapshot {
   /** chandelles abattues depuis le dernier instantané (`TickResult`) */
   chutes: ChuteDeChandelle[];
   incendie?: IncendieResult;
+  tempete?: TempeteResult;
 }
 
 /**
@@ -222,6 +248,8 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // semaine à l'autre (elle est récurrente par construction), et c'est cette
     // mémoire-là qui fait griller un tapis — pas la pluie de mardi.
     soilHerbeHumidite: Float32Array.from(state.soil.herbeHumidite),
+    soilHerbeEmprises: emprisesParEspece(state.soil.herbeEmprise),
+    herbesIds: HERBACEES.map((h) => h.id),
     // Les ravageurs par cellule, pas seulement leur moyenne : c'est la tache
     // de défoliation, et la mort qui la suit, que le rendu doit montrer.
     soilRavageurs: Float32Array.from(state.soil.ravageurs),
@@ -259,6 +287,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     gestes: e.gestes,
     chutes: e.chutes,
     incendie: e.incendie,
+    tempete: e.tempete,
   };
 }
 
@@ -284,6 +313,7 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilHerbe.buffer,
     s.soilHerbeBiomasse.buffer,
     s.soilHerbeHumidite.buffer,
+    ...s.soilHerbeEmprises.map((g) => g.buffer),
     s.soilRavageurs.buffer,
     s.soilEpaisseurPerdueCm.buffer,
     s.soilNappeCm.buffer,

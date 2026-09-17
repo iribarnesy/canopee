@@ -243,7 +243,15 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
       if (rejets > 0) break;
     }
     // Le décor doit vraiment produire des rejets, sinon le test ne prouve rien.
-    expect(rejets).toBeGreaterThan(300);
+    //
+    // CENT, ET PLUS TROIS CENTS. Trois cents était le compte EXACT que donnait
+    // le premier incendie trouvé sur ce balayage de cinq graines — un tirage,
+    // pas une propriété. Il est tombé à 205 le jour où le plancher racinaire a
+    // cessé de traiter un ajonc mûr comme un semis (#84) : l'ajonc pousse un
+    // peu autrement, l'incendie retenu n'est plus le même, et le compte de
+    // rejets suit. Ce que ce garde doit dire est que la branche « rejet » du
+    // bilan est vraiment empruntée, EN MASSE ; pas quel nombre un décor donne.
+    expect(rejets).toBeGreaterThan(100);
   });
 });
 

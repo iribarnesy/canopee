@@ -111,6 +111,7 @@ est là pour qu'une station le déclare quand on l'aura).
 | `soilHerbe` | couverture herbacée ∈ [0,1] |
 | `soilHerbeBiomasse` | herbe SUR PIED — elle reste quand l'herbe jaunit |
 | `soilHerbeHumidite` | humidité VÉCUE du tapis ∈ [0,1] : la surface, lissée sur ~6 semaines — la pelouse grillée |
+| `soilHerbeEmprises` + `herbesIds` | l'emprise de CHAQUE herbacée, une grille `Uint8Array` par espèce (0-255 pour 0 à 1), dans l'ordre d'`herbesIds` — qui tient la cellule, et dans quelle proportion (#86) |
 | `soilLitiereCG` | litière, gC/m² : le tapis de novembre, le paillage, les cendres |
 | `soilBoisAuSol` | bois mort COUCHÉ, gC/m² : où poser des troncs |
 | `soilBoisEnTravers` | part de ce bois qui BARRE l'eau ∈ [0,1] : le tronc en travers de la pente |
@@ -128,7 +129,7 @@ est là pour qu'une station le déclare quand on l'aura).
 `diametreTeteCm`, `caviteTeteL`, `vigueur`,
 `dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
 `derniereLeveeSemaine`, `floraison`, `fruitProgress`, `bloomFrosted`,
-`pousseTendreM`, `frotteSemaine`, `brouteSemaine`.
+`pousseTendreM`, `frotteSemaine`, `brouteSemaine`, `renverseSemaine`, `chuteRad`.
 
 `baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
 plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien
@@ -165,6 +166,21 @@ L'**intensité** qui a décidé de cette mort n'a pas besoin de voyager : elle s
 recalcule avec `intensiteDuFeu(charges[i])`, désormais exportée de
 `src/engine/feu.ts` — la règle a un nom et un seul propriétaire, pour que
 personne ne la recopie.
+
+**La tempête** (`Snapshot.tempete`) voyage maintenant comme l'incendie, et pour
+la même raison : `rafaleMs`, `versRad`, `arbresVerses`, `volumeM3` et les
+`victimes` nommées, la semaine même. Sans l'événement, le rendu n'a qu'un état
+changé entre deux images et aucun MOMENT où jouer l'acte — d'autant que la mort
+d'un chablis n'est rapportée qu'un an plus tard, une semaine où `tempete` vaut
+`undefined`.
+
+Côté arbre, `renverseSemaine` et `chuteRad` l'accompagnent, et le second est
+**le cap partagé par tous les arbres d'une même rafale** : un bouquet de troncs
+couchés dans le même sens est la signature d'une tempête, et elle se lit d'un
+coup d'œil. Ils ne réparent pas un manque mais un CONTRESENS : un chablis reste
+dans `state.trees` l'année où son bois est récupérable, donc il arrivait avec
+`chandelle: true` — annoncé comme un tronc mort resté DEBOUT là où le moteur a
+un arbre par terre (#87).
 
 `brouteSemaine` dit qu'un plant a été brouté, et QUAND. `pousseTendreM` ne le
 dit pas : c'est un stock, qui baisse par lignification et par dormance autant
@@ -277,6 +293,42 @@ L'assimilante n'est branchée sur rien côté moteur, et c'est délibéré : bra
 la sénescence sur la croissance suppose de recalibrer une seconde fois
 (`docs/realisme.md`, « le houppier doré produit encore »). L'écart vaut deux
 semaines par an sur vingt-six.
+
+## Ce qui voyage et que personne ne lit encore
+
+Ce contrat trace les demandes du rendu — une demande, une issue, fermée par la
+PR qui livre. Il ne traçait PAS le sens inverse : ce que le moteur envoie et que
+personne ne consomme. Ça se relève en grepant les noms de champs de
+`protocol.ts` dans `src/render`, `src/game`, `src/ui`, `src/apercu` et `src/lab`
+hors plomberie, et **chaque trouvaille part en issue** plutôt que dans une liste
+ici — une donnée tenue à deux endroits diverge.
+
+Les issues portent le préfixe `[attente-rendu]` comme les demandes, et disent
+leur LOT et leur VERSION, pour que le rendu les prenne au bon moment :
+
+| sujet | lot | version |
+|---|---|---|
+| l'acte de la tempête (#106) | L3 | v0.3 |
+| le chablis couché, la chandelle qui vieillit (#107) | L5 | v0.5 |
+| la teinte et le seuil du tapis par espèce (#108) | L1, correction | v0.3 |
+| la défoliation par taches (#109) | L5 | v0.5 |
+| l'érosion et le dépôt de limon (#110) | L7 | v0.7 |
+
+**Ce n'est pas une liste de dettes.** Poser l'offre en avance est légitime quand
+le champ ne se déduit de rien — c'est même préférable à le recalculer côté vue.
+Ce qui ne l'est pas, c'est de l'oublier.
+
+Et **deux de ces cinq sujets n'ont pas de lot dans le §9** — ni le tapis
+herbacé ni la défoliation n'y sont nommés, alors que le moteur simule les deux.
+Ils sont rattachés au plus proche plutôt que laissés sans date : le tapis au
+terrain (L1, déjà livré, donc une correction à prendre tôt), la défoliation aux
+morts (L5, dont la promesse est « on comprend pourquoi ça meurt » — et une tache
+de pullulation est ce qui rend la mort par ravageurs compréhensible AVANT
+qu'elle arrive). Le découpage gagnerait à les nommer.
+
+La leçon vient de #87 : la seule trace du manque était un COMMENTAIRE dans
+`src/render/temps/mort.ts`, et l'issue le disait elle-même — « un commentaire ne
+se cherche pas ».
 
 ## Deux limites connues
 

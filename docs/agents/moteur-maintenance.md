@@ -77,6 +77,33 @@ mécanisme : neutraliser le tirage et remesurer.
   nombres suffisait. Quand une simulation ne bouge pas, chercher d'abord si elle
   PEUT bouger — `lumiere.test.ts` et `elancement.test.ts` portent maintenant ces
   bornes-là, et elles ne coûtent rien.
+- **Un témoin pris APRÈS le tri n'est pas un témoin.** `tempete.test.ts` posait
+  en hypothèse que les deux peuplements « arrivent à taille comparable », et le
+  vérifiait sur la hauteur des SURVIVANTS à soixante ans — c'est-à-dire après
+  que la tempête a emporté les plus grands. « Le pin était petit » et « le pin
+  s'est fait coucher » y étaient la même mesure, si bien que l'hypothèse tombait
+  d'autant plus vite que la conclusion était vraie. La hauteur ATTEINTE, relevée
+  semaine après semaine, dit ce que la phrase voulait dire. Règle générale :
+  quand un essai mesure un tri, sa prémisse se relève avant le tri, ou sur le
+  témoin non trié (ici, la parcelle abritée).
+- **Profiler à la densité qui fait mal, pas à celle qui est commode.** En
+  cherchant les n² du tick (#99), un profil à 2 300 tiges donnait `windShelterAt`
+  en tête à 9,7 % et `lightAtPoint` à 1,4 %. À 4 000 tiges le classement
+  s'inverse. Un terme quadratique est par définition invisible tant que le
+  peuplement est petit : c'est le cas lourd qui le désigne.
+- **Deux chronos pris à deux endroits ne se comparent pas.** Le même code, au
+  même commit, avec le même `node_modules`, tourne en 69 s depuis un worktree et
+  en 87 s depuis le dépôt — en alternance, donc ce n'est pas du bruit. Un lot
+  entier a failli être accusé d'un surcoût de 24 % qui n'était que le répertoire.
+  Une comparaison de performance se fait au même endroit, et de préférence en
+  alternant les deux versions.
+- **Une optimisation qui change l'ORDRE d'une somme change son résultat.**
+  L'addition de flottants n'est pas associative : ranger les voisins dans un
+  index et les parcourir dans un autre ordre suffit à déplacer les derniers
+  chiffres, donc à faire basculer un seuil dans un tout autre fichier. Insérer
+  dans l'ordre de `trees` conserve l'ordre de parcours, et l'égalité s'exige
+  alors STRICTE (`toBe`, jamais `toBeCloseTo`) — sinon on ne prouve rien.
+  Un comptage d'ENTIERS, lui, est libre : il ne dépend pas de l'ordre.
 - **Et ce délai doit porter là où le temps passe.** Une campagne lancée dans le
   corps d'un `describe` tourne à la COLLECTE, que ni `testTimeout` ni un délai
   posé sur le `describe` ne couvrent : si elle s'emballe, la suite bloque au
@@ -123,6 +150,40 @@ fois — pas trois copies d'une même intuition.
   les CHABLIS : sur ~310 morts, 205-244 et 55-98 contre 4-7 pour l'ombre.
   Le verrou de l'élancement est parti dans #79, celui de la mortalité d'ombre
   dans une issue d'évolution.
+
+- **#84 est CLOSE, et elle a coûté trois essais d'autres lots.** Le plancher
+  racinaire valait 0,35 du potentiel à tout âge : un hêtre de vingt mètres
+  jamais assoiffé avait les racines d'un semis (44 cm). Il croît maintenant avec
+  la maturité (0,35 → 0,80, `partPlancherRacines`), l'extrémité jeune
+  inchangée, et le seuil d'ancrage de `tempete.ts` est REVENU à sa valeur
+  mesurée (6 % au lieu du pansement à 4 %). La leçon de méthode est là :
+  `tempete.ts` écrivait noir sur blanc « le vrai sujet est ailleurs, issue
+  #84 » — une constante calée pour compenser le défaut d'un autre fichier est
+  une DETTE, et les essais qui tombent quand on la solde ne sont pas des dégâts
+  collatéraux, ce sont les créanciers. Trois sont tombés ainsi (`tempete`,
+  `feu`, `climat`), et les trois mesuraient effectivement la mauvaise chose.
+
+- **#95 est CLOSE, et la campagne a contredit l'issue sur un point.** Celle-ci
+  annonçait qu'un plafond local demanderait une autre valeur que le plafond
+  parcellaire ; la mesure dit le contraire, et pour une raison qui tient à la
+  grandeur elle-même — le recouvrement local MOYEN d'un peuplement homogène
+  égale son recouvrement global, parce qu'une moyenne de parts vaut la part de
+  la somme. Ce que la portée change n'est pas le niveau mais la VARIANCE.
+  Elle se trompait aussi sur la maille : celle de douze mètres de `light.ts`
+  convient comme INDEX et pas comme portée — à douze mètres le voisinage
+  recommence à voir la matrice et l'ouverture s'efface. Six, l'emprise d'un
+  houppier adulte.
+
+- **#99 est CLOSE, et sa seconde question reste ouverte ailleurs.** Trois n²
+  hebdomadaires sont tombés (`windShelterAt`, l'index d'ombres reconstruit à
+  chaque tentative d'installation, le comptage de voisins des frottis) : trente
+  ans sur une lande sèche passent de 317 s à 136 s, et la tranche 25-30 ans de
+  152 s à 31 s. Aucune assertion de la suite n'a bougé, ce qui était le but.
+  L'issue demandait aussi si 4 000 tiges sur une lande sèche sont JUSTES :
+  l'ordre de grandeur se défend pour un fourré de bouleau, mais le peuplement
+  GAGNE des tiges entre 20 et 30 ans (2 299 → 3 971) là où un fourré de cet âge
+  devrait en perdre. C'est #96 — rien ne meurt de manquer de lumière — et ça ne
+  se corrige pas en maintenance.
 
 - **L'expansion de branchage** (pas encore d'issue, sorti de #68). Une fois
   l'infradensité en place, le carbone total d'un hêtre de 25 m et 50 cm tombe à
