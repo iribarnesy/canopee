@@ -298,21 +298,29 @@ semaines par an sur vingt-six.
 
 Ce contrat trace les demandes du rendu — une demande, une issue, fermée par la
 PR qui livre. Il ne traçait PAS le sens inverse : ce que le moteur envoie et que
-personne ne consomme. Relevé en grepant tout `src/render`, `src/game`, `src/ui`,
-`src/apercu` et `src/lab` hors plomberie :
+personne ne consomme. Ça se relève en grepant les noms de champs de
+`protocol.ts` dans `src/render`, `src/game`, `src/ui`, `src/apercu` et `src/lab`
+hors plomberie, et **chaque trouvaille part en issue** plutôt que dans une liste
+ici — une donnée tenue à deux endroits diverge.
 
-| ce qui voyage | pourquoi c'est là malgré tout |
-|---|---|
-| `renverseSemaine`, `chuteRad`, `tempete` | livrés par #87, la mise en scène reste à faire |
-| `soilHerbeEmprises`, `herbesIds` | livrés par #86, idem |
-| `causeMort`, `mortSemaine` | le rendu prend la cause dans `MortDeLaSemaine`, l'ÉVÉNEMENT de la semaine. Les champs de l'arbre sont l'état DURABLE : une chandelle qui grisonne pendant des années a besoin du second, pas du premier |
-| `soilRavageurs` | « une moyenne ne se dessine pas, la défoliation se lit par TACHES » — la grille attend son calque |
-| `soilEpaisseurPerdueCm` | l'érosion cumulée, signée |
+Les issues portent le préfixe `[attente-rendu]` comme les demandes, et disent
+leur LOT et leur VERSION, pour que le rendu les prenne au bon moment :
+
+| sujet | lot | version |
+|---|---|---|
+| l'acte de la tempête (#106) | L3 | v0.3 |
+| le chablis couché, la chandelle qui vieillit (#107) | L5 | v0.5 |
+| la teinte et le seuil du tapis par espèce (#108) | aucun lot écrit | à décider |
+| la défoliation par taches (#109) | aucun lot écrit | à décider |
+| l'érosion et le dépôt de limon (#110) | L7 | v0.7 |
 
 **Ce n'est pas une liste de dettes.** Poser l'offre en avance est légitime quand
-le champ ne se déduit de rien ; ce qui ne l'est pas, c'est de l'oublier. Et le
-tableau ne se tient pas à la main : il se régénère en grepant les noms de champs
-de `protocol.ts` dans les répertoires de vue.
+le champ ne se déduit de rien — c'est même préférable à le recalculer côté vue.
+Ce qui ne l'est pas, c'est de l'oublier.
+
+Et **deux de ces cinq sujets n'ont aucun lot**, ce qui est le vrai signal : le
+découpage du §9 ne prévoit ni le tapis herbacé ni la défoliation, alors que le
+moteur les simule tous les deux.
 
 La leçon vient de #87 : la seule trace du manque était un COMMENTAIRE dans
 `src/render/temps/mort.ts`, et l'issue le disait elle-même — « un commentaire ne
