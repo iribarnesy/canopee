@@ -496,6 +496,52 @@ export interface TickResult {
   aides?: AidesAnnuelles;
 }
 
+/**
+ * À qui imputer une mort que le coup de grâce vient de déclencher.
+ *
+ * `causeMort` retenait le DERNIER COUP et non la cause (#103). Un dominé
+ * remplit son compteur de stress pendant des décennies, puis un dégât de
+ * ravageur le pousse au-delà du seuil, et le moteur écrivait « ravageurs ».
+ * C'est juste comme description du coup de grâce — un arbre affamé ne refait
+ * plus ses tanins ni sa résine, les ravageurs le trouvent, et la littérature
+ * décrit ce syndrome — mais faux comme rapport : le journal envoyait traiter
+ * là où il fallait éclaircir.
+ *
+ * La règle est la MAJORITÉ, pas une priorité inversée. Si plus de la moitié
+ * du stress accumulé vient des causes lentes, c'est d'elles que l'arbre
+ * meurt, et `causeLente` dit laquelle. Sinon le coup garde son nom — et il
+ * le garde souvent : sur une hêtraie serrée de cent vingt ans, neutraliser
+ * la famine laisse 130 morts par ravageurs sur 327. Les inverser toutes
+ * aurait effacé des gradations bien réelles sur peuplement sain, ce que
+ * l'issue demandait explicitement de ne pas faire.
+ */
+function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMort {
+  const lent = tree.stressLent ?? 0;
+  // LA MAJORITÉ DU COMPTEUR, et deux autres règles ont été essayées puis
+  // écartées par la mesure — elles sont écrites ici pour qu'on ne les
+  // repropose pas.
+  //
+  // La NÉCESSITÉ (« le coup seul aurait-il suffi ? ») est séduisante et
+  // VIDE : à l'instant de la mort, `stress` vient tout juste de franchir
+  // `STRESS_LETHAL`, donc `stressFinal - lent < STRESS_LETHAL` se réduit à
+  // « y a-t-il le moindre stress lent ? ». Elle efface toutes les morts par
+  // ravageurs, y compris sous réchauffement où la pullulation est le
+  // mécanisme documenté : 89 / 82 / 80 deviennent zéro.
+  //
+  // Porter au compte lent le SURPLUS de dégât dû à la faiblesse échoue
+  // autrement : ce surplus est en partie l'œuvre des ravageurs eux-mêmes,
+  // puisqu'un arbre attaqué s'affaiblit et devient plus attaquable — la
+  // spirale que `ravageurs.ts` décrit. Le leur retirer, c'est la compter
+  // deux fois, et ça efface aussi tout.
+  //
+  // Reste la majorité, qui ne prétend qu'à ce qu'elle dit : si plus de la
+  // moitié de ce qui a tué l'arbre vient des causes lentes, c'est d'elles
+  // qu'il meurt. Elle est PRUDENTE — elle ne se déclenche que quand la
+  // charge lente domine vraiment — et c'est le sens dans lequel il vaut
+  // mieux se tromper : elle ne fabrique pas de morts d'ombre.
+  return lent > stressFinal - lent ? (tree.causeLente ?? coup) : coup;
+}
+
 export function tick(state: GameState, weather: WeekWeather): TickResult {
   const { station } = state;
   const dims = gridDims(station);
@@ -1765,7 +1811,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const stress = tree.stress + FROTTIS_DEGAT;
       const marque = { ...tree, frotteSemaine: state.week };
       if (stress < STRESS_LETHAL) return { ...marque, stress };
-      return { ...marque, stress, alive: false, causeMort: "frottis" as const };
+      return { ...marque, stress, alive: false, causeMort: imputer(tree, "frottis", stress) };
     });
   }
 
@@ -1948,11 +1994,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       somme += ravageurs[i] ?? 0;
       n++;
     });
-    const degats = degatsSurArbre(tree, n > 0 ? somme / n : 0);
+    const pression = n > 0 ? somme / n : 0;
+    const degats = degatsSurArbre(tree, pression);
     if (degats <= 0) return tree;
     const stress = tree.stress + degats;
     if (stress < STRESS_LETHAL) return { ...tree, stress };
-    return { ...tree, stress, alive: false, causeMort: "ravageurs" as const };
+    return { ...tree, stress, alive: false, causeMort: imputer(tree, "ravageurs", stress) };
   });
 
   // ── 5 quinquies. Maladies (§7.4) ──────────────────────────────────────────
@@ -1980,7 +2027,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (degats <= 0) return tree;
       const stress = tree.stress + degats;
       if (stress < STRESS_LETHAL) return { ...tree, stress };
-      return { ...tree, stress, alive: false, causeMort: "maladie" as const };
+      return { ...tree, stress, alive: false, causeMort: imputer(tree, "maladie", stress) };
     });
   }
 

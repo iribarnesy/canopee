@@ -71,6 +71,40 @@ export interface TreeState {
   diametreCm: number;
   /** points de stress cumulés ; l'arbre meurt à STRESS_LETHAL */
   stress: number;
+  /**
+   * La part de `stress` venue des causes LENTES — la famine de réserves et les
+   * facteurs de station (ombre, soif, engorgement, pH, âge). Le reste, par
+   * différence, est ce que les coups BRUSQUES ont ajouté : ravageurs, maladie,
+   * frottis.
+   *
+   * ELLE EXISTE PARCE QUE `causeMort` RETENAIT LE DERNIER COUP ET NON LA CAUSE
+   * (#103). Un dominé remplit son compteur pendant des décennies, puis un
+   * dégât de ravageur le pousse au-delà du seuil — et le moteur écrivait
+   * « ravageurs ». C'est juste comme description du coup de grâce : un arbre
+   * affamé ne refait plus ses tanins ni sa résine, les ravageurs le trouvent,
+   * et la littérature décrit ce syndrome. Mais comme RAPPORT au joueur, c'est
+   * le contraire du geste à apprendre — il ira traiter là où il fallait
+   * éclaircir. Mesuré sur une hêtraie serrée de cent vingt ans : 327 morts
+   * « ravageurs » dont 197 disparaissent quand on neutralise la famine.
+   *
+   * Elle s'amortit AU PRORATA quand l'arbre cicatrise : une cicatrisation
+   * efface du stress sans savoir d'où il venait, donc elle en efface la même
+   * proportion de chaque origine.
+   *
+   * Optionnelle, et volontairement : c'est un compteur DÉRIVÉ, pas un état
+   * fondamental. Un arbre qu'on instancie sans elle n'a pas de provenance
+   * enregistrée, ce qui se lit « zéro » — la même convention que
+   * `brulEeSemaine` ou `causeLente`, et ça évite d'imposer un champ de
+   * comptabilité à tous les bancs d'essai.
+   */
+  stressLent?: number;
+  /**
+   * Laquelle des causes lentes pèse le plus, relevée chaque semaine par
+   * `tickTree` — pas seulement à la mort. C'est ce qui permet à un coup brusque
+   * de céder la place : il sait que l'arbre était condamné, il ne saurait pas
+   * dire à quoi.
+   */
+  causeLente?: CauseMort;
   alive: boolean;
   /** azote acquis depuis la dernière chute des feuilles, g (recyclé en litière) */
   uptakeYearG: number;
@@ -1091,6 +1125,36 @@ export interface TreeTickResult {
   limitingFactor: number;
 }
 
+/**
+ * Laquelle des causes LENTES pèse le plus, à cet instant.
+ *
+ * La famine entre dans ce classement par ce qu'elle COÛTE, et non par un
+ * facteur : c'est la seule façon de comparer un stock qui se vide à des
+ * facteurs instantanés. Un arbre qui puise plus qu'il ne souffre par ailleurs
+ * se meurt de l'ombre.
+ *
+ * Le pH a manqué à cette liste alors qu'il compte dans la survie : un arbre tué
+ * par un sol trop acide se voyait attribuer la « vieillesse », parce que tous
+ * les facteurs listés valaient 1 et que l'âge était le premier testé. Un
+ * pommier de trois ans mort « de vieillesse » sur une lande à pH 4,5, c'était
+ * ça.
+ */
+function causeLenteDominante(
+  usure: number,
+  parLeManque: number,
+  fSecSurvie: number,
+  fEng: number,
+  fPH: number,
+  fAge: number,
+): CauseMort {
+  if (usure > parLeManque) return "ombre";
+  const pire = Math.min(fSecSurvie, fEng, fPH, fAge);
+  if (pire === fPH) return "solHorsGamme";
+  if (pire === fAge) return "vieillesse";
+  if (pire === fEng) return "engorgement";
+  return "secheresse";
+}
+
 export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult {
   if (!tree.alive) return { tree, limitingFactor: 0 };
 
@@ -1237,13 +1301,22 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // rien pour un centième de lumière, et c'est le zéro dur que ce dépôt
   // traque depuis quatre lots.
   let stress = tree.stress;
+  // Tout ce que cette fonction ajoute est LENT — la famine et les facteurs de
+  // station — donc tout ce qu'elle ajoute alimente aussi `stressLent` (#103).
+  let stressLent = tree.stressLent ?? 0;
   const usure = puisementDesReserves * season * USURE_PAR_SEMAINE;
-  if (survivalFactor < STRESS_ONSET) {
-    stress += (STRESS_ONSET - survivalFactor) * 5;
-  }
-  stress += usure;
+  const parLeManqueSemaine =
+    survivalFactor < STRESS_ONSET ? (STRESS_ONSET - survivalFactor) * 5 : 0;
+  stress += parLeManqueSemaine + usure;
+  stressLent += parLeManqueSemaine + usure;
   if (survivalFactor > STRESS_RECOVERY) {
-    stress = Math.max(0, stress - RECUPERATION_STRESS * season * (1 - puisementDesReserves));
+    const apres = Math.max(0, stress - RECUPERATION_STRESS * season * (1 - puisementDesReserves));
+    // AU PRORATA : la cicatrisation efface du stress sans savoir d'où il
+    // venait, donc elle en efface la même proportion de chaque origine. Sans
+    // ce partage, un arbre qui cicatrise verrait sa part lente fondre plus vite
+    // ou moins vite que l'autre, et l'attribution dériverait toute seule.
+    stressLent = stress > 0 ? (stressLent * apres) / stress : 0;
+    stress = apres;
   }
   const alive = stress < STRESS_LETHAL;
   // À la mort, on retient QUEL facteur a eu le dernier mot : c'est ce que le
@@ -1262,17 +1335,20 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     // souffrait par ailleurs est mort de l'ombre.
     const pire = Math.min(fSecSurvie, fEng, fPH, fAge);
     const parLeManque = pire < STRESS_ONSET ? (STRESS_ONSET - pire) * 5 : 0;
-    causeMort =
-      usure > parLeManque
-        ? "ombre"
-        : pire === fPH
-          ? "solHorsGamme"
-          : pire === fAge
-            ? "vieillesse"
-            : pire === fEng
-              ? "engorgement"
-              : "secheresse";
+    causeMort = causeLenteDominante(usure, parLeManque, fSecSurvie, fEng, fPH, fAge);
   }
+  // La même lecture, mais tenue CHAQUE SEMAINE et pas seulement à la mort :
+  // c'est elle qu'un coup brusque relira pour savoir de quoi l'arbre se
+  // mourait déjà (#103). Elle ne se fige que quand il y a quelque chose à
+  // dire — sans stress lent, il n'y a pas de cause lente.
+  // Seulement les semaines où quelque chose de LENT a vraiment pesé. Le relever
+  // à chaque tick, y compris quand tous les facteurs valent 1, revenait à
+  // départager des égalités : `Math.min` rendait alors le pH, premier testé, et
+  // une hêtraie de limon riche accumulait 189 morts « solHorsGamme ». Mesuré.
+  const causeLente =
+    usure > 0 || parLeManqueSemaine > 0
+      ? causeLenteDominante(usure, parLeManqueSemaine, fSecSurvie, fEng, fPH, fAge)
+      : tree.causeLente;
 
   return {
     tree: {
@@ -1281,6 +1357,8 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
       heightM,
       diametreCm,
       stress,
+      stressLent,
+      causeLente,
       alive,
       rootDepthCm,
       causeMort,

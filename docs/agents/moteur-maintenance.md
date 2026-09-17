@@ -86,6 +86,22 @@ mécanisme : neutraliser le tirage et remesurer.
   semaine après semaine, dit ce que la phrase voulait dire. Règle générale :
   quand un essai mesure un tri, sa prémisse se relève avant le tri, ou sur le
   témoin non trié (ici, la parcelle abritée).
+- **Un témoin et une comptabilité de provenance ne mesurent pas la même chose.**
+  #103 déduisait d'un témoin — famine neutralisée, 291 morts « ravageurs » sur
+  293 disparaissent — que la famine était la cause de ces morts. C'est vrai au
+  sens du contrefactuel, et pourtant aucune comptabilité de provenance ne
+  reproduit ce chiffre : la famine agit sur les ravageurs par la `vigueur`, donc
+  en AMPLIFIANT leur dégât, pas en remplissant le compteur de stress. Retirer
+  une cause et voir ce qui reste répond à « était-ce nécessaire ? » ; suivre
+  d'où vient chaque point répond à « qu'est-ce qui a fait le plus ? ». Les deux
+  sont légitimes, et il faut dire laquelle on prétend mesurer.
+- **Une règle qui se déclenche toujours ne discrimine rien.** Toujours #103 : le
+  test « le coup seul aurait-il suffi ? » paraît être le bon, et il est VIDE —
+  à l'instant de la mort le compteur vient de franchir le seuil, donc il se
+  réduit à « y a-t-il le moindre stress lent ? ». Il effaçait toutes les morts
+  par ravageurs, y compris là où la pullulation est le mécanisme documenté.
+  Avant d'adopter un critère, regarder ce qu'il donne AUX DEUX BOUTS : sur le
+  cas qu'il doit attraper, et sur celui qu'il doit laisser passer.
 - **Profiler à la densité qui fait mal, pas à celle qui est commode.** En
   cherchant les n² du tick (#99), un profil à 2 300 tiges donnait `windShelterAt`
   en tête à 9,7 % et `lightAtPoint` à 1,4 %. À 4 000 tiges le classement

@@ -300,3 +300,20 @@ export function disperser(pression: Float64Array, dims: GridDims): Float64Array 
 export function degatsSurArbre(tree: TreeState, pressionMoyenne: number): number {
   return DEGAT_MAX * pressionMoyenne * vulnerabilite(tree.especeId, tree.vigueur);
 }
+
+/**
+ * Ce que le MÊME arbre aurait encaissé en pleine vigueur.
+ *
+ * L'écart avec `degatsSurArbre` est la part du dégât qui n'existe QUE parce que
+ * l'arbre ne se défend plus — il ne refait ni ses tanins ni sa résine faute de
+ * carbone. Cette part-là est à porter au compte de ce qui l'affame, pas des
+ * ravageurs : sans elle, un dominé meurt « de ravageurs » alors que la seule
+ * chose qui a changé chez lui est l'ombre (#103).
+ *
+ * Ce n'est pas une heuristique, c'est la décomposition de `vulnerabilite` :
+ * le plancher est ce qu'un arbre sain paie de toute façon, le reste est
+ * proportionnel à son affaiblissement.
+ */
+export function degatsAPleineVigueur(tree: TreeState, pressionMoyenne: number): number {
+  return DEGAT_MAX * pressionMoyenne * vulnerabilite(tree.especeId, 1);
+}
