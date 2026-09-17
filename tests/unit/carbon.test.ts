@@ -7,27 +7,79 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
-import { diametreInitialCm } from "../../src/engine/trees";
+import { diametreInitialCm, volumeTigeM3 } from "../../src/engine/trees";
 import { runYears } from "../helpers";
 
 describe("allométrie carbone", () => {
-  it("un grand hêtre (25 m, 50 cm) pèse ce que pèse un hêtre de 25 m et 50 cm", () => {
-    // CETTE ANCRE A DÉJÀ MENTI UNE FOIS, et il faut dire comment (#62).
+  it("la tige d'un grand hêtre pèse ce que pèsent les tiges de hêtre mesurées", () => {
+    // C'EST L'ANCRE QUI TIENT L'INFRADENSITÉ (#68), et elle porte sur la TIGE
+    // à dessein. L'ancre d'avant portait sur l'arbre entier et ne discriminait
+    // rien : elle acceptait 1 078 kg C (infradensité 0,55) comme 1 333 kg C
+    // (densité du commerce 0,68), si bien que le défaut a pu vivre sous un
+    // essai vert. Une ancre que la correction ne fait pas basculer ne prouve
+    // pas la correction.
     //
-    // Elle exigeait « plus de 1 500 kg », bornes écrites d'après le moteur
-    // d'alors — qui donnait 3 917 kg pour cet arbre, soit trois à quatre fois
-    // le réel. Une borne basse posée sous un chiffre faux ENTÉRINE l'erreur au
-    // lieu de l'attraper : une ancre écrite d'après le moteur n'est pas une
-    // ancre, c'est un miroir.
+    // La tige, elle, discrimine, parce que son volume ne fait pas débat : le
+    // moteur en donne 2,454 m³ pour cet arbre, et le tarif français EMERGE
+    // (Deleuze et al. 2014, constante Fagus sylvatica 0,515 — reproduit en
+    // annexe 4 de la méthode CNPF du label bas-carbone) en donne 2,528 m³,
+    // soit 3 % d'écart. Sur un volume aussi bien tenu, la masse sèche ne
+    // mesure plus qu'une chose : l'infradensité.
     //
-    // Les bornes ci-dessous viennent donc du DEHORS. Une tige de hêtre de 25 m
-    // et 50 cm de diamètre porte de l'ordre de 2,4 m³ de tige et 3,2 m³
-    // d'aérien, soit 0,8 à 1,1 t C aérien ; avec les racines
-    // (`ROOT_SHOOT_RATIO`), le total attendu tombe entre 1,0 et 1,4 t.
-    // Le moteur y place 1 333 kg.
+    // Les bornes viennent de Zianis, Muukkonen, Mäkipää & Mencuccini 2005,
+    // Biomass and Stem Volume Equations for Tree Species in Europe, Silva
+    // Fennica Monographs 4, annexe A. Quatre équations de biomasse de tige
+    // (ST) y sont applicables à un hêtre adulte de 50 cm et 25 m — celles qui
+    // ne sont ni hors de leur plage de diamètre ni calées sur une autre classe
+    // d'âge :
+    //
+    //   Cienciala 2005 (Tchéquie, D 5,7–62,1, n=20)  1 624 kg
+    //   Calamini & Gregori 2001 (Italie, adultes)    1 512 kg
+    //   Bartelink 1997 (Pays-Bas, D et H, n=38)      1 307 kg
+    //   Bartelink 1997 (Pays-Bas, D seul, n=38)      1 474 kg
+    //
+    // soit une enveloppe de 1 307 à 1 624 kg de matière sèche, arrondie vers
+    // l'extérieur ci-dessous pour ne jamais serrer plus que la mesure. Divisée
+    // par le volume de tige, elle borne l'infradensité entre 0,53 et 0,66 —
+    // ce qui contient les 0,55 de l'IGN et les 0,585 du GWDD, et exclut les
+    // 0,68 d'avant.
+    //
+    // VÉRIFIÉ : à 0,68, le moteur donne 1 669 kg et cet essai TOMBE. C'est la
+    // seule preuve que la correction en est une.
+    const hetre = getEspece("fagus_sylvatica");
+
+    // Le volume de tige d'abord, séparément : si un jour il dérive, on saura
+    // que c'est lui et non l'infradensité qui a fait tomber la borne suivante.
+    const volumeTige = volumeTigeM3(50, 25);
+    expect(volumeTige).toBeGreaterThan(2.3);
+    expect(volumeTige).toBeLessThan(2.7);
+
+    const tigeAnhydreKg = volumeTige * hetre.bois.densite * 1000;
+    expect(tigeAnhydreKg).toBeGreaterThan(1300);
+    expect(tigeAnhydreKg).toBeLessThan(1630);
+  });
+
+  it("l'arbre entier reste dans l'enveloppe des équations de biomasse", () => {
+    // Garde-fou d'ordre de grandeur, PAS l'ancre : ces bornes-ci ne
+    // discriminent pas l'infradensité (0,55 donne 1 078 kg, 0,68 en donnait
+    // 1 333, les deux passent). C'est l'essai précédent qui tranche ; celui-ci
+    // attrape les dérives grossières d'allométrie ou de fraction de carbone.
+    //
+    // Bornes tirées des mêmes équations (Zianis 2005, annexe A), compartiment
+    // AB cette fois : de 1 819 kg (Hochbichler 2002, Autriche) à 2 302 kg
+    // (Duvigneaud 1977, Belgique) de matière sèche aérienne. Converties avec
+    // `CARBON_FRACTION` et `ROOT_SHOOT_RATIO`, et élargies vers le bas jusqu'à
+    // la plus petite tige publiée augmentée du plus faible rapport
+    // aérien/tige observé (1 307 × 1,20), elles donnent 960 à 1 420 kg C.
+    //
+    // Le moteur y place 1 078 kg, soit 3 % SOUS le plancher qu'on obtiendrait
+    // en partant des seules équations AB : son expansion de branches (1,30) et
+    // l'infradensité de l'IGN (0,55) sont toutes deux au bas de leur
+    // fourchette, et les deux se cumulent. C'est à regarder, mais séparément —
+    // deux corrections de biomasse dans le même lot se masqueraient.
     const kg = treeTotalCarbonKg(getEspece("fagus_sylvatica"), 50, 25);
-    expect(kg).toBeGreaterThan(1000);
-    expect(kg).toBeLessThan(1500);
+    expect(kg).toBeGreaterThan(960);
+    expect(kg).toBeLessThan(1420);
   });
 
   it("un semis stocke un carbone négligeable, et racines < aérien", () => {

@@ -15,7 +15,19 @@
  */
 
 import { getEspece } from "../engine/especes";
+import { HAUTEUR_BROUTAGE_M } from "../engine/gibier";
+import type { ContextePhenologique } from "../engine/phenologie";
+import { partFoliaireOmbrageanteDans, senescenceDans } from "../engine/phenologie";
 import { tournerVue, type Vue, vueInitiale, zoomMax } from "../render/camera";
+import {
+  type ArbreAPoser,
+  AtlasArbres,
+  ancrageDePose,
+  fourreEnArbre,
+  posesDesArbres,
+  separerLeFourre,
+  tailleDePose,
+} from "../render/couches/arbres";
 import { BRUME, type DecorBordures } from "../render/couches/decor";
 import {
   cuireTachesOmbre,
@@ -41,6 +53,35 @@ interface ArbreScene {
   y: number;
   heightM: number;
   chandelle: boolean;
+  hauteurElagueeM?: number;
+  teteTrogneM?: number;
+  /** `baseHouppierM` du protocole : la base du houppier, m */
+  baseHouppierM?: number;
+  /** `floraison` du protocole : part de la couronne en fleur ∈ [0,1] */
+  floraison?: number;
+  vigueur?: number;
+  /** `dommageHydraulique` du protocole : la cime sèche ∈ [0,1] */
+  dommageHydraulique?: number;
+  /** `brulEeSemaine` du protocole : présent = le feu l'a tué */
+  brulEeSemaine?: number;
+  /** `protege` du protocole : plant sous manchon */
+  protege?: boolean;
+  /** `recepages` du protocole : nombre d'étêtages subis */
+  recepages?: number;
+  /** `frotteSemaine` du protocole : présent = un brocard l'a frotté */
+  frotteSemaine?: number;
+  /** `derniereLeveeSemaine` du protocole : la semaine du dernier démasclage */
+  derniereLeveeSemaine?: number;
+  /** `brouteSemaine` du protocole : présent = un chevreuil l'a brouté */
+  brouteSemaine?: number;
+  /** `diametreTeteCm` du protocole : le renflement à dessiner, cm */
+  diametreTeteCm?: number;
+  /** `caviteTeteL` du protocole : le creux, en litres */
+  caviteTeteL?: number;
+  /** `fruitProgress` du protocole : avancement du fruit de l'année ∈ [0,1] */
+  fruitProgress?: number;
+  /** `fruitsKg` du protocole : les fruits mûrs qui attendent la récolte */
+  fruitsKg?: number;
 }
 
 interface Scene {
@@ -51,12 +92,19 @@ interface Scene {
     ruMm: number;
     enEau?: boolean[];
     debordementMm?: number[];
+    /** `Snapshot.soilBoisAuSol` : bois mort couché, g C/m² */
+    boisAuSol?: number[];
+    /** `Snapshot.soilBoisEnTravers` : sa transversalité ∈ [0,1] */
+    boisEnTravers?: number[];
     altitudesM: number[];
     waterMm: number[];
     herbeCouverture: number[];
     herbeBiomasse: number[];
     litiereCG: number[];
+    lumiere?: number[];
+    herbeHumidite?: number[];
     bordures?: DecorBordures;
+    pheno?: ContextePhenologique;
   };
 }
 
@@ -73,22 +121,42 @@ function donneesDe(scene: Scene): DonneesSol {
     herbe: Float32Array.from(scene.sol.herbeCouverture),
     herbeBiomasse: Float32Array.from(scene.sol.herbeBiomasse),
     litiereCG: Float32Array.from(scene.sol.litiereCG),
+    ...(scene.sol.lumiere ? { lumiere: Float32Array.from(scene.sol.lumiere) } : {}),
+    ...(scene.sol.herbeHumidite
+      ? { herbeHumidite: Float32Array.from(scene.sol.herbeHumidite) }
+      : {}),
     ...(scene.sol.enEau ? { enEau: scene.sol.enEau } : {}),
+    ...(scene.sol.boisAuSol ? { boisAuSol: Float32Array.from(scene.sol.boisAuSol) } : {}),
+    ...(scene.sol.boisEnTravers
+      ? { boisEnTravers: Float32Array.from(scene.sol.boisEnTravers) }
+      : {}),
     ...(scene.sol.debordementMm
       ? { debordementMm: Float32Array.from(scene.sol.debordementMm) }
       : {}),
   };
 }
 
-/** Part du feuillage qui fait de l'ombre, à la semaine donnée. Approximation
- * de saison : un caduc est nu de la semaine 45 à la 14. */
-function partOmbrageante(especeId: string, semaine: number): number {
+/**
+ * Part du feuillage qui fait de l'ombre, et avancement de la sénescence.
+ *
+ * **Lus dans le contexte phénologique du moteur, pas approchés ici.** La page
+ * calculait d'abord « un caduc est nu de la semaine 45 à la 14 », ce qui est
+ * grossièrement vrai et précisément faux : le calendrier dépend de l'espèce,
+ * des degrés-jours de l'année et des semaines de froid. Deux calendriers,
+ * celui du moteur et celui de l'écran, dériveraient — et c'est exactement ce
+ * que le §2.1 interdit : « une seule loi, deux appelants, aucune dérive
+ * possible ».
+ */
+function feuillageDe(
+  especeId: string,
+  pheno: ContextePhenologique | undefined,
+): { part: number; senescence: number } {
   const espece = getEspece(especeId);
-  if (!espece) return 1;
-  if (!espece.lumiere.caduc) return 1;
-  if (semaine >= 18 && semaine <= 40) return 1;
-  if (semaine < 12 || semaine > 46) return 0.05;
-  return 0.5;
+  if (!espece || !pheno) return { part: 1, senescence: 0 };
+  return {
+    part: partFoliaireOmbrageanteDans(espece, pheno),
+    senescence: senescenceDans(espece, pheno),
+  };
 }
 
 /**
@@ -122,10 +190,80 @@ interface Options {
   decor?: boolean;
   /** NE PAS borner les ombres au sol — pour montrer le défaut qu'on a corrigé */
   ombresDebordantes?: boolean;
+  /** poser les arbres (défaut : oui) */
+  arbres?: boolean;
+  /** planche : dessiner les sujets NUS, pour juger la ramure d'hiver */
+  nu?: boolean;
+  /** planche : avancement de la sénescence ∈ [0,1] */
+  senescence?: number;
+  /** planche : facteur d'échelle, pour zoomer sur un sujet */
+  echelle?: number;
+  /**
+   * Planche : avancement du fruit ∈ [0,1] et kilos mûrs, tels que le moteur les
+   * donnerait. Ce sont les DEUX grandeurs du protocole, pas un réglage : la
+   * planche les impose pour qu'on puisse juger les deux états côte à côte, ce
+   * qu'aucune semaine réelle ne permet — un pommier et un arbousier ne mûrissent
+   * pas le même mois.
+   */
+  fruitProgress?: number;
+  fruitsKg?: number;
+  /** Planche : part de la couronne en fleur ∈ [0,1], telle que le moteur la donne. */
+  floraison?: number;
+  /** Planche : vigueur ∈ [0,1] imposée, pour juger les états de santé côte à côte. */
+  vigueur?: number;
+  /** Planche : dommage hydraulique ∈ [0,1] imposé — la cime sèche. */
+  dommageHydraulique?: number;
+  /** Planche : arbre mort debout. */
+  chandelle?: boolean;
+  /** Planche : tué par le feu (`brulEeSemaine` renseigné côté moteur). */
+  brulee?: boolean;
+  /** Planche : plant sous manchon. */
+  protege?: boolean;
+  /** Planche : tige frottée par un brocard (`frotteSemaine` renseigné). */
+  frotte?: boolean;
+  /** Planche : flèche broutée (`brouteSemaine` renseigné). */
+  broute?: boolean;
+  /**
+   * Planche : semaines écoulées depuis le démasclage, UNE PAR CASE.
+   *
+   * La seule option de cette liste qui varie d'une case à l'autre, et c'est
+   * qu'elle sert à autre chose que les autres : partout ailleurs la planche
+   * compare des ESPÈCES dans le même état, ici elle compare le même arbre à
+   * quatre âges d'écorce. Une valeur par case, répétée si la liste est plus
+   * courte que la grille.
+   */
+  semainesDepuisLevee?: readonly number[];
+  /**
+   * Planche : la trogne, telle que le moteur la donne — hauteur de coupe,
+   * diamètre du bourrelet, volume du creux.
+   *
+   * Les trois ensemble, parce que le moteur les donne ensemble : `trogne.ts`
+   * tire le diamètre et la cavité du compte d'étêtages, et la planche impose
+   * les valeurs qui en découlent plutôt que le compte, pour comparer une jeune
+   * tête et une tête centenaire côte à côte.
+   */
+  teteTrogneM?: number;
+  diametreTeteCm?: number;
+  caviteTeteL?: number;
+  recepages?: number;
+  /**
+   * Planche : la base du houppier, en PART de la hauteur de l'arbre.
+   *
+   * Comme le fruit, c'est une grandeur du moteur que la planche IMPOSE pour
+   * pouvoir comparer — un sujet isolé et un sujet de futaie n'existent pas au
+   * même endroit de la même parcelle, donc aucune scène réelle ne les met côte
+   * à côte. Elle est en part et non en mètres parce que la planche compare des
+   * espèces de hauteurs maximales différentes.
+   *
+   * Absente = 0,25, c'est-à-dire un arbre ayant subi un peu de compétition. Ce
+   * n'est pas une valeur par défaut du moteur, c'est le cadrage de la planche,
+   * et c'est pour ça qu'elle est déclarée ici et pas ailleurs.
+   */
+  baseHouppier?: number;
 }
 
 function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElement {
-  const { ombres = true, decor = true, ombresDebordantes = false } = options;
+  const { ombres = true, decor = true, ombresDebordantes = false, arbres = true } = options;
   const donnees = donneesDe(scene);
   const semaine = scene.week % 52;
   const bordures = scene.sol.bordures;
@@ -149,12 +287,20 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
     }
   }
 
+  // La silhouette de la PARCELLE SEULE, décor exclu : c'est elle qui borne
+  // l'ombre. Le décor est là pour se taire, et une tache sombre posée dessus
+  // attire l'œil là où il n'y a rien à voir.
+  const silhouette = fabriquer(vue.largeurPx, vue.hauteurPx);
+  const sq = silhouette.getContext("2d");
+  if (!sq) throw new Error("contexte 2d indisponible");
+
   const terrain = new Terrain(fabriquer, scene.coteM);
   terrain.rafraichir(donnees, semaine, vue);
   terrain.cuire(donnees, semaine, vue, 10000);
   for (const m of terrain.aPoser(vue)) {
     if (!m.image || !m.decalage) continue;
     cq.drawImage(m.image, m.decalage.dx, m.decalage.dy);
+    sq.drawImage(m.image, m.decalage.dx, m.decalage.dy);
   }
 
   // ── Les ombres ─────────────────────────────────────────────────────────
@@ -178,7 +324,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
           ] ?? 0,
         heightM: t.heightM,
         houppierRatio: getEspece(t.especeId)?.lumiere.houppierRatio ?? 0.4,
-        partOmbrageante: partOmbrageante(t.especeId, semaine),
+        partOmbrageante: feuillageDe(t.especeId, scene.sol.pheno).part,
       }));
     for (const o of ombresAPoser(arbres, vue)) {
       const tache = taches[o.densite];
@@ -195,15 +341,229 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
       ctx.globalCompositeOperation = "source-over";
       return sortie;
     }
-    // Découpe à la silhouette du sol, PUIS multiplication : voir `MODE_LIMITE`.
+    // Découpe à la silhouette de la PARCELLE, puis multiplication : voir
+    // `MODE_LIMITE`. Sur la silhouette et non sur `calque`, qui porte aussi le
+    // décor — c'est ce qui laissait des taches d'ombre hors de la parcelle.
     mq.globalCompositeOperation = MODE_LIMITE;
-    mq.drawImage(calque, 0, 0);
+    mq.drawImage(silhouette, 0, 0);
     cq.globalCompositeOperation = MODE_COMPOSITION;
     cq.drawImage(masque, 0, 0);
     cq.globalCompositeOperation = "source-over";
   }
 
   ctx.drawImage(calque, 0, 0);
+
+  // ── Les arbres ─────────────────────────────────────────────────────────
+  // **Posés APRÈS le calque du sol, et hors de lui.** Un arbre dépasse du
+  // terrain — c'est même tout l'intérêt d'un arbre — donc le découper à la
+  // silhouette du sol, comme on le fait des ombres, le décapiterait.
+  //
+  // Ils ne sont pas non plus entrelacés avec les morceaux de terrain : la
+  // décision D3 l'exigera au lot suivant, quand une butte devra masquer le
+  // pied des arbres derrière elle. Les deux listes sont déjà triées par la
+  // même clé de profondeur, ce qui rendra la fusion mécanique — mais tant que
+  // le sol est posé en un bloc, entrelacer ne changerait rien à l'image et
+  // masquerait ce qui reste à faire.
+  if (arbres) {
+    const separe = separerLeFourre(
+      scene.trees
+        .filter((t) => t.heightM > 0)
+        .map((t): ArbreAPoser => {
+          const espece = getEspece(t.especeId);
+          const f = feuillageDe(t.especeId, scene.sol.pheno);
+          return {
+            id: t.id,
+            especeId: t.especeId,
+            x: t.x,
+            y: t.y,
+            z:
+              scene.sol.altitudesM[
+                Math.min(scene.coteM - 1, Math.floor(t.y)) * scene.coteM +
+                  Math.min(scene.coteM - 1, Math.floor(t.x))
+              ] ?? 0,
+            heightM: t.heightM,
+            houppierRatio: espece?.lumiere.houppierRatio ?? 0.4,
+            // Repli à zéro : un arbre dont la scène ne dit pas la base de
+            // houppier est branchu jusqu'au sol, ce qui est vrai de tout arbre
+            // qui vient de naître — et ce qui ne fabrique aucune longueur de
+            // fût, contrairement à la formule qu'on avait ici.
+            baseHouppierM: t.baseHouppierM ?? 0,
+            ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
+            ...(t.chandelle ? { chandelle: true } : {}),
+            // `brulEeSemaine` est une SEMAINE ; le rendu n'en lit que la
+            // présence. De combien un charbon pâlit avec le temps est une
+            // question de modèle, et le moteur ne la traite pas.
+            ...(t.brulEeSemaine === undefined ? {} : { brulee: true }),
+            ...(t.protege ? { protege: true } : {}),
+            ...(t.recepages ? { recepages: t.recepages } : {}),
+            // Même lecture que `brulee` : la présence, pas la semaine.
+            ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
+            ...(t.brouteSemaine === undefined ? {} : { broute: true }),
+            // Deux DIMENSIONS, et le rendu n'en fabrique plus aucune : le
+            // diamètre du bourrelet et le volume du creux viennent de
+            // `trogne.ts` (issue #19).
+            ...(t.diametreTeteCm ? { diametreTeteCm: t.diametreTeteCm } : {}),
+            ...(t.caviteTeteL ? { caviteTeteL: t.caviteTeteL } : {}),
+            // Une DURÉE, pas une présence : le moteur porte la rotation, donc
+            // on peut dire OÙ EN EST l'écorce, pas seulement qu'elle a été levée.
+            ...(t.derniereLeveeSemaine === undefined
+              ? {}
+              : { semainesDepuisLevee: Math.max(0, scene.week - t.derniereLeveeSemaine) }),
+            // Une chandelle n'a plus de feuilles : c'est un tronc mort debout.
+            partFoliaire: t.chandelle ? 0 : f.part,
+            senescence: f.senescence,
+            vigueur: t.vigueur ?? 1,
+            ...(t.dommageHydraulique ? { dommageHydraulique: t.dommageHydraulique } : {}),
+            // Tels quels, sans repli inventé : absent veut dire « la scène ne
+            // transporte pas la grandeur », donc pas de fruit — pas « zéro
+            // fruit sur un arbre qui en porte ».
+            ...(t.floraison ? { floraison: t.floraison } : {}),
+            ...(t.fruitProgress ? { fruitProgress: t.fruitProgress } : {}),
+            ...(t.fruitsKg ? { fruitsKg: t.fruitsKg } : {}),
+          };
+        }),
+    );
+    const poses = posesDesArbres(
+      [...separe.arbres, ...separe.fourre.map(fourreEnArbre)],
+      (especeId) => getEspece(especeId)?.hauteurMaxM ?? 20,
+      vue,
+    );
+    const atlas = new AtlasArbres(fabriquer);
+    atlas.rafraichir(poses);
+    // Budget SANS LIMITE : une capture n'a pas de deuxième image, donc rien ne
+    // doit rester en attente. Dans le jeu, c'est le budget par image qui
+    // s'applique — et il se compte en PIXELS, pas en vignettes : passer 10 000
+    // ici ne cuisait plus qu'une seule vignette, et la parcelle sortait vide.
+    atlas.cuire(Number.POSITIVE_INFINITY);
+    for (const pose of poses) {
+      const vignette = atlas.vignette(pose.classe);
+      if (!vignette) continue;
+      // La vignette est cuite à une RÉSOLUTION (puissance de deux, pour que le
+      // cache serve) et posée à sa TAILLE écran. Confondre les deux donnait des
+      // arbres trois fois trop grands.
+      const taille = tailleDePose(pose.arbre.heightM, vignette, vue);
+      const ancre = ancrageDePose(vignette, taille);
+      ctx.drawImage(
+        vignette.image,
+        pose.sx - ancre.dx,
+        pose.sy - ancre.dy,
+        taille.largeur,
+        taille.hauteur,
+      );
+    }
+  }
+
+  return sortie;
+}
+
+/**
+ * La planche d'essences : un sujet par espèce, à taille comparable, sur un fond
+ * neutre.
+ *
+ * **C'est l'épreuve de la décision D4**, et elle ne se passe pas dans la
+ * parcelle : au milieu de cinq mille tiges, on ne juge pas une silhouette. Le
+ * critère est écrit noir sur blanc dans le §5.4 — « une essence n'est finie que
+ * si quelqu'un d'autre la reconnaît sans étiquette » — et il demande de voir les
+ * arbres côte à côte, à la même hauteur, sans rien autour.
+ */
+function planche(
+  especes: readonly string[],
+  hauteurM: number,
+  largeurPx: number,
+  hauteurPx: number,
+  options: Options = {},
+): HTMLCanvasElement {
+  const sortie = fabriquer(largeurPx, hauteurPx);
+  const ctx = sortie.getContext("2d");
+  if (!ctx) throw new Error("contexte 2d indisponible");
+  peindreLeCiel(ctx, largeurPx, hauteurPx);
+
+  // **Une GRILLE, et pas une rangée.** Un arbre de seize mètres au houppier
+  // large est aussi large que haut : sept côte à côte demandent une image sept
+  // fois plus large que haute, où l'on ne voit plus rien. En deux rangs, chaque
+  // sujet a une case à peu près carrée — la proportion d'un arbre.
+  const colonnes = Math.ceil(Math.sqrt(especes.length * 1.6));
+  const lignes = Math.ceil(especes.length / colonnes);
+  const largeurCase = largeurPx / colonnes;
+  const hauteurCase = hauteurPx / lignes;
+  // Ce que la case doit CONTENIR, et pas seulement l'arbre : un plant sous
+  // manchon est plus petit que son tube — c'est même toute la raison d'être du
+  // tube — et cadrer sur le plant seul faisait sortir le manchon par le haut.
+  const contenuM = options.protege ? Math.max(hauteurM, HAUTEUR_BROUTAGE_M) : hauteurM;
+  const zoom = (hauteurCase - 46) / (contenuM * 8);
+  const vue: Vue = {
+    cam: { coteM: 100, zoom, orientation: 0 },
+    centre: { x: 50, y: 50 },
+    largeurPx,
+    hauteurPx,
+  };
+  const atlas = new AtlasArbres(fabriquer);
+  especes.forEach((especeId, i) => {
+    const colonne = i % colonnes;
+    const ligne = Math.floor(i / colonnes);
+    const sol = (ligne + 1) * hauteurCase - 24;
+    const centre = (colonne + 0.5) * largeurCase;
+    ctx.fillStyle = "rgb(96 100 74)";
+    ctx.fillRect(colonne * largeurCase, sol, largeurCase, 24);
+    const espece = getEspece(especeId);
+    const serie = options.semainesDepuisLevee;
+    const depuisLevee = serie && serie.length > 0 ? serie[i % serie.length] : undefined;
+    const arbre: ArbreAPoser = {
+      id: 7 + i * 13,
+      especeId,
+      x: 50,
+      y: 50,
+      z: 0,
+      heightM: Math.min(hauteurM, espece?.hauteurMaxM ?? hauteurM),
+      houppierRatio: espece?.lumiere.houppierRatio ?? 0.35,
+      // **La tête rabat la base du houppier, parce que c'est ce que le moteur
+      // fait.** `actions.ts`, action `trogner` : la hauteur devient celle de la
+      // tête et `baseHouppierM` est ramenée à `min(base, hauteurTete)` — « ce
+      // qui repartira part d'elle ». Sans ce rabattement, la planche fabriquait
+      // un état que la simulation ne produit jamais : une tête à deux mètres et
+      // un houppier qui recommence quatre mètres plus haut, avec entre les deux
+      // un fût nu que rien ne porte. Ce n'est pas une règle de dessin recopiée,
+      // c'est la planche qui se contraint à ne poser que des états atteignables.
+      baseHouppierM: Math.min(
+        (options.baseHouppier ?? 0.25) * hauteurM,
+        options.teteTrogneM ?? Number.POSITIVE_INFINITY,
+      ),
+      partFoliaire: options.nu ? 0 : 1,
+      senescence: options.senescence ?? 0,
+      vigueur: options.vigueur ?? 1,
+      ...(options.dommageHydraulique ? { dommageHydraulique: options.dommageHydraulique } : {}),
+      // Les états de conduite et de mort. Ils passent par le même chemin que
+      // le reste : la planche IMPOSE la valeur que le moteur donnerait, elle
+      // n'en fabrique pas de nouvelle sorte.
+      ...(options.chandelle ? { chandelle: true } : {}),
+      ...(options.brulee ? { brulee: true } : {}),
+      ...(options.protege ? { protege: true } : {}),
+      ...(options.frotte ? { frotte: true } : {}),
+      ...(depuisLevee === undefined ? {} : { semainesDepuisLevee: depuisLevee }),
+      ...(options.teteTrogneM ? { teteTrogneM: options.teteTrogneM } : {}),
+      ...(options.diametreTeteCm ? { diametreTeteCm: options.diametreTeteCm } : {}),
+      ...(options.caviteTeteL ? { caviteTeteL: options.caviteTeteL } : {}),
+      ...(options.broute ? { broute: true } : {}),
+      ...(options.recepages ? { recepages: options.recepages } : {}),
+      ...(options.floraison ? { floraison: options.floraison } : {}),
+      ...(options.fruitProgress ? { fruitProgress: options.fruitProgress } : {}),
+      ...(options.fruitsKg ? { fruitsKg: options.fruitsKg } : {}),
+    };
+    const poses = posesDesArbres([arbre], () => espece?.hauteurMaxM ?? 20, vue);
+    atlas.rafraichir(poses);
+    atlas.cuire(Number.POSITIVE_INFINITY);
+    const pose = poses[0];
+    if (!pose) return;
+    const v = atlas.vignette(pose.classe);
+    if (!v) return;
+    const taille = tailleDePose(arbre.heightM, v, vue);
+    const ancre = ancrageDePose(v, taille);
+    ctx.drawImage(v.image, centre - ancre.dx, sol - ancre.dy, taille.largeur, taille.hauteur);
+    ctx.fillStyle = "rgb(212 210 198)";
+    ctx.font = "13px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(especeId.replace("_", " "), centre, sol + 17);
+  });
   return sortie;
 }
 
@@ -255,6 +615,9 @@ function cadrer(
  * L'ordre est celui de la présentation, pas celui de la cuisson.
  */
 interface Planche {
+  /** `especes` = planche d'essences plutôt qu'une scène */
+  especes?: readonly string[];
+  hauteurM?: number;
   scene: string;
   titre: string;
   facteur?: number;
@@ -263,27 +626,330 @@ interface Planche {
   options?: Options;
 }
 
+/**
+ * Les arbres de futaie et les fruitiers, dans l'ordre des familles de port.
+ *
+ * Treize sujets à seize mètres : c'est la hauteur à laquelle ces essences-là se
+ * comparent. Les arbustes de haie ont leur propre planche, plus bas — les
+ * mettre ici les réduirait à des points, puisque `heightM` est plafonné par la
+ * hauteur maximale de l'espèce et qu'une aubépine n'en fait que huit.
+ */
+const FUTAIE = [
+  "fagus_sylvatica",
+  "quercus_pubescens",
+  "castanea_sativa",
+  "fraxinus_excelsior",
+  "juglans_regia",
+  "carpinus_betulus",
+  "betula_pendula",
+  "alnus_glutinosa",
+  "salix_alba",
+  "pinus_sylvestris",
+  "quercus_suber",
+  "malus_domestica",
+  "prunus_armeniaca",
+];
+
+/**
+ * Les arbustes de haie et de lisière, à six mètres.
+ *
+ * **C'est la planche la plus exigeante des deux**, et c'est pour ça qu'elle
+ * existe séparément : douze arbres de futaie se distinguent déjà par leur
+ * taille et leur port, alors que neuf arbustes de haie ont tous à peu près la
+ * même stature et le même vert. S'ils se confondent, c'est le dessin de la
+ * feuille qui n'a pas fait son travail — pas la silhouette, qui ne peut pas le
+ * faire ici.
+ */
+const HAIE = [
+  "corylus_avellana",
+  "prunus_spinosa",
+  "crataegus_monogyna",
+  "sambucus_nigra",
+  "cornus_mas",
+  "euonymus_europaeus",
+  "ligustrum_vulgare",
+  "ilex_aquifolium",
+  "arbutus_unedo",
+];
+
+/**
+ * Les espèces dont le MOTEUR suit la fructification, dans l'ordre des tailles
+ * de fruit.
+ *
+ * Onze, et la liste n'est pas un choix de dessin : c'est exactement l'ensemble
+ * des espèces qui ont un bloc `fruits` dans `especes.ts` — le noyer s'y est
+ * ajouté avec l'allélopathie, et son BROU (une drupe verte, la noix n'apparaît
+ * qu'au sol) se range entre la bogue du châtaignier et l'abricot. L'aubépine, le houx
+ * et le fusain en portent de bien visibles et n'y sont pas — le moteur ne suit
+ * pas leur fructification, donc le rendu n'en dessine pas.
+ */
+const FRUITIERS = [
+  "malus_domestica",
+  "castanea_sativa",
+  "juglans_regia",
+  "prunus_armeniaca",
+  "arbutus_unedo",
+  "corylus_avellana",
+  "cornus_mas",
+  "prunus_spinosa",
+  "ligustrum_vulgare",
+  "sambucus_nigra",
+  "rubus_fruticosus",
+];
+
 const PLANCHE: Planche[] = [
+  { scene: "", especes: FUTAIE, hauteurM: 16, titre: "futaie et vergers · été" },
+  {
+    scene: "",
+    especes: FUTAIE,
+    hauteurM: 16,
+    titre: "futaie et vergers · nus (la ramure d'hiver)",
+    options: { nu: true },
+  },
+  {
+    scene: "",
+    especes: FUTAIE,
+    hauteurM: 16,
+    titre: "futaie et vergers · sénescence",
+    options: { senescence: 1 },
+  },
+  {
+    scene: "",
+    especes: FRUITIERS,
+    hauteurM: 7,
+    titre: "les fleurs · EN FLEUR (`floraison` : le seul moment où un verger se voit de loin)",
+    options: { floraison: 1 },
+  },
+  {
+    scene: "",
+    especes: FRUITIERS,
+    hauteurM: 7,
+    titre: "les fruits · MÛRS (`fruitsKg > 0` : il y a quelque chose à récolter)",
+    options: { fruitProgress: 1, fruitsKg: 12 },
+  },
+  {
+    scene: "",
+    especes: FRUITIERS,
+    hauteurM: 7,
+    titre: "les fruits · en croissance (`fruitProgress` à mi-course, verts)",
+    options: { fruitProgress: 0.5 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "castanea_sativa", "pinus_sylvestris"],
+    hauteurM: 18,
+    titre: "le même arbre EN PRÉ (branchu jusqu'au sol) — baseHouppier 0",
+    options: { baseHouppier: 0 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "castanea_sativa", "pinus_sylvestris"],
+    hauteurM: 18,
+    titre: "le même arbre EN FUTAIE (fût nu sur les deux tiers) — baseHouppier 0,65",
+    options: { baseHouppier: 0.65 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "betula_pendula", "pinus_sylvestris"],
+    hauteurM: 16,
+    titre: "santé · un arbre qui VÉGÈTE (vigueur 0,2 : houppier clairsemé et pâle)",
+    options: { vigueur: 0.2 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "betula_pendula", "pinus_sylvestris"],
+    hauteurM: 16,
+    titre: "santé · CIME SÈCHE (dommage hydraulique 0,45 : l'embolie ne se répare pas)",
+    options: { dommageHydraulique: 0.45 },
+  },
+  // Les trois âges d'une tête, avec les valeurs que `trogne.ts` produit pour
+  // 1, 6 et 25 étêtages. La planche les IMPOSE plutôt que d'imposer le compte :
+  // c'est ce qui permet de mettre les trois côte à côte, ce qu'aucune parcelle
+  // ne fait — un têtard centenaire et un têtard neuf n'existent pas la même
+  // année.
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
+    hauteurM: 9,
+    titre: "trogne · 1 étêtage (tête de 25 cm, aucun creux : une coupe n'est pas un trou)",
+    options: { teteTrogneM: 2.2, recepages: 1, diametreTeteCm: 25, caviteTeteL: 0 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
+    hauteurM: 9,
+    titre: "trogne · 6 étêtages (55 cm, 18 L de creux : de quoi loger une mésange)",
+    options: { teteTrogneM: 2.2, recepages: 6, diametreTeteCm: 55, caviteTeteL: 17.8 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fraxinus_excelsior", "carpinus_betulus", "salix_alba"],
+    hauteurM: 9,
+    titre: "trogne · 25 étêtages (120 cm au plafond, 407 L : un têtard centenaire)",
+    options: { teteTrogneM: 2.2, recepages: 25, diametreTeteCm: 120, caviteTeteL: 407.2 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_pubescens", "fagus_sylvatica", "corylus_avellana", "malus_domestica"],
+    hauteurM: 1.4,
+    titre: "brout · la flèche pincée : sections claires au bout des rameaux à portée",
+    options: { baseHouppier: 0, broute: true },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "pinus_sylvestris", "betula_pendula", "quercus_pubescens"],
+    hauteurM: 14,
+    titre: "chandelle · morte de SÉCHERESSE (bois gris) contre morte du FEU (bois noir)",
+    options: { chandelle: true, nu: true },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "pinus_sylvestris", "betula_pendula", "quercus_pubescens"],
+    hauteurM: 14,
+    titre: "chandelle · brûlée sur pied (`brulEeSemaine` : encore récoltable)",
+    options: { brulee: true, nu: true },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "quercus_pubescens", "corylus_avellana", "malus_domestica"],
+    hauteurM: 0.9,
+    titre: "manchon · le plant protégé, jusqu'à la hauteur de dent du moteur (1,5 m)",
+    options: { protege: true },
+  },
+  {
+    scene: "",
+    especes: ["carpinus_betulus", "fagus_sylvatica", "fraxinus_excelsior", "corylus_avellana"],
+    hauteurM: 2.5,
+    titre: "frottis · la plaie du brocard, sur une tige dans la fourchette du moteur (1,2–5 m)",
+    options: { baseHouppier: 0.35, frotte: true },
+  },
+  {
+    scene: "",
+    especes: ["carpinus_betulus", "fagus_sylvatica", "fraxinus_excelsior", "corylus_avellana"],
+    hauteurM: 2.5,
+    titre: "frottis · les mêmes tiges intactes, pour comparer",
+    options: { baseHouppier: 0.35 },
+  },
+  {
+    scene: "",
+    especes: ["quercus_suber", "quercus_suber", "quercus_suber", "quercus_suber"],
+    hauteurM: 12,
+    titre: "liège · à vif, puis la rotation du moteur : 0, 3, 6 et 10 ans après la levée",
+    // La rotation du moteur est de dix ans (`ecorce.rotationAns`) : c'est elle
+    // qui règle l'échelle, pas un choix de planche.
+    options: { baseHouppier: 0.3, semainesDepuisLevee: [0, 3 * 52, 6 * 52, 10 * 52] },
+  },
+  { scene: "", especes: HAIE, hauteurM: 6, titre: "la haie · été" },
+  {
+    scene: "",
+    especes: HAIE,
+    hauteurM: 6,
+    titre: "la haie · nue (et ce qui reste : houx, arbousier, troène)",
+    options: { nu: true },
+  },
+  {
+    scene: "",
+    especes: HAIE,
+    hauteurM: 6,
+    titre: "la haie · sénescence (le fusain doit sauter aux yeux)",
+    options: { senescence: 1 },
+  },
+  {
+    scene: "",
+    especes: ["fagus_sylvatica", "betula_pendula", "pinus_sylvestris"],
+    hauteurM: 16,
+    titre: "trois sujets de près",
+    options: { echelle: 1 },
+  },
+  // Le banc de la PELOUSE : le critère est celui du retour — « avec une densité
+  // de 100 % on devrait voir une pelouse quand on zoome ». Trois scènes
+  // synthétiques, couverture forcée à 1, sans arbres pour les deux premières :
+  // on juge le tapis, pas ce qui pousse dessus.
+  //
+  // **La seconde moitié du critère — « là où elle sèche, une pelouse sèche » —
+  // n'est PAS montrée ici, et c'est volontaire.** La grandeur qui le dirait
+  // (`humiditeVecue`, l'humidité de surface lissée de `herbe.ts`) n'est pas
+  // dans l'instantané, et le rendu n'a pas à la fabriquer. Ce banc montre donc
+  // ce que le moteur donne : le FOIN sur pied, commandé par la biomasse. Un
+  // banc qui afficherait une pelouse grillée par un seuil inventé ferait
+  // croire le sujet réglé.
+  {
+    scene: "pelouse-s28",
+    titre: "pelouse · couverture 100 % · ×8",
+    facteur: 8,
+    centre: { x: 50, y: 50 },
+  },
+  {
+    scene: "pelouse-s28",
+    titre: "pelouse · couverture 100 % · ×24",
+    facteur: 24,
+    centre: { x: 50, y: 50 },
+  },
+  {
+    scene: "pelouse-seche-s28",
+    titre: "pelouse · couverture 100 %, FOIN sur pied · ×24",
+    facteur: 24,
+    centre: { x: 50, y: 50 },
+  },
+  {
+    scene: "pelouse-arbres-s28",
+    titre: "pelouse + arbres · l'ombre portée doit tomber DESSUS · ×8",
+    facteur: 8,
+    centre: { x: 50, y: 50 },
+  },
   { scene: "friche-s28", titre: "friche · parcelle entière · juillet" },
-  {
-    scene: "friche-s28",
-    titre: "sans hors-parcelle · ombres bornées au sol",
-    options: { decor: false },
-  },
-  {
-    scene: "friche-s28",
-    titre: "sans hors-parcelle · ombres NON bornées (le défaut signalé)",
-    options: { decor: false, ombresDebordantes: true },
-  },
+  { scene: "friche-s28", titre: "friche · sans les arbres", options: { arbres: false } },
   { scene: "friche-s28", titre: "friche · zoom ×6", facteur: 6, centre: { x: 50, y: 50 } },
   { scene: "friche-s28", titre: "friche · zoom ×16", facteur: 16, centre: { x: 50, y: 50 } },
+  { scene: "friche-s28", titre: "friche · zoom ×30", facteur: 30, centre: { x: 50, y: 50 } },
   { scene: "friche-s4", titre: "saison · janvier" },
   { scene: "friche-s17", titre: "saison · avril" },
+  // Semaines 13 et 24 : les fenêtres de floraison, et elles sont ÉTROITES —
+  // deux à trois semaines chacune, calées sur un seuil de degrés-jours. Les
+  // rater était facile : les quatre saisons habituelles (s4, s17, s28, s42) ne
+  // croisent aucune floraison de la friche, ce qui n'est pas un défaut mais la
+  // raison d'être de ces deux scènes-ci.
+  { scene: "friche-s13", titre: "floraison · mars · le prunellier sur bois nu" },
+  {
+    scene: "friche-s13",
+    titre: "floraison · mars · zoom ×10 : l'écume blanche des prunelliers",
+    facteur: 10,
+    centre: { x: 50, y: 50 },
+  },
+  { scene: "friche-s24", titre: "floraison · juin · les grappes du troène" },
   { scene: "friche-s28", titre: "saison · juillet" },
+  // Semaine 36 : la semaine de récolte du sureau et du noisetier (`recolteWeek`
+  // dans `especes.ts`). C'est la seule façon de voir le fruit sur le chemin
+  // RÉEL — sur la friche, 143 sureaux portent des kilos mûrs cette semaine-là,
+  // et le troène en est à mi-croissance.
+  { scene: "friche-s36", titre: "saison · septembre · la récolte du sureau" },
+  {
+    scene: "friche-s36",
+    titre: "septembre · zoom ×10 : les corymbes du sureau",
+    facteur: 10,
+    centre: { x: 50, y: 50 },
+  },
   { scene: "friche-s42", titre: "saison · octobre" },
   { scene: "mare-s28", titre: "mare · parcelle entière" },
   { scene: "mare-s28", titre: "mare · zoom ×8", facteur: 8, centre: { x: 60, y: 40 } },
-  { scene: "ruisseau-s28", titre: "ruisseau · zoom ×6", facteur: 6, centre: { x: 50, y: 12 } },
+  // Le bois couché, aux deux bouts de la transversalité. La simulation ne met
+  // pas côte à côte, la même semaine, un tronc en travers et un tronc dans le
+  // sens de la pente : le banc impose donc les deux valeurs que le moteur
+  // produirait, comme il impose une couverture d'herbe pleine.
+  {
+    scene: "bois-barre",
+    titre:
+      "bois couché · EN TRAVERS de la pente (barre l'eau : au-delà du seuil des 30° du moteur)",
+    facteur: 6,
+    centre: { x: 40, y: 34 },
+  },
+  {
+    scene: "bois-longe",
+    titre:
+      "bois couché · le long de la pente (transversalité 0,33 : sous le seuil, il fait gouttière)",
+    facteur: 6,
+    centre: { x: 40, y: 34 },
+  },
   { scene: "versant-s28", titre: "versant 12 % · parcelle entière" },
   { scene: "versant-s28", titre: "versant 12 % · zoom ×6", facteur: 6, centre: { x: 50, y: 50 } },
   { scene: "friche-s28", titre: "rotation · nord", orientation: 0 },
@@ -300,6 +966,18 @@ async function main(): Promise<void> {
   const filtre = demandees ? new Set(demandees.split(",")) : undefined;
   const cache = new Map<string, Scene>();
   for (const entree of PLANCHE) {
+    if (entree.especes) {
+      // Les planches d'essences ne sont pas des scènes : le filtre `?scenes=`
+      // les laisse passer quand il nomme « planches », et les saute sinon.
+      if (filtre && !filtre.has("planches")) continue;
+      if (etat) etat.textContent = `cuisson · ${entree.titre}…`;
+      vignette(
+        entree.titre,
+        planche(entree.especes, entree.hauteurM ?? 16, 1100, 760, entree.options ?? {}),
+      );
+      await new Promise((r) => setTimeout(r, 0));
+      continue;
+    }
     if (filtre && !filtre.has(entree.scene)) continue;
     if (etat) etat.textContent = `cuisson · ${entree.titre}…`;
     let scene = cache.get(entree.scene);

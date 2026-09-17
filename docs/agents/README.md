@@ -38,6 +38,26 @@ mesurées et relues.
 Les trois derniers ne routent pas, ils avertissent. Ils se cumulent avec les
 trois premiers.
 
+### Une demande d'un périmètre à l'autre porte DEUX labels
+
+`rendu` dit d'où vient le besoin ; il ne dit pas qui écrit le code. Quand le jeu
+a besoin d'une grandeur que seul `src/engine` peut donner, l'issue porte `rendu`
+**et** le label moteur qui route :
+
+- `moteur:maintenance` si le mécanisme existe déjà et qu'il suffit de
+  l'**exposer** — une grandeur que le moteur calcule mais ne met pas dans
+  l'instantané, une action qui s'applique mais ne se rapporte pas ;
+- `moteur:évolution` s'il faut **inventer** ce que le moteur ne sait pas faire.
+
+Sans le second label, la demande atterrit dans la file de celui qui l'a écrite.
+Ce n'est pas une hypothèse : **#86** et **#87** sont restées ouvertes et non
+assignées parce qu'elles ne portaient que `rendu`, alors que tout le travail
+était côté moteur. Les deux labels ne se contredisent pas — le premier dit
+pourquoi on le demande, le second dit qui le fait.
+
+La même règle vaut dans l'autre sens : un mécanisme du moteur qui ne se verra
+que si le jeu l'affiche porte son label moteur **et** `rendu`.
+
 ## Où en est le projet
 
 Le **moteur** est largement en avance sur ce que le jeu sait montrer : 109
@@ -66,9 +86,21 @@ chemin critique.** Un mécanisme de plus ne rapproche pas d'une version finie.
 
 ## Deux pièges de procédure, vérifiés à nos dépens
 
-**Le mot-clé de fermeture doit être dans le message de commit**, pas seulement
-dans le corps de la PR : le squash reprend le message du commit. L'issue #34 est
-restée ouverte après le merge de la PR qui la réglait.
+**Le mot-clé de fermeture doit être EN ANGLAIS.** GitHub ne reconnaît que
+`close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
+`resolves` / `resolved`. « Ferme #34 » ne ferme rien, où qu'on l'écrive.
+
+C'est la vraie cause de l'issue #34 restée ouverte après le merge de la PR qui
+la réglait — longtemps mise sur le compte du squash, à tort. Revérifié sur #80 :
+« Ferme #78, #83 et #98 » figurait à la fois dans le corps de la PR **et** dans
+le message du commit de squash, les trois issues sont restées ouvertes, et
+`closed_by_pull_requests` était vide. Écrire `Closes #78`, ou fermer à la main
+après la fusion.
+
+D'après la documentation GitHub — pas mesuré ici, faute d'avoir écrit un
+mot-clé anglais — un mot-clé valide est lu aussi bien dans le corps de la PR
+que dans un message de commit de la branche par défaut. Le squash n'est donc
+pas en cause.
 
 **Merger une base avec `--delete-branch` ferme les PR empilées dessus.** Arrivé
 deux fois (#24, #36). Repointer les filles d'abord : `gh pr edit <n> --base main`.

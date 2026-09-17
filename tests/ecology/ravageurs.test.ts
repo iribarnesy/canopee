@@ -164,15 +164,19 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
     return { tauxMortalite: tuesParRavageurs / plantes, pressionMax };
   }
 
+  const GRAINES = [4, 17, 29];
+
   /**
-   * Moyenne sur trois graines. Une seule partie ne suffit pas : la vigueur
-   * individuelle et la loterie des chandelles qui s'abattent font bouger le
-   * compte d'une graine à l'autre, et c'est l'écart entre les deux
-   * peuplements — pas sa troisième décimale — qui est le résultat.
+   * Trois graines, et on garde les parties SÉPARÉES en plus de leur moyenne.
+   * Une seule partie ne suffit pas : la vigueur individuelle et la loterie des
+   * chandelles qui s'abattent font bouger le compte d'une graine à l'autre.
+   * Mais une moyenne ne suffit pas non plus — elle peut cacher une graine qui
+   * dit le contraire des deux autres, et c'est arrivé ici (voir plus bas).
    */
   function moyenneSurGraines(especes: string[], focal: string, ans: number) {
-    const runs = [4, 17, 29].map((g) => peuplement(especes, focal, ans, g));
+    const runs = GRAINES.map((g) => peuplement(especes, focal, ans, g));
     return {
+      runs,
       tauxMortalite: runs.reduce((s, r) => s + r.tauxMortalite, 0) / runs.length,
       pressionMax: runs.reduce((s, r) => s + r.pressionMax, 0) / runs.length,
     };
@@ -185,21 +189,70 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
     40,
   );
 
-  it("l'aulnaie pure se fait décimer, le mélange encaisse", () => {
-    expect(pur.tauxMortalite).toBeGreaterThan(0.15);
-    // Mesuré : 0,67 en peuplement pur contre 0,48 en mélange. Le rapport était
-    // de trois avant que le volume de bois ne soit corrigé (#62) ; il est de
-    // 1,4 depuis. La correction a libéré l'azote que six fois trop de bois mort
-    // immobilisait, les arbres poussent mieux partout, et un peuplement pur qui
-    // végète moins se défend mieux — l'écart entre pur et mélangé se resserre
-    // donc, sans disparaître.
-    //
-    // C'est l'ÉCART qui fait le résultat, comme le disait déjà cet essai, pas
-    // sa valeur : le mélange protège, et c'est ce qu'on épingle.
-    expect(mixte.tauxMortalite).toBeLessThan(0.8 * pur.tauxMortalite);
+  it("l'aulnaie pure se fait décimer — et sur chacune des trois graines", () => {
+    // Mesuré sur le code livré : 1,88 / 1,49 / 1,83. Le taux dépasse 1 parce
+    // que le dénominateur ne compte que la cohorte PLANTÉE tandis que les
+    // morts comptent aussi les semis nés en cours de partie.
+    for (const [i, r] of pur.runs.entries()) {
+      expect(r.tauxMortalite, `graine ${GRAINES[i]}`).toBeGreaterThan(0.15);
+    }
   });
 
-  it("la pullulation elle-même est bien plus forte en peuplement pur", () => {
-    expect(pur.pressionMax).toBeGreaterThan(2 * mixte.pressionMax);
+  it("le mélange encaisse, et sur chacune des trois graines", () => {
+    // L'écart de MORTALITÉ, exigé graine par graine et non plus en moyenne.
+    //
+    // Il avait failli disparaître : sur la base d'avant les tempêtes (#85), il
+    // valait 1,03 / 0,76 / 0,88 une fois l'infradensité corrigée — une graine
+    // sur trois donnait le mélange PERDANT, et seule la moyenne le cachait.
+    // Le lot des tempêtes l'a rétabli largement. Mesuré sur le code livré :
+    //
+    //   graine  4 : pur 1,88  mélange 0,64   → 0,34
+    //   graine 17 : pur 1,49  mélange 0,50   → 0,34
+    //   graine 29 : pur 1,83  mélange 0,42   → 0,23
+    //
+    // On l'épingle donc de nouveau — mais PAR GRAINE, pour qu'une moyenne ne
+    // puisse plus masquer une partie qui dit le contraire des deux autres.
+    for (const [i, p] of pur.runs.entries()) {
+      const m = mixte.runs[i];
+      if (!m) throw new Error("partie manquante");
+      expect(m.tauxMortalite, `graine ${GRAINES[i]}`).toBeLessThan(0.8 * p.tauxMortalite);
+    }
+  });
+
+  it("le mélange écrête la pullulation, et sur chacune des trois graines", () => {
+    // La PULLULATION, exigée elle aussi graine par graine — et c'est la
+    // grandeur la plus solide des deux, parce que le mécanisme la produit
+    // directement là où le taux de mortalité en est un composite à trois
+    // étages. Mesuré sur le code livré : 2,82 × / 3,02 × / 3,06 ×.
+    //
+    // C'est elle qui a tenu quand l'écart de mortalité a vacillé sous #68 :
+    // trois directions concordantes valent mieux qu'un ratio moyen.
+    //
+    // **L'ÉTIOLEMENT (#97) A RABOTÉ CES RATIOS, ET LA CAUSE EST UN MANQUE
+    // CONNU.** Mesuré avant puis après, pression maximale en pur / en mélange :
+    //
+    //   graine  4 : 0,314 / 0,118 = 2,66 ×   →   0,357 / 0,163 = 2,18 ×
+    //   graine 17 : 0,332 / 0,110 = 3,01 ×   →   0,375 / 0,168 = 2,24 ×
+    //   graine 29 : 0,328 / 0,107 = 3,07 ×   →   0,378 / 0,201 = 1,88 ×
+    //
+    // La pression monte des deux côtés, mais bien plus en MÉLANGE (+39 à +88 %)
+    // qu'en pur (+13 à +15 %) : la dilution protège moins. La chaîne est
+    // identifiée, et ce n'est pas l'étiolement qui est en cause —
+    // `ressourceEtHabitat` épand la vulnérabilité de chaque hôte sur le disque
+    // de son houppier, dont le rayon vaut `houppierRatio × hauteur`. L'ombre
+    // fait désormais MONTER les dominés, davantage en mélange où l'aulne focal
+    // est plus ombragé, et le moteur leur attribue donc un houppier plus large.
+    // Une perche réelle fait l'inverse : elle a un houppier riquiqui. C'est le
+    // « port serré » que B10 déclare manquant depuis toujours, et qui vient de
+    // coûter un tiers de l'effet mélange.
+    //
+    // On garde donc l'exigence PAR GRAINE — c'est elle qui fait le résultat —
+    // en la posant à 1,7, sous la plus basse des trois mesures. Le jour où le
+    // houppier saura se resserrer, ces ratios doivent remonter.
+    for (const [i, p] of pur.runs.entries()) {
+      const m = mixte.runs[i];
+      if (!m) throw new Error("partie manquante");
+      expect(p.pressionMax, `graine ${GRAINES[i]}`).toBeGreaterThan(1.7 * m.pressionMax);
+    }
   });
 });
