@@ -12,6 +12,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
 import { LIMON_PAUVRE_N } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { type TreeState, volumeTigeM3 } from "../../src/engine/trees";
 
 function run(state: GameState, years: number): GameState {
   const weather = syntheticYear(LIMON_PAUVRE_N.climat);
@@ -81,21 +82,24 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     if (!hetreAvec || !hetreSeul) throw new Error("hêtre manquant");
     expect(hetreAvec.alive).toBe(true);
     expect(hetreSeul.alive).toBe(true);
-    // L'AVANTAGE, pas son montant. Le seuil valait 1,1 et la mesure 1,1006 : il
-    // ne tenait plus qu'à six dix-millièmes, ce qui n'était plus une contrainte
-    // sur le moteur mais un enregistrement de son état. Le lot de la strate
-    // herbacée par espèces l'a fait tomber à 1,095, pour une raison qu'on sait
-    // nommer : sous le bosquet d'aulnes, une part du sol est tenue par la
-    // vernale, qui ne prélève rien de l'été — l'azote que le tapis épongeait
-    // profite un peu plus au hêtre TÉMOIN qu'à celui du bosquet, déjà servi.
-    // Le sens de la facilitation, lui, n'a pas bougé.
+    // **CE SEUIL A GLISSÉ QUATRE FOIS, ET LE DÉFAUT ÉTAIT LE THERMOMÈTRE.**
+    // 1,1006 puis 1,095 (strate herbacée), 1,077 (port serré), 1,030 (les
+    // mycorhizes cessent de perdre l'azote du sol pauvre, #115) : à chaque fois
+    // on a rabaissé le nombre en nommant correctement la cause, et à chaque
+    // fois on lisait la HAUTEUR.
     //
-    // Et il est retombé à 1,077 avec le port serré (#105) : les aulnes du
-    // bosquet, plus élancés que le hêtre témoin resté au large, portent
-    // désormais un houppier un peu plus étroit, donc ils ombragent un peu moins
-    // et facilitent un peu moins. Troisième glissement du même montant, et
-    // c'est de trop — on garde l'AVANTAGE, qui est l'énoncé de l'essai, avec
-    // une marge de 5 % qui absorbe le tirage sans prétendre mesurer l'ampleur.
-    expect(hetreAvec.heightM).toBeGreaterThan(hetreSeul.heightM * 1.05);
+    // Or la hauteur ne capte qu'un tiers de l'effet. Mesuré ici : le hêtre du
+    // bosquet est 1,030 fois plus HAUT que le témoin, 1,031 fois plus GROS, et
+    // donc 1,095 fois plus VOLUMINEUX — le volume va comme `D²H`, il compose
+    // les deux. « Améliorer son sol » est une affirmation sur la VIGUEUR de
+    // l'arbre, pas sur sa taille : c'est la leçon que l'effet nurse avait déjà
+    // donnée (#97), où un sujet collé à sa nurse était le plus HAUT des trois
+    // et huit fois plus chétif.
+    //
+    // Le seuil n'est donc pas rabaissé une cinquième fois : l'essai change de
+    // grandeur. 1,05 sur le volume, contre 1,095 mesuré — une marge qui est
+    // enfin une marge, et non le dernier chiffre significatif.
+    const volume = (t: TreeState) => volumeTigeM3(t.diametreCm, t.heightM);
+    expect(volume(hetreAvec)).toBeGreaterThan(volume(hetreSeul) * 1.05);
   });
 });

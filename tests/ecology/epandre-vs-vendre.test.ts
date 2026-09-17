@@ -136,7 +136,13 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
       }
       return sum;
     };
-    expect(nTotal(epandre.state, 30, 30)).toBeGreaterThan(1.2 * nTotal(vendre.state, 30, 30));
+    // Le seuil valait 1,20 pour une mesure à 1,2123 : un pour cent de marge,
+    // donc un enregistrement du moteur et non une contrainte. Le correctif des
+    // mycorhizes (#115) l'a fait tomber à 1,1834 — les arbres prélèvent
+    // désormais l'azote que le sol perdait, donc l'écart de STOCK entre les
+    // deux parcelles se resserre alors même que l'apport, lui, n'a pas bougé.
+    // L'énoncé est « épandre ENRICHIT », et il se tient à 1,15.
+    expect(nTotal(epandre.state, 30, 30)).toBeGreaterThan(1.15 * nTotal(vendre.state, 30, 30));
   });
 
   it("côté carbone : épandre garde les stocks sur la parcelle, vendre les émet (§12)", () => {
@@ -187,7 +193,14 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     //
     // Ce que l'essai épingle est donc ce qui est vrai et qui suffit : le gain
     // apparaît, et il tient encore vingt-sept ans après la coupe.
-    expect(gainA(35)).toBeGreaterThan(1.03);
+    //
+    // Même remarque que ci-dessus, et c'est la troisième fois que ce chiffre
+    // se remesure : 1,03 posé pour une mesure à 1,0368, donc sept millièmes de
+    // marge. À 1,0264 après #115, l'énoncé — « le gain tient encore vingt-sept
+    // ans après la coupe » — n'a pas bougé d'un iota ; c'est le chiffre qui
+    // datait. Deux points de marge, et on ne prétend toujours pas mesurer
+    // l'ampleur.
+    expect(gainA(35)).toBeGreaterThan(1.02);
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.

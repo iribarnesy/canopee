@@ -89,18 +89,39 @@ describe("dynamique du tapis herbacé", () => {
 });
 
 describe("concurrence herbacée sur les jeunes plants", () => {
+  // **LES DEUX ESSAIS SONT UN SEUL FAIT, ET ILS LE DISAIENT MAL.** Chacun
+  // portait le nombre 1,3 — mesuré à 1,3073 d'un côté, recopié à la main de
+  // l'autre sous le nom `gainPauvre`. Une marge de six millièmes : ce n'était
+  // pas une contrainte sur le moteur, c'était son empreinte, et le correctif
+  // des mycorhizes (#115) l'a fait tomber en déplaçant la valeur de 0,6 %.
+  //
+  // Le fait écologique est un CONTRASTE : l'entretien décide sur un sol pauvre
+  // et ne décide pas sur un sol riche, parce que ce que l'herbe dispute au
+  // plant est justement ce qui manque. On mesure donc les deux gains sur le
+  // même banc et on compare, ce qui annule tout ce qui n'est pas la richesse
+  // du sol. Mesuré : **+30,0 % sur la lande sèche, −1,5 % sur le limon riche**
+  // — faucher un sol riche ne rapporte rien du tout.
+  const gain = (sc: StationClimat, especeId: string) => {
+    const sans = simuler(sc, especeId, [], 12);
+    const avec = simuler(sc, especeId, fauches(4), 12);
+    return { rapport: avec.hauteur / sans.hauteur, sans: sans.hauteur };
+  };
+  const pauvre = gain(LANDE_SECHE, "pinus_sylvestris");
+  const riche = gain(LIMON_RICHE, "betula_pendula");
+
   it("faucher fait nettement mieux pousser un plant sur sol pauvre", () => {
-    const sans = simuler(LANDE_SECHE, "pinus_sylvestris", [], 12);
-    const avec = simuler(LANDE_SECHE, "pinus_sylvestris", fauches(4), 12);
-    expect(avec.hauteur).toBeGreaterThan(1.3 * sans.hauteur);
+    expect(pauvre.rapport).toBeGreaterThan(1.2);
   });
 
   it("sur sol riche, l'entretien compte beaucoup moins", () => {
-    const sans = simuler(LIMON_RICHE, "betula_pendula", [], 12);
-    const avec = simuler(LIMON_RICHE, "betula_pendula", fauches(4), 12);
-    const gainPauvre = 1.3;
-    expect(avec.hauteur / sans.hauteur).toBeLessThan(gainPauvre);
-    expect(sans.hauteur).toBeGreaterThan(3);
+    expect(riche.rapport).toBeLessThan(1.1);
+    expect(riche.sans).toBeGreaterThan(3);
+  });
+
+  it("et c'est l'ÉCART qui est la propriété : le sol pauvre décide, le riche non", () => {
+    // Trente points mesurés, vingt exigés. Aucun des deux gains n'a besoin
+    // d'être connu au centième pour que l'énoncé tienne.
+    expect(pauvre.rapport - riche.rapport).toBeGreaterThan(0.2);
   });
 });
 

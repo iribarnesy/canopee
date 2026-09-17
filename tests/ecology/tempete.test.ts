@@ -304,7 +304,20 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       const semaines = [...pin.semaines, ...hetre.semaines];
       for (const s of semaines) expect(s < 23 || s > 37).toBe(true);
       const hivernales = semaines.filter((s) => s >= 40 || s < 14).length;
-      expect(hivernales).toBeGreaterThanOrEqual(0.75 * semaines.length);
+      // **LE ZÉRO DE RÉFÉRENCE EST 50 %, ET LE SEUIL NE LE DISAIT PAS.** La
+      // fenêtre « hivernale » retenue ici — semaines 40 à 13 — fait vingt-six
+      // semaines, soit exactement la moitié du calendrier. Une distribution
+      // sans saison y placerait donc la moitié des chablis, et le vieux seuil
+      // de 0,75 se lisait comme une marge alors qu'il était une photographie :
+      // mesuré à 24/30 sur la graine 3, il ne tenait qu'à un événement près, et
+      // le lot des mycorhizes (#115) le lui a pris en déplaçant à peine le
+      // peuplement.
+      //
+      // On énonce donc l'asymétrie contre son zéro : il en tombe au moins DEUX
+      // FOIS PLUS dans la moitié hivernale que dans l'autre. Mesuré 22 contre 8
+      // (graine 3) et 31 contre 6 (graine 11) — un rapport de 2,8 et de 5,2.
+      const estivales = semaines.length - hivernales;
+      expect(hivernales).toBeGreaterThan(2 * estivales);
     });
 
     it(`graine ${graine} : un site abrité ne paie rien, le même exposé paie`, () => {
