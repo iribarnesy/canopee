@@ -20,6 +20,7 @@ import type {
   IncendieResult,
   MortDeLaSemaine,
   NaissanceDeLaSemaine,
+  TempeteResult,
 } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 import type { DecorBordures } from "../render/couches/decor";
@@ -153,6 +154,27 @@ export interface SnapshotTree {
    * chandelle NOIRE de la GRISE.
    */
   brulEeSemaine?: number;
+  /**
+   * Semaine où une tempête l'a couché ; absent = pas de chablis.
+   *
+   * SANS ELLE, L'INSTANTANÉ MENT (#87). Un chablis reste dans `state.trees`
+   * l'année où son bois est encore récupérable, mort mais non purgé — et le
+   * rendu le recevait avec `chandelle: true`, c'est-à-dire annoncé comme un
+   * tronc mort resté DEBOUT là où le moteur a un arbre par terre. Ce n'était
+   * pas une donnée manquante, c'était une donnée fausse.
+   */
+  renverseSemaine?: number;
+  /**
+   * Direction dans laquelle le tronc est parti, radians ; absent = pas de
+   * chablis.
+   *
+   * Tous les arbres d'une même rafale la partagent, puisqu'elle est le cap du
+   * vent de la semaine : un bouquet de troncs couchés dans le même sens est la
+   * signature d'une tempête sur le terrain, et elle se lit d'un coup d'œil sur
+   * la carte. Elle ne se déduit de rien — la pente orienterait une chandelle,
+   * pas un chablis (`boisMort.ts`).
+   */
+  chuteRad?: number;
   /** ce qui a eu raison de l'arbre : onze causes, onze animations de mort */
   causeMort?: CauseMort;
   /**
@@ -258,6 +280,32 @@ export interface Snapshot {
    */
   soilHerbeHumidite: Float32Array;
   /**
+   * Emprise de CHAQUE espèce herbacée, par cellule — une grille par espèce,
+   * dans l'ordre de `HERBACEES` (herbacees.ts), en 0-255 pour une emprise de
+   * 0 à 1. `herbesIds` donne la correspondance.
+   *
+   * POURQUOI LE MÉLANGE ET NON LA DOMINANTE (#86). Le rendu lisait le seuil
+   * d'eau chez le dactyle pour toutes les cellules, faute de savoir qui les
+   * tient — exact tant que le tapis était un dactyle qui s'ignorait, faux dès
+   * qu'autre chose pousse. L'envoi d'un simple indice d'espèce dominante était
+   * la réponse évidente, et la mesure la refuse : sur limon riche et sur
+   * friche, la première espèce ne tient qu'une médiane de 0,88 à 0,92 de sa
+   * cellule, et surtout SON IDENTITÉ BASCULE d'avril à juillet sur près de
+   * quarante pour cent des cellules — le dactyle régresse à la sécheresse
+   * pendant que l'anémone, dormante, ne perd rien. Un indice unique ferait donc
+   * sauter la teinte ET le seuil (0,35 → 0,50) d'une saison à l'autre, alors
+   * que le mélange, lui, ne bouge presque pas. Sur la lande sèche la question
+   * ne se pose pas : la molinie tient 100 % de chaque cellule.
+   *
+   * Un octet par espèce et par cellule, et non un flottant : le rendu en tire
+   * une teinte et un seuil pondéré, où 1/255 est très au-delà du nécessaire.
+   * Ça coûte le tiers d'un `Float32Array`, ce qui compte puisque le nombre
+   * d'espèces grandira avec l'atlas.
+   */
+  soilHerbeEmprises: Uint8Array[];
+  /** les identifiants d'espèce, dans l'ordre de `soilHerbeEmprises`. */
+  herbesIds: readonly string[];
+  /**
    * Population de ravageurs par cellule ∈ [0,1] (ravageurs.ts). Seule la
    * moyenne voyageait (`TickFluxes.ravageurMoyen`), et une moyenne ne se
    * dessine pas : la défoliation se lit par TACHES, et c'est là que les
@@ -335,6 +383,16 @@ export interface Snapshot {
   chutes: ChuteDeChandelle[];
   /** l'incendie de la semaine, avec son front, s'il y en a eu un (feu.ts) */
   incendie?: IncendieResult;
+  /**
+   * La tempête de la semaine, s'il y en a eu une (tempete.ts) — la rafale, le
+   * cap du vent, et les tiges qu'elle a couchées avec leur hauteur.
+   *
+   * Elle voyage pour la même raison que l'incendie : sans l'événement, le rendu
+   * ne voit qu'un état changé entre deux images et n'a pas de MOMENT où jouer
+   * l'acte. Le moteur la calculait déjà en entier ; elle s'arrêtait au journal
+   * de la semaine (#87).
+   */
+  tempete?: TempeteResult;
 }
 
 export interface StationInfo {

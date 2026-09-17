@@ -52,6 +52,7 @@ import type {
   IncendieResult,
   MortDeLaSemaine,
   NaissanceDeLaSemaine,
+  TempeteResult,
 } from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
@@ -97,6 +98,8 @@ let pendingFranchissements: FranchissementDeStade[] = [];
 let pendingGestes: GesteVisible[] = [];
 let pendingChutes: ChuteDeChandelle[] = [];
 let pendingIncendie: IncendieResult | undefined;
+/** Même traitement que l'incendie : l'événement attend l'instantané (#87). */
+let pendingTempete: TempeteResult | undefined;
 // Grandeurs du dernier tick : elles ne sont pas dans l'état, et sans elles le
 // rendu n'a ni crue, ni sous-bois sombre (tick.ts).
 let lastDebordement: Float32Array | undefined;
@@ -444,6 +447,7 @@ function postSnapshot() {
     gestes: pendingGestes,
     chutes: pendingChutes,
     incendie: pendingIncendie,
+    tempete: pendingTempete,
   });
   pendingRefusals = [];
   pendingEvents = [];
@@ -455,6 +459,7 @@ function postSnapshot() {
   // Les tampons du feu partent avec l'instantané : on ne les garde pas pour le
   // suivant, sinon la même flambée se rejouerait à l'écran.
   pendingIncendie = undefined;
+  pendingTempete = undefined;
   // Les grandeurs du tick, elles, se GARDENT : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
   // joueur ne doit pas voir la crue disparaître entre deux clics.
@@ -487,6 +492,9 @@ function stepWeeks(n: number) {
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
     if (ticked.incendie) pendingIncendie = ticked.incendie;
+    // Deux tempêtes dans un même lot d'instantané : on garde la dernière, comme
+    // pour l'incendie — c'est elle dont les troncs sont encore au sol.
+    if (ticked.tempete) pendingTempete = ticked.tempete;
     // Les aides publiques, une fois l'an. On raconte surtout le cas où elles
     // NE tombent PAS : perdre l'éligibilité en plantant un arbre de trop est
     // la décision que ce mécanisme met sur la table (aides.ts).
@@ -775,6 +783,7 @@ function init(
   pendingGestes = [];
   pendingChutes = [];
   pendingIncendie = undefined;
+  pendingTempete = undefined;
   lastFluxes = undefined;
   lastDebordement = undefined;
   lastLumiereAuSol = undefined;
@@ -855,6 +864,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       pendingGestes = [];
       pendingChutes = [];
       pendingIncendie = undefined;
+      pendingTempete = undefined;
       weeksPerSecond = 0;
       post({ type: "ready", station: stationInfo() });
       postSnapshot();
