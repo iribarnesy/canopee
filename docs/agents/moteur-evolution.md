@@ -61,7 +61,74 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'étiolement, #97)
+## Ce que le dernier lot a appris (le budget carbone, #96)
+
+**Construire le TÉMOIN, et pas seulement la mesure.** Le résultat du lot n'est
+pas « la hêtraie tombe à 415 tiges/ha », c'est l'écart entre 415 et les 2 231 du
+même banc avec la seule constante du mécanisme mise à zéro. Sans ce témoin, on ne
+sait pas si le mécanisme fait le travail ou si c'est le reste du moteur. Ici il a
+tranché une vraie question : les ravageurs signant 293 morts sur 295, on pouvait
+croire que le budget carbone ne faisait qu'accompagner une mortalité qui existait
+déjà. Le témoin montre qu'elle n'existait pas — deux chablis, et rien d'autre.
+**Neutraliser une constante est presque toujours possible, et ça coûte une
+mesure de plus.**
+
+**Valider sur ce qui ne dépend PAS de la constante qu'on ne sait pas ancrer.**
+Le niveau de densité maximale (l'indice SDI) est un chiffre qu'on trouve mal, et
+s'y comparer aurait fait reposer la validation dessus. La PENTE de
+l'auto-éclaircie, elle, est le vrai contenu de la loi de Reineke et ne dépend pas
+du niveau : mesurée à −1,48 et −1,52 contre −1,605, donc dans la gamme des pentes
+relevées essence par essence. **Chercher, dans la loi de référence, la partie qui
+survit à l'ignorance de ses constantes.**
+
+**Et ne pas s'attacher à un chiffre qu'une correction peut emporter.** Une
+version intermédiaire donnait −1,606 et −1,591 — une coïncidence à trois
+décimales avec la valeur canonique, que j'avais écrite partout, jusque dans un
+message de commit. La correction de la cicatrisation hivernale, faite pour une
+tout autre raison, l'a ramenée à −1,48. Le résultat n'a pas changé de nature, mon
+récit de ce résultat si. **Refaire la mesure après le DERNIER correctif, jamais
+avant.**
+
+**Une échelle physique vaut mieux qu'une normalisation par espèce.** La charge
+d'entretien suit la hauteur RÉELLE de l'individu (modèle du tube), pas sa hauteur
+rapportée au maximum de son essence. La normalisation par espèce, essayée
+d'abord, disait qu'une callune adulte dépense autant qu'un hêtre adulte — c'est
+l'inverse du fait qu'on veut. **Quand une grandeur se rapporte à « un adulte »,
+se demander adulte DE QUOI.**
+
+**L'attribution n'est pas la cause, et le moteur ne les distingue pas.**
+`causeMort` retient qui a franchi le seuil, pas qui a rempli le compteur : 293
+morts de famine sortent étiquetées « ravageurs ». Physiquement juste comme coup
+final, faux comme rapport au joueur. Issue de maintenance ouverte. **Un mécanisme
+qui tue LENTEMENT ne récoltera jamais l'étiquette : la vérifier explicitement.**
+
+**Le zéro dur, cinquième occurrence.** La cicatrisation conditionnée à
+« puisement nul » basculait de 0,25/semaine à rien pour un centième de lumière.
+Remplacée par une rampe. Mais la règle s'affine encore : le lot porte aussi un
+zéro dur **volontaire** — le résidu de diamètre nul de #97 — et ce qui distingue
+les deux est la PORTE DE SORTIE. Le zéro du cerne manquant est borné par
+l'enveloppe de flambage ; celui de la cicatrisation ne l'était pas.
+
+**La saison commande le DÉBIT, pas la position du budget.** Avoir mis le
+puisement à zéro hors saison rendait la cicatrisation à plein régime six mois par
+an — assez pour effacer chaque hiver la famine de l'été, sous un couvert CADUC
+qui rouvre la lumière en janvier. Un semis de pin sous hêtraie survivait
+indéfiniment, et c'est un essai existant qui l'a attrapé, pas une relecture.
+**Un arbre dormant ne répare pas : la réparation se paie en carbone comme le
+reste.**
+
+**Et le thermomètre, pour la troisième fois de suite.** Deux essais de plus ont
+dû changer de grandeur sans changer de conclusion — le réchauffement mesuré sur
+la pullulation au lieu des morts, le frêne comparé au sol nu au lieu de son point
+de départ. Ce n'est plus un accident, c'est une étape : **après un lot qui
+change qui meurt, relire tous les essais qui COMPTENT des morts.**
+
+**Ne pas modifier le moteur pendant qu'une suite tourne.** J'ai neutralisé une
+constante pour un témoin alors que la suite complète était en cours : son
+résultat était sans valeur et a dû être refait. Coût : une demi-heure. Copier le
+fichier, ou attendre.
+
+## Ce qu'un lot plus ancien a appris (l'étiolement, #97)
 
 **Chercher la GARANTIE D'IDENTITÉ avant d'écrire le mécanisme.** Le partage
 hauteur/diamètre a été construit pour redonner l'ancien calcul, au dernier
@@ -294,20 +361,17 @@ montre — un gradient monotone sur trois couverts — et non ce qu'on espérait
 
 ## File d'attente
 
-**#96 — la mort par bilan carbone négatif, et c'est le plus gros gain
-disponible.** Rien ne meurt de manquer de lumière : sur une cohorte de pins
-suivie cent vingt ans, l'ombre tue 4 à 7 tiges quand les ravageurs en prennent
-205 à 244. Et le hêtre ne meurt JAMAIS d'ombre — 361 plantés, 361 vivants à cent
-vingt ans, soit 2 256 tiges/ha quand le réel en porte 200 à 300 — parce que son
-seuil de stress (0,0090) passe sous le plancher de lumière du moteur (0,0111).
-L'issue démontre que ce n'est pas une calibration à retoucher : un seuil
-INSTANTANÉ ne peut pas représenter un épuisement qui prend des années. Deux
-pièges y sont écrits : ne pas EMPILER cette mortalité sur celle des ravageurs
-(ce sont des risques concurrents), et caler sur une courbe de densité de
-peuplement équienne, pas sur un seuil choisi pour que la hêtraie tombe à 300.
-**#97 est son préalable et il est fait** : une tige s'étiole avant de s'épuiser,
-et la calibration du budget carbone se fera donc sur un peuplement dont la forme
-est enfin juste.
+**Ce qui reste de #96 — l'attribution de la cause de mort (issue #103).** Le
+mécanisme est là et F6 est tombé, mais 293 morts de famine sur 295 sortent
+étiquetées « ravageurs » : `causeMort` retient qui franchit le seuil, pas qui
+remplit le compteur. C'est de la maintenance, et c'est un défaut ANTÉRIEUR au
+lot — il n'était simplement pas visible tant que rien ne tuait lentement. Il
+compte pour le jeu plus que pour le moteur : le journal envoie le joueur vers un
+traitement sanitaire là où il fallait éclaircir.
+
+Et B6 reste 🟡 : ce que l'ombrage latéral produit est désormais juste, mais le
+poids 0,4 des codominants qui le dose est toujours posé à la main, et il gouverne
+aussi la succession.
 
 **Ce qui reste de #71 — la pompe à bases (C15, ❌).** Le pool de bases est de
 SURFACE, comme ceux de N, P et K. Le moteur dit donc qu'un frêne entretient son

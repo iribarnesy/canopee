@@ -159,12 +159,30 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
   });
 
   it("un frêne entretient le sien, et la différence est l'essence seule", () => {
-    // Même station, même graine, même météo : seule la fiche change. Relevé sur
-    // cinquante ans : hêtre 7,00 → 6,77, frêne 7,00 → 7,14.
+    // Même station, même graine, même météo : seule la fiche change.
+    //
+    // **La comparaison se fait contre le SOL NU, et c'est une correction.**
+    // L'essai lisait « le frêne remonte son pH au-dessus de son point de
+    // départ », ce qui mêlait deux choses : l'effet de la litière, qu'il visait,
+    // et la quantité de biomasse que la parcelle porte, qu'il ne contrôlait pas.
+    // Le budget carbone (#96) a séparé les deux — le frêne est héliophile, sa
+    // régénération ne passe plus sous couvert, la parcelle est passée de 35 à 11
+    // recrues et sa litière cumulée de 15 200 à 7 000 eq/ha. C'est
+    // écologiquement juste (le frêne est une essence de trouée) et ça suffit à
+    // faire passer le pH du frêne sous son point de départ.
+    //
+    // Le témoin manquait : cette station s'acidifie TOUTE SEULE, 7,00 → 6,87
+    // sans un arbre. Comparée à lui, la conclusion est intacte et même plus
+    // nette qu'avant — frêne 6,94 au-dessus du sol nu, hêtre 6,75 en dessous.
+    // C'est bien la litière de l'essence qu'on mesure, et elle seule.
     const hetre = parcelle(LIMON_RICHE, "fagus_sylvatica", 50);
     const frene = parcelle(LIMON_RICHE, "fraxinus_excelsior", 50);
-    expect(hetre.ph).toBeLessThan(hetre.ph0);
-    expect(frene.ph).toBeGreaterThan(frene.ph0);
+    const nu = parcelle(LIMON_RICHE, null, 50);
+    expect(hetre.ph).toBeLessThan(nu.ph);
+    expect(frene.ph).toBeGreaterThan(nu.ph);
+    // Et la dérive de la station elle-même va vers le bas : sans arbre, ce
+    // limon perd déjà des bases.
+    expect(nu.ph).toBeLessThan(nu.ph0);
   });
 
   it("la dérive se compte en DIXIÈMES sur une vie de forêt, pas en unités", () => {
