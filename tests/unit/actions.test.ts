@@ -241,6 +241,82 @@ describe("ce que l'action rapporte au rendu", () => {
     expect(r.gestes).toEqual([]);
     expect(r.refusals).toHaveLength(1);
   });
+
+  /**
+   * LES TROIS GESTES QUI NE SE DISAIENT PAS (#100). `planter`, `recolter` et
+   * `leverEcorce` s'appliquaient sans rien rapporter : le journal de la semaine
+   * les taisait et le rendu n'avait aucun événement où accrocher une
+   * animation. Un état n'y suppléait pas, et chacun pour une raison propre —
+   * des `fruitsKg` qui tombent à zéro ne disent pas si c'est une récolte, une
+   * chute ou un avortement ; `derniereLeveeSemaine` est une durée, donc un
+   * arbre démasclé il y a dix ans porte la même marque que celui qu'on
+   * démascle à l'instant ; et un plant n'est pas une naissance.
+   */
+  it("la plantation nomme les plants réellement posés", () => {
+    let state = createGameState(STATION, rngStateFromSeed(4));
+    state = plantAt(state, "fraxinus_excelsior", 10, 10, 9);
+    const r = applyAction(state, {
+      type: "planter",
+      week: 0,
+      especeId: "quercus_pubescens",
+      // La deuxième position est à moins d'un mètre du frêne déjà là : elle est
+      // refusée, et elle ne doit donc PAS s'animer. La troisième est hors
+      // parcelle. Un geste qui annoncerait trois plants en poserait un de trop.
+      positions: [
+        { x: 30, y: 30 },
+        { x: 10.5, y: 10 },
+        { x: -5, y: 10 },
+      ],
+    });
+    expect(idsDe(r, "planter")).toHaveLength(1);
+    expect(r.refusals).toHaveLength(2);
+    const pose = r.state.trees.find((t) => t.id === idsDe(r, "planter")[0]);
+    expect(pose?.especeId).toBe("quercus_pubescens");
+    expect(pose?.x).toBe(30);
+  });
+
+  it("la récolte dit quels arbres, et combien de fruits sont partis", () => {
+    let state = createGameState(STATION, rngStateFromSeed(4));
+    state = plantAt(state, "juglans_regia", 10, 10, 12);
+    state = plantAt(state, "juglans_regia", 20, 10, 12);
+    // Des noix sur le premier seulement : le second n'a rien à donner et ne
+    // doit pas figurer au geste.
+    state = {
+      ...state,
+      trees: state.trees.map((t) => (t.id === 1 ? { ...t, fruitsKg: 12 } : t)),
+    };
+    const r = applyAction(state, { type: "recolter", week: 40, treeIds: [1, 2] });
+    const geste = (r.gestes ?? []).filter(estGesteSurArbres).find((g) => g.type === "recolter");
+    expect(geste?.ids).toEqual([1]);
+    // La MASSE, et pas seulement l'identifiant : sans elle le rendu sait que
+    // quelque chose est parti, pas combien en faire partir.
+    expect(geste?.masseKg).toEqual([12]);
+    expect(r.state.trees.find((t) => t.id === 1)?.fruitsKg).toBe(0);
+  });
+
+  it("le démasclage se distingue de la marque qu'il laisse", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "quercus_suber", 20, 20, 10);
+    state = { ...state, trees: state.trees.map((t) => ({ ...t, ageWeeks: 30 * 52 })) };
+    const premier = applyAction(state, { type: "leverEcorce", week: 30 * 52, treeIds: [1] });
+    const geste = (premier.gestes ?? [])
+      .filter(estGesteSurArbres)
+      .find((g) => g.type === "leverEcorce");
+    expect(geste?.ids).toEqual([1]);
+    expect(geste?.masseKg?.[0]).toBeGreaterThan(0);
+
+    // ET C'EST TOUT L'OBJET : trois ans plus tard l'arbre porte toujours la
+    // marque (`derniereLeveeSemaine` est renseignée), mais le geste n'a pas
+    // lieu — il est refusé. Une durée ne sait pas dire « à l'instant ».
+    const tropTot = applyAction(premier.state, {
+      type: "leverEcorce",
+      week: 33 * 52,
+      treeIds: [1],
+    });
+    expect(premier.state.trees.find((t) => t.id === 1)?.derniereLeveeSemaine).toBe(30 * 52);
+    expect(tropTot.gestes).toEqual([]);
+    expect(tropTot.refusals).toHaveLength(1);
+  });
 });
 
 /**

@@ -220,23 +220,28 @@ export function facteurElancement(hauteurM: number, diametreCm: number): number 
  * et c'est mesurable : au premier jet, une profondeur absolue couchait des
  * semis et épargnait les dominants, soit l'exact inverse d'une tempête.
  *
- * Quatre pour cent donnent un ancrage complet. Le premier jet demandait six, et
- * **six était calé sur un échantillon qui n'en était pas un** : des hêtraies et
- * des aulnaies de quarante ans sur la série météo de Limon-riche, où l'été sec
- * force les racines vers le bas (0,054 à 0,073). Le même hêtre POUSSÉ pendant
- * quatre-vingt-dix ans sur un site jamais sec tient 0,019 à 0,035 — la
- * plasticité racinaire fait exactement ce qu'on lui demande
- * (`nouvelleProfondeurRacines`), il n'a jamais eu soif, il n'est jamais
- * descendu. Toute une population légitime se retrouvait donc au fond du
- * barème, et la tempête couchait seize hêtres sur soixante-quatre en cinq ans.
+ * SIX POUR CENT, ET C'EST UN RETOUR, PAS UNE NOUVEAUTÉ. Le premier jet demandait
+ * six, calé sur de vraies hêtraies et aulnaies de quarante ans (0,054 à 0,073).
+ * Il a été abandonné pour quatre, parce que le même hêtre poussé quatre-vingt-dix
+ * ans sur un site jamais sec ne tenait que 0,019 à 0,035 : toute une population
+ * légitime se retrouvait au fond du barème et la tempête couchait seize hêtres
+ * sur soixante-quatre en cinq ans.
  *
- * Le seuil couvre maintenant les deux régimes : au-dessus de 0,04 l'ancrage est
- * complet quelle que soit l'histoire hydrique, au-dessous il se dégrade
- * *(à calibrer — et le vrai sujet est ailleurs : que le moteur donne 44 cm de
- * racines à un hêtre de 20 m sur sol frais est une calibration de
- * `RACINES_PLANCHER`, pas de ce fichier ; issue #84)*.
+ * Ce n'était pas la plasticité racinaire qui déraillait, c'était son PLANCHER —
+ * ce fichier le disait déjà en renvoyant à #84, « le vrai sujet est ailleurs ».
+ * Le plancher est corrigé, il croît avec la maturité, et le hêtre jamais assoiffé
+ * tient maintenant 0,039 (79 cm à 20,5 m) contre 0,059 pour l'assoiffé (96 cm à
+ * 16,4 m). Les deux régimes se tiennent dans un rapport de 1,5 au lieu de 2,7,
+ * et six pour cent redevient ce qu'il était : la valeur mesurée.
+ *
+ * FORESTGALES RECOUPE, et c'est ce qui achève de la fonder. Les modèles de cette
+ * famille classent un sol SUPERFICIEL à 80 cm ou moins. Pour un arbre de vingt
+ * mètres, 80 cm valent précisément un ratio de 0,04 — donc l'ancien seuil
+ * déclarait « complètement ancré » ce que la littérature appelle superficiel.
+ * À 0,06, l'ancrage complet demande 120 cm au même arbre, soit la classe
+ * profonde, et le sol superficiel conserve 0,93 de sa résistance.
  */
-export const ANCRAGE_SUFFISANT_RATIO = 0.04;
+export const ANCRAGE_SUFFISANT_RATIO = 0.06;
 /**
  * Ce qui reste de résistance à un arbre à peine ancré, en part.
  *
@@ -244,9 +249,12 @@ export const ANCRAGE_SUFFISANT_RATIO = 0.04;
  * l'enracinement en CLASSES (superficiel, moyen, profond) dont les
  * multiplicateurs sur le moment de renversement se tiennent dans un rapport de
  * l'ordre de 0,8 à 1, pas de 0,6 à 1. Le premier jet en faisait le terme
- * dominant de la vitesse critique, devant l'élancement et la prise au vent
- * *(à confirmer sur les tables d'enracinement de ForestGALES ; voir aussi #84,
- * qui met en doute la profondeur elle-même)*.
+ * dominant de la vitesse critique, devant l'élancement et la prise au vent.
+ *
+ * Cette valeur-ci n'a pas bougé avec #84, et c'est voulu : elle dit l'AMPLITUDE
+ * de l'effet d'ancrage, que la correction des racines ne remet pas en cause.
+ * C'est le SEUIL au-dessus qui était faussé, pas l'écart entre bien et mal
+ * ancré *(à confirmer sur les tables d'enracinement de ForestGALES)*.
  */
 export const ANCRAGE_MINIMAL = 0.8;
 

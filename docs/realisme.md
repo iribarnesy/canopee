@@ -61,6 +61,24 @@ constantes annulées depuis — les chiffres étaient sincères et faux.
 Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues.
 « Plus de 0,9 × TOTAL » survit à un changement d'échelle, « plus de 900 kg » non.
 
+**Additionner deux causes ne supprime pas le vase communicant, ça le déplace.**
+Le premier piège a une suite, apprise en trois lots. « Le réchauffement tue » a
+d'abord été mesuré sur les morts par ravageurs, puis — parce qu'un arbre ne
+meurt qu'une fois et que la sécheresse lui volait ses victimes — sur la somme
+soif + ravageurs. Le composite est tombé lui aussi, deux fois : le feu, les
+chablis et l'ombre puisent dans le même bassin, et tout lot qui touche l'un des
+trois rejoue le partage. La sortie n'est pas d'élargir la somme jusqu'à
+l'épuisement des causes, c'est de changer de grandeur : **compter ce qui reste
+DEBOUT**. Un arbre debout est debout quelle que soit la case qui l'aurait tué.
+
+**Un témoin pris APRÈS le tri n'est pas un témoin.** Un essai de tempête posait
+en hypothèse que deux peuplements « arrivent à taille comparable », et le
+vérifiait sur la hauteur des SURVIVANTS — après que le vent a emporté les plus
+grands. « Le pin était petit » et « le pin s'est fait coucher » y étaient la
+même mesure, si bien que l'hypothèse tombait d'autant plus vite que la
+conclusion était vraie. Quand un essai mesure un tri, sa prémisse se relève
+avant le tri, ou sur un témoin que le tri n'a pas touché.
+
 ## Score actuel
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
@@ -69,15 +87,15 @@ Corollaire de méthode : préférer partout les PROPORTIONS aux valeurs absolues
 | B. Lumière et structure | 7 | 4 | 0 | 11 |
 | C. Nutriments et cycles | 14 | 0 | 1 | 15 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
-| E. Interactions entre plantes | 9 | 3 | 0 | 12 |
+| E. Interactions entre plantes | 8 | 4 | 0 | 12 |
 | F. Dynamique des peuplements | 12 | 4 | 3 | 19 |
 | G. Faune et santé | 10 | 1 | 0 | 11 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 7 | 1 | 0 | 8 |
-| **Total** | **121** | **21** | **4** | **146** |
+| **Total** | **120** | **22** | **4** | **146** |
 
-**Score de réalisme : 121 pleins + 21 partiels sur 146 → 90 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 120 pleins + 22 partiels sur 146 → 90 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -132,11 +150,17 @@ d'être un état : il se lit sur un pool de bases que la litière fait pencher)
 → 88 % (le sanglier : un herbivore qui mange la régénération ET la favorise)
 → 89 % (la disposition paie : lisière, cœur, étagement local)
 → 89 % (l'infradensité : la biomasse cesse de se peser avec la densité du
-commerce) → **90 % (les trouées et le bilan carbone d'une plantation sont enfin
-mis à l'épreuve — F7 et I8 ; le domaine du carbone n'a plus une seule lacune)**.*
+commerce) → 90 % (les trouées et le bilan carbone d'une plantation sont enfin
+mis à l'épreuve — F7 et I8 ; le domaine du carbone n'a plus une seule lacune)
+→ 89 % (le plancher racinaire cesse de traiter un arbre mûr comme un semis :
+l'ancrage revient à sa valeur mesurée, et E11 rend un ✅ qu'un essai tenait par
+une coïncidence de dix centimètres)
+→ 89 % (la place se dispute là où la graine tombe : le plafond de
+recouvrement devient local, et une futaie vraiment dense redevient testable)
+→ **90 % (une tige à l'ombre ne stagne pas, elle file : l'étiolement)**.*
 
-*Le score BAISSE au dernier chantier — comme il avait baissé au chantier des
-hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
+*Le score a BAISSÉ deux chantiers avant celui-ci — comme il avait baissé au
+chantier des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
 c'est le référentiel qui s'est mis à compter des points que personne ne comptait.
 Un référentiel qui ne s'allonge jamais finit par ne plus mesurer que ce qu'on
 sait déjà faire, et un score qui ne fait que monter est le symptôme de cette
@@ -167,7 +191,7 @@ maladie-là, pas une preuve de santé.*
 | A21 | Un orage sur un sol déjà plein ruisselle intégralement | ✅ | passe 1 de `profilHydro` : le refus reflue au lieu d'être perdu ; `profil-hydro-conservation.test.ts` |
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
 | A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
-| A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` |
+| A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` — et il faut distinguer DEUX choses que le moteur confondait (#84) : la plasticité, qui ne répond qu'à la soif, et le SQUELETTE d'ancrage, qu'un arbre bâtit en grandissant qu'il ait soif ou non. Le plancher `partPlancherRacines` croît donc avec la maturité (0,35 → 0,80 du potentiel), alors qu'il valait 0,35 à tout âge : un hêtre de vingt mètres jamais assoiffé avait les racines d'un semis, et c'est ce qui forçait le barème d'ancrage de `tempete.ts` à mentir (F15). L'extrémité jeune est inchangée — un semis démarre toujours en surface |
 | A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ✅ | `relief.ts` + `erosion.ts` ; `erosion.test.ts` — 4 t/ha/an à 15 % sur sol nu, quasi rien sous couvert |
 | A27 | Ce que l'eau emporte est plus riche que le sol moyen, et se dépose plus bas | ✅ | enrichissement ×3, dépôt fonction du couvert de la cellule d'arrivée — le versant se déshabille par le sommet |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
@@ -228,7 +252,7 @@ maladie-là, pas une preuve de santé.*
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
 | D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
 | D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler AVANT de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
-| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent. Deux conséquences sont épinglées GRAINE PAR GRAINE : la pullulation de ravageurs (1,45 / 1,35 / 1,31 ×) et la mortalité qu'elle entraîne, comptée soif + ravageurs ENSEMBLE parce qu'un arbre ne meurt qu'une fois (1,88 / 4,00 / 3,29 ×, #93) |
+| D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent. Deux conséquences sont épinglées GRAINE PAR GRAINE : la pullulation de ravageurs (1,45 / 1,35 / 1,31 ×) et la MORTALITÉ, qui se lit sur ce qui reste debout de la cohorte plantée à soixante ans — 88 → 43, 49 → 38, 80 → 38 tiges sur 120, et pour le seul hêtre mésophile 55 → 21, 20 → 4, 56 → 22. **Cet instrument-là est le troisième, et les deux premiers étaient faux de la même manière** : compter les morts par ravageurs seuls (#68), puis les morts « soif + ravageurs » ensemble (#93, #84). Additionner deux causes ne supprime pas le vase communicant, ça le déplace — le feu, les chablis et l'ombre puisent dans le même bassin de victimes, et le rapport composite est tombé à trois lots de mécanisme d'affilée sans que le lien entre chaleur et mortalité ait bougé. Un arbre DEBOUT est debout quelle que soit la case qui l'aurait tué |
 | D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
 | D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | ✅ | écarts chauds et déficits de pluie amplifiés (`normalesHebdo`) ; et la mémoire pluriannuelle existe — non dans le sol (qui se recharge chaque hiver, mesuré à 94-100 %) mais dans l'arbre, par la cavitation (`dommageHydraulique`) |
 | D10 | L'altitude et l'exposition modifient températures et rayonnement | 🟡 | latitude seule ; pas d'altitude ni d'adret/ubac |
@@ -241,7 +265,7 @@ maladie-là, pas une preuve de santé.*
 | E2 | Un fixateur voisin profite aux autres | ✅ | `litiere.test.ts` |
 | E3 | La facilitation domine en milieu contraint, la compétition en milieu riche | 🟡 | émergent, non testé comme tel |
 | E4 | Les espèces xérophiles transpirent moins par unité de feuillage (WUE) | 🟡 | dérivé du tempérament, à calibrer sur données |
-| E11 | Un pivot résiste à la sécheresse là où un traçant souffre | ✅ | `racines.test.ts` (sable sur limon : le pivot survit, le traçant meurt) |
+| E11 | Un pivot résiste à la sécheresse là où un traçant souffre | 🟡 | `racines.test.ts` — **l'essai qui portait ce ✅ affirmait une mort que ni le moteur ni la réalité ne produisent (#84)**. Il faisait mourir un bouleau sous 25 cm de sable sur limon profond ; or le bouleau est LE pionnier des sables, l'essentiel de ses racines tient dans les soixante premiers centimètres, et sous 750 mm comme sous 320 mm aucun des deux arbres n'accumule le moindre stress sur ce profil — le bouleau y dépasse même le chêne (11,8 m contre 7,2), ce qui est juste pour un pionnier rapide contre un chêne lent. Il ne passait que parce que le plancher racinaire du bouleau tombait par hasard À L'INTÉRIEUR de la couche de sable (19 cm pour 25) : une conclusion écologique portée par une coïncidence de dix centimètres. Ce qui est mesuré, et qui est le mécanisme lui-même : sous un manteau de sable de 120 cm, **le pivot CONVERTIT la sécheresse en profondeur et le traçant ne le peut pas** — 122 → 147 cm quand on passe de 750 à 320 mm/an, contre 81 → 81, PAS UN CENTIMÈTRE, le traçant étant déjà collé au potentiel que sa taille et son espèce lui accordent quand le pivot en a encore trente devant lui. **Reste 🟡 sur la CONSÉQUENCE** : que le traçant en SOUFFRE demanderait une station où sa profondeur plafond ne suffit pas à passer l'été, et le moteur n'en produit pas encore sur laquelle l'essai reste honnête |
 | E5 | Une haie brise-vent améliore la production sur 10-20 fois sa hauteur | ✅ | `windShelterAt` |
 | E6 | L'allélopathie (juglone du noyer) pénalise les sensibles | 🟡 | `allelopathie.ts` + le NOYER entre à l'atlas. Portée 17,5 m (littérature : 15-20), intensité décroissante, sensibilité par espèce — pommier, pin et bouleau documentés sensibles. Et le SOL décide autant que l'arbre : le sable lessive la juglone, le limon lourd la retient. Sensibilité médiane par défaut là où la littérature ne dit rien |
 | E7 | Les racines se stratifient : deux espèces peuvent puiser à des profondeurs différentes | ✅ | `fractionsRacinairesParHorizon` ; `racines.test.ts` |
@@ -259,15 +283,15 @@ maladie-là, pas une preuve de santé.*
 | F3 | Les semis ne s'installent que dans leurs conditions (lumière, pH) | ✅ | filtres d'installation |
 | F4 | Les arbres vieillissent et meurent (sénescence) | ✅ | `fAge` ; `succession.test.ts` |
 | F5 | Le voisinage hors-parcelle ensemence en continu | ✅ | `station.voisinage` |
-| F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | La densité se régule bien — 361 pins plantés à 2 m tombent à 47-54 en 120 ans — mais par les RAVAGEURS et les CHABLIS, pas par la lumière (#65). Deux réserves. Le plafond de recouvrement qui borne l'installation est PARCELLAIRE et non local (#95). Et une cohorte de HÊTRES ne s'éclaircit pas du tout : 361 tiges plantées, 361 vivantes à 120 ans, là où le réel en porte quelques centaines. Son seuil de stress d'ombre (0,9 × compensation = 0,0090) passe sous le plancher de lumière du moteur (`exp(−MAX_EXTINCTION)` = 0,0111) : il ne peut littéralement pas mourir d'ombre (`lumiere.test.ts`). **23 % d'écart entre deux constantes indépendantes** — un équilibre sur le fil, que recalibrer l'une ou l'autre renverserait sans qu'on l'ait voulu. Ce qui manque vraiment est la mortalité par famine carbonée, qui est un budget CUMULÉ et non un seuil instantané mieux placé (#96) |
-| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | ✅ | `regeneration.ts` + `light.ts` ; `trouees.test.ts` — comparateur APPARIÉ, la même zone avec et sans trouée sur cinq graines : 16 / 22 / 17 / 25 / 17 recrues contre 4 / 8 / 11 / 11 / 7 (et 8/8 sur la campagne élargie). Et ce n'est pas « plus de semis » mais un TRI — le bouleau (compensation 0,25) n'entre que par l'ouverture, le charme (0,03) recrute jusque sous le couvert. **Deux limites, trouvées en mesurant.** Le plafond de recouvrement des couronnes est PARCELLAIRE et non local : au-delà, plus rien ne s'installe nulle part, trouée comprise. Et un point quelconque du peuplement ne fait PAS un témoin fermé — sur certaines graines la zone témoin porte 17 recrues dont 9 bouleaux sans qu'on ait rien creusé, ce qui a coûté un comparateur croisé (retiré : sa prémisse était fausse, pas son seuil) |
+| F6 | L'auto-éclaircie régule la densité d'un peuplement dense | 🟡 | La densité se régule bien — 361 pins plantés à 2 m tombent à 47-54 en 120 ans — mais par les RAVAGEURS et les CHABLIS, pas par la lumière (#65). **Une réserve est levée** : le plafond de recouvrement qui borne l'installation était PARCELLAIRE — tant que la somme des couronnes dépassait 2,5 fois la surface, plus rien ne s'installait nulle part, trouée comprise. Il se lit maintenant dans un voisinage de six mètres, l'emprise d'un houppier adulte (#95), et sa VALEUR n'a pas eu à bouger : le recouvrement local moyen d'un peuplement homogène égale son recouvrement global (6,79 contre 6,32 ; 7,69 contre 7,72 ; 2,19 contre 2,14 ; 0,96 contre 1,02). Ce que la portée change n'est pas le niveau, c'est la VARIANCE. **L'autre tient** : une cohorte de HÊTRES ne s'éclaircit pas du tout : 361 tiges plantées, 361 vivantes à 120 ans, là où le réel en porte quelques centaines. Son seuil de stress d'ombre (0,9 × compensation = 0,0090) passe sous le plancher de lumière du moteur (`exp(−MAX_EXTINCTION)` = 0,0111) : il ne peut littéralement pas mourir d'ombre (`lumiere.test.ts`). **23 % d'écart entre deux constantes indépendantes** — un équilibre sur le fil, que recalibrer l'une ou l'autre renverserait sans qu'on l'ait voulu. Ce qui manque vraiment est la mortalité par famine carbonée, qui est un budget CUMULÉ et non un seuil instantané mieux placé (#96) |
+| F7 | Les trouées déclenchent une régénération (cycle sylvigénétique) | ✅ | `regeneration.ts` + `light.ts` ; `trouees.test.ts` — comparateur APPARIÉ, la même zone avec et sans trouée sur cinq graines : 17 / 17 / 14 / 23 / 17 recrues contre 6 / 9 / 12 / 10 / 5 (et 8/8 sur la campagne élargie). Et ce n'est pas « plus de semis » mais un TRI — le bouleau (compensation 0,25) n'entre que par l'ouverture, le charme (0,03) recrute jusque sous le couvert. **Une limite est tombée, l'autre tient.** Le plafond de recouvrement était PARCELLAIRE : au-delà, plus rien ne s'installait nulle part, trouée comprise, et l'essai avait dû se replier sur un écartement de huit mètres — le seul qui reste sous le plafond — donc sur un couvert perméable au lieu de la futaie dense qui est le cas intéressant. Le plafond est devenu local (#95), et l'essai porte désormais un second banc à TROIS mètres d'écartement, recouvrement 6,8 à 9,5 : **le témoin fermé n'y recrute rien du tout — 0 sur les cinq graines — et la trouée recrute 3 / 2 / 4 / 6 / 4.** C'est F7 sans détour, et sans garde-fou. Ce qui tient, c'est qu'un point quelconque du peuplement ne fait PAS un témoin fermé — sur certaines graines la zone témoin porte 17 recrues dont 9 bouleaux sans qu'on ait rien creusé, ce qui a coûté un comparateur croisé (retiré : sa prémisse était fausse, pas son seuil) |
 | F8 | Certaines espèces rejettent de souche ou drageonnent | 🟡 | Rejet de souche : `rejetteDeSouche`, éprouvé après feu et après recépage. DRAGEONNEMENT : `regeneration.drageonne` (prunellier), un drageon sort dans un anneau serré autour de sa mère ET échappe au filtre de lumière, parce qu'elle le nourrit. Reste sans drageonnement : robinier et peuplier, absents de l'atlas |
 | F9 | La banque de graines du sol garde une mémoire du passé | 🟡 | `banqueGraines.ts` : ajonc, genêt, callune et ronce gardent une banque de 15 à 30 ans que le FEU réveille (il scarifie sans détruire, le sol isole). Une lande rasée revient en lande depuis le sol, sans voisinage pour la réensemencer — et le témoin sans banque reste nu. Banque tenue à l'échelle de la parcelle, pas de la cellule |
 | F10 | Le feu tue, sélectionne et régénère (espèces pyrophytes) | ✅ | `feu.ts` ; `feu.test.ts` |
 | F11 | Le risque d'incendie ÉMERGE du climat (il remontera vers le nord) | ✅ | `indiceRisqueFeu` : sécheresse × chaleur × combustible × vent, aucune station déclarée « à feu » |
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
 | F14 | Une tempête couche des arbres : le chablis existe, et il est l'accident le plus brutal de la vie d'un peuplement | ✅ | `tempete.ts` ; `tempete.test.ts` — une rafale hebdomadaire dérivée de la graine de partie (queue exponentielle sur le vent moyen), cinquantennale à 40-45 m/s. Le seuil de dégât est celui de l'ARBRE, pas celui de la rafale : les coups de vent ordinaires reviennent chaque hiver et ne couchent rien |
-| F15 | La vulnérabilité au vent se trie par INDIVIDU, et rien n'est déclaré espèce par espèce | ✅ | `vitesseCritiqueMs` : élancement H/D, ancrage rapporté au bras de levier (`rootDepthCm / hauteur`), sol gorgé au-delà de ce que l'espèce tolère, prise au vent foliaire de la semaine, souplesse des jeunes tiges. Aucun trait nouveau à l'atlas — tout se lit sur l'état de l'arbre. Deux faits de terrain TOMBENT de là sans être écrits : les tempêtes sont hivernales (le vent moyen l'est), et le caduc nu paie moins que le sempervirent (mesuré à 60 ans : 4-11 tiges couchées contre 65-88). Deux des cinq facteurs trient mal, et le disent : l'élancement parce que le moteur n'en produit qu'un cinquième de la gamme réelle (#79), l'ancrage parce que la profondeur racinaire d'un arbre mûr est elle-même douteuse (#84) |
+| F15 | La vulnérabilité au vent se trie par INDIVIDU, et rien n'est déclaré espèce par espèce | ✅ | `vitesseCritiqueMs` : élancement H/D, ancrage rapporté au bras de levier (`rootDepthCm / hauteur`), sol gorgé au-delà de ce que l'espèce tolère, prise au vent foliaire de la semaine, souplesse des jeunes tiges. Aucun trait nouveau à l'atlas — tout se lit sur l'état de l'arbre. Deux faits de terrain TOMBENT de là sans être écrits : les tempêtes sont hivernales (le vent moyen l'est), et le caduc nu paie moins que le sempervirent (mesuré à 60 ans : 4-11 tiges couchées contre 65-88). Un des cinq facteurs trie mal, et le dit : l'élancement, parce que le moteur n'en produit qu'un cinquième de la gamme réelle (#79). **L'ancrage, lui, ne triait mal que par ricochet, et c'est réparé (#84)** : la profondeur racinaire d'un arbre mûr était fausse — le plancher `RACINES_PLANCHER` traitait un hêtre de vingt mètres comme un semis — ce qui forçait le seuil d'ancrage à descendre à 4 % pour ne pas coucher toute une population légitime. Plancher corrigé, les deux régimes hydriques du moteur tiennent maintenant dans un rapport de 1,5 (0,039 sur site jamais sec, 0,059 sur été sec) au lieu de 2,7, et le seuil est revenu à la valeur mesurée sur de vraies hêtraies, 6 % |
 | F16 | Ce qui dépasse prend le vent : un sous-étage est abrité, une futaie régulière ne s'abrite pas elle-même | ✅ | `abriAuVent` ne somme que le DÉPASSEMENT des voisins plus hauts, là où l'abri de haie (`windShelterAt`, E5) sature à 1 dans n'importe quel peuplement. C'est Klaus dans les pins landais alignés |
 | F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | ❌ | le moteur ne connaît qu'un renversement entier — un arbre tient ou il verse. Ni cime cassée, ni arbre penché qui survit avec une plaie, alors que c'est la moitié des dégâts d'une tempête réelle |
 | F18 | Un peuplement qu'on vient d'ouvrir (éclaircie, lisière neuve) verse pendant quelques années | ❌ | `abriAuVent` recalcule l'abri dans la semaine qui suit la coupe : les survivants sont réputés adaptés instantanément. Il y faudrait une mémoire par arbre de l'ouverture récente |
@@ -449,6 +473,13 @@ trouée comprise. Un « zéro recrue sous couvert » aurait décroché le ✅ po
 mauvaise raison. D'où le témoin qui est resté dans l'essai : une seconde espèce,
 tolérante à l'ombre, dont la présence prouve qu'il y avait quelque chose à
 mesurer.
+
+*Et le défaut trouvé par cet échec a fini par être corrigé* (#95) : le plafond
+se lit désormais dans un voisinage de six mètres. L'essai porte depuis un second
+banc à trois mètres d'écartement — la futaie dense qui lui était interdite — où
+le témoin fermé ne recrute RIEN sur les cinq graines et la trouée recrute. Le
+banc de repli à huit mètres reste en place, parce qu'il mesure autre chose et le
+mesure bien : sous un couvert perméable, la trouée concentre et TRIE.
 
 Celui de I8 a CORRIGÉ son propre critère. L'énoncé attribuait le bilan négatif
 au travail du sol ; le témoin sans labour montre que le creux existe quand même,
@@ -1220,10 +1251,13 @@ Deux faits de terrain TOMBENT de ce seul choix, sans qu'on ait eu à les écrire
   pinède couche 65 à 88 tiges, la hêtraie 4 à 11.
 
 Un troisième tombe d'un mécanisme qui n'avait rien à voir : **les hivers doux et
-humides font des arbres qui versent**. Un arbre qui n'a jamais eu soif garde un
-chevelu superficiel (`nouvelleProfondeurRacines`), donc un ancrage médiocre. Ça
-n'est écrit nulle part ; c'est la rencontre de la plasticité racinaire et du
-bras de levier.
+humides font des arbres qui versent un peu plus**. Un arbre qui n'a jamais eu
+soif n'est jamais descendu chercher l'eau (`nouvelleProfondeurRacines`), donc il
+s'ancre moins bien que son voisin des étés secs. Ça n'est écrit nulle part ;
+c'est la rencontre de la plasticité racinaire et du bras de levier. L'effet a
+été RAMENÉ À SA TAILLE depuis (#84) : il valait un rapport de 2,7 entre les deux
+régimes, dont les deux tiers venaient d'un plancher racinaire fautif et non de
+la plasticité. Il en reste 1,5 — sept points de résistance, pas la moitié.
 
 ### Ce que quatre erreurs de conception ont appris
 
@@ -1254,7 +1288,7 @@ alors que les tests du lot passaient tous. Six pour cent semblaient être le
 niveau normal : c'est ce que tiennent les hêtraies et les aulnaies de quarante
 ans mesurées sur la série de Limon-riche (0,054 à 0,073). Mais ces racines-là
 sont descendues parce que l'ÉTÉ LES Y A FORCÉES. Le même hêtre poussé
-quatre-vingt-dix ans sur un site jamais sec tient 0,019 à 0,035 : il n'a jamais
+quatre-vingt-dix ans sur un site jamais sec tenait 0,019 à 0,035 : il n'a jamais
 eu soif, il n'est jamais descendu, et la plasticité racinaire fait exactement
 ce qu'on lui demande. Toute une population légitime se retrouvait donc au fond
 du barème, et le test de lumière — une futaie de soixante-quatre hêtres de 25 m
@@ -1262,16 +1296,59 @@ sur limon frais, qui ne parle pas du tout de vent — perdait seize arbres en
 cinq ans, ouvrait sa canopée et laissait survivre un semis de pin qui devait
 mourir d'ombre.
 
-Deux corrections, et la seconde compte autant que la première : le seuil passe
-à 4 % pour couvrir les deux régimes hydriques, et **l'ancrage cesse d'être le
-terme dominant** de la vitesse critique. Un enracinement superficiel retire un
-cinquième de la résistance et non deux, ce qui est l'ordre de grandeur des
-classes d'enracinement de la famille ForestGALES. Le tri, lui, survit : 65-88
-pins couchés contre 4-11 hêtres, et zéro sur un site abrité.
+Deux corrections, et la seconde compte autant que la première : le seuil est
+descendu à 4 % pour couvrir les deux régimes hydriques, et **l'ancrage a cessé
+d'être le terme dominant** de la vitesse critique. Un enracinement superficiel
+retire un cinquième de la résistance et non deux, ce qui est l'ordre de grandeur
+des classes d'enracinement de la famille ForestGALES. Le tri, lui, survit :
+65-88 pins couchés contre 4-11 hêtres, et zéro sur un site abrité.
 
-Reste une question qui n'est PAS celle de ce lot : que le moteur donne 44 cm de
-racines à un hêtre de vingt mètres sur sol frais est une calibration de
-`RACINES_PLANCHER` (`trees.ts`), et elle revient à la maintenance.
+### Le seuil est revenu à six, et c'est la mesure qui l'a ramené
+
+Ce fichier posait lui-même la question qu'il ne pouvait pas trancher : « que le
+moteur donne 44 cm de racines à un hêtre de vingt mètres sur sol frais est une
+calibration de `RACINES_PLANCHER`, pas de ce fichier ». **C'était le vrai
+défaut, et le 4 % n'était que le pansement** (#84).
+
+`RACINES_PLANCHER` valait 0,35 pour tout le monde, à tout âge : un arbre qui
+n'a jamais eu soif ne construisait qu'un tiers du squelette racinaire que son
+espèce et son sol autorisent — ce qui est vrai d'un semis, et faux d'un arbre
+mûr. Un arbre ne descend en profondeur que s'il a soif (`nouvelleProfondeurRacines`,
+A17), mais il BÂTIT son ancrage en grandissant, soif ou pas. Le plancher croît
+donc maintenant avec la maturité, de 0,35 à 0,80 (`partPlancherRacines`), et
+l'extrémité jeune n'a pas bougé : un semis démarre toujours en surface.
+
+Ce que ça change, mesuré sur un hêtre isolé, graine 7, quatre-vingt-dix ans :
+
+| | 30 ans | 60 ans | 90 ans |
+|---|---|---|---|
+| série (été sec) | 5,9 m / 60 cm — 0,101 | 13,3 m / 87 cm — 0,065 | 16,4 m / 96 cm — 0,059 |
+| site jamais sec | 9,0 m / 43 cm — 0,048 | 16,9 m / 72 cm — 0,043 | 20,5 m / 79 cm — 0,039 |
+
+Les deux régimes se tiennent dans un rapport de 1,5 au lieu de 2,7. Le seuil
+d'ancrage complet est donc revenu à **6 %**, la valeur mesurée sur de vraies
+hêtraies, et le hêtre jamais assoiffé y perd sept points de résistance au lieu
+d'être condamné. **ForestGALES recoupe** : ces modèles classent un sol
+superficiel à 80 cm ou moins, ce qui vaut exactement un ratio de 0,04 pour un
+arbre de vingt mètres — l'ancien seuil déclarait donc « parfaitement ancré » ce
+que la littérature appelle superficiel. À 0,06, l'ancrage complet demande 120 cm
+au même arbre, soit la classe profonde.
+
+**Et trois essais d'autres lots sont tombés avec la correction**, ce qui est le
+signe qu'ils s'appuyaient sur le défaut :
+
+- `tempete.test.ts` posait en hypothèse que pinède et hêtraie « arrivent à
+  taille comparable » et le vérifiait sur la hauteur des SURVIVANTS à soixante
+  ans, c'est-à-dire après que la tempête a emporté les plus grands : la
+  conclusion de l'essai déguisée en son hypothèse. Se lit désormais sur la
+  hauteur ATTEINTE, relevée semaine après semaine ;
+- `feu.test.ts` exigeait « plus de 300 rejets » d'un incendie cherché sur cinq
+  graines — le compte exact d'un tirage. Un ajonc qui pousse un peu autrement
+  retient un autre incendie, et le compte tombe à 205. Le garde dit maintenant
+  ce qu'il voulait dire : que la branche « rejet » du bilan carbone est
+  vraiment empruntée, en masse ;
+- `climat.test.ts` comptait le rapport des morts « soif + ravageurs » — voir D8 :
+  troisième instrument en trois lots, et le premier qui ne soit pas un composite.
 
 **L'aulnaie rasée tous les deux ans.** L'engorgement est LE facteur des grandes
 tempêtes : Lothar et Klaus se sont concentrés là où le sol était gorgé. Mais
