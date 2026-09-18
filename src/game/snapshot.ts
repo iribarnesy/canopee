@@ -113,8 +113,30 @@ function floraisonDe(t: TreeState, ddYearBase5: number): number {
   const espece = getEspece(t.especeId);
   const fruits = espece.fruits;
   if (!fruits) return 0;
+  const floraison = espece.floraison;
+  if (!floraison) return 0;
   if (t.ageWeeks < espece.regeneration.maturiteAns * 52) return 0;
-  return partFloraison(fruits.floraisonDJ, ddYearBase5);
+  return partFloraison(floraison.debutDJ, ddYearBase5, floraison.dureeDJ);
+}
+
+/**
+ * Emprise moyenne de chaque herbacée sur la parcelle, dans l'ordre de
+ * `HERBACEES`. C'est une moyenne de parcelle, et c'est assumé : l'indice de
+ * biodiversité est lui-même une note de parcelle. Le MÉCANISME, lui, reste
+ * local — la ressource florale que lit la pollinisation est par cellule
+ * (`tick.ts`).
+ */
+function empriseHerbaceeMoyenne(state: GameState): number[] {
+  const nCells = state.soil.mineralNG.length;
+  const out = new Array<number>(N_HERBACEES).fill(0);
+  if (nCells === 0) return out;
+  for (let i = 0; i < nCells; i++) {
+    for (let s = 0; s < N_HERBACEES; s++) {
+      out[s] = (out[s] ?? 0) + (state.soil.herbeEmprise[i * N_HERBACEES + s] ?? 0);
+    }
+  }
+  for (let s = 0; s < N_HERBACEES; s++) out[s] = (out[s] ?? 0) / nCells;
+  return out;
 }
 
 /** Eau de l'horizon de SURFACE, par cellule (le sol est stratifié, cf. soil.ts). */
@@ -217,6 +239,11 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
       // Le côté de la parcelle : c'est lui qui permet de voir la MOSAÏQUE et
       // l'étagement local, donc de récompenser la disposition (biodiversite.ts).
       state.station.coteM,
+      // L'emprise MOYENNE de chaque herbacée : c'est par elle que la strate
+      // basse entre enfin dans l'étalement des floraisons (#70). Une vernale
+      // qui tient un tiers du sol nourrit les pollinisateurs de mars, et
+      // l'indice l'ignorait.
+      empriseHerbaceeMoyenne(state),
     ),
     fluxes: e.fluxes,
     // Le calendrier foliaire se RECALCULE à l'identique : mêmes entrées que

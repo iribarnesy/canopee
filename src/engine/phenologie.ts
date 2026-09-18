@@ -424,11 +424,13 @@ export function partFoliaireAssimilanteDans(espece: EspeceV0, ctx: ContextePheno
 }
 
 /**
- * Largeur de la fenêtre de floraison, en degrés-jours base 5 °C. C'est la
- * borne haute que `tick.ts` compare déjà à `fruits.floraisonDJ` pour savoir si
- * un gel tardif tombe sur des fleurs ouvertes ; elle vit ici pour qu'un seul
- * endroit tienne ce calendrier — le rendu doit dessiner la fleur la semaine où
- * le moteur la croit ouverte, pas une semaine avant.
+ * Largeur PAR DÉFAUT de la fenêtre de floraison, en degrés-jours base 5 °C.
+ * Chaque espèce porte désormais la sienne (`especes.ts:floraison.dureeDJ`),
+ * parce que l'écart est l'essentiel du sujet : un verger passe en deux
+ * semaines, un ajonc tient six mois, et c'est ce qui sépare une ressource
+ * ponctuelle d'une ressource de fond (#70). Cette constante reste la valeur
+ * qu'avaient toutes les espèces avant qu'on le mesure, et le défaut des
+ * appelants qui n'en connaissent pas.
  */
 export const FLORAISON_DUREE_DJ = 100;
 /**
@@ -450,8 +452,12 @@ const FLORAISON_OUVERTURE = 0.25;
  * 0 pendant, et 0 toute l'année pour un arbre immature. Les trois cas sont
  * indiscernables, et c'est pour ça que cette part existe.
  */
-export function partFloraison(floraisonDJ: number, ddYearBase5: number): number {
-  const x = (ddYearBase5 - floraisonDJ) / FLORAISON_DUREE_DJ;
+export function partFloraison(
+  floraisonDJ: number,
+  ddYearBase5: number,
+  dureeDJ: number = FLORAISON_DUREE_DJ,
+): number {
+  const x = (ddYearBase5 - floraisonDJ) / dureeDJ;
   if (x <= 0 || x >= 1) return 0;
   if (x < FLORAISON_OUVERTURE) return x / FLORAISON_OUVERTURE;
   return (1 - x) / (1 - FLORAISON_OUVERTURE);
