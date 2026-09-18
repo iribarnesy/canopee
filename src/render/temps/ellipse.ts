@@ -39,6 +39,7 @@ import type {
   IncendieResult,
   MortDeLaSemaine,
   NaissanceDeLaSemaine,
+  TempeteResult,
 } from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
 
@@ -61,6 +62,16 @@ export interface JournalDeSemaine {
   chutes?: readonly ChuteDeChandelle[];
   gestes?: readonly GesteVisible[];
   incendie?: IncendieResult;
+  /**
+   * La tempête de la semaine (`Snapshot.tempete`).
+   *
+   * **Il faut l'ÉVÉNEMENT, pas l'état**, et le piège est pire que pour le feu :
+   * un chablis n'est rapporté mort qu'un an plus tard
+   * (`CHABLIS_RECUPERABLE_SEMAINES`), une semaine où `tempete` vaut
+   * `undefined`. Se raccrocher aux `morts` ferait jouer la rafale avec un an
+   * de retard.
+   */
+  tempete?: TempeteResult;
   /**
    * Les semis installés depuis le dernier instantané (`Snapshot.naissances`).
    *
@@ -110,6 +121,21 @@ export type Sujet =
        * elle le rendu les dessinait toutes à la même hauteur de convention.
        */
       charges: readonly number[];
+    }
+  | {
+      quoi: "tempete";
+      /** la rafale de référence à 10 m, m/s : à quelle force jouer l'acte */
+      rafaleMs: number;
+      /**
+       * Le cap vers lequel le vent poussait, radians.
+       *
+       * **C'est la direction du MOUVEMENT, pas la provenance** — le contresens
+       * est signalé par le moteur lui-même. Il est le même pour toutes les
+       * victimes d'une même semaine, et c'est ce qui fait qu'elles penchent du
+       * même côté : la signature d'une tempête sur le terrain.
+       */
+      versRad: number;
+      victimes: readonly { id: number; hauteurM: number }[];
     }
   | { quoi: "chute"; chutes: readonly ChuteDeChandelle[] }
   | { quoi: "mort"; cause: CauseMort; morts: readonly MortDeLaSemaine[] }
@@ -167,7 +193,7 @@ export const ACTE_LE_PLUS_COURT_MS = 100;
  * de l'enchaînement un hasard. Les gestes du joueur viennent en tête : c'est
  * lui qui a agi, et le reste de la semaine en découle.
  */
-const ORDRE: readonly Sujet["quoi"][] = ["geste", "feu", "mort", "chute"];
+const ORDRE: readonly Sujet["quoi"][] = ["geste", "feu", "tempete", "mort", "chute"];
 
 /**
  * Range un journal de changements dans un budget de temps d'écran.
@@ -212,10 +238,15 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
   const chutes: ChuteDeChandelle[] = [];
   const parCause = new Map<CauseMort, MortDeLaSemaine[]>();
   const feux: IncendieResult[] = [];
+  const tempetes: TempeteResult[] = [];
   for (const j of journaux) {
     if (j.gestes) gestes.push(...j.gestes);
     if (j.chutes) chutes.push(...j.chutes);
     if (j.incendie) feux.push(j.incendie);
+    // Une tempête par ACTE, et non fusionnées : deux rafales de deux hivers
+    // n'ont pas le même cap, et les confondre coucherait les arbres de l'une
+    // dans le sens de l'autre.
+    if (j.tempete) tempetes.push(j.tempete);
     for (const m of j.morts ?? []) {
       const deja = parCause.get(m.cause);
       if (deja) deja.push(m);
@@ -243,6 +274,14 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
       brulees: [...f.brulees],
       rangs: [...f.rangs],
       charges: [...f.charges],
+    });
+  }
+  for (const t of tempetes) {
+    sujets.push({
+      quoi: "tempete",
+      rafaleMs: t.rafaleMs,
+      versRad: t.versRad,
+      victimes: [...t.victimes],
     });
   }
   for (const [cause, morts] of parCause) sujets.push({ quoi: "mort", cause, morts });

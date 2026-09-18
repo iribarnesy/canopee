@@ -50,10 +50,12 @@ import {
   indexerLesVoiles,
   particulesDuFeu,
   poseDeLaMort,
+  poseDeLaRafale,
   poseDuPlant,
   RIEN_NE_BRULE,
   remodelageDe,
   tigesAbattues,
+  trouverLaTempete,
   trouverLeFeu,
   voilesEnCours,
 } from "../render/temps/lecteur";
@@ -107,6 +109,7 @@ function journalDe(snapshot: Snapshot): JournalDeSemaine {
     naissances: snapshot.naissances,
     franchissements: snapshot.franchissements,
     ...(snapshot.incendie ? { incendie: snapshot.incendie } : {}),
+    ...(snapshot.tempete ? { tempete: snapshot.tempete } : {}),
   };
 }
 
@@ -220,6 +223,13 @@ export function useEllipse(
     // éteinte — elle est faite pour les grands sauts, et griser la parcelle
     // entière parce que trois arbres sont morts serait violent pour rien.
     const ou = new Map(snapshot.trees.map((t) => [t.id, { x: t.x, y: t.y }]));
+    // La tempête ne dit que « qui » et « de quelle hauteur » : le reste se lit
+    // dans l'instantané, où les victimes sont encore là — un chablis devient
+    // chandelle sur-le-champ et n'est rapporté mort qu'un an plus tard.
+    const arbres = new Map(
+      snapshot.trees.map((t) => [t.id, { x: t.x, y: t.y, heightM: t.heightM }]),
+    );
+    const tempete = trouverLaTempete(plan, (id) => arbres.get(id));
     const calque = marqueursDuJournal(journal, (id) => ou.get(id), coteM);
 
     const depuis = (maintenantMs: number) => maintenantMs - debut.current;
@@ -238,9 +248,15 @@ export function useEllipse(
         // Trois canaux de POSE qui se composent : tomber, mourir, et sortir de
         // terre. `DEBOUT` est neutre pour cette composition, donc on les
         // additionne sans se demander lequel a lieu.
+        // Quatre canaux de POSE qui se composent : tomber, mourir, sortir de
+        // terre, et plier sous la rafale. `DEBOUT` est neutre pour cette
+        // composition, donc on les additionne sans se demander lequel a lieu.
         return combiner(
-          combiner(deformationDe(chutes, ecoule, id, vue), poseDeLaMort(morts, ecoule, id)),
-          poseDuPlant(gestes, ecoule, id),
+          combiner(
+            combiner(deformationDe(chutes, ecoule, id, vue), poseDeLaMort(morts, ecoule, id)),
+            poseDuPlant(gestes, ecoule, id),
+          ),
+          poseDeLaRafale(tempete, ecoule, id, vue),
         );
       },
       mourant: (id, maintenantMs, vivant) => {

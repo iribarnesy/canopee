@@ -54,8 +54,10 @@ import {
   indexerLesVoiles,
   particulesDuFeu,
   poseDeLaMort,
+  poseDeLaRafale,
   remodelageDe,
   tigesAbattues,
+  trouverLaTempete,
   trouverLeFeu,
   voilesEnCours,
 } from "../render/temps/lecteur";
@@ -294,12 +296,17 @@ function Demo(): React.ReactElement {
     // il appartient donc aux bancs de MÉCANISME, et court-circuite le journal
     // réel comme les deux autres.
     const surArbres = params.get("geste-arbres") as GesteTypeArbre | null;
+    // `?tempete=1` fabrique une rafale, pour la même raison que les trois
+    // bancs au-dessus : une tempête est un événement rare, et l'attendre au
+    // hasard d'une partie n'est pas une façon de juger un acte. La part qui
+    // verse se règle (`?tempete-part=0.3`), le cap aussi (`?tempete-vers`).
+    const rafale = params.get("tempete");
     // **Le journal RÉEL quand la scène en porte un**, et c'est le seul cas
     // normal. Les deux bancs de mécanisme le remplacent exprès — ils fabriquent
     // un sujet que la scène n'a pas — et c'est pour ça qu'ils portent un nom
     // qui dit qu'ils forcent quelque chose.
     const reel = scene?.journal;
-    if (reel && !tout && !cause && !surArbres) {
+    if (reel && !tout && !cause && !surArbres && !rafale) {
       // L'incendie rejoint le journal sous la forme que le plan attend. Les
       // trois nombres que `IncendieResult` porte en plus — cellules brûlées,
       // arbres tués, carbone — ne servent qu'au fil d'actualité.
@@ -400,6 +407,7 @@ function Demo(): React.ReactElement {
         voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
         morts: indexerLesMorts(plan),
         feu: trouverLeFeu(plan),
+        tempete: undefined as ReturnType<typeof trouverLaTempete>,
         torches,
         marqueurs: calque.marqueurs,
         omis: calque.omis,
@@ -412,7 +420,26 @@ function Demo(): React.ReactElement {
         partis: new Set<number>(),
       };
     }
+    // Les arbres assez hauts pour verser : sous cinq mètres une tige plie et
+    // se relève, elle ne casse pas (`HAUTEUR_SOUPLE_M`, tempete.ts).
+    const versables = (scene?.trees ?? []).filter(
+      (t) => t.heightM > 5 && !t.chandelle && !ficheDe(t.especeId)?.fourre,
+    );
+    const partVersee = Number(params.get("tempete-part") ?? "0.25");
     const journal: JournalDeSemaine = {
+      ...(rafale
+        ? {
+            tempete: {
+              rafaleMs: Number(params.get("tempete-force") ?? "33.3"),
+              versRad: Number(params.get("tempete-vers") ?? "0.785"),
+              arbresVerses: 0,
+              volumeM3: 0,
+              victimes: versables
+                .filter((_, i) => i % Math.max(1, Math.round(1 / partVersee)) === 0)
+                .map((t) => ({ id: t.id, hauteurM: t.heightM })),
+            },
+          }
+        : {}),
       ...(cause
         ? {
             morts: (scene?.trees ?? [])
@@ -435,8 +462,10 @@ function Demo(): React.ReactElement {
             !ficheDe(t.especeId)?.fourre &&
             // Une ellipse qui montre une mort ne doit pas faire tomber le même
             // arbre en même temps : deux actes sur un sujet se composent, et on
-            // ne verrait ni l'un ni l'autre.
-            !cause,
+            // ne verrait ni l'un ni l'autre. Même raison pour la rafale, qui
+            // couche déjà les siens.
+            !cause &&
+            !rafale,
         )
         .map((t) => ({
           id: t.id,
@@ -532,11 +561,15 @@ function Demo(): React.ReactElement {
     // La DURÉE du plan et non le budget : un plan vide dure zéro, et c'est ce
     // zéro-là qu'il faut porter pour que `?ellipse=` ne prétende pas figer une
     // ellipse qui n'existe pas.
+    const ouEtQuelleHauteur = new Map(
+      (scene?.trees ?? []).map((t) => [t.id, { x: t.x, y: t.y, heightM: t.heightM }]),
+    );
     return {
       index: indexerLesChutes(plan),
       voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
       morts: indexerLesMorts(plan),
       feu: trouverLeFeu(plan),
+      tempete: trouverLaTempete(plan, (id) => ouEtQuelleHauteur.get(id)),
       torches: AUCUNE_TORCHE,
       marqueurs: [] as Marqueur[],
       omis: 0,
@@ -639,7 +672,13 @@ function Demo(): React.ReactElement {
         // négatif, et c'est son geste qui la fait tomber (§6.2).
         if (id < 0) return chuteDeLaTige(ellipse.gestes, ou, id, vue);
         return combiner(
-          combiner(deformationDe(ellipse.index, ou, id, vue), poseDeLaMort(ellipse.morts, ou, id)),
+          combiner(
+            combiner(
+              deformationDe(ellipse.index, ou, id, vue),
+              poseDeLaMort(ellipse.morts, ou, id),
+            ),
+            poseDeLaRafale(ellipse.tempete, ou, id, vue),
+          ),
           estompe,
         );
       }}

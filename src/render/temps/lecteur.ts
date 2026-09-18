@@ -29,7 +29,7 @@
 import { type ArbreRetire, estGesteSurZone, type GesteSurZone } from "../../engine/actions";
 import type { ChuteDeChandelle } from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
-import type { Vue } from "../camera";
+import { type Vue, versEcranVue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
 import type { Acte, PlanDEllipse } from "./ellipse";
 import {
@@ -757,4 +757,114 @@ export function flammesDesTorches(index: TorchesIndexees, ecouleMs: number): Par
     if (t) sorties.push(...flammesDeTorche(t.torche, t.u, ecouleMs));
   }
   return sorties;
+}
+
+/**
+ * La TEMPÊTE d'un plan, prête à être jouée.
+ *
+ * Les victimes portent leur position, qui ne vient pas de l'événement : le
+ * moteur donne `{ id, hauteurM }`, et le reste se lit dans l'instantané, où
+ * elles sont encore là — une chablis devient chandelle sur-le-champ et n'est
+ * rapportée morte qu'un an plus tard. C'est une jointure entre deux choses
+ * que le moteur dit, pas une grandeur inventée.
+ */
+export interface TempeteTrouvee {
+  acte: Acte;
+  rafaleMs: number;
+  versRad: number;
+  /** les victimes, par identifiant, avec de quoi les faire tomber */
+  victimes: Map<number, { x: number; y: number; heightM: number }>;
+}
+
+/**
+ * Pente de la rafale : à quelle inclinaison penche un arbre épargné, par m/s.
+ *
+ * Calée pour qu'une rafale de 30 m/s — la force qui commence à verser
+ * (`RAFALE_MINIMALE_MS`) — penche le peuplement d'environ 0,12 rad, soit sept
+ * degrés. Assez pour qu'on voie passer le coup de vent, trop peu pour qu'on
+ * croie que ces arbres-là tombent aussi.
+ */
+const PENCHE_PAR_MS = 0.004;
+
+/** Inclinaison maximale d'un arbre épargné, rad. Au-delà, il aurait versé. */
+const PENCHE_MAX_RAD = 0.22;
+
+export function trouverLaTempete(
+  plan: PlanDEllipse,
+  positionDe: (id: number) => { x: number; y: number; heightM: number } | undefined,
+): TempeteTrouvee | undefined {
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "tempete") continue;
+    const victimes = new Map<number, { x: number; y: number; heightM: number }>();
+    for (const v of acte.sujet.victimes) {
+      const ou = positionDe(v.id);
+      // Une victime absente de l'instantané ne se dessine pas : on l'ignore
+      // plutôt que de lui inventer une position.
+      if (ou) victimes.set(v.id, { x: ou.x, y: ou.y, heightM: v.hauteurM });
+    }
+    return { acte, rafaleMs: acte.sujet.rafaleMs, versRad: acte.sujet.versRad, victimes };
+  }
+  return undefined;
+}
+
+/**
+ * Ce que la rafale fait à un arbre : il verse, ou il plie.
+ *
+ * **Les deux au même moment, et c'est tout l'acte.** Une tempête ne se lit pas
+ * à quelques arbres qui tombent isolément : elle se lit au peuplement entier
+ * qui se couche d'un côté pendant que certains ne se relèvent pas. Les
+ * victimes partent toutes dans le sens de `versRad`, ce qui est la signature
+ * d'une tempête sur le terrain — par opposition à une chandelle qui tombe dans
+ * le sens de la pente.
+ *
+ * L'arbre épargné revient droit à la fin de l'acte ; la victime reste couchée
+ * jusqu'au bout de l'ellipse, comme une chandelle qui tombe.
+ */
+export function poseDeLaRafale(
+  tempete: TempeteTrouvee | undefined,
+  ecouleMs: number,
+  idArbre: number,
+  vue: Vue,
+): Deformation {
+  if (!tempete) return DEBOUT;
+  const { acte } = tempete;
+  const fini = ecouleMs >= acte.debutMs + acte.dureeMs;
+  if (ecouleMs < acte.debutMs) return DEBOUT;
+
+  const victime = tempete.victimes.get(idArbre);
+  if (victime) {
+    const t = fini ? 1 : avancementDuSujet(acte, idArbre, ecouleMs);
+    return t <= 0 ? DEBOUT : chuteEnCours({ ...victime, directionRad: tempete.versRad }, t, vue);
+  }
+  if (fini) return DEBOUT;
+
+  // L'arbre épargné : il plie et se redresse. L'enveloppe part de zéro,
+  // culmine au milieu de l'acte et revient à zéro — un coup de vent passe,
+  // il ne s'installe pas. Le décalage par identifiant évite que deux mille
+  // tiges bougent comme un seul bloc, sans casser le fait qu'elles penchent
+  // toutes du même côté.
+  const brut = (ecouleMs - acte.debutMs) / Math.max(1, acte.dureeMs);
+  const phase = Math.min(1, Math.max(0, brut - 0.15 * decalageDe(idArbre)));
+  const enveloppe = Math.sin(Math.PI * phase);
+  const ampleur = Math.min(PENCHE_MAX_RAD, tempete.rafaleMs * PENCHE_PAR_MS) * enveloppe;
+  return { rotationRad: ampleur * sensDuVentALEcran(tempete.versRad, vue), hauteur: 1, opacite: 1 };
+}
+
+/**
+ * De quel côté de l'ÉCRAN le vent pousse : +1 vers la droite, -1 vers la
+ * gauche.
+ *
+ * Il faut le projeter, et non le lire sur `versRad` : la caméra tourne d'un
+ * quart de tour aux flèches, et un vent d'ouest pousse alors vers le haut de
+ * l'écran au lieu de la droite. On projette deux points de parcelle et on
+ * regarde le signe — le même procédé que `chuteEnCours`, pour la même raison.
+ *
+ * La projection étant affine, ce signe ne dépend pas de l'endroit : un seul
+ * point de référence suffit pour tout le peuplement.
+ */
+function sensDuVentALEcran(versRad: number, vue: Vue): number {
+  const origine = versEcranVue({ x: 0, y: 0, z: 0 }, vue);
+  const versLa = versEcranVue({ x: Math.cos(versRad), y: Math.sin(versRad), z: 0 }, vue);
+  const dx = versLa.sx - origine.sx;
+  return dx === 0 ? 0 : Math.sign(dx);
 }
