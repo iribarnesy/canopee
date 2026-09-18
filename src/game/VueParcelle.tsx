@@ -132,8 +132,21 @@ export interface VueParcelleProps {
    *
    * Non appelé quand le pointeur a GLISSÉ : faire tourner la parcelle ne doit
    * pas planter un arbre au passage.
+   *
+   * `idArbre` est l'arbre qu'on VOIT sous le curseur, s'il y en a un : la vue
+   * vise le sprite et non le sol, parce qu'un houppier penché déborde de sa
+   * cellule et qu'un tronc derrière une butte n'a pas la sienne sous le
+   * curseur. La vue rend les deux réponses et ne choisit pas : un geste porte
+   * sur la cellule même quand un arbre est devant, une sélection porte sur
+   * l'arbre — c'est au jeu de dire lequel il veut.
    */
-  surClic?: (cellule: { x: number; y: number }, multiple: boolean) => void;
+  surClic?: (
+    cellule: { x: number; y: number },
+    multiple: boolean,
+    idArbre: number | undefined,
+  ) => void;
+  /** Les arbres à éclairer, parce qu'ils sont choisis. */
+  surbrillance?: ReadonlySet<number>;
   /**
    * Comment un geste remodèle un arbre qui RESTE debout, s'il y a lieu (§6.2).
    *
@@ -244,6 +257,9 @@ const ANNONCE_MS = 250;
  */
 const SEUIL_DE_CLIC_PX = 4;
 
+/** Aucun arbre choisi — une seule instance, pour ne pas en créer une par image. */
+const AUCUN: ReadonlySet<number> = new Set();
+
 export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const hote = useRef<HTMLDivElement>(null);
   const scene = useRef<SceneParcelle | null>(null);
@@ -253,6 +269,8 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const glisse = useRef<{ x: number; y: number } | null>(null);
   /** Distance parcourue depuis l'appui, px : ce qui distingue un clic d'un glissement. */
   const parcouru = useRef(0);
+  /** L'arbre sous le curseur, relu par la boucle d'images pour l'éclairer. */
+  const survole = useRef<number | undefined>(undefined);
 
   const altitudeMax = useRef(0);
   altitudeMax.current = props.sol.altitudesM.reduce((m, z) => Math.max(m, z), 0);
@@ -357,6 +375,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.voilerLesCellules(p.voiler?.(horloge) ?? []);
         scene.current?.embraser(p.feu?.(horloge) ?? RIEN_NE_BRULE);
         scene.current?.montrerLesChangements(p.marqueurs ?? []);
+        scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
         const compte = scene.current?.rafraichir(
           {
             sol: p.sol,
@@ -404,7 +423,20 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
 
   const surGlissement = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const depart = glisse.current;
-    if (!depart) return;
+    if (!depart) {
+      // **Le survol se pose sur le DOM, pas dans un état de React** : un
+      // `setState` par mouvement de souris ferait rendre l'arbre React
+      // plusieurs dizaines de fois par seconde pour changer un curseur.
+      const hoteVue = hote.current;
+      if (!hoteVue) return;
+      const r = hoteVue.getBoundingClientRect();
+      const id = scene.current?.arbreSousLeCurseur(e.clientX - r.left, e.clientY - r.top);
+      survole.current = id;
+      // Une main dit « je vais saisir et déplacer » — c'est le geste de la
+      // caméra. Au-dessus d'un arbre, on désigne : c'est un pointeur.
+      hoteVue.style.cursor = id === undefined ? "grab" : "pointer";
+      return;
+    }
     const dx = e.clientX - depart.x;
     const dy = e.clientY - depart.y;
     glisse.current = { x: e.clientX, y: e.clientY };
@@ -426,9 +458,10 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
       v,
       (x, y) => p.sol.altitudesM[y * p.sol.coteM + x] ?? 0,
     );
+    const idArbre = scene.current?.arbreSousLeCurseur(e.clientX - r.left, e.clientY - r.top);
     // Hors parcelle : rien. Un clic dans le décor n'est pas un geste manqué,
     // c'est un clic sur ce qui n'appartient pas au joueur.
-    if (cellule) p.surClic(cellule, e.shiftKey || e.metaKey || e.ctrlKey);
+    if (cellule) p.surClic(cellule, e.shiftKey || e.metaKey || e.ctrlKey, idArbre);
   }, []);
 
   const surTouche = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {

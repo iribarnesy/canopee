@@ -161,6 +161,45 @@ export interface Compte {
  * reste est synchrone, y compris `rafraichir`, qui est appelé par la boucle de
  * jeu et doit rendre la main dans le budget d'une image.
  */
+/**
+ * Un arbre tel qu'il a été POSÉ : de quoi refaire, dans l'autre sens, le
+ * chemin du pixel écran vers le pixel de sa vignette.
+ */
+interface ArbrePose {
+  id: number;
+  image: HTMLCanvasElement;
+  /** le PIED de l'arbre à l'écran */
+  sx: number;
+  sy: number;
+  /** le pied dans la vignette, une fois mise à l'échelle */
+  dx: number;
+  dy: number;
+  largeur: number;
+  hauteur: number;
+  rotationRad: number;
+  opacite: number;
+}
+
+/** L'opacité d'une vignette, un octet par pixel. */
+interface MasqueAlpha {
+  largeur: number;
+  hauteur: number;
+  alpha: Uint8Array;
+}
+
+/**
+ * En deçà de quoi un pixel de vignette ne compte pas comme « l'arbre ».
+ *
+ * Pas zéro : le dessin a des bords adoucis, et un seuil à zéro rendrait
+ * cliquable un halo invisible d'un ou deux pixels autour de chaque feuille —
+ * ce qui redonnerait des arbres qui se volent les clics, le défaut qu'on
+ * corrige ici.
+ */
+const OPACITE_CLIQUABLE = 24;
+
+/** En deçà, l'anneau de sélection ne se verrait plus. */
+const RAYON_ANNEAU_MIN_PX = 9;
+
 export class SceneParcelle {
   private readonly app = new Application();
   private readonly couches = {
@@ -170,12 +209,33 @@ export class SceneParcelle {
     ombres: new Container(),
     feu: new Container(),
     arbres: new Container(),
+    surbrillance: new Container(),
     panache: new Container(),
     ciel: new Container(),
     marqueurs: new Container(),
   };
   private terrain?: Terrain;
   private decor?: Decor;
+  /**
+   * Où chaque arbre a été posé à la dernière image, dans l'ordre du peintre.
+   *
+   * C'est ce qui permet de désigner un arbre par ce qu'on VOIT de lui plutôt
+   * que par la cellule de sol sous le curseur : un houppier penché déborde de
+   * sa cellule, et un tronc derrière une butte n'a pas la sienne sous le
+   * curseur. Relu à l'envers, l'ordre du peintre donne aussi gratuitement la
+   * bonne réponse quand deux houppiers se recouvrent — c'est celui de devant.
+   */
+  private arbresPoses: ArbrePose[] = [];
+  /** L'anneau posé au pied des arbres éclairés. */
+  private readonly anneaux = new Graphics();
+  /** L'arbre survolé et les arbres choisis, à éclairer. */
+  private surligne: { survole?: number; choisis: ReadonlySet<number> } = { choisis: new Set() };
+  /**
+   * L'opacité de chaque vignette, pour savoir si un pixel appartient à
+   * l'arbre ou au vide autour. Attachée au canvas lui-même : une vignette
+   * recuite est un canvas neuf, et son masque se refait tout seul.
+   */
+  private readonly masques = new WeakMap<HTMLCanvasElement, MasqueAlpha>();
   private atlas?: AtlasArbres;
   private taches: Texture[] = [];
   private masque?: RenderTexture;
@@ -321,6 +381,15 @@ export class SceneParcelle {
       // lisible, quand la flamme monte derrière une tige et pas devant.
       this.couches.feu,
       this.couches.arbres,
+      // La surbrillance est un CALQUE et non une teinte : la teinte de Pixi
+      // multiplie, donc elle ne sait qu'assombrir. Un double du sprite posé
+      // par-dessus, en `add`, éclaire l'arbre sans toucher à sa vignette — et
+      // la vignette cuite reste intacte, ce qu'exige le §5.11.
+      this.couches.surbrillance,
+      // L'anneau de sélection est posé À PART de la couche des halos, et pas
+      // dedans : `poserImages` y range des sprites par rang, et un `Graphics`
+      // glissé au milieu de ce rangement se ferait prendre pour l'un d'eux.
+      this.anneaux,
       // **Le panache est AU-DESSUS des arbres, et c'est le seul calque du monde
       // qui ait le droit de masquer un houppier** : de la fumée passe devant ce
       // qu'elle survole, sinon ce n'est pas de la fumée. Le calque des
@@ -889,6 +958,7 @@ export class SceneParcelle {
   private poserArbres(poses: ReturnType<typeof posesDesArbres>, vue: Vue): number {
     if (!this.atlas) return 0;
     let n = 0;
+    this.arbresPoses.length = 0;
     for (const pose of poses) {
       const vignette = this.atlas.vignette(pose.classe);
       if (!vignette) continue;
@@ -948,9 +1018,125 @@ export class SceneParcelle {
         sprite.x = pose.sx;
         sprite.y = pose.sy;
       }
+      // Un arbre transparent n'est pas encore là (une plantation qui monte) :
+      // il ne doit pas capter le clic avant d'être visible. Le fourré agrégé
+      // porte un identifiant négatif et n'est l'arbre de personne.
+      if (pose.arbre.id >= 0 && d.opacite > 0.5) {
+        this.arbresPoses.push({
+          id: pose.arbre.id,
+          image: vignette.image,
+          sx: pose.sx,
+          sy: pose.sy,
+          dx: ancre.dx,
+          dy: ancre.dy,
+          largeur: taille.largeur,
+          hauteur: taille.hauteur * d.hauteur,
+          rotationRad: d.rotationRad,
+          opacite: d.opacite,
+        });
+      }
     }
     SceneParcelle.tailler(this.couches.arbres, n);
+    return n + this.poserLaSurbrillance();
+  }
+
+  /**
+   * Éclaire l'arbre survolé et les arbres choisis.
+   *
+   * Un double du sprite, en `add` : la teinte de Pixi multiplie et ne sait
+   * qu'assombrir, alors qu'il faut ici que l'arbre RESSORTE. Le survol est
+   * discret — il dit « celui-ci partirait » — et le choix est plus franc.
+   */
+  private poserLaSurbrillance(): number {
+    let n = 0;
+    this.anneaux.clear();
+    for (let i = 0; i < this.couches.arbres.children.length; i++) {
+      const pose = this.arbresPoses[i];
+      const source = this.couches.arbres.children[i] as Sprite | undefined;
+      if (!pose || !source) continue;
+      const choisi = this.surligne.choisis.has(pose.id);
+      const survole = this.surligne.survole === pose.id;
+      if (!choisi && !survole) continue;
+      const halo = SceneParcelle.sprite(this.couches.surbrillance, n++, source.texture);
+      halo.width = source.width;
+      halo.height = source.height;
+      halo.pivot.copyFrom(source.pivot);
+      halo.rotation = source.rotation;
+      halo.x = source.x;
+      halo.y = source.y;
+      halo.blendMode = "add";
+      halo.tint = choisi ? 0x7fc4ff : 0xffffff;
+      halo.alpha = (choisi ? 0.5 : 0.25) * pose.opacite;
+
+      // **L'anneau au pied fait le vrai travail.** Éclairer la vignette ne se
+      // voit pas sur un semis de trois pixels — et c'est justement sur les
+      // petits arbres qu'on a besoin de savoir lequel on tient. L'anneau, lui,
+      // garde une taille lisible quelle que soit celle de l'arbre, et il est
+      // posé à plat sur le sol, donc aplati comme tout ce que la vue isométrique
+      // couche.
+      const rx = Math.max(RAYON_ANNEAU_MIN_PX, pose.largeur * 0.38);
+      this.anneaux.ellipse(pose.sx, pose.sy, rx, rx * 0.5);
+      this.anneaux.stroke({
+        width: choisi ? 2.5 : 1.5,
+        color: choisi ? 0x8fd0ff : 0xffffff,
+        alpha: (choisi ? 0.95 : 0.6) * pose.opacite,
+      });
+    }
+    SceneParcelle.tailler(this.couches.surbrillance, n);
     return n;
+  }
+
+  /** Dit quels arbres éclairer à la prochaine image. */
+  surlignerLesArbres(choisis: ReadonlySet<number>, survole?: number): void {
+    this.surligne = survole === undefined ? { choisis } : { choisis, survole };
+  }
+
+  /**
+   * L'arbre sous un point de l'écran — celui qu'on VOIT à cet endroit.
+   *
+   * On remonte l'ordre du peintre à l'envers : le dernier posé est devant, et
+   * c'est lui qui a le clic quand deux houppiers se recouvrent. Le rectangle
+   * du sprite ne suffit pas — il est plein de vide autour du dessin — d'où la
+   * lecture de l'opacité du pixel visé dans la vignette.
+   */
+  arbreSousLeCurseur(sx: number, sy: number): number | undefined {
+    for (let i = this.arbresPoses.length - 1; i >= 0; i--) {
+      const pose = this.arbresPoses[i];
+      if (!pose) continue;
+      // Le repère de la vignette posée : on défait la rotation autour du pied.
+      let lx = sx - pose.sx;
+      let ly = sy - pose.sy;
+      if (pose.rotationRad !== 0) {
+        const c = Math.cos(-pose.rotationRad);
+        const s = Math.sin(-pose.rotationRad);
+        const rx = lx * c - ly * s;
+        ly = lx * s + ly * c;
+        lx = rx;
+      }
+      lx += pose.dx;
+      ly += pose.dy;
+      if (lx < 0 || ly < 0 || lx >= pose.largeur || ly >= pose.hauteur) continue;
+      const masque = this.masqueDe(pose.image);
+      if (!masque) continue;
+      const mx = Math.min(masque.largeur - 1, Math.floor((lx / pose.largeur) * masque.largeur));
+      const my = Math.min(masque.hauteur - 1, Math.floor((ly / pose.hauteur) * masque.hauteur));
+      if ((masque.alpha[my * masque.largeur + mx] ?? 0) >= OPACITE_CLIQUABLE) return pose.id;
+    }
+    return undefined;
+  }
+
+  /** L'opacité d'une vignette, lue une fois puis gardée avec son canvas. */
+  private masqueDe(image: HTMLCanvasElement): MasqueAlpha | undefined {
+    const deja = this.masques.get(image);
+    if (deja) return deja;
+    const ctx = image.getContext("2d", { willReadFrequently: true });
+    if (!ctx || image.width === 0 || image.height === 0) return undefined;
+    const pixels = ctx.getImageData(0, 0, image.width, image.height).data;
+    const alpha = new Uint8Array(image.width * image.height);
+    for (let i = 0; i < alpha.length; i++) alpha[i] = pixels[i * 4 + 3] ?? 0;
+    const masque = { largeur: image.width, hauteur: image.height, alpha };
+    this.masques.set(image, masque);
+    return masque;
   }
 
   /**

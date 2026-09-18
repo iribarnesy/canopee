@@ -15,7 +15,6 @@ import {
 } from "../engine/climat";
 import { type EauDeSurface, profondeurNappeCm, resumeEau, SANS_EAU } from "../engine/eau_surface";
 import { getEspece } from "../engine/especes";
-import { crownRadiusM } from "../engine/light";
 import {
   type Bordures,
   bordersUniformes,
@@ -59,23 +58,9 @@ import {
   type ProfilDepart,
   supprimerProfil,
 } from "./profils";
-import type { SnapshotTree } from "./protocol";
 import { useEllipse } from "./useEllipse";
 import { loadSave, useGame } from "./useGame";
 import { VueParcelle } from "./VueParcelle";
-
-/**
- * Ce qu'on peut cliquer d'un arbre, en m. C'est son houppier — sauf pour une
- * chandelle, qui n'en a plus : sans ce rétrécissement, un fût mort capte les
- * clics sur toute l'emprise de la couronne qu'il avait de son vivant, et vole
- * la sélection à ses voisins vivants. Le facteur suit ce que `drawTreeOblique`
- * dessine réellement d'une chandelle.
- */
-function rayonCliquableM(tree: SnapshotTree): number {
-  const espece = getEspece(tree.especeId);
-  const houppier = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
-  return Math.max(1, tree.chandelle ? houppier * 0.3 : houppier);
-}
 
 function StartScreen({
   onStart,
@@ -1066,14 +1051,23 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * Un clic sur la parcelle : le geste en cours s'applique là, ou bien on
    * sélectionne l'arbre qui s'y trouve.
    *
-   * **La vue rend une CELLULE et le jeu vise son centre.** La vue isométrique
-   * ne peut pas faire mieux sans mentir : sur un terrain accidenté un même
-   * pixel recouvre plusieurs cellules, et `celluleSousLeCurseurVue` rend celle
-   * qu'on voit. Un demi-mètre d'approximation ne change rien à un geste — le
-   * plus fin porte sur un disque de huit mètres, et le rayon cliquable d'un
-   * arbre vaut son houppier.
+   * **Un geste vise une CELLULE, une sélection vise un ARBRE**, et la vue rend
+   * les deux. Pour le geste, la cellule suffit : sur un terrain accidenté un
+   * même pixel recouvre plusieurs cellules et `celluleSousLeCurseurVue` rend
+   * celle qu'on voit, à un demi-mètre près — sans importance quand le geste le
+   * plus fin porte sur un disque de huit mètres.
+   *
+   * Pour la sélection, non. On désignait l'arbre par la distance de sa cellule
+   * au clic, c'est-à-dire en visant le SOL : il fallait toucher le pied, un
+   * houppier penché ne comptait pas, et sur un semis de trente centimètres
+   * personne ne trouvait la cible. La vue vise maintenant le sprite — ce qu'on
+   * voit de l'arbre EST l'arbre — et `idArbre` est sa réponse.
    */
-  const surClicParcelle = (cellule: { x: number; y: number }, multiple: boolean) => {
+  const surClicParcelle = (
+    cellule: { x: number; y: number },
+    multiple: boolean,
+    idArbre: number | undefined,
+  ) => {
     const mx = cellule.x + 0.5;
     const my = cellule.y + 0.5;
     if (mode === "planter") {
@@ -1103,28 +1097,17 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         critere: critereEclaircie,
         devenir: "vendre",
       });
+    } else if (multiple) {
+      // Maj/ctrl : on ajoute ou on retire, et un clic dans le vide ne défait
+      // pas la sélection qu'on est en train de construire.
+      if (idArbre !== undefined) {
+        const suite = new Set(selectedIds);
+        if (suite.has(idArbre)) suite.delete(idArbre);
+        else suite.add(idArbre);
+        setSelectedIds(suite);
+      }
     } else {
-      // Sélection au pied de l'arbre ; maj/ctrl = ajouter à la sélection.
-      let best: SnapshotTree | undefined;
-      let bestD = Infinity;
-      for (const t of snapshot.trees) {
-        const r = rayonCliquableM(t);
-        const d = Math.hypot(t.x - mx, t.y - my);
-        if (d <= r + 0.5 && d < bestD) {
-          best = t;
-          bestD = d;
-        }
-      }
-      if (multiple) {
-        if (best) {
-          const next = new Set(selectedIds);
-          if (next.has(best.id)) next.delete(best.id);
-          else next.add(best.id);
-          setSelectedIds(next);
-        }
-      } else {
-        setSelectedIds(best ? new Set([best.id]) : new Set());
-      }
+      setSelectedIds(idArbre === undefined ? new Set() : new Set([idArbre]));
     }
   };
 
@@ -1148,6 +1131,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             hauteurMaxDe={(id) => getEspece(id)?.hauteurMaxM ?? 20}
             ombreDe={(a) => a.partFoliaire}
             surClic={surClicParcelle}
+            surbrillance={selectedIds}
             deformer={ellipse.deformer}
             mourant={ellipse.mourant}
             remodeler={ellipse.remodeler}
