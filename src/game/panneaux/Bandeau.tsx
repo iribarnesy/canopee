@@ -34,8 +34,18 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
   return (
     <>
       <p className="bandeau">
+        {/*
+          La DATE d'abord, le temps joué en petit.
+          `anneeCivile` vient du moteur : c'est l'année qui décide du climat,
+          du CO₂ et de la dérive. « An 1 » ne dit que depuis combien de temps
+          on joue — et sur une parcelle vieillie de quinze ans avant qu'on y
+          touche, il annonçait l'an 1 devant mille trois cents arbres.
+        */}
         <strong style={{ fontSize: "1.25rem" }}>
-          An {annee} · {mois}
+          {mois} {snapshot.anneeCivile}
+          <span className="detail" style={{ fontSize: "0.72rem", fontWeight: 400, marginLeft: 6 }}>
+            an {annee}
+          </span>
         </strong>
         <strong style={{ fontSize: "1.25rem", color: tresorerie < 0 ? "#c0392b" : "#2e5b30" }}>
           {tresorerie.toFixed(0)} €
