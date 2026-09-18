@@ -43,10 +43,12 @@ import { Bandeau } from "./panneaux/Bandeau";
 import { CarteDuSol } from "./panneaux/CarteDuSol";
 import { PanneauAction } from "./panneaux/PanneauAction";
 import { PanneauJournal } from "./panneaux/PanneauJournal";
+import { PanneauMenu } from "./panneaux/PanneauMenu";
 import { PanneauParcelle } from "./panneaux/PanneauParcelle";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
 import { useReglagesDeGeste } from "./panneaux/reglages";
-import { btn, PANNEAU_DROIT, SCENE, VOLET } from "./panneaux/styles";
+import { btn, SCENE, VOLET } from "./panneaux/styles";
+import { Angle, BoutonDeVolet, useVolets, Volet } from "./panneaux/Volet";
 import { arbresAPoser, donneesSolDe } from "./parcelle";
 import {
   chargerProfils,
@@ -950,6 +952,9 @@ function StartScreen({
 export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => void }) {
   const game = useGame();
   const geste = useReglagesDeGeste();
+  // Les gestes sont ouverts d'entrée : un écran où tout est rangé ne dit pas
+  // au joueur qui arrive qu'il y a quelque chose à faire.
+  const volets = useVolets({ bg: "gestes" });
   // Le clic sur la parcelle a besoin de savoir quel geste est armé et avec
   // quels réglages ; le panneau, lui, reçoit l'objet entier.
   const { mode, especeId, avecManchon, rayonChaulage, densiteCible, critereEclaircie } = geste;
@@ -1153,31 +1158,127 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         )}
       </div>
 
-      {/* En haut à gauche : la date, l'argent, le temps, la marche du temps. */}
-      <div style={{ ...VOLET, top: 10, left: 10, maxWidth: "calc(100vw - 420px)" }}>
+      {/*
+        LE SEUL AFFICHAGE PERMANENT : la date, l'argent, les heures, la météo,
+        et les vitesses. Tout le reste est derrière un bouton — rien de tout
+        cela n'a besoin d'être relu à chaque semaine de jeu.
+      */}
+      <div style={{ ...VOLET, top: 12, left: 12 }}>
         <Bandeau game={game} snapshot={snapshot} />
       </div>
 
-      {/* En bas à gauche : le diagnostic de sol. */}
-      <div style={{ ...VOLET, left: 10, bottom: 10 }}>
-        <CarteDuSol snapshot={snapshot} station={station} />
+      {/*
+        Les avis ne sont derrière aucun bouton : ce sont des choses qui
+        arrivent, et on ne pense pas à aller les chercher.
+      */}
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 440,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        <Avis game={game} vivants={vivants} />
       </div>
 
-      <div style={PANNEAU_DROIT}>
-        <Avis game={game} />
+      {/* En haut à droite : la partie, et l'arbre qu'on vient de cliquer. */}
+      <Angle
+        coin="hd"
+        volet={
+          volets.estOuvert("hd", "partie") ? (
+            <Volet titre="La partie" largeur={340} surFermer={() => volets.fermer("hd")}>
+              <PanneauMenu game={game} />
+            </Volet>
+          ) : selectedTrees.length > 0 ? (
+            <Volet
+              titre={
+                selectedTrees.length === 1
+                  ? "L'arbre sélectionné"
+                  : `${selectedTrees.length} arbres sélectionnés`
+              }
+              largeur={380}
+              surFermer={() => setSelectedIds(new Set())}
+            >
+              <PanneauSelection
+                game={game}
+                vivants={vivants}
+                selectedTrees={selectedTrees}
+                setSelectedIds={setSelectedIds}
+              />
+            </Volet>
+          ) : undefined
+        }
+      >
+        <BoutonDeVolet
+          ouvert={volets.estOuvert("hd", "partie")}
+          surClic={() => volets.basculer("hd", "partie")}
+        >
+          ⚙ La partie
+        </BoutonDeVolet>
+      </Angle>
 
-        <PanneauAction game={game} snapshot={snapshot} geste={geste} />
+      {/* En bas à gauche : ce qu'on FAIT à la parcelle. */}
+      <Angle
+        coin="bg"
+        volet={
+          volets.estOuvert("bg", "gestes") ? (
+            <Volet titre="Gestes" largeur={390} surFermer={() => volets.fermer("bg")}>
+              <PanneauAction game={game} snapshot={snapshot} geste={geste} />
+            </Volet>
+          ) : volets.estOuvert("bg", "sol") ? (
+            <Volet titre="Diagnostic de sol" largeur={430} surFermer={() => volets.fermer("bg")}>
+              <CarteDuSol snapshot={snapshot} station={station} />
+            </Volet>
+          ) : undefined
+        }
+      >
+        <BoutonDeVolet
+          ouvert={volets.estOuvert("bg", "gestes")}
+          surClic={() => volets.basculer("bg", "gestes")}
+        >
+          🌱 Gestes
+        </BoutonDeVolet>
+        <BoutonDeVolet
+          ouvert={volets.estOuvert("bg", "sol")}
+          surClic={() => volets.basculer("bg", "sol")}
+        >
+          🗺 Sol
+        </BoutonDeVolet>
+      </Angle>
 
-        <PanneauSelection
-          game={game}
-          vivants={vivants}
-          selectedTrees={selectedTrees}
-          setSelectedIds={setSelectedIds}
-        />
-        <PanneauParcelle snapshot={snapshot} station={station} vivants={vivants} />
-
-        <PanneauJournal evenements={game.events} />
-      </div>
+      {/* En bas à droite : ce qu'on LIT de la parcelle. */}
+      <Angle
+        coin="bd"
+        volet={
+          volets.estOuvert("bd", "parcelle") ? (
+            <Volet titre="La parcelle" largeur={400} surFermer={() => volets.fermer("bd")}>
+              <PanneauParcelle snapshot={snapshot} station={station} vivants={vivants} />
+            </Volet>
+          ) : volets.estOuvert("bd", "journal") ? (
+            <Volet titre="Journal" largeur={400} surFermer={() => volets.fermer("bd")}>
+              <PanneauJournal evenements={game.events} />
+            </Volet>
+          ) : undefined
+        }
+      >
+        <BoutonDeVolet
+          ouvert={volets.estOuvert("bd", "parcelle")}
+          surClic={() => volets.basculer("bd", "parcelle")}
+        >
+          📊 La parcelle
+        </BoutonDeVolet>
+        <BoutonDeVolet
+          ouvert={volets.estOuvert("bd", "journal")}
+          surClic={() => volets.basculer("bd", "journal")}
+        >
+          📜 Journal{game.events.length > 0 ? ` (${game.events.length})` : ""}
+        </BoutonDeVolet>
+      </Angle>
     </div>
   );
 }

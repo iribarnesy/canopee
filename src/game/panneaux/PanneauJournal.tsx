@@ -7,11 +7,7 @@ import type { WithUid } from "../useGame";
 
 export function PanneauJournal({ evenements }: { evenements: readonly WithUid<GameEvent>[] }) {
   return (
-    <section
-      className="carte journal"
-      style={{ maxHeight: 560, overflowY: "auto", fontSize: 13, flex: 1 }}
-    >
-      <h3>Journal</h3>
+    <div className="journal" style={{ fontSize: 13 }}>
       {evenements.length === 0 && (
         <div style={{ color: "var(--encre-douce)" }}>Rien à signaler pour l'instant.</div>
       )}
@@ -23,6 +19,6 @@ export function PanneauJournal({ evenements }: { evenements: readonly WithUid<Ga
           {ev.icone} {ev.message}
         </div>
       ))}
-    </section>
+    </div>
   );
 }

@@ -1,11 +1,15 @@
 /**
- * Les AVIS : la pause automatique et les refus du moteur. Rien de permanent —
- * ce sont des choses qui arrivent, se lisent, et passent.
+ * Les AVIS : ce que la partie a besoin de dire tout de suite — une pause
+ * automatique, un geste refusé, une récolte qui attend. Rien de permanent : ce
+ * sont des choses qui arrivent, se lisent, et passent. Elles ne sont derrière
+ * aucun bouton, justement parce qu'on ne pense pas à aller les chercher.
  */
 
+import { useMemo } from "react";
 import type { GameAction } from "../../engine/actions";
+import type { SnapshotTree } from "../protocol";
 import type { GameApi } from "../useGame";
-import { panel } from "./styles";
+import { btn, panel } from "./styles";
 
 /**
  * Le nom du geste tel qu'on le dit, pour les refus. Sans cette table, le
@@ -32,7 +36,9 @@ const NOM_DU_GESTE: Partial<Record<GameAction["type"], string>> = {
   ramasserBoisMort: "Ramasser le bois mort",
 };
 
-export function Avis({ game }: { game: GameApi }) {
+export function Avis({ game, vivants }: { game: GameApi; vivants: readonly SnapshotTree[] }) {
+  const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
+
   return (
     <>
       {game.notice && <div style={{ ...panel, background: "#f3e6c4" }}>⏸ {game.notice}</div>}
@@ -43,6 +49,22 @@ export function Avis({ game }: { game: GameApi }) {
               ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
             </div>
           ))}
+        </div>
+      )}
+      {fruitsPrets.length > 0 && !game.autoHarvest && (
+        <div style={panel}>
+          🍎 <strong>{fruitsPrets.reduce((s, t) => s + t.fruitsKg, 0).toFixed(0)} kg</strong> de
+          fruits mûrs sur {fruitsPrets.length} arbres.
+          <br />
+          <button
+            type="button"
+            style={btn(true)}
+            onClick={() =>
+              game.dispatch({ type: "recolter", treeIds: fruitsPrets.map((t) => t.id) })
+            }
+          >
+            Tout récolter
+          </button>
         </div>
       )}
     </>

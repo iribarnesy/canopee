@@ -1,6 +1,9 @@
 /**
- * Le BANDEAU : la date, l'argent, le temps qu'il fait, et la marche du temps.
- * Les deux seules choses qu'on veut lire à chaque semaine de jeu.
+ * Le BANDEAU : la seule chose affichée en permanence.
+ *
+ * La date, l'argent, les heures et le temps qu'il fait — ce qu'on lit à chaque
+ * semaine de jeu — et les vitesses, sans lesquelles on ne peut pas jouer du
+ * tout. Le reste est derrière un bouton.
  */
 
 import type { Snapshot } from "../protocol";
@@ -48,7 +51,7 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         </span>
         {snapshot.economy.bankrupt && <strong style={{ color: "#c0392b" }}>FAILLITE</strong>}
       </p>
-      <p style={{ margin: "0 0 6px" }}>
+      <p style={{ margin: 0 }}>
         {[0, 1, 4, 13, 52].map((v) => (
           <button
             key={v}
@@ -59,25 +62,6 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
             {v === 0 ? "⏸" : `×${v}`}
           </button>
         ))}
-        <label style={{ marginRight: 10 }}>
-          <input
-            type="checkbox"
-            checked={game.autoHarvest}
-            onChange={(e) => game.setAutoHarvest(e.target.checked)}
-          />{" "}
-          🧺 récolte auto
-        </label>
-        {/*
-            La seule porte de sortie : il n'y a plus d'en-tête de site par-dessus
-            le jeu. Elle sauvegarde d'abord, et le dit — voir `quit`.
-          */}
-        <button type="button" style={btn()} onClick={game.quit}>
-          💾 Sauvegarder et quitter
-        </button>
-      </p>
-      <p style={{ margin: "6px 0 0", color: "var(--encre-douce)", fontSize: 13 }}>
-        Glisser pour déplacer · molette pour zoomer · ← → pour tourner d'un quart de tour · maj+clic
-        = sélection multiple
       </p>
     </>
   );

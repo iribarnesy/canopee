@@ -58,8 +58,7 @@ export function PanneauAction({
   );
 
   return (
-    <section className="carte">
-      <h3>Action</h3>
+    <>
       <button type="button" style={btn(mode === "selection")} onClick={() => setMode("selection")}>
         Sélection
       </button>
@@ -270,6 +269,6 @@ export function PanneauAction({
           {rayonChaulage} m — {LEGENDE_RAYON[mode] ?? ""}.
         </div>
       )}
-    </section>
+    </>
   );
 }
