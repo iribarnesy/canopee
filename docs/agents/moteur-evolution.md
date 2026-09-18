@@ -108,6 +108,20 @@ répertoire avec le même script : +6 %, et ça recoupe le témoin par
 neutralisation du bloc. **Un chronométrage se prend dans le même processus, le
 même répertoire et la même arborescence de modules**, ou il ne se prend pas.
 
+**Un dispositif peut passer pour la raison qu'on veut réfuter.** L'essai
+historique de G4 — « un verger nu produit moins que le même verger dans un
+environnement diversifié » — plantait une haie de noisetier, chêne pubescent et
+bouleau. Les TROIS sont anémophiles. Il passait parce que le service ne lisait
+que l'habitat, qui compte la richesse en essences : le moteur affirmait donc que
+planter trois arbres pollinisés par le vent améliore la nouaison d'un verger de
+15 %. Le lot l'a fait tomber à +0,9 %, et c'est la correction d'une affirmation
+fausse, pas une régression. L'essai garde son énoncé, se donne une haie
+mellifère (+28,0 %) et **conserve la haie anémophile comme TÉMOIN** : c'est elle
+qui sépare « des voisins » de « des voisins qui nourrissent ». **Quand un lot
+fait tomber un essai qui défendait le critère qu'il renforce, regarder d'abord
+le dispositif de cet essai** — il mesurait peut-être ce que le lot vient
+justement de réfuter.
+
 **Et trois mesures concurrentes ne font pas trois mesures.** J'ai lancé deux
 chronométrages et une suite d'essais en parallèle ; les trois sont invalides, et
 la suite a failli expirer pour une raison qui n'avait rien à voir avec elle. Le
