@@ -43,7 +43,7 @@ describe("un drageon sort près de sa mère, et c'est tout le mécanisme", () =>
     const mere = { x: 20, y: 20 } as TreeState;
     let rng = rngStateFromSeed(3);
     for (let k = 0; k < 200; k++) {
-      const p = positionDeDrageon(rng, mere, 40, espece);
+      const p = positionDeDrageon(rng, mere, espece);
       rng = p.rng;
       const d = Math.hypot(p.x - 20, p.y - 20);
       expect(d).toBeLessThanOrEqual(portee + 1e-9);
@@ -55,7 +55,7 @@ describe("un drageon sort près de sa mère, et c'est tout le mécanisme", () =>
   });
 
   it("sans mère, pas de drageon — le mécanisme ne se déclenche pas tout seul", () => {
-    const p = positionDeDrageon(rngStateFromSeed(1), null, 40, getEspece("prunus_spinosa"));
+    const p = positionDeDrageon(rngStateFromSeed(1), null, getEspece("prunus_spinosa"));
     expect(p.x).toBeLessThan(0);
   });
 });

@@ -214,7 +214,6 @@ function draw(rng: RngState): { rng: RngState; value: number } {
 export function positionDeDrageon(
   rng: RngState,
   parent: TreeState | null,
-  coteM: number,
   espece: EspeceV0,
 ): { rng: RngState; x: number; y: number } {
   const portee = espece.regeneration.drageonne?.porteeM ?? 0;
@@ -403,7 +402,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   const tryEstablish = (especeId: string, parent: TreeState | null, parDrageon = false) => {
     const espece = getEspece(especeId);
     const pos = parDrageon
-      ? positionDeDrageon(rng, parent, coteM, espece)
+      ? positionDeDrageon(rng, parent, espece)
       : drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
     rng = pos.rng;
     // La place se dispute LÀ OÙ LA GRAINE TOMBE, et plus à l'échelle de la
