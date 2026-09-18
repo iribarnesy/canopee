@@ -70,6 +70,36 @@ export const OVERDRAFT_LIMIT_EUR = -20_000;
 export const PLANT_HOURS = 1;
 /** espacement minimal imposé à la plantation, m */
 export const PLANT_MIN_SPACING_M = 1;
+/**
+ * Hauteur adulte à partir de laquelle une essence encombre PLEINEMENT un potet,
+ * m. En dessous, l'exclusion se réduit dans la même proportion (#154).
+ *
+ * Le seuil du mètre ne dit pas « il y a un obstacle » — il dit « on ne met pas
+ * deux futurs arbres l'un sur l'autre ». C'est donc le potentiel de l'essence
+ * qui décide, pas la taille du jour : un semis de chêne de 30 cm doit bloquer,
+ * parce qu'il deviendra un chêne ; une ronce de deux mètres ne doit rien
+ * bloquer, parce qu'elle ne deviendra jamais un arbre et qu'on la débroussaille.
+ *
+ * Huit mètres est le haut de la strate arbustive dans l'atlas — pommier,
+ * noisetier, aubépine, houx — et l'atlas est vide entre 8 et 20 m, si bien que
+ * TOUT ce qui est un arbre garde exactement l'exclusion d'aujourd'hui. Le lot
+ * ne déplace que la strate basse : ronce, ajonc, genêt à 2,5 m, callune à 0,6.
+ */
+export const HAUTEUR_ARBRE_M = 8;
+/**
+ * Diamètre au-dessus duquel une tige s'ABAT, et en dessous duquel elle se
+ * DÉBROUSSAILLE, cm *(à calibrer)*. Entre les deux, le prix se mélange.
+ *
+ * `fellingHours` facture 0,3 h d'approche et de façonnage plus 0,15 h par mètre
+ * de haut : c'est juste pour un fût qu'on approche, tronçonne, ébranche et
+ * découpe, et absurde pour un brin de ronce qu'on couche d'un coup de
+ * débroussailleuse. Mesuré avant ce lot : nettoyer 335 ronces revenait à
+ * 822 h/ha, contre les 60 h/ha que `FAUCHE_HOURS_M2_MAIN` documente pour ce
+ * geste exact — le moteur se contredisait d'un facteur quatorze.
+ */
+export const DIAMETRE_BROUSSE_CM = 5;
+/** Diamètre au-dessus duquel la tige se facture entièrement comme un abattage, cm *(à calibrer)*. */
+export const DIAMETRE_FUT_CM = 12;
 /** prix de vente du bois de chauffage, €/m³ *(à calibrer)* */
 export const WOOD_PRICE_EUR_M3 = 35;
 
@@ -800,6 +830,102 @@ export function fellingHours(heightM: number): number {
 }
 
 /**
+ * Part de tige qui relève de l'ABATTAGE plutôt que du débroussaillage, ∈ [0,1].
+ *
+ * Une rampe sur le diamètre, parce qu'il n'y a pas de frontière nette entre un
+ * brin qu'on couche à la débroussailleuse et une perche qu'on tronçonne. Le
+ * zéro en dessous de `DIAMETRE_BROUSSE_CM` porte sur ce TERME, pas sur le prix :
+ * une tige de brousse coûte son débroussaillage, jamais rien.
+ */
+export function partAbattage(diametreCm: number): number {
+  const etendue = DIAMETRE_FUT_CM - DIAMETRE_BROUSSE_CM;
+  return Math.min(1, Math.max(0, (diametreCm - DIAMETRE_BROUSSE_CM) / etendue));
+}
+
+/**
+ * Temps pour faire tomber une tige, h — abattage, débroussaillage, ou entre les
+ * deux selon son diamètre (#154).
+ *
+ * Le débroussaillage se facture à la SURFACE que la tige occupe au sol, au tarif
+ * que le moteur emploie déjà pour un dégagement à la main
+ * (`FAUCHE_HOURS_M2_MAIN`, 60 h/ha). Ce n'est pas un réglage : sur une friche de
+ * dix ans, les houppiers de ronce couvrent 2 911 m² d'une parcelle de 2 500, ce
+ * qui donne 17,5 h là où les 60 h/ha en donnent 15. Le modèle surfacique tombe
+ * sur l'ancre tout seul, et il a la bonne limite aux deux bouts — un tapis
+ * continu coûte le plein tarif, des brins épars coûtent à proportion.
+ */
+export function heuresPourAbattre(tree: {
+  heightM: number;
+  diametreCm: number;
+  especeId: string;
+}): number {
+  const part = partAbattage(tree.diametreCm);
+  if (part >= 1) return fellingHours(tree.heightM);
+  const espece = getEspece(tree.especeId);
+  const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
+  const brousse = Math.PI * r * r * FAUCHE_HOURS_M2_MAIN;
+  return part * fellingHours(tree.heightM) + (1 - part) * brousse;
+}
+
+/**
+ * Heures de débroussaillage qu'un potet réclame avant qu'on puisse creuser, h
+ * (#154).
+ *
+ * On ne dégage que le potet, pas la parcelle : la surface de brousse qui
+ * recouvre le mètre carré visé, au tarif du dégagement à la main. Le chiffre est
+ * petit — une minute environ dans un roncier fermé, contre l'heure que coûte la
+ * plantation — et c'est le bon ordre de grandeur : 60 h/ha sur trois mètres
+ * carrés font quelques dizaines de secondes.
+ *
+ * Ce qui punit vraiment une plantation dans un roncier n'est donc PAS ce
+ * surcoût, c'est que le plant s'y fasse étouffer — et ça, le moteur le simule
+ * déjà par la lumière. Facturer davantage ici reviendrait à compter deux fois,
+ * et à écrire en dur une punition que la simulation produit toute seule.
+ */
+export function degagementDuPotet(
+  trees: readonly {
+    alive: boolean;
+    x: number;
+    y: number;
+    heightM: number;
+    diametreCm: number;
+    especeId: string;
+  }[],
+  x: number,
+  y: number,
+): number {
+  let recouvert = 0;
+  for (const t of trees) {
+    if (!t.alive) continue;
+    const part = 1 - partAbattage(t.diametreCm);
+    if (part <= 0) continue;
+    const espece = getEspece(t.especeId);
+    const r = crownRadiusM(t.heightM, espece.lumiere.houppierRatio, t.diametreCm);
+    const d = Math.hypot(t.x - x, t.y - y);
+    if (d >= r + PLANT_MIN_SPACING_M) continue;
+    // Part du potet que ce houppier recouvre, approchée par le rapport des
+    // rayons : suffisant pour un surcoût, et sans intersection de disques à
+    // écrire pour trois décimales.
+    const chevauchement = Math.min(1, (r + PLANT_MIN_SPACING_M - d) / (2 * PLANT_MIN_SPACING_M));
+    recouvert += part * chevauchement;
+  }
+  const surface = Math.PI * PLANT_MIN_SPACING_M * PLANT_MIN_SPACING_M;
+  return Math.min(1, recouvert) * surface * FAUCHE_HOURS_M2_MAIN;
+}
+
+/**
+ * Rayon d'exclusion qu'une tige impose à un potet, m (#154).
+ *
+ * Proportionnel à ce que son essence peut DEVENIR, plafonné à l'espacement
+ * d'aujourd'hui : tout ce qui est un arbre garde exactement l'ancienne règle,
+ * seule la strate basse se relâche.
+ */
+export function rayonEncombrement(especeId: string): number {
+  const h = getEspece(especeId).hauteurMaxM;
+  return PLANT_MIN_SPACING_M * Math.min(1, h / HAUTEUR_ARBRE_M);
+}
+
+/**
  * Les heures faites AU-DELÀ de ce que l'effectif couvre, cette semaine.
  *
  * Zéro tant qu'on tient dans le plafond. Rien à retenir en plus : le compteur
@@ -869,16 +995,31 @@ function applyPlanter(
       refusals.push(refuse(action.week, "planter", "position hors parcelle"));
       continue;
     }
-    const tooClose = trees.some((t) => {
+    // L'exclusion appartient au VOISIN, pas au geste : une ronce n'empêche pas
+    // un potet, un chêne oui, et entre les deux ça se dose (#154). Le message
+    // nomme donc l'essence qui bloque — `prevoirAction` (#139) le porte jusque
+    // sous le curseur, où « un arbre vivant » n'aidait personne.
+    const gene = trees.find((t) => {
       if (!t.alive) return false;
       const dx = t.x - pos.x;
       const dy = t.y - pos.y;
-      return dx * dx + dy * dy < PLANT_MIN_SPACING_M * PLANT_MIN_SPACING_M;
+      const r = rayonEncombrement(t.especeId);
+      return dx * dx + dy * dy < r * r;
     });
-    if (tooClose) {
-      refusals.push(refuse(action.week, "planter", "trop proche d'un arbre vivant (< 1 m)"));
+    if (gene) {
+      refusals.push(
+        refuse(
+          action.week,
+          "planter",
+          `trop proche d'un ${getEspece(gene.especeId).nom.toLowerCase()} vivant (< ${rayonEncombrement(gene.especeId).toFixed(1)} m)`,
+        ),
+      );
       continue;
     }
+    // Ce qu'il faut ouvrir avant de creuser : la brousse qui recouvre le potet
+    // se débroussaille, et ça se paie en heures plutôt qu'en refus (#154, dans
+    // l'esprit de #133 — le joueur arbitre, le moteur facture).
+    const heuresDegagement = degagementDuPotet(trees, pos.x, pos.y);
     const tirage = tirerVigueurIndividuelle(rng);
     rng = tirage.rng;
     poses.push(nextTreeId);
@@ -908,8 +1049,8 @@ function applyPlanter(
     });
     planted++;
     treasuryEur -= euroParPlant;
-    hoursUsedWeek += heuresParPlant;
-    hoursUsedYear += heuresParPlant;
+    hoursUsedWeek += heuresParPlant + heuresDegagement;
+    hoursUsedYear += heuresParPlant + heuresDegagement;
     importedKgC += treeTotalCarbonKg(espece, diametreInitialCm(0.3), 0.3); // le plant arrive avec sa biomasse
   }
 
@@ -1022,7 +1163,7 @@ function applyCouper(
           : action.devenir === "laisser"
             ? LAISSER_SUR_PLACE_FACTEUR
             : 1;
-    const hours = fellingHours(tree.heightM) * facteurTravail;
+    const hours = heuresPourAbattre(tree) * facteurTravail;
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
