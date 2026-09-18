@@ -262,8 +262,18 @@ export interface Emprise {
  *   deux cellules de profondeur (`x + y`) puisqu'une cellule en vaut
  *   `TUILE_HAUTEUR_PX / 2`. D'où la marge de `2 × hauteurMaxM`, appliquée aux
  *   deux axes — c'est majorant, et une marge trop large ne coûte que quelques
- *   cellules cuites pour rien ;
- * - le relief joue dans le même sens, d'où `altitudeMaxM` compté avec.
+ *   cellules cuites pour rien. Elle ne vaut que du côté des `x + y` CROISSANTS :
+ *   un arbre ne pousse que vers le haut, et le haut de l'écran est le fond de
+ *   la parcelle ;
+ * - **le relief joue dans les DEUX sens, et c'est ce qui manquait (#151).** Les
+ *   altitudes sont des écarts autour de zéro — de −2 à +2 m sur les stations
+ *   livrées, davantage sur un terrain modelé à la main. Une cellule HAUSSÉE
+ *   monte à l'écran comme un arbre, donc du côté des `x + y` croissants ; mais
+ *   une cellule CREUSÉE descend, et fait entrer dans le cadre une cellule qui
+ *   en sortait par le haut — du côté des `x + y` décroissants, qui n'avait
+ *   qu'une cellule de marge. Le sol qui la porte n'était donc ni cuit ni posé,
+ *   et le joueur voyait un carré manquant. `altitudeMaxM` est l'écart le plus
+ *   fort en valeur absolue, et sa marge s'applique des deux côtés.
  *
  * Rend `undefined` si rien de la parcelle n'est à l'écran, ce qui ne devrait pas
  * arriver puisque le centre est borné — mais un appelant qui l'ignore mérite de
@@ -287,11 +297,14 @@ export function celluleVisibles(vue: Vue, hauteurMaxM = 0, altitudeMaxM = 0): Em
     minY = Math.min(minY, p.y);
     maxY = Math.max(maxY, p.y);
   }
-  const marge = 2 * (hauteurMaxM + altitudeMaxM);
-  const x0 = Math.max(0, Math.floor(minX - 1));
-  const y0 = Math.max(0, Math.floor(minY - 1));
-  const x1 = Math.min(vue.cam.coteM - 1, Math.ceil(maxX + marge));
-  const y1 = Math.min(vue.cam.coteM - 1, Math.ceil(maxY + marge));
+  // Vers le fond : ce qui monte à l'écran, donc la hauteur ET le relief.
+  const margeFond = 2 * (hauteurMaxM + altitudeMaxM);
+  // Vers l'avant : ce qui descend à l'écran, donc le relief seul.
+  const margeAvant = 2 * altitudeMaxM;
+  const x0 = Math.max(0, Math.floor(minX - 1 - margeAvant));
+  const y0 = Math.max(0, Math.floor(minY - 1 - margeAvant));
+  const x1 = Math.min(vue.cam.coteM - 1, Math.ceil(maxX + margeFond));
+  const y1 = Math.min(vue.cam.coteM - 1, Math.ceil(maxY + margeFond));
   if (x1 < x0 || y1 < y0) return undefined;
   return { x0, y0, x1, y1 };
 }

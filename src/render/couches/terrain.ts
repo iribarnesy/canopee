@@ -323,6 +323,30 @@ function melangeA(donnees: DonneesSol, i: number): MelangeDuTapis | undefined {
 }
 
 /** Nombre de morceaux sur un côté, pour une parcelle donnée. */
+/**
+ * L'écart d'altitude le plus fort de la parcelle, en m.
+ *
+ * **C'est la marge que l'emprise visible doit prendre** (#151) : sans elle,
+ * `celluleVisibles` inverse les coins de l'écran à plat et laisse dehors les
+ * cellules que le relief a déplacées — d'où des carrés de sol manquants au
+ * zoom rapproché. Les appelants passaient zéro, ce qui revenait à annoncer un
+ * terrain plat.
+ *
+ * Gardé avec le tableau lui-même : le relief ne bouge pas d'une semaine à
+ * l'autre, et le parcourir à chaque image pour quatre appels serait dix mille
+ * cellules lues pour rien.
+ */
+const amplitudes = new WeakMap<object, number>();
+
+export function amplitudeDuRelief(altitudesM: readonly number[]): number {
+  const deja = amplitudes.get(altitudesM);
+  if (deja !== undefined) return deja;
+  let max = 0;
+  for (const z of altitudesM) max = Math.max(max, Math.abs(z));
+  amplitudes.set(altitudesM, max);
+  return max;
+}
+
 export function morceauxParCote(coteM: number): number {
   return Math.ceil(coteM / COTE_MORCEAU_M);
 }
@@ -1159,6 +1183,8 @@ const TRONC_BARRANT: Teinte = { r: 72, g: 62, b: 50 };
 export class Terrain {
   private readonly morceaux = new Map<number, Morceau>();
   private readonly parCote: number;
+  /** L'écart d'altitude le plus fort, retenu de la dernière mise à jour. */
+  private amplitudeRelief = 0;
   /** morceaux à recuire, du plus proche de la caméra au plus lointain */
   private aCuire: { ix: number; iy: number }[] = [];
 
@@ -1182,7 +1208,11 @@ export class Terrain {
    * rien et il faut le savoir.
    */
   public rafraichir(donnees: DonneesSol, semaineAnnee: number, vue: Vue): number {
-    const emprise = celluleVisibles(vue);
+    // `aPoser` ne reçoit pas les données du sol : l'amplitude est retenue ici,
+    // et les deux doivent voir la MÊME emprise — un morceau cuit que la pose
+    // ignore, ou l'inverse, laisse le trou qu'on corrige.
+    this.amplitudeRelief = amplitudeDuRelief(donnees.altitudesM);
+    const emprise = celluleVisibles(vue, 0, this.amplitudeRelief);
     if (!emprise) {
       this.aCuire = [];
       return 0;
@@ -1246,7 +1276,7 @@ export class Terrain {
 
   /** Les morceaux à poser, déjà dans l'ordre du peintre. */
   public aPoser(vue: Vue): Morceau[] {
-    const emprise = celluleVisibles(vue);
+    const emprise = celluleVisibles(vue, 0, this.amplitudeRelief);
     if (!emprise) return [];
     const sortie: Morceau[] = [];
     for (const { ix, iy } of morceauxDeLEmprise(emprise, vue)) {
@@ -1673,6 +1703,8 @@ export class Decor {
   private zoomCuit = Number.NaN;
   private orientationCuite = Number.NaN;
   private aCuire: { ix: number; iy: number }[] = [];
+  /** L'écart d'altitude le plus fort, retenu de la dernière mise à jour. */
+  private amplitudeRelief = 0;
 
   constructor(
     private readonly fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
@@ -1695,7 +1727,10 @@ export class Decor {
       this.zoomCuit = zoomDeCuisson(vue.cam.zoom);
       this.orientationCuite = vue.cam.orientation;
     }
-    const emprise = celluleVisibles(vue);
+    // Le décor prolonge la pente de la parcelle au-delà de ses bords : il
+    // s'écarte du plan au moins autant qu'elle, donc au moins autant de marge.
+    this.amplitudeRelief = amplitudeDuRelief(this.altitudesM);
+    const emprise = celluleVisibles(vue, 0, this.amplitudeRelief);
     if (!emprise) {
       this.aCuire = [];
       return 0;
@@ -1841,7 +1876,7 @@ export class Decor {
 
   /** Les morceaux de décor à poser, dans l'ordre du peintre. */
   public aPoser(vue: Vue): MorceauDecor[] {
-    const emprise = celluleVisibles(vue);
+    const emprise = celluleVisibles(vue, 0, this.amplitudeRelief);
     if (!emprise) return [];
     const sortie: MorceauDecor[] = [];
     for (const { ix, iy } of this.morceauxVisibles(emprise, vue)) {
