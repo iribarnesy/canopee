@@ -61,7 +61,48 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la culture, #136)
+## Ce que le dernier lot a appris (la fertilisation, #140)
+
+**Une courbe de réponse ne s'écrit pas, elle se vérifie.** L'apport remplit le
+pool d'azote, et le rendement y répond par la satisfaction de la strate — la
+même que celle des arbres. Rien n'a été codé, et les paliers de Broadbalk
+sortent monotones (1,01 / 2,40 / 3,21 / 3,92 / 4,88 t/ha) avec un point zéro
+juste. **Quand un mécanisme amont existe déjà, la courbe aval est un RÉSULTAT :
+l'écrire serait s'interdire de la mesurer.**
+
+**Chercher le plafond, ne pas le supposer.** Le moteur s'arrêtait à 4,88 t/ha
+là où Broadbalk monte à 8-9, et la tentation était d'accuser la culture ou la
+dose. Le diagnostic — deux lignes de relevé sur l'état du sol — donne
+`tassement = 1,000` : quatre passages d'engin par an contre 0,20 de réparation,
+et le sol perd 30 % de croissance pour toujours. **Un plateau net dans une
+mesure est presque toujours un facteur limitant qu'on n'a pas regardé**, et
+c'est ce qu'il faut aller lire avant de toucher au mécanisme qu'on vient
+d'écrire.
+
+**Un proxy vieillit quand le moteur s'enrichit.** La densité racinaire qui
+répare le tassement était lue sur `1 − groundLight`, c'est-à-dire sur le COUVERT
+DES ARBRES. C'était défendable tant que seuls les arbres avaient des racines ;
+mon lot précédent ajoute une plante enracinée SANS canopée, et le proxy s'est
+mis à dire qu'un champ de blé ne répare rien. **Après un lot qui ajoute une
+catégorie d'êtres, relire les proxys qui décrivaient les anciens** — ils
+parlaient d'un monde où la nouvelle catégorie n'existait pas.
+
+**Savoir s'arrêter à la frontière de son rôle, mais pas avant.** L'autre moitié
+du même défaut — le labour qui ne décompacte jamais, et 0,25 de tassement par
+passage — est une calibration, donc de la maintenance : issue ouverte, et la
+dépendance écrite des deux côtés. Mais la moitié causée par MON lot (le proxy
+racinaire) a été corrigée ici, parce que la passer à quelqu'un d'autre aurait
+été lui demander de réparer ce que je venais de casser. **La règle route les
+calibrations, pas les conséquences de son propre travail.**
+
+**Et un lot peut en débloquer un autre pour de bon.** E13 était 🟡 parce que le
+gradient d'une allée mesurait surtout l'azote que la litière rendait à un blé
+qui s'épuisait — le rapport passait au-dessus de 1. Les deux côtés fertilisés,
+c'est de l'ombre pure : monotone de 0,999 à 0,787, et le critère passe ✅. **Un
+🟡 dont la justification nomme un manque précis est une dette qui s'éteint d'un
+coup le jour où le manque est comblé** ; ça vaut la peine de les écrire ainsi.
+
+## Ce qu'un lot plus ancien a appris (la culture, #136)
 
 **Une heure de littérature AVANT d'écrire, et elle a changé le mécanisme.** Je
 partais sur « moins de lumière, moins de grain ». La mesure dit l'inverse en
@@ -590,6 +631,16 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce qui reste de #140 — le LER, enfin faisable.** La fertilisation lève le
+verrou : une monoculture de blé fertilisée EST un témoin valable, et le gradient
+est désormais de l'ombre pure. H21 (❌) demande maintenant le dispositif
+complet — blé pur, forêt pure, et l'allée — sur la même station et le même
+climat. Cible de validation : le noyer-céréale de Restinclières dépasse 1,2.
+
+Dépend de **#141** (maintenance) pour le niveau : tant que le tassement
+s'épingle à 1, le blé pur plafonne à 4,88 t/ha au lieu de 8-9, et un LER
+calculé sur deux termes également rabotés serait juste par accident.
 
 **Ce qui reste de #136 — la FERTILISATION, et c'est le verrou suivant.** Le
 moteur n'a aucun geste pour apporter de l'azote à une culture : un blé continu

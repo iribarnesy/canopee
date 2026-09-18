@@ -35,6 +35,7 @@ import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
+import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tassementApresPassage } from "./tassement";
@@ -225,6 +226,38 @@ export const LIME_PH_STEP = 0.5;
  * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
  */
 export const BRF_CN_RATIO = 40;
+
+/**
+ * C/N d'un fumier de ferme bien décomposé (#140). Bien plus bas que celui du
+ * BRF, qui est du bois : un fumier libère son azote sur deux à trois ans au
+ * lieu d'en immobiliser d'abord *(à confirmer sur la composition publiée des
+ * apports de Broadbalk, e-RA `01-BKFYM`)*.
+ */
+export const FUMIER_CN_RATIO = 15;
+/**
+ * Prix de l'azote minéral, €/kg N. L'ordre de grandeur des dernières campagnes,
+ * ammonitrate rendu ferme *(à calibrer : le prix de l'azote suit celui du gaz
+ * et a varié du simple au triple entre 2020 et 2023)*.
+ */
+export const AZOTE_MINERAL_EUR_KG = 1.5;
+/**
+ * Prix du fumier rendu et épandu, €/kg N apporté. Plus cher à l'unité d'azote
+ * parce qu'on transporte surtout de l'eau et de la matière : c'est le vrai
+ * arbitrage du geste, et il n'a de sens que rapporté à ce qu'il construit
+ * *(à calibrer)*.
+ */
+export const FUMIER_EUR_KG_N = 2.5;
+/** Épandage d'engrais minéral, h/ha : un passage d'épandeur centrifuge. */
+export const FERTILISATION_HEURES_HA = 0.4;
+/** Épandage de fumier, h/ha : on transporte des tonnes, pas des sacs. */
+export const FUMIER_HEURES_HA = 2.5;
+/**
+ * Dose maximale d'un apport, kg N/ha. La directive nitrates plafonne l'azote
+ * organique à 170 kg N/ha/an en zone vulnérable, et les paliers de Broadbalk
+ * montent à 192 en minéral : au-delà de 250 en une fois, on ne fertilise plus,
+ * on déverse *(à calibrer)*.
+ */
+export const DOSE_AZOTE_MAX_KG_HA = 250;
 /**
  * Surcoût de temps pour charger le broyat au lieu de le laisser tomber sur
  * place : il faut remplir et déplacer la remorque *(à calibrer)*.
@@ -405,6 +438,30 @@ export type GameAction =
       rayonM: number;
       /** part du tas à épandre ∈ ]0,1] */
       part: number;
+    }
+  | {
+      /**
+       * FERTILISER une zone (#140). Deux formes qui ne font pas la même chose,
+       * et c'est tout l'intérêt du geste :
+       *
+       *  - **minéral** : l'azote arrive dans le pool MINÉRAL, tout de suite
+       *    disponible — et tout de suite LESSIVABLE. Un apport posé avant
+       *    l'hiver part avec le drainage, et le moteur sait déjà le faire
+       *    (`cellLeachedG`) ;
+       *  - **fumier** : il arrive dans la LITIÈRE, avec son C/N. Il se
+       *    minéralise sur des années, il ne lessive pas tant qu'il n'est pas
+       *    minéralisé, et il construit de l'humus au passage.
+       *
+       * La dose est en kg N/ha dans les deux cas, pour qu'elles se comparent.
+       */
+      type: "fertiliser";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+      forme: "mineral" | "fumier";
+      /** dose d'azote apportée, kg N/ha */
+      doseKgNHa: number;
     }
   | {
       /**
@@ -1349,6 +1406,93 @@ function cellulesDuDisque(cote: number, cx: number, cy: number, rayonM: number):
     }
   }
   return out;
+}
+
+function applyFertiliser(
+  state: GameState,
+  action: Extract<GameAction, { type: "fertiliser" }>,
+): ApplyResult {
+  const dose = action.doseKgNHa;
+  if (!(dose > 0)) {
+    return { state, refusals: [refuse(action.week, "fertiliser", "dose nulle")] };
+  }
+  if (dose > DOSE_AZOTE_MAX_KG_HA) {
+    return {
+      state,
+      refusals: [
+        refuse(
+          action.week,
+          "fertiliser",
+          `dose au-delà de ${DOSE_AZOTE_MAX_KG_HA} kg N/ha : ce n'est plus fertiliser`,
+        ),
+      ],
+    };
+  }
+  const cote = state.station.coteM;
+  const dims = { widthM: cote, heightM: cote };
+  const cells: number[] = [];
+  forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => cells.push(i));
+  if (cells.length === 0) {
+    return { state, refusals: [refuse(action.week, "fertiliser", "zone hors parcelle")] };
+  }
+  // Une cellule fait un mètre carré, et la dose est à l'hectare.
+  const azoteParCelluleG = dose * KG_PER_HA_TO_G_PER_M2;
+  const areaHa = cells.length / 10_000;
+  const mineral = action.forme === "mineral";
+  const cost = dose * areaHa * (mineral ? AZOTE_MINERAL_EUR_KG : FUMIER_EUR_KG_N);
+  const hours = areaHa * (mineral ? FERTILISATION_HEURES_HA : FUMIER_HEURES_HA);
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "fertiliser", "plafond hebdomadaire atteint")] };
+  }
+  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+    return { state, refusals: [refuse(action.week, "fertiliser", "découvert plafonné")] };
+  }
+
+  const soil = { ...state.soil };
+  if (mineral) {
+    // **L'AZOTE MINÉRAL ARRIVE DISPONIBLE, ET DONC LESSIVABLE.** Il entre dans
+    // le pool que les plantes prélèvent et que le drainage emporte : un apport
+    // posé avant l'hiver part avec l'eau, et le moteur n'a rien eu à apprendre
+    // pour ça (`nitrogen.ts:cellLeachedG`). C'est là tout le contraste avec le
+    // fumier, et c'est le contenu du geste.
+    const mineralNG = state.soil.mineralNG.slice();
+    for (const i of cells) mineralNG[i] = (mineralNG[i] ?? 0) + azoteParCelluleG;
+    soil.mineralNG = mineralNG;
+  } else {
+    // Le fumier entre dans la LITIÈRE avec son C/N : il se minéralise sur des
+    // années, il ne lessive pas tant qu'il ne l'est pas, et il construit de
+    // l'humus au passage. Même patron que `epandreBrf`, avec le C/N d'un
+    // fumier au lieu de celui du bois — et la vitesse de décomposition suit,
+    // parce que `litterK` est une moyenne pondérée par l'azote.
+    const litterNG = state.soil.litterNG.slice();
+    const litterCG = state.soil.litterCG.slice();
+    const litterK = state.soil.litterK.slice();
+    const kFumier = litterDecayRate(FUMIER_CN_RATIO);
+    for (const i of cells) {
+      const oldN = litterNG[i] ?? 0;
+      litterK[i] =
+        (oldN * (litterK[i] ?? 0) + azoteParCelluleG * kFumier) / (oldN + azoteParCelluleG);
+      litterNG[i] = oldN + azoteParCelluleG;
+      litterCG[i] = (litterCG[i] ?? 0) + azoteParCelluleG * FUMIER_CN_RATIO;
+    }
+    soil.litterNG = litterNG;
+    soil.litterCG = litterCG;
+    soil.litterK = litterK;
+  }
+
+  return {
+    state: {
+      ...state,
+      soil,
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur - cost,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
 }
 
 function applySemer(state: GameState, action: Extract<GameAction, { type: "semer" }>): ApplyResult {
@@ -2300,6 +2444,8 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyChauler(state, action);
     case "faucher":
       return applyFaucher(state, action);
+    case "fertiliser":
+      return applyFertiliser(state, action);
     case "semer":
       return applySemer(state, action);
     case "moissonner":

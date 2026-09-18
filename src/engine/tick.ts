@@ -2740,7 +2740,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (let i = 0; i < nCells; i++) {
       const t = tassement[i] ?? 0;
       if (t <= 0) continue;
-      tassement[i] = tassementApresUneAnnee(t, 1 - (groundLight[i] ?? 1));
+      // **LES RACINES DE LA STRATE BASSE COMPTENT AUSSI** (#140). La densité
+      // racinaire était lue sur `1 - groundLight`, c'est-à-dire sur le COUVERT
+      // DES ARBRES : un champ de blé, qui a pourtant un chevelu dense, n'en
+      // recevait aucun crédit faute de canopée. Le proxy confondait « ombragé »
+      // et « enraciné », et rien ne l'avait révélé parce que rien ne labourait
+      // tous les ans sur une parcelle sans arbres.
+      //
+      // Le maximum des deux, et non leur somme : sous une futaie, le couvert
+      // dit déjà ce que les racines valent, et les additionner compterait deux
+      // fois le même sol.
+      const racines = Math.max(1 - (groundLight[i] ?? 1), herbeCouverture[i] ?? 0);
+      tassement[i] = tassementApresUneAnnee(t, racines);
     }
   }
 

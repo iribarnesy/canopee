@@ -96,17 +96,17 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
 | B. Lumière et structure | 8 | 3 | 0 | 11 |
-| C. Nutriments et cycles | 15 | 0 | 1 | 16 |
+| C. Nutriments et cycles | 17 | 0 | 1 | 18 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
-| E. Interactions entre plantes | 8 | 5 | 0 | 13 |
+| E. Interactions entre plantes | 9 | 4 | 0 | 13 |
 | F. Dynamique des peuplements | 13 | 3 | 3 | 19 |
 | G. Faune et santé | 11 | 0 | 0 | 11 |
 | H. Gestion, économie, travail | 16 | 4 | 1 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 8 | 0 | 0 | 8 |
-| **Total** | **127** | **19** | **5** | **151** |
+| **Total** | **130** | **18** | **5** | **153** |
 
-**Score de réalisme : 127 pleins + 19 partiels sur 151 → 90 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 130 pleins + 18 partiels sur 153 → 91 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -177,9 +177,11 @@ B10 est enfin complet)
 pauvre — aucun point gagné, un ✅ qui était faux réparé)
 → 91 % (le calendrier des fleurs : fleurir cesse d'être fructifier, et sept
 espèces qui nourrissent sans rien donner à récolter entrent au calendrier)
-→ **90 % (le jeu peut enfin poser sa question centrale : la culture existe —
+→ 90 % (le jeu peut enfin poser sa question centrale : la culture existe —
 cinq critères écrits, dont le LER qu'on ne sait pas calculer, donc un point
-de moins)**.*
+de moins)
+→ **91 % (la fertilisation : la courbe de réponse de Broadbalk tombe toute
+seule, et l'allée fertilisée rend enfin le gradient lisible)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -259,6 +261,8 @@ maladie-là, pas une preuve de santé.*
 | C14 | Les bases échangeables suivent un bilan conservatif | ✅ | `bases.test.ts` — la variation du pool vaut altération + dépôts + litière − lessivage − charge acide, à l'arrondi près. Comme pour N, P et K, et avec la même réserve : la conservation ne valide pas le NIVEAU |
 | C15 | La POMPE À BASES : un feuillu remonte les bases du sous-sol et les dépose en surface, appauvrissant la profondeur | ❌ | le moteur ne tient qu'un pool de bases de SURFACE, comme pour N, P et K. Il dit donc qu'un frêne entretient son horizon de surface, et rien de ce qu'il prend en dessous. Ce n'est pas un détail : c'est par là que Foltran et al. mesurent un hêtre acidifiant le sol minéral profond PLUS qu'un épicéa (−0,5 unité en vingt ans) — l'intuition « les résineux acidifient » est une demi-vérité, et c'est la moitié que ce lot ne dit pas |
 | C16 | Une culture continue sans apport épuise le sol, et se stabilise bas | ✅ | La culture prélève son azote pondéré par son `exigenceMinerale` — dix pour le blé contre un pour une graminée spontanée (`herbacees.ts`, `tick.ts`) — et le moteur n'a pas d'action de fertilisation. Un blé continu descend donc de lui-même : 3,43 t/ha à l'an 4, 1,98 à l'an 12, **1,02 à l'an 24**, 0,82 à l'an 29 (`culture.test.ts`). **Le calage et la validation viennent de la même source sur deux chiffres différents** : Broadbalk (Rothamsted, blé continu depuis 1843) donne 8-9 t/ha sur les parcelles pleinement fumées — c'est le plafond posé sur la fiche — et ~1 t/ha sur celles qui ne reçoivent rien, tenu sur cent soixante-dix ans. Rien dans le code ne pousse le moteur vers ce second chiffre. **Limite** : il glisse sous 1 après trente ans là où Broadbalk tient, et la cause probable est la PAILLE, qui reste au champ dans la réalité et ne rend rien ici |
+| C17 | On peut apporter de l'azote, et les formes ne font pas la même chose | ✅ | `fertiliser` (`actions.ts`), dose en kg N/ha dans les deux cas pour qu'elles se comparent. Le MINÉRAL entre dans le pool disponible — donc lessivable par `cellLeachedG`, qui existait ; le FUMIER entre dans la litière avec son C/N, se minéralise sur des années et construit de l'humus au passage (même patron que `epandreBrf`). Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m² d'azote minéral et RIEN en litière, le plot fumier 4,50 et 20,25 de litière — le second a constitué un stock, le premier l'a traversé. À azote comparable, le fumier fait mieux sur la durée (6,21 contre 4,88 t/ha), ce que Broadbalk dit aussi. Refus au-delà de 250 kg N/ha : la directive nitrates plafonne l'organique à 170 en zone vulnérable |
+| C18 | Le rendement répond à la dose d'azote, et la courbe n'est écrite nulle part | ✅ | Aucune courbe de réponse n'a été codée : l'apport remplit le pool, et le rendement y répond par la satisfaction de la strate. Mesurée sur les paliers de Broadbalk (0 / 48 / 96 / 144 / 192 kg N/ha), moyenne des dix dernières années sur trente : **1,01 / 2,40 / 3,21 / 3,92 / 4,88 t/ha** — monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues tiennent depuis 1843. **Limite, chiffrée et attribuée** : Broadbalk monte à 8-9 t/ha à 192 kg N et le moteur plafonne à 4,88. La cause n'est ni dans la culture ni dans l'azote — un itinéraire céréalier fait quatre passages d'engin par an, soit 1,00 de tassement contre 0,20 de réparation, donc le sol est épinglé à 1 dès la deuxième année et perd 30 % de croissance pour toujours (issue #141, maintenance). **Les premières années, avant l'épinglage, atteignent 7,35 et 7,62 t/ha**, dans la gamme de l'essai |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
 | C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche**. **Ce ✅ était faux et personne ne pouvait le voir** : le gain gonflait la demande qui vide la cellule sans gonfler le service, si bien que le réseau COÛTAIT 11,8 % du volume sur limon pauvre et 0,7 % sur limon riche — il nuisait le plus là où il devait aider le plus. Corrigé en rangeant le gain une fois par arbre pour que les deux passes ne PUISSENT plus diverger (#115). Mesuré sur cinq graines et deux stations : **+2,79 % de volume sur limon pauvre, +0,09 % sur limon riche** (azote reçu +5,7 % et +0,7 %), gradient enfin dans le bon sens. **Limite** : le réseau fait GAGNER l'arbre dans la compétition pour l'azote minéral, il n'en AJOUTE pas — le service réel (capter l'azote organique et les pores qu'une racine n'atteint pas) demande un pool organique accessible, et le gain sur l'eau et le phosphore attend toujours |
 
@@ -295,7 +299,7 @@ maladie-là, pas une preuve de santé.*
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ✅ | `herbacees.ts` : une vernale ne bouge son emprise que pendant SA saison, donc elle juge la station en mars ; `herbacees.test.ts`. Sous hêtraie, la couverture du sol vaut 3 fois plus mi-avril que fin juillet et la vernale tient 36-40 % de l'emprise ; sous pinède, 1,25 et 19 % ; à découvert, 1,04 et 3 % — gradient monotone, deux graines. **Limite** : le moteur ne produit pas, sur cette station, de peuplement sempervirent assez sombre pour l'exclure tout à fait (le pin sylvestre s'auto-éclaircit) ; ce que vaut la fenêtre se lit alors sur la capacité, nulle à 4 % de lumière |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts`, `herbacees.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre. La fauche emporte le FEUILLAGE et laisse l'emprise : la repousse est celle d'un chaume, pas d'une réinstallation |
-| E13 | Une culture sous les arbres rend moins, et d'autant plus que l'ombre monte | 🟡 | Deux rangs de noyers encadrant une allée de 8 m, le rapport hauteur/largeur d'allée montant de 0,29 à 1,28 en trente-trois ans, comparé au même blé en plein champ (`culture.test.ts`) : 1,000 / **1,007 à H/L 0,84** / 0,950 à 1,19 / **0,874 à 1,28**. L'ombre finit donc par coûter, et le premier régime retrouve l'observation de Dupraz — « le rendement n'est pas beaucoup affecté tant que H/L reste sous 0,8 ». **Reste 🟡 parce qu'on n'a pas le droit d'être content de cette coïncidence** : chez Dupraz l'allée est FERTILISÉE, donc son seuil est de l'ombre pure ; ici c'est une compensation entre l'ombre qui coûte et la litière de noyer qui rend, mesurée à plus de 1 entre H/L 0,93 et 1,11. Même chiffre, composition différente, et c'est la fertilisation qui manque au moteur pour les séparer |
+| E13 | Une culture sous les arbres rend moins, et d'autant plus que l'ombre monte | ✅ | **C'est la fertilisation qui a rendu ce gradient lisible** (#140). Sans elle, l'essai mesurait surtout l'azote que la litière des noyers rendait à un blé qui s'épuisait, et le rapport passait AU-DESSUS de 1 entre H/L 0,93 et 1,11. Les deux côtés fertilisés, c'est de l'ombre PURE — donc comparable à ce que mesure Dupraz. Deux rangs de noyers encadrant une allée de 8 m, contre le même blé fertilisé en plein champ (`fertilisation.test.ts`) : H/L 0,29 → **0,999** ; 0,55 → 0,963 ; 0,74 → 0,912 ; 0,84 → **0,889** ; 1,02 → 0,835 ; 1,28 → **0,787**. Monotone d'un bout à l'autre, et le rapport ne remonte jamais au-dessus de 1. **Limite, et elle est franche** : le moteur ne montre PAS de genou à 0,8. L'observation de Dupraz — « pas beaucoup affecté sous H/L 0,8 » — reste compatible (−9 % à 0,74) mais le moteur la produit comme une pente douce, pas comme un seuil |
 | E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ✅ | `trees.ts` (`allocationDiametreCmParM` + le partage de l'étiolement) ; `elancement.test.ts`, `etiolement.test.ts`. Le diamètre est porté par l'INDIVIDU, et la lumière décide de l'ARBITRAGE avant de raboter la pousse : l'allongement se sert d'abord, le diamètre encaisse le résidu. Rien n'est déclaré par essence. **L'amplitude est enfin là**, et il a fallu innocenter deux coupables avant d'y arriver — ni le poids des codominants (#65 : le porter à 1 déplace les dominants serrés de 42,1 à 41,7), ni la paire d'allocation (#79 : ouvrir sa fenêtre à [40 ; 200] plafonne à 62). Le verrou était que l'ombre rabotait la pousse au lieu de la rediriger. Mesuré depuis #97 : gradient MONOTONE des dominants à 2 / 4 / 10 m d'écartement, et la tige la plus élancée du peuplement passe de 49 à **87** à 2 m, contre 38 à 10 m ; la hêtraie serrée monte à 129 à quatre-vingts ans, là où la sylviculture mesure 25–40 au large et 90–100 en perche. Et c'est bien une PERCHE, pas un nabot : elle est à 62 % de la hauteur du plus haut, là où le moteur d'avant faisait des dominés TRAPUS. **Ce que ça débloque** : `ELANCEMENT_CRITIQUE` (tempete.ts) vaut 100 et était inatteignable — la moitié haute de la rampe de chablis n'est plus du code mort. **Réserve** : le bas de gamme reste court, au large le moteur donne 35–38 quand le réel descend à 25, ce que l'allocation plafonnée à 2,5 cm/m interdit |
 
 ## F. Dynamique des peuplements
@@ -2093,6 +2097,70 @@ pas le voir : il appelait la fonction avec des entiers.
   réservoir fini à seuil de débordement, et non comme une rugosité — ce que
   fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
   des barrages de débris.
+
+## La fertilisation : ce qui a rendu le gradient lisible
+
+Le moteur n'avait aucun geste pour apporter de l'azote. Un blé continu ne
+pouvait donc que s'épuiser — ce qui est juste, et ce qui interdisait tout le
+reste : on ne savait pas séparer l'ombre de l'azote dans une allée, et le LER
+n'avait pas de témoin valable.
+
+### La courbe de réponse TOMBE, elle n'est écrite nulle part
+
+Aucune courbe n'a été codée. L'apport remplit le pool, et le rendement y répond
+par la satisfaction de la strate — la même que celle des arbres. Mesurée sur
+les paliers de Broadbalk, moyenne des dix dernières années sur trente :
+
+| apport (kg N/ha) | 0 | 48 | 96 | 144 | 192 |
+|---|---|---|---|---|---|
+| rendement | **1,01** | 2,40 | 3,21 | 3,92 | 4,88 |
+
+Monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues
+tiennent depuis 1843.
+
+### Le plafond n'est ni dans la culture ni dans l'azote
+
+Broadbalk monte à 8-9 t/ha à 192 kg N ; le moteur plafonne à 4,88. La cause a
+été cherchée plutôt que supposée, et elle est ailleurs : un itinéraire céréalier
+fait **quatre passages d'engin par an**, soit 1,00 de tassement contre 0,20 de
+réparation. Le sol est épinglé à `tassement = 1,000` dès la deuxième année et
+perd 30 % de croissance pour toujours. La preuve que le plafond est bien là :
+**les premières années, avant l'épinglage, atteignent 7,35 et 7,62 t/ha**.
+
+C'est une calibration, donc de la maintenance — issue #141, et ce lot en dépend.
+
+Une moitié du défaut a tout de même été corrigée ici, parce qu'elle était de ce
+lot : la densité racinaire était lue sur `1 − groundLight`, c'est-à-dire sur le
+**couvert des arbres**. Un champ de blé, qui a pourtant un chevelu dense, n'en
+recevait aucun crédit faute de canopée — le proxy confondait « ombragé » et
+« enraciné ». Rien ne l'avait révélé parce que rien ne labourait tous les ans
+sur une parcelle sans arbres. Gain mesuré : 4,59 → 4,88 t/ha en minéral, 5,85 →
+6,21 en fumier. Réel, et loin de suffire.
+
+### Deux formes, et c'est le lessivage qui les sépare
+
+Le minéral entre dans le pool disponible, donc lessivable — et le moteur savait
+déjà le faire. Le fumier entre dans la litière avec son C/N, se minéralise sur
+des années et construit de l'humus au passage. Relevé au centre après trente
+ans : le plot minéral porte 0,98 g/m² d'azote minéral et **rien** en litière, le
+plot fumier 4,50 et 20,25. Le second a constitué un sol, le premier l'a
+traversé — et il fait mieux sur la durée, 6,21 contre 4,88 t/ha, ce que
+Broadbalk dit aussi.
+
+### Et le gradient devient enfin de l'ombre pure
+
+C'est le déblocage. Sans fertilisation, l'allée mesurait surtout l'azote que la
+litière des noyers rendait à un blé qui s'épuisait, et le rapport passait
+au-dessus de 1 entre H/L 0,93 et 1,11. Les deux côtés fertilisés :
+
+| H/L | 0,29 | 0,55 | 0,74 | **0,84** | 1,02 | **1,28** |
+|---|---|---|---|---|---|---|
+| allée / blé pur | 0,999 | 0,963 | 0,912 | **0,889** | 0,835 | **0,787** |
+
+Monotone d'un bout à l'autre, et le rapport ne remonte jamais. **E13 passe ✅.**
+Avec une limite franche : le moteur ne montre pas de genou à 0,8. L'observation
+de Dupraz reste compatible (−9 % à 0,74) mais le moteur la produit comme une
+pente douce, pas comme un seuil.
 
 ## La culture : le jeu ne pouvait pas poser sa question
 
