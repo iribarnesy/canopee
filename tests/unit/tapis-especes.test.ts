@@ -57,7 +57,10 @@ describe("le seuil d'eau suit les espèces présentes", () => {
    */
   it("dactyle et molinie : aucune différence, l'ancien contournement les servait bien", () => {
     for (const h of [0.1, 0.2, 0.3, 0.4, 0.5, 0.9]) {
-      expect(satisfactionEnEau(h, seul(MOLINIE))).toBeCloseTo(satisfactionEnEau(h, seul(DACTYLE)), 10);
+      expect(satisfactionEnEau(h, seul(MOLINIE))).toBeCloseTo(
+        satisfactionEnEau(h, seul(DACTYLE)),
+        10,
+      );
     }
   });
 
@@ -170,12 +173,8 @@ describe("la signature d'une cellule voit tout ce qui la colore", () => {
   });
 
   it("mais un centième d'emprise ne la change pas : c'est le palier qui compte", () => {
-    const a = signatureCellule(
-      quantifier({ ...base, tapis: { ids: [DACTYLE], parts: [0.50] } }),
-    );
-    const b = signatureCellule(
-      quantifier({ ...base, tapis: { ids: [DACTYLE], parts: [0.51] } }),
-    );
+    const a = signatureCellule(quantifier({ ...base, tapis: { ids: [DACTYLE], parts: [0.5] } }));
+    const b = signatureCellule(quantifier({ ...base, tapis: { ids: [DACTYLE], parts: [0.51] } }));
     expect(a).toBe(b);
   });
 });
