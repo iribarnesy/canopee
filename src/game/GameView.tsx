@@ -124,6 +124,53 @@ type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement";
  */
 const CARTE_PX = 210;
 
+/**
+ * La scène : toute la fenêtre, et rien qui dépasse. `fixed` et non `absolute`
+ * parce que l'écran de jeu ne vit plus dans la colonne centrée du site — il
+ * EST la page.
+ */
+const SCENE: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  overflow: "hidden",
+  background: "var(--carte)",
+};
+
+/**
+ * Un volet posé sur la parcelle. Fond presque opaque : dessous il y a une vue
+ * en mouvement, et du texte sur des feuillages qui bougent ne se lit pas.
+ */
+const VOLET: React.CSSProperties = {
+  position: "absolute",
+  border: "1px solid var(--trait)",
+  borderRadius: 10,
+  padding: "8px 12px",
+  background: "rgba(255, 253, 247, 0.94)",
+  boxShadow: "0 2px 12px rgba(60, 50, 30, 0.16)",
+  backdropFilter: "blur(3px)",
+};
+
+/**
+ * La colonne de droite, le temps que ses morceaux trouvent leurs coins. Elle
+ * recouvre la vue au lieu de la rogner.
+ */
+const PANNEAU_DROIT: React.CSSProperties = {
+  position: "absolute",
+  top: 0,
+  right: 0,
+  bottom: 0,
+  width: 380,
+  overflowY: "auto",
+  padding: "12px 14px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+  background: "rgba(255, 253, 247, 0.94)",
+  borderLeft: "1px solid var(--trait)",
+  boxShadow: "-2px 0 14px rgba(60, 50, 30, 0.16)",
+  backdropFilter: "blur(3px)",
+};
+
 const panel: React.CSSProperties = {
   border: "1px solid var(--trait)",
   borderRadius: 8,
@@ -1143,7 +1190,7 @@ function StartScreen({
   );
 }
 
-export function GameView() {
+export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => void }) {
   const game = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<Mode>("selection");
@@ -1158,6 +1205,12 @@ export function GameView() {
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
 
   const { station, snapshot } = game;
+
+  // La coquille du site a besoin de savoir si une partie tourne : en jeu elle
+  // s'efface, la parcelle prend la fenêtre entière.
+  useEffect(() => {
+    surPartie?.(Boolean(station && snapshot));
+  }, [station, snapshot, surPartie]);
   const selectedTrees = useMemo(
     () => (snapshot ? snapshot.trees.filter((t) => selectedIds.has(t.id)) : []),
     [snapshot, selectedIds],
@@ -1298,8 +1351,6 @@ export function GameView() {
   const annee = Math.floor(snapshot.week / 52) + 1;
   const semaine = snapshot.week % 52;
   const mois = MOIS[Math.min(11, Math.floor(semaine / 4.34))];
-  /** Largeur de la vue de parcelle, px. C'est l'objet principal de l'écran. */
-  const canvasPx = 700;
   const tresorerie = snapshot.economy.treasuryEur;
 
   /**
@@ -1379,8 +1430,38 @@ export function GameView() {
   const selFruitsKg = selectedTrees.reduce((s, t) => s + t.fruitsKg, 0);
 
   return (
-    <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-      <div>
+    <div style={SCENE}>
+      {/*
+        La parcelle, en isométrique — et elle est le FOND de l'écran, pas un
+        panneau parmi d'autres. La scène PixiJS vit dans `VueParcelle` et se
+        redimensionne avec son conteneur, ici la fenêtre entière. Tout le reste
+        est posé PAR-DESSUS : un volet qui s'ouvre recouvre la vue au lieu de la
+        rétrécir, sinon la parcelle se recadrerait sous les yeux du joueur à
+        chaque ouverture.
+      */}
+      <div style={{ position: "absolute", inset: 0 }}>
+        {solAPoser && (
+          <VueParcelle
+            sol={solAPoser}
+            semaineAnnee={snapshot.week % 52}
+            arbres={arbresPoses}
+            bordures={station.bordures}
+            hauteurMaxDe={(id) => getEspece(id)?.hauteurMaxM ?? 20}
+            ombreDe={(a) => a.partFoliaire}
+            surClic={surClicParcelle}
+            deformer={ellipse.deformer}
+            mourant={ellipse.mourant}
+            remodeler={ellipse.remodeler}
+            voiler={ellipse.voiler}
+            feu={ellipse.feu}
+            marqueurs={ellipse.marqueurs}
+            {...(ellipse.cadrerSur ? { cadrerSur: ellipse.cadrerSur } : {})}
+          />
+        )}
+      </div>
+
+      {/* En haut à gauche : la date, l'argent, le temps, la marche du temps. */}
+      <div style={{ ...VOLET, top: 10, left: 10, maxWidth: "calc(100vw - 420px)" }}>
         <p className="bandeau">
           <strong style={{ fontSize: "1.25rem" }}>
             An {annee} · {mois}
@@ -1418,51 +1499,23 @@ export function GameView() {
             />{" "}
             🧺 récolte auto
           </label>
+          {/*
+            La seule porte de sortie : il n'y a plus d'en-tête de site par-dessus
+            le jeu. Elle sauvegarde d'abord, et le dit — voir `quit`.
+          */}
           <button type="button" style={btn()} onClick={game.quit}>
-            Quitter
+            💾 Sauvegarder et quitter
           </button>
         </p>
-        {/*
-          La parcelle, en isométrique. La scène PixiJS vit dans `VueParcelle` et
-          se redimensionne avec son conteneur — d'où la taille portée ici et non
-          en attributs de canvas.
-        */}
-        <div
-          style={{
-            width: canvasPx,
-            height: Math.round(canvasPx * 0.72),
-            border: "1px solid var(--trait)",
-            borderRadius: 8,
-            boxShadow: "var(--ombre)",
-            overflow: "hidden",
-            background: "var(--carte)",
-          }}
-        >
-          {solAPoser && (
-            <VueParcelle
-              sol={solAPoser}
-              semaineAnnee={snapshot.week % 52}
-              arbres={arbresPoses}
-              bordures={station.bordures}
-              hauteurMaxDe={(id) => getEspece(id)?.hauteurMaxM ?? 20}
-              ombreDe={(a) => a.partFoliaire}
-              surClic={surClicParcelle}
-              deformer={ellipse.deformer}
-              mourant={ellipse.mourant}
-              remodeler={ellipse.remodeler}
-              voiler={ellipse.voiler}
-              feu={ellipse.feu}
-              marqueurs={ellipse.marqueurs}
-              {...(ellipse.cadrerSur ? { cadrerSur: ellipse.cadrerSur } : {})}
-            />
-          )}
-        </div>
         <p style={{ margin: "6px 0 0", color: "var(--encre-douce)", fontSize: 13 }}>
           Glisser pour déplacer · molette pour zoomer · ← → pour tourner d'un quart de tour ·
           maj+clic = sélection multiple
         </p>
+      </div>
 
-        <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "flex-start" }}>
+      {/* En bas à gauche : le diagnostic de sol. */}
+      <div style={{ ...VOLET, left: 10, bottom: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
           <canvas
             ref={canvasRef}
             width={CARTE_PX}
@@ -1504,7 +1557,7 @@ export function GameView() {
         </div>
       </div>
 
-      <div style={{ width: 380, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={PANNEAU_DROIT}>
         {game.notice && <div style={{ ...panel, background: "#f3e6c4" }}>⏸ {game.notice}</div>}
         {game.refusals.length > 0 && (
           <div style={{ ...panel, color: "#8a4b2d" }}>

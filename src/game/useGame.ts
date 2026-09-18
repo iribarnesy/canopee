@@ -26,6 +26,9 @@ import type {
 
 const SAVE_KEY = "canopee-sauvegarde";
 
+/** Combien de temps on attend la sauvegarde avant de fermer quand même, ms. */
+const DELAI_SAUVEGARDE_MS = 2000;
+
 export function loadSave(): SaveGame | undefined {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -70,6 +73,12 @@ export interface GameApi {
 
 export function useGame(): GameApi {
   const workerRef = useRef<Worker>(null);
+  /**
+   * Ce qu'il reste à faire pour quitter, une fois la sauvegarde écrite.
+   * Non nul seulement pendant le court instant où l'on attend la réponse du
+   * worker à `requestSave` — voir `quit`.
+   */
+  const arretRef = useRef<(() => void) | null>(null);
   const [station, setStation] = useState<StationInfo>();
   const [snapshot, setSnapshot] = useState<Snapshot>();
   const [refusals, setRefusals] = useState<WithUid<ActionRefusal>[]>([]);
@@ -119,6 +128,8 @@ export function useGame(): GameApi {
           } catch {
             /* stockage plein ou indisponible : la partie continue sans autosave */
           }
+          // Si l'on attendait cette sauvegarde pour quitter, c'est le moment.
+          arretRef.current?.();
           break;
       }
     };
@@ -205,13 +216,35 @@ export function useGame(): GameApi {
       setSpeedState(weeksPerSecond);
       setNotice(undefined);
     },
+    /**
+     * Quitter, c'est sauvegarder PUIS fermer — dans cet ordre.
+     *
+     * Le worker ne répond pas à `requestSave` sur place : il renvoie un
+     * message que le fil principal écrit dans `localStorage`. Terminer le
+     * worker dans la foulée de la demande, comme on le faisait, ne laissait
+     * jamais cette réponse arriver : la sauvegarde du dernier instant était
+     * perdue, et seul l'autosave précédent survivait. On attend donc le
+     * message, avec un délai de grâce : mieux vaut quitter en ayant perdu la
+     * dernière minute que rester coincé sur un worker muet.
+     */
     quit: () => {
+      if (arretRef.current) return; // déjà en train de quitter
+      let minuteur: ReturnType<typeof setTimeout>;
+      const fermer = () => {
+        arretRef.current = null;
+        clearTimeout(minuteur);
+        workerRef.current?.terminate();
+        workerRef.current = null;
+        setStation(undefined);
+        setSnapshot(undefined);
+        setSpeedState(0);
+      };
+      arretRef.current = fermer;
+      minuteur = setTimeout(fermer, DELAI_SAUVEGARDE_MS);
+      // La partie s'arrête d'avancer pendant qu'on écrit, sinon la sauvegarde
+      // décrit une semaine qui n'est déjà plus celle du moteur.
+      send({ type: "speed", weeksPerSecond: 0 });
       send({ type: "requestSave" });
-      workerRef.current?.terminate();
-      workerRef.current = null;
-      setStation(undefined);
-      setSnapshot(undefined);
-      setSpeedState(0);
     },
   };
 }

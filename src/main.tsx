@@ -6,6 +6,17 @@ import "./ui/theme.css";
 
 function Root() {
   const [tab, setTab] = useState<"jeu" | "labo">("jeu");
+  /**
+   * Une partie tourne-t-elle ? `GameView` le dit, parce que lui seul le sait.
+   *
+   * Tant qu'aucune partie ne tourne, on est sur l'écran de départ et la
+   * coquille du site est là : le titre, et l'accès au labo. Dès qu'une partie
+   * commence, tout ça disparaît — la parcelle prend l'écran entier, et l'on en
+   * ressort par « sauvegarder et quitter », comme dans un jeu.
+   */
+  const [enPartie, setEnPartie] = useState(false);
+  const pleinEcran = tab === "jeu" && enPartie;
+
   const tabBtn = (active: boolean): React.CSSProperties => ({
     padding: "4px 14px",
     border: "1px solid",
@@ -15,33 +26,41 @@ function Root() {
     color: active ? "#fff" : "var(--encre)",
     cursor: "pointer",
   });
-  // Assez large pour la vue de parcelle ET son panneau : les deux font 1 100 px
-  // à elles deux, et une page plus étroite ne les rétrécissait pas — elle les
-  // laissait déborder, texte coupé au bord droit.
+
+  // Hors jeu, une colonne centrée : l'écran de départ et le labo sont des
+  // pages à lire. En jeu, on ne contraint plus rien — `GameView` se pose sur
+  // toute la fenêtre.
   return (
-    <main style={{ maxWidth: 1160, margin: "1.5rem auto", padding: "0 1rem" }}>
-      <header
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 14,
-          borderBottom: "1px solid var(--trait)",
-          paddingBottom: 10,
-          marginBottom: 18,
-        }}
-      >
-        <strong style={{ fontSize: "1.35rem", letterSpacing: "0.02em" }}>Canopée</strong>
-        <span style={{ flex: 1, fontSize: 13, color: "var(--encre-douce)" }}>
-          agroforesterie tempérée, une semaine à la fois
-        </span>
-        <button type="button" style={tabBtn(tab === "jeu")} onClick={() => setTab("jeu")}>
-          Jouer
-        </button>
-        <button type="button" style={tabBtn(tab === "labo")} onClick={() => setTab("labo")}>
-          Labo moteur
-        </button>
-      </header>
-      {tab === "jeu" ? <GameView /> : <LabView />}
+    <main style={pleinEcran ? {} : { maxWidth: 1160, margin: "1.5rem auto", padding: "0 1rem" }}>
+      {!pleinEcran && (
+        <header
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 14,
+            borderBottom: "1px solid var(--trait)",
+            paddingBottom: 10,
+            marginBottom: 18,
+          }}
+        >
+          <strong style={{ fontSize: "1.35rem", letterSpacing: "0.02em" }}>Canopée</strong>
+          <span style={{ flex: 1, fontSize: 13, color: "var(--encre-douce)" }}>
+            agroforesterie tempérée, une semaine à la fois
+          </span>
+          <button type="button" style={tabBtn(tab === "jeu")} onClick={() => setTab("jeu")}>
+            Jouer
+          </button>
+          <button type="button" style={tabBtn(tab === "labo")} onClick={() => setTab("labo")}>
+            Labo moteur
+          </button>
+        </header>
+      )}
+      {/*
+        Les deux vues gardent leur place dans l'arbre d'un rendu à l'autre : un
+        `GameView` qui changerait de position serait démonté, et avec lui le
+        worker qui porte la partie en cours.
+      */}
+      {tab === "jeu" ? <GameView surPartie={setEnPartie} /> : <LabView />}
     </main>
   );
 }
