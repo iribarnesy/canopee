@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   type ArbreRetire,
   applyAction,
+  coutDuDepassement,
   DECOTE_BOIS_MORT,
   DENSITE_BOIS_MORT_KG_M3,
+  depassementHoraire,
   estGesteSurArbres,
   estGesteSurZone,
   fellingHours,
   type GameAction,
   PLANT_HOURS,
   RECEPAGE_HAUTEUR_M,
+  SEASONAL_EUR_WEEK,
   WEEK_HOURS_CAP,
   WOOD_PRICE_EUR_M3,
 } from "../../src/engine/actions";
@@ -72,8 +75,18 @@ describe("journal d'actions — la sauvegarde rejouable", () => {
 });
 
 describe("plafonds économiques (déterministes)", () => {
-  it("le plafond hebdomadaire d'heures refuse l'excédent", () => {
+  /**
+   * LE PLAFOND HORAIRE NE REFUSE PLUS, IL SE COMPTE (#133).
+   *
+   * Il refusait, à quinze endroits, et le joueur découvrait au clic qu'il ne
+   * pouvait pas — sans savoir de combien il dépassait ni ce que ça coûterait de
+   * le faire quand même. On le punissait d'avoir essayé. Les heures se comptent
+   * désormais au-delà, et le moteur dit ce que ça vaut ; présenter la facture et
+   * obtenir la décision revient à l'interface.
+   */
+  it("le plafond hebdomadaire ne refuse plus : les heures se comptent au-delà", () => {
     const maxPlants = Math.floor(WEEK_HOURS_CAP / PLANT_HOURS);
+    const demandes = maxPlants + 20;
     const journal = {
       stationId: STATION.id,
       seed: 3,
@@ -82,14 +95,59 @@ describe("plafonds économiques (déterministes)", () => {
           type: "planter",
           week: 0,
           especeId: "pinus_sylvestris",
-          positions: positionsGrid(maxPlants + 20, 2, 2, 2),
+          positions: positionsGrid(demandes, 2, 2, 2),
         } as GameAction,
       ],
     };
     const { state, refusals } = runJournal(STATION, journal, WEATHER, 2);
-    expect(state.trees).toHaveLength(maxPlants);
-    expect(refusals).toHaveLength(1);
-    expect(refusals[0]?.reason).toContain("plafond hebdomadaire");
+    // Tout est planté, et rien n'est refusé POUR CETTE RAISON-LÀ.
+    expect(state.trees).toHaveLength(demandes);
+    expect(refusals.filter((r) => r.reason.includes("plafond hebdomadaire"))).toEqual([]);
+  });
+
+  it("et le dépassement se lit, avec sa facture", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    const maxPlants = Math.floor(WEEK_HOURS_CAP / PLANT_HOURS);
+    // Une semaine et demie de travail pour un seul UTH.
+    const demandes = Math.ceil(1.5 * maxPlants);
+    const r = applyAction(state, {
+      type: "planter",
+      week: 0,
+      especeId: "pinus_sylvestris",
+      positions: positionsGrid(demandes, 2, 2, 2),
+    });
+    state = r.state;
+    const depasse = depassementHoraire(state.economy);
+    expect(depasse).toBeGreaterThan(0);
+    expect(depasse).toBeCloseTo(demandes * PLANT_HOURS - WEEK_HOURS_CAP, 6);
+    // Une tranche de plafond entamée = une embauche, au prix du saisonnier.
+    // Aucun nombre neuf : le coût sort des constantes qui existaient déjà.
+    expect(coutDuDepassement(depasse)).toEqual({ embauches: 1, eur: SEASONAL_EUR_WEEK });
+  });
+
+  it("tant qu'on tient dans le plafond, il n'y a rien à facturer", () => {
+    const state = createGameState(STATION, rngStateFromSeed(3));
+    expect(depassementHoraire(state.economy)).toBe(0);
+    expect(coutDuDepassement(0)).toEqual({ embauches: 0, eur: 0 });
+  });
+
+  it("le dépassement se compte par UTH, pas par personne", () => {
+    // Deux bras couvrent deux fois le plafond : le même travail ne dépasse plus.
+    expect(depassementHoraire({ hoursUsedWeek: 90, uth: 1 })).toBe(30);
+    expect(depassementHoraire({ hoursUsedWeek: 90, uth: 2 })).toBe(0);
+  });
+
+  it("les AUTRES refus restent des refus", () => {
+    // Seul le plafond horaire change de nature. Le découvert, la position hors
+    // parcelle, « trop proche d'un arbre vivant » doivent rester des murs.
+    const state = createGameState(STATION, rngStateFromSeed(1));
+    const r = applyAction(state, {
+      type: "planter",
+      week: 0,
+      especeId: "betula_pendula",
+      positions: [{ x: -5, y: 10 }],
+    });
+    expect(r.refusals[0]?.reason).toContain("hors parcelle");
   });
 
   it("le découvert plafonné refuse d'acheter plus de plants", () => {

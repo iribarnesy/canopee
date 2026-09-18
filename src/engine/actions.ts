@@ -36,7 +36,21 @@ import {
   volumeTigeM3,
 } from "./trees";
 
-/** plafond d'heures de travail par UTH et par semaine (docs/regles.md §10) */
+/**
+ * Heures de travail par UTH et par semaine (docs/regles.md §10).
+ *
+ * CE N'EST PLUS UN MUR, C'EST UN SEUIL DE FACTURATION (#133). Quinze actions
+ * refusaient l'excédent : le joueur découvrait au clic qu'il ne pouvait pas,
+ * sans savoir de combien il dépassait ni ce que ça coûterait de le faire quand
+ * même. On le punissait d'avoir essayé.
+ *
+ * Les actions s'appliquent désormais, et les heures se comptent AU-DELÀ du
+ * plafond. Ce que le moteur en dit s'arrête là : `depassementHoraire` et
+ * `coutDuDepassement` donnent de quoi présenter la facture, et c'est à
+ * l'interface de la présenter et d'obtenir la décision. La contrainte reste
+ * entière, mais elle devient économique au lieu d'être un refus — ce qui est
+ * la vraie contrainte de main-d'œuvre en agroforesterie.
+ */
 export const WEEK_HOURS_CAP = 60;
 /** heures d'une UTH sur l'année (~1 800 h) */
 export const UTH_HOURS_PER_YEAR = 1800;
@@ -691,6 +705,41 @@ export function fellingHours(heightM: number): number {
   return 0.3 + 0.15 * heightM;
 }
 
+/**
+ * Les heures faites AU-DELÀ de ce que l'effectif couvre, cette semaine.
+ *
+ * Zéro tant qu'on tient dans le plafond. Rien à retenir en plus : le compteur
+ * `hoursUsedWeek` existait déjà et continue simplement de monter, ce qu'il
+ * faisait de toute façon — c'est le refus qui l'arrêtait avant, pas lui.
+ */
+export function depassementHoraire(economy: { hoursUsedWeek: number; uth: number }): number {
+  return Math.max(0, economy.hoursUsedWeek - WEEK_HOURS_CAP * economy.uth);
+}
+
+/**
+ * Ce que coûteraient les heures supplémentaires, et combien de bras il faut.
+ *
+ * IL N'Y A PAS DE PLAFOND DUR À INVENTER, et c'est ce qui rend le mécanisme
+ * honnête : embaucher n'est pas faire travailler quelqu'un plus longtemps,
+ * c'est ajouter une personne. Le dépassement se convertit donc en EMBAUCHES —
+ * une par tranche de plafond entamée — et le prix suit les constantes qui
+ * existent déjà (`SEASONAL_EUR_WEEK`), sans nouveau nombre à calibrer. Le
+ * saisonnier est l'instrument juste ici : on paie une semaine de bras pour une
+ * semaine d'heures déjà faites.
+ *
+ * LE PALIER PEUT RENDRE L'ARBITRAGE BIZARRE, et l'issue le dit : dépasser d'une
+ * heure coûte une semaine entière. C'est peut-être juste — on n'embauche
+ * personne pour une heure — et c'est peut-être à lisser. Ça se juge EN JOUANT,
+ * pas sur un banc, donc rien n'est lissé ici *(à calibrer)*.
+ */
+export function coutDuDepassement(depassementHeures: number): {
+  embauches: number;
+  eur: number;
+} {
+  const embauches = Math.ceil(Math.max(0, depassementHeures) / WEEK_HOURS_CAP);
+  return { embauches, eur: embauches * SEASONAL_EUR_WEEK };
+}
+
 function refuse(week: number, action: GameAction["type"], reason: string): ActionRefusal {
   return { week, action, reason };
 }
@@ -717,12 +766,6 @@ function applyPlanter(
   const heuresParPlant = PLANT_HOURS + (action.avecManchon ? PROTECTION_HEURES : 0);
   const euroParPlant = espece.economie.prixPlantEur + (action.avecManchon ? PROTECTION_EUR : 0);
   for (const pos of action.positions) {
-    if (hoursUsedWeek + heuresParPlant > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(
-        refuse(action.week, "planter", `plafond hebdomadaire atteint (${planted} plantés)`),
-      );
-      break;
-    }
     if (state.economy.active && treasuryEur - euroParPlant < OVERDRAFT_LIMIT_EUR) {
       refusals.push(refuse(action.week, "planter", `découvert plafonné (${planted} plantés)`));
       break;
@@ -885,10 +928,6 @@ function applyCouper(
             ? LAISSER_SUR_PLACE_FACTEUR
             : 1;
     const hours = fellingHours(tree.heightM) * facteurTravail;
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "couper", `plafond hebdomadaire atteint (arbre ${id})`));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
@@ -1108,12 +1147,6 @@ function applyEpandreBrf(
     return { state, refusals: [refuse(action.week, "epandreBrf", "le tas de broyat est vide")] };
   }
   const hours = (carboneG / 1000 / CARBON_FRACTION) * EPANDAGE_HEURES_PAR_KG;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return {
-      state,
-      refusals: [refuse(action.week, "epandreBrf", "plafond hebdomadaire atteint")],
-    };
-  }
 
   const cote = state.station.coteM;
   const dims = { widthM: cote, heightM: cote };
@@ -1178,10 +1211,6 @@ function applyRecolter(
     // Cadence de cueillette propre à l'espèce (ramasser 19 kg de noisettes
     // n'a rien à voir avec cueillir 19 kg de pommes).
     const hours = tree.fruitsKg * (espece.fruits?.recolteHKg ?? 0.03);
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "recolter", `plafond hebdomadaire atteint (arbre ${id})`));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     treasuryEur += tree.fruitsKg * prix;
@@ -1208,9 +1237,6 @@ function applyChauler(
   const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
   const cost = areaM2 * (LIME_EUR_M2 + part * COUT_ENGIN_EUR_M2);
   const hours = areaM2 * (part * LIME_HOURS_M2_ENGIN + (1 - part) * LIME_HOURS_M2_MAIN);
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "chauler", "plafond hebdomadaire atteint")] };
-  }
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
   }
@@ -1264,9 +1290,6 @@ function applyFaucher(
   const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
   const hours = areaM2 * (part * FAUCHE_HOURS_M2_ENGIN + (1 - part) * FAUCHE_HOURS_M2_MAIN);
   const coutEngin = areaM2 * part * COUT_ENGIN_EUR_M2;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "faucher", "plafond hebdomadaire atteint")] };
-  }
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
@@ -1350,12 +1373,6 @@ function applyRamasserBoisMort(
   }
   const volumeM3 = carboneKgC / CARBON_FRACTION / DENSITE_BOIS_MORT_KG_M3;
   const hours = volumeM3 * RAMASSAGE_HOURS_M3;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return {
-      state,
-      refusals: [refuse(action.week, "ramasserBoisMort", "plafond hebdomadaire atteint")],
-    };
-  }
   // Le tronc parti, il ne barre plus rien : la part en travers s'en va avec
   // lui. C'est le vrai prix caché du ramassage sur un versant.
   for (const i of cibles) {
@@ -1412,10 +1429,6 @@ function applyElaguer(
       continue;
     }
     const hours = (cible - tree.hauteurElagueeM) * ELAGAGE_HOURS_PAR_M;
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "elaguer", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     elagues.push(id);
@@ -1488,10 +1501,6 @@ function applyTrogner(
       );
       continue;
     }
-    if (hoursUsedWeek + TROGNE_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "trogner", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += TROGNE_HEURES;
     hoursUsedYear += TROGNE_HEURES;
     etetes.push(id);
@@ -1547,9 +1556,6 @@ function applyChasser(
   state: GameState,
   action: Extract<GameAction, { type: "chasser" }>,
 ): ApplyResult {
-  if (state.economy.hoursUsedWeek + CHASSE_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "chasser", "plafond hebdomadaire atteint")] };
-  }
   return {
     state: {
       ...state,
@@ -1577,9 +1583,6 @@ function applyCloturer(
   const perimetreM = 2 * Math.PI * action.rayonM;
   const cost = perimetreM * CLOTURE_EUR_M;
   const hours = perimetreM * CLOTURE_HEURES_M;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "cloturer", "plafond hebdomadaire atteint")] };
-  }
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "cloturer", "découvert plafonné")] };
   }
@@ -1622,9 +1625,6 @@ function applyLabourer(
   const areaM2 = Math.PI * action.rayonM * action.rayonM * part;
   const hours = areaM2 * LABOUR_HOURS_M2;
   const cost = areaM2 * LABOUR_EUR_M2;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "labourer", "plafond hebdomadaire atteint")] };
-  }
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "labourer", "découvert plafonné")] };
   }
@@ -1754,10 +1754,6 @@ function applyProteger(
       );
       continue;
     }
-    if (hoursUsedWeek + PROTECTION_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "proteger", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += PROTECTION_HEURES;
     hoursUsedYear += PROTECTION_HEURES;
     treasuryEur -= PROTECTION_EUR;
@@ -1798,10 +1794,6 @@ function applyReceper(
         refuse(action.week, "receper", `${espece.nom} ne rejette pas de souche : il en mourrait`),
       );
       continue;
-    }
-    if (hoursUsedWeek + RECEPAGE_HOURS > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "receper", "plafond hebdomadaire atteint"));
-      break;
     }
     hoursUsedWeek += RECEPAGE_HOURS;
     hoursUsedYear += RECEPAGE_HOURS;
@@ -1956,10 +1948,6 @@ function applyLeverEcorce(
     // Le rendement suit la taille : un gros arbre porte plus de planches.
     const kg = ecorce.rendementKg * Math.min(1.5, tree.heightM / 12);
     const hours = kg * ecorce.recolteHKg;
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "leverEcorce", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     treasuryEur += kg * ecorce.prixEurKg;
