@@ -155,6 +155,26 @@ export interface HerbaceeV0 {
     partPersistante: number;
   };
   /**
+   * Ce que l'espèce offre aux pollinisateurs quand elle fleurit, et QUAND
+   * (#70, critères G4 et J6). Même forme que sur la fiche ligneuse
+   * (`especes.ts:floraison`), même horloge en degrés-jours.
+   *
+   * **Absent pour une anémophile**, et c'est le contenu du champ : deux des
+   * trois herbacées du moteur sont des GRAMINÉES. Elles fleurissent
+   * abondamment, leur pollen part au vent, et aucun insecte ne vient le
+   * chercher. La strate basse ne nourrit donc les pollinisateurs que par sa
+   * vernale — ce qui est exactement ce que dit la littérature de la soudure de
+   * printemps, et ce qui laisse la soudure d'ÉTÉ à la charge des ligneux.
+   */
+  floraison?: {
+    /** ouverture : cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier */
+    debutDJ: number;
+    /** largeur de la fenêtre, en degrés-jours */
+    dureeDJ: number;
+    /** ce que la floraison offre ∈ [0,1], à pleine emprise */
+    nectar: number;
+  };
+  /**
    * °C moyenne hebdomadaire à partir de laquelle la végétation démarre. Une
    * vernale pousse au froid — c'est même tout son avantage —, une molinie
    * attend la chaleur.
@@ -220,6 +240,13 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       senescenceAutomnale: true,
       partPersistante: 0,
     },
+    // Mars-avril, six à huit semaines (SHIRREFFS_1985). Elle n'a PAS de
+    // nectaires : ses visiteurs — diptères, coléoptères, abeilles solitaires —
+    // viennent pour le POLLEN. L'offre est donc réelle mais moindre que celle
+    // d'une rosacée, et elle tombe très tôt, au moment où presque rien d'autre
+    // n'est ouvert *(à calibrer : la source décrit les visiteurs, pas un
+    // débit)*.
+    floraison: { debutDJ: 60, dureeDJ: 300, nectar: 0.4 },
     // Elle travaille à deux ou trois degrés, quand la prairie attend : c'est là
     // tout son avantage *(à calibrer)*.
     tBaseCroissanceC: 2,
@@ -337,6 +364,18 @@ export const REGRESSION_PAR_SEMAINE = 0.2;
  * bougé.
  */
 export const REPOUSSE_PAR_SEMAINE = 0.25;
+
+/**
+ * Inertie de la RESSOURCE FLORALE vécue, par semaine (#70). Même forme que
+ * l'humidité vécue de `herbe.ts`, et pour une raison du même ordre : ce qui
+ * décide n'est pas ce qui est ouvert aujourd'hui, c'est ce qui l'a été.
+ *
+ * 0,15 donne une constante de temps d'environ sept semaines — l'ordre de
+ * grandeur d'une génération de pollinisateur, et donc le délai avec lequel une
+ * population suit sa table *(à calibrer : les sources donnent des durées de
+ * développement par espèce, pas un temps de réponse de communauté)*.
+ */
+export const INERTIE_RESSOURCE_FLORALE = 0.15;
 
 const borne = (x: number) => Math.min(1, Math.max(0, x));
 

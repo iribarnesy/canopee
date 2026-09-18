@@ -88,6 +88,7 @@ import {
   facteurEauHerbacee,
   facteurThermique,
   HERBACEES,
+  INERTIE_RESSOURCE_FLORALE,
   N_HERBACEES,
   partSaisonniere,
   rabattreParEspece,
@@ -136,7 +137,7 @@ import {
 import { frequentationDesBordures } from "./paysage";
 import {
   contextePhenologique,
-  FLORAISON_DUREE_DJ,
+  partFloraison,
   partFoliaireActiveDans,
   partFoliaireOmbrageanteDans,
   semaineDeFroid,
@@ -541,6 +542,18 @@ function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMo
   // mieux se tromper : elle ne fabrique pas de morts d'ombre.
   return lent > stressFinal - lent ? (tree.causeLente ?? coup) : coup;
 }
+
+/**
+ * Ce qu'un arbre noue MÊME sans aucun pollinisateur autour : le vent en porte
+ * un peu, les abeilles domestiques d'un voisin passent, et beaucoup d'espèces
+ * sont partiellement autogames. Un verger nu dans une plaine nue perd une
+ * bonne part de sa nouaison ; il n'en perd jamais la totalité *(à calibrer)*.
+ *
+ * C'est la valeur qu'avait ce plancher avant que le service lise le calendrier
+ * des fleurs (#70), et elle n'a pas bougé : le lot AJOUTE un facteur limitant,
+ * il ne déplace pas le plancher.
+ */
+const POLLINISATION_PLANCHER = 0.35;
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
   const { station } = state;
@@ -1710,6 +1723,51 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const semainesDeFroid =
     (week === DEBUT_COMPTAGE_FROID ? 0 : state.semainesDeFroid) +
     (semaineDeFroid(weather.tMean) ? 1 : 0);
+  // ── 5 bis A. La RESSOURCE FLORALE, et c'est une mémoire (#70, G4/J6) ──────
+  // Ce qui est ouvert cette semaine, dans le rayon où un insecte travaille :
+  // les houppiers en fleur épandus sur leur disque — le même patron que la
+  // vulnérabilité des hôtes dans `ravageurs.ts` — et l'emprise des herbacées
+  // qui fleurissent, là où elles la tiennent.
+  //
+  // Le NECTAR est ce qui compte, pas la floraison : un noisetier et un noyer
+  // couvrent leur disque de fleurs et n'y mettent rien pour personne.
+  const floraleInstant = new Float64Array(nCells);
+  for (const tree of nextTrees) {
+    if (!tree.alive) continue;
+    const espece = getEspece(tree.especeId);
+    const f = espece.floraison;
+    if (!f || f.nectar <= 0) continue;
+    if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+    const part = partFloraison(f.debutDJ, ddYearBase5, f.dureeDJ);
+    if (part <= 0) continue;
+    const offre = f.nectar * part;
+    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
+    forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
+      floraleInstant[i] = (floraleInstant[i] ?? 0) + offre;
+    });
+  }
+  for (const [s_, h] of HERBACEES.entries()) {
+    const f = h.floraison;
+    if (!f || f.nectar <= 0) continue;
+    const part = partFloraison(f.debutDJ, ddYearBase5, f.dureeDJ);
+    if (part <= 0) continue;
+    const offre = f.nectar * part;
+    for (let i = 0; i < nCells; i++) {
+      floraleInstant[i] =
+        (floraleInstant[i] ?? 0) + offre * (herbeEmprise[i * N_HERBACEES + s_] ?? 0);
+    }
+  }
+  // La mémoire, enfin. Une colonie qui a jeûné au printemps n'est pas là en
+  // juin : c'est la CONTINUITÉ du calendrier qui fait la population, pas ce
+  // qui est ouvert le jour de la visite. Sans elle, chaque arbre se
+  // pollinisait lui-même à proportion de ses propres fleurs.
+  const ressourceFlorale = state.soil.ressourceFlorale.slice();
+  for (let i = 0; i < nCells; i++) {
+    const cible = Math.min(1, floraleInstant[i] ?? 0);
+    ressourceFlorale[i] =
+      (ressourceFlorale[i] ?? 0) + (cible - (ressourceFlorale[i] ?? 0)) * INERTIE_RESSOURCE_FLORALE;
+  }
+
   nextTrees = nextTrees.map((tree, t) => {
     const espece = getEspece(tree.especeId);
     const fruits = espece.fruits;
@@ -1721,12 +1779,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       fruitsKg = 0; // les fruits de l'an passé sont perdus depuis longtemps
     }
     const mature = tree.alive && tree.ageWeeks >= espece.regeneration.maturiteAns * 52;
-    if (mature) {
-      const bloomEnd = fruits.floraisonDJ + FLORAISON_DUREE_DJ;
+    // La floraison a quitté le bloc `fruits` (#70) : une espèce qui fructifie
+    // en porte forcément une, `fiches.test.ts` le vérifie, et le repli sur la
+    // durée par défaut ne sert qu'à ne pas jeter une fiche incomplète.
+    const floraison = espece.floraison;
+    if (mature && floraison) {
+      const bloomEnd = floraison.debutDJ + floraison.dureeDJ;
       // Fenêtre de floraison : gel fatal aux fleurs ouvertes (atlas : abricotier).
       if (
         ddPrev < bloomEnd &&
-        ddYearBase5 >= fruits.floraisonDJ &&
+        ddYearBase5 >= floraison.debutDJ &&
         // Le gel se juge SOUS LE COUVERT de cet arbre-là, pas au-dessus de la
         // parcelle : la nuit, un couvert renvoie vers le sol le rayonnement que
         // le ciel clair emporterait, et la floraison qu'il abrite y échappe
@@ -1767,7 +1829,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // verger nu dans une plaine nue perd une bonne part de sa nouaison ;
         // il n'en perd jamais la totalité (vent, abeilles domestiques).
         const cellArbre = cellIndexAt(dims, tree.x, tree.y);
-        const servicePollinisation = 0.35 + 0.65 * Math.min(1, habitat[cellArbre] ?? 0);
+        // **IL FAUT UN GÎTE ET UNE TABLE, et le plus rare décide** (#70). Le
+        // service ne lisait que l'habitat — essences, strates, herbe, bois
+        // mort —, c'est-à-dire où l'insecte VIT. Il lit maintenant aussi ce
+        // qu'il a eu à MANGER, par la mémoire florale de la cellule : un
+        // verger nu qui fleurit trois semaines et ne nourrit rien le reste de
+        // l'année n'a pas la population qu'il lui faudrait le jour venu.
+        //
+        // Le minimum plutôt qu'une somme, comme partout ailleurs dans ce
+        // moteur : un abri sans fleurs ne fait pas un pollinisateur, des
+        // fleurs sans abri non plus.
+        const servicePollinisation =
+          POLLINISATION_PLANCHER +
+          (1 - POLLINISATION_PLANCHER) *
+            Math.min(habitat[cellArbre] ?? 0, ressourceFlorale[cellArbre] ?? 0);
         fruitsKg =
           fruits.rendementMaxKg *
           sizeFactor *
@@ -2722,6 +2797,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterK,
         herbeCouverture,
         herbeEmprise,
+        ressourceFlorale,
         herbeFeuillage,
         herbeBiomasse,
         herbeHumidite,
