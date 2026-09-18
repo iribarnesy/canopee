@@ -61,7 +61,56 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le calendrier des fleurs, #70)
+## Ce que le dernier lot a appris (la culture, #136)
+
+**Une heure de littérature AVANT d'écrire, et elle a changé le mécanisme.** Je
+partais sur « moins de lumière, moins de grain ». La mesure dit l'inverse en
+Méditerranée : blé et orge font +19 % de rendement à 50 % d'éclairement, et le
+même +19 % à 90 % — un plateau, en serre IRRIGUÉE, donc pas une économie d'eau
+mais un excès de lumière au départ. Le moteur portait déjà la forme qu'il
+fallait, la SATURATION de la fiche herbacée, et il n'y avait aucun mécanisme à
+ajouter. **Chercher la réponse d'une espèce dans la littérature de l'espèce, pas
+dans le dispositif qu'on veut reproduire.**
+
+**Caler sur un chiffre, valider sur un AUTRE chiffre de la même source.**
+Broadbalk donne les deux bouts du blé : 8-9 t/ha pleinement fumé, ~1 t/ha sans
+aucun apport, tenu sur cent soixante-dix ans. Le plafond de la fiche est calé
+sur le premier ; le moteur n'ayant pas de fertilisation, il doit descendre de
+lui-même vers le second — mesuré 1,02 t/ha à l'an 24, sans que rien ne l'y
+pousse. La même source, deux chiffres, et la validation ne doit rien au calage.
+
+**Une normalisation peut rendre un plafond INATTEIGNABLE par construction.** Le
+grain était l'intégrale de l'assimilation divisée par le nombre de semaines de
+culture — ce qui suppose un feuillage plein toute la saison, que nul blé ne
+fait. Le plafond de 7 t/ha devenait donc hors d'atteinte quoi qu'il arrive, et
+le champ ne voulait plus dire ce que son commentaire promettait. La forme juste
+est un RAPPORT — ce qui a été assimilé sur ce qui l'aurait été sans limite — et
+elle ne demande aucune constante. **Quand un maximum déclaré n'est jamais
+approché, suspecter le dénominateur avant la physique.**
+
+**Un mécanisme qui échoue en SILENCE est pire qu'un mécanisme absent.** Semer
+dans un tapis fermé posait une emprise nulle, réussissait, et la moisson
+annonçait « rien à moissonner » neuf mois plus tard sans que rien n'ait dit
+pourquoi. Le refus existe maintenant et il dit quoi faire. **Un geste dont
+l'échec ne se voit qu'à la saison suivante doit refuser tout de suite.**
+
+**Et mon dispositif a manqué son témoin, deux fois dans le même lot.** Le banc
+du gradient comparait une allée à un blé pur qui S'ÉPUISAIT : je mesurais donc
+l'apport d'azote des noyers bien plus que leur ombre, et l'allée passait
+au-dessus du témoin. Puis l'essai du refus de semis semait sur une parcelle
+NEUVE, qui n'est pas un tapis fermé — il ne créait pas la condition qu'il
+testait. **Avant de lire un rapport, vérifier que le dénominateur est dans
+l'état qu'on croit.**
+
+**Retrouver le bon chiffre pour la mauvaise raison reste un résultat, à
+condition de le dire.** L'observation de Dupraz — « pas beaucoup affecté sous
+H/L 0,8 » — est reproduite : 1,007 à H/L 0,84. Mais chez lui l'allée est
+fertilisée, donc son seuil est de l'ombre pure, quand le nôtre est une
+compensation entre l'ombre qui coûte et la litière qui rend. Le critère reste
+🟡 pour cette raison, et pas parce que le chiffre serait mauvais. **Un accord
+numérique dont on ne sait pas décomposer les termes n'est pas une validation.**
+
+## Ce qu'un lot plus ancien a appris (le calendrier des fleurs, #70)
 
 **Le verrou était un DÉCOUPAGE, et il se voyait en listant les fiches.** La
 date de floraison vivait dans le bloc `fruits`, réservé aux essences dont on
@@ -541,6 +590,18 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce qui reste de #136 — la FERTILISATION, et c'est le verrou suivant.** Le
+moteur n'a aucun geste pour apporter de l'azote à une culture : un blé continu
+ne peut donc que s'épuiser, ce qui est juste mais qui interdit de séparer
+l'ombre de l'azote dans une allée — E13 reste 🟡 pour cette seule raison, et le
+LER (H21, ❌) n'aura pas de sens tant qu'une monoculture de blé voudra dire
+« blé qui se mine ». Manquent aussi, dans l'ordre où ils se paient : le retour
+de la PAILLE, qui explique probablement que le moteur glisse sous la parcelle
+nue de Broadbalk ; une saturation lumineuse rapportée au rayonnement de la
+STATION, sans quoi le blé du plateau picard reste aussi tolérant à l'ombre que
+celui du Midi ; et une seconde culture, dont le coût se mesure avant de
+l'ajouter.
 
 **Ce qui reste de #70 — la soudure d'ÉTÉ, et l'ortie.** Le calendrier est là et
 G4/J6 sont tombés, mais la strate basse n'y apporte que sa vernale : les deux
