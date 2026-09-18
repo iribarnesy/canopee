@@ -2491,3 +2491,53 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyReceper(state, action);
   }
 }
+
+/**
+ * Ce qu'`applyAction` REFUSERAIT pour ce geste, sans rien changer à l'état.
+ *
+ * Le jeu en a besoin pour dire « ce clic sera refusé, et voici pourquoi »
+ * AVANT le clic (#139, #120) : sous le curseur, le viseur passe au rouge avec
+ * la raison écrite là où l'œil se trouve déjà.
+ *
+ * Deux chemins étaient possibles, et le second est le bon pour une raison
+ * mesurée, pas supposée.
+ *
+ * Le premier — extraire de chaque `applyXxx` sa décision de refus, et
+ * l'appeler des deux côtés — donne bien une règle unique, mais au prix d'une
+ * réécriture des vingt et une actions, donc de vingt et une occasions de
+ * laisser un refus derrière. Un préavis qui se désynchronise du geste réel est
+ * pire que pas de préavis : il annonce un refus qui n'arrive pas, ou laisse
+ * passer un clic qui sera refusé.
+ *
+ * Le second — appeler `applyAction` et ne garder que les refus — ne peut PAS
+ * se désynchroniser, puisque c'est le geste réel qui répond. Il pose deux
+ * questions, et les deux ont été mesurées plutôt que pariées :
+ *
+ * 1. Est-ce assez bon marché pour le survol ? Mesuré sur une parcelle pleine
+ *    de 100 m portant deux cents arbres, et sur le chemin de TRAVAIL — celui
+ *    qu'on paie quand la cible est légale, donc le cher : 1,8 ms au pire, pour
+ *    un chaulage de 40 m de rayon qui couvre la moitié de la parcelle ; moins
+ *    d'une milliseconde pour les gestes ordinaires. Le survol ne redemande que
+ *    lorsque la cellule visée change : il peut le payer.
+ *
+ *    Pour comparaison, sur le MÊME état, copier l'état avant de l'appeler — la
+ *    parade défensive évidente — coûte 53 ms, trente fois plus que le pire cas
+ *    qu'elle protégerait. C'est cette mesure qui l'a écartée, pas un avis :
+ *    l'idée prudente était la seule des deux qui rendait le préavis
+ *    impossible.
+ *
+ * 2. `applyAction` laisse-t-elle vraiment son entrée intacte ? Aujourd'hui
+ *    oui, et ce n'est plus une propriété du code du jour : `prevoir.test.ts`
+ *    la vérifie pour CHAQUE type d'action, sur son chemin de refus ET sur son
+ *    chemin de travail, par comparaison profonde de l'état avant et après. La
+ *    table des cas y est indexée par `GameAction["type"]`, donc une action
+ *    neuve qu'on oublierait d'y inscrire ne compile pas.
+ *
+ * Ce que l'issue reprochait à ce chemin — « le jeu n'a pas le droit de parier
+ * sur du code dont il n'est pas responsable » — reste vrai, et c'est pour ça
+ * que la fonction vit ICI. Le pari n'est plus celui du jeu : il est celui du
+ * moteur sur son propre code, et la suite le tient.
+ */
+export function prevoirAction(state: GameState, action: GameAction): ActionRefusal[] {
+  return applyAction(state, action).refusals;
+}
