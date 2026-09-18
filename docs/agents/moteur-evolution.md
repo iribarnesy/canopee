@@ -61,7 +61,62 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'origine du stress, #153)
+## Ce que le dernier lot a appris (la brousse n'est pas un arbre, #154)
+
+Né d'une question de partie : « ça bloque quand on veut planter à moins d'un
+mètre d'un autre arbre — est-ce que ça fait ça même à côté d'une ronce ? ».
+Oui, et deux autres symptômes tenaient à la même cause : `state.trees` mêle un
+chêne de trente mètres et un brin de ronce, et presque tout le code les traite
+pareil. Aucun point de `realisme.md` n'est gagné ; deux ✅ qui tenaient sur la
+moitié de ce qu'ils annonçaient sont réparés.
+
+**La meilleure ancre est parfois une constante du dépôt lui-même.** Débroussailler
+335 ronces coûtait 822 h/ha. Inutile d'aller chercher une source : le fichier
+d'à côté écrit `FAUCHE_HOURS_M2_MAIN = 0,006`, commenté « 60 h/ha, le vrai prix
+d'un dégagement quand un engin ne peut pas entrer ». Le moteur se contredisait
+d'un facteur quatorze sur le même geste. **Avant de chercher une ancre dehors,
+regarder si le moteur en porte déjà une pour ce geste-là** — une contradiction
+interne est plus facile à défendre qu'un chiffre importé, et plus difficile à
+contester.
+
+**Un modèle juste tombe sur l'ancre sans qu'on le règle.** Le débroussaillage
+est facturé à la SURFACE de houppier, au tarif du dégagement. Sur la friche, les
+houppiers de ronce couvrent 2 911 m² d'une parcelle de 2 500 : le modèle donne
+17,5 h là où les 60 h/ha en donnent 15. Rien n'a été calé pour y tomber, et la
+forme a les bonnes limites aux deux bouts — un tapis continu coûte le plein
+tarif, des brins épars coûtent à proportion. **Quand un modèle atteint l'ancre
+sans réglage, c'est le signe qu'on a trouvé la bonne grandeur ; quand il faut
+tourner un bouton pour l'atteindre, on enregistre le moteur.**
+
+**Deux questions voisines n'appellent pas la même grandeur.** J'avais d'abord
+annoncé que TOUT devait se caler sur l'individu, au nom de la règle « on raisonne
+par individu ». C'était faux pour l'une des deux : le seuil du mètre ne dit pas
+« il y a un obstacle », il dit « on ne met pas deux futurs arbres l'un sur
+l'autre » — donc un semis de chêne de trente centimètres doit bloquer, et une
+ronce adulte non. C'est le POTENTIEL de l'essence qui décide là (`hauteurMaxM`,
+un trait déclaré, donc permis), et la taille de l'INDIVIDU qui décide du prix du
+geste. **Avant de choisir la grandeur, écrire ce que la règle affirme** ; deux
+règles qui se ressemblent peuvent lire deux choses opposées.
+
+**Une punition que la simulation produit déjà ne se réécrit pas.** Le surcoût de
+dégagement d'un potet est d'une minute contre une heure de plantation, et la
+tentation était de le gonfler pour « faire jeu ». Mesuré : à emplacements et
+graine identiques, quinze ans plus tard, **29 % de survie dans les ronces contre
+48 % après débroussaillage**. Le vrai prix d'une plantation dans un roncier est
+l'étouffement, et le moteur le calcule tout seul par la lumière. **Gonfler un
+coût pour créer une friction que la simulation produit déjà, c'est la compter
+deux fois** — et remplacer un résultat par une affirmation.
+
+**Et un banc qui mesurait la recolonisation.** Ma cohorte était « les arbres dont
+l'id dépasse celui d'avant la plantation » : sur une friche, qui régénère seule,
+ça comptait surtout les recrues spontanées — 83 emplacements, « 439 plantés ».
+Puis, corrigé par les identifiants que l'action rend, le dénominateur restait
+faux : je comptais les tiges encore PRÉSENTES, or un mort finit par être retiré
+du tableau quand sa chandelle tombe, si bien que les morts disparaissaient du
+calcul. **Sur une parcelle qui vit, une cohorte se désigne par ce que l'action a
+rendu, et se compte sur ce qu'on a posé.**
+
+## Ce qu'un lot plus ancien a appris (l'origine du stress, #153)
 
 Trouvé en vérifiant une réserve de #149 — *« si en route un dégât s'avère muet
 dans l'instantané »*. Il y en avait un : les ravageurs et les maladies
@@ -736,6 +791,12 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**#156 — éclaircir par essence est inatteignable.** Ouvert au passage : le
+moteur accepte `critere: "espece"` depuis toujours et prélève toutes les tiges
+d'une essence, mais l'interface n'expose que `parLeBas` et `parLeHaut`. Une
+capacité entière du moteur qu'on ne peut pas demander. Rien à faire côté moteur
+— le snapshot porte les `especeId` et le jeu importe déjà l'atlas.
 
 **Ce que #153 laisse à #149.** L'origine du stress est nommée et relayée
 jusqu'à `SnapshotTree` : le journal par arbre peut dire « attaqué par des
