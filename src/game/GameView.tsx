@@ -1232,7 +1232,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               <PanneauAction game={game} snapshot={snapshot} geste={geste} />
             </Volet>
           ) : volets.estOuvert("bg", "sol") ? (
-            <Volet titre="Diagnostic de sol" largeur={430} surFermer={() => volets.fermer("bg")}>
+            <Volet titre="Diagnostic de sol" largeur={400} surFermer={() => volets.fermer("bg")}>
               <CarteDuSol snapshot={snapshot} station={station} />
             </Volet>
           ) : undefined

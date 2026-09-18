@@ -15,10 +15,14 @@ import { btn } from "./styles";
 type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement";
 
 /**
- * Côté de la carte du sol, px. Petite exprès : c'est un diagnostic qu'on
- * consulte, pas la parcelle qu'on regarde.
+ * Côté de la carte du sol, px.
+ *
+ * Elle était petite parce qu'elle était affichée en permanence, et qu'il
+ * fallait bien lui prendre le moins de place possible. Maintenant qu'on
+ * l'ouvre exprès, elle peut être lisible : à 210 px, une parcelle homogène
+ * n'était qu'un aplat.
  */
-const CARTE_PX = 210;
+const CARTE_PX = 360;
 
 /**
  * La CARTE DU SOL : une vue de dessus, un pixel par cellule, qui montre ce que
@@ -154,41 +158,40 @@ export function CarteDuSol({ snapshot, station }: { snapshot: Snapshot; station:
 
   return (
     <>
-      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-        <canvas
-          ref={canvasRef}
-          width={CARTE_PX}
-          height={CARTE_PX}
-          style={{
-            width: CARTE_PX,
-            border: "1px solid var(--trait)",
-            borderRadius: 6,
-          }}
-        />
-        <p style={{ margin: 0, color: "var(--encre-douce)", fontSize: 13 }}>
-          {/*
-              La carte du sol montre ce que la vue ne peut pas montrer : le pH,
-              la nappe, l'azote. Ce sont des grandeurs d'un sol qu'on ne voit
-              pas, et une vue jolie ne remplace pas un diagnostic.
-            */}
-          Carte du sol — nord en haut
-          <br />
-          {(
-            [
-              ["eau", "Eau"],
-              ["ph", "pH"],
-              ["azote", "Azote"],
-              ["herbe", "Herbe"],
-              ["nappe", "Nappe"],
-              ["engorgement", "Engorgement"],
-            ] as const
-          ).map(([o, libelle]) => (
-            <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
-              {libelle}
-            </button>
-          ))}
-        </p>
-      </div>
+      {/*
+        La carte du sol montre ce que la vue ne peut pas montrer : le pH, la
+        nappe, l'azote. Ce sont des grandeurs d'un sol qu'on ne voit pas, et
+        une vue jolie ne remplace pas un diagnostic.
+      */}
+      <canvas
+        ref={canvasRef}
+        width={CARTE_PX}
+        height={CARTE_PX}
+        style={{
+          width: "100%",
+          display: "block",
+          border: "1px solid var(--trait)",
+          borderRadius: 6,
+        }}
+      />
+      <p style={{ margin: "8px 0 0", color: "var(--encre-douce)", fontSize: 13 }}>
+        Nord en haut
+        <br />
+        {(
+          [
+            ["eau", "Eau"],
+            ["ph", "pH"],
+            ["azote", "Azote"],
+            ["herbe", "Herbe"],
+            ["nappe", "Nappe"],
+            ["engorgement", "Engorgement"],
+          ] as const
+        ).map(([o, libelle]) => (
+          <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
+            {libelle}
+          </button>
+        ))}
+      </p>
 
       <dl className="stats" style={{ marginTop: 12 }}>
         <dt>Sol</dt>
