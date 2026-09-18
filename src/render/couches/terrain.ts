@@ -69,6 +69,7 @@ import {
   CANOPEE_LA_PLUS_BASSE_M,
   CONTRASTE_CANOPEE,
   canopee,
+  clarteDuRelief,
   couleurDecor,
   couleurMasse,
   DEBORD_CANOPEE_M,
@@ -1470,7 +1471,15 @@ export function cuireMorceauDecor(
     // de parcelle se lit comme une découpe de papier. Le grain est atténué —
     // le hors-parcelle n'a pas à montrer de matière, juste à ne pas être plat.
     const matiereDecor = 1 + (facteurGrain(cxM, cyM, TUILE_LARGEUR_PX * vue.cam.zoom) - 1) * 0.6;
-    const teinte = versCss(eclairer(couleurDecor(bordures, cxM, cyM, coteM), matiereDecor));
+    // **L'amont s'éclaircit, l'aval s'assombrit.** C'est le seul indice de
+    // pente qu'une isométrie puisse porter sur un plan uniforme : sa géométrie
+    // ne le déforme pas, mais son ALTITUDE, elle, varie d'un bout de l'image à
+    // l'autre. Rien n'est inventé — c'est le `z` que ce même quad utilise déjà
+    // pour se placer.
+    const relief = clarteDuRelief(z(cxM, cyM), moyenne);
+    const teinte = versCss(
+      eclairer(couleurDecor(bordures, cxM, cyM, coteM), matiereDecor * relief),
+    );
     ctx.fillStyle = teinte;
     ctx.strokeStyle = teinte;
     ctx.lineWidth = 1;
@@ -1589,7 +1598,12 @@ export function cuireMorceauDecor(
       }
       return { point: { x: cxM, y: cyM }, c };
     })();
-    const fond = couleurDecor(bordures, echantillon.point.x, echantillon.point.y, coteM);
+    const fond = eclairer(
+      couleurDecor(bordures, echantillon.point.x, echantillon.point.y, coteM),
+      // Le même gradient que le sol sous elle : une canopée qui garderait sa
+      // teinte de plaine sur un versant s'en détacherait comme un décalque.
+      clarteDuRelief(z(echantillon.point.x, echantillon.point.y), moyenne),
+    );
     const distance = Math.max(0.5, distanceAuBord(echantillon.point.x, echantillon.point.y, coteM));
     const dessus = couleurMasse("bois", fond, distance, CONTRASTE_CANOPEE, echantillon.c.especeId);
     // La jupe : du sol au dessous de la canopée, plus sombre que le dessus.
@@ -1627,7 +1641,10 @@ export function cuireMorceauDecor(
     // verrait sur les bords doux.
     if (m.x < x0 || m.x >= x1 || m.y < y0 || m.y >= y1) continue;
     const distance = distanceAuBord(m.x, m.y, coteM);
-    const fond = couleurDecor(bordures, m.x, m.y, coteM);
+    const fond = eclairer(
+      couleurDecor(bordures, m.x, m.y, coteM),
+      clarteDuRelief(z(m.x, m.y), moyenne),
+    );
     const pied = versEcranVue({ x: m.x, y: m.y, z: z(m.x, m.y) }, vue);
     const px = pied.sx - decalage.dx;
     const py = pied.sy - decalage.dy;
