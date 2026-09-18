@@ -76,9 +76,10 @@ describe("l'argent contraint, ou ne contraint pas", () => {
     // lieu de se refuser, la limite de travail EST devenue une contrainte
     // d'argent — donc économie coupée, plus rien ne borne la semaine.
     //
-    // C'est assumé : le mode sans économie sert les questions qui n'en sont
-    // pas (quelle succession sur deux siècles, le chêne-liège protège-t-il du
-    // feu), et personne n'y compose des semaines de 200 h. Ce qui doit rester
+    // C'est assumé, et c'est acté (docs/regles.md §15-13) : le mode sans
+    // économie sert les questions qui n'en sont pas (quelle succession sur deux
+    // siècles, le chêne-liège protège-t-il du feu), et personne n'y compose des
+    // semaines de 200 h. Ce qui doit rester
     // vrai, et que ce test garde, c'est que la COMPTABILITÉ physique ne dépend
     // pas de l'argent : les heures montent pareil, et le dépassement se lit
     // pareil. Savoir ce qu'aurait coûté une conduite reste instructif même

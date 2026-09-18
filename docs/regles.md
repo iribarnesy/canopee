@@ -704,6 +704,8 @@ Variabilité individuelle (ta v2 : tirage d'un « génotype » par individu auto
 9. Greffes en v2 ; variétés en v1.
 10. **Un seul phénotype par espèce en v1** ; l'achat de provenances plus méridionales (migration assistée) arrivera en v2, avec la variabilité individuelle.
 11. Aléa (dispersion voisine…) autorisé mais **seedé** : le déterminisme se teste à seed fixée, les tests écologiques valident des critères larges sur plusieurs seeds (§16).
+12. **Le dépassement horaire ne se lisse pas** (2026-09-18). Une heure au-dessus du seuil coûte une semaine de saisonnier entière. C'est un palier assumé, pas un oubli : on n'embauche personne pour une heure. Si une partie montre que l'arbitrage en devient absurde, c'est la partie qui le dira — pas un banc.
+13. **Le bac à sable n'a aucune limite de travail** (2026-09-18). Conséquence assumée du point 4 : la limite hebdomadaire étant devenue une contrainte d'ARGENT, couper l'économie la fait disparaître. Ce mode sert les questions qui ne sont pas économiques (quelle succession sur deux siècles, le chêne-liège protège-t-il du feu) et personne n'y compose des semaines de 200 h. Ce qui reste vrai, et que `economie-optionnelle.test.ts` verrouille : la comptabilité physique ne dépend pas de l'argent — les heures montent à l'identique des deux côtés et le dépassement se lit à l'identique.
 
 **Encore ouvert :**
 - **Vue graphique** : hypothèse de travail = **isométrique** ; maquette à faire au moment de l'UI, en vérifiant deux points durs de l'iso : lisibilité des ombres portées (information de gameplay) et occlusion des petits sujets derrière les grands arbres. Une vue de dessus « plan de gestion » restera sans doute nécessaire en complément.

@@ -96,7 +96,6 @@ import {
   OFFRE_FLORALE_SUFFISANTE,
   partSaisonniere,
   rabattreParEspece,
-  SEMAINES_DE_CULTURE,
   suivreFeuillage,
   vigueurHerbacee,
 } from "./herbacees";

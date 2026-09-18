@@ -821,10 +821,11 @@ export function depassementHoraire(economy: { hoursUsedWeek: number; uth: number
  * saisonnier est l'instrument juste ici : on paie une semaine de bras pour une
  * semaine d'heures déjà faites.
  *
- * LE PALIER PEUT RENDRE L'ARBITRAGE BIZARRE, et l'issue le dit : dépasser d'une
- * heure coûte une semaine entière. C'est peut-être juste — on n'embauche
- * personne pour une heure — et c'est peut-être à lisser. Ça se juge EN JOUANT,
- * pas sur un banc, donc rien n'est lissé ici *(à calibrer)*.
+ * LE PALIER NE SE LISSE PAS, et c'est une décision actée (docs/regles.md
+ * §15-12) : dépasser d'une heure coûte une semaine de saisonnier entière, parce
+ * qu'on n'embauche personne pour une heure. Si une partie montre que
+ * l'arbitrage en devient absurde, c'est la partie qui le dira — pas un banc, et
+ * pas ce commentaire.
  */
 export function coutDuDepassement(depassementHeures: number): {
   embauches: number;
