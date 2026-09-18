@@ -87,9 +87,30 @@ export function facteurPhBiologie(ph: number): number {
 }
 
 /**
- * Tolérance d'une espèce à l'acidité ∈ [0,1] : 1 dans sa gamme, bordure douce
- * de ±0,7 pH, 0 au-delà — la bio-indication de l'atlas, calcicoles contre
- * acidiphiles.
+ * Largeur de la rampe de tolérance au pH, de part et d'autre du plein régime.
+ *
+ * Elle est tournée vers l'INTÉRIEUR de la gamme déclarée : une espèce donnée
+ * pour [4 ; 7,5] vaut 0 à pH 4 et n'atteint 1 qu'à 4,7. La gamme de
+ * `especes.ts` est donc une amplitude de PRÉSENCE, pas un plateau de vigueur —
+ * et l'écart entre les deux vaut 0,7 de chaque côté.
+ */
+export const RAMPE_PH = 0.7;
+
+/**
+ * Tolérance d'une espèce à l'acidité ∈ [0,1].
+ *
+ * ATTENTION, LA RAMPE EST À L'INTÉRIEUR DE LA GAMME, pas à l'extérieur : le
+ * facteur vaut 0 AUX BORNES déclarées et n'atteint 1 qu'à `RAMPE_PH` de
+ * celles-ci. Toutes les espèces sont dans ce cas — mesuré : `f(min) = 0` pour
+ * les 26. Ce n'est pas ce que le nom laisse croire, et ce n'était pas non plus
+ * ce que ce commentaire disait avant ; il annonçait « 1 dans sa gamme, bordure
+ * douce de ±0,7, 0 au-delà », c'est-à-dire l'exact miroir de ce que le code
+ * fait. La calibration entière (hauteurs, bio-indication, composition des
+ * paysages voisins) a poussé sur la forme réelle, pas sur celle annoncée :
+ * redresser la fonction seule fait sortir cinq essais, dont le hêtre qui
+ * s'installe sur un podzol et le pin qui dépasse sa table de production de
+ * 27 %. Le départage de la gamme déclarée et du plateau réel est donc un lot à
+ * lui seul, et il est ouvert.
  *
  * Elle vit ici, et pas dans `trees.ts`, parce que la strate herbacée la lit
  * aussi (`herbacees.ts`) : c'est une propriété du SOL confrontée à une gamme,
@@ -97,7 +118,19 @@ export function facteurPhBiologie(ph: number): number {
  */
 export function facteurGammePh(gamme: readonly [number, number], ph: number): number {
   const [min, max] = gamme;
-  return Math.min(1, Math.max(0, Math.min((ph - min) / 0.7, (max - ph) / 0.7)));
+  return Math.min(1, Math.max(0, Math.min((ph - min) / RAMPE_PH, (max - ph) / RAMPE_PH)));
+}
+
+/**
+ * La gamme où l'espèce tient VRAIMENT son plein régime, telle que le moteur
+ * l'applique — et non telle que `especes.ts` la déclare.
+ *
+ * C'est ce qu'il faut montrer au joueur quand on lui explique une mort : lui
+ * citer la gamme déclarée pendant qu'on le tue sur le plateau réel, c'est lui
+ * présenter un message qui se contredit tout seul.
+ */
+export function plateauPh(gamme: readonly [number, number]): [number, number] {
+  return [gamme[0] + RAMPE_PH, gamme[1] - RAMPE_PH];
 }
 
 /**

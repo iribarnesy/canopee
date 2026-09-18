@@ -36,7 +36,7 @@ import {
   type Relief,
 } from "../engine/relief";
 import { rngStateFromSeed } from "../engine/rng";
-import { ruHorizonMm } from "../engine/soil";
+import { plateauPh, ruHorizonMm } from "../engine/soil";
 import {
   createGameState,
   type GameState,
@@ -530,12 +530,20 @@ function stepWeeks(n: number) {
     const weekOfYear = before.week % 52;
     // Morts : regroupées par espèce ET par cause, pour que le joueur sache
     // ce qui a tué ses arbres et puisse corriger le tir.
-    const parEspeceEtCause = new Map<string, { n: number; hMax: number }>();
+    const parEspeceEtCause = new Map<string, { n: number; hMax: number; phPire: number }>();
     for (const mort of ticked.morts) {
       const cle = `${mort.especeId}|${mort.cause}`;
-      const agg = parEspeceEtCause.get(cle) ?? { n: 0, hMax: 0 };
+      const agg = parEspeceEtCause.get(cle) ?? { n: 0, hMax: 0, phPire: Number.NaN };
       agg.n++;
       agg.hMax = Math.max(agg.hMax, mort.heightM);
+      // LE pH SOUS L'ARBRE, pas celui de la station : il dérive chaque semaine
+      // avec la saturation en bases (C10) et le chaulage le déplace d'un geste.
+      // On retient le plus acide du groupe, qui est celui qui a tué.
+      if (state) {
+        const i = Math.floor(mort.y) * state.station.coteM + Math.floor(mort.x);
+        const ph = state.soil.ph[i];
+        if (ph !== undefined) agg.phPire = Number.isNaN(agg.phPire) ? ph : Math.min(agg.phPire, ph);
+      }
       parEspeceEtCause.set(cle, agg);
     }
     for (const [cle, agg] of parEspeceEtCause) {
@@ -545,9 +553,14 @@ function stepWeeks(n: number) {
       const taille = agg.hMax >= 1 ? ` (jusqu'à ${agg.hMax.toFixed(1)} m)` : " (semis)";
       // Sur un sol hors gamme, on donne les chiffres : c'est la seule cause de
       // mort que le joueur peut corriger d'un geste (chauler).
+      // On cite le PLATEAU que le moteur applique, pas la gamme déclarée dans
+      // `especes.ts` : celle-ci est plus large de 0,7 de chaque côté, si bien
+      // que le message disait « sol à pH 4,5, il leur en faut 4 à 7,5 » — il se
+      // contredisait tout seul et faisait passer le moteur pour cassé.
+      const plateau = cause === "solHorsGamme" ? plateauPh(getEspece(id).ph) : null;
       const precision =
-        cause === "solHorsGamme" && state
-          ? ` — sol à pH ${state.station.phInitial.toFixed(1)}, il leur en faut ${getEspece(id).ph[0]} à ${getEspece(id).ph[1]}`
+        plateau && !Number.isNaN(agg.phPire)
+          ? ` — sol à pH ${agg.phPire.toFixed(1)}, il leur faut ${plateau[0].toFixed(1)} à ${plateau[1].toFixed(1)} pour être à l'aise`
           : "";
       event(
         "💀",
