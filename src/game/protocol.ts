@@ -476,6 +476,25 @@ export type ToWorker =
    * position vient la réponse qui arrive.
    */
   | { type: "prevoir"; cle: string; action: ActionSansSemaine }
+  /**
+   * « Avance de tant de semaines, puis arrête-toi. »
+   *
+   * **La traversée est jouée, pas sautée.** Le joueur qui demande un mois veut
+   * voir la parcelle changer, pas la retrouver changée : le worker avance donc
+   * à la vitesse demandée, semaine après semaine, et c'est LUI qui s'arrête au
+   * bon moment. Le faire côté jeu voudrait dire guetter le bandeau et
+   * re-cliquer sur pause au jugé, ce que le joueur faisait déjà à la main.
+   *
+   * L'arrivée se signale par `autopause`, comme les fruits mûrs : c'est le
+   * message qui resynchronise la vitesse de l'interface.
+   */
+  | {
+      type: "avancerDe";
+      semaines: number;
+      weeksPerSecond: number;
+      /** ce que l'arrivée dira au joueur — le worker ne sait pas nommer un mois */
+      libelle: string;
+    }
   | { type: "requestSave" };
 
 export type FromWorker =

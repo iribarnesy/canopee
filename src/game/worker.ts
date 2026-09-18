@@ -88,6 +88,14 @@ let pendingRefusals: ActionRefusal[] = [];
 let lastFluxes: TickFluxes | undefined;
 let timer: ReturnType<typeof setInterval> | undefined;
 let fractionalWeeks = 0;
+/**
+ * La semaine où la traversée demandée doit s'arrêter, s'il y en a une en
+ * cours. Toute reprise de contrôle par le joueur l'annule — sinon une pause
+ * suivie d'un « lecture » repartirait avec une arrivée fantôme.
+ */
+let semaineDArret: number | undefined;
+/** Ce que l'arrivée annoncera — posé par le jeu, qui sait nommer un mois. */
+let libelleDArrivee = "";
 let prevFruitsReadyKg = 0;
 let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
@@ -683,11 +691,23 @@ function startLoop() {
   timer = setInterval(() => {
     if (!state || weeksPerSecond <= 0) return;
     fractionalWeeks += weeksPerSecond / 10;
-    const n = Math.floor(fractionalWeeks);
+    let n = Math.floor(fractionalWeeks);
     if (n > 0) {
       fractionalWeeks -= n;
-      stepWeeks(Math.min(n, 26));
-      postSnapshot();
+      // **On ne dépasse jamais l'arrivée.** Sans ce rabot, une traversée à
+      // grande vitesse franchirait la semaine visée au milieu d'un pas et
+      // s'arrêterait après — un mois demandé, cinq semaines rendues.
+      if (semaineDArret !== undefined) n = Math.min(n, semaineDArret - state.week);
+      if (n > 0) {
+        stepWeeks(Math.min(n, 26));
+        postSnapshot();
+      }
+      if (semaineDArret !== undefined && state.week >= semaineDArret) {
+        semaineDArret = undefined;
+        weeksPerSecond = 0;
+        fractionalWeeks = 0;
+        post({ type: "autopause", reason: libelleDArrivee });
+      }
     }
   }, 100);
 }
@@ -875,7 +895,16 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
     }
     case "speed":
       weeksPerSecond = msg.weeksPerSecond;
+      // Le joueur reprend la main : la traversée en cours n'a plus d'objet.
+      semaineDArret = undefined;
       break;
+    case "avancerDe": {
+      if (!state) return;
+      semaineDArret = state.week + Math.max(1, Math.round(msg.semaines));
+      weeksPerSecond = msg.weeksPerSecond;
+      libelleDArrivee = msg.libelle;
+      break;
+    }
     case "action": {
       if (!state) return;
       // La semaine est déjà « ouverte » : l'action s'applique immédiatement,

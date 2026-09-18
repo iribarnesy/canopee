@@ -10,6 +10,16 @@ import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
 
+/**
+ * Semaines dans un mois : 52 / 12.
+ *
+ * Le même nombre que celui qui nomme le mois deux lignes plus bas — un mois de
+ * jeu n'est pas un mois de calendrier, c'est un douzième d'année, et les deux
+ * doivent dire la même chose sous peine d'annoncer « un mois plus tard » sur
+ * un bandeau qui n'a pas changé de nom.
+ */
+const SEMAINES_PAR_MOIS = 52 / 12;
+
 const MOIS = [
   "janvier",
   "février",
@@ -28,7 +38,7 @@ const MOIS = [
 export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot }) {
   const annee = Math.floor(snapshot.week / 52) + 1;
   const semaine = snapshot.week % 52;
-  const mois = MOIS[Math.min(11, Math.floor(semaine / 4.34))];
+  const mois = MOIS[Math.min(11, Math.floor(semaine / SEMAINES_PAR_MOIS))];
   const tresorerie = snapshot.economy.treasuryEur;
 
   return (
@@ -61,17 +71,59 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         </span>
         {snapshot.economy.bankrupt && <strong style={{ color: "#c0392b" }}>FAILLITE</strong>}
       </p>
-      <p style={{ margin: 0 }}>
-        {[0, 1, 4, 13, 52].map((v) => (
+      <p style={{ margin: 0, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        {/*
+          **Une seule cible pour partir et pour s'arrêter.** La pause et la
+          lecture étaient deux boutons différents qu'il fallait chercher à
+          chaque fois ; la bascule montre l'état courant et le renverse. Les
+          vitesses restent à côté, parce qu'elles disent autre chose — non pas
+          « le temps coule-t-il ? » mais « à quel rythme ».
+        */}
+        <button
+          type="button"
+          // Allumé quand le temps COULE, éteint à l'arrêt : dans toute cette
+          // interface le vert veut dire « en cours », et un ▶ vert à l'arrêt
+          // dirait le contraire de ce que le bouton montre.
+          style={{ ...btn(game.speed > 0), marginRight: 0, marginBottom: 0, minWidth: 44 }}
+          onClick={game.basculer}
+          title={game.speed > 0 ? "Mettre en pause (espace)" : "Laisser filer le temps (espace)"}
+          aria-label={game.speed > 0 ? "Mettre en pause" : "Reprendre"}
+        >
+          {game.speed > 0 ? "⏸" : "▶"}
+        </button>
+        {[1, 4, 13, 52].map((v) => (
           <button
             key={v}
             type="button"
-            style={btn(game.speed === v)}
+            style={{ ...btn(game.speed === v), marginRight: 0, marginBottom: 0 }}
             onClick={() => game.setSpeed(v)}
           >
-            {v === 0 ? "⏸" : `×${v}`}
+            ×{v}
           </button>
         ))}
+        {/*
+          **La traversée est jouée, pas sautée.** C'est la demande : voir la
+          parcelle changer pendant le mois, pas la retrouver changée. Les
+          vitesses choisies sont celles où une ellipse tient encore : à ×4 une
+          semaine dure 250 ms, de quoi jouer deux actes ; au-delà de ×13 le
+          budget passe sous le plancher de lisibilité et les actes sautent.
+        */}
+        <button
+          type="button"
+          style={{ ...btn(), marginRight: 0, marginBottom: 0 }}
+          onClick={() => game.avancerDe(SEMAINES_PAR_MOIS, 4, "un mois plus tard")}
+          title="Avance d'un mois, puis s'arrête"
+        >
+          ⏩ +1 mois
+        </button>
+        <button
+          type="button"
+          style={{ ...btn(), marginRight: 0, marginBottom: 0 }}
+          onClick={() => game.avancerDe(52, 13, "un an plus tard")}
+          title="Avance d'un an, puis s'arrête"
+        >
+          ⏭ +1 an
+        </button>
       </p>
     </>
   );

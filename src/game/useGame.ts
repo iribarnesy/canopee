@@ -86,6 +86,16 @@ export interface GameApi {
    */
   revision: number;
   setSpeed: (weeksPerSecond: number) => void;
+  /**
+   * Met en marche ou en pause, d'un seul geste.
+   *
+   * La reprise repart à la DERNIÈRE vitesse choisie, et c'est tout l'intérêt
+   * d'avoir une bascule : mettre en pause et reprendre étaient deux cibles
+   * différentes qu'il fallait chercher à chaque fois.
+   */
+  basculer: () => void;
+  /** Avance de tant de semaines à la vitesse dite, puis s'arrête tout seul. */
+  avancerDe: (semaines: number, weeksPerSecond: number, libelle: string) => void;
   quit: () => void;
 }
 
@@ -101,6 +111,13 @@ export function useGame(): GameApi {
   const [snapshot, setSnapshot] = useState<Snapshot>();
   const [refusals, setRefusals] = useState<WithUid<ActionRefusal>[]>([]);
   const [speed, setSpeedState] = useState(0);
+  /**
+   * La dernière vitesse de lecture demandée, pour savoir à quoi reprendre.
+   *
+   * Une référence et non un état : elle ne change rien à l'écran, et la faire
+   * rendre à chaque pause serait payer un rendu pour une mémoire.
+   */
+  const vitessePrecedente = useRef(1);
   const [replayProgress, setReplayProgress] = useState<{
     done: number;
     total: number;
@@ -248,7 +265,19 @@ export function useGame(): GameApi {
       send({ type: "prevoir", cle, action });
     },
     setSpeed: (weeksPerSecond) => {
+      if (weeksPerSecond > 0) vitessePrecedente.current = weeksPerSecond;
       send({ type: "speed", weeksPerSecond });
+      setSpeedState(weeksPerSecond);
+      setNotice(undefined);
+    },
+    basculer: () => {
+      const cible = speed > 0 ? 0 : vitessePrecedente.current;
+      send({ type: "speed", weeksPerSecond: cible });
+      setSpeedState(cible);
+      setNotice(undefined);
+    },
+    avancerDe: (semaines, weeksPerSecond, libelle) => {
+      send({ type: "avancerDe", semaines, weeksPerSecond, libelle });
       setSpeedState(weeksPerSecond);
       setNotice(undefined);
     },

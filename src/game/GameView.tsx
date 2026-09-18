@@ -1039,6 +1039,33 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    */
   const [survol, setSurvol] = useState<{ x: number; y: number }>();
 
+  /**
+   * LA BARRE ESPACE met en marche et arrête, où qu'on ait cliqué.
+   *
+   * `preventDefault` sert deux fois : il empêche la page de défiler, et il
+   * empêche la barre d'activer le bouton qui a le focus. C'est voulu — après
+   * un clic sur « ×13 », le focus reste sur ce bouton, et sans ça la barre
+   * rejouerait ce clic au lieu de mettre en pause. Les boutons restent
+   * atteignables à la touche Entrée, qui est l'autre activateur.
+   *
+   * On ne prend pas la main quand on écrit : un champ de saisie a besoin de
+   * ses espaces. Il n'y en a pas dans l'écran de jeu aujourd'hui, mais les
+   * volets en gagneront.
+   */
+  useEffect(() => {
+    const surTouche = (e: KeyboardEvent) => {
+      if (e.code !== "Space" && e.key !== " ") return;
+      const cible = e.target as HTMLElement | null;
+      const balise = cible?.tagName;
+      if (balise === "INPUT" || balise === "TEXTAREA" || balise === "SELECT") return;
+      if (cible?.isContentEditable) return;
+      e.preventDefault();
+      game.basculer();
+    };
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [game.basculer]);
+
   // **Le refus vient du moteur, jamais d'une règle refaite ici.** Le worker
   // applique la plantation sur l'état courant et jette le résultat, ne gardant
   // que les refus (`prevoir`). La règle du mètre, le plafond d'heures et le
