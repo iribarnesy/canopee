@@ -61,7 +61,60 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le préavis de refus, #139)
+## Ce que le dernier lot a appris (l'origine du stress, #153)
+
+Trouvé en vérifiant une réserve de #149 — *« si en route un dégât s'avère muet
+dans l'instantané »*. Il y en avait un : les ravageurs et les maladies
+ajoutaient leurs dégâts au scalaire `stress` et n'étaient nommés qu'à la MORT de
+l'arbre. Aucun critère de `realisme.md` ne bouge : le mal était déjà modélisé, il
+était seulement anonyme.
+
+**Un mécanisme juste mais muet ne vaut rien pour le joueur.** Soixante
+abricotiers, vingt-cinq ans : 592 unités de dégâts infligées, **zéro nommée**,
+parce qu'aucun arbre n'en mourait et que `causeMort` était la seule sortie. Le
+moteur avait raison sur ce qui se passait et ne savait pas le dire. **Avant de
+juger qu'un mécanisme est complet, demander ce que le joueur peut en LIRE** — un
+effet qui n'atteint jamais l'instantané n'existe pas pour lui.
+
+**La forme du signal dicte celle de l'interface, et elle se mesure.** 75 444
+coups sur vingt-cinq ans et soixante arbres, soit environ un par arbre et par
+semaine, médiane 0,0053, seuls 1,4 % au-dessus de 0,05. C'est une pression
+CONTINUE avec des pointes, pas une suite d'épisodes — donc un niveau attribué,
+pas un flux d'événements qui aurait produit 75 000 lignes de journal. **La
+distribution d'un signal se regarde avant de décider comment l'exposer** ; le
+cumul seul aurait fait choisir l'inverse.
+
+**Le prorata se calcule UNE FOIS, pas par origine.** `stressLent` s'amortissait
+déjà au prorata quand l'arbre cicatrise. En ajoutant deux origines, la tentation
+était de recopier la formule trois fois. Un rapport unique, appliqué à chacune,
+dit la vraie règle — « le stress a reculé d'autant, donc chaque provenance
+recule d'autant » — et rend impossible d'en oublier une le jour où il y en aura
+quatre. L'invariant qui en découle, `somme des origines ≤ stress`, est éprouvé
+sur trois bancs, et il TOMBE dès l'an 1 si l'on soustrait une origine à
+l'amortissement (vérifié).
+
+**Deux champs plutôt qu'un registre, et la raison est écrite dans le code.** Un
+`Partial<Record<CauseMort, number>>` serait extensible et se lirait mieux ; il
+coûterait un objet de plus par arbre et par semaine dans la boucle la plus
+chaude du moteur, pour nommer deux causes. Le choix est noté sur le champ avec
+sa condition de révision, pour qu'on ne le repropose pas sans raison neuve.
+
+**Et, pour la troisième fois de suite, un banc qui n'exécutait pas le code.**
+Les trois bancs plantaient abricotier, pommier, aulne, saule — et la chalarose
+du frêne est la SEULE maladie de l'atlas. La moitié « maladie » du lot allait
+être livrée sans avoir jamais tourné, en vert. **Quand un mécanisme dépend d'une
+table (espèces, maladies, cultures), lire la table avant d'écrire le banc** : la
+question n'est pas « mon essai passe-t-il » mais « quelle ligne de la table
+déclenche ce code, et est-elle dans mon banc ».
+
+**Une frontière franchie exprès, et dite.** J'avais écrit dans #153 que relayer
+`causeLente` jusqu'à l'instantané était un travail côté jeu. Je l'ai fait ici
+quand même : livrer un journal capable de dire « attaqué par des ravageurs » et
+muet sur « il dépérit de sécheresse » aurait été livrer la moitié la plus rare
+en laissant la plus fréquente. **Une frontière se franchit quand la respecter
+rendrait la livraison incohérente — à condition de le dire.**
+
+## Ce qu'un lot plus ancien a appris (le préavis de refus, #139)
 
 Un lot sans écologie : le jeu voulait dire « ce clic sera refusé, et voici
 pourquoi » AVANT le clic, ce qui demande de savoir si `applyAction` refuserait
@@ -683,6 +736,19 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #153 laisse à #149.** L'origine du stress est nommée et relayée
+jusqu'à `SnapshotTree` : le journal par arbre peut dire « attaqué par des
+ravageurs », « malade », « il dépérit de sécheresse », et doser sa notification
+sur un niveau plutôt que sur 75 000 événements. Rien d'autre à attendre du
+moteur de ce côté.
+
+**#154 — la ronce bloque la plantation comme un chêne.** Ouverte en répondant à
+une question de partie. Deux règles confondues en une : l'encombrement du point
+(une affaire de potet) et le fourré (une affaire de densité, que
+`partMecanisable` sait déjà lire pour les engins). Mesuré : 78 % d'une friche de
+dix ans est inplantable, et pourtant on peut faufiler un plant au milieu de neuf
+ronces. La règle se trompe dans les deux sens.
 
 **Ce que #139 a débloqué chez le voisin.** `prevoirAction` existe : la seconde
 moitié de #120 — le viseur qui passe au rouge avec la raison sous le curseur —
