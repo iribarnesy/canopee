@@ -59,6 +59,7 @@ import {
   type ProfilDepart,
   supprimerProfil,
 } from "./profils";
+import { useRetourNavigateur } from "./retourNavigateur";
 import { useEllipse } from "./useEllipse";
 import { loadSave, useGame } from "./useGame";
 import { VueParcelle } from "./VueParcelle";
@@ -954,6 +955,9 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   useEffect(() => {
     surPartie?.(Boolean(station && snapshot));
   }, [station, snapshot, surPartie]);
+  // Le retour du navigateur remonte à l'écran titre au lieu d'éjecter (#148),
+  // par la même porte que « Sauvegarder et quitter ».
+  useRetourNavigateur(Boolean(station && snapshot), game.quit);
   const selectedTrees = useMemo(
     () => (snapshot ? snapshot.trees.filter((t) => selectedIds.has(t.id)) : []),
     [snapshot, selectedIds],
