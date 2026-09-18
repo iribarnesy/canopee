@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { type GameAction, PLANT_HOURS, WEEK_HOURS_CAP } from "../../src/engine/actions";
+import {
+  coutDuDepassement,
+  depassementHoraire,
+  type GameAction,
+  PLANT_HOURS,
+  WEEK_HOURS_CAP,
+} from "../../src/engine/actions";
 import { runJournal } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
 import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
@@ -17,8 +23,14 @@ function positionsGrid(n: number, x0: number, y0: number, spacing: number) {
 describe("embauche (§10) : saisonnier vs CDI", () => {
   const STATION = { ...LIMON_RICHE.station, coteM: 60 };
 
-  it("un saisonnier double la capacité de la semaine, puis repart tout seul", () => {
+  it("un saisonnier repousse la facture de la semaine, puis repart tout seul", () => {
+    // DEPUIS #133 UN SAISONNIER NE DÉBLOQUE PLUS RIEN : il n'y a plus de mur à
+    // pousser. Ce qu'il déplace, c'est le SEUIL au-delà duquel les heures se
+    // facturent — et c'est une leçon plus juste, parce que c'est celle du
+    // terrain. On plante donc la même semaine surchargée dans les deux cas ;
+    // seule la note change.
     const maxSeul = Math.floor(WEEK_HOURS_CAP / PLANT_HOURS);
+    const plants = 2 * maxSeul + 10;
     const journal = {
       stationId: STATION.id,
       seed: 3,
@@ -28,17 +40,29 @@ describe("embauche (§10) : saisonnier vs CDI", () => {
           type: "planter",
           week: 1,
           especeId: "pinus_sylvestris",
-          positions: positionsGrid(2 * maxSeul + 10, 2, 2, 2),
+          positions: positionsGrid(plants, 2, 2, 2),
         },
       ] as GameAction[],
     };
     const { state } = runJournal(STATION, journal, WEATHER, 5);
-    expect(state.trees).toHaveLength(2 * maxSeul);
+    // La semaine n'est plus tronquée : les 130 plants sont en terre.
+    expect(state.trees).toHaveLength(plants);
     // Le contrat de 2 semaines est expiré : retour à 1 UTH sans licencier.
     expect(state.economy.uth).toBe(1);
     expect(state.economy.saisonniersFinSemaine).toEqual([]);
     // Coût : 2 semaines × 700 € payées d'avance + les plants.
-    expect(state.economy.treasuryEur).toBeCloseTo(20_000 - 1_400 - 2 * maxSeul * 1.5, 6);
+    expect(state.economy.treasuryEur).toBeCloseTo(20_000 - 1_400 - plants * 1.5, 6);
+
+    // Et voilà ce que le saisonnier a réellement acheté : la même semaine de
+    // 130 h coûte deux embauches de plus quand on l'affronte seul, une seule à
+    // deux. Embaucher n'autorise pas le travail, il en abaisse le prix.
+    const heures = plants * PLANT_HOURS;
+    expect(coutDuDepassement(depassementHoraire({ hoursUsedWeek: heures, uth: 1 })).embauches).toBe(
+      2,
+    );
+    expect(coutDuDepassement(depassementHoraire({ hoursUsedWeek: heures, uth: 2 })).embauches).toBe(
+      1,
+    );
   });
 
   it("le tour de passe-passe CDI (embaucher-récolter-licencier) coûte son vrai prix", () => {

@@ -338,7 +338,7 @@ maladie-là, pas une preuve de santé.*
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
 | H1 | Chaque action coûte du temps de travail et de l'argent | ✅ | `actions.ts` ; `actions.test.ts` |
-| H2 | Le temps de travail est plafonné par semaine et budgété à l'année (UTH) | ✅ | `WEEK_HOURS_CAP` |
+| H2 | Une semaine surchargée ne se refuse pas, elle se paie : le budget est annuel (UTH), la semaine n'est qu'un seuil de facturation | ✅ | `WEEK_HOURS_CAP` sert de seuil, plus de mur : `depassementHoraire` donne les heures au-delà de 60 h/UTH et `coutDuDepassement` les convertit en embauches saisonnières (une par tranche entamée). Un maraîcher qui pointe 80 h en semaine de plantation ne se fait pas arrêter par un garde-fou — il embauche, ou il y passe ses nuits |
 | H3 | Saisonnier vs CDI : coûts, durées et ruptures réalistes | ✅ | `embauche-chaulage.test.ts` |
 | H4 | La cadence de récolte dépend de l'espèce (pommes vs noisettes) | ✅ | `fruits.recolteHKg` |
 | H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |

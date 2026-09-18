@@ -459,8 +459,10 @@ export const EXPERIENCES: readonly Experience[] = [
       const w = meteo("friche-limon");
       const preparer = (s: GameState) => planterGrille(s, "corylus_avellana", 13, 3).state;
       // Les plants sont numérotés dans l'ordre de plantation. Poser 169
-      // manchons demande 84 heures : on étale sur deux semaines, sinon le
-      // plafond hebdomadaire en refuse la moitié.
+      // manchons demande 84 heures : on étale sur deux semaines, parce qu'une
+      // seule personne ne les fait pas d'un coup. Le moteur ne l'impose plus
+      // (#133, le dépassement se facture au lieu de se refuser) — c'est le
+      // réalisme du geste qui commande, pas un garde-fou.
       const tous = Array.from({ length: 169 }, (_, i) => i + 1);
       const protections: GameAction[] = [
         { type: "proteger", week: 1, treeIds: tous.slice(0, 100) },
