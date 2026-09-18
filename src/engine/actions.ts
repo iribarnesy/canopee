@@ -24,7 +24,13 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { forEachDiscCell } from "./grid";
-import { N_HERBACEES, rabattreParEspece } from "./herbacees";
+import {
+  HERBACEES,
+  INDEX_CULTURES,
+  N_HERBACEES,
+  partDuRendement,
+  rabattreParEspece,
+} from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
@@ -470,6 +476,34 @@ export type GameAction =
        * et l'herbe coupée reste au sol en litière.
        */
       type: "faucher";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+    }
+  | {
+      /**
+       * SEMER une culture sur une zone (#136). Ce que le semis pose, c'est la
+       * PLACE LIBRE : un blé semé dans une friche n'occupe que ce que les
+       * adventices lui laissent, et c'est ce qui fait de `labourer` et de
+       * `faucher` des gestes préparatoires plutôt que des ornements. La règle
+       * n'est écrite nulle part, elle tombe du partage de la place
+       * (`herbacees.ts`).
+       */
+      type: "semer";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+      cultureId: string;
+    }
+  | {
+      /**
+       * MOISSONNER : le grain accumulé depuis le semis part en vente, et la
+       * culture libère la place. Hors de sa fenêtre de récolte, il n'y a rien
+       * à prendre — un blé moissonné en mai n'a pas fini de remplir.
+       */
+      type: "moissonner";
       week: number;
       x: number;
       y: number;
@@ -1283,6 +1317,210 @@ function applyChauler(
   };
 }
 
+/**
+ * Fenêtre de semis, en semaines de part et d'autre de la date de la fiche. Un
+ * blé d'hiver se sème en octobre ; on laisse la latitude d'une arrière-saison
+ * pluvieuse, pas celle de le semer au printemps *(à calibrer)*.
+ */
+export const FENETRE_SEMIS_SEMAINES = 4;
+
+/**
+ * Place libre moyenne en dessous de laquelle le semis est refusé. Un dixième :
+ * il ne s'agit pas d'exiger un sol nu — une friche rase se sème — mais de ne
+ * pas laisser passer un semis qui ne lèverait sur rien *(à calibrer)*.
+ */
+export const PLACE_MINIMALE_SEMIS = 0.1;
+
+/** Écart en semaines entre deux dates de l'année, en passant par le plus court. */
+function ecartSemaines(a: number, b: number): number {
+  const d = Math.abs(a - b) % 52;
+  return Math.min(d, 52 - d);
+}
+
+/** Les cellules d'un disque, comme `faucher` et `chauler` les parcourent. */
+function cellulesDuDisque(cote: number, cx: number, cy: number, rayonM: number): number[] {
+  const out: number[] = [];
+  const r2 = rayonM * rayonM;
+  for (let y = 0; y < cote; y++) {
+    for (let x = 0; x < cote; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      if (dx * dx + dy * dy <= r2) out.push(y * cote + x);
+    }
+  }
+  return out;
+}
+
+function applySemer(state: GameState, action: Extract<GameAction, { type: "semer" }>): ApplyResult {
+  const s = HERBACEES.findIndex((h) => h.id === action.cultureId);
+  const fiche = HERBACEES[s];
+  const culture = fiche?.culture;
+  if (!fiche || !culture) {
+    return {
+      state,
+      refusals: [refuse(action.week, "semer", `${action.cultureId} n'est pas une culture`)],
+    };
+  }
+  const semaine = action.week % 52;
+  if (ecartSemaines(semaine, culture.semisWeek) > FENETRE_SEMIS_SEMAINES) {
+    return {
+      state,
+      refusals: [
+        refuse(
+          action.week,
+          "semer",
+          `hors fenêtre de semis (semaine ${culture.semisWeek} ± ${FENETRE_SEMIS_SEMAINES})`,
+        ),
+      ],
+    };
+  }
+  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const areaHa = areaM2 / 10_000;
+  // Le semis est un chantier d'engin : ce qui n'est pas mécanisable ne se sème
+  // pas au combiné, et le moteur sait déjà dire quelle part l'est.
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const hours = areaHa * culture.heuresSemisHa * (part + (1 - part) * 20);
+  const cost = areaHa * culture.semenceEurHa + areaM2 * part * COUT_ENGIN_EUR_M2;
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "semer", "plafond hebdomadaire atteint")] };
+  }
+  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+    return { state, refusals: [refuse(action.week, "semer", "découvert plafonné")] };
+  }
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const cultureGrain = state.soil.cultureGrain.slice();
+  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
+  const cellules = cellulesDuDisque(state.station.coteM, action.x, action.y, action.rayonM);
+  // **CE QUE LE SEMIS POSE, C'EST LA PLACE LIBRE.** Un blé semé dans une
+  // friche n'occupe que ce que les adventices lui laissent, et la règle
+  // « préparer le lit de semence avant de semer » n'est écrite nulle part :
+  // elle tombe du partage de la place (`herbacees.ts`) et du fait que
+  // `labourer` remet les emprises à zéro. Deux mécanismes qui existaient déjà.
+  let placeTotale = 0;
+  for (const i of cellules) {
+    const base = i * N_HERBACEES;
+    let occupee = 0;
+    for (let k = 0; k < N_HERBACEES; k++) {
+      if (k !== s) occupee += herbeEmprise[base + k] ?? 0;
+    }
+    placeTotale += Math.max(0, 1 - occupee);
+  }
+  // Et semer dans un tapis fermé ne doit pas RÉUSSIR EN SILENCE. Mesuré avant
+  // cette garde : le semis passait, l'emprise valait zéro, et la moisson
+  // annonçait « rien à moissonner » neuf mois plus tard sans que rien n'ait
+  // dit pourquoi. Le joueur doit l'apprendre au semis, pas à la récolte.
+  if (cellules.length > 0 && placeTotale / cellules.length < PLACE_MINIMALE_SEMIS) {
+    return {
+      state,
+      refusals: [
+        refuse(
+          action.week,
+          "semer",
+          "le tapis occupe déjà le sol : labourer ou faucher avant de semer",
+        ),
+      ],
+    };
+  }
+  for (const i of cellules) {
+    const base = i * N_HERBACEES;
+    let occupee = 0;
+    for (let k = 0; k < N_HERBACEES; k++) {
+      if (k !== s) occupee += herbeEmprise[base + k] ?? 0;
+    }
+    herbeEmprise[base + s] = Math.max(0, 1 - occupee);
+    cultureGrain[base + s] = 0;
+    cultureGrainPotentiel[base + s] = 0;
+  }
+  return {
+    state: {
+      ...state,
+      soil: { ...state.soil, herbeEmprise, cultureGrain, cultureGrainPotentiel },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur - cost,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
+function applyMoissonner(
+  state: GameState,
+  action: Extract<GameAction, { type: "moissonner" }>,
+): ApplyResult {
+  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const areaHa = areaM2 / 10_000;
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const cellules = cellulesDuDisque(state.station.coteM, action.x, action.y, action.rayonM);
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
+  const cultureGrain = state.soil.cultureGrain.slice();
+  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
+  // Ce qu'on récolte, culture par culture, en part de rendement maximal cumulée
+  // sur les cellules. Diviser par le nombre de cellules donnerait la moyenne ;
+  // on veut la SOMME, parce que c'est elle qui devient des tonnes.
+  let recolteEur = 0;
+  let cellulesRecoltees = 0;
+  const m2ParCellule = 1;
+  for (const s of INDEX_CULTURES) {
+    const culture = HERBACEES[s]?.culture;
+    if (!culture) continue;
+    for (const i of cellules) {
+      const base = i * N_HERBACEES;
+      const grain = partDuRendement(
+        cultureGrain[base + s] ?? 0,
+        cultureGrainPotentiel[base + s] ?? 0,
+      );
+      if ((herbeEmprise[base + s] ?? 0) <= 0 && grain <= 0) continue;
+      const tonnes = (grain * culture.rendementMaxTHa * m2ParCellule) / 10_000;
+      recolteEur += tonnes * culture.prixEurT;
+      cultureGrain[base + s] = 0;
+      cultureGrainPotentiel[base + s] = 0;
+      // La culture libère la place : le chaume n'occupe plus rien, et les
+      // adventices reprendront la main dès la semaine suivante.
+      herbeEmprise[base + s] = 0;
+      herbeFeuillage[base + s] = 0;
+      cellulesRecoltees++;
+    }
+  }
+  if (cellulesRecoltees === 0) {
+    return { state, refusals: [refuse(action.week, "moissonner", "rien à moissonner ici")] };
+  }
+  const heuresHa = HERBACEES[INDEX_CULTURES[0] ?? 0]?.culture?.heuresRecolteHa ?? 1;
+  const hours = areaHa * heuresHa * (part + (1 - part) * 20);
+  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
+    return { state, refusals: [refuse(action.week, "moissonner", "plafond hebdomadaire atteint")] };
+  }
+  const herbeCouverture = state.soil.herbeCouverture.slice();
+  for (const i of cellules) {
+    let couverture = 0;
+    for (let k = 0; k < N_HERBACEES; k++) couverture += herbeFeuillage[i * N_HERBACEES + k] ?? 0;
+    herbeCouverture[i] = couverture;
+  }
+  return {
+    state: {
+      ...state,
+      soil: {
+        ...state.soil,
+        herbeEmprise,
+        herbeFeuillage,
+        herbeCouverture,
+        cultureGrain,
+        cultureGrainPotentiel,
+      },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur + recolteEur - areaM2 * part * COUT_ENGIN_EUR_M2,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
 function applyFaucher(
   state: GameState,
   action: Extract<GameAction, { type: "faucher" }>,
@@ -2062,6 +2300,10 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyChauler(state, action);
     case "faucher":
       return applyFaucher(state, action);
+    case "semer":
+      return applySemer(state, action);
+    case "moissonner":
+      return applyMoissonner(state, action);
     case "ramasserBoisMort":
       return applyRamasserBoisMort(state, action);
     case "eclaircir": {
