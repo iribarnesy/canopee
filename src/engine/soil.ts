@@ -87,30 +87,47 @@ export function facteurPhBiologie(ph: number): number {
 }
 
 /**
- * Largeur de la rampe de tolérance au pH, de part et d'autre du plein régime.
+ * Ce qui reste de vigueur à une espèce AU BORD de son amplitude.
  *
- * Elle est tournée vers l'INTÉRIEUR de la gamme déclarée : une espèce donnée
- * pour [4 ; 7,5] vaut 0 à pH 4 et n'atteint 1 qu'à 4,7. La gamme de
- * `especes.ts` est donc une amplitude de PRÉSENCE, pas un plateau de vigueur —
- * et l'écart entre les deux vaut 0,7 de chaque côté.
+ * C'est le paramètre qui porte tout le sens, et c'est pour ça qu'on règle
+ * celui-là plutôt que la largeur du débordement : « au bord de son aire, une
+ * espèce est présente, rare et mal en point » veut dire la même chose pour une
+ * généraliste et pour une spécialiste, alors qu'une marge en unités de pH
+ * donnerait au bord d'une amplitude large un tout autre sens qu'au bord d'une
+ * étroite.
+ *
+ * Le mécanisme derrière est réel des deux côtés. Vers l'acide, l'aluminium
+ * échangeable occupe une part croissante du complexe sous pH 5,5 et attaque
+ * l'apex racinaire : un hêtre en solution aluminique entre pH 4,2 et 5,4 perd
+ * 21 à 44 % de sa biomasse. Vers le basique, c'est la chlorose calcaire, que le
+ * moteur tient déjà par ailleurs (`pk.ts:disponibilitePhosphore`).
  */
-export const RAMPE_PH = 0.7;
+export const VIGUEUR_A_LA_BORNE = 0.2;
 
 /**
- * Tolérance d'une espèce à l'acidité ∈ [0,1].
+ * Tolérance d'une espèce au pH ∈ [0,1] : réponse UNIMODALE, pleine à
+ * l'optimum, réduite au cinquième aux bornes de l'atlas, nulle peu après.
  *
- * ATTENTION, LA RAMPE EST À L'INTÉRIEUR DE LA GAMME, pas à l'extérieur : le
- * facteur vaut 0 AUX BORNES déclarées et n'atteint 1 qu'à `RAMPE_PH` de
- * celles-ci. Toutes les espèces sont dans ce cas — mesuré : `f(min) = 0` pour
- * les 26. Ce n'est pas ce que le nom laisse croire, et ce n'était pas non plus
- * ce que ce commentaire disait avant ; il annonçait « 1 dans sa gamme, bordure
- * douce de ±0,7, 0 au-delà », c'est-à-dire l'exact miroir de ce que le code
- * fait. La calibration entière (hauteurs, bio-indication, composition des
- * paysages voisins) a poussé sur la forme réelle, pas sur celle annoncée :
- * redresser la fonction seule fait sortir cinq essais, dont le hêtre qui
- * s'installe sur un podzol et le pin qui dépasse sa table de production de
- * 27 %. Le départage de la gamme déclarée et du plateau réel est donc un lot à
- * lui seul, et il est ouvert.
+ * LA FORME EST CELLE QUE MESURENT LES RELEVÉS. Les modèles de Huisman-Olff-
+ * Fresco, l'étalon pour une réponse d'espèce le long d'un gradient, retiennent
+ * cinq formes emboîtées — plate, monotone, plateau, unimodale symétrique,
+ * unimodale dissymétrique — et ce sont les unimodales qui l'emportent pour le
+ * pH. Aucun relevé ne décrit un plein régime plat suivi d'une falaise. Le
+ * moteur tient d'ailleurs déjà la réponse du phosphore au pH par une
+ * gaussienne : c'est ce facteur-ci qui faisait exception.
+ *
+ * CE QUI ÉTAIT FAUX. La rampe touchait zéro AUX BORNES : mesuré sur les 26
+ * espèces, `f(min) = 0` pour toutes — chacune en mort certaine au pH exact que
+ * l'atlas lui donne pour tolérable, ce qui est le contraire de ce qu'une
+ * amplitude de présence veut dire. Le journal en arrivait à annoncer « sol à
+ * pH 4,5, il leur en faut 4 à 7,5 » sur un pin qu'il était en train de tuer, et
+ * `paysage.ts` avait écrit la conséquence en doctrine : « au bord exact de sa
+ * gamme, une espèce ne pousse déjà plus du tout ».
+ *
+ * L'optimum est pris au MILIEU de l'amplitude, faute de mieux : les relevés
+ * donnent des réponses souvent dissymétriques, mais aucune donnée par espèce
+ * ici ne permettrait de placer un optimum décalé. Symétrique est l'hypothèse
+ * honnête, pas la vraie *(à mesurer)*.
  *
  * Elle vit ici, et pas dans `trees.ts`, parce que la strate herbacée la lit
  * aussi (`herbacees.ts`) : c'est une propriété du SOL confrontée à une gamme,
@@ -118,19 +135,13 @@ export const RAMPE_PH = 0.7;
  */
 export function facteurGammePh(gamme: readonly [number, number], ph: number): number {
   const [min, max] = gamme;
-  return Math.min(1, Math.max(0, Math.min((ph - min) / RAMPE_PH, (max - ph) / RAMPE_PH)));
-}
-
-/**
- * La gamme où l'espèce tient VRAIMENT son plein régime, telle que le moteur
- * l'applique — et non telle que `especes.ts` la déclare.
- *
- * C'est ce qu'il faut montrer au joueur quand on lui explique une mort : lui
- * citer la gamme déclarée pendant qu'on le tue sur le plateau réel, c'est lui
- * présenter un message qui se contredit tout seul.
- */
-export function plateauPh(gamme: readonly [number, number]): [number, number] {
-  return [gamme[0] + RAMPE_PH, gamme[1] - RAMPE_PH];
+  const centre = (min + max) / 2;
+  // La demi-portée se DÉDUIT de la vigueur voulue à la borne : à l'écart
+  // (max-min)/2 on veut exactement VIGUEUR_A_LA_BORNE, donc le zéro tombe un
+  // peu au-delà, d'autant plus loin que l'amplitude est large.
+  const demiPortee = (max - min) / 2 / Math.sqrt(1 - VIGUEUR_A_LA_BORNE);
+  const ecart = (ph - centre) / demiPortee;
+  return Math.max(0, 1 - ecart * ecart);
 }
 
 /**
