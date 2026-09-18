@@ -87,12 +87,16 @@ import {
   evoluerEmprises,
   facteurEauHerbacee,
   facteurThermique,
+  grainDeLaSemaine,
   HERBACEES,
+  INDEX_CULTURES,
   INERTIE_RESSOURCE_FLORALE,
+  N_CULTURES,
   N_HERBACEES,
   OFFRE_FLORALE_SUFFISANTE,
   partSaisonniere,
   rabattreParEspece,
+  SEMAINES_DE_CULTURE,
   suivreFeuillage,
   vigueurHerbacee,
 } from "./herbacees";
@@ -682,6 +686,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterCaMgG = state.soil.litterCaMgG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeEmprise = state.soil.herbeEmprise.slice();
+  const cultureGrain = state.soil.cultureGrain.slice();
+  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
@@ -1414,7 +1420,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
     herbeDemandeL[i] = demandeEau;
     cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
-    herbeDemandeNG[i] = herbeDemandeAzoteG(couverture, saisonHerbe);
+    // **PAR ESPÈCE, et pondérée par son exigence** (#136). C'était une
+    // constante multipliée par la couverture ; un blé demande dix fois ce que
+    // demande une graminée spontanée, et sans ça `exigenceMinerale` ne veut
+    // rien dire. Les trois spontanées étant à 1, la somme vaut EXACTEMENT
+    // l'ancienne valeur tant qu'aucune culture n'est semée : le lot est
+    // l'identité sur une parcelle sans culture.
+    let demandeN = 0;
+    for (let s_ = 0; s_ < N_HERBACEES; s_++) {
+      const h = HERBACEES[s_];
+      if (!h) continue;
+      demandeN += herbeDemandeAzoteG(
+        (herbeFeuillage[i * N_HERBACEES + s_] ?? 0) * h.exigenceMinerale,
+        saisonHerbe,
+      );
+    }
+    herbeDemandeNG[i] = demandeN;
     cellNWanted[i] = (cellNWanted[i] ?? 0) + (herbeDemandeNG[i] ?? 0);
   }
 
@@ -1532,6 +1553,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const base = i * N_HERBACEES;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
+    // ── Le GRAIN s'accumule (#136) ──────────────────────────────────────────
+    // Le rendement est l'intégrale de ce que la plante assimile, pas une
+    // fonction de son état du jour. Les trois facteurs sont déjà là : ce
+    // qu'elle couvre (le feuillage, qui porte la saison et la sécheresse), ce
+    // que la station lui permet (`capacites`, qui porte la lumière, le pH et
+    // le tassement), et ce que l'azote lui laisse — `nServedRatio`, la part
+    // réellement servie à cette cellule cette semaine.
+    for (let s = 0; s < N_CULTURES; s++) {
+      const s_ = INDEX_CULTURES[s];
+      if (s_ === undefined) continue;
+      if ((herbeEmprise[base + s_] ?? 0) <= 0) continue;
+      const { assimile, potentiel } = grainDeLaSemaine(
+        herbeFeuillage[base + s_] ?? 0,
+        capacites[s_] ?? 0,
+        nServedRatio[i] ?? 0,
+      );
+      cultureGrain[base + s_] = (cultureGrain[base + s_] ?? 0) + assimile;
+      cultureGrainPotentiel[base + s_] = (cultureGrainPotentiel[base + s_] ?? 0) + potentiel;
+    }
     // Ce que la cellule COUVRE : la somme des feuillages. Tout le reste du
     // moteur lit cette ligne et ignore les espèces.
     let couverture = 0;
@@ -2842,6 +2882,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterK,
         herbeCouverture,
         herbeEmprise,
+        cultureGrain,
+        cultureGrainPotentiel,
         ressourceFlorale,
         herbeFeuillage,
         herbeBiomasse,
