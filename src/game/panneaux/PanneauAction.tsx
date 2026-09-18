@@ -1,9 +1,4 @@
-/**
- * Le panneau ACTION : le geste qu'on s'apprête à faire, et ses réglages.
- */
-
-import { ESPECES_V0 } from "../../engine/especes";
-import { SPECIES_COLORS } from "../../ui/couleurs";
+import { getEspece } from "../../engine/especes";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
 import type { Mode, ReglagesDeGeste } from "./reglages";
@@ -26,18 +21,19 @@ export function PanneauAction({
   game,
   snapshot,
   geste,
+  surChoisirEssence,
 }: {
   game: GameApi;
   snapshot: Snapshot;
   geste: ReglagesDeGeste;
+  /** Ouvre le volet de choix des essences. */
+  surChoisirEssence: () => void;
 }) {
   const {
     mode,
     setMode,
     especeId,
-    setEspeceId,
     avecManchon,
-    setAvecManchon,
     rayonChaulage,
     setRayonChaulage,
     semainesSaison,
@@ -171,35 +167,29 @@ export function PanneauAction({
       )}
       {mode === "planter" && (
         <div style={{ marginTop: 6 }}>
-          {ESPECES_V0.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              style={{
-                ...btn(especeId === e.id),
-                borderLeft: `6px solid ${SPECIES_COLORS[e.id]}`,
-              }}
-              onClick={() => setEspeceId(e.id)}
-            >
-              {e.nom} ({e.economie.prixPlantEur} €)
-            </button>
-          ))}
+          {/*
+            Les vingt-cinq boutons d'essence tenaient ici et pesaient la moitié
+            du panneau. Choisir ce qu'on plante mérite sa propre page : elle
+            montre l'arbre, sa gamme de pH et ce qui tient sur ce terrain.
+          */}
+          <button
+            type="button"
+            style={{ ...btn(true), display: "block", textAlign: "left", width: "100%" }}
+            onClick={surChoisirEssence}
+          >
+            🌳 {getEspece(especeId)?.nom ?? especeId}
+            <span style={{ opacity: 0.85 }}>
+              {" "}
+              — {getEspece(especeId)?.economie.prixPlantEur} €{avecManchon ? " + manchon" : ""} ·
+              changer…
+            </span>
+          </button>
           <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
-            <label style={{ cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={avecManchon}
-                onChange={(e) => setAvecManchon(e.target.checked)}
-              />{" "}
-              🛡️ poser un manchon en même temps (+8 €, +30 min par plant)
-            </label>
-            <br />
-            Clic sur la carte = 1 plant (1 h, espacement ≥ 1 m). Sans manchon, un plant appétent se
-            fait brouter tant qu'il n'a pas sa flèche hors d'atteinte — vous pourrez toujours en
-            poser un après coup en sélectionnant l'arbre.
+            Clic sur la parcelle = 1 plant (1 h, espacement ≥ 1 m).
           </div>
         </div>
       )}
+
       {mode === "eclaircir" && (
         <div style={{ marginTop: 6 }}>
           <div style={{ color: "#8a4b2d", fontSize: 13, marginBottom: 6 }}>

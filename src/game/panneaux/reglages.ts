@@ -35,6 +35,9 @@ export interface ReglagesDeGeste {
   setCritereEclaircie: (v: "parLeBas" | "parLeHaut") => void;
   mainOuvertePanneau: boolean;
   setMainOuvertePanneau: (v: boolean) => void;
+  /** Le choix des essences est-il réduit à ce qui tient sur ce terrain ? */
+  seulementTenables: boolean;
+  setSeulementTenables: (v: boolean) => void;
 }
 
 export function useReglagesDeGeste(): ReglagesDeGeste {
@@ -46,6 +49,9 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
   const [densiteCible, setDensiteCible] = useState(400);
   const [critereEclaircie, setCritereEclaircie] = useState<"parLeBas" | "parLeHaut">("parLeBas");
   const [mainOuvertePanneau, setMainOuvertePanneau] = useState(false);
+  // Vrai au départ : sur une lande sèche, la moitié de la liste n'a aucun sens,
+  // et c'est le filtre qui fait le gain de cette interface.
+  const [seulementTenables, setSeulementTenables] = useState(true);
   return {
     mode,
     setMode,
@@ -63,5 +69,7 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
     setCritereEclaircie,
     mainOuvertePanneau,
     setMainOuvertePanneau,
+    seulementTenables,
+    setSeulementTenables,
   };
 }

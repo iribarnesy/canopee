@@ -92,7 +92,10 @@ export function Volet({
         ...VOLET,
         position: "relative",
         width: largeur,
-        maxHeight: "calc(100vh - 140px)",
+        // De quoi laisser le bandeau permanent visible au-dessus : un volet
+        // haut qui le recouvrait cachait justement les deux choses que
+        // l'écran s'était engagé à ne jamais cacher, l'argent et la date.
+        maxHeight: "calc(100vh - 170px)",
         overflowY: "auto",
       }}
     >

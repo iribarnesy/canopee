@@ -42,6 +42,7 @@ import { Bandeau } from "./panneaux/Bandeau";
 import { CarteDuSol } from "./panneaux/CarteDuSol";
 import { PanneauAction } from "./panneaux/PanneauAction";
 import { PanneauArbres } from "./panneaux/PanneauArbres";
+import { PanneauEssences } from "./panneaux/PanneauEssences";
 import { PanneauJournal } from "./panneaux/PanneauJournal";
 import { PanneauMenu } from "./panneaux/PanneauMenu";
 import { PanneauScores } from "./panneaux/PanneauScores";
@@ -1228,7 +1229,31 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         volet={
           volets.estOuvert("bg", "gestes") ? (
             <Volet titre="Gestes" largeur={390} surFermer={() => volets.fermer("bg")}>
-              <PanneauAction game={game} snapshot={snapshot} geste={geste} />
+              <PanneauAction
+                game={game}
+                snapshot={snapshot}
+                geste={geste}
+                surChoisirEssence={() => volets.basculer("bg", "essences")}
+              />
+            </Volet>
+          ) : volets.estOuvert("bg", "essences") ? (
+            // Le volet de choix remplace celui des gestes dans le même angle,
+            // et sa croix y ramène : on est parti d'ici, on y revient.
+            <Volet
+              titre="Qu'est-ce qu'on plante ?"
+              largeur={520}
+              surFermer={() => volets.basculer("bg", "gestes")}
+            >
+              <PanneauEssences
+                snapshot={snapshot}
+                station={station}
+                especeId={geste.especeId}
+                setEspeceId={geste.setEspeceId}
+                avecManchon={geste.avecManchon}
+                setAvecManchon={geste.setAvecManchon}
+                seulementTenables={geste.seulementTenables}
+                setSeulementTenables={geste.setSeulementTenables}
+              />
             </Volet>
           ) : volets.estOuvert("bg", "sol") ? (
             <Volet titre="Diagnostic de sol" largeur={400} surFermer={() => volets.fermer("bg")}>
