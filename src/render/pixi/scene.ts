@@ -45,11 +45,14 @@ import {
   type ArbreAPoser,
   AtlasArbres,
   ancrageDePose,
+  classeDe,
   cleClasse,
+  cuireVignette,
   fourreEnArbre,
   posesDesArbres,
   separerLeFourre,
   tailleDePose,
+  type Vignette,
 } from "../couches/arbres";
 import { BRUME, type DecorBordures, OPACITE_DU_DECOR } from "../couches/decor";
 import {
@@ -180,6 +183,19 @@ interface ArbrePose {
   opacite: number;
 }
 
+/** L'arbre adulte annoncé sous le curseur. */
+export interface Fantome {
+  especeId: string;
+  /** hauteur du sujet montré, m — l'adulte, pas le plant */
+  hauteurM: number;
+  hauteurMaxM: number;
+  houppierRatio: number;
+  x: number;
+  y: number;
+  /** le moteur refuserait-il de planter ici ? */
+  refuse: boolean;
+}
+
 /** L'opacité d'une vignette, un octet par pixel. */
 interface MasqueAlpha {
   largeur: number;
@@ -240,6 +256,11 @@ export class SceneParcelle {
   /** Où le geste armé porterait, dessiné sur le sol avant le clic. */
   private readonly visee = new Graphics();
   private viseeDemandee?: { x: number; y: number; rayonM: number };
+  /** L'arbre adulte en transparence, sous le curseur, avant de planter. */
+  private readonly couchefantome = new Container();
+  private fantomeDemande?: Fantome;
+  /** Les vignettes du fantôme, une par classe cuite — mêmes clés que l'atlas. */
+  private readonly vignettesFantome = new Map<string, Vignette>();
   /** L'arbre survolé et les arbres choisis, à éclairer. */
   private surligne: { survole?: number; choisis: ReadonlySet<number> } = { choisis: new Set() };
   /**
@@ -403,6 +424,7 @@ export class SceneParcelle {
       // glissé au milieu de ce rangement se ferait prendre pour l'un d'eux.
       this.anneaux,
       this.visee,
+      this.couchefantome,
       // **Le panache est AU-DESSUS des arbres, et c'est le seul calque du monde
       // qui ait le droit de masquer un houppier** : de la fumée passe devant ce
       // qu'elle survole, sinon ce n'est pas de la fumée. Le calque des
@@ -547,6 +569,7 @@ export class SceneParcelle {
     spritesPoses += this.poserArbres(poses, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
     this.poserLaVisee(etat, vue);
+    spritesPoses += this.poserLeFantome(etat, vue);
     // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
     // laissait une découpe périmée. La signature ne regarde que les arbres et
     // la caméra ; or l'ombre est aussi découpée à la SILHOUETTE de la parcelle,
@@ -1098,6 +1121,94 @@ export class SceneParcelle {
     }
     SceneParcelle.tailler(this.couches.surbrillance, n);
     return n;
+  }
+
+  /**
+   * Dit quel arbre montrer en transparence sous le curseur, et s'il serait
+   * refusé là. `undefined` quand on ne plante pas.
+   */
+  montrerLeFantome(fantome?: Fantome): void {
+    this.fantomeDemande = fantome;
+  }
+
+  /**
+   * L'ARBRE ADULTE sous le curseur, avant de planter.
+   *
+   * Adulte, et c'est le point : ce qu'on met en terre est un plant de trente
+   * centimètres, mais ce qu'on décide en cliquant est la place qu'il occupera
+   * dans trente ans. Le fantôme montre cette place ; le clic pose le semis.
+   *
+   * Rouge quand le moteur refuserait — la raison vient de lui, pas d'une règle
+   * refaite ici (worker `prevoir`).
+   */
+  private poserLeFantome(etat: EtatScene, vue: Vue): number {
+    const f = this.fantomeDemande;
+    if (!f) {
+      SceneParcelle.tailler(this.couchefantome, 0);
+      return 0;
+    }
+    const cote = etat.sol.coteM;
+    const cx = Math.min(cote - 1, Math.max(0, Math.floor(f.x)));
+    const cy = Math.min(cote - 1, Math.max(0, Math.floor(f.y)));
+    const z = etat.sol.altitudesM[cy * cote + cx] ?? 0;
+    const arbre: ArbreAPoser = {
+      id: -2,
+      especeId: f.especeId,
+      x: f.x,
+      y: f.y,
+      z,
+      heightM: f.hauteurM,
+      houppierRatio: f.houppierRatio,
+      // Un arbre de plein vent : c'est le port de l'espèce qu'on annonce, pas
+      // le fût nu que la compétition fabriquera peut-être.
+      baseHouppierM: f.hauteurM * 0.25,
+      partFoliaire: 1,
+      senescence: 0,
+      vigueur: 1,
+    };
+    const classe = classeDe(arbre, f.hauteurMaxM, vue);
+    const cle = cleClasse(classe);
+    let vignette = this.vignettesFantome.get(cle);
+    if (!vignette) {
+      vignette = cuireVignette(
+        classe,
+        arbre.heightM,
+        arbre.houppierRatio,
+        (largeur, hauteur) => {
+          const c = document.createElement("canvas");
+          c.width = largeur;
+          c.height = hauteur;
+          return c;
+        },
+        arbre.baseHouppierM,
+      );
+      this.vignettesFantome.set(cle, vignette);
+    }
+    const cleTexture = `fantome:${cle}`;
+    let texture = this.posees.get(cleTexture);
+    if (!texture || texture.source.resource !== vignette.image) {
+      texture?.destroy(true);
+      texture = Texture.from(vignette.image);
+      this.posees.set(cleTexture, texture);
+    }
+    const taille = tailleDePose(arbre.heightM, vignette, vue);
+    const ancre = ancrageDePose(vignette, taille);
+    const ecran = versEcranVue({ x: f.x, y: f.y, z }, vue);
+    const sprite = SceneParcelle.sprite(this.couchefantome, 0, texture);
+    sprite.width = taille.largeur;
+    sprite.height = taille.hauteur;
+    sprite.x = ecran.sx - ancre.dx;
+    sprite.y = ecran.sy - ancre.dy;
+    sprite.rotation = 0;
+    sprite.pivot.set(0, 0);
+    sprite.blendMode = "normal";
+    // La teinte MULTIPLIE : elle ne sait qu'assombrir, et c'est exactement ce
+    // qu'on veut ici — un arbre refusé vire au rouge sombre, un arbre accepté
+    // garde ses couleurs.
+    sprite.tint = f.refuse ? 0xff6a5a : 0xffffff;
+    sprite.alpha = f.refuse ? 0.75 : 0.55;
+    SceneParcelle.tailler(this.couchefantome, 1);
+    return 1;
   }
 
   /**

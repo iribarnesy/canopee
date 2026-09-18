@@ -884,6 +884,18 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       postSnapshot();
       break;
     }
+    case "prevoir": {
+      if (!state) return;
+      // **On applique et on jette.** Le moteur seul sait ce qu'il refuse ; le
+      // jeu n'a pas le droit d'en tenir une seconde version. `applyAction`
+      // rend un état neuf plutôt que de toucher au sien — c'est vérifié par
+      // `tests/unit/prevoir.test.ts`, qui échouera bruyamment le jour où ça
+      // cessera d'être vrai.
+      const { refusals } = applyAction(state, { ...msg.action, week: state.week } as GameAction);
+      const reponse: FromWorker = { type: "prevision", cle: msg.cle, refusals };
+      self.postMessage(reponse);
+      break;
+    }
     case "autoHarvest":
       autoHarvest = msg.enabled;
       break;

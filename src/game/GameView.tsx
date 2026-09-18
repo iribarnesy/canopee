@@ -1027,6 +1027,34 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     [station, snapshot, ellipse, coupeDeLaTige],
   );
 
+  /**
+   * La cellule survolée, et ce que le moteur en dit.
+   *
+   * Elle vit dans un état de React alors que le reste du survol vit dans des
+   * références : c'est qu'elle sert à POSER UNE QUESTION au worker, pas à
+   * dessiner. La vue ne l'annonce qu'aux changements de cellule — une question
+   * par pixel parcouru noierait le worker pour rien.
+   */
+  const [survol, setSurvol] = useState<{ x: number; y: number }>();
+
+  // **Le refus vient du moteur, jamais d'une règle refaite ici.** Le worker
+  // applique la plantation sur l'état courant et jette le résultat, ne gardant
+  // que les refus (`prevoir`). La règle du mètre, le plafond d'heures et le
+  // découvert sont donc ceux du moteur, sans copie qui dériverait.
+  const cleDuPreavis =
+    mode === "planter" && survol
+      ? `planter:${survol.x},${survol.y},${especeId},${avecManchon ? 1 : 0},${game.revision}`
+      : undefined;
+  useEffect(() => {
+    if (!cleDuPreavis || !survol) return;
+    game.prevoir(cleDuPreavis, {
+      type: "planter",
+      especeId,
+      positions: [{ x: survol.x + 0.5, y: survol.y + 0.5 }],
+      avecManchon,
+    });
+  }, [cleDuPreavis, survol, especeId, avecManchon, game.prevoir]);
+
   if (!station || !snapshot) {
     return (
       <div>
@@ -1077,6 +1105,25 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       : mode === "planter"
         ? { rayonM: 0 }
         : { rayonM: rayonChaulage };
+
+  const refusDuPreavis =
+    cleDuPreavis && game.prevision?.cle === cleDuPreavis ? game.prevision.refusals : [];
+
+  /** L'arbre adulte à annoncer sous le curseur, quand on plante. */
+  const fantome =
+    mode === "planter"
+      ? (() => {
+          const espece = getEspece(especeId);
+          if (!espece) return undefined;
+          return {
+            especeId,
+            hauteurM: Math.max(0.6, espece.hauteurMaxM * 0.75),
+            hauteurMaxM: espece.hauteurMaxM,
+            houppierRatio: espece.lumiere.houppierRatio,
+            refuse: refusDuPreavis.length > 0,
+          };
+        })()
+      : undefined;
 
   const surClicParcelle = (
     cellule: { x: number; y: number },
@@ -1148,6 +1195,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             surClic={surClicParcelle}
             surbrillance={selectedIds}
             {...(empriseDuGeste ? { emprise: empriseDuGeste } : {})}
+            {...(fantome ? { fantome } : {})}
+            surSurvol={setSurvol}
             deformer={ellipse.deformer}
             mourant={ellipse.mourant}
             remodeler={ellipse.remodeler}

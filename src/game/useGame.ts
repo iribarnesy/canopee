@@ -67,6 +67,24 @@ export interface GameApi {
   ) => void;
   resume: (save: SaveGame) => void;
   dispatch: (action: ActionSansSemaine) => void;
+  /**
+   * Demande au moteur si ce geste passerait, sans le faire. La réponse arrive
+   * dans `prevision`, marquée de la même `cle` — le survol pose la question
+   * plusieurs fois par seconde et les réponses peuvent se doubler.
+   */
+  prevoir: (cle: string, action: ActionSansSemaine) => void;
+  /** La dernière réponse du moteur à `prevoir`. */
+  prevision?: { cle: string; refusals: ActionRefusal[] };
+  /**
+   * Combien d'instantanés sont arrivés. Ce n'est pas un compteur de semaines :
+   * une action en pause en produit un aussi.
+   *
+   * Un préavis porte sur un ÉTAT, pas seulement sur une position — planter un
+   * arbre rend refusée la place qu'on survolait il y a une seconde. Sans ce
+   * numéro dans la clé, la réponse restait celle d'avant le geste, et le
+   * fantôme restait vert sur une place devenue interdite.
+   */
+  revision: number;
   setSpeed: (weeksPerSecond: number) => void;
   quit: () => void;
 }
@@ -91,6 +109,10 @@ export function useGame(): GameApi {
   const [notice, setNotice] = useState<string>();
   const [events, setEvents] = useState<WithUid<GameEvent>[]>([]);
   const [autoHarvest, setAutoHarvestState] = useState(true);
+  const [prevision, setPrevision] = useState<{ cle: string; refusals: ActionRefusal[] }>();
+  const [revision, setRevision] = useState(0);
+  /** La dernière question posée : les réponses en retard sont jetées. */
+  const cleDemandee = useRef("");
 
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
@@ -106,6 +128,7 @@ export function useGame(): GameApi {
           break;
         case "snapshot":
           setSnapshot(msg.snapshot);
+          setRevision((n) => n + 1);
           if (msg.snapshot.refusals.length > 0) {
             setRefusals((prev) => [...msg.snapshot.refusals.map(withUid), ...prev].slice(0, 4));
           }
@@ -121,6 +144,12 @@ export function useGame(): GameApi {
         case "autopause":
           setSpeedState(0);
           setNotice(msg.reason);
+          break;
+        case "prevision":
+          // Une réponse qui ne concerne plus la position survolée est périmée :
+          // la garder ferait clignoter le fantôme entre rouge et normal.
+          if (msg.cle === cleDemandee.current)
+            setPrevision({ cle: msg.cle, refusals: msg.refusals });
           break;
         case "save":
           try {
@@ -159,6 +188,8 @@ export function useGame(): GameApi {
       send({ type: "autoHarvest", enabled });
     },
     notice,
+    prevision,
+    revision,
     replayProgress,
     newGame: (
       stationId,
@@ -210,6 +241,11 @@ export function useGame(): GameApi {
     dispatch: (action) => {
       send({ type: "action", action });
       send({ type: "requestSave" });
+    },
+    prevoir: (cle, action) => {
+      if (cle === cleDemandee.current) return; // déjà demandé, la réponse vient
+      cleDemandee.current = cle;
+      send({ type: "prevoir", cle, action });
     },
     setSpeed: (weeksPerSecond) => {
       send({ type: "speed", weeksPerSecond });

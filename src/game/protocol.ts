@@ -460,6 +460,21 @@ export type ToWorker =
   | { type: "speed"; weeksPerSecond: number }
   | { type: "action"; action: ActionSansSemaine }
   | { type: "autoHarvest"; enabled: boolean }
+  /**
+   * « Ce geste passerait-il ? » — sans le faire.
+   *
+   * Le worker applique l'action sur l'état courant et JETTE le résultat, ne
+   * gardant que les refus. C'est le seul moyen d'annoncer un refus avant le
+   * clic sans tenir dans le jeu une seconde copie des règles du moteur, qui
+   * dériverait en silence. Que `applyAction` ne modifie pas l'état qu'on lui
+   * donne est une propriété du moteur, épinglée par `tests/unit/prevoir.test.ts`
+   * — et #139 demande qu'elle devienne un contrat au lieu d'une observation.
+   *
+   * `cle` revient telle quelle dans la réponse : le survol pose la question
+   * plusieurs fois par seconde, et sans elle on ne saurait pas de quelle
+   * position vient la réponse qui arrive.
+   */
+  | { type: "prevoir"; cle: string; action: ActionSansSemaine }
   | { type: "requestSave" };
 
 export type FromWorker =
@@ -468,4 +483,6 @@ export type FromWorker =
   | { type: "save"; save: SaveGame }
   | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
   /** le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la vitesse */
-  | { type: "autopause"; reason: string };
+  | { type: "autopause"; reason: string }
+  /** la réponse à `prevoir` : les refus qu'aurait produits ce geste */
+  | { type: "prevision"; cle: string; refusals: ActionRefusal[] };

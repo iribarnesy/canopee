@@ -37,7 +37,7 @@ import {
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
-import { type Compte, SceneParcelle } from "../render/pixi/scene";
+import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
 import type { Marqueur } from "../render/temps/changements";
 import type { Deformation } from "../render/temps/chute";
 import type { ArbreRemodele } from "../render/temps/geste";
@@ -156,6 +156,21 @@ export interface VueParcelleProps {
    * de refaire une règle du moteur pour le deviner.
    */
   emprise?: { rayonM: number };
+  /**
+   * L'arbre adulte à montrer en transparence sous le curseur, avant de
+   * planter — et s'il serait refusé là.
+   *
+   * Adulte, et c'est le point : ce qu'on met en terre est un plant de trente
+   * centimètres, mais ce qu'on décide en cliquant est la place qu'il occupera
+   * dans trente ans.
+   */
+  fantome?: Omit<Fantome, "x" | "y">;
+  /**
+   * La cellule survolée a changé. Appelé seulement quand elle CHANGE, pas à
+   * chaque pixel : le jeu s'en sert pour demander un préavis au moteur, et
+   * une question par pixel noierait le worker.
+   */
+  surSurvol?: (cellule: { x: number; y: number } | undefined) => void;
   /**
    * Comment un geste remodèle un arbre qui RESTE debout, s'il y a lieu (§6.2).
    *
@@ -282,6 +297,8 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const survole = useRef<number | undefined>(undefined);
   /** Le point de parcelle sous le curseur, pour y poser le viseur du geste. */
   const cible = useRef<{ x: number; y: number } | undefined>(undefined);
+  /** La dernière cellule annoncée au jeu, pour ne l'annoncer qu'aux changements. */
+  const celluleAnnoncee = useRef("");
 
   const altitudeMax = useRef(0);
   altitudeMax.current = props.sol.altitudesM.reduce((m, z) => Math.max(m, z), 0);
@@ -389,6 +406,9 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
         const vise = p.emprise && cible.current ? { ...cible.current, ...p.emprise } : undefined;
         scene.current?.viserLeGeste(vise);
+        scene.current?.montrerLeFantome(
+          p.fantome && cible.current ? { ...p.fantome, ...cible.current } : undefined,
+        );
         const compte = scene.current?.rafraichir(
           {
             sol: p.sol,
@@ -450,7 +470,15 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
       const c = v
         ? celluleSousLeCurseurVue(curseur, v, (x, y) => p.sol.altitudesM[y * p.sol.coteM + x] ?? 0)
         : undefined;
+      const avant = celluleAnnoncee.current;
       cible.current = c ? { x: c.x + 0.5, y: c.y + 0.5 } : undefined;
+      // On n'annonce QUE les changements de cellule : le préavis part vers le
+      // worker à chaque annonce, et une question par pixel parcouru le noierait.
+      const cle = c ? `${c.x},${c.y}` : "";
+      if (cle !== avant) {
+        celluleAnnoncee.current = cle;
+        dernier.current.props.surSurvol?.(c ? { x: c.x, y: c.y } : undefined);
+      }
       // Une main dit « je vais saisir et déplacer » — c'est le geste de la
       // caméra. Au-dessus d'un arbre, on désigne : c'est un pointeur.
       hoteVue.style.cursor = id === undefined ? "grab" : "pointer";
