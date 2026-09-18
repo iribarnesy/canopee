@@ -1442,9 +1442,10 @@ function applyFertiliser(
   const mineral = action.forme === "mineral";
   const cost = dose * areaHa * (mineral ? AZOTE_MINERAL_EUR_KG : FUMIER_EUR_KG_N);
   const hours = areaHa * (mineral ? FERTILISATION_HEURES_HA : FUMIER_HEURES_HA);
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "fertiliser", "plafond hebdomadaire atteint")] };
-  }
+  // Les heures n'arrêtent rien (#133) : elles montent, et `depassementHoraire`
+  // les facture en fin de semaine. Ces trois gestes de culture — semer,
+  // fertiliser, moissonner — ont été écrits pendant que la règle changeait sur
+  // `main` ; ils suivent la nouvelle, comme les quinze autres.
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "fertiliser", "découvert plafonné")] };
   }
@@ -1526,9 +1527,6 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
   const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
   const hours = areaHa * culture.heuresSemisHa * (part + (1 - part) * 20);
   const cost = areaHa * culture.semenceEurHa + areaM2 * part * COUT_ENGIN_EUR_M2;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "semer", "plafond hebdomadaire atteint")] };
-  }
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "semer", "découvert plafonné")] };
   }
@@ -1635,9 +1633,6 @@ function applyMoissonner(
   }
   const heuresHa = HERBACEES[INDEX_CULTURES[0] ?? 0]?.culture?.heuresRecolteHa ?? 1;
   const hours = areaHa * heuresHa * (part + (1 - part) * 20);
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "moissonner", "plafond hebdomadaire atteint")] };
-  }
   const herbeCouverture = state.soil.herbeCouverture.slice();
   for (const i of cellules) {
     let couverture = 0;
