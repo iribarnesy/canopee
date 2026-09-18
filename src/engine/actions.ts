@@ -1,11 +1,14 @@
 /**
  * Actions du joueur (docs/regles.md §9-10) et économie V0 : argent (€) et
- * temps de travail (heures, plafond hebdomadaire par UTH). Les actions sont
+ * temps de travail (heures, seuil hebdomadaire de facturation par UTH — voir
+ * `depassementHoraire`). Les actions sont
  * DATÉES (semaine absolue) : le journal d'actions + la seed + la station
  * forment la sauvegarde rejouable (docs/stack.md).
  * Une action refusée l'est déterministiquement, avec sa raison ; une action
  * partiellement exécutée traite ses éléments dans l'ordre et s'arrête au
- * plafond (heures ou découvert).
+ * découvert. LES HEURES N'ARRÊTENT PLUS RIEN (#133) : dépasser le plafond
+ * hebdomadaire ne se refuse pas, ça se facture — le moteur rapporte le
+ * dépassement et son prix, l'arbitrage revient au joueur.
  */
 
 import { CHAULAGE_EQ_M2, capaciteEchangeEqM2, phDepuisSaturation } from "./bases";
@@ -1552,10 +1555,9 @@ function applyTrogner(
   };
 }
 
-function applyChasser(
-  state: GameState,
-  action: Extract<GameAction, { type: "chasser" }>,
-): ApplyResult {
+// Plus rien à lire dans l'action : la chasse ne porte ni cible ni quantité, et
+// depuis #133 la semaine ne la refuse plus. Le paramètre a donc disparu.
+function applyChasser(state: GameState): ApplyResult {
   return {
     state: {
       ...state,
@@ -2094,7 +2096,7 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
     case "labourer":
       return applyLabourer(state, action);
     case "chasser":
-      return applyChasser(state, action);
+      return applyChasser(state);
     case "trogner":
       return applyTrogner(state, action);
     case "cloturer":

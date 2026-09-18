@@ -61,7 +61,9 @@ function plantation(
   }
   // Poser une protection prend une demi-heure : 169 plants, c'est plus de
   // quatre-vingts heures. On étale sur plusieurs semaines, comme sur le
-  // terrain — sinon le plafond hebdomadaire en refuse la moitié en silence.
+  // terrain. Depuis #133 le moteur ne refuserait plus le paquet d'un bloc, il
+  // le facturerait ; on garde l'étalement parce qu'il est réaliste, et parce
+  // que le changer déplacerait le tirage de ce test.
   const actions: GameAction[] = [];
   if (options.protege) {
     for (let debut = 0; debut < ids.length; debut += 100) {
