@@ -54,6 +54,7 @@ import {
   DEBORDEMENT_PLEIN_MM,
   eclairer,
   estInondee,
+  type MelangeDuTapis,
   melange,
   palier,
   quantifier,
@@ -207,6 +208,19 @@ export interface DonneesSol {
    */
   herbeHumidite?: Float32Array;
   /**
+   * L'emprise de chaque herbacée, une grille par espèce, 0-255 pour 0 à 1 :
+   * `Snapshot.soilHerbeEmprises`. `herbesIds` donne la correspondance.
+   *
+   * **Le mélange et non la dominante**, et c'est mesuré : l'identité de la
+   * dominante bascule d'avril à juillet sur près de quarante pour cent des
+   * cellules, alors que le mélange ne bouge presque pas. Un indice unique
+   * ferait sauter la teinte et le seuil d'eau d'une saison à l'autre, et
+   * l'artefact aurait été mis sur le dos du rendu.
+   */
+  herbeEmprises?: readonly Uint8Array[];
+  /** les identifiants d'espèce, dans l'ordre de `herbeEmprises` */
+  herbesIds?: readonly string[];
+  /**
    * `StationInfo.enEau` : les cellules d'eau libre, fixées avec la station.
    * Absent = parcelle sans ruisseau ni mare.
    */
@@ -276,13 +290,36 @@ export interface Morceau {
 }
 
 /** Cellule d'une grille de sol, lue à l'indice `i`. */
+/**
+ * La cellule telle que la SIGNATURE doit la voir.
+ *
+ * **Elle oubliait la lumière et la soif du tapis**, que `couleurSol` lit
+ * pourtant. Une cellule dont la seule chose à changer était l'ombre portée ou
+ * le grillage de l'herbe gardait donc sa signature : le morceau n'était pas
+ * recuit, et le changement n'arrivait à l'écran que quand autre chose bougeait.
+ * Tout ce qui décide de la couleur doit entrer ici, et le tapis avec.
+ */
 function celluleA(donnees: DonneesSol, i: number): CelluleQuantifiee {
+  const tapis = melangeA(donnees, i);
   return quantifier({
     humidite: donnees.humidite[i] ?? 0,
     herbe: donnees.herbe[i] ?? 0,
     herbeBiomasse: donnees.herbeBiomasse[i] ?? 0,
     litiereCG: donnees.litiereCG[i] ?? 0,
+    lumiere: donnees.lumiere?.[i] ?? 1,
+    herbeHumidite: donnees.herbeHumidite?.[i] ?? 1,
+    ...(tapis ? { tapis } : {}),
   });
+}
+
+/** Le mélange d'herbacées d'une cellule, ou `undefined` si la donnée manque. */
+function melangeA(donnees: DonneesSol, i: number): MelangeDuTapis | undefined {
+  const grilles = donnees.herbeEmprises;
+  const ids = donnees.herbesIds;
+  if (!grilles || !ids || grilles.length === 0) return undefined;
+  const parts: number[] = [];
+  for (const grille of grilles) parts.push((grille[i] ?? 0) / 255);
+  return { ids, parts };
 }
 
 /** Nombre de morceaux sur un côté, pour une parcelle donnée. */
@@ -305,6 +342,14 @@ export function signatureMorceau(
   semaineAnnee: number,
 ): number {
   let h = 0x811c9dc5 ^ (semaineAnnee & 0x3f);
+  // La liste d'espèces entre ICI et non dans chaque cellule : elle est la même
+  // pour toute la parcelle, et les cellules ne portent que leurs parts. Sans
+  // elle, un atlas qui gagnerait une herbacée ne redessinerait rien.
+  for (const id of donnees.herbesIds ?? []) {
+    for (let k = 0; k < id.length; k++) {
+      h = ((h ^ id.charCodeAt(k)) * 0x01000193) >>> 0;
+    }
+  }
   const xFin = Math.min(donnees.coteM, (ix + 1) * COTE_MORCEAU_M);
   const yFin = Math.min(donnees.coteM, (iy + 1) * COTE_MORCEAU_M);
   for (let y = iy * COTE_MORCEAU_M; y < yFin; y++) {
@@ -481,6 +526,7 @@ function teintePave(
   let z = 0;
   let relief = 0;
   let n = 0;
+  const emprises = new Array<number>(donnees.herbeEmprises?.length ?? 0).fill(0);
   // Les bornes sont rabattues dans la parcelle : un échantillon de l'anneau de
   // débordement tombe DEHORS, et y lire des zéros donnerait une terre sèche
   // fictive vers laquelle le bord interpolerait. C'est exactement la frange
@@ -494,6 +540,13 @@ function teintePave(
       litiere += donnees.litiereCG[i] ?? 0;
       lumiere += donnees.lumiere?.[i] ?? 1;
       herbeHumidite += donnees.herbeHumidite?.[i] ?? 1;
+      // Les emprises se moyennent comme le reste : on moyenne PUIS on
+      // quantifie, pour que le pavé rende la couleur du sol moyen et non la
+      // moyenne de paliers — la même règle que l'humidité, deux lignes plus
+      // haut, et la raison est écrite au-dessus de cette fonction.
+      for (let e = 0; e < emprises.length; e++) {
+        emprises[e] = (emprises[e] ?? 0) + (donnees.herbeEmprises?.[e]?.[i] ?? 0) / 255;
+      }
       z += donnees.altitudesM[i] ?? 0;
       relief += facteurRelief(donnees.altitudesM, donnees.coteM, x, y, penteReference);
       n++;
@@ -507,6 +560,9 @@ function teintePave(
     litiereCG: litiere / n,
     lumiere: lumiere / n,
     herbeHumidite: herbeHumidite / n,
+    ...(donnees.herbesIds && emprises.length > 0
+      ? { tapis: { ids: donnees.herbesIds, parts: emprises.map((somme) => somme / n) } }
+      : {}),
   });
   return { teinte: eclairer(couleurSol(q, semaineAnnee), relief / n), z: z / n };
 }

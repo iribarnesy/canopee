@@ -38,7 +38,7 @@
  * Module **pur** : pas de canvas, pas de DOM, aucun état.
  */
 
-import { facteurEauHerbacee, HERBACEES } from "../engine/herbacees";
+import { facteurEauHerbacee, HERBACEES, type HerbaceeV0 } from "../engine/herbacees";
 
 /**
  * L'herbacée dont le tapis porte le seuil d'eau.
@@ -60,6 +60,39 @@ import { facteurEauHerbacee, HERBACEES } from "../engine/herbacees";
  * moment selon qui l'occupe.
  */
 const HERBACEE_DU_TAPIS = HERBACEES.find((h) => h.id === "dactylis_glomerata") ?? HERBACEES[0];
+
+/**
+ * La teinte de chaque herbacée, en pleine saison et bien nourrie.
+ *
+ * **C'est une décision de DESSIN, et c'est pour ça qu'elle est ici** : le
+ * moteur ne dit pas de quelle couleur est une plante, et il n'a pas à le dire.
+ * Mais elle n'est pas arbitraire pour autant — chacune se justifie de ce que la
+ * fiche du moteur porte déjà, ou du nom même de l'espèce :
+ *
+ * - **Dactyle aggloméré** — `senescenceAutomnale: false`, `partPersistante: 1` :
+ *   une touffe qui passe l'hiver verte. Le vert franc et un peu terne d'une
+ *   graminée de prairie grossière, la couleur de référence du tapis jusqu'ici.
+ * - **Molinie bleue** — *Molinia caerulea* : son épithète EST sa couleur. Un
+ *   vert bleuté en saison, et `partPersistante: 0,25` avec
+ *   `senescenceAutomnale: true` dit le reste — l'hiver, il ne reste que la
+ *   touradon sèche, que le canal du foin et celui de la soif portent déjà.
+ * - **Anémone des bois** — géophyte vernale (`finDJ: 500`,
+ *   `partPersistante: 0`) d'ombre profonde (`compensation: 0,02`) : le vert
+ *   tendre et clair d'un feuillage de sous-bois printanier, qui n'a jamais
+ *   connu le plein soleil.
+ *
+ * Une espèce absente de cette table prend le vert du tapis : l'atlas
+ * grandira, et une herbacée sans teinte doit se dessiner quand même plutôt que
+ * de trouer le sol.
+ */
+const TEINTE_HERBACEE: Readonly<Record<string, Teinte>> = {
+  dactylis_glomerata: { r: 106, g: 140, b: 72 },
+  molinia_caerulea: { r: 96, g: 138, b: 104 },
+  anemone_nemorosa: { r: 132, g: 166, b: 96 },
+};
+
+/** Les fiches par identifiant, résolues une fois. */
+const FICHE_PAR_ID = new Map(HERBACEES.map((h) => [h.id, h]));
 
 /** Paliers de quantification d'une grandeur continue du sol (§3). */
 export const NIVEAUX = 8;
@@ -271,16 +304,32 @@ export function phaseAnnuelle(semaineAnnee: number): number {
  * module lit : la couverture recule — `couvertureMax` la rabat quand l'eau de
  * surface manque — donc le sol nu réapparaît entre les touffes.
  */
-export function couleurHerbe(semaineAnnee: number, biomasse: number, herbeHumidite = 1): Teinte {
+export function couleurHerbe(
+  semaineAnnee: number,
+  biomasse: number,
+  herbeHumidite = 1,
+  tapis?: MelangeDuTapis,
+): Teinte {
   const phase = phaseAnnuelle(semaineAnnee);
+  // **L'identité de l'espèce porte les deux verts, la saison porte l'écart.**
+  // Le ton d'été est celui de printemps assombri du rapport EXACT que portent
+  // les deux verts de référence : la saison décale donc pareil pour toutes les
+  // espèces, et seule l'identité change. Sans ça, il aurait fallu deux teintes
+  // par fiche, dont la seconde n'aurait rien dit de plus.
+  const printemps = teinteDuTapis(tapis);
+  const ete = {
+    r: (printemps.r * HERBE_ETE.r) / HERBE_PRINTEMPS.r,
+    g: (printemps.g * HERBE_ETE.g) / HERBE_PRINTEMPS.g,
+    b: (printemps.b * HERBE_ETE.b) / HERBE_PRINTEMPS.b,
+  };
   // Un cycle simple : hiver → printemps → été → hiver, calé sur les repères que
   // le moteur utilise déjà (solstice en semaine 25, sénescence en semaine 40).
   let saisonniere: Teinte;
   if (phase < 0.15)
     saisonniere = HERBE_HIVER; // janvier–février
-  else if (phase < 0.35) saisonniere = melange(HERBE_HIVER, HERBE_PRINTEMPS, (phase - 0.15) / 0.2);
-  else if (phase < 0.55) saisonniere = melange(HERBE_PRINTEMPS, HERBE_ETE, (phase - 0.35) / 0.2);
-  else if (phase < 0.8) saisonniere = melange(HERBE_ETE, HERBE_HIVER, (phase - 0.55) / 0.25);
+  else if (phase < 0.35) saisonniere = melange(HERBE_HIVER, printemps, (phase - 0.15) / 0.2);
+  else if (phase < 0.55) saisonniere = melange(printemps, ete, (phase - 0.35) / 0.2);
+  else if (phase < 0.8) saisonniere = melange(ete, HERBE_HIVER, (phase - 0.55) / 0.25);
   else saisonniere = HERBE_HIVER;
   // La biomasse tire vers le foin : c'est la matière sur pied qui a séché, et
   // elle se voit surtout quand il y en a beaucoup.
@@ -288,7 +337,13 @@ export function couleurHerbe(semaineAnnee: number, biomasse: number, herbeHumidi
   const surPied = melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
   // Puis la soif, par-dessus : elle grille ce qui reste, foin comme gazon. Un
   // pré déjà blond qui grille ne blondit pas davantage, il brunit.
-  const soif = 1 - satisfactionEnEau(herbeHumidite);
+  // **Le seuil de soif est celui des espèces PRÉSENTES**, pondéré par leur
+  // emprise. Il était lu chez le dactyle pour toutes les cellules — exact tant
+  // que le tapis était un dactyle qui s'ignorait, et il le reste pour la
+  // molinie, dont la courbe est identique au millième. C'est l'anémone qui
+  // s'en écarte : jusqu'à 0,257 de satisfaction, dans la bande d'humidité
+  // 0,1–0,4 — les cellules d'ombre assez sèches, précisément là où elle vit.
+  const soif = 1 - satisfactionEnEau(herbeHumidite, tapis);
   return melange(surPied, HERBE_GRILLEE, SOIF_LA_PLUS_BRUNE * soif);
 }
 
@@ -318,6 +373,15 @@ export interface CelluleSol {
    * Absente = pas de tapis connu, on n'affirme aucune soif.
    */
   herbeHumidite?: number;
+  /**
+   * Qui occupe la cellule, et pour quelle part : `Snapshot.soilHerbeEmprises`
+   * ramené en [0,1], dans l'ordre de `Snapshot.herbesIds`.
+   *
+   * Absent = on ne sait pas qui tient le terrain, et le tapis retombe sur
+   * l'espèce de référence — ce qu'il faisait pour TOUTES les cellules avant ce
+   * lot.
+   */
+  tapis?: MelangeDuTapis;
   /**
    * Lumière relative arrivant au sol ∈ [0,1] : `soilLumiere`.
    *
@@ -349,6 +413,14 @@ export interface CelluleQuantifiee {
   litiere: number;
   lumiere: number;
   herbeHumidite: number;
+  /**
+   * Qui tient la cellule — mêmes identifiants, emprises en PALIERS.
+   *
+   * Quantifié comme tout le reste : c'est le palier et non la valeur qui entre
+   * dans la signature d'un morceau, sinon un centième d'emprise invaliderait
+   * le cache de cuisson à chaque semaine.
+   */
+  tapis?: MelangeDuTapis;
 }
 
 export function quantifier(c: CelluleSol): CelluleQuantifiee {
@@ -359,6 +431,7 @@ export function quantifier(c: CelluleSol): CelluleQuantifiee {
     litiere: palier(c.litiereCG / LITIERE_PLEINE_CG),
     lumiere: palier(c.lumiere ?? 1),
     herbeHumidite: palier(c.herbeHumidite ?? 1),
+    ...(c.tapis ? { tapis: { ids: c.tapis.ids, parts: c.tapis.parts.map((p) => palier(p)) } } : {}),
   };
 }
 
@@ -391,9 +464,75 @@ export const SOIF_LA_PLUS_BRUNE = 0.72;
  * herbe souffre est une affirmation de modèle. Le manque est parti en issue, le
  * moteur y a répondu, et le rendu se contente maintenant de lire.
  */
-export function satisfactionEnEau(herbeHumidite: number): number {
-  if (!HERBACEE_DU_TAPIS) return 1;
-  return facteurEauHerbacee(HERBACEE_DU_TAPIS, Math.min(1, Math.max(0, herbeHumidite)));
+export function satisfactionEnEau(herbeHumidite: number, tapis?: MelangeDuTapis): number {
+  const h = Math.min(1, Math.max(0, herbeHumidite));
+  const parts = partsUtiles(tapis);
+  if (!parts) return HERBACEE_DU_TAPIS ? facteurEauHerbacee(HERBACEE_DU_TAPIS, h) : 1;
+  let somme = 0;
+  let poids = 0;
+  for (const { fiche, part } of parts) {
+    somme += facteurEauHerbacee(fiche, h) * part;
+    poids += part;
+  }
+  return poids > 0 ? somme / poids : 1;
+}
+
+/**
+ * Qui occupe la cellule, et pour quelle part.
+ *
+ * Le MÉLANGE et non la dominante, et c'est mesuré : l'identité de la dominante
+ * bascule d'avril à juillet sur près de quarante pour cent des cellules — le
+ * dactyle régresse à la sécheresse pendant que l'anémone, dormante, ne perd
+ * rien. Un indice unique ferait donc sauter la teinte ET le seuil d'eau d'une
+ * saison à l'autre, alors que le mélange ne bouge presque pas.
+ */
+export interface MelangeDuTapis {
+  /** les identifiants d'espèce, dans l'ordre de `parts` (`Snapshot.herbesIds`) */
+  ids: readonly string[];
+  /** l'emprise de chacune ∈ [0,1] */
+  parts: readonly number[];
+}
+
+/** Les espèces présentes, appariées à leur fiche. `undefined` si on ne sait rien. */
+function partsUtiles(
+  tapis?: MelangeDuTapis,
+): readonly { fiche: HerbaceeV0; part: number }[] | undefined {
+  if (!tapis || tapis.ids.length === 0) return undefined;
+  const utiles: { fiche: HerbaceeV0; part: number }[] = [];
+  for (let i = 0; i < tapis.ids.length; i++) {
+    const part = tapis.parts[i] ?? 0;
+    if (part <= 0) continue;
+    const fiche = FICHE_PAR_ID.get(tapis.ids[i] ?? "");
+    if (fiche) utiles.push({ fiche, part });
+  }
+  // Une cellule sans herbe du tout : on retombe sur le tapis de référence
+  // plutôt que de rendre une couleur neutre qui ne veut rien dire.
+  return utiles.length > 0 ? utiles : undefined;
+}
+
+/**
+ * La teinte de pleine saison du tapis, mélangée à l'emprise de chaque espèce.
+ *
+ * Pondérée par l'emprise et non par une dominante : une cellule où le dactyle
+ * tient 0,6 et l'anémone 0,4 n'est ni l'un ni l'autre, et c'est justement ce
+ * qu'un indice unique ne saurait pas dire.
+ */
+function teinteDuTapis(tapis?: MelangeDuTapis): Teinte {
+  const parts = partsUtiles(tapis);
+  if (!parts) return HERBE_PRINTEMPS;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let poids = 0;
+  for (const { fiche, part } of parts) {
+    const t = TEINTE_HERBACEE[fiche.id] ?? HERBE_PRINTEMPS;
+    r += t.r * part;
+    g += t.g * part;
+    b += t.b * part;
+    poids += part;
+  }
+  if (poids <= 0) return HERBE_PRINTEMPS;
+  return { r: r / poids, g: g / poids, b: b / poids };
 }
 
 /**
@@ -453,6 +592,15 @@ export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
     semaineAnnee,
     valeurDuPalier(q.herbeBiomasse),
     valeurDuPalier(q.herbeHumidite),
+    // **`partDuPalier` et non `valeurDuPalier`**, et ce module dit déjà
+    // pourquoi quelques lignes plus haut : une emprise est une PRÉSENCE, pas
+    // une couleur à interpoler. Avec le milieu de tranche, une espèce absente
+    // ressortait à une demi-tranche — sur une lande tenue à 100 % par la
+    // molinie, les deux autres pesaient encore douze pour cent du mélange et
+    // délavaient sa teinte. C'est exactement le défaut que le commentaire de
+    // `partDuPalier` raconte pour les marques, et je l'ai refait pour les
+    // espèces.
+    q.tapis ? { ids: q.tapis.ids, parts: q.tapis.parts.map((p) => partDuPalier(p)) } : undefined,
   );
   // La couverture n'est pas une opacité linéaire : une cellule à moitié
   // couverte lit déjà comme de l'herbe, parce que les touffes se voient de
@@ -545,9 +693,22 @@ export function estInondee(debordementMm: number): boolean {
  * une chaîne coûterait une allocation par cellule et par semaine.
  */
 export function signatureCellule(q: CelluleQuantifiee): number {
-  return (
+  let h =
     (((q.humidite * NIVEAUX + q.herbe) * NIVEAUX + q.herbeBiomasse) * NIVEAUX + q.litiere) *
       NIVEAUX +
-    q.lumiere
-  );
+    q.lumiere;
+  // **`herbeHumidite` manquait, et `couleurSol` la lit.** Une cellule dont la
+  // seule chose à changer était la soif du tapis gardait donc sa signature :
+  // le morceau n'était pas recuit, et l'herbe ne grillait pas à l'écran tant
+  // qu'autre chose ne bougeait pas. Le tapis entre par la même porte, et pour
+  // la même raison — c'est lui qui décide maintenant de la teinte.
+  h = h * NIVEAUX + q.herbeHumidite;
+  // **Les parts seulement, pas les identifiants** : la liste d'espèces est une
+  // propriété de la PARCELLE et non de la cellule — l'instantané en envoie une
+  // seule, et toutes les cellules la partagent. Hacher trois chaînes par
+  // cellule et par image pour une valeur constante serait payer cher un
+  // renseignement qu'on a déjà. C'est `signatureMorceau` qui la prend en
+  // compte, une fois par morceau.
+  for (const part of q.tapis?.parts ?? []) h = h * NIVEAUX + part;
+  return h;
 }

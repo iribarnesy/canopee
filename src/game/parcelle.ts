@@ -62,6 +62,10 @@ export interface SolSource {
   lumiere?: ArrayLike<number>;
   /** `Snapshot.soilHerbeHumidite` */
   herbeHumidite?: ArrayLike<number>;
+  /** `Snapshot.soilHerbeEmprises` : une grille par espèce, 0-255 */
+  herbeEmprises?: readonly Uint8Array[];
+  /** `Snapshot.herbesIds` : les espèces, dans l'ordre des grilles */
+  herbesIds?: readonly string[];
   /** `StationInfo.enEau` */
   enEau?: readonly boolean[];
   /** `Snapshot.soilDebordementMm` */
@@ -97,6 +101,14 @@ export function donneesSolDe(src: SolSource): DonneesSol {
     litiereCG: Float32Array.from(src.litiereCG),
     ...(src.lumiere ? { lumiere: Float32Array.from(src.lumiere) } : {}),
     ...(src.herbeHumidite ? { herbeHumidite: Float32Array.from(src.herbeHumidite) } : {}),
+    // Gardées par RÉFÉRENCE, contrairement aux autres grilles : ce sont les
+    // tableaux de l'instantané, que le worker refabrique à chaque semaine et ne
+    // touche plus une fois postés. Les recopier coûterait une copie par semaine
+    // pour rien — et le rendu ramène l'emprise en [0,1] au moment de colorer,
+    // sans jamais écrire dedans.
+    ...(src.herbeEmprises && src.herbesIds
+      ? { herbeEmprises: src.herbeEmprises, herbesIds: src.herbesIds }
+      : {}),
     ...(src.enEau ? { enEau: src.enEau } : {}),
     ...(src.debordementMm ? { debordementMm: Float32Array.from(src.debordementMm) } : {}),
     ...(src.boisAuSol ? { boisAuSol: Float32Array.from(src.boisAuSol) } : {}),

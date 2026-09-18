@@ -987,6 +987,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             litiereCG: snapshot.soilLitiereCG,
             lumiere: snapshot.soilLumiere,
             herbeHumidite: snapshot.soilHerbeHumidite,
+            herbeEmprises: snapshot.soilHerbeEmprises,
+            herbesIds: snapshot.herbesIds,
             enEau: station.enEau,
             debordementMm: snapshot.soilDebordementMm,
             boisAuSol: snapshot.soilBoisAuSol,
