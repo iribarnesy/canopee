@@ -61,7 +61,75 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les mycorhizes, #115)
+## Ce que le dernier lot a appris (le calendrier des fleurs, #70)
+
+**Le verrou était un DÉCOUPAGE, et il se voyait en listant les fiches.** La
+date de floraison vivait dans le bloc `fruits`, réservé aux essences dont on
+récolte quelque chose. Sept espèces qui nourrissent réellement les
+pollinisateurs n'en avaient donc aucune — aubépine, saule, ajonc, genêt,
+callune, houx, fusain — et bâtir la ressource florale là-dessus aurait fabriqué
+des trous qui n'existent pas : le moteur aurait dit qu'une lande girondine ne
+nourrit personne, alors que l'ajonc et la callune en font une pâture d'abeilles
+presque toute l'année. **Avant d'écrire un mécanisme qui lit un champ, lister
+qui le porte et qui ne le porte pas** : l'absence dessine le découpage mieux que
+la présence.
+
+**Un champ dont le contenu est le ZÉRO.** `nectar` vaut zéro pour le noisetier
+et le noyer, qui fleurissent abondamment et dont le pollen part au vent. Ce
+n'est pas une valeur par défaut faute de mieux, c'est l'information : l'indice
+de biodiversité les comptait comme une ressource, si bien qu'une noiseraie
+affichait des floraisons étalées sans nourrir personne. **Quand un trait vaut
+zéro pour une raison qu'on sait nommer, le déclarer plutôt que l'omettre** —
+l'omission se lit « pas encore instruit », le zéro se lit « et voici pourquoi ».
+
+**Le thermomètre, QUATRIÈME lot de suite, et cette fois deux fois dans le même
+lot.** La ressource florale mesurait d'abord une QUANTITÉ de nectar là où il
+fallait une ADÉQUATION : `min(habitat, florale)` avec un habitat à 0,5 et une
+ressource à 0,10 ne départageait rien, il remplaçait silencieusement le premier
+facteur par le second. Puis elle mesurait le nectar du seul DISQUE DE HOUPPIER
+là où il fallait une portée de butinage. Les deux fois, la relecture ne disait
+rien et la mesure disait tout. **Quand un facteur limitant nouveau est
+systématiquement plus petit que celui qu'il accompagne, ce n'est pas un facteur
+de plus : c'est un remplacement, et l'échelle est fausse.**
+
+**Écrire à côté d'une solution que le dépôt possède déjà.** La portée de
+butinage était résolue depuis longtemps, à trois fichiers de là, commentaire
+compris : `ravageurs.ts` agrège par blocs de 10 m sur une fenêtre de 3×3 « parce
+qu'évaluer la richesse cellule par cellule donnait toujours une seule essence ».
+La note connaissait la faute inverse — réutiliser une fonction sans relire sa
+définition ; celle-ci est sa jumelle. **Avant d'écrire une agrégation spatiale,
+chercher si le moteur en a déjà une, et à quelle échelle.**
+
+**Un étalon de temps mesuré AILLEURS n'est pas un étalon.** Le coût du lot a
+d'abord été annoncé à +30 %, mesuré contre un arbre de travail séparé dont le
+`node_modules` était un lien symbolique. Ce seul changement d'environnement
+déplaçait le chiffre de 25 % — cinq fois l'effet cherché. Mesuré dans le même
+répertoire avec le même script : +6 %, et ça recoupe le témoin par
+neutralisation du bloc. **Un chronométrage se prend dans le même processus, le
+même répertoire et la même arborescence de modules**, ou il ne se prend pas.
+
+**Un dispositif peut passer pour la raison qu'on veut réfuter.** L'essai
+historique de G4 — « un verger nu produit moins que le même verger dans un
+environnement diversifié » — plantait une haie de noisetier, chêne pubescent et
+bouleau. Les TROIS sont anémophiles. Il passait parce que le service ne lisait
+que l'habitat, qui compte la richesse en essences : le moteur affirmait donc que
+planter trois arbres pollinisés par le vent améliore la nouaison d'un verger de
+15 %. Le lot l'a fait tomber à +0,9 %, et c'est la correction d'une affirmation
+fausse, pas une régression. L'essai garde son énoncé, se donne une haie
+mellifère (+28,0 %) et **conserve la haie anémophile comme TÉMOIN** : c'est elle
+qui sépare « des voisins » de « des voisins qui nourrissent ». **Quand un lot
+fait tomber un essai qui défendait le critère qu'il renforce, regarder d'abord
+le dispositif de cet essai** — il mesurait peut-être ce que le lot vient
+justement de réfuter.
+
+**Et trois mesures concurrentes ne font pas trois mesures.** J'ai lancé deux
+chronométrages et une suite d'essais en parallèle ; les trois sont invalides, et
+la suite a failli expirer pour une raison qui n'avait rien à voir avec elle. Le
+corollaire de « ne pas modifier le moteur pendant qu'une suite tourne », et il
+mérite d'être écrit à part : **une mesure de TEMPS veut la machine pour elle
+seule.**
+
+## Ce qu'un lot plus ancien a appris (les mycorhizes, #115)
 
 **Un invariant ne garde que le côté qu'il ferme.** Le bilan d'azote du tick
 vérifiait « minéralisation = prélèvements + lessivage + Δstock » depuis toujours,
@@ -473,6 +541,23 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce qui reste de #70 — la soudure d'ÉTÉ, et l'ortie.** Le calendrier est là et
+G4/J6 sont tombés, mais la strate basse n'y apporte que sa vernale : les deux
+autres herbacées sont des graminées anémophiles. La soudure de fin d'été reste
+donc à la charge des ligneux (ronce, troène, callune), et il manque une
+herbacée entomophile tardive — un trèfle, une centaurée — pour que la strate
+basse tienne les deux soudures. Manquent aussi, inchangés : **l'ortie
+nitrophile**, qui demande que la capacité d'une herbacée lise l'azote et ferait
+de l'épandage un choix visible au sol ; **la hiérarchie de hauteur** dans la
+strate, seule limite écrite de B8 ; et **la culture comme strate basse**, qui
+est le sujet de l'agroforesterie — une fiche herbacée avec un rendement et une
+exigence minérale ferait poser au jeu sa question centrale.
+
+Côté pollinisation, la limite de G4 est nommée : pas d'insectes individualisés,
+et la fenêtre de butinage est celle des auxiliaires faute d'en avoir mesuré une
+autre. Une distance propre aux pollinisateurs demanderait une mesure, pas un
+chiffre choisi.
 
 **Ce qui reste de #115 — le réseau n'AJOUTE toujours pas d'azote.** Le correctif
 lui rend un signe juste (+2,79 % de volume sur limon pauvre, +0,09 % sur riche)

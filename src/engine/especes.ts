@@ -346,10 +346,44 @@ export interface EspeceV0 {
      */
     appetence: number;
   };
+  /**
+   * FLEURIR N'EST PAS FRUCTIFIER, et les confondre fabriquait des trous dans
+   * le calendrier (issue #70, critères G4 et J6).
+   *
+   * La date de floraison vivait dans le bloc `fruits`, réservé aux essences
+   * dont on récolte quelque chose. Or l'ajonc fleurit de décembre à juin et la
+   * callune en août : ce couple-là nourrit les abeilles d'une lande atlantique
+   * toute l'année, et le moteur n'en savait rien parce qu'on n'en récolte rien.
+   * Le saule est la ressource de février, l'aubépine celle de mai — mêmes
+   * absences, même cause. La floraison a donc son bloc, indépendant.
+   *
+   * **Absent veut dire « ne fleurit pas au calendrier du moteur »**, ce qui est
+   * le cas des anémophiles dont on ne récolte rien : un hêtre, un chêne, un
+   * frêne. Une espèce qui porte `fruits` porte forcément ce bloc — c'est la
+   * même fleur qui devient le fruit, et `fiches.test.ts` le vérifie.
+   */
+  floraison?: {
+    /** ouverture : cumul de degrés-jours base 5 °C depuis le 1er janvier */
+    debutDJ: number;
+    /**
+     * Largeur de la fenêtre, en degrés-jours. Un verger passe en deux
+     * semaines ; un ajonc tient six mois. C'est la grandeur qui sépare une
+     * ressource ponctuelle d'une ressource de fond.
+     */
+    dureeDJ: number;
+    /**
+     * Ce que la floraison OFFRE aux pollinisateurs ∈ [0,1], à pleine couronne.
+     *
+     * **Zéro pour une anémophile**, et c'est le contenu du champ : le noisetier
+     * et le noyer fleurissent abondamment, leur pollen part au vent, et aucun
+     * insecte ne se déplace pour eux. Les compter comme une ressource — ce que
+     * `indiceBiodiversite` faisait — donnait des floraisons étalées à une
+     * noiseraie qui ne nourrit personne.
+     */
+    nectar: number;
+  };
   /** production fruitière (docs/regles.md §7.2) — absent pour les essences forestières */
   fruits?: {
-    /** floraison : cumul de degrés-jours base 5 °C depuis le 1er janvier */
-    floraisonDJ: number;
     /** tMin qui détruit les fleurs pendant la floraison, °C (gel tardif) */
     gelFatalC: number;
     /** semaine de récolte (0-51) */
@@ -674,8 +708,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Bois précieux : le noyer se vend à la bille, plusieurs fois le chêne.
     // Infradensité : GWDD, moyenne de trois mesures (0,533 à 0,591).
     bois: { densite: 0.56, prixOeuvreEurM3: 600, rejetteDeSouche: false },
+    // Anémophile : le noyer lâche son pollen au vent, comme le noisetier. Il
+    // fleurit après avoir feuillé, donc tard *(atlas)*.
+    floraison: { debutDJ: 320, dureeDJ: 100, nectar: 0 },
     fruits: {
-      floraisonDJ: 320, // mai : il fleurit après avoir feuillé, donc tard
       gelFatalC: -1,
       recolteWeek: 40,
       fenetreRecolteWeeks: 3,
@@ -732,8 +768,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // et le pommier sauvage (Malus sylvestris, 0,60 au GWDD) est une AUTRE espèce.
     // Valeur laissée en l'état plutôt qu'empruntée (#68).
     bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
+    // Fin avril, après la plupart des gels. Le pommier est l'entomophile de
+    // manuel : il ne noue presque rien sans insectes, et son nectar est
+    // abondant *(atlas)*.
+    floraison: { debutDJ: 200, dureeDJ: 100, nectar: 0.9 },
     fruits: {
-      floraisonDJ: 200, // fin avril — après la plupart des gels
       gelFatalC: -2,
       recolteWeek: 38,
       fenetreRecolteWeeks: 3,
@@ -778,8 +817,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Infradensité : GWDD, mesure UNIQUE (0,675, Asie du Sud-Est) — sourcée, mais
     // sur un seul échantillon, et hors d'Europe.
     bois: { densite: 0.68, prixOeuvreEurM3: 150, rejetteDeSouche: false },
+    // Fin février-mars : LE pari du gel tardif (atlas). Très mellifère, et
+    // d'autant plus précieux que rien d'autre n'est ouvert à cette date.
+    floraison: { debutDJ: 60, dureeDJ: 80, nectar: 0.9 },
     fruits: {
-      floraisonDJ: 60, // fin février-mars : LE pari du gel tardif (atlas)
       gelFatalC: -1.5,
       recolteWeek: 27,
       fenetreRecolteWeeks: 2,
@@ -831,8 +872,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 8 },
     // Infradensité : IGN/Dupouey, « Noisetier ».
     bois: { densite: 0.52, prixOeuvreEurM3: 70, rejetteDeSouche: true },
+    // Chatons d'hiver (janv.-fév.), pollinisation par LE VENT : abondants et
+    // sans nectar. Les abeilles y prélèvent du pollen les jours doux, mais on
+    // ne compte pas une noiseraie comme une ressource florale.
+    floraison: { debutDJ: 15, dureeDJ: 150, nectar: 0 },
     fruits: {
-      floraisonDJ: 15, // chatons d'hiver (janv.-fév.), pollinisation par le vent
       gelFatalC: -8, // les chatons encaissent le froid — pas de pari climatique
       recolteWeek: 36,
       fenetreRecolteWeeks: 3,
@@ -890,8 +934,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Infradensité NON SOURCÉE : absente des deux sources. Valeur d'avant #68,
     // donc vraisemblablement une densité à 12 % d'humidité, donc surestimée.
     bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Il fleurit AVANT les feuilles, dès mars : exposé au gel, et c'est la
+    // première nappe blanche des haies — une ressource majeure de sortie
+    // d'hiver.
+    floraison: { debutDJ: 60, dureeDJ: 100, nectar: 0.8 },
     fruits: {
-      floraisonDJ: 60, // fleurit AVANT les feuilles, dès mars : exposé au gel
       gelFatalC: -3,
       recolteWeek: 42, // après les premières gelées, qui les rendent mangeables
       fenetreRecolteWeeks: 4,
@@ -913,6 +960,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "crataegus_monogyna",
     nom: "Aubépine",
     nomLatin: "Crataegus monogyna",
+    // Mai, après les feuilles : l'aubépine est LA nappe blanche de mai, et le
+    // calendrier en avait un trou — entre le pommier (fin avril) et la ronce
+    // (juin), le moteur ne connaissait que le noyer, qui est anémophile.
+    floraison: { debutDJ: 450, dureeDJ: 150, nectar: 0.9 },
     hauteurMaxM: 8,
     // ENCADRÉ par deux mesures anglaises, non calé sur l'une d'elles : 37
     // cm/an sur douze ans en jardin (Grubb 1999, via la Biological Flora du
@@ -990,8 +1041,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Infradensité NON SOURCÉE : absente des deux sources, comme tous les
     // sous-arbrisseaux. Valeur d'avant #68.
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Juin, hors d'atteinte des gels, et elle s'étale : la ronce fleurit et
+    // refleurit sur des semaines. C'est le pilier de la ressource d'été.
+    floraison: { debutDJ: 900, dureeDJ: 500, nectar: 0.9 },
     fruits: {
-      floraisonDJ: 900, // juin : hors d'atteinte des gels
       gelFatalC: -1,
       recolteWeek: 34,
       fenetreRecolteWeeks: 5,
@@ -1037,8 +1090,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Infradensité NON SOURCÉE : le GWDD n'a que des sureaux d'Amérique (0,43 à
     // 0,46) ; on ne prête pas leur valeur au nôtre. Valeur d'avant #68.
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Juin. Ombelles très visitées, surtout par les diptères — nectar plus
+    // discret que celui d'une rosacée *(à calibrer)*.
+    floraison: { debutDJ: 700, dureeDJ: 150, nectar: 0.5 },
     fruits: {
-      floraisonDJ: 700, // juin
       gelFatalC: -1,
       recolteWeek: 36,
       fenetreRecolteWeeks: 3,
@@ -1113,6 +1168,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "ilex_aquifolium",
     nom: "Houx",
     nomLatin: "Ilex aquifolium",
+    // Mai-juin, discret mais bien visité ; le houx est dioïque et dépend
+    // entièrement des insectes pour nouer *(atlas)*.
+    floraison: { debutDJ: 520, dureeDJ: 150, nectar: 0.6 },
     hauteurMaxM: 8,
     // L'un des plus lents de l'atlas, et la lenteur est confirmée : un houx
     // « bien éclairé » fait 1,5 à 3,0 m entre huit et quinze ans (Peterken &
@@ -1149,6 +1207,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "salix_alba",
     nom: "Saule blanc",
     nomLatin: "Salix alba",
+    // Février-mars, sur bois nu. Le saule est la ressource de SORTIE D'HIVER
+    // par excellence : c'est de son pollen que les colonies repartent, et
+    // aucune autre essence de cette taille n'ouvre aussi tôt. Il n'a pas de
+    // bloc `fruits` — on ne récolte rien d'un saule blanc — et c'est
+    // exactement pour cette raison qu'il était absent du calendrier.
+    floraison: { debutDJ: 30, dureeDJ: 150, nectar: 0.8 },
     hauteurMaxM: 20,
     // **INVENTÉ, et il le reste** *(à calibrer)*. Il n'existe aucune table de
     // production du saule blanc de plein vent : ce qui existe est de
@@ -1216,8 +1280,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // (le GWDD n'a que le sanguin, 0,68). Valeur d'avant #68, et c'est désormais
     // la plus haute du référentiel, donc la plus suspecte.
     bois: { densite: 0.9, prixOeuvreEurM3: 0, rejetteDeSouche: true }, // le bois le plus dur d'Europe
+    // Février, sur bois nu : c'est sa signature, et c'est ce qui en fait une
+    // des toutes premières ressources de l'année.
+    floraison: { debutDJ: 25, dureeDJ: 120, nectar: 0.7 },
     fruits: {
-      floraisonDJ: 25, // février, sur bois nu : c'est sa signature
       gelFatalC: -4, // et il l'encaisse, sans quoi il n'existerait pas
       recolteWeek: 34,
       fenetreRecolteWeeks: 3,
@@ -1238,6 +1304,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "euonymus_europaeus",
     nom: "Fusain d'Europe",
     nomLatin: "Euonymus europaeus",
+    // Mai-juin. Fleurs verdâtres et minuscules, mais nectarifères et très
+    // fréquentées par les diptères et les petits hyménoptères *(à calibrer)*.
+    floraison: { debutDJ: 480, dureeDJ: 150, nectar: 0.4 },
     hauteurMaxM: 6,
     // Confronté, non calé : +135,9 cm en cinq ans sur limon de marne
     // calcaire dans les Midlands (Willoughby 2007, via la Biological Flora),
@@ -1307,10 +1376,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Infradensité : GWDD, mesure unique (0,805, Europe). Elle MONTE — preuve
     // qu'un facteur global appliqué aux anciennes valeurs aurait eu tort ici.
     bois: { densite: 0.81, prixOeuvreEurM3: 0, rejetteDeSouche: true },
+    // Juin-juillet, très odorant et très visité.
+    floraison: { debutDJ: 800, dureeDJ: 200, nectar: 0.8 },
     fruits: {
       // Très mellifère en juin : ses fleurs comptent dans l'étalement des
       // floraisons, même si ses baies sont toxiques et ne se récoltent pas.
-      floraisonDJ: 800,
       gelFatalC: -1,
       recolteWeek: 40,
       fenetreRecolteWeeks: 2,
@@ -1331,6 +1401,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "ulex_europaeus",
     nom: "Ajonc d'Europe",
     nomLatin: "Ulex europaeus",
+    // **Il fleurit presque toute l'année**, avec un pic de mars à juin et des
+    // fleurs éparses dès décembre. C'est la ressource de FOND d'une lande
+    // atlantique, celle qui tient la soudure quand rien d'autre n'est ouvert.
+    // Une fenêtre large plutôt qu'un pic : c'est la grandeur `dureeDJ` qui
+    // porte la différence *(à calibrer — les sources donnent une saison, pas
+    // un cumul)*.
+    floraison: { debutDJ: 20, dureeDJ: 1100, nectar: 0.7 },
     hauteurMaxM: 2.5,
     // Confronté à la meilleure géographie possible, sans être calé dessus :
     // des ajoncs bretons et écossais semés en jardin commun près de Rennes
@@ -1381,6 +1458,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "cytisus_scoparius",
     nom: "Genêt à balais",
     nomLatin: "Cytisus scoparius",
+    // Mai-juin, franc et court. Fabacée à fleurs sans nectar ou presque : le
+    // genêt se visite pour son POLLEN, que les bourdons libèrent en forçant la
+    // carène *(à calibrer)*.
+    floraison: { debutDJ: 500, dureeDJ: 200, nectar: 0.5 },
     hauteurMaxM: 2.5,
     // La confrontation la plus nette de tout l'atlas arbustif, et elle tombe
     // juste sans qu'on ait rien touché : à Londres, un genêt fait ~160 cm à
@@ -1427,6 +1508,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "calluna_vulgaris",
     nom: "Callune",
     nomLatin: "Calluna vulgaris",
+    // Août-septembre. **C'est la dernière grande miellée de l'année** sur les
+    // landes — le miel de bruyère existe pour cette raison — et elle tombe
+    // dans la seconde soudure, quand la ronce est passée et que rien de
+    // ligneux n'a pris le relais.
+    floraison: { debutDJ: 1400, dureeDJ: 350, nectar: 1 },
     hauteurMaxM: 0.6,
     // Cohérent avec la mesure, à une réserve de méthode près. Les landes du
     // nord-est de l'Allemagne donnent ~10 cm/an d'allongement de pousse
@@ -1506,8 +1592,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Infradensité : IGN/Dupouey, « Châtaignier » — l'essence de taillis par
     // excellence, et la table est faite pour les taillis.
     bois: { densite: 0.47, prixOeuvreEurM3: 200, rejetteDeSouche: true },
+    // Juin, bien après les gels tardifs. Le châtaignier est une miellée de
+    // référence, et il tient longtemps ouvert.
+    floraison: { debutDJ: 750, dureeDJ: 250, nectar: 1 },
     fruits: {
-      floraisonDJ: 750, // juin : bien après les gels tardifs
       gelFatalC: -2,
       recolteWeek: 41,
       fenetreRecolteWeeks: 3,
@@ -1650,8 +1738,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 9 },
     // Infradensité : GWDD, mesure unique (0,65).
     bois: { densite: 0.65, prixOeuvreEurM3: 90, rejetteDeSouche: true },
+    // Il fleurit en AUTOMNE, en même temps qu'il mûrit les fruits de l'an
+    // passé (atlas : ressource des pollinisateurs). C'est la dernière table
+    // de l'année, et elle n'a pas de concurrente.
+    floraison: { debutDJ: 1150, dureeDJ: 300, nectar: 0.9 },
     fruits: {
-      floraisonDJ: 1150, // fleurit en automne (atlas : ressource des pollinisateurs)
       gelFatalC: -4,
       recolteWeek: 46,
       fenetreRecolteWeeks: 3,

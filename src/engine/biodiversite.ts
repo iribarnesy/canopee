@@ -18,7 +18,9 @@
  */
 
 import { getEspece } from "./especes";
+import { HERBACEES } from "./herbacees";
 import { crownRadiusM } from "./light";
+import { partFloraison } from "./phenologie";
 import type { TreeState } from "./trees";
 import { partHabitatDeTrogne } from "./trogne";
 
@@ -207,6 +209,66 @@ export function heterogeneiteVerticale(trees: readonly TreeState[], coteM: numbe
   return Math.min(1, somme / cellules / ECART_TYPE_REFERENCE_M);
 }
 
+/**
+ * Cumul de degrés-jours base 5 °C qu'une année tempérée atteint, et donc
+ * l'étendue de la saison de vol des pollinisateurs. Les stations du moteur
+ * tournent entre 1 700 et 2 000 ; 1 800 couvre l'année de février à octobre
+ * *(à calibrer)*.
+ */
+const SAISON_POLLINISATEURS_DJ = 1800;
+/** Découpage de cette saison : 30 °C·j, soit environ une semaine d'été. */
+const PAS_CALENDRIER_DJ = 30;
+
+/**
+ * ÉTALEMENT DES FLORAISONS ∈ [0,1] — critère J6, refait (#70).
+ *
+ * Ce que la mesure d'avant faisait : un ENSEMBLE de tranches de 250 °C·j, une
+ * par espèce ligneuse présente, divisé par quatre. Quatre défauts, et le
+ * premier suffit à la disqualifier.
+ *
+ *  1. **Elle comptait les anémophiles.** Un noisetier et un noyer entraient au
+ *     même titre qu'un pommier, alors que leur pollen part au vent et qu'aucun
+ *     insecte ne se déplace pour eux. Une noiseraie affichait des floraisons
+ *     étalées et ne nourrissait personne.
+ *  2. **Elle ignorait la strate basse**, qui est précisément ce qui nourrit
+ *     pendant les soudures.
+ *  3. **Elle ignorait la DURÉE.** Un ajonc qui tient six mois comptait pour une
+ *     tranche, comme un abricotier qui passe en dix jours.
+ *  4. **Elle comptait des espèces, pas une couverture.** Un pommier isolé parmi
+ *     trois cents hêtres valait une tranche pleine.
+ *
+ * Ce qu'elle fait maintenant : elle balaie la saison de vol et demande, à
+ * chaque pas, ce qui est OUVERT et ce que ça offre. Les sources s'additionnent
+ * et saturent — deux tables valent une table garnie —, et la note est la
+ * moyenne sur la saison. Un trou dans le calendrier se lit donc comme un trou,
+ * ce que l'ensemble de tranches ne savait pas faire.
+ */
+function etalementDesFloraisons(
+  partParEspece: ReadonlyMap<string, number>,
+  empriseHerbacee: readonly number[] | undefined,
+): number {
+  let somme = 0;
+  let pas = 0;
+  for (let dj = 0; dj < SAISON_POLLINISATEURS_DJ; dj += PAS_CALENDRIER_DJ) {
+    let offre = 0;
+    for (const [especeId, part] of partParEspece) {
+      const f = getEspece(especeId).floraison;
+      if (!f || f.nectar <= 0) continue;
+      offre += f.nectar * part * partFloraison(f.debutDJ, dj, f.dureeDJ);
+    }
+    for (const [i, h] of HERBACEES.entries()) {
+      const f = h.floraison;
+      if (!f || f.nectar <= 0) continue;
+      const emprise = empriseHerbacee?.[i] ?? 0;
+      if (emprise <= 0) continue;
+      offre += f.nectar * emprise * partFloraison(f.debutDJ, dj, f.dureeDJ);
+    }
+    somme += Math.min(1, offre);
+    pas++;
+  }
+  return pas > 0 ? somme / pas : 0;
+}
+
 /** Entropie de Shannon normalisée : 0 = une seule catégorie, 1 = tout équilibré. */
 function equitabiliteShannon(effectifs: readonly number[]): number {
   const total = effectifs.reduce((a, b) => a + b, 0);
@@ -232,6 +294,13 @@ export function indiceBiodiversite(
    * pas pénalisés pour une géométrie qu'ils n'ont pas.
    */
   coteM?: number,
+  /**
+   * Emprise moyenne de chaque herbacée sur la parcelle, dans l'ordre de
+   * `HERBACEES` (#70). OPTIONNEL : un essai qui décrit une liste d'arbres n'a
+   * pas de tapis, et l'indice se comporte alors comme si le sol était nu —
+   * ce qu'il faisait pour tout le monde avant ce lot.
+   */
+  empriseHerbacee?: readonly number[],
 ): IndiceBiodiversite {
   const vivants = trees.filter((t) => t.alive);
   // Les CHANDELLES comptent parmi les arbres-habitats, et pas qu'un peu : un
@@ -263,7 +332,12 @@ export function indiceBiodiversite(
   let surfaceSempervirente = 0;
   let surfaceTotale = 0;
   let gros = chandelles;
-  const moisFloraison = new Set<number>();
+  /**
+   * Surface de houppier par espèce : c'est elle, et non le nombre de tiges,
+   * qui dit ce qu'une espèce OFFRE en fleur. Un pommier isolé parmi trois
+   * cents hêtres ne nourrit pas une parcelle (#70).
+   */
+  const surfaceParEspece = new Map<string, number>();
 
   for (const t of vivants) {
     const espece = getEspece(t.especeId);
@@ -286,7 +360,7 @@ export function indiceBiodiversite(
     const surface = t.heightM * t.heightM;
     surfaceTotale += surface;
     if (!espece.lumiere.caduc) surfaceSempervirente += surface;
-    if (espece.fruits) moisFloraison.add(Math.floor(espece.fruits.floraisonDJ / 250));
+    surfaceParEspece.set(t.especeId, (surfaceParEspece.get(t.especeId) ?? 0) + surface);
   }
 
   const richesse = parEspece.size;
@@ -297,7 +371,11 @@ export function indiceBiodiversite(
   // ~20 t C/ha de bois mort est un objectif de forêt riche (ch4-A).
   const boisMort = Math.min(1, boisMortKgC / 1000 / surfaceHa / 20);
   const couvertPermanent = surfaceTotale > 0 ? surfaceSempervirente / surfaceTotale : 0;
-  const floraisonsEtalees = Math.min(1, moisFloraison.size / 4);
+  const partParEspece = new Map<string, number>();
+  if (surfaceTotale > 0) {
+    for (const [id, surf] of surfaceParEspece) partParEspece.set(id, surf / surfaceTotale);
+  }
+  const floraisonsEtalees = etalementDesFloraisons(partParEspece, empriseHerbacee);
   // L'ARRANGEMENT, enfin (issue #75) : la mosaïque et l'étagement local. Ils
   // ne coûtent rien aux appelants sans géométrie, qui les reçoivent à zéro.
   const spatial = coteM && coteM > 0 ? structureHorizontale(vivants, coteM) : undefined;

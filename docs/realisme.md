@@ -100,13 +100,13 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 8 | 4 | 0 | 12 |
 | F. Dynamique des peuplements | 13 | 3 | 3 | 19 |
-| G. Faune et santé | 10 | 1 | 0 | 11 |
+| G. Faune et santé | 11 | 0 | 0 | 11 |
 | H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
 | I. Carbone | 9 | 0 | 0 | 9 |
-| J. Biodiversité et structure | 7 | 1 | 0 | 8 |
-| **Total** | **122** | **20** | **4** | **146** |
+| J. Biodiversité et structure | 8 | 0 | 0 | 8 |
+| **Total** | **124** | **18** | **4** | **146** |
 
-**Score de réalisme : 122 pleins + 20 partiels sur 146 → 90 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 124 pleins + 18 partiels sur 146 → 91 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -173,8 +173,10 @@ recouvrement devient local, et une futaie vraiment dense redevient testable)
 entrée omise par son propre lot, rattrapée ici)
 → 90 % (le houppier suit le diamètre, pas la hauteur : le port serré, et
 B10 est enfin complet)
-→ **90 % (le réseau mycorhizien cesse de coûter 12 % du volume sur sol
-pauvre — aucun point gagné, un ✅ qui était faux réparé)**.*
+→ 90 % (le réseau mycorhizien cesse de coûter 12 % du volume sur sol
+pauvre — aucun point gagné, un ✅ qui était faux réparé)
+→ **91 % (le calendrier des fleurs : fleurir cesse d'être fructifier, et sept
+espèces qui nourrissent sans rien donner à récolter entrent au calendrier)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -325,7 +327,7 @@ maladie-là, pas une preuve de santé.*
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; l'aulnaie pure se fait décimer sur chacune des trois graines, le mélange y perd trois à quatre fois moins d'aulnes (0,34 / 0,34 / 0,23) et y écrête la pullulation d'un facteur 2,8 à 3,1. Les deux sont épinglés GRAINE PAR GRAINE depuis #68, et non plus en moyenne : l'écart de mortalité avait failli s'annuler sur une graine sans que la moyenne le dise |
-| G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison. Les espèces herbacées existent maintenant (`herbacees.ts`) mais aucune ne déclare de floraison : la fiche s'arrête au calendrier FOLIAIRE |
+| G4 | Les pollinisateurs conditionnent la fructification | ✅ | Le service demande désormais **un gîte ET une table**, et le plus rare décide : `min(habitat, ressourceFlorale)` (`tick.ts`, `floraison.test.ts`). L'habitat dit où l'insecte vit — essences, strates, herbe, bois mort ; la ressource florale dit ce qu'il a eu à manger, par une MÉMOIRE de sept semaines agrégée sur la fenêtre de butinage (blocs de 10 m, voisinage 3×3, celle-là même que `ravageurs.ts` emploie pour l'habitat). **Le témoin est le résultat** : neuf pommiers, vingt-deux ans, trois graines, et deux haies rigoureusement égales — même nombre de tiges, mêmes espèces mellifères, même couvert. Celle qui fleurit de février à l'automne rend 327,6 kg, celle qui fleurit toute en mai 263,4 kg, le verger nu 255,6 kg : **+28 % pour le calendrier, +3 % pour la seule présence de voisins**. Coût mesuré : +6 % de temps par semaine simulée. **Et un second banc, tout différent, donne le même chiffre** : deux pommiers entourés de six arbustes, douze ans — une haie MELLIFÈRE (prunellier, aubépine, ronce) rend 14,74 kg contre 11,52 kg pour le verger nu, soit +28,0 %, quand la même haie ANÉMOPHILE (noisetier, chêne, bouleau) n'en rend que 11,62 kg, +0,9 %. Cet essai-là passait AVANT le lot avec la seule haie anémophile : le moteur affirmait que trois arbres pollinisés par le vent améliorent la nouaison d'un verger de 15 %, parce que le service ne lisait que la richesse en essences. **Limite** : pas d'insectes individualisés — ni espèces, ni populations, ni distance de butinage propre à chacune ; la fenêtre est celle des auxiliaires, faute d'en avoir mesuré une autre |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
 | G10 | Le sanglier retourne le sol et mange la glandée — un herbivore qui FAVORISE aussi la régénération | ✅ | `sanglier.ts` ; `sanglier.test.ts` — 5 % de la parcelle retournée par an à densité de référence (relevés : 0,2-0,7 %/an en prairie, 7-11 %/an en forêt), en automne et en hiver, sur les cellules qui offrent de la glandée, du couvert et un sol humide. **Deux effets de signe opposé, et aucun n'est écrit par espèce** : il mange ce qui tombe et reste (les graines dont le mode de dissémination est `geai` ou `gravite`), il ouvre un lit de germination pour ce qu'apporte le vent. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à densité ordinaire, 22 sous forte densité — difficile, jamais impossible |
 | G11 | Un boutis est un ENFOUISSEMENT, pas une destruction : la litière passe au pool lent | ✅ | le carbone enfoui rejoint l'humus et l'azote le pool minéral ; le stock d'humus MONTE avec la densité de sangliers. Et la structure y gagne — un boutis casse la croûte, ce qu'on n'attend pas d'un dégât. Ce qu'il coûte est ailleurs : la terre est à nu, donc elle part |
@@ -385,7 +387,7 @@ inventaire.
 | J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | ✅ | strates, sempervirence, et depuis l'issue #75 l'ÉTAGEMENT LOCAL (`heterogeneiteVerticale`) — l'écart-type des hauteurs dans un voisinage de 3 m, qui distingue enfin une forêt étagée d'un damier de blocs monostrates que le décompte de strates notait pareil : 0,00 contre 0,68 |
 | J9 | L'ARRANGEMENT compte autant que la composition : lisière, cœur, mosaïque | ✅ | `structureHorizontale` ; `mosaique.test.ts` — à espèces, nombre et âge identiques, une mosaïque de bosquets note mieux qu'un bloc et qu'une plantation régulière (0,79 / 0,23 / 0,00). **Et le mitage ne paie pas** : des houppiers disjoints donnent 94 % de lisière et zéro cœur, donc zéro. La courbe n'est pas ajustée — c'est le PRODUIT lisière × cœur, qui tombe de l'énoncé « il faut les deux » |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
-| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C). `indiceBiodiversite` ne compte que les floraisons LIGNEUSES ; la strate basse, qui est justement ce qui nourrit en soudure, n'y entre pas |
+| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | ✅ | `biodiversite.ts:etalementDesFloraisons` balaie la saison de vol par pas de 30 °C·j et demande, à chaque pas, ce qui est OUVERT et ce que ça offre. Quatre défauts de la mesure d'avant tombent ensemble : elle comptait les **anémophiles** (une noiseraie affichait des floraisons étalées sans nourrir personne — le noisetier et le noyer déclarent maintenant `nectar: 0`), elle ignorait la **strate basse**, elle ignorait la **durée** (l'ajonc tient six mois, l'abricotier dix jours), et elle comptait des espèces au lieu d'une couverture (un pommier isolé parmi trois cents hêtres valait une tranche pleine). **Ce qui a débloqué le critère est un découpage** : la floraison a quitté le bloc `fruits`, si bien que sept espèces qui nourrissent sans rien donner à récolter — aubépine, saule, ajonc, genêt, callune, houx, fusain — cessent d'être invisibles. À elles deux, l'ajonc et la callune nourrissent une lande atlantique presque toute l'année. **Limite** : la strate basse n'apporte que sa vernale, les deux autres herbacées étant des graminées ; la soudure d'ÉTÉ reste donc à la charge des ligneux, faute d'une herbacée entomophile tardive |
 
 ## Ce qui débloquerait le plus de critères
 
@@ -2083,6 +2085,86 @@ pas le voir : il appelait la fonction avec des entiers.
   réservoir fini à seuil de débordement, et non comme une rugosité — ce que
   fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
   des barrages de débris.
+
+## Le calendrier des fleurs : on ne récolte pas l'ajonc
+
+Le moteur savait qu'un arbre fleurit — il en tirait un gel tardif et un fruit.
+Il ne savait pas que cette fleur NOURRIT quelqu'un, ni que ce quelqu'un doit
+manger le reste de l'année pour être là le jour venu.
+
+### Le verrou était un découpage, pas un mécanisme manquant
+
+La date de floraison vivait dans le bloc `fruits`, réservé aux essences dont on
+récolte quelque chose. Onze espèces en portaient une. Sept qui nourrissent
+réellement les pollinisateurs n'en avaient **aucune** : aubépine, saule blanc,
+ajonc, genêt, callune, houx, fusain.
+
+Ce ne sont pas des oublis de saisie, c'est la conséquence du découpage. L'ajonc
+fleurit de décembre à juin et la callune en août ; à eux deux ils nourrissent
+les abeilles d'une lande atlantique presque toute l'année, et le moteur n'en
+savait rien **parce qu'on n'en récolte rien**. Le saule est la ressource de
+sortie d'hiver, l'aubépine la nappe blanche de mai — entre le pommier (fin
+avril) et la ronce (juin), le calendrier ne connaissait que le noyer, qui est
+anémophile. Bâtir la ressource florale là-dessus aurait fabriqué des trous qui
+n'existent pas.
+
+### Le nectar est le contenu du lot
+
+Le champ vaut **zéro pour le noisetier et le noyer**. Ils fleurissent
+abondamment, leur pollen part au vent, aucun insecte ne se déplace pour eux — et
+`indiceBiodiversite` les comptait comme une ressource. Une noiseraie affichait
+des floraisons étalées sans nourrir personne. Deux des trois herbacées sont dans
+le même cas : ce sont des graminées, et c'est pourquoi la strate basse
+n'apporte ici que sa vernale.
+
+La **durée** sépare de la même façon une ressource ponctuelle d'une ressource de
+fond : l'abricotier passe en dix jours, l'ajonc tient six mois. La constante
+unique de 100 °C·j ne savait pas le dire.
+
+### Le témoin est le résultat
+
+Neuf pommiers, vingt-deux ans, trois graines, trois voisinages. Les deux haies
+sont rigoureusement comparables — même nombre de tiges, mêmes espèces
+mellifères, même couvert, même habitat ; seul le calendrier change.
+
+| voisinage | récolte | ressource florale au centre |
+|---|---|---|
+| aucun | 255,6 kg | 0,029 |
+| haie fleurissant **toute en mai** | 263,4 kg — +3,1 % | 0,059 |
+| haie fleurissant **de février à l'automne** | **327,6 kg — +28,2 %** | 0,159 |
+
+C'est le calendrier qui travaille, pas la présence de voisins.
+
+### Deux grandeurs fausses, que seule la mesure pouvait dire
+
+**La ressource mesurait une quantité, pas une adéquation.** `min(habitat,
+florale)` prétend arbitrer entre un gîte et une table ; mesuré, l'habitat
+tournait à 0,5 et la ressource à 0,10 dans le meilleur cas. Le minimum ne
+départageait donc rien, il remplaçait silencieusement l'habitat — un facteur de
+moins, pas un de plus. Un seuil d'adéquation la rend sans dimension : la mémoire
+devient « quelle part de la saison cette cellule a-t-elle eu de quoi nourrir »,
+ce qui est comparable à l'habitat, et ce qui est aussi, mot pour mot, ce que J6
+appelle « sans rupture ».
+
+**Et le nectar ne portait pas plus loin qu'un houppier.** Même après le seuil,
+la ressource plafonnait à 0,15 au centre du verger : la haie est à seize mètres
+et un disque d'aubépine fait quatre mètres, donc elle ne comptait pour rien.
+Le moteur avait pourtant déjà appris cela et l'avait écrit — `ravageurs.ts`,
+`BLOC_AUXILIAIRES_M` : « les auxiliaires ne perçoivent pas leur environnement au
+mètre carré ; évaluer la richesse cellule par cellule donnait toujours une seule
+essence ». La ressource florale reprend donc la même fenêtre, qui est de surcroît
+celle de l'habitat avec lequel on la compare.
+
+### Ce que ça coûte, et une mesure qui a failli mentir
+
+**+6 % de temps par semaine simulée** (8,02 → 8,52 ms, hêtraie-aubépine 30 × 30
+de quarante ans, médiane de cinq passes). Le premier relevé annonçait +30 %, et
+il était faux : l'étalon avait été mesuré dans un ARBRE DE TRAVAIL SÉPARÉ, avec
+son `node_modules` en lien symbolique. Ce seul changement d'environnement
+déplaçait le chiffre de 25 % — cinq fois l'effet cherché. Mesuré dans le même
+répertoire, avec le même script, l'écart tombe à +6 %, et il recoupe exactement
+le témoin par neutralisation du bloc (+0,43 ms). **Un étalon de temps mesuré
+ailleurs n'est pas un étalon.**
 
 ## Le réseau mycorhizien rendait moins que rien, et le bilan était exact
 
