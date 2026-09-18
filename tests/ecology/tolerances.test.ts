@@ -78,10 +78,29 @@ describe("azote (même limon, riche vs pauvre)", () => {
   const riche = runYears(LIMON_RICHE, YEARS, { plantations });
   const pauvre = runYears(LIMON_PAUVRE_N, YEARS, { plantations });
 
-  it("le hêtre (exigeant, non fixateur) pousse nettement moins sur sol pauvre en N", () => {
-    const hRiche = meanHeight(riche, "fagus_sylvatica", 300);
-    const hPauvre = meanHeight(pauvre, "fagus_sylvatica", 300);
-    expect(hPauvre).toBeLessThan(hRiche * 0.8);
+  it("le hêtre (exigeant, non fixateur) paie la pauvreté, le fixateur non", () => {
+    const perte = (especeId: string) =>
+      1 - meanHeight(pauvre, especeId, 300) / meanHeight(riche, especeId, 300);
+    const hetre = perte("fagus_sylvatica");
+    const aulne = perte("alnus_glutinosa");
+    // **L'ÉNONCÉ EST UN CONTRASTE, pas une valeur absolue.** L'ancien seuil
+    // exigeait que le hêtre perde plus de 20 % de sa hauteur sur sol pauvre ;
+    // il en perdait 21,0 %, soit une marge de 1,3 % — le seuil n'était pas une
+    // contrainte sur le moteur, c'était une photographie. Le correctif des
+    // mycorhizes (#115), qui a rendu au sol pauvre l'azote qu'il perdait, l'a
+    // fait tomber à 18,0 % et l'essai avec lui.
+    //
+    // Ce que l'essai veut dire vit dans la comparaison avec l'AULNE, planté au
+    // même moment dans les deux mêmes stations : un fixateur ne dépend pas de
+    // l'azote du sol, donc il ne doit rien payer. Mesuré, hêtre 18,0 %, aulne
+    // −0,5 % (il fait même un cheveu de mieux sur sol pauvre, où il est moins
+    // concurrencé). L'écart des deux pénalités annule tout ce qui n'est pas
+    // l'exigence en azote — le climat, la densité, l'ombre mutuelle — et il ne
+    // se cale sur rien : dix points, contre dix-huit mesurés.
+    expect(hetre - aulne).toBeGreaterThan(0.1);
+    // Et le hêtre paie DANS L'ABSOLU, sans quoi le contraste tiendrait avec un
+    // aulne qui prospère et un hêtre qui ne sent rien.
+    expect(hetre).toBeGreaterThan(0.1);
   });
 
   it("l'aulne (fixateur) est quasi insensible à la pauvreté en azote", () => {

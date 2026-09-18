@@ -61,7 +61,55 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le port serré, #105)
+## Ce que le dernier lot a appris (les mycorhizes, #115)
+
+**Un invariant ne garde que le côté qu'il ferme.** Le bilan d'azote du tick
+vérifiait « minéralisation = prélèvements + lessivage + Δstock » depuis toujours,
+C1 était ✅, et 11,6 % de l'azote prélevé sur un limon pauvre sortait du sol pour
+n'arriver dans aucune plante. Le bilan était EXACT : « prélèvements » compte ce
+qui sort, et ce qui sort sortait bien. **Un transfert a deux côtés ; l'invariant
+n'était écrit que sur celui du départ.** Quand une grandeur passe d'un pool à un
+autre, écrire l'égalité du départ ET celle de l'arrivée — ici deux flux de plus
+(`uptakeArbresKgHa`, `uptakeHerbeKgHa`) et une ligne d'essai.
+
+**Le défaut n'était pas celui que l'issue décrivait, et l'issue était de moi.**
+Elle diagnostiquait un mécanisme mal placé — un gain porté sur une fraction
+d'accès ne crée rien, il accélère une course — et proposait de le déplacer vers
+la minéralisation. Vrai, et hors sujet : la cause était que le gain figurait dans
+la passe de DEMANDE et pas dans celle de SERVICE. Le peuplement vidait la cellule
+à hauteur d'une demande gonflée et se servait sur une demande non gonflée.
+**Relire le code avant d'appliquer le remède que l'issue propose, même quand
+c'est soi qui l'a écrite** : une issue est un signalement, pas un diagnostic.
+
+**La même grandeur calculée deux fois est un défaut en attente.** Le correctif
+n'ajoute pas le facteur manquant au second endroit : il RANGE le gain une fois
+par arbre (`gainMyco[t]`, à côté de `rootCells` et `rootFractions`) et fait lire
+les deux passes dans le tableau. La différence compte — la première forme se
+remet à diverger au prochain qui touche une passe, la seconde ne le peut plus.
+La demande d'azote du tapis a été rangée de la même façon, parce qu'elle avait
+exactement la même faille en germe.
+
+**Le témoin par neutralisation a donné un ZÉRO EXACT, et c'est ce qui a permis de
+conclure.** Avec `GAIN_ABSORPTION = 0`, le manquant tombe à 0,0 g sur quatre
+campagnes — pas « petit », nul. Un écart résiduel aurait voulu dire qu'une
+seconde cause traînait. **Quand un témoin peut rendre un zéro exact plutôt qu'un
+petit nombre, le construire ainsi** : il transforme une corrélation en
+démonstration.
+
+**Reproduire la panne AVANT d'écrire le garde-fou.** La nouvelle propriété a été
+lancée dans les deux sens : elle passe avec le correctif, et elle échoue sur les
+quatre stations sans lui (écarts de 8·10⁻⁷ à 4·10⁻⁵ kg/ha). Un essai qu'on n'a
+jamais vu rouge ne garde rien de démontré.
+
+**Et ma propre mesure intermédiaire était fausse, sur deux graines.** J'avais
+annoncé un volume « bruité, +1,6 % et −1,2 % » sur sol pauvre, sur un banc de
+trente-six tiges avec une formule de volume écrite à la main. Refait sur le banc
+de l'issue — vingt-cinq tiges, `volumeTigeM3` du moteur, cinq graines — c'est
++2,33 à +3,27 %, cinq fois sur cinq. **Deux graines et un thermomètre improvisé
+ne font pas une mesure**, même pour se faire une idée : l'idée qu'on s'en fait
+survit ensuite à la vraie mesure si on ne la refait pas.
+
+## Ce qu'un lot plus ancien a appris (le port serré, #105)
 
 **Mesurer la grandeur candidate AVANT de la choisir, et accepter qu'elle perde.**
 Le premier jet faisait porter le resserrement sur la PROFONDEUR de houppier
@@ -425,6 +473,29 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce qui reste de #115 — le réseau n'AJOUTE toujours pas d'azote.** Le correctif
+lui rend un signe juste (+2,79 % de volume sur limon pauvre, +0,09 % sur riche)
+mais le mécanisme reste redistributif : ce que l'arbre gagne vient du tapis
+(−5 %) et du lessivage évité. Le service que la littérature met en avant est
+autre — les hyphes atteignent l'azote ORGANIQUE et les pores qu'une racine
+n'occupe pas, ce qui ajoute au peuplement. Il y faudrait un pool organique
+accessible au prélèvement, que le moteur ne tient pas : la litière se
+minéralise, elle ne se prospecte pas. Et le gain sur l'EAU et le PHOSPHORE, que
+`mycorhizes.ts` diffère depuis l'origine, attend toujours — relire dans ce
+module pourquoi la première tentative (élargir le rayon prospecté de 15 %) a été
+refusée, elle diluait l'asymétrie entre dominants et dominés au point que le
+hêtre n'atteignait plus la canopée.
+
+**Un second banc pour « Planter dans un labour ».** Le verdict a été corrigé
+dans ce lot, mais l'expérience elle-même tourne sur un limon RICHE, où l'azote
+ne limite pas : la hauteur des plants y est identique au centimètre avec et sans
+labour (4,96 m à cinq ans), et elle l'était déjà avant le correctif. La courbe
+montre donc la moitié de la question — le réseau se coupe vite et revient
+lentement — et le verdict le dit désormais au lieu de conclure que labourer est
+gratuit. L'autre moitié demande le même banc sur limon pauvre en azote, où le
+réseau vaut +2,8 % de volume. C'est une expérience à ajouter, pas une phrase à
+réécrire, donc ça ne tenait pas dans ce lot.
 
 **Ce qui reste de #105 — la racine et la transpiration de la perche.** Le
 houppier suit le diamètre ; le disque racinaire et la demande en eau restent sur

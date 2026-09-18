@@ -450,7 +450,18 @@ export interface TickFluxes {
   /** développement moyen des réseaux mycorhiziens ∈ [0,1] */
   mycorhizesMoyen: number;
   mineralizationKgHa: number;
+  /** N SORTI du sol cette semaine (arbres + tapis), kg/ha */
   uptakeKgHa: number;
+  /**
+   * N réellement SERVI aux arbres non fixateurs, kg/ha. Avec `uptakeHerbeKgHa`,
+   * il doit retrouver `uptakeKgHa` au gramme près : le sol ne perd rien qui
+   * n'arrive dans une plante. L'égalité est tenue par
+   * `tests/properties/tick-conservation.test.ts` — elle manquait, et un
+   * huitième de l'azote d'un limon pauvre s'évaporait entre les deux (#115).
+   */
+  uptakeArbresKgHa: number;
+  /** N réellement servi à la strate herbacée, kg/ha */
+  uptakeHerbeKgHa: number;
   leachedKgHa: number;
   /** N retourné au sol par la chute des feuilles (recyclage interne), kg/ha */
   litterfallKgHa: number;

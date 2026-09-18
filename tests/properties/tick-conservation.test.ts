@@ -85,6 +85,15 @@ function checkConservation(sc: StationClimat, years: number) {
         fluxes.depositionKgHa,
       6,
     );
+
+    // **ET CE QUI SORT DU SOL DOIT ARRIVER DANS UNE PLANTE** (#115). Le bilan
+    // ci-dessus ferme le côté SOL : il compte `uptakeKgHa`, c'est-à-dire ce que
+    // le partage RETIRE. Il ne dit rien de ce que les plantes REÇOIVENT, et
+    // c'est par là qu'un huitième de l'azote d'un limon pauvre s'évaporait —
+    // la demande d'un arbre était gonflée par son réseau mycorhizien pour
+    // vider la cellule, puis servie sans ce gain. Personne ne recevait
+    // l'écart, et aucune propriété ne le regardait.
+    expect(fluxes.uptakeArbresKgHa + fluxes.uptakeHerbeKgHa).toBeCloseTo(fluxes.uptakeKgHa, 9);
     state = next;
   }
 }

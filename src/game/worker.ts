@@ -414,6 +414,8 @@ function emptyFluxes(): TickFluxes {
     mycorhizesMoyen: 0,
     mineralizationKgHa: 0,
     uptakeKgHa: 0,
+    uptakeArbresKgHa: 0,
+    uptakeHerbeKgHa: 0,
     leachedKgHa: 0,
     phosphoreMoyenGM2: 0,
     potassiumMoyenGM2: 0,
