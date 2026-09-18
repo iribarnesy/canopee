@@ -2186,8 +2186,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const degats = degatsSurArbre(tree, pression);
     if (degats <= 0) return tree;
     const stress = tree.stress + degats;
-    if (stress < STRESS_LETHAL) return { ...tree, stress };
-    return { ...tree, stress, alive: false, causeMort: imputer(tree, "ravageurs", stress) };
+    // Le dégât garde son nom sur l'arbre VIVANT (#153). Sans ce compteur, il
+    // se fondait dans `stress` et n'était nommé qu'à la mort — or l'arbre
+    // survit presque toujours, donc il ne l'était jamais.
+    const stressRavageurs = (tree.stressRavageurs ?? 0) + degats;
+    if (stress < STRESS_LETHAL) return { ...tree, stress, stressRavageurs };
+    return {
+      ...tree,
+      stress,
+      stressRavageurs,
+      alive: false,
+      causeMort: imputer(tree, "ravageurs", stress),
+    };
   });
 
   // ── 5 quinquies. Maladies (§7.4) ──────────────────────────────────────────
@@ -2214,8 +2224,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         getEspece(tree.especeId).ravageurs.sensibilite;
       if (degats <= 0) return tree;
       const stress = tree.stress + degats;
-      if (stress < STRESS_LETHAL) return { ...tree, stress };
-      return { ...tree, stress, alive: false, causeMort: imputer(tree, "maladie", stress) };
+      const stressMaladie = (tree.stressMaladie ?? 0) + degats;
+      if (stress < STRESS_LETHAL) return { ...tree, stress, stressMaladie };
+      return {
+        ...tree,
+        stress,
+        stressMaladie,
+        alive: false,
+        causeMort: imputer(tree, "maladie", stress),
+      };
     });
   }
 

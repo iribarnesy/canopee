@@ -73,6 +73,15 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     diametreCm: t.diametreCm,
     ageWeeks: t.ageWeeks,
     stress: t.stress,
+    // L'origine du stress, relayée telle quelle (#153). `causeLente` existait
+    // déjà sur l'arbre et n'arrivait pas jusqu'ici : le moteur la calculait
+    // chaque semaine puis elle était jetée. La livrer sans elle aurait donné un
+    // journal capable de dire « attaqué par des ravageurs » et muet sur « il
+    // dépérit de sécheresse » — la moitié la plus fréquente.
+    stressLent: t.stressLent,
+    causeLente: t.causeLente,
+    stressRavageurs: t.stressRavageurs,
+    stressMaladie: t.stressMaladie,
     fruitsKg: t.fruitsKg,
     hauteurElagueeM: t.hauteurElagueeM,
     // Absente sur un arbre qui vient de naître : il est branchu jusqu'en bas.

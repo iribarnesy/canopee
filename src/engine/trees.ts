@@ -105,6 +105,32 @@ export interface TreeState {
    * dire à quoi.
    */
   causeLente?: CauseMort;
+  /**
+   * Stress accumulé par les RAVAGEURS, et son jumeau `stressMaladie` pour les
+   * maladies (#153). Deux sources rapides qui, avant ce champ, s'ajoutaient à
+   * `stress` sans laisser de nom : l'arbre ne pouvait dire de quoi il souffrait
+   * qu'en en MOURANT, par `causeMort`. Mesuré sur soixante abricotiers pendant
+   * vingt-cinq ans : 592 unités de dégâts infligées, aucune nommée, parce
+   * qu'aucun arbre n'en était mort.
+   *
+   * Ils s'amortissent AU PRORATA comme `stressLent`, et par le même calcul :
+   * une cicatrisation efface du stress sans savoir d'où il venait, donc elle en
+   * efface la même proportion de chaque origine.
+   *
+   * DEUX CHAMPS PLUTÔT QU'UN REGISTRE `Partial<Record<CauseMort, number>>`, qui
+   * serait extensible et se lirait mieux : il coûterait un objet de plus par
+   * arbre et par semaine, dans la boucle la plus chaude du moteur, pour nommer
+   * deux causes. Les deux seules sources de stress anonymes sont ici — le
+   * frottis pose déjà `frotteSemaine` et émet son geste, la famine et les
+   * facteurs de station passent par `stressLent`. Le jour où une troisième
+   * apparaît, ce sera le moment de repeser ce choix, pas avant.
+   *
+   * Optionnels pour la même raison que `stressLent` : compteurs dérivés, pas
+   * états fondamentaux ; absent se lit « zéro ».
+   */
+  stressRavageurs?: number;
+  /** Stress accumulé par les MALADIES — voir `stressRavageurs`. */
+  stressMaladie?: number;
   alive: boolean;
   /** azote acquis depuis la dernière chute des feuilles, g (recyclé en litière) */
   uptakeYearG: number;
@@ -1316,6 +1342,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // Tout ce que cette fonction ajoute est LENT — la famine et les facteurs de
   // station — donc tout ce qu'elle ajoute alimente aussi `stressLent` (#103).
   let stressLent = tree.stressLent ?? 0;
+  // Les deux origines RAPIDES, remplies ailleurs (tick.ts §5 quater et
+  // quinquies) : elles ne gagnent rien ici, mais elles doivent s'amortir avec
+  // les autres (#153).
+  let stressRavageurs = tree.stressRavageurs ?? 0;
+  let stressMaladie = tree.stressMaladie ?? 0;
   const usure = puisementDesReserves * season * USURE_PAR_SEMAINE;
   const parLeManqueSemaine =
     survivalFactor < STRESS_ONSET ? (STRESS_ONSET - survivalFactor) * 5 : 0;
@@ -1325,9 +1356,17 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     const apres = Math.max(0, stress - RECUPERATION_STRESS * season * (1 - puisementDesReserves));
     // AU PRORATA : la cicatrisation efface du stress sans savoir d'où il
     // venait, donc elle en efface la même proportion de chaque origine. Sans
-    // ce partage, un arbre qui cicatrise verrait sa part lente fondre plus vite
-    // ou moins vite que l'autre, et l'attribution dériverait toute seule.
-    stressLent = stress > 0 ? (stressLent * apres) / stress : 0;
+    // ce partage, un arbre qui cicatrise verrait une origine fondre plus vite
+    // que l'autre, et l'attribution dériverait toute seule.
+    //
+    // Le rapport se calcule UNE FOIS et s'applique à toutes les origines : la
+    // règle est « le stress a reculé d'autant, donc chaque provenance recule
+    // d'autant », et la recopier par origine serait l'occasion d'en oublier une
+    // le jour où il y en aura une de plus.
+    const rapport = stress > 0 ? apres / stress : 0;
+    stressLent *= rapport;
+    stressRavageurs *= rapport;
+    stressMaladie *= rapport;
     stress = apres;
   }
   const alive = stress < STRESS_LETHAL;
@@ -1370,6 +1409,8 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
       diametreCm,
       stress,
       stressLent,
+      stressRavageurs,
+      stressMaladie,
       causeLente,
       alive,
       rootDepthCm,
