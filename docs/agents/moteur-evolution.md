@@ -61,7 +61,59 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la fertilisation, #140)
+## Ce que le dernier lot a appris (le préavis de refus, #139)
+
+Un lot sans écologie : le jeu voulait dire « ce clic sera refusé, et voici
+pourquoi » AVANT le clic, ce qui demande de savoir si `applyAction` refuserait
+sans l'appliquer. Aucun critère de `realisme.md` ne bouge — ce lot n'affirme
+rien sur le monde, et il vaut mieux l'écrire que de gonfler le référentiel d'une
+ligne qui n'y a pas sa place.
+
+**Mesurer avant de concevoir : la parade prudente était la seule à être
+impossible.** Deux chemins s'offraient. Extraire de chaque `applyXxx` sa
+décision de refus donnait une règle unique, au prix d'une réécriture des vingt
+et une actions. Appeler `applyAction` et ne garder que les refus ne pouvait pas
+se désynchroniser, mais supposait deux choses. Les deux ont été mesurées plutôt
+que pariées : `applyAction` coûte 1,8 ms au pire sur une parcelle pleine, contre
+**53 ms** pour copier l'état d'abord. La copie défensive — le réflexe — coûtait
+trente fois le danger qu'elle écartait, et elle seule rendait le préavis
+impossible. **Quand deux conceptions s'opposent sur un risque, le chiffre qui
+tranche est souvent celui du coût, pas celui du risque.**
+
+**Un chemin de refus ne prouve rien sur le chemin de travail.** Ma première
+sonde déclarait les vingt-cinq actions pures. Elle mentait : onze d'entre elles
+avaient été REFUSÉES — pas de broyat en stock, hors fenêtre de semis, l'engin
+qui ne manœuvre pas — et une action refusée rend l'état d'entrée tel quel, donc
+passe trivialement. Le code qui écrit, le seul qui pourrait muter, n'avait
+jamais tourné. Il a fallu construire un état par action pour la faire
+travailler : des charmes pour trogner, une lande sableuse et trente ans pour le
+liège, un blé semé puis mûri pour la moisson. **Un essai de non-mutation qui ne
+fait pas TRAVAILLER le code n'éprouve rien.**
+
+**Un essai doit vérifier sa propre prémisse, et ça a servi dans l'heure.** Chaque
+cas déclare ce qu'il attend — `travail` ou `refus` — et un premier essai vérifie
+que c'est bien ce qui se produit. En réduisant la parcelle de 100 à 40 m pour
+tenir le coût, le cas « labourer entre des arbres serrés » a cessé d'être
+refusé : moins d'arbres, l'engin passe. Sans cette vérification il serait resté
+vert en n'éprouvant plus rien. **Un cas qui cesse d'atteindre ce qu'il visait ne
+se signale jamais tout seul.**
+
+**Une propriété devient un contrat quand le compilateur et la suite la
+tiennent.** La table des cas est un `Record<GameAction["type"], Cas[]>` : une
+action neuve qu'on oublierait ne compile pas — vérifié en retirant une clé. Et
+l'essai attrape bien une écriture en place — vérifié en en injectant une, qui
+ressort nommée (`.soil.mineralNG[0] : 3,687 → 4,687`). **Les deux contrôles se
+font dans les deux sens : qu'il échoue quand il doit, pas seulement qu'il passe.**
+
+**Le pari change de nature quand il change de côté de la frontière.** L'issue
+refusait que le jeu appelle `applyAction` et jette l'état : « le jeu n'a pas le
+droit de parier sur du code dont il n'est pas responsable. » C'est juste, et
+c'est pourquoi `prevoirAction` vit dans le moteur. Le pari n'a pas disparu, il a
+changé de propriétaire — et celui-là peut le défendre, parce que c'est son code
+et qu'il a une suite pour ça. **Une garantie qu'un module ne peut pas donner,
+son voisin la donne parfois sans effort.**
+
+## Ce qu'un lot plus ancien a appris (la fertilisation, #140)
 
 **Une courbe de réponse ne s'écrit pas, elle se vérifie.** L'apport remplit le
 pool d'azote, et le rendement y répond par la satisfaction de la strate — la
@@ -632,6 +684,11 @@ montre — un gradient monotone sur trois couverts — et non ce qu'on espérait
 
 ## File d'attente
 
+**Ce que #139 a débloqué chez le voisin.** `prevoirAction` existe : la seconde
+moitié de #120 — le viseur qui passe au rouge avec la raison sous le curseur —
+ne dépend plus du moteur. Rien à faire de ce côté, sinon ne pas casser le
+contrat de non-mutation que `tests/unit/prevoir.test.ts` tient.
+
 **Ce qui reste de #140 — le LER, enfin faisable.** La fertilisation lève le
 verrou : une monoculture de blé fertilisée EST un témoin valable, et le gradient
 est désormais de l'ombre pure. H21 (❌) demande maintenant le dispositif
@@ -642,17 +699,13 @@ Dépend de **#141** (maintenance) pour le niveau : tant que le tassement
 s'épingle à 1, le blé pur plafonne à 4,88 t/ha au lieu de 8-9, et un LER
 calculé sur deux termes également rabotés serait juste par accident.
 
-**Ce qui reste de #136 — la FERTILISATION, et c'est le verrou suivant.** Le
-moteur n'a aucun geste pour apporter de l'azote à une culture : un blé continu
-ne peut donc que s'épuiser, ce qui est juste mais qui interdit de séparer
-l'ombre de l'azote dans une allée — E13 reste 🟡 pour cette seule raison, et le
-LER (H21, ❌) n'aura pas de sens tant qu'une monoculture de blé voudra dire
-« blé qui se mine ». Manquent aussi, dans l'ordre où ils se paient : le retour
-de la PAILLE, qui explique probablement que le moteur glisse sous la parcelle
-nue de Broadbalk ; une saturation lumineuse rapportée au rayonnement de la
-STATION, sans quoi le blé du plateau picard reste aussi tolérant à l'ombre que
-celui du Midi ; et une seconde culture, dont le coût se mesure avant de
-l'ajouter.
+**Ce qui reste de #136 après la fertilisation.** Le verrou que cette entrée
+annonçait — aucun geste pour apporter de l'azote — est levé depuis #140, et E13
+est passé ✅. Restent trois manques, dans l'ordre où ils se paient : le retour de
+la PAILLE, qui explique probablement que le moteur glisse sous la parcelle nue
+de Broadbalk ; une saturation lumineuse rapportée au rayonnement de la STATION,
+sans quoi le blé du plateau picard reste aussi tolérant à l'ombre que celui du
+Midi ; et une seconde culture, dont le coût se mesure avant de l'ajouter.
 
 **Ce qui reste de #70 — la soudure d'ÉTÉ, et l'ortie.** Le calendrier est là et
 G4/J6 sont tombés, mais la strate basse n'y apporte que sa vernale : les deux
