@@ -1,11 +1,14 @@
 /**
  * Actions du joueur (docs/regles.md §9-10) et économie V0 : argent (€) et
- * temps de travail (heures, plafond hebdomadaire par UTH). Les actions sont
+ * temps de travail (heures, seuil hebdomadaire de facturation par UTH — voir
+ * `depassementHoraire`). Les actions sont
  * DATÉES (semaine absolue) : le journal d'actions + la seed + la station
  * forment la sauvegarde rejouable (docs/stack.md).
  * Une action refusée l'est déterministiquement, avec sa raison ; une action
  * partiellement exécutée traite ses éléments dans l'ordre et s'arrête au
- * plafond (heures ou découvert).
+ * découvert. LES HEURES N'ARRÊTENT PLUS RIEN (#133) : dépasser le plafond
+ * hebdomadaire ne se refuse pas, ça se facture — le moteur rapporte le
+ * dépassement et son prix, l'arbitrage revient au joueur.
  */
 
 import { CHAULAGE_EQ_M2, capaciteEchangeEqM2, phDepuisSaturation } from "./bases";
@@ -21,11 +24,18 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { forEachDiscCell } from "./grid";
-import { N_HERBACEES, rabattreParEspece } from "./herbacees";
+import {
+  HERBACEES,
+  INDEX_CULTURES,
+  N_HERBACEES,
+  partDuRendement,
+  rabattreParEspece,
+} from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
+import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tassementApresPassage } from "./tassement";
@@ -36,7 +46,21 @@ import {
   volumeTigeM3,
 } from "./trees";
 
-/** plafond d'heures de travail par UTH et par semaine (docs/regles.md §10) */
+/**
+ * Heures de travail par UTH et par semaine (docs/regles.md §10).
+ *
+ * CE N'EST PLUS UN MUR, C'EST UN SEUIL DE FACTURATION (#133). Quinze actions
+ * refusaient l'excédent : le joueur découvrait au clic qu'il ne pouvait pas,
+ * sans savoir de combien il dépassait ni ce que ça coûterait de le faire quand
+ * même. On le punissait d'avoir essayé.
+ *
+ * Les actions s'appliquent désormais, et les heures se comptent AU-DELÀ du
+ * plafond. Ce que le moteur en dit s'arrête là : `depassementHoraire` et
+ * `coutDuDepassement` donnent de quoi présenter la facture, et c'est à
+ * l'interface de la présenter et d'obtenir la décision. La contrainte reste
+ * entière, mais elle devient économique au lieu d'être un refus — ce qui est
+ * la vraie contrainte de main-d'œuvre en agroforesterie.
+ */
 export const WEEK_HOURS_CAP = 60;
 /** heures d'une UTH sur l'année (~1 800 h) */
 export const UTH_HOURS_PER_YEAR = 1800;
@@ -202,6 +226,38 @@ export const LIME_PH_STEP = 0.5;
  * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
  */
 export const BRF_CN_RATIO = 40;
+
+/**
+ * C/N d'un fumier de ferme bien décomposé (#140). Bien plus bas que celui du
+ * BRF, qui est du bois : un fumier libère son azote sur deux à trois ans au
+ * lieu d'en immobiliser d'abord *(à confirmer sur la composition publiée des
+ * apports de Broadbalk, e-RA `01-BKFYM`)*.
+ */
+export const FUMIER_CN_RATIO = 15;
+/**
+ * Prix de l'azote minéral, €/kg N. L'ordre de grandeur des dernières campagnes,
+ * ammonitrate rendu ferme *(à calibrer : le prix de l'azote suit celui du gaz
+ * et a varié du simple au triple entre 2020 et 2023)*.
+ */
+export const AZOTE_MINERAL_EUR_KG = 1.5;
+/**
+ * Prix du fumier rendu et épandu, €/kg N apporté. Plus cher à l'unité d'azote
+ * parce qu'on transporte surtout de l'eau et de la matière : c'est le vrai
+ * arbitrage du geste, et il n'a de sens que rapporté à ce qu'il construit
+ * *(à calibrer)*.
+ */
+export const FUMIER_EUR_KG_N = 2.5;
+/** Épandage d'engrais minéral, h/ha : un passage d'épandeur centrifuge. */
+export const FERTILISATION_HEURES_HA = 0.4;
+/** Épandage de fumier, h/ha : on transporte des tonnes, pas des sacs. */
+export const FUMIER_HEURES_HA = 2.5;
+/**
+ * Dose maximale d'un apport, kg N/ha. La directive nitrates plafonne l'azote
+ * organique à 170 kg N/ha/an en zone vulnérable, et les paliers de Broadbalk
+ * montent à 192 en minéral : au-delà de 250 en une fois, on ne fertilise plus,
+ * on déverse *(à calibrer)*.
+ */
+export const DOSE_AZOTE_MAX_KG_HA = 250;
 /**
  * Surcoût de temps pour charger le broyat au lieu de le laisser tomber sur
  * place : il faut remplir et déplacer la remorque *(à calibrer)*.
@@ -385,6 +441,30 @@ export type GameAction =
     }
   | {
       /**
+       * FERTILISER une zone (#140). Deux formes qui ne font pas la même chose,
+       * et c'est tout l'intérêt du geste :
+       *
+       *  - **minéral** : l'azote arrive dans le pool MINÉRAL, tout de suite
+       *    disponible — et tout de suite LESSIVABLE. Un apport posé avant
+       *    l'hiver part avec le drainage, et le moteur sait déjà le faire
+       *    (`cellLeachedG`) ;
+       *  - **fumier** : il arrive dans la LITIÈRE, avec son C/N. Il se
+       *    minéralise sur des années, il ne lessive pas tant qu'il n'est pas
+       *    minéralisé, et il construit de l'humus au passage.
+       *
+       * La dose est en kg N/ha dans les deux cas, pour qu'elles se comparent.
+       */
+      type: "fertiliser";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+      forme: "mineral" | "fumier";
+      /** dose d'azote apportée, kg N/ha */
+      doseKgNHa: number;
+    }
+  | {
+      /**
        * Étêter (trogner) : couper la charpente à hauteur d'homme, au-dessus de
        * la dent du bétail, et laisser la tête repartir. On y revient tous les
        * dix ans. C'est le geste qui a fait les arbres les plus vieux de nos
@@ -453,6 +533,34 @@ export type GameAction =
        * et l'herbe coupée reste au sol en litière.
        */
       type: "faucher";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+    }
+  | {
+      /**
+       * SEMER une culture sur une zone (#136). Ce que le semis pose, c'est la
+       * PLACE LIBRE : un blé semé dans une friche n'occupe que ce que les
+       * adventices lui laissent, et c'est ce qui fait de `labourer` et de
+       * `faucher` des gestes préparatoires plutôt que des ornements. La règle
+       * n'est écrite nulle part, elle tombe du partage de la place
+       * (`herbacees.ts`).
+       */
+      type: "semer";
+      week: number;
+      x: number;
+      y: number;
+      rayonM: number;
+      cultureId: string;
+    }
+  | {
+      /**
+       * MOISSONNER : le grain accumulé depuis le semis part en vente, et la
+       * culture libère la place. Hors de sa fenêtre de récolte, il n'y a rien
+       * à prendre — un blé moissonné en mai n'a pas fini de remplir.
+       */
+      type: "moissonner";
       week: number;
       x: number;
       y: number;
@@ -621,13 +729,26 @@ export type GesteTypeArbre =
   | "leverEcorce";
 
 /** Gestes qui désignent une zone de sol. */
+/**
+ * Gestes qui désignent une zone de sol.
+ *
+ * LES DEUX DERNIERS PORTENT LE MÊME NOM QUE DES GESTES SUR ARBRES, et ce n'est
+ * pas une collision : c'est un seul geste qui touche les DEUX mailles (#124). Le
+ * §6.2 le décrit ainsi — « le plant apparaît, la terre est retournée autour »,
+ * « le tronc change de couleur, planches de liège empilées » — une moitié qui
+ * désigne des arbres, une moitié qui désigne du sol. Les deux voyagent donc sous
+ * le même nom, et `estGesteSurArbres` / `estGesteSurZone` les séparent par leur
+ * FORME, pas par leur type.
+ */
 export type GesteTypeZone =
   | "chauler"
   | "faucher"
   | "epandreBrf"
   | "labourer"
   | "ramasserBoisMort"
-  | "cloturer";
+  | "cloturer"
+  | "planter"
+  | "leverEcorce";
 
 export type GesteType = GesteTypeArbre | GesteTypeZone;
 
@@ -678,6 +799,42 @@ export function fellingHours(heightM: number): number {
   return 0.3 + 0.15 * heightM;
 }
 
+/**
+ * Les heures faites AU-DELÀ de ce que l'effectif couvre, cette semaine.
+ *
+ * Zéro tant qu'on tient dans le plafond. Rien à retenir en plus : le compteur
+ * `hoursUsedWeek` existait déjà et continue simplement de monter, ce qu'il
+ * faisait de toute façon — c'est le refus qui l'arrêtait avant, pas lui.
+ */
+export function depassementHoraire(economy: { hoursUsedWeek: number; uth: number }): number {
+  return Math.max(0, economy.hoursUsedWeek - WEEK_HOURS_CAP * economy.uth);
+}
+
+/**
+ * Ce que coûteraient les heures supplémentaires, et combien de bras il faut.
+ *
+ * IL N'Y A PAS DE PLAFOND DUR À INVENTER, et c'est ce qui rend le mécanisme
+ * honnête : embaucher n'est pas faire travailler quelqu'un plus longtemps,
+ * c'est ajouter une personne. Le dépassement se convertit donc en EMBAUCHES —
+ * une par tranche de plafond entamée — et le prix suit les constantes qui
+ * existent déjà (`SEASONAL_EUR_WEEK`), sans nouveau nombre à calibrer. Le
+ * saisonnier est l'instrument juste ici : on paie une semaine de bras pour une
+ * semaine d'heures déjà faites.
+ *
+ * LE PALIER NE SE LISSE PAS, et c'est une décision actée (docs/regles.md
+ * §15-12) : dépasser d'une heure coûte une semaine de saisonnier entière, parce
+ * qu'on n'embauche personne pour une heure. Si une partie montre que
+ * l'arbitrage en devient absurde, c'est la partie qui le dira — pas un banc, et
+ * pas ce commentaire.
+ */
+export function coutDuDepassement(depassementHeures: number): {
+  embauches: number;
+  eur: number;
+} {
+  const embauches = Math.ceil(Math.max(0, depassementHeures) / WEEK_HOURS_CAP);
+  return { embauches, eur: embauches * SEASONAL_EUR_WEEK };
+}
+
 function refuse(week: number, action: GameAction["type"], reason: string): ActionRefusal {
   return { week, action, reason };
 }
@@ -695,6 +852,8 @@ function applyPlanter(
   let importedKgC = 0;
   /** Les plants RÉELLEMENT posés — pas ceux qu'on avait demandés (#100). */
   const poses: number[] = [];
+  /** Et les cellules où la terre a été ouverte pour les mettre (#124), sans doublon. */
+  const travaillees = new Set<number>();
   // La vigueur de chaque plant se tire dans le générateur de la partie : deux
   // parties de même graine plantent donc exactement les mêmes individus.
   let rng = state.rng;
@@ -702,12 +861,6 @@ function applyPlanter(
   const heuresParPlant = PLANT_HOURS + (action.avecManchon ? PROTECTION_HEURES : 0);
   const euroParPlant = espece.economie.prixPlantEur + (action.avecManchon ? PROTECTION_EUR : 0);
   for (const pos of action.positions) {
-    if (hoursUsedWeek + heuresParPlant > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(
-        refuse(action.week, "planter", `plafond hebdomadaire atteint (${planted} plantés)`),
-      );
-      break;
-    }
     if (state.economy.active && treasuryEur - euroParPlant < OVERDRAFT_LIMIT_EUR) {
       refusals.push(refuse(action.week, "planter", `découvert plafonné (${planted} plantés)`));
       break;
@@ -729,6 +882,7 @@ function applyPlanter(
     const tirage = tirerVigueurIndividuelle(rng);
     rng = tirage.rng;
     poses.push(nextTreeId);
+    travaillees.add(Math.floor(pos.y) * state.station.coteM + Math.floor(pos.x));
     trees.push({
       vigueurIndividuelle: tirage.vigueur,
       id: nextTreeId++,
@@ -772,14 +926,29 @@ function applyPlanter(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
-    // Pas de geste de ZONE avec celui-ci, et c'est délibéré (#100). Le §6.2
-    // décrit aussi « la terre est retournée autour » du plant ; le moteur ne
-    // retourne rien en plantant — ni `boutis`, ni `laboure`, aucun état de sol
-    // ne bouge. Rapporter une maille retournée serait inventer un geste qui
-    // n'a pas eu lieu, exactement la jointure fausse que #83 a corrigée
-    // ailleurs. Le rendu tient les positions par les `ids` et peut dessiner ce
-    // qu'il veut autour ; le moteur, lui, ne déclare que ce qu'il fait.
-    gestes: poses.length > 0 ? [{ type: "planter", ids: poses }] : [],
+    // DEUX GESTES POUR UNE ACTION (#124) : les plants posés, et le sol travaillé
+    // autour d'eux. #100 n'avait livré que le premier, en refusant d'inventer
+    // une maille de terre retournée — et ce refus portait sur la bonne chose,
+    // mais pas sur la bonne question. Le moteur ne retourne effectivement rien
+    // en plantant : aucun état de sol ne bouge, ni `boutis`, ni `laboure`.
+    //
+    // Ce qu'il sait pourtant, et qui n'est pas une invention, c'est OÙ le geste
+    // a eu lieu. Un geste de zone dit « ces cellules ont été touchées », pas
+    // « leur sol a changé » — c'est ce que `ramasserBoisMort` dit déjà sans
+    // rien changer au sol non plus. Le rendu peut donc dessiner sa terre remuée
+    // sans que personne ait deviné de rayon : il n'y en a pas à deviner, la
+    // cellule du plant EST l'emprise, et un mètre carré est l'ordre de grandeur
+    // d'un potet.
+    //
+    // Ce qui reste hors de ce lot, et qui serait un mécanisme : que ce travail
+    // du sol AIT DES SUITES — lit de germination, tassement, minéralisation.
+    gestes:
+      poses.length > 0
+        ? [
+            { type: "planter", ids: poses },
+            { type: "planter", cellules: [...travaillees] },
+          ]
+        : [],
   };
 }
 
@@ -854,10 +1023,6 @@ function applyCouper(
             ? LAISSER_SUR_PLACE_FACTEUR
             : 1;
     const hours = fellingHours(tree.heightM) * facteurTravail;
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "couper", `plafond hebdomadaire atteint (arbre ${id})`));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
 
@@ -1077,12 +1242,6 @@ function applyEpandreBrf(
     return { state, refusals: [refuse(action.week, "epandreBrf", "le tas de broyat est vide")] };
   }
   const hours = (carboneG / 1000 / CARBON_FRACTION) * EPANDAGE_HEURES_PAR_KG;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return {
-      state,
-      refusals: [refuse(action.week, "epandreBrf", "plafond hebdomadaire atteint")],
-    };
-  }
 
   const cote = state.station.coteM;
   const dims = { widthM: cote, heightM: cote };
@@ -1147,10 +1306,6 @@ function applyRecolter(
     // Cadence de cueillette propre à l'espèce (ramasser 19 kg de noisettes
     // n'a rien à voir avec cueillir 19 kg de pommes).
     const hours = tree.fruitsKg * (espece.fruits?.recolteHKg ?? 0.03);
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "recolter", `plafond hebdomadaire atteint (arbre ${id})`));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     treasuryEur += tree.fruitsKg * prix;
@@ -1177,9 +1332,6 @@ function applyChauler(
   const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
   const cost = areaM2 * (LIME_EUR_M2 + part * COUT_ENGIN_EUR_M2);
   const hours = areaM2 * (part * LIME_HOURS_M2_ENGIN + (1 - part) * LIME_HOURS_M2_MAIN);
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "chauler", "plafond hebdomadaire atteint")] };
-  }
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
   }
@@ -1223,6 +1375,292 @@ function applyChauler(
   };
 }
 
+/**
+ * Fenêtre de semis, en semaines de part et d'autre de la date de la fiche. Un
+ * blé d'hiver se sème en octobre ; on laisse la latitude d'une arrière-saison
+ * pluvieuse, pas celle de le semer au printemps *(à calibrer)*.
+ */
+export const FENETRE_SEMIS_SEMAINES = 4;
+
+/**
+ * Place libre moyenne en dessous de laquelle le semis est refusé. Un dixième :
+ * il ne s'agit pas d'exiger un sol nu — une friche rase se sème — mais de ne
+ * pas laisser passer un semis qui ne lèverait sur rien *(à calibrer)*.
+ */
+export const PLACE_MINIMALE_SEMIS = 0.1;
+
+/** Écart en semaines entre deux dates de l'année, en passant par le plus court. */
+function ecartSemaines(a: number, b: number): number {
+  const d = Math.abs(a - b) % 52;
+  return Math.min(d, 52 - d);
+}
+
+/** Les cellules d'un disque, comme `faucher` et `chauler` les parcourent. */
+function cellulesDuDisque(cote: number, cx: number, cy: number, rayonM: number): number[] {
+  const out: number[] = [];
+  const r2 = rayonM * rayonM;
+  for (let y = 0; y < cote; y++) {
+    for (let x = 0; x < cote; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      if (dx * dx + dy * dy <= r2) out.push(y * cote + x);
+    }
+  }
+  return out;
+}
+
+function applyFertiliser(
+  state: GameState,
+  action: Extract<GameAction, { type: "fertiliser" }>,
+): ApplyResult {
+  const dose = action.doseKgNHa;
+  if (!(dose > 0)) {
+    return { state, refusals: [refuse(action.week, "fertiliser", "dose nulle")] };
+  }
+  if (dose > DOSE_AZOTE_MAX_KG_HA) {
+    return {
+      state,
+      refusals: [
+        refuse(
+          action.week,
+          "fertiliser",
+          `dose au-delà de ${DOSE_AZOTE_MAX_KG_HA} kg N/ha : ce n'est plus fertiliser`,
+        ),
+      ],
+    };
+  }
+  const cote = state.station.coteM;
+  const dims = { widthM: cote, heightM: cote };
+  const cells: number[] = [];
+  forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => cells.push(i));
+  if (cells.length === 0) {
+    return { state, refusals: [refuse(action.week, "fertiliser", "zone hors parcelle")] };
+  }
+  // Une cellule fait un mètre carré, et la dose est à l'hectare.
+  const azoteParCelluleG = dose * KG_PER_HA_TO_G_PER_M2;
+  const areaHa = cells.length / 10_000;
+  const mineral = action.forme === "mineral";
+  const cost = dose * areaHa * (mineral ? AZOTE_MINERAL_EUR_KG : FUMIER_EUR_KG_N);
+  const hours = areaHa * (mineral ? FERTILISATION_HEURES_HA : FUMIER_HEURES_HA);
+  // Les heures n'arrêtent rien (#133) : elles montent, et `depassementHoraire`
+  // les facture en fin de semaine. Ces trois gestes de culture — semer,
+  // fertiliser, moissonner — ont été écrits pendant que la règle changeait sur
+  // `main` ; ils suivent la nouvelle, comme les quinze autres.
+  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+    return { state, refusals: [refuse(action.week, "fertiliser", "découvert plafonné")] };
+  }
+
+  const soil = { ...state.soil };
+  if (mineral) {
+    // **L'AZOTE MINÉRAL ARRIVE DISPONIBLE, ET DONC LESSIVABLE.** Il entre dans
+    // le pool que les plantes prélèvent et que le drainage emporte : un apport
+    // posé avant l'hiver part avec l'eau, et le moteur n'a rien eu à apprendre
+    // pour ça (`nitrogen.ts:cellLeachedG`). C'est là tout le contraste avec le
+    // fumier, et c'est le contenu du geste.
+    const mineralNG = state.soil.mineralNG.slice();
+    for (const i of cells) mineralNG[i] = (mineralNG[i] ?? 0) + azoteParCelluleG;
+    soil.mineralNG = mineralNG;
+  } else {
+    // Le fumier entre dans la LITIÈRE avec son C/N : il se minéralise sur des
+    // années, il ne lessive pas tant qu'il ne l'est pas, et il construit de
+    // l'humus au passage. Même patron que `epandreBrf`, avec le C/N d'un
+    // fumier au lieu de celui du bois — et la vitesse de décomposition suit,
+    // parce que `litterK` est une moyenne pondérée par l'azote.
+    const litterNG = state.soil.litterNG.slice();
+    const litterCG = state.soil.litterCG.slice();
+    const litterK = state.soil.litterK.slice();
+    const kFumier = litterDecayRate(FUMIER_CN_RATIO);
+    for (const i of cells) {
+      const oldN = litterNG[i] ?? 0;
+      litterK[i] =
+        (oldN * (litterK[i] ?? 0) + azoteParCelluleG * kFumier) / (oldN + azoteParCelluleG);
+      litterNG[i] = oldN + azoteParCelluleG;
+      litterCG[i] = (litterCG[i] ?? 0) + azoteParCelluleG * FUMIER_CN_RATIO;
+    }
+    soil.litterNG = litterNG;
+    soil.litterCG = litterCG;
+    soil.litterK = litterK;
+  }
+
+  return {
+    state: {
+      ...state,
+      soil,
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur - cost,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
+function applySemer(state: GameState, action: Extract<GameAction, { type: "semer" }>): ApplyResult {
+  const s = HERBACEES.findIndex((h) => h.id === action.cultureId);
+  const fiche = HERBACEES[s];
+  const culture = fiche?.culture;
+  if (!fiche || !culture) {
+    return {
+      state,
+      refusals: [refuse(action.week, "semer", `${action.cultureId} n'est pas une culture`)],
+    };
+  }
+  const semaine = action.week % 52;
+  if (ecartSemaines(semaine, culture.semisWeek) > FENETRE_SEMIS_SEMAINES) {
+    return {
+      state,
+      refusals: [
+        refuse(
+          action.week,
+          "semer",
+          `hors fenêtre de semis (semaine ${culture.semisWeek} ± ${FENETRE_SEMIS_SEMAINES})`,
+        ),
+      ],
+    };
+  }
+  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const areaHa = areaM2 / 10_000;
+  // Le semis est un chantier d'engin : ce qui n'est pas mécanisable ne se sème
+  // pas au combiné, et le moteur sait déjà dire quelle part l'est.
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const hours = areaHa * culture.heuresSemisHa * (part + (1 - part) * 20);
+  const cost = areaHa * culture.semenceEurHa + areaM2 * part * COUT_ENGIN_EUR_M2;
+  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
+    return { state, refusals: [refuse(action.week, "semer", "découvert plafonné")] };
+  }
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const cultureGrain = state.soil.cultureGrain.slice();
+  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
+  const cellules = cellulesDuDisque(state.station.coteM, action.x, action.y, action.rayonM);
+  // **CE QUE LE SEMIS POSE, C'EST LA PLACE LIBRE.** Un blé semé dans une
+  // friche n'occupe que ce que les adventices lui laissent, et la règle
+  // « préparer le lit de semence avant de semer » n'est écrite nulle part :
+  // elle tombe du partage de la place (`herbacees.ts`) et du fait que
+  // `labourer` remet les emprises à zéro. Deux mécanismes qui existaient déjà.
+  let placeTotale = 0;
+  for (const i of cellules) {
+    const base = i * N_HERBACEES;
+    let occupee = 0;
+    for (let k = 0; k < N_HERBACEES; k++) {
+      if (k !== s) occupee += herbeEmprise[base + k] ?? 0;
+    }
+    placeTotale += Math.max(0, 1 - occupee);
+  }
+  // Et semer dans un tapis fermé ne doit pas RÉUSSIR EN SILENCE. Mesuré avant
+  // cette garde : le semis passait, l'emprise valait zéro, et la moisson
+  // annonçait « rien à moissonner » neuf mois plus tard sans que rien n'ait
+  // dit pourquoi. Le joueur doit l'apprendre au semis, pas à la récolte.
+  if (cellules.length > 0 && placeTotale / cellules.length < PLACE_MINIMALE_SEMIS) {
+    return {
+      state,
+      refusals: [
+        refuse(
+          action.week,
+          "semer",
+          "le tapis occupe déjà le sol : labourer ou faucher avant de semer",
+        ),
+      ],
+    };
+  }
+  for (const i of cellules) {
+    const base = i * N_HERBACEES;
+    let occupee = 0;
+    for (let k = 0; k < N_HERBACEES; k++) {
+      if (k !== s) occupee += herbeEmprise[base + k] ?? 0;
+    }
+    herbeEmprise[base + s] = Math.max(0, 1 - occupee);
+    cultureGrain[base + s] = 0;
+    cultureGrainPotentiel[base + s] = 0;
+  }
+  return {
+    state: {
+      ...state,
+      soil: { ...state.soil, herbeEmprise, cultureGrain, cultureGrainPotentiel },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur - cost,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
+function applyMoissonner(
+  state: GameState,
+  action: Extract<GameAction, { type: "moissonner" }>,
+): ApplyResult {
+  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const areaHa = areaM2 / 10_000;
+  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const cellules = cellulesDuDisque(state.station.coteM, action.x, action.y, action.rayonM);
+  const herbeEmprise = state.soil.herbeEmprise.slice();
+  const herbeFeuillage = state.soil.herbeFeuillage.slice();
+  const cultureGrain = state.soil.cultureGrain.slice();
+  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
+  // Ce qu'on récolte, culture par culture, en part de rendement maximal cumulée
+  // sur les cellules. Diviser par le nombre de cellules donnerait la moyenne ;
+  // on veut la SOMME, parce que c'est elle qui devient des tonnes.
+  let recolteEur = 0;
+  let cellulesRecoltees = 0;
+  const m2ParCellule = 1;
+  for (const s of INDEX_CULTURES) {
+    const culture = HERBACEES[s]?.culture;
+    if (!culture) continue;
+    for (const i of cellules) {
+      const base = i * N_HERBACEES;
+      const grain = partDuRendement(
+        cultureGrain[base + s] ?? 0,
+        cultureGrainPotentiel[base + s] ?? 0,
+      );
+      if ((herbeEmprise[base + s] ?? 0) <= 0 && grain <= 0) continue;
+      const tonnes = (grain * culture.rendementMaxTHa * m2ParCellule) / 10_000;
+      recolteEur += tonnes * culture.prixEurT;
+      cultureGrain[base + s] = 0;
+      cultureGrainPotentiel[base + s] = 0;
+      // La culture libère la place : le chaume n'occupe plus rien, et les
+      // adventices reprendront la main dès la semaine suivante.
+      herbeEmprise[base + s] = 0;
+      herbeFeuillage[base + s] = 0;
+      cellulesRecoltees++;
+    }
+  }
+  if (cellulesRecoltees === 0) {
+    return { state, refusals: [refuse(action.week, "moissonner", "rien à moissonner ici")] };
+  }
+  const heuresHa = HERBACEES[INDEX_CULTURES[0] ?? 0]?.culture?.heuresRecolteHa ?? 1;
+  const hours = areaHa * heuresHa * (part + (1 - part) * 20);
+  const herbeCouverture = state.soil.herbeCouverture.slice();
+  for (const i of cellules) {
+    let couverture = 0;
+    for (let k = 0; k < N_HERBACEES; k++) couverture += herbeFeuillage[i * N_HERBACEES + k] ?? 0;
+    herbeCouverture[i] = couverture;
+  }
+  return {
+    state: {
+      ...state,
+      soil: {
+        ...state.soil,
+        herbeEmprise,
+        herbeFeuillage,
+        herbeCouverture,
+        cultureGrain,
+        cultureGrainPotentiel,
+      },
+      economy: {
+        ...state.economy,
+        treasuryEur: state.economy.treasuryEur + recolteEur - areaM2 * part * COUT_ENGIN_EUR_M2,
+        hoursUsedWeek: state.economy.hoursUsedWeek + hours,
+        hoursUsedYear: state.economy.hoursUsedYear + hours,
+      },
+    },
+    refusals: [],
+  };
+}
+
 function applyFaucher(
   state: GameState,
   action: Extract<GameAction, { type: "faucher" }>,
@@ -1233,9 +1671,6 @@ function applyFaucher(
   const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
   const hours = areaM2 * (part * FAUCHE_HOURS_M2_ENGIN + (1 - part) * FAUCHE_HOURS_M2_MAIN);
   const coutEngin = areaM2 * part * COUT_ENGIN_EUR_M2;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "faucher", "plafond hebdomadaire atteint")] };
-  }
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
@@ -1319,12 +1754,6 @@ function applyRamasserBoisMort(
   }
   const volumeM3 = carboneKgC / CARBON_FRACTION / DENSITE_BOIS_MORT_KG_M3;
   const hours = volumeM3 * RAMASSAGE_HOURS_M3;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return {
-      state,
-      refusals: [refuse(action.week, "ramasserBoisMort", "plafond hebdomadaire atteint")],
-    };
-  }
   // Le tronc parti, il ne barre plus rien : la part en travers s'en va avec
   // lui. C'est le vrai prix caché du ramassage sur un versant.
   for (const i of cibles) {
@@ -1381,10 +1810,6 @@ function applyElaguer(
       continue;
     }
     const hours = (cible - tree.hauteurElagueeM) * ELAGAGE_HOURS_PAR_M;
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "elaguer", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     elagues.push(id);
@@ -1457,10 +1882,6 @@ function applyTrogner(
       );
       continue;
     }
-    if (hoursUsedWeek + TROGNE_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "trogner", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += TROGNE_HEURES;
     hoursUsedYear += TROGNE_HEURES;
     etetes.push(id);
@@ -1512,13 +1933,9 @@ function applyTrogner(
   };
 }
 
-function applyChasser(
-  state: GameState,
-  action: Extract<GameAction, { type: "chasser" }>,
-): ApplyResult {
-  if (state.economy.hoursUsedWeek + CHASSE_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "chasser", "plafond hebdomadaire atteint")] };
-  }
+// Plus rien à lire dans l'action : la chasse ne porte ni cible ni quantité, et
+// depuis #133 la semaine ne la refuse plus. Le paramètre a donc disparu.
+function applyChasser(state: GameState): ApplyResult {
   return {
     state: {
       ...state,
@@ -1546,9 +1963,6 @@ function applyCloturer(
   const perimetreM = 2 * Math.PI * action.rayonM;
   const cost = perimetreM * CLOTURE_EUR_M;
   const hours = perimetreM * CLOTURE_HEURES_M;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "cloturer", "plafond hebdomadaire atteint")] };
-  }
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "cloturer", "découvert plafonné")] };
   }
@@ -1591,9 +2005,6 @@ function applyLabourer(
   const areaM2 = Math.PI * action.rayonM * action.rayonM * part;
   const hours = areaM2 * LABOUR_HOURS_M2;
   const cost = areaM2 * LABOUR_EUR_M2;
-  if (state.economy.hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-    return { state, refusals: [refuse(action.week, "labourer", "plafond hebdomadaire atteint")] };
-  }
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "labourer", "découvert plafonné")] };
   }
@@ -1723,10 +2134,6 @@ function applyProteger(
       );
       continue;
     }
-    if (hoursUsedWeek + PROTECTION_HEURES > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "proteger", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += PROTECTION_HEURES;
     hoursUsedYear += PROTECTION_HEURES;
     treasuryEur -= PROTECTION_EUR;
@@ -1767,10 +2174,6 @@ function applyReceper(
         refuse(action.week, "receper", `${espece.nom} ne rejette pas de souche : il en mourrait`),
       );
       continue;
-    }
-    if (hoursUsedWeek + RECEPAGE_HOURS > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "receper", "plafond hebdomadaire atteint"));
-      break;
     }
     hoursUsedWeek += RECEPAGE_HOURS;
     hoursUsedYear += RECEPAGE_HOURS;
@@ -1892,6 +2295,8 @@ function applyLeverEcorce(
   /** Les arbres réellement démasclés, et le poids de liège levé (#100). */
   const demascles: number[] = [];
   const masses: number[] = [];
+  /** Où les planches se posent (#124), sans doublon si deux arbres partagent une cellule. */
+  const piedsDesArbres = new Set<number>();
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
@@ -1923,15 +2328,14 @@ function applyLeverEcorce(
     // Le rendement suit la taille : un gros arbre porte plus de planches.
     const kg = ecorce.rendementKg * Math.min(1.5, tree.heightM / 12);
     const hours = kg * ecorce.recolteHKg;
-    if (hoursUsedWeek + hours > WEEK_HOURS_CAP * state.economy.uth) {
-      refusals.push(refuse(action.week, "leverEcorce", "plafond hebdomadaire atteint"));
-      break;
-    }
     hoursUsedWeek += hours;
     hoursUsedYear += hours;
     treasuryEur += kg * ecorce.prixEurKg;
     demascles.push(id);
     masses.push(kg);
+    // Les planches s'empilent AU PIED : la cellule de l'arbre est l'endroit,
+    // et il n'y a rien à deviner de plus (#124).
+    piedsDesArbres.add(Math.floor(tree.y) * state.station.coteM + Math.floor(tree.x));
     trees[idx] = { ...tree, derniereLeveeSemaine: action.week };
   }
   return {
@@ -1941,7 +2345,15 @@ function applyLeverEcorce(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
-    gestes: demascles.length > 0 ? [{ type: "leverEcorce", ids: demascles, masseKg: masses }] : [],
+    // Deux mailles ici aussi : les troncs mis à vif, et le pied où le liège
+    // s'empile (#124). `masseKg` dit COMBIEN de planches, les cellules disent OÙ.
+    gestes:
+      demascles.length > 0
+        ? [
+            { type: "leverEcorce", ids: demascles, masseKg: masses },
+            { type: "leverEcorce", cellules: [...piedsDesArbres] },
+          ]
+        : [],
   };
 }
 
@@ -2028,6 +2440,12 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       return applyChauler(state, action);
     case "faucher":
       return applyFaucher(state, action);
+    case "fertiliser":
+      return applyFertiliser(state, action);
+    case "semer":
+      return applySemer(state, action);
+    case "moissonner":
+      return applyMoissonner(state, action);
     case "ramasserBoisMort":
       return applyRamasserBoisMort(state, action);
     case "eclaircir": {
@@ -2062,7 +2480,7 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
     case "labourer":
       return applyLabourer(state, action);
     case "chasser":
-      return applyChasser(state, action);
+      return applyChasser(state);
     case "trogner":
       return applyTrogner(state, action);
     case "cloturer":

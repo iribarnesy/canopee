@@ -50,6 +50,12 @@ export const TEINTE_DU_GESTE: Record<GesteTypeZone, Teinte> = {
   faucher: { r: 202, g: 198, b: 152 },
   ramasserBoisMort: { r: 152, g: 146, b: 132 },
   cloturer: { r: 122, g: 110, b: 96 },
+  // Les deux moitiés de sol que #124 a branchées. Terre fraîchement ouverte au
+  // pied d'un plant : la même famille que `labourer`, un peu plus claire parce
+  // qu'un potet remue moins de terre qu'un labour. Liège empilé : l'écorce à
+  // vif, ocre-rouge. Deux premières valeurs, à retoucher côté rendu.
+  planter: { r: 96, g: 74, b: 56 },
+  leverEcorce: { r: 168, g: 96, b: 64 },
 };
 
 /**

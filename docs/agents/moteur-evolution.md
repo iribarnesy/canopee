@@ -61,7 +61,165 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les mycorhizes, #115)
+## Ce que le dernier lot a appris (la fertilisation, #140)
+
+**Une courbe de réponse ne s'écrit pas, elle se vérifie.** L'apport remplit le
+pool d'azote, et le rendement y répond par la satisfaction de la strate — la
+même que celle des arbres. Rien n'a été codé, et les paliers de Broadbalk
+sortent monotones (1,01 / 2,40 / 3,21 / 3,92 / 4,88 t/ha) avec un point zéro
+juste. **Quand un mécanisme amont existe déjà, la courbe aval est un RÉSULTAT :
+l'écrire serait s'interdire de la mesurer.**
+
+**Chercher le plafond, ne pas le supposer.** Le moteur s'arrêtait à 4,88 t/ha
+là où Broadbalk monte à 8-9, et la tentation était d'accuser la culture ou la
+dose. Le diagnostic — deux lignes de relevé sur l'état du sol — donne
+`tassement = 1,000` : quatre passages d'engin par an contre 0,20 de réparation,
+et le sol perd 30 % de croissance pour toujours. **Un plateau net dans une
+mesure est presque toujours un facteur limitant qu'on n'a pas regardé**, et
+c'est ce qu'il faut aller lire avant de toucher au mécanisme qu'on vient
+d'écrire.
+
+**Un proxy vieillit quand le moteur s'enrichit.** La densité racinaire qui
+répare le tassement était lue sur `1 − groundLight`, c'est-à-dire sur le COUVERT
+DES ARBRES. C'était défendable tant que seuls les arbres avaient des racines ;
+mon lot précédent ajoute une plante enracinée SANS canopée, et le proxy s'est
+mis à dire qu'un champ de blé ne répare rien. **Après un lot qui ajoute une
+catégorie d'êtres, relire les proxys qui décrivaient les anciens** — ils
+parlaient d'un monde où la nouvelle catégorie n'existait pas.
+
+**Savoir s'arrêter à la frontière de son rôle, mais pas avant.** L'autre moitié
+du même défaut — le labour qui ne décompacte jamais, et 0,25 de tassement par
+passage — est une calibration, donc de la maintenance : issue ouverte, et la
+dépendance écrite des deux côtés. Mais la moitié causée par MON lot (le proxy
+racinaire) a été corrigée ici, parce que la passer à quelqu'un d'autre aurait
+été lui demander de réparer ce que je venais de casser. **La règle route les
+calibrations, pas les conséquences de son propre travail.**
+
+**Et un lot peut en débloquer un autre pour de bon.** E13 était 🟡 parce que le
+gradient d'une allée mesurait surtout l'azote que la litière rendait à un blé
+qui s'épuisait — le rapport passait au-dessus de 1. Les deux côtés fertilisés,
+c'est de l'ombre pure : monotone de 0,999 à 0,787, et le critère passe ✅. **Un
+🟡 dont la justification nomme un manque précis est une dette qui s'éteint d'un
+coup le jour où le manque est comblé** ; ça vaut la peine de les écrire ainsi.
+
+## Ce qu'un lot plus ancien a appris (la culture, #136)
+
+**Une heure de littérature AVANT d'écrire, et elle a changé le mécanisme.** Je
+partais sur « moins de lumière, moins de grain ». La mesure dit l'inverse en
+Méditerranée : blé et orge font +19 % de rendement à 50 % d'éclairement, et le
+même +19 % à 90 % — un plateau, en serre IRRIGUÉE, donc pas une économie d'eau
+mais un excès de lumière au départ. Le moteur portait déjà la forme qu'il
+fallait, la SATURATION de la fiche herbacée, et il n'y avait aucun mécanisme à
+ajouter. **Chercher la réponse d'une espèce dans la littérature de l'espèce, pas
+dans le dispositif qu'on veut reproduire.**
+
+**Caler sur un chiffre, valider sur un AUTRE chiffre de la même source.**
+Broadbalk donne les deux bouts du blé : 8-9 t/ha pleinement fumé, ~1 t/ha sans
+aucun apport, tenu sur cent soixante-dix ans. Le plafond de la fiche est calé
+sur le premier ; le moteur n'ayant pas de fertilisation, il doit descendre de
+lui-même vers le second — mesuré 1,02 t/ha à l'an 24, sans que rien ne l'y
+pousse. La même source, deux chiffres, et la validation ne doit rien au calage.
+
+**Une normalisation peut rendre un plafond INATTEIGNABLE par construction.** Le
+grain était l'intégrale de l'assimilation divisée par le nombre de semaines de
+culture — ce qui suppose un feuillage plein toute la saison, que nul blé ne
+fait. Le plafond de 7 t/ha devenait donc hors d'atteinte quoi qu'il arrive, et
+le champ ne voulait plus dire ce que son commentaire promettait. La forme juste
+est un RAPPORT — ce qui a été assimilé sur ce qui l'aurait été sans limite — et
+elle ne demande aucune constante. **Quand un maximum déclaré n'est jamais
+approché, suspecter le dénominateur avant la physique.**
+
+**Un mécanisme qui échoue en SILENCE est pire qu'un mécanisme absent.** Semer
+dans un tapis fermé posait une emprise nulle, réussissait, et la moisson
+annonçait « rien à moissonner » neuf mois plus tard sans que rien n'ait dit
+pourquoi. Le refus existe maintenant et il dit quoi faire. **Un geste dont
+l'échec ne se voit qu'à la saison suivante doit refuser tout de suite.**
+
+**Et mon dispositif a manqué son témoin, deux fois dans le même lot.** Le banc
+du gradient comparait une allée à un blé pur qui S'ÉPUISAIT : je mesurais donc
+l'apport d'azote des noyers bien plus que leur ombre, et l'allée passait
+au-dessus du témoin. Puis l'essai du refus de semis semait sur une parcelle
+NEUVE, qui n'est pas un tapis fermé — il ne créait pas la condition qu'il
+testait. **Avant de lire un rapport, vérifier que le dénominateur est dans
+l'état qu'on croit.**
+
+**Retrouver le bon chiffre pour la mauvaise raison reste un résultat, à
+condition de le dire.** L'observation de Dupraz — « pas beaucoup affecté sous
+H/L 0,8 » — est reproduite : 1,007 à H/L 0,84. Mais chez lui l'allée est
+fertilisée, donc son seuil est de l'ombre pure, quand le nôtre est une
+compensation entre l'ombre qui coûte et la litière qui rend. Le critère reste
+🟡 pour cette raison, et pas parce que le chiffre serait mauvais. **Un accord
+numérique dont on ne sait pas décomposer les termes n'est pas une validation.**
+
+## Ce qu'un lot plus ancien a appris (le calendrier des fleurs, #70)
+
+**Le verrou était un DÉCOUPAGE, et il se voyait en listant les fiches.** La
+date de floraison vivait dans le bloc `fruits`, réservé aux essences dont on
+récolte quelque chose. Sept espèces qui nourrissent réellement les
+pollinisateurs n'en avaient donc aucune — aubépine, saule, ajonc, genêt,
+callune, houx, fusain — et bâtir la ressource florale là-dessus aurait fabriqué
+des trous qui n'existent pas : le moteur aurait dit qu'une lande girondine ne
+nourrit personne, alors que l'ajonc et la callune en font une pâture d'abeilles
+presque toute l'année. **Avant d'écrire un mécanisme qui lit un champ, lister
+qui le porte et qui ne le porte pas** : l'absence dessine le découpage mieux que
+la présence.
+
+**Un champ dont le contenu est le ZÉRO.** `nectar` vaut zéro pour le noisetier
+et le noyer, qui fleurissent abondamment et dont le pollen part au vent. Ce
+n'est pas une valeur par défaut faute de mieux, c'est l'information : l'indice
+de biodiversité les comptait comme une ressource, si bien qu'une noiseraie
+affichait des floraisons étalées sans nourrir personne. **Quand un trait vaut
+zéro pour une raison qu'on sait nommer, le déclarer plutôt que l'omettre** —
+l'omission se lit « pas encore instruit », le zéro se lit « et voici pourquoi ».
+
+**Le thermomètre, QUATRIÈME lot de suite, et cette fois deux fois dans le même
+lot.** La ressource florale mesurait d'abord une QUANTITÉ de nectar là où il
+fallait une ADÉQUATION : `min(habitat, florale)` avec un habitat à 0,5 et une
+ressource à 0,10 ne départageait rien, il remplaçait silencieusement le premier
+facteur par le second. Puis elle mesurait le nectar du seul DISQUE DE HOUPPIER
+là où il fallait une portée de butinage. Les deux fois, la relecture ne disait
+rien et la mesure disait tout. **Quand un facteur limitant nouveau est
+systématiquement plus petit que celui qu'il accompagne, ce n'est pas un facteur
+de plus : c'est un remplacement, et l'échelle est fausse.**
+
+**Écrire à côté d'une solution que le dépôt possède déjà.** La portée de
+butinage était résolue depuis longtemps, à trois fichiers de là, commentaire
+compris : `ravageurs.ts` agrège par blocs de 10 m sur une fenêtre de 3×3 « parce
+qu'évaluer la richesse cellule par cellule donnait toujours une seule essence ».
+La note connaissait la faute inverse — réutiliser une fonction sans relire sa
+définition ; celle-ci est sa jumelle. **Avant d'écrire une agrégation spatiale,
+chercher si le moteur en a déjà une, et à quelle échelle.**
+
+**Un étalon de temps mesuré AILLEURS n'est pas un étalon.** Le coût du lot a
+d'abord été annoncé à +30 %, mesuré contre un arbre de travail séparé dont le
+`node_modules` était un lien symbolique. Ce seul changement d'environnement
+déplaçait le chiffre de 25 % — cinq fois l'effet cherché. Mesuré dans le même
+répertoire avec le même script : +6 %, et ça recoupe le témoin par
+neutralisation du bloc. **Un chronométrage se prend dans le même processus, le
+même répertoire et la même arborescence de modules**, ou il ne se prend pas.
+
+**Un dispositif peut passer pour la raison qu'on veut réfuter.** L'essai
+historique de G4 — « un verger nu produit moins que le même verger dans un
+environnement diversifié » — plantait une haie de noisetier, chêne pubescent et
+bouleau. Les TROIS sont anémophiles. Il passait parce que le service ne lisait
+que l'habitat, qui compte la richesse en essences : le moteur affirmait donc que
+planter trois arbres pollinisés par le vent améliore la nouaison d'un verger de
+15 %. Le lot l'a fait tomber à +0,9 %, et c'est la correction d'une affirmation
+fausse, pas une régression. L'essai garde son énoncé, se donne une haie
+mellifère (+28,0 %) et **conserve la haie anémophile comme TÉMOIN** : c'est elle
+qui sépare « des voisins » de « des voisins qui nourrissent ». **Quand un lot
+fait tomber un essai qui défendait le critère qu'il renforce, regarder d'abord
+le dispositif de cet essai** — il mesurait peut-être ce que le lot vient
+justement de réfuter.
+
+**Et trois mesures concurrentes ne font pas trois mesures.** J'ai lancé deux
+chronométrages et une suite d'essais en parallèle ; les trois sont invalides, et
+la suite a failli expirer pour une raison qui n'avait rien à voir avec elle. Le
+corollaire de « ne pas modifier le moteur pendant qu'une suite tourne », et il
+mérite d'être écrit à part : **une mesure de TEMPS veut la machine pour elle
+seule.**
+
+## Ce qu'un lot plus ancien a appris (les mycorhizes, #115)
 
 **Un invariant ne garde que le côté qu'il ferme.** Le bilan d'azote du tick
 vérifiait « minéralisation = prélèvements + lessivage + Δstock » depuis toujours,
@@ -473,6 +631,45 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce qui reste de #140 — le LER, enfin faisable.** La fertilisation lève le
+verrou : une monoculture de blé fertilisée EST un témoin valable, et le gradient
+est désormais de l'ombre pure. H21 (❌) demande maintenant le dispositif
+complet — blé pur, forêt pure, et l'allée — sur la même station et le même
+climat. Cible de validation : le noyer-céréale de Restinclières dépasse 1,2.
+
+Dépend de **#141** (maintenance) pour le niveau : tant que le tassement
+s'épingle à 1, le blé pur plafonne à 4,88 t/ha au lieu de 8-9, et un LER
+calculé sur deux termes également rabotés serait juste par accident.
+
+**Ce qui reste de #136 — la FERTILISATION, et c'est le verrou suivant.** Le
+moteur n'a aucun geste pour apporter de l'azote à une culture : un blé continu
+ne peut donc que s'épuiser, ce qui est juste mais qui interdit de séparer
+l'ombre de l'azote dans une allée — E13 reste 🟡 pour cette seule raison, et le
+LER (H21, ❌) n'aura pas de sens tant qu'une monoculture de blé voudra dire
+« blé qui se mine ». Manquent aussi, dans l'ordre où ils se paient : le retour
+de la PAILLE, qui explique probablement que le moteur glisse sous la parcelle
+nue de Broadbalk ; une saturation lumineuse rapportée au rayonnement de la
+STATION, sans quoi le blé du plateau picard reste aussi tolérant à l'ombre que
+celui du Midi ; et une seconde culture, dont le coût se mesure avant de
+l'ajouter.
+
+**Ce qui reste de #70 — la soudure d'ÉTÉ, et l'ortie.** Le calendrier est là et
+G4/J6 sont tombés, mais la strate basse n'y apporte que sa vernale : les deux
+autres herbacées sont des graminées anémophiles. La soudure de fin d'été reste
+donc à la charge des ligneux (ronce, troène, callune), et il manque une
+herbacée entomophile tardive — un trèfle, une centaurée — pour que la strate
+basse tienne les deux soudures. Manquent aussi, inchangés : **l'ortie
+nitrophile**, qui demande que la capacité d'une herbacée lise l'azote et ferait
+de l'épandage un choix visible au sol ; **la hiérarchie de hauteur** dans la
+strate, seule limite écrite de B8 ; et **la culture comme strate basse**, qui
+est le sujet de l'agroforesterie — une fiche herbacée avec un rendement et une
+exigence minérale ferait poser au jeu sa question centrale.
+
+Côté pollinisation, la limite de G4 est nommée : pas d'insectes individualisés,
+et la fenêtre de butinage est celle des auxiliaires faute d'en avoir mesuré une
+autre. Une distance propre aux pollinisateurs demanderait une mesure, pas un
+chiffre choisi.
 
 **Ce qui reste de #115 — le réseau n'AJOUTE toujours pas d'azote.** Le correctif
 lui rend un signe juste (+2,79 % de volume sur limon pauvre, +0,09 % sur riche)

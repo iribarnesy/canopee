@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
-import { serieToWeeks, syntheticYear } from "../../src/engine/meteo";
+import { syntheticYear } from "../../src/engine/meteo";
 import {
   fermetureDuCouvert,
   TAMPON_MAXIMUM_C,

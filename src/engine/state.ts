@@ -13,7 +13,7 @@ import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
-import { empriseInitiale } from "./herbacees";
+import { empriseInitiale, N_HERBACEES } from "./herbacees";
 import { stockEquilibreMm, stocksEquilibreParCellule } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
@@ -299,6 +299,31 @@ export interface SoilState {
    */
   herbeBiomasse: number[];
   /**
+   * GRAIN accumulé par cellule et par culture, en part du rendement annuel
+   * maximal de l'espèce (#136). Même indexation à plat que `herbeEmprise`.
+   *
+   * C'est une INTÉGRALE : le grain est ce que la plante a assimilé pendant sa
+   * saison, semaine après semaine, et non une fonction de son état du jour.
+   * La moisson le remet à zéro et l'emporte hors de la parcelle.
+   */
+  cultureGrain: number[];
+  /**
+   * Le DÉNOMINATEUR du rendement : ce que la culture aurait assimilé sans
+   * aucun facteur limitant, cumulé de la même façon. Le rapport des deux est
+   * la part du rendement maximal (`herbacees.ts:partDuRendement`).
+   */
+  cultureGrainPotentiel: number[];
+  /**
+   * RESSOURCE FLORALE vécue par cellule ∈ [0,1] (#70, critère G4) : ce que les
+   * pollinisateurs ont trouvé à manger ici, ces dernières semaines.
+   *
+   * C'est une MÉMOIRE, comme `herbeHumidite`, et c'est tout le sujet : une
+   * colonie qui a jeûné en mars n'est pas là en juin pour polliniser le
+   * pommier. Une valeur instantanée dirait l'inverse — que chaque arbre se
+   * pollinise lui-même à proportion de ses propres fleurs.
+   */
+  ressourceFlorale: number[];
+  /**
    * Humidité de surface telle que le tapis la « vit » : moyenne lissée sur
    * plusieurs semaines (herbe.ts). Sans cette mémoire, la couverture réagit à
    * sa propre consommation avec une semaine de retard et se met à osciller.
@@ -557,6 +582,12 @@ export function createGameState(
       // que la saison permet.
       herbeFeuillage: Array.from({ length: n }, () => depart).flat(),
       herbeBiomasse: new Array(n).fill(station.herbeInitiale),
+      // Rien de semé au premier jour : une culture s'obtient par une action.
+      cultureGrain: new Array(n * N_HERBACEES).fill(0),
+      cultureGrainPotentiel: new Array(n * N_HERBACEES).fill(0),
+      // Aucune mémoire florale au premier jour : la première saison la
+      // construit. Partir d'un plancher supposerait une année d'avant.
+      ressourceFlorale: new Array(n).fill(0),
       // Le 1er janvier, la réserve de surface est pleine.
       herbeHumidite: new Array(n).fill(1),
       ravageurs: new Array(n).fill(0),

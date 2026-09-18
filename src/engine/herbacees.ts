@@ -155,6 +155,39 @@ export interface HerbaceeV0 {
     partPersistante: number;
   };
   /**
+   * Exigence minérale, même échelle que les ligneux (`especes.ts`) : une
+   * essence forestière est à 1, et c'est la référence. Une céréale
+   * sélectionnée pour le rendement, dont on exporte la récolte chaque année,
+   * est à dix ou vingt — c'est par ce nombre, et non par un cas particulier
+   * dans le moteur, que les cultures s'ajoutent.
+   *
+   * Les trois herbacées spontanées sont à 1, ce qui rend le lot des cultures
+   * IDENTIQUE pour elles : la demande d'azote du tapis était une constante
+   * multipliée par la couverture, elle devient une somme par espèce, et la
+   * somme vaut exactement l'ancienne tant que tout le monde est à 1.
+   */
+  exigenceMinerale: number;
+  /**
+   * Ce que l'espèce offre aux pollinisateurs quand elle fleurit, et QUAND
+   * (#70, critères G4 et J6). Même forme que sur la fiche ligneuse
+   * (`especes.ts:floraison`), même horloge en degrés-jours.
+   *
+   * **Absent pour une anémophile**, et c'est le contenu du champ : deux des
+   * trois herbacées du moteur sont des GRAMINÉES. Elles fleurissent
+   * abondamment, leur pollen part au vent, et aucun insecte ne vient le
+   * chercher. La strate basse ne nourrit donc les pollinisateurs que par sa
+   * vernale — ce qui est exactement ce que dit la littérature de la soudure de
+   * printemps, et ce qui laisse la soudure d'ÉTÉ à la charge des ligneux.
+   */
+  floraison?: {
+    /** ouverture : cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier */
+    debutDJ: number;
+    /** largeur de la fenêtre, en degrés-jours */
+    dureeDJ: number;
+    /** ce que la floraison offre ∈ [0,1], à pleine emprise */
+    nectar: number;
+  };
+  /**
    * °C moyenne hebdomadaire à partir de laquelle la végétation démarre. Une
    * vernale pousse au froid — c'est même tout son avantage —, une molinie
    * attend la chaleur.
@@ -164,8 +197,56 @@ export interface HerbaceeV0 {
    * Gain d'emprise par semaine de pleine vigueur, en part de cellule. C'est la
    * vitesse de CONQUÊTE d'un sol libre, et elle sépare radicalement une
    * graminée qui talle d'un rhizome qui avance de quelques centimètres par an.
+   *
+   * **Nulle pour une culture**, qui ne conquiert rien : son emprise est POSÉE
+   * par le semis. Voir `culture`.
    */
   vitesseInstallation: number;
+  /**
+   * CULTURE : présent quand l'espèce est semée et récoltée plutôt que
+   * spontanée. C'est une histoire de vie différente, et il faut l'assumer —
+   * tout le reste de ce module décrit des PÉRENNES.
+   *
+   *  - une pérenne CONQUIERT la place libre et REFLUE quand la station ne la
+   *    porte plus ; une culture ne fait ni l'un ni l'autre. Son emprise est
+   *    posée au semis et remise à zéro à la moisson, et rien entre les deux ne
+   *    la fait bouger ;
+   *  - une pérenne rend sa litière à la cellule ; une culture est EXPORTÉE, et
+   *    l'azote du grain quitte la parcelle pour de bon ;
+   *  - une parcelle laissée seule se couvre de molinie, jamais de blé.
+   *
+   * Ce qui ne change PAS : le feuillage suit la saison et la sécheresse comme
+   * pour tout le monde, si bien qu'une céréale d'hiver profite d'elle-même de
+   * la fenêtre où les caducs sont nus — la mécanique de la vernale, sans une
+   * ligne de plus.
+   */
+  culture?: {
+    /**
+     * Rendement en grain à pleine emprise et sans aucun facteur limitant,
+     * t/ha. C'est un PLAFOND, que la lumière, l'eau et l'azote rabotent.
+     */
+    rendementMaxTHa: number;
+    /** Prix de vente du grain, €/t. */
+    prixEurT: number;
+    /** Semaine de semis (0-51). */
+    semisWeek: number;
+    /** Semaine de moisson (0-51). */
+    recolteWeek: number;
+    /** Travail du semis puis de la moisson, h/ha pour chacun. */
+    heuresSemisHa: number;
+    heuresRecolteHa: number;
+    /** Coût de la semence, €/ha. */
+    semenceEurHa: number;
+  };
+  /**
+   * **L'AZOTE DU GRAIN N'EST PAS COMPTÉ À LA MOISSON, et c'est voulu.** Il est
+   * déjà sorti du sol pendant la saison, par le prélèvement de la strate
+   * (`tick.ts`, pondéré par `exigenceMinerale`), et la strate ne rend pas de
+   * litière. Le recompter à la récolte le ferait disparaître deux fois — ce
+   * que la propriété de conservation attraperait (#115). Ce qui manque
+   * vraiment est le retour de la PAILLE, qui reste au champ et devrait rendre
+   * son azote : c'est une dette de ce lot, écrite ici pour ne pas être oubliée.
+   */
   sources: string[];
 }
 
@@ -173,6 +254,14 @@ const SHIRREFFS_1985 =
   "Shirreffs 1985, Biological Flora of the British Isles: Anemone nemorosa L., Journal of Ecology 73:1005-1020 (Grande-Bretagne)";
 const BEDDOWS_1959 =
   "Beddows 1959, Biological Flora of the British Isles: Dactylis glomerata L., Journal of Ecology 47:223-239 (Grande-Bretagne)";
+const ARTRU_2019 =
+  "Artru et al. 2019, Wheat and barley can increase grain yield in shade through acclimation of physiological and morphological traits in Mediterranean conditions, Scientific Reports 9:9834 (serre irriguée, Espagne centrale)";
+const DUPRAZ_CAPILLON =
+  "Dupraz & Capillon, L'agroforesterie, INRAE Montpellier (essai de Restinclières, noyer x blé dur, Hérault)";
+const ROTHAMSTED_BROADBALK =
+  "Rothamsted, essai de Broadbalk (blé continu depuis 1843, le plus ancien essai agronomique au monde) : parcelles sans aucun apport ~1 t/ha tenues sur 170 ans, parcelles pleinement fumées 8-9 t/ha (e-RA, dataset 03-OAWWYields)";
+const AGRESTE_BLE =
+  "Agreste, statistique agricole annuelle : rendement moyen français du blé tendre d'hiver, ordre de 7 t/ha sur la dernière décennie";
 const TAYLOR_2001 =
   "Taylor, Rowland & Jones 2001, Biological Flora of the British Isles: Molinia caerulea (L.) Moench, Journal of Ecology 89:126-144 (Grande-Bretagne)";
 
@@ -220,8 +309,16 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       senescenceAutomnale: true,
       partPersistante: 0,
     },
+    // Mars-avril, six à huit semaines (SHIRREFFS_1985). Elle n'a PAS de
+    // nectaires : ses visiteurs — diptères, coléoptères, abeilles solitaires —
+    // viennent pour le POLLEN. L'offre est donc réelle mais moindre que celle
+    // d'une rosacée, et elle tombe très tôt, au moment où presque rien d'autre
+    // n'est ouvert *(à calibrer : la source décrit les visiteurs, pas un
+    // débit)*.
+    floraison: { debutDJ: 60, dureeDJ: 300, nectar: 0.4 },
     // Elle travaille à deux ou trois degrés, quand la prairie attend : c'est là
     // tout son avantage *(à calibrer)*.
+    exigenceMinerale: 1,
     tBaseCroissanceC: 2,
     // Le rhizome avance de quelques centimètres par an (SHIRREFFS_1985, ordre
     // de grandeur repris par la littérature des indicatrices de forêt
@@ -267,6 +364,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       senescenceAutomnale: false,
       partPersistante: 1,
     },
+    exigenceMinerale: 1,
     tBaseCroissanceC: 4,
     // Elle talle : un semis couvre en une saison (BEDDOWS_1959). La valeur est
     // celle de la reconquête du tapis d'avant ce lot (0,12 par semaine de
@@ -294,10 +392,98 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       senescenceAutomnale: true,
       partPersistante: 0.25,
     },
+    exigenceMinerale: 1,
     tBaseCroissanceC: 8,
     // Touffe, plus lente à couvrir qu'une graminée traçante *(à calibrer)*.
     vitesseInstallation: 0.05,
     sources: [TAYLOR_2001],
+  },
+  {
+    id: "triticum_aestivum",
+    nom: "Blé tendre d'hiver",
+    nomLatin: "Triticum aestivum",
+    /**
+     * **LA SATURATION EST LE CHIFFRE DU LOT, et elle vient d'une mesure
+     * contre-intuitive.** Je supposais « moins de lumière, moins de grain ».
+     * En Méditerranée, blé et orge font +19 % de rendement à 50 %
+     * d'éclairement, et le MÊME +19 % à 90 % : un plateau (ARTRU_2019, serre
+     * IRRIGUÉE — ce n'est donc pas une économie d'eau, c'est un excès de
+     * lumière au départ). Les auteurs disent explicitement que dans les
+     * régions moins ensoleillées, l'ombre fait baisser le rendement.
+     *
+     * Une saturation à 0,5 reproduit ce plateau sans un mécanisme de plus.
+     *
+     * **LIMITE, et il faut la lire avant d'exploiter un chiffre du nord** : la
+     * lumière du moteur est une FRACTION de la pleine lumière locale, pas un
+     * éclairement absolu. Dire 0,5 revient donc à dire « la moitié du soleil
+     * d'ici suffit au blé » PARTOUT — ce qui est juste dans le Midi, d'où
+     * viennent les deux ancres de ce lot, et trop généreux sur le plateau
+     * picard. Rendre la saturation absolue demande le rayonnement de la
+     * station, et c'est un lot à part.
+     *
+     * Le point de compensation, lui, est celui d'une héliophile stricte : sous
+     * un cinquième de la pleine lumière, une céréale ne fait plus de grain
+     * *(à calibrer)*.
+     */
+    lumiere: { compensation: 0.2, saturation: 0.5 },
+    // Elle souffre de la sécheresse comme les graminées, et plus tôt : le
+    // remplissage du grain se joue en juin *(à calibrer)*.
+    eau: { seuilConfort: 0.4 },
+    // Neutrophile : le blé veut un sol chaulé, il décroche sous 5,5
+    // *(bornes à calibrer)*.
+    ph: [5.2, 8.3],
+    phenologie: {
+      // Semée en octobre, elle lève avant l'hiver, passe la mauvaise saison en
+      // rosette et repart au premier redoux : ni forçage ni porte
+      // photopériodique, comme le dactyle, et pour la même raison — il n'y a
+      // pas de bourgeon en dormance à lever.
+      debutDJ: 0,
+      seuilJourH: 8,
+      // Elle MÛRIT, elle ne sénesce pas : le retrait est programmé, comme chez
+      // une vernale, sauf qu'il s'appelle la maturation et qu'il finit à la
+      // moisson.
+      finDJ: 1250,
+      senescenceAutomnale: false,
+      partPersistante: 0,
+    },
+    tBaseCroissanceC: 3,
+    // Elle ne conquiert RIEN : son emprise est posée par le semis.
+    vitesseInstallation: 0,
+    /**
+     * Dix fois une essence forestière. Le commentaire d'`especes.ts` le
+     * réservait depuis longtemps : « une céréale ou un maraîchage seraient à
+     * dix ou vingt ». C'est ce nombre qui fait qu'un blé a faim là où un chêne
+     * se contente, et donc que la concurrence pour l'azote se voie.
+     */
+    exigenceMinerale: 10,
+    culture: {
+      /**
+       * Le rendement SANS AUCUN FACTEUR LIMITANT — ni lumière, ni eau, ni
+       * azote. Ce n'est donc pas la moyenne française (7 t/ha), qui est déjà
+       * une moyenne de parcelles fertilisées et diversement limitées : c'est
+       * le plafond que les parcelles pleinement fumées de BROADBALK
+       * atteignent, 8 à 9 t/ha (ROTHAMSTED_BROADBALK).
+       *
+       * Et le même essai fournit la VALIDATION, sur un autre chiffre : ses
+       * parcelles sans aucun apport tiennent ~1 t/ha depuis 1843. Le moteur
+       * n'a pas d'action de fertilisation, donc un blé continu doit y
+       * descendre de lui-même — ce qui se vérifie et ne se cale pas.
+       */
+      rendementMaxTHa: 9,
+      // Ordre de grandeur des dernières campagnes *(à calibrer : le prix du
+      // blé varie du simple au double d'une année à l'autre, et le moteur n'a
+      // pas de marché céréalier)*.
+      prixEurT: 200,
+      // Semis mi-octobre, moisson mi-juillet.
+      semisWeek: 41,
+      recolteWeek: 28,
+      // Un semis se fait à 1 ha/h avec un combiné, une moisson guère plus
+      // lentement *(à calibrer)*.
+      heuresSemisHa: 1.5,
+      heuresRecolteHa: 1,
+      semenceEurHa: 90,
+    },
+    sources: [ROTHAMSTED_BROADBALK, AGRESTE_BLE, ARTRU_2019, DUPRAZ_CAPILLON],
   },
 ];
 
@@ -337,6 +523,37 @@ export const REGRESSION_PAR_SEMAINE = 0.2;
  * bougé.
  */
 export const REPOUSSE_PAR_SEMAINE = 0.25;
+
+/**
+ * Inertie de la RESSOURCE FLORALE vécue, par semaine (#70). Même forme que
+ * l'humidité vécue de `herbe.ts`, et pour une raison du même ordre : ce qui
+ * décide n'est pas ce qui est ouvert aujourd'hui, c'est ce qui l'a été.
+ *
+ * 0,15 donne une constante de temps d'environ sept semaines — l'ordre de
+ * grandeur d'une génération de pollinisateur, et donc le délai avec lequel une
+ * population suit sa table *(à calibrer : les sources donnent des durées de
+ * développement par espèce, pas un temps de réponse de communauté)*.
+ */
+/**
+ * Ce qu'il faut d'offre OUVERTE dans une cellule pour que les insectes y
+ * trouvent à manger — au-delà, la table est garnie et en rajouter ne nourrit
+ * personne de plus (#70).
+ *
+ * Sans ce seuil, la mémoire florale mesure une QUANTITÉ de nectar et non une
+ * ADÉQUATION, et elle reste basse partout : mesuré à 0,10 dans le meilleur cas
+ * du banc, contre un habitat à 0,5 — le minimum des deux ne départageait donc
+ * plus rien, il remplaçait l'habitat. Avec le seuil, la mémoire devient la
+ * PART DE LA SAISON pendant laquelle la cellule a eu de quoi nourrir, qui est
+ * une grandeur sans dimension et comparable à l'habitat.
+ *
+ * 0,25 : un arbuste mellifère en pleine fleur au-dessus de la cellule
+ * (aubépine, nectar 0,9) la nourrit largement, un quart de cellule de vernale
+ * la nourrit à peu près *(à calibrer — aucune source ne donne un débit de
+ * nectar par mètre carré)*.
+ */
+export const OFFRE_FLORALE_SUFFISANTE = 0.25;
+
+export const INERTIE_RESSOURCE_FLORALE = 0.15;
 
 const borne = (x: number) => Math.min(1, Math.max(0, x));
 
@@ -435,6 +652,72 @@ export function capaciteHerbacee(h: HerbaceeV0, lumiereAuSol: number, ph: number
  * toute la suite de tests.
  */
 const VITESSES = HERBACEES.map((h) => h.vitesseInstallation);
+/**
+ * Qui est une CULTURE, précalculé : la question se pose pour chaque espèce et
+ * chaque cellule, toutes les semaines.
+ */
+const EST_CULTURE = HERBACEES.map((h) => h.culture !== undefined);
+
+/**
+ * Les cultures, rangées une fois : leur indice dans `HERBACEES` et la durée de
+ * leur cycle. La boucle du tick les parcourt toutes les semaines et dans
+ * toutes les cellules — la balayer en entier pour trouver les deux ou trois
+ * qui comptent se paierait.
+ */
+export const INDEX_CULTURES = HERBACEES.map((h, i) => (h.culture ? i : -1)).filter((i) => i >= 0);
+export const N_CULTURES = INDEX_CULTURES.length;
+
+/** La fiche est-elle celle d'une culture semée, plutôt que d'une spontanée ? */
+export function estCulture(h: HerbaceeV0): boolean {
+  return h.culture !== undefined;
+}
+
+/**
+ * Le GRAIN est la moyenne des facteurs limitants, PONDÉRÉE PAR LE FEUILLAGE
+ * (#136) — et cette forme-là ne demande aucune constante à caler.
+ *
+ * Le premier jet divisait le cumul par le nombre de semaines de culture, ce qui
+ * suppose un feuillage plein d'un bout à l'autre de la saison. Aucun blé ne
+ * fait ça : il lève à l'automne, passe l'hiver en rosette et mûrit en juin.
+ * Mesuré, le plafond de la fiche devenait inatteignable par construction —
+ * 1,1 t/ha là où la fiche annonce 7 — et « rendement maximal » ne voulait plus
+ * dire ce que son commentaire promettait.
+ *
+ * La bonne grandeur est un RAPPORT. On cumule d'un côté ce que la plante a
+ * réellement assimilé — son feuillage, multiplié par ce que la station lui
+ * permet et par ce que l'azote lui laisse —, de l'autre ce qu'elle aurait
+ * assimilé sans aucune limite, c'est-à-dire son feuillage seul. Le quotient
+ * vaut 1 pour une culture que rien ne bride, et `rendementMaxTHa` retrouve
+ * exactement le sens que la fiche lui donne.
+ */
+export function grainDeLaSemaine(
+  feuillage: number,
+  facteurLumiere: number,
+  facteurAzote: number,
+): { assimile: number; potentiel: number } {
+  return { assimile: feuillage * facteurLumiere * facteurAzote, potentiel: feuillage };
+}
+
+/** Le rendement, en part du maximum de la fiche : le quotient des deux cumuls. */
+export function partDuRendement(assimileCum: number, potentielCum: number): number {
+  return potentielCum > 0 ? assimileCum / potentielCum : 0;
+}
+
+/**
+ * Nombre de semaines entre le semis et la moisson, en tenant compte du passage
+ * par le 1ᵉʳ janvier : une céréale d'HIVER est semée en semaine 41 et moissonnée
+ * en semaine 28 de l'année suivante.
+ */
+export function semainesDeCulture(semisWeek: number, recolteWeek: number): number {
+  const d = recolteWeek - semisWeek;
+  return d > 0 ? d : d + 52;
+}
+
+/** La durée du cycle de chaque culture, dans l'ordre d'`INDEX_CULTURES`. */
+export const SEMAINES_DE_CULTURE = INDEX_CULTURES.map((i) => {
+  const c = HERBACEES[i]?.culture;
+  return c ? semainesDeCulture(c.semisWeek, c.recolteWeek) : 1;
+});
 
 /**
  * Tampon des demandes d'une cellule. Vit ici, hors de la fonction, pour la même
@@ -478,6 +761,11 @@ export function evoluerEmprises(
   let demandeTotale = 0;
   for (let s = 0; s < N_HERBACEES; s++) {
     demandes[s] = 0;
+    // **UNE CULTURE NE JUGE PAS SA STATION** (#136). Son emprise est posée au
+    // semis et remise à zéro à la moisson ; rien entre les deux ne la fait
+    // bouger, ni la conquête ni le repli. Un blé à l'ombre ne perd pas son
+    // emprise, il perd son GRAIN — et c'est `croissanceDuGrain` qui le dit.
+    if (EST_CULTURE[s]) continue;
     const vigueur = vigueurs[s] ?? 0;
     // Dormante : ni gain ni perte. C'est de là que sort la fenêtre vernale —
     // une espèce ne juge sa station que pendant sa saison de croissance.

@@ -362,13 +362,14 @@ describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
   });
 
   it("**une couleur de fleur suppose un cycle de fruits côté moteur**", () => {
-    // La fleur vit DANS le bloc `fruit`, donc la contrainte est structurelle :
-    // impossible de déclarer une floraison à une espèce dont le moteur ne suit
-    // pas la fructification. C'est voulu — le moment de la floraison se calcule
-    // sur `floraisonDJ`, qui n'existe que dans le bloc `fruits`.
+    // La contrainte n'est plus structurelle depuis que la floraison a quitté le
+    // bloc `fruits` (#70) : une espèce peut désormais fleurir sans qu'on
+    // récolte rien d'elle, ce qui est le cas de l'ajonc, de la callune et du
+    // saule. Ce que l'essai vérifie reste le même — une fleur DESSINÉE doit
+    // avoir une date dans le moteur, sinon le rendu la pose quand il veut.
     for (const f of FICHES) {
       if (!f.fruit?.fleur) continue;
-      expect(getEspece(f.especeId)?.fruits?.floraisonDJ, f.especeId).toBeGreaterThan(0);
+      expect(getEspece(f.especeId)?.floraison?.debutDJ, f.especeId).toBeGreaterThan(0);
     }
   });
 

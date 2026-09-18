@@ -87,8 +87,13 @@ import {
   evoluerEmprises,
   facteurEauHerbacee,
   facteurThermique,
+  grainDeLaSemaine,
   HERBACEES,
+  INDEX_CULTURES,
+  INERTIE_RESSOURCE_FLORALE,
+  N_CULTURES,
   N_HERBACEES,
+  OFFRE_FLORALE_SUFFISANTE,
   partSaisonniere,
   rabattreParEspece,
   suivreFeuillage,
@@ -136,7 +141,7 @@ import {
 import { frequentationDesBordures } from "./paysage";
 import {
   contextePhenologique,
-  FLORAISON_DUREE_DJ,
+  partFloraison,
   partFoliaireActiveDans,
   partFoliaireOmbrageanteDans,
   semaineDeFroid,
@@ -163,6 +168,7 @@ import {
   SATURATION_P_G_M2,
 } from "./pk";
 import {
+  BLOC_AUXILIAIRES_M,
   carteBiotique,
   degatsSurArbre,
   disperser,
@@ -542,6 +548,18 @@ function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMo
   return lent > stressFinal - lent ? (tree.causeLente ?? coup) : coup;
 }
 
+/**
+ * Ce qu'un arbre noue MÊME sans aucun pollinisateur autour : le vent en porte
+ * un peu, les abeilles domestiques d'un voisin passent, et beaucoup d'espèces
+ * sont partiellement autogames. Un verger nu dans une plaine nue perd une
+ * bonne part de sa nouaison ; il n'en perd jamais la totalité *(à calibrer)*.
+ *
+ * C'est la valeur qu'avait ce plancher avant que le service lise le calendrier
+ * des fleurs (#70), et elle n'a pas bougé : le lot AJOUTE un facteur limitant,
+ * il ne déplace pas le plancher.
+ */
+const POLLINISATION_PLANCHER = 0.35;
+
 export function tick(state: GameState, weather: WeekWeather): TickResult {
   const { station } = state;
   const dims = gridDims(station);
@@ -667,6 +685,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterCaMgG = state.soil.litterCaMgG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeEmprise = state.soil.herbeEmprise.slice();
+  const cultureGrain = state.soil.cultureGrain.slice();
+  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
@@ -1399,7 +1419,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
     herbeDemandeL[i] = demandeEau;
     cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
-    herbeDemandeNG[i] = herbeDemandeAzoteG(couverture, saisonHerbe);
+    // **PAR ESPÈCE, et pondérée par son exigence** (#136). C'était une
+    // constante multipliée par la couverture ; un blé demande dix fois ce que
+    // demande une graminée spontanée, et sans ça `exigenceMinerale` ne veut
+    // rien dire. Les trois spontanées étant à 1, la somme vaut EXACTEMENT
+    // l'ancienne valeur tant qu'aucune culture n'est semée : le lot est
+    // l'identité sur une parcelle sans culture.
+    let demandeN = 0;
+    for (let s_ = 0; s_ < N_HERBACEES; s_++) {
+      const h = HERBACEES[s_];
+      if (!h) continue;
+      demandeN += herbeDemandeAzoteG(
+        (herbeFeuillage[i * N_HERBACEES + s_] ?? 0) * h.exigenceMinerale,
+        saisonHerbe,
+      );
+    }
+    herbeDemandeNG[i] = demandeN;
     cellNWanted[i] = (cellNWanted[i] ?? 0) + (herbeDemandeNG[i] ?? 0);
   }
 
@@ -1517,6 +1552,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const base = i * N_HERBACEES;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
+    // ── Le GRAIN s'accumule (#136) ──────────────────────────────────────────
+    // Le rendement est l'intégrale de ce que la plante assimile, pas une
+    // fonction de son état du jour. Les trois facteurs sont déjà là : ce
+    // qu'elle couvre (le feuillage, qui porte la saison et la sécheresse), ce
+    // que la station lui permet (`capacites`, qui porte la lumière, le pH et
+    // le tassement), et ce que l'azote lui laisse — `nServedRatio`, la part
+    // réellement servie à cette cellule cette semaine.
+    for (let s = 0; s < N_CULTURES; s++) {
+      const s_ = INDEX_CULTURES[s];
+      if (s_ === undefined) continue;
+      if ((herbeEmprise[base + s_] ?? 0) <= 0) continue;
+      const { assimile, potentiel } = grainDeLaSemaine(
+        herbeFeuillage[base + s_] ?? 0,
+        capacites[s_] ?? 0,
+        nServedRatio[i] ?? 0,
+      );
+      cultureGrain[base + s_] = (cultureGrain[base + s_] ?? 0) + assimile;
+      cultureGrainPotentiel[base + s_] = (cultureGrainPotentiel[base + s_] ?? 0) + potentiel;
+    }
     // Ce que la cellule COUVRE : la somme des feuillages. Tout le reste du
     // moteur lit cette ligne et ignore les espèces.
     let couverture = 0;
@@ -1710,6 +1764,94 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const semainesDeFroid =
     (week === DEBUT_COMPTAGE_FROID ? 0 : state.semainesDeFroid) +
     (semaineDeFroid(weather.tMean) ? 1 : 0);
+  // ── 5 bis A. La RESSOURCE FLORALE, et c'est une mémoire (#70, G4/J6) ──────
+  // Ce qui est ouvert cette semaine, dans le rayon où un insecte travaille :
+  // les houppiers en fleur épandus sur leur disque — le même patron que la
+  // vulnérabilité des hôtes dans `ravageurs.ts` — et l'emprise des herbacées
+  // qui fleurissent, là où elles la tiennent.
+  //
+  // Le NECTAR est ce qui compte, pas la floraison : un noisetier et un noyer
+  // couvrent leur disque de fleurs et n'y mettent rien pour personne.
+  const floraleInstant = new Float64Array(nCells);
+  for (const tree of nextTrees) {
+    if (!tree.alive) continue;
+    const espece = getEspece(tree.especeId);
+    const f = espece.floraison;
+    if (!f || f.nectar <= 0) continue;
+    if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
+    const part = partFloraison(f.debutDJ, ddYearBase5, f.dureeDJ);
+    if (part <= 0) continue;
+    const offre = f.nectar * part;
+    const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
+    forEachDiscCell(dims, tree.x, tree.y, r, (i) => {
+      floraleInstant[i] = (floraleInstant[i] ?? 0) + offre;
+    });
+  }
+  for (const [s_, h] of HERBACEES.entries()) {
+    const f = h.floraison;
+    if (!f || f.nectar <= 0) continue;
+    const part = partFloraison(f.debutDJ, ddYearBase5, f.dureeDJ);
+    if (part <= 0) continue;
+    const offre = f.nectar * part;
+    for (let i = 0; i < nCells; i++) {
+      floraleInstant[i] =
+        (floraleInstant[i] ?? 0) + offre * (herbeEmprise[i * N_HERBACEES + s_] ?? 0);
+    }
+  }
+  // **UN POLLINISATEUR NE BUTINE PAS AU MÈTRE CARRÉ**, et le moteur le savait
+  // déjà : `carteBiotique` agrège la diversité par blocs de 10 m sur une
+  // fenêtre de 3×3, « parce qu'évaluer la richesse cellule par cellule donnait
+  // toujours une seule essence ». Épandre le nectar sur le seul disque du
+  // houppier reproduisait exactement ce défaut — mesuré, une haie à seize
+  // mètres du centre d'un verger ne comptait pour rien, alors qu'un insecte la
+  // visite sans y penser. On reprend donc la MÊME fenêtre, qui est déjà celle
+  // de l'habitat avec lequel cette ressource va être comparée.
+  const nbxF = Math.max(1, Math.ceil(dims.widthM / BLOC_AUXILIAIRES_M));
+  const nbyF = Math.max(1, Math.ceil(dims.heightM / BLOC_AUXILIAIRES_M));
+  const offreBloc = new Float64Array(nbxF * nbyF);
+  const cellulesBloc = new Float64Array(nbxF * nbyF);
+  for (let i = 0; i < nCells; i++) {
+    const bx = Math.min(nbxF - 1, Math.floor((i % dims.widthM) / BLOC_AUXILIAIRES_M));
+    const by = Math.min(nbyF - 1, Math.floor(Math.floor(i / dims.widthM) / BLOC_AUXILIAIRES_M));
+    const b = by * nbxF + bx;
+    offreBloc[b] = (offreBloc[b] ?? 0) + (floraleInstant[i] ?? 0);
+    cellulesBloc[b] = (cellulesBloc[b] ?? 0) + 1;
+  }
+  const offreVue = new Float64Array(nbxF * nbyF);
+  for (let by = 0; by < nbyF; by++) {
+    for (let bx = 0; bx < nbxF; bx++) {
+      let somme = 0;
+      let cellules = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const x = bx + dx;
+          const y = by + dy;
+          if (x < 0 || y < 0 || x >= nbxF || y >= nbyF) continue;
+          somme += offreBloc[y * nbxF + x] ?? 0;
+          cellules += cellulesBloc[y * nbxF + x] ?? 0;
+        }
+      }
+      offreVue[by * nbxF + bx] = cellules > 0 ? somme / cellules : 0;
+    }
+  }
+
+  // La mémoire, enfin. Une colonie qui a jeûné au printemps n'est pas là en
+  // juin : c'est la CONTINUITÉ du calendrier qui fait la population, pas ce
+  // qui est ouvert le jour de la visite. Sans elle, chaque arbre se
+  // pollinisait lui-même à proportion de ses propres fleurs.
+  const ressourceFlorale = state.soil.ressourceFlorale.slice();
+  for (let i = 0; i < nCells; i++) {
+    const bx = Math.min(nbxF - 1, Math.floor((i % dims.widthM) / BLOC_AUXILIAIRES_M));
+    const by = Math.min(nbyF - 1, Math.floor(Math.floor(i / dims.widthM) / BLOC_AUXILIAIRES_M));
+    // La mémoire suit une ADÉQUATION, pas une quantité : « y a-t-il eu de quoi
+    // manger à portée », et non « combien de nectar ». C'est ce qui la rend
+    // comparable à l'habitat, et c'est la mesure qui l'a imposé (herbacees.ts,
+    // `OFFRE_FLORALE_SUFFISANTE`).
+    const cible = Math.min(1, (offreVue[by * nbxF + bx] ?? 0) / OFFRE_FLORALE_SUFFISANTE);
+    ressourceFlorale[i] =
+      (ressourceFlorale[i] ?? 0) + (cible - (ressourceFlorale[i] ?? 0)) * INERTIE_RESSOURCE_FLORALE;
+  }
+
   nextTrees = nextTrees.map((tree, t) => {
     const espece = getEspece(tree.especeId);
     const fruits = espece.fruits;
@@ -1721,12 +1863,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       fruitsKg = 0; // les fruits de l'an passé sont perdus depuis longtemps
     }
     const mature = tree.alive && tree.ageWeeks >= espece.regeneration.maturiteAns * 52;
-    if (mature) {
-      const bloomEnd = fruits.floraisonDJ + FLORAISON_DUREE_DJ;
+    // La floraison a quitté le bloc `fruits` (#70) : une espèce qui fructifie
+    // en porte forcément une, `fiches.test.ts` le vérifie, et le repli sur la
+    // durée par défaut ne sert qu'à ne pas jeter une fiche incomplète.
+    const floraison = espece.floraison;
+    if (mature && floraison) {
+      const bloomEnd = floraison.debutDJ + floraison.dureeDJ;
       // Fenêtre de floraison : gel fatal aux fleurs ouvertes (atlas : abricotier).
       if (
         ddPrev < bloomEnd &&
-        ddYearBase5 >= fruits.floraisonDJ &&
+        ddYearBase5 >= floraison.debutDJ &&
         // Le gel se juge SOUS LE COUVERT de cet arbre-là, pas au-dessus de la
         // parcelle : la nuit, un couvert renvoie vers le sol le rayonnement que
         // le ciel clair emporterait, et la floraison qu'il abrite y échappe
@@ -1767,7 +1913,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // verger nu dans une plaine nue perd une bonne part de sa nouaison ;
         // il n'en perd jamais la totalité (vent, abeilles domestiques).
         const cellArbre = cellIndexAt(dims, tree.x, tree.y);
-        const servicePollinisation = 0.35 + 0.65 * Math.min(1, habitat[cellArbre] ?? 0);
+        // **IL FAUT UN GÎTE ET UNE TABLE, et le plus rare décide** (#70). Le
+        // service ne lisait que l'habitat — essences, strates, herbe, bois
+        // mort —, c'est-à-dire où l'insecte VIT. Il lit maintenant aussi ce
+        // qu'il a eu à MANGER, par la mémoire florale de la cellule : un
+        // verger nu qui fleurit trois semaines et ne nourrit rien le reste de
+        // l'année n'a pas la population qu'il lui faudrait le jour venu.
+        //
+        // Le minimum plutôt qu'une somme, comme partout ailleurs dans ce
+        // moteur : un abri sans fleurs ne fait pas un pollinisateur, des
+        // fleurs sans abri non plus.
+        const servicePollinisation =
+          POLLINISATION_PLANCHER +
+          (1 - POLLINISATION_PLANCHER) *
+            Math.min(habitat[cellArbre] ?? 0, ressourceFlorale[cellArbre] ?? 0);
         fruitsKg =
           fruits.rendementMaxKg *
           sizeFactor *
@@ -2580,7 +2739,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (let i = 0; i < nCells; i++) {
       const t = tassement[i] ?? 0;
       if (t <= 0) continue;
-      tassement[i] = tassementApresUneAnnee(t, 1 - (groundLight[i] ?? 1));
+      // **LES RACINES DE LA STRATE BASSE COMPTENT AUSSI** (#140). La densité
+      // racinaire était lue sur `1 - groundLight`, c'est-à-dire sur le COUVERT
+      // DES ARBRES : un champ de blé, qui a pourtant un chevelu dense, n'en
+      // recevait aucun crédit faute de canopée. Le proxy confondait « ombragé »
+      // et « enraciné », et rien ne l'avait révélé parce que rien ne labourait
+      // tous les ans sur une parcelle sans arbres.
+      //
+      // Le maximum des deux, et non leur somme : sous une futaie, le couvert
+      // dit déjà ce que les racines valent, et les additionner compterait deux
+      // fois le même sol.
+      const racines = Math.max(1 - (groundLight[i] ?? 1), herbeCouverture[i] ?? 0);
+      tassement[i] = tassementApresUneAnnee(t, racines);
     }
   }
 
@@ -2722,6 +2892,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterK,
         herbeCouverture,
         herbeEmprise,
+        cultureGrain,
+        cultureGrainPotentiel,
+        ressourceFlorale,
         herbeFeuillage,
         herbeBiomasse,
         herbeHumidite,

@@ -158,58 +158,90 @@ describe("pollinisation croisée (§7.5) et récolte (§10)", () => {
 });
 
 describe("service de pollinisation (§7.4, critère G4)", () => {
-  it("un verger nu produit moins que le même verger dans un environnement diversifié", () => {
-    const positions = [
-      { x: 20, y: 20 },
-      { x: 25, y: 20 },
+  /**
+   * **CET ESSAI AVAIT CHOISI TROIS ESPÈCES QUI NE NOURRISSENT PERSONNE.**
+   *
+   * Son « environnement diversifié » était une haie de noisetier, chêne
+   * pubescent et bouleau. Les trois sont ANÉMOPHILES : leur pollen part au
+   * vent, aucun insecte ne se déplace pour eux. L'essai passait quand même,
+   * parce que le service ne lisait que l'habitat — lequel compte la richesse
+   * en essences. Le moteur affirmait donc que planter trois arbres pollinisés
+   * par le vent améliore la nouaison d'un verger de 15 %.
+   *
+   * Depuis le calendrier des fleurs (#70), le service demande un gîte ET une
+   * table, et la table de cette haie-là est vide : mesuré, elle ne rend plus
+   * que +0,9 %. Ce n'est pas une régression, c'est la correction d'une
+   * affirmation fausse.
+   *
+   * L'essai garde donc son énoncé — un verger accompagné produit plus qu'un
+   * verger nu — et se donne le dispositif qui peut le montrer, avec le bras
+   * anémophile conservé comme TÉMOIN : c'est lui qui sépare « des voisins »
+   * de « des voisins qui nourrissent ».
+   */
+  const positions = [
+    { x: 20, y: 20 },
+    { x: 25, y: 20 },
+  ];
+  /** Les mêmes six emplacements dans les trois bras : seules les espèces changent. */
+  const EMPLACEMENTS: [number, number][][] = [
+    [
+      [14, 20],
+      [14, 24],
+    ],
+    [
+      [14, 16],
+      [31, 20],
+    ],
+    [
+      [31, 16],
+      [31, 24],
+    ],
+  ];
+  const haie = (especes: readonly string[]): GameAction[] =>
+    especes.map((especeId, i) => ({
+      type: "planter",
+      week: 0,
+      especeId,
+      positions: (EMPLACEMENTS[i] ?? []).map(([x, y]) => ({ x, y })),
+    }));
+
+  const recolte = (accompagnement: GameAction[]): number => {
+    const actions: GameAction[] = [
+      { type: "planter", week: 0, especeId: "malus_domestica", positions },
+      { type: "proteger", week: 1, treeIds: [1, 2] },
+      ...accompagnement,
     ];
-    const recolte = (accompagnement: GameAction[]): number => {
-      const actions: GameAction[] = [
-        { type: "planter", week: 0, especeId: "malus_domestica", positions },
-        { type: "proteger", week: 1, treeIds: [1, 2] },
-        ...accompagnement,
-      ];
-      let best = 0;
-      run(actions, 12, (state) => {
-        for (const t of state.trees) {
-          if (t.especeId === "malus_domestica") best = Math.max(best, t.fruitsKg);
-        }
-      });
-      return best;
-    };
-    const nu = recolte([]);
-    // Une haie d'essences variées et étagées autour du verger : c'est de là que
-    // viennent les pollinisateurs, et les mêmes habitats servent aux auxiliaires.
-    const haie: GameAction[] = [
-      {
-        type: "planter",
-        week: 0,
-        especeId: "corylus_avellana",
-        positions: [
-          { x: 14, y: 20 },
-          { x: 14, y: 24 },
-        ],
-      },
-      {
-        type: "planter",
-        week: 0,
-        especeId: "quercus_pubescens",
-        positions: [
-          { x: 14, y: 16 },
-          { x: 31, y: 20 },
-        ],
-      },
-      {
-        type: "planter",
-        week: 0,
-        especeId: "betula_pendula",
-        positions: [
-          { x: 31, y: 16 },
-          { x: 31, y: 24 },
-        ],
-      },
-    ];
-    const accompagne = recolte(haie);
-    expect(accompagne).toBeGreaterThan(1.15 * nu);
+    let best = 0;
+    run(actions, 12, (state) => {
+      for (const t of state.trees) {
+        if (t.especeId === "malus_domestica") best = Math.max(best, t.fruitsKg);
+      }
+    });
+    return best;
+  };
+
+  const nu = recolte([]);
+  // Noisetier, chêne, bouleau : trois essences, trois strates, zéro nectar.
+  const anemophile = recolte(haie(["corylus_avellana", "quercus_pubescens", "betula_pendula"]));
+  // Prunellier (mars), aubépine (mai), ronce (juin à août) : même nombre de
+  // tiges, mêmes emplacements, et de quoi manger d'un bout à l'autre de la
+  // saison. Les trois mûrissent en deux à huit ans, donc elles fleurissent
+  // avant la fin du banc.
+  const mellifere = recolte(haie(["prunus_spinosa", "crataegus_monogyna", "rubus_fruticosus"]));
+
+  it("une haie qui NOURRIT fait mieux nouer le verger", () => {
+    // Relevé : nu 11,52 kg, anémophile 11,62 kg (+0,9 %), mellifère 14,74 kg
+    // (+28,0 %). Le banc du verger de `floraison.test.ts`, dispositif tout
+    // différent — quarante mètres de côté, deux haies complètes, vingt-deux
+    // ans —, donne +28,2 %. Deux bancs indépendants, le même chiffre.
+    expect(mellifere).toBeGreaterThan(1.15 * nu);
+  });
+
+  it("une haie qui n'offre que le gîte ne le fait PAS, et c'est le témoin", () => {
+    // Elle abrite autant — même nombre de tiges, mêmes strates, même richesse
+    // en essences — et elle ne nourrit rien. Le service étant le minimum du
+    // gîte et de la table, c'est la table qui décide ici.
+    expect(anemophile).toBeLessThan(1.05 * nu);
+    expect(mellifere).toBeGreaterThan(1.1 * anemophile);
   });
 });

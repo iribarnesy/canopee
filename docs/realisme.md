@@ -96,17 +96,17 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
 | B. Lumière et structure | 8 | 3 | 0 | 11 |
-| C. Nutriments et cycles | 14 | 0 | 1 | 15 |
+| C. Nutriments et cycles | 17 | 0 | 1 | 18 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
-| E. Interactions entre plantes | 8 | 4 | 0 | 12 |
+| E. Interactions entre plantes | 9 | 4 | 0 | 13 |
 | F. Dynamique des peuplements | 13 | 3 | 3 | 19 |
-| G. Faune et santé | 10 | 1 | 0 | 11 |
-| H. Gestion, économie, travail | 14 | 4 | 0 | 18 |
+| G. Faune et santé | 11 | 0 | 0 | 11 |
+| H. Gestion, économie, travail | 16 | 4 | 1 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
-| J. Biodiversité et structure | 7 | 1 | 0 | 8 |
-| **Total** | **122** | **20** | **4** | **146** |
+| J. Biodiversité et structure | 8 | 0 | 0 | 8 |
+| **Total** | **130** | **18** | **5** | **153** |
 
-**Score de réalisme : 122 pleins + 20 partiels sur 146 → 90 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 130 pleins + 18 partiels sur 153 → 91 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -173,8 +173,15 @@ recouvrement devient local, et une futaie vraiment dense redevient testable)
 entrée omise par son propre lot, rattrapée ici)
 → 90 % (le houppier suit le diamètre, pas la hauteur : le port serré, et
 B10 est enfin complet)
-→ **90 % (le réseau mycorhizien cesse de coûter 12 % du volume sur sol
-pauvre — aucun point gagné, un ✅ qui était faux réparé)**.*
+→ 90 % (le réseau mycorhizien cesse de coûter 12 % du volume sur sol
+pauvre — aucun point gagné, un ✅ qui était faux réparé)
+→ 91 % (le calendrier des fleurs : fleurir cesse d'être fructifier, et sept
+espèces qui nourrissent sans rien donner à récolter entrent au calendrier)
+→ 90 % (le jeu peut enfin poser sa question centrale : la culture existe —
+cinq critères écrits, dont le LER qu'on ne sait pas calculer, donc un point
+de moins)
+→ **91 % (la fertilisation : la courbe de réponse de Broadbalk tombe toute
+seule, et l'allée fertilisée rend enfin le gradient lisible)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -253,6 +260,9 @@ maladie-là, pas une preuve de santé.*
 | C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | ✅ | `bases.ts` ; `bases.test.ts` — **le pH cesse d'être un état** : il se lit sur le taux de saturation d'un pool de bases échangeables, alimenté par l'altération et les dépôts, vidé par le lessivage, et penché par la teneur en CALCIUM de la litière (un trait de l'atlas, mesuré, aucune espèce nommée). Mesuré sur cinquante ans : un châtaignier fait passer un limon acide de 5,00 à 4,76, un hêtre un limon riche de 7,00 à 6,77, un frêne le même de 7,00 à 7,14 — des dixièmes, comme la podzolisation réelle. Et le chaulage cesse d'être un geste à effet fixe : la même chaux déplace un sable bien plus qu'une argile, parce que le complexe est au dénominateur |
 | C14 | Les bases échangeables suivent un bilan conservatif | ✅ | `bases.test.ts` — la variation du pool vaut altération + dépôts + litière − lessivage − charge acide, à l'arrondi près. Comme pour N, P et K, et avec la même réserve : la conservation ne valide pas le NIVEAU |
 | C15 | La POMPE À BASES : un feuillu remonte les bases du sous-sol et les dépose en surface, appauvrissant la profondeur | ❌ | le moteur ne tient qu'un pool de bases de SURFACE, comme pour N, P et K. Il dit donc qu'un frêne entretient son horizon de surface, et rien de ce qu'il prend en dessous. Ce n'est pas un détail : c'est par là que Foltran et al. mesurent un hêtre acidifiant le sol minéral profond PLUS qu'un épicéa (−0,5 unité en vingt ans) — l'intuition « les résineux acidifient » est une demi-vérité, et c'est la moitié que ce lot ne dit pas |
+| C16 | Une culture continue sans apport épuise le sol, et se stabilise bas | ✅ | La culture prélève son azote pondéré par son `exigenceMinerale` — dix pour le blé contre un pour une graminée spontanée (`herbacees.ts`, `tick.ts`) — et le moteur n'a pas d'action de fertilisation. Un blé continu descend donc de lui-même : 3,43 t/ha à l'an 4, 1,98 à l'an 12, **1,02 à l'an 24**, 0,82 à l'an 29 (`culture.test.ts`). **Le calage et la validation viennent de la même source sur deux chiffres différents** : Broadbalk (Rothamsted, blé continu depuis 1843) donne 8-9 t/ha sur les parcelles pleinement fumées — c'est le plafond posé sur la fiche — et ~1 t/ha sur celles qui ne reçoivent rien, tenu sur cent soixante-dix ans. Rien dans le code ne pousse le moteur vers ce second chiffre. **Limite** : il glisse sous 1 après trente ans là où Broadbalk tient, et la cause probable est la PAILLE, qui reste au champ dans la réalité et ne rend rien ici |
+| C17 | On peut apporter de l'azote, et les formes ne font pas la même chose | ✅ | `fertiliser` (`actions.ts`), dose en kg N/ha dans les deux cas pour qu'elles se comparent. Le MINÉRAL entre dans le pool disponible — donc lessivable par `cellLeachedG`, qui existait ; le FUMIER entre dans la litière avec son C/N, se minéralise sur des années et construit de l'humus au passage (même patron que `epandreBrf`). Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m² d'azote minéral et RIEN en litière, le plot fumier 4,50 et 20,25 de litière — le second a constitué un stock, le premier l'a traversé. À azote comparable, le fumier fait mieux sur la durée (6,21 contre 4,88 t/ha), ce que Broadbalk dit aussi. Refus au-delà de 250 kg N/ha : la directive nitrates plafonne l'organique à 170 en zone vulnérable |
+| C18 | Le rendement répond à la dose d'azote, et la courbe n'est écrite nulle part | ✅ | Aucune courbe de réponse n'a été codée : l'apport remplit le pool, et le rendement y répond par la satisfaction de la strate. Mesurée sur les paliers de Broadbalk (0 / 48 / 96 / 144 / 192 kg N/ha), moyenne des dix dernières années sur trente : **1,01 / 2,40 / 3,21 / 3,92 / 4,88 t/ha** — monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues tiennent depuis 1843. **Limite, chiffrée et attribuée** : Broadbalk monte à 8-9 t/ha à 192 kg N et le moteur plafonne à 4,88. La cause n'est ni dans la culture ni dans l'azote — un itinéraire céréalier fait quatre passages d'engin par an, soit 1,00 de tassement contre 0,20 de réparation, donc le sol est épinglé à 1 dès la deuxième année et perd 30 % de croissance pour toujours (issue #141, maintenance). **Les premières années, avant l'épinglage, atteignent 7,35 et 7,62 t/ha**, dans la gamme de l'essai |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
 | C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche**. **Ce ✅ était faux et personne ne pouvait le voir** : le gain gonflait la demande qui vide la cellule sans gonfler le service, si bien que le réseau COÛTAIT 11,8 % du volume sur limon pauvre et 0,7 % sur limon riche — il nuisait le plus là où il devait aider le plus. Corrigé en rangeant le gain une fois par arbre pour que les deux passes ne PUISSENT plus diverger (#115). Mesuré sur cinq graines et deux stations : **+2,79 % de volume sur limon pauvre, +0,09 % sur limon riche** (azote reçu +5,7 % et +0,7 %), gradient enfin dans le bon sens. **Limite** : le réseau fait GAGNER l'arbre dans la compétition pour l'azote minéral, il n'en AJOUTE pas — le service réel (capter l'azote organique et les pores qu'une racine n'atteint pas) demande un pool organique accessible, et le gain sur l'eau et le phosphore attend toujours |
 
@@ -289,6 +299,7 @@ maladie-là, pas une preuve de santé.*
 | E8 | Un couvert nurse peut être « levé » (coupe progressive) au bon moment | ✅ | coupe/recépage sélectifs de la nurse |
 | E9 | Les plantes de sous-bois profitent de la fenêtre de printemps | ✅ | `herbacees.ts` : une vernale ne bouge son emprise que pendant SA saison, donc elle juge la station en mars ; `herbacees.test.ts`. Sous hêtraie, la couverture du sol vaut 3 fois plus mi-avril que fin juillet et la vernale tient 36-40 % de l'emprise ; sous pinède, 1,25 et 19 % ; à découvert, 1,04 et 3 % — gradient monotone, deux graines. **Limite** : le moteur ne produit pas, sur cette station, de peuplement sempervirent assez sombre pour l'exclure tout à fait (le pin sylvestre s'auto-éclaircit) ; ce que vaut la fenêtre se lit alors sur la capacité, nulle à 4 % de lumière |
 | E12 | La concurrence herbacée fait échouer les plantations non entretenues | ✅ | `herbe.ts`, `herbacees.ts` ; `herbe.test.ts` — d'autant plus forte que le sol est pauvre. La fauche emporte le FEUILLAGE et laisse l'emprise : la repousse est celle d'un chaume, pas d'une réinstallation |
+| E13 | Une culture sous les arbres rend moins, et d'autant plus que l'ombre monte | ✅ | **C'est la fertilisation qui a rendu ce gradient lisible** (#140). Sans elle, l'essai mesurait surtout l'azote que la litière des noyers rendait à un blé qui s'épuisait, et le rapport passait AU-DESSUS de 1 entre H/L 0,93 et 1,11. Les deux côtés fertilisés, c'est de l'ombre PURE — donc comparable à ce que mesure Dupraz. Deux rangs de noyers encadrant une allée de 8 m, contre le même blé fertilisé en plein champ (`fertilisation.test.ts`) : H/L 0,29 → **0,999** ; 0,55 → 0,963 ; 0,74 → 0,912 ; 0,84 → **0,889** ; 1,02 → 0,835 ; 1,28 → **0,787**. Monotone d'un bout à l'autre, et le rapport ne remonte jamais au-dessus de 1. **Limite, et elle est franche** : le moteur ne montre PAS de genou à 0,8. L'observation de Dupraz — « pas beaucoup affecté sous H/L 0,8 » — reste compatible (−9 % à 0,74) mais le moteur la produit comme une pente douce, pas comme un seuil |
 | E10 | La densité de plantation modifie la forme et la vitesse (serré = élancé) | ✅ | `trees.ts` (`allocationDiametreCmParM` + le partage de l'étiolement) ; `elancement.test.ts`, `etiolement.test.ts`. Le diamètre est porté par l'INDIVIDU, et la lumière décide de l'ARBITRAGE avant de raboter la pousse : l'allongement se sert d'abord, le diamètre encaisse le résidu. Rien n'est déclaré par essence. **L'amplitude est enfin là**, et il a fallu innocenter deux coupables avant d'y arriver — ni le poids des codominants (#65 : le porter à 1 déplace les dominants serrés de 42,1 à 41,7), ni la paire d'allocation (#79 : ouvrir sa fenêtre à [40 ; 200] plafonne à 62). Le verrou était que l'ombre rabotait la pousse au lieu de la rediriger. Mesuré depuis #97 : gradient MONOTONE des dominants à 2 / 4 / 10 m d'écartement, et la tige la plus élancée du peuplement passe de 49 à **87** à 2 m, contre 38 à 10 m ; la hêtraie serrée monte à 129 à quatre-vingts ans, là où la sylviculture mesure 25–40 au large et 90–100 en perche. Et c'est bien une PERCHE, pas un nabot : elle est à 62 % de la hauteur du plus haut, là où le moteur d'avant faisait des dominés TRAPUS. **Ce que ça débloque** : `ELANCEMENT_CRITIQUE` (tempete.ts) vaut 100 et était inatteignable — la moitié haute de la rampe de chablis n'est plus du code mort. **Réserve** : le bas de gamme reste court, au large le moteur donne 35–38 quand le réel descend à 25, ce que l'allocation plafonnée à 2,5 cm/m interdit |
 
 ## F. Dynamique des peuplements
@@ -325,7 +336,7 @@ maladie-là, pas une preuve de santé.*
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; l'aulnaie pure se fait décimer sur chacune des trois graines, le mélange y perd trois à quatre fois moins d'aulnes (0,34 / 0,34 / 0,23) et y écrête la pullulation d'un facteur 2,8 à 3,1. Les deux sont épinglés GRAINE PAR GRAINE depuis #68, et non plus en moyenne : l'écart de mortalité avait failli s'annuler sur une graine sans que la moyenne le dise |
-| G4 | Les pollinisateurs conditionnent la fructification | 🟡 | service ∝ habitat local (mêmes milieux que les auxiliaires) ; pas d'insectes individualisés ni de calendrier de floraison. Les espèces herbacées existent maintenant (`herbacees.ts`) mais aucune ne déclare de floraison : la fiche s'arrête au calendrier FOLIAIRE |
+| G4 | Les pollinisateurs conditionnent la fructification | ✅ | Le service demande désormais **un gîte ET une table**, et le plus rare décide : `min(habitat, ressourceFlorale)` (`tick.ts`, `floraison.test.ts`). L'habitat dit où l'insecte vit — essences, strates, herbe, bois mort ; la ressource florale dit ce qu'il a eu à manger, par une MÉMOIRE de sept semaines agrégée sur la fenêtre de butinage (blocs de 10 m, voisinage 3×3, celle-là même que `ravageurs.ts` emploie pour l'habitat). **Le témoin est le résultat** : neuf pommiers, vingt-deux ans, trois graines, et deux haies rigoureusement égales — même nombre de tiges, mêmes espèces mellifères, même couvert. Celle qui fleurit de février à l'automne rend 327,6 kg, celle qui fleurit toute en mai 263,4 kg, le verger nu 255,6 kg : **+28 % pour le calendrier, +3 % pour la seule présence de voisins**. Coût mesuré : +6 % de temps par semaine simulée. **Et un second banc, tout différent, donne le même chiffre** : deux pommiers entourés de six arbustes, douze ans — une haie MELLIFÈRE (prunellier, aubépine, ronce) rend 14,74 kg contre 11,52 kg pour le verger nu, soit +28,0 %, quand la même haie ANÉMOPHILE (noisetier, chêne, bouleau) n'en rend que 11,62 kg, +0,9 %. Cet essai-là passait AVANT le lot avec la seule haie anémophile : le moteur affirmait que trois arbres pollinisés par le vent améliorent la nouaison d'un verger de 15 %, parce que le service ne lisait que la richesse en essences. **Limite** : pas d'insectes individualisés — ni espèces, ni populations, ni distance de butinage propre à chacune ; la fenêtre est celle des auxiliaires, faute d'en avoir mesuré une autre |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
 | G10 | Le sanglier retourne le sol et mange la glandée — un herbivore qui FAVORISE aussi la régénération | ✅ | `sanglier.ts` ; `sanglier.test.ts` — 5 % de la parcelle retournée par an à densité de référence (relevés : 0,2-0,7 %/an en prairie, 7-11 %/an en forêt), en automne et en hiver, sur les cellules qui offrent de la glandée, du couvert et un sol humide. **Deux effets de signe opposé, et aucun n'est écrit par espèce** : il mange ce qui tombe et reste (les graines dont le mode de dissémination est `geai` ou `gravite`), il ouvre un lit de germination pour ce qu'apporte le vent. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à densité ordinaire, 22 sous forte densité — difficile, jamais impossible |
 | G11 | Un boutis est un ENFOUISSEMENT, pas une destruction : la litière passe au pool lent | ✅ | le carbone enfoui rejoint l'humus et l'azote le pool minéral ; le stock d'humus MONTE avec la densité de sangliers. Et la structure y gagne — un boutis casse la croûte, ce qu'on n'attend pas d'un dégât. Ce qu'il coûte est ailleurs : la terre est à nu, donc elle part |
@@ -336,7 +347,7 @@ maladie-là, pas une preuve de santé.*
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
 | H1 | Chaque action coûte du temps de travail et de l'argent | ✅ | `actions.ts` ; `actions.test.ts` |
-| H2 | Le temps de travail est plafonné par semaine et budgété à l'année (UTH) | ✅ | `WEEK_HOURS_CAP` |
+| H2 | Une semaine surchargée ne se refuse pas, elle se paie : le budget est annuel (UTH), la semaine n'est qu'un seuil de facturation | ✅ | `WEEK_HOURS_CAP` sert de seuil, plus de mur : `depassementHoraire` donne les heures au-delà de 60 h/UTH et `coutDuDepassement` les convertit en embauches saisonnières (une par tranche entamée). Un maraîcher qui pointe 80 h en semaine de plantation ne se fait pas arrêter par un garde-fou — il embauche, ou il y passe ses nuits |
 | H3 | Saisonnier vs CDI : coûts, durées et ruptures réalistes | ✅ | `embauche-chaulage.test.ts` |
 | H4 | La cadence de récolte dépend de l'espèce (pommes vs noisettes) | ✅ | `fruits.recolteHKg` |
 | H5 | Une récolte non faite dans sa fenêtre est perdue | ✅ | `fruits.test.ts` |
@@ -347,6 +358,9 @@ maladie-là, pas une preuve de santé.*
 | H15 | Un bois tué sur pied reste valorisable un temps, avec décote | ✅ | `DECOTE_CHABLIS`, `CHABLIS_RECUPERABLE_SEMAINES` ; qualité d'œuvre perdue. Les deux constantes s'appelaient « chablis » quand seul le FEU savait en produire ; depuis `tempete.ts` elles portent enfin leur nom. Et la ruine des cours après une tempête est là sans qu'on l'écrive : sortir d'un coup tout ce que le vent a couché tombe sous la décote d'engorgement du débouché (H7) |
 | H9 | Irrigation, fertilisation, protections individuelles, clôtures | 🟡 | chaulage, fauche, protections individuelles et **clôtures** ; irrigation et fertilisation absentes |
 | H18 | Le gibier se régule aussi par la chasse — et l'immigration compense | ✅ | `chasser` ; `gibier.test.ts` — une journée fait reculer la pression, un an plus tard elle est revenue |
+| H19 | Une culture se sème, se récolte et se vend | ✅ | `semer` et `moissonner` (`actions.ts`), fiche `culture` sur l'herbacée (`herbacees.ts`) : semence, heures de chantier au prorata de la part mécanisable, grain vendu au prix de la fiche. Le grain est une INTÉGRALE — ce que la plante a assimilé sur ce qu'elle aurait assimilé sans limite —, ce qui ne demande aucune constante à caler et rend à `rendementMaxTHa` le sens que sa fiche lui donne |
+| H20 | Préparer le lit de semence conditionne la levée | ✅ | Le semis pose la PLACE LIBRE, et `labourer` remet les emprises à zéro : la règle « labourer ou faucher avant de semer » n'est écrite nulle part, elle tombe de deux mécanismes qui existaient déjà (`culture.test.ts`). Semer dans un tapis fermé est refusé AVEC sa raison — mesuré avant cette garde, le semis réussissait en silence et la moisson annonçait « rien à moissonner » neuf mois plus tard |
+| H21 | Le LER dit si le mélange bat la somme des parties | ❌ | `docs/regles.md` §7.5 le demande — « le jeu calcule le Land Equivalent Ratio des assolements mixtes vs monoculture, indicateur de score et outil pédagogique » — et rien ne le calcule. Il exige les DEUX monocultures comme témoins, le blé pur et la forêt pure sur la même station : ce n'est pas un affichage, c'est un dispositif. Cible de validation : le noyer-céréale de Restinclières dépasse 1,2 |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
@@ -385,7 +399,7 @@ inventaire.
 | J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | ✅ | strates, sempervirence, et depuis l'issue #75 l'ÉTAGEMENT LOCAL (`heterogeneiteVerticale`) — l'écart-type des hauteurs dans un voisinage de 3 m, qui distingue enfin une forêt étagée d'un damier de blocs monostrates que le décompte de strates notait pareil : 0,00 contre 0,68 |
 | J9 | L'ARRANGEMENT compte autant que la composition : lisière, cœur, mosaïque | ✅ | `structureHorizontale` ; `mosaique.test.ts` — à espèces, nombre et âge identiques, une mosaïque de bosquets note mieux qu'un bloc et qu'une plantation régulière (0,79 / 0,23 / 0,00). **Et le mitage ne paie pas** : des houppiers disjoints donnent 94 % de lisière et zéro cœur, donc zéro. La courbe n'est pas ajustée — c'est le PRODUIT lisière × cœur, qui tombe de l'énoncé « il faut les deux » |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
-| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | 🟡 | le service de pollinisation dépend de l'habitat, mais pas encore du calendrier de floraison (les deux périodes de soudure, ch4-C). `indiceBiodiversite` ne compte que les floraisons LIGNEUSES ; la strate basse, qui est justement ce qui nourrit en soudure, n'y entre pas |
+| J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | ✅ | `biodiversite.ts:etalementDesFloraisons` balaie la saison de vol par pas de 30 °C·j et demande, à chaque pas, ce qui est OUVERT et ce que ça offre. Quatre défauts de la mesure d'avant tombent ensemble : elle comptait les **anémophiles** (une noiseraie affichait des floraisons étalées sans nourrir personne — le noisetier et le noyer déclarent maintenant `nectar: 0`), elle ignorait la **strate basse**, elle ignorait la **durée** (l'ajonc tient six mois, l'abricotier dix jours), et elle comptait des espèces au lieu d'une couverture (un pommier isolé parmi trois cents hêtres valait une tranche pleine). **Ce qui a débloqué le critère est un découpage** : la floraison a quitté le bloc `fruits`, si bien que sept espèces qui nourrissent sans rien donner à récolter — aubépine, saule, ajonc, genêt, callune, houx, fusain — cessent d'être invisibles. À elles deux, l'ajonc et la callune nourrissent une lande atlantique presque toute l'année. **Limite** : la strate basse n'apporte que sa vernale, les deux autres herbacées étant des graminées ; la soudure d'ÉTÉ reste donc à la charge des ligneux, faute d'une herbacée entomophile tardive |
 
 ## Ce qui débloquerait le plus de critères
 
@@ -2083,6 +2097,226 @@ pas le voir : il appelait la fonction avec des entiers.
   réservoir fini à seuil de débordement, et non comme une rugosité — ce que
   fait aussi WEPP, qui note explicitement qu'il ne modélise pas la formation
   des barrages de débris.
+
+## La fertilisation : ce qui a rendu le gradient lisible
+
+Le moteur n'avait aucun geste pour apporter de l'azote. Un blé continu ne
+pouvait donc que s'épuiser — ce qui est juste, et ce qui interdisait tout le
+reste : on ne savait pas séparer l'ombre de l'azote dans une allée, et le LER
+n'avait pas de témoin valable.
+
+### La courbe de réponse TOMBE, elle n'est écrite nulle part
+
+Aucune courbe n'a été codée. L'apport remplit le pool, et le rendement y répond
+par la satisfaction de la strate — la même que celle des arbres. Mesurée sur
+les paliers de Broadbalk, moyenne des dix dernières années sur trente :
+
+| apport (kg N/ha) | 0 | 48 | 96 | 144 | 192 |
+|---|---|---|---|---|---|
+| rendement | **1,01** | 2,40 | 3,21 | 3,92 | 4,88 |
+
+Monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues
+tiennent depuis 1843.
+
+### Le plafond n'est ni dans la culture ni dans l'azote
+
+Broadbalk monte à 8-9 t/ha à 192 kg N ; le moteur plafonne à 4,88. La cause a
+été cherchée plutôt que supposée, et elle est ailleurs : un itinéraire céréalier
+fait **quatre passages d'engin par an**, soit 1,00 de tassement contre 0,20 de
+réparation. Le sol est épinglé à `tassement = 1,000` dès la deuxième année et
+perd 30 % de croissance pour toujours. La preuve que le plafond est bien là :
+**les premières années, avant l'épinglage, atteignent 7,35 et 7,62 t/ha**.
+
+C'est une calibration, donc de la maintenance — issue #141, et ce lot en dépend.
+
+Une moitié du défaut a tout de même été corrigée ici, parce qu'elle était de ce
+lot : la densité racinaire était lue sur `1 − groundLight`, c'est-à-dire sur le
+**couvert des arbres**. Un champ de blé, qui a pourtant un chevelu dense, n'en
+recevait aucun crédit faute de canopée — le proxy confondait « ombragé » et
+« enraciné ». Rien ne l'avait révélé parce que rien ne labourait tous les ans
+sur une parcelle sans arbres. Gain mesuré : 4,59 → 4,88 t/ha en minéral, 5,85 →
+6,21 en fumier. Réel, et loin de suffire.
+
+### Deux formes, et c'est le lessivage qui les sépare
+
+Le minéral entre dans le pool disponible, donc lessivable — et le moteur savait
+déjà le faire. Le fumier entre dans la litière avec son C/N, se minéralise sur
+des années et construit de l'humus au passage. Relevé au centre après trente
+ans : le plot minéral porte 0,98 g/m² d'azote minéral et **rien** en litière, le
+plot fumier 4,50 et 20,25. Le second a constitué un sol, le premier l'a
+traversé — et il fait mieux sur la durée, 6,21 contre 4,88 t/ha, ce que
+Broadbalk dit aussi.
+
+### Et le gradient devient enfin de l'ombre pure
+
+C'est le déblocage. Sans fertilisation, l'allée mesurait surtout l'azote que la
+litière des noyers rendait à un blé qui s'épuisait, et le rapport passait
+au-dessus de 1 entre H/L 0,93 et 1,11. Les deux côtés fertilisés :
+
+| H/L | 0,29 | 0,55 | 0,74 | **0,84** | 1,02 | **1,28** |
+|---|---|---|---|---|---|---|
+| allée / blé pur | 0,999 | 0,963 | 0,912 | **0,889** | 0,835 | **0,787** |
+
+Monotone d'un bout à l'autre, et le rapport ne remonte jamais. **E13 passe ✅.**
+Avec une limite franche : le moteur ne montre pas de genou à 0,8. L'observation
+de Dupraz reste compatible (−9 % à 0,74) mais le moteur la produit comme une
+pente douce, pas comme un seuil.
+
+## La culture : le jeu ne pouvait pas poser sa question
+
+Canopée est un jeu d'agroforesterie — l'art de faire pousser une culture ET des
+arbres sur la même parcelle. Le moteur savait faire les arbres. Il ne savait pas
+faire la culture, donc il ne pouvait pas poser la question du sujet : quelle
+culture, sous quels arbres, à quel écartement.
+
+### Une herbacée de plus, avec une histoire de vie différente
+
+`herbacees.ts` décrit des **pérennes** : une emprise qui conquiert la place
+libre et qui reflue quand la station ne la porte plus. Une culture ne fait ni
+l'un ni l'autre — elle est semée, elle est moissonnée, elle ne colonise rien.
+Le bloc `culture` porte cette différence et le module l'assume par écrit, comme
+il assume déjà son modèle de populations.
+
+Ce qui ne change pas : le feuillage suit la saison et la sécheresse comme pour
+tout le monde, si bien qu'une céréale d'hiver profite d'elle-même de la fenêtre
+où les caducs sont nus. C'est la mécanique de la vernale, sans une ligne.
+
+### Deux règles qui TOMBENT
+
+**Semer pose la place libre**, et `labourer` remet déjà les emprises à zéro :
+« préparer le lit de semence » sort de deux mécanismes qui existaient, sans
+qu'on l'écrive, et c'est aussi le fait agronomique. Mesuré : dans un tapis
+fermé, l'emprise du blé vaut 0,000 et celle des adventices 1,000.
+
+**Et l'azote du grain sort au prélèvement, pas à la moisson.** La strate
+consomme son azote pendant la saison, pondéré par `exigenceMinerale` — dix pour
+le blé, un pour les spontanées, si bien que la demande de la strate vaut
+exactement l'ancienne tant qu'aucune culture n'est semée. Le recompter à la
+récolte le ferait disparaître deux fois, ce que la conservation attraperait.
+
+### Le calage et la validation, sur deux chiffres de la même source
+
+Le grain est un RAPPORT — ce que la plante a assimilé sur ce qu'elle aurait
+assimilé sans limite —, donc il n'y a aucune constante à caler. Le premier jet
+divisait par le nombre de semaines de culture, ce qui suppose un feuillage plein
+toute la saison : le plafond devenait inatteignable par construction, 1,1 t/ha
+là où la fiche annonçait 7.
+
+**Broadbalk** (Rothamsted, blé continu depuis 1843, le plus ancien essai
+agronomique au monde) donne les deux bouts : 8-9 t/ha sur les parcelles
+pleinement fumées, ~1 t/ha sur celles qui ne reçoivent rien, tenu sur cent
+soixante-dix ans. Le plafond de la fiche est calé sur le premier ; le moteur
+n'ayant pas d'action de fertilisation, il doit descendre de lui-même vers le
+second.
+
+| an | 4 | 12 | **24** | 29 |
+|---|---|---|---|---|
+| rendement | 3,43 t/ha | 1,98 | **1,02** | 0,82 |
+
+Rien dans le code ne l'y pousse. Il glisse sous 1 après trente ans là où
+Broadbalk tient, et la cause probable est la paille, qui reste au champ dans la
+réalité et ne rend rien ici.
+
+### Le seuil retrouvé, et pourquoi on n'a pas le droit d'en être content
+
+Deux rangs de noyers encadrant une allée de 8 m, le rapport hauteur/largeur
+d'allée montant de 0,29 à 1,28 en trente-trois ans, comparé au même blé en plein
+champ : 1,000 / **1,007 à H/L 0,84** / 0,950 à 1,19 / **0,874 à 1,28**.
+
+Le premier régime retrouve l'observation de Dupraz — « le rendement n'est pas
+beaucoup affecté tant que H/L reste sous 0,8 ». Mais chez lui **l'allée est
+fertilisée**, donc son seuil est de l'ombre pure ; ici c'est une compensation
+entre l'ombre qui coûte et la litière de noyer qui rend, et le rapport passe
+même au-dessus de 1 entre H/L 0,93 et 1,11. Même chiffre, composition
+différente. C'est la fertilisation qui manque au moteur pour les séparer, et
+E13 reste 🟡 pour cette raison.
+
+### Cinq critères écrits, un point perdu
+
+C16, E13, H19, H20 et H21. Le dernier est un ❌ assumé : le LER, que
+`regles.md` demande depuis toujours et que rien ne calcule. Le référentiel
+passe de 91 % à 90 %, et c'est le travail — la même chose était arrivée au lot
+des tempêtes.
+
+## Le calendrier des fleurs : on ne récolte pas l'ajonc
+
+Le moteur savait qu'un arbre fleurit — il en tirait un gel tardif et un fruit.
+Il ne savait pas que cette fleur NOURRIT quelqu'un, ni que ce quelqu'un doit
+manger le reste de l'année pour être là le jour venu.
+
+### Le verrou était un découpage, pas un mécanisme manquant
+
+La date de floraison vivait dans le bloc `fruits`, réservé aux essences dont on
+récolte quelque chose. Onze espèces en portaient une. Sept qui nourrissent
+réellement les pollinisateurs n'en avaient **aucune** : aubépine, saule blanc,
+ajonc, genêt, callune, houx, fusain.
+
+Ce ne sont pas des oublis de saisie, c'est la conséquence du découpage. L'ajonc
+fleurit de décembre à juin et la callune en août ; à eux deux ils nourrissent
+les abeilles d'une lande atlantique presque toute l'année, et le moteur n'en
+savait rien **parce qu'on n'en récolte rien**. Le saule est la ressource de
+sortie d'hiver, l'aubépine la nappe blanche de mai — entre le pommier (fin
+avril) et la ronce (juin), le calendrier ne connaissait que le noyer, qui est
+anémophile. Bâtir la ressource florale là-dessus aurait fabriqué des trous qui
+n'existent pas.
+
+### Le nectar est le contenu du lot
+
+Le champ vaut **zéro pour le noisetier et le noyer**. Ils fleurissent
+abondamment, leur pollen part au vent, aucun insecte ne se déplace pour eux — et
+`indiceBiodiversite` les comptait comme une ressource. Une noiseraie affichait
+des floraisons étalées sans nourrir personne. Deux des trois herbacées sont dans
+le même cas : ce sont des graminées, et c'est pourquoi la strate basse
+n'apporte ici que sa vernale.
+
+La **durée** sépare de la même façon une ressource ponctuelle d'une ressource de
+fond : l'abricotier passe en dix jours, l'ajonc tient six mois. La constante
+unique de 100 °C·j ne savait pas le dire.
+
+### Le témoin est le résultat
+
+Neuf pommiers, vingt-deux ans, trois graines, trois voisinages. Les deux haies
+sont rigoureusement comparables — même nombre de tiges, mêmes espèces
+mellifères, même couvert, même habitat ; seul le calendrier change.
+
+| voisinage | récolte | ressource florale au centre |
+|---|---|---|
+| aucun | 255,6 kg | 0,029 |
+| haie fleurissant **toute en mai** | 263,4 kg — +3,1 % | 0,059 |
+| haie fleurissant **de février à l'automne** | **327,6 kg — +28,2 %** | 0,159 |
+
+C'est le calendrier qui travaille, pas la présence de voisins.
+
+### Deux grandeurs fausses, que seule la mesure pouvait dire
+
+**La ressource mesurait une quantité, pas une adéquation.** `min(habitat,
+florale)` prétend arbitrer entre un gîte et une table ; mesuré, l'habitat
+tournait à 0,5 et la ressource à 0,10 dans le meilleur cas. Le minimum ne
+départageait donc rien, il remplaçait silencieusement l'habitat — un facteur de
+moins, pas un de plus. Un seuil d'adéquation la rend sans dimension : la mémoire
+devient « quelle part de la saison cette cellule a-t-elle eu de quoi nourrir »,
+ce qui est comparable à l'habitat, et ce qui est aussi, mot pour mot, ce que J6
+appelle « sans rupture ».
+
+**Et le nectar ne portait pas plus loin qu'un houppier.** Même après le seuil,
+la ressource plafonnait à 0,15 au centre du verger : la haie est à seize mètres
+et un disque d'aubépine fait quatre mètres, donc elle ne comptait pour rien.
+Le moteur avait pourtant déjà appris cela et l'avait écrit — `ravageurs.ts`,
+`BLOC_AUXILIAIRES_M` : « les auxiliaires ne perçoivent pas leur environnement au
+mètre carré ; évaluer la richesse cellule par cellule donnait toujours une seule
+essence ». La ressource florale reprend donc la même fenêtre, qui est de surcroît
+celle de l'habitat avec lequel on la compare.
+
+### Ce que ça coûte, et une mesure qui a failli mentir
+
+**+6 % de temps par semaine simulée** (8,02 → 8,52 ms, hêtraie-aubépine 30 × 30
+de quarante ans, médiane de cinq passes). Le premier relevé annonçait +30 %, et
+il était faux : l'étalon avait été mesuré dans un ARBRE DE TRAVAIL SÉPARÉ, avec
+son `node_modules` en lien symbolique. Ce seul changement d'environnement
+déplaçait le chiffre de 25 % — cinq fois l'effet cherché. Mesuré dans le même
+répertoire, avec le même script, l'écart tombe à +6 %, et il recoupe exactement
+le témoin par neutralisation du bloc (+0,43 ms). **Un étalon de temps mesuré
+ailleurs n'est pas un étalon.**
 
 ## Le réseau mycorhizien rendait moins que rien, et le bilan était exact
 
