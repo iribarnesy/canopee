@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0, getEspece } from "../../src/engine/especes";
-import { facteurGammePh, VIGUEUR_A_LA_BORNE } from "../../src/engine/soil";
+import { facteurGammePh, RAMPE_PH, VIGUEUR_A_LA_BORNE } from "../../src/engine/soil";
 
 describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
   it("aux bornes de l'atlas, l'espèce est handicapée mais VIVANTE", () => {
@@ -22,8 +22,7 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
     for (const espece of ESPECES_V0) {
       for (const borne of espece.ph) {
         const f = facteurGammePh(espece.ph, borne);
-        expect(f).toBeGreaterThan(0.3);
-        expect(f).toBeLessThan(0.7);
+        expect(f).toBeCloseTo(VIGUEUR_A_LA_BORNE, 10);
       }
     }
   });
@@ -33,10 +32,13 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
       const [min, max] = espece.ph;
       const centre = (min + max) / 2;
       expect(facteurGammePh(espece.ph, centre)).toBe(1);
-      // Strictement décroissant en s'écartant : c'est ce que « unimodal » veut
-      // dire, et c'est ce qui permet au pH de TRIER les espèces (bio-indication).
-      expect(facteurGammePh(espece.ph, centre + 0.4)).toBeLessThan(1);
-      expect(facteurGammePh(espece.ph, centre - 0.4)).toBeLessThan(1);
+      // Le sommet est PLAT, et c'est voulu : une espèce à large amplitude est
+      // une généraliste, elle ne culmine pas sur un point. C'est le modèle III
+      // de Huisman-Olff-Fresco, le « plateau », et non une cloche.
+      expect(facteurGammePh(espece.ph, centre + 0.4)).toBe(1);
+      // Mais elle décline bien en approchant des bornes.
+      expect(facteurGammePh(espece.ph, min + 0.1)).toBeLessThan(1);
+      expect(facteurGammePh(espece.ph, max - 0.1)).toBeLessThan(1);
     }
   });
 
@@ -45,13 +47,10 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
     // basique la chlorose calcaire. Le zéro est dehors, pas sur la borne.
     for (const espece of ESPECES_V0) {
       const [min, max] = espece.ph;
-      // PILE à la marge, l'arrondi flottant laisse parfois 9·10⁻¹⁶ : c'est zéro
-      // pour tout ce qui s'en sert, et le prétendre exact serait un test qui
-      // ment. Au-delà, en revanche, on exige le zéro franc.
-      expect(facteurGammePh(espece.ph, min - VIGUEUR_A_LA_BORNE)).toBeLessThan(1e-12);
-      expect(facteurGammePh(espece.ph, max + VIGUEUR_A_LA_BORNE)).toBeLessThan(1e-12);
-      expect(facteurGammePh(espece.ph, min - VIGUEUR_A_LA_BORNE - 0.01)).toBe(0);
-      expect(facteurGammePh(espece.ph, max + VIGUEUR_A_LA_BORNE + 0.01)).toBe(0);
+      const debordement = RAMPE_PH * VIGUEUR_A_LA_BORNE;
+      expect(facteurGammePh(espece.ph, min - debordement)).toBe(0);
+      expect(facteurGammePh(espece.ph, max + debordement)).toBe(0);
+      expect(facteurGammePh(espece.ph, min - debordement - 1)).toBe(0);
     }
   });
 
@@ -60,8 +59,8 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
     expect(pin.ph).toEqual([4, 7.5]);
     // Il souffre — le journal avait raison de le dire — mais il n'est plus
     // condamné à sa propre borne : à pH 4 il lui reste la moitié de son régime.
-    expect(facteurGammePh(pin.ph, 4.5)).toBeCloseTo(0.74, 2);
-    expect(facteurGammePh(pin.ph, 4)).toBeCloseTo(0.49, 2);
+    expect(facteurGammePh(pin.ph, 4.5)).toBeCloseTo(0.914, 3);
+    expect(facteurGammePh(pin.ph, 4)).toBeCloseTo(0.2, 10);
     // Et le pin est l'essence des podzols : à 4, il vit.
     expect(facteurGammePh(pin.ph, 4)).toBeGreaterThan(0);
   });

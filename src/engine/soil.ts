@@ -86,6 +86,9 @@ export function facteurPhBiologie(ph: number): number {
   return Math.min(1, Math.max(0.15, (ph - 3.5) / 2));
 }
 
+/** Largeur sur laquelle la vigueur monte de zéro au plein régime, en pH. */
+export const RAMPE_PH = 0.7;
+
 /**
  * Ce qui reste de vigueur à une espèce AU BORD de son amplitude.
  *
@@ -135,13 +138,17 @@ export const VIGUEUR_A_LA_BORNE = 0.2;
  */
 export function facteurGammePh(gamme: readonly [number, number], ph: number): number {
   const [min, max] = gamme;
-  const centre = (min + max) / 2;
-  // La demi-portée se DÉDUIT de la vigueur voulue à la borne : à l'écart
-  // (max-min)/2 on veut exactement VIGUEUR_A_LA_BORNE, donc le zéro tombe un
-  // peu au-delà, d'autant plus loin que l'amplitude est large.
-  const demiPortee = (max - min) / 2 / Math.sqrt(1 - VIGUEUR_A_LA_BORNE);
-  const ecart = (ph - centre) / demiPortee;
-  return Math.max(0, 1 - ecart * ecart);
+  // Le zéro est DEHORS, et c'est tout ce qui change par rapport à la version
+  // qui le posait sur la borne. La rampe garde sa largeur, donc le plein régime
+  // couvre presque la même plage qu'avant et la calibration bâtie dessus tient.
+  const debordement = RAMPE_PH * VIGUEUR_A_LA_BORNE;
+  return Math.min(
+    1,
+    Math.max(
+      0,
+      Math.min((ph - (min - debordement)) / RAMPE_PH, (max + debordement - ph) / RAMPE_PH),
+    ),
+  );
 }
 
 /**
