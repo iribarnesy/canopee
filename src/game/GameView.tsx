@@ -5,8 +5,7 @@
  * Rendu Canvas 2D — l'isométrique complète viendra comme couche visuelle.
  */
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import type { GameAction } from "../engine/actions";
+import { useEffect, useMemo, useState } from "react";
 import {
   formeSaisonniere,
   rechauffementFranceC,
@@ -15,7 +14,7 @@ import {
   type ScenarioId,
 } from "../engine/climat";
 import { type EauDeSurface, profondeurNappeCm, resumeEau, SANS_EAU } from "../engine/eau_surface";
-import { ESPECES_V0, getEspece } from "../engine/especes";
+import { getEspece } from "../engine/especes";
 import { crownRadiusM } from "../engine/light";
 import {
   type Bordures,
@@ -37,9 +36,17 @@ import {
   RUISSELLEMENT_AMONT,
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
-import { COULEUR_AUTRES, SPECIES_COLORS } from "../ui/couleurs";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { PlanEau } from "./PlanEau";
+import { Avis } from "./panneaux/Avis";
+import { Bandeau } from "./panneaux/Bandeau";
+import { CarteDuSol } from "./panneaux/CarteDuSol";
+import { PanneauAction } from "./panneaux/PanneauAction";
+import { PanneauJournal } from "./panneaux/PanneauJournal";
+import { PanneauParcelle } from "./panneaux/PanneauParcelle";
+import { PanneauSelection } from "./panneaux/PanneauSelection";
+import { useReglagesDeGeste } from "./panneaux/reglages";
+import { btn, PANNEAU_DROIT, SCENE, VOLET } from "./panneaux/styles";
 import { arbresAPoser, donneesSolDe } from "./parcelle";
 import {
   chargerProfils,
@@ -49,146 +56,10 @@ import {
   type ProfilDepart,
   supprimerProfil,
 } from "./profils";
-import type { Snapshot, SnapshotTree } from "./protocol";
+import type { SnapshotTree } from "./protocol";
 import { useEllipse } from "./useEllipse";
 import { loadSave, useGame } from "./useGame";
 import { VueParcelle } from "./VueParcelle";
-
-const MOIS = [
-  "janvier",
-  "février",
-  "mars",
-  "avril",
-  "mai",
-  "juin",
-  "juillet",
-  "août",
-  "septembre",
-  "octobre",
-  "novembre",
-  "décembre",
-];
-
-/**
- * Ce que le disque va faire, mode par mode. Une seule phrase par geste : trois
- * modes affichaient jusqu'ici la légende de la fauche parce que la condition
- * s'arrêtait au chaulage.
- */
-/**
- * Le nom du geste tel qu'on le dit, pour les refus. Sans cette table, le
- * joueur lisait l'identifiant du code — « ramasserBoisMort », « epandreBrf ».
- */
-const NOM_DU_GESTE: Partial<Record<GameAction["type"], string>> = {
-  planter: "Planter",
-  couper: "Abattre",
-  recolter: "Récolter",
-  embaucher: "Embaucher",
-  licencier: "Licencier",
-  chauler: "Chauler",
-  leverEcorce: "Cercler l'écorce",
-  eclaircir: "Éclaircir",
-  elaguer: "Élaguer",
-  epandreBrf: "Épandre le broyat",
-  trogner: "Trogner",
-  chasser: "Chasser",
-  cloturer: "Clôturer",
-  labourer: "Labourer",
-  proteger: "Protéger du gibier",
-  receper: "Recéper",
-  faucher: "Faucher",
-  ramasserBoisMort: "Ramasser le bois mort",
-};
-
-const LEGENDE_RAYON: Partial<Record<Mode, string>> = {
-  chauler: "pH +0,5 sur le disque",
-  faucher: "l'herbe est rabattue, elle repoussera",
-  boisMort: "les troncs tombés partent au chauffage — plus d'humus ni d'abri dessous",
-  brf: "le broyat est épandu, l'azote va où on le porte",
-  cloturer: "le disque est mis hors d'atteinte du gibier",
-};
-
-type Mode =
-  | "selection"
-  | "planter"
-  | "chauler"
-  | "faucher"
-  | "boisMort"
-  | "eclaircir"
-  | "brf"
-  | "cloturer";
-type Overlay = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement";
-
-/**
- * Côté de la carte du sol, px. Petite exprès : c'est un diagnostic qu'on
- * consulte, pas la parcelle qu'on regarde.
- */
-const CARTE_PX = 210;
-
-/**
- * La scène : toute la fenêtre, et rien qui dépasse. `fixed` et non `absolute`
- * parce que l'écran de jeu ne vit plus dans la colonne centrée du site — il
- * EST la page.
- */
-const SCENE: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  overflow: "hidden",
-  background: "var(--carte)",
-};
-
-/**
- * Un volet posé sur la parcelle. Fond presque opaque : dessous il y a une vue
- * en mouvement, et du texte sur des feuillages qui bougent ne se lit pas.
- */
-const VOLET: React.CSSProperties = {
-  position: "absolute",
-  border: "1px solid var(--trait)",
-  borderRadius: 10,
-  padding: "8px 12px",
-  background: "rgba(255, 253, 247, 0.94)",
-  boxShadow: "0 2px 12px rgba(60, 50, 30, 0.16)",
-  backdropFilter: "blur(3px)",
-};
-
-/**
- * La colonne de droite, le temps que ses morceaux trouvent leurs coins. Elle
- * recouvre la vue au lieu de la rogner.
- */
-const PANNEAU_DROIT: React.CSSProperties = {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  bottom: 0,
-  width: 380,
-  overflowY: "auto",
-  padding: "12px 14px",
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-  background: "rgba(255, 253, 247, 0.94)",
-  borderLeft: "1px solid var(--trait)",
-  boxShadow: "-2px 0 14px rgba(60, 50, 30, 0.16)",
-  backdropFilter: "blur(3px)",
-};
-
-const panel: React.CSSProperties = {
-  border: "1px solid var(--trait)",
-  borderRadius: 8,
-  padding: "8px 12px",
-  background: "var(--carte)",
-};
-
-const btn = (active = false): React.CSSProperties => ({
-  padding: "4px 11px",
-  marginRight: 5,
-  marginBottom: 4,
-  border: "1px solid",
-  borderColor: active ? "var(--foret)" : "var(--trait)",
-  borderRadius: 6,
-  background: active ? "var(--foret)" : "#fff",
-  color: active ? "#fff" : "var(--encre)",
-  cursor: "pointer",
-});
 
 /**
  * Ce qu'on peut cliquer d'un arbre, en m. C'est son houppier — sauf pour une
@@ -201,120 +72,6 @@ function rayonCliquableM(tree: SnapshotTree): number {
   const espece = getEspece(tree.especeId);
   const houppier = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
   return Math.max(1, tree.chandelle ? houppier * 0.3 : houppier);
-}
-
-/**
- * La CARTE DU SOL : une vue de dessus, un pixel par cellule, qui montre ce que
- * la parcelle cache.
- *
- * **Elle ne dessine plus les arbres**, et c'est ce qui lui reste à faire. La
- * parcelle elle-même se voit maintenant en isométrique (`VueParcelle`), où le
- * peuplement se lit comme un peuplement et non comme des taches triées du fond
- * vers l'avant. Ce que la vue isométrique ne peut PAS montrer, c'est le pH, la
- * nappe ou l'azote : ce sont des grandeurs d'un sol qu'on ne voit pas, et une
- * carte à plat reste la bonne forme pour elles — le §5 n'a jamais prétendu
- * qu'un rendu joli remplaçait un diagnostic.
- */
-function dessinerCarteDuSol(
-  canvas: HTMLCanvasElement,
-  snapshot: Snapshot,
-  coteM: number,
-  ruMm: number,
-  overlay: Overlay,
-  nappeCm: Float32Array | undefined,
-  enEau: readonly boolean[] | undefined,
-) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const scale = canvas.width / coteM;
-  for (let y = 0; y < coteM; y++) {
-    for (let x = 0; x < coteM; x++) {
-      const i = y * coteM + x;
-      let l: number;
-      let hue = 90;
-      let sat = 18;
-      if (overlay === "eau") {
-        l = 88 - 45 * Math.min(1, (snapshot.soilWater[i] ?? 0) / ruMm);
-      } else if (overlay === "ph") {
-        const ph = snapshot.soilPh[i] ?? 7;
-        hue = 20 + ((ph - 4) / 4.5) * 200; // acide = orangé, calcaire = bleuté
-        sat = 35;
-        l = 70;
-      } else if (overlay === "herbe") {
-        // Plus l'herbe couvre, plus le vert est franc.
-        const c = snapshot.soilHerbe[i] ?? 0;
-        hue = 95;
-        sat = 15 + 45 * c;
-        l = 85 - 35 * c;
-      } else if (overlay === "nappe") {
-        // Du bleu franc là où la nappe affleure au beige là où elle est hors
-        // de portée : c'est la carte qui explique la ripisylve, et celle qui
-        // montre la nappe monter après un incendie.
-        const prof = Math.min(
-          snapshot.soilNappeCm[i] ?? Number.POSITIVE_INFINITY,
-          nappeCm?.[i] ?? Number.POSITIVE_INFINITY,
-        );
-        const proximite = Number.isFinite(prof) ? Math.max(0, 1 - prof / 300) : 0;
-        hue = 205;
-        sat = 8 + 52 * proximite;
-        l = 88 - 40 * proximite;
-      } else if (overlay === "engorgement") {
-        // Ce que les racines subissent vraiment : la macroporosité noyée. Du
-        // beige au violet, parce que ce n'est pas de l'eau disponible — c'est
-        // de l'asphyxie.
-        const e = Math.min(1, Math.max(0, snapshot.soilEngorgement[i] ?? 0));
-        hue = 280;
-        sat = 6 + 44 * e;
-        l = 90 - 45 * e;
-      } else {
-        l = 90 - 50 * Math.min(1, (snapshot.soilN[i] ?? 0) / 3);
-        hue = 55;
-        sat = 30;
-      }
-      // L'eau libre elle-même : elle prime sur tous les calques.
-      if (enEau?.[i]) {
-        hue = 200;
-        sat = 55;
-        l = 45;
-      }
-      ctx.fillStyle = `hsl(${hue} ${sat}% ${l}%)`;
-      ctx.fillRect(x * scale, (coteM - 1 - y) * scale, Math.ceil(scale), Math.ceil(scale));
-    }
-  }
-  // La clôture : on ne peint pas l'intérieur — ce serait un aplat de plus sur
-  // une carte qui en a déjà — on trace le GRILLAGE, c'est-à-dire les côtés de
-  // cellules qui séparent le clos du dehors.
-  ctx.strokeStyle = "#8a6d3b";
-  ctx.lineWidth = Math.max(1.5, scale * 0.22);
-  ctx.beginPath();
-  for (let y = 0; y < coteM; y++) {
-    for (let x = 0; x < coteM; x++) {
-      if (!snapshot.soilCloture[y * coteM + x]) continue;
-      const gauche = x > 0 ? snapshot.soilCloture[y * coteM + x - 1] : 0;
-      const droite = x < coteM - 1 ? snapshot.soilCloture[y * coteM + x + 1] : 0;
-      const dessous = y > 0 ? snapshot.soilCloture[(y - 1) * coteM + x] : 0;
-      const dessus = y < coteM - 1 ? snapshot.soilCloture[(y + 1) * coteM + x] : 0;
-      const px = x * scale;
-      const py = (coteM - 1 - y) * scale;
-      if (!gauche) {
-        ctx.moveTo(px, py);
-        ctx.lineTo(px, py + scale);
-      }
-      if (!droite) {
-        ctx.moveTo(px + scale, py);
-        ctx.lineTo(px + scale, py + scale);
-      }
-      if (!dessus) {
-        ctx.moveTo(px, py);
-        ctx.lineTo(px + scale, py);
-      }
-      if (!dessous) {
-        ctx.moveTo(px, py + scale);
-        ctx.lineTo(px + scale, py + scale);
-      }
-    }
-  }
-  ctx.stroke();
 }
 
 function StartScreen({
@@ -1192,16 +949,10 @@ function StartScreen({
 
 export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => void }) {
   const game = useGame();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [mode, setMode] = useState<Mode>("selection");
-  const [avecManchon, setAvecManchon] = useState(false);
-  const [overlay, setOverlay] = useState<Overlay>("eau");
-  const [especeId, setEspeceId] = useState("betula_pendula");
-  const [rayonChaulage, setRayonChaulage] = useState(8);
-  const [semainesSaison, setSemainesSaison] = useState(4);
-  const [densiteCible, setDensiteCible] = useState(400);
-  const [critereEclaircie, setCritereEclaircie] = useState<"parLeBas" | "parLeHaut">("parLeBas");
-  const [mainOuvertePanneau, setMainOuvertePanneau] = useState(false);
+  const geste = useReglagesDeGeste();
+  // Le clic sur la parcelle a besoin de savoir quel geste est armé et avec
+  // quels réglages ; le panneau, lui, reçoit l'objet entier.
+  const { mode, especeId, avecManchon, rayonChaulage, densiteCible, critereEclaircie } = geste;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
 
   const { station, snapshot } = game;
@@ -1223,35 +974,6 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     () => (snapshot ? snapshot.trees.filter((t) => !t.chandelle) : []),
     [snapshot],
   );
-  const chandelles = snapshot ? snapshot.trees.length - vivants.length : 0;
-  /**
-   * Qui domine la parcelle, en direct. On classe par NOMBRE de tiges et on
-   * montre la hauteur du plus grand : une essence peut être partout en
-   * sous-étage sans jamais atteindre la canopée, et c'est une information
-   * différente de « qui occupe le terrain ».
-   */
-  const composition = useMemo(() => {
-    if (vivants.length === 0) return [];
-    const parEspece = new Map<string, { n: number; hauteurMax: number }>();
-    for (const t of vivants) {
-      const agg = parEspece.get(t.especeId) ?? { n: 0, hauteurMax: 0 };
-      agg.n++;
-      agg.hauteurMax = Math.max(agg.hauteurMax, t.heightM);
-      parEspece.set(t.especeId, agg);
-    }
-    const total = vivants.length;
-    return [...parEspece]
-      .sort((a, b) => b[1].n - a[1].n)
-      .slice(0, 5)
-      .map(([especeId, agg]) => ({
-        especeId,
-        nom: getEspece(especeId).nom.toLowerCase(),
-        part: Math.round((agg.n / total) * 100),
-        hauteurMax: agg.hauteurMax,
-      }));
-  }, [vivants]);
-
-  const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
 
   /**
    * Le sol et les arbres dans la forme que la couche visuelle attend
@@ -1313,20 +1035,6 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     [station, snapshot, ellipse, coupeDeLaTige],
   );
 
-  useEffect(() => {
-    if (canvasRef.current && snapshot && station) {
-      dessinerCarteDuSol(
-        canvasRef.current,
-        snapshot,
-        station.coteM,
-        station.ruMm,
-        overlay,
-        station.nappeCm,
-        station.enEau,
-      );
-    }
-  }, [snapshot, station, overlay]);
-
   if (!station || !snapshot) {
     return (
       <div>
@@ -1347,11 +1055,6 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       </div>
     );
   }
-
-  const annee = Math.floor(snapshot.week / 52) + 1;
-  const semaine = snapshot.week % 52;
-  const mois = MOIS[Math.min(11, Math.floor(semaine / 4.34))];
-  const tresorerie = snapshot.economy.treasuryEur;
 
   /**
    * Un clic sur la parcelle : le geste en cours s'applique là, ou bien on
@@ -1419,16 +1122,6 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     }
   };
 
-  // Ce que l'éclaircie va garder : c'est l'arithmétique que le joueur ne peut
-  // pas faire de tête, et sans elle « densité visée » ne veut rien dire.
-  const tigesGardees = Math.max(
-    0,
-    Math.round((densiteCible * Math.PI * rayonChaulage * rayonChaulage) / 10_000),
-  );
-
-  const selEspeces = [...new Set(selectedTrees.map((t) => t.especeId))];
-  const selFruitsKg = selectedTrees.reduce((s, t) => s + t.fruitsKg, 0);
-
   return (
     <div style={SCENE}>
       {/*
@@ -1462,668 +1155,28 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
 
       {/* En haut à gauche : la date, l'argent, le temps, la marche du temps. */}
       <div style={{ ...VOLET, top: 10, left: 10, maxWidth: "calc(100vw - 420px)" }}>
-        <p className="bandeau">
-          <strong style={{ fontSize: "1.25rem" }}>
-            An {annee} · {mois}
-          </strong>
-          <strong style={{ fontSize: "1.25rem", color: tresorerie < 0 ? "#c0392b" : "#2e5b30" }}>
-            {tresorerie.toFixed(0)} €
-          </strong>
-          <span>
-            ⏱ {snapshot.economy.hoursUsedWeek.toFixed(0)}/{60 * snapshot.economy.uth} h · vous
-            {snapshot.economy.ouvriersCdi > 0 && ` + ${snapshot.economy.ouvriersCdi} CDI`}
-            {snapshot.economy.saisonniersFinSemaine.length > 0 &&
-              ` + ${snapshot.economy.saisonniersFinSemaine.length} sais.`}
-          </span>
-          <span>
-            🌡 {snapshot.weather.tMean.toFixed(0)} °C · 🌧 {snapshot.weather.rainMm.toFixed(0)} mm
-          </span>
-          {snapshot.economy.bankrupt && <strong style={{ color: "#c0392b" }}>FAILLITE</strong>}
-        </p>
-        <p style={{ margin: "0 0 6px" }}>
-          {[0, 1, 4, 13, 52].map((v) => (
-            <button
-              key={v}
-              type="button"
-              style={btn(game.speed === v)}
-              onClick={() => game.setSpeed(v)}
-            >
-              {v === 0 ? "⏸" : `×${v}`}
-            </button>
-          ))}
-          <label style={{ marginRight: 10 }}>
-            <input
-              type="checkbox"
-              checked={game.autoHarvest}
-              onChange={(e) => game.setAutoHarvest(e.target.checked)}
-            />{" "}
-            🧺 récolte auto
-          </label>
-          {/*
-            La seule porte de sortie : il n'y a plus d'en-tête de site par-dessus
-            le jeu. Elle sauvegarde d'abord, et le dit — voir `quit`.
-          */}
-          <button type="button" style={btn()} onClick={game.quit}>
-            💾 Sauvegarder et quitter
-          </button>
-        </p>
-        <p style={{ margin: "6px 0 0", color: "var(--encre-douce)", fontSize: 13 }}>
-          Glisser pour déplacer · molette pour zoomer · ← → pour tourner d'un quart de tour ·
-          maj+clic = sélection multiple
-        </p>
+        <Bandeau game={game} snapshot={snapshot} />
       </div>
 
       {/* En bas à gauche : le diagnostic de sol. */}
       <div style={{ ...VOLET, left: 10, bottom: 10 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-          <canvas
-            ref={canvasRef}
-            width={CARTE_PX}
-            height={CARTE_PX}
-            style={{
-              width: CARTE_PX,
-              border: "1px solid var(--trait)",
-              borderRadius: 6,
-            }}
-          />
-          <p style={{ margin: 0, color: "var(--encre-douce)", fontSize: 13 }}>
-            {/*
-              La carte du sol montre ce que la vue ne peut pas montrer : le pH,
-              la nappe, l'azote. Ce sont des grandeurs d'un sol qu'on ne voit
-              pas, et une vue jolie ne remplace pas un diagnostic.
-            */}
-            Carte du sol — nord en haut
-            <br />
-            {(
-              [
-                ["eau", "Eau"],
-                ["ph", "pH"],
-                ["azote", "Azote"],
-                ["herbe", "Herbe"],
-                ["nappe", "Nappe"],
-                ["engorgement", "Engorgement"],
-              ] as const
-            ).map(([o, libelle]) => (
-              <button
-                key={o}
-                type="button"
-                style={btn(overlay === o)}
-                onClick={() => setOverlay(o)}
-              >
-                {libelle}
-              </button>
-            ))}
-          </p>
-        </div>
+        <CarteDuSol snapshot={snapshot} station={station} />
       </div>
 
       <div style={PANNEAU_DROIT}>
-        {game.notice && <div style={{ ...panel, background: "#f3e6c4" }}>⏸ {game.notice}</div>}
-        {game.refusals.length > 0 && (
-          <div style={{ ...panel, color: "#8a4b2d" }}>
-            {game.refusals.slice(0, 3).map((r) => (
-              <div key={r.uid}>
-                ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
-              </div>
-            ))}
-          </div>
-        )}
+        <Avis game={game} />
 
-        <section className="carte">
-          <h3>Action</h3>
-          <button
-            type="button"
-            style={btn(mode === "selection")}
-            onClick={() => setMode("selection")}
-          >
-            Sélection
-          </button>
-          <button type="button" style={btn(mode === "planter")} onClick={() => setMode("planter")}>
-            Planter
-          </button>
-          <button type="button" style={btn(mode === "chauler")} onClick={() => setMode("chauler")}>
-            Chauler
-          </button>
-          <button
-            type="button"
-            style={btn(mode === "eclaircir")}
-            onClick={() => setMode("eclaircir")}
-            title="Abattre des tiges entières pour ramener une zone à la densité choisie. Rien à voir avec l'élagage, qui laisse l'arbre debout."
-          >
-            🪚 Éclaircir (abattre)
-          </button>
-          {snapshot.stockBrfKg > 1 && (
-            <button
-              type="button"
-              style={btn(mode === "brf")}
-              onClick={() => setMode("brf")}
-              title="Épandre le tas de broyat là où vous voulez porter la fertilité"
-            >
-              🍂 Épandre le BRF ({snapshot.stockBrfKg.toFixed(0)} kg)
-            </button>
-          )}
-          <button
-            type="button"
-            style={btn(mode === "cloturer")}
-            onClick={() => setMode("cloturer")}
-            title="Enclore une zone : cher au mètre de périmètre, mais le gibier n'y entre plus"
-          >
-            🚧 Clôturer
-          </button>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() => game.dispatch({ type: "chasser" })}
-            title="Une journée de chasse : la pression recule, puis les voisins comblent le vide"
-          >
-            🎯 Chasser
-          </button>
-          <button
-            type="button"
-            style={btn(mode === "faucher")}
-            onClick={() => setMode("faucher")}
-            title="Dégager la strate herbacée autour des jeunes plants — l'entretien qui sauve une plantation sur sol pauvre"
-          >
-            🌾 Faucher
-          </button>
-          <button
-            type="button"
-            style={btn(mode === "boisMort")}
-            onClick={() => setMode("boisMort")}
-            title="Ramasser les troncs tombés pour le chauffage — moins de combustible, mais moins d'humus, d'abris et de terre retenue"
-          >
-            🪵 Bois mort
-          </button>
-          <button
-            type="button"
-            style={btn(mainOuvertePanneau)}
-            onClick={() => setMainOuvertePanneau(!mainOuvertePanneau)}
-            title="Embaucher de la main-d'œuvre"
-          >
-            👷 Main-d'œuvre
-          </button>
-          {mainOuvertePanneau && (
-            <div style={{ marginTop: 6 }}>
-              <button
-                type="button"
-                style={btn()}
-                onClick={() =>
-                  game.dispatch({
-                    type: "embaucher",
-                    contrat: "saisonnier",
-                    semaines: semainesSaison,
-                  })
-                }
-                title="Payé d'avance, repart tout seul à la fin du contrat — l'outil des récoltes"
-              >
-                Saisonnier {semainesSaison} sem ({semainesSaison * 700} €)
-              </button>
-              <input
-                type="range"
-                min={1}
-                max={12}
-                value={semainesSaison}
-                onChange={(e) => setSemainesSaison(Number(e.target.value))}
-                style={{ verticalAlign: "middle", width: 70 }}
-              />
-              <br />
-              <button
-                type="button"
-                style={btn()}
-                onClick={() => game.dispatch({ type: "embaucher", contrat: "cdi" })}
-                title="600 €/sem, rupture 1 200 € (indemnités + préavis)"
-              >
-                CDI (600 €/sem)
-              </button>
-              <button
-                type="button"
-                style={btn()}
-                onClick={() => game.dispatch({ type: "licencier" })}
-                title="Rompre un CDI : 1 200 € d'indemnités"
-              >
-                Licencier (1 200 €)
-              </button>
-            </div>
-          )}
-          {mode === "planter" && (
-            <div style={{ marginTop: 6 }}>
-              {ESPECES_V0.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  style={{
-                    ...btn(especeId === e.id),
-                    borderLeft: `6px solid ${SPECIES_COLORS[e.id]}`,
-                  }}
-                  onClick={() => setEspeceId(e.id)}
-                >
-                  {e.nom} ({e.economie.prixPlantEur} €)
-                </button>
-              ))}
-              <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
-                <label style={{ cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={avecManchon}
-                    onChange={(e) => setAvecManchon(e.target.checked)}
-                  />{" "}
-                  🛡️ poser un manchon en même temps (+8 €, +30 min par plant)
-                </label>
-                <br />
-                Clic sur la carte = 1 plant (1 h, espacement ≥ 1 m). Sans manchon, un plant appétent
-                se fait brouter tant qu'il n'a pas sa flèche hors d'atteinte — vous pourrez toujours
-                en poser un après coup en sélectionnant l'arbre.
-              </div>
-            </div>
-          )}
-          {mode === "eclaircir" && (
-            <div style={{ marginTop: 6 }}>
-              <div style={{ color: "#8a4b2d", fontSize: 13, marginBottom: 6 }}>
-                ⚠️ Éclaircir, c'est <strong>abattre des tiges entières</strong> pour desserrer le
-                peuplement — pas couper des branches. Pour travailler les branches d'un arbre et le
-                laisser debout, c'est <strong>élaguer</strong>, sur une sélection d'arbres.
-              </div>
-              <button
-                type="button"
-                style={btn(critereEclaircie === "parLeBas")}
-                onClick={() => setCritereEclaircie("parLeBas")}
-                title="Retirer les dominés : la croissance se concentre sur les plus beaux"
-              >
-                par le bas (on abat les petits)
-              </button>
-              <button
-                type="button"
-                style={btn(critereEclaircie === "parLeHaut")}
-                onClick={() => setCritereEclaircie("parLeHaut")}
-                title="Prélever les gros : on récolte le capital sur pied et on libère les dominés"
-              >
-                par le haut (on abat les gros)
-              </button>
-              <br />
-              Densité visée :{" "}
-              <input
-                type="range"
-                min={100}
-                max={1500}
-                step={50}
-                value={densiteCible}
-                onChange={(e) => setDensiteCible(Number(e.target.value))}
-                style={{ verticalAlign: "middle", width: 90 }}
-              />{" "}
-              {densiteCible} tiges/ha · rayon{" "}
-              <input
-                type="range"
-                min={3}
-                max={20}
-                value={rayonChaulage}
-                onChange={(e) => setRayonChaulage(Number(e.target.value))}
-                style={{ verticalAlign: "middle", width: 70 }}
-              />{" "}
-              {rayonChaulage} m
-              <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
-                Un cercle de {rayonChaulage} m fait{" "}
-                {Math.round(Math.PI * rayonChaulage * rayonChaulage)} m² : à {densiteCible}{" "}
-                tiges/ha, on y <strong>garde {tigesGardees} tiges</strong> et on abat tout le reste,
-                en commençant par les{" "}
-                {critereEclaircie === "parLeHaut" ? "plus grandes" : "plus petites"}.
-              </div>
-            </div>
-          )}
-          {(mode === "chauler" ||
-            mode === "faucher" ||
-            mode === "boisMort" ||
-            mode === "brf" ||
-            mode === "cloturer") && (
-            <div style={{ marginTop: 6 }}>
-              Rayon :{" "}
-              <input
-                type="range"
-                min={3}
-                max={20}
-                value={rayonChaulage}
-                onChange={(e) => setRayonChaulage(Number(e.target.value))}
-              />{" "}
-              {rayonChaulage} m — {LEGENDE_RAYON[mode] ?? ""}.
-            </div>
-          )}
-        </section>
+        <PanneauAction game={game} snapshot={snapshot} geste={geste} />
 
-        {selectedTrees.length > 0 && (
-          <div style={panel}>
-            <strong>
-              {selectedTrees.length === 1
-                ? getEspece(selectedTrees[0]?.especeId ?? "").nom
-                : `${selectedTrees.length} arbres sélectionnés`}
-            </strong>
-            {selectedTrees.length === 1 && selectedTrees[0] && (
-              <>
-                {" "}
-                · {selectedTrees[0].heightM.toFixed(1)} m ·{" "}
-                {Math.floor(selectedTrees[0].ageWeeks / 52)} ans
-                {/* Le dire, sinon on lit l'âge et le stress d'un arbre mort
-                    comme ceux d'un vivant, et on s'étonne qu'aucun geste ne
-                    marche dessus : le moteur les refuse tous, à raison. */}
-                {selectedTrees[0].chandelle && " · chandelle (bois mort sur pied)"}
-                {!selectedTrees[0].chandelle &&
-                  selectedTrees[0].stress > 1 &&
-                  ` · stress ${selectedTrees[0].stress.toFixed(0)}/10`}
-                {selectedTrees[0].hauteurElagueeM > 0 &&
-                  ` · bille ${selectedTrees[0].hauteurElagueeM.toFixed(1)} m`}
-              </>
-            )}
-            {selFruitsKg > 0.5 && <> · 🍎 {selFruitsKg.toFixed(0)} kg mûrs</>}
-            <br />
-            {selEspeces.map((id) => (
-              <button
-                key={id}
-                type="button"
-                style={btn()}
-                onClick={() =>
-                  setSelectedIds(
-                    // Les vivants seuls : on sélectionne une essence pour lui
-                    // faire quelque chose, et le moteur refuse tout geste sur
-                    // une chandelle.
-                    new Set(vivants.filter((t) => t.especeId === id).map((t) => t.id)),
-                  )
-                }
-              >
-                + tous les {getEspece(id).nom.toLowerCase()}s
-              </button>
-            ))}
-            <br />
-            {selFruitsKg > 0.5 && (
-              <button
-                type="button"
-                style={btn(true)}
-                onClick={() =>
-                  game.dispatch({ type: "recolter", treeIds: selectedTrees.map((t) => t.id) })
-                }
-              >
-                🧺 Récolter
-              </button>
-            )}
-            <button
-              type="button"
-              style={btn()}
-              onClick={() =>
-                game.dispatch({
-                  type: "couper",
-                  treeIds: selectedTrees.map((t) => t.id),
-                  devenir: "broyer",
-                })
-              }
-              title="Broyer et charger : le bois rejoint le tas, à épandre où vous voudrez"
-            >
-              🍂 Couper & broyer (en tas)
-            </button>
-            <button
-              type="button"
-              style={btn()}
-              onClick={() =>
-                game.dispatch({ type: "proteger", treeIds: selectedTrees.map((t) => t.id) })
-              }
-              title="Poser un manchon : le plant échappe aux dents jusqu'à ce qu'il ait sa flèche hors d'atteinte"
-            >
-              🛡️ Protéger
-            </button>
-            <button
-              type="button"
-              style={btn()}
-              onClick={() =>
-                game.dispatch({ type: "leverEcorce", treeIds: selectedTrees.map((t) => t.id) })
-              }
-              title="Lever le liège : une récolte qui ne tue pas l'arbre et revient tous les dix ans"
-            >
-              🟤 Lever l'écorce
-            </button>
-            <button
-              type="button"
-              style={btn()}
-              onClick={() =>
-                game.dispatch({
-                  type: "elaguer",
-                  treeIds: selectedTrees.map((t) => t.id),
-                  hauteurM: 6,
-                })
-              }
-              title="Couper les branches basses des arbres sélectionnés, qui restent debout : la bille montée fera du bois d'œuvre au lieu du chauffage. Le houppier remonte, on le voit sur la carte — et un houppier haut ne s'enflamme plus d'un feu rampant, ce qui fait de l'élagage une mesure de prévention."
-            >
-              ✂️ Élaguer à 6 m
-            </button>
-            <button
-              type="button"
-              style={btn()}
-              onClick={() =>
-                game.dispatch({ type: "receper", treeIds: selectedTrees.map((t) => t.id) })
-              }
-              title="Couper au ras : la souche repart en cépée (taillis). Seules les espèces qui rejettent le supportent."
-            >
-              🪵 Recéper
-            </button>
-            <button
-              type="button"
-              style={btn()}
-              onClick={() => {
-                game.dispatch({
-                  type: "couper",
-                  treeIds: selectedTrees.map((t) => t.id),
-                  devenir: "vendre",
-                });
-                setSelectedIds(new Set());
-              }}
-            >
-              🪓 Couper &amp; vendre
-            </button>
-            <button
-              type="button"
-              style={btn()}
-              onClick={() => {
-                game.dispatch({
-                  type: "couper",
-                  treeIds: selectedTrees.map((t) => t.id),
-                  devenir: "epandre",
-                });
-                setSelectedIds(new Set());
-              }}
-            >
-              🪓 Couper &amp; épandre (BRF)
-            </button>
-            <button
-              type="button"
-              style={btn()}
-              onClick={() => {
-                game.dispatch({
-                  type: "couper",
-                  treeIds: selectedTrees.map((t) => t.id),
-                  devenir: "laisser",
-                });
-                setSelectedIds(new Set());
-              }}
-              title="Abattre et coucher le fût en travers de la pente : rien ne rentre en caisse, mais l'eau ralentit et la terre se dépose derrière le tronc"
-            >
-              🪵 Couper &amp; coucher en travers
-            </button>
-          </div>
-        )}
+        <PanneauSelection
+          game={game}
+          vivants={vivants}
+          selectedTrees={selectedTrees}
+          setSelectedIds={setSelectedIds}
+        />
+        <PanneauParcelle snapshot={snapshot} station={station} vivants={vivants} />
 
-        {fruitsPrets.length > 0 && !game.autoHarvest && (
-          <div style={panel}>
-            🍎 <strong>{fruitsPrets.reduce((s, t) => s + t.fruitsKg, 0).toFixed(0)} kg</strong> de
-            fruits mûrs sur {fruitsPrets.length} arbres.
-            <br />
-            <button
-              type="button"
-              style={btn(true)}
-              onClick={() =>
-                game.dispatch({ type: "recolter", treeIds: fruitsPrets.map((t) => t.id) })
-              }
-            >
-              Tout récolter
-            </button>
-          </div>
-        )}
-
-        <section className="carte">
-          <h3>La parcelle</h3>
-          <dl className="stats">
-            <dt>Arbres</dt>
-            <dd>
-              {vivants.length}
-              {chandelles > 0 ? ` + ${chandelles} chandelle${chandelles > 1 ? "s" : ""}` : ""} ·
-              herbe {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % du sol
-            </dd>
-            <dt>Carbone</dt>
-            <dd>
-              {snapshot.inventory.vivantTHa.toFixed(1)} t vivant +{" "}
-              {snapshot.inventory.humusTHa.toFixed(1)} t humus ·{" "}
-              <strong>
-                bilan {snapshot.inventory.bilanNetTHa >= 0 ? "+" : ""}
-                {snapshot.inventory.bilanNetTHa.toFixed(1)} t C/ha
-              </strong>
-            </dd>
-            <dt>Entourage</dt>
-            <dd>
-              {snapshot.paysage}
-              <span className="detail">
-                {" "}
-                · gibier {(snapshot.pressionGibier * 100).toFixed(0)} %
-              </span>
-            </dd>
-            <dt>Époque</dt>
-            <dd>
-              {snapshot.anneeCivile}{" "}
-              <span className="detail">· CO₂ {snapshot.co2Ppm.toFixed(0)} ppm</span>
-            </dd>
-            <dt>Pression</dt>
-            <dd>
-              broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · ravageurs{" "}
-              {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · auxiliaires{" "}
-              {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} %
-            </dd>
-            <dt>Nappe</dt>
-            <dd>
-              à {(snapshot.fluxes.nappeProfondeurCm / 100).toFixed(2)} m sous la surface
-              <span className="detail">
-                {" "}
-                · équilibre régional {(station.nappeEquilibreCm / 100).toFixed(1)} m — la forêt la
-                fait descendre en transpirant, un incendie la fait remonter
-              </span>
-            </dd>
-            <dt>Essences</dt>
-            <dd>
-              {composition.length === 0
-                ? "aucun arbre"
-                : composition.map((c, rang) => (
-                    // Le séparateur est DEHORS, et c'est ce qui laisse la ligne
-                    // se replier : deux `nowrap` collés l'un à l'autre sans
-                    // espace entre eux n'offrent aucune coupure, et la liste
-                    // débordait du panneau dès la troisième essence.
-                    <Fragment key={c.especeId}>
-                      {rang > 0 && " · "}
-                      <span style={{ whiteSpace: "nowrap" }}>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            width: 8,
-                            height: 8,
-                            borderRadius: 2,
-                            background: SPECIES_COLORS[c.especeId] ?? COULEUR_AUTRES,
-                            marginRight: 4,
-                          }}
-                        />
-                        {c.nom} <strong>{c.part}</strong> %
-                        <span className="detail">
-                          {" "}
-                          ({c.hauteurMax < 10 ? c.hauteurMax.toFixed(1) : c.hauteurMax.toFixed(0)}{" "}
-                          m)
-                        </span>
-                      </span>
-                    </Fragment>
-                  ))}
-            </dd>
-            <dt>Sol</dt>
-            <dd>
-              P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} · K{" "}
-              {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables · mycorhizes{" "}
-              {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
-            </dd>
-            {snapshot.fluxes.erosionArracheeKgM2 > 0 && (
-              <>
-                <dt>Érosion</dt>
-                <dd>
-                  {(snapshot.fluxes.erosionArracheeKgM2 * 520).toFixed(1)} t/ha/an arrachées ·{" "}
-                  <strong>{(snapshot.fluxes.erosionSortieKgM2 * 520).toFixed(1)}</strong> sorties de
-                  la parcelle
-                  <span className="detail">
-                    {" "}
-                    · avec {(snapshot.fluxes.erosionNKgHa * 52).toFixed(1)} N ·{" "}
-                    {(snapshot.fluxes.erosionPKgHa * 52).toFixed(2)} P ·{" "}
-                    {(snapshot.fluxes.erosionKKgHa * 52).toFixed(1)} K kg/ha/an
-                  </span>
-                </dd>
-              </>
-            )}
-            {(snapshot.fluxes.boisSedimentPiegeKgM2 > 0 || snapshot.fluxes.boisRetenueMm > 0) && (
-              <>
-                <dt>Bois en travers</dt>
-                <dd>
-                  retient <strong>{(snapshot.fluxes.boisRetenueMm * 52).toFixed(0)} mm/an</strong>{" "}
-                  d'eau et{" "}
-                  {/* En kg et non en tonnes : le bois mort NATUREL barre peu (un
-                      chablis repose sur ses branches), et « 0,0 t/ha » ne dirait
-                      rien de ce qui se passe. */}
-                  <strong>
-                    {(snapshot.fluxes.boisSedimentPiegeKgM2 * 520_000).toFixed(0)} kg/ha/an
-                  </strong>{" "}
-                  de terre
-                  <span className="detail">
-                    {" "}
-                    · un tronc couché en travers de la pente met l'eau en flaque, le temps qu'elle
-                    rentre, et fait déposer derrière lui ce que le ruissellement emportait
-                  </span>
-                </dd>
-              </>
-            )}
-            {snapshot.fluxes.partInondee > 0 && (
-              <>
-                <dt>Crue</dt>
-                <dd>
-                  la nappe affleure sur {(snapshot.fluxes.partInondee * 100).toFixed(0)} % de la
-                  parcelle
-                </dd>
-              </>
-            )}
-            <dt>Biodiversité</dt>
-            <dd>
-              <strong>{snapshot.biodiversite.note.toFixed(0)}/100</strong>{" "}
-              <span className="detail">
-                ({snapshot.biodiversite.richesse} essence
-                {snapshot.biodiversite.richesse > 1 ? "s" : ""}, strates{" "}
-                {(snapshot.biodiversite.strates * 100).toFixed(0)} %, couvert permanent{" "}
-                {(snapshot.biodiversite.couvertPermanent * 100).toFixed(0)} %, bois mort{" "}
-                {(snapshot.biodiversite.boisMort * 100).toFixed(0)} %)
-              </span>
-            </dd>
-          </dl>
-        </section>
-
-        <section
-          className="carte journal"
-          style={{ maxHeight: 560, overflowY: "auto", fontSize: 13, flex: 1 }}
-        >
-          <h3>Journal</h3>
-          {game.events.length === 0 && (
-            <div style={{ color: "var(--encre-douce)" }}>Rien à signaler pour l'instant.</div>
-          )}
-          {game.events.map((ev) => (
-            <div key={ev.uid} className="entree">
-              <span className="quand">
-                AN {Math.floor(ev.week / 52) + 1} · S{ev.week % 52}
-              </span>{" "}
-              {ev.icone} {ev.message}
-            </div>
-          ))}
-        </section>
+        <PanneauJournal evenements={game.events} />
       </div>
     </div>
   );
