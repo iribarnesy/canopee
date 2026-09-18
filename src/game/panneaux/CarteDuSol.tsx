@@ -1,5 +1,11 @@
 /**
- * La CARTE DU SOL : le diagnostic que la vue isométrique ne peut pas donner.
+ * Le volet SOL : le diagnostic que la vue isométrique ne peut pas donner.
+ *
+ * La carte à plat pour ce qui se répartit — l'eau, le pH, l'azote — et sous
+ * elle les grandeurs qui n'ont pas de place où se poser : ce que le sol porte,
+ * où est la nappe, ce que l'érosion emporte. Elles vivaient dans le pavé
+ * « La parcelle », mêlées au peuplement et aux scores ; c'est ici qu'on les
+ * cherche.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -147,40 +153,106 @@ export function CarteDuSol({ snapshot, station }: { snapshot: Snapshot; station:
   }, [snapshot, station, overlay]);
 
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-      <canvas
-        ref={canvasRef}
-        width={CARTE_PX}
-        height={CARTE_PX}
-        style={{
-          width: CARTE_PX,
-          border: "1px solid var(--trait)",
-          borderRadius: 6,
-        }}
-      />
-      <p style={{ margin: 0, color: "var(--encre-douce)", fontSize: 13 }}>
-        {/*
+    <>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+        <canvas
+          ref={canvasRef}
+          width={CARTE_PX}
+          height={CARTE_PX}
+          style={{
+            width: CARTE_PX,
+            border: "1px solid var(--trait)",
+            borderRadius: 6,
+          }}
+        />
+        <p style={{ margin: 0, color: "var(--encre-douce)", fontSize: 13 }}>
+          {/*
               La carte du sol montre ce que la vue ne peut pas montrer : le pH,
               la nappe, l'azote. Ce sont des grandeurs d'un sol qu'on ne voit
               pas, et une vue jolie ne remplace pas un diagnostic.
             */}
-        Carte du sol — nord en haut
-        <br />
-        {(
-          [
-            ["eau", "Eau"],
-            ["ph", "pH"],
-            ["azote", "Azote"],
-            ["herbe", "Herbe"],
-            ["nappe", "Nappe"],
-            ["engorgement", "Engorgement"],
-          ] as const
-        ).map(([o, libelle]) => (
-          <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
-            {libelle}
-          </button>
-        ))}
-      </p>
-    </div>
+          Carte du sol — nord en haut
+          <br />
+          {(
+            [
+              ["eau", "Eau"],
+              ["ph", "pH"],
+              ["azote", "Azote"],
+              ["herbe", "Herbe"],
+              ["nappe", "Nappe"],
+              ["engorgement", "Engorgement"],
+            ] as const
+          ).map(([o, libelle]) => (
+            <button key={o} type="button" style={btn(overlay === o)} onClick={() => setOverlay(o)}>
+              {libelle}
+            </button>
+          ))}
+        </p>
+      </div>
+
+      <dl className="stats" style={{ marginTop: 12 }}>
+        <dt>Sol</dt>
+        <dd>
+          P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} · K{" "}
+          {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables · mycorhizes{" "}
+          {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
+        </dd>
+        <dt>Nappe</dt>
+        <dd>
+          à {(snapshot.fluxes.nappeProfondeurCm / 100).toFixed(2)} m sous la surface
+          <span className="detail">
+            {" "}
+            · équilibre régional {(station.nappeEquilibreCm / 100).toFixed(1)} m — la forêt la fait
+            descendre en transpirant, un incendie la fait remonter
+          </span>
+        </dd>
+        {snapshot.fluxes.erosionArracheeKgM2 > 0 && (
+          <>
+            <dt>Érosion</dt>
+            <dd>
+              {(snapshot.fluxes.erosionArracheeKgM2 * 520).toFixed(1)} t/ha/an arrachées ·{" "}
+              <strong>{(snapshot.fluxes.erosionSortieKgM2 * 520).toFixed(1)}</strong> sorties de la
+              parcelle
+              <span className="detail">
+                {" "}
+                · avec {(snapshot.fluxes.erosionNKgHa * 52).toFixed(1)} N ·{" "}
+                {(snapshot.fluxes.erosionPKgHa * 52).toFixed(2)} P ·{" "}
+                {(snapshot.fluxes.erosionKKgHa * 52).toFixed(1)} K kg/ha/an
+              </span>
+            </dd>
+          </>
+        )}
+        {(snapshot.fluxes.boisSedimentPiegeKgM2 > 0 || snapshot.fluxes.boisRetenueMm > 0) && (
+          <>
+            <dt>Bois en travers</dt>
+            <dd>
+              retient <strong>{(snapshot.fluxes.boisRetenueMm * 52).toFixed(0)} mm/an</strong> d'eau
+              et{" "}
+              {/* En kg et non en tonnes : le bois mort NATUREL barre peu (un
+                      chablis repose sur ses branches), et « 0,0 t/ha » ne dirait
+                      rien de ce qui se passe. */}
+              <strong>
+                {(snapshot.fluxes.boisSedimentPiegeKgM2 * 520_000).toFixed(0)} kg/ha/an
+              </strong>{" "}
+              de terre
+              <span className="detail">
+                {" "}
+                · un tronc couché en travers de la pente met l'eau en flaque, le temps qu'elle
+                rentre, et fait déposer derrière lui ce que le ruissellement emportait
+              </span>
+            </dd>
+          </>
+        )}
+        {snapshot.fluxes.partInondee > 0 && (
+          <>
+            <dt>Crue</dt>
+            <dd>
+              la nappe affleure sur {(snapshot.fluxes.partInondee * 100).toFixed(0)} % de la
+              parcelle
+            </dd>
+          </>
+        )}
+      </dl>
+    </>
   );
 }

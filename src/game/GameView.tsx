@@ -42,9 +42,10 @@ import { Avis } from "./panneaux/Avis";
 import { Bandeau } from "./panneaux/Bandeau";
 import { CarteDuSol } from "./panneaux/CarteDuSol";
 import { PanneauAction } from "./panneaux/PanneauAction";
+import { PanneauArbres } from "./panneaux/PanneauArbres";
 import { PanneauJournal } from "./panneaux/PanneauJournal";
 import { PanneauMenu } from "./panneaux/PanneauMenu";
-import { PanneauParcelle } from "./panneaux/PanneauParcelle";
+import { PanneauScores } from "./panneaux/PanneauScores";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
 import { useReglagesDeGeste } from "./panneaux/reglages";
 import { btn, SCENE, VOLET } from "./panneaux/styles";
@@ -1255,9 +1256,13 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       <Angle
         coin="bd"
         volet={
-          volets.estOuvert("bd", "parcelle") ? (
-            <Volet titre="La parcelle" largeur={400} surFermer={() => volets.fermer("bd")}>
-              <PanneauParcelle snapshot={snapshot} station={station} vivants={vivants} />
+          volets.estOuvert("bd", "arbres") ? (
+            <Volet titre="Les arbres" largeur={400} surFermer={() => volets.fermer("bd")}>
+              <PanneauArbres snapshot={snapshot} vivants={vivants} />
+            </Volet>
+          ) : volets.estOuvert("bd", "scores") ? (
+            <Volet titre="Scores" largeur={400} surFermer={() => volets.fermer("bd")}>
+              <PanneauScores snapshot={snapshot} />
             </Volet>
           ) : volets.estOuvert("bd", "journal") ? (
             <Volet titre="Journal" largeur={400} surFermer={() => volets.fermer("bd")}>
@@ -1267,10 +1272,16 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         }
       >
         <BoutonDeVolet
-          ouvert={volets.estOuvert("bd", "parcelle")}
-          surClic={() => volets.basculer("bd", "parcelle")}
+          ouvert={volets.estOuvert("bd", "arbres")}
+          surClic={() => volets.basculer("bd", "arbres")}
         >
-          📊 La parcelle
+          🌳 Les arbres
+        </BoutonDeVolet>
+        <BoutonDeVolet
+          ouvert={volets.estOuvert("bd", "scores")}
+          surClic={() => volets.basculer("bd", "scores")}
+        >
+          📊 Scores
         </BoutonDeVolet>
         <BoutonDeVolet
           ouvert={volets.estOuvert("bd", "journal")}
