@@ -155,8 +155,20 @@ describe("le tassement se paie sur ce qui pousse (câblage du moteur)", () => {
   it("mais la structure se répare pendant ce temps, elle ne reste pas à 1", () => {
     // Trois passages annuels de réparation : le sol ne revient pas à neuf,
     // mais il n'est plus au maximum non plus.
+    //
+    // **Les deux bornes étaient serrées, et la basse enregistrait un proxy
+    // FAUX.** Elle exigeait plus de 0,5 pour une mesure qui valait un peu plus
+    // de 0,5 : moins de deux pour cent de marge. Et elle a bougé avec #140,
+    // qui a corrigé la densité racinaire — elle était lue sur `1 - groundLight`,
+    // c'est-à-dire sur le COUVERT DES ARBRES, si bien qu'une strate herbacée
+    // dense ne réparait rien faute de canopée. La réparation est donc plus
+    // rapide qu'avant, à juste titre, et la mesure passe à 0,497.
+    //
+    // Les deux bornes disent maintenant ce que l'essai veut dire, avec de la
+    // marge des deux côtés : le sol a CLAIREMENT réparé, et il n'est CLAIREMENT
+    // pas revenu à neuf.
     const tasse = apresDesAnnees(1, 3);
-    expect(tasse.tassementRestant).toBeLessThan(1);
-    expect(tasse.tassementRestant).toBeGreaterThan(0.5);
+    expect(tasse.tassementRestant).toBeLessThan(0.9);
+    expect(tasse.tassementRestant).toBeGreaterThan(0.2);
   });
 });
