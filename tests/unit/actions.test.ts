@@ -294,6 +294,90 @@ describe("ce que l'action rapporte au rendu", () => {
     expect(r.state.trees.find((t) => t.id === 1)?.fruitsKg).toBe(0);
   });
 
+  /**
+   * LES DEUX MOITIÉS DU §6.2 (#124). Chacun de ces deux gestes touche les DEUX
+   * mailles — des arbres et du sol — et #100 n'avait livré que la première,
+   * en refusant d'inventer une maille de terre retournée.
+   *
+   * Ce refus portait sur la bonne chose et pas sur la bonne question. Le moteur
+   * ne retourne effectivement aucune terre en plantant : aucun état de sol ne
+   * bouge. Mais un geste de ZONE dit « ces cellules ont été touchées », pas
+   * « leur sol a changé » — `ramasserBoisMort` le dit déjà sans rien changer au
+   * sol non plus. Et il n'y a aucun rayon à deviner : la cellule du plant EST
+   * l'emprise, un mètre carré étant l'ordre de grandeur d'un potet.
+   */
+  function cellulesDe(r: ReturnType<typeof applyAction>, type: string): readonly number[] {
+    return (r.gestes ?? []).filter(estGesteSurZone).find((g) => g.type === type)?.cellules ?? [];
+  }
+
+  it("planter touche les deux mailles : les plants, et le sol ouvert sous eux", () => {
+    const state = createGameState(STATION, rngStateFromSeed(4));
+    const r = applyAction(state, {
+      type: "planter",
+      week: 0,
+      especeId: "quercus_pubescens",
+      positions: [
+        { x: 10.4, y: 20.7 },
+        { x: 30.2, y: 5.9 },
+        // Hors parcelle : refusée, donc ni plant ni cellule travaillée.
+        { x: -3, y: 5 },
+      ],
+    });
+    expect(idsDe(r, "planter")).toHaveLength(2);
+    // Les cellules sont celles des plants, à l'entier inférieur.
+    expect([...cellulesDe(r, "planter")].sort((a, b) => a - b)).toEqual(
+      [20 * STATION.coteM + 10, 5 * STATION.coteM + 30].sort((a, b) => a - b),
+    );
+  });
+
+  it("deux plants d'une même cellule ne la comptent qu'une fois", () => {
+    const state = createGameState(STATION, rngStateFromSeed(4));
+    const r = applyAction(state, {
+      type: "planter",
+      week: 0,
+      especeId: "quercus_pubescens",
+      // Deux positions distinctes, à plus d'un mètre l'une de l'autre pour
+      // qu'aucune ne soit refusée, mais dans la même cellule entière.
+      positions: [
+        { x: 10.05, y: 20.05 },
+        { x: 10.95, y: 20.95 },
+      ],
+    });
+    expect(idsDe(r, "planter")).toHaveLength(2);
+    expect(cellulesDe(r, "planter")).toEqual([20 * STATION.coteM + 10]);
+  });
+
+  it("et le sol n'a pourtant PAS changé : le geste dit où, pas quoi", () => {
+    // La distinction qui a fait refuser ce geste une première fois. Le moteur
+    // ne modélise aucun travail du sol à la plantation ; que cette terre
+    // ouverte ait des SUITES — lit de germination, tassement — serait un
+    // mécanisme, donc une évolution, pas cette issue.
+    const state = createGameState(STATION, rngStateFromSeed(4));
+    const r = applyAction(state, {
+      type: "planter",
+      week: 0,
+      especeId: "quercus_pubescens",
+      positions: [{ x: 10, y: 20 }],
+    });
+    const i = 20 * STATION.coteM + 10;
+    expect(r.state.soil.ph[i]).toBe(state.soil.ph[i]);
+    expect(r.state.soil.litterCG[i]).toBe(state.soil.litterCG[i]);
+    expect(r.state.soil.humusCG[i]).toBe(state.soil.humusCG[i]);
+  });
+
+  it("le démasclage empile ses planches au pied de l'arbre", () => {
+    let state = createGameState(STATION, rngStateFromSeed(3));
+    state = plantAt(state, "quercus_suber", 20.6, 30.2, 10);
+    state = { ...state, trees: state.trees.map((t) => ({ ...t, ageWeeks: 30 * 52 })) };
+    const r = applyAction(state, { type: "leverEcorce", week: 30 * 52, treeIds: [1] });
+    expect(cellulesDe(r, "leverEcorce")).toEqual([30 * STATION.coteM + 20]);
+    // `masseKg` dit COMBIEN de planches, la cellule dit OÙ.
+    const surArbres = (r.gestes ?? [])
+      .filter(estGesteSurArbres)
+      .find((g) => g.type === "leverEcorce");
+    expect(surArbres?.masseKg?.[0]).toBeGreaterThan(0);
+  });
+
   it("le démasclage se distingue de la marque qu'il laisse", () => {
     let state = createGameState(STATION, rngStateFromSeed(3));
     state = plantAt(state, "quercus_suber", 20, 20, 10);

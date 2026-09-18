@@ -621,13 +621,26 @@ export type GesteTypeArbre =
   | "leverEcorce";
 
 /** Gestes qui désignent une zone de sol. */
+/**
+ * Gestes qui désignent une zone de sol.
+ *
+ * LES DEUX DERNIERS PORTENT LE MÊME NOM QUE DES GESTES SUR ARBRES, et ce n'est
+ * pas une collision : c'est un seul geste qui touche les DEUX mailles (#124). Le
+ * §6.2 le décrit ainsi — « le plant apparaît, la terre est retournée autour »,
+ * « le tronc change de couleur, planches de liège empilées » — une moitié qui
+ * désigne des arbres, une moitié qui désigne du sol. Les deux voyagent donc sous
+ * le même nom, et `estGesteSurArbres` / `estGesteSurZone` les séparent par leur
+ * FORME, pas par leur type.
+ */
 export type GesteTypeZone =
   | "chauler"
   | "faucher"
   | "epandreBrf"
   | "labourer"
   | "ramasserBoisMort"
-  | "cloturer";
+  | "cloturer"
+  | "planter"
+  | "leverEcorce";
 
 export type GesteType = GesteTypeArbre | GesteTypeZone;
 
@@ -695,6 +708,8 @@ function applyPlanter(
   let importedKgC = 0;
   /** Les plants RÉELLEMENT posés — pas ceux qu'on avait demandés (#100). */
   const poses: number[] = [];
+  /** Et les cellules où la terre a été ouverte pour les mettre (#124), sans doublon. */
+  const travaillees = new Set<number>();
   // La vigueur de chaque plant se tire dans le générateur de la partie : deux
   // parties de même graine plantent donc exactement les mêmes individus.
   let rng = state.rng;
@@ -729,6 +744,7 @@ function applyPlanter(
     const tirage = tirerVigueurIndividuelle(rng);
     rng = tirage.rng;
     poses.push(nextTreeId);
+    travaillees.add(Math.floor(pos.y) * state.station.coteM + Math.floor(pos.x));
     trees.push({
       vigueurIndividuelle: tirage.vigueur,
       id: nextTreeId++,
@@ -772,14 +788,29 @@ function applyPlanter(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
-    // Pas de geste de ZONE avec celui-ci, et c'est délibéré (#100). Le §6.2
-    // décrit aussi « la terre est retournée autour » du plant ; le moteur ne
-    // retourne rien en plantant — ni `boutis`, ni `laboure`, aucun état de sol
-    // ne bouge. Rapporter une maille retournée serait inventer un geste qui
-    // n'a pas eu lieu, exactement la jointure fausse que #83 a corrigée
-    // ailleurs. Le rendu tient les positions par les `ids` et peut dessiner ce
-    // qu'il veut autour ; le moteur, lui, ne déclare que ce qu'il fait.
-    gestes: poses.length > 0 ? [{ type: "planter", ids: poses }] : [],
+    // DEUX GESTES POUR UNE ACTION (#124) : les plants posés, et le sol travaillé
+    // autour d'eux. #100 n'avait livré que le premier, en refusant d'inventer
+    // une maille de terre retournée — et ce refus portait sur la bonne chose,
+    // mais pas sur la bonne question. Le moteur ne retourne effectivement rien
+    // en plantant : aucun état de sol ne bouge, ni `boutis`, ni `laboure`.
+    //
+    // Ce qu'il sait pourtant, et qui n'est pas une invention, c'est OÙ le geste
+    // a eu lieu. Un geste de zone dit « ces cellules ont été touchées », pas
+    // « leur sol a changé » — c'est ce que `ramasserBoisMort` dit déjà sans
+    // rien changer au sol non plus. Le rendu peut donc dessiner sa terre remuée
+    // sans que personne ait deviné de rayon : il n'y en a pas à deviner, la
+    // cellule du plant EST l'emprise, et un mètre carré est l'ordre de grandeur
+    // d'un potet.
+    //
+    // Ce qui reste hors de ce lot, et qui serait un mécanisme : que ce travail
+    // du sol AIT DES SUITES — lit de germination, tassement, minéralisation.
+    gestes:
+      poses.length > 0
+        ? [
+            { type: "planter", ids: poses },
+            { type: "planter", cellules: [...travaillees] },
+          ]
+        : [],
   };
 }
 
@@ -1892,6 +1923,8 @@ function applyLeverEcorce(
   /** Les arbres réellement démasclés, et le poids de liège levé (#100). */
   const demascles: number[] = [];
   const masses: number[] = [];
+  /** Où les planches se posent (#124), sans doublon si deux arbres partagent une cellule. */
+  const piedsDesArbres = new Set<number>();
   for (const id of action.treeIds) {
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
@@ -1932,6 +1965,9 @@ function applyLeverEcorce(
     treasuryEur += kg * ecorce.prixEurKg;
     demascles.push(id);
     masses.push(kg);
+    // Les planches s'empilent AU PIED : la cellule de l'arbre est l'endroit,
+    // et il n'y a rien à deviner de plus (#124).
+    piedsDesArbres.add(Math.floor(tree.y) * state.station.coteM + Math.floor(tree.x));
     trees[idx] = { ...tree, derniereLeveeSemaine: action.week };
   }
   return {
@@ -1941,7 +1977,15 @@ function applyLeverEcorce(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
-    gestes: demascles.length > 0 ? [{ type: "leverEcorce", ids: demascles, masseKg: masses }] : [],
+    // Deux mailles ici aussi : les troncs mis à vif, et le pied où le liège
+    // s'empile (#124). `masseKg` dit COMBIEN de planches, les cellules disent OÙ.
+    gestes:
+      demascles.length > 0
+        ? [
+            { type: "leverEcorce", ids: demascles, masseKg: masses },
+            { type: "leverEcorce", cellules: [...piedsDesArbres] },
+          ]
+        : [],
   };
 }
 
