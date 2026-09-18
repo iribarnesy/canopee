@@ -463,12 +463,13 @@ export type ToWorker =
   /**
    * « Ce geste passerait-il ? » — sans le faire.
    *
-   * Le worker applique l'action sur l'état courant et JETTE le résultat, ne
-   * gardant que les refus. C'est le seul moyen d'annoncer un refus avant le
-   * clic sans tenir dans le jeu une seconde copie des règles du moteur, qui
-   * dériverait en silence. Que `applyAction` ne modifie pas l'état qu'on lui
-   * donne est une propriété du moteur, épinglée par `tests/unit/prevoir.test.ts`
-   * — et #139 demande qu'elle devienne un contrat au lieu d'une observation.
+   * Le worker le demande au moteur, qui répond par `prevoirAction` sans rien
+   * changer. C'est le seul moyen d'annoncer un refus avant le clic sans tenir
+   * dans le jeu une seconde copie des règles, qui dériverait en silence.
+   *
+   * Le jeu a d'abord appliqué l'action en jetant le résultat, en tenant
+   * lui-même par un essai la propriété dont il dépendait. #139 demandait que
+   * le moteur en fasse un contrat ; #152 l'a livré.
    *
    * `cle` revient telle quelle dans la réponse : le survol pose la question
    * plusieurs fois par seconde, et sans elle on ne saurait pas de quelle

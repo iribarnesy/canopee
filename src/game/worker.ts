@@ -8,7 +8,7 @@
 
 import { serieMeteoPour } from "../data/meteo";
 import type { ActionRefusal, GameAction, GesteVisible } from "../engine/actions";
-import { applyAction, valeurSurPied } from "../engine/actions";
+import { applyAction, prevoirAction, valeurSurPied } from "../engine/actions";
 import {
   getScenario,
   meteoDerivee,
@@ -886,12 +886,14 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
     }
     case "prevoir": {
       if (!state) return;
-      // **On applique et on jette.** Le moteur seul sait ce qu'il refuse ; le
-      // jeu n'a pas le droit d'en tenir une seconde version. `applyAction`
-      // rend un état neuf plutôt que de toucher au sien — c'est vérifié par
-      // `tests/unit/prevoir.test.ts`, qui échouera bruyamment le jour où ça
-      // cessera d'être vrai.
-      const { refusals } = applyAction(state, { ...msg.action, week: state.week } as GameAction);
+      // **C'est le moteur qui répond, par sa propre fonction.** Le jeu
+      // appliquait l'action et jetait le résultat, en tenant lui-même par un
+      // essai la propriété dont il dépendait — que `applyAction` ne mute pas
+      // l'état qu'on lui donne. Le moteur en a fait un contrat (#139, #152) :
+      // `prevoirAction` porte la garantie dans sa signature, et l'essai qui la
+      // défend éprouve désormais TOUS les types d'action sur leur chemin de
+      // travail, là où le mien ne couvrait que la plantation.
+      const refusals = prevoirAction(state, { ...msg.action, week: state.week } as GameAction);
       const reponse: FromWorker = { type: "prevision", cle: msg.cle, refusals };
       self.postMessage(reponse);
       break;
