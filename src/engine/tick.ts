@@ -89,6 +89,7 @@ import {
   facteurThermique,
   HERBACEES,
   INERTIE_RESSOURCE_FLORALE,
+  OFFRE_FLORALE_SUFFISANTE,
   N_HERBACEES,
   partSaisonniere,
   rabattreParEspece,
@@ -164,6 +165,7 @@ import {
   SATURATION_P_G_M2,
 } from "./pk";
 import {
+  BLOC_AUXILIAIRES_M,
   carteBiotique,
   degatsSurArbre,
   disperser,
@@ -1757,13 +1759,56 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         (floraleInstant[i] ?? 0) + offre * (herbeEmprise[i * N_HERBACEES + s_] ?? 0);
     }
   }
+  // **UN POLLINISATEUR NE BUTINE PAS AU MÈTRE CARRÉ**, et le moteur le savait
+  // déjà : `carteBiotique` agrège la diversité par blocs de 10 m sur une
+  // fenêtre de 3×3, « parce qu'évaluer la richesse cellule par cellule donnait
+  // toujours une seule essence ». Épandre le nectar sur le seul disque du
+  // houppier reproduisait exactement ce défaut — mesuré, une haie à seize
+  // mètres du centre d'un verger ne comptait pour rien, alors qu'un insecte la
+  // visite sans y penser. On reprend donc la MÊME fenêtre, qui est déjà celle
+  // de l'habitat avec lequel cette ressource va être comparée.
+  const nbxF = Math.max(1, Math.ceil(dims.widthM / BLOC_AUXILIAIRES_M));
+  const nbyF = Math.max(1, Math.ceil(dims.heightM / BLOC_AUXILIAIRES_M));
+  const offreBloc = new Float64Array(nbxF * nbyF);
+  const cellulesBloc = new Float64Array(nbxF * nbyF);
+  for (let i = 0; i < nCells; i++) {
+    const bx = Math.min(nbxF - 1, Math.floor((i % dims.widthM) / BLOC_AUXILIAIRES_M));
+    const by = Math.min(nbyF - 1, Math.floor(Math.floor(i / dims.widthM) / BLOC_AUXILIAIRES_M));
+    const b = by * nbxF + bx;
+    offreBloc[b] = (offreBloc[b] ?? 0) + (floraleInstant[i] ?? 0);
+    cellulesBloc[b] = (cellulesBloc[b] ?? 0) + 1;
+  }
+  const offreVue = new Float64Array(nbxF * nbyF);
+  for (let by = 0; by < nbyF; by++) {
+    for (let bx = 0; bx < nbxF; bx++) {
+      let somme = 0;
+      let cellules = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const x = bx + dx;
+          const y = by + dy;
+          if (x < 0 || y < 0 || x >= nbxF || y >= nbyF) continue;
+          somme += offreBloc[y * nbxF + x] ?? 0;
+          cellules += cellulesBloc[y * nbxF + x] ?? 0;
+        }
+      }
+      offreVue[by * nbxF + bx] = cellules > 0 ? somme / cellules : 0;
+    }
+  }
+
   // La mémoire, enfin. Une colonie qui a jeûné au printemps n'est pas là en
   // juin : c'est la CONTINUITÉ du calendrier qui fait la population, pas ce
   // qui est ouvert le jour de la visite. Sans elle, chaque arbre se
   // pollinisait lui-même à proportion de ses propres fleurs.
   const ressourceFlorale = state.soil.ressourceFlorale.slice();
   for (let i = 0; i < nCells; i++) {
-    const cible = Math.min(1, floraleInstant[i] ?? 0);
+    const bx = Math.min(nbxF - 1, Math.floor((i % dims.widthM) / BLOC_AUXILIAIRES_M));
+    const by = Math.min(nbyF - 1, Math.floor(Math.floor(i / dims.widthM) / BLOC_AUXILIAIRES_M));
+    // La mémoire suit une ADÉQUATION, pas une quantité : « y a-t-il eu de quoi
+    // manger à portée », et non « combien de nectar ». C'est ce qui la rend
+    // comparable à l'habitat, et c'est la mesure qui l'a imposé (herbacees.ts,
+    // `OFFRE_FLORALE_SUFFISANTE`).
+    const cible = Math.min(1, (offreVue[by * nbxF + bx] ?? 0) / OFFRE_FLORALE_SUFFISANTE);
     ressourceFlorale[i] =
       (ressourceFlorale[i] ?? 0) + (cible - (ressourceFlorale[i] ?? 0)) * INERTIE_RESSOURCE_FLORALE;
   }

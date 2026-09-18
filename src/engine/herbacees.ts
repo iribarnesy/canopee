@@ -375,6 +375,25 @@ export const REPOUSSE_PAR_SEMAINE = 0.25;
  * population suit sa table *(à calibrer : les sources donnent des durées de
  * développement par espèce, pas un temps de réponse de communauté)*.
  */
+/**
+ * Ce qu'il faut d'offre OUVERTE dans une cellule pour que les insectes y
+ * trouvent à manger — au-delà, la table est garnie et en rajouter ne nourrit
+ * personne de plus (#70).
+ *
+ * Sans ce seuil, la mémoire florale mesure une QUANTITÉ de nectar et non une
+ * ADÉQUATION, et elle reste basse partout : mesuré à 0,10 dans le meilleur cas
+ * du banc, contre un habitat à 0,5 — le minimum des deux ne départageait donc
+ * plus rien, il remplaçait l'habitat. Avec le seuil, la mémoire devient la
+ * PART DE LA SAISON pendant laquelle la cellule a eu de quoi nourrir, qui est
+ * une grandeur sans dimension et comparable à l'habitat.
+ *
+ * 0,25 : un arbuste mellifère en pleine fleur au-dessus de la cellule
+ * (aubépine, nectar 0,9) la nourrit largement, un quart de cellule de vernale
+ * la nourrit à peu près *(à calibrer — aucune source ne donne un débit de
+ * nectar par mètre carré)*.
+ */
+export const OFFRE_FLORALE_SUFFISANTE = 0.25;
+
 export const INERTIE_RESSOURCE_FLORALE = 0.15;
 
 const borne = (x: number) => Math.min(1, Math.max(0, x));
