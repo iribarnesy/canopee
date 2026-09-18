@@ -1063,6 +1063,20 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * personne ne trouvait la cible. La vue vise maintenant le sprite — ce qu'on
    * voit de l'arbre EST l'arbre — et `idArbre` est sa réponse.
    */
+  /**
+   * Ce que le geste armé couvre, pour que la vue le montre sous le curseur.
+   *
+   * Les rayons viennent des réglages du panneau, et le zéro de la plantation
+   * est le bon zéro : un plant occupe un point, et l'espacement minimal est
+   * une règle du moteur qu'on ne redit pas ici.
+   */
+  const empriseDuGeste: { rayonM: number } | undefined =
+    mode === "selection"
+      ? undefined
+      : mode === "planter"
+        ? { rayonM: 0 }
+        : { rayonM: rayonChaulage };
+
   const surClicParcelle = (
     cellule: { x: number; y: number },
     multiple: boolean,
@@ -1132,6 +1146,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             ombreDe={(a) => a.partFoliaire}
             surClic={surClicParcelle}
             surbrillance={selectedIds}
+            {...(empriseDuGeste ? { emprise: empriseDuGeste } : {})}
             deformer={ellipse.deformer}
             mourant={ellipse.mourant}
             remodeler={ellipse.remodeler}

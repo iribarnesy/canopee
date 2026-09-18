@@ -148,6 +148,15 @@ export interface VueParcelleProps {
   /** Les arbres à éclairer, parce qu'ils sont choisis. */
   surbrillance?: ReadonlySet<number>;
   /**
+   * Le geste armé et son emprise, pour le montrer sous le curseur AVANT le
+   * clic. `undefined` quand on sélectionne : il n'y a rien à annoncer.
+   *
+   * La vue ne dit que le OÙ. Savoir si le geste passerait demande un préavis
+   * du moteur, qui n'existe pas encore (#139) — et le rendu n'a pas le droit
+   * de refaire une règle du moteur pour le deviner.
+   */
+  emprise?: { rayonM: number };
+  /**
    * Comment un geste remodèle un arbre qui RESTE debout, s'il y a lieu (§6.2).
    *
    * Le quatrième canal, et il ressemble au troisième : il ne déforme pas un
@@ -271,6 +280,8 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const parcouru = useRef(0);
   /** L'arbre sous le curseur, relu par la boucle d'images pour l'éclairer. */
   const survole = useRef<number | undefined>(undefined);
+  /** Le point de parcelle sous le curseur, pour y poser le viseur du geste. */
+  const cible = useRef<{ x: number; y: number } | undefined>(undefined);
 
   const altitudeMax = useRef(0);
   altitudeMax.current = props.sol.altitudesM.reduce((m, z) => Math.max(m, z), 0);
@@ -376,6 +387,8 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.embraser(p.feu?.(horloge) ?? RIEN_NE_BRULE);
         scene.current?.montrerLesChangements(p.marqueurs ?? []);
         scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
+        const vise = p.emprise && cible.current ? { ...cible.current, ...p.emprise } : undefined;
+        scene.current?.viserLeGeste(vise);
         const compte = scene.current?.rafraichir(
           {
             sol: p.sol,
@@ -430,8 +443,14 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
       const hoteVue = hote.current;
       if (!hoteVue) return;
       const r = hoteVue.getBoundingClientRect();
-      const id = scene.current?.arbreSousLeCurseur(e.clientX - r.left, e.clientY - r.top);
+      const curseur = { sx: e.clientX - r.left, sy: e.clientY - r.top };
+      const id = scene.current?.arbreSousLeCurseur(curseur.sx, curseur.sy);
       survole.current = id;
+      const { props: p, vue: v } = dernier.current;
+      const c = v
+        ? celluleSousLeCurseurVue(curseur, v, (x, y) => p.sol.altitudesM[y * p.sol.coteM + x] ?? 0)
+        : undefined;
+      cible.current = c ? { x: c.x + 0.5, y: c.y + 0.5 } : undefined;
       // Une main dit « je vais saisir et déplacer » — c'est le geste de la
       // caméra. Au-dessus d'un arbre, on désigne : c'est un pointeur.
       hoteVue.style.cursor = id === undefined ? "grab" : "pointer";

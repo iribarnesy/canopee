@@ -200,6 +200,15 @@ const OPACITE_CLIQUABLE = 24;
 /** En deçà, l'anneau de sélection ne se verrait plus. */
 const RAYON_ANNEAU_MIN_PX = 9;
 
+/**
+ * En combien de points on échantillonne l'emprise d'un geste.
+ *
+ * Quarante-huit : assez pour qu'un disque de huit mètres n'ait pas l'air d'un
+ * polygone au zoom rapproché, et assez peu pour que le tracé ne coûte rien —
+ * il est refait à chaque image, comme tout ce qui suit le curseur.
+ */
+const POINTS_DEMPRISE = 48;
+
 export class SceneParcelle {
   private readonly app = new Application();
   private readonly couches = {
@@ -228,6 +237,9 @@ export class SceneParcelle {
   private arbresPoses: ArbrePose[] = [];
   /** L'anneau posé au pied des arbres éclairés. */
   private readonly anneaux = new Graphics();
+  /** Où le geste armé porterait, dessiné sur le sol avant le clic. */
+  private readonly visee = new Graphics();
+  private viseeDemandee?: { x: number; y: number; rayonM: number };
   /** L'arbre survolé et les arbres choisis, à éclairer. */
   private surligne: { survole?: number; choisis: ReadonlySet<number> } = { choisis: new Set() };
   /**
@@ -390,6 +402,7 @@ export class SceneParcelle {
       // dedans : `poserImages` y range des sprites par rang, et un `Graphics`
       // glissé au milieu de ce rangement se ferait prendre pour l'un d'eux.
       this.anneaux,
+      this.visee,
       // **Le panache est AU-DESSUS des arbres, et c'est le seul calque du monde
       // qui ait le droit de masquer un houppier** : de la fumée passe devant ce
       // qu'elle survole, sinon ce n'est pas de la fumée. Le calque des
@@ -533,6 +546,7 @@ export class SceneParcelle {
     spritesPoses += this.poserLeCiel();
     spritesPoses += this.poserArbres(poses, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
+    this.poserLaVisee(etat, vue);
     // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
     // laissait une découpe périmée. La signature ne regarde que les arbres et
     // la caméra ; or l'ombre est aussi découpée à la SILHOUETTE de la parcelle,
@@ -1084,6 +1098,54 @@ export class SceneParcelle {
     }
     SceneParcelle.tailler(this.couches.surbrillance, n);
     return n;
+  }
+
+  /**
+   * Dit où porterait le geste armé — la cellule visée, et son emprise s'il y
+   * en a une. `undefined` quand aucun geste n'est armé : on sélectionne, et
+   * un viseur n'aurait rien à annoncer.
+   */
+  viserLeGeste(visee?: { x: number; y: number; rayonM: number }): void {
+    this.viseeDemandee = visee;
+  }
+
+  /**
+   * L'emprise du geste, posée SUR LE RELIEF et non à plat.
+   *
+   * Un cercle de huit mètres dessiné comme une ellipse mentirait dès qu'il
+   * traverse une butte : le disque que le moteur traitera épouse le terrain,
+   * et c'est ce terrain-là qu'il faut montrer. On échantillonne donc le cercle
+   * en points de parcelle, chacun à l'altitude de sa cellule, et on relie.
+   */
+  private poserLaVisee(etat: EtatScene, vue: Vue): void {
+    this.visee.clear();
+    const v = this.viseeDemandee;
+    if (!v) return;
+    const cote = etat.sol.coteM;
+    const altitude = (x: number, y: number) => {
+      const cx = Math.min(cote - 1, Math.max(0, Math.floor(x)));
+      const cy = Math.min(cote - 1, Math.max(0, Math.floor(y)));
+      return etat.sol.altitudesM[cy * cote + cx] ?? 0;
+    };
+    // La croix au point visé : elle dit « ici », même quand le rayon est nul.
+    const centre = versEcranVue({ x: v.x, y: v.y, z: altitude(v.x, v.y) }, vue);
+    const bras = 6;
+    this.visee.moveTo(centre.sx - bras, centre.sy);
+    this.visee.lineTo(centre.sx + bras, centre.sy);
+    this.visee.moveTo(centre.sx, centre.sy - bras);
+    this.visee.lineTo(centre.sx, centre.sy + bras);
+    this.visee.stroke({ width: 1.5, color: 0xffe9a8, alpha: 0.95 });
+
+    if (v.rayonM <= 0) return;
+    for (let i = 0; i <= POINTS_DEMPRISE; i++) {
+      const a = (i / POINTS_DEMPRISE) * Math.PI * 2;
+      const x = v.x + v.rayonM * Math.cos(a);
+      const y = v.y + v.rayonM * Math.sin(a);
+      const e = versEcranVue({ x, y, z: altitude(x, y) }, vue);
+      if (i === 0) this.visee.moveTo(e.sx, e.sy);
+      else this.visee.lineTo(e.sx, e.sy);
+    }
+    this.visee.stroke({ width: 2, color: 0xffe9a8, alpha: 0.8 });
   }
 
   /** Dit quels arbres éclairer à la prochaine image. */
