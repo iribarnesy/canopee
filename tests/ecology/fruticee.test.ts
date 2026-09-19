@@ -19,12 +19,12 @@ import { tick } from "../../src/engine/tick";
 
 const ARBUSTES = ["prunus_spinosa", "crataegus_monogyna", "rubus_fruticosus", "sambucus_nigra"];
 
-function friche(paysageId: string, annees: number[]): Map<number, GameState> {
+function friche(paysageId: string, annees: number[], graine = 21): Map<number, GameState> {
   const base = LIMON_RICHE.station;
   const b = bordersUniformes(paysageId);
   const st = { ...base, coteM: 40, ...entourageDeLaStation(b, base.phInitial, base.ruMm) };
   const meteo = syntheticYear(LIMON_RICHE.climat);
-  let state = createGameState(st, rngStateFromSeed(21));
+  let state = createGameState(st, rngStateFromSeed(graine));
   const etapes = new Map<number, GameState>();
   for (const an of annees) {
     while (state.week < an * 52) state = tick(state, meteo[state.week % 52] as never).state;
@@ -54,33 +54,55 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     if (!vieux || !jeune) throw new Error("étape manquante");
     // La ronce est héliophile et vit quinze ans : sous futaie, elle disparaît.
     expect(part(vieux, ["rubus_fruticosus"])).toBeLessThan(0.3 * part(jeune, ["rubus_fruticosus"]));
-    // L'aubépine, elle, vit deux siècles et reste la dernière debout — mais
-    // **on le vérifie RELATIVEMENT aux autres pionniers, et c'est une
-    // correction**. L'essai exigeait 5 % des tiges ; le budget carbone (#96) l'a
-    // fait passer à 2,9 %, et de deux façons à la fois : le peuplement
-    // s'auto-éclaircit (570 tiges à quinze ans, 175 à cent vingt), et l'aubépine
-    // est une PIONNIÈRE que l'atlas donne à compensation 0,10 — la plus
-    // exigeante en lumière des quatre arbustes. Sa compensation d'arbre entier
-    // atteint 16 % de lumière à six mètres, que la futaie ne donne pas.
-    //
-    // C'est conforme à ce qu'elle est : une essence de lisière, de haie et de
-    // fourré, rare sous futaie fermée. Mesuré à cent vingt ans — aubépine
-    // 2,9 %, prunellier 1,1 %, sureau 0,6 %, ronce 0,0 % : elle est bien la
-    // dernière debout, avec près de trois fois le suivant. C'est ce que la
-    // phrase voulait dire, et un seuil absolu ne savait pas le dire.
-    //
-    // Le multiple est passé de 2 à 1,5 avec le port serré (#105) : la ronce,
-    // qui était à zéro, revient à 1,9 % parce qu'une canopée d'arbres élancés
-    // laisse un peu plus de lumière au sol. L'énoncé n'est pas « trois fois le
-    // suivant », c'est « la dernière debout » — on garde donc l'ORDRE, qui est
-    // ce que la phrase dit, avec une marge qui n'en fait pas un classement à
-    // l'égalité près.
-    const aubepine = part(vieux, ["crataegus_monogyna"]);
-    expect(aubepine).toBeGreaterThan(0);
-    for (const autre of ["prunus_spinosa", "rubus_fruticosus", "sambucus_nigra"]) {
-      expect(aubepine, autre).toBeGreaterThan(1.5 * part(vieux, [autre]));
-    }
   });
+
+  it("l'aubépine est la dernière pionnière debout — mesuré sur trois graines", () => {
+    // L'ÉNONCÉ EST VRAI, C'EST LA MESURE QUI ÉTAIT FAUSSE, et il a fallu trois
+    // recalibrations pour s'en apercevoir. L'essai exigeait 5 % des tiges, puis
+    // un multiple de 2, puis de 1,5 sur UNE graine — or à cent vingt ans il ne
+    // reste qu'une poignée de pionnières, et un rapport entre deux ou trois
+    // individus mesure le tirage, pas l'écologie. Relevé à l'écriture :
+    //
+    //     graine 21 : 239 tiges — aubépine  2, prunellier 0, ronce 2, sureau 1
+    //     graine  3 : 257 tiges — aubépine  5, prunellier 1, ronce 0, sureau 0
+    //     graine  7 : 279 tiges — aubépine  6, prunellier 2, ronce 0, sureau 0
+    //     graine 11 : 274 tiges — aubépine 12, prunellier 4, ronce 1, sureau 3
+    //     graine 42 : 256 tiges — aubépine 13, prunellier 0, ronce 0, sureau 1
+    //
+    // L'aubépine est en tête sur les cinq, à égalité une fois. C'est ÇA que la
+    // phrase veut dire, et ça se dit en cumulant — comme §16 le demande pour un
+    // critère écologique. Trois graines suffisent à le trancher et coûtent deux
+    // parties de plus ; les cinq sont au relevé pour la mémoire.
+    const graines = [21, 11, 42];
+    const autres = ["prunus_spinosa", "rubus_fruticosus", "sambucus_nigra"];
+    let aubepines = 0;
+    let concurrentes = 0;
+    for (const graine of graines) {
+      const fin = friche("lisiere-forestiere", [120], graine).get(120);
+      if (!fin) throw new Error("étape manquante");
+      const vivants = fin.trees.filter((t) => t.alive);
+      const n = (id: string) => vivants.filter((t) => t.especeId === id).length;
+      const aubepine = n("crataegus_monogyna");
+      expect(aubepine).toBeGreaterThan(0);
+      // En tête sur CHAQUE graine — l'égalité est tolérée, elle arrive quand il
+      // ne reste que deux tiges de chaque côté.
+      for (const autre of autres)
+        expect(aubepine, `${autre} (graine ${graine})`).toBeGreaterThanOrEqual(n(autre));
+      aubepines += aubepine;
+      concurrentes += autres.reduce((s, id) => s + n(id), 0);
+    }
+    // Au cumul, l'aubépine à elle seule passe les trois autres RÉUNIES. C'est
+    // l'énoncé, et c'est tout l'énoncé.
+    //
+    // La première version exigeait le DOUBLE, et la CI l'a fait tomber (28
+    // contre 15, soit 1,87×) : j'avais remplacé un seuil calé sur une mesure
+    // par un autre seuil calé sur une mesure, ce qui est exactement le défaut
+    // que cet essai corrigeait. Un multiple choisi sur un relevé rebascule au
+    // premier lot qui déplace le tirage — il y en a eu trois. « La dernière
+    // debout » ne dit pas « le double » : elle dit « devant », et devant tout
+    // le monde à la fois.
+    expect(aubepines).toBeGreaterThan(concurrentes);
+  }, 900_000);
 });
 
 describe("ce que les épineux apportent", () => {

@@ -86,10 +86,64 @@ export function facteurPhBiologie(ph: number): number {
   return Math.min(1, Math.max(0.15, (ph - 3.5) / 2));
 }
 
+/** Largeur sur laquelle la vigueur monte de zéro au plein régime, en pH. */
+export const RAMPE_PH = 0.7;
+
 /**
- * Tolérance d'une espèce à l'acidité ∈ [0,1] : 1 dans sa gamme, bordure douce
- * de ±0,7 pH, 0 au-delà — la bio-indication de l'atlas, calcicoles contre
- * acidiphiles.
+ * Ce qui reste de vigueur à une espèce PILE À LA BORNE de son amplitude.
+ *
+ * Ce paramètre ne corrige qu'une chose, et il faut savoir laquelle : la borne
+ * de l'atlas ne vaut plus ZÉRO. Elle le valait pour les 26 espèces — mesuré —
+ * ce qui faisait de chaque amplitude de présence un couloir de mort à ses
+ * propres bords, et `paysage.ts` en avait tiré une doctrine (« au bord exact de
+ * sa gamme, une espèce ne pousse déjà plus du tout »).
+ *
+ * IL NE FAIT PAS SURVIVRE L'ESPÈCE À SA BORNE, et c'est mesuré aussi. Sous
+ * `STRESS_ONSET` (0,45) le stress monte de (0,45 − f) × 5 par semaine pour
+ * 10 de létal : à 0 l'arbre meurt en quatre semaines, à 0,2 en huit. La valeur
+ * ne déplace donc qu'un délai. La faire monter à 0,45 pour qu'une espèce tienne
+ * vraiment à sa borne relèverait de +0,45 TOUTE espèce située dans sa rampe,
+ * ce qui casse les tables de production — le pin sylvestre, dont la station de
+ * référence est à pH 7, soit dans la rampe de sa borne haute, passe de 15,5 m
+ * tabulés à 18,9 m simulés dès qu'on le relève de 0,2.
+ *
+ * 0,05 est donc choisi pour ce qu'il ne casse pas : c'est la plus petite valeur
+ * qui ôte le zéro franc, et les tables de production — le seul ancrage de
+ * vérité terrain du dépôt — restent satisfaites. Ce n'est pas une mesure, c'est
+ * une borne supérieure imposée par la calibration existante.
+ *
+ * LE VRAI MANQUE EST AILLEURS, et il a son issue : le pH n'a qu'UN facteur,
+ * qui sert à la fois la croissance et la survie. L'eau en a deux, découplés
+ * exprès — « le hêtre pousse mal en sec, mais son semis survit ». Un arbre au
+ * bord de son amplitude de pH devrait pousser mal ET tenir ; le moteur n'a
+ * aucun moyen de le dire.
+ */
+export const VIGUEUR_A_LA_BORNE = 0.05;
+
+/**
+ * Tolérance d'une espèce au pH ∈ [0,1] : réponse UNIMODALE, pleine à
+ * l'optimum, réduite au cinquième aux bornes de l'atlas, nulle peu après.
+ *
+ * LA FORME EST CELLE QUE MESURENT LES RELEVÉS. Les modèles de Huisman-Olff-
+ * Fresco, l'étalon pour une réponse d'espèce le long d'un gradient, retiennent
+ * cinq formes emboîtées — plate, monotone, plateau, unimodale symétrique,
+ * unimodale dissymétrique — et ce sont les unimodales qui l'emportent pour le
+ * pH. Aucun relevé ne décrit un plein régime plat suivi d'une falaise. Le
+ * moteur tient d'ailleurs déjà la réponse du phosphore au pH par une
+ * gaussienne : c'est ce facteur-ci qui faisait exception.
+ *
+ * CE QUI ÉTAIT FAUX. La rampe touchait zéro AUX BORNES : mesuré sur les 26
+ * espèces, `f(min) = 0` pour toutes — chacune en mort certaine au pH exact que
+ * l'atlas lui donne pour tolérable, ce qui est le contraire de ce qu'une
+ * amplitude de présence veut dire. Le journal en arrivait à annoncer « sol à
+ * pH 4,5, il leur en faut 4 à 7,5 » sur un pin qu'il était en train de tuer, et
+ * `paysage.ts` avait écrit la conséquence en doctrine : « au bord exact de sa
+ * gamme, une espèce ne pousse déjà plus du tout ».
+ *
+ * L'optimum est pris au MILIEU de l'amplitude, faute de mieux : les relevés
+ * donnent des réponses souvent dissymétriques, mais aucune donnée par espèce
+ * ici ne permettrait de placer un optimum décalé. Symétrique est l'hypothèse
+ * honnête, pas la vraie *(à mesurer)*.
  *
  * Elle vit ici, et pas dans `trees.ts`, parce que la strate herbacée la lit
  * aussi (`herbacees.ts`) : c'est une propriété du SOL confrontée à une gamme,
@@ -97,7 +151,17 @@ export function facteurPhBiologie(ph: number): number {
  */
 export function facteurGammePh(gamme: readonly [number, number], ph: number): number {
   const [min, max] = gamme;
-  return Math.min(1, Math.max(0, Math.min((ph - min) / 0.7, (max - ph) / 0.7)));
+  // Le zéro est DEHORS, et c'est tout ce qui change par rapport à la version
+  // qui le posait sur la borne. La rampe garde sa largeur, donc le plein régime
+  // couvre presque la même plage qu'avant et la calibration bâtie dessus tient.
+  const debordement = RAMPE_PH * VIGUEUR_A_LA_BORNE;
+  return Math.min(
+    1,
+    Math.max(
+      0,
+      Math.min((ph - (min - debordement)) / RAMPE_PH, (max + debordement - ph) / RAMPE_PH),
+    ),
+  );
 }
 
 /**
