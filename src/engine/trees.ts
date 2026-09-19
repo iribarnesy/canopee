@@ -16,7 +16,7 @@ import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import { partPuiseeSurLesReserves, usureParSemaine } from "./reserves";
 import { type RngState, rngFloat } from "./rng";
-import { facteurGammePh } from "./soil";
+import { facteurGammePh, facteurSurviePh } from "./soil";
 import { facteurCroissanceTassement } from "./tassement";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
@@ -1149,6 +1149,18 @@ export function phFactor(espece: EspeceV0, ph: number): number {
 }
 
 /**
+ * f_pH de SURVIE : l'amplitude de l'atlas élargie de sa marge (#161).
+ *
+ * Distinct de `phFactor`, comme `seuilStressSecheresse` est distinct de
+ * `seuilConfortSecheresse` : au bord de son amplitude une espèce pousse mal —
+ * c'est `phFactor` qui le dit — mais elle ne meurt pas, et c'est celui-ci qui
+ * le dit. Seul ce second facteur entre dans `survivalFactor`.
+ */
+export function phFactorSurvie(espece: EspeceV0, ph: number): number {
+  return facteurSurviePh(espece.ph, ph);
+}
+
+/**
  * f_lumière : 0 au point de compensation (l'arbre vit sur ses réserves),
  * 1 à saturation — les sciaphiles saturent bas, les héliophiles exigent le plein soleil (ch3-B).
  */
@@ -1217,6 +1229,8 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const fEng = waterloggingFactor(espece, env.waterloggingRatio);
   const fLum = lightFactor(espece, env.light);
   const fPH = phFactor(espece, env.phMean);
+  // La SURVIE lit l'amplitude élargie : pousser mal n'est pas mourir (#161).
+  const fPHSurvie = phFactorSurvie(espece, env.phMean);
   const fN = espece.azote.fixateur ? 0.95 : env.nitrogenSatisfaction;
   // Loi du minimum : le phosphore et le potassium entrent au même titre que
   // les autres. Ils ne freinent presque jamais sur un bon sol — c'est sur les
@@ -1267,7 +1281,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     ageYears < 0.85 * longevite
       ? 1
       : Math.max(0, 1 - (ageYears - 0.85 * longevite) / (0.3 * longevite));
-  const survivalFactor = Math.min(fSecSurvie, fEng, fPH, fAge);
+  const survivalFactor = Math.min(fSecSurvie, fEng, fPHSurvie, fAge);
 
   // Croissance : potentiel × loi du minimum, asymptote vers la hauteur max.
   // Un arbre stressé pousse moins (il puise dans ses réserves, docs/regles.md §7.1).
@@ -1384,9 +1398,13 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     // et non par un facteur : c'est la seule façon de comparer un stock qui se
     // vide à des facteurs instantanés. Un arbre qui puisait plus qu'il ne
     // souffrait par ailleurs est mort de l'ombre.
-    const pire = Math.min(fSecSurvie, fEng, fPH, fAge);
+    // C'est le facteur de SURVIE du pH qui entre ici, le même que dans
+    // `survivalFactor` : imputer la mort sur le facteur de CROISSANCE
+    // désignerait le pH presque à chaque fois, puisqu'il lui est toujours
+    // inférieur ou égal (#161).
+    const pire = Math.min(fSecSurvie, fEng, fPHSurvie, fAge);
     const parLeManque = pire < STRESS_ONSET ? (STRESS_ONSET - pire) * 5 : 0;
-    causeMort = causeLenteDominante(usure, parLeManque, fSecSurvie, fEng, fPH, fAge);
+    causeMort = causeLenteDominante(usure, parLeManque, fSecSurvie, fEng, fPHSurvie, fAge);
   }
   // La même lecture, mais tenue CHAQUE SEMAINE et pas seulement à la mort :
   // c'est elle qu'un coup brusque relira pour savoir de quoi l'arbre se
@@ -1398,7 +1416,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // une hêtraie de limon riche accumulait 189 morts « solHorsGamme ». Mesuré.
   const causeLente =
     usure > 0 || parLeManqueSemaine > 0
-      ? causeLenteDominante(usure, parLeManqueSemaine, fSecSurvie, fEng, fPH, fAge)
+      ? causeLenteDominante(usure, parLeManqueSemaine, fSecSurvie, fEng, fPHSurvie, fAge)
       : tree.causeLente;
 
   return {

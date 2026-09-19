@@ -121,6 +121,55 @@ export const RAMPE_PH = 0.7;
 export const VIGUEUR_A_LA_BORNE = 0.05;
 
 /**
+ * Marge de SURVIE au-delà de l'amplitude de présence, en pH (#161).
+ *
+ * Le second seuil que `VIGUEUR_A_LA_BORNE` appelait de ses vœux. L'eau en a
+ * deux depuis toujours — un confort qui ralentit la croissance, un stress qui
+ * tue — et l'atlas explique pourquoi : « le hêtre pousse mal dès que l'eau
+ * manque mais son semis survit ». Le pH n'en avait qu'un, si bien qu'une espèce
+ * au bord de son amplitude ne pouvait pas pousser mal ET tenir : elle mourait.
+ * Mesuré avant ce lot, sur trois graines : un hêtre planté sur la lande sèche,
+ * dont le pH (4,50) est EXACTEMENT la borne que l'atlas lui donne pour
+ * tolérable, meurt à 20 sur 20 en moins de cinq ans.
+ *
+ * UNE AMPLITUDE D'ATLAS EST UNE AMPLITUDE DE PRÉSENCE : l'espèce s'y trouve,
+ * rare et chétive aux bords, pas morte. Au-delà seulement commencent les
+ * mécanismes qui tuent — vers l'acide la toxicité aluminique, vers le basique
+ * la chlorose calcaire.
+ *
+ * LA VALEUR VIENT D'UN RELEVÉ, pas du moteur. Une hêtraie acidiphile à luzule
+ * descend vers pH 4 ; la borne déclarée du hêtre est 4,5. Il faut donc qu'il
+ * vive un demi-point en dessous, et qu'il meure peu après. Avec 0,7 — qui se
+ * trouve être la largeur de la rampe, ce qui est commode mais n'est pas la
+ * raison — sa survie vaut 1,00 pile à la borne, passe sous le seuil de stress
+ * vers 4,15 et s'éteint vers 3,8. Le hêtre vit à pH 4, comme le relevé le dit.
+ *
+ * UNE SEULE VALEUR POUR TOUTES LES ESPÈCES, et c'est une hypothèse, pas une
+ * mesure : une spécialiste et une généraliste n'ont sûrement pas la même marge,
+ * mais aucune donnée par espèce ne permettrait ici de les distinguer. Uniforme
+ * est l'honnête tant qu'on n'a pas mieux *(à mesurer)*.
+ */
+export const MARGE_SURVIE_PH = 0.7;
+
+/**
+ * Tolérance de SURVIE d'une espèce au pH ∈ [0,1] — le pendant de
+ * `facteurGammePh`, en plus large (#161).
+ *
+ * La croissance lit l'amplitude de l'atlas, la survie lit la même élargie de
+ * `MARGE_SURVIE_PH`. Entre les deux, l'arbre végète sans mourir : c'est
+ * exactement ce qu'on observe aux bords d'une aire.
+ *
+ * CE QUE ÇA NE DOIT PAS CASSER : la bio-indication (C7). Un hêtre sur podzol ne
+ * meurt plus de son pH, mais il y pousse à 5 % de son potentiel — il est donc
+ * exclu par la CONCURRENCE au lieu de l'être par la mort, ce qui est le vrai
+ * mécanisme de terrain et non un adoucissement. Mesuré dans `ph-survie.test.ts`.
+ */
+export function facteurSurviePh(gamme: readonly [number, number], ph: number): number {
+  const [min, max] = gamme;
+  return facteurGammePh([min - MARGE_SURVIE_PH, max + MARGE_SURVIE_PH], ph);
+}
+
+/**
  * Tolérance d'une espèce au pH ∈ [0,1] : réponse UNIMODALE, pleine à
  * l'optimum, réduite au cinquième aux bornes de l'atlas, nulle peu après.
  *
