@@ -11,6 +11,10 @@ on:
 # branche de travail). Le déploiement est donc dans `deploy.yml`, déclenché par
 # la RÉUSSITE de ce workflow sur `main`. Ne pas le ramener ici.
 jobs:
+  # Les vérifications INSTANTANÉES, séparées des essais : elles rendent leur
+  # verdict en quelques secondes, et les attendre derrière une suite de
+  # trente minutes revenait à découvrir une faute de frappe une demi-heure
+  # trop tard.
   checks:
     runs-on: ubuntu-latest
     steps:
@@ -31,4 +35,31 @@ jobs:
       # entrée de la progression cite le score courant. `python3` est fourni par
       # l'image `ubuntu-latest`.
       - run: npm run check:realisme
-      - run: npm test
+
+  # LA SUITE EST DÉCOUPÉE EN QUATRE, et c'est du temps de mur gagné sans
+  # toucher à une ligne du moteur. Mesuré : 4 368 s de travail cumulé pour
+  # 2 308 s de mur, soit 1,9× de parallélisme — un runner `ubuntu-latest` a
+  # deux cœurs, et vitest ne peut pas en inventer un troisième. Quatre tranches
+  # sur quatre machines ramènent le mur au quart.
+  #
+  # `--shard` répartit les FICHIERS, pas les essais : chaque tranche est une
+  # suite complète et autonome, et le découpage ne change donc rien à ce qui
+  # est vérifié. Si une tranche rougit, son journal porte l'échec entier.
+  #
+  # Pour ajouter une tranche : allonger `tranche` ET le dénominateur. Les deux
+  # doivent rester d'accord, sinon des fichiers ne sont tournés par personne.
+  essais:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tranche: [1, 2, 3, 4]
+    name: essais (${{ matrix.tranche }}/4)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run --shard=${{ matrix.tranche }}/4
