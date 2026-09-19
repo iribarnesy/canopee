@@ -180,8 +180,10 @@ espèces qui nourrissent sans rien donner à récolter entrent au calendrier)
 → 90 % (le jeu peut enfin poser sa question centrale : la culture existe —
 cinq critères écrits, dont le LER qu'on ne sait pas calculer, donc un point
 de moins)
-→ **91 % (la fertilisation : la courbe de réponse de Broadbalk tombe toute
-seule, et l'allée fertilisée rend enfin le gradient lisible)**.*
+→ 91 % (la fertilisation : la courbe de réponse de Broadbalk tombe toute
+seule, et l'allée fertilisée rend enfin le gradient lisible)
+→ **91 % (la brousse cesse d'être un arbre : aucun point gagné, deux ✅ qui
+tenaient sur la moitié de ce qu'ils annonçaient réparés)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -346,7 +348,7 @@ maladie-là, pas une preuve de santé.*
 
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
-| H1 | Chaque action coûte du temps de travail et de l'argent | ✅ | `actions.ts` ; `actions.test.ts` |
+| H1 | Chaque action coûte du temps de travail et de l'argent | ✅ | `actions.ts` ; `actions.test.ts`. **Et le prix correspond au GESTE, pas seulement à l'objet** (#154) : `state.trees` mêle un chêne de trente mètres et un brin de ronce, si bien que débroussailler se facturait comme abattre — 335 ronces revenaient à **822 h/ha**, contre les 60 h/ha que `FAUCHE_HOURS_M2_MAIN` documente pour ce geste exact, une contradiction interne d'un facteur quatorze dont la moitié venait du seul coût fixe d'approche (0,3 h par tige, pour un brin qu'on couche d'un coup). Le prix se répartit désormais entre abattage et débroussaillage selon le DIAMÈTRE de l'individu, le second facturé à la surface de houppier au tarif du dégagement à la main : **96 h/ha** mesuré (`brousse.test.ts`). Le modèle surfacique n'a pas été calé — il tombe sur l'ancre tout seul, et il a la bonne limite aux deux bouts, un tapis continu coûtant le plein tarif et des brins épars à proportion. **Témoin** : au-delà du diamètre de fût, le prix est celui d'avant à la virgule |
 | H2 | Une semaine surchargée ne se refuse pas, elle se paie : le budget est annuel (UTH), la semaine n'est qu'un seuil de facturation | ✅ | `WEEK_HOURS_CAP` sert de seuil, plus de mur : `depassementHoraire` donne les heures au-delà de 60 h/UTH et `coutDuDepassement` les convertit en embauches saisonnières (une par tranche entamée). Un maraîcher qui pointe 80 h en semaine de plantation ne se fait pas arrêter par un garde-fou — il embauche, ou il y passe ses nuits |
 | H3 | Saisonnier vs CDI : coûts, durées et ruptures réalistes | ✅ | `embauche-chaulage.test.ts` |
 | H4 | La cadence de récolte dépend de l'espèce (pommes vs noisettes) | ✅ | `fruits.recolteHKg` |
@@ -363,7 +365,7 @@ maladie-là, pas une preuve de santé.*
 | H21 | Le LER dit si le mélange bat la somme des parties | ❌ | `docs/regles.md` §7.5 le demande — « le jeu calcule le Land Equivalent Ratio des assolements mixtes vs monoculture, indicateur de score et outil pédagogique » — et rien ne le calcule. Il exige les DEUX monocultures comme témoins, le blé pur et la forêt pure sur la même station : ce n'est pas un affichage, c'est un dispositif. Cible de validation : le noyer-céréale de Restinclières dépasse 1,2 |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
-| H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts` |
+| H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts`. **Ce ✅ ne valait que pour la strate HERBACÉE** : `faucher` n'écrit que dans `herbeCouverture`, `herbeFeuillage` et `herbeBiomasse`, donc un roncier lui survivait intact, et le seul outil qui l'ouvrait — `eclaircir` par essence — était tarifé en abattages, donc hors de portée. Les deux moitiés y sont depuis #154. **Le témoin est le résultat, et aucune punition n'a été écrite** : mêmes 83 chênes aux mêmes emplacements sur une friche de dix ans, une fois telle quelle et une fois débroussaillée, quinze ans plus tard — **29 % de survie contre 48 %** (`brousse.test.ts`). Les ronces prennent la lumière, et le moteur en tire tout seul de quoi rendre rentables les 18 h de débroussaillage |
 | H10 | Les aides publiques et paiements pour services existent | 🟡 | `aides.ts` : aide de base au revenu (127 €/ha), écorégime (54 ou 76 €/ha selon la part d'infrastructures agroécologiques), bonus haies (7 €/ha). Et surtout le PLAFOND DE 100 ARBRES/HA au-delà duquel la parcelle n'est plus agricole et perd tout. Règles FIGÉES sur la programmation 2023-2027, ce que la réalité n'est pas |
 | H11 | La trésorerie peut plonger jusqu'à la faillite | ✅ | découvert plafonné |
 | H12 | Le sol se découvre par observation ou analyse payante | 🟡 | tout est visible dans l'UI (calques) |

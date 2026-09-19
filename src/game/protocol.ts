@@ -83,6 +83,21 @@ export interface SnapshotTree {
   diametreCm: number;
   ageWeeks: number;
   stress: number;
+  /**
+   * D'OÙ vient ce stress, pour les origines que le moteur sait nommer sur un
+   * arbre VIVANT (#153). `stress` seul est une somme : sécheresse, famine,
+   * ravageurs et maladie y tombent ensemble, et le jeu ne peut pas les
+   * départager — il n'a pas le droit de refaire le calcul, et l'information
+   * n'y est plus.
+   *
+   * Les trois sont des parts de `stress`, amorties avec lui : leur somme lui
+   * reste inférieure ou égale, et ce qui manque est ce que personne ne nomme
+   * encore (le frottis, qui se lit par `frotteSemaine`).
+   */
+  stressLent?: number;
+  causeLente?: CauseMort;
+  stressRavageurs?: number;
+  stressMaladie?: number;
   fruitsKg: number;
   /** hauteur de bille élaguée, m (ce qui fera du bois d'œuvre) */
   hauteurElagueeM: number;
