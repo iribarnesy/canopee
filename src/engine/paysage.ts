@@ -388,13 +388,27 @@ export function getPaysage(id: string): Paysage {
  * utile exclut les espèces qui exigent de la fraîcheur.
  */
 export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number): boolean {
-  // On réutilise le facteur pH du moteur plutôt qu'une bordure approximative :
-  // au bord exact de sa gamme, une espèce ne pousse déjà plus du tout, et
-  // c'est le cas du hêtre à pH 4,5.
+  // On réutilise le facteur pH du moteur plutôt qu'une bordure approximative.
+  // Ce commentaire disait auparavant « au bord exact de sa gamme, une espèce ne
+  // pousse déjà plus du tout, et c'est le cas du hêtre à pH 4,5 » : c'était vrai
+  // du code et faux du monde, et ça tenait à un défaut de `facteurGammePh` qui
+  // mettait le zéro SUR la borne de l'atlas. Une hêtraie acidiphile à luzule
+  // existe jusque vers pH 4 ; ce n'est pas l'acidité qui exclut le hêtre des
+  // Landes.
   if (phFactor(espece, phStation) < 0.25) return false;
-  // Sous ~120 mm de réserve utile, seules les espèces qui encaissent la soif
-  // tiennent le coup.
-  if (ruMm < 120 && espece.eau.seuilStressSecheresse > 0.55) return false;
+  // C'EST LA SOIF QUI L'EXCLUT, et on la lit au bon seuil. `eau` en porte deux,
+  // découplés exprès : celui de la SURVIE (le hêtre pousse mal en sec, mais son
+  // semis survit) et celui du CONFORT. La question posée ici n'est pas « qui
+  // survivrait » mais « qui PEUPLE l'entourage et sème dessus » — donc le
+  // confort. Sur le seuil de survie, ce filtre n'écartait que l'aulne et le
+  // saule, et laissait le hêtre semer sur un sable landais à 92 mm de réserve.
+  //
+  // Le seuil de 0,6 sépare la flore réelle de la lande atlantique : restent le
+  // pin, le bouleau, la ronce, l'ajonc, le genêt, la callune, le châtaignier,
+  // le chêne-liège et l'arbousier ; partent le hêtre (0,85), le frêne (0,80),
+  // le charme (0,70), l'aulne et le saule (0,85). Sur un limon profond, la
+  // réserve passe le seuil et plus personne n'est écarté.
+  if (ruMm < 120 && espece.eau.seuilConfortSecheresse > 0.6) return false;
   return true;
 }
 

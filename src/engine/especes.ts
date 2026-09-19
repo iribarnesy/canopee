@@ -31,8 +31,15 @@ export interface EspeceV0 {
     toleranceEngorgement: number;
   };
   /**
-   * Gamme de pH tolérée [min, max] (atlas, nuancier acidiphile→calcicole).
-   * Bordure douce de ±0,7 : au-delà, chlorose puis mort (bio-indication).
+   * Amplitude de pH où l'atlas signale l'espèce [min, max] (nuancier
+   * acidiphile→calcicole).
+   *
+   * C'EST UNE AMPLITUDE DE PRÉSENCE, PAS UN PLATEAU DE VIGUEUR. L'espèce y est
+   * pleine en son milieu et réduite au cinquième à ses bornes, où elle est
+   * rare et mal en point sans être morte — c'est `soil.ts:facteurGammePh` qui
+   * porte la forme, et elle est unimodale. Lire ces deux nombres comme des
+   * murs a déjà coûté : le moteur tuait à coup sûr au pH exact qu'il annonçait
+   * tolérable.
    */
   ph: [number, number];
   lumiere: {
