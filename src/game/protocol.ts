@@ -487,6 +487,15 @@ export type ToWorker =
     }
   | { type: "resume"; save: SaveGame }
   | { type: "speed"; weeksPerSecond: number }
+  /**
+   * RETENIR l'horloge sans toucher à la vitesse (#163).
+   *
+   * Le temps du jeu attend qu'une animation bloquante finisse. Distinct d'une
+   * mise en pause, et il le faut : la vitesse choisie par le joueur doit être
+   * intacte quand on relâche, et une pause qu'on pose puis qu'on lève écraserait
+   * une traversée en cours (`avancerDe`) comme une reprise en main.
+   */
+  | { type: "attendre"; retenu: boolean }
   | { type: "action"; action: ActionSansSemaine }
   | { type: "autoHarvest"; enabled: boolean }
   /**

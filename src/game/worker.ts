@@ -71,6 +71,8 @@ let anneeDepart = 2026;
 let bordures: Bordures = bordersUniformes("bocage");
 // Relief choisi au lancement ; à défaut, celui d'origine de la station.
 let relief: Relief | undefined;
+/** Vrai tant qu'une animation bloquante retient le temps du jeu (#163). */
+let retenu = false;
 let maturationAns = 0;
 /** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
 let economie = true;
@@ -690,6 +692,11 @@ function startLoop() {
   fractionalWeeks = 0;
   timer = setInterval(() => {
     if (!state || weeksPerSecond <= 0) return;
+    // **L'horloge attend la fin d'une animation bloquante (#163).** On sort
+    // AVANT d'accumuler la fraction de semaine : sinon la retenue ne ferait
+    // que différer les semaines, qui repartiraient toutes d'un coup au
+    // relâchement — ce qui est le contraire de ce qu'on cherche.
+    if (retenu) return;
     fractionalWeeks += weeksPerSecond / 10;
     let n = Math.floor(fractionalWeeks);
     if (n > 0) {
@@ -897,6 +904,12 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       startLoop();
       break;
     }
+    case "attendre":
+      // On ne touche NI à `weeksPerSecond` NI à `semaineDArret` : c'est une
+      // retenue, pas une reprise en main. Une traversée « +1 mois » qui
+      // s'interromprait pour montrer une chute doit repartir où elle allait.
+      retenu = msg.retenu;
+      break;
     case "speed":
       weeksPerSecond = msg.weeksPerSecond;
       // Le joueur reprend la main : la traversée en cours n'a plus d'objet.

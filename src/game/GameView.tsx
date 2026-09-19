@@ -5,7 +5,7 @@
  * Rendu Canvas 2D — l'isométrique complète viendra comme couche visuelle.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   formeSaisonniere,
   rechauffementFranceC,
@@ -1009,6 +1009,58 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * coupé TOMBE au lieu de s'escamoter.
    */
   const ellipse = useEllipse(snapshot, station, game.speed);
+
+  /**
+   * **Le temps attend la fin d'une animation bloquante (#163).**
+   *
+   * Le retour de partie : « c'est mieux d'attendre la fin d'une animation que
+   * de couper. Par exemple, si on chaule pendant que les semaines s'écoulent,
+   * actuellement ça coupe l'animation ». C'est ici que ça se joue — le worker
+   * sait retenir son horloge, l'ellipse sait combien de temps, et ce lien-là
+   * est le seul endroit qui connaisse les deux.
+   *
+   * Le nettoyage RELÂCHE toujours, et ce n'est pas une précaution de style :
+   * sans lui, changer de vitesse ou fermer la partie pendant une chute
+   * laisserait le worker retenu pour de bon, c'est-à-dire un jeu figé sans que
+   * rien ne l'indique.
+   */
+  const retenir = game.attendre;
+  const retenuJusqua = useRef(0);
+  const minuteurDAttente = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    // **Sur l'ELLIPSE et non sur sa durée**, et c'est le premier piège : deux
+    // semaines de suite portent souvent la même attente — une chute, 900 ms,
+    // une chute, 900 ms. Un effet qui dépend du nombre ne se rejouerait pas et
+    // une semaine sur deux couperait son animation.
+    if (ellipse.attenteMs <= 0) return;
+    // **Et pas de relâchement au changement de dépendance, ce qui est le
+    // second piège — mesuré, celui-là.** Un nettoyage d'effet ordinaire
+    // relâchait la retenue dès que l'ellipse suivante arrivait : relevé dans
+    // le navigateur, les paires retenir/relâcher duraient 80 à 220 ms au lieu
+    // des 900 attendues, et le jeu avançait exactement comme s'il n'y avait
+    // pas de retenue du tout (58 instantanés en 20 s, avant comme après).
+    // L'instantané suivant annulait donc la retenue au lieu que la retenue
+    // empêche l'instantané suivant — c'est-à-dire le défaut qu'on corrige,
+    // reproduit dans sa correction.
+    const fin = performance.now() + ellipse.attenteMs;
+    if (fin <= retenuJusqua.current) return;
+    retenuJusqua.current = fin;
+    retenir(true);
+    clearTimeout(minuteurDAttente.current);
+    minuteurDAttente.current = setTimeout(() => {
+      retenuJusqua.current = 0;
+      retenir(false);
+    }, ellipse.attenteMs);
+  }, [ellipse, retenir]);
+  // Le relâchement de sûreté, au démontage seulement : une partie qu'on quitte
+  // pendant une chute ne doit pas laisser un worker retenu pour de bon.
+  useEffect(
+    () => () => {
+      clearTimeout(minuteurDAttente.current);
+      retenir(false);
+    },
+    [retenir],
+  );
   /** Hauteur de coupe de chaque tige abattue, par identifiant de tige. */
   const coupeDeLaTige = useMemo(
     () => new Map(ellipse.tiges.map((t) => [t.id, t.hauteurDeCoupeM])),

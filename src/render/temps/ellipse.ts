@@ -155,11 +155,28 @@ export interface Acte {
   /** début du créneau, ms depuis le début de l'ellipse */
   debutMs: number;
   dureeMs: number;
+  /**
+   * Cet acte RETIENT-il l'horloge ? (#163)
+   *
+   * **Le commanditaire a renversé la politique, et il faut le dire en toutes
+   * lettres** : jusqu'ici la vitesse imposait sa durée à l'animation — « une
+   * animation remplacée avant sa fin bouge sans rien dire », donc on la
+   * comprimait dans le temps d'écran d'une semaine. La demande est l'inverse :
+   * « c'est mieux d'attendre la fin d'une animation que de couper ». Un acte
+   * bloquant va donc jusqu'au bout, et le temps du jeu l'attend.
+   *
+   * Tout ce qui vient du JOURNAL est bloquant, et c'est cohérent : le journal
+   * ne rapporte que des événements, c'est-à-dire des choses qui arrivent une
+   * fois et qu'on manque si on ne les montre pas. Le non bloquant est
+   * l'ambiance — le vent sur les feuillages, les oiseaux (§5.11 point 1) — et
+   * la CROISSANCE, qui court sur toute l'ellipse sans rien retenir.
+   */
+  bloquant: boolean;
 }
 
 export interface PlanDEllipse {
   actes: readonly Acte[];
-  /** durée totale, ms — au plus le budget demandé */
+  /** durée totale, ms — au plus le budget demandé, sauf au rythme naturel */
   dureeMs: number;
   /**
    * Vrai si le budget ne permettait pas de tout montrer lisiblement.
@@ -183,6 +200,48 @@ export interface PlanDEllipse {
  * qu'une ellipse déborde, et c'est pour ça qu'il est nommé.
  */
 export const ACTE_LE_PLUS_COURT_MS = 100;
+
+/**
+ * Le temps qu'un acte demande pour se lire, ms, par nature d'acte (#163).
+ *
+ * **Une première calibration, et elle s'assume comme telle.** Rien dans le
+ * moteur ne dit combien de temps une chute doit prendre à l'écran : c'est une
+ * durée de PRÉSENTATION, donc un choix. Les valeurs partent de ce que le
+ * mouvement demande pour être suivi — un quart de tour de fût se lit en une
+ * seconde environ, un feuillage qui jaunit puis tombe demande davantage parce
+ * que c'est un changement d'état et non un déplacement, et un front d'incendie
+ * doit parcourir la parcelle (c'est #157 : il se jouait en 100 ms).
+ *
+ * Elles sont toutes au-dessus d'`ACTE_LE_PLUS_COURT_MS`, qui reste le plancher
+ * en dessous duquel un mouvement n'est plus lu comme un mouvement.
+ */
+export const DUREE_NATURELLE_MS: Readonly<Record<Sujet["quoi"], number>> = {
+  // Le joueur vient d'agir : c'est l'acte qu'il attend, et il ouvre la semaine.
+  geste: 1000,
+  // Le front traverse la parcelle. Long exprès — voir #157.
+  feu: 2500,
+  // Une rafale couche ses victimes ensemble, échelonnées.
+  tempete: 1200,
+  // Un changement d'ÉTAT et non un déplacement : jaunir, se défeuiller, griser.
+  mort: 1400,
+  // Un quart de tour autour du pied, accéléré comme une chute libre.
+  chute: 900,
+};
+
+/**
+ * Les natures d'acte qui retiennent l'horloge.
+ *
+ * Toutes, aujourd'hui : le journal ne rapporte que des événements. La table
+ * existe pour que le jour où une animation d'ambiance entrera dans un plan,
+ * elle y entre comme non bloquante et non comme une exception écrite ailleurs.
+ */
+const BLOQUANT: Readonly<Record<Sujet["quoi"], boolean>> = {
+  geste: true,
+  feu: true,
+  tempete: true,
+  mort: true,
+  chute: true,
+};
 
 /**
  * L'ORDRE des actes : les causes avant leurs conséquences.
@@ -209,7 +268,7 @@ export function planDEllipse(
 ): PlanDEllipse {
   const sujets = regrouper(journaux);
   if (sujets.length === 0 || budgetMs <= 0) {
-    return { actes: [], dureeMs: 0, deborde: false, actesOmis: 0 };
+    return VIDE;
   }
   // Combien d'actes tiennent au plancher de lisibilité. Au-delà, on tronque et
   // on le DIT : c'est le repli du §6.8, pas un échec silencieux.
@@ -217,11 +276,56 @@ export function planDEllipse(
   const gardes = sujets.slice(0, tiennent);
   const dureeMs = budgetMs / gardes.length;
   return {
-    actes: gardes.map((sujet, i) => ({ sujet, debutMs: i * dureeMs, dureeMs })),
+    actes: gardes.map((sujet, i) => ({
+      sujet,
+      debutMs: i * dureeMs,
+      dureeMs,
+      bloquant: BLOQUANT[sujet.quoi],
+    })),
     dureeMs: budgetMs,
     deborde: gardes.length < sujets.length,
     actesOmis: sujets.length - gardes.length,
   };
+}
+
+/** Un plan qui n'a rien à jouer. */
+const VIDE: PlanDEllipse = { actes: [], dureeMs: 0, deborde: false, actesOmis: 0 };
+
+/**
+ * Le même plan, mais chaque acte prend le TEMPS QU'IL LUI FAUT (#163).
+ *
+ * **C'est l'inverse de `planDEllipse`, et c'est la demande** : là-bas un
+ * budget se partage entre les actes, quitte à les réduire sous le plancher de
+ * lisibilité ou à en omettre ; ici chaque acte reçoit sa durée naturelle et le
+ * plan dure ce que ça fait. Rien n'est omis, rien n'est comprimé — et c'est à
+ * l'appelant de retenir l'horloge pendant ce temps-là, faute de quoi
+ * l'instantané suivant remplacerait l'animation en cours, ce qui est
+ * exactement le défaut qu'on vient corriger.
+ *
+ * Le regroupement, l'ordre et le débordement ne changent pas : trente-quatre
+ * bouleaux morts de sécheresse restent UN acte, et les causes précèdent
+ * toujours leurs conséquences.
+ */
+export function planAuRythmeNaturel(journaux: readonly JournalDeSemaine[]): PlanDEllipse {
+  const sujets = regrouper(journaux);
+  if (sujets.length === 0) return VIDE;
+  let debutMs = 0;
+  const actes = sujets.map((sujet) => {
+    const dureeMs = DUREE_NATURELLE_MS[sujet.quoi];
+    const acte = { sujet, debutMs, dureeMs, bloquant: BLOQUANT[sujet.quoi] };
+    debutMs += dureeMs;
+    return acte;
+  });
+  return { actes, dureeMs: debutMs, deborde: false, actesOmis: 0 };
+}
+
+/** Le temps pendant lequel un plan RETIENT l'horloge, ms. */
+export function dureeBloquanteMs(plan: PlanDEllipse): number {
+  let fin = 0;
+  for (const acte of plan.actes) {
+    if (acte.bloquant) fin = Math.max(fin, acte.debutMs + acte.dureeMs);
+  }
+  return fin;
 }
 
 /**
