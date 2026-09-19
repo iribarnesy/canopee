@@ -16,7 +16,7 @@ import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import { partPuiseeSurLesReserves, usureParSemaine } from "./reserves";
 import { type RngState, rngFloat } from "./rng";
-import { facteurGammePh, facteurSurviePh } from "./soil";
+import { facteurGammePh, facteurSurviePh, VIGUEUR_A_LA_BORNE } from "./soil";
 import { facteurCroissanceTassement } from "./tassement";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
@@ -1145,7 +1145,25 @@ function waterloggingFactor(espece: EspeceV0, waterlogging: number): number {
  * (chlorose puis mort — la bio-indication de l'atlas : calcicoles vs acidiphiles).
  */
 export function phFactor(espece: EspeceV0, ph: number): number {
-  return facteurGammePh(espece.ph, ph);
+  const dansLaGamme = facteurGammePh(espece.ph, ph);
+  // UNE QUEUE DANS LA MARGE DE SURVIE, sans quoi le lot trahirait son propre
+  // énoncé (#161) : « un arbre entre les deux pousse mal ET tient ». Avec la
+  // seule rampe de l'atlas, la croissance tombe à zéro dès sous la borne, si
+  // bien qu'un hêtre à pH 4,2 ne poussait plus du tout mais ne mourait pas non
+  // plus — mesuré, 19 sur 20 encore vivants à CINQUANTE ans, toujours à leurs
+  // 0,30 m de plantation. Des nains immortels, ce que rien n'observe.
+  //
+  // Les deux termes se rejoignent EXACTEMENT à la borne, où la rampe vaut
+  // `VIGUEUR_A_LA_BORNE` et la survie vaut 1 : la courbe reste continue, et
+  // au-dessus c'est la rampe qui commande, inchangée.
+  //
+  // AUCUNE TABLE DE PRODUCTION NE PEUT BOUGER, et c'est démontrable plutôt que
+  // mesuré : la queue ne vit que HORS de l'amplitude déclarée, et aucune espèce
+  // n'est calée hors de la sienne — le pin sylvestre est à pH 7 dans sa gamme
+  // 4–7,5, le châtaignier sur le limon acide où il vaut 1. Les seuils
+  // d'installation (`paysage.ts`, `regeneration.ts`) ne bougent pas non plus :
+  // ils excluent sous 0,20 et 0,25, quand la queue plafonne à 0,05.
+  return Math.max(dansLaGamme, VIGUEUR_A_LA_BORNE * facteurSurviePh(espece.ph, ph));
 }
 
 /**
