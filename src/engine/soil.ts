@@ -170,16 +170,22 @@ export function facteurSurviePh(gamme: readonly [number, number], ph: number): n
 }
 
 /**
- * Tolérance d'une espèce au pH ∈ [0,1] : réponse UNIMODALE, pleine à
- * l'optimum, réduite au cinquième aux bornes de l'atlas, nulle peu après.
+ * Tolérance d'une espèce au pH ∈ [0,1] : un PLATEAU à bords en rampe, plein à
+ * l'optimum, réduit au cinquième aux bornes de l'atlas, nul peu après.
  *
- * LA FORME EST CELLE QUE MESURENT LES RELEVÉS. Les modèles de Huisman-Olff-
+ * LA FORME QU'IL FAUDRAIT, ET CELLE QU'ON A. Les modèles de Huisman-Olff-
  * Fresco, l'étalon pour une réponse d'espèce le long d'un gradient, retiennent
  * cinq formes emboîtées — plate, monotone, plateau, unimodale symétrique,
  * unimodale dissymétrique — et ce sont les unimodales qui l'emportent pour le
- * pH. Aucun relevé ne décrit un plein régime plat suivi d'une falaise. Le
- * moteur tient d'ailleurs déjà la réponse du phosphore au pH par une
- * gaussienne : c'est ce facteur-ci qui faisait exception.
+ * pH. Aucun relevé ne décrit un plein régime plat suivi d'une falaise.
+ *
+ * Ce commentaire a un temps annoncé cette unimodale comme livrée. Elle ne
+ * l'est pas : mesuré, 2,2 pH sur 3,5 d'amplitude valent exactement 1,00 — un
+ * plateau, c'est-à-dire la forme même que ces modèles écartent. La poser
+ * déplacerait la calibration de toutes les essences dont la station de
+ * référence tombe dans une rampe, à commencer par le pin sylvestre. C'est donc
+ * une dette écrite, pas un acquis *(à mesurer)*. Le moteur tient d'ailleurs la
+ * réponse du phosphore au pH par une gaussienne : celui-ci fait exception.
  *
  * CE QUI ÉTAIT FAUX. La rampe touchait zéro AUX BORNES : mesuré sur les 26
  * espèces, `f(min) = 0` pour toutes — chacune en mort certaine au pH exact que

@@ -9,10 +9,10 @@ import {
   MARGE_SURVIE_PH,
   VIGUEUR_A_LA_BORNE,
 } from "../../src/engine/soil";
-import { LIMON_RICHE, stationDepuisProfil } from "../../src/engine/stations";
 import { createGameState, type GameState, plantScattered } from "../../src/engine/state";
-import { phFactor, phFactorSurvie } from "../../src/engine/trees";
+import { LIMON_RICHE, stationDepuisProfil } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { phFactor, phFactorSurvie } from "../../src/engine/trees";
 
 /**
  * Le pH a deux seuils, comme l'eau en a deux (#161).
@@ -169,9 +169,7 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
       const hetres = coh.filter((t) => t.especeId === "fagus_sylvatica");
       expect(pins.length).toBeGreaterThan(10);
       const hp = pins.reduce((a, t) => a + t.heightM, 0) / pins.length;
-      const hh = hetres.length
-        ? hetres.reduce((a, t) => a + t.heightM, 0) / hetres.length
-        : 0;
+      const hh = hetres.length ? hetres.reduce((a, t) => a + t.heightM, 0) / hetres.length : 0;
       // Un ordre de grandeur d'écart : le peuplement est une pinède, et les
       // hêtres n'y sont que des brins dominés.
       expect(hp).toBeGreaterThan(10 * hh);
