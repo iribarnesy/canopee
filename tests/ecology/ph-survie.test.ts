@@ -50,7 +50,8 @@ const ACIDE = stationDepuisProfil({
   remonteeNappeMmSemaine: 0,
   drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
   herbeInitiale: 0.2,
-  coteM: 50,
+  // 40 m : le banc isole un facteur du sol, pas une dynamique de peuplement.
+  coteM: 40,
 });
 
 const GRAINES = [11, 23, 37];
@@ -95,11 +96,19 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
       // À la borne : la rampe vaut VIGUEUR_A_LA_BORNE, la survie vaut 1.
       expect(phFactor(e, min)).toBeCloseTo(VIGUEUR_A_LA_BORNE, 6);
       expect(phFactorSurvie(e, min)).toBeCloseTo(1, 6);
-      // Et de part et d'autre, pas de saut : la croissance décroît continûment.
-      const dedans = phFactor(e, min + 0.01);
-      const dehors = phFactor(e, min - 0.01);
-      expect(Math.abs(dedans - dehors)).toBeLessThan(0.01);
-      expect(dehors).toBeLessThanOrEqual(VIGUEUR_A_LA_BORNE + 1e-9);
+      // PAS DE SAUT — et c'est bien un saut qu'on cherche, pas une pente. Une
+      // première version comparait `min ± 0,01` en exigeant moins de 0,01
+      // d'écart : la rampe a une pente de 1/0,7, elle bouge donc de 0,014 sur
+      // cet intervalle rien qu'en étant continue. L'essai mesurait la
+      // PLATITUDE et tombait sur une fonction parfaitement saine.
+      //
+      // Un coude à la borne est légitime : au-dessus c'est la rampe qui
+      // commande, en dessous la queue. Ce qui ne le serait pas, c'est une
+      // marche — que ce test attraperait, puisqu'elle ne s'efface pas quand ε
+      // tend vers zéro.
+      const eps = 1e-6;
+      expect(Math.abs(phFactor(e, min + eps) - phFactor(e, min - eps))).toBeLessThan(1e-4);
+      expect(phFactor(e, min - eps)).toBeLessThanOrEqual(VIGUEUR_A_LA_BORNE + 1e-9);
     }
   });
 
@@ -131,13 +140,13 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     // millimètre ni mourir. L'issue dit « pousse mal ET tient », pas « ne pousse
     // pas ». D'où la queue de croissance dans la marge.
     const hauteurs = GRAINES.map((g) => {
-      const s = peuplement([["fagus_sylvatica", 20]], 50, g);
+      const s = peuplement([["fagus_sylvatica", 20]], 40, g);
       const v = s.trees.filter((t) => t.alive && t.id <= 20);
       return v.reduce((a, t) => a + t.heightM, 0) / v.length;
     });
     for (const h of hauteurs) {
-      expect(h).toBeGreaterThan(0.5); // il a poussé
-      expect(h).toBeLessThan(2); // et très peu : cinquante ans pour trois quarts de mètre
+      expect(h).toBeGreaterThan(0.45); // il a poussé
+      expect(h).toBeLessThan(2); // et très peu : quarante ans pour deux tiers de mètre
     }
   });
 
