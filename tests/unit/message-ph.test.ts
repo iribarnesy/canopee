@@ -57,11 +57,15 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
   it("le pin sylvestre à pH 4,5 : le cas du journal, chiffré", () => {
     const pin = getEspece("pinus_sylvestris");
     expect(pin.ph).toEqual([4, 7.5]);
-    // Il souffre — le journal avait raison de le dire — mais il n'est plus
-    // condamné à sa propre borne : à pH 4 il lui reste la moitié de son régime.
-    expect(facteurGammePh(pin.ph, 4.5)).toBeCloseTo(0.914, 3);
-    expect(facteurGammePh(pin.ph, 4)).toBeCloseTo(0.2, 10);
-    // Et le pin est l'essence des podzols : à 4, il vit.
+    // À 4,5 il souffre un peu — 0,76, bien au-dessus du seuil de stress (0,45),
+    // donc il ne peut PAS mourir « hors gamme » à ce pH-là. C'est le message du
+    // journal qui trompait : il affichait le pH de la station au départ, pas
+    // celui du sol sous l'arbre, qui avait dérivé plus bas.
+    expect(facteurGammePh(pin.ph, 4.5)).toBeCloseTo(0.764, 3);
+    // Et à sa borne exacte il n'est plus à ZÉRO. Il reste condamné à terme —
+    // 0,05 est sous le seuil de stress — mais il n'est plus mort d'avance, et
+    // c'est tout ce que ce paramètre corrige.
+    expect(facteurGammePh(pin.ph, 4)).toBeCloseTo(VIGUEUR_A_LA_BORNE, 10);
     expect(facteurGammePh(pin.ph, 4)).toBeGreaterThan(0);
   });
 

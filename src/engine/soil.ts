@@ -90,22 +90,35 @@ export function facteurPhBiologie(ph: number): number {
 export const RAMPE_PH = 0.7;
 
 /**
- * Ce qui reste de vigueur à une espèce AU BORD de son amplitude.
+ * Ce qui reste de vigueur à une espèce PILE À LA BORNE de son amplitude.
  *
- * C'est le paramètre qui porte tout le sens, et c'est pour ça qu'on règle
- * celui-là plutôt que la largeur du débordement : « au bord de son aire, une
- * espèce est présente, rare et mal en point » veut dire la même chose pour une
- * généraliste et pour une spécialiste, alors qu'une marge en unités de pH
- * donnerait au bord d'une amplitude large un tout autre sens qu'au bord d'une
- * étroite.
+ * Ce paramètre ne corrige qu'une chose, et il faut savoir laquelle : la borne
+ * de l'atlas ne vaut plus ZÉRO. Elle le valait pour les 26 espèces — mesuré —
+ * ce qui faisait de chaque amplitude de présence un couloir de mort à ses
+ * propres bords, et `paysage.ts` en avait tiré une doctrine (« au bord exact de
+ * sa gamme, une espèce ne pousse déjà plus du tout »).
  *
- * Le mécanisme derrière est réel des deux côtés. Vers l'acide, l'aluminium
- * échangeable occupe une part croissante du complexe sous pH 5,5 et attaque
- * l'apex racinaire : un hêtre en solution aluminique entre pH 4,2 et 5,4 perd
- * 21 à 44 % de sa biomasse. Vers le basique, c'est la chlorose calcaire, que le
- * moteur tient déjà par ailleurs (`pk.ts:disponibilitePhosphore`).
+ * IL NE FAIT PAS SURVIVRE L'ESPÈCE À SA BORNE, et c'est mesuré aussi. Sous
+ * `STRESS_ONSET` (0,45) le stress monte de (0,45 − f) × 5 par semaine pour
+ * 10 de létal : à 0 l'arbre meurt en quatre semaines, à 0,2 en huit. La valeur
+ * ne déplace donc qu'un délai. La faire monter à 0,45 pour qu'une espèce tienne
+ * vraiment à sa borne relèverait de +0,45 TOUTE espèce située dans sa rampe,
+ * ce qui casse les tables de production — le pin sylvestre, dont la station de
+ * référence est à pH 7, soit dans la rampe de sa borne haute, passe de 15,5 m
+ * tabulés à 18,9 m simulés dès qu'on le relève de 0,2.
+ *
+ * 0,05 est donc choisi pour ce qu'il ne casse pas : c'est la plus petite valeur
+ * qui ôte le zéro franc, et les tables de production — le seul ancrage de
+ * vérité terrain du dépôt — restent satisfaites. Ce n'est pas une mesure, c'est
+ * une borne supérieure imposée par la calibration existante.
+ *
+ * LE VRAI MANQUE EST AILLEURS, et il a son issue : le pH n'a qu'UN facteur,
+ * qui sert à la fois la croissance et la survie. L'eau en a deux, découplés
+ * exprès — « le hêtre pousse mal en sec, mais son semis survit ». Un arbre au
+ * bord de son amplitude de pH devrait pousser mal ET tenir ; le moteur n'a
+ * aucun moyen de le dire.
  */
-export const VIGUEUR_A_LA_BORNE = 0.2;
+export const VIGUEUR_A_LA_BORNE = 0.05;
 
 /**
  * Tolérance d'une espèce au pH ∈ [0,1] : réponse UNIMODALE, pleine à
