@@ -537,7 +537,13 @@ export class SceneParcelle {
     this.terrain ??= new Terrain(this.fabriquer, etat.sol.coteM);
     this.atlas ??= new AtlasArbres(this.fabriquer);
     if (etat.bordures && !this.decor) {
-      this.decor = new Decor(this.fabriquer, etat.sol.coteM, etat.bordures, etat.sol.altitudesM);
+      this.decor = new Decor(
+        this.fabriquer,
+        etat.sol.coteM,
+        etat.bordures,
+        etat.sol.altitudesM,
+        etat.sol.bassinAmontHa,
+      );
     }
 
     const debutCuisson = performance.now();

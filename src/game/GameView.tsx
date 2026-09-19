@@ -985,6 +985,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             coteM: station.coteM,
             ruMm: station.ruMm,
             altitudesM: station.altitudesM,
+            bassinAmontHa: station.bassinAmontHa,
             waterMm: snapshot.soilWater,
             herbe: snapshot.soilHerbe,
             herbeBiomasse: snapshot.soilHerbeBiomasse,

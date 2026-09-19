@@ -745,6 +745,10 @@ function stationInfo(): StationInfo {
     // Le relief, celui-là même qui a servi à placer l'eau libre. Il ne change
     // pas d'une semaine à l'autre : il part une fois, avec la station.
     altitudesM: altitudes,
+    // Ce qui verse d'en haut : la même grandeur que `apportAmontM2` ci-dessus,
+    // dans son unité d'origine, parce que le décor s'en sert pour savoir où
+    // poser la crête (#150).
+    bassinAmontHa: station.relief.bassinAmontHa,
     // Et ce qu'il y a AUTOUR, réduit à ce que le décor en dessine. Même
     // raison : les bordures sont choisies au départ et ne bougent plus. La vue
     // ne peut pas les retrouver seule — une partie reprise d'une sauvegarde

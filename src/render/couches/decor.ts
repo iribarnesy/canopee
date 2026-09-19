@@ -941,6 +941,7 @@ export function altitudeDecor(
   x: number,
   y: number,
   pente?: [number, number],
+  bassinAmontHa?: number,
 ): number {
   const lisiere = lisiereLissee(altitudesM, coteM, x, y);
   const [dzdx, dzdy] = pente ?? penteMoyenne(altitudesM, coteM);
@@ -950,7 +951,37 @@ export function altitudeDecor(
   // `moyenneM` reste dans la signature : c'est le repli quand la parcelle est
   // trop petite pour qu'une pente ait un sens.
   const base = Number.isFinite(lisiere) ? lisiere : moyenneM;
-  return base + dzdx * dx + dzdy * dy;
+  const montee = dzdx * dx + dzdy * dy;
+  // En AVAL rien ne s'arrête : le pays continue de descendre, et personne ne
+  // dit où il s'arrête. C'est en amont seulement qu'il y a une crête.
+  if (bassinAmontHa === undefined || montee <= 0) return base + montee;
+  const raideur = Math.hypot(dzdx, dzdy);
+  return base + Math.min(montee, distanceDeLaCrete(bassinAmontHa, coteM) * raideur);
+}
+
+/**
+ * À quelle distance en amont le sol cesse de monter, m (#150).
+ *
+ * **La seule lecture que je sache tirer de la grandeur sans rien inventer.**
+ * Le moteur donne une SURFACE amont, `bassinAmontHa` : ce qui verse sur la
+ * parcelle. Une surface ne dit pas une forme — un bassin de cinq hectares peut
+ * être une bande étroite et longue ou un éventail court et large, et le moteur
+ * n'en sait rien puisque son ruissellement ne dépend que de l'aire.
+ *
+ * On lit donc le bassin comme une BANDE de la largeur de la parcelle : `A` ha
+ * versant sur un côté de `L` m s'étendent sur `A × 10⁴ / L` mètres en amont.
+ * Cinq hectares sur cent mètres de côté font cinq cents mètres. Au-delà,
+ * c'est le bassin du voisin : le sol cesse de monter, et ce qui tombe plus
+ * haut ne descend pas ici.
+ *
+ * **L'effet est à l'envers de l'intuition, et c'est juste** : un petit bassin
+ * met la crête tout près — on est presque au sommet — et un grand bassin fait
+ * monter le versant à perte de vue. Une parcelle de crête (`bassinAmontHa` à
+ * zéro, la lande sèche livrée) est donc plate en amont et descend en aval, ce
+ * qui est exactement ce qu'est une crête.
+ */
+export function distanceDeLaCrete(bassinAmontHa: number, coteM: number): number {
+  return coteM > 0 ? (bassinAmontHa * 10_000) / coteM : 0;
 }
 
 /** Altitude moyenne de la parcelle. Le niveau du pays autour. */

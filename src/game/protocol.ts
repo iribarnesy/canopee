@@ -440,6 +440,20 @@ export interface StationInfo {
    */
   altitudesM: readonly number[];
   /**
+   * Surface qui verse sur la parcelle depuis l'amont, hectares
+   * (`Relief.bassinAmontHa`).
+   *
+   * **Elle part parce que le décor la dessine** (#150) : c'est elle qui dit
+   * jusqu'où le versant amont monte avant de buter sur une crête. Elle était
+   * déjà dans la partie — c'est un curseur de l'écran de départ — mais elle
+   * n'arrivait pas jusqu'au rendu, qui ne pouvait donc pas distinguer une
+   * parcelle de crête d'un fond de vallon.
+   *
+   * Comme le relief et les bordures : choisie au départ, envoyée une fois, et
+   * conservée par la sauvegarde.
+   */
+  bassinAmontHa: number;
+  /**
    * Ce qui entoure la parcelle, réduit à ce que le DÉCOR en dessine : trois
    * parts de couvert et les semenciers, par côté (`decorDesBordures`).
    *

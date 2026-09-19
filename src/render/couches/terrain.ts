@@ -257,6 +257,14 @@ export interface DonneesSol {
    * exact de la fonction du moteur.
    */
   boisEnTravers?: Float32Array;
+  /**
+   * `StationInfo.bassinAmontHa` : la surface qui verse d'en haut, hectares.
+   *
+   * Fixe pour la partie, comme `altitudesM`. Absente = on ne sait pas où est
+   * la crête, et le décor prolonge la pente indéfiniment — ce qu'il faisait
+   * avant #150.
+   */
+  bassinAmontHa?: number;
 }
 
 /** Une image de terrain cuite, et où la poser. */
@@ -1374,6 +1382,7 @@ export function cuireMorceauDecor(
   iy: number,
   vue: Vue,
   fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+  bassinAmontHa?: number,
 ):
   | {
       image: HTMLCanvasElement;
@@ -1397,7 +1406,7 @@ export function cuireMorceauDecor(
   const moyenne = altitudeMoyenneParcelle(altitudesM, coteM);
   const pente = penteMoyenne(altitudesM, coteM);
   const z = (x: number, y: number): number =>
-    altitudeDecor(altitudesM, coteM, moyenne, x, y, pente);
+    altitudeDecor(altitudesM, coteM, moyenne, x, y, pente, bassinAmontHa);
 
   // Emprise écran, comme pour le terrain, mais sur les seuls coins : le décor
   // n'a pas de relief accidenté, son altitude est monotone entre deux coins.
@@ -1728,6 +1737,8 @@ export class Decor {
     private readonly coteM: number,
     private readonly bordures: DecorBordures,
     private readonly altitudesM: readonly number[],
+    /** `StationInfo.bassinAmontHa` : où le versant amont bute sur sa crête (#150). */
+    private readonly bassinAmontHa?: number,
   ) {}
 
   /** Dresse la liste des morceaux de décor à cuire pour la vue courante. */
@@ -1867,6 +1878,7 @@ export class Decor {
         iy,
         vueDeCuisson,
         this.fabriquer,
+        this.bassinAmontHa,
       );
       faits++;
       if (!cuit) {

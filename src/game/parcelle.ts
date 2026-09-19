@@ -74,6 +74,8 @@ export interface SolSource {
   boisAuSol?: ArrayLike<number>;
   /** `Snapshot.soilBoisEnTravers` */
   boisEnTravers?: ArrayLike<number>;
+  /** `StationInfo.bassinAmontHa` : la surface amont, pour la crête du décor */
+  bassinAmontHa?: number;
 }
 
 /**
@@ -95,6 +97,7 @@ export function donneesSolDe(src: SolSource): DonneesSol {
   return {
     coteM: src.coteM,
     altitudesM: src.altitudesM,
+    ...(src.bassinAmontHa === undefined ? {} : { bassinAmontHa: src.bassinAmontHa }),
     humidite,
     herbe: Float32Array.from(src.herbe),
     herbeBiomasse: Float32Array.from(src.herbeBiomasse),
