@@ -35,6 +35,7 @@ import {
   RUISSELLEMENT_AMONT,
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
+import type { Orientation } from "../render/projection";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { PlanEau } from "./PlanEau";
 import { Avis } from "./panneaux/Avis";
@@ -946,6 +947,9 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   // quels réglages ; le panneau, lui, reçoit l'objet entier.
   const { mode, especeId, avecManchon, rayonChaulage, densiteCible, critereEclaircie } = geste;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
+  // L'orientation de la caméra vit dans `VueParcelle` ; elle remonte ici pour
+  // que la carte du sol se présente comme la vue (#145).
+  const [orientation, setOrientation] = useState<Orientation>(0);
 
   const { station, snapshot } = game;
 
@@ -1229,6 +1233,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             deformer={ellipse.deformer}
             mourant={ellipse.mourant}
             remodeler={ellipse.remodeler}
+            surOrientation={setOrientation}
             voiler={ellipse.voiler}
             feu={ellipse.feu}
             marqueurs={ellipse.marqueurs}
@@ -1335,7 +1340,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             </Volet>
           ) : volets.estOuvert("bg", "sol") ? (
             <Volet titre="Diagnostic de sol" largeur={400} surFermer={() => volets.fermer("bg")}>
-              <CarteDuSol snapshot={snapshot} station={station} />
+              <CarteDuSol
+                snapshot={snapshot}
+                station={station}
+                especeId={geste.especeId}
+                orientation={orientation}
+              />
             </Volet>
           ) : undefined
         }
