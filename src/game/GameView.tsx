@@ -35,6 +35,7 @@ import {
   RUISSELLEMENT_AMONT,
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
+import type { Orientation } from "../render/projection";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { PlanEau } from "./PlanEau";
 import { Avis } from "./panneaux/Avis";
@@ -946,6 +947,9 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   // quels réglages ; le panneau, lui, reçoit l'objet entier.
   const { mode, especeId, avecManchon, rayonChaulage, densiteCible, critereEclaircie } = geste;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
+  // L'orientation de la caméra vit dans `VueParcelle` ; elle remonte ici pour
+  // que la carte du sol se présente comme la vue (#145).
+  const [orientation, setOrientation] = useState<Orientation>(0);
 
   const { station, snapshot } = game;
 
@@ -1038,6 +1042,33 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * par pixel parcouru noierait le worker pour rien.
    */
   const [survol, setSurvol] = useState<{ x: number; y: number }>();
+
+  /**
+   * LA BARRE ESPACE met en marche et arrête, où qu'on ait cliqué.
+   *
+   * `preventDefault` sert deux fois : il empêche la page de défiler, et il
+   * empêche la barre d'activer le bouton qui a le focus. C'est voulu — après
+   * un clic sur « ×13 », le focus reste sur ce bouton, et sans ça la barre
+   * rejouerait ce clic au lieu de mettre en pause. Les boutons restent
+   * atteignables à la touche Entrée, qui est l'autre activateur.
+   *
+   * On ne prend pas la main quand on écrit : un champ de saisie a besoin de
+   * ses espaces. Il n'y en a pas dans l'écran de jeu aujourd'hui, mais les
+   * volets en gagneront.
+   */
+  useEffect(() => {
+    const surTouche = (e: KeyboardEvent) => {
+      if (e.code !== "Space" && e.key !== " ") return;
+      const cible = e.target as HTMLElement | null;
+      const balise = cible?.tagName;
+      if (balise === "INPUT" || balise === "TEXTAREA" || balise === "SELECT") return;
+      if (cible?.isContentEditable) return;
+      e.preventDefault();
+      game.basculer();
+    };
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [game.basculer]);
 
   // **Le refus vient du moteur, jamais d'une règle refaite ici.** Le worker
   // applique la plantation sur l'état courant et jette le résultat, ne gardant
@@ -1202,6 +1233,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             deformer={ellipse.deformer}
             mourant={ellipse.mourant}
             remodeler={ellipse.remodeler}
+            surOrientation={setOrientation}
             voiler={ellipse.voiler}
             feu={ellipse.feu}
             marqueurs={ellipse.marqueurs}
@@ -1308,7 +1340,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             </Volet>
           ) : volets.estOuvert("bg", "sol") ? (
             <Volet titre="Diagnostic de sol" largeur={400} surFermer={() => volets.fermer("bg")}>
-              <CarteDuSol snapshot={snapshot} station={station} />
+              <CarteDuSol
+                snapshot={snapshot}
+                station={station}
+                especeId={geste.especeId}
+                orientation={orientation}
+              />
             </Volet>
           ) : undefined
         }

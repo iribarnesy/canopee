@@ -152,6 +152,48 @@ export const OMBRE_DU_DECOR = 0.88;
 export const OPACITE_DU_DECOR = 0.78;
 
 /**
+ * De combien le décor s'éclaircit par mètre d'altitude au-dessus de la
+ * parcelle, et s'assombrit au-dessous.
+ *
+ * **Parce qu'en isométrie, un plan uniformément incliné est indiscernable d'un
+ * plan horizontal** (#150). La projection le décale à l'écran, elle ne le
+ * déforme pas ; sa pente est constante, donc l'ombrer par la pente donnerait
+ * une teinte uniforme et aucun gradient. Mesuré sur la bande de décor visible
+ * au zoom d'ensemble, une pente de 1 à 6 % — celle des stations livrées — ne
+ * fait monter le lointain que de deux à quatorze pixels sur huit cent vingt :
+ * la géométrie est juste, elle est simplement sous le seuil de perception.
+ *
+ * L'ALTITUDE, elle, varie d'un bout de l'image à l'autre sur un versant. La
+ * teindre est la perspective aérienne des peintres — l'amont clair, l'aval
+ * sombre — et elle n'invente rien : c'est la grandeur que `altitudeDecor`
+ * calcule déjà, rendue lisible au lieu d'être seulement exacte. Sur une
+ * station plate, l'écart est nul et il ne se passe donc rien.
+ */
+const CLARTE_PAR_METRE = 0.012;
+
+/**
+ * Le plus fort écart de clarté que le relief puisse donner au décor.
+ *
+ * Il borne ce que la pente peut faire à la teinte, pour que le décor ne se
+ * mette pas à concurrencer la parcelle sur un versant à 40 % — la contrainte
+ * que l'issue pose nommément. Au-delà, un versant plus raide ne se lit plus à
+ * la teinte mais à la déformation du losange de la parcelle, qui elle ne
+ * sature pas.
+ */
+const CLARTE_RELIEF_MAX = 0.22;
+
+/**
+ * Ce que l'altitude d'un point du décor fait à sa clarté ∈ [1−max, 1+max].
+ *
+ * `moyenneM` est le niveau de la parcelle : c'est par rapport à elle qu'on est
+ * amont ou aval, et c'est ce qui rend le zéro non arbitraire.
+ */
+export function clarteDuRelief(zM: number, moyenneM: number): number {
+  const brut = (zM - moyenneM) * CLARTE_PAR_METRE;
+  return 1 + Math.min(CLARTE_RELIEF_MAX, Math.max(-CLARTE_RELIEF_MAX, brut));
+}
+
+/**
  * Ce que la brume a mangé, à `distance` mètres du bord de la parcelle.
  *
  * **La courbe compte, et le premier jet s'est trompé de sens.** J'avais pris

@@ -38,6 +38,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
+import type { Orientation } from "../render/projection";
 import type { Marqueur } from "../render/temps/changements";
 import type { Deformation } from "../render/temps/chute";
 import type { ArbreRemodele } from "../render/temps/geste";
@@ -190,6 +191,16 @@ export interface VueParcelleProps {
     maintenantMs: number,
     especeId: string,
   ) => ArbreRemodele | undefined;
+  /**
+   * L'orientation courante de la caméra, annoncée au jeu quand elle change.
+   *
+   * La caméra vit ICI, et c'est bien : le glissement, le zoom et le quart de
+   * tour sont des gestes de la vue. Mais la carte du sol doit se présenter
+   * comme la vue (#145), et elle vit dans un volet. Un seul quart de tour
+   * voyage donc vers le haut — pas la vue entière, qui changerait à chaque
+   * pixel de glissement et ferait rendre le volet soixante fois par seconde.
+   */
+  surOrientation?: (orientation: Orientation) => void;
 }
 
 /**
@@ -302,6 +313,15 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
 
   const altitudeMax = useRef(0);
   altitudeMax.current = props.sol.altitudesM.reduce((m, z) => Math.max(m, z), 0);
+
+  // ── Le quart de tour, annoncé au jeu ────────────────────────────────────
+  // Seule l'orientation remonte, et seulement quand elle change : la carte du
+  // sol se présente comme la vue (#145), elle n'a pas besoin du reste.
+  const orientation = vue?.cam.orientation;
+  const surOrientation = props.surOrientation;
+  useEffect(() => {
+    if (orientation !== undefined) surOrientation?.(orientation);
+  }, [orientation, surOrientation]);
 
   // ── Taille : la scène suit son conteneur ────────────────────────────────
   useLayoutEffect(() => {
