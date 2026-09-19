@@ -37,12 +37,15 @@ import type { ArbreRemodele, TigeAbattue } from "../render/temps/geste";
 import {
   type ArbreATorcher,
   AUCUNE_TORCHE,
+  chandellesTombees,
+  chuteDeLaChandelle,
   chuteDeLaTige,
   deformationDe,
   etatDuTorchage,
   etatMourantDe,
   feuEnCours,
   type IncendieAPoser,
+  indexerLesChandellesTombees,
   indexerLesChutes,
   indexerLesGestes,
   indexerLesMorts,
@@ -80,11 +83,12 @@ export const DUREE_ELLIPSE_MS = 2500;
  */
 export interface EllipseDuJeu {
   /**
-   * Les tiges abattues, à poser EN PLUS des arbres de l'instantané.
+   * Les fûts à poser EN PLUS des arbres de l'instantané : les tiges qu'un
+   * geste vient d'abattre, et les chandelles qui s'abattent d'elles-mêmes.
    *
-   * Une tige abattue a quitté `state.trees` dans le même tick : sans ça, un
-   * arbre coupé s'escamote entre deux images. La liste ne change pas pendant
-   * que le plan se joue — c'est la déformation qui la fait tomber — pour que le
+   * Les deux ont quitté `state.trees` dans le tick où ils tombent : sans ça,
+   * ils s'escamotent entre deux images. La liste ne change pas pendant que le
+   * plan se joue — c'est la déformation qui la fait tomber — pour que le
    * tableau d'arbres reste une clé de cache stable.
    */
   tiges: readonly TigeAbattue[];
@@ -209,6 +213,9 @@ export function useEllipse(
 
     const coteM = station.coteM;
     const chutes = indexerLesChutes(plan);
+    // Les chandelles qui tombent, reposées : elles ne sont plus dans
+    // l'instantané de la semaine où elles tombent (#163).
+    const chandelles = indexerLesChandellesTombees(plan);
     const morts = indexerLesMorts(plan);
     const voiles = indexerLesVoiles(plan, coteM);
     const gestes = indexerLesGestes(plan);
@@ -235,13 +242,20 @@ export function useEllipse(
     const depuis = (maintenantMs: number) => maintenantMs - debut.current;
 
     return {
-      tiges: tigesAbattues(gestes),
+      tiges: [...tigesAbattues(gestes), ...chandellesTombees(plan)],
       seTorche: (id) => torches.arbres.has(id),
       deformer: (id, maintenantMs, vue) => {
         const ecoule = depuis(maintenantMs);
-        // Une tige abattue n'est pas un arbre de l'instantané : son
-        // identifiant est négatif, et c'est son geste qui la fait tomber.
-        if (id < 0) return chuteDeLaTige(gestes, ecoule, id, vue);
+        // Un fût reposé n'est pas un arbre de l'instantané : son identifiant
+        // est négatif. Deux origines possibles — un geste l'a couché, ou
+        // c'était une chandelle qui s'est abattue — et l'index qui ne le
+        // connaît pas rend `DEBOUT`, qui est neutre.
+        if (id < 0) {
+          return combiner(
+            chuteDeLaTige(gestes, ecoule, id, vue),
+            chuteDeLaChandelle(chandelles, ecoule, id, vue),
+          );
+        }
         // Les canaux de POSE se composent : franchir dix ans, c'est voir un
         // arbre mourir puis tomber, et `DEBOUT` est neutre pour cette
         // composition.

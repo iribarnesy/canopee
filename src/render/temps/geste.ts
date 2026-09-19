@@ -76,8 +76,16 @@ export interface TigeAbattue {
   heightM: number;
   /** base du houppier, comptée depuis la coupe */
   baseHouppierM: number;
-  /** une tige fraîchement abattue porte encore son feuillage */
-  chandelle: false;
+  /**
+   * Faux pour une tige fraîchement abattue, qui porte encore son feuillage ;
+   * VRAI pour une chandelle qui s'abat, qui n'en a plus.
+   *
+   * Les deux passent par ce même type parce qu'elles posent le même problème :
+   * un fût qui a quitté `state.trees` dans le tick où il tombe, et qu'il faut
+   * reposer le temps de sa chute. Leur donner deux types aurait donné deux
+   * chemins de pose à tenir d'accord, pour un seul champ de différence.
+   */
+  chandelle: boolean;
   /** direction dans laquelle elle se couche, radians (0 = +x, sens trigo) */
   directionRad: number;
   /**

@@ -51,6 +51,7 @@ import {
 import {
   type ArbreRemodele,
   demasclageEnCours,
+  idDeLaTige,
   poseDeLaPlantation,
   recolteEnCours,
   remodelageEnCours,
@@ -118,6 +119,83 @@ export function indexerLesChutes(plan: PlanDEllipse): PlanIndexe {
     for (const chute of acte.sujet.chutes) index.set(chute.id, { acte, chute });
   }
   return index;
+}
+
+/**
+ * Les chandelles qui s'abattent, REPOSÉES le temps de leur acte (#163).
+ *
+ * **Sans elles, l'index ci-dessus n'a personne à déformer.** Mesuré sur six
+ * stations et quinze ans : sur 423 chutes rapportées, **423** concernent un
+ * arbre qui a déjà quitté l'instantané de la même semaine — c'est zéro sur
+ * 423 qui y reste. `deformationDe` n'est donc jamais appelée pour une
+ * chandelle qui tombe, la scène n'a aucun sprite de ce nom, et le tronc
+ * disparaît d'une image à l'autre. La mécanique de chute existait et ne
+ * servait à rien.
+ *
+ * C'est exactement le problème que `TigeAbattue` résout déjà pour les gestes,
+ * et c'est donc la même réponse : on repose le fût à partir du seul événement.
+ * Rien n'est inventé — `ChuteDeChandelle` porte la position, l'espèce, la
+ * hauteur et la direction, et c'est tout ce qu'un fût qui tombe demande.
+ */
+export function chandellesTombees(plan: PlanDEllipse): TigeAbattue[] {
+  const tiges: TigeAbattue[] = [];
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "chute") continue;
+    for (const chute of acte.sujet.chutes) {
+      if (chute.heightM <= 0) continue;
+      tiges.push({
+        id: idDeLaTige(chute.id),
+        especeId: chute.especeId,
+        x: chute.x,
+        y: chute.y,
+        heightM: chute.heightM,
+        // Une chandelle n'a plus de houppier : `arbresAPoser` lui met déjà une
+        // part foliaire nulle sur ce seul drapeau, donc il n'y a pas de base
+        // de houppier à porter.
+        baseHouppierM: 0,
+        chandelle: true,
+        directionRad: chute.directionRad,
+        // Elle bascule depuis le sol, et non depuis une coupe : c'est tout ce
+        // qui la distingue d'une tige de recépage.
+        hauteurDeCoupeM: 0,
+      });
+    }
+  }
+  return tiges;
+}
+
+/** Les mêmes, indexées par l'identifiant sous lequel elles se dessinent. */
+export function indexerLesChandellesTombees(plan: PlanDEllipse): PlanIndexe {
+  const index: PlanIndexe = new Map();
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "chute") continue;
+    for (const chute of acte.sujet.chutes) index.set(idDeLaTige(chute.id), { acte, chute });
+  }
+  return index;
+}
+
+/**
+ * La déformation d'une chandelle reposée, à cet instant de l'ellipse.
+ *
+ * Même découpage que `chuteDeLaTige`, et pour la même raison : debout avant
+ * son acte, en train de tomber pendant, EFFACÉE après. L'effacement n'est pas
+ * un détail — le fût au sol est désormais l'affaire du terrain
+ * (`soilBoisAuSol`), et le laisser couché en dessinerait deux.
+ */
+export function chuteDeLaChandelle(
+  index: PlanIndexe,
+  ecouleMs: number,
+  idTige: number,
+  vue: Vue,
+): Deformation {
+  const trouve = index.get(idTige);
+  if (!trouve) return DEBOUT;
+  const { acte, chute } = trouve;
+  if (ecouleMs >= acte.debutMs + acte.dureeMs)
+    return { ...chuteEnCours(chute, 1, vue), opacite: 0 };
+  if (ecouleMs < acte.debutMs) return DEBOUT;
+  const t = avancementDuSujet(acte, chute.id, ecouleMs);
+  return t <= 0 ? DEBOUT : chuteEnCours(chute, t, vue);
 }
 
 /**
