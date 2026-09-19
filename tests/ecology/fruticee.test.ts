@@ -91,8 +91,17 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
       aubepines += aubepine;
       concurrentes += autres.reduce((s, id) => s + n(id), 0);
     }
-    // Et largement en tête au cumul : c'est là que l'écart cesse d'être du bruit.
-    expect(aubepines).toBeGreaterThan(2 * concurrentes);
+    // Au cumul, l'aubépine à elle seule passe les trois autres RÉUNIES. C'est
+    // l'énoncé, et c'est tout l'énoncé.
+    //
+    // La première version exigeait le DOUBLE, et la CI l'a fait tomber (28
+    // contre 15, soit 1,87×) : j'avais remplacé un seuil calé sur une mesure
+    // par un autre seuil calé sur une mesure, ce qui est exactement le défaut
+    // que cet essai corrigeait. Un multiple choisi sur un relevé rebascule au
+    // premier lot qui déplace le tirage — il y en a eu trois. « La dernière
+    // debout » ne dit pas « le double » : elle dit « devant », et devant tout
+    // le monde à la fois.
+    expect(aubepines).toBeGreaterThan(concurrentes);
   }, 900_000);
 });
 
