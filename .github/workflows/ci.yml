@@ -36,25 +36,31 @@ jobs:
       # l'image `ubuntu-latest`.
       - run: npm run check:realisme
 
-  # LA SUITE EST DÉCOUPÉE EN QUATRE, et c'est du temps de mur gagné sans
-  # toucher à une ligne du moteur. Mesuré : 4 368 s de travail cumulé pour
-  # 2 308 s de mur, soit 1,9× de parallélisme — un runner `ubuntu-latest` a
-  # deux cœurs, et vitest ne peut pas en inventer un troisième. Quatre tranches
-  # sur quatre machines ramènent le mur au quart.
+  # LA SUITE EST DÉCOUPÉE EN SIX, et c'est du temps de mur gagné sans toucher
+  # à une ligne du moteur. Mesuré : 4 368 s de travail cumulé pour 2 308 s de
+  # mur, soit 1,9× de parallélisme — un runner `ubuntu-latest` a deux cœurs, et
+  # vitest ne peut pas en inventer un troisième. Six machines ramènent le mur
+  # au sixième.
   #
   # `--shard` répartit les FICHIERS, pas les essais : chaque tranche est une
   # suite complète et autonome, et le découpage ne change donc rien à ce qui
   # est vérifié. Si une tranche rougit, son journal porte l'échec entier.
   #
-  # Pour ajouter une tranche : allonger `tranche` ET le dénominateur. Les deux
+  # LE PLANCHER EST LE FICHIER LE PLUS LOURD, et c'est pour ça que les essais
+  # de hauteur ont été coupés en deux (700 s à eux seuls, 16 % de la suite) :
+  # aucun nombre de tranches ne pouvait passer sous un fichier indivisible. Le
+  # plancher est désormais à ~320 s. Avant d'ajouter des tranches, vérifier que
+  # ce n'est pas un fichier qui borne, sinon on paie des machines pour rien.
+  #
+  # Pour changer le nombre : allonger `tranche` ET le dénominateur. Les deux
   # doivent rester d'accord, sinon des fichiers ne sont tournés par personne.
   essais:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        tranche: [1, 2, 3, 4]
-    name: essais (${{ matrix.tranche }}/4)
+        tranche: [1, 2, 3, 4, 5, 6]
+    name: essais (${{ matrix.tranche }}/6)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -62,4 +68,4 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx vitest run --shard=${{ matrix.tranche }}/4
+      - run: npx vitest run --shard=${{ matrix.tranche }}/6

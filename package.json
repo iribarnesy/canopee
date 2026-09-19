@@ -23,6 +23,7 @@
     "apercu:perf": "node scripts/apercu-perf.mjs",
     "apercu:scenes": "bash scripts/apercu-scenes.sh",
     "test": "vitest run",
+    "test:rapide": "vitest run tests/unit tests/properties",
     "test:watch": "vitest",
     "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm run check:realisme && npm test"
   },
