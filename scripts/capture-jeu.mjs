@@ -75,11 +75,16 @@ await page.waitForSelector(".vue-parcelle canvas", { timeout: 600000 });
 // fait passer les semaines, on attend seulement celle qu'on veut voir.
 if (MOIS) {
   await page.getByRole("button", { name: "×13" }).click();
+  // Le bandeau écrit « juillet 2026 » depuis la barre de temps (#146) ; il
+  // écrivait « an 1 · juillet » avant, et ce script attendait toujours
+  // l'ancienne forme — il ne rendait donc plus la main.
   await page
-    .locator(".bandeau strong", { hasText: new RegExp(`· ${MOIS}$`) })
+    .locator(".bandeau strong", { hasText: new RegExp(`^${MOIS} `) })
     .first()
     .waitFor({ timeout: 300000 });
-  await page.getByRole("button", { name: "⏸" }).click();
+  // La bascule porte un `aria-label` depuis #146 : c'est LUI le nom
+  // accessible, et le pictogramme n'en est plus un.
+  await page.getByRole("button", { name: "Mettre en pause" }).click();
 }
 
 await page.waitForTimeout(POSE_MS);
