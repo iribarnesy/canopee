@@ -260,10 +260,9 @@ export interface SoilState {
    * Les bases échangeables du SOUS-SOL, eq/m² : tout ce qui est sous l'horizon
    * de surface, en un seul compartiment (`bases.ts`, critère C15).
    *
-   * C'est le réservoir dans lequel la pompe puise. Il ne se remplit pas —
-   * l'altération, qui devrait l'alimenter, crédite encore la surface — et il ne
-   * se lessive pas. Il ne fait que se vider, à la vitesse à laquelle le
-   * peuplement remonte du calcium vers ses feuilles. Aucun arbre ne le LIT
+   * C'est un BUDGET, pas un compteur : il reçoit l'altération de ses propres
+   * horizons et ce que la surface lui lessive, il perd ce que les racines y
+   * pompent et ce qui passe sous la zone racinaire. Aucun arbre ne le LIT
    * encore : le moteur sait dire que le fond s'appauvrit, pas encore ce que
    * l'appauvrissement fait aux racines qui y poussent.
    */
@@ -444,6 +443,7 @@ export interface TickFluxes {
    * publie pas le budget est un pool qu'on ne peut pas mettre en défaut.
    */
   basesApportEqHa: number;
+  /** ce qui DESCEND de la surface vers le sous-sol (ce n'est plus une sortie) */
   basesLessiveEqHa: number;
   basesLitiereEqHa: number;
   basesAcideEqHa: number;
@@ -454,6 +454,14 @@ export interface TickFluxes {
    * `basesProfondEq` doit valoir exactement son opposé.
    */
   basesPreleveEqHa: number;
+  /**
+   * LE BUDGET DU SOUS-SOL, eq/ha : ce qu'il reçoit (son altération, plus ce que
+   * la surface lui a lessivé) et ce qui QUITTE le profil par le bas. Avec la
+   * pompe ci-dessus, la variation de `basesProfondEq` doit valoir
+   * `apportProfond − prélèvement − export`.
+   */
+  basesApportProfondEqHa: number;
+  basesExportEqHa: number;
   /** taux de saturation moyen du complexe ∈ [0,1] — le pH en est la lecture */
   saturationMoyenne: number;
   /** le même taux, pour le sous-sol : c'est lui que la pompe fait baisser */

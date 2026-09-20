@@ -13,9 +13,11 @@ import { type AidesAnnuelles, aidesAnnuelles } from "./aides";
 import { intensiteAllelopathique } from "./allelopathie";
 import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
-  alterationBasesEqM2Semaine,
+  alterationBasesProfondeEqM2Semaine,
+  alterationBasesSurfaceEqM2Semaine,
   CALCIUM_NEUTRE_MG_G,
   capaciteEchangeEqM2,
+  capaciteEchangeProfondeCmolKg,
   capaciteEchangeProfondeEqM2,
   DEPOSITION_BASES_EQ_M2_SEMAINE,
   effetLitiereEq,
@@ -710,6 +712,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let basesLitiereSumEq = 0;
   let basesAcideSumEq = 0;
   let basesPreleveSumEq = 0;
+  let basesApportProfondSumEq = 0;
+  let basesExportSumEq = 0;
   let litterDecaySumG = 0;
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
@@ -724,9 +728,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Le même complexe, vu comme un STOCK par mètre carré et non comme une
   // densité : c'est lui le dénominateur du taux de saturation, donc du pH.
   const cecSurfaceEq = horizonSurface0 ? capaciteEchangeEqM2(horizonSurface0) : 0;
-  // Et le complexe du sous-sol, dénominateur du taux de saturation profond.
+  // Et le complexe du sous-sol : son stock, dénominateur du taux de saturation
+  // profond, et sa densité, qui dit avec quelle force il retient (bases.ts).
   const cecProfondEq = capaciteEchangeProfondeEqM2(profil);
-  const alterationBasesSemaine = alterationBasesEqM2Semaine(profil);
+  const cecProfond = capaciteEchangeProfondeCmolKg(profil);
+  // L'altération crédite l'horizon qui la produit, et non plus la seule surface.
+  const alterationBasesSurfaceSemaine = alterationBasesSurfaceEqM2Semaine(profil);
+  const alterationBasesProfondeSemaine = alterationBasesProfondeEqM2Semaine(profil);
   let uptakePSumG = 0;
   let uptakeKSumG = 0;
   let leachedKSumG = 0;
@@ -1045,9 +1053,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // (bases.ts). Créditer l'accélération sans débiter ce qu'elle nourrit
     // fabriquait des bases : un peuplement de hêtres faisait remonter le pH de
     // son sol, l'inverse exact de ce qu'il fait.
-    const apportBases = alterationBasesSemaine + DEPOSITION_BASES_EQ_M2_SEMAINE;
+    const apportBases = alterationBasesSurfaceSemaine + DEPOSITION_BASES_EQ_M2_SEMAINE;
     basesEq[i] = (basesEq[i] ?? 0) + apportBases;
     basesApportSumEq += apportBases;
+    // Et le sous-sol reçoit CE QU'IL LIBÈRE, qui est la plus grosse part du
+    // profil. C'est ce qui fait de `basesProfondEq` un budget et non un simple
+    // compteur de prélèvement (#170).
+    basesProfondEq[i] = (basesProfondEq[i] ?? 0) + alterationBasesProfondeSemaine;
+    basesApportProfondSumEq += alterationBasesProfondeSemaine;
     // Le tampon du sol : la réserve suit ce que les racines prennent.
     const echange = echangeReserveK(
       potassiumG[i] ?? 0,
@@ -1655,6 +1668,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Les bases partent avec la même eau, retenues par le même complexe. C'est
     // le terme qui fait qu'un sol lessive vers l'acide quand plus rien ne le
     // réalimente — le versant « lessivage » de l'issue #71 (bases.ts).
+    //
+    // Elles ne quittent PLUS le monde en sortant de la surface : elles
+    // descendent (#170). Une base lessivée de l'horizon labouré est dans
+    // l'horizon d'en dessous, pas dans la rivière — et c'est en partie de là
+    // que les racines profondes la reprennent.
     const perduBases = lessivageBasesEq(
       basesEq[i] ?? 0,
       drainageMmArr[i] ?? 0,
@@ -1663,6 +1681,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     basesEq[i] = (basesEq[i] ?? 0) - perduBases;
     basesLessiveSumEq += perduBases;
+    if (cecProfondEq > 0) {
+      basesProfondEq[i] = (basesProfondEq[i] ?? 0) + perduBases;
+      basesApportProfondSumEq += perduBases;
+      // Et c'est en SORTANT du sous-sol qu'une base quitte la parcelle. C'est
+      // ce flux-là, et non celui de la surface, que la littérature mesure sous
+      // forêt tempérée : ce qui passe sous la zone racinaire.
+      let eauProfondeMm = 0;
+      for (let h = 1; h < nH; h++) eauProfondeMm += waterMm[i * nH + h] ?? 0;
+      const exporteBases = lessivageBasesEq(
+        basesProfondEq[i] ?? 0,
+        drainageMmArr[i] ?? 0,
+        eauProfondeMm,
+        cecProfond,
+      );
+      basesProfondEq[i] = (basesProfondEq[i] ?? 0) - exporteBases;
+      basesExportSumEq += exporteBases;
+    } else {
+      // Un profil d'un seul horizon n'a pas de sous-sol : ce qui sort de la
+      // surface sort du monde, comme avant le lot.
+      basesExportSumEq += perduBases;
+    }
   }
 
   // ── 4 bis. Le pH n'est pas un état : il se RELIT (bases.ts) ───────────────
@@ -3026,6 +3065,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       basesLitiereEqHa: (basesLitiereSumEq / nCells) * 10_000,
       basesAcideEqHa: (basesAcideSumEq / nCells) * 10_000,
       basesPreleveEqHa: (basesPreleveSumEq / nCells) * 10_000,
+      basesApportProfondEqHa: (basesApportProfondSumEq / nCells) * 10_000,
+      basesExportEqHa: (basesExportSumEq / nCells) * 10_000,
       saturationMoyenne:
         cecSurfaceEq > 0 ? basesEq.reduce((a, b) => a + b, 0) / nCells / cecSurfaceEq : 0,
       saturationProfondeMoyenne:

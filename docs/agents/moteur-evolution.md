@@ -65,34 +65,47 @@ l'autre âge pour vérifier.
 
 `effetLitiereEq` créditait la surface du calcium d'une feuille qui se
 décompose, sans que rien nulle part ne soit débité : le calcium arrivait de
-nulle part. Le moteur tient maintenant un pool de bases de sous-sol, que les
-racines vident. C15 passe de ❌ à 🟡.
+nulle part. Et l'altération, qui se produit dans tout le profil, créditait elle
+aussi la seule surface. Le budget est maintenant stratifié en deux pools et il
+circule. C15 passe de ❌ à ✅, et le référentiel à 92 %.
 
-**Le témoin à mécanisme neutralisé peut être un état, pas un drapeau.** L'issue
-demandait « à prélèvement nul, trajectoires identiques au bit près ». Plutôt
-qu'un paramètre de test qui n'existerait que pour le test, le banc met le
-sous-sol à ZÉRO : il n'a plus rien à céder, le `Math.min` ramène tout
-prélèvement à zéro, et rien d'autre du tick ne change. Résultat : même pH à
-dix-sept chiffres, même hash d'état. Le témoin est dans le moteur, pas à côté.
+**Le témoin à mécanisme neutralisé peut être un état, pas un drapeau — tant que
+le lot reste additif.** Premier jet : le banc mettait le sous-sol à ZÉRO, il
+n'avait plus rien à céder, et la surface sortait identique au bit près, hash
+compris. Élégant, et **périmé dès que l'altération a été stratifiée** — le pool
+vidé se remplit maintenant tout seul. Ce qui l'a remplacé vaut mieux parce que
+ça ne rouille pas : le budget de SURFACE doit se refermer exactement sur ses
+quatre termes d'origine, sur une parcelle qui pompe fort. Si la pompe touchait
+la surface d'un millionième, l'égalité tomberait. Une invariance structurelle
+mesurée bat une identité mesurée.
 
-**Et la prémisse se vérifie DANS le témoin.** Un « rien n'a bougé » passe tout
-seul si le mécanisme n'a jamais tourné — c'est la faute que ce dépôt a commise
-six fois. Le banc exige donc d'abord que la branche normale ait pompé quelque
-chose, et seulement ensuite que la branche neutralisée soit identique.
+**Un argument de cadrage se mesure, comme le reste — et j'en ai écrit deux
+faux.** D'abord « la surface est inchangée, donc rien à recalibrer » : vrai mais
+creux. Puis, pour rattraper, « l'altération profonde pèse un ordre de grandeur
+de moins que la pompe », chiffré de mémoire. Mesuré : 9 400 eq/ha contre 8 100
+sur cinquante ans, même ordre, parfois dans l'autre sens. **Deux justifications
+écrites avant la mesure, deux fausses.** La bonne réponse n'était pas un
+troisième argument, c'était de faire le travail.
 
-**Un argument de cadrage se mesure, comme le reste.** L'issue justifiait
-d'abord le périmètre additif par « la surface est inchangée, donc rien à
-recalibrer ». C'était vrai mais creux : l'altération, elle, somme sur tout le
-profil et crédite la surface, et 63 à 79 % de ce qu'elle libère vient d'en
-dessous. J'ai cru rattraper l'argument avec un second, chiffré de mémoire — la
-pompe pèserait un ordre de grandeur de plus que l'altération profonde. Mesuré
-après coup, c'est FAUX : 8 100 eq/ha pompés par une hêtraie en cinquante ans
-contre 9 400 d'altération profonde mal placée, châtaigneraie 11 400 contre
-8 700. **Deux justifications écrites avant la mesure, deux fausses.** Ce qui
-reste, et qui est vrai, est un énoncé de périmètre : stratifier l'altération
-retire les deux tiers des apports minéraux de la surface et défait la
-calibration de C10 — c'est un autre lot. Le pool profond est donc un COMPTEUR
-DE POMPE, pas un budget de sous-sol, et le référentiel le dit.
+**Un seuil qu'aucune valeur du monde ne peut satisfaire est un seuil calé sur le
+moteur.** La stratification portait la dérive du limon riche nu de 0,125 à
+0,203 unité en cinquante ans, et l'essai bornait à 0,2. Avant de toucher au
+seuil, j'ai balayé la rétention sur quatre valeurs pour repasser dessous. C'est
+impossible : dès 0,0016 le limon acide cesse de se décalcifier et remonte, à
+0,0011 la lande sèche aussi — l'erreur exacte que la calibration des dépôts
+avait servi à corriger. **Le balayage EST l'argument** : il montre que la borne
+ne contraignait plus le moteur, elle l'enregistrait. Remplacée par une ancre du
+dehors (les témoins non amendés de Rothamsted, de l'ordre d'un demi-point par
+siècle) et par la direction, qui elle ne se négocie pas. Aucune constante du
+moteur n'a bougé dans ce lot.
+
+**Un pool à un seul terme ne peut pas porter un critère.** Tant que le sous-sol
+n'avait que le prélèvement, il ne pouvait que baisser — avec ou sans arbre, la
+conclusion était écrite d'avance et le témoin sol nu ne disait rien. Une fois
+son altération et son lessivage rendus, il trouve son équilibre sans végétation
+(7,000 → 7,018 en cinquante ans) et ne baisse que sous un peuplement (→ 6,976
+sous hêtraie). **C'est le même mécanisme, mais il est devenu mesurable**, parce
+qu'il a maintenant un contrefactuel.
 
 **Ce qui sort d'un banc n'est pas toujours le contraste qu'on visait.** « Le
 frêne est le pompeur de manuel » : à masse de litière égale, oui, deux fois le
@@ -103,9 +116,9 @@ que le hêtre et porte plus de tiges, et il pompe cinquante fois moins. La
 profondeur donne l'accès, la teneur donne la quantité.
 
 **Une grandeur exposée que personne ne lit reste une grandeur exposée.** Aucun
-arbre ne lit `basesProfondEq` : le moteur sait dire que le fond s'appauvrit,
-pas encore ce que l'appauvrissement fait aux racines qui y poussent. C'est
-écrit sur le champ lui-même, pour que le prochain lot n'ait pas à le deviner.
+arbre ne lit `basesProfondEq` : le moteur sait dire que le fond s'appauvrit, pas
+encore ce que l'appauvrissement fait aux racines qui y poussent. C'est écrit sur
+le champ lui-même, pour que le prochain lot n'ait pas à le deviner.
 
 ## Ce qu'un lot plus ancien a appris (la phénologie entre deux semaines, #164)
 
@@ -1050,18 +1063,18 @@ Et B6 reste 🟡 : ce que l'ombrage latéral produit est désormais juste, mais 
 poids 0,4 des codominants qui le dose est toujours posé à la main, et il gouverne
 aussi la succession.
 
-**Ce qui reste de #71 — l'altération n'est pas stratifiée (C15, 🟡).** La pompe
-à bases est écrite (#170) : les racines débitent un pool de sous-sol, et le
-contraste entre essences se lit sur deux traits de l'atlas. Mais ce pool n'a que
-ce terme-là. L'altération, qui devrait l'alimenter, somme encore sur tout le
-profil et crédite la seule surface — 9 400 eq/ha sur cinquante ans en limon
-riche, le même ordre de grandeur que la pompe. La stratifier retire les deux
-tiers des apports minéraux de la surface : il faudra recalibrer
-`AMPLIFICATION_CHARGE` et refaire tous les chiffres de dérive de C10, donc c'est
-un lot à part entière et pas un correctif. Personne ne LIT encore le pool
-profond non plus : ce serait le second morceau. Manque aussi une litière
-herbacée porteuse de calcium (la strate basse ne pèse pas sur le complexe) et
-l'ortie nitrophile, qui rendrait la bio-indication lisible.
+**Ce qui reste de #71 — le pool profond que personne ne lit (C15 ✅, mais).** La
+pompe à bases est écrite et le budget est stratifié (#170) : le sous-sol a son
+altération, reçoit ce que la surface lui lessive, perd ce que les racines y
+pompent et ce qui passe sous la zone racinaire. Deux choses restent. **Aucun
+arbre ne lit le pH profond** — brancher la tolérance des espèces dessus demande
+de décider ce qu'une racine ressent quand ses deux horizons diffèrent, ce qui
+est une affirmation distincte. **Et le profil n'a que deux compartiments** ; le
+raffiner en N horizons n'a de sens qu'avec l'azote, le phosphore et le
+potassium, qui ont la même plomberie et doivent bouger ensemble. Manque aussi
+une litière herbacée porteuse de calcium — la strate basse ne pèse toujours pas
+sur le complexe, et c'est elle qui manque le plus au témoin sol nu — et l'ortie
+nitrophile, qui rendrait la bio-indication lisible.
 
 **Ce qui reste de #70 — le calendrier de floraison.** La strate a ses espèces,
 E9 et B8 sont tombés, mais la fiche herbacée s'arrête au calendrier FOLIAIRE.

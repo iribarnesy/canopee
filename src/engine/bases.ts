@@ -22,29 +22,37 @@
  *  - **le chaulage n'est plus un geste à effet fixe** : la même chaux monte un
  *    podzol de plus d'une unité et un limon argileux de deux dixièmes.
  *
+ * ## Le budget est stratifié, et il CIRCULE (#170)
+ *
+ * Deux pools : la surface et le sous-sol. Chaque horizon reçoit l'altération
+ * qu'il produit — le fond en fait 63 à 79 % du total, parce qu'il fait les deux
+ * tiers de l'épaisseur —, la surface reçoit en plus les dépôts atmosphériques
+ * et ce que la litière rend, elle LESSIVE VERS LE FOND au lieu de lessiver vers
+ * le néant, les racines pompent au fond, et c'est en passant sous la zone
+ * racinaire qu'une base quitte la parcelle.
+ *
+ * Ce qui en sort, mesuré sur cinquante ans de limon riche : sans un arbre le
+ * sous-sol trouve son équilibre (7,000 → 7,018) pendant que la surface décroche
+ * (7,00 → 6,80) ; sous une hêtraie le fond baisse (→ 6,976) et la surface
+ * décroche plus fort (→ 6,62) ; sous un frêne la surface tient 0,18 unité
+ * au-dessus du sol nu. **C'est la végétation qui décide du sens**, et c'est
+ * exactement ce que dit le critère C15.
+ *
  * ## Ce que ce fichier ne fait pas, et il faut le dire
  *
- * **L'ALTÉRATION n'est pas stratifiée, et la pompe l'est.** Depuis l'issue #170
- * le prélèvement racinaire débite un pool de sous-sol (`basesProfondEq`) : un
- * arbre qui met du calcium dans sa litière l'a pris quelque part, et il le
- * prend d'autant plus bas que ses racines descendent. L'altération, elle,
- * continue de sommer sur TOUT le profil et de créditer la seule SURFACE.
+ * **Le profil n'a que DEUX compartiments.** Un sol réel n'a pas une surface et
+ * un fond, il a un gradient ; ce que ce fichier sait dire est « la surface
+ * s'enrichit, le fond s'appauvrit », pas à quelle profondeur. C'est le plus
+ * petit découpage qui exprime la pompe à bases, et il vaut mieux le dire
+ * grossier que le maquiller *(à raffiner en N horizons le jour où l'azote, le
+ * phosphore et le potassium le seront aussi — les quatre pools ont la même
+ * plomberie et doivent bouger ensemble)*.
  *
- * Les deux affirmations ne sont pas cohérentes entre elles, et il faut dire à
- * quel point. Mesuré station par station, 63 à 79 % de l'altération vient de
- * sous l'horizon de surface : 188 eq/ha/an sur le limon riche, sur 289. Sur
- * cinquante ans cela fait 9 400 eq/ha que le fond devrait recevoir et qui vont
- * en surface — c'est-à-dire **le même ordre de grandeur que la pompe
- * elle-même** (8 100 eq/ha sous hêtraie sur la même station, 11 400 sous
- * châtaigneraie sur limon acide contre 8 700 d'altération profonde).
- *
- * Donc : `basesProfondEq` COMPTE CE QU'UN PEUPLEMENT A POMPÉ, ce n'est pas le
- * budget du sous-sol. Le corriger n'était pas une question de soin mais de
- * périmètre — stratifier l'altération retire aux deux tiers des apports
- * minéraux de la surface, ce qui défait la calibration de `AMPLIFICATION_CHARGE`
- * et tous les chiffres de dérive du critère C10. C'est le lot qui transformera
- * ce compteur en budget *(à faire ; d'ici là, lire le pool profond comme une
- * pompe, pas comme un stock)*.
+ * **Personne ne LIT encore le pool profond.** Le moteur sait dire que le fond
+ * s'appauvrit ; il ne sait pas encore ce que l'appauvrissement fait aux racines
+ * qui y poussent. Brancher le pH profond sur la tolérance des espèces demande
+ * de décider ce qu'une racine ressent quand ses deux horizons diffèrent, ce qui
+ * est une affirmation distincte et qui a besoin de sa propre mesure.
  *
  * **La boucle interne prélèvement ↔ litière n'est pas suivie EN SURFACE.** Les
  * bases qui montent dans les feuilles et redescendent à l'automne font un flux
@@ -132,16 +140,10 @@ export function capaciteEchangeEqM2(h: Horizon): number {
 /**
  * Le même complexe, mais pour TOUT CE QUI EST SOUS L'HORIZON DE SURFACE, eq/m².
  *
- * Deux pools et non N horizons : c'est le plus petit découpage qui exprime la
- * pompe à bases, et il faut le dire grossier plutôt que le maquiller. Un profil
- * réel n'a pas deux compartiments, il a un gradient ; ce que le moteur sait
- * dire, c'est « la surface s'enrichit, le fond s'appauvrit », et pas à quelle
- * profondeur exactement.
- *
  * L'ordre de grandeur, mesuré sur le limon riche : le sous-sol (65 cm) porte
  * 779 000 eq/ha de capacité contre 520 000 pour l'horizon de surface (35 cm).
  * Le fond est le gros réservoir, et c'est bien pour ça qu'un arbre peut y
- * puiser cinquante ans sans le vider.
+ * puiser cinquante ans sans le vider — 8 100 eq/ha sous hêtraie, soit 1,2 %.
  */
 export function capaciteEchangeProfondeEqM2(profil: readonly Horizon[]): number {
   let eq = 0;
@@ -150,6 +152,28 @@ export function capaciteEchangeProfondeEqM2(profil: readonly Horizon[]): number 
     if (horizon) eq += capaciteEchangeEqM2(horizon);
   }
   return eq;
+}
+
+/**
+ * La même capacité vue comme une DENSITÉ, cmol+/kg, moyennée sur le sous-sol au
+ * prorata des masses de terre.
+ *
+ * `lessivageBasesEq` a besoin des deux formes : le stock (eq/m²) pour savoir ce
+ * qu'il y a à perdre, la densité (cmol+/kg) pour savoir avec quelle force le
+ * complexe le retient. Une moyenne pondérée par l'épaisseur seule dirait faux
+ * dès qu'un horizon est plus caillouteux ou plus dense que l'autre.
+ */
+export function capaciteEchangeProfondeCmolKg(profil: readonly Horizon[]): number {
+  let masse = 0;
+  let cmol = 0;
+  for (let h = 1; h < profil.length; h++) {
+    const horizon = profil[h];
+    if (!horizon) continue;
+    const m = horizon.epaisseurCm * 10 * densiteApparente(horizon) * (1 - horizon.pierrosite);
+    masse += m;
+    cmol += m * (50 * horizon.argile + 2 * horizon.moPct);
+  }
+  return masse > 0 ? cmol / masse : 0;
 }
 
 /**
@@ -179,17 +203,48 @@ export function capaciteEchangeProfondeEqM2(profil: readonly Horizon[]): number 
  */
 export const ALTERATION_BASES_EQ_HA_AN_POUR_30CM = 450;
 
-export function alterationBasesEqM2Semaine(profil: readonly Horizon[]): number {
-  let eqHaAn = 0;
-  for (const h of profil) {
-    eqHaAn +=
-      ALTERATION_BASES_EQ_HA_AN_POUR_30CM *
-      (0.05 + 0.95 * h.argile) *
-      (1 - h.pierrosite) *
-      (h.epaisseurCm / 30);
-  }
-  // eq/ha → eq/m², puis à la semaine.
+function alterationHorizonEqHaAn(h: Horizon): number {
+  return (
+    ALTERATION_BASES_EQ_HA_AN_POUR_30CM *
+    (0.05 + 0.95 * h.argile) *
+    (1 - h.pierrosite) *
+    (h.epaisseurCm / 30)
+  );
+}
+
+/** eq/ha/an → eq/m²/semaine. */
+function parSemaine(eqHaAn: number): number {
   return eqHaAn / 10_000 / 52;
+}
+
+/**
+ * Ce que libère l'HORIZON DE SURFACE, eq/m²/semaine.
+ *
+ * Jusqu'à l'issue #170 cette fonction sommait tout le profil et créditait la
+ * surface, ce qui faisait remonter au jour des bases libérées à un mètre de
+ * fond. Chaque horizon crédite désormais SON pool : c'est ce qui permet au
+ * sous-sol d'avoir un budget, et pas seulement un compteur de prélèvement.
+ */
+export function alterationBasesSurfaceEqM2Semaine(profil: readonly Horizon[]): number {
+  const h = profil[0];
+  return h ? parSemaine(alterationHorizonEqHaAn(h)) : 0;
+}
+
+/**
+ * Ce que libère tout ce qui est SOUS l'horizon de surface, eq/m²/semaine.
+ *
+ * C'est la plus grosse part, et de loin : 63 à 79 % du total selon la station,
+ * parce que le sous-sol fait les deux tiers de l'épaisseur du profil. Le lui
+ * rendre change la nature du pool profond — il cesse d'être un compteur de
+ * pompe pour devenir un budget qu'on peut mettre en défaut.
+ */
+export function alterationBasesProfondeEqM2Semaine(profil: readonly Horizon[]): number {
+  let eqHaAn = 0;
+  for (let i = 1; i < profil.length; i++) {
+    const h = profil[i];
+    if (h) eqHaAn += alterationHorizonEqHaAn(h);
+  }
+  return parSemaine(eqHaAn);
 }
 
 /**
@@ -233,6 +288,18 @@ export const DEPOSITION_BASES_EQ_M2_SEMAINE = DEPOSITION_BASES_EQ_HA_AN / 10_000
  * c'est-à-dire à peine plus que l'altération, ce qui est bien la raison pour
  * laquelle un sol met des siècles à se décalcifier *(à calibrer sur un budget
  * de bases complet)*.
+ *
+ * **Elle n'a PAS été retouchée quand le budget a été stratifié (#170), et le
+ * balayage qui le justifie vaut d'être écrit.** La cascade fait sortir du
+ * profil 817 eq/ha/an sur le limon riche là où la surface seule en sortait 650,
+ * et la dérive du sol nu passe de 0,125 à 0,203 unité en cinquante ans. La
+ * tentation était de baisser la rétention pour revenir aux anciens chiffres.
+ * Mesuré sur quatre valeurs (0,0023 / 0,0015 / 0,0011 / 0,0008), c'est
+ * impossible : dès 0,0016 le limon ACIDE cesse de se décalcifier et remonte, et
+ * à 0,0011 la lande sèche remonte aussi — c'est-à-dire l'erreur exacte que la
+ * calibration des dépôts avait servi à corriger. Aucune valeur ne satisfait les
+ * deux bouts. Ce qui coinçait n'était donc pas la constante mais un SEUIL
+ * D'ESSAI calé sur le moteur ; cf. `bases.test.ts`.
  */
 export const RETENTION_BASES = 0.0023;
 
@@ -349,8 +416,9 @@ export function basesLitiereEq(carboneGM2: number, calciumMgG: number): number {
  * PROTONS dont le calcium n'est qu'un terme. Ici on déplace du calcium, une
  * masse : elle ne se multiplie pas par trois en descendant d'un horizon. Les
  * deux nombres ne sont donc pas symétriques, et ils n'ont pas à l'être — ils
- * ne disent pas la même chose. C'est aussi ce qui laisse la calibration de
- * surface intacte : le lot n'ajoute rien au-dessus, il retranche en dessous.
+ * ne disent pas la même chose. Conséquence pratique, et c'est ce que le banc
+ * vérifie : **le budget de surface se referme sans aucun terme de pompe**. Ce
+ * que l'arbre remonte n'atteint la surface que par la litière.
  *
  * ## Ce qu'aucun nom d'espèce ne décide
  *

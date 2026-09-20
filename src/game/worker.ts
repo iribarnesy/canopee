@@ -394,6 +394,8 @@ function emptyFluxes(): TickFluxes {
     basesLitiereEqHa: 0,
     basesAcideEqHa: 0,
     basesPreleveEqHa: 0,
+    basesApportProfondEqHa: 0,
+    basesExportEqHa: 0,
     saturationMoyenne: 0,
     saturationProfondeMoyenne: 0,
     partInondee: 0,
