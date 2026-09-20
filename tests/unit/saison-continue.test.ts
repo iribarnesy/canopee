@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest";
 import { appliquerLesActes, type SaisonDUneEssence } from "../../src/game/VueParcelle";
 import type { ArbreAPoser } from "../../src/render/couches/arbres";
 import { PALIERS_FEUILLAGE, palierDe } from "../../src/render/couches/arbres";
+import type { EtatMourant } from "../../src/render/temps/mort";
 
 const arbre = (id: number, partFoliaire: number, senescence = 0): ArbreAPoser => ({
   id,
@@ -32,6 +33,17 @@ const arbre = (id: number, partFoliaire: number, senescence = 0): ArbreAPoser =>
   partFoliaire,
   senescence,
   vigueur: 1,
+});
+
+/** Un état de mourant complet : le type en demande plus que les trois valeurs. */
+const mourantA = (partFoliaire: number, senescence: number, vigueur: number): EtatMourant => ({
+  partFoliaire,
+  senescence,
+  vigueur,
+  dommageHydraulique: 0.5,
+  chandelle: false,
+  opacite: 1,
+  hauteur: 1,
 });
 
 const saisonA = (partFoliaire: number, senescence = 0) => {
@@ -131,10 +143,7 @@ describe("les autres canaux, après la réécriture en copie paresseuse", () => 
     const arbres = [arbre(1, 1), arbre(2, 1)];
     const sortie = appliquerLesActes(
       arbres,
-      (id) =>
-        id === 1
-          ? { partFoliaire: 0.2, senescence: 0.8, vigueur: 0.1, dommageHydraulique: 0.5 }
-          : undefined,
+      (id) => (id === 1 ? mourantA(0.2, 0.8, 0.1) : undefined),
       undefined,
       undefined,
       0,
@@ -173,7 +182,7 @@ describe("les autres canaux, après la réécriture en copie paresseuse", () => 
     const arbres = [arbre(1, 0.1)];
     const sortie = appliquerLesActes(
       arbres,
-      () => ({ partFoliaire: 0.05, senescence: 0.9, vigueur: 0, dommageHydraulique: 0 }),
+      () => mourantA(0.05, 0.9, 0),
       undefined,
       saisonA(0.9),
       0,
