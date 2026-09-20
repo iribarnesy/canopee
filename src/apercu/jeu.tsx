@@ -64,6 +64,7 @@ import {
   trouverLeFeu,
   voilesEnCours,
 } from "../render/temps/lecteur";
+import { especeSiConnue } from "./atlasDuBanc";
 
 interface Scene {
   coteM: number;
@@ -673,7 +674,7 @@ function Demo(): React.ReactElement {
       semaineAnnee={scene.week % 52}
       arbres={arbres}
       {...(scene.sol.bordures ? { bordures: scene.sol.bordures } : {})}
-      hauteurMaxDe={(especeId) => getEspece(especeId)?.hauteurMaxM ?? 20}
+      hauteurMaxDe={(especeId) => especeSiConnue(especeId)?.hauteurMaxM ?? 20}
       ombreDe={(a) => a.partFoliaire}
       surCompte={setCompte}
       marqueurs={ellipse.marqueurs}

@@ -245,7 +245,7 @@ export function recolteEnCours(masseKg: number, avancement: number): ArbreRemode
  * pas produire le geste, et une teinte de liège sur un hêtre se verrait.
  */
 export function demasclageEnCours(especeId: string, avancement: number): ArbreRemodele | undefined {
-  const rotationAns = getEspece(especeId)?.ecorce?.rotationAns;
+  const rotationAns = getEspece(especeId).ecorce?.rotationAns;
   if (!rotationAns) return undefined;
   const a = Math.min(1, Math.max(0, avancement));
   return { semainesDepuisLevee: a >= 1 ? 0 : rotationAns * 52 * (1 - a) };

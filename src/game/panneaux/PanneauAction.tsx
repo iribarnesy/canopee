@@ -204,10 +204,10 @@ export function PanneauAction({
             style={{ ...btn(true), display: "block", textAlign: "left", width: "100%" }}
             onClick={surChoisirEssence}
           >
-            🌳 {getEspece(especeId)?.nom ?? especeId}
+            🌳 {getEspece(especeId).nom}
             <span style={{ opacity: 0.85 }}>
               {" "}
-              — {getEspece(especeId)?.economie.prixPlantEur} €{avecManchon ? " + manchon" : ""} ·
+              — {getEspece(especeId).economie.prixPlantEur} €{avecManchon ? " + manchon" : ""} ·
               changer…
             </span>
           </button>

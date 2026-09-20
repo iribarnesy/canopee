@@ -1290,7 +1290,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             semaineAnnee={snapshot.week % 52}
             arbres={arbresPoses}
             bordures={station.bordures}
-            hauteurMaxDe={(id) => getEspece(id)?.hauteurMaxM ?? 20}
+            hauteurMaxDe={(id) => getEspece(id).hauteurMaxM}
             ombreDe={(a) => a.partFoliaire}
             surClic={surClicParcelle}
             surbrillance={selectedIds}

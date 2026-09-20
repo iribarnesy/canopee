@@ -38,6 +38,7 @@ import {
 } from "../render/couches/ombres";
 import { Decor, type DonneesSol, Terrain } from "../render/couches/terrain";
 import { versCss } from "../render/palette";
+import { especeSiConnue } from "./atlasDuBanc";
 
 const fabriquer = (largeur: number, hauteur: number): HTMLCanvasElement => {
   const c = document.createElement("canvas");
@@ -151,7 +152,9 @@ function feuillageDe(
   especeId: string,
   pheno: ContextePhenologique | undefined,
 ): { part: number; senescence: number } {
-  const espece = getEspece(especeId);
+  // `getEspece` lèverait sur un inconnu : les tiges d'espèce inconnue sont
+  // écartées en amont, et le repli ici ne couvre que l'absence de saison.
+  const espece = especeSiConnue(especeId);
   if (!espece || !pheno) return { part: 1, senescence: 0 };
   return {
     part: partFoliaireOmbrageanteDans(espece, pheno),
@@ -323,7 +326,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
               Math.min(scene.coteM - 1, Math.floor(t.x))
           ] ?? 0,
         heightM: t.heightM,
-        houppierRatio: getEspece(t.especeId)?.lumiere.houppierRatio ?? 0.4,
+        houppierRatio: especeSiConnue(t.especeId)?.lumiere.houppierRatio ?? 0.4,
         partOmbrageante: feuillageDe(t.especeId, scene.sol.pheno).part,
       }));
     for (const o of ombresAPoser(arbres, vue)) {
@@ -367,7 +370,12 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
   if (arbres) {
     const separe = separerLeFourre(
       scene.trees
-        .filter((t) => t.heightM > 0)
+        // **Une espèce que l'atlas ne connaît plus est ÉCARTÉE, pas devinée.**
+        // Une scène cuite survit au catalogue : une espèce renommée ou retirée
+        // faisait lever `getEspece` et tomber le banc entier sur une seule
+        // tige périmée. On ne peut pas la dessiner fidèlement, donc on ne la
+        // dessine pas — le reste de la scène, lui, reste jugeable.
+        .filter((t) => t.heightM > 0 && especeSiConnue(t.especeId) !== undefined)
         .map((t): ArbreAPoser => {
           const espece = getEspece(t.especeId);
           const f = feuillageDe(t.especeId, scene.sol.pheno);
@@ -425,7 +433,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
     );
     const poses = posesDesArbres(
       [...separe.arbres, ...separe.fourre.map(fourreEnArbre)],
-      (especeId) => getEspece(especeId)?.hauteurMaxM ?? 20,
+      (especeId) => especeSiConnue(especeId)?.hauteurMaxM ?? 20,
       vue,
     );
     const atlas = new AtlasArbres(fabriquer);

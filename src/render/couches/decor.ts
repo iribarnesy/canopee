@@ -577,7 +577,7 @@ export function canopee(
   const px = Math.floor(x / MAILLE_PEUPLEMENT_M);
   const py = Math.floor(y / MAILLE_PEUPLEMENT_M);
   const especeId = especeDuBois(bordures, x, y, coteM, hacher(px, py, 0x1f7b));
-  const hauteurMax = especeId ? getEspece(especeId)?.hauteurMaxM : undefined;
+  const hauteurMax = especeId ? getEspece(especeId).hauteurMaxM : undefined;
   const maturite =
     PART_DE_MATURITE.min +
     bruitLisse(x, y, MAILLE_PEUPLEMENT_M, 0x8ac1) * (PART_DE_MATURITE.max - PART_DE_MATURITE.min);
