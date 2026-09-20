@@ -1301,6 +1301,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             mourant={ellipse.mourant}
             remodeler={ellipse.remodeler}
             surOrientation={setOrientation}
+            saison={ellipse.saison}
             voiler={ellipse.voiler}
             feu={ellipse.feu}
             marqueurs={ellipse.marqueurs}

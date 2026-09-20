@@ -34,7 +34,7 @@ import {
   vueInitiale,
   zoomer,
 } from "../render/camera";
-import type { ArbreAPoser } from "../render/couches/arbres";
+import { type ArbreAPoser, PALIERS_FEUILLAGE, palierDe } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
@@ -201,6 +201,25 @@ export interface VueParcelleProps {
    * pixel de glissement et ferait rendre le volet soixante fois par seconde.
    */
   surOrientation?: (orientation: Orientation) => void;
+  /**
+   * La SAISON à cet instant, par essence — le canal continu de la semaine
+   * (#163).
+   *
+   * Interrogé une fois par IMAGE et non une fois par arbre : à un instant
+   * donné, deux hêtres portent la même feuille. Il rend une table par essence,
+   * que `appliquerLesActes` applique aux arbres concernés.
+   *
+   * Comme les autres canaux de cuisson, il ne remplace un arbre que si le
+   * PALIER change : entre deux marches, le tableau d'origine est rendu tel
+   * quel, et la scène ne recuit rien.
+   */
+  saison?: (maintenantMs: number) => ReadonlyMap<string, SaisonDUneEssence> | undefined;
+}
+
+/** Ce que la saison fait à une essence, à un instant donné (`useEllipse`). */
+export interface SaisonDUneEssence {
+  partFoliaire: number;
+  senescence: number;
 }
 
 /**
@@ -214,16 +233,39 @@ export interface VueParcelleProps {
  *
  * Quand quelqu'un meurt, seuls les arbres concernés sont copiés — les autres
  * gardent leur objet, donc leur classe de vignette, donc leur texture.
+ *
+ * Exportée pour l'essai : c'est une fonction PURE au milieu d'un fichier qui
+ * ne l'est pas, et c'est elle qui porte la propriété du §5.11 — « une
+ * animation continue ne doit pas invalider un cache de cuisson ».
  */
-function appliquerLesActes(
+export function appliquerLesActes(
   arbres: readonly ArbreAPoser[],
   mourant: VueParcelleProps["mourant"],
   remodeler: VueParcelleProps["remodeler"],
+  saison: VueParcelleProps["saison"],
   maintenantMs: number,
 ): readonly ArbreAPoser[] {
-  if (!mourant && !remodeler) return arbres;
+  const parEssence = saison?.(maintenantMs);
+  if (!mourant && !remodeler && !parEssence) return arbres;
   let touche = false;
-  const sortie = arbres.map((a) => {
+  /**
+   * **Copié PARESSEUSEMENT, et c'est nécessaire depuis la saison (#163).**
+   * Avant, ce `map` n'allouait que pendant une ellipse — une seconde ou deux.
+   * La saison, elle, est là toute la semaine dès que le temps coule : un
+   * tableau de trois mille entrées jeté à chaque image, c'est exactement la
+   * pression mémoire que le lot L0 proscrit. On ne fabrique donc le tableau
+   * qu'au premier arbre qui change vraiment.
+   */
+  let sortie: ArbreAPoser[] | undefined;
+  const remplacer = (i: number, remplacant: ArbreAPoser) => {
+    sortie ??= arbres.slice();
+    sortie[i] = remplacant;
+    touche = true;
+  };
+  for (let i = 0; i < arbres.length; i++) {
+    const brut = arbres[i];
+    if (!brut) continue;
+    let a = brut;
     // Les deux canaux de CUISSON se composent, et dans cet ordre : le geste dit
     // quelle forme avait l'arbre, la mort dit dans quel état il est. Un arbre
     // élagué qui meurt la même semaine doit montrer les deux.
@@ -231,6 +273,24 @@ function appliquerLesActes(
     // géométrie, une récolte le stock de fruits, un démasclage l'âge de
     // l'écorce — et un arbre qui subit deux gestes la même semaine reçoit les
     // deux sans que l'un efface l'autre.
+    // **La saison d'abord, et seulement quand elle change de PALIER.** La
+    // phénologie du moteur avance en continu depuis #164, mais la classe de
+    // vignette est quantifiée : remplacer l'arbre à chaque image ferait croire
+    // à la scène — qui compare des références — que tout a changé, et ferait
+    // recuire l'atlas soixante fois par seconde pour une image identique. En
+    // ne remplaçant qu'au franchissement, on obtient exactement les marches
+    // que la quantification impose, mais RÉPARTIES sur la semaine au lieu
+    // d'être empilées sur une image.
+    const deLaSaison = parEssence?.get(a.especeId);
+    const saisonne =
+      deLaSaison &&
+      (palierDe(deLaSaison.partFoliaire, PALIERS_FEUILLAGE) !==
+        palierDe(a.partFoliaire, PALIERS_FEUILLAGE) ||
+        palierDe(deLaSaison.senescence, PALIERS_FEUILLAGE) !==
+          palierDe(a.senescence, PALIERS_FEUILLAGE))
+        ? { ...a, partFoliaire: deLaSaison.partFoliaire, senescence: deLaSaison.senescence }
+        : a;
+    a = saisonne;
     const forme = remodeler?.(a.id, maintenantMs, a.especeId);
     const base = forme
       ? {
@@ -245,16 +305,20 @@ function appliquerLesActes(
             : {}),
         }
       : a;
-    if (forme) touche = true;
+    // Pas de `touche` posé ici : c'est `remplacer` qui le pose, au moment où
+    // il met vraiment quelque chose dans le tableau. Le poser d'avance
+    // laisserait croire à un changement qu'on n'a pas écrit.
     const e = mourant?.(a.id, maintenantMs, {
       partFoliaire: a.partFoliaire,
       senescence: a.senescence,
       vigueur: a.vigueur,
       dommageHydraulique: a.dommageHydraulique ?? 0,
     });
-    if (!e) return base;
-    touche = true;
-    return {
+    if (!e) {
+      if (base !== brut) remplacer(i, base);
+      continue;
+    }
+    remplacer(i, {
       ...base,
       partFoliaire: e.partFoliaire,
       senescence: e.senescence,
@@ -272,9 +336,9 @@ function appliquerLesActes(
       // du §6.3 n'a d'avis sur elle, et si elles rendaient `false` elles
       // effaceraient la trace d'un incendie passé (`mort.ts`).
       ...(e.brulee === undefined ? {} : { brulee: e.brulee }),
-    };
-  });
-  return touche ? sortie : arbres;
+    });
+  }
+  return touche && sortie ? sortie : arbres;
 }
 
 /** Facteur de zoom par cran de molette. Un cran = un pas net, pas un glissement. */
@@ -433,7 +497,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
           {
             sol: p.sol,
             semaineAnnee: p.semaineAnnee,
-            arbres: appliquerLesActes(p.arbres, p.mourant, p.remodeler, horloge),
+            arbres: appliquerLesActes(p.arbres, p.mourant, p.remodeler, p.saison, horloge),
             ...(p.bordures ? { bordures: p.bordures } : {}),
             hauteurMaxDe: p.hauteurMaxDe,
             ombreDe: p.ombreDe,

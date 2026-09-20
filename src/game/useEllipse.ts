@@ -25,9 +25,14 @@
  */
 
 import { useMemo, useRef } from "react";
-import { getEspece } from "../engine/especes";
+import { ESPECES_V0, type EspeceV0, getEspece } from "../engine/especes";
 import { ventRecuParLeSite } from "../engine/feu";
-import { partFoliaireOmbrageanteDans, senescenceDans } from "../engine/phenologie";
+import {
+  type ContextePhenologique,
+  contextePhenologiqueFractionnaire,
+  partFoliaireOmbrageanteDans,
+  senescenceDans,
+} from "../engine/phenologie";
 import type { Vue } from "../render/camera";
 import { type Marqueur, marqueursDuJournal } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
@@ -148,6 +153,31 @@ export interface EllipseDuJeu {
   rejouer: () => void;
   /** Y a-t-il quelque chose à rejouer ? Faux sur une semaine sans journal. */
   rejouable: boolean;
+  /**
+   * La SAISON à cet instant, par essence — le canal continu de la semaine
+   * (#163, débloqué par #164).
+   *
+   * **Un hêtre gagne 51 % de sa feuille en un pas de temps**, mesuré ; c'est
+   * la résolution hebdomadaire du moteur, pas une quantification du rendu. Le
+   * moteur livre maintenant `contextePhenologiqueFractionnaire`, qui RECALCULE
+   * le modèle à un instant intermédiaire — il ne l'interpole pas, parce que le
+   * débourrement a des coudes et qu'une droite s'en écarte de 11 points au
+   * printemps. Le rendu n'invente donc rien : il demande.
+   *
+   * Par ESSENCE et non par arbre : à un instant donné, deux hêtres portent la
+   * même feuille. Une dizaine d'appels par image au lieu de trois mille.
+   *
+   * **Non bloquant** : la saison court en fond, elle ne retient pas l'horloge.
+   * C'est le second cas de la distinction que porte `Acte.bloquant`, et le
+   * premier qui ne vient pas du journal.
+   */
+  saison: (maintenantMs: number) => ReadonlyMap<string, SaisonDUneEssence> | undefined;
+}
+
+/** Ce que la saison fait à une essence, à un instant donné. */
+export interface SaisonDUneEssence {
+  partFoliaire: number;
+  senescence: number;
 }
 
 /** Le journal que porte un instantané, dans la forme que le plan attend. */
@@ -230,6 +260,7 @@ const RIEN: EllipseDuJeu = {
   attenteMs: 0,
   rejouer: () => {},
   rejouable: false,
+  saison: () => undefined,
 };
 
 /**
@@ -259,15 +290,23 @@ export function useEllipse(
   // lirait alors l'ellipse neuve avec l'horloge de l'ancienne — c'est-à-dire au
   // milieu, ou déjà finie.
   const debut = useRef(0);
+  // **Posée pour TOUTE semaine et plus seulement pour celles qui ont un
+  // journal.** La saison court sur les semaines vides aussi — c'est même leur
+  // seul mouvement — et une horloge restée sur la semaine d'avant lui ferait
+  // lire une fraction déjà supérieure à un.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: c'est l'identité de l'instantané qu'on guette
+  useMemo(() => {
+    debut.current = performance.now();
+  }, [snapshot]);
 
-  return useMemo(() => {
+  // Tout sauf la saison, qui se calcule après pour pouvoir lire l'attente.
+  const noyau = useMemo<Omit<EllipseDuJeu, "saison">>(() => {
     if (!snapshot || !station) return RIEN;
     const journal = journalDe(snapshot);
     const plan = auRythmeNaturel
       ? planAuRythmeNaturel([journal])
       : planDEllipse([journal], budgetMs);
     if (plan.actes.length === 0) return RIEN;
-    debut.current = performance.now();
 
     const coteM = station.coteM;
     const chutes = indexerLesChutes(plan);
@@ -366,4 +405,58 @@ export function useEllipse(
         : {}),
     };
   }, [snapshot, station, budgetMs, auRythmeNaturel, enMarche]);
+
+  /**
+   * Le contexte de la semaine PRÉCÉDENTE, pour avoir d'où l'on part.
+   *
+   * L'instantané ne porte que l'état d'ARRIVÉE — c'est la même inversion que
+   * pour les morts et les gestes : la mise en scène remonte le temps au début
+   * de la semaine et redescend.
+   */
+  const phenoPrecedent = useRef<ContextePhenologique | undefined>(undefined);
+  const phenoCourant = useRef<ContextePhenologique | undefined>(undefined);
+
+  /** Le temps d'écran d'une semaine : ce qu'on met à la traverser pour de vrai. */
+  const semaineMs = enMarche ? 1000 / vitesse + noyau.attenteMs : 0;
+
+  const saison = useMemo(() => {
+    if (!snapshot) return () => undefined;
+    // On décale d'un cran à chaque instantané. Dans le mémo et non dans un
+    // effet, pour la raison déjà écrite plus haut : la boucle d'images peut
+    // tourner avant qu'un effet ne soit appliqué.
+    if (phenoCourant.current !== snapshot.pheno) {
+      phenoPrecedent.current = phenoCourant.current;
+      phenoCourant.current = snapshot.pheno;
+    }
+    const depart = phenoPrecedent.current;
+    const arrivee = snapshot.pheno;
+    // Première semaine d'une partie : rien à interpoler, l'instantané fait foi.
+    if (!depart || semaineMs <= 0) return () => undefined;
+    // Les essences présentes, une fois par instantané : à un instant donné,
+    // deux hêtres portent la même feuille.
+    const especes = [...new Set(snapshot.trees.map((t) => t.especeId))]
+      .map((id) => ESPECES_V0.find((e) => e.id === id))
+      .filter((e): e is EspeceV0 => e !== undefined);
+    if (especes.length === 0) return () => undefined;
+    return (maintenantMs: number): ReadonlyMap<string, SaisonDUneEssence> | undefined => {
+      const t = Math.min(1, Math.max(0, (maintenantMs - debut.current) / semaineMs));
+      // **Arrivé au bout, on ne remplace plus rien**, et ce n'est pas une
+      // économie : à `t = 1` l'état de la semaine EST celui de l'instantané.
+      // Rendre la table quand même laisserait l'arbre sur la valeur du dernier
+      // franchissement de palier — une grandeur que le moteur n'a jamais dite,
+      // et que l'ombre portée lit.
+      if (t >= 1) return undefined;
+      const ctx = contextePhenologiqueFractionnaire(depart, arrivee, t);
+      const par = new Map<string, SaisonDUneEssence>();
+      for (const e of especes) {
+        par.set(e.id, {
+          partFoliaire: partFoliaireOmbrageanteDans(e, ctx),
+          senescence: senescenceDans(e, ctx),
+        });
+      }
+      return par;
+    };
+  }, [snapshot, semaineMs]);
+
+  return useMemo(() => ({ ...noyau, saison }), [noyau, saison]);
 }

@@ -619,7 +619,16 @@ export interface Classe {
 }
 
 /** Quantifie une valeur ∈ [0,1] en `n` paliers, et rend l'indice. */
-function palierDe(valeur: number, n: number): number {
+/**
+ * Quantifie une grandeur ∈ [0,1] en `n` paliers.
+ *
+ * Exportée depuis #163 : le canal de SAISON doit pouvoir demander « est-ce que
+ * ça change de palier ? » avant de remplacer quoi que ce soit. Sans cette
+ * question, une phénologie à la demi-semaine ferait reconstruire le tableau
+ * d'arbres à chaque image — et la scène, qui compare des références, croirait
+ * que tout a changé.
+ */
+export function palierDe(valeur: number, n: number): number {
   return Math.min(n - 1, Math.max(0, Math.floor(Math.min(1, Math.max(0, valeur)) * n)));
 }
 
