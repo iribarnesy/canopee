@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { getEspece } from "../../engine/especes";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
+import { essencesPresentes } from "./recensement";
 import type { Mode, ReglagesDeGeste } from "./reglages";
 import { btn } from "./styles";
 
@@ -22,12 +24,18 @@ export function PanneauAction({
   snapshot,
   geste,
   surChoisirEssence,
+  zoneVisee,
 }: {
   game: GameApi;
   snapshot: Snapshot;
   geste: ReglagesDeGeste;
   /** Ouvre le volet de choix des essences. */
   surChoisirEssence: () => void;
+  /**
+   * La cellule sous le curseur, s'il y en a une : le recensement des essences
+   * porte sur le disque visé plutôt que sur toute la parcelle (#156).
+   */
+  zoneVisee?: { x: number; y: number } | undefined;
 }) {
   const {
     mode,
@@ -42,6 +50,8 @@ export function PanneauAction({
     setDensiteCible,
     critereEclaircie,
     setCritereEclaircie,
+    especeEclaircie,
+    setEspeceEclaircie,
     mainOuvertePanneau,
     setMainOuvertePanneau,
   } = geste;
@@ -52,6 +62,23 @@ export function PanneauAction({
     0,
     Math.round((densiteCible * Math.PI * rayonChaulage * rayonChaulage) / 10_000),
   );
+
+  // Qui est là, dans le cercle qu'on vise — ou sur toute la parcelle tant
+  // qu'on ne vise rien (#156). Recalculé au survol : c'est une somme sur
+  // quelques milliers de tiges, et le panneau ne se rend qu'aux changements de
+  // cellule (`survol` n'est annoncé qu'aux changements, `VueParcelle`).
+  const presentes = useMemo(
+    () =>
+      essencesPresentes(
+        snapshot.trees,
+        zoneVisee ? { x: zoneVisee.x, y: zoneVisee.y, rayonM: rayonChaulage } : undefined,
+      ),
+    [snapshot.trees, zoneVisee, rayonChaulage],
+  );
+  /** Ce que l'éclaircie par essence abattrait, si une essence est choisie. */
+  const visee = presentes.find((e) => e.especeId === especeEclaircie);
+  const tigesVisees = visee?.tiges;
+  const nomVise = visee?.nom ?? "";
 
   return (
     <>
@@ -213,18 +240,78 @@ export function PanneauAction({
           >
             par le haut (on abat les gros)
           </button>
+          <button
+            type="button"
+            style={btn(critereEclaircie === "espece")}
+            onClick={() => setCritereEclaircie("espece")}
+            title="N'abattre qu'une essence, et toutes ses tiges dans le disque"
+          >
+            par essence (on nettoie une espèce)
+          </button>
+          {/*
+            **Le nettoyage sélectif, enfin atteignable (#156).** Le moteur sait
+            faire depuis longtemps — `critere: "espece"` prélève toutes les
+            tiges de l'essence dans le disque — et rien dans l'interface ne
+            permettait de le demander. Conséquence mesurée en partie : un
+            joueur qui veut ouvrir un roncier fauche en boucle, alors que
+            `faucher` n'écrit que dans la strate herbacée et ne touche aucun
+            ligneux bas.
+          */}
+          {critereEclaircie === "espece" && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{ color: "var(--encre-douce)", fontSize: 13 }}>
+                {zoneVisee
+                  ? `Dans le cercle de ${rayonChaulage} m visé :`
+                  : "Sur toute la parcelle (survolez pour viser un cercle) :"}
+              </div>
+              {presentes.length === 0 ? (
+                <div style={{ color: "var(--encre-douce)", fontSize: 13 }}>aucune tige ici.</div>
+              ) : (
+                presentes.slice(0, 12).map((e) => (
+                  <button
+                    key={e.especeId}
+                    type="button"
+                    style={btn(especeEclaircie === e.especeId)}
+                    onClick={() => setEspeceEclaircie(e.especeId)}
+                    title={`la plus haute fait ${e.hauteurMaxM.toFixed(1)} m`}
+                  >
+                    {e.nom}{" "}
+                    <span style={{ fontVariantNumeric: "tabular-nums", opacity: 0.75 }}>
+                      {e.tiges}
+                    </span>
+                  </button>
+                ))
+              )}
+              {presentes.length > 12 && (
+                <div style={{ color: "var(--encre-douce)", fontSize: 13 }}>
+                  … et {presentes.length - 12} autres essences, moins nombreuses.
+                </div>
+              )}
+            </div>
+          )}
           <br />
-          Densité visée :{" "}
-          <input
-            type="range"
-            min={100}
-            max={1500}
-            step={50}
-            value={densiteCible}
-            onChange={(e) => setDensiteCible(Number(e.target.value))}
-            style={{ verticalAlign: "middle", width: 90 }}
-          />{" "}
-          {densiteCible} tiges/ha · rayon{" "}
+          {/*
+            La densité visée ne veut rien dire pour le critère par essence : le
+            moteur y prend TOUTES les tiges de l'essence, quel qu'en soit le
+            nombre. L'afficher quand même ferait une promesse que l'action ne
+            tient pas.
+          */}
+          {critereEclaircie !== "espece" && (
+            <>
+              Densité visée :{" "}
+              <input
+                type="range"
+                min={100}
+                max={1500}
+                step={50}
+                value={densiteCible}
+                onChange={(e) => setDensiteCible(Number(e.target.value))}
+                style={{ verticalAlign: "middle", width: 90 }}
+              />{" "}
+              {densiteCible} tiges/ha ·{" "}
+            </>
+          )}
+          rayon{" "}
           <input
             type="range"
             min={3}
@@ -235,10 +322,28 @@ export function PanneauAction({
           />{" "}
           {rayonChaulage} m
           <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
-            Un cercle de {rayonChaulage} m fait{" "}
-            {Math.round(Math.PI * rayonChaulage * rayonChaulage)} m² : à {densiteCible} tiges/ha, on
-            y <strong>garde {tigesGardees} tiges</strong> et on abat tout le reste, en commençant
-            par les {critereEclaircie === "parLeHaut" ? "plus grandes" : "plus petites"}.
+            {critereEclaircie === "espece" ? (
+              tigesVisees === undefined ? (
+                <>Choisissez l'essence à nettoyer dans la liste ci-dessus.</>
+              ) : (
+                <>
+                  Un cercle de {rayonChaulage} m fait{" "}
+                  {Math.round(Math.PI * rayonChaulage * rayonChaulage)} m² : on y abat les{" "}
+                  <strong>
+                    {tigesVisees} tiges de {nomVise}
+                  </strong>{" "}
+                  et rien d'autre.
+                </>
+              )
+            ) : (
+              <>
+                Un cercle de {rayonChaulage} m fait{" "}
+                {Math.round(Math.PI * rayonChaulage * rayonChaulage)} m² : à {densiteCible}{" "}
+                tiges/ha, on y <strong>garde {tigesGardees} tiges</strong> et on abat tout le reste,
+                en commençant par les{" "}
+                {critereEclaircie === "parLeHaut" ? "plus grandes" : "plus petites"}.
+              </>
+            )}
           </div>
         </div>
       )}

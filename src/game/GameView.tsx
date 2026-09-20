@@ -945,7 +945,15 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const volets = useVolets({ bg: "gestes" });
   // Le clic sur la parcelle a besoin de savoir quel geste est armé et avec
   // quels réglages ; le panneau, lui, reçoit l'objet entier.
-  const { mode, especeId, avecManchon, rayonChaulage, densiteCible, critereEclaircie } = geste;
+  const {
+    mode,
+    especeId,
+    avecManchon,
+    rayonChaulage,
+    densiteCible,
+    critereEclaircie,
+    especeEclaircie,
+  } = geste;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
   // L'orientation de la caméra vit dans `VueParcelle` ; elle remonte ici pour
   // que la carte du sol se présente comme la vue (#145).
@@ -1236,6 +1244,11 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     } else if (mode === "brf") {
       game.dispatch({ type: "epandreBrf", x: mx, y: my, rayonM: rayonChaulage, part: 1 });
     } else if (mode === "eclaircir") {
+      // Par essence, c'est l'essence qui décide et non la densité : le moteur
+      // prend toutes ses tiges dans le disque (#156). Sans essence choisie, on
+      // ne lance rien — une éclaircie par essence sans essence abattrait zéro
+      // tige en facturant le déplacement.
+      if (critereEclaircie === "espece" && !especeEclaircie) return;
       game.dispatch({
         type: "eclaircir",
         x: mx,
@@ -1243,6 +1256,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         rayonM: rayonChaulage,
         densiteCibleParHa: densiteCible,
         critere: critereEclaircie,
+        ...(critereEclaircie === "espece" ? { especeId: especeEclaircie } : {}),
         devenir: "vendre",
       });
     } else if (multiple) {
@@ -1320,7 +1334,11 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           gap: 6,
         }}
       >
-        <Avis game={game} vivants={vivants} />
+        <Avis
+          game={game}
+          vivants={vivants}
+          rejouer={ellipse.rejouable ? ellipse.rejouer : undefined}
+        />
       </div>
 
       {/* En haut à droite : la partie, et l'arbre qu'on vient de cliquer. */}
@@ -1370,6 +1388,10 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 snapshot={snapshot}
                 geste={geste}
                 surChoisirEssence={() => volets.basculer("bg", "essences")}
+                // Le centre de la cellule, comme le clic : `survol` donne des
+                // indices entiers, et viser le coin décalerait le recensement
+                // d'un demi-mètre par rapport au disque qui sera appliqué.
+                zoneVisee={survol ? { x: survol.x + 0.5, y: survol.y + 0.5 } : undefined}
               />
             </Volet>
           ) : volets.estOuvert("bg", "essences") ? (

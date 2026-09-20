@@ -132,6 +132,22 @@ export interface EllipseDuJeu {
    * pas du dessin.
    */
   attenteMs: number;
+  /**
+   * REJOUER l'ellipse depuis son début (#157).
+   *
+   * « L'incendie est déjà fini quand on lève les yeux » : une ellipse se joue
+   * une fois, à l'instant précis où le bandeau d'autopause apparaît —
+   * c'est-à-dire au moment où le joueur lit le bandeau et non la parcelle.
+   * Allonger l'acte ne suffit pas, parce que le problème n'est pas sa durée
+   * mais le fait qu'il n'a lieu qu'une fois.
+   *
+   * Rejouer ne recalcule RIEN : le plan est déjà là, seule l'horloge revient à
+   * zéro. C'est pour ça que ça coûte une référence et pas un rembobinage
+   * (#128) — l'instantané courant porte encore son journal.
+   */
+  rejouer: () => void;
+  /** Y a-t-il quelque chose à rejouer ? Faux sur une semaine sans journal. */
+  rejouable: boolean;
 }
 
 /** Le journal que porte un instantané, dans la forme que le plan attend. */
@@ -212,6 +228,8 @@ const RIEN: EllipseDuJeu = {
   feu: () => RIEN_NE_BRULE,
   marqueurs: [],
   attenteMs: 0,
+  rejouer: () => {},
+  rejouable: false,
 };
 
 /**
@@ -332,6 +350,12 @@ export function useEllipse(
       // On n'attend que si le temps COULE : à l'arrêt il n'y a pas de semaine
       // suivante à retenir, et retenir une horloge arrêtée n'a pas de sens.
       attenteMs: auRythmeNaturel && enMarche ? dureeBloquanteMs(plan) : 0,
+      // Remettre l'horloge à zéro suffit : la boucle d'images lit `debut` à
+      // chaque frame, et le plan n'a pas bougé.
+      rejouer: () => {
+        debut.current = performance.now();
+      },
+      rejouable: true,
       ...(feu
         ? {
             cadrerSur: {

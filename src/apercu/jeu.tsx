@@ -38,7 +38,7 @@ import {
   sujetsDuJournal,
 } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
-import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
+import { type JournalDeSemaine, planAuRythmeNaturel } from "../render/temps/ellipse";
 import { SANS_VENT } from "../render/temps/feu";
 import {
   AUCUNE_TORCHE,
@@ -222,24 +222,19 @@ function donneesDe(scene: Scene): DonneesSol {
 }
 
 /**
- * Durée d'écran d'une ellipse, ms.
- *
- * Deux secondes et demie, et c'est un BUDGET : c'est tout l'intérêt du §5.11 —
- * le joueur qui saute une semaine et celui qui saute dix ans attendent le même
- * temps, l'un voyant quatre actes et l'autre quarante.
- */
-const DUREE_ELLIPSE_MS = 2500;
-
-/**
  * Où en est la lecture : l'horloge, ou l'avancement figé par `?ellipse=`.
  *
  * Partagée par les deux rappels — la déformation des arbres et le voile des
  * gestes — parce que deux horloges qui devraient être la même finissent par ne
  * plus l'être. La boucle tourne un peu plus longtemps que l'ellipse pour qu'on
  * voie l'état d'arrivée avant qu'elle ne reprenne.
+ *
+ * **La boucle se règle sur la durée du PLAN** depuis #163 : les actes prennent
+ * maintenant leur durée propre, et une boucle calée sur un budget fixe aurait
+ * rejoué le début avant la fin, ou attendu dans le vide.
  */
 function ouLire(maintenantMs: number, fige: number | undefined, dureeMs: number): number {
-  return fige === undefined ? maintenantMs % (DUREE_ELLIPSE_MS * 1.6) : fige * dureeMs;
+  return fige === undefined ? maintenantMs % Math.max(1, dureeMs * 1.6) : fige * dureeMs;
 }
 
 function Demo(): React.ReactElement {
@@ -335,7 +330,11 @@ function Demo(): React.ReactElement {
             }
           : {}),
       };
-      const plan = planDEllipse([journalReel], DUREE_ELLIPSE_MS);
+      // **Au rythme naturel, comme le jeu à l'arrêt (#163).** Le banc jugeait
+      // des actes comprimés dans un budget de 2 500 ms partagé, alors que le
+      // jeu, à la vitesse où l'on regarde, leur donne maintenant leur durée
+      // propre. Un banc qui ne joue pas ce que le jeu joue ne juge rien.
+      const plan = planAuRythmeNaturel([journalReel]);
       const ou = new Map((scene?.trees ?? []).map((t) => [t.id, { x: t.x, y: t.y }]));
       // `?calque=0` éteint tout, pour comparer ; `?calque=marqueurs` garde les
       // repères sans estomper, ce qui isole ce que chaque mécanisme apporte.
@@ -565,7 +564,7 @@ function Demo(): React.ReactElement {
       );
       partis = new Set(retire.filter((r) => r.hauteurApresM <= 0).map((r) => r.id));
     }
-    const plan = planDEllipse([journal], DUREE_ELLIPSE_MS);
+    const plan = planAuRythmeNaturel([journal]);
     // **Le banc doit tenir la prémisse du moteur, et il ne la tenait pas
     // (#163).** Une chandelle qui s'abat quitte `state.trees` dans le tick même
     // où sa chute est rapportée — mesuré, 423 fois sur 423. Le banc, lui,

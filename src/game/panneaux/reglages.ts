@@ -18,6 +18,14 @@ export type Mode =
   | "brf"
   | "cloturer";
 
+/**
+ * Comment l'éclaircie choisit ses tiges — les trois critères du moteur.
+ *
+ * `espece` existait dans `GameAction` depuis longtemps et n'était exposé nulle
+ * part : une capacité entière du moteur était inatteignable (#156).
+ */
+export type CritereEclaircie = "parLeBas" | "parLeHaut" | "espece";
+
 export interface ReglagesDeGeste {
   mode: Mode;
   setMode: (m: Mode) => void;
@@ -31,8 +39,17 @@ export interface ReglagesDeGeste {
   setSemainesSaison: (v: number) => void;
   densiteCible: number;
   setDensiteCible: (v: number) => void;
-  critereEclaircie: "parLeBas" | "parLeHaut";
-  setCritereEclaircie: (v: "parLeBas" | "parLeHaut") => void;
+  critereEclaircie: CritereEclaircie;
+  setCritereEclaircie: (v: CritereEclaircie) => void;
+  /**
+   * L'essence que l'éclaircie par espèce vise (#156).
+   *
+   * Distincte de `especeId`, qui est ce qu'on PLANTE : viser le roncier pour
+   * le nettoyer et choisir un merisier pour le remplacer sont deux décisions,
+   * et les confondre ferait changer l'une en touchant l'autre.
+   */
+  especeEclaircie: string;
+  setEspeceEclaircie: (id: string) => void;
   mainOuvertePanneau: boolean;
   setMainOuvertePanneau: (v: boolean) => void;
   /** Le choix des essences est-il réduit à ce qui tient sur ce terrain ? */
@@ -47,7 +64,8 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
   const [rayonChaulage, setRayonChaulage] = useState(8);
   const [semainesSaison, setSemainesSaison] = useState(4);
   const [densiteCible, setDensiteCible] = useState(400);
-  const [critereEclaircie, setCritereEclaircie] = useState<"parLeBas" | "parLeHaut">("parLeBas");
+  const [critereEclaircie, setCritereEclaircie] = useState<CritereEclaircie>("parLeBas");
+  const [especeEclaircie, setEspeceEclaircie] = useState("");
   const [mainOuvertePanneau, setMainOuvertePanneau] = useState(false);
   // Vrai au départ : sur une lande sèche, la moitié de la liste n'a aucun sens,
   // et c'est le filtre qui fait le gain de cette interface.
@@ -67,6 +85,8 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
     setDensiteCible,
     critereEclaircie,
     setCritereEclaircie,
+    especeEclaircie,
+    setEspeceEclaircie,
     mainOuvertePanneau,
     setMainOuvertePanneau,
     seulementTenables,

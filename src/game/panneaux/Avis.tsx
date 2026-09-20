@@ -36,12 +36,48 @@ const NOM_DU_GESTE: Partial<Record<GameAction["type"], string>> = {
   ramasserBoisMort: "Ramasser le bois mort",
 };
 
-export function Avis({ game, vivants }: { game: GameApi; vivants: readonly SnapshotTree[] }) {
+export function Avis({
+  game,
+  vivants,
+  rejouer,
+}: {
+  game: GameApi;
+  vivants: readonly SnapshotTree[];
+  /**
+   * Rejouer l'ellipse de la semaine, s'il y a quelque chose à revoir (#157).
+   *
+   * Absent quand la semaine n'a rien à montrer : un bouton « revoir » qui ne
+   * rejoue rien est pire qu'un bouton absent.
+   */
+  rejouer?: (() => void) | undefined;
+}) {
   const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
 
   return (
     <>
-      {game.notice && <div style={{ ...panel, background: "#f3e6c4" }}>⏸ {game.notice}</div>}
+      {game.notice && (
+        <div style={{ ...panel, background: "#f3e6c4" }}>
+          ⏸ {game.notice}
+          {/*
+            **Le bouton qui répond à « on ne voit pas l'incendie » (#157).**
+            L'ellipse se joue une fois, à l'instant précis où ce bandeau
+            apparaît — donc au moment où le joueur lit le bandeau et pas la
+            parcelle. Allonger l'acte ne suffisait pas : le défaut n'est pas sa
+            durée, c'est qu'il n'a lieu qu'une fois. Il est POSÉ SUR L'AVIS et
+            non dans le journal, parce que c'est là que le regard est.
+          */}
+          {rejouer && (
+            <button
+              type="button"
+              style={{ ...btn(false), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
+              onClick={rejouer}
+              title="Rejouer l'animation de la semaine"
+            >
+              ▶ revoir
+            </button>
+          )}
+        </div>
+      )}
       {game.refusals.length > 0 && (
         <div style={{ ...panel, color: "#8a4b2d" }}>
           {game.refusals.slice(0, 3).map((r) => (
