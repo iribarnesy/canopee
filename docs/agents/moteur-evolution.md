@@ -61,7 +61,48 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les deux seuils du pH, #161)
+## Ce que le dernier lot a appris (la phénologie entre deux semaines, #164)
+
+Un hêtre passait de nu à à-moitié-feuillu en un seul pas de temps, et le rendu
+ne pouvait pas l'adoucir sans refaire la phénologie chez lui. Aucun critère de
+`realisme.md` ne bouge : comme #139 et #153, ce lot ajoute une capacité de
+LECTURE, pas une affirmation sur le monde.
+
+**Reproduire la prémisse avant de construire.** L'issue annonçait 44,0 % et
+51,3 % de part foliaire gagnés en une semaine. Vérifié en cinq minutes : les
+deux chiffres tombent au dixième. Ça paraît une politesse ; c'est ce qui permet
+d'affirmer ensuite que le lot corrige quelque chose, plutôt que de l'espérer.
+
+**L'issue laissait le choix entre deux formes, et c'est une mesure qui a
+tranché.** Livrer la semaine précédente et laisser le rendu interpoler aurait
+coûté **0,00 point d'erreur à l'automne** — la chute est une rampe, la droite
+est exacte — mais **11,27 points au printemps**, où le débourrement a des
+coudes. Soit un cinquième du plus gros saut, précisément à la saison qu'on
+voulait soigner. **Et mesurer la seule semaine du plus gros saut donnait 0,00 :
+la bonne réponse était dans les semaines ordinaires, pas dans la spectaculaire.**
+
+**Exposer une capacité que le consommateur ne peut pas alimenter, ce n'est pas
+la livrer.** Avant d'écrire la signature, j'ai regardé ce que le jeu tient
+vraiment : il reçoit le contexte phénologique, mais ni la latitude ni la semaine
+de l'année. Une fonction à six paramètres l'aurait laissé sans deux d'entre eux.
+Le contexte porte donc désormais ce dont il est FAIT, et la fonction ne prend
+plus que deux contextes et un instant — sans une ligne de protocole à changer.
+**La leçon de `causeLente`, appliquée à temps cette fois.**
+
+**Recalculer plutôt qu'interpoler, dès que l'entrée est dérivable.** Interpoler
+la durée du jour coûte jusqu'à 4,37 minutes, soit 6 % de la largeur de la porte
+photopériodique — assez pour décaler un débourrement. La recalculer depuis le
+jour de l'année ne coûte rien et ne se trompe pas. Seuls les degrés-jours sont
+interpolés, et ce n'est pas une approximation : le tick les accumule par un
+apport hebdomadaire unique tiré d'une seule température, donc l'incrément
+journalier est constant et la droite EST la courbe.
+
+**« Le même modèle lu plus fin » est une propriété qui se vérifie.** Aux deux
+bouts, l'instant fractionnaire rend EXACTEMENT les semaines qu'il relie — zéro
+d'écart, pas « proche ». C'est ce qui empêche le rendu et le tick de peindre
+deux printemps différents, et c'est le premier essai du fichier.
+
+## Ce qu'un lot plus ancien a appris (les deux seuils du pH, #161)
 
 L'eau distingue depuis toujours un CONFORT, qui ralentit la croissance, et un
 STRESS, qui tue. Le pH n'avait qu'un facteur pour les deux, si bien qu'une
@@ -848,6 +889,12 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #164 laisse au rendu.** `contextePhenologiqueFractionnaire(debut, fin, t)`
+rend le calendrier à n'importe quel instant entre deux semaines, et le `pheno`
+de l'instantané porte maintenant sa latitude et sa semaine, donc rien à changer
+au protocole. Découpé en huit, le plus gros saut de feuillage tombe de 51,3 % à
+6,4 %.
 
 **#156 — éclaircir par essence est inatteignable.** Ouvert au passage : le
 moteur accepte `critere: "espece"` depuis toujours et prélève toutes les tiges

@@ -329,6 +329,16 @@ export function senescenceEnCours(dureeJourH: number, automne: boolean): boolean
  * phénologie se raffine, le contexte grossit et les deux appelants suivent.
  */
 export interface ContextePhenologique {
+  /**
+   * De quoi ce contexte est FAIT : la latitude et la semaine dont il est issu
+   * (#164). Sans elles, on ne peut pas en construire un à un instant
+   * intermédiaire sans interpoler la durée du jour — ce qui coûte jusqu'à
+   * 4,37 minutes d'erreur, soit 6 % de la largeur de la porte photopériodique.
+   * Les porter permet de la RECALCULER exactement.
+   */
+  latitudeDeg: number;
+  /** semaine DANS L'ANNÉE dont ce contexte est issu, fractionnaire entre deux semaines */
+  semaineAnnee: number;
   /** cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier (GameState) */
   ddYearBase5: number;
   /** durée du jour au milieu de la semaine, heures */
@@ -357,11 +367,72 @@ export function contextePhenologique(
 ): ContextePhenologique {
   const automne = semaineAnnee >= SOLSTICE_ETE_SEMAINE;
   return {
+    latitudeDeg,
+    semaineAnnee,
     ddYearBase5,
     jourH: dureeDuJourH(latitudeDeg, midWeekDayOfYear(semaineAnnee)),
     automne,
     semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
     semainesDeFroid,
+  };
+}
+
+/**
+ * Le contexte phénologique ENTRE deux semaines, à l'instant `t` ∈ [0,1] (#164).
+ *
+ * POURQUOI LE MOTEUR ET PAS LE RENDU. Un hêtre passe de nu à à-moitié-feuillu
+ * en un seul pas de temps — mesuré, 51,3 % de part foliaire gagnés en une
+ * semaine, 44,0 % pour le bouleau. Le rendu ne peut pas adoucir ça sans
+ * reconstituer la phénologie chez lui, ce que la règle du dépôt interdit : les
+ * degrés-jours, la porte photopériodique et le besoin de froid vivent ici et
+ * doivent y rester.
+ *
+ * CE N'EST PAS UNE INVENTION, C'EST LE MÊME MODÈLE LU PLUS FIN. Le tick
+ * accumule `ddYearBase5 += max(0, tMean − 5) × 7` : un seul apport hebdomadaire
+ * tiré d'une température moyenne unique, donc un incrément journalier CONSTANT
+ * dans la semaine. Interpoler linéairement les degrés-jours rend exactement ce
+ * que le modèle dit — `ddDebut + (ddFin − ddDebut) t` et
+ * `ddDebut + max(0, tMean − 5) × 7t` sont la même expression. Tout le reste est
+ * RECALCULÉ à l'instant fractionnaire plutôt qu'interpolé : la durée du jour
+ * depuis le jour de l'année, la porte d'automne et le compteur de chute depuis
+ * la semaine fractionnaire.
+ *
+ * POURQUOI PAS L'AUTRE FORME. L'issue proposait aussi de livrer la part
+ * foliaire de la semaine précédente et de laisser le rendu interpoler. Mesuré
+ * sur deux ans et deux essences, l'écart entre cette droite et la vraie courbe
+ * vaut 0,00 point à l'automne — la chute est une rampe, la droite est exacte —
+ * mais jusqu'à **11,27 points au printemps**, parce que le débourrement a des
+ * coudes : le forçage démarre, la porte prend le relais, la saturation arrive.
+ * C'est-à-dire un cinquième du plus gros saut, et précisément à la saison que
+ * l'issue veut soigner.
+ *
+ * LA BASCULE DE FIN D'ANNÉE. Le cumul se remet à zéro en semaine 0, si bien
+ * qu'entre la 51 et la 0 une interpolation descendrait au lieu de monter. On
+ * tient alors la valeur de départ : aucun seuil phénologique ne se franchit
+ * dans la première semaine de janvier, où le cumul vaut presque rien.
+ */
+export function contextePhenologiqueFractionnaire(
+  debut: ContextePhenologique,
+  fin: ContextePhenologique,
+  t: number,
+): ContextePhenologique {
+  const u = Math.min(1, Math.max(0, t));
+  const semaineAnnee = debut.semaineAnnee + u;
+  const automne = semaineAnnee >= SOLSTICE_ETE_SEMAINE;
+  return {
+    latitudeDeg: debut.latitudeDeg,
+    semaineAnnee,
+    // La remise à zéro annuelle n'est pas une décrue : on ne la traverse pas.
+    ddYearBase5:
+      fin.ddYearBase5 >= debut.ddYearBase5
+        ? debut.ddYearBase5 + (fin.ddYearBase5 - debut.ddYearBase5) * u
+        : debut.ddYearBase5,
+    jourH: dureeDuJourH(debut.latitudeDeg, midWeekDayOfYear(debut.semaineAnnee) + 7 * u),
+    automne,
+    semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
+    // Compteur de semaines ENTIÈRES : il ne bouge pas dans la semaine, et il ne
+    // sert qu'à gonfler le besoin de froid, pas à doser un feuillage.
+    semainesDeFroid: debut.semainesDeFroid,
   };
 }
 
