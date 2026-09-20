@@ -1362,6 +1362,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               <PanneauSelection
                 game={game}
                 vivants={vivants}
+                tous={snapshot.trees}
                 selectedTrees={selectedTrees}
                 setSelectedIds={setSelectedIds}
               />
