@@ -61,7 +61,105 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la brousse n'est pas un arbre, #154)
+## Ce que le dernier lot a appris (la phénologie entre deux semaines, #164)
+
+Un hêtre passait de nu à à-moitié-feuillu en un seul pas de temps, et le rendu
+ne pouvait pas l'adoucir sans refaire la phénologie chez lui. Aucun critère de
+`realisme.md` ne bouge : comme #139 et #153, ce lot ajoute une capacité de
+LECTURE, pas une affirmation sur le monde.
+
+**Reproduire la prémisse avant de construire.** L'issue annonçait 44,0 % et
+51,3 % de part foliaire gagnés en une semaine. Vérifié en cinq minutes : les
+deux chiffres tombent au dixième. Ça paraît une politesse ; c'est ce qui permet
+d'affirmer ensuite que le lot corrige quelque chose, plutôt que de l'espérer.
+
+**L'issue laissait le choix entre deux formes, et c'est une mesure qui a
+tranché.** Livrer la semaine précédente et laisser le rendu interpoler aurait
+coûté **0,00 point d'erreur à l'automne** — la chute est une rampe, la droite
+est exacte — mais **11,27 points au printemps**, où le débourrement a des
+coudes. Soit un cinquième du plus gros saut, précisément à la saison qu'on
+voulait soigner. **Et mesurer la seule semaine du plus gros saut donnait 0,00 :
+la bonne réponse était dans les semaines ordinaires, pas dans la spectaculaire.**
+
+**Exposer une capacité que le consommateur ne peut pas alimenter, ce n'est pas
+la livrer.** Avant d'écrire la signature, j'ai regardé ce que le jeu tient
+vraiment : il reçoit le contexte phénologique, mais ni la latitude ni la semaine
+de l'année. Une fonction à six paramètres l'aurait laissé sans deux d'entre eux.
+Le contexte porte donc désormais ce dont il est FAIT, et la fonction ne prend
+plus que deux contextes et un instant — sans une ligne de protocole à changer.
+**La leçon de `causeLente`, appliquée à temps cette fois.**
+
+**Recalculer plutôt qu'interpoler, dès que l'entrée est dérivable.** Interpoler
+la durée du jour coûte jusqu'à 4,37 minutes, soit 6 % de la largeur de la porte
+photopériodique — assez pour décaler un débourrement. La recalculer depuis le
+jour de l'année ne coûte rien et ne se trompe pas. Seuls les degrés-jours sont
+interpolés, et ce n'est pas une approximation : le tick les accumule par un
+apport hebdomadaire unique tiré d'une seule température, donc l'incrément
+journalier est constant et la droite EST la courbe.
+
+**« Le même modèle lu plus fin » est une propriété qui se vérifie.** Aux deux
+bouts, l'instant fractionnaire rend EXACTEMENT les semaines qu'il relie — zéro
+d'écart, pas « proche ». C'est ce qui empêche le rendu et le tick de peindre
+deux printemps différents, et c'est le premier essai du fichier.
+
+## Ce qu'un lot plus ancien a appris (les deux seuils du pH, #161)
+
+L'eau distingue depuis toujours un CONFORT, qui ralentit la croissance, et un
+STRESS, qui tue. Le pH n'avait qu'un facteur pour les deux, si bien qu'une
+espèce au bord de son amplitude ne pouvait pas pousser mal ET tenir. Aucun point
+de réalisme n'est gagné : C7 était déjà ✅, il est réparé.
+
+**Le défaut était pire que l'issue ne le disait, et c'est le CONTRÔLE qui l'a
+montré.** L'issue parlait de mort « à la borne déclarée ». En retirant le
+mécanisme pour vérifier que l'essai tombe, j'ai vu mourir aussi les PINS — à
+pH 4,2, c'est-à-dire confortablement à l'intérieur de leur gamme 4–7,5, où leur
+facteur vaut 0,336 quand le seuil de stress est à 0,45. L'ancien moteur tuait
+donc partout dans la rampe basse, jusqu'à 0,7 pH DANS l'amplitude. **Un contrôle
+ne sert pas qu'à valider : il mesure l'ampleur de ce qu'on répare, et elle est
+parfois plus grande que l'énoncé.**
+
+**Un banc qui confond deux facteurs ne prouve rien.** Le cas évident était le
+hêtre sur la lande sableuse, dont le pH (4,50) est pile sa borne. Avant le lot
+il y mourait de `solHorsGamme` — parfait. Après, il y mourait toujours, de
+`secheresse` : une lande SÈCHE tue un hêtre par l'eau avant de le tuer par
+l'acidité, et le banc ne disait donc plus rien de mon mécanisme. Il a fallu
+fabriquer une station qui ne diffère QUE par le pH — le limon riche, même
+texture, même nappe, même azote, pH abaissé. **Quand un banc doit prouver
+l'effet d'un facteur, il faut une station qui ne varie que par lui ; une station
+réaliste en fait varier plusieurs à la fois.**
+
+**Livrer l'énoncé, pas son approximation.** Mon premier jet séparait bien
+croissance et survie, et passait tous les contrôles que j'avais prévus. Mesuré
+par acquit de conscience à cinquante ans : le hêtre était vivant à 19 sur 20…
+et toujours à ses 0,30 m de plantation, sans avoir grandi d'un millimètre ni
+risquer de mourir. Des nains immortels. L'issue dit « pousse mal ET tient », pas
+« ne pousse pas et tient » : il manquait une queue de croissance dans la marge.
+**Relire ce que l'issue demande APRÈS avoir mesuré, pas seulement avant : un
+mécanisme peut passer tous ses essais et rater sa phrase.**
+
+**Une garantie structurelle vaut mieux qu'une mesure rassurante.** La crainte du
+lot était de déplacer les tables de production, seul ancrage terrain du dépôt.
+Plutôt que de mesurer et d'espérer, la conception la rend impossible : la queue
+ne vit qu'HORS de l'amplitude déclarée, et aucune espèce n'est calée hors de la
+sienne. Un essai le pose pour les 26 espèces sur toute leur gamme — `phFactor`
+rend exactement l'ancienne valeur. La mesure a confirmé (16,31 / 16,56 / 16,77 /
+17,49, identiques au bit près), mais elle n'était plus le garant. **Quand on
+peut construire l'invariance au lieu de la constater, la construire.**
+
+**Et une assertion qui testait la platitude en croyant tester la continuité.**
+J'exigeais moins de 0,01 d'écart entre `min − 0,01` et `min + 0,01`, alors qu'une
+rampe de pente 1/0,7 bouge de 0,014 sur cet intervalle rien qu'en étant continue.
+Le seul essai qui tombait était le mien. La bonne formulation est celle qui
+distingue un saut d'une pente : **un saut ne s'efface pas quand ε tend vers
+zéro.** Un coude reste légitime ; une marche, non.
+
+**Enfin, une imprudence de méthode à ne pas refaire** : j'ai lancé en tâche de
+fond un contrôle qui MUTILE le moteur pendant que j'éditais les mêmes fichiers.
+Pendant plusieurs minutes, l'arbre de travail portait deux amputations
+volontaires, et un commit à cet instant les aurait figées. Un contrôle
+destructeur tourne au premier plan, ou sur une copie.
+
+## Ce qu'un lot plus ancien a appris (la brousse n'est pas un arbre, #154)
 
 Né d'une question de partie : « ça bloque quand on veut planter à moins d'un
 mètre d'un autre arbre — est-ce que ça fait ça même à côté d'une ronce ? ».
@@ -791,6 +889,12 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #164 laisse au rendu.** `contextePhenologiqueFractionnaire(debut, fin, t)`
+rend le calendrier à n'importe quel instant entre deux semaines, et le `pheno`
+de l'instantané porte maintenant sa latitude et sa semaine, donc rien à changer
+au protocole. Découpé en huit, le plus gros saut de feuillage tombe de 51,3 % à
+6,4 %.
 
 **#156 — éclaircir par essence est inatteignable.** Ouvert au passage : le
 moteur accepte `critere: "espece"` depuis toujours et prélève toutes les tiges
