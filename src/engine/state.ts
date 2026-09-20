@@ -6,7 +6,12 @@
 
 import type { EconomyState } from "./actions";
 import { createEconomy } from "./actions";
-import { CALCIUM_NEUTRE_MG_G, capaciteEchangeEqM2, saturationDepuisPh } from "./bases";
+import {
+  CALCIUM_NEUTRE_MG_G,
+  capaciteEchangeEqM2,
+  capaciteEchangeProfondeEqM2,
+  saturationDepuisPh,
+} from "./bases";
 import type { CarbonState } from "./carbon";
 import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
 import type { EauDeSurface } from "./eau_surface";
@@ -252,6 +257,18 @@ export interface SoilState {
    */
   basesEq: number[];
   /**
+   * Les bases échangeables du SOUS-SOL, eq/m² : tout ce qui est sous l'horizon
+   * de surface, en un seul compartiment (`bases.ts`, critère C15).
+   *
+   * C'est le réservoir dans lequel la pompe puise. Il ne se remplit pas —
+   * l'altération, qui devrait l'alimenter, crédite encore la surface — et il ne
+   * se lessive pas. Il ne fait que se vider, à la vitesse à laquelle le
+   * peuplement remonte du calcium vers ses feuilles. Aucun arbre ne le LIT
+   * encore : le moteur sait dire que le fond s'appauvrit, pas encore ce que
+   * l'appauvrissement fait aux racines qui y poussent.
+   */
+  basesProfondEq: number[];
+  /**
    * Teneur en calcium de la litière PRÉSENTE sur la cellule, mg/g de matière
    * sèche : moyenne pondérée par les masses déposées, tenue comme l'est déjà la
    * vitesse de décomposition (`litterK`). C'est elle qui décide si ce qui se
@@ -430,8 +447,17 @@ export interface TickFluxes {
   basesLessiveEqHa: number;
   basesLitiereEqHa: number;
   basesAcideEqHa: number;
+  /**
+   * LA POMPE : bases retirées au sous-sol par les racines cette semaine, eq/ha
+   * (bases.ts, critère C15). Elle n'entre pas dans le budget de SURFACE ci-
+   * dessus — c'est le budget du pool profond à elle seule, et la variation de
+   * `basesProfondEq` doit valoir exactement son opposé.
+   */
+  basesPreleveEqHa: number;
   /** taux de saturation moyen du complexe ∈ [0,1] — le pH en est la lecture */
   saturationMoyenne: number;
+  /** le même taux, pour le sous-sol : c'est lui que la pompe fait baisser */
+  saturationProfondeMoyenne: number;
   /** eau arrivée de l'amont par ruissellement, mm */
   ruissellementEntrantMm: number;
   /** eau partie de la parcelle par ruissellement, mm */
@@ -514,7 +540,12 @@ export function createGameState(
   // Le complexe d'échange de l'horizon de surface, et ce que le pH de la
   // station implique qu'il porte de bases (bases.ts).
   const cecDepart = station.profil[0] ? capaciteEchangeEqM2(station.profil[0]) : 0;
-  const basesDepart = cecDepart * saturationDepuisPh(station.phInitial);
+  const saturationDepart = saturationDepuisPh(station.phInitial);
+  const basesDepart = cecDepart * saturationDepart;
+  // Le sous-sol démarre au MÊME taux de saturation que la surface : la station
+  // ne déclare qu'un pH, et lui inventer un gradient de départ serait affirmer
+  // quelque chose qu'elle ne dit pas.
+  const basesProfondDepart = capaciteEchangeProfondeEqM2(station.profil) * saturationDepart;
   return {
     week: 0,
     station,
@@ -545,6 +576,7 @@ export function createGameState(
       // l'inverse : les stations décrivent un pH, pas un taux de saturation, et
       // une partie doit démarrer exactement au pH annoncé (bases.ts).
       basesEq: new Array(n).fill(basesDepart),
+      basesProfondEq: new Array(n).fill(basesProfondDepart),
       litterCaMgG: new Array(n).fill(CALCIUM_NEUTRE_MG_G),
       ph: new Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),

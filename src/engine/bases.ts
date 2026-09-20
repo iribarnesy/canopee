@@ -24,20 +24,36 @@
  *
  * ## Ce que ce fichier ne fait pas, et il faut le dire
  *
- * **La pompe à bases n'est pas tracée en profondeur.** La littérature est plus
- * retorse que l'intuition « les résineux acidifient » : Foltran et al. mesurent
- * après 63 et 82 ans de conversion que le HÊTRE acidifie le sol minéral profond
- * PLUS que l'épicéa (−0,5 unité en vingt ans), précisément parce qu'il remonte
- * les bases et les dépose en surface. Le moteur ne tient qu'un pool de SURFACE
- * — comme pour l'azote, le phosphore et le potassium —, donc il dit la première
- * moitié de cette histoire et pas la seconde. Écrit comme tel au référentiel.
+ * **L'ALTÉRATION n'est pas stratifiée, et la pompe l'est.** Depuis l'issue #170
+ * le prélèvement racinaire débite un pool de sous-sol (`basesProfondEq`) : un
+ * arbre qui met du calcium dans sa litière l'a pris quelque part, et il le
+ * prend d'autant plus bas que ses racines descendent. L'altération, elle,
+ * continue de sommer sur TOUT le profil et de créditer la seule SURFACE.
  *
- * **La boucle interne prélèvement ↔ litière n'est pas suivie.** Les bases qui
- * montent dans les feuilles et redescendent à l'automne font un flux plus gros
- * que l'altération, mais c'est une boucle : ce qui compte pour le complexe est
- * le BUDGET (altération + dépôts − lessivage) et la charge acide nette. Suivre
- * la boucle demanderait un pool de bases par arbre, pour un résultat qui
- * s'annule.
+ * Les deux affirmations ne sont pas cohérentes entre elles, et il faut dire à
+ * quel point. Mesuré station par station, 63 à 79 % de l'altération vient de
+ * sous l'horizon de surface : 188 eq/ha/an sur le limon riche, sur 289. Sur
+ * cinquante ans cela fait 9 400 eq/ha que le fond devrait recevoir et qui vont
+ * en surface — c'est-à-dire **le même ordre de grandeur que la pompe
+ * elle-même** (8 100 eq/ha sous hêtraie sur la même station, 11 400 sous
+ * châtaigneraie sur limon acide contre 8 700 d'altération profonde).
+ *
+ * Donc : `basesProfondEq` COMPTE CE QU'UN PEUPLEMENT A POMPÉ, ce n'est pas le
+ * budget du sous-sol. Le corriger n'était pas une question de soin mais de
+ * périmètre — stratifier l'altération retire aux deux tiers des apports
+ * minéraux de la surface, ce qui défait la calibration de `AMPLIFICATION_CHARGE`
+ * et tous les chiffres de dérive du critère C10. C'est le lot qui transformera
+ * ce compteur en budget *(à faire ; d'ici là, lire le pool profond comme une
+ * pompe, pas comme un stock)*.
+ *
+ * **La boucle interne prélèvement ↔ litière n'est pas suivie EN SURFACE.** Les
+ * bases qui montent dans les feuilles et redescendent à l'automne font un flux
+ * plus gros que l'altération, mais tant qu'elles partent et reviennent au même
+ * horizon, c'est une boucle : ce qui compte pour le complexe est le BUDGET
+ * (altération + dépôts − lessivage) et la charge acide nette. La suivre
+ * demanderait un pool de bases par arbre, pour un résultat qui s'annule. Ce
+ * n'est que la part PROFONDE qui est un transport, et c'est elle, et elle
+ * seule, que `prelevementProfondEq` débite.
  */
 
 import type { Horizon } from "./soil";
@@ -111,6 +127,29 @@ export function capaciteEchangeEqM2(h: Horizon): number {
   const cmolParKg = 50 * h.argile + 2 * h.moPct;
   const masseKgM2 = h.epaisseurCm * 10 * densiteApparente(h) * (1 - h.pierrosite);
   return (cmolParKg * masseKgM2) / 100;
+}
+
+/**
+ * Le même complexe, mais pour TOUT CE QUI EST SOUS L'HORIZON DE SURFACE, eq/m².
+ *
+ * Deux pools et non N horizons : c'est le plus petit découpage qui exprime la
+ * pompe à bases, et il faut le dire grossier plutôt que le maquiller. Un profil
+ * réel n'a pas deux compartiments, il a un gradient ; ce que le moteur sait
+ * dire, c'est « la surface s'enrichit, le fond s'appauvrit », et pas à quelle
+ * profondeur exactement.
+ *
+ * L'ordre de grandeur, mesuré sur le limon riche : le sous-sol (65 cm) porte
+ * 779 000 eq/ha de capacité contre 520 000 pour l'horizon de surface (35 cm).
+ * Le fond est le gros réservoir, et c'est bien pour ça qu'un arbre peut y
+ * puiser cinquante ans sans le vider.
+ */
+export function capaciteEchangeProfondeEqM2(profil: readonly Horizon[]): number {
+  let eq = 0;
+  for (let h = 1; h < profil.length; h++) {
+    const horizon = profil[h];
+    if (horizon) eq += capaciteEchangeEqM2(horizon);
+  }
+  return eq;
 }
 
 /**
@@ -270,9 +309,62 @@ export const CHARGE_ACIDE_PAR_G_C = CALCIUM_NEUTRE_MG_G / 1000 / PART_C_LITIERE 
  * rouge. « Résineux » n'est pas une grandeur chimique.
  */
 export function effetLitiereEq(carboneDecomposeGM2: number, calciumMgG: number): number {
-  const basesRendues = (carboneDecomposeGM2 / PART_C_LITIERE) * (calciumMgG / 1000);
-  const net = basesRendues / G_CALCIUM_PAR_EQ - carboneDecomposeGM2 * CHARGE_ACIDE_PAR_G_C;
+  const net =
+    basesLitiereEq(carboneDecomposeGM2, calciumMgG) - carboneDecomposeGM2 * CHARGE_ACIDE_PAR_G_C;
   return net * AMPLIFICATION_CHARGE;
+}
+
+/**
+ * Les bases que PORTE une litière, eq/m² : son calcium, converti en charges.
+ *
+ * C'est le terme positif de `effetLitiereEq`, sorti pour être réutilisé — et
+ * ce n'est pas une commodité de programmeur. Ce calcium-là est compté DEUX
+ * FOIS dans le moteur, aux deux bouts du même voyage : rendu à la surface
+ * quand la feuille se décompose, et retiré du sous-sol quand l'arbre l'y a
+ * pris. Les deux doivent lire la même grandeur, sans quoi la pompe fabrique ou
+ * détruit du calcium selon le sens du vent.
+ */
+export function basesLitiereEq(carboneGM2: number, calciumMgG: number): number {
+  return ((carboneGM2 / PART_C_LITIERE) * (calciumMgG / 1000)) / G_CALCIUM_PAR_EQ;
+}
+
+/**
+ * LA POMPE À BASES : ce qu'un arbre retire au sous-sol, eq/m² (critère C15).
+ *
+ * Le calcium d'une litière n'arrive pas de nulle part — l'arbre est allé le
+ * chercher, et il l'a cherché là où sont ses racines. D'où la forme : les
+ * bases de la litière, multipliées par la part du système racinaire qui
+ * travaille SOUS l'horizon de surface.
+ *
+ * ## Ce qui est prélevé au fond, et ce qui ne l'est pas
+ *
+ * Ce que l'arbre prend dans l'horizon de SURFACE n'est pas débité, et c'est
+ * délibéré : il le rend au même endroit en perdant sa feuille, donc la boucle
+ * s'annule (cf. l'en-tête de ce fichier). Seule la part profonde est un
+ * TRANSPORT, et c'est celle-là qui appauvrit quelque chose.
+ *
+ * ## Pourquoi le débit n'est PAS amplifié
+ *
+ * La surface reçoit `(calcium − protons) × AMPLIFICATION_CHARGE`, un budget de
+ * PROTONS dont le calcium n'est qu'un terme. Ici on déplace du calcium, une
+ * masse : elle ne se multiplie pas par trois en descendant d'un horizon. Les
+ * deux nombres ne sont donc pas symétriques, et ils n'ont pas à l'être — ils
+ * ne disent pas la même chose. C'est aussi ce qui laisse la calibration de
+ * surface intacte : le lot n'ajoute rien au-dessus, il retranche en dessous.
+ *
+ * ## Ce qu'aucun nom d'espèce ne décide
+ *
+ * `calciumMgG` et la profondeur des racines sont deux traits de l'atlas, lus
+ * par individu. Le frêne (16 mg/g, 120 cm) est le pompeur de manuel, la
+ * callune (3,5 mg/g, 40 cm) son exact opposé — et ni l'un ni l'autre n'est
+ * écrit ici.
+ */
+export function prelevementProfondEq(
+  carboneLitiereGM2: number,
+  calciumMgG: number,
+  partRacinesProfondes: number,
+): number {
+  return basesLitiereEq(carboneLitiereGM2, calciumMgG) * partRacinesProfondes;
 }
 
 /**

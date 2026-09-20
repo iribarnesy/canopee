@@ -61,7 +61,53 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la phénologie entre deux semaines, #164)
+## Ce que le dernier lot a appris (la pompe à bases, #170)
+
+`effetLitiereEq` créditait la surface du calcium d'une feuille qui se
+décompose, sans que rien nulle part ne soit débité : le calcium arrivait de
+nulle part. Le moteur tient maintenant un pool de bases de sous-sol, que les
+racines vident. C15 passe de ❌ à 🟡.
+
+**Le témoin à mécanisme neutralisé peut être un état, pas un drapeau.** L'issue
+demandait « à prélèvement nul, trajectoires identiques au bit près ». Plutôt
+qu'un paramètre de test qui n'existerait que pour le test, le banc met le
+sous-sol à ZÉRO : il n'a plus rien à céder, le `Math.min` ramène tout
+prélèvement à zéro, et rien d'autre du tick ne change. Résultat : même pH à
+dix-sept chiffres, même hash d'état. Le témoin est dans le moteur, pas à côté.
+
+**Et la prémisse se vérifie DANS le témoin.** Un « rien n'a bougé » passe tout
+seul si le mécanisme n'a jamais tourné — c'est la faute que ce dépôt a commise
+six fois. Le banc exige donc d'abord que la branche normale ait pompé quelque
+chose, et seulement ensuite que la branche neutralisée soit identique.
+
+**Un argument de cadrage se mesure, comme le reste.** L'issue justifiait
+d'abord le périmètre additif par « la surface est inchangée, donc rien à
+recalibrer ». C'était vrai mais creux : l'altération, elle, somme sur tout le
+profil et crédite la surface, et 63 à 79 % de ce qu'elle libère vient d'en
+dessous. J'ai cru rattraper l'argument avec un second, chiffré de mémoire — la
+pompe pèserait un ordre de grandeur de plus que l'altération profonde. Mesuré
+après coup, c'est FAUX : 8 100 eq/ha pompés par une hêtraie en cinquante ans
+contre 9 400 d'altération profonde mal placée, châtaigneraie 11 400 contre
+8 700. **Deux justifications écrites avant la mesure, deux fausses.** Ce qui
+reste, et qui est vrai, est un énoncé de périmètre : stratifier l'altération
+retire les deux tiers des apports minéraux de la surface et défait la
+calibration de C10 — c'est un autre lot. Le pool profond est donc un COMPTEUR
+DE POMPE, pas un budget de sous-sol, et le référentiel le dit.
+
+**Ce qui sort d'un banc n'est pas toujours le contraste qu'on visait.** « Le
+frêne est le pompeur de manuel » : à masse de litière égale, oui, deux fois le
+hêtre. En partie, non — sa régénération de trouée lui laisse 25 tiges contre 46
+au hêtre, et il pompe trois fois moins. Le contraste qui tient à l'échelle du
+peuplement est un autre, et il est meilleur : le PIN descend deux fois plus bas
+que le hêtre et porte plus de tiges, et il pompe cinquante fois moins. La
+profondeur donne l'accès, la teneur donne la quantité.
+
+**Une grandeur exposée que personne ne lit reste une grandeur exposée.** Aucun
+arbre ne lit `basesProfondEq` : le moteur sait dire que le fond s'appauvrit,
+pas encore ce que l'appauvrissement fait aux racines qui y poussent. C'est
+écrit sur le champ lui-même, pour que le prochain lot n'ait pas à le deviner.
+
+## Ce qu'un lot plus ancien a appris (la phénologie entre deux semaines, #164)
 
 Un hêtre passait de nu à à-moitié-feuillu en un seul pas de temps, et le rendu
 ne pouvait pas l'adoucir sans refaire la phénologie chez lui. Aucun critère de
@@ -1004,14 +1050,18 @@ Et B6 reste 🟡 : ce que l'ombrage latéral produit est désormais juste, mais 
 poids 0,4 des codominants qui le dose est toujours posé à la main, et il gouverne
 aussi la succession.
 
-**Ce qui reste de #71 — la pompe à bases (C15, ❌).** Le pool de bases est de
-SURFACE, comme ceux de N, P et K. Le moteur dit donc qu'un frêne entretient son
-horizon de surface, et rien de ce qu'il prend en dessous — alors que c'est par
-là que le hêtre acidifie la profondeur plus que l'épicéa. Il y faudrait un pool
-par horizon, ce que le moteur ne fait pour aucun nutriment : le lot dépasse #71.
-Manque aussi une litière herbacée porteuse de calcium (la strate basse ne pèse
-pas sur le complexe) et l'ortie nitrophile, qui rendrait la bio-indication
-lisible.
+**Ce qui reste de #71 — l'altération n'est pas stratifiée (C15, 🟡).** La pompe
+à bases est écrite (#170) : les racines débitent un pool de sous-sol, et le
+contraste entre essences se lit sur deux traits de l'atlas. Mais ce pool n'a que
+ce terme-là. L'altération, qui devrait l'alimenter, somme encore sur tout le
+profil et crédite la seule surface — 9 400 eq/ha sur cinquante ans en limon
+riche, le même ordre de grandeur que la pompe. La stratifier retire les deux
+tiers des apports minéraux de la surface : il faudra recalibrer
+`AMPLIFICATION_CHARGE` et refaire tous les chiffres de dérive de C10, donc c'est
+un lot à part entière et pas un correctif. Personne ne LIT encore le pool
+profond non plus : ce serait le second morceau. Manque aussi une litière
+herbacée porteuse de calcium (la strate basse ne pèse pas sur le complexe) et
+l'ortie nitrophile, qui rendrait la bio-indication lisible.
 
 **Ce qui reste de #70 — le calendrier de floraison.** La strate a ses espèces,
 E9 et B8 sont tombés, mais la fiche herbacée s'arrête au calendrier FOLIAIRE.
