@@ -207,6 +207,7 @@ import {
 import { type StadeDeDeveloppement, stadeDe } from "./stades";
 import type { GameState, TickFluxes } from "./state";
 import { gridDims, weekOfYear } from "./state";
+import { tampon } from "./tampons";
 import {
   facteurCroissanceTassement,
   facteurInfiltration,
@@ -691,7 +692,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
   /** engorgement par (cellule, horizon) */
-  const waterlogging = new Array<number>(nCells * nH).fill(0);
+  const waterlogging = tampon("waterlogging", nCells * nH, 0);
   const availFactor = new Array<number>(nCells);
   const drainageMmArr = new Array<number>(nCells);
   let evapSum = 0;
@@ -820,19 +821,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let cellulesInondees = 0;
   for (const v of nappeCm) if (v <= 5) cellulesInondees++;
 
-  const debordementParCellule = new Array<number>(nCells).fill(0);
+  const debordementParCellule = tampon("debordementParCellule", nCells, 0);
   let ruissellementEntrantMm = 0;
   let ruissellementSortantMm = 0;
   // Érosion : la terre arrachée voyage avec sa charge de fertilité, et ce
   // qu'elle emporte hors de la parcelle est une perte sèche (erosion.ts).
   const masseSurfaceKgM2 = profil[0] ? masseHorizonKgM2(profil[0]) : 0;
   const epaisseurPerdueCm = state.soil.epaisseurPerdueCm.slice();
-  const chargeHumusCG = new Array<number>(nCells).fill(0);
-  const chargeLitiereCG = new Array<number>(nCells).fill(0);
-  const chargeNminG = new Array<number>(nCells).fill(0);
-  const chargeNlitG = new Array<number>(nCells).fill(0);
-  const chargePG = new Array<number>(nCells).fill(0);
-  const chargeKG = new Array<number>(nCells).fill(0);
+  const chargeHumusCG = tampon("chargeHumusCG", nCells, 0);
+  const chargeLitiereCG = tampon("chargeLitiereCG", nCells, 0);
+  const chargeNminG = tampon("chargeNminG", nCells, 0);
+  const chargeNlitG = tampon("chargeNlitG", nCells, 0);
+  const chargePG = tampon("chargePG", nCells, 0);
+  const chargeKG = tampon("chargeKG", nCells, 0);
   let erosionArracheeKg = 0;
   let erosionSortieKg = 0;
   let erosionSortieHumusCG = 0;
@@ -1091,7 +1092,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // L'eau qui court emporte la terre : ce qui suit descend avec elle, cellule
   // par cellule (erosion.ts). `sedimentEnTransit` est ce qu'une cellule passe
   // à sa voisine d'aval, en kg de terre par m².
-  const sedimentEnTransit = new Array<number>(nCells).fill(0);
+  const sedimentEnTransit = tampon("sedimentEnTransit", nCells, 0);
   // Ce que le bois en travers aura détourné, eau et terre : deux effets
   // distincts, deux compteurs distincts.
   let boisRetenueMm = 0;
@@ -1210,7 +1211,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       );
       if (piege > 0) {
         const f = piege / avantPiege;
-        const rendre = (stock: number[], charge: number[]): void => {
+        // `charge` est un tampon prêté (`tampons.ts`), donc une Float64Array :
+        // on ne type que ce qu'on utilise, l'indexation.
+        const rendre = (stock: number[], charge: { [i: number]: number }): void => {
           const rendu = (charge[i] ?? 0) * f;
           stock[i] = (stock[i] ?? 0) + rendu;
           charge[i] = (charge[i] ?? 0) - rendu;
@@ -1295,11 +1298,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // des racines de chaque arbre : un semis ne puise qu'en surface, un pivot
   // adulte va chercher l'eau profonde. C'est la complémentarité verticale.
   const nTrees = trees.length;
-  const waterDemandL = new Array<number>(nTrees).fill(0);
-  const pSatisfaction = new Array<number>(nTrees).fill(1);
-  const kSatisfaction = new Array<number>(nTrees).fill(1);
-  const nNeedG = new Array<number>(nTrees).fill(0);
-  const rootCells = new Array<number>(nTrees).fill(1);
+  const waterDemandL = tampon("waterDemandL", nTrees, 0);
+  const pSatisfaction = tampon("pSatisfaction", nTrees, 1);
+  const kSatisfaction = tampon("kSatisfaction", nTrees, 1);
+  const nNeedG = tampon("nNeedG", nTrees, 0);
+  const rootCells = tampon("rootCells", nTrees, 1);
   /**
    * Le gain mycorhizien de chaque arbre, RANGÉ, parce que les deux passes
    * doivent lire exactement le même nombre (#115). Le recalculer dans la
@@ -1307,12 +1310,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
    * service ne l'était pas, et l'écart sortait du sol pour n'arriver nulle
    * part — 11,6 % de l'azote prélevé sur limon pauvre.
    */
-  const gainMyco = new Array<number>(nTrees).fill(1);
-  const wlMean = new Array<number>(nTrees).fill(0);
-  const phMean = new Array<number>(nTrees).fill(7);
+  const gainMyco = tampon("gainMyco", nTrees, 1);
+  const wlMean = tampon("wlMean", nTrees, 0);
+  const phMean = tampon("phMean", nTrees, 7);
   const rootFractions = new Array<number[]>(nTrees);
-  const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
-  const cellNWanted = new Array<number>(nCells).fill(0);
+  const cellWaterDemand = tampon("cellWaterDemand", nCells * nH, 0);
+  const cellNWanted = tampon("cellNWanted", nCells, 0);
   /**
    * L'abri au vent, rangé une fois pour la semaine au lieu d'être recalculé en
    * balayant tout le peuplement pour chaque arbre (#99). Construit seulement
@@ -1410,9 +1413,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 3 bis. La strate herbacée demande sa part, en surface uniquement ──────
   // C'est la concurrence qui fait échouer les plantations non entretenues.
   const saisonHerbe = Math.min(1, Math.max(0, (weather.tMean - 4) / 8));
-  const herbeDemandeL = new Array<number>(nCells).fill(0);
+  const herbeDemandeL = tampon("herbeDemandeL", nCells, 0);
   /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
-  const herbeDemandeNG = new Array<number>(nCells).fill(0);
+  const herbeDemandeNG = tampon("herbeDemandeNG", nCells, 0);
   for (let i = 0; i < nCells; i++) {
     const couverture = herbeCouverture[i] ?? 0;
     if (couverture <= 0) continue;
@@ -1464,8 +1467,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     herbeDemandeL[i] = (herbeDemandeL[i] ?? 0) * facteur;
   }
 
-  const waterServedRatio = new Array<number>(nCells * nH).fill(0);
-  const nServedRatio = new Array<number>(nCells).fill(0);
+  const waterServedRatio = tampon("waterServedRatio", nCells * nH, 0);
+  const nServedRatio = tampon("nServedRatio", nCells, 0);
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   /**
@@ -1585,9 +1588,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     herbeSum += couverture;
   }
 
-  const waterSatisfaction = new Array<number>(nTrees).fill(1);
-  const nSatisfaction = new Array<number>(nTrees).fill(1);
-  const acquiredNG = new Array<number>(nTrees).fill(0);
+  const waterSatisfaction = tampon("waterSatisfaction", nTrees, 1);
+  const nSatisfaction = tampon("nSatisfaction", nTrees, 1);
+  const acquiredNG = tampon("acquiredNG", nTrees, 0);
   for (let t = 0; t < nTrees; t++) {
     const tree = trees[t];
     if (!tree?.alive) continue;
@@ -1671,7 +1674,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 5. Croissance de chaque arbre — loi du minimum, facteurs locaux ───────
   let nppKgC = 0; // production primaire nette de la semaine (bois + racines)
   let importedPlantsKgC = 0; // carbone des recrues, venu de la graine
-  const limitingFactors = new Array<number>(nTrees).fill(0);
+  const limitingFactors = tampon("limitingFactors", nTrees, 0);
   const franchissements: FranchissementDeStade[] = [];
   let nextTrees: TreeState[] = trees.map((tree, t) => {
     const result = tickTree(tree, {
@@ -2082,7 +2085,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Où il y a de la glandée : sous les couronnes des arbres mûrs dont la
     // graine est LOURDE — celle qui tombe et reste. Le trait suffit à le dire
     // (`dissemination` vaut `geai` ou `gravite`), aucune espèce n'est nommée.
-    const mastAuSol = new Array<number>(nCells).fill(0);
+    const mastAuSol = tampon("mastAuSol", nCells, 0);
     for (const tree of nextTrees) {
       if (!tree.alive) continue;
       const espece = getEspece(tree.especeId);
