@@ -31,18 +31,26 @@ import { partFoliaireOmbrageanteDans, senescenceDans } from "../engine/phenologi
 import type { Vue } from "../render/camera";
 import { type Marqueur, marqueursDuJournal } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
-import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
+import {
+  dureeBloquanteMs,
+  type JournalDeSemaine,
+  planAuRythmeNaturel,
+  planDEllipse,
+} from "../render/temps/ellipse";
 import { SANS_VENT, type VentAPencher } from "../render/temps/feu";
 import type { ArbreRemodele, TigeAbattue } from "../render/temps/geste";
 import {
   type ArbreATorcher,
   AUCUNE_TORCHE,
+  chandellesTombees,
+  chuteDeLaChandelle,
   chuteDeLaTige,
   deformationDe,
   etatDuTorchage,
   etatMourantDe,
   feuEnCours,
   type IncendieAPoser,
+  indexerLesChandellesTombees,
   indexerLesChutes,
   indexerLesGestes,
   indexerLesMorts,
@@ -73,6 +81,23 @@ import type { Snapshot, StationInfo } from "./protocol";
 export const DUREE_ELLIPSE_MS = 2500;
 
 /**
+ * Vitesse à partir de laquelle on ne retient plus l'horloge, semaines/seconde.
+ *
+ * **Le seuil n'est pas choisi au doigt mouillé : il est déjà dans le produit.**
+ * Le bandeau offre deux sauts (#146) — « +1 mois » qui traverse à ×4 « pour
+ * voir la parcelle changer pendant le mois », et « +1 an » qui traverse à ×13.
+ * La ligne entre VIVRE le temps et le TRAVERSER est donc posée entre ces deux
+ * vitesses-là, et c'est celle qu'on reprend.
+ *
+ * En deçà, une animation bloquante va jusqu'au bout et le temps l'attend : le
+ * joueur regarde. Au-delà, les actes se rangent dans le temps d'écran d'une
+ * semaine comme avant, quitte à être comprimés ou omis : le joueur traverse,
+ * et une traversée d'un an qui durerait cinq minutes ne serait pas une
+ * traversée.
+ */
+export const VITESSE_SANS_ATTENTE = 13;
+
+/**
  * Ce que la vue reçoit d'une ellipse en cours.
  *
  * Les noms sont ceux des propriétés de `VueParcelle` : l'appelant les étale, il
@@ -80,11 +105,12 @@ export const DUREE_ELLIPSE_MS = 2500;
  */
 export interface EllipseDuJeu {
   /**
-   * Les tiges abattues, à poser EN PLUS des arbres de l'instantané.
+   * Les fûts à poser EN PLUS des arbres de l'instantané : les tiges qu'un
+   * geste vient d'abattre, et les chandelles qui s'abattent d'elles-mêmes.
    *
-   * Une tige abattue a quitté `state.trees` dans le même tick : sans ça, un
-   * arbre coupé s'escamote entre deux images. La liste ne change pas pendant
-   * que le plan se joue — c'est la déformation qui la fait tomber — pour que le
+   * Les deux ont quitté `state.trees` dans le tick où ils tombent : sans ça,
+   * ils s'escamotent entre deux images. La liste ne change pas pendant que le
+   * plan se joue — c'est la déformation qui la fait tomber — pour que le
    * tableau d'arbres reste une clé de cache stable.
    */
   tiges: readonly TigeAbattue[];
@@ -98,6 +124,14 @@ export interface EllipseDuJeu {
   marqueurs: readonly Marqueur[];
   /** le départ d'un incendie, le seul événement qui mérite qu'on cadre */
   cadrerSur?: { x: number; y: number };
+  /**
+   * Combien de temps le jeu doit ATTENDRE avant la semaine suivante, ms (#163).
+   *
+   * Zéro quand rien ne bloque — plan vide, ou traversée à grande vitesse. Le
+   * calcul est ici et non dans la vue parce que c'est une propriété du plan,
+   * pas du dessin.
+   */
+  attenteMs: number;
 }
 
 /** Le journal que porte un instantané, dans la forme que le plan attend. */
@@ -177,6 +211,7 @@ const RIEN: EllipseDuJeu = {
   voiler: () => [],
   feu: () => RIEN_NE_BRULE,
   marqueurs: [],
+  attenteMs: 0,
 };
 
 /**
@@ -192,6 +227,13 @@ export function useEllipse(
 ): EllipseDuJeu {
   // Le temps d'écran d'une semaine borne l'ellipse : une animation remplacée
   // avant sa fin bouge sans rien dire.
+  // **Deux régimes, et c'est le renversement demandé en #163.** En deçà du
+  // seuil, chaque acte prend le temps qu'il lui faut et le jeu l'attend ;
+  // au-delà, on retombe sur l'ancienne politique — le temps d'écran d'une
+  // semaine est le plafond, et ce qui n'y tient pas est comprimé ou omis.
+  const auRythmeNaturel = vitesse < VITESSE_SANS_ATTENTE;
+  /** Le temps coule-t-il ? À l'arrêt il n'y a pas de semaine suivante à retenir. */
+  const enMarche = vitesse > 0;
   const budgetMs = vitesse > 0 ? Math.min(DUREE_ELLIPSE_MS, 1000 / vitesse) : DUREE_ELLIPSE_MS;
 
   // L'origine des temps. Posée DANS le mémo et non dans un effet : la boucle
@@ -203,12 +245,17 @@ export function useEllipse(
   return useMemo(() => {
     if (!snapshot || !station) return RIEN;
     const journal = journalDe(snapshot);
-    const plan = planDEllipse([journal], budgetMs);
+    const plan = auRythmeNaturel
+      ? planAuRythmeNaturel([journal])
+      : planDEllipse([journal], budgetMs);
     if (plan.actes.length === 0) return RIEN;
     debut.current = performance.now();
 
     const coteM = station.coteM;
     const chutes = indexerLesChutes(plan);
+    // Les chandelles qui tombent, reposées : elles ne sont plus dans
+    // l'instantané de la semaine où elles tombent (#163).
+    const chandelles = indexerLesChandellesTombees(plan);
     const morts = indexerLesMorts(plan);
     const voiles = indexerLesVoiles(plan, coteM);
     const gestes = indexerLesGestes(plan);
@@ -235,13 +282,20 @@ export function useEllipse(
     const depuis = (maintenantMs: number) => maintenantMs - debut.current;
 
     return {
-      tiges: tigesAbattues(gestes),
+      tiges: [...tigesAbattues(gestes), ...chandellesTombees(plan)],
       seTorche: (id) => torches.arbres.has(id),
       deformer: (id, maintenantMs, vue) => {
         const ecoule = depuis(maintenantMs);
-        // Une tige abattue n'est pas un arbre de l'instantané : son
-        // identifiant est négatif, et c'est son geste qui la fait tomber.
-        if (id < 0) return chuteDeLaTige(gestes, ecoule, id, vue);
+        // Un fût reposé n'est pas un arbre de l'instantané : son identifiant
+        // est négatif. Deux origines possibles — un geste l'a couché, ou
+        // c'était une chandelle qui s'est abattue — et l'index qui ne le
+        // connaît pas rend `DEBOUT`, qui est neutre.
+        if (id < 0) {
+          return combiner(
+            chuteDeLaTige(gestes, ecoule, id, vue),
+            chuteDeLaChandelle(chandelles, ecoule, id, vue),
+          );
+        }
         // Les canaux de POSE se composent : franchir dix ans, c'est voir un
         // arbre mourir puis tomber, et `DEBOUT` est neutre pour cette
         // composition.
@@ -275,6 +329,9 @@ export function useEllipse(
       },
       feu: (maintenantMs) => particulesDuFeu(feu, depuis(maintenantMs), coteM, vent, torches),
       marqueurs: calque.marqueurs,
+      // On n'attend que si le temps COULE : à l'arrêt il n'y a pas de semaine
+      // suivante à retenir, et retenir une horloge arrêtée n'a pas de sens.
+      attenteMs: auRythmeNaturel && enMarche ? dureeBloquanteMs(plan) : 0,
       ...(feu
         ? {
             cadrerSur: {
@@ -284,5 +341,5 @@ export function useEllipse(
           }
         : {}),
     };
-  }, [snapshot, station, budgetMs]);
+  }, [snapshot, station, budgetMs, auRythmeNaturel, enMarche]);
 }

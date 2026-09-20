@@ -42,11 +42,14 @@ import { type JournalDeSemaine, planDEllipse } from "../render/temps/ellipse";
 import { SANS_VENT } from "../render/temps/feu";
 import {
   AUCUNE_TORCHE,
+  chandellesTombees,
+  chuteDeLaChandelle,
   chuteDeLaTige,
   deformationDe,
   etatDuTorchage,
   etatMourantDe,
   feuEnCours,
+  indexerLesChandellesTombees,
   indexerLesChutes,
   indexerLesGestes,
   indexerLesMorts,
@@ -416,6 +419,11 @@ function Demo(): React.ReactElement {
         estompe: quoi !== "0" && quoi !== "marqueurs" && sujets.size > 0,
         dureeMs: plan.dureeMs,
         gestes: indexerLesGestes(plan),
+        // Une scène qui porte un VRAI journal a déjà été cuite après coup : ses
+        // chandelles tombées n'y sont plus, et il n'y a donc rien à en retirer.
+        // Il y a bien quelque chose à reposer, en revanche (#163).
+        chandelles: chandellesTombees(plan),
+        indexChandelles: indexerLesChandellesTombees(plan),
         apres: new Map<number, { heightM: number; baseHouppierM: number }>(),
         partis: new Set<number>(),
       };
@@ -558,6 +566,15 @@ function Demo(): React.ReactElement {
       partis = new Set(retire.filter((r) => r.hauteurApresM <= 0).map((r) => r.id));
     }
     const plan = planDEllipse([journal], DUREE_ELLIPSE_MS);
+    // **Le banc doit tenir la prémisse du moteur, et il ne la tenait pas
+    // (#163).** Une chandelle qui s'abat quitte `state.trees` dans le tick même
+    // où sa chute est rapportée — mesuré, 423 fois sur 423. Le banc, lui,
+    // fabriquait sa chute en laissant l'arbre dans la scène : il prouvait donc
+    // la mécanique de chute sur une situation que le jeu ne rencontre jamais,
+    // et c'est exactement pour ça que le défaut a survécu à toutes les
+    // captures. On retire donc ce qui tombe, comme le moteur le retire, et
+    // c'est `chandellesTombees` qui le repose.
+    for (const chute of journal.chutes ?? []) partis.add(chute.id);
     // La DURÉE du plan et non le budget : un plan vide dure zéro, et c'est ce
     // zéro-là qu'il faut porter pour que `?ellipse=` ne prétende pas figer une
     // ellipse qui n'existe pas.
@@ -578,6 +595,8 @@ function Demo(): React.ReactElement {
       estompe: false,
       dureeMs: plan.dureeMs,
       gestes: indexerLesGestes(plan),
+      chandelles: chandellesTombees(plan),
+      indexChandelles: indexerLesChandellesTombees(plan),
       apres,
       partis,
     };
@@ -632,13 +651,16 @@ function Demo(): React.ReactElement {
             const a = ellipse.apres.get(t.id);
             return a ? { ...t, heightM: a.heightM, baseHouppierM: a.baseHouppierM } : t;
           });
-  const arbres: ArbreAPoser[] = arbresAPoser([...restants, ...tigesAbattues(ellipse.gestes)], {
-    coteM: scene.coteM,
-    week: scene.week,
-    altitudesM: scene.sol.altitudesM,
-    ...(pheno ? { pheno } : {}),
-    seTorche: (id) => ellipse.torches.arbres.has(id),
-  });
+  const arbres: ArbreAPoser[] = arbresAPoser(
+    [...restants, ...tigesAbattues(ellipse.gestes), ...ellipse.chandelles],
+    {
+      coteM: scene.coteM,
+      week: scene.week,
+      altitudesM: scene.sol.altitudesM,
+      ...(pheno ? { pheno } : {}),
+      seTorche: (id) => ellipse.torches.arbres.has(id),
+    },
+  );
 
   // `?ellipse=0.4` FIGE la lecture à cet avancement, et c'est ce qui rend la
   // démonstration jugeable : une animation qui tourne à une image par seconde
@@ -668,9 +690,15 @@ function Demo(): React.ReactElement {
           ellipse.estompe && !ellipse.sujets.has(id)
             ? { rotationRad: 0, hauteur: 1, opacite: OPACITE_HORS_SUJET }
             : DEBOUT;
-        // Une tige abattue n'est pas un arbre de l'instantané : identifiant
-        // négatif, et c'est son geste qui la fait tomber (§6.2).
-        if (id < 0) return chuteDeLaTige(ellipse.gestes, ou, id, vue);
+        // Un fût reposé n'est pas un arbre de l'instantané : identifiant
+        // négatif. Un geste l'a couché (§6.2), ou c'est une chandelle qui
+        // s'abat (#163) ; l'index qui ne le connaît pas rend `DEBOUT`.
+        if (id < 0) {
+          return combiner(
+            chuteDeLaTige(ellipse.gestes, ou, id, vue),
+            chuteDeLaChandelle(ellipse.indexChandelles, ou, id, vue),
+          );
+        }
         return combiner(
           combiner(
             combiner(

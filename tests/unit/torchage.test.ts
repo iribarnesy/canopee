@@ -212,6 +212,8 @@ describe("indexerLesTorches et le canal de la mise en scène", () => {
   const acte = {
     debutMs: 0,
     dureeMs: 1000,
+    // Bloquant, comme tout ce qui vient du journal (#163).
+    bloquant: true,
     sujet: {
       quoi: "feu" as const,
       origine: front.origine,

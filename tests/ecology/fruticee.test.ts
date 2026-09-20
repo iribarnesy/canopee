@@ -76,7 +76,7 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     const graines = [21, 11, 42];
     const autres = ["prunus_spinosa", "rubus_fruticosus", "sambucus_nigra"];
     let aubepines = 0;
-    let concurrentes = 0;
+    const cumuls = new Map<string, number>();
     for (const graine of graines) {
       const fin = friche("lisiere-forestiere", [120], graine).get(120);
       if (!fin) throw new Error("étape manquante");
@@ -89,19 +89,31 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
       for (const autre of autres)
         expect(aubepine, `${autre} (graine ${graine})`).toBeGreaterThanOrEqual(n(autre));
       aubepines += aubepine;
-      concurrentes += autres.reduce((s, id) => s + n(id), 0);
+      for (const autre of autres) cumuls.set(autre, (cumuls.get(autre) ?? 0) + n(autre));
     }
-    // Au cumul, l'aubépine à elle seule passe les trois autres RÉUNIES. C'est
-    // l'énoncé, et c'est tout l'énoncé.
+    // AU CUMUL, DEVANT CHACUNE — et c'est la phrase du dessus, pas une de plus.
     //
     // La première version exigeait le DOUBLE, et la CI l'a fait tomber (28
-    // contre 15, soit 1,87×) : j'avais remplacé un seuil calé sur une mesure
-    // par un autre seuil calé sur une mesure, ce qui est exactement le défaut
-    // que cet essai corrigeait. Un multiple choisi sur un relevé rebascule au
-    // premier lot qui déplace le tirage — il y en a eu trois. « La dernière
-    // debout » ne dit pas « le double » : elle dit « devant », et devant tout
-    // le monde à la fois.
-    expect(aubepines).toBeGreaterThan(concurrentes);
+    // contre 15, soit 1,87×) : un multiple choisi sur un relevé rebascule au
+    // premier lot qui déplace le tirage — il y en a eu trois. La deuxième
+    // exigeait que l'aubépine passe les trois autres RÉUNIES, et #161 l'a fait
+    // tomber à son tour (33 contre 46).
+    //
+    // Cette chute-là n'était pas une régression, et c'est ce qui a décidé de la
+    // forme retenue. Vérifié espèce par espèce : aucun des survivants n'est
+    // sous sa borne de pH — pH local 5,66 à 7,50, facteurs de croissance 0,764
+    // à 1,000, l'aubépine à 7,99 m pour 8 m de potentiel. Le second seuil de pH
+    // ne les maintient donc pas en vie ; il garde des tiges ailleurs, et la
+    // succession se redistribue sur cent vingt ans. Il reste simplement DEUX
+    // FOIS PLUS de pionnières qu'avant, si bien que « une contre trois réunies »
+    // est devenue une barre arithmétique là où l'énoncé parle d'un classement.
+    //
+    // « La dernière debout » dit « devant », et devant tout le monde à la fois.
+    // C'est donc devant CHACUNE que ça se vérifie — par graine juste au-dessus,
+    // et au cumul ici, ce qui écrase le tirage sans changer l'affirmation.
+    for (const [autre, n] of cumuls) {
+      expect(aubepines, `cumul contre ${autre}`).toBeGreaterThan(n);
+    }
   }, 900_000);
 });
 

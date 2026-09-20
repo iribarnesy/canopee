@@ -16,7 +16,7 @@ import { getEspece } from "./especes";
 import { crownRadiusM } from "./light";
 import { partPuiseeSurLesReserves, usureParSemaine } from "./reserves";
 import { type RngState, rngFloat } from "./rng";
-import { facteurGammePh } from "./soil";
+import { facteurGammePh, facteurSurviePh, VIGUEUR_A_LA_BORNE } from "./soil";
 import { facteurCroissanceTassement } from "./tassement";
 
 /** Ce qui tue un arbre — pour le raconter au joueur. */
@@ -1145,7 +1145,37 @@ function waterloggingFactor(espece: EspeceV0, waterlogging: number): number {
  * (chlorose puis mort — la bio-indication de l'atlas : calcicoles vs acidiphiles).
  */
 export function phFactor(espece: EspeceV0, ph: number): number {
-  return facteurGammePh(espece.ph, ph);
+  const dansLaGamme = facteurGammePh(espece.ph, ph);
+  // UNE QUEUE DANS LA MARGE DE SURVIE, sans quoi le lot trahirait son propre
+  // énoncé (#161) : « un arbre entre les deux pousse mal ET tient ». Avec la
+  // seule rampe de l'atlas, la croissance tombe à zéro dès sous la borne, si
+  // bien qu'un hêtre à pH 4,2 ne poussait plus du tout mais ne mourait pas non
+  // plus — mesuré, 19 sur 20 encore vivants à CINQUANTE ans, toujours à leurs
+  // 0,30 m de plantation. Des nains immortels, ce que rien n'observe.
+  //
+  // Les deux termes se rejoignent EXACTEMENT à la borne, où la rampe vaut
+  // `VIGUEUR_A_LA_BORNE` et la survie vaut 1 : la courbe reste continue, et
+  // au-dessus c'est la rampe qui commande, inchangée.
+  //
+  // AUCUNE TABLE DE PRODUCTION NE PEUT BOUGER, et c'est démontrable plutôt que
+  // mesuré : la queue ne vit que HORS de l'amplitude déclarée, et aucune espèce
+  // n'est calée hors de la sienne — le pin sylvestre est à pH 7 dans sa gamme
+  // 4–7,5, le châtaignier sur le limon acide où il vaut 1. Les seuils
+  // d'installation (`paysage.ts`, `regeneration.ts`) ne bougent pas non plus :
+  // ils excluent sous 0,20 et 0,25, quand la queue plafonne à 0,05.
+  return Math.max(dansLaGamme, VIGUEUR_A_LA_BORNE * facteurSurviePh(espece.ph, ph));
+}
+
+/**
+ * f_pH de SURVIE : l'amplitude de l'atlas élargie de sa marge (#161).
+ *
+ * Distinct de `phFactor`, comme `seuilStressSecheresse` est distinct de
+ * `seuilConfortSecheresse` : au bord de son amplitude une espèce pousse mal —
+ * c'est `phFactor` qui le dit — mais elle ne meurt pas, et c'est celui-ci qui
+ * le dit. Seul ce second facteur entre dans `survivalFactor`.
+ */
+export function phFactorSurvie(espece: EspeceV0, ph: number): number {
+  return facteurSurviePh(espece.ph, ph);
 }
 
 /**
@@ -1217,6 +1247,8 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const fEng = waterloggingFactor(espece, env.waterloggingRatio);
   const fLum = lightFactor(espece, env.light);
   const fPH = phFactor(espece, env.phMean);
+  // La SURVIE lit l'amplitude élargie : pousser mal n'est pas mourir (#161).
+  const fPHSurvie = phFactorSurvie(espece, env.phMean);
   const fN = espece.azote.fixateur ? 0.95 : env.nitrogenSatisfaction;
   // Loi du minimum : le phosphore et le potassium entrent au même titre que
   // les autres. Ils ne freinent presque jamais sur un bon sol — c'est sur les
@@ -1267,7 +1299,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     ageYears < 0.85 * longevite
       ? 1
       : Math.max(0, 1 - (ageYears - 0.85 * longevite) / (0.3 * longevite));
-  const survivalFactor = Math.min(fSecSurvie, fEng, fPH, fAge);
+  const survivalFactor = Math.min(fSecSurvie, fEng, fPHSurvie, fAge);
 
   // Croissance : potentiel × loi du minimum, asymptote vers la hauteur max.
   // Un arbre stressé pousse moins (il puise dans ses réserves, docs/regles.md §7.1).
@@ -1384,9 +1416,13 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     // et non par un facteur : c'est la seule façon de comparer un stock qui se
     // vide à des facteurs instantanés. Un arbre qui puisait plus qu'il ne
     // souffrait par ailleurs est mort de l'ombre.
-    const pire = Math.min(fSecSurvie, fEng, fPH, fAge);
+    // C'est le facteur de SURVIE du pH qui entre ici, le même que dans
+    // `survivalFactor` : imputer la mort sur le facteur de CROISSANCE
+    // désignerait le pH presque à chaque fois, puisqu'il lui est toujours
+    // inférieur ou égal (#161).
+    const pire = Math.min(fSecSurvie, fEng, fPHSurvie, fAge);
     const parLeManque = pire < STRESS_ONSET ? (STRESS_ONSET - pire) * 5 : 0;
-    causeMort = causeLenteDominante(usure, parLeManque, fSecSurvie, fEng, fPH, fAge);
+    causeMort = causeLenteDominante(usure, parLeManque, fSecSurvie, fEng, fPHSurvie, fAge);
   }
   // La même lecture, mais tenue CHAQUE SEMAINE et pas seulement à la mort :
   // c'est elle qu'un coup brusque relira pour savoir de quoi l'arbre se
@@ -1398,7 +1434,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // une hêtraie de limon riche accumulait 189 morts « solHorsGamme ». Mesuré.
   const causeLente =
     usure > 0 || parLeManqueSemaine > 0
-      ? causeLenteDominante(usure, parLeManqueSemaine, fSecSurvie, fEng, fPH, fAge)
+      ? causeLenteDominante(usure, parLeManqueSemaine, fSecSurvie, fEng, fPHSurvie, fAge)
       : tree.causeLente;
 
   return {

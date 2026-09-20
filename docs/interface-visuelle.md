@@ -1165,10 +1165,14 @@ demande prend le problème par l'autre bout, et elle est plus simple :
    l'ambiance continue de la §6.1. C'est le BONUS au sens du calendrier : il
    vient quand le reste est fait. Mais c'est la brique dont tout le reste
    découle, et il ne faut donc rien construire qui l'empêche.
-2. **Passer d'une semaine à la suivante est INSTANTANÉ.** Un tick, et la scène
-   est celle de la semaine d'après. Il n'y a aucun sens à faire souffler le
-   vent pendant cette transition-là : on ne regarde pas le temps s'écouler, on
-   change de semaine.
+2. ~~**Passer d'une semaine à la suivante est INSTANTANÉ.**~~ **Corrigé par le
+   commanditaire (2026-09-19, #163), et c'est un renversement, pas une
+   nuance.** Le point disait : « un tick, et la scène est celle de la semaine
+   d'après ». En partie, ça donne exactement ce qu'on lui reproche : « même en
+   ×1, quand on passe d'une semaine à l'autre, c'est très abrupt, il n'y a pas
+   de transition ». La règle devient : **une animation va jusqu'au bout, et le
+   temps l'attend** — « c'est mieux d'attendre la fin d'une animation que de
+   couper ». Voir « Deux régimes » plus bas.
 3. **Une fois le temps réel acquis, l'ellipse n'est plus un cas particulier :
    c'est une ANIMATION.** Sauter un mois, c'est jouer l'animation de ce qui a
    changé dans le mois — par exemple tous les arbres morts pendant la période,
@@ -1180,6 +1184,49 @@ demande prend le problème par l'autre bout, et elle est plus simple :
    joueur doit voir se dérouler, pas résumer. L'`autopause` existante et le
    « mode cinéma » de la §6.8 sont la même idée, et deviennent le comportement
    par défaut de la catastrophe.
+
+#### Deux régimes : vivre le temps, ou le traverser (#163)
+
+La politique d'origine faisait de la vitesse le maître : le temps d'écran
+d'une semaine était le plafond, et une animation qui n'y tenait pas était
+comprimée, voire omise — « une animation remplacée avant sa fin bouge sans
+rien dire ». Mesuré en partie, ça faisait **trois** troncatures distinctes :
+
+| troncature | où | ce qu'elle faisait |
+|---|---|---|
+| compression | `planDEllipse` partage le budget entre les actes | un chaulage seul tombait à 77 ms en ×13, sous le plancher de lisibilité que le module se donne (100 ms) |
+| omission | au-delà de `budget / 100` actes | 13 % des actes supprimés au-delà de ×13, et seulement comptés |
+| remplacement | le plan reconstruit à chaque instantané | l'animation en cours jetée quand la semaine suivante arrive — le chaulage coupé du retour de partie |
+
+La règle est maintenant **le rythme naturel en deçà d'un seuil de vitesse, le
+budget au-delà** :
+
+- en deçà, chaque acte prend la durée que sa nature demande
+  (`DUREE_NATURELLE_MS`), rien n'est omis ni comprimé, et le worker **retient
+  son horloge** le temps que ça dure (message `attendre`). Le joueur VIT le
+  temps : il regarde ;
+- au-delà, on retombe sur le budget d'avant, avec ses compressions et ses
+  omissions assumées. Le joueur TRAVERSE : une traversée d'un an qui durerait
+  cinq minutes ne serait pas une traversée.
+
+**Le seuil n'est pas un chiffre choisi au doigt mouillé : il était déjà dans
+le produit.** Le bandeau offre deux sauts (#146) — « +1 mois » traverse à ×4
+« pour voir la parcelle changer pendant le mois », « +1 an » traverse à ×13.
+La ligne entre vivre et traverser est donc posée entre ces deux vitesses-là,
+et `VITESSE_SANS_ATTENTE` la reprend.
+
+**Bloquant et non bloquant.** Un acte du journal est bloquant : le journal ne
+rapporte que des événements, c'est-à-dire des choses qui arrivent une fois et
+qu'on manque si on ne les montre pas. L'ambiance du point 1 — le vent sur les
+feuillages, les oiseaux — sera non bloquante : elle tourne en fond et ne
+retient rien. Le plan porte le drapeau par acte (`Acte.bloquant`) pour que la
+distinction vive dans le plan et non dans une exception écrite ailleurs.
+
+**Ce que ça coûte, mesuré.** Sur un fond de vallon à 45 ans, où un tiers des
+semaines porte un acte, ×4 passe de 2,8 à 0,9 semaine par seconde : le jeu
+avance au rythme de ses animations. ×13 est inchangé, retenue à zéro. Et une
+semaine peut encore passer avant que la retenue ne prenne effet — le message
+traverse le fil, et le worker tique toutes les 100 ms.
 
 **Ce que ça impose au rendu, dès maintenant.** Rien de neuf, et c'est
 rassurant : la règle « aucune primitive vectorielle par image » va déjà dans ce

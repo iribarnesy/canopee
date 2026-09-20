@@ -96,6 +96,15 @@ export interface GameApi {
   basculer: () => void;
   /** Avance de tant de semaines à la vitesse dite, puis s'arrête tout seul. */
   avancerDe: (semaines: number, weeksPerSecond: number, libelle: string) => void;
+  /**
+   * RETIENT le temps du jeu, sans toucher à la vitesse (#163).
+   *
+   * Le temps attend qu'une animation bloquante aille jusqu'au bout. Ce n'est
+   * pas une pause : la vitesse choisie et la traversée en cours sont intactes
+   * au relâchement, et le bandeau continue d'afficher ce que le joueur a
+   * demandé — il n'a pas changé d'avis, il regarde un arbre tomber.
+   */
+  attendre: (retenu: boolean) => void;
   quit: () => void;
 }
 
@@ -132,6 +141,14 @@ export function useGame(): GameApi {
   const cleDemandee = useRef("");
 
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
+
+  /**
+   * STABLE, et c'est nécessaire et pas décoratif : l'appelant s'en sert dans
+   * l'effet qui retient l'horloge. Une fonction recréée à chaque rendu ferait
+   * relâcher puis reprendre la retenue à chaque image — le jeu avancerait par
+   * à-coups au lieu d'attendre.
+   */
+  const attendre = useCallback((retenu: boolean) => send({ type: "attendre", retenu }), [send]);
 
   const ensureWorker = useCallback(() => {
     if (workerRef.current) return workerRef.current;
@@ -281,6 +298,9 @@ export function useGame(): GameApi {
       setSpeedState(weeksPerSecond);
       setNotice(undefined);
     },
+    // Pas de `setSpeedState` ici, et c'est tout l'intérêt : l'état affiché ne
+    // bouge pas, seul le worker suspend ses pas.
+    attendre,
     /**
      * Quitter, c'est sauvegarder PUIS fermer — dans cet ordre.
      *
