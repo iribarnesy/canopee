@@ -61,7 +61,64 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la carie du tronc, #182)
+## Ce que le dernier lot a appris (le chêne creux et le LER, #183 et #136)
+
+**Un mécanisme de soutien qui casse ce qu'il soutient pèse trop lourd.** La
+carie de #182 a fait tomber deux bancs qui ne parlent pas de carie — la
+pullulation sous réchauffement et l'éclaircie qui fragilise. Ce n'était pas du
+bruit : c'était le signal qu'un mécanisme secondaire déplaçait plus que les
+mécanismes qu'il sert. Deux défauts derrière, et le second est le plus instructif :
+
+ 1. **l'unité était fausse.** Une carie comptée en PART DU RAYON ronge un chêne
+    de cinquante centimètres aussi vite qu'une perche de quinze, alors que sa
+    vitesse ne sait rien du tronc qu'elle habite. En centimètres, avec le mur de
+    compartimentation de Shigo, la conséquence tombe toute seule : *un arbre
+    vigoureux distance sa carie, un dominé se fait rattraper* ;
+ 2. **il manquait un SEUIL D'ENTRÉE.** La moindre brindille arrachée inoculait,
+    donc tout le monde finissait carié — 46 chênes sur 163 dont 43 creux, un
+    quart du peuplement. Une plaie doit atteindre le bois de cœur. Le relevé
+    tombe alors à 9 sur 165, soit 5 %.
+
+**Un thermomètre qui a flanché une fois ne se remplace pas par un autre qui a
+flanché une fois : il se double.** La pullulation se mesurait par hôte, et la
+carie déplace des hôtes. Recampagnée sur six graines au lieu de trois, avec les
+deux thermomètres côte à côte, la mesure brute tient dans une bande étroite
+(1,29 à 1,88 ×, aucune inversion) là où le par-hôte s'étale du simple au double
+(1,69 à 3,03). Une graine dit pourquoi : ses deux bras finissent avec le même
+nombre de tiges, la normalisation n'a rien à corriger, et c'est la seule où elle
+ABAISSE le rapport. On exige désormais les deux.
+
+**COMPARER DES MOYENNES DE DISTRIBUTIONS ASYMÉTRIQUES NE DIT RIEN**, et ça m'a
+coûté une issue écrite à tort. Le LER donnait un terme arbre ridicule ; les
+diamètres moyens (19,6 en allée contre 20,2 en plantation) semblaient innocenter
+la culture et accuser la croissance du noyer, non calée sur table. J'ai ouvert
+l'issue. En volume l'écart était de 2,5, pas de 1,2 — et suivie par identité, la
+cohorte plantée dit l'inverse : le noyer atteint 32,3 cm à soixante ans hors
+culture, et dépasse celui de la plantation. **Le seul échantillon comparable
+d'un bras à l'autre est celui qu'on suit par ses identités.**
+
+**Un témoin, ça se conduit.** Le « témoin forestier » du LER comptait 49 noyers
+plantés et 187 à l'arrivée : les sujets mûrs s'étaient ressemés, et le témoin
+était un fourré. Il comptait en plus le bois des essences spontanées, 15,0 m³ là
+où les noyers n'en faisaient que 6,7 — or un LER compare des PRODUITS.
+
+**Et un lot peut être juste, sortir le bon nombre, et rester 🟡.** Le LER sort à
+1,20, la cible de Restinclières. Mais sa composition est renversée (culture 1,10
+et arbre 0,10, contre ~0,7 et ~0,5 dans la littérature), parce que le dispositif
+laboure jusqu'au pied des rangs — ce qu'aucun agroforestier ne fait — et que les
+actions du moteur prennent toutes un DISQUE, qui ne pave pas une allée en
+laissant des bandes. Un bon nombre obtenu pour la mauvaise raison n'est pas un
+critère vert.
+
+**Ce qui se branche sans rien inventer.** Les cavités : `trogne.ts` avait déjà
+posé la bonne grandeur (le creux se compte en LITRES), la carie donne le rayon
+pourri, `ravageurs.ts` faisait déjà dépendre la prédation du bois mort du
+voisinage. Le lot n'a fait que réunir trois choses existantes — et pour toucher
+deux critères déjà verts sans risque, il prend le PLUS GÉNÉREUX du bois mort et
+des creux au lieu de les additionner : à creux nuls la carte est celle d'avant
+au bit près, et l'essai l'épingle plutôt que de le mesurer.
+
+## Ce qu'un lot plus ancien a appris (la carie du tronc, #182)
 
 Le dernier facteur de risque de chablis que le moteur ignorait. Il ne gagne
 aucun point — aucun critère du référentiel ne nomme la carie — et c'est
@@ -79,20 +136,17 @@ donné un mécanisme faux et une conclusion banale.
 plusieurs qui s'effacent — le dommage hydraulique, le houppier arraché, la
 naïveté au vent. La carie est la première qui ne fait que monter, et c'est
 exactement ce qui la rend intéressante : elle transforme des blessures
-dispersées sur un siècle en une trajectoire individuelle. Mesuré sur cent vingt
-ans de chênes, 49 cariés sur 163 vivants dont 41 creux — le vieil arbre creux
-d'un bocage, né des coups de vent, sans qu'on l'ait déclaré.
+dispersées sur un siècle en une trajectoire individuelle. Le vieil arbre creux
+d'un bocage, né des coups de vent, sans qu'on l'ait déclaré — *les chiffres
+annoncés ici étaient ceux d'un modèle sans compartimentation ni seuil d'entrée ;
+voir #183 ci-dessus pour ceux qui tiennent.*
 
 **Et la boucle se ferme entre trois lots** : une tempête arrache des branches
 (#181), la plaie installe une carie (#182), l'arbre casse plus facilement à la
 tempête suivante. Aucun des trois ne connaît les deux autres.
 
-**Ce qu'il reste à brancher, et qui est presque gratuit** : un arbre creux EST
-un arbre à cavités, et J3 compte déjà les gros arbres et les chandelles comme
-habitats. Relier `pourriture` à la valeur de biodiversité ferait naître le
-réservoir de biodiversité d'un bocage de la conduite en trogne — `recepages`
-blesse à chaque passage. Non fait : c'est un autre critère, et il mérite sa
-propre mesure.
+**Ce qu'il restait à brancher** : un arbre creux EST un arbre à cavités. Fait
+en #183, et la section ci-dessus dit ce que ça a appris.
 
 ## Ce qu'un lot plus ancien a appris (la branche arrachée, #181, et F17/F18 au vert)
 

@@ -101,12 +101,12 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | E. Interactions entre plantes | 9 | 4 | 0 | 13 |
 | F. Dynamique des peuplements | 15 | 3 | 1 | 19 |
 | G. Faune et santé | 11 | 0 | 0 | 11 |
-| H. Gestion, économie, travail | 16 | 4 | 1 | 21 |
+| H. Gestion, économie, travail | 16 | 5 | 0 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 8 | 0 | 0 | 8 |
-| **Total** | **133** | **18** | **2** | **153** |
+| **Total** | **133** | **19** | **1** | **153** |
 
-**Score de réalisme : 133 pleins + 18 partiels sur 153 → 93 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 133 pleins + 19 partiels sur 153 → 93 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -189,9 +189,13 @@ n'est plus exécutée par le sol, elle est battue par celles à qui il convient)
 → 92 % (la pompe à bases : le calcium de la litière cesse d'arriver de nulle
 part, et l'altération de remonter d'un mètre de fond toute seule — le budget
 de bases est stratifié en deux pools et il circule)
-→ **93 % (le bloc tempêtes : une tempête casse et ébranche au lieu de seulement
+→ 93 % (le bloc tempêtes : une tempête casse et ébranche au lieu de seulement
 déraciner, une futaie s'abrite elle-même, et ce qu'on vient d'ouvrir verse —
-trois critères, dont un dont l'énoncé était faux)**.*
+trois critères, dont un dont l'énoncé était faux)
+→ **93 % (le chêne creux et le LER : la carie se compartimente donc un arbre
+vigoureux la distance, un tronc carié devient un arbre à cavités qui loge les
+auxiliaires, et le LER existe enfin — à 🟡, parce qu'il sort le bon nombre pour
+la mauvaise raison et qu'on sait laquelle)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -370,7 +374,7 @@ maladie-là, pas une preuve de santé.*
 | H18 | Le gibier se régule aussi par la chasse — et l'immigration compense | ✅ | `chasser` ; `gibier.test.ts` — une journée fait reculer la pression, un an plus tard elle est revenue |
 | H19 | Une culture se sème, se récolte et se vend | ✅ | `semer` et `moissonner` (`actions.ts`), fiche `culture` sur l'herbacée (`herbacees.ts`) : semence, heures de chantier au prorata de la part mécanisable, grain vendu au prix de la fiche. Le grain est une INTÉGRALE — ce que la plante a assimilé sur ce qu'elle aurait assimilé sans limite —, ce qui ne demande aucune constante à caler et rend à `rendementMaxTHa` le sens que sa fiche lui donne |
 | H20 | Préparer le lit de semence conditionne la levée | ✅ | Le semis pose la PLACE LIBRE, et `labourer` remet les emprises à zéro : la règle « labourer ou faucher avant de semer » n'est écrite nulle part, elle tombe de deux mécanismes qui existaient déjà (`culture.test.ts`). Semer dans un tapis fermé est refusé AVEC sa raison — mesuré avant cette garde, le semis réussissait en silence et la moisson annonçait « rien à moissonner » neuf mois plus tard |
-| H21 | Le LER dit si le mélange bat la somme des parties | ❌ | `docs/regles.md` §7.5 le demande — « le jeu calcule le Land Equivalent Ratio des assolements mixtes vs monoculture, indicateur de score et outil pédagogique » — et rien ne le calcule. Il exige les DEUX monocultures comme témoins, le blé pur et la forêt pure sur la même station : ce n'est pas un affichage, c'est un dispositif. Cible de validation : le noyer-céréale de Restinclières dépasse 1,2 |
+| H21 | Le LER dit si le mélange bat la somme des parties | 🟡 | `ler.ts` ; `ler.test.ts` — **le dispositif existe et il est juste ; le chiffre ne l'est pas encore, et la raison est nommée** (#136, #184). Le LER se calcule sur TROIS bras, même station, même graine, même conduite : noyers en allées de 13 m avec du blé dessous, blé pur, et plantation de noyers à 6 × 6 conduite en futaie (éclaircies à 400/200/120 tiges/ha à 20, 35 et 50 ans). Ce n'est pas un affichage : `ler.ts` détaille pourquoi aucune quantité mesurée sur la seule parcelle mixte ne remplace les témoins — l'idéal sans limite de `partDuRendement` n'est pas une monoculture (un blé pur fertilisé plafonne à 0,70 de son idéal, C18), les cellules les moins ombragées d'une allée reçoivent l'azote de la litière des arbres (#140), et côté arbre il n'existe aucun analogue local. Mesuré sur soixante ans : **LER total 1,20**, la cible de Restinclières — **mais la composition est renversée**, culture 1,10 et arbre 0,10 là où la littérature donne ~0,7 et ~0,5. Le total est donc juste pour la mauvaise raison. **CE QUE LA CAMPAGNE A DÛ ÉCARTER AVANT DE TROUVER**, et il a fallu quatre relevés : le témoin forestier était devenu un fourré de semis (49 plantés, 187 à l'arrivée) ; il comptait le bois des essences spontanées (15,0 m³ pour 6,7 m³ de noyers) ; et j'ai accusé à tort la croissance du noyer sur la foi de MOYENNES de distributions asymétriques — suivie par identité, la cohorte plantée dit l'inverse, le noyer atteint 32,3 cm et 13,4 m à soixante ans et dépasse celui de la plantation. **Ce qui reste** : cultiver l'allée coûte **77 % du volume des arbres** (0,130 m³/arbre contre 0,565), parce que le dispositif laboure jusqu'au pied des rangs — ce qu'aucun agroforestier ne fait, une allée réelle gardant une bande enherbée. Les actions du moteur prennent toutes un DISQUE, et un disque ne pave pas une allée en laissant des bandes ; éprouvé en remplaçant le labour par une fauche, les noyers retrouvent exactement leurs 0,565 m³ mais **le blé ne lève plus du tout**, semer dans un tapis fermé étant refusé (H20). **Pour le vert** : savoir ménager le pied des rangs, puis séparer la part du soc de celle de la concurrence (#184) — le dispositif, lui, n'aura rien à changer. **Et pour l'affichage permanent que `regles.md` demande** : faire avancer deux parcelles témoins en même temps que celle du joueur, soit trois fois le coût du moteur par tick. C'est un choix d'architecture, pas un lot |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts`. **Ce ✅ ne valait que pour la strate HERBACÉE** : `faucher` n'écrit que dans `herbeCouverture`, `herbeFeuillage` et `herbeBiomasse`, donc un roncier lui survivait intact, et le seul outil qui l'ouvrait — `eclaircir` par essence — était tarifé en abattages, donc hors de portée. Les deux moitiés y sont depuis #154. **Le témoin est le résultat, et aucune punition n'a été écrite** : mêmes 83 chênes aux mêmes emplacements sur une friche de dix ans, une fois telle quelle et une fois débroussaillée, quinze ans plus tard — **29 % de survie contre 48 %** (`brousse.test.ts`). Les ronces prennent la lumière, et le moteur en tire tout seul de quoi rendre rentables les 18 h de débroussaillage |
