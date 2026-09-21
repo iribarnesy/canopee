@@ -528,7 +528,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.57,
     // Atlas : mésophile, « aime le frais, sensible à la sécheresse ».
     eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
-    ph: [4.5, 8],
+    // pH, littérature : Leuschner et al. 2006 (Ann. For. Sci.), 50 peuplements d'Europe centrale : extrêmes MESURÉS pH(H2O) 3,2-7,3 ; PFAF donne 3,5-8,5.
+    ph: [3.5, 8],
     // Atlas : sciaphile climacique — un semis survit à ~1-2 % de lumière (ch3-B),
     // couronne très opaque.
     // Marcescent seulement jeune ou taillé, d'où une valeur nettement plus
@@ -618,6 +619,21 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
+    // pH : LAISSÉ TEL QUEL, et la raison mérite d'être lue. L'USFS Silvics
+    // donne « 4,0 à 7,0, optimum 4,5-6,0, chlorose au-delà de 6,5 » ; d'autres
+    // fiches donnent « tolère l'alcalin jusqu'à 7,5 ». Les deux sont
+    // compatibles — une préférence n'est pas une borne — et la seconde est
+    // celle qui était déjà là.
+    //
+    // Trancher pour 7,0 a été ESSAYÉ et mesuré : le pin tombe alors à 0,05 de
+    // vigueur sur sa station de référence (limon riche, pH 7,0) et sa table de
+    // production s'effondre. En le déplaçant sur une station qu'il habite
+    // vraiment, on découvre autre chose : limon acide profond 19,5 m (+26 %),
+    // lande sableuse 6,5 m (-58 %) contre 15,5 m tabulés. AUCUNE STATION DU
+    // DÉPÔT NE VAUT UNE CLASSE MÉDIANE POUR UN PIN — la convention « le limon
+    // riche vaut la médiane » a été taillée pour des feuillus mésophiles, pas
+    // pour un pionnier dont le site médian est un sable. C'est ce manque-là
+    // qu'il faut traiter, pas cette borne.
     ph: [4, 7.5],
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     lumiere: { compensation: 0.25, saturation: 0.7, lai: 1.2, houppierRatio: 0.25, caduc: false },
@@ -661,6 +677,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },
+    // pH : LAISSÉ TEL QUEL, et c'est une correction de ma propre correction.
+    // J'avais resserré la borne haute à 7,0 sur « PFAF : préfère sous 6,5 » —
+    // mais la même fiche dit aussi qu'il pousse en sols « basiques (légèrement
+    // alcalins) ». Poser la mort à 7,0 contredisait la seconde moitié de la
+    // source. Une préférence n'est pas une borne.
     ph: [3.8, 7.5],
     // Atlas : très héliophile ; ombre légère (couronne aérée) — le bon parasol de nurse.
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.3, houppierRatio: 0.3, caduc: true },
@@ -698,7 +719,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // ce qui limite l'agroforesterie au noyer aux bonnes terres.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
     // Il fuit l'acide : c'est un arbre de sols neutres à calcaires.
-    ph: [6, 8.5],
+    // pH, littérature : PFAF et World Agroforestry : tolère 5,1-8,3, préfère 6,6-7,5 ; la chaux libre ne le limite pas.
+    ph: [5, 8.3],
     lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 160 }, // pivot profond
     tBaseCroissanceC: 8,
@@ -758,7 +780,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : « fruitier clé » ; mésophile de plaine.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.15 },
-    ph: [5.5, 8],
+    // pH, littérature : ICL et PFAF : optimum 6-7, tolère dès 5,0, carences en fer au-delà de 8 (source horticole).
+    ph: [5, 7.5],
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 120 }, // fruitier greffé, enracinement moyen
     // Le pommier est en tête de toutes les listes de sensibles à la juglone : ne pas planter de verger sous un noyer est le conseil le plus répété.
@@ -811,7 +834,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : « gel des fleurs = risque ; sec » — xérophile, floraison très précoce.
     eau: { seuilConfortSecheresse: 0.4, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.05 },
-    ph: [6, 8.5],
+    // pH, littérature : PFAF et Garden Oracle : 6,0-7,8, optimum 6,7-7,5 (source horticole).
+    ph: [6, 7.8],
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.8, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 180 }, // pivot des sols secs et chauds
     tBaseCroissanceC: 8,
@@ -862,7 +886,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.6,
     // Atlas : demi-ombre, cépée — l'arbuste des sous-étages agroforestiers.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
-    ph: [5, 8],
+    // pH, littérature : Hicks 2022, Biological Flora : calcaires pH 7-8, dépôts sur craie 4-5, ET sols très acides sous 4.
+    ph: [4, 8],
     lumiere: { compensation: 0.05, saturation: 0.4, lai: 2.5, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 90 }, // cépée à racines traçantes
     tBaseCroissanceC: 5,
@@ -1021,7 +1046,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 1.4,
     // Atlas : « nurse (fruticée) », pionnière, cosmopolite tempéré.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.25 },
-    ph: [4.5, 8],
+    // pH, littérature : BSBI (Fermanagh) : LA PLUS FRÉQUENTE à pH 3,5-5,0, et tolère jusqu'au très alcalin.
+    ph: [3.5, 8],
     // Demi-ombre tolérée : elle tient sous un couvert clair, ce qui lui permet
     // d'attendre la trouée.
     lumiere: { compensation: 0.06, saturation: 0.5, lai: 3, houppierRatio: 0.8, caduc: true },
@@ -1191,7 +1217,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // PERMANENT de sous-bois : en janvier, sous une hêtraie nue, c'est lui qui
     // abrite et nourrit.
     eau: { seuilConfortSecheresse: 0.75, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.2 },
-    ph: [4, 7],
+    // pH, littérature : Peterken & Lloyd 1967, Biological Flora : « presque indifférent au pH », de l'acide au riche en calcaire.
+    ph: [4, 8],
     lumiere: { compensation: 0.02, saturation: 0.35, lai: 3, houppierRatio: 0.4, caduc: false },
     racines: { profondeurMaxCm: 80 },
     tBaseCroissanceC: 5,
@@ -1274,7 +1301,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // tout le monde — c'est la première ressource de l'année pour les
     // pollinisateurs, et cela compte dans l'indice de biodiversité.
     eau: { seuilConfortSecheresse: 0.45, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.1 },
-    ph: [6, 8.5],
+    // pH, littérature : PFAF : 5,0-8,0, préfère 5,5-7,5, pousse en très alcalin.
+    ph: [5, 8.5],
     lumiere: { compensation: 0.06, saturation: 0.5, lai: 2.5, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 100 },
     tBaseCroissanceC: 5,
@@ -1689,7 +1717,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // souffre vite en sol sec — c'est LE frêne des fonds de vallée et des
     // haies bocagères.
     eau: { seuilConfortSecheresse: 0.8, seuilStressSecheresse: 0.45, toleranceEngorgement: 0.5 },
-    ph: [5, 8],
+    // pH, littérature : Thomas 2016, Biological Flora : ABSENT sous pH 4,2 en surface, tolère 4,5, préfère base-riche au-dessus de 5,5.
+    ph: [4.2, 8],
     // Demi-héliophile : il s'installe en lisière et dans les trouées, pas sous
     // couvert fermé.
     lumiere: { compensation: 0.06, saturation: 0.6, lai: 2.5, houppierRatio: 0.35, caduc: true },
@@ -1733,7 +1762,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.25,
     // Atlas : « méditerranéen, acidiphile, rejette après feu », mycorhize éricoïde.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.05 },
-    ph: [4, 6.5],
+    // pH, littérature : van den Berk et World Agroforestry : de 5,0 (grès acide) à 7,8 (limon calcaire) ; tolérance à l'alcalin rare chez une éricacée.
+    ph: [4, 7.8],
     lumiere: { compensation: 0.12, saturation: 0.6, lai: 2.4, houppierRatio: 0.45, caduc: false },
     racines: { profondeurMaxCm: 150 }, // racines profondes, adaptation méditerranéenne
     tBaseCroissanceC: 8,
