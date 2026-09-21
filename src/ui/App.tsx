@@ -1,110 +1,33 @@
 /**
  * UI jetable de la V0 (« labo moteur ») : bilan hydrique, croissance des
- * 5 espèces et carte spatiale (eau du sol + couronnes) sur les stations de
+ * espèces de la V0 et carte spatiale (eau du sol + couronnes) sur les stations de
  * test. Sera remplacée par la vraie UI (React + PixiJS) — ne rien construire
  * de précieux ici.
+ *
+ * **Le calcul n'est plus ici (#123).** Il vit dans `src/lab/sonde.ts` et
+ * s'exécute dans le worker du labo, comme les expériences. Ce fichier ne fait
+ * plus que demander, montrer l'avancement, et dessiner ce qui revient — ce qui
+ * est justement ce qu'on peut jeter sans rien perdre. Le contraire aurait
+ * voulu dire bâtir la tuyauterie dans le fichier destiné à disparaître, et
+ * c'est ce qui avait fait repousser la correction.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { serieMeteoPour } from "../data/meteo";
-import {
-  createGameState,
-  crownRadiusM,
-  ESPECES_V0,
-  type GameState,
-  getEspece,
-  plantScattered,
-  rngStateFromSeed,
-  STATIONS_V0,
-  type StationClimat,
-  serieToWeeks,
-  syntheticYear,
-  type TickFluxes,
-  tick,
-  type WeekWeather,
-} from "../engine";
-import { carbonInventory } from "../engine/carbon";
+import { crownRadiusM, ESPECES_V0, type GameState, getEspece, STATIONS_V0 } from "../engine";
 import { type Horizon, ruHorizonMm } from "../engine/soil";
-
-const YEARS = 20;
-const TREES_PER_SPECIES = 30;
-/** ids ≤ ce seuil = cohorte plantée ; au-delà = recrues de la régénération */
-const PLANTED_MAX_ID = TREES_PER_SPECIES * 5;
+import {
+  type BilanCarbone,
+  isSuccessionStation,
+  PLANTED_MAX_ID,
+  type SimResult,
+  TREES_PER_SPECIES,
+  type WeekPoint,
+  YEARS,
+} from "../lab/sonde";
+import type { DuLabo, VersLabo } from "../lab/worker";
 
 import { COULEUR_AUTRES, SPECIES_COLORS } from "./couleurs";
-
-interface WeekPoint {
-  week: number;
-  meanWaterMm: number;
-  waterlogging: number;
-  fluxes: TickFluxes;
-  heights: Record<string, number>;
-  /** tous les individus vivants, recrues comprises */
-  aliveCounts: Record<string, number>;
-  /** ceux qui viennent de la cohorte plantée (0 en succession) */
-  plantesVivants: Record<string, number>;
-}
-
-interface SimResult {
-  points: WeekPoint[];
-  /** état en fin d'été de la dernière année : l'assèchement local est visible */
-  finalState: GameState;
-}
-
-/** Sur la friche, on ne plante rien : on regarde la succession se dérouler. */
-function isSuccessionStation(sc: StationClimat): boolean {
-  return sc.station.id === "friche-limon";
-}
-
-function simulate(sc: StationClimat, weather: WeekWeather[]): SimResult {
-  const succession = isSuccessionStation(sc);
-  const years = succession ? 150 : YEARS;
-  let state = createGameState(sc.station, rngStateFromSeed(42));
-  if (!succession) {
-    for (const espece of ESPECES_V0) {
-      state = plantScattered(state, espece.id, TREES_PER_SPECIES);
-    }
-  }
-  const statMaxId = succession ? Infinity : PLANTED_MAX_ID;
-  let lateSummerState = state;
-  const points: WeekPoint[] = [];
-  for (let i = 0; i < years * 52; i++) {
-    const w = weather[i % weather.length];
-    if (!w) throw new Error("météo manquante");
-    const result = tick(state, w);
-    state = result.state;
-    const heights: Record<string, number> = {};
-    const aliveCounts: Record<string, number> = {};
-    const plantesVivants: Record<string, number> = {};
-    for (const espece of ESPECES_V0) {
-      // Hauteur DOMINANTE (max des vivants, recrues comprises) : la métrique
-      // forestière standard, sans l'artefact des moyennes qui s'effondrent
-      // quand un individu meurt. Les comptages distinguent la cohorte plantée.
-      const alive = state.trees.filter((t) => t.especeId === espece.id && t.alive);
-      // On compte TOUT ce qui est vivant — sans les recrues, une parcelle
-      // couverte de semis paraissait vide, ce qui est le contraire de ce
-      // qu'on veut lire sur une régénération naturelle.
-      aliveCounts[espece.id] = alive.length;
-      plantesVivants[espece.id] = alive.filter((t) => t.id <= statMaxId).length;
-      heights[espece.id] = alive.reduce((max, t) => Math.max(max, t.heightM), 0);
-    }
-    const waterArr = state.soil.waterMm;
-    const nHoriz = Math.max(1, state.station.profil.length);
-    let surfaceSum = 0;
-    for (let c = 0; c < waterArr.length; c += nHoriz) surfaceSum += waterArr[c] ?? 0;
-    points.push({
-      week: i,
-      meanWaterMm: surfaceSum / (waterArr.length / nHoriz),
-      waterlogging: result.fluxes.waterloggingMean,
-      fluxes: result.fluxes,
-      heights,
-      aliveCounts,
-      plantesVivants,
-    });
-    if (i % 52 === 35) lateSummerState = state;
-  }
-  return { points, finalState: lateSummerState };
-}
 
 const W = 900;
 const H = 200;
@@ -385,6 +308,113 @@ function TableauEspeces({
   );
 }
 
+/**
+ * LA SONDE, dans le worker du labo (#123).
+ *
+ * **Un worker par demande, et c'est lui qui donne l'annulation.** Changer de
+ * station ou de météo pendant que la sonde tourne demandait, sans ça, d'ignorer
+ * un résultat qu'on aurait payé jusqu'au bout : cent cinquante ans de friche
+ * continueraient de brûler un cœur pour une page que personne ne regarde.
+ * `terminate()` coupe net, et la demande suivante repart sur un worker neuf.
+ */
+function useSonde(
+  stationId: string,
+  meteoReelle: boolean,
+): {
+  /** le résultat ET son bilan, ensemble : ils arrivent ensemble */
+  pret?: { resultat: SimResult; bilan: BilanCarbone };
+  annees: number;
+  total: number;
+  erreur?: string;
+} {
+  const [etat, setEtat] = useState<{
+    pret?: { resultat: SimResult; bilan: BilanCarbone };
+    annees: number;
+    total: number;
+    erreur?: string;
+  }>({ annees: 0, total: 0 });
+
+  useEffect(() => {
+    setEtat({ annees: 0, total: 0 });
+    const w = new Worker(new URL("../lab/worker.ts", import.meta.url), { type: "module" });
+    w.addEventListener("message", (event: MessageEvent<DuLabo>) => {
+      const msg = event.data;
+      if (msg.type === "avancementSonde") {
+        setEtat((e) => ({ ...e, annees: msg.annees, total: msg.total }));
+      } else if (msg.type === "sonde") {
+        setEtat((e) => ({ ...e, pret: { resultat: msg.resultat, bilan: msg.bilan } }));
+      } else if (msg.type === "erreur") {
+        setEtat((e) => ({ ...e, erreur: msg.message }));
+      }
+    });
+    const demande: VersLabo = { type: "sonder", stationId, meteoReelle };
+    w.postMessage(demande);
+    return () => w.terminate();
+  }, [stationId, meteoReelle]);
+
+  return etat;
+}
+
+/** Les stations, en boutons — le même bandeau avant et après le calcul. */
+function ChoixDeStation({
+  stationId,
+  setStationId,
+}: {
+  stationId: string;
+  setStationId: (id: string) => void;
+}) {
+  return (
+    <p>
+      {STATIONS_V0.map((s) => (
+        <button
+          key={s.station.id}
+          type="button"
+          onClick={() => setStationId(s.station.id)}
+          style={{
+            marginRight: 8,
+            padding: "4px 10px",
+            border: "1px solid #b0a58c",
+            borderRadius: 4,
+            background: s.station.id === stationId ? "#3d6b3f" : "#f6f4ee",
+            color: s.station.id === stationId ? "#fff" : "#2e2a20",
+            cursor: "pointer",
+          }}
+        >
+          {s.station.nom}
+        </button>
+      ))}
+    </p>
+  );
+}
+
+/** Où en est la sonde : des années simulées, et une barre qui avance. */
+function Avancement({ annees, total }: { annees: number; total: number }) {
+  const part = total > 0 ? annees / total : 0;
+  return (
+    <div style={{ color: "#6b6250" }}>
+      <p>
+        La sonde simule la station, année par année
+        {total > 0 ? ` — ${annees} ans sur ${total}` : "…"}. La page reste vivante : le calcul
+        tourne dans un worker, et changer de station l'arrête.
+      </p>
+      <div
+        style={{
+          width: 420,
+          height: 10,
+          border: "1px solid #b0a58c",
+          borderRadius: 5,
+          overflow: "hidden",
+          background: "#f6f4ee",
+        }}
+      >
+        <div
+          style={{ width: `${(part * 100).toFixed(1)}%`, height: "100%", background: "#3d6b3f" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
   const [meteoReelle, setMeteoReelle] = useState(true);
@@ -392,10 +422,24 @@ export function App() {
   if (!sc) throw new Error("aucune station");
   const serie = serieMeteoPour(sc.station.id);
   const useReelle = meteoReelle && serie !== undefined;
-  const { points, finalState } = useMemo(() => {
-    const weather = useReelle && serie ? serieToWeeks(serie) : syntheticYear(sc.climat);
-    return simulate(sc, weather);
-  }, [sc, useReelle, serie]);
+  const sonde = useSonde(sc.station.id, useReelle);
+
+  // Tant que la sonde n'a pas rendu, on montre où elle en est — et la page
+  // répond, ce qui est tout l'objet de #123.
+  if (!sonde.pret) {
+    return (
+      <div>
+        <h1 style={{ fontSize: "1.3rem" }}>Labo moteur (grille 1 m² : eau, azote, lumière)</h1>
+        <ChoixDeStation stationId={sc.station.id} setStationId={setStationId} />
+        {sonde.erreur ? (
+          <p style={{ color: "#8a4b2d" }}>La sonde a échoué : {sonde.erreur}</p>
+        ) : (
+          <Avancement annees={sonde.annees} total={sonde.total} />
+        )}
+      </div>
+    );
+  }
+  const { points, finalState } = sonde.pret.resultat;
 
   const last = points[points.length - 1];
   // Classement décroissant par effectif vivant : ce qui domine le peuplement se
@@ -412,26 +456,7 @@ export function App() {
   return (
     <div>
       <h1 style={{ fontSize: "1.3rem" }}>Labo moteur (grille 1 m² : eau, azote, lumière)</h1>
-      <p>
-        {STATIONS_V0.map((s) => (
-          <button
-            key={s.station.id}
-            type="button"
-            onClick={() => setStationId(s.station.id)}
-            style={{
-              marginRight: 8,
-              padding: "4px 10px",
-              border: "1px solid #b0a58c",
-              borderRadius: 4,
-              background: s.station.id === sc.station.id ? "#3d6b3f" : "#f6f4ee",
-              color: s.station.id === sc.station.id ? "#fff" : "#2e2a20",
-              cursor: "pointer",
-            }}
-          >
-            {s.station.nom}
-          </button>
-        ))}
-      </p>
+      <ChoixDeStation stationId={sc.station.id} setStationId={setStationId} />
       <p style={{ color: "#6b6250" }}>
         {isSuccessionStation(sc)
           ? "150 ans simulés · RIEN n'est planté : succession émergente depuis le voisinage (seed 42)"
@@ -465,7 +490,7 @@ export function App() {
       <ParcelMap state={finalState} classement={classement} />
       <p style={{ color: "#6b6250" }}>
         {(() => {
-          const inv = carbonInventory(finalState, sc.station.initialSoilCTHa);
+          const inv = sonde.pret.bilan;
           return (
             <>
               Carbone (t C/ha) — vivant {inv.vivantTHa.toFixed(1)} · bois mort{" "}
