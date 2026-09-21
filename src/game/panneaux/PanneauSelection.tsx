@@ -36,6 +36,8 @@ export function PanneauSelection({
   tous,
   selectedTrees,
   setSelectedIds,
+  suivis,
+  basculerSuivi,
 }: {
   game: GameApi;
   vivants: readonly SnapshotTree[];
@@ -50,6 +52,10 @@ export function PanneauSelection({
   tous: readonly SnapshotTree[];
   selectedTrees: readonly SnapshotTree[];
   setSelectedIds: (ids: ReadonlySet<number>) => void;
+  /** les arbres déjà suivis, pour savoir ce que le bouton doit proposer (#149) */
+  suivis: ReadonlySet<number>;
+  /** suivre toute la sélection, ou la lâcher si elle l'est déjà */
+  basculerSuivi: (ids: Iterable<number>) => void;
 }) {
   /**
    * Les essences de la sélection, les plus nombreuses d'abord.
@@ -77,6 +83,7 @@ export function PanneauSelection({
    * broyer et épandre sont exclus, vendre et coucher ne le sont pas.
    */
   const queDuBoisMort = selectedTrees.length > 0 && selVivants === 0;
+  const tousSuivis = selectedTrees.length > 0 && selectedTrees.every((t) => suivis.has(t.id));
   const chandellesDeLaParcelle = tous.filter(dejaEnBoisMort);
 
   return (
@@ -170,6 +177,25 @@ export function PanneauSelection({
         </button>
       )}
       <br />
+      {/*
+        **Suivre, c'est-à-dire ne plus rien rater de ces arbres-là (#149).** Le
+        journal de la partie raconte la parcelle ; celui-ci raconte un arbre —
+        et sa mort arrête le temps au lieu de se découvrir trois ans plus tard
+        en comptant les troncs.
+      */}
+      <button
+        type="button"
+        style={btn(tousSuivis)}
+        onClick={() => basculerSuivi(selectedTrees.map((t) => t.id))}
+        title={
+          tousSuivis
+            ? "Ne plus suivre : leur journal s'efface et le temps ne s'arrêtera plus pour eux"
+            : "Tenir leur journal — gestes, stades, dégâts — et arrêter le temps s'ils meurent"
+        }
+      >
+        {tousSuivis ? "🚫 Ne plus suivre" : "👁 Suivre"}
+        {selectedTrees.length > 1 ? ` (${selectedTrees.length})` : ""}
+      </button>
       {selFruitsKg > 0.5 && (
         <button
           type="button"

@@ -105,6 +105,11 @@ export interface GameApi {
    * demandé — il n'a pas changé d'avis, il regarde un arbre tomber.
    */
   attendre: (retenu: boolean) => void;
+  /**
+   * Dit au worker QUELS arbres le joueur suit : leur mort arrête le temps
+   * (#149). La liste entière à chaque fois — voir `suivre` dans le protocole.
+   */
+  suivre: (ids: ReadonlySet<number>) => void;
   quit: () => void;
 }
 
@@ -149,6 +154,12 @@ export function useGame(): GameApi {
    * à-coups au lieu d'attendre.
    */
   const attendre = useCallback((retenu: boolean) => send({ type: "attendre", retenu }), [send]);
+
+  /** Stable pour la même raison qu'`attendre` : l'appelant s'en sert dans un effet. */
+  const suivre = useCallback(
+    (ids: ReadonlySet<number>) => send({ type: "suivre", ids: [...ids] }),
+    [send],
+  );
 
   const ensureWorker = useCallback(() => {
     if (workerRef.current) return workerRef.current;
@@ -301,6 +312,7 @@ export function useGame(): GameApi {
     // Pas de `setSpeedState` ici, et c'est tout l'intérêt : l'état affiché ne
     // bouge pas, seul le worker suspend ses pas.
     attendre,
+    suivre,
     /**
      * Quitter, c'est sauvegarder PUIS fermer — dans cet ordre.
      *

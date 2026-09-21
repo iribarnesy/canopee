@@ -59,6 +59,7 @@ import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import { decorDesBordures } from "./parcelle";
 import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
+import { CAUSE_AU_SINGULIER } from "./suivis";
 
 let sc: StationClimat | undefined;
 let weather: WeekWeather[] = [];
@@ -73,6 +74,8 @@ let bordures: Bordures = bordersUniformes("bocage");
 let relief: Relief | undefined;
 /** Vrai tant qu'une animation bloquante retient le temps du jeu (#163). */
 let retenu = false;
+/** Les arbres que le joueur suit : leur mort arrête le temps (#149). */
+let suivis: ReadonlySet<number> = new Set();
 let maturationAns = 0;
 /** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
 let economie = true;
@@ -142,6 +145,30 @@ function event(icone: string, message: string) {
 
 function nomEspece(id: string): string {
   return getEspece(id).nom.toLowerCase();
+}
+
+/**
+ * Ce que dit la pause quand un arbre suivi meurt : son essence et sa cause.
+ *
+ * Au SINGULIER, par la table du journal des suivis (`suivis.ts`) — « meurt de
+ * sécheresse » et non « morts de sécheresse : 1 ». C'est un arbre qu'on
+ * regardait, pas une ligne de bilan.
+ *
+ * **L'essence est mise entre parenthèses, et c'est de la grammaire et non du
+ * style.** Le premier jet écrivait « L'bouleau verruqueux que vous suivez » —
+ * relevé tel quel dans le navigateur. Rien dans les données ne donne le genre
+ * d'une essence : « le » se trompe sur la ronce et la callune, « l' » sur tout
+ * ce qui commence par une consonne. La seule phrase toujours juste fait porter
+ * l'accord par « arbre », et nomme l'essence en apposition.
+ */
+function raisonDesMorts(morts: readonly MortDeLaSemaine[]): string {
+  const premier = morts[0];
+  if (!premier) return "";
+  const nom = nomEspece(premier.especeId);
+  if (morts.length === 1) {
+    return `Un arbre suivi (${nom}) meurt ${CAUSE_AU_SINGULIER[premier.cause]}`;
+  }
+  return `${morts.length} arbres suivis meurent — le premier (${nom}) ${CAUSE_AU_SINGULIER[premier.cause]}`;
 }
 
 /** Dit si la coupe part en scierie ou en bûches, pour le journal. */
@@ -662,6 +689,16 @@ function stepWeeks(n: number) {
         return;
       }
     }
+    // **Un arbre SUIVI meurt : le temps s'arrête (#149).** C'est la demande
+    // même de l'issue — « pas qu'ils meurent sans que je comprenne rien ». Ici
+    // et pas côté jeu, parce qu'ici seulement la mort est connue à la semaine
+    // où elle arrive : l'instantané, lui, peut en porter vingt-six.
+    const morts = ticked.morts.filter((m) => suivis.has(m.id));
+    if (morts.length > 0) {
+      weeksPerSecond = 0;
+      post({ type: "autopause", reason: raisonDesMorts(morts) });
+      return;
+    }
     // Faillite : le temps s'arrête, le joueur doit regarder ses comptes.
     if (state.economy.bankrupt && !bankruptcyAnnounced) {
       bankruptcyAnnounced = true;
@@ -918,6 +955,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       startLoop();
       break;
     }
+    case "suivre":
+      suivis = new Set(msg.ids);
+      break;
     case "attendre":
       // On ne touche NI à `weeksPerSecond` NI à `semaineDArret` : c'est une
       // retenue, pas une reprise en main. Une traversée « +1 mois » qui

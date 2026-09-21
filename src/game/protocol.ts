@@ -533,6 +533,19 @@ export type ToWorker =
       /** ce que l'arrivée dira au joueur — le worker ne sait pas nommer un mois */
       libelle: string;
     }
+  /**
+   * LES ARBRES SUIVIS, pour que le worker sache s'arrêter quand l'un meurt (#149).
+   *
+   * La liste entière à chaque fois, et non un ajout : c'est un ENSEMBLE, et
+   * s'envoyer des deltas demanderait aux deux côtés de tenir la même liste —
+   * deux copies d'un même état, ce que le §2.1 nous a déjà coûté ailleurs.
+   *
+   * Le jeu, lui, tient le journal : le worker n'a besoin de savoir que ce
+   * qu'il est seul à pouvoir faire, arrêter le temps au bon tick. Le faire
+   * côté jeu voudrait dire découvrir la mort à l'instantané suivant, c'est-à-
+   * dire jusqu'à vingt-six semaines trop tard.
+   */
+  | { type: "suivre"; ids: number[] }
   | { type: "requestSave" };
 
 export type FromWorker =

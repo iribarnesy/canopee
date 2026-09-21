@@ -48,6 +48,7 @@ import { PanneauJournal } from "./panneaux/PanneauJournal";
 import { PanneauMenu } from "./panneaux/PanneauMenu";
 import { PanneauScores } from "./panneaux/PanneauScores";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
+import { PanneauSuivis } from "./panneaux/PanneauSuivis";
 import { useReglagesDeGeste } from "./panneaux/reglages";
 import { btn, SCENE, VOLET } from "./panneaux/styles";
 import { Angle, BoutonDeVolet, useVolets, Volet } from "./panneaux/Volet";
@@ -62,6 +63,7 @@ import {
 } from "./profils";
 import { useEllipse } from "./useEllipse";
 import { loadSave, useGame } from "./useGame";
+import { useSuivis } from "./useSuivis";
 import { VueParcelle } from "./VueParcelle";
 
 function StartScreen({
@@ -960,6 +962,11 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const [orientation, setOrientation] = useState<Orientation>(0);
 
   const { station, snapshot } = game;
+  /**
+   * LES ARBRES SUIVIS et leur journal (#149). Le worker en tient la liste, lui
+   * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
+   */
+  const suivis = useSuivis(snapshot, game.suivre);
 
   // La coquille du site a besoin de savoir si une partie tourne : en jeu elle
   // s'efface, la parcelle prend la fenêtre entière.
@@ -1103,6 +1110,15 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * par pixel parcouru noierait le worker pour rien.
    */
   const [survol, setSurvol] = useState<{ x: number; y: number }>();
+
+  /**
+   * Où la vue va d'elle-même, quand elle y va.
+   *
+   * **La mort d'un suivi passe devant l'incendie (#149)** : les deux cadrages
+   * sont le même mécanisme, et quand ils tombent ensemble c'est l'arbre qu'on
+   * regardait qui l'emporte — le feu, lui, se voit de toute façon.
+   */
+  const cadrage = suivis.cadrerSur ?? ellipse.cadrerSur;
 
   /**
    * LA BARRE ESPACE met en marche et arrête, où qu'on ait cliqué.
@@ -1305,7 +1321,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             voiler={ellipse.voiler}
             feu={ellipse.feu}
             marqueurs={ellipse.marqueurs}
-            {...(ellipse.cadrerSur ? { cadrerSur: ellipse.cadrerSur } : {})}
+            {...(cadrage ? { cadrerSur: cadrage } : {})}
           />
         )}
       </div>
@@ -1366,6 +1382,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 tous={snapshot.trees}
                 selectedTrees={selectedTrees}
                 setSelectedIds={setSelectedIds}
+                suivis={suivis.suivis}
+                basculerSuivi={suivis.basculer}
               />
             </Volet>
           ) : undefined
@@ -1457,6 +1475,16 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             <Volet titre="Journal" largeur={400} surFermer={() => volets.fermer("bd")}>
               <PanneauJournal evenements={game.events} />
             </Volet>
+          ) : volets.estOuvert("bd", "suivis") ? (
+            <Volet titre="Arbres suivis" largeur={420} surFermer={() => volets.fermer("bd")}>
+              <PanneauSuivis
+                suivis={suivis.suivis}
+                journal={suivis.journal}
+                tous={snapshot.trees}
+                oublier={suivis.oublier}
+                selectionner={(id) => setSelectedIds(new Set([id]))}
+              />
+            </Volet>
           ) : undefined
         }
       >
@@ -1478,6 +1506,16 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         >
           📜 Journal{game.events.length > 0 ? ` (${game.events.length})` : ""}
         </BoutonDeVolet>
+        {/* Le bouton n'apparaît qu'une fois qu'on suit quelqu'un : un volet
+            vide de plus sur l'écran d'un joueur qui n'a rien demandé. */}
+        {suivis.suivis.size > 0 && (
+          <BoutonDeVolet
+            ouvert={volets.estOuvert("bd", "suivis")}
+            surClic={() => volets.basculer("bd", "suivis")}
+          >
+            👁 Suivis ({suivis.suivis.size})
+          </BoutonDeVolet>
+        )}
       </Angle>
     </div>
   );
