@@ -42,6 +42,21 @@ export interface WeekWeather {
   ventVersRad: number;
   /** Vitesse moyenne du vent sur la semaine, à 10 m, m/s. */
   ventMoyMs: number;
+  /**
+   * Ce par quoi la trajectoire climatique multiplie la RAFALE de la semaine
+   * (`tempete.ts`), critère F19. Optionnel ; absent, il vaut 1.
+   *
+   * **Il vaut 1 aujourd'hui, et c'est un état assumé, pas un oubli.** Ce champ
+   * existe pour réunir deux moitiés de mécanisme qui ne se voyaient pas :
+   * `meteoDerivee` connaît le scénario mais pas la graine de partie, donc ne
+   * peut tirer de rafale ; `tick` tire la rafale et ne connaît pas le scénario.
+   * La plomberie est faite ; le CHIFFRE manque, et il manque pour une raison
+   * qui n'est pas de la paresse — cf. `AMPLIFICATION_RAFALE` (climat.ts).
+   *
+   * Le jour où la littérature donnera un sens et une ampleur pour la France, il
+   * y aura UNE ligne à changer, dans `climat.ts`, et rien d'autre.
+   */
+  facteurRafale?: number;
 }
 
 /**

@@ -221,6 +221,7 @@ import {
   abriAuVent,
   candidatAuChablis,
   hauteurDeVolisM,
+  memoireDAbri,
   modeDeRuine,
   RAFALE_MINIMALE_MS,
   rafaleDeLaSemaine,
@@ -698,7 +699,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // DEUX fois et à deux endroits éloignés du tick : elle couche les arbres
   // vivants (§ tempête) et elle oriente la chute des chandelles (§ bois mort,
   // issue #58). Elle dérive de la graine de partie, pas du flux principal.
-  const rafaleMs = rafaleDeLaSemaine(state.graineMarche, state.week, weather.ventMoyMs);
+  const rafaleMs = rafaleDeLaSemaine(
+    state.graineMarche,
+    state.week,
+    weather.ventMoyMs,
+    // La trajectoire climatique, arrivée jusqu'ici par la météo de la semaine
+    // (F19). Elle vaut 1 tant que le chiffre manque, mais les deux moitiés du
+    // mécanisme se voient enfin : `meteoDerivee` connaît le scénario, `tick`
+    // connaît la graine, et c'est la météo qui fait le pont — exactement comme
+    // elle le fait déjà pour le CO₂ et l'année.
+    weather.facteurRafale ?? 1,
+  );
   const ventDeChute = {
     versRad: weather.ventVersRad,
     emprise: empriseDuVentSurLaChute(rafaleMs * Math.min(1, Math.max(0, station.ventExposition))),
@@ -2906,6 +2917,29 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const sortieOeuvreKgC = state.carbon.oeuvreStockKgC * SORTIE_OEUVRE_PAR_SEMAINE;
 
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
+  // ── 6 ter bis. La mémoire d'abri, une fois l'an (F18) ────────────────────
+  // Chaque arbre retient l'abri sous lequel il a fabriqué son fût et ses
+  // racines ; ce qui le fragilise n'est pas d'être exposé mais de l'être sans y
+  // être préparé (tempete.ts). La mise à jour est ANNUELLE et non hebdomadaire,
+  // et c'est un choix de coût assumé : `abriAuVent` parcourt le peuplement pour
+  // chaque arbre, donc un n², et la constante de temps se compte en années.
+  //
+  // Placée APRÈS la tempête, délibérément : un arbre découvert par la rafale de
+  // cette semaine-là doit être naïf l'an prochain, pas déjà habitué.
+  if (week === RECRUITMENT_WEEK) {
+    const debout = nextTrees.filter((t) => t.alive);
+    nextTrees = nextTrees.map((tree) => {
+      if (!tree.alive) return tree;
+      const abri = abriAuVent(debout, tree);
+      return {
+        ...tree,
+        // Un arbre qui n'a pas encore vu passer un 1ᵉʳ janvier est réputé
+        // habitué à ce qu'il a : un semis ne naît pas fragile.
+        abriHabituel: memoireDAbri(tree.abriHabituel ?? abri, abri),
+      };
+    });
+  }
+
   // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
   // Versées à la semaine du recrutement, qui vaut « début de campagne ». Elles
   // ne tombent que si l'économie compte dans cette partie : sans elle, le

@@ -120,13 +120,22 @@ export function rafaleDeLaSemaine(
   grainePartie: number,
   semaineAbsolue: number,
   ventMoyMs: number,
+  facteurClimat = 1,
 ): number {
   const graine = (grainePartie * 2246822519 + semaineAbsolue * 3266489917 + 374761393) >>> 0;
   const u = rngFloat(rngStateFromSeed(graine)).value;
   const pied = Math.max(0, ventMoyMs) * FACTEUR_RAFALE;
   // La queue : -ln(1-u) est une exponentielle standard. À u proche de 1 elle
   // s'envole, ce qui est exactement ce qu'on veut d'une tempête.
-  return Math.min(RAFALE_MAXIMALE_MS, pied * (1 + ECHELLE_TEMPETE * -Math.log(1 - u)));
+  //
+  // `facteurClimat` est la moitié manquante de F19 : la trajectoire climatique
+  // arrive jusqu'ici, alors que le scénario ne parvenait pas au tick. Il vaut 1
+  // aujourd'hui et le restera tant que le CHIFFRE manquera (`climat.ts`,
+  // `AMPLIFICATION_RAFALE`) — mais la plomberie, elle, ne manque plus. Il
+  // multiplie le PIED de la loi et non son sommet : un climat plus venteux
+  // décale toute la distribution, il ne rallonge pas seulement sa queue.
+  const tire = pied * (1 + ECHELLE_TEMPETE * -Math.log(1 - u));
+  return Math.min(RAFALE_MAXIMALE_MS, tire * Math.max(0, facteurClimat));
 }
 
 /**
@@ -429,6 +438,66 @@ export function abriAuVent(
   return Math.min(1, abri);
 }
 
+/**
+ * En combien d'années un arbre s'habitue à un nouveau régime de vent.
+ *
+ * L'épaississement du tronc et de l'ancrage sous la contrainte mécanique — la
+ * thigmomorphogenèse — est un fait mesuré, et il se compte en années. La
+ * sylviculture en tire sa règle de terrain : un peuplement fraîchement
+ * éclairci est à risque pendant quelques années, et c'est pour ça qu'on
+ * n'éclaircit ni tard ni fort *(à calibrer : l'ordre de grandeur de la période
+ * critique est documenté, la forme de la décroissance ne l'est pas)*.
+ */
+export const MEMOIRE_ABRI_ANS = 5;
+
+/**
+ * Nouvelle mémoire d'abri après une année passée sous `abriActuel`.
+ *
+ * Un lissage exponentiel, mis à jour une fois l'an et non chaque semaine — et
+ * c'est un choix de COÛT, à dire : `abriAuVent` parcourt le peuplement pour
+ * chaque arbre, donc un n² ; le faire cinquante-deux fois par an pour une
+ * constante de temps de cinq ans serait payer très cher une précision qui ne
+ * change rien.
+ */
+export function memoireDAbri(abriHabituel: number, abriActuel: number): number {
+  const a = 1 / MEMOIRE_ABRI_ANS;
+  return abriHabituel + a * (abriActuel - abriHabituel);
+}
+
+/**
+ * NAÏVETÉ AU VENT ∈ [0,1] : de combien l'abri a chuté sous celui auquel
+ * l'arbre est habitué (critère F18).
+ *
+ * Une seule soustraction, et elle couvre les trois causes que le critère
+ * nomme — l'éclaircie, la lisière neuve, la trouée d'un chablis — sans qu'aucune
+ * ne soit écrite. Ce sont toutes des chutes d'abri.
+ *
+ * Et les deux cas qui ne doivent RIEN donner ne donnent rien : un arbre qui a
+ * toujours poussé au large a une mémoire basse, donc aucune naïveté — c'est
+ * l'arbre de plein vent, celui qui tient ; et un arbre qu'on vient d'ABRITER
+ * (un voisin qui pousse, une haie qui monte) n'est pas naïf non plus, il est
+ * simplement mieux protégé, d'où le plancher à zéro.
+ */
+export function naiveteAuVent(abriHabituel: number | undefined, abriActuel: number): number {
+  if (abriHabituel === undefined) return 0;
+  return Math.min(1, Math.max(0, abriHabituel - abriActuel));
+}
+
+/** Ce qu'une découverte complète retire à la tenue, en part. */
+export const PERTE_NAIVETE = 0.25;
+
+/**
+ * Ce que la naïveté laisse de résistance ∈ [0,75 ; 1].
+ *
+ * Elle s'applique aux DEUX ruines, et c'est voulu : ce qui n'a pas suivi est
+ * le fût autant que l'ancrage. Un arbre élevé à l'abri est effilé ET mal
+ * amarré, et c'est précisément pour ça qu'une éclaircie tardive et forte est
+ * la faute que Lothar a fait payer le plus cher.
+ */
+export function facteurNaivete(naivete: number): number {
+  return 1 - PERTE_NAIVETE * Math.min(1, Math.max(0, naivete));
+}
+
 /** Rafale que l'arbre reçoit vraiment à la cime, m/s. */
 export function rafaleRecue(arbre: TreeState, exposition: ExpositionAuVent): number {
   const abri = 1 - ABRI_MAX * Math.min(1, Math.max(0, exposition.abriVent));
@@ -447,7 +516,8 @@ export function vitesseCritiqueMs(arbre: TreeState, exposition: ExpositionAuVent
     facteurElancement(arbre.heightM, arbre.diametreCm) *
     facteurAncrage(exposition.profondeurEffectiveCm, arbre.heightM) *
     facteurSolGorge(exposition.engorgement, exposition.toleranceEngorgement) *
-    facteurPriseAuVent(exposition.partFoliaire)
+    facteurPriseAuVent(exposition.partFoliaire) *
+    facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent))
   );
 }
 
@@ -538,7 +608,8 @@ export function vitesseCritiqueVolisMs(
     (VITESSE_CRITIQUE_VOLIS_MS / facteurSouplesse(arbre.heightM)) *
     facteurDensiteBois(densiteBois) *
     facteurGeometrieFut(arbre.heightM, arbre.diametreCm) *
-    facteurPriseAuVent(exposition.partFoliaire)
+    facteurPriseAuVent(exposition.partFoliaire) *
+    facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent))
   );
 }
 

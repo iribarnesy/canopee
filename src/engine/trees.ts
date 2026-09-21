@@ -208,6 +208,22 @@ export interface TreeState {
    * avant que le bois ne bleuisse — c'est le VRAI chablis, celui dont
    * `DECOTE_CHABLIS` porte le nom depuis toujours sans le désigner.
    */
+  /**
+   * ABRI AUQUEL CET ARBRE-LÀ EST HABITUÉ ∈ [0,1] : moyenne lissée de l'abri
+   * qu'il a connu, remise à jour une fois l'an (`tempete.ts`, critère F18).
+   *
+   * Ce n'est pas son abri actuel — c'est la mémoire de celui sous lequel il a
+   * fabriqué son fût et ses racines. Ce qui fragilise un arbre qu'on vient de
+   * découvrir n'est pas d'être exposé, c'est de l'être SANS Y ÊTRE PRÉPARÉ :
+   * l'épaississement du tronc sous la contrainte mécanique se compte en
+   * années. La chute entre cette mémoire et l'abri du jour mesure cette
+   * naïveté, et elle s'estompe toute seule à mesure que la mémoire rattrape.
+   *
+   * Absent sur un arbre qui n'a pas encore vu passer un 1ᵉʳ janvier : il est
+   * alors réputé habitué à ce qu'il a, donc pas naïf. Un semis ne naît pas
+   * fragile.
+   */
+  abriHabituel?: number;
   renverseSemaine?: number;
   /**
    * Direction dans laquelle le tronc est parti, radians — posée au moment du

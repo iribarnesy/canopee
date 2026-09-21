@@ -61,7 +61,61 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le volis, #176)
+## Ce que le dernier lot a appris (la naïveté au vent, #177 et F19)
+
+Deux lots d'un coup, et ils se ressemblent : dans les deux cas le mécanisme est
+écrit et sa conséquence ne l'est pas — pour F19 parce que le chiffre n'existe
+pas, pour F18 parce que le moteur ne peut pas la montrer. F18 passe à 🟡, F19
+reste ❌ avec sa plomberie faite.
+
+**Le diagnostic écrit au référentiel peut être faux, et c'est la prémisse qui
+le dit.** F18 affirmait que « `abriAuVent` recalcule l'abri dans la semaine qui
+suit la coupe : les survivants sont réputés adaptés instantanément ». Mesuré
+avant d'écrire une ligne : c'est l'inverse. L'abri tombe de 0,76 à 0,14 dès la
+coupe, et la parcelle éclaircie prend 10,9 % de ruines en dix ans contre 1,2 %
+au témoin. Ce qui manquait n'était pas l'exposition mais l'ACCLIMATATION. Sans
+cette mesure, j'aurais construit un mécanisme en croyant combler un trou qui
+n'existait pas.
+
+**Le meilleur résultat du lot est celui que personne n'a écrit.** La naïveté
+distingue toute seule les deux façons d'éclaircir : 0,589 par le haut, 0,012 par
+le bas. La raison est dans la définition de l'abri — `abriAuVent` ne compte que
+les voisins qui DÉPASSENT, donc une éclaircie par le bas garde les dominants,
+que personne n'abritait, et ils ne perdent rien. C'est exactement la règle
+sylvicole, et elle tombe de deux mécanismes qui ne se connaissaient pas.
+
+**Et c'est la même définition qui empêche le critère de tomber.** Si les seuls
+arbres qui ont de l'abri à perdre sont les dominés, et si les dominés sont trop
+courts pour verser, alors la fragilité d'après-ouverture ne peut PAS produire de
+surcroît de ruines. Mesuré, et j'ai cherché : douze graines, exposition forcée à
+1, cohorte naïve suivie nommément — 15,3 % contre 12,7 %, sur dix-sept et seize
+événements. Non séparable du bruit. **Le blocage de F18 n'était donc jamais la
+mémoire par arbre ; c'est que la futaie ne s'abrite pas elle-même.**
+
+**Un dénominateur mal choisi cache un effet, et j'ai failli m'y laisser prendre
+deux fois.** Premier compte : 68 ruines contre 63 sur 540 tiges — mais la
+plupart de ces tiges étaient trop petites pour verser. Deuxième essai, cohorte
+ciblée : 111 naïfs contre 6 témoins, donc une comparaison vide. Il a fallu le
+témoin APPARIÉ — la même cohorte, mécanisme neutralisé — pour obtenir un chiffre
+lisible, et ce chiffre dit non.
+
+**Ce qu'on livre quand le chiffre n'existe pas : la plomberie, et elle seule.**
+Pour F19, `meteoDerivee` connaissait le scénario sans pouvoir tirer de rafale et
+`tick` tirait la rafale sans connaître le scénario ; la météo de la semaine
+porte maintenant un `facteurRafale`, comme elle porte déjà le CO₂. Il vaut 1, et
+`AMPLIFICATION_RAFALE` vaut 0, parce que le SIGNE du changement de vent extrême
+sur la France n'est pas établi. Deux essais tiennent les deux bouts : l'un
+vérifie qu'un facteur non neutre agit VRAIMENT — sans quoi le champ serait un
+ornement —, l'autre épingle le zéro pour que le poser devienne un geste
+délibéré.
+
+**Et un essai a changé de thermomètre, pas de seuil.** `tempete.test.ts`
+comparait `arbresVerses`, qui depuis #176 ne compte plus que les déracinements :
+le pin, bois tendre, était passé au volis, et l'essai lisait « le pin déracine
+moins » là où il veut dire « la tempête lui prend plus d'arbres qu'au hêtre ».
+Il somme désormais les deux ruines.
+
+## Ce qu'un lot plus ancien a appris (le volis, #176)
 
 Une tempête ne savait que déraciner. Elle casse aussi, désormais, et c'est la
 plus basse des deux vitesses critiques qui décide. F17 passe de ❌ à 🟡.
