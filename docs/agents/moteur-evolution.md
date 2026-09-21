@@ -61,7 +61,56 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (une futaie s'abrite elle-même, #179)
+## Ce que le dernier lot a appris (la branche arrachée, #181, et F17/F18 au vert)
+
+Le troisième mode de F17 — un coup de vent qui arrache des branches à un arbre
+qui tient — et le banc apparié qui a fait tomber F18. Les deux critères passent
+✅, le référentiel à 93 %.
+
+**Un mécanisme peut être juste et se brancher au mauvais endroit.** J'avais
+branché la perte de houppier sur `env.light` : moins de feuilles, moins de
+lumière captée. Le banc des tables de production a répondu en trois minutes —
+le pin à 18,7 m pour 15,5 tabulés, donc TROP GRAND. `env.light` nourrit aussi
+l'allocation, donc le signal d'étiolement : je disais à l'arbre qu'il était à
+l'ombre, et un arbre à l'ombre file en hauteur. **Un arbre ébranché n'est pas
+ombragé.** La pénalité est allée là où entre la vigueur individuelle, au seul
+endroit qui module ce que l'arbre TIRE de conditions données.
+
+**Et sous l'erreur de branchement, un bug de conservation.** Je déposais la
+litière arrachée sans rien retirer à l'arbre, qui laissait donc retomber à
+l'automne un feuillage déjà perdu : le moteur CRÉAIT de l'azote à chaque coup de
+vent, et la parcelle s'en trouvait fertilisée. C'était toute l'explication du
+pin trop grand. Un coup de vent ne fabrique pas des feuilles, il les fait tomber
+plus tôt — on débite donc la réserve de l'année de ce qu'on verse au sol. La
+leçon générale : **tout dépôt dans un pool doit être un TRANSFERT, jamais une
+création**, et c'est vrai des feuilles comme du calcium (#170).
+
+**F18 n'attendait aucun mécanisme : il attendait un banc.** Tout était écrit
+depuis #177 et #179. Les deux premières mesures comparaient des populations
+différentes — une éclaircie par le haut retire les grands, donc la population
+vulnérable — et concluaient qu'un peuplement éclairci est plus sûr. Vrai, et
+hors sujet. La bonne mesure suit **les mêmes arbres dans les deux bras**, ceux
+qu'une éclaircie par le BAS laisse debout : un tiers d'abri en moins, trois fois
+plus de chablis, 11 contre 1 sur les cinq premières années.
+
+**Le banc du feu a cassé DEUX FOIS dans la même session, et trois graines n'ont
+pas suffi.** Après l'avoir élargi de une à trois graines, #181 a de nouveau
+éteint les trois. Mesuré sur sept graines de part et d'autre, le feu n'était
+pourtant pas supprimé — plutôt davantage, les branches au sol faisant du
+combustible. Il est passé à sept graines. **Mais le vrai remède n'est pas un
+nombre de graines** : c'est de séparer « une lande finit-elle par brûler ? »,
+qui demande beaucoup de parties, de « que fait un feu quand il a lieu ? », qui
+se teste sur un feu FORCÉ et sans hasard. Noté comme lot.
+
+**Le compte des pièges de ce bloc.** Un banc qui n'exerçait pas le mécanisme.
+Un dénominateur trop large. Deux témoins « appariés » qui ne l'étaient pas. Un
+témoin dont la neutralisation s'est retournée (1e9 donne un facteur 1, pas 0).
+Une calibration tentée sur une sortie chaotique et non monotone. Et deux fois le
+même banc de feu re-tiré. **Six fois la même famille d'erreur — mesurer une
+chose en croyant en mesurer une autre — dans un seul bloc.** À chaque fois, ce
+qui a sauvé la conclusion est un relevé imprimé à côté du verdict.
+
+## Ce qu'un lot plus ancien a appris (une futaie s'abrite elle-même, #179)
 
 `abriAuVent` ne comptait que les voisins qui DÉPASSENT, si bien qu'une futaie
 régulière n'abritait personne. Elle s'abrite maintenant, par le rapport de
