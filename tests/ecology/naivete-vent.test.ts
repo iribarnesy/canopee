@@ -137,3 +137,88 @@ describe("en partie : la naïveté distingue les deux façons d'éclaircir", () 
     expect(apres).toBeLessThan(0.5 * juste);
   });
 });
+
+describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
+  it("les MÊMES arbres versent trois fois plus après une éclaircie", () => {
+    // LE BANC APPARIÉ, et il a fallu trois essais ratés pour l'obtenir.
+    //
+    // Les deux premiers comparaient des populations différentes — une éclaircie
+    // par le haut retire les grands, donc la population vulnérable, et le
+    // peuplement éclairci ressortait plus SÛR que le témoin (8,3 % contre
+    // 43,7 %). Ce n'était pas faux : il n'avait plus d'arbres à perdre. Mais ça
+    // ne dit rien de la fragilité d'après-ouverture.
+    //
+    // Celui-ci suit **exactement les mêmes arbres dans les deux bras** : ceux
+    // que l'éclaircie laisse debout. Populations identiques à l'instant zéro ;
+    // seule diffère la présence des voisins qu'on a retirés.
+    const COTE_B = 40;
+    const stationB: Station = { ...LIMON_RICHE.station, coteM: COTE_B, voisinage: [] };
+    const AN = 40;
+    const SUIVI = 12;
+    let couchesEclairci = 0;
+    let couchesTemoin = 0;
+    let cohorteTotale = 0;
+    let abriEclairci = 0;
+    let abriTemoin = 0;
+    for (const graine of [3, 7, 11, 13, 17, 19]) {
+      let base: GameState = plantScattered(
+        createGameState(stationB, rngStateFromSeed(graine)),
+        "pinus_sylvestris",
+        400,
+      );
+      for (let i = 0; i < AN * 52; i++) {
+        const w = METEO[i % METEO.length];
+        if (!w) throw new Error("météo manquante");
+        base = tick(base, w).state;
+      }
+      // Une éclaircie PAR LE BAS : elle garde les dominants, et c'est le cas
+      // réel — celui où la question « sont-ils plus fragiles ? » a un sens.
+      const eclairci = applyAction(base, {
+        type: "eclaircir",
+        week: AN * 52,
+        x: COTE_B / 2,
+        y: COTE_B / 2,
+        rayonM: COTE_B,
+        densiteCibleParHa: 150,
+        critere: "parLeBas",
+        devenir: "laisser",
+      }).state;
+      const vE = eclairci.trees.filter((t) => t.alive);
+      const vT = base.trees.filter((t) => t.alive);
+      const hMax = Math.max(0, ...vE.map((t) => t.heightM));
+      const dom = vE.filter((t) => t.heightM > 0.8 * hMax);
+      const cohorte = new Set(dom.map((t) => t.id));
+      cohorteTotale += cohorte.size;
+      abriEclairci += moyenne(dom.map((t) => abriAuVent(vE, t))) * dom.length;
+      abriTemoin += moyenne(dom.map((t) => abriAuVent(vT, t))) * dom.length;
+      for (const [eclairciBras, depart] of [
+        [true, eclairci],
+        [false, base],
+      ] as const) {
+        let s = depart;
+        for (let i = AN * 52; i < (AN + SUIVI) * 52; i++) {
+          const w = METEO[i % METEO.length];
+          if (!w) throw new Error("météo manquante");
+          const r = tick(s, w);
+          s = r.state;
+          if (!r.tempete) continue;
+          for (const vic of r.tempete.victimes) {
+            if (!cohorte.has(vic.id)) continue;
+            if (eclairciBras) couchesEclairci++;
+            else couchesTemoin++;
+          }
+        }
+      }
+    }
+    // L'ouverture dépouille les dominants : relevé 0,279 → 0,190 sur douze
+    // graines, soit un tiers de leur abri.
+    expect(abriEclairci / cohorteTotale).toBeLessThan(0.8 * (abriTemoin / cohorteTotale));
+    // Et ils le paient. Relevé sur douze graines : 57 couchés contre 19, dont
+    // 11 contre 1 sur les cinq premières années — celles où la croissance n'a
+    // pas encore divergé, donc où le seul écart est l'abri perdu. À douze ans
+    // la cohorte éclaircie mesure 18,4 m contre 17,3 m : six pour cent de
+    // hauteur en plus n'explique pas un facteur trois.
+    expect(couchesTemoin).toBeGreaterThan(0);
+    expect(couchesEclairci).toBeGreaterThan(2 * couchesTemoin);
+  }, 900_000);
+});
