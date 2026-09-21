@@ -30,6 +30,7 @@
  * pluriannuels, lutte biologique active.
  */
 
+import { volumeCaviteTotalL } from "./cavites";
 import { getEspece } from "./especes";
 import type { GridDims } from "./grid";
 import { forEachDiscCell } from "./grid";
@@ -93,6 +94,20 @@ export const RESSOURCE_SATURATION = 1.2;
 
 /** Nombre d'essences au-delà duquel la richesse du voisinage ne rapporte plus. */
 const RICHESSE_SUFFISANTE = 4;
+
+/**
+ * Litres de cavité à l'hectare qui saturent l'offre de gîtes *(à calibrer)*.
+ *
+ * Même rôle que les 20 t/ha de bois mort auxquels ce nombre se substitue quand
+ * il est plus généreux : au-delà, un auxiliaire de plus ne trouve pas un gîte
+ * de plus, c'est autre chose qui le limite. L'ordre de grandeur est celui d'un
+ * bocage âgé, et c'est la cible que la sylviculture à but de biodiversité se
+ * donne : cinq à dix gros arbres-habitats à l'hectare, à une centaine de litres
+ * de creux pièce (`CAVITE_HABITAT_L`, trogne.ts). Relevé sur cent vingt ans de
+ * chênes, une parcelle qui a eu ses coups de vent en offre 7 800 L/ha — elle
+ * est donc largement au-dessus de la cible, et le terme y sature.
+ */
+export const CAVITES_SUFFISANTES_L_HA = 1000;
 
 /**
  * Côté du bloc sur lequel on agrège la diversité, m. Les auxiliaires ne
@@ -159,6 +174,25 @@ export function carteBiotique(
   boisMortTHa: number,
   dims: GridDims,
 ): CarteBiotique {
+  // Les CAVITÉS comptent parmi les gîtes, au même titre que le bois mort et
+  // dans le même terme (#182). Un tronc creux est un abri d'hiver et un site
+  // de nid — c'est ce qui loge les mésanges et les chauves-souris que le
+  // commentaire de tête de ce module nomme sans que rien ne les porte.
+  //
+  // Le terme prend le PLUS GÉNÉREUX des deux et ne les additionne pas, et ce
+  // n'est pas une précaution d'écriture : ce que ce 0,15 mesure est « y a-t-il
+  // où se loger », et cette question-là SATURE. Un peuplement qui a déjà
+  // vingt tonnes de bois mort à l'hectare ne loge pas mieux parce qu'il a
+  // aussi des creux. La conséquence est qu'à cavités nulles la carte est
+  // rigoureusement celle d'avant — le lot se neutralise tout seul, et un
+  // essai l'épingle.
+  //
+  // Les creux, EUX, sont spatialisés, là où le pool de bois mort ne l'est pas :
+  // une cavité est sur un arbre, à un endroit. Ils s'agrègent donc par bloc et
+  // se lisent dans la même fenêtre de 3×3 que la richesse — celle que le
+  // commentaire de `BLOC_AUXILIAIRES_M` justifie par la prospection d'une
+  // mésange. Un vieux têtard creux vaut pour son voisinage, pas pour la
+  // parcelle entière.
   const n = dims.widthM * dims.heightM;
   const ressource = new Float64Array(n);
   const habitat = new Float64Array(n);
@@ -172,6 +206,7 @@ export function carteBiotique(
   const stratesBloc = new Int32Array(nbx * nby);
   const especeBit = new Map<string, number>();
 
+  const cavitesBloc = new Float64Array(nbx * nby);
   for (const tree of trees) {
     if (!tree.alive) continue;
     const espece = getEspece(tree.especeId);
@@ -194,15 +229,19 @@ export function carteBiotique(
     const b = by * nbx + bx;
     essencesBloc[b] = (essencesBloc[b] ?? 0) | (bit ?? 0);
     stratesBloc[b] = (stratesBloc[b] ?? 0) | strateBit;
+    cavitesBloc[b] = (cavitesBloc[b] ?? 0) + volumeCaviteTotalL(tree);
   }
 
   // Fenêtre de 3×3 blocs : ce que l'auxiliaire a sous les yeux depuis son nid.
   const essencesVues = new Int32Array(nbx * nby);
   const stratesVues = new Int32Array(nbx * nby);
+  const cavitesVues = new Float64Array(nbx * nby);
   for (let by = 0; by < nby; by++) {
     for (let bx = 0; bx < nbx; bx++) {
       let e = 0;
       let st = 0;
+      let cav = 0;
+      let blocsVus = 0;
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
           const x = bx + dx;
@@ -210,10 +249,17 @@ export function carteBiotique(
           if (x < 0 || y < 0 || x >= nbx || y >= nby) continue;
           e |= essencesBloc[y * nbx + x] ?? 0;
           st |= stratesBloc[y * nbx + x] ?? 0;
+          cav += cavitesBloc[y * nbx + x] ?? 0;
+          blocsVus++;
         }
       }
       essencesVues[by * nbx + bx] = e;
       stratesVues[by * nbx + bx] = st;
+      // En litres par hectare de ce qu'on voit, et non en litres tout court :
+      // un bloc de bord n'a que quatre voisins, et sans ça il serait pauvre
+      // par le seul fait d'être au bord.
+      const haVues = (blocsVus * BLOC_AUXILIAIRES_M * BLOC_AUXILIAIRES_M) / 10_000;
+      cavitesVues[by * nbx + bx] = haVues > 0 ? cav / haVues : 0;
     }
   }
 
@@ -227,11 +273,12 @@ export function carteBiotique(
     const b = by * nbx + bx;
     const richesse = popcount(essencesVues[b] ?? 0);
     const nStrates = popcount(stratesVues[b] ?? 0);
+    const partCavites = Math.min(1, (cavitesVues[b] ?? 0) / CAVITES_SUFFISANTES_L_HA);
     habitat[i] =
       0.4 * Math.min(1, richesse / RICHESSE_SUFFISANTE) +
       0.25 * Math.min(1, nStrates / 3) +
       0.2 * Math.min(1, herbeCouverture[i] ?? 0) +
-      0.15 * partBoisMort;
+      0.15 * Math.max(partBoisMort, partCavites);
   }
   return { ressource, habitat, abriHivernal };
 }
