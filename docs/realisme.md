@@ -269,7 +269,7 @@ maladie-là, pas une preuve de santé.*
 | C15 | La POMPE À BASES : un feuillu remonte les bases du sous-sol et les dépose en surface, appauvrissant la profondeur | ✅ | `bases.ts` (`prelevementProfondEq`, `alterationBases*`) ; `pompe-bases.test.ts` — le budget de bases est **stratifié et il circule** : chaque horizon reçoit l'altération qu'il produit (le sous-sol en fait 63 à 79 %, là où tout était crédité à la surface), la surface lessive VERS le fond au lieu du néant, les racines pompent au fond le calcium qu'elles déposeront en surface, et c'est en passant sous la zone racinaire qu'une base quitte la parcelle. Le prélèvement se lit sur deux traits de l'atlas (`litiere.calciumMgG`, `racines.profondeurMaxCm`), par individu, aucune espèce nommée. Mesuré sur cinquante ans, limon riche : **sans arbre le sous-sol ne s'appauvrit pas** (7,000 → 7,018, il trouve son équilibre), **sous hêtraie il baisse** (→ 6,976) pendant que la surface, elle, reçoit — le frêne tient sa surface 0,18 unité au-dessus du sol nu tout en creusant son fond. Et c'est la TENEUR qui décide, pas la profondeur : le pin descend deux fois plus bas que le hêtre, porte plus de tiges, et pompe cinquante fois moins. Les deux budgets se referment à 1e-11 près, et celui de surface **sans aucun terme de pompe** — c'est ce qui prouve que la remontée passe par la litière et non par un raccourci. Hors d'atteinte en revanche, et dit : le contraste de Foltran et al. (hêtre acidifiant le fond PLUS que l'épicéa) suppose un épicéa que l'atlas n'a pas |
 | C16 | Une culture continue sans apport épuise le sol, et se stabilise bas | ✅ | La culture prélève son azote pondéré par son `exigenceMinerale` — dix pour le blé contre un pour une graminée spontanée (`herbacees.ts`, `tick.ts`) — et le moteur n'a pas d'action de fertilisation. Un blé continu descend donc de lui-même : 3,43 t/ha à l'an 4, 1,98 à l'an 12, **1,02 à l'an 24**, 0,82 à l'an 29 (`culture.test.ts`). **Le calage et la validation viennent de la même source sur deux chiffres différents** : Broadbalk (Rothamsted, blé continu depuis 1843) donne 8-9 t/ha sur les parcelles pleinement fumées — c'est le plafond posé sur la fiche — et ~1 t/ha sur celles qui ne reçoivent rien, tenu sur cent soixante-dix ans. Rien dans le code ne pousse le moteur vers ce second chiffre. **Limite** : il glisse sous 1 après trente ans là où Broadbalk tient, et la cause probable est la PAILLE, qui reste au champ dans la réalité et ne rend rien ici |
 | C17 | On peut apporter de l'azote, et les formes ne font pas la même chose | ✅ | `fertiliser` (`actions.ts`), dose en kg N/ha dans les deux cas pour qu'elles se comparent. Le MINÉRAL entre dans le pool disponible — donc lessivable par `cellLeachedG`, qui existait ; le FUMIER entre dans la litière avec son C/N, se minéralise sur des années et construit de l'humus au passage (même patron que `epandreBrf`). Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m² d'azote minéral et RIEN en litière, le plot fumier 4,50 et 20,25 de litière — le second a constitué un stock, le premier l'a traversé. À azote comparable, le fumier fait mieux sur la durée (6,21 contre 4,88 t/ha), ce que Broadbalk dit aussi. Refus au-delà de 250 kg N/ha : la directive nitrates plafonne l'organique à 170 en zone vulnérable |
-| C18 | Le rendement répond à la dose d'azote, et la courbe n'est écrite nulle part | ✅ | Aucune courbe de réponse n'a été codée : l'apport remplit le pool, et le rendement y répond par la satisfaction de la strate. Mesurée sur les paliers de Broadbalk (0 / 48 / 96 / 144 / 192 kg N/ha), moyenne des dix dernières années sur trente : **1,01 / 2,40 / 3,21 / 3,92 / 4,88 t/ha** — monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues tiennent depuis 1843. **Limite, chiffrée et attribuée** : Broadbalk monte à 8-9 t/ha à 192 kg N et le moteur plafonne à 4,88. La cause n'est ni dans la culture ni dans l'azote — un itinéraire céréalier fait quatre passages d'engin par an, soit 1,00 de tassement contre 0,20 de réparation, donc le sol est épinglé à 1 dès la deuxième année et perd 30 % de croissance pour toujours (issue #141, maintenance). **Les premières années, avant l'épinglage, atteignent 7,35 et 7,62 t/ha**, dans la gamme de l'essai |
+| C18 | Le rendement répond à la dose d'azote, et la courbe n'est écrite nulle part | ✅ | Aucune courbe de réponse n'a été codée : l'apport remplit le pool, et le rendement y répond par la satisfaction de la strate. Mesurée sur les paliers de Broadbalk (0 / 48 / 96 / 144 / 192 kg N/ha), moyenne des dix dernières années sur trente : **1,07 / 2,54 / 3,40 / 4,17 / 4,88 t/ha** — monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues tiennent depuis 1843. **Limite, chiffrée et attribuée** : Broadbalk monte à 8-9 t/ha à 192 kg N et le moteur plafonne à 4,88. La cause n'est ni dans la culture ni dans l'azote — c'est le TASSEMENT, qui s'épingle à 1,000 à l'an 16 et retire 30 % de croissance pour toujours. Neutraliser `PERTE_CROISSANCE_MAX` le chiffre : 1,70 / — / — / — / 6,68 t/ha, et 8,39 sur le plot fumé, dans la gamme de l'essai. Mais le témoin soulève AUSSI le point zéro (1,07 → 1,70), donc le tassement faisait en partie le travail de la paille qui manque (C16) : il manque un terme, le desserrement par le soc, pas un coefficient (issue #141, passée à `moteur:évolution`). **Les premières années, avant l'épinglage, atteignent 8,16 et 8,15 t/ha** |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
 | C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche**. **Ce ✅ était faux et personne ne pouvait le voir** : le gain gonflait la demande qui vide la cellule sans gonfler le service, si bien que le réseau COÛTAIT 11,8 % du volume sur limon pauvre et 0,7 % sur limon riche — il nuisait le plus là où il devait aider le plus. Corrigé en rangeant le gain une fois par arbre pour que les deux passes ne PUISSENT plus diverger (#115). Mesuré sur cinq graines et deux stations : **+2,79 % de volume sur limon pauvre, +0,09 % sur limon riche** (azote reçu +5,7 % et +0,7 %), gradient enfin dans le bon sens. **Limite** : le réseau fait GAGNER l'arbre dans la compétition pour l'azote minéral, il n'en AJOUTE pas — le service réel (capter l'azote organique et les pores qu'une racine n'atteint pas) demande un pool organique accessible, et le gain sur l'eau et le phosphore attend toujours |
 
@@ -2120,21 +2120,52 @@ les paliers de Broadbalk, moyenne des dix dernières années sur trente :
 
 | apport (kg N/ha) | 0 | 48 | 96 | 144 | 192 |
 |---|---|---|---|---|---|
-| rendement | **1,01** | 2,40 | 3,21 | 3,92 | 4,88 |
+| rendement | **1,07** | 2,54 | 3,40 | 4,17 | 4,88 |
 
 Monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues
 tiennent depuis 1843.
 
+Les quatre premiers chiffres ont monté de 3 à 6 % depuis #140 (1,01 / 2,40 /
+3,21 / 3,92) et le cinquième n'a pas bougé d'un centième. Aucun lot n'a touché
+à la culture entre-temps : c'est le flux aléatoire qui a glissé, comme il
+glisse chaque fois qu'un tirage s'insère en amont.
+
 ### Le plafond n'est ni dans la culture ni dans l'azote
 
 Broadbalk monte à 8-9 t/ha à 192 kg N ; le moteur plafonne à 4,88. La cause a
-été cherchée plutôt que supposée, et elle est ailleurs : un itinéraire céréalier
-fait **quatre passages d'engin par an**, soit 1,00 de tassement contre 0,20 de
-réparation. Le sol est épinglé à `tassement = 1,000` dès la deuxième année et
-perd 30 % de croissance pour toujours. La preuve que le plafond est bien là :
-**les premières années, avant l'épinglage, atteignent 7,35 et 7,62 t/ha**.
+été cherchée plutôt que supposée, et elle est ailleurs : le **tassement**.
 
-C'est une calibration, donc de la maintenance — issue #141, et ce lot en dépend.
+Le compte écrit ici au départ était faux, et il a tenu tout un lot : « quatre
+passages d'engin par an, soit 1,00 de tassement contre 0,20 de réparation, donc
+épinglé dès la deuxième année ». **Un seul geste tasse dans le moteur** —
+`labourer` ; semer, fertiliser et moissonner ne touchent pas la variable. C'est
+donc 0,25 par an contre 0,20, soit +0,05, et la trajectoire relevée au centre le
+dit : 0,25 à l'an 1, 0,50 à l'an 6, 0,96 à l'an 15, `1,000` à partir de l'an 16.
+Le plafond arrive quatorze ans plus tard qu'annoncé, et il arrive quand même.
+
+Ce qu'il coûte, mesuré en neutralisant `PERTE_CROISSANCE_MAX` — le témoin que
+l'issue demandait :
+
+| moyenne des 10 dernières années | moteur | témoin sans tassement | Broadbalk |
+|---|---|---|---|
+| rien | 1,07 | 1,70 | ~1 |
+| minéral 192 | 4,88 | 6,68 | 8-9 |
+| fumier 240 | 6,21 | **8,39** | ~9 |
+
+Un bon tiers du rendement, et le plot fumé neutralisé tombe dans la gamme de
+l'essai. La preuve que le plafond est bien là, autrement : **les premières
+années, avant l'épinglage, atteignent 8,16 et 8,15 t/ha**.
+
+**Mais le témoin soulève TOUTE la courbe, point zéro compris** : 1,07 → 1,70,
+là où les parcelles nues de Broadbalk tiennent ~1 depuis cent soixante-dix ans.
+Le tassement faisait donc en partie le travail de la paille qui manque (C16).
+Corriger l'un sans regarder l'autre déplacerait le défaut au lieu de le lever.
+
+Et ce n'est pas un coefficient trop grand : le soc **desserre** l'horizon
+travaillé — c'est la raison agronomique du geste — et le moteur ne modélise que
+les roues du tracteur. Broadbalk est labouré chaque année depuis 1843 et fait
+9 t/ha. Il manque un TERME, pas un réglage : l'issue #141 est passée à
+`moteur:évolution` pour cette raison.
 
 Une moitié du défaut a tout de même été corrigée ici, parce qu'elle était de ce
 lot : la densité racinaire était lue sur `1 − groundLight`, c'est-à-dire sur le

@@ -144,7 +144,14 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
 
   it("plus d'azote, plus de grain — et c'est monotone", () => {
     // Relevé sur les paliers de l'essai, moyenne des dix dernières années :
-    // rien 1,01 / 48 kg 2,40 / 96 kg 3,21 / 144 kg 3,92 / 192 kg 4,88.
+    // rien 1,07 / 48 kg 2,54 / 96 kg 3,40 / 144 kg 4,17 / 192 kg 4,88.
+    //
+    // Les quatre premiers ont monté de 3 à 6 % depuis #140 (1,01 / 2,40 /
+    // 3,21 / 3,92), et le cinquième n'a pas bougé d'un centième. Aucun lot n'a
+    // touché à la culture entre-temps : c'est le flux aléatoire qui a glissé,
+    // comme il glisse à chaque fois qu'un tirage s'insère en amont. On les
+    // remet à ce que la mesure donne plutôt que de garder des chiffres qui ne
+    // sortent plus.
     const rien = dernieres(bleContinu(ANS, 0));
     const moyen = dernieres(bleContinu(ANS, 96));
     const fort = dernieres(bleContinu(ANS, 192));
@@ -161,14 +168,39 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
   it("le PLAFOND n'est pas dans l'azote : il est dans le tassement (#141)", () => {
     // Le moteur reproduit la FORME de la courbe et pas son niveau haut :
     // 4,88 t/ha à 192 kg N contre 8-9 chez Broadbalk. La cause est mesurée et
-    // elle est ailleurs — un itinéraire céréalier fait quatre passages d'engin
-    // par an, soit 1,00 de tassement contre 0,20 de réparation, donc le sol est
-    // épinglé à 1 dès la deuxième année et perd 30 % de croissance pour
-    // toujours. C'est une calibration, elle a son issue, et #140 en dépend.
+    // elle est ailleurs — le tassement.
+    //
+    // LE COMPTE ÉCRIT ICI ÉTAIT FAUX, et il l'a été pendant tout un lot :
+    // « quatre passages d'engin par an, soit 1,00 de tassement contre 0,20 de
+    // réparation, donc épinglé dès la deuxième année ». Un seul geste tasse
+    // dans le moteur d'aujourd'hui — `labourer` ; semer, fertiliser et
+    // moissonner ne touchent pas la variable. C'est donc 0,25 par an contre
+    // 0,20 de réparation, soit +0,05, et la TRAJECTOIRE relevée au centre le
+    // dit : 0,25 à l'an 1, 0,50 à l'an 6, 0,96 à l'an 15, 1,000 à partir de
+    // l'an 16, pour toujours. Le plafond arrive quatorze ans plus tard
+    // qu'annoncé, et il arrive quand même.
+    //
+    // CE QU'IL COÛTE, mesuré par neutralisation de `PERTE_CROISSANCE_MAX`
+    // (le témoin que l'issue demandait), moyenne des dix dernières années sur
+    // trente :
+    //
+    //                   moteur   témoin sans tassement   Broadbalk
+    //   rien             1,07            1,70              ~1
+    //   minéral 192      4,88            6,68              8-9
+    //   fumier 240       6,21            8,39              ~9
+    //
+    // Le tassement coûte donc un bon tiers du rendement, et le plot fumé
+    // neutralisé tombe dans la gamme de l'essai. MAIS il soulève TOUTE la
+    // courbe, point zéro compris : 1,07 → 1,70 là où les parcelles nues de
+    // Broadbalk tiennent ~1 depuis 1843. Le tassement faisait donc en partie
+    // le travail de la paille qui manque (voir C16). Corriger l'un sans
+    // regarder l'autre déplacerait le défaut au lieu de le lever — c'est écrit
+    // dans l'issue, qui est passée à `moteur:évolution` pour cette raison : il
+    // manque un TERME, le desserrement par le soc, pas un coefficient.
     //
     // La preuve que le plafond est bien là : **les premières années, avant que
-    // le tassement ne s'épingle, atteignent la gamme de Broadbalk** — 7,35 t/ha
-    // à 192 kg N et 7,62 avec le fumier.
+    // le tassement ne s'épingle, atteignent la gamme de Broadbalk** — 8,16 t/ha
+    // à 192 kg N et 8,15 avec le fumier, à l'an 2.
     const fort = bleContinu(8, 192);
     expect(Math.max(...fort)).toBeGreaterThan(6.5);
   }, 900_000);
