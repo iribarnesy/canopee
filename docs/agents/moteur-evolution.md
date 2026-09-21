@@ -102,13 +102,33 @@ plantés et 187 à l'arrivée : les sujets mûrs s'étaient ressemés, et le té
 était un fourré. Il comptait en plus le bois des essences spontanées, 15,0 m³ là
 où les noyers n'en faisaient que 6,7 — or un LER compare des PRODUITS.
 
-**Et un lot peut être juste, sortir le bon nombre, et rester 🟡.** Le LER sort à
-1,20, la cible de Restinclières. Mais sa composition est renversée (culture 1,10
-et arbre 0,10, contre ~0,7 et ~0,5 dans la littérature), parce que le dispositif
-laboure jusqu'au pied des rangs — ce qu'aucun agroforestier ne fait — et que les
-actions du moteur prennent toutes un DISQUE, qui ne pave pas une allée en
-laissant des bandes. Un bon nombre obtenu pour la mauvaise raison n'est pas un
-critère vert.
+**UN BON NOMBRE OBTENU POUR LA MAUVAISE RAISON N'EST PAS UN CRITÈRE VERT**, et
+ce refus a payé. Le LER sortait à 1,20 — la cible de Restinclières — avec une
+composition renversée : culture 1,10 et arbre 0,10, contre ~0,7 et ~0,5 publiés.
+J'ai écrit 🟡 plutôt que ✅, puis cherché la cause. Elle était **dans le
+dispositif, pas dans le moteur** : je labourais jusqu'au pied des rangs, ce
+qu'aucun agroforestier ne fait, la règle d'installation étant « des bandes larges
+de plus d'un mètre ». Une fois les allées pavées de disques qui épargnent le
+rang, tout s'est remis en place d'un coup — culture 0,72, arbre 0,60, total
+1,32, et la pénalité de 77 % sur les arbres tombée à 2 %.
+
+**Et la contrainte qui semblait bloquer n'en était pas une.** Je croyais devoir
+attendre des zones en bande (#186) parce que toutes les actions prennent un
+disque. Mais `semer` calcule la place libre en EXCLUANT la culture qu'on sème,
+donc deux disques de blé ne se refusent pas : on pave une bande avec plusieurs
+disques. Lire le code de la garde avant de conclure qu'elle bloque.
+
+**Le contrôle doit ne changer QU'UNE chose.** Le bras « labouré sans blé » donnait
+0,319 m³/arbre contre 0,427 pour le bras cultivé — le labour paraissait coûter
+plus que le labour plus le blé. Absurde, et le confondant était évident une fois
+vu : en retirant le blé j'avais retiré sa fertilisation, dont les noyers
+profitent.
+
+**Mesurer plutôt que calculer, même une surface.** Mes bandes épargnées n'en
+étaient pas : le rayon des disques dépassait la demi-largeur pour couvrir les
+creux, et mangeait le rang. C'est la surface réellement semée, comptée cellule
+par cellule, qui l'a dit — 93,3 % au lieu de 82 %, donc 0,67 m épargné au lieu
+de 1,75.
 
 **Ce qui se branche sans rien inventer.** Les cavités : `trogne.ts` avait déjà
 posé la bonne grandeur (le creux se compte en LITRES), la carie donne le rayon
