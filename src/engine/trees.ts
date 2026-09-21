@@ -280,6 +280,20 @@ export interface TreeState {
    */
   dommageHydraulique: number;
   /**
+   * Part du houppier ARRACHÉE par un coup de vent et pas encore reconstituée
+   * ∈ [0 ; 0,4] (`tempete.ts`, critère F17).
+   *
+   * Le troisième dégât d'une tempête, celui qui laisse l'arbre debout : ni
+   * motte arrachée, ni fût cassé, des branches en moins. C'est le plus FRÉQUENT
+   * — on le voit après chaque coup de vent sans que rien ne soit par terre — et
+   * il coûte de deux façons : l'arbre intercepte moins de lumière tant qu'il
+   * n'a pas repoussé, et ses plaies sont une porte d'entrée pour les maladies.
+   *
+   * Même famille que `dommageHydraulique` : une mémoire d'événement, portée par
+   * l'arbre et non par son milieu, qui s'efface lentement.
+   */
+  houppierPerdu?: number;
+  /**
    * Vigueur ∈ [0,1] : moyenne lissée du facteur limitant sur les derniers
    * mois. Ce n'est pas la même chose que le stress. Le stress ne monte que
    * lorsque l'arbre est en danger de mort ; la vigueur, elle, dit s'il pousse
@@ -1354,11 +1368,27 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // l'arbre TIRE de conditions données, pas les conditions elles-mêmes. Deux
   // voisins ont la même eau et la même lumière ; l'un en fait plus que l'autre,
   // et c'est ce qui crée les dominants et les dominés.
+  //
+  // LE HOUPPIER ARRACHÉ ENTRE AU MÊME ENDROIT, ET C'EST UNE CORRECTION.
+  // Première version : il multipliait `env.light`, ce qui paraissait naturel —
+  // moins de feuilles, moins de lumière captée. C'était faux, et le banc des
+  // tables de production l'a dit tout de suite : le pin ressortait à 18,7 m à
+  // quarante ans pour 15,5 m tabulés, soit TROP GRAND. La raison est que
+  // `env.light` nourrit aussi l'allocation (`allocationDiametreCmParM`), donc
+  // le signal d'ÉTIOLEMENT : baisser la lumière disait à l'arbre qu'il était à
+  // l'ombre, et un arbre à l'ombre file en hauteur. Or un arbre ébranché n'est
+  // pas ombragé — il a la même lumière et moins de feuilles pour la prendre.
+  // C'est donc bien ce qu'il en TIRE qu'il faut réduire.
   // Le tassement se multiplie au lieu d'entrer dans le minimum, pour la raison
   // dite au champ `tassement` : il ne remplace aucun facteur limitant, il les
   // aggrave tous. Essais Arvalis : jusqu'à 30 % de perte sur sol tassé.
   const fTassement = facteurCroissanceTassement(env.tassement ?? 0);
-  const commun = Math.max(0, potentialM) * stressPenalty * fTassement * tree.vigueurIndividuelle;
+  const commun =
+    Math.max(0, potentialM) *
+    stressPenalty *
+    fTassement *
+    tree.vigueurIndividuelle *
+    (1 - Math.min(1, Math.max(0, tree.houppierPerdu ?? 0)));
   // Ce que la tige pourrait allonger si le carbone suivait : tous les facteurs
   // SAUF la lumière. C'est la hauteur insensible à la densité d'Assmann.
   const allongementPossibleM = commun * limitantHorsLumiere;

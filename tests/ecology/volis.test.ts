@@ -23,9 +23,13 @@ import { LIMON_RICHE } from "../../src/engine/stations";
 import {
   type ExpositionAuVent,
   facteurDensiteBois,
+  HOUPPIER_ARRACHE_MAX,
   hauteurDeVolisM,
+  houppierArrache,
   modeDeRuine,
+  PART_CASSE_BRANCHES,
   probabiliteRenversement,
+  prochainHouppierPerdu,
   vitesseCritiqueMs,
   vitesseCritiqueVolisMs,
 } from "../../src/engine/tempete";
@@ -203,4 +207,90 @@ describe("en partie : les deux ruines coexistent", () => {
     // dépend de l'élancement, cf. le commentaire du référentiel.
     expect(casses).toBeGreaterThan(verses);
   });
+});
+
+describe("le troisième mode : des branches en moins, l'arbre debout", () => {
+  it("rien en dessous du seuil, et jamais plus que le plafond", () => {
+    // La casse partielle commence BIEN avant la ruine : c'est le dégât qu'on
+    // voit après chaque coup de vent sans que rien ne soit par terre.
+    const critique = 30;
+    expect(houppierArrache(0.3 * critique, critique)).toBe(0);
+    expect(houppierArrache(PART_CASSE_BRANCHES * critique, critique)).toBe(0);
+    expect(houppierArrache(critique, critique)).toBeCloseTo(HOUPPIER_ARRACHE_MAX, 12);
+    expect(houppierArrache(3 * critique, critique)).toBe(HOUPPIER_ARRACHE_MAX);
+    // Et c'est une rampe : un vent à peine suffisant casse une branche, un
+    // vent proche de la ruine écime.
+    const milieu = (PART_CASSE_BRANCHES + 1) / 2;
+    expect(houppierArrache(milieu * critique, critique)).toBeGreaterThan(0);
+    expect(houppierArrache(milieu * critique, critique)).toBeLessThan(HOUPPIER_ARRACHE_MAX);
+  });
+
+  it("elle se lit sur le MÊME rapport que la ruine", () => {
+    // Ce qui rend le troisième mode cohérent sans rien coûter : tout ce qui
+    // fragilise un arbre le rend du même coup plus facile à ébrancher. Ici,
+    // l'élancement.
+    const ferme = exposition(0, 0.3);
+    const trapu = arbre(20, 40);
+    const perche = arbre(30, 30);
+    const rafale = 22;
+    expect(houppierArrache(rafale, vitesseCritiqueMs(perche, ferme))).toBeGreaterThan(
+      houppierArrache(rafale, vitesseCritiqueMs(trapu, ferme)),
+    );
+  });
+
+  it("la plaie se referme, et ne s'aggrave pas toute seule", () => {
+    let perdu = HOUPPIER_ARRACHE_MAX;
+    for (let semaine = 0; semaine < 52 * 3; semaine++) perdu = prochainHouppierPerdu(perdu, 0);
+    expect(perdu).toBe(0);
+    // Un coup plus fort écrase le précédent ; un coup plus faible ne le guérit pas.
+    expect(prochainHouppierPerdu(0.1, 0.3)).toBeGreaterThan(0.25);
+    expect(prochainHouppierPerdu(0.3, 0.05)).toBeGreaterThan(0.25);
+  });
+});
+
+describe("en partie : la casse partielle est le dégât le plus FRÉQUENT", () => {
+  it("elle arrive cent fois plus souvent qu'une ruine, et elle guérit", () => {
+    // Ce que le critère appelle « la casse partielle » : elle ne tue personne,
+    // et c'est justement pour ça qu'elle manquait — le moteur ne comptait que
+    // ce qui meurt. Relevé sur soixante ans d'une pinède de 400 plants :
+    // 28 chablis, 33 volis, et plus de 1 500 ébranchages.
+    const COTE = 40;
+    const station: Station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
+    const serie = serieMeteoPour(LIMON_RICHE.station.id);
+    if (!serie) throw new Error("série manquante");
+    const meteo = serieToWeeks(serie);
+    let s = plantScattered(createGameState(station, rngStateFromSeed(7)), "pinus_sylvestris", 400);
+    let ruines = 0;
+    let ebranches = 0;
+    let plaieMax = 0;
+    let arrachePlusFort = 0;
+    let rafalePlusForte = 0;
+    for (let i = 0; i < 60 * 52; i++) {
+      const w = meteo[i % meteo.length];
+      if (!w) throw new Error("météo manquante");
+      const r = tick(s, w);
+      s = r.state;
+      if (!r.tempete) continue;
+      ruines += r.tempete.arbresVerses + r.tempete.arbresCasses;
+      ebranches += r.tempete.arbresEbranches;
+      const perdus = s.trees.filter((t) => t.alive && (t.houppierPerdu ?? 0) > 0);
+      const pire = Math.max(0, ...perdus.map((t) => t.houppierPerdu ?? 0));
+      plaieMax = Math.max(plaieMax, pire);
+      // La profondeur du dégât suit la force du coup : c'est une rampe, pas un
+      // interrupteur. Relevé : 3 % du houppier à 27 m/s, 20 % à 48 m/s.
+      if (r.tempete.arbresEbranches > 0 && r.tempete.rafaleMs > rafalePlusForte) {
+        rafalePlusForte = r.tempete.rafaleMs;
+        arrachePlusFort = pire;
+      }
+    }
+    expect(ruines).toBeGreaterThan(0);
+    expect(ebranches).toBeGreaterThan(10 * ruines);
+    expect(plaieMax).toBeGreaterThan(0.1);
+    expect(plaieMax).toBeLessThanOrEqual(HOUPPIER_ARRACHE_MAX);
+    expect(arrachePlusFort).toBeGreaterThan(0.1);
+    // Et elle guérit : après soixante ans, la plupart des arbres sont intacts.
+    const vivants = s.trees.filter((t) => t.alive);
+    const blesses = vivants.filter((t) => (t.houppierPerdu ?? 0) > 0);
+    expect(blesses.length).toBeLessThan(0.5 * vivants.length);
+  }, 900_000);
 });

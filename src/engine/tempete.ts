@@ -766,6 +766,58 @@ export function probabiliteRenversement(
 }
 
 /**
+ * Part de la vitesse critique à partir de laquelle le vent ARRACHE DES BRANCHES
+ * sans ruiner l'arbre (critère F17, le troisième mode).
+ *
+ * Bien en dessous de la ruine, et c'est tout l'intérêt : la casse partielle est
+ * le dégât le plus FRÉQUENT d'une tempête, celui qu'on voit après chaque coup
+ * de vent sans que rien ne soit par terre. Six dixièmes de la vitesse critique
+ * *(à calibrer : l'existence d'un seuil bien inférieur à la ruine est le fait
+ * de terrain, sa valeur est une convention)*.
+ */
+export const PART_CASSE_BRANCHES = 0.6;
+
+/** Part du houppier qu'un vent juste sous la ruine arrache, au plus. */
+export const HOUPPIER_ARRACHE_MAX = 0.4;
+
+/**
+ * Part du houppier qu'un coup de vent arrache à un arbre qui TIENT ∈ [0 ; 0,4].
+ *
+ * Le troisième mode de ruine du critère F17, et le seul qui laisse l'arbre
+ * debout : ni motte arrachée, ni fût cassé, mais des branches en moins. C'est
+ * une rampe et non un seuil — un vent à peine suffisant casse une branche, un
+ * vent proche de la ruine écime.
+ *
+ * Elle se lit sur le MÊME rapport que la ruine, la rafale reçue sur la vitesse
+ * critique, et c'est ce qui la rend cohérente sans rien coûter : tout ce qui
+ * fragilise un arbre — son élancement, son ancrage, le sol gorgé, sa prise au
+ * vent, l'abri qu'il a perdu — le rend du même coup plus facile à ébrancher.
+ */
+export function houppierArrache(rafaleRecueMs: number, critiqueMs: number): number {
+  if (critiqueMs <= 0) return HOUPPIER_ARRACHE_MAX;
+  const part = (rafaleRecueMs / critiqueMs - PART_CASSE_BRANCHES) / (1 - PART_CASSE_BRANCHES);
+  return HOUPPIER_ARRACHE_MAX * Math.min(1, Math.max(0, part));
+}
+
+/**
+ * Part de houppier qu'un arbre reconstitue par semaine.
+ *
+ * Un arbre ébranché refait des pousses, mais pas en un an : il lui faut
+ * quelques saisons pour retrouver sa surface foliaire. Même forme que la
+ * récupération d'un dommage hydraulique (`trees.ts`), qui est la mémoire d'une
+ * sécheresse — celle-ci est la mémoire d'une tempête *(à calibrer)*.
+ */
+export const REPOUSSE_HOUPPIER_PAR_SEMAINE = 0.004;
+
+/** Le houppier perdu d'un arbre, une semaine plus tard. */
+export function prochainHouppierPerdu(perdu: number, arrache: number): number {
+  return Math.min(
+    HOUPPIER_ARRACHE_MAX,
+    Math.max(0, Math.max(perdu, arrache) - REPOUSSE_HOUPPIER_PAR_SEMAINE),
+  );
+}
+
+/**
  * Graine propre à un renversement : l'identité de l'arbre et la semaine.
  * Même précaution et même forme que `graineDeChute` (`boisMort.ts`) — le flux
  * principal ne bouge pas, et la partie reste rejouable à l'identique.
