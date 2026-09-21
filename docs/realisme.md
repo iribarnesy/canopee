@@ -1875,11 +1875,34 @@ debout, parce que ce sont deux objets différents :
 | faune | pics, puis tout ce qui occupe leurs loges | carabes, salamandres, saproxyliques du sol |
 | sol | rien | protège la terre sous lui comme un paillage — et **barre l'eau** s'il est en travers (voir plus bas) |
 
-La direction de chute suit l'aval, d'autant plus franchement que la pente est
-raide : au-delà de 30 %, la gravité tranche ; à plat, l'arbre tombe où son
-défaut le porte. Une seule formule, resserrée par la pente, plutôt qu'un cas
-« pente » et un cas « plat » — et le test compare deux nuages de deux cents
-tirages, parce qu'une chute unique ne prouverait rien.
+La direction de chute compose **deux tendances**, en vecteurs : l'aval, d'autant
+plus franchement que la pente est raide, et le **coup de vent de la semaine**
+(#58). Une seule formule, pas un cas « pente » et un cas « plat » — et le test
+compare des nuages de plusieurs centaines de tirages, parce qu'une chute unique
+ne prouverait rien. Deux tendances qui divergent orientent vers leur
+résultante ; deux qui s'opposent s'annulent et rendent la main au hasard. Elles
+ne resserrent en revanche jamais au-delà du plancher de dispersion, et c'est la
+source qui l'impose : Rentch et al. concluent que la forte variation des
+directions de chute empêche d'établir une relation constante avec la pente OU
+le vent.
+
+Ce qu'on lit est la **rafale** et non le vent moyen, et la distinction est tout
+le mécanisme. Une moyenne hebdomadaire souffle en permanence : branchée ici,
+elle peigne les chutes tout le temps, dans une direction sans rapport avec
+l'aval — mesuré, le rapport « un versant raide barre moins que le plat » passe
+de 0,55 à 0,97, c'est-à-dire s'efface. Une rafale ne dépasse le seuil que seize
+semaines sur cent, si bien que la pente décide seule le reste du temps et que
+les chandelles d'une semaine de coup de vent partent **ensemble dans le même
+sens**. Mesuré en partie sur terrain plat, morts échelonnées : 14,5 % des chutes
+tombent une semaine ventée, et leur concentration autour du cap du vent vaut
+0,19 contre 0,03 pour les autres.
+
+*Limite à écrire* : **c'est le calendrier qui décide de la date de chute, pas le
+vent.** `dureeChandelleSemaines` est un délai fixe par espèce ; la rafale
+n'oriente que ce qui tombe déjà. La conséquence se mesure — un banc qui tue cent
+vingt saules la même semaine les voit tomber tous la même semaine, et n'exerce
+jamais ce mécanisme. Le jour où un coup de vent déclenchera la chute au lieu de
+seulement l'orienter, la corrélation cessera d'être une coïncidence *(à faire)*.
 
 Ce qui poussait dessous casse selon une règle de masse : **ce qui reçoit plus
 lourd que soi casse**. Un semis disparaît sous n'importe quel tronc, un arbre

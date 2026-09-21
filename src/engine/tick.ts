@@ -34,6 +34,7 @@ import {
   directionDeChute,
   ecrasePar,
   empreinteDeChute,
+  empriseDuVentSurLaChute,
   graineDeChute,
   lameRetenueMm,
   longueurDeTroncM,
@@ -685,6 +686,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterK = state.soil.litterK.slice();
   // Les bases échangeables, et le calcium de la litière qui les nourrit ou les
   // consomme (bases.ts). C'est ce pool-là qui porte le pH de la cellule.
+  // La rafale de la semaine, tirée une fois pour toutes (tempete.ts). Elle sert
+  // DEUX fois et à deux endroits éloignés du tick : elle couche les arbres
+  // vivants (§ tempête) et elle oriente la chute des chandelles (§ bois mort,
+  // issue #58). Elle dérive de la graine de partie, pas du flux principal.
+  const rafaleMs = rafaleDeLaSemaine(state.graineMarche, state.week, weather.ventMoyMs);
+  const ventDeChute = {
+    versRad: weather.ventVersRad,
+    emprise: empriseDuVentSurLaChute(rafaleMs * Math.min(1, Math.max(0, station.ventExposition))),
+  };
   const basesEq = state.soil.basesEq.slice();
   // Le réservoir du fond, celui que la pompe vide (bases.ts, critère C15).
   const basesProfondEq = state.soil.basesProfondEq.slice();
@@ -2481,10 +2491,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // flux principal est unique et séquentiel, un tirage de plus y décalerait
     // tous les suivants et rebattrait les cartes de tous les autres mécanismes.
     // Un chablis est parti dans le sens du coup de vent, et il l'a retenu
-    // (`chuteRad`). Une chandelle, elle, n'a que la pente pour l'orienter.
+    // (`chuteRad`). Une chandelle, elle, compose la pente et le coup de vent de
+    // la semaine où elle s'abat (issue #58) : ce qui fait tomber un tronc mort
+    // est rarement le terrain tout seul.
     const radians =
       tree.chuteRad ??
-      directionDeChute(altitudes, dims, tree.x, tree.y, graineDeChute(tree.id, state.week));
+      directionDeChute(
+        altitudes,
+        dims,
+        tree.x,
+        tree.y,
+        graineDeChute(tree.id, state.week),
+        ventDeChute,
+      );
     const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, radians, dims);
     const longueurTotale = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
     if (longueurTotale <= 0) continue;
@@ -2761,7 +2780,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Aucun tirage dans le flux principal : la rafale dérive de la graine de
   // partie, le renversement de l'identité de l'arbre (tempete.ts).
   let tempete: TickResult["tempete"];
-  const rafaleMs = rafaleDeLaSemaine(state.graineMarche, state.week, weather.ventMoyMs);
   if (rafaleMs >= RAFALE_MINIMALE_MS && station.ventExposition > 0) {
     const verses: TreeState[] = [];
     nextTrees = nextTrees.map((tree) => {

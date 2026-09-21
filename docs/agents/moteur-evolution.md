@@ -61,7 +61,60 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la pompe à bases, #170)
+## Ce que le dernier lot a appris (le coup de vent couche les chandelles, #58)
+
+`directionDeChute` ne composait qu'une tendance, la pente, alors que ce qui abat
+un tronc mort est un coup de vent. Elle en compose deux désormais. Aucun critère
+de `realisme.md` ne bouge : comme #139, #153 et #164, c'est une capacité qui
+s'ajoute, pas une affirmation nouvelle sur le monde.
+
+**Une issue bloquée peut avoir été débloquée par quelqu'un d'autre.** #58
+attendait « une climatologie de rafales, ou simplement un maximum hebdomadaire à
+côté de la moyenne ». #55 a livré exactement ça quatre jours plus tard —
+`rafaleDeLaSemaine`, dans `tempete.ts` — et personne n'a rouvert l'issue pour le
+dire. Avant de déclarer un lot bloqué, relire ce que le blocage demandait et
+chercher si ça existe : ici, trois lignes de câblage.
+
+**Ne jamais faire tomber un contrôle destructif sur un fichier qu'on édite.**
+Pour mesurer le témoin « sans vent », j'ai neutralisé la fonction puis lancé
+`git checkout -- src/engine/boisMort.ts` pour revenir. Le fichier portait tout le
+lot, non commité : il a été effacé d'un coup. Rien n'a été perdu — le correctif
+était dans la conversation — mais la règle est la même que celle déjà écrite
+pour les contrôles en arrière-plan : **un témoin destructif se fait sur une
+copie, ou pas du tout.**
+
+**Un témoin qui se retourne vaut un témoin qui ne tourne pas.** Premier essai de
+neutralisation : porter le seuil de rafale à 1e9 pour que l'emprise tombe à zéro.
+Elle est montée à UN — le rapport `(x − 1e9)/(30 − 1e9)` tend vers +1, pas vers
+0. J'ai donc mesuré « vent permanent à pleine emprise » en croyant mesurer
+« aucun vent ». Le relevé d'emprise que le script imprimait l'a montré tout de
+suite ; sans lui, la conclusion aurait été exactement inverse. Accessoirement,
+ce faux témoin a reproduit la panne du vent moyen, ce qui est devenu un chiffre
+du dossier.
+
+**Un banc peut ne jamais exercer ce qu'il prétend couvrir, et il faut le
+mesurer, pas le supposer.** Le banc du bois en travers donnait des chiffres
+IDENTIQUES avec et sans le mécanisme. Explication trouvée en instrumentant : il
+tue ses cent vingt saules la même semaine, `dureeChandelleSemaines` est un délai
+fixe par espèce, donc elles tombent toutes la même semaine — calme. J'aurais pu
+écrire « le résultat survit au lot », ce qui aurait été vide. Le banc
+d'intégration échelonne maintenant les morts, et le mécanisme tire pour de bon :
+14,5 % des chutes un jour de coup de vent.
+
+**Le même banc a démenti une phrase que j'avais écrite dans le module.**
+J'annonçais que deux tendances d'accord resserrent plus que chacune séparément.
+Faux au chiffre près : `min(1, norme)` plafonne. Et c'est le bon comportement,
+parce que la dispersion résiduelle est un PLANCHER que la source citée interdit
+de franchir. La documentation disait ce que j'espérais, l'essai a dit ce que le
+code fait.
+
+**Et la limite qui reste, mesurée plutôt que devinée** : c'est le calendrier qui
+décide de la date de chute, pas le vent. La rafale n'oriente que ce qui tombe
+déjà. Tant que ce sera le cas, la corrélation entre le sens d'une chute et la
+rafale de la semaine reste une coïncidence bien orientée, et le référentiel le
+dit.
+
+## Ce qu'un lot plus ancien a appris (la pompe à bases, #170)
 
 `effetLitiereEq` créditait la surface du calcium d'une feuille qui se
 décompose, sans que rien nulle part ne soit débité : le calcium arrivait de
