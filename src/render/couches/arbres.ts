@@ -66,6 +66,12 @@ export interface ArbreAPoser {
   /** altitude du sol sous l'arbre, m */
   z: number;
   heightM: number;
+  /**
+   * Diamètre à 1,30 m, cm — celui du moteur (#62), absent pour ce qui n'en a
+   * pas (portrait d'essence, scène de banc). C'est lui qui fait l'épaisseur du
+   * fût, et donc l'étiolement visible.
+   */
+  diametreCm?: number;
   houppierRatio: number;
   /**
    * Base du houppier, m : `Snapshot.baseHouppierM`, tel quel.
@@ -614,8 +620,53 @@ export interface Classe {
    * a coulé.
    */
   liege: number;
+  /**
+   * ÉPAISSEUR DU FÛT, en quarts de l'allométrie de secours — 4 = celle-ci
+   * exactement, 2 = deux fois plus mince, 8 = deux fois plus épais.
+   *
+   * **C'est l'étiolement, et c'est ce qui manquait.** Le moteur donne
+   * `diametreCm` par arbre depuis #62, et l'instantané le porte pour que le
+   * rendu dessine le tronc à la bonne épaisseur ; le rendu continuait pourtant
+   * de le déduire de la hauteur. Deux arbres de neuf mètres, l'un trapu au
+   * large, l'autre filé sous couvert, sortaient donc identiques — alors que
+   * c'est la première chose qu'un forestier voit.
+   *
+   * Dans la CLÉ parce que c'est une image différente, et en quarts parce qu'il
+   * faut bien quantifier : un quart de fût ne se voit pas à l'écran, et sans
+   * palier chaque semaine de croissance ferait recuire l'arbre.
+   */
+  epaisseur: number;
   /** taille de cuisson, en pixels de large */
   taillePx: number;
+}
+
+/**
+ * Le pas de quantification de l'épaisseur du fût : un quart.
+ *
+ * On ARRONDIT au lieu de tronquer, et c'est voulu : un arbre d'élancement
+ * ordinaire tombe alors exactement sur `EPAISSEUR_NORMALE`, donc se dessine
+ * exactement comme avant ce champ. Ce qui change, ce sont les autres.
+ */
+export const EPAISSEUR_NORMALE = 4;
+/** Bornes du rapport, en quarts : du fût deux fois plus mince au triple. */
+export const EPAISSEUR_MIN = 1;
+export const EPAISSEUR_MAX = 12;
+
+/**
+ * L'épaisseur du fût d'un arbre, en quarts de l'allométrie de secours.
+ *
+ * Sans diamètre — un portrait d'essence, une scène de banc — c'est l'allométrie
+ * qui parle, et le résultat est `EPAISSEUR_NORMALE` : rien ne change pour eux.
+ */
+export function epaisseurDuFut(arbre: ArbreAPoser): number {
+  if (arbre.diametreCm === undefined || arbre.heightM <= 0) return EPAISSEUR_NORMALE;
+  const rapport = arbre.diametreCm / 200 / rayonAuPiedM(arbre.heightM);
+  return Math.min(EPAISSEUR_MAX, Math.max(EPAISSEUR_MIN, Math.round(rapport * EPAISSEUR_NORMALE)));
+}
+
+/** Le rayon du fût que cette classe demande, m. */
+export function rayonDeLaClasse(classe: Classe, hauteurM: number): number {
+  return (rayonAuPiedM(hauteurM) * classe.epaisseur) / EPAISSEUR_NORMALE;
 }
 
 /** Quantifie une valeur ∈ [0,1] en `n` paliers, et rend l'indice. */
@@ -719,6 +770,7 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
         PALIERS_CAVITE +
       palierDe((arbre.caviteTeteL ?? 0) / CAVITE_HABITAT_L, PALIERS_CAVITE),
     liege: palierDe(partEcorceRefaite(arbre), PALIERS_LIEGE),
+    epaisseur: epaisseurDuFut(arbre),
     taillePx,
   };
 }
@@ -755,7 +807,7 @@ export function partEcorceRefaite(arbre: ArbreAPoser): number {
 
 /** La clé de cache d'une classe. */
 export function cleClasse(c: Classe): string {
-  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.sante}|${c.fruit}|${c.trogne}|${c.liege}|${c.taillePx}`;
+  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.sante}|${c.fruit}|${c.trogne}|${c.liege}|${c.epaisseur}|${c.taillePx}`;
 }
 
 /** Une vignette cuite, et où poser son pied. */
@@ -967,6 +1019,9 @@ export function cuireVignette(
     hauteurM,
     houppierRatio,
     baseHouppierM,
+    // Le fût que le DIAMÈTRE du moteur demande, et non celui que la hauteur
+    // ferait supposer : c'est ce qui rend une tige filée mince à l'écran.
+    rayonAuPiedM: rayonDeLaClasse(classe, hauteurM),
     ...(trogne ? { teteTrogneM: trogne.teteTrogneM } : {}),
     ...(fiche.brinsDeCepee ? { brins: fiche.brinsDeCepee } : {}),
   };
@@ -1004,14 +1059,17 @@ export function cuireVignette(
     const haut =
       fiche.ecorceHaute &&
       s.depart.y > hauteurM * 0.45 &&
-      s.rayonDepartM > rayonAuPiedM(hauteurM) * 0.28;
+      s.rayonDepartM > rayonDeLaClasse(classe, hauteurM) * 0.28;
     // **Les RAMEAUX ne sont pas de la couleur du fût**, et le bouleau l'a montré
     // sans appel : peindre en blanc les brindilles d'un houppier donne un arbre
     // mort en plein été, la ramure crevant le feuillage. C'est aussi faux en
     // botanique — l'écorce blanche du bouleau est celle du tronc et des grosses
     // branches ; ses rameaux de l'année sont brun-rouge sombre. On assombrit
     // donc l'écorce à mesure que le bois s'affine.
-    const finesse = Math.min(1, s.rayonDepartM / Math.max(1e-6, rayonAuPiedM(hauteurM) * 0.35));
+    const finesse = Math.min(
+      1,
+      s.rayonDepartM / Math.max(1e-6, rayonDeLaClasse(classe, hauteurM) * 0.35),
+    );
     const base = teinteDuBois(fiche, haut, classe);
     // Le fût est un CYLINDRE, et il était peint comme un trait.
     //
@@ -1066,7 +1124,7 @@ export function cuireVignette(
   // ils se croisaient, c'est le tube qu'on doit voir par-dessus la plaie — il
   // est ce qui la fait cesser.
   if (classe.gestion & EST_FROTTE) {
-    dessinerFrottis(ctx, hauteurM, echelle, versPx);
+    dessinerFrottis(ctx, classe, hauteurM, echelle, versPx);
   }
 
   // ── Le manchon ────────────────────────────────────────────────────────
@@ -1263,7 +1321,7 @@ function dessinerDemasclage(
   if (hautPx < 2) return;
   // Un peu plus étroit que le fût au pied : le tronc s'affine en montant, et
   // une bande à la largeur du pied déborderait en haut.
-  const demi = Math.max(0.6, rayonAuPiedM(hauteurM) * echelle * 0.9);
+  const demi = Math.max(0.6, rayonDeLaClasse(classe, hauteurM) * echelle * 0.9);
   ctx.fillStyle = versCss(melange(LIEGE_A_VIF, fiche.ecorce, classe.liege / (PALIERS_LIEGE - 1)));
   ctx.beginPath();
   ctx.rect(bas.sx - demi, haut.sy, demi * 2, hautPx);
@@ -1470,11 +1528,14 @@ const PART_RAMEAUX_BROUTES = 0.07;
  */
 function dessinerFrottis(
   ctx: CanvasRenderingContext2D,
+  classe: Classe,
   hauteurM: number,
   echelle: number,
   versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
 ): void {
-  const rayonPx = rayonAuPiedM(hauteurM) * echelle;
+  // La plaie fait la largeur du FÛT, donc celle que la classe demande : sur une
+  // tige filée, une marque à la largeur supposée déborderait du tronc.
+  const rayonPx = rayonDeLaClasse(classe, hauteurM) * echelle;
   const hautPx = (FROTTIS_HAUT_M - FROTTIS_BAS_M) * echelle;
   // Sous deux pixels de haut ou un de large, la plaie n'est plus qu'un point
   // sombre sur le fût, et un point sombre au hasard sur un tronc ressemble à un

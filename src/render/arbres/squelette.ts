@@ -118,6 +118,14 @@ export interface Sujet {
    */
   baseHouppierM: number;
   /**
+   * Rayon du fût au pied, m — celui du MOTEUR quand on l'a (`diametreCm / 200`).
+   *
+   * Absent, l'allométrie de secours prend le relais (`rayonAuPiedM`). C'est ce
+   * champ qui fait qu'une tige filée se dessine mince : sans lui, la hauteur
+   * décidait seule de l'épaisseur, et l'étiolement était invisible.
+   */
+  rayonAuPiedM?: number;
+  /**
    * Hauteur de la tête de trogne, m. Le fût s'arrête là, et les rejets
    * repartent tous du même point — la silhouette la plus reconnaissable du
    * bocage.
@@ -151,12 +159,27 @@ export interface Sujet {
  * jeune. Quinze pour cent au minimum, la moitié au plus.
  */
 
-/** Rayon du fût au pied, déduit de la hauteur. */
+/**
+ * Rayon du fût au pied, à DÉFAUT de diamètre — l'allométrie de secours.
+ *
+ * « Ce n'est pas une grandeur du moteur — il n'a pas de diamètre » : c'est ce
+ * que disait cette fonction, et ce n'est plus vrai depuis #62. Le moteur porte
+ * `diametreCm` par arbre et l'instantané le transporte NOMMÉMENT pour que le
+ * rendu dessine « un tronc à la bonne épaisseur, ce qu'il déduisait jusqu'ici
+ * d'un proxy faux » (protocol.ts). Le proxy était pourtant resté, et avec lui
+ * le défaut qu'il cache : deux arbres de neuf mètres, l'un trapu au large et
+ * l'autre filé sous couvert, sortaient avec le même fût. L'étiolement — ce que
+ * la sylviculture lit en premier sur une tige — ne se voyait nulle part.
+ *
+ * Elle reste ici pour ce qui n'a pas de diamètre : un portrait d'essence, une
+ * scène de banc. Le rapport entre le vrai fût et celui-ci est ce que la classe
+ * de vignette quantifie (`arbres.ts`), et c'est ce rapport qui fait la
+ * différence à l'écran.
+ */
 export function rayonAuPiedM(hauteurM: number): number {
   // Une allométrie grossière mais universelle : le diamètre à hauteur de
-  // poitrine vaut environ un centième de la hauteur pour un arbre de futaie.
-  // Ce n'est pas une grandeur du moteur — il n'a pas de diamètre — donc c'est
-  // au rendu de la poser, et de la poser une seule fois.
+  // poitrine vaut environ un centième de la hauteur pour un arbre de futaie —
+  // soit un élancement H/D d'environ 45, le milieu de la gamme forestière.
   return Math.max(0.004, hauteurM * 0.011);
 }
 
@@ -248,7 +271,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
   const brins = Math.max(1, Math.round(sujet.brins ?? 1));
   // Les brins d'une cépée se partagent la matière : chacun est plus fin qu'un
   // fût unique de même hauteur, et c'est ce qui la fait lire comme un buisson.
-  const rayon = rayonAuPiedM(sujet.hauteurM) / Math.sqrt(brins);
+  const rayon = (sujet.rayonAuPiedM ?? rayonAuPiedM(sujet.hauteurM)) / Math.sqrt(brins);
   // Une cépée n'a PAS de fût : ses brins partent du sol. Une trogne s'arrête à
   // sa tête. Tout le reste monte jusqu'à la base de houppier que le MOTEUR
   // donne — et non plus jusqu'à une part de hauteur calculée ici.

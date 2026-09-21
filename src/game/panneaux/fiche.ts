@@ -88,13 +88,26 @@ export function couleurDeLaPart(part: number, sens: SensDeLecture = "neutre"): s
  * disent déjà, il dit seulement laquelle regarder en premier.
  */
 export function alerteDeLArbre(lignes: readonly LigneDeFiche[]): number {
-  let pire = 0;
+  return Math.min(1, partOrientee(pireLigne(lignes)));
+}
+
+/** Ce qu'une ligne orientée « vaut » en alerte : 0 si elle n'en est pas une. */
+function partOrientee(ligne: LigneDeFiche | undefined): number {
+  if (!ligne || ligne.part === undefined || ligne.sens === undefined) return 0;
+  if (ligne.sens === "neutre" || ligne.horsAlerte) return 0;
+  return ligne.sens === "hautMauvais" ? ligne.part : 1 - ligne.part;
+}
+
+/**
+ * LA LIGNE qui tient l'alerte — celle qu'il faut nommer quand on n'en montre
+ * qu'une. Rien à signaler sur aucune : `undefined`.
+ */
+export function pireLigne(lignes: readonly LigneDeFiche[]): LigneDeFiche | undefined {
+  let pire: LigneDeFiche | undefined;
   for (const l of lignes) {
-    if (l.part === undefined || l.sens === undefined || l.sens === "neutre" || l.horsAlerte)
-      continue;
-    pire = Math.max(pire, l.sens === "hautMauvais" ? l.part : 1 - l.part);
+    if (partOrientee(l) > partOrientee(pire)) pire = l;
   }
-  return Math.min(1, pire);
+  return pire;
 }
 
 const pourcent = (part: number): string => `${Math.round(part * 100)} %`;
@@ -120,6 +133,40 @@ export function ilYA(semaines: number): string {
  */
 export function depuis(semaine: number, marque: number): string {
   return marque > semaine ? "avant votre arrivée" : ilYA(semaine - marque);
+}
+
+/**
+ * OÙ EN EST L'ÉTIOLEMENT, ∈ [0,1] — ou `undefined` si la question n'a pas de
+ * sens (une tige sans diamètre mesurable).
+ *
+ * **Zéro n'est pas « pas d'élancement », c'est « élancement d'un arbre au
+ * large ».** La borne basse est le haut de la gamme que le moteur cite pour un
+ * arbre de plein vent (25 à 40) ; la borne haute est SA limite structurelle,
+ * qui dépend du diamètre — une grosse tige flambe plus tôt en H/D qu'une fine.
+ * Sans ce décalage, tout le peuplement partait à l'orange : mesuré, un sujet
+ * sain remplit déjà 57 % de la jauge si on la fait partir de zéro.
+ */
+export const ELANCEMENT_AU_LARGE = 40;
+
+export function partEtiolement(diametreCm: number, heightM: number): number | undefined {
+  const h = elancement(diametreCm, heightM);
+  const limite = elancementLimite(diametreCm);
+  if (!Number.isFinite(h) || !Number.isFinite(limite) || limite <= ELANCEMENT_AU_LARGE) {
+    return undefined;
+  }
+  return Math.min(1, Math.max(0, (h - ELANCEMENT_AU_LARGE) / (limite - ELANCEMENT_AU_LARGE)));
+}
+
+/**
+ * Le mot qui va avec la part. Ce ne sont pas des seuils du moteur mais des mots
+ * de sylviculture, et le nombre reste sous la jauge : on nomme ce qu'on montre,
+ * on ne décide rien à la place du joueur.
+ */
+export function motDeLEtiolement(part: number): string {
+  if (part <= 0.01) return "aucun (plein vent)";
+  if (part < 0.35) return "léger";
+  if (part < 0.7) return "net : la tige file";
+  return "sévère : elle ne se tient plus";
 }
 
 export function ficheDeLArbre(
@@ -175,19 +222,22 @@ export function ficheDeLArbre(
     sens: "hautBon",
   });
 
-  // **L'ÉLANCEMENT, avec la limite du MOTEUR pour repère.** C'est la mesure du
-  // forestier — hauteur sur diamètre, × 100 — et `elancementLimite` dit au-delà
-  // de quoi la tige flambe ou ploie sous la neige (`trees.ts`). Un arbre filé
-  // par l'ombre se voit là, et nulle part ailleurs dans la fiche : il est grand
-  // ET mince, donc ni sa taille ni son âge ne le trahissent.
-  const h = elancement(arbre.diametreCm, arbre.heightM);
-  const limite = elancementLimite(arbre.diametreCm);
-  if (Number.isFinite(h) && Number.isFinite(limite) && limite > 0) {
-    dire("📐", "Élancement", `H/D ${h.toFixed(0)} · limite ${limite.toFixed(0)}`, {
-      aide: `Hauteur sur diamètre. Au large un arbre tient 25 à 40 ; une perche filée monte à 90 ou 100. La limite est celle du moteur : au-delà, la tige ne se tient plus (hauteur stable pour ce diamètre : ${hauteurStableM(arbre.diametreCm).toFixed(1)} m).`,
-      part: h / limite,
+  // **L'ÉTIOLEMENT, dit en français et non en H/D.** « La ligne H/D n'est pas
+  // très parlante » — elle ne l'était pas, en effet : le nombre brut ne dit
+  // rien sans les deux repères qui l'encadrent. Les voici, et ils ne sont pas
+  // de nous : la gamme forestière que `trees.ts` cite (« 25–40 au large, 90–100
+  // en perche ») donne le plancher, et `elancementLimite` — le moteur — donne
+  // le point où la tige ne se tient plus. La part va de l'un à l'autre.
+  //
+  // C'est la seule ligne qui dise l'arbre FILÉ par l'ombre : il est grand ET
+  // mince, donc ni sa taille ni son âge ne le trahissent. Elle compte donc dans
+  // l'alerte — « un arbre très étiolé, c'est un risque ».
+  const part = partEtiolement(arbre.diametreCm, arbre.heightM);
+  if (part !== undefined) {
+    dire("📐", "Étiolement", motDeLEtiolement(part), {
+      aide: `Élancement H/D (hauteur sur diamètre) : ${elancement(arbre.diametreCm, arbre.heightM).toFixed(0)}. Au large un arbre tient 25 à 40 ; une perche filée par l'ombre monte à 90 ou 100. La jauge est pleine à la limite du moteur — ${elancementLimite(arbre.diametreCm).toFixed(0)}, soit ${hauteurStableM(arbre.diametreCm).toFixed(1)} m de haut pour ce diamètre — au-delà de laquelle la tige flambe ou ploie sous la neige.`,
+      part,
       sens: "hautMauvais",
-      horsAlerte: true,
     });
   }
 
@@ -255,9 +305,23 @@ export function ficheDeLArbre(
     });
   }
   if (arbre.baseHouppierM > 0) {
-    dire("🌳", "Houppier à partir de", `${arbre.baseHouppierM.toFixed(1)} m`, {
-      aide: "En dessous, plus une branche vivante. Un fût nu sur quinze mètres, c'est la compétition qui l'a fait — pas la maladie.",
-    });
+    // **« Houppier à partir de 0,3 m » se lisait de travers**, et la question
+    // posée en partie le dit : « ça voudrait dire que 30 cm au-dessus du sol
+    // c'est déjà le houppier ? » Oui, et c'est normal — un jeune pin au large
+    // est branchu presque jusqu'au sol. Ce qui manquait, c'est que la grandeur
+    // se lit par le BAS : c'est la hauteur de fût nu, pas le début d'une
+    // couronne haut perchée.
+    const part = arbre.baseHouppierM / Math.max(0.1, arbre.heightM);
+    dire(
+      "🪵",
+      "Fût sans branches",
+      `${arbre.baseHouppierM.toFixed(1)} m sur ${arbre.heightM.toFixed(1)} m`,
+      {
+        aide: "La hauteur en dessous de laquelle il n'y a plus une seule branche vivante : au-dessus, l'arbre est branchu. Elle ne descend jamais — une branche morte ne repousse pas — et elle monte de deux façons que l'arbre ne distingue pas : l'ombre qui tue les branches basses, ou le sécateur. Un arbre de plein vent garde donc un fût court ; une tige de futaie en porte quinze mètres.",
+        part,
+        sens: "neutre",
+      },
+    );
   }
   // **La question du moteur, et non la nôtre** : il ne suffit pas d'avoir une
   // hauteur de tête pour être une trogne (`trogne.ts` demande aussi un

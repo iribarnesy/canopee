@@ -21,8 +21,12 @@ import {
   alerteDeLArbre,
   couleurDeLaPart,
   depuis,
+  ELANCEMENT_AU_LARGE,
   ficheDeLArbre,
   ilYA,
+  motDeLEtiolement,
+  partEtiolement,
+  pireLigne,
 } from "../../src/game/panneaux/fiche";
 import { arbreDuSnapshot } from "../../src/game/snapshot";
 
@@ -171,32 +175,56 @@ describe("ce qui se lit sans être lu", () => {
   });
 
   it("le point d'alerte prend la PIRE des grandeurs orientées, et ignore les neutres", () => {
-    // Un arbre vigoureux et sans stress : rien à signaler. Mesuré en écrivant
-    // cet essai : l'élancement d'un sujet sain remplit déjà 57 % de sa jauge,
-    // parce que sa référence est la limite de flambage et non un idéal — il
-    // mettait donc tout le peuplement à l'orange, et il en est sorti.
-    expect(alerteDeLArbre(fiche({ vigueur: 1 }))).toBe(0);
-    expect(fiche().find((x) => x.quoi === "Élancement")?.horsAlerte).toBe(true);
-    // Le même, mais qui végète : l'alerte monte, sans qu'aucune ligne neutre
-    // n'y soit pour quelque chose.
+    // Un arbre qui végète : l'alerte monte, sans qu'aucune ligne neutre n'y
+    // soit pour quelque chose.
     expect(alerteDeLArbre(fiche({ vigueur: 0.2 }))).toBeCloseTo(0.8, 5);
     expect(alerteDeLArbre(fiche({ vigueur: 1, stress: 9 }))).toBeCloseTo(0.9, 5);
+    // Et la ligne nommée est bien celle qui tient l'alerte : c'est elle que la
+    // ligne repliée montrera.
+    expect(pireLigne(fiche({ vigueur: 1, stress: 9 }))?.quoi).toBe("Stress");
+  });
+
+  it("un arbre très étiolé est DANS LE ROUGE : c'est un risque, pas une curiosité", () => {
+    // Première version : l'étiolement était hors alerte, parce qu'un sujet sain
+    // remplissait déjà 57 % d'une jauge partant de zéro. La correction n'est pas
+    // de l'exclure mais de la faire partir d'où il faut — le haut de la gamme
+    // « au large » que le moteur cite — et d'aller jusqu'à SA limite de flambage.
+    const trapu = fiche({ heightM: 9, diametreCm: 30 });
+    const file = fiche({ heightM: 9, diametreCm: 9 });
+    expect(alerteDeLArbre(trapu)).toBe(0);
+    expect(alerteDeLArbre(file)).toBeGreaterThan(0.8);
+    expect(pireLigne(file)?.quoi).toBe("Étiolement");
   });
 });
 
-describe("l'élancement, qui dit l'arbre filé", () => {
-  it("se lit avec la limite du MOTEUR, pas avec une limite à nous", () => {
-    const l = fiche({ heightM: 12, diametreCm: 12 });
-    const attendu = elancement(12, 12);
-    const limite = elancementLimite(12);
-    expect(valeur(l, "Élancement")).toBe(`H/D ${attendu.toFixed(0)} · limite ${limite.toFixed(0)}`);
-    expect(l.find((x) => x.quoi === "Élancement")?.part).toBeCloseTo(attendu / limite, 5);
+describe("l'étiolement, qui dit l'arbre filé", () => {
+  it("se lit entre la gamme « au large » et la limite du MOTEUR", () => {
+    // Ni l'une ni l'autre borne n'est de nous : `trees.ts` cite la gamme
+    // forestière (« 25–40 au large »), et `elancementLimite` est sa propre
+    // limite de flambage, qui dépend du diamètre.
+    const attendu = (h: number, d: number) =>
+      (elancement(d, h) - ELANCEMENT_AU_LARGE) / (elancementLimite(d) - ELANCEMENT_AU_LARGE);
+    expect(partEtiolement(12, 12)).toBeCloseTo(attendu(12, 12), 5);
+    expect(
+      fiche({ heightM: 12, diametreCm: 12 }).find((x) => x.quoi === "Étiolement")?.part,
+    ).toBeCloseTo(attendu(12, 12), 5);
   });
 
-  it("une tige filée remplit sa jauge plus qu'une tige trapue de même hauteur", () => {
-    const file = fiche({ heightM: 12, diametreCm: 10 }).find((x) => x.quoi === "Élancement");
-    const trapu = fiche({ heightM: 12, diametreCm: 30 }).find((x) => x.quoi === "Élancement");
-    expect(file?.part ?? 0).toBeGreaterThan(trapu?.part ?? 0);
+  it("une tige de plein vent ne remplit RIEN, une tige filée remplit tout", () => {
+    // 25 à 40 au large : à H/D 30, la jauge doit être à zéro et non à moitié.
+    expect(partEtiolement((100 * 9) / 30, 9)).toBe(0);
+    const file = partEtiolement(9, 9) ?? 0;
+    expect(file).toBeGreaterThan(0.8);
+  });
+
+  it("le mot suit la jauge, et la ligne H/D disparaît de la vue", () => {
+    expect(motDeLEtiolement(0)).toContain("plein vent");
+    expect(motDeLEtiolement(0.9)).toContain("ne se tient plus");
+    // Le nombre brut ne s'affiche plus — « H/D, c'est pas très parlant » — il
+    // reste dans l'infobulle, avec ses deux repères.
+    const l = fiche({ heightM: 12, diametreCm: 12 }).find((x) => x.quoi === "Étiolement");
+    expect(l?.valeur).not.toMatch(/H\/D/);
+    expect(l?.aide).toContain("H/D");
   });
 });
 

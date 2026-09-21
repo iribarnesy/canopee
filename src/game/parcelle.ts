@@ -129,6 +129,13 @@ export interface ArbreSource {
   x: number;
   y: number;
   heightM: number;
+  /**
+   * Diamètre à 1,30 m, cm (#62). Il ne sert pas qu'aux stades : c'est lui qui
+   * donne au fût son épaisseur À L'ÉCRAN, donc qui rend l'étiolement visible —
+   * une tige filée est mince pour sa hauteur, et c'est la première chose qu'un
+   * forestier lit sur un arbre.
+   */
+  diametreCm?: number;
   chandelle: boolean;
   baseHouppierM?: number;
   teteTrogneM?: number;
@@ -204,6 +211,7 @@ export function arbresAPoser(arbres: readonly ArbreSource[], ctx: ContexteDePose
       y: t.y,
       z: altitudeSous(ctx, t.x, t.y),
       heightM: t.heightM,
+      ...(t.diametreCm === undefined ? {} : { diametreCm: t.diametreCm }),
       houppierRatio: espece?.lumiere.houppierRatio ?? 0.4,
       baseHouppierM: t.baseHouppierM ?? 0,
       ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),

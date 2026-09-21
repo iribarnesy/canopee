@@ -74,6 +74,12 @@ export interface TigeAbattue {
   y: number;
   /** ce qui est PARTI : la hauteur d'avant moins ce qui reste debout */
   heightM: number;
+  /**
+   * Diamètre à 1,30 m, cm — le moteur le porte sur `ArbreRetire` justement
+   * parce que le geste ne le change pas. Sans lui, un fût changerait
+   * d'épaisseur en tombant : le tronc au sol est celui d'avant la coupe.
+   */
+  diametreCm?: number;
   /** base du houppier, comptée depuis la coupe */
   baseHouppierM: number;
   /**
@@ -118,6 +124,7 @@ export function tigeAbattueDe(retire: ArbreRetire): TigeAbattue | undefined {
     x: retire.x,
     y: retire.y,
     heightM: partie,
+    diametreCm: retire.diametreCm,
     // La base du houppier est comptée depuis le pied de la TIGE, donc depuis
     // la coupe : une cépée recépée à trente centimètres emporte son houppier
     // trente centimètres plus bas qu'il n'était sur l'arbre.
