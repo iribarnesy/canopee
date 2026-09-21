@@ -120,6 +120,32 @@ arbre ne lit `basesProfondEq` : le moteur sait dire que le fond s'appauvrit, pas
 encore ce que l'appauvrissement fait aux racines qui y poussent. C'est écrit sur
 le champ lui-même, pour que le prochain lot n'ait pas à le deviner.
 
+**Un banc qui tombe loin du lot mérite une mesure avant un diagnostic.** La
+stratification a fait tomber cinq essais dans deux fichiers sans rapport : le
+feu sur la lande et la succession de la fruticée. La lecture immédiate — « le
+pH plus bas éteint les incendies » — était fausse. Mesuré sur sept graines des
+deux côtés : 5 incendies, 5 700 cellules brûlées et 739 morts avant, 6, 6 161 et
+546 après, et trois graines sans le moindre feu des deux côtés. Rien n'a changé
+dans le feu ; le grand incendie de la graine 12 tenait à un tirage d'allumage,
+et le banc avait parié dessus. Même histoire côté fruticée, où l'avance de
+l'aubépine s'est ÉLARGIE (51 → 75 tiges cumulées contre 24 à la suivante) alors
+que l'assertion par graine tombait.
+
+**Un banc réparé doit passer AVANT le lot aussi.** C'est le contrôle qui
+sépare « j'ai rendu l'essai robuste » de « je l'ai ajusté à mon résultat ». Les
+deux fichiers corrigés — feu cumulé sur trois graines, fruticée qui ne juge le
+classement qu'au cumul — ont été rejoués sur un worktree à `a8d7094`, moteur
+pré-lot : 51 essais verts là-bas aussi. Sans ce contrôle, la réparation n'aurait
+été qu'une affirmation.
+
+**Une assertion qui contredit son propre commentaire finira par tomber.** Le
+banc fruticée expliquait depuis trois recalibrations qu'« un rapport entre deux
+ou trois individus mesure le tirage, pas l'écologie » — et gardait en code un
+classement strict par graine sur des effectifs de deux à onze tiges. Quatrième
+chute. Ce qui l'a corrigé n'est pas un seuil de plus mais l'alignement du code
+sur ce que le texte disait déjà : la présence se vérifie par graine, le
+classement au cumul.
+
 ## Ce qu'un lot plus ancien a appris (la phénologie entre deux semaines, #164)
 
 Un hêtre passait de nu à à-moitié-feuillu en un seul pas de temps, et le rendu

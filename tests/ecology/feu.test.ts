@@ -356,15 +356,31 @@ describe("la charge de combustible", () => {
 
 describe("un incendie sur la lande, en conditions de jeu", () => {
   const station: Station = { ...LANDE_SECHE.station, coteM: 50, voisinage: [] };
-  let state = createGameState(station, rngStateFromSeed(12));
-  for (let i = 0; i < 20; i++) {
-    state = plantAt(state, "pinus_sylvestris", 5 + (i % 5) * 10, 5 + Math.floor(i / 5) * 10, 6);
-  }
-  for (let i = 0; i < 10; i++) {
-    state = plantAt(state, "quercus_suber", 10 + (i % 5) * 9, 12 + Math.floor(i / 5) * 14, 5);
-  }
+  /**
+   * TROIS GRAINES, ET C'EST UNE CORRECTION.
+   *
+   * Ce scénario n'en avait qu'une, la 12, et il a tenu jusqu'à ce qu'un lot
+   * sans rapport avec le feu (#170, la stratification du budget de bases) la
+   * fasse basculer : le grand incendie de la trente-cinquième année n'est plus
+   * parti, et quatre vérifications sont tombées d'un coup. Le réflexe aurait
+   * été de conclure à une régression du feu. Mesuré sur sept graines avant et
+   * après, c'est faux — 5 incendies, 5 700 cellules et 739 morts avant,
+   * 6 incendies, 6 161 cellules et 546 morts après, et trois graines sans le
+   * moindre feu des deux côtés. Rien n'a changé dans le feu ; un TIRAGE a
+   * changé de face, et le banc avait parié dessus.
+   *
+   * Un départ d'incendie est rare par construction — il faut que la saison, la
+   * sécheresse, le combustible et une source humaine s'alignent la même
+   * semaine. Sur quarante ans, une graine donne zéro à trois feux. Un banc qui
+   * lit une seule graine ne mesure donc pas la propension d'une lande à brûler,
+   * il mesure un tirage ; c'est vrai de tout ce fichier depuis le début, et
+   * c'était vrai aussi quand il passait. On cumule désormais sur trois parties,
+   * ce qui coûte une minute et rend l'énoncé à ce qu'il annonce.
+   */
+  const GRAINES = [12, 5, 41] as const;
   let incendies = 0;
   let arbresTues = 0;
+  const incendiesParGraine = new Map<number, number>();
   const tuesParLeFeu: Record<string, number> = {};
   const mortsTotales: Record<string, number> = {};
   /** Effectif vivant de chaque espèce PRÉSENT dans les cellules brûlées. */
@@ -380,6 +396,17 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     Math.min(station.coteM - 1, Math.max(0, Math.floor(y))) * station.coteM +
     Math.min(station.coteM - 1, Math.max(0, Math.floor(x)));
   let dernier: NonNullable<ReturnType<typeof advanceWeek>["incendie"]> | undefined;
+  /** La lande de départ : vingt pins, dix chênes-lièges, la même à chaque graine. */
+  const landePlantee = (graine: number) => {
+    let s = createGameState(station, rngStateFromSeed(graine));
+    for (let i = 0; i < 20; i++) {
+      s = plantAt(s, "pinus_sylvestris", 5 + (i % 5) * 10, 5 + Math.floor(i / 5) * 10, 6);
+    }
+    for (let i = 0; i < 10; i++) {
+      s = plantAt(s, "quercus_suber", 10 + (i % 5) * 9, 12 + Math.floor(i / 5) * 14, 5);
+    }
+    return s;
+  };
   // Ce scénario portait aussi un relevé de carbone sur les rejets de souche.
   // Il ne relevait rien, et pour une raison structurelle : le pin est tué mais
   // ne rejette pas, le chêne-liège rejette mais son écorce à 0,95 ne le laisse
@@ -390,40 +417,50 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   // L'invariant est maintenant testé sur une lande de genêts qui rejette pour
   // de bon, avec la comptabilité complète : voir
   // `tests/properties/carbon-conservation.test.ts`.
-  for (let i = 0; i < 40 * 52; i++) {
-    const w = WEATHER[i % WEATHER.length];
-    if (!w) throw new Error("météo manquante");
-    const avant = state;
-    const r = advanceWeek(state, w, []);
-    state = r.state;
-    for (const m of r.morts) {
-      mortsTotales[m.especeId] = (mortsTotales[m.especeId] ?? 0) + 1;
-      if (m.cause === "feu") tuesParLeFeu[m.especeId] = (tuesParLeFeu[m.especeId] ?? 0) + 1;
-    }
-    if (r.incendie) {
-      incendies++;
-      arbresTues += r.incendie.arbresTues;
-      dernier = r.incendie;
-      // Le DÉNOMINATEUR du tri : qui était sur le passage du front, relevé
-      // AVANT le tick, donc avant que le feu n'en retire personne.
-      const brulees = new Set(r.incendie.brulees);
-      for (const t of avant.trees) {
-        if (!t.alive) continue;
-        if (brulees.has(celluleDe(t.x, t.y))) {
-          dansLeFront[t.especeId] = (dansLeFront[t.especeId] ?? 0) + 1;
-        }
+  for (const graine of GRAINES) {
+    let state = landePlantee(graine);
+    let nGraine = 0;
+    for (let i = 0; i < 40 * 52; i++) {
+      const w = WEATHER[i % WEATHER.length];
+      if (!w) throw new Error("météo manquante");
+      const avant = state;
+      const r = advanceWeek(state, w, []);
+      state = r.state;
+      for (const m of r.morts) {
+        mortsTotales[m.especeId] = (mortsTotales[m.especeId] ?? 0) + 1;
+        if (m.cause === "feu") tuesParLeFeu[m.especeId] = (tuesParLeFeu[m.especeId] ?? 0) + 1;
       }
-      semainesDIncendie.push({
-        victimes: r.incendie.victimes,
-        arbresTues: r.incendie.arbresTues,
-        mortsFeuLaMemeSemaine: r.morts.filter((m) => m.cause === "feu").length,
-        // Après le tick : c'est là que le rendu ferait la jointure.
-        idsEnJeu: new Set(state.trees.map((t) => t.id)),
-      });
+      if (r.incendie) {
+        incendies++;
+        nGraine++;
+        arbresTues += r.incendie.arbresTues;
+        dernier = r.incendie;
+        // Le DÉNOMINATEUR du tri : qui était sur le passage du front, relevé
+        // AVANT le tick, donc avant que le feu n'en retire personne.
+        const brulees = new Set(r.incendie.brulees);
+        for (const t of avant.trees) {
+          if (!t.alive) continue;
+          if (brulees.has(celluleDe(t.x, t.y))) {
+            dansLeFront[t.especeId] = (dansLeFront[t.especeId] ?? 0) + 1;
+          }
+        }
+        semainesDIncendie.push({
+          victimes: r.incendie.victimes,
+          arbresTues: r.incendie.arbresTues,
+          mortsFeuLaMemeSemaine: r.morts.filter((m) => m.cause === "feu").length,
+          // Après le tick : c'est là que le rendu ferait la jointure.
+          idsEnJeu: new Set(state.trees.map((t) => t.id)),
+        });
+      }
     }
+    incendiesParGraine.set(graine, nGraine);
   }
 
   it("la lande finit par brûler et le feu tue", () => {
+    // Cumulé sur les trois parties. Relevé à l'écriture : 5 incendies et 546
+    // arbres tués — et 4 incendies pour 621 morts sur les mêmes graines avant
+    // le lot qui a fait basculer la 12. C'est cet ordre de grandeur-là qui est
+    // la propriété d'une lande, pas le sort d'une partie.
     expect(incendies).toBeGreaterThan(0);
     expect(arbresTues).toBeGreaterThan(5);
   });
@@ -560,13 +597,9 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   });
 
   it("le feu est déterministe : même graine, mêmes incendies", () => {
-    let bis = createGameState(station, rngStateFromSeed(12));
-    for (let i = 0; i < 20; i++) {
-      bis = plantAt(bis, "pinus_sylvestris", 5 + (i % 5) * 10, 5 + Math.floor(i / 5) * 10, 6);
-    }
-    for (let i = 0; i < 10; i++) {
-      bis = plantAt(bis, "quercus_suber", 10 + (i % 5) * 9, 12 + Math.floor(i / 5) * 14, 5);
-    }
+    // Rejouée à l'identique, une graine rend exactement ses incendies — et
+    // c'est SON compte à elle qu'on compare, pas le cumul des trois.
+    let bis = landePlantee(12);
     let n = 0;
     for (let i = 0; i < 40 * 52; i++) {
       const w = WEATHER[i % WEATHER.length];
@@ -575,7 +608,7 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
       bis = r.state;
       if (r.incendie) n++;
     }
-    expect(n).toBe(incendies);
+    expect(n).toBe(incendiesParGraine.get(12));
   });
 });
 

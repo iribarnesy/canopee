@@ -83,11 +83,15 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
       const vivants = fin.trees.filter((t) => t.alive);
       const n = (id: string) => vivants.filter((t) => t.especeId === id).length;
       const aubepine = n("crataegus_monogyna");
+      // DEBOUT sur chaque graine — c'est ça qui se vérifie par partie, et rien
+      // de plus. L'essai exigeait aussi qu'elle soit EN TÊTE sur chacune, et
+      // cette ligne-là est tombée pour la quatrième fois (#170, graine 21 :
+      // 7 aubépines contre 11 sureaux). Elle disait en code l'inverse de ce que
+      // le commentaire ci-dessus dit en français — « un rapport entre deux ou
+      // trois individus mesure le tirage, pas l'écologie » — et il a fallu
+      // quatre chutes pour s'en apercevoir. Le classement se vérifie AU CUMUL,
+      // plus bas, là où les effectifs cessent d'être une poignée.
       expect(aubepine).toBeGreaterThan(0);
-      // En tête sur CHAQUE graine — l'égalité est tolérée, elle arrive quand il
-      // ne reste que deux tiges de chaque côté.
-      for (const autre of autres)
-        expect(aubepine, `${autre} (graine ${graine})`).toBeGreaterThanOrEqual(n(autre));
       aubepines += aubepine;
       for (const autre of autres) cumuls.set(autre, (cumuls.get(autre) ?? 0) + n(autre));
     }
@@ -109,8 +113,18 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     // est devenue une barre arithmétique là où l'énoncé parle d'un classement.
     //
     // « La dernière debout » dit « devant », et devant tout le monde à la fois.
-    // C'est donc devant CHACUNE que ça se vérifie — par graine juste au-dessus,
-    // et au cumul ici, ce qui écrase le tirage sans changer l'affirmation.
+    // C'est donc devant CHACUNE que ça se vérifie, au cumul, ce qui écrase le
+    // tirage sans changer l'affirmation.
+    //
+    // Relevé sur les cinq graines, avant et après la stratification du budget
+    // de bases (#170), qui a fait tomber l'ancienne ligne par graine :
+    //
+    //     avant : aubépine 51, prunellier 18, ronce 24, sureau 19
+    //     après : aubépine 75, prunellier 21, ronce 16, sureau 24
+    //
+    // L'avance s'est ÉLARGIE — de deux fois à trois fois la suivante. Ce qui a
+    // bougé n'est donc pas l'écologie mais la répartition du tirage entre
+    // graines, et c'est exactement ce que le cumul est là pour absorber.
     for (const [autre, n] of cumuls) {
       expect(aubepines, `cumul contre ${autre}`).toBeGreaterThan(n);
     }
