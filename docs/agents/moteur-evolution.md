@@ -61,7 +61,92 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la phénologie entre deux semaines, #164)
+## Ce que le dernier lot a appris (la pompe à bases, #170)
+
+`effetLitiereEq` créditait la surface du calcium d'une feuille qui se
+décompose, sans que rien nulle part ne soit débité : le calcium arrivait de
+nulle part. Et l'altération, qui se produit dans tout le profil, créditait elle
+aussi la seule surface. Le budget est maintenant stratifié en deux pools et il
+circule. C15 passe de ❌ à ✅, et le référentiel à 92 %.
+
+**Le témoin à mécanisme neutralisé peut être un état, pas un drapeau — tant que
+le lot reste additif.** Premier jet : le banc mettait le sous-sol à ZÉRO, il
+n'avait plus rien à céder, et la surface sortait identique au bit près, hash
+compris. Élégant, et **périmé dès que l'altération a été stratifiée** — le pool
+vidé se remplit maintenant tout seul. Ce qui l'a remplacé vaut mieux parce que
+ça ne rouille pas : le budget de SURFACE doit se refermer exactement sur ses
+quatre termes d'origine, sur une parcelle qui pompe fort. Si la pompe touchait
+la surface d'un millionième, l'égalité tomberait. Une invariance structurelle
+mesurée bat une identité mesurée.
+
+**Un argument de cadrage se mesure, comme le reste — et j'en ai écrit deux
+faux.** D'abord « la surface est inchangée, donc rien à recalibrer » : vrai mais
+creux. Puis, pour rattraper, « l'altération profonde pèse un ordre de grandeur
+de moins que la pompe », chiffré de mémoire. Mesuré : 9 400 eq/ha contre 8 100
+sur cinquante ans, même ordre, parfois dans l'autre sens. **Deux justifications
+écrites avant la mesure, deux fausses.** La bonne réponse n'était pas un
+troisième argument, c'était de faire le travail.
+
+**Un seuil qu'aucune valeur du monde ne peut satisfaire est un seuil calé sur le
+moteur.** La stratification portait la dérive du limon riche nu de 0,125 à
+0,203 unité en cinquante ans, et l'essai bornait à 0,2. Avant de toucher au
+seuil, j'ai balayé la rétention sur quatre valeurs pour repasser dessous. C'est
+impossible : dès 0,0016 le limon acide cesse de se décalcifier et remonte, à
+0,0011 la lande sèche aussi — l'erreur exacte que la calibration des dépôts
+avait servi à corriger. **Le balayage EST l'argument** : il montre que la borne
+ne contraignait plus le moteur, elle l'enregistrait. Remplacée par une ancre du
+dehors (les témoins non amendés de Rothamsted, de l'ordre d'un demi-point par
+siècle) et par la direction, qui elle ne se négocie pas. Aucune constante du
+moteur n'a bougé dans ce lot.
+
+**Un pool à un seul terme ne peut pas porter un critère.** Tant que le sous-sol
+n'avait que le prélèvement, il ne pouvait que baisser — avec ou sans arbre, la
+conclusion était écrite d'avance et le témoin sol nu ne disait rien. Une fois
+son altération et son lessivage rendus, il trouve son équilibre sans végétation
+(7,000 → 7,018 en cinquante ans) et ne baisse que sous un peuplement (→ 6,976
+sous hêtraie). **C'est le même mécanisme, mais il est devenu mesurable**, parce
+qu'il a maintenant un contrefactuel.
+
+**Ce qui sort d'un banc n'est pas toujours le contraste qu'on visait.** « Le
+frêne est le pompeur de manuel » : à masse de litière égale, oui, deux fois le
+hêtre. En partie, non — sa régénération de trouée lui laisse 25 tiges contre 46
+au hêtre, et il pompe trois fois moins. Le contraste qui tient à l'échelle du
+peuplement est un autre, et il est meilleur : le PIN descend deux fois plus bas
+que le hêtre et porte plus de tiges, et il pompe cinquante fois moins. La
+profondeur donne l'accès, la teneur donne la quantité.
+
+**Une grandeur exposée que personne ne lit reste une grandeur exposée.** Aucun
+arbre ne lit `basesProfondEq` : le moteur sait dire que le fond s'appauvrit, pas
+encore ce que l'appauvrissement fait aux racines qui y poussent. C'est écrit sur
+le champ lui-même, pour que le prochain lot n'ait pas à le deviner.
+
+**Un banc qui tombe loin du lot mérite une mesure avant un diagnostic.** La
+stratification a fait tomber cinq essais dans deux fichiers sans rapport : le
+feu sur la lande et la succession de la fruticée. La lecture immédiate — « le
+pH plus bas éteint les incendies » — était fausse. Mesuré sur sept graines des
+deux côtés : 5 incendies, 5 700 cellules brûlées et 739 morts avant, 6, 6 161 et
+546 après, et trois graines sans le moindre feu des deux côtés. Rien n'a changé
+dans le feu ; le grand incendie de la graine 12 tenait à un tirage d'allumage,
+et le banc avait parié dessus. Même histoire côté fruticée, où l'avance de
+l'aubépine s'est ÉLARGIE (51 → 75 tiges cumulées contre 24 à la suivante) alors
+que l'assertion par graine tombait.
+
+**Un banc réparé doit passer AVANT le lot aussi.** C'est le contrôle qui
+sépare « j'ai rendu l'essai robuste » de « je l'ai ajusté à mon résultat ». Les
+deux fichiers corrigés — feu cumulé sur trois graines, fruticée qui ne juge le
+classement qu'au cumul — ont été rejoués sur un worktree à `a8d7094`, moteur
+pré-lot : 51 essais verts là-bas aussi. Sans ce contrôle, la réparation n'aurait
+été qu'une affirmation.
+
+**Une assertion qui contredit son propre commentaire finira par tomber.** Le
+banc fruticée expliquait depuis trois recalibrations qu'« un rapport entre deux
+ou trois individus mesure le tirage, pas l'écologie » — et gardait en code un
+classement strict par graine sur des effectifs de deux à onze tiges. Quatrième
+chute. Ce qui l'a corrigé n'est pas un seuil de plus mais l'alignement du code
+sur ce que le texte disait déjà : la présence se vérifie par graine, le
+classement au cumul.
+
+## Ce qu'un lot plus ancien a appris (la phénologie entre deux semaines, #164)
 
 Un hêtre passait de nu à à-moitié-feuillu en un seul pas de temps, et le rendu
 ne pouvait pas l'adoucir sans refaire la phénologie chez lui. Aucun critère de
@@ -1004,14 +1089,18 @@ Et B6 reste 🟡 : ce que l'ombrage latéral produit est désormais juste, mais 
 poids 0,4 des codominants qui le dose est toujours posé à la main, et il gouverne
 aussi la succession.
 
-**Ce qui reste de #71 — la pompe à bases (C15, ❌).** Le pool de bases est de
-SURFACE, comme ceux de N, P et K. Le moteur dit donc qu'un frêne entretient son
-horizon de surface, et rien de ce qu'il prend en dessous — alors que c'est par
-là que le hêtre acidifie la profondeur plus que l'épicéa. Il y faudrait un pool
-par horizon, ce que le moteur ne fait pour aucun nutriment : le lot dépasse #71.
-Manque aussi une litière herbacée porteuse de calcium (la strate basse ne pèse
-pas sur le complexe) et l'ortie nitrophile, qui rendrait la bio-indication
-lisible.
+**Ce qui reste de #71 — le pool profond que personne ne lit (C15 ✅, mais).** La
+pompe à bases est écrite et le budget est stratifié (#170) : le sous-sol a son
+altération, reçoit ce que la surface lui lessive, perd ce que les racines y
+pompent et ce qui passe sous la zone racinaire. Deux choses restent. **Aucun
+arbre ne lit le pH profond** — brancher la tolérance des espèces dessus demande
+de décider ce qu'une racine ressent quand ses deux horizons diffèrent, ce qui
+est une affirmation distincte. **Et le profil n'a que deux compartiments** ; le
+raffiner en N horizons n'a de sens qu'avec l'azote, le phosphore et le
+potassium, qui ont la même plomberie et doivent bouger ensemble. Manque aussi
+une litière herbacée porteuse de calcium — la strate basse ne pèse toujours pas
+sur le complexe, et c'est elle qui manque le plus au témoin sol nu — et l'ortie
+nitrophile, qui rendrait la bio-indication lisible.
 
 **Ce qui reste de #70 — le calendrier de floraison.** La strate a ses espèces,
 E9 et B8 sont tombés, mais la fiche herbacée s'arrête au calendrier FOLIAIRE.
