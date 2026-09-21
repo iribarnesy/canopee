@@ -33,6 +33,7 @@ export type CauseMort =
   | "maladie"
   | "frottis"
   | "chablis"
+  | "volis"
   | "ecrasement";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
@@ -49,6 +50,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   maladie: "emportés par la maladie",
   frottis: "annelés par les frottis de cervidés",
   chablis: "couchés par la tempête",
+  volis: "cassés net par la tempête",
 };
 
 export interface TreeState {

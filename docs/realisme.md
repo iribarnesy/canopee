@@ -99,14 +99,14 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | C. Nutriments et cycles | 18 | 0 | 0 | 18 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 9 | 4 | 0 | 13 |
-| F. Dynamique des peuplements | 13 | 3 | 3 | 19 |
+| F. Dynamique des peuplements | 13 | 4 | 2 | 19 |
 | G. Faune et santé | 11 | 0 | 0 | 11 |
 | H. Gestion, économie, travail | 16 | 4 | 1 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 8 | 0 | 0 | 8 |
-| **Total** | **131** | **18** | **4** | **153** |
+| **Total** | **131** | **19** | **3** | **153** |
 
-**Score de réalisme : 131 pleins + 18 partiels sur 153 → 92 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 131 pleins + 19 partiels sur 153 → 92 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -328,7 +328,7 @@ maladie-là, pas une preuve de santé.*
 | F14 | Une tempête couche des arbres : le chablis existe, et il est l'accident le plus brutal de la vie d'un peuplement | ✅ | `tempete.ts` ; `tempete.test.ts` — une rafale hebdomadaire dérivée de la graine de partie (queue exponentielle sur le vent moyen), cinquantennale à 40-45 m/s. Le seuil de dégât est celui de l'ARBRE, pas celui de la rafale : les coups de vent ordinaires reviennent chaque hiver et ne couchent rien |
 | F15 | La vulnérabilité au vent se trie par INDIVIDU, et rien n'est déclaré espèce par espèce | ✅ | `vitesseCritiqueMs` : élancement H/D, ancrage rapporté au bras de levier (`rootDepthCm / hauteur`), sol gorgé au-delà de ce que l'espèce tolère, prise au vent foliaire de la semaine, souplesse des jeunes tiges. Aucun trait nouveau à l'atlas — tout se lit sur l'état de l'arbre. Deux faits de terrain TOMBENT de là sans être écrits : les tempêtes sont hivernales (le vent moyen l'est), et le caduc nu paie moins que le sempervirent (mesuré à 60 ans : 4-11 tiges couchées contre 65-88). Un des cinq facteurs trie mal, et le dit : l'élancement, parce que le moteur n'en produit qu'un cinquième de la gamme réelle (#79). **L'ancrage, lui, ne triait mal que par ricochet, et c'est réparé (#84)** : la profondeur racinaire d'un arbre mûr était fausse — le plancher `RACINES_PLANCHER` traitait un hêtre de vingt mètres comme un semis — ce qui forçait le seuil d'ancrage à descendre à 4 % pour ne pas coucher toute une population légitime. Plancher corrigé, les deux régimes hydriques du moteur tiennent maintenant dans un rapport de 1,5 (0,039 sur site jamais sec, 0,059 sur été sec) au lieu de 2,7, et le seuil est revenu à la valeur mesurée sur de vraies hêtraies, 6 % |
 | F16 | Ce qui dépasse prend le vent : un sous-étage est abrité, une futaie régulière ne s'abrite pas elle-même | ✅ | `abriAuVent` ne somme que le DÉPASSEMENT des voisins plus hauts, là où l'abri de haie (`windShelterAt`, E5) sature à 1 dans n'importe quel peuplement. C'est Klaus dans les pins landais alignés |
-| F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | ❌ | le moteur ne connaît qu'un renversement entier — un arbre tient ou il verse. Ni cime cassée, ni arbre penché qui survit avec une plaie, alors que c'est la moitié des dégâts d'une tempête réelle |
+| F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | 🟡 | `tempete.ts` (`vitesseCritiqueVolisMs`, `modeDeRuine`) ; `volis.test.ts` — le moteur calcule désormais **deux** vitesses critiques, comme les modèles de la famille ForestGALES qu'il cite déjà : la motte lâche, ou le fût casse, et **c'est la plus basse qui décide** — une comparaison, pas un tirage ni une part posée à la main. Aucun trait nouveau : le module de rupture suit la densité du bois (`bois.densite`, #68) et le fût résiste par son module de section, donc par le CUBE de son diamètre. **La dichotomie de terrain tombe de ce qui N'ENTRE PAS dans le calcul** : ni ancrage ni engorgement, parce qu'un fût casse aussi bien sur un sol gelé que sur un sol saturé. Mesuré sur un pin de 20 m à H/D 50, la vitesse de rupture ne bouge pas d'un millième entre sol ferme et sol gorgé (24,4 m/s) pendant que le renversement s'effondre de 27,2 à 15,7 — donc le même arbre casse sur le coteau et déracine dans le fond de vallon, et personne n'a écrit la règle. Une souche qui rejette survit à sa cassure (`rejetteDeSouche`), les autres restent en chandelle raccourcie. **🟡 et pas ✅, pour deux raisons.** Les **branches arrachées** sans ruine du fût ne sont pas modélisées — il y faudrait un état « blessé » qui s'estompe, et son articulation avec G6. Et **la PART de volis n'est pas une ancre** : en peuplement c'est l'élancement qui domine la densité, au point que le hêtre casse plus que le pin (83 % contre 55 % sur trois graines) alors que son bois est plus dense — la tempête sélectionne les tiges élancées, et celles-là cassent. Ce qui est testé est donc la DIRECTION contre le sol et contre la géométrie, jamais la répartition |
 | F18 | Un peuplement qu'on vient d'ouvrir (éclaircie, lisière neuve) verse pendant quelques années | ❌ | `abriAuVent` recalcule l'abri dans la semaine qui suit la coupe : les survivants sont réputés adaptés instantanément. Il y faudrait une mémoire par arbre de l'ouverture récente |
 | F19 | La fréquence des tempêtes suit la dérive du climat | ❌ | `AMPLIFICATION_EXTREMES` (D11) joue sur la chaleur et la pluie, pas sur le vent. Les deux moitiés sont dans deux fonctions qui ne se voient pas : `meteoDerivee` connaît le scénario mais pas la graine de partie, donc ne peut tirer de rafale ; `tick` la tire et ignore le scénario |
 | F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` : six essences contre des tables (Jansen 1996 aux Pays-Bas, Lockow 2009 pour le charme, Lemaire 2005 pour le châtaignier) et quatre arbustes contre des mesures de terrain britanniques et bretonnes, faute de table. Deux essences seulement y sont CALÉES (hêtre, charme) : l'essai les garde plus qu'il ne les valide. Les huit autres sont une validation entière, et la vérification tenue à l'écart est à vingt ans (−13 % à +10 %). Restent hors référence, et le disent : bouleau, chêne pubescent, saule blanc, prunellier — plus le chêne-liège, faute de station méditerranéenne où le confronter |
@@ -490,10 +490,12 @@ trois des six lignes écrites sont des ❌ assumés. Par ordre de gain :
 - **F18, la fragilité d'après-éclaircie** — il y faut une mémoire par arbre de
   l'ouverture récente. C'est ce qui rendrait DANGEREUSE une éclaircie tardive et
   forte, ce qui est la leçon sylvicole la plus chère de Lothar.
-- **F17, la casse partielle** — un arbre penché qui survit avec une plaie est
-  aussi une porte d'entrée pour les maladies (G6) et une branche arrachée est du
-  bois mort au sol (`boisMort.ts`). Le mécanisme existerait presque ; c'est
-  l'état « blessé » qui manque à l'arbre.
+- **F17, la casse partielle** — livré pour moitié (#176) : le volis existe à
+  côté du déracinement, et c'est la plus basse des deux vitesses critiques qui
+  décide. Ce qui reste est la **branche arrachée sans ruine du fût**, qui
+  demande l'état « blessé » qui manque à l'arbre — une plaie est aussi une porte
+  d'entrée pour les maladies (G6), et une branche au sol est du bois mort
+  (`boisMort.ts`).
 
 ### 4. Les moins chers : un test, et le critère passe
 

@@ -196,7 +196,8 @@ describe("marqueursDuJournal", () => {
       expect(vues.get(cle), `${cause} a la couleur de ${vues.get(cle)}`).toBeUndefined();
       vues.set(cle, cause);
     }
-    expect(vues.size).toBe(13);
+    // Quatorze depuis que le volis existe à côté du chablis (#176).
+    expect(vues.size).toBe(14);
   });
 
   it("garde les teintes que le §6.8 nomme", () => {

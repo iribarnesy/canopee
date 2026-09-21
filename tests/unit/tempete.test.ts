@@ -34,6 +34,7 @@ const tempete = (versRad = 0): TempeteResult => ({
   rafaleMs: 33.3,
   versRad,
   arbresVerses: 2,
+  arbresCasses: 0,
   volumeM3: 4.2,
   victimes: [
     { id: 1, hauteurM: 18 },

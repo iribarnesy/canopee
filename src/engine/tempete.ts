@@ -322,6 +322,24 @@ export function facteurPriseAuVent(partFoliaire: number): number {
   return 1 - PERTE_PRISE_AU_VENT * Math.min(1, Math.max(0, partFoliaire));
 }
 
+/**
+ * Où le fût casse, en part de la hauteur, quand l'arbre n'a pas de houppier
+ * dégagé.
+ *
+ * Un volis casse là où le moment appliqué l'emporte sur ce que la section peut
+ * tenir, c'est-à-dire À LA BASE DU HOUPPIER : au-dessus la prise au vent est
+ * maximale, au-dessous le tronc s'épaissit vite. Le moteur connaît cette
+ * hauteur (`TreeState.baseHouppierM`) — mais elle vaut zéro sur un arbre resté
+ * branchu, et casser au ras du sol ne serait plus un volis, ce serait un
+ * recépage. D'où ce plancher *(à calibrer)*.
+ */
+export const HAUTEUR_VOLIS_MINIMALE_PART = 1 / 3;
+
+/** Hauteur à laquelle le fût de cet arbre-là casse, m. */
+export function hauteurDeVolisM(hauteurM: number, baseHouppierM: number): number {
+  return Math.max(hauteurM * HAUTEUR_VOLIS_MINIMALE_PART, Math.min(baseHouppierM, hauteurM * 0.8));
+}
+
 /** Hauteur en dessous de laquelle une tige plie au lieu de verser, m. */
 export const HAUTEUR_SOUPLE_M = 5;
 /** Hauteur à partir de laquelle la souplesse ne protège plus du tout, m. */
@@ -434,6 +452,118 @@ export function vitesseCritiqueMs(arbre: TreeState, exposition: ExpositionAuVent
 }
 
 /**
+ * Densité de bois de référence, sur laquelle la vitesse de volis est calée.
+ * Un feuillu moyen de l'atlas ; les vingt-six fiches vont de 0,28 à 0,90.
+ */
+export const DENSITE_BOIS_REFERENCE = 0.5;
+
+/** Élancement H/D de l'arbre de référence : une futaie ferme, ni perche ni têtard. */
+export const ELANCEMENT_REFERENCE = 50;
+
+/**
+ * Vitesse à laquelle le FÛT casse, pour l'arbre de référence en pleine feuille,
+ * m/s.
+ *
+ * L'ancre n'est pas un nombre isolé, c'est un RAPPORT : les modèles de la
+ * famille ForestGALES calculent deux vitesses critiques — renversement et
+ * rupture — et les publient dans la même bande de 15 à 45 m/s. Aucune des deux
+ * ne domine par construction ; ce qui décide est le sol et le bois. La valeur
+ * ci-dessous est donc posée pour que l'arbre de référence ait, sur sol ferme et
+ * bien ancré, une vitesse de rupture du même ordre que sa vitesse de
+ * renversement (27 m/s). Ce qui trie ensuite, c'est tout le reste
+ * *(à calibrer : la bande est mesurée, l'égalité au point de référence est une
+ * convention)*.
+ */
+export const VITESSE_CRITIQUE_VOLIS_MS = 42;
+
+/**
+ * Ce que la densité du bois laisse de résistance à la rupture.
+ *
+ * Le module de rupture d'un bois suit sa DENSITÉ — c'est l'une des relations
+ * les mieux établies de la science du bois, et elle dispense d'un trait
+ * nouveau : `bois.densite` est à l'atlas depuis #68, sourcée espèce par espèce.
+ * La racine carrée vient de ce que la vitesse critique varie comme la racine du
+ * moment résistant, lequel est proportionnel au module de rupture.
+ *
+ * Un saule à 0,42 casse donc à 0,92 de la référence, un chêne pubescent à 0,65
+ * à 1,14 — et « bois tendre » cesse d'être une intuition pour devenir un
+ * chiffre que la fiche porte déjà.
+ */
+export function facteurDensiteBois(densite: number): number {
+  return Math.sqrt(Math.max(0.05, densite) / DENSITE_BOIS_REFERENCE);
+}
+
+/**
+ * Ce que la GÉOMÉTRIE du fût laisse de résistance à la rupture.
+ *
+ * C'est ici que le volis se sépare vraiment du renversement, et pas seulement
+ * par les facteurs qu'on lui retire. Une motte résiste par un bras de levier
+ * qui est sa profondeur ; un fût résiste par son MODULE DE SECTION, qui varie
+ * comme le CUBE du diamètre. Le moment appliqué, lui, croît avec la hauteur et
+ * la surface du houppier — qu'on suppose homothétique, donc en h².
+ *
+ * D'où `u ∝ √(d³ / h³)`, soit l'élancement à la puissance −3/2 : la rupture est
+ * bien plus sensible à l'élancement que le renversement, qui n'en dépend que
+ * par une rampe linéaire. Une perche de H/D 100 casse à un tiers de la vitesse
+ * qui casserait un arbre de plein vent *(à calibrer : l'homothétie du houppier
+ * est une convention, le moteur sait calculer un rayon de houppier réel)*.
+ */
+export function facteurGeometrieFut(hauteurM: number, diametreCm: number): number {
+  if (diametreCm <= 0 || hauteurM <= 0) return 0;
+  const hd = (hauteurM * 100) / diametreCm;
+  return (ELANCEMENT_REFERENCE / hd) ** 1.5;
+}
+
+/**
+ * Vitesse de rafale à laquelle le FÛT de cet arbre-là casse, m/s (critère F17).
+ *
+ * **Ce qui n'entre PAS dans ce calcul est ce qui fait tout le lot.** Ni
+ * `facteurAncrage`, ni `facteurSolGorge` : un fût casse aussi bien sur un sol
+ * gelé que sur un sol gorgé, parce que la rupture se joue dans le bois et non
+ * dans la terre. De cette absence sort, sans qu'on l'écrive, le fait de terrain
+ * que les tempêtes françaises montrent partout :
+ *
+ *  - **fond de vallon gorgé** → l'ancrage lâche avant le fût, ça DÉRACINE ;
+ *  - **sol ferme, tige élancée ou bois tendre** → ça CASSE.
+ *
+ * La souplesse, en revanche, protège des deux : une tige de trois mètres plie
+ * et se relève, elle ne casse pas plus qu'elle ne s'arrache.
+ */
+export function vitesseCritiqueVolisMs(
+  arbre: TreeState,
+  densiteBois: number,
+  exposition: ExpositionAuVent,
+): number {
+  return (
+    (VITESSE_CRITIQUE_VOLIS_MS / facteurSouplesse(arbre.heightM)) *
+    facteurDensiteBois(densiteBois) *
+    facteurGeometrieFut(arbre.heightM, arbre.diametreCm) *
+    facteurPriseAuVent(exposition.partFoliaire)
+  );
+}
+
+/** Les deux façons dont une tempête ruine un arbre. */
+export type ModeDeRuine = "chablis" | "volis";
+
+/**
+ * Ce qui cède EN PREMIER : la motte ou le fût.
+ *
+ * Pas un tirage entre deux modes, pas une part posée à la main — une
+ * comparaison. Le mode qui l'emporte est celui dont la vitesse critique est la
+ * plus basse, exactement comme ForestGALES tranche entre ses deux calculs.
+ */
+export function modeDeRuine(
+  arbre: TreeState,
+  densiteBois: number,
+  exposition: ExpositionAuVent,
+): ModeDeRuine {
+  return vitesseCritiqueVolisMs(arbre, densiteBois, exposition) <
+    vitesseCritiqueMs(arbre, exposition)
+    ? "volis"
+    : "chablis";
+}
+
+/**
  * Marge au-delà de la vitesse critique à laquelle un arbre verse à coup sûr.
  *
  * Une tempête ne rase pas un peuplement d'un coup ni ne l'épargne d'un coup :
@@ -443,9 +573,26 @@ export function vitesseCritiqueMs(arbre: TreeState, exposition: ExpositionAuVent
  */
 export const MARGE_RENVERSEMENT = 0.4;
 
-/** Probabilité qu'un arbre verse ∈ [0,1]. */
-export function probabiliteRenversement(arbre: TreeState, exposition: ExpositionAuVent): number {
-  const critique = vitesseCritiqueMs(arbre, exposition);
+/**
+ * Probabilité qu'un arbre soit ruiné ∈ [0,1], quel que soit le mode.
+ *
+ * C'est la PLUS BASSE des deux vitesses critiques qui décide, parce qu'un arbre
+ * cède par son point faible : le fût casse ou la motte lâche, selon ce qui
+ * lâche en premier (critère F17). `densiteBois` à `undefined` neutralise le
+ * volis — c'est ce que le banc utilise comme témoin.
+ */
+export function probabiliteRenversement(
+  arbre: TreeState,
+  exposition: ExpositionAuVent,
+  densiteBois?: number,
+): number {
+  const critique =
+    densiteBois === undefined
+      ? vitesseCritiqueMs(arbre, exposition)
+      : Math.min(
+          vitesseCritiqueMs(arbre, exposition),
+          vitesseCritiqueVolisMs(arbre, densiteBois, exposition),
+        );
   if (critique <= 0) return 1;
   const exces = rafaleRecue(arbre, exposition) / critique - 1;
   return Math.min(1, Math.max(0, exces / MARGE_RENVERSEMENT));
@@ -460,9 +607,14 @@ export function graineDeChablis(idArbre: number, semaine: number): number {
   return (idArbre * 2654435761 + semaine * 40503 + 0x9e3779b9) >>> 0;
 }
 
-/** Cet arbre-là verse-t-il cette semaine-là ? */
-export function verse(arbre: TreeState, exposition: ExpositionAuVent, semaine: number): boolean {
-  const p = probabiliteRenversement(arbre, exposition);
+/** Cet arbre-là est-il ruiné cette semaine-là ? */
+export function verse(
+  arbre: TreeState,
+  exposition: ExpositionAuVent,
+  semaine: number,
+  densiteBois?: number,
+): boolean {
+  const p = probabiliteRenversement(arbre, exposition, densiteBois);
   if (p <= 0) return false;
   return rngFloat(rngStateFromSeed(graineDeChablis(arbre.id, semaine))).value < p;
 }

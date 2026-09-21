@@ -61,7 +61,51 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le coup de vent couche les chandelles, #58)
+## Ce que le dernier lot a appris (le volis, #176)
+
+Une tempête ne savait que déraciner. Elle casse aussi, désormais, et c'est la
+plus basse des deux vitesses critiques qui décide. F17 passe de ❌ à 🟡.
+
+**Le meilleur mécanisme est celui qu'on obtient en RETIRANT des termes.** Le
+volis ne se distingue pas du chablis par ce qu'on lui ajoute mais par ce qu'on
+lui refuse : ni ancrage, ni engorgement, parce qu'un fût casse aussi bien sur un
+sol gelé que sur un sol saturé. De cette absence sort le fait de terrain des
+tempêtes françaises — le même arbre casse sur le coteau et déracine dans le fond
+de vallon — sans qu'une ligne ne le dise. Mesuré : la vitesse de rupture ne
+bouge pas d'un millième entre les deux sols, c'est le renversement qui
+s'effondre.
+
+**Chercher le trait avant d'en déclarer un.** `bois.densite` était à l'atlas
+depuis #68, sourcée espèce par espèce, et le module de rupture d'un bois suit sa
+densité — l'une des relations les mieux établies de la science du bois.
+`rejetteDeSouche` décidait déjà du sort d'une souche. Le lot n'a donc rien
+déclaré : il a lu.
+
+**L'ancre peut être un RAPPORT plutôt qu'un nombre.** ForestGALES publie ses
+deux vitesses critiques dans la même bande de 15 à 45 m/s, sans qu'aucune ne
+domine par construction. C'est ça qu'on cale : l'arbre de référence a, sur sol
+ferme, une rupture du même ordre que son renversement. Poser directement une
+vitesse de rupture aurait été un chiffre sorti de nulle part.
+
+**Et le banc a renversé ce que j'allais écrire.** J'attendais que la densité
+ordonne les essences en peuplement : bois tendre, plus de volis. Mesuré sur
+trois graines, le hêtre casse à 83 % et le pin à 55 % — alors que le hêtre est
+plus dense. La raison est une SÉLECTION : la tempête n'abat pas un arbre moyen,
+elle abat les plus élancés, et ceux-là cassent parce que la rupture dépend de
+l'élancement en puissance −3/2 quand le renversement n'en dépend que par une
+rampe. La densité trie bel et bien, mais à géométrie égale — ce que seul le banc
+unitaire peut montrer. **La part de volis n'est donc pas une ancre**, et le
+référentiel le dit : on teste la direction contre le sol et contre la géométrie,
+jamais la répartition.
+
+**Le compilateur a fait le tour des conséquences à ma place.** Ajouter `volis` à
+`CauseMort` a fait tomber quatre fichiers d'un coup, dont deux du rendu : les
+tables de libellés, de teintes et de trajectoires de mort sont des
+`Record<CauseMort, …>`, donc exhaustives par construction. C'est le même
+dispositif que le `Record<GameAction["type"], Cas[]>` de #139, et il vaut mieux
+qu'une revue : on ne peut pas oublier un cas.
+
+## Ce qu'un lot plus ancien a appris (le coup de vent couche les chandelles, #58)
 
 `directionDeChute` ne composait qu'une tendance, la pente, alors que ce qui abat
 un tronc mort est un coup de vent. Elle en compose deux désormais. Aucun critère

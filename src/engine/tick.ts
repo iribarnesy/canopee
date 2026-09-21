@@ -220,6 +220,8 @@ import {
 import {
   abriAuVent,
   candidatAuChablis,
+  hauteurDeVolisM,
+  modeDeRuine,
   RAFALE_MINIMALE_MS,
   rafaleDeLaSemaine,
   verse,
@@ -447,6 +449,12 @@ export interface TempeteResult {
   /** cap vers lequel le vent poussait, radians — le sens où les troncs sont partis */
   versRad: number;
   arbresVerses: number;
+  /**
+   * Arbres dont le FÛT a cassé au lieu que la motte lâche (F17). Ils ne sont
+   * pas comptés dans `arbresVerses` : ils ne sont pas par terre, il reste un
+   * moignon debout — et pour une espèce qui rejette, il est vivant.
+   */
+  arbresCasses: number;
   /** volume de tige couché, m³ : ce que le joueur peut encore vendre, décoté */
   volumeM3: number;
   victimes: readonly { id: number; hauteurM: number }[];
@@ -2782,6 +2790,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let tempete: TickResult["tempete"];
   if (rafaleMs >= RAFALE_MINIMALE_MS && station.ventExposition > 0) {
     const verses: TreeState[] = [];
+    /** Ceux dont le FÛT a cassé : ils ne sont pas par terre (F17). */
+    const casses: TreeState[] = [];
     nextTrees = nextTrees.map((tree) => {
       if (!candidatAuChablis(tree)) return tree;
       const espece = getEspece(tree.especeId);
@@ -2808,7 +2818,43 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
         profondeurEffectiveCm: tree.rootDepthCm,
       };
-      if (!verse(tree, exposition, state.week)) return tree;
+      if (!verse(tree, exposition, state.week, espece.bois.densite)) return tree;
+      // DEUX RUINES, ET C'EST UNE COMPARAISON QUI TRANCHE (F17). L'arbre cède
+      // par son point faible : si son fût casse avant que sa motte ne lâche,
+      // c'est un volis et non un chablis (tempete.ts).
+      if (modeDeRuine(tree, espece.bois.densite, exposition) === "volis") {
+        const hauteurApres = hauteurDeVolisM(tree.heightM, tree.baseHouppierM ?? 0);
+        // Ce que l'arbre cesse de porter part au sol : la cime cassée reste sur
+        // place, et les racines que le modèle déduit de la hauteur avec elle
+        // (carbon.ts). Sans ce versement, une tempête ferait disparaître du
+        // carbone — et le test de conservation le dirait.
+        deadWoodKgC +=
+          treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
+          treeAboveCarbonKg(espece, tree.diametreCm, hauteurApres) +
+          racinesPerduesEnRabattant(espece, tree.diametreCm, tree.heightM, hauteurApres);
+        casses.push(tree);
+        // C'est `rejetteDeSouche` qui décide du sort, et rien d'autre : un
+        // châtaignier repart de sa cassure, un pin reste un moignon sec.
+        if (!espece.bois.rejetteDeSouche) {
+          return {
+            ...tree,
+            heightM: hauteurApres,
+            alive: false,
+            causeMort: "volis" as const,
+            // PAS de `renverseSemaine` : il n'est pas par terre. Il fera une
+            // chandelle raccourcie, pas un chablis récupérable.
+            mortSemaine: undefined,
+          };
+        }
+        return {
+          ...tree,
+          heightM: hauteurApres,
+          // La souche repart branchue, comme après un recépage (actions.ts).
+          hauteurElagueeM: 0,
+          baseHouppierM: 0,
+          pousseTendreM: 0,
+        };
+      }
       verses.push(tree);
       return {
         ...tree,
@@ -2820,11 +2866,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         chuteRad: weather.ventVersRad,
       };
     });
-    if (verses.length > 0) {
+    if (verses.length > 0 || casses.length > 0) {
       tempete = {
         rafaleMs,
         versRad: weather.ventVersRad,
         arbresVerses: verses.length,
+        arbresCasses: casses.length,
         volumeM3: verses.reduce((s, t) => s + volumeTigeM3(t.diametreCm, t.heightM), 0),
         victimes: verses.map((t) => ({ id: t.id, hauteurM: t.heightM })),
       };

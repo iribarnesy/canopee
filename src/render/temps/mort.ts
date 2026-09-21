@@ -269,6 +269,16 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
     seffaceEntre: [0.1, 0.5],
     chandelleA: 1.1,
   },
+  // Un VOLIS n'est pas un chablis : le fût a cassé, la souche est restée
+  // debout, et sur une espèce qui rejette elle est même vivante (F17). Ce qui
+  // meurt ici est l'arbre qui ne rejette pas — il reste un moignon sec, donc
+  // une chandelle qui vient tout de suite et ne s'efface pas. Le rendu ne sait
+  // pas encore le RACCOURCIR au moment de la casse, faute que `tempete`
+  // atteigne le protocole : même pis-aller que le chablis, et même issue.
+  volis: {
+    defeuille: [0, 0.2],
+    chandelleA: 0.2,
+  },
 };
 
 /** Où en est une fenêtre à cet avancement : 0 avant, 1 après, linéaire dedans. */

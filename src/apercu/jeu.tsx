@@ -440,6 +440,7 @@ function Demo(): React.ReactElement {
             tempete: {
               rafaleMs: Number(params.get("tempete-force") ?? "33.3"),
               versRad: Number(params.get("tempete-vers") ?? "0.785"),
+              arbresCasses: 0,
               arbresVerses: 0,
               volumeM3: 0,
               victimes: versables
