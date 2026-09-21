@@ -61,7 +61,59 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la naïveté au vent, #177 et F19)
+## Ce que le dernier lot a appris (une futaie s'abrite elle-même, #179)
+
+`abriAuVent` ne comptait que les voisins qui DÉPASSENT, si bien qu'une futaie
+régulière n'abritait personne. Elle s'abrite maintenant, par le rapport de
+l'espacement local à la hauteur. Aucun critère ne monte ; F16 est RÉÉCRIT et
+F18 garde son 🟡, pour une raison nouvelle.
+
+**Un critère du référentiel peut être faux, et celui-là bloquait un autre
+critère.** F16 affirmait en ✅ qu'« une futaie régulière ne s'abrite pas
+elle-même », justifié par Klaus dans les pins landais alignés. Mais ces pinèdes
+n'ont pas versé faute d'abri : elles ont versé parce qu'elles étaient élancées,
+uniformes, sur sable, et qu'une fois ouvertes elles se sont décousues. L'énoncé
+confondait une conséquence avec sa cause — et tant qu'il tenait, F18 ne pouvait
+pas tomber, puisque les seuls arbres à avoir de l'abri à perdre étaient trop
+courts pour verser. **Un ✅ mal énoncé coûte plus cher qu'un ❌** : il ferme la
+question.
+
+**La bonne variable était publiée, et ce n'était pas celle du moteur.** Les
+modèles de la famille ForestGALES ne raisonnent pas en « qui dépasse qui » mais
+sur S/H, l'espacement rapporté à la hauteur : des tiges serrées se partagent la
+quantité de mouvement. Mesuré dans le moteur avant d'écrire, le S/H d'une futaie
+fermée vaut 0,31 — au milieu de la gamme où ce rapport joue. Le signal était
+dans l'état du peuplement, il n'était pas lu.
+
+**Le garde-fou se met dans l'essai, pas dans l'intention.** Le premier jet de ce
+module avait saturé l'abri à 1 pour tout le monde : zéro arbre couché en
+soixante ans. Un terme collectif mal borné referait exactement ça. Il plafonne
+donc au tiers, et un essai l'exige — parce qu'une note de bas de page n'empêche
+personne de relever une constante.
+
+**Deux comportements sortent sans être écrits**, et c'est la marque d'une bonne
+forme : un arbre de lisière est moins abrité qu'un arbre d'intérieur (0,271
+contre 0,338), sans qu'aucune distance au bord soit calculée ; et une ouverture
+dépouille les DOMINANTS, dont l'abri tombe de 0,115 à 0,021.
+
+**Mais le juge a dit non, et pour une raison plus profonde qu'avant.** Le lot
+devait rendre F18 mesurable. Il ne le rend pas : dans ce moteur la HAUTEUR
+commande le risque de chablis — profil logarithmique du vent, souplesse des
+jeunes tiges — si bien que toute opération qui déplace la distribution des
+hauteurs noie l'effet d'abri. Une éclaircie par le haut retire les grands, donc
+la population vulnérable : 8,3 % de ruines contre 43,7 % au témoin non
+éclairci. Le peuplement éclairci est plus SÛR, et ce n'est pas faux — il n'a
+plus d'arbres à perdre. Ce qu'il faudrait est une ouverture qui ne déplace pas
+les hauteurs : une lisière neuve, pas une éclaircie.
+
+**Deux témoins appariés de suite se sont révélés non appariés.** Naïveté active
+contre neutralisée : 99 arbres suivis contre 124, parce que le mécanisme tourne
+pendant les quarante ans qui précèdent l'éclaircie et que les deux parcours ont
+divergé bien avant. Un témoin qui change la population qu'il compare n'est pas
+un témoin. C'est la troisième forme du même piège dans ce bloc, après le banc
+qui n'exerçait rien et le dénominateur trop large.
+
+## Ce qu'un lot plus ancien a appris (la naïveté au vent, #177 et F19)
 
 Deux lots d'un coup, et ils se ressemblent : dans les deux cas le mécanisme est
 écrit et sa conséquence ne l'est pas — pour F19 parce que le chiffre n'existe

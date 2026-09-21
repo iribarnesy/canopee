@@ -425,17 +425,113 @@ export function abriAuVent(
   arbre: Pick<TreeState, "id" | "x" | "y" | "heightM">,
 ): number {
   let abri = 0;
+  // Le voisinage qui compte pour l'abri de PEUPLEMENT : un rayon de deux
+  // hauteurs, et seulement les tiges d'une taille comparable (cf. plus bas).
+  const rayonPeuplement = RAYON_PEUPLEMENT * Math.max(0.5, arbre.heightM);
+  let pairs = 0;
   for (const voisin of arbres) {
     if (!voisin.alive || voisin.id === arbre.id) continue;
-    const exces = voisin.heightM - arbre.heightM;
-    if (exces <= 0) continue;
     const dx = voisin.x - arbre.x;
     const dy = voisin.y - arbre.y;
     const d = Math.sqrt(dx * dx + dy * dy);
+    if (d <= rayonPeuplement && voisin.heightM >= PART_HAUTEUR_PAIR * arbre.heightM) pairs++;
+    const exces = voisin.heightM - arbre.heightM;
+    if (exces <= 0) continue;
     if (d > PORTEE_ABRI * exces) continue;
     abri += (FORCE_ABRI * exces) / Math.max(1.5, d);
   }
-  return Math.min(1, abri);
+  return Math.min(
+    1,
+    abri + abriDuPeuplement(espacementSurHauteur(pairs, rayonPeuplement, arbre.heightM)),
+  );
+}
+
+/**
+ * Rayon du voisinage qui fait peuplement, en hauteurs d'arbre.
+ *
+ * Deux hauteurs : c'est l'ordre de grandeur sur lequel une canopée fait
+ * rugosité pour l'un de ses membres. Au-delà, ce qui pousse ne partage plus la
+ * même quantité de mouvement que lui *(à calibrer)*.
+ */
+export const RAYON_PEUPLEMENT = 2;
+
+/**
+ * Part de la hauteur du sujet au-dessous de laquelle un voisin ne fait plus
+ * peuplement avec lui.
+ *
+ * **Sans ce filtre, la régénération abriterait la futaie**, ce qui est
+ * exactement faux : un dominant entouré de semis est un arbre isolé. Sept
+ * dixièmes, parce qu'un étage dominé de cette hauteur-là partage encore la
+ * canopée *(à calibrer)*.
+ */
+export const PART_HAUTEUR_PAIR = 0.7;
+
+/**
+ * Espacement moyen entre tiges comparables, rapporté à la hauteur : le fameux
+ * S/H des modèles de risque de chablis.
+ *
+ * On le déduit du COMPTE de voisins dans un disque, ce qui suppose qu'ils y
+ * sont répartis à peu près régulièrement — c'est l'hypothèse que fait aussi la
+ * sylviculture quand elle publie un espacement moyen *(à confirmer sur un
+ * peuplement volontairement agrégé)*.
+ */
+export function espacementSurHauteur(pairs: number, rayonM: number, hauteurM: number): number {
+  if (hauteurM <= 0) return Number.POSITIVE_INFINITY;
+  // Aucun pair : l'arbre est seul, donc de plein vent.
+  if (pairs <= 0) return Number.POSITIVE_INFINITY;
+  return Math.sqrt((Math.PI * rayonM * rayonM) / pairs) / hauteurM;
+}
+
+/**
+ * S/H au-delà duquel un arbre est de plein vent : plus aucun abri de peuplement.
+ *
+ * Un demi : au-delà d'un espacement égal à la moitié de la hauteur, les
+ * houppiers ne se touchent plus et chaque tige prend le vent pour elle seule.
+ * C'est le haut de la gamme sur laquelle les modèles de la famille
+ * ForestGALES font jouer le rapport espacement/hauteur *(à calibrer)*.
+ */
+export const ESPACEMENT_PLEIN_VENT = 0.5;
+
+/**
+ * Ce qu'un abri de PEUPLEMENT retire, au plus, à la rafale reçue.
+ *
+ * **Il est volontairement plus faible que l'abri de surcime, et c'est un
+ * garde-fou historique.** Le premier jet de ce module avait réutilisé
+ * `windShelterAt`, qui saturait à 1 pour tout le monde dans n'importe quel
+ * peuplement : plus rien ne versait, zéro arbre couché en soixante ans. Un
+ * terme collectif mal borné refait exactement cette faute. Un tiers laisse donc
+ * une futaie serrée nettement plus sûre qu'une parcelle ouverte, sans jamais la
+ * rendre invulnérable — et un essai l'exige *(à calibrer)*.
+ */
+export const ABRI_PEUPLEMENT_MAX = 1 / 3;
+
+/**
+ * ABRI QUE LA FUTAIE DONNE À CHACUN DE SES MEMBRES ∈ [0 ; ABRI_PEUPLEMENT_MAX].
+ *
+ * Ce que `abriAuVent` ne savait pas dire, et qui bloquait F18 (#179). Il ne
+ * comptait que les voisins QUI DÉPASSENT, si bien qu'une futaie régulière
+ * n'abritait personne : les seuls arbres à avoir de l'abri à perdre étaient les
+ * dominés, et les dominés sont trop courts pour verser. Aucune ouverture ne
+ * pouvait donc faire verser quoi que ce soit de plus.
+ *
+ * Les modèles de la famille ForestGALES ne raisonnent pas en « qui dépasse
+ * qui » mais sur le rapport de l'ESPACEMENT à la HAUTEUR : plus les tiges sont
+ * serrées, plus la quantité de mouvement se partage, et plus le moment appliqué
+ * à chacune est faible. C'est ce rapport-là qu'on lit.
+ *
+ * Trois choses tombent de cette forme, et aucune n'est écrite :
+ *
+ *  - **un dominant de futaie fermée est abrité**, ce qui était le trou ;
+ *  - **un arbre de lisière l'est moins** qu'un arbre d'intérieur — il a moins
+ *    de voisins, donc un espacement local plus grand. La distance à la lisière
+ *    n'a pas à être calculée, elle se lit dans le comptage ;
+ *  - **une éclaircie découvre les DOMINANTS**, ceux qui versent, et c'est ce
+ *    que la mémoire d'abri (#177) attendait pour mordre.
+ */
+export function abriDuPeuplement(espacementSurHauteurLocal: number): number {
+  if (!Number.isFinite(espacementSurHauteurLocal)) return 0;
+  const part = 1 - espacementSurHauteurLocal / ESPACEMENT_PLEIN_VENT;
+  return ABRI_PEUPLEMENT_MAX * Math.min(1, Math.max(0, part));
 }
 
 /**
