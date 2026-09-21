@@ -20,6 +20,30 @@
  * sources consultées ne chiffrent PAS ce temps de retour — on prend une échelle
  * pluriannuelle, marquée comme telle *(à calibrer)*.
  *
+ * ─── CE QU'IL EN EST AUJOURD'HUI, MESURÉ ─────────────────────────────────────
+ * **UN SEUL GESTE TASSE** : `labourer`. Semer, fertiliser et moissonner ne
+ * touchent pas la variable, alors que ce sont des passages d'engin eux aussi.
+ * Le compte qui circulait dans le dépôt — « quatre passages, soit 1,00 par an
+ * contre 0,20 de réparation, donc épinglé dès la deuxième année » — était donc
+ * faux. La trajectoire relevée au centre d'un blé continu labouré tous les ans
+ * est +0,05 par an : 0,25 à l'an 1, 0,50 à l'an 6, 1,000 à partir de l'an 16,
+ * et plus jamais rien d'autre.
+ *
+ * Ce que ce plafond coûte, mesuré en neutralisant `PERTE_CROISSANCE_MAX`
+ * (moyenne des dix dernières années sur trente, blé continu, limon riche) :
+ * sans apport 1,07 → 1,70 t/ha, minéral 192 kg N 4,88 → 6,68, fumier 240
+ * 6,21 → 8,39. Un bon tiers du rendement, et le plot fumé neutralisé tombe
+ * dans la gamme de Broadbalk (~9 t/ha).
+ *
+ * **CE N'EST PAS UN COEFFICIENT TROP GRAND, C'EST UN TERME QUI MANQUE** : le
+ * soc DESSERRE l'horizon travaillé — c'est même la raison agronomique du
+ * geste — et le moteur ne modélise que les roues du tracteur. Broadbalk est
+ * labouré chaque année depuis 1843 et fait 9 t/ha. Baisser
+ * `TASSEMENT_PAR_PASSAGE` soulèverait aussi le point zéro (1,07 → 1,70 alors
+ * que les parcelles nues de l'essai tiennent ~1), c'est-à-dire déplacerait le
+ * défaut : le tassement fait en partie le travail de la paille qui manque.
+ * Voir l'issue #141, passée à `moteur:évolution` pour cette raison.
+ *
  * ─── ET C'EST UN ARGUMENT AGROFORESTIER ──────────────────────────────────────
  * Le tassement ne se produit que là où l'engin PASSE. Or le moteur sait déjà
  * dire quelle part d'une zone est mécanisable selon la façon dont c'est planté
