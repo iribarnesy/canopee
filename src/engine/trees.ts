@@ -1206,6 +1206,24 @@ export interface TreeTickResult {
  * les facteurs listés valaient 1 et que l'âge était le premier testé. Un
  * pommier de trois ans mort « de vieillesse » sur une lande à pH 4,5, c'était
  * ça.
+ *
+ * À ÉGALITÉ LE pH GAGNE, puisqu'il est testé le premier, et l'égalité la plus
+ * inquiétante est celle À 1 : quatre facteurs parfaits, donc `pire === fPH`,
+ * donc « sur un sol hors de sa gamme de pH » pour un arbre dont le sol lui
+ * convient. #160 laissait la question ouverte en marge. MESURÉ, ET ELLE NE SE
+ * PRODUIT PAS : trois graines, quarante ans, pommiers, abricotiers et hêtres
+ * sur le limon riche à pH 7 où leur facteur de survie au pH vaut exactement 1
+ * — 15 morts, 8 « ravageurs », 7 « ombre », AUCUNE « solHorsGamme ».
+ *
+ * Et ce n'est pas une chance : la branche est hors d'atteinte par
+ * construction. Une mort déclenchée par un coup brusque passe par `imputer`
+ * (tick.ts), qui ne consulte les causes lentes que si elles font la majorité
+ * du compteur, et lit alors `causeLente` — relevée sous la garde « seulement
+ * les semaines où quelque chose de lent a vraiment pesé », donc jamais dans
+ * une semaine où tout vaut 1. Il n'y a pas de chemin qui mène ici avec quatre
+ * facteurs parfaits. Départager l'égalité serait donc ajouter un terme pour
+ * un cas que rien n'atteint ; on l'écrit plutôt ici pour ne pas le reprendre
+ * une troisième fois.
  */
 function causeLenteDominante(
   usure: number,
