@@ -10,9 +10,12 @@
  * relire ce que le moteur a nommé.
  */
 
+import { Fragment } from "react";
 import { getEspece } from "../../engine/especes";
+import type { ContextePhenologique } from "../../engine/phenologie";
 import type { SnapshotTree } from "../protocol";
 import { type EvenementSuivi, grouperLesSuivis, type QuoiSuivi } from "../suivis";
+import { ficheDeLArbre } from "./fiche";
 import { btn } from "./styles";
 
 /** Une pastille par sorte d'événement, pour survoler la liste des yeux. */
@@ -52,10 +55,43 @@ function quandDuGroupe(semaine: number, depuis: number): string {
  */
 const LIGNES_PAR_ARBRE = 6;
 
+/** La fiche d'un arbre : ses grandeurs, deux par ligne quand la place le veut. */
+function Fiche({
+  arbre,
+  semaine,
+  pheno,
+}: {
+  arbre: SnapshotTree;
+  semaine: number;
+  pheno: ContextePhenologique;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        columnGap: 8,
+        rowGap: 1,
+        margin: "3px 0 5px",
+        color: "var(--encre-douce)",
+      }}
+    >
+      {ficheDeLArbre(arbre, { semaine, pheno }).map((l) => (
+        <Fragment key={l.quoi}>
+          <span title={l.aide}>{l.quoi}</span>
+          <span style={{ color: "var(--encre)" }}>{l.valeur}</span>
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
 export function PanneauSuivis({
   suivis,
   journal,
   tous,
+  semaine,
+  pheno,
   oublier,
   selectionner,
 }: {
@@ -63,6 +99,10 @@ export function PanneauSuivis({
   journal: readonly EvenementSuivi[];
   /** TOUS les arbres de l'instantané, chandelles comprises : un suivi mort en est une. */
   tous: readonly SnapshotTree[];
+  /** la semaine de l'instantané : les « il y a » de la fiche s'y rapportent */
+  semaine: number;
+  /** le calendrier foliaire de la semaine, pour le feuillage de la fiche */
+  pheno: ContextePhenologique;
   oublier: (id: number) => void;
   selectionner: (id: number) => void;
 }) {
@@ -108,15 +148,11 @@ export function PanneauSuivis({
         );
         return (
           <div key={id} style={{ marginBottom: 10 }}>
+            {/* Le nom seul : la taille et l'âge sont dans la fiche, juste
+                dessous, et les dire deux fois ne les dit pas mieux. */}
             <strong>
               {arbre ? getEspece(arbre.especeId).nom : `Arbre n°${id}`}
-              {arbre && (
-                <span style={{ fontWeight: 400 }}>
-                  {" "}
-                  · {arbre.heightM.toFixed(1)} m · {Math.floor(arbre.ageWeeks / 52)} ans
-                  {arbre.chandelle && " · chandelle"}
-                </span>
-              )}
+              {arbre?.chandelle && <span style={{ fontWeight: 400 }}> · chandelle</span>}
               {!arbre && <span style={{ fontWeight: 400 }}> · a quitté la parcelle</span>}
             </strong>{" "}
             {arbre && (
@@ -132,6 +168,7 @@ export function PanneauSuivis({
             <button type="button" style={btn()} onClick={() => oublier(id)}>
               Ne plus suivre
             </button>
+            {arbre && <Fiche arbre={arbre} semaine={semaine} pheno={pheno} />}
             {sien.length === 0 ? (
               <div style={{ color: "var(--encre-douce)" }}>
                 Rien ne lui est arrivé depuis qu'on le suit.
