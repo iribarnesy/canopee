@@ -23,21 +23,19 @@ import type {
   StationInfo,
   ToWorker,
 } from "./protocol";
-
-const SAVE_KEY = "canopee-sauvegarde";
+import { derniereSauvegarde, ecrireSauvegarde, idNeuf } from "./sauvegardes";
 
 /** Combien de temps on attend la sauvegarde avant de fermer quand même, ms. */
 const DELAI_SAUVEGARDE_MS = 2000;
 
+/**
+ * La partie la plus récente, s'il y en a une (#147).
+ *
+ * Le rangement est ailleurs (`sauvegardes.ts`) : ici on ne fait que demander la
+ * dernière, pour le bouton « Reprendre » qui n'a besoin de rien d'autre.
+ */
 export function loadSave(): SaveGame | undefined {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return undefined;
-    const save = JSON.parse(raw) as SaveGame;
-    return save.version === 1 ? save : undefined;
-  } catch {
-    return undefined;
-  }
+  return derniereSauvegarde(localStorage)?.save;
 }
 
 export interface GameApi {
@@ -65,7 +63,12 @@ export interface GameApi {
     anneeDepart: number,
     economie: boolean,
   ) => void;
-  resume: (save: SaveGame) => void;
+  /**
+   * Reprendre une partie. `id` est son entrée dans la liste : c'est LÀ que
+   * l'autosave écrira ensuite, sinon reprendre une partie en créerait une
+   * seconde copie à la première sauvegarde (#147).
+   */
+  resume: (save: SaveGame, id?: string) => void;
   dispatch: (action: ActionSansSemaine) => void;
   /**
    * Demande au moteur si ce geste passerait, sans le faire. La réponse arrive
@@ -144,6 +147,11 @@ export function useGame(): GameApi {
   const [revision, setRevision] = useState(0);
   /** La dernière question posée : les réponses en retard sont jetées. */
   const cleDemandee = useRef("");
+  /**
+   * L'entrée de la liste où l'autosave écrit. Une référence et non un état :
+   * elle ne change rien à l'écran, et personne ne la lit pendant un rendu.
+   */
+  const idPartie = useRef(idNeuf());
 
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
@@ -197,11 +205,9 @@ export function useGame(): GameApi {
             setPrevision({ cle: msg.cle, refusals: msg.refusals });
           break;
         case "save":
-          try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(msg.save));
-          } catch {
-            /* stockage plein ou indisponible : la partie continue sans autosave */
-          }
+          // Chaque partie a son entrée, et l'autosave écrit dans la sienne :
+          // c'est ce qui fait qu'en commencer une n'efface plus l'autre (#147).
+          ecrireSauvegarde(localStorage, idPartie.current, msg.save);
           // Si l'on attendait cette sauvegarde pour quitter, c'est le moment.
           arretRef.current?.();
           break;
@@ -250,6 +256,10 @@ export function useGame(): GameApi {
       anneeDepart,
       economie,
     ) => {
+      // **Une partie neuve, une entrée neuve.** C'est tout le défaut de #147 :
+      // l'autosave écrivait dans l'emplacement unique, donc commencer une
+      // partie effaçait la précédente trente secondes plus tard.
+      idPartie.current = idNeuf();
       ensureWorker();
       setRefusals([]);
       setEvents([]);
@@ -273,7 +283,8 @@ export function useGame(): GameApi {
       setAutoHarvestState(true);
       setSpeedState(0);
     },
-    resume: (save) => {
+    resume: (save, id) => {
+      idPartie.current = id ?? idNeuf();
       ensureWorker();
       setRefusals([]);
       setEvents([]);

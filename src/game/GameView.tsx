@@ -61,8 +61,16 @@ import {
   type ProfilDepart,
   supprimerProfil,
 } from "./profils";
+import type { SaveGame } from "./protocol";
+import {
+  type EntreeSauvegarde,
+  essencesPlantees,
+  listerSauvegardes,
+  reglagesDeLaPartie,
+  supprimerSauvegarde,
+} from "./sauvegardes";
 import { useEllipse } from "./useEllipse";
-import { loadSave, useGame } from "./useGame";
+import { useGame } from "./useGame";
 import { useSuivis } from "./useSuivis";
 import { VueParcelle } from "./VueParcelle";
 
@@ -84,7 +92,8 @@ function StartScreen({
     anneeDepart: number,
     economie: boolean,
   ) => void;
-  onResume: () => void;
+  /** reprendre la partie que la liste désigne (#147) */
+  onResume: (entree: EntreeSauvegarde) => void;
 }) {
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
   const [seed, setSeed] = useState(42);
@@ -117,7 +126,44 @@ function StartScreen({
    * pas de réalisme (actions.ts).
    */
   const [economie, setEconomie] = useState(true);
-  const save = loadSave();
+  /**
+   * LES PARTIES SAUVEGARDÉES (#147) : on ne les lit qu'au montage. La liste ne
+   * change pas sous nos yeux — c'est le jeu qui écrit dedans, et il n'y a pas
+   * de jeu tant que cet écran est là.
+   */
+  const [parties, setParties] = useState<EntreeSauvegarde[]>(() => listerSauvegardes(localStorage));
+  const [partieChoisie, setPartieChoisie] = useState<string>();
+  const choisieEntree = parties.find((e) => e.id === partieChoisie);
+
+  /**
+   * PRÉ-REMPLIR L'ÉCRAN avec les réglages d'une partie (#147).
+   *
+   * Tout sauf la graine : c'est elle qu'on change pour éprouver un résultat.
+   * Les valeurs absentes de la sauvegarde sont celles que la partie n'avait pas
+   * choisies — on laisse alors ce qui est à l'écran, plutôt que d'inventer un
+   * défaut qui n'a jamais été le sien.
+   */
+  const appliquerLesReglages = (save: SaveGame): void => {
+    // **Une station qu'on ne connaît plus ne se choisit pas.** Une sauvegarde
+    // d'une version où la station s'appelait autrement laisserait sinon
+    // l'écran sur un identifiant inexistant, et « Démarrer » n'ouvrirait
+    // jamais de partie — un cul-de-sac sans un mot. Le reste des réglages, lui,
+    // se charge quand même.
+    if (STATIONS_V0.some((s) => s.station.id === save.stationId)) setStationId(save.stationId);
+    setScenario(save.scenario);
+    setAnneeDepart(save.anneeDepart);
+    setSeed(Math.floor(Math.random() * 10_000));
+    setBordures(save.bordures ?? bordersUniformes(save.paysageId));
+    if (save.relief) {
+      setRelief(save.relief);
+      setTerrain(save.relief.altitudesM ? [...save.relief.altitudesM] : undefined);
+    }
+    if (save.eau) setEau(save.eau);
+    if (save.nappeCm !== undefined) setNappeCm(save.nappeCm);
+    if (save.partBassin !== undefined) setPartBassin(save.partBassin);
+    setMaturationAns(save.maturationAns ?? 0);
+    setEconomie(save.economie ?? true);
+  };
 
   const choisie = STATIONS_V0.find((s) => s.station.id === stationId);
   /**
@@ -259,6 +305,90 @@ function StartScreen({
         Un sol, un entourage, un climat — et cinquante ans devant vous. Rien n'est scripté&nbsp;:
         tout ce qui arrivera découlera de ces trois choix.
       </p>
+
+      {/*
+        LES PARTIES SAUVEGARDÉES (#147). Il y en avait une seule, et démarrer
+        une partie l'écrasait au premier autosave : « changer des paramètres,
+        lancer, sortir — et plus aucun moyen de relire les paramètres de la
+        partie précédente ». Rien de nouveau n'est stocké pour autant : la
+        sauvegarde portait déjà tout, il lui manquait un rangement et de quoi
+        se relire.
+      */}
+      {parties.length > 0 && (
+        <section className="carte">
+          <h3>Parties sauvegardées</h3>
+          <p className="sous">
+            Cliquez une partie pour relire ses réglages : la reprendre, ou repartir des mêmes
+            conditions avec une autre graine.
+          </p>
+          <div className="seg">
+            {parties.map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                style={btn(e.id === partieChoisie)}
+                onClick={() => setPartieChoisie(e.id === partieChoisie ? undefined : e.id)}
+                title={`${e.save.actions.length} actions · ${new Date(e.quand).toLocaleString("fr-FR")}`}
+              >
+                {e.nom}
+              </button>
+            ))}
+          </div>
+          {choisieEntree && (
+            <div style={{ marginTop: 8 }}>
+              <table style={{ borderCollapse: "collapse", marginBottom: 8 }}>
+                <tbody>
+                  {reglagesDeLaPartie(choisieEntree.save).map((l) => (
+                    <tr key={l.quoi}>
+                      <td style={{ paddingRight: 12, color: "var(--encre-douce)" }}>{l.quoi}</td>
+                      <td>{l.valeur}</td>
+                    </tr>
+                  ))}
+                  {essencesPlantees(choisieEntree.save).length > 0 && (
+                    <tr>
+                      <td style={{ paddingRight: 12, color: "var(--encre-douce)" }}>Plantations</td>
+                      <td>{essencesPlantees(choisieEntree.save).join(", ")}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <button type="button" style={btn(true)} onClick={() => onResume(choisieEntree)}>
+                ▶ Reprendre cette partie
+              </button>
+              {/*
+                **Repartir de ces réglages, graine libre.** C'est la porte du
+                mode expert : contester un résultat suppose de pouvoir rejouer
+                exactement les mêmes conditions — sauf le hasard, qu'on change
+                justement pour voir si le résultat tient.
+              */}
+              <button
+                type="button"
+                style={btn()}
+                onClick={() => {
+                  appliquerLesReglages(choisieEntree.save);
+                  setPartieChoisie(undefined);
+                  setMessageProfil(
+                    `Réglages de « ${choisieEntree.nom} » chargés, avec une graine neuve.`,
+                  );
+                }}
+              >
+                ⚙ Repartir de ces réglages
+              </button>
+              <button
+                type="button"
+                style={btn()}
+                onClick={() => {
+                  setParties(supprimerSauvegarde(localStorage, choisieEntree.id));
+                  setPartieChoisie(undefined);
+                }}
+                title="Effacer cette sauvegarde"
+              >
+                🗑 Oublier
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="carte">
         <h3>Le terrain</h3>
@@ -924,16 +1054,6 @@ function StartScreen({
         >
           Démarrer
         </button>
-        {save && (
-          <button
-            type="button"
-            style={{ ...btn(), padding: "8px 16px" }}
-            onClick={onResume}
-            title={`${save.stationId}, semaine ${save.weeks}`}
-          >
-            Reprendre la partie sauvegardée (an {Math.floor(save.weeks / 52) + 1})
-          </button>
-        )}
       </p>
     </div>
   );
@@ -1195,10 +1315,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         )}
         <StartScreen
           onStart={game.newGame}
-          onResume={() => {
-            const save = loadSave();
-            if (save) game.resume(save);
-          }}
+          onResume={(entree) => game.resume(entree.save, entree.id)}
         />
       </div>
     );
