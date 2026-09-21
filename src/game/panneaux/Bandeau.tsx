@@ -6,6 +6,7 @@
  * tout. Le reste est derrière un bouton.
  */
 
+import { coutDuDepassement, depassementHoraire } from "../../engine/actions";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
@@ -36,6 +37,8 @@ const MOIS = [
 ];
 
 export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot }) {
+  // L'économie coupée ne facture pas les heures : voir `factureDeLaSemaine`.
+  const depassement = snapshot.economy.active ? depassementHoraire(snapshot.economy) : 0;
   const annee = Math.floor(snapshot.week / 52) + 1;
   const semaine = snapshot.week % 52;
   const mois = MOIS[Math.min(11, Math.floor(semaine / SEMAINES_PAR_MOIS))];
@@ -60,11 +63,20 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         <strong style={{ fontSize: "1.25rem", color: tresorerie < 0 ? "#c0392b" : "#2e5b30" }}>
           {tresorerie.toFixed(0)} €
         </strong>
-        <span>
+        {/*
+          **Le dépassement se voit AU FUR ET À MESURE (#133)**, et pas à la
+          fin : le plafond ne refuse plus rien, il se paie, et une facture qui
+          tombe sans prévenir n'est pas un arbitrage. Le nombre d'heures et son
+          prix viennent du moteur (`depassementHoraire`, `coutDuDepassement`) —
+          le bandeau ne recalcule ni le plafond ni le tarif d'un bras.
+        */}
+        <span style={depassement > 0 ? { color: "#c0392b", fontWeight: 600 } : {}}>
           ⏱ {snapshot.economy.hoursUsedWeek.toFixed(0)}/{60 * snapshot.economy.uth} h · vous
           {snapshot.economy.ouvriersCdi > 0 && ` + ${snapshot.economy.ouvriersCdi} CDI`}
           {snapshot.economy.saisonniersFinSemaine.length > 0 &&
             ` + ${snapshot.economy.saisonniersFinSemaine.length} sais.`}
+          {depassement > 0 &&
+            ` · +${depassement.toFixed(0)} h à payer (${coutDuDepassement(depassement).eur} €)`}
         </span>
         <span>
           🌡 {snapshot.weather.tMean.toFixed(0)} °C · 🌧 {snapshot.weather.rainMm.toFixed(0)} mm

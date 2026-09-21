@@ -1083,6 +1083,47 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
 
   const { station, snapshot } = game;
   /**
+   * ─── LE BOUTON RETOUR DU NAVIGATEUR (#148) ──────────────────────────────
+   *
+   * Lancer une partie n'écrivait rien dans l'historique : « retour » quittait
+   * le site en pleine partie, et c'est par ce chemin que des paramètres de
+   * partie ont été perdus. Le réflexe « retour = un écran en arrière » est
+   * celui de tout le monde.
+   *
+   * Une partie pousse donc UNE entrée, et le retour la consomme pour revenir à
+   * l'écran titre — par le même chemin que « Sauvegarder et quitter », c'est-à-
+   * dire en sauvegardant d'abord, et non par un déchargement de page.
+   *
+   * Les deux références évitent chacune un piège. `quitter` parce que la
+   * fonction du jeu change d'identité à chaque rendu : un effet qui en
+   * dépendrait pousserait une entrée d'historique par rendu. `sortieDemandee`
+   * parce que le bouton, lui, appelle `history.back()` pour consommer l'entrée
+   * — et ce retour-là ne doit pas déclencher une seconde sortie.
+   */
+  const enPartie = Boolean(station && snapshot);
+  const quitter = useRef(game.quit);
+  quitter.current = game.quit;
+  const sortieDemandee = useRef(false);
+  useEffect(() => {
+    if (!enPartie) return;
+    sortieDemandee.current = false;
+    history.pushState({ canopee: "partie" }, "");
+    const surRetour = () => {
+      if (sortieDemandee.current) return;
+      sortieDemandee.current = true;
+      quitter.current();
+    };
+    window.addEventListener("popstate", surRetour);
+    return () => window.removeEventListener("popstate", surRetour);
+  }, [enPartie]);
+
+  /** Quitter par le bouton : on consomme l'entrée d'historique qu'on a poussée. */
+  const quitterLaPartie = () => {
+    sortieDemandee.current = true;
+    if (window.history.state?.canopee === "partie") history.back();
+    game.quit();
+  };
+  /**
    * LES ARBRES SUIVIS et leur journal (#149). Le worker en tient la liste, lui
    * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
    */
@@ -1499,7 +1540,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         volet={
           volets.estOuvert("hd", "partie") ? (
             <Volet titre="La partie" largeur={340} surFermer={() => volets.fermer("hd")}>
-              <PanneauMenu game={game} />
+              <PanneauMenu game={game} surQuitter={quitterLaPartie} />
             </Volet>
           ) : selectedTrees.length > 0 ? (
             <Volet

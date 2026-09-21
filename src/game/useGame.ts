@@ -16,6 +16,7 @@ const withUid = <T>(x: T): WithUid<T> => ({ ...x, uid: ++uid });
 
 import type {
   ActionSansSemaine,
+  FactureHoraire,
   FromWorker,
   GameEvent,
   SaveGame,
@@ -48,6 +49,15 @@ export interface GameApi {
   setAutoHarvest: (enabled: boolean) => void;
   /** message de pause automatique (fruits mûrs…) */
   notice?: string;
+  /**
+   * LA FACTURE D'UNE SEMAINE TROP CHARGÉE (#133), quand il y en a une.
+   *
+   * Présente = le temps est arrêté et attend une réponse. Ce n'est pas un
+   * avis : c'est une question, et `reglerFacture` y répond.
+   */
+  facture?: FactureHoraire;
+  /** embaucher les bras qu'il faut, ou s'en tenir aux soixante heures */
+  reglerFacture: (embaucher: boolean) => void;
   replayProgress?: { done: number; total: number; phase?: "vieillissement" | "rejeu" };
   newGame: (
     stationId: string,
@@ -141,6 +151,7 @@ export function useGame(): GameApi {
     phase?: "vieillissement" | "rejeu";
   }>();
   const [notice, setNotice] = useState<string>();
+  const [facture, setFacture] = useState<FactureHoraire>();
   const [events, setEvents] = useState<WithUid<GameEvent>[]>([]);
   const [autoHarvest, setAutoHarvestState] = useState(true);
   const [prevision, setPrevision] = useState<{ cle: string; refusals: ActionRefusal[] }>();
@@ -198,6 +209,13 @@ export function useGame(): GameApi {
           setSpeedState(0);
           setNotice(msg.reason);
           break;
+        case "facture":
+          // Le worker s'est arrêté pour poser la question : l'interface se
+          // remet à zéro comme pour n'importe quelle pause automatique, sinon
+          // le bandeau afficherait une vitesse que personne ne joue.
+          setSpeedState(0);
+          setFacture(msg.facture);
+          break;
         case "prevision":
           // Une réponse qui ne concerne plus la position survolée est périmée :
           // la garder ferait clignoter le fantôme entre rouge et normal.
@@ -239,6 +257,11 @@ export function useGame(): GameApi {
       send({ type: "autoHarvest", enabled });
     },
     notice,
+    ...(facture ? { facture } : {}),
+    reglerFacture: (embaucher) => {
+      setFacture(undefined);
+      send({ type: "reglerFacture", embaucher });
+    },
     prevision,
     revision,
     replayProgress,

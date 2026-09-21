@@ -55,6 +55,33 @@ export function Avis({
 
   return (
     <>
+      {/*
+        LA FACTURE HORAIRE (#133) — une QUESTION, pas un avis : le temps est
+        arrêté et ne repartira qu'avec la réponse. Elle passe donc devant le
+        reste, et dit ce qu'on perd dans les deux cas, y compris lesquels : le
+        joueur doit pouvoir choisir, pas découvrir.
+      */}
+      {game.facture && (
+        <div style={{ ...panel, background: "#f3e6c4", border: "1px solid var(--foret)" }}>
+          <strong>⏱ {game.facture.heures.toFixed(0)} h au-delà des 60 h de la semaine</strong>
+          <div style={{ fontSize: 13, margin: "4px 0 8px" }}>
+            Il faudrait {game.facture.embauches} saisonnier
+            {game.facture.embauches > 1 ? "s" : ""} pour les couvrir, soit{" "}
+            <strong>{game.facture.eur.toFixed(0)} €</strong> — payés pour des heures déjà faites.
+            Sinon, la semaine est ramenée à 60 h et{" "}
+            {game.facture.gestesAnnules > 0
+              ? `les ${game.facture.gestesAnnules} derniers gestes posés sont annulés`
+              : "rien n'est perdu"}
+            .
+          </div>
+          <button type="button" style={btn(true)} onClick={() => game.reglerFacture(true)}>
+            🧑‍🌾 Embaucher ({game.facture.eur.toFixed(0)} €)
+          </button>
+          <button type="button" style={btn()} onClick={() => game.reglerFacture(false)}>
+            ⏱ S'en tenir à 60 h
+          </button>
+        </div>
+      )}
       {game.notice && (
         <div style={{ ...panel, background: "#f3e6c4" }}>
           ⏸ {game.notice}

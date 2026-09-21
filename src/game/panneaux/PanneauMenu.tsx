@@ -6,7 +6,19 @@
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
 
-export function PanneauMenu({ game }: { game: GameApi }) {
+export function PanneauMenu({
+  game,
+  surQuitter,
+}: {
+  game: GameApi;
+  /**
+   * Sortir de la partie. Ce n'est plus `game.quit` directement : depuis #148,
+   * la partie occupe une entrée d'historique, et la porte de sortie doit la
+   * consommer — sinon le bouton retour du navigateur resterait coincé sur un
+   * écran qu'on a déjà quitté.
+   */
+  surQuitter: () => void;
+}) {
   return (
     <>
       <p style={{ margin: "0 0 8px" }}>
@@ -24,7 +36,7 @@ export function PanneauMenu({ game }: { game: GameApi }) {
         jeu. Elle sauvegarde d'abord, et le dit — voir `quit`.
       */}
       <p style={{ margin: "0 0 10px" }}>
-        <button type="button" style={btn()} onClick={game.quit}>
+        <button type="button" style={btn()} onClick={surQuitter}>
           💾 Sauvegarder et quitter
         </button>
       </p>

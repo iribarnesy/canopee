@@ -546,7 +546,32 @@ export type ToWorker =
    * dire jusqu'à vingt-six semaines trop tard.
    */
   | { type: "suivre"; ids: number[] }
+  /**
+   * La réponse à la facture (#133). `embaucher` vrai paie les bras qu'il faut
+   * — rétroactivement, pour des heures déjà faites — ; faux ramène la semaine
+   * sous le plafond en rejouant sans ses derniers gestes.
+   */
+  | { type: "reglerFacture"; embaucher: boolean }
   | { type: "requestSave" };
+
+/**
+ * LA FACTURE D'UNE SEMAINE TROP CHARGÉE (#133).
+ *
+ * Le plafond de soixante heures ne refuse plus rien : il se paie. Ces trois
+ * nombres viennent du moteur (`depassementHoraire`, `coutDuDepassement`) ; le
+ * quatrième se mesure en rejouant la semaine à blanc, côté worker, parce que
+ * lui seul sait ce que le joueur a posé depuis lundi.
+ */
+export interface FactureHoraire {
+  /** heures au-delà du plafond, toutes UTH comptées */
+  heures: number;
+  /** combien de bras il faudrait pour les couvrir */
+  embauches: number;
+  /** ce que ces bras coûtent, € */
+  eur: number;
+  /** combien de gestes tomberaient si l'on s'en tenait au plafond */
+  gestesAnnules: number;
+}
 
 export type FromWorker =
   | { type: "ready"; station: StationInfo }
@@ -555,5 +580,12 @@ export type FromWorker =
   | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
   /** le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la vitesse */
   | { type: "autopause"; reason: string }
+  /**
+   * « Votre semaine dépasse : vous embauchez, ou on s'en tient à 60 h ? »
+   *
+   * Le temps est arrêté quand ce message part, et il ne repart pas avant la
+   * réponse (`reglerFacture`) : c'est une question, pas une notification.
+   */
+  | { type: "facture"; facture: FactureHoraire }
   /** la réponse à `prevoir` : les refus qu'aurait produits ce geste */
   | { type: "prevision"; cle: string; refusals: ActionRefusal[] };

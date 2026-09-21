@@ -8,7 +8,13 @@
 
 import { serieMeteoPour } from "../data/meteo";
 import type { ActionRefusal, GameAction, GesteVisible } from "../engine/actions";
-import { applyAction, prevoirAction, valeurSurPied } from "../engine/actions";
+import {
+  applyAction,
+  coutDuDepassement,
+  depassementHoraire,
+  prevoirAction,
+  valeurSurPied,
+} from "../engine/actions";
 import {
   getScenario,
   meteoDerivee,
@@ -56,8 +62,16 @@ import type {
 } from "../engine/tick";
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
+import { prefixeSousLePlafond } from "./facture";
 import { decorDesBordures } from "./parcelle";
-import type { FromWorker, GameEvent, SaveGame, StationInfo, ToWorker } from "./protocol";
+import type {
+  FactureHoraire,
+  FromWorker,
+  GameEvent,
+  SaveGame,
+  StationInfo,
+  ToWorker,
+} from "./protocol";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 import { CAUSE_AU_SINGULIER } from "./suivis";
 
@@ -76,6 +90,27 @@ let relief: Relief | undefined;
 let retenu = false;
 /** Les arbres que le joueur suit : leur mort arrête le temps (#149). */
 let suivis: ReadonlySet<number> = new Set();
+/**
+ * ─── LA FACTURE HORAIRE (#133) ───────────────────────────────────────────
+ *
+ * Le plafond de soixante heures ne refuse plus rien (#137) : il se paie. Pour
+ * pouvoir le présenter en fin de semaine — « tant d'heures, tant d'euros :
+ * vous embauchez, ou on s'en tient à vos 60 h ? » — il faut savoir revenir en
+ * arrière, et c'est là qu'était le point dur : une action est appliquée AU
+ * CLIC, et couper un arbre change beaucoup de choses.
+ *
+ * **On ne défait donc rien : on REJOUE la semaine depuis son début avec une
+ * liste élaguée**, ce que l'issue désignait comme la piste à instruire. Il
+ * suffit pour ça de garder l'état tel qu'il était à l'ouverture de la semaine
+ * — une référence, l'état étant remplacé en entier à chaque application — et
+ * la liste des actions posées depuis.
+ */
+let debutDeSemaine: GameState | undefined;
+let actionsDeLaSemaine: GameAction[] = [];
+/** Où en était le journal de sauvegarde à l'ouverture de la semaine. */
+let journalAuDebut = 0;
+/** Une facture attend sa réponse : le temps ne repart pas avant. */
+let factureEnAttente = false;
 let maturationAns = 0;
 /** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
 let economie = true;
@@ -184,9 +219,27 @@ function qualiteVente(avant: GameState, treeIds: readonly number[]): string {
 }
 
 /** Applique une action, la date, la journalise et raconte son résultat. */
+/**
+ * Ouvrir une semaine, et retenir d'où elle part.
+ *
+ * Les trois endroits qui ouvraient une semaine le faisaient chacun de leur
+ * côté ; celui-ci ajoute la seule chose dont la facture a besoin — le point de
+ * retour — et personne n'a plus à y penser (#133).
+ */
+function ouvrirLaSemaine(etat: GameState): void {
+  state = beginWeek(etat);
+  debutDeSemaine = state;
+  actionsDeLaSemaine = [];
+  journalAuDebut = journal.length;
+  // Une facture appartient à la semaine qui la porte : aucune ne peut survivre
+  // à l'ouverture de la suivante — ni, surtout, à une partie neuve.
+  factureEnAttente = false;
+}
+
 function performAction(action: GameAction) {
   if (!state) return;
   journal.push(action);
+  actionsDeLaSemaine.push(action);
   const before = state;
   const result = applyAction(state, action);
   state = result.state;
@@ -514,9 +567,129 @@ function postSnapshot() {
  * Pause automatique quand des fruits arrivent à maturité : à grande vitesse,
  * le joueur raterait la fenêtre de récolte (3 semaines) sans s'en apercevoir.
  */
+/**
+ * Ce que coûterait la semaine telle qu'elle est composée, et ce qu'on perdrait
+ * à s'en tenir aux soixante heures — sans rien changer à l'état.
+ *
+ * Les deux nombres viennent du MOTEUR (`depassementHoraire`,
+ * `coutDuDepassement`) : le rendu ne recalcule ni le plafond ni le prix d'un
+ * bras. Le troisième — combien de gestes tomberaient — ne peut se connaître
+ * qu'en rejouant la semaine, et c'est ce qu'on fait ici à blanc.
+ */
+function factureDeLaSemaine(): FactureHoraire | undefined {
+  if (!state) return undefined;
+  // **Pas de facture quand l'argent ne compte pas.** La facture EST
+  // l'arbitrage économique ; sans argent, « embaucher » est un clic gratuit et
+  // la question n'en est plus une. Le moteur a tranché dans le même sens en
+  // livrant sa part (#133) : en économie coupée, la limite de travail
+  // disparaît, et un garde-fou serait un mécanisme neuf.
+  if (!state.economy.active) return undefined;
+  const heures = depassementHoraire(state.economy);
+  if (heures <= 0) return undefined;
+  const { embauches, eur } = coutDuDepassement(heures);
+  return { heures, embauches, eur, gestesAnnules: gestesQuiTomberaient() };
+}
+
+/** Combien d'actions la semaine perdrait si on la ramenait sous le plafond. */
+function gestesQuiTomberaient(): number {
+  if (!debutDeSemaine) return 0;
+  return prefixeSousLePlafond(debutDeSemaine, actionsDeLaSemaine).annulees;
+}
+
+/**
+ * S'EN TENIR AUX SOIXANTE HEURES : la semaine se rejoue amputée de sa fin.
+ *
+ * **L'ordre inverse de saisie**, comme l'issue le demandait : on garde le plus
+ * long préfixe qui tienne dans le plafond, donc ce sont les derniers gestes
+ * posés qui tombent. C'est la seule règle prévisible, et l'écran la dit.
+ *
+ * **Le journal de sauvegarde porte la DÉCISION, pas les tentatives** — c'était
+ * le piège nommé dans l'issue : un journal qui garderait les actions annulées
+ * les rejouerait au rechargement, et la partie divergerait.
+ */
+function seTenirAuPlafond(): number {
+  if (!state || !debutDeSemaine) return 0;
+  const posees = actionsDeLaSemaine;
+  // Les gestes déjà mis en scène appartiennent à des actions qu'on est en
+  // train de reprendre : on repart d'une feuille blanche, le rejeu les
+  // reproduira pour celles qui restent.
+  const elaguee = prefixeSousLePlafond(debutDeSemaine, posees);
+  pendingGestes = elaguee.gestes;
+  state = elaguee.etat;
+  journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
+  actionsDeLaSemaine = elaguee.gardees;
+  return elaguee.annulees;
+}
+
+/**
+ * Répondre à la facture : embaucher, ou s'en tenir au plafond (#133).
+ *
+ * Écrite à part et non dans le gestionnaire de messages, pour une raison de
+ * portée : la fonction qui écrit au journal s'appelle `event`, et le
+ * gestionnaire nomme `event` son message. Dans ce bloc-là, écrire au journal
+ * était impossible.
+ */
+function reglerLaFacture(embaucher: boolean): void {
+  if (!state || !factureEnAttente) return;
+  factureEnAttente = false;
+  if (embaucher) {
+    // **L'embauche est rétroactive à la semaine écoulée**, et c'est ce que
+    // l'issue demandait : on ne fait pas travailler quelqu'un plus
+    // longtemps, on ajoute des bras — pour des heures déjà faites. Un
+    // saisonnier par tranche de plafond entamée, pour UNE semaine : c'est
+    // exactement ce que `coutDuDepassement` a chiffré.
+    const { embauches } = coutDuDepassement(depassementHoraire(state.economy));
+    for (let i = 0; i < embauches; i++) {
+      performAction({
+        type: "embaucher",
+        week: state.week,
+        contrat: "saisonnier",
+        semaines: 1,
+      });
+    }
+    const reste = depassementHoraire(state.economy);
+    if (reste > 0) {
+      // L'embauche a été refusée (découvert plafonné) : la question se
+      // repose, avec les nombres d'après. Rien ne part en silence.
+      const encore = factureDeLaSemaine();
+      if (encore) {
+        factureEnAttente = true;
+        post({ type: "facture", facture: encore });
+        postSnapshot();
+        return;
+      }
+    } else {
+      event(
+        "🧑‍🌾",
+        `${embauches} saisonnier${embauches > 1 ? "s" : ""} embauché${embauches > 1 ? "s" : ""} pour la semaine : les heures supplémentaires sont couvertes`,
+      );
+    }
+  } else {
+    const tombes = seTenirAuPlafond();
+    event(
+      "⏱",
+      tombes > 0
+        ? `Semaine ramenée à 60 h : ${tombes} geste${tombes > 1 ? "s" : ""} annulé${tombes > 1 ? "s" : ""}, les derniers posés`
+        : "Semaine ramenée à 60 h",
+    );
+  }
+  postSnapshot();
+}
+
 function stepWeeks(n: number) {
   if (!state) return;
   for (let i = 0; i < n; i++) {
+    // **La facture se présente AVANT que la semaine ne se ferme (#133).** Le
+    // joueur compose sa semaine librement ; c'est au moment de passer à la
+    // suivante qu'on lui demande s'il embauche. Le temps s'arrête le temps
+    // qu'il réponde — comme il s'arrête pour un incendie ou une mort suivie.
+    const facture = factureEnAttente ? undefined : factureDeLaSemaine();
+    if (facture) {
+      factureEnAttente = true;
+      weeksPerSecond = 0;
+      post({ type: "facture", facture });
+      return;
+    }
     const w = meteoSemaine(state.week);
     if (!w) return;
     const before = state;
@@ -557,7 +730,7 @@ function stepWeeks(n: number) {
         );
       }
     }
-    state = beginWeek(ticked.state);
+    ouvrirLaSemaine(ticked.state);
     const finis =
       before.economy.saisonniersFinSemaine.length - state.economy.saisonniersFinSemaine.length;
     if (finis > 0) {
@@ -861,7 +1034,7 @@ function init(
   const neuf = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed), {
     economie,
   });
-  state = beginWeek(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
+  ouvrirLaSemaine(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
   journal = [];
   pendingRefusals = [];
   pendingEvents = [];
@@ -942,7 +1115,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         if (i % 104 === 0)
           post({ type: "progress", done: i, total: msg.save.weeks, phase: "rejeu" });
       }
-      state = beginWeek(replayed);
+      ouvrirLaSemaine(replayed);
       // Le rejeu n'a rien à raconter : ce sont des semaines déjà vécues.
       pendingRefusals = [];
       pendingEvents = [];
@@ -961,6 +1134,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
     }
     case "suivre":
       suivis = new Set(msg.ids);
+      break;
+    case "reglerFacture":
+      reglerLaFacture(msg.embaucher);
       break;
     case "attendre":
       // On ne touche NI à `weeksPerSecond` NI à `semaineDArret` : c'est une
