@@ -294,6 +294,21 @@ export interface TreeState {
    */
   houppierPerdu?: number;
   /**
+   * CARIE DU TRONC ∈ [0,1] : la part du RAYON mangée par les champignons de
+   * carie (`tempete.ts`, #182).
+   *
+   * Elle s'installe par une PLAIE — branche arrachée, frottis, brûlure,
+   * recépage, élagage — et **elle ne guérit jamais**. C'est ce qui la distingue
+   * de `houppierPerdu`, qui repousse : une colonne de carie ne fait que monter,
+   * et c'est ce qui rend un vieil arbre plusieurs fois blessé cumulativement
+   * fragile.
+   *
+   * Ce n'est PAS la vieillesse : `tickTree` fait déjà décliner la vigueur passé
+   * 85 % de la longévité. La carie est attachée aux blessures, et un arbre
+   * jamais blessé reste sain quel que soit son âge.
+   */
+  pourriture?: number;
+  /**
    * Vigueur ∈ [0,1] : moyenne lissée du facteur limitant sur les derniers
    * mois. Ce n'est pas la même chose que le stress. Le stress ne monte que
    * lorsque l'arbre est en danger de mort ; la vigueur, elle, dit s'il pousse

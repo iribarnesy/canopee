@@ -61,7 +61,40 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la branche arrachée, #181, et F17/F18 au vert)
+## Ce que le dernier lot a appris (la carie du tronc, #182)
+
+Le dernier facteur de risque de chablis que le moteur ignorait. Il ne gagne
+aucun point — aucun critère du référentiel ne nomme la carie — et c'est
+volontaire : c'est un mécanisme de soutien, qui ferme une boucle.
+
+**La bonne formule rend le fait contre-intuitif gratuit.** Un tronc creux est un
+tube, son module de section va en `1 − p⁴`, donc un arbre creux à la MOITIÉ de
+son rayon ne perd que 3 % de sa vitesse critique. C'est ce qui fait qu'un vieux
+chêne creux tient des siècles, et c'est aussi la base de la règle du `t/R` des
+arboristes — s'inquiéter sous une paroi saine du tiers du rayon. **Le seuil
+n'est écrit nulle part : il tombe de l'exposant.** Une rampe linéaire aurait
+donné un mécanisme faux et une conclusion banale.
+
+**Une mémoire qui NE guérit pas est une espèce à part.** Le moteur en a
+plusieurs qui s'effacent — le dommage hydraulique, le houppier arraché, la
+naïveté au vent. La carie est la première qui ne fait que monter, et c'est
+exactement ce qui la rend intéressante : elle transforme des blessures
+dispersées sur un siècle en une trajectoire individuelle. Mesuré sur cent vingt
+ans de chênes, 49 cariés sur 163 vivants dont 41 creux — le vieil arbre creux
+d'un bocage, né des coups de vent, sans qu'on l'ait déclaré.
+
+**Et la boucle se ferme entre trois lots** : une tempête arrache des branches
+(#181), la plaie installe une carie (#182), l'arbre casse plus facilement à la
+tempête suivante. Aucun des trois ne connaît les deux autres.
+
+**Ce qu'il reste à brancher, et qui est presque gratuit** : un arbre creux EST
+un arbre à cavités, et J3 compte déjà les gros arbres et les chandelles comme
+habitats. Relier `pourriture` à la valeur de biodiversité ferait naître le
+réservoir de biodiversité d'un bocage de la conduite en trogne — `recepages`
+blesse à chaque passage. Non fait : c'est un autre critère, et il mérite sa
+propre mesure.
+
+## Ce qu'un lot plus ancien a appris (la branche arrachée, #181, et F17/F18 au vert)
 
 Le troisième mode de F17 — un coup de vent qui arrache des branches à un arbre
 qui tient — et le banc apparié qui a fait tomber F18. Les deux critères passent

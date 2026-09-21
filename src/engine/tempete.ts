@@ -613,7 +613,8 @@ export function vitesseCritiqueMs(arbre: TreeState, exposition: ExpositionAuVent
     facteurAncrage(exposition.profondeurEffectiveCm, arbre.heightM) *
     facteurSolGorge(exposition.engorgement, exposition.toleranceEngorgement) *
     facteurPriseAuVent(exposition.partFoliaire) *
-    facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent))
+    facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent)) *
+    facteurCarieAncrage(arbre.pourriture ?? 0)
   );
 }
 
@@ -705,7 +706,8 @@ export function vitesseCritiqueVolisMs(
     facteurDensiteBois(densiteBois) *
     facteurGeometrieFut(arbre.heightM, arbre.diametreCm) *
     facteurPriseAuVent(exposition.partFoliaire) *
-    facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent))
+    facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent)) *
+    facteurCarie(arbre.pourriture ?? 0)
   );
 }
 
@@ -815,6 +817,80 @@ export function prochainHouppierPerdu(perdu: number, arrache: number): number {
     HOUPPIER_ARRACHE_MAX,
     Math.max(0, Math.max(perdu, arrache) - REPOUSSE_HOUPPIER_PAR_SEMAINE),
   );
+}
+
+/**
+ * Part du rayon qu'une plaie neuve ouvre d'emblée à la carie.
+ *
+ * Une blessure n'est pas une carie : c'est une PORTE. Ce qui entre est petit,
+ * et c'est ensuite que ça travaille *(à calibrer)*.
+ */
+export const CARIE_INITIALE = 0.05;
+
+/**
+ * Progression annuelle d'une colonne de carie installée, en part du rayon, sur
+ * un bois de densité de référence.
+ *
+ * Les colonnes de carie d'un arbre vivant s'étendent de quelques centimètres
+ * par an en hauteur et bien plus lentement en rayon. Un pour cent du rayon par
+ * an met un siècle à creuser un tronc, ce qui est l'ordre de grandeur d'un
+ * vieux chêne creux *(à calibrer)*.
+ */
+export const PROGRESSION_CARIE_PAR_AN = 0.01;
+
+/**
+ * LA CARIE D'UN TRONC, une année plus tard (critère F17, #182).
+ *
+ * **Elle ne guérit jamais, et c'est ce qui la distingue d'une plaie.** Un
+ * houppier arraché repousse ; une colonne de carie ne fait que monter. C'est ce
+ * qui rend un vieil arbre plusieurs fois blessé cumulativement fragile, et
+ * c'est le fait de terrain.
+ *
+ * Le bois dense se carie plus lentement — et ce n'est pas un trait nouveau :
+ * `dureeChandelleSemaines` (boisMort.ts) fait déjà de la densité la résistance
+ * à la décomposition d'un arbre MORT. C'est la même propriété du bois, lue sur
+ * un arbre vivant.
+ */
+export function prochaineCarie(pourriture: number, blesse: boolean, densiteBois: number): number {
+  const installee = pourriture > 0 || blesse;
+  if (!installee) return 0;
+  const depart = Math.max(pourriture, blesse ? CARIE_INITIALE : 0);
+  const vitesse = PROGRESSION_CARIE_PAR_AN * (DENSITE_BOIS_REFERENCE / Math.max(0.05, densiteBois));
+  return Math.min(1, depart + vitesse);
+}
+
+/**
+ * Ce que la carie laisse de résistance à la RUPTURE ∈ ]0 ; 1].
+ *
+ * **Un tronc creux est un TUBE, et c'est tout le lot.** Le module de section
+ * d'un tube vaut `d³(1 − p⁴)` où `p` est la part du rayon cariée, et la vitesse
+ * critique va comme la racine de ce module. La puissance QUATRE est ce qui
+ * produit le fait le plus contre-intuitif de l'arboriculture, celui qu'on n'a
+ * pas eu à écrire : **un arbre creux à la moitié de son rayon ne perd que 3 %
+ * de sa vitesse critique**, et c'est pour ça qu'un vieux chêne creux tient des
+ * siècles.
+ *
+ * C'est aussi la base de la règle du `t/R` : on ne s'inquiète qu'en dessous
+ * d'une paroi saine du tiers du rayon, soit `p > 0,67` — où cette formule
+ * donne encore 0,90. Le seuil n'est écrit nulle part ; il tombe de l'exposant.
+ */
+export function facteurCarie(pourriture: number): number {
+  const p = Math.min(1, Math.max(0, pourriture));
+  return Math.sqrt(Math.max(0.01, 1 - p ** 4));
+}
+
+/**
+ * Ce que la carie DU PIED laisse de tenue à l'ancrage ∈ [0,7 ; 1].
+ *
+ * Plus faible que sur la rupture, et linéaire : une carie de pied pourrit les
+ * contreforts et les grosses racines, mais la motte tient encore par le reste
+ * du système. C'est le versant « déracinement » d'un champignon de carie comme
+ * l'armillaire *(à calibrer)*.
+ */
+export const PERTE_ANCRAGE_CARIE = 0.3;
+
+export function facteurCarieAncrage(pourriture: number): number {
+  return 1 - PERTE_ANCRAGE_CARIE * Math.min(1, Math.max(0, pourriture));
 }
 
 /**

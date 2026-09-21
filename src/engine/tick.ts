@@ -224,6 +224,7 @@ import {
   houppierArrache,
   memoireDAbri,
   modeDeRuine,
+  prochaineCarie,
   prochainHouppierPerdu,
   RAFALE_MINIMALE_MS,
   rafaleDeLaSemaine,
@@ -2981,8 +2982,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     nextTrees = nextTrees.map((tree) => {
       if (!tree.alive) return tree;
       const abri = abriAuVent(debout, tree);
+      // LA CARIE AVANCE, une fois l'an et pour toujours (#182). Une plaie
+      // l'installe — branche arrachée, frottis, brûlure, recépage, élagage —
+      // et rien ne la referme. C'est la seule mémoire du moteur qui ne
+      // s'efface pas, et c'est ce qui fait un vieil arbre creux.
+      const blesse =
+        (tree.houppierPerdu ?? 0) > 0 ||
+        tree.frotteSemaine !== undefined ||
+        tree.brulEeSemaine !== undefined ||
+        tree.recepages > 0 ||
+        tree.hauteurElagueeM > 0;
+      const pourriture =
+        prochaineCarie(tree.pourriture ?? 0, blesse, getEspece(tree.especeId).bois.densite) ||
+        undefined;
       return {
         ...tree,
+        pourriture,
         // Un arbre qui n'a pas encore vu passer un 1ᵉʳ janvier est réputé
         // habitué à ce qu'il a : un semis ne naît pas fragile.
         abriHabituel: memoireDAbri(tree.abriHabituel ?? abri, abri),
