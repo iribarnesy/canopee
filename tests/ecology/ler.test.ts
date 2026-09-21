@@ -21,7 +21,6 @@
  * (Dupraz & Capillon, INRAE Montpellier).
  */
 
-import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { applyAction, type GameAction } from "../../src/engine/actions";
 import {
@@ -415,27 +414,6 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // Les deux témoins doivent exister, sans quoi l'indice ne veut rien dire.
     expect(blePur.production.grainTHaAn).toBeGreaterThan(0);
     expect(boisPur.production.boisM3HaAn).toBeGreaterThan(0);
-    writeFileSync(
-      "/tmp/claude-0/-home-user-canopee/92894e8d-7260-55b6-b840-4a9e76cdcbd4/scratchpad/ler.txt",
-      [
-        `agro    grain ${agro.production.grainTHaAn.toFixed(3)} t/ha/an  bois ${agro.production.boisM3HaAn.toFixed(3)} m3/ha/an  tiges ${agro.tiges}  cultivé ${(agro.partCultivee * 100).toFixed(1)} %`,
-        `blé pur grain ${blePur.production.grainTHaAn.toFixed(3)}  bois ${blePur.production.boisM3HaAn.toFixed(3)}  cultivé ${(blePur.partCultivee * 100).toFixed(1)} %`,
-        `bois pur grain ${boisPur.production.grainTHaAn.toFixed(3)}  bois ${boisPur.production.boisM3HaAn.toFixed(3)}  tiges ${boisPur.tiges}  autres ${boisPur.autres}  éclairci ${boisPur.boisRecolteM3.toFixed(2)} m3`,
-        `LER culture ${r.culture.toFixed(3)}  arbre ${r.arbre.toFixed(3)}  TOTAL ${r.total.toFixed(3)}`,
-        `DIAG noyers  agro d=${agro.dMoy.toFixed(1)} h=${agro.hMoy.toFixed(1)} n=${agro.tiges}` +
-          ` | mêmes rangs SANS blé d=${rangsSansBle.dMoy.toFixed(1)} h=${rangsSansBle.hMoy.toFixed(1)} n=${rangsSansBle.tiges} bois=${rangsSansBle.production.boisM3HaAn.toFixed(3)}` +
-          ` | plantation d=${boisPur.dMoy.toFixed(1)} h=${boisPur.hMoy.toFixed(1)} n=${boisPur.tiges}`,
-        "COHORTE PLANTÉE (mêmes identités, seul échantillon comparable) :",
-        ...[
-          ["agro (blé + labour)", agro],
-          ["mêmes rangs, sans blé", rangsSansBle],
-          ["plantation 6x6", boisPur],
-        ].map(
-          ([nom, b]) =>
-            `  ${String(nom).padEnd(24)} n=${(b as typeof agro).cohorte} d=${(b as typeof agro).dCohorte.toFixed(1)} h=${(b as typeof agro).hCohorte.toFixed(1)} vol=${(b as typeof agro).volCohorte.toFixed(2)} m3 soit ${((b as typeof agro).volCohorte / Math.max(1, (b as typeof agro).cohorte)).toFixed(3)} m3/arbre`,
-        ),
-      ].join("\n"),
-    );
     expect(agro.tiges).toBeGreaterThan(0);
     // Le témoin forestier doit être CONDUIT, sans quoi il n'en est pas un :
     // sans éclaircie il finissait à 187 tiges pour 49 plantées.
