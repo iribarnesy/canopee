@@ -1499,8 +1499,10 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 suivis={suivis.suivis}
                 journal={suivis.journal}
                 tous={snapshot.trees}
+                poses={arbresPoses}
                 semaine={snapshot.week}
                 pheno={snapshot.pheno}
+                aLArret={game.speed === 0}
                 oublier={suivis.oublier}
                 selectionner={(id) => setSelectedIds(new Set([id]))}
               />

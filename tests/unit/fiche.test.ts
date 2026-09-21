@@ -11,8 +11,19 @@
 
 import { describe, expect, it } from "vitest";
 import { contextePhenologique } from "../../src/engine/phenologie";
-import { diametreInitialCm, type TreeState } from "../../src/engine/trees";
-import { depuis, ficheDeLArbre, ilYA } from "../../src/game/panneaux/fiche";
+import {
+  diametreInitialCm,
+  elancement,
+  elancementLimite,
+  type TreeState,
+} from "../../src/engine/trees";
+import {
+  alerteDeLArbre,
+  couleurDeLaPart,
+  depuis,
+  ficheDeLArbre,
+  ilYA,
+} from "../../src/game/panneaux/fiche";
 import { arbreDuSnapshot } from "../../src/game/snapshot";
 
 const ARBRE: TreeState = {
@@ -127,6 +138,65 @@ describe("une marque plus vieille que la partie", () => {
     expect(valeur(l, "Brouté")).toBe("avant votre arrivée");
     expect(depuis(12, 1800)).toBe("avant votre arrivée");
     expect(depuis(60, 8)).toBe("il y a 1 an");
+  });
+});
+
+describe("ce qui se lit sans être lu", () => {
+  it("chaque ligne porte un picto, et aucun n'est vide", () => {
+    for (const l of fiche({ stress: 2, teteTrogneM: 2, recepages: 2, protege: true })) {
+      expect(l.icone.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("la couleur EST le nombre : pas de palier, donc pas de seuil inventé", () => {
+    // Vert à zéro, rouge à un, et continue entre les deux — dans les deux sens
+    // de lecture. Un palier serait une règle que le moteur n'a pas donnée.
+    expect(couleurDeLaPart(0, "hautMauvais")).toBe("hsl(120 55% 38%)");
+    expect(couleurDeLaPart(1, "hautMauvais")).toBe("hsl(0 55% 38%)");
+    expect(couleurDeLaPart(0, "hautBon")).toBe("hsl(0 55% 38%)");
+    expect(couleurDeLaPart(1, "hautBon")).toBe("hsl(120 55% 38%)");
+    expect(couleurDeLaPart(0.5, "hautMauvais")).toBe("hsl(60 55% 38%)");
+    // Une grandeur sans sens ne prend pas parti : un caduc nu en janvier n'est
+    // pas un caduc malade.
+    expect(couleurDeLaPart(0, "neutre")).toBe(couleurDeLaPart(1, "neutre"));
+  });
+
+  it("le feuillage et la taille sont NEUTRES, la vigueur et le stress non", () => {
+    const l = fiche({ stress: 5 });
+    expect(l.find((x) => x.quoi === "Feuillage")?.sens).toBe("neutre");
+    expect(l.find((x) => x.quoi === "Taille")?.sens).toBe("neutre");
+    expect(l.find((x) => x.quoi === "Vigueur")?.sens).toBe("hautBon");
+    expect(l.find((x) => x.quoi === "Stress")?.sens).toBe("hautMauvais");
+    expect(l.find((x) => x.quoi === "Stress")?.part).toBeCloseTo(0.5, 5);
+  });
+
+  it("le point d'alerte prend la PIRE des grandeurs orientées, et ignore les neutres", () => {
+    // Un arbre vigoureux et sans stress : rien à signaler. Mesuré en écrivant
+    // cet essai : l'élancement d'un sujet sain remplit déjà 57 % de sa jauge,
+    // parce que sa référence est la limite de flambage et non un idéal — il
+    // mettait donc tout le peuplement à l'orange, et il en est sorti.
+    expect(alerteDeLArbre(fiche({ vigueur: 1 }))).toBe(0);
+    expect(fiche().find((x) => x.quoi === "Élancement")?.horsAlerte).toBe(true);
+    // Le même, mais qui végète : l'alerte monte, sans qu'aucune ligne neutre
+    // n'y soit pour quelque chose.
+    expect(alerteDeLArbre(fiche({ vigueur: 0.2 }))).toBeCloseTo(0.8, 5);
+    expect(alerteDeLArbre(fiche({ vigueur: 1, stress: 9 }))).toBeCloseTo(0.9, 5);
+  });
+});
+
+describe("l'élancement, qui dit l'arbre filé", () => {
+  it("se lit avec la limite du MOTEUR, pas avec une limite à nous", () => {
+    const l = fiche({ heightM: 12, diametreCm: 12 });
+    const attendu = elancement(12, 12);
+    const limite = elancementLimite(12);
+    expect(valeur(l, "Élancement")).toBe(`H/D ${attendu.toFixed(0)} · limite ${limite.toFixed(0)}`);
+    expect(l.find((x) => x.quoi === "Élancement")?.part).toBeCloseTo(attendu / limite, 5);
+  });
+
+  it("une tige filée remplit sa jauge plus qu'une tige trapue de même hauteur", () => {
+    const file = fiche({ heightM: 12, diametreCm: 10 }).find((x) => x.quoi === "Élancement");
+    const trapu = fiche({ heightM: 12, diametreCm: 30 }).find((x) => x.quoi === "Élancement");
+    expect(file?.part ?? 0).toBeGreaterThan(trapu?.part ?? 0);
   });
 });
 
