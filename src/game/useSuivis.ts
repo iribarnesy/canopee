@@ -45,6 +45,17 @@ export interface SuivisDuJeu {
   /** Ne plus suivre cet arbre-là : son journal s'en va avec lui. */
   oublier: (id: number) => void;
   /**
+   * Combien d'événements sont arrivés depuis qu'on a lu le volet.
+   *
+   * **Une notification et pas une pause**, ce que l'issue demande nommément :
+   * un franchissement de stade ou un brout n'arrête pas le temps, sinon on ne
+   * joue plus. Le chiffre sur le bouton suffit à dire qu'il s'est passé
+   * quelque chose, et c'est le joueur qui décide d'aller voir.
+   */
+  nouveautes: number;
+  /** « J'ai lu » : le volet s'ouvre, le compte repart de zéro. */
+  marquerLu: () => void;
+  /**
    * Où cadrer la vue, quand un suivi vient de mourir (#149).
    *
    * C'est le pendant visuel de l'autopause du worker : le temps s'arrête, et
@@ -61,6 +72,7 @@ export function useSuivis(
   const [suivis, setSuivis] = useState<ReadonlySet<number>>(new Set());
   const [journal, setJournal] = useState<readonly EvenementSuivi[]>([]);
   const [cadrerSur, setCadrerSur] = useState<{ x: number; y: number }>();
+  const [nouveautes, setNouveautes] = useState(0);
   const memoire = useRef<MemoireDesSuivis>(new Map());
   const dernierLu = useRef<Snapshot>(undefined);
   /**
@@ -82,6 +94,7 @@ export function useSuivis(
       // Le plus récent en tête, comme le journal de la partie : c'est ce
       // qu'on lit en premier quand la pause vient d'arriver.
       setJournal((prev) => [...evenements.reverse(), ...prev].slice(0, EVENEMENTS_GARDES));
+      setNouveautes((n) => n + evenements.length);
     }
     const morts = suivisMorts(snapshot, ensemble.current);
     const premier = morts[0];
@@ -119,15 +132,20 @@ export function useSuivis(
       // Un arbre qu'on ne suit plus n'a plus de journal : le laisser ferait
       // une liste d'événements sans arbre pour les porter.
       setJournal((prev) => prev.filter((e) => e.idArbre !== id));
+      setNouveautes(0);
     },
     [changer],
   );
+
+  const marquerLu = useCallback(() => setNouveautes(0), []);
 
   return {
     suivis,
     journal,
     basculer,
     oublier,
+    nouveautes,
+    marquerLu,
     ...(cadrerSur ? { cadrerSur } : {}),
   };
 }

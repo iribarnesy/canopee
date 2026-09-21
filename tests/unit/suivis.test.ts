@@ -35,6 +35,8 @@ import { arbreDuSnapshot, construireSnapshot } from "../../src/game/snapshot";
 import {
   accumulerLesSuivis,
   CAUSE_AU_SINGULIER,
+  type EvenementSuivi,
+  grouperLesSuivis,
   type MemoireDesSuivis,
   SEUIL_SOUFFRANCE,
   suivisMorts,
@@ -313,6 +315,48 @@ describe("l'arbre qui disparaît", () => {
       SUIVI,
     );
     expect(coupe.evenements.map((e) => e.texte)).toEqual(["abattu"]);
+  });
+});
+
+describe("les répétitions qu'on regroupe pour pouvoir lire", () => {
+  const ev = (semaine: number, texte: string, idArbre = 1): EvenementSuivi => ({
+    semaine,
+    idArbre,
+    quoi: "brout",
+    texte,
+  });
+
+  it("les identiques qui se suivent font une ligne, avec leur compte et leur plage", () => {
+    const lignes = grouperLesSuivis([
+      ev(8, "brouté par le gibier"),
+      ev(7, "brouté par le gibier"),
+      ev(4, "brouté par le gibier"),
+    ]);
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]?.fois).toBe(3);
+    expect(lignes[0]?.semaine).toBe(8);
+    expect(lignes[0]?.depuisSemaine).toBe(4);
+  });
+
+  it("… mais seulement CEUX QUI SE SUIVENT : l'histoire reste l'histoire", () => {
+    const lignes = grouperLesSuivis([
+      ev(9, "brouté par le gibier"),
+      ev(8, "élagué"),
+      ev(7, "brouté par le gibier"),
+    ]);
+    expect(lignes.map((l) => `${l.texte}×${l.fois}`)).toEqual([
+      "brouté par le gibier×1",
+      "élagué×1",
+      "brouté par le gibier×1",
+    ]);
+  });
+
+  it("deux arbres ne se regroupent jamais ensemble", () => {
+    const lignes = grouperLesSuivis([
+      ev(9, "brouté par le gibier", 1),
+      ev(9, "brouté par le gibier", 2),
+    ]);
+    expect(lignes.map((l) => l.idArbre)).toEqual([1, 2]);
   });
 });
 

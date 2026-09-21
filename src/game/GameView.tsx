@@ -1112,6 +1112,24 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const [survol, setSurvol] = useState<{ x: number; y: number }>();
 
   /**
+   * **Ce qu'on lit est lu**, y compris ce qui arrive pendant qu'on le lit : le
+   * compte de nouveautés ne doit pas monter sous les yeux de qui a justement
+   * le volet ouvert. `marquerLu` est stable et remet à zéro un zéro sans
+   * refaire de rendu, donc l'effet peut se rejouer à chaque événement.
+   */
+  const marquerLu = suivis.marquerLu;
+  // Ce qu'on a sous les yeux : le dernier événement quand le volet est ouvert,
+  // et rien du tout quand il est fermé. C'est LUI la dépendance de l'effet —
+  // dire « le volet est ouvert ET le journal a changé » demanderait une
+  // dépendance dont l'effet ne se sert pas, ce que le linteur refuse à juste
+  // titre. Le premier élément change de référence à chaque arrivée, y compris
+  // quand le journal est plein et que sa longueur, elle, ne bouge plus.
+  const enLecture = volets.estOuvert("bd", "suivis") ? (suivis.journal[0] ?? null) : undefined;
+  useEffect(() => {
+    if (enLecture !== undefined) marquerLu();
+  }, [enLecture, marquerLu]);
+
+  /**
    * Où la vue va d'elle-même, quand elle y va.
    *
    * **La mort d'un suivi passe devant l'incendie (#149)** : les deux cadrages
@@ -1514,6 +1532,10 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             surClic={() => volets.basculer("bd", "suivis")}
           >
             👁 Suivis ({suivis.suivis.size})
+            {/* Ce qui est arrivé pendant qu'on regardait ailleurs : une
+                notification, et non une pause — seule la mort d'un suivi
+                arrête le temps (#149). */}
+            {suivis.nouveautes > 0 && ` · ${suivis.nouveautes} 🔔`}
           </BoutonDeVolet>
         )}
       </Angle>

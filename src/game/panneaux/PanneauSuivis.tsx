@@ -12,7 +12,7 @@
 
 import { getEspece } from "../../engine/especes";
 import type { SnapshotTree } from "../protocol";
-import type { EvenementSuivi, QuoiSuivi } from "../suivis";
+import { type EvenementSuivi, grouperLesSuivis, type QuoiSuivi } from "../suivis";
 import { btn } from "./styles";
 
 /** Une pastille par sorte d'événement, pour survoler la liste des yeux. */
@@ -29,6 +29,18 @@ const ICONE: Record<QuoiSuivi, string> = {
 /** « AN 3 · S12 », comme le journal de la partie. */
 function quand(semaine: number): string {
   return `AN ${Math.floor(semaine / 52) + 1} · S${semaine % 52}`;
+}
+
+/**
+ * La date d'un groupe : une semaine, ou la plage qu'il couvre.
+ *
+ * L'an n'est répété que s'il change — « AN 1 · S1 → AN 1 · S6 » disait deux
+ * fois la même chose, sur la ligne où la place manque le plus.
+ */
+function quandDuGroupe(semaine: number, depuis: number): string {
+  if (depuis === semaine) return quand(semaine);
+  const memeAn = Math.floor(depuis / 52) === Math.floor(semaine / 52);
+  return `${quand(depuis)} → ${memeAn ? `S${semaine % 52}` : quand(semaine)}`;
 }
 
 /**
@@ -91,7 +103,9 @@ export function PanneauSuivis({
         // de semaine 18 se plaçait devant un lot de semaine 28. Le tri est
         // stable, donc les événements d'un même instantané — qui portent tous
         // sa semaine — gardent l'ordre où le moteur les a nommés.
-        const sien = journal.filter((e) => e.idArbre === id).sort((a, b) => b.semaine - a.semaine);
+        const sien = grouperLesSuivis(
+          journal.filter((e) => e.idArbre === id).sort((a, b) => b.semaine - a.semaine),
+        );
         return (
           <div key={id} style={{ marginBottom: 10 }}>
             <strong>
@@ -126,7 +140,9 @@ export function PanneauSuivis({
               <div className="journal">
                 {sien.slice(0, LIGNES_PAR_ARBRE).map((e) => (
                   <div key={`${e.semaine}-${e.quoi}-${e.texte}`} className="entree">
-                    <span className="quand">{quand(e.semaine)}</span> {ICONE[e.quoi]} {e.texte}
+                    <span className="quand">{quandDuGroupe(e.semaine, e.depuisSemaine)}</span>{" "}
+                    {ICONE[e.quoi]} {e.texte}
+                    {e.fois > 1 && ` (${e.fois} fois)`}
                   </div>
                 ))}
                 {sien.length > LIGNES_PAR_ARBRE && (

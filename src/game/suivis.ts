@@ -192,3 +192,39 @@ export function suivisMorts(
     .filter((m) => suivis.has(m.id))
     .map((m) => ({ id: m.id, x: m.x, y: m.y, cause: m.cause }));
 }
+
+/** Un événement, ou plusieurs identiques qui se suivent. */
+export interface LigneDeSuivi extends EvenementSuivi {
+  /** combien de fois de suite, la même chose — 1 dans le cas ordinaire */
+  fois: number;
+  /** la semaine du plus ANCIEN du groupe ; `semaine` porte le plus récent */
+  depuisSemaine: number;
+}
+
+/**
+ * Regrouper ce qui se répète à l'identique et se suit.
+ *
+ * Mesuré à l'écran : un jeune pin sylvestre est brouté toutes les semaines, et
+ * son journal n'était plus qu'une colonne de « brouté par le gibier » — le
+ * geste qu'on cherchait et la mort qu'on attendait passaient dessous.
+ *
+ * **Seulement ce qui se SUIT**, et le texte doit être le même mot pour mot :
+ * un brout, un gel, un brout redevient trois lignes. On ne perd donc pas
+ * l'histoire, on cesse de la répéter — et les deux semaines du groupe sont
+ * gardées, celle où ça a commencé et celle où on en est.
+ *
+ * Attend la liste déjà triée comme elle sera lue.
+ */
+export function grouperLesSuivis(evenements: readonly EvenementSuivi[]): LigneDeSuivi[] {
+  const lignes: LigneDeSuivi[] = [];
+  for (const e of evenements) {
+    const derniere = lignes[lignes.length - 1];
+    if (derniere && derniere.idArbre === e.idArbre && derniere.texte === e.texte) {
+      derniere.fois += 1;
+      derniere.depuisSemaine = Math.min(derniere.depuisSemaine, e.semaine);
+      continue;
+    }
+    lignes.push({ ...e, fois: 1, depuisSemaine: e.semaine });
+  }
+  return lignes;
+}
