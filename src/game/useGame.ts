@@ -19,6 +19,7 @@ import type {
   FactureHoraire,
   FromWorker,
   GameEvent,
+  PolitiqueHoraire,
   SaveGame,
   Snapshot,
   StationInfo,
@@ -56,8 +57,15 @@ export interface GameApi {
    * avis : c'est une question, et `reglerFacture` y répond.
    */
   facture?: FactureHoraire;
-  /** embaucher les bras qu'il faut, ou s'en tenir aux soixante heures */
-  reglerFacture: (embaucher: boolean) => void;
+  /**
+   * Embaucher les bras qu'il faut, ou s'en tenir aux soixante heures.
+   * `pourToujours` retient le choix pour les semaines suivantes (#133).
+   */
+  reglerFacture: (embaucher: boolean, pourToujours?: boolean) => void;
+  /** la consigne en vigueur pour les heures supplémentaires */
+  politiqueHoraire: PolitiqueHoraire;
+  /** la changer — notamment la lever, pour qu'on repose la question */
+  setPolitiqueHoraire: (politique: PolitiqueHoraire) => void;
   replayProgress?: { done: number; total: number; phase?: "vieillissement" | "rejeu" };
   newGame: (
     stationId: string,
@@ -152,6 +160,7 @@ export function useGame(): GameApi {
   }>();
   const [notice, setNotice] = useState<string>();
   const [facture, setFacture] = useState<FactureHoraire>();
+  const [politiqueHoraire, setPolitique] = useState<PolitiqueHoraire>("demander");
   const [events, setEvents] = useState<WithUid<GameEvent>[]>([]);
   const [autoHarvest, setAutoHarvestState] = useState(true);
   const [prevision, setPrevision] = useState<{ cle: string; refusals: ActionRefusal[] }>();
@@ -209,6 +218,9 @@ export function useGame(): GameApi {
           setSpeedState(0);
           setNotice(msg.reason);
           break;
+        case "politiqueHoraire":
+          setPolitique(msg.politique);
+          break;
         case "facture":
           // Le worker s'est arrêté pour poser la question : l'interface se
           // remet à zéro comme pour n'importe quelle pause automatique, sinon
@@ -258,10 +270,12 @@ export function useGame(): GameApi {
     },
     notice,
     ...(facture ? { facture } : {}),
-    reglerFacture: (embaucher) => {
+    reglerFacture: (embaucher, pourToujours = false) => {
       setFacture(undefined);
-      send({ type: "reglerFacture", embaucher });
+      send({ type: "reglerFacture", embaucher, pourToujours });
     },
+    politiqueHoraire,
+    setPolitiqueHoraire: (politique) => send({ type: "politiqueHoraire", politique }),
     prevision,
     revision,
     replayProgress,
@@ -283,6 +297,7 @@ export function useGame(): GameApi {
       // l'autosave écrivait dans l'emplacement unique, donc commencer une
       // partie effaçait la précédente trente secondes plus tard.
       idPartie.current = idNeuf();
+      setPolitique("demander");
       ensureWorker();
       setRefusals([]);
       setEvents([]);

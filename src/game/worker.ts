@@ -68,6 +68,7 @@ import type {
   FactureHoraire,
   FromWorker,
   GameEvent,
+  PolitiqueHoraire,
   SaveGame,
   StationInfo,
   ToWorker,
@@ -111,6 +112,14 @@ let actionsDeLaSemaine: GameAction[] = [];
 let journalAuDebut = 0;
 /** Une facture attend sa réponse : le temps ne repart pas avant. */
 let factureEnAttente = false;
+/**
+ * Ce que le joueur a demandé qu'on fasse des heures supplémentaires.
+ *
+ * « Demander » est le défaut, et il le reste tant qu'on n'a pas coché « se
+ * souvenir de mon choix » : une consigne qui s'installerait toute seule
+ * dépenserait de l'argent — ou annulerait des gestes — sans qu'on l'ait voulu.
+ */
+let politiqueHoraire: PolitiqueHoraire = "demander";
 let maturationAns = 0;
 /** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
 let economie = true;
@@ -629,9 +638,10 @@ function seTenirAuPlafond(): number {
  * gestionnaire nomme `event` son message. Dans ce bloc-là, écrire au journal
  * était impossible.
  */
-function reglerLaFacture(embaucher: boolean): void {
+function reglerLaFacture(embaucher: boolean, pourToujours = false): void {
   if (!state || !factureEnAttente) return;
   factureEnAttente = false;
+  if (pourToujours) definirLaPolitique(embaucher ? "embaucher" : "plafond");
   if (embaucher) {
     // **L'embauche est rétroactive à la semaine écoulée**, et c'est ce que
     // l'issue demandait : on ne fait pas travailler quelqu'un plus
@@ -676,6 +686,21 @@ function reglerLaFacture(embaucher: boolean): void {
   postSnapshot();
 }
 
+/** Poser la consigne, et le dire — à l'écran comme au journal. */
+function definirLaPolitique(politique: PolitiqueHoraire): void {
+  if (politiqueHoraire === politique) return;
+  politiqueHoraire = politique;
+  post({ type: "politiqueHoraire", politique });
+  event(
+    "⏱",
+    politique === "embaucher"
+      ? "Consigne retenue : on embauchera ce qu'il faut à chaque dépassement"
+      : politique === "plafond"
+        ? "Consigne retenue : chaque semaine sera ramenée à 60 h"
+        : "Consigne levée : la question sera reposée à chaque dépassement",
+  );
+}
+
 function stepWeeks(n: number) {
   if (!state) return;
   for (let i = 0; i < n; i++) {
@@ -686,9 +711,23 @@ function stepWeeks(n: number) {
     const facture = factureEnAttente ? undefined : factureDeLaSemaine();
     if (facture) {
       factureEnAttente = true;
-      weeksPerSecond = 0;
-      post({ type: "facture", facture });
-      return;
+      // **La consigne retenue répond à la place du joueur**, sans arrêter le
+      // temps — c'est tout l'objet de « se souvenir de mon choix ». Elle ne
+      // passe pas en silence pour autant : `reglerLaFacture` écrit au journal
+      // ce qu'elle a coûté ou ce qu'elle a annulé.
+      if (politiqueHoraire !== "demander") {
+        reglerLaFacture(politiqueHoraire === "embaucher");
+        // L'embauche a pu être refusée — découvert plafonné : la facture est
+        // alors reposée, et il faut bien s'arrêter pour l'entendre.
+        if (factureEnAttente) {
+          weeksPerSecond = 0;
+          return;
+        }
+      } else {
+        weeksPerSecond = 0;
+        post({ type: "facture", facture });
+        return;
+      }
     }
     const w = meteoSemaine(state.week);
     if (!w) return;
@@ -1034,6 +1073,7 @@ function init(
   const neuf = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(newSeed), {
     economie,
   });
+  politiqueHoraire = "demander";
   ouvrirLaSemaine(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
   journal = [];
   pendingRefusals = [];
@@ -1093,6 +1133,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // Absent = vrai : une sauvegarde d'avant l'option a été jouée AVEC
       // l'économie, et doit se rejouer ainsi ou elle divergerait.
       economie = msg.save.economie ?? true;
+      politiqueHoraire = msg.save.politiqueHoraire ?? "demander";
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
@@ -1128,6 +1169,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       pendingTempete = undefined;
       weeksPerSecond = 0;
       post({ type: "ready", station: stationInfo() });
+      // La consigne vient de la sauvegarde : l'écran ne la devinerait pas.
+      post({ type: "politiqueHoraire", politique: politiqueHoraire });
       postSnapshot();
       startLoop();
       break;
@@ -1136,7 +1179,11 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       suivis = new Set(msg.ids);
       break;
     case "reglerFacture":
-      reglerLaFacture(msg.embaucher);
+      reglerLaFacture(msg.embaucher, msg.pourToujours);
+      break;
+    case "politiqueHoraire":
+      definirLaPolitique(msg.politique);
+      postSnapshot();
       break;
     case "attendre":
       // On ne touche NI à `weeksPerSecond` NI à `semaineDArret` : c'est une
@@ -1198,6 +1245,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         maturationAns,
         economie,
         anneeDepart,
+        // La consigne suit la partie : c'est un choix de conduite, pas un
+        // réglage de la session (#133).
+        ...(politiqueHoraire === "demander" ? {} : { politiqueHoraire }),
         weeks: state.week,
         actions: journal,
       };

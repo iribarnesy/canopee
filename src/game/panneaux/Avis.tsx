@@ -5,7 +5,7 @@
  * aucun bouton, justement parce qu'on ne pense pas à aller les chercher.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { GameAction } from "../../engine/actions";
 import type { SnapshotTree } from "../protocol";
 import type { GameApi } from "../useGame";
@@ -52,6 +52,8 @@ export function Avis({
   rejouer?: (() => void) | undefined;
 }) {
   const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
+  /** La case reste cochée d'une facture à l'autre : c'est une intention, pas un clic. */
+  const [seSouvenir, setSeSouvenir] = useState(false);
 
   return (
     <>
@@ -74,12 +76,32 @@ export function Avis({
               : "rien n'est perdu"}
             .
           </div>
-          <button type="button" style={btn(true)} onClick={() => game.reglerFacture(true)}>
+          <button
+            type="button"
+            style={btn(true)}
+            onClick={() => game.reglerFacture(true, seSouvenir)}
+          >
             🧑‍🌾 Embaucher ({game.facture.eur.toFixed(0)} €)
           </button>
-          <button type="button" style={btn()} onClick={() => game.reglerFacture(false)}>
+          <button type="button" style={btn()} onClick={() => game.reglerFacture(false, seSouvenir)}>
             ⏱ S'en tenir à 60 h
           </button>
+          {/*
+            **Se souvenir du choix** : une semaine trop chargée est une
+            situation ordinaire dans une partie longue, et reposer la même
+            question chaque semaine n'est plus un arbitrage, c'est une corvée.
+            La consigne se révoque dans « La partie », et le journal dit à
+            chaque fois ce qu'elle a coûté — un automatisme qui dépense en
+            silence serait pire que la question.
+          */}
+          <label style={{ display: "block", marginTop: 6, fontSize: 13 }}>
+            <input
+              type="checkbox"
+              checked={seSouvenir}
+              onChange={(e) => setSeSouvenir(e.target.checked)}
+            />{" "}
+            se souvenir de mon choix pour les semaines suivantes
+          </label>
         </div>
       )}
       {game.notice && (

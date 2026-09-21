@@ -32,6 +32,29 @@ export function PanneauMenu({
         </label>
       </p>
       {/*
+        LA CONSIGNE HORAIRE (#133), et de quoi la lever. Une consigne qu'on ne
+        peut pas révoquer n'est pas un choix, c'est un piège : celle-ci
+        embauche ou annule des gestes toutes les semaines.
+      */}
+      {game.politiqueHoraire !== "demander" && (
+        <p style={{ margin: "0 0 10px", fontSize: 13 }}>
+          Heures supplémentaires :{" "}
+          <strong>
+            {game.politiqueHoraire === "embaucher"
+              ? "on embauche à chaque dépassement"
+              : "la semaine est ramenée à 60 h"}
+          </strong>{" "}
+          <button
+            type="button"
+            style={btn()}
+            onClick={() => game.setPolitiqueHoraire("demander")}
+            title="Reposer la question à chaque dépassement"
+          >
+            ↺ me redemander
+          </button>
+        </p>
+      )}
+      {/*
         La seule porte de sortie : il n'y a plus d'en-tête de site par-dessus le
         jeu. Elle sauvegarde d'abord, et le dit — voir `quit`.
       */}

@@ -59,6 +59,11 @@ export interface SaveGame {
   economie?: boolean;
   /** année civile du début de partie */
   anneeDepart: number;
+  /**
+   * Ce que le joueur a demandé qu'on fasse des heures supplémentaires, s'il
+   * l'a demandé (#133). Absent = on lui repose la question.
+   */
+  politiqueHoraire?: PolitiqueHoraire;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
   weeks: number;
   actions: GameAction[];
@@ -551,7 +556,9 @@ export type ToWorker =
    * — rétroactivement, pour des heures déjà faites — ; faux ramène la semaine
    * sous le plafond en rejouant sans ses derniers gestes.
    */
-  | { type: "reglerFacture"; embaucher: boolean }
+  | { type: "reglerFacture"; embaucher: boolean; pourToujours: boolean }
+  /** Changer la consigne sans qu'une facture soit posée — pour la révoquer. */
+  | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
   | { type: "requestSave" };
 
 /**
@@ -562,6 +569,17 @@ export type ToWorker =
  * quatrième se mesure en rejouant la semaine à blanc, côté worker, parce que
  * lui seul sait ce que le joueur a posé depuis lundi.
  */
+/**
+ * QUE FAIRE DES HEURES SUPPLÉMENTAIRES, la fois d'après (#133).
+ *
+ * « Se souvenir de mon choix » : une semaine trop chargée est une situation
+ * ordinaire dans une partie longue, et répondre à la même question toutes les
+ * semaines n'est plus un arbitrage, c'est une corvée. Le choix retenu
+ * s'applique alors tout seul — et le journal le dit à chaque fois, parce qu'un
+ * automatisme qui dépense de l'argent en silence est pire que la question.
+ */
+export type PolitiqueHoraire = "demander" | "embaucher" | "plafond";
+
 export interface FactureHoraire {
   /** heures au-delà du plafond, toutes UTH comptées */
   heures: number;
@@ -587,5 +605,7 @@ export type FromWorker =
    * réponse (`reglerFacture`) : c'est une question, pas une notification.
    */
   | { type: "facture"; facture: FactureHoraire }
+  /** la consigne en vigueur, à chaque fois qu'elle change (y compris au rejeu) */
+  | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
   /** la réponse à `prevoir` : les refus qu'aurait produits ce geste */
   | { type: "prevision"; cle: string; refusals: ActionRefusal[] };
