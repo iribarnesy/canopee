@@ -35,7 +35,18 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
       // Le sommet est PLAT, et c'est voulu : une espèce à large amplitude est
       // une généraliste, elle ne culmine pas sur un point. C'est le modèle III
       // de Huisman-Olff-Fresco, le « plateau », et non une cloche.
-      expect(facteurGammePh(espece.ph, centre + 0.4)).toBe(1);
+      //
+      // Le décalage est RELATIF à l'espèce, et il a fallu le corriger : un
+      // +0,4 pH fixe suppose que tout le monde a un plateau large, ce qui
+      // était vrai tant que la gamme la plus étroite faisait 2,5 pH. La
+      // recalibration sur la littérature (#160) a resserré l'abricotier à
+      // 6,0-7,8, dont le plateau ne fait que 0,47 pH : le point d'épreuve
+      // tombait dehors et l'essai accusait une fonction saine.
+      const demiPlateau = (max - min) / 2 - (RAMPE_PH - RAMPE_PH * VIGUEUR_A_LA_BORNE);
+      // Une gamme plus étroite que deux rampes n'aurait PAS d'optimum plein :
+      // ce serait une cloche, donc une autre forme que celle qu'on affirme.
+      expect(demiPlateau).toBeGreaterThan(0);
+      expect(facteurGammePh(espece.ph, centre + demiPlateau / 2)).toBe(1);
       // Mais elle décline bien en approchant des bornes.
       expect(facteurGammePh(espece.ph, min + 0.1)).toBeLessThan(1);
       expect(facteurGammePh(espece.ph, max - 0.1)).toBeLessThan(1);

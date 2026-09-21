@@ -24,15 +24,35 @@ import { phFactor, phFactorSurvie } from "../../src/engine/trees";
  *
  * Une amplitude d'atlas est une amplitude de PRÉSENCE. Y être, c'est y être
  * rare et chétif, pas y être mort.
+ *
+ * LE LOT DÉMONTRAIT CELA SUR LE HÊTRE À pH 4,2 ; c'est le CHARME qui s'en
+ * charge depuis, au même pH et aux mêmes facteurs (croissance 0,031, survie
+ * 0,621, aux trois décimales). La recalibration des gammes sur la littérature
+ * (#160) a porté le hêtre de 4,5-8,0 à 3,5-8,0 — Leuschner et al. 2006 ont
+ * MESURÉ des hêtraies jusqu'à pH(H2O) 3,2 — et 4,2 est devenu pour lui un
+ * optimum : il y montait à 9,8 m au lieu de végéter.
+ *
+ * Descendre le banc sous 3,5 n'était PAS une option, et c'est le moteur qui le
+ * dit : `bases.ts` plancherait le pH à 4,1 (`PH_PLANCHER`), qui est la gamme
+ * tampon de l'aluminium d'Ulrich et non un garde-fou. Un profil déclaré à 3,2
+ * remonte à 4,1 au premier tick. Conséquence à retenir : AUCUNE ESPÈCE DE
+ * BORNE BASSE SOUS 4,1 ne peut se retrouver sous sa borne dans ce moteur — le
+ * hêtre, le bouleau, la ronce, la callune, l'ajonc, le chêne-liège. Leur rampe
+ * acide existe dans la fonction et ne sera jamais atteinte en jeu. Le charme
+ * (4,5-8,0) est l'arbre dont la borne basse est la plus haute parmi les
+ * essences d'ombre : c'est lui qui permet l'épreuve.
  */
 
 /**
  * LE LIMON RICHE, MAIS ACIDE — et rien d'autre de changé.
  *
  * Même texture, même profondeur, même nappe, même azote : seul le pH descend, à
- * 4,2. C'est le seul banc qui ISOLE le facteur. Un premier jet mesurait sur la
- * lande sableuse, dont le pH (4,50) est pile la borne du hêtre — mais on y meurt
- * de SOIF avant d'y mourir du pH, et le banc ne prouvait donc rien du lot.
+ * 4,2 — trois dixièmes sous la borne du charme, et un dixième au-dessus du
+ * plancher du tampon aluminium (4,1), qui est le plus bas que ce moteur sache
+ * représenter. C'est le seul banc qui ISOLE le facteur. Un premier jet mesurait
+ * sur la lande sableuse, dont le pH (4,50) est pile la borne du charme — mais on
+ * y meurt de SOIF avant d'y mourir du pH, et le banc ne prouvait donc rien du
+ * lot.
  */
 const PH_ACIDE = 4.2;
 const ACIDE = stationDepuisProfil({
@@ -113,20 +133,21 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
   });
 
   it("la survie va plus loin que la croissance, exactement de sa marge", () => {
-    const hetre = getEspece("fagus_sylvatica");
-    const [min] = hetre.ph;
+    const charme = getEspece("carpinus_betulus");
+    const [min] = charme.ph;
     // La croissance s'éteint juste sous la borne ; la survie tient une marge
     // de plus. C'est tout l'objet du lot.
-    expect(facteurGammePh(hetre.ph, min - 0.1)).toBe(0);
-    expect(facteurSurviePh(hetre.ph, min - 0.1)).toBeGreaterThan(0.45);
-    expect(facteurSurviePh(hetre.ph, min - MARGE_SURVIE_PH - 0.2)).toBe(0);
+    expect(facteurGammePh(charme.ph, min - 0.1)).toBe(0);
+    expect(facteurSurviePh(charme.ph, min - 0.1)).toBeGreaterThan(0.45);
+    expect(facteurSurviePh(charme.ph, min - MARGE_SURVIE_PH - 0.2)).toBe(0);
   });
 
-  it("un hêtre sous sa borne SURVIT, là où il mourait à 20 sur 20", () => {
-    // Avant ce lot, mesuré sur ces trois graines : 0/20 vivants à cinq ans,
-    // cause `solHorsGamme`, à un pH que l'atlas donne pour tolérable.
+  it("un charme sous sa borne SURVIT, là où il mourait à 20 sur 20", () => {
+    // Avant ce lot, mesuré sur ces trois graines (sur le hêtre, alors calé
+    // 4,5-8,0) : 0/20 vivants à cinq ans, cause `solHorsGamme`, à un pH que
+    // l'atlas donne pour tolérable.
     for (const g of GRAINES) {
-      const s = peuplement([["fagus_sylvatica", 20]], 15, g);
+      const s = peuplement([["carpinus_betulus", 20]], 15, g);
       const coh = s.trees.filter((t) => t.id <= 20);
       const vivants = coh.filter((t) => t.alive);
       expect(vivants.length).toBeGreaterThan(15);
@@ -135,12 +156,12 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
   });
 
   it("mais il VÉGÈTE : il pousse, très peu, et n'est pas un nain immortel", () => {
-    // Le premier jet de ce lot laissait la croissance à zéro sous la borne : le
-    // hêtre tenait cinquante ans à ses 0,30 m de plantation, sans grandir d'un
-    // millimètre ni mourir. L'issue dit « pousse mal ET tient », pas « ne pousse
-    // pas ». D'où la queue de croissance dans la marge.
+    // Le premier jet de ce lot laissait la croissance à zéro sous la borne :
+    // l'arbre tenait cinquante ans à ses 0,30 m de plantation, sans grandir
+    // d'un millimètre ni mourir. L'issue dit « pousse mal ET tient », pas « ne
+    // pousse pas ». D'où la queue de croissance dans la marge.
     const hauteurs = GRAINES.map((g) => {
-      const s = peuplement([["fagus_sylvatica", 20]], 40, g);
+      const s = peuplement([["carpinus_betulus", 20]], 40, g);
       const v = s.trees.filter((t) => t.alive && t.id <= 20);
       return v.reduce((a, t) => a + t.heightM, 0) / v.length;
     });
@@ -153,26 +174,27 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
   it("et il est exclu par la CONCURRENCE, pas par la mort : C7 tient autrement", () => {
     // Le point délicat du lot. Si le pH ne tue plus, la bio-indication doit
     // venir d'ailleurs — et elle vient de là où elle devrait : l'espèce à qui le
-    // sol convient prend la lumière. Le pin (gamme 4–7,5) est chez lui à 4,2, le
-    // hêtre (4,5–8) n'y est pas.
+    // sol convient prend la lumière. À 4,2, le pin (gamme 4–7,5) est dans sa
+    // rampe basse et vaut 0,34 ; le charme (4,5–8) est sous sa borne et vaut
+    // 0,03. Dix fois moins, et c'est tout ce qu'il faut.
     for (const g of GRAINES) {
       const s = peuplement(
         [
           ["pinus_sylvestris", 15],
-          ["fagus_sylvatica", 15],
+          ["carpinus_betulus", 15],
         ],
         50,
         g,
       );
       const coh = s.trees.filter((t) => t.id <= 30 && t.alive);
       const pins = coh.filter((t) => t.especeId === "pinus_sylvestris");
-      const hetres = coh.filter((t) => t.especeId === "fagus_sylvatica");
+      const charmes = coh.filter((t) => t.especeId === "carpinus_betulus");
       expect(pins.length).toBeGreaterThan(10);
       const hp = pins.reduce((a, t) => a + t.heightM, 0) / pins.length;
-      const hh = hetres.length ? hetres.reduce((a, t) => a + t.heightM, 0) / hetres.length : 0;
+      const hc = charmes.length ? charmes.reduce((a, t) => a + t.heightM, 0) / charmes.length : 0;
       // Un ordre de grandeur d'écart : le peuplement est une pinède, et les
-      // hêtres n'y sont que des brins dominés.
-      expect(hp).toBeGreaterThan(10 * hh);
+      // charmes n'y sont que des brins dominés.
+      expect(hp).toBeGreaterThan(10 * hc);
     }
   });
 });
