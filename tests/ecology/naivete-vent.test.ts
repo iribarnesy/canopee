@@ -9,12 +9,14 @@
  * Chaque arbre retient donc l'abri sous lequel il a grandi, et c'est la CHUTE
  * entre cette mémoire et l'abri du jour qui le fragilise.
  *
- * **Ce fichier ne teste PAS que l'éclaircie fait verser davantage**, et c'est
- * délibéré : mesuré sur douze graines, le surcroît de ruines n'est pas
- * séparable du bruit (cf. le référentiel, F18). Ce qui est mesurable, et qui
- * l'est très nettement, c'est la naïveté elle-même : son ampleur, sa
- * décroissance, et le fait qu'elle distingue toute seule les deux façons
- * d'éclaircir.
+ * Le fichier tient deux choses de nature différente. D'abord la naïveté
+ * elle-même — son ampleur, sa décroissance, le fait qu'elle distingue toute
+ * seule les deux façons d'éclaircir —, qui se lit sur les fonctions et ne
+ * dépend d'aucun tirage. Puis, à la fin, **le banc APPARIÉ**, qui mesure ce que
+ * l'ouverture coûte en ruines et qu'il a fallu trois essais ratés pour
+ * obtenir : la comparaison ne vaut que si les deux bras suivent les MÊMES
+ * arbres, et que si on la lit dans la fenêtre où l'abri perdu est leur seule
+ * différence.
  */
 
 import { describe, expect, it } from "vitest";
@@ -139,7 +141,7 @@ describe("en partie : la naïveté distingue les deux façons d'éclaircir", () 
 });
 
 describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
-  it("les MÊMES arbres versent trois fois plus après une éclaircie", () => {
+  it("les MÊMES arbres versent deux fois et demie plus dans les cinq ans qui suivent", () => {
     // LE BANC APPARIÉ, et il a fallu trois essais ratés pour l'obtenir.
     //
     // Les deux premiers comparaient des populations différentes — une éclaircie
@@ -157,6 +159,8 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     const SUIVI = 12;
     let couchesEclairci = 0;
     let couchesTemoin = 0;
+    let toutDeSuiteEclairci = 0;
+    let toutDeSuiteTemoin = 0;
     let cohorteTotale = 0;
     let abriEclairci = 0;
     let abriTemoin = 0;
@@ -204,21 +208,47 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
           if (!r.tempete) continue;
           for (const vic of r.tempete.victimes) {
             if (!cohorte.has(vic.id)) continue;
-            if (eclairciBras) couchesEclairci++;
-            else couchesTemoin++;
+            const tot = i < (AN + 5) * 52;
+            if (eclairciBras) {
+              couchesEclairci++;
+              if (tot) toutDeSuiteEclairci++;
+            } else {
+              couchesTemoin++;
+              if (tot) toutDeSuiteTemoin++;
+            }
           }
         }
       }
     }
-    // L'ouverture dépouille les dominants : relevé 0,279 → 0,190 sur douze
+    // L'ouverture dépouille les dominants : relevé 0,275 → 0,189 sur les six
     // graines, soit un tiers de leur abri.
     expect(abriEclairci / cohorteTotale).toBeLessThan(0.8 * (abriTemoin / cohorteTotale));
-    // Et ils le paient. Relevé sur douze graines : 57 couchés contre 19, dont
-    // 11 contre 1 sur les cinq premières années — celles où la croissance n'a
-    // pas encore divergé, donc où le seul écart est l'abri perdu. À douze ans
-    // la cohorte éclaircie mesure 18,4 m contre 17,3 m : six pour cent de
-    // hauteur en plus n'explique pas un facteur trois.
+
+    // ── ET C'EST LA FENÊTRE DE CINQ ANS QUI PORTE LA MESURE (#183) ──────────
+    //
+    // Premier relevé, douze graines, avant la carie du tronc : 57 couchés
+    // contre 19 sur douze ans, dont 11 contre 1 sur les cinq premières années.
+    // La carie (#182, corrigée en #183) a tout déplacé sans rien dire sur le
+    // vent — elle affaiblit les fûts des DEUX bras, donc elle relève le
+    // plancher du témoin, qui ne versait presque pas :
+    //
+    //                     avant carie (12 gr.)   après (6 gr.)
+    //   sur douze ans        57 / 19  = 3,0       133 / 81 = 1,6
+    //   sur cinq ans         11 /  1  = 11        49 / 20  = 2,5
+    //
+    // Le rapport baisse dans les deux fenêtres, et il baisse pour une raison
+    // écologique et non par bruit : un peuplement dont les fûts sont en partie
+    // cariés perd des tiges même sans qu'on l'ouvre. La naïveté reste ce
+    // qu'elle était ; c'est le témoin qui a cessé d'être intact.
+    //
+    // La fenêtre de CINQ ANS est celle qui compte, et le commentaire ci-dessus
+    // disait déjà pourquoi : au-delà, les deux bras ont divergé en hauteur et
+    // en diamètre, donc on ne mesure plus l'abri perdu mais tout ce qui a
+    // suivi. Les deux seuils sont posés sous les rapports mesurés — 1,75 sous
+    // 2,45 et 1,3 sous 1,64 — et tous deux au-dessus de 1.
     expect(couchesTemoin).toBeGreaterThan(0);
-    expect(couchesEclairci).toBeGreaterThan(2 * couchesTemoin);
+    expect(toutDeSuiteTemoin).toBeGreaterThan(0);
+    expect(toutDeSuiteEclairci).toBeGreaterThan(1.75 * toutDeSuiteTemoin);
+    expect(couchesEclairci).toBeGreaterThan(1.3 * couchesTemoin);
   }, 900_000);
 });

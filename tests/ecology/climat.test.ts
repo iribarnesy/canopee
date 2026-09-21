@@ -261,6 +261,8 @@ describe("dans une partie, le réchauffement se voit", () => {
      * parties comparables en neutralisant ce qui les distingue par ailleurs.
      */
     let pressionParHoteMax = 0;
+    /** Le sommet de la pullulation BRUTE, sans normalisation : l'autre thermomètre. */
+    let pressionBruteMax = 0;
     for (let i = 0; i < ans * 52; i++) {
       const base = OBSERVATIONS[i % OBSERVATIONS.length];
       if (!base) throw new Error("météo manquante");
@@ -271,6 +273,7 @@ describe("dans une partie, le réchauffement se voit", () => {
       state = r.state;
       morts.push(...r.morts);
       const vivantes = state.trees.filter((t) => t.alive).length;
+      pressionBruteMax = Math.max(pressionBruteMax, r.fluxes.ravageurMoyen);
       pressionParHoteMax = Math.max(
         pressionParHoteMax,
         r.fluxes.ravageurMoyen / Math.max(1, vivantes),
@@ -280,6 +283,7 @@ describe("dans une partie, le réchauffement se voit", () => {
     }
     return {
       pressionParHoteMax,
+      pressionBruteMax,
       etpDebut: etpDebut / 5,
       etpFin: etpFin / 5,
       hetresMortsDeSoif: morts.filter(
@@ -404,17 +408,43 @@ describe("dans une partie, le réchauffement se voit", () => {
     //   graine 37            1,47 ×                  2,99 ×
     //
     // Divisée par les tiges vivantes, la pullulation est franche sur les trois
-    // parties et deux fois plus forte qu'au brut. Le seuil est posé à 2 — sous
-    // le minimum mesuré (2,64) pour laisser de la marge, très au-dessus de 1
-    // pour rester une affirmation.
+    // parties et deux fois plus forte qu'au brut.
+    //
+    // ── ET LA NORMALISATION S'EST RÉVÉLÉE ÊTRE LE GROS DU SIGNAL (#183) ──
+    //
+    // La carie du tronc (#182) a fait tomber cet essai, à 1,98 sur la graine 11
+    // pour un seuil à 2. Elle ne parle pas de ravageurs : elle déplace des
+    // chablis, donc des hôtes, donc le DÉNOMINATEUR. Recampagné sur six graines
+    // plutôt que trois, avec les deux thermomètres côte à côte :
+    //
+    //   graine        11     23     37      5     41      7
+    //   par hôte    1,98   3,03   2,44   2,72   1,69   2,62
+    //   brut        1,38   1,37   1,37   1,46   1,88   1,29
+    //
+    // Le brut, qui avait inversé sur une graine en #95, ne le fait plus sur
+    // aucune des six et tient dans une bande étroite (1,29 à 1,88). Le par-hôte
+    // s'étale du simple au double (1,69 à 3,03) — et la graine 41 dit pourquoi :
+    // ses deux bras finissent avec 274 et 282 tiges, donc la normalisation n'a
+    // rien à corriger, et c'est la seule où elle ABAISSE le rapport (1,88 → 1,69).
+    // Partout ailleurs elle le gonfle, parce qu'elle recompte la mortalité que
+    // l'essai SUIVANT mesure déjà et bien mieux.
+    //
+    // On garde donc les deux, et on exige les deux. Un thermomètre qui a
+    // flanché une fois ne se remplace pas par un autre qui a flanché une fois :
+    // il se double. Les seuils sont posés sous les minimums de la campagne à
+    // six graines — 1,5 sous 1,69, et 1,2 sous 1,29 —, et tous deux très
+    // au-dessus de 1 pour rester des affirmations.
     //
     // Que le réchauffement TUE est affirmé par l'essai suivant, sur ce qui
     // reste DEBOUT de la cohorte plantée (#93, #84).
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
-      expect(c.pressionParHoteMax, `graine ${GRAINES[i]}`).toBeGreaterThan(
-        2 * f.pressionParHoteMax,
+      expect(c.pressionParHoteMax, `par hôte, graine ${GRAINES[i]}`).toBeGreaterThan(
+        1.5 * f.pressionParHoteMax,
+      );
+      expect(c.pressionBruteMax, `brut, graine ${GRAINES[i]}`).toBeGreaterThan(
+        1.2 * f.pressionBruteMax,
       );
     }
   });

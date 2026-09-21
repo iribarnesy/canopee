@@ -27,10 +27,11 @@ import {
 } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import {
+  AVANCEE_CARIE_CM_AN,
   CARIE_INITIALE,
   facteurCarie,
   facteurCarieAncrage,
-  PROGRESSION_CARIE_PAR_AN,
+  partCariee,
   prochaineCarie,
 } from "../../src/engine/tempete";
 
@@ -61,17 +62,49 @@ describe("un tronc creux est un TUBE, et c'est tout le lot", () => {
 
   it("elle ne guérit JAMAIS, et c'est ce qui la distingue d'une plaie", () => {
     // Un houppier arraché repousse ; une colonne de carie ne fait que monter.
-    let p = 0;
-    p = prochaineCarie(p, true, 0.5);
-    expect(p).toBeGreaterThanOrEqual(CARIE_INITIALE);
-    const installee = p;
+    const R = 10;
+    let c = prochaineCarie(undefined, true, true, R, 0.5);
+    expect(c?.rayonCm).toBeGreaterThanOrEqual(CARIE_INITIALE * R);
+    const installee = c?.rayonCm ?? 0;
     // Même sans nouvelle blessure, elle avance.
-    p = prochaineCarie(p, false, 0.5);
-    expect(p).toBeGreaterThan(installee);
+    c = prochaineCarie(c, false, false, R, 0.5);
+    expect(c?.rayonCm).toBeGreaterThan(installee);
     // Et un arbre jamais blessé reste sain, quel que soit le temps qui passe.
-    let sain = 0;
-    for (let an = 0; an < 200; an++) sain = prochaineCarie(sain, false, 0.5);
-    expect(sain).toBe(0);
+    let sain = prochaineCarie(undefined, false, false, R, 0.5);
+    for (let an = 0; an < 200; an++) sain = prochaineCarie(sain, false, false, R, 0.5);
+    expect(sain).toBeUndefined();
+  });
+
+  it("mais elle ne POURSUIT pas l'arbre : le mur de compartimentation la borne", () => {
+    // Le CODIT, et c'est lui qui décide de tout. À la blessure l'arbre dresse
+    // une barrière sur le bois qu'il a CE JOUR-LÀ ; l'aubier fabriqué ensuite
+    // reste hors d'atteinte. Un tronc de 10 cm de rayon blessé aujourd'hui ne
+    // pourrira jamais au-delà de ces 10 cm-là, même dans mille ans.
+    let c = prochaineCarie(undefined, true, false, 10, 0.5);
+    for (let an = 0; an < 500; an++) c = prochaineCarie(c, false, false, 10, 0.5);
+    expect(c?.rayonCm).toBeCloseTo(10, 6);
+    expect(partCariee(c, 20)).toBe(1);
+    // Et s'il a grossi entre-temps, la MÊME colonne ne fait plus qu'une part
+    // du tronc : le chêne de futaie porte sa cicatrice de jeunesse sans en
+    // souffrir à cent ans.
+    expect(partCariee(c, 60)).toBeCloseTo(1 / 3, 6);
+    expect(facteurCarie(partCariee(c, 60))).toBeGreaterThan(0.99);
+  });
+
+  it("un arbre VIGOUREUX distance sa carie, un arbre qui végète se fait rattraper", () => {
+    // La conséquence qu'on n'a pas écrite. Deux arbres blessés au même rayon,
+    // l'un qui pousse et l'autre non, cinquante ans plus tard.
+    const R0 = 8;
+    let vif = prochaineCarie(undefined, true, false, R0, 0.5);
+    let lent = vif;
+    let rVif = R0;
+    for (let an = 0; an < 50; an++) {
+      rVif += 0.25; // accroissement radial d'un sujet vigoureux, cm/an
+      vif = prochaineCarie(vif, false, false, rVif, 0.5);
+      lent = prochaineCarie(lent, false, false, R0, 0.5);
+    }
+    expect(partCariee(lent, 2 * R0)).toBe(1);
+    expect(partCariee(vif, 2 * rVif)).toBeLessThan(0.45);
   });
 
   it("un bois dense se carie plus lentement, et c'est un trait déjà déclaré", () => {
@@ -80,10 +113,11 @@ describe("un tronc creux est un TUBE, et c'est tout le lot", () => {
     const chene = getEspece("quercus_pubescens").bois.densite;
     const saule = getEspece("salix_alba").bois.densite;
     expect(chene).toBeGreaterThan(saule);
-    const apresChene = prochaineCarie(0.2, false, chene);
-    const apresSaule = prochaineCarie(0.2, false, saule);
-    expect(apresChene).toBeLessThan(apresSaule);
-    expect(PROGRESSION_CARIE_PAR_AN).toBeGreaterThan(0);
+    const depart = { rayonCm: 2, barriereCm: 30 };
+    const apresChene = prochaineCarie(depart, false, false, 30, chene);
+    const apresSaule = prochaineCarie(depart, false, false, 30, saule);
+    expect(apresChene?.rayonCm).toBeLessThan(apresSaule?.rayonCm ?? 0);
+    expect(AVANCEE_CARIE_CM_AN).toBeGreaterThan(0);
   });
 });
 
@@ -91,9 +125,19 @@ describe("en partie : le vieil arbre creux naît des coups de vent", () => {
   it("un siècle de tempêtes fabrique des chênes creux", () => {
     // La conséquence qu'on n'a pas écrite : les plaies de tempête s'accumulent,
     // la carie ne se referme pas, et il sort une population de vieux arbres
-    // creux — ceux-là mêmes que le moteur compte déjà comme habitats (J3).
-    // Relevé : à cent vingt ans, 49 chênes cariés sur 163 vivants, dont 41
-    // creux au-delà de la moitié de leur rayon.
+    // creux — ceux-là mêmes que le moteur compte comme habitats (J3, #183).
+    //
+    // **LE PREMIER RELEVÉ EN DONNAIT CINQ FOIS TROP**, et c'est ce banc qui l'a
+    // dit. Il comptait 46 chênes cariés sur 163 vivants dont 43 creux au-delà
+    // de la moitié de leur rayon : un quart du peuplement, à l'âge où une
+    // futaie de chêne est précisément du bois d'œuvre. La cause n'était ni la
+    // vitesse de la carie ni la compartimentation, mais le SEUIL D'ENTRÉE, qui
+    // n'existait pas : la moindre brindille arrachée inoculait, et comme
+    // `houppierArrache` mord dès 27 m/s, tout le monde finissait blessé. Avec
+    // `PLAIE_OUVRANTE` — une plaie doit atteindre le bois de cœur pour ouvrir
+    // une porte —, le relevé tombe à **9 cariés sur 165 vivants, dont 8 creux
+    // au-delà de la moitié**, soit 5 % du peuplement. C'est l'ordre de grandeur
+    // d'une futaie réelle, et c'est bien la tempête qui inocule, plus la brise.
     const COTE = 40;
     const station: Station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
     const serie = serieMeteoPour(LIMON_RICHE.station.id);
@@ -110,10 +154,13 @@ describe("en partie : le vieil arbre creux naît des coups de vent", () => {
       s = advanceWeek(s, w, []).state;
     }
     const vivants = s.trees.filter((t) => t.alive);
-    const caries = vivants.filter((t) => (t.pourriture ?? 0) > 0);
-    const creux = vivants.filter((t) => (t.pourriture ?? 0) > 0.5);
-    expect(caries.length).toBeGreaterThan(10);
+    const caries = vivants.filter((t) => t.carie !== undefined);
+    const creux = vivants.filter((t) => partCariee(t.carie, t.diametreCm) > 0.5);
+    expect(caries.length).toBeGreaterThan(3);
     expect(creux.length).toBeGreaterThan(0);
+    // Et une franche minorité : le seuil est posé bien en dessous des 5,5 %
+    // mesurés, mais il interdit le quart de peuplement d'avant.
+    expect(caries.length).toBeLessThan(vivants.length / 5);
     // Mais pas TOUS : un arbre jamais blessé reste sain, et c'est la moitié du
     // mécanisme. Une carie qui toucherait tout le monde serait de la
     // vieillesse déguisée, or `tickTree` fait déjà décliner la vigueur.

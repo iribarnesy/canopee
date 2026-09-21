@@ -53,6 +53,20 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   volis: "cassés net par la tempête",
 };
 
+/**
+ * L'état de carie d'un tronc : ce qui est pourri, et jusqu'où ça peut aller.
+ *
+ * Les deux nombres sont en centimètres de RAYON, et il en faut bien deux — la
+ * barrière est le mur de compartimentation que l'arbre dresse à la blessure,
+ * et elle borne la carie pour toujours (`prochaineCarie`, tempete.ts).
+ */
+export interface Carie {
+  /** rayon du bois déjà carié, cm */
+  rayonCm: number;
+  /** mur de compartimentation : le rayon qu'avait le tronc à la dernière plaie, cm */
+  barriereCm: number;
+}
+
 export interface TreeState {
   id: number;
   especeId: string;
@@ -306,8 +320,14 @@ export interface TreeState {
    * Ce n'est PAS la vieillesse : `tickTree` fait déjà décliner la vigueur passé
    * 85 % de la longévité. La carie est attachée aux blessures, et un arbre
    * jamais blessé reste sain quel que soit son âge.
+   *
+   * Deux nombres et pas un, tous deux en centimètres de rayon : ce qui est
+   * pourri, et le mur de compartimentation que l'arbre a dressé à la plaie. Le
+   * second borne le premier, donc un arbre qui pousse vite recouvre sa carie
+   * d'aubier sain — c'est le CODIT, et c'est ce qui sépare le chêne de futaie
+   * qui porte une cicatrice de jeunesse du vieux têtard creux du bocage.
    */
-  pourriture?: number;
+  carie?: Carie;
   /**
    * Vigueur ∈ [0,1] : moyenne lissée du facteur limitant sur les derniers
    * mois. Ce n'est pas la même chose que le stress. Le stress ne monte que

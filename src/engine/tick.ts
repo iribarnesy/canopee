@@ -224,6 +224,7 @@ import {
   houppierArrache,
   memoireDAbri,
   modeDeRuine,
+  PLAIE_OUVRANTE,
   prochaineCarie,
   prochainHouppierPerdu,
   RAFALE_MINIMALE_MS,
@@ -2986,18 +2987,34 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // l'installe — branche arrachée, frottis, brûlure, recépage, élagage —
       // et rien ne la referme. C'est la seule mémoire du moteur qui ne
       // s'efface pas, et c'est ce qui fait un vieil arbre creux.
+      // Et une plaie, ici, est une plaie qui atteint le CŒUR : une brindille
+      // cassée se referme, une charpentière arrachée jamais (`PLAIE_OUVRANTE`).
+      // L'élagage et le recépage y vont d'office — ce sont des coupes franches
+      // faites exprès, et c'est bien pour ça qu'un têtard se creuse.
+      const grossePlaie = (tree.houppierPerdu ?? 0) >= PLAIE_OUVRANTE;
       const blesse =
-        (tree.houppierPerdu ?? 0) > 0 ||
+        grossePlaie ||
         tree.frotteSemaine !== undefined ||
         tree.brulEeSemaine !== undefined ||
         tree.recepages > 0 ||
         tree.hauteurElagueeM > 0;
-      const pourriture =
-        prochaineCarie(tree.pourriture ?? 0, blesse, getEspece(tree.especeId).bois.densite) ||
-        undefined;
+      // Mais seule une plaie FRAÎCHE repousse le mur de compartimentation sur
+      // le rayon du jour : une cicatrice d'élagage de jeunesse n'ouvre pas
+      // l'aubier que l'arbre a fabriqué depuis (`prochaineCarie`).
+      const plaieFraiche =
+        grossePlaie ||
+        (tree.frotteSemaine !== undefined && state.week - tree.frotteSemaine < 52) ||
+        (tree.brulEeSemaine !== undefined && state.week - tree.brulEeSemaine < 52);
+      const carie = prochaineCarie(
+        tree.carie,
+        blesse,
+        plaieFraiche,
+        tree.diametreCm / 2,
+        getEspece(tree.especeId).bois.densite,
+      );
       return {
         ...tree,
-        pourriture,
+        carie,
         // Un arbre qui n'a pas encore vu passer un 1ᵉʳ janvier est réputé
         // habitué à ce qu'il a : un semis ne naît pas fragile.
         abriHabituel: memoireDAbri(tree.abriHabituel ?? abri, abri),

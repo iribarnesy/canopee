@@ -67,7 +67,7 @@
  */
 
 import { rngFloat, rngStateFromSeed } from "./rng";
-import type { TreeState } from "./trees";
+import type { Carie, TreeState } from "./trees";
 
 /**
  * Rapport entre la rafale maximale d'une semaine et la vitesse MOYENNE du vent
@@ -614,7 +614,7 @@ export function vitesseCritiqueMs(arbre: TreeState, exposition: ExpositionAuVent
     facteurSolGorge(exposition.engorgement, exposition.toleranceEngorgement) *
     facteurPriseAuVent(exposition.partFoliaire) *
     facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent)) *
-    facteurCarieAncrage(arbre.pourriture ?? 0)
+    facteurCarieAncrage(partCariee(arbre.carie, arbre.diametreCm))
   );
 }
 
@@ -707,7 +707,7 @@ export function vitesseCritiqueVolisMs(
     facteurGeometrieFut(arbre.heightM, arbre.diametreCm) *
     facteurPriseAuVent(exposition.partFoliaire) *
     facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent)) *
-    facteurCarie(arbre.pourriture ?? 0)
+    facteurCarie(partCariee(arbre.carie, arbre.diametreCm))
   );
 }
 
@@ -828,35 +828,103 @@ export function prochainHouppierPerdu(perdu: number, arrache: number): number {
 export const CARIE_INITIALE = 0.05;
 
 /**
- * Progression annuelle d'une colonne de carie installée, en part du rayon, sur
- * un bois de densité de référence.
+ * Part de houppier qu'il faut avoir perdue pour qu'une plaie ouvre le BOIS DE
+ * CŒUR *(à calibrer)*.
  *
- * Les colonnes de carie d'un arbre vivant s'étendent de quelques centimètres
- * par an en hauteur et bien plus lentement en rayon. Un pour cent du rayon par
- * an met un siècle à creuser un tronc, ce qui est l'ordre de grandeur d'un
- * vieux chêne creux *(à calibrer)*.
+ * Une brindille cassée n'est pas une porte. Un arbre referme une plaie de
+ * petit diamètre en une ou deux saisons — le bourrelet de cicatrisation la
+ * recouvre avant que le champignon n'ait atteint le cœur —, alors qu'une
+ * grosse charpentière arrachée laisse une section que l'arbre ne recouvrira
+ * jamais, et c'est celle-là qui compte.
+ *
+ * Sans ce seuil, le moindre coup de vent inoculait, et comme `houppierArrache`
+ * mord dès 27 m/s, à peu près TOUS les arbres finissaient cariés : mesuré à
+ * cent vingt ans, 43 chênes creux au-delà de la moitié de leur rayon sur 163
+ * vivants, soit un quart du peuplement à l'âge où une futaie de chêne est
+ * précisément du bois d'œuvre. Le seuil est posé au niveau que la campagne de
+ * F17 attribue à un coup de vent FORT — 3 % de houppier à 27 m/s, 20 % à
+ * 48 m/s — pour que ce soit la tempête qui inocule, et non la brise.
  */
-export const PROGRESSION_CARIE_PAR_AN = 0.01;
+export const PLAIE_OUVRANTE = 0.15;
+
+/**
+ * Avancée RADIALE annuelle du front de carie, cm/an, sur un bois de densité de
+ * référence.
+ *
+ * En centimètres et non plus en part du rayon, et ce changement d'unité est le
+ * mécanisme lui-même. Une colonne de carie s'étend de plusieurs centimètres par
+ * an en HAUTEUR et beaucoup plus lentement en rayon ; surtout, sa vitesse ne
+ * sait rien de la taille du tronc qu'elle habite. L'exprimer en part du rayon
+ * revenait à faire pourrir un gros arbre aussi vite qu'une perche, alors que
+ * c'est exactement le contraire qui se passe.
+ *
+ * L'ordre de grandeur est choisi pour que la comparaison avec l'accroissement
+ * radial d'un arbre vigoureux (0,15 à 0,25 cm/an ici) soit SERRÉE, parce que
+ * c'est ce voisinage-là qui est réel : un arbre qui pousse bien distance sa
+ * carie, un arbre dominé ou vieux se fait rattraper *(à calibrer : aucune
+ * source consultée ne donne une vitesse radiale franche, et pour cause — elle
+ * dépend du champignon autant que de l'hôte)*.
+ */
+export const AVANCEE_CARIE_CM_AN = 0.3;
 
 /**
  * LA CARIE D'UN TRONC, une année plus tard (critère F17, #182).
  *
- * **Elle ne guérit jamais, et c'est ce qui la distingue d'une plaie.** Un
- * houppier arraché repousse ; une colonne de carie ne fait que monter. C'est ce
- * qui rend un vieil arbre plusieurs fois blessé cumulativement fragile, et
- * c'est le fait de terrain.
+ * **Elle ne guérit jamais** — un houppier arraché repousse, une colonne de
+ * carie ne fait que monter — **mais elle ne poursuit pas l'arbre.** C'est la
+ * COMPARTIMENTATION (le CODIT de Shigo), et c'est elle qui décide de tout :
+ * à la blessure, l'arbre dresse une barrière chimique sur le bois qu'il a CE
+ * JOUR-LÀ, et tout ce qu'il fabriquera ensuite reste hors d'atteinte du
+ * champignon. Le cœur pourrit ; l'aubier neuf, lui, s'épaissit par-dessus.
+ *
+ * D'où la conséquence qu'on n'a pas écrite et qui est le fait de terrain :
+ * **un arbre vigoureux distance sa carie, un arbre dominé ou vieux se fait
+ * rattraper.** La part cariée `p = rayon carié / rayon actuel` peut donc
+ * DÉCROÎTRE, et c'est la seule façon d'obtenir à la fois le vieux chêne creux
+ * du bocage — blessé tard, poussant lentement — et le chêne de futaie qui
+ * porte une cicatrice de jeunesse sans en souffrir à cent ans.
+ *
+ * Le premier jet n'avait pas la barrière et comptait la carie en part du rayon.
+ * Il donnait 41 chênes creux au-delà de la moitié de leur rayon sur 163 vivants
+ * à cent vingt ans — un quart du peuplement, à l'âge où une futaie de chêne est
+ * précisément du bois d'œuvre. Et il déplaçait assez de chablis pour casser
+ * deux bancs qui ne parlent pas de carie (la pullulation sous réchauffement,
+ * l'éclaircie qui fragilise) : le signe qu'un mécanisme de soutien pesait plus
+ * que ce qu'il soutient.
  *
  * Le bois dense se carie plus lentement — et ce n'est pas un trait nouveau :
  * `dureeChandelleSemaines` (boisMort.ts) fait déjà de la densité la résistance
  * à la décomposition d'un arbre MORT. C'est la même propriété du bois, lue sur
  * un arbre vivant.
+ *
+ * **Limite assumée** : seule une plaie FRAÎCHE repousse la barrière. Un arbre
+ * réélagué vingt ans plus tard devrait la voir repartir de son rayon du jour,
+ * et l'état ne dit pas quand `recepages` ou `hauteurElagueeM` ont changé. Le
+ * cas qui compte vraiment — la trogne recoupée sans fin — est modélisé
+ * ailleurs et pour lui-même (`trogne.ts`).
  */
-export function prochaineCarie(pourriture: number, blesse: boolean, densiteBois: number): number {
-  const installee = pourriture > 0 || blesse;
-  if (!installee) return 0;
-  const depart = Math.max(pourriture, blesse ? CARIE_INITIALE : 0);
-  const vitesse = PROGRESSION_CARIE_PAR_AN * (DENSITE_BOIS_REFERENCE / Math.max(0.05, densiteBois));
-  return Math.min(1, depart + vitesse);
+export function prochaineCarie(
+  carie: Carie | undefined,
+  blesse: boolean,
+  plaieFraiche: boolean,
+  rayonTroncCm: number,
+  densiteBois: number,
+): Carie | undefined {
+  if (rayonTroncCm <= 0) return carie;
+  if (carie === undefined) {
+    if (!blesse) return undefined;
+    // La porte s'ouvre, et le mur se dresse sur le rayon du jour.
+    return { rayonCm: CARIE_INITIALE * rayonTroncCm, barriereCm: rayonTroncCm };
+  }
+  const barriereCm = plaieFraiche ? Math.max(carie.barriereCm, rayonTroncCm) : carie.barriereCm;
+  const vitesse = AVANCEE_CARIE_CM_AN * (DENSITE_BOIS_REFERENCE / Math.max(0.05, densiteBois));
+  return { rayonCm: Math.min(barriereCm, carie.rayonCm + vitesse), barriereCm };
+}
+
+/** La part du rayon qui est cariée ∈ [0,1] — la grandeur que les ruines lisent. */
+export function partCariee(carie: Carie | undefined, diametreCm: number): number {
+  if (carie === undefined || diametreCm <= 0) return 0;
+  return Math.min(1, carie.rayonCm / (diametreCm / 2));
 }
 
 /**
@@ -873,6 +941,23 @@ export function prochaineCarie(pourriture: number, blesse: boolean, densiteBois:
  * C'est aussi la base de la règle du `t/R` : on ne s'inquiète qu'en dessous
  * d'une paroi saine du tiers du rayon, soit `p > 0,67` — où cette formule
  * donne encore 0,90. Le seuil n'est écrit nulle part ; il tombe de l'exposant.
+ *
+ * **LIMITE ASSUMÉE : le tube est supposé FERMÉ.** `d³(1 − p⁴)` est le module
+ * d'un anneau complet, et il suppose que la paroi fait tout le tour. Une
+ * cavité OUVERTE — celle qui s'ouvre à la place d'une grosse branche arrachée,
+ * celle par où entre la mésange — n'est plus un tube mais un profil en C, et
+ * un profil en C est beaucoup plus faible que l'anneau de même épaisseur :
+ * il n'a plus de continuité pour reprendre le cisaillement, et il se ferme sur
+ * lui-même en s'ovalisant avant de rompre. Le moteur ne fait donc PAS la
+ * différence entre un chêne creux intact et le même chêne fendu par une
+ * cicatrice ouverte, alors que le second est le cas qui tombe.
+ *
+ * Non corrigé, et pas par paresse : la littérature d'arboriculture propose
+ * plusieurs corrections concurrentes pour l'ouverture (pénalité sur l'angle
+ * d'ouverture, ou sur la seule épaisseur résiduelle au droit de la plaie) sans
+ * qu'aucune fasse consensus, et l'exposant 4 rend l'écart invisible tant que
+ * `p` reste sous 0,67 — c'est-à-dire sur la quasi-totalité des arbres que le
+ * moteur produit. Écrire un chiffre ici, ce serait le caler sur le moteur.
  */
 export function facteurCarie(pourriture: number): number {
   const p = Math.min(1, Math.max(0, pourriture));
