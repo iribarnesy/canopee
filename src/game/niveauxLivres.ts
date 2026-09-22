@@ -144,12 +144,26 @@ const VERGER: Niveau = {
     // ——— SONDE TEMPORAIRE (#188) : les pommiers portent-ils seulement des
     // fruits ? À retirer une fois la question tranchée.
     {
-      id: "sonde-fruits-sur-arbre",
-      quoi: "SONDE · pommes sur l'arbre",
+      // À MÉMOIRE (`acquis` par défaut) : la fenêtre de fruits ne dure que
+      // trois semaines par an, donc un relevé instantané tombe presque
+      // toujours à côté. Ce palier reste coché dès que les pommiers ont porté
+      // UNE FOIS — c'est ça, la question.
+      id: "sonde-a-deja-porte",
+      quoi: "SONDE · les pommiers ont déjà porté",
       mesure: (e) => pommiers(e).reduce((s2, t) => s2 + t.fruitsKg, 0),
       cible: 1,
       unite: "kg",
-      acquis: false,
+    },
+    {
+      // Le TOTAL toutes essences : la ronce est récoltée chaque année (le
+      // journal le montre), donc ce palier doit se cocher. S'il se coche et que
+      // « les pommiers ont déjà porté » ne se coche pas, la chaîne du cumul
+      // fonctionne et ce sont bien les pommes qui manquent.
+      id: "sonde-cumul-total",
+      quoi: "SONDE · fruits récoltés, toutes essences",
+      mesure: (e) => e.cumuls.fruitsKg,
+      cible: 1,
+      unite: "kg",
     },
     {
       id: "sonde-hauteur",
