@@ -286,7 +286,10 @@ function performAction(action: GameAction) {
   // point de retour aurait donc toujours été en retard d'un lot entier — et
   // une semaine ramenée sous le plafond aurait effacé les récoltes de tout ce
   // lot, pas seulement les siennes.
-  cumuls = accumuler(cumuls, result.gestes ?? []);
+  // Les arbres d'APRÈS le geste : une cueillette laisse l'arbre debout, donc
+  // son essence s'y lit encore — et c'est elle qui distingue « deux cents kilos
+  // de pommes » de « deux cents kilos de n'importe quoi » (#188).
+  cumuls = accumuler(cumuls, result.gestes ?? [], state.trees);
   const dEur = state.economy.treasuryEur - before.economy.treasuryEur;
   const dHeures = state.economy.hoursUsedWeek - before.economy.hoursUsedWeek;
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
@@ -660,7 +663,7 @@ function seTenirAuPlafond(): number {
   // Le cumul se rejoue comme l'état : il repart du début de la semaine, puis
   // recompte les gestes des SEULES actions gardées. Sans ça, une récolte
   // annulée resterait acquise.
-  cumuls = accumuler(cumulsAuDebut, elaguee.gestes);
+  cumuls = accumuler(cumulsAuDebut, elaguee.gestes, elaguee.etat.trees);
   state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
   actionsDeLaSemaine = elaguee.gardees;
@@ -780,7 +783,7 @@ function stepWeeks(n: number) {
     pendingNaissances.push(...ticked.naissances);
     pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
-    cumuls = accumuler(cumuls, ticked.gestes);
+    cumuls = accumuler(cumuls, ticked.gestes, ticked.state.trees);
     pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
@@ -1199,7 +1202,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
-        cumuls = accumuler(cumuls, step.gestes);
+        cumuls = accumuler(cumuls, step.gestes, step.state.trees);
         lastFluxes = step.fluxes;
         // La dernière semaine rejouée est celle qu'on va montrer : son
         // débordement et sa lumière au sol servent au premier instantané.

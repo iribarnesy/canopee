@@ -132,7 +132,12 @@ const VERGER: Niveau = {
     {
       id: "recolter",
       quoi: "Récolter des pommes",
-      mesure: (e) => e.cumuls.fruitsKg,
+      // DES POMMES, et pas des fruits. La première version lisait le total
+      // toutes essences, et l'essai dans le navigateur l'a prise en faute de la
+      // pire façon : une partie où l'on ne plante RIEN affichait
+      // « 1549 / 200 kg ». Le bocage sème, la parcelle se couvre de noisetiers
+      // et de prunelliers, et la récolte automatique les cueille.
+      mesure: (e) => e.cumuls.fruitsParEspece[POMMIER] ?? 0,
       cible: 200,
       unite: "kg",
       aide: "Un pommier ne donne rien avant sept ans, et les fruits se perdent trois semaines après leur maturité.",

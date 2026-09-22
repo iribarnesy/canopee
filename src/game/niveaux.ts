@@ -45,8 +45,23 @@ import type { Snapshot } from "./protocol";
  * palier ne peut encore s'écrire dessus.
  */
 export interface Cumuls {
-  /** fruits réellement cueillis, kg (`recolter`) */
+  /** fruits réellement cueillis, toutes essences confondues, kg (`recolter`) */
   fruitsKg: number;
+  /**
+   * Les mêmes kilos, PAR ESSENCE.
+   *
+   * **Sans quoi « récolter deux cents kilos de pommes » se gagne sans pommier.**
+   * Mesuré : sur un limon riche bordé de bocage, une parcelle où l'on ne plante
+   * RIEN se couvre de semis — soixante tiges la première année, mille quatre
+   * cents à la neuvième — et la récolte automatique y cueille noisettes,
+   * prunelles et sureau. Quinze cents kilos au compteur, pas un pommier.
+   *
+   * L'essence ne voyage pas dans le geste (`GesteSurArbres` n'a que des
+   * identifiants), mais elle est dans l'ÉTAT : un arbre récolté est toujours
+   * debout après sa cueillette. Joindre deux faits que le moteur rapporte n'est
+   * pas recalculer une de ses règles.
+   */
+  fruitsParEspece: Record<string, number>;
   /** écorce réellement levée, kg (`leverEcorce`) */
   ecorceKg: number;
   /** tiges mises en terre (`planter`) */
@@ -55,7 +70,13 @@ export interface Cumuls {
   abattues: number;
 }
 
-export const CUMULS_VIDES: Cumuls = { fruitsKg: 0, ecorceKg: 0, plantes: 0, abattues: 0 };
+export const CUMULS_VIDES: Cumuls = {
+  fruitsKg: 0,
+  fruitsParEspece: {},
+  ecorceKg: 0,
+  plantes: 0,
+  abattues: 0,
+};
 
 /**
  * Ajouter au cumul ce que la semaine a produit.
@@ -65,17 +86,40 @@ export const CUMULS_VIDES: Cumuls = { fruitsKg: 0, ecorceKg: 0, plantes: 0, abat
  * ailleurs que dans ce rejeu divergerait de la partie à la première
  * sauvegarde.
  */
-export function accumuler(cumuls: Cumuls, gestes: readonly GesteVisible[]): Cumuls {
+export function accumuler(
+  cumuls: Cumuls,
+  gestes: readonly GesteVisible[],
+  /**
+   * Les arbres tels qu'ils sont APRÈS le geste, pour retrouver l'essence de
+   * chaque récolte. Absents, les kilos ne comptent que dans le total : mieux
+   * vaut un compte par essence vide qu'un compte faux.
+   */
+  arbres?: readonly { id: number; especeId: string }[],
+): Cumuls {
   let { fruitsKg, ecorceKg, plantes, abattues } = cumuls;
+  const fruitsParEspece = { ...cumuls.fruitsParEspece };
+  let especeDe: Map<number, string> | undefined;
   for (const geste of gestes) {
     // Les gestes de ZONE portent parfois le même nom (`planter`,
     // `leverEcorce`) : c'est un seul geste qui touche deux mailles (#124), et
     // c'est la FORME qui les sépare, pas le type.
     if (!estGesteSurArbres(geste)) continue;
     switch (geste.type) {
-      case "recolter":
+      case "recolter": {
         fruitsKg += somme(geste.masseKg);
+        if (arbres) {
+          // La table ne se construit qu'à la première récolte, et une seule
+          // fois : chercher chaque identifiant dans la liste coûterait le
+          // carré du peuplement, qui passe le millier de tiges en dix ans.
+          if (!especeDe) especeDe = new Map(arbres.map((a) => [a.id, a.especeId]));
+          geste.ids.forEach((id, i) => {
+            const espece = especeDe?.get(id);
+            if (!espece) return;
+            fruitsParEspece[espece] = (fruitsParEspece[espece] ?? 0) + (geste.masseKg?.[i] ?? 0);
+          });
+        }
         break;
+      }
       case "leverEcorce":
         ecorceKg += somme(geste.masseKg);
         break;
@@ -90,7 +134,7 @@ export function accumuler(cumuls: Cumuls, gestes: readonly GesteVisible[]): Cumu
         break;
     }
   }
-  return { fruitsKg, ecorceKg, plantes, abattues };
+  return { fruitsKg, fruitsParEspece, ecorceKg, plantes, abattues };
 }
 
 function somme(masses: readonly number[] | undefined): number {

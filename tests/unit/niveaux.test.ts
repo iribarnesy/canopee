@@ -143,6 +143,7 @@ describe("les cumuls", () => {
     ];
     expect(accumuler(CUMULS_VIDES, gestes)).toEqual({
       fruitsKg: 0,
+      fruitsParEspece: {},
       ecorceKg: 30,
       plantes: 3,
       abattues: 3,
@@ -189,6 +190,44 @@ describe("les cumuls", () => {
     expect(accumuler(ouverture, gardees).fruitsKg).toBe(40);
     // Ce que donnerait un cumul qui ne se rejouerait pas — la faute à éviter.
     expect(accumuler(accumuler(ouverture, posees), gardees).fruitsKg).toBe(95);
+  });
+
+  it("range les kilos SOUS LEUR ESSENCE, sinon « des pommes » veut dire « des fruits »", () => {
+    // Le cas qui a fait tomber la première version : une partie sans un seul
+    // pommier affichait « 1549 / 200 kg de pommes », parce que le bocage sème
+    // et que la récolte automatique cueille tout ce qui porte.
+    const arbres = [
+      { id: 1, especeId: "malus_domestica" },
+      { id: 2, especeId: "corylus_avellana" },
+      { id: 3, especeId: "malus_domestica" },
+    ];
+    const gestes: GesteVisible[] = [{ type: "recolter", ids: [1, 2, 3], masseKg: [30, 40, 20] }];
+    const c = accumuler(CUMULS_VIDES, gestes, arbres);
+    expect(c.fruitsKg).toBe(90);
+    expect(c.fruitsParEspece.malus_domestica).toBe(50);
+    expect(c.fruitsParEspece.corylus_avellana).toBe(40);
+  });
+
+  it("s'additionne par essence d'une semaine à l'autre", () => {
+    const arbres = [{ id: 1, especeId: "malus_domestica" }];
+    const une: GesteVisible[] = [{ type: "recolter", ids: [1], masseKg: [10] }];
+    const deux: GesteVisible[] = [{ type: "recolter", ids: [1], masseKg: [15] }];
+    const c = accumuler(accumuler(CUMULS_VIDES, une, arbres), deux, arbres);
+    expect(c.fruitsParEspece.malus_domestica).toBe(25);
+  });
+
+  it("sans la liste des arbres, le total compte et le détail reste vide — jamais faux", () => {
+    const gestes: GesteVisible[] = [{ type: "recolter", ids: [1], masseKg: [10] }];
+    const c = accumuler(CUMULS_VIDES, gestes);
+    expect(c.fruitsKg).toBe(10);
+    expect(c.fruitsParEspece).toEqual({});
+  });
+
+  it("un arbre que la liste ne connaît pas ne tombe dans aucune essence", () => {
+    const gestes: GesteVisible[] = [{ type: "recolter", ids: [9], masseKg: [10] }];
+    const c = accumuler(CUMULS_VIDES, gestes, [{ id: 1, especeId: "malus_domestica" }]);
+    expect(c.fruitsKg).toBe(10);
+    expect(c.fruitsParEspece).toEqual({});
   });
 
   it("ignore les gestes que personne ne compte", () => {
