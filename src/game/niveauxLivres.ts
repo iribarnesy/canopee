@@ -141,6 +141,24 @@ const VERGER: Niveau = {
       unite: "protégés",
       aide: "Un plant brouté repart de zéro. Le manchon se pose à la plantation, ou après.",
     },
+    // ——— SONDE TEMPORAIRE (#188) : les pommiers portent-ils seulement des
+    // fruits ? À retirer une fois la question tranchée.
+    {
+      id: "sonde-fruits-sur-arbre",
+      quoi: "SONDE · pommes sur l'arbre",
+      mesure: (e) => pommiers(e).reduce((s2, t) => s2 + t.fruitsKg, 0),
+      cible: 1,
+      unite: "kg",
+      acquis: false,
+    },
+    {
+      id: "sonde-hauteur",
+      quoi: "SONDE · hauteur du plus grand pommier",
+      mesure: (e) => pommiers(e).reduce((m, t) => Math.max(m, t.heightM), 0),
+      cible: 99,
+      unite: "m",
+      acquis: false,
+    },
     {
       id: "recolter",
       quoi: "Récolter des pommes",
