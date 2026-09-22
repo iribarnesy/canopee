@@ -145,6 +145,15 @@ export interface Station {
    * le domaine vital d'un sanglier fait 500 à 2000 hectares.
    */
   sanglierParHa: number;
+  /**
+   * La faune est-elle faite d'INDIVIDUS ou d'une densité ? (#187, prototype)
+   *
+   * Absent, le moteur se comporte exactement comme avant : c'est le contrôle de
+   * neutralité du lot, promu en réglage de partie.
+   */
+  faune?: import("./faune").ModeFaune;
+  /** Les individus présents, quand `faune` les demande (#187, prototype). */
+  individus?: readonly import("./faune").IndividuFaune[];
   /** phosphore assimilable au départ, g/m² (dérivé du profil) */
   phosphoreInitialGM2: number;
   /** potassium échangeable au départ, g/m² (dérivé du profil) */

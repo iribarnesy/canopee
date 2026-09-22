@@ -69,6 +69,7 @@ import {
   terreArracheeKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
+import { predationDesIndividus } from "./faune";
 import {
   chargeCombustible,
   departDeFeu,
@@ -585,6 +586,13 @@ function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMo
  * il ne déplace pas le plancher.
  */
 const POLLINISATION_PLANCHER = 0.35;
+
+/**
+ * Tampon de la prédation des individus, réutilisé d'une semaine à l'autre. Même
+ * raison que `demandes` dans `herbacees.ts` : une allocation par tick coûterait
+ * plus que le mécanisme. Il n'existe que si une partie demande des individus.
+ */
+let predationFaune: Float64Array | undefined;
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
   const { station } = state;
@@ -1842,6 +1850,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     boisMortTHa,
     dims,
   );
+  // LA FAUNE EN INDIVIDUS (#187, prototype de mesure). Absente, rien ne change
+  // — pas même une allocation : c'est le contrôle de neutralité du lot.
+  if (station.faune !== undefined && station.faune !== "densite") {
+    predationFaune ??= new Float64Array(nCells);
+    predationDesIndividus(
+      station.individus ?? [],
+      dims,
+      station.faune,
+      predationFaune,
+      BLOC_AUXILIAIRES_M,
+    );
+    for (let i = 0; i < nCells; i++) {
+      habitat[i] = Math.min(1, (habitat[i] ?? 0) + (predationFaune[i] ?? 0));
+    }
+  }
 
   // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────
   // Degrés-jours base 5 °C depuis le 1er janvier ; floraison quand le cumul
