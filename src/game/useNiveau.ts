@@ -13,7 +13,7 @@
  *    vitesse — le worker, lui, ne sait pas qu'il joue un niveau.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { type Avancement, avancementDuNiveau, paliersFranchis } from "./niveaux";
 import { niveauParId } from "./niveauxLivres";
 import type { GameApi } from "./useGame";
@@ -34,21 +34,21 @@ export function useNiveau(game: GameApi): NiveauEnCours {
   );
 
   /**
-   * La mémoire des paliers franchis.
+   * La mémoire des paliers franchis — CELLE DU WORKER, et pas une copie.
    *
-   * Un état et non une référence : l'écran doit se redessiner quand un palier
-   * tombe, sinon la coche n'apparaît qu'au rendu suivant.
+   * Elle a d'abord été tenue ici, en état local, synchronisée par une garde sur
+   * l'identifiant du niveau. Le défaut est arrivé par là : rejouer LE MÊME
+   * niveau ne change pas l'identifiant, la garde sortait, et la mémoire de la
+   * partie précédente survivait. On voyait une coche sur un palier qui
+   * affichait « 0 / 12 ».
+   *
+   * Deux copies d'un même état divergent dès qu'un chemin oublie d'en remettre
+   * une à zéro. Il n'y en a donc plus qu'une : le worker la tient, la remet à
+   * zéro pour une partie neuve, la restaure d'une sauvegarde, et l'écran la lit.
+   * Le prix est un aller-retour de message avant qu'une coche apparaisse ; il
+   * est invisible et il vaut mieux que le défaut qu'il supprime.
    */
-  const [acquis, setAcquis] = useState<ReadonlySet<string>>(() => new Set<string>());
-
-  // Ce que la sauvegarde portait fait foi au chargement, et une seule fois :
-  // la reprise rend une liste que l'écran n'aurait aucun moyen de recalculer.
-  const idCharge = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (idCharge.current === niveauRange.id) return;
-    idCharge.current = niveauRange.id;
-    setAcquis(new Set(niveauRange.acquis));
-  }, [niveauRange.id, niveauRange.acquis]);
+  const acquis = useMemo(() => new Set(niveauRange.acquis), [niveauRange.acquis]);
 
   const avancement = useMemo(() => {
     if (!niveau || !snapshot) return undefined;
@@ -64,8 +64,6 @@ export function useNiveau(game: GameApi): NiveauEnCours {
     if (!avancement || !niveauRange.id) return;
     const franchis = paliersFranchis(avancement);
     if (franchis.length === acquis.size && franchis.every((id) => acquis.has(id))) return;
-    const suite = new Set(franchis);
-    setAcquis(suite);
     ranger.current(niveauRange.id, franchis);
   }, [avancement, acquis, niveauRange.id]);
 

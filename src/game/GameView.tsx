@@ -54,7 +54,7 @@ import { PanneauScores } from "./panneaux/PanneauScores";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
 import { PanneauSuivis } from "./panneaux/PanneauSuivis";
 import { useReglagesDeGeste } from "./panneaux/reglages";
-import { btn, SCENE, VOLET } from "./panneaux/styles";
+import { btn, panel, SCENE, VOLET } from "./panneaux/styles";
 import { Angle, BoutonDeVolet, useVolets, Volet } from "./panneaux/Volet";
 import { arbresAPoser, donneesSolDe } from "./parcelle";
 import {
@@ -1240,14 +1240,26 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const quitter = useRef(game.quit);
   quitter.current = game.quit;
   const sortieDemandee = useRef(false);
+  /**
+   * Le retour du navigateur DEMANDE à sortir, il ne sort pas (#188).
+   *
+   * Le geste est trop facile à faire sans le vouloir — un coup de pouce sur un
+   * pavé tactile — et il coûtait une partie en cours : la parcelle disparaît, il
+   * faut retrouver la sauvegarde et la relancer. La partie est sauvegardée, donc
+   * rien n'est perdu, mais rien ne le dit non plus au moment où l'écran se vide.
+   *
+   * On repousse donc l'entrée d'historique consommée par le retour — sinon un
+   * second retour sortirait vraiment du site — et on pose la question.
+   */
+  const [sortieAConfirmer, setSortieAConfirmer] = useState(false);
   useEffect(() => {
     if (!enPartie) return;
     sortieDemandee.current = false;
     history.pushState({ canopee: "partie" }, "");
     const surRetour = () => {
       if (sortieDemandee.current) return;
-      sortieDemandee.current = true;
-      quitter.current();
+      history.pushState({ canopee: "partie" }, "");
+      setSortieAConfirmer(true);
     };
     window.addEventListener("popstate", surRetour);
     return () => window.removeEventListener("popstate", surRetour);
@@ -1688,6 +1700,51 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       {enNiveau.niveau && enNiveau.avancement && (
         <PanneauNiveau niveau={enNiveau.niveau} avancement={enNiveau.avancement} />
       )}
+      {/*
+        LA SORTIE SE CONFIRME. Un retour accidentel vidait l'écran sans un mot ;
+        la partie était bien sauvegardée, mais rien ne le disait — d'où cette
+        phrase, qui répond à la seule question qu'on se pose à cet instant.
+      */}
+      {sortieAConfirmer && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            display: "grid",
+            placeItems: "center",
+            background: "rgba(30, 26, 18, 0.55)",
+            backdropFilter: "blur(2px)",
+            zIndex: 45,
+          }}
+        >
+          <section
+            style={{ ...panel, maxWidth: 420, padding: "18px 22px" }}
+            aria-label="Quitter la partie ?"
+          >
+            <h2 style={{ margin: 0, fontSize: "1.1em" }}>Quitter la partie ?</h2>
+            <p style={{ margin: "8px 0 0", opacity: 0.85 }}>
+              Elle est sauvegardée : vous la retrouverez dans « Parties sauvegardées », sur l'écran
+              d'accueil.
+            </p>
+            <div style={{ marginTop: 14 }}>
+              <button
+                type="button"
+                style={btn(true)}
+                onClick={() => {
+                  setSortieAConfirmer(false);
+                  quitterLaPartie();
+                }}
+              >
+                💾 Sauvegarder et quitter
+              </button>
+              <button type="button" style={btn()} onClick={() => setSortieAConfirmer(false)}>
+                ↩ Continuer à jouer
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {enNiveau.niveau && enNiveau.avancement && enNiveau.fini && (
         <FinDeNiveau
           niveau={enNiveau.niveau}
@@ -1838,6 +1895,15 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 vivants={vivants}
                 recolteAuto={game.recolteAuto}
                 reglerRecolteAuto={game.reglerRecolteAuto}
+                // Cliquer une essence sélectionne toutes ses tiges VIVANTES :
+                // c'est ce qui rend la liste agissante. Les chandelles en sont
+                // exclues — elles ne se gèrent pas comme des arbres, et le
+                // volet « Les arbres » les compte déjà à part.
+                surSelectionnerEssence={(especeId) =>
+                  setSelectedIds(
+                    new Set(vivants.filter((t) => t.especeId === especeId).map((t) => t.id)),
+                  )
+                }
               />
             </Volet>
           ) : volets.estOuvert("bd", "scores") ? (
@@ -1883,20 +1949,27 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         >
           📜 Journal{game.events.length > 0 ? ` (${game.events.length})` : ""}
         </BoutonDeVolet>
-        {/* Le bouton n'apparaît qu'une fois qu'on suit quelqu'un : un volet
-            vide de plus sur l'écran d'un joueur qui n'a rien demandé. */}
-        {suivis.suivis.size > 0 && (
-          <BoutonDeVolet
-            ouvert={volets.estOuvert("bd", "suivis")}
-            surClic={() => volets.basculer("bd", "suivis")}
-          >
-            👁 Suivis ({suivis.suivis.size})
-            {/* Ce qui est arrivé pendant qu'on regardait ailleurs : une
-                notification, et non une pause — seule la mort d'un suivi
-                arrête le temps (#149). */}
-            {suivis.nouveautes > 0 && ` · ${suivis.nouveautes} 🔔`}
-          </BoutonDeVolet>
-        )}
+        {/*
+          LE BOUTON EST TOUJOURS LÀ, même sans un seul arbre suivi.
+
+          Il ne l'était pas : « un volet vide de plus sur l'écran d'un joueur
+          qui n'a rien demandé ». Le raisonnement se retourne — on ne peut pas
+          demander ce qu'on ne voit pas. Dans une partie neuve on ne suit
+          personne, donc l'entrée n'existait pas, donc l'outil restait
+          introuvable pour qui ne l'avait jamais utilisé. Le volet, lui, sait
+          déjà quoi dire quand il est vide : il explique comment suivre un
+          arbre.
+        */}
+        <BoutonDeVolet
+          ouvert={volets.estOuvert("bd", "suivis")}
+          surClic={() => volets.basculer("bd", "suivis")}
+        >
+          👁 Suivis{suivis.suivis.size > 0 ? ` (${suivis.suivis.size})` : ""}
+          {/* Ce qui est arrivé pendant qu'on regardait ailleurs : une
+              notification, et non une pause — seule la mort d'un suivi
+              arrête le temps (#149). */}
+          {suivis.nouveautes > 0 && ` · ${suivis.nouveautes} 🔔`}
+        </BoutonDeVolet>
       </Angle>
     </div>
   );
