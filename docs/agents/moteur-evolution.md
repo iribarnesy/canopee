@@ -68,15 +68,52 @@ Aucun critère gagné, aucun chiffre d'écologie déplacé — et c'est justemen
 qu'il faut savoir livrer, parce que dix actions du moteur changent de signature
 en même temps.
 
-**Le livrable d'un refactor est une empreinte inchangée.** Avant d'écrire une
-ligne de `zone.ts`, l'empreinte d'une partie de douze ans — semis, fauches,
-chaulages, une éclaircie, un labour — a été relevée sur le commit d'AVANT et
-épinglée en dur dans l'essai. Recalculée depuis le moteur d'après, elle aurait
-suivi le changement au lieu de le contrôler ; épinglée, elle est le seul énoncé
-qui distingue un refactor réussi d'un refactor qui déplace silencieusement
-toutes les parties. Et sous elle, neuf cas de bord prouvent l'égalité cellule
-par cellule : centré, décentré, à cheval sur le bord, débordant, et un disque
-si petit qu'il ne touche aucun centre de cellule.
+**Le livrable d'un refactor est une empreinte inchangée — mais une empreinte
+ABSOLUE n'est pas portable.** Le premier contrôle épinglait en dur le
+`stateHash` d'une partie de douze ans, relevé sur le commit d'avant. Il passait
+ici et **il est tombé en CI**. Ce n'était pas le refactor :
+
+    empreinte de la même partie           avant (ffca0fb)   après (ce lot)
+    Node 20 (V8 11.3), Node 22 (V8 12.4)    3 806 937 118    3 806 937 118
+    Node 24 (V8 13.6) — celui de la CI        633 354 304      633 354 304
+
+Le refactor est neutre des DEUX côtés ; c'est la valeur absolue qui bouge avec
+la version de V8, `stateHash` étant un FNV-1a sur les flottants bruts de chaque
+arbre. **C'est la même faute que l'essai qui écrivait dans mon dossier de
+travail** : un essai dont le verdict dépend de la machine ne prouve rien, et son
+vert local encore moins. Le diagnostic s'est fait en téléchargeant Node 24 et en
+rejouant la partie sur le commit d'AVANT — 633 354 304, la valeur de la CI, donc
+l'affaire était close sans toucher au moteur. La leçon qui dépasse le lot : **les
+chiffres du moteur sont portables, ses bits ne le sont pas**, et la suite entière
+le montre puisqu'elle est verte sous les deux (1 671 essais, dont des centaines
+qui épinglent des grandeurs écologiques). Sorti en #193, avec ce que ça pose
+pour les sauvegardes.
+
+**Neuf cas de bord prouvent ce à quoi on a pensé ; cinq cents tirés au hasard
+prouvent le reste.** Le contrôle d'identité a donc été refait en balayage — et
+le balayage a trouvé une divergence que les neuf cas choisis manquaient.
+`actions.ts` avait deux routes qui ne faisaient pas la même chose :
+`forEachDiscCell` garantissait au moins une cellule, `cellulesDuDisque` non, si
+bien qu'un `semer` de vingt centimètres ne semait rien — en silence, et facturé
+— quand un `faucher` du même rayon fauchait une cellule. Unifier était la bonne
+réponse, mais il fallait le SAVOIR pour pouvoir l'écrire.
+
+Une seconde divergence était du même ordre : l'aire se calculait de deux façons
+à un ULP près (`Math.PI * r * r` cinq fois, `(Math.PI * r2)` pour l'éclaircie).
+Il n'existait donc pas d'« avant » unique à préserver. On prend la forme
+majoritaire, et l'essai BORNE ce que l'autre y perd plutôt que de l'ignorer :
+rien, sur quatorze mille couples (rayon, densité), le `Math.round` du nombre de
+tiges à garder absorbant l'écart.
+
+**Et l'empreinte bout à bout, alors ?** Elle est tenue par la suite elle-même,
+et mieux qu'elle ne l'était par un hash : des centaines d'essais épinglent des
+grandeurs écologiques absolues, et un refactor qui déplacerait une partie en
+casserait. À quoi ce lot ajoute trois contrôles d'EMPREINTE AU SOL, qui prennent
+la géométrie par l'autre bout : on joue `cloturer`, `labourer`, `chauler` sur des
+disques volontairement décentrés, et l'ensemble des cellules qui ont bougé doit
+être exactement celui d'avant. C'est ce qui attrape un argument mal branché — un
+x et un y échangés —, c'est instantané, et c'est portable : on compare des
+indices, pas des flottants.
 
 **La compatibilité se paie par un discriminant FACULTATIF.** `ZoneDisque`
 déclare `zone?: "disque"`, si bien qu'une action écrite `{ x, y, rayonM }` —

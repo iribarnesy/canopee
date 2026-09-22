@@ -16,13 +16,28 @@
  *
  * ── CE QUE CE MODULE GARANTIT ────────────────────────────────────────────────
  *
- * **Le disque reste le comportement par défaut, au bit près.** `zone` est
- * FACULTATIF sur la variante disque : une action écrite `{ x, y, rayonM }` —
- * c'est-à-dire toutes celles qui existent, dans le moteur comme dans les essais
- * — reste valide sans être touchée, et rend exactement les mêmes cellules
- * qu'avant. Ce n'est pas une politesse envers l'existant : c'est le seul
- * contrôle qui vaille sur un refactor qui traverse dix actions. Une partie
- * rejouée doit donner le même `stateHash`, et un essai l'exige.
+ * **Le disque reste le comportement par défaut, au bit près — à deux exceptions
+ * près, qui sont écrites.** `zone` est FACULTATIF sur la variante disque : une
+ * action écrite `{ x, y, rayonM }` — c'est-à-dire toutes celles qui existent,
+ * dans le moteur comme dans les essais — reste valide sans être touchée, et rend
+ * exactement les mêmes cellules qu'avant. Ce n'est pas une politesse envers
+ * l'existant : c'est le seul contrôle qui vaille sur un refactor qui traverse
+ * dix actions, et `tests/unit/zone.test.ts` le tient sur cinq cents disques
+ * tirés au hasard plutôt que sur des cas choisis.
+ *
+ * Les deux exceptions, trouvées par ce balayage et par lui seul :
+ *
+ *  1. **`actions.ts` avait DEUX routes qui ne faisaient pas la même chose.**
+ *     `forEachDiscCell` garantissait au moins une cellule, `cellulesDuDisque`
+ *     non — si bien qu'un `semer` de vingt centimètres ne semait rien, en
+ *     silence et facturé, quand un `faucher` du même rayon fauchait une cellule.
+ *     La zone unifie sur la garantie. Seul ce cas dégénéré change.
+ *  2. **L'aire se calculait de deux façons à un ULP près.** Cinq appels
+ *     écrivaient `Math.PI * r * r`, l'éclaircie écrivait `(Math.PI * r2)`. Il
+ *     n'y a donc pas d'« avant » unique à préserver ; on prend la forme
+ *     majoritaire, et l'essai borne ce que l'éclaircie y perd : rien, le
+ *     `Math.round` du nombre de tiges à garder absorbant l'ULP sur tous les
+ *     couples (rayon, densité) plausibles.
  *
  * Les six opérations que la forme doit savoir rendre sont celles que le moteur
  * lui demandait déjà, une par usage relevé dans `actions.ts` : la liste des
@@ -125,8 +140,9 @@ export function pourChaqueCelluleDeLaZone(
 /**
  * Les cellules de la zone sur une parcelle carrée de côté `coteM`.
  *
- * Même règle que ci-dessus, et c'est le remplaçant direct de `cellulesDuDisque`
- * dans `actions.ts`.
+ * Même règle que ci-dessus, et c'est ce qui remplace `cellulesDuDisque` dans
+ * `actions.ts` — à une différence près, voulue : l'ancienne fonction n'avait pas
+ * la garantie « au moins une cellule », celle-ci l'a. Voir l'en-tête.
  */
 export function cellulesDeLaZone(coteM: number, zone: Zone): number[] {
   const out: number[] = [];

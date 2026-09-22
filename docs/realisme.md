@@ -200,8 +200,10 @@ distance, et un tronc carié devient un arbre à cavités qui loge les auxiliair
 moteur)
 → **93 % (la géométrie d'un chantier cesse d'être un disque : on peut travailler
 en bande, et la mécanisation le sent — AUCUN point gagné, c'est une
-infrastructure, et son seul livrable est une empreinte de partie inchangée au
-bit près)**.*
+infrastructure. Son livrable est une identité, tenue sur cinq cents disques
+tirés au hasard plutôt que sur des cas choisis, ce qui a fait tomber deux
+divergences que personne n'aurait vues : un semis minuscule ne semait rien, et
+l'aire se calculait de deux façons à un ULP près)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;

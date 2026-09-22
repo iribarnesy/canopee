@@ -1,30 +1,44 @@
 /**
  * LA ZONE D'UN CHANTIER (issue #186).
  *
- * Ce fichier tient d'abord une chose, et c'est la seule qui rende le refactor
- * sûr : **pour un disque, la nouvelle géométrie rend EXACTEMENT les mêmes
- * cellules que l'ancienne.** Pas « à peu près », pas « en moyenne » — les mêmes
- * indices, dans le même ordre. Dix actions vont changer de signature ; sans
- * cette égalité, rien ne distingue un refactor réussi d'un refactor qui déplace
- * silencieusement toutes les parties.
+ * Ce fichier tient une chose, et c'est la seule qui rende le refactor sûr :
+ * **pour un disque, la nouvelle géométrie rend EXACTEMENT ce que rendait
+ * l'ancienne.** Pas « à peu près », pas « en moyenne » — les mêmes indices dans
+ * le même ordre, et les mêmes flottants au bit près. Dix actions ont changé de
+ * signature ; sans cette égalité, rien ne distingue un refactor réussi d'un
+ * refactor qui déplace silencieusement toutes les parties.
  *
- * Le reste vérifie que la bande est bien une bande.
+ * ── CE QUI A ÉTÉ TENTÉ D'ABORD, ET POURQUOI C'ÉTAIT FAUX ─────────────────────
+ *
+ * Le premier contrôle épinglait en dur le `stateHash` d'une partie de douze ans,
+ * relevé sur le commit d'AVANT (`ffca0fb`). Il passait ici et **tombait en CI**.
+ * Ce n'était pas le refactor : `stateHash` est un FNV-1a sur les flottants bruts
+ * de chaque arbre, donc un ULP n'importe où le change, et le moteur ne rend pas
+ * les mêmes derniers bits selon la version de V8. Mesuré des deux côtés :
+ *
+ *     empreinte de la même partie      avant (ffca0fb)   après (ce lot)
+ *     Node 20 (V8 11.3), Node 22 (12.4)   3 806 937 118   3 806 937 118
+ *     Node 24 (V8 13.6) — celui de la CI    633 354 304     633 354 304
+ *
+ * Le refactor est donc bien neutre SUR LES DEUX plateformes ; c'est la valeur
+ * absolue qui n'est pas portable. Un essai dont le verdict dépend de la machine
+ * ne prouve rien — c'est la même faute que l'essai qui écrivait dans mon dossier
+ * de travail et passait chez moi. On ne l'assertait donc pas : on garde la
+ * mesure ci-dessus comme relevé, et les contrôles ci-dessous, qui sont exacts et
+ * portables. Le bout-à-bout, lui, est tenu par la suite entière — 1 671 essais
+ * dont des centaines épinglent des grandeurs écologiques, verts avant comme
+ * après, sous Node 22 comme sous Node 24.
+ *
+ * (Et la conclusion qui dépasse ce lot : les CHIFFRES du moteur sont portables,
+ * ses BITS ne le sont pas. Sorti en #193.)
  */
 
 import { describe, expect, it } from "vitest";
-import { serieMeteoPour } from "../../src/data/meteo";
-import { applyAction, type GameAction } from "../../src/engine/actions";
-import { forEachDiscCell, type GridDims } from "../../src/engine/grid";
-import { serieToWeeks } from "../../src/engine/meteo";
+import { applyAction } from "../../src/engine/actions";
+import { cellIndexAt, forEachDiscCell, type GridDims } from "../../src/engine/grid";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import {
-  createGameState,
-  type GameState,
-  plantScattered,
-  type Station,
-} from "../../src/engine/state";
+import { createGameState, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
-import { stateHash, tick } from "../../src/engine/tick";
 import {
   aireM2DeLaZone,
   cellulesDeLaZone,
@@ -36,18 +50,39 @@ import {
 
 const DIMS: GridDims = { widthM: 40, heightM: 40 };
 
-/**
- * L'empreinte de la partie témoin, relevée AVANT le refactor sur `ffca0fb`.
- * Elle est en dur, et c'est tout l'intérêt : recalculée depuis le moteur, elle
- * suivrait le changement au lieu de le contrôler.
- */
-const EMPREINTE_AVANT_ZONE = 3_806_937_118;
-
 /** L'ancienne route, telle quelle, pour comparer. */
-function ancien(cx: number, cy: number, r: number): number[] {
+function ancien(cx: number, cy: number, r: number, dims: GridDims = DIMS): number[] {
   const out: number[] = [];
-  forEachDiscCell(DIMS, cx, cy, r, (i) => out.push(i));
+  forEachDiscCell(dims, cx, cy, r, (i) => out.push(i));
   return out;
+}
+
+/**
+ * `cellulesDuDisque` DE L'ANCIEN `actions.ts`, recopiée telle quelle. Ce n'est
+ * pas la même route que `forEachDiscCell` : elle balaie toute la parcelle et
+ * n'a PAS la garantie « au moins une cellule ». Les deux existaient, les deux
+ * doivent être reproduites.
+ */
+function ancienneCellulesDuDisque(cote: number, cx: number, cy: number, rayonM: number): number[] {
+  const out: number[] = [];
+  const r2 = rayonM * rayonM;
+  for (let y = 0; y < cote; y++) {
+    for (let x = 0; x < cote; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      if (dx * dx + dy * dy <= r2) out.push(y * cote + x);
+    }
+  }
+  return out;
+}
+
+/** Générateur reproductible : un balayage au hasard vaut mieux qu'un cas choisi. */
+function tirage(graine: number): () => number {
+  let s = graine;
+  return () => {
+    s = (s * 1103515245 + 12345) % 2147483648;
+    return s / 2147483648;
+  };
 }
 
 describe("le disque ne bouge pas d'un indice", () => {
@@ -74,14 +109,155 @@ describe("le disque ne bouge pas d'un indice", () => {
     }
   });
 
-  it("et `cellulesDeLaZone` rend la même chose que le parcours", () => {
-    const zone: Zone = { x: 12, y: 27, rayonM: 6 };
-    expect(cellulesDeLaZone(40, zone)).toEqual(ancien(12, 27, 6));
+  it("et sur cinq cents disques tirés au hasard, les deux routes d'avant", () => {
+    // Neuf cas choisis prouvent ce à quoi on a pensé. Cinq cents tirés prouvent
+    // aussi ce à quoi on n'a pas pensé — et c'est bien ce qui est arrivé : le
+    // balayage a trouvé la SECONDE divergence du refactor, que les neuf cas de
+    // bord avaient manquée.
+    //
+    // `cellulesDuDisque` n'avait PAS la garantie « au moins une cellule », que
+    // `forEachDiscCell` avait. Les deux vivaient côte à côte dans `actions.ts` :
+    // `semer` et `moissonner` passaient par la première, tout le reste par la
+    // seconde, si bien qu'un semis de vingt centimètres ne semait rien du tout
+    // — en silence, et facturé. La zone unifie sur la garantie, donc ce cas-là
+    // change, et lui seul : hors de lui, les deux listes sont identiques.
+    const suivant = tirage(20260922);
+    let degeneres = 0;
+    for (let n = 0; n < 500; n++) {
+      const x = -5 + suivant() * 50;
+      const y = -5 + suivant() * 50;
+      const rayonM = suivant() * 25;
+      const zone: Zone = { x, y, rayonM };
+
+      const parcours: number[] = [];
+      pourChaqueCelluleDeLaZone(DIMS, zone, (i) => parcours.push(i));
+      expect(parcours, `parcours (${x}, ${y}, r=${rayonM})`).toEqual(ancien(x, y, rayonM));
+
+      const attendu = ancienneCellulesDuDisque(40, x, y, rayonM);
+      const obtenu = cellulesDeLaZone(40, zone);
+      if (attendu.length > 0) {
+        expect(obtenu, `liste (${x}, ${y}, r=${rayonM})`).toEqual(attendu);
+      } else {
+        degeneres++;
+        expect(obtenu, `liste dégénérée (${x}, ${y}, r=${rayonM})`).toEqual([
+          cellIndexAt(DIMS, x, y),
+        ]);
+      }
+    }
+    // Le cas dégénéré doit être RENCONTRÉ, sinon la branche ci-dessus ne prouve
+    // rien — et rester rare, sinon le tirage ne teste plus le cas courant.
+    expect(degeneres).toBeGreaterThan(0);
+    expect(degeneres).toBeLessThan(40);
   });
 
-  it("l'aire et le périmètre restent ceux d'un disque", () => {
-    expect(aireM2DeLaZone({ x: 0, y: 0, rayonM: 3 })).toBeCloseTo(Math.PI * 9, 12);
-    expect(perimetreMDeLaZone({ x: 0, y: 0, rayonM: 3 })).toBeCloseTo(6 * Math.PI, 12);
+  it("l'aire et le périmètre sont les MÊMES FLOTTANTS, pas des valeurs proches", () => {
+    // `toBe` et non `toBeCloseTo` : ces nombres facturent des heures de chantier
+    // et entrent dans le `stateHash`. Une réassociation d'un ULP suffirait à
+    // déplacer une partie, donc l'expression doit être la même, pas équivalente.
+    const suivant = tirage(7);
+    for (let n = 0; n < 2000; n++) {
+      const rayonM = suivant() * 60;
+      expect(aireM2DeLaZone({ x: 0, y: 0, rayonM })).toBe(Math.PI * rayonM * rayonM);
+      expect(perimetreMDeLaZone({ x: 0, y: 0, rayonM })).toBe(2 * Math.PI * rayonM);
+    }
+  });
+
+  it("et `zoneContient` tranche exactement comme le test au carré d'avant", () => {
+    // Les actions ne testent pas que des centres de cellule : `labourer` et
+    // `eclaircir` testent aussi des POSITIONS D'ARBRE, continues.
+    const suivant = tirage(99);
+    for (let n = 0; n < 5000; n++) {
+      const cx = suivant() * 40;
+      const cy = suivant() * 40;
+      const rayonM = suivant() * 20;
+      const px = suivant() * 40;
+      const py = suivant() * 40;
+      const dx = px - cx;
+      const dy = py - cy;
+      expect(zoneContient({ x: cx, y: cy, rayonM }, px, py)).toBe(
+        dx * dx + dy * dy <= rayonM * rayonM,
+      );
+    }
+  });
+
+  it("LE SEUL ENDROIT QUI N'EST PAS AU BIT PRÈS, et de combien", () => {
+    // `choisirTigesAEclaircir` écrivait `(Math.PI * r2) / 10_000`, soit
+    // π·(r·r) ; les cinq autres appels écrivaient `Math.PI * r * r`, soit
+    // (π·r)·r. Les deux familles se contredisaient DÉJÀ d'un ULP entre elles :
+    // il n'existe donc pas d'« avant » unique à préserver. `aireM2DeLaZone`
+    // prend la forme majoritaire, et l'éclaircie se décale d'au plus un ULP sur
+    // 30 % des rayons.
+    //
+    // Ce décalage ne peut changer une partie que s'il fait basculer le
+    // `Math.round` du nombre de tiges à garder. Balayé sur les rayons et les
+    // densités plausibles : jamais.
+    let differents = 0;
+    let couples = 0;
+    for (let r = 0.5; r <= 60; r += 0.05) {
+      const avant = (Math.PI * (r * r)) / 10_000;
+      const apres = (Math.PI * r * r) / 10_000;
+      for (const densite of [50, 100, 120, 150, 200, 300, 400, 500, 800, 1000, 1600, 2500]) {
+        couples++;
+        if (Math.round(densite * avant) !== Math.round(densite * apres)) differents++;
+      }
+    }
+    expect(couples).toBeGreaterThan(14_000);
+    expect(differents).toBe(0);
+  });
+});
+
+describe("l'empreinte d'un chantier sur le sol est celle d'avant", () => {
+  // Les contrôles ci-dessus portent sur la géométrie prise à part. Ceux-ci la
+  // prennent PAR L'AUTRE BOUT : on joue l'action, et on regarde quelles cellules
+  // du sol ont bougé. C'est ce qui attrape un argument mal branché — un centre
+  // inversé, un rayon passé à la place d'un autre —, et les zones sont
+  // volontairement DÉCENTRÉES et asymétriques pour qu'un échange de x et y se
+  // voie. Instantané, et portable : on compare des ensembles d'indices, pas des
+  // flottants.
+  const COTE = 40;
+  const station: Station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
+  const neuf = () => createGameState(station, rngStateFromSeed(3));
+  const dims: GridDims = { widthM: COTE, heightM: COTE };
+
+  it("clôturer clôt exactement le disque, et pas son symétrique", () => {
+    const { state } = applyAction(neuf(), {
+      type: "cloturer",
+      week: 10,
+      x: 12.3,
+      y: 27.8,
+      rayonM: 6.4,
+    });
+    const closes = [...state.soil.cloture.keys()].filter((i) => state.soil.cloture[i]);
+    expect(closes).toEqual(ancien(12.3, 27.8, 6.4, dims));
+    expect(closes).not.toEqual(ancien(27.8, 12.3, 6.4, dims));
+  });
+
+  it("labourer tasse exactement le disque — l'autre route, celle sans garantie", () => {
+    const { state, refusals } = applyAction(neuf(), {
+      type: "labourer",
+      week: 30,
+      x: 9.7,
+      y: 31.2,
+      rayonM: 5.5,
+    });
+    expect(refusals).toEqual([]);
+    const laboures = [...state.soil.tassement.keys()].filter(
+      (i) => (state.soil.tassement[i] ?? 0) > 0,
+    );
+    expect(laboures).toEqual(ancienneCellulesDuDisque(COTE, 9.7, 31.2, 5.5));
+  });
+
+  it("chauler relève le pH exactement sur le disque", () => {
+    const avant = neuf();
+    const { state } = applyAction(avant, {
+      type: "chauler",
+      week: 12,
+      x: 30.4,
+      y: 8.1,
+      rayonM: 7.2,
+    });
+    const chaulees = [...state.soil.ph.keys()].filter((i) => state.soil.ph[i] !== avant.soil.ph[i]);
+    expect(chaulees).toEqual(ancienneCellulesDuDisque(COTE, 30.4, 8.1, 7.2));
   });
 });
 
@@ -135,55 +311,4 @@ describe("la bande est une bande", () => {
     const debordante: Zone = { ...horizontale, x: 0, y: 0, longueurM: 200, largeurM: 200 };
     expect(cellulesDeLaZone(40, debordante).length).toBe(40 * 40);
   });
-});
-
-describe("le refactor ne déplace aucune partie", () => {
-  it("une partie jouée avec des actions de disque rend le même stateHash", () => {
-    // LE CONTRÔLE QUI REND LE REFACTOR SÛR, et le seul. Dix actions ont changé
-    // de signature ; l'égalité des cellules (ci-dessus) le prouve unité par
-    // unité, celle-ci le prouve BOUT À BOUT — une partie entière, avec des
-    // gestes qui labourent, fauchent, chaulent, éclaircissent et épandent,
-    // doit rendre exactement l'empreinte qu'elle rendait avant.
-    //
-    // L'empreinte est épinglée en dur : recalculée depuis le moteur, elle
-    // n'aurait rien prouvé du tout — elle aurait suivi le changement.
-    const COTE = 30;
-    const station: Station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
-    const serie = serieMeteoPour(LIMON_RICHE.station.id);
-    if (!serie) throw new Error("série manquante");
-    const meteo = serieToWeeks(serie);
-    let s: GameState = plantScattered(
-      createGameState(station, rngStateFromSeed(7)),
-      "quercus_pubescens",
-      80,
-    );
-    const centre = COTE / 2;
-    for (let an = 0; an < 12; an++) {
-      for (let w = 0; w < 52; w++) {
-        const week = an * 52 + w;
-        const geste = (a: GameAction) => {
-          s = applyAction(s, a).state;
-        };
-        if (w === 8) geste({ type: "faucher", week, x: centre, y: centre, rayonM: 8 });
-        if (w === 12 && an % 3 === 0)
-          geste({ type: "chauler", week, x: centre, y: centre, rayonM: 6 });
-        if (w === 20 && an === 4)
-          geste({
-            type: "eclaircir",
-            week,
-            x: centre,
-            y: centre,
-            rayonM: 12,
-            densiteCibleParHa: 400,
-            critere: "parLeBas",
-            devenir: "laisser",
-          });
-        if (w === 30 && an === 6) geste({ type: "labourer", week, x: 8, y: 8, rayonM: 5 });
-        const m = meteo[week % meteo.length];
-        if (!m) throw new Error("météo manquante");
-        s = tick(s, m).state;
-      }
-    }
-    expect(stateHash(s)).toBe(EMPREINTE_AVANT_ZONE);
-  }, 300_000);
 });
