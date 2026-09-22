@@ -24,6 +24,7 @@ import { getEspece } from "../../src/engine/especes";
 import {
   type ArbrePorteur,
   arbresMurs,
+  especesSemees,
   fautIlCueillir,
   fautIlPrevenir,
   SEUIL_ARBRE_KG,
@@ -48,13 +49,14 @@ const POMMIER = fruitsDe("malus_domestica");
 function saison(cueillies: Set<number>): (semaine: number) => ArbrePorteur[] {
   return (semaine) =>
     [
-      { id: 1, espece: RONCE, kg: 40 },
-      { id: 2, espece: POMMIER, kg: 30 },
-    ].map(({ id, espece, kg }) => {
+      { id: 1, especeId: "rubus_fruticosus", espece: RONCE, kg: 40 },
+      { id: 2, especeId: "malus_domestica", espece: POMMIER, kg: 30 },
+    ].map(({ id, especeId, espece, kg }) => {
       const dansLaFenetre =
         semaine >= espece.recolteWeek && semaine < espece.recolteWeek + espece.fenetreRecolteWeeks;
       return {
         id,
+        especeId,
         alive: true,
         fruitsKg: dansLaFenetre && !cueillies.has(id) ? kg : 0,
       };
@@ -77,10 +79,10 @@ function rejouer(regle: (kg: number, kgAvant: number) => boolean): Set<number> {
 describe("les arbres mûrs", () => {
   it("écarte les morts et ce qui ne vaut pas le geste", () => {
     const arbres: ArbrePorteur[] = [
-      { id: 1, alive: true, fruitsKg: 12 },
-      { id: 2, alive: false, fruitsKg: 40 },
-      { id: 3, alive: true, fruitsKg: SEUIL_ARBRE_KG },
-      { id: 4, alive: true, fruitsKg: 8 },
+      { id: 1, especeId: "malus_domestica", alive: true, fruitsKg: 12 },
+      { id: 2, especeId: "malus_domestica", alive: false, fruitsKg: 40 },
+      { id: 3, especeId: "malus_domestica", alive: true, fruitsKg: SEUIL_ARBRE_KG },
+      { id: 4, especeId: "malus_domestica", alive: true, fruitsKg: 8 },
     ];
     const murs = arbresMurs(arbres);
     expect(murs.ids).toEqual([1, 4]);
@@ -88,7 +90,10 @@ describe("les arbres mûrs", () => {
   });
 
   it("ne rend rien sur une parcelle sans fruits", () => {
-    expect(arbresMurs([{ id: 1, alive: true, fruitsKg: 0 }])).toEqual({ ids: [], kg: 0 });
+    expect(arbresMurs([{ id: 1, especeId: "malus_domestica", alive: true, fruitsKg: 0 }])).toEqual({
+      ids: [],
+      kg: 0,
+    });
   });
 });
 
@@ -125,6 +130,7 @@ describe("la même mesure des deux côtés (#191)", () => {
    */
   const MIETTES: ArbrePorteur[] = Array.from({ length: 200 }, (_, i) => ({
     id: 1000 + i,
+    especeId: "rubus_fruticosus",
     alive: true,
     fruitsKg: 0.14,
   }));
@@ -138,7 +144,9 @@ describe("la même mesure des deux côtés (#191)", () => {
   });
 
   it("comparé à la BONNE grandeur, le front se lève pour l'essence suivante", () => {
-    const pommiers: ArbrePorteur[] = [{ id: 1, alive: true, fruitsKg: 115 }];
+    const pommiers: ArbrePorteur[] = [
+      { id: 1, especeId: "malus_domestica", alive: true, fruitsKg: 115 },
+    ];
     const parcelle = [...MIETTES, ...pommiers];
     // La semaine d'avant : rien de cueillable, seulement des miettes.
     const precedentJuste = arbresMurs(MIETTES).kg;
@@ -146,10 +154,49 @@ describe("la même mesure des deux côtés (#191)", () => {
   });
 
   it("comparé au total BRUT, il ne se lève jamais — c'est ce qui se passait", () => {
-    const pommiers: ArbrePorteur[] = [{ id: 1, alive: true, fruitsKg: 115 }];
+    const pommiers: ArbrePorteur[] = [
+      { id: 1, especeId: "malus_domestica", alive: true, fruitsKg: 115 },
+    ];
     const parcelle = [...MIETTES, ...pommiers];
     const precedentBrut = MIETTES.reduce((s, t2) => s + t2.fruitsKg, 0);
     expect(fautIlPrevenir(arbresMurs(parcelle).kg, precedentBrut)).toBe(false);
+  });
+});
+
+describe("on ne cueille que ce qu'on a semé", () => {
+  const RONCES: ArbrePorteur[] = Array.from({ length: 40 }, (_, i) => ({
+    id: 1000 + i,
+    especeId: "rubus_fruticosus",
+    alive: true,
+    fruitsKg: 9.5,
+  }));
+  const POMMIERS: ArbrePorteur[] = [
+    { id: 1, especeId: "malus_domestica", alive: true, fruitsKg: 115 },
+  ];
+
+  it("la friche ne se cueille pas toute seule, même quand elle pèse plus lourd", () => {
+    const parcelle = [...RONCES, ...POMMIERS];
+    expect(arbresMurs(parcelle).kg).toBeCloseTo(495, 0);
+    // Le joueur n'a semé que des pommiers : c'est tout ce qu'on lui cueille.
+    const verger = arbresMurs(parcelle, new Set(["malus_domestica"]));
+    expect(verger.kg).toBe(115);
+    expect(verger.ids).toEqual([1]);
+  });
+
+  it("les essences semées se lisent dans le journal du joueur", () => {
+    const journal = [
+      { type: "planter", especeId: "malus_domestica" },
+      { type: "couper" },
+      { type: "planter", especeId: "malus_domestica" },
+      { type: "planter", especeId: "corylus_avellana" },
+      { type: "chauler" },
+    ];
+    expect(especesSemees(journal)).toEqual(new Set(["malus_domestica", "corylus_avellana"]));
+  });
+
+  it("sans filtre, tout se cueille — c'est le bac à sable qui n'a rien semé", () => {
+    expect(arbresMurs(RONCES).ids.length).toBe(40);
+    expect(arbresMurs(RONCES, new Set()).ids).toEqual([]);
   });
 });
 

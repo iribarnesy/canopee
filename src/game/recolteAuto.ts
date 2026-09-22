@@ -34,15 +34,50 @@ export const SEUIL_ARBRE_KG = 0.5;
 /** En dessous, la parcelle entière n'a rien qui vaille une action. */
 export const SEUIL_PARCELLE_KG = 1;
 
+/**
+ * Les essences que le joueur a SEMÉES lui-même, d'après son propre journal.
+ *
+ * **Rien à demander au moteur** : chaque action `planter` porte son essence, et
+ * le journal est la sauvegarde. C'est la seule chose qui distingue un verger
+ * d'une friche, et le moteur n'a aucune raison de la connaître — pour lui, un
+ * pommier planté et une ronce venue de la haie sont deux tiges.
+ */
+export function especesSemees(
+  actions: readonly { type: string; especeId?: string }[],
+): Set<string> {
+  const vues = new Set<string>();
+  for (const a of actions) {
+    if (a.type === "planter" && a.especeId) vues.add(a.especeId);
+  }
+  return vues;
+}
+
 /** Ce qu'un arbre porte, vu d'ici. */
 export interface ArbrePorteur {
   id: number;
+  especeId: string;
   alive: boolean;
   fruitsKg: number;
 }
 
-/** Les arbres qu'il y a lieu de cueillir, et ce qu'ils portent en tout. */
-export function arbresMurs(arbres: readonly ArbrePorteur[]): {
+/**
+ * Les arbres qu'il y a lieu de cueillir, et ce qu'ils portent en tout.
+ *
+ * **On ne cueille que ce qu'on a semé**, quand `semees` est donné. La récolte
+ * automatique existe pour qu'on ne rate pas SA fenêtre de récolte en avançant
+ * vite ; cueillir la friche qui a envahi la parcelle n'est pas ça. Mesuré dans
+ * une partie : « Récolte : 382 kg de ronce → +1527 € (152,7 h) », cent
+ * cinquante-deux heures dans une semaine qui en compte soixante, passées sur
+ * des ronces que personne n'avait plantées — dans un niveau qui parle de
+ * pommes.
+ *
+ * Le joueur garde la main : une essence qu'il n'a pas semée se récolte en la
+ * sélectionnant, comme n'importe quel geste.
+ */
+export function arbresMurs(
+  arbres: readonly ArbrePorteur[],
+  semees?: ReadonlySet<string>,
+): {
   ids: number[];
   kg: number;
 } {
@@ -50,6 +85,7 @@ export function arbresMurs(arbres: readonly ArbrePorteur[]): {
   let kg = 0;
   for (const a of arbres) {
     if (!a.alive || a.fruitsKg <= SEUIL_ARBRE_KG) continue;
+    if (semees && !semees.has(a.especeId)) continue;
     ids.push(a.id);
     kg += a.fruitsKg;
   }

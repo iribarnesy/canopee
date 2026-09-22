@@ -20,6 +20,7 @@ import { getEspece, STATIONS_V0 } from "../engine";
 import { SCENARIOS } from "../engine/climat";
 import { PAYSAGES } from "../engine/paysage";
 import type { SaveGame } from "./protocol";
+import { especesSemees } from "./recolteAuto";
 
 /** L'ancienne clé, celle de l'emplacement unique. */
 export const CLE_ANCIENNE = "canopee-sauvegarde";
@@ -224,9 +225,8 @@ function nomDuPaysage(id: string | undefined): string {
 
 /** Les essences plantées dans cette partie, pour reconnaître ce qu'on a fait. */
 export function essencesPlantees(save: SaveGame): string[] {
-  const vues = new Set<string>();
-  for (const a of save.actions) {
-    if (a.type === "planter") vues.add(a.especeId);
-  }
-  return [...vues].map((id) => getEspece(id).nom);
+  // La MÊME dérivation que celle dont la récolte automatique se sert pour savoir
+  // ce qu'elle a le droit de cueillir (`recolteAuto.ts`). Deux copies de cette
+  // liste finiraient par ne plus désigner le même verger.
+  return [...especesSemees(save.actions)].map((id) => getEspece(id).nom);
 }

@@ -74,7 +74,7 @@ import type {
   StationInfo,
   ToWorker,
 } from "./protocol";
-import { arbresMurs, fautIlPrevenir } from "./recolteAuto";
+import { arbresMurs, especesSemees, fautIlPrevenir } from "./recolteAuto";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 import { CAUSE_AU_SINGULIER } from "./suivis";
 
@@ -83,6 +83,15 @@ let weather: WeekWeather[] = [];
 /** état courant, toujours « semaine ouverte » */
 let state: GameState | undefined;
 let journal: GameAction[] = [];
+/**
+ * Ce que le joueur a SEMÉ, tiré de son propre journal.
+ *
+ * C'est ce qui sépare son verger de la friche qui l'entoure, et la récolte
+ * automatique s'y tient : elle existe pour qu'on ne rate pas SA fenêtre de
+ * récolte en avançant vite, pas pour cueillir des ronces à cent cinquante
+ * heures la semaine.
+ */
+let semees: ReadonlySet<string> = new Set();
 let meteoMode: "reelle" | "synthetique" = "reelle";
 let scenario: ScenarioId = "ssp245";
 let anneeDepart = 2026;
@@ -296,6 +305,7 @@ function performAction(action: GameAction) {
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
   switch (action.type) {
     case "planter": {
+      semees = especesSemees(journal);
       const n = state.trees.length - before.trees.length;
       if (n > 0)
         event(
@@ -971,7 +981,7 @@ function stepWeeks(n: number) {
     // Fruits mûrs : récolte auto, ou pause pour laisser la main. Les deux
     // décisions vivent dans `recolteAuto.ts`, où un essai peut les prendre en
     // faute — ici elles étaient confondues en une seule condition.
-    const murs = arbresMurs(state.trees);
+    const murs = arbresMurs(state.trees, semees);
     // Le front montant : on n'agit qu'à l'ARRIVÉE d'une maturité, pas à chaque
     // semaine où elle dure. Il ne vaut que si les deux termes comparés sont la
     // MÊME grandeur — voir la mise à jour de `prevFruitsReadyKg` plus bas, qui
@@ -1005,7 +1015,7 @@ function stepWeeks(n: number) {
     // l'année, le front ne retombait jamais, et plus rien n'était cueilli après
     // la première essence mûre. Mesuré en jeu : 115 kg de pommes sur l'arbre en
     // semaine 39, comparés à un « précédent » de 28 kg de miettes.
-    prevFruitsReadyKg = arbresMurs(state.trees).kg;
+    prevFruitsReadyKg = arbresMurs(state.trees, semees).kg;
   }
 }
 
@@ -1132,6 +1142,7 @@ function init(
   politiqueHoraire = "demander";
   // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
   cumuls = CUMULS_VIDES;
+  semees = new Set();
   // …ni son niveau : l'interface réinstalle celui qu'elle lance.
   niveauId = undefined;
   paliersAcquis = [];
@@ -1202,6 +1213,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
       normales = normalesHebdo(weather);
       journal = msg.save.actions;
+      // Le journal rejoué rend aussi ce qui a été semé : sans ça, reprendre une
+      // partie ferait cueillir la friche.
+      semees = especesSemees(journal);
       let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed), {
         economie,
       });
