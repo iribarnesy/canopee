@@ -76,7 +76,7 @@ import {
   supprimerSauvegarde,
 } from "./sauvegardes";
 import { useBilan } from "./useBilan";
-import { useEllipse } from "./useEllipse";
+import { useEllipse, vitesseDeRelecture } from "./useEllipse";
 import { useGame } from "./useGame";
 import { useNiveau } from "./useNiveau";
 import { useSuivis } from "./useSuivis";
@@ -1278,7 +1278,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * LES ARBRES SUIVIS et leur journal (#149). Le worker en tient la liste, lui
    * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
    */
-  const suivis = useSuivis(snapshot, game.suivre);
+  const suivis = useSuivis(snapshot, game.suivre, game.rembobinage.enCours !== undefined);
   const enNiveau = useNiveau(game);
 
   /**
@@ -1374,7 +1374,10 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * avançait, groupé et situé. Il vit à côté des marqueurs de l'ellipse et sur
    * la même durée qu'eux — voir `useBilan.ts`.
    */
-  const bilan = useBilan(game.bilan, game.speed > 0);
+  // **La période ne se referme pas parce qu'on la revoit (#128).** L'horloge
+  // repart pendant une relecture, et sans cette garde le bilan qu'on venait
+  // rejouer s'effacerait au moment même où l'on appuie sur « revoir ».
+  const bilan = useBilan(game.bilan, game.speed > 0 && game.rembobinage.enCours === undefined);
 
   /**
    * CE QUI S'EST PASSÉ PENDANT TOUT LE NIVEAU, pour l'écran de fin.
@@ -1729,18 +1732,43 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         et les vitesses. Tout le reste est derrière un bouton — rien de tout
         cela n'a besoin d'être relu à chaque semaine de jeu.
       */}
-      <div style={{ ...VOLET, top: 12, left: 12 }}>
-        <Bandeau game={game} snapshot={snapshot} />
-      </div>
-
       {/*
-        L'OBJECTIF (#188), sous le bandeau et par-dessus la vue : c'est le seul
-        endroit que l'œil retrouve sans chercher, et un objectif qu'on doit
-        aller ouvrir n'en est pas un.
+        **Empilés, et pas posés chacun à sa hauteur.** La fiche du niveau
+        portait un `top: 104` — la hauteur du bandeau, recopiée — et la ligne
+        de relecture (#128) l'a fait diverger sur-le-champ : la fiche est venue
+        couvrir les boutons de vitesse. Une colonne les tient dans l'ordre, et
+        personne n'a plus à connaître la hauteur de l'autre.
+
+        `pointerEvents` ne s'ouvre que sur les cartes : la colonne elle-même
+        s'étend sur toute la hauteur laissée libre, et sans ça elle avalerait
+        les clics destinés à la parcelle.
       */}
-      {enNiveau.niveau && enNiveau.avancement && (
-        <PanneauNiveau niveau={enNiveau.niveau} avancement={enNiveau.avancement} />
-      )}
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          left: 12,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 8,
+          pointerEvents: "none",
+        }}
+      >
+        <div style={{ ...VOLET, position: "static", pointerEvents: "auto" }}>
+          <Bandeau game={game} snapshot={snapshot} />
+        </div>
+        {/*
+          L'OBJECTIF (#188), sous le bandeau et par-dessus la vue : c'est le
+          seul endroit que l'œil retrouve sans chercher, et un objectif qu'on
+          doit aller ouvrir n'en est pas un.
+        */}
+        {enNiveau.niveau && enNiveau.avancement && (
+          <div style={{ pointerEvents: "auto" }}>
+            <PanneauNiveau niveau={enNiveau.niveau} avancement={enNiveau.avancement} />
+          </div>
+        )}
+      </div>
       {/*
         LA SORTIE SE CONFIRME. Un retour accidentel vidait l'écran sans un mot ;
         la partie était bien sauvegardée, mais rien ne le disait — d'où cette
@@ -1966,10 +1994,42 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 tête parce qu'il est le résumé ; le fil, dessous, garde ce
                 que seul le moteur sait dire — le pH sous l'arbre qui a tué.
               */}
-              <h3 style={{ margin: "2px 0 4px", fontSize: 13 }}>
-                Ce qui a changé
-                {bilan.depuis > 0 ? ` depuis l'an ${Math.floor(bilan.depuis / 52) + 1}` : ""}
-              </h3>
+              <div style={{ display: "flex", gap: 8, alignItems: "baseline", margin: "2px 0 4px" }}>
+                <h3 style={{ margin: 0, fontSize: 13, flex: 1 }}>
+                  Ce qui a changé
+                  {bilan.depuis > 0 ? ` depuis l'an ${Math.floor(bilan.depuis / 52) + 1}` : ""}
+                </h3>
+                {/*
+                  LE REMBOBINAGE (#128, §6.8 №3), et il n'a pas d'autre bouton.
+
+                  Il est ICI, contre le bilan, parce que c'est là qu'il répond à
+                  une question qu'on vient de se poser : on lit « 90 ronces
+                  mortes étouffées par l'ombre » et on voudrait l'avoir vu. La
+                  période à revoir est exactement celle que le bilan compte —
+                  une seule notion, deux façons de la regarder.
+
+                  Il disparaît quand la période est déjà tombée de la fenêtre
+                  des points de reprise : mieux vaut pas de bouton qu'un bouton
+                  qui ne fait rien.
+                */}
+                {snapshot.week > bilan.depuis &&
+                  game.rembobinage.depuisQuand <= bilan.depuis &&
+                  game.rembobinage.enCours === undefined && (
+                    <button
+                      type="button"
+                      style={{ ...btn(), marginRight: 0, marginBottom: 0, fontSize: 12 }}
+                      onClick={() =>
+                        game.rembobinage.revoir(
+                          bilan.depuis,
+                          vitesseDeRelecture(snapshot.week - bilan.depuis),
+                        )
+                      }
+                      title="Revenir au début de la période et la rejouer"
+                    >
+                      ↺ Revoir
+                    </button>
+                  )}
+              </div>
               <PanneauBilan
                 lignes={bilan.lignes}
                 surCadrer={(ou) => setCadrageDemande({ ou: { ...ou }, contre: cadrageAuto })}

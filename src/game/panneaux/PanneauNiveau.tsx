@@ -66,7 +66,11 @@ export function PanneauNiveau({ niveau, avancement }: { niveau: Niveau; avanceme
   const annees = avancement.restantes === undefined ? undefined : avancement.restantes / 52;
   return (
     <section
-      style={{ ...VOLET, top: 104, left: 12, maxWidth: 330, fontSize: "0.92em" }}
+      // **Pas de `top` ici.** Il valait 104 — la hauteur du bandeau, recopiée.
+      // Une seconde copie d'une même grandeur, et elle a divergé dès que le
+      // bandeau a gagné une ligne (la relecture de #128) : la fiche est venue
+      // couvrir les boutons de vitesse. C'est l'appelant qui empile.
+      style={{ ...VOLET, position: "static", maxWidth: 330, fontSize: "0.92em" }}
       aria-label="Objectif du niveau"
     >
       <h2 style={{ margin: 0, fontSize: "1em" }}>{niveau.nom}</h2>

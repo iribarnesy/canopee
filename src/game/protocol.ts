@@ -615,6 +615,17 @@ export type ToWorker =
   | { type: "reglerFacture"; embaucher: boolean; pourToujours: boolean }
   /** Changer la consigne sans qu'une facture soit posée — pour la révoquer. */
   | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
+  /**
+   * REVENIR EN ARRIÈRE et rejouer jusqu'au présent (#128, §6.8 №3).
+   *
+   * Une RELECTURE, pas une reprise : le présent est mis de côté et retrouvé
+   * intact au bout, rien de ce qui est rejoué n'est compté deux fois, et le
+   * joueur ne peut pas agir pendant. « On ne montre pas une année en une
+   * image, on offre de la revoir. »
+   */
+  | { type: "relire"; deSemaine: number; weeksPerSecond: number }
+  /** Rendre la main au présent, que la relecture soit finie ou non. */
+  | { type: "arreterLaRelecture" }
   | { type: "requestSave" };
 
 /**
@@ -664,7 +675,20 @@ export type FromWorker =
    * second : la période qu'il affiche est celui-ci moins celui qu'il avait au
    * début de la période.
    */
-  | { type: "snapshot"; snapshot: Snapshot; cumuls: Cumuls; bilan: Bilan }
+  | {
+      type: "snapshot";
+      snapshot: Snapshot;
+      cumuls: Cumuls;
+      bilan: Bilan;
+      /**
+       * La plus ancienne semaine où le rembobinage sait revenir (#128).
+       *
+       * Elle voyage à chaque instantané parce qu'elle AVANCE : les points de
+       * reprise sont une fenêtre glissante, et l'écran ne doit pas proposer de
+       * revoir une période dont le début est déjà tombé par-dessus bord.
+       */
+      rembobinable: number;
+    }
   /** Le niveau et ses paliers franchis, tels que la sauvegarde les portait. */
   | { type: "niveau"; id?: string; acquis: string[] }
   /**
@@ -689,4 +713,31 @@ export type FromWorker =
   /** la consigne en vigueur, à chaque fois qu'elle change (y compris au rejeu) */
   | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
   /** la réponse à `prevoir` : les refus qu'aurait produits ce geste */
-  | { type: "prevision"; cle: string; refusals: ActionRefusal[] };
+  | { type: "prevision"; cle: string; refusals: ActionRefusal[] }
+  /**
+   * OÙ EN EST LA RELECTURE (#128).
+   *
+   * `enCours` faux dit qu'on est revenu au présent — y compris quand la
+   * demande a été refusée faute de point de reprise assez ancien. L'écran en a
+   * besoin pour bien plus que l'afficher : pendant une relecture il doit
+   * geler ce qui COMPTE — les paliers du niveau, la période du bilan, le
+   * journal des arbres suivis — sans quoi une partie revue se mettrait à
+   * gagner des objectifs qu'elle a déjà gagnés.
+   */
+  | {
+      type: "relecture";
+      enCours: boolean;
+      depuis: number;
+      semaine: number;
+      jusqua: number;
+      /**
+       * La vitesse à laquelle la relecture se joue.
+       *
+       * Elle revient à l'écran au lieu d'y être posée d'avance, et ce n'est pas
+       * un détail : poser la vitesse AVANT de savoir qu'une relecture commence
+       * ouvre une image où l'horloge coule sans qu'on relise — et la partie
+       * jouée l'a prise en faute, la période du bilan s'effaçait au clic même
+       * sur « Revoir ».
+       */
+      vitesse: number;
+    };

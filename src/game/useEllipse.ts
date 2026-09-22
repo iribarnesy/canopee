@@ -99,6 +99,37 @@ export const DUREE_ELLIPSE_MS = 2500;
 export const VITESSE_SANS_ATTENTE = 13;
 
 /**
+ * Temps d'écran d'une RELECTURE, secondes (#128).
+ *
+ * **C'est le mode cinéma**, et il tombe du même principe que le budget
+ * d'ellipse : le §5.11 dit qu'une durée d'animation est une durée de
+ * PRÉSENTATION et non de jeu. Une relecture d'un an et une relecture de vingt
+ * ans durent donc le même temps à l'écran ; ce qui change est la densité de ce
+ * qu'on y voit.
+ *
+ * Quarante-cinq secondes : assez pour qu'une année se lise, assez court pour
+ * qu'on ne quitte pas la pièce. La première version laissait la vitesse à ×4
+ * quelle que soit la période, et l'essai dans le navigateur l'a montrée
+ * inutilisable — cinq ans à ×4, animations bloquantes comprises, tenaient
+ * encore après deux minutes et demie.
+ */
+export const DUREE_RELECTURE_S = 45;
+
+/**
+ * À quelle vitesse revoir une période de tant de semaines.
+ *
+ * Bornée par le bas à ×1 — en dessous, on ne revoit plus, on attend — et par le
+ * haut à ×52, la plus grande vitesse du bandeau. Entre les deux, le §5.11
+ * décide de ce qui se perd : sous `VITESSE_SANS_ATTENTE` l'horloge attend les
+ * animations bloquantes et l'on voit tout ; au-delà, les actes se compriment
+ * dans le temps d'écran d'une semaine. Une relecture de vingt ans est donc
+ * forcément une traversée, et c'est la seule réponse honnête.
+ */
+export function vitesseDeRelecture(semaines: number): number {
+  return Math.max(1, Math.min(52, Math.round(semaines / DUREE_RELECTURE_S)));
+}
+
+/**
  * Ce que la vue reçoit d'une ellipse en cours.
  *
  * Les noms sont ceux des propriétés de `VueParcelle` : l'appelant les étale, il

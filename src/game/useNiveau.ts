@@ -50,10 +50,28 @@ export function useNiveau(game: GameApi): NiveauEnCours {
    */
   const acquis = useMemo(() => new Set(niveauRange.acquis), [niveauRange.acquis]);
 
+  /**
+   * L'AVANCEMENT SE GÈLE PENDANT UNE RELECTURE (#128).
+   *
+   * Revoir une période, c'est remonter le temps : la semaine recule, les
+   * arbres coupés se relèvent, les kilos récoltés ne sont pas encore cueillis.
+   * Laisser le niveau se recalculer là-dessus le ferait perdre ses paliers de
+   * stock et croire qu'il lui reste des années — sur un niveau déjà fini,
+   * l'écran de fin disparaîtrait au milieu de la relecture.
+   *
+   * On retient donc le dernier avancement VIVANT et on le rend tel quel. Ce
+   * n'est pas une copie d'état au sens du §2.1 : c'est la valeur courante,
+   * mise en attente le temps qu'on regarde ailleurs.
+   */
+  const gele = useRef<Avancement | undefined>(undefined);
+  const enRelecture = game.rembobinage.enCours !== undefined;
   const avancement = useMemo(() => {
     if (!niveau || !snapshot) return undefined;
-    return avancementDuNiveau(niveau, { snapshot, cumuls, semaines: snapshot.week }, acquis);
-  }, [niveau, snapshot, cumuls, acquis]);
+    if (enRelecture) return gele.current;
+    const vu = avancementDuNiveau(niveau, { snapshot, cumuls, semaines: snapshot.week }, acquis);
+    gele.current = vu;
+    return vu;
+  }, [niveau, snapshot, cumuls, acquis, enRelecture]);
 
   // **Un palier franchi se retient**, et le worker l'apprend pour l'écrire dans
   // la sauvegarde. La comparaison porte sur le CONTENU et non sur la taille :

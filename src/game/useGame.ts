@@ -68,6 +68,20 @@ export interface GameApi {
   /** ce que la partie a accumulé depuis son début (#188) */
   cumuls: Cumuls;
   /**
+   * LE REMBOBINAGE (#128, §6.8 №3).
+   *
+   * `enCours` présent = on revoit le passé, et l'écran doit geler tout ce qui
+   * COMPTE. `depuisQuand` est la plus ancienne semaine atteignable.
+   */
+  rembobinage: {
+    enCours?: { depuis: number; semaine: number; jusqua: number };
+    depuisQuand: number;
+    /** revenir à cette semaine et rejouer jusqu'au présent */
+    revoir: (deSemaine: number, weeksPerSecond: number) => void;
+    /** rendre la main au présent */
+    revenir: () => void;
+  };
+  /**
    * Ce qui a changé depuis qu'on compte, groupé et situé (#128).
    *
    * `depuis` est la semaine où la période a commencé ; `oublier` la referme et
@@ -253,6 +267,15 @@ export function useGame(): GameApi {
    * annulés.
    */
   const [bilan, setBilan] = useState<Bilan>(BILAN_VIDE);
+  /**
+   * LA RELECTURE EN COURS (#128), quand il y en a une.
+   *
+   * `rembobinable` est la plus ancienne semaine où l'on sait revenir : elle
+   * avance avec la partie, et sans elle l'écran proposerait de revoir une
+   * période dont le début est déjà tombé de la fenêtre.
+   */
+  const [relecture, setRelecture] = useState<{ depuis: number; semaine: number; jusqua: number }>();
+  const [rembobinable, setRembobinable] = useState(0);
   /** Le bilan au début de la période affichée : ce qu'on retranche. */
   const [bilanReference, setBilanReference] = useState<Bilan>(BILAN_VIDE);
   const [bilanDepuis, setBilanDepuis] = useState(0);
@@ -297,6 +320,7 @@ export function useGame(): GameApi {
           dernierBilan.current = msg.bilan;
           derniereSemaine.current = msg.snapshot.week;
           setBilan(msg.bilan);
+          setRembobinable(msg.rembobinable);
           setCumuls(msg.cumuls);
           setRevision((n) => n + 1);
           if (msg.snapshot.refusals.length > 0) {
@@ -320,6 +344,18 @@ export function useGame(): GameApi {
           break;
         case "niveau":
           setNiveauRange({ id: msg.id, acquis: msg.acquis });
+          break;
+        case "relecture":
+          setRelecture(
+            msg.enCours
+              ? { depuis: msg.depuis, semaine: msg.semaine, jusqua: msg.jusqua }
+              : undefined,
+          );
+          // **La vitesse se pose ICI et nulle part avant.** Les deux états
+          // changent dans le même rendu, donc il n'existe aucune image où
+          // l'horloge coule sans qu'on sache qu'on relit — et c'est ce qui
+          // empêchait la période du bilan de survivre au clic sur « Revoir ».
+          setSpeedState(msg.enCours ? msg.vitesse : 0);
           break;
         case "recolteAuto":
           setRecolteAuto({ semees: msg.semees, choix: msg.choix });
@@ -378,6 +414,12 @@ export function useGame(): GameApi {
       send({ type: "reglerFacture", embaucher, pourToujours });
     },
     cumuls,
+    rembobinage: {
+      ...(relecture ? { enCours: relecture } : {}),
+      depuisQuand: rembobinable,
+      revoir: (deSemaine, weeksPerSecond) => send({ type: "relire", deSemaine, weeksPerSecond }),
+      revenir: () => send({ type: "arreterLaRelecture" }),
+    },
     bilan: {
       partie: bilan,
       reference: bilanReference,

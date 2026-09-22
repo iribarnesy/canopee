@@ -167,6 +167,77 @@ let bilan: Bilan = BILAN_VIDE;
 let bilanAuDebut: Bilan = BILAN_VIDE;
 
 /**
+ * ═══ LE REMBOBINAGE (#128, §6.8 №3) ═══
+ *
+ * *« Garder les instantanés récents en mémoire et pouvoir revenir en arrière
+ * pour rejouer la période à ×1, avec toutes les animations. C'est la seule
+ * façon honnête de tout voir : on ne montre pas une année en une image, on
+ * offre de la revoir. »*
+ *
+ * ## Des états, pas des instantanés
+ *
+ * Le §6.8 prévoyait de garder les INSTANTANÉS — « ~280 ko pièce, une année
+ * tient dans 15 Mo » — et notait que le worker devrait alors en poster un par
+ * semaine simulée au lieu d'un par lot de vingt-six. C'est beaucoup de travail
+ * en pure perte, et il y a moins cher : garder des ÉTATS DE PARTIE, et
+ * refabriquer les instantanés au moment de la relecture.
+ *
+ * **Ça ne coûte qu'une référence retenue**, parce que le moteur ne modifie
+ * jamais un état : `advanceWeek` en rend un neuf et laisse l'ancien intact —
+ * son sol, ses arbres, sa graine aléatoire, sa banque de graines. Un essai le
+ * tient (`tests/unit/points-de-reprise.test.ts`), et il a fallu le vérifier
+ * avant d'écrire une ligne d'ici : si la propriété tombait, un point de reprise
+ * vieillirait avec la partie et le rembobinage ramènerait au présent **sans que
+ * rien ne casse**. Le pire des défauts, celui qui ne se voit pas.
+ *
+ * Le worker en dépendait d'ailleurs déjà sans le dire : une semaine trop
+ * chargée se rejoue depuis l'état retenu à son ouverture (#133).
+ *
+ * ## Le grain, et ce qu'il coûte
+ *
+ * Un point par trimestre, dix ans de recul. Entre deux points, on rejoue au
+ * plus douze semaines pour tomber juste — moins de deux secondes de calcul.
+ * Un point retient un état entier, donc quelques centaines de kilo-octets de
+ * sol ; quarante points tiennent dans l'ordre de grandeur que le §6.8 s'était
+ * donné pour une seule année d'instantanés.
+ */
+const PAS_DE_REPRISE = 13;
+const POINTS_GARDES = 40;
+
+/** Les états mis de côté, du plus ancien au plus récent. */
+let pointsDeReprise: { semaine: number; etat: GameState }[] = [];
+
+/**
+ * LA RELECTURE EN COURS, s'il y en a une.
+ *
+ * `vivant` est le présent mis de côté : la relecture ne le touche pas, elle
+ * marche à côté. C'est ce qui en fait une relecture et non une reprise — le
+ * §6.8 demande de REVOIR la période, pas de repartir de là, et rien de ce qui
+ * se joue pendant n'est compté deux fois.
+ */
+let relecture: { depuis: number; jusqua: number; vivant: GameState; vitesse: number } | undefined;
+
+/** Met l'état de la semaine de côté, si c'est une semaine à garder. */
+function poserUnPointDeReprise(etat: GameState): void {
+  if (etat.week % PAS_DE_REPRISE !== 0) return;
+  const dernier = pointsDeReprise[pointsDeReprise.length - 1];
+  if (dernier && dernier.semaine >= etat.week) return;
+  pointsDeReprise.push({ semaine: etat.week, etat });
+  if (pointsDeReprise.length > POINTS_GARDES) pointsDeReprise.shift();
+}
+
+/**
+ * La plus ancienne semaine où l'on sait revenir.
+ *
+ * Sans le moindre point de reprise, c'est la semaine courante — c'est-à-dire
+ * « nulle part ». Rendre zéro dirait le contraire et ferait afficher un bouton
+ * « Revoir » qui ne fait rien.
+ */
+function plusAncienRetour(): number {
+  return pointsDeReprise[0]?.semaine ?? state?.week ?? 0;
+}
+
+/**
  * Replie une semaine dans le bilan de la partie.
  *
  * `arbres` sert à SITUER : les gestes et les franchissements ne nomment que des
@@ -324,6 +395,10 @@ function ouvrirLaSemaine(etat: GameState): void {
   // le plafond se rejoue amputée, et ce qu'elle a récolté doit se rejouer avec.
   cumulsAuDebut = cumuls;
   bilanAuDebut = bilan;
+  // Un point de reprise, tous les tant de semaines. Ici parce que c'est le
+  // seul endroit traversé exactement une fois par semaine, quelle que soit la
+  // vitesse — `stepWeeks` en avale jusqu'à vingt-six d'un coup.
+  if (!relecture) poserUnPointDeReprise(state);
   // Une facture appartient à la semaine qui la porte : aucune ne peut survivre
   // à l'ouverture de la suivante — ni, surtout, à une partie neuve.
   factureEnAttente = false;
@@ -669,7 +744,10 @@ function postSnapshot() {
   // Les grandeurs du tick, elles, se GARDENT : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
   // joueur ne doit pas voir la crue disparaître entre deux clics.
-  post({ type: "snapshot", snapshot, cumuls, bilan }, transferablesDuSnapshot(snapshot));
+  post(
+    { type: "snapshot", snapshot, cumuls, bilan, rembobinable: plusAncienRetour() },
+    transferablesDuSnapshot(snapshot),
+  );
 }
 
 /**
@@ -1085,6 +1163,119 @@ function stepWeeks(n: number) {
   }
 }
 
+/**
+ * Avance la relecture d'une semaine à la fois.
+ *
+ * **`advanceWeek` et non `tick`**, et c'est ce qui rend la relecture fidèle :
+ * elle rejoue aussi les GESTES du joueur, que le journal porte datés. Ticker
+ * seul rejouerait une parcelle où personne n'aurait rien fait.
+ *
+ * Rien n'est compté ici — ni le cumul du niveau, ni le bilan, ni le journal de
+ * sauvegarde : ce qui est rejoué a déjà été vécu une fois.
+ */
+function avancerLaRelecture(n: number): void {
+  if (!state || !relecture) return;
+  for (let k = 0; k < n && state.week < relecture.jusqua; k++) {
+    const w = meteoSemaine(state.week);
+    if (!w) return;
+    const step = advanceWeek(state, w, journal);
+    state = step.state;
+    pendingMorts.push(...step.morts);
+    pendingNaissances.push(...step.naissances);
+    pendingFranchissements.push(...step.franchissements);
+    pendingGestes.push(...step.gestes);
+    pendingChutes.push(...step.chutes);
+    if (step.incendie) pendingIncendie = step.incendie;
+    if (step.tempete) pendingTempete = step.tempete;
+    lastFluxes = step.fluxes;
+    lastDebordement = step.debordementParCellule;
+    lastLumiereAuSol = step.lumiereAuSol;
+  }
+}
+
+/**
+ * Revenir en arrière et rejouer jusqu'au présent.
+ *
+ * On repart du point de reprise le plus proche AVANT la semaine demandée, puis
+ * on rejoue en silence jusqu'à elle — au plus un pas de reprise, donc moins de
+ * deux secondes. C'est seulement à partir de là que les instantanés repartent.
+ */
+function commencerLaRelecture(deSemaine: number, vitesse: number): void {
+  if (!state || relecture) return;
+  const vivant = state;
+  const depart = [...pointsDeReprise].reverse().find((p) => p.semaine <= deSemaine);
+  if (!depart || vivant.week <= depart.semaine) {
+    post({
+      type: "relecture",
+      enCours: false,
+      depuis: vivant.week,
+      semaine: vivant.week,
+      jusqua: vivant.week,
+      vitesse: 0,
+    });
+    return;
+  }
+  relecture = {
+    depuis: Math.max(depart.semaine, deSemaine),
+    jusqua: vivant.week,
+    vivant,
+    vitesse,
+  };
+  state = depart.etat;
+  // Rattraper la semaine demandée sans rien montrer : ce qu'on veut revoir
+  // commence à `deSemaine`, pas au point de reprise qui la précède.
+  while (state.week < deSemaine && state.week < vivant.week) {
+    const w = meteoSemaine(state.week);
+    if (!w) break;
+    state = advanceWeek(state, w, journal).state;
+  }
+  viderLesTampons();
+  weeksPerSecond = vitesse;
+  fractionalWeeks = 0;
+  semaineDArret = undefined;
+  post({
+    type: "relecture",
+    enCours: true,
+    depuis: relecture.depuis,
+    semaine: state.week,
+    jusqua: relecture.jusqua,
+    vitesse: relecture.vitesse,
+  });
+  postSnapshot();
+}
+
+/** Revenir au présent, que la relecture soit allée au bout ou non. */
+function arreterLaRelecture(): void {
+  if (!relecture) return;
+  state = relecture.vivant;
+  const jusqua = relecture.jusqua;
+  relecture = undefined;
+  weeksPerSecond = 0;
+  fractionalWeeks = 0;
+  viderLesTampons();
+  post({ type: "relecture", enCours: false, depuis: jusqua, semaine: jusqua, jusqua, vitesse: 0 });
+  postSnapshot();
+}
+
+/**
+ * Jette ce qui attendait d'être montré.
+ *
+ * Au départ d'une relecture comme à son retour : les morts et les gestes
+ * accumulés appartiennent à l'autre temps, et les jouer à l'arrivée ferait
+ * tomber des arbres qui sont debout.
+ */
+function viderLesTampons(): void {
+  pendingRefusals = [];
+  pendingEvents = [];
+  pendingMorts = [];
+  pendingNaissances = [];
+  pendingFranchissements = [];
+  pendingGestes = [];
+  pendingChutes = [];
+  pendingIncendie = undefined;
+  pendingTempete = undefined;
+}
+
 function startLoop() {
   if (timer) clearInterval(timer);
   fractionalWeeks = 0;
@@ -1096,6 +1287,24 @@ function startLoop() {
     // relâchement — ce qui est le contraire de ce qu'on cherche.
     if (retenu) return;
     fractionalWeeks += weeksPerSecond / 10;
+    if (relecture) {
+      const pas = Math.floor(fractionalWeeks);
+      if (pas > 0) {
+        fractionalWeeks -= pas;
+        avancerLaRelecture(pas);
+        postSnapshot();
+        post({
+          type: "relecture",
+          enCours: true,
+          depuis: relecture.depuis,
+          semaine: state.week,
+          jusqua: relecture.jusqua,
+          vitesse: relecture.vitesse,
+        });
+        if (state.week >= relecture.jusqua) arreterLaRelecture();
+      }
+      return;
+    }
     let n = Math.floor(fractionalWeeks);
     if (n > 0) {
       fractionalWeeks -= n;
@@ -1209,6 +1418,8 @@ function init(
   // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
   cumuls = CUMULS_VIDES;
   bilan = BILAN_VIDE;
+  pointsDeReprise = [];
+  relecture = undefined;
   semees = new Set();
   choixRecolte = {};
   recoltees = new Set();
@@ -1299,6 +1510,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // ont donné. C'est le même rejeu qui refait la parcelle et son compte.
       cumuls = CUMULS_VIDES;
       bilan = BILAN_VIDE;
+      pointsDeReprise = [];
+      relecture = undefined;
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
@@ -1366,12 +1579,14 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       retenu = msg.retenu;
       break;
     case "speed":
+      // Changer de vitesse pendant une relecture la règle, sans la quitter :
+      // c'est le seul bouton du bandeau qui garde son sens.
       weeksPerSecond = msg.weeksPerSecond;
       // Le joueur reprend la main : la traversée en cours n'a plus d'objet.
       semaineDArret = undefined;
       break;
     case "avancerDe": {
-      if (!state) return;
+      if (!state || relecture) return;
       semaineDArret = state.week + Math.max(1, Math.round(msg.semaines));
       weeksPerSecond = msg.weeksPerSecond;
       libelleDArrivee = msg.libelle;
@@ -1379,6 +1594,10 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
     }
     case "action": {
       if (!state) return;
+      // **Pendant une relecture, on regarde.** Agir écrirait dans le journal
+      // une action datée d'une semaine déjà vécue, et le rejeu d'après en
+      // sortirait une autre partie.
+      if (relecture) return;
       // La semaine est déjà « ouverte » : l'action s'applique immédiatement,
       // en pause comme en lecture — le rejeu donnera le même résultat.
       performAction({ ...msg.action, week: state.week } as GameAction);
@@ -1399,11 +1618,20 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       self.postMessage(reponse);
       break;
     }
+    case "relire":
+      commencerLaRelecture(msg.deSemaine, msg.weeksPerSecond);
+      break;
+    case "arreterLaRelecture":
+      arreterLaRelecture();
+      break;
     case "autoHarvest":
       autoHarvest = msg.enabled;
       break;
     case "requestSave": {
-      if (!state) return;
+      // **Pas de sauvegarde pendant une relecture** : l'état courant est un
+      // passé, et l'enregistrer raccourcirait la partie de tout ce qu'on est
+      // en train de revoir.
+      if (!state || relecture) return;
       const save: SaveGame = {
         version: 1,
         stationId: sc?.station.id ?? "",
