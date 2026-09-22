@@ -279,6 +279,45 @@ export const AMPLIFICATION_EXTREMES = 0.08;
  */
 export const AMPLIFICATION_SECHERESSE = 0.05;
 
+/**
+ * Amplification des RAFALES par degré de réchauffement global (critère F19).
+ *
+ * **Elle vaut ZÉRO, et c'est une conclusion, pas une case à cocher.** Le
+ * référentiel demande que la fréquence des tempêtes suive la dérive du climat,
+ * et l'endroit où la brancher est bien celui-ci — la rafale, pas le vent moyen,
+ * puisque c'est elle qui casse. Mais le nombre manque, et il manque pour une
+ * raison qu'il faut écrire plutôt que de la contourner :
+ *
+ * **le SIGNE lui-même n'est pas établi pour la France.** Les projections
+ * européennes sur les tempêtes hivernales sont de faible confiance et se
+ * contredisent d'un modèle à l'autre ; ce qui fait consensus est plutôt un
+ * léger déplacement vers le nord des trajectoires, dont la France
+ * métropolitaine est justement la charnière. Poser +8 % par degré, comme pour
+ * la chaleur, reviendrait à décider en creux que les tempêtes futures couchent
+ * plus d'arbres — une affirmation que rien ne soutient, et qui commanderait la
+ * mortalité, le bois mort et le marché du bois d'une partie entière.
+ *
+ * Ce qui est fait ici est donc la PLOMBERIE, et elle seule : les deux moitiés
+ * du mécanisme se voient enfin. Le jour où un chiffre sourçable existera, il se
+ * pose ici et rien d'autre ne bouge *(à instruire : projections Euro-CORDEX de
+ * vent extrême sur la France, et leur dispersion inter-modèles)*.
+ */
+export const AMPLIFICATION_RAFALE = 0;
+
+/**
+ * Ce par quoi la trajectoire climatique multiplie la rafale d'une semaine.
+ *
+ * La même forme que les deux amplifications au-dessus, pour que le jour où
+ * `AMPLIFICATION_RAFALE` cessera d'être nulle, elle se lise comme ses voisines.
+ * Aujourd'hui elle rend exactement 1, quel que soit le scénario et l'année —
+ * et un essai l'exige, parce qu'un facteur de dérive qui dériverait sans qu'on
+ * l'ait décidé serait pire que pas de facteur du tout.
+ */
+export function facteurRafale(scenario: Scenario, annee: number): number {
+  const dGlobal = Math.max(0, rechauffementGlobalC(scenario, annee) - RECHAUFFEMENT_SERIE_C);
+  return 1 + AMPLIFICATION_RAFALE * dGlobal;
+}
+
 /** Normales saisonnières d'une série : 52 valeurs, la moyenne de chaque semaine. */
 export interface Normales {
   tMean: readonly number[];
@@ -340,14 +379,18 @@ export function meteoDerivee(
     rainMm: Math.max(0, pluie),
     co2Ppm: co2Ppm(scenario, annee),
     annee,
-    // Le vent traverse le scénario INCHANGÉ. Le réchauffement modifie bel et
-    // bien la circulation, mais dans quel sens et de combien en France, je ne
-    // sais pas le sourcer — et l'appliquer au vent des feux serait décider en
-    // creux si les incendies futurs courent plus vite. Tant que la réponse
-    // n'est pas chiffrée, le champ passe tel quel plutôt que d'être étiré au
-    // hasard *(à instruire)*.
+    // Le vent MOYEN traverse le scénario inchangé. Le réchauffement modifie
+    // bel et bien la circulation, mais dans quel sens et de combien en France,
+    // je ne sais pas le sourcer — et l'appliquer au vent des feux serait
+    // décider en creux si les incendies futurs courent plus vite. Tant que la
+    // réponse n'est pas chiffrée, le champ passe tel quel plutôt que d'être
+    // étiré au hasard *(à instruire)*.
     ventVersRad: base.ventVersRad,
     ventMoyMs: base.ventMoyMs,
+    // La RAFALE, elle, a désormais par où passer (F19). Le facteur vaut 1
+    // aujourd'hui ; ce qui change est que `tick` peut enfin le lire, alors que
+    // le scénario ne lui parvenait pas (`AMPLIFICATION_RAFALE`).
+    facteurRafale: facteurRafale(scenario, annee),
   };
 }
 

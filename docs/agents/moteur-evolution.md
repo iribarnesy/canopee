@@ -61,7 +61,366 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la pompe à bases, #170)
+## Ce que le dernier lot a appris (le chêne creux et le LER, #183 et #136)
+
+**Un mécanisme de soutien qui casse ce qu'il soutient pèse trop lourd.** La
+carie de #182 a fait tomber deux bancs qui ne parlent pas de carie — la
+pullulation sous réchauffement et l'éclaircie qui fragilise. Ce n'était pas du
+bruit : c'était le signal qu'un mécanisme secondaire déplaçait plus que les
+mécanismes qu'il sert. Deux défauts derrière, et le second est le plus instructif :
+
+ 1. **l'unité était fausse.** Une carie comptée en PART DU RAYON ronge un chêne
+    de cinquante centimètres aussi vite qu'une perche de quinze, alors que sa
+    vitesse ne sait rien du tronc qu'elle habite. En centimètres, avec le mur de
+    compartimentation de Shigo, la conséquence tombe toute seule : *un arbre
+    vigoureux distance sa carie, un dominé se fait rattraper* ;
+ 2. **il manquait un SEUIL D'ENTRÉE.** La moindre brindille arrachée inoculait,
+    donc tout le monde finissait carié — 46 chênes sur 163 dont 43 creux, un
+    quart du peuplement. Une plaie doit atteindre le bois de cœur. Le relevé
+    tombe alors à 9 sur 165, soit 5 %.
+
+**Un thermomètre qui a flanché une fois ne se remplace pas par un autre qui a
+flanché une fois : il se double.** La pullulation se mesurait par hôte, et la
+carie déplace des hôtes. Recampagnée sur six graines au lieu de trois, avec les
+deux thermomètres côte à côte, la mesure brute tient dans une bande étroite
+(1,29 à 1,88 ×, aucune inversion) là où le par-hôte s'étale du simple au double
+(1,69 à 3,03). Une graine dit pourquoi : ses deux bras finissent avec le même
+nombre de tiges, la normalisation n'a rien à corriger, et c'est la seule où elle
+ABAISSE le rapport. On exige désormais les deux.
+
+**COMPARER DES MOYENNES DE DISTRIBUTIONS ASYMÉTRIQUES NE DIT RIEN**, et ça m'a
+coûté une issue écrite à tort. Le LER donnait un terme arbre ridicule ; les
+diamètres moyens (19,6 en allée contre 20,2 en plantation) semblaient innocenter
+la culture et accuser la croissance du noyer, non calée sur table. J'ai ouvert
+l'issue. En volume l'écart était de 2,5, pas de 1,2 — et suivie par identité, la
+cohorte plantée dit l'inverse : le noyer atteint 32,3 cm à soixante ans hors
+culture, et dépasse celui de la plantation. **Le seul échantillon comparable
+d'un bras à l'autre est celui qu'on suit par ses identités.**
+
+**Un témoin, ça se conduit.** Le « témoin forestier » du LER comptait 49 noyers
+plantés et 187 à l'arrivée : les sujets mûrs s'étaient ressemés, et le témoin
+était un fourré. Il comptait en plus le bois des essences spontanées, 15,0 m³ là
+où les noyers n'en faisaient que 6,7 — or un LER compare des PRODUITS.
+
+**UN BON NOMBRE OBTENU POUR LA MAUVAISE RAISON N'EST PAS UN CRITÈRE VERT**, et
+ce refus a payé. Le LER sortait à 1,20 — la cible de Restinclières — avec une
+composition renversée : culture 1,10 et arbre 0,10, contre ~0,7 et ~0,5 publiés.
+J'ai écrit 🟡 plutôt que ✅, puis cherché la cause. Elle était **dans le
+dispositif, pas dans le moteur** : je labourais jusqu'au pied des rangs, ce
+qu'aucun agroforestier ne fait, la règle d'installation étant « des bandes larges
+de plus d'un mètre ». Une fois les allées pavées de disques qui épargnent le
+rang, tout s'est remis en place d'un coup — culture 0,72, arbre 0,60, total
+1,32, et la pénalité de 77 % sur les arbres tombée à 2 %.
+
+**Et la contrainte qui semblait bloquer n'en était pas une.** Je croyais devoir
+attendre des zones en bande (#186) parce que toutes les actions prennent un
+disque. Mais `semer` calcule la place libre en EXCLUANT la culture qu'on sème,
+donc deux disques de blé ne se refusent pas : on pave une bande avec plusieurs
+disques. Lire le code de la garde avant de conclure qu'elle bloque.
+
+**Le contrôle doit ne changer QU'UNE chose.** Le bras « labouré sans blé » donnait
+0,319 m³/arbre contre 0,427 pour le bras cultivé — le labour paraissait coûter
+plus que le labour plus le blé. Absurde, et le confondant était évident une fois
+vu : en retirant le blé j'avais retiré sa fertilisation, dont les noyers
+profitent.
+
+**Mesurer plutôt que calculer, même une surface.** Mes bandes épargnées n'en
+étaient pas : le rayon des disques dépassait la demi-largeur pour couvrir les
+creux, et mangeait le rang. C'est la surface réellement semée, comptée cellule
+par cellule, qui l'a dit — 93,3 % au lieu de 82 %, donc 0,67 m épargné au lieu
+de 1,75.
+
+**Ce qui se branche sans rien inventer.** Les cavités : `trogne.ts` avait déjà
+posé la bonne grandeur (le creux se compte en LITRES), la carie donne le rayon
+pourri, `ravageurs.ts` faisait déjà dépendre la prédation du bois mort du
+voisinage. Le lot n'a fait que réunir trois choses existantes — et pour toucher
+deux critères déjà verts sans risque, il prend le PLUS GÉNÉREUX du bois mort et
+des creux au lieu de les additionner : à creux nuls la carte est celle d'avant
+au bit près, et l'essai l'épingle plutôt que de le mesurer.
+
+## Ce qu'un lot plus ancien a appris (la carie du tronc, #182)
+
+Le dernier facteur de risque de chablis que le moteur ignorait. Il ne gagne
+aucun point — aucun critère du référentiel ne nomme la carie — et c'est
+volontaire : c'est un mécanisme de soutien, qui ferme une boucle.
+
+**La bonne formule rend le fait contre-intuitif gratuit.** Un tronc creux est un
+tube, son module de section va en `1 − p⁴`, donc un arbre creux à la MOITIÉ de
+son rayon ne perd que 3 % de sa vitesse critique. C'est ce qui fait qu'un vieux
+chêne creux tient des siècles, et c'est aussi la base de la règle du `t/R` des
+arboristes — s'inquiéter sous une paroi saine du tiers du rayon. **Le seuil
+n'est écrit nulle part : il tombe de l'exposant.** Une rampe linéaire aurait
+donné un mécanisme faux et une conclusion banale.
+
+**Une mémoire qui NE guérit pas est une espèce à part.** Le moteur en a
+plusieurs qui s'effacent — le dommage hydraulique, le houppier arraché, la
+naïveté au vent. La carie est la première qui ne fait que monter, et c'est
+exactement ce qui la rend intéressante : elle transforme des blessures
+dispersées sur un siècle en une trajectoire individuelle. Le vieil arbre creux
+d'un bocage, né des coups de vent, sans qu'on l'ait déclaré — *les chiffres
+annoncés ici étaient ceux d'un modèle sans compartimentation ni seuil d'entrée ;
+voir #183 ci-dessus pour ceux qui tiennent.*
+
+**Et la boucle se ferme entre trois lots** : une tempête arrache des branches
+(#181), la plaie installe une carie (#182), l'arbre casse plus facilement à la
+tempête suivante. Aucun des trois ne connaît les deux autres.
+
+**Ce qu'il restait à brancher** : un arbre creux EST un arbre à cavités. Fait
+en #183, et la section ci-dessus dit ce que ça a appris.
+
+## Ce qu'un lot plus ancien a appris (la branche arrachée, #181, et F17/F18 au vert)
+
+Le troisième mode de F17 — un coup de vent qui arrache des branches à un arbre
+qui tient — et le banc apparié qui a fait tomber F18. Les deux critères passent
+✅, le référentiel à 93 %.
+
+**Un mécanisme peut être juste et se brancher au mauvais endroit.** J'avais
+branché la perte de houppier sur `env.light` : moins de feuilles, moins de
+lumière captée. Le banc des tables de production a répondu en trois minutes —
+le pin à 18,7 m pour 15,5 tabulés, donc TROP GRAND. `env.light` nourrit aussi
+l'allocation, donc le signal d'étiolement : je disais à l'arbre qu'il était à
+l'ombre, et un arbre à l'ombre file en hauteur. **Un arbre ébranché n'est pas
+ombragé.** La pénalité est allée là où entre la vigueur individuelle, au seul
+endroit qui module ce que l'arbre TIRE de conditions données.
+
+**Et sous l'erreur de branchement, un bug de conservation.** Je déposais la
+litière arrachée sans rien retirer à l'arbre, qui laissait donc retomber à
+l'automne un feuillage déjà perdu : le moteur CRÉAIT de l'azote à chaque coup de
+vent, et la parcelle s'en trouvait fertilisée. C'était toute l'explication du
+pin trop grand. Un coup de vent ne fabrique pas des feuilles, il les fait tomber
+plus tôt — on débite donc la réserve de l'année de ce qu'on verse au sol. La
+leçon générale : **tout dépôt dans un pool doit être un TRANSFERT, jamais une
+création**, et c'est vrai des feuilles comme du calcium (#170).
+
+**F18 n'attendait aucun mécanisme : il attendait un banc.** Tout était écrit
+depuis #177 et #179. Les deux premières mesures comparaient des populations
+différentes — une éclaircie par le haut retire les grands, donc la population
+vulnérable — et concluaient qu'un peuplement éclairci est plus sûr. Vrai, et
+hors sujet. La bonne mesure suit **les mêmes arbres dans les deux bras**, ceux
+qu'une éclaircie par le BAS laisse debout : un tiers d'abri en moins, trois fois
+plus de chablis, 11 contre 1 sur les cinq premières années.
+
+**Le banc du feu a cassé DEUX FOIS dans la même session, et trois graines n'ont
+pas suffi.** Après l'avoir élargi de une à trois graines, #181 a de nouveau
+éteint les trois. Mesuré sur sept graines de part et d'autre, le feu n'était
+pourtant pas supprimé — plutôt davantage, les branches au sol faisant du
+combustible. Il est passé à sept graines. **Mais le vrai remède n'est pas un
+nombre de graines** : c'est de séparer « une lande finit-elle par brûler ? »,
+qui demande beaucoup de parties, de « que fait un feu quand il a lieu ? », qui
+se teste sur un feu FORCÉ et sans hasard. Noté comme lot.
+
+**Le compte des pièges de ce bloc.** Un banc qui n'exerçait pas le mécanisme.
+Un dénominateur trop large. Deux témoins « appariés » qui ne l'étaient pas. Un
+témoin dont la neutralisation s'est retournée (1e9 donne un facteur 1, pas 0).
+Une calibration tentée sur une sortie chaotique et non monotone. Et deux fois le
+même banc de feu re-tiré. **Six fois la même famille d'erreur — mesurer une
+chose en croyant en mesurer une autre — dans un seul bloc.** À chaque fois, ce
+qui a sauvé la conclusion est un relevé imprimé à côté du verdict.
+
+## Ce qu'un lot plus ancien a appris (une futaie s'abrite elle-même, #179)
+
+`abriAuVent` ne comptait que les voisins qui DÉPASSENT, si bien qu'une futaie
+régulière n'abritait personne. Elle s'abrite maintenant, par le rapport de
+l'espacement local à la hauteur. Aucun critère ne monte ; F16 est RÉÉCRIT et
+F18 garde son 🟡, pour une raison nouvelle.
+
+**Un critère du référentiel peut être faux, et celui-là bloquait un autre
+critère.** F16 affirmait en ✅ qu'« une futaie régulière ne s'abrite pas
+elle-même », justifié par Klaus dans les pins landais alignés. Mais ces pinèdes
+n'ont pas versé faute d'abri : elles ont versé parce qu'elles étaient élancées,
+uniformes, sur sable, et qu'une fois ouvertes elles se sont décousues. L'énoncé
+confondait une conséquence avec sa cause — et tant qu'il tenait, F18 ne pouvait
+pas tomber, puisque les seuls arbres à avoir de l'abri à perdre étaient trop
+courts pour verser. **Un ✅ mal énoncé coûte plus cher qu'un ❌** : il ferme la
+question.
+
+**La bonne variable était publiée, et ce n'était pas celle du moteur.** Les
+modèles de la famille ForestGALES ne raisonnent pas en « qui dépasse qui » mais
+sur S/H, l'espacement rapporté à la hauteur : des tiges serrées se partagent la
+quantité de mouvement. Mesuré dans le moteur avant d'écrire, le S/H d'une futaie
+fermée vaut 0,31 — au milieu de la gamme où ce rapport joue. Le signal était
+dans l'état du peuplement, il n'était pas lu.
+
+**Le garde-fou se met dans l'essai, pas dans l'intention.** Le premier jet de ce
+module avait saturé l'abri à 1 pour tout le monde : zéro arbre couché en
+soixante ans. Un terme collectif mal borné referait exactement ça. Il plafonne
+donc au tiers, et un essai l'exige — parce qu'une note de bas de page n'empêche
+personne de relever une constante.
+
+**Deux comportements sortent sans être écrits**, et c'est la marque d'une bonne
+forme : un arbre de lisière est moins abrité qu'un arbre d'intérieur (0,271
+contre 0,338), sans qu'aucune distance au bord soit calculée ; et une ouverture
+dépouille les DOMINANTS, dont l'abri tombe de 0,115 à 0,021.
+
+**Mais le juge a dit non, et pour une raison plus profonde qu'avant.** Le lot
+devait rendre F18 mesurable. Il ne le rend pas : dans ce moteur la HAUTEUR
+commande le risque de chablis — profil logarithmique du vent, souplesse des
+jeunes tiges — si bien que toute opération qui déplace la distribution des
+hauteurs noie l'effet d'abri. Une éclaircie par le haut retire les grands, donc
+la population vulnérable : 8,3 % de ruines contre 43,7 % au témoin non
+éclairci. Le peuplement éclairci est plus SÛR, et ce n'est pas faux — il n'a
+plus d'arbres à perdre. Ce qu'il faudrait est une ouverture qui ne déplace pas
+les hauteurs : une lisière neuve, pas une éclaircie.
+
+**Deux témoins appariés de suite se sont révélés non appariés.** Naïveté active
+contre neutralisée : 99 arbres suivis contre 124, parce que le mécanisme tourne
+pendant les quarante ans qui précèdent l'éclaircie et que les deux parcours ont
+divergé bien avant. Un témoin qui change la population qu'il compare n'est pas
+un témoin. C'est la troisième forme du même piège dans ce bloc, après le banc
+qui n'exerçait rien et le dénominateur trop large.
+
+## Ce qu'un lot plus ancien a appris (la naïveté au vent, #177 et F19)
+
+Deux lots d'un coup, et ils se ressemblent : dans les deux cas le mécanisme est
+écrit et sa conséquence ne l'est pas — pour F19 parce que le chiffre n'existe
+pas, pour F18 parce que le moteur ne peut pas la montrer. F18 passe à 🟡, F19
+reste ❌ avec sa plomberie faite.
+
+**Le diagnostic écrit au référentiel peut être faux, et c'est la prémisse qui
+le dit.** F18 affirmait que « `abriAuVent` recalcule l'abri dans la semaine qui
+suit la coupe : les survivants sont réputés adaptés instantanément ». Mesuré
+avant d'écrire une ligne : c'est l'inverse. L'abri tombe de 0,76 à 0,14 dès la
+coupe, et la parcelle éclaircie prend 10,9 % de ruines en dix ans contre 1,2 %
+au témoin. Ce qui manquait n'était pas l'exposition mais l'ACCLIMATATION. Sans
+cette mesure, j'aurais construit un mécanisme en croyant combler un trou qui
+n'existait pas.
+
+**Le meilleur résultat du lot est celui que personne n'a écrit.** La naïveté
+distingue toute seule les deux façons d'éclaircir : 0,589 par le haut, 0,012 par
+le bas. La raison est dans la définition de l'abri — `abriAuVent` ne compte que
+les voisins qui DÉPASSENT, donc une éclaircie par le bas garde les dominants,
+que personne n'abritait, et ils ne perdent rien. C'est exactement la règle
+sylvicole, et elle tombe de deux mécanismes qui ne se connaissaient pas.
+
+**Et c'est la même définition qui empêche le critère de tomber.** Si les seuls
+arbres qui ont de l'abri à perdre sont les dominés, et si les dominés sont trop
+courts pour verser, alors la fragilité d'après-ouverture ne peut PAS produire de
+surcroît de ruines. Mesuré, et j'ai cherché : douze graines, exposition forcée à
+1, cohorte naïve suivie nommément — 15,3 % contre 12,7 %, sur dix-sept et seize
+événements. Non séparable du bruit. **Le blocage de F18 n'était donc jamais la
+mémoire par arbre ; c'est que la futaie ne s'abrite pas elle-même.**
+
+**Un dénominateur mal choisi cache un effet, et j'ai failli m'y laisser prendre
+deux fois.** Premier compte : 68 ruines contre 63 sur 540 tiges — mais la
+plupart de ces tiges étaient trop petites pour verser. Deuxième essai, cohorte
+ciblée : 111 naïfs contre 6 témoins, donc une comparaison vide. Il a fallu le
+témoin APPARIÉ — la même cohorte, mécanisme neutralisé — pour obtenir un chiffre
+lisible, et ce chiffre dit non.
+
+**Ce qu'on livre quand le chiffre n'existe pas : la plomberie, et elle seule.**
+Pour F19, `meteoDerivee` connaissait le scénario sans pouvoir tirer de rafale et
+`tick` tirait la rafale sans connaître le scénario ; la météo de la semaine
+porte maintenant un `facteurRafale`, comme elle porte déjà le CO₂. Il vaut 1, et
+`AMPLIFICATION_RAFALE` vaut 0, parce que le SIGNE du changement de vent extrême
+sur la France n'est pas établi. Deux essais tiennent les deux bouts : l'un
+vérifie qu'un facteur non neutre agit VRAIMENT — sans quoi le champ serait un
+ornement —, l'autre épingle le zéro pour que le poser devienne un geste
+délibéré.
+
+**Et un essai a changé de thermomètre, pas de seuil.** `tempete.test.ts`
+comparait `arbresVerses`, qui depuis #176 ne compte plus que les déracinements :
+le pin, bois tendre, était passé au volis, et l'essai lisait « le pin déracine
+moins » là où il veut dire « la tempête lui prend plus d'arbres qu'au hêtre ».
+Il somme désormais les deux ruines.
+
+## Ce qu'un lot plus ancien a appris (le volis, #176)
+
+Une tempête ne savait que déraciner. Elle casse aussi, désormais, et c'est la
+plus basse des deux vitesses critiques qui décide. F17 passe de ❌ à 🟡.
+
+**Le meilleur mécanisme est celui qu'on obtient en RETIRANT des termes.** Le
+volis ne se distingue pas du chablis par ce qu'on lui ajoute mais par ce qu'on
+lui refuse : ni ancrage, ni engorgement, parce qu'un fût casse aussi bien sur un
+sol gelé que sur un sol saturé. De cette absence sort le fait de terrain des
+tempêtes françaises — le même arbre casse sur le coteau et déracine dans le fond
+de vallon — sans qu'une ligne ne le dise. Mesuré : la vitesse de rupture ne
+bouge pas d'un millième entre les deux sols, c'est le renversement qui
+s'effondre.
+
+**Chercher le trait avant d'en déclarer un.** `bois.densite` était à l'atlas
+depuis #68, sourcée espèce par espèce, et le module de rupture d'un bois suit sa
+densité — l'une des relations les mieux établies de la science du bois.
+`rejetteDeSouche` décidait déjà du sort d'une souche. Le lot n'a donc rien
+déclaré : il a lu.
+
+**L'ancre peut être un RAPPORT plutôt qu'un nombre.** ForestGALES publie ses
+deux vitesses critiques dans la même bande de 15 à 45 m/s, sans qu'aucune ne
+domine par construction. C'est ça qu'on cale : l'arbre de référence a, sur sol
+ferme, une rupture du même ordre que son renversement. Poser directement une
+vitesse de rupture aurait été un chiffre sorti de nulle part.
+
+**Et le banc a renversé ce que j'allais écrire.** J'attendais que la densité
+ordonne les essences en peuplement : bois tendre, plus de volis. Mesuré sur
+trois graines, le hêtre casse à 83 % et le pin à 55 % — alors que le hêtre est
+plus dense. La raison est une SÉLECTION : la tempête n'abat pas un arbre moyen,
+elle abat les plus élancés, et ceux-là cassent parce que la rupture dépend de
+l'élancement en puissance −3/2 quand le renversement n'en dépend que par une
+rampe. La densité trie bel et bien, mais à géométrie égale — ce que seul le banc
+unitaire peut montrer. **La part de volis n'est donc pas une ancre**, et le
+référentiel le dit : on teste la direction contre le sol et contre la géométrie,
+jamais la répartition.
+
+**Le compilateur a fait le tour des conséquences à ma place.** Ajouter `volis` à
+`CauseMort` a fait tomber quatre fichiers d'un coup, dont deux du rendu : les
+tables de libellés, de teintes et de trajectoires de mort sont des
+`Record<CauseMort, …>`, donc exhaustives par construction. C'est le même
+dispositif que le `Record<GameAction["type"], Cas[]>` de #139, et il vaut mieux
+qu'une revue : on ne peut pas oublier un cas.
+
+## Ce qu'un lot plus ancien a appris (le coup de vent couche les chandelles, #58)
+
+`directionDeChute` ne composait qu'une tendance, la pente, alors que ce qui abat
+un tronc mort est un coup de vent. Elle en compose deux désormais. Aucun critère
+de `realisme.md` ne bouge : comme #139, #153 et #164, c'est une capacité qui
+s'ajoute, pas une affirmation nouvelle sur le monde.
+
+**Une issue bloquée peut avoir été débloquée par quelqu'un d'autre.** #58
+attendait « une climatologie de rafales, ou simplement un maximum hebdomadaire à
+côté de la moyenne ». #55 a livré exactement ça quatre jours plus tard —
+`rafaleDeLaSemaine`, dans `tempete.ts` — et personne n'a rouvert l'issue pour le
+dire. Avant de déclarer un lot bloqué, relire ce que le blocage demandait et
+chercher si ça existe : ici, trois lignes de câblage.
+
+**Ne jamais faire tomber un contrôle destructif sur un fichier qu'on édite.**
+Pour mesurer le témoin « sans vent », j'ai neutralisé la fonction puis lancé
+`git checkout -- src/engine/boisMort.ts` pour revenir. Le fichier portait tout le
+lot, non commité : il a été effacé d'un coup. Rien n'a été perdu — le correctif
+était dans la conversation — mais la règle est la même que celle déjà écrite
+pour les contrôles en arrière-plan : **un témoin destructif se fait sur une
+copie, ou pas du tout.**
+
+**Un témoin qui se retourne vaut un témoin qui ne tourne pas.** Premier essai de
+neutralisation : porter le seuil de rafale à 1e9 pour que l'emprise tombe à zéro.
+Elle est montée à UN — le rapport `(x − 1e9)/(30 − 1e9)` tend vers +1, pas vers
+0. J'ai donc mesuré « vent permanent à pleine emprise » en croyant mesurer
+« aucun vent ». Le relevé d'emprise que le script imprimait l'a montré tout de
+suite ; sans lui, la conclusion aurait été exactement inverse. Accessoirement,
+ce faux témoin a reproduit la panne du vent moyen, ce qui est devenu un chiffre
+du dossier.
+
+**Un banc peut ne jamais exercer ce qu'il prétend couvrir, et il faut le
+mesurer, pas le supposer.** Le banc du bois en travers donnait des chiffres
+IDENTIQUES avec et sans le mécanisme. Explication trouvée en instrumentant : il
+tue ses cent vingt saules la même semaine, `dureeChandelleSemaines` est un délai
+fixe par espèce, donc elles tombent toutes la même semaine — calme. J'aurais pu
+écrire « le résultat survit au lot », ce qui aurait été vide. Le banc
+d'intégration échelonne maintenant les morts, et le mécanisme tire pour de bon :
+14,5 % des chutes un jour de coup de vent.
+
+**Le même banc a démenti une phrase que j'avais écrite dans le module.**
+J'annonçais que deux tendances d'accord resserrent plus que chacune séparément.
+Faux au chiffre près : `min(1, norme)` plafonne. Et c'est le bon comportement,
+parce que la dispersion résiduelle est un PLANCHER que la source citée interdit
+de franchir. La documentation disait ce que j'espérais, l'essai a dit ce que le
+code fait.
+
+**Et la limite qui reste, mesurée plutôt que devinée** : c'est le calendrier qui
+décide de la date de chute, pas le vent. La rafale n'oriente que ce qui tombe
+déjà. Tant que ce sera le cas, la corrélation entre le sens d'une chute et la
+rafale de la semaine reste une coïncidence bien orientée, et le référentiel le
+dit.
+
+## Ce qu'un lot plus ancien a appris (la pompe à bases, #170)
 
 `effetLitiereEq` créditait la surface du calcium d'une feuille qui se
 décompose, sans que rien nulle part ne soit débité : le calcium arrivait de

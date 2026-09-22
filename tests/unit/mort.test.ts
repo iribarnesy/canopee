@@ -72,8 +72,10 @@ describe("dansLaFenetre", () => {
 describe("les causes de mort", () => {
   it("ont toutes une trajectoire : la table est exhaustive", () => {
     // Le type l'impose déjà, mais une valeur ajoutée au moteur doit CASSER ici
-    // et non passer silencieusement.
-    expect(CAUSES.length).toBe(13);
+    // et non passer silencieusement. Il l'a fait : le VOLIS est la quatorzième
+    // (#176, F17), et ce garde-fou est ce qui a forcé à lui dessiner une mort
+    // plutôt qu'à la laisser hériter de celle du chablis.
+    expect(CAUSES.length).toBe(14);
   });
 
   it("se distinguent DEUX À DEUX : aucune paire ne donne la même suite", () => {

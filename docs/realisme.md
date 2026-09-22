@@ -99,14 +99,14 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | C. Nutriments et cycles | 18 | 0 | 0 | 18 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 9 | 4 | 0 | 13 |
-| F. Dynamique des peuplements | 13 | 3 | 3 | 19 |
+| F. Dynamique des peuplements | 15 | 3 | 1 | 19 |
 | G. Faune et santé | 11 | 0 | 0 | 11 |
-| H. Gestion, économie, travail | 16 | 4 | 1 | 21 |
+| H. Gestion, économie, travail | 17 | 4 | 0 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 8 | 0 | 0 | 8 |
-| **Total** | **131** | **18** | **4** | **153** |
+| **Total** | **134** | **18** | **1** | **153** |
 
-**Score de réalisme : 131 pleins + 18 partiels sur 153 → 92 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 134 pleins + 18 partiels sur 153 → 93 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -186,9 +186,18 @@ seule, et l'allée fertilisée rend enfin le gradient lisible)
 tenaient sur la moitié de ce qu'ils annonçaient réparés)
 → 91 % (le pH a deux seuils comme l'eau : hors de son amplitude, une espèce
 n'est plus exécutée par le sol, elle est battue par celles à qui il convient)
-→ **92 % (la pompe à bases : le calcium de la litière cesse d'arriver de nulle
+→ 92 % (la pompe à bases : le calcium de la litière cesse d'arriver de nulle
 part, et l'altération de remonter d'un mètre de fond toute seule — le budget
-de bases est stratifié en deux pools et il circule)**.*
+de bases est stratifié en deux pools et il circule)
+→ 93 % (le bloc tempêtes : une tempête casse et ébranche au lieu de seulement
+déraciner, une futaie s'abrite elle-même, et ce qu'on vient d'ouvrir verse —
+trois critères, dont un dont l'énoncé était faux)
+→ 93 % (le chêne creux : la carie se compartimente, donc un arbre vigoureux la
+distance, et un tronc carié devient un arbre à cavités qui loge les auxiliaires)
+→ **93 % (le LER : le jeu répond enfin à sa question centrale — il faudrait
+1,3 hectare de monocultures pour égaler un hectare d'allées. Quatre causes
+écartées avant la bonne, et les quatre étaient dans le dispositif, pas dans le
+moteur)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -327,10 +336,10 @@ maladie-là, pas une preuve de santé.*
 | F12 | Le feu se propage selon ce qui brûle : une coupure ou un feuillu frais l'arrêtent | ✅ | `probabilitePropagation` ; `feu.test.ts` |
 | F14 | Une tempête couche des arbres : le chablis existe, et il est l'accident le plus brutal de la vie d'un peuplement | ✅ | `tempete.ts` ; `tempete.test.ts` — une rafale hebdomadaire dérivée de la graine de partie (queue exponentielle sur le vent moyen), cinquantennale à 40-45 m/s. Le seuil de dégât est celui de l'ARBRE, pas celui de la rafale : les coups de vent ordinaires reviennent chaque hiver et ne couchent rien |
 | F15 | La vulnérabilité au vent se trie par INDIVIDU, et rien n'est déclaré espèce par espèce | ✅ | `vitesseCritiqueMs` : élancement H/D, ancrage rapporté au bras de levier (`rootDepthCm / hauteur`), sol gorgé au-delà de ce que l'espèce tolère, prise au vent foliaire de la semaine, souplesse des jeunes tiges. Aucun trait nouveau à l'atlas — tout se lit sur l'état de l'arbre. Deux faits de terrain TOMBENT de là sans être écrits : les tempêtes sont hivernales (le vent moyen l'est), et le caduc nu paie moins que le sempervirent (mesuré à 60 ans : 4-11 tiges couchées contre 65-88). Un des cinq facteurs trie mal, et le dit : l'élancement, parce que le moteur n'en produit qu'un cinquième de la gamme réelle (#79). **L'ancrage, lui, ne triait mal que par ricochet, et c'est réparé (#84)** : la profondeur racinaire d'un arbre mûr était fausse — le plancher `RACINES_PLANCHER` traitait un hêtre de vingt mètres comme un semis — ce qui forçait le seuil d'ancrage à descendre à 4 % pour ne pas coucher toute une population légitime. Plancher corrigé, les deux régimes hydriques du moteur tiennent maintenant dans un rapport de 1,5 (0,039 sur site jamais sec, 0,059 sur été sec) au lieu de 2,7, et le seuil est revenu à la valeur mesurée sur de vraies hêtraies, 6 % |
-| F16 | Ce qui dépasse prend le vent : un sous-étage est abrité, une futaie régulière ne s'abrite pas elle-même | ✅ | `abriAuVent` ne somme que le DÉPASSEMENT des voisins plus hauts, là où l'abri de haie (`windShelterAt`, E5) sature à 1 dans n'importe quel peuplement. C'est Klaus dans les pins landais alignés |
-| F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | ❌ | le moteur ne connaît qu'un renversement entier — un arbre tient ou il verse. Ni cime cassée, ni arbre penché qui survit avec une plaie, alors que c'est la moitié des dégâts d'une tempête réelle |
-| F18 | Un peuplement qu'on vient d'ouvrir (éclaircie, lisière neuve) verse pendant quelques années | ❌ | `abriAuVent` recalcule l'abri dans la semaine qui suit la coupe : les survivants sont réputés adaptés instantanément. Il y faudrait une mémoire par arbre de l'ouverture récente |
-| F19 | La fréquence des tempêtes suit la dérive du climat | ❌ | `AMPLIFICATION_EXTREMES` (D11) joue sur la chaleur et la pluie, pas sur le vent. Les deux moitiés sont dans deux fonctions qui ne se voient pas : `meteoDerivee` connaît le scénario mais pas la graine de partie, donc ne peut tirer de rafale ; `tick` la tire et ignore le scénario |
+| F16 | Ce qui dépasse prend le vent : un sous-étage est abrité, une futaie ne l'est qu'un peu | ✅ | `abriAuVent` somme DEUX abris (`tempete.ts` ; `abri-peuplement.test.ts`). Le premier est le DÉPASSEMENT des voisins plus hauts : c'est lui qui protège un sous-étage, et il est fort. Le second est l'abri de PEUPLEMENT, fonction du rapport espacement/hauteur local — la variable centrale des modèles de la famille ForestGALES, où des tiges serrées se partagent la quantité de mouvement. **L'énoncé de ce critère a été corrigé (#179), et c'est une erreur du référentiel, pas du moteur.** Il disait « une futaie régulière ne s'abrite pas elle-même », justifié par Klaus dans les pins landais alignés — or ces pinèdes n'ont pas versé faute d'abri, elles ont versé parce qu'elles étaient élancées, uniformes, sur sable, et qu'une fois ouvertes elles se sont décousues. Un peuplement dense réduit bel et bien la charge par tige. Le second terme plafonne donc au TIERS, très en dessous du premier : une futaie serrée est plus sûre qu'une parcelle ouverte sans jamais être intouchable — le premier jet du module avait justement saturé l'abri à 1 et plus rien ne versait en soixante ans, et un essai l'interdit désormais. Mesuré : l'abri d'un dominant de futaie fermée passe de 0,182 à 0,314, celui d'un dominant de lisière vaut 0,271 contre 0,338 à l'intérieur — la distance au bord n'est calculée nulle part, elle se lit dans le comptage des voisins |
+| F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | ✅ | `tempete.ts` (`vitesseCritiqueVolisMs`, `modeDeRuine`, `houppierArrache`) ; `volis.test.ts` — **trois modes, et c'est une comparaison qui tranche entre les deux premiers.** Le moteur calcule deux vitesses critiques comme les modèles de la famille ForestGALES : la motte lâche, ou le fût casse, la plus basse décide. La dichotomie de terrain tombe de ce qui N'ENTRE PAS dans le calcul du volis — ni ancrage ni engorgement, parce qu'un fût casse aussi bien sur un sol gelé que sur un sol saturé : sur un pin de 20 m à H/D 50, la rupture ne bouge pas d'un millième entre sol ferme et sol gorgé (24,4 m/s) pendant que le renversement s'effondre de 27,2 à 15,7. **Et le troisième mode est le plus fréquent** : un coup de vent bien en dessous de la ruine arrache des branches à un arbre qui tient. Relevé sur soixante ans, 28 chablis et 33 volis contre plus de 1 500 ébranchages ; la profondeur suit la force du coup — 3 % du houppier à 27 m/s, 20 % à 48 m/s sur 17 % du peuplement. L'arbre paie en croissance tant qu'il n'a pas repoussé, ses plaies ouvrent la porte aux maladies (G6), et le tout guérit en deux ans. Aucun trait nouveau : `bois.densite` et `rejetteDeSouche` étaient déjà à l'atlas. **Ce qu'on ne revendique pas** : la répartition volis/chablis. En peuplement c'est l'élancement qui domine la densité — le hêtre casse à 83 % et le pin à 55 % alors que le hêtre est plus dense — parce que la tempête sélectionne les tiges élancées. On teste la direction contre le sol et contre la géométrie, jamais la part. **Et un quatrième facteur, qui n'est pas un dégât mais une prédisposition** (#182) : la CARIE du tronc, qu'une plaie installe et qui ne guérit jamais. Elle ne gagne aucun point — aucun critère ne la nomme — mais elle ferme la boucle : un arbre ébranché se carie, donc casse plus facilement au coup de vent suivant. Et elle produit le fait le plus contre-intuitif de l'arboriculture sans qu'on l'écrive, parce qu'un tronc creux est un TUBE et que son module de section va en `1 − p⁴` : **creux à la moitié de son rayon, un arbre ne perd que 3 % de sa vitesse critique**, et il faut 90 % pour en perdre 41 %. La règle du `t/R` — s'inquiéter sous une paroi saine du tiers du rayon — tombe de l'exposant, elle n'est écrite nulle part. **Elle a été refaite deux fois avant de tenir** (#183). Le premier jet la comptait en part du rayon, donc une colonne rongeait un chêne de cinquante centimètres aussi vite qu'une perche de quinze, alors que sa vitesse ne sait rien du tronc qu'elle habite : elle se compte maintenant en centimètres et porte son MUR DE COMPARTIMENTATION, le CODIT de Shigo — à la blessure l'arbre dresse une barrière sur le bois qu'il a ce jour-là, et l'aubier fabriqué ensuite reste hors d'atteinte. D'où la conséquence qu'on n'a pas écrite : *un arbre vigoureux distance sa carie, un dominé se fait rattraper*, et la part cariée peut DÉCROÎTRE. Le second jet n'avait pas de seuil d'entrée, et c'est ce banc qui l'a dit : la moindre brindille arrachée inoculait, donc 46 chênes cariés sur 163 dont 43 creux au-delà de la moitié — un quart du peuplement, à l'âge où une futaie de chêne est du bois d'œuvre. Avec `PLAIE_OUVRANTE` (une plaie doit atteindre le bois de cœur), le relevé à cent vingt ans tombe à **9 cariés sur 165 vivants, dont 8 creux au-delà de la moitié** — 5 %, l'ordre de grandeur d'une futaie réelle, et c'est la tempête qui inocule, plus la brise. **Limite assumée de la carie** : `1 − p⁴` est le module d'un tube FERMÉ. Une cavité ouverte — celle d'une grosse branche arrachée, celle par où entre la mésange — est un profil en C, nettement plus faible à paroi égale parce qu'il s'ovalise avant de rompre ; le moteur ne distingue pas les deux. Non corrigé faute d'ancre : les corrections d'ouverture de l'arboriculture ne font pas consensus, et l'exposant 4 rend l'écart invisible sous `p = 0,67`, c'est-à-dire sur presque tous les arbres que le moteur produit — un chiffre posé ici serait calé sur le moteur |
+| F18 | Un peuplement qu'on vient d'ouvrir (éclaircie, lisière neuve) verse pendant quelques années | ✅ | `tempete.ts` (`abriDuPeuplement`, `memoireDAbri`, `naiveteAuVent`) ; `naivete-vent.test.ts` — **et il a fallu trois bancs ratés avant d'obtenir le bon.** Les deux premiers comparaient des populations différentes : une éclaircie par le haut retire les grands, donc la population vulnérable, et le peuplement éclairci ressortait plus SÛR que le témoin (8,3 % de ruines contre 43,7 %). Ce n'était pas faux — il n'avait plus d'arbres à perdre — mais ça ne disait rien de la fragilité d'après-ouverture. Le banc qui compte suit **exactement les mêmes arbres dans les deux bras** : les dominants que l'éclaircie laisse debout, avec et sans le retrait de leurs voisins. Mesuré sur six graines, 332 dominants appariés : l'ouverture leur retire un tiers de leur abri (0,275 → 0,189) et **multiplie leurs chablis par 2,5 dans les cinq ans qui suivent — 49 couchés contre 20**, 133 contre 81 sur douze ans. Le confondant est écarté par la fenêtre : à cinq ans les deux bras n'ont pas encore divergé en hauteur, donc l'abri perdu est leur seule différence, et c'est là que le rapport est le plus franc. **Ces chiffres ont changé avec la carie du tronc** (#182/#183), qui ne dit rien du vent mais affaiblit les fûts des DEUX bras : le premier relevé donnait 57 contre 19 sur douze ans, dont 11 contre 1 sur cinq ans. Ce n'est pas la naïveté qui a baissé, c'est le témoin qui a cessé d'être intact — un peuplement dont les fûts sont en partie cariés perd des tiges même sans qu'on l'ouvre. **Ce que le banc ne sait pas séparer**, et qu'il faut dire : l'excès a deux causes — la perte PERMANENTE d'abri collectif tant que le peuplement reste ouvert, et la naïveté qui s'estompe en cinq ans par-dessus. Le banc mesure leur somme. La seconde est vérifiée à part, sur sa grandeur et sa décroissance (0,486 → 0,062), et elle distingue toute seule les deux façons d'éclaircir |
+| F19 | La fréquence des tempêtes suit la dérive du climat | ❌ | **la plomberie est faite, le CHIFFRE manque — et c'est le chiffre qui bloque, plus la tuyauterie.** `meteoDerivee` connaissait le scénario sans pouvoir tirer de rafale, `tick` tirait la rafale sans connaître le scénario ; la météo de la semaine porte désormais un `facteurRafale` qui fait le pont, comme elle le fait déjà pour le CO₂ et l'année (`climat.ts`, `tempete.ts` ; `rafale-climat.test.ts`). Il vaut **1**, et `AMPLIFICATION_RAFALE` vaut **0**, parce que le SIGNE lui-même n'est pas établi pour la France : les projections européennes de tempêtes hivernales sont de faible confiance et se contredisent, le consensus portant plutôt sur un léger déplacement vers le nord des trajectoires — dont la France métropolitaine est la charnière. Poser +8 % par degré comme pour la chaleur déciderait en creux que les tempêtes futures couchent plus d'arbres, ce qui commanderait la mortalité, le bois mort et le marché du bois d'une partie entière. Un essai épingle le zéro pour que le poser devienne un geste délibéré *(à instruire : projections Euro-CORDEX de vent extrême sur la France, et leur dispersion inter-modèles)* |
 | F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` : six essences contre des tables (Jansen 1996 aux Pays-Bas, Lockow 2009 pour le charme, Lemaire 2005 pour le châtaignier) et quatre arbustes contre des mesures de terrain britanniques et bretonnes, faute de table. Deux essences seulement y sont CALÉES (hêtre, charme) : l'essai les garde plus qu'il ne les valide. Les huit autres sont une validation entière, et la vérification tenue à l'écart est à vingt ans (−13 % à +10 %). Restent hors référence, et le disent : bouleau, chêne pubescent, saule blanc, prunellier — plus le chêne-liège, faute de station méditerranéenne où le confronter |
 
 ## G. Faune et santé
@@ -342,7 +351,7 @@ maladie-là, pas une preuve de santé.*
 | G7 | Sa sélectivité réoriente la composition (le noisetier trinque, le pin passe) | ✅ | `especes.gibier.appetence` ; émergent, rien n'est codé espèce par espèce |
 | G8 | Un herbivore ne détruit rien : il déplace et concentre le C et l'azote | ✅ | déjections rendues à la cellule broutée ; conservation C et N testée |
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
-| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; l'aulnaie pure se fait décimer sur chacune des trois graines, le mélange y perd trois à quatre fois moins d'aulnes (0,34 / 0,34 / 0,23) et y écrête la pullulation d'un facteur 2,8 à 3,1. Les deux sont épinglés GRAINE PAR GRAINE depuis #68, et non plus en moyenne : l'écart de mortalité avait failli s'annuler sur une graine sans que la moyenne le dise |
+| G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; l'aulnaie pure se fait décimer sur chacune des trois graines, le mélange y perd trois à quatre fois moins d'aulnes (0,34 / 0,34 / 0,23) et y écrête la pullulation d'un facteur 2,8 à 3,1. Les deux sont épinglés GRAINE PAR GRAINE depuis #68, et non plus en moyenne : l'écart de mortalité avait failli s'annuler sur une graine sans que la moyenne le dise. **Et depuis #183 les CAVITÉS comptent parmi les gîtes**, dans le même terme que le bois mort et en prenant le plus généreux des deux : ce que ce terme mesure est « y a-t-il où se loger », et cette question-là sature — un peuplement qui a déjà vingt tonnes de bois mort à l'hectare ne loge pas mieux parce qu'il a aussi des creux. Le lot se neutralise donc structurellement, et deux essais l'épinglent : à creux nuls comme à bois mort abondant, la carte est celle d'avant au bit près, et un creux ne peut jamais appauvrir une cellule. Mesuré sur un contrôle apparié au sens fort — les mêmes arbres, au même instant, aux mêmes coordonnées, dont on a seulement effacé les creux — après cent vingt ans de tempêtes : l'habitat moyen passe de **0,424 à 0,574**. C'est le plafond de ce que les cavités peuvent faire, et il n'est atteint que là où le bois mort a été enlevé : **une parcelle qu'on nettoie garde ses auxiliaires si elle garde ses arbres creux.** Les creux, contrairement au pool de bois mort, sont SPATIALISÉS — ils s'agrègent par bloc et se lisent dans la fenêtre de 3×3 que la prospection d'une mésange justifie |
 | G4 | Les pollinisateurs conditionnent la fructification | ✅ | Le service demande désormais **un gîte ET une table**, et le plus rare décide : `min(habitat, ressourceFlorale)` (`tick.ts`, `floraison.test.ts`). L'habitat dit où l'insecte vit — essences, strates, herbe, bois mort ; la ressource florale dit ce qu'il a eu à manger, par une MÉMOIRE de sept semaines agrégée sur la fenêtre de butinage (blocs de 10 m, voisinage 3×3, celle-là même que `ravageurs.ts` emploie pour l'habitat). **Le témoin est le résultat** : neuf pommiers, vingt-deux ans, trois graines, et deux haies rigoureusement égales — même nombre de tiges, mêmes espèces mellifères, même couvert. Celle qui fleurit de février à l'automne rend 327,6 kg, celle qui fleurit toute en mai 263,4 kg, le verger nu 255,6 kg : **+28 % pour le calendrier, +3 % pour la seule présence de voisins**. Coût mesuré : +6 % de temps par semaine simulée. **Et un second banc, tout différent, donne le même chiffre** : deux pommiers entourés de six arbustes, douze ans — une haie MELLIFÈRE (prunellier, aubépine, ronce) rend 14,74 kg contre 11,52 kg pour le verger nu, soit +28,0 %, quand la même haie ANÉMOPHILE (noisetier, chêne, bouleau) n'en rend que 11,62 kg, +0,9 %. Cet essai-là passait AVANT le lot avec la seule haie anémophile : le moteur affirmait que trois arbres pollinisés par le vent améliorent la nouaison d'un verger de 15 %, parce que le service ne lisait que la richesse en essences. **Limite** : pas d'insectes individualisés — ni espèces, ni populations, ni distance de butinage propre à chacune ; la fenêtre est celle des auxiliaires, faute d'en avoir mesuré une autre |
 | G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
 | G10 | Le sanglier retourne le sol et mange la glandée — un herbivore qui FAVORISE aussi la régénération | ✅ | `sanglier.ts` ; `sanglier.test.ts` — 5 % de la parcelle retournée par an à densité de référence (relevés : 0,2-0,7 %/an en prairie, 7-11 %/an en forêt), en automne et en hiver, sur les cellules qui offrent de la glandée, du couvert et un sol humide. **Deux effets de signe opposé, et aucun n'est écrit par espèce** : il mange ce qui tombe et reste (les graines dont le mode de dissémination est `geai` ou `gravite`), il ouvre un lit de germination pour ce qu'apporte le vent. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à densité ordinaire, 22 sous forte densité — difficile, jamais impossible |
@@ -367,7 +376,7 @@ maladie-là, pas une preuve de santé.*
 | H18 | Le gibier se régule aussi par la chasse — et l'immigration compense | ✅ | `chasser` ; `gibier.test.ts` — une journée fait reculer la pression, un an plus tard elle est revenue |
 | H19 | Une culture se sème, se récolte et se vend | ✅ | `semer` et `moissonner` (`actions.ts`), fiche `culture` sur l'herbacée (`herbacees.ts`) : semence, heures de chantier au prorata de la part mécanisable, grain vendu au prix de la fiche. Le grain est une INTÉGRALE — ce que la plante a assimilé sur ce qu'elle aurait assimilé sans limite —, ce qui ne demande aucune constante à caler et rend à `rendementMaxTHa` le sens que sa fiche lui donne |
 | H20 | Préparer le lit de semence conditionne la levée | ✅ | Le semis pose la PLACE LIBRE, et `labourer` remet les emprises à zéro : la règle « labourer ou faucher avant de semer » n'est écrite nulle part, elle tombe de deux mécanismes qui existaient déjà (`culture.test.ts`). Semer dans un tapis fermé est refusé AVEC sa raison — mesuré avant cette garde, le semis réussissait en silence et la moisson annonçait « rien à moissonner » neuf mois plus tard |
-| H21 | Le LER dit si le mélange bat la somme des parties | ❌ | `docs/regles.md` §7.5 le demande — « le jeu calcule le Land Equivalent Ratio des assolements mixtes vs monoculture, indicateur de score et outil pédagogique » — et rien ne le calcule. Il exige les DEUX monocultures comme témoins, le blé pur et la forêt pure sur la même station : ce n'est pas un affichage, c'est un dispositif. Cible de validation : le noyer-céréale de Restinclières dépasse 1,2 |
+| H21 | Le LER dit si le mélange bat la somme des parties | ✅ | `ler.ts` ; `ler.test.ts` — **le chiffre de l'agroforesterie, et il fallait un DISPOSITIF, pas un affichage** (#136). Trois bras, même station, même graine, même conduite : noyers en allées de 13,3 m à 100 tiges/ha avec du blé dessous, blé pur, et plantation de noyers à 6 × 6 conduite en futaie (éclaircies à 400/200/120 tiges/ha). `ler.ts` détaille pourquoi aucune quantité mesurée sur la seule parcelle mixte ne remplace les deux témoins — l'idéal sans limite de `partDuRendement` n'est pas une monoculture (un blé pur fertilisé plafonne à 0,70 de son idéal, C18), les cellules les moins ombragées d'une allée reçoivent l'azote de la litière des arbres (#140), et côté arbre il n'existe aucun analogue local. Campagne à trois graines, soixante ans : **LER 1,323 / 1,388 / 1,202**, donc les trois au-dessus de la cible de Restinclières, et la composition est celle de la littérature — culture 0,72 à 0,73, arbre 0,47 à 0,67, contre ~0,7 et ~0,5 publiés. Le terme culture est quasi constant et le terme arbre varie du simple au tiers, ce qui est attendu : le blé répond à la lumière et à l'azote, déterministes ici, quand la mortalité et la régénération des arbres sont des tirages. **IL A FALLU CINQ RELEVÉS, ET QUATRE CAUSES ÉCARTÉES QUI ÉTAIENT TOUTES MIENNES** : le témoin forestier était devenu un fourré de semis (49 plantés, 187 à l'arrivée) ; il comptait le bois des essences spontanées (15,0 m³ pour 6,7 de noyers) ; j'ai accusé la croissance du noyer sur des MOYENNES de distributions asymétriques quand l'écart était de 2,5 en volume et non de 1,2 ; puis j'ai accusé le labour et la concurrence du blé sur un écart de 77 %, alors que le dispositif labourait jusqu'au pied des rangs — ce qu'aucun agroforestier ne fait, la règle étant « des bandes larges de plus d'un mètre » (CNPF). En pavant les allées de disques qui épargnent le rang, **la pénalité s'évapore** : 0,551 m³/arbre contre 0,561 sans culture, soit 2 %, et le contrôle labour-seul-fertilisé donne 0,563 — le soc ne coûte rien. L'arbre d'allée DÉPASSE même celui de la plantation (0,498), ce qui est le fait réel : il a plus de place. **Ce qui reste impur** : la bande épargnée se reboise toute seule — élargie de 0,67 à 1,75 m elle a fait passer le bras de 23 à 34 noyers, dont dix-huit spontanés qui pèsent 5,6 % du terme arbre. C'est pourquoi la règle dit « parfaitement désherbées », et le moteur n'a pas de geste pour entretenir une bande. **Et l'affichage permanent que `regles.md` demande n'est PAS fait** : il suppose de faire avancer deux parcelles témoins en même temps que celle du joueur, soit trois fois le coût du moteur par tick. C'est un choix d'architecture, pas un lot |
 | H16 | Un chantier se mécanise ou non selon la disposition des arbres, et la machine se paie | ✅ | `mecanisation.ts` ; `mecanisation.test.ts` — la part accessible se déduit des positions, aucune parcelle n'est déclarée mécanisable |
 | H17 | La fertilité se TRANSPORTE : on récolte la biomasse ici et on l'épand là | ✅ | tas de broyat (`stockBrf`) + action `epandreBrf` ; `epandre-vs-vendre.test.ts` |
 | H13 | Entretenir une plantation (dégagements) change son sort | ✅ | action `faucher` ; `herbe.test.ts`. **Ce ✅ ne valait que pour la strate HERBACÉE** : `faucher` n'écrit que dans `herbeCouverture`, `herbeFeuillage` et `herbeBiomasse`, donc un roncier lui survivait intact, et le seul outil qui l'ouvrait — `eclaircir` par essence — était tarifé en abattages, donc hors de portée. Les deux moitiés y sont depuis #154. **Le témoin est le résultat, et aucune punition n'a été écrite** : mêmes 83 chênes aux mêmes emplacements sur une friche de dix ans, une fois telle quelle et une fois débroussaillée, quinze ans plus tard — **29 % de survie contre 48 %** (`brousse.test.ts`). Les ronces prennent la lumière, et le moteur en tire tout seul de quoi rendre rentables les 18 h de débroussaillage |
@@ -401,7 +410,7 @@ inventaire.
 |---|---|---|---|
 | J1 | La richesse en essences ET leur équilibre comptent (une essence à 95 % est un désert) | ✅ | `biodiversite.ts` équitabilité de Shannon ; `biodiversite.test.ts` |
 | J2 | Le bois mort est un habitat, pas un déchet | ✅ | pool `deadWoodKgC` intégré à l'indice (ch4-A) |
-| J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | ✅ | gros sujets, trognes recoupées ET chandelles (`biodiversite.ts` ; `trogne.test.ts`, `chandelles.test.ts`) |
+| J3 | Les gros arbres et les arbres à cavités valent plusieurs jeunes | ✅ | gros sujets, chandelles, têtes de trogne **et troncs cariés** (`biodiversite.ts` via `cavites.ts` ; `trogne.test.ts`, `chandelles.test.ts`, `cavites.test.ts`) — l'énoncé dit « les arbres à cavités » et le moteur n'en connaissait qu'une sorte, la tête de têtard (#183). Or le vieux chêne creux d'un bocage n'a pas été conduit en trogne : il a été blessé par des coups de vent, et depuis #182 le moteur sait exactement ça. Le creux d'un fût carié se calcule sur la COLONNE elle-même et non en part du fût du jour — ce que le champignon a mangé, l'aubier fabriqué par-dessus ne le rebouche pas — et l'ordre de grandeur tombe sans qu'aucun seuil ne le décide : un chêne de 50 cm creux à mi-rayon offre ~180 L, le gîte d'une chevêche, et une perche de 15 cm creuse au même degré en offre 6, le nid d'une mésange. La même formule, deux mondes. Un arbre à la fois têtard et carié ne compte pas deux fois : les litres s'additionnent avant de se convertir. **Ce que ça ne change PAS, et il faut le dire** : dans une futaie fermée l'indice ne bouge pas d'un millième — `grosArbres` vaut 1,000 avec et sans les creux à cent vingt ans — parce que le terme est déjà saturé par les sujets de plus de quinze mètres. Les cavités pèsent là où ces sujets manquent : un taillis, une haie, un jeune peuplement. **Ce qui n'est pas modélisé** : le diamètre de l'entrée, qui trie les espèces autant que le volume (28 mm pour une mésange bleue, 80 pour une chevêche), et la hauteur de la loge — les deux appellent une fiche de faune, qui n'existe pas |
 | J8 | Un arbre mort reste debout des années : c'est LE bois mort qui compte pour la faune | ✅ | `dureeChandelleSemaines` (densité du bois × 15 ans) ; `chandelles.test.ts` |
 | J4 | Un couvert étagé et permanent abrite plus qu'une strate unique | ✅ | strates, sempervirence, et depuis l'issue #75 l'ÉTAGEMENT LOCAL (`heterogeneiteVerticale`) — l'écart-type des hauteurs dans un voisinage de 3 m, qui distingue enfin une forêt étagée d'un damier de blocs monostrates que le décompte de strates notait pareil : 0,00 contre 0,68 |
 | J9 | L'ARRANGEMENT compte autant que la composition : lisière, cœur, mosaïque | ✅ | `structureHorizontale` ; `mosaique.test.ts` — à espèces, nombre et âge identiques, une mosaïque de bosquets note mieux qu'un bloc et qu'une plantation régulière (0,79 / 0,23 / 0,00). **Et le mitage ne paie pas** : des houppiers disjoints donnent 94 % de lisière et zéro cœur, donc zéro. La courbe n'est pas ajustée — c'est le PRODUIT lisière × cœur, qui tombe de l'énoncé « il faut les deux » |
@@ -485,15 +494,20 @@ trois des six lignes écrites sont des ❌ assumés. Par ordre de gain :
   parce que la fréquence des tempêtes est le bon endroit où brancher la dérive
   du climat, et le vent moyen le mauvais. Le blocage est de PLOMBERIE, pas
   d'écologie : `meteoDerivee` connaît le scénario et pas la graine de partie,
-  `tick` tire la rafale et ignore le scénario. Réunir les deux moitiés est un
-  petit lot, et il rend D11 vrai du vent aussi.
-- **F18, la fragilité d'après-éclaircie** — il y faut une mémoire par arbre de
-  l'ouverture récente. C'est ce qui rendrait DANGEREUSE une éclaircie tardive et
-  forte, ce qui est la leçon sylvicole la plus chère de Lothar.
-- **F17, la casse partielle** — un arbre penché qui survit avec une plaie est
-  aussi une porte d'entrée pour les maladies (G6) et une branche arrachée est du
-  bois mort au sol (`boisMort.ts`). Le mécanisme existerait presque ; c'est
-  l'état « blessé » qui manque à l'arbre.
+  `tick` tirait la rafale et ignorait le scénario. **Les deux moitiés se voient
+  désormais** : la météo porte un `facteurRafale`. Ce qui reste n'est plus de la
+  plomberie mais un CHIFFRE, et il n'est pas sourçable en l'état — le signe même
+  du changement de vent extrême sur la France n'est pas établi. Le jour où il le
+  sera, il y aura une ligne à changer dans `climat.ts`, et D11 deviendra vrai du
+  vent aussi.
+- **F18 est tombé** (#177 et #179). Ce qui l'a débloqué n'est pas un mécanisme
+  de plus mais un BANC : les deux premiers comparaient des populations
+  différentes, et concluaient qu'un peuplement éclairci est plus sûr — vrai, et
+  hors sujet. Le troisième suit les mêmes arbres dans les deux bras.
+- **F17 est tombé** (#176 puis #181) : le volis à côté du déracinement, et la
+  branche arrachée à côté des deux. L'état « blessé » qui manquait est
+  `houppierPerdu`, de la même famille que `dommageHydraulique` — une mémoire
+  d'événement portée par l'arbre, qui s'efface.
 
 ### 4. Les moins chers : un test, et le critère passe
 
@@ -1308,10 +1322,25 @@ existait déjà et calculait un abri. Mais il répond à une AUTRE question : il
 du sol — et compte tout voisin d'une certaine taille, où qu'il soit. Dans un
 peuplement il sature donc à 1 pour tout le monde : chacun s'abrite de ses
 semblables, et plus rien ne verse. Ce qui abrite une CIME, c'est ce qui la
-dépasse. `abriAuVent` ne somme que le dépassement des voisins plus hauts, et de
-là sortent trois comportements de terrain qu'on n'a pas eu à écrire : une futaie
-régulière ne s'abrite pas elle-même (c'est Klaus dans les pins alignés), un
-sous-étage est protégé par sa canopée, un dominant qui émerge prend tout.
+dépasse. `abriAuVent` somme donc le dépassement des voisins plus hauts, et de là
+sortent deux comportements de terrain qu'on n'a pas eu à écrire : un sous-étage
+est protégé par sa canopée, un dominant qui émerge prend tout.
+
+**Et un TROISIÈME abri s'y ajoute, celui du peuplement (#179)** — le rapport de
+l'espacement local à la hauteur, qui est la variable centrale des modèles de la
+famille ForestGALES : des tiges serrées se partagent la quantité de mouvement.
+Il a fallu corriger un énoncé du référentiel pour l'écrire. On lisait ici
+qu'« une futaie régulière ne s'abrite pas elle-même, c'est Klaus dans les pins
+alignés » : ces pinèdes n'ont pas versé faute d'abri, elles ont versé parce
+qu'elles étaient élancées, uniformes, sur sable, et qu'une fois ouvertes elles
+se sont décousues. Le terme collectif plafonne donc au TIERS, très en dessous du
+dépassement — une futaie serrée est plus sûre qu'une parcelle ouverte sans être
+intouchable, et un essai l'interdit, parce que c'est exactement la faute du
+premier jet. De là sortent deux comportements de plus, toujours sans les
+écrire : **un arbre de lisière est moins abrité qu'un arbre d'intérieur** (il a
+moins de voisins, donc un espacement local plus grand — la distance au bord
+n'est calculée nulle part), et **une ouverture dépouille les DOMINANTS**, ceux
+qui versent, ce que la mémoire d'abri de F18 attendait pour mordre.
 
 **Les semis couchés, les dominants épargnés.** Cent vingt-deux arbres pour
 2,4 m³, soit l'exact inverse d'une tempête. L'ancrage était écrit comme une
@@ -1875,11 +1904,34 @@ debout, parce que ce sont deux objets différents :
 | faune | pics, puis tout ce qui occupe leurs loges | carabes, salamandres, saproxyliques du sol |
 | sol | rien | protège la terre sous lui comme un paillage — et **barre l'eau** s'il est en travers (voir plus bas) |
 
-La direction de chute suit l'aval, d'autant plus franchement que la pente est
-raide : au-delà de 30 %, la gravité tranche ; à plat, l'arbre tombe où son
-défaut le porte. Une seule formule, resserrée par la pente, plutôt qu'un cas
-« pente » et un cas « plat » — et le test compare deux nuages de deux cents
-tirages, parce qu'une chute unique ne prouverait rien.
+La direction de chute compose **deux tendances**, en vecteurs : l'aval, d'autant
+plus franchement que la pente est raide, et le **coup de vent de la semaine**
+(#58). Une seule formule, pas un cas « pente » et un cas « plat » — et le test
+compare des nuages de plusieurs centaines de tirages, parce qu'une chute unique
+ne prouverait rien. Deux tendances qui divergent orientent vers leur
+résultante ; deux qui s'opposent s'annulent et rendent la main au hasard. Elles
+ne resserrent en revanche jamais au-delà du plancher de dispersion, et c'est la
+source qui l'impose : Rentch et al. concluent que la forte variation des
+directions de chute empêche d'établir une relation constante avec la pente OU
+le vent.
+
+Ce qu'on lit est la **rafale** et non le vent moyen, et la distinction est tout
+le mécanisme. Une moyenne hebdomadaire souffle en permanence : branchée ici,
+elle peigne les chutes tout le temps, dans une direction sans rapport avec
+l'aval — mesuré, le rapport « un versant raide barre moins que le plat » passe
+de 0,55 à 0,97, c'est-à-dire s'efface. Une rafale ne dépasse le seuil que seize
+semaines sur cent, si bien que la pente décide seule le reste du temps et que
+les chandelles d'une semaine de coup de vent partent **ensemble dans le même
+sens**. Mesuré en partie sur terrain plat, morts échelonnées : 14,5 % des chutes
+tombent une semaine ventée, et leur concentration autour du cap du vent vaut
+0,19 contre 0,03 pour les autres.
+
+*Limite à écrire* : **c'est le calendrier qui décide de la date de chute, pas le
+vent.** `dureeChandelleSemaines` est un délai fixe par espèce ; la rafale
+n'oriente que ce qui tombe déjà. La conséquence se mesure — un banc qui tue cent
+vingt saules la même semaine les voit tomber tous la même semaine, et n'exerce
+jamais ce mécanisme. Le jour où un coup de vent déclenchera la chute au lieu de
+seulement l'orienter, la corrélation cessera d'être une coïncidence *(à faire)*.
 
 Ce qui poussait dessous casse selon une règle de masse : **ce qui reçoit plus
 lourd que soi casse**. Un semis disparaît sous n'importe quel tronc, un arbre

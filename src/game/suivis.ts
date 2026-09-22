@@ -53,6 +53,7 @@ export const CAUSE_AU_SINGULIER: Record<CauseMort, string> = {
   maladie: "emporté par la maladie",
   frottis: "annelé par les frottis de cervidés",
   chablis: "couché par la tempête",
+  volis: "cassé net par la tempête",
 };
 
 /**

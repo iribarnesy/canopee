@@ -33,6 +33,7 @@ export type CauseMort =
   | "maladie"
   | "frottis"
   | "chablis"
+  | "volis"
   | "ecrasement";
 
 export const LIBELLE_CAUSE: Record<CauseMort, string> = {
@@ -49,7 +50,22 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   maladie: "emportés par la maladie",
   frottis: "annelés par les frottis de cervidés",
   chablis: "couchés par la tempête",
+  volis: "cassés net par la tempête",
 };
+
+/**
+ * L'état de carie d'un tronc : ce qui est pourri, et jusqu'où ça peut aller.
+ *
+ * Les deux nombres sont en centimètres de RAYON, et il en faut bien deux — la
+ * barrière est le mur de compartimentation que l'arbre dresse à la blessure,
+ * et elle borne la carie pour toujours (`prochaineCarie`, tempete.ts).
+ */
+export interface Carie {
+  /** rayon du bois déjà carié, cm */
+  rayonCm: number;
+  /** mur de compartimentation : le rayon qu'avait le tronc à la dernière plaie, cm */
+  barriereCm: number;
+}
 
 export interface TreeState {
   id: number;
@@ -206,6 +222,22 @@ export interface TreeState {
    * avant que le bois ne bleuisse — c'est le VRAI chablis, celui dont
    * `DECOTE_CHABLIS` porte le nom depuis toujours sans le désigner.
    */
+  /**
+   * ABRI AUQUEL CET ARBRE-LÀ EST HABITUÉ ∈ [0,1] : moyenne lissée de l'abri
+   * qu'il a connu, remise à jour une fois l'an (`tempete.ts`, critère F18).
+   *
+   * Ce n'est pas son abri actuel — c'est la mémoire de celui sous lequel il a
+   * fabriqué son fût et ses racines. Ce qui fragilise un arbre qu'on vient de
+   * découvrir n'est pas d'être exposé, c'est de l'être SANS Y ÊTRE PRÉPARÉ :
+   * l'épaississement du tronc sous la contrainte mécanique se compte en
+   * années. La chute entre cette mémoire et l'abri du jour mesure cette
+   * naïveté, et elle s'estompe toute seule à mesure que la mémoire rattrape.
+   *
+   * Absent sur un arbre qui n'a pas encore vu passer un 1ᵉʳ janvier : il est
+   * alors réputé habitué à ce qu'il a, donc pas naïf. Un semis ne naît pas
+   * fragile.
+   */
+  abriHabituel?: number;
   renverseSemaine?: number;
   /**
    * Direction dans laquelle le tronc est parti, radians — posée au moment du
@@ -261,6 +293,41 @@ export interface TreeState {
    * deux ou trois ans après, à la suivante.
    */
   dommageHydraulique: number;
+  /**
+   * Part du houppier ARRACHÉE par un coup de vent et pas encore reconstituée
+   * ∈ [0 ; 0,4] (`tempete.ts`, critère F17).
+   *
+   * Le troisième dégât d'une tempête, celui qui laisse l'arbre debout : ni
+   * motte arrachée, ni fût cassé, des branches en moins. C'est le plus FRÉQUENT
+   * — on le voit après chaque coup de vent sans que rien ne soit par terre — et
+   * il coûte de deux façons : l'arbre intercepte moins de lumière tant qu'il
+   * n'a pas repoussé, et ses plaies sont une porte d'entrée pour les maladies.
+   *
+   * Même famille que `dommageHydraulique` : une mémoire d'événement, portée par
+   * l'arbre et non par son milieu, qui s'efface lentement.
+   */
+  houppierPerdu?: number;
+  /**
+   * CARIE DU TRONC ∈ [0,1] : la part du RAYON mangée par les champignons de
+   * carie (`tempete.ts`, #182).
+   *
+   * Elle s'installe par une PLAIE — branche arrachée, frottis, brûlure,
+   * recépage, élagage — et **elle ne guérit jamais**. C'est ce qui la distingue
+   * de `houppierPerdu`, qui repousse : une colonne de carie ne fait que monter,
+   * et c'est ce qui rend un vieil arbre plusieurs fois blessé cumulativement
+   * fragile.
+   *
+   * Ce n'est PAS la vieillesse : `tickTree` fait déjà décliner la vigueur passé
+   * 85 % de la longévité. La carie est attachée aux blessures, et un arbre
+   * jamais blessé reste sain quel que soit son âge.
+   *
+   * Deux nombres et pas un, tous deux en centimètres de rayon : ce qui est
+   * pourri, et le mur de compartimentation que l'arbre a dressé à la plaie. Le
+   * second borne le premier, donc un arbre qui pousse vite recouvre sa carie
+   * d'aubier sain — c'est le CODIT, et c'est ce qui sépare le chêne de futaie
+   * qui porte une cicatrice de jeunesse du vieux têtard creux du bocage.
+   */
+  carie?: Carie;
   /**
    * Vigueur ∈ [0,1] : moyenne lissée du facteur limitant sur les derniers
    * mois. Ce n'est pas la même chose que le stress. Le stress ne monte que
@@ -1336,11 +1403,27 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // l'arbre TIRE de conditions données, pas les conditions elles-mêmes. Deux
   // voisins ont la même eau et la même lumière ; l'un en fait plus que l'autre,
   // et c'est ce qui crée les dominants et les dominés.
+  //
+  // LE HOUPPIER ARRACHÉ ENTRE AU MÊME ENDROIT, ET C'EST UNE CORRECTION.
+  // Première version : il multipliait `env.light`, ce qui paraissait naturel —
+  // moins de feuilles, moins de lumière captée. C'était faux, et le banc des
+  // tables de production l'a dit tout de suite : le pin ressortait à 18,7 m à
+  // quarante ans pour 15,5 m tabulés, soit TROP GRAND. La raison est que
+  // `env.light` nourrit aussi l'allocation (`allocationDiametreCmParM`), donc
+  // le signal d'ÉTIOLEMENT : baisser la lumière disait à l'arbre qu'il était à
+  // l'ombre, et un arbre à l'ombre file en hauteur. Or un arbre ébranché n'est
+  // pas ombragé — il a la même lumière et moins de feuilles pour la prendre.
+  // C'est donc bien ce qu'il en TIRE qu'il faut réduire.
   // Le tassement se multiplie au lieu d'entrer dans le minimum, pour la raison
   // dite au champ `tassement` : il ne remplace aucun facteur limitant, il les
   // aggrave tous. Essais Arvalis : jusqu'à 30 % de perte sur sol tassé.
   const fTassement = facteurCroissanceTassement(env.tassement ?? 0);
-  const commun = Math.max(0, potentialM) * stressPenalty * fTassement * tree.vigueurIndividuelle;
+  const commun =
+    Math.max(0, potentialM) *
+    stressPenalty *
+    fTassement *
+    tree.vigueurIndividuelle *
+    (1 - Math.min(1, Math.max(0, tree.houppierPerdu ?? 0)));
   // Ce que la tige pourrait allonger si le carbone suivait : tous les facteurs
   // SAUF la lumière. C'est la hauteur insensible à la densité d'Assmann.
   const allongementPossibleM = commun * limitantHorsLumiere;

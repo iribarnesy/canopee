@@ -34,6 +34,7 @@ import {
   directionDeChute,
   ecrasePar,
   empreinteDeChute,
+  empriseDuVentSurLaChute,
   graineDeChute,
   lameRetenueMm,
   longueurDeTroncM,
@@ -219,9 +220,19 @@ import {
 import {
   abriAuVent,
   candidatAuChablis,
+  hauteurDeVolisM,
+  houppierArrache,
+  memoireDAbri,
+  modeDeRuine,
+  PLAIE_OUVRANTE,
+  prochaineCarie,
+  prochainHouppierPerdu,
   RAFALE_MINIMALE_MS,
   rafaleDeLaSemaine,
+  rafaleRecue,
   verse,
+  vitesseCritiqueMs,
+  vitesseCritiqueVolisMs,
 } from "./tempete";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
 import type { CauseMort, TreeState } from "./trees";
@@ -446,6 +457,17 @@ export interface TempeteResult {
   /** cap vers lequel le vent poussait, radians — le sens où les troncs sont partis */
   versRad: number;
   arbresVerses: number;
+  /**
+   * Arbres dont le FÛT a cassé au lieu que la motte lâche (F17). Ils ne sont
+   * pas comptés dans `arbresVerses` : ils ne sont pas par terre, il reste un
+   * moignon debout — et pour une espèce qui rejette, il est vivant.
+   */
+  arbresCasses: number;
+  /**
+   * Arbres qui ont TENU mais y ont laissé des branches (F17). C'est le dégât
+   * le plus fréquent d'une tempête, et le seul qui ne tue personne.
+   */
+  arbresEbranches: number;
   /** volume de tige couché, m³ : ce que le joueur peut encore vendre, décoté */
   volumeM3: number;
   victimes: readonly { id: number; hauteurM: number }[];
@@ -685,6 +707,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterK = state.soil.litterK.slice();
   // Les bases échangeables, et le calcium de la litière qui les nourrit ou les
   // consomme (bases.ts). C'est ce pool-là qui porte le pH de la cellule.
+  // La rafale de la semaine, tirée une fois pour toutes (tempete.ts). Elle sert
+  // DEUX fois et à deux endroits éloignés du tick : elle couche les arbres
+  // vivants (§ tempête) et elle oriente la chute des chandelles (§ bois mort,
+  // issue #58). Elle dérive de la graine de partie, pas du flux principal.
+  const rafaleMs = rafaleDeLaSemaine(
+    state.graineMarche,
+    state.week,
+    weather.ventMoyMs,
+    // La trajectoire climatique, arrivée jusqu'ici par la météo de la semaine
+    // (F19). Elle vaut 1 tant que le chiffre manque, mais les deux moitiés du
+    // mécanisme se voient enfin : `meteoDerivee` connaît le scénario, `tick`
+    // connaît la graine, et c'est la météo qui fait le pont — exactement comme
+    // elle le fait déjà pour le CO₂ et l'année.
+    weather.facteurRafale ?? 1,
+  );
+  const ventDeChute = {
+    versRad: weather.ventVersRad,
+    emprise: empriseDuVentSurLaChute(rafaleMs * Math.min(1, Math.max(0, station.ventExposition))),
+  };
   const basesEq = state.soil.basesEq.slice();
   // Le réservoir du fond, celui que la pompe vide (bases.ts, critère C15).
   const basesProfondEq = state.soil.basesProfondEq.slice();
@@ -1753,6 +1794,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const vigueur = next.vigueur + ((result.limitingFactor ?? 1) - next.vigueur) * 0.05;
     // La cavitation s'installe vite et se dilue lentement : c'est la mémoire
     // pluriannuelle des sécheresses (trees.ts).
+    const houppierPerdu = next.houppierPerdu
+      ? prochainHouppierPerdu(next.houppierPerdu, 0) || undefined
+      : undefined;
     const dommageHydraulique = prochainDommageHydraulique(
       next.dommageHydraulique,
       waterSatisfaction[t] ?? 1,
@@ -1782,6 +1826,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       ...next,
       vigueur,
       dommageHydraulique,
+      houppierPerdu,
       baseHouppierM,
       uptakeYearG: next.uptakeYearG + Math.max(0, acquired),
     };
@@ -2267,7 +2312,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const degats =
         maladie.virulence *
         pressionMaladie(maladie, voisins, humiditeSurface) *
-        getEspece(tree.especeId).ravageurs.sensibilite;
+        getEspece(tree.especeId).ravageurs.sensibilite *
+        // Une plaie est une porte d'entrée (G6) : un arbre que la tempête a
+        // ébranché offre au champignon des bois frais à coloniser (F17). Le
+        // surcroît s'efface avec la repousse, comme la plaie se referme.
+        (1 + (tree.houppierPerdu ?? 0));
       if (degats <= 0) return tree;
       const stress = tree.stress + degats;
       const stressMaladie = (tree.stressMaladie ?? 0) + degats;
@@ -2481,10 +2530,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // flux principal est unique et séquentiel, un tirage de plus y décalerait
     // tous les suivants et rebattrait les cartes de tous les autres mécanismes.
     // Un chablis est parti dans le sens du coup de vent, et il l'a retenu
-    // (`chuteRad`). Une chandelle, elle, n'a que la pente pour l'orienter.
+    // (`chuteRad`). Une chandelle, elle, compose la pente et le coup de vent de
+    // la semaine où elle s'abat (issue #58) : ce qui fait tomber un tronc mort
+    // est rarement le terrain tout seul.
     const radians =
       tree.chuteRad ??
-      directionDeChute(altitudes, dims, tree.x, tree.y, graineDeChute(tree.id, state.week));
+      directionDeChute(
+        altitudes,
+        dims,
+        tree.x,
+        tree.y,
+        graineDeChute(tree.id, state.week),
+        ventDeChute,
+      );
     const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, radians, dims);
     const longueurTotale = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
     if (longueurTotale <= 0) continue;
@@ -2761,9 +2819,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Aucun tirage dans le flux principal : la rafale dérive de la graine de
   // partie, le renversement de l'identité de l'arbre (tempete.ts).
   let tempete: TickResult["tempete"];
-  const rafaleMs = rafaleDeLaSemaine(state.graineMarche, state.week, weather.ventMoyMs);
   if (rafaleMs >= RAFALE_MINIMALE_MS && station.ventExposition > 0) {
     const verses: TreeState[] = [];
+    /** Ceux dont le FÛT a cassé : ils ne sont pas par terre (F17). */
+    const casses: TreeState[] = [];
+    /** Ceux qui tiennent mais y laissent des branches (F17). */
+    let ebranches = 0;
     nextTrees = nextTrees.map((tree) => {
       if (!candidatAuChablis(tree)) return tree;
       const espece = getEspece(tree.especeId);
@@ -2790,7 +2851,72 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
         profondeurEffectiveCm: tree.rootDepthCm,
       };
-      if (!verse(tree, exposition, state.week)) return tree;
+      if (!verse(tree, exposition, state.week, espece.bois.densite)) {
+        // IL TIENT — mais il peut y laisser des branches (F17, troisième mode).
+        // C'est le dégât le plus fréquent d'une tempête, celui qu'on voit après
+        // chaque coup de vent sans que rien ne soit par terre.
+        const critique = Math.min(
+          vitesseCritiqueMs(tree, exposition),
+          vitesseCritiqueVolisMs(tree, espece.bois.densite, exposition),
+        );
+        const arrache = houppierArrache(rafaleRecue(tree, exposition), critique);
+        if (arrache <= (tree.houppierPerdu ?? 0)) return tree;
+        // Ce qui est arraché tombe : feuilles et brindilles rejoignent la
+        // litière tout de suite, au lieu d'attendre l'automne.
+        //
+        // ET C'EST BIEN « AU LIEU », PAS « EN PLUS » — la première version
+        // déposait cette litière sans rien retirer à l'arbre, si bien qu'il
+        // laissait tomber à l'automne un feuillage qu'il avait déjà perdu :
+        // le moteur CRÉAIT de l'azote à chaque coup de vent, et la parcelle
+        // s'en trouvait fertilisée. Mesuré, le pin en sortait plus grand que
+        // les tables de production. Un coup de vent ne fabrique pas des
+        // feuilles ; il les fait tomber plus tôt. On retire donc à la réserve
+        // de l'année exactement ce qu'on verse au sol.
+        const litiereArrachee = arrache * tree.uptakeYearG;
+        depositLitter(tree, LITTER_RETURN_FRACTION * litiereArrachee);
+        ebranches++;
+        return {
+          ...tree,
+          houppierPerdu: arrache,
+          uptakeYearG: tree.uptakeYearG - litiereArrachee,
+        };
+      }
+      // DEUX RUINES, ET C'EST UNE COMPARAISON QUI TRANCHE (F17). L'arbre cède
+      // par son point faible : si son fût casse avant que sa motte ne lâche,
+      // c'est un volis et non un chablis (tempete.ts).
+      if (modeDeRuine(tree, espece.bois.densite, exposition) === "volis") {
+        const hauteurApres = hauteurDeVolisM(tree.heightM, tree.baseHouppierM ?? 0);
+        // Ce que l'arbre cesse de porter part au sol : la cime cassée reste sur
+        // place, et les racines que le modèle déduit de la hauteur avec elle
+        // (carbon.ts). Sans ce versement, une tempête ferait disparaître du
+        // carbone — et le test de conservation le dirait.
+        deadWoodKgC +=
+          treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
+          treeAboveCarbonKg(espece, tree.diametreCm, hauteurApres) +
+          racinesPerduesEnRabattant(espece, tree.diametreCm, tree.heightM, hauteurApres);
+        casses.push(tree);
+        // C'est `rejetteDeSouche` qui décide du sort, et rien d'autre : un
+        // châtaignier repart de sa cassure, un pin reste un moignon sec.
+        if (!espece.bois.rejetteDeSouche) {
+          return {
+            ...tree,
+            heightM: hauteurApres,
+            alive: false,
+            causeMort: "volis" as const,
+            // PAS de `renverseSemaine` : il n'est pas par terre. Il fera une
+            // chandelle raccourcie, pas un chablis récupérable.
+            mortSemaine: undefined,
+          };
+        }
+        return {
+          ...tree,
+          heightM: hauteurApres,
+          // La souche repart branchue, comme après un recépage (actions.ts).
+          hauteurElagueeM: 0,
+          baseHouppierM: 0,
+          pousseTendreM: 0,
+        };
+      }
       verses.push(tree);
       return {
         ...tree,
@@ -2802,11 +2928,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         chuteRad: weather.ventVersRad,
       };
     });
-    if (verses.length > 0) {
+    if (verses.length > 0 || casses.length > 0 || ebranches > 0) {
       tempete = {
         rafaleMs,
         versRad: weather.ventVersRad,
         arbresVerses: verses.length,
+        arbresCasses: casses.length,
+        arbresEbranches: ebranches,
         volumeM3: verses.reduce((s, t) => s + volumeTigeM3(t.diametreCm, t.heightM), 0),
         victimes: verses.map((t) => ({ id: t.id, hauteurM: t.heightM })),
       };
@@ -2841,6 +2969,59 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const sortieOeuvreKgC = state.carbon.oeuvreStockKgC * SORTIE_OEUVRE_PAR_SEMAINE;
 
   // ── 7. Régénération annuelle (semis de la parcelle + du voisinage) ────────
+  // ── 6 ter bis. La mémoire d'abri, une fois l'an (F18) ────────────────────
+  // Chaque arbre retient l'abri sous lequel il a fabriqué son fût et ses
+  // racines ; ce qui le fragilise n'est pas d'être exposé mais de l'être sans y
+  // être préparé (tempete.ts). La mise à jour est ANNUELLE et non hebdomadaire,
+  // et c'est un choix de coût assumé : `abriAuVent` parcourt le peuplement pour
+  // chaque arbre, donc un n², et la constante de temps se compte en années.
+  //
+  // Placée APRÈS la tempête, délibérément : un arbre découvert par la rafale de
+  // cette semaine-là doit être naïf l'an prochain, pas déjà habitué.
+  if (week === RECRUITMENT_WEEK) {
+    const debout = nextTrees.filter((t) => t.alive);
+    nextTrees = nextTrees.map((tree) => {
+      if (!tree.alive) return tree;
+      const abri = abriAuVent(debout, tree);
+      // LA CARIE AVANCE, une fois l'an et pour toujours (#182). Une plaie
+      // l'installe — branche arrachée, frottis, brûlure, recépage, élagage —
+      // et rien ne la referme. C'est la seule mémoire du moteur qui ne
+      // s'efface pas, et c'est ce qui fait un vieil arbre creux.
+      // Et une plaie, ici, est une plaie qui atteint le CŒUR : une brindille
+      // cassée se referme, une charpentière arrachée jamais (`PLAIE_OUVRANTE`).
+      // L'élagage et le recépage y vont d'office — ce sont des coupes franches
+      // faites exprès, et c'est bien pour ça qu'un têtard se creuse.
+      const grossePlaie = (tree.houppierPerdu ?? 0) >= PLAIE_OUVRANTE;
+      const blesse =
+        grossePlaie ||
+        tree.frotteSemaine !== undefined ||
+        tree.brulEeSemaine !== undefined ||
+        tree.recepages > 0 ||
+        tree.hauteurElagueeM > 0;
+      // Mais seule une plaie FRAÎCHE repousse le mur de compartimentation sur
+      // le rayon du jour : une cicatrice d'élagage de jeunesse n'ouvre pas
+      // l'aubier que l'arbre a fabriqué depuis (`prochaineCarie`).
+      const plaieFraiche =
+        grossePlaie ||
+        (tree.frotteSemaine !== undefined && state.week - tree.frotteSemaine < 52) ||
+        (tree.brulEeSemaine !== undefined && state.week - tree.brulEeSemaine < 52);
+      const carie = prochaineCarie(
+        tree.carie,
+        blesse,
+        plaieFraiche,
+        tree.diametreCm / 2,
+        getEspece(tree.especeId).bois.densite,
+      );
+      return {
+        ...tree,
+        carie,
+        // Un arbre qui n'a pas encore vu passer un 1ᵉʳ janvier est réputé
+        // habitué à ce qu'il a : un semis ne naît pas fragile.
+        abriHabituel: memoireDAbri(tree.abriHabituel ?? abri, abri),
+      };
+    });
+  }
+
   // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
   // Versées à la semaine du recrutement, qui vaut « début de campagne ». Elles
   // ne tombent que si l'économie compte dans cette partie : sans elle, le

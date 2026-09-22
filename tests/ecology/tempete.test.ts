@@ -221,6 +221,12 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
     for (let x = 2; x < COTE; x += 3) state = plantAt(state, especeId, x, y, 0.5);
   }
   let tempetes = 0;
+  // TOUTES les ruines, les deux modes confondus. Depuis #176 une tempête casse
+  // aussi bien qu'elle déracine, et `arbresVerses` ne compte plus que la
+  // seconde : compter les couchés seuls ferait dire à cet essai « le pin
+  // déracine moins qu'avant » là où il veut dire « la tempête lui prend plus
+  // d'arbres qu'au hêtre ». Quand un mécanisme change ce qu'une grandeur
+  // VEUT DIRE, c'est le thermomètre qu'on change, pas le seuil.
   let verses = 0;
   let volumeM3 = 0;
   const semaines: number[] = [];
@@ -243,7 +249,7 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
     }
     if (!r.tempete) continue;
     tempetes++;
-    verses += r.tempete.arbresVerses;
+    verses += r.tempete.arbresVerses + r.tempete.arbresCasses;
     volumeM3 += r.tempete.volumeM3;
     semaines.push(i % 52);
   }
@@ -293,6 +299,9 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       // conclusion de l'essai déguisée en son hypothèse.
       expect(pin.hMaxAtteint).toBeGreaterThan(10);
       expect(hetre.hMaxAtteint).toBeGreaterThan(10);
+      // Relevé après #176, les deux modes confondus : 64 + 40 ruines de pin
+      // contre 24 au hêtre sur la graine 11. Le tri tient, et il tient mieux
+      // qu'avant — le pin est un bois tendre, donc il casse en plus de verser.
       expect(pin.verses).toBeGreaterThan(3 * Math.max(1, hetre.verses));
       expect(pin.volumeM3).toBeGreaterThan(hetre.volumeM3);
       // Et les tempêtes sont des événements d'hiver. Pas « jamais en été » :

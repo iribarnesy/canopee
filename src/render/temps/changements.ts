@@ -115,6 +115,9 @@ export const TEINTE_DE_LA_CAUSE: Record<CauseMort, Teinte> = {
   // La tempête : le gris-bleu froid d'un ciel de coup de vent. Ni fauve — ce
   // n'est pas le gibier — ni gris neutre, qui est déjà l'ombre.
   chablis: { r: 108, g: 128, b: 152 },
+  // Le volis est un chablis du fût : même famille de bleu-gris, un ton plus
+  // clair parce qu'il reste un moignon debout (F17).
+  volis: { r: 130, g: 146, b: 166 },
 };
 
 /** La teinte d'un geste — celle du travail, pas celle d'une cause. */

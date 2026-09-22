@@ -74,10 +74,85 @@ export const EMPRISE_PAR_METRE_DE_TRONC = 0.3;
 export const MASSE_LINEIQUE_TRONC_KGC_PAR_M = 15;
 
 /**
+ * Rafale en dessous de laquelle le vent n'oriente pas une chandelle, m/s.
+ *
+ * Une brise ne décide pas du sens où tombe un tronc mort : ce qui l'abat est un
+ * COUP de vent. Douze mètres par seconde (43 km/h) est le bas d'un coup de vent
+ * ordinaire, celui qui casse les branches mortes *(à calibrer)*.
+ */
+export const RAFALE_SANS_EMPRISE_MS = 12;
+
+/**
+ * Rafale à partir de laquelle le vent oriente autant que la pente la plus
+ * franche, m/s.
+ *
+ * Trente mètres par seconde (108 km/h) : au-dessus, `tempete.ts` commence à
+ * coucher des arbres VIVANTS. Une chandelle pourrie n'a aucune raison de mieux
+ * tenir, et à ce régime-là c'est le vent qui décide du sens, pas le terrain
+ * *(à calibrer)*.
+ */
+export const RAFALE_ORIENTANTE_MS = 30;
+
+/**
+ * Emprise du vent sur le sens d'une chute ∈ [0,1].
+ *
+ * **C'est la RAFALE qu'on lit, et pas le vent moyen de la semaine.** La
+ * distinction a été mesurée avant d'être écrite : branchée sur `ventMoyMs`, une
+ * tendance permanente efface complètement un résultat du banc du bois en
+ * travers — un versant raide barre moins l'eau que le plat, et le rapport
+ * remonte à 0,97 alors qu'il vaut 0,55 sans vent. La raison est que la moyenne
+ * hebdomadaire souffle TOUT LE TEMPS : elle peigne les chutes en permanence,
+ * dans une direction qui n'a aucune raison d'être celle de l'aval, et brouille
+ * une tendance réelle sans en apporter une.
+ *
+ * Une rafale, elle, ne dépasse ce seuil que seize semaines sur cent. Le reste
+ * du temps l'emprise est nulle et la pente décide seule, comme avant ; les
+ * semaines de coup de vent, les chandelles partent ensemble dans le même sens.
+ * C'est la signature de terrain que l'issue #58 décrivait, et elle ne pouvait
+ * pas sortir d'une moyenne.
+ */
+export function empriseDuVentSurLaChute(rafaleMs: number): number {
+  const part =
+    (rafaleMs - RAFALE_SANS_EMPRISE_MS) / (RAFALE_ORIENTANTE_MS - RAFALE_SANS_EMPRISE_MS);
+  return Math.min(1, Math.max(0, part));
+}
+
+/** Ce que le vent de la semaine pèse sur le sens d'une chute. */
+export interface VentDeChute {
+  /** cap vers lequel le vent souffle, radians (`WeekWeather.ventVersRad`) */
+  versRad: number;
+  /** emprise ∈ [0,1], cf. `empriseDuVentSurLaChute` */
+  emprise: number;
+}
+
+/** Aucun vent : la pente décide seule, comme avant l'issue #58. */
+export const SANS_VENT_DE_CHUTE: VentDeChute = { versRad: 0, emprise: 0 };
+
+/**
  * Direction dans laquelle une chandelle s'abat, en radians (0 = +x, sens
- * trigonométrique). Sur une pente marquée, l'arbre tombe vers l'aval ; à plat,
- * il tombe n'importe où. Entre les deux, le hasard est resserré autour de
- * l'aval à mesure que la pente se redresse — une seule formule, pas deux cas.
+ * trigonométrique).
+ *
+ * DEUX TENDANCES, COMPOSÉES EN VECTEURS. La pente tire vers l'aval, le coup de
+ * vent vers son cap ; on somme les deux vecteurs et on lit l'angle du
+ * résultat, sa longueur donnant la force du resserrement. Une seule formule,
+ * pas un arbitrage entre cas :
+ *
+ *  - la pente seule oriente vers l'aval, d'autant plus qu'elle est raide ;
+ *  - le coup de vent seul oriente vers son cap ;
+ *  - les deux ensemble orientent vers LEUR RÉSULTANTE — un versant qui descend
+ *    à l'est sous un vent de nord couche ses troncs au nord-est ;
+ *  - **deux qui s'opposent s'annulent et rendent la main au hasard** — un
+ *    versant qui tourne le dos au vent couche dans tous les sens.
+ *
+ * **Ce que la composition ne fait PAS, et le banc l'a exigé avant moi.** J'avais
+ * écrit ici que deux tendances d'accord resserrent plus que chacune séparément.
+ * C'est faux, et l'essai l'a démenti au chiffre près : `Math.min(1, norme)`
+ * plafonne le resserrement, si bien qu'une pente déjà franche ne se resserre
+ * pas davantage sous le vent. Et c'est le bon comportement, parce que
+ * `DISPERSION_RESIDUELLE` est un PLANCHER de hasard, pas un reliquat : Rentch
+ * et al. concluent que la forte variation des directions de chute empêche
+ * d'établir une relation constante avec la pente OU le vent. Deux tendances
+ * alignées qui mordraient dessus contrediraient la seule source qu'on ait.
  */
 export function directionDeChute(
   altitudes: readonly number[],
@@ -85,12 +160,21 @@ export function directionDeChute(
   x: number,
   y: number,
   graine: number,
+  vent: VentDeChute = SANS_VENT_DE_CHUTE,
 ): number {
   const { radians: aval, pentePct } = versLAval(altitudes, dims, x, y);
-  const contrainte =
-    (1 - DISPERSION_RESIDUELLE) * Math.min(1, pentePct / PENTE_ORIENTANT_LA_CHUTE_PCT);
+  const forcePente = Math.min(1, pentePct / PENTE_ORIENTANT_LA_CHUTE_PCT);
+  const emprise = Math.min(1, Math.max(0, vent.emprise));
+  const vx = forcePente * Math.cos(aval) + emprise * Math.cos(vent.versRad);
+  const vy = forcePente * Math.sin(aval) + emprise * Math.sin(vent.versRad);
+  const norme = Math.hypot(vx, vy);
+  // Sans aucune tendance — terrain plat et pas de coup de vent — la chute est
+  // quelconque, et c'est l'aval qui sert de repère pour que le tirage reste
+  // celui d'avant. `atan2(0, 0)` vaudrait 0, soit un est arbitraire.
+  const tendance = norme > 0 ? Math.atan2(vy, vx) : aval;
+  const contrainte = (1 - DISPERSION_RESIDUELLE) * Math.min(1, norme);
   const ecart = (rngFloat(rngStateFromSeed(graine)).value * 2 - 1) * Math.PI;
-  return aval + ecart * (1 - contrainte);
+  return tendance + ecart * (1 - contrainte);
 }
 
 /**

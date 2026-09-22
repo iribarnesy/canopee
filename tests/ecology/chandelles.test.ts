@@ -17,7 +17,11 @@ import {
   couvertureDuBoisAuSol,
   directionDeChute,
   ecrasePar,
+  empriseDuVentSurLaChute,
   graineDeChute,
+  RAFALE_ORIENTANTE_MS,
+  RAFALE_SANS_EMPRISE_MS,
+  SANS_VENT_DE_CHUTE,
 } from "../../src/engine/boisMort";
 import { treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
@@ -25,9 +29,11 @@ import { chargeCombustible } from "../../src/engine/feu";
 import { computeLight } from "../../src/engine/light";
 import { partMecanisable } from "../../src/engine/mecanisation";
 import { syntheticYear } from "../../src/engine/meteo";
+import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, plantAt } from "../../src/engine/state";
+import { createGameState, plantAt, plantScattered } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
+import { rafaleDeLaSemaine } from "../../src/engine/tempete";
 import { tick } from "../../src/engine/tick";
 import {
   CHANDELLE_ANS_PAR_DENSITE,
@@ -339,5 +345,150 @@ describe("un tronc qui tombe tombe quelque part", () => {
     expect(couvertureDuBoisAuSol(1)).toBeGreaterThan(0);
     expect(couvertureDuBoisAuSol(1)).toBeLessThan(1);
     expect(couvertureDuBoisAuSol(10)).toBe(1);
+  });
+});
+
+/**
+ * LE COUP DE VENT ORIENTE LA CHUTE (issue #58).
+ *
+ * `directionDeChute` ne composait qu'une tendance, la pente, alors que ce qui
+ * abat un tronc mort est le plus souvent un coup de vent. Elle en compose deux
+ * désormais, en vecteurs — et la grandeur lue est la RAFALE de la semaine
+ * (`tempete.ts`), pas le vent moyen : la distinction est tout le lot.
+ */
+describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l'aval", () => {
+  /** Concentration circulaire ∈ [0,1] d'un paquet d'angles autour d'un cap. */
+  const concentration = (angles: readonly number[], cap: number) =>
+    angles.reduce((s, a) => s + Math.cos(a - cap), 0) / Math.max(1, angles.length);
+
+  const PLAT = { widthM: 20, heightM: 20 };
+  const platAlt = new Array(400).fill(0);
+  /** Versant qui descend vers l'est (+x) : l'aval vaut 0 radian. */
+  const versLEst = Array.from({ length: 400 }, (_, i) => -(i % 20) * 0.6);
+
+  const paquet = (alt: readonly number[], vent: { versRad: number; emprise: number }, n = 600) =>
+    Array.from({ length: n }, (_, k) =>
+      directionDeChute(alt, PLAT, 10, 10, graineDeChute(k, 3), vent),
+    );
+
+  it("la rafale n'a d'emprise qu'à partir d'un COUP de vent", () => {
+    // Une brise n'abat rien et n'oriente rien ; au-delà de la rafale qui
+    // couche des arbres vivants, elle décide seule.
+    expect(empriseDuVentSurLaChute(0)).toBe(0);
+    expect(empriseDuVentSurLaChute(RAFALE_SANS_EMPRISE_MS)).toBe(0);
+    expect(empriseDuVentSurLaChute(RAFALE_ORIENTANTE_MS)).toBe(1);
+    expect(empriseDuVentSurLaChute(60)).toBe(1);
+    const milieu = empriseDuVentSurLaChute((RAFALE_SANS_EMPRISE_MS + RAFALE_ORIENTANTE_MS) / 2);
+    expect(milieu).toBeGreaterThan(0.4);
+    expect(milieu).toBeLessThan(0.6);
+  });
+
+  it("sans vent, rien ne change : la pente décide, comme avant le lot", () => {
+    // La garantie d'identité du lot. `SANS_VENT_DE_CHUTE` doit rendre EXACTEMENT
+    // ce que rendait la fonction à une seule tendance — sans quoi le lot
+    // déplacerait toutes les chutes des parties sans tempête.
+    for (let k = 0; k < 50; k++) {
+      const graine = graineDeChute(k, 3);
+      expect(directionDeChute(versLEst, PLAT, 10, 10, graine, SANS_VENT_DE_CHUTE)).toBe(
+        directionDeChute(versLEst, PLAT, 10, 10, graine),
+      );
+    }
+  });
+
+  it("à plat, c'est le vent seul qui range les troncs", () => {
+    // Le cas où la pente ne dit rien : sans coup de vent la chute est
+    // quelconque, avec un coup de vent elle suit le cap.
+    const cap = Math.PI / 3;
+    const sans = concentration(paquet(platAlt, SANS_VENT_DE_CHUTE), cap);
+    const avec = concentration(paquet(platAlt, { versRad: cap, emprise: 1 }), cap);
+    expect(Math.abs(sans)).toBeLessThan(0.15);
+    expect(avec).toBeGreaterThan(0.5);
+  });
+
+  it("deux tendances qui divergent orientent vers leur RÉSULTANTE", () => {
+    // Le contenu réel de la composition : ce n'est pas un arbitrage entre deux
+    // cas, c'est une somme. Un versant qui descend à l'est (aval = 0) sous un
+    // vent de nord (cap = π/2) couche ses troncs au nord-est, à mi-chemin.
+    const aval = 0;
+    const cap = Math.PI / 2;
+    const chutes = paquet(versLEst, { versRad: cap, emprise: 1 });
+    const resultante = Math.PI / 4;
+    expect(concentration(chutes, resultante)).toBeGreaterThan(concentration(chutes, aval));
+    expect(concentration(chutes, resultante)).toBeGreaterThan(concentration(chutes, cap));
+  });
+
+  it("en partie : les chandelles d'une semaine ventée partent dans le même sens", () => {
+    // LA PRÉMISSE D'ABORD, et elle a failli manquer. Le banc du bois en travers
+    // ne voyait AUCUN effet de ce lot, et pour une raison qu'il fallait
+    // mesurer : il tue ses cent vingt saules la même semaine, `dureeChandelle`
+    // est un délai fixe par espèce, donc elles tombent toutes la même semaine —
+    // une semaine calme, en l'occurrence. Un banc peut passer sans jamais
+    // exercer ce qu'il prétend couvrir ; ici on échelonne les morts.
+    const COTE_V = 30;
+    const station = {
+      ...LIMON_RICHE.station,
+      coteM: COTE_V,
+      herbeInitiale: 0,
+      voisinage: [],
+      gibierParHa: 0,
+      relief: { ...RELIEF_PLAT, pentePct: 0, expositionDeg: 180, forme: "plan" as const },
+    };
+    const meteo = syntheticYear(LIMON_RICHE.climat);
+    const expo = Math.min(1, Math.max(0, station.ventExposition));
+    let state = plantScattered(createGameState(station, rngStateFromSeed(5)), "salix_alba", 200);
+    const ventees: { d: number; cap: number }[] = [];
+    const calmes: { d: number; cap: number }[] = [];
+    for (let i = 0; i < 40 * 52; i++) {
+      if (i % 13 === 0) {
+        let reste = 3;
+        state = {
+          ...state,
+          trees: state.trees.map((t) => (t.alive && reste-- > 0 ? { ...t, alive: false } : t)),
+        };
+      }
+      const w = meteo[i % 52];
+      if (!w) throw new Error("météo manquante");
+      const r = tick(state, w);
+      state = r.state;
+      const emprise = empriseDuVentSurLaChute(
+        rafaleDeLaSemaine(state.graineMarche, i, w.ventMoyMs) * expo,
+      );
+      for (const c of r.chutes) {
+        (emprise > 0 ? ventees : calmes).push({ d: c.directionRad, cap: w.ventVersRad });
+      }
+    }
+    const conc = (a: readonly { d: number; cap: number }[]) =>
+      a.length ? a.reduce((s, x) => s + Math.cos(x.d - x.cap), 0) / a.length : 0;
+    // Le mécanisme a bien tourné : une chute sur sept tombe un jour de coup de
+    // vent. Sur un terrain PLAT, où la pente ne dit rien, c'est le vent seul.
+    expect(ventees.length).toBeGreaterThan(30);
+    expect(calmes.length).toBeGreaterThan(100);
+    // Et il fait ce qu'il annonce : ces chutes-là penchent du côté où soufflait
+    // la rafale, les autres nulle part en particulier.
+    expect(conc(ventees)).toBeGreaterThan(0.1);
+    expect(Math.abs(conc(calmes))).toBeLessThan(0.1);
+    expect(conc(ventees)).toBeGreaterThan(3 * Math.abs(conc(calmes)));
+  });
+
+  it("mais elles ne resserrent PAS au-delà du plancher de hasard", () => {
+    // L'essai qui a démenti une phrase que j'avais écrite dans le module. Deux
+    // tendances d'accord ne font pas mieux que la plus forte : `min(1, norme)`
+    // plafonne, et c'est voulu — `DISPERSION_RESIDUELLE` est un plancher, pas
+    // un reliquat. Rentch et al. ne permettent pas de le franchir.
+    const aval = 0;
+    const penteSeule = concentration(paquet(versLEst, SANS_VENT_DE_CHUTE), aval);
+    const lesDeux = concentration(paquet(versLEst, { versRad: aval, emprise: 1 }), aval);
+    expect(lesDeux).toBeCloseTo(penteSeule, 12);
+  });
+
+  it("deux tendances opposées s'annulent et rendent la main au hasard", () => {
+    // Et le symétrique : un versant qui tourne le dos au vent couche dans tous
+    // les sens. Aucune des deux ne gagne — c'est une SOMME de vecteurs, pas un
+    // arbitrage entre deux cas.
+    const aval = 0;
+    const penteSeule = concentration(paquet(versLEst, SANS_VENT_DE_CHUTE), aval);
+    const opposees = paquet(versLEst, { versRad: Math.PI, emprise: 1 });
+    expect(Math.abs(concentration(opposees, aval))).toBeLessThan(penteSeule);
+    expect(Math.abs(concentration(opposees, Math.PI))).toBeLessThan(penteSeule);
   });
 });

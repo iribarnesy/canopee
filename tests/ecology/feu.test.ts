@@ -374,10 +374,25 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
    * semaine. Sur quarante ans, une graine donne zéro à trois feux. Un banc qui
    * lit une seule graine ne mesure donc pas la propension d'une lande à brûler,
    * il mesure un tirage ; c'est vrai de tout ce fichier depuis le début, et
-   * c'était vrai aussi quand il passait. On cumule désormais sur trois parties,
-   * ce qui coûte une minute et rend l'énoncé à ce qu'il annonce.
+   * c'était vrai aussi quand il passait.
+   *
+   * **TROIS GRAINES NE SUFFISAIENT PAS NON PLUS**, et la même session l'a
+   * démontré deux fois : le lot suivant (#181, la branche arrachée) a de
+   * nouveau éteint les trois. Mesuré sur sept graines de part et d'autre, le
+   * feu n'était pourtant pas supprimé — 7 incendies, 9 356 cellules et 914
+   * victimes avec le mécanisme contre 6, 6 161 et 546 sans, donc plutôt
+   * davantage, les branches au sol faisant du combustible. Trois graines
+   * donnent une à deux tempêtes de feu et se rejouent à chaque lot ; sept en
+   * donnent sept et tiennent.
+   *
+   * **Ce qui réglerait ça pour de bon n'est pas un nombre de graines**, c'est
+   * de séparer les deux questions : « une lande finit-elle par brûler ? »
+   * demande beaucoup de parties, mais « que fait un feu quand il a lieu ? » se
+   * teste sur un feu FORCÉ, sans hasard du tout. Les vérifications de tri, de
+   * victimes et de hauteurs d'avant appartiennent à la seconde
+   * *(à faire : un banc de feu déclenché à la main)*.
    */
-  const GRAINES = [12, 5, 41] as const;
+  const GRAINES = [12, 5, 41, 3, 7, 21, 33] as const;
   let incendies = 0;
   let arbresTues = 0;
   const incendiesParGraine = new Map<number, number>();
@@ -457,10 +472,9 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   }
 
   it("la lande finit par brûler et le feu tue", () => {
-    // Cumulé sur les trois parties. Relevé à l'écriture : 5 incendies et 546
-    // arbres tués — et 4 incendies pour 621 morts sur les mêmes graines avant
-    // le lot qui a fait basculer la 12. C'est cet ordre de grandeur-là qui est
-    // la propriété d'une lande, pas le sort d'une partie.
+    // Cumulé sur les sept parties. Relevé après #181 : 7 incendies et 914
+    // arbres tués. C'est cet ordre de grandeur-là qui est la propriété d'une
+    // lande, pas le sort d'une partie.
     expect(incendies).toBeGreaterThan(0);
     expect(arbresTues).toBeGreaterThan(5);
   });

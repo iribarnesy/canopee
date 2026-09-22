@@ -17,12 +17,12 @@
  * il classe des situations les unes par rapport aux autres.
  */
 
+import { partHabitatDeCavites } from "./cavites";
 import { getEspece } from "./especes";
 import { HERBACEES } from "./herbacees";
 import { crownRadiusM } from "./light";
 import { partFloraison } from "./phenologie";
 import type { TreeState } from "./trees";
-import { partHabitatDeTrogne } from "./trogne";
 
 export interface IndiceBiodiversite {
   /** nombre d'espèces ligneuses présentes */
@@ -31,7 +31,7 @@ export interface IndiceBiodiversite {
   equitabilite: number;
   /** diversité des strates de hauteur ∈ [0,1] */
   strates: number;
-  /** présence d'arbres-habitats — gros sujets et trognes creuses ∈ [0,1] */
+  /** présence d'arbres-habitats — gros sujets, têtards et troncs creux ∈ [0,1] */
   grosArbres: number;
   /** bois mort au sol ∈ [0,1] */
   boisMort: number;
@@ -353,9 +353,22 @@ export function indiceBiodiversite(
     // donnait la même valeur à une tête de trois coupes et à un saule têtard
     // centenaire, alors que l'écart va du litre à la centaine — et que c'est
     // ce volume, et lui seul, qui décide entre une mésange et une chevêche
-    // (trogne.ts).
-    if (t.heightM >= 15) gros++;
-    else gros += partHabitatDeTrogne(t);
+    // (cavites.ts).
+    //
+    // ET LA TROGNE N'EST PLUS LA SEULE SOURCE DE CREUX (#182). Un tronc carié
+    // se vide de la même façon, et c'est même le chemin ORDINAIRE : le vieux
+    // chêne creux d'un bocage n'a pas été conduit en trogne, il a été blessé
+    // par des coups de vent. L'énoncé du critère dit « les gros arbres ET les
+    // arbres à cavités » ; jusqu'ici le moteur ne savait compter que les
+    // premiers et les têtards.
+    //
+    // Un gros sujet compte pour un habitat entier quoi qu'il arrive — c'est ce
+    // que le seuil de 15 m dit déjà : écorce crevassée, grosses branches,
+    // volume. Sous ce seuil, ce sont ses creux qui décident, et ils ne
+    // s'additionnent jamais au-delà de un : tête de têtard et fût carié se
+    // somment en LITRES (`cavites.ts`) avant de se convertir, parce qu'un
+    // arbre reste un arbre.
+    gros += t.heightM >= 15 ? 1 : partHabitatDeCavites(t);
     // Le couvert permanent se mesure en surface de houppier, pas en tiges.
     const surface = t.heightM * t.heightM;
     surfaceTotale += surface;
