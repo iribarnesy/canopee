@@ -120,6 +120,40 @@ function StartScreen({
   );
   const [eau, setEau] = useState<EauDeSurface>(SANS_EAU);
   const [partBassin, setPartBassin] = useState(0);
+  /**
+   * Le bac à sable est-il ouvert ? (#189)
+   *
+   * Un ÉTAT et pas une page à part : les deux écrans partagent les réglages,
+   * et revenir de l'un à l'autre ne doit rien perdre de ce qu'on a posé.
+   *
+   * L'entrée pousse une entrée d'historique, et la sortie la consomme. C'est ce
+   * qui fait que le bouton retour du navigateur remonte d'UN écran et pas de
+   * deux, comme #148 l'a établi pour la sortie de partie — avec un écran de
+   * plus, la règle doit continuer de valoir.
+   */
+  const [bac, setBac] = useState(false);
+  const sortieDuBac = useRef(false);
+  const entrerDansLeBac = () => {
+    sortieDuBac.current = false;
+    history.pushState({ canopee: "bac" }, "");
+    setBac(true);
+  };
+  const quitterLeBac = () => {
+    sortieDuBac.current = true;
+    if (window.history.state?.canopee === "bac") history.back();
+    setBac(false);
+  };
+  useEffect(() => {
+    if (!bac) return;
+    const surRetour = () => {
+      if (sortieDuBac.current) return;
+      sortieDuBac.current = true;
+      setBac(false);
+    };
+    window.addEventListener("popstate", surRetour);
+    return () => window.removeEventListener("popstate", surRetour);
+  }, [bac]);
+
   const [profils, setProfils] = useState<ProfilDepart[]>(() => chargerProfils());
   const [nomProfil, setNomProfil] = useState("");
   const [importTexte, setImportTexte] = useState("");
@@ -308,33 +342,66 @@ function StartScreen({
 
   return (
     <div className="depart">
-      <h2>Nouvelle partie</h2>
-      <p className="accroche">
-        Un sol, un entourage, un climat — et cinquante ans devant vous. Rien n'est scripté&nbsp;:
-        tout ce qui arrivera découlera de ces trois choix.
-      </p>
+      {bac ? (
+        <>
+          <h2>Bac à sable</h2>
+          <p className="accroche">
+            Un sol, un entourage, un climat — et cinquante ans devant vous. Rien n'est
+            scripté&nbsp;: tout ce qui arrivera découlera de ces choix-là.
+          </p>
+          <p className="seg">
+            <button type="button" style={btn()} onClick={quitterLeBac}>
+              ← Retour
+            </button>
+          </p>
+        </>
+      ) : (
+        <>
+          <h2>Jouer</h2>
+          <p className="accroche">
+            Une parcelle, un objectif, et le temps qu'il faut à un arbre pour pousser.
+          </p>
+        </>
+      )}
 
       {/*
-        LES NIVEAUX (#188). Ils passent AVANT les réglages, et c'est tout le
-        propos : `v1.md` demande que l'écran de démarrage cesse d'être un banc
-        d'essai. Le déménagement complet des quatorze réglages derrière un mode
-        « bac à sable » est l'objet de #189 ; ici, le niveau prend seulement la
-        tête de l'écran, pour que ce soit lui qu'on voie d'abord.
+        LES NIVEAUX SONT LA PORTE (#189), et les quatorze réglages sont passés
+        derrière un mode. `v1.md` : « Un écran de démarrage qui n'est pas un banc
+        d'essai. Aujourd'hui il demande quatorze réglages […] Un niveau pose ces
+        réglages lui-même ; le joueur ne les voit pas. »
+
+        Le bac à sable NE DISPARAÎT PAS, et c'est écrit noir sur blanc dans le
+        même document : « c'est lui qui permettra aux experts de reproduire une
+        situation précise et de contester un résultat ». Le premier public du
+        jeu est celui des experts de sol et de biodiversité ; leur retirer les
+        réglages leur retirerait le moyen de contester.
       */}
-      <section className="carte">
-        <h3>Niveaux</h3>
-        <p className="sous">
-          Un objectif, des étapes, et une fin. Les réglages du terrain sont posés par le niveau.
-        </p>
-        {NIVEAUX_LIVRES.map((n) => (
-          <div key={n.id} style={{ marginTop: 6 }}>
-            <button type="button" style={btn(true)} onClick={() => onNiveau(n)}>
-              ▶ {n.nom}
+      {!bac && (
+        <section className="carte">
+          <h3>Niveaux</h3>
+          <p className="sous">
+            Un objectif, des étapes, et une fin. Les réglages du terrain sont posés par le niveau.
+          </p>
+          {NIVEAUX_LIVRES.map((n) => (
+            <div key={n.id} style={{ marginTop: 6 }}>
+              <button type="button" style={btn(true)} onClick={() => onNiveau(n)}>
+                ▶ {n.nom}
+              </button>
+              <span className="sous"> {n.enonce}</span>
+            </div>
+          ))}
+          <p className="seg" style={{ marginTop: 10, marginBottom: 0 }}>
+            <button type="button" style={btn()} onClick={entrerDansLeBac}>
+              ⚙ Mode bac à sable
             </button>
-            <span className="sous"> {n.enonce}</span>
-          </div>
-        ))}
-      </section>
+            <span className="sous">
+              {" "}
+              Poser soi-même le sol, l'entourage, le relief, le climat — pour reproduire une
+              situation précise, ou contester un résultat.
+            </span>
+          </p>
+        </section>
+      )}
 
       {/*
         LES PARTIES SAUVEGARDÉES (#147). Il y en avait une seule, et démarrer
@@ -344,7 +411,7 @@ function StartScreen({
         sauvegarde portait déjà tout, il lui manquait un rangement et de quoi
         se relire.
       */}
-      {parties.length > 0 && (
+      {!bac && parties.length > 0 && (
         <section className="carte">
           <h3>Parties sauvegardées</h3>
           <p className="sous">
@@ -420,671 +487,683 @@ function StartScreen({
         </section>
       )}
 
-      <section className="carte">
-        <h3>Le terrain</h3>
-        <p className="sous">
-          Le sol décide de ce qu'il retient d'eau, de ce qu'il minéralise, de ce qu'il supporte.
-        </p>
-        <div className="seg">
-          {STATIONS_V0.map((s) => (
-            <button
-              key={s.station.id}
-              type="button"
-              style={btn(s.station.id === stationId)}
-              onClick={() => choisirStation(s.station.id)}
-            >
-              {s.station.nom}
-            </button>
-          ))}
-        </div>
-        {choisie && (
-          <p className="glose">
-            {choisie.station.coteM} × {choisie.station.coteM} m · réserve utile{" "}
-            {choisie.station.ruMm.toFixed(0)} mm · pH {choisie.station.phInitial.toFixed(1)} ·{" "}
-            {choisie.climat.rainAnnualMm} mm de pluie par an ·{" "}
-            {choisie.station.relief.pentePct > 0
-              ? `pente ${choisie.station.relief.pentePct} % à ${choisie.station.relief.altitudeM} m`
-              : `terrain plat à ${choisie.station.relief.altitudeM} m`}
-          </p>
-        )}
-      </section>
+      {bac && (
+        <>
+          <section className="carte">
+            <h3>Le terrain</h3>
+            <p className="sous">
+              Le sol décide de ce qu'il retient d'eau, de ce qu'il minéralise, de ce qu'il supporte.
+            </p>
+            <div className="seg">
+              {STATIONS_V0.map((s) => (
+                <button
+                  key={s.station.id}
+                  type="button"
+                  style={btn(s.station.id === stationId)}
+                  onClick={() => choisirStation(s.station.id)}
+                >
+                  {s.station.nom}
+                </button>
+              ))}
+            </div>
+            {choisie && (
+              <p className="glose">
+                {choisie.station.coteM} × {choisie.station.coteM} m · réserve utile{" "}
+                {choisie.station.ruMm.toFixed(0)} mm · pH {choisie.station.phInitial.toFixed(1)} ·{" "}
+                {choisie.climat.rainAnnualMm} mm de pluie par an ·{" "}
+                {choisie.station.relief.pentePct > 0
+                  ? `pente ${choisie.station.relief.pentePct} % à ${choisie.station.relief.altitudeM} m`
+                  : `terrain plat à ${choisie.station.relief.altitudeM} m`}
+              </p>
+            )}
+          </section>
 
-      <section className="carte">
-        <h3>Ce qu'il y a autour</h3>
-        <p className="sous">
-          L'entourage décide du gibier, des semis qui arrivent tout seuls, de l'azote qui tombe du
-          ciel, du vent et des départs de feu.
-        </p>
-        {cotesSeparees ? (
-          <div className="compas">
-            <div />
-            {selecteur("nord", "NORD")}
-            <div />
-            {selecteur("ouest", "OUEST")}
-            <div className="parcelle">votre parcelle</div>
-            {selecteur("est", "EST")}
-            <div />
-            {selecteur("sud", "SUD")}
-            <div />
-          </div>
-        ) : (
-          <div className="seg">
-            {PAYSAGES.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                style={btn(p.id === bordures.nord)}
-                onClick={() => setCote("nord", p.id)}
-                title={p.description}
-              >
-                {p.court}
-              </button>
-            ))}
-          </div>
-        )}
-        <p style={{ margin: "10px 0 0", fontSize: 13 }}>
-          <label style={{ cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={cotesSeparees}
-              onChange={(e) => setCotesSeparees(e.target.checked)}
-            />{" "}
-            un entourage différent de chaque côté
-          </label>
-        </p>
-        <p className="glose" style={{ minHeight: 0 }}>
-          {cotesSeparees
-            ? resumeBordures(bordures)
-            : PAYSAGES.find((p) => p.id === bordures.nord)?.description}
-        </p>
-        {entourage && (
-          <div className="effets">
-            <span title="densité de cervidés : ils broutent les pousses et frottent les jeunes tiges">
-              🦌 {entourage.gibierParHa.toFixed(1)} cervidé/ha
-            </span>
-            <span title="semis arrivant du voisinage, après filtrage par ce que ce sol supporte">
-              🌱 {semisParAn} semis/an{essences.length > 0 && ` — ${essences.join(", ")}`}
-            </span>
-            <span title="dépôts atmosphériques d'azote (élevages, trafic, cultures)">
-              💧 {entourage.depositionNKgHaAn.toFixed(0)} kg N/ha/an
-            </span>
-            <span title="exposition au vent : un côté ouvert suffit à laisser passer">
-              💨 vent {(entourage.ventExposition * 100).toFixed(0)} %
-            </span>
-            <span title="fréquentation humaine : d'où partent les feux">
-              🔥 départs ×{frequentationDesBordures(bordures).toFixed(1)}
-            </span>
-          </div>
-        )}
-      </section>
+          <section className="carte">
+            <h3>Ce qu'il y a autour</h3>
+            <p className="sous">
+              L'entourage décide du gibier, des semis qui arrivent tout seuls, de l'azote qui tombe
+              du ciel, du vent et des départs de feu.
+            </p>
+            {cotesSeparees ? (
+              <div className="compas">
+                <div />
+                {selecteur("nord", "NORD")}
+                <div />
+                {selecteur("ouest", "OUEST")}
+                <div className="parcelle">votre parcelle</div>
+                {selecteur("est", "EST")}
+                <div />
+                {selecteur("sud", "SUD")}
+                <div />
+              </div>
+            ) : (
+              <div className="seg">
+                {PAYSAGES.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    style={btn(p.id === bordures.nord)}
+                    onClick={() => setCote("nord", p.id)}
+                    title={p.description}
+                  >
+                    {p.court}
+                  </button>
+                ))}
+              </div>
+            )}
+            <p style={{ margin: "10px 0 0", fontSize: 13 }}>
+              <label style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={cotesSeparees}
+                  onChange={(e) => setCotesSeparees(e.target.checked)}
+                />{" "}
+                un entourage différent de chaque côté
+              </label>
+            </p>
+            <p className="glose" style={{ minHeight: 0 }}>
+              {cotesSeparees
+                ? resumeBordures(bordures)
+                : PAYSAGES.find((p) => p.id === bordures.nord)?.description}
+            </p>
+            {entourage && (
+              <div className="effets">
+                <span title="densité de cervidés : ils broutent les pousses et frottent les jeunes tiges">
+                  🦌 {entourage.gibierParHa.toFixed(1)} cervidé/ha
+                </span>
+                <span title="semis arrivant du voisinage, après filtrage par ce que ce sol supporte">
+                  🌱 {semisParAn} semis/an{essences.length > 0 && ` — ${essences.join(", ")}`}
+                </span>
+                <span title="dépôts atmosphériques d'azote (élevages, trafic, cultures)">
+                  💧 {entourage.depositionNKgHaAn.toFixed(0)} kg N/ha/an
+                </span>
+                <span title="exposition au vent : un côté ouvert suffit à laisser passer">
+                  💨 vent {(entourage.ventExposition * 100).toFixed(0)} %
+                </span>
+                <span title="fréquentation humaine : d'où partent les feux">
+                  🔥 départs ×{frequentationDesBordures(bordures).toFixed(1)}
+                </span>
+              </div>
+            )}
+          </section>
 
-      <section className="carte">
-        <h3>Le relief</h3>
-        <p className="sous">
-          L'eau et la chaleur ne se répartissent pas à plat : une pente fait filer la pluie, un
-          versant sud grille, un vallon reçoit ce que le bassin d'amont lui envoie.
-        </p>
-        <div className="reglages">
-          <label htmlFor="altitude">Altitude</label>
-          <input
-            id="altitude"
-            type="range"
-            min={20}
-            max={1600}
-            step={20}
-            value={relief.altitudeM}
-            onChange={(e) => setRelief({ ...relief, altitudeM: Number(e.target.value) })}
-          />
-          <span className="valeur">{relief.altitudeM} m</span>
+          <section className="carte">
+            <h3>Le relief</h3>
+            <p className="sous">
+              L'eau et la chaleur ne se répartissent pas à plat : une pente fait filer la pluie, un
+              versant sud grille, un vallon reçoit ce que le bassin d'amont lui envoie.
+            </p>
+            <div className="reglages">
+              <label htmlFor="altitude">Altitude</label>
+              <input
+                id="altitude"
+                type="range"
+                min={20}
+                max={1600}
+                step={20}
+                value={relief.altitudeM}
+                onChange={(e) => setRelief({ ...relief, altitudeM: Number(e.target.value) })}
+              />
+              <span className="valeur">{relief.altitudeM} m</span>
 
-          <label htmlFor="pente">Pente</label>
-          <input
-            id="pente"
-            type="range"
-            min={0}
-            max={45}
-            step={1}
-            value={relief.pentePct}
-            disabled={terrain !== undefined}
-            title={
-              terrain
-                ? "La pente se lit sur le terrain que vous avez dessiné"
-                : "Pente moyenne de la parcelle"
-            }
-            onChange={(e) => setRelief({ ...relief, pentePct: Number(e.target.value) })}
-          />
-          <span className="valeur">
-            {terrain ? `${penteEffective.toFixed(1)} % (dessinée)` : `${relief.pentePct} %`}
-          </span>
-
-          <label htmlFor="amont">Bassin amont</label>
-          <input
-            id="amont"
-            type="range"
-            min={0}
-            max={20}
-            step={0.5}
-            value={relief.bassinAmontHa}
-            onChange={(e) => setRelief({ ...relief, bassinAmontHa: Number(e.target.value) })}
-          />
-          <span className="valeur">{relief.bassinAmontHa.toFixed(1)} ha</span>
-
-          <span className="intitule">Exposition</span>
-          <div className="choix">
-            {(
-              [
-                [0, "Nord (ubac)"],
-                [90, "Est"],
-                [180, "Sud (adret)"],
-                [270, "Ouest"],
-              ] as const
-            ).map(([deg, libelle]) => (
-              <button
-                key={deg}
-                type="button"
-                style={btn(relief.expositionDeg === deg)}
-                disabled={relief.pentePct === 0 && !terrain}
-                title={
-                  relief.pentePct === 0
-                    ? "Sans pente, l'exposition ne change rien"
-                    : "Le versant que regarde la pente"
-                }
-                onClick={() => setRelief({ ...relief, expositionDeg: deg })}
-              >
-                {libelle}
-              </button>
-            ))}
-          </div>
-
-          <span className="intitule">Forme</span>
-          <div className="choix">
-            {(
-              [
-                ["plan", "Versant régulier", "Une pente d'un seul tenant."],
-                [
-                  "vallon",
-                  "Vallon (entonnoir)",
-                  "Les versants convergent : l'eau se concentre au milieu de la parcelle.",
-                ],
-                [
-                  "croupe",
-                  "Croupe (dos d'âne)",
-                  "Le terrain bombe : l'eau s'écarte des deux côtés et le sommet reste sec.",
-                ],
-              ] as const
-            ).map(([forme, libelle, aide]) => (
-              <button
-                key={forme}
-                type="button"
-                style={btn(relief.forme === forme)}
+              <label htmlFor="pente">Pente</label>
+              <input
+                id="pente"
+                type="range"
+                min={0}
+                max={45}
+                step={1}
+                value={relief.pentePct}
                 disabled={terrain !== undefined}
-                title={terrain ? "Sans effet : votre terrain dessiné fait foi" : aide}
-                onClick={() => setRelief({ ...relief, forme })}
+                title={
+                  terrain
+                    ? "La pente se lit sur le terrain que vous avez dessiné"
+                    : "Pente moyenne de la parcelle"
+                }
+                onChange={(e) => setRelief({ ...relief, pentePct: Number(e.target.value) })}
+              />
+              <span className="valeur">
+                {terrain ? `${penteEffective.toFixed(1)} % (dessinée)` : `${relief.pentePct} %`}
+              </span>
+
+              <label htmlFor="amont">Bassin amont</label>
+              <input
+                id="amont"
+                type="range"
+                min={0}
+                max={20}
+                step={0.5}
+                value={relief.bassinAmontHa}
+                onChange={(e) => setRelief({ ...relief, bassinAmontHa: Number(e.target.value) })}
+              />
+              <span className="valeur">{relief.bassinAmontHa.toFixed(1)} ha</span>
+
+              <span className="intitule">Exposition</span>
+              <div className="choix">
+                {(
+                  [
+                    [0, "Nord (ubac)"],
+                    [90, "Est"],
+                    [180, "Sud (adret)"],
+                    [270, "Ouest"],
+                  ] as const
+                ).map(([deg, libelle]) => (
+                  <button
+                    key={deg}
+                    type="button"
+                    style={btn(relief.expositionDeg === deg)}
+                    disabled={relief.pentePct === 0 && !terrain}
+                    title={
+                      relief.pentePct === 0
+                        ? "Sans pente, l'exposition ne change rien"
+                        : "Le versant que regarde la pente"
+                    }
+                    onClick={() => setRelief({ ...relief, expositionDeg: deg })}
+                  >
+                    {libelle}
+                  </button>
+                ))}
+              </div>
+
+              <span className="intitule">Forme</span>
+              <div className="choix">
+                {(
+                  [
+                    ["plan", "Versant régulier", "Une pente d'un seul tenant."],
+                    [
+                      "vallon",
+                      "Vallon (entonnoir)",
+                      "Les versants convergent : l'eau se concentre au milieu de la parcelle.",
+                    ],
+                    [
+                      "croupe",
+                      "Croupe (dos d'âne)",
+                      "Le terrain bombe : l'eau s'écarte des deux côtés et le sommet reste sec.",
+                    ],
+                  ] as const
+                ).map(([forme, libelle, aide]) => (
+                  <button
+                    key={forme}
+                    type="button"
+                    style={btn(relief.forme === forme)}
+                    disabled={terrain !== undefined}
+                    title={terrain ? "Sans effet : votre terrain dessiné fait foi" : aide}
+                    onClick={() => setRelief({ ...relief, forme })}
+                  >
+                    {libelle}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="effets">
+              <span title="0,6 °C de moins par 100 m d'altitude, et l'écart entre adret et ubac">
+                🌡 {anomalieC + anomalieExposition >= 0 ? "+" : ""}
+                {(anomalieC + anomalieExposition).toFixed(1)} °C
+                <span className="detail">
+                  {" "}
+                  (altitude {anomalieC >= 0 ? "+" : ""}
+                  {anomalieC.toFixed(1)}, exposition {anomalieExposition >= 0 ? "+" : ""}
+                  {anomalieExposition.toFixed(1)})
+                </span>
+              </span>
+              <span title="un versant sud reçoit plus d'énergie : il évapore plus et sèche plus tôt">
+                ☀️ rayonnement {rayonnement >= 1 ? "+" : ""}
+                {((rayonnement - 1) * 100).toFixed(0)} %
+              </span>
+              <span title="part de la pluie qui file en surface au lieu de s'infiltrer">
+                💧 ruissellement {(ruissellementNu * 100).toFixed(0)} % à nu ·{" "}
+                {(ruissellementCouvert * 100).toFixed(0)} % sous couvert
+              </span>
+              <span title="eau reçue du bassin situé au-dessus, en semaine de pluie moyenne">
+                ⬇️ {amontMm.toFixed(1)} mm/sem d'amont
+              </span>
+              <span title="la forme décide de la façon dont l'eau se rassemble ou s'écarte">
+                {relief.forme === "vallon"
+                  ? "🕳 l'eau converge au milieu"
+                  : relief.forme === "croupe"
+                    ? "⛰ l'eau s'écarte, le sommet sèche"
+                    : "▱ versant régulier, l'eau descend tout droit"}
+              </span>
+            </div>
+          </section>
+
+          <section className="carte">
+            <h3>L'eau de surface</h3>
+            <p className="sous">
+              Un ruisseau ou une mare, ce n'est pas un décor : c'est une nappe sous vos pieds. Elle
+              affleure au bord, s'enfonce en s'éloignant, et c'est elle — pas une règle sur les
+              espèces — qui fait pousser l'aulne là où le hêtre se noie.
+            </p>
+            <div className="reglages" style={{ marginBottom: 12 }}>
+              <label htmlFor="nappe">Nappe</label>
+              <input
+                id="nappe"
+                type="range"
+                min={30}
+                max={800}
+                step={10}
+                value={nappeCm}
+                onChange={(e) => setNappeCm(Number(e.target.value))}
+                title="Profondeur d'équilibre de la nappe, celle que le réseau régional impose"
+              />
+              <span className="valeur">{(nappeCm / 100).toFixed(1)} m</span>
+
+              <label htmlFor="bassin">Bassin semblable</label>
+              <input
+                id="bassin"
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(partBassin * 100)}
+                onChange={(e) => setPartBassin(Number(e.target.value) / 100)}
+                title="Part du bassin versant qui subit le même sort que la parcelle"
+              />
+              <span className="valeur">{Math.round(partBassin * 100)} %</span>
+            </div>
+            <p className="glose" style={{ minHeight: 0, marginTop: 0 }}>
+              {partBassin === 0
+                ? "Parcelle isolée : quoi qu'il lui arrive, la région tient le niveau de la nappe."
+                : partBassin >= 0.9
+                  ? "La parcelle vaut pour tout son bassin : si elle brûle, le massif brûle, et la nappe régionale remonte avec."
+                  : "Une partie du bassin suit le sort de la parcelle : la nappe régionale bouge, mais moins qu'elle."}
+            </p>
+            <p className="glose" style={{ minHeight: 0, marginTop: 0 }}>
+              {nappeCm <= 100
+                ? "Nappe affleurante : le sol reste engorgé, seules les espèces qui le tolèrent tiendront."
+                : nappeCm <= 250
+                  ? "Nappe à portée des racines : elles iront y puiser en été, et la forêt la fera baisser en transpirant."
+                  : "Nappe profonde : la parcelle ne vit que de sa pluie."}{" "}
+              Elle est plus PLATE que le terrain — sous une butte elle s'enfonce, dans un creux elle
+              affleure.
+            </p>
+            <div className="seg">
+              {(
+                [
+                  ["aucune", "Aucune"],
+                  ["ruisseau", "Un ruisseau"],
+                  ["mare", "Une mare"],
+                ] as const
+              ).map(([type, libelle]) => (
+                <button
+                  key={type}
+                  type="button"
+                  style={btn(eau.type === type)}
+                  onClick={() =>
+                    setEau(
+                      type === "aucune"
+                        ? SANS_EAU
+                        : type === "ruisseau"
+                          ? { type, cote: "sud", bergeM: 0.3 }
+                          : { type, xRel: 0.5, yRel: 0.5, rayonM: 4, bergeM: 0.6 },
+                    )
+                  }
+                >
+                  {libelle}
+                </button>
+              ))}
+            </div>
+            {eau.type !== "aucune" && (
+              <div className="reglages" style={{ marginTop: 10 }}>
+                {eau.type === "mare" && (
+                  <>
+                    <label htmlFor="rayon">Rayon</label>
+                    <input
+                      id="rayon"
+                      type="range"
+                      min={2}
+                      max={12}
+                      step={1}
+                      value={eau.rayonM ?? 4}
+                      onChange={(e) => setEau({ ...eau, rayonM: Number(e.target.value) })}
+                    />
+                    <span className="valeur">{eau.rayonM ?? 4} m</span>
+                  </>
+                )}
+                <label htmlFor="berge">Encaissement</label>
+                <input
+                  id="berge"
+                  type="range"
+                  min={0}
+                  max={3}
+                  step={0.1}
+                  value={eau.bergeM}
+                  onChange={(e) => setEau({ ...eau, bergeM: Number(e.target.value) })}
+                />
+                <span className="valeur">{eau.bergeM.toFixed(1)} m</span>
+              </div>
+            )}
+            {eau.type !== "aucune" && choisie && (
+              <PlanEau eau={eau} coteM={choisie.station.coteM} onChange={setEau} />
+            )}
+            {nappe && (
+              <div className="effets">
+                <span title="profondeur de la nappe sous la cellule la plus proche de l'eau">
+                  💧 nappe à {nappe.proche.toFixed(0)} cm au bord
+                </span>
+                <span title="profondeur de la nappe au point le plus éloigné de l'eau">
+                  🏜 {nappe.loin > 350 ? "hors de portée" : `${nappe.loin.toFixed(0)} cm`} au plus
+                  loin
+                </span>
+                <span>{resumeEau(eau)}</span>
+              </div>
+            )}
+          </section>
+
+          <section className="carte">
+            <h3>Modeler le terrain</h3>
+            <p className="sous">
+              Facultatif. Creusez, montez, lissez — et l'eau apparaît d'elle-même là où le terrain
+              la retient. Ce n'est pas un décor : la cuvette qui tient l'eau tiendra une nappe, et
+              la nappe fera la ripisylve.
+            </p>
+            <div className="seg">
+              <button
+                type="button"
+                style={btn(terrain !== undefined)}
+                onClick={() => {
+                  if (terrain) {
+                    setTerrain(undefined);
+                    if (eau.type === "terrain") setEau(SANS_EAU);
+                  } else if (choisie) {
+                    setTerrain(terrainInitial(choisie.station.coteM, relief.pentePct));
+                    setEau({ type: "terrain", bergeM: 0 });
+                  }
+                }}
               >
-                {libelle}
+                {terrain ? "↩ revenir au relief paramétré" : "✎ dessiner le terrain"}
               </button>
-            ))}
-          </div>
-        </div>
-        <div className="effets">
-          <span title="0,6 °C de moins par 100 m d'altitude, et l'écart entre adret et ubac">
-            🌡 {anomalieC + anomalieExposition >= 0 ? "+" : ""}
-            {(anomalieC + anomalieExposition).toFixed(1)} °C
-            <span className="detail">
-              {" "}
-              (altitude {anomalieC >= 0 ? "+" : ""}
-              {anomalieC.toFixed(1)}, exposition {anomalieExposition >= 0 ? "+" : ""}
-              {anomalieExposition.toFixed(1)})
-            </span>
-          </span>
-          <span title="un versant sud reçoit plus d'énergie : il évapore plus et sèche plus tôt">
-            ☀️ rayonnement {rayonnement >= 1 ? "+" : ""}
-            {((rayonnement - 1) * 100).toFixed(0)} %
-          </span>
-          <span title="part de la pluie qui file en surface au lieu de s'infiltrer">
-            💧 ruissellement {(ruissellementNu * 100).toFixed(0)} % à nu ·{" "}
-            {(ruissellementCouvert * 100).toFixed(0)} % sous couvert
-          </span>
-          <span title="eau reçue du bassin situé au-dessus, en semaine de pluie moyenne">
-            ⬇️ {amontMm.toFixed(1)} mm/sem d'amont
-          </span>
-          <span title="la forme décide de la façon dont l'eau se rassemble ou s'écarte">
-            {relief.forme === "vallon"
-              ? "🕳 l'eau converge au milieu"
-              : relief.forme === "croupe"
-                ? "⛰ l'eau s'écarte, le sommet sèche"
-                : "▱ versant régulier, l'eau descend tout droit"}
-          </span>
-        </div>
-      </section>
+            </div>
+            {terrain && choisie && (
+              <div style={{ marginTop: 10 }}>
+                <EditeurTerrain
+                  coteM={choisie.station.coteM}
+                  pluieAnnuelleMm={choisie.climat.rainAnnualMm}
+                  profil={choisie.station.profil}
+                  valeur={terrain}
+                  onChange={setTerrain}
+                />
+              </div>
+            )}
+          </section>
 
-      <section className="carte">
-        <h3>L'eau de surface</h3>
-        <p className="sous">
-          Un ruisseau ou une mare, ce n'est pas un décor : c'est une nappe sous vos pieds. Elle
-          affleure au bord, s'enfonce en s'éloignant, et c'est elle — pas une règle sur les espèces
-          — qui fait pousser l'aulne là où le hêtre se noie.
-        </p>
-        <div className="reglages" style={{ marginBottom: 12 }}>
-          <label htmlFor="nappe">Nappe</label>
-          <input
-            id="nappe"
-            type="range"
-            min={30}
-            max={800}
-            step={10}
-            value={nappeCm}
-            onChange={(e) => setNappeCm(Number(e.target.value))}
-            title="Profondeur d'équilibre de la nappe, celle que le réseau régional impose"
-          />
-          <span className="valeur">{(nappeCm / 100).toFixed(1)} m</span>
+          <section className="carte">
+            <h3>Avant votre arrivée</h3>
+            <p className="sous">
+              Un terrain qu'on vient de modeler n'est qu'une topographie. L'humus, l'herbe, les
+              semis venus du voisinage et la ceinture d'arbres autour de l'eau demandent du temps —
+              on peut le lui donner d'avance.
+            </p>
+            <div className="reglages">
+              <label htmlFor="maturation">Vieillissement</label>
+              <input
+                id="maturation"
+                type="range"
+                min={0}
+                max={120}
+                step={5}
+                value={maturationAns}
+                onChange={(e) => setMaturationAns(Number(e.target.value))}
+              />
+              <span className="valeur">
+                {maturationAns === 0 ? "aucun" : `${maturationAns} ans`}
+              </span>
+            </div>
+            <p className="glose" style={{ minHeight: 0 }}>
+              {maturationAns === 0
+                ? "Vous arrivez sur le terrain tel qu'il est décrit ci-dessus."
+                : `Le moteur simule ${maturationAns} ans sans vous (${anneeDepart - maturationAns}-${anneeDepart}), puis vous arrivez. Ce qui aura poussé aura poussé tout seul.`}
+            </p>
+          </section>
 
-          <label htmlFor="bassin">Bassin semblable</label>
-          <input
-            id="bassin"
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={Math.round(partBassin * 100)}
-            onChange={(e) => setPartBassin(Number(e.target.value) / 100)}
-            title="Part du bassin versant qui subit le même sort que la parcelle"
-          />
-          <span className="valeur">{Math.round(partBassin * 100)} %</span>
-        </div>
-        <p className="glose" style={{ minHeight: 0, marginTop: 0 }}>
-          {partBassin === 0
-            ? "Parcelle isolée : quoi qu'il lui arrive, la région tient le niveau de la nappe."
-            : partBassin >= 0.9
-              ? "La parcelle vaut pour tout son bassin : si elle brûle, le massif brûle, et la nappe régionale remonte avec."
-              : "Une partie du bassin suit le sort de la parcelle : la nappe régionale bouge, mais moins qu'elle."}
-        </p>
-        <p className="glose" style={{ minHeight: 0, marginTop: 0 }}>
-          {nappeCm <= 100
-            ? "Nappe affleurante : le sol reste engorgé, seules les espèces qui le tolèrent tiendront."
-            : nappeCm <= 250
-              ? "Nappe à portée des racines : elles iront y puiser en été, et la forêt la fera baisser en transpirant."
-              : "Nappe profonde : la parcelle ne vit que de sa pluie."}{" "}
-          Elle est plus PLATE que le terrain — sous une butte elle s'enfonce, dans un creux elle
-          affleure.
-        </p>
-        <div className="seg">
-          {(
-            [
-              ["aucune", "Aucune"],
-              ["ruisseau", "Un ruisseau"],
-              ["mare", "Une mare"],
-            ] as const
-          ).map(([type, libelle]) => (
+          <section className="carte">
+            <h3>Le climat</h3>
+            <p className="sous">Ce qu'on plante aujourd'hui vivra dedans.</p>
+            <div className="seg">
+              {SCENARIOS.map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  style={btn(sc.id === scenario)}
+                  onClick={() => setScenario(sc.id)}
+                  title={sc.description}
+                >
+                  {sc.nom}
+                </button>
+              ))}
+            </div>
+            <p className="glose">{SCENARIOS.find((sc) => sc.id === scenario)?.description}</p>
+            {(() => {
+              const sc = SCENARIOS.find((x) => x.id === scenario);
+              if (!sc || sc.id === "stable") return null;
+              const monde = rechauffementGlobalC(sc, 2100);
+              const france = rechauffementFranceC(sc, 2100);
+              const f = sc.fourchetteFrance2100;
+              return (
+                <div className="effets">
+                  <span title="réchauffement moyen du globe en 2100, vs 1850-1900 (GIEC AR6)">
+                    🌍 monde +{monde.toFixed(1)} °C
+                  </span>
+                  <span title="réchauffement annuel moyen en France — c'est celui que subit la parcelle">
+                    🇫🇷 France <strong>+{france.toFixed(1)} °C</strong>
+                    {f && ` [${f[0].toFixed(1)} ; ${f[1].toFixed(1)}]`}
+                  </span>
+                  <span title="l'été se réchauffe bien plus que la moyenne annuelle">
+                    ☀️ été français +{(france * formeSaisonniere(28)).toFixed(1)} °C
+                  </span>
+                  <span title="l'hiver se réchauffe moins que l'été, mais plus que le globe">
+                    ❄️ hiver +{(france * formeSaisonniere(2)).toFixed(1)} °C
+                  </span>
+                </div>
+              );
+            })()}
+            <details style={{ marginTop: 8, fontSize: 13, color: "var(--encre-douce)" }}>
+              <summary style={{ cursor: "pointer" }}>D'où viennent ces chiffres</summary>
+              <p style={{ marginTop: 6 }}>
+                Le réchauffement mondial vient du sixième rapport du GIEC. Les valeurs françaises,
+                elles, ne s'en déduisent pas par une simple règle de trois : la France se réchauffe
+                environ une fois et demie plus vite que le globe, et ses étés presque deux fois —
+                l'assèchement des sols supprimant l'évaporation qui les tempérait.
+              </p>
+              <p>
+                Ces valeurs sont celles de l'
+                <strong>estimation observationnellement contrainte</strong> (Ribes et al., CMIP6),
+                qui sert de base aux paliers <strong>TRACC</strong>, le référentiel français
+                d'adaptation. Elles sont nettement plus chaudes que les projections régionales
+                EURO-CORDEX diffusées par DRIAS-2020, surtout en été : la plupart de ces modèles
+                régionaux ne font varier ni les aérosols ni l'effet physiologique du CO₂ sur les
+                stomates, et sous-estiment de ce fait le réchauffement estival. Pour quoi que ce
+                soit qui ressemble à de la planification, ce sont les paliers TRACC qu'on attend de
+                vous, pas des sorties SSP brutes.
+              </p>
+            </details>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13 }}>Année de départ</span>
+              <div className="seg">
+                {[2026, 2040].map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    style={btn(a === anneeDepart)}
+                    onClick={() => setAnneeDepart(a)}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+              <span style={{ fontSize: 13, marginLeft: 8 }}>Graine du hasard</span>
+              <input
+                type="number"
+                value={seed}
+                onChange={(e) => setSeed(Number(e.target.value) || 0)}
+                style={{ width: 80 }}
+                title="Deux parties avec la même graine se déroulent à l'identique."
+              />
+            </div>
+            <div className="seg" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                style={btn(economie)}
+                onClick={() => setEconomie(true)}
+                title="La trésorerie contraint : plants à payer, découvert limité, faillite possible"
+              >
+                💶 L'argent compte
+              </button>
+              <button
+                type="button"
+                style={btn(!economie)}
+                onClick={() => setEconomie(false)}
+                title="Le compte tourne et s'affiche, mais ne bloque rien : ni découvert refusé, ni faillite"
+              >
+                🌱 Écologie seule
+              </button>
+            </div>
+            <p className="glose" style={{ minHeight: 0 }}>
+              {economie
+                ? "Les plants se paient, le découvert est plafonné, et une trésorerie trop longtemps négative met fin à la partie."
+                : "Le compte continue de tourner et reste affiché — savoir ce qu'aurait coûté une conduite est instructif — mais il ne bloque plus rien. Le plafond d'heures de travail, lui, reste : une journée fait le même nombre d'heures qu'on ait de l'argent ou non."}
+            </p>
+          </section>
+
+          <section className="carte">
+            <h3>Profils de départ</h3>
+            <p className="sous">
+              Figer tout ce qui précède — terrain, entourage, relief, eau, climat — pour rejouer
+              plusieurs parties dans les mêmes conditions. La graine du hasard, elle, reste libre :
+              c'est en la changeant qu'on distingue ce qui tient du terrain de ce qui tient de la
+              chance.
+            </p>
+            <div className="seg" style={{ marginBottom: 8 }}>
+              <input
+                type="text"
+                value={nomProfil}
+                placeholder="nom du profil"
+                onChange={(e) => setNomProfil(e.target.value)}
+                style={{ width: 200 }}
+              />
+              <button
+                type="button"
+                style={btn()}
+                disabled={nomProfil.trim().length === 0}
+                onClick={() => {
+                  const profil = profilCourant(nomProfil.trim());
+                  setProfils(enregistrerProfil(profil));
+                  setMessageProfil(`« ${profil.nom} » enregistré.`);
+                }}
+              >
+                Enregistrer
+              </button>
+              <button
+                type="button"
+                style={btn()}
+                onClick={() => {
+                  const texte = JSON.stringify(
+                    profilCourant(nomProfil.trim() || "profil"),
+                    null,
+                    2,
+                  );
+                  setImportTexte(texte);
+                  setMessageProfil("Profil courant écrit ci-dessous : copiez-le pour le garder.");
+                }}
+              >
+                Exporter en JSON
+              </button>
+            </div>
+            <div className="seg" style={{ marginBottom: 8 }}>
+              {PROFILS_LIVRES.map((p) => (
+                <button
+                  key={p.nom}
+                  type="button"
+                  style={{ ...btn(), marginRight: 10 }}
+                  onClick={() => {
+                    appliquerProfil(p);
+                    setMessageProfil(`« ${p.nom} » chargé — profil livré, la graine reste à vous.`);
+                  }}
+                  title="Situation réelle livrée avec le jeu : elle se charge, se joue, et se modifie sans être écrasée"
+                >
+                  📍 {p.nom}
+                </button>
+              ))}
+            </div>
+            {profils.length > 0 && (
+              <div className="seg" style={{ marginBottom: 8 }}>
+                {profils.map((p) => (
+                  <span key={p.nom} style={{ display: "inline-flex" }}>
+                    <button type="button" style={btn()} onClick={() => appliquerProfil(p)}>
+                      ↺ {p.nom}
+                    </button>
+                    <button
+                      type="button"
+                      style={{ ...btn(), marginRight: 10 }}
+                      title={`Oublier « ${p.nom} »`}
+                      onClick={() => {
+                        setProfils(supprimerProfil(p.nom));
+                        setMessageProfil(`« ${p.nom} » oublié.`);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <textarea
+              value={importTexte}
+              onChange={(e) => setImportTexte(e.target.value)}
+              placeholder="Collez ici un profil exporté pour le charger"
+              rows={3}
+              style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: 11 }}
+            />
+            <div className="seg" style={{ marginTop: 6 }}>
+              <button
+                type="button"
+                style={btn()}
+                disabled={importTexte.trim().length === 0}
+                onClick={() => {
+                  const lu = lireProfilExporte(importTexte);
+                  if (typeof lu === "string") setMessageProfil(lu);
+                  else {
+                    appliquerProfil(lu);
+                    setMessageProfil(`« ${lu.nom} » chargé.`);
+                  }
+                }}
+              >
+                Charger ce JSON
+              </button>
+            </div>
+            {messageProfil && (
+              <p className="glose" style={{ minHeight: 0 }}>
+                {messageProfil}
+              </p>
+            )}
+          </section>
+
+          <p className="seg">
             <button
-              key={type}
               type="button"
-              style={btn(eau.type === type)}
+              style={{ ...btn(true), padding: "8px 20px", fontSize: 14, fontWeight: 600 }}
               onClick={() =>
-                setEau(
-                  type === "aucune"
-                    ? SANS_EAU
-                    : type === "ruisseau"
-                      ? { type, cote: "sud", bergeM: 0.3 }
-                      : { type, xRel: 0.5, yRel: 0.5, rayonM: 4, bergeM: 0.6 },
+                onStart(
+                  stationId,
+                  seed,
+                  "reelle",
+                  scenario,
+                  bordures,
+                  reliefFinal,
+                  eau,
+                  nappeCm,
+                  partBassin,
+                  maturationAns,
+                  anneeDepart,
+                  economie,
                 )
               }
             >
-              {libelle}
+              Démarrer
             </button>
-          ))}
-        </div>
-        {eau.type !== "aucune" && (
-          <div className="reglages" style={{ marginTop: 10 }}>
-            {eau.type === "mare" && (
-              <>
-                <label htmlFor="rayon">Rayon</label>
-                <input
-                  id="rayon"
-                  type="range"
-                  min={2}
-                  max={12}
-                  step={1}
-                  value={eau.rayonM ?? 4}
-                  onChange={(e) => setEau({ ...eau, rayonM: Number(e.target.value) })}
-                />
-                <span className="valeur">{eau.rayonM ?? 4} m</span>
-              </>
-            )}
-            <label htmlFor="berge">Encaissement</label>
-            <input
-              id="berge"
-              type="range"
-              min={0}
-              max={3}
-              step={0.1}
-              value={eau.bergeM}
-              onChange={(e) => setEau({ ...eau, bergeM: Number(e.target.value) })}
-            />
-            <span className="valeur">{eau.bergeM.toFixed(1)} m</span>
-          </div>
-        )}
-        {eau.type !== "aucune" && choisie && (
-          <PlanEau eau={eau} coteM={choisie.station.coteM} onChange={setEau} />
-        )}
-        {nappe && (
-          <div className="effets">
-            <span title="profondeur de la nappe sous la cellule la plus proche de l'eau">
-              💧 nappe à {nappe.proche.toFixed(0)} cm au bord
-            </span>
-            <span title="profondeur de la nappe au point le plus éloigné de l'eau">
-              🏜 {nappe.loin > 350 ? "hors de portée" : `${nappe.loin.toFixed(0)} cm`} au plus loin
-            </span>
-            <span>{resumeEau(eau)}</span>
-          </div>
-        )}
-      </section>
-
-      <section className="carte">
-        <h3>Modeler le terrain</h3>
-        <p className="sous">
-          Facultatif. Creusez, montez, lissez — et l'eau apparaît d'elle-même là où le terrain la
-          retient. Ce n'est pas un décor : la cuvette qui tient l'eau tiendra une nappe, et la nappe
-          fera la ripisylve.
-        </p>
-        <div className="seg">
-          <button
-            type="button"
-            style={btn(terrain !== undefined)}
-            onClick={() => {
-              if (terrain) {
-                setTerrain(undefined);
-                if (eau.type === "terrain") setEau(SANS_EAU);
-              } else if (choisie) {
-                setTerrain(terrainInitial(choisie.station.coteM, relief.pentePct));
-                setEau({ type: "terrain", bergeM: 0 });
-              }
-            }}
-          >
-            {terrain ? "↩ revenir au relief paramétré" : "✎ dessiner le terrain"}
-          </button>
-        </div>
-        {terrain && choisie && (
-          <div style={{ marginTop: 10 }}>
-            <EditeurTerrain
-              coteM={choisie.station.coteM}
-              pluieAnnuelleMm={choisie.climat.rainAnnualMm}
-              profil={choisie.station.profil}
-              valeur={terrain}
-              onChange={setTerrain}
-            />
-          </div>
-        )}
-      </section>
-
-      <section className="carte">
-        <h3>Avant votre arrivée</h3>
-        <p className="sous">
-          Un terrain qu'on vient de modeler n'est qu'une topographie. L'humus, l'herbe, les semis
-          venus du voisinage et la ceinture d'arbres autour de l'eau demandent du temps — on peut le
-          lui donner d'avance.
-        </p>
-        <div className="reglages">
-          <label htmlFor="maturation">Vieillissement</label>
-          <input
-            id="maturation"
-            type="range"
-            min={0}
-            max={120}
-            step={5}
-            value={maturationAns}
-            onChange={(e) => setMaturationAns(Number(e.target.value))}
-          />
-          <span className="valeur">{maturationAns === 0 ? "aucun" : `${maturationAns} ans`}</span>
-        </div>
-        <p className="glose" style={{ minHeight: 0 }}>
-          {maturationAns === 0
-            ? "Vous arrivez sur le terrain tel qu'il est décrit ci-dessus."
-            : `Le moteur simule ${maturationAns} ans sans vous (${anneeDepart - maturationAns}-${anneeDepart}), puis vous arrivez. Ce qui aura poussé aura poussé tout seul.`}
-        </p>
-      </section>
-
-      <section className="carte">
-        <h3>Le climat</h3>
-        <p className="sous">Ce qu'on plante aujourd'hui vivra dedans.</p>
-        <div className="seg">
-          {SCENARIOS.map((sc) => (
-            <button
-              key={sc.id}
-              type="button"
-              style={btn(sc.id === scenario)}
-              onClick={() => setScenario(sc.id)}
-              title={sc.description}
-            >
-              {sc.nom}
-            </button>
-          ))}
-        </div>
-        <p className="glose">{SCENARIOS.find((sc) => sc.id === scenario)?.description}</p>
-        {(() => {
-          const sc = SCENARIOS.find((x) => x.id === scenario);
-          if (!sc || sc.id === "stable") return null;
-          const monde = rechauffementGlobalC(sc, 2100);
-          const france = rechauffementFranceC(sc, 2100);
-          const f = sc.fourchetteFrance2100;
-          return (
-            <div className="effets">
-              <span title="réchauffement moyen du globe en 2100, vs 1850-1900 (GIEC AR6)">
-                🌍 monde +{monde.toFixed(1)} °C
-              </span>
-              <span title="réchauffement annuel moyen en France — c'est celui que subit la parcelle">
-                🇫🇷 France <strong>+{france.toFixed(1)} °C</strong>
-                {f && ` [${f[0].toFixed(1)} ; ${f[1].toFixed(1)}]`}
-              </span>
-              <span title="l'été se réchauffe bien plus que la moyenne annuelle">
-                ☀️ été français +{(france * formeSaisonniere(28)).toFixed(1)} °C
-              </span>
-              <span title="l'hiver se réchauffe moins que l'été, mais plus que le globe">
-                ❄️ hiver +{(france * formeSaisonniere(2)).toFixed(1)} °C
-              </span>
-            </div>
-          );
-        })()}
-        <details style={{ marginTop: 8, fontSize: 13, color: "var(--encre-douce)" }}>
-          <summary style={{ cursor: "pointer" }}>D'où viennent ces chiffres</summary>
-          <p style={{ marginTop: 6 }}>
-            Le réchauffement mondial vient du sixième rapport du GIEC. Les valeurs françaises,
-            elles, ne s'en déduisent pas par une simple règle de trois : la France se réchauffe
-            environ une fois et demie plus vite que le globe, et ses étés presque deux fois —
-            l'assèchement des sols supprimant l'évaporation qui les tempérait.
           </p>
-          <p>
-            Ces valeurs sont celles de l'<strong>estimation observationnellement contrainte</strong>{" "}
-            (Ribes et al., CMIP6), qui sert de base aux paliers <strong>TRACC</strong>, le
-            référentiel français d'adaptation. Elles sont nettement plus chaudes que les projections
-            régionales EURO-CORDEX diffusées par DRIAS-2020, surtout en été : la plupart de ces
-            modèles régionaux ne font varier ni les aérosols ni l'effet physiologique du CO₂ sur les
-            stomates, et sous-estiment de ce fait le réchauffement estival. Pour quoi que ce soit
-            qui ressemble à de la planification, ce sont les paliers TRACC qu'on attend de vous, pas
-            des sorties SSP brutes.
-          </p>
-        </details>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13 }}>Année de départ</span>
-          <div className="seg">
-            {[2026, 2040].map((a) => (
-              <button
-                key={a}
-                type="button"
-                style={btn(a === anneeDepart)}
-                onClick={() => setAnneeDepart(a)}
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-          <span style={{ fontSize: 13, marginLeft: 8 }}>Graine du hasard</span>
-          <input
-            type="number"
-            value={seed}
-            onChange={(e) => setSeed(Number(e.target.value) || 0)}
-            style={{ width: 80 }}
-            title="Deux parties avec la même graine se déroulent à l'identique."
-          />
-        </div>
-        <div className="seg" style={{ marginTop: 8 }}>
-          <button
-            type="button"
-            style={btn(economie)}
-            onClick={() => setEconomie(true)}
-            title="La trésorerie contraint : plants à payer, découvert limité, faillite possible"
-          >
-            💶 L'argent compte
-          </button>
-          <button
-            type="button"
-            style={btn(!economie)}
-            onClick={() => setEconomie(false)}
-            title="Le compte tourne et s'affiche, mais ne bloque rien : ni découvert refusé, ni faillite"
-          >
-            🌱 Écologie seule
-          </button>
-        </div>
-        <p className="glose" style={{ minHeight: 0 }}>
-          {economie
-            ? "Les plants se paient, le découvert est plafonné, et une trésorerie trop longtemps négative met fin à la partie."
-            : "Le compte continue de tourner et reste affiché — savoir ce qu'aurait coûté une conduite est instructif — mais il ne bloque plus rien. Le plafond d'heures de travail, lui, reste : une journée fait le même nombre d'heures qu'on ait de l'argent ou non."}
-        </p>
-      </section>
-
-      <section className="carte">
-        <h3>Profils de départ</h3>
-        <p className="sous">
-          Figer tout ce qui précède — terrain, entourage, relief, eau, climat — pour rejouer
-          plusieurs parties dans les mêmes conditions. La graine du hasard, elle, reste libre :
-          c'est en la changeant qu'on distingue ce qui tient du terrain de ce qui tient de la
-          chance.
-        </p>
-        <div className="seg" style={{ marginBottom: 8 }}>
-          <input
-            type="text"
-            value={nomProfil}
-            placeholder="nom du profil"
-            onChange={(e) => setNomProfil(e.target.value)}
-            style={{ width: 200 }}
-          />
-          <button
-            type="button"
-            style={btn()}
-            disabled={nomProfil.trim().length === 0}
-            onClick={() => {
-              const profil = profilCourant(nomProfil.trim());
-              setProfils(enregistrerProfil(profil));
-              setMessageProfil(`« ${profil.nom} » enregistré.`);
-            }}
-          >
-            Enregistrer
-          </button>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() => {
-              const texte = JSON.stringify(profilCourant(nomProfil.trim() || "profil"), null, 2);
-              setImportTexte(texte);
-              setMessageProfil("Profil courant écrit ci-dessous : copiez-le pour le garder.");
-            }}
-          >
-            Exporter en JSON
-          </button>
-        </div>
-        <div className="seg" style={{ marginBottom: 8 }}>
-          {PROFILS_LIVRES.map((p) => (
-            <button
-              key={p.nom}
-              type="button"
-              style={{ ...btn(), marginRight: 10 }}
-              onClick={() => {
-                appliquerProfil(p);
-                setMessageProfil(`« ${p.nom} » chargé — profil livré, la graine reste à vous.`);
-              }}
-              title="Situation réelle livrée avec le jeu : elle se charge, se joue, et se modifie sans être écrasée"
-            >
-              📍 {p.nom}
-            </button>
-          ))}
-        </div>
-        {profils.length > 0 && (
-          <div className="seg" style={{ marginBottom: 8 }}>
-            {profils.map((p) => (
-              <span key={p.nom} style={{ display: "inline-flex" }}>
-                <button type="button" style={btn()} onClick={() => appliquerProfil(p)}>
-                  ↺ {p.nom}
-                </button>
-                <button
-                  type="button"
-                  style={{ ...btn(), marginRight: 10 }}
-                  title={`Oublier « ${p.nom} »`}
-                  onClick={() => {
-                    setProfils(supprimerProfil(p.nom));
-                    setMessageProfil(`« ${p.nom} » oublié.`);
-                  }}
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        <textarea
-          value={importTexte}
-          onChange={(e) => setImportTexte(e.target.value)}
-          placeholder="Collez ici un profil exporté pour le charger"
-          rows={3}
-          style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: 11 }}
-        />
-        <div className="seg" style={{ marginTop: 6 }}>
-          <button
-            type="button"
-            style={btn()}
-            disabled={importTexte.trim().length === 0}
-            onClick={() => {
-              const lu = lireProfilExporte(importTexte);
-              if (typeof lu === "string") setMessageProfil(lu);
-              else {
-                appliquerProfil(lu);
-                setMessageProfil(`« ${lu.nom} » chargé.`);
-              }
-            }}
-          >
-            Charger ce JSON
-          </button>
-        </div>
-        {messageProfil && (
-          <p className="glose" style={{ minHeight: 0 }}>
-            {messageProfil}
-          </p>
-        )}
-      </section>
-
-      <p className="seg">
-        <button
-          type="button"
-          style={{ ...btn(true), padding: "8px 20px", fontSize: 14, fontWeight: 600 }}
-          onClick={() =>
-            onStart(
-              stationId,
-              seed,
-              "reelle",
-              scenario,
-              bordures,
-              reliefFinal,
-              eau,
-              nappeCm,
-              partBassin,
-              maturationAns,
-              anneeDepart,
-              economie,
-            )
-          }
-        >
-          Démarrer
-        </button>
-      </p>
+        </>
+      )}
     </div>
   );
 }
