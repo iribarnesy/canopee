@@ -16,16 +16,15 @@
  *
  * ## Ce que ce module ne fait PAS, et pourquoi
  *
- * **Il n'accumule rien.** Le pli est dans `useGame`, dans le gestionnaire de
- * messages du worker, et il a fallu une mesure pour l'y mettre : replier
- * l'instantané que React garde en ÉTAT perdait soixante-dix pour cent des
- * instantanés (115 reçus, 35 repliés sur douze ans à ×52). Ici on ne décide que
- * d'une chose — quand refermer la période — parce que c'est la seule qui
- * regarde l'écran et non la simulation.
+ * **Il n'accumule rien, et la période n'est même pas un second compte.** Le
+ * worker tient UN cumul, depuis le début de la partie ; la période est ce
+ * cumul moins celui qu'il valait quand elle a commencé (`soustraire`). Ici on
+ * ne décide donc que d'une chose — quand la refermer — parce que c'est la
+ * seule qui regarde l'écran et non la simulation.
  */
 
 import { useEffect, useMemo, useRef } from "react";
-import { type LigneLue, lignesDuBilan } from "./bilan";
+import { type LigneLue, lignesDuBilan, soustraire } from "./bilan";
 import type { GameApi } from "./useGame";
 
 export interface BilanDuJeu {
@@ -52,7 +51,10 @@ export function useBilan(
 
   // Le tri et les phrases une fois par bilan, et pas une fois par image : le
   // panneau se redessine à chaque survol de la parcelle.
-  const lignes = useMemo(() => lignesDuBilan(bilan.lignes), [bilan.lignes]);
+  const lignes = useMemo(
+    () => lignesDuBilan(soustraire(bilan.partie, bilan.reference, bilan.depuis)),
+    [bilan.partie, bilan.reference, bilan.depuis],
+  );
 
   return { lignes, depuis: bilan.depuis };
 }

@@ -230,6 +230,45 @@ export function agreger(
   return suite;
 }
 
+/**
+ * CE QUI S'EST PASSÉ DEPUIS, c'est-à-dire un bilan moins un autre.
+ *
+ * **Une soustraction plutôt qu'un second cumul**, et c'est le §2.1 qui tranche :
+ * le bilan de la partie et celui de la période sont la même quantité sur deux
+ * fenêtres. Les compter deux fois, c'est se donner deux chances de compter
+ * faux — et le jour où l'un se corrige, l'autre ment.
+ *
+ * Elle marche parce que le bilan ne retient que des SOMMES : les comptes, les
+ * positions, les places. Un centre de gravité se soustrait comme le reste.
+ *
+ * Ce qui ne se soustrait pas, c'est la DATE : le bilan ne garde pas quelle
+ * semaine a apporté quoi, donc la première semaine d'une ligne héritée du passé
+ * serait celle d'avant la période. On la ramène à `depuis`, qui est vrai par
+ * construction — la période commence là.
+ */
+export function soustraire(bilan: Bilan, reference: Bilan, depuis: number): Bilan {
+  const reste = new Map<string, LigneDeBilan>();
+  for (const [cle, ligne] of bilan) {
+    const avant = reference.get(cle);
+    if (!avant) {
+      reste.set(cle, ligne);
+      continue;
+    }
+    const combien = ligne.combien - avant.combien;
+    if (combien <= 0) continue;
+    reste.set(cle, {
+      ...ligne,
+      combien,
+      sx: ligne.sx - avant.sx,
+      sy: ligne.sy - avant.sy,
+      places: ligne.places - avant.places,
+      premiereSemaine: Math.max(ligne.premiereSemaine, depuis),
+      derniereSemaine: ligne.derniereSemaine,
+    });
+  }
+  return reste;
+}
+
 /** Une ligne de bilan prête à lire : sa phrase, son icône, son endroit. */
 export interface LigneLue {
   cle: string;

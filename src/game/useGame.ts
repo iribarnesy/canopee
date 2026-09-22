@@ -9,8 +9,7 @@ import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
 import type { Bordures } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
-import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
-import { journalDe } from "./journal";
+import { BILAN_VIDE, type Bilan } from "./bilan";
 import { CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { type ChoixRecolte, especesRecoltees } from "./recolteAuto";
 
@@ -75,7 +74,16 @@ export interface GameApi {
    * en ouvre une neuve. Qui décide de la refermer n'est pas d'ici : c'est
    * l'écran, qui sait quand le joueur a regardé (`useBilan`).
    */
-  bilan: { lignes: Bilan; depuis: number; oublier: () => void };
+  bilan: {
+    /** tout ce qui a changé depuis le début de la partie */
+    partie: Bilan;
+    /** ce qu'il avait changé au début de la période affichée */
+    reference: Bilan;
+    /** la semaine où la période a commencé */
+    depuis: number;
+    /** refermer la période et en ouvrir une neuve ici */
+    oublier: () => void;
+  };
   /** ce que la récolte automatique cueille, et pourquoi */
   recolteAuto: { semees: string[]; choix: ChoixRecolte; actives: ReadonlySet<string> };
   /** allumer ou éteindre une essence dans la récolte automatique */
@@ -218,40 +226,43 @@ export function useGame(): GameApi {
   const idPartie = useRef(idNeuf());
 
   /**
-   * LE BILAN DE LA PÉRIODE (#128) : ce qui a changé depuis qu'on compte.
+   * LE BILAN (#128) : tout ce qui a changé depuis le début de la partie, et la
+   * borne à partir de laquelle l'écran en lit une PÉRIODE.
    *
-   * **Replié ICI, dans le gestionnaire de messages, et pas dans un effet qui
-   * lirait `snapshot`.** La différence n'est pas de style, elle est de justesse,
-   * et elle a été mesurée : sur douze ans joués à ×52, cent quinze instantanés
-   * sont arrivés et **trente-cinq seulement** ont traversé l'état de React —
-   * deux mille deux cent trente-sept naissances reçues, deux cent soixante-sept
-   * comptées. Un état ne garde que la DERNIÈRE valeur ; tout ce qui arrive
-   * entre deux rendus est écrasé sans bruit.
+   * **Un seul cumul, dans le worker, et une soustraction ici.** Le §2.1 le
+   * commande : la partie et la période sont la même quantité sur deux fenêtres,
+   * et les compter deux fois, c'est se donner deux chances de compter faux.
    *
-   * C'est exactement pourquoi le fil des événements, lui, s'accumule déjà par
-   * une mise à jour fonctionnelle à partir de `msg` : ce qui compte cumule
-   * depuis le MESSAGE, jamais depuis l'état.
+   * Et le worker est le bon endroit pour les deux, pour une raison qu'une
+   * mesure a établie et une autre confirmée :
    *
-   * Reste vrai ce qui ne se voit pas d'ici : le bilan de la PARTIE entière —
-   * celui que la fin de niveau voudra — n'est toujours pas ici mais dans le
-   * worker, à côté de `cumuls`, parce que reprendre une sauvegarde rejoue le
-   * journal sans qu'un seul instantané intermédiaire ne remonte.
+   * - **replier l'instantané que React garde en ÉTAT en perd les deux tiers** :
+   *   sur douze ans joués à ×52, cent quinze instantanés reçus, trente-cinq
+   *   repliés, deux mille deux cent trente-sept naissances arrivées et deux
+   *   cent soixante-sept comptées. Un état ne garde que la dernière valeur ;
+   *   ce qui arrive entre deux rendus est écrasé sans bruit ;
+   * - **et même replié depuis le MESSAGE, ce qui suffirait à la justesse du
+   *   compte, un cumul d'ici ne survivrait pas à une reprise** : rejouer une
+   *   sauvegarde refait la partie dans le worker, sans qu'un seul instantané
+   *   intermédiaire ne remonte. La fin de niveau raconterait alors une partie
+   *   qui commence au chargement.
+   *
+   * Une troisième raison les départage tout à fait, et elle n'est pas
+   * théorique : une semaine trop chargée se REJOUE amputée (#133). Le worker
+   * défait son cumul, l'écran ne défait rien — il aurait gardé les gestes
+   * annulés.
    */
   const [bilan, setBilan] = useState<Bilan>(BILAN_VIDE);
+  /** Le bilan au début de la période affichée : ce qu'on retranche. */
+  const [bilanReference, setBilanReference] = useState<Bilan>(BILAN_VIDE);
   const [bilanDepuis, setBilanDepuis] = useState(0);
-  /** Le côté de la parcelle, pour situer un geste de zone. Fixé à `ready`. */
-  const coteM = useRef(0);
+  /** Le dernier bilan reçu, lisible hors rendu pour borner une période neuve. */
+  const dernierBilan = useRef<Bilan>(BILAN_VIDE);
   const derniereSemaine = useRef(0);
 
-  const replierLeBilan = useCallback((s: Snapshot) => {
-    derniereSemaine.current = s.week;
-    const ou = new Map(s.trees.map((t) => [t.id, { x: t.x, y: t.y }]));
-    setBilan((b) => agreger(b, journalDe(s), s.week, coteM.current, (id) => ou.get(id)));
-  }, []);
-
-  /** Le clic « vu » du §6.8 : on oublie, et la période repart d'ici. */
+  /** Le clic « vu » du §6.8 : on referme la période, et une neuve part d'ici. */
   const oublierLeBilan = useCallback(() => {
-    setBilan(BILAN_VIDE);
+    setBilanReference(dernierBilan.current);
     setBilanDepuis(derniereSemaine.current);
   }, []);
 
@@ -279,12 +290,13 @@ export function useGame(): GameApi {
       switch (msg.type) {
         case "ready":
           setStation(msg.station);
-          coteM.current = msg.station.coteM;
           setReplayProgress(undefined);
           break;
         case "snapshot":
           setSnapshot(msg.snapshot);
-          replierLeBilan(msg.snapshot);
+          dernierBilan.current = msg.bilan;
+          derniereSemaine.current = msg.snapshot.week;
+          setBilan(msg.bilan);
           setCumuls(msg.cumuls);
           setRevision((n) => n + 1);
           if (msg.snapshot.refusals.length > 0) {
@@ -336,9 +348,7 @@ export function useGame(): GameApi {
     };
     workerRef.current = worker;
     return worker;
-    // `replierLeBilan` est stable (rien dans ses dépendances) : le citer ne
-    // recrée pas le worker, ça dit seulement d'où il vient.
-  }, [replierLeBilan]);
+  }, []);
 
   useEffect(() => {
     // Autosave : demande la sauvegarde au worker toutes les 30 s de jeu réel.
@@ -368,7 +378,12 @@ export function useGame(): GameApi {
       send({ type: "reglerFacture", embaucher, pourToujours });
     },
     cumuls,
-    bilan: { lignes: bilan, depuis: bilanDepuis, oublier: oublierLeBilan },
+    bilan: {
+      partie: bilan,
+      reference: bilanReference,
+      depuis: bilanDepuis,
+      oublier: oublierLeBilan,
+    },
     recolteAuto: {
       ...recolteAuto,
       // La règle est appliquée UNE fois, par la même fonction que le worker.
@@ -410,6 +425,7 @@ export function useGame(): GameApi {
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
       setBilan(BILAN_VIDE);
+      setBilanReference(BILAN_VIDE);
       setBilanDepuis(0);
       setRecolteAuto({ semees: [], choix: {} });
       setNiveauRange({ acquis: [] });
@@ -440,6 +456,7 @@ export function useGame(): GameApi {
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
       setBilan(BILAN_VIDE);
+      setBilanReference(BILAN_VIDE);
       setBilanDepuis(0);
       send({ type: "resume", save });
       send({ type: "autoHarvest", enabled: true });

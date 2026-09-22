@@ -23,7 +23,7 @@ import type {
   MortDeLaSemaine,
   NaissanceDeLaSemaine,
 } from "../../src/engine/tick";
-import { agreger, BILAN_VIDE, lignesDuBilan, surface } from "../../src/game/bilan";
+import { agreger, BILAN_VIDE, lignesDuBilan, soustraire, surface } from "../../src/game/bilan";
 
 const COTE_M = 100;
 
@@ -169,6 +169,46 @@ describe("agreger", () => {
     ];
     const b = agreger(BILAN_VIDE, { gestes }, 0, COTE_M);
     expect(lignesDuBilan(b)[0]?.texte).toBe("1,2 ha labouré");
+  });
+});
+
+describe("soustraire", () => {
+  it("rend ce qui s'est passé DEPUIS la référence", () => {
+    const avant = agreger(BILAN_VIDE, { morts: [mort(1, 1), mort(2, 2)] }, 10, COTE_M);
+    const apres = agreger(avant, { morts: [mort(3, 3), mort(4, 4), mort(5, 5)] }, 20, COTE_M);
+    const [ligne] = lignesDuBilan(soustraire(apres, avant, 15));
+    expect(ligne?.combien).toBe(3);
+    expect(ligne?.texte).toBe("3 aulnes glutineux morts asphyxiés par l'eau");
+  });
+
+  it("rend le centre de gravité de la SEULE période", () => {
+    const avant = agreger(BILAN_VIDE, { morts: [mort(0, 0)] }, 0, COTE_M);
+    const apres = agreger(avant, { morts: [mort(50, 60), mort(70, 80)] }, 10, COTE_M);
+    const [ligne] = lignesDuBilan(soustraire(apres, avant, 5));
+    // Le mort à l'origine ne doit PAS tirer le centre vers le coin.
+    expect(ligne?.ou).toEqual({ x: 60, y: 70 });
+  });
+
+  it("fait disparaître une ligne que la période n'a pas fait bouger", () => {
+    const avant = agreger(BILAN_VIDE, { morts: [mort(1, 1)] }, 0, COTE_M);
+    expect(lignesDuBilan(soustraire(avant, avant, 5))).toHaveLength(0);
+  });
+
+  it("garde une ligne née PENDANT la période, entière", () => {
+    const avant = agreger(BILAN_VIDE, { morts: [mort(1, 1, "alnus_glutinosa")] }, 0, COTE_M);
+    const apres = agreger(avant, { morts: [mort(2, 2, "fagus_sylvatica")] }, 10, COTE_M);
+    const lignes = lignesDuBilan(soustraire(apres, avant, 5));
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]?.texte).toContain("hêtre");
+  });
+
+  it("ne fait pas remonter une date avant le début de la période", () => {
+    const avant = agreger(BILAN_VIDE, { morts: [mort(1, 1)] }, 0, COTE_M);
+    const apres = agreger(avant, { morts: [mort(2, 2)] }, 300, COTE_M);
+    const [ligne] = lignesDuBilan(soustraire(apres, avant, 260));
+    // La ligne existe depuis l'an 1, mais la PÉRIODE commence à la semaine 260.
+    expect(ligne?.premiereSemaine).toBe(260);
+    expect(ligne?.derniereSemaine).toBe(300);
   });
 });
 

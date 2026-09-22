@@ -1,28 +1,52 @@
 /**
- * LE JOURNAL QUE PORTE UN INSTANTANÉ.
+ * LE JOURNAL D'UNE SEMAINE, d'où qu'il vienne.
  *
- * Une seule fonction, et elle a une raison d'exister à part : **trois lectures
+ * Une seule fonction, et elle a une raison d'exister à part : **quatre lectures
  * différentes partent du même journal**. L'ellipse le joue (`useEllipse`), le
- * calque le pointe (`changements.ts`), le bilan le compte (`bilan.ts`). Si
- * chacun choisit lui-même les champs de l'instantané qu'il recopie, le jour où
- * le moteur en ajoute un, deux des trois l'ignorent en silence — et personne
- * ne s'en aperçoit, puisque rien ne casse.
+ * calque le pointe (`changements.ts`), le bilan le compte (`bilan.ts`), et le
+ * worker le replie semaine après semaine. Si chacun choisit lui-même les champs
+ * qu'il recopie, le jour où le moteur en ajoute un, trois des quatre l'ignorent
+ * en silence — et personne ne s'en aperçoit, puisque rien ne casse.
+ *
+ * **La forme est structurelle et non nominale**, et c'est ce qui permet la
+ * quatrième lecture : un `Snapshot` et un `TickResult` portent les mêmes sept
+ * champs sous les mêmes noms. Le worker n'a donc pas à fabriquer un instantané
+ * pour compter une semaine qu'il vient de simuler.
  *
  * Module **pur** : pas de React, pas de DOM, pas d'horloge.
  */
 
+import type { GesteVisible } from "../engine/actions";
+import type {
+  ChuteDeChandelle,
+  FranchissementDeStade,
+  IncendieResult,
+  MortDeLaSemaine,
+  NaissanceDeLaSemaine,
+  TempeteResult,
+} from "../engine/tick";
 import type { JournalDeSemaine } from "../render/temps/ellipse";
-import type { Snapshot } from "./protocol";
 
-/** Le journal que porte un instantané, dans la forme que le plan attend. */
-export function journalDe(snapshot: Snapshot): JournalDeSemaine {
+/** Ce qui suffit à porter un journal : l'instantané comme le résultat d'un tick. */
+export interface PorteurDeJournal {
+  morts: readonly MortDeLaSemaine[];
+  chutes: readonly ChuteDeChandelle[];
+  gestes: readonly GesteVisible[];
+  naissances: readonly NaissanceDeLaSemaine[];
+  franchissements: readonly FranchissementDeStade[];
+  incendie?: IncendieResult;
+  tempete?: TempeteResult;
+}
+
+/** Le journal que porte un instantané ou un tick, dans la forme attendue. */
+export function journalDe(porteur: PorteurDeJournal): JournalDeSemaine {
   return {
-    morts: snapshot.morts,
-    chutes: snapshot.chutes,
-    gestes: snapshot.gestes,
-    naissances: snapshot.naissances,
-    franchissements: snapshot.franchissements,
-    ...(snapshot.incendie ? { incendie: snapshot.incendie } : {}),
-    ...(snapshot.tempete ? { tempete: snapshot.tempete } : {}),
+    morts: porteur.morts,
+    chutes: porteur.chutes,
+    gestes: porteur.gestes,
+    naissances: porteur.naissances,
+    franchissements: porteur.franchissements,
+    ...(porteur.incendie ? { incendie: porteur.incendie } : {}),
+    ...(porteur.tempete ? { tempete: porteur.tempete } : {}),
   };
 }

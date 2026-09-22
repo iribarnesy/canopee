@@ -61,8 +61,10 @@ import type {
   TempeteResult,
 } from "../engine/tick";
 import { tick } from "../engine/tick";
-import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
+import { type CauseMort, LIBELLE_CAUSE, type TreeState } from "../engine/trees";
+import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import { prefixeSousLePlafond } from "./facture";
+import { journalDe, type PorteurDeJournal } from "./journal";
 import { nomEspece, nomEspeces, s } from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
@@ -149,6 +151,39 @@ let actionsDeLaSemaine: GameAction[] = [];
 let cumuls: Cumuls = CUMULS_VIDES;
 /** Le cumul à l'ouverture de la semaine, jumeau de `debutDeSemaine`. */
 let cumulsAuDebut: Cumuls = CUMULS_VIDES;
+/**
+ * LE BILAN DE LA PARTIE (#128) : tout ce qui a changé depuis son début.
+ *
+ * **Ici pour la même raison que `cumuls`, et la raison est décisive** :
+ * reprendre une sauvegarde REJOUE le journal d'actions, semaine après semaine,
+ * sans qu'un seul instantané intermédiaire ne remonte à l'écran. Un bilan tenu
+ * là-haut repartirait de zéro à chaque reprise — et c'est justement à la fin
+ * d'un niveau, souvent repris, qu'on veut raconter ce qui s'est passé.
+ *
+ * L'écran, lui, n'en tient pas de second : la période qu'il affiche est ce
+ * bilan-ci moins celui qu'il avait au début de la période (`soustraire`).
+ */
+let bilan: Bilan = BILAN_VIDE;
+/** Le bilan à l'ouverture de la semaine, jumeau de `cumulsAuDebut`. */
+let bilanAuDebut: Bilan = BILAN_VIDE;
+
+/**
+ * Replie une semaine dans le bilan de la partie.
+ *
+ * `arbres` sert à SITUER : les gestes et les franchissements ne nomment que des
+ * identifiants. On passe les tiges d'APRÈS la semaine — un arbre abattu n'y est
+ * plus, et sa ligne existera donc sans endroit, ce qui est plus honnête qu'un
+ * doigt pointé sur un coin de parcelle.
+ */
+function replierLeBilan(
+  porteur: PorteurDeJournal,
+  semaine: number,
+  arbres: readonly TreeState[],
+): void {
+  if (!sc) return;
+  const ou = new Map(arbres.map((a) => [a.id, a]));
+  bilan = agreger(bilan, journalDe(porteur), semaine, sc.station.coteM, (id) => ou.get(id));
+}
 /**
  * Le niveau joué et ses paliers franchis (#188) — RANGÉS, pas joués.
  *
@@ -289,6 +324,7 @@ function ouvrirLaSemaine(etat: GameState): void {
   // Le cumul a le même point de retour que l'état : une semaine ramenée sous
   // le plafond se rejoue amputée, et ce qu'elle a récolté doit se rejouer avec.
   cumulsAuDebut = cumuls;
+  bilanAuDebut = bilan;
   // Une facture appartient à la semaine qui la porte : aucune ne peut survivre
   // à l'ouverture de la suivante — ni, surtout, à une partie neuve.
   factureEnAttente = false;
@@ -313,6 +349,11 @@ function performAction(action: GameAction) {
   // son essence s'y lit encore — et c'est elle qui distingue « deux cents kilos
   // de pommes » de « deux cents kilos de n'importe quoi » (#188).
   cumuls = accumuler(cumuls, result.gestes ?? [], state.trees);
+  replierLeBilan(
+    { morts: [], chutes: [], naissances: [], franchissements: [], gestes: result.gestes ?? [] },
+    state.week,
+    state.trees,
+  );
   const dEur = state.economy.treasuryEur - before.economy.treasuryEur;
   const dHeures = state.economy.hoursUsedWeek - before.economy.hoursUsedWeek;
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
@@ -629,7 +670,7 @@ function postSnapshot() {
   // Les grandeurs du tick, elles, se GARDENT : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
   // joueur ne doit pas voir la crue disparaître entre deux clics.
-  post({ type: "snapshot", snapshot, cumuls }, transferablesDuSnapshot(snapshot));
+  post({ type: "snapshot", snapshot, cumuls, bilan }, transferablesDuSnapshot(snapshot));
 }
 
 /**
@@ -689,6 +730,15 @@ function seTenirAuPlafond(): number {
   // recompte les gestes des SEULES actions gardées. Sans ça, une récolte
   // annulée resterait acquise.
   cumuls = accumuler(cumulsAuDebut, elaguee.gestes, elaguee.etat.trees);
+  // Le bilan repart du même point que le cumul et l'état. Il n'y a que les
+  // GESTES à recompter : la semaine n'a pas encore été close, donc ni mort ni
+  // naissance n'y est encore arrivée.
+  bilan = bilanAuDebut;
+  replierLeBilan(
+    { morts: [], chutes: [], naissances: [], franchissements: [], gestes: elaguee.gestes },
+    elaguee.etat.week,
+    elaguee.etat.trees,
+  );
   state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
   actionsDeLaSemaine = elaguee.gardees;
@@ -809,6 +859,7 @@ function stepWeeks(n: number) {
     pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
     cumuls = accumuler(cumuls, ticked.gestes, ticked.state.trees);
+    replierLeBilan(ticked, before.week, ticked.state.trees);
     pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
@@ -1153,6 +1204,7 @@ function init(
   politiqueHoraire = "demander";
   // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
   cumuls = CUMULS_VIDES;
+  bilan = BILAN_VIDE;
   semees = new Set();
   choixRecolte = {};
   recoltees = new Set();
@@ -1242,10 +1294,15 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // l'état, et le journal de sauvegarde porte les actions, pas ce qu'elles
       // ont donné. C'est le même rejeu qui refait la parcelle et son compte.
       cumuls = CUMULS_VIDES;
+      bilan = BILAN_VIDE;
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
         cumuls = accumuler(cumuls, step.gestes, step.state.trees);
+        // **Le rejeu compte, et c'est tout l'intérêt de tenir le bilan ici** :
+        // une partie reprise retrouve les morts, les semis et les gestes de
+        // toutes ses années, qu'aucun instantané n'a jamais montrés.
+        replierLeBilan(step, i, step.state.trees);
         lastFluxes = step.fluxes;
         // La dernière semaine rejouée est celle qu'on va montrer : son
         // débordement et sa lumière au sol servent au premier instantané.

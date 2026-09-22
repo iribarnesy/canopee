@@ -24,6 +24,7 @@ import type {
 } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 import type { DecorBordures } from "../render/couches/decor";
+import type { Bilan } from "./bilan";
 import type { Cumuls } from "./niveaux";
 import type { ChoixRecolte } from "./recolteAuto";
 
@@ -655,8 +656,15 @@ export type FromWorker =
    * que le MOTEUR dit de la parcelle à cette semaine, le cumul est ce que le
    * jeu a compté des gestes qu'il a rapportés. Les mélanger ferait croire que
    * le moteur tient un compte qu'il ne tient pas.
+   *
+   * `bilan` est du même bois (#128) : tout ce qui a changé depuis le début de
+   * la partie, groupé et situé. Il est compté dans le worker pour la raison qui
+   * y garde le cumul — reprendre une sauvegarde rejoue le journal sans qu'un
+   * seul instantané intermédiaire ne remonte. L'écran n'en tient pas de
+   * second : la période qu'il affiche est celui-ci moins celui qu'il avait au
+   * début de la période.
    */
-  | { type: "snapshot"; snapshot: Snapshot; cumuls: Cumuls }
+  | { type: "snapshot"; snapshot: Snapshot; cumuls: Cumuls; bilan: Bilan }
   /** Le niveau et ses paliers franchis, tels que la sauvegarde les portait. */
   | { type: "niveau"; id?: string; acquis: string[] }
   /**

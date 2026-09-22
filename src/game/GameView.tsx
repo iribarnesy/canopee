@@ -36,6 +36,7 @@ import {
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
 import type { Orientation } from "../render/projection";
+import { lignesDuBilan } from "./bilan";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import type { Niveau } from "./niveaux";
 import { NIVEAUX_LIVRES } from "./niveauxLivres";
@@ -1376,6 +1377,15 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const bilan = useBilan(game.bilan, game.speed > 0);
 
   /**
+   * CE QUI S'EST PASSÉ PENDANT TOUT LE NIVEAU, pour l'écran de fin.
+   *
+   * La partie entière et non la période : c'est le même bilan, lu sur l'autre
+   * fenêtre. Calculé à part parce qu'un écran de fin ne s'ouvre qu'une fois,
+   * et qu'une partie de vingt ans porte plus de lignes qu'une pause.
+   */
+  const bilanDuNiveau = useMemo(() => lignesDuBilan(game.bilan.partie), [game.bilan.partie]);
+
+  /**
    * **Le temps attend la fin d'une animation bloquante (#163).**
    *
    * Le retour de partie : « c'est mieux d'attendre la fin d'une animation que
@@ -1781,6 +1791,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           niveau={enNiveau.niveau}
           avancement={enNiveau.avancement}
           annees={snapshot.week / 52}
+          bilan={bilanDuNiveau}
           surRejouer={() => {
             if (enNiveau.niveau) lancerLeNiveau(enNiveau.niveau);
           }}
