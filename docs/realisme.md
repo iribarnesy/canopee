@@ -202,12 +202,17 @@ moteur)
 INDIVIDUS sur les gîtes que la parcelle offre, et abattre l'arbre porteur en
 expulse un que le journal peut nommer — un critère de plus au référentiel, posé
 et rempli par le même lot, ce qui est assumé plutôt que dissimulé)
-→ **94 % (la géométrie d'un chantier cesse d'être un disque : on peut travailler
+→ 94 % (la géométrie d'un chantier cesse d'être un disque : on peut travailler
 en bande, et la mécanisation le sent — AUCUN point gagné, c'est une
 infrastructure. Son livrable est une identité, tenue sur cinq cents disques
 tirés au hasard plutôt que sur des cas choisis, ce qui a fait tomber deux
 divergences que personne n'aurait vues : un semis minuscule ne semait rien, et
-l'aire se calculait de deux façons à un ULP près)**.*
+l'aire se calculait de deux façons à un ULP près)
+→ **94 % (le soc desserre ce que les roues tassent : un sol labouré cesse d'être
+condamné à 1,000 de tassement pour toujours, la courbe de Broadbalk monte d'un
+quart et le plot fumé entre enfin dans la gamme de l'essai — aucun point gagné,
+c'est une correction, et le risque annoncé sur le point zéro s'est révélé être
+une fenêtre de mesure trop courte)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -250,7 +255,7 @@ maladie-là, pas une preuve de santé.*
 | A30 | L'altitude refroidit et l'exposition décide du rayonnement (adret/ubac) | ✅ | 0,6 °C/100 m ; ±25 % d'ETP ET ±1,5 °C entre adret et ubac — c'est la même énergie qui fait les deux, un versant sud n'est pas seulement plus sec |
 | A28 | La nappe se voit : profondeur et engorgement, cellule par cellule | ✅ | calques « Nappe » et « Engorgement » alimentés par l'instantané |
 | A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` + réserve de surface recalculée par cellule selon son humus ; `sol-vivant.test.ts` |
-| A13 | La structure/compaction évolue (tassement, restauration par les racines) | ✅ | `tassement.ts` ; `tassement.test.ts` — un passage d'engin tasse la seule part MÉCANISABLE de la zone (`mecanisation.ts`) : une parcelle plantée serré ne se tasse pas. Le tassement ferme le sol à l'eau (ruissellement, donc érosion), coûte jusqu'à 30 % de croissance aux arbres ET à la strate herbacée (fourchette Arvalis 5–30 %), et se répare chaque année d'autant plus vite que l'enracinement est dense *(vitesse de retour à calibrer : aucune source consultée ne la chiffre)*. **Limite assumée** : toute partie démarre à structure intacte, y compris sur une parcelle de grande culture qui arriverait déjà tassée — l'historique de la parcelle n'est pas déclaré |
+| A13 | La structure/compaction évolue (tassement, restauration par les racines) | ✅ | `tassement.ts` ; `tassement.test.ts` — un passage d'engin tasse la seule part MÉCANISABLE de la zone (`mecanisation.ts`) : une parcelle plantée serré ne se tasse pas. Le tassement ferme le sol à l'eau (ruissellement, donc érosion), coûte jusqu'à 30 % de croissance aux arbres ET à la strate herbacée (fourchette Arvalis 5–30 %), et se répare chaque année d'autant plus vite que l'enracinement est dense *(vitesse de retour à calibrer : aucune source consultée ne la chiffre)*. **Et depuis #141, un labour fait les DEUX CHOSES qu'il fait vraiment** : le soc casse la structure tassée de l'horizon travaillé — la raison agronomique du geste — et les roues repassent derrière dans la raie ouverte. Le moteur ne modélisait que les roues, si bien qu'un blé continu atteignait `tassement = 1,000` à l'an 16 et y restait à jamais. Deux termes composés dans cet ordre, et un fait tombe que personne n'a écrit : **la même charrue desserre un sol tassé et tasse un sol meuble**, puisque sur la part mécanisée ce qu'elle laisse ne dépend plus de ce qu'elle a trouvé. Le régime n'est plus une saturation mais un ÉQUILIBRE — 0,30 au sortir du labour, 0,10 après une année de réparation —, ce qu'un sol labouré depuis 1843 impose. `labour-desserre.test.ts` le tient par les deux bouts : deux conduites parties de 0 et de 1 se rejoignent, et le résidu du soc n'est pas nul PARCE QUE la semelle de labour, elle, ne se desserre pas — le moteur n'ayant qu'une valeur par cellule, ce résidu est la part qu'elle y occupe. **Limite assumée** : toute partie démarre à structure intacte, y compris sur une parcelle de grande culture qui arriverait déjà tassée — l'historique de la parcelle n'est pas déclaré |
 | A14 | Deux plantes voisines se disputent réellement l'eau de leurs cellules communes | ✅ | Allocation spatiale en 2 passes ; `nurse.test.ts` |
 
 ## B. Lumière et structure
@@ -286,9 +291,9 @@ maladie-là, pas une preuve de santé.*
 | C10 | Le pH dérive lentement (litières acidifiantes, lessivage, chaulage) | ✅ | `bases.ts` ; `bases.test.ts` — **le pH cesse d'être un état** : il se lit sur le taux de saturation d'un pool de bases échangeables, alimenté par l'altération et les dépôts, vidé par le lessivage, et penché par la teneur en CALCIUM de la litière (un trait de l'atlas, mesuré, aucune espèce nommée). Mesuré sur cinquante ans, depuis que le budget est stratifié (#170) : un châtaignier fait passer un limon acide de 5,00 à 4,73 quand le même sol nu tient 4,97, un hêtre un limon riche de 7,00 à 6,62 contre 6,80 nu, un frêne le même à 6,98 — au-dessus du sol nu. Des dixièmes, comme la podzolisation réelle, et **c'est la litière qui décide du signe par rapport au témoin**, pas par rapport au point de départ : un sol que sa végétation ne réalimente pas se décalcifie de lui-même, ce que les témoins non amendés de Rothamsted donnent à l'ordre d'un demi-point par siècle *(à confirmer sur Park Grass)*. Et le chaulage cesse d'être un geste à effet fixe : la même chaux déplace un sable bien plus qu'une argile, parce que le complexe est au dénominateur |
 | C14 | Les bases échangeables suivent un bilan conservatif | ✅ | `bases.test.ts` — la variation du pool vaut altération + dépôts + litière − lessivage − charge acide, à l'arrondi près. Comme pour N, P et K, et avec la même réserve : la conservation ne valide pas le NIVEAU |
 | C15 | La POMPE À BASES : un feuillu remonte les bases du sous-sol et les dépose en surface, appauvrissant la profondeur | ✅ | `bases.ts` (`prelevementProfondEq`, `alterationBases*`) ; `pompe-bases.test.ts` — le budget de bases est **stratifié et il circule** : chaque horizon reçoit l'altération qu'il produit (le sous-sol en fait 63 à 79 %, là où tout était crédité à la surface), la surface lessive VERS le fond au lieu du néant, les racines pompent au fond le calcium qu'elles déposeront en surface, et c'est en passant sous la zone racinaire qu'une base quitte la parcelle. Le prélèvement se lit sur deux traits de l'atlas (`litiere.calciumMgG`, `racines.profondeurMaxCm`), par individu, aucune espèce nommée. Mesuré sur cinquante ans, limon riche : **sans arbre le sous-sol ne s'appauvrit pas** (7,000 → 7,018, il trouve son équilibre), **sous hêtraie il baisse** (→ 6,976) pendant que la surface, elle, reçoit — le frêne tient sa surface 0,18 unité au-dessus du sol nu tout en creusant son fond. Et c'est la TENEUR qui décide, pas la profondeur : le pin descend deux fois plus bas que le hêtre, porte plus de tiges, et pompe cinquante fois moins. Les deux budgets se referment à 1e-11 près, et celui de surface **sans aucun terme de pompe** — c'est ce qui prouve que la remontée passe par la litière et non par un raccourci. Hors d'atteinte en revanche, et dit : le contraste de Foltran et al. (hêtre acidifiant le fond PLUS que l'épicéa) suppose un épicéa que l'atlas n'a pas |
-| C16 | Une culture continue sans apport épuise le sol, et se stabilise bas | ✅ | La culture prélève son azote pondéré par son `exigenceMinerale` — dix pour le blé contre un pour une graminée spontanée (`herbacees.ts`, `tick.ts`) — et le moteur n'a pas d'action de fertilisation. Un blé continu descend donc de lui-même : 3,43 t/ha à l'an 4, 1,98 à l'an 12, **1,02 à l'an 24**, 0,82 à l'an 29 (`culture.test.ts`). **Le calage et la validation viennent de la même source sur deux chiffres différents** : Broadbalk (Rothamsted, blé continu depuis 1843) donne 8-9 t/ha sur les parcelles pleinement fumées — c'est le plafond posé sur la fiche — et ~1 t/ha sur celles qui ne reçoivent rien, tenu sur cent soixante-dix ans. Rien dans le code ne pousse le moteur vers ce second chiffre. **Limite** : il glisse sous 1 après trente ans là où Broadbalk tient, et la cause probable est la PAILLE, qui reste au champ dans la réalité et ne rend rien ici |
-| C17 | On peut apporter de l'azote, et les formes ne font pas la même chose | ✅ | `fertiliser` (`actions.ts`), dose en kg N/ha dans les deux cas pour qu'elles se comparent. Le MINÉRAL entre dans le pool disponible — donc lessivable par `cellLeachedG`, qui existait ; le FUMIER entre dans la litière avec son C/N, se minéralise sur des années et construit de l'humus au passage (même patron que `epandreBrf`). Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m² d'azote minéral et RIEN en litière, le plot fumier 4,50 et 20,25 de litière — le second a constitué un stock, le premier l'a traversé. À azote comparable, le fumier fait mieux sur la durée (6,21 contre 4,88 t/ha), ce que Broadbalk dit aussi. Refus au-delà de 250 kg N/ha : la directive nitrates plafonne l'organique à 170 en zone vulnérable |
-| C18 | Le rendement répond à la dose d'azote, et la courbe n'est écrite nulle part | ✅ | Aucune courbe de réponse n'a été codée : l'apport remplit le pool, et le rendement y répond par la satisfaction de la strate. Mesurée sur les paliers de Broadbalk (0 / 48 / 96 / 144 / 192 kg N/ha), moyenne des dix dernières années sur trente : **1,07 / 2,54 / 3,40 / 4,17 / 4,88 t/ha** — monotone, et le point zéro tombe juste sur les ~1 t/ha que les parcelles nues tiennent depuis 1843. **Limite, chiffrée et attribuée** : Broadbalk monte à 8-9 t/ha à 192 kg N et le moteur plafonne à 4,88. La cause n'est ni dans la culture ni dans l'azote — c'est le TASSEMENT, qui s'épingle à 1,000 à l'an 16 et retire 30 % de croissance pour toujours. Neutraliser `PERTE_CROISSANCE_MAX` le chiffre : 1,70 / — / — / — / 6,68 t/ha, et 8,39 sur le plot fumé, dans la gamme de l'essai. Mais le témoin soulève AUSSI le point zéro (1,07 → 1,70), donc le tassement faisait en partie le travail de la paille qui manque (C16) : il manque un terme, le desserrement par le soc, pas un coefficient (issue #141, passée à `moteur:évolution`). **Les premières années, avant l'épinglage, atteignent 8,16 et 8,15 t/ha** |
+| C16 | Une culture continue sans apport épuise le sol, et se stabilise bas | ✅ | La culture prélève son azote pondéré par son `exigenceMinerale` — dix pour le blé contre un pour une graminée spontanée (`herbacees.ts`, `tick.ts`) — et le moteur n'a pas d'action de fertilisation. Un blé continu descend donc de lui-même : 4,16 t/ha à l'an 4, 2,63 à l'an 12, **1,45 à l'an 24**, 1,20 à l'an 29 (`culture.test.ts`) — toute la trajectoire a monté d'un quart avec #141, qui a levé le plafond de tassement, et elle descend toujours. **Le calage et la validation viennent de la même source sur deux chiffres différents** : Broadbalk (Rothamsted, blé continu depuis 1843) donne 8-9 t/ha sur les parcelles pleinement fumées — c'est le plafond posé sur la fiche — et ~1 t/ha sur celles qui ne reçoivent rien, tenu sur cent soixante-dix ans. Rien dans le code ne pousse le moteur vers ce second chiffre. **Limite, et elle est maintenant mesurée sur l'échelle de temps de l'essai** plutôt que sur une fenêtre de trente ans — opposer trente ans de moteur à cent quatre-vingts ans d'épuisement n'est pas le même dispositif. Sur cent vingt ans, moyennes par tranche de vingt : **2,96 / 1,25 / 0,84 / 0,78 / 0,79 / 0,70**. Le moteur traverse la gamme de Broadbalk vers les années 20 à 40, puis converge SOUS, à 0,70-0,84 au lieu du ~1 que l'essai tient depuis 1843. Il glisse donc bien, la cause probable reste la PAILLE — qui reste au champ dans la réalité et ne rend rien ici — et ce n'est pas #141 qui l'a créé : c'est le lot qui a rendu la mesure lisible, en retirant un tassement irréaliste qui masquait le défaut par en dessous |
+| C17 | On peut apporter de l'azote, et les formes ne font pas la même chose | ✅ | `fertiliser` (`actions.ts`), dose en kg N/ha dans les deux cas pour qu'elles se comparent. Le MINÉRAL entre dans le pool disponible — donc lessivable par `cellLeachedG`, qui existait ; le FUMIER entre dans la litière avec son C/N, se minéralise sur des années et construit de l'humus au passage (même patron que `epandreBrf`). Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m² d'azote minéral et RIEN en litière, le plot fumier 4,50 et 20,25 de litière — le second a constitué un stock, le premier l'a traversé. À azote comparable, le fumier fait mieux sur la durée (8,01 contre 6,00 t/ha depuis #141 ; 6,21 contre 4,88 avant), ce que Broadbalk dit aussi. Refus au-delà de 250 kg N/ha : la directive nitrates plafonne l'organique à 170 en zone vulnérable |
+| C18 | Le rendement répond à la dose d'azote, et la courbe n'est écrite nulle part | ✅ | Aucune courbe de réponse n'a été codée : l'apport remplit le pool, et le rendement y répond par la satisfaction de la strate. Mesurée sur les paliers de Broadbalk (0 / 48 / 96 / 144 / 192 kg N/ha), moyenne des dix dernières années sur trente : **1,44 / 3,25 / 4,26 / 5,16 / 6,00 t/ha**, et **8,01 sur le plot fumé** — monotone d'un bout à l'autre. **Le plafond est levé** (#141) : il valait 1,07 / 2,54 / 3,40 / 4,17 / 4,88 et 6,21, et la cause n'était ni dans la culture ni dans l'azote mais dans le TASSEMENT, qui s'épinglait à 1,000 à l'an 16 et retirait 30 % de croissance pour toujours parce que le moteur ne modélisait que les roues du tracteur et jamais le soc. Le plot fumé entre maintenant dans la gamme de l'essai (~9). **Témoin REFAIT après le lot** — `PERTE_CROISSANCE_MAX = 0`, et refait plutôt que repris, la trajectoire de tassement n'étant plus la même : 1,59 / — / — / — / 6,32 et 8,39. Il ne reste donc que 5 % attribuables au tassement sur les deux plots fertilisés, contre 26 % avant : c'est ce qu'un sol labouré doit coûter, ni zéro ni un tiers. **Ce qui reste, et qui n'est pas là** : le minéral 192 s'arrête à 6,00 pour 8-9 chez Broadbalk, alors que son propre témoin plafonne à 6,32 — une seconde cause, petite mais réelle, et ailleurs |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
 | C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche**. **Ce ✅ était faux et personne ne pouvait le voir** : le gain gonflait la demande qui vide la cellule sans gonfler le service, si bien que le réseau COÛTAIT 11,8 % du volume sur limon pauvre et 0,7 % sur limon riche — il nuisait le plus là où il devait aider le plus. Corrigé en rangeant le gain une fois par arbre pour que les deux passes ne PUISSENT plus diverger (#115). Mesuré sur cinq graines et deux stations : **+2,79 % de volume sur limon pauvre, +0,09 % sur limon riche** (azote reçu +5,7 % et +0,7 %), gradient enfin dans le bon sens. **Limite** : le réseau fait GAGNER l'arbre dans la compétition pour l'azote minéral, il n'en AJOUTE pas — le service réel (capter l'azote organique et les pores qu'une racine n'atteint pas) demande un pool organique accessible, et le gain sur l'eau et le phosphore attend toujours |
 
@@ -2193,6 +2198,11 @@ Les quatre premiers chiffres ont monté de 3 à 6 % depuis #140 (1,01 / 2,40 /
 à la culture entre-temps : c'est le flux aléatoire qui a glissé, comme il
 glisse chaque fois qu'un tirage s'insère en amont.
 
+**Et #141 les a tous relevés d'un quart** — 1,44 / 3,25 / 4,26 / 5,16 / 6,00,
+et 8,01 au fumier. Cette fois ce n'est pas le flux aléatoire : c'est le soc.
+La suite de cette section raconte le défaut tel qu'il était ; ce qui l'a levé
+est en fin de fichier.
+
 ### Le plafond n'est ni dans la culture ni dans l'azote
 
 Broadbalk monte à 8-9 t/ha à 192 kg N ; le moteur plafonne à 4,88. La cause a
@@ -2229,6 +2239,10 @@ travaillé — c'est la raison agronomique du geste — et le moteur ne modélis
 les roues du tracteur. Broadbalk est labouré chaque année depuis 1843 et fait
 9 t/ha. Il manque un TERME, pas un réglage : l'issue #141 est passée à
 `moteur:évolution` pour cette raison.
+
+> **Livré depuis.** Le terme est là, et le risque annoncé ici ne s'est pas
+> réalisé de la façon annoncée : voir *« Le soc desserre ce que les roues
+> tassent »* en fin de fichier.
 
 Une moitié du défaut a tout de même été corrigée ici, parce qu'elle était de ce
 lot : la densité racinaire était lue sur `1 − groundLight`, c'est-à-dire sur le
@@ -3448,6 +3462,93 @@ entier a donc été élargi vers le bas jusqu'à la plus petite tige publiée
 augmentée du plus faible rapport aérien/tige observé (1 307 × 1,20), plutôt que
 resserré sur un plancher que le moteur ne tient pas. C'est à regarder — séparément, et pas dans le même lot
 qu'une autre correction de biomasse, faute de quoi les deux se masqueraient.
+
+
+## Le soc desserre ce que les roues tassent (#141)
+
+Le moteur ne modélisait qu'une moitié du labour. `applyLabourer` n'appelait que
+`tassementApresPassage` : il AJOUTAIT du tassement, et rien ne le retirait. Un
+blé continu atteignait donc `tassement = 1,000` à l'an 16 et y restait pour
+toujours, ce qui lui coûtait 30 % de croissance — pendant que Broadbalk, labouré
+chaque année depuis 1843, fait 9 t/ha.
+
+**Ce n'était pas un coefficient trop grand, c'était un terme qui manquait**, et
+l'issue insistait pour qu'on ne baisse pas simplement `TASSEMENT_PAR_PASSAGE` :
+les deux corrections ne disent pas la même chose sur une parcelle
+agroforestière, où la densité d'arbres protège déjà la structure.
+
+Un labour fait deux choses en même temps, et elles vont en sens contraire : le
+soc casse la structure tassée de l'horizon travaillé, les roues repassent
+derrière dans la raie ouverte. Les deux termes composés dans cet ordre, et **un
+fait tombe que personne n'a écrit** : sur la part mécanisée, ce que la charrue
+laisse ne dépend plus de ce qu'elle a trouvé. La même charrue desserre donc un
+sol tassé et tasse un sol meuble, ce qui est le comportement réel de l'outil.
+Le régime cesse d'être une saturation et devient un ÉQUILIBRE — 0,30 au sortir
+du labour, 0,10 après une année de réparation.
+
+| moyenne des 10 dernières années sur 30 | avant | après | témoin refait | Broadbalk |
+|---|---|---|---|---|
+| rien | 1,07 | 1,44 | 1,59 | ~1 |
+| minéral 192 | 4,88 | **6,00** | 6,32 | 8-9 |
+| fumier 240 | 6,21 | **8,01** | 8,39 | ~9 |
+
+Le témoin est `PERTE_CROISSANCE_MAX = 0`, **refait après le lot** et non repris
+de la mesure d'avant, qui portait sur une autre trajectoire de tassement. Il
+reste 5 % attribuables au tassement sur les deux plots fertilisés, contre 26 %
+avant : c'est ce qu'un sol labouré doit coûter.
+
+### Le risque annoncé, et ce que la mesure en dit
+
+L'issue prévenait : neutraliser le tassement soulève TOUTE la courbe, point zéro
+compris (1,07 → 1,70), là où les parcelles nues de Broadbalk tiennent ~1 depuis
+1843. On aurait gagné le haut et perdu le bas, qui était juste.
+
+Après le lot, la parcelle nue donne 1,44 sur trente ans. Ce serait 44 % de trop
+— **si la fenêtre était comparable, et elle ne l'est pas** : on opposait trente
+ans de moteur à cent quatre-vingts ans d'épuisement. Poursuivie sur cent vingt
+ans, la trajectoire dit autre chose :
+
+| ans | 1-20 | 21-40 | 41-60 | 61-80 | 81-100 | 101-120 |
+|---|---|---|---|---|---|---|
+| t/ha | 2,96 | 1,25 | 0,84 | 0,78 | 0,79 | 0,70 |
+
+Le moteur traverse la gamme de l'essai vers les années 20 à 40, puis converge
+**sous** : 0,70 à 0,84. L'écart est donc dans l'autre sens que redouté, et ce
+n'est pas ce lot qui l'a créé — c'est la limite déjà écrite sous C16, la paille
+qui reste au champ dans la réalité et ne rend rien ici. **Le 1,07 d'avant
+n'était pas un point juste** : c'était une fenêtre de trente ans sur un sol
+qu'un tassement irréaliste freinait, et deux erreurs de sens contraire y
+donnaient le bon chiffre.
+
+### Un essai est tombé, et il disait mieux après qu'avant
+
+`culture.test.ts` affirmait que l'azote du noyer MASQUE son ombre, seuil à 0,9
+sur le rapport allée / blé pur à l'an 33. Mesuré 0,834 après le lot, contre
+0,953 avant. **Ce n'est pas un effet différentiel du tassement** : les deux bras
+sont au même 0,10 pendant l'essentiel de l'essai. C'est que ni l'un ni l'autre
+n'est plus freiné par le sol, donc chacun bute sur ce qui le limite vraiment —
+le témoin sur son azote, l'allée sur la lumière. Relâcher une contrainte commune
+fait apparaître celle qui diffère.
+
+Le seuil n'a pas été rabaissé : l'essai a été réécrit autour de ce qu'il montre
+maintenant, et il dit davantage. La compensation tient jusqu'à H/L ≈ 1 et **passe
+même devant** — 1,069 à l'an 25, l'allée rendant 7 % de plus que le blé pur —,
+puis l'ombre gagne : 0,834 à H/L 1,28. Le masquage a une fin, ce que le seuil
+d'avant ne voyait pas.
+
+### Ce que ce lot n'a PAS fait
+
+**La semelle de labour.** Le desserrement de l'horizon travaillé va avec un
+tassement SOUS lui, que le passage répété du soc à la même profondeur lisse et
+que rien ne desserre. Le moteur n'a qu'une valeur par cellule, pour tout le
+profil : `TASSEMENT_RESIDUEL_APRES_SOC` n'est donc pas nul, et ce résidu EST la
+part que la semelle occupe dans cette valeur unique. Un modèle à deux horizons
+la rendrait explicite ; il faudrait l'ancrer, et ce serait un autre lot.
+
+**Les trois autres passages d'engin.** Semer, fertiliser et moissonner ne
+touchent toujours pas la variable, alors que ce sont des passages eux aussi. Les
+ajouter demanderait de recalibrer `TASSEMENT_PAR_PASSAGE`, que ce lot n'a pas
+touché — et l'issue demandait précisément de ne pas mélanger les deux.
 
 
 ## Règle de travail
