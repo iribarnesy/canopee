@@ -972,6 +972,20 @@ function stepWeeks(n: number) {
     // décisions vivent dans `recolteAuto.ts`, où un essai peut les prendre en
     // faute — ici elles étaient confondues en une seule condition.
     const murs = arbresMurs(state.trees);
+    // ——— SONDE TEMPORAIRE (#188) : que voit le worker, semaine par semaine ?
+    // À retirer dès la question tranchée.
+    {
+      const pom = state.trees.filter(
+        (t) => t.alive && t.especeId === "malus_domestica" && t.fruitsKg > 0,
+      );
+      if (pom.length > 0) {
+        const kg = pom.reduce((a, t) => a + t.fruitsKg, 0);
+        event(
+          "🔎",
+          `SONDE S${state.week % 52} : ${pom.length} pommiers portent ${kg.toFixed(1)} kg · total mûr ${murs.kg.toFixed(0)} kg · précédent ${prevFruitsReadyKg.toFixed(0)} kg`,
+        );
+      }
+    }
     // Le front montant, tel qu'il a toujours été : on n'agit qu'à l'ARRIVÉE
     // d'une maturité, pas à chaque semaine où elle dure. Reste à savoir s'il
     // laisse passer une essence qui mûrit pendant qu'une autre porte encore
