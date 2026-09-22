@@ -39,8 +39,9 @@
  * **Lot 2 — LA TABLE.** Un gîte ne suffit pas : un nichoir dans un désert reste
  * vide. L'installation demande donc un gîte ET une table, comme le moteur
  * l'exige déjà des pollinisateurs (G4), et un individu qui ne mange pas deux
- * saisons de suite s'en va. Les quatre ressources lues existaient toutes : la
- * table n'a rien inventé, elle a déclaré qui prélève quoi.
+ * saisons de suite s'en va. Les ressources lues existaient déjà : la table n'a
+ * rien inventé, elle a déclaré qui prélève quoi — et elle en a RETIRÉ deux sur
+ * quatre après mesure, ce que `Ressource` raconte juste en dessous.
  *
  * Il ne fait toujours pas se reproduire ni mourir de vieillesse : un individu
  * s'installe, il reste tant que son gîte tient et que la table suit, et il part

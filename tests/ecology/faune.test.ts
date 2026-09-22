@@ -1,5 +1,5 @@
 /**
- * LA FAUNE EN INDIVIDUS (issue #187, lot 1 : « l'animal existe »).
+ * LA FAUNE EN INDIVIDUS (issue #187, lots 1 et 2).
  *
  * Le moteur n'avait que des grandeurs : une densité de paysage pour le gibier,
  * une population anonyme pour les ravageurs, et rien du tout pour les
@@ -7,7 +7,7 @@
  * lot pose l'autre modèle : des individus qui s'ancrent, qu'on peut voir
  * arriver et partir.
  *
- * Ce fichier tient quatre choses, dans l'ordre où elles comptent :
+ * Ce fichier tient six choses, dans l'ordre où elles comptent :
  *
  *   1. **le gîte trie, et il trie tout seul** — aucune ligne du moteur ne
  *      connaît de mésange ; c'est la géométrie du creux, déjà calculée pour
@@ -19,6 +19,15 @@
  *      l'ait prévu. C'est l'événement, et il tombe du mécanisme ;
  *   4. **et allumer la faune ne déplace aucune partie.** Le lot ne touche aucun
  *      critère vert, et il doit pouvoir le prouver.
+ *
+ * Puis, depuis le lot 2 :
+ *
+ *   5. **un gîte parfait dans un désert reste vide**, et le manque ne compte
+ *      qu'à hauteur de ce que la parcelle pèse dans le territoire — un demi-
+ *      hectare peut affamer une mésange, jamais une buse ;
+ *   6. **et la table PAIE** : une haie de vieux arbres ne nourrit pas ce qu'un
+ *      bois nourrit. Un mécanisme qui ne change rien sur une partie réelle
+ *      serait un paramètre, pas un mécanisme.
  */
 
 import { describe, expect, it } from "vitest";
