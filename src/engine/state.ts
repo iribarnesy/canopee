@@ -16,6 +16,7 @@ import type { CarbonState } from "./carbon";
 import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
 import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
+import type { IndividuFaune } from "./faune";
 import type { GridDims } from "./grid";
 import { cellCount } from "./grid";
 import { empriseInitiale, N_HERBACEES } from "./herbacees";
@@ -129,6 +130,21 @@ export interface Station {
    * cultivée, 0,3/ha dans un massif à forte densité.
    */
   gibierParHa: number;
+  /**
+   * LA FAUNE EST-ELLE FAITE D'INDIVIDUS DANS CETTE PARTIE ? (#187)
+   *
+   * Absent ou faux : rien ne change, et ça veut dire RIEN — le tick ne parcourt
+   * rien, n'alloue rien, ne tire rien. C'est ce commutateur qui porte la preuve
+   * de neutralité du mécanisme, et c'est sa vraie raison d'être : le coût de
+   * calcul, lui, ne le justifiait pas (mesuré : plat jusqu'à cinq cents
+   * individus). Sa seconde raison est la reproductibilité — les individus
+   * ajoutent des tirages, donc une partie avec faune ne se superpose pas à une
+   * partie sans, même à graine égale.
+   *
+   * Ce n'est PAS une donnée de contexte comme `gibierParHa` : le gibier
+   * traverse, les individus s'ancrent (`faune.ts`).
+   */
+  faune?: boolean;
   /**
    * Dépôts atmosphériques d'azote, kg/ha/an. Ce n'est pas un détail : entre
    * les oxydes d'azote de la combustion et l'ammoniac de l'élevage, le ciel
@@ -409,6 +425,16 @@ export interface GameState {
    * que rien d'autre n'aurait réveillée.
    */
   aBruleDepuisLaLevee: boolean;
+  /**
+   * Les individus de faune installés sur la parcelle (`faune.ts`, #187).
+   *
+   * ABSENT tant que `station.faune` n'est pas allumé, et c'est voulu : un
+   * tableau vide serait déjà une allocation, et l'égalité de `stateHash` d'une
+   * partie sans faune avec celle d'avant le lot en dépend.
+   */
+  faune?: readonly IndividuFaune[];
+  /** Prochaine identité à distribuer à un individu — même règle que `nextTreeId`. */
+  nextFauneId?: number;
   rng: RngState;
 }
 

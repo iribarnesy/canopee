@@ -18,6 +18,8 @@
  */
 
 import { ESPECES_V0 } from "../../engine/especes";
+import type { CauseMort } from "../../engine/trees";
+import { SEUIL_SOUFFRANCE } from "../suivis";
 
 /**
  * Le nom qu'on lit, sans jamais lever d'exception.
@@ -90,4 +92,65 @@ export function essencesPresentes(
       // clignoterait sous le curseur.
       .sort((a, b) => b.tiges - a.tiges || a.nom.localeCompare(b.nom, "fr"))
   );
+}
+
+/** Une tige, réduite à ce que l'état de santé lit. */
+export interface TigeSurveillee extends TigeRecensee {
+  /** souffrance LENTE, amortie : celle qui dure (protocol.ts) */
+  stressLent?: number;
+  /** ce que le moteur nomme, quand il sait le nommer */
+  causeLente?: CauseMort;
+}
+
+/** Une essence, et l'état de sa population. */
+export interface EssenceSurveillee extends EssencePresente {
+  /** tiges dont la souffrance lente dépasse le seuil */
+  enSouffrance: number;
+  /** ∈ [0,1] : la part de l'essence qui souffre — ce que le statut montre */
+  part: number;
+  /** la cause la plus fréquente parmi celles qui souffrent, si le moteur la nomme */
+  cause?: CauseMort;
+}
+
+/**
+ * L'ÉTAT DE CHAQUE ESSENCE : combien de tiges souffrent, et de quoi.
+ *
+ * **Le même seuil et la même règle que le journal des suivis** (`suivis.ts`) :
+ * une tige souffre quand le moteur NOMME sa peine et qu'elle dépasse
+ * `SEUIL_SOUFFRANCE`. Deux définitions de « souffrir » dans le même jeu
+ * finiraient par se contredire d'un panneau à l'autre.
+ *
+ * On rend une PART et non la pire tige : sur deux mille ronces, une seule qui
+ * dépérit ne dit rien de l'essence, alors qu'un tiers qui dépérit dit tout. Ce
+ * qu'on surveille ici est une population, pas un individu — c'est l'inverse du
+ * volet des suivis, et c'est pour ça que les deux existent.
+ */
+export function etatDesEssences(tiges: readonly TigeSurveillee[]): EssenceSurveillee[] {
+  const parEspece = new Map<string, { souffrent: number; causes: Map<CauseMort, number> }>();
+  for (const t of tiges) {
+    const agg = parEspece.get(t.especeId) ?? { souffrent: 0, causes: new Map() };
+    if (t.causeLente !== undefined && (t.stressLent ?? 0) >= SEUIL_SOUFFRANCE) {
+      agg.souffrent++;
+      agg.causes.set(t.causeLente, (agg.causes.get(t.causeLente) ?? 0) + 1);
+    }
+    parEspece.set(t.especeId, agg);
+  }
+  return essencesPresentes(tiges, undefined).map((e) => {
+    const agg = parEspece.get(e.especeId);
+    const souffrent = agg?.souffrent ?? 0;
+    let cause: CauseMort | undefined;
+    let pire = 0;
+    for (const [c, n] of agg?.causes ?? []) {
+      if (n > pire) {
+        pire = n;
+        cause = c;
+      }
+    }
+    return {
+      ...e,
+      enSouffrance: souffrent,
+      part: e.tiges > 0 ? souffrent / e.tiges : 0,
+      ...(cause ? { cause } : {}),
+    };
+  });
 }

@@ -63,6 +63,7 @@ import type {
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import { prefixeSousLePlafond } from "./facture";
+import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
 import type {
   FactureHoraire,
@@ -73,6 +74,13 @@ import type {
   StationInfo,
   ToWorker,
 } from "./protocol";
+import {
+  arbresMurs,
+  type ChoixRecolte,
+  especesRecoltees,
+  especesSemees,
+  fautIlPrevenir,
+} from "./recolteAuto";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 import { CAUSE_AU_SINGULIER } from "./suivis";
 
@@ -81,6 +89,25 @@ let weather: WeekWeather[] = [];
 /** état courant, toujours « semaine ouverte » */
 let state: GameState | undefined;
 let journal: GameAction[] = [];
+/**
+ * Ce que le joueur a SEMÉ, tiré de son propre journal.
+ *
+ * C'est ce qui sépare son verger de la friche qui l'entoure, et la récolte
+ * automatique s'y tient : elle existe pour qu'on ne rate pas SA fenêtre de
+ * récolte en avançant vite, pas pour cueillir des ronces à cent cinquante
+ * heures la semaine.
+ */
+let semees: ReadonlySet<string> = new Set();
+/** Ce que le joueur a décidé essence par essence, et qui prime sur le défaut. */
+let choixRecolte: ChoixRecolte = {};
+/** Ce qui est effectivement cueilli d'office — la règle, appliquée une fois. */
+let recoltees: ReadonlySet<string> = new Set();
+
+/** Recalculer ce qui est cueilli, et le dire à l'écran. */
+function majRecolteAuto(): void {
+  recoltees = especesRecoltees(semees, choixRecolte);
+  post({ type: "recolteAuto", semees: [...semees], choix: { ...choixRecolte } });
+}
 let meteoMode: "reelle" | "synthetique" = "reelle";
 let scenario: ScenarioId = "ssp245";
 let anneeDepart = 2026;
@@ -108,6 +135,28 @@ let suivis: ReadonlySet<number> = new Set();
  */
 let debutDeSemaine: GameState | undefined;
 let actionsDeLaSemaine: GameAction[] = [];
+/**
+ * Ce qui s'est accumulé depuis le début de la partie (#188) : les kilos
+ * cueillis, les plants mis en terre, les tiges abattues.
+ *
+ * **Ici et pas dans l'interface**, parce que c'est ici que la partie se
+ * REJOUE : reprendre une sauvegarde rejoue son journal d'actions, et un cumul
+ * tenu ailleurs repartirait de zéro à chaque reprise. Un objectif comme
+ * « récolter une tonne de pommes » porte sur des fruits qui ont quitté la
+ * parcelle — aucun instantané ne les montre plus.
+ */
+let cumuls: Cumuls = CUMULS_VIDES;
+/** Le cumul à l'ouverture de la semaine, jumeau de `debutDeSemaine`. */
+let cumulsAuDebut: Cumuls = CUMULS_VIDES;
+/**
+ * Le niveau joué et ses paliers franchis (#188) — RANGÉS, pas joués.
+ *
+ * Le worker ne sait pas ce qu'est un palier : les fiches portent des
+ * fermetures, qui ne traversent pas la frontière d'un worker. Il tient les
+ * deux valeurs pour que la sauvegarde les porte et que la reprise les rende.
+ */
+let niveauId: string | undefined;
+let paliersAcquis: string[] = [];
 /** Où en était le journal de sauvegarde à l'ouverture de la semaine. */
 let journalAuDebut = 0;
 /** Une facture attend sa réponse : le temps ne repart pas avant. */
@@ -240,6 +289,9 @@ function ouvrirLaSemaine(etat: GameState): void {
   debutDeSemaine = state;
   actionsDeLaSemaine = [];
   journalAuDebut = journal.length;
+  // Le cumul a le même point de retour que l'état : une semaine ramenée sous
+  // le plafond se rejoue amputée, et ce qu'elle a récolté doit se rejouer avec.
+  cumulsAuDebut = cumuls;
   // Une facture appartient à la semaine qui la porte : aucune ne peut survivre
   // à l'ouverture de la suivante — ni, surtout, à une partie neuve.
   factureEnAttente = false;
@@ -254,11 +306,23 @@ function performAction(action: GameAction) {
   state = result.state;
   pendingRefusals.push(...result.refusals);
   pendingGestes.push(...(result.gestes ?? []));
+  // Compté ICI, à la source (#188). Compter au moment de l'instantané aurait
+  // été plus simple d'un cran, et faux : `ouvrirLaSemaine` fige le point de
+  // retour du cumul, et un instantané couvre jusqu'à vingt-six semaines. Le
+  // point de retour aurait donc toujours été en retard d'un lot entier — et
+  // une semaine ramenée sous le plafond aurait effacé les récoltes de tout ce
+  // lot, pas seulement les siennes.
+  // Les arbres d'APRÈS le geste : une cueillette laisse l'arbre debout, donc
+  // son essence s'y lit encore — et c'est elle qui distingue « deux cents kilos
+  // de pommes » de « deux cents kilos de n'importe quoi » (#188).
+  cumuls = accumuler(cumuls, result.gestes ?? [], state.trees);
   const dEur = state.economy.treasuryEur - before.economy.treasuryEur;
   const dHeures = state.economy.hoursUsedWeek - before.economy.hoursUsedWeek;
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
   switch (action.type) {
     case "planter": {
+      semees = especesSemees(journal);
+      majRecolteAuto();
       const n = state.trees.length - before.trees.length;
       if (n > 0)
         event(
@@ -568,7 +632,7 @@ function postSnapshot() {
   // Les grandeurs du tick, elles, se GARDENT : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
   // joueur ne doit pas voir la crue disparaître entre deux clics.
-  post({ type: "snapshot", snapshot }, transferablesDuSnapshot(snapshot));
+  post({ type: "snapshot", snapshot, cumuls }, transferablesDuSnapshot(snapshot));
 }
 
 /**
@@ -624,6 +688,10 @@ function seTenirAuPlafond(): number {
   // reproduira pour celles qui restent.
   const elaguee = prefixeSousLePlafond(debutDeSemaine, posees);
   pendingGestes = elaguee.gestes;
+  // Le cumul se rejoue comme l'état : il repart du début de la semaine, puis
+  // recompte les gestes des SEULES actions gardées. Sans ça, une récolte
+  // annulée resterait acquise.
+  cumuls = accumuler(cumulsAuDebut, elaguee.gestes, elaguee.etat.trees);
   state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
   actionsDeLaSemaine = elaguee.gardees;
@@ -743,6 +811,7 @@ function stepWeeks(n: number) {
     pendingNaissances.push(...ticked.naissances);
     pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
+    cumuls = accumuler(cumuls, ticked.gestes, ticked.state.trees);
     pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
@@ -926,13 +995,18 @@ function stepWeeks(n: number) {
       });
       return;
     }
-    // Fruits mûrs : récolte auto, ou pause pour laisser la main
-    const ready = state.trees.filter((t) => t.alive && t.fruitsKg > 0.5);
-    const readyKg = ready.reduce((s, t) => s + t.fruitsKg, 0);
-    if (readyKg > 1 && prevFruitsReadyKg <= 1) {
+    // Fruits mûrs : récolte auto, ou pause pour laisser la main. Les deux
+    // décisions vivent dans `recolteAuto.ts`, où un essai peut les prendre en
+    // faute — ici elles étaient confondues en une seule condition.
+    const murs = arbresMurs(state.trees, recoltees);
+    // Le front montant : on n'agit qu'à l'ARRIVÉE d'une maturité, pas à chaque
+    // semaine où elle dure. Il ne vaut que si les deux termes comparés sont la
+    // MÊME grandeur — voir la mise à jour de `prevFruitsReadyKg` plus bas, qui
+    // ne l'était pas (#191).
+    if (fautIlPrevenir(murs.kg, prevFruitsReadyKg)) {
       if (autoHarvest) {
         const refusalsBefore = pendingRefusals.length;
-        performAction({ type: "recolter", week: state.week, treeIds: ready.map((t) => t.id) });
+        performAction({ type: "recolter", week: state.week, treeIds: murs.ids });
         if (pendingRefusals.length > refusalsBefore) {
           weeksPerSecond = 0;
           post({
@@ -944,13 +1018,21 @@ function stepWeeks(n: number) {
           return;
         }
       } else if (weeksPerSecond > 4) {
-        prevFruitsReadyKg = readyKg;
+        prevFruitsReadyKg = murs.kg;
         weeksPerSecond = 0;
-        post({ type: "autopause", reason: `${Math.round(readyKg)} kg de fruits sont mûrs` });
+        post({ type: "autopause", reason: `${Math.round(murs.kg)} kg de fruits sont mûrs` });
         return;
       }
     }
-    prevFruitsReadyKg = state.trees.reduce((s, t) => (t.alive ? s + t.fruitsKg : s), 0);
+    // **LA MÊME MESURE DES DEUX CÔTÉS (#191).** Ce compteur additionnait le
+    // fruit de TOUS les arbres, sans le seuil de 0,5 kg par pied que la
+    // récolte applique. Deux mesures de la même chose, donc deux mesures qui
+    // divergent : sur une parcelle où des milliers de ronces portent chacune
+    // quelques grammes, le résidu tenait le total au-dessus du kilo toute
+    // l'année, le front ne retombait jamais, et plus rien n'était cueilli après
+    // la première essence mûre. Mesuré en jeu : 115 kg de pommes sur l'arbre en
+    // semaine 39, comparés à un « précédent » de 28 kg de miettes.
+    prevFruitsReadyKg = arbresMurs(state.trees, recoltees).kg;
   }
 }
 
@@ -1031,7 +1113,8 @@ function stationInfo(): StationInfo {
     id: sc.station.id,
     nom: sc.station.nom,
     coteM: sc.station.coteM,
-    ruMm: sc.station.profil[0] ? ruHorizonMm(sc.station.profil[0]) : sc.station.ruMm,
+    ruMm: sc.station.ruMm,
+    ruHorizonSurfaceMm: sc.station.profil[0] ? ruHorizonMm(sc.station.profil[0]) : sc.station.ruMm,
     phInitial: sc.station.phInitial,
     meteoLabel: serie
       ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France)`
@@ -1074,6 +1157,14 @@ function init(
     economie,
   });
   politiqueHoraire = "demander";
+  // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
+  cumuls = CUMULS_VIDES;
+  semees = new Set();
+  choixRecolte = {};
+  recoltees = new Set();
+  // …ni son niveau : l'interface réinstalle celui qu'elle lance.
+  niveauId = undefined;
+  paliersAcquis = [];
   ouvrirLaSemaine(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
   journal = [];
   pendingRefusals = [];
@@ -1134,20 +1225,33 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // l'économie, et doit se rejouer ainsi ou elle divergerait.
       economie = msg.save.economie ?? true;
       politiqueHoraire = msg.save.politiqueHoraire ?? "demander";
+      niveauId = msg.save.niveauId;
+      paliersAcquis = msg.save.paliersAcquis ? [...msg.save.paliersAcquis] : [];
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
       normales = normalesHebdo(weather);
       journal = msg.save.actions;
+      // Le journal rejoué rend aussi ce qui a été semé : sans ça, reprendre une
+      // partie ferait cueillir la friche. Les décisions du joueur, elles,
+      // viennent de la sauvegarde — rien ne permettrait de les deviner.
+      semees = especesSemees(journal);
+      choixRecolte = { ...(msg.save.recolteAuto ?? {}) };
       let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed), {
         economie,
       });
       // Le vieillissement fait partie de l'histoire de la parcelle : il se
       // rejoue à l'identique avant les actions du joueur.
       if (maturationAns > 0) replayed = faireVieillir(replayed, maturationAns);
+      // Le cumul se REFAIT pendant le rejeu (#188). Rien d'autre ne pourrait le
+      // rendre : les kilos cueillis il y a dix ans ne sont plus nulle part dans
+      // l'état, et le journal de sauvegarde porte les actions, pas ce qu'elles
+      // ont donné. C'est le même rejeu qui refait la parcelle et son compte.
+      cumuls = CUMULS_VIDES;
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
+        cumuls = accumuler(cumuls, step.gestes, step.state.trees);
         lastFluxes = step.fluxes;
         // La dernière semaine rejouée est celle qu'on va montrer : son
         // débordement et sa lumière au sol servent au premier instantané.
@@ -1171,12 +1275,27 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       post({ type: "ready", station: stationInfo() });
       // La consigne vient de la sauvegarde : l'écran ne la devinerait pas.
       post({ type: "politiqueHoraire", politique: politiqueHoraire });
+      // Le niveau vient de la sauvegarde : l'écran ne le devinerait pas.
+      post({ type: "niveau", id: niveauId, acquis: [...paliersAcquis] });
+      majRecolteAuto();
       postSnapshot();
       startLoop();
       break;
     }
     case "suivre":
       suivis = new Set(msg.ids);
+      break;
+    case "niveau":
+      // On RANGE, on ne joue pas : l'avancement se calcule côté interface, où
+      // les fiches vivent (#188).
+      niveauId = msg.id;
+      paliersAcquis = [...msg.acquis];
+      break;
+    case "recolteAuto":
+      // Une décision explicite, qui doit survivre à une plantation ultérieure :
+      // retirer la ronce puis en semer ne doit pas la réintroduire en douce.
+      choixRecolte = { ...choixRecolte, [msg.especeId]: msg.actif };
+      majRecolteAuto();
       break;
     case "reglerFacture":
       reglerLaFacture(msg.embaucher, msg.pourToujours);
@@ -1248,6 +1367,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         // La consigne suit la partie : c'est un choix de conduite, pas un
         // réglage de la session (#133).
         ...(politiqueHoraire === "demander" ? {} : { politiqueHoraire }),
+        ...(Object.keys(choixRecolte).length > 0 ? { recolteAuto: { ...choixRecolte } } : {}),
+        ...(niveauId ? { niveauId } : {}),
+        ...(paliersAcquis.length > 0 ? { paliersAcquis: [...paliersAcquis] } : {}),
         weeks: state.week,
         actions: journal,
       };

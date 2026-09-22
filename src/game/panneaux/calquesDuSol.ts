@@ -105,9 +105,11 @@ export const CALQUES: readonly FicheDeCalque[] = [
     libelle: "Eau",
     titre: "Eau de l'horizon de surface",
     unite: "mm",
-    // `ruMm` EST la réserve utile de cet horizon-là (worker.ts) : la borne
-    // haute est donc le sol plein, et pas un maximum choisi.
-    bornes: (station) => [0, station.ruMm],
+    // La réserve de l'HORIZON DE SURFACE, parce que `soilWater` ne rapporte
+    // que celui-là : la borne haute est le sol plein, pas un maximum choisi.
+    // Elle portait le nom `ruMm`, qui désigne ailleurs le profil entier —
+    // d'où #190, et d'où ce nom-ci.
+    bornes: (station) => [0, station.ruHorizonSurfaceMm],
     lire: (snapshot, _station, i) => snapshot.soilWater[i] ?? 0,
     teinte: (part) => [90, 18, 88 - 45 * part],
     format: (v) => v.toFixed(0),

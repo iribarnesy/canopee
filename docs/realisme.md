@@ -103,10 +103,10 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | G. Faune et santé | 11 | 0 | 0 | 11 |
 | H. Gestion, économie, travail | 17 | 4 | 0 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
-| J. Biodiversité et structure | 8 | 0 | 0 | 8 |
-| **Total** | **134** | **18** | **1** | **153** |
+| J. Biodiversité et structure | 9 | 0 | 0 | 9 |
+| **Total** | **135** | **18** | **1** | **154** |
 
-**Score de réalisme : 134 pleins + 18 partiels sur 153 → 93 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 135 pleins + 18 partiels sur 154 → 94 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -198,7 +198,11 @@ distance, et un tronc carié devient un arbre à cavités qui loge les auxiliair
 1,3 hectare de monocultures pour égaler un hectare d'allées. Quatre causes
 écartées avant la bonne, et les quatre étaient dans le dispositif, pas dans le
 moteur)
-→ **93 % (la géométrie d'un chantier cesse d'être un disque : on peut travailler
+→ 94 % (la faune cesse d'être une grandeur : sept espèces s'installent en
+INDIVIDUS sur les gîtes que la parcelle offre, et abattre l'arbre porteur en
+expulse un que le journal peut nommer — un critère de plus au référentiel, posé
+et rempli par le même lot, ce qui est assumé plutôt que dissimulé)
+→ **94 % (la géométrie d'un chantier cesse d'être un disque : on peut travailler
 en bande, et la mécanisation le sent — AUCUN point gagné, c'est une
 infrastructure. Son livrable est une identité, tenue sur cinq cents disques
 tirés au hasard plutôt que sur des cas choisis, ce qui a fait tomber deux
@@ -422,6 +426,7 @@ inventaire.
 | J9 | L'ARRANGEMENT compte autant que la composition : lisière, cœur, mosaïque | ✅ | `structureHorizontale` ; `mosaique.test.ts` — à espèces, nombre et âge identiques, une mosaïque de bosquets note mieux qu'un bloc et qu'une plantation régulière (0,79 / 0,23 / 0,00). **Et le mitage ne paie pas** : des houppiers disjoints donnent 94 % de lisière et zéro cœur, donc zéro. La courbe n'est pas ajustée — c'est le PRODUIT lisière × cœur, qui tombe de l'énoncé « il faut les deux » |
 | J5 | La diversité rétroagit sur le peuplement (régulation, pollinisation, résilience) | ✅ | c'est le cœur de `ravageurs.ts` : la diversité du voisinage nourrit les auxiliaires, qui écrêtent les pullulations, et les pollinisateurs, qui font la nouaison |
 | J6 | Des floraisons étalées nourrissent les pollinisateurs sans rupture | ✅ | `biodiversite.ts:etalementDesFloraisons` balaie la saison de vol par pas de 30 °C·j et demande, à chaque pas, ce qui est OUVERT et ce que ça offre. Quatre défauts de la mesure d'avant tombent ensemble : elle comptait les **anémophiles** (une noiseraie affichait des floraisons étalées sans nourrir personne — le noisetier et le noyer déclarent maintenant `nectar: 0`), elle ignorait la **strate basse**, elle ignorait la **durée** (l'ajonc tient six mois, l'abricotier dix jours), et elle comptait des espèces au lieu d'une couverture (un pommier isolé parmi trois cents hêtres valait une tranche pleine). **Ce qui a débloqué le critère est un découpage** : la floraison a quitté le bloc `fruits`, si bien que sept espèces qui nourrissent sans rien donner à récolter — aubépine, saule, ajonc, genêt, callune, houx, fusain — cessent d'être invisibles. À elles deux, l'ajonc et la callune nourrissent une lande atlantique presque toute l'année. **Limite** : la strate basse n'apporte que sa vernale, les deux autres herbacées étant des graminées ; la soudure d'ÉTÉ reste donc à la charge des ligneux, faute d'une herbacée entomophile tardive |
+| J10 | La faune qui s'installe est faite d'INDIVIDUS, et détruire un gîte en expulse un | ✅ | `faune.ts` ; `faune.test.ts` — **critère AJOUTÉ par le lot qui le remplit**, et il faut le dire : c'est un choix d'architecture pris explicitement (#187), pas une case que le référentiel réclamait. Tout ce qui vole ou court était jusque-là une grandeur — densité de paysage pour le gibier, population anonyme pour les ravageurs, et pour les auxiliaires rien du tout. **La règle de partage est « ce qui s'ancre contre ce qui traverse »** : est un individu ce qui niche, se love ou bâtit dans la parcelle ; une buse qui la survole reste une densité. Sept fiches (mésanges bleue et charbonnière, pic épeiche, chouette chevêche, loir gris, écureuil roux, buse variable), et aucune ligne du moteur ne connaît d'espèce : ce qui trie est la géométrie du creux, déjà calculée pour #183 — volume de chambre, CALIBRE (une entrée ne peut pas être plus large que la chambre qu'elle dessert, condition nécessaire et non suffisante) et hauteur. Un chêne d'un mètre jamais blessé ne loge personne ; une perche creuse loge des mésanges ; un têtard de douze coupes loge une chevêche. **Deux bornes, aucune écrite** : le territoire (quadrupler les arbres creux n'ajoute pas de mésange) et la part du territoire que la parcelle représente — sans cette seconde, un demi-hectare abritait une buse à coup sûr en dix ans, soit cent fois le terrain. Mesuré sur trente ans, trois graines : 7 à 10 individus sur 0,64 ha sans buse ; 38 sur 4 ha, dont 2,5 mésanges bleues/ha (1 à 2 publiées), 3,3 loirs/ha (2 à 10), 1 écureuil/ha (0,5 à 1,5) et UNE buse. Aucun de ces nombres n'est calé. **Limite écrite** : le territoire n'exclut que les congénères DE la parcelle, qui ne voit pas ceux de ses voisins — sur une parcelle plus petite qu'un territoire, c'est une borne supérieure, pas une densité. **Et l'individu ne PAIE pas encore** : la part « gîte » de l'habitat des auxiliaires reste le proxy de `ravageurs.ts` (lot 3) |
 
 ## Ce qui débloquerait le plus de critères
 
