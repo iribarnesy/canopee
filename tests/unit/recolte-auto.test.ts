@@ -23,6 +23,7 @@ import {
   fautIlCueillir,
   fautIlPrevenir,
   SEUIL_ARBRE_KG,
+  SEUIL_PARCELLE_KG,
 } from "../../src/game/recolteAuto";
 
 /** Les semaines de récolte viennent de l'atlas, pas d'un chiffre écrit ici. */
@@ -103,6 +104,48 @@ describe("une saison à deux essences", () => {
     // pourtant qu'une récolte de ronce par an — la cause est donc ailleurs, et
     // #191 reste à instruire.
     expect(rejouer((kg, kgAvant) => kg > 1 && kgAvant <= 1)).toEqual(new Set([1, 2]));
+  });
+});
+
+describe("la même mesure des deux côtés (#191)", () => {
+  /**
+   * Le vrai défaut, et il est invisible à la lecture : ce qu'on CUEILLE se
+   * filtre à `SEUIL_ARBRE_KG` par pied, ce à quoi on le COMPARAIT ne se
+   * filtrait pas. Sur une parcelle où des milliers de ronces portent chacune
+   * quelques grammes, le résidu tenait le total au-dessus du seuil toute
+   * l'année : le front ne retombait jamais, et plus rien n'était cueilli après
+   * la première essence mûre.
+   *
+   * Mesuré en jeu avant correction : 115 kg de pommes sur l'arbre en semaine
+   * 39, comparés à un « précédent » de 28 kg de miettes de ronce.
+   */
+  const MIETTES: ArbrePorteur[] = Array.from({ length: 200 }, (_, i) => ({
+    id: 1000 + i,
+    alive: true,
+    fruitsKg: 0.14,
+  }));
+
+  it("les miettes pèsent lourd ensemble et ne se cueillent pas une par une", () => {
+    const brut = MIETTES.reduce((s, t2) => s + t2.fruitsKg, 0);
+    expect(brut).toBeGreaterThan(SEUIL_PARCELLE_KG);
+    // …et pourtant il n'y a rien à cueillir : chaque pied est sous le seuil.
+    expect(arbresMurs(MIETTES).kg).toBe(0);
+    expect(arbresMurs(MIETTES).ids).toEqual([]);
+  });
+
+  it("comparé à la BONNE grandeur, le front se lève pour l'essence suivante", () => {
+    const pommiers: ArbrePorteur[] = [{ id: 1, alive: true, fruitsKg: 115 }];
+    const parcelle = [...MIETTES, ...pommiers];
+    // La semaine d'avant : rien de cueillable, seulement des miettes.
+    const precedentJuste = arbresMurs(MIETTES).kg;
+    expect(fautIlPrevenir(arbresMurs(parcelle).kg, precedentJuste)).toBe(true);
+  });
+
+  it("comparé au total BRUT, il ne se lève jamais — c'est ce qui se passait", () => {
+    const pommiers: ArbrePorteur[] = [{ id: 1, alive: true, fruitsKg: 115 }];
+    const parcelle = [...MIETTES, ...pommiers];
+    const precedentBrut = MIETTES.reduce((s, t2) => s + t2.fruitsKg, 0);
+    expect(fautIlPrevenir(arbresMurs(parcelle).kg, precedentBrut)).toBe(false);
   });
 });
 

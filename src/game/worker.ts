@@ -972,25 +972,10 @@ function stepWeeks(n: number) {
     // décisions vivent dans `recolteAuto.ts`, où un essai peut les prendre en
     // faute — ici elles étaient confondues en une seule condition.
     const murs = arbresMurs(state.trees);
-    // ——— SONDE TEMPORAIRE (#188) : que voit le worker, semaine par semaine ?
-    // À retirer dès la question tranchée.
-    {
-      const pom = state.trees.filter(
-        (t) => t.alive && t.especeId === "malus_domestica" && t.fruitsKg > 0,
-      );
-      if (pom.length > 0) {
-        const kg = pom.reduce((a, t) => a + t.fruitsKg, 0);
-        event(
-          "🔎",
-          `SONDE S${state.week % 52} : ${pom.length} pommiers portent ${kg.toFixed(1)} kg · total mûr ${murs.kg.toFixed(0)} kg · précédent ${prevFruitsReadyKg.toFixed(0)} kg`,
-        );
-      }
-    }
-    // Le front montant, tel qu'il a toujours été : on n'agit qu'à l'ARRIVÉE
-    // d'une maturité, pas à chaque semaine où elle dure. Reste à savoir s'il
-    // laisse passer une essence qui mûrit pendant qu'une autre porte encore
-    // (#191, en cours d'instruction) — la règle est ici pour qu'un essai
-    // puisse le dire, ce qu'elle ne permettait pas enfouie dans ce fichier.
+    // Le front montant : on n'agit qu'à l'ARRIVÉE d'une maturité, pas à chaque
+    // semaine où elle dure. Il ne vaut que si les deux termes comparés sont la
+    // MÊME grandeur — voir la mise à jour de `prevFruitsReadyKg` plus bas, qui
+    // ne l'était pas (#191).
     if (fautIlPrevenir(murs.kg, prevFruitsReadyKg)) {
       if (autoHarvest) {
         const refusalsBefore = pendingRefusals.length;
@@ -1012,7 +997,15 @@ function stepWeeks(n: number) {
         return;
       }
     }
-    prevFruitsReadyKg = state.trees.reduce((s, t) => (t.alive ? s + t.fruitsKg : s), 0);
+    // **LA MÊME MESURE DES DEUX CÔTÉS (#191).** Ce compteur additionnait le
+    // fruit de TOUS les arbres, sans le seuil de 0,5 kg par pied que la
+    // récolte applique. Deux mesures de la même chose, donc deux mesures qui
+    // divergent : sur une parcelle où des milliers de ronces portent chacune
+    // quelques grammes, le résidu tenait le total au-dessus du kilo toute
+    // l'année, le front ne retombait jamais, et plus rien n'était cueilli après
+    // la première essence mûre. Mesuré en jeu : 115 kg de pommes sur l'arbre en
+    // semaine 39, comparés à un « précédent » de 28 kg de miettes.
+    prevFruitsReadyKg = arbresMurs(state.trees).kg;
   }
 }
 
