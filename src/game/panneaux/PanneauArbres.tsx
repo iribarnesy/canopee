@@ -6,8 +6,7 @@
  * qu'ils étaient tous dans la même colonne. Ce n'était pas une parenté.
  */
 
-import { Fragment, useMemo } from "react";
-import { getEspece } from "../../engine/especes";
+import { useMemo } from "react";
 import { LIBELLE_CAUSE } from "../../engine/trees";
 import { COULEUR_AUTRES, SPECIES_COLORS } from "../../ui/couleurs";
 import type { Snapshot, SnapshotTree } from "../protocol";
@@ -132,33 +131,6 @@ export function PanneauArbres({
   reglerRecolteAuto: (especeId: string, actif: boolean) => void;
 }) {
   const chandelles = snapshot.trees.length - vivants.length;
-  /**
-   * Qui domine la parcelle, en direct. On classe par NOMBRE de tiges et on
-   * montre la hauteur du plus grand : une essence peut être partout en
-   * sous-étage sans jamais atteindre la canopée, et c'est une information
-   * différente de « qui occupe le terrain ».
-   */
-  const composition = useMemo(() => {
-    if (vivants.length === 0) return [];
-    const parEspece = new Map<string, { n: number; hauteurMax: number }>();
-    for (const t of vivants) {
-      const agg = parEspece.get(t.especeId) ?? { n: 0, hauteurMax: 0 };
-      agg.n++;
-      agg.hauteurMax = Math.max(agg.hauteurMax, t.heightM);
-      parEspece.set(t.especeId, agg);
-    }
-    const total = vivants.length;
-    return [...parEspece]
-      .sort((a, b) => b[1].n - a[1].n)
-      .slice(0, 5)
-      .map(([especeId, agg]) => ({
-        especeId,
-        nom: getEspece(especeId).nom.toLowerCase(),
-        part: Math.round((agg.n / total) * 100),
-        hauteurMax: agg.hauteurMax,
-      }));
-  }, [vivants]);
-
   return (
     <dl className="stats">
       <dt>Arbres</dt>
@@ -167,42 +139,20 @@ export function PanneauArbres({
         {chandelles > 0 ? ` + ${chandelles} chandelle${chandelles > 1 ? "s" : ""}` : ""} · herbe{" "}
         {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % du sol
       </dd>
-      <dt>Essences</dt>
-      <dd>
-        {composition.length === 0
-          ? "aucun arbre"
-          : composition.map((c, rang) => (
-              // Le séparateur est DEHORS, et c'est ce qui laisse la ligne
-              // se replier : deux `nowrap` collés l'un à l'autre sans
-              // espace entre eux n'offrent aucune coupure, et la liste
-              // débordait du panneau dès la troisième essence.
-              <Fragment key={c.especeId}>
-                {rang > 0 && " · "}
-                <span style={{ whiteSpace: "nowrap" }}>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: 8,
-                      height: 8,
-                      borderRadius: 2,
-                      background: SPECIES_COLORS[c.especeId] ?? COULEUR_AUTRES,
-                      marginRight: 4,
-                    }}
-                  />
-                  {c.nom} <strong>{c.part}</strong> %
-                  <span className="detail">
-                    {" "}
-                    ({c.hauteurMax < 10 ? c.hauteurMax.toFixed(1) : c.hauteurMax.toFixed(0)} m)
-                  </span>
-                </span>
-              </Fragment>
-            ))}
-      </dd>
-      <dt>Récolte automatique</dt>
+      {/*
+        UNE SEULE LISTE D'ESSENCES, et pas deux. Ce volet portait au-dessus un
+        résumé compact — les cinq premières, en pourcentage — qui disait moins
+        que la liste tout en disant la même chose. Deux affichages d'une même
+        grandeur divergent le jour où l'un des deux change de règle ; celui-ci
+        s'arrêtait d'ailleurs à cinq essences, sans le dire.
+      */}
+      <dt>Les essences</dt>
       <dd>
         <span className="detail">
-          Ce qui se cueille tout seul quand le temps passe vite. Par défaut, ce que vous avez semé —
-          le reste se récolte à la main, en sélectionnant l'arbre.
+          La pastille dit la part de l'essence qui souffre, le liseré est sa couleur — celle de la
+          carte et du choix des plants. Le bouton décide de ce qui se cueille tout seul quand le
+          temps passe vite : par défaut ce que vous avez semé, le reste se récolte à la main en
+          sélectionnant l'arbre.
         </span>
         <ListeDesEssences
           vivants={vivants}
