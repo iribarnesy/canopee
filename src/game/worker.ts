@@ -74,6 +74,7 @@ import type {
   StationInfo,
   ToWorker,
 } from "./protocol";
+import { arbresMurs, fautIlPrevenir } from "./recolteAuto";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 import { CAUSE_AU_SINGULIER } from "./suivis";
 
@@ -967,13 +968,19 @@ function stepWeeks(n: number) {
       });
       return;
     }
-    // Fruits mûrs : récolte auto, ou pause pour laisser la main
-    const ready = state.trees.filter((t) => t.alive && t.fruitsKg > 0.5);
-    const readyKg = ready.reduce((s, t) => s + t.fruitsKg, 0);
-    if (readyKg > 1 && prevFruitsReadyKg <= 1) {
+    // Fruits mûrs : récolte auto, ou pause pour laisser la main. Les deux
+    // décisions vivent dans `recolteAuto.ts`, où un essai peut les prendre en
+    // faute — ici elles étaient confondues en une seule condition.
+    const murs = arbresMurs(state.trees);
+    // Le front montant, tel qu'il a toujours été : on n'agit qu'à l'ARRIVÉE
+    // d'une maturité, pas à chaque semaine où elle dure. Reste à savoir s'il
+    // laisse passer une essence qui mûrit pendant qu'une autre porte encore
+    // (#191, en cours d'instruction) — la règle est ici pour qu'un essai
+    // puisse le dire, ce qu'elle ne permettait pas enfouie dans ce fichier.
+    if (fautIlPrevenir(murs.kg, prevFruitsReadyKg)) {
       if (autoHarvest) {
         const refusalsBefore = pendingRefusals.length;
-        performAction({ type: "recolter", week: state.week, treeIds: ready.map((t) => t.id) });
+        performAction({ type: "recolter", week: state.week, treeIds: murs.ids });
         if (pendingRefusals.length > refusalsBefore) {
           weeksPerSecond = 0;
           post({
@@ -985,9 +992,9 @@ function stepWeeks(n: number) {
           return;
         }
       } else if (weeksPerSecond > 4) {
-        prevFruitsReadyKg = readyKg;
+        prevFruitsReadyKg = murs.kg;
         weeksPerSecond = 0;
-        post({ type: "autopause", reason: `${Math.round(readyKg)} kg de fruits sont mûrs` });
+        post({ type: "autopause", reason: `${Math.round(murs.kg)} kg de fruits sont mûrs` });
         return;
       }
     }
