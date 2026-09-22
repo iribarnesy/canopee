@@ -69,6 +69,8 @@ import {
   terreArracheeKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
+import type { DepartFaune, InstallationFaune } from "./faune";
+import { departs, installations } from "./faune";
 import {
   chargeCombustible,
   departDeFeu,
@@ -526,7 +528,22 @@ export interface TickResult {
    * seulement si l'économie compte dans cette partie (aides.ts).
    */
   aides?: AidesAnnuelles;
+  /**
+   * Faune installée cette semaine (`faune.ts`, #187). Toujours vide si
+   * `station.faune` est éteint — et c'est alors le MÊME tableau, figé, pour ne
+   * rien allouer du tout.
+   */
+  installationsFaune: readonly InstallationFaune[];
+  /** Faune qui a quitté la parcelle cette semaine, et pourquoi. */
+  departsFaune: readonly DepartFaune[];
 }
+
+/**
+ * Le tableau que le tick rend quand la faune est éteinte. Un seul, figé : le
+ * contrôle de neutralité dit « pas même une allocation », et un `[]` écrit dans
+ * le `return` en serait une, cinquante-deux fois par an.
+ */
+const AUCUN_MOUVEMENT_DE_FAUNE: readonly never[] = Object.freeze([]);
 
 /**
  * À qui imputer une mort que le coup de grâce vient de déclencher.
@@ -3113,10 +3130,49 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     aBruleDepuisLaLevee = false;
   }
 
+  // ── LA FAUNE EN INDIVIDUS (#187) ───────────────────────────────────────────
+  //
+  // Dernier pas du tick, et il vient après tout le reste pour une raison : il
+  // lit `nextTrees`, c'est-à-dire la parcelle telle qu'elle est À LA FIN de la
+  // semaine. Un arbre abattu par le joueur ou une chandelle que le vent a
+  // couchée n'y est plus, et l'individu qu'il portait s'en va sans qu'aucun
+  // code n'ait eu à le prévoir — c'est l'événement, et il tombe du mécanisme.
+  //
+  // ÉTEINT VEUT DIRE ÉTEINT : pas un parcours, pas une allocation, pas un
+  // tirage. C'est le contrôle de neutralité du lot.
+  let faune = state.faune;
+  let nextFauneId = state.nextFauneId;
+  let installationsFaune: readonly InstallationFaune[] = AUCUN_MOUVEMENT_DE_FAUNE;
+  let departsFaune: readonly DepartFaune[] = AUCUN_MOUVEMENT_DE_FAUNE;
+  if (state.station.faune) {
+    const presents = faune ?? [];
+    departsFaune = departs(presents, nextTrees);
+    const partis = departsFaune;
+    const restants =
+      partis.length === 0
+        ? presents
+        : presents.filter((ind) => !partis.some((d) => d.individu.id === ind.id));
+    const premierId = nextFauneId ?? 1;
+    installationsFaune = installations(
+      restants,
+      nextTrees,
+      state.week,
+      premierId,
+      state.station.coteM * state.station.coteM,
+    );
+    nextFauneId = premierId + installationsFaune.length;
+    faune =
+      installationsFaune.length === 0
+        ? restants
+        : [...restants, ...installationsFaune.map((entree) => entree.individu)];
+  }
+
   return {
     state: {
       ...state,
       week: state.week + 1,
+      faune,
+      nextFauneId,
       // Les aides tombent une fois l'an sur la trésorerie ; le reste du temps
       // l'économie traverse le tick sans changer (aides.ts).
       economy: aidesVersees ? { ...state.economy, treasuryEur: treasuryApresAides } : state.economy,
@@ -3192,6 +3248,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     naissances,
     franchissements,
     chutes,
+    installationsFaune,
+    departsFaune,
     aides: aidesVersees,
     incendie,
     tempete,

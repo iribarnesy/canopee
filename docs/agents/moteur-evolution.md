@@ -61,7 +61,73 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le chêne creux et le LER, #183 et #136)
+## Ce que le dernier lot a appris (l'animal existe, #187 lot 1)
+
+Premier lot où le moteur fait exister un INDIVIDU. Tout ce qui volait ou courait
+était une grandeur — densité de paysage pour le gibier, population anonyme pour
+les ravageurs, et pour les auxiliaires rien du tout, `PREDATION_MAX · habitat`
+les supposant. Le choix d'architecture est du propriétaire du dépôt, et il est
+explicite : on veut des individus pour que le joueur s'attache.
+
+**Une règle de partage vaut mieux qu'une liste.** « Est un individu ce qui
+s'ancre par un nid, une loge ou une hutte ; est une densité ce qui ne fait que
+traverser. » Elle n'a pas été inventée pour le code, c'est de la biologie — et
+elle fait trois choses d'un coup : elle borne l'effectif (un gîte est une place),
+elle donne l'ÉVÉNEMENT (l'arbre qui tombe expulse quelqu'un de nommé, sans rien
+de scripté), et elle plafonne le coût (un rapace à mille mètres de rayon ne
+touche que les cellules de la parcelle). Une liste d'espèces « qu'on modélise »
+n'aurait rien fait de tout ça.
+
+**Le tri ne demandait aucune donnée nouvelle.** `cavites.ts` comptait déjà les
+litres de creux depuis #183 ; son en-tête disait d'ailleurs ce qui manquait — le
+calibre et la hauteur. Les deux se lisent sur les volumes déjà là, en rendant à
+chaque creux sa forme : la colonne de carie est un CYLINDRE (le volume va comme
+le carré du diamètre, donc l'exposant est un demi), la tête de têtard est une
+BOULE (exposant un tiers). Aucune constante nouvelle, et le vieux chêne loge une
+chevêche là où la perche ne loge qu'une mésange.
+
+**Et ce qu'on peut affirmer, on l'affirme ; ce qu'on ne peut pas, on l'écrit.**
+Le calibre calculé est celui de la CHAMBRE, pas de l'entrée — dans la réalité
+c'est le pic qui creuse le trou, à sa taille. Ce que la géométrie permet de dire
+sans rien inventer, c'est qu'une entrée ne peut pas être plus large que la
+chambre qu'elle dessert : condition NÉCESSAIRE, pas suffisante, et c'est écrit
+dans la fonction plutôt que masqué par un seuil bien choisi.
+
+**Un résultat plausible peut être faux d'un facteur cent, et c'est le
+recensement qui le dit.** La première version donnait, sur 0,64 hectare et en dix
+ans, une buse, une chevêche et un écureuil à coup sûr. Chaque nombre pris seul
+semblait raisonnable ; ramené à l'hectare, c'était dix à cent fois le terrain.
+La cause n'était pas un paramètre mais un MANQUE : le territoire excluait les
+congénères, et rien ne disait que la parcelle n'est qu'une fraction d'un
+territoire. Un couple de buses occupe cent cinquante hectares — la chance que son
+aire tombe sur vos six mille mètres carrés vaut 0,4 %, pas 20. Le facteur ajouté
+(`partDuTerritoire`) est le prolongement exact de la règle de partage, il ne
+coûte rien, et il rend deux comportements opposés avec une seule formule :
+agrandir la parcelle ne change presque rien pour la mésange et tout pour la buse.
+
+**À un individu par parcelle, tout se mesure à pile ou face.** Un essai
+affirmait qu'un écureuil s'installe sur un gros arbre sain. Il est tombé : le
+tirage de CETTE graine disait non. L'essai ne mesurait pas le mécanisme, il
+mesurait la graine. Refait sur quarante arbres distincts — zéro sur les grêles,
+plus de dix sur les gros —, il dit ce qu'il prétend dire. La mise en garde était
+dans l'issue, au mot près, et elle s'est quand même vérifiée sur moi.
+
+**Le commutateur n'était pas pour le coût.** Mesuré au lot précédent : la faune
+par bloc est plate jusqu'à cinq cents individus. `station.faune` vaut pour la
+reproductibilité, et surtout **il EST le contrôle de neutralité** — éteint, le
+tick ne parcourt rien, n'alloue rien (un `[]` figé, pas un neuf), ne tire rien.
+Bonus non prévu : les tirages passant par une graine locale, la partie avec faune
+n'est pas seulement proche de la partie sans, elle rend le MÊME `stateHash`. Le
+contrôle se fait donc dans le même processus, et pas contre une valeur épinglée —
+leçon de #193.
+
+**Un critère ajouté par le lot qui le remplit, et dit comme tel.** J10 n'existait
+pas ; le référentiel ne réclamait pas d'individus. C'est le propriétaire qui a
+élargi l'ambition, et la ligne le dit en toutes lettres plutôt que de laisser
+croire à une case cochée. Un référentiel qui ne s'allonge jamais finit par ne
+mesurer que ce qu'on sait déjà faire.
+
+## Ce qu'un lot plus ancien a appris (le chêne creux et le LER, #183 et #136)
 
 **Un mécanisme de soutien qui casse ce qu'il soutient pèse trop lourd.** La
 carie de #182 a fait tomber deux bancs qui ne parlent pas de carie — la
@@ -1333,6 +1399,16 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #187 lot 1 laisse aux lots 2 et 3.** L'animal existe, il s'installe et
+il part ; il ne se reproduit pas, ne meurt pas, et surtout **il ne paie rien** —
+la part « gîte » de l'habitat des auxiliaires reste le proxy de `ravageurs.ts`.
+Le prototype de prédation par individu est mesuré et rangé sur
+`claude/faune-mesure-cout` : par bloc c'est gratuit, par cellule c'est 0,055 %
+par individu. Attention, le lot 3 touchera G3 et J5, tous deux verts — traitement
+F16 obligatoire. Et la limite à lever un jour : le territoire n'exclut que les
+congénères DE la parcelle, qui ne voit pas ceux de ses voisins (`station.voisinage`).
+
 
 **Ce que #164 laisse au rendu.** `contextePhenologiqueFractionnaire(debut, fin, t)`
 rend le calendrier à n'importe quel instant entre deux semaines, et le `pheno`
