@@ -1,23 +1,32 @@
 /**
- * QUAND RÉCOLTER, ET CE QU'IL Y A À PRENDRE.
+ * QUAND RÉCOLTER, ET CE QU'IL Y A À PRENDRE (#191).
  *
- * **Une extraction, pas un changement.** La règle vivait au milieu du worker,
- * où rien ne pouvait l'éprouver : il a fallu treize ans de jeu dans un
- * navigateur pour se demander ce qu'elle faisait, et le doute n'est pas levé
- * (#191). Elle est ici pour qu'un essai puisse la prendre en faute.
+ * **Une seule mesure de ce qui est mûr**, et c'est tout l'objet de ce module.
+ * La règle vivait au milieu du worker, où elle s'était dédoublée sans que
+ * personne le voie : ce qu'on CUEILLAIT se filtrait à `SEUIL_ARBRE_KG` par
+ * pied, ce à quoi on le COMPARAIT additionnait tous les arbres sans seuil.
  *
- * Ce qu'elle dit aujourd'hui, sans rien y ajouter : on agit à l'ARRIVÉE d'une
- * maturité — le total des fruits mûrs franchit le seuil alors qu'il était
- * dessous la semaine d'avant — et pas à chaque semaine où cette maturité dure.
- * Sans ce front, le jeu s'arrêterait à chaque semaine de chaque fenêtre de
- * récolte quand la cueillette automatique est coupée.
+ * Deux mesures de la même chose finissent toujours par diverger. Celles-là
+ * divergeaient dès le premier sous-bois un peu dense : sur une parcelle où des
+ * milliers de ronces portent chacune quelques grammes, ces miettes — jamais
+ * cueillables — tenaient le compteur au-dessus du seuil toute l'année. Le front
+ * ne retombait plus, et plus rien n'était cueilli après la première essence
+ * mûre. Mesuré en jeu : 115 kg de pommes sur l'arbre en semaine 39, comparés à
+ * un « précédent » de 28 kg de miettes, treize années de suite.
  *
- * **Ce qui reste à instruire (#191)** : ce front se juge sur le TOTAL, toutes
- * essences confondues, alors que les semaines de récolte s'échelonnent de la 34
- * (ronce, cornouiller) à la 46 (arbousier) et que les fenêtres se chevauchent.
- * Une essence qui mûrit pendant qu'une autre porte encore pourrait n'être ni
- * cueillie ni annoncée. Ce n'est pas démontré — c'est justement ce que ces
- * fonctions, une fois sorties d'ici, permettront de démontrer ou d'écarter.
+ * Les deux décisions que ce module sert :
+ *
+ * - **cueillir** est sans conséquence si on le fait trop souvent : `fruitsKg`
+ *   n'est non nul que pendant la fenêtre de récolte de l'essence (`tick.ts` le
+ *   pose à `recolteWeek`, le remet à zéro à `recolteWeek + fenetreRecolteWeeks`),
+ *   et une cueillette vide l'arbre ;
+ * - **prévenir** — arrêter le temps pour laisser la main — serait insupportable
+ *   chaque semaine. Là, et là seulement, il faut un front montant : `arbresMurs`
+ *   des deux côtés de la comparaison, jamais autre chose.
+ *
+ * Ces fonctions sont ici, et pas dans le worker, pour qu'un essai puisse les
+ * prendre en faute — c'est l'essai qui manquait, et il a coûté treize ans de
+ * jeu dans un navigateur.
  */
 
 /** En dessous, un arbre n'a rien qui vaille un geste. */

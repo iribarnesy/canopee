@@ -1,18 +1,22 @@
 /**
- * LA RÈGLE DE RÉCOLTE, SORTIE DU WORKER POUR ÊTRE ÉPROUVÉE.
+ * LA RÈGLE DE RÉCOLTE COMPARAIT DEUX GRANDEURS DIFFÉRENTES (#191).
  *
- * Le constat de départ : le journal d'une partie de treize ans ne montrait
- * qu'une récolte par an, toujours en semaine 35, toujours de la ronce — alors
- * que treize pommiers vivants auraient dû donner en semaine 38.
+ * Le constat : le journal d'une partie de treize ans ne montrait qu'une récolte
+ * par an, toujours de la ronce, alors que treize pommiers vivants portaient
+ * jusqu'à 115 kg en semaine 39.
  *
- * Le soupçon portait sur le front montant, jugé sur le TOTAL toutes essences
- * confondues. Ces essais l'ÉCARTENT pour cette parcelle : la cueillette vide
- * tout et remet le compte à zéro, donc le front remonte pour les pommes.
+ * La cause, et elle est invisible à la lecture : ce qu'on CUEILLE se filtre à
+ * `SEUIL_ARBRE_KG` par pied, ce à quoi on le COMPARAIT additionnait tous les
+ * arbres sans seuil. Les miettes d'un sous-bois de ronces — vingt-huit kilos,
+ * jamais cueillables — tenaient le compteur en l'air toute l'année.
  *
- * Ces essais rejouent une saison, semaine par semaine, avec les VRAIES semaines
- * de récolte de l'atlas — et le dernier d'entre eux sert à DÉFAIRE une
- * conclusion trop rapide : sur cette parcelle-là, le front cueille bien les
- * deux essences. Ce qui prive le jeu de ses pommes est donc ailleurs.
+ * Ces essais tiennent la règle par ses deux bouts, et l'un d'eux rejoue
+ * exprès le défaut : si quelqu'un remettait un jour le total brut d'un côté de
+ * la comparaison, il échouerait.
+ *
+ * Deux d'entre eux gardent la trace d'une conclusion trop rapide que j'avais
+ * tirée en chemin — que le front confisquait la récolte pour une raison de
+ * calendrier. Ils la contredisent, et c'est pour ça qu'ils restent.
  */
 
 import { describe, expect, it } from "vitest";
@@ -96,13 +100,13 @@ describe("une saison à deux essences", () => {
     expect(rejouer((kg) => fautIlCueillir(kg))).toEqual(new Set([1, 2]));
   });
 
-  it("le front les cueille toutes DEUX ici — donc il n'explique pas à lui seul #191", () => {
-    // Ce que l'essai a servi à établir, et qui contredit une conclusion trop
-    // rapide : avec ces deux essences-là, la cueillette de la semaine 35 vide
-    // la parcelle et remet le compte à zéro, donc le front remonte pour les
-    // pommes de la semaine 38. Le journal d'une vraie partie ne montrait
-    // pourtant qu'une récolte de ronce par an — la cause est donc ailleurs, et
-    // #191 reste à instruire.
+  it("le front les cueille toutes DEUX quand le calendrier seul est en jeu", () => {
+    // Cet essai a servi à ÉCARTER une conclusion trop rapide : j'avais accusé
+    // le chevauchement des fenêtres de récolte. Avec ces deux essences-là, la
+    // cueillette de la semaine 35 vide la parcelle et remet le compte à zéro,
+    // donc le front remonte sans difficulté pour les pommes de la semaine 38.
+    // Le calendrier n'y était pour rien : c'est l'asymétrie des deux mesures,
+    // éprouvée plus bas, qui privait le jeu de ses pommes.
     expect(rejouer((kg, kgAvant) => kg > 1 && kgAvant <= 1)).toEqual(new Set([1, 2]));
   });
 });
