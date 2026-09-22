@@ -20,6 +20,7 @@
  */
 
 import type { TreeState } from "./trees";
+import { type Zone, zoneContient } from "./zone";
 
 /** Largeur d'un tracteur avec son outil, m *(à calibrer)*. */
 export const LARGEUR_ENGIN_M = 2.2;
@@ -41,9 +42,7 @@ const N_DIRECTIONS = 24;
  */
 export function partMecanisable(
   trees: readonly TreeState[],
-  cx: number,
-  cy: number,
-  rayonM: number,
+  zone: Zone,
   largeurEngin = LARGEUR_ENGIN_M,
 ): number {
   const obstacles: { x: number; y: number }[] = [];
@@ -57,13 +56,27 @@ export function partMecanisable(
     //
     // Conséquence de jeu voulue : après une mortalité, la fauche et le
     // chaulage redeviennent chers jusqu'à ce qu'on ait nettoyé.
-    const dx = tree.x - cx;
-    const dy = tree.y - cy;
-    if (dx * dx + dy * dy <= rayonM * rayonM) obstacles.push({ x: dx, y: dy });
+    if (zoneContient(zone, tree.x, tree.y)) {
+      obstacles.push({ x: tree.x - zone.x, y: tree.y - zone.y });
+    }
   }
   if (obstacles.length === 0) return 1;
 
-  const largeurTotale = 2 * rayonM;
+  /**
+   * La DEMI-LARGEUR du chantier en travers de la direction d'essai (#186).
+   *
+   * Pour un disque elle vaut le rayon, quelle que soit la direction — c'est
+   * exactement ce que le code faisait avant, et le contrôle d'identité y tient.
+   * Pour une bande elle en dépend : un engin qui remonte l'allée dans son axe a
+   * toute la longueur devant lui, le même engin qui la traverse n'a que la
+   * largeur. C'est le fait de terrain qui décide qu'on laboure DANS le sens du
+   * rang, et il tombe de la géométrie sans qu'on l'écrive.
+   */
+  const demiLargeur = (theta: number): number => {
+    if (zone.zone !== "bande") return zone.rayonM;
+    const d = zone.orientationRad - theta;
+    return (zone.longueurM * Math.abs(Math.sin(d)) + zone.largeurM * Math.abs(Math.cos(d))) / 2;
+  };
   let meilleure = 0;
   const projections = new Float64Array(obstacles.length);
   for (let d = 0; d < N_DIRECTIONS; d++) {
@@ -77,17 +90,18 @@ export function partMecanisable(
       if (!o) continue;
       projections[i] = o.x * ux + o.y * uy;
     }
+    const demi = demiLargeur(theta);
     const tries = Array.from(projections).sort((a, b) => a - b);
     let accessible = 0;
-    let bord = -rayonM;
+    let bord = -demi;
     for (const p of tries) {
       const libre = p - DEGAGEMENT_M - bord;
       if (libre >= largeurEngin) accessible += libre;
       bord = Math.max(bord, p + DEGAGEMENT_M);
     }
-    const dernier = rayonM - bord;
+    const dernier = demi - bord;
     if (dernier >= largeurEngin) accessible += dernier;
-    const part = accessible / largeurTotale;
+    const part = accessible / (2 * demi);
     if (part > meilleure) meilleure = part;
     if (meilleure >= 1) break;
   }

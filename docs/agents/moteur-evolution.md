@@ -118,6 +118,157 @@ seuil d'avant ne voyait pas.
 mesuré avant ; le reprendre aurait comparé le nouveau moteur à un témoin calculé
 sur une autre trajectoire de tassement. Refait : 1,59 / 6,32 / 8,39. Il reste
 5 % attribuables au tassement sur les plots fertilisés, contre 26 % avant.
+## Ce qu'un lot plus ancien a appris (l'animal existe, #187 lot 1)
+
+Premier lot où le moteur fait exister un INDIVIDU. Tout ce qui volait ou courait
+était une grandeur — densité de paysage pour le gibier, population anonyme pour
+les ravageurs, et pour les auxiliaires rien du tout, `PREDATION_MAX · habitat`
+les supposant. Le choix d'architecture est du propriétaire du dépôt, et il est
+explicite : on veut des individus pour que le joueur s'attache.
+
+**Une règle de partage vaut mieux qu'une liste.** « Est un individu ce qui
+s'ancre par un nid, une loge ou une hutte ; est une densité ce qui ne fait que
+traverser. » Elle n'a pas été inventée pour le code, c'est de la biologie — et
+elle fait trois choses d'un coup : elle borne l'effectif (un gîte est une place),
+elle donne l'ÉVÉNEMENT (l'arbre qui tombe expulse quelqu'un de nommé, sans rien
+de scripté), et elle plafonne le coût (un rapace à mille mètres de rayon ne
+touche que les cellules de la parcelle). Une liste d'espèces « qu'on modélise »
+n'aurait rien fait de tout ça.
+
+**Le tri ne demandait aucune donnée nouvelle.** `cavites.ts` comptait déjà les
+litres de creux depuis #183 ; son en-tête disait d'ailleurs ce qui manquait — le
+calibre et la hauteur. Les deux se lisent sur les volumes déjà là, en rendant à
+chaque creux sa forme : la colonne de carie est un CYLINDRE (le volume va comme
+le carré du diamètre, donc l'exposant est un demi), la tête de têtard est une
+BOULE (exposant un tiers). Aucune constante nouvelle, et le vieux chêne loge une
+chevêche là où la perche ne loge qu'une mésange.
+
+**Et ce qu'on peut affirmer, on l'affirme ; ce qu'on ne peut pas, on l'écrit.**
+Le calibre calculé est celui de la CHAMBRE, pas de l'entrée — dans la réalité
+c'est le pic qui creuse le trou, à sa taille. Ce que la géométrie permet de dire
+sans rien inventer, c'est qu'une entrée ne peut pas être plus large que la
+chambre qu'elle dessert : condition NÉCESSAIRE, pas suffisante, et c'est écrit
+dans la fonction plutôt que masqué par un seuil bien choisi.
+
+**Un résultat plausible peut être faux d'un facteur cent, et c'est le
+recensement qui le dit.** La première version donnait, sur 0,64 hectare et en dix
+ans, une buse, une chevêche et un écureuil à coup sûr. Chaque nombre pris seul
+semblait raisonnable ; ramené à l'hectare, c'était dix à cent fois le terrain.
+La cause n'était pas un paramètre mais un MANQUE : le territoire excluait les
+congénères, et rien ne disait que la parcelle n'est qu'une fraction d'un
+territoire. Un couple de buses occupe cent cinquante hectares — la chance que son
+aire tombe sur vos six mille mètres carrés vaut 0,4 %, pas 20. Le facteur ajouté
+(`partDuTerritoire`) est le prolongement exact de la règle de partage, il ne
+coûte rien, et il rend deux comportements opposés avec une seule formule :
+agrandir la parcelle ne change presque rien pour la mésange et tout pour la buse.
+
+**À un individu par parcelle, tout se mesure à pile ou face.** Un essai
+affirmait qu'un écureuil s'installe sur un gros arbre sain. Il est tombé : le
+tirage de CETTE graine disait non. L'essai ne mesurait pas le mécanisme, il
+mesurait la graine. Refait sur quarante arbres distincts — zéro sur les grêles,
+plus de dix sur les gros —, il dit ce qu'il prétend dire. La mise en garde était
+dans l'issue, au mot près, et elle s'est quand même vérifiée sur moi.
+
+**Le commutateur n'était pas pour le coût.** Mesuré au lot précédent : la faune
+par bloc est plate jusqu'à cinq cents individus. `station.faune` vaut pour la
+reproductibilité, et surtout **il EST le contrôle de neutralité** — éteint, le
+tick ne parcourt rien, n'alloue rien (un `[]` figé, pas un neuf), ne tire rien.
+Bonus non prévu : les tirages passant par une graine locale, la partie avec faune
+n'est pas seulement proche de la partie sans, elle rend le MÊME `stateHash`. Le
+contrôle se fait donc dans le même processus, et pas contre une valeur épinglée —
+leçon de #193.
+
+**Un critère ajouté par le lot qui le remplit, et dit comme tel.** J10 n'existait
+pas ; le référentiel ne réclamait pas d'individus. C'est le propriétaire qui a
+élargi l'ambition, et la ligne le dit en toutes lettres plutôt que de laisser
+croire à une case cochée. Un référentiel qui ne s'allonge jamais finit par ne
+mesurer que ce qu'on sait déjà faire.
+
+## Ce qu'un lot plus ancien a appris (la bande, #186)
+
+Un lot d'INFRASTRUCTURE : la géométrie d'un chantier cesse d'être un disque.
+Aucun critère gagné, aucun chiffre d'écologie déplacé — et c'est justement ce
+qu'il faut savoir livrer, parce que dix actions du moteur changent de signature
+en même temps.
+
+**Le livrable d'un refactor est une empreinte inchangée — mais une empreinte
+ABSOLUE n'est pas portable.** Le premier contrôle épinglait en dur le
+`stateHash` d'une partie de douze ans, relevé sur le commit d'avant. Il passait
+ici et **il est tombé en CI**. Ce n'était pas le refactor :
+
+    empreinte de la même partie           avant (ffca0fb)   après (ce lot)
+    Node 20 (V8 11.3), Node 22 (V8 12.4)    3 806 937 118    3 806 937 118
+    Node 24 (V8 13.6) — celui de la CI        633 354 304      633 354 304
+
+Le refactor est neutre des DEUX côtés ; c'est la valeur absolue qui bouge avec
+la version de V8, `stateHash` étant un FNV-1a sur les flottants bruts de chaque
+arbre. **C'est la même faute que l'essai qui écrivait dans mon dossier de
+travail** : un essai dont le verdict dépend de la machine ne prouve rien, et son
+vert local encore moins. Le diagnostic s'est fait en téléchargeant Node 24 et en
+rejouant la partie sur le commit d'AVANT — 633 354 304, la valeur de la CI, donc
+l'affaire était close sans toucher au moteur. La leçon qui dépasse le lot : **les
+chiffres du moteur sont portables, ses bits ne le sont pas**, et la suite entière
+le montre puisqu'elle est verte sous les deux (1 671 essais, dont des centaines
+qui épinglent des grandeurs écologiques). Sorti en #193, avec ce que ça pose
+pour les sauvegardes.
+
+**Neuf cas de bord prouvent ce à quoi on a pensé ; cinq cents tirés au hasard
+prouvent le reste.** Le contrôle d'identité a donc été refait en balayage — et
+le balayage a trouvé une divergence que les neuf cas choisis manquaient.
+`actions.ts` avait deux routes qui ne faisaient pas la même chose :
+`forEachDiscCell` garantissait au moins une cellule, `cellulesDuDisque` non, si
+bien qu'un `semer` de vingt centimètres ne semait rien — en silence, et facturé
+— quand un `faucher` du même rayon fauchait une cellule. Unifier était la bonne
+réponse, mais il fallait le SAVOIR pour pouvoir l'écrire.
+
+Une seconde divergence était du même ordre : l'aire se calculait de deux façons
+à un ULP près (`Math.PI * r * r` cinq fois, `(Math.PI * r2)` pour l'éclaircie).
+Il n'existait donc pas d'« avant » unique à préserver. On prend la forme
+majoritaire, et l'essai BORNE ce que l'autre y perd plutôt que de l'ignorer :
+rien, sur quatorze mille couples (rayon, densité), le `Math.round` du nombre de
+tiges à garder absorbant l'écart.
+
+**Et l'empreinte bout à bout, alors ?** Elle est tenue par la suite elle-même,
+et mieux qu'elle ne l'était par un hash : des centaines d'essais épinglent des
+grandeurs écologiques absolues, et un refactor qui déplacerait une partie en
+casserait. À quoi ce lot ajoute trois contrôles d'EMPREINTE AU SOL, qui prennent
+la géométrie par l'autre bout : on joue `cloturer`, `labourer`, `chauler` sur des
+disques volontairement décentrés, et l'ensemble des cellules qui ont bougé doit
+être exactement celui d'avant. C'est ce qui attrape un argument mal branché — un
+x et un y échangés —, c'est instantané, et c'est portable : on compare des
+indices, pas des flottants.
+
+**La compatibilité se paie par un discriminant FACULTATIF.** `ZoneDisque`
+déclare `zone?: "disque"`, si bien qu'une action écrite `{ x, y, rayonM }` —
+c'est-à-dire toutes celles qui existaient, dans le moteur comme dans les essais
+— reste valide sans être touchée. Le coût du refactor est alors proportionnel à
+ce qu'on ajoute, pas à ce qui existe.
+
+**Une collision de noms ne se relit pas, elle se compile.** Le discriminant
+s'appelait d'abord `forme` ; or `fertiliser` avait déjà un champ `forme`
+(minérale ou fumier), et l'intersection `{…} & Zone` réduisait toute la variante
+à `never`. Aucune relecture n'aurait attrapé ça — le compilateur l'a dit tout
+de suite. C'est la meilleure raison de faire passer une forme par le SYSTÈME DE
+TYPES plutôt que par une convention.
+
+**La forme du chantier était dans le moteur, pas dans l'interface.** La question
+s'est posée : une bande, n'est-ce pas à l'interface de la découper en disques ?
+Non — parce que `partMecanisable` a besoin de la forme. La demi-largeur qu'un
+engin a devant lui dépend de la direction où il passe, et pour un rectangle elle
+se lit sur la projection du rectangle sur l'axe perpendiculaire au passage. Une
+allée découpée en disques par l'interface aurait perdu exactement l'information
+qui décide. Deux faits de terrain tombent alors sans être écrits : on ne remonte
+pas une allée de 4 m qu'un arbre bouche, on la traverse ; et une ligne de tiges
+plantée dans l'axe se longe mais ne se traverse pas.
+
+**Ne pas écrire l'essai à l'histoire qu'on avait en tête.** Le premier essai de
+ce lot affirmait qu'une bande carrée « n'a plus de direction de secours » et
+attendait 0. Le moteur a rendu 0,876, et il avait raison : un carré de 4 m vu en
+diagonale fait 5,66 m de large, l'engin y passe. L'histoire était fausse, pas le
+code. L'essai a été refait autour de ce que la géométrie produit vraiment, avec
+les deux contre-exemples qui le rendent probant — demi-largeur figée à celle de
+la bande, le premier cas rendrait 0 ; figée à sa demi-longueur, le second
+rendrait 0,977 au lieu de 0,9125.
 
 ## Ce qu'un lot plus ancien a appris (le chêne creux et le LER, #183 et #136)
 
@@ -1400,6 +1551,23 @@ touchent toujours pas la variable ; les ajouter demanderait de recalibrer
 `TASSEMENT_PAR_PASSAGE`, et l'issue demandait de ne pas mélanger les deux. Et la
 PAILLE de C16, qui reste le défaut du point bas : sur cent vingt ans le moteur
 converge à 0,70-0,84 t/ha là où Broadbalk tient ~1.
+
+**Ce que #187 lot 1 laisse aux lots 2 et 3.** L'animal existe, il s'installe et
+il part ; il ne se reproduit pas, ne meurt pas, et surtout **il ne paie rien** —
+la part « gîte » de l'habitat des auxiliaires reste le proxy de `ravageurs.ts`.
+Le prototype de prédation par individu est mesuré et rangé sur
+`claude/faune-mesure-cout` : par bloc c'est gratuit, par cellule c'est 0,055 %
+par individu. Attention, le lot 3 touchera G3 et J5, tous deux verts — traitement
+F16 obligatoire. Et la limite à lever un jour : le territoire n'exclut que les
+congénères DE la parcelle, qui ne voit pas ceux de ses voisins (`station.voisinage`).
+
+**Ce que #186 laisse à l'interface.** Le moteur sait faire une bande : dix
+actions acceptent `{ zone: "bande", x, y, longueurM, largeurM, orientationRad }`
+à la place de `{ x, y, rayonM }`, et `mecanisation.ts` en tient compte. Rien
+côté interface ne permet encore d'en DESSINER une — c'est la moitié du lot qui
+revient à l'agent d'interface. Tant qu'elle n'est pas là, aucune partie ne peut
+produire de bande, ce qui est exactement pourquoi l'empreinte témoin est
+inchangée.
 
 
 **Ce que #164 laisse au rendu.** `contextePhenologiqueFractionnaire(debut, fin, t)`

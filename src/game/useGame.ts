@@ -9,6 +9,8 @@ import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
 import type { Bordures } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
+import { CUMULS_VIDES, type Cumuls } from "./niveaux";
+import { type ChoixRecolte, especesRecoltees } from "./recolteAuto";
 
 let uid = 0;
 export type WithUid<T> = T & { uid: number };
@@ -62,6 +64,16 @@ export interface GameApi {
    * `pourToujours` retient le choix pour les semaines suivantes (#133).
    */
   reglerFacture: (embaucher: boolean, pourToujours?: boolean) => void;
+  /** ce que la partie a accumulé depuis son début (#188) */
+  cumuls: Cumuls;
+  /** ce que la récolte automatique cueille, et pourquoi */
+  recolteAuto: { semees: string[]; choix: ChoixRecolte; actives: ReadonlySet<string> };
+  /** allumer ou éteindre une essence dans la récolte automatique */
+  reglerRecolteAuto: (especeId: string, actif: boolean) => void;
+  /** le niveau joué et ses paliers franchis, tels que la sauvegarde les porte */
+  niveauRange: { id?: string; acquis: string[] };
+  /** ranger le niveau et ses paliers, pour que la sauvegarde les emporte */
+  rangerLeNiveau: (id: string | undefined, acquis: readonly string[]) => void;
   /** la consigne en vigueur pour les heures supplémentaires */
   politiqueHoraire: PolitiqueHoraire;
   /** la changer — notamment la lever, pour qu'on repose la question */
@@ -161,6 +173,28 @@ export function useGame(): GameApi {
   const [notice, setNotice] = useState<string>();
   const [facture, setFacture] = useState<FactureHoraire>();
   const [politiqueHoraire, setPolitique] = useState<PolitiqueHoraire>("demander");
+  /** Ce que la partie a accumulé : kilos cueillis, plants, abattages (#188). */
+  const [cumuls, setCumuls] = useState<Cumuls>(CUMULS_VIDES);
+  /**
+   * Ce qui est cueilli d'office : ce que le joueur a semé, et ce qu'il a décidé.
+   *
+   * Les deux, et pas seulement la liste effective : une pastille doit pouvoir
+   * dire si elle est allumée par défaut ou parce qu'on l'a voulu.
+   */
+  const [recolteAuto, setRecolteAuto] = useState<{ semees: string[]; choix: ChoixRecolte }>({
+    semees: [],
+    choix: {},
+  });
+  /**
+   * Le niveau joué et ses paliers déjà franchis, tels que le worker les range.
+   *
+   * L'AVANCEMENT, lui, ne vient pas d'ici : il se calcule là où les fiches
+   * vivent, c'est-à-dire dans l'écran (`useNiveau`). Le worker ne peut pas le
+   * faire — une fiche porte des fermetures, qui ne traversent pas un worker.
+   */
+  const [niveauRange, setNiveauRange] = useState<{ id?: string; acquis: string[] }>({
+    acquis: [],
+  });
   const [events, setEvents] = useState<WithUid<GameEvent>[]>([]);
   const [autoHarvest, setAutoHarvestState] = useState(true);
   const [prevision, setPrevision] = useState<{ cle: string; refusals: ActionRefusal[] }>();
@@ -201,6 +235,7 @@ export function useGame(): GameApi {
           break;
         case "snapshot":
           setSnapshot(msg.snapshot);
+          setCumuls(msg.cumuls);
           setRevision((n) => n + 1);
           if (msg.snapshot.refusals.length > 0) {
             setRefusals((prev) => [...msg.snapshot.refusals.map(withUid), ...prev].slice(0, 4));
@@ -220,6 +255,12 @@ export function useGame(): GameApi {
           break;
         case "politiqueHoraire":
           setPolitique(msg.politique);
+          break;
+        case "niveau":
+          setNiveauRange({ id: msg.id, acquis: msg.acquis });
+          break;
+        case "recolteAuto":
+          setRecolteAuto({ semees: msg.semees, choix: msg.choix });
           break;
         case "facture":
           // Le worker s'est arrêté pour poser la question : l'interface se
@@ -274,6 +315,18 @@ export function useGame(): GameApi {
       setFacture(undefined);
       send({ type: "reglerFacture", embaucher, pourToujours });
     },
+    cumuls,
+    recolteAuto: {
+      ...recolteAuto,
+      // La règle est appliquée UNE fois, par la même fonction que le worker.
+      actives: especesRecoltees(new Set(recolteAuto.semees), recolteAuto.choix),
+    },
+    reglerRecolteAuto: (especeId, actif) => send({ type: "recolteAuto", especeId, actif }),
+    niveauRange,
+    rangerLeNiveau: (id, acquis) => {
+      setNiveauRange({ id, acquis: [...acquis] });
+      send({ type: "niveau", id, acquis: [...acquis] });
+    },
     politiqueHoraire,
     setPolitiqueHoraire: (politique) => send({ type: "politiqueHoraire", politique }),
     prevision,
@@ -302,6 +355,9 @@ export function useGame(): GameApi {
       setRefusals([]);
       setEvents([]);
       setSnapshot(undefined);
+      setCumuls(CUMULS_VIDES);
+      setRecolteAuto({ semees: [], choix: {} });
+      setNiveauRange({ acquis: [] });
       send({
         type: "init",
         stationId,
@@ -327,6 +383,7 @@ export function useGame(): GameApi {
       setRefusals([]);
       setEvents([]);
       setSnapshot(undefined);
+      setCumuls(CUMULS_VIDES);
       send({ type: "resume", save });
       send({ type: "autoHarvest", enabled: true });
       setAutoHarvestState(true);
@@ -383,6 +440,7 @@ export function useGame(): GameApi {
         workerRef.current = null;
         setStation(undefined);
         setSnapshot(undefined);
+        setCumuls(CUMULS_VIDES);
         setSpeedState(0);
       };
       arretRef.current = fermer;

@@ -20,16 +20,22 @@
  * (`ravageurs.ts`, G3). La conduite en trogne et la tempête arrivent au même
  * résultat par deux chemins que rien ne relie dans le code.
  *
- * **Ce qui n'est PAS modélisé** : le diamètre de l'entrée, qui dans la réalité
- * trie les espèces autant que le volume (28 mm pour une mésange bleue, 80 pour
- * une chevêche), et la hauteur de la loge au-dessus du sol, qui décide de
- * l'accès aux prédateurs. Les deux appellent une fiche de faune, qui n'existe
- * pas : les auxiliaires sont ici un agrégat, pas des espèces.
+ * **Ce que ce module a d'abord laissé de côté, et qui est arrivé depuis** : le
+ * calibre de la chambre, qui dans la réalité trie les espèces autant que le
+ * volume (28 mm d'entrée pour une mésange bleue, 70 pour une chevêche), et la
+ * hauteur de la loge au-dessus du sol. Les deux appelaient une fiche de faune,
+ * qui existe maintenant (`faune.ts`, #187), et les deux se déduisent de ce qui
+ * était déjà là — voir `diametreCaviteCm` et `hauteurCaviteM` en fin de fichier.
  */
 
 import type { TreeState } from "./trees";
 import { volumeTigeM3 } from "./trees";
-import { CAVITE_HABITAT_L, volumeCaviteL as volumeTeteCreuseL } from "./trogne";
+import {
+  CAVITE_HABITAT_L,
+  diametreTeteCm,
+  volumeCaviteL as volumeTeteCreuseL,
+  volumeTeteL,
+} from "./trogne";
 
 /**
  * Part du bois carié qui est réellement CREUSE *(à calibrer)*.
@@ -91,4 +97,58 @@ export function partHabitatDeCavites(
   tree: Pick<TreeState, "carie" | "diametreCm" | "heightM" | "teteTrogneM" | "recepages">,
 ): number {
   return Math.min(1, volumeCaviteTotalL(tree) / CAVITE_HABITAT_L);
+}
+
+/**
+ * Le CALIBRE de la chambre, cm — le diamètre du creux lui-même, pas celui de
+ * l'arbre qui le porte.
+ *
+ * Il ne demande aucune constante nouvelle : il se lit sur les deux volumes que
+ * ce module assemble déjà, en rendant à chacun sa forme.
+ *
+ *  - **La colonne de carie est un cylindre.** À hauteur donnée, son volume va
+ *    comme le carré de son diamètre, donc la chambre creuse à `CARIE_EVIDEE` de
+ *    la colonne a le diamètre de la colonne fois la racine de cette part.
+ *  - **La tête de têtard est une boule** (`volumeTeteL`). À forme donnée, son
+ *    volume va comme le cube de son diamètre, donc l'exposant est un tiers.
+ *
+ * On garde la plus grande des deux : un arbre offre le meilleur creux qu'il a,
+ * et c'est celui-là qu'un occupant choisira.
+ *
+ * **Ce que ce nombre est, et ce qu'il n'est pas.** C'est le calibre de la
+ * CHAMBRE. L'entrée, dans la réalité, est bien plus étroite — un pic creuse un
+ * trou à sa taille dans un fût de quarante centimètres. Ce que la géométrie
+ * permet d'affirmer sans rien inventer, c'est qu'**une entrée ne peut pas être
+ * plus large que la chambre qu'elle dessert**. C'est donc une condition
+ * NÉCESSAIRE au tri des espèces, et pas une condition suffisante.
+ */
+export function diametreCaviteCm(
+  tree: Pick<TreeState, "carie" | "diametreCm" | "heightM" | "teteTrogneM" | "recepages">,
+): number {
+  const rayonCm = tree.carie?.rayonCm ?? 0;
+  const colonneCm = rayonCm > 0 ? Math.min(tree.diametreCm, 2 * rayonCm) : 0;
+  const troncCm = colonneCm * Math.sqrt(CARIE_EVIDEE);
+
+  const teteL = volumeTeteL(tree);
+  const creuxTeteL = volumeTeteCreuseL(tree);
+  const teteCm = teteL > 0 ? diametreTeteCm(tree) * Math.cbrt(creuxTeteL / teteL) : 0;
+
+  return Math.max(troncCm, teteCm);
+}
+
+/**
+ * La HAUTEUR du creux au-dessus du sol, m — celle qui décide de l'accès des
+ * prédateurs terrestres, et donc de qui accepte d'y nicher.
+ *
+ * Une carie du bois de cœur suit le fût sur toute sa longueur : sa loge peut
+ * être aussi haute que l'arbre. Une tête de têtard, elle, est là où on a étêté,
+ * et pas plus haut — c'est même tout l'intérêt de la conduite. On rend donc la
+ * hauteur du creux le plus haut que l'arbre offre.
+ */
+export function hauteurCaviteM(
+  tree: Pick<TreeState, "carie" | "diametreCm" | "heightM" | "teteTrogneM" | "recepages">,
+): number {
+  const parLeFut = volumeCaviteTroncL(tree) > 0 ? tree.heightM : 0;
+  const parLaTete = volumeTeteCreuseL(tree) > 0 ? (tree.teteTrogneM ?? 0) : 0;
+  return Math.max(parLeFut, parLaTete);
 }
