@@ -39,6 +39,31 @@ import { stateHash, tick } from "../../src/engine/tick";
  *
  * Et on part d'un état déjà chauffé, partagé par les trois modes, pour que la
  * chauffe ne soit pas comptée dans la mesure.
+ *
+ * ── LE RELEVÉ, 0,64 ha, 731 arbres, 200 ticks, meilleur de 3 ────────────────
+ *
+ *   effectif   bruit du témoin   par bloc   par cellule
+ *       10         ±16,6 %        +1,5 %       −0,4 %
+ *       50          ±4,1 %        +0,4 %       +4,3 %
+ *      200          ±0,7 %        +0,5 %      +11,0 %
+ *      500          ±1,5 %        −0,5 %      +26,8 %
+ *
+ * PAR BLOC : PLAT. De −0,5 à +1,5 %, toujours dans le bruit, y compris à cinq
+ * cents individus. Gratuit, au sens strict de non mesurable.
+ *
+ * PAR CELLULE : LINÉAIRE, à ≈ 0,055 % par individu — 1 % tous les dix-huit. Aux
+ * effectifs réalistes (quelques dizaines pour une parcelle, puisqu'un individu
+ * s'ancre par un nid et qu'un nid occupe une place) c'est sous 1 %. Ça ne mord
+ * qu'à partir de plusieurs centaines.
+ *
+ * Noter que le plancher de bruit s'effondre au fil des mesures : c'est le JIT
+ * qui chauffe, et c'est pourquoi la ligne à dix individus n'est pas
+ * exploitable. Ce sont les lignes à 200 et 500 qui portent la conclusion.
+ *
+ * CE QUE ÇA DÉCIDE. Le commutateur n'est PAS justifié par le calcul — il le
+ * reste par la reproductibilité et parce qu'il EST le contrôle de neutralité du
+ * lot. Et le choix d'implémentation reste libre : on peut prendre le mode par
+ * cellule, le plus expressif, sans le payer.
  */
 
 const L: string[] = [];
