@@ -73,7 +73,11 @@ function station(enEau: boolean[] = new Array(COTE_M * COTE_M).fill(false)): Sta
     id: STATION.id,
     nom: STATION.nom,
     coteM: COTE_M,
-    ruMm: horizon ? ruHorizonMm(horizon) : STATION.ruMm,
+    // LES DEUX, depuis #190 : le profil entier et l'horizon de surface ont
+    // longtemps porté le même nom, et c'est ce qui a permis au sélecteur
+    // d'essences de prendre l'un pour l'autre.
+    ruMm: STATION.ruMm,
+    ruHorizonSurfaceMm: horizon ? ruHorizonMm(horizon) : STATION.ruMm,
     phInitial: STATION.phInitial,
     meteoLabel: "essai",
     enEau,
@@ -88,12 +92,17 @@ const SNAPSHOT = instantane();
 
 describe("les bornes sont de vraies bornes", () => {
   it("l'eau va de zéro à la réserve utile de l'horizon de surface", () => {
-    // Pas un maximum choisi : `ruMm` EST la capacité de l'horizon que
-    // `soilWater` mesure (worker.ts). Une échelle qui ne peut pas être
-    // atteinte serait un mensonge de légende.
+    // Pas un maximum choisi : `ruHorizonSurfaceMm` EST la capacité de
+    // l'horizon que `soilWater` mesure (worker.ts). Une échelle qui ne peut pas
+    // être atteinte serait un mensonge de légende.
+    //
+    // Et c'est bien CELLE-LÀ, pas la réserve du profil : sur un limon à deux
+    // horizons les deux diffèrent d'un facteur trois, et borner sur le profil
+    // ferait paraître la parcelle sèche en permanence (#190).
     const st = station();
-    expect(ficheDuCalque("eau").bornes(st)).toEqual([0, st.ruMm]);
-    expect(st.ruMm).toBeGreaterThan(0);
+    expect(ficheDuCalque("eau").bornes(st)).toEqual([0, st.ruHorizonSurfaceMm]);
+    expect(st.ruHorizonSurfaceMm).toBeGreaterThan(0);
+    expect(st.ruHorizonSurfaceMm).toBeLessThan(st.ruMm);
   });
 
   it("aucune valeur de la parcelle ne sort de son dégradé", () => {
@@ -159,7 +168,8 @@ describe("l'extraction n'a pas changé la carte", () => {
   // `dessinerCarteDuSol`. Si la table les trahit, c'est ici qu'on le voit et
   // pas trois captures plus tard.
   const AVANT: Record<string, (s: Snapshot, st: StationInfo, i: number) => string> = {
-    eau: (s, st, i) => `hsl(90 18% ${88 - 45 * Math.min(1, (s.soilWater[i] ?? 0) / st.ruMm)}%)`,
+    eau: (s, st, i) =>
+      `hsl(90 18% ${88 - 45 * Math.min(1, (s.soilWater[i] ?? 0) / st.ruHorizonSurfaceMm)}%)`,
     ph: (s, _st, i) => {
       const ph = s.soilPh[i] ?? 7;
       return `hsl(${20 + ((ph - 4) / 4.5) * 200} 35% 70%)`;
