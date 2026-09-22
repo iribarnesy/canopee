@@ -5,22 +5,29 @@
  * même qu'entre `especes.ts` et le moteur qui les fait pousser : ajouter un
  * niveau ne doit toucher que ce fichier.
  *
- * ## Les chiffres viennent d'une mesure, et la première était fausse
+ * ## Les chiffres viennent d'une mesure, et les deux premières étaient fausses
  *
- * **La première mesure omettait les BORDURES**, donc la pluie de semis de
- * l'entourage. Elle annonçait deux cents kilos à l'an 14 ; le niveau joué dans
- * le navigateur en a rendu ZÉRO en vingt ans. La capture disait pourquoi d'un
- * coup d'œil : la parcelle était devenue un fourré, et les treize pommiers
- * protégés y étaient étouffés avant d'avoir fructifié.
+ * **La première omettait les BORDURES**, donc la pluie de semis de l'entourage.
  *
- * Treize pommiers plantés sur limon profond riche, sans autre soin que le
- * manchon, météo synthétique, graine 7 — le cumul de pommes selon l'entourage :
+ * **La seconde a été prise avec un défaut de code non encore trouvé** : la
+ * récolte automatique ne cueillait rien après la première essence mûre (#191),
+ * et le niveau rendait ZÉRO kilo en vingt ans. J'en ai conclu que le bocage
+ * étouffait le verger, et j'ai déménagé le niveau pour cette raison — qui
+ * n'existait pas. Le verger ne disparaissait pas : il portait, et personne ne
+ * le cueillait.
  *
- * | entourage | semis/an | an 8 | an 12 | an 16 | an 20 | pommiers restants |
- * |---|---|---|---|---|---|---|
- * | bocage | 62 | — | — | — | **0** (mesuré en jeu) | 13 |
- * | (sans bordures) | — | 28 kg | 145 kg | 318 kg | 585 kg | 4 |
- * | **plaine céréalière** | **2** | **87 kg** | **482 kg** | **1187 kg** | **2170 kg** | **11** |
+ * Remesuré une fois #191 corrigée, treize pommiers sur limon profond riche avec
+ * la récolte automatique du jeu, graine 7, météo synthétique :
+ *
+ * | entourage | semis/an | 200 kg atteints | pommiers à l'an 17 | tiges à l'an 13 |
+ * |---|---|---|---|---|
+ * | bocage | 62 | an 13 | 9 sur 13 | 2843 |
+ * | **plaine céréalière** | **2** | **an 10** | **13 sur 13** | **2782** |
+ *
+ * **Les deux sont jouables dans les vingt ans impartis.** Ce qui départage
+ * n'est donc pas la possibilité mais la douceur : trois ans de marge en plus,
+ * et pas un pommier perdu. C'est ce qu'on veut d'un PREMIER niveau — `v1.md`
+ * demande qu'il soit « court et facile ». Le bocage fera un bon deuxième.
  *
  * Trois choses en sortent, et elles font le niveau :
  *
@@ -29,13 +36,13 @@
  *    l'atteindre. Un objectif de fruits est donc forcément un objectif long —
  *    ce que le jeu doit rendre supportable par la vitesse, pas par un
  *    rendement inventé.
- * 2. **C'est L'ENTOURAGE qui décide**, bien plus que la station. Soixante-deux
- *    semis par an contre deux : d'un côté un fourré de deux mille cinq cents
- *    tiges où le verger disparaît, de l'autre un verger qui tient. Un premier
- *    niveau doit échouer par ce qu'on n'a pas fait, jamais par le terrain — la
- *    lutte contre l'envahissement fera un bon niveau, plus tard.
- * 3. **Deux cents kilos tombent vers l'an 9** dans la plaine céréalière. Onze
- *    ans de marge sur les vingt impartis : de quoi s'y prendre mal.
+ * 2. **L'entourage change le rythme, pas l'issue.** Soixante-deux semis par an
+ *    contre deux : la parcelle finit couverte dans les deux cas (deux mille
+ *    huit cents tiges à l'an 13), mais le verger tient. Ce qu'il coûte, c'est
+ *    trois ans et quatre arbres.
+ * 3. **Deux cents kilos tombent vers l'an 10** dans la plaine céréalière, et la
+ *    partie jouée dans le navigateur les a franchis à l'an 9. Dix ans de marge
+ *    sur les vingt impartis : de quoi s'y prendre mal.
  *
  * Et le temps réel, que `v1.md` veut entre dix et trente minutes : le moteur
  * tient environ sept semaines par seconde sur ce peuplement, donc vingt ans
@@ -70,18 +77,18 @@ function pommiers(e: EtatDuNiveau) {
  *
  * Limon profond riche, plat, champs tout autour, nappe hors d'atteinte des
  * racines, pas d'eau libre, climat médian. Rien de ce qui fait mourir un
- * plant sur la lande ou dans le fond de vallée — ni, désormais, la pluie de
- * semis d'un bocage. Un premier niveau doit échouer par ce qu'on n'a pas
- * fait, jamais par le terrain.
+ * plant sur la lande ou dans le fond de vallée. Un premier niveau doit échouer
+ * par ce qu'on n'a pas fait, jamais par le terrain.
  */
 const VERGER_DE_PLAINE: ProfilDepart = {
   version: 1,
   nom: "Verger de plaine",
   stationId: "limon-riche",
-  // **La plaine céréalière, et c'est le réglage qui décide du niveau.** Deux
-  // semis par an contre soixante-deux pour un bocage : ailleurs, le verger
-  // disparaît sous la régénération avant d'avoir donné. Un verger au milieu
-  // des champs est d'ailleurs le cas agroforestier canonique.
+  // **La plaine céréalière : deux semis par an contre soixante-deux.** Le
+  // verger tient dans les deux entourages — c'est mesuré — mais ici il donne
+  // trois ans plus tôt et sans perdre un arbre. Un premier niveau se joue
+  // large. Un verger au milieu des champs est d'ailleurs le cas agroforestier
+  // canonique.
   bordures: {
     nord: "plaine-cerealiere",
     est: "plaine-cerealiere",
@@ -121,8 +128,9 @@ const VERGER: Niveau = {
   seed: 7,
   meteo: "synthetique",
   economie: false,
-  // Vingt ans. La mesure ci-dessus donne deux cents kilos vers l'an 9 : la
-  // marge est de onze ans pour qui s'y prend mal.
+  // Vingt ans. La mesure ci-dessus donne deux cents kilos vers l'an 10, et la
+  // partie jouée dans le navigateur les a franchis à l'an 9 : dix ans de marge
+  // pour qui s'y prend mal.
   semainesImparties: 20 * 52,
   paliers: [
     {
