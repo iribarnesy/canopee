@@ -5,18 +5,22 @@
  * même qu'entre `especes.ts` et le moteur qui les fait pousser : ajouter un
  * niveau ne doit toucher que ce fichier.
  *
- * ## Les chiffres viennent d'une mesure, pas d'une intuition
+ * ## Les chiffres viennent d'une mesure, et la première était fausse
  *
- * Douze pommiers plantés sur limon profond riche, laissés sans aucun soin,
- * météo synthétique, graine 7 — quarante ans de moteur :
+ * **La première mesure omettait les BORDURES**, donc la pluie de semis de
+ * l'entourage. Elle annonçait deux cents kilos à l'an 14 ; le niveau joué dans
+ * le navigateur en a rendu ZÉRO en vingt ans. La capture disait pourquoi d'un
+ * coup d'œil : la parcelle était devenue un fourré, et les treize pommiers
+ * protégés y étaient étouffés avant d'avoir fructifié.
  *
- * | an | vivants | hauteur | récolte | cumul |
- * |---|---|---|---|---|
- * | 6 | 10 | 1,3 m | 0 kg | 0 kg |
- * | 7 | 10 | 1,5 m | 12 kg | **12 kg** |
- * | 10 | 10 | 2,9 m | 27 kg | 76 kg |
- * | 14 | 6 | 4,3 m | 32 kg | **199 kg** |
- * | 20 | 4 | 5,4 m | 24 kg | 322 kg |
+ * Treize pommiers plantés sur limon profond riche, sans autre soin que le
+ * manchon, météo synthétique, graine 7 — le cumul de pommes selon l'entourage :
+ *
+ * | entourage | semis/an | an 8 | an 12 | an 16 | an 20 | pommiers restants |
+ * |---|---|---|---|---|---|---|
+ * | bocage | 62 | — | — | — | **0** (mesuré en jeu) | 13 |
+ * | (sans bordures) | — | 28 kg | 145 kg | 318 kg | 585 kg | 4 |
+ * | **plaine céréalière** | **2** | **87 kg** | **482 kg** | **1187 kg** | **2170 kg** | **11** |
  *
  * Trois choses en sortent, et elles font le niveau :
  *
@@ -25,14 +29,17 @@
  *    l'atteindre. Un objectif de fruits est donc forcément un objectif long —
  *    ce que le jeu doit rendre supportable par la vitesse, pas par un
  *    rendement inventé.
- * 2. **Le verger FOND** : douze plants, dix l'année suivante, six à l'an 14,
- *    quatre à l'an 20. Sans soin, la moitié du verger est perdue avant la
- *    pleine production — et c'est exactement la leçon que `v1.md` met dans son
- *    exemple : *« découvrir que le gibier les mange, y répondre »*.
- * 3. **Deux cents kilos se cueillent vers l'an 14 SANS RIEN FAIRE.** C'est donc
- *    un objectif atteignable, et la conduite doit le rendre plus rapide, pas
- *    le rendre possible. Vingt ans impartis laissent six ans de marge à qui
- *    s'y prend mal.
+ * 2. **C'est L'ENTOURAGE qui décide**, bien plus que la station. Soixante-deux
+ *    semis par an contre deux : d'un côté un fourré de deux mille cinq cents
+ *    tiges où le verger disparaît, de l'autre un verger qui tient. Un premier
+ *    niveau doit échouer par ce qu'on n'a pas fait, jamais par le terrain — la
+ *    lutte contre l'envahissement fera un bon niveau, plus tard.
+ * 3. **Deux cents kilos tombent vers l'an 9** dans la plaine céréalière. Onze
+ *    ans de marge sur les vingt impartis : de quoi s'y prendre mal.
+ *
+ * Et le temps réel, que `v1.md` veut entre dix et trente minutes : le moteur
+ * tient environ sept semaines par seconde sur ce peuplement, donc vingt ans
+ * demandent deux minutes et demie de simulation. La contrainte n'est pas là.
  */
 
 import type { EtatDuNiveau, Niveau } from "./niveaux";
@@ -61,20 +68,25 @@ function pommiers(e: EtatDuNiveau) {
 /**
  * Le terrain du premier niveau : le plus indulgent des six.
  *
- * Limon profond riche, plat, bocage tout autour, nappe hors d'atteinte des
+ * Limon profond riche, plat, champs tout autour, nappe hors d'atteinte des
  * racines, pas d'eau libre, climat médian. Rien de ce qui fait mourir un
- * plant sur la lande ou dans le fond de vallée. Un premier niveau doit
- * échouer par ce qu'on n'a pas fait, jamais par le terrain.
+ * plant sur la lande ou dans le fond de vallée — ni, désormais, la pluie de
+ * semis d'un bocage. Un premier niveau doit échouer par ce qu'on n'a pas
+ * fait, jamais par le terrain.
  */
-const VERGER_DE_BOCAGE: ProfilDepart = {
+const VERGER_DE_PLAINE: ProfilDepart = {
   version: 1,
-  nom: "Verger de bocage",
+  nom: "Verger de plaine",
   stationId: "limon-riche",
+  // **La plaine céréalière, et c'est le réglage qui décide du niveau.** Deux
+  // semis par an contre soixante-deux pour un bocage : ailleurs, le verger
+  // disparaît sous la régénération avant d'avoir donné. Un verger au milieu
+  // des champs est d'ailleurs le cas agroforestier canonique.
   bordures: {
-    nord: "bocage",
-    est: "bocage",
-    sud: "bocage",
-    ouest: "bocage",
+    nord: "plaine-cerealiere",
+    est: "plaine-cerealiere",
+    sud: "plaine-cerealiere",
+    ouest: "plaine-cerealiere",
   },
   relief: { altitudeM: 120, pentePct: 1, expositionDeg: 180, forme: "plan", bassinAmontHa: 0 },
   eau: { type: "aucune", bergeM: 0 },
@@ -105,12 +117,12 @@ const VERGER: Niveau = {
   id: "verger",
   nom: "Le verger",
   enonce: "Planter un verger, le protéger du gibier, et en récolter deux cents kilos de pommes.",
-  depart: VERGER_DE_BOCAGE,
+  depart: VERGER_DE_PLAINE,
   seed: 7,
   meteo: "synthetique",
   economie: false,
-  // Vingt ans. La mesure ci-dessus donne deux cents kilos vers l'an 14 sans
-  // aucun soin : la marge est de six ans pour qui s'y prend mal.
+  // Vingt ans. La mesure ci-dessus donne deux cents kilos vers l'an 9 : la
+  // marge est de onze ans pour qui s'y prend mal.
   semainesImparties: 20 * 52,
   paliers: [
     {
