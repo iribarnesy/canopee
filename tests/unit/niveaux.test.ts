@@ -169,6 +169,28 @@ describe("les cumuls", () => {
     expect(accumuler(CUMULS_VIDES, gestes).fruitsKg).toBe(0);
   });
 
+  it("se rejoue depuis un point de retour : une semaine élaguée ne garde que ce qu'elle garde", () => {
+    // Le cas du worker, réduit à son arithmétique. Une semaine trop chargée se
+    // REJOUE amputée de sa fin (#133) ; le cumul doit se rejouer avec elle,
+    // depuis le cumul qu'il avait à l'ouverture de la semaine.
+    //
+    // Et c'est pour ça que le worker compte À LA SOURCE et non au moment de
+    // l'instantané : un instantané couvre jusqu'à vingt-six semaines, donc un
+    // point de retour posé avant lui serait en retard d'autant, et le repli
+    // effacerait les récoltes de tout le lot.
+    const ouverture = accumuler(CUMULS_VIDES, [
+      { type: "recolter", ids: [1], masseKg: [10] },
+    ] as GesteVisible[]);
+    const posees: GesteVisible[] = [
+      { type: "recolter", ids: [2], masseKg: [30] },
+      { type: "recolter", ids: [3], masseKg: [25] },
+    ];
+    const gardees = posees.slice(0, 1);
+    expect(accumuler(ouverture, gardees).fruitsKg).toBe(40);
+    // Ce que donnerait un cumul qui ne se rejouerait pas — la faute à éviter.
+    expect(accumuler(accumuler(ouverture, posees), gardees).fruitsKg).toBe(95);
+  });
+
   it("ignore les gestes que personne ne compte", () => {
     const gestes: GesteVisible[] = [
       { type: "brouter", ids: [1] },

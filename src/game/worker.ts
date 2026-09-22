@@ -280,6 +280,13 @@ function performAction(action: GameAction) {
   state = result.state;
   pendingRefusals.push(...result.refusals);
   pendingGestes.push(...(result.gestes ?? []));
+  // Compté ICI, à la source (#188). Compter au moment de l'instantané aurait
+  // été plus simple d'un cran, et faux : `ouvrirLaSemaine` fige le point de
+  // retour du cumul, et un instantané couvre jusqu'à vingt-six semaines. Le
+  // point de retour aurait donc toujours été en retard d'un lot entier — et
+  // une semaine ramenée sous le plafond aurait effacé les récoltes de tout ce
+  // lot, pas seulement les siennes.
+  cumuls = accumuler(cumuls, result.gestes ?? []);
   const dEur = state.economy.treasuryEur - before.economy.treasuryEur;
   const dHeures = state.economy.hoursUsedWeek - before.economy.hoursUsedWeek;
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
@@ -580,12 +587,6 @@ function postSnapshot() {
     incendie: pendingIncendie,
     tempete: pendingTempete,
   });
-  // **Le seul point où l'on compte**, et il est volontairement unique : les
-  // gestes arrivent de trois endroits (l'action au clic, le tick, le rejeu
-  // d'une semaine élaguée), et `pendingGestes` est tantôt complété, tantôt
-  // REMPLACÉ. Compter à chaque source doublerait ce qu'une semaine rejouée a
-  // déjà donné ; compter ici, juste avant de vider, ne le peut pas.
-  cumuls = accumuler(cumuls, pendingGestes);
   pendingRefusals = [];
   pendingEvents = [];
   pendingMorts = [];
@@ -656,9 +657,10 @@ function seTenirAuPlafond(): number {
   // reproduira pour celles qui restent.
   const elaguee = prefixeSousLePlafond(debutDeSemaine, posees);
   pendingGestes = elaguee.gestes;
-  // Le cumul repart du début de semaine : `postSnapshot` recomptera les gestes
-  // des seules actions gardées. Sans ça, une récolte annulée resterait acquise.
-  cumuls = cumulsAuDebut;
+  // Le cumul se rejoue comme l'état : il repart du début de la semaine, puis
+  // recompte les gestes des SEULES actions gardées. Sans ça, une récolte
+  // annulée resterait acquise.
+  cumuls = accumuler(cumulsAuDebut, elaguee.gestes);
   state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
   actionsDeLaSemaine = elaguee.gardees;
@@ -778,6 +780,7 @@ function stepWeeks(n: number) {
     pendingNaissances.push(...ticked.naissances);
     pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
+    cumuls = accumuler(cumuls, ticked.gestes);
     pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.

@@ -1590,7 +1590,10 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           surRejouer={() => {
             if (enNiveau.niveau) lancerLeNiveau(enNiveau.niveau);
           }}
-          surQuitter={game.quit}
+          // `quitterLaPartie` et non `game.quit` : la sortie doit CONSOMMER
+          // l'entrée d'historique poussée à l'entrée en partie (#148), sinon
+          // le bouton retour du navigateur ramènerait à une partie finie.
+          surQuitter={quitterLaPartie}
         />
       )}
 
