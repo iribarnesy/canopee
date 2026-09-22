@@ -63,6 +63,7 @@ import type {
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import { prefixeSousLePlafond } from "./facture";
+import { nomEspece, nomEspeces, s } from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
 import type {
@@ -236,10 +237,6 @@ function event(icone: string, message: string) {
   pendingEvents.push({ week: state.week, icone, message });
 }
 
-function nomEspece(id: string): string {
-  return getEspece(id).nom.toLowerCase();
-}
-
 /**
  * Ce que dit la pause quand un arbre suivi meurt : son essence et sa cause.
  *
@@ -327,7 +324,7 @@ function performAction(action: GameAction) {
       if (n > 0)
         event(
           "🌱",
-          `${n} ${nomEspece(action.especeId)}${n > 1 ? "s" : ""} planté${n > 1 ? "s" : ""}${action.avecManchon ? ` et manchonné${n > 1 ? "s" : ""}` : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
+          `${n} ${nomEspeces(action.especeId, n)} planté${s(n)}${action.avecManchon ? ` et manchonné${s(n)}` : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
         );
       break;
     }
@@ -885,10 +882,7 @@ function stepWeeks(n: number) {
         gamme && !Number.isNaN(agg.phPire)
           ? ` — sol à pH ${agg.phPire.toFixed(1)}, il leur en faut ${gamme[0]} à ${gamme[1]}`
           : "";
-      event(
-        "💀",
-        `${agg.n} ${nomEspece(id)}${agg.n > 1 ? "s" : ""} ${libelle}${taille}${precision}`,
-      );
+      event("💀", `${agg.n} ${nomEspeces(id, agg.n)} ${libelle}${taille}${precision}`);
     }
     // Gel des fleurs
     const frostedBefore = new Set(before.trees.filter((t) => t.bloomFrosted).map((t) => t.id));
@@ -901,7 +895,7 @@ function stepWeeks(n: number) {
     for (const [id, n2] of frosted) {
       event(
         "❄️",
-        `Gel tardif (${w.tMinAbsC.toFixed(0)} °C) : fleurs de ${n2} ${nomEspece(id)}${n2 > 1 ? "s" : ""} détruites — récolte perdue`,
+        `Gel tardif (${w.tMinAbsC.toFixed(0)} °C) : fleurs de ${n2} ${nomEspeces(id, n2)} détruites — récolte perdue`,
       );
     }
     // Semis naturels (semaine du recrutement)

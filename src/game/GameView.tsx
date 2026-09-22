@@ -46,6 +46,7 @@ import { CarteDuSol } from "./panneaux/CarteDuSol";
 import { FinDeNiveau } from "./panneaux/FinDeNiveau";
 import { PanneauAction } from "./panneaux/PanneauAction";
 import { PanneauArbres } from "./panneaux/PanneauArbres";
+import { PanneauBilan } from "./panneaux/PanneauBilan";
 import { PanneauEssences } from "./panneaux/PanneauEssences";
 import { PanneauJournal } from "./panneaux/PanneauJournal";
 import { PanneauMenu } from "./panneaux/PanneauMenu";
@@ -73,6 +74,7 @@ import {
   reglagesDeLaPartie,
   supprimerSauvegarde,
 } from "./sauvegardes";
+import { useBilan } from "./useBilan";
 import { useEllipse } from "./useEllipse";
 import { useGame } from "./useGame";
 import { useNiveau } from "./useNiveau";
@@ -1367,6 +1369,13 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const ellipse = useEllipse(snapshot, station, game.speed);
 
   /**
+   * LE BILAN DE LA PÉRIODE (#128, §6.8 №2) : ce qui s'est passé pendant qu'on
+   * avançait, groupé et situé. Il vit à côté des marqueurs de l'ellipse et sur
+   * la même durée qu'eux — voir `useBilan.ts`.
+   */
+  const bilan = useBilan(game.bilan, game.speed > 0);
+
+  /**
    * **Le temps attend la fin d'une animation bloquante (#163).**
    *
    * Le retour de partie : « c'est mieux d'attendre la fin d'une animation que
@@ -1477,7 +1486,29 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * sont le même mécanisme, et quand ils tombent ensemble c'est l'arbre qu'on
    * regardait qui l'emporte — le feu, lui, se voit de toute façon.
    */
-  const cadrage = suivis.cadrerSur ?? ellipse.cadrerSur;
+  const cadrageAuto = suivis.cadrerSur ?? ellipse.cadrerSur;
+
+  /**
+   * OÙ LE JOUEUR A DEMANDÉ D'ALLER : la ligne du bilan qu'il a cliquée (#128).
+   *
+   * Un objet NEUF à chaque clic, parce que la vue n'applique un cadrage qu'une
+   * fois par cible (`VueParcelle`) : recliquer la même ligne après avoir fait
+   * glisser la parcelle doit y ramener.
+   *
+   * **Il retient CONTRE QUOI il a été posé, et c'est ce qui le périme.** Il
+   * passe devant les deux cadrages automatiques — c'est lui qu'on vient de
+   * demander — mais dès que l'un d'eux a du neuf à montrer, il rend la main :
+   * un arbre suivi qui meurt pendant qu'on lit le bilan est plus urgent que la
+   * ligne qu'on vient de cliquer. Écrit comme une comparaison et non comme un
+   * effet qui remet à zéro : un effet aurait deux états à tenir d'accord, donc
+   * une image où les deux se contredisent.
+   */
+  const [cadrageDemande, setCadrageDemande] = useState<{
+    ou: { x: number; y: number };
+    contre: { x: number; y: number } | undefined;
+  }>();
+  const cadrage =
+    cadrageDemande && cadrageDemande.contre === cadrageAuto ? cadrageDemande.ou : cadrageAuto;
 
   /**
    * LA BARRE ESPACE met en marche et arrête, où qu'on ait cliqué.
@@ -1911,7 +1942,29 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               <PanneauScores snapshot={snapshot} />
             </Volet>
           ) : volets.estOuvert("bd", "journal") ? (
-            <Volet titre="Journal" largeur={400} surFermer={() => volets.fermer("bd")}>
+            <Volet titre="Journal" largeur={420} surFermer={() => volets.fermer("bd")}>
+              {/*
+                DEUX LECTURES DU MÊME TEMPS, et le §6.8 les veut toutes les
+                deux : le bilan groupe et situe, le fil date et détaille.
+
+                Le §6.8 dit « un panneau qui REMPLACE le fil texte quand la
+                vitesse est haute ». On les empile plutôt qu'on ne les
+                échange, et c'est un écart assumé : un panneau qui change de
+                contenu selon la vitesse oblige le joueur à ralentir pour
+                relire une ligne qu'il avait sous les yeux. Le bilan est en
+                tête parce qu'il est le résumé ; le fil, dessous, garde ce
+                que seul le moteur sait dire — le pH sous l'arbre qui a tué.
+              */}
+              <h3 style={{ margin: "2px 0 4px", fontSize: 13 }}>
+                Ce qui a changé
+                {bilan.depuis > 0 ? ` depuis l'an ${Math.floor(bilan.depuis / 52) + 1}` : ""}
+              </h3>
+              <PanneauBilan
+                lignes={bilan.lignes}
+                surCadrer={(ou) => setCadrageDemande({ ou: { ...ou }, contre: cadrageAuto })}
+                quandVide="Rien n'a changé depuis que le temps s'est remis à couler."
+              />
+              <h3 style={{ margin: "12px 0 4px", fontSize: 13 }}>Le fil</h3>
               <PanneauJournal evenements={game.events} />
             </Volet>
           ) : volets.estOuvert("bd", "suivis") ? (

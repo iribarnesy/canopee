@@ -36,12 +36,7 @@ import {
 import type { Vue } from "../render/camera";
 import { type Marqueur, marqueursDuJournal } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
-import {
-  dureeBloquanteMs,
-  type JournalDeSemaine,
-  planAuRythmeNaturel,
-  planDEllipse,
-} from "../render/temps/ellipse";
+import { dureeBloquanteMs, planAuRythmeNaturel, planDEllipse } from "../render/temps/ellipse";
 import { SANS_VENT, type VentAPencher } from "../render/temps/feu";
 import type { ArbreRemodele, TigeAbattue } from "../render/temps/geste";
 import {
@@ -74,6 +69,7 @@ import {
 } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
+import { journalDe } from "./journal";
 import type { Snapshot, StationInfo } from "./protocol";
 
 /**
@@ -178,19 +174,6 @@ export interface EllipseDuJeu {
 export interface SaisonDUneEssence {
   partFoliaire: number;
   senescence: number;
-}
-
-/** Le journal que porte un instantané, dans la forme que le plan attend. */
-function journalDe(snapshot: Snapshot): JournalDeSemaine {
-  return {
-    morts: snapshot.morts,
-    chutes: snapshot.chutes,
-    gestes: snapshot.gestes,
-    naissances: snapshot.naissances,
-    franchissements: snapshot.franchissements,
-    ...(snapshot.incendie ? { incendie: snapshot.incendie } : {}),
-    ...(snapshot.tempete ? { tempete: snapshot.tempete } : {}),
-  };
 }
 
 /**

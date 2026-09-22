@@ -9,6 +9,8 @@ import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
 import type { Bordures } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
+import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
+import { journalDe } from "./journal";
 import { CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { type ChoixRecolte, especesRecoltees } from "./recolteAuto";
 
@@ -66,6 +68,14 @@ export interface GameApi {
   reglerFacture: (embaucher: boolean, pourToujours?: boolean) => void;
   /** ce que la partie a accumulé depuis son début (#188) */
   cumuls: Cumuls;
+  /**
+   * Ce qui a changé depuis qu'on compte, groupé et situé (#128).
+   *
+   * `depuis` est la semaine où la période a commencé ; `oublier` la referme et
+   * en ouvre une neuve. Qui décide de la refermer n'est pas d'ici : c'est
+   * l'écran, qui sait quand le joueur a regardé (`useBilan`).
+   */
+  bilan: { lignes: Bilan; depuis: number; oublier: () => void };
   /** ce que la récolte automatique cueille, et pourquoi */
   recolteAuto: { semees: string[]; choix: ChoixRecolte; actives: ReadonlySet<string> };
   /** allumer ou éteindre une essence dans la récolte automatique */
@@ -207,6 +217,44 @@ export function useGame(): GameApi {
    */
   const idPartie = useRef(idNeuf());
 
+  /**
+   * LE BILAN DE LA PÉRIODE (#128) : ce qui a changé depuis qu'on compte.
+   *
+   * **Replié ICI, dans le gestionnaire de messages, et pas dans un effet qui
+   * lirait `snapshot`.** La différence n'est pas de style, elle est de justesse,
+   * et elle a été mesurée : sur douze ans joués à ×52, cent quinze instantanés
+   * sont arrivés et **trente-cinq seulement** ont traversé l'état de React —
+   * deux mille deux cent trente-sept naissances reçues, deux cent soixante-sept
+   * comptées. Un état ne garde que la DERNIÈRE valeur ; tout ce qui arrive
+   * entre deux rendus est écrasé sans bruit.
+   *
+   * C'est exactement pourquoi le fil des événements, lui, s'accumule déjà par
+   * une mise à jour fonctionnelle à partir de `msg` : ce qui compte cumule
+   * depuis le MESSAGE, jamais depuis l'état.
+   *
+   * Reste vrai ce qui ne se voit pas d'ici : le bilan de la PARTIE entière —
+   * celui que la fin de niveau voudra — n'est toujours pas ici mais dans le
+   * worker, à côté de `cumuls`, parce que reprendre une sauvegarde rejoue le
+   * journal sans qu'un seul instantané intermédiaire ne remonte.
+   */
+  const [bilan, setBilan] = useState<Bilan>(BILAN_VIDE);
+  const [bilanDepuis, setBilanDepuis] = useState(0);
+  /** Le côté de la parcelle, pour situer un geste de zone. Fixé à `ready`. */
+  const coteM = useRef(0);
+  const derniereSemaine = useRef(0);
+
+  const replierLeBilan = useCallback((s: Snapshot) => {
+    derniereSemaine.current = s.week;
+    const ou = new Map(s.trees.map((t) => [t.id, { x: t.x, y: t.y }]));
+    setBilan((b) => agreger(b, journalDe(s), s.week, coteM.current, (id) => ou.get(id)));
+  }, []);
+
+  /** Le clic « vu » du §6.8 : on oublie, et la période repart d'ici. */
+  const oublierLeBilan = useCallback(() => {
+    setBilan(BILAN_VIDE);
+    setBilanDepuis(derniereSemaine.current);
+  }, []);
+
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
   /**
@@ -231,10 +279,12 @@ export function useGame(): GameApi {
       switch (msg.type) {
         case "ready":
           setStation(msg.station);
+          coteM.current = msg.station.coteM;
           setReplayProgress(undefined);
           break;
         case "snapshot":
           setSnapshot(msg.snapshot);
+          replierLeBilan(msg.snapshot);
           setCumuls(msg.cumuls);
           setRevision((n) => n + 1);
           if (msg.snapshot.refusals.length > 0) {
@@ -286,7 +336,9 @@ export function useGame(): GameApi {
     };
     workerRef.current = worker;
     return worker;
-  }, []);
+    // `replierLeBilan` est stable (rien dans ses dépendances) : le citer ne
+    // recrée pas le worker, ça dit seulement d'où il vient.
+  }, [replierLeBilan]);
 
   useEffect(() => {
     // Autosave : demande la sauvegarde au worker toutes les 30 s de jeu réel.
@@ -316,6 +368,7 @@ export function useGame(): GameApi {
       send({ type: "reglerFacture", embaucher, pourToujours });
     },
     cumuls,
+    bilan: { lignes: bilan, depuis: bilanDepuis, oublier: oublierLeBilan },
     recolteAuto: {
       ...recolteAuto,
       // La règle est appliquée UNE fois, par la même fonction que le worker.
@@ -356,6 +409,8 @@ export function useGame(): GameApi {
       setEvents([]);
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
+      setBilan(BILAN_VIDE);
+      setBilanDepuis(0);
       setRecolteAuto({ semees: [], choix: {} });
       setNiveauRange({ acquis: [] });
       send({
@@ -384,6 +439,8 @@ export function useGame(): GameApi {
       setEvents([]);
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
+      setBilan(BILAN_VIDE);
+      setBilanDepuis(0);
       send({ type: "resume", save });
       send({ type: "autoHarvest", enabled: true });
       setAutoHarvestState(true);
