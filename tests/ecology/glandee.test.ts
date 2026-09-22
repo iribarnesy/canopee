@@ -379,7 +379,7 @@ describe("ce que la mesure a coûté au sanglier", () => {
     // Ce qui manque pour que la bête pèse à nouveau sur le chêne n'est pas un
     // coefficient, c'est un MÉCANISME : un boutis détruit les semis et les
     // glands germés là où il passe, et le moteur n'en compte aujourd'hui que le
-    // bon côté (le lit de germination). C'est l'objet d'une issue à part.
+    // bon côté (le lit de germination). C'est l'objet de l'issue #199.
     const recrues = [0, DENSITE_REFERENCE_PAR_HA, 0.5].map((d) => chenaie(d, 40).recrues);
     const haut = Math.max(...recrues);
     const bas = Math.min(...recrues);

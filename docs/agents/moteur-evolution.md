@@ -1614,13 +1614,14 @@ montre — un gradient monotone sur trois couverts — et non ce qu'on espérait
 
 ## File d'attente
 
-**Ce que #197 laisse, et l'essentiel est une issue à ouvrir.** LE BOUTIS DÉTRUIT
+**Ce que #197 laisse, et l'essentiel est #199.** LE BOUTIS DÉTRUIT
 LES SEMIS : à ration réelle, le sanglier ne pèse plus sur la régénération du
 chêne (71 / 71 / 71 / 77 / 70 recrues de 0 à 0,5 bête/ha), et il n'en avait
 jamais eu les moyens physiques. Ce qui manque n'est pas un coefficient mais le
 second effet de la bête — un boutis déchire les semis et les glands germés là où
-il passe, et le moteur n'en compte que le bon côté (le lit de germination). Le
-reste : l'ANNÉE RÉFRACTAIRE (un chêne vide ses réserves en fructifiant, le
+il passe, et le moteur n'en compte que le bon côté (le lit de germination) —
+c'est [#199](https://github.com/iribarnesy/canopee/issues/199). Le reste :
+l'ANNÉE RÉFRACTAIRE (un chêne vide ses réserves en fructifiant, le
 tirage de Bernoulli l'autorise une année sur seize) ; les CHARANÇONS, qui
 prélèvent une part et non une ration, donc ne se rangent pas dans la même
 formule ; et le prélèvement appliqué ESPÈCE PAR ESPÈCE, alors qu'un mulot ne
