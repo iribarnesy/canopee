@@ -8,23 +8,30 @@
 
 import { Fragment, useMemo } from "react";
 import { getEspece } from "../../engine/especes";
+import { LIBELLE_CAUSE } from "../../engine/trees";
 import { COULEUR_AUTRES, SPECIES_COLORS } from "../../ui/couleurs";
 import type { Snapshot, SnapshotTree } from "../protocol";
 import { etatDeLaRecolte } from "../recolteAuto";
-import { essencesPresentes } from "./recensement";
+import { couleurDeLaPart } from "./fiche";
+import { etatDesEssences } from "./recensement";
 import { btn } from "./styles";
 
 /**
- * LA LISTE DES ESSENCES, ET CE QU'ON CUEILLE D'OFFICE.
+ * LA LISTE DES ESSENCES : un œil sur toute la parcelle, essence par essence.
  *
- * La récolte automatique se limitait à ce que le joueur avait semé — c'était
- * mieux que de ramasser la friche à cent cinquante heures la semaine, mais
- * c'était encore une règle QU'IL SUBISSAIT. Ici il la voit et il la change,
- * essence par essence.
+ * Le pendant du volet des suivis, à l'autre échelle : là on surveille des
+ * individus, ici des POPULATIONS. Sur une parcelle de deux mille huit cents
+ * tiges, lire des fiches une par une n'a aucun sens ; savoir que le tiers des
+ * noisetiers est étouffé par l'ombre, si.
  *
- * La pastille dit l'état, et le point qui la suit dit d'où il vient : allumée
- * parce qu'on l'a semée, ou parce qu'on l'a demandé. La distinction compte —
- * une décision explicite survit à une plantation ultérieure, un défaut non.
+ * Deux choses à ne pas confondre, et la forme les sépare :
+ *
+ * - **la couleur de l'essence** est un repère d'identité — la même que la carte
+ *   et que le choix des plants. Elle est un LISERÉ au bord de la ligne, comme
+ *   dans « qu'est-ce qu'on plante ? », pas une pastille : elle ne dit rien de
+ *   l'état, et une pastille ferait croire le contraire ;
+ * - **la pastille** est un STATUT : la part de l'essence qui souffre, du vert au
+ *   rouge, par la même règle que le point d'alerte d'un arbre suivi.
  */
 function ListeDesEssences({
   vivants,
@@ -39,26 +46,42 @@ function ListeDesEssences({
 }) {
   // Le MÊME recensement que l'éclaircie par essence (#156) : compter deux fois
   // les mêmes tiges finirait par donner deux comptes différents.
-  const presentes = useMemo(() => essencesPresentes(vivants, undefined), [vivants]);
-  if (presentes.length === 0) return null;
+  const essences = useMemo(() => etatDesEssences(vivants), [vivants]);
+  if (essences.length === 0) return null;
   return (
-    <ul style={{ listStyle: "none", margin: "4px 0 0", padding: 0 }}>
-      {presentes.map((e) => {
+    <ul style={{ listStyle: "none", margin: "6px 0 0", padding: 0 }}>
+      {essences.map((e) => {
         const { active, choisi } = etatDeLaRecolte(e.especeId, semees, choix);
         return (
           <li
             key={e.especeId}
-            style={{ display: "flex", gap: 8, alignItems: "center", margin: "3px 0" }}
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              margin: "4px 0",
+              padding: "4px 6px",
+              border: "1px solid var(--trait)",
+              borderLeft: `6px solid ${SPECIES_COLORS[e.especeId] ?? COULEUR_AUTRES}`,
+              borderRadius: 6,
+              background: "var(--carte)",
+            }}
           >
             <span
-              aria-hidden="true"
+              title={
+                e.enSouffrance === 0
+                  ? "Aucune tige ne souffre d'une peine que le moteur sache nommer."
+                  : `${e.enSouffrance} tige${e.enSouffrance > 1 ? "s" : ""} sur ${e.tiges} ${
+                      e.enSouffrance > 1 ? "souffrent" : "souffre"
+                    }${e.cause ? ` — ${LIBELLE_CAUSE[e.cause]}` : ""}.`
+              }
               style={{
                 display: "inline-block",
-                width: 10,
-                height: 10,
-                borderRadius: 3,
+                width: 9,
+                height: 9,
+                borderRadius: 5,
                 flex: "0 0 auto",
-                background: SPECIES_COLORS[e.especeId] ?? COULEUR_AUTRES,
+                background: couleurDeLaPart(e.part, "hautMauvais"),
               }}
             />
             <span style={{ flex: 1, minWidth: 0 }}>
@@ -67,6 +90,12 @@ function ListeDesEssences({
                 {e.tiges} tige{e.tiges > 1 ? "s" : ""} ·{" "}
                 {e.hauteurMaxM < 10 ? e.hauteurMaxM.toFixed(1) : e.hauteurMaxM.toFixed(0)} m
               </span>
+              {e.enSouffrance > 0 && (
+                <div className="detail" style={{ fontSize: "0.85em" }}>
+                  {e.enSouffrance} {e.enSouffrance > 1 ? "souffrent" : "souffre"}
+                  {e.cause ? ` — ${LIBELLE_CAUSE[e.cause]}` : ""}
+                </div>
+              )}
             </span>
             <button
               type="button"
