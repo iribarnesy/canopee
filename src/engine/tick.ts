@@ -69,8 +69,8 @@ import {
   terreArracheeKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
-import type { DepartFaune, InstallationFaune } from "./faune";
-import { departs, installations } from "./faune";
+import type { DepartFaune, InstallationFaune, TableDeLaParcelle } from "./faune";
+import { bilanDeTable, departs, installations } from "./faune";
 import {
   chargeCombustible,
   departDeFeu,
@@ -3146,25 +3146,48 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let departsFaune: readonly DepartFaune[] = AUCUN_MOUVEMENT_DE_FAUNE;
   if (state.station.faune) {
     const presents = faune ?? [];
-    departsFaune = departs(presents, nextTrees);
-    const partis = departsFaune;
-    const restants =
-      partis.length === 0
+    const aireParcelleM2 = state.station.coteM * state.station.coteM;
+    // La table de la parcelle, telle que le tick vient de la mettre à jour.
+    // Deux grilles déjà là, une par poste — et deux seulement, parce que le
+    // nectar n'a pas encore de consommateur et que la glandée n'existe pas
+    // dans ce moteur (`faune.ts`).
+    const table: TableDeLaParcelle = {
+      invertebres: ravageurs,
+      micromammiferes: herbeBiomasse,
+    };
+
+    // Le gîte d'abord — un arbre disparu expulse, quoi qu'il y ait à manger.
+    const partisDuGite = departs(presents, nextTrees);
+    const apresGite =
+      partisDuGite.length === 0
         ? presents
-        : presents.filter((ind) => !partis.some((d) => d.individu.id === ind.id));
+        : presents.filter((ind) => !partisDuGite.some((d) => d.individu.id === ind.id));
+
+    // La table ensuite : elle ne chasse personne d'un coup, elle compte les
+    // saisons maigres et tranche à la seconde (`faune.ts`).
+    const bilan = bilanDeTable(apresGite, dims, table, state.week, aireParcelleM2);
+    departsFaune =
+      partisDuGite.length === 0
+        ? bilan.partants
+        : bilan.partants.length === 0
+          ? partisDuGite
+          : [...partisDuGite, ...bilan.partants];
+
     const premierId = nextFauneId ?? 1;
     installationsFaune = installations(
-      restants,
+      bilan.individus,
       nextTrees,
       state.week,
       premierId,
-      state.station.coteM * state.station.coteM,
+      aireParcelleM2,
+      dims,
+      table,
     );
     nextFauneId = premierId + installationsFaune.length;
     faune =
       installationsFaune.length === 0
-        ? restants
-        : [...restants, ...installationsFaune.map((entree) => entree.individu)];
+        ? bilan.individus
+        : [...bilan.individus, ...installationsFaune.map((entree) => entree.individu)];
   }
 
   return {

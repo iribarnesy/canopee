@@ -61,7 +61,72 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le soc desserre, #141)
+## Ce que le dernier lot a appris (la table, #187 lot 2)
+
+Le lot 1 faisait exister l'animal ; il ne le faisait pas MANGER. C'est le
+propriétaire qui l'a relevé — *« un oiseau s'installe aussi s'il y a les bonnes
+ressources, et il peut partir si ça ne lui plaît pas »* — et il avait raison :
+un nichoir dans un désert reste vide.
+
+**Chercher l'idiome AVANT d'en inventer un.** Le moteur exige déjà des
+pollinisateurs « un gîte ET une table, et le plus rare décide » (G4,
+`min(habitat, ressourceFlorale)`). Que la faune en individus l'ignore aurait été
+incohérent avec le voisin. La table n'a donc pas eu à être conçue, seulement
+déclarée : qui prélève quoi, sur des grandeurs que le moteur suit déjà.
+
+**Et une notion déjà écrite règle le point délicat.** Un demi-hectare peut
+affamer une mésange, dont l'hectare de territoire tient presque entier chez
+vous ; il ne peut pas affamer une buse, qui chasse sur cent cinquante hectares
+dont vous n'êtes que quatre millièmes. Le manque ne compte donc qu'à hauteur de
+ce que la parcelle pèse dans le territoire — exactement le facteur
+`partDuTerritoire` qui rendait déjà l'installation d'une buse rare. Une formule,
+deux comportements opposés, zéro constante nouvelle.
+
+**LE PREMIER JET ÉTAIT DE LA FICTION, ET C'EST LE RECENSEMENT QUI L'A DIT.**
+Quatre ressources, sept seuils, tous écrits avant d'avoir regardé ce que les
+grandeurs valent. Mesuré sur une année, semaine par semaine :
+
+    soil.ravageurs        0,004 à 0,008     seuil écrit : 0,12
+    soil.herbeBiomasse    ≈ 1,0             seuil écrit : 120
+    soil.ressourceFlorale 0 à 0,03          aucun consommateur
+    tree.fruitsKg         0,0 TOUTE L'ANNÉE seuil écrit : 8 et 15
+
+Un à trois ordres de grandeur d'écart. Le recensement l'avait annoncé avant la
+mesure, et d'une façon reconnaissable : la population de 4 ha passait de 38 à 7
+individus, **et la parcelle de 0,64 ha nourrissait un écureuil que celle de 4 ha
+affamait.** Un résultat impossible dans le mauvais sens vaut le même
+avertissement qu'un résultat impossible dans le bon : le protocole est faux.
+
+**Une grandeur peut porter un nom juste et vouloir dire autre chose.** Le
+`fruitsKg = 0` d'un peuplement mûr de chênes n'est pas un défaut de
+fructification : le bloc `fruits` de l'atlas décrit une RÉCOLTE — ce qu'un
+verger donne au joueur — et onze espèces sur vingt-six en portent un. **La
+glandée n'existe pas dans ce moteur.** Un écureuil nourri aux `fruitsKg` aurait
+mangé le verger et jamais les chênes, ce qui est le contraire de sa biologie.
+Il a fallu mesurer pour le voir ; le nom, lui, promettait le bon sens.
+
+**Retirer vaut mieux que brancher de travers.** L'écureuil et le loir restent
+sans table, jugés sur leur seul gîte comme au lot 1, et le champ est FACULTATIF
+sur la fiche pour que l'absence soit une position tenue et non un oubli. Le
+nectar part aussi : une ressource sans consommateur dérive sans que rien ne le
+dise. Deux postes sur quatre, et la glandée sort en #197 — c'est un mécanisme,
+pas un champ à brancher, parce qu'une glandée est SYNCHRONE et IRRÉGULIÈRE, et
+que c'est cette irrégularité même qui permet au chêne de se régénérer.
+
+**Un mécanisme qui ne change rien sur une partie réelle est un paramètre, pas un
+mécanisme.** Les seuils recalés, le recensement redonnait EXACTEMENT le lot 1 et
+zéro départ par la faim : la table était inerte sur la parcelle d'essai, qui est
+un bon habitat. Il a fallu chercher le contraste pour savoir si elle sert —
+même station, même graine, même conduite, seul le nombre d'arbres change :
+
+    25 chênes creusés   7 / 7 / 10 individus   AUCUN départ par la faim
+     3 chênes creusés   4 / 4 /  5 individus   3 départs sur deux graines
+
+Et c'est le PIC ÉPEICHE qui disparaît le premier, ce qui est le bon ordre : son
+territoire de sept hectares moyenne le plus de vide. Une haie de vieux arbres
+n'est pas un bois, et c'est le mécanisme qui le dit.
+
+## Ce qu'un lot plus ancien a appris (le soc desserre, #141)
 
 Une CORRECTION, pas une conquête : aucun point de référentiel gagné, et un
 plafond de trente pour cent levé sur une courbe validée par ailleurs.
@@ -1542,6 +1607,18 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #187 lot 2 laisse.** LA GLANDÉE, d'abord, sortie en **#197** : sans
+elle, les rongeurs arboricoles et les geais n'ont pas de table, le sanglier mange
+une glandée qui n'est produite nulle part, et `banqueGraines` reçoit un dépôt
+forfaitaire par adulte — donc pas d'années de glandée, alors que c'est LE
+phénomène de la chênaie. Ensuite le LOT 3, qui fera enfin PAYER l'individu : la part
+« gîte » de l'habitat des auxiliaires cessera d'être un proxy. Attention, il
+touche G3 et J5, tous deux verts — traitement F16 obligatoire. Et les seuils de
+table sont calés sur ce que le moteur produit, donc marqués *(à calibrer)* : ils
+ne sont pas des ancres, et une source qui chiffrerait ces ressources en unités
+réelles les remplacerait avantageusement.
+
 
 **Ce que #141 laisse.** La SEMELLE DE LABOUR : le desserrement de l'horizon
 travaillé va avec un tassement sous lui, et le moteur n'a qu'une valeur par
