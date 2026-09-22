@@ -88,6 +88,7 @@ import {
   LIGNIFICATION_PAR_SEMAINE,
   RETOUR_IMMIGRATION,
 } from "./gibier";
+import { glandeeRelative } from "./glandee";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
   capaciteHerbacee,
@@ -199,7 +200,6 @@ import {
   effortSemaine,
   HERBE_ARRACHEE,
   LITIERE_ENFOUIE,
-  partGlandeeRestante,
   retournee,
   TASSEMENT_CASSE,
 } from "./sanglier";
@@ -3064,6 +3064,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let banqueGraines = state.banqueGraines;
   const naissances: NaissanceDeLaSemaine[] = [];
   if (week === RECRUITMENT_WEEK) {
+    const glandeeDeLAnnee: Record<string, number> = {};
+    for (const arbre of nextTrees) {
+      if (!arbre.alive) continue;
+      const especeId = arbre.especeId;
+      if (glandeeDeLAnnee[especeId] !== undefined) continue;
+      if (!getEspece(especeId).semences) continue;
+      glandeeDeLAnnee[especeId] = glandeeRelative(
+        nextTrees,
+        especeId,
+        Math.floor(state.week / 52),
+        state.graineMarche,
+        station.sanglierParHa,
+        surfaceHaParcelle,
+      );
+    }
     const recruitment = yearlyRecruitment({
       trees: nextTrees,
       rng,
@@ -3074,9 +3089,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       lumiereAuSol: groundLight,
       banqueGraines: state.banqueGraines,
       aBrule: aBruleDepuisLaLevee,
-      // Le sanglier, des deux côtés : ce qu'il a mangé des glands, et le lit
-      // qu'il a ouvert pour les petites graines (sanglier.ts).
-      partGlandeeRestante: partGlandeeRestante(station.sanglierParHa),
+      // La GLANDÉE de l'année, espèce par espèce (glandee.ts) : ce qui est
+      // tombé, moins ce que les mangeurs de graines en ont pris. C'est ici que
+      // se joue la satiété — une année pleine passe, une année creuse est
+      // mangée — et le sanglier n'en est qu'un terme parmi d'autres.
+      glandeeRelative: glandeeDeLAnnee,
+      // Et l'autre face du sanglier : le lit de germination qu'il ouvre pour
+      // les petites graines (sanglier.ts).
       partRetournee: partRetourneeAn,
       nextTreeId,
     });

@@ -61,7 +61,78 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le soc desserre, #141)
+## Ce que le dernier lot a appris (la glandée, #197)
+
+Un critère de plus au référentiel, posé et rempli par le même lot — et c'est le
+petit côté. Le grand est ce que la mesure a démoli chez le voisin.
+
+**UNE GRANDEUR PEUT PORTER UN NOM JUSTE ET VOULOIR DIRE AUTRE CHOSE.** Le moteur
+avait `fruitsKg`, et il valait 0,0 les cinquante-deux semaines sur une chênaie
+mûre. Ce n'était pas un défaut de fructification : le bloc `fruits` de l'atlas
+décrit une RÉCOLTE — un prix, une fenêtre de cueillette, des semaines de
+fraîcheur — et un chêne n'en a pas. La faute est la plus difficile à voir de
+toutes, parce que le champ n'est pas faux, il est hors sujet. Elle n'a été
+trouvée qu'en MESURANT la table d'un autre lot, qui branchait les rongeurs
+dessus et les faisait manger le verger.
+
+**Deux notions qui partagent un mot méritent deux blocs, et le cas qui le prouve
+est celui qui porte les deux.** Un châtaignier a `fruits` (on en ramasse) et
+`semences` (le reste tombe et nourrit). Si c'était la même chose, ce cas serait
+impossible à écrire.
+
+**UN MÉCANISME NE PAIE QUE PAR SON DÉCALAGE, ET IL FAUT UN TÉMOIN POUR LE
+SAVOIR.** Le premier jet faisait produire les semences par à-coups et les
+prélevait par une part constante : à production totale égale, l'irrégulier
+valait *exactement* le régulier, et tout le lot n'aurait été qu'un détour. Ce
+qui le fait payer est que les mangeurs sont dimensionnés par la glandée de l'AN
+PASSÉ — 73,5 % de la production survit en irrégulier contre 38,7 % en régulier.
+Le témoin l'établit au lieu de le supposer : qu'on leur fasse suivre la glandée
+de l'année même, et l'avantage disparaît intégralement. **Ce n'est pas la
+variance qui sauve le chêne, c'est le retard des mangeurs sur elle.**
+
+**Une redistribution doit conserver sa moyenne PAR CONSTRUCTION.** Le facteur
+d'une année creuse est DÉDUIT de la période et du facteur d'année pleine, jamais
+déclaré. Sans cette contrainte, « à production totale égale » aurait été une
+formule de politesse et le témoin central du lot aurait été faux. Même raison
+pour la durée : sur quatre cents ans le tirage donnait encore 7,5 % de
+production en trop à l'un des deux bras, il a fallu vingt mille.
+
+**ADOSSER UN CHIFFRE À UNE PRODUCTION RÉELLE PEUT DÉMOLIR UN RÉSULTAT VERT, ET
+C'EST LE TRAVAIL.** Le sanglier mangeait 55 % de la glandée à densité de
+référence (#73), sur une glandée que le moteur ne produisait pas. Les deux lois
+ayant la même forme, on peut lire ce que l'ancienne supposait : vingt-cinq kilos
+de glands à l'hectare, et plus d'une tonne avalée par bête et par an. Ce n'était
+pas une ration, c'était un réglage — *un chiffre calé sur le moteur lui-même
+n'est pas une ancre*, et en voici le coût exact. Avec une ration ancrée, le
+triplet qui portait la moitié de G10 (97 / 60 / 22 recrues) devient 71 / 71 / 71
+/ 77 / 70 sur une gamme de densité dix fois plus large. **On n'affirme pas une
+décroissance qu'on ne mesure plus** : l'essai a été réécrit pour affirmer
+l'effondrement, avec l'arithmétique qui l'explique et l'issue qui dit ce qui
+manque.
+
+**Une avalanche de hachage n'est pas une coquetterie, et c'est l'essai qui l'a
+attrapée.** Les graines locales du dépôt (`graineDeChute`, `graineDeBoutis`)
+s'arrêtent à la somme parce que leurs entrées balaient tout le domaine. Ici deux
+des trois entrées sont minuscules — une année, un numéro de partie — et sans
+brassage final, deux parties voyaient les MÊMES années de glandée sur deux
+siècles. Un essai « deux parties diffèrent » l'a dit tout de suite ; aucune
+relecture ne l'aurait vu.
+
+**Un trait réclamé en commentaire finit par arriver.** `regeneration.ts`
+appelait depuis #73 un trait de TAILLE DE GRAINE pour cesser de trier les
+graines mangeables sur leur mode de dissémination. Le bloc `semences` EST ce
+trait : le porter, c'est faire une graine assez grosse pour qu'on s'en nourrisse
+et assez lourde pour rester au sol. Le hêtre rejoint les chênes, l'ajonc reste
+dehors, aucune espèce n'est nommée.
+
+**Rien n'a été stocké, et ça valait le détour.** La production d'une année est
+une FONCTION de la parcelle, de l'année et de la graine de partie ; la glandée
+de l'an passé se recalcule avec les houppiers d'aujourd'hui, à un ou deux pour
+cent près. Prix payé : une approximation écrite. Prix évité : un champ d'état,
+une migration de sauvegarde, et un ordre de clés de plus — les trois choses qui
+ont fait rater deux fois la sérialisation.
+
+## Ce qu'un lot plus ancien a appris (le soc desserre, #141)
 
 Une CORRECTION, pas une conquête : aucun point de référentiel gagné, et un
 plafond de trente pour cent levé sur une courbe validée par ailleurs.
@@ -1542,6 +1613,21 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #197 laisse, et l'essentiel est une issue à ouvrir.** LE BOUTIS DÉTRUIT
+LES SEMIS : à ration réelle, le sanglier ne pèse plus sur la régénération du
+chêne (71 / 71 / 71 / 77 / 70 recrues de 0 à 0,5 bête/ha), et il n'en avait
+jamais eu les moyens physiques. Ce qui manque n'est pas un coefficient mais le
+second effet de la bête — un boutis déchire les semis et les glands germés là où
+il passe, et le moteur n'en compte que le bon côté (le lit de germination). Le
+reste : l'ANNÉE RÉFRACTAIRE (un chêne vide ses réserves en fructifiant, le
+tirage de Bernoulli l'autorise une année sur seize) ; les CHARANÇONS, qui
+prélèvent une part et non une ration, donc ne se rangent pas dans la même
+formule ; et le prélèvement appliqué ESPÈCE PAR ESPÈCE, alors qu'un mulot ne
+distingue pas un gland d'une faîne — c'est exactement ce que #187 lot 2
+remplacera en portant les ressources de la faune. Le DÉPÔT dans `banqueGraines`
+reste forfaitaire, et le rester tant qu'aucune espèce ne portera à la fois
+`semences` et une banque : les deux sont exclusives par biologie.
 
 **Ce que #141 laisse.** La SEMELLE DE LABOUR : le desserrement de l'horizon
 travaillé va avec un tassement sous lui, et le moteur n'a qu'une valeur par

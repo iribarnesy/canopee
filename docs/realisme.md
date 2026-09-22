@@ -99,14 +99,14 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | C. Nutriments et cycles | 18 | 0 | 0 | 18 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 9 | 4 | 0 | 13 |
-| F. Dynamique des peuplements | 15 | 3 | 1 | 19 |
+| F. Dynamique des peuplements | 16 | 3 | 1 | 20 |
 | G. Faune et santé | 11 | 0 | 0 | 11 |
 | H. Gestion, économie, travail | 17 | 4 | 0 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 9 | 0 | 0 | 9 |
-| **Total** | **135** | **18** | **1** | **154** |
+| **Total** | **136** | **18** | **1** | **155** |
 
-**Score de réalisme : 135 pleins + 18 partiels sur 154 → 94 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 136 pleins + 18 partiels sur 155 → 94 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -208,11 +208,17 @@ infrastructure. Son livrable est une identité, tenue sur cinq cents disques
 tirés au hasard plutôt que sur des cas choisis, ce qui a fait tomber deux
 divergences que personne n'aurait vues : un semis minuscule ne semait rien, et
 l'aire se calculait de deux façons à un ULP près)
-→ **94 % (le soc desserre ce que les roues tassent : un sol labouré cesse d'être
+→ 94 % (le soc desserre ce que les roues tassent : un sol labouré cesse d'être
 condamné à 1,000 de tassement pour toujours, la courbe de Broadbalk monte d'un
 quart et le plot fumé entre enfin dans la gamme de l'essai — aucun point gagné,
 c'est une correction, et le risque annoncé sur le point zéro s'est révélé être
-une fenêtre de mesure trop courte)**.*
+une fenêtre de mesure trop courte)
+→ **94 % (la glandée existe : un chêne cesse de ne rien produire, et il produit
+par à-coups synchronisés — un critère de plus au référentiel, posé et rempli par
+le même lot. Le point gagné est le petit côté du lot ; le grand est qu'en
+adossant enfin le sanglier à une production réelle, la mesure a démoli le chiffre
+le plus cité de G10 : sa part de 55 % supposait un hectare portant vingt-cinq
+kilos de glands)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -355,6 +361,7 @@ maladie-là, pas une preuve de santé.*
 | F17 | La casse partielle existe à côté du déracinement : volis, bris de cime, branches arrachées | ✅ | `tempete.ts` (`vitesseCritiqueVolisMs`, `modeDeRuine`, `houppierArrache`) ; `volis.test.ts` — **trois modes, et c'est une comparaison qui tranche entre les deux premiers.** Le moteur calcule deux vitesses critiques comme les modèles de la famille ForestGALES : la motte lâche, ou le fût casse, la plus basse décide. La dichotomie de terrain tombe de ce qui N'ENTRE PAS dans le calcul du volis — ni ancrage ni engorgement, parce qu'un fût casse aussi bien sur un sol gelé que sur un sol saturé : sur un pin de 20 m à H/D 50, la rupture ne bouge pas d'un millième entre sol ferme et sol gorgé (24,4 m/s) pendant que le renversement s'effondre de 27,2 à 15,7. **Et le troisième mode est le plus fréquent** : un coup de vent bien en dessous de la ruine arrache des branches à un arbre qui tient. Relevé sur soixante ans, 28 chablis et 33 volis contre plus de 1 500 ébranchages ; la profondeur suit la force du coup — 3 % du houppier à 27 m/s, 20 % à 48 m/s sur 17 % du peuplement. L'arbre paie en croissance tant qu'il n'a pas repoussé, ses plaies ouvrent la porte aux maladies (G6), et le tout guérit en deux ans. Aucun trait nouveau : `bois.densite` et `rejetteDeSouche` étaient déjà à l'atlas. **Ce qu'on ne revendique pas** : la répartition volis/chablis. En peuplement c'est l'élancement qui domine la densité — le hêtre casse à 83 % et le pin à 55 % alors que le hêtre est plus dense — parce que la tempête sélectionne les tiges élancées. On teste la direction contre le sol et contre la géométrie, jamais la part. **Et un quatrième facteur, qui n'est pas un dégât mais une prédisposition** (#182) : la CARIE du tronc, qu'une plaie installe et qui ne guérit jamais. Elle ne gagne aucun point — aucun critère ne la nomme — mais elle ferme la boucle : un arbre ébranché se carie, donc casse plus facilement au coup de vent suivant. Et elle produit le fait le plus contre-intuitif de l'arboriculture sans qu'on l'écrive, parce qu'un tronc creux est un TUBE et que son module de section va en `1 − p⁴` : **creux à la moitié de son rayon, un arbre ne perd que 3 % de sa vitesse critique**, et il faut 90 % pour en perdre 41 %. La règle du `t/R` — s'inquiéter sous une paroi saine du tiers du rayon — tombe de l'exposant, elle n'est écrite nulle part. **Elle a été refaite deux fois avant de tenir** (#183). Le premier jet la comptait en part du rayon, donc une colonne rongeait un chêne de cinquante centimètres aussi vite qu'une perche de quinze, alors que sa vitesse ne sait rien du tronc qu'elle habite : elle se compte maintenant en centimètres et porte son MUR DE COMPARTIMENTATION, le CODIT de Shigo — à la blessure l'arbre dresse une barrière sur le bois qu'il a ce jour-là, et l'aubier fabriqué ensuite reste hors d'atteinte. D'où la conséquence qu'on n'a pas écrite : *un arbre vigoureux distance sa carie, un dominé se fait rattraper*, et la part cariée peut DÉCROÎTRE. Le second jet n'avait pas de seuil d'entrée, et c'est ce banc qui l'a dit : la moindre brindille arrachée inoculait, donc 46 chênes cariés sur 163 dont 43 creux au-delà de la moitié — un quart du peuplement, à l'âge où une futaie de chêne est du bois d'œuvre. Avec `PLAIE_OUVRANTE` (une plaie doit atteindre le bois de cœur), le relevé à cent vingt ans tombe à **9 cariés sur 165 vivants, dont 8 creux au-delà de la moitié** — 5 %, l'ordre de grandeur d'une futaie réelle, et c'est la tempête qui inocule, plus la brise. **Limite assumée de la carie** : `1 − p⁴` est le module d'un tube FERMÉ. Une cavité ouverte — celle d'une grosse branche arrachée, celle par où entre la mésange — est un profil en C, nettement plus faible à paroi égale parce qu'il s'ovalise avant de rompre ; le moteur ne distingue pas les deux. Non corrigé faute d'ancre : les corrections d'ouverture de l'arboriculture ne font pas consensus, et l'exposant 4 rend l'écart invisible sous `p = 0,67`, c'est-à-dire sur presque tous les arbres que le moteur produit — un chiffre posé ici serait calé sur le moteur |
 | F18 | Un peuplement qu'on vient d'ouvrir (éclaircie, lisière neuve) verse pendant quelques années | ✅ | `tempete.ts` (`abriDuPeuplement`, `memoireDAbri`, `naiveteAuVent`) ; `naivete-vent.test.ts` — **et il a fallu trois bancs ratés avant d'obtenir le bon.** Les deux premiers comparaient des populations différentes : une éclaircie par le haut retire les grands, donc la population vulnérable, et le peuplement éclairci ressortait plus SÛR que le témoin (8,3 % de ruines contre 43,7 %). Ce n'était pas faux — il n'avait plus d'arbres à perdre — mais ça ne disait rien de la fragilité d'après-ouverture. Le banc qui compte suit **exactement les mêmes arbres dans les deux bras** : les dominants que l'éclaircie laisse debout, avec et sans le retrait de leurs voisins. Mesuré sur six graines, 332 dominants appariés : l'ouverture leur retire un tiers de leur abri (0,275 → 0,189) et **multiplie leurs chablis par 2,5 dans les cinq ans qui suivent — 49 couchés contre 20**, 133 contre 81 sur douze ans. Le confondant est écarté par la fenêtre : à cinq ans les deux bras n'ont pas encore divergé en hauteur, donc l'abri perdu est leur seule différence, et c'est là que le rapport est le plus franc. **Ces chiffres ont changé avec la carie du tronc** (#182/#183), qui ne dit rien du vent mais affaiblit les fûts des DEUX bras : le premier relevé donnait 57 contre 19 sur douze ans, dont 11 contre 1 sur cinq ans. Ce n'est pas la naïveté qui a baissé, c'est le témoin qui a cessé d'être intact — un peuplement dont les fûts sont en partie cariés perd des tiges même sans qu'on l'ouvre. **Ce que le banc ne sait pas séparer**, et qu'il faut dire : l'excès a deux causes — la perte PERMANENTE d'abri collectif tant que le peuplement reste ouvert, et la naïveté qui s'estompe en cinq ans par-dessus. Le banc mesure leur somme. La seconde est vérifiée à part, sur sa grandeur et sa décroissance (0,486 → 0,062), et elle distingue toute seule les deux façons d'éclaircir |
 | F19 | La fréquence des tempêtes suit la dérive du climat | ❌ | **la plomberie est faite, le CHIFFRE manque — et c'est le chiffre qui bloque, plus la tuyauterie.** `meteoDerivee` connaissait le scénario sans pouvoir tirer de rafale, `tick` tirait la rafale sans connaître le scénario ; la météo de la semaine porte désormais un `facteurRafale` qui fait le pont, comme elle le fait déjà pour le CO₂ et l'année (`climat.ts`, `tempete.ts` ; `rafale-climat.test.ts`). Il vaut **1**, et `AMPLIFICATION_RAFALE` vaut **0**, parce que le SIGNE lui-même n'est pas établi pour la France : les projections européennes de tempêtes hivernales sont de faible confiance et se contredisent, le consensus portant plutôt sur un léger déplacement vers le nord des trajectoires — dont la France métropolitaine est la charnière. Poser +8 % par degré comme pour la chaleur déciderait en creux que les tempêtes futures couchent plus d'arbres, ce qui commanderait la mortalité, le bois mort et le marché du bois d'une partie entière. Un essai épingle le zéro pour que le poser devienne un geste délibéré *(à instruire : projections Euro-CORDEX de vent extrême sur la France, et leur dispersion inter-modèles)* |
+| F20 | Les grosses graines fructifient par à-coups SYNCHRONISÉS, et c'est ce qui permet la régénération malgré les mangeurs | ✅ | `glandee.ts` ; `glandee.test.ts` — **un critère que le référentiel ne portait pas, posé et rempli par le même lot** (#197), et il manquait parce que le moteur ne produisait aucune semence : relevé sur vingt-cinq chênes mûrs, `fruitsKg = 0,0` les cinquante-deux semaines de l'année. Le bloc `fruits` de l'atlas décrit une RÉCOLTE — un prix, une fenêtre de cueillette — et onze espèces sur vingt-six en portent un ; le chêne n'en a pas. Un bloc `semences` distinct porte maintenant une production annuelle en kilos, modulée par la surface du houppier (donc par la taille, sans courbe d'âge), et tirée irrégulièrement autour d'une moyenne CONSERVÉE par construction — une glandée redistribue la production, elle n'en crée pas, sans quoi le témoin ci-dessous ne voudrait rien dire. Le chêne fait vingt fois plus une année pleine qu'une année creuse, tous les quatre ans en moyenne (relevés : tous les deux à sept ans, dix à cinquante fois plus). **Le fait à reproduire n'est pas la quantité, c'est la satiété des mangeurs**, et il est mesuré : à production totale égale sur vingt mille ans, **73,5 % de la production survit en irrégulier contre 38,7 % en régulier**. Un témoin dit pourquoi, au lieu de le constater : les mangeurs sont dimensionnés par la glandée de l'AN PASSÉ, et si on leur fait suivre celle de l'année même, l'avantage disparaît intégralement. **Ce n'est pas la variance qui sauve le chêne, c'est le retard des mangeurs sur elle.** En partie, la régénération cesse d'être un filet et devient une vague : sur quarante ans, 1 · 1 · 5 recrues les années creuses, 50 et 17 les deux années pleines — et ZÉRO l'année qui suit une glandée, les mangeurs ayant pullulé dessus. Le champ est aussi le trait de TAILLE DE GRAINE que `regeneration.ts` réclamait depuis #73 : porter `semences`, c'est faire une graine assez grosse pour qu'on s'en nourrisse et assez lourde pour rester au sol — le hêtre rejoint donc les chênes, l'ajonc reste dehors, et le tri ne passe plus par le mode de dissémination. **Ce qui n'est pas là** : l'année réfractaire (un chêne vide ses réserves en fructifiant, donc deux glandées d'affilée sont plus rares que le tirage ne le dit), la prédation par les charançons (une part, pas une ration), et le fait qu'un mulot mange glands et faînes indifféremment — le prélèvement est appliqué espèce par espèce |
 | F13 | Les hauteurs à un âge donné tombent dans les tables de production | 🟡 | `hauteurs.test.ts` : six essences contre des tables (Jansen 1996 aux Pays-Bas, Lockow 2009 pour le charme, Lemaire 2005 pour le châtaignier) et quatre arbustes contre des mesures de terrain britanniques et bretonnes, faute de table. Deux essences seulement y sont CALÉES (hêtre, charme) : l'essai les garde plus qu'il ne les valide. Les huit autres sont une validation entière, et la vérification tenue à l'écart est à vingt ans (−13 % à +10 %). Restent hors référence, et le disent : bouleau, chêne pubescent, saule blanc, prunellier — plus le chêne-liège, faute de station méditerranéenne où le confronter |
 
 ## G. Faune et santé
@@ -368,8 +375,8 @@ maladie-là, pas une preuve de santé.*
 | G2 | Les ravageurs apparaissent quand les hôtes s'affaiblissent | ✅ | `ravageurs.ts` ; `ravageurs.test.ts` — sans seuil scripté : vigueur → ressource → pullulation, avec hivernage donc crises pluriannuelles |
 | G3 | Les auxiliaires régulent les ravageurs selon l'habitat offert | ✅ | prédation ∝ habitat du voisinage (essences, strates, herbe, bois mort) ; l'aulnaie pure se fait décimer sur chacune des trois graines, le mélange y perd trois à quatre fois moins d'aulnes (0,34 / 0,34 / 0,23) et y écrête la pullulation d'un facteur 2,8 à 3,1. Les deux sont épinglés GRAINE PAR GRAINE depuis #68, et non plus en moyenne : l'écart de mortalité avait failli s'annuler sur une graine sans que la moyenne le dise. **Et depuis #183 les CAVITÉS comptent parmi les gîtes**, dans le même terme que le bois mort et en prenant le plus généreux des deux : ce que ce terme mesure est « y a-t-il où se loger », et cette question-là sature — un peuplement qui a déjà vingt tonnes de bois mort à l'hectare ne loge pas mieux parce qu'il a aussi des creux. Le lot se neutralise donc structurellement, et deux essais l'épinglent : à creux nuls comme à bois mort abondant, la carte est celle d'avant au bit près, et un creux ne peut jamais appauvrir une cellule. Mesuré sur un contrôle apparié au sens fort — les mêmes arbres, au même instant, aux mêmes coordonnées, dont on a seulement effacé les creux — après cent vingt ans de tempêtes : l'habitat moyen passe de **0,424 à 0,574**. C'est le plafond de ce que les cavités peuvent faire, et il n'est atteint que là où le bois mort a été enlevé : **une parcelle qu'on nettoie garde ses auxiliaires si elle garde ses arbres creux.** Les creux, contrairement au pool de bois mort, sont SPATIALISÉS — ils s'agrègent par bloc et se lisent dans la fenêtre de 3×3 que la prospection d'une mésange justifie |
 | G4 | Les pollinisateurs conditionnent la fructification | ✅ | Le service demande désormais **un gîte ET une table**, et le plus rare décide : `min(habitat, ressourceFlorale)` (`tick.ts`, `floraison.test.ts`). L'habitat dit où l'insecte vit — essences, strates, herbe, bois mort ; la ressource florale dit ce qu'il a eu à manger, par une MÉMOIRE de sept semaines agrégée sur la fenêtre de butinage (blocs de 10 m, voisinage 3×3, celle-là même que `ravageurs.ts` emploie pour l'habitat). **Le témoin est le résultat** : neuf pommiers, vingt-deux ans, trois graines, et deux haies rigoureusement égales — même nombre de tiges, mêmes espèces mellifères, même couvert. Celle qui fleurit de février à l'automne rend 327,6 kg, celle qui fleurit toute en mai 263,4 kg, le verger nu 255,6 kg : **+28 % pour le calendrier, +3 % pour la seule présence de voisins**. Coût mesuré : +6 % de temps par semaine simulée. **Et un second banc, tout différent, donne le même chiffre** : deux pommiers entourés de six arbustes, douze ans — une haie MELLIFÈRE (prunellier, aubépine, ronce) rend 14,74 kg contre 11,52 kg pour le verger nu, soit +28,0 %, quand la même haie ANÉMOPHILE (noisetier, chêne, bouleau) n'en rend que 11,62 kg, +0,9 %. Cet essai-là passait AVANT le lot avec la seule haie anémophile : le moteur affirmait que trois arbres pollinisés par le vent améliorent la nouaison d'un verger de 15 %, parce que le service ne lisait que la richesse en essences. **Limite** : pas d'insectes individualisés — ni espèces, ni populations, ni distance de butinage propre à chacune ; la fenêtre est celle des auxiliaires, faute d'en avoir mesuré une autre |
-| G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) |
-| G10 | Le sanglier retourne le sol et mange la glandée — un herbivore qui FAVORISE aussi la régénération | ✅ | `sanglier.ts` ; `sanglier.test.ts` — 5 % de la parcelle retournée par an à densité de référence (relevés : 0,2-0,7 %/an en prairie, 7-11 %/an en forêt), en automne et en hiver, sur les cellules qui offrent de la glandée, du couvert et un sol humide. **Deux effets de signe opposé, et aucun n'est écrit par espèce** : il mange ce qui tombe et reste (les graines dont le mode de dissémination est `geai` ou `gravite`), il ouvre un lit de germination pour ce qu'apporte le vent. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à densité ordinaire, 22 sous forte densité — difficile, jamais impossible |
+| G5 | Les disséminateurs (geai) transportent les grosses graines | ✅ | mode `geai` : loin du parent ET **en découvert**, parce que l'oiseau doit retrouver ses caches. C'est ce biais qui fait coloniser les friches par les chênes et explique leur mauvaise régénération sous leur propre couvert (`geai.test.ts`) . **Et il a enfin quelque chose à transporter** (#197) : le nombre de glands que le geai déplace suit désormais la glandée de l'année, qui varie d'un facteur vingt d'une année à l'autre. Ce qui manque encore est le BUT du geai — il cache pour se nourrir, donc il devrait déplacer une part à peu près constante et abandonner le surplus des années pleines, là où le moteur lui fait suivre l'offre proportionnellement *(à instruire)* |
+| G10 | Le sanglier retourne le sol et mange la glandée — un herbivore qui FAVORISE aussi la régénération | ✅ | `sanglier.ts` ; `sanglier.test.ts` — 2 % de la parcelle retournée par an à densité de référence (relevés : 0,2-0,7 %/an en prairie, 7-11 %/an en forêt, mais les deux chiffres forestiers portent sur des populations INVASIVES et une parcelle française se situe entre les deux), en automne et en hiver, sur les cellules qui offrent de la glandée, du couvert et un sol humide. **Deux effets de signe opposé, et aucun n'est écrit par espèce** : il mange ce qui tombe et reste, il ouvre un lit de germination pour ce qu'apporte le vent. **La seconde moitié de ce critère a été refaite par #197, et la mesure a démoli son chiffre le plus cité.** Ce ✅ s'appuyait sur un triplet — 97 recrues de chêne sans sanglier, 60 à densité ordinaire, 22 sous forte densité — produit par une `partGlandeeRestante` qui mangeait 55 % de la glandée à la densité de référence. Or **le moteur ne produisait aucune glandée** : la fonction en supposait une, et on peut dire laquelle. Pour que 0,05 sanglier/ha en prennent 55 %, il fallait un hectare portant vingt-cinq kilos de glands, et une bête en avalant plus d'une tonne par an — plusieurs kilos par jour, tous les jours. Ce n'était pas une ration, c'était un réglage : exactement ce que la règle du dépôt interdit. Le sanglier prélève désormais une ration ANCRÉE (400 kg/an, montanera ibérique : six à dix kilos par jour sur deux à trois mois pour un porc qu'on engraisse) sur une production réelle (`glandee.ts`). Mesuré, mêmes graine et météo : **71 / 71 / 71 / 77 / 70 recrues à 0 · 0,02 · 0,05 · 0,15 · 0,5 sanglier/ha**. L'écart est tombé de 77 % à moins de 15 %, et **il n'a plus de sens reconnaissable** — les 77 ne sont pas un effet, c'est du bruit. L'arithmétique le dit sans détour : soixante kilos de ration à l'hectare contre une glandée de plusieurs centaines, et de plusieurs milliers une année pleine. **Un sanglier ne peut pas manger une glandée — c'est toute l'idée de la glandée.** Le critère reste ✅ parce que les deux mécanismes existent et sont maintenant ancrés tous les deux ; ce qui manque pour que la bête pèse à nouveau sur le chêne n'est pas un coefficient mais un MÉCANISME — un boutis détruit les semis et les glands germés là où il passe, et le moteur n'en compte que le bon côté *(issue ouverte)* |
 | G11 | Un boutis est un ENFOUISSEMENT, pas une destruction : la litière passe au pool lent | ✅ | le carbone enfoui rejoint l'humus et l'azote le pool minéral ; le stock d'humus MONTE avec la densité de sangliers. Et la structure y gagne — un boutis casse la croûte, ce qu'on n'attend pas d'un dégât. Ce qu'il coûte est ailleurs : la terre est à nu, donc elle part |
 | G6 | Les maladies datées frappent (chalarose du frêne) | ✅ | `maladies.ts` ; `maladies.test.ts` — mieux qu'une date : une année d'arrivée historique, puis une pression qui suit la densité d'hôtes et l'humidité. Une frênaie pure perd un tiers de ses tiges en trente ans, le même nombre de frênes en mélange s'en tire deux fois mieux |
 
@@ -1065,6 +1072,17 @@ D'où la tension que l'issue espérait, sans qu'on ait eu à l'écrire : **le ge
 plante les chênes, le sanglier les mange**, et pendant ce temps il prépare le lit
 du bouleau. Mesuré sur quarante ans : 97 recrues de chêne sans sanglier, 60 à
 densité ordinaire, 22 sous forte densité.
+
+> **Ce triplet est mort, et c'est #197 qui l'a tué.** Il tenait à une part de
+> 55 % de la glandée mangée à la densité de référence — sur une glandée que le
+> moteur ne produisait pas. Une fois la production écrite et la ration ancrée
+> sur ce qu'un animal peut avaler, les mêmes quarante ans donnent **71 / 71 /
+> 71 / 77 / 70** de 0 à 0,5 sanglier/ha. Le sanglier ne contrôle plus la
+> régénération du chêne, et il n'en avait jamais eu les moyens physiques : sa
+> ration fait soixante kilos à l'hectare contre une glandée de plusieurs
+> milliers une année pleine. La première moitié du paragraphe ci-dessus reste
+> vraie (le geai plante, la bête mange), la seconde a changé d'échelle. Voir
+> « La glandée » plus bas, et G10.
 
 ### Le sanglier annule l'atténuation qu'apporte la plantation feuillue
 
@@ -3549,6 +3567,150 @@ la rendrait explicite ; il faudrait l'ancrer, et ce serait un autre lot.
 touchent toujours pas la variable, alors que ce sont des passages eux aussi. Les
 ajouter demanderait de recalibrer `TASSEMENT_PAR_PASSAGE`, que ce lot n'a pas
 touché — et l'issue demandait précisément de ne pas mélanger les deux.
+
+
+## La glandée : une production que le moteur n'avait pas (#197)
+
+Relevé sur un peuplement mûr de vingt-cinq chênes pubescents de dix-huit mètres,
+semaine par semaine sur une année entière, après vingt-cinq ans de chauffe :
+
+```
+fruitsKg = 0,0  —  les cinquante-deux semaines
+```
+
+Ce n'était pas un défaut de fructification. **Le bloc `fruits` de l'atlas décrit
+une RÉCOLTE** — un prix au kilo, une fenêtre de cueillette, des semaines de
+fraîcheur — et onze espèces sur vingt-six en portent un. Le chêne n'en a pas, le
+hêtre non plus, le charme non plus. Le moteur savait qu'un pommier donne des
+pommes qu'on vend ; il ne savait pas qu'un chêne donne des glands.
+
+C'est une grandeur qui portait un nom juste et voulait dire autre chose, et
+c'est la faute la plus difficile à voir : `fruitsKg` n'était pas faux, il était
+hors sujet. Elle a été trouvée en mesurant la table de la faune (#187 lot 2),
+qui branchait les rongeurs arboricoles sur `fruitsKg` et les faisait donc manger
+le verger et jamais la chênaie — le contraire de leur biologie.
+
+### Ce n'est pas un champ à ajouter, c'est un mécanisme
+
+On aurait pu écrire un bloc `fruits` sur le chêne. Ce serait faux deux fois :
+
+1. **une glandée ne se vend pas.** Elle n'a ni prix ni fenêtre de cueillette :
+   elle tombe, et elle nourrit. Les deux notions partagent un mot et rien
+   d'autre — et un châtaignier porte les deux blocs sans se contredire, puisque
+   l'on ramasse une partie de ses châtaignes et que le reste nourrit ;
+2. **une glandée est SYNCHRONE et IRRÉGULIÈRE.** Les chênes d'un massif
+   fructifient la même année, et cette année-là dix à cinquante fois plus que
+   les autres. Ce n'est pas une curiosité : c'est la stratégie.
+
+### Le fait à reproduire n'est pas la quantité, c'est la satiété
+
+Un rendement moyen et régulier donnerait l'inverse de ce qu'on observe : une
+population de mangeurs calée sur l'offre, qui mange tout, tous les ans. Le
+mécanisme ne tient que si les mangeurs sont dimensionnés par la glandée de l'AN
+PASSÉ — une population de rongeurs est faite de la nourriture de l'automne
+précédent, si bien qu'une glandée tombe sur des mangeurs calés sur une année
+creuse.
+
+Mesuré, à production totale égale sur vingt mille ans, à la densité de sanglier
+de référence :
+
+| | production | ce qui survit |
+|---|---|---|
+| chênaie irrégulière (glandée tous les 4 ans) | 100 % | **73,5 %** |
+| chênaie régulière (même total, étalé) | 100 % | **38,7 %** |
+
+Et un témoin dit *pourquoi*, au lieu de le constater : si l'on fait suivre aux
+mangeurs la glandée de l'année même au lieu de celle d'avant, **l'avantage
+disparaît intégralement** — les deux chênaies laissent alors passer exactement
+la même part. Ce n'est donc pas la variance qui sauve le chêne, c'est le retard
+des mangeurs sur elle.
+
+La signature en partie est une régénération qui cesse d'être un filet. Quarante
+ans, même graine et même météo que l'essai du sanglier :
+
+```
+an  30   31   32   33*   34   35   36   37*   38   39
+     1    1    5   50     0    0    0   17     0    0        (* année pleine)
+```
+
+Deux années sur dix portent 88 % des recrues du siècle, et **l'année qui suit
+une glandée n'en porte aucune** : les mangeurs ont pullulé dessus. Les deux
+faces du même mécanisme, et la seconde est aussi documentée que la première.
+
+### Ce que ça a coûté au sanglier, et c'est le vrai résultat du lot
+
+Le sanglier mangeait la glandée depuis #73, avec une `partGlandeeRestante` qui
+en prenait 55 % à la densité de référence. La fonction était honnête sur ce
+qu'elle ignorait — *« à calibrer : la part réellement consommée varie de tout au
+rien selon l'année semencière »* — mais elle ne pouvait pas le savoir : **le
+moteur ne produisait aucune glandée, alors elle en supposait une.**
+
+Les deux lois ont la même forme — l'ancienne vaut exp(−k × densité), la nouvelle
+exp(−ration/production) — ce qui permet de lire la production supposée. Elle
+valait **vingt-cinq kilos de glands à l'hectare**, et faisait avaler à une bête
+plus d'une tonne par an. Un hectare de chênaie en porte quelques centaines, et
+un sanglier en avale quelques centaines au plus.
+
+Avec une ration ancrée (400 kg/an — dans la montanera ibérique, un porc à
+l'engrais prend six à dix kilos par jour pendant deux à trois mois) sur une
+production réelle, les mêmes quarante ans donnent :
+
+| sanglier/ha | 0 | 0,02 | 0,05 | 0,15 | 0,5 |
+|---|---|---|---|---|---|
+| recrues de chêne, ancienne loi | 97 | 82 | 60 | 22 | — |
+| recrues de chêne, ration réelle | 71 | 71 | 71 | 77 | 70 |
+
+L'écart d'un bout à l'autre tombe de 77 % à moins de 15 %, et **il n'a plus de
+sens reconnaissable** : les 77 de 0,15/ha ne sont pas un effet, c'est ce que le
+bruit fait quand le signal a disparu. On n'affirme donc pas une décroissance
+qu'on ne mesure plus.
+
+L'arithmétique est sans appel : à 0,15 sanglier/ha, la ration fait soixante
+kilos à l'hectare contre une glandée de plusieurs centaines, et de plusieurs
+milliers une année pleine. **Un sanglier ne peut pas manger une glandée — c'est
+toute l'idée de la glandée.** Ce qui manque pour que la bête pèse à nouveau sur
+le chêne n'est pas un coefficient mais un mécanisme : un boutis détruit les
+semis et les glands germés là où il passe, et le moteur n'en compte aujourd'hui
+que le bon côté.
+
+### Le trait qui manquait à l'atlas, et qu'on cherchait depuis #73
+
+`regeneration.ts` triait les graines mangeables sur leur mode de dissémination,
+et son commentaire disait déjà que c'était un pis-aller : le mode ne dit pas le
+poids. Il avait d'abord rangé l'ajonc et le genêt (graines dures de deux
+millimètres) à côté de la faîne, ce qui faisait manger des graines d'ajonc aux
+sangliers et effondrait l'effet nurse d'une lande. Se replier sur `geai`
+corrigeait ça, mais laissait dehors la faîne du hêtre — et le fichier appelait
+un trait de TAILLE DE GRAINE *(à instruire)*.
+
+**Le bloc `semences` EST ce trait.** Le porter, c'est produire une graine assez
+grosse pour qu'on s'en nourrisse et assez lourde pour qu'elle reste au sol ; ne
+pas le porter, c'est une samare. Le hêtre rejoint donc les chênes, l'ajonc reste
+dehors, et aucune espèce n'est nommée nulle part.
+
+### Ce que ce lot n'a PAS fait
+
+**L'année réfractaire.** Un chêne vide ses réserves en fructifiant et ne peut
+pas recommencer l'année suivante ; le tirage de Bernoulli retenu ici l'autorise,
+à une année sur seize pour le chêne. La poser demanderait de contraindre la
+fréquence en retour, et la satiété — qui est le fait à reproduire — n'y tient
+pas *(à instruire)*.
+
+**Un mulot ne distingue pas un gland d'une faîne.** Le prélèvement est appliqué
+espèce par espèce, comme si chaque essence avait ses propres mangeurs. Une
+glandée de chêne devrait aussi protéger les faînes de l'année. *(À lever quand
+la faune en individus portera ses ressources : ce prélèvement de fond est
+exactement ce qu'elle remplacera.)*
+
+**Les charançons.** La prédation par les insectes est une PART de la
+fructification infestée, pas une ration — elle ne sature pas, et elle ne se
+range donc pas dans la même formule.
+
+**Le dépôt dans la banque de graines** reste forfaitaire. Aucune espèce ne porte
+à la fois `semences` et `banqueGraines` — un gland est récalcitrant, il ne fait
+aucune mémoire — si bien que les brancher l'un sur l'autre ne changerait
+aujourd'hui strictement rien. Le jour où une espèce porterait les deux, il
+faudra le faire.
 
 
 ## Règle de travail
