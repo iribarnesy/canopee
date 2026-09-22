@@ -38,7 +38,7 @@ import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
-import { tassementApresPassage } from "./tassement";
+import { tassementApresLabour } from "./tassement";
 import {
   diametreInitialCm,
   tirerVigueurIndividuelle,
@@ -2181,7 +2181,7 @@ function applyLabourer(
       if (dx * dx + dy * dy > r2) continue;
       const i = y * cote + x;
       labourees.push(i);
-      tassement[i] = tassementApresPassage(tassement[i] ?? 0, part);
+      tassement[i] = tassementApresLabour(tassement[i] ?? 0, part);
       // Le coup de fouet : de l'humus part en fumée, son azote reste.
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;

@@ -61,7 +61,65 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le chêne creux et le LER, #183 et #136)
+## Ce que le dernier lot a appris (le soc desserre, #141)
+
+Une CORRECTION, pas une conquête : aucun point de référentiel gagné, et un
+plafond de trente pour cent levé sur une courbe validée par ailleurs.
+
+**Une demi-modélisation est pire qu'un coefficient faux.** `applyLabourer`
+n'appelait que `tassementApresPassage` : il ajoutait du tassement, et rien ne
+le retirait. Le moteur modélisait les roues du tracteur et pas le soc, alors
+que casser la structure tassée de l'horizon travaillé est la raison
+agronomique du geste. Résultat, un blé continu se figeait à `tassement = 1,000`
+à l'an 16 — pour toujours — pendant que Broadbalk, labouré chaque année depuis
+1843, fait 9 t/ha. Aucune valeur de `TASSEMENT_PAR_PASSAGE` n'aurait réparé ça :
+il manquait un TERME.
+
+**Deux termes composés dans l'ordre où les choses arrivent rendent un fait
+gratuit.** Le soc passe, puis les roues roulent dans la raie qu'il vient
+d'ouvrir. Sur la part mécanisée, ce que la charrue laisse ne dépend donc plus
+du tout de ce qu'elle a trouvé — et la même charrue desserre un sol tassé et
+tasse un sol meuble, ce qui est le comportement réel de l'outil. Le régime
+cesse d'être une saturation et devient un équilibre, ce qu'un sol labouré depuis
+cent quatre-vingts ans impose.
+
+**Une limite du modèle peut JUSTIFIER une constante au lieu d'être une excuse.**
+`TASSEMENT_RESIDUEL_APRES_SOC` n'est pas nul, et la raison n'est pas prudentielle :
+sous l'horizon travaillé se forme une semelle de labour que rien ne desserre, et
+le moteur n'ayant qu'une valeur par cellule, ce résidu EST la part qu'elle y
+occupe. La limite est écrite là où la constante est posée, et elle lui donne son
+sens.
+
+**LE RISQUE ANNONCÉ S'EST RÉVÉLÉ ÊTRE UNE FENÊTRE DE MESURE TROP COURTE.**
+L'issue prévenait qu'enlever le tassement soulèverait le point zéro (1,07 → 1,70
+alors que les parcelles nues de Broadbalk tiennent ~1), donc qu'on gagnerait le
+haut de la courbe en perdant le bas. Après le lot, la parcelle nue donne 1,44
+sur trente ans — 44 % de trop, **si la fenêtre était comparable**. Elle ne
+l'était pas : on opposait trente ans de moteur à cent quatre-vingts ans
+d'épuisement. Poursuivie sur cent vingt ans, la trajectoire converge à 0,70-0,84,
+donc SOUS la cible, ce qui est la limite déjà écrite sous C16 (la paille). Le
+1,07 d'avant n'était pas un point juste : deux erreurs de sens contraire y
+donnaient le bon chiffre. **Quand un chiffre de référence porte une durée, le
+dispositif doit porter la même durée.**
+
+**Un essai tombé peut dire mieux après qu'avant, et le seuil ne se rabaisse
+pas.** `culture.test.ts` affirmait que l'azote du noyer masque son ombre, seuil
+à 0,9 à l'an 33 ; mesuré 0,834. L'attribution d'abord, et elle a écarté la cause
+évidente : les deux bras sont au même tassement pendant l'essentiel de l'essai,
+donc l'effet n'est pas différentiel. Ce qui se passe est que ni l'un ni l'autre
+n'est plus freiné par le sol, donc chacun bute sur ce qui le limite vraiment —
+le témoin sur son azote, l'allée sur la lumière. **Relâcher une contrainte
+COMMUNE fait apparaître celle qui DIFFÈRE.** L'essai a été réécrit autour de ce
+qu'il montre désormais, et il dit davantage : la compensation passe devant à
+l'an 25 (1,069), puis l'ombre gagne (0,834). Le masquage a une fin, ce que le
+seuil d'avant ne voyait pas.
+
+**Le témoin se REFAIT après le lot.** `PERTE_CROISSANCE_MAX = 0` avait été
+mesuré avant ; le reprendre aurait comparé le nouveau moteur à un témoin calculé
+sur une autre trajectoire de tassement. Refait : 1,59 / 6,32 / 8,39. Il reste
+5 % attribuables au tassement sur les plots fertilisés, contre 26 % avant.
+
+## Ce qu'un lot plus ancien a appris (le chêne creux et le LER, #183 et #136)
 
 **Un mécanisme de soutien qui casse ce qu'il soutient pèse trop lourd.** La
 carie de #182 a fait tomber deux bancs qui ne parlent pas de carie — la
@@ -1333,6 +1391,16 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #141 laisse.** La SEMELLE DE LABOUR : le desserrement de l'horizon
+travaillé va avec un tassement sous lui, et le moteur n'a qu'une valeur par
+cellule — un modèle à deux horizons la rendrait explicite, et il faudrait
+l'ancrer. Les TROIS AUTRES PASSAGES d'engin (semer, fertiliser, moissonner) ne
+touchent toujours pas la variable ; les ajouter demanderait de recalibrer
+`TASSEMENT_PAR_PASSAGE`, et l'issue demandait de ne pas mélanger les deux. Et la
+PAILLE de C16, qui reste le défaut du point bas : sur cent vingt ans le moteur
+converge à 0,70-0,84 t/ha là où Broadbalk tient ~1.
+
 
 **Ce que #164 laisse au rendu.** `contextePhenologiqueFractionnaire(debut, fin, t)`
 rend le calendrier à n'importe quel instant entre deux semaines, et le `pheno`

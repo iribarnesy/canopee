@@ -166,9 +166,21 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // continu doit donc descendre de lui-même vers le second, ce que rien dans
     // le code ne lui dit de faire.
     //
-    // Relevé sur trente ans : 3,43 t/ha à l'an 4, 1,98 à l'an 12, **1,02 à
-    // l'an 24**, 0,82 à l'an 29. Il glisse sous 1 là où Broadbalk tient, et la
-    // cause probable est la PAILLE non restituée (`herbacees.ts`).
+    // Relevé après #141, qui a levé le plafond de tassement : 4,16 t/ha à
+    // l'an 4, 2,63 à l'an 12, **1,45 à l'an 24**, 1,20 à l'an 29. Toute la
+    // trajectoire a monté d'un quart, et elle descend toujours.
+    //
+    // **Et elle a été poursuivie jusqu'à l'échelle de l'essai**, parce que
+    // comparer trente ans de moteur à cent quatre-vingts ans d'épuisement n'est
+    // pas le même dispositif (moyennes par tranche de vingt ans) :
+    //
+    //     ans 1-20   21-40   41-60   61-80   81-100   101-120
+    //       2,96      1,25    0,84    0,78     0,79      0,70
+    //
+    // Le moteur passe par la gamme de Broadbalk vers les années 20 à 40 puis
+    // converge SOUS, à 0,70-0,84. Il glisse donc bien sous 1 là où l'essai
+    // tient, et la cause probable reste la PAILLE non restituée
+    // (`herbacees.ts`). Mesure détaillée dans `labour-desserre.test.ts`.
     const r = culture({ ans: 26, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
     const an24 = r[24] ?? 0;
@@ -188,8 +200,17 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // Deux rangs de noyers encadrant une allée de 8 m : le rapport
     // hauteur / largeur d'allée monte jusqu'à 1,28 en trente-trois ans.
     //
-    // Relevé, allée rapportée au même blé en plein champ : 1,000 à H/L 0,29 ;
-    // **1,007 à H/L 0,84** ; 0,950 à 1,19 ; **0,874 à 1,28**.
+    // Relevé après #141, allée rapportée au même blé en plein champ :
+    // 0,990 à l'an 3 ; 0,982 à l'an 15 ; **1,069 à l'an 25** ; 0,834 à l'an 33.
+    //
+    // **Ces chiffres ont bougé avec le desserrement par le soc, et il faut dire
+    // pourquoi** — le rapport de fin est passé de 0,953 à 0,834. Ce n'est PAS
+    // un effet différentiel du tassement : les deux bras sont au même 0,10
+    // pendant l'essentiel de l'essai, et l'allée ne descend à 0,05 qu'à la fin,
+    // quand les noyers réduisent la part mécanisable. C'est que les deux bras
+    // ne sont plus freinés par le sol, donc chacun bute sur ce qui le limite
+    // VRAIMENT : le témoin sur son azote, l'allée sur la lumière. Relâcher une
+    // contrainte commune fait apparaître celle qui diffère.
     //
     // Le premier régime retrouve l'observation de Dupraz — « le rendement
     // n'est pas beaucoup affecté tant que H/L reste sous 0,8 » — mais PAS pour
@@ -221,10 +242,15 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // fertilisée ne laisse PAS voir l'ombre, parce que l'arbre rend ce qu'il
     // prend.
     expect(rapport(3)).toBeGreaterThan(0.95);
-    // Trente ans plus tard, malgré un rapport hauteur/largeur passé de 0,29 à
-    // 1,28, l'allée n'a toujours pas franchement décroché : mesuré 0,953.
-    // C'est la compensation, et c'est le résultat.
-    expect(rapport(33)).toBeGreaterThan(0.9);
-    expect(rapport(33)).toBeLessThan(1);
+    // **LA COMPENSATION TIENT JUSQU'À H/L ≈ 1, ET ELLE PASSE MÊME DEVANT.** À
+    // l'an 25, l'allée rend 7 % de PLUS que le blé pur : la litière des noyers
+    // vaut mieux, pour un témoin qui s'épuise, que ce que leur ombre coûte.
+    // C'est l'énoncé le plus net de ce que cet essai est seul à dire, et le
+    // seuil ci-dessous le prend par le haut plutôt que par le bas.
+    expect(rapport(25)).toBeGreaterThan(1);
+    // Puis l'ombre finit par gagner, ce que le seuil d'avant ne voyait pas :
+    // à H/L 1,28 l'allée décroche de 17 %. Le masquage a une fin.
+    expect(rapport(33)).toBeLessThan(0.9);
+    expect(rapport(33)).toBeGreaterThan(0.7);
   }, 900_000);
 });
