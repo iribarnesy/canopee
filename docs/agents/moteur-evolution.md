@@ -127,6 +127,92 @@ pas ; le référentiel ne réclamait pas d'individus. C'est le propriétaire qui
 croire à une case cochée. Un référentiel qui ne s'allonge jamais finit par ne
 mesurer que ce qu'on sait déjà faire.
 
+## Ce qu'un lot plus ancien a appris (la bande, #186)
+
+Un lot d'INFRASTRUCTURE : la géométrie d'un chantier cesse d'être un disque.
+Aucun critère gagné, aucun chiffre d'écologie déplacé — et c'est justement ce
+qu'il faut savoir livrer, parce que dix actions du moteur changent de signature
+en même temps.
+
+**Le livrable d'un refactor est une empreinte inchangée — mais une empreinte
+ABSOLUE n'est pas portable.** Le premier contrôle épinglait en dur le
+`stateHash` d'une partie de douze ans, relevé sur le commit d'avant. Il passait
+ici et **il est tombé en CI**. Ce n'était pas le refactor :
+
+    empreinte de la même partie           avant (ffca0fb)   après (ce lot)
+    Node 20 (V8 11.3), Node 22 (V8 12.4)    3 806 937 118    3 806 937 118
+    Node 24 (V8 13.6) — celui de la CI        633 354 304      633 354 304
+
+Le refactor est neutre des DEUX côtés ; c'est la valeur absolue qui bouge avec
+la version de V8, `stateHash` étant un FNV-1a sur les flottants bruts de chaque
+arbre. **C'est la même faute que l'essai qui écrivait dans mon dossier de
+travail** : un essai dont le verdict dépend de la machine ne prouve rien, et son
+vert local encore moins. Le diagnostic s'est fait en téléchargeant Node 24 et en
+rejouant la partie sur le commit d'AVANT — 633 354 304, la valeur de la CI, donc
+l'affaire était close sans toucher au moteur. La leçon qui dépasse le lot : **les
+chiffres du moteur sont portables, ses bits ne le sont pas**, et la suite entière
+le montre puisqu'elle est verte sous les deux (1 671 essais, dont des centaines
+qui épinglent des grandeurs écologiques). Sorti en #193, avec ce que ça pose
+pour les sauvegardes.
+
+**Neuf cas de bord prouvent ce à quoi on a pensé ; cinq cents tirés au hasard
+prouvent le reste.** Le contrôle d'identité a donc été refait en balayage — et
+le balayage a trouvé une divergence que les neuf cas choisis manquaient.
+`actions.ts` avait deux routes qui ne faisaient pas la même chose :
+`forEachDiscCell` garantissait au moins une cellule, `cellulesDuDisque` non, si
+bien qu'un `semer` de vingt centimètres ne semait rien — en silence, et facturé
+— quand un `faucher` du même rayon fauchait une cellule. Unifier était la bonne
+réponse, mais il fallait le SAVOIR pour pouvoir l'écrire.
+
+Une seconde divergence était du même ordre : l'aire se calculait de deux façons
+à un ULP près (`Math.PI * r * r` cinq fois, `(Math.PI * r2)` pour l'éclaircie).
+Il n'existait donc pas d'« avant » unique à préserver. On prend la forme
+majoritaire, et l'essai BORNE ce que l'autre y perd plutôt que de l'ignorer :
+rien, sur quatorze mille couples (rayon, densité), le `Math.round` du nombre de
+tiges à garder absorbant l'écart.
+
+**Et l'empreinte bout à bout, alors ?** Elle est tenue par la suite elle-même,
+et mieux qu'elle ne l'était par un hash : des centaines d'essais épinglent des
+grandeurs écologiques absolues, et un refactor qui déplacerait une partie en
+casserait. À quoi ce lot ajoute trois contrôles d'EMPREINTE AU SOL, qui prennent
+la géométrie par l'autre bout : on joue `cloturer`, `labourer`, `chauler` sur des
+disques volontairement décentrés, et l'ensemble des cellules qui ont bougé doit
+être exactement celui d'avant. C'est ce qui attrape un argument mal branché — un
+x et un y échangés —, c'est instantané, et c'est portable : on compare des
+indices, pas des flottants.
+
+**La compatibilité se paie par un discriminant FACULTATIF.** `ZoneDisque`
+déclare `zone?: "disque"`, si bien qu'une action écrite `{ x, y, rayonM }` —
+c'est-à-dire toutes celles qui existaient, dans le moteur comme dans les essais
+— reste valide sans être touchée. Le coût du refactor est alors proportionnel à
+ce qu'on ajoute, pas à ce qui existe.
+
+**Une collision de noms ne se relit pas, elle se compile.** Le discriminant
+s'appelait d'abord `forme` ; or `fertiliser` avait déjà un champ `forme`
+(minérale ou fumier), et l'intersection `{…} & Zone` réduisait toute la variante
+à `never`. Aucune relecture n'aurait attrapé ça — le compilateur l'a dit tout
+de suite. C'est la meilleure raison de faire passer une forme par le SYSTÈME DE
+TYPES plutôt que par une convention.
+
+**La forme du chantier était dans le moteur, pas dans l'interface.** La question
+s'est posée : une bande, n'est-ce pas à l'interface de la découper en disques ?
+Non — parce que `partMecanisable` a besoin de la forme. La demi-largeur qu'un
+engin a devant lui dépend de la direction où il passe, et pour un rectangle elle
+se lit sur la projection du rectangle sur l'axe perpendiculaire au passage. Une
+allée découpée en disques par l'interface aurait perdu exactement l'information
+qui décide. Deux faits de terrain tombent alors sans être écrits : on ne remonte
+pas une allée de 4 m qu'un arbre bouche, on la traverse ; et une ligne de tiges
+plantée dans l'axe se longe mais ne se traverse pas.
+
+**Ne pas écrire l'essai à l'histoire qu'on avait en tête.** Le premier essai de
+ce lot affirmait qu'une bande carrée « n'a plus de direction de secours » et
+attendait 0. Le moteur a rendu 0,876, et il avait raison : un carré de 4 m vu en
+diagonale fait 5,66 m de large, l'engin y passe. L'histoire était fausse, pas le
+code. L'essai a été refait autour de ce que la géométrie produit vraiment, avec
+les deux contre-exemples qui le rendent probant — demi-largeur figée à celle de
+la bande, le premier cas rendrait 0 ; figée à sa demi-longueur, le second
+rendrait 0,977 au lieu de 0,9125.
+
 ## Ce qu'un lot plus ancien a appris (le chêne creux et le LER, #183 et #136)
 
 **Un mécanisme de soutien qui casse ce qu'il soutient pèse trop lourd.** La
@@ -1408,6 +1494,14 @@ Le prototype de prédation par individu est mesuré et rangé sur
 par individu. Attention, le lot 3 touchera G3 et J5, tous deux verts — traitement
 F16 obligatoire. Et la limite à lever un jour : le territoire n'exclut que les
 congénères DE la parcelle, qui ne voit pas ceux de ses voisins (`station.voisinage`).
+
+**Ce que #186 laisse à l'interface.** Le moteur sait faire une bande : dix
+actions acceptent `{ zone: "bande", x, y, longueurM, largeurM, orientationRad }`
+à la place de `{ x, y, rayonM }`, et `mecanisation.ts` en tient compte. Rien
+côté interface ne permet encore d'en DESSINER une — c'est la moitié du lot qui
+revient à l'agent d'interface. Tant qu'elle n'est pas là, aucune partie ne peut
+produire de bande, ce qui est exactement pourquoi l'empreinte témoin est
+inchangée.
 
 
 **Ce que #164 laisse au rendu.** `contextePhenologiqueFractionnaire(debut, fin, t)`
