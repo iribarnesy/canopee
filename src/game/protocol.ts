@@ -25,6 +25,7 @@ import type {
 import type { CauseMort } from "../engine/trees";
 import type { DecorBordures } from "../render/couches/decor";
 import type { Cumuls } from "./niveaux";
+import type { ChoixRecolte } from "./recolteAuto";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
 type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
@@ -82,6 +83,15 @@ export interface SaveGame {
    * liste, reprendre une partie reprendrait un objectif déjà gagné.
    */
   paliersAcquis?: string[];
+  /**
+   * Ce que le joueur a décidé de la récolte automatique, essence par essence.
+   *
+   * Seules ses DÉCISIONS sont rangées, pas la liste effective : celle-ci se
+   * recalcule du journal (ce qu'il a semé) et de ces décisions. Ranger la liste
+   * effective en ferait une seconde copie d'une règle, qui dériverait du jour
+   * où la règle par défaut changerait.
+   */
+  recolteAuto?: ChoixRecolte;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
   weeks: number;
   actions: GameAction[];
@@ -594,6 +604,8 @@ export type ToWorker =
    * worker. Il les RANGE, pour que la sauvegarde les porte.
    */
   | { type: "niveau"; id?: string; acquis: string[] }
+  /** allumer ou éteindre la récolte automatique d'une essence */
+  | { type: "recolteAuto"; especeId: string; actif: boolean }
   /**
    * La réponse à la facture (#133). `embaucher` vrai paie les bras qu'il faut
    * — rétroactivement, pour des heures déjà faites — ; faux ramène la semaine
@@ -647,6 +659,14 @@ export type FromWorker =
   | { type: "snapshot"; snapshot: Snapshot; cumuls: Cumuls }
   /** Le niveau et ses paliers franchis, tels que la sauvegarde les portait. */
   | { type: "niveau"; id?: string; acquis: string[] }
+  /**
+   * Ce qui est cueilli d'office, et pourquoi.
+   *
+   * `semees` vient du journal du joueur, `choix` de ses décisions : l'écran a
+   * besoin des DEUX pour dire si une pastille est allumée par défaut ou parce
+   * qu'on l'a voulu.
+   */
+  | { type: "recolteAuto"; semees: string[]; choix: ChoixRecolte }
   | { type: "save"; save: SaveGame }
   | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
   /** le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la vitesse */

@@ -74,7 +74,13 @@ import type {
   StationInfo,
   ToWorker,
 } from "./protocol";
-import { arbresMurs, especesSemees, fautIlPrevenir } from "./recolteAuto";
+import {
+  arbresMurs,
+  type ChoixRecolte,
+  especesRecoltees,
+  especesSemees,
+  fautIlPrevenir,
+} from "./recolteAuto";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 import { CAUSE_AU_SINGULIER } from "./suivis";
 
@@ -92,6 +98,16 @@ let journal: GameAction[] = [];
  * heures la semaine.
  */
 let semees: ReadonlySet<string> = new Set();
+/** Ce que le joueur a décidé essence par essence, et qui prime sur le défaut. */
+let choixRecolte: ChoixRecolte = {};
+/** Ce qui est effectivement cueilli d'office — la règle, appliquée une fois. */
+let recoltees: ReadonlySet<string> = new Set();
+
+/** Recalculer ce qui est cueilli, et le dire à l'écran. */
+function majRecolteAuto(): void {
+  recoltees = especesRecoltees(semees, choixRecolte);
+  post({ type: "recolteAuto", semees: [...semees], choix: { ...choixRecolte } });
+}
 let meteoMode: "reelle" | "synthetique" = "reelle";
 let scenario: ScenarioId = "ssp245";
 let anneeDepart = 2026;
@@ -306,6 +322,7 @@ function performAction(action: GameAction) {
   switch (action.type) {
     case "planter": {
       semees = especesSemees(journal);
+      majRecolteAuto();
       const n = state.trees.length - before.trees.length;
       if (n > 0)
         event(
@@ -981,7 +998,7 @@ function stepWeeks(n: number) {
     // Fruits mûrs : récolte auto, ou pause pour laisser la main. Les deux
     // décisions vivent dans `recolteAuto.ts`, où un essai peut les prendre en
     // faute — ici elles étaient confondues en une seule condition.
-    const murs = arbresMurs(state.trees, semees);
+    const murs = arbresMurs(state.trees, recoltees);
     // Le front montant : on n'agit qu'à l'ARRIVÉE d'une maturité, pas à chaque
     // semaine où elle dure. Il ne vaut que si les deux termes comparés sont la
     // MÊME grandeur — voir la mise à jour de `prevFruitsReadyKg` plus bas, qui
@@ -1015,7 +1032,7 @@ function stepWeeks(n: number) {
     // l'année, le front ne retombait jamais, et plus rien n'était cueilli après
     // la première essence mûre. Mesuré en jeu : 115 kg de pommes sur l'arbre en
     // semaine 39, comparés à un « précédent » de 28 kg de miettes.
-    prevFruitsReadyKg = arbresMurs(state.trees, semees).kg;
+    prevFruitsReadyKg = arbresMurs(state.trees, recoltees).kg;
   }
 }
 
@@ -1143,6 +1160,8 @@ function init(
   // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
   cumuls = CUMULS_VIDES;
   semees = new Set();
+  choixRecolte = {};
+  recoltees = new Set();
   // …ni son niveau : l'interface réinstalle celui qu'elle lance.
   niveauId = undefined;
   paliersAcquis = [];
@@ -1214,8 +1233,10 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       normales = normalesHebdo(weather);
       journal = msg.save.actions;
       // Le journal rejoué rend aussi ce qui a été semé : sans ça, reprendre une
-      // partie ferait cueillir la friche.
+      // partie ferait cueillir la friche. Les décisions du joueur, elles,
+      // viennent de la sauvegarde — rien ne permettrait de les deviner.
       semees = especesSemees(journal);
+      choixRecolte = { ...(msg.save.recolteAuto ?? {}) };
       let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed), {
         economie,
       });
@@ -1256,6 +1277,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       post({ type: "politiqueHoraire", politique: politiqueHoraire });
       // Le niveau vient de la sauvegarde : l'écran ne le devinerait pas.
       post({ type: "niveau", id: niveauId, acquis: [...paliersAcquis] });
+      majRecolteAuto();
       postSnapshot();
       startLoop();
       break;
@@ -1268,6 +1290,12 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // les fiches vivent (#188).
       niveauId = msg.id;
       paliersAcquis = [...msg.acquis];
+      break;
+    case "recolteAuto":
+      // Une décision explicite, qui doit survivre à une plantation ultérieure :
+      // retirer la ronce puis en semer ne doit pas la réintroduire en douce.
+      choixRecolte = { ...choixRecolte, [msg.especeId]: msg.actif };
+      majRecolteAuto();
       break;
     case "reglerFacture":
       reglerLaFacture(msg.embaucher, msg.pourToujours);
@@ -1339,6 +1367,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         // La consigne suit la partie : c'est un choix de conduite, pas un
         // réglage de la session (#133).
         ...(politiqueHoraire === "demander" ? {} : { politiqueHoraire }),
+        ...(Object.keys(choixRecolte).length > 0 ? { recolteAuto: { ...choixRecolte } } : {}),
         ...(niveauId ? { niveauId } : {}),
         ...(paliersAcquis.length > 0 ? { paliersAcquis: [...paliersAcquis] } : {}),
         weeks: state.week,

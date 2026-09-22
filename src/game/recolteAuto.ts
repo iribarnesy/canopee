@@ -52,6 +52,50 @@ export function especesSemees(
   return vues;
 }
 
+/**
+ * Ce que le joueur a DÉCIDÉ, essence par essence — et rien d'autre.
+ *
+ * Seules les essences qu'il a touchées y figurent. Les autres suivent la règle
+ * par défaut (« on cueille ce qu'on a semé »), et c'est ce qui permet à une
+ * décision de SURVIVRE à une plantation ultérieure : retirer la ronce de la
+ * récolte automatique, puis semer de la ronce, ne doit pas la réintroduire en
+ * douce.
+ */
+export type ChoixRecolte = Record<string, boolean>;
+
+/**
+ * Les essences que la récolte automatique cueille : ce qu'on a semé, plus ce
+ * qu'on a explicitement ajouté, moins ce qu'on a explicitement retiré.
+ *
+ * Une seule fonction pour cette règle, appelée par le worker ET par l'écran :
+ * l'un décide qui est cueilli, l'autre affiche des pastilles allumées ou
+ * éteintes, et les deux doivent dire la même chose.
+ */
+export function especesRecoltees(
+  semees: ReadonlySet<string>,
+  choix: ChoixRecolte = {},
+): Set<string> {
+  const actives = new Set(semees);
+  for (const [especeId, actif] of Object.entries(choix)) {
+    if (actif) actives.add(especeId);
+    else actives.delete(especeId);
+  }
+  return actives;
+}
+
+/**
+ * Ce qu'une pastille doit montrer pour une essence : allumée ou éteinte, et
+ * si c'est le joueur qui l'a dit.
+ */
+export function etatDeLaRecolte(
+  especeId: string,
+  semees: ReadonlySet<string>,
+  choix: ChoixRecolte = {},
+): { active: boolean; choisi: boolean } {
+  const choisi = especeId in choix;
+  return { active: choisi ? choix[especeId] === true : semees.has(especeId), choisi };
+}
+
 /** Ce qu'un arbre porte, vu d'ici. */
 export interface ArbrePorteur {
   id: number;

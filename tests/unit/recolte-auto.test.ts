@@ -24,7 +24,9 @@ import { getEspece } from "../../src/engine/especes";
 import {
   type ArbrePorteur,
   arbresMurs,
+  especesRecoltees,
   especesSemees,
+  etatDeLaRecolte,
   fautIlCueillir,
   fautIlPrevenir,
   SEUIL_ARBRE_KG,
@@ -197,6 +199,44 @@ describe("on ne cueille que ce qu'on a semé", () => {
   it("sans filtre, tout se cueille — c'est le bac à sable qui n'a rien semé", () => {
     expect(arbresMurs(RONCES).ids.length).toBe(40);
     expect(arbresMurs(RONCES, new Set()).ids).toEqual([]);
+  });
+});
+
+describe("le joueur décide, essence par essence", () => {
+  const SEMEES = new Set(["malus_domestica"]);
+
+  it("sans rien dire, on cueille ce qu'on a semé", () => {
+    expect(especesRecoltees(SEMEES)).toEqual(new Set(["malus_domestica"]));
+    expect(etatDeLaRecolte("malus_domestica", SEMEES)).toEqual({ active: true, choisi: false });
+    expect(etatDeLaRecolte("rubus_fruticosus", SEMEES)).toEqual({ active: false, choisi: false });
+  });
+
+  it("on peut ajouter une essence qu'on n'a pas semée", () => {
+    const choix = { rubus_fruticosus: true };
+    expect(especesRecoltees(SEMEES, choix)).toEqual(
+      new Set(["malus_domestica", "rubus_fruticosus"]),
+    );
+    expect(etatDeLaRecolte("rubus_fruticosus", SEMEES, choix)).toEqual({
+      active: true,
+      choisi: true,
+    });
+  });
+
+  it("on peut retirer une essence qu'on a semée", () => {
+    const choix = { malus_domestica: false };
+    expect(especesRecoltees(SEMEES, choix)).toEqual(new Set());
+    expect(etatDeLaRecolte("malus_domestica", SEMEES, choix)).toEqual({
+      active: false,
+      choisi: true,
+    });
+  });
+
+  it("une décision SURVIT à une plantation ultérieure", () => {
+    // Retirer la ronce, puis en semer, ne doit pas la réintroduire en douce :
+    // c'est tout l'intérêt de ne ranger que les décisions, et pas la liste.
+    const choix = { rubus_fruticosus: false };
+    const apresAvoirSeme = new Set(["malus_domestica", "rubus_fruticosus"]);
+    expect(especesRecoltees(apresAvoirSeme, choix)).toEqual(new Set(["malus_domestica"]));
   });
 });
 

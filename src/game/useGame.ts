@@ -10,6 +10,7 @@ import type { EauDeSurface } from "../engine/eau_surface";
 import type { Bordures } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
 import { CUMULS_VIDES, type Cumuls } from "./niveaux";
+import { type ChoixRecolte, especesRecoltees } from "./recolteAuto";
 
 let uid = 0;
 export type WithUid<T> = T & { uid: number };
@@ -65,6 +66,10 @@ export interface GameApi {
   reglerFacture: (embaucher: boolean, pourToujours?: boolean) => void;
   /** ce que la partie a accumulé depuis son début (#188) */
   cumuls: Cumuls;
+  /** ce que la récolte automatique cueille, et pourquoi */
+  recolteAuto: { semees: string[]; choix: ChoixRecolte; actives: ReadonlySet<string> };
+  /** allumer ou éteindre une essence dans la récolte automatique */
+  reglerRecolteAuto: (especeId: string, actif: boolean) => void;
   /** le niveau joué et ses paliers franchis, tels que la sauvegarde les porte */
   niveauRange: { id?: string; acquis: string[] };
   /** ranger le niveau et ses paliers, pour que la sauvegarde les emporte */
@@ -171,6 +176,16 @@ export function useGame(): GameApi {
   /** Ce que la partie a accumulé : kilos cueillis, plants, abattages (#188). */
   const [cumuls, setCumuls] = useState<Cumuls>(CUMULS_VIDES);
   /**
+   * Ce qui est cueilli d'office : ce que le joueur a semé, et ce qu'il a décidé.
+   *
+   * Les deux, et pas seulement la liste effective : une pastille doit pouvoir
+   * dire si elle est allumée par défaut ou parce qu'on l'a voulu.
+   */
+  const [recolteAuto, setRecolteAuto] = useState<{ semees: string[]; choix: ChoixRecolte }>({
+    semees: [],
+    choix: {},
+  });
+  /**
    * Le niveau joué et ses paliers déjà franchis, tels que le worker les range.
    *
    * L'AVANCEMENT, lui, ne vient pas d'ici : il se calcule là où les fiches
@@ -244,6 +259,9 @@ export function useGame(): GameApi {
         case "niveau":
           setNiveauRange({ id: msg.id, acquis: msg.acquis });
           break;
+        case "recolteAuto":
+          setRecolteAuto({ semees: msg.semees, choix: msg.choix });
+          break;
         case "facture":
           // Le worker s'est arrêté pour poser la question : l'interface se
           // remet à zéro comme pour n'importe quelle pause automatique, sinon
@@ -298,6 +316,12 @@ export function useGame(): GameApi {
       send({ type: "reglerFacture", embaucher, pourToujours });
     },
     cumuls,
+    recolteAuto: {
+      ...recolteAuto,
+      // La règle est appliquée UNE fois, par la même fonction que le worker.
+      actives: especesRecoltees(new Set(recolteAuto.semees), recolteAuto.choix),
+    },
+    reglerRecolteAuto: (especeId, actif) => send({ type: "recolteAuto", especeId, actif }),
     niveauRange,
     rangerLeNiveau: (id, acquis) => {
       setNiveauRange({ id, acquis: [...acquis] });
@@ -332,6 +356,7 @@ export function useGame(): GameApi {
       setEvents([]);
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
+      setRecolteAuto({ semees: [], choix: {} });
       setNiveauRange({ acquis: [] });
       send({
         type: "init",

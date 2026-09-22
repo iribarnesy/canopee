@@ -1727,7 +1727,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         volet={
           volets.estOuvert("bd", "arbres") ? (
             <Volet titre="Les arbres" largeur={400} surFermer={() => volets.fermer("bd")}>
-              <PanneauArbres snapshot={snapshot} vivants={vivants} />
+              <PanneauArbres
+                snapshot={snapshot}
+                vivants={vivants}
+                recolteAuto={game.recolteAuto}
+                reglerRecolteAuto={game.reglerRecolteAuto}
+              />
             </Volet>
           ) : volets.estOuvert("bd", "scores") ? (
             <Volet titre="Scores" largeur={400} surFermer={() => volets.fermer("bd")}>
