@@ -63,6 +63,7 @@ import type {
 import { tick } from "../engine/tick";
 import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
 import { prefixeSousLePlafond } from "./facture";
+import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
 import type {
   FactureHoraire,
@@ -108,6 +109,28 @@ let suivis: ReadonlySet<number> = new Set();
  */
 let debutDeSemaine: GameState | undefined;
 let actionsDeLaSemaine: GameAction[] = [];
+/**
+ * Ce qui s'est accumulé depuis le début de la partie (#188) : les kilos
+ * cueillis, les plants mis en terre, les tiges abattues.
+ *
+ * **Ici et pas dans l'interface**, parce que c'est ici que la partie se
+ * REJOUE : reprendre une sauvegarde rejoue son journal d'actions, et un cumul
+ * tenu ailleurs repartirait de zéro à chaque reprise. Un objectif comme
+ * « récolter une tonne de pommes » porte sur des fruits qui ont quitté la
+ * parcelle — aucun instantané ne les montre plus.
+ */
+let cumuls: Cumuls = CUMULS_VIDES;
+/** Le cumul à l'ouverture de la semaine, jumeau de `debutDeSemaine`. */
+let cumulsAuDebut: Cumuls = CUMULS_VIDES;
+/**
+ * Le niveau joué et ses paliers franchis (#188) — RANGÉS, pas joués.
+ *
+ * Le worker ne sait pas ce qu'est un palier : les fiches portent des
+ * fermetures, qui ne traversent pas la frontière d'un worker. Il tient les
+ * deux valeurs pour que la sauvegarde les porte et que la reprise les rende.
+ */
+let niveauId: string | undefined;
+let paliersAcquis: string[] = [];
 /** Où en était le journal de sauvegarde à l'ouverture de la semaine. */
 let journalAuDebut = 0;
 /** Une facture attend sa réponse : le temps ne repart pas avant. */
@@ -240,6 +263,9 @@ function ouvrirLaSemaine(etat: GameState): void {
   debutDeSemaine = state;
   actionsDeLaSemaine = [];
   journalAuDebut = journal.length;
+  // Le cumul a le même point de retour que l'état : une semaine ramenée sous
+  // le plafond se rejoue amputée, et ce qu'elle a récolté doit se rejouer avec.
+  cumulsAuDebut = cumuls;
   // Une facture appartient à la semaine qui la porte : aucune ne peut survivre
   // à l'ouverture de la suivante — ni, surtout, à une partie neuve.
   factureEnAttente = false;
@@ -554,6 +580,12 @@ function postSnapshot() {
     incendie: pendingIncendie,
     tempete: pendingTempete,
   });
+  // **Le seul point où l'on compte**, et il est volontairement unique : les
+  // gestes arrivent de trois endroits (l'action au clic, le tick, le rejeu
+  // d'une semaine élaguée), et `pendingGestes` est tantôt complété, tantôt
+  // REMPLACÉ. Compter à chaque source doublerait ce qu'une semaine rejouée a
+  // déjà donné ; compter ici, juste avant de vider, ne le peut pas.
+  cumuls = accumuler(cumuls, pendingGestes);
   pendingRefusals = [];
   pendingEvents = [];
   pendingMorts = [];
@@ -568,7 +600,7 @@ function postSnapshot() {
   // Les grandeurs du tick, elles, se GARDENT : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
   // joueur ne doit pas voir la crue disparaître entre deux clics.
-  post({ type: "snapshot", snapshot }, transferablesDuSnapshot(snapshot));
+  post({ type: "snapshot", snapshot, cumuls }, transferablesDuSnapshot(snapshot));
 }
 
 /**
@@ -624,6 +656,9 @@ function seTenirAuPlafond(): number {
   // reproduira pour celles qui restent.
   const elaguee = prefixeSousLePlafond(debutDeSemaine, posees);
   pendingGestes = elaguee.gestes;
+  // Le cumul repart du début de semaine : `postSnapshot` recomptera les gestes
+  // des seules actions gardées. Sans ça, une récolte annulée resterait acquise.
+  cumuls = cumulsAuDebut;
   state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
   actionsDeLaSemaine = elaguee.gardees;
@@ -1031,7 +1066,10 @@ function stationInfo(): StationInfo {
     id: sc.station.id,
     nom: sc.station.nom,
     coteM: sc.station.coteM,
-    ruMm: sc.station.profil[0] ? ruHorizonMm(sc.station.profil[0]) : sc.station.ruMm,
+    ruMm: sc.station.ruMm,
+    ruHorizonSurfaceMm: sc.station.profil[0]
+      ? ruHorizonMm(sc.station.profil[0])
+      : sc.station.ruMm,
     phInitial: sc.station.phInitial,
     meteoLabel: serie
       ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France)`
@@ -1074,6 +1112,11 @@ function init(
     economie,
   });
   politiqueHoraire = "demander";
+  // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
+  cumuls = CUMULS_VIDES;
+  // …ni son niveau : l'interface réinstalle celui qu'elle lance.
+  niveauId = undefined;
+  paliersAcquis = [];
   ouvrirLaSemaine(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
   journal = [];
   pendingRefusals = [];
@@ -1134,6 +1177,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // l'économie, et doit se rejouer ainsi ou elle divergerait.
       economie = msg.save.economie ?? true;
       politiqueHoraire = msg.save.politiqueHoraire ?? "demander";
+      niveauId = msg.save.niveauId;
+      paliersAcquis = msg.save.paliersAcquis ? [...msg.save.paliersAcquis] : [];
       anneeDepart = msg.save.anneeDepart;
       seed = msg.save.seed;
       weather = loadWeather(msg.save.stationId, msg.save.meteo);
@@ -1145,9 +1190,15 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // Le vieillissement fait partie de l'histoire de la parcelle : il se
       // rejoue à l'identique avant les actions du joueur.
       if (maturationAns > 0) replayed = faireVieillir(replayed, maturationAns);
+      // Le cumul se REFAIT pendant le rejeu (#188). Rien d'autre ne pourrait le
+      // rendre : les kilos cueillis il y a dix ans ne sont plus nulle part dans
+      // l'état, et le journal de sauvegarde porte les actions, pas ce qu'elles
+      // ont donné. C'est le même rejeu qui refait la parcelle et son compte.
+      cumuls = CUMULS_VIDES;
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
+        cumuls = accumuler(cumuls, step.gestes);
         lastFluxes = step.fluxes;
         // La dernière semaine rejouée est celle qu'on va montrer : son
         // débordement et sa lumière au sol servent au premier instantané.
@@ -1171,12 +1222,20 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       post({ type: "ready", station: stationInfo() });
       // La consigne vient de la sauvegarde : l'écran ne la devinerait pas.
       post({ type: "politiqueHoraire", politique: politiqueHoraire });
+      // Le niveau vient de la sauvegarde : l'écran ne le devinerait pas.
+      post({ type: "niveau", id: niveauId, acquis: [...paliersAcquis] });
       postSnapshot();
       startLoop();
       break;
     }
     case "suivre":
       suivis = new Set(msg.ids);
+      break;
+    case "niveau":
+      // On RANGE, on ne joue pas : l'avancement se calcule côté interface, où
+      // les fiches vivent (#188).
+      niveauId = msg.id;
+      paliersAcquis = [...msg.acquis];
       break;
     case "reglerFacture":
       reglerLaFacture(msg.embaucher, msg.pourToujours);
@@ -1248,6 +1307,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         // La consigne suit la partie : c'est un choix de conduite, pas un
         // réglage de la session (#133).
         ...(politiqueHoraire === "demander" ? {} : { politiqueHoraire }),
+        ...(niveauId ? { niveauId } : {}),
+        ...(paliersAcquis.length > 0 ? { paliersAcquis: [...paliersAcquis] } : {}),
         weeks: state.week,
         actions: journal,
       };

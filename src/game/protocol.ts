@@ -24,6 +24,7 @@ import type {
 } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 import type { DecorBordures } from "../render/couches/decor";
+import type { Cumuls } from "./niveaux";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
 type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
@@ -64,6 +65,23 @@ export interface SaveGame {
    * l'a demandé (#133). Absent = on lui repose la question.
    */
   politiqueHoraire?: PolitiqueHoraire;
+  /**
+   * Le niveau joué, s'il y en a un (#188). Absent = bac à sable.
+   *
+   * Seul l'IDENTIFIANT est rangé, pas la fiche : un niveau corrigé doit
+   * s'appliquer aux parties en cours, et une fiche recopiée dans chaque
+   * sauvegarde serait une seconde copie de la règle, donc une divergence (§2.1).
+   */
+  niveauId?: string;
+  /**
+   * Les paliers déjà franchis.
+   *
+   * La plupart se retrouvent tout seuls au rejeu — un cumul ne redescend pas.
+   * Ceux qui portent sur un STOCK, eux, ne se retrouvent pas : douze arbres
+   * protégés puis morts ne laissent aucune trace dans l'état. Sans cette
+   * liste, reprendre une partie reprendrait un objectif déjà gagné.
+   */
+  paliersAcquis?: string[];
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
   weeks: number;
   actions: GameAction[];
@@ -419,8 +437,25 @@ export interface StationInfo {
   id: string;
   nom: string;
   coteM: number;
-  /** réserve utile de l'horizon de surface, mm (échelle de la carte) */
+  /**
+   * Réserve utile du PROFIL ENTIER, mm — la même grandeur que `Station.ruMm`
+   * du moteur, et sous le même nom exprès.
+   *
+   * C'est elle que lisent les règles qui parlent du sol où un arbre s'enracine :
+   * `especeTenable` écarte les espèces exigeantes en eau sous 120 mm, et ce
+   * seuil-là parle du profil, pas de la couche de surface (#190).
+   */
   ruMm: number;
+  /**
+   * Réserve utile du seul HORIZON DE SURFACE, mm.
+   *
+   * Séparée, et nommée autrement, parce que c'en est une autre : c'est la
+   * borne haute du calque « Eau » de la carte du sol, dont `soilWater` ne
+   * rapporte que cet horizon. Les deux ont vécu sous le nom `ruMm`, et le
+   * sélecteur d'essences a pris l'une pour l'autre — il écartait huit espèces
+   * du limon le plus riche du jeu (#190).
+   */
+  ruHorizonSurfaceMm: number;
   phInitial: number;
   meteoLabel: string;
   /** eau libre de la parcelle : l'UI la dessine (eau_surface.ts) */
@@ -552,6 +587,14 @@ export type ToWorker =
    */
   | { type: "suivre"; ids: number[] }
   /**
+   * Le niveau joué et les paliers déjà franchis (#188).
+   *
+   * Le worker ne JOUE pas le niveau — il n'en connaît ni les paliers ni les
+   * cibles, qui sont des fermetures et ne traverseraient pas la frontière du
+   * worker. Il les RANGE, pour que la sauvegarde les porte.
+   */
+  | { type: "niveau"; id?: string; acquis: string[] }
+  /**
    * La réponse à la facture (#133). `embaucher` vrai paie les bras qu'il faut
    * — rétroactivement, pour des heures déjà faites — ; faux ramène la semaine
    * sous le plafond en rejouant sans ses derniers gestes.
@@ -593,7 +636,17 @@ export interface FactureHoraire {
 
 export type FromWorker =
   | { type: "ready"; station: StationInfo }
-  | { type: "snapshot"; snapshot: Snapshot }
+  /**
+   * L'instantané, et ce qui s'est ACCUMULÉ depuis le début de la partie (#188).
+   *
+   * Le cumul voyage à côté de l'instantané, et non dedans : l'instantané est ce
+   * que le MOTEUR dit de la parcelle à cette semaine, le cumul est ce que le
+   * jeu a compté des gestes qu'il a rapportés. Les mélanger ferait croire que
+   * le moteur tient un compte qu'il ne tient pas.
+   */
+  | { type: "snapshot"; snapshot: Snapshot; cumuls: Cumuls }
+  /** Le niveau et ses paliers franchis, tels que la sauvegarde les portait. */
+  | { type: "niveau"; id?: string; acquis: string[] }
   | { type: "save"; save: SaveGame }
   | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
   /** le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la vitesse */

@@ -37,15 +37,19 @@ import {
 import { STATIONS_V0 } from "../engine/stations";
 import type { Orientation } from "../render/projection";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
+import type { Niveau } from "./niveaux";
+import { NIVEAUX_LIVRES } from "./niveauxLivres";
 import { PlanEau } from "./PlanEau";
 import { Avis } from "./panneaux/Avis";
 import { Bandeau } from "./panneaux/Bandeau";
 import { CarteDuSol } from "./panneaux/CarteDuSol";
+import { FinDeNiveau } from "./panneaux/FinDeNiveau";
 import { PanneauAction } from "./panneaux/PanneauAction";
 import { PanneauArbres } from "./panneaux/PanneauArbres";
 import { PanneauEssences } from "./panneaux/PanneauEssences";
 import { PanneauJournal } from "./panneaux/PanneauJournal";
 import { PanneauMenu } from "./panneaux/PanneauMenu";
+import { PanneauNiveau } from "./panneaux/PanneauNiveau";
 import { PanneauScores } from "./panneaux/PanneauScores";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
 import { PanneauSuivis } from "./panneaux/PanneauSuivis";
@@ -71,12 +75,14 @@ import {
 } from "./sauvegardes";
 import { useEllipse } from "./useEllipse";
 import { useGame } from "./useGame";
+import { useNiveau } from "./useNiveau";
 import { useSuivis } from "./useSuivis";
 import { VueParcelle } from "./VueParcelle";
 
 function StartScreen({
   onStart,
   onResume,
+  onNiveau,
 }: {
   onStart: (
     stationId: string,
@@ -94,6 +100,8 @@ function StartScreen({
   ) => void;
   /** reprendre la partie que la liste désigne (#147) */
   onResume: (entree: EntreeSauvegarde) => void;
+  /** lancer un niveau : il pose lui-même ses réglages (#188) */
+  onNiveau: (niveau: Niveau) => void;
 }) {
   const [stationId, setStationId] = useState(STATIONS_V0[0]?.station.id ?? "");
   const [seed, setSeed] = useState(42);
@@ -305,6 +313,28 @@ function StartScreen({
         Un sol, un entourage, un climat — et cinquante ans devant vous. Rien n'est scripté&nbsp;:
         tout ce qui arrivera découlera de ces trois choix.
       </p>
+
+      {/*
+        LES NIVEAUX (#188). Ils passent AVANT les réglages, et c'est tout le
+        propos : `v1.md` demande que l'écran de démarrage cesse d'être un banc
+        d'essai. Le déménagement complet des quatorze réglages derrière un mode
+        « bac à sable » est l'objet de #189 ; ici, le niveau prend seulement la
+        tête de l'écran, pour que ce soit lui qu'on voie d'abord.
+      */}
+      <section className="carte">
+        <h3>Niveaux</h3>
+        <p className="sous">
+          Un objectif, des étapes, et une fin. Les réglages du terrain sont posés par le niveau.
+        </p>
+        {NIVEAUX_LIVRES.map((n) => (
+          <div key={n.id} style={{ marginTop: 6 }}>
+            <button type="button" style={btn(true)} onClick={() => onNiveau(n)}>
+              ▶ {n.nom}
+            </button>
+            <span className="sous"> {n.enonce}</span>
+          </div>
+        ))}
+      </section>
 
       {/*
         LES PARTIES SAUVEGARDÉES (#147). Il y en avait une seule, et démarrer
@@ -1128,6 +1158,34 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
    */
   const suivis = useSuivis(snapshot, game.suivre);
+  const enNiveau = useNiveau(game);
+
+  /**
+   * Lancer un niveau : ses réglages sont ceux de sa fiche, et rien n'est
+   * demandé au joueur (#188, #189).
+   *
+   * L'ordre des deux messages compte : `newGame` remet le niveau à zéro dans le
+   * worker — une partie neuve n'hérite pas de la précédente — donc c'est
+   * APRÈS qu'on installe celui qu'on lance.
+   */
+  const lancerLeNiveau = (niveau: Niveau) => {
+    const d = niveau.depart;
+    game.newGame(
+      d.stationId,
+      niveau.seed,
+      niveau.meteo,
+      d.scenario,
+      d.bordures,
+      d.relief,
+      d.eau,
+      d.nappeCm,
+      d.partBassinSemblable,
+      d.maturationAns,
+      d.anneeDepart,
+      niveau.economie,
+    );
+    game.rangerLeNiveau(niveau.id, []);
+  };
 
   // La coquille du site a besoin de savoir si une partie tourne : en jeu elle
   // s'efface, la parcelle prend la fenêtre entière.
@@ -1159,7 +1217,11 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       station && snapshot
         ? donneesSolDe({
             coteM: station.coteM,
-            ruMm: station.ruMm,
+            // L'HORIZON DE SURFACE, parce que `soilWater` ne rapporte que
+            // lui : le rapport des deux est le remplissage de cette couche-là.
+            // Passer la réserve du profil entier ferait paraître la parcelle
+            // sèche en permanence (#190).
+            ruMm: station.ruHorizonSurfaceMm,
             altitudesM: station.altitudesM,
             bassinAmontHa: station.bassinAmontHa,
             waterMm: snapshot.soilWater,
@@ -1357,6 +1419,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         <StartScreen
           onStart={game.newGame}
           onResume={(entree) => game.resume(entree.save, entree.id)}
+          onNiveau={lancerLeNiveau}
         />
       </div>
     );
@@ -1510,6 +1573,26 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       <div style={{ ...VOLET, top: 12, left: 12 }}>
         <Bandeau game={game} snapshot={snapshot} />
       </div>
+
+      {/*
+        L'OBJECTIF (#188), sous le bandeau et par-dessus la vue : c'est le seul
+        endroit que l'œil retrouve sans chercher, et un objectif qu'on doit
+        aller ouvrir n'en est pas un.
+      */}
+      {enNiveau.niveau && enNiveau.avancement && (
+        <PanneauNiveau niveau={enNiveau.niveau} avancement={enNiveau.avancement} />
+      )}
+      {enNiveau.niveau && enNiveau.avancement && enNiveau.fini && (
+        <FinDeNiveau
+          niveau={enNiveau.niveau}
+          avancement={enNiveau.avancement}
+          annees={snapshot.week / 52}
+          surRejouer={() => {
+            if (enNiveau.niveau) lancerLeNiveau(enNiveau.niveau);
+          }}
+          surQuitter={game.quit}
+        />
+      )}
 
       {/*
         Les avis ne sont derrière aucun bouton : ce sont des choses qui
