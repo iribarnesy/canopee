@@ -27,34 +27,8 @@
 
 import { estGesteSurArbres, type GesteTypeArbre } from "../engine/actions";
 import type { CauseMort } from "../engine/trees";
+import { causeDite, estFeminin } from "./mots";
 import type { Snapshot } from "./protocol";
-
-/**
- * La cause de mort au SINGULIER.
- *
- * Le moteur en a déjà une table (`LIBELLE_CAUSE`), mais accordée au pluriel —
- * « broutés par le gibier » — parce qu'elle sert aux messages collectifs du
- * journal. Un arbre suivi est un individu. Ce n'est donc pas une copie de la
- * même règle mais l'autre nombre de la même phrase, et le `Record` complet
- * garantit ce qui compte : le jour où le moteur ajoute une cause, ceci ne
- * compile plus tant qu'elle n'a pas sa forme au singulier.
- */
-export const CAUSE_AU_SINGULIER: Record<CauseMort, string> = {
-  ecrasement: "écrasé par la chute d'un arbre mort",
-  secheresse: "de sécheresse",
-  engorgement: "asphyxié par l'eau",
-  ombre: "étouffé par l'ombre",
-  vieillesse: "de vieillesse",
-  solHorsGamme: "sur un sol hors de sa gamme de pH",
-  feu: "dans l'incendie",
-  abroutissement: "brouté par le gibier",
-  ravageurs: "achevé par les ravageurs",
-  labour: "retourné par le labour",
-  maladie: "emporté par la maladie",
-  frottis: "annelé par les frottis de cervidés",
-  chablis: "couché par la tempête",
-  volis: "cassé net par la tempête",
-};
 
 /**
  * Ce qu'un geste a FAIT à l'arbre, dit au passé, et sous quelle rubrique.
@@ -144,7 +118,9 @@ export function accumulerLesSuivis(
   }
   // Les morts, avec leur cause en clair : c'est la demande de la v1.
   for (const m of snapshot.morts ?? []) {
-    if (suivis.has(m.id)) dire(m.id, "mort", `meurt ${CAUSE_AU_SINGULIER[m.cause]}`);
+    // Accordé à l'ESSENCE : « la ronce meurt étouffée », pas « étouffé ».
+    if (suivis.has(m.id))
+      dire(m.id, "mort", `meurt ${causeDite(m.cause, 1, estFeminin(m.especeId))}`);
   }
 
   for (const arbre of snapshot.trees) {
@@ -165,7 +141,7 @@ export function accumulerLesSuivis(
     const souffre = cause !== undefined && (arbre.stressLent ?? 0) >= SEUIL_SOUFFRANCE;
     const dite = souffre && cause !== vu?.causeDite ? cause : vu?.causeDite;
     if (souffre && cause !== vu?.causeDite) {
-      dire(arbre.id, "souffre", `souffre : ${CAUSE_AU_SINGULIER[cause]}`);
+      dire(arbre.id, "souffre", `souffre : ${causeDite(cause, 1, estFeminin(arbre.especeId))}`);
     }
     suite.set(arbre.id, {
       gel: arbre.bloomFrosted,

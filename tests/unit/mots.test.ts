@@ -10,7 +10,8 @@
 
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0 } from "../../src/engine/especes";
-import { nomEspeces, pluriel, s } from "../../src/game/mots";
+import { type CauseMort, LIBELLE_CAUSE } from "../../src/engine/trees";
+import { accord, causeDite, estFeminin, GENRE, nomEspeces, pluriel, s } from "../../src/game/mots";
 
 /** Le pluriel attendu de chaque nom du catalogue, écrit à la main. */
 const ATTENDU: Record<string, string> = {
@@ -42,6 +43,37 @@ const ATTENDU: Record<string, string> = {
   "Troène commun": "Troènes communs",
 };
 
+describe("causeDite", () => {
+  it("accorde le participe, pas le complément", () => {
+    // Le défaut vu sur l'écran de fin : « 90 ronces morts étouffés par l'ombre ».
+    expect(causeDite("ombre", 90, true)).toBe("étouffées par l'ombre");
+    expect(causeDite("ombre", 1, false)).toBe("étouffé par l'ombre");
+    expect(causeDite("ombre", 3, false)).toBe("étouffés par l'ombre");
+  });
+
+  it("laisse les causes sans participe invariables", () => {
+    for (const n of [1, 40]) {
+      for (const f of [false, true]) {
+        expect(causeDite("secheresse", n, f)).toBe("de sécheresse");
+        expect(causeDite("vieillesse", n, f)).toBe("de vieillesse");
+        expect(causeDite("feu", n, f)).toBe("dans l'incendie");
+      }
+    }
+  });
+
+  it("change le complément là où le NOMBRE le change", () => {
+    expect(causeDite("solHorsGamme", 1)).toContain("de sa gamme");
+    expect(causeDite("solHorsGamme", 5)).toContain("de leur gamme");
+  });
+
+  it("couvre toutes les causes du moteur, sans phrase vide", () => {
+    for (const cause of Object.keys(LIBELLE_CAUSE) as CauseMort[]) {
+      expect(causeDite(cause).length, cause).toBeGreaterThan(3);
+      expect(causeDite(cause, 5, true).length, cause).toBeGreaterThan(3);
+    }
+  });
+});
+
 describe("pluriel", () => {
   it("accorde les vingt-six noms du catalogue", () => {
     for (const espece of ESPECES_V0) {
@@ -72,6 +104,32 @@ describe("pluriel", () => {
   it("met le nom en minuscules au fil du texte", () => {
     expect(nomEspeces("betula_pendula", 3)).toBe("bouleaux verruqueux");
     expect(nomEspeces("betula_pendula", 1)).toBe("bouleau verruqueux");
+  });
+
+  it("donne un genre à chaque essence du catalogue, et à rien d'autre", () => {
+    for (const espece of ESPECES_V0) {
+      expect(GENRE[espece.id], `genre non écrit pour « ${espece.nom} »`).toBeDefined();
+    }
+    const ids = new Set(ESPECES_V0.map((e) => e.id));
+    for (const id of Object.keys(GENRE)) {
+      expect(ids.has(id), `« ${id} » n'est plus au catalogue`).toBe(true);
+    }
+  });
+
+  it("connaît les trois essences féminines", () => {
+    expect(estFeminin("rubus_fruticosus")).toBe(true);
+    expect(estFeminin("crataegus_monogyna")).toBe(true);
+    expect(estFeminin("calluna_vulgaris")).toBe(true);
+    expect(estFeminin("fagus_sylvatica")).toBe(false);
+    // Une essence inconnue passe au masculin plutôt que d'exploser.
+    expect(estFeminin("inconnue")).toBe(false);
+  });
+
+  it("accord() donne les quatre terminaisons", () => {
+    expect(accord(false, 1)).toBe("");
+    expect(accord(true, 1)).toBe("e");
+    expect(accord(false, 3)).toBe("s");
+    expect(accord(true, 3)).toBe("es");
   });
 
   it("s() n'accorde qu'au-delà de un", () => {

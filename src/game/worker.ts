@@ -61,11 +61,11 @@ import type {
   TempeteResult,
 } from "../engine/tick";
 import { tick } from "../engine/tick";
-import { type CauseMort, LIBELLE_CAUSE, type TreeState } from "../engine/trees";
+import type { CauseMort, TreeState } from "../engine/trees";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import { prefixeSousLePlafond } from "./facture";
 import { journalDe, type PorteurDeJournal } from "./journal";
-import { nomEspece, nomEspeces, s } from "./mots";
+import { accord, causeDite, estFeminin, nomEspece, nomEspeces, s } from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
 import type {
@@ -85,7 +85,6 @@ import {
   fautIlPrevenir,
 } from "./recolteAuto";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
-import { CAUSE_AU_SINGULIER } from "./suivis";
 
 let sc: StationClimat | undefined;
 let weather: WeekWeather[] = [];
@@ -291,9 +290,9 @@ function raisonDesMorts(morts: readonly MortDeLaSemaine[]): string {
   if (!premier) return "";
   const nom = nomEspece(premier.especeId);
   if (morts.length === 1) {
-    return `Un arbre suivi (${nom}) meurt ${CAUSE_AU_SINGULIER[premier.cause]}`;
+    return `Un arbre suivi (${nom}) meurt ${causeDite(premier.cause)}`;
   }
-  return `${morts.length} arbres suivis meurent — le premier (${nom}) ${CAUSE_AU_SINGULIER[premier.cause]}`;
+  return `${morts.length} arbres suivis meurent — le premier (${nom}) ${causeDite(premier.cause)}`;
 }
 
 /** Dit si la coupe part en scierie ou en bûches, pour le journal. */
@@ -919,7 +918,12 @@ function stepWeeks(n: number) {
     for (const [cle, agg] of parEspeceEtCause) {
       const [id, cause] = cle.split("|");
       if (!id) continue;
-      const libelle = LIBELLE_CAUSE[(cause ?? "secheresse") as CauseMort] ?? "";
+      // **Accordé, et le mot « mortes » enfin dit.** La table du moteur est au
+      // masculin pluriel et n'a pas de verbe : « 90 ronces étouffés par
+      // l'ombre ». Celle du jeu accorde en genre et en nombre, et c'est la
+      // même que lit le bilan de période — une seule phrase pour les deux.
+      const feminin = estFeminin(id);
+      const libelle = `mort${accord(feminin, agg.n)} ${causeDite((cause ?? "secheresse") as CauseMort, agg.n, feminin)}`;
       const taille = agg.hMax >= 1 ? ` (jusqu'à ${agg.hMax.toFixed(1)} m)` : " (semis)";
       // Sur un sol hors gamme, on donne les chiffres : c'est la seule cause de
       // mort que le joueur peut corriger d'un geste (chauler).

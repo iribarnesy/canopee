@@ -24,10 +24,10 @@
  * Les deux disent donc parfois la même chose, et le §2.1 veut savoir laquelle
  * des deux tient la règle. Réponse : **aucune des deux ne tient de règle**. Le
  * groupement est une somme, pas un calcul — il n'y a rien qui puisse diverger.
- * Ce qui pouvait diverger, c'est le VOCABULAIRE, et il est tenu ailleurs : la
- * cause de mort par `LIBELLE_CAUSE` (moteur) et `CAUSE_AU_SINGULIER`
- * (`suivis.ts`), l'accord des noms d'essence par `mots.ts`. Les trois écrans du
- * jeu qui comptent des arbres lisent ces mêmes tables.
+ * Ce qui pouvait diverger, c'est le VOCABULAIRE, et il est tenu ailleurs :
+ * `mots.ts` tient l'accord des noms d'essence, le genre de chacune, et la
+ * cause de mort accordable. Le fil du journal, la fiche d'un arbre, le volet
+ * des suivis et ce bilan lisent tous ces mêmes tables.
  *
  * ## Comment il est fait
  *
@@ -46,11 +46,10 @@
 
 import { estGesteSurArbres, type GesteType } from "../engine/actions";
 import type { StadeDeDeveloppement } from "../engine/stades";
-import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
+import type { CauseMort } from "../engine/trees";
 import { centreDesCellules } from "../render/temps/changements";
 import type { JournalDeSemaine } from "../render/temps/ellipse";
-import { nomEspeces, s } from "./mots";
-import { CAUSE_AU_SINGULIER } from "./suivis";
+import { accord, causeDite, estFeminin, nomEspeces, s } from "./mots";
 
 /** De quelle nature est une ligne de bilan. */
 export type SorteDeBilan = "feu" | "tempete" | "mort" | "chute" | "geste" | "naissance" | "montee";
@@ -375,11 +374,11 @@ function texteDe(l: LigneDeBilan): string {
     case "tempete":
       return `${n} tige${s(n)} couchée${s(n)} par la tempête`;
     case "mort": {
-      const cause =
-        n > 1
-          ? LIBELLE_CAUSE[l.cause ?? "vieillesse"]
-          : CAUSE_AU_SINGULIER[l.cause ?? "vieillesse"];
-      return `${n} ${nomEspeces(l.especeId ?? "", n)} mort${s(n)} ${cause}`;
+      // **Accordé à l'ESSENCE, en genre et en nombre.** La partie jouée l'a
+      // pris en faute sur l'écran de fin : « 90 ronces morts étouffés par
+      // l'ombre ». Trois essences du catalogue sont féminines.
+      const f = estFeminin(l.especeId ?? "");
+      return `${n} ${nomEspeces(l.especeId ?? "", n)} mort${accord(f, n)} ${causeDite(l.cause ?? "vieillesse", n, f)}`;
     }
     case "chute":
       return `${n} chandelle${s(n)} de ${nomEspeces(l.especeId ?? "", 1)} tombée${s(n)}`;

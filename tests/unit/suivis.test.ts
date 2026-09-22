@@ -30,11 +30,11 @@ import {
   LIBELLE_CAUSE,
   type TreeState,
 } from "../../src/engine/trees";
+import { causeDite } from "../../src/game/mots";
 import type { Snapshot, SnapshotTree } from "../../src/game/protocol";
 import { arbreDuSnapshot, construireSnapshot } from "../../src/game/snapshot";
 import {
   accumulerLesSuivis,
-  CAUSE_AU_SINGULIER,
   type EvenementSuivi,
   grouperLesSuivis,
   type MemoireDesSuivis,
@@ -212,9 +212,9 @@ describe("ce que le moteur a déjà nommé", () => {
     expect(evenements[0]?.texte).toBe("meurt de sécheresse");
   });
 
-  it("chaque cause du moteur a sa forme au singulier, et aucune n'est vide", () => {
+  it("chaque cause du moteur a sa forme accordable, et aucune n'est vide", () => {
     for (const cause of Object.keys(LIBELLE_CAUSE) as CauseMort[]) {
-      expect(CAUSE_AU_SINGULIER[cause]?.length).toBeGreaterThan(3);
+      expect(causeDite(cause).length, cause).toBeGreaterThan(3);
     }
   });
 });

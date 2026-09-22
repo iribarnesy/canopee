@@ -15,6 +15,7 @@
  */
 
 import { getEspece } from "../engine/especes";
+import type { CauseMort } from "../engine/trees";
 
 /**
  * Les mots qui ARRÊTENT l'accord dans un nom composé.
@@ -77,4 +78,108 @@ export function nomEspeces(id: string, n: number): string {
  */
 export function s(n: number): string {
   return n >= 2 ? "s" : "";
+}
+
+/**
+ * LE GENRE DE CHAQUE ESSENCE.
+ *
+ * Trois féminins sur vingt-six, et ils suffisent à rendre faux tout ce qui
+ * s'accorde avec eux : l'écran de fin d'un niveau écrivait « 90 ronces morts
+ * étouffés par l'ombre ».
+ *
+ * **Le worker avait déjà buté là-dessus et s'en était sorti autrement** :
+ * `raisonDesMorts` fait porter l'accord par le mot « arbre » et nomme
+ * l'essence en apposition. C'est juste, et ça ne marche que pour une phrase
+ * dont on écrit soi-même le sujet. Une ligne de bilan compte des ronces, pas
+ * des arbres.
+ *
+ * Le `Record` complet est la garantie qui compte : l'essai vérifie que la table
+ * couvre le catalogue du moteur, et rien d'autre.
+ */
+export const GENRE: Record<string, "m" | "f"> = {
+  alnus_glutinosa: "m",
+  fagus_sylvatica: "m",
+  quercus_pubescens: "m",
+  pinus_sylvestris: "m",
+  betula_pendula: "m",
+  juglans_regia: "m",
+  malus_domestica: "m",
+  prunus_armeniaca: "m",
+  corylus_avellana: "m",
+  prunus_spinosa: "m",
+  crataegus_monogyna: "f",
+  rubus_fruticosus: "f",
+  sambucus_nigra: "m",
+  carpinus_betulus: "m",
+  ilex_aquifolium: "m",
+  salix_alba: "m",
+  cornus_mas: "m",
+  euonymus_europaeus: "m",
+  ligustrum_vulgare: "m",
+  ulex_europaeus: "m",
+  cytisus_scoparius: "m",
+  calluna_vulgaris: "f",
+  castanea_sativa: "m",
+  quercus_suber: "m",
+  fraxinus_excelsior: "m",
+  arbutus_unedo: "m",
+};
+
+/** Une essence dont le nom est féminin ? Inconnue = masculin, le défaut. */
+export function estFeminin(especeId: string): boolean {
+  return GENRE[especeId] === "f";
+}
+
+/**
+ * La terminaison d'un participe accordé : rien, « e », « s » ou « es ».
+ *
+ * `feminin` et non une essence : ce qui s'accorde n'est pas toujours l'essence.
+ * Une ligne qui compte des TIGES est au féminin quelle que soit l'espèce.
+ */
+export function accord(feminin: boolean, n: number): string {
+  return `${feminin ? "e" : ""}${s(n)}`;
+}
+
+/**
+ * CE QUI A TUÉ, accordé.
+ *
+ * **Une table qui en remplace une, et non une de plus.** Le moteur en a une au
+ * masculin pluriel (`LIBELLE_CAUSE`), pour ses messages collectifs ; le jeu en
+ * tenait une seconde au masculin singulier, parce qu'un arbre suivi est un
+ * individu. Il en aurait fallu deux de plus pour le féminin. Celle-ci sépare ce
+ * qui s'accorde — le participe — de ce qui ne s'accorde pas, et couvre donc les
+ * quatre cas d'un coup.
+ *
+ * Deux causes n'ont pas de participe du tout : on ne meurt pas « mort de
+ * sécheresse » par un participe, on en meurt tout court. Leur phrase est alors
+ * le complément seul.
+ *
+ * `pl` n'existe que là où le COMPLÉMENT change avec le nombre — « hors de sa
+ * gamme de pH » contre « hors de leur gamme ».
+ */
+const CAUSE_DITE: Record<CauseMort, { participe?: string; sg: string; pl?: string }> = {
+  ecrasement: { participe: "écrasé", sg: " par la chute d'un arbre mort" },
+  secheresse: { sg: "de sécheresse" },
+  engorgement: { participe: "asphyxié", sg: " par l'eau" },
+  ombre: { participe: "étouffé", sg: " par l'ombre" },
+  vieillesse: { sg: "de vieillesse" },
+  solHorsGamme: {
+    sg: "sur un sol hors de sa gamme de pH",
+    pl: "sur un sol hors de leur gamme de pH",
+  },
+  feu: { sg: "dans l'incendie" },
+  abroutissement: { participe: "brouté", sg: " par le gibier" },
+  ravageurs: { participe: "achevé", sg: " par les ravageurs" },
+  labour: { participe: "retourné", sg: " par le labour" },
+  maladie: { participe: "emporté", sg: " par la maladie" },
+  frottis: { participe: "annelé", sg: " par les frottis de cervidés" },
+  chablis: { participe: "couché", sg: " par la tempête" },
+  volis: { participe: "cassé", sg: " net par la tempête" },
+};
+
+/** La cause de mort, accordée au nombre et au genre de ce qu'elle a tué. */
+export function causeDite(cause: CauseMort, n = 1, feminin = false): string {
+  const dite = CAUSE_DITE[cause];
+  const complement = (n >= 2 && dite.pl) || dite.sg;
+  return dite.participe ? `${dite.participe}${accord(feminin, n)}${complement}` : complement;
 }

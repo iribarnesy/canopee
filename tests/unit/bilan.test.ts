@@ -74,6 +74,31 @@ describe("agreger", () => {
     expect(quatre[0]?.texte).toBe("4 aulnes glutineux morts asphyxiés par l'eau");
   });
 
+  it("accorde en GENRE avec l'essence", () => {
+    // Vu sur l'écran de fin d'un niveau : « 90 ronces morts étouffés par
+    // l'ombre ». Trois essences du catalogue sont féminines.
+    const une = agreger(
+      BILAN_VIDE,
+      { morts: [mort(1, 1, "rubus_fruticosus", "ombre")] },
+      0,
+      COTE_M,
+    );
+    expect(lignesDuBilan(une)[0]?.texte).toBe("1 ronce morte étouffée par l'ombre");
+    const trois = agreger(
+      BILAN_VIDE,
+      {
+        morts: [
+          mort(1, 1, "rubus_fruticosus", "ombre"),
+          mort(2, 2, "rubus_fruticosus", "ombre"),
+          mort(3, 3, "rubus_fruticosus", "ombre"),
+        ],
+      },
+      0,
+      COTE_M,
+    );
+    expect(lignesDuBilan(trois)[0]?.texte).toBe("3 ronces mortes étouffées par l'ombre");
+  });
+
   it("compte un geste sur arbres tige par tige, et un geste de zone en m²", () => {
     const gestes: GesteVisible[] = [
       { type: "elaguer", ids: [1, 2, 3] },

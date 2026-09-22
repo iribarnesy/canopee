@@ -25,8 +25,8 @@ import {
 } from "../../engine/phenologie";
 import { stadeDe } from "../../engine/stades";
 import { elancement, elancementLimite, hauteurStableM } from "../../engine/trees";
+import { causeDite } from "../mots";
 import type { SnapshotTree } from "../protocol";
-import { CAUSE_AU_SINGULIER } from "../suivis";
 
 /**
  * Comment se lit une part : une part haute est-elle une bonne nouvelle ?
@@ -208,7 +208,9 @@ export function ficheDeLArbre(
   if (arbre.chandelle) {
     // Une chandelle n'a plus ni feuillage ni vigueur : ce qui reste à dire
     // d'elle, c'est depuis quand elle est morte et de quoi.
-    if (arbre.causeMort) dire("✝️", "Morte", CAUSE_AU_SINGULIER[arbre.causeMort]);
+    // « Morte » parce que le sujet de la fiche est la TIGE, qui est féminine
+    // quelle que soit l'essence ; la cause s'accorde avec elle.
+    if (arbre.causeMort) dire("✝️", "Morte", causeDite(arbre.causeMort, 1, true));
     if (arbre.mortSemaine !== undefined) {
       dire("🕰", "Sur pied depuis", depuis(ctx.semaine, arbre.mortSemaine));
     }
@@ -257,7 +259,7 @@ export function ficheDeLArbre(
   if (arbre.stress > 0.05) {
     const parts: string[] = [];
     if (arbre.stressLent !== undefined && arbre.stressLent > 0.01 && arbre.causeLente) {
-      parts.push(`${CAUSE_AU_SINGULIER[arbre.causeLente]} ${pourcent(arbre.stressLent)}`);
+      parts.push(`${causeDite(arbre.causeLente, 1, true)} ${pourcent(arbre.stressLent)}`);
     }
     if (arbre.stressRavageurs !== undefined && arbre.stressRavageurs > 0.01) {
       parts.push(`ravageurs ${pourcent(arbre.stressRavageurs)}`);
