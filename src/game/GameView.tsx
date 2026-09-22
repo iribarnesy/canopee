@@ -383,23 +383,50 @@ function StartScreen({
             Un objectif, des étapes, et une fin. Les réglages du terrain sont posés par le niveau.
           </p>
           {NIVEAUX_LIVRES.map((n) => (
-            <div key={n.id} style={{ marginTop: 6 }}>
-              <button type="button" style={btn(true)} onClick={() => onNiveau(n)}>
-                ▶ {n.nom}
-              </button>
-              <span className="sous"> {n.enonce}</span>
-            </div>
-          ))}
-          <p className="seg" style={{ marginTop: 10, marginBottom: 0 }}>
-            <button type="button" style={btn()} onClick={entrerDansLeBac}>
-              ⚙ Mode bac à sable
+            <button
+              key={n.id}
+              type="button"
+              onClick={() => onNiveau(n)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                marginTop: 8,
+                padding: "10px 12px",
+                border: "1px solid var(--trait)",
+                borderLeft: "6px solid var(--foret)",
+                borderRadius: 8,
+                background: "var(--carte)",
+                cursor: "pointer",
+                font: "inherit",
+              }}
+            >
+              <strong>▶ {n.nom}</strong>
+              <div className="sous" style={{ marginTop: 2 }}>
+                {n.enonce}
+              </div>
             </button>
-            <span className="sous">
-              {" "}
-              Poser soi-même le sol, l'entourage, le relief, le climat — pour reproduire une
-              situation précise, ou contester un résultat.
-            </span>
+          ))}
+        </section>
+      )}
+
+      {/*
+        LE BAC À SABLE A SA PROPRE CARTE, et pas un bouton glissé sous les
+        niveaux : ce n'est pas une variante d'un niveau, c'est l'autre porte. La
+        capture de la première version le montrait mieux qu'un raisonnement — le
+        bouton, posé au bas de la carte « Niveaux », avait l'air d'en dépendre.
+      */}
+      {!bac && (
+        <section className="carte">
+          <h3>Bac à sable</h3>
+          <p className="sous">
+            Poser soi-même le sol, l'entourage, le relief, le climat, et regarder ce qui arrive.
+            Sans objectif ni fin — c'est le mode qui permet de reproduire une situation précise, ou
+            de contester un résultat.
           </p>
+          <button type="button" style={btn()} onClick={entrerDansLeBac}>
+            ⚙ Régler une partie
+          </button>
         </section>
       )}
 
