@@ -208,11 +208,15 @@ infrastructure. Son livrable est une identité, tenue sur cinq cents disques
 tirés au hasard plutôt que sur des cas choisis, ce qui a fait tomber deux
 divergences que personne n'aurait vues : un semis minuscule ne semait rien, et
 l'aire se calculait de deux façons à un ULP près)
-→ **94 % (le soc desserre ce que les roues tassent : un sol labouré cesse d'être
+→ 94 % (le soc desserre ce que les roues tassent : un sol labouré cesse d'être
 condamné à 1,000 de tassement pour toujours, la courbe de Broadbalk monte d'un
 quart et le plot fumé entre enfin dans la gamme de l'essai — aucun point gagné,
 c'est une correction, et le risque annoncé sur le point zéro s'est révélé être
-une fenêtre de mesure trop courte)**.*
+une fenêtre de mesure trop courte)
+→ **94 % (l'état du moteur s'écrit et se relit à l'identique : une partie reprise
+continue exactement comme celle qui ne s'est pas arrêtée, là où la rejouer depuis
+sa graine la faisait diverger dès que le navigateur changeait de version — aucun
+point gagné, c'est la partie du joueur qu'on cesse de parier)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
