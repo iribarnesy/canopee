@@ -12,7 +12,19 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { serieMeteoPour } from "../../src/data/meteo";
+import { applyAction, type GameAction } from "../../src/engine/actions";
 import { forEachDiscCell, type GridDims } from "../../src/engine/grid";
+import { serieToWeeks } from "../../src/engine/meteo";
+import { rngStateFromSeed } from "../../src/engine/rng";
+import {
+  createGameState,
+  type GameState,
+  plantScattered,
+  type Station,
+} from "../../src/engine/state";
+import { LIMON_RICHE } from "../../src/engine/stations";
+import { stateHash, tick } from "../../src/engine/tick";
 import {
   aireM2DeLaZone,
   cellulesDeLaZone,
@@ -23,6 +35,13 @@ import {
 } from "../../src/engine/zone";
 
 const DIMS: GridDims = { widthM: 40, heightM: 40 };
+
+/**
+ * L'empreinte de la partie témoin, relevée AVANT le refactor sur `ffca0fb`.
+ * Elle est en dur, et c'est tout l'intérêt : recalculée depuis le moteur, elle
+ * suivrait le changement au lieu de le contrôler.
+ */
+const EMPREINTE_AVANT_ZONE = 3_806_937_118;
 
 /** L'ancienne route, telle quelle, pour comparer. */
 function ancien(cx: number, cy: number, r: number): number[] {
@@ -68,7 +87,7 @@ describe("le disque ne bouge pas d'un indice", () => {
 
 describe("la bande est une bande", () => {
   const horizontale: Zone = {
-    forme: "bande",
+    zone: "bande",
     x: 20,
     y: 20,
     longueurM: 30,
@@ -116,4 +135,55 @@ describe("la bande est une bande", () => {
     const debordante: Zone = { ...horizontale, x: 0, y: 0, longueurM: 200, largeurM: 200 };
     expect(cellulesDeLaZone(40, debordante).length).toBe(40 * 40);
   });
+});
+
+describe("le refactor ne déplace aucune partie", () => {
+  it("une partie jouée avec des actions de disque rend le même stateHash", () => {
+    // LE CONTRÔLE QUI REND LE REFACTOR SÛR, et le seul. Dix actions ont changé
+    // de signature ; l'égalité des cellules (ci-dessus) le prouve unité par
+    // unité, celle-ci le prouve BOUT À BOUT — une partie entière, avec des
+    // gestes qui labourent, fauchent, chaulent, éclaircissent et épandent,
+    // doit rendre exactement l'empreinte qu'elle rendait avant.
+    //
+    // L'empreinte est épinglée en dur : recalculée depuis le moteur, elle
+    // n'aurait rien prouvé du tout — elle aurait suivi le changement.
+    const COTE = 30;
+    const station: Station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
+    const serie = serieMeteoPour(LIMON_RICHE.station.id);
+    if (!serie) throw new Error("série manquante");
+    const meteo = serieToWeeks(serie);
+    let s: GameState = plantScattered(
+      createGameState(station, rngStateFromSeed(7)),
+      "quercus_pubescens",
+      80,
+    );
+    const centre = COTE / 2;
+    for (let an = 0; an < 12; an++) {
+      for (let w = 0; w < 52; w++) {
+        const week = an * 52 + w;
+        const geste = (a: GameAction) => {
+          s = applyAction(s, a).state;
+        };
+        if (w === 8) geste({ type: "faucher", week, x: centre, y: centre, rayonM: 8 });
+        if (w === 12 && an % 3 === 0)
+          geste({ type: "chauler", week, x: centre, y: centre, rayonM: 6 });
+        if (w === 20 && an === 4)
+          geste({
+            type: "eclaircir",
+            week,
+            x: centre,
+            y: centre,
+            rayonM: 12,
+            densiteCibleParHa: 400,
+            critere: "parLeBas",
+            devenir: "laisser",
+          });
+        if (w === 30 && an === 6) geste({ type: "labourer", week, x: 8, y: 8, rayonM: 5 });
+        const m = meteo[week % meteo.length];
+        if (!m) throw new Error("météo manquante");
+        s = tick(s, m).state;
+      }
+    }
+    expect(stateHash(s)).toBe(EMPREINTE_AVANT_ZONE);
+  }, 300_000);
 });

@@ -16,7 +16,7 @@
  *
  * ── CE QUE CE MODULE GARANTIT ────────────────────────────────────────────────
  *
- * **Le disque reste le comportement par défaut, au bit près.** `forme` est
+ * **Le disque reste le comportement par défaut, au bit près.** `zone` est
  * FACULTATIF sur la variante disque : une action écrite `{ x, y, rayonM }` —
  * c'est-à-dire toutes celles qui existent, dans le moteur comme dans les essais
  * — reste valide sans être touchée, et rend exactement les mêmes cellules
@@ -33,11 +33,16 @@
 import { cellIndexAt, type GridDims } from "./grid";
 
 /**
- * Un disque : un centre et un rayon. `forme` est facultatif — c'est ce qui rend
- * la migration invisible pour tout ce qui était déjà écrit.
+ * Un disque : un centre et un rayon. Le discriminant est facultatif — c'est ce
+ * qui rend la migration invisible pour tout ce qui était déjà écrit.
+ *
+ * Il s'appelle `zone` et non `forme` parce que `forme` était déjà pris : une
+ * fertilisation a une forme, minérale ou fumier. L'intersection réduisait toute
+ * l'action à `never`, et c'est le compilateur qui l'a dit — une collision de
+ * noms qu'aucune relecture n'aurait attrapée.
  */
 export interface ZoneDisque {
-  forme?: "disque";
+  zone?: "disque";
   x: number;
   y: number;
   rayonM: number;
@@ -52,7 +57,7 @@ export interface ZoneDisque {
  * le moteur (`versLAval`, `ventVersRad`).
  */
 export interface ZoneBande {
-  forme: "bande";
+  zone: "bande";
   x: number;
   y: number;
   /** longueur du grand axe, m */
@@ -69,7 +74,7 @@ export type Zone = ZoneDisque | ZoneBande;
 export function zoneContient(zone: Zone, px: number, py: number): boolean {
   const dx = px - zone.x;
   const dy = py - zone.y;
-  if (zone.forme === "bande") {
+  if (zone.zone === "bande") {
     // On se place dans le repère de la bande : le long de son axe, et en
     // travers. Deux comparaisons, et aucune trigonométrie par cellule — le
     // cosinus et le sinus sont calculés une fois ici.
@@ -84,7 +89,7 @@ export function zoneContient(zone: Zone, px: number, py: number): boolean {
 
 /** Le rayon de la boîte englobante, m — pour borner le parcours de la grille. */
 function porteeM(zone: Zone): number {
-  return zone.forme === "bande" ? Math.hypot(zone.longueurM, zone.largeurM) / 2 : zone.rayonM;
+  return zone.zone === "bande" ? Math.hypot(zone.longueurM, zone.largeurM) / 2 : zone.rayonM;
 }
 
 /**
@@ -131,12 +136,12 @@ export function cellulesDeLaZone(coteM: number, zone: Zone): number[] {
 
 /** L'aire de la zone, m² — celle qui facture les heures de chantier. */
 export function aireM2DeLaZone(zone: Zone): number {
-  return zone.forme === "bande"
+  return zone.zone === "bande"
     ? zone.longueurM * zone.largeurM
     : Math.PI * zone.rayonM * zone.rayonM;
 }
 
 /** Le périmètre de la zone, m — celui qu'on clôture. */
 export function perimetreMDeLaZone(zone: Zone): number {
-  return zone.forme === "bande" ? 2 * (zone.longueurM + zone.largeurM) : 2 * Math.PI * zone.rayonM;
+  return zone.zone === "bande" ? 2 * (zone.longueurM + zone.largeurM) : 2 * Math.PI * zone.rayonM;
 }

@@ -176,7 +176,7 @@ function moyen(
   state: GameState,
   action: Extract<GameAction, { type: "faucher" | "chauler" }>,
 ): string {
-  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const part = partMecanisable(state.trees, action);
   if (part >= 0.85) return "à la machine";
   if (part <= 0.15) return "à la main : l'engin ne passe pas";
   return `${Math.round(part * 100)} % à la machine, le reste à la main`;

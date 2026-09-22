@@ -61,7 +61,56 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le chêne creux et le LER, #183 et #136)
+## Ce que le dernier lot a appris (la bande, #186)
+
+Un lot d'INFRASTRUCTURE : la géométrie d'un chantier cesse d'être un disque.
+Aucun critère gagné, aucun chiffre d'écologie déplacé — et c'est justement ce
+qu'il faut savoir livrer, parce que dix actions du moteur changent de signature
+en même temps.
+
+**Le livrable d'un refactor est une empreinte inchangée.** Avant d'écrire une
+ligne de `zone.ts`, l'empreinte d'une partie de douze ans — semis, fauches,
+chaulages, une éclaircie, un labour — a été relevée sur le commit d'AVANT et
+épinglée en dur dans l'essai. Recalculée depuis le moteur d'après, elle aurait
+suivi le changement au lieu de le contrôler ; épinglée, elle est le seul énoncé
+qui distingue un refactor réussi d'un refactor qui déplace silencieusement
+toutes les parties. Et sous elle, neuf cas de bord prouvent l'égalité cellule
+par cellule : centré, décentré, à cheval sur le bord, débordant, et un disque
+si petit qu'il ne touche aucun centre de cellule.
+
+**La compatibilité se paie par un discriminant FACULTATIF.** `ZoneDisque`
+déclare `zone?: "disque"`, si bien qu'une action écrite `{ x, y, rayonM }` —
+c'est-à-dire toutes celles qui existaient, dans le moteur comme dans les essais
+— reste valide sans être touchée. Le coût du refactor est alors proportionnel à
+ce qu'on ajoute, pas à ce qui existe.
+
+**Une collision de noms ne se relit pas, elle se compile.** Le discriminant
+s'appelait d'abord `forme` ; or `fertiliser` avait déjà un champ `forme`
+(minérale ou fumier), et l'intersection `{…} & Zone` réduisait toute la variante
+à `never`. Aucune relecture n'aurait attrapé ça — le compilateur l'a dit tout
+de suite. C'est la meilleure raison de faire passer une forme par le SYSTÈME DE
+TYPES plutôt que par une convention.
+
+**La forme du chantier était dans le moteur, pas dans l'interface.** La question
+s'est posée : une bande, n'est-ce pas à l'interface de la découper en disques ?
+Non — parce que `partMecanisable` a besoin de la forme. La demi-largeur qu'un
+engin a devant lui dépend de la direction où il passe, et pour un rectangle elle
+se lit sur la projection du rectangle sur l'axe perpendiculaire au passage. Une
+allée découpée en disques par l'interface aurait perdu exactement l'information
+qui décide. Deux faits de terrain tombent alors sans être écrits : on ne remonte
+pas une allée de 4 m qu'un arbre bouche, on la traverse ; et une ligne de tiges
+plantée dans l'axe se longe mais ne se traverse pas.
+
+**Ne pas écrire l'essai à l'histoire qu'on avait en tête.** Le premier essai de
+ce lot affirmait qu'une bande carrée « n'a plus de direction de secours » et
+attendait 0. Le moteur a rendu 0,876, et il avait raison : un carré de 4 m vu en
+diagonale fait 5,66 m de large, l'engin y passe. L'histoire était fausse, pas le
+code. L'essai a été refait autour de ce que la géométrie produit vraiment, avec
+les deux contre-exemples qui le rendent probant — demi-largeur figée à celle de
+la bande, le premier cas rendrait 0 ; figée à sa demi-longueur, le second
+rendrait 0,977 au lieu de 0,9125.
+
+## Ce qu'un lot plus ancien a appris (le chêne creux et le LER, #183 et #136)
 
 **Un mécanisme de soutien qui casse ce qu'il soutient pèse trop lourd.** La
 carie de #182 a fait tomber deux bancs qui ne parlent pas de carie — la
@@ -1333,6 +1382,14 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #186 laisse à l'interface.** Le moteur sait faire une bande : dix
+actions acceptent `{ zone: "bande", x, y, longueurM, largeurM, orientationRad }`
+à la place de `{ x, y, rayonM }`, et `mecanisation.ts` en tient compte. Rien
+côté interface ne permet encore d'en DESSINER une — c'est la moitié du lot qui
+revient à l'agent d'interface. Tant qu'elle n'est pas là, aucune partie ne peut
+produire de bande, ce qui est exactement pourquoi l'empreinte témoin est
+inchangée.
 
 **Ce que #164 laisse au rendu.** `contextePhenologiqueFractionnaire(debut, fin, t)`
 rend le calendrier à n'importe quel instant entre deux semaines, et le `pheno`
