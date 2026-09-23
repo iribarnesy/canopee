@@ -126,8 +126,29 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     const avec = simuler(sc, especeId, fauches(4), 12);
     return { rapport: avec.hauteur / sans.hauteur, sans: sans.hauteur };
   };
+  // **LE BANC FAISAIT VARIER DEUX CHOSES À LA FOIS** (#210). Le bras « pauvre »
+  // était un PIN sur lande, le bras « riche » un BOULEAU sur limon : leur
+  // différence portait donc la station ET l'espèce, alors que l'essai ne
+  // prétend parler que de la station. Mesuré en carré complet, rapport
+  // fauché/non fauché à douze ans :
+  //
+  //                       pin      bouleau    couverture herbacée
+  //     pauvre (lande)   1,0207    1,0132           0,223
+  //     riche  (limon)   1,0003    0,9988           0,963
+  //
+  // La station pèse environ deux points, l'espèce sept dixièmes : le contraste
+  // était majoritairement le bon, mais **un tiers du signal venait de l'espèce**
+  // — sur un signal qui ne fait déjà que deux points, ce n'est pas une nuance.
+  // L'espèce est donc fixée, et c'est le pin qui reste, parce qu'il vit sur les
+  // deux stations et que le bouleau n'a rien à faire sur une lande sèche.
+  //
+  // Ce qui VARIE ENCORE entre les deux bras, et qu'on ne peut pas fixer : la
+  // couverture herbacée, 0,22 contre 0,96. Mais c'est une CONSÉQUENCE de la
+  // station, pas un facteur indépendant — une lande sèche porte peu d'herbe,
+  // c'est ce qu'être une lande sèche veut dire. Le noter tout de même, parce
+  // qu'il explique la moitié du résultat : il y a peu à faucher sur la lande.
   const pauvre = gain(LANDE_SECHE, "pinus_sylvestris");
-  const riche = gain(LIMON_RICHE, "betula_pendula");
+  const riche = gain(LIMON_RICHE, "pinus_sylvestris");
 
   it("faucher ne NUIT pas, et le sens reste le bon sur sol pauvre", () => {
     // Le signe, et rien de plus : retirer un concurrent ne coûte jamais au
@@ -141,7 +162,10 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     // moitié du contraste qui survit intacte, parce qu'elle ne reposait sur
     // aucun apport fantôme.
     expect(riche.rapport).toBeLessThan(1.1);
-    expect(riche.sans).toBeGreaterThan(3);
+    // Et l'arbre a bien poussé : 2,54 m à douze ans pour le pin sur limon
+    // riche, contre 1,67 sur la lande. Ce n'est pas un témoin mort.
+    expect(riche.sans).toBeGreaterThan(2);
+    expect(riche.sans).toBeGreaterThan(pauvre.sans);
   });
 
   it("le contraste pauvre/riche garde son sens, mais il ne fait plus que deux points", () => {

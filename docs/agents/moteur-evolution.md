@@ -61,7 +61,48 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la date de l'élagage, #180)
+## Ce que le dernier lot a appris (le banc qui variait deux fois, #210)
+
+Vingt lignes d'essai, aucun code de moteur, et deux leçons de méthode dont l'une
+est une faute que j'ai commise dans la même journée.
+
+**UN BANC QUI FAIT VARIER DEUX CHOSES NE MESURE NI L'UNE NI L'AUTRE.** Le banc
+de la concurrence herbacée opposait un PIN sur lande à un BOULEAU sur limon, et
+appelait leur différence « ce que fait la station ». Mesuré en carré complet :
+
+                      pin      bouleau    couverture herbacée
+     pauvre (lande)  1,0207    1,0132           0,223
+     riche  (limon)  1,0003    0,9988           0,963
+
+La station pèse deux points, l'espèce sept dixièmes. Le contraste était
+majoritairement le bon — **et c'est ce qui rend ce défaut vicieux** : il ne se
+voit pas dans le signe, il se voit dans le tiers. Sur un signal qui ne fait déjà
+que deux points, un tiers parasite n'est pas une nuance. Fixer l'espèce coûtait
+une ligne et n'a rien coûté de plus en temps de calcul : les deux bras tournaient
+déjà.
+
+**ET CE QU'ON NE PEUT PAS FIXER, ON L'ÉCRIT.** La couverture herbacée reste à
+0,22 contre 0,96 entre les deux bras, et on ne peut pas l'égaliser : une lande
+sèche porte peu d'herbe, c'est ce qu'être une lande sèche veut dire. C'est une
+CONSÉQUENCE de la station, pas un facteur indépendant — mais elle explique la
+moitié du résultat (*il y a peu à faucher sur la lande*), donc elle est écrite
+dans l'essai. Un confondant qu'on ne peut pas retirer se déclare ; c'est la
+différence entre un banc imparfait et un banc trompeur.
+
+**ET LA FAUTE, QUI EST LA MÊME QUE CELLES QUE LA JOURNÉE A PASSÉES À RÉPARER.**
+En instruisant #210, j'ai conclu « le mécanisme n'est pas livrable, tous les
+héliophiles meurent » **sur la première ligne d'un banc de deux lignes**. La
+seconde disait le contraire : le bouleau survit et tombe sur sa table à 20,16 m
+contre 20,0 tabulés. La recommandation fausse était déjà écrite dans l'issue
+quand la mesure est arrivée.
+
+C'est exactement le défaut que le lot de la litière avait démonté six fois dans
+la même journée — conclure sur un bras sans avoir lu l'autre —, et l'avoir
+nommé six fois n'a pas suffi à ne pas le commettre. *Une mesure lancée en
+arrière-plan n'est pas une mesure tant qu'elle n'est pas finie, et « la première
+ligne suffit à voir » est une phrase qu'on se dit juste avant de se tromper.*
+
+## Ce qu'un lot plus ancien a appris (la date de l'élagage, #180)
 
 Trois lignes de mécanisme, un champ optionnel, et un arbitrage de long terme
 rendu au joueur. Le lot le plus rentable de la série, et il tenait à une
