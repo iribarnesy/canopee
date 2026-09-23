@@ -213,6 +213,10 @@ condamné à 1,000 de tassement pour toujours, la courbe de Broadbalk monte d'un
 quart et le plot fumé entre enfin dans la gamme de l'essai — aucun point gagné,
 c'est une correction, et le risque annoncé sur le point zéro s'est révélé être
 une fenêtre de mesure trop courte)
+→ 94 % (l'état du moteur s'écrit et se relit à l'identique : une partie reprise
+continue exactement comme celle qui ne s'est pas arrêtée, là où la rejouer depuis
+sa graine la faisait diverger dès que le navigateur changeait de version — aucun
+point gagné, c'est la partie du joueur qu'on cesse de parier)
 → **94 % (un gîte ne suffit plus, il faut une table : un nichoir dans un désert
 reste vide, et une haie de vieux arbres ne nourrit pas ce qu'un bois nourrit —
 aucun point gagné, et deux ressources sur quatre retirées après mesure, parce
