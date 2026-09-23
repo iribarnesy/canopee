@@ -37,7 +37,7 @@
  *
  * Deux choses que ce compte apprend, et qu'aucun raisonnement ne donnait :
  *
- *  - **les trois morts qui font DISPARAÎTRE l'arbre coûtent zéro** — labour,
+ *  - **les morts qui font DISPARAÎTRE l'arbre coûtent zéro** — labour, boutis,
  *    abroutissement, écrasement ne touchent que la pose. La séparation des deux
  *    canaux n'est donc pas qu'une question de principe, elle se paie ou se
  *    gagne ;
@@ -223,6 +223,14 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   // c'est le VOILE du geste `labourer`, qui joue dans le même plan.
   labour: {
     seffaceEntre: [0, 0.3],
+    chandelleA: 1.1,
+  },
+  // Le boutis fait la même chose que le labour — le plant disparaît, la terre
+  // est retournée — mais un groin n'est pas un soc : il fouille, il revient,
+  // il met le temps d'un repas. L'effacement est donc le même geste, plus
+  // lent. Pas de chandelle : un semis arraché ne laisse pas de tige debout.
+  boutis: {
+    seffaceEntre: [0, 0.6],
     chandelleA: 1.1,
   },
   // « dessèchement d'une branche puis de l'ensemble, feuilles qui restent
