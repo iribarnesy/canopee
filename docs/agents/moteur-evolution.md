@@ -61,7 +61,55 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le point zéro du carbone, #202)
+## Ce que le dernier lot a appris (la date de l'élagage, #180)
+
+Trois lignes de mécanisme, un champ optionnel, et un arbitrage de long terme
+rendu au joueur. Le lot le plus rentable de la série, et il tenait à une
+question posée en cours de partie : *« est-ce qu'un arbre élagué tôt vaut plus
+qu'un arbre élagué au dernier moment ? »* Non. Et le geste existait.
+
+**UNE GÉOMÉTRIE VAUT MIEUX QU'UNE LOI À CALER.** La tentation était une
+décroissance — la valeur du bois décroît avec le diamètre à l'élagage, avec un
+exposant, un seuil, un *(à calibrer)*. Or le fait est purement géométrique : le
+nœud est un cylindre de diamètre `d₀` dans une gaine claire jusqu'à `d`, donc la
+part sans nœuds est le rapport des sections, `1 − (d₀/d)²`. **Zéro paramètre, et
+rien à ancrer** : c'est de la trigonométrie de collège, et elle rend exactement
+ce que les relevés d'aubier disent. Quand un mécanisme a une forme que la
+géométrie donne, la chercher d'abord évite un chiffre à défendre pendant dix
+lots.
+
+**UN ÉTAT QUI NE RETIENT QUE LE RÉSULTAT NE PEUT PAS PARLER DU CHEMIN.** Le
+moteur portait `hauteurElagueeM` — une hauteur, c'est-à-dire *où* on a coupé — et
+rien sur *quand*. Aucune loi, si fine soit-elle, n'aurait pu en tirer une
+différence entre élaguer tôt et élaguer tard : l'information n'était pas dans
+l'état. **Le lot est donc un champ, pas une formule.** C'est le même motif que la
+glandée (#197), qui n'a rien stocké, mais retourné : là il valait mieux
+recalculer, ici il fallait retenir, et ce qui tranche est de savoir si la
+grandeur est une FONCTION de l'état présent ou une trace du passé.
+
+**QUAND DEUX COUPES SE SUCCÈDENT, IL FAUT DIRE LAQUELLE COMPTE, ET LE DIRE
+D'APRÈS LE MÉTIER.** Monter la bille à quatre mètres à huit centimètres puis à
+six mètres à quarante : quel `d₀` ? La réponse n'est pas une moyenne, c'est la
+PIRE section — une grume se classe sur son défaut, pas sur sa moyenne. Le choix
+juste se trouve être aussi celui qui ne demande aucun état de plus : un `Math.max`
+sur un scalaire, au lieu d'une liste de coupes à sérialiser.
+
+**UN CHAMP OPTIONNEL EST UNE MIGRATION GRATUITE.** `diametreElagageCm` absent
+rend 1, c'est-à-dire le comportement d'avant. Une partie plus ancienne que le lot
+ne perd pas la valeur de ses billes du jour au lendemain, et les quinze essais
+qui appellent `valeurSurPied` sans le champ continuent de mesurer ce qu'ils
+mesuraient. *Le défaut d'un champ nouveau doit être l'ancien monde, sans quoi
+c'est le lot d'après qui paie.*
+
+**ET ON ÉCRIT CE QU'ON NE LIVRE PAS.** Deux choses manquent et sont nommées dans
+le référentiel plutôt que laissées à trouver : la GROSSEUR de la branche coupée
+(trois centimètres se recouvrent, huit laissent une porte aux champignons), et un
+SEUIL DE CLASSEMENT — une gaine claire plus mince qu'une planche ne se scie pas,
+donc un arbre élagué très tard devrait sortir en chauffage plutôt qu'en œuvre à
+prix nul. Les deux sont des affirmations distinctes, avec leurs propres ancres à
+trouver ; les empiler ici aurait rendu le lot immesurable.
+
+## Ce qu'un lot plus ancien a appris (le point zéro du carbone, #202)
 
 Le lot le plus court de la série, et celui dont l'énoncé était déjà écrit par le
 propriétaire : *« si on arrive sur une parcelle de prairie, il y a déjà du

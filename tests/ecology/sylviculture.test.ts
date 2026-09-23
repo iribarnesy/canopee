@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyAction,
   type GameAction,
+  partSansNoeud,
   valeurSurPied,
   WOOD_PRICE_EUR_M3,
 } from "../../src/engine/actions";
@@ -56,6 +57,44 @@ describe("ce qui fait la valeur d'un arbre", () => {
     ).toBe("chauffage");
   });
 
+  it("élaguer TÔT vaut bien plus qu'élaguer tard, sur la même bille", () => {
+    // **LE NŒUD EST DÉJÀ DANS LE BOIS** (#180). Élaguer ne retire rien : ça
+    // empêche les cernes SUIVANTS d'en porter. Le moteur ne retenait qu'une
+    // HAUTEUR élaguée, si bien qu'un chêne élagué à 8 cm de diamètre et le même
+    // élagué à 40 sortaient au centime près au même prix — et que la stratégie
+    // optimale était d'élaguer la veille de la vente, ce qui est l'inverse de
+    // ce que la sylviculture enseigne.
+    //
+    // Les deux arbres ci-dessous sont le MÊME arbre : même hauteur, même
+    // diamètre, même bille de six mètres. La seule différence est le diamètre
+    // qu'il portait quand la scie est passée.
+    const tige = { heightM: 18, diametreCm: 40, hauteurElagueeM: 6 };
+    const tot = valeurSurPied(chene, { ...tige, diametreElagageCm: 8 });
+    const tard = valeurSurPied(chene, { ...tige, diametreElagageCm: 38 });
+    // Géométrie, sans paramètre à caler : 1 − (8/40)² = 0,96 contre
+    // 1 − (38/40)² = 0,0975.
+    expect(tot.partOeuvre).toBeGreaterThan(8 * tard.partOeuvre);
+    expect(tot.eur).toBeGreaterThan(2 * tard.eur);
+    // Et l'arbre élagué tard ne vaut pas moins que s'il ne l'avait pas été :
+    // ce que le lot retire est un gain, pas de la valeur.
+    const jamais = valeurSurPied(chene, { heightM: 18, diametreCm: 40, hauteurElagueeM: 0 });
+    expect(tard.eur).toBeGreaterThanOrEqual(jamais.eur);
+  });
+
+  it("et la part sans nœuds est une géométrie, pas une loi calée", () => {
+    // La bille est un cylindre noueux de diamètre `d0` dans une gaine claire
+    // jusqu'à `d` : la part claire est le rapport des sections.
+    expect(partSansNoeud(40, 8)).toBeCloseTo(0.96, 4);
+    expect(partSansNoeud(30, 29)).toBeCloseTo(1 - (29 / 30) ** 2, 6);
+    // Élagué la veille de la vente : rien ne s'est formé depuis.
+    expect(partSansNoeud(40, 40)).toBe(0);
+    // Un arbre qui a grossi depuis un élagage ancien ne peut pas dépasser 1,
+    // et une partie d'avant ce lot ne porte pas le champ : elle rend 1, donc
+    // le comportement d'avant.
+    expect(partSansNoeud(40, 0)).toBe(1);
+    expect(partSansNoeud(40, undefined)).toBe(1);
+  });
+
   it("le chauffage reste payé au volume, quelle que soit l'essence", () => {
     const pin = getEspece("pinus_sylvestris");
     const v = valeurSurPied(pin, {
@@ -84,6 +123,24 @@ describe("élaguer", () => {
     expect(arbre?.hauteurElagueeM ?? 0).toBeGreaterThan(0);
     expect(arbre?.hauteurElagueeM ?? 0).toBeLessThanOrEqual(0.3);
     expect(state.economy.hoursUsedYear).toBeGreaterThan(0);
+  });
+
+  it("retient le diamètre de la tige au moment de la coupe", () => {
+    const journal = {
+      stationId: STATION.id,
+      seed: 5,
+      actions: [
+        { type: "planter", week: 0, especeId: "quercus_pubescens", positions: [{ x: 20, y: 20 }] },
+        { type: "elaguer", week: 10 * 52, treeIds: [1], hauteurM: 4 },
+      ] as GameAction[],
+    };
+    const { state } = runJournal(STATION, journal, WEATHER, 10 * 52 + 2);
+    const arbre = state.trees.find((t) => t.id === 1);
+    if (!arbre) throw new Error("arbre manquant");
+    // Le champ existe, et il vaut le diamètre que l'arbre PORTAIT cette
+    // semaine-là — pas celui qu'il aura à la vente (#180).
+    expect(arbre.diametreElagageCm).toBeGreaterThan(0);
+    expect(arbre.diametreElagageCm).toBeLessThanOrEqual(arbre.diametreCm);
   });
 
   it("on ne peut pas élaguer plus haut que ce que l'arbre permet", () => {

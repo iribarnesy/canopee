@@ -167,6 +167,27 @@ export interface TreeState {
    */
   hauteurElagueeM: number;
   /**
+   * Diamètre de la tige, cm, QUAND la bille a été montée pour la dernière fois
+   * (issue #180). Absent = jamais élagué par le joueur.
+   *
+   * **Le nœud est déjà dans le bois, et l'élagage ne le retire pas.** Il empêche
+   * seulement les cernes SUIVANTS d'en porter : la bille d'un arbre élagué tard
+   * est un cylindre noueux entouré d'une mince gaine de bois clair, et elle se
+   * déroule, se tranche et se paie comme telle. Sans ce champ, le moteur ne
+   * pouvait pas le dire — il ne retenait qu'une HAUTEUR élaguée, si bien qu'un
+   * chêne élagué à 8 cm de diamètre et le même élagué à 40 sortaient au centime
+   * près au même prix, et que la stratégie optimale était d'élaguer la veille de
+   * la vente.
+   *
+   * On garde le PLUS GRAND diamètre d'élagage, pas le dernier ni le premier :
+   * une bille se classe sur sa pire section, et monter la bille tard sur un gros
+   * fût déclasse ce qu'on avait gagné en l'élaguant tôt plus bas. C'est ce que
+   * fait un acheteur qui regarde la grume, et ça se trouve être aussi le choix
+   * qui ne demande aucun état de plus (`Math.max` sur un scalaire, pas une liste
+   * de coupes).
+   */
+  diametreElagageCm?: number;
+  /**
    * Base du houppier, m : la hauteur en dessous de laquelle il n'y a plus de
    * branches vivantes (docs/realisme.md B10). Absente = branchu jusqu'en bas,
    * ce qu'est tout arbre qui vient de naître.
