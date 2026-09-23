@@ -724,3 +724,51 @@ export function installations(
   }
   return nouveaux;
 }
+
+/**
+ * Nombre de territoires d'INSECTIVORES qui se recouvrent sur une cellule
+ * au-delà duquel un auxiliaire de plus n'y change plus rien (issue #187, lot 3).
+ *
+ * Un bois feuillu tempéré bien pourvu porte de l'ordre de trois à cinq couples
+ * d'insectivores cavernicoles à l'hectare — mésanges pour l'essentiel, un pic
+ * par plusieurs hectares. Trois territoires superposés situent donc le moteur au
+ * bas de cette fourchette, ce qui est le bon côté pour un seuil de SATURATION :
+ * on ne veut pas qu'il soit atteint par une parcelle médiocre *(à confirmer)*.
+ */
+export const AUXILIAIRES_SUFFISANTS = 3;
+
+/**
+ * Combien d'insectivores INSTALLÉS couvrent chaque cellule de leur territoire
+ * (issue #187, lot 3).
+ *
+ * **C'est ce qui fait cesser le proxy.** `ravageurs.ts` estimait jusqu'ici la
+ * part « gîte » de l'habitat des auxiliaires par des litres de cavité et des
+ * tonnes de bois mort, c'est-à-dire par *« y a-t-il de quoi loger »*. Or une
+ * cavité vide ne mange pas de pucerons. Ce que ce lot substitue au proxy est
+ * *« y a-t-il effectivement quelqu'un de logé »* — et ce quelqu'un n'existe que
+ * si le gîte lui va ET si la table le nourrit (lot 2), donc le nouveau terme
+ * contient l'ancien et lui ajoute la condition qui manquait.
+ *
+ * Seules les espèces dont la table est faite d'INVERTÉBRÉS comptent : une
+ * chevêche mange des campagnols, un écureuil des graines, et ni l'une ni
+ * l'autre n'écrête une pullulation de chenilles. Aucune espèce n'est nommée —
+ * c'est le champ `table.ressource` de la fiche qui tranche.
+ *
+ * Le territoire est peint UNIFORMÉMENT sur son disque. Une décroissance depuis
+ * le gîte serait plus fine, et elle est à instruire ; en l'état on ne saurait
+ * pas la caler, et une forme inventée vaudrait moins qu'un disque assumé.
+ */
+export function couvertureAuxiliaires(
+  individus: readonly IndividuFaune[],
+  dims: GridDims,
+): Float64Array {
+  const couverture = new Float64Array(dims.widthM * dims.heightM);
+  for (const individu of individus) {
+    const espece = especeFaune(individu.especeId);
+    if (espece?.table?.ressource !== "invertebres") continue;
+    forEachDiscCell(dims, individu.x, individu.y, espece.territoireM, (i) => {
+      couverture[i] = (couverture[i] ?? 0) + 1;
+    });
+  }
+  return couverture;
+}
