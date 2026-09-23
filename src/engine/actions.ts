@@ -1795,7 +1795,6 @@ function applyFaucher(
       const avant = herbeCouverture[i] ?? 0;
       if (avant <= FAUCHE_COUVERTURE_RESIDUELLE) continue;
       fauchees.push(i);
-      const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
       herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       herbeBiomasse[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       // La coupe se répartit sur les feuillages, dans la même proportion. Une
