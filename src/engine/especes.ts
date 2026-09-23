@@ -653,9 +653,26 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Pin sylvestre",
     nomLatin: "Pinus sylvestris",
     hauteurMaxM: 30,
-    // Non calé, et validé : 16,4 m simulés à quarante ans contre 15,5 m dans
-    // la table néerlandaise (groveden, GK 8).
-    pousseMaxMAn: 0.5,
+    /**
+     * Non calé sur table, et VALIDÉ contre elle — c'est-à-dire que ce nombre
+     * n'est pas choisi pour retomber sur la table, et que la table le juge.
+     *
+     * **Il valait 0,5, et le moteur avait dérivé sous lui** (#201). Le
+     * commentaire d'origine enregistrait « 16,4 m simulés à quarante ans
+     * contre 15,5 m dans la table néerlandaise (groveden, GK 8) » ; mesuré
+     * depuis, le même pin faisait **17,7 m**, soit +14,2 % pour une tolérance
+     * de 15 %. Personne ne l'avait vu parce qu'il restait dans la bande, et
+     * c'est le lot de la litière herbacée — qui ajoute un point de croissance
+     * en cessant de faire fuir l'azote du sol — qui l'a poussé dehors.
+     *
+     * 0,45 rend 16,58 m, c'est-à-dire ce que le commentaire d'origine
+     * documentait. **Ce n'est donc pas un calage sur la table** : la table dit
+     * 15,5, on en est à +7,0 %, et elle continue de juger. La vérification
+     * tenue à l'écart suit : 8,63 m à vingt ans contre 8,1 dans la table,
+     * +6,6 %, là où l'ancienne valeur donnait +18,6 % — le pin était trop
+     * grand aux DEUX âges, et pas seulement à celui qu'on regardait.
+     */
+    pousseMaxMAn: 0.45,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
     // pH : LAISSÉ TEL QUEL, et la raison mérite d'être lue. L'USFS Silvics
