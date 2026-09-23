@@ -759,9 +759,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Noyer commun",
     nomLatin: "Juglans regia",
     hauteurMaxM: 25,
-    // NON calé sur table : aucune table de production française de noyer n'a
-    // été trouvée. Ordre de grandeur d'un noyer de plein champ conduit pour le
-    // bois *(à confirmer)*.
+    // AUCUNE TABLE N'EXISTE, ET ON SAIT MAINTENANT POURQUOI (#185). Ce n'était
+    // pas « pas trouvée » : le *Fichier écologique des essences* wallon
+    // (fichierecologique.be, fiche du noyer commun) porte à la ligne
+    // productivité « **sans objet, sylviculture d'arbre** ». Le noyer se
+    // conduit en arbre isolé, pas en peuplement — il n'y a donc ni volume à
+    // l'hectare ni bonité à déclarer, et c'est la bonité qui fait une table de
+    // production. La même fiche donne une longévité de 200 à 300 ans et une
+    // exploitabilité de 60 à 70 ans, avant la dépréciation du bois.
+    //
+    // Ce nombre reste donc un ordre de grandeur de noyer de plein champ
+    // conduit pour le bois, et il le restera : ce n'est pas une recherche
+    // inachevée, c'est une référence qui n'existe pas dans cette forme.
     pousseMaxMAn: 0.5,
     // Atlas : héliophile, mésoxérophile, EUTROPHE — il exige le riche, et c'est
     // ce qui limite l'agroforesterie au noyer aux bonnes terres.
