@@ -61,7 +61,60 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le soc desserre, #141)
+## Ce que le dernier lot a appris (sérialiser l'état, #193)
+
+Pas un mécanisme d'écologie : une réponse à un défaut que le lot des bandes
+avait mis au jour. Une sauvegarde de Canopée est un JOURNAL, et charger une
+partie c'est la REJOUER — ce qui suppose que rejouer la même partie donne la
+même partie. Le moteur ne tient pas cette promesse d'une version de V8 à
+l'autre. Ce n'est pas une perte de réalisme, c'est une perte de la partie du
+joueur, ce qui est pire.
+
+**Un défaut trouvé en passant mérite d'être suivi jusqu'à sa conséquence.**
+L'écart de bits était une curiosité tant qu'on le regardait dans un essai. Il est
+devenu un défaut le jour où on a vérifié ce que `runJournal` fait vraiment —
+station + graine + actions, aucun état rangé. La question « est-ce que ça compte
+pour de vrai ? » se répond en lisant le code d'à côté, pas en spéculant.
+
+**Mesurer AVANT de choisir le format.** L'état en JSON pèse 5 Mo pour un
+hectare et 21 Mo pour quatre : le quota entier de `localStorage`, et la réponse
+« on sérialise en JSON » serait morte à la première partie sérieuse. En float64
+brut, 3,6 Mo ; gzippé, 79 Ko à 1,4 Mo selon la parcelle et son âge. Le format
+binaire n'est pas une optimisation, c'est ce qui rend la chose possible — et ça
+se savait en une mesure, avant d'écrire une ligne.
+
+**Deux matières, deux traitements.** Les grilles de sol sont 99 % du volume et
+toutes de même nature : float64 bout à bout. Tout le reste — arbres, économie,
+banque de graines, tirage — est irrégulier, porte des chaînes, et ne pèse rien :
+JSON, qui est EXACT (`JSON.stringify` d'un flottant rend la plus courte écriture
+qui se relit à l'identique). Chercher un format unique aurait coûté cher des
+deux côtés.
+
+**Refuser est un résultat, pas un échec.** `lireEtat` rend `undefined` sur une
+version inconnue, un bloc tronqué, une parcelle d'une autre taille, ou un
+en-tête qui déclare d'autres champs que le sol d'aujourd'hui — et l'appelant
+rejoue le journal. C'est ce qui permet de garder les deux : l'état pour
+l'exactitude, le journal pour la survie aux montées de version. Un bloc relu de
+travers serait bien pire qu'un rejeu.
+
+**L'ORDRE DES CLÉS, ET POURQUOI ON NE L'A PAS LAISSÉ FILER.** Le premier essai
+comparait `JSON.stringify` de l'état écrit et de l'état relu : il est tombé deux
+fois, et jamais sur une valeur — sur l'ordre. D'abord au niveau de `GameState`,
+puis DANS le sol, où la découverte compte : **le sol que rend un tick ne range
+pas ses champs comme celui que rend `createGameState`.** Reconstruire « dans
+l'ordre d'un état neuf » était donc faux, et l'aurait été en silence. D'où un
+squelette rangé dans l'en-tête — la forme exacte du sol, grilles remplacées par
+`null` — qui porte l'ordre avec les scalaires. Trente octets pour garder le
+contrôle le plus simple qui soit : *l'état relu est-il indiscernable de l'état
+écrit ?*
+
+**Le contrôle qui compte n'est pas l'aller-retour.** C'est : *dix ans, puis dix
+ans, valent-ils vingt ans d'affilée ?* L'aller-retour ne prouve que la
+plomberie ; celui-là prouve ce que le joueur attend. Et il se fait dans le même
+processus, jamais contre une empreinte épinglée — ce serait refaire l'erreur que
+ce lot répare.
+
+## Ce qu'un lot plus ancien a appris (le soc desserre, #141)
 
 Une CORRECTION, pas une conquête : aucun point de référentiel gagné, et un
 plafond de trente pour cent levé sur une courbe validée par ailleurs.
@@ -1542,6 +1595,16 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #193 laisse à la couche jeu.** Le moteur rend des octets ; il ne range
+rien. Reste à décider OÙ, et la mesure tranche à moitié : au-delà d'une petite
+parcelle, ça ne tient pas dans `localStorage` (5 Mo pour toutes les parties, et
+le base64 ajoute un tiers). IndexedDB range des octets tels quels et n'a pas ce
+plafond ; `CompressionStream('gzip')` est dans tous les navigateurs visés. Le
+journal, lui, est minuscule et peut rester où il est — et il DOIT rester, c'est
+le recours quand le format d'état a changé. La règle d'usage est écrite dans
+`serialisation.ts` : *charger l'état s'il se lit, rejouer le journal sinon.*
+
 
 **Ce que #141 laisse.** La SEMELLE DE LABOUR : le desserrement de l'horizon
 travaillé va avec un tassement sous lui, et le moteur n'a qu'une valeur par

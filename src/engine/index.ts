@@ -8,6 +8,7 @@ export * from "./meteo";
 export * from "./nitrogen";
 export * from "./phenologie";
 export * from "./rng";
+export * from "./serialisation";
 export * from "./state";
 export * from "./stations";
 export * from "./tick";
