@@ -778,16 +778,52 @@ export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
  * m³ ; le reste finit en bûches. C'est l'écart qui justifie l'élagage et la
  * patience (ch5-A).
  */
+/**
+ * Part de la SECTION d'une bille qui s'est formée depuis l'élagage, ∈ [0,1] —
+ * c'est-à-dire la part sans nœuds (issue #180).
+ *
+ * Un nœud est une branche enfermée dans le bois : il est là avant la coupe et il
+ * y reste. Ce que l'élagage change, c'est que les cernes formés APRÈS n'en
+ * portent plus. La bille est donc un cylindre noueux de diamètre `d0` dans une
+ * gaine claire jusqu'à `d`, et la part claire vaut le rapport des sections :
+ *
+ *     1 − (d0 / d)²
+ *
+ * Il n'y a aucun paramètre à caler là-dedans — c'est de la géométrie, et c'est
+ * pour ça qu'elle est préférée à une loi de décroissance qu'il aurait fallu
+ * ancrer. Élagué à 8 cm et vendu à 40, l'arbre est clair à 96 % ; élagué à 29 et
+ * vendu à 30, à 6,6 % ; élagué la veille de la vente, à zéro.
+ *
+ * Un arbre dont on ne sait pas à quel diamètre il a été élagué rend 1 : c'est le
+ * comportement d'avant ce lot, et le seul état qui puisse le porter est une
+ * partie plus ancienne que lui.
+ */
+export function partSansNoeud(diametreCm: number, diametreElagageCm?: number): number {
+  if (diametreElagageCm === undefined) return 1;
+  if (diametreCm <= 0) return 0;
+  const rapport = Math.max(0, diametreElagageCm) / diametreCm;
+  return Math.min(1, Math.max(0, 1 - rapport * rapport));
+}
+
 export function valeurSurPied(
   espece: EspeceV0,
-  tree: { heightM: number; diametreCm: number; hauteurElagueeM: number },
+  tree: {
+    heightM: number;
+    diametreCm: number;
+    hauteurElagueeM: number;
+    diametreElagageCm?: number;
+  },
 ): { eur: number; qualite: "oeuvre" | "chauffage"; partOeuvre: number } {
   const volume = volumeTigeM3(tree.diametreCm, tree.heightM);
   const assezGros = tree.diametreCm >= DIAMETRE_OEUVRE_MIN_CM;
   const assezElague = tree.hauteurElagueeM >= BILLE_OEUVRE_MIN_M;
   if (assezGros && assezElague) {
     // Seule la bille élaguée fait de l'œuvre ; le houppier reste du chauffage.
-    const partOeuvre = Math.min(0.6, tree.hauteurElagueeM / tree.heightM);
+    // **Et seule la part de la bille formée DEPUIS l'élagage** : élaguer tard
+    // laisse un cœur noueux que la scierie ne paie pas (#180).
+    const partOeuvre =
+      Math.min(0.6, tree.hauteurElagueeM / tree.heightM) *
+      partSansNoeud(tree.diametreCm, tree.diametreElagageCm);
     return {
       eur:
         volume * partOeuvre * espece.bois.prixOeuvreEurM3 +
@@ -1940,7 +1976,13 @@ function applyElaguer(
       // suite pour que le rendu n'attende pas une semaine.
       baseHouppierApresM: Math.max(tree.baseHouppierM ?? 0, cible),
     });
-    trees[idx] = { ...tree, hauteurElagueeM: cible };
+    trees[idx] = {
+      ...tree,
+      hauteurElagueeM: cible,
+      // Le diamètre du jour, et le PLUS GRAND des élagages subis : la bille se
+      // classe sur sa pire section (`trees.ts`, #180).
+      diametreElagageCm: Math.max(tree.diametreElagageCm ?? 0, tree.diametreCm),
+    };
   }
   return {
     state: { ...state, trees, economy: { ...state.economy, hoursUsedWeek, hoursUsedYear } },
