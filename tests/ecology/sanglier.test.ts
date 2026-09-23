@@ -22,7 +22,6 @@ import {
   DENSITE_REFERENCE_PAR_HA,
   effortSemaine,
   PART_RETOURNEE_PAR_AN,
-  partGlandeeRestante,
   poidsSaisonnier,
 } from "../../src/engine/sanglier";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
@@ -104,20 +103,23 @@ describe("aucun tirage ne quitte le flux local", () => {
   });
 });
 
-describe("la glandée : ce qu'il en reste", () => {
-  it("il en mange d'autant plus qu'il est nombreux, sans jamais tout prendre", () => {
-    expect(partGlandeeRestante(0)).toBe(1);
-    const ref = partGlandeeRestante(DENSITE_REFERENCE_PAR_HA);
-    expect(ref).toBeCloseTo(0.45, 2);
-    expect(partGlandeeRestante(3 * DENSITE_REFERENCE_PAR_HA)).toBeLessThan(ref);
-    // **Jamais zéro**, et c'est délibéré : le premier jet soustrayait
-    // linéairement et éteignait la régénération du chêne d'un coup passé 1,8
-    // fois la densité de référence. Une espèce posée sur une borne bascule d'un
-    // extrême à l'autre pour un centième de rien — ce dépôt l'a déjà payé deux
-    // fois (l'anémone à pH 4,0, le chêne-liège à pH 4,50).
-    expect(partGlandeeRestante(10 * DENSITE_REFERENCE_PAR_HA)).toBeGreaterThan(0);
-  });
-});
+/**
+ * ─── LA GLANDÉE A DÉMÉNAGÉ (issue #197) ──────────────────────────────────────
+ *
+ * Il y avait ici une section « ce qu'il en reste » qui vérifiait
+ * `partGlandeeRestante` : une part de la glandée mangée en fonction de la seule
+ * densité de sangliers. Elle a disparu avec la fonction, et pour une raison qui
+ * n'est pas cosmétique — **le moteur ne produisait aucune glandée**, alors la
+ * fonction en supposait une, et le 0,55 qu'elle portait supposait un hectare
+ * portant vingt-cinq kilos de glands et une bête en avalant plus d'une tonne
+ * par an.
+ *
+ * Le sanglier prélève désormais une RATION en kilos sur une production réelle
+ * (`glandee.ts`), et ce qui reste ici du même animal — le retournement, les
+ * boutis, l'humus, le tassement cassé — n'a pas bougé d'un cheveu.
+ * `tests/ecology/glandee.test.ts` tient la suite, y compris ce que la mesure a
+ * coûté à la deuxième moitié de G10.
+ */
 
 /** Une chênaie mûre, quarante ans, à une densité de sanglier donnée. */
 function chenaie(densite: number, ans: number) {
@@ -144,17 +146,22 @@ function chenaie(densite: number, ans: number) {
   return { recrues: vivants - plantes, vivants, humus: somme(s.soil.humusCG) };
 }
 
-describe("en partie : le geai plante les chênes, le sanglier les mange", () => {
-  it("la régénération du chêne recule quand les sangliers montent", () => {
-    // Relevé à l'écriture, quarante ans, mêmes graine et météo : 97 recrues
-    // sans sanglier, 82 à 0,02/ha, 60 à la densité de référence, 22 à 0,15/ha.
+describe("en partie : le geai plante les chênes, le sanglier retourne le sol", () => {
+  it("la chênaie se régénère, et le sanglier n'y change plus grand-chose", () => {
+    // Cet essai relevait 97 recrues sans sanglier, 60 à la densité de référence
+    // et 22 à 0,15/ha, et c'est ce triplet qui portait la deuxième moitié de
+    // G10. **Il tenait à un coefficient et non à une ration** : #197 l'a
+    // remplacé par des kilos mangés sur des kilos produits, et l'écart d'un
+    // bout à l'autre est tombé de 77 % à moins de 15 % — c'est-à-dire au bruit.
+    //
+    // Ce qui se vérifie ici est donc le contraire de ce qui s'y vérifiait : que
+    // la chênaie se régénère, et qu'elle le fasse sanglier ou non. La mesure
+    // complète et ce qu'elle coûte sont dans `glandee.test.ts`, qui a la
+    // glandée sous la main — ce que ce fichier n'a pas.
     const sans = chenaie(0, 40);
-    const ordinaire = chenaie(DENSITE_REFERENCE_PAR_HA, 40);
     const beaucoup = chenaie(0.15, 40);
-    expect(sans.recrues).toBeGreaterThan(ordinaire.recrues);
-    expect(ordinaire.recrues).toBeGreaterThan(beaucoup.recrues);
-    // Difficile, jamais impossible : c'est la tension qu'on cherche.
-    expect(beaucoup.recrues).toBeGreaterThan(0);
+    expect(sans.recrues).toBeGreaterThan(20);
+    expect(beaucoup.recrues).toBeGreaterThan(20);
   });
 
   it("ce qu'il enfouit ne disparaît pas : l'humus y gagne", () => {

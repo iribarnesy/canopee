@@ -6,6 +6,8 @@
  * V1 (docs/regles.md §6), migration vers data/ + Zod à ce moment-là.
  */
 
+import type { Semences } from "./glandee";
+
 export interface EspeceV0 {
   id: string;
   nom: string;
@@ -407,6 +409,26 @@ export interface EspeceV0 {
     /** auto-fertile ? sinon il faut un congénère mature à moins de 30 m (§7.5) */
     autofertile: boolean;
   };
+  /**
+   * PRODUCTION DE SEMENCES — et ce n'est PAS le bloc `fruits` (issue #197).
+   *
+   * Un chêne ne donne rien à vendre et il nourrit tout un massif. Le bloc
+   * `fruits` au-dessus décrit une récolte : un prix, une fenêtre de cueillette,
+   * des semaines de fraîcheur. Celui-ci décrit ce qui TOMBE, ce qui se mange au
+   * sol et ce qui lève au printemps. Les deux notions partagent un mot et rien
+   * d'autre, et un châtaignier porte les deux blocs sans contradiction — on
+   * ramasse une partie de ses châtaignes, le reste nourrit les sangliers.
+   *
+   * **Absent veut dire « graine légère »** : le bouleau, le frêne ou le saule
+   * sèment abondamment, mais personne ne se nourrit d'une samare et une samare
+   * ne survit pas à l'hiver au sol. Le champ est donc aussi le trait de TAILLE
+   * DE GRAINE que `regeneration.ts` réclamait à la fin de son paragraphe sur le
+   * sanglier : la faîne du hêtre, classée `gravite`, est mangée comme un gland,
+   * et c'est ce bloc qui le dit — pas son mode de dissémination.
+   *
+   * Voir `glandee.ts`, qui en tire une production annuelle irrégulière.
+   */
+  semences?: Semences;
   sources: string[];
 }
 
@@ -562,6 +584,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
+    /**
+     * La faînée. Les relevés de hêtraies tempérées donnent quelques centaines
+     * de kilos de faînes à l'hectare en moyenne pluriannuelle, et plus de mille
+     * les années pleines *(à confirmer)*. Le hêtre est l'espèce européenne dont
+     * la fructification est la plus IRRÉGULIÈRE — d'où la période longue et le
+     * facteur élevé : une année pleine porte ici quinze fois une année creuse.
+     */
+    semences: { kgParM2HouppierAn: 0.025, periodeAns: 6, facteurAnneePleine: 4.5 },
     sources: [ATLAS, JANSEN_1996, IGN_DUPOUEY_2002],
   },
   {
@@ -607,6 +637,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.75 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.5, rejetteApresFeu: true },
+    /**
+     * La glandée, le cas de référence du lot. Une chênaie produit couramment
+     * quelques centaines de kilos de glands à l'hectare en moyenne, et plus
+     * d'une tonne les années pleines *(à confirmer sur une série longue)* ; la
+     * masting revient tous les deux à sept ans, d'où la période de quatre.
+     * Avec ce facteur, une année pleine porte vingt fois une année creuse, ce
+     * qui est la fourchette basse du « dix à cinquante fois » observé.
+     */
+    semences: { kgParM2HouppierAn: 0.04, periodeAns: 4, facteurAnneePleine: 3.5 },
     sources: [ATLAS, IGN_DUPOUEY_2002],
   },
   {
@@ -763,6 +802,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.4 },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: false },
+    /**
+     * Le noyer ALTERNE — une année chargée, une année creuse — et c'est un fait
+     * de verger avant d'être un fait de forêt *(à confirmer)*.
+     */
+    semences: { kgParM2HouppierAn: 0.06, periodeAns: 2, facteurAnneePleine: 1.4 },
     sources: [ATLAS, GWDD_2009],
   },
   {
@@ -926,6 +970,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45 },
     gibier: { appetence: 0.9 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.1, rejetteApresFeu: true },
+    /**
+     * La noisette : petite couronne, mais dense et fructifiant tôt. Le chiffre
+     * est pris bien sous les rendements d'une noiseraie conduite, qui ne dit
+     * rien d'un noisetier de haie *(à calibrer)*.
+     */
+    semences: { kgParM2HouppierAn: 0.08, periodeAns: 2, facteurAnneePleine: 1.5 },
     sources: [ATLAS, HARMER_2004, IGN_DUPOUEY_2002],
   },
   {
@@ -1647,6 +1697,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.7 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
+    /**
+     * Le châtaignier porte les DEUX blocs, et c'est la démonstration que ce ne
+     * sont pas les mêmes : on récolte une partie de ses châtaignes (`fruits`),
+     * le reste tombe et nourrit. Production nettement plus lourde et plus
+     * régulière que celle d'un chêne *(à calibrer : les rendements publiés sont
+     * ceux de vergers greffés, pas de taillis)*.
+     */
+    semences: { kgParM2HouppierAn: 0.08, periodeAns: 2, facteurAnneePleine: 1.4 },
     sources: [ATLAS, LEMAIRE_2005, IGN_DUPOUEY_2002],
   },
   {
@@ -1703,6 +1761,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
+    /**
+     * Le chêne-liège est le chêne le plus RÉGULIER, et ce n'est pas un détail
+     * de fiche : la montado ibérique engraisse ses porcs sur sa glandée chaque
+     * automne, ce qu'aucun élevage ne pourrait faire avec une production une
+     * année sur quatre *(à confirmer)*.
+     */
+    semences: { kgParM2HouppierAn: 0.05, periodeAns: 3, facteurAnneePleine: 2.5 },
     sources: [ATLAS, SANCHEZ_2010, IGN_DUPOUEY_2002],
   },
   {
