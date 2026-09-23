@@ -704,15 +704,24 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Bouleau verruqueux",
     nomLatin: "Betula pendula",
     hauteurMaxM: 25,
-    // NON calé sur table, et c'est délibéré. La seule table de bouleau du
-    // corpus est Braastad 1967, *Produksjonstabeller for bjørk* — norvégienne,
-    // donc boréale : 8,6 m à vingt ans en classe médiane. La transposer à un
-    // bocage à 11,5 °C de moyenne serait une erreur de catégorie, et en tirer
-    // un RANG contre un aulne calé sur une table allemande (Mitscherlich 1945)
-    // en serait une seconde — on comparerait deux climats, pas deux essences.
-    // 0,9 m/an reste donc une estimation, mais une estimation honnête pour un
-    // bouleau de plaine française *(à confirmer : il manque une table
-    // française ou allemande de bouleau)*.
+    // ESTIMÉ SANS TABLE, PUIS CONFIRMÉ PAR UNE TABLE TROUVÉE APRÈS COUP —
+    // c'est la seule validation hors échantillon du fichier.
+    //
+    // 0,9 m/an a été posé comme « estimation honnête pour un bouleau de plaine
+    // française », faute de référence transposable : la seule table du corpus
+    // était Braastad 1967, norvégienne donc boréale (8,6 m à vingt ans), et la
+    // transposer à un bocage à 11,5 °C aurait été une erreur de catégorie.
+    // Ce refus tient toujours.
+    //
+    // La table qui manquait existe (#185) : Lockow 1996, *Ertragstafel für die
+    // Sandbirke*, Eberswalde, pour le nord-est allemand — plaine tempérée,
+    // même auteur et même région que la table de charme déjà employée, donc
+    // même décote de géographie (subcontinentale sèche). Classe médiane des
+    // cinq, HO100 = 24 m : 12,2 m à vingt ans, 20,0 m à quarante.
+    //
+    // Mesuré contre elle sur le banc des hauteurs : 13,3 m à vingt ans (+9 %)
+    // et 19,6 m à quarante (−2 %). **Personne n'a touché à ce nombre pour
+    // obtenir ce résultat** — il était écrit avant que la table soit trouvée.
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },

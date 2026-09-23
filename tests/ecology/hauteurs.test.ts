@@ -35,8 +35,10 @@
  * (especes.ts). L'essai ne les mesure pas ; il attrapera leur dérive.
  *
  * NON CALÉES, donc réellement mises à l'épreuve : pin, aulne, frêne,
- * CHÂTAIGNIER à quarante ans ; aubépine, fusain, genêt et houx dans le bloc
- * des arbustes. Leur accord avec la mesure est un résultat, pas un réglage.
+ * CHÂTAIGNIER et BOULEAU à quarante ans ; aubépine, fusain, genêt et houx dans
+ * le bloc des arbustes. Leur accord avec la mesure est un résultat, pas un
+ * réglage — et le bouleau en est le cas le plus net, son `pousseMaxMAn` ayant
+ * été posé des mois avant qu'on trouve la table qui le juge (#185).
  *
  * À VINGT ANS, aucune espèce n'est calée. C'est la vérification tenue à
  * l'écart : un seul paramètre par espèce a été ajusté, sur un seul âge, et le
@@ -73,7 +75,7 @@ import { describe, expect, it } from "vitest";
 import { a, hauteurs, TABLE, TOLERANCE_CALAGE, TOLERANCE_TENUE_A_LECART } from "./hauteurs-commun";
 
 describe("hauteurs absolues contre les tables de production (hêtre, pin, aulne)", () => {
-  const especes = ["fagus_sylvatica", "pinus_sylvestris", "alnus_glutinosa"];
+  const especes = ["fagus_sylvatica", "pinus_sylvestris", "alnus_glutinosa", "betula_pendula"];
   for (const [especeId, ref] of Object.entries(TABLE)) {
     if (!especes.includes(especeId)) continue;
     it(`${ref.nom} : 20 et 40 ans dans la bande de la table`, () => {
@@ -94,18 +96,21 @@ describe("hauteurs absolues contre les tables de production (hêtre, pin, aulne)
     }, 300_000);
   }
   it("le bouleau reste devant le hêtre en jeunesse : c'est un pionnier", () => {
-    // Le bouleau n'est PAS calé sur une table, et l'essai ne prétend donc pas
-    // le mesurer. La seule table du corpus est norvégienne (Braastad 1967) :
-    // 8,6 m à vingt ans, ce qui est un bouleau boréal, pas un bouleau de
-    // bocage. On avait un moment conclu que l'atlas se trompait de rang parce
-    // que cette table donne l'aulne allemand devant — mais comparer une table
-    // norvégienne à une table allemande, c'est comparer deux climats.
+    // LE TEMPÉRAMENT, qui ne se lit dans aucune table : un pionnier prend
+    // l'avance sur une climacique et la garde à vingt ans. L'essai porte sur
+    // le RANG, et le niveau est désormais tenu par l'essai calé ci-dessus.
     //
-    // Ce qui se vérifie sans table, en revanche, c'est le tempérament : un
-    // pionnier prend l'avance sur une climacique, et la garde à vingt ans.
-    // Faute de référence transposable, ralentir le bouleau cassait cinq
-    // conclusions écologiques du dépôt sans qu'aucune preuve ne l'exige.
-    expect(a(hauteurs("betula_pendula", 20), 20)).toBeGreaterThan(
+    // Sa prémisse a changé (#185) : il disait « le bouleau n'est calé sur
+    // aucune table, la seule du corpus est norvégienne (Braastad 1967), donc
+    // boréale ». Ce refus tient toujours — 8,6 m à vingt ans, c'est un bouleau
+    // de Norvège — mais il existe une table de PLAINE TEMPÉRÉE, celle de
+    // Lockow 1996 pour le nord-est allemand, et le bouleau y est entré.
+    //
+    // Il lit la même course de quarante ans que l'essai calé, et pas une
+    // course de vingt : la mémoire de `hauteurs` porte l'horizon dans sa clé,
+    // donc demander vingt ans ici rejouerait une partie entière pour un
+    // chiffre déjà calculé.
+    expect(a(hauteurs("betula_pendula", 40), 20)).toBeGreaterThan(
       a(hauteurs("fagus_sylvatica"), 20),
     );
   }, 600_000);
