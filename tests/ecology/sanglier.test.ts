@@ -122,7 +122,7 @@ describe("aucun tirage ne quitte le flux local", () => {
  */
 
 /** Une chênaie mûre, quarante ans, à une densité de sanglier donnée. */
-function chenaie(densite: number, ans: number) {
+function chenaie(densite: number, ans: number, graine = 3) {
   const COTE = 24;
   const station: Station = {
     ...LIMON_RICHE.station,
@@ -131,7 +131,7 @@ function chenaie(densite: number, ans: number) {
     ventExposition: 0,
     sanglierParHa: densite,
   };
-  let s = createGameState(station, rngStateFromSeed(3));
+  let s = createGameState(station, rngStateFromSeed(graine));
   for (let y = 3; y < COTE; y += 6) {
     for (let x = 3; x < COTE; x += 6) s = plantAt(s, "quercus_pubescens", x, y, 12);
   }
@@ -146,29 +146,98 @@ function chenaie(densite: number, ans: number) {
   return { recrues: vivants - plantes, vivants, humus: somme(s.soil.humusCG) };
 }
 
+// Trois graines, deux densités, et les six parties tournent UNE fois pour tout
+// le fichier — une partie de quarante ans coûte une minute et demie, et chaque
+// essai en dessous en lit les résultats plutôt que d'en relancer (`npm test`
+// est déjà le poste le plus cher du dépôt).
+const GRAINES = [3, 5, 7];
+const MESURES = GRAINES.map((g) => ({
+  graine: g,
+  sans: chenaie(0, 40, g),
+  forte: chenaie(0.5, 40, g),
+}));
+
 describe("en partie : le geai plante les chênes, le sanglier retourne le sol", () => {
-  it("la chênaie se régénère, et le sanglier n'y change plus grand-chose", () => {
+  it("la chênaie se régénère, avec ou sans sanglier", () => {
     // Cet essai relevait 97 recrues sans sanglier, 60 à la densité de référence
     // et 22 à 0,15/ha, et c'est ce triplet qui portait la deuxième moitié de
     // G10. **Il tenait à un coefficient et non à une ration** : #197 l'a
     // remplacé par des kilos mangés sur des kilos produits, et l'écart d'un
     // bout à l'autre est tombé de 77 % à moins de 15 % — c'est-à-dire au bruit.
+    // Ce que #199 a rendu n'est pas ce triplet : c'est un mécanisme (le boutis
+    // arrache), et l'essai suivant le mesure.
     //
-    // Ce qui se vérifie ici est donc le contraire de ce qui s'y vérifiait : que
-    // la chênaie se régénère, et qu'elle le fasse sanglier ou non. La mesure
-    // complète et ce qu'elle coûte sont dans `glandee.test.ts`, qui a la
-    // glandée sous la main — ce que ce fichier n'a pas.
-    const sans = chenaie(0, 40);
-    const beaucoup = chenaie(0.15, 40);
-    expect(sans.recrues).toBeGreaterThan(20);
-    expect(beaucoup.recrues).toBeGreaterThan(20);
+    // Ce qui se vérifie ici reste ce qui doit se vérifier d'abord : que la
+    // chênaie se régénère, et qu'elle le fasse dans les deux cas. La glandée
+    // elle-même est mesurée dans `glandee.test.ts`, qui l'a sous la main.
+    for (const m of MESURES) {
+      expect(m.sans.recrues).toBeGreaterThan(20);
+      expect(m.forte.recrues).toBeGreaterThan(20);
+    }
   });
 
   it("ce qu'il enfouit ne disparaît pas : l'humus y gagne", () => {
     // Un boutis est un ENFOUISSEMENT, pas une combustion. La litière passe au
     // pool lent, elle ne part pas en fumée — et ça se voit sur le stock.
-    const sans = chenaie(0, 40);
-    const beaucoup = chenaie(0.15, 40);
-    expect(beaucoup.humus).toBeGreaterThan(sans.humus);
+    for (const m of MESURES) expect(m.forte.humus).toBeGreaterThan(m.sans.humus);
+  });
+});
+
+describe("le boutis arrache ce qui a levé (#199)", () => {
+  it("à forte densité, la régénération du chêne recule nettement — sur toutes les graines", () => {
+    // **LE MÉCANISME QUI MANQUAIT, ET IL MANQUAIT PARCE QU'UN AUTRE ÉTAIT FAUX.**
+    //
+    // Le sanglier a deux prises sur une chênaie et le moteur n'en comptait
+    // qu'une et demie : il mange la glandée (#197, ancré, et PETIT — à 0,15
+    // bête/ha, quatre cents kilos par bête font soixante kilos de glands à
+    // l'hectare contre une glandée qui se compte en centaines), il ouvre un lit
+    // de germination pour les petites graines, et **il détruit ce qui a déjà
+    // levé**, ce que rien ne disait. Un sanglier ne peut pas manger une
+    // glandée ; il peut labourer les semis qui en sortent.
+    //
+    // Le boutis descend à dix centimètres (`PROFONDEUR_BOUTIS_CM`) : ce qui part
+    // avec la motte est le plant dont les racines n'ont pas quitté cet horizon,
+    // soit, à la coupure des protocoles d'inventaire, celui qui n'a pas atteint
+    // cinquante centimètres. Rien de nouveau dans l'atlas, rien de nouveau dans
+    // l'état, aucun tirage de plus — la cellule retournée est déjà tirée, et ce
+    // qu'elle porte n'est pas affaire de chance.
+    //
+    // Mesuré, chênaie de quarante ans, recrues (cinq graines × trois densités) :
+    //
+    //     graine      0 sanglier/ha    0,15    0,5
+    //        3             68           62      45
+    //        5             95           77      61
+    //        7             86           72      47
+    //       11            102           82      55
+    //       13             99           89      65
+    //     moyenne        90,0         76,4    54,6
+    //
+    // **Décroissant sur cinq graines sur cinq**, ce qu'aucun tirage ne donne
+    // par hasard : −15 % à 0,15/ha, −39 % à 0,5. Le fichier n'en rejoue que
+    // trois et que les deux bouts, parce qu'une partie de quarante ans coûte
+    // une minute et demie et que le milieu est déjà dit par le tableau.
+    //
+    // **ET L'ARITHMÉTIQUE TOMBE D'ACCORD AVEC LA SIMULATION**, ce qui est le
+    // meilleur contrôle qu'on puisse avoir sur un mécanisme de ce genre. À 0,5
+    // sanglier/ha, le moteur retourne 20 % de la parcelle par an (2 % à la
+    // densité de référence de 0,05, proportionnel). Un semis de chêne naît à
+    // trente centimètres et met environ deux ans à passer cinquante : son
+    // risque cumulé est 1 − 0,8² = 36 %. Mesuré : 39 %. Le mécanisme ne fait
+    // rien d'autre que ce que son énoncé annonce.
+    //
+    // Ce que l'essai n'affirme PAS, et c'est délibéré : il ne rend pas le
+    // triplet d'avant (97 / 60 / 22). Celui-là venait d'un coefficient calé sur
+    // le moteur, et la cible d'un lot n'est jamais l'ancien nombre.
+    for (const m of MESURES) {
+      expect(m.forte.recrues).toBeLessThan(0.8 * m.sans.recrues);
+    }
+  });
+
+  it("et il ne les fait pas disparaître : à forte densité la chênaie tient encore debout", () => {
+    // Un mécanisme qui supprime tout n'est pas un mécanisme, c'est un couperet.
+    // La plus basse des trois graines rend encore 45 recrues sur 68.
+    for (const m of MESURES) {
+      expect(m.forte.recrues).toBeGreaterThan(0.4 * m.sans.recrues);
+    }
   });
 });

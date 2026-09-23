@@ -198,6 +198,7 @@ import {
 import {
   attraitCellule,
   effortSemaine,
+  HAUTEUR_ARRACHEE_PAR_BOUTIS_M,
   HERBE_ARRACHEE,
   LITIERE_ENFOUIE,
   retournee,
@@ -2276,6 +2277,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Aucun tirage dans le flux principal : la cellule retournée dérive d'une
   // graine locale, comme le chablis et la chute des chandelles.
   let cellulesRetournees = 0;
+  // Les cellules retournées CETTE SEMAINE : c'est sur elles que le second effet
+  // du sanglier se joue, et il se joue tout de suite, pas au recrutement — un
+  // semis arraché en novembre n'attend pas le printemps pour être mort. Rien
+  // n'est gardé d'une semaine à l'autre : pas de champ d'état, pas de migration
+  // de sauvegarde.
+  const retourneesCetteSemaine = new Set<number>();
   if (station.sanglierParHa > 0) {
     // Où il y a de la glandée : sous les couronnes des arbres mûrs dont la
     // graine est LOURDE — celle qui tombe et reste. Le trait suffit à le dire
@@ -2312,6 +2319,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (let i = 0; i < nCells; i++) {
       if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
       cellulesRetournees++;
+      retourneesCetteSemaine.add(i);
       // La litière est ENFOUIE : elle ne disparaît pas, elle passe au pool
       // lent. Un boutis est un enfouissement, pas une combustion.
       const litiereC = (litterCG[i] ?? 0) * LITIERE_ENFOUIE;
@@ -2327,9 +2335,28 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // la fait partir — et ce qui ouvre le lit des petites graines.
       rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 1 - HERBE_ARRACHEE);
     }
+    // **ET CE QUI AVAIT LEVÉ EST ARRACHÉ** (issue #199). Le boutis descend à
+    // dix centimètres : ce qui part avec la motte est le plant dont les racines
+    // n'ont pas encore quitté cet horizon (`sanglier.ts`). C'est raisonné
+    // cellule par cellule et plant par plant, sans qu'aucune espèce ne soit
+    // nommée : la seule chose qui compte est la taille du sujet et le fait
+    // qu'il se trouve sous le groin.
+    //
+    // Aucun tirage n'est ajouté : le boutis est déjà tiré, et ce qu'il trouve
+    // dessus n'est pas une affaire de chance. Le flux principal ne bouge pas.
+    if (retourneesCetteSemaine.size > 0) {
+      nextTrees = nextTrees.map((tree) => {
+        if (!tree.alive) return tree;
+        if (tree.heightM >= HAUTEUR_ARRACHEE_PAR_BOUTIS_M) return tree;
+        if (!retourneesCetteSemaine.has(cellIndexAt(dims, tree.x, tree.y))) return tree;
+        return { ...tree, alive: false, causeMort: "boutis" as const };
+      });
+    }
   }
   // Ce que le sanglier a retourné depuis un an : la régénération le lit à la
-  // semaine de recrutement, et c'est là que son second effet se joue.
+  // semaine de recrutement, et c'est là que son PREMIER effet se joue — le lit
+  // de germination ouvert aux petites graines. Le second, la destruction de ce
+  // qui a déjà levé, s'est joué juste au-dessus, à la semaine du boutis.
   const partRetourneeAn = Math.min(1, (cellulesRetournees / nCells) * 52);
 
   // ── 5 ter bis. Réseaux mycorhiziens (§7.5) ────────────────────────────────

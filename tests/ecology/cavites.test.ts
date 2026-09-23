@@ -148,6 +148,12 @@ describe("ce que le lot promet de NE PAS faire", () => {
   }, 900_000);
 });
 
+// **UNE SEULE PARTIE POUR LES DEUX ESSAIS.** Cent vingt ans sur quarante mètres
+// avec trois cents chênes coûte plusieurs minutes, et ce fichier la faisait
+// tourner deux fois pour en lire deux choses différentes. Elle est déterministe :
+// la partager ne change aucun résultat et divise le fichier par deux.
+const SIECLE = siecleDeChenes(7);
+
 describe("le vieil arbre creux paie, et la boucle se ferme", () => {
   it("un siècle de tempêtes loge les auxiliaires mieux qu'un peuplement sain", () => {
     // LA BOUCLE, dont tous les maillons existaient sauf le dernier : une
@@ -159,7 +165,7 @@ describe("le vieil arbre creux paie, et la boucle se ferme", () => {
     // même instant, aux mêmes coordonnées, avec les mêmes essences et les
     // mêmes hauteurs. La SEULE différence est qu'on a effacé leurs creux. Rien
     // d'autre ne peut expliquer l'écart.
-    const s = siecleDeChenes(7);
+    const s = SIECLE;
     const dims = gridDims(s.station);
     const herbe = [...s.soil.herbeCouverture];
     // Sans bois mort au dénominateur, sinon le terme de gîte est déjà saturé
@@ -168,12 +174,32 @@ describe("le vieil arbre creux paie, et la boucle se ferme", () => {
     const sans = carteBiotique(sansCreux(s.trees), herbe, 0, dims).habitat;
     const moyenne = (a: Float64Array) => a.reduce((x, y) => x + y, 0) / a.length;
     const creux = s.trees.filter((t) => t.alive && volumeCaviteTotalL(t) > 0);
-    expect(creux.length).toBeGreaterThan(5);
+    // **CE COMPTE EST UN TIRAGE, PAS UNE GRANDEUR** (#199). Il demandait plus de
+    // cinq arbres creux, et il est tombé à quatre quand le sanglier s'est mis à
+    // arracher les semis. On a cherché de combien le boutis coûtait, et la
+    // réponse est : de rien du tout. Les trois mesures, même graine, même météo,
+    // cent vingt ans :
+    //
+    //     sanglier, pas de boutis (avant #199)     6 creux   141 vivants
+    //     sanglier + boutis                        4 creux   136 vivants
+    //     AUCUN SANGLIER DU TOUT                   4 creux   127 vivants
+    //
+    // **Retirer la bête entièrement donne le même quatre que le boutis.** Le
+    // compte n'est donc monotone en rien : c'est ce que rend un siècle de coups
+    // de vent sur une poignée de vieux arbres, et n'importe quelle perturbation
+    // le déplace d'un ou deux. Le seuil était une photographie d'une trajectoire.
+    //
+    // Ce que cet essai AFFIRME, lui, n'a jamais dépendu de ce nombre : c'est la
+    // comparaison appariée de la ligne d'en dessous — les mêmes arbres, au même
+    // instant, aux mêmes coordonnées, dont on a seulement effacé les creux. Le
+    // compte reste ici comme GARDE, pour que la comparaison ne soit pas vide, et
+    // il est ramené à une valeur qui garde sa marge sur les trois mesures.
+    expect(creux.length).toBeGreaterThan(2);
     expect(moyenne(avec)).toBeGreaterThan(moyenne(sans));
   }, 900_000);
 
   it("et l'indice de biodiversité les compte comme arbres-habitats", () => {
-    const s = siecleDeChenes(7);
+    const s = SIECLE;
     const petitsCreux = s.trees.filter(
       (t) => t.alive && t.heightM < 15 && partHabitatDeCavites(t) > 0,
     );

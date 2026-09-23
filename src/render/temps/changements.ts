@@ -93,6 +93,11 @@ export interface Marqueur {
  * deux morts d'origine HUMAINE (le labour) reprennent la teinte du geste
  * correspondant, pour qu'un labour et sa mort se lisent comme un seul
  * événement.
+ *
+ * Le BOUTIS tombe entre les deux familles, et c'est ce qu'il est : un animal
+ * qui retourne la terre. Sa teinte est celle du fauve, rabattue vers celle du
+ * labour — on doit y lire la bête ET le sol nu, et surtout ne pas la confondre
+ * avec le geste du joueur, qui est plus sombre encore.
  */
 export const TEINTE_DE_LA_CAUSE: Record<CauseMort, Teinte> = {
   secheresse: { r: 198, g: 104, b: 48 },
@@ -112,6 +117,8 @@ export const TEINTE_DE_LA_CAUSE: Record<CauseMort, Teinte> = {
   ecrasement: { r: 158, g: 140, b: 108 },
   // Le labour : la terre retournée, la même que son voile.
   labour: { r: 74, g: 57, b: 44 },
+  // Le boutis : le fauve du sanglier passé à la terre qu'il remue.
+  boutis: { r: 122, g: 96, b: 62 },
   // La tempête : le gris-bleu froid d'un ciel de coup de vent. Ni fauve — ce
   // n'est pas le gibier — ni gris neutre, qui est déjà l'ombre.
   chablis: { r: 108, g: 128, b: 152 },

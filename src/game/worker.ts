@@ -15,6 +15,7 @@ import {
   prevoirAction,
   valeurSurPied,
 } from "../engine/actions";
+import { figerCarboneDeReference } from "../engine/carbon";
 import {
   getScenario,
   meteoDerivee,
@@ -604,7 +605,6 @@ function postSnapshot() {
     weather: meteoSemaine(state.week),
     anneeCivile: anneeDepart + Math.floor(state.week / 52),
     paysage: resumeBordures(bordures),
-    initialSoilCTHa: sc.station.initialSoilCTHa,
     fluxes: lastFluxes ?? emptyFluxes(),
     debordementParCellule: lastDebordement,
     lumiereAuSol: lastLumiereAuSol,
@@ -1165,7 +1165,13 @@ function init(
   // …ni son niveau : l'interface réinstalle celui qu'elle lance.
   niveauId = undefined;
   paliersAcquis = [];
-  ouvrirLaSemaine(maturationAns > 0 ? faireVieillir(neuf, maturationAns) : neuf);
+  // **LE POINT ZÉRO DU BILAN CARBONE SE FIGE ICI, ET PAS AILLEURS** (#202) :
+  // c'est l'instant exact où le joueur prend la main. Ce qu'il trouve sur la
+  // parcelle — les arbres venus tout seuls pendant la maturation compris — est
+  // son acquis, pas son mérite.
+  ouvrirLaSemaine(
+    maturationAns > 0 ? figerCarboneDeReference(faireVieillir(neuf, maturationAns)) : neuf,
+  );
   journal = [];
   pendingRefusals = [];
   pendingEvents = [];

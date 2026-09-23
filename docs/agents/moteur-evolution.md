@@ -109,6 +109,112 @@ donc un arbre élagué très tard devrait sortir en chauffage plutôt qu'en œuv
 prix nul. Les deux sont des affirmations distinctes, avec leurs propres ancres à
 trouver ; les empiler ici aurait rendu le lot immesurable.
 
+## Ce qu'un lot plus ancien a appris (le point zéro du carbone, #202)
+
+Le lot le plus court de la série, et celui dont l'énoncé était déjà écrit par le
+propriétaire : *« si on arrive sur une parcelle de prairie, il y a déjà du
+carbone stocké dans le sol. Tout l'objectif sera d'arriver à en stocker encore
+plus en plantant des arbres. »*
+
+**UNE MOITIÉ JUSTE PEUT CACHER UNE MOITIÉ FAUSSE, ET LA PREMIÈRE CHOSE À FAIRE
+EST DE LIRE LE CODE PLUTÔT QUE L'INTUITION.** Le compteur ne partait PAS de zéro
+tonne : `bilanNetTHa` était déjà un écart, et une parcelle nue démarrait à 0,00
+en portant soixante-quatorze tonnes. Le défaut était ailleurs, une couche plus
+loin : la RÉFÉRENCE ne bougeait pas quand la parcelle, elle, avait vieilli.
+Trente ans de maturation et le joueur arrivait à +45 t/ha, soixante ans et il
+arrivait à +108, sans avoir posé un plant. *Répondre « c'est déjà fait » aurait
+été aussi faux que refaire le calcul en entier.*
+
+**DEUX ERREURS QUI NE SE COMPENSENT PAS PEUVENT VIVRE DANS LE MÊME TOTAL.**
+Pendant la maturation, l'humus BAISSE (73,97 → 56,31 t/ha en trente ans) : la
+référence surestimait donc le sol en même temps qu'elle ignorait les arbres. On
+aurait pu croire les deux écarts de signes contraires et espérer qu'ils
+s'annulent ; ils sont dans deux cases différentes et ils s'additionnent.
+*Vérifier case par case, pas sur le total.*
+
+**LA BONNE FRONTIÈRE SE TROUVE EN CHERCHANT QUI POSSÈDE LA VALEUR.** La question
+n'était pas « où calculer » mais « à qui appartient ce nombre ». Il appartient à
+la PARTIE, comme `graineMarche` — donc à l'état sauvegardé, sans quoi une partie
+rechargée retrouverait une autre référence. Une fois cela posé, le reste suit :
+le calcul est dans le moteur (`figerCarboneDeReference`), la couche jeu ne fait
+que l'appeler au seul instant qui compte, et le paramètre qui portait le défaut
+DISPARAÎT des appels. Le rendre impossible vaut mieux que le documenter.
+
+**ET LE TÉMOIN QUI NE COÛTE RIEN EST CELUI QU'IL FAUT ÉCRIRE.** À maturation
+nulle, la valeur figée doit valoir `station.initialSoilCTHa` au centième près.
+C'est gratuit, c'est exact, et c'est ce qui garantit qu'aucune partie ordinaire
+n'a changé de point zéro pour rien. Un lot qui traverse une frontière a besoin
+d'un contrôle d'identité, pas seulement d'un contrôle d'effet.
+
+**CE QU'ON NE LIVRE PAS, ON NE LE POSE PAS.** « Stocker plus qu'au départ » n'est
+pas « stocker plus qu'en ne faisant rien ». Sur une prairie à l'équilibre les
+deux coïncident — et #201 vient justement de rendre cet équilibre réel — mais
+sur une friche qui se boiserait seule, le vrai repère est la TRAJECTOIRE d'un
+témoin, ce qui demanderait de faire tourner une parcelle fantôme. Le critère
+posé au référentiel dit donc exactement ce que le lot livre, et nomme l'autre
+comme un critère distinct, à instruire. *Poser large et remplir étroit est la
+façon la plus commode de mentir à un référentiel.*
+
+## Ce qu'un lot plus ancien a appris (le boutis arrache, #199)
+
+Quinze lignes dans le tick, aucun paramètre neuf dans l'atlas, aucun champ dans
+l'état — et la moitié de G10 revient. Ce lot est le contrecoup direct du
+précédent, et il apprend surtout une chose sur la façon dont un manque se
+comble.
+
+**UN CHIFFRE FAUX PEUT CACHER UN MÉCANISME ABSENT, ET SA CORRECTION LE
+DÉCOUVRE.** Tant que `partGlandeeRestante` mangeait 55 % de la glandée, le
+sanglier « pesait » sur la chênaie et personne ne cherchait par quoi. Ancrée sur
+une ration réelle, la consommation devient petite — et le trou apparaît : la
+bête supprime la régénération **en labourant les semis**, pas en mangeant les
+glands. *Un paramètre trop gros ne fait pas qu'une erreur de valeur ; il tient
+la place d'un mécanisme, et on ne voit le second qu'en réparant le premier.*
+
+**LE MOTEUR AVAIT DÉJÀ TOUT CE QU'IL FALLAIT.** `retournee(cellule, semaine, …)`
+savait quelles cellules sont retournées ; les arbres ont des coordonnées et une
+hauteur. Le lot n'ajoute qu'une chose : un `Set` des cellules retournées de la
+semaine, lu dans la foulée. Rien n'est gardé d'une semaine à l'autre, donc pas
+de champ d'état, pas de migration de sauvegarde, pas d'ordre de clés — les trois
+choses qui ont fait rater deux fois la sérialisation. Et l'effet se concentre
+tout seul là où il faut, parce que `attraitCellule` envoie déjà le sanglier sous
+les couronnes à grosses graines, c'est-à-dire là où les semis de chêne sont.
+
+**LE MOMENT COMPTE, ET L'ÉVIDENT N'ÉTAIT PAS LE BON.** L'issue proposait de
+faire mourir les semis au recrutement annuel, en lisant la part retournée dans
+l'année. C'est un scalaire de parcelle, donc une probabilité moyenne : on aurait
+perdu exactement ce qui fait l'intérêt du mécanisme, la CONCENTRATION sous les
+chênes. Le faire à la semaine du boutis, sur la cellule du boutis, ne coûte pas
+plus cher et garde la localité.
+
+**UN SEUIL S'ANCRE SUR UNE PROFONDEUR, PAS SUR UN ÂGE.** « À partir de quel âge
+un semis résiste ? » n'a pas de réponse dans l'atlas, et l'inventer aurait été un
+paramètre de plus. La question se retourne : le boutis descend à dix centimètres
+— déjà dans le fichier, déjà sourcé —, donc ce qui part avec la motte est le
+plant dont les racines n'ont pas quitté cet horizon. Les protocoles d'inventaire
+coupent la régénération à cinquante centimètres, et c'est la borne retenue
+*(à calibrer)*. Une tentative a été écartée en chemin : comparer `rootDepthCm` à
+la profondeur du boutis. Elle ne pouvait pas marcher — le moteur plancherait
+toute racine à quinze centimètres, donc rien n'aurait jamais été arraché. *Un
+seuil doit être cherché dans la grandeur que le mécanisme met en jeu, mais
+encore faut-il vérifier que le moteur la laisse varier.*
+
+**ET LE MEILLEUR CONTRÔLE DU LOT N'EST PAS UN ESSAI, C'EST UNE DIVISION.** À 0,5
+sanglier/ha, le moteur retourne 20 % de la parcelle par an ; un semis de chêne
+naît à trente centimètres et met environ deux ans à passer cinquante, donc son
+risque cumulé vaut 1 − 0,8² = 36 %. Mesuré sur cinq graines : 39 % de recrues en
+moins. **L'arithmétique de coin de table et la simulation tombent d'accord**, ce
+qui dit que le mécanisme ne fait rien d'autre que ce que son énoncé annonce — et
+c'est une vérification qu'aucun seuil ne donne. Quand un mécanisme a une forme
+assez simple pour être calculé à la main, le calculer à la main vaut mieux que
+de l'admirer.
+
+**ON NE REND PAS L'ANCIEN NOMBRE.** Le triplet 97 / 60 / 22 n'est pas revenu :
+68 · 95 · 86 · 102 · 99 sans sanglier deviennent 45 · 61 · 47 · 55 · 65 à forte
+densité, et restent presque intacts à densité ordinaire. C'est le résultat, et
+il dit quelque chose de juste — *le sanglier est un problème de DENSITÉ*. Viser
+97 / 60 / 22 aurait demandé un coefficient, c'est-à-dire de refaire exactement
+ce que #197 venait de démonter.
+
 ## Ce qu'un lot plus ancien a appris (la strate rend son azote, #201)
 
 Le mécanisme tient en quinze lignes : ce que la strate herbacée prélève, elle le
@@ -1935,13 +2041,11 @@ RÉTRANSLOCATION, que l'arbre porte déjà (`LITTER_RETURN_FRACTION`) et que la
 strate n'a pas — une plante retire l'azote d'une feuille avant de la lâcher, ce
 qui remonte le C/N de la litière sans rien créer.
 
-**Ce que #197 laisse, et l'essentiel est #199.** LE BOUTIS DÉTRUIT
-LES SEMIS : à ration réelle, le sanglier ne pèse plus sur la régénération du
-chêne (71 / 71 / 71 / 77 / 70 recrues de 0 à 0,5 bête/ha), et il n'en avait
-jamais eu les moyens physiques. Ce qui manque n'est pas un coefficient mais le
-second effet de la bête — un boutis déchire les semis et les glands germés là où
-il passe, et le moteur n'en compte que le bon côté (le lit de germination) —
-c'est [#199](https://github.com/iribarnesy/canopee/issues/199). Le reste :
+**Ce que #197 laissait, et le principal est LIVRÉ.** Le boutis détruit
+désormais les semis ([#199](https://github.com/iribarnesy/canopee/issues/199),
+chapitre du haut) : à ration réelle le sanglier ne pesait plus sur la
+régénération du chêne, et ce n'était pas un coefficient qui manquait mais le
+second effet de la bête. Le reste :
 l'ANNÉE RÉFRACTAIRE (un chêne vide ses réserves en fructifiant, le
 tirage de Bernoulli l'autorise une année sur seize) ; les CHARANÇONS, qui
 prélèvent une part et non une ration, donc ne se rangent pas dans la même
