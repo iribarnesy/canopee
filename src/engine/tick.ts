@@ -99,6 +99,7 @@ import {
   HERBACEES,
   INDEX_CULTURES,
   INERTIE_RESSOURCE_FLORALE,
+  lumiereSousLHerbe,
   N_CULTURES,
   N_HERBACEES,
   OFFRE_FLORALE_SUFFISANTE,
@@ -663,6 +664,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const arbre = trees[t];
     if (!arbre) continue;
     light[t] = (light[t] ?? 1) * lumiereApresBordures(arbre.x, arbre.y, dims, station.bordures);
+    // **ET LA STRATE HERBACÉE OMBRAGE CE QUI EST PLUS COURT QU'ELLE** (#210).
+    // Le moteur ne lui disputait que l'azote et l'eau : un semis de trente
+    // centimètres poussait au plein soleil au milieu d'une molinie d'un mètre,
+    // et faucher autour d'un plant ne lui rendait que deux pour cent de hauteur
+    // à douze ans. C'est la strate basse qui ombrage la strate ligneuse, pas
+    // l'inverse — l'inverse, `groundLight` le dit déjà quelques lignes plus
+    // haut, et les deux ne se croisent pas : une tige plus haute que le tapis
+    // reçoit exactement ce qu'elle recevait avant ce lot.
+    //
+    // Le tapis lu est celui de la cellule où la tige est plantée. Un houppier
+    // qui déborde sur les voisines n'y change rien : ce qui est ombragé ici est
+    // une pousse de l'année, et elle tient dans son mètre carré.
+    light[t] =
+      (light[t] ?? 1) *
+      lumiereSousLHerbe(
+        arbre.heightM,
+        state.soil.herbeFeuillage,
+        cellIndexAt(dims, arbre.x, arbre.y) * N_HERBACEES,
+      );
   }
   for (let i = 0; i < nCells; i++) {
     const x = (i % dims.widthM) + 0.5;

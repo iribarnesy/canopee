@@ -271,6 +271,22 @@ export interface HerbaceeV0 {
    * nommées de ce bloc, à la valeur près : la fauche n'a pas bougé d'un
    * gramme.
    */
+  /**
+   * Hauteur du FEUILLAGE en pleine végétation, m (issue #210).
+   *
+   * **Elle ne sert qu'à une chose, et il faut la lire pour ce qu'elle est :
+   * faire de l'ombre à ce qui est plus court.** Ce fichier écrit plus haut qu'il
+   * n'y a « pas de hiérarchie de hauteur » entre herbacées, et ça ne change
+   * pas : une graminée haute ne déloge toujours pas une rosette, la concurrence
+   * dans la strate se joue sur la place LIBRE. Ce que ce trait ajoute est
+   * l'ombre portée sur la strate LIGNEUSE — un plant de trente centimètres dans
+   * un dactyle de soixante-dix est à l'ombre, et le moteur ne le disait pas.
+   *
+   * C'est la hauteur des FEUILLES, pas celle des épis : ce sont elles qui
+   * interceptent. Un dactyle monte ses chaumes à 1,40 m et porte son limbe à
+   * 0,70 ; c'est 0,70 qui ombrage un semis.
+   */
+  hauteurFeuillageM: number;
   litiere: {
     /**
      * Rapport C/N de la litière de l'espèce.
@@ -373,6 +389,11 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     vitesseInstallation: 0.004,
     // Une feuille d'anémone est tendre et disparaît en quelques semaines : elle
     // est du côté bas de la gamme du feuillage herbacé jeune *(à confirmer)*.
+    // Géophyte de quelques centimètres : les flores donnent 5 à 25 cm, et son
+    // limbe est étalé au ras du sol. Elle n'ombrage personne, et c'est le bon
+    // témoin du mécanisme — une herbacée peut couvrir le sol sans le priver de
+    // lumière *(à confirmer)*.
+    hauteurFeuillageM: 0.15,
     litiere: { cSurN: 18 },
     sources: [SHIRREFFS_1985],
   },
@@ -421,6 +442,10 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     vitesseInstallation: 0.12,
     // Foin de graminée : le milieu de la gamme, et la valeur que la fauche
     // portait en dur avant #201 — d'où une fauche inchangée au gramme près.
+    // Touffe dense : le limbe monte à 50-80 cm en pleine végétation, les
+    // chaumes florifères bien plus haut (jusqu'à 1,40 m). C'est le limbe qui
+    // intercepte, d'où 0,70 *(à confirmer)*.
+    hauteurFeuillageM: 0.7,
     litiere: { cSurN: 25 },
     sources: [BEDDOWS_1959],
   },
@@ -451,6 +476,10 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // La molinie fait une touradon sèche et fibreuse qui tient l'hiver : plus
     // dure qu'un dactyle, et c'est ce qui fait la litière acide d'une lande
     // à molinie *(à confirmer)*.
+    // Touradon de molinie : les feuilles font 40 à 80 cm, les hampes montent à
+    // 1,50 m sur les stations fraîches. Même lecture que pour le dactyle, un
+    // cran plus haut parce qu'elle fait des touffes hautes *(à confirmer)*.
+    hauteurFeuillageM: 0.8,
     litiere: { cSurN: 38 },
     sources: [TAYLOR_2001],
   },
@@ -547,6 +576,10 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // suivante avant de la faire monter — c'est un fait d'agronomie que le
     // moteur ne pouvait pas produire tant que la paille n'existait pas
     // *(à confirmer)*.
+    // Blé tendre moderne : les variétés semi-naines plafonnent à 70-90 cm,
+    // paille comprise. La distinction limbe/épi n'a pas de sens ici — un blé
+    // est un couvert plein sur toute sa hauteur.
+    hauteurFeuillageM: 0.8,
     litiere: { cSurN: 90 },
     sources: [ROTHAMSTED_BROADBALK, AGRESTE_BLE, ARTRU_2019, DUPRAZ_CAPILLON],
   },
@@ -554,6 +587,59 @@ export const HERBACEES: readonly HerbaceeV0[] = [
 
 /** Combien d'espèces : la longueur d'un « paquet » dans les tableaux à plat. */
 export const N_HERBACEES = HERBACEES.length;
+
+/** Hauteurs de feuillage, rangées une fois dans l'ordre de `HERBACEES`. */
+const HAUTEURS_FEUILLAGE = HERBACEES.map((h) => h.hauteurFeuillageM);
+
+/**
+ * Extinction de la lumière sous un couvert herbacé PLEIN, sans dimension.
+ *
+ * Loi de Beer-Lambert, la même forme que pour les houppiers (`light.ts`) :
+ * `transmission = exp(−k × opacité)`, où l'opacité est la part du couvert qui
+ * passe au-dessus du sujet. Sous une prairie fermée en pleine végétation, les
+ * relevés au ras du sol donnent deux à dix pour cent de la lumière incidente ;
+ * cinq pour cent, soit k = 3, situe le moteur au milieu *(à confirmer)*.
+ */
+export const EXTINCTION_HERBE = 3;
+
+/**
+ * Ce qu'un couvert herbacé laisse à une tige LIGNEUSE de hauteur donnée, ∈ [0,1]
+ * (issue #210).
+ *
+ * **Le moteur ne disputait à un jeune plant que l'AZOTE et l'EAU** : il faisait
+ * pousser un semis de trente centimètres au plein soleil au milieu d'une
+ * molinie d'un mètre. Mesuré, faucher autour d'un pin sur lande ne lui rendait
+ * que deux pour cent de hauteur à douze ans — trois et demi en fauchant chaque
+ * année —, quand le dégagement est le premier facteur de réussite d'une
+ * plantation sur le terrain.
+ *
+ * Chaque espèce n'intercepte que la part d'elle-même qui DÉPASSE la tige :
+ * `max(0, 1 − h / H)`. Une tige plus haute que tout le tapis reçoit exactement
+ * ce qu'elle recevait avant ce lot, au bit près — c'est le témoin d'identité du
+ * mécanisme, et il est structurel, pas mesuré.
+ *
+ * Aucune espèce n'est nommée : le trait tranche, et l'anémone le prouve — elle
+ * couvre le sol d'un tapis continu en avril sans ombrager quoi que ce soit,
+ * parce qu'elle fait quinze centimètres.
+ */
+export function lumiereSousLHerbe(
+  hauteurTigeM: number,
+  feuillage: readonly number[],
+  base: number,
+): number {
+  let opacite = 0;
+  for (let s = 0; s < N_HERBACEES; s++) {
+    const hauteur = HAUTEURS_FEUILLAGE[s] ?? 0;
+    if (hauteur <= 0) continue;
+    const part = feuillage[base + s] ?? 0;
+    if (part <= 0) continue;
+    const dessus = 1 - hauteurTigeM / hauteur;
+    if (dessus <= 0) continue;
+    opacite += part * dessus;
+  }
+  if (opacite <= 0) return 1;
+  return Math.exp(-EXTINCTION_HERBE * opacite);
+}
 
 /**
  * Sur combien de degrés-jours l'appareil végétatif se déploie, une fois parti.
