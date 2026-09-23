@@ -211,8 +211,11 @@ export interface HerbaceeV0 {
    *    porte plus ; une culture ne fait ni l'un ni l'autre. Son emprise est
    *    posée au semis et remise à zéro à la moisson, et rien entre les deux ne
    *    la fait bouger ;
-   *  - une pérenne rend sa litière à la cellule ; une culture est EXPORTÉE, et
-   *    l'azote du grain quitte la parcelle pour de bon ;
+   *  - une pérenne rend TOUTE sa litière à la cellule ; une culture n'en rend
+   *    que la paille et le chaume, le grain partant pour de bon avec son
+   *    azote. (Cette ligne a longtemps décrit une intention plutôt qu'un
+   *    mécanisme : jusqu'à #201, aucune des deux ne rendait quoi que ce
+   *    soit.) ;
    *  - une parcelle laissée seule se couvre de molinie, jamais de blé.
    *
    * Ce qui ne change PAS : le feuillage suit la saison et la sécheresse comme
@@ -237,6 +240,57 @@ export interface HerbaceeV0 {
     heuresRecolteHa: number;
     /** Coût de la semence, €/ha. */
     semenceEurHa: number;
+  };
+  /**
+   * CE QUE L'ESPÈCE REND AU SOL (issue #201).
+   *
+   * La strate basse ne rendait RIEN. Mesuré avant ce lot, une prairie
+   * spontanée à 0,95 de couverture sur limon riche : le stock d'humus perd
+   * 42 % en cinquante ans et la litière reste à 0,00 les deux mille six cents
+   * semaines. Park Grass, prairie permanente non fertilisée depuis 1856, tient
+   * son stock. Une prairie ne se décarbonise pas — c'est même le couvert qui
+   * en stocke le plus vite dans l'horizon de surface.
+   *
+   * Le seul retour qui existait était celui de la FAUCHE, et il portait deux
+   * nombres nus (`coupe * 4` et `* 25`) qui sont devenus les constantes
+   * nommées de ce bloc, à la valeur près : la fauche n'a pas bougé d'un
+   * gramme.
+   */
+  litiere: {
+    /**
+     * Rapport C/N de la litière de l'espèce.
+     *
+     * C'est le trait qui décide si un résidu NOURRIT la culture suivante ou
+     * lui VOLE son azote, et l'écart entre les deux bouts est énorme : une
+     * feuille tendre de vernale se minéralise en quelques semaines, une paille
+     * de blé immobilise l'azote du sol pendant un an avant de le rendre.
+     * Ordres de grandeur usuels : feuillage herbacé jeune 15-25, foin de
+     * graminée 25-40, paille de céréale 80-100 *(à confirmer)*.
+     */
+    cSurN: number;
+    /**
+     * Fois que la plante RENOUVELLE sa matière en un an, racines fines
+     * comprises, rapporté à sa biomasse aérienne sur pied.
+     *
+     * **C'est ce trait qui porte le mécanisme, et il a fallu une mesure ratée
+     * pour le comprendre.** Le premier jet collectait la SÉNESCENCE que
+     * `suivreFeuillage` calcule déjà — une feuille qui jaunit et se couche. Il
+     * rendait 36 kg C/ha/an, deux ordres de grandeur sous le compte. La raison
+     * est que le feuillage de ce moteur est un ÉTAT DE COUVERTURE et non un
+     * stock de matière : sur une prairie permanente il reste à 0,95 toute
+     * l'année, si bien qu'il n'y a presque rien qui « tombe ». Or une prairie
+     * dont la couverture ne bouge pas d'un centième renouvelle quand même
+     * toute sa matière chaque année — c'est un FLUX, pas une chute.
+     *
+     * L'ancre est la production primaire d'une prairie tempérée : 6 à 12 t de
+     * matière sèche par hectare et par an, parties aérienne et souterraine
+     * confondues, dont l'essentiel se renouvelle dans l'année. Rapporté à une
+     * biomasse aérienne sur pied de l'ordre de 2 t MS/ha, cela fait un
+     * renouvellement de l'ordre de 3 *(à calibrer)* — dont environ un tiers
+     * au-dessus du sol et deux tiers en racines fines, qui est le terme
+     * dominant d'une prairie et la raison pour laquelle elle stocke.
+     */
+    renouvellementAn: number;
   };
   /**
    * **L'AZOTE DU GRAIN N'EST PAS COMPTÉ À LA MOISSON, et c'est voulu.** Il est
@@ -325,6 +379,9 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // ancienne) : soit ~17 ans pour remplir un mètre carré depuis son bord,
     // étalés sur la quinzaine de semaines où elle végète *(à confirmer)*.
     vitesseInstallation: 0.004,
+    // Une feuille d'anémone est tendre et disparaît en quelques semaines : elle
+    // est du côté bas de la gamme du feuillage herbacé jeune *(à confirmer)*.
+    litiere: { cSurN: 18, renouvellementAn: 2 },
     sources: [SHIRREFFS_1985],
   },
   {
@@ -370,6 +427,9 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // celle de la reconquête du tapis d'avant ce lot (0,12 par semaine de
     // pleine végétation), pour la même raison que ses seuils de lumière.
     vitesseInstallation: 0.12,
+    // Foin de graminée : le milieu de la gamme, et la valeur que la fauche
+    // portait en dur avant #201 — d'où une fauche inchangée au gramme près.
+    litiere: { cSurN: 25, renouvellementAn: 3 },
     sources: [BEDDOWS_1959],
   },
   {
@@ -396,6 +456,10 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     tBaseCroissanceC: 8,
     // Touffe, plus lente à couvrir qu'une graminée traçante *(à calibrer)*.
     vitesseInstallation: 0.05,
+    // La molinie fait une touradon sèche et fibreuse qui tient l'hiver : plus
+    // dure qu'un dactyle, et c'est ce qui fait la litière acide d'une lande
+    // à molinie *(à confirmer)*.
+    litiere: { cSurN: 38, renouvellementAn: 2.5 },
     sources: [TAYLOR_2001],
   },
   {
@@ -483,6 +547,14 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       heuresRecolteHa: 1,
       semenceEurHa: 90,
     },
+    // **La paille de blé, et c'est le trait le plus conséquent du bloc.** Son
+    // C/N est célèbre pour son effet : à 90, elle IMMOBILISE l'azote du sol
+    // le temps que les micro-organismes la digèrent, et ne le rend qu'ensuite.
+    // Enfouir une paille sans apport d'azote fait donc baisser la culture
+    // suivante avant de la faire monter — c'est un fait d'agronomie que le
+    // moteur ne pouvait pas produire tant que la paille n'existait pas
+    // *(à confirmer)*.
+    litiere: { cSurN: 90, renouvellementAn: 0.6 },
     sources: [ROTHAMSTED_BROADBALK, AGRESTE_BLE, ARTRU_2019, DUPRAZ_CAPILLON],
   },
 ];
@@ -805,6 +877,35 @@ export function evoluerEmprises(
  * À la descente il n'y a rien à amortir : la cible porte déjà la sénescence et
  * le grillage, tous deux progressifs.
  */
+/**
+ * Carbone de l'appareil aérien d'un couvert herbacé FERMÉ, g/m² (issue #201).
+ *
+ * C'est la constante de conversion de tout ce module : une part de couverture
+ * qui disparaît rend cette part de ce nombre. Elle n'est pas nouvelle — elle
+ * était écrite en dur dans la fauche, sous la forme `coupe * 4 * 25`, sans nom
+ * ni source. La nommer ne change donc pas un gramme au geste existant, et la
+ * rend disponible aux trois chemins qui n'existaient pas.
+ *
+ * Cent grammes de carbone au mètre carré font une tonne de C à l'hectare, soit
+ * environ 2,2 t de matière sèche (une matière végétale sèche est à ~45 % de
+ * carbone). C'est le BAS de la gamme d'une prairie tempérée, dont la biomasse
+ * aérienne sur pied se compte en 3 à 6 t MS/ha *(à calibrer)* — on garde la
+ * valeur d'origine plutôt que de la relever en même temps qu'on ouvre les
+ * chemins, pour que le lot ne mélange pas deux changements.
+ */
+export const CARBONE_COUVERT_FERME_G_M2 = 100;
+
+/**
+ * Ce qu'une part de couvert qui disparaît rend au sol, en grammes par m².
+ *
+ * Le carbone tombe de la biomasse, l'azote du C/N de l'espèce : c'est là que
+ * le trait de la fiche décide si le résidu nourrit ou s'il immobilise.
+ */
+export function litiereRendue(part: number, cSurN: number): { c: number; n: number } {
+  const c = Math.max(0, part) * CARBONE_COUVERT_FERME_G_M2;
+  return { c, n: cSurN > 0 ? c / cSurN : 0 };
+}
+
 export function suivreFeuillage(
   feuillage: number[],
   emprises: number[],

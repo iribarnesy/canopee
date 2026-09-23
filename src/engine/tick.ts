@@ -98,6 +98,7 @@ import {
   HERBACEES,
   INDEX_CULTURES,
   INERTIE_RESSOURCE_FLORALE,
+  litiereRendue,
   N_CULTURES,
   N_HERBACEES,
   OFFRE_FLORALE_SUFFISANTE,
@@ -1605,6 +1606,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // parcelle, et les deux tampons par cellule sont alloués une fois pour
   // toutes : la strate tourne sur toutes les cellules toutes les semaines, et
   // ce lot coûte déjà 11 % de temps de tick.
+  // Ce que la strate basse rend au sol cette semaine, kg C sur toute la
+  // parcelle : elle le rend au sol ET elle l'a fixé, donc il entre au bilan
+  // par la production primaire (#201).
+  let herbeNppKgC = 0;
   const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
   const saisonnieres = HERBACEES.map((h) => partSaisonniere(h, pheno));
   const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
@@ -1630,6 +1635,54 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const base = i * N_HERBACEES;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
+    // ── CE QUE LA STRATE BASSE REND AU SOL (#201) ───────────────────────────
+    //
+    // Elle ne rendait RIEN. Mesuré avant ce lot, une prairie spontanée à 0,95
+    // de couverture sur limon riche : le stock d'humus perd 42 % en cinquante
+    // ans et la litière reste à 0,00 les deux mille six cents semaines. Park
+    // Grass, prairie permanente non fertilisée depuis 1856, tient son stock.
+    //
+    // **Un FLUX, pas une chute**, et le premier jet s'est trompé là-dessus. Il
+    // collectait la sénescence que `suivreFeuillage` calcule déjà, et rendait
+    // 36 kg C/ha/an — deux ordres de grandeur trop peu. Le feuillage de ce
+    // moteur est un état de COUVERTURE, pas un stock de matière : sur une
+    // prairie permanente il ne bouge pas de l'année, donc rien n'y « tombe ».
+    // Une plante dont la couverture ne bouge pas renouvelle pourtant toute sa
+    // matière, racines fines comprises, et c'est ce renouvellement-là qui
+    // nourrit le sol (`renouvellementAn`, herbacees.ts).
+    for (let s = 0; s < N_HERBACEES; s++) {
+      const presente = herbeFeuillage[base + s] ?? 0;
+      if (presente <= 0) continue;
+      const fiche = HERBACEES[s];
+      if (!fiche) continue;
+      const { c, n } = litiereRendue(
+        (presente * fiche.litiere.renouvellementAn) / 52,
+        fiche.litiere.cSurN,
+      );
+      // **Le carbone est CRÉDITÉ à la production primaire**, sans quoi on le
+      // ferait apparaître de nulle part. La strate n'était pas au bilan
+      // carbone du tout, et le seul chemin qui l'alimentait — la fauche — en
+      // créait donc en silence, sans que rien ne le voie : la propriété de
+      // conservation ne passe pas par `faucher`. C'est la plante qui a fixé ce
+      // carbone, il entre par là.
+      herbeNppKgC += c / 1000;
+      // Le mélange suit les masses, comme pour la litière d'arbre : une cellule
+      // qui reçoit de la paille à 90 et du dactyle à 25 porte les deux.
+      const oldN = litterNG[i] ?? 0;
+      // **`litterK` EST LA LIGNE QUI MANQUAIT AU PREMIER JET, et l'essai l'a
+      // dit sans ambiguïté** : la litière s'accumulait à 99 t C/ha après
+      // quarante ans, c'est-à-dire que rien ne s'en décomposait jamais. La
+      // vitesse de décomposition d'une cellule est un mélange pondéré des
+      // vitesses de ce qui y est tombé, et sur une parcelle sans arbre elle
+      // valait zéro faute que personne ne l'ait jamais posée. Elle se déduit du
+      // C/N, donc le trait de la fiche suffit — aucun paramètre de plus.
+      litterK[i] =
+        (oldN * (litterK[i] ?? 0) + n * litterDecayRate(fiche.litiere.cSurN)) / (oldN + n);
+      litterCaMgG[i] =
+        (oldN * (litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G) + n * CALCIUM_NEUTRE_MG_G) / (oldN + n);
+      litterNG[i] = oldN + n;
+      litterCG[i] = (litterCG[i] ?? 0) + c;
+    }
     // ── Le GRAIN s'accumule (#136) ──────────────────────────────────────────
     // Le rendement est l'intégrale de ce que la plante assimile, pas une
     // fonction de son état du jour. Les trois facteurs sont déjà là : ce
@@ -3229,7 +3282,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       carbon: {
         ...state.carbon,
         deadWoodKgC,
-        nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC,
+        nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC + herbeNppKgC,
         importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedPlantsKgC,
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
         erosionCumKgC:
