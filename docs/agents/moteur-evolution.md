@@ -125,6 +125,19 @@ trait : le porter, c'est faire une graine assez grosse pour qu'on s'en nourrisse
 et assez lourde pour rester au sol. Le hêtre rejoint les chênes, l'ajonc reste
 dehors, aucune espèce n'est nommée.
 
+**UN BANC QUI TOMBE N'EST PAS TOUJOURS UN BANC QU'ON A CASSÉ — VÉRIFIER SUR
+PLUSIEURS GRAINES AVANT DE CONCLURE.** `culture.test.ts` affirmait qu'à l'an 25
+une allée de noyers non fertilisée rend 7 % de PLUS que le blé pur, « l'énoncé le
+plus net de ce que cet essai est seul à dire ». Le lot l'a fait tomber. Avant de
+toucher au seuil, la mesure : cinq graines, sur le moteur d'AVANT le lot —
+1,069 · 1,052 · 0,940 · 0,929 · 0,922. **Trois sur cinq passaient déjà sous 1.**
+L'affirmation ne tenait pas au mécanisme, elle tenait à la graine 4 ; le lot ne
+l'a pas cassée, il a déplacé le tirage. Le banc tourne maintenant sur cinq
+graines et affirme la moyenne, qui est monotone (0,993 / 0,987 / 0,953 / 0,899)
+là où aucune graine seule ne l'était. **C'est la troisième fois que ce dépôt
+paie un verdict qui dépendait d'un tirage** — après le `stateHash` qui dépendait
+de la version de V8 et l'écureuil qui s'installait sur une seule graine.
+
 **Rien n'a été stocké, et ça valait le détour.** La production d'une année est
 une FONCTION de la parcelle, de l'année et de la graine de partie ; la glandée
 de l'an passé se recalcule avec les houppiers d'aujourd'hui, à un ou deux pour
