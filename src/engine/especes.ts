@@ -1005,8 +1005,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // du prunellier n'a été trouvée en climat océanique : pas de Biological
     // Flora, rien dans la littérature de haies. La seule contrainte publiée
     // est ORDINALE — Grubb range le prunellier dans le groupe « à croissance
-    // rapide », devant l'aubépine, ce que le moteur respecte (37 cm/an contre
-    // 29 sur les trois premières années).
+    // rapide », devant l'aubépine.
+    //
+    // ELLE EST MAINTENANT GARDÉE PAR UN ESSAI (#185), ce qu'elle n'était pas :
+    // ces deux lignes portaient la seule chose qu'on sache de l'espèce, et
+    // rien n'empêchait qu'elle devienne fausse en silence. Mesuré sur le banc
+    // des arbustes : 1,39 m à trois ans contre 1,14 à l'aubépine (36 cm/an
+    // contre 28), puis l'ordre s'inverse — 3,10 m contre 3,73 à douze ans,
+    // parce que le plafond du prunellier est à 4 m et celui de l'aubépine à 8.
     pousseMaxMAn: 0.4,
     // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
