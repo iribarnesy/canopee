@@ -85,6 +85,38 @@ export const DENSITE_REFERENCE_PAR_HA = 0.05;
 export const PROFONDEUR_BOUTIS_CM = 10;
 
 /**
+ * Hauteur en dessous de laquelle un plant ne survit pas à un boutis, m.
+ *
+ * **C'EST LE SECOND EFFET DU SANGLIER SUR LA RÉGÉNÉRATION, ET LE SEUL QUI LA
+ * SUPPRIME VRAIMENT** (issue #199). Le premier — manger la glandée — est
+ * maintenant ancré sur une ration réelle, et il est PETIT : à 0,15 bête à
+ * l'hectare, une ration de 400 kg/an fait soixante kilos de glands contre une
+ * glandée qui se compte en centaines. Un sanglier ne peut pas manger une
+ * glandée, c'est toute l'idée de la glandée. Ce qu'il peut faire, c'est
+ * labourer ce qui a levé.
+ *
+ * Le boutis descend à dix centimètres (ci-dessus) : il soulève l'horizon de
+ * surface, celui qui porte la litière, l'humus et le chevelu des plantules.
+ * **Ce qui part avec la motte est le plant dont le système racinaire n'a pas
+ * encore quitté cet horizon.** Au-dessus, la tige tient par des racines que le
+ * groin ne remonte pas, et le boutis ne fait plus que la blesser.
+ *
+ * Cinquante centimètres : c'est la coupure que les protocoles d'inventaire
+ * mettent au bas de la régénération — en dessous on compte des semis, au-dessus
+ * des recrûs installés. Le semis de ce moteur naît à trente centimètres
+ * (`hauteurDuSemisM`), donc la fenêtre de vulnérabilité dure ce que met le plant
+ * à gagner vingt centimètres : une saison en pleine lumière, plusieurs années
+ * sous couvert — exactement là où le sanglier va *(à calibrer)*.
+ *
+ * Comparer avec le LABOUR, qui détruit jusqu'à 1,2 m (`actions.ts`) : l'outil
+ * retourne deux à trois fois plus profond, sur toute la zone d'un coup, et le
+ * moteur dit maintenant les deux choses séparément. Le sanglier n'est pas un
+ * petit tracteur : il est plus superficiel, et il ne touche que deux pour cent
+ * de la parcelle par an.
+ */
+export const HAUTEUR_ARRACHEE_PAR_BOUTIS_M = 0.5;
+
+/**
  * Poids saisonnier du retournement, par semaine de l'année.
  *
  * Les suivis s'accordent : l'activité est marquée de la mi-automne au

@@ -420,6 +420,31 @@ export interface GameState {
    */
   graineMarche: number;
   /**
+   * Le carbone que la parcelle PORTAIT DÉJÀ quand le joueur est arrivé, t/ha —
+   * le point zéro du bilan (`carbon.ts`, issue #202).
+   *
+   * **C'était `station.initialSoilCTHa`, et c'était faux dès qu'une partie
+   * démarrait sur une parcelle vieillie.** Ce champ-là est le carbone du PROFIL
+   * pédologique : il sert à remplir `humusCG` à la création, et c'est son
+   * rôle. Mais `faireVieillir` (critère A26) fait tourner le moteur pendant des
+   * décennies avant l'arrivée du joueur — la friche se boise toute seule,
+   * l'humus dérive — puis remet la semaine à zéro. La référence, elle, ne
+   * bougeait pas. Sur un limon riche boisé depuis soixante ans, le joueur lisait
+   * « vous avez stocké 108 tonnes de carbone à l'hectare » avant d'avoir posé un
+   * seul plant, et ces tonnes étaient celles d'arbres venus tout seuls.
+   *
+   * Le défaut avait une seconde face : pendant la maturation l'humus BAISSE
+   * (73,97 → 56,31 t/ha en trente ans), si bien que la référence surestimait le
+   * sol en même temps qu'elle ignorait les arbres. Les deux erreurs ne se
+   * compensaient pas, elles s'additionnaient dans deux cases du même total.
+   *
+   * La valeur appartient donc à la PARTIE et non à la station, au même titre que
+   * `graineMarche` : une partie rechargée doit retrouver la sienne. Elle vaut
+   * exactement `station.initialSoilCTHa` à la création — une parcelle nue démarre
+   * à zéro, comme avant — et n'est refigée qu'une fois, après la maturation.
+   */
+  carboneDeReferenceTHa: number;
+  /**
    * La parcelle a-t-elle brûlé depuis la dernière levée annuelle ? Le feu
    * scarifie les téguments durs : c'est lui qui fait lever d'un coup une banque
    * que rien d'autre n'aurait réveillée.
@@ -588,6 +613,9 @@ export function createGameState(
     // en tire ses variations annuelles sans puiser dans le flux aléatoire
     // principal, qui lui change à chaque tick (marche.ts).
     graineMarche: (rng[0] ?? 1) >>> 0,
+    // Une parcelle neuve ne porte que le carbone de son profil : le bilan part
+    // donc de zéro, et rien ne change tant qu'on ne vieillit pas la parcelle.
+    carboneDeReferenceTHa: station.initialSoilCTHa,
     carbon: createCarbonState(),
     ddYearBase5: 0,
     // Une partie démarre au 1ᵉʳ janvier : l'hiver qui précède est supposé

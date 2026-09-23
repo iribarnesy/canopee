@@ -77,8 +77,18 @@ const ACIDE = stationDepuisProfil({
 const GRAINES = [11, 23, 37];
 const meteo = syntheticYear(LIMON_RICHE.climat);
 
+/**
+ * Le gibier ET le sanglier sont écartés, pour la même raison : ce fichier mesure
+ * ce que le pH fait à une tige, et une tige plantée à trente centimètres est à
+ * portée des deux. Le sanglier s'est ajouté avec le boutis (#199), qui arrache
+ * ce qui n'a pas atteint cinquante centimètres — il tuait un charme sur vingt et
+ * l'essai du dessous comptait des morts qui n'avaient rien à voir avec le sol.
+ */
 function peuplement(plantations: [string, number][], annees: number, seed: number): GameState {
-  let s = createGameState({ ...ACIDE, gibierParHa: 0, voisinage: [] }, rngStateFromSeed(seed));
+  let s = createGameState(
+    { ...ACIDE, gibierParHa: 0, sanglierParHa: 0, voisinage: [] },
+    rngStateFromSeed(seed),
+  );
   for (const [id, n] of plantations) s = plantScattered(s, id, n, 0.3);
   for (let i = 0; i < annees * 52; i++) {
     const w = meteo[s.week % meteo.length];
@@ -182,9 +192,16 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     // pin recalé sur sa table de production l'a fait tomber sur une graine :
     //
     //     graine   pin (m)   charme (m)   rapport   charme SEUL
-    //       11      10,403      0,976      10,66       1,012
-    //       23       9,042      0,954       9,48       0,907
-    //       37       8,703      0,928       9,37       0,886
+    //       11      10,397      0,976      10,65       1,012
+    //       23       9,040      0,954       9,48       0,907
+    //       37       8,703      0,928       9,38       0,886
+    //
+    // (Relevé une seconde fois APRÈS avoir écarté le sanglier du banc, qui
+    // arrachait un charme sur vingt depuis #199 : 10,403 · 9,042 · 8,703
+    // devient 10,397 · 9,040 · 8,703. La bête ne déplaçait rien ici — à
+    // cinquante ans les tiges sont sorties de sa portée depuis longtemps —,
+    // mais elle tuait dans l'essai de quinze ans, et un banc qui mesure le pH
+    // n'a pas à compter des morts de groin.)
     //
     // **Deux graines sur trois passaient désormais sous dix**, et la troisième
     // à 6 % près. Le « dix fois » était lu du rapport des FACTEURS de pH (0,34
@@ -195,7 +212,7 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     //
     // **Et la mesure a corrigé l'énoncé lui-même, pas seulement son seuil.** La
     // colonne de droite donne le charme SEUL, sur la même station et la même
-    // durée : −3,6 %, +5,2 %, +4,7 % pour le charme en mélange contre le charme
+    // durée : −3,6 %, +5,1 %, +4,7 % pour le charme en mélange contre le charme
     // seul. Trois à cinq pour cent, **et le signe change d'une graine à
     // l'autre**. **Le pin ne fait presque rien au charme.** Ce n'est donc pas la
     // concurrence qui l'exclut, c'est le pH, directement : l'essai s'appelait

@@ -50,6 +50,7 @@ export const CAUSE_AU_SINGULIER: Record<CauseMort, string> = {
   abroutissement: "brouté par le gibier",
   ravageurs: "achevé par les ravageurs",
   labour: "retourné par le labour",
+  boutis: "arraché par le boutis du sanglier",
   maladie: "emporté par la maladie",
   frottis: "annelé par les frottis de cervidés",
   chablis: "couché par la tempête",
