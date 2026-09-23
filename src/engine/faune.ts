@@ -36,8 +36,16 @@
  * sera le lot 3 de la faire payer. Un effectif qui ne fait rien encore, mais
  * qu'on peut voir naître et partir.
  *
- * Il ne fait pas non plus se reproduire ni mourir (lot 2) : un individu
- * s'installe, et il reste tant que son gîte tient.
+ * **Lot 2 — LA TABLE.** Un gîte ne suffit pas : un nichoir dans un désert reste
+ * vide. L'installation demande donc un gîte ET une table, comme le moteur
+ * l'exige déjà des pollinisateurs (G4), et un individu qui ne mange pas deux
+ * saisons de suite s'en va. Les ressources lues existaient déjà : la table n'a
+ * rien inventé, elle a déclaré qui prélève quoi — et elle en a RETIRÉ deux sur
+ * quatre après mesure, ce que `Ressource` raconte juste en dessous.
+ *
+ * Il ne fait toujours pas se reproduire ni mourir de vieillesse : un individu
+ * s'installe, il reste tant que son gîte tient et que la table suit, et il part
+ * sinon.
  *
  * ── LA LIMITE À CONNAÎTRE : LA PARCELLE NE VOIT PAS SES VOISINS ──────────────
  *
@@ -63,6 +71,7 @@
  */
 
 import { diametreCaviteCm, hauteurCaviteM, volumeCaviteTotalL } from "./cavites";
+import { forEachDiscCell, type GridDims } from "./grid";
 import type { TreeState } from "./trees";
 
 /**
@@ -77,6 +86,43 @@ import type { TreeState } from "./trees";
  *    que la hutte, en beaucoup plus exigeant.
  */
 export type TypeDeGite = "cavite" | "hutte" | "aire";
+
+/**
+ * CE QUI NOURRIT, et d'où le moteur le tire.
+ *
+ * Deux postes, et **il y en avait quatre dans le premier jet**. Ce qui les a
+ * ramenés à deux est une mesure, pas une opinion — voir plus bas.
+ *
+ *  - `invertebres` — `soil.ravageurs`. Ce que `ravageurs.ts` appelle une
+ *    pullulation, une mésange l'appelle un garde-manger : c'est la même
+ *    biomasse de chenilles et de larves, vue des deux bouts. **C'est un PROXY
+ *    et il faut le dire** : cette grandeur suit la dynamique des ravageurs, pas
+ *    la phénologie des chenilles de mai. Ce qu'elle rend justement, c'est que
+ *    des arbres nourrissent des insectivores et qu'un champ nu n'en nourrit pas.
+ *  - `micromammiferes` — `soil.herbeBiomasse`. Le moteur ne modélise pas les
+ *    campagnols ; il tient l'herbe où ils vivent, et la relation est réelle —
+ *    une prairie haute en porte, un sol nu n'en porte pas. Ce n'est pas une
+ *    mesure de la proie, c'est une mesure de son habitat. Conséquence juste et
+ *    non voulue : une buse préfère l'ouvert au couvert.
+ *
+ * ── LES DEUX QUI ONT ÉTÉ RETIRÉS, ET POURQUOI ────────────────────────────────
+ *
+ * **Le nectar** (`soil.ressourceFlorale`) n'a aucun consommateur dans l'atlas :
+ * la guilde des pollinisateurs viendra, et la ressource avec elle. Déclarer un
+ * poste que personne ne lit, c'est le laisser dériver sans que rien ne le dise.
+ *
+ * **Les fruits** ont demandé une mesure pour être compris, et c'est la plus
+ * instructive du lot. Un peuplement mûr de chênes rend `fruitsKg = 0` toute
+ * l'année, toutes semaines confondues. Ce n'est pas un défaut de fructification :
+ * le bloc `fruits` de l'atlas décrit une RÉCOLTE — ce qu'un verger donne au
+ * joueur — et onze espèces sur vingt-six en portent un. **La glandée n'existe
+ * pas dans ce moteur.** Un écureuil nourri aux `fruitsKg` mangerait le verger et
+ * jamais les chênes, ce qui est le contraire de sa biologie. L'écureuil et le
+ * loir restent donc SANS table, jugés sur leur seul gîte comme au lot 1, et la
+ * glandée est sortie en #197 — c'est un mécanisme à part entière, pas un champ
+ * à brancher.
+ */
+export type Ressource = "invertebres" | "micromammiferes";
 
 /**
  * Une fiche de faune. **C'est une FICHE, jamais un `if (especeId === …)`** : ce
@@ -129,6 +175,25 @@ export interface EspeceFaune {
    * l'espèce est rare et exigeante, plus c'est long.
    */
   colonisationParAn: number;
+  /**
+   * **CE QUE L'ANIMAL MANGE**, et ce qu'il lui en faut (lot 2).
+   *
+   * Le gîte ne suffit pas : un nichoir dans un désert reste vide.
+   *
+   * **FACULTATIF, et l'absence est une position tenue** : une espèce dont la
+   * nourriture n'existe pas encore dans le moteur est jugée sur son seul gîte,
+   * comme au lot 1. Mieux vaut une table manquante et dite qu'une table
+   * branchée sur une grandeur qui ne veut pas ce qu'on croit — c'est ce qui
+   * serait arrivé à l'écureuil, faute de glandée.
+   */
+  table?: { ressource: Ressource; seuil: number };
+  /**
+   * Semaine de l'année où l'on fait le BILAN de la table. Ignorée sans table.
+   *
+   * Ce n'est pas la semaine d'installation : on s'installe au printemps et on
+   * échoue à nourrir sa nichée plus tard. Une donnée de fiche, comme le reste.
+   */
+  semaineBilan?: number;
 }
 
 /**
@@ -160,6 +225,8 @@ export const FAUNE: readonly EspeceFaune[] = [
     territoireM: 56,
     semaineInstallation: 13,
     colonisationParAn: 0.7,
+    table: { ressource: "invertebres", seuil: 0.004 },
+    semaineBilan: 20,
   },
   {
     id: "mesange_charbonniere",
@@ -174,6 +241,8 @@ export const FAUNE: readonly EspeceFaune[] = [
     territoireM: 69,
     semaineInstallation: 13,
     colonisationParAn: 0.7,
+    table: { ressource: "invertebres", seuil: 0.004 },
+    semaineBilan: 20,
   },
   {
     id: "pic_epeiche",
@@ -188,6 +257,8 @@ export const FAUNE: readonly EspeceFaune[] = [
     territoireM: 150,
     semaineInstallation: 14,
     colonisationParAn: 0.4,
+    table: { ressource: "invertebres", seuil: 0.003 },
+    semaineBilan: 22,
   },
   {
     id: "chouette_cheveche",
@@ -205,6 +276,8 @@ export const FAUNE: readonly EspeceFaune[] = [
     territoireM: 250,
     semaineInstallation: 12,
     colonisationParAn: 0.25,
+    table: { ressource: "micromammiferes", seuil: 0.5 },
+    semaineBilan: 26,
   },
   {
     id: "loir_gris",
@@ -248,6 +321,8 @@ export const FAUNE: readonly EspeceFaune[] = [
     territoireM: 700,
     semaineInstallation: 8,
     colonisationParAn: 0.2,
+    table: { ressource: "micromammiferes", seuil: 0.6 },
+    semaineBilan: 24,
   },
 ];
 
@@ -268,10 +343,20 @@ export interface IndividuFaune {
   y: number;
   /** semaine d'installation, pour le journal et pour l'âge */
   depuisSemaine: number;
+  /**
+   * Saisons consécutives où la table n'a pas suffi (lot 2). Absent = aucune.
+   *
+   * **Un animal ne déménage pas pour une mauvaise semaine.** Il échoue à
+   * nourrir sa nichée sur un printemps, puis sur un second, et alors il s'en
+   * va. Sans cette mémoire on obtiendrait une faune qui clignote et un journal
+   * illisible ; avec elle, une mauvaise année est un avertissement et deux une
+   * décision.
+   */
+  saisonsMaigres?: number;
 }
 
 /** Pourquoi un individu a quitté la parcelle. */
-export type CauseDepart = "arbreDisparu" | "giteTropPetit";
+export type CauseDepart = "arbreDisparu" | "giteTropPetit" | "tableVide";
 
 export interface InstallationFaune {
   individu: IndividuFaune;
@@ -441,6 +526,140 @@ function partDuTerritoire(espece: EspeceFaune, aireParcelleM2: number): number {
 }
 
 /**
+ * Ce que le moteur donne à lire pour nourrir la faune.
+ *
+ * Passé en argument plutôt que lu depuis `GameState` : ce module ne connaît ni
+ * le sol ni le tick, et c'est ce qui permet de l'éprouver sur une parcelle
+ * fabriquée à la main.
+ */
+export interface TableDeLaParcelle {
+  /** `soil.ravageurs`, par cellule */
+  invertebres: readonly number[];
+  /** `soil.herbeBiomasse`, par cellule — le PROXY des micromammifères */
+  micromammiferes: readonly number[];
+}
+
+/**
+ * Ce que le territoire d'un individu offre, dans son unité propre et rapporté
+ * à la cellule (ou à l'hectare pour les fruits).
+ *
+ * **Seules les cellules DE LA PARCELLE comptent**, parce que ce sont les seules
+ * que le moteur connaisse — et c'est la même limite que partout ailleurs ici :
+ * la parcelle ne voit pas ses voisins. Ce qu'on en fait est traité par
+ * `satisfaction`, pas ici.
+ */
+export function offreDuTerritoire(
+  espece: EspeceFaune,
+  x: number,
+  y: number,
+  dims: GridDims,
+  table: TableDeLaParcelle,
+): number {
+  if (espece.table === undefined) return Number.POSITIVE_INFINITY;
+  const grille =
+    espece.table.ressource === "invertebres" ? table.invertebres : table.micromammiferes;
+
+  let total = 0;
+  let cellules = 0;
+  forEachDiscCell(dims, x, y, espece.territoireM, (i) => {
+    total += grille[i] ?? 0;
+    cellules++;
+  });
+  return cellules > 0 ? total / cellules : 0;
+}
+
+/**
+ * À quel point la parcelle NOURRIT cet individu ∈ [0,1].
+ *
+ * **Le point délicat du lot, et il se règle avec une notion déjà écrite.** Un
+ * demi-hectare peut affamer une mésange, dont l'hectare de territoire tient
+ * presque entier chez vous. Il ne peut pas affamer une buse, qui chasse sur
+ * cent cinquante hectares dont vous n'êtes que quatre millièmes : ce que vous
+ * faites de votre herbe ne décide de rien pour elle. Le manque ne compte donc
+ * qu'à hauteur de ce que la parcelle pèse dans le territoire — exactement le
+ * facteur qui rend déjà l'installation d'une buse rare.
+ *
+ * Une seule formule, et elle rend les deux comportements :
+ *
+ *     satisfaction = 1 − part_du_territoire × manque
+ *
+ * où le manque va de 0 (le seuil est atteint) à 1 (rien du tout).
+ */
+export function satisfaction(espece: EspeceFaune, offre: number, aireParcelleM2: number): number {
+  // Sans table déclarée, l'espèce est jugée sur son seul gîte : elle est
+  // toujours contente, et c'est le comportement du lot 1.
+  const seuil = espece.table?.seuil;
+  if (seuil === undefined || seuil <= 0) return 1;
+  const manque = Math.min(1, Math.max(0, 1 - offre / seuil));
+  return 1 - partDuTerritoire(espece, aireParcelleM2) * manque;
+}
+
+/**
+ * En dessous de quoi une saison compte pour maigre *(à calibrer)*.
+ *
+ * La moitié : la parcelle ne nourrit que la moitié de ce qu'il faudrait, pour
+ * la part du territoire qu'elle représente.
+ */
+export const SATISFACTION_SUFFISANTE = 0.5;
+
+/**
+ * Saisons maigres consécutives au bout desquelles l'animal s'en va *(à
+ * calibrer)*. Deux : une mauvaise année est un accident, deux sont un lieu.
+ */
+export const SAISONS_MAIGRES_AVANT_DEPART = 2;
+
+/**
+ * Le BILAN DE TABLE de la semaine : qui a faim, et qui s'en va.
+ *
+ * Rend les individus mis à jour — leur compteur de saisons maigres a bougé — et
+ * ceux qui partent. Ne fait rien hors des semaines de bilan déclarées par les
+ * fiches, donc dort cinquante semaines sur cinquante-deux comme l'installation.
+ */
+export function bilanDeTable(
+  individus: readonly IndividuFaune[],
+  dims: GridDims,
+  table: TableDeLaParcelle,
+  semaine: number,
+  aireParcelleM2: number,
+): { individus: IndividuFaune[]; partants: DepartFaune[] } {
+  const semaineDeLAnnee = semaine % 52;
+  const restants: IndividuFaune[] = [];
+  const partants: DepartFaune[] = [];
+  let quelquUnABouge = false;
+
+  for (const individu of individus) {
+    const espece = especeFaune(individu.especeId);
+    if (espece?.table === undefined || espece.semaineBilan !== semaineDeLAnnee) {
+      restants.push(individu);
+      continue;
+    }
+    const offre = offreDuTerritoire(espece, individu.x, individu.y, dims, table);
+    const contente = satisfaction(espece, offre, aireParcelleM2) >= SATISFACTION_SUFFISANTE;
+    const maigres = contente ? 0 : (individu.saisonsMaigres ?? 0) + 1;
+    if (maigres >= SAISONS_MAIGRES_AVANT_DEPART) {
+      partants.push({ individu, cause: "tableVide" });
+      quelquUnABouge = true;
+      continue;
+    }
+    if (maigres !== (individu.saisonsMaigres ?? 0)) {
+      restants.push(
+        maigres === 0
+          ? { ...individu, saisonsMaigres: 0 }
+          : { ...individu, saisonsMaigres: maigres },
+      );
+      quelquUnABouge = true;
+      continue;
+    }
+    restants.push(individu);
+  }
+
+  // Rendre le MÊME tableau quand rien n'a bougé : le bilan tombe une fois par
+  // an et par espèce, et le reste du temps il ne doit rien coûter, pas même une
+  // copie.
+  return { individus: quelquUnABouge ? restants : (individus as IndividuFaune[]), partants };
+}
+
+/**
  * Les individus qui S'INSTALLENT cette semaine.
  *
  * Le balayage n'a lieu que les semaines d'installation déclarées par les fiches
@@ -455,6 +674,8 @@ export function installations(
   semaine: number,
   premierId: number,
   aireParcelleM2: number,
+  dims: GridDims,
+  table: TableDeLaParcelle,
 ): InstallationFaune[] {
   const semaineDeLAnnee = semaine % 52;
   const especes = FAUNE.filter((e) => e.semaineInstallation === semaineDeLAnnee);
@@ -474,7 +695,19 @@ export function installations(
         if (porteDejaCeGite(presents, arbre.id, espece.gite)) continue;
       }
       if (!territoireLibre(presents, espece, arbre.x, arbre.y)) continue;
-      const chance = espece.colonisationParAn * partDuTerritoire(espece, aireParcelleM2);
+      // **UN GÎTE ET UNE TABLE, ET LA PLUS RARE DÉCIDE.** C'est l'idiome que le
+      // moteur applique déjà aux pollinisateurs (G4, `min(habitat, ressource)`),
+      // et il aurait été incohérent que la faune en individus l'ignore. Ici la
+      // table ne ferme pas la porte, elle rend le lieu moins attirant : une
+      // parcelle à demi nourrissante reçoit deux fois moins de candidats, ce
+      // qui est plus proche du terrain qu'un seuil.
+      const nourriture = satisfaction(
+        espece,
+        offreDuTerritoire(espece, arbre.x, arbre.y, dims, table),
+        aireParcelleM2,
+      );
+      const chance =
+        espece.colonisationParAn * partDuTerritoire(espece, aireParcelleM2) * nourriture;
       const tirage = tirageLocal(graineInstallation(arbre.id, espece.id, semaine));
       if (tirage >= chance) continue;
       const individu: IndividuFaune = {
