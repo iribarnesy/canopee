@@ -77,8 +77,18 @@ const ACIDE = stationDepuisProfil({
 const GRAINES = [11, 23, 37];
 const meteo = syntheticYear(LIMON_RICHE.climat);
 
+/**
+ * Le gibier ET le sanglier sont écartés, pour la même raison : ce fichier mesure
+ * ce que le pH fait à une tige, et une tige plantée à trente centimètres est à
+ * portée des deux. Le sanglier s'est ajouté avec le boutis (#199), qui arrache
+ * ce qui n'a pas atteint cinquante centimètres — il tuait un charme sur vingt et
+ * l'essai du dessous comptait des morts qui n'avaient rien à voir avec le sol.
+ */
 function peuplement(plantations: [string, number][], annees: number, seed: number): GameState {
-  let s = createGameState({ ...ACIDE, gibierParHa: 0, voisinage: [] }, rngStateFromSeed(seed));
+  let s = createGameState(
+    { ...ACIDE, gibierParHa: 0, sanglierParHa: 0, voisinage: [] },
+    rngStateFromSeed(seed),
+  );
   for (const [id, n] of plantations) s = plantScattered(s, id, n, 0.3);
   for (let i = 0; i < annees * 52; i++) {
     const w = meteo[s.week % meteo.length];
