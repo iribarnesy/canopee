@@ -155,6 +155,122 @@ de l'an passé se recalcule avec les houppiers d'aujourd'hui, à un ou deux pour
 cent près. Prix payé : une approximation écrite. Prix évité : un champ d'état,
 une migration de sauvegarde, et un ordre de clés de plus — les trois choses qui
 ont fait rater deux fois la sérialisation.
+## Ce qu'un lot plus ancien a appris (la table, #187 lot 2)
+
+Le lot 1 faisait exister l'animal ; il ne le faisait pas MANGER. C'est le
+propriétaire qui l'a relevé — *« un oiseau s'installe aussi s'il y a les bonnes
+ressources, et il peut partir si ça ne lui plaît pas »* — et il avait raison :
+un nichoir dans un désert reste vide.
+
+**Chercher l'idiome AVANT d'en inventer un.** Le moteur exige déjà des
+pollinisateurs « un gîte ET une table, et le plus rare décide » (G4,
+`min(habitat, ressourceFlorale)`). Que la faune en individus l'ignore aurait été
+incohérent avec le voisin. La table n'a donc pas eu à être conçue, seulement
+déclarée : qui prélève quoi, sur des grandeurs que le moteur suit déjà.
+
+**Et une notion déjà écrite règle le point délicat.** Un demi-hectare peut
+affamer une mésange, dont l'hectare de territoire tient presque entier chez
+vous ; il ne peut pas affamer une buse, qui chasse sur cent cinquante hectares
+dont vous n'êtes que quatre millièmes. Le manque ne compte donc qu'à hauteur de
+ce que la parcelle pèse dans le territoire — exactement le facteur
+`partDuTerritoire` qui rendait déjà l'installation d'une buse rare. Une formule,
+deux comportements opposés, zéro constante nouvelle.
+
+**LE PREMIER JET ÉTAIT DE LA FICTION, ET C'EST LE RECENSEMENT QUI L'A DIT.**
+Quatre ressources, sept seuils, tous écrits avant d'avoir regardé ce que les
+grandeurs valent. Mesuré sur une année, semaine par semaine :
+
+    soil.ravageurs        0,004 à 0,008     seuil écrit : 0,12
+    soil.herbeBiomasse    ≈ 1,0             seuil écrit : 120
+    soil.ressourceFlorale 0 à 0,03          aucun consommateur
+    tree.fruitsKg         0,0 TOUTE L'ANNÉE seuil écrit : 8 et 15
+
+Un à trois ordres de grandeur d'écart. Le recensement l'avait annoncé avant la
+mesure, et d'une façon reconnaissable : la population de 4 ha passait de 38 à 7
+individus, **et la parcelle de 0,64 ha nourrissait un écureuil que celle de 4 ha
+affamait.** Un résultat impossible dans le mauvais sens vaut le même
+avertissement qu'un résultat impossible dans le bon : le protocole est faux.
+
+**Une grandeur peut porter un nom juste et vouloir dire autre chose.** Le
+`fruitsKg = 0` d'un peuplement mûr de chênes n'est pas un défaut de
+fructification : le bloc `fruits` de l'atlas décrit une RÉCOLTE — ce qu'un
+verger donne au joueur — et onze espèces sur vingt-six en portent un. **La
+glandée n'existe pas dans ce moteur.** Un écureuil nourri aux `fruitsKg` aurait
+mangé le verger et jamais les chênes, ce qui est le contraire de sa biologie.
+Il a fallu mesurer pour le voir ; le nom, lui, promettait le bon sens.
+
+**Retirer vaut mieux que brancher de travers.** L'écureuil et le loir restent
+sans table, jugés sur leur seul gîte comme au lot 1, et le champ est FACULTATIF
+sur la fiche pour que l'absence soit une position tenue et non un oubli. Le
+nectar part aussi : une ressource sans consommateur dérive sans que rien ne le
+dise. Deux postes sur quatre, et la glandée sort en #197 — c'est un mécanisme,
+pas un champ à brancher, parce qu'une glandée est SYNCHRONE et IRRÉGULIÈRE, et
+que c'est cette irrégularité même qui permet au chêne de se régénérer.
+
+**Un mécanisme qui ne change rien sur une partie réelle est un paramètre, pas un
+mécanisme.** Les seuils recalés, le recensement redonnait EXACTEMENT le lot 1 et
+zéro départ par la faim : la table était inerte sur la parcelle d'essai, qui est
+un bon habitat. Il a fallu chercher le contraste pour savoir si elle sert —
+même station, même graine, même conduite, seul le nombre d'arbres change :
+
+    25 chênes creusés   7 / 7 / 10 individus   AUCUN départ par la faim
+     3 chênes creusés   4 / 4 /  5 individus   3 départs sur deux graines
+
+Et c'est le PIC ÉPEICHE qui disparaît le premier, ce qui est le bon ordre : son
+territoire de sept hectares moyenne le plus de vide. Une haie de vieux arbres
+n'est pas un bois, et c'est le mécanisme qui le dit.
+## Ce qu'un lot plus ancien a appris (sérialiser l'état, #193)
+
+Pas un mécanisme d'écologie : une réponse à un défaut que le lot des bandes
+avait mis au jour. Une sauvegarde de Canopée est un JOURNAL, et charger une
+partie c'est la REJOUER — ce qui suppose que rejouer la même partie donne la
+même partie. Le moteur ne tient pas cette promesse d'une version de V8 à
+l'autre. Ce n'est pas une perte de réalisme, c'est une perte de la partie du
+joueur, ce qui est pire.
+
+**Un défaut trouvé en passant mérite d'être suivi jusqu'à sa conséquence.**
+L'écart de bits était une curiosité tant qu'on le regardait dans un essai. Il est
+devenu un défaut le jour où on a vérifié ce que `runJournal` fait vraiment —
+station + graine + actions, aucun état rangé. La question « est-ce que ça compte
+pour de vrai ? » se répond en lisant le code d'à côté, pas en spéculant.
+
+**Mesurer AVANT de choisir le format.** L'état en JSON pèse 5 Mo pour un
+hectare et 21 Mo pour quatre : le quota entier de `localStorage`, et la réponse
+« on sérialise en JSON » serait morte à la première partie sérieuse. En float64
+brut, 3,6 Mo ; gzippé, 79 Ko à 1,4 Mo selon la parcelle et son âge. Le format
+binaire n'est pas une optimisation, c'est ce qui rend la chose possible — et ça
+se savait en une mesure, avant d'écrire une ligne.
+
+**Deux matières, deux traitements.** Les grilles de sol sont 99 % du volume et
+toutes de même nature : float64 bout à bout. Tout le reste — arbres, économie,
+banque de graines, tirage — est irrégulier, porte des chaînes, et ne pèse rien :
+JSON, qui est EXACT (`JSON.stringify` d'un flottant rend la plus courte écriture
+qui se relit à l'identique). Chercher un format unique aurait coûté cher des
+deux côtés.
+
+**Refuser est un résultat, pas un échec.** `lireEtat` rend `undefined` sur une
+version inconnue, un bloc tronqué, une parcelle d'une autre taille, ou un
+en-tête qui déclare d'autres champs que le sol d'aujourd'hui — et l'appelant
+rejoue le journal. C'est ce qui permet de garder les deux : l'état pour
+l'exactitude, le journal pour la survie aux montées de version. Un bloc relu de
+travers serait bien pire qu'un rejeu.
+
+**L'ORDRE DES CLÉS, ET POURQUOI ON NE L'A PAS LAISSÉ FILER.** Le premier essai
+comparait `JSON.stringify` de l'état écrit et de l'état relu : il est tombé deux
+fois, et jamais sur une valeur — sur l'ordre. D'abord au niveau de `GameState`,
+puis DANS le sol, où la découverte compte : **le sol que rend un tick ne range
+pas ses champs comme celui que rend `createGameState`.** Reconstruire « dans
+l'ordre d'un état neuf » était donc faux, et l'aurait été en silence. D'où un
+squelette rangé dans l'en-tête — la forme exacte du sol, grilles remplacées par
+`null` — qui porte l'ordre avec les scalaires. Trente octets pour garder le
+contrôle le plus simple qui soit : *l'état relu est-il indiscernable de l'état
+écrit ?*
+
+**Le contrôle qui compte n'est pas l'aller-retour.** C'est : *dix ans, puis dix
+ans, valent-ils vingt ans d'affilée ?* L'aller-retour ne prouve que la
+plomberie ; celui-là prouve ce que le joueur attend. Et il se fait dans le même
+processus, jamais contre une empreinte épinglée — ce serait refaire l'erreur que
+ce lot répare.
 
 ## Ce qu'un lot plus ancien a appris (le soc desserre, #141)
 
@@ -1653,6 +1769,26 @@ distingue pas un gland d'une faîne — c'est exactement ce que #187 lot 2
 remplacera en portant les ressources de la faune. Le DÉPÔT dans `banqueGraines`
 reste forfaitaire, et le rester tant qu'aucune espèce ne portera à la fois
 `semences` et une banque : les deux sont exclusives par biologie.
+
+**Ce que #187 lot 2 laisse.** La glandée qu'il réclamait est LIVRÉE (#197) : les
+rongeurs arboricoles et le geai ont maintenant de quoi manger, et rebrancher
+l'écureuil roux et le loir gris sur `semences` est un petit lot à soi. Reste
+surtout le LOT 3, qui fera enfin PAYER l'individu : la part
+« gîte » de l'habitat des auxiliaires cessera d'être un proxy. Attention, il
+touche G3 et J5, tous deux verts — traitement F16 obligatoire. Et les seuils de
+table sont calés sur ce que le moteur produit, donc marqués *(à calibrer)* : ils
+ne sont pas des ancres, et une source qui chiffrerait ces ressources en unités
+réelles les remplacerait avantageusement.
+
+**Ce que #193 laisse à la couche jeu.** Le moteur rend des octets ; il ne range
+rien. Reste à décider OÙ, et la mesure tranche à moitié : au-delà d'une petite
+parcelle, ça ne tient pas dans `localStorage` (5 Mo pour toutes les parties, et
+le base64 ajoute un tiers). IndexedDB range des octets tels quels et n'a pas ce
+plafond ; `CompressionStream('gzip')` est dans tous les navigateurs visés. Le
+journal, lui, est minuscule et peut rester où il est — et il DOIT rester, c'est
+le recours quand le format d'état a changé. La règle d'usage est écrite dans
+`serialisation.ts` : *charger l'état s'il se lit, rejouer le journal sinon.*
+
 
 **Ce que #141 laisse.** La SEMELLE DE LABOUR : le desserrement de l'horizon
 travaillé va avec un tassement sous lui, et le moteur n'a qu'une valeur par

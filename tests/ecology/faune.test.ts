@@ -1,5 +1,5 @@
 /**
- * LA FAUNE EN INDIVIDUS (issue #187, lot 1 : « l'animal existe »).
+ * LA FAUNE EN INDIVIDUS (issue #187, lots 1 et 2).
  *
  * Le moteur n'avait que des grandeurs : une densité de paysage pour le gibier,
  * une population anonyme pour les ravageurs, et rien du tout pour les
@@ -7,7 +7,7 @@
  * lot pose l'autre modèle : des individus qui s'ancrent, qu'on peut voir
  * arriver et partir.
  *
- * Ce fichier tient quatre choses, dans l'ordre où elles comptent :
+ * Ce fichier tient six choses, dans l'ordre où elles comptent :
  *
  *   1. **le gîte trie, et il trie tout seul** — aucune ligne du moteur ne
  *      connaît de mésange ; c'est la géométrie du creux, déjà calculée pour
@@ -19,19 +19,33 @@
  *      l'ait prévu. C'est l'événement, et il tombe du mécanisme ;
  *   4. **et allumer la faune ne déplace aucune partie.** Le lot ne touche aucun
  *      critère vert, et il doit pouvoir le prouver.
+ *
+ * Puis, depuis le lot 2 :
+ *
+ *   5. **un gîte parfait dans un désert reste vide**, et le manque ne compte
+ *      qu'à hauteur de ce que la parcelle pèse dans le territoire — un demi-
+ *      hectare peut affamer une mésange, jamais une buse ;
+ *   6. **et la table PAIE** : une haie de vieux arbres ne nourrit pas ce qu'un
+ *      bois nourrit. Un mécanisme qui ne change rien sur une partie réelle
+ *      serait un paramètre, pas un mécanisme.
  */
 
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import { diametreCaviteCm, volumeCaviteTotalL } from "../../src/engine/cavites";
 import {
+  bilanDeTable,
   departs,
   especeFaune,
   FAUNE,
   type IndividuFaune,
   installations,
+  SAISONS_MAIGRES_AVANT_DEPART,
+  satisfaction,
+  type TableDeLaParcelle,
 } from "../../src/engine/faune";
 import { advanceWeek } from "../../src/engine/game";
+import type { GridDims } from "../../src/engine/grid";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
@@ -73,6 +87,65 @@ const SEMAINE_MESANGES = 13;
  */
 const GRANDE_PARCELLE_M2 = 2_000_000;
 
+/** La grille des essais d'éligibilité : assez large pour tous les territoires. */
+const DIMS: GridDims = { widthM: 200, heightM: 200 };
+
+/**
+ * Une table PLEINE, pour la même raison que la grande parcelle : isoler.
+ *
+ * Trois règles se superposent maintenant dans `installations` — le gîte, la
+ * rareté du territoire, et la table. Les mélanger rendrait chaque essai muet :
+ * un écureuil absent ne dirait pas s'il manquait la fourche, la chance ou les
+ * faines. Chacune a donc ses essais, et les autres y sont neutralisées.
+ */
+const TABLE_PLEINE: TableDeLaParcelle = {
+  invertebres: new Array(DIMS.widthM * DIMS.heightM).fill(1),
+  micromammiferes: new Array(DIMS.widthM * DIMS.heightM).fill(1000),
+};
+
+/** Et une table VIDE, pour l'essai qui la regarde. */
+const TABLE_VIDE: TableDeLaParcelle = {
+  invertebres: new Array(DIMS.widthM * DIMS.heightM).fill(0),
+  micromammiferes: new Array(DIMS.widthM * DIMS.heightM).fill(0),
+};
+
+/** Une partie de trente ans sur une parcelle dont on a creusé un arbre sur trois. */
+function partie(faune: boolean, arbres = 25): { hash: number; state: GameState } {
+  const COTE = 80;
+  const station: Station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [], faune };
+  const serie = serieMeteoPour(LIMON_RICHE.station.id);
+  if (!serie) throw new Error("série manquante");
+  const meteo = serieToWeeks(serie);
+  // Une vieille futaie claire : vingt-cinq chênes de dix-huit mètres. On les
+  // plante à cette taille et on en CREUSE un sur trois à la main, plutôt que
+  // d'attendre le siècle de coups de vent qui les creuserait pour de vrai :
+  // ce qu'on éprouve ici est l'installation, pas la carie, et `carie.test.ts`
+  // tient déjà l'autre bout de la chaîne.
+  let s: GameState = createGameState(station, rngStateFromSeed(11));
+  let poses = 0;
+  for (let i = 0; i < 5; i++) {
+    for (let j = 0; j < 5; j++) {
+      if (poses >= arbres) continue;
+      s = plantAt(s, "quercus_pubescens", 8 + i * 16, 8 + j * 16, 18);
+      poses++;
+    }
+  }
+  s = {
+    ...s,
+    trees: s.trees.map((t, i) =>
+      i % 3 === 0
+        ? { ...t, carie: { rayonCm: t.diametreCm * 0.35, barriereCm: t.diametreCm / 2 } }
+        : t,
+    ),
+  };
+  for (let w = 0; w < 52 * 30; w++) {
+    const m = meteo[w % meteo.length];
+    if (!m) throw new Error("météo manquante");
+    s = advanceWeek(s, m, []).state;
+  }
+  return { hash: stateHash(s), state: s };
+}
+
 describe("le gîte trie les espèces, et rien dans le code ne les connaît", () => {
   it("un arbre sain ne loge aucun cavernicole, quelle que soit sa taille", () => {
     // Le point de départ, et il n'est pas décoratif : ce qui fait un
@@ -80,7 +153,9 @@ describe("le gîte trie les espèces, et rien dans le code ne les connaît", () 
     // d'un mètre jamais blessé n'offre pas une loge (`cavites.ts`, #182).
     const sain = arbre(1, 50, 50, 100, 0);
     expect(volumeCaviteTotalL(sain)).toBe(0);
-    expect(installations([], [sain], SEMAINE_MESANGES, 1, GRANDE_PARCELLE_M2)).toEqual([]);
+    expect(
+      installations([], [sain], SEMAINE_MESANGES, 1, GRANDE_PARCELLE_M2, DIMS, TABLE_PLEINE),
+    ).toEqual([]);
   });
 
   it("et la guilde s'approfondit avec le creux, sans qu'aucun seuil ne le dise", () => {
@@ -122,7 +197,15 @@ describe("le gîte trie les espèces, et rien dans le code ne les connaît", () 
     const essais = (fabrique: (id: number) => TreeState, semaine: number, especeId: string) => {
       let venus = 0;
       for (let id = 1; id <= 40; id++) {
-        const nouveaux = installations([], [fabrique(id)], semaine, id, GRANDE_PARCELLE_M2);
+        const nouveaux = installations(
+          [],
+          [fabrique(id)],
+          semaine,
+          id,
+          GRANDE_PARCELLE_M2,
+          DIMS,
+          TABLE_PLEINE,
+        );
         if (nouveaux.some((n) => n.individu.especeId === especeId)) venus++;
       }
       return venus;
@@ -159,7 +242,7 @@ describe("le territoire borne l'effectif avant que les gîtes ne manquent", () =
       return trees;
     };
     const compteBleues = (trees: TreeState[]) =>
-      installations([], trees, SEMAINE_MESANGES, 1, GRANDE_PARCELLE_M2).filter(
+      installations([], trees, SEMAINE_MESANGES, 1, GRANDE_PARCELLE_M2, DIMS, TABLE_PLEINE).filter(
         (n) => n.individu.especeId === "mesange_bleue",
       );
     const peu = compteBleues(grille(5));
@@ -188,7 +271,17 @@ describe("le territoire borne l'effectif avant que les gîtes ne manquent", () =
     const veteran = arbre(1, 50, 50, 80, 0.8);
     const tous = FAUNE.filter((e) => e.gite === "cavite");
     const installes = tous
-      .flatMap((e) => installations([], [veteran], e.semaineInstallation, 1, GRANDE_PARCELLE_M2))
+      .flatMap((e) =>
+        installations(
+          [],
+          [veteran],
+          e.semaineInstallation,
+          1,
+          GRANDE_PARCELLE_M2,
+          DIMS,
+          TABLE_PLEINE,
+        ),
+      )
       .filter((n) => especeFaune(n.individu.especeId)?.gite === "cavite");
     expect(installes.length).toBeGreaterThan(1);
     const litres = installes.reduce(
@@ -214,7 +307,9 @@ describe("un grand domaine vital rend l'installation RARE, pas impossible", () =
       for (let id = 1; id <= 200; id++) {
         const t = arbre(id, 50, 50, 60, 0.7);
         if (
-          installations([], [t], semaine, id, aireM2).some((n) => n.individu.especeId === especeId)
+          installations([], [t], semaine, id, aireM2, DIMS, TABLE_PLEINE).some(
+            (n) => n.individu.especeId === especeId,
+          )
         ) {
           venus++;
         }
@@ -245,7 +340,15 @@ describe("un grand domaine vital rend l'installation RARE, pas impossible", () =
 describe("l'arbre qui disparaît expulse quelqu'un de nommé", () => {
   it("abattre l'arbre porteur fait partir son occupant, et on sait lequel", () => {
     const porteur = arbre(7, 30, 30, 60, 0.7);
-    const nouveaux = installations([], [porteur], SEMAINE_MESANGES, 1, GRANDE_PARCELLE_M2);
+    const nouveaux = installations(
+      [],
+      [porteur],
+      SEMAINE_MESANGES,
+      1,
+      GRANDE_PARCELLE_M2,
+      DIMS,
+      TABLE_PLEINE,
+    );
     expect(nouveaux.length).toBeGreaterThan(0);
     const presents = nouveaux.map((n) => n.individu);
 
@@ -290,40 +393,6 @@ describe("l'arbre qui disparaît expulse quelqu'un de nommé", () => {
 });
 
 describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
-  /** Une partie de dix ans sur une parcelle dont on a creusé les arbres. */
-  function partie(faune: boolean): { hash: number; state: GameState } {
-    const COTE = 80;
-    const station: Station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [], faune };
-    const serie = serieMeteoPour(LIMON_RICHE.station.id);
-    if (!serie) throw new Error("série manquante");
-    const meteo = serieToWeeks(serie);
-    // Une vieille futaie claire : vingt-cinq chênes de dix-huit mètres. On les
-    // plante à cette taille et on en CREUSE un sur trois à la main, plutôt que
-    // d'attendre le siècle de coups de vent qui les creuserait pour de vrai :
-    // ce qu'on éprouve ici est l'installation, pas la carie, et `carie.test.ts`
-    // tient déjà l'autre bout de la chaîne.
-    let s: GameState = createGameState(station, rngStateFromSeed(11));
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 5; j++) {
-        s = plantAt(s, "quercus_pubescens", 8 + i * 16, 8 + j * 16, 18);
-      }
-    }
-    s = {
-      ...s,
-      trees: s.trees.map((t, i) =>
-        i % 3 === 0
-          ? { ...t, carie: { rayonCm: t.diametreCm * 0.35, barriereCm: t.diametreCm / 2 } }
-          : t,
-      ),
-    };
-    for (let w = 0; w < 52 * 30; w++) {
-      const m = meteo[w % meteo.length];
-      if (!m) throw new Error("météo manquante");
-      s = advanceWeek(s, m, []).state;
-    }
-    return { hash: stateHash(s), state: s };
-  }
-
   it("allumer la faune ne déplace AUCUNE partie", () => {
     // Le contrôle de neutralité du lot, et il est plus fort qu'attendu : les
     // tirages d'installation passent par une graine LOCALE (modèle
@@ -364,4 +433,163 @@ describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
     // Bornée par les territoires, pas par le nombre d'arbres creux.
     expect(peuplement.length).toBeLessThan(state.trees.length);
   });
+});
+
+describe("un gîte ne suffit pas : il faut une table (lot 2)", () => {
+  it("le même creux, parfait, reste vide dans un désert", () => {
+    // Même arbre, même semaine, même territoire libre : seule la nourriture
+    // change. Quarante arbres distincts, parce qu'une installation est un
+    // tirage et qu'un seul essai mesurerait la graine.
+    const essais = (table: TableDeLaParcelle) => {
+      let venus = 0;
+      for (let id = 1; id <= 40; id++) {
+        const t = arbre(id, 100, 100, 50, 0.6);
+        if (
+          installations([], [t], SEMAINE_MESANGES, id, GRANDE_PARCELLE_M2, DIMS, table).length > 0
+        ) {
+          venus++;
+        }
+      }
+      return venus;
+    };
+    expect(essais(TABLE_PLEINE)).toBeGreaterThan(10);
+    expect(essais(TABLE_VIDE)).toBe(0);
+  });
+
+  it("et une espèce SANS table est jugée sur son seul gîte", () => {
+    // L'écureuil et le loir n'ont pas de table, parce que leur nourriture
+    // n'existe pas dans ce moteur : le bloc `fruits` de l'atlas décrit une
+    // RÉCOLTE de verger, et un peuplement mûr de chênes rend `fruitsKg = 0`
+    // toute l'année. Les brancher dessus les aurait fait manger le verger et
+    // jamais les chênes. Ils restent donc au régime du lot 1, et l'essai
+    // épingle ce choix plutôt que de le laisser passer pour un oubli.
+    const ecureuil = especeFaune("ecureuil_roux");
+    if (!ecureuil) throw new Error("fiche manquante");
+    expect(ecureuil.table).toBeUndefined();
+    expect(satisfaction(ecureuil, 0, 5_000)).toBe(1);
+    // Et il s'installe donc dans un désert, là où la mésange n'y va pas.
+    let venus = 0;
+    for (let id = 1; id <= 40; id++) {
+      const t = arbre(id, 100, 100, 60, 0);
+      if (
+        installations([], [t], 6, id, GRANDE_PARCELLE_M2, DIMS, TABLE_VIDE).some(
+          (n) => n.individu.especeId === "ecureuil_roux",
+        )
+      ) {
+        venus++;
+      }
+    }
+    expect(venus).toBeGreaterThan(10);
+  });
+});
+
+describe("le manque ne compte qu'à hauteur de ce que la parcelle pèse", () => {
+  it("un demi-hectare peut affamer une mésange, jamais une buse", () => {
+    // **LE POINT QUI ÉVITE L'ABSURDE**, et il se règle avec une notion déjà
+    // écrite pour la rareté. Une mésange a son hectare chez vous : votre herbe
+    // et vos chenilles décident de son sort. Une buse chasse sur cent cinquante
+    // hectares dont vous n'êtes que quatre millièmes : ce que vous faites ne
+    // pèse rien pour elle, et prétendre l'affamer serait faux.
+    const mesange = especeFaune("mesange_bleue");
+    const buse = especeFaune("buse_variable");
+    if (!mesange?.table || !buse?.table) throw new Error("fiches manquantes");
+    const DEMI_HECTARE = 5_000;
+    // Offre nulle des deux côtés : c'est le POIDS de la parcelle qui décide.
+    expect(satisfaction(mesange, 0, DEMI_HECTARE)).toBeLessThan(0.6);
+    expect(satisfaction(buse, 0, DEMI_HECTARE)).toBeGreaterThan(0.99);
+    // Et sur un domaine à sa mesure, la buse redevient sensible.
+    expect(satisfaction(buse, 0, 1_500_000)).toBeLessThan(0.1);
+    // Une table servie satisfait tout le monde, quelle que soit la taille.
+    expect(satisfaction(mesange, mesange.table.seuil, DEMI_HECTARE)).toBe(1);
+    expect(satisfaction(buse, buse.table.seuil, 1_500_000)).toBe(1);
+  });
+});
+
+describe("une mauvaise année est un avertissement, deux sont une décision", () => {
+  const SEMAINE_BILAN_MESANGE = 20;
+  const installee = (): IndividuFaune => ({
+    id: 1,
+    especeId: "mesange_bleue",
+    arbreId: 7,
+    x: 100,
+    y: 100,
+    depuisSemaine: 0,
+  });
+
+  it("la première saison maigre ne fait partir personne", () => {
+    const { individus, partants } = bilanDeTable(
+      [installee()],
+      DIMS,
+      TABLE_VIDE,
+      SEMAINE_BILAN_MESANGE,
+      5_000,
+    );
+    expect(partants).toEqual([]);
+    expect(individus[0]?.saisonsMaigres).toBe(1);
+  });
+
+  it("la seconde, si", () => {
+    let vivants = [installee()];
+    for (let an = 0; an < SAISONS_MAIGRES_AVANT_DEPART; an++) {
+      const r = bilanDeTable(vivants, DIMS, TABLE_VIDE, an * 52 + SEMAINE_BILAN_MESANGE, 5_000);
+      vivants = r.individus;
+      if (an === SAISONS_MAIGRES_AVANT_DEPART - 1) {
+        expect(r.partants.length).toBe(1);
+        expect(r.partants[0]?.cause).toBe("tableVide");
+        expect(vivants).toEqual([]);
+      }
+    }
+  });
+
+  it("et une bonne année remet le compteur à zéro", () => {
+    const maigre = bilanDeTable([installee()], DIMS, TABLE_VIDE, SEMAINE_BILAN_MESANGE, 5_000);
+    expect(maigre.individus[0]?.saisonsMaigres).toBe(1);
+    const grasse = bilanDeTable(
+      maigre.individus,
+      DIMS,
+      TABLE_PLEINE,
+      52 + SEMAINE_BILAN_MESANGE,
+      5_000,
+    );
+    expect(grasse.partants).toEqual([]);
+    expect(grasse.individus[0]?.saisonsMaigres).toBe(0);
+  });
+
+  it("hors de la semaine de bilan, rien ne se passe et rien ne s'alloue", () => {
+    // Le bilan dort cinquante semaines sur cinquante-deux, comme
+    // l'installation. Rendre le MÊME tableau plutôt qu'une copie n'est pas une
+    // coquetterie : c'est ce qui rend le mécanisme gratuit le reste du temps.
+    const avant = [installee()];
+    const r = bilanDeTable(avant, DIMS, TABLE_VIDE, SEMAINE_BILAN_MESANGE + 1, 5_000);
+    expect(r.partants).toEqual([]);
+    expect(r.individus).toBe(avant);
+  });
+});
+
+describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => {
+  it("le même gîte, le même sol, trois arbres au lieu de vingt-cinq", () => {
+    // **L'ESSAI QUI DIT SI LE MÉCANISME SERT À QUELQUE CHOSE.** Un mécanisme
+    // qui ne change rien sur une partie réelle n'est pas un mécanisme, c'est un
+    // paramètre. Deux parcelles, même station, même graine, même conduite, même
+    // proportion d'arbres creusés : seul leur NOMBRE change.
+    //
+    // Relevé sur trente ans, trois graines :
+    //
+    //     25 chênes creusés   7 / 7 / 10 individus   AUCUN départ par la faim
+    //      3 chênes creusés   4 / 4 /  5 individus   3 départs sur deux graines
+    //
+    // Et c'est le PIC ÉPEICHE qui disparaît le premier, ce qui est le bon
+    // ordre : c'est lui dont le territoire est le plus grand, donc celui qui
+    // moyenne le plus de vide. Une mésange se contente d'un hectare, un pic en
+    // demande sept — trois arbres ne les nourrissent pas de la même façon.
+    const bois = partie(true, 25).state.faune ?? [];
+    const haie = partie(true, 3).state.faune ?? [];
+    expect(bois.length).toBeGreaterThan(haie.length);
+    // Le bois porte des espèces que la haie n'a pas.
+    const especesDuBois = new Set(bois.map((i) => i.especeId));
+    const especesDeLaHaie = new Set(haie.map((i) => i.especeId));
+    expect(especesDuBois.size).toBeGreaterThan(especesDeLaHaie.size);
+    // Et la haie garde tout de même du monde : elle est pauvre, pas morte.
+    expect(haie.length).toBeGreaterThan(0);
+  }, 900_000);
 });
