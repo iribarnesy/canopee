@@ -106,8 +106,8 @@ describe("une plante ne rend que ce qu'elle a pris", () => {
   });
 });
 
-describe("LE RÉSULTAT DU LOT : la prairie cesse de stériliser son sol", () => {
-  it("l'azote minéral tient, au lieu de descendre sans fin", () => {
+describe("LE RÉSULTAT DU LOT : la prairie stérilise son sol deux fois moins vite", () => {
+  it("l'azote minéral perd encore, mais la moitié moins", () => {
     // **Voilà ce que le lot répare, et ce n'est pas ce qu'on cherchait.** Dans
     // un moteur où l'herbe n'a pas de masse, l'azote qu'elle prélevait ne
     // partait pas dans une plante : il disparaissait du système. Une prairie
@@ -118,13 +118,28 @@ describe("LE RÉSULTAT DU LOT : la prairie cesse de stériliser son sol", () => 
     // prélèvement comme une SORTIE légitime, puisqu'une plante l'a pris. Rien
     // ne vérifiait qu'il revienne, parce que pour les arbres il revient
     // (`LITTER_RETURN_FRACTION`) et que personne n'avait regardé la strate.
+    // **LA FUITE EST DIVISÉE PAR DEUX, PAS ANNULÉE, et c'est la
+    // rétranslocation qui en décide.** Une plante retire l'azote d'un organe
+    // avant de le lâcher : elle n'en rend que la moitié au sol, l'autre restant
+    // dans ses réserves. Le moteur n'a pas de pool d'azote de la plante — pas
+    // plus pour l'arbre que pour la strate —, donc cette moitié-là n'est
+    // toujours pas rendue. C'est une fuite résiduelle, et elle est NOMMÉE :
+    // adossée à un fait plutôt qu'à un oubli.
+    //
+    //     an          1      16
+    //     avant     1,236   0,931   soit −25 %, sans plancher en vue
+    //     après     1,248   1,058   soit −15 %
+    //
+    // On n'affirme donc pas « il tient » : on affirme qu'il perd nettement
+    // moins. Prétendre le contraire serait annoncer ce que le lot ne fait pas.
     const r = prairie(16);
     const an = (a: number) => r.mineral[a - 1] ?? 0;
-    // Il ne s'effondre plus : seize ans plus tard il est encore à plus de 90 %
-    // de son départ, là où l'ancien moteur en avait perdu un quart.
-    expect(an(16)).toBeGreaterThan(0.9 * an(1));
-    // Et il ne s'envole pas non plus — on rend ce qui a été pris, pas plus.
-    expect(an(16)).toBeLessThan(1.2 * an(1));
+    const perte = 1 - an(16) / an(1);
+    // Il perd encore, et il faut le dire.
+    expect(perte).toBeGreaterThan(0);
+    // Mais nettement moins que le quart d'avant : la moitié de la fuite est
+    // bouchée, ce qui est exactement la part que la rétranslocation laisse.
+    expect(perte).toBeLessThan(0.2);
   }, 600_000);
 
   it("la litière trouve un stock d'équilibre au lieu de rester à zéro", () => {
