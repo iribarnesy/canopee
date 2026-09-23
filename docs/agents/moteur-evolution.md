@@ -128,6 +128,32 @@ compare maintenant **chaque espèce à elle-même** — 41,5 % de perte pour le 
 67,6 % pour le noisetier — et la croissance propre se simplifie. *Le témoin
 apparié coûte un bras de plus et rend un énoncé qui ne glissera pas.*
 
+Puis un quatrième et un cinquième, tous deux tombés à la même cause — **un seul
+paramètre d'espèce recalé, et cinq pour cent de hauteur en moins** :
+
+- `ph-survie.test.ts` demandait `pin > 10 × charme` sur une station acide.
+  Mesuré : 10,66 · 9,48 · 9,37 sur trois graines, donc **deux sur trois sous le
+  seuil**. Le « dix » venait du rapport des FACTEURS de pH (0,34 contre 0,03),
+  transporté tel quel sur des hauteurs, ce que rien ne justifie. Deux bornes
+  qui ne portent chacune qu'une espèce l'ont remplacé.
+- `abri-peuplement.test.ts` demandait `abri > 0,25` sur une futaie de pins.
+  Mesuré 0,221 ; en forçant le seul `pousseMaxMAn` dans l'atlas, tout le reste
+  égal, 0,285 à 0,50 contre 0,221 à 0,45. **La cause est mécanique et vaut
+  d'être retenue** : le rayon de peuplement se compte en HAUTEURS, donc un
+  peuplement 5 % plus court regarde un disque 5 % plus petit et y trouve 10 % de
+  voisins en moins. Un absolu sur l'abri photographiait la TAILLE du peuplement
+  autant que sa fermeture. Le témoin dense/clairsemé le remplace : les deux bras
+  montent et descendent ensemble.
+
+**ET UN TÉMOIN QU'ON AJOUTE POUR SAUVER UN SEUIL PEUT DÉMENTIR L'ÉNONCÉ.** En
+mesurant le charme SEUL pour pouvoir le comparer à lui-même, on découvre qu'il
+fait 1,012 · 0,907 · 0,886 m seul contre 0,976 · 0,954 · 0,928 en mélange — trois
+à cinq pour cent, **et le signe change d'une graine à l'autre**. Le pin ne fait
+donc presque rien au charme : l'essai s'appelait « exclu par la CONCURRENCE » et
+le référentiel le répétait depuis trois lots, alors que c'est le pH qui le tient
+à un mètre, tout seul. *Le témoin apparié n'est pas seulement un thermomètre plus
+stable : c'est souvent la première fois qu'on mesure ce que l'essai prétend dire.*
+
 **QUAND UN FICHIER ÉCRIT « ON NE PRÉTEND PAS MESURER L'AMPLEUR », LE PRENDRE AU
 MOT.** Deux fois dans ce lot j'ai exigé d'un essai plus qu'il ne prétend. Dans
 `litiere.test.ts` j'ai d'abord demandé que la hauteur, le diamètre ET le volume
