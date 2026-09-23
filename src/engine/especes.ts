@@ -1367,9 +1367,23 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Aucune mesure scientifique trouvée. Les seules valeurs en climat
     // océanique sont des catalogues de pépiniéristes allemands : 10-30 cm/an
     // *(à confirmer — c'est du commerce, pas de la mesure)*. Le moteur en
-    // fait 24 à 26, dans le haut de cette fourchette, et respecte le seul
-    // fait sur lequel toutes les sources s'accordent : le cornouiller mâle
-    // est trois à cinq fois plus lent que le noisetier.
+    // fait 26, dans le haut de cette fourchette.
+    //
+    // **ET IL NE RESPECTE PAS LE RAPPORT QUE CETTE FICHE AFFIRMAIT** *(à
+    // calibrer)*. Elle disait : « respecte le seul fait sur lequel toutes les
+    // sources s'accordent : le cornouiller mâle est trois à cinq fois plus
+    // lent que le noisetier ». Mesuré en allant le vérifier (#185), sur le
+    // banc des arbustes et aux mêmes jalons : **25,7 cm/an contre 63,1 au
+    // noisetier, soit 2,5 fois — pas 3 à 5.** L'affirmation était fausse, et
+    // elle a tenu parce que rien ne la gardait.
+    //
+    // On ne corrige pas le nombre ici, et c'est délibéré : le rapport « 3 à
+    // 5 » est lui-même repris d'un commentaire, sans source nommée. Le
+    // vérifier dans la littérature vient AVANT de ralentir l'espèce — et
+    // ralentir le cornouiller déplacerait les haies, donc la biodiversité,
+    // donc une campagne. Pour mémoire, l'intersection des deux contraintes
+    // tomberait entre 13 et 21 cm/an, ce qui reste dans la fourchette des
+    // catalogues.
     pousseMaxMAn: 0.25,
     // Atlas : « calcicole, floraison précoce ». Il fleurit en février, avant
     // tout le monde — c'est la première ressource de l'année pour les

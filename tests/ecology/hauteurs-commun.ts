@@ -141,7 +141,11 @@ export function hauteurs(
   const cle = `${especeId}|${anMax}|${sc.station.id}|${coteM}`;
   const enCache = CACHE.get(cle);
   if (enCache) return enCache;
-  const jalons = [3, 5, 8, 10, 12, 20, 40].filter((an) => an <= anMax);
+  // 2 et 4 ans sont là pour des MESURES DE TERRAIN qui tombent à ces âges-là
+  // — l'ajonc breton de Hornoy 2011 à deux ans, la cépée de noisetier de
+  // Buckley 1992 à quatre. Les relever ne coûte rien : la course est la même,
+  // on note un jalon de plus au passage.
+  const jalons = [2, 3, 4, 5, 8, 10, 12, 20, 40].filter((an) => an <= anMax);
   const weather = syntheticYear(sc.climat);
   // Parcelle réduite (60 × 60 m) : mêmes dynamiques, essai plus rapide.
   const station = { ...sc.station, coteM, gibierParHa: 0, voisinage: [] };
