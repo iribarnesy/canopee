@@ -61,7 +61,88 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la glandée, #197)
+## Ce que le dernier lot a appris (la strate rend son azote, #201)
+
+Le mécanisme tient en quinze lignes : ce que la strate herbacée prélève, elle le
+rend en litière, avec le C/N de son espèce. Ce qu'il a révélé occupe le reste de
+ce chapitre — **quatre critères verts du référentiel étaient payés par un trou
+de comptabilité**, et il a fallu les retirer un par un.
+
+**UNE COMPTABILITÉ QUI NE BOUCLE PAS NE PRODUIT PAS UNE ERREUR, ELLE PRODUIT UN
+RÉSULTAT.** L'herbe de ce moteur n'a pas de masse : elle prélevait ~31 kg
+N/ha/an et ne les rendait à personne. Sur seize ans de prairie permanente,
+l'azote minéral tombait de 1,236 à 0,931 g/m² — *sans plancher*. Le moteur
+stérilisait lentement toute parcelle enherbée, et personne ne l'avait vu, parce
+qu'un appauvrissement lent ressemble à de l'écologie. Les deux propriétés de
+conservation du dépôt ne l'avaient pas attrapé non plus : **une propriété ne
+vaut que sur les chemins qu'elle parcourt**, et celle de l'azote ne comptait pas
+la strate parmi les puits.
+
+**RÉPARER UNE COMPTABILITÉ FAIT TOMBER CE QUE LE BOGUE PAYAIT, ET C'EST ÇA, LE
+RÉSULTAT DU LOT.** Quatre critères sont passés ✅ → 🟡 dans le même lot. Deux
+méritent d'être retenus :
+
+- *L'aulne améliore le sol de son voisin.* Le hêtre du bosquet n'a pas bougé
+  (4,32 → 4,35 m) ; c'est le TÉMOIN qui a gagné 12 à 13 %. Le hêtre isolé,
+  entouré d'herbe, était volé en permanence ; celui du bosquet, dont l'herbe est
+  étouffée par l'ombre, ne l'était presque pas. **L'effet améliorant qu'on
+  mesurait était pour une bonne part un appauvrissement du témoin.**
+- *Faucher vaut mieux que ne rien faire.* `applyFaucher` déposait `coupe * 4` g
+  de litière et `coupe * 25` g de carbone, deux nombres nus sortis de rien. 28
+  des 30 points de l'effet désherbage venaient de cet engrais fantôme. La
+  fauche ne fabrique pas de matière : elle en déplace.
+
+Un essai qui compare deux bras ne mesure le bras traité que si le témoin est
+honnête. **Quand un écart se réduit après une réparation, regarder lequel des
+deux bras a bougé avant de conclure que le mécanisme a faibli.**
+
+**LA CIBLE À RETROUVER N'EST JAMAIS L'ANCIEN NOMBRE.** La tentation, quatre fois
+de suite, était de retoucher le mécanisme jusqu'à ce que 1,095 revienne. Mais
+1,095 reposait sur une destruction de matière : *un chiffre calé sur le moteur
+n'est pas une ancre, et un chiffre calé sur un bogue du moteur encore moins.*
+Ce qui remplace un critère tombé, c'est l'énoncé qui survit sans lui — ici « le
+bosquet enrichit SON sol », qui ne compare pas deux parcelles dont l'une était
+volée — plus une issue qui écrit le manque avec ses symptômes chiffrés (#210).
+Retirer une affirmation est un résultat publiable ; la sauver en rabaissant son
+seuil ne l'est pas.
+
+**UNE GRANDEUR MAL CHOISIE GLISSE À CHAQUE LOT ; CHANGER DE GRANDEUR PLUTÔT QUE
+RABAISSER LE SEUIL.** Le seuil de l'aulne avait glissé quatre fois (1,1006 →
+1,095 → 1,077 → 1,030), à chaque fois pour une cause correctement nommée, et à
+chaque fois on lisait la HAUTEUR — qui ne capte qu'un tiers de l'effet. Même
+motif ailleurs dans le lot : `epandre-vs-vendre` comparait un RAPPORT de stocks
+d'azote, dont le dénominateur bouge avec le lot ; il compare maintenant une
+DIFFÉRENCE absolue (189 g/m² mesurés, seuil à 100), qui est la grandeur que
+l'épandage produit réellement. **Un seuil qui glisse à chaque lot accuse le
+thermomètre, pas le mécanisme.**
+
+**QUAND UN FICHIER ÉCRIT « ON NE PRÉTEND PAS MESURER L'AMPLEUR », LE PRENDRE AU
+MOT.** Deux fois dans ce lot j'ai exigé d'un essai plus qu'il ne prétend. Dans
+`litiere.test.ts` j'ai d'abord demandé que la hauteur, le diamètre ET le volume
+s'accordent — alors que le fichier lui-même dit que la hauteur ne capte qu'un
+tiers de l'effet. Puis j'ai annoncé « +3,7 % de volume » sur un `grep` mal
+attribué, quand la valeur mesurée était 0,78. **Le commentaire d'un essai est
+une source ; le relire vaut mieux que le contourner, et un chiffre qu'on
+n'a pas mesuré soi-même dans le run courant n'est pas un chiffre.**
+
+**UN MÉCANISME SE TROUVE EN MESURANT, PAS EN CONCEVANT.** Quatre versions du
+retour d'azote sont tombées avant la bonne, chacune corrigée par une mesure :
+récolter la sénescence (deux ordres de grandeur trop peu), inventer un trait de
+turnover (120 kg N/ha/an créés contre une absorption de 31 ; 34 essais par
+terre), rendre exactement ce qui a été prélevé (pas de rétention), puis la
+retranslocation par le `LITTER_RETURN_FRACTION` que l'arbre utilise déjà. **La
+quatrième est la seule qui ne déclare aucun paramètre neuf** — le moteur avait
+déjà le bon, appliqué à la mauvaise strate.
+
+**UN COMMENTAIRE QUI CITE UN CHIFFRE DE SORTIE SE PÉRIME EN SILENCE.** Le pin
+portait « 16,4 m simulés » dans son propre commentaire de calibration ; le
+moteur en était à 17,7 m, soit +14,2 % contre une tolérance de 15 %. Personne
+n'avait menti : le moteur avait dérivé sous son commentaire. `pousseMaxMAn`
+passe de 0,50 à 0,45 (0,42 a été écarté : il aurait touché la table aux deux
+âges et fait passer le pin de *validé* à *calé*). **Relire les chiffres de
+sortie cités en commentaire fait partie du lot, comme relire les seuils.**
+
+## Ce qu'un lot plus ancien a appris (la glandée, #197)
 
 Un critère de plus au référentiel, posé et rempli par le même lot — et c'est le
 petit côté. Le grand est ce que la mesure a démoli chez le voisin.
