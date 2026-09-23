@@ -26,6 +26,7 @@ import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import {
   HERBACEES,
   INDEX_CULTURES,
+  litiereRendue,
   N_HERBACEES,
   partDuRendement,
   rabattreParEspece,
@@ -1702,6 +1703,13 @@ function applyMoissonner(
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const cultureGrain = state.soil.cultureGrain.slice();
   const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
+  const litterNG = state.soil.litterNG.slice();
+  const litterCG = state.soil.litterCG.slice();
+  const litterK = state.soil.litterK.slice();
+  // La paille que la moisson laisse au champ, kg C : elle est rendue au sol ET
+  // la plante l'avait fixée, donc elle entre au bilan par la production
+  // primaire — sans quoi on la ferait apparaître de nulle part (#201).
+  let pailleKgC = 0;
   // Ce qu'on récolte, culture par culture, en part de rendement maximal cumulée
   // sur les cellules. Diviser par le nombre de cellules donnerait la moyenne ;
   // on veut la SOMME, parce que c'est elle qui devient des tonnes.
@@ -1722,6 +1730,34 @@ function applyMoissonner(
       recolteEur += tonnes * culture.prixEurT;
       cultureGrain[base + s] = 0;
       cultureGrainPotentiel[base + s] = 0;
+      // ── LA PAILLE RESTE AU CHAMP (issue #201) ───────────────────────────
+      //
+      // Ce bloc mettait le feuillage à zéro et c'était tout : le grain était
+      // vendu et **le reste s'évaporait**. Or ce qui est debout à la moisson
+      // et qui n'est pas du grain, c'est la paille et le chaume — ils restent,
+      // et ils rendent leur carbone et leur azote au sol.
+      //
+      // **Et c'est le trait le plus conséquent de la fiche** : le C/N d'une
+      // paille de blé est de 90. Elle IMMOBILISE l'azote du sol le temps que
+      // les micro-organismes la digèrent, et ne le rend qu'ensuite. Enfouir
+      // une paille sans apport fait donc baisser la culture suivante avant de
+      // la faire monter, ce qu'aucun coefficient n'aurait produit.
+      //
+      // *Ce qu'on ne fait pas* : la presser. Une botte de paille qui part est
+      // un geste de gestion, avec son prix et ses heures — il lui faudra son
+      // action. Par défaut elle reste, ce qui est la conduite la plus
+      // répandue.
+      const fiche = HERBACEES[s];
+      const debout = herbeFeuillage[base + s] ?? 0;
+      if (fiche && debout > 0) {
+        const { c, n } = litiereRendue(debout, fiche.litiere.cSurN);
+        pailleKgC += c / 1000;
+        const oldN = litterNG[i] ?? 0;
+        litterK[i] =
+          (oldN * (litterK[i] ?? 0) + n * litterDecayRate(fiche.litiere.cSurN)) / (oldN + n);
+        litterNG[i] = oldN + n;
+        litterCG[i] = (litterCG[i] ?? 0) + c;
+      }
       // La culture libère la place : le chaume n'occupe plus rien, et les
       // adventices reprendront la main dès la semaine suivante.
       herbeEmprise[base + s] = 0;
@@ -1750,6 +1786,13 @@ function applyMoissonner(
         herbeCouverture,
         cultureGrain,
         cultureGrainPotentiel,
+        litterNG,
+        litterCG,
+        litterK,
+      },
+      carbon: {
+        ...state.carbon,
+        nppCumKgC: state.carbon.nppCumKgC + pailleKgC,
       },
       economy: {
         ...state.economy,
@@ -1775,8 +1818,19 @@ function applyFaucher(
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
+  // Le feuillage AVANT la coupe : c'est lui qui dit quelle espèce était là, et
+  // donc quel C/N porte ce qu'on laisse au sol. `rabattreParEspece` l'écrase
+  // quelques lignes plus bas.
+  const herbeFeuillageAvant = state.soil.herbeFeuillage.slice();
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
+  const litterK = state.soil.litterK.slice();
+  // Ce que la fauche laisse au sol, kg C. **La strate n'était pas au bilan
+  // carbone du tout**, si bien que ce geste — le seul qui l'alimentait — en
+  // créait en silence : la propriété de conservation ne passe pas par
+  // `faucher`. C'est la plante qui l'a fixé, il entre par la production
+  // primaire (#201).
+  let fauchageKgC = 0;
   const cote = state.station.coteM;
   // Les cellules où l'outil a effectivement mordu : une pelouse déjà rase ne
   // se fauche pas, et le rendu n'a rien à y montrer.
@@ -1795,15 +1849,47 @@ function applyFaucher(
       // espèce déjà rentrée sous terre n'a rien à perdre : c'est ce qui laisse
       // une prairie de fauche garder sa flore de printemps (herbacees.ts).
       rabattreParEspece(herbeFeuillage, i * N_HERBACEES, FAUCHE_COUVERTURE_RESIDUELLE / avant);
-      // L'herbe coupée reste sur place : litière tendre, vite recyclée.
-      litterNG[i] = (litterNG[i] ?? 0) + coupe * 4;
-      litterCG[i] = (litterCG[i] ?? 0) + coupe * 4 * 25;
+      // ── L'herbe coupée reste sur place ──────────────────────────────────
+      //
+      // **Ces deux lignes portaient `coupe * 4` et `* 25`, sans nom ni
+      // source** — les seuls nombres du moteur qui transformaient de l'herbe
+      // en carbone, et ils étaient nus. Ils sont devenus
+      // `CARBONE_COUVERT_FERME_G_M2` et le C/N de la fiche (#201), à la valeur
+      // près : un couvert fermé de dactyle rend toujours 100 g de C et 4 g
+      // d'azote au mètre carré, et ce geste n'a pas bougé d'un gramme. Ce qui
+      // change est que le reste du moteur peut maintenant s'en servir.
+      //
+      // La coupe est répartie sur les espèces au prorata de ce qu'elles
+      // couvraient, parce que c'est leur C/N qui décide de la suite : une
+      // prairie de dactyle et une lande à molinie ne rendent pas la même
+      // litière, et l'ancienne ligne les confondait sous un 25 unique.
+      for (let k = 0; k < N_HERBACEES; k++) {
+        const fiche = HERBACEES[k];
+        const partEspece = herbeFeuillageAvant[i * N_HERBACEES + k] ?? 0;
+        if (!fiche || partEspece <= 0 || avant <= 0) continue;
+        const { c, n } = litiereRendue((coupe * partEspece) / avant, fiche.litiere.cSurN);
+        fauchageKgC += c / 1000;
+        const oldN = litterNG[i] ?? 0;
+        litterK[i] =
+          (oldN * (litterK[i] ?? 0) + n * litterDecayRate(fiche.litiere.cSurN)) / (oldN + n);
+        litterNG[i] = oldN + n;
+        litterCG[i] = (litterCG[i] ?? 0) + c;
+      }
     }
   }
   return {
     state: {
       ...state,
-      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse, litterNG, litterCG },
+      soil: {
+        ...state.soil,
+        herbeCouverture,
+        herbeFeuillage,
+        herbeBiomasse,
+        litterNG,
+        litterCG,
+        litterK,
+      },
+      carbon: { ...state.carbon, nppCumKgC: state.carbon.nppCumKgC + fauchageKgC },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,
