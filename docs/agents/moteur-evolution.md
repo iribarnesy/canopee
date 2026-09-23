@@ -61,7 +61,54 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le banc qui variait deux fois, #210)
+## Ce que le dernier lot a appris (l'auxiliaire paie, #187 lot 3)
+
+Une fonction de quinze lignes, un paramètre optionnel, et un critère qui cesse
+de reposer sur une promesse.
+
+**UN PROXY CRÉDITE LE POTENTIEL COMME S'IL ÉTAIT RÉALISÉ.** La part « gîte » de
+l'habitat des auxiliaires valait `max(bois mort, cavités)`, c'est-à-dire *« y
+a-t-il de quoi loger »*. C'est une question sur le DÉCOR. Ce qui mange les
+chenilles est une question sur les HABITANTS, et **une cavité vide ne mange pas
+de pucerons**. Le remplacement n'ajoute pas une condition arbitraire : il
+branche le terme sur ce que les lots 1 et 2 avaient déjà rendu calculable — on
+ne s'installe pas sans cavité, et on ne reste pas si la table ne nourrit pas.
+*Le nouveau terme CONTIENT l'ancien ; c'est à ça qu'on reconnaît qu'on remplace
+un proxy plutôt que d'en poser un autre.*
+
+**LE TRAIT TRANCHE, MÊME QUAND LE TRI EST ÉVIDENT.** Une chevêche mange des
+campagnols, un écureuil des graines, un loir n'a pas de table du tout — aucun
+des trois n'écrête une pullulation. La tentation d'écrire la liste des trois
+insectivores était forte, et elle aurait été fausse le jour de la première
+guilde ajoutée. C'est `table.ressource` de la fiche qui décide, et l'essai
+l'épingle en passant les trois autres pour vérifier qu'ils comptent zéro.
+
+**UN LOT QUI FAIT PAYER DOIT CASSER LE CONTRÔLE DU LOT QUI NE FAISAIT PAS
+PAYER.** `faune.test.ts` affirmait depuis deux lots qu'allumer la faune ne
+déplace AUCUNE partie — empreinte identique au bit près. C'était juste, et
+c'était la preuve que les individus ne coûtaient rien ; c'était aussi l'aveu
+qu'ils ne FAISAIENT rien. Le lot 3 est exactement celui qui les fait payer, donc
+il doit faire tomber cette égalité, et l'essai est retourné : d'un côté « éteinte
+elle n'existe pas », de l'autre « allumée elle déplace la partie ». **Quand un
+contrôle de neutralité tombe, la question n'est pas comment le sauver, c'est de
+savoir s'il devait tomber.**
+
+**ET LE CONTRÔLE QUI RESTE EST STRUCTUREL, PAS MESURÉ.** Sans `station.faune`,
+`carteBiotique` ne reçoit pas son argument et retombe sur le proxy — pas
+« approximativement », pas « à la tolérance près » : la même branche de code
+qu'avant, sans un parcours ni une allocation. Un paramètre optionnel dont
+l'absence est l'ancien monde vaut mieux qu'un essai qui compare deux nombres.
+
+**LE LOT NE DÉPLACE PAS LE NIVEAU, IL EN CHANGE LA CAUSE — ET C'EST À MESURER
+POUR LE SAVOIR.** Vieille futaie creusée, trente ans : habitat moyen 0,5315 sous
+le proxy, 0,5391 avec les douze individus installés, 4,06 territoires superposés
+par cellule. Les deux lectures coïncident à 1,4 % près, parce que la parcelle
+tient la promesse de ses creux et que les deux termes y saturent. **C'est le bon
+résultat** : un lot qui aurait déplacé le niveau aurait recalibré G3 par la
+bande. L'écart ne se creuse que là où la promesse n'est pas tenue — et c'est
+précisément ce que le proxy ne savait pas dire.
+
+## Ce qu'un lot plus ancien a appris (le banc qui variait deux fois, #210)
 
 Vingt lignes d'essai, aucun code de moteur, et deux leçons de méthode dont l'une
 est une faute que j'ai commise dans la même journée.
