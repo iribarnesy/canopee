@@ -125,6 +125,17 @@ trait : le porter, c'est faire une graine assez grosse pour qu'on s'en nourrisse
 et assez lourde pour rester au sol. Le hêtre rejoint les chênes, l'ajonc reste
 dehors, aucune espèce n'est nommée.
 
+**REMPLACER UN CHIFFRE OBLIGE À ALLER VÉRIFIER CE QUI S'APPUYAIT DESSUS,
+AILLEURS.** Le résultat le plus fort de #73 — « le sanglier annule l'atténuation
+qu'apporte la plantation feuillue » à Saumos — ne vivait dans aucun essai : il
+était écrit dans `docs/realisme.md` et dans un commentaire, parce que l'essai
+mettait justement le sanglier de côté. Toute sa chaîne passait par le maillon
+que ce lot a remplacé. Refait sur les mêmes seize graines : les écarts passent
+de 296 et 27 m² à −26 et +91, c'est-à-dire **sous le bruit que le cas d'étude
+documente lui-même** (28 % entre deux lots de seize graines). L'affirmation est
+retirée, pas inversée. Un résultat qui ne tient pas dans un essai ne se défend
+pas tout seul : il faut le chercher.
+
 **UN BANC QUI TOMBE N'EST PAS TOUJOURS UN BANC QU'ON A CASSÉ — VÉRIFIER SUR
 PLUSIEURS GRAINES AVANT DE CONCLURE.** `culture.test.ts` affirmait qu'à l'an 25
 une allée de noyers non fertilisée rend 7 % de PLUS que le blé pur, « l'énoncé le

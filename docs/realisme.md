@@ -1084,28 +1084,45 @@ densité ordinaire, 22 sous forte densité.
 > vraie (le geai plante, la bête mange), la seconde a changé d'échelle. Voir
 > « La glandée » plus bas, et G10.
 
-### Le sanglier annule l'atténuation qu'apporte la plantation feuillue
+### Le sanglier annulait l'atténuation feuillue — et la mesure l'a retiré
 
-C'est le résultat le plus fort du lot, et personne ne l'a demandé. Le cas
+C'était le résultat le plus fort de #73, et personne ne l'avait demandé. Le cas
 d'étude de Saumos compare, sur seize graines et vingt-six ans, une pinède et un
-mélange bouleau-châtaignier sur la même lande. Mesuré :
+mélange bouleau-châtaignier sur la même lande. Mesuré à l'époque :
 
 | | pin | feuillus | écart |
 |---|---|---|---|
 | sans sanglier | 821 m² | 525 m² | **296 m²** |
 | à la densité du paysage | 720 m² | 747 m² | **27 m²** |
 
-Sans sanglier, les feuillus brûlent un bon tiers de moins. Avec, **l'avantage
-disparaît entièrement**. La chaîne est celle que le fichier d'essai annonçait
-depuis longtemps sans pouvoir la refermer : l'atténuation feuillue repose sur la
-capacité à FERMER LE COUVERT vite, ce qui étouffe la lande qui porte le feu ; le
-châtaignier est en `geai`, donc le sanglier mange sa châtaigne, donc le mélange
-ne se ressème pas, donc il ne referme pas, donc il n'étouffe plus rien.
+Sans sanglier les feuillus brûlaient un bon tiers de moins ; avec, l'avantage
+disparaissait. La chaîne était celle que le fichier d'essai annonçait :
+l'atténuation feuillue repose sur la capacité à FERMER LE COUVERT vite, ce qui
+étouffe la lande qui porte le feu ; le sanglier mange la châtaigne, donc le
+mélange ne se ressème pas, donc il ne referme pas, donc il n'étouffe plus rien.
 
-Un gestionnaire qui plante des feuillus pour réduire le risque d'incendie et qui
-ne compte pas ses sangliers plante donc pour rien. L'essai de Saumos met
-maintenant le sanglier de côté pour continuer de mesurer la composition seule ;
-l'interaction, elle, est ici.
+**Le premier maillon a cédé avec #197.** Ce « le sanglier mange la châtaigne »
+valait 55 % de la fructification lourde, par un coefficient posé sur une
+production que le moteur ne calculait pas. Il en prélève maintenant une RATION
+en kilos sur une production réelle — et une ration ne fait pas le poids contre
+une fructification. Refait sur les mêmes seize graines :
+
+| | pin | feuillus | écart |
+|---|---|---|---|
+| sans sanglier | 469 m² | 495 m² | **−26 m²** |
+| à la densité du paysage | 575 m² | 484 m² | **+91 m²** |
+
+**Les deux écarts sont dans le bruit que ce cas d'étude documente lui-même** :
+un même peuplement brûle de 0 à 4 500 m² selon le tirage, et deux lots de seize
+graines diffèrent de 28 % sur la même composition. L'interaction n'est donc pas
+inversée, elle est **retirée** — la mesure ne soutient plus d'affirmation dans
+un sens ni dans l'autre.
+
+C'est le quatrième retrait de ce cas d'étude, et le troisième où une
+affirmation tombe parce qu'on a regardé son bruit au lieu de son signe. Ce qui
+reste vérifié n'a pas bougé : le feu passe dans les deux compositions, et le
+chêne-liège tient aux deux horizons parce qu'il SURVIT au feu plutôt que de le
+ralentir.
 
 ### Ce qu'on n'attend pas d'un dégât
 
