@@ -61,7 +61,117 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'auxiliaire paie, #187 lot 3)
+## Ce que le dernier lot a appris (la prairie reste une prairie, #184)
+
+Un lot qui gagne un critère, en rend un autre, et **découvre que le résultat du
+lot précédent était un artefact de géométrie**. Les trois en une fois, et c'est
+le même fil.
+
+### Le mécanisme tenait en dix lignes, et `regles.md` le demandait déjà
+
+`faucher` n'écrivait que dans le tapis herbacé. Une prairie de fauche s'y
+boisait tranquillement sous l'outil qui est justement là pour l'en empêcher, et
+la règle du jeu le disait depuis toujours (§8) : *« le joueur peut les garder ou
+les faucher — c'est l'arbitrage régénération vs plantation »*. Personne n'avait
+écrit la ligne de référentiel correspondante, donc personne ne comptait le
+point. **Le référentiel ne liste que ce qu'on a pensé à écrire**, et cette
+phrase-là, on la relit à chaque lot sans jamais la croire assez.
+
+Contrôle apparié, même friche, même graine, trente ans, une seule chose qui
+change : **338 tiges dont 311 au-dessus du mètre et une canopée à 20,6 m sans
+fauche, ZÉRO avec**. Et une conséquence qu'on n'avait pas demandée, qui vaut
+confirmation indépendante : le tapis passe de 0,54 à 0,95 de couverture. L'herbe
+ne souffrait pas de la faucheuse, elle souffrait de l'ombre.
+
+### Le moteur répondait déjà à la question difficile
+
+Fallait-il faire rejeter les souches fauchées ? Le trait `rejetteDeSouche` est
+déclaré dans l'atlas, la tentation était de brancher dessus — et j'avais écrit
+les vingt lignes de comptabilité carbone qui allaient avec. **Deux constantes
+existantes encadraient la réponse** : il faut laisser une souche de 0,5 m pour
+qu'un taillis reparte (`RECEPAGE_HAUTEUR_M`) et une tige rabattue sous 0,12 m ne
+repart plus (`HAUTEUR_LETALE_M`, posée par le gibier — « un plant plusieurs fois
+rabattu et resté minuscule finit par mourir »). Un rotor coupe à dix
+centimètres : **sous les deux**. Le trait ne départage rien ici, ce n'est pas le
+pouvoir de rejeter qui manque, c'est la souche. Vingt lignes supprimées, une
+constante nouvelle au lieu de trois.
+
+*Avant d'inventer un seuil, chercher si deux seuils existants ne l'encadrent
+pas déjà. Quand ils le font, la réponse est plus solide que celle qu'on aurait
+calibrée, parce qu'elle est cohérente avec le reste du moteur par construction.*
+
+### Le prix : `faucher` cesse d'être un dégagement inconditionnel
+
+Un gyrobroyeur ne trie pas, donc un plant de trente centimètres part avec
+l'herbe. Ce qui sépare un dégagement d'une fauche de prairie, c'est qu'on a
+**protégé** ce qu'on veut garder — et `proteger` existait, avec son coût. Deux
+essais d'entretien (`herbe.test.ts`, `pk.test.ts`) posent désormais un manchon
+**dans tous leurs bras** : dans le bras non fauché aussi, sans quoi le témoin ne
+différerait plus par la seule fauche. C'est un changement de sens d'une action
+que le référentiel documente (H13), et il se dit, il ne se glisse pas.
+
+### Et là, le lot a trouvé ce qu'il ne cherchait pas
+
+La bande enherbée du dispositif du LER se reboisait toute seule — dix-huit
+semis spontanés, 34 noyers pour 16 plantés. La fauche annuelle règle ça au
+nombre près. Mais en passant aux **vraies bandes** de #186, à la place du pavage
+de disques que le lot #178 avait bricolé, le volume par arbre est tombé de 0,551
+à 0,443 m³.
+
+**Le 2 % de #178 — « la pénalité s'évapore » — était le feston du pavage.** Deux
+disques voisins qui se touchent laissent une lentille non semée au BORD de la
+bande, c'est-à-dire exactement au pied du rang. Ce détail, écrit noir sur blanc
+comme acceptable dans le commentaire du lot précédent, portait tout le résultat.
+
+Le banc de dose l'a attribué, en ne bougeant QUE la demi-largeur épargnée
+(témoin sans blé à 0,562 m³/arbre) :
+
+| demi-bande | vol/arbre | part cultivée | grain |
+|---|---|---|---|
+| 1,00 m | 0,367 | 0,900 | 5,47 t/ha/an |
+| 1,75 m | 0,443 | 0,850 | 5,15 |
+| 2,50 m | 0,534 | 0,750 | 4,55 |
+| 3,25 m | 0,560 | 0,650 | 3,96 |
+
+Le feston valait donc ~2,5 m épargnés par endroits. La forme, elle, est saine :
+ce qu'on laboure est une part du disque racinaire, et la pénalité la suit à peu
+près linéairement. Le compromis de l'agroforesterie tombe même tout seul — la
+bande qui sauve l'arbre coûte le grain.
+
+**Trois leçons, et la troisième est la plus chère.**
+
+*Le contrôle de surface portait sur la MOYENNE de la parcelle, et trois pour
+cent s'y cachent.* 0,823 au lieu de 0,85 : personne ne s'en émeut. Le même
+écart, localisé au pied du rang, valait dix fois la pénalité mesurée. **Quand
+une géométrie a un endroit qui compte plus que les autres, c'est là qu'il faut
+la vérifier, pas en moyenne.**
+
+*Un contournement documenté reste un contournement.* Le commentaire disait « le
+prix de cette rigueur est une petite lentille non semée ; elle est DANS la
+bande, pas dans le rang ». C'était faux — elle était au bord de la bande, donc
+au bord du rang — et l'avoir écrit a donné l'impression que c'était pesé.
+
+*Et le lot qui livre l'outil doit repasser sur ce que l'outil débloque.* #186 a
+livré les zones en bande en citant `ler.test.ts` comme la victime du manque. Le
+dispositif n'a pas été converti pour autant, et trois lots ont reposé dessus.
+
+### Ce que ça coûte au référentiel, et pourquoi c'est le travail
+
+**F21 gagné** (on peut refuser la régénération naturelle : la faucher
+l'emporte), **H21 rendu** : la cible de Restinclières n'est plus atteinte que
+sur une graine sur trois (1,172 / 1,231 / 1,098), et surtout le fait central
+est inversé — là-bas l'arbre d'allée pousse plus vite que le témoin forestier,
+ici il reste 11 à 22 % dessous. L'essai épingle les deux écarts **en plafond et
+non en plancher**, comme E12 : tant qu'ils tiennent, le moteur n'a pas retrouvé
+le fait, et le jour où la ligne tombe il faudra la retourner.
+
+Ce qui reste en cause n'est plus la géométrie mais ce qu'un sol travaillé coûte
+aux racines voisines — mycorhizes tranchées, eau et azote prélevés, tassement.
+#222 est ouverte pour ça, avec le banc de dose comme point de départ et une
+consigne : les trois causes se séparent par les grandeurs de `TreeEnvironment`
+relevées par arbre, pas par des bras qui diffèrent par deux choses à la fois.
+
+## Ce qu'un lot plus ancien a appris (l'auxiliaire paie, #187 lot 3)
 
 Une fonction de quinze lignes, un paramètre optionnel, et un critère qui cesse
 de reposer sur une promesse.
