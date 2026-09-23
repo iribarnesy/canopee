@@ -1377,13 +1377,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // noisetier, soit 2,5 fois — pas 3 à 5.** L'affirmation était fausse, et
     // elle a tenu parce que rien ne la gardait.
     //
-    // On ne corrige pas le nombre ici, et c'est délibéré : le rapport « 3 à
-    // 5 » est lui-même repris d'un commentaire, sans source nommée. Le
-    // vérifier dans la littérature vient AVANT de ralentir l'espèce — et
-    // ralentir le cornouiller déplacerait les haies, donc la biodiversité,
-    // donc une campagne. Pour mémoire, l'intersection des deux contraintes
-    // tomberait entre 13 et 21 cm/an, ce qui reste dans la fourchette des
-    // catalogues.
+    // ON N'Y TOUCHE PAS, ET C'EST ARBITRÉ PLUTÔT QU'OUBLIÉ. Le rapport « 3 à
+    // 5 » est lui-même repris d'un commentaire, sans source nommée ; le
+    // vérifier dans la littérature viendrait avant de ralentir l'espèce, et
+    // cette recherche a été jugée sans intérêt au regard de ce qu'elle
+    // rapporterait — entre 2,5 et 3, rien ne change de ce que le joueur voit,
+    // et ralentir le cornouiller déplacerait les haies, donc la biodiversité,
+    // donc une campagne entière. Pour mémoire, l'intersection des deux
+    // contraintes tomberait entre 13 et 21 cm/an, ce qui resterait dans la
+    // fourchette des catalogues.
+    //
+    // Ce qui compte est écrit au-dessus : la fiche affirmait un rapport
+    // qu'elle n'avait pas, et elle ne l'affirme plus.
     pousseMaxMAn: 0.25,
     // Atlas : « calcicole, floraison précoce ». Il fleurit en février, avant
     // tout le monde — c'est la première ressource de l'année pour les
