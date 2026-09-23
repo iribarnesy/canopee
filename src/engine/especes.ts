@@ -721,15 +721,24 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Bouleau verruqueux",
     nomLatin: "Betula pendula",
     hauteurMaxM: 25,
-    // NON calé sur table, et c'est délibéré. La seule table de bouleau du
-    // corpus est Braastad 1967, *Produksjonstabeller for bjørk* — norvégienne,
-    // donc boréale : 8,6 m à vingt ans en classe médiane. La transposer à un
-    // bocage à 11,5 °C de moyenne serait une erreur de catégorie, et en tirer
-    // un RANG contre un aulne calé sur une table allemande (Mitscherlich 1945)
-    // en serait une seconde — on comparerait deux climats, pas deux essences.
-    // 0,9 m/an reste donc une estimation, mais une estimation honnête pour un
-    // bouleau de plaine française *(à confirmer : il manque une table
-    // française ou allemande de bouleau)*.
+    // ESTIMÉ SANS TABLE, PUIS CONFIRMÉ PAR UNE TABLE TROUVÉE APRÈS COUP —
+    // c'est la seule validation hors échantillon du fichier.
+    //
+    // 0,9 m/an a été posé comme « estimation honnête pour un bouleau de plaine
+    // française », faute de référence transposable : la seule table du corpus
+    // était Braastad 1967, norvégienne donc boréale (8,6 m à vingt ans), et la
+    // transposer à un bocage à 11,5 °C aurait été une erreur de catégorie.
+    // Ce refus tient toujours.
+    //
+    // La table qui manquait existe (#185) : Lockow 1996, *Ertragstafel für die
+    // Sandbirke*, Eberswalde, pour le nord-est allemand — plaine tempérée,
+    // même auteur et même région que la table de charme déjà employée, donc
+    // même décote de géographie (subcontinentale sèche). Classe médiane des
+    // cinq, HO100 = 24 m : 12,2 m à vingt ans, 20,0 m à quarante.
+    //
+    // Mesuré contre elle sur le banc des hauteurs : 13,3 m à vingt ans (+9 %)
+    // et 19,6 m à quarante (−2 %). **Personne n'a touché à ce nombre pour
+    // obtenir ce résultat** — il était écrit avant que la table soit trouvée.
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },
@@ -767,9 +776,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Noyer commun",
     nomLatin: "Juglans regia",
     hauteurMaxM: 25,
-    // NON calé sur table : aucune table de production française de noyer n'a
-    // été trouvée. Ordre de grandeur d'un noyer de plein champ conduit pour le
-    // bois *(à confirmer)*.
+    // AUCUNE TABLE N'EXISTE, ET ON SAIT MAINTENANT POURQUOI (#185). Ce n'était
+    // pas « pas trouvée » : le *Fichier écologique des essences* wallon
+    // (fichierecologique.be, fiche du noyer commun) porte à la ligne
+    // productivité « **sans objet, sylviculture d'arbre** ». Le noyer se
+    // conduit en arbre isolé, pas en peuplement — il n'y a donc ni volume à
+    // l'hectare ni bonité à déclarer, et c'est la bonité qui fait une table de
+    // production. La même fiche donne une longévité de 200 à 300 ans et une
+    // exploitabilité de 60 à 70 ans, avant la dépréciation du bois.
+    //
+    // Ce nombre reste donc un ordre de grandeur de noyer de plein champ
+    // conduit pour le bois, et il le restera : ce n'est pas une recherche
+    // inachevée, c'est une référence qui n'existe pas dans cette forme.
     pousseMaxMAn: 0.5,
     // Atlas : héliophile, mésoxérophile, EUTROPHE — il exige le riche, et c'est
     // ce qui limite l'agroforesterie au noyer aux bonnes terres.
@@ -1004,8 +1022,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // du prunellier n'a été trouvée en climat océanique : pas de Biological
     // Flora, rien dans la littérature de haies. La seule contrainte publiée
     // est ORDINALE — Grubb range le prunellier dans le groupe « à croissance
-    // rapide », devant l'aubépine, ce que le moteur respecte (37 cm/an contre
-    // 29 sur les trois premières années).
+    // rapide », devant l'aubépine.
+    //
+    // ELLE EST MAINTENANT GARDÉE PAR UN ESSAI (#185), ce qu'elle n'était pas :
+    // ces deux lignes portaient la seule chose qu'on sache de l'espèce, et
+    // rien n'empêchait qu'elle devienne fausse en silence. Mesuré sur le banc
+    // des arbustes : 1,39 m à trois ans contre 1,14 à l'aubépine (36 cm/an
+    // contre 28), puis l'ordre s'inverse — 3,10 m contre 3,73 à douze ans,
+    // parce que le plafond du prunellier est à 4 m et celui de l'aubépine à 8.
     pousseMaxMAn: 0.4,
     // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
@@ -1360,9 +1384,23 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Aucune mesure scientifique trouvée. Les seules valeurs en climat
     // océanique sont des catalogues de pépiniéristes allemands : 10-30 cm/an
     // *(à confirmer — c'est du commerce, pas de la mesure)*. Le moteur en
-    // fait 24 à 26, dans le haut de cette fourchette, et respecte le seul
-    // fait sur lequel toutes les sources s'accordent : le cornouiller mâle
-    // est trois à cinq fois plus lent que le noisetier.
+    // fait 26, dans le haut de cette fourchette.
+    //
+    // **ET IL NE RESPECTE PAS LE RAPPORT QUE CETTE FICHE AFFIRMAIT** *(à
+    // calibrer)*. Elle disait : « respecte le seul fait sur lequel toutes les
+    // sources s'accordent : le cornouiller mâle est trois à cinq fois plus
+    // lent que le noisetier ». Mesuré en allant le vérifier (#185), sur le
+    // banc des arbustes et aux mêmes jalons : **25,7 cm/an contre 63,1 au
+    // noisetier, soit 2,5 fois — pas 3 à 5.** L'affirmation était fausse, et
+    // elle a tenu parce que rien ne la gardait.
+    //
+    // On ne corrige pas le nombre ici, et c'est délibéré : le rapport « 3 à
+    // 5 » est lui-même repris d'un commentaire, sans source nommée. Le
+    // vérifier dans la littérature vient AVANT de ralentir l'espèce — et
+    // ralentir le cornouiller déplacerait les haies, donc la biodiversité,
+    // donc une campagne. Pour mémoire, l'intersection des deux contraintes
+    // tomberait entre 13 et 21 cm/an, ce qui reste dans la fourchette des
+    // catalogues.
     pousseMaxMAn: 0.25,
     // Atlas : « calcicole, floraison précoce ». Il fleurit en février, avant
     // tout le monde — c'est la première ressource de l'année pour les

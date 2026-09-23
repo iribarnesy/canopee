@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { LIMON_RICHE } from "../../src/engine/stations";
+import { LIMON_RICHE } from "../../src/engine/stations";
 import {
   a,
   hauteurs,
@@ -126,6 +126,82 @@ const MESURES: {
     sc: LIMON_ACIDE,
     source: "Peterken & Lloyd 1967 (Grande-Bretagne) : 1,5 à 3,0 m entre 8 et 15 ans",
   },
+  {
+    // Repousse de CÉPÉE en taillis anglais : 2,4 à 2,8 m à la quatrième année
+    // (Buckley 1992), après 1,5-1,75 m la première puis ~50 cm/an (Harmer
+    // 2004). Le moteur en fait 2,66 — dedans.
+    //
+    // CE QU'ON MESURE ICI EST UN NOISETIER DE TAILLIS, et il faut le savoir :
+    // une souche établie repart plus vite qu'un semis, et le moteur ne sait
+    // pas faire la différence (sa forme de croissance dépend de la TAILLE,
+    // pas de l'âge). C'est son emploi réel en haie, donc la comparaison a un
+    // sens — mais elle ne dit rien d'un noisetier de semis.
+    espece: "corylus_avellana",
+    nom: "Noisetier",
+    bandes: [{ an: 4, bas: 2.3, haut: 2.9 }],
+    source: "Buckley 1992 (taillis anglais) : 2,4-2,8 m à la 4ᵉ année",
+  },
+  {
+    // LA MEILLEURE GÉOGRAPHIE DU FICHIER : des ajoncs bretons et écossais
+    // semés en jardin commun près de Rennes, donc le climat même du bocage
+    // qu'on simule. 110 à 130 cm à deux ans (Hornoy 2011, valeur lue sur la
+    // figure — le texte ne donne que des écarts relatifs). Le moteur en fait
+    // 1,17 m.
+    //
+    // Les autres chiffres publiés sont d'autres régimes et on ne s'y cale
+    // pas : catalogues britanniques 15-30 cm/an (taille commerciale), rejets
+    // après brûlage dirigé en Galice 57 cm à trois ans (lande brûlée).
+    //
+    // L'ajonc est calcifuge (3,5-6,5) : sur le limon riche à pH 7 il meurt.
+    espece: "ulex_europaeus",
+    nom: "Ajonc d'Europe",
+    bandes: [{ an: 2, bas: 1.05, haut: 1.35 }],
+    sc: LIMON_ACIDE,
+    source: "Hornoy 2011, jardin commun près de Rennes : 110-130 cm à 2 ans",
+  },
+  {
+    // La plus rapide de l'atlas, et le piège est dans la grandeur mesurée :
+    // un turion s'allonge de 3 à 6 m par saison, mais il s'arque et se
+    // marcotte — L'ALLONGEMENT N'EST PAS UN GAIN DE HAUTEUR. La roncière
+    // plafonne bas, et c'est le plafond qu'on éprouve : 1 à 3 m de hauteur
+    // finale (bases horticoles allemandes, faute de mesure scientifique de
+    // hauteur de roncier). Le moteur fait 2,42 m à cinq ans et plafonne à 2,5.
+    espece: "rubus_fruticosus",
+    nom: "Ronce",
+    bandes: [{ an: 5, bas: 1.0, haut: 3.0 }],
+    source: "bases horticoles allemandes : hauteur finale 1 à 3 m",
+  },
+  {
+    // UN PLANCHER, PAS UNE BANDE, et c'est tout ce que la littérature donne :
+    // 37 cm/an sur gravats de brique en friche urbaine (Gilbert 1991, via la
+    // Biological Flora) — le pire sol imaginable pour un nitrophile. Sur un
+    // limon riche, le moteur doit faire MIEUX, et il fait 3,37 m à cinq ans
+    // contre 2,15 pour le plancher.
+    //
+    // La borne haute n'est pas une mesure : c'est un garde-fou à mi-chemin de
+    // sa hauteur adulte (7 m). Il attrape un emballement, il ne valide rien.
+    espece: "sambucus_nigra",
+    nom: "Sureau noir",
+    bandes: [{ an: 5, bas: 2.15, haut: 5.0 }],
+    source: "Gilbert 1991 (friche urbaine) : 37 cm/an sur gravats, PLANCHER",
+  },
+  {
+    // La trajectoire d'une lande : les guides britanniques donnent un couvert
+    // de callune à 50-60 cm à maturité, vers vingt ans. Le moteur fait 0,60 m
+    // à vingt ans.
+    //
+    // ON N'ÉPROUVE QUE LE PLATEAU, et c'est délibéré : le moteur fait naître
+    // tous ses semis à 30 cm (`regeneration.ts`), si bien que la callune du
+    // jeu SAUTE sa phase pionnière — les guides la donnent sous 10-15 cm.
+    // Mesurer le début de sa courbe mesurerait ce défaut-là, qui n'est pas de
+    // sa fiche mais d'une hauteur de semis unique pour un atlas qui va du
+    // sous-arbrisseau au chêne.
+    espece: "calluna_vulgaris",
+    nom: "Callune",
+    bandes: [{ an: 20, bas: 0.45, haut: 0.7 }],
+    sc: LIMON_ACIDE,
+    source: "guides britanniques : couvert de 50-60 cm à maturité, vers 20 ans",
+  },
 ];
 
 describe("arbustes : ce que disent les mesures de terrain, faute de tables", () => {
@@ -142,4 +218,45 @@ describe("arbustes : ce que disent les mesures de terrain, faute de tables", () 
       }
     }, 120_000);
   }
+
+  it("le troène devance le fusain, comme dans l'essai de Grubb", () => {
+    // MÊME CAS QUE LE PRUNELLIER, autre espèce : le troène n'a pas de
+    // Biological Flora, et le seul point publié — 104 cm à deux ans en jardin
+    // (Grubb 1999) — inclut la croissance en pépinière avant repiquage, donc
+    // ne vaut pas comme taux. Ce qui reste est ORDINAL : le troène est dans le
+    // groupe « à croissance rapide » de cet essai, devant le fusain.
+    //
+    // Sa fiche portait cette contrainte sans que rien ne la garde (#185).
+    // Mesuré à cinq ans : 2,05 m contre 1,78 — et le fusain est déjà là, sa
+    // bande de terrain se lisant au même âge, donc l'essai ne coûte qu'une
+    // course de troène.
+    const troene = hauteurs("ligustrum_vulgare", 5, LIMON_RICHE, 40);
+    const fusain = hauteurs("euonymus_europaeus", 5, LIMON_RICHE, 40);
+    expect(a(troene, 5)).toBeGreaterThan(a(fusain, 5));
+  }, 120_000);
+
+  it("le prunellier prend l'avance sur l'aubépine, puis se fait dépasser", () => {
+    // LE PRUNELLIER N'A PAS DE COURBE, et il n'en aura sans doute pas : aucune
+    // mesure de croissance en climat océanique n'a été trouvée — pas de
+    // Biological Flora, rien dans la littérature de haies. La seule contrainte
+    // publiée est ORDINALE : Grubb 1999 le range dans le groupe « à croissance
+    // rapide », devant l'aubépine.
+    //
+    // Sa fiche portait déjà cette contrainte ET son résultat chiffré, en
+    // commentaire, sans que rien ne la garde (#185). C'est exactement ainsi
+    // qu'une affirmation devient fausse en silence : il suffit que quelqu'un
+    // ralentisse le prunellier pour une autre raison, et la seule chose qu'on
+    // savait de lui ne serait plus vraie sans que la suite bronche.
+    const prunellier = hauteurs("prunus_spinosa", 12, LIMON_RICHE, 40);
+    const aubepine = hauteurs("crataegus_monogyna", 12, LIMON_RICHE, 40);
+    // À trois ans, l'ordre de Grubb : 1,39 m contre 1,14 mesurés, soit 36
+    // cm/an contre 28.
+    expect(a(prunellier, 3)).toBeGreaterThan(a(aubepine, 3));
+    // À douze ans, l'ordre s'inverse, et ce n'est pas un hasard : les deux
+    // fiches portent des hauteurs adultes différentes — 4 m pour le
+    // prunellier, 8 pour l'aubépine — et c'est le plafond qui parle. Mesuré :
+    // 3,10 m contre 3,73. Le croisement a lieu entre cinq et huit ans ; on
+    // l'éprouve à douze, où l'écart (20 %) ne peut plus être du bruit.
+    expect(a(aubepine, 12)).toBeGreaterThan(a(prunellier, 12));
+  }, 120_000);
 });
