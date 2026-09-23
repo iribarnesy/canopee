@@ -249,6 +249,25 @@ export const CLOTURE_HEURES_M = 0.12;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
 /**
+ * Hauteur au-dessus de laquelle une tige ligneuse ne se fauche plus, m
+ * *(à calibrer)*.
+ *
+ * **C'EST LA RAISON POUR LAQUELLE UNE PRAIRIE DE FAUCHE RESTE UNE PRAIRIE.**
+ * Le moteur savait qu'un labour détruit ce qui n'a pas encore de tronc
+ * (`LABOUR_HAUTEUR_DETRUITE_M`) ; il ne savait pas que la fauche en fait autant,
+ * et une bande enherbée entretenue s'y reboisait toute seule — mesuré sur le
+ * dispositif du LER (#184), dix-huit semis spontanés de noyer dans une bande de
+ * 1,75 m de part et d'autre du rang, soit 5,6 % du terme arbre de l'indice.
+ *
+ * Le seuil n'est pas une hauteur de visibilité mais une CAPACITÉ DE COUPE : les
+ * fléaux d'un gyrobroyeur avalent un brin ligneux de deux à trois centimètres
+ * de diamètre au collet, ce qui correspond au mètre chez un feuillu de
+ * quelques années. Au-delà la tige ploie et résiste, et le conducteur la
+ * contourne. Plus bas que le seuil du labour (1,2 m), donc, et c'est le bon
+ * sens : la charrue déterre, le rotor ne fait que couper.
+ */
+export const FAUCHE_HAUTEUR_TIGE_FAUCHABLE_M = 1;
+/**
  * Ce qu'un chaulage montait le pH, partout et quel que soit le sol.
  *
  * **Plus personne ne s'en sert** : depuis `bases.ts`, le chaulage apporte des
@@ -1852,9 +1871,37 @@ function applyFaucher(
       // elle enlève ce qui est sorti, et le tapis repart.
     }
   }
+  // ── ET LE ROTOR NE TRIE PAS (issue #184) ────────────────────────────────────
+  //
+  // Une tige ligneuse assez fine pour passer sous les fléaux y passe, comme le
+  // reste. **C'EST CE QUI ARRÊTE LA SUCCESSION** : une prairie de fauche n'est
+  // pas une prairie parce que l'herbe y gagnerait, c'est une prairie parce
+  // qu'on la fauche. Sans ce passage, le moteur laissait une bande enherbée
+  // entretenue se reboiser sous l'outil qui est justement là pour l'empêcher —
+  // mesuré sur le dispositif du LER (#184), dix-huit semis spontanés de noyer
+  // dans les bandes épargnées, 5,6 % du terme arbre de l'indice.
+  //
+  // **ET LE MOTEUR RÉPONDAIT DÉJÀ À LA QUESTION DU REJET, avec deux constantes
+  // qui l'encadrent**, ce qui évite d'en inventer une troisième : il faut
+  // laisser une souche de `RECEPAGE_HAUTEUR_M` (0,5 m) pour qu'un taillis
+  // reparte, et une tige rabattue sous `HAUTEUR_LETALE_M` (0,12 m) ne repart
+  // plus — « un plant plusieurs fois rabattu et resté minuscule finit par
+  // mourir » (gibier.ts). Le rotor coupe à dix centimètres, donc SOUS les deux.
+  // Le trait `rejetteDeSouche` de l'atlas ne départage rien ici : ce n'est pas
+  // le pouvoir de rejeter qui manque, c'est la souche.
+  const trees = state.trees.map((tree) => {
+    if (!tree.alive || tree.heightM > FAUCHE_HAUTEUR_TIGE_FAUCHABLE_M) return tree;
+    // **UN PLANT PROTÉGÉ NE SE FAUCHE PAS**, et c'est la moitié de la raison
+    // d'être d'un manchon : il se voit, l'outil le contourne. Un alignement
+    // planté se conduit comme ça — on protège, puis on fauche entre.
+    if (tree.protege) return tree;
+    if (!zoneContient(action, tree.x, tree.y)) return tree;
+    return { ...tree, alive: false, causeMort: "fauche" as const };
+  });
   return {
     state: {
       ...state,
+      trees,
       soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse },
       economy: {
         ...state.economy,

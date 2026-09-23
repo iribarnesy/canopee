@@ -31,6 +31,7 @@ export type CauseMort =
   | "ravageurs"
   | "labour"
   | "boutis"
+  | "fauche"
   | "maladie"
   | "frottis"
   | "chablis"
@@ -49,6 +50,7 @@ export const LIBELLE_CAUSE: Record<CauseMort, string> = {
   ravageurs: "achevés par les ravageurs",
   labour: "retournés par le labour",
   boutis: "arrachés par le boutis du sanglier",
+  fauche: "emportés par la fauche",
   maladie: "emportés par la maladie",
   frottis: "annelés par les frottis de cervidés",
   chablis: "couchés par la tempête",

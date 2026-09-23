@@ -32,11 +32,18 @@ function simuler(
   const weather = serieToWeeks(serie);
   let state = createGameState(station, rngStateFromSeed(3));
   state = plantAt(state, especeId, 15, 15, 0.3);
+  // **LE PLANT PORTE UN MANCHON, ET DANS TOUS LES BRAS** (#184). Depuis que la
+  // fauche emporte les tiges ligneuses qu'elle atteint, un plant de trente
+  // centimètres part avec l'herbe : c'est le fait, un gyrobroyeur ne trie pas.
+  // Ce qui distingue un dégagement d'une fauche de prairie est qu'on a protégé
+  // ce qu'on veut garder. La protection est posée dans TOUS les bras, fauchés
+  // ou non — sans quoi le témoin ne différerait plus par la seule fauche.
+  const protection: GameAction = { type: "proteger", week: 0, treeIds: [1] };
   let couvertureFinale = 0;
   for (let i = 0; i < ans * 52; i++) {
     const w = weather[i % weather.length];
     if (!w) throw new Error("météo manquante");
-    const r = advanceWeek(state, w, actions);
+    const r = advanceWeek(state, w, [protection, ...actions]);
     state = r.state;
     couvertureFinale = r.fluxes.herbeCouvertureMean;
   }

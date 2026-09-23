@@ -119,6 +119,9 @@ export const TEINTE_DE_LA_CAUSE: Record<CauseMort, Teinte> = {
   labour: { r: 74, g: 57, b: 44 },
   // Le boutis : le fauve du sanglier passé à la terre qu'il remue.
   boutis: { r: 122, g: 96, b: 62 },
+  // La fauche laisse un chaume, pas de la terre : le vert-jaune pâle d'une
+  // prairie rase, qui la sépare du brun des gestes qui vont sous le sol.
+  fauche: { r: 176, g: 178, b: 116 },
   // La tempête : le gris-bleu froid d'un ciel de coup de vent. Ni fauve — ce
   // n'est pas le gibier — ni gris neutre, qui est déjà l'ombre.
   chablis: { r: 108, g: 128, b: 152 },
