@@ -1605,6 +1605,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // parcelle, et les deux tampons par cellule sont alloués une fois pour
   // toutes : la strate tourne sur toutes les cellules toutes les semaines, et
   // ce lot coûte déjà 11 % de temps de tick.
+  // Ce que la strate basse rend au sol cette semaine (#201) : le carbone
+  // entre au bilan par la production primaire (kg C sur la parcelle), l'azote
+  // par le retour de litière (g/m² cumulés, comme celui des arbres).
+  let herbeNppKgC = 0;
+  let herbeLitiereNG = 0;
   const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
   const saisonnieres = HERBACEES.map((h) => partSaisonniere(h, pheno));
   const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
@@ -1630,6 +1635,91 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const base = i * N_HERBACEES;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
+    // ── CE QUE LA STRATE BASSE REND AU SOL (#201) ───────────────────────────
+    //
+    // Elle ne rendait RIEN. Mesuré avant ce lot, une prairie spontanée à 0,95
+    // de couverture sur limon riche : le stock d'humus perd 42 % en cinquante
+    // ans et la litière reste à 0,00 les deux mille six cents semaines. Park
+    // Grass, prairie permanente non fertilisée depuis 1856, tient son stock.
+    //
+    // **UNE PLANTE NE PEUT RENDRE QUE CE QU'ELLE A PRIS, et c'est la propriété
+    // de conservation de l'azote qui a dû le rappeler.** Le premier jet posait
+    // un taux de renouvellement sur la fiche et en tirait la litière : il
+    // rendait 120 kg N/ha/an là où la strate en prélève 31, soit quatre fois
+    // ce qu'elle avait jamais absorbé, créé de rien chaque année. Trente-quatre
+    // essais sont tombés — un frêne poussait 17 % au-dessus de sa table, la
+    // courbe de Broadbalk crevait son plafond — et `tick-conservation` a
+    // chiffré la fuite à 0,38 kg N/ha par semaine.
+    //
+    // Le mécanisme n'avait donc pas besoin d'un taux inventé : **le moteur
+    // porte déjà le flux annuel de la strate, c'est son PRÉLÈVEMENT D'AZOTE**
+    // (`herbe.ts`, calibré à ~30 kg N/ha/an). L'azote rendu est celui qui a été
+    // servi, et le carbone qui l'accompagne vaut cet azote fois le C/N de
+    // l'espèce. Conservateur par construction, et ancré sur une grandeur qui
+    // l'était déjà.
+    //
+    // *Simplification assumée* : le retour se fait la semaine même du
+    // prélèvement, faute d'un pool d'azote dans la plante. L'azote ne
+    // court-circuite pas pour autant — il passe par la LITIÈRE, dont il ne
+    // ressort qu'au rythme de la décomposition, donc avec le délai qu'il faut.
+    const servi = nServedRatio[i] ?? 0;
+    if (servi > 0) {
+      let poidsTotal = 0;
+      for (let s = 0; s < N_HERBACEES; s++) {
+        const h = HERBACEES[s];
+        if (h) poidsTotal += (herbeFeuillage[base + s] ?? 0) * h.exigenceMinerale;
+      }
+      const azoteCellule = (herbeDemandeNG[i] ?? 0) * servi;
+      if (poidsTotal > 0 && azoteCellule > 0) {
+        for (let s = 0; s < N_HERBACEES; s++) {
+          const fiche = HERBACEES[s];
+          if (!fiche) continue;
+          const poids = (herbeFeuillage[base + s] ?? 0) * fiche.exigenceMinerale;
+          if (poids <= 0) continue;
+          // Ce que cette espèce-là a pris, et ce qu'elle en RESTITUE : une
+          // pérenne rend tout, une culture garde dans son grain l'azote qui
+          // quittera la parcelle (`azoteDansLeGrain`, herbacees.ts).
+          const pris = (azoteCellule * poids) / poidsTotal;
+          // **LA RÉTRANSLOCATION, et c'est le même patron que l'arbre.** Une
+          // plante retire l'azote d'un organe avant de le lâcher : une feuille
+          // qui jaunit a déjà rendu la moitié de son azote au reste de la
+          // plante, et c'est pour cela qu'une litière est toujours plus pauvre
+          // que le tissu vivant dont elle vient. `LITTER_RETURN_FRACTION` porte
+          // exactement ça pour l'arbre — *« part de l'azote acquis dans l'année
+          // qui retourne au sol avec les feuilles ; le reste est retenu »* — et
+          // il n'y a aucune raison que la strate s'en dispense.
+          //
+          // *Ce que ça laisse de côté, et c'est la même dette que pour
+          // l'arbre* : la part retenue devrait vivre dans un pool d'azote de la
+          // plante, et le moteur n'en a pas. Elle n'est donc pas rendue, ce qui
+          // reste une fuite — mais la moitié de celle d'avant ce lot, et une
+          // fuite NOMMÉE, adossée à un fait (la rétranslocation) plutôt qu'à un
+          // oubli.
+          const n = pris * LITTER_RETURN_FRACTION * (1 - (fiche.culture?.azoteDansLeGrain ?? 0));
+          if (n <= 0) continue;
+          const c = n * fiche.litiere.cSurN;
+          // Le carbone est CRÉDITÉ à la production primaire — c'est la plante
+          // qui l'a fixé — et l'azote déclaré comme un retour de litière, sans
+          // quoi le bilan du sol verrait une entrée venue de nulle part.
+          herbeNppKgC += c / 1000;
+          herbeLitiereNG += n;
+          const oldN = litterNG[i] ?? 0;
+          // `litterK` EST LA LIGNE QUI MANQUAIT AU PREMIER JET, et l'essai l'a
+          // dit sans ambiguïté : la litière s'accumulait à 99 t C/ha après
+          // quarante ans, c'est-à-dire que rien ne s'en décomposait jamais. La
+          // vitesse de décomposition d'une cellule est un mélange pondéré des
+          // vitesses de ce qui y est tombé, et sur une parcelle sans arbre elle
+          // valait zéro faute que personne ne l'ait jamais posée. Elle se
+          // déduit du C/N, donc le trait de la fiche suffit.
+          litterK[i] =
+            (oldN * (litterK[i] ?? 0) + n * litterDecayRate(fiche.litiere.cSurN)) / (oldN + n);
+          litterCaMgG[i] =
+            (oldN * (litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G) + n * CALCIUM_NEUTRE_MG_G) / (oldN + n);
+          litterNG[i] = oldN + n;
+          litterCG[i] = (litterCG[i] ?? 0) + c;
+        }
+      }
+    }
     // ── Le GRAIN s'accumule (#136) ──────────────────────────────────────────
     // Le rendement est l'intégrale de ce que la plante assimile, pas une
     // fonction de son état du jour. Les trois facteurs sont déjà là : ce
@@ -2351,7 +2441,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 6. Retours de litière : chute des feuilles + arbres morts ─────────────
   // Les déjections du gibier sont un retour de litière comme un autre : c'est
   // de l'azote qui quitte les arbres pour revenir au sol.
-  let litterfallSumG = broutageAzoteG;
+  // La strate basse rend sa litière bien avant ce point (#201) : son azote
+  // est un retour comme celui des feuilles d'arbre, et il entre au même titre.
+  let litterfallSumG = broutageAzoteG + herbeLitiereNG;
   let fixationSumG = 0;
   let leafNppKgC = 0; // le feuillage tombé a été produit dans l'année (NPP feuilles)
   const depositLitter = (tree: TreeState, amountG: number) => {
@@ -3271,7 +3363,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       carbon: {
         ...state.carbon,
         deadWoodKgC,
-        nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC,
+        nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC + herbeNppKgC,
         importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedPlantsKgC,
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
         erosionCumKgC:

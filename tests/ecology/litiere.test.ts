@@ -97,9 +97,61 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     // et huit fois plus chétif.
     //
     // Le seuil n'est donc pas rabaissé une cinquième fois : l'essai change de
-    // grandeur. 1,05 sur le volume, contre 1,095 mesuré — une marge qui est
-    // enfin une marge, et non le dernier chiffre significatif.
+    // grandeur. 1,05 sur le volume, contre 1,095 mesuré.
+    //
+    // ─── ET IL S'EST INVERSÉ (#201), PARCE QUE LE TÉMOIN ÉTAIT VOLÉ ──────────
+    //
+    // Mesuré avec et sans le retour de litière de la strate herbacée :
+    //
+    //                    parmi les aulnes   hêtre seul   rapport
+    //     sans le lot  H      4,32             4,19       1,031
+    //                  D     10,55            10,22       1,032
+    //                  V                                  1,098
+    //     avec le lot  H      4,35             4,71       0,922
+    //                  D     10,61            11,53       0,920
+    //                  V                                  0,782
+    //
+    // **Le hêtre du bosquet n'a PAS bougé** — 4,32 → 4,35, 10,55 → 10,61. C'est
+    // le TÉMOIN qui a gagné 12 à 13 %. L'aulne ne fait pas moins ; son témoin
+    // faisait artificiellement moins.
+    //
+    // La cause : la strate prélevait ~31 kg N/ha/an et ne les rendait jamais —
+    // dans un moteur où l'herbe n'a pas de masse, cet azote DISPARAISSAIT. Le
+    // hêtre isolé, entouré d'herbe, était donc volé en permanence ; celui du
+    // bosquet, dont l'herbe est étouffée par l'ombre des aulnes, ne l'était
+    // presque pas. **L'effet améliorant qu'on mesurait était pour une bonne
+    // part un appauvrissement du témoin.**
+    //
+    // On ne rabaisse donc pas le seuil une cinquième fois et on ne le retourne
+    // pas non plus : **l'affirmation se retire**, et ce qui reste vérifiable
+    // est en dessous. Le manque est écrit dans #210 — la strate de ce moteur
+    // rend son azote trop facilement et n'en dispute pas assez — et il devra se
+    // réancrer sur du terrain, pas sur le chiffre d'avant, qui reposait sur une
+    // destruction de matière. *Un nombre calé sur le moteur n'est pas une
+    // ancre, et un nombre calé sur un bogue du moteur encore moins.*
     const volume = (t: TreeState) => volumeTigeM3(t.diametreCm, t.heightM);
-    expect(volume(hetreAvec)).toBeGreaterThan(volume(hetreSeul) * 1.05);
+    // Ce que l'aulne fait au hêtre reste POSITIF en soi : le bosquet ne nuit
+    // pas, ses arbres vivent et poussent. C'est la comparaison au témoin qui a
+    // changé de signe, pas la santé du bosquet.
+    expect(volume(hetreAvec)).toBeGreaterThan(0);
+    expect(hetreAvec.heightM).toBeGreaterThan(3);
+    // Et LA MOITIÉ DU MÉCANISME TIENT ENCORE, celle qu'aucun bogue ne portait :
+    // l'aulne fixe, sa litière se minéralise, et le sol du bosquet en garde la
+    // trace. C'est ce que l'essai voisin mesure directement sur l'azote du sol,
+    // et c'est lui qui porte désormais le critère.
+  });
+
+  it("et ce qui tient sans dépendre du témoin : le bosquet d'aulnes enrichit SON sol", () => {
+    // L'énoncé qui survit à #201, parce qu'il ne compare pas deux parcelles
+    // dont l'une était volée : il regarde le sol SOUS les aulnes contre le sol
+    // au départ. La fixation symbiotique, elle, n'a jamais rien dû à la strate.
+    const azoteSol = (s: typeof finAvec) => {
+      let total = 0;
+      for (let i = 0; i < s.soil.mineralNG.length; i++) {
+        total += (s.soil.mineralNG[i] ?? 0) + (s.soil.litterNG[i] ?? 0);
+      }
+      return total / s.soil.mineralNG.length;
+    };
+    expect(azoteSol(finAvec)).toBeGreaterThan(azoteSol(finTemoin));
   });
 });

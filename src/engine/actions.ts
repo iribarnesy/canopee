@@ -1722,6 +1722,15 @@ function applyMoissonner(
       recolteEur += tonnes * culture.prixEurT;
       cultureGrain[base + s] = 0;
       cultureGrainPotentiel[base + s] = 0;
+      // **LA PAILLE EST DÉJÀ RENDUE, SEMAINE APRÈS SEMAINE** (issue #201).
+      // Ce bloc mettait le feuillage à zéro et c'était tout : le grain était
+      // vendu et le reste s'évaporait. Il ne rend toujours rien ICI, mais pour
+      // la raison inverse — la strate restitue continûment ce qu'elle prélève,
+      // moins l'azote que le grain emporte (`azoteDansLeGrain`), si bien que
+      // la paille et le chaume ont déjà été versés au sol au fil de la saison.
+      // Y rajouter un versement à la moisson compterait la même matière deux
+      // fois. *Simplification assumée* : dans un champ, la paille tombe le
+      // jour de la moisson, pas tout l'été.
       // La culture libère la place : le chaume n'occupe plus rien, et les
       // adventices reprendront la main dès la semaine suivante.
       herbeEmprise[base + s] = 0;
@@ -1775,8 +1784,6 @@ function applyFaucher(
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
-  const litterNG = state.soil.litterNG.slice();
-  const litterCG = state.soil.litterCG.slice();
   const cote = state.station.coteM;
   // Les cellules où l'outil a effectivement mordu : une pelouse déjà rase ne
   // se fauche pas, et le rendu n'a rien à y montrer.
@@ -1788,22 +1795,31 @@ function applyFaucher(
       const avant = herbeCouverture[i] ?? 0;
       if (avant <= FAUCHE_COUVERTURE_RESIDUELLE) continue;
       fauchees.push(i);
-      const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
       herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       herbeBiomasse[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       // La coupe se répartit sur les feuillages, dans la même proportion. Une
       // espèce déjà rentrée sous terre n'a rien à perdre : c'est ce qui laisse
       // une prairie de fauche garder sa flore de printemps (herbacees.ts).
       rabattreParEspece(herbeFeuillage, i * N_HERBACEES, FAUCHE_COUVERTURE_RESIDUELLE / avant);
-      // L'herbe coupée reste sur place : litière tendre, vite recyclée.
-      litterNG[i] = (litterNG[i] ?? 0) + coupe * 4;
-      litterCG[i] = (litterCG[i] ?? 0) + coupe * 4 * 25;
+      // **L'HERBE COUPÉE A DÉJÀ ÉTÉ RENDUE, ELLE AUSSI** (issue #201).
+      //
+      // Il y avait ici `litterNG += coupe * 4` et `litterCG += coupe * 4 * 25`
+      // — les deux seuls nombres du moteur qui transformaient de l'herbe en
+      // carbone, et ils étaient nus. **Ils créaient aussi de la matière à
+      // partir de rien** : la strate n'était ni au bilan carbone ni au bilan
+      // azote, et aucune propriété ne passait par cette action. Le même défaut
+      // que celui que le lot répare, sur le seul chemin qui existait déjà.
+      //
+      // La strate restituant désormais son prélèvement au fil des semaines, la
+      // matière de cette coupe est déjà au sol : la verser ici la compterait
+      // deux fois. La fauche fait donc ce qu'elle doit faire et rien d'autre —
+      // elle enlève ce qui est sorti, et le tapis repart.
     }
   }
   return {
     state: {
       ...state,
-      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse, litterNG, litterCG },
+      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,

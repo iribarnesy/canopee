@@ -61,7 +61,126 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la glandée, #197)
+## Ce que le dernier lot a appris (la strate rend son azote, #201)
+
+Le mécanisme tient en quinze lignes : ce que la strate herbacée prélève, elle le
+rend en litière, avec le C/N de son espèce. Ce qu'il a révélé occupe le reste de
+ce chapitre — **quatre critères verts du référentiel étaient payés par un trou
+de comptabilité**, et il a fallu les retirer un par un.
+
+**UNE COMPTABILITÉ QUI NE BOUCLE PAS NE PRODUIT PAS UNE ERREUR, ELLE PRODUIT UN
+RÉSULTAT.** L'herbe de ce moteur n'a pas de masse : elle prélevait ~31 kg
+N/ha/an et ne les rendait à personne. Sur seize ans de prairie permanente,
+l'azote minéral tombait de 1,236 à 0,931 g/m² — *sans plancher*. Le moteur
+stérilisait lentement toute parcelle enherbée, et personne ne l'avait vu, parce
+qu'un appauvrissement lent ressemble à de l'écologie. Les deux propriétés de
+conservation du dépôt ne l'avaient pas attrapé non plus : **une propriété ne
+vaut que sur les chemins qu'elle parcourt**, et celle de l'azote ne comptait pas
+la strate parmi les puits.
+
+**RÉPARER UNE COMPTABILITÉ FAIT TOMBER CE QUE LE BOGUE PAYAIT, ET C'EST ÇA, LE
+RÉSULTAT DU LOT.** Quatre critères sont passés ✅ → 🟡 dans le même lot. Deux
+méritent d'être retenus :
+
+- *L'aulne améliore le sol de son voisin.* Le hêtre du bosquet n'a pas bougé
+  (4,32 → 4,35 m) ; c'est le TÉMOIN qui a gagné 12 à 13 %. Le hêtre isolé,
+  entouré d'herbe, était volé en permanence ; celui du bosquet, dont l'herbe est
+  étouffée par l'ombre, ne l'était presque pas. **L'effet améliorant qu'on
+  mesurait était pour une bonne part un appauvrissement du témoin.**
+- *Faucher vaut mieux que ne rien faire.* `applyFaucher` déposait `coupe * 4` g
+  de litière et `coupe * 25` g de carbone, deux nombres nus sortis de rien. 28
+  des 30 points de l'effet désherbage venaient de cet engrais fantôme. La
+  fauche ne fabrique pas de matière : elle en déplace.
+
+Un essai qui compare deux bras ne mesure le bras traité que si le témoin est
+honnête. **Quand un écart se réduit après une réparation, regarder lequel des
+deux bras a bougé avant de conclure que le mécanisme a faibli.**
+
+**LA CIBLE À RETROUVER N'EST JAMAIS L'ANCIEN NOMBRE.** La tentation, quatre fois
+de suite, était de retoucher le mécanisme jusqu'à ce que 1,095 revienne. Mais
+1,095 reposait sur une destruction de matière : *un chiffre calé sur le moteur
+n'est pas une ancre, et un chiffre calé sur un bogue du moteur encore moins.*
+Ce qui remplace un critère tombé, c'est l'énoncé qui survit sans lui — ici « le
+bosquet enrichit SON sol », qui ne compare pas deux parcelles dont l'une était
+volée — plus une issue qui écrit le manque avec ses symptômes chiffrés (#210).
+Retirer une affirmation est un résultat publiable ; la sauver en rabaissant son
+seuil ne l'est pas.
+
+**UNE GRANDEUR MAL CHOISIE GLISSE À CHAQUE LOT ; CHANGER DE GRANDEUR PLUTÔT QUE
+RABAISSER LE SEUIL.** Le seuil de l'aulne avait glissé quatre fois (1,1006 →
+1,095 → 1,077 → 1,030), à chaque fois pour une cause correctement nommée, et à
+chaque fois on lisait la HAUTEUR — qui ne capte qu'un tiers de l'effet. Même
+motif ailleurs dans le lot : `epandre-vs-vendre` comparait un RAPPORT de stocks
+d'azote, dont le dénominateur bouge avec le lot ; il compare maintenant une
+DIFFÉRENCE absolue (189 g/m² mesurés, seuil à 100), qui est la grandeur que
+l'épandage produit réellement. **Un seuil qui glisse à chaque lot accuse le
+thermomètre, pas le mécanisme.**
+
+Et un troisième cas, arrivé par la CI et pas par le raisonnement : le pin recalé
+a fait tomber `gibier.test.ts`, qui affirmait `pin > 2 × noisetier` sur la
+hauteur à douze ans — 3,266 contre 3,330 demandés, 1,9 % de marge. **Un rapport
+entre DEUX ESPÈCES porte tout ce qui les distingue**, vitesse de croissance
+comprise, et pas seulement ce que l'essai prétend mesurer. Mesuré avec et sans
+gibier : sans dent, le pin et le noisetier font presque la même taille (5,58
+contre 5,13) ; avec, 3,27 contre 1,67. Le « deux fois » n'était pas une
+propriété du pin, c'était la dent qui coupait le noisetier en deux. L'essai
+compare maintenant **chaque espèce à elle-même** — 41,5 % de perte pour le pin,
+67,6 % pour le noisetier — et la croissance propre se simplifie. *Le témoin
+apparié coûte un bras de plus et rend un énoncé qui ne glissera pas.*
+
+Puis un quatrième et un cinquième, tous deux tombés à la même cause — **un seul
+paramètre d'espèce recalé, et cinq pour cent de hauteur en moins** :
+
+- `ph-survie.test.ts` demandait `pin > 10 × charme` sur une station acide.
+  Mesuré : 10,66 · 9,48 · 9,37 sur trois graines, donc **deux sur trois sous le
+  seuil**. Le « dix » venait du rapport des FACTEURS de pH (0,34 contre 0,03),
+  transporté tel quel sur des hauteurs, ce que rien ne justifie. Deux bornes
+  qui ne portent chacune qu'une espèce l'ont remplacé.
+- `abri-peuplement.test.ts` demandait `abri > 0,25` sur une futaie de pins.
+  Mesuré 0,221 ; en forçant le seul `pousseMaxMAn` dans l'atlas, tout le reste
+  égal, 0,285 à 0,50 contre 0,221 à 0,45. **La cause est mécanique et vaut
+  d'être retenue** : le rayon de peuplement se compte en HAUTEURS, donc un
+  peuplement 5 % plus court regarde un disque 5 % plus petit et y trouve 10 % de
+  voisins en moins. Un absolu sur l'abri photographiait la TAILLE du peuplement
+  autant que sa fermeture. Le témoin dense/clairsemé le remplace : les deux bras
+  montent et descendent ensemble.
+
+**ET UN TÉMOIN QU'ON AJOUTE POUR SAUVER UN SEUIL PEUT DÉMENTIR L'ÉNONCÉ.** En
+mesurant le charme SEUL pour pouvoir le comparer à lui-même, on découvre qu'il
+fait 1,012 · 0,907 · 0,886 m seul contre 0,976 · 0,954 · 0,928 en mélange — trois
+à cinq pour cent, **et le signe change d'une graine à l'autre**. Le pin ne fait
+donc presque rien au charme : l'essai s'appelait « exclu par la CONCURRENCE » et
+le référentiel le répétait depuis trois lots, alors que c'est le pH qui le tient
+à un mètre, tout seul. *Le témoin apparié n'est pas seulement un thermomètre plus
+stable : c'est souvent la première fois qu'on mesure ce que l'essai prétend dire.*
+
+**QUAND UN FICHIER ÉCRIT « ON NE PRÉTEND PAS MESURER L'AMPLEUR », LE PRENDRE AU
+MOT.** Deux fois dans ce lot j'ai exigé d'un essai plus qu'il ne prétend. Dans
+`litiere.test.ts` j'ai d'abord demandé que la hauteur, le diamètre ET le volume
+s'accordent — alors que le fichier lui-même dit que la hauteur ne capte qu'un
+tiers de l'effet. Puis j'ai annoncé « +3,7 % de volume » sur un `grep` mal
+attribué, quand la valeur mesurée était 0,78. **Le commentaire d'un essai est
+une source ; le relire vaut mieux que le contourner, et un chiffre qu'on
+n'a pas mesuré soi-même dans le run courant n'est pas un chiffre.**
+
+**UN MÉCANISME SE TROUVE EN MESURANT, PAS EN CONCEVANT.** Quatre versions du
+retour d'azote sont tombées avant la bonne, chacune corrigée par une mesure :
+récolter la sénescence (deux ordres de grandeur trop peu), inventer un trait de
+turnover (120 kg N/ha/an créés contre une absorption de 31 ; 34 essais par
+terre), rendre exactement ce qui a été prélevé (pas de rétention), puis la
+retranslocation par le `LITTER_RETURN_FRACTION` que l'arbre utilise déjà. **La
+quatrième est la seule qui ne déclare aucun paramètre neuf** — le moteur avait
+déjà le bon, appliqué à la mauvaise strate.
+
+**UN COMMENTAIRE QUI CITE UN CHIFFRE DE SORTIE SE PÉRIME EN SILENCE.** Le pin
+portait « 16,4 m simulés » dans son propre commentaire de calibration ; le
+moteur en était à 17,7 m, soit +14,2 % contre une tolérance de 15 %. Personne
+n'avait menti : le moteur avait dérivé sous son commentaire. `pousseMaxMAn`
+passe de 0,50 à 0,45 (0,42 a été écarté : il aurait touché la table aux deux
+âges et fait passer le pin de *validé* à *calé*). **Relire les chiffres de
+sortie cités en commentaire fait partie du lot, comme relire les seuils.**
+
+## Ce qu'un lot plus ancien a appris (la glandée, #197)
 
 Un critère de plus au référentiel, posé et rempli par le même lot — et c'est le
 petit côté. Le grand est ce que la mesure a démoli chez le voisin.
@@ -1753,6 +1872,20 @@ sur la lande). La conclusion a été réécrite pour dire ce que le dispositif
 montre — un gradient monotone sur trois couverts — et non ce qu'on espérait.
 
 ## File d'attente
+
+**Ce que #201 laisse, et c'est le gros morceau.** LE PRÉLÈVEMENT D'AZOTE DE LA
+STRATE EST TROP BAS. La strate rend maintenant sa matière, mais ce qu'elle rend
+est borné par ce qu'elle prend — 31 kg N/ha/an (`HERBE_AZOTE_G_M2_SEMAINE`,
+marqué *(à calibrer)*), soit 0,52 t C/ha/an de litière là où il en faudrait ~1,9
+pour équilibrer la décomposition de l'humus. Une prairie tempérée réelle prélève
+100 à 200 kg N/ha/an. C'est pour cela que C19 est 🟡 et non ✅ : la prairie perd
+encore son humus, à peine moins vite qu'avant. Relever ce chiffre est un lot à
+soi, avec ses propres ancres, et il touchera beaucoup de vert — ne PAS le faire
+en passant. Le reste : PRESSER LA PAILLE (aujourd'hui elle reste au champ par
+défaut ; l'exporter est un geste de gestion avec son prix et ses heures), et la
+RÉTRANSLOCATION, que l'arbre porte déjà (`LITTER_RETURN_FRACTION`) et que la
+strate n'a pas — une plante retire l'azote d'une feuille avant de la lâcher, ce
+qui remonte le C/N de la litière sans rien créer.
 
 **Ce que #197 laisse, et l'essentiel est #199.** LE BOUTIS DÉTRUIT
 LES SEMIS : à ration réelle, le sanglier ne pèse plus sur la régénération du

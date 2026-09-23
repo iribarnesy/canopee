@@ -211,8 +211,11 @@ export interface HerbaceeV0 {
    *    porte plus ; une culture ne fait ni l'un ni l'autre. Son emprise est
    *    posée au semis et remise à zéro à la moisson, et rien entre les deux ne
    *    la fait bouger ;
-   *  - une pérenne rend sa litière à la cellule ; une culture est EXPORTÉE, et
-   *    l'azote du grain quitte la parcelle pour de bon ;
+   *  - une pérenne rend TOUTE sa litière à la cellule ; une culture n'en rend
+   *    que la paille et le chaume, le grain partant pour de bon avec son
+   *    azote. (Cette ligne a longtemps décrit une intention plutôt qu'un
+   *    mécanisme : jusqu'à #201, aucune des deux ne rendait quoi que ce
+   *    soit.) ;
    *  - une parcelle laissée seule se couvre de molinie, jamais de blé.
    *
    * Ce qui ne change PAS : le feuillage suit la saison et la sécheresse comme
@@ -237,6 +240,49 @@ export interface HerbaceeV0 {
     heuresRecolteHa: number;
     /** Coût de la semence, €/ha. */
     semenceEurHa: number;
+    /**
+     * Part de l'azote absorbé par la culture qui QUITTE la parcelle dans le
+     * grain (issue #201).
+     *
+     * Le reste — la paille, le chaume, les racines — est rendu au sol. Sans ce
+     * champ, une céréale restituerait tout ce qu'elle a pris, y compris ce
+     * qu'on vend, et le moteur rendrait l'exportation gratuite.
+     *
+     * Le blé est réputé pour son indice de récolte AZOTÉ élevé : l'essentiel de
+     * l'azote absorbé finit dans le grain, bien plus que la part de biomasse
+     * que le grain représente. C'est d'ailleurs le pendant du C/N de 90 de sa
+     * paille — ce qui reste au champ est riche en carbone et pauvre en azote,
+     * et c'est la même observation vue des deux côtés *(à confirmer)*.
+     */
+    azoteDansLeGrain: number;
+  };
+  /**
+   * CE QUE L'ESPÈCE REND AU SOL (issue #201).
+   *
+   * La strate basse ne rendait RIEN. Mesuré avant ce lot, une prairie
+   * spontanée à 0,95 de couverture sur limon riche : le stock d'humus perd
+   * 42 % en cinquante ans et la litière reste à 0,00 les deux mille six cents
+   * semaines. Park Grass, prairie permanente non fertilisée depuis 1856, tient
+   * son stock. Une prairie ne se décarbonise pas — c'est même le couvert qui
+   * en stocke le plus vite dans l'horizon de surface.
+   *
+   * Le seul retour qui existait était celui de la FAUCHE, et il portait deux
+   * nombres nus (`coupe * 4` et `* 25`) qui sont devenus les constantes
+   * nommées de ce bloc, à la valeur près : la fauche n'a pas bougé d'un
+   * gramme.
+   */
+  litiere: {
+    /**
+     * Rapport C/N de la litière de l'espèce.
+     *
+     * C'est le trait qui décide si un résidu NOURRIT la culture suivante ou
+     * lui VOLE son azote, et l'écart entre les deux bouts est énorme : une
+     * feuille tendre de vernale se minéralise en quelques semaines, une paille
+     * de blé immobilise l'azote du sol pendant un an avant de le rendre.
+     * Ordres de grandeur usuels : feuillage herbacé jeune 15-25, foin de
+     * graminée 25-40, paille de céréale 80-100 *(à confirmer)*.
+     */
+    cSurN: number;
   };
   /**
    * **L'AZOTE DU GRAIN N'EST PAS COMPTÉ À LA MOISSON, et c'est voulu.** Il est
@@ -325,6 +371,9 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // ancienne) : soit ~17 ans pour remplir un mètre carré depuis son bord,
     // étalés sur la quinzaine de semaines où elle végète *(à confirmer)*.
     vitesseInstallation: 0.004,
+    // Une feuille d'anémone est tendre et disparaît en quelques semaines : elle
+    // est du côté bas de la gamme du feuillage herbacé jeune *(à confirmer)*.
+    litiere: { cSurN: 18 },
     sources: [SHIRREFFS_1985],
   },
   {
@@ -370,6 +419,9 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // celle de la reconquête du tapis d'avant ce lot (0,12 par semaine de
     // pleine végétation), pour la même raison que ses seuils de lumière.
     vitesseInstallation: 0.12,
+    // Foin de graminée : le milieu de la gamme, et la valeur que la fauche
+    // portait en dur avant #201 — d'où une fauche inchangée au gramme près.
+    litiere: { cSurN: 25 },
     sources: [BEDDOWS_1959],
   },
   {
@@ -396,6 +448,10 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     tBaseCroissanceC: 8,
     // Touffe, plus lente à couvrir qu'une graminée traçante *(à calibrer)*.
     vitesseInstallation: 0.05,
+    // La molinie fait une touradon sèche et fibreuse qui tient l'hiver : plus
+    // dure qu'un dactyle, et c'est ce qui fait la litière acide d'une lande
+    // à molinie *(à confirmer)*.
+    litiere: { cSurN: 38 },
     sources: [TAYLOR_2001],
   },
   {
@@ -482,7 +538,16 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       heuresSemisHa: 1.5,
       heuresRecolteHa: 1,
       semenceEurHa: 90,
+      azoteDansLeGrain: 0.75,
     },
+    // **La paille de blé, et c'est le trait le plus conséquent du bloc.** Son
+    // C/N est célèbre pour son effet : à 90, elle IMMOBILISE l'azote du sol
+    // le temps que les micro-organismes la digèrent, et ne le rend qu'ensuite.
+    // Enfouir une paille sans apport d'azote fait donc baisser la culture
+    // suivante avant de la faire monter — c'est un fait d'agronomie que le
+    // moteur ne pouvait pas produire tant que la paille n'existait pas
+    // *(à confirmer)*.
+    litiere: { cSurN: 90 },
     sources: [ROTHAMSTED_BROADBALK, AGRESTE_BLE, ARTRU_2019, DUPRAZ_CAPILLON],
   },
 ];
