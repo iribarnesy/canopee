@@ -116,6 +116,18 @@ DIFFÉRENCE absolue (189 g/m² mesurés, seuil à 100), qui est la grandeur que
 l'épandage produit réellement. **Un seuil qui glisse à chaque lot accuse le
 thermomètre, pas le mécanisme.**
 
+Et un troisième cas, arrivé par la CI et pas par le raisonnement : le pin recalé
+a fait tomber `gibier.test.ts`, qui affirmait `pin > 2 × noisetier` sur la
+hauteur à douze ans — 3,266 contre 3,330 demandés, 1,9 % de marge. **Un rapport
+entre DEUX ESPÈCES porte tout ce qui les distingue**, vitesse de croissance
+comprise, et pas seulement ce que l'essai prétend mesurer. Mesuré avec et sans
+gibier : sans dent, le pin et le noisetier font presque la même taille (5,58
+contre 5,13) ; avec, 3,27 contre 1,67. Le « deux fois » n'était pas une
+propriété du pin, c'était la dent qui coupait le noisetier en deux. L'essai
+compare maintenant **chaque espèce à elle-même** — 41,5 % de perte pour le pin,
+67,6 % pour le noisetier — et la croissance propre se simplifie. *Le témoin
+apparié coûte un bras de plus et rend un énoncé qui ne glissera pas.*
+
 **QUAND UN FICHIER ÉCRIT « ON NE PRÉTEND PAS MESURER L'AMPLEUR », LE PRENDRE AU
 MOT.** Deux fois dans ce lot j'ai exigé d'un essai plus qu'il ne prétend. Dans
 `litiere.test.ts` j'ai d'abord demandé que la hauteur, le diamètre ET le volume

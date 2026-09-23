@@ -131,13 +131,53 @@ describe("le piège à dents", () => {
 });
 
 describe("la sélectivité réoriente la composition", () => {
-  it("à pression égale, le pin s'en sort là où le noisetier est bloqué", () => {
-    const pin = plantation("pinus_sylvestris", { protege: false, gibierParHa: 0.4 });
-    const noisetier = plantation("corylus_avellana", { protege: false, gibierParHa: 0.4 });
-    // Rien n'est codé « le pin échappe au gibier » : c'est son appétence de
-    // 0,2 contre 0,9 qui produit l'écart.
-    expect(pin.hauteurMediane).toBeGreaterThan(2 * noisetier.hauteurMediane);
-  });
+  it("à pression égale, le pin perd bien moins de sa hauteur que le noisetier", () => {
+    // **CET ESSAI COMPARAIT DEUX ESPÈCES ; IL COMPARE MAINTENANT CHACUNE À
+    // ELLE-MÊME**, et le changement de grandeur n'est pas cosmétique.
+    //
+    // Il affirmait `pin > 2 × noisetier` sur la hauteur médiane à douze ans.
+    // C'était un RAPPORT ENTRE DEUX ESPÈCES, donc une grandeur qui porte tout
+    // ce qui distingue un pin d'un noisetier — vitesse de croissance, forme,
+    // longévité — et pas seulement ce que l'essai prétend mesurer, qui est
+    // l'appétence. Il a fini par tomber en calant le pin sur sa table de
+    // production (#201, `pousseMaxMAn` 0,50 → 0,45, un pin qui avait dérivé de
+    // 1,3 m sous son propre commentaire) : 3,266 contre 3,330 demandés, soit
+    // 1,9 % de marge. **Le mécanisme n'avait pas bougé d'un cheveu ; c'est le
+    // thermomètre qui était accroché à un nombre juste à côté.**
+    //
+    // Mesuré, hauteur médiane à douze ans, avec et sans gibier :
+    //
+    //                     0,4 cervidé/ha   sans gibier   perte
+    //     pin (app. 0,2)       3,266          5,579      41,5 %
+    //     noisetier (0,9)      1,665          5,131      67,6 %
+    //     chêne pubescent      0,689          3,051      77,4 %
+    //
+    // La ligne du milieu dit pourquoi le rapport était fragile : **sans gibier,
+    // le pin et le noisetier font presque la même taille** (5,58 contre 5,13,
+    // 8,7 % d'écart). Le « deux fois » n'était donc pas une propriété du pin,
+    // c'était la dent du chevreuil qui coupait le noisetier en deux — et le
+    // facteur 2 tombait pile là où le pin, un peu trop grand, le portait.
+    //
+    // Ce que l'essai affirme maintenant est la chose que l'appétence produit,
+    // et elle seule : **à pression égale, l'espèce appétente perd bien plus de
+    // sa hauteur que l'espèce dédaignée.** Chaque bras est son propre témoin,
+    // donc la croissance propre à l'espèce se simplifie. Rien n'est codé « le
+    // pin échappe au gibier » : c'est 0,2 contre 0,9 dans l'atlas.
+    const pinNu = plantation("pinus_sylvestris", { protege: false, gibierParHa: 0.4 });
+    const pinLibre = plantation("pinus_sylvestris", { protege: false, gibierParHa: 0 });
+    const noisetierBroute = plantation("corylus_avellana", { protege: false, gibierParHa: 0.4 });
+    const noisetierLibre = plantation("corylus_avellana", { protege: false, gibierParHa: 0 });
+    const perte = (nu: Resultat, libre: Resultat) => 1 - nu.hauteurMediane / libre.hauteurMediane;
+    const pertePin = perte(pinNu, pinLibre);
+    const perteNoisetier = perte(noisetierBroute, noisetierLibre);
+    // Le pin n'est pas épargné — 0,2 n'est pas 0 — mais il garde la majorité de
+    // sa hauteur là où le noisetier en laisse les deux tiers.
+    expect(pertePin).toBeGreaterThan(0);
+    expect(pertePin).toBeLessThan(0.5);
+    // Vingt-six points d'écart mesurés ; le seuil est une MARGE, pas une
+    // ancre — ce qui est ancré est le sens, que porte le trait d'appétence.
+    expect(perteNoisetier - pertePin).toBeGreaterThan(0.15);
+  }, 120_000);
 
   it("une pression forte fait plus de dégâts qu'une pression faible", () => {
     const faible = plantation("quercus_pubescens", { protege: false, gibierParHa: 0.03 });
