@@ -80,6 +80,23 @@ export const TABLE: Record<string, Reference> = {
   // ans — 6 % sous celle-ci. Les deux encadrent le moteur, qui était sous les
   // deux.
   carpinus_betulus: { nom: "Charme", h20: 9.9, h40: 16.3 },
+  // Lockow 1996, *Ertragstafel für die Sandbirke*, Forstliche Forschungsanstalt
+  // Eberswalde, pour le nord-est allemand : bonité absolue HO100 = 24 m
+  // (III. Ekl.), classe MÉDIANE des cinq (I 32 / II 28 / III 24 / IV 20 /
+  // V 16 m à cent ans). Colonne HO du tirage de la III.
+  //
+  // ELLE COMBLE LE TROU QUE LA FICHE ANNONÇAIT : jusqu'ici la seule table de
+  // bouleau du corpus était norvégienne (Braastad 1967), donc boréale, et le
+  // dépôt avait refusé de la transposer à un bocage à 11,5 °C — refus qui
+  // tient toujours. Celle-ci est de plaine tempérée, et c'est le même auteur
+  // et la même région que la table de charme déjà employée : géographie à
+  // décoter de la même façon, subcontinentale sèche.
+  //
+  // ET C'EST UNE VALIDATION HORS ÉCHANTILLON, pas un calage : `pousseMaxMAn`
+  // valait déjà 0,9 avant qu'on trouve cette table, posé comme « estimation
+  // honnête » faute de mieux. Mesuré contre elle : +9 % à vingt ans, −2 % à
+  // quarante. Personne n'a touché à ce nombre pour obtenir ce résultat.
+  betula_pendula: { nom: "Bouleau verruqueux", h20: 12.2, h40: 20.0 },
   // Faisceau de courbes des TAILLIS de châtaignier en France (Lemaire 2005,
   // SUF-IDF, publié par le CRPF Île-de-France–Centre 2013). Les seules valeurs
   // écrites du faisceau sont les hauteurs dominantes à 25 ans : 21 / 18,5 / 16
