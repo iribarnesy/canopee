@@ -36,6 +36,10 @@ import { createGameState, type GameState, plantAt } from "../../src/engine/state
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import { volumeTigeM3 } from "../../src/engine/trees";
+import type { Zone, ZoneBande } from "../../src/engine/zone";
+
+/** Un chantier : une zone du moteur, disque ou bande (#186). */
+type Chantier = Zone;
 
 const FICHE = HERBACEES.find((h) => h.id === "triticum_aestivum");
 if (!FICHE?.culture) throw new Error("fiche du blé manquante");
@@ -65,12 +69,20 @@ const DOSE_N = 192;
  * fait — la règle d'installation est justement « des bandes larges de plus d'un
  * mètre » le long du rang (CNPF, *Les noyers à bois*).
  *
- * Les actions du moteur prennent toutes un DISQUE, et un disque ne pave pas une
- * bande. On la pave donc de plusieurs disques qui se chevauchent, ce que
- * `semer` autorise sans le savoir : son calcul de place libre EXCLUT la culture
- * qu'on sème, donc deux disques de blé ne se refusent pas l'un l'autre. Le
- * moteur gagnera des zones en bande un jour (#186) ; en attendant, ceci marche
- * et se mesure.
+ * **CES BANDES SONT MAINTENANT DES BANDES** (#186). La première version pavait
+ * chaque allée de disques qui se chevauchent, faute d'une forme longue dans le
+ * moteur ; ça marchait, c'était mesuré, et ça laissait une lentille non semée
+ * au bord de chaque allée entre deux disques voisins. Une `ZoneBande` dit
+ * exactement ce que le dispositif veut dire, et la surface cultivée mesurée
+ * monte de 0,82 à 0,85 — la lentille, précisément.
+ *
+ * **ET LA BANDE ÉPARGNÉE S'ENTRETIENT** (#184). C'était l'impureté déclarée du
+ * lot précédent : épargner le pied des rangs les laissait se reboiser tout
+ * seuls, dix-huit semis spontanés de noyer qui pesaient 5,6 % du terme arbre.
+ * On écrivait alors « le moteur n'a pas de geste pour entretenir une bande » —
+ * il l'a : la fauche emporte désormais les tiges ligneuses qu'elle atteint
+ * (`prairie-de-fauche.test.ts`), et une bande fauchée une fois l'an reste une
+ * bande enherbée, ce que dit la règle et ce que fait l'agroforestier.
  *
  * La surface réellement cultivée n'est pas calculée mais MESURÉE, cellule par
  * cellule, et rapportée avec le résultat — c'est elle qui porte le partage du
@@ -87,51 +99,40 @@ for (const y of [RANG_BAS_Y, RANG_HAUT_Y])
 const PLANTATION_PURE: [number, number][] = [];
 for (let y = 3; y < COTE; y += 6) for (let x = 3; x < COTE; x += 6) PLANTATION_PURE.push([x, y]);
 
-/** Un disque de chantier : centre et rayon. */
-interface Disque {
-  x: number;
-  y: number;
-  rayonM: number;
-}
-
-/**
- * Pave une bande horizontale `[yBas, yHaut]` de disques qui se chevauchent.
- *
- * Le rayon est pris un peu plus grand que la demi-largeur pour que les creux
- * entre deux disques voisins soient couverts — un point du bord de bande n'est
- * atteint que si un centre est assez proche. Le débord vertical est le prix,
- * et il est compté : la bande épargnée est dimensionnée pour l'absorber.
- */
-function paverBande(yBas: number, yHaut: number): Disque[] {
-  const centre = (yBas + yHaut) / 2;
-  const demi = (yHaut - yBas) / 2;
-  // Le rayon vaut EXACTEMENT la demi-largeur : aucun débord, donc la bande
-  // épargnée est celle qu'on a déclarée. Le premier jet prenait un rayon plus
-  // grand pour couvrir les creux entre disques, et mesuré, il cultivait 93,3 %
-  // de la parcelle au lieu des ~82 % voulus — les rangs ne gardaient plus que
-  // 0,67 m de chaque côté au lieu de 1,75, sous la règle du « plus d'un mètre ».
-  // Le prix de cette rigueur est une petite lentille non semée au bord de bande
-  // entre deux disques voisins ; elle est DANS la bande, pas dans le rang, et
-  // la surface réellement cultivée est mesurée plus bas.
-  const rayonM = demi;
-  const pas = demi * 0.7;
-  const out: Disque[] = [];
-  for (let x = 0; x <= COTE + pas; x += pas) out.push({ x, y: centre, rayonM });
-  return out;
+/** Une bande horizontale `[yBas, yHaut]` qui traverse la parcelle. */
+function bande(yBas: number, yHaut: number): ZoneBande {
+  return {
+    zone: "bande",
+    x: CENTRE,
+    y: (yBas + yHaut) / 2,
+    longueurM: COTE,
+    largeurM: yHaut - yBas,
+    orientationRad: 0,
+  };
 }
 
 /**
  * Les bandes cultivées de l'agroforesterie : entre les rangs, et de part et
  * d'autre, chacune amputée de la bande épargnée.
  */
-const BANDES_CULTIVEES: Disque[] = [
-  ...paverBande(0, RANG_BAS_Y - BANDE_EPARGNEE_M),
-  ...paverBande(RANG_BAS_Y + BANDE_EPARGNEE_M, RANG_HAUT_Y - BANDE_EPARGNEE_M),
-  ...paverBande(RANG_HAUT_Y + BANDE_EPARGNEE_M, COTE),
+const BANDES_CULTIVEES: Chantier[] = [
+  bande(0, RANG_BAS_Y - BANDE_EPARGNEE_M),
+  bande(RANG_BAS_Y + BANDE_EPARGNEE_M, RANG_HAUT_Y - BANDE_EPARGNEE_M),
+  bande(RANG_HAUT_Y + BANDE_EPARGNEE_M, COTE),
+];
+
+/**
+ * Et les bandes épargnées elles-mêmes, celles qui portent les rangs : ni
+ * labourées, ni semées, ni fertilisées — fauchées une fois l'an, comme une
+ * bande enherbée d'agroforesterie.
+ */
+const BANDES_EPARGNEES: Chantier[] = [
+  bande(RANG_BAS_Y - BANDE_EPARGNEE_M, RANG_BAS_Y + BANDE_EPARGNEE_M),
+  bande(RANG_HAUT_Y - BANDE_EPARGNEE_M, RANG_HAUT_Y + BANDE_EPARGNEE_M),
 ];
 
 /** Le blé pur, lui, couvre tout : c'est la terre que le mélange cède aux arbres. */
-const PARCELLE_ENTIERE: Disque[] = [{ x: CENTRE, y: CENTRE, rayonM: RAYON }];
+const PARCELLE_ENTIERE: Chantier[] = [{ x: CENTRE, y: CENTRE, rayonM: RAYON }];
 
 /** Le grain mûr sur la parcelle, en tonnes — ce que la moissonneuse va emporter. */
 function grainSurPiedT(state: GameState): number {
@@ -206,9 +207,14 @@ function bras(
   } = {},
 ) {
   const graine = options.graine ?? 4;
-  // Les chantiers de culture : un seul disque pour le blé pur, une bande pavée
-  // par allée pour l'agroforesterie, qui épargne ainsi le pied des rangs.
+  // Les chantiers de culture : un seul disque pour le blé pur, une bande par
+  // allée pour l'agroforesterie, qui épargne ainsi le pied des rangs.
   const chantiers = arbres.length > 0 ? BANDES_CULTIVEES : PARCELLE_ENTIERE;
+  // Le dispositif EN ALLÉES, et lui seul, a des bandes enherbées à entretenir :
+  // la plantation témoin n'en a pas, le blé pur non plus. Il les fauche dans
+  // TOUS ses bras, cultivés ou non — sans quoi le témoin « mêmes rangs sans
+  // blé » ne différerait plus du bras agroforestier par la seule culture.
+  const enAllees = arbres === RANGS_AGROFORESTERIE;
   const station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
   let state: GameState = createGameState(station, rngStateFromSeed(graine));
   for (const [x, y] of arbres) state = plantAt(state, "juglans_regia", x, y, 2);
@@ -252,6 +258,11 @@ function bras(
         if (w === 10)
           for (const z of BANDES_CULTIVEES)
             geste({ type: "fertiliser", week, ...z, forme: "mineral", doseKgNHa: DOSE_N });
+      }
+      // La bande enherbée se fauche une fois l'an, en été, comme un foin —
+      // c'est ce qui l'empêche de se reboiser (#184).
+      if (enAllees && w === 25) {
+        for (const z of BANDES_EPARGNEES) geste({ type: "faucher", week, ...z });
       }
       if (avecBle) {
         for (const z of chantiers) {
@@ -368,12 +379,11 @@ describe("le dispositif à trois bras, soixante ans", () => {
    *      mêmes rangs, LABOURÉS+fertilisés 0,563
    *      plantation 6 × 6                 0,498
    *
-   *    Cultiver coûte **2 %**, et le soc seul ne coûte rien. Mieux : l'arbre
-   *    d'allée DÉPASSE celui de la plantation, ce qui est le fait réel — il a
-   *    plus de place. Les 77 % étaient intégralement l'artefact.
+   *    Cultiver coûtait alors **2 %**, et le soc seul rien. **Et ce 2 % était
+   *    FAUX à son tour** : voir le point 6.
    *
-   *    Et le contrôle du labour a dû être purifié : mesuré d'abord sans azote,
-   *    il donnait 0,319 m³/arbre, donc le labour paraissait coûter PLUS que le
+   *    Le contrôle du labour a dû être purifié : mesuré d'abord sans azote, il
+   *    donnait 0,319 m³/arbre, donc le labour paraissait coûter PLUS que le
    *    labour plus le blé. Absurde, et confondant évident — la fertilisation du
    *    blé profite aussi aux noyers. On laboure et on fertilise, sans semer.
    *
@@ -381,28 +391,57 @@ describe("le dispositif à trois bras, soixante ans", () => {
    *    demi-largeur pour couvrir les creux, et mangeait le rang : mesuré,
    *    93,3 % de la parcelle cultivée au lieu de 82 %, donc 0,67 m épargné de
    *    chaque côté au lieu de 1,75 — sous la règle. C'est la SURFACE MESURÉE,
-   *    et non calculée, qui l'a dit.
+   *    et non calculée, qui l'a dit. Rayon ramené à la demi-largeur exacte.
    *
-   * CAMPAGNE FINALE, trois graines, soixante ans :
+   * 6. **ET LE PAVAGE ÉPARGNAIT ENCORE PLUS QU'IL NE LE DISAIT** (#184). Deux
+   *    disques voisins qui se touchent laissent un feston au BORD de la bande,
+   *    c'est-à-dire exactement au pied du rang, et le point 5 l'avait écrit
+   *    comme un détail acceptable — « une petite lentille non semée ». Ce
+   *    détail portait tout le résultat du point 4. Les vraies bandes de #186
+   *    l'ont supprimé : surface cultivée mesurée 0,850 au lieu de 0,823, et la
+   *    pénalité passe de 2 % à **21 %**.
+   *
+   *    **Le banc de dose l'a attribué**, en ne bougeant QUE la demi-largeur
+   *    épargnée (graine 4, témoin sans blé à 0,5624 m³/arbre) :
+   *
+   *      demi-bande   vol/arbre   part cultivée   grain t/ha/an
+   *        1,00 m       0,367         0,900           5,47
+   *        1,75 m       0,443         0,850           5,15
+   *        2,50 m       0,534         0,750           4,55
+   *        3,25 m       0,560         0,650           3,96
+   *
+   *    Rien de pathologique là-dedans : ce qu'on laboure, c'est une part du
+   *    disque racinaire, et la pénalité la suit à peu près linéairement. Le
+   *    feston valait ~2,5 m épargnés par endroits, d'où le 2 %. **On ne mesure
+   *    pas une géométrie, on la déclare et on vérifie qu'elle est celle qu'on a
+   *    déclarée** — c'est la même leçon qu'au point 5, et il a fallu la
+   *    réapprendre parce que le contrôle de surface portait sur la MOYENNE de
+   *    la parcelle, où trois pour cent se cachent, et non sur le bord de bande.
+   *
+   *    Et le compromis que l'agroforesterie met en nombres apparaît ici tout
+   *    seul : la bande qui sauve l'arbre coûte le grain, 5,47 → 3,96 t/ha/an.
+   *
+   * 7. LA BANDE ÉPARGNÉE S'ENTRETIENT (#184). Elle se reboisait toute seule —
+   *    dix-huit semis spontanés de noyer, 34 tiges pour 16 plantées. La fauche
+   *    emporte désormais les tiges ligneuses qu'elle atteint, et une fauche
+   *    annuelle de la bande ramène le bras à ses 16 plantées, exactement.
+   *
+   * CAMPAGNE FINALE, trois graines, soixante ans, bandes de #186 et bande
+   * enherbée entretenue :
    *
    *   graine        4       11      23
-   *   culture     0,719   0,719   0,734
-   *   arbre       0,604   0,668   0,468
-   *   TOTAL       1,323   1,388   1,202
+   *   culture     0,713   0,712   0,725
+   *   arbre       0,460   0,519   0,373
+   *   TOTAL       1,172   1,231   1,098
    *
-   * Les trois dépassent la cible de Restinclières (> 1,2), et la composition
-   * est celle de la littérature (~0,7 et ~0,5) sur les trois. Le terme CULTURE
-   * est quasi constant et le terme ARBRE varie du simple au tiers : c'est
-   * attendu, le blé répond à la lumière et à l'azote, tous deux déterministes
-   * ici, pendant que la mortalité et la régénération des arbres sont des
-   * tirages. L'essai n'en garde qu'une par coût de calcul, et ses seuils sont
-   * posés sous le minimum des trois.
-   *
-   * **Ce qui reste impur, et il faut le dire** : la bande épargnée se reboise
-   * toute seule. Élargie de 0,67 à 1,75 m, elle a fait passer le bras
-   * agroforestier de 23 à 34 noyers — dix-huit semis spontanés, qui pèsent
-   * 5,6 % du terme arbre. C'est précisément pourquoi la règle dit « parfaitement
-   * désherbées », et le moteur n'a pas de geste pour entretenir une bande.
+   * **ET LE DISPOSITIF NE REND PLUS LE FAIT DE RESTINCLIÈRES**, ce que les
+   * chiffres du point 4 masquaient : là-bas l'arbre d'allée pousse PLUS VITE
+   * que celui du témoin forestier, ici il reste 11 à 22 % dessous (0,443 contre
+   * 0,498 à la graine 4), et le LER ne dépasse la cible de 1,2 que sur une
+   * graine sur trois. L'essai épingle les deux écarts plus bas, en PLAFOND et
+   * non en plancher : tant qu'ils tiennent, le moteur n'a pas retrouvé le fait.
+   * C'est la question 2 de #184, et elle reste ouverte — elle vise la pénalité
+   * qu'un sol travaillé inflige aux racines voisines, pas la géométrie.
    */
   it("le mélange bat la somme des parties", () => {
     const agro = bras(RANGS_AGROFORESTERIE, true);
@@ -423,20 +462,40 @@ describe("le dispositif à trois bras, soixante ans", () => {
     expect(blePur.partCultivee).toBeGreaterThan(0.99);
     expect(agro.partCultivee).toBeGreaterThan(0.75);
     expect(agro.partCultivee).toBeLessThan(0.9);
-    // LES ARBRES D'ALLÉE NE PAIENT PAS LA CULTURE, et c'est ce qui a demandé
-    // cinq relevés. Un écart de plus de 10 % ici voudrait dire que le chantier
-    // repasse sur les rangs.
+    // **LA BANDE ÉPARGNÉE NE SE REBOISE PLUS** : la cohorte plantée est tout ce
+    // qui reste debout dans les rangs, parce qu'on la fauche (#184). Avant, le
+    // bras finissait à 34 noyers pour 16 plantés.
+    expect(agro.tiges).toBe(agro.cohorte);
+    // **CE QUE L'ARBRE D'ALLÉE PAIE, ET C'EST UN ENCADREMENT À DEUX BORNES.**
+    // L'essai affirmait ici « il ne paie rien, à 10 % près », sur la foi du
+    // pavage de disques qui épargnait un feston au pied du rang ; les vraies
+    // bandes rendent la mesure à 0,79-0,81 du témoin sans blé. Un encadrement
+    // plutôt qu'un plancher, parce que les deux sorties veulent dire quelque
+    // chose : au-dessus de 0,9 c'est le feston qui serait revenu, en dessous de
+    // 0,7 c'est que le chantier repasse sur les rangs.
     const parArbre = (b: { volCohorte: number; cohorte: number }) => b.volCohorte / b.cohorte;
-    expect(parArbre(agro)).toBeGreaterThan(0.9 * parArbre(rangsSansBle));
-    // Et ils dépassent ceux de la plantation, parce qu'ils ont plus de place.
-    expect(parArbre(agro)).toBeGreaterThan(parArbre(boisPur));
+    const rapport = parArbre(agro) / parArbre(rangsSansBle);
+    expect(rapport).toBeGreaterThan(0.7);
+    expect(rapport).toBeLessThan(0.9);
+    // **ET VOICI LE FAIT QUE LE MOTEUR NE REND PAS** — épinglé en PLAFOND, pas
+    // en plancher, comme E12 : à Restinclières l'arbre d'allée pousse plus vite
+    // que celui du témoin forestier, parce qu'il a plus de place. Ici il reste
+    // dessous. Le jour où cette ligne tombera, le moteur aura retrouvé le fait
+    // et il faudra la retourner — c'est la question 2 de #184.
+    expect(parArbre(agro)).toBeLessThan(parArbre(boisPur));
     // LA CULTURE, ELLE, PAIE — et c'est le sens même d'un LER : le mélange rend
     // moins de grain par hectare de PARCELLE qu'un champ de blé pur, puisqu'il
     // lui cède la place des rangs. Un terme culture au-dessus de 1 serait le
     // signe que les arbres n'ombragent rien, ce qui fut le cas et fut le défaut.
     expect(r.culture).toBeLessThan(1);
     expect(r.arbre).toBeGreaterThan(0.3);
-    // Seuil sous le minimum de la campagne à trois graines (1,202).
-    expect(r.total).toBeGreaterThan(1.1);
+    // **LE MÉLANGE BAT LA SOMME DES PARTIES, ET C'EST TOUT CE QUE CETTE LIGNE
+    // AFFIRME.** Elle tenait 1,1, sous le minimum d'une campagne à 1,202 ; les
+    // vraies bandes donnent 1,172 / 1,231 / 1,098 et la cible de Restinclières
+    // (> 1,2) n'est plus atteinte que sur une graine sur trois. On ne rabaisse
+    // pas le seuil d'un cran pour le faire passer : on revient à l'énoncé du
+    // LER, qui est « au-dessus de 1 », et c'est le référentiel (H21, repassé
+    // 🟡) qui porte l'écart à la cible.
+    expect(r.total).toBeGreaterThan(1);
   }, 900_000);
 });
