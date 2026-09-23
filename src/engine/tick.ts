@@ -1680,7 +1680,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // pérenne rend tout, une culture garde dans son grain l'azote qui
           // quittera la parcelle (`azoteDansLeGrain`, herbacees.ts).
           const pris = (azoteCellule * poids) / poidsTotal;
-          const n = pris * (1 - (fiche.culture?.azoteDansLeGrain ?? 0));
+          // **LA RÉTRANSLOCATION, et c'est le même patron que l'arbre.** Une
+          // plante retire l'azote d'un organe avant de le lâcher : une feuille
+          // qui jaunit a déjà rendu la moitié de son azote au reste de la
+          // plante, et c'est pour cela qu'une litière est toujours plus pauvre
+          // que le tissu vivant dont elle vient. `LITTER_RETURN_FRACTION` porte
+          // exactement ça pour l'arbre — *« part de l'azote acquis dans l'année
+          // qui retourne au sol avec les feuilles ; le reste est retenu »* — et
+          // il n'y a aucune raison que la strate s'en dispense.
+          //
+          // *Ce que ça laisse de côté, et c'est la même dette que pour
+          // l'arbre* : la part retenue devrait vivre dans un pool d'azote de la
+          // plante, et le moteur n'en a pas. Elle n'est donc pas rendue, ce qui
+          // reste une fuite — mais la moitié de celle d'avant ce lot, et une
+          // fuite NOMMÉE, adossée à un fait (la rétranslocation) plutôt qu'à un
+          // oubli.
+          const n = pris * LITTER_RETURN_FRACTION * (1 - (fiche.culture?.azoteDansLeGrain ?? 0));
           if (n <= 0) continue;
           const c = n * fiche.litiere.cSurN;
           // Le carbone est CRÉDITÉ à la production primaire — c'est la plante
