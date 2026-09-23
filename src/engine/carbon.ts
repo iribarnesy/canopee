@@ -226,7 +226,42 @@ export function livingCarbonKg(trees: readonly TreeState[]): number {
   return sum;
 }
 
-export function carbonInventory(state: GameState, initialHumusTHa: number): CarbonInventory {
+/**
+ * Fige le point zéro du bilan carbone sur ce que la parcelle porte MAINTENANT
+ * (issue #202).
+ *
+ * À appeler une fois, au moment où le joueur prend la main — c'est-à-dire après
+ * la maturation, et seulement là. Avant, la couche jeu passait
+ * `station.initialSoilCTHa` au bilan, qui est le carbone du PROFIL : une
+ * parcelle boisée toute seule pendant soixante ans offrait cent tonnes d'avance
+ * gratuite (`state.ts`, `carboneDeReferenceTHa`).
+ *
+ * Le total figé est celui du bilan, bois d'œuvre en stock compris, pour que
+ * `bilanNetTHa` vaille exactement zéro à la semaine d'arrivée quelle que soit
+ * la maturation. **Conséquence voulue, et c'est le sens du jeu : arriver sur
+ * une vieille chênaie et la raser fait plonger le bilan.**
+ */
+export function figerCarboneDeReference(state: GameState): GameState {
+  const areaHa = (state.station.coteM * state.station.coteM) / 10_000;
+  const inv = carbonInventory(state);
+  return {
+    ...state,
+    carboneDeReferenceTHa: inv.totalTHa + state.carbon.oeuvreStockKgC / 1000 / areaHa,
+  };
+}
+
+/**
+ * L'inventaire carbone de la parcelle, et son écart au point de départ.
+ *
+ * `reference` n'est là que pour les bancs qui veulent un autre point zéro (zéro
+ * tout court, par exemple, pour lire des stocks bruts). **Une partie n'en passe
+ * pas** : le point zéro appartient à l'état, et le lui passer de l'extérieur est
+ * exactement le défaut qu'a corrigé #202.
+ */
+export function carbonInventory(
+  state: GameState,
+  reference: number = state.carboneDeReferenceTHa,
+): CarbonInventory {
   const areaHa = (state.station.coteM * state.station.coteM) / 10_000;
   const nCells = state.soil.litterCG.length;
   let litterG = 0;
@@ -261,6 +296,6 @@ export function carbonInventory(state: GameState, initialHumusTHa: number): Carb
     // DEDANS. Avant l'issue #72, c'est le cumul qui était crédité : une
     // palette vendue en 2030 comptait encore en 2090, et vendre du bois
     // devenait un geste climatique gratuit et définitif.
-    bilanNetTHa: totalTHa + state.carbon.oeuvreStockKgC / 1000 / areaHa - initialHumusTHa,
+    bilanNetTHa: totalTHa + state.carbon.oeuvreStockKgC / 1000 / areaHa - reference,
   };
 }

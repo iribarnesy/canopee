@@ -164,6 +164,11 @@ export function simulate(
  */
 export type BilanCarbone = ReturnType<typeof carbonInventory>;
 
-export function bilanDeLaSonde(sc: StationClimat, finalState: GameState): BilanCarbone {
-  return carbonInventory(finalState, sc.station.initialSoilCTHa);
+/**
+ * Le bilan carbone d'une sonde. La station ne sert plus : le point zéro est
+ * dans l'état depuis #202, et la sonde ne vieillit pas sa parcelle — elle part
+ * donc du carbone du profil, comme avant.
+ */
+export function bilanDeLaSonde(finalState: GameState): BilanCarbone {
+  return carbonInventory(finalState);
 }

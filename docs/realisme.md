@@ -102,11 +102,11 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | F. Dynamique des peuplements | 16 | 3 | 1 | 20 |
 | G. Faune et santé | 11 | 0 | 0 | 11 |
 | H. Gestion, économie, travail | 16 | 5 | 0 | 21 |
-| I. Carbone | 9 | 0 | 0 | 9 |
+| I. Carbone | 10 | 0 | 0 | 10 |
 | J. Biodiversité et structure | 9 | 0 | 0 | 9 |
-| **Total** | **132** | **23** | **1** | **156** |
+| **Total** | **133** | **23** | **1** | **157** |
 
-**Score de réalisme : 132 pleins + 23 partiels sur 156 → 92 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 133 pleins + 23 partiels sur 157 → 92 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -235,7 +235,16 @@ AZOTE, l'herbe n'ayant pas de masse dans ce moteur. Le « +30 % de la fauche »
 était de l'engrais fabriqué par le geste, et « l'aulne améliore son voisin » un
 témoin volé par sa propre herbe. Deux points de score pour trois défauts de
 conservation réparés : c'est ce que coûte un référentiel qui cesse de compter
-des faits qui n'en sont pas)**.*
+des faits qui n'en sont pas)
+→ 92 % (le boutis arrache ce qui a levé : le sanglier retrouve une prise sur la
+chênaie, et ce n'est pas celle qu'il avait — il ne mange pas la glandée, il
+laboure les semis qui en sortent. Aucun point gagné, G10 était déjà vert : ce
+qui change est qu'il l'est maintenant pour la bonne raison, et sur un gradient
+décroissant sur cinq graines sur cinq)
+→ 92 % (le bilan carbone part de ce que le joueur TROUVE, arbres compris : une
+parcelle boisée toute seule pendant soixante ans lui offrait cent huit tonnes
+d'avance gratuite. Un critère de plus au référentiel, posé et rempli par le même
+lot)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -437,6 +446,7 @@ maladie-là, pas une preuve de santé.*
 | I9 | Un incendie renvoie d'un coup le carbone accumulé | ✅ | `feu.ts` ; `feu.test.ts` |
 | I7 | L'allométrie biomasse→carbone est plausible par espèce | ✅ | `trees.ts` : le volume découle de la géométrie, `V = f × g × h` avec un facteur de forme de 0,5 et une expansion de branchage de 1,3. L'ancien proxy en `0,015·H²`, confronté au diamètre, impliquait un tronc jusqu'à 9,6 fois plus plein que son propre cylindre — impossible par construction. La densité qui convertit ce volume en matière sèche est désormais une INFRADENSITÉ (masse anhydre / volume vert) et non plus une densité du commerce à 12 % d'humidité : 17 des 26 espèces la tiennent d'une source ouverte — table IGN d'après Dupouey 2002 (annexe 3 de la méthode CNPF du label bas-carbone) pour les feuillus français, Global Wood Density Database (Zanne et al. 2009, doi:10.5061/dryad.234) pour le reste — et les 9 autres, sous-arbrisseaux de lande et de haie qu'aucune des deux ne couvre, gardent leur valeur d'avant en le disant dans leur fiche. Aucun facteur global : le troène MONTE (0,75 → 0,81), le chêne-liège ne bouge pas, le charme perd un quart (#68). Un hêtre de 25 m et 50 cm stocke 1 078 kg C contre 1 333 avant et 3 917 avant #62. **L'ancre discrimine enfin** : elle porte sur la TIGE, dont le volume ne fait pas débat (2,454 m³ ici, 2,528 par le tarif français EMERGE), et la borne à 1 307–1 624 kg de matière sèche — enveloppe des quatre équations de biomasse de tige applicables à cet arbre dans Zianis et al. 2005, Silva Fennica Monographs 4. Le moteur y place 1 350 kg ; à l'ancienne densité il en plaçait 1 669 et l'essai TOMBE, ce qui est la preuve que le correctif en est un |
 | I8 | Le bilan peut être négatif au début d'une plantation | ✅ | `bilan-carbone-plantation.test.ts` — le total des stocks perd 11,6 à 11,8 t C/ha après labour, creux aux 12ᵉ–13ᵉ années, retour au-dessus du départ aux 25ᵉ–26ᵉ. **Et la mesure corrige l'énoncé** : le creux existe SANS labour (−8,2 à −8,5 t C/ha, croisement aux 23ᵉ–24ᵉ années). Ce n'est pas le travail du sol qui rend le bilan négatif — c'est la jeunesse du peuplement, qui ne rend rien à la litière pendant que l'humus se minéralise à 1,5 %/an. Le labour aggrave de 40 % et retarde de deux ans |
+| I10 | Le bilan se compte depuis ce que la parcelle PORTAIT à l'arrivée du joueur, arbres compris | ✅ | `figerCarboneDeReference` (`carbon.ts`) ; `reference-carbone.test.ts` — le compteur n'est jamais parti de zéro tonne : `bilanNetTHa` est un écart, et une parcelle nue démarre à 0,00 en portant déjà 73,97 t C/ha de profil. **Mais la référence ne bougeait pas quand la parcelle, elle, avait vieilli** ([#202](https://github.com/iribarnesy/canopee/issues/202)) : `faireVieillir` (A26) fait tourner le moteur des décennies avant l'arrivée du joueur — la friche se boise toute seule — et le bilan restait calé sur `station.initialSoilCTHa`, une constante de la fiche. Mesuré, limon riche, à la semaine 0 du joueur : **0 an −0,00 t/ha ; 10 ans +0,06 ; 30 ans +45,48 ; 60 ans +107,61**, dont 119,91 t/ha de bois vivant à soixante ans. Le joueur lisait « vous avez stocké 108 tonnes à l'hectare » avant d'avoir posé un plant. Et le défaut avait une seconde face : l'humus BAISSE pendant la maturation (73,97 → 56,31 en trente ans), donc la référence surestimait le sol en même temps qu'elle ignorait les arbres — les deux erreurs s'additionnaient dans deux cases du même total. Le point zéro est désormais l'inventaire COMPLET figé à l'instant où le joueur prend la main, et il appartient à la partie (donc à la sauvegarde), au même titre que `graineMarche`. Témoin exact : à maturation nulle la valeur figée vaut `initialSoilCTHa` au centième près, donc rien ne change pour une parcelle neuve. Conséquence voulue : **arriver sur une vieille chênaie et la raser fait plonger le bilan**, là où elle offrait cent tonnes d'avance gratuite. *Ce que ce critère ne dit PAS, et qui est un autre critère : « stocker plus qu'au départ » n'est pas « stocker plus qu'en ne faisant rien ». Sur une prairie à l'équilibre les deux coïncident (#201 vient de rendre cet équilibre réel) ; sur une friche qui se serait boisée seule, le vrai repère est la TRAJECTOIRE d'un témoin, ce qui demanderait de faire tourner une parcelle fantôme.* |
 
 ---
 

@@ -61,7 +61,53 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le boutis arrache, #199)
+## Ce que le dernier lot a appris (le point zéro du carbone, #202)
+
+Le lot le plus court de la série, et celui dont l'énoncé était déjà écrit par le
+propriétaire : *« si on arrive sur une parcelle de prairie, il y a déjà du
+carbone stocké dans le sol. Tout l'objectif sera d'arriver à en stocker encore
+plus en plantant des arbres. »*
+
+**UNE MOITIÉ JUSTE PEUT CACHER UNE MOITIÉ FAUSSE, ET LA PREMIÈRE CHOSE À FAIRE
+EST DE LIRE LE CODE PLUTÔT QUE L'INTUITION.** Le compteur ne partait PAS de zéro
+tonne : `bilanNetTHa` était déjà un écart, et une parcelle nue démarrait à 0,00
+en portant soixante-quatorze tonnes. Le défaut était ailleurs, une couche plus
+loin : la RÉFÉRENCE ne bougeait pas quand la parcelle, elle, avait vieilli.
+Trente ans de maturation et le joueur arrivait à +45 t/ha, soixante ans et il
+arrivait à +108, sans avoir posé un plant. *Répondre « c'est déjà fait » aurait
+été aussi faux que refaire le calcul en entier.*
+
+**DEUX ERREURS QUI NE SE COMPENSENT PAS PEUVENT VIVRE DANS LE MÊME TOTAL.**
+Pendant la maturation, l'humus BAISSE (73,97 → 56,31 t/ha en trente ans) : la
+référence surestimait donc le sol en même temps qu'elle ignorait les arbres. On
+aurait pu croire les deux écarts de signes contraires et espérer qu'ils
+s'annulent ; ils sont dans deux cases différentes et ils s'additionnent.
+*Vérifier case par case, pas sur le total.*
+
+**LA BONNE FRONTIÈRE SE TROUVE EN CHERCHANT QUI POSSÈDE LA VALEUR.** La question
+n'était pas « où calculer » mais « à qui appartient ce nombre ». Il appartient à
+la PARTIE, comme `graineMarche` — donc à l'état sauvegardé, sans quoi une partie
+rechargée retrouverait une autre référence. Une fois cela posé, le reste suit :
+le calcul est dans le moteur (`figerCarboneDeReference`), la couche jeu ne fait
+que l'appeler au seul instant qui compte, et le paramètre qui portait le défaut
+DISPARAÎT des appels. Le rendre impossible vaut mieux que le documenter.
+
+**ET LE TÉMOIN QUI NE COÛTE RIEN EST CELUI QU'IL FAUT ÉCRIRE.** À maturation
+nulle, la valeur figée doit valoir `station.initialSoilCTHa` au centième près.
+C'est gratuit, c'est exact, et c'est ce qui garantit qu'aucune partie ordinaire
+n'a changé de point zéro pour rien. Un lot qui traverse une frontière a besoin
+d'un contrôle d'identité, pas seulement d'un contrôle d'effet.
+
+**CE QU'ON NE LIVRE PAS, ON NE LE POSE PAS.** « Stocker plus qu'au départ » n'est
+pas « stocker plus qu'en ne faisant rien ». Sur une prairie à l'équilibre les
+deux coïncident — et #201 vient justement de rendre cet équilibre réel — mais
+sur une friche qui se boiserait seule, le vrai repère est la TRAJECTOIRE d'un
+témoin, ce qui demanderait de faire tourner une parcelle fantôme. Le critère
+posé au référentiel dit donc exactement ce que le lot livre, et nomme l'autre
+comme un critère distinct, à instruire. *Poser large et remplir étroit est la
+façon la plus commode de mentir à un référentiel.*
+
+## Ce qu'un lot plus ancien a appris (le boutis arrache, #199)
 
 Quinze lignes dans le tick, aucun paramètre neuf dans l'atlas, aucun champ dans
 l'état — et la moitié de G10 revient. Ce lot est le contrecoup direct du

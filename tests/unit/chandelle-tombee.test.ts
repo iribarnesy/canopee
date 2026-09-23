@@ -156,7 +156,6 @@ describe("la prémisse, tenue par le moteur", () => {
         weather: w,
         anneeCivile: 2026,
         paysage: "bocage",
-        initialSoilCTHa: st.initialSoilCTHa,
         fluxes: t.fluxes,
         debordementParCellule: t.debordementParCellule,
         lumiereAuSol: t.lumiereAuSol,
