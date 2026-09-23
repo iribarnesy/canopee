@@ -35,6 +35,7 @@ import { serieMeteoPour } from "../../src/data/meteo";
 import { diametreCaviteCm, volumeCaviteTotalL } from "../../src/engine/cavites";
 import {
   bilanDeTable,
+  couvertureAuxiliaires,
   departs,
   especeFaune,
   FAUNE,
@@ -47,6 +48,7 @@ import {
 import { advanceWeek } from "../../src/engine/game";
 import type { GridDims } from "../../src/engine/grid";
 import { serieToWeeks } from "../../src/engine/meteo";
+import { carteBiotique } from "../../src/engine/ravageurs";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
@@ -393,19 +395,30 @@ describe("l'arbre qui disparaît expulse quelqu'un de nommé", () => {
 });
 
 describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
-  it("allumer la faune ne déplace AUCUNE partie", () => {
-    // Le contrôle de neutralité du lot, et il est plus fort qu'attendu : les
-    // tirages d'installation passent par une graine LOCALE (modèle
-    // `graineDeChute`), donc ils ne consomment pas le flux principal. La partie
-    // avec faune n'est pas « proche » de la partie sans, elle est la MÊME.
+  it("éteinte, la faune n'existe pas — et c'est ÇA, le contrôle du lot 3", () => {
+    // **CET ESSAI AFFIRMAIT LE CONTRAIRE, ET IL AVAIT RAISON JUSQU'AU LOT 3.**
+    // Aux lots 1 et 2, allumer la faune ne déplaçait AUCUNE partie : les
+    // individus s'installaient, partaient, se nourrissaient, et le peuplement
+    // d'arbres était le même au bit près. C'était la preuve qu'ils ne coûtaient
+    // rien — et aussi l'aveu qu'ils ne FAISAIENT rien. Le lot 3 est
+    // exactement celui qui les fait payer (#187), donc il DOIT casser cette
+    // égalité : un auxiliaire qui mange des chenilles change la parcelle.
     //
-    // Comparé DANS LE MÊME PROCESSUS, et pas contre une valeur épinglée : une
-    // empreinte absolue n'est pas portable d'une version de V8 à l'autre (#193).
+    // Ce qui reste, et qui est le vrai contrôle F16 : **éteinte, la faune
+    // n'existe pas.** Pas un tableau vide, pas un parcours, pas une allocation,
+    // et `carteBiotique` ne reçoit rien — elle retombe donc sur son proxy
+    // d'avant, au bit près, par construction et non par mesure.
+    const sans = partie(false);
+    expect(sans.state.faune).toBeUndefined();
+  });
+
+  it("et allumée, elle DÉPLACE la partie : c'est le lot 3 qui se voit", () => {
+    // Le pendant du précédent. Deux parties identiques en tout sauf le
+    // commutateur, trente ans : si les empreintes coïncidaient encore, c'est
+    // que les auxiliaires ne mangeraient toujours rien.
     const sans = partie(false);
     const avec = partie(true);
-    expect(avec.hash).toBe(sans.hash);
-    // Éteinte, la faune n'existe même pas — pas de tableau vide, rien.
-    expect(sans.state.faune).toBeUndefined();
+    expect(avec.hash).not.toBe(sans.hash);
   });
 
   it("et allumée, elle peuple la parcelle à des densités plausibles", () => {
@@ -592,4 +605,82 @@ describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => 
     // Et la haie garde tout de même du monde : elle est pauvre, pas morte.
     expect(haie.length).toBeGreaterThan(0);
   }, 900_000);
+});
+
+describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
+  // Même peuplement, même bois mort, même herbe. La SEULE différence est ce
+  // qu'on passe à `carteBiotique` : rien (le proxy d'avant) ou la liste de qui
+  // est effectivement installé.
+  const DIMS: GridDims = { widthM: 60, heightM: 60 };
+  const HERBE = new Array(DIMS.widthM * DIMS.heightM).fill(0.5);
+  // Neuf gros chênes creux : de quoi loger largement, et de quoi saturer le
+  // proxy des cavités (`CAVITES_SUFFISANTES_L_HA`).
+  const CREUX: TreeState[] = [];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      CREUX.push(arbre(CREUX.length + 1, 10 + i * 20, 10 + j * 20, 70, 0.6));
+    }
+  }
+  const mesange = (id: number, x: number, y: number): IndividuFaune => ({
+    id,
+    especeId: "mesange_bleue",
+    arbreId: 1,
+    x,
+    y,
+    depuisSemaine: 0,
+  });
+
+  it("des cavités PLEINES de creux mais VIDES d'oiseaux ne valent plus un habitat", () => {
+    // **L'ÉNONCÉ DU LOT, ET IL TIENT EN UNE LIGNE : une cavité vide ne mange
+    // pas de pucerons.** Le proxy créditait le POTENTIEL comme s'il était
+    // réalisé — il suffisait d'avoir de quoi loger. Les individus exigent que
+    // quelqu'un soit logé, ce qui suppose en plus que la table nourrisse
+    // (lot 2). Le nouveau terme contient donc l'ancien et lui ajoute la
+    // condition qui manquait.
+    const avecProxy = carteBiotique(CREUX, HERBE, 0, DIMS);
+    const personne = carteBiotique(CREUX, HERBE, 0, DIMS, couvertureAuxiliaires([], DIMS));
+    const centre = 30 * DIMS.widthM + 30;
+    expect(avecProxy.habitat[centre] ?? 0).toBeGreaterThan(personne.habitat[centre] ?? 0);
+  });
+
+  it("et trois insectivores installés rendent ce que les creux promettaient", () => {
+    // Le terme SATURE à trois territoires superposés (`AUXILIAIRES_SUFFISANTS`),
+    // et les creux saturaient déjà leur propre terme : les deux lectures
+    // coïncident donc quand la promesse est tenue. C'est ce qui garantit que le
+    // lot ne DÉPLACE pas le niveau de l'habitat, il en change la CAUSE.
+    const trois = couvertureAuxiliaires(
+      [mesange(1, 30, 30), mesange(2, 30, 30), mesange(3, 30, 30)],
+      DIMS,
+    );
+    const avecProxy = carteBiotique(CREUX, HERBE, 0, DIMS);
+    const peuple = carteBiotique(CREUX, HERBE, 0, DIMS, trois);
+    const centre = 30 * DIMS.widthM + 30;
+    expect(peuple.habitat[centre] ?? 0).toBeCloseTo(avecProxy.habitat[centre] ?? 0, 10);
+  });
+
+  it("l'auxiliaire ne sert que là où il chasse : son territoire, pas la parcelle", () => {
+    // Une mésange bleue tient 56 m autour de son gîte. Au-delà, elle ne mange
+    // rien — et c'est la raison d'être du mode PAR CELLULE : un gradient à
+    // l'intérieur de la parcelle, que jamais un scalaire n'aurait donné.
+    const couverture = couvertureAuxiliaires([mesange(1, 5, 5)], DIMS);
+    expect(couverture[5 * DIMS.widthM + 5] ?? 0).toBe(1);
+    expect(couverture[55 * DIMS.widthM + 55] ?? 0).toBe(0);
+  });
+
+  it("et seul l'INSECTIVORE compte : la chevêche et l'écureuil ne comptent pas", () => {
+    // Une chevêche mange des campagnols, un écureuil des graines ; ni l'une ni
+    // l'autre n'écrête une pullulation de chenilles. Rien ne les nomme dans le
+    // code : c'est `table.ressource` de la fiche qui tranche, et le loir — qui
+    // n'a pas de table du tout — est écarté par la même ligne.
+    const autres: IndividuFaune[] = [
+      { ...mesange(1, 30, 30), especeId: "chouette_cheveche" },
+      { ...mesange(2, 30, 30), especeId: "ecureuil_roux" },
+      { ...mesange(3, 30, 30), especeId: "loir_gris" },
+    ];
+    const couverture = couvertureAuxiliaires(autres, DIMS);
+    expect(couverture[30 * DIMS.widthM + 30] ?? 0).toBe(0);
+    // Le même trio avec UNE mésange en plus : elle seule compte.
+    const avecMesange = couvertureAuxiliaires([...autres, mesange(4, 30, 30)], DIMS);
+    expect(avecMesange[30 * DIMS.widthM + 30] ?? 0).toBe(1);
+  });
 });

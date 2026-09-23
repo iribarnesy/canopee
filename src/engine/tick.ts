@@ -70,7 +70,7 @@ import {
 } from "./erosion";
 import { getEspece } from "./especes";
 import type { DepartFaune, InstallationFaune, TableDeLaParcelle } from "./faune";
-import { bilanDeTable, departs, installations } from "./faune";
+import { bilanDeTable, couvertureAuxiliaires, departs, installations } from "./faune";
 import {
   chargeCombustible,
   departDeFeu,
@@ -1944,11 +1944,26 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) moyenneEauSurface += waterMm[i * nH] ?? 0;
   moyenneEauSurface /= nCells;
   const boisMortTHa = state.carbon.deadWoodKgC / 1000 / (nCells / 10_000);
+  // **CE QUI LOGE LES AUXILIAIRES : LES GÎTES, OU LES LOGÉS ?** (#187 lot 3)
+  //
+  // Tant que la faune n'existe pas en individus, `carteBiotique` estime la part
+  // « gîte » de l'habitat par des litres de cavité et des tonnes de bois mort.
+  // Quand elle existe, on lui passe qui est EFFECTIVEMENT installé, et le proxy
+  // s'efface. On lit la faune du DÉBUT de semaine — celle que le tick mettra à
+  // jour plus bas — parce que ce sont les animaux présents qui mangent cette
+  // semaine-ci, pas ceux qui arriveront à la fin.
+  //
+  // Éteint veut dire éteint : sans `station.faune`, pas un parcours, pas une
+  // allocation, et `carteBiotique` retombe au bit près sur la carte d'avant.
+  const auxiliaires = state.station.faune
+    ? couvertureAuxiliaires(state.faune ?? [], dims)
+    : undefined;
   const { ressource, habitat, abriHivernal } = carteBiotique(
     nextTrees,
     herbeCouverture,
     boisMortTHa,
     dims,
+    auxiliaires,
   );
 
   // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────

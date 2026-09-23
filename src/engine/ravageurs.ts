@@ -32,6 +32,7 @@
 
 import { volumeCaviteTotalL } from "./cavites";
 import { getEspece } from "./especes";
+import { AUXILIAIRES_SUFFISANTS } from "./faune";
 import type { GridDims } from "./grid";
 import { forEachDiscCell } from "./grid";
 import { crownRadiusM } from "./light";
@@ -173,6 +174,7 @@ export function carteBiotique(
   herbeCouverture: readonly number[],
   boisMortTHa: number,
   dims: GridDims,
+  auxiliairesInstalles?: ArrayLike<number>,
 ): CarteBiotique {
   // Les CAVITÉS comptent parmi les gîtes, au même titre que le bois mort et
   // dans le même terme (#182). Un tronc creux est un abri d'hiver et un site
@@ -274,11 +276,25 @@ export function carteBiotique(
     const richesse = popcount(essencesVues[b] ?? 0);
     const nStrates = popcount(stratesVues[b] ?? 0);
     const partCavites = Math.min(1, (cavitesVues[b] ?? 0) / CAVITES_SUFFISANTES_L_HA);
+    // **ET QUAND LA FAUNE EXISTE EN INDIVIDUS, LE PROXY S'EFFACE** (#187 lot 3).
+    // Les deux lignes disent la même chose à deux niveaux de preuve : les gîtes
+    // disent « il y a où se loger », les individus disent « quelqu'un est logé ».
+    // La seconde contient la première — on ne s'installe pas sans cavité — et
+    // lui ajoute ce qui manquait : la table doit nourrir. Une cavité vide ne
+    // mange pas de pucerons.
+    //
+    // Absent, on retombe au bit près sur la carte d'avant ce lot : c'est le
+    // contrôle de neutralité que réclame le traitement F16, et il est
+    // STRUCTUREL, pas mesuré.
+    const partGite =
+      auxiliairesInstalles === undefined
+        ? Math.max(partBoisMort, partCavites)
+        : Math.min(1, (auxiliairesInstalles[i] ?? 0) / AUXILIAIRES_SUFFISANTS);
     habitat[i] =
       0.4 * Math.min(1, richesse / RICHESSE_SUFFISANTE) +
       0.25 * Math.min(1, nStrates / 3) +
       0.2 * Math.min(1, herbeCouverture[i] ?? 0) +
-      0.15 * Math.max(partBoisMort, partCavites);
+      0.15 * partGite;
   }
   return { ressource, habitat, abriHivernal };
 }
