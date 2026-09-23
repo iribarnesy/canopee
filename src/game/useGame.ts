@@ -54,6 +54,14 @@ export interface GameApi {
   /** message de pause automatique (fruits mûrs…) */
   notice?: string;
   /**
+   * La semaine d'où rejouer la SCÈNE que la pause vient d'interrompre (#128).
+   *
+   * Présente seulement quand il y a quelque chose à revoir — un incendie, une
+   * tempête, une mortalité de masse — et pas pour l'arrivée d'un saut ou des
+   * fruits mûrs. C'est le « mode cinéma » du §6.8.
+   */
+  sceneARevoir?: number;
+  /**
    * LA FACTURE D'UNE SEMAINE TROP CHARGÉE (#133), quand il y en a une.
    *
    * Présente = le temps est arrêté et attend une réponse. Ce n'est pas un
@@ -203,6 +211,7 @@ export function useGame(): GameApi {
     phase?: "vieillissement" | "rejeu";
   }>();
   const [notice, setNotice] = useState<string>();
+  const [sceneARevoir, setSceneARevoir] = useState<number>();
   const [facture, setFacture] = useState<FactureHoraire>();
   const [politiqueHoraire, setPolitique] = useState<PolitiqueHoraire>("demander");
   /** Ce que la partie a accumulé : kilos cueillis, plants, abattages (#188). */
@@ -338,6 +347,7 @@ export function useGame(): GameApi {
         case "autopause":
           setSpeedState(0);
           setNotice(msg.reason);
+          setSceneARevoir(msg.scene);
           break;
         case "politiqueHoraire":
           setPolitique(msg.politique);
@@ -408,6 +418,7 @@ export function useGame(): GameApi {
       send({ type: "autoHarvest", enabled });
     },
     notice,
+    ...(sceneARevoir === undefined ? {} : { sceneARevoir }),
     ...(facture ? { facture } : {}),
     reglerFacture: (embaucher, pourToujours = false) => {
       setFacture(undefined);
@@ -519,17 +530,20 @@ export function useGame(): GameApi {
       send({ type: "speed", weeksPerSecond });
       setSpeedState(weeksPerSecond);
       setNotice(undefined);
+      setSceneARevoir(undefined);
     },
     basculer: () => {
       const cible = speed > 0 ? 0 : vitessePrecedente.current;
       send({ type: "speed", weeksPerSecond: cible });
       setSpeedState(cible);
       setNotice(undefined);
+      setSceneARevoir(undefined);
     },
     avancerDe: (semaines, weeksPerSecond, libelle) => {
       send({ type: "avancerDe", semaines, weeksPerSecond, libelle });
       setSpeedState(weeksPerSecond);
       setNotice(undefined);
+      setSceneARevoir(undefined);
     },
     // Pas de `setSpeedState` ici, et c'est tout l'intérêt : l'état affiché ne
     // bouge pas, seul le worker suspend ses pas.

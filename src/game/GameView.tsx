@@ -1748,26 +1748,67 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           position: "absolute",
           top: 12,
           left: 12,
+          right: 12,
           display: "flex",
-          flexDirection: "column",
           alignItems: "flex-start",
-          gap: 8,
+          gap: 12,
           pointerEvents: "none",
         }}
       >
-        <div style={{ ...VOLET, position: "static", pointerEvents: "auto" }}>
-          <Bandeau game={game} snapshot={snapshot} />
-        </div>
-        {/*
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 8,
+          }}
+        >
+          <div style={{ ...VOLET, position: "static", pointerEvents: "auto" }}>
+            <Bandeau game={game} snapshot={snapshot} />
+          </div>
+          {/*
           L'OBJECTIF (#188), sous le bandeau et par-dessus la vue : c'est le
           seul endroit que l'œil retrouve sans chercher, et un objectif qu'on
           doit aller ouvrir n'en est pas un.
         */}
-        {enNiveau.niveau && enNiveau.avancement && (
-          <div style={{ pointerEvents: "auto" }}>
-            <PanneauNiveau niveau={enNiveau.niveau} avancement={enNiveau.avancement} />
-          </div>
-        )}
+          {enNiveau.niveau && enNiveau.avancement && (
+            <div style={{ pointerEvents: "auto" }}>
+              <PanneauNiveau niveau={enNiveau.niveau} avancement={enNiveau.avancement} />
+            </div>
+          )}
+        </div>
+
+        {/*
+          LES AVIS : ils ne sont derrière aucun bouton — ce sont des choses qui
+          arrivent, et on ne pense pas à aller les chercher.
+
+          DANS LA MÊME RANGÉE, et non posés par-dessus.
+
+          Ils étaient centrés en absolu sur quatre cent quarante pixels, et à
+          1280 de large ils recouvraient la fin du bandeau — la température et
+          la pluie disparaissaient sous « 586 arbres meurent d'un coup ». Mis
+          dans la rangée, ils prennent ce qui reste à droite du bandeau et s'y
+          centrent : plus personne n'a à connaître la largeur de l'autre, et
+          ça tient aussi sur un écran étroit.
+        */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            maxWidth: 440,
+            margin: "0 auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            pointerEvents: "auto",
+          }}
+        >
+          <Avis
+            game={game}
+            vivants={vivants}
+            rejouer={ellipse.rejouable ? ellipse.rejouer : undefined}
+          />
+        </div>
       </div>
       {/*
         LA SORTIE SE CONFIRME. Un retour accidentel vidait l'écran sans un mot ;
@@ -1829,29 +1870,6 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           surQuitter={quitterLaPartie}
         />
       )}
-
-      {/*
-        Les avis ne sont derrière aucun bouton : ce sont des choses qui
-        arrivent, et on ne pense pas à aller les chercher.
-      */}
-      <div
-        style={{
-          position: "absolute",
-          top: 12,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 440,
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-        }}
-      >
-        <Avis
-          game={game}
-          vivants={vivants}
-          rejouer={ellipse.rejouable ? ellipse.rejouer : undefined}
-        />
-      </div>
 
       {/* En haut à droite : la partie, et l'arbre qu'on vient de cliquer. */}
       <Angle

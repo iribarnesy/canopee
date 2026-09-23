@@ -125,6 +125,34 @@ export function Avis({
               ▶ revoir
             </button>
           )}
+          {/*
+            LE MODE CINÉMA (#128, §6.8) — et ce n'est pas le même bouton que
+            celui d'à côté.
+
+            « ▶ revoir » rejoue l'ELLIPSE de l'instantané : à ×52, c'est
+            vingt-six semaines rangées dans deux secondes et demie, où
+            l'incendie est un acte parmi quarante. « ↺ Revoir la scène »
+            REMBOBINE d'une semaine et rejoue à ×1 : la scène s'y déroule au
+            lieu d'y être résumée. C'est ce que le §6.8 demande d'une
+            catastrophe — « on repasse en temps réel, ce sont les moments où
+            le joueur doit voir se dérouler, pas résumer ».
+
+            Il n'apparaît que sur les pauses qui en portent une : l'arrivée
+            d'un « +1 an » ou des fruits mûrs n'ont pas de scène.
+          */}
+          {game.sceneARevoir !== undefined && game.rembobinage.enCours === undefined && (
+            <button
+              type="button"
+              style={{ ...btn(true), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
+              onClick={() => {
+                const depuis = game.sceneARevoir;
+                if (depuis !== undefined) game.rembobinage.revoir(depuis, 1);
+              }}
+              title="Revenir juste avant, et rejouer au ralenti"
+            >
+              ↺ Revoir la scène
+            </button>
+          )}
         </div>
       )}
       {game.refusals.length > 0 && (

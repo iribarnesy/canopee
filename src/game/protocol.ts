@@ -701,8 +701,18 @@ export type FromWorker =
   | { type: "recolteAuto"; semees: string[]; choix: ChoixRecolte }
   | { type: "save"; save: SaveGame }
   | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
-  /** le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la vitesse */
-  | { type: "autopause"; reason: string }
+  /**
+   * Le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la
+   * vitesse.
+   *
+   * `scene` n'est renseignée que pour ce qui MÉRITE D'ÊTRE REVU — un incendie,
+   * une tempête, une mortalité de masse — et porte la semaine où revenir. C'est
+   * le « mode cinéma » du §6.8 : *« l'autopause existe déjà pour l'incendie ; on
+   * l'étend à la crue et aux mortalités de masse, puis on rejoue la scène à
+   * ×1 »*. Absente pour une pause qui n'a rien à montrer — l'arrivée d'un saut
+   * « +1 an », des fruits mûrs, une faillite.
+   */
+  | { type: "autopause"; reason: string; scene?: number }
   /**
    * « Votre semaine dépasse : vous embauchez, ou on s'en tient à 60 h ? »
    *

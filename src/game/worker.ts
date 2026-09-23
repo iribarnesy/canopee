@@ -84,6 +84,7 @@ import {
   especesSemees,
   fautIlPrevenir,
 } from "./recolteAuto";
+import { estUneMortaliteDeMasse, estUneTempeteAVoir } from "./scenes";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 
 let sc: StationClimat | undefined;
@@ -193,19 +194,45 @@ let bilanAuDebut: Bilan = BILAN_VIDE;
  * Le worker en dépendait d'ailleurs déjà sans le dire : une semaine trop
  * chargée se rejoue depuis l'état retenu à son ouverture (#133).
  *
- * ## Le grain, et ce qu'il coûte
+ * ## Le grain, et ce qu'il coûte — MESURÉ, et deux fois plutôt qu'une
  *
- * Un point par trimestre, dix ans de recul. Entre deux points, on rejoue au
- * plus douze semaines pour tomber juste — moins de deux secondes de calcul.
- * Un point retient un état entier, donc quelques centaines de kilo-octets de
- * sol ; quarante points tiennent dans l'ordre de grandeur que le §6.8 s'était
- * donné pour une seule année d'instantanés.
+ * Le premier jet gardait quarante points, un par trimestre, sur la foi d'un
+ * « quelques centaines de kilo-octets par point » que personne n'avait pesé.
+ * **L'onglet a planté pendant une relecture sur lande sèche**, et c'est ce qui
+ * a fait poser la question.
+ *
+ * La première pesée a répondu six mégaoctets, la deuxième vingt-huit : les deux
+ * étaient fausses, et pour la même raison — sans ramasse-miettes forcé, on
+ * mesure les DÉCHETS des états intermédiaires et non ce qui est retenu. Avec
+ * `--expose-gc`, deux traversées identiques dont une seule retient : **3,9 Mo
+ * par point**. Quarante points valaient donc cent cinquante mégaoctets, à côté
+ * de la scène Pixi et des instantanés.
+ *
+ * Quatre mégaoctets pour dix mille cellules, parce que `SoilState` porte une
+ * quinzaine de `number[]` dont deux par cellule ET par horizon. Des tableaux
+ * typés diviseraient ça par deux et rendraient d'autant plus de recul — c'est
+ * au moteur de le décider, pas au rendu.
+ *
+ * D'où le grain d'aujourd'hui : **un point par semestre, huit points, quatre
+ * ans de recul pour trente et un mégaoctets mesurés**. Le §6.8 s'était donné
+ * « une fenêtre glissante d'un an » ; on en tient quatre. Entre deux points, on
+ * rejoue au plus vingt-cinq semaines pour tomber juste, soit quelques secondes
+ * de calcul avant que la relecture ne commence.
  */
-const PAS_DE_REPRISE = 13;
-const POINTS_GARDES = 40;
+const PAS_DE_REPRISE = 26;
+const POINTS_GARDES = 8;
 
 /** Les états mis de côté, du plus ancien au plus récent. */
 let pointsDeReprise: { semaine: number; etat: GameState }[] = [];
+
+/**
+ * La semaine du dernier instantané POSTÉ.
+ *
+ * C'est le début de ce que le joueur n'a pas vu : entre elle et maintenant, le
+ * worker a avalé tout un lot de semaines sans rien montrer. Le mode cinéma
+ * repart de là.
+ */
+let semaineDuDernierInstantane = 0;
 
 /**
  * LA RELECTURE EN COURS, s'il y en a une.
@@ -224,6 +251,33 @@ function poserUnPointDeReprise(etat: GameState): void {
   if (dernier && dernier.semaine >= etat.week) return;
   pointsDeReprise.push({ semaine: etat.week, etat });
   if (pointsDeReprise.length > POINTS_GARDES) pointsDeReprise.shift();
+}
+
+/**
+ * LE MODE CINÉMA (#128, §6.8) : d'où rejouer la scène qui vient de se passer.
+ *
+ * *« L'`autopause` existe déjà pour l'incendie et la faillite ; on l'étend à la
+ * crue et aux mortalités de masse, puis on rejoue la scène à ×1. »*
+ *
+ * **Depuis le DERNIER INSTANTANÉ, et pas depuis la semaine d'avant.** La
+ * première version rembobinait d'une seule semaine, et l'essai dans le
+ * navigateur l'a prise en faute : la relecture était finie avant qu'on la voie,
+ * et elle ne montrait rien de plus que le bouton « ▶ revoir » d'à côté.
+ *
+ * Ce qu'il faut rejouer, c'est ce que le SAUT a enjambé. À ×52 l'écran avale
+ * vingt-six semaines entre deux images : la catastrophe est quelque part
+ * dedans, avec ce qui l'a amenée. Repartir du dernier instantané montré, c'est
+ * exactement rejouer ce que le joueur n'a pas vu — vingt-six semaines à ×1,
+ * une ellipse entière par semaine. À ×4, où un instantané couvre une semaine,
+ * c'est une semaine : tout ce qui a été sauté, ni plus ni moins.
+ *
+ * Rend `undefined` s'il n'y a pas de point de reprise assez ancien — mieux vaut
+ * pas de bouton qu'un bouton qui ne fait rien.
+ */
+function sceneDeLaSemaine(): number | undefined {
+  if (!state) return undefined;
+  const depuis = semaineDuDernierInstantane;
+  return plusAncienRetour() <= depuis && depuis < state.week ? depuis : undefined;
 }
 
 /**
@@ -748,6 +802,9 @@ function postSnapshot() {
     { type: "snapshot", snapshot, cumuls, bilan, rembobinable: plusAncienRetour() },
     transferablesDuSnapshot(snapshot),
   );
+  // APRÈS l'envoi : la scène à rejouer part du dernier instantané montré, donc
+  // de celui-ci une fois qu'il est parti, pas de celui d'avant.
+  if (!relecture) semaineDuDernierInstantane = snapshot.week;
 }
 
 /**
@@ -1072,9 +1129,7 @@ function stepWeeks(n: number) {
     }
     partInondeePrecedente = inondee;
     // Tempête : elle arrive en une semaine et doit se dire, sinon des arbres
-    // s'escamotent. Pas d'auto-pause en revanche, à la différence du feu — un
-    // chablis reste récupérable un an (`tempete.ts`), le joueur a le temps de
-    // décider s'il sort le bois ou s'il le laisse.
+    // s'escamotent.
     if (ticked.tempete) {
       const t = ticked.tempete;
       event(
@@ -1083,6 +1138,32 @@ function stepWeeks(n: number) {
           `${t.arbresVerses > 1 ? "s couchés" : " couché"} — ${t.volumeM3.toFixed(1)} m³ ` +
           `à sortir dans l'année avant que le bois ne se déprécie`,
       );
+      // **Elle arrête le temps, désormais (#128).** Elle ne le faisait pas, et
+      // le raisonnement écrit ici était : « un chablis reste récupérable un an,
+      // le joueur a le temps de décider ». C'est vrai de la DÉCISION et faux du
+      // SPECTACLE — le §6.8 range la tempête parmi les scènes qu'on rejoue, et
+      // à ×52 une rafale qui couche trente arbres passe entre deux images.
+      if (weeksPerSecond > 1 && estUneTempeteAVoir(t.arbresVerses)) {
+        weeksPerSecond = 0;
+        post({
+          type: "autopause",
+          reason: `Tempête : ${t.arbresVerses} arbres couchés`,
+          scene: sceneDeLaSemaine(),
+        });
+      }
+    }
+    // **Une mortalité de masse est une scène**, et c'est la troisième que le
+    // §6.8 nomme. Pas une cause en particulier : ce qui la fait, c'est le
+    // NOMBRE — une sécheresse qui emporte le tiers d'un peuplement en une
+    // semaine se voit autant qu'un feu, et ne se dit nulle part ailleurs.
+    if (weeksPerSecond > 1 && estUneMortaliteDeMasse(ticked.morts.length, before.trees.length)) {
+      const part = ticked.morts.length / Math.max(1, before.trees.length);
+      weeksPerSecond = 0;
+      post({
+        type: "autopause",
+        reason: `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
+        scene: sceneDeLaSemaine(),
+      });
     }
     // Incendie : l'événement le plus marquant d'une partie sur lande.
     if (ticked.incendie) {
@@ -1096,7 +1177,11 @@ function stepWeeks(n: number) {
       );
       if (weeksPerSecond > 1) {
         weeksPerSecond = 0;
-        post({ type: "autopause", reason: `Incendie : ${f.arbresTues} arbres perdus` });
+        post({
+          type: "autopause",
+          reason: `Incendie : ${f.arbresTues} arbres perdus`,
+          scene: sceneDeLaSemaine(),
+        });
         postSnapshot();
         return;
       }
@@ -1420,6 +1505,7 @@ function init(
   bilan = BILAN_VIDE;
   pointsDeReprise = [];
   relecture = undefined;
+  semaineDuDernierInstantane = 0;
   semees = new Set();
   choixRecolte = {};
   recoltees = new Set();
@@ -1512,6 +1598,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       bilan = BILAN_VIDE;
       pointsDeReprise = [];
       relecture = undefined;
+      semaineDuDernierInstantane = 0;
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;

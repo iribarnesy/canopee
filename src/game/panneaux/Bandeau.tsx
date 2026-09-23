@@ -123,8 +123,16 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
           }}
         >
           <strong>↺ Relecture</strong>
+          {/*
+            **En SEMAINES quand la relecture tient dans une année.** Elle
+            annonçait « an 19 sur 19 » pour une scène de vingt-six semaines :
+            vrai, et parfaitement muet. L'unité suit la durée de ce qu'on
+            regarde, comme partout ailleurs dans cette interface.
+          */}
           <span>
-            an {Math.floor(relecture.semaine / 52) + 1} sur {Math.floor(relecture.jusqua / 52) + 1}
+            {relecture.jusqua - relecture.depuis < 52
+              ? `semaine ${(relecture.semaine % 52) + 1} sur ${(relecture.jusqua % 52) + 1}, an ${Math.floor(relecture.jusqua / 52) + 1}`
+              : `an ${Math.floor(relecture.semaine / 52) + 1} sur ${Math.floor(relecture.jusqua / 52) + 1}`}
           </span>
           {/* Une barre, parce qu'une relecture a une FIN et qu'on veut savoir
               où l'on en est sans compter les années. */}
