@@ -359,34 +359,58 @@ describe("ce que la mesure a coûté au sanglier", () => {
     expect(productionSupposee).toBeGreaterThan(10);
   });
 
-  it("à ration réelle, le sanglier ne contrôle plus la régénération du chêne", () => {
-    // **Et c'est un résultat, pas un regret.** Quarante ans, mêmes graine et
-    // météo que l'essai qui portait G10 :
+  it("la ration est petite, et ce n'est PAS elle qui fait reculer le chêne", () => {
+    // **L'ATTRIBUTION, ET CE FICHIER EST LE SEUL QUI PUISSE LA FAIRE** : il a la
+    // glandée sous la main, donc il peut séparer les deux prises du sanglier là
+    // où `sanglier.test.ts` ne voit que leur somme.
     //
-    //     sanglier/ha   0     0,02   0,05   0,15   0,5
-    //     recrues       71     71     71     77     70      (ancienne loi : 97 · 82 · 60 · 22 · —)
+    // Cet essai a d'abord affirmé le CONTRAIRE, et c'était juste à l'époque. À
+    // ration ancrée (#197), le sanglier ne pesait plus sur la régénération —
+    // 71 · 71 · 71 · 77 · 70 recrues de 0 à 0,5 bête/ha, contre 97 · 82 · 60 · 22
+    // sous l'ancienne loi. On n'affirmait donc pas une décroissance qu'on ne
+    // mesurait plus, et le commentaire nommait ce qui manquait : **un boutis
+    // détruit les semis, et le moteur n'en comptait que le bon côté** (#199).
     //
-    // Non seulement l'écart s'est effondré, mais **il n'a plus de sens
-    // reconnaissable** : les 77 de 0,15/ha ne sont pas un effet, c'est ce que
-    // le bruit fait quand le signal a disparu. On n'affirme donc pas une
-    // décroissance qu'on ne mesure plus — on affirme l'effondrement.
+    // Le mécanisme est arrivé, et la décroissance avec. Mesuré ici, quarante
+    // ans, mêmes graine et météo, en lisant les deux grandeurs sur la MÊME
+    // partie — les recrues d'un côté, la glandée qui survit à la ration de
+    // l'autre, moyennée sur les dix dernières années :
     //
-    // La raison est arithmétique : à 0,15 sanglier/ha, la ration fait soixante
-    // kilos à l'hectare contre une glandée de plusieurs centaines, et de
-    // plusieurs milliers une année pleine. **Un sanglier ne peut pas manger une
-    // glandée — c'est même toute l'idée de la glandée.**
+    //     sanglier/ha    recrues    glandée survivante    perte de glandée
+    //        0             71            0,7113                  —
+    //        0,05          65            0,7016               1,4 %
+    //        0,5           48            0,6377              10,4 %
     //
-    // Ce qui manque pour que la bête pèse à nouveau sur le chêne n'est pas un
-    // coefficient, c'est un MÉCANISME : un boutis détruit les semis et les
-    // glands germés là où il passe, et le moteur n'en compte aujourd'hui que le
-    // bon côté (le lit de germination). C'est l'objet de l'issue #199.
-    const recrues = [0, DENSITE_REFERENCE_PAR_HA, 0.5].map((d) => chenaie(d, 40).recrues);
-    const haut = Math.max(...recrues);
-    const bas = Math.min(...recrues);
-    expect(bas).toBeGreaterThan(0);
-    // Moins de 15 % du haut au bas sur une gamme de densité de 1 à 10, là où
-    // l'ancienne loi en faisait 77 % de 0 à 0,15.
-    expect((haut - bas) / haut).toBeLessThan(0.15);
+    // **À la densité de référence, la ration prélève 1,4 % de la glandée et la
+    // régénération perd 8,5 % : six fois plus.** L'arithmétique de #197 tient
+    // donc toujours — un sanglier ne peut pas manger une glandée —, et ce qui
+    // fait reculer le chêne est l'autre geste, celui qui laboure ce qui a levé.
+    // Le gradient complet, cinq graines, est dans `sanglier.test.ts`.
+    const aireHa = (24 * 24) / 10_000;
+    const mesure = (d: number) => {
+      const r = chenaie(d, 40);
+      const arbres = r.etat.trees.filter((t) => t.alive);
+      let somme = 0;
+      for (let an = 30; an < 40; an++) {
+        somme += glandeeRelative(arbres, "quercus_pubescens", an, r.etat.graineMarche, d, aireHa);
+      }
+      return { recrues: r.recrues, glandee: somme / 10 };
+    };
+    const sans = mesure(0);
+    const ordinaire = mesure(DENSITE_REFERENCE_PAR_HA);
+    const forte = mesure(0.5);
+    // La ration reste petite à densité ordinaire : moins d'un vingtième de la
+    // glandée, quand l'ancienne loi en mangeait 55 %.
+    expect(1 - ordinaire.glandee / sans.glandee).toBeLessThan(0.05);
+    // Et la régénération perd BIEN PLUS que la glandée : la ration ne peut pas
+    // rendre compte de l'écart, donc ce n'est pas elle qui l'explique. Six fois
+    // mesuré, seuil de marge à trois.
+    const perteRecrues = 1 - ordinaire.recrues / sans.recrues;
+    const perteGlandee = 1 - ordinaire.glandee / sans.glandee;
+    expect(perteRecrues).toBeGreaterThan(3 * perteGlandee);
+    // Et à forte densité le recul est net, ce qui est la moitié de G10 rendue.
+    expect(forte.recrues).toBeLessThan(0.8 * sans.recrues);
+    expect(forte.recrues).toBeGreaterThan(0);
   }, 900_000);
 
   it("les deux termes restent de signes et d'échelles reconnaissables", () => {
