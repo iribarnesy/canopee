@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { LIMON_RICHE } from "../../src/engine/stations";
+import { LIMON_RICHE } from "../../src/engine/stations";
 import {
   a,
   hauteurs,
@@ -142,4 +142,29 @@ describe("arbustes : ce que disent les mesures de terrain, faute de tables", () 
       }
     }, 120_000);
   }
+
+  it("le prunellier prend l'avance sur l'aubépine, puis se fait dépasser", () => {
+    // LE PRUNELLIER N'A PAS DE COURBE, et il n'en aura sans doute pas : aucune
+    // mesure de croissance en climat océanique n'a été trouvée — pas de
+    // Biological Flora, rien dans la littérature de haies. La seule contrainte
+    // publiée est ORDINALE : Grubb 1999 le range dans le groupe « à croissance
+    // rapide », devant l'aubépine.
+    //
+    // Sa fiche portait déjà cette contrainte ET son résultat chiffré, en
+    // commentaire, sans que rien ne la garde (#185). C'est exactement ainsi
+    // qu'une affirmation devient fausse en silence : il suffit que quelqu'un
+    // ralentisse le prunellier pour une autre raison, et la seule chose qu'on
+    // savait de lui ne serait plus vraie sans que la suite bronche.
+    const prunellier = hauteurs("prunus_spinosa", 12, LIMON_RICHE, 40);
+    const aubepine = hauteurs("crataegus_monogyna", 12, LIMON_RICHE, 40);
+    // À trois ans, l'ordre de Grubb : 1,39 m contre 1,14 mesurés, soit 36
+    // cm/an contre 28.
+    expect(a(prunellier, 3)).toBeGreaterThan(a(aubepine, 3));
+    // À douze ans, l'ordre s'inverse, et ce n'est pas un hasard : les deux
+    // fiches portent des hauteurs adultes différentes — 4 m pour le
+    // prunellier, 8 pour l'aubépine — et c'est le plafond qui parle. Mesuré :
+    // 3,10 m contre 3,73. Le croisement a lieu entre cinq et huit ans ; on
+    // l'éprouve à douze, où l'écart (20 %) ne peut plus être du bruit.
+    expect(a(aubepine, 12)).toBeGreaterThan(a(prunellier, 12));
+  }, 120_000);
 });
