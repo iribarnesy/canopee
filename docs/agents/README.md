@@ -24,6 +24,45 @@ l'allométrie du volume, l'élancement individuel) parce que rien ne disait qui
 prenait quoi. Deux PR ont fini fermées en doublon après avoir été écrites,
 mesurées et relues.
 
+## La branche d'un autre agent ne se touche pas
+
+**Ce qui appartient à un agent : sa branche, ses PR, ses issues assignées.**
+Personne d'autre n'y pousse un commit, n'y ouvre une PR, ne fusionne, ne ferme
+ni ne rouvre. Même quand le travail est fini, mesuré, vert et manifestement en
+attente : **c'est son auteur qui le propose, et lui seul.**
+
+Ce qu'on fait à la place tient en une phrase : **on ouvre une issue avec le
+label qui route vers lui**, on y écrit ce qu'on a vu, et on passe à autre chose.
+Il la lira, et il décidera s'il finit, s'il complète ou s'il laisse.
+
+C'est écrit ici parce que ça ne l'était pas, et que ça a coûté : le 23 septembre
+2026, l'agent de maintenance a trouvé une branche du rendu finie depuis la
+veille et sans PR — deux issues l'annonçaient livrée et en attente de fusion. Il
+a ouvert la PR à sa place et allait la fusionner. Rien n'a été perdu, mais la
+raison d'être de la règle est là : l'auteur d'une branche sait des choses que
+son état Git ne dit pas. Ce qu'il allait encore y mettre, ce qu'il avait
+délibérément laissé de côté, ce qu'il voulait remesurer après la fusion de
+`main`. Quelqu'un qui fusionne à sa place lui retire cette décision et fabrique
+un conflit là où il n'y en avait pas.
+
+Le cas se reconnaît facilement : **une branche qui n'a pas de PR n'attend pas
+qu'on l'aide, elle attend son auteur.** S'il faut vraiment qu'elle avance —
+livraison bloquée, `main` rouge à cause d'elle — c'est une décision du
+propriétaire du dépôt, à qui on la signale, pas une initiative d'agent.
+
+Trois détails qui suivent de la même règle :
+
+- **Ce qui est livré est fermé par celui qui l'a livré.** Une issue restée
+  ouverte alors que son travail est dans `main`, on le signale ; on ne ferme pas
+  à la place d'un autre, et surtout pas sur une déduction tirée d'un titre de
+  commit.
+- **Les branches mortes ne se suppriment pas non plus.** Le dépôt en porte des
+  dizaines dont le contenu est déjà dans `main` par squash — une fusion les
+  ferait *reculer*, pas avancer. Le ménage est une décision de propriétaire.
+- **Signaler n'est pas se plaindre.** Une issue qui dit « voilà ce que j'ai vu,
+  voilà ce que ça coûte, tu en fais ce que tu veux » est exactement ce qu'on
+  attend d'un agent qui trouve quelque chose hors de son périmètre.
+
 ## Les labels, qui disent à qui revient quoi
 
 | Label | Pour qui | Sens |
