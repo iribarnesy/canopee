@@ -96,7 +96,7 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 |---|---|---|---|---|
 | A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
 | B. Lumière et structure | 8 | 3 | 0 | 11 |
-| C. Nutriments et cycles | 18 | 0 | 0 | 18 |
+| C. Nutriments et cycles | 19 | 0 | 0 | 19 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
 | E. Interactions entre plantes | 9 | 4 | 0 | 13 |
 | F. Dynamique des peuplements | 15 | 3 | 1 | 19 |
@@ -104,9 +104,9 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | H. Gestion, économie, travail | 17 | 4 | 0 | 21 |
 | I. Carbone | 9 | 0 | 0 | 9 |
 | J. Biodiversité et structure | 9 | 0 | 0 | 9 |
-| **Total** | **135** | **18** | **1** | **154** |
+| **Total** | **136** | **18** | **1** | **155** |
 
-**Score de réalisme : 135 pleins + 18 partiels sur 154 → 94 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 136 pleins + 18 partiels sur 155 → 94 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -208,11 +208,17 @@ infrastructure. Son livrable est une identité, tenue sur cinq cents disques
 tirés au hasard plutôt que sur des cas choisis, ce qui a fait tomber deux
 divergences que personne n'aurait vues : un semis minuscule ne semait rien, et
 l'aire se calculait de deux façons à un ULP près)
-→ **94 % (le soc desserre ce que les roues tassent : un sol labouré cesse d'être
+→ 94 % (le soc desserre ce que les roues tassent : un sol labouré cesse d'être
 condamné à 1,000 de tassement pour toujours, la courbe de Broadbalk monte d'un
 quart et le plot fumé entre enfin dans la gamme de l'essai — aucun point gagné,
 c'est une correction, et le risque annoncé sur le point zéro s'est révélé être
-une fenêtre de mesure trop courte)**.*
+une fenêtre de mesure trop courte)
+→ **94 % (la strate basse rend enfin sa matière au sol : une prairie permanente
+cessait de se décarboniser à raison de 42 % de son humus en cinquante ans, parce
+que la strate herbacée ne versait RIEN au pool de litière — ni sénescence, ni
+racines fines, ni chaume, ni paille. Un critère de plus, et un ✅ qui était faux
+trouvé en passant : `faucher` créait du carbone à partir de rien, et la propriété
+de conservation ne passait pas par cette action)**.*
 
 *Le score a BAISSÉ en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -294,6 +300,7 @@ maladie-là, pas une preuve de santé.*
 | C16 | Une culture continue sans apport épuise le sol, et se stabilise bas | ✅ | La culture prélève son azote pondéré par son `exigenceMinerale` — dix pour le blé contre un pour une graminée spontanée (`herbacees.ts`, `tick.ts`) — et le moteur n'a pas d'action de fertilisation. Un blé continu descend donc de lui-même : 4,16 t/ha à l'an 4, 2,63 à l'an 12, **1,45 à l'an 24**, 1,20 à l'an 29 (`culture.test.ts`) — toute la trajectoire a monté d'un quart avec #141, qui a levé le plafond de tassement, et elle descend toujours. **Le calage et la validation viennent de la même source sur deux chiffres différents** : Broadbalk (Rothamsted, blé continu depuis 1843) donne 8-9 t/ha sur les parcelles pleinement fumées — c'est le plafond posé sur la fiche — et ~1 t/ha sur celles qui ne reçoivent rien, tenu sur cent soixante-dix ans. Rien dans le code ne pousse le moteur vers ce second chiffre. **Limite, et elle est maintenant mesurée sur l'échelle de temps de l'essai** plutôt que sur une fenêtre de trente ans — opposer trente ans de moteur à cent quatre-vingts ans d'épuisement n'est pas le même dispositif. Sur cent vingt ans, moyennes par tranche de vingt : **2,96 / 1,25 / 0,84 / 0,78 / 0,79 / 0,70**. Le moteur traverse la gamme de Broadbalk vers les années 20 à 40, puis converge SOUS, à 0,70-0,84 au lieu du ~1 que l'essai tient depuis 1843. Il glisse donc bien, la cause probable reste la PAILLE — qui reste au champ dans la réalité et ne rend rien ici — et ce n'est pas #141 qui l'a créé : c'est le lot qui a rendu la mesure lisible, en retirant un tassement irréaliste qui masquait le défaut par en dessous |
 | C17 | On peut apporter de l'azote, et les formes ne font pas la même chose | ✅ | `fertiliser` (`actions.ts`), dose en kg N/ha dans les deux cas pour qu'elles se comparent. Le MINÉRAL entre dans le pool disponible — donc lessivable par `cellLeachedG`, qui existait ; le FUMIER entre dans la litière avec son C/N, se minéralise sur des années et construit de l'humus au passage (même patron que `epandreBrf`). Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m² d'azote minéral et RIEN en litière, le plot fumier 4,50 et 20,25 de litière — le second a constitué un stock, le premier l'a traversé. À azote comparable, le fumier fait mieux sur la durée (8,01 contre 6,00 t/ha depuis #141 ; 6,21 contre 4,88 avant), ce que Broadbalk dit aussi. Refus au-delà de 250 kg N/ha : la directive nitrates plafonne l'organique à 170 en zone vulnérable |
 | C18 | Le rendement répond à la dose d'azote, et la courbe n'est écrite nulle part | ✅ | Aucune courbe de réponse n'a été codée : l'apport remplit le pool, et le rendement y répond par la satisfaction de la strate. Mesurée sur les paliers de Broadbalk (0 / 48 / 96 / 144 / 192 kg N/ha), moyenne des dix dernières années sur trente : **1,44 / 3,25 / 4,26 / 5,16 / 6,00 t/ha**, et **8,01 sur le plot fumé** — monotone d'un bout à l'autre. **Le plafond est levé** (#141) : il valait 1,07 / 2,54 / 3,40 / 4,17 / 4,88 et 6,21, et la cause n'était ni dans la culture ni dans l'azote mais dans le TASSEMENT, qui s'épinglait à 1,000 à l'an 16 et retirait 30 % de croissance pour toujours parce que le moteur ne modélisait que les roues du tracteur et jamais le soc. Le plot fumé entre maintenant dans la gamme de l'essai (~9). **Témoin REFAIT après le lot** — `PERTE_CROISSANCE_MAX = 0`, et refait plutôt que repris, la trajectoire de tassement n'étant plus la même : 1,59 / — / — / — / 6,32 et 8,39. Il ne reste donc que 5 % attribuables au tassement sur les deux plots fertilisés, contre 26 % avant : c'est ce qu'un sol labouré doit coûter, ni zéro ni un tiers. **Ce qui reste, et qui n'est pas là** : le minéral 192 s'arrête à 6,00 pour 8-9 chez Broadbalk, alors que son propre témoin plafonne à 6,32 — une seconde cause, petite mais réelle, et ailleurs |
+| C19 | La strate herbacée rend sa matière au sol : une prairie construit et entretient son humus | ✅ | `herbacees.ts` (trait `litiere`) ; `litiere-herbacee.test.ts` — **un critère que le référentiel ne portait pas, posé et rempli par le même lot** (#201), et il manquait parce que le trou était invisible tant qu'on ne l'énumérait pas. Tout le moteur verse au pool de litière — chute de feuilles d'ARBRE, crottes de chevreuil, BRF et fumier, érosion qui redépose — sauf la strate basse, qui n'y versait rien : ni sénescence, ni racines fines, ni chaume, ni paille. `applyMoissonner` mettait le feuillage à zéro, le grain était vendu et le reste s'évaporait. Mesuré, prairie spontanée à 0,95 de couverture, sans arbre ni geste : **le stock d'humus perdait 42 % en cinquante ans** et la litière restait à 0,00 les deux mille six cents semaines. **Le mécanisme est un FLUX, pas une chute, et il a fallu une mesure ratée pour le voir.** Le premier jet collectait la sénescence que le moteur calcule déjà : 36 kg C/ha/an, deux ordres de grandeur trop peu. Le feuillage de ce moteur est un état de COUVERTURE et non un stock de matière — sur une prairie permanente il ne bouge pas de l'année, donc rien n'y tombe. Une plante dont la couverture ne bouge pas renouvelle pourtant toute sa matière, racines fines comprises : c'est `renouvellementAn`, ancré sur la production primaire d'une prairie tempérée (6 à 12 t MS/ha/an, aérien et souterrain confondus) *(à calibrer)*. **Et une seconde correction, dite par l'essai** : la litière s'empilait alors à 99 t C/ha en quarante ans, parce que `litterK` — la vitesse de décomposition d'une cellule, mélange pondéré de ce qui y est tombé — n'avait jamais été posée sur une parcelle sans arbre et valait zéro. Elle se déduit du C/N, donc le trait suffisait déjà. Relevé après, sur cent soixante-dix ans (la durée de Park Grass, prairie permanente non fertilisée depuis 1856, qui tient son stock) : humus **6571 → 6284 → 6109 → 5997 → 5925 → 5883 → 5860 → 5856 → 5857 kg C** de vingt en vingt ans, litière stable à **2,6 t C/ha**. L'humus s'ajuste de 11 % sur le premier siècle — le point de départ de la station n'est pas son équilibre — puis il TIENT, à quatre dixièmes de kilo près entre l'an 141 et l'an 161. **Ce qui manque** : presser la paille, qui est un geste de gestion avec son prix et ses heures, et qu'il faudra une action pour demander |
 | C11 | Phosphore et potassium peuvent limiter la croissance | ✅ | `pk.ts` ; `pk.test.ts` — cycles conservatifs, flux réalistes, branchés sur la loi du minimum : rien sur un limon profond, décisifs sur un podzol acide |
 | C12 | Les mycorhizes améliorent l'absorption et se construisent avec le temps | ✅ | `mycorhizes.ts` : trois réseaux incompatibles, ~5 ans à se tisser, détruits par le labour ; gain sur l'azote dilué ET **altération biologique de la roche**. **Ce ✅ était faux et personne ne pouvait le voir** : le gain gonflait la demande qui vide la cellule sans gonfler le service, si bien que le réseau COÛTAIT 11,8 % du volume sur limon pauvre et 0,7 % sur limon riche — il nuisait le plus là où il devait aider le plus. Corrigé en rangeant le gain une fois par arbre pour que les deux passes ne PUISSENT plus diverger (#115). Mesuré sur cinq graines et deux stations : **+2,79 % de volume sur limon pauvre, +0,09 % sur limon riche** (azote reçu +5,7 % et +0,7 %), gradient enfin dans le bon sens. **Limite** : le réseau fait GAGNER l'arbre dans la compétition pour l'azote minéral, il n'en AJOUTE pas — le service réel (capter l'azote organique et les pores qu'une racine n'atteint pas) demande un pool organique accessible, et le gain sur l'eau et le phosphore attend toujours |
 
@@ -403,7 +410,7 @@ maladie-là, pas une preuve de santé.*
 
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
-| I1 | Le carbone suit un bilan conservatif entre tous les pools | ✅ | `carbon-conservation.test.ts` |
+| I1 | Le carbone suit un bilan conservatif entre tous les pools | ✅ | `carbon-conservation.test.ts` — **ce ✅ était faux sur un chemin, et c'est #201 qui l'a trouvé en passant.** La propriété vérifie que NPP + plants = Δstocks + émissions + exports à chaque semaine pendant huit ans, mais elle n'exerçait ni `faucher` ni `moissonner`. Or `faucher` versait l'herbe coupée au pool de litière — donc au stock — sans qu'aucune entrée ne la compense, la strate herbacée n'étant pas au bilan carbone du tout : **il créait du carbone à partir de rien, et rien ne le voyait**. Les quatre chemins de la strate créditent maintenant la production primaire, et les deux actions sont entrées dans la propriété. Vérifié que l'essai POUVAIT échouer avant de le croire : crédit retiré, il attrape 37 kg C créés en une semaine de fauche |
 | I2 | Le sol est le plus gros stock en tempéré | ✅ | `carbon.test.ts` |
 | I3 | Le bois énergie vendu est émis immédiatement (il ne stocke rien) | ✅ | `epandre-vs-vendre.test.ts` |
 | I4 | Le bois d'œuvre stocke pendant la durée de vie du produit | ✅ | `DEMI_VIE_OEUVRE_ANS` ; `produits-bois.test.ts` — décroissance de premier ordre sur la demi-vie par défaut de l'IPCC pour les sciages (35 ans ; 25 pour les panneaux, 2 pour le papier, mais le moteur ne produit que du sciage). Le crédit au bilan net est le STOCK et non le cumul : **un puits qui ne se vide jamais n'est pas un puits**. Et le carbone se partage enfin comme la CAISSE — seule la bille élaguée part en scierie, le houppier part en bûches et brûle, là où un arbre classé « œuvre » envoyait auparavant tout son carbone au produit |
@@ -3549,6 +3556,114 @@ la rendrait explicite ; il faudrait l'ancrer, et ce serait un autre lot.
 touchent toujours pas la variable, alors que ce sont des passages eux aussi. Les
 ajouter demanderait de recalibrer `TASSEMENT_PAR_PASSAGE`, que ce lot n'a pas
 touché — et l'issue demandait précisément de ne pas mélanger les deux.
+
+
+## Ce que la strate basse rend au sol (#201)
+
+Une prairie spontanée sur limon riche, couverture 0,95 tenue pendant cinquante
+ans, sans aucun arbre et sans aucune intervention :
+
+```
+                 humus (kg C)   litière (kg C)   couverture
+  an  1             6 549            0,00           0,95
+  an 21             4 986            0,00           0,95
+  an 41             3 815            0,00           0,95
+```
+
+**Le stock d'humus perdait 42 % en cinquante ans sous une prairie fermée**, et
+la litière restait à zéro les deux mille six cents semaines. Park Grass,
+prairie permanente non fertilisée depuis 1856, tient son stock : une prairie ne
+se décarbonise pas, c'est même le couvert qui en stocke le plus vite dans
+l'horizon de surface.
+
+### Le trou se voyait en énumérant, pas en lisant
+
+Tout le moteur verse au pool de litière — la chute des feuilles d'un ARBRE, les
+crottes de chevreuil, le BRF et le fumier, l'érosion qui redépose en aval — sauf
+un. La strate herbacée n'y versait rien : ni la sénescence annuelle d'une
+graminée, ni le renouvellement de ses racines fines, ni le chaume, ni la paille.
+`applyMoissonner` mettait le feuillage à zéro, le grain était vendu et le reste
+s'évaporait.
+
+La fiche d'herbacée le disait pourtant depuis longtemps — *« une pérenne rend sa
+litière à la cellule »* — mais c'était une intention, pas un mécanisme. Et le
+commentaire de clôture du fichier portait la dette en toutes lettres : *« la
+strate ne rend pas de litière. Ce qui manque vraiment est le retour de la
+PAILLE. »*
+
+### Un FLUX, pas une chute — et c'est une mesure ratée qui l'a dit
+
+Le premier jet collectait la SÉNESCENCE que le moteur calcule déjà, une feuille
+qui jaunit et se couche. Il rendait **36 kg C/ha/an**, deux ordres de grandeur
+sous le compte.
+
+La raison tient à la représentation : le feuillage de ce moteur est un **état de
+couverture**, pas un stock de matière. Sur une prairie permanente il reste à
+0,95 toute l'année, si bien qu'il n'y a presque rien qui tombe. Or une prairie
+dont la couverture ne bouge pas d'un centième renouvelle quand même toute sa
+matière chaque année, racines fines comprises — et c'est ce renouvellement qui
+nourrit le sol. L'ancre est la production primaire d'une prairie tempérée : 6 à
+12 t de matière sèche par hectare et par an, aérien et souterrain confondus.
+
+### Et une seconde correction, dite par l'essai
+
+La litière s'est alors empilée à **99 t C/ha en quarante ans** : rien ne s'en
+décomposait jamais. `litterK`, la vitesse de décomposition d'une cellule, est un
+mélange pondéré des vitesses de ce qui y est tombé — et sur une parcelle sans
+arbre, personne ne l'avait jamais posée. Elle valait zéro. Elle se déduit du
+C/N, donc le trait de la fiche suffisait déjà.
+
+Relevé après, sur cent soixante-dix ans — la durée de Park Grass, parce qu'un
+repère qui porte une durée impose la même au dispositif (leçon du lot du soc) :
+
+| an | 1 | 21 | 41 | 61 | 81 | 101 | 121 | 141 | 161 |
+|---|---|---|---|---|---|---|---|---|---|
+| humus, kg C | 6571 | 6284 | 6109 | 5997 | 5925 | 5883 | 5860 | 5856 | 5857 |
+| litière, kg C | 131 | 235 | 236 | 234 | 234 | 234 | 236 | 234 | 236 |
+
+La litière trouve son équilibre à **2,6 t C/ha**, l'ordre de grandeur d'un tapis
+de prairie. L'humus s'ajuste de 11 % sur le premier siècle — le point de départ
+de la station n'est pas son équilibre — puis il **tient**, à quatre dixièmes de
+kilo près entre l'an 141 et l'an 161.
+
+### Le trait qui décide : le C/N de la paille
+
+Une paille de blé est à **90**. Elle immobilise l'azote du sol le temps que les
+micro-organismes la digèrent, et ne le rend qu'ensuite : enfouir une paille sans
+apport fait donc baisser la culture suivante avant de la faire monter. Un
+feuillage herbacé jeune est à 15-25 et se minéralise en quelques semaines. C'est
+l'écart entre ces deux nombres qui fait qu'un couvert de légumineuse nourrit la
+culture suivante et qu'un résidu de céréale lui vole d'abord son azote — un fait
+d'agronomie que le moteur ne pouvait pas produire tant que la paille n'existait
+pas, et que `azoteNetDecomposition` (C9) savait déjà traiter sans jamais en voir.
+
+### Un ✅ qui était faux, trouvé en passant
+
+La strate n'étant pas au bilan carbone, le seul chemin qui l'alimentait —
+`faucher`, qui versait l'herbe coupée au pool de litière — **créait du carbone à
+partir de rien**. La propriété de conservation du carbone (I1) vérifie pourtant
+que les entrées égalent les sorties à chaque semaine pendant huit ans ; elle
+n'exerçait ni `faucher` ni `moissonner`, et ne pouvait donc pas le voir.
+
+Les quatre chemins créditent maintenant la production primaire — c'est la plante
+qui a fixé ce carbone — et les deux actions sont entrées dans la propriété. On a
+vérifié que l'essai POUVAIT échouer avant de le croire : crédit retiré, il
+attrape 37 kg C créés en une semaine de fauche.
+
+### Ce que ce lot n'a PAS fait
+
+**Presser la paille.** Par défaut elle reste au champ, ce qui est la conduite la
+plus répandue. L'exporter est un geste de gestion, avec son prix et ses heures :
+il lui faudra son action.
+
+**Distinguer l'aérien du souterrain.** `renouvellementAn` porte les deux d'un
+seul nombre, rapporté à la biomasse aérienne. Les séparer permettrait de dire
+qu'un fauchage emporte l'un et pas l'autre — ce que le moteur ne sait pas.
+
+**Relever la biomasse de référence.** `CARBONE_COUVERT_FERME_G_M2` vaut 100, la
+valeur qui était écrite en dur dans la fauche : c'est le bas de la gamme d'une
+prairie tempérée. On la garde plutôt que de la relever en même temps qu'on ouvre
+les chemins, pour que le lot ne mélange pas deux changements.
 
 
 ## Règle de travail

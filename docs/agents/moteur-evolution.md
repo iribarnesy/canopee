@@ -1543,6 +1543,16 @@ montre — un gradient monotone sur trois couverts — et non ce qu'on espérait
 
 ## File d'attente
 
+**Ce que #201 laisse.** PRESSER LA PAILLE : par défaut elle reste au champ, ce
+qui est la conduite la plus répandue ; l'exporter est un geste de gestion avec
+son prix et ses heures, et il lui faut son action. SÉPARER L'AÉRIEN DU
+SOUTERRAIN : `renouvellementAn` porte les deux d'un seul nombre, si bien que le
+moteur ne sait pas qu'un fauchage emporte l'un et pas l'autre. Et RELEVER
+`CARBONE_COUVERT_FERME_G_M2`, qui vaut 100 — la valeur qu'avait la fauche en dur,
+c'est-à-dire le bas de la gamme d'une prairie tempérée. On l'a gardée pour que le
+lot ne mélange pas l'ouverture des chemins et une recalibration ; la relever est
+un lot à soi, avec ses ancres de biomasse.
+
 **Ce que #141 laisse.** La SEMELLE DE LABOUR : le desserrement de l'horizon
 travaillé va avec un tassement sous lui, et le moteur n'a qu'une valeur par
 cellule — un modèle à deux horizons la rendrait explicite, et il faudrait
