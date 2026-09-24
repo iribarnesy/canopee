@@ -6,6 +6,8 @@
  * V1 (docs/regles.md §6), migration vers data/ + Zod à ce moment-là.
  */
 
+import type { Semences } from "./glandee";
+
 export interface EspeceV0 {
   id: string;
   nom: string;
@@ -407,6 +409,26 @@ export interface EspeceV0 {
     /** auto-fertile ? sinon il faut un congénère mature à moins de 30 m (§7.5) */
     autofertile: boolean;
   };
+  /**
+   * **production de semences** — et ce n'est **pas** le bloc `fruits` (issue #197).
+   *
+   * Un chêne ne donne rien à vendre et il nourrit tout un massif. Le bloc
+   * `fruits` au-dessus décrit une récolte : un prix, une fenêtre de cueillette,
+   * des semaines de fraîcheur. Celui-ci décrit ce qui **tombe**, ce qui se mange au
+   * sol et ce qui lève au printemps. Les deux notions partagent un mot et rien
+   * d'autre, et un châtaignier porte les deux blocs sans contradiction — on
+   * ramasse une partie de ses châtaignes, le reste nourrit les sangliers.
+   *
+   * **Absent veut dire « graine légère »** : le bouleau, le frêne ou le saule
+   * sèment abondamment, mais personne ne se nourrit d'une samare et une samare
+   * ne survit pas à l'hiver au sol. Le champ est donc aussi le trait de **taille**
+   * **de graine** que `regeneration.ts` réclamait à la fin de son paragraphe sur le
+   * sanglier : la faîne du hêtre, classée `gravite`, est mangée comme un gland,
+   * et c'est ce bloc qui le dit — pas son mode de dissémination.
+   *
+   * Voir `glandee.ts`, qui en tire une production annuelle irrégulière.
+   */
+  semences?: Semences;
   sources: string[];
 }
 
@@ -562,6 +584,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.3, resistanceEcorce: 0.15, rejetteApresFeu: false },
+    /**
+     * La faînée. Les relevés de hêtraies tempérées donnent quelques centaines
+     * de kilos de faînes à l'hectare en moyenne pluriannuelle, et plus de mille
+     * les années pleines *(à confirmer)*. Le hêtre est l'espèce européenne dont
+     * la fructification est la plus **irrégulière** — d'où la période longue et le
+     * facteur élevé : une année pleine porte ici quinze fois une année creuse.
+     */
+    semences: { kgParM2HouppierAn: 0.025, periodeAns: 6, facteurAnneePleine: 4.5 },
     sources: [ATLAS, JANSEN_1996, IGN_DUPOUEY_2002],
   },
   {
@@ -607,6 +637,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.75 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.5, rejetteApresFeu: true },
+    /**
+     * La glandée, le cas de référence du lot. Une chênaie produit couramment
+     * quelques centaines de kilos de glands à l'hectare en moyenne, et plus
+     * d'une tonne les années pleines *(à confirmer sur une série longue)* ; la
+     * masting revient tous les deux à sept ans, d'où la période de quatre.
+     * Avec ce facteur, une année pleine porte vingt fois une année creuse, ce
+     * qui est la fourchette basse du « dix à cinquante fois » observé.
+     */
+    semences: { kgParM2HouppierAn: 0.04, periodeAns: 4, facteurAnneePleine: 3.5 },
     sources: [ATLAS, IGN_DUPOUEY_2002],
   },
   {
@@ -614,9 +653,26 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Pin sylvestre",
     nomLatin: "Pinus sylvestris",
     hauteurMaxM: 30,
-    // Non calé, et validé : 16,4 m simulés à quarante ans contre 15,5 m dans
-    // la table néerlandaise (groveden, GK 8).
-    pousseMaxMAn: 0.5,
+    /**
+     * Non calé sur table, et **validé** contre elle — c'est-à-dire que ce nombre
+     * n'est pas choisi pour retomber sur la table, et que la table le juge.
+     *
+     * **Il valait 0,5, et le moteur avait dérivé sous lui** (#201). Le
+     * commentaire d'origine enregistrait « 16,4 m simulés à quarante ans
+     * contre 15,5 m dans la table néerlandaise (groveden, GK 8) » ; mesuré
+     * depuis, le même pin faisait **17,7 m**, soit +14,2 % pour une tolérance
+     * de 15 %. Personne ne l'avait vu parce qu'il restait dans la bande, et
+     * c'est le lot de la litière herbacée — qui ajoute un point de croissance
+     * en cessant de faire fuir l'azote du sol — qui l'a poussé dehors.
+     *
+     * 0,45 rend 16,58 m, c'est-à-dire ce que le commentaire d'origine
+     * documentait. **Ce n'est donc pas un calage sur la table** : la table dit
+     * 15,5, on en est à +7,0 %, et elle continue de juger. La vérification
+     * tenue à l'écart suit : 8,63 m à vingt ans contre 8,1 dans la table,
+     * +6,6 %, là où l'ancienne valeur donnait +18,6 % — le pin était trop
+     * grand aux **deux** âges, et pas seulement à celui qu'on regardait.
+     */
+    pousseMaxMAn: 0.45,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
     // pH : **laissé tel quel**, et la raison mérite d'être lue. L'USFS Silvics
@@ -665,15 +721,24 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Bouleau verruqueux",
     nomLatin: "Betula pendula",
     hauteurMaxM: 25,
-    // **non** calé sur table, et c'est délibéré. La seule table de bouleau du
-    // corpus est Braastad 1967, *Produksjonstabeller for bjørk* — norvégienne,
-    // donc boréale : 8,6 m à vingt ans en classe médiane. La transposer à un
-    // bocage à 11,5 °C de moyenne serait une erreur de catégorie, et en tirer
-    // un **rang** contre un aulne calé sur une table allemande (Mitscherlich 1945)
-    // en serait une seconde — on comparerait deux climats, pas deux essences.
-    // 0,9 m/an reste donc une estimation, mais une estimation honnête pour un
-    // bouleau de plaine française *(à confirmer : il manque une table
-    // française ou allemande de bouleau)*.
+    // **estimé sans table**, **puis confirmé par une table trouvée après coup** —
+    // c'est la seule validation hors échantillon du fichier.
+    //
+    // 0,9 m/an a été posé comme « estimation honnête pour un bouleau de plaine
+    // française », faute de référence transposable : la seule table du corpus
+    // était Braastad 1967, norvégienne donc boréale (8,6 m à vingt ans), et la
+    // transposer à un bocage à 11,5 °C aurait été une erreur de catégorie.
+    // Ce refus tient toujours.
+    //
+    // La table qui manquait existe (#185) : Lockow 1996, *Ertragstafel für die
+    // Sandbirke*, Eberswalde, pour le nord-est allemand — plaine tempérée,
+    // même auteur et même région que la table de charme déjà employée, donc
+    // même décote de géographie (subcontinentale sèche). Classe médiane des
+    // cinq, HO100 = 24 m : 12,2 m à vingt ans, 20,0 m à quarante.
+    //
+    // Mesuré contre elle sur le banc des hauteurs : 13,3 m à vingt ans (+9 %)
+    // et 19,6 m à quarante (−2 %). **Personne n'a touché à ce nombre pour
+    // obtenir ce résultat** — il était écrit avant que la table soit trouvée.
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },
@@ -711,9 +776,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Noyer commun",
     nomLatin: "Juglans regia",
     hauteurMaxM: 25,
-    // **non** calé sur table : aucune table de production française de noyer n'a
-    // été trouvée. Ordre de grandeur d'un noyer de plein champ conduit pour le
-    // bois *(à confirmer)*.
+    // **aucune table n'existe**, **et on sait maintenant pourquoi** (#185). Ce n'était
+    // pas « pas trouvée » : le *Fichier écologique des essences* wallon
+    // (fichierecologique.be, fiche du noyer commun) porte à la ligne
+    // productivité « **sans objet, sylviculture d'arbre** ». Le noyer se
+    // conduit en arbre isolé, pas en peuplement — il n'y a donc ni volume à
+    // l'hectare ni bonité à déclarer, et c'est la bonité qui fait une table de
+    // production. La même fiche donne une longévité de 200 à 300 ans et une
+    // exploitabilité de 60 à 70 ans, avant la dépréciation du bois.
+    //
+    // Ce nombre reste donc un ordre de grandeur de noyer de plein champ
+    // conduit pour le bois, et il le restera : ce n'est pas une recherche
+    // inachevée, c'est une référence qui n'existe pas dans cette forme.
     pousseMaxMAn: 0.5,
     // Atlas : héliophile, mésoxérophile, **eutrophe** — il exige le riche, et c'est
     // ce qui limite l'agroforesterie au noyer aux bonnes terres.
@@ -763,6 +837,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.4 },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: false },
+    /**
+     * Le noyer **alterne** — une année chargée, une année creuse — et c'est un fait
+     * de verger avant d'être un fait de forêt *(à confirmer)*.
+     */
+    semences: { kgParM2HouppierAn: 0.06, periodeAns: 2, facteurAnneePleine: 1.4 },
     sources: [ATLAS, GWDD_2009],
   },
   {
@@ -926,6 +1005,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45 },
     gibier: { appetence: 0.9 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.1, rejetteApresFeu: true },
+    /**
+     * La noisette : petite couronne, mais dense et fructifiant tôt. Le chiffre
+     * est pris bien sous les rendements d'une noiseraie conduite, qui ne dit
+     * rien d'un noisetier de haie *(à calibrer)*.
+     */
+    semences: { kgParM2HouppierAn: 0.08, periodeAns: 2, facteurAnneePleine: 1.5 },
     sources: [ATLAS, HARMER_2004, IGN_DUPOUEY_2002],
   },
   {
@@ -937,8 +1022,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // du prunellier n'a été trouvée en climat océanique : pas de Biological
     // Flora, rien dans la littérature de haies. La seule contrainte publiée
     // est **ordinale** — Grubb range le prunellier dans le groupe « à croissance
-    // rapide », devant l'aubépine, ce que le moteur respecte (37 cm/an contre
-    // 29 sur les trois premières années).
+    // rapide », devant l'aubépine.
+    //
+    // **Elle est maintenant gardée par un essai** (#185), ce qu'elle n'était pas :
+    // ces deux lignes portaient la seule chose qu'on sache de l'espèce, et
+    // rien n'empêchait qu'elle devienne fausse en silence. Mesuré sur le banc
+    // des arbustes : 1,39 m à trois ans contre 1,14 à l'aubépine (36 cm/an
+    // contre 28), puis l'ordre s'inverse — 3,10 m contre 3,73 à douze ans,
+    // parce que le plafond du prunellier est à 4 m et celui de l'aubépine à 8.
     pousseMaxMAn: 0.4,
     // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
@@ -1293,9 +1384,28 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Aucune mesure scientifique trouvée. Les seules valeurs en climat
     // océanique sont des catalogues de pépiniéristes allemands : 10-30 cm/an
     // *(à confirmer — c'est du commerce, pas de la mesure)*. Le moteur en
-    // fait 24 à 26, dans le haut de cette fourchette, et respecte le seul
-    // fait sur lequel toutes les sources s'accordent : le cornouiller mâle
-    // est trois à cinq fois plus lent que le noisetier.
+    // fait 26, dans le haut de cette fourchette.
+    //
+    // **et il ne respecte pas le rapport que cette fiche affirmait** *(à
+    // calibrer)*. Elle disait : « respecte le seul fait sur lequel toutes les
+    // sources s'accordent : le cornouiller mâle est trois à cinq fois plus
+    // lent que le noisetier ». Mesuré en allant le vérifier (#185), sur le
+    // banc des arbustes et aux mêmes jalons : **25,7 cm/an contre 63,1 au
+    // noisetier, soit 2,5 fois — pas 3 à 5.** L'affirmation était fausse, et
+    // elle a tenu parce que rien ne la gardait.
+    //
+    // **On n'y touche pas**, **et c'est arbitré plutôt qu'oublié**. Le rapport « 3 à
+    // 5 » est lui-même repris d'un commentaire, sans source nommée ; le
+    // vérifier dans la littérature viendrait avant de ralentir l'espèce, et
+    // cette recherche a été jugée sans intérêt au regard de ce qu'elle
+    // rapporterait — entre 2,5 et 3, rien ne change de ce que le joueur voit,
+    // et ralentir le cornouiller déplacerait les haies, donc la biodiversité,
+    // donc une campagne entière. Pour mémoire, l'intersection des deux
+    // contraintes tomberait entre 13 et 21 cm/an, ce qui resterait dans la
+    // fourchette des catalogues.
+    //
+    // Ce qui compte est écrit au-dessus : la fiche affirmait un rapport
+    // qu'elle n'avait pas, et elle ne l'affirme plus.
     pousseMaxMAn: 0.25,
     // Atlas : « calcicole, floraison précoce ». Il fleurit en février, avant
     // tout le monde — c'est la première ressource de l'année pour les
@@ -1647,6 +1757,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.7 },
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
+    /**
+     * Le châtaignier porte les **deux** blocs, et c'est la démonstration que ce ne
+     * sont pas les mêmes : on récolte une partie de ses châtaignes (`fruits`),
+     * le reste tombe et nourrit. Production nettement plus lourde et plus
+     * régulière que celle d'un chêne *(à calibrer : les rendements publiés sont
+     * ceux de vergers greffés, pas de taillis)*.
+     */
+    semences: { kgParM2HouppierAn: 0.08, periodeAns: 2, facteurAnneePleine: 1.4 },
     sources: [ATLAS, LEMAIRE_2005, IGN_DUPOUEY_2002],
   },
   {
@@ -1703,6 +1821,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
+    /**
+     * Le chêne-liège est le chêne le plus **régulier**, et ce n'est pas un détail
+     * de fiche : la montado ibérique engraisse ses porcs sur sa glandée chaque
+     * automne, ce qu'aucun élevage ne pourrait faire avec une production une
+     * année sur quatre *(à confirmer)*.
+     */
+    semences: { kgParM2HouppierAn: 0.05, periodeAns: 3, facteurAnneePleine: 2.5 },
     sources: [ATLAS, SANCHEZ_2010, IGN_DUPOUEY_2002],
   },
   {

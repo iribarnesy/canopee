@@ -144,14 +144,13 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
 
   it("plus d'azote, plus de grain — et c'est monotone", () => {
     // Relevé sur les paliers de l'essai, moyenne des dix dernières années :
-    // rien 1,07 / 48 kg 2,54 / 96 kg 3,40 / 144 kg 4,17 / 192 kg 4,88.
+    // **rien 1,44 / 48 kg 3,25 / 96 kg 4,26 / 144 kg 5,16 / 192 kg 6,00.**
     //
-    // Les quatre premiers ont monté de 3 à 6 % depuis #140 (1,01 / 2,40 /
-    // 3,21 / 3,92), et le cinquième n'a pas bougé d'un centième. Aucun lot n'a
-    // touché à la culture entre-temps : c'est le flux aléatoire qui a glissé,
-    // comme il glisse à chaque fois qu'un tirage s'insère en amont. On les
-    // remet à ce que la mesure donne plutôt que de garder des chiffres qui ne
-    // sortent plus.
+    // Toute la courbe a monté d'un quart depuis #141 (1,07 / 2,54 / 3,40 /
+    // 4,17 / 4,88), et cette fois ce n'est pas le flux aléatoire : le soc
+    // desserre, le tassement ne s'épingle plus à 1, et ce qu'il retirait à tout
+    // ce qui pousse est rendu. Voir `labour-desserre.test.ts` pour le
+    // mécanisme, et l'essai ci-dessous pour ce que ça change sur le plafond.
     const rien = dernieres(bleContinu(ANS, 0));
     const moyen = dernieres(bleContinu(ANS, 96));
     const fort = dernieres(bleContinu(ANS, 192));
@@ -165,44 +164,46 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
     expect(fort).toBeGreaterThan(3 * rien);
   }, 900_000);
 
-  it("le PLAFOND n'est pas dans l'azote : il est dans le tassement (#141)", () => {
-    // Le moteur reproduit la **forme** de la courbe et pas son niveau haut :
-    // 4,88 t/ha à 192 kg N contre 8-9 chez Broadbalk. La cause est mesurée et
-    // elle est ailleurs — le tassement.
+  it("le PLAFOND était dans le tassement, et il est levé (#141)", () => {
+    // Le moteur reproduisait la **forme** de la courbe et pas son niveau haut :
+    // 4,88 t/ha à 192 kg N contre 8-9 chez Broadbalk, 6,21 au fumier contre ~9.
+    // La cause avait été cherchée plutôt que supposée, et elle était ailleurs
+    // que dans l'azote : le **tassement**, qui s'épinglait à 1,000 à l'an 16 et
+    // retirait 30 % de croissance pour toujours.
     //
-    // **Le compte écrit ici était faux**, et il l'a été pendant tout un lot :
-    // « quatre passages d'engin par an, soit 1,00 de tassement contre 0,20 de
-    // réparation, donc épinglé dès la deuxième année ». Un seul geste tasse
-    // dans le moteur d'aujourd'hui — `labourer` ; semer, fertiliser et
-    // moissonner ne touchent pas la variable. C'est donc 0,25 par an contre
-    // 0,20 de réparation, soit +0,05, et la **trajectoire** relevée au centre le
-    // dit : 0,25 à l'an 1, 0,50 à l'an 6, 0,96 à l'an 15, 1,000 à partir de
-    // l'an 16, pour toujours. Le plafond arrive quatorze ans plus tard
-    // qu'annoncé, et il arrive quand même.
+    // **Ce n'était pas un coefficient trop grand**, **c'était un terme qui manquait**.
+    // Le moteur ne modélisait que les roues du tracteur ; le soc, lui, casse la
+    // structure tassée de l'horizon travaillé — c'est la raison agronomique du
+    // geste, et Broadbalk est labouré chaque année depuis 1843. Le terme ajouté
+    // remplace la saturation par un **équilibre** : le tassement oscille entre 0,30
+    // au sortir du labour et 0,10 après une année de réparation, au lieu de
+    // monter à 1 et d'y rester.
     //
-    // **Ce qu'il coûte**, mesuré par neutralisation de `PERTE_CROISSANCE_MAX`
-    // (le témoin que l'issue demandait), moyenne des dix dernières années sur
-    // trente :
+    // **Ce que ça rend**, moyenne des dix dernières années sur trente. Le témoin
+    // est `PERTE_CROISSANCE_MAX = 0`, **refait** après le lot comme l'issue le
+    // demandait — et pas repris de la mesure d'avant, qui portait sur une autre
+    // trajectoire de tassement :
     //
-    //                   moteur   témoin sans tassement   Broadbalk
-    //   rien             1,07            1,70              ~1
-    //   minéral 192      4,88            6,68              8-9
-    //   fumier 240       6,21            8,39              ~9
+    //                  avant #141   après   témoin refait   Broadbalk
+    //   rien              1,07       1,44        1,59          ~1
+    //   minéral 192       4,88       6,00        6,32         8-9
+    //   fumier 240        6,21       8,01        8,39          ~9
     //
-    // Le tassement coûte donc un bon tiers du rendement, et le plot fumé
-    // neutralisé tombe dans la gamme de l'essai. **Mais** il soulève **toute** la
-    // courbe, point zéro compris : 1,07 → 1,70 là où les parcelles nues de
-    // Broadbalk tiennent ~1 depuis 1843. Le tassement faisait donc en partie
-    // le travail de la paille qui manque (voir C16). Corriger l'un sans
-    // regarder l'autre déplacerait le défaut au lieu de le lever — c'est écrit
-    // dans l'issue, qui est passée à `moteur:évolution` pour cette raison : il
-    // manque un **terme**, le desserrement par le soc, pas un coefficient.
+    // **Le plot fumé entre dans la gamme de l'essai**, et surtout il ne reste
+    // presque plus rien d'attribuable au tassement : 95 % du témoin sur les deux
+    // plots fertilisés, contre 74 % avant le lot. Le régime d'équilibre coûte
+    // 5 %, ce qui est ce qu'un sol labouré doit coûter — pas zéro, pas un tiers.
     //
-    // La preuve que le plafond est bien là : **les premières années, avant que
-    // le tassement ne s'épingle, atteignent la gamme de Broadbalk** — 8,16 t/ha
-    // à 192 kg N et 8,15 avec le fumier, à l'an 2.
-    const fort = bleContinu(8, 192);
-    expect(Math.max(...fort)).toBeGreaterThan(6.5);
+    // **Ce qui reste**, et qui n'est pas ce lot : le minéral 192 s'arrête à 6,00
+    // pour 8-9 chez Broadbalk, et son propre témoin sans tassement plafonne à
+    // 6,32. La seconde cause est donc petite mais réelle, et elle est ailleurs.
+    const fort = dernieres(bleContinu(ANS, 192));
+    const fumier = dernieres(bleContinu(ANS, 0, 240));
+    // Le plafond d'avant est franchi, et largement.
+    expect(fort).toBeGreaterThan(5.5);
+    // Et le fumier atteint la gamme de l'essai.
+    expect(fumier).toBeGreaterThan(7.5);
+    expect(fumier).toBeLessThan(10);
   }, 900_000);
 });
 

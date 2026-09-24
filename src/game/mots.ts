@@ -171,6 +171,8 @@ const CAUSE_DITE: Record<CauseMort, { participe?: string; sg: string; pl?: strin
   abroutissement: { participe: "brouté", sg: " par le gibier" },
   ravageurs: { participe: "achevé", sg: " par les ravageurs" },
   labour: { participe: "retourné", sg: " par le labour" },
+  boutis: { participe: "arraché", sg: " par le boutis du sanglier" },
+  fauche: { participe: "emporté", sg: " par la fauche" },
   maladie: { participe: "emporté", sg: " par la maladie" },
   frottis: { participe: "annelé", sg: " par les frottis de cervidés" },
   chablis: { participe: "couché", sg: " par la tempête" },

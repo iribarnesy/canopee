@@ -135,11 +135,15 @@ export interface RecruitmentInput {
   /** La parcelle a-t-elle brûlé depuis la dernière levée ? Le feu scarifie. */
   aBrule?: boolean;
   /**
-   * Ce qui reste d'une fructification **lourde** après le passage des sangliers
-   * ∈ [0,1] (`sanglier.ts`). Les grosses graines tombent et restent : elles se
-   * mangent au sol. Celles que le vent ou les oiseaux emportent, non.
+   * Ce que vaut la glandée **survivante** de l'année, par espèce, rapporté à une
+   * année moyenne dont rien n'aurait été mangé (`glandee.ts`).
+   *
+   * Remplace l'ancienne `partGlandeeRestante`, qui était une part ∈ [0,1] de
+   * sangliers sur une production supposée constante. Ce nombre-ci n'est pas
+   * borné à 1 : une année de glandée en vaut trois, et c'est tout l'objet du
+   * mécanisme — les mangeurs de graines sont noyés, et le chêne passe.
    */
-  partGlandeeRestante?: number;
+  glandeeRelative?: Readonly<Record<string, number>>;
   /**
    * Part de la parcelle retournée par les sangliers dans l'année ∈ [0,1]. Un
    * boutis déchire le tapis et enfouit la litière : il **ouvre** un lit de
@@ -529,32 +533,30 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   // dissémination est `geai` ou `gravite` — et il ouvre des lits de germination
   // en retournant le sol, ce dont profitent celles qui arrivent par le vent ou
   // par les oiseaux. Aucune espèce n'est nommée : le trait tranche.
-  const restant = input.partGlandeeRestante ?? 1;
   const litOuvert = 1 + BONUS_SOL_RETOURNE * (input.partRetournee ?? 0);
   for (const tree of trees) {
     if (!tree.alive) continue;
     const espece = getEspece(tree.especeId);
     if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
-    // `geai` et **rien d'autre**, et le détour vaut d'être écrit. Le premier jet
-    // prenait aussi `gravite`, en croyant lire « graine lourde ». Mais ce mode
-    // ne dit pas le poids : il dit que la graine **tombe sous sa mère**, ce qui
-    // range l'ajonc et le genêt — graines dures de deux millimètres, dont
-    // aucun sanglier ne se nourrit — à côté de la faîne. Résultat mesuré : les
-    // ajoncs d'une lande ne se ressemaient plus, la nurse qu'ils forment ne se
-    // refermait plus, et un pin abrité poussait moins qu'un pin nu (1,38 m →
-    // 0,92 m). L'effet nurse tombait à cause d'un sanglier mangeant des
-    // graines d'ajonc.
+    // **Le trait de taille de graine, enfin.** Ce bloc triait sur
+    // `dissemination === "geai"`, et le commentaire qu'il portait disait
+    // pourquoi c'était un pis-aller : le mode de dissémination ne dit pas le
+    // poids. Il avait d'abord rangé l'ajonc et le genêt (`gravite`, graines
+    // dures de deux millimètres) à côté de la faîne, ce qui faisait manger des
+    // graines d'ajonc aux sangliers, ne refermait plus la nurse d'une lande et
+    // faisait pousser un pin abrité moins qu'un pin nu (1,38 m → 0,92 m).
+    // `geai` corrigeait ça — mais laissait dehors la faîne du hêtre, qui est
+    // bien mangée, et le commentaire appelait un trait de taille de graine
+    // *(à instruire)*.
     //
-    // `geai` est le bon marqueur, et il ne doit rien au hasard : un geai ne
-    // cache que de **grosses** graines nutritives, donc l'atlas le pose exactement
-    // sur les chênes, le chêne-liège, le châtaignier et le noisetier — les
-    // glands et les châtaignes que l'issue nommait. **Ce que ça laisse de
-    // côté** : la faîne du hêtre, classée `gravite`, est bien mangée par les
-    // sangliers. La corriger proprement demanderait un trait de **taille de**
-    // **graine** dans l'atlas, ce qui dépasse ce lot *(à instruire)*.
+    // Le bloc `semences` **est** ce trait (#197). Le porter, c'est produire une
+    // graine assez grosse pour qu'on s'en nourrisse et assez lourde pour
+    // qu'elle reste au sol ; ne pas le porter, c'est une samare. Le hêtre
+    // rejoint donc les chênes, et l'ajonc reste dehors — sans qu'aucune espèce
+    // ne soit nommée nulle part.
     const taux =
       espece.regeneration.semisParAn *
-      (espece.regeneration.dissemination === "geai" ? restant : litOuvert);
+      (espece.semences ? (input.glandeeRelative?.[tree.especeId] ?? 1) : litOuvert);
     const n = tentatives(taux);
     for (let k = 0; k < n; k++) tryEstablish(tree.especeId, tree);
   }

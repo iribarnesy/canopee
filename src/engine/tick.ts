@@ -69,6 +69,8 @@ import {
   terreArracheeKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
+import type { DepartFaune, InstallationFaune, TableDeLaParcelle } from "./faune";
+import { bilanDeTable, couvertureAuxiliaires, departs, installations } from "./faune";
 import {
   chargeCombustible,
   departDeFeu,
@@ -86,6 +88,7 @@ import {
   LIGNIFICATION_PAR_SEMAINE,
   RETOUR_IMMIGRATION,
 } from "./gibier";
+import { glandeeRelative } from "./glandee";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
   capaciteHerbacee,
@@ -195,9 +198,9 @@ import {
 import {
   attraitCellule,
   effortSemaine,
+  HAUTEUR_ARRACHEE_PAR_BOUTIS_M,
   HERBE_ARRACHEE,
   LITIERE_ENFOUIE,
-  partGlandeeRestante,
   retournee,
   TASSEMENT_CASSE,
 } from "./sanglier";
@@ -526,7 +529,22 @@ export interface TickResult {
    * seulement si l'économie compte dans cette partie (aides.ts).
    */
   aides?: AidesAnnuelles;
+  /**
+   * Faune installée cette semaine (`faune.ts`, #187). Toujours vide si
+   * `station.faune` est éteint — et c'est alors le **même** tableau, figé, pour ne
+   * rien allouer du tout.
+   */
+  installationsFaune: readonly InstallationFaune[];
+  /** Faune qui a quitté la parcelle cette semaine, et pourquoi. */
+  departsFaune: readonly DepartFaune[];
 }
+
+/**
+ * Le tableau que le tick rend quand la faune est éteinte. Un seul, figé : le
+ * contrôle de neutralité dit « pas même une allocation », et un `[]` écrit dans
+ * le `return` en serait une, cinquante-deux fois par an.
+ */
+const AUCUN_MOUVEMENT_DE_FAUNE: readonly never[] = Object.freeze([]);
 
 /**
  * À qui imputer une mort que le coup de grâce vient de déclencher.
@@ -1588,6 +1606,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // parcelle, et les deux tampons par cellule sont alloués une fois pour
   // toutes : la strate tourne sur toutes les cellules toutes les semaines, et
   // ce lot coûte déjà 11 % de temps de tick.
+  // Ce que la strate basse rend au sol cette semaine (#201) : le carbone
+  // entre au bilan par la production primaire (kg C sur la parcelle), l'azote
+  // par le retour de litière (g/m² cumulés, comme celui des arbres).
+  let herbeNppKgC = 0;
+  let herbeLitiereNG = 0;
   const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
   const saisonnieres = HERBACEES.map((h) => partSaisonniere(h, pheno));
   const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
@@ -1613,6 +1636,91 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const base = i * N_HERBACEES;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
+    // ── **ce que la strate basse rend au sol** (#201) ───────────────────────────
+    //
+    // Elle ne rendait **rien**. Mesuré avant ce lot, une prairie spontanée à 0,95
+    // de couverture sur limon riche : le stock d'humus perd 42 % en cinquante
+    // ans et la litière reste à 0,00 les deux mille six cents semaines. Park
+    // Grass, prairie permanente non fertilisée depuis 1856, tient son stock.
+    //
+    // **une plante ne peut rendre que ce qu'elle a pris, et c'est la propriété
+    // de conservation de l'azote qui a dû le rappeler.** Le premier jet posait
+    // un taux de renouvellement sur la fiche et en tirait la litière : il
+    // rendait 120 kg N/ha/an là où la strate en prélève 31, soit quatre fois
+    // ce qu'elle avait jamais absorbé, créé de rien chaque année. Trente-quatre
+    // essais sont tombés — un frêne poussait 17 % au-dessus de sa table, la
+    // courbe de Broadbalk crevait son plafond — et `tick-conservation` a
+    // chiffré la fuite à 0,38 kg N/ha par semaine.
+    //
+    // Le mécanisme n'avait donc pas besoin d'un taux inventé : **le moteur
+    // porte déjà le flux annuel de la strate, c'est son prélèvement d'azote**
+    // (`herbe.ts`, calibré à ~30 kg N/ha/an). L'azote rendu est celui qui a été
+    // servi, et le carbone qui l'accompagne vaut cet azote fois le C/N de
+    // l'espèce. Conservateur par construction, et ancré sur une grandeur qui
+    // l'était déjà.
+    //
+    // *Simplification assumée* : le retour se fait la semaine même du
+    // prélèvement, faute d'un pool d'azote dans la plante. L'azote ne
+    // court-circuite pas pour autant — il passe par la **litière**, dont il ne
+    // ressort qu'au rythme de la décomposition, donc avec le délai qu'il faut.
+    const servi = nServedRatio[i] ?? 0;
+    if (servi > 0) {
+      let poidsTotal = 0;
+      for (let s = 0; s < N_HERBACEES; s++) {
+        const h = HERBACEES[s];
+        if (h) poidsTotal += (herbeFeuillage[base + s] ?? 0) * h.exigenceMinerale;
+      }
+      const azoteCellule = (herbeDemandeNG[i] ?? 0) * servi;
+      if (poidsTotal > 0 && azoteCellule > 0) {
+        for (let s = 0; s < N_HERBACEES; s++) {
+          const fiche = HERBACEES[s];
+          if (!fiche) continue;
+          const poids = (herbeFeuillage[base + s] ?? 0) * fiche.exigenceMinerale;
+          if (poids <= 0) continue;
+          // Ce que cette espèce-là a pris, et ce qu'elle en **restitue** : une
+          // pérenne rend tout, une culture garde dans son grain l'azote qui
+          // quittera la parcelle (`azoteDansLeGrain`, herbacees.ts).
+          const pris = (azoteCellule * poids) / poidsTotal;
+          // **la rétranslocation, et c'est le même patron que l'arbre.** Une
+          // plante retire l'azote d'un organe avant de le lâcher : une feuille
+          // qui jaunit a déjà rendu la moitié de son azote au reste de la
+          // plante, et c'est pour cela qu'une litière est toujours plus pauvre
+          // que le tissu vivant dont elle vient. `LITTER_RETURN_FRACTION` porte
+          // exactement ça pour l'arbre — *« part de l'azote acquis dans l'année
+          // qui retourne au sol avec les feuilles ; le reste est retenu »* — et
+          // il n'y a aucune raison que la strate s'en dispense.
+          //
+          // *Ce que ça laisse de côté, et c'est la même dette que pour
+          // l'arbre* : la part retenue devrait vivre dans un pool d'azote de la
+          // plante, et le moteur n'en a pas. Elle n'est donc pas rendue, ce qui
+          // reste une fuite — mais la moitié de celle d'avant ce lot, et une
+          // fuite **nommée**, adossée à un fait (la rétranslocation) plutôt qu'à un
+          // oubli.
+          const n = pris * LITTER_RETURN_FRACTION * (1 - (fiche.culture?.azoteDansLeGrain ?? 0));
+          if (n <= 0) continue;
+          const c = n * fiche.litiere.cSurN;
+          // Le carbone est **crédité** à la production primaire — c'est la plante
+          // qui l'a fixé — et l'azote déclaré comme un retour de litière, sans
+          // quoi le bilan du sol verrait une entrée venue de nulle part.
+          herbeNppKgC += c / 1000;
+          herbeLitiereNG += n;
+          const oldN = litterNG[i] ?? 0;
+          // `litterK` **est la ligne qui manquait au premier jet**, et l'essai l'a
+          // dit sans ambiguïté : la litière s'accumulait à 99 t C/ha après
+          // quarante ans, c'est-à-dire que rien ne s'en décomposait jamais. La
+          // vitesse de décomposition d'une cellule est un mélange pondéré des
+          // vitesses de ce qui y est tombé, et sur une parcelle sans arbre elle
+          // valait zéro faute que personne ne l'ait jamais posée. Elle se
+          // déduit du C/N, donc le trait de la fiche suffit.
+          litterK[i] =
+            (oldN * (litterK[i] ?? 0) + n * litterDecayRate(fiche.litiere.cSurN)) / (oldN + n);
+          litterCaMgG[i] =
+            (oldN * (litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G) + n * CALCIUM_NEUTRE_MG_G) / (oldN + n);
+          litterNG[i] = oldN + n;
+          litterCG[i] = (litterCG[i] ?? 0) + c;
+        }
+      }
+    }
     // ── Le **grain** s'accumule (#136) ──────────────────────────────────────────
     // Le rendement est l'intégrale de ce que la plante assimile, pas une
     // fonction de son état du jour. Les trois facteurs sont déjà là : ce
@@ -1836,11 +1944,26 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) moyenneEauSurface += waterMm[i * nH] ?? 0;
   moyenneEauSurface /= nCells;
   const boisMortTHa = state.carbon.deadWoodKgC / 1000 / (nCells / 10_000);
+  // **ce qui loge les auxiliaires : les gîtes, ou les logés ?** (#187 lot 3)
+  //
+  // Tant que la faune n'existe pas en individus, `carteBiotique` estime la part
+  // « gîte » de l'habitat par des litres de cavité et des tonnes de bois mort.
+  // Quand elle existe, on lui passe qui est **effectivement** installé, et le proxy
+  // s'efface. On lit la faune du **début** de semaine — celle que le tick mettra à
+  // jour plus bas — parce que ce sont les animaux présents qui mangent cette
+  // semaine-ci, pas ceux qui arriveront à la fin.
+  //
+  // Éteint veut dire éteint : sans `station.faune`, pas un parcours, pas une
+  // allocation, et `carteBiotique` retombe au bit près sur la carte d'avant.
+  const auxiliaires = state.station.faune
+    ? couvertureAuxiliaires(state.faune ?? [], dims)
+    : undefined;
   const { ressource, habitat, abriHivernal } = carteBiotique(
     nextTrees,
     herbeCouverture,
     boisMortTHa,
     dims,
+    auxiliaires,
   );
 
   // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────
@@ -2169,6 +2292,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Aucun tirage dans le flux principal : la cellule retournée dérive d'une
   // graine locale, comme le chablis et la chute des chandelles.
   let cellulesRetournees = 0;
+  // Les cellules retournées **cette semaine** : c'est sur elles que le second effet
+  // du sanglier se joue, et il se joue tout de suite, pas au recrutement — un
+  // semis arraché en novembre n'attend pas le printemps pour être mort. Rien
+  // n'est gardé d'une semaine à l'autre : pas de champ d'état, pas de migration
+  // de sauvegarde.
+  const retourneesCetteSemaine = new Set<number>();
   if (station.sanglierParHa > 0) {
     // Où il y a de la glandée : sous les couronnes des arbres mûrs dont la
     // graine est **lourde** — celle qui tombe et reste. Le trait suffit à le dire
@@ -2205,6 +2334,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (let i = 0; i < nCells; i++) {
       if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
       cellulesRetournees++;
+      retourneesCetteSemaine.add(i);
       // La litière est **enfouie** : elle ne disparaît pas, elle passe au pool
       // lent. Un boutis est un enfouissement, pas une combustion.
       const litiereC = (litterCG[i] ?? 0) * LITIERE_ENFOUIE;
@@ -2220,9 +2350,28 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // la fait partir — et ce qui ouvre le lit des petites graines.
       rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 1 - HERBE_ARRACHEE);
     }
+    // **et ce qui avait levé est arraché** (issue #199). Le boutis descend à
+    // dix centimètres : ce qui part avec la motte est le plant dont les racines
+    // n'ont pas encore quitté cet horizon (`sanglier.ts`). C'est raisonné
+    // cellule par cellule et plant par plant, sans qu'aucune espèce ne soit
+    // nommée : la seule chose qui compte est la taille du sujet et le fait
+    // qu'il se trouve sous le groin.
+    //
+    // Aucun tirage n'est ajouté : le boutis est déjà tiré, et ce qu'il trouve
+    // dessus n'est pas une affaire de chance. Le flux principal ne bouge pas.
+    if (retourneesCetteSemaine.size > 0) {
+      nextTrees = nextTrees.map((tree) => {
+        if (!tree.alive) return tree;
+        if (tree.heightM >= HAUTEUR_ARRACHEE_PAR_BOUTIS_M) return tree;
+        if (!retourneesCetteSemaine.has(cellIndexAt(dims, tree.x, tree.y))) return tree;
+        return { ...tree, alive: false, causeMort: "boutis" as const };
+      });
+    }
   }
   // Ce que le sanglier a retourné depuis un an : la régénération le lit à la
-  // semaine de recrutement, et c'est là que son second effet se joue.
+  // semaine de recrutement, et c'est là que son **premier** effet se joue — le lit
+  // de germination ouvert aux petites graines. Le second, la destruction de ce
+  // qui a déjà levé, s'est joué juste au-dessus, à la semaine du boutis.
   const partRetourneeAn = Math.min(1, (cellulesRetournees / nCells) * 52);
 
   // ── 5 ter bis. Réseaux mycorhiziens (§7.5) ────────────────────────────────
@@ -2334,7 +2483,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 6. Retours de litière : chute des feuilles + arbres morts ─────────────
   // Les déjections du gibier sont un retour de litière comme un autre : c'est
   // de l'azote qui quitte les arbres pour revenir au sol.
-  let litterfallSumG = broutageAzoteG;
+  // La strate basse rend sa litière bien avant ce point (#201) : son azote
+  // est un retour comme celui des feuilles d'arbre, et il entre au même titre.
+  let litterfallSumG = broutageAzoteG + herbeLitiereNG;
   let fixationSumG = 0;
   let leafNppKgC = 0; // le feuillage tombé a été produit dans l'année (NPP feuilles)
   const depositLitter = (tree: TreeState, amountG: number) => {
@@ -3047,6 +3198,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let banqueGraines = state.banqueGraines;
   const naissances: NaissanceDeLaSemaine[] = [];
   if (week === RECRUITMENT_WEEK) {
+    const glandeeDeLAnnee: Record<string, number> = {};
+    for (const arbre of nextTrees) {
+      if (!arbre.alive) continue;
+      const especeId = arbre.especeId;
+      if (glandeeDeLAnnee[especeId] !== undefined) continue;
+      if (!getEspece(especeId).semences) continue;
+      glandeeDeLAnnee[especeId] = glandeeRelative(
+        nextTrees,
+        especeId,
+        Math.floor(state.week / 52),
+        state.graineMarche,
+        station.sanglierParHa,
+        surfaceHaParcelle,
+      );
+    }
     const recruitment = yearlyRecruitment({
       trees: nextTrees,
       rng,
@@ -3057,9 +3223,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       lumiereAuSol: groundLight,
       banqueGraines: state.banqueGraines,
       aBrule: aBruleDepuisLaLevee,
-      // Le sanglier, des deux côtés : ce qu'il a mangé des glands, et le lit
-      // qu'il a ouvert pour les petites graines (sanglier.ts).
-      partGlandeeRestante: partGlandeeRestante(station.sanglierParHa),
+      // La **glandée** de l'année, espèce par espèce (glandee.ts) : ce qui est
+      // tombé, moins ce que les mangeurs de graines en ont pris. C'est ici que
+      // se joue la satiété — une année pleine passe, une année creuse est
+      // mangée — et le sanglier n'en est qu'un terme parmi d'autres.
+      glandeeRelative: glandeeDeLAnnee,
+      // Et l'autre face du sanglier : le lit de germination qu'il ouvre pour
+      // les petites graines (sanglier.ts).
       partRetournee: partRetourneeAn,
       nextTreeId,
     });
@@ -3113,10 +3283,72 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     aBruleDepuisLaLevee = false;
   }
 
+  // ── **la faune en individus** (#187) ───────────────────────────────────────────
+  //
+  // Dernier pas du tick, et il vient après tout le reste pour une raison : il
+  // lit `nextTrees`, c'est-à-dire la parcelle telle qu'elle est **à la fin** de la
+  // semaine. Un arbre abattu par le joueur ou une chandelle que le vent a
+  // couchée n'y est plus, et l'individu qu'il portait s'en va sans qu'aucun
+  // code n'ait eu à le prévoir — c'est l'événement, et il tombe du mécanisme.
+  //
+  // **Éteint veut dire éteint** : pas un parcours, pas une allocation, pas un
+  // tirage. C'est le contrôle de neutralité du lot.
+  let faune = state.faune;
+  let nextFauneId = state.nextFauneId;
+  let installationsFaune: readonly InstallationFaune[] = AUCUN_MOUVEMENT_DE_FAUNE;
+  let departsFaune: readonly DepartFaune[] = AUCUN_MOUVEMENT_DE_FAUNE;
+  if (state.station.faune) {
+    const presents = faune ?? [];
+    const aireParcelleM2 = state.station.coteM * state.station.coteM;
+    // La table de la parcelle, telle que le tick vient de la mettre à jour.
+    // Deux grilles déjà là, une par poste — et deux seulement, parce que le
+    // nectar n'a pas encore de consommateur et que la glandée n'existe pas
+    // dans ce moteur (`faune.ts`).
+    const table: TableDeLaParcelle = {
+      invertebres: ravageurs,
+      micromammiferes: herbeBiomasse,
+    };
+
+    // Le gîte d'abord — un arbre disparu expulse, quoi qu'il y ait à manger.
+    const partisDuGite = departs(presents, nextTrees);
+    const apresGite =
+      partisDuGite.length === 0
+        ? presents
+        : presents.filter((ind) => !partisDuGite.some((d) => d.individu.id === ind.id));
+
+    // La table ensuite : elle ne chasse personne d'un coup, elle compte les
+    // saisons maigres et tranche à la seconde (`faune.ts`).
+    const bilan = bilanDeTable(apresGite, dims, table, state.week, aireParcelleM2);
+    departsFaune =
+      partisDuGite.length === 0
+        ? bilan.partants
+        : bilan.partants.length === 0
+          ? partisDuGite
+          : [...partisDuGite, ...bilan.partants];
+
+    const premierId = nextFauneId ?? 1;
+    installationsFaune = installations(
+      bilan.individus,
+      nextTrees,
+      state.week,
+      premierId,
+      aireParcelleM2,
+      dims,
+      table,
+    );
+    nextFauneId = premierId + installationsFaune.length;
+    faune =
+      installationsFaune.length === 0
+        ? bilan.individus
+        : [...bilan.individus, ...installationsFaune.map((entree) => entree.individu)];
+  }
+
   return {
     state: {
       ...state,
       week: state.week + 1,
+      faune,
+      nextFauneId,
       // Les aides tombent une fois l'an sur la trésorerie ; le reste du temps
       // l'économie traverse le tick sans changer (aides.ts).
       economy: aidesVersees ? { ...state.economy, treasuryEur: treasuryApresAides } : state.economy,
@@ -3173,7 +3405,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       carbon: {
         ...state.carbon,
         deadWoodKgC,
-        nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC,
+        nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC + herbeNppKgC,
         importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedPlantsKgC,
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,
         erosionCumKgC:
@@ -3192,6 +3424,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     naissances,
     franchissements,
     chutes,
+    installationsFaune,
+    departsFaune,
     aides: aidesVersees,
     incendie,
     tempete,

@@ -196,8 +196,11 @@ describe("marqueursDuJournal", () => {
       expect(vues.get(cle), `${cause} a la couleur de ${vues.get(cle)}`).toBeUndefined();
       vues.set(cle, cause);
     }
-    // Quatorze depuis que le volis existe à côté du chablis (#176).
-    expect(vues.size).toBe(14);
+    // Quatorze depuis que le volis existe à côté du chablis (#176), quinze
+    // depuis que le boutis existe à côté du labour (#199) — et c'est le même
+    // garde-fou qui a joué : deux morts qui se ressemblent ne peuvent pas
+    // partager une teinte, il a fallu en trouver une au sanglier.
+    expect(vues.size).toBe(16);
   });
 
   it("garde les teintes que le §6.8 nomme", () => {

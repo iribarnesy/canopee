@@ -46,7 +46,6 @@ function instantane(): Snapshot {
     weather: w,
     anneeCivile: 2026,
     paysage: "bocage",
-    initialSoilCTHa: STATION.initialSoilCTHa,
     fluxes: ticked.fluxes,
     debordementParCellule: ticked.debordementParCellule,
     lumiereAuSol: ticked.lumiereAuSol,

@@ -195,8 +195,6 @@ export interface EntreesSnapshot {
   anneeCivile: number;
   /** nom du paysage autour de la parcelle (paysage.ts) */
   paysage: string;
-  /** carbone du sol au départ, t/ha (pour le bilan) */
-  initialSoilCTHa: number;
   fluxes: TickFluxes;
   /**
    * Débordement de la dernière semaine simulée, mm par cellule
@@ -231,7 +229,11 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     week: state.week,
     weather: e.weather,
     economy: state.economy,
-    inventory: carbonInventory(state, e.initialSoilCTHa),
+    // Le point zéro du bilan est **dans** l'état (`carboneDeReferenceTHa`), et ce
+    // n'est pas un détail de plomberie : il valait `station.initialSoilCTHa`,
+    // donc une parcelle vieillie avant l'arrivée du joueur lui offrait le
+    // carbone de ses arbres en avance gratuite (#202).
+    inventory: carbonInventory(state),
     anneeCivile: e.anneeCivile,
     paysage: e.paysage,
     co2Ppm: e.weather.co2Ppm ?? CO2_ACTUEL_PPM,

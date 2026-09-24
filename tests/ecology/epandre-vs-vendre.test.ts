@@ -136,13 +136,36 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
       }
       return sum;
     };
+    // **l'essai change de grandeur plutôt que de glisser une troisième fois.**
+    //
     // Le seuil valait 1,20 pour une mesure à 1,2123 : un pour cent de marge,
     // donc un enregistrement du moteur et non une contrainte. Le correctif des
-    // mycorhizes (#115) l'a fait tomber à 1,1834 — les arbres prélèvent
-    // désormais l'azote que le sol perdait, donc l'écart de **stock** entre les
-    // deux parcelles se resserre alors même que l'apport, lui, n'a pas bougé.
-    // L'énoncé est « épandre **enrichit** », et il se tient à 1,15.
-    expect(nTotal(epandre.state, 30, 30)).toBeGreaterThan(1.15 * nTotal(vendre.state, 30, 30));
+    // mycorhizes (#115) l'a fait tomber à 1,1834, et il a été reposé à 1,15.
+    // Le lot de la litière herbacée (#201) l'amène à 1,1360. Trois glissements
+    // sur la même cause : **un rapport de stocks se resserre dès que quelque
+    // chose enrichit les deux parcelles**, alors que l'apport de BRF, lui, n'a
+    // pas bougé d'un gramme.
+    //
+    // L'écart **absolu** ne souffre pas de ça — un terme commun s'y annule au lieu
+    // de s'y diluer. Mesuré, avec et sans le retour de litière de la strate :
+    //
+    //                  épandre   vendre   écart   rapport
+    //     sans le lot   1386,8   1155,2   231,6   1,2004
+    //     avec le lot   1575,9   1387,3   188,7   1,1360
+    //
+    // L'excès du rapport perd un tiers, l'écart absolu un cinquième. **Et il
+    // n'est pas neutre non plus, ce qui est un fait à noter** : le terme ajouté
+    // vaut +232 côté « vendre » contre +189 côté « épandre », parce que le BRF
+    // forme un paillis qui étouffe le tapis — moins d'herbe, donc moins de
+    // restitution herbacée. L'écart reste donc la meilleure grandeur des deux,
+    // sans être une invariante.
+    //
+    // Cent grammes sur le bloc de treize par treize cellules, contre 189
+    // mesurés : la marge est enfin une marge, et l'énoncé — « épandre
+    // **enrichit** » — est ce que le nombre soutient.
+    const azoteEpandu = nTotal(epandre.state, 30, 30);
+    const azoteVendu = nTotal(vendre.state, 30, 30);
+    expect(azoteEpandu - azoteVendu).toBeGreaterThan(100);
   });
 
   it("côté carbone : épandre garde les stocks sur la parcelle, vendre les émet (§12)", () => {
@@ -200,7 +223,18 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // ans après la coupe » — n'a pas bougé d'un iota ; c'est le chiffre qui
     // datait. Deux points de marge, et on ne prétend toujours pas mesurer
     // l'ampleur.
-    expect(gainA(35)).toBeGreaterThan(1.02);
+    // **et la quatrième fois, on prend le fichier au mot** (#201). Il écrit
+    // depuis deux glissements « on ne prétend toujours pas mesurer l'ampleur »,
+    // tout en épinglant 1,02 pour une mesure à 1,0264 — six millièmes. Le lot
+    // de la litière herbacée l'amène à 1,0137, par la même cause que le stock
+    // ci-dessus : le fond d'azote monte dans les deux bras, et l'extraction
+    // sature, donc la valeur marginale de l'apport baisse.
+    //
+    // Le seuil devient donc ce que la phrase dit : le **signe**. Si l'on veut un
+    // jour affirmer l'ampleur, il faudra un dispositif qui la mesure — plusieurs
+    // stations, et un témoin qui reçoive le même azote sous une autre forme —
+    // pas un nombre relevé sur une sortie.
+    expect(gainA(35)).toBeGreaterThan(1);
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.

@@ -23,7 +23,6 @@ import {
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
-import { forEachDiscCell } from "./grid";
 import {
   HERBACEES,
   INDEX_CULTURES,
@@ -38,13 +37,21 @@ import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
-import { tassementApresPassage } from "./tassement";
+import { tassementApresLabour } from "./tassement";
 import {
   diametreInitialCm,
   tirerVigueurIndividuelle,
   treeNitrogenNeedGWeek,
   volumeTigeM3,
 } from "./trees";
+import {
+  aireM2DeLaZone,
+  cellulesDeLaZone,
+  perimetreMDeLaZone,
+  pourChaqueCelluleDeLaZone,
+  type Zone,
+  zoneContient,
+} from "./zone";
 
 /**
  * Heures de travail par UTH et par semaine (docs/regles.md §10).
@@ -242,6 +249,25 @@ export const CLOTURE_HEURES_M = 0.12;
 /** couverture herbacée restant juste après un passage */
 export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
 /**
+ * Hauteur au-dessus de laquelle une tige ligneuse ne se fauche plus, m
+ * *(à calibrer)*.
+ *
+ * **c'est la raison pour laquelle une prairie de fauche reste une prairie.**
+ * Le moteur savait qu'un labour détruit ce qui n'a pas encore de tronc
+ * (`LABOUR_HAUTEUR_DETRUITE_M`) ; il ne savait pas que la fauche en fait autant,
+ * et une bande enherbée entretenue s'y reboisait toute seule — mesuré sur le
+ * dispositif du LER (#184), dix-huit semis spontanés de noyer dans une bande de
+ * 1,75 m de part et d'autre du rang, soit 5,6 % du terme arbre de l'indice.
+ *
+ * Le seuil n'est pas une hauteur de visibilité mais une **capacité de coupe** : les
+ * fléaux d'un gyrobroyeur avalent un brin ligneux de deux à trois centimètres
+ * de diamètre au collet, ce qui correspond au mètre chez un feuillu de
+ * quelques années. Au-delà la tige ploie et résiste, et le conducteur la
+ * contourne. Plus bas que le seuil du labour (1,2 m), donc, et c'est le bon
+ * sens : la charrue déterre, le rotor ne fait que couper.
+ */
+export const FAUCHE_HAUTEUR_TIGE_FAUCHABLE_M = 1;
+/**
  * Ce qu'un chaulage montait le pH, partout et quel que soit le sol.
  *
  * **Plus personne ne s'en sert** : depuis `bases.ts`, le chaulage apporte des
@@ -405,14 +431,11 @@ export type GameAction =
       type: "licencier";
       week: number;
     }
-  | {
+  | ({
       /** chauler un disque : pH +0,5 (plafond 7,5) — pour les calcicoles (§9) */
       type: "chauler";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
-    }
+    } & Zone)
   | {
       /**
        * Lever l'écorce (démasclage du liège) : une récolte qui ne tue pas
@@ -422,7 +445,7 @@ export type GameAction =
       week: number;
       treeIds: number[];
     }
-  | {
+  | ({
       /**
        * Éclaircir une zone jusqu'à une densité cible, en désignant les tiges
        * par un **critère** plutôt qu'une par une (ch5-A « les coupes »).
@@ -434,16 +457,13 @@ export type GameAction =
        */
       type: "eclaircir";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
       /** tiges/ha visées après passage */
       densiteCibleParHa: number;
       critere: "parLeBas" | "parLeHaut" | "espece";
       /** pour le critère « espece » */
       especeId?: string;
       devenir: "vendre" | "epandre" | "broyer" | "laisser";
-    }
+    } & Zone)
   | {
       /**
        * Élaguer : monter une bille propre sur les arbres choisis. C'est ce
@@ -455,7 +475,7 @@ export type GameAction =
       /** hauteur de tronc à dégager, m */
       hauteurM: number;
     }
-  | {
+  | ({
       /**
        * Épandre le tas de broyat sur une zone choisie. C'est **le** geste de
        * transfert de fertilité : on coupe les fixateurs d'azote là où ils
@@ -463,13 +483,10 @@ export type GameAction =
        */
       type: "epandreBrf";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
       /** part du tas à épandre ∈ ]0,1] */
       part: number;
-    }
-  | {
+    } & Zone)
+  | ({
       /**
        * **fertiliser** une zone (#140). Deux formes qui ne font pas la même chose,
        * et c'est tout l'intérêt du geste :
@@ -486,13 +503,10 @@ export type GameAction =
        */
       type: "fertiliser";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
       forme: "mineral" | "fumier";
       /** dose d'azote apportée, kg N/ha */
       doseKgNHa: number;
-    }
+    } & Zone)
   | {
       /**
        * Étêter (trogner) : couper la charpente à hauteur d'homme, au-dessus de
@@ -514,7 +528,7 @@ export type GameAction =
       type: "chasser";
       week: number;
     }
-  | {
+  | ({
       /**
        * Clôturer une zone : cher au mètre de périmètre, mais total. À la
        * différence des manchons, le coût ne dépend pas du nombre de plants —
@@ -522,21 +536,15 @@ export type GameAction =
        */
       type: "cloturer";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
-    }
-  | {
+    } & Zone)
+  | ({
       /**
        * Labourer : retourner le sol d'une zone. Le geste fondateur de
        * l'agriculture, et celui qui coûte le plus cher au sol.
        */
       type: "labourer";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
-    }
+    } & Zone)
   | {
       /**
        * Protéger : poser un manchon ou une gaine sur des plants. C'est le
@@ -556,7 +564,7 @@ export type GameAction =
       week: number;
       treeIds: number[];
     }
-  | {
+  | ({
       /**
        * Faucher/dégager un disque : rabat la strate herbacée, qui repartira.
        * C'est l'entretien qui sauve une plantation de la concurrence (ch4-B) —
@@ -564,11 +572,8 @@ export type GameAction =
        */
       type: "faucher";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
-    }
-  | {
+    } & Zone)
+  | ({
       /**
        * **semer** une culture sur une zone (#136). Ce que le semis pose, c'est la
        * **place libre** : un blé semé dans une friche n'occupe que ce que les
@@ -579,12 +584,9 @@ export type GameAction =
        */
       type: "semer";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
       cultureId: string;
-    }
-  | {
+    } & Zone)
+  | ({
       /**
        * **moissonner** : le grain accumulé depuis le semis part en vente, et la
        * culture libère la place. Hors de sa fenêtre de récolte, il n'y a rien
@@ -592,11 +594,8 @@ export type GameAction =
        */
       type: "moissonner";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
-    }
-  | {
+    } & Zone)
+  | ({
       /**
        * Ramasser le bois mort **couché** d'une zone pour le chauffage. Le geste
        * n'est pas neutre : il enlève de l'humus en devenir, un abri et une
@@ -605,10 +604,7 @@ export type GameAction =
        */
       type: "ramasserBoisMort";
       week: number;
-      x: number;
-      y: number;
-      rayonM: number;
-    };
+    } & Zone);
 
 export interface ActionRefusal {
   week: number;
@@ -801,16 +797,52 @@ export function estGesteSurZone(geste: GesteVisible): geste is GesteSurZone {
  * m³ ; le reste finit en bûches. C'est l'écart qui justifie l'élagage et la
  * patience (ch5-A).
  */
+/**
+ * Part de la **section** d'une bille qui s'est formée depuis l'élagage, ∈ [0,1] —
+ * c'est-à-dire la part sans nœuds (issue #180).
+ *
+ * Un nœud est une branche enfermée dans le bois : il est là avant la coupe et il
+ * y reste. Ce que l'élagage change, c'est que les cernes formés **après** n'en
+ * portent plus. La bille est donc un cylindre noueux de diamètre `d0` dans une
+ * gaine claire jusqu'à `d`, et la part claire vaut le rapport des sections :
+ *
+ *     1 − (d0 / d)²
+ *
+ * Il n'y a aucun paramètre à caler là-dedans — c'est de la géométrie, et c'est
+ * pour ça qu'elle est préférée à une loi de décroissance qu'il aurait fallu
+ * ancrer. Élagué à 8 cm et vendu à 40, l'arbre est clair à 96 % ; élagué à 29 et
+ * vendu à 30, à 6,6 % ; élagué la veille de la vente, à zéro.
+ *
+ * Un arbre dont on ne sait pas à quel diamètre il a été élagué rend 1 : c'est le
+ * comportement d'avant ce lot, et le seul état qui puisse le porter est une
+ * partie plus ancienne que lui.
+ */
+export function partSansNoeud(diametreCm: number, diametreElagageCm?: number): number {
+  if (diametreElagageCm === undefined) return 1;
+  if (diametreCm <= 0) return 0;
+  const rapport = Math.max(0, diametreElagageCm) / diametreCm;
+  return Math.min(1, Math.max(0, 1 - rapport * rapport));
+}
+
 export function valeurSurPied(
   espece: EspeceV0,
-  tree: { heightM: number; diametreCm: number; hauteurElagueeM: number },
+  tree: {
+    heightM: number;
+    diametreCm: number;
+    hauteurElagueeM: number;
+    diametreElagageCm?: number;
+  },
 ): { eur: number; qualite: "oeuvre" | "chauffage"; partOeuvre: number } {
   const volume = volumeTigeM3(tree.diametreCm, tree.heightM);
   const assezGros = tree.diametreCm >= DIAMETRE_OEUVRE_MIN_CM;
   const assezElague = tree.hauteurElagueeM >= BILLE_OEUVRE_MIN_M;
   if (assezGros && assezElague) {
     // Seule la bille élaguée fait de l'œuvre ; le houppier reste du chauffage.
-    const partOeuvre = Math.min(0.6, tree.hauteurElagueeM / tree.heightM);
+    // **Et seule la part de la bille formée depuis l'élagage** : élaguer tard
+    // laisse un cœur noueux que la scierie ne paie pas (#180).
+    const partOeuvre =
+      Math.min(0.6, tree.hauteurElagueeM / tree.heightM) *
+      partSansNoeud(tree.diametreCm, tree.diametreElagageCm);
     return {
       eur:
         volume * partOeuvre * espece.bois.prixOeuvreEurM3 +
@@ -1387,7 +1419,7 @@ function applyEpandreBrf(
   const cote = state.station.coteM;
   const dims = { widthM: cote, heightM: cote };
   const cells: number[] = [];
-  forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => cells.push(i));
+  pourChaqueCelluleDeLaZone(dims, action, (i) => cells.push(i));
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
@@ -1469,8 +1501,8 @@ function applyChauler(
   state: GameState,
   action: Extract<GameAction, { type: "chauler" }>,
 ): ApplyResult {
-  const areaM2 = Math.PI * action.rayonM * action.rayonM;
-  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const areaM2 = aireM2DeLaZone(action);
+  const part = partMecanisable(state.trees, action);
   const cost = areaM2 * (LIME_EUR_M2 + part * COUT_ENGIN_EUR_M2);
   const hours = areaM2 * (part * LIME_HOURS_M2_ENGIN + (1 - part) * LIME_HOURS_M2_MAIN);
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
@@ -1484,13 +1516,10 @@ function applyChauler(
   const ph = state.soil.ph.slice();
   const cecEq = state.station.profil[0] ? capaciteEchangeEqM2(state.station.profil[0]) : 0;
   const cote = state.station.coteM;
-  const r2 = action.rayonM * action.rayonM;
   const chaulees: number[] = [];
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
-      const dx = x + 0.5 - action.x;
-      const dy = y + 0.5 - action.y;
-      if (dx * dx + dy * dy <= r2) {
+      if (zoneContient(action, x + 0.5, y + 0.5)) {
         const i = y * cote + x;
         chaulees.push(i);
         basesEq[i] = Math.min(cecEq, (basesEq[i] ?? 0) + CHAULAGE_EQ_M2);
@@ -1536,20 +1565,6 @@ function ecartSemaines(a: number, b: number): number {
   return Math.min(d, 52 - d);
 }
 
-/** Les cellules d'un disque, comme `faucher` et `chauler` les parcourent. */
-function cellulesDuDisque(cote: number, cx: number, cy: number, rayonM: number): number[] {
-  const out: number[] = [];
-  const r2 = rayonM * rayonM;
-  for (let y = 0; y < cote; y++) {
-    for (let x = 0; x < cote; x++) {
-      const dx = x + 0.5 - cx;
-      const dy = y + 0.5 - cy;
-      if (dx * dx + dy * dy <= r2) out.push(y * cote + x);
-    }
-  }
-  return out;
-}
-
 function applyFertiliser(
   state: GameState,
   action: Extract<GameAction, { type: "fertiliser" }>,
@@ -1573,7 +1588,7 @@ function applyFertiliser(
   const cote = state.station.coteM;
   const dims = { widthM: cote, heightM: cote };
   const cells: number[] = [];
-  forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => cells.push(i));
+  pourChaqueCelluleDeLaZone(dims, action, (i) => cells.push(i));
   if (cells.length === 0) {
     return { state, refusals: [refuse(action.week, "fertiliser", "zone hors parcelle")] };
   }
@@ -1661,11 +1676,11 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
       ],
     };
   }
-  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const areaM2 = aireM2DeLaZone(action);
   const areaHa = areaM2 / 10_000;
   // Le semis est un chantier d'engin : ce qui n'est pas mécanisable ne se sème
   // pas au combiné, et le moteur sait déjà dire quelle part l'est.
-  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const part = partMecanisable(state.trees, action);
   const hours = areaHa * culture.heuresSemisHa * (part + (1 - part) * 20);
   const cost = areaHa * culture.semenceEurHa + areaM2 * part * COUT_ENGIN_EUR_M2;
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
@@ -1674,7 +1689,7 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const cultureGrain = state.soil.cultureGrain.slice();
   const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
-  const cellules = cellulesDuDisque(state.station.coteM, action.x, action.y, action.rayonM);
+  const cellules = cellulesDeLaZone(state.station.coteM, action);
   // **ce que le semis pose, c'est la place libre.** Un blé semé dans une
   // friche n'occupe que ce que les adventices lui laissent, et la règle
   // « préparer le lit de semence avant de semer » n'est écrite nulle part :
@@ -1734,10 +1749,10 @@ function applyMoissonner(
   state: GameState,
   action: Extract<GameAction, { type: "moissonner" }>,
 ): ApplyResult {
-  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const areaM2 = aireM2DeLaZone(action);
   const areaHa = areaM2 / 10_000;
-  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
-  const cellules = cellulesDuDisque(state.station.coteM, action.x, action.y, action.rayonM);
+  const part = partMecanisable(state.trees, action);
+  const cellules = cellulesDeLaZone(state.station.coteM, action);
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const cultureGrain = state.soil.cultureGrain.slice();
@@ -1762,6 +1777,15 @@ function applyMoissonner(
       recolteEur += tonnes * culture.prixEurT;
       cultureGrain[base + s] = 0;
       cultureGrainPotentiel[base + s] = 0;
+      // **la paille est déjà rendue, semaine après semaine** (issue #201).
+      // Ce bloc mettait le feuillage à zéro et c'était tout : le grain était
+      // vendu et le reste s'évaporait. Il ne rend toujours rien **ici**, mais pour
+      // la raison inverse — la strate restitue continûment ce qu'elle prélève,
+      // moins l'azote que le grain emporte (`azoteDansLeGrain`), si bien que
+      // la paille et le chaume ont déjà été versés au sol au fil de la saison.
+      // Y rajouter un versement à la moisson compterait la même matière deux
+      // fois. *Simplification assumée* : dans un champ, la paille tombe le
+      // jour de la moisson, pas tout l'été.
       // La culture libère la place : le chaume n'occupe plus rien, et les
       // adventices reprendront la main dès la semaine suivante.
       herbeEmprise[base + s] = 0;
@@ -1806,47 +1830,79 @@ function applyFaucher(
   state: GameState,
   action: Extract<GameAction, { type: "faucher" }>,
 ): ApplyResult {
-  const areaM2 = Math.PI * action.rayonM * action.rayonM;
+  const areaM2 = aireM2DeLaZone(action);
   // Ce que l'engin peut atteindre dépend de la façon dont c'est planté : le
   // reste se fait à la débroussailleuse, vingt fois plus lentement.
-  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const part = partMecanisable(state.trees, action);
   const hours = areaM2 * (part * FAUCHE_HOURS_M2_ENGIN + (1 - part) * FAUCHE_HOURS_M2_MAIN);
   const coutEngin = areaM2 * part * COUT_ENGIN_EUR_M2;
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
-  const litterNG = state.soil.litterNG.slice();
-  const litterCG = state.soil.litterCG.slice();
   const cote = state.station.coteM;
-  const r2 = action.rayonM * action.rayonM;
   // Les cellules où l'outil a effectivement mordu : une pelouse déjà rase ne
   // se fauche pas, et le rendu n'a rien à y montrer.
   const fauchees: number[] = [];
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
-      const dx = x + 0.5 - action.x;
-      const dy = y + 0.5 - action.y;
-      if (dx * dx + dy * dy > r2) continue;
+      if (!zoneContient(action, x + 0.5, y + 0.5)) continue;
       const i = y * cote + x;
       const avant = herbeCouverture[i] ?? 0;
       if (avant <= FAUCHE_COUVERTURE_RESIDUELLE) continue;
       fauchees.push(i);
-      const coupe = avant - FAUCHE_COUVERTURE_RESIDUELLE;
       herbeCouverture[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       herbeBiomasse[i] = FAUCHE_COUVERTURE_RESIDUELLE;
       // La coupe se répartit sur les feuillages, dans la même proportion. Une
       // espèce déjà rentrée sous terre n'a rien à perdre : c'est ce qui laisse
       // une prairie de fauche garder sa flore de printemps (herbacees.ts).
       rabattreParEspece(herbeFeuillage, i * N_HERBACEES, FAUCHE_COUVERTURE_RESIDUELLE / avant);
-      // L'herbe coupée reste sur place : litière tendre, vite recyclée.
-      litterNG[i] = (litterNG[i] ?? 0) + coupe * 4;
-      litterCG[i] = (litterCG[i] ?? 0) + coupe * 4 * 25;
+      // **l'herbe coupée a déjà été rendue, elle aussi** (issue #201).
+      //
+      // Il y avait ici `litterNG += coupe * 4` et `litterCG += coupe * 4 * 25`
+      // — les deux seuls nombres du moteur qui transformaient de l'herbe en
+      // carbone, et ils étaient nus. **Ils créaient aussi de la matière à
+      // partir de rien** : la strate n'était ni au bilan carbone ni au bilan
+      // azote, et aucune propriété ne passait par cette action. Le même défaut
+      // que celui que le lot répare, sur le seul chemin qui existait déjà.
+      //
+      // La strate restituant désormais son prélèvement au fil des semaines, la
+      // matière de cette coupe est déjà au sol : la verser ici la compterait
+      // deux fois. La fauche fait donc ce qu'elle doit faire et rien d'autre —
+      // elle enlève ce qui est sorti, et le tapis repart.
     }
   }
+  // ── **et le rotor ne trie pas** (issue #184) ────────────────────────────────────
+  //
+  // Une tige ligneuse assez fine pour passer sous les fléaux y passe, comme le
+  // reste. **c'est ce qui arrête la succession** : une prairie de fauche n'est
+  // pas une prairie parce que l'herbe y gagnerait, c'est une prairie parce
+  // qu'on la fauche. Sans ce passage, le moteur laissait une bande enherbée
+  // entretenue se reboiser sous l'outil qui est justement là pour l'empêcher —
+  // mesuré sur le dispositif du LER (#184), dix-huit semis spontanés de noyer
+  // dans les bandes épargnées, 5,6 % du terme arbre de l'indice.
+  //
+  // **et le moteur répondait déjà à la question du rejet, avec deux constantes
+  // qui l'encadrent**, ce qui évite d'en inventer une troisième : il faut
+  // laisser une souche de `RECEPAGE_HAUTEUR_M` (0,5 m) pour qu'un taillis
+  // reparte, et une tige rabattue sous `HAUTEUR_LETALE_M` (0,12 m) ne repart
+  // plus — « un plant plusieurs fois rabattu et resté minuscule finit par
+  // mourir » (gibier.ts). Le rotor coupe à dix centimètres, donc **sous** les deux.
+  // Le trait `rejetteDeSouche` de l'atlas ne départage rien ici : ce n'est pas
+  // le pouvoir de rejeter qui manque, c'est la souche.
+  const trees = state.trees.map((tree) => {
+    if (!tree.alive || tree.heightM > FAUCHE_HAUTEUR_TIGE_FAUCHABLE_M) return tree;
+    // **un plant protégé ne se fauche pas**, et c'est la moitié de la raison
+    // d'être d'un manchon : il se voit, l'outil le contourne. Un alignement
+    // planté se conduit comme ça — on protège, puis on fauche entre.
+    if (tree.protege) return tree;
+    if (!zoneContient(action, tree.x, tree.y)) return tree;
+    return { ...tree, alive: false, causeMort: "fauche" as const };
+  });
   return {
     state: {
       ...state,
-      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse, litterNG, litterCG },
+      trees,
+      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,
@@ -1870,16 +1926,13 @@ function applyRamasserBoisMort(
   action: Extract<GameAction, { type: "ramasserBoisMort" }>,
 ): ApplyResult {
   const cote = state.station.coteM;
-  const r2 = action.rayonM * action.rayonM;
   const boisAuSolCG = state.soil.boisAuSolCG.slice();
   const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
   const cibles: number[] = [];
   let carboneKgC = 0;
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
-      const dx = x + 0.5 - action.x;
-      const dy = y + 0.5 - action.y;
-      if (dx * dx + dy * dy > r2) continue;
+      if (!zoneContient(action, x + 0.5, y + 0.5)) continue;
       const i = y * cote + x;
       const stock = boisAuSolCG[i] ?? 0;
       if (stock <= 0) continue;
@@ -1970,7 +2023,13 @@ function applyElaguer(
       // suite pour que le rendu n'attende pas une semaine.
       baseHouppierApresM: Math.max(tree.baseHouppierM ?? 0, cible),
     });
-    trees[idx] = { ...tree, hauteurElagueeM: cible };
+    trees[idx] = {
+      ...tree,
+      hauteurElagueeM: cible,
+      // Le diamètre du jour, et le **plus grand** des élagages subis : la bille se
+      // classe sur sa pire section (`trees.ts`, #180).
+      diametreElagageCm: Math.max(tree.diametreElagageCm ?? 0, tree.diametreCm),
+    };
   }
   return {
     state: { ...state, trees, economy: { ...state.economy, hoursUsedWeek, hoursUsedYear } },
@@ -2101,7 +2160,7 @@ function applyCloturer(
   state: GameState,
   action: Extract<GameAction, { type: "cloturer" }>,
 ): ApplyResult {
-  const perimetreM = 2 * Math.PI * action.rayonM;
+  const perimetreM = perimetreMDeLaZone(action);
   const cost = perimetreM * CLOTURE_EUR_M;
   const hours = perimetreM * CLOTURE_HEURES_M;
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
@@ -2110,7 +2169,7 @@ function applyCloturer(
   const cloture = state.soil.cloture.slice();
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
   const closes: number[] = [];
-  forEachDiscCell(dims, action.x, action.y, action.rayonM, (i) => {
+  pourChaqueCelluleDeLaZone(dims, action, (i) => {
     closes.push(i);
     cloture[i] = true;
   });
@@ -2136,14 +2195,14 @@ function applyLabourer(
 ): ApplyResult {
   // On ne laboure que là où l'engin passe : entre des arbres serrés, la
   // question ne se pose même pas.
-  const part = partMecanisable(state.trees, action.x, action.y, action.rayonM);
+  const part = partMecanisable(state.trees, action);
   if (part < 0.5) {
     return {
       state,
       refusals: [refuse(action.week, "labourer", "l'engin ne peut pas manœuvrer ici")],
     };
   }
-  const areaM2 = Math.PI * action.rayonM * action.rayonM * part;
+  const areaM2 = aireM2DeLaZone(action) * part;
   const hours = areaM2 * LABOUR_HOURS_M2;
   const cost = areaM2 * LABOUR_EUR_M2;
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
@@ -2164,7 +2223,6 @@ function applyLabourer(
     ericoide: state.soil.mycorhizes.ericoide.slice(),
   };
   const cote = state.station.coteM;
-  const r2 = action.rayonM * action.rayonM;
   const labourees: number[] = [];
   // L'engin tasse là où il **passe**, et seulement là. `part` dit quelle fraction
   // de la zone lui est accessible selon la façon dont c'est planté
@@ -2176,12 +2234,10 @@ function applyLabourer(
   let emisKgC = 0;
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
-      const dx = x + 0.5 - action.x;
-      const dy = y + 0.5 - action.y;
-      if (dx * dx + dy * dy > r2) continue;
+      if (!zoneContient(action, x + 0.5, y + 0.5)) continue;
       const i = y * cote + x;
       labourees.push(i);
-      tassement[i] = tassementApresPassage(tassement[i] ?? 0, part);
+      tassement[i] = tassementApresLabour(tassement[i] ?? 0, part);
       // Le coup de fouet : de l'humus part en fumée, son azote reste.
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;
@@ -2211,9 +2267,7 @@ function applyLabourer(
   // Tout ce qui n'a pas encore de tronc y passe.
   const trees = state.trees.map((t) => {
     if (!t.alive || t.heightM > LABOUR_HAUTEUR_DETRUITE_M) return t;
-    const dx = t.x - action.x;
-    const dy = t.y - action.y;
-    if (dx * dx + dy * dy > r2) return t;
+    if (!zoneContient(action, t.x, t.y)) return t;
     return { ...t, alive: false, causeMort: "labour" as const };
   });
 
@@ -2393,17 +2447,11 @@ export function choisirTigesAEclaircir(
   state: GameState,
   action: Extract<GameAction, { type: "eclaircir" }>,
 ): number[] {
-  const r2 = action.rayonM * action.rayonM;
-  const dansZone = state.trees.filter((t) => {
-    if (!t.alive) return false;
-    const dx = t.x - action.x;
-    const dy = t.y - action.y;
-    return dx * dx + dy * dy <= r2;
-  });
+  const dansZone = state.trees.filter((t) => t.alive && zoneContient(action, t.x, t.y));
   if (action.critere === "espece") {
     return dansZone.filter((t) => t.especeId === action.especeId).map((t) => t.id);
   }
-  const surfaceHa = (Math.PI * r2) / 10_000;
+  const surfaceHa = aireM2DeLaZone(action) / 10_000;
   const aGarder = Math.max(0, Math.round(action.densiteCibleParHa * surfaceHa));
   if (dansZone.length <= aGarder) return [];
   // Par le bas : on sacrifie les dominés. Par le haut : on prélève les gros.

@@ -72,10 +72,13 @@ describe("dansLaFenetre", () => {
 describe("les causes de mort", () => {
   it("ont toutes une trajectoire : la table est exhaustive", () => {
     // Le type l'impose déjà, mais une valeur ajoutée au moteur doit **casser** ici
-    // et non passer silencieusement. Il l'a fait : le **volis** est la quatorzième
-    // (#176, F17), et ce garde-fou est ce qui a forcé à lui dessiner une mort
-    // plutôt qu'à la laisser hériter de celle du chablis.
-    expect(CAUSES.length).toBe(14);
+    // et non passer silencieusement. Il l'a fait deux fois : le **volis** est la
+    // quatorzième (#176, F17), et ce garde-fou est ce qui a forcé à lui
+    // dessiner une mort plutôt qu'à la laisser hériter de celle du chablis ; le
+    // **boutis** est la quinzième (#199), et le garde-fou a joué pareil — un plant
+    // arraché par un groin s'efface comme sous le labour, mais plus lentement,
+    // parce qu'un sanglier fouille le temps d'un repas.
+    expect(CAUSES.length).toBe(16);
   });
 
   it("se distinguent DEUX À DEUX : aucune paire ne donne la même suite", () => {
@@ -263,7 +266,7 @@ describe("ce que chaque cause raconte", () => {
     // sens.
     const effacent = CAUSES.filter((c) => mortAccomplie(c, vif).opacite < 1);
     expect(new Set(effacent)).toEqual(
-      new Set(["labour", "abroutissement", "ombre", "ecrasement", "chablis"]),
+      new Set(["labour", "boutis", "fauche", "abroutissement", "ombre", "ecrasement", "chablis"]),
     );
   });
 
@@ -276,6 +279,8 @@ describe("ce que chaque cause raconte", () => {
     expect(chandelles).toContain("vieillesse");
     expect(chandelles).toContain("frottis");
     expect(chandelles).not.toContain("labour");
+    // Un semis arraché par un boutis ne laisse pas de tige debout.
+    expect(chandelles).not.toContain("boutis");
     expect(chandelles).not.toContain("abroutissement");
     expect(chandelles).not.toContain("ecrasement");
   });

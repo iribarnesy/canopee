@@ -608,7 +608,7 @@ export const EXPERIENCES: readonly Experience[] = [
       const grille = (positions: { x: number; y: number }[]) => {
         let s = createGameState(st, rngStateFromSeed(1));
         for (const p of positions) s = plantAt(s, "quercus_pubescens", p.x, p.y, 3);
-        return partMecanisable(s.trees, 20, 20, 15) * 100;
+        return partMecanisable(s.trees, { x: 20, y: 20, rayonM: 15 }) * 100;
       };
       const rangs: { x: number; y: number }[] = [];
       for (let r = 0; r < 8; r++) {

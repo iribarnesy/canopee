@@ -97,6 +97,28 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       // quelques mètres recépé fait disparaître son carbone racinaire.
       { type: "receper", week: 6 * 52 + 30, treeIds: [6, 7, 8] },
       { type: "trogner", week: 7 * 52 + 10, treeIds: [9, 10], hauteurTeteM: 2 },
+      // ── **la strate basse**, et elle manquait à cette liste (issue #201) ──────
+      //
+      // **`faucher` créait du carbone à partir de rien, et personne ne le
+      // voyait.** L'herbe coupée était versée au pool de litière — donc au
+      // stock ci-dessus — sans qu'aucune entrée ne la compense, parce que la
+      // strate herbacée n'était pas au bilan carbone du tout. La propriété ne
+      // passait simplement pas par cette action, et c'est en branchant les
+      // trois autres chemins qu'on est tombé dessus. La fauche crédite
+      // maintenant la production primaire, comme la sénescence et la paille :
+      // c'est la plante qui a fixé ce carbone.
+      { type: "faucher", week: 3 * 52 + 30, x: 25, y: 25, rayonM: 12 },
+      { type: "faucher", week: 4 * 52 + 30, x: 25, y: 25, rayonM: 12 },
+      // Et la **moisson**, qui laisse sa paille au champ depuis le même lot.
+      {
+        type: "semer",
+        week: 2 * 52 + 41,
+        x: 25,
+        y: 25,
+        rayonM: 10,
+        cultureId: "triticum_aestivum",
+      },
+      { type: "moissonner", week: 3 * 52 + 28, x: 25, y: 25, rayonM: 10 },
     ];
 
     let state = createGameState(STATION, rngStateFromSeed(13));

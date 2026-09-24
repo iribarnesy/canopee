@@ -41,7 +41,7 @@ function sonder(stationId: string, meteoReelle: boolean) {
   post({
     type: "sonde",
     resultat,
-    bilan: bilanDeLaSonde(sc, resultat.finalState),
+    bilan: bilanDeLaSonde(resultat.finalState),
     dureeMs: performance.now() - debut,
   });
 }

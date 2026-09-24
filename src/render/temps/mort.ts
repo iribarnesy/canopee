@@ -37,8 +37,8 @@
  *
  * Deux choses que ce compte apprend, et qu'aucun raisonnement ne donnait :
  *
- *  - **les trois morts qui font disparaître l'arbre coûtent zéro** — labour,
- *    abroutissement, écrasement ne touchent que la pose. La séparation des deux
+ *  - **les morts qui font disparaître l'arbre coûtent zéro** — labour, boutis,
+ *    fauche, abroutissement, écrasement ne touchent que la pose. La séparation des deux
  *    canaux n'est donc pas qu'une question de principe, elle se paie ou se
  *    gagne ;
  *  - **le coût ne dépend pas du nombre de morts.** Trente-quatre bouleaux qui
@@ -223,6 +223,21 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   // c'est le **voile** du geste `labourer`, qui joue dans le même plan.
   labour: {
     seffaceEntre: [0, 0.3],
+    chandelleA: 1.1,
+  },
+  // Le boutis fait la même chose que le labour — le plant disparaît, la terre
+  // est retournée — mais un groin n'est pas un soc : il fouille, il revient,
+  // il met le temps d'un repas. L'effacement est donc le même geste, plus
+  // lent. Pas de chandelle : un semis arraché ne laisse pas de tige debout.
+  boutis: {
+    seffaceEntre: [0, 0.6],
+    chandelleA: 1.1,
+  },
+  // La fauche est le plus net des trois : un passage, et le brin n'est plus
+  // là. Pas de chandelle non plus — ce qui reste debout tient dans la garde au
+  // sol du rotor.
+  fauche: {
+    seffaceEntre: [0, 0.2],
     chandelleA: 1.1,
   },
   // « dessèchement d'une branche puis de l'ensemble, feuilles qui restent

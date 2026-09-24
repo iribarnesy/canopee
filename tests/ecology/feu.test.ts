@@ -218,8 +218,23 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
     // c'est elle qui portait le feu sur les 88 % de cellules sans houppier. Le
     // décor était juste ; c'est de l'avoir fait tenir sur un tirage unique qui
     // ne l'était pas.
+    //
+    // **et il a fallu l'élargir une seconde fois** (#201). Les cinq graines
+    // ci-dessous en donnaient toutes un ; après le lot de la litière herbacée,
+    // aucune des cinq. La cause est exactement celle que le paragraphe
+    // ci-dessus décrit : la strate rend désormais au sol ce qu'elle lui
+    // prenait, l'ajonc pousse un peu plus vite, il referme le couvert plus tôt,
+    // et l'herbe qui portait le feu ne s'installe plus.
+    //
+    // Balayé sur seize graines pour trancher entre « le décor ne brûle plus »
+    // et « ces cinq-là ne brûlent plus » : **cinq incendies avec rejets, de 327
+    // à 375**, sur les graines 3, 7, 17, 31 et 37. Le décor va bien ; c'est la
+    // liste qui était courte. On la reprend en ordre croissant plutôt qu'en
+    // gardant les cinq d'origine suivies des nouvelles — une liste où les
+    // graines qui marchent sont mises devant serait un tirage choisi, ce que ce
+    // banc s'interdit précisément.
     let rejets = 0;
-    for (const graine of [2, 5, 9, 13, 21]) {
+    for (const graine of [2, 3, 5, 7, 9, 11, 13, 17, 21, 23, 29, 31, 37]) {
       let state = createGameState(station, rngStateFromSeed(graine));
       for (let i = 0; i < 36; i++) {
         state = plantAt(state, "ulex_europaeus", 2 + (i % 6) * 5, 2 + Math.floor(i / 6) * 5, 1.2);

@@ -107,24 +107,33 @@ function saumos(): Station {
     // Tout le bassin subit le même sort : c'est un incendie de **massif**.
     partBassinSemblable: 1,
     ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),
-    // **Pas de sanglier**, et c'est un choix d'expérience, pas un contournement.
+    // **Pas de sanglier**, et c'est un choix d'expérience : cet essai isole la
+    // **composition**, comme il isole déjà le voisinage semencier.
     //
-    // Cet essai isole la **composition** — comme il isole déjà le voisinage
-    // semencier. Or le sanglier l'écrase : il mange la châtaigne (mode `geai`),
-    // donc le mélange feuillu ne se ressème pas, donc il ne referme pas le
-    // couvert, donc il n'étouffe plus la lande qui porte le feu. Mesuré sur les
-    // mêmes seize graines :
+    // **la raison d'origine, elle, n'existe plus — quatrième retrait de ce
+    // fichier.** On mettait le sanglier de côté parce qu'il **écrasait** la
+    // mesure : il mangeait la châtaigne, donc le mélange feuillu ne se
+    // ressemait pas, donc il ne refermait pas le couvert, donc il n'étouffait
+    // plus la lande qui porte le feu. Mesuré à l'époque sur ces seize graines :
+    // pin 821 m² contre feuillus 525 sans sanglier, pin 720 contre 747 à la
+    // densité du paysage — **« le sanglier annule l'atténuation qu'apporte la
+    // plantation feuillue »**, et c'était le résultat le plus fort de #73.
     //
-    //   sans sanglier      : pin 821 m², feuillus 525 m² → les feuillus
-    //                        atténuent d'un bon tiers ;
-    //   densité du paysage : pin 720 m², feuillus 747 m² → plus aucun écart.
+    // Le premier maillon de cette chaîne a cédé avec #197. Le sanglier mangeait
+    // 55 % de la fructification lourde par un coefficient posé sur une
+    // production que le moteur ne calculait pas ; il en prélève maintenant une
+    // **ration** en kilos sur une production réelle, et une ration ne fait pas le
+    // poids contre une fructification. Refait sur les mêmes seize graines :
     //
-    // **Le sanglier annule l'atténuation qu'apporte la plantation feuillue.**
-    // C'est un résultat, pas un bruit — il est écrit dans `docs/realisme.md` —
-    // et c'est exactement ce que ce fichier annonçait déjà : « l'atténuation
-    // par les feuillus reposait sur leur capacité à fermer le couvert vite, et
-    // tout ce qui les ralentit la défait ». On le met de côté **ici** pour que
-    // l'essai continue de mesurer ce pour quoi il a été écrit.
+    //   sans sanglier      : pin 469 m², feuillus 495 → écart −26 ;
+    //   densité du paysage : pin 575 m², feuillus 484 → écart +91.
+    //
+    // **Les deux écarts sont dans le bruit que ce fichier documente lui-même**
+    // — un même peuplement brûle de 0 à 4 500 m² selon le tirage, et l'écart
+    // entre deux lots de seize graines atteint 28 %. L'interaction n'est donc
+    // pas inversée, elle est **retirée** : la mesure ne soutient plus d'affirmation
+    // dans un sens ni dans l'autre. Le sanglier reste à zéro ici pour isoler la
+    // composition, et non parce qu'il écraserait quoi que ce soit.
     sanglierParHa: 0,
   };
 }

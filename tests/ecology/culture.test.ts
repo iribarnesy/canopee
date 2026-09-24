@@ -33,11 +33,13 @@ function culture(options: {
   ans: number;
   cote: number;
   rayonM: number;
+  /** Graine de la partie. Une seule ne dit rien dès qu'il y a des arbres. */
+  graine?: number;
   arbres?: { especeId: string; y: number }[];
 }): number[] {
   const { ans, cote, rayonM } = options;
   const station = { ...LIMON_RICHE.station, coteM: cote, voisinage: [] };
-  let state: GameState = createGameState(station, rngStateFromSeed(4));
+  let state: GameState = createGameState(station, rngStateFromSeed(options.graine ?? 4));
   for (const rang of options.arbres ?? []) {
     for (let x = 2; x < cote; x += 8) state = plantAt(state, rang.especeId, x, rang.y, 2);
   }
@@ -166,9 +168,21 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // continu doit donc descendre de lui-même vers le second, ce que rien dans
     // le code ne lui dit de faire.
     //
-    // Relevé sur trente ans : 3,43 t/ha à l'an 4, 1,98 à l'an 12, **1,02 à
-    // l'an 24**, 0,82 à l'an 29. Il glisse sous 1 là où Broadbalk tient, et la
-    // cause probable est la **paille** non restituée (`herbacees.ts`).
+    // Relevé après #141, qui a levé le plafond de tassement : 4,16 t/ha à
+    // l'an 4, 2,63 à l'an 12, **1,45 à l'an 24**, 1,20 à l'an 29. Toute la
+    // trajectoire a monté d'un quart, et elle descend toujours.
+    //
+    // **Et elle a été poursuivie jusqu'à l'échelle de l'essai**, parce que
+    // comparer trente ans de moteur à cent quatre-vingts ans d'épuisement n'est
+    // pas le même dispositif (moyennes par tranche de vingt ans) :
+    //
+    //     ans 1-20   21-40   41-60   61-80   81-100   101-120
+    //       2,96      1,25    0,84    0,78     0,79      0,70
+    //
+    // Le moteur passe par la gamme de Broadbalk vers les années 20 à 40 puis
+    // converge **sous**, à 0,70-0,84. Il glisse donc bien sous 1 là où l'essai
+    // tient, et la cause probable reste la **paille** non restituée
+    // (`herbacees.ts`). Mesure détaillée dans `labour-desserre.test.ts`.
     const r = culture({ ans: 26, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
     const an24 = r[24] ?? 0;
@@ -188,8 +202,33 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // Deux rangs de noyers encadrant une allée de 8 m : le rapport
     // hauteur / largeur d'allée monte jusqu'à 1,28 en trente-trois ans.
     //
-    // Relevé, allée rapportée au même blé en plein champ : 1,000 à H/L 0,29 ;
-    // **1,007 à H/L 0,84** ; 0,950 à 1,19 ; **0,874 à 1,28**.
+    // **ce banc tourne sur cinq graines depuis #197, et il a fallu ça pour
+    // découvrir qu'une de ses deux affirmations était fausse.** Il n'en tirait
+    // qu'une, la 4, et il en concluait qu'à l'an 25 l'allée rend 7 % de **plus**
+    // que le blé pur (1,069) — « l'énoncé le plus net de ce que cet essai est
+    // seul à dire ». Relevé sur cinq graines, sur le moteur d'**avant** ce lot :
+    //
+    //     graine        4      1      7     33   2022
+    //     an 25      1,069  1,052  0,940  0,929  0,922
+    //     an 33      0,834  0,837  0,883  0,770  0,810
+    //
+    // **Trois graines sur cinq passaient déjà sous 1 à l'an 25.** Le seuil ne
+    // tenait pas au mécanisme, il tenait au tirage — et ce n'est pas #197 qui
+    // l'a cassé, c'est #197 qui l'a fait tomber en déplaçant la graine. La
+    // seconde affirmation, elle, était solide : les cinq graines décrochaient à
+    // l'an 33.
+    //
+    // Ce que ce lot change vraiment : une graine de noyer se **mange** (elle porte
+    // `semences`), donc la parcelle porte 49 à 66 noyers à l'an 33 au lieu de
+    // 72 à 89, donc moins d'ombre **et** moins de litière. Relevé après :
+    //
+    //     an 25      0,922  1,046  0,947  0,929  0,920   → moyenne 0,953
+    //     an 33      1,034  0,799  0,808  0,848  1,006   → moyenne 0,899
+    //
+    // Sur la moyenne des cinq, la trajectoire est **monotone** — 0,993 / 0,987
+    // / 0,953 / 0,899 — ce qu'aucune graine prise seule ne montre. C'est le bon
+    // dispositif, et il dit la même chose en mieux : la compensation tient
+    // longtemps, et elle a une fin.
     //
     // Le premier régime retrouve l'observation de Dupraz — « le rendement
     // n'est pas beaucoup affecté tant que H/L reste sous 0,8 » — mais **pas** pour
@@ -198,22 +237,28 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // coûte et la litière de noyer rend. Même chiffre, composition différente,
     // et c'est la fertilisation qui manque au moteur pour les séparer.
     const ANS = 34;
-    const pur = culture({ ans: ANS, cote: 40, rayonM: 3 });
-    const allee = culture({
-      ans: ANS,
-      cote: 40,
-      rayonM: 3,
-      arbres: [
-        { especeId: "juglans_regia", y: 16 },
-        { especeId: "juglans_regia", y: 24 },
-      ],
+    const GRAINES = [4, 1, 7, 33, 2022];
+    const parGraine = GRAINES.map((graine) => {
+      const pur = culture({ ans: ANS, cote: 40, rayonM: 3, graine });
+      const allee = culture({
+        ans: ANS,
+        cote: 40,
+        rayonM: 3,
+        graine,
+        arbres: [
+          { especeId: "juglans_regia", y: 16 },
+          { especeId: "juglans_regia", y: 24 },
+        ],
+      });
+      return (a: number) => ((pur[a] ?? 0) > 0 ? (allee[a] ?? 0) / (pur[a] ?? 1) : 0);
     });
-    const rapport = (a: number) => ((pur[a] ?? 0) > 0 ? (allee[a] ?? 0) / (pur[a] ?? 1) : 0);
-    // **ce que cet essai montre vraiment, c'est le masquage**, et c'est ce qui
-    // a motivé le lot de la fertilisation (#140). Sans apport, le témoin en blé
-    // pur s'épuise pendant que l'allée reçoit la litière des noyers : on mesure
-    // donc l'azote des arbres bien plus que leur ombre, et le rapport a même
-    // dépassé 1 entre H/L 0,93 et 1,11.
+    const rapport = (a: number) =>
+      parGraine.reduce((somme, r) => somme + r(a), 0) / parGraine.length;
+
+    // **ce que cet essai montre, c'est le masquage**, et c'est ce qui a motivé
+    // le lot de la fertilisation (#140). Sans apport, le témoin en blé pur
+    // s'épuise pendant que l'allée reçoit la litière des noyers : on mesure
+    // donc l'azote des arbres bien plus que leur ombre.
     //
     // Le gradient d'**ombre pure** est mesuré ailleurs, les deux côtés fertilisés
     // (`fertilisation.test.ts`) : 0,999 à H/L 0,29 puis 0,787 à 1,28, monotone.
@@ -221,10 +266,16 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // fertilisée ne laisse **pas** voir l'ombre, parce que l'arbre rend ce qu'il
     // prend.
     expect(rapport(3)).toBeGreaterThan(0.95);
-    // Trente ans plus tard, malgré un rapport hauteur/largeur passé de 0,29 à
-    // 1,28, l'allée n'a toujours pas franchement décroché : mesuré 0,953.
-    // C'est la compensation, et c'est le résultat.
-    expect(rapport(33)).toBeGreaterThan(0.9);
-    expect(rapport(33)).toBeLessThan(1);
-  }, 900_000);
+    // **la compensation tient jusqu'à H/L ≈ 1.** À l'an 25, l'allée est à 5 %
+    // du blé pur, là où son ombre seule lui coûterait le double
+    // (`fertilisation.test.ts` : 0,835 à H/L 1,02). On n'affirme plus qu'elle
+    // passe **devant** : une graine sur cinq le fait, et c'était déjà le cas avant
+    // ce lot.
+    expect(rapport(25)).toBeGreaterThan(0.9);
+    expect(rapport(25)).toBeLessThan(rapport(3));
+    // Puis l'ombre finit par gagner : à H/L 1,28 l'allée décroche de 10 %. Le
+    // masquage a une fin, et le classement des quatre âges est strict.
+    expect(rapport(33)).toBeLessThan(rapport(25));
+    expect(rapport(33)).toBeGreaterThan(0.75);
+  }, 1_800_000);
 });

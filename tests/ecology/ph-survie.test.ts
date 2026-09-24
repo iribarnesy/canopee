@@ -77,8 +77,18 @@ const ACIDE = stationDepuisProfil({
 const GRAINES = [11, 23, 37];
 const meteo = syntheticYear(LIMON_RICHE.climat);
 
+/**
+ * Le gibier **et** le sanglier sont écartés, pour la même raison : ce fichier mesure
+ * ce que le pH fait à une tige, et une tige plantée à trente centimètres est à
+ * portée des deux. Le sanglier s'est ajouté avec le boutis (#199), qui arrache
+ * ce qui n'a pas atteint cinquante centimètres — il tuait un charme sur vingt et
+ * l'essai du dessous comptait des morts qui n'avaient rien à voir avec le sol.
+ */
 function peuplement(plantations: [string, number][], annees: number, seed: number): GameState {
-  let s = createGameState({ ...ACIDE, gibierParHa: 0, voisinage: [] }, rngStateFromSeed(seed));
+  let s = createGameState(
+    { ...ACIDE, gibierParHa: 0, sanglierParHa: 0, voisinage: [] },
+    rngStateFromSeed(seed),
+  );
   for (const [id, n] of plantations) s = plantScattered(s, id, n, 0.3);
   for (let i = 0; i < annees * 52; i++) {
     const w = meteo[s.week % meteo.length];
@@ -171,12 +181,49 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     }
   });
 
-  it("et il est exclu par la CONCURRENCE, pas par la mort : C7 tient autrement", () => {
+  it("et il reste un BRIN DOMINÉ dans une pinède : C7 tient autrement", () => {
     // Le point délicat du lot. Si le pH ne tue plus, la bio-indication doit
     // venir d'ailleurs — et elle vient de là où elle devrait : l'espèce à qui le
-    // sol convient prend la lumière. À 4,2, le pin (gamme 4–7,5) est dans sa
-    // rampe basse et vaut 0,34 ; le charme (4,5–8) est sous sa borne et vaut
-    // 0,03. Dix fois moins, et c'est tout ce qu'il faut.
+    // sol convient fait la canopée, l'autre reste au sol. À 4,2, le pin (gamme
+    // 4–7,5) est dans sa rampe basse et vaut 0,34 ; le charme (4,5–8) est sous
+    // sa borne et vaut 0,03.
+    //
+    // **cet essai affirmait `hp > 10 × hc`, et c'était un couteau** (#201). Le
+    // pin recalé sur sa table de production l'a fait tomber sur une graine :
+    //
+    //     graine   pin (m)   charme (m)   rapport   charme **seul**
+    //       11      10,397      0,976      10,65       1,012
+    //       23       9,040      0,954       9,48       0,907
+    //       37       8,703      0,928       9,38       0,886
+    //
+    // (Relevé une seconde fois **après** avoir écarté le sanglier du banc, qui
+    // arrachait un charme sur vingt depuis #199 : 10,403 · 9,042 · 8,703
+    // devient 10,397 · 9,040 · 8,703. La bête ne déplaçait rien ici — à
+    // cinquante ans les tiges sont sorties de sa portée depuis longtemps —,
+    // mais elle tuait dans l'essai de quinze ans, et un banc qui mesure le pH
+    // n'a pas à compter des morts de groin.)
+    //
+    // **Deux graines sur trois passaient désormais sous dix**, et la troisième
+    // à 6 % près. Le « dix fois » était lu du rapport des **facteurs** de pH (0,34
+    // contre 0,03, soit onze), transporté tel quel sur des **hauteurs**. Rien ne dit
+    // qu'un facteur onze fois plus petit fasse une tige dix fois plus courte :
+    // **un rapport entre deux espèces porte tout ce qui les distingue**, et il
+    // suffit d'en recalibrer une pour qu'il bascule.
+    //
+    // **Et la mesure a corrigé l'énoncé lui-même, pas seulement son seuil.** La
+    // colonne de droite donne le charme **seul**, sur la même station et la même
+    // durée : −3,6 %, +5,1 %, +4,7 % pour le charme en mélange contre le charme
+    // seul. Trois à cinq pour cent, **et le signe change d'une graine à
+    // l'autre**. **Le pin ne fait presque rien au charme.** Ce n'est donc pas la
+    // concurrence qui l'exclut, c'est le pH, directement : l'essai s'appelait
+    // « exclu par la **concurrence** » et mesurait autre chose. Ce qu'il montre
+    // vraiment, et qui suffit à C7, c'est la **structure** qui en résulte — une
+    // pinède où les charmes sont des brins.
+    //
+    // Chaque borne ne porte donc plus qu'**une** espèce : recalibrer le pin déplace
+    // la première et laisse la seconde tranquille. Le plafond du charme est
+    // celui que l'essai voisin lui donne déjà en peuplement pur (« quarante ans
+    // pour deux tiers de mètre »), ce qui rend les deux cohérents.
     for (const g of GRAINES) {
       const s = peuplement(
         [
@@ -192,9 +239,10 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
       expect(pins.length).toBeGreaterThan(10);
       const hp = pins.reduce((a, t) => a + t.heightM, 0) / pins.length;
       const hc = charmes.length ? charmes.reduce((a, t) => a + t.heightM, 0) / charmes.length : 0;
-      // Un ordre de grandeur d'écart : le peuplement est une pinède, et les
-      // charmes n'y sont que des brins dominés.
-      expect(hp).toBeGreaterThan(10 * hc);
+      // Le pin fait un arbre (8,7 à 10,4 m mesurés), le charme reste un brin
+      // (0,93 à 0,98) : une pinède avec des charmes dessous, pas un mélange.
+      expect(hp).toBeGreaterThan(5);
+      expect(hc).toBeLessThan(2);
     }
   });
 });

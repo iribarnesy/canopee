@@ -85,6 +85,38 @@ export const DENSITE_REFERENCE_PAR_HA = 0.05;
 export const PROFONDEUR_BOUTIS_CM = 10;
 
 /**
+ * Hauteur en dessous de laquelle un plant ne survit pas à un boutis, m.
+ *
+ * **c'est le second effet du sanglier sur la régénération, et le seul qui la
+ * supprime vraiment** (issue #199). Le premier — manger la glandée — est
+ * maintenant ancré sur une ration réelle, et il est **petit** : à 0,15 bête à
+ * l'hectare, une ration de 400 kg/an fait soixante kilos de glands contre une
+ * glandée qui se compte en centaines. Un sanglier ne peut pas manger une
+ * glandée, c'est toute l'idée de la glandée. Ce qu'il peut faire, c'est
+ * labourer ce qui a levé.
+ *
+ * Le boutis descend à dix centimètres (ci-dessus) : il soulève l'horizon de
+ * surface, celui qui porte la litière, l'humus et le chevelu des plantules.
+ * **Ce qui part avec la motte est le plant dont le système racinaire n'a pas
+ * encore quitté cet horizon.** Au-dessus, la tige tient par des racines que le
+ * groin ne remonte pas, et le boutis ne fait plus que la blesser.
+ *
+ * Cinquante centimètres : c'est la coupure que les protocoles d'inventaire
+ * mettent au bas de la régénération — en dessous on compte des semis, au-dessus
+ * des recrûs installés. Le semis de ce moteur naît à trente centimètres
+ * (`hauteurDuSemisM`), donc la fenêtre de vulnérabilité dure ce que met le plant
+ * à gagner vingt centimètres : une saison en pleine lumière, plusieurs années
+ * sous couvert — exactement là où le sanglier va *(à calibrer)*.
+ *
+ * Comparer avec le **labour**, qui détruit jusqu'à 1,2 m (`actions.ts`) : l'outil
+ * retourne deux à trois fois plus profond, sur toute la zone d'un coup, et le
+ * moteur dit maintenant les deux choses séparément. Le sanglier n'est pas un
+ * petit tracteur : il est plus superficiel, et il ne touche que deux pour cent
+ * de la parcelle par an.
+ */
+export const HAUTEUR_ARRACHEE_PAR_BOUTIS_M = 0.5;
+
+/**
  * Poids saisonnier du retournement, par semaine de l'année.
  *
  * Les suivis s'accordent : l'activité est marquée de la mi-automne au
@@ -164,42 +196,31 @@ export function effortSemaine(sanglierParHa: number, semaine: number): number {
 }
 
 /**
- * Part de la fructification lourde tombée qu'un sanglier consomme, à la densité
- * de référence.
+ * ─── **ce qui a quitté ce fichier**, **et pourquoi** (issue #197) ────────────────────
  *
- * Il ne reste pas grand-chose d'une glandée là où les sangliers sont nombreux,
- * et c'est le contrepoids du geai : l'un cache les glands en les dispersant,
- * l'autre les mange sur place. La valeur est choisie pour que la régénération
- * du chêne reste **possible** sous densité ordinaire et devienne difficile sous
- * forte densité — c'est la tension qu'on cherche, pas une extinction
- * *(à calibrer : la part réellement consommée d'une glandée varie de tout au
- * rien selon l'année semencière)*.
- */
-export const PART_GLANDEE_CONSOMMEE = 0.55;
-
-/**
- * Ce qui reste d'une fructification lourde après le passage des sangliers ∈ [0,1].
+ * Il y avait ici `PART_GLANDEE_CONSOMMEE = 0,55` et `partGlandeeRestante`, une
+ * part de la glandée mangée en fonction de la seule densité de sangliers. La
+ * fonction était honnête sur ce qu'elle ne savait pas — *« à calibrer : la part
+ * réellement consommée d'une glandée varie de tout au rien selon l'année
+ * semencière »* — mais elle ne pouvait pas le savoir : **le moteur ne produisait
+ * aucune glandée**, alors elle en supposait une.
  *
- * Ne lit aucun nom d'espèce : l'appelant décide quelles graines sont « lourdes »
- * sur la foi du trait `dissemination` (`geai` et `gravite` tombent et restent,
- * `vent` et `oiseaux` s'en vont).
+ * Ce qu'elle supposait, en clair : pour que 0,05 sanglier/ha en mangent 55 %, il
+ * fallait qu'un hectare ne porte que **seize kilos** de glands, et qu'une bête en
+ * avale deux tonnes et demie par an. Le chiffre ne valait rien comme ration ; il
+ * valait comme réglage, et c'est exactement ce que la règle du dépôt interdit —
+ * un chiffre calé sur le moteur lui-même n'est pas une ancre.
+ *
+ * `glandee.ts` produit maintenant la glandée, et le sanglier y prélève une
+ * **ration** en kilos, ancrée sur ce qu'un animal peut avaler. La loi n'a pas
+ * changé de forme : celle d'ici valait exp(−k × densité), celle de là vaut
+ * exp(−ration/production) — la même, avec la production réelle à la place de la
+ * production supposée.
+ *
+ * **Ce que la mesure a dit**, et ce n'est pas un détail : à ration réelle, le
+ * sanglier ne contrôle plus la régénération du chêne (voir `docs/realisme.md`,
+ * G10). Il n'en avait jamais eu les moyens physiques.
  */
-export function partGlandeeRestante(sanglierParHa: number): number {
-  // Forme exponentielle, et **pas** une droite tronquée à zéro. Le premier jet
-  // soustrayait linéairement : à 1,8 fois la densité de référence il ne restait
-  // exactement **rien**, et la régénération du chêne s'éteignait d'un coup. Mesuré
-  // à 0,15 sanglier/ha : zéro recrue en quarante ans, contre 97 sans sanglier.
-  //
-  // Un seuil dur comme celui-là est le défaut que ce dépôt a déjà payé deux
-  // fois (l'anémone à pH 4,0, le chêne-liège à pH 4,50 — voir docs/realisme.md) :
-  // une espèce posée sur une borne bascule d'un extrême à l'autre pour un
-  // centième de rien. Ici la forme exponentielle garde la bonne écologie — sous
-  // forte densité la glandée ne passe presque plus — sans jamais promettre
-  // l'extinction.
-  const pression =
-    -Math.log(1 - PART_GLANDEE_CONSOMMEE) * (sanglierParHa / DENSITE_REFERENCE_PAR_HA);
-  return Math.exp(-pression);
-}
 
 /**
  * Ce qu'une même cellule peut être retournée, au plus, en une semaine.

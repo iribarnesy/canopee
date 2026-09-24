@@ -228,8 +228,8 @@ describe("abattre une chandelle", () => {
       x: 4 + i * 1.6,
       y: 10 + ((i * 7) % 5),
     }));
-    expect(partMecanisable(morts, 10, 10, 8)).toBeLessThan(1);
-    expect(partMecanisable([], 10, 10, 8)).toBe(1);
+    expect(partMecanisable(morts, { x: 10, y: 10, rayonM: 8 })).toBeLessThan(1);
+    expect(partMecanisable([], { x: 10, y: 10, rayonM: 8 })).toBe(1);
   });
 });
 

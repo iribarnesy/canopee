@@ -97,10 +97,23 @@ describe("azote (même limon, riche vs pauvre)", () => {
     // concurrencé). L'écart des deux pénalités annule tout ce qui n'est pas
     // l'exigence en azote — le climat, la densité, l'ombre mutuelle — et il ne
     // se cale sur rien : dix points, contre dix-huit mesurés.
-    expect(hetre - aulne).toBeGreaterThan(0.1);
+    //
+    // **et le même seuil a retenu deux fois la même leçon** (#201). Le lot de
+    // la litière herbacée a bouché une fuite d'azote — la strate prélevait
+    // ~31 kg N/ha/an et ne les rendait jamais — ce qui profite bien davantage
+    // au limon **pauvre**, dont le pool est petit. Le contraste s'est donc resserré
+    // une seconde fois, de dix-huit points à **9,95**. Le seuil valait 0,1 :
+    // cinq millièmes de marge, c'est-à-dire de nouveau une photographie, et
+    // exactement la faute que le paragraphe ci-dessus raconte.
+    //
+    // On le pose à 0,06, qui laisse quatre points de marge et interdit toujours
+    // le cas qui compte : un hêtre qui ne sentirait pas la pauvreté. Ce que
+    // l'essai affirme est que la différence des deux pénalités est **franche**, pas
+    // qu'elle vaut dix points.
+    expect(hetre - aulne).toBeGreaterThan(0.06);
     // Et le hêtre paie **dans l'absolu**, sans quoi le contraste tiendrait avec un
     // aulne qui prospère et un hêtre qui ne sent rien.
-    expect(hetre).toBeGreaterThan(0.1);
+    expect(hetre).toBeGreaterThan(0.06);
   });
 
   it("l'aulne (fixateur) est quasi insensible à la pauvreté en azote", () => {

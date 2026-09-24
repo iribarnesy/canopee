@@ -32,11 +32,18 @@ function simuler(
   const weather = serieToWeeks(serie);
   let state = createGameState(station, rngStateFromSeed(3));
   state = plantAt(state, especeId, 15, 15, 0.3);
+  // **le plant porte un manchon, et dans tous les bras** (#184). Depuis que la
+  // fauche emporte les tiges ligneuses qu'elle atteint, un plant de trente
+  // centimètres part avec l'herbe : c'est le fait, un gyrobroyeur ne trie pas.
+  // Ce qui distingue un dégagement d'une fauche de prairie est qu'on a protégé
+  // ce qu'on veut garder. La protection est posée dans **tous** les bras, fauchés
+  // ou non — sans quoi le témoin ne différerait plus par la seule fauche.
+  const protection: GameAction = { type: "proteger", week: 0, treeIds: [1] };
   let couvertureFinale = 0;
   for (let i = 0; i < ans * 52; i++) {
     const w = weather[i % weather.length];
     if (!w) throw new Error("météo manquante");
-    const r = advanceWeek(state, w, actions);
+    const r = advanceWeek(state, w, [protection, ...actions]);
     state = r.state;
     couvertureFinale = r.fluxes.herbeCouvertureMean;
   }
@@ -89,39 +96,97 @@ describe("dynamique du tapis herbacé", () => {
 });
 
 describe("concurrence herbacée sur les jeunes plants", () => {
-  // **les deux essais sont un seul fait, et ils le disaient mal.** Chacun
-  // portait le nombre 1,3 — mesuré à 1,3073 d'un côté, recopié à la main de
-  // l'autre sous le nom `gainPauvre`. Une marge de six millièmes : ce n'était
-  // pas une contrainte sur le moteur, c'était son empreinte, et le correctif
-  // des mycorhizes (#115) l'a fait tomber en déplaçant la valeur de 0,6 %.
+  // **ce banc mesurait un bogue, et il a fallu #201 pour le voir.**
   //
-  // Le fait écologique est un **contraste** : l'entretien décide sur un sol pauvre
-  // et ne décide pas sur un sol riche, parce que ce que l'herbe dispute au
-  // plant est justement ce qui manque. On mesure donc les deux gains sur le
-  // même banc et on compare, ce qui annule tout ce qui n'est pas la richesse
-  // du sol. Mesuré : **+30,0 % sur la lande sèche, −1,5 % sur le limon riche**
-  // — faucher un sol riche ne rapporte rien du tout.
+  // Il affirmait « faucher fait **nettement** mieux pousser un plant sur sol
+  // pauvre », +30,0 % mesurés contre +20 % exigés, et il avait déjà été réécrit
+  // une fois pour cesser d'épingler son propre chiffre à six millièmes près.
+  // L'énoncé est vrai sur le terrain — l'entretien du pied est le premier
+  // facteur de réussite d'une plantation. Le moteur, lui, le produisait pour
+  // une autre raison que la bonne.
+  //
+  // `applyFaucher` versait au sol `coupe * 4` grammes d'azote et `* 25` de
+  // carbone, **sans que rien ne les retire de nulle part** : la strate
+  // herbacée n'était ni au bilan carbone ni au bilan azote, et aucune propriété
+  // de conservation n'exerçait cette action. Faucher **fabriquait** de l'engrais et
+  // le versait au pied du plant.
+  //
+  // #201 a retiré cette création. Attribution faite avec le retour de litière
+  // de la strate désactivé, pour séparer les deux moitiés du lot :
+  //
+  //     +30,0 %   avant #201
+  //      +1,9 %   dépôt de fauche retiré, retour de la strate désactivé
+  //      +1,3 %   lot complet
+  //
+  // **Vingt-huit des trente points venaient de l'engrais fantôme.** Ce qui
+  // reste — un à deux points — est la concurrence réellement libérée par la
+  // coupe, sur quatre ans de fauche relevés à douze ans, donc avec un tapis qui
+  // a eu huit ans pour revenir.
+  //
+  // On n'abaisse donc pas le seuil de 1,2 à 1,01 : **l'affirmation se retire.**
+  // Un seuil ajusté sur deux points n'enregistrerait que l'état du jour, et
+  // surtout il ferait croire que le moteur tient un fait qu'il ne tient plus.
+  // Ce qui reste vérifiable est en dessous, et une issue porte le manque :
+  // la concurrence herbacée de ce moteur est trop faible (#210).
   const gain = (sc: StationClimat, especeId: string) => {
     const sans = simuler(sc, especeId, [], 12);
     const avec = simuler(sc, especeId, fauches(4), 12);
     return { rapport: avec.hauteur / sans.hauteur, sans: sans.hauteur };
   };
+  // **le banc faisait varier deux choses à la fois** (#210). Le bras « pauvre »
+  // était un **pin** sur lande, le bras « riche » un **bouleau** sur limon : leur
+  // différence portait donc la station **et** l'espèce, alors que l'essai ne
+  // prétend parler que de la station. Mesuré en carré complet, rapport
+  // fauché/non fauché à douze ans :
+  //
+  //                       pin      bouleau    couverture herbacée
+  //     pauvre (lande)   1,0207    1,0132           0,223
+  //     riche  (limon)   1,0003    0,9988           0,963
+  //
+  // La station pèse environ deux points, l'espèce sept dixièmes : le contraste
+  // était majoritairement le bon, mais **un tiers du signal venait de l'espèce**
+  // — sur un signal qui ne fait déjà que deux points, ce n'est pas une nuance.
+  // L'espèce est donc fixée, et c'est le pin qui reste, parce qu'il vit sur les
+  // deux stations et que le bouleau n'a rien à faire sur une lande sèche.
+  //
+  // Ce qui **varie encore** entre les deux bras, et qu'on ne peut pas fixer : la
+  // couverture herbacée, 0,22 contre 0,96. Mais c'est une **conséquence** de la
+  // station, pas un facteur indépendant — une lande sèche porte peu d'herbe,
+  // c'est ce qu'être une lande sèche veut dire. Le noter tout de même, parce
+  // qu'il explique la moitié du résultat : il y a peu à faucher sur la lande.
   const pauvre = gain(LANDE_SECHE, "pinus_sylvestris");
-  const riche = gain(LIMON_RICHE, "betula_pendula");
+  const riche = gain(LIMON_RICHE, "pinus_sylvestris");
 
-  it("faucher fait nettement mieux pousser un plant sur sol pauvre", () => {
-    expect(pauvre.rapport).toBeGreaterThan(1.2);
+  it("faucher ne NUIT pas, et le sens reste le bon sur sol pauvre", () => {
+    // Le signe, et rien de plus : retirer un concurrent ne coûte jamais au
+    // plant. C'est tout ce que le moteur soutient aujourd'hui.
+    expect(pauvre.rapport).toBeGreaterThan(1);
   });
 
-  it("sur sol riche, l'entretien compte beaucoup moins", () => {
+  it("sur sol riche, l'entretien ne rapporte rien — et ça, c'est toujours vrai", () => {
+    // Celui-ci n'a pas bougé et il n'avait pas à bouger : sur un sol qui ne
+    // manque de rien, ce que l'herbe prend ne manque à personne. C'est la
+    // moitié du contraste qui survit intacte, parce qu'elle ne reposait sur
+    // aucun apport fantôme.
     expect(riche.rapport).toBeLessThan(1.1);
-    expect(riche.sans).toBeGreaterThan(3);
+    // Et l'arbre a bien poussé : 2,54 m à douze ans pour le pin sur limon
+    // riche, contre 1,67 sur la lande. Ce n'est pas un témoin mort.
+    expect(riche.sans).toBeGreaterThan(2);
+    expect(riche.sans).toBeGreaterThan(pauvre.sans);
   });
 
-  it("et c'est l'ÉCART qui est la propriété : le sol pauvre décide, le riche non", () => {
-    // Trente points mesurés, vingt exigés. Aucun des deux gains n'a besoin
-    // d'être connu au centième pour que l'énoncé tienne.
-    expect(pauvre.rapport - riche.rapport).toBeGreaterThan(0.2);
+  it("le contraste pauvre/riche garde son sens, mais il ne fait plus que deux points", () => {
+    // **l'écart était la propriété, et il l'est resté — c'est son amplitude qui
+    // était fausse.** Trente points mesurés, vingt exigés ; il en reste deux.
+    // Le sol pauvre décide encore, le sol riche ne décide toujours pas, mais un
+    // gestionnaire qui lirait ce moteur conclurait que l'entretien du pied est
+    // accessoire — et ce serait faux.
+    expect(pauvre.rapport - riche.rapport).toBeGreaterThan(0);
+    // Et on épingle le **plafond** plutôt que le plancher, ce qui est l'inverse de
+    // ce que ce banc faisait : tant que l'écart reste sous dix points, le
+    // moteur n'a pas retrouvé le fait, et l'issue reste ouverte. Le jour où il
+    // le dépassera, cette ligne tombera — et ce sera la bonne nouvelle.
+    expect(pauvre.rapport - riche.rapport).toBeLessThan(0.1);
   });
 });
 

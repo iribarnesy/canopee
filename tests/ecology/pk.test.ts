@@ -179,7 +179,13 @@ describe("où le phosphore et le potassium limitent — et où ils ne limitent p
     }
     // On dégage la strate herbacée, sinon c'est elle qui décide de tout sur un
     // sol pauvre (cf. herbe.test.ts) et on ne verrait plus le phosphore.
-    const entretien: GameAction[] = [];
+    //
+    // Les plants portent un manchon : la fauche emporte les tiges ligneuses
+    // qu'elle atteint (#184), et un dégagement se fait autour de ce qu'on a
+    // protégé. Sans cette ligne l'entretien tuerait ce qu'il vient entretenir.
+    const entretien: GameAction[] = [
+      { type: "proteger", week: 0, treeIds: state.trees.map((t) => t.id) },
+    ];
     for (let an = 0; an < ans; an++) {
       entretien.push({ type: "faucher", week: an * 52 + 20, x: 15, y: 15, rayonM: 12 });
     }
