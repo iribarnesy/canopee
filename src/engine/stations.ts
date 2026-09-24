@@ -333,6 +333,25 @@ export const FRICHE_LIMON: StationClimat = {
  * *(Profil à calibrer : les textures et les teneurs sont des ordres de grandeur
  * d'arène granitique acide, aucune analyse de suberaie des Maures n'a été
  * consultée.)*
+ *
+ * ── ce que la station produit, mesuré ────────────────────────────────────────
+ *
+ * Réserve utile 121 mm sur trois horizons (33, 44, 43). **Sol nu, cinq ans, la
+ * sécheresse d'été est bien là — et elle est dans l'horizon qui évapore** :
+ *
+ *   semaine      0     12     16     20     24     28     32     40
+ *   horizon 0  0,88   0,35   0,14   0,11   0,20   0,15   0,14   0,48
+ *   horizons 1-2  1,00 partout, toute l'année
+ *
+ * Les deux horizons profonds restent pleins, et **c'est correct** : évaporer
+ * est un geste de surface, et sans racine rien ne puise en dessous. Le piège
+ * est pour qui mesure la réserve du profil ENTIER — elle ne descend qu'à 0,74,
+ * et on lirait « station pas sèche » là où la couche qui compte est à 0,14.
+ *
+ * Sur la station peuplée le minimum du profil entier vaut 0,62, contre 0,59 sur
+ * le limon riche d'Abbeville. Ça ne veut pas dire que la Méditerranée est plus
+ * humide que la Picardie : ça veut dire que la suberaie ne porte presque que de
+ * la ronce, donc peu de racines profondes pour vider les horizons du bas.
  */
 export const SUBERAIE_MAURES: StationClimat = {
   station: stationDepuisProfil({
