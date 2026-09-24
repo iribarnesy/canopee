@@ -38,7 +38,7 @@
  * Deux choses que ce compte apprend, et qu'aucun raisonnement ne donnait :
  *
  *  - **les morts qui font DISPARAÎTRE l'arbre coûtent zéro** — labour, boutis,
- *    abroutissement, écrasement ne touchent que la pose. La séparation des deux
+ *    fauche, abroutissement, écrasement ne touchent que la pose. La séparation des deux
  *    canaux n'est donc pas qu'une question de principe, elle se paie ou se
  *    gagne ;
  *  - **le coût ne dépend pas du nombre de morts.** Trente-quatre bouleaux qui
@@ -231,6 +231,13 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   // lent. Pas de chandelle : un semis arraché ne laisse pas de tige debout.
   boutis: {
     seffaceEntre: [0, 0.6],
+    chandelleA: 1.1,
+  },
+  // La fauche est le plus net des trois : un passage, et le brin n'est plus
+  // là. Pas de chandelle non plus — ce qui reste debout tient dans la garde au
+  // sol du rotor.
+  fauche: {
+    seffaceEntre: [0, 0.2],
     chandelleA: 1.1,
   },
   // « dessèchement d'une branche puis de l'ensemble, feuilles qui restent
