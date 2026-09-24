@@ -1,11 +1,11 @@
 /**
- * LA TAILLE DU BASSIN AMONT SE VOIT (#150, seconde moitié).
+ * **La taille du bassin amont se voit** (#150, seconde moitié).
  *
  * Un bassin de 5 % et un de 100 % donnaient exactement le même paysage : la
  * grandeur existait dans la partie — c'est un curseur de l'écran de départ —
  * et n'arrivait pas jusqu'au décor.
  *
- * **Ce qui se dessine est une CRÊTE**, et c'est une lecture, pas une vérité.
+ * **Ce qui se dessine est une crête**, et c'est une lecture, pas une vérité.
  * Le moteur donne une surface amont et rien d'autre ; une surface ne dit pas
  * une forme. On la lit comme une bande de la largeur de la parcelle, ce qui
  * donne une distance en amont au-delà de laquelle le sol cesse de monter.

@@ -92,12 +92,12 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       },
       { type: "couper", week: 5 * 52 + 20, treeIds: [1, 2, 3, 4, 5], devenir: "epandre" },
       { type: "couper", week: 6 * 52 + 20, treeIds: [31, 32, 33, 34], devenir: "vendre" },
-      // Rabattre un arbre VIVANT : la tige s'exporte, mais les racines qu'il
+      // Rabattre un arbre **vivant** : la tige s'exporte, mais les racines qu'il
       // cesse de porter restent au sol. Sans elles au bilan, un aulne de
       // quelques mètres recépé fait disparaître son carbone racinaire.
       { type: "receper", week: 6 * 52 + 30, treeIds: [6, 7, 8] },
       { type: "trogner", week: 7 * 52 + 10, treeIds: [9, 10], hauteurTeteM: 2 },
-      // ── LA STRATE BASSE, et elle manquait à cette liste (issue #201) ──────
+      // ── **la strate basse**, et elle manquait à cette liste (issue #201) ──────
       //
       // **`faucher` créait du carbone à partir de rien, et personne ne le
       // voyait.** L'herbe coupée était versée au pool de litière — donc au
@@ -109,7 +109,7 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       // c'est la plante qui a fixé ce carbone.
       { type: "faucher", week: 3 * 52 + 30, x: 25, y: 25, rayonM: 12 },
       { type: "faucher", week: 4 * 52 + 30, x: 25, y: 25, rayonM: 12 },
-      // Et la MOISSON, qui laisse sa paille au champ depuis le même lot.
+      // Et la **moisson**, qui laisse sa paille au champ depuis le même lot.
       {
         type: "semer",
         week: 2 * 52 + 41,
@@ -139,7 +139,7 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
 });
 
 /**
- * Le cas où le carbone se dédoublait : une chandelle brûlée coupée APRÈS le
+ * Le cas où le carbone se dédoublait : une chandelle brûlée coupée **après** le
  * délai de récupération. Le tick a déjà versé la totalité de son carbone au
  * pool de bois mort ; la coupe exportait quand même sa partie aérienne et
  * rajoutait ses racines au pool — soit un arbre entier créé de rien, et un
@@ -187,7 +187,7 @@ describe("couper une chandelle brûlée passé le délai de récupération", () 
 });
 
 /**
- * L'autre bout du même fil : la chandelle qui REBRÛLE. Son bois sec est le
+ * L'autre bout du même fil : la chandelle qui **rebrûle**. Son bois sec est le
  * meilleur combustible de la parcelle (`chargeCombustible`), mais il est déjà
  * compté au pool de bois mort. Le feu l'émettait sans l'en retirer — et pire,
  * pour une essence qui rejette de souche, il faisait « repartir » un arbre
@@ -204,12 +204,12 @@ describe("un incendie qui emporte des chandelles", () => {
     // Le charme rejette de souche : c'est l'essence qui déclenchait la
     // résurrection d'une chandelle, et donc la création de carbone.
     //
-    // Le peuplement est DENSE, et il faut qu'il le soit. La propagation est une
+    // Le peuplement est **dense**, et il faut qu'il le soit. La propagation est une
     // percolation : sous le seuil de probabilité par cellule (≈ 0,59 sur un
     // réseau carré à quatre voisins), un départ s'éteint sur place au lieu de
     // parcourir la parcelle. Quarante chandelles éparses sur 2 500 m² tombaient
     // exactement sur cette arête, et l'essai basculait au moindre changement de
-    // charge. Ce qu'on veut éprouver ici est le BILAN CARBONE d'un feu de
+    // charge. Ce qu'on veut éprouver ici est le **bilan carbone** d'un feu de
     // chandelles, pas la statistique des départs : on se donne donc de quoi
     // brûler franchement.
     state = plantScattered(state, "carpinus_betulus", 120, 15);
@@ -231,7 +231,7 @@ describe("un incendie qui emporte des chandelles", () => {
       state = step.state;
       expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
       if (step.incendie) {
-        // On ACCUMULE au lieu de garder le dernier feu. La parcelle en connaît
+        // On **accumule** au lieu de garder le dernier feu. La parcelle en connaît
         // maintenant plusieurs — les chandelles portent le feu, et l'ombre
         // n'amortit plus leur charge (feu.ts) — et le dernier, qui ne trouve
         // plus rien à brûler, écrasait le compte du premier par un zéro.
@@ -248,7 +248,7 @@ describe("un incendie qui emporte des chandelles", () => {
 
     expect(feux).toBeGreaterThan(0);
     // Les chandelles ont brûlé : elles quittent la carte, et le bois parti en
-    // fumée a été PRIS au pool, pas émis en plus de lui.
+    // fumée a été **pris** au pool, pas émis en plus de lui.
     expect(chandellesEmportees).toBeGreaterThan(60);
     expect(state.trees).toEqual([]);
     expect(brulKgC).toBeGreaterThan(0);
@@ -259,7 +259,7 @@ describe("un incendie qui emporte des chandelles", () => {
 });
 
 /**
- * Rabattre un arbre VIVANT — recéper, étêter, rejeter après feu — est le
+ * Rabattre un arbre **vivant** — recéper, étêter, rejeter après feu — est le
  * troisième cas de la même famille, et le plus discret : l'arbre reste en
  * jeu, sa hauteur baisse, et comme son carbone racinaire se déduit de sa
  * hauteur, il en perd sans que personne le reçoive.
@@ -304,7 +304,7 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
       12,
       RECEPAGE_HAUTEUR_M,
     );
-    // Ce qu'on épingle est que la part racinaire perdue est SUBSTANTIELLE, pas
+    // Ce qu'on épingle est que la part racinaire perdue est **substantielle**, pas
     // qu'elle vaut tant de kilos : un seuil en valeur absolue ne décrirait que
     // le niveau de l'allométrie du jour, et celui-ci a déjà changé d'un facteur
     // six (#62). Rabattre un arbre de douze mètres à hauteur de souche lui
@@ -330,7 +330,7 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
   });
 
   it("on ne vend pas la souche qu'on laisse debout", () => {
-    // Exporter l'aérien ENTIER d'un arbre recépé créait le carbone du demi-
+    // Exporter l'aérien **entier** d'un arbre recépé créait le carbone du demi-
     // mètre resté sur place — et le facturait au client.
     const { state, id } = charmeDe(12);
     const r = applyAction(state, { type: "receper", week: 0, treeIds: [id] });
@@ -345,7 +345,7 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
 });
 
 /**
- * Le quatrième cas de la famille, et le seul qui passe par le FEU : un arbre
+ * Le quatrième cas de la famille, et le seul qui passe par le **feu** : un arbre
  * vivant que l'incendie rabat mais qui repart de souche. Deux erreurs s'y
  * compensaient à moitié, donc aucune ne se voyait — imputer tout l'aérien à la
  * fumée émettait un carbone que la souche porte encore, et comme le carbone
@@ -355,7 +355,7 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
  * Le chemin était jusqu'ici hors de portée des tests : le scénario de
  * `feu.test.ts` ne peut structurellement pas rejeter (le pin est tué mais ne
  * rejette pas, le chêne-liège rejette mais son écorce à 0,95 ne le laisse pas
- * tuer). D'où cette lande de GENÊTS — inflammabilité 0,98, écorce nulle,
+ * tuer). D'où cette lande de **genêts** — inflammabilité 0,98, écorce nulle,
  * pyrophyte qui rejette : elle brûle et elle repart, ce qui est exactement le
  * cas à couvrir.
  */
@@ -386,7 +386,7 @@ describe("un feu qui fait rejeter de souche", () => {
     // arrivé à la version qui vivait dans `feu.test.ts`.
     expect(rejets).toBeGreaterThan(0);
     // Le délai est explicite parce que l'essai est cher par construction : il
-    // vérifie le bilan carbone à CHAQUE semaine d'une partie qu'il faut mener
+    // vérifie le bilan carbone à **chaque** semaine d'une partie qu'il faut mener
     // assez loin pour qu'un incendie y fasse rejeter. Il tenait dans les 120 s
     // par défaut sur ma machine et les dépassait sur le runner d'intégration,
     // qui est plus lent.

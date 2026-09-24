@@ -1,21 +1,21 @@
 /**
- * Le FRONT D'INCENDIE : une ligne de flammes qui court, puis de la cendre
+ * Le **front d'incendie** : une ligne de flammes qui court, puis de la cendre
  * (docs/interface-visuelle.md §6.4).
  *
  * **Le moteur a tout préparé pour ça, et il l'a écrit noir sur blanc.** Le
  * commentaire de `rangsDuFront` dans `feu.ts` dit : « c'est ce qui permet de
- * faire COURIR une ligne de flammes au lieu de noircir un patch d'un coup ».
- * `IncendieResult` porte donc l'origine, les cellules brûlées, et le RANG
+ * faire **courir** une ligne de flammes au lieu de noircir un patch d'un coup ».
+ * `IncendieResult` porte donc l'origine, les cellules brûlées, et le **rang**
  * d'arrivée du front sur chacune — sa distance à l'origine à travers ce qui a
  * brûlé. Le rendu n'a aucune propagation à refaire : il lit un rang et le
  * compare à l'avancement de l'acte.
  *
  * **Et il n'a presque aucune machinerie à ajouter, ce qui est le signe que le
  * découpage précédent était bon.** Un front est un ensemble de cellules
- * teintées, animées à la POSE — exactement ce que le voile des gestes de zone
+ * teintées, animées à la **pose** — exactement ce que le voile des gestes de zone
  * dessine déjà (`voile.ts`, `couches/voile.ts`). Les deux rendent des
  * `CelluleVoilee` et passent par la même couche de losanges. Une flamme au sol
- * et un nuage de chaux ne sont pas la même chose, mais ils se DESSINENT de la
+ * et un nuage de chaux ne sont pas la même chose, mais ils se **dessinent** de la
  * même façon, et il n'y avait pas de raison d'en écrire deux fois.
  *
  * Ce qui ne passe pas par ici, et c'est délibéré :
@@ -23,15 +23,15 @@
  *  - **le torchage d'un arbre** — la couronne qui s'embrase et la chandelle
  *    noire qui reste. La classe de vignette porte déjà `brulee`, et la mort de
  *    cause `feu` la met en place dès le premier instant (`mort.ts`). C'est de
- *    la CUISSON, pas de la pose ;
+ *    la **cuisson**, pas de la pose ;
  *  - **les rejets de souche au printemps suivant** : ils arriveront comme des
  *    recrues dans un instantané ultérieur, et le calque des changements les
  *    pointera sans rien de plus.
  *
  * **La fumée, les flammes et les braises sont arrivées ensuite, et elles ne
- * changent rien à ce partage** : ce sont des PARTICULES, c'est-à-dire des
+ * changent rien à ce partage** : ce sont des **particules**, c'est-à-dire des
  * images à poser dans le monde à une hauteur donnée, et leur position est une
- * fonction PURE de (ce que le moteur a brûlé, l'avancement de l'acte, l'horloge
+ * fonction **pure** de (ce que le moteur a brûlé, l'avancement de l'acte, l'horloge
  * de l'ellipse). Rien ne s'accumule d'une image à l'autre — pas de tableau de
  * particules vivantes, pas d'intégration, pas d'état. C'est ce qui rend une
  * capture figée (`?ellipse=0.7`) reproductible au pixel, et c'est aussi ce qui
@@ -56,7 +56,7 @@ export interface FrontDIncendie {
   /** rang d'arrivée du front sur chaque cellule de `brulees`, même ordre */
   rangs: ArrayLike<number>;
   /**
-   * Charge de combustible de chaque cellule, même ordre — ce DANS QUOI le feu
+   * Charge de combustible de chaque cellule, même ordre — ce **dans quoi** le feu
    * a brûlé (`IncendieResult.charges`).
    *
    * Optionnelle, et c'est le seul champ qui le soit : les scènes cuites avant
@@ -73,7 +73,7 @@ export interface FrontDIncendie {
  * **C'est ce qui fait la différence entre un front et une tache qui grandit.**
  * À un rang, on voit un liseré d'un mètre courir — trop fin pour se lire à la
  * parcelle. À dix, tout ce qui a brûlé flambe en même temps et on ne voit plus
- * où le feu EST. Trois rangs, c'est une ligne de flammes de trois mètres de
+ * où le feu **est**. Trois rangs, c'est une ligne de flammes de trois mètres de
  * profondeur : ce qu'on voit d'un feu courant.
  */
 export const RANGS_DU_FRONT = 3;
@@ -84,13 +84,13 @@ export const RANGS_DU_FRONT = 3;
  *
  * Sept, soit un peu plus du double de la profondeur du front : une couronne
  * met plus de temps à brûler que l'herbe sous elle, et c'est ce décalage qui
- * fait qu'on voit des torches DERRIÈRE la ligne de flammes — ce qu'on voit
+ * fait qu'on voit des torches **derrière** la ligne de flammes — ce qu'on voit
  * d'un feu courant qui monte dans les arbres.
  */
 export const TORCHAGE_EN_RANGS = 7;
 
 /**
- * De combien la tête du front DÉPASSE le dernier rang, en rangs.
+ * De combien la tête du front **dépasse** le dernier rang, en rangs.
  *
  * **Le dépassement doit couvrir la plus longue chose que l'incendie met en
  * scène, et un essai a attrapé les deux fois où ce n'était pas le cas.** La
@@ -138,14 +138,14 @@ export const OPACITE_DE_LA_FLAMME = 0.68;
 /**
  * Opacité de la cendre.
  *
- * Pas totale : le sol brûlé reste du SOL, et ce qu'il portait — un tronc
+ * Pas totale : le sol brûlé reste du **sol**, et ce qu'il portait — un tronc
  * couché, une souche — doit rester lisible dessous. C'est aussi ce qui évite
  * qu'un incendie laisse un trou noir découpé au ciseau dans la parcelle.
  */
 export const OPACITE_DE_LA_CENDRE = 0.6;
 
 /**
- * Combien de variantes de TACHE DE BRÛLURE sont cuites.
+ * Combien de variantes de **tache de brûlure** sont cuites.
  *
  * Quatre et non trois : une tache de brûlure est posée sur des milliers de
  * cellules d'un seul coup, là où une flamme n'apparaît qu'à cent soixante
@@ -156,7 +156,7 @@ export const VARIANTES_DE_BRULURE = 4;
 /**
  * Un nombre reproductible tiré de deux entiers.
  *
- * **Pas un générateur, une FONCTION.** Un générateur à état donnerait des
+ * **Pas un générateur, une fonction.** Un générateur à état donnerait des
  * particules qui changent de place à chaque image alors qu'elles sont censées
  * être les mêmes, et une capture figée ne serait pas reproductible. Ici, la
  * phase d'une flamme est une fonction de sa cellule : elle est stable d'une
@@ -186,9 +186,9 @@ function melanger(a: Teinte, b: Teinte, part: number): Teinte {
  * il correspond à ce que l'instantané d'après dira du sol.
  */
 /**
- * Où en est la TÊTE du front, en rangs, à un avancement donné.
+ * Où en est la **tête** du front, en rangs, à un avancement donné.
  *
- * Extrait parce que TOUT ce qui dessine un incendie en dépend — la cendre, les
+ * Extrait parce que **tout** ce qui dessine un incendie en dépend — la cendre, les
  * flammes, la fumée, les braises, les couronnes qui flambent. Deux copies de
  * cette formule et le panache se décalerait du front d'un rang, ce qui se
  * verrait tout de suite : de la fumée là où il n'y a plus de feu.
@@ -260,7 +260,7 @@ export function porteeDuFront(front: FrontDIncendie): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Ce qu'une particule DESSINE. La forme décide de la texture, de l'ancre et du
+ * Ce qu'une particule **dessine**. La forme décide de la texture, de l'ancre et du
  * mode de fusion — un feu s'ajoute à ce qu'il éclaire, une fumée le recouvre —
  * mais c'est la couche de pose qui en tire les conséquences, pas ce module.
  */
@@ -277,7 +277,7 @@ export type FormeDeFeu = "lueur" | "flamme" | "coeur" | "fumee" | "traine" | "br
  */
 export interface Particule {
   /**
-   * La cellule du PIED, c'est-à-dire d'où la particule est partie.
+   * La cellule du **pied**, c'est-à-dire d'où la particule est partie.
    *
    * Elle sert à deux choses : lire l'altitude du sol (le panache pend au-dessus
    * de son pied, pas au-dessus du terrain qu'il survole) et vérifier, dans les
@@ -354,7 +354,7 @@ export const OPACITE_DE_LA_LUEUR = 0.42;
 /**
  * Hauteur d'une flamme, en mètres, sur la charge de combustible de référence.
  *
- * **Elle VARIE maintenant d'une cellule à l'autre, et c'est le moteur qui le
+ * **Elle varie maintenant d'une cellule à l'autre, et c'est le moteur qui le
  * dit.** `IncendieResult.charges` porte la charge de chaque cellule brûlée
  * depuis que le moteur l'expose ; le rendu n'a donc plus à dessiner toutes ses
  * flammes à la même hauteur de convention. Deux mètres et demi restent la
@@ -371,7 +371,7 @@ export const HAUTEUR_DE_FLAMME_M = 2.5;
 /**
  * La charge de combustible sur laquelle `HAUTEUR_DE_FLAMME_M` est calée.
  *
- * **Ce n'est PAS `CHARGE_PLEINE_INTENSITE` du moteur, et le premier jet s'y est
+ * **Ce n'est pas `CHARGE_PLEINE_INTENSITE` du moteur, et le premier jet s'y est
  * trompé.** J'avais pris la charge à laquelle le feu tue tout ce qui n'a pas
  * d'écorce (1,2), en trouvant l'accord élégant. Mesuré ensuite : la friche de
  * démonstration brûle à 0,53–0,60 de charge médiane, donc toutes ses flammes
@@ -380,7 +380,7 @@ export const HAUTEUR_DE_FLAMME_M = 2.5;
  *
  * Les deux nombres répondent à deux questions différentes. « À quelle charge le
  * feu devient-il létal » est une question d'écologie ; « quelle est la charge
- * d'une pelouse ordinaire » est la question de dessin, parce que c'est ELLE que
+ * d'une pelouse ordinaire » est la question de dessin, parce que c'est **elle** que
  * le joueur voit brûler la plupart du temps et c'est sur elle qu'il faut caler
  * l'échelle. Six dixièmes, soit la médiane mesurée de ce qui brûle sur les deux
  * scènes de feu. Une lande d'ajoncs à 1,7 monte alors à une fois et demie cette
@@ -438,7 +438,7 @@ export const PERIODE_DE_FLAMME_MS = 240;
 /**
  * Maille de la lueur au sol, en mètres.
  *
- * La lueur n'est pas une flamme, c'est ce que les flammes ÉCLAIRENT : elle se
+ * La lueur n'est pas une flamme, c'est ce que les flammes **éclairent** : elle se
  * pose par tache large, une tous les sept mètres de front, et non par cellule.
  * C'est le §6.4 qui la demande dès le départ du feu — « une lueur sur la
  * cellule d'origine » — et au départ il n'y a qu'une maille, donc une lueur.
@@ -454,7 +454,7 @@ export const LUEURS_MAX = 48;
 /**
  * Maille des colonnes de fumée, en mètres.
  *
- * **C'est la bonne UNITÉ qui décide ici, et la question s'est posée comme
+ * **C'est la bonne unité qui décide ici, et la question s'est posée comme
  * toujours.** Une bouffée par cellule en flammes, ce sont deux mille bouffées
  * et un brouillard ; une seule colonne pour tout l'incendie, c'est un panache
  * qui ne dit plus où le feu est. Ce qu'on voit d'un feu courant, c'est une
@@ -463,7 +463,7 @@ export const LUEURS_MAX = 48;
  *
  * **Une maille et non un échantillonnage par indice**, et c'est la raison qui
  * compte : un pas d'indice change de cellules à chaque image quand le front
- * grandit, et les colonnes se téléporteraient. Une maille SPATIALE tient une
+ * grandit, et les colonnes se téléporteraient. Une maille **spatiale** tient une
  * colonne en place tant que le front traverse son carré.
  */
 export const MAILLE_DES_COLONNES_M = 9;
@@ -496,7 +496,7 @@ export const HAUTEUR_DU_PANACHE_M = 28;
 /**
  * Taille d'une bouffée au ras du feu, puis au sommet du panache, en mètres.
  *
- * **Le RAPPORT entre les deux compte plus que les deux nombres, et la capture
+ * **Le rapport entre les deux compte plus que les deux nombres, et la capture
  * l'a montré : à un contre cinq, chaque colonne se lisait comme un
  * champignon** — un pied fin et un chapeau. Une colonne de fumée ne pousse pas
  * comme ça : elle part déjà large, parce qu'elle part de plusieurs mètres de
@@ -509,7 +509,7 @@ export const BOUFFEE_LA_PLUS_GRANDE_M = 17;
 export const MONTEE_DU_PANACHE_MS = 900;
 
 /**
- * De combien le panache DÉRIVE sur toute sa hauteur, en mètres, au vent le
+ * De combien le panache **dérive** sur toute sa hauteur, en mètres, au vent le
  * plus fort.
  *
  * Trente pour vingt-huit mètres de montée, soit une inclinaison de quarante-six
@@ -520,7 +520,7 @@ export const MONTEE_DU_PANACHE_MS = 900;
 export const DERIVE_LA_PLUS_FORTE_M = 30;
 
 /**
- * Sur combien de rangs derrière le front le sol FUME encore.
+ * Sur combien de rangs derrière le front le sol **fume** encore.
  *
  * **C'est ce qui manquait le plus, et la capture l'a rendu évident** : un
  * anneau de flammes avec des colonnes au-dessus et un trou noir au milieu ne se
@@ -584,7 +584,7 @@ function cycle(v: number): number {
 }
 
 /**
- * Les cellules qui FLAMBENT à cet avancement, avec leur place dans le front.
+ * Les cellules qui **flambent** à cet avancement, avec leur place dans le front.
  *
  * `part` vaut 0 sur la tête du front et tend vers 1 au fond, là où la flamme
  * retombe en braise. C'est la seule grandeur dont les particules aient besoin
@@ -620,7 +620,7 @@ export function cellulesEnFlammes(
 }
 
 /**
- * Les cellules qui FUMENT encore, derrière le front.
+ * Les cellules qui **fument** encore, derrière le front.
  *
  * `part` vaut 0 juste derrière la flamme et 1 au bout des `RANGS_QUI_FUMENT` :
  * c'est de quoi faire une traîne qui s'éteint en s'éloignant du feu, ce qui est
@@ -659,19 +659,19 @@ function centreDe(cellule: number, coteM: number): { x: number; y: number } {
  * contresens à l'écran :**
  *
  *  - **`vers`, pas « d'où »**. La météo nomme un vent par sa provenance — un
- *    « vent d'ouest » vient de l'ouest. Ici c'est la direction du MOUVEMENT,
+ *    « vent d'ouest » vient de l'ouest. Ici c'est la direction du **mouvement**,
  *    comme `directionRad` d'une tige tombée : un vent d'ouest vaut
  *    `versRad = 0`, puisqu'il pousse vers l'est. Le signe inverse ferait
  *    pencher le panache face au feu ;
- *  - **la vitesse REÇUE, pas la vitesse régionale.** `ventMoyMs` est le vent de
+ *  - **la vitesse reçue, pas la vitesse régionale.** `ventMoyMs` est le vent de
  *    la région, `ventExposition` l'abri du site, et ce que la parcelle prend est
  *    le produit des deux (`ventRecuParLeSite` du moteur). Un vallon fermé ne
  *    couche pas son panache comme une lande.
  */
 export interface VentAPencher {
-  /** direction VERS laquelle il souffle, radians (0 = +x = est, sens trigo) */
+  /** direction **vers** laquelle il souffle, radians (0 = +x = est, sens trigo) */
   versRad: number;
-  /** vitesse que le SITE reçoit, m/s (`ventRecuParLeSite`) */
+  /** vitesse que le **site** reçoit, m/s (`ventRecuParLeSite`) */
   recuMs: number;
 }
 
@@ -679,11 +679,11 @@ export interface VentAPencher {
  * Vitesse à laquelle le panache est couché au maximum, en m/s.
  *
  * **Une convention de dessin, et il faut le dire.** L'inclinaison d'un panache
- * est le rapport entre la vitesse du vent et la vitesse d'ASCENSION de la
+ * est le rapport entre la vitesse du vent et la vitesse d'**ascension** de la
  * colonne — c'est de la physique, et elle est bien connue. Mais la vitesse
  * d'ascension du panache dessiné ici n'est pas une vitesse du monde : le
  * panache monte `HAUTEUR_DU_PANACHE_M` en `MONTEE_DU_PANACHE_MS`, qui sont des
- * millisecondes d'ELLIPSE, c'est-à-dire du temps de cinéma. Le rapport honnête
+ * millisecondes d'**ellipse**, c'est-à-dire du temps de cinéma. Le rapport honnête
  * n'est donc pas calculable, et ce nombre-ci le remplace : huit mètres par
  * seconde, soit une bonne brise, couchent la colonne autant que le dessin sait
  * la coucher. En dessous elle se redresse proportionnellement.
@@ -693,7 +693,7 @@ export const VENT_QUI_COUCHE_MS = 8;
 /**
  * Vers où la fumée penche, et de combien.
  *
- * **Le moteur le SAIT, et cette fonction ne devine plus rien.** Elle a d'abord
+ * **Le moteur le sait, et cette fonction ne devine plus rien.** Elle a d'abord
  * fait pencher chaque colonne à l'opposé de l'origine de l'incendie — ce qui
  * dessinait un vent soufflant vers l'extérieur dans toutes les directions à la
  * fois — puis toutes dans le sens de l'avance nette du front, ce qui confondait
@@ -722,13 +722,13 @@ function penchantDuVent(vent: VentAPencher): { dx: number; dy: number; force: nu
 export const SANS_VENT: VentAPencher = { versRad: 0, recuMs: 0 };
 
 /**
- * Ce qui brûle AU SOL : la lueur et les langues de flamme.
+ * Ce qui brûle **au sol** : la lueur et les langues de flamme.
  *
  * Posé sous les arbres, parce qu'un feu courant est à leurs pieds : on le voit
  * entre les troncs. Ce qui monte au-dessus du couvert — la fumée, les braises —
  * est rendu par `panacheDuFeu` et posé par-dessus tout.
  *
- * `phaseMs` est l'horloge de l'ELLIPSE et non celle du navigateur : c'est ce
+ * `phaseMs` est l'horloge de l'**ellipse** et non celle du navigateur : c'est ce
  * qui fait qu'une lecture figée l'est vraiment, jusqu'au battement des flammes.
  */
 export function feuAuSol(
@@ -741,8 +741,8 @@ export function feuAuSol(
   if (flambent.length === 0) return [];
   const sorties: Particule[] = [];
 
-  // La LUEUR d'abord : une tache large par maille de front, aplatie de moitié
-  // parce qu'elle est posée AU SOL et que le sol est vu de biais. C'est le seul
+  // La **lueur** d'abord : une tache large par maille de front, aplatie de moitié
+  // parce qu'elle est posée **au sol** et que le sol est vu de biais. C'est le seul
   // endroit du feu qui éclaire quelque chose d'autre que lui-même.
   const mailles = new Set<number>();
   const parRangee = Math.ceil(coteM / MAILLE_DES_LUEURS_M) + 1;
@@ -768,7 +768,7 @@ export function feuAuSol(
     });
   }
 
-  // Les LANGUES, échantillonnées à pas régulier. Le pas est en indices et non
+  // Les **langues**, échantillonnées à pas régulier. Le pas est en indices et non
   // en maille : une flamme scintille, elle a le droit de changer de cellule
   // d'une image à l'autre — c'est même ce qui donne le grouillement du feu.
   const pas = Math.max(1, Math.ceil(flambent.length / FLAMMES_MAX));
@@ -807,7 +807,7 @@ export function feuAuSol(
       teinte,
       opacite: OPACITE_DE_LA_FLAMME * (0.8 + 0.2 * ondule),
     });
-    // Le CŒUR : la même langue, plus petite et presque blanche. C'est le
+    // Le **cœur** : la même langue, plus petite et presque blanche. C'est le
     // dégradé de température, et c'est lui qui empêche la flamme de se lire
     // comme un morceau de papier orange.
     sorties.push({
@@ -827,7 +827,7 @@ export function feuAuSol(
 }
 
 /**
- * Ce qui MONTE : le panache et les braises.
+ * Ce qui **monte** : le panache et les braises.
  *
  * Posé au-dessus des arbres, et c'est le seul calque du rendu qui ait le droit
  * de masquer un houppier : de la fumée passe devant ce qu'elle survole, sinon
@@ -851,12 +851,12 @@ export function panacheDuFeu(
   // Une seule pour tout l'incendie : un vent est uniforme sur un hectare.
   const pente = penchantDuVent(vent);
 
-  // Les COLONNES, une par maille de front traversée.
+  // Les **colonnes**, une par maille de front traversée.
   //
-  // **Parcourues à PAS RÉGULIER et non dans l'ordre**, et c'est une correction
+  // **Parcourues à pas régulier et non dans l'ordre**, et c'est une correction
   // mesurée : `cellulesEnFlammes` rend ses cellules dans l'ordre du rang, donc
   // prendre les premières mailles rencontrées jusqu'au plafond ne retenait que
-  // le bord INTÉRIEUR du front — les colonnes sortaient de la cendre au lieu de
+  // le bord **intérieur** du front — les colonnes sortaient de la cendre au lieu de
   // suivre la ligne de feu. Un pas qui balaie tout l'ensemble les répartit.
   const mailles = new Set<number>();
   const parRangee = Math.ceil(coteM / MAILLE_DES_COLONNES_M) + 1;
@@ -879,7 +879,7 @@ export function panacheDuFeu(
       const u = cycle(phaseMs / MONTEE_DU_PANACHE_MS + j / BOUFFEES_PAR_COLONNE + decalage);
       const derive = DERIVE_LA_PLUS_FORTE_M * pente.force * u ** 1.5;
       const serpente = 1.1 * Math.sin(u * 5 + decalage * 6.283);
-      // Une bouffée GROSSIT en montant : c'est ce qui fait un panache et non
+      // Une bouffée **grossit** en montant : c'est ce qui fait un panache et non
       // une file de billes, et c'est vrai — l'air chaud se dilate et se mêle.
       const taille =
         BOUFFEE_LA_PLUS_PETITE_M + (BOUFFEE_LA_PLUS_GRANDE_M - BOUFFEE_LA_PLUS_PETITE_M) * u;
@@ -892,11 +892,11 @@ export function panacheDuFeu(
         hauteurM: taille,
         forme: "fumee",
         variante: (j + Math.floor(alea(clef, 8) * VARIANTES)) % VARIANTES,
-        // Elle reste SUIE longtemps : un feu d'herbe fume noir parce qu'il
+        // Elle reste **suie** longtemps : un feu d'herbe fume noir parce qu'il
         // brûle mal, et le premier jet pâlissait en `u ** 0.7`, ce qui donnait
         // de la ouate blanche dès le tiers de la montée.
         teinte: melanger(SUIE, FUMEE_PALE, u ** 1.5),
-        // **Un PLATEAU et non une décroissance, et la capture a tranché.** Avec
+        // **Un plateau et non une décroissance, et la capture a tranché.** Avec
         // une opacité qui tombe dès la naissance de la bouffée, les grosses
         // bouffées du haut du panache étaient les plus transparentes : le
         // panache grossissait en devenant invisible, et il se lisait comme un
@@ -909,7 +909,7 @@ export function panacheDuFeu(
     }
   }
 
-  // La TRAÎNE : ce qui a brûlé fume encore, bas et large.
+  // La **traîne** : ce qui a brûlé fume encore, bas et large.
   //
   // Elle est indispensable et elle ne coûte presque rien : sans elle, le
   // panache flotte au-dessus d'un trou noir et l'incendie se lit comme des
@@ -951,7 +951,7 @@ export function panacheDuFeu(
     });
   }
 
-  // Les BRAISES, échantillonnées comme les flammes. Elles montent plus vite et
+  // Les **braises**, échantillonnées comme les flammes. Elles montent plus vite et
   // moins haut que la fumée, et elles s'éteignent en tombant vers le rouge :
   // c'est ce qui donne l'échelle du feu, parce qu'une braise est petite et
   // qu'on en voit beaucoup.
@@ -981,7 +981,7 @@ export function panacheDuFeu(
 }
 
 /**
- * La teinte dont un incendie charge le CIEL (§6.4, « ciel orangé »).
+ * La teinte dont un incendie charge le **ciel** (§6.4, « ciel orangé »).
  *
  * Un feu de cette taille éclaire tout ce qui est autour de lui : la brume du
  * hors-parcelle, les champs voisins, la fumée elle-même. C'est un ajout de
@@ -1006,7 +1006,7 @@ export const CELLULES_POUR_UN_CIEL_PLEIN = 300;
 /**
  * Opacité de l'embrasement du ciel, au plus fort.
  *
- * Faible, et c'est une contrainte plus qu'un réglage : ce voile couvre TOUTE
+ * Faible, et c'est une contrainte plus qu'un réglage : ce voile couvre **toute**
  * l'image, y compris l'interface de la carte et le décor. Au-delà, il ne
  * raconte plus un incendie, il déteint sur le jeu — et le joueur perd la
  * lecture des couleurs de sol dont il a besoin pour décider.
@@ -1027,26 +1027,26 @@ export function chargeDuCiel(front: FrontDIncendie, avancement: number): number 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Le TORCHAGE : un arbre que le front atteint (§6.4)
+// Le **torchage** : un arbre que le front atteint (§6.4)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Un arbre que l'incendie a tué, tel que le rendu le lit.
  *
  * **Ce qui rend le torchage possible sans rien inventer, et ce n'est pas le
- * journal.** Le moteur ne rapporte PAS une mort par le feu au moment du feu :
+ * journal.** Le moteur ne rapporte **pas** une mort par le feu au moment du feu :
  * un arbre brûlé reste « récupérable en coupe sanitaire » pendant
  * `CHABLIS_RECUPERABLE_SEMAINES` — un an — et n'entre dans `morts` qu'après
  * (issue #52). Un incendie et ses victimes n'arrivent donc jamais dans le même
  * journal, et une mise en scène qui attendrait ça n'aurait jamais rien à
  * montrer.
  *
- * Mais l'INSTANTANÉ le dit : `brulEeSemaine` porte la semaine où le feu a tué
+ * Mais l'**instantané** le dit : `brulEeSemaine` porte la semaine où le feu a tué
  * l'arbre. Un arbre dont cette semaine tombe dans l'intervalle du journal a
  * brûlé pendant l'ellipse qu'on est en train de jouer — exactement le même
  * raisonnement que pour les recrues, reconnues à leur `ageWeeks`.
  *
- * Et le MOMENT vient du front : le rang de sa cellule dit quand la ligne de
+ * Et le **moment** vient du front : le rang de sa cellule dit quand la ligne de
  * flammes l'atteint. Un arbre ne s'embrase donc pas quand l'acte commence, il
  * s'embrase quand le feu arrive à son pied — ce qui est la seule chose qui
  * puisse rendre un torchage lisible plutôt que décoratif.
@@ -1062,7 +1062,7 @@ export interface ArbreQuiSeTorche {
   baseHouppierM: number;
   /** rayon du houppier, m */
   rayonHouppierM: number;
-  /** le rang du front sur sa cellule : c'est QUAND il s'embrase */
+  /** le rang du front sur sa cellule : c'est **quand** il s'embrase */
   rang: number;
 }
 
@@ -1181,14 +1181,14 @@ export function flammesDeTorche(torche: ArbreQuiSeTorche, u: number, phaseMs: nu
 }
 
 /**
- * Ce que le torchage fait à l'ÉTAT de l'arbre, c'est-à-dire à sa vignette.
+ * Ce que le torchage fait à l'**état** de l'arbre, c'est-à-dire à sa vignette.
  *
  * **Trois grandeurs seulement, et c'est un budget de cuisson.** La couronne se
  * défeuille, la vigueur tombe, l'arbre passe charbonné puis chandelle. Le
  * jaunissement n'y est pas : un feuillage brûlé ne jaunit pas, il noircit, et
  * c'est `brulee` qui le dit dans la classe.
  *
- * L'avancement est QUANTIFIÉ pour les mêmes raisons que dans `mort.ts` — une
+ * L'avancement est **quantifié** pour les mêmes raisons que dans `mort.ts` — une
  * grandeur continue dans une clé de cache est un cache qui ne sert à rien.
  */
 export function torchageEnCours(avantLeFeu: ArbreVivant, u: number): EtatMourant {
@@ -1200,7 +1200,7 @@ export function torchageEnCours(avantLeFeu: ArbreVivant, u: number): EtatMourant
     partFoliaire: avantLeFeu.partFoliaire * (1 - dansLaFenetre(a, [0.15, 0.65])),
     vigueur: avantLeFeu.vigueur * (1 - dansLaFenetre(a, [0, 0.5])),
     dommageHydraulique: avantLeFeu.dommageHydraulique,
-    // **Charbonné AVANT d'être une chandelle**, et l'ordre compte : l'écorce
+    // **Charbonné avant d'être une chandelle**, et l'ordre compte : l'écorce
     // noircit dès que la flamme la léche, alors qu'il faut que la couronne ait
     // fini de brûler pour que ce soit un tronc mort sur pied. Entre les deux, on
     // voit un arbre noir qui a encore des feuilles — ce qui est exactement ce

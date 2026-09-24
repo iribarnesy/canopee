@@ -107,7 +107,7 @@ describe("une bande se mesure sur sa propre largeur (#186)", () => {
   // Pour un disque, la largeur du chantier en travers d'un passage est le
   // rayon, quelle que soit la direction — c'est ce que le code faisait, et le
   // contrôle d'identité de `zone.test.ts` y tient au bit près. Pour une bande
-  // elle DÉPEND de la direction : un engin qui remonte l'allée dans son axe
+  // elle **dépend** de la direction : un engin qui remonte l'allée dans son axe
   // n'a que la largeur devant lui, le même engin qui la traverse a toute la
   // longueur. Les deux essais ci-dessous tiennent ce fait par ses deux bouts,
   // chacun étant faux si la demi-largeur était figée.
@@ -127,7 +127,7 @@ describe("une bande se mesure sur sa propre largeur (#186)", () => {
     // Le cas inverse, et le plus proche du terrain : des tiges en ligne au
     // milieu d'une allée de 8 m, tous les mètres. Les traverser est impossible
     // — 0,30 m entre deux troncs. Les longer ne l'est pas : il reste 3,65 m de
-    // part et d'autre, donc 7,30 sur 8. Demi-largeur figée à la demi-LONGUEUR,
+    // part et d'autre, donc 7,30 sur 8. Demi-largeur figée à la demi-**longueur**,
     // on lirait 0,977 : la bande ferait mine d'être large de 30 m là où elle
     // n'en fait que 8.
     const haie = Array.from({ length: 29 }, (_, i) => ({ x: 6 + i, y: 20 }));

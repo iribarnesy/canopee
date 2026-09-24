@@ -1,10 +1,10 @@
 /**
- * La CHUTE d'une chandelle : une déformation à la pose, jamais une recuisson
+ * La **chute** d'une chandelle : une déformation à la pose, jamais une recuisson
  * (docs/interface-visuelle.md §5.11, §6.3).
  *
  * **C'est la première animation, et elle a été choisie pour ça.** Le §6.3
  * l'appelle « la demande explicite » et le §2.3 note que l'issue #4 a été
- * ouverte pour elle : « l'arbre qui TOMBE au lieu de s'escamoter ». Le
+ * ouverte pour elle : « l'arbre qui **tombe** au lieu de s'escamoter ». Le
  * protocole porte tout ce qu'il faut depuis — `ChuteDeChandelle` donne la
  * position, la hauteur, la masse, l'empreinte au sol et surtout la
  * `directionRad` — et rien ne le lisait.
@@ -12,20 +12,20 @@
  * **La contrainte que le §5.11 pose nommément**, et qui a décidé de la forme de
  * ce module : « une animation continue ne doit pas invalider un cache de
  * cuisson. Le vent sur les feuillages ne peut pas passer par une recuisson des
- * vignettes : ce sera une déformation à la POSE (un sprite qu'on incline), pas
+ * vignettes : ce sera une déformation à la **pose** (un sprite qu'on incline), pas
  * un redessin. » Ce module ne rend donc que des nombres — un angle, une
  * échelle, une opacité — que le poseur applique au sprite déjà cuit. L'atlas
  * ne bouge pas d'un octet pendant qu'un arbre tombe.
  *
  * **La géométrie, et pourquoi elle n'est pas triviale.** Un arbre qui tombe
  * décrit un quart de cercle : sa cime part de la verticale et finit couchée le
- * long de la direction de chute. Or cette direction est un azimut de PARCELLE,
+ * long de la direction de chute. Or cette direction est un azimut de **parcelle**,
  * et la vignette est un panneau vu de face. Un arbre qui tombe vers la caméra
- * ne pivote donc presque pas à l'écran — il RACCOURCIT ; un arbre qui tombe de
+ * ne pivote donc presque pas à l'écran — il **raccourcit** ; un arbre qui tombe de
  * profil pivote d'un quart de tour. Les deux sont le même mouvement, vu de deux
  * côtés, et c'est la projection qui fait la différence.
  *
- * On calcule donc où va la CIME, en pixels, et on en déduit l'inclinaison et la
+ * On calcule donc où va la **cime**, en pixels, et on en déduit l'inclinaison et la
  * longueur du panneau. Rien de plus : un panneau plat ne peut pas faire mieux,
  * et il n'a pas à faire mieux — à l'échelle où l'on joue, ce qu'on lit d'une
  * chute est qu'un arbre debout devient un tronc couché, dans la bonne
@@ -41,7 +41,7 @@ import { METRE_VERTICAL_PX } from "../projection";
 /**
  * Ce qu'il faut appliquer à un sprite déjà cuit pour le voir tomber.
  *
- * Tout est relatif au PIED de l'arbre, qui ne bouge pas : c'est le point
+ * Tout est relatif au **pied** de l'arbre, qui ne bouge pas : c'est le point
  * d'ancrage de la pose, et c'est aussi le point autour duquel un arbre
  * pivote réellement quand il tombe — la souche reste.
  */
@@ -49,7 +49,7 @@ export interface Deformation {
   /** inclinaison du panneau, radians, autour du pied ; 0 = debout */
   rotationRad: number;
   /**
-   * Facteur d'échelle sur la HAUTEUR du sprite.
+   * Facteur d'échelle sur la **hauteur** du sprite.
    *
    * C'est lui qui porte le raccourci : un arbre qui tombe vers la caméra garde
    * son inclinaison à zéro et voit sa hauteur fondre. Sans ce facteur, un tel
@@ -93,7 +93,7 @@ export function combiner(a: Deformation, b: Deformation): Deformation {
 export const HAUTEUR_LA_PLUS_COURTE = 0.34;
 
 /**
- * Part de la chute pendant laquelle l'arbre ACCÉLÈRE.
+ * Part de la chute pendant laquelle l'arbre **accélère**.
  *
  * Un arbre ne tombe pas à vitesse constante : il part lentement, la souche
  * cède, puis il s'abat. Le carré de l'avancement suffit à le dire — c'est la
@@ -121,7 +121,7 @@ export function chuteEnCours(
   // L'angle parcouru depuis la verticale : un quart de tour en tout.
   const theta = (t * Math.PI) / 2;
 
-  // **La direction de chute, en PIXELS.** On projette deux points de parcelle
+  // **La direction de chute, en pixels.** On projette deux points de parcelle
   // et on soustrait : c'est la seule façon juste sous une caméra qui tourne, et
   // le rendu tourne (quart de tour aux flèches). Une constante ne marcherait
   // que pour une orientation.
@@ -137,11 +137,11 @@ export function chuteEnCours(
   const solX = versLa.sx - pied.sx;
   const solY = versLa.sy - pied.sy;
 
-  // **Deux composantes, et il faut les séparer.** Ce qui est DANS le plan de
+  // **Deux composantes, et il faut les séparer.** Ce qui est **dans** le plan de
   // l'écran fait pivoter le panneau ; ce qui va vers l'objectif le raccourcit.
   // Les confondre — en prenant l'angle de la cime projetée — est exact et
   // inutilisable : un arbre qui tombe droit vers l'objectif traverse la ligne
-  // de visée, sa projection s'écrase à zéro puis repart vers le BAS, et le
+  // de visée, sa projection s'écrase à zéro puis repart vers le **bas**, et le
   // panneau se retourne. C'est géométriquement juste et ça se voit comme un
   // défaut d'affichage. Un panneau vu de face ne peut pas montrer ça, et il
   // n'a pas à essayer.

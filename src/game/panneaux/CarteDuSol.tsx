@@ -1,5 +1,5 @@
 /**
- * Le volet SOL : le diagnostic que la vue isométrique ne peut pas donner.
+ * Le volet **sol** : le diagnostic que la vue isométrique ne peut pas donner.
  *
  * La carte à plat pour ce qui se répartit — l'eau, le pH, l'azote — et sous
  * elle les grandeurs qui n'ont pas de place où se poser : ce que le sol porte,
@@ -50,12 +50,12 @@ const CARTE_PX = 360;
 const ARRETS_DE_LEGENDE = 16;
 
 /**
- * La CARTE DU SOL : une vue de dessus, un pixel par cellule, qui montre ce que
+ * La **carte du sol** : une vue de dessus, un pixel par cellule, qui montre ce que
  * la parcelle cache.
  *
  * **Elle ne dessine pas les arbres**, et c'est ce qui lui reste à faire. La
  * parcelle elle-même se voit en isométrique (`VueParcelle`), où le peuplement
- * se lit comme un peuplement. Ce que la vue isométrique ne peut PAS montrer,
+ * se lit comme un peuplement. Ce que la vue isométrique ne peut **pas** montrer,
  * c'est le pH, la nappe ou l'azote : ce sont des grandeurs d'un sol qu'on ne
  * voit pas, et une carte à plat reste la bonne forme pour elles.
  *
@@ -82,7 +82,7 @@ function dessinerCarteDuSol(
     }
   }
   // La clôture : on ne peint pas l'intérieur — ce serait un aplat de plus sur
-  // une carte qui en a déjà — on trace le GRILLAGE, c'est-à-dire les côtés de
+  // une carte qui en a déjà — on trace le **grillage**, c'est-à-dire les côtés de
   // cellules qui séparent le clos du dehors.
   ctx.strokeStyle = "#8a6d3b";
   ctx.lineWidth = Math.max(1.5, scale * 0.22);
@@ -126,7 +126,7 @@ function dessinerCarteDuSol(
 function AiguilleDuNord({ orientation }: { orientation: Orientation }) {
   const cap = capDuNord(orientation);
   const rad = (cap * Math.PI) / 180;
-  // La lettre suit la pointe mais ne TOURNE PAS : un « N » couché se lit comme
+  // La lettre suit la pointe mais ne **tourne pas** : un « N » couché se lit comme
   // un « Z », et on aurait rendu la boussole moins lisible que l'absence de
   // boussole.
   const lettreX = Math.sin(rad) * 13;
@@ -280,7 +280,7 @@ export function CarteDuSol({
   station: StationInfo;
   /** L'essence choisie au volet des gestes : sa plage de pH est un repère. */
   especeId: string;
-  /** L'orientation de la VUE, pour présenter la carte comme elle (#145). */
+  /** L'orientation de la **vue**, pour présenter la carte comme elle (#145). */
   orientation: Orientation;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -316,7 +316,7 @@ export function CarteDuSol({
     const cadre = e.currentTarget.getBoundingClientRect();
     if (!canvas || canvas.offsetWidth === 0) return;
     // Le centre du cadre est invariant par la transformation ; le côté du
-    // canvas est sa taille de MISE EN PAGE, que la transformation ne change pas.
+    // canvas est sa taille de **mise en page**, que la transformation ne change pas.
     const dx = e.clientX - (cadre.left + cadre.width / 2);
     const dy = e.clientY - (cadre.top + cadre.height / 2);
     setSurvol(celluleSousLaCarte(dx, dy, canvas.offsetWidth, station.coteM, orientation));

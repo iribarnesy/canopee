@@ -1,14 +1,14 @@
 /**
- * LA SONDE D'UNE STATION : vingt ans de moteur sur une parcelle, semaine par
+ * **La sonde d'une station** : vingt ans de moteur sur une parcelle, semaine par
  * semaine — le calcul, séparé de son affichage (#123).
  *
  * Il vivait dans `src/ui/App.tsx`, au milieu des graphiques, et tournait dans
  * le fil d'interface : la page gelait plusieurs minutes dès qu'on ouvrait le
- * panneau. #98 avait déjà supprimé le gel AUTOMATIQUE — la sonde ne partait
+ * panneau. #98 avait déjà supprimé le gel **automatique** — la sonde ne partait
  * plus à chaque affichage de l'onglet — mais le calcul restait bloquant, et le
  * panneau se contentait de l'annoncer honnêtement.
  *
- * Ce module ne fait qu'une chose : il SIMULE, sans React, sans DOM et sans
+ * Ce module ne fait qu'une chose : il **simule**, sans React, sans DOM et sans
  * horloge. C'est ce qui permet au worker du labo de l'exécuter (`worker.ts`),
  * exactement comme il exécute les expériences, et à la page de rester vivante
  * — avec une barre d'avancement, là où elle n'avait qu'un écran figé.
@@ -38,7 +38,7 @@ export const TREES_PER_SPECIES = 30;
  *
  * **Dérivé de la liste et non d'un chiffre écrit à la main.** Il valait
  * `30 × 5` depuis le temps où la V0 comptait cinq espèces ; elles sont
- * vingt-six, et la sonde en plante trente de CHACUNE. Six cent trente arbres
+ * vingt-six, et la sonde en plante trente de **chacune**. Six cent trente arbres
  * plantés étaient donc comptés comme des recrues, et la page annonçait une
  * régénération naturelle qui n'était qu'une plantation. Trouvé en écrivant le
  * premier essai de ce module — le calcul était jusque-là pris dans un
@@ -125,11 +125,11 @@ export function simulate(
     const aliveCounts: Record<string, number> = {};
     const plantesVivants: Record<string, number> = {};
     for (const espece of ESPECES_V0) {
-      // Hauteur DOMINANTE (max des vivants, recrues comprises) : la métrique
+      // Hauteur **dominante** (max des vivants, recrues comprises) : la métrique
       // forestière standard, sans l'artefact des moyennes qui s'effondrent
       // quand un individu meurt. Les comptages distinguent la cohorte plantée.
       const alive = state.trees.filter((t) => t.especeId === espece.id && t.alive);
-      // On compte TOUT ce qui est vivant — sans les recrues, une parcelle
+      // On compte **tout** ce qui est vivant — sans les recrues, une parcelle
       // couverte de semis paraissait vide, ce qui est le contraire de ce
       // qu'on veut lire sur une régénération naturelle.
       aliveCounts[espece.id] = alive.length;
@@ -156,7 +156,7 @@ export function simulate(
 }
 
 /**
- * Le bilan carbone de l'état final, calculé DANS le worker.
+ * Le bilan carbone de l'état final, calculé **dans** le worker.
  *
  * La page le calculait elle-même à partir de `finalState` ; c'est une lecture
  * de plus sur un état de cent mille cellules, et elle n'a pas besoin de

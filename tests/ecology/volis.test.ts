@@ -1,14 +1,14 @@
 /**
- * LE VOLIS : une tempête ne sait plus seulement déraciner (issue #176, F17).
+ * **Le volis** : une tempête ne sait plus seulement déraciner (issue #176, F17).
  *
  * `tempete.ts` ne calculait qu'une vitesse critique et rendait un seul verdict :
  * l'arbre tient, ou il verse en entier, racines en l'air. Les modèles de la
- * famille ForestGALES, que ce fichier cite déjà, en calculent DEUX — le
+ * famille ForestGALES, que ce fichier cite déjà, en calculent **deux** — le
  * renversement et la rupture du fût — et c'est la plus basse qui décide.
  *
  * Ce fichier vérifie, dans cet ordre : que la seconde vitesse se lit sur des
  * traits déjà déclarés ; que la dichotomie sol ferme / sol gorgé tombe toute
- * seule de ce qui N'ENTRE PAS dans le calcul du volis ; que le lot ne change
+ * seule de ce qui **n'entre pas** dans le calcul du volis ; que le lot ne change
  * rien pour un arbre qui ne casse pas ; et qu'en partie les deux ruines
  * coexistent, une souche qui rejette survivant à sa cassure.
  */
@@ -86,7 +86,7 @@ describe("la rupture du fût se lit sur des traits déjà déclarés", () => {
 
   it("l'élancement pèse PLUS sur la rupture que sur le renversement", () => {
     // La différence de forme, et elle est physique : une motte résiste par un
-    // bras de levier, un fût par son module de section — qui va comme le CUBE
+    // bras de levier, un fût par son module de section — qui va comme le **cube**
     // du diamètre. Doubler l'élancement doit donc coûter bien plus au volis.
     const ferme = exposition(0, 0.3);
     const trapu = arbre(20, 40);
@@ -122,7 +122,7 @@ describe("la dichotomie tombe de ce qui N'ENTRE PAS dans le calcul", () => {
     const gorge = exposition(0.95, pin.eau.toleranceEngorgement);
     expect(modeDeRuine(a, pin.bois.densite, ferme)).toBe("volis");
     expect(modeDeRuine(a, pin.bois.densite, gorge)).toBe("chablis");
-    // Et la raison se lit dans les chiffres : la rupture ne bouge PAS d'un
+    // Et la raison se lit dans les chiffres : la rupture ne bouge **pas** d'un
     // millième entre les deux sols, c'est le renversement qui s'effondre.
     expect(vitesseCritiqueVolisMs(a, pin.bois.densite, gorge)).toBeCloseTo(
       vitesseCritiqueVolisMs(a, pin.bois.densite, ferme),
@@ -142,7 +142,7 @@ describe("la dichotomie tombe de ce qui N'ENTRE PAS dans le calcul", () => {
 describe("ce que le lot ne déplace pas", () => {
   it("pour un arbre qui ne casse pas, la probabilité est INCHANGÉE", () => {
     // La garantie du lot, et elle est structurelle : quand la rupture demande
-    // plus de vent que le renversement, le minimum des deux EST le
+    // plus de vent que le renversement, le minimum des deux **est** le
     // renversement, donc le lot ne peut rien avoir déplacé. Vérifié sur le cas
     // qui compte — un bois dense et trapu, celui qui déracine.
     const ferme = exposition(0, 0.3);
@@ -176,7 +176,7 @@ describe("ce que le lot ne déplace pas", () => {
 
 describe("en partie : les deux ruines coexistent", () => {
   it("une saulaie casse au lieu de verser, et ses souches repartent", () => {
-    // LA PRÉMISSE : si aucun arbre ne cassait jamais, le mécanisme serait du
+    // **La prémisse** : si aucun arbre ne cassait jamais, le mécanisme serait du
     // code mort — c'est ce que l'issue demandait de vérifier avant d'écrire.
     // Le saule est le bois le plus tendre de l'atlas (0,28) et il rejette de
     // souche : c'est le cas où les deux moitiés du lot se voient.
@@ -203,7 +203,7 @@ describe("en partie : les deux ruines coexistent", () => {
     expect(getEspece("salix_alba").bois.rejetteDeSouche).toBe(true);
     expect(s.trees.some((t) => t.alive)).toBe(true);
     // Et le bois tendre casse bien plus qu'il ne verse : relevé 97 % de volis
-    // sur trois graines. C'est la DIRECTION qui est testée, pas la part — elle
+    // sur trois graines. C'est la **direction** qui est testée, pas la part — elle
     // dépend de l'élancement, cf. le commentaire du référentiel.
     expect(casses).toBeGreaterThan(verses);
   });
@@ -211,7 +211,7 @@ describe("en partie : les deux ruines coexistent", () => {
 
 describe("le troisième mode : des branches en moins, l'arbre debout", () => {
   it("rien en dessous du seuil, et jamais plus que le plafond", () => {
-    // La casse partielle commence BIEN avant la ruine : c'est le dégât qu'on
+    // La casse partielle commence **bien** avant la ruine : c'est le dégât qu'on
     // voit après chaque coup de vent sans que rien ne soit par terre.
     const critique = 30;
     expect(houppierArrache(0.3 * critique, critique)).toBe(0);

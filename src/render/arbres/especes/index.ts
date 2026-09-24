@@ -1,7 +1,7 @@
 /**
  * Les fiches graphiques, une par espèce (docs/interface-visuelle.md §5.4).
  *
- * **L'ordre de travail a suivi ce qui MUTUALISE, pas ce qui est le plus
+ * **L'ordre de travail a suivi ce qui mutualise, pas ce qui est le plus
  * utile.** Une fiche par famille de port d'abord, pour éprouver le générateur
  * sur les huit géométries et faire remonter ses manques ; les autres ensuite,
  * chacune dans une famille déjà défrichée. Ce détour a payé : c'est en écrivant
@@ -9,10 +9,10 @@
  * `brinsDeCepee` est devenu nécessaire — deux champs qu'il aurait fallu
  * rétro-ajouter à vingt-cinq fiches si l'ordre avait été alphabétique.
  *
- * **Le catalogue est complet, et il le REDEVIENT à chaque fois que le moteur
+ * **Le catalogue est complet, et il le redevient à chaque fois que le moteur
  * grandit.** Vingt-six espèces aujourd'hui, et un test le vérifie dans les deux
  * sens — aucune fiche ne désigne une espèce absente, aucune espèce n'est laissée
- * au port générique. C'est ce test qui a signalé l'arrivée du NOYER, que le
+ * au port générique. C'est ce test qui a signalé l'arrivée du **noyer**, que le
  * moteur a ajouté pour l'allélopathie : sans lui, le noyer serait resté un
  * feuillu générique de plus, et la leçon du juglone — le sol nu sous le
  * houppier — serait passée inaperçue faute qu'on reconnaisse l'arbre qui le
@@ -25,7 +25,7 @@
  * (`couches/fourre.ts`), donc ni leur port ni leur branchement ne servent. Ce
  * qu'on leur demande, ce sont leurs couleurs et leur texture.
  *
- * **Ce que « complet » ne veut PAS dire.** Le critère de fin est ailleurs :
+ * **Ce que « complet » ne veut pas dire.** Le critère de fin est ailleurs :
  * *une essence n'est finie que si quelqu'un d'autre la reconnaît sans
  * étiquette.* Aucune des vingt-six ne l'a passé — elles ont passé celui du
  * générateur, qui n'est pas le même. Ce fichier dit qu'il n'y a plus de trou,

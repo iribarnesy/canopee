@@ -25,7 +25,7 @@ if grep -rnE "from ['\"]\.\./(ui|render|sim-worker)" src/engine; then
   fail=1
 fi
 
-# Le rendu doit être DÉTERMINISTE : deux parties de même graine donnent la même
+# Le rendu doit être **déterministe** : deux parties de même graine donnent la même
 # image. Toute variation « organique » (penchant d'un arbre, phase de son
 # balancement, forme de son houppier) dérive de son id, pas du hasard — sinon
 # une capture d'écran n'est pas reproductible et un bug de rendu ne se rejoue
@@ -35,12 +35,12 @@ if [ -d src/render ] && grep -rnE "Math\.random\s*\(" src/render; then
   fail=1
 fi
 
-# Un ESSAI N'ÉCRIT PAS HORS DU DÉPÔT. Les bancs de mesure versent volontiers
+# Un **essai n'écrit pas hors du dépôt**. Les bancs de mesure versent volontiers
 # leurs relevés dans un dossier de travail personnel ; oublié dans un commit,
 # le chemin n'existe pas sur le runner et la CI tombe sur un ENOENT — au milieu
 # d'un essai d'écologie qui, lui, marchait. C'est arrivé (#136), et la suite
 # locale ne l'a pas vu, justement parce que le dossier existait ici. Les
-# relevés se recopient dans les COMMENTAIRES de l'essai, qui est leur place.
+# relevés se recopient dans les **commentaires** de l'essai, qui est leur place.
 if grep -rnE "writeFileSync|appendFileSync|/tmp/" tests; then
   echo "ERREUR : un essai écrit hors du dépôt — recopier le relevé en commentaire." >&2
   fail=1

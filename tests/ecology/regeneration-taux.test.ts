@@ -1,7 +1,7 @@
 /**
  * Les taux de régénération fractionnaires (regeneration.ts).
  *
- * `semisParAn` compte des établissements POTENTIELS, après l'entonnoir de
+ * `semisParAn` compte des établissements **potentiels**, après l'entonnoir de
  * mortalité graine→semis. Pour une espèce à grosses graines convoitées, cet
  * entonnoir est si étroit que le taux tombe sous 1 : la boucle entière n'en
  * produisait alors jamais aucun, ce qui obligeait à arrondir à 1 — et un

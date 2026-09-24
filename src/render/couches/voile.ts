@@ -2,7 +2,7 @@
  * Le losange d'un voile de geste, cuit une fois pour la partie.
  *
  * Une seule fonction, et elle est ici plutôt que dans `pixi/scene.ts` pour la
- * raison habituelle : le Canvas 2D CUIT, Pixi POSE, et ce dépôt garde les deux
+ * raison habituelle : le Canvas 2D **cuit**, Pixi **pose**, et ce dépôt garde les deux
  * dans des fichiers séparés pour que le premier se teste sans navigateur.
  *
  * **Blanc, et c'est ce qui permet de n'en cuire qu'un.** La teinte du geste
@@ -27,15 +27,15 @@ import { TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 export const FINESSE_DU_VOILE = 4;
 
 /**
- * Un losange plein, aux arêtes FRANCHES.
+ * Un losange plein, aux arêtes **franches**.
  *
- * Franches parce qu'une cellule EST un losange net — le terrain dessine les
+ * Franches parce qu'une cellule **est** un losange net — le terrain dessine les
  * siennes exactement ainsi, avec le même demi-débord d'un demi-pixel pour
  * qu'elles se touchent. Un voile aux bords fondus se lirait comme une tache et
  * non comme un carreau travaillé, et deux cellules voisines fondues
  * s'additionneraient en un liseré plus sombre à leur jointure.
  *
- * Ce qui reste du crénelage est traité à la POSE et non ici : la texture est
+ * Ce qui reste du crénelage est traité à la **pose** et non ici : la texture est
  * réduite par mipmap, ce qui est le seul remède au damier qu'une réduction
  * brutale produisait.
  */

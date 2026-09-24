@@ -1,7 +1,7 @@
 /**
- * UNE FUTAIE S'ABRITE ELLE-MÊME (issue #179).
+ * **Une futaie s'abrite elle-même** (issue #179).
  *
- * `abriAuVent` ne comptait que les voisins QUI DÉPASSENT. Dans une futaie
+ * `abriAuVent` ne comptait que les voisins **qui dépassent**. Dans une futaie
  * régulière personne ne dépasse personne, donc personne n'était abrité — et la
  * chaîne se refermait sur elle-même : les seuls arbres à avoir de l'abri à
  * perdre étaient les dominés, les dominés sont courts, les courts ne versent
@@ -9,7 +9,7 @@
  * C'est ce qui a bloqué F18 (#177).
  *
  * Les modèles de la famille ForestGALES ne raisonnent pas en « qui dépasse
- * qui » mais sur le rapport de l'ESPACEMENT à la HAUTEUR : plus les tiges sont
+ * qui » mais sur le rapport de l'**espacement** à la **hauteur** : plus les tiges sont
  * serrées, plus la quantité de mouvement se partage. C'est ce rapport qu'on lit.
  */
 
@@ -137,8 +137,8 @@ describe("en partie : ce sont les DOMINANTS que le lot change", () => {
     // C'était 0,18 parce que personne ne les dépassait ; c'est 0,31 parce que
     // leurs pairs les entourent.
     //
-    // **ET LE SEUIL ABSOLU QUI EN AVAIT ÉTÉ TIRÉ ÉTAIT COUPLÉ À LA VITESSE DE
-    // CROISSANCE DU PIN** (#201). Il demandait `abri > 0,25`, à mi-chemin entre
+    // **et le seuil absolu qui en avait été tiré était couplé à la vitesse de
+    // croissance du pin** (#201). Il demandait `abri > 0,25`, à mi-chemin entre
     // les deux relevés ; il est tombé à 0,221 quand le pin a été calé sur sa
     // table de production. Attribué en forçant le seul `pousseMaxMAn` dans
     // l'atlas, tout le reste égal :
@@ -148,18 +148,18 @@ describe("en partie : ce sont les DOMINANTS que le lot change", () => {
     //     pin à 0,45          0,221       51      18,19
     //
     // La cause est mécanique et vaut d'être écrite : **le rayon de peuplement se
-    // compte en HAUTEURS** (l'essai du bas le dit), donc un peuplement 5 % plus
+    // compte en hauteurs** (l'essai du bas le dit), donc un peuplement 5 % plus
     // court regarde un disque 5 % plus petit, y trouve 10 % de voisins en moins,
     // et s'abrite d'autant moins. Un seuil absolu sur `abri` est donc une
-    // photographie de la TAILLE du peuplement autant que de sa fermeture — il
+    // photographie de la **taille** du peuplement autant que de sa fermeture — il
     // rebougera à chaque calage d'espèce. (Le reste de la dérive, 0,314 → 0,285,
     // est antérieur à ce lot et n'a pas été instruit ici.)
     //
     // L'essai change donc de grandeur, et prend le témoin qui manquait : **la
-    // MÊME parcelle, le même âge, la même espèce, peuplée dense ou clairsemée.**
+    // même parcelle, le même âge, la même espèce, peuplée dense ou clairsemée.**
     // Les deux bras montent et descendent ensemble avec la taille des arbres, et
     // ce qui reste est ce que le lot affirme — un dominant est abrité par ses
-    // PAIRS, pas seulement par ce qui le dépasse. Mesuré à quarante-cinq ans sur
+    // **pairs**, pas seulement par ce qui le dépasse. Mesuré à quarante-cinq ans sur
     // quarante mètres de côté :
     //
     //     600 plants (3 750/ha)   abri 0,221   51 dominants
@@ -167,7 +167,7 @@ describe("en partie : ce sont les DOMINANTS que le lot change", () => {
     //      40 plants   (250/ha)   abri 0,073   21
     //
     // Trois fois plus d'abri dans la futaie que dans la plantation lâche, et
-    // l'effet SATURE entre 150 et 600 tiges — au-delà, l'auto-éclaircie espace
+    // l'effet **sature** entre 150 et 600 tiges — au-delà, l'auto-éclaircie espace
     // les survivants autant que la densité les rapproche. Le seuil est une
     // marge (×2 pour un rapport mesuré à 3,0), pas une ancre.
     const dense = futaie(40, 600);
@@ -176,7 +176,7 @@ describe("en partie : ce sont les DOMINANTS que le lot change", () => {
     const abriClair = moyenne(dominants(clairsemee).map((t) => abriAuVent(clairsemee.trees, t)));
     expect(abriDense).toBeGreaterThan(2 * abriClair);
     // Un dominant isolé n'est pas à zéro non plus : il a des voisins, ils sont
-    // juste loin. Ce que le lot nie, c'est qu'il faille être DOMINÉ pour être
+    // juste loin. Ce que le lot nie, c'est qu'il faille être **dominé** pour être
     // abrité, pas qu'un arbre au large le soit un peu.
     expect(abriClair).toBeGreaterThan(0);
     // Et jamais au point de les rendre intouchables : l'abri de peuplement

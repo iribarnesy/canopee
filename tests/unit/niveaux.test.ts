@@ -1,11 +1,11 @@
 /**
- * UN NIVEAU : SON OBJECTIF, SES PALIERS, SA FIN (#188).
+ * **Un niveau** : **son objectif**, **ses paliers**, **sa fin** (#188).
  *
  * Ce que ces essais défendent, et ce sont trois pièges qu'aucune capture
  * d'écran ne montrerait :
  *
  * 1. **Un cumul n'est pas un stock.** « Récolter une tonne de pommes » —
- *    l'exemple de `v1.md` — porte sur des fruits qui ont QUITTÉ la parcelle :
+ *    l'exemple de `v1.md` — porte sur des fruits qui ont **quitté** la parcelle :
  *    l'instantané ne les montre plus, et un palier branché sur `fruitsKg` des
  *    arbres retomberait à zéro à l'instant même où l'objectif est atteint.
  * 2. **Un geste de zone porte parfois le même nom qu'un geste sur arbres**
@@ -13,7 +13,7 @@
  *    deux doublerait le cumul.
  * 3. **Un palier acquis le reste.** Les objectifs intermédiaires « font
  *    découvrir les gestes dans l'ordre » : perdre un arbre planté ne
- *    désapprend pas la plantation. Un objectif qui doit TENIR à la fin, lui,
+ *    désapprend pas la plantation. Un objectif qui doit **tenir** à la fin, lui,
  *    doit pouvoir se reperdre.
  */
 
@@ -41,7 +41,7 @@ import { construireSnapshot } from "../../src/game/snapshot";
 const STATION: Station = { ...LIMON_RICHE.station, coteM: 12, voisinage: [], gibierParHa: 0 };
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
 
-/** Un instantané VRAI, pas un simulacre : un objet partiel mentirait. */
+/** Un instantané **vrai**, pas un simulacre : un objet partiel mentirait. */
 function instantaneDeBase(): Snapshot {
   const state = createGameState(STATION, rngStateFromSeed(7));
   const w = WEATHER[0];
@@ -150,7 +150,7 @@ describe("les cumuls", () => {
   });
 
   it("ne compte PAS deux fois un geste qui touche aussi le sol (#124)", () => {
-    // `planter` et `leverEcorce` voyagent sous le même nom en version ZONE :
+    // `planter` et `leverEcorce` voyagent sous le même nom en version **zone** :
     // la terre retournée autour du plant, les planches empilées au pied. Elles
     // n'ont pas d'`ids`, et ne doivent rien ajouter.
     const gestes: GesteVisible[] = [
@@ -171,10 +171,10 @@ describe("les cumuls", () => {
 
   it("se rejoue depuis un point de retour : une semaine élaguée ne garde que ce qu'elle garde", () => {
     // Le cas du worker, réduit à son arithmétique. Une semaine trop chargée se
-    // REJOUE amputée de sa fin (#133) ; le cumul doit se rejouer avec elle,
+    // **rejoue** amputée de sa fin (#133) ; le cumul doit se rejouer avec elle,
     // depuis le cumul qu'il avait à l'ouverture de la semaine.
     //
-    // Et c'est pour ça que le worker compte À LA SOURCE et non au moment de
+    // Et c'est pour ça que le worker compte **à la source** et non au moment de
     // l'instantané : un instantané couvre jusqu'à vingt-six semaines, donc un
     // point de retour posé avant lui serait en retard d'autant, et le repli
     // effacerait les récoltes de tout le lot.

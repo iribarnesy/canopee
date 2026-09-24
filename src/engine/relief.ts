@@ -24,7 +24,7 @@ export interface Relief {
   /** altitude moyenne de la parcelle, m */
   altitudeM: number;
   /**
-   * Terrain dessiné : altitude de CHAQUE cellule, en m relatifs (mêmes
+   * Terrain dessiné : altitude de **chaque** cellule, en m relatifs (mêmes
    * dimensions que la grille). Quand il est là, il remplace la forme
    * paramétrique — pente, exposition et forme ne servent plus qu'à décrire le
    * terrain pour le joueur. C'est ce qui permet de modeler un terrain à la
@@ -49,7 +49,7 @@ export interface Relief {
    */
   forme: "plan" | "vallon" | "croupe";
   /**
-   * Surface qui verse SUR la parcelle depuis l'amont, en hectares. Zéro pour
+   * Surface qui verse **sur** la parcelle depuis l'amont, en hectares. Zéro pour
    * une parcelle de sommet ; plusieurs hectares en fond de vallon, ce qui
    * amène de l'eau qu'on n'a pas reçue en pluie — et parfois trop.
    */
@@ -151,7 +151,7 @@ export function voisineAval(altitudes: readonly number[], dims: GridDims): Int32
       const i = y * w + x;
       const ici = altitudes[i] ?? 0;
       let meilleur = -1;
-      // On compare des PENTES, pas des dénivelés : à dénivelé égal, la voisine
+      // On compare des **pentes**, pas des dénivelés : à dénivelé égal, la voisine
       // en diagonale est 1,41 fois plus loin, donc moins pentue. Comparer les
       // dénivelés bruts faisait gagner la diagonale à égalité — et sur un plan
       // incliné, où les trois voisines d'aval sont à égalité parfaite, toute
@@ -208,7 +208,7 @@ export function fractionRuissellement(pentePct: number): number {
  * L'ordre de grandeur : sous nos latitudes, l'écart de température de l'air
  * entre un adret et un ubac de même altitude se compte en dixièmes de degré à
  * un degré et demi selon la raideur — bien moins que l'écart des températures
- * de SOL, qui atteint plusieurs degrés et qu'on ne modélise pas. Ce qu'on
+ * de **sol**, qui atteint plusieurs degrés et qu'on ne modélise pas. Ce qu'on
  * vise ici est le premier, celui que voit la phénologie.
  *
  * *Ce qui réfuterait ce chiffre* : des relevés d'air à 2 m sur deux versants
@@ -218,16 +218,16 @@ export function fractionRuissellement(pentePct: number): number {
 export const SENSIBILITE_THERMIQUE_RAYONNEMENT_C = 4;
 
 /**
- * Écart de température dû à l'EXPOSITION, °C.
+ * Écart de température dû à l'**exposition**, °C.
  *
  * Il se déduit du rayonnement, et c'est le point : un versant sud reçoit plus
- * d'énergie, et cette même énergie fait DEUX choses — elle évapore plus et
+ * d'énergie, et cette même énergie fait **deux** choses — elle évapore plus et
  * elle chauffe plus. Les deux effets partagent donc une seule cause et une
  * seule formule ; ils s'annulent ensemble sur un terrain plat, et croissent
  * ensemble avec la pente.
  *
  * *(Jusqu'ici la pente n'agissait que sur l'évapotranspiration. Un versant sud
- * était plus SEC mais pas plus CHAUD, ce qui n'a pas de sens physique.)*
+ * était plus **sec** mais pas plus **chaud**, ce qui n'a pas de sens physique.)*
  */
 export function anomalieExpositionC(relief: Relief): number {
   return SENSIBILITE_THERMIQUE_RAYONNEMENT_C * (facteurExpositionRayonnement(relief) - 1);
@@ -275,7 +275,7 @@ export function penteParCellule(altitudes: readonly number[], dims: GridDims): F
 export function pointDEntreeDAmont(altitudes: readonly number[], dims: GridDims): number {
   const { widthM: w, heightM: h } = dims;
   const poids = entreesDAmont(altitudes, dims);
-  // On repère d'abord LE CÔTÉ par lequel l'amont arrive — celui qui reçoit le
+  // On repère d'abord **le côté** par lequel l'amont arrive — celui qui reçoit le
   // plus de poids — puis, sur ce côté seulement, le point bas. Chercher le
   // point bas parmi toutes les cellules de forte altitude donnerait un coin,
   // et le ruisseau entrerait de travers.
@@ -311,7 +311,7 @@ export function pointDEntreeDAmont(altitudes: readonly number[], dims: GridDims)
  * Par où l'eau d'amont entre dans la parcelle : poids par cellule, de somme 1.
  *
  * Elle n'arrive pas en pluie uniforme — ce serait de la pluie, pas du
- * ruissellement. Elle franchit la BORDURE HAUTE et traverse ensuite le terrain
+ * ruissellement. Elle franchit la **bordure haute** et traverse ensuite le terrain
  * en s'infiltrant au passage. Sur un terrain sans relief marqué, faute de
  * bordure haute identifiable, elle se répartit sur tout le pourtour.
  */

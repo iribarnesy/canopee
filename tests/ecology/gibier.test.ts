@@ -132,11 +132,11 @@ describe("le piège à dents", () => {
 
 describe("la sélectivité réoriente la composition", () => {
   it("à pression égale, le pin perd bien moins de sa hauteur que le noisetier", () => {
-    // **CET ESSAI COMPARAIT DEUX ESPÈCES ; IL COMPARE MAINTENANT CHACUNE À
-    // ELLE-MÊME**, et le changement de grandeur n'est pas cosmétique.
+    // **cet essai comparait deux espèces ; il compare maintenant chacune à
+    // elle-même**, et le changement de grandeur n'est pas cosmétique.
     //
     // Il affirmait `pin > 2 × noisetier` sur la hauteur médiane à douze ans.
-    // C'était un RAPPORT ENTRE DEUX ESPÈCES, donc une grandeur qui porte tout
+    // C'était un **rapport entre deux espèces**, donc une grandeur qui porte tout
     // ce qui distingue un pin d'un noisetier — vitesse de croissance, forme,
     // longévité — et pas seulement ce que l'essai prétend mesurer, qui est
     // l'appétence. Il a fini par tomber en calant le pin sur sa table de
@@ -174,7 +174,7 @@ describe("la sélectivité réoriente la composition", () => {
     // sa hauteur là où le noisetier en laisse les deux tiers.
     expect(pertePin).toBeGreaterThan(0);
     expect(pertePin).toBeLessThan(0.5);
-    // Vingt-six points d'écart mesurés ; le seuil est une MARGE, pas une
+    // Vingt-six points d'écart mesurés ; le seuil est une **marge**, pas une
     // ancre — ce qui est ancré est le sens, que porte le trait d'appétence.
     expect(perteNoisetier - pertePin).toBeGreaterThan(0.15);
   }, 120_000);
@@ -446,7 +446,7 @@ function arbreNu(heightM: number): TreeState {
 }
 
 /**
- * Ce que le gibier fait, le rendu doit pouvoir le MONTRER la semaine où ça
+ * Ce que le gibier fait, le rendu doit pouvoir le **montrer** la semaine où ça
  * arrive : une pousse mangée, une écorce arrachée au pied. Le tick les
  * rapporte comme des gestes, au même titre que ceux du joueur (tick.ts).
  */
@@ -525,7 +525,7 @@ describe("les gestes du gibier remontent au rendu", () => {
 });
 
 /**
- * La TRACE de l'abroutissement (issue #21).
+ * La **trace** de l'abroutissement (issue #21).
  *
  * Le tick calculait le dégât arbre par arbre — `brouter()` rend une
  * `Map<number, BroutageArbre>` — s'en servait pour rabattre la hauteur, pour
@@ -587,7 +587,7 @@ describe("un plant brouté le dit, et dit quand", () => {
   });
 
   it("se souvient de ce que `pousseTendreM` oublie", () => {
-    // Le cœur de l'affaire : `pousseTendreM` est un STOCK, sans date. Il
+    // Le cœur de l'affaire : `pousseTendreM` est un **stock**, sans date. Il
     // remonte dès que l'arbre repousse, et l'événement disparaît avec.
     //
     // Deux parcelles menées deux ans, l'une sous 0,4 cervidé/ha et l'autre

@@ -91,7 +91,7 @@ describe("le squelette", () => {
     // La règle de L0 : « terminal » veut dire sans fille, pas « au dernier
     // ordre de récursion » — une branche latérale raccourcit plus vite que la
     // flèche et s'arrête bien avant elle. Mesuré sur un arbre de quatre mètres,
-    // où c'est la LONGUEUR qui arrête la récursion : les bouts feuillus se
+    // où c'est la **longueur** qui arrête la récursion : les bouts feuillus se
     // répartissent sur cinq ordres.
     const bouts = rameauxTerminaux(engendrer(sujet({ hauteurM: 4 }), feuillu));
     const ordres = new Set(bouts.map((s) => s.ordre));
@@ -158,10 +158,10 @@ describe("le squelette", () => {
 
   it("les stades sortent GRATUITEMENT : c'est le même squelette, déroulé moins loin", () => {
     // La promesse de D4. Un gaulis n'est pas un autre dessin, c'est un jeune
-    // arbre — donc sa ramure doit GRANDIR de façon monotone avec la hauteur.
+    // arbre — donc sa ramure doit **grandir** de façon monotone avec la hauteur.
     //
     // Ce qu'on mesure est l'encombrement, pas le nombre de segments : celui-ci
-    // n'est PAS monotone une fois le plafond atteint, et c'est normal. Un arbre
+    // n'est **pas** monotone une fois le plafond atteint, et c'est normal. Un arbre
     // plus grand a des segments plus longs, donc il tient plus d'ordres avant la
     // longueur minimale, donc le plafond lui coupe un ordre entier là où un
     // arbre plus petit gardait le sien. Mesuré : 2 033 segments à douze mètres,
@@ -189,7 +189,7 @@ describe("la base du houppier et la trogne sont des COUPES dans le squelette", (
     // **Le champ a changé de nom parce qu'il a changé de nature.** Le rendu
     // lisait `hauteurElagueeM` — le coup de scie du joueur — et calculait le
     // reste du fût par une formule à lui. Il lit maintenant `baseHouppierM`,
-    // que le moteur produit, et qui range les DEUX façons dont une couronne
+    // que le moteur produit, et qui range les **deux** façons dont une couronne
     // remonte : l'ombre qui tue les branches basses, et le joueur qui les
     // coupe. L'arbre ne les distingue pas, et le dessin non plus.
     const arbre = engendrer(sujet({ baseHouppierM: 8 }), feuillu);
@@ -200,7 +200,7 @@ describe("la base du houppier et la trogne sont des COUPES dans le squelette", (
   });
 
   it("**un arbre de pré est branchu jusqu'au sol, le même en futaie ne l'est pas**", () => {
-    // Ce que l'ancienne formule ne pouvait PAS dire, et qui est tout l'intérêt
+    // Ce que l'ancienne formule ne pouvait **pas** dire, et qui est tout l'intérêt
     // de la grandeur : la profondeur de couronne est un résultat de
     // compétition, pas un trait d'espèce. `1 − 2 × houppierRatio` donnait le
     // même arbre dans les deux cas, puisqu'elle ne connaissait que l'essence.
@@ -334,7 +334,7 @@ describe("la cime porte des feuilles", () => {
   it("le rameau le plus HAUT est terminal", () => {
     // Le défaut que ça corrige : le marquage se faisait pendant la récursion,
     // au moment où un axe engendrait des filles. Quand la boucle s'arrêtait
-    // AVANT de poser ces filles — à l'ordre maximal — le dernier rang était
+    // **avant** de poser ces filles — à l'ordre maximal — le dernier rang était
     // perdu et ses parents restaient marqués « a des filles ». La cime n'avait
     // plus de feuilles : mesuré sur un hêtre de seize mètres, les rameaux
     // feuillus s'arrêtaient à 12,5 m.
@@ -434,7 +434,7 @@ describe("le verticille : ce qui fait un conifère", () => {
   });
 
   it("donne une silhouette différente du même arbre sans verticille", () => {
-    // Mesuré sur les POSITIONS et non sur l'encombrement : les deux arbres
+    // Mesuré sur les **positions** et non sur l'encombrement : les deux arbres
     // peuvent avoir par hasard le même rayon maximal — c'est arrivé, à seize
     // décimales — alors que leurs ramures n'ont rien à voir.
     const avec = engendrer(sujet({ hauteurM: 16 }), conifere);

@@ -1,5 +1,5 @@
 /**
- * QUI EST LÀ : les essences présentes, comptées, triées par effectif (#156).
+ * **Qui est là** : les essences présentes, comptées, triées par effectif (#156).
  *
  * **Une capacité entière du moteur était inatteignable faute de cette
  * liste.** `eclaircir` accepte depuis longtemps `critere: "espece"`, et
@@ -24,7 +24,7 @@ import { SEUIL_SOUFFRANCE } from "../suivis";
 /**
  * Le nom qu'on lit, sans jamais lever d'exception.
  *
- * **`getEspece` LÈVE sur un identifiant inconnu**, elle ne rend pas
+ * **`getEspece` lève sur un identifiant inconnu**, elle ne rend pas
  * `undefined` : le `getEspece(id)?.nom ?? id` que j'avais écrit d'abord était
  * un filet qui n'attrape rien, et l'essai l'a montré du premier coup. Un
  * recensement est de l'affichage — il ne doit pas faire tomber le panneau
@@ -54,7 +54,7 @@ export interface TigeRecensee {
 
 /**
  * Les essences présentes dans le disque visé, ou sur toute la parcelle si
- * aucune zone n'est visée, triées par effectif DÉCROISSANT.
+ * aucune zone n'est visée, triées par effectif **décroissant**.
  *
  * Le tri est celui que l'issue demande, et il a une raison : sur une friche,
  * ce qu'on vient nettoyer est presque toujours le plus nombreux.
@@ -96,7 +96,7 @@ export function essencesPresentes(
 
 /** Une tige, réduite à ce que l'état de santé lit. */
 export interface TigeSurveillee extends TigeRecensee {
-  /** souffrance LENTE, amortie : celle qui dure (protocol.ts) */
+  /** souffrance **lente**, amortie : celle qui dure (protocol.ts) */
   stressLent?: number;
   /** ce que le moteur nomme, quand il sait le nommer */
   causeLente?: CauseMort;
@@ -113,14 +113,14 @@ export interface EssenceSurveillee extends EssencePresente {
 }
 
 /**
- * L'ÉTAT DE CHAQUE ESSENCE : combien de tiges souffrent, et de quoi.
+ * **l'état de chaque essence** : combien de tiges souffrent, et de quoi.
  *
  * **Le même seuil et la même règle que le journal des suivis** (`suivis.ts`) :
- * une tige souffre quand le moteur NOMME sa peine et qu'elle dépasse
+ * une tige souffre quand le moteur **nomme** sa peine et qu'elle dépasse
  * `SEUIL_SOUFFRANCE`. Deux définitions de « souffrir » dans le même jeu
  * finiraient par se contredire d'un panneau à l'autre.
  *
- * On rend une PART et non la pire tige : sur deux mille ronces, une seule qui
+ * On rend une **part** et non la pire tige : sur deux mille ronces, une seule qui
  * dépérit ne dit rien de l'essence, alors qu'un tiers qui dépérit dit tout. Ce
  * qu'on surveille ici est une population, pas un individu — c'est l'inverse du
  * volet des suivis, et c'est pour ça que les deux existent.

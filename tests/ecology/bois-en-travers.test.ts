@@ -1,14 +1,14 @@
 /**
- * Le bois couché EN TRAVERS : ce qu'un tronc fait à l'eau qui passe à côté.
+ * Le bois couché **en travers** : ce qu'un tronc fait à l'eau qui passe à côté.
  *
- * Un tronc au sol protégeait déjà la terre SOUS lui, comme un paillage. Mais un
+ * Un tronc au sol protégeait déjà la terre **sous** lui, comme un paillage. Mais un
  * tronc couché en travers d'un thalweg fait autre chose, et de plus important :
  * il barre. L'eau s'y met en flaque et a le temps de rentrer dans la terre, le
  * sédiment se dépose derrière lui. C'est l'effet mesuré des « log erosion
  * barriers » de la restauration post-incendie, et c'est un des rares leviers
  * réels contre le ruissellement d'un versant.
  *
- * Tout tient à l'ORIENTATION, et ces essais sont là pour l'établir : le même
+ * Tout tient à l'**orientation**, et ces essais sont là pour l'établir : le même
  * tronc, de la même masse, ne fait rien du tout s'il gît dans le sens de la
  * pente. Adams et al. (2023) ne mesurent aucune accumulation derrière un tronc
  * orienté à moins de 30° du courant.
@@ -130,7 +130,7 @@ describe("l'orientation d'un tronc décide de tout", () => {
     // La conséquence gênante, et elle tient : là où l'érosion fait le plus de
     // dégâts, la chute naturelle sert le moins. Sur une pente marquée, l'arbre
     // part plutôt vers l'aval et son tronc devient une gouttière — d'où
-    // l'intérêt d'ABATTRE sur courbe de niveau, ce que fait la restauration
+    // l'intérêt d'**abattre** sur courbe de niveau, ce que fait la restauration
     // post-incendie.
     //
     // « Plutôt », et non « toujours » : l'écart s'est nettement resserré le
@@ -161,7 +161,7 @@ describe("l'orientation d'un tronc décide de tout", () => {
     expect(moyenne(2)).toBeLessThan(0.8);
     expect(moyenne(25)).toBeLessThan(moyenne(8));
     // La pente oriente, elle ne range pas : à 50 % il reste la moitié du bois
-    // en travers. Ce qui doit rester vrai, c'est le SENS et l'écart net.
+    // en travers. Ce qui doit rester vrai, c'est le **sens** et l'écart net.
     expect(moyenne(50)).toBeLessThan(0.85 * moyenne(2));
     expect(moyenne(50)).toBeGreaterThan(0.3);
   });
@@ -214,19 +214,19 @@ describe("un tronc en travers freine l'eau et piège la terre — pas celui qui 
     const enTravers = surPlusieursGraines(GRAINES, 1, 5);
 
     // Le tronc couché dans le sens de la pente ne détourne pas une goutte et ne
-    // retient pas un gramme : le paillage qu'il fait sous lui est un AUTRE
+    // retient pas un gramme : le paillage qu'il fait sous lui est un **autre**
     // mécanisme, sans orientation, et il est déjà compté ailleurs.
     expect(leLong.retenue).toBe(0);
     expect(leLong.piege).toBe(0);
     expect(enTravers.retenue).toBeGreaterThan(0);
     expect(enTravers.piege).toBeGreaterThan(0);
 
-    // Deux effets DISTINCTS : moins d'eau court en surface, et moins de terre
+    // Deux effets **distincts** : moins d'eau court en surface, et moins de terre
     // quitte la parcelle. Le second est le plus net, comme sur le terrain.
     expect(enTravers.eau).toBeLessThan(sans.eau);
     expect(enTravers.terre).toBeLessThan(0.95 * leLong.terre);
     // ... et la même masse de bois posée dans l'autre sens ne fait ni l'un ni
-    // l'autre : l'écart entre les deux bras EST l'effet de l'orientation.
+    // l'autre : l'écart entre les deux bras **est** l'effet de l'orientation.
     expect(leLong.eau).toBeGreaterThan(0.99 * sans.eau);
   });
 
@@ -301,12 +301,12 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // Ce test est long — deux bras, soixante ans, deux graines — et ce n'est
     // pas du gras. Mesuré avant de raccourcir quoi que ce soit :
     //
-    //  - SOIXANTE ANS sont nécessaires. À quarante, `piege` vaut 0,068 pour un
+    //  - **Soixante ans** sont nécessaires. À quarante, `piege` vaut 0,068 pour un
     //    seuil à 0,15 et le rapport d'eau 0,9835 pour un seuil à 0,97 : deux
     //    assertions sur trois échouent. Le bois doit pousser, mourir, tomber,
     //    et seulement alors barrer. Raccourcir ne l'allégerait pas, ça le
     //    falsifierait.
-    //  - LA PARCELLE aussi porte le phénomène. À trente mètres de côté, le
+    //  - **La parcelle** aussi porte le phénomène. À trente mètres de côté, le
     //    rapport d'eau vaut 0,957 ; à vingt, il remonte à 0,984 et l'assertion
     //    tombe — une pente plus courte accumule moins de ruissellement, donc un
     //    barrage y compte moins. À vingt-quatre, il ne reste que 0,0005 de
@@ -352,11 +352,11 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
       }
       return { eau, piege, travers: n > 0 ? travers / n : 0 };
     };
-    // DEUX graines, pas trois. Chacune passe déjà seule (transversalité 0,11 à
+    // **Deux** graines, pas trois. Chacune passe déjà seule (transversalité 0,11 à
     // 0,17 pour un seuil à 0,08 ; eau 0,949 à 0,968 pour un seuil à 0,97), et
     // la moyenne sert à amortir la plus juste des trois. Passer de trois à deux
     // coûte 27 % de temps en moins sans rogner une marge : 0,1404 / 0,3279 /
-    // 0,9586 contre 0,1450 / 0,3113 / 0,9574 à trois. C'est la SEULE dimension
+    // 0,9586 contre 0,1450 / 0,3113 / 0,9574 à trois. C'est la **seule** dimension
     // de ce scénario qui ne porte pas le phénomène — voir plus bas.
     const graines = [3, 11];
     const oriente = graines.map((g) => bras(g, false));
@@ -371,7 +371,7 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // c'est bien pour ça que le geste d'abattre et de coucher existe.
     expect(moy(oriente, "travers")).toBeGreaterThan(0.08);
     // Il piège de la terre — sur place, derrière les troncs — là où le même
-    // bois couché dans le sens de la pente n'en piège aucune. Le TONNAGE, lui,
+    // bois couché dans le sens de la pente n'en piège aucune. Le **tonnage**, lui,
     // dépend d'abord de ce que le versant a à donner : mesuré à 1,6 kg/m² sur
     // soixante ans avant que les vitesses de croissance ne soient calées sur
     // les tables, il tombe à 0,8 ensuite. Ce n'est pas le mécanisme qui a
@@ -383,25 +383,25 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // Une forêt livrée à elle-même arme mal son versant, et c'est précisément
     // pour ça que le geste d'abattre et de coucher en travers a un sens.
     //
-    // Et il a fallu l'abaisser une TROISIÈME fois, pour la raison la plus
+    // Et il a fallu l'abaisser une **troisième** fois, pour la raison la plus
     // franche des trois : le volume de bois était faux. Le moteur faisait peser
     // à ses arbres jusqu'à neuf fois un cylindre plein de leur propre diamètre
     // (#62), donc le tonnage qui tombait au sol et piégeait la terre était
     // gonflé d'autant. Mesuré après correction : 0,135. Le mécanisme n'a pas
     // bougé d'un cheveu — c'est la masse qui redevient celle d'un vrai arbre.
     //
-    // Et une QUATRIÈME fois, pour la raison que ce commentaire annonçait :
+    // Et une **quatrième** fois, pour la raison que ce commentaire annonçait :
     // « un piège ne retient que ce qui passe ». La strate herbacée par espèces
     // change ce qui passe — la couverture moyenne de ce versant tombe de 0,661
     // à 0,641 sur soixante ans, mais elle se répartit autrement dans l'année,
     // et il descend 0,093 au lieu de 0,135. Ce qui ne bouge pas, et c'est
-    // l'objet du test : à plat, le même bois ne piège RIEN.
+    // l'objet du test : à plat, le même bois ne piège **rien**.
     //
-    // Une CINQUIÈME fois, et celle-là est la plus jolie des cinq : le sol
-    // DÉRIVE maintenant (`bases.ts`). Ce versant est un limon riche à pH 7,0,
+    // Une **cinquième** fois, et celle-là est la plus jolie des cinq : le sol
+    // **dérive** maintenant (`bases.ts`). Ce versant est un limon riche à pH 7,0,
     // planté de hêtre et de pin — deux litières pauvres en calcium. En soixante
     // ans le peuplement acidifie son propre sol jusqu'à 6,62, et le pin, qui
-    // était à la LIMITE HAUTE de sa gamme (4 à 7,5, donc un facteur de 0,80 à
+    // était à la **limite haute** de sa gamme (4 à 7,5, donc un facteur de 0,80 à
     // pH 7), y gagne : 0,80 → 0,97 → 1,00 au fil de la dérive. Il pousse donc
     // mieux, monte à 23 m au lieu de rester bridé, couvre davantage — et il
     // descend 0,062 au lieu de 0,093. **Le pin s'acidifie le sol jusqu'à s'y
@@ -411,12 +411,12 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     expect(moy(oriente, "piege")).toBeGreaterThan(0.04);
     expect(moy(aPlat, "piege")).toBe(0);
     // Et il détourne une part de l'eau de surface vers le sol — une part
-    // MINCE, et c'est le résultat, pas un aveu de faiblesse.
+    // **mince**, et c'est le résultat, pas un aveu de faiblesse.
     //
     // Ce seuil exigeait 3 % quand le moteur faisait peser à ses arbres jusqu'à
     // neuf fois leur propre cylindre (#62). À masse corrigée, la part tombe à
     // 0,64 % : moins de bois au sol barre moins d'eau, exactement en
-    // proportion. Le SENS est intact sur les deux graines.
+    // proportion. Le **sens** est intact sur les deux graines.
     //
     // Et cette petitesse dit la même chose que les deux lignes du dessus : une
     // forêt livrée à elle-même arme mal son versant. C'est la prémisse même du
@@ -433,7 +433,7 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
  * Le mécanisme de barrage existait sans qu'aucune action ne permette de
  * l'armer : couper un arbre, c'était le vendre, le broyer ou l'épandre — dans
  * les trois cas le fût quittait le sol. Or la restauration post-incendie ne
- * fait pas autre chose que d'abattre et de COUCHER EN TRAVERS.
+ * fait pas autre chose que d'abattre et de **coucher en travers**.
  */
 describe("abattre et laisser le tronc en travers", () => {
   function parcelleAvecArbres() {
@@ -494,7 +494,7 @@ describe("abattre et laisser le tronc en travers", () => {
   });
 
   it("et ça arme vraiment le versant : moins de terre part", () => {
-    // Le contrôle est le même arbre coupé et VENDU : même parcelle, mêmes
+    // Le contrôle est le même arbre coupé et **vendu** : même parcelle, mêmes
     // arbres en moins, seule différence le fût laissé ou emporté.
     const partieAvec = (devenir: "laisser" | "vendre") => {
       let state = parcelleAvecArbres();

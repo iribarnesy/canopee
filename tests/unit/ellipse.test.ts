@@ -3,7 +3,7 @@
  *
  * **La propriété centrale à garder est celle que le commanditaire a énoncée** :
  * « c'est le même principe peu importe la durée de l'ellipse ». Une semaine et
- * dix ans doivent produire un plan de même FORME — même budget, mêmes types
+ * dix ans doivent produire un plan de même **forme** — même budget, mêmes types
  * d'actes, mêmes regroupements — avec seulement plus de sujets dedans. La
  * plupart des essais ci-dessous ne vérifient que ça, sous différents angles.
  */
@@ -124,7 +124,7 @@ describe("l'ordre : les causes avant leurs conséquences", () => {
 describe("le budget : la même mécanique quelle que soit la durée franchie", () => {
   /**
    * **La propriété que le commanditaire a demandée, mise à l'épreuve.** Une
-   * semaine et dix ans doivent tenir dans le MÊME budget : le joueur qui saute
+   * semaine et dix ans doivent tenir dans le **même** budget : le joueur qui saute
    * dix ans n'attend pas cinq cents fois plus longtemps, il voit plus de choses
    * dans le même temps.
    */
@@ -139,7 +139,7 @@ describe("le budget : la même mécanique quelle que soit la durée franchie", (
   });
 
   it("ne déborde pas sur dix ans de morts : le regroupement s'en charge", () => {
-    // Dix ans de sécheresse ne font pas dix ans d'actes — ils font UN acte de
+    // Dix ans de sécheresse ne font pas dix ans d'actes — ils font **un** acte de
     // dix ans d'arbres. Sans ce regroupement sur toute la période, une longue
     // ellipse déborderait pour de mauvaises raisons.
     const dixAns: JournalDeSemaine[] = Array.from({ length: 520 }, (_, i) => ({
@@ -165,7 +165,7 @@ describe("le budget : la même mécanique quelle que soit la durée franchie", (
   });
 
   /**
-   * **Et il DIT quand il n'y arrive pas.** C'est là que les mécanismes du §6.8
+   * **Et il dit quand il n'y arrive pas.** C'est là que les mécanismes du §6.8
    * reprennent la main — calque des changements, bilan de période — non plus
    * comme une alternative à l'animation mais comme son repli assumé. Un plan
    * qui mentirait ici ferait défiler des actes de trois millisecondes en

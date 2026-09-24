@@ -2,7 +2,7 @@
  * Le sanglier (issue #73, critère G10).
  *
  * Le dernier grand absent du module biotique, et le seul herbivore qui puisse
- * FAVORISER la régénération. Deux effets de signe opposé, portés par le même
+ * **favoriser** la régénération. Deux effets de signe opposé, portés par le même
  * animal et par des traits que l'atlas déclarait déjà : il mange ce qui tombe
  * et reste (les graines lourdes), il ouvre un lit de germination pour ce qui
  * arrive par le vent.
@@ -84,7 +84,7 @@ describe("combien il retourne, et quand", () => {
 describe("aucun tirage ne quitte le flux local", () => {
   it("une parcelle avec sangliers tire exactement comme une parcelle sans", () => {
     // La précaution du lot des tempêtes : le choix des cellules retournées
-    // dérive d'une graine locale. Sur une parcelle SANS arbres — donc sans
+    // dérive d'une graine locale. Sur une parcelle **sans** arbres — donc sans
     // recrutement pour diverger — les deux flux doivent rester identiques au
     // bit près, alors que l'un retourne du sol et l'autre non.
     const base: Station = { ...LIMON_RICHE.station, coteM: 10, voisinage: [] };
@@ -104,7 +104,7 @@ describe("aucun tirage ne quitte le flux local", () => {
 });
 
 /**
- * ─── LA GLANDÉE A DÉMÉNAGÉ (issue #197) ──────────────────────────────────────
+ * ─── **la glandée a déménagé** (issue #197) ──────────────────────────────────────
  *
  * Il y avait ici une section « ce qu'il en reste » qui vérifiait
  * `partGlandeeRestante` : une part de la glandée mangée en fonction de la seule
@@ -114,7 +114,7 @@ describe("aucun tirage ne quitte le flux local", () => {
  * portant vingt-cinq kilos de glands et une bête en avalant plus d'une tonne
  * par an.
  *
- * Le sanglier prélève désormais une RATION en kilos sur une production réelle
+ * Le sanglier prélève désormais une **ration** en kilos sur une production réelle
  * (`glandee.ts`), et ce qui reste ici du même animal — le retournement, les
  * boutis, l'humus, le tassement cassé — n'a pas bougé d'un cheveu.
  * `tests/ecology/glandee.test.ts` tient la suite, y compris ce que la mesure a
@@ -146,7 +146,7 @@ function chenaie(densite: number, ans: number, graine = 3) {
   return { recrues: vivants - plantes, vivants, humus: somme(s.soil.humusCG) };
 }
 
-// Trois graines, deux densités, et les six parties tournent UNE fois pour tout
+// Trois graines, deux densités, et les six parties tournent **une** fois pour tout
 // le fichier — une partie de quarante ans coûte une minute et demie, et chaque
 // essai en dessous en lit les résultats plutôt que d'en relancer (`npm test`
 // est déjà le poste le plus cher du dépôt).
@@ -177,7 +177,7 @@ describe("en partie : le geai plante les chênes, le sanglier retourne le sol", 
   });
 
   it("ce qu'il enfouit ne disparaît pas : l'humus y gagne", () => {
-    // Un boutis est un ENFOUISSEMENT, pas une combustion. La litière passe au
+    // Un boutis est un **enfouissement**, pas une combustion. La litière passe au
     // pool lent, elle ne part pas en fumée — et ça se voit sur le stock.
     for (const m of MESURES) expect(m.forte.humus).toBeGreaterThan(m.sans.humus);
   });
@@ -185,10 +185,10 @@ describe("en partie : le geai plante les chênes, le sanglier retourne le sol", 
 
 describe("le boutis arrache ce qui a levé (#199)", () => {
   it("à forte densité, la régénération du chêne recule nettement — sur toutes les graines", () => {
-    // **LE MÉCANISME QUI MANQUAIT, ET IL MANQUAIT PARCE QU'UN AUTRE ÉTAIT FAUX.**
+    // **le mécanisme qui manquait, et il manquait parce qu'un autre était faux.**
     //
     // Le sanglier a deux prises sur une chênaie et le moteur n'en comptait
-    // qu'une et demie : il mange la glandée (#197, ancré, et PETIT — à 0,15
+    // qu'une et demie : il mange la glandée (#197, ancré, et **petit** — à 0,15
     // bête/ha, quatre cents kilos par bête font soixante kilos de glands à
     // l'hectare contre une glandée qui se compte en centaines), il ouvre un lit
     // de germination pour les petites graines, et **il détruit ce qui a déjà
@@ -217,7 +217,7 @@ describe("le boutis arrache ce qui a levé (#199)", () => {
     // trois et que les deux bouts, parce qu'une partie de quarante ans coûte
     // une minute et demie et que le milieu est déjà dit par le tableau.
     //
-    // **ET L'ARITHMÉTIQUE TOMBE D'ACCORD AVEC LA SIMULATION**, ce qui est le
+    // **et l'arithmétique tombe d'accord avec la simulation**, ce qui est le
     // meilleur contrôle qu'on puisse avoir sur un mécanisme de ce genre. À 0,5
     // sanglier/ha, le moteur retourne 20 % de la parcelle par an (2 % à la
     // densité de référence de 0,05, proportionnel). Un semis de chêne naît à
@@ -225,7 +225,7 @@ describe("le boutis arrache ce qui a levé (#199)", () => {
     // risque cumulé est 1 − 0,8² = 36 %. Mesuré : 39 %. Le mécanisme ne fait
     // rien d'autre que ce que son énoncé annonce.
     //
-    // Ce que l'essai n'affirme PAS, et c'est délibéré : il ne rend pas le
+    // Ce que l'essai n'affirme **pas**, et c'est délibéré : il ne rend pas le
     // triplet d'avant (97 / 60 / 22). Celui-là venait d'un coefficient calé sur
     // le moteur, et la cible d'un lot n'est jamais l'ancien nombre.
     for (const m of MESURES) {

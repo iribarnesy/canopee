@@ -1,11 +1,11 @@
 /**
- * PLUSIEURS PARTIES SAUVEGARDÉES, ET LISIBLES (#147).
+ * **Plusieurs parties sauvegardées**, **et lisibles** (#147).
  *
  * Cas vécu : « changer des paramètres, lancer, sortir — et plus aucun moyen de
  * relire les paramètres de la partie précédente ». Une seule sauvegarde, que la
  * partie suivante écrasait au premier autosave.
  *
- * Ce que ces épreuves défendent : qu'on ne perde RIEN — ni la partie d'avant en
+ * Ce que ces épreuves défendent : qu'on ne perde **rien** — ni la partie d'avant en
  * en commençant une autre, ni celle d'un joueur qui avait déjà joué sous
  * l'ancien rangement — et que la fiche dise ce qui a été demandé, pas ce que le
  * moteur en a fait.
@@ -147,7 +147,7 @@ describe("la fiche d'une partie", () => {
     const dit = (quoi: string) => lignes.find((l) => l.quoi === quoi)?.valeur;
     expect(dit("Station")).toBe("Limon profond riche");
     expect(dit("Paysage")).toBe("Dans un bocage d'élevage");
-    // Le libellé du MOTEUR, pas l'identifiant : c'est le mot que l'écran de
+    // Le libellé du **moteur**, pas l'identifiant : c'est le mot que l'écran de
     // réglages affiche, et l'issue demande les mêmes.
     expect(dit("Scénario climatique")).toBe("SSP2-4.5");
     expect(dit("Météo")).toContain("réelle");

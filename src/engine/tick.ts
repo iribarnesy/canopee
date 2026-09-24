@@ -1,9 +1,9 @@
 /**
  * Le cœur du moteur : une fonction pure `état + météo → état`, spatialisée.
  * Ordre d'un tick (docs/regles.md §1.1) :
- * météo → lumière (elle pilote la croissance ET la transpiration) → bilan
+ * météo → lumière (elle pilote la croissance **et** la transpiration) → bilan
  * hydrique + minéralisation + décomposition de la litière, par cellule →
- * prélèvements eau/azote par arbre dans SA zone racinaire (deux passes,
+ * prélèvements eau/azote par arbre dans **sa** zone racinaire (deux passes,
  * indépendantes de l'ordre des arbres) → lessivage → croissance des arbres →
  * chute des feuilles (semaine 44) → morts en litière → régénération (sem. 14).
  */
@@ -256,7 +256,7 @@ import type { HorizonHydro } from "./water";
 import { drynessFactor, profilHydro } from "./water";
 
 /**
- * Part de l'ETP qu'un sol NU peut évaporer (la strate herbacée, elle, est
+ * Part de l'ETP qu'un sol **nu** peut évaporer (la strate herbacée, elle, est
  * modélisée explicitement dans herbe.ts et transpire pour son compte).
  */
 const SOIL_EVAP_FRACTION = 0.5;
@@ -264,7 +264,7 @@ const SOIL_EVAP_FRACTION = 0.5;
  * Microclimat forestier (docs/regles.md §3, volet humidité) : sous couvert
  * fermé, l'évaporation du sol tombe à cette fraction de sa valeur plein soleil
  * (ombre + air calme + humidité) *(à calibrer)*. Bas, car sous un couvert la
- * transpiration des arbres REMPLACE l'évaporation du sol au lieu de s'y
+ * transpiration des arbres **remplace** l'évaporation du sol au lieu de s'y
  * ajouter — c'est la même ETP qui se partage. Le volet température (−x °C en
  * canicule) viendra avec les vraies séries météo.
  */
@@ -288,7 +288,7 @@ const G_PER_M2_TO_KG_PER_HA = 10;
 const RECRUITMENT_WEEK = 14;
 /**
  * Semaine où l'on remet à zéro le compteur de froid. Mi-septembre : le froid
- * qui lève la dormance est celui de l'automne et de l'hiver qui SUIVENT, pas
+ * qui lève la dormance est celui de l'automne et de l'hiver qui **suivent**, pas
  * celui de l'hiver précédent.
  */
 const DEBUT_COMPTAGE_FROID = 37;
@@ -309,7 +309,7 @@ const CHABLIS_RECUPERABLE_SEMAINES = 52;
  */
 const LITTER_RETURN_FRACTION = 0.5;
 
-/** Un arbre mort pendant le tick : de quoi le raconter ET l'animer là où il est. */
+/** Un arbre mort pendant le tick : de quoi le raconter **et** l'animer là où il est. */
 export interface MortDeLaSemaine {
   /** l'arbre qui vient de mourir : il reste en jeu comme chandelle */
   id: number;
@@ -322,12 +322,12 @@ export interface MortDeLaSemaine {
 }
 
 /**
- * Un semis RÉELLEMENT installé cette semaine. Le pendant positif de
+ * Un semis **réellement** installé cette semaine. Le pendant positif de
  * `MortDeLaSemaine`, et volontairement la même forme : le rendu pointe une
  * naissance comme il pointe une mort, au même endroit de son calque.
  *
  * Pourquoi ça voyage alors que `ageWeeks` est déjà dans l'instantané, et
- * qu'un arbre jeune s'y repère : parce que les TROIS endroits qui créent un
+ * qu'un arbre jeune s'y repère : parce que les **trois** endroits qui créent un
  * arbre — le recrutement naturel (regeneration.ts), le geste `planter` et le
  * semis en vrac (state.ts) — posent tous `ageWeeks: 0`. Un plant acheté et un
  * semis levé la même semaine portent donc le même âge pour toujours, et
@@ -337,7 +337,7 @@ export interface MortDeLaSemaine {
  *
  * Accessoirement, le tick avait déjà tout ça sous la main et le jetait —
  * `yearlyRecruitment` rend des `TreeState` complets. Le worker en déduisait un
- * NOMBRE par soustraction d'effectifs, faux dès qu'un geste de la semaine
+ * **nombre** par soustraction d'effectifs, faux dès qu'un geste de la semaine
  * avait retiré des tiges ; il lit cette liste.
  */
 export interface NaissanceDeLaSemaine {
@@ -352,12 +352,12 @@ export interface NaissanceDeLaSemaine {
 
 /**
  * Une tige qui vient de changer de stade (stades.ts). Le franchissement se
- * rapporte ici, et PAS sous forme d'un `stade` par arbre dans l'instantané :
+ * rapporte ici, et **pas** sous forme d'un `stade` par arbre dans l'instantané :
  * le stade lui-même est une fonction pure de `heightM`, que le rendu calcule
  * déjà sans nous (`stadeDe`). Ce qu'il ne peut pas faire, c'est comparer deux
  * instants — d'où l'événement, et lui seul.
  *
- * Ne couvre que ce que la CROISSANCE a fait franchir. Un arbre rabattu par une
+ * Ne couvre que ce que la **croissance** a fait franchir. Un arbre rabattu par une
  * trogne ou un recépage descend l'échelle, et cette chute-là voyage déjà :
  * `ArbreRetire` porte `hauteurAvantM` et `hauteurApresM` (actions.ts), dont le
  * rendu tire les deux stades. La redire ici serait la même vérité deux fois.
@@ -369,7 +369,7 @@ export interface FranchissementDeStade {
 }
 
 /**
- * Un arbre que le feu a emporté, rapporté LA SEMAINE DE L'INCENDIE.
+ * Un arbre que le feu a emporté, rapporté **la semaine de l'incendie**.
  *
  * `TickResult.morts` ne pouvait pas s'en charger, et pas par négligence : un
  * arbre tué par le feu reste debout, récupérable en coupe sanitaire, et n'entre
@@ -377,14 +377,14 @@ export interface FranchissementDeStade {
  * une semaine où `incendie` est `undefined`. L'incendie et ses victimes ne
  * pouvaient donc jamais figurer dans le même journal.
  *
- * Les y pousser DEUX fois — à l'incendie puis à la chute — aurait été pire : un
+ * Les y pousser **deux** fois — à l'incendie puis à la chute — aurait été pire : un
  * consommateur qui compte les morts en aurait compté le double. C'est pourquoi
  * les identités arrivent ici, dans le récit de l'incendie, et non dans `morts`.
  *
- * `id` suffit à faire la jointure : dans les deux cas l'arbre est TOUJOURS dans
+ * `id` suffit à faire la jointure : dans les deux cas l'arbre est **toujours** dans
  * `state.trees`, donc dans l'instantané — en chandelle, ou rabattu sur son
  * rejet. Position et espèce s'y lisent, et l'intensité qui l'a tué se recalcule
- * avec `intensiteDuFeu(charges[i])` (feu.ts). Seule la hauteur d'AVANT ne se
+ * avec `intensiteDuFeu(charges[i])` (feu.ts). Seule la hauteur d'**avant** ne se
  * lit nulle part, parce qu'un rejet a écrasé la sienne.
  */
 export interface VictimeDuFeu {
@@ -392,7 +392,7 @@ export interface VictimeDuFeu {
   /** hauteur juste avant le feu, m — écrasée chez un rejet */
   hauteurAvantM: number;
   /**
-   * La souche a rejeté : l'arbre reste EN JEU, rabattu à `HAUTEUR_REJET_M`, au
+   * La souche a rejeté : l'arbre reste **en jeu**, rabattu à `HAUTEUR_REJET_M`, au
    * lieu de laisser une chandelle noire. Ça ne s'anime pas pareil — la couronne
    * s'embrase dans les deux cas, mais l'un repart d'en bas et l'autre pas — et
    * c'est ce qui fait des pyrophytes des gagnants du feu.
@@ -400,17 +400,17 @@ export interface VictimeDuFeu {
   rejet: boolean;
 }
 
-/** L'incendie de la semaine, tel qu'on peut le raconter ET le dessiner. */
+/** L'incendie de la semaine, tel qu'on peut le raconter **et** le dessiner. */
 export interface IncendieResult {
   cellulesBrulees: number;
   arbresTues: number;
   rejets: number;
   /**
-   * QUI le feu a emporté, et non plus seulement combien. `arbresTues` en donnait
+   * **qui** le feu a emporté, et non plus seulement combien. `arbresTues` en donnait
    * le nombre, jamais les identités : le rendu devait reconnaître les arbres
    * torchés en comparant `brulEeSemaine` à la fenêtre du journal, une jointure
    * qu'il refaisait faute que le moteur la donne — et fragile, puisqu'un arbre
-   * brûlé lors d'un incendie PRÉCÉDENT garde son `brulEeSemaine`.
+   * brûlé lors d'un incendie **précédent** garde son `brulEeSemaine`.
    *
    * La liste couvre exactement ce que compte `arbresTues` : les vivants dont le
    * feu a emporté l'aérien, rejets compris (distingués par `rejet`). Une
@@ -425,7 +425,7 @@ export interface IncendieResult {
   brulees: Int32Array;
   /**
    * Rang d'arrivée du front sur chaque cellule de `brulees`, même ordre : sa
-   * distance à l'origine en cellules. C'est ce qui permet de faire COURIR une
+   * distance à l'origine en cellules. C'est ce qui permet de faire **courir** une
    * ligne de flammes au lieu de noircir la tache d'un coup (feu.ts).
    */
   rangs: Int32Array;
@@ -433,7 +433,7 @@ export interface IncendieResult {
    * Charge de combustible de chaque cellule de `brulees`, même ordre : l'indice
    * de `chargeCombustible` (feu.ts), herbe sèche + litière + ligneux, ∈ [0, ~1,5].
    *
-   * C'est DANS QUOI la cellule a brûlé, et ça décide de la hauteur de flamme :
+   * C'est **dans quoi** la cellule a brûlé, et ça décide de la hauteur de flamme :
    * haute dans l'ajonc, basse dans un pré ras. Sans elle le rendu dessine
    * toutes ses flammes à la même hauteur de convention, et « le feu s'essouffle
    * dans le feuillu frais, fonce dans la lande » ne se lit que sur la vitesse
@@ -446,9 +446,9 @@ export interface IncendieResult {
 }
 
 /**
- * La tempête de la semaine, telle qu'on peut la raconter ET la dessiner.
+ * La tempête de la semaine, telle qu'on peut la raconter **et** la dessiner.
  *
- * Elle n'est renseignée que si elle a COUCHÉ quelque chose : une rafale qui
+ * Elle n'est renseignée que si elle a **couché** quelque chose : une rafale qui
  * passe sans rien casser n'est pas un événement, c'est du temps qu'il fait. Les
  * victimes arrivent ici et non dans `morts`, pour la même raison que celles du
  * feu — un chablis reste récupérable un an et n'entre dans `morts` qu'ensuite,
@@ -461,13 +461,13 @@ export interface TempeteResult {
   versRad: number;
   arbresVerses: number;
   /**
-   * Arbres dont le FÛT a cassé au lieu que la motte lâche (F17). Ils ne sont
+   * Arbres dont le **fût** a cassé au lieu que la motte lâche (F17). Ils ne sont
    * pas comptés dans `arbresVerses` : ils ne sont pas par terre, il reste un
    * moignon debout — et pour une espèce qui rejette, il est vivant.
    */
   arbresCasses: number;
   /**
-   * Arbres qui ont TENU mais y ont laissé des branches (F17). C'est le dégât
+   * Arbres qui ont **tenu** mais y ont laissé des branches (F17). C'est le dégât
    * le plus fréquent d'une tempête, et le seul qui ne tue personne.
    */
   arbresEbranches: number;
@@ -477,7 +477,7 @@ export interface TempeteResult {
 }
 
 /**
- * Une chandelle qui s'abat, telle qu'on peut la raconter ET la dessiner : le
+ * Une chandelle qui s'abat, telle qu'on peut la raconter **et** la dessiner : le
  * rendu a besoin de la direction pour coucher le tronc dans le bon sens, et de
  * l'empreinte pour savoir où le poser (boisMort.ts).
  */
@@ -509,7 +509,7 @@ export interface TickResult {
   /** tempête de la semaine, si elle a couché au moins un arbre */
   tempete?: TempeteResult;
   /**
-   * Ce que le GIBIER a fait subir à quels arbres cette semaine (broutage,
+   * Ce que le **gibier** a fait subir à quels arbres cette semaine (broutage,
    * frottis). Les gestes du joueur remontent par `applyAction` (actions.ts) ;
    * le rendu les traite de la même façon.
    */
@@ -531,7 +531,7 @@ export interface TickResult {
   aides?: AidesAnnuelles;
   /**
    * Faune installée cette semaine (`faune.ts`, #187). Toujours vide si
-   * `station.faune` est éteint — et c'est alors le MÊME tableau, figé, pour ne
+   * `station.faune` est éteint — et c'est alors le **même** tableau, figé, pour ne
    * rien allouer du tout.
    */
   installationsFaune: readonly InstallationFaune[];
@@ -549,7 +549,7 @@ const AUCUN_MOUVEMENT_DE_FAUNE: readonly never[] = Object.freeze([]);
 /**
  * À qui imputer une mort que le coup de grâce vient de déclencher.
  *
- * `causeMort` retenait le DERNIER COUP et non la cause (#103). Un dominé
+ * `causeMort` retenait le **dernier coup** et non la cause (#103). Un dominé
  * remplit son compteur de stress pendant des décennies, puis un dégât de
  * ravageur le pousse au-delà du seuil, et le moteur écrivait « ravageurs ».
  * C'est juste comme description du coup de grâce — un arbre affamé ne refait
@@ -557,7 +557,7 @@ const AUCUN_MOUVEMENT_DE_FAUNE: readonly never[] = Object.freeze([]);
  * décrit ce syndrome — mais faux comme rapport : le journal envoyait traiter
  * là où il fallait éclaircir.
  *
- * La règle est la MAJORITÉ, pas une priorité inversée. Si plus de la moitié
+ * La règle est la **majorité**, pas une priorité inversée. Si plus de la moitié
  * du stress accumulé vient des causes lentes, c'est d'elles que l'arbre
  * meurt, et `causeLente` dit laquelle. Sinon le coup garde son nom — et il
  * le garde souvent : sur une hêtraie serrée de cent vingt ans, neutraliser
@@ -567,18 +567,18 @@ const AUCUN_MOUVEMENT_DE_FAUNE: readonly never[] = Object.freeze([]);
  */
 function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMort {
   const lent = tree.stressLent ?? 0;
-  // LA MAJORITÉ DU COMPTEUR, et deux autres règles ont été essayées puis
+  // **la majorité du compteur**, et deux autres règles ont été essayées puis
   // écartées par la mesure — elles sont écrites ici pour qu'on ne les
   // repropose pas.
   //
-  // La NÉCESSITÉ (« le coup seul aurait-il suffi ? ») est séduisante et
-  // VIDE : à l'instant de la mort, `stress` vient tout juste de franchir
+  // La **nécessité** (« le coup seul aurait-il suffi ? ») est séduisante et
+  // **vide** : à l'instant de la mort, `stress` vient tout juste de franchir
   // `STRESS_LETHAL`, donc `stressFinal - lent < STRESS_LETHAL` se réduit à
   // « y a-t-il le moindre stress lent ? ». Elle efface toutes les morts par
   // ravageurs, y compris sous réchauffement où la pullulation est le
   // mécanisme documenté : 89 / 82 / 80 deviennent zéro.
   //
-  // Porter au compte lent le SURPLUS de dégât dû à la faiblesse échoue
+  // Porter au compte lent le **surplus** de dégât dû à la faiblesse échoue
   // autrement : ce surplus est en partie l'œuvre des ravageurs eux-mêmes,
   // puisqu'un arbre attaqué s'affaiblit et devient plus attaquable — la
   // spirale que `ravageurs.ts` décrit. Le leur retirer, c'est la compter
@@ -586,20 +586,20 @@ function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMo
   //
   // Reste la majorité, qui ne prétend qu'à ce qu'elle dit : si plus de la
   // moitié de ce qui a tué l'arbre vient des causes lentes, c'est d'elles
-  // qu'il meurt. Elle est PRUDENTE — elle ne se déclenche que quand la
+  // qu'il meurt. Elle est **prudente** — elle ne se déclenche que quand la
   // charge lente domine vraiment — et c'est le sens dans lequel il vaut
   // mieux se tromper : elle ne fabrique pas de morts d'ombre.
   return lent > stressFinal - lent ? (tree.causeLente ?? coup) : coup;
 }
 
 /**
- * Ce qu'un arbre noue MÊME sans aucun pollinisateur autour : le vent en porte
+ * Ce qu'un arbre noue **même** sans aucun pollinisateur autour : le vent en porte
  * un peu, les abeilles domestiques d'un voisin passent, et beaucoup d'espèces
  * sont partiellement autogames. Un verger nu dans une plaine nue perd une
  * bonne part de sa nouaison ; il n'en perd jamais la totalité *(à calibrer)*.
  *
  * C'est la valeur qu'avait ce plancher avant que le service lise le calendrier
- * des fleurs (#70), et elle n'a pas bougé : le lot AJOUTE un facteur limitant,
+ * des fleurs (#70), et elle n'a pas bougé : le lot **ajoute** un facteur limitant,
  * il ne déplace pas le plancher.
  */
 const POLLINISATION_PLANCHER = 0.35;
@@ -622,10 +622,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const trees = state.trees;
 
   // ── 0. Lumière : au sol (microclimat, évaporation) et par arbre (croissance
-  //      ET transpiration — c'est le moteur de l'effet nurse, cf. trees.ts).
+  //      **et** transpiration — c'est le moteur de l'effet nurse, cf. trees.ts).
   // Phénologie : chaque espèce a son calendrier, et le feuillage se déploie
   // progressivement au lieu de s'allumer d'un coup (phenologie.ts).
-  // Le MÊME contexte que celui qui voyagera dans l'instantané : le rendu
+  // Le **même** contexte que celui qui voyagera dans l'instantané : le rendu
   // recalcule les couleurs de saison avec exactement ces cinq scalaires.
   const pheno = contextePhenologique(
     station.latitudeDeg,
@@ -633,7 +633,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     state.ddYearBase5,
     state.semainesDeFroid,
   );
-  // L'ombre porte sur le feuillage qui INTERCEPTE, feuilles mortes des
+  // L'ombre porte sur le feuillage qui **intercepte**, feuilles mortes des
   // marcescents comprises ; la croissance et la litière suivront la part
   // vivante (phenologie.ts).
   const partOmbrageanteDe: PartOmbrageante = (tree) =>
@@ -642,7 +642,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   /**
    * Ce que les émetteurs d'allélopathie déversent en un point (allelopathie.ts).
    * Le sable lessive la juglone, le limon lourd la retient : l'intensité dépend
-   * donc de la TEXTURE du sol, que la station connaît déjà.
+   * donc de la **texture** du sol, que la station connaît déjà.
    */
   const partSableSurface = station.profil[0]?.sable ?? 0;
   const emetteurs = trees.filter((t) => t.alive && getEspece(t.especeId).allelopathie);
@@ -657,9 +657,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return Math.min(1, total);
   };
   const light = computeLight(trees, partOmbrageanteDe);
-  // L'ENTOURAGE ombrage les lisières : un carré de bocage au milieu d'un massif
+  // **l'entourage** ombrage les lisières : un carré de bocage au milieu d'un massif
   // n'est pas une clairière isolée (lisiere.ts). Et la géométrie n'est pas
-  // symétrique — c'est ce qui est au SUD qui ombrage.
+  // symétrique — c'est ce qui est au **sud** qui ombrage.
   for (let t = 0; t < light.length; t++) {
     const arbre = trees[t];
     if (!arbre) continue;
@@ -683,7 +683,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const epaisseurs = profil.map((h) => h.epaisseurCm);
   const solPenetrableCm = profondeurPenetrableCm(profil);
   const ruSurface = horizonsHydro[0]?.ruMm ?? 1;
-  // Réserve utile DYNAMIQUE de l'horizon de surface (critère A12) : elle suit
+  // Réserve utile **dynamique** de l'horizon de surface (critère A12) : elle suit
   // l'humus de la cellule. C'est le retour sur investissement de « construire
   // du sol » — et, à l'inverse, ce qu'un labour répété finit par coûter en
   // eau disponible. On raisonne en écart relatif au profil de départ, l'humus
@@ -726,7 +726,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Les bases échangeables, et le calcium de la litière qui les nourrit ou les
   // consomme (bases.ts). C'est ce pool-là qui porte le pH de la cellule.
   // La rafale de la semaine, tirée une fois pour toutes (tempete.ts). Elle sert
-  // DEUX fois et à deux endroits éloignés du tick : elle couche les arbres
+  // **deux** fois et à deux endroits éloignés du tick : elle couche les arbres
   // vivants (§ tempête) et elle oriente la chute des chandelles (§ bois mort,
   // issue #58). Elle dérive de la graine de partie, pas du flux principal.
   const rafaleMs = rafaleDeLaSemaine(
@@ -784,7 +784,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const depositionPSemaine = DEPOSITION_P_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
   const depositionKSemaine = DEPOSITION_K_KG_HA_AN / G_PER_M2_TO_KG_PER_HA / 52;
   const cecSurface = horizonSurface0 ? capaciteEchange(horizonSurface0) : 10;
-  // Le même complexe, vu comme un STOCK par mètre carré et non comme une
+  // Le même complexe, vu comme un **stock** par mètre carré et non comme une
   // densité : c'est lui le dénominateur du taux de saturation, donc du pH.
   const cecSurfaceEq = horizonSurface0 ? capaciteEchangeEqM2(horizonSurface0) : 0;
   // Et le complexe du sous-sol : son stock, dénominateur du taux de saturation
@@ -822,14 +822,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     profil: station.profil,
   });
   const nappeReposCm = champDeNappeCm(sourcesEau, altitudes, dims, station.profil);
-  // La nappe comme STOCK (nappe.ts) : ce qui percole sous le profil ne
+  // La nappe comme **stock** (nappe.ts) : ce qui percole sous le profil ne
   // disparaît plus, il la recharge ; la région la ramène vers son niveau
   // d'équilibre, dans les deux sens ; et son niveau décide de ce que le sol
   // peut encore évacuer. C'est ce chaînage qui permet à une forêt de faire
   // baisser la nappe en transpirant — et à un incendie de la faire remonter.
   const nappeStockMm = state.soil.nappeMm.slice();
   const capaciteNappeMm = capaciteAquifereMm(station.profil);
-  // La nappe est une SURFACE, plus plate que le terrain : profonde sous les
+  // La nappe est une **surface**, plus plate que le terrain : profonde sous les
   // buttes, affleurante dans les creux (nappe.ts). Chaque cellule a donc son
   // propre niveau d'équilibre.
   // Décalage du niveau régional par rapport à sa valeur d'origine : c'est lui
@@ -854,7 +854,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let apportEauLibreMm = 0;
   const descente = ordreDeDescente(altitudes);
   const aval = voisineAval(altitudes, dims);
-  // La pente se lit CELLULE PAR CELLULE : sur un terrain dessiné, la berge
+  // La pente se lit **cellule par cellule** : sur un terrain dessiné, la berge
   // d'une mare et le plateau qui la borde n'ont rien à voir (relief.ts).
   const pentes = penteParCellule(altitudes, dims);
   // Ce qui arrive de l'amont : la pluie tombée sur le bassin versant qui verse
@@ -882,7 +882,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const nappeEauLibreCm =
     crueCm > 0 ? nappeReposCm.map((v) => Math.max(0, v - crueCm)) : nappeReposCm;
   // Deux nappes possibles sous une cellule : celle qu'impose l'eau libre
-  // voisine, et celle que porte l'aquifère. C'est la plus HAUTE des deux qui
+  // voisine, et celle que porte l'aquifère. C'est la plus **haute** des deux qui
   // gouverne, puisque c'est elle qui sature le sol en premier.
   const nappeCm = new Float32Array(nCells);
   for (let i = 0; i < nCells; i++) {
@@ -969,7 +969,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           SOIL_EVAP_FRACTION *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
           (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
-        // La remontée capillaire PUISE dans la nappe : ce n'est plus un apport
+        // La remontée capillaire **puise** dans la nappe : ce n'est plus un apport
         // venu de nulle part, c'est un transfert.
         nappeMm: Number.isFinite(nappeCm[i] ?? Number.POSITIVE_INFINITY)
           ? station.remonteeNappeMmSemaine + remonteeCapillaireMm(nappeCm[i] ?? 0, station.profil)
@@ -991,16 +991,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     drainageMmArr[i] = bilan.drainageMm;
     ruissellementEntrantMm += amontIci;
     // Le débordement, c'est l'eau que la cellule n'a pas pu absorber. Sur du
-    // plat elle stagne puis s'en va ; sur une pente, elle RUISSELLE — et c'est
+    // plat elle stagne puis s'en va ; sur une pente, elle **ruisselle** — et c'est
     // elle qu'il faut router, pas l'eau gravitaire déjà infiltrée.
     debordementParCellule[i] = bilan.overflowMm + ruissele;
     // Ce qui percole recharge la nappe ; ce qu'elle a rendu au sol lui est
     // retiré. L'eau qui remonte n'a pas toujours la même provenance : quand un
-    // ruisseau voisin impose une nappe haute, c'est LUI qui fournit, et cette
-    // eau-là ENTRE dans la parcelle. On sert donc d'abord sur l'aquifère
+    // ruisseau voisin impose une nappe haute, c'est **lui** qui fournit, et cette
+    // eau-là **entre** dans la parcelle. On sert donc d'abord sur l'aquifère
     // local, le reste vient de l'eau libre.
     //
-    // Ce bloc vient APRÈS l'affectation du débordement, et il faut qu'il y
+    // Ce bloc vient **après** l'affectation du débordement, et il faut qu'il y
     // reste : le trop-plein d'aquifère s'y ajoute, et le placer avant le
     // faisait effacer par elle.
     const depuisAquifere = Math.min(nappeStockMm[i] ?? 0, bilan.nappeMm);
@@ -1058,14 +1058,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // en neutralisent une part. Au-dessus du seuil de calcium elle rend au
     // complexe, en dessous elle lui prend — et c'est tout ce qui sépare une
     // essence acidifiante d'une essence améliorante. Aucun nom d'espèce ici :
-    // la teneur en calcium de ce qui est tombé sur CETTE cellule suffit.
+    // la teneur en calcium de ce qui est tombé sur **cette** cellule suffit.
     const effetBases = effetLitiereEq(decayedC, litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G);
     basesEq[i] = (basesEq[i] ?? 0) + effetBases;
     if (effetBases >= 0) basesLitiereSumEq += effetBases;
     else basesAcideSumEq -= effetBases;
     humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
     emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
-    // L'humus est LE stock d'azote organique du sol : ce qui s'en minéralise
+    // L'humus est **le** stock d'azote organique du sol : ce qui s'en minéralise
     // part en CO₂ pour le carbone et revient aux plantes pour l'azote, au
     // rapport C/N de l'humus. Les deux cycles ne peuvent plus diverger — et
     // c'est ce couplage qui donne son sens à « construire du sol » (§12).
@@ -1103,19 +1103,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine * bio + depositionPSemaine;
     potassiumG[i] = (potassiumG[i] ?? 0) + alterationKSemaine * bio + depositionKSemaine;
     // Les bases suivent la même plomberie que le potassium — et pour cause, le
-    // potassium EST une de ces bases. L'altération les libère dans tout le
+    // potassium **est** une de ces bases. L'altération les libère dans tout le
     // profil, la rhizosphère l'accélère, l'atmosphère en dépose (bases.ts).
     // Sans le facteur rhizosphère, à la différence du phosphore et du
     // potassium — et c'est délibéré. Les racines et les mycorhizes dissolvent
-    // bel et bien la roche et en libèrent des bases, mais elles le font POUR
-    // LES PRENDRE, et ce fichier ne débite pas le prélèvement des arbres
+    // bel et bien la roche et en libèrent des bases, mais elles le font **pour**
+    // **les prendre**, et ce fichier ne débite pas le prélèvement des arbres
     // (bases.ts). Créditer l'accélération sans débiter ce qu'elle nourrit
     // fabriquait des bases : un peuplement de hêtres faisait remonter le pH de
     // son sol, l'inverse exact de ce qu'il fait.
     const apportBases = alterationBasesSurfaceSemaine + DEPOSITION_BASES_EQ_M2_SEMAINE;
     basesEq[i] = (basesEq[i] ?? 0) + apportBases;
     basesApportSumEq += apportBases;
-    // Et le sous-sol reçoit CE QU'IL LIBÈRE, qui est la plus grosse part du
+    // Et le sous-sol reçoit **ce qu'il libère**, qui est la plus grosse part du
     // profil. C'est ce qui fait de `basesProfondEq` un budget et non un simple
     // compteur de prélèvement (#170).
     basesProfondEq[i] = (basesProfondEq[i] ?? 0) + alterationBasesProfondeSemaine;
@@ -1143,7 +1143,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 2 bis. Ruissellement : l'eau descend la pente ─────────────────────────
   // On parcourt les cellules de la plus haute à la plus basse : ce qui part
   // d'en haut a déjà été calculé quand on arrive en bas, et l'eau cascade donc
-  // d'un bout à l'autre du versant en une seule passe. C'est l'eau GRAVITAIRE
+  // d'un bout à l'autre du versant en une seule passe. C'est l'eau **gravitaire**
   // qui bouge — celle que le sol ne retient pas ; la réserve utile, elle,
   // reste où elle est.
   // ── 2 ter. La nappe s'écoule vers l'aval ─────────────────────────────────
@@ -1177,7 +1177,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let boisSedimentPiegeKg = 0;
   // Un tronc couché en travers protège la terre sous lui comme un paillage, et
   // c'est un effet reconnu du bois mort : ce qui est dessous ne part pas. On
-  // lit le bois de la semaine PRÉCÉDENTE — un arbre qui s'abat ce tick-ci
+  // lit le bois de la semaine **précédente** — un arbre qui s'abat ce tick-ci
   // protégera la parcelle à partir du suivant.
   const couvertureDe = (i: number) =>
     Math.min(
@@ -1186,7 +1186,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG) +
         couvertureDuBoisAuSol(longueurDeTroncM(state.soil.boisAuSolCG[i] ?? 0)),
     );
-  // Le paillage ci-dessus se moque de l'orientation ; le BARRAGE, non. Un
+  // Le paillage ci-dessus se moque de l'orientation ; le **barrage**, non. Un
   // tronc en travers oppose sa longueur au courant, le même tronc couché dans
   // le sens de la pente ne lui oppose rien (boisMort.ts). D'où une seconde
   // lecture du bois au sol, projetée sur la courbe de niveau.
@@ -1196,7 +1196,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const disponible = debordementParCellule[i] ?? 0;
     const partRuisselante = fractionRuissellement(pentes[i] ?? 0);
     // Ce qui ne ruisselle pas stagne sur place et finit par s'en aller. Ce
-    // terme se fige ICI, avant que le bois n'entame la lame ruisselée : ce
+    // terme se fige **ici**, avant que le bois n'entame la lame ruisselée : ce
     // qu'un tronc fait entrer dans le sol ne stagne pas, et le compter deux
     // fois casserait le bilan de l'eau.
     const stagnante = disponible * (1 - partRuisselante);
@@ -1204,7 +1204,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // ── Ce qu'un tronc en travers retient de l'eau ──────────────────────────
     // Le tronc ne fait pas disparaître la lame : il la met en flaque, et une
     // flaque a le temps de rentrer dans la terre. Ce qui rentre change de
-    // NATURE — l'eau qui courait en surface et traversait la parcelle dans la
+    // **nature** — l'eau qui courait en surface et traversait la parcelle dans la
     // semaine devient de l'eau du sol, puis de la nappe, qui met des mois à
     // rejoindre l'aval (§ « la nappe s'écoule vers l'aval », plus haut). C'est
     // là, et pas ailleurs, qu'un tronc travaille contre une inondation : il ne
@@ -1273,7 +1273,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Distinct de la retenue d'eau, et c'est le point : même quand le sol est
     // saturé et que le barrage ne retient plus une goutte, il continue de
     // peigner la terre qui passe. C'est l'effet mesuré des « log erosion
-    // barriers », et c'est le principal (boisMort.ts). Le dépôt se fait DERRIÈRE
+    // barriers », et c'est le principal (boisMort.ts). Le dépôt se fait **derrière**
     // le tronc, donc sur sa propre cellule, avec toute sa charge.
     if (barrage > 0 && horizonSurface) {
       const avantPiege = sedimentEnTransit[i] ?? 0;
@@ -1380,7 +1380,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const nNeedG = new Array<number>(nTrees).fill(0);
   const rootCells = new Array<number>(nTrees).fill(1);
   /**
-   * Le gain mycorhizien de chaque arbre, RANGÉ, parce que les deux passes
+   * Le gain mycorhizien de chaque arbre, **rangé**, parce que les deux passes
    * doivent lire exactement le même nombre (#115). Le recalculer dans la
    * seconde était le défaut : la demande était gonflée par le réseau, le
    * service ne l'était pas, et l'écart sortait du sol pour n'arriver nulle
@@ -1441,11 +1441,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     rootCells[t] = n;
     wlMean[t] = wlSum / n;
     phMean[t] = phSum / n;
-    // Le phosphore et le potassium se lisent comme une ANALYSE DE SOL : un
+    // Le phosphore et le potassium se lisent comme une **analyse de sol** : un
     // stock comparé à un seuil, pas une allocation hebdomadaire. C'est ainsi
     // que l'agronomie en parle, et c'est bien plus stable — les coupler au
     // partage semaine par semaine faisait osciller des peuplements entiers.
-    // Le seuil de carence est une propriété de LA PLANTE, pas du moteur : un
+    // Le seuil de carence est une propriété de **la plante**, pas du moteur : un
     // pin se contente de ce qui affamerait un pommier, et un pommier de ce qui
     // affamerait un blé. C'est par ce nombre que les cultures s'ajouteront.
     pSatisfaction[t] = facteurNutriment(pSum / n, SATURATION_P_G_M2 * espece.exigenceMinerale);
@@ -1476,7 +1476,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cellWaterDemand[i * nH + h] =
           (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0);
       }
-      // Le mycélium sait capter l'azote DILUÉ, là où une racine nue ne
+      // Le mycélium sait capter l'azote **dilué**, là où une racine nue ne
       // trouverait plus rien : c'est sur ce frein-là qu'il agit, et c'est
       // pourquoi il compte sur les sols pauvres et pas sur les riches
       // (où le frein est déjà levé).
@@ -1498,10 +1498,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
     herbeDemandeL[i] = demandeEau;
     cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
-    // **PAR ESPÈCE, et pondérée par son exigence** (#136). C'était une
+    // **par espèce, et pondérée par son exigence** (#136). C'était une
     // constante multipliée par la couverture ; un blé demande dix fois ce que
     // demande une graminée spontanée, et sans ça `exigenceMinerale` ne veut
-    // rien dire. Les trois spontanées étant à 1, la somme vaut EXACTEMENT
+    // rien dire. Les trois spontanées étant à 1, la somme vaut **exactement**
     // l'ancienne valeur tant qu'aucune culture n'est semée : le lot est
     // l'identité sur une parcelle sans culture.
     let demandeN = 0;
@@ -1548,8 +1548,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   /**
-   * Ce que le partage SERT réellement, arbres d'un côté, tapis de l'autre.
-   * `uptakeSumG` compte ce qui SORT DU SOL ; tant que les deux passes
+   * Ce que le partage **sert** réellement, arbres d'un côté, tapis de l'autre.
+   * `uptakeSumG` compte ce qui **sort du sol** ; tant que les deux passes
    * s'accordent, la somme des deux le retrouve au gramme près — et c'est
    * précisément l'égalité que #115 violait sans qu'aucun essai la regarde.
    */
@@ -1579,7 +1579,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       uptakeSumG += taken;
       azotePris = taken;
     }
-    // Phosphore et potassium suivent l'azote RÉELLEMENT absorbé, pas la
+    // Phosphore et potassium suivent l'azote **réellement** absorbé, pas la
     // demande : une plante bridée par l'azote n'accumule pas du potassium pour
     // autant. C'est la stœchiométrie du vivant qui commande.
     if (azotePris > 0) {
@@ -1593,7 +1593,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
 
-  // La strate évolue selon la lumière reçue et l'humidité qui RESTE en surface
+  // La strate évolue selon la lumière reçue et l'humidité qui **reste** en surface
   // après le passage de tout le monde (état du sol, pas flux : cf. herbe.ts).
   //
   // Espèce par espèce (herbacees.ts) : chacune a son point de compensation, sa
@@ -1636,14 +1636,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const base = i * N_HERBACEES;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
-    // ── CE QUE LA STRATE BASSE REND AU SOL (#201) ───────────────────────────
+    // ── **ce que la strate basse rend au sol** (#201) ───────────────────────────
     //
-    // Elle ne rendait RIEN. Mesuré avant ce lot, une prairie spontanée à 0,95
+    // Elle ne rendait **rien**. Mesuré avant ce lot, une prairie spontanée à 0,95
     // de couverture sur limon riche : le stock d'humus perd 42 % en cinquante
     // ans et la litière reste à 0,00 les deux mille six cents semaines. Park
     // Grass, prairie permanente non fertilisée depuis 1856, tient son stock.
     //
-    // **UNE PLANTE NE PEUT RENDRE QUE CE QU'ELLE A PRIS, et c'est la propriété
+    // **une plante ne peut rendre que ce qu'elle a pris, et c'est la propriété
     // de conservation de l'azote qui a dû le rappeler.** Le premier jet posait
     // un taux de renouvellement sur la fiche et en tirait la litière : il
     // rendait 120 kg N/ha/an là où la strate en prélève 31, soit quatre fois
@@ -1653,7 +1653,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // chiffré la fuite à 0,38 kg N/ha par semaine.
     //
     // Le mécanisme n'avait donc pas besoin d'un taux inventé : **le moteur
-    // porte déjà le flux annuel de la strate, c'est son PRÉLÈVEMENT D'AZOTE**
+    // porte déjà le flux annuel de la strate, c'est son prélèvement d'azote**
     // (`herbe.ts`, calibré à ~30 kg N/ha/an). L'azote rendu est celui qui a été
     // servi, et le carbone qui l'accompagne vaut cet azote fois le C/N de
     // l'espèce. Conservateur par construction, et ancré sur une grandeur qui
@@ -1661,7 +1661,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     //
     // *Simplification assumée* : le retour se fait la semaine même du
     // prélèvement, faute d'un pool d'azote dans la plante. L'azote ne
-    // court-circuite pas pour autant — il passe par la LITIÈRE, dont il ne
+    // court-circuite pas pour autant — il passe par la **litière**, dont il ne
     // ressort qu'au rythme de la décomposition, donc avec le délai qu'il faut.
     const servi = nServedRatio[i] ?? 0;
     if (servi > 0) {
@@ -1677,11 +1677,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           if (!fiche) continue;
           const poids = (herbeFeuillage[base + s] ?? 0) * fiche.exigenceMinerale;
           if (poids <= 0) continue;
-          // Ce que cette espèce-là a pris, et ce qu'elle en RESTITUE : une
+          // Ce que cette espèce-là a pris, et ce qu'elle en **restitue** : une
           // pérenne rend tout, une culture garde dans son grain l'azote qui
           // quittera la parcelle (`azoteDansLeGrain`, herbacees.ts).
           const pris = (azoteCellule * poids) / poidsTotal;
-          // **LA RÉTRANSLOCATION, et c'est le même patron que l'arbre.** Une
+          // **la rétranslocation, et c'est le même patron que l'arbre.** Une
           // plante retire l'azote d'un organe avant de le lâcher : une feuille
           // qui jaunit a déjà rendu la moitié de son azote au reste de la
           // plante, et c'est pour cela qu'une litière est toujours plus pauvre
@@ -1694,18 +1694,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // l'arbre* : la part retenue devrait vivre dans un pool d'azote de la
           // plante, et le moteur n'en a pas. Elle n'est donc pas rendue, ce qui
           // reste une fuite — mais la moitié de celle d'avant ce lot, et une
-          // fuite NOMMÉE, adossée à un fait (la rétranslocation) plutôt qu'à un
+          // fuite **nommée**, adossée à un fait (la rétranslocation) plutôt qu'à un
           // oubli.
           const n = pris * LITTER_RETURN_FRACTION * (1 - (fiche.culture?.azoteDansLeGrain ?? 0));
           if (n <= 0) continue;
           const c = n * fiche.litiere.cSurN;
-          // Le carbone est CRÉDITÉ à la production primaire — c'est la plante
+          // Le carbone est **crédité** à la production primaire — c'est la plante
           // qui l'a fixé — et l'azote déclaré comme un retour de litière, sans
           // quoi le bilan du sol verrait une entrée venue de nulle part.
           herbeNppKgC += c / 1000;
           herbeLitiereNG += n;
           const oldN = litterNG[i] ?? 0;
-          // `litterK` EST LA LIGNE QUI MANQUAIT AU PREMIER JET, et l'essai l'a
+          // `litterK` **est la ligne qui manquait au premier jet**, et l'essai l'a
           // dit sans ambiguïté : la litière s'accumulait à 99 t C/ha après
           // quarante ans, c'est-à-dire que rien ne s'en décomposait jamais. La
           // vitesse de décomposition d'une cellule est un mélange pondéré des
@@ -1721,7 +1721,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         }
       }
     }
-    // ── Le GRAIN s'accumule (#136) ──────────────────────────────────────────
+    // ── Le **grain** s'accumule (#136) ──────────────────────────────────────────
     // Le rendement est l'intégrale de ce que la plante assimile, pas une
     // fonction de son état du jour. Les trois facteurs sont déjà là : ce
     // qu'elle couvre (le feuillage, qui porte la saison et la sécheresse), ce
@@ -1740,7 +1740,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       cultureGrain[base + s_] = (cultureGrain[base + s_] ?? 0) + assimile;
       cultureGrainPotentiel[base + s_] = (cultureGrainPotentiel[base + s_] ?? 0) + potentiel;
     }
-    // Ce que la cellule COUVRE : la somme des feuillages. Tout le reste du
+    // Ce que la cellule **couvre** : la somme des feuillages. Tout le reste du
     // moteur lit cette ligne et ignore les espèces.
     let couverture = 0;
     for (let s = 0; s < N_HERBACEES; s++) couverture += herbeFeuillage[base + s] ?? 0;
@@ -1774,7 +1774,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       for (let h = 0; h < nH; h++) {
         gotW += wPerCell * (fractions[h] ?? 0) * (waterServedRatio[i * nH + h] ?? 0);
       }
-      // Le MÊME `dispo` qu'à la passe de demande, et c'est tout le correctif
+      // Le **même** `dispo` qu'à la passe de demande, et c'est tout le correctif
       // de #115 : servir sur une demande plus petite que celle qui a vidé la
       // cellule fait disparaître la différence (mycorhizes.ts, `tick.ts`
       // passe 3).
@@ -1784,9 +1784,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;
-    // Satisfaction rapportée au besoin d'un arbre INTACT : c'est ce qui fait
+    // Satisfaction rapportée au besoin d'un arbre **intact** : c'est ce qui fait
     // qu'un sujet embolisé reste en déficit même le sol plein — et qu'il meurt
-    // souvent à la sécheresse SUIVANTE, pas à celle qui l'a abîmé.
+    // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé.
     const besoinIntact = wd / Math.max(0.15, 1 - tree.dommageHydraulique);
     waterSatisfaction[t] = besoinIntact > 0 ? Math.min(1, gotW / besoinIntact) : 1;
     nSatisfaction[t] = nd > 0 ? Math.min(1, gotN / nd) : 1;
@@ -1818,7 +1818,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // le terme qui fait qu'un sol lessive vers l'acide quand plus rien ne le
     // réalimente — le versant « lessivage » de l'issue #71 (bases.ts).
     //
-    // Elles ne quittent PLUS le monde en sortant de la surface : elles
+    // Elles ne quittent **plus** le monde en sortant de la surface : elles
     // descendent (#170). Une base lessivée de l'horizon labouré est dans
     // l'horizon d'en dessous, pas dans la rivière — et c'est en partie de là
     // que les racines profondes la reprennent.
@@ -1833,7 +1833,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (cecProfondEq > 0) {
       basesProfondEq[i] = (basesProfondEq[i] ?? 0) + perduBases;
       basesApportProfondSumEq += perduBases;
-      // Et c'est en SORTANT du sous-sol qu'une base quitte la parcelle. C'est
+      // Et c'est en **sortant** du sous-sol qu'une base quitte la parcelle. C'est
       // ce flux-là, et non celui de la surface, que la littérature mesure sous
       // forêt tempérée : ce qui passe sous la zone racinaire.
       let eauProfondeMm = 0;
@@ -1853,7 +1853,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
 
-  // ── 4 bis. Le pH n'est pas un état : il se RELIT (bases.ts) ───────────────
+  // ── 4 bis. Le pH n'est pas un état : il se **relit** (bases.ts) ───────────────
   // Après tous les mouvements de bases de la semaine, chaque cellule relit son
   // pH sur le taux de saturation de son complexe. C'est ici, et nulle part
   // ailleurs, que `soil.ph` est écrit — le chaulage lui-même passe par les
@@ -1876,7 +1876,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       nitrogenSatisfaction: nSatisfaction[t] ?? 1,
       phosphoreSatisfaction: pSatisfaction[t] ?? 1,
       intensiteAllelopathique: intensiteAllelopathiqueEn(tree.x, tree.y),
-      // Le tassement est LOCAL : deux arbres de la même parcelle n'ont pas le
+      // Le tassement est **local** : deux arbres de la même parcelle n'ont pas le
       // même sol sous les pieds selon que le tracteur est passé sous eux ou
       // non (tassement.ts).
       tassement: tassement[cellIndexAt(dims, tree.x, tree.y)] ?? 0,
@@ -1884,7 +1884,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       phMean: phMean[t] ?? 7,
       solPenetrableCm,
       tMean: weather.tMean,
-      // Le feuillage ACTIF, pas l'ombrageant : des feuilles mortes de
+      // Le feuillage **actif**, pas l'ombrageant : des feuilles mortes de
       // marcescence font de l'ombre mais ne travaillent pas (phenologie.ts).
       partFoliaire: partFoliaireActiveDans(getEspece(tree.especeId), pheno),
       facteurCo2,
@@ -1913,7 +1913,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const acquired = acquiredNG[t] ?? 0;
     // Élagage naturel (docs/realisme.md B10) : sous l'ombre, les branches
     // basses cessent de payer leur respiration et meurent. La base du houppier
-    // MONTE, et ne redescend jamais — une branche morte ne repousse pas. C'est
+    // **monte**, et ne redescend jamais — une branche morte ne repousse pas. C'est
     // ce cliquet qui donne le fût nu d'une futaie serrée, et lui seul : à
     // lumière pleine, la cible reste au ras du sol et rien ne bouge.
     const lumiere = getEspece(tree.especeId).lumiere;
@@ -1944,12 +1944,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) moyenneEauSurface += waterMm[i * nH] ?? 0;
   moyenneEauSurface /= nCells;
   const boisMortTHa = state.carbon.deadWoodKgC / 1000 / (nCells / 10_000);
-  // **CE QUI LOGE LES AUXILIAIRES : LES GÎTES, OU LES LOGÉS ?** (#187 lot 3)
+  // **ce qui loge les auxiliaires : les gîtes, ou les logés ?** (#187 lot 3)
   //
   // Tant que la faune n'existe pas en individus, `carteBiotique` estime la part
   // « gîte » de l'habitat par des litres de cavité et des tonnes de bois mort.
-  // Quand elle existe, on lui passe qui est EFFECTIVEMENT installé, et le proxy
-  // s'efface. On lit la faune du DÉBUT de semaine — celle que le tick mettra à
+  // Quand elle existe, on lui passe qui est **effectivement** installé, et le proxy
+  // s'efface. On lit la faune du **début** de semaine — celle que le tick mettra à
   // jour plus bas — parce que ce sont les animaux présents qui mangent cette
   // semaine-ci, pas ceux qui arriveront à la fin.
   //
@@ -1978,13 +1978,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const semainesDeFroid =
     (week === DEBUT_COMPTAGE_FROID ? 0 : state.semainesDeFroid) +
     (semaineDeFroid(weather.tMean) ? 1 : 0);
-  // ── 5 bis A. La RESSOURCE FLORALE, et c'est une mémoire (#70, G4/J6) ──────
+  // ── 5 bis A. La **ressource florale**, et c'est une mémoire (#70, G4/J6) ──────
   // Ce qui est ouvert cette semaine, dans le rayon où un insecte travaille :
   // les houppiers en fleur épandus sur leur disque — le même patron que la
   // vulnérabilité des hôtes dans `ravageurs.ts` — et l'emprise des herbacées
   // qui fleurissent, là où elles la tiennent.
   //
-  // Le NECTAR est ce qui compte, pas la floraison : un noisetier et un noyer
+  // Le **nectar** est ce qui compte, pas la floraison : un noisetier et un noyer
   // couvrent leur disque de fleurs et n'y mettent rien pour personne.
   const floraleInstant = new Float64Array(nCells);
   for (const tree of nextTrees) {
@@ -2012,13 +2012,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         (floraleInstant[i] ?? 0) + offre * (herbeEmprise[i * N_HERBACEES + s_] ?? 0);
     }
   }
-  // **UN POLLINISATEUR NE BUTINE PAS AU MÈTRE CARRÉ**, et le moteur le savait
+  // **un pollinisateur ne butine pas au mètre carré**, et le moteur le savait
   // déjà : `carteBiotique` agrège la diversité par blocs de 10 m sur une
   // fenêtre de 3×3, « parce qu'évaluer la richesse cellule par cellule donnait
   // toujours une seule essence ». Épandre le nectar sur le seul disque du
   // houppier reproduisait exactement ce défaut — mesuré, une haie à seize
   // mètres du centre d'un verger ne comptait pour rien, alors qu'un insecte la
-  // visite sans y penser. On reprend donc la MÊME fenêtre, qui est déjà celle
+  // visite sans y penser. On reprend donc la **même** fenêtre, qui est déjà celle
   // de l'habitat avec lequel cette ressource va être comparée.
   const nbxF = Math.max(1, Math.ceil(dims.widthM / BLOC_AUXILIAIRES_M));
   const nbyF = Math.max(1, Math.ceil(dims.heightM / BLOC_AUXILIAIRES_M));
@@ -2050,14 +2050,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   // La mémoire, enfin. Une colonie qui a jeûné au printemps n'est pas là en
-  // juin : c'est la CONTINUITÉ du calendrier qui fait la population, pas ce
+  // juin : c'est la **continuité** du calendrier qui fait la population, pas ce
   // qui est ouvert le jour de la visite. Sans elle, chaque arbre se
   // pollinisait lui-même à proportion de ses propres fleurs.
   const ressourceFlorale = state.soil.ressourceFlorale.slice();
   for (let i = 0; i < nCells; i++) {
     const bx = Math.min(nbxF - 1, Math.floor((i % dims.widthM) / BLOC_AUXILIAIRES_M));
     const by = Math.min(nbyF - 1, Math.floor(Math.floor(i / dims.widthM) / BLOC_AUXILIAIRES_M));
-    // La mémoire suit une ADÉQUATION, pas une quantité : « y a-t-il eu de quoi
+    // La mémoire suit une **adéquation**, pas une quantité : « y a-t-il eu de quoi
     // manger à portée », et non « combien de nectar ». C'est ce qui la rend
     // comparable à l'habitat, et c'est la mesure qui l'a imposé (herbacees.ts,
     // `OFFRE_FLORALE_SUFFISANTE`).
@@ -2087,7 +2087,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (
         ddPrev < bloomEnd &&
         ddYearBase5 >= floraison.debutDJ &&
-        // Le gel se juge SOUS LE COUVERT de cet arbre-là, pas au-dessus de la
+        // Le gel se juge **sous le couvert** de cet arbre-là, pas au-dessus de la
         // parcelle : la nuit, un couvert renvoie vers le sol le rayonnement que
         // le ciel clair emporterait, et la floraison qu'il abrite y échappe
         // (microclimat.ts). C'est l'argument agroforestier pour mettre les
@@ -2127,10 +2127,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // verger nu dans une plaine nue perd une bonne part de sa nouaison ;
         // il n'en perd jamais la totalité (vent, abeilles domestiques).
         const cellArbre = cellIndexAt(dims, tree.x, tree.y);
-        // **IL FAUT UN GÎTE ET UNE TABLE, et le plus rare décide** (#70). Le
+        // **il faut un gîte et une table, et le plus rare décide** (#70). Le
         // service ne lisait que l'habitat — essences, strates, herbe, bois
-        // mort —, c'est-à-dire où l'insecte VIT. Il lit maintenant aussi ce
-        // qu'il a eu à MANGER, par la mémoire florale de la cellule : un
+        // mort —, c'est-à-dire où l'insecte **vit**. Il lit maintenant aussi ce
+        // qu'il a eu à **manger**, par la mémoire florale de la cellule : un
         // verger nu qui fleurit trois semaines et ne nourrit rien le reste de
         // l'année n'a pas la population qu'il lui faudrait le jour venu.
         //
@@ -2223,7 +2223,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (consommee > 0) {
         const avant = herbeCouverture[i] ?? 0;
         herbeCouverture[i] = Math.max(0, avant - consommee);
-        // Ce qui est brouté est pris sur le FEUILLAGE, et sur lui seul : la
+        // Ce qui est brouté est pris sur le **feuillage**, et sur lui seul : la
         // dent du chevreuil ne va pas chercher les rhizomes, et l'espèce qui
         // n'était pas sortie n'a rien perdu.
         if (avant > 0) {
@@ -2234,7 +2234,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     nextTrees = nextTrees.map((tree) => {
       const degat = broutage.parArbre.get(tree.id);
       if (!degat) return tree;
-      // La DATE, pas le stock : `pousseTendreM` redescend aussi bien par
+      // La **date**, pas le stock : `pousseTendreM` redescend aussi bien par
       // lignification que par dormance, et une valeur basse ne dit pas qui
       // l'a fait baisser (trees.ts). Le tick, lui, le sait — il le savait
       // déjà, il le jetait.
@@ -2260,7 +2260,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const azoteRenduG = dansLaParcelle ? tree.uptakeYearG * partMangee : 0;
       if (dansLaParcelle) {
         // Les déjections tombent là où le gibier broute, pas « sur la parcelle » :
-        // un herbivore CONCENTRE la fertilité, il ne l'étale pas.
+        // un herbivore **concentre** la fertilité, il ne l'étale pas.
         if (mangeKgC > 0)
           litterCG[cell] = (litterCG[cell] ?? 0) + mangeKgC * (1 - DIGESTIBILITE) * 1000;
         if (azoteRenduG > 0) {
@@ -2292,7 +2292,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Aucun tirage dans le flux principal : la cellule retournée dérive d'une
   // graine locale, comme le chablis et la chute des chandelles.
   let cellulesRetournees = 0;
-  // Les cellules retournées CETTE SEMAINE : c'est sur elles que le second effet
+  // Les cellules retournées **cette semaine** : c'est sur elles que le second effet
   // du sanglier se joue, et il se joue tout de suite, pas au recrutement — un
   // semis arraché en novembre n'attend pas le printemps pour être mort. Rien
   // n'est gardé d'une semaine à l'autre : pas de champ d'état, pas de migration
@@ -2300,13 +2300,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const retourneesCetteSemaine = new Set<number>();
   if (station.sanglierParHa > 0) {
     // Où il y a de la glandée : sous les couronnes des arbres mûrs dont la
-    // graine est LOURDE — celle qui tombe et reste. Le trait suffit à le dire
+    // graine est **lourde** — celle qui tombe et reste. Le trait suffit à le dire
     // (`dissemination` vaut `geai` ou `gravite`), aucune espèce n'est nommée.
     const mastAuSol = new Array<number>(nCells).fill(0);
     for (const tree of nextTrees) {
       if (!tree.alive) continue;
       const espece = getEspece(tree.especeId);
-      // `geai` seul : c'est le marqueur des GROSSES graines nutritives, celles
+      // `geai` seul : c'est le marqueur des **grosses** graines nutritives, celles
       // qu'un geai cache et qu'un sanglier mange (regeneration.ts dit pourquoi
       // `gravite` ne convient pas).
       if (espece.regeneration.dissemination !== "geai") continue;
@@ -2335,7 +2335,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
       cellulesRetournees++;
       retourneesCetteSemaine.add(i);
-      // La litière est ENFOUIE : elle ne disparaît pas, elle passe au pool
+      // La litière est **enfouie** : elle ne disparaît pas, elle passe au pool
       // lent. Un boutis est un enfouissement, pas une combustion.
       const litiereC = (litterCG[i] ?? 0) * LITIERE_ENFOUIE;
       const litiereN = (litterNG[i] ?? 0) * LITIERE_ENFOUIE;
@@ -2343,14 +2343,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       litterNG[i] = (litterNG[i] ?? 0) - litiereN;
       humusCG[i] = (humusCG[i] ?? 0) + litiereC;
       mineralNG[i] = (mineralNG[i] ?? 0) + litiereN;
-      // La croûte est cassée : la structure y GAGNE, ce qu'on n'attend pas
+      // La croûte est cassée : la structure y **gagne**, ce qu'on n'attend pas
       // d'un dégât (sanglier.ts).
       tassement[i] = (tassement[i] ?? 0) * (1 - TASSEMENT_CASSE);
       // Et le tapis est déchiré : c'est ce qui met la terre à nu, donc ce qui
       // la fait partir — et ce qui ouvre le lit des petites graines.
       rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 1 - HERBE_ARRACHEE);
     }
-    // **ET CE QUI AVAIT LEVÉ EST ARRACHÉ** (issue #199). Le boutis descend à
+    // **et ce qui avait levé est arraché** (issue #199). Le boutis descend à
     // dix centimètres : ce qui part avec la motte est le plant dont les racines
     // n'ont pas encore quitté cet horizon (`sanglier.ts`). C'est raisonné
     // cellule par cellule et plant par plant, sans qu'aucune espèce ne soit
@@ -2369,7 +2369,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
   }
   // Ce que le sanglier a retourné depuis un an : la régénération le lit à la
-  // semaine de recrutement, et c'est là que son PREMIER effet se joue — le lit
+  // semaine de recrutement, et c'est là que son **premier** effet se joue — le lit
   // de germination ouvert aux petites graines. Le second, la destruction de ce
   // qui a déjà levé, s'est joué juste au-dessus, à la semaine du boutis.
   const partRetourneeAn = Math.min(1, (cellulesRetournees / nCells) * 52);
@@ -2393,7 +2393,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   // ── 5 quater. Ravageurs et auxiliaires (§7.4) ────────────────────────────
-  // Les ravageurs prospèrent sur les hôtes sensibles ET affaiblis ; les
+  // Les ravageurs prospèrent sur les hôtes sensibles **et** affaiblis ; les
   // auxiliaires les freinent à hauteur de ce que l'habitat local leur offre.
   const chaleur = facteurChaleur(weather.tMean);
   let ravageurs = state.soil.ravageurs.slice();
@@ -2426,7 +2426,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const degats = degatsSurArbre(tree, pression);
     if (degats <= 0) return tree;
     const stress = tree.stress + degats;
-    // Le dégât garde son nom sur l'arbre VIVANT (#153). Sans ce compteur, il
+    // Le dégât garde son nom sur l'arbre **vivant** (#153). Sans ce compteur, il
     // se fondait dans `stress` et n'était nommé qu'à la mort — or l'arbre
     // survit presque toujours, donc il ne l'était jamais.
     const stressRavageurs = (tree.stressRavageurs ?? 0) + degats;
@@ -2499,13 +2499,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const share = amountG / n;
     const shareC = share * espece.litiere.cnRatio;
     const kSpecies = litterDecayRate(espece.litiere.cnRatio);
-    // LA POMPE À BASES (bases.ts, critère C15). Le calcium qui tombe ici,
+    // **La pompe à bases** (bases.ts, critère C15). Le calcium qui tombe ici,
     // l'arbre est allé le chercher — et il l'a cherché là où sont ses racines.
     // On débite donc le sous-sol de la part profonde de son système racinaire,
-    // celle qui fait un vrai TRANSPORT ; ce qu'il a pris en surface, il vient
+    // celle qui fait un vrai **transport** ; ce qu'il a pris en surface, il vient
     // de le rendre au même endroit, et cette boucle-là s'annule.
     //
-    // La profondeur explorée est celle de CET individu, pas de son espèce : un
+    // La profondeur explorée est celle de **cet** individu, pas de son espèce : un
     // semis de chêne pompe en surface comme une callune, et ce n'est qu'en
     // grandissant qu'il descend chercher ailleurs.
     const partProfonde = 1 - (fractionsRacinairesParHorizon(epaisseurs, tree.rootDepthCm)[0] ?? 1);
@@ -2527,14 +2527,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // ne bouge pas d'un millimètre.
       phosphoreG[i] =
         (phosphoreG[i] ?? 0) + share * RATIO_P_SUR_N * (RETOUR_LITIERE_P / LITTER_RETURN_FRACTION);
-      // Le POTASSIUM revient tout de suite : ce n'est qu'un ion, la pluie le
+      // Le **potassium** revient tout de suite : ce n'est qu'un ion, la pluie le
       // rince de la feuille avant même qu'elle ait fini de se décomposer. Le
       // phosphore, lui, est dans les molécules — il attend la décomposition,
       // et revient donc plus haut, au rythme de la minéralisation.
       potassiumG[i] =
         (potassiumG[i] ?? 0) + share * RATIO_K_SUR_N * (RETOUR_LITIERE_K / LITTER_RETURN_FRACTION);
       // On ne prend que ce qui est là : un sous-sol vidé ne s'endette pas. Le
-      // flux publié est ce qui a RÉELLEMENT été retiré, sans quoi l'invariant
+      // flux publié est ce qui a **réellement** été retiré, sans quoi l'invariant
       // de conservation mentirait le jour où le fond touche le fond.
       const pris = Math.min(basesProfondEq[i] ?? 0, preleveParCellule);
       basesProfondEq[i] = (basesProfondEq[i] ?? 0) - pris;
@@ -2554,7 +2554,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const espece = getEspece(tree.especeId);
     if (!espece.lumiere.caduc) return tree;
     // Rien ne tombe hors sénescence. Le garde manquait, et l'asymétrie du
-    // froid n'était qu'un symptôme : au PRINTEMPS, les deux appels ci-dessous
+    // froid n'était qu'un symptôme : au **printemps**, les deux appels ci-dessous
     // ont le même `semainesDepuisSenescence` (zéro), donc leur seule
     // différence était le besoin de froid — et un hêtre à 500 °C·j avec trois
     // semaines de froid « lâchait » ainsi 27,8 % de son azote foliaire en
@@ -2596,7 +2596,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const boisAuSolCG = state.soil.boisAuSolCG.slice();
   const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
   /**
-   * Poser du bois sur une cellule, en gardant trace de son ORIENTATION. La
+   * Poser du bois sur une cellule, en gardant trace de son **orientation**. La
    * masse s'ajoute, la part barrante se moyenne — pondérée par les masses,
    * puisque c'est bien de longueur de barrage qu'il s'agit : deux troncs, l'un
    * en travers l'autre dans le sens de la pente, ne barrent que la moitié de
@@ -2606,7 +2606,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
    * moyenne : deux troncs à 25° de l'aval ne barrent rien du tout, alors que
    * leur transversalité moyenne, elle, ne serait pas nulle.
    *
-   * L'orientation se juge contre l'aval de la cellule QUI REÇOIT, pas contre
+   * L'orientation se juge contre l'aval de la cellule **qui reçoit**, pas contre
    * celui du pied de l'arbre : un tronc de trente mètres traverse plusieurs
    * expositions, et c'est l'eau de chaque cellule qu'il barre ou non.
    */
@@ -2646,7 +2646,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
     if (tree.mortSemaine === undefined) {
       // Il vient de mourir : sa litière tombe et son bois rejoint le pool de
-      // bois mort. Ce transfert n'a lieu qu'UNE fois — ensuite l'arbre reste
+      // bois mort. Ce transfert n'a lieu qu'**une** fois — ensuite l'arbre reste
       // en jeu comme chandelle, sans plus rien à donner.
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM);
@@ -2665,7 +2665,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Elle ne fait pas d'ombre (les morts sont ignorés du calcul de lumière)
     // mais elle occupe la place et sert d'habitat (trees.ts, biodiversite.ts).
     //
-    // Un CHABLIS n'en est pas une : il est déjà par terre. Il ne fait donc pas
+    // Un **chablis** n'en est pas une : il est déjà par terre. Il ne fait donc pas
     // de chandelle et son bois se couche dès la fin du délai de récupération.
     const chablis = tree.renverseSemaine !== undefined;
     if (
@@ -2677,7 +2677,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
     // Elle s'abat. Elle ne s'évapore pas : son bois se couche sur les cellules
     // qu'il recouvre, dans une direction que la pente oriente (boisMort.ts).
-    // La direction se tire sur un flux PROPRE à cette chute (boisMort.ts) : le
+    // La direction se tire sur un flux **propre** à cette chute (boisMort.ts) : le
     // flux principal est unique et séquentiel, un tirage de plus y décalerait
     // tous les suivants et rebattrait les cartes de tous les autres mécanismes.
     // Un chablis est parti dans le sens du coup de vent, et il l'a retenu
@@ -2732,7 +2732,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // n'importe quel tronc, un arbre fait encaisse. Le bois de l'écrasé rejoint
   // le sol là où il gisait, pas le pool des chandelles : il est déjà couché.
   if (chutes.length > 0) {
-    // On retient aussi la DIRECTION du tronc le plus lourd reçu : un arbre
+    // On retient aussi la **direction** du tronc le plus lourd reçu : un arbre
     // qu'un chablis couche part dans le sens de la poussée, pas au hasard.
     const massePosee = new Map<number, { part: number; radians: number }>();
     for (const chute of chutes) {
@@ -2777,7 +2777,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) humusCG[i] = (humusCG[i] ?? 0) + humifiedPerCellG;
   emittedG += deadDecayKgC * (1 - DEADWOOD_HUMIFICATION) * 1000;
   // Le bois couché se décompose plus vite que le bois debout, et il fait son
-  // humus SUR PLACE : c'est là toute la différence avec le pool de parcelle.
+  // humus **sur place** : c'est là toute la différence avec le pool de parcelle.
   for (let i = 0; i < nCells; i++) {
     const stock = boisAuSolCG[i] ?? 0;
     if (stock <= 0) continue;
@@ -2816,7 +2816,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     rng = depart.rng;
     if (depart.origine !== undefined) {
       // Le feu lit le vent de la semaine, rabattu par l'abri du site : c'est
-      // le vent que la PARCELLE reçoit qui pousse le front, pas celui du
+      // le vent que la **parcelle** reçoit qui pousse le front, pas celui du
       // bulletin régional.
       const vent = {
         versRad: weather.ventVersRad,
@@ -2848,7 +2848,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         }
         if (!tree.alive) {
           // Une chandelle qui rebrûle. Son bois sec part en fumée, mais il est
-          // DÉJÀ compté quelque part : l'émettre sans l'en retirer fabriquerait
+          // **déjà** compté quelque part : l'émettre sans l'en retirer fabriquerait
           // du carbone. Et un arbre déjà mort ne rejette pas de souche, ni ne
           // compte une deuxième fois parmi les arbres tués par le feu.
           const aerienKgC = treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM);
@@ -2872,7 +2872,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         }
         tues++;
         const rejette = espece.feu.rejetteApresFeu && tree.heightM > 0.6;
-        // Relevé ICI, une fois, juste après `tues++` : les deux comptes ne
+        // Relevé **ici**, une fois, juste après `tues++` : les deux comptes ne
         // peuvent donc pas diverger, et la hauteur est encore celle d'avant le
         // feu — dans un instant, un rejet l'aura écrasée.
         victimes.push({ id: tree.id, hauteurAvantM: tree.heightM, rejet: rejette });
@@ -2882,16 +2882,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // gagnants du feu.
           rejets++;
           // La partie aérienne a brûlé, la souche repart : ce qui est parti en
-          // fumée, c'est l'aérien MOINS le rejet qui reste debout. L'imputer
+          // fumée, c'est l'aérien **moins** le rejet qui reste debout. L'imputer
           // entier émettait un carbone que l'arbre porte toujours.
           carboneFeuKgC +=
             treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
             treeAboveCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M);
           // Elle ne porte plus pour autant les racines d'un arbre de dix
           // mètres : l'excédent meurt et se décompose sur place (carbon.ts).
-          // Sans ce versement, le feu ferait DISPARAÎTRE ce carbone.
+          // Sans ce versement, le feu ferait **disparaître** ce carbone.
           //
-          // Réservé aux VIVANTS : cette branche est aussi empruntée par les
+          // Réservé aux **vivants** : cette branche est aussi empruntée par les
           // chandelles, dont le bois est déjà au pool depuis leur mort. Leur
           // verser des racines en plus créerait du carbone. Qu'un tronc mort
           // « rejette » est une autre affaire, et pas la mienne ici.
@@ -2940,7 +2940,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterNG[i] = 0;
       }
       const areaHa = (station.coteM * station.coteM) / 10_000;
-      // Le front, reconstitué APRÈS coup : aucun tirage, aucun changement au
+      // Le front, reconstitué **après** coup : aucun tirage, aucun changement au
       // parcours ni au résultat (feu.ts). Rangées par rang d'arrivée, les
       // cellules se découpent en tranches — la ligne de flammes du rendu.
       const rangs = rangsDuFront(brulees, depart.origine, station.coteM);
@@ -2961,7 +2961,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // ── 6 ter. La tempête (§7.4, issue #55) ───────────────────────────────────
   // Placée juste après le feu, et pour la même raison : ce sont deux événements
-  // qui MARQUENT des arbres cette semaine — le feu les brûle, la tempête les
+  // qui **marquent** des arbres cette semaine — le feu les brûle, la tempête les
   // couche — et laissent la passe de mortalité de la semaine suivante en tirer
   // les conséquences. Un chablis est donc récupérable un an, exactement comme
   // un bois brûlé, et c'est enfin `CHABLIS_RECUPERABLE_SEMAINES` qui porte son
@@ -2972,7 +2972,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let tempete: TickResult["tempete"];
   if (rafaleMs >= RAFALE_MINIMALE_MS && station.ventExposition > 0) {
     const verses: TreeState[] = [];
-    /** Ceux dont le FÛT a cassé : ils ne sont pas par terre (F17). */
+    /** Ceux dont le **fût** a cassé : ils ne sont pas par terre (F17). */
     const casses: TreeState[] = [];
     /** Ceux qui tiennent mais y laissent des branches (F17). */
     let ebranches = 0;
@@ -2983,27 +2983,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const exposition = {
         rafaleMs,
         ventExposition: station.ventExposition,
-        // L'abri qui compte pour une CIME, celui que les voisins PLUS HAUTS
+        // L'abri qui compte pour une **cime**, celui que les voisins **plus hauts**
         // donnent — et non l'abri de haie de `windShelterAt`, qui sature à 1
         // dans n'importe quel peuplement (tempete.ts).
         //
-        // Sur le peuplement du DÉBUT de semaine, volontairement : un voisin
+        // Sur le peuplement du **début** de semaine, volontairement : un voisin
         // couché par la même rafale était debout quand elle est arrivée. Ça
         // rend aussi la passe indépendante de l'ordre des arbres, ce qu'une
         // tempête doit être — elle frappe tout d'un coup, pas de proche en
         // proche comme un feu.
         abriVent: abriAuVent(trees, tree),
-        // L'engorgement de SURFACE : c'est là que sont les racines qui tiennent
+        // L'engorgement de **surface** : c'est là que sont les racines qui tiennent
         // l'arbre debout, et c'est un sol saturé qui les lâche.
         engorgement: waterlogging[cellule * nH] ?? 0,
         toleranceEngorgement: espece.eau.toleranceEngorgement,
         partFoliaire: partFoliaireOmbrageanteDans(espece, pheno),
-        // La profondeur que CET arbre a explorée, pas celle que sa fiche vise :
+        // La profondeur que **cet** arbre a explorée, pas celle que sa fiche vise :
         // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
         profondeurEffectiveCm: tree.rootDepthCm,
       };
       if (!verse(tree, exposition, state.week, espece.bois.densite)) {
-        // IL TIENT — mais il peut y laisser des branches (F17, troisième mode).
+        // **Il tient** — mais il peut y laisser des branches (F17, troisième mode).
         // C'est le dégât le plus fréquent d'une tempête, celui qu'on voit après
         // chaque coup de vent sans que rien ne soit par terre.
         const critique = Math.min(
@@ -3015,10 +3015,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // Ce qui est arraché tombe : feuilles et brindilles rejoignent la
         // litière tout de suite, au lieu d'attendre l'automne.
         //
-        // ET C'EST BIEN « AU LIEU », PAS « EN PLUS » — la première version
+        // **Et c'est bien** « **au lieu** », **pas** « **en plus** » — la première version
         // déposait cette litière sans rien retirer à l'arbre, si bien qu'il
         // laissait tomber à l'automne un feuillage qu'il avait déjà perdu :
-        // le moteur CRÉAIT de l'azote à chaque coup de vent, et la parcelle
+        // le moteur **créait** de l'azote à chaque coup de vent, et la parcelle
         // s'en trouvait fertilisée. Mesuré, le pin en sortait plus grand que
         // les tables de production. Un coup de vent ne fabrique pas des
         // feuilles ; il les fait tomber plus tôt. On retire donc à la réserve
@@ -3032,7 +3032,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           uptakeYearG: tree.uptakeYearG - litiereArrachee,
         };
       }
-      // DEUX RUINES, ET C'EST UNE COMPARAISON QUI TRANCHE (F17). L'arbre cède
+      // **Deux ruines**, **et c'est une comparaison qui tranche** (F17). L'arbre cède
       // par son point faible : si son fût casse avant que sa motte ne lâche,
       // c'est un volis et non un chablis (tempete.ts).
       if (modeDeRuine(tree, espece.bois.densite, exposition) === "volis") {
@@ -3054,7 +3054,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             heightM: hauteurApres,
             alive: false,
             causeMort: "volis" as const,
-            // PAS de `renverseSemaine` : il n'est pas par terre. Il fera une
+            // **Pas** de `renverseSemaine` : il n'est pas par terre. Il fera une
             // chandelle raccourcie, pas un chablis récupérable.
             mortSemaine: undefined,
           };
@@ -3098,9 +3098,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (let i = 0; i < nCells; i++) {
       const t = tassement[i] ?? 0;
       if (t <= 0) continue;
-      // **LES RACINES DE LA STRATE BASSE COMPTENT AUSSI** (#140). La densité
-      // racinaire était lue sur `1 - groundLight`, c'est-à-dire sur le COUVERT
-      // DES ARBRES : un champ de blé, qui a pourtant un chevelu dense, n'en
+      // **les racines de la strate basse comptent aussi** (#140). La densité
+      // racinaire était lue sur `1 - groundLight`, c'est-à-dire sur le **couvert**
+      // **des arbres** : un champ de blé, qui a pourtant un chevelu dense, n'en
       // recevait aucun crédit faute de canopée. Le proxy confondait « ombragé »
       // et « enraciné », et rien ne l'avait révélé parce que rien ne labourait
       // tous les ans sur une parcelle sans arbres.
@@ -3123,22 +3123,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 6 ter bis. La mémoire d'abri, une fois l'an (F18) ────────────────────
   // Chaque arbre retient l'abri sous lequel il a fabriqué son fût et ses
   // racines ; ce qui le fragilise n'est pas d'être exposé mais de l'être sans y
-  // être préparé (tempete.ts). La mise à jour est ANNUELLE et non hebdomadaire,
+  // être préparé (tempete.ts). La mise à jour est **annuelle** et non hebdomadaire,
   // et c'est un choix de coût assumé : `abriAuVent` parcourt le peuplement pour
   // chaque arbre, donc un n², et la constante de temps se compte en années.
   //
-  // Placée APRÈS la tempête, délibérément : un arbre découvert par la rafale de
+  // Placée **après** la tempête, délibérément : un arbre découvert par la rafale de
   // cette semaine-là doit être naïf l'an prochain, pas déjà habitué.
   if (week === RECRUITMENT_WEEK) {
     const debout = nextTrees.filter((t) => t.alive);
     nextTrees = nextTrees.map((tree) => {
       if (!tree.alive) return tree;
       const abri = abriAuVent(debout, tree);
-      // LA CARIE AVANCE, une fois l'an et pour toujours (#182). Une plaie
+      // **La carie avance**, une fois l'an et pour toujours (#182). Une plaie
       // l'installe — branche arrachée, frottis, brûlure, recépage, élagage —
       // et rien ne la referme. C'est la seule mémoire du moteur qui ne
       // s'efface pas, et c'est ce qui fait un vieil arbre creux.
-      // Et une plaie, ici, est une plaie qui atteint le CŒUR : une brindille
+      // Et une plaie, ici, est une plaie qui atteint le **cœur** : une brindille
       // cassée se referme, une charpentière arrachée jamais (`PLAIE_OUVRANTE`).
       // L'élagage et le recépage y vont d'office — ce sont des coupes franches
       // faites exprès, et c'est bien pour ça qu'un têtard se creuse.
@@ -3149,7 +3149,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         tree.brulEeSemaine !== undefined ||
         tree.recepages > 0 ||
         tree.hauteurElagueeM > 0;
-      // Mais seule une plaie FRAÎCHE repousse le mur de compartimentation sur
+      // Mais seule une plaie **fraîche** repousse le mur de compartimentation sur
       // le rayon du jour : une cicatrice d'élagage de jeunesse n'ouvre pas
       // l'aubier que l'arbre a fabriqué depuis (`prochaineCarie`).
       const plaieFraiche =
@@ -3223,7 +3223,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       lumiereAuSol: groundLight,
       banqueGraines: state.banqueGraines,
       aBrule: aBruleDepuisLaLevee,
-      // La GLANDÉE de l'année, espèce par espèce (glandee.ts) : ce qui est
+      // La **glandée** de l'année, espèce par espèce (glandee.ts) : ce qui est
       // tombé, moins ce que les mangeurs de graines en ont pris. C'est ici que
       // se joue la satiété — une année pleine passe, une année creuse est
       // mangée — et le sanglier n'en est qu'un terme parmi d'autres.
@@ -3235,7 +3235,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
     // Le carbone des recrues vient d'ailleurs : de la graine, produite par un
     // parent hors parcelle ou par les réserves d'un parent qu'on ne débite
-    // pas. C'est donc une ENTRÉE, au même titre qu'un plant acheté — sans quoi
+    // pas. C'est donc une **entrée**, au même titre qu'un plant acheté — sans quoi
     // le bilan carbone fabrique de la matière à chaque printemps.
     for (const recrue of recruitment.newTrees) {
       importedPlantsKgC += treeTotalCarbonKg(
@@ -3243,7 +3243,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         recrue.diametreCm,
         recrue.heightM,
       );
-      // Ce sont les semis RÉELLEMENT installés : `yearlyRecruitment` a déjà
+      // Ce sont les semis **réellement** installés : `yearlyRecruitment` a déjà
       // écarté ceux que le plafond de densité, le pH ou l'ombre refusaient.
       naissances.push({
         id: recrue.id,
@@ -3283,15 +3283,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     aBruleDepuisLaLevee = false;
   }
 
-  // ── LA FAUNE EN INDIVIDUS (#187) ───────────────────────────────────────────
+  // ── **la faune en individus** (#187) ───────────────────────────────────────────
   //
   // Dernier pas du tick, et il vient après tout le reste pour une raison : il
-  // lit `nextTrees`, c'est-à-dire la parcelle telle qu'elle est À LA FIN de la
+  // lit `nextTrees`, c'est-à-dire la parcelle telle qu'elle est **à la fin** de la
   // semaine. Un arbre abattu par le joueur ou une chandelle que le vent a
   // couchée n'y est plus, et l'individu qu'il portait s'en va sans qu'aucun
   // code n'ait eu à le prévoir — c'est l'événement, et il tombe du mécanisme.
   //
-  // ÉTEINT VEUT DIRE ÉTEINT : pas un parcours, pas une allocation, pas un
+  // **Éteint veut dire éteint** : pas un parcours, pas une allocation, pas un
   // tirage. C'est le contrôle de neutralité du lot.
   let faune = state.faune;
   let nextFauneId = state.nextFauneId;
@@ -3370,7 +3370,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         nappeMm: nappeStockMm,
         epaisseurPerdueCm,
         // Le réseau régional suit la parcelle à proportion de ce que le bassin
-        // partage avec elle : c'est ainsi qu'un incendie de MASSIF se
+        // partage avec elle : c'est ainsi qu'un incendie de **massif** se
         // distingue d'un incendie de parcelle (nappe.ts).
         nappeRegionaleMm: nouveauNiveauRegionalMm(
           state.soil.nappeRegionaleMm,

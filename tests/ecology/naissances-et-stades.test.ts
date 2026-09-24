@@ -1,5 +1,5 @@
 /**
- * Le journal de la semaine sait enfin dire ce qui ARRIVE et ce qui GRANDIT
+ * Le journal de la semaine sait enfin dire ce qui **arrive** et ce qui **grandit**
  * (issue #46). Il disait déjà très bien ce qui meurt, ce qui tombe et ce qu'on
  * a fait ; un calque des changements qui ne pointe que les mauvaises nouvelles
  * donne une lecture fausse de la parcelle — une friche qui se boise, le sujet
@@ -45,7 +45,7 @@ function friche(seed: number, coteM = 30) {
 
 describe("l'échelle des stades", () => {
   it("monte dans l'ordre du tableau, et chaque borne fait basculer", () => {
-    // Les bornes sont en DIAMÈTRE et se lisent maintenant EN DIAMÈTRE : plus
+    // Les bornes sont en **diamètre** et se lisent maintenant **en diamètre** : plus
     // de conversion par un proxy. L'essai en devient plus court, ce qui est le
     // signe que la grandeur testée est enfin celle que le moteur porte (#62).
     expect(STADES).toEqual(["semis", "gaulis", "perchis", "futaie"]);
@@ -127,10 +127,10 @@ describe("les naissances remontent avec leur position", () => {
    * les trois endroits qui créent un arbre — le recrutement naturel
    * (regeneration.ts), le geste `planter` et le semis en vrac (state.ts) —
    * posent tous `ageWeeks: 0`, et l'incrémentent d'un par tick. Un plant acheté
-   * et un semis levé le même jour portent donc le MÊME âge pour toujours :
+   * et un semis levé le même jour portent donc le **même** âge pour toujours :
    * aucune règle lisant `ageWeeks` ne peut les séparer.
    *
-   * Or le §6.8 demande un point vert sur les RECRUES. Pointer d'un point vert
+   * Or le §6.8 demande un point vert sur les **recrues**. Pointer d'un point vert
    * ce que le joueur vient de planter lui-même n'est pas la même image, et
    * c'est le genre d'erreur qu'on ne voit pas avant de planter deux cents
    * tiges d'un coup. `naissances` ne contient que ce que le recrutement a
@@ -197,10 +197,10 @@ describe("les franchissements de stade", () => {
   });
 
   it("étêter une trogne ne l'amincit pas : son stade ne descend pas", () => {
-    // CE QUE CET ESSAI AFFIRMAIT ÉTAIT UN ARTEFACT (#62). Il attendait qu'un
+    // **Ce que cet essai affirmait était un artefact** (#62). Il attendait qu'un
     // étêtage fasse descendre l'échelle de « futaie » à « gaulis », parce que
-    // le stade se lisait alors sur la HAUTEUR. Or le stade est une classe de
-    // DIAMÈTRE, et rabattre la cime d'un arbre ne rabote pas son tronc à 1,30 m.
+    // le stade se lisait alors sur la **hauteur**. Or le stade est une classe de
+    // **diamètre**, et rabattre la cime d'un arbre ne rabote pas son tronc à 1,30 m.
     //
     // Un fût de quarante centimètres coupé à deux mètres reste un gros bois :
     // aucun forestier ne l'appellerait un gaulis. Le moteur le dit maintenant,

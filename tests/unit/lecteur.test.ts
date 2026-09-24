@@ -71,7 +71,7 @@ describe("un arbre déjà tombé reste tombé", () => {
    * choses qui se défont.
    */
   it("garde l'état final quand l'acte de chute est passé", () => {
-    // La chute passe en DERNIER dans l'ordre du plan : on met donc un acte
+    // La chute passe en **dernier** dans l'ordre du plan : on met donc un acte
     // après elle en trichant sur l'ordre — impossible — donc on vérifie
     // autrement : au-delà de la fin du plan, l'arbre est toujours couché.
     const plan = planDEllipse([{ chutes: [chute(7)] }], 1000);
@@ -97,7 +97,7 @@ describe("un arbre déjà tombé reste tombé", () => {
   });
 
   /**
-   * Les autres actes ne passent PAS par la pose : une mort de sécheresse
+   * Les autres actes ne passent **pas** par la pose : une mort de sécheresse
    * jaunit puis se défeuille, ce qui est un changement de cuisson que la
    * classe porte déjà. Confondre les deux canaux ferait recuire l'atlas
    * pendant une animation, ce que le §5.11 interdit.
@@ -226,7 +226,7 @@ describe("indexerLesVoiles / voilesEnCours", () => {
 
   it("cumule deux gestes de zone quand leurs créneaux se recouvrent", () => {
     // Deux actes ne se recouvrent pas dans le plan actuel, mais le lecteur ne
-    // doit pas le SUPPOSER : il additionne ce qu'il trouve.
+    // doit pas le **supposer** : il additionne ce qu'il trouve.
     const plan = planDEllipse(
       [
         {
@@ -244,7 +244,7 @@ describe("indexerLesVoiles / voilesEnCours", () => {
     for (let t = 0; t < plan.dureeMs; t += 10) {
       for (const v of voilesEnCours(voiles, t)) vus.add(`${v.cellule}`);
     }
-    // Toutes les cellules des DEUX gestes ont été montrées au fil du plan.
+    // Toutes les cellules des **deux** gestes ont été montrées au fil du plan.
     expect(vus.size).toBe(cellules.length + 2);
   });
 });

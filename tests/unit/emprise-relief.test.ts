@@ -1,5 +1,5 @@
 /**
- * L'EMPRISE VISIBLE FACE AU RELIEF (#151).
+ * **L'emprise visible FACE au relief** (#151).
  *
  * Retour de partie : sur un terrain en pente, en zoomant, des carrés de rendu
  * disparaissent. Le découpage par emprise visible est ce qui décide quels
@@ -7,13 +7,13 @@
  * à l'écran.
  *
  * **La propriété est simple à énoncer et suffit à tout** : si le centre d'une
- * cellule, à SON altitude, se projette dans le cadre, alors cette cellule doit
+ * cellule, à **son** altitude, se projette dans le cadre, alors cette cellule doit
  * être dans l'emprise. Ces essais la vérifient par balayage exhaustif de la
  * parcelle plutôt que sur quelques cas choisis — un trou de rendu est par
  * nature un cas qu'on n'avait pas choisi.
  *
- * **Les altitudes sont des ÉCARTS autour de zéro**, mesuré sur les stations
- * livrées : de −2 à +2 m. Le relief pousse donc dans les DEUX sens, alors que
+ * **Les altitudes sont des écarts autour de zéro**, mesuré sur les stations
+ * livrées : de −2 à +2 m. Le relief pousse donc dans les **deux** sens, alors que
  * la hauteur d'un arbre ne pousse que vers le haut. C'est ce qui fait qu'une
  * marge appliquée d'un seul côté ne peut pas suffire.
  */
@@ -79,8 +79,8 @@ describe("aucune cellule visible n'est exclue de l'emprise", () => {
   }
 
   /**
-   * Le cas qui casse, et pourquoi il casse : un CREUX. Une cellule enfoncée se
-   * projette plus BAS à l'écran, donc une cellule qui serait hors cadre par le
+   * Le cas qui casse, et pourquoi il casse : un **creux**. Une cellule enfoncée se
+   * projette plus **bas** à l'écran, donc une cellule qui serait hors cadre par le
    * haut y rentre — et c'est du côté `x0`/`y0` de l'emprise, celui qui n'avait
    * qu'une cellule de marge.
    */
@@ -97,7 +97,7 @@ describe("aucune cellule visible n'est exclue de l'emprise", () => {
   });
 
   /**
-   * **La moitié du défaut était chez l'APPELANT**, et corriger la marge ne
+   * **La moitié du défaut était chez l'appelant**, et corriger la marge ne
    * servait à rien tant qu'on lui passait zéro : les quatre appels du terrain
    * demandaient l'emprise sans annoncer le moindre relief. Cet essai fixe
    * l'obligation — avec zéro le trou revient, avec l'amplitude il disparaît —

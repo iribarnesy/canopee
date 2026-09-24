@@ -181,7 +181,7 @@ describe("le décor des bordures", () => {
     expect(d.nord.boise).toBe(p.partBoisee);
     expect(d.nord.cultive).toBe(p.partCultivee);
     expect(d.nord.urbain).toBe(p.partUrbaine);
-    // Les ESSENCES, et pas seulement les parts : sans elles un massif de pins
+    // Les **essences**, et pas seulement les parts : sans elles un massif de pins
     // de lande se dessine comme une hêtraie.
     expect(d.nord.especes?.map((e) => e.especeId)).toEqual(p.semenciers.map((s) => s.especeId));
   });

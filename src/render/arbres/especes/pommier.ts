@@ -1,7 +1,7 @@
 /**
  * Pommier — *Malus domestica*. Famille : **fruitier greffé**.
  *
- * Houppier **en gobelet** : c'est une forme de TAILLE et non un port naturel,
+ * Houppier **en gobelet** : c'est une forme de **taille** et non un port naturel,
  * et c'est justement ce qui doit se voir — un pommier de verger a été fait
  * ainsi par quelqu'un. Le centre est ouvert, les charpentières divergent, et le
  * sommet reste dégagé pour que la lumière descende sur les fruits.
@@ -20,7 +20,7 @@ export const POMMIER: FicheGraphique = {
     angleDeg: 52,
     divergenceDeg: 120,
     ratioLongueur: 0.66,
-    // Très faible : la taille en gobelet SUPPRIME la flèche. C'est le geste
+    // Très faible : la taille en gobelet **supprime** la flèche. C'est le geste
     // qui définit la forme.
     dominance: 0.14,
     branchesParNoeud: 3,
@@ -34,7 +34,7 @@ export const POMMIER: FicheGraphique = {
     automne: { r: 178, g: 152, b: 74 },
   },
   fruit: {
-    // La pomme est le fruit le plus GROS de l'atlas, et c'est la moitié de ce
+    // La pomme est le fruit le plus **gros** de l'atlas, et c'est la moitié de ce
     // qui la rend reconnaissable : à sept centimètres, elle se voit là où une
     // baie de sureau demande de zoomer.
     forme: "charnu",

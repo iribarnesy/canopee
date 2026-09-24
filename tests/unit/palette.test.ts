@@ -234,8 +234,8 @@ describe("la soif de l'herbe, lue du moteur et non décrétée", () => {
   it("**le seuil est celui du MOTEUR, pas une constante d'ici**", () => {
     // Le garde-fou de la faute, et il est précis. Le premier jet décrétait
     // `SEUIL_GRILLE = 0.42` sur la réserve utile : faux de valeur, faux de
-    // grandeur, faux de nature. La valeur juste — 0,35 de l'eau de SURFACE —
-    // vit dans `facteurEauHerbacee`, et le rendu l'obtient en APPELANT cette
+    // grandeur, faux de nature. La valeur juste — 0,35 de l'eau de **surface** —
+    // vit dans `facteurEauHerbacee`, et le rendu l'obtient en **appelant** cette
     // fonction plutôt qu'en recopiant son seuil.
     //
     // Recopier serait l'autre façon de se tromper, celle du §2.1 : deux copies
@@ -269,34 +269,34 @@ describe("ce que le rendu N'A PAS le droit d'inventer", () => {
     //
     // Le moteur, lui, sait le dire : `herbe.ts` porte `humiditeVecue`,
     // l'humidité de l'horizon de surface lissée sur ~6 semaines, et son seuil
-    // d'eau pour l'herbe vaut 0,35 de l'eau de SURFACE — ni la même valeur, ni
+    // d'eau pour l'herbe vaut 0,35 de l'eau de **surface** — ni la même valeur, ni
     // la même grandeur que ce que j'avais inventé. Elle n'est pas encore dans
     // l'instantané : c'est une issue moteur, pas une constante de palette.
     //
     // Cet essai compte les paramètres. C'est grossier, et c'est exactement ce
-    // qu'il faut : il se déclenche à la SIGNATURE, donc avant qu'on ait eu le
+    // qu'il faut : il se déclenche à la **signature**, donc avant qu'on ait eu le
     // temps de rebrancher un seuil quelque part.
     // Le troisième paramètre est revenu, mais il a changé de nature : ce n'est
     // plus une « sécheresse » calculée ici depuis un seuil décrété, c'est
     // `soilHerbeHumidite` transporté tel quel, dont la lecture passe par
     // `satisfactionEnEau` — donc par `facteurEauHerbacee`, donc par le moteur.
     //
-    // L'essai vérifie ce qui compte : que la valeur neutre soit l'ABSENCE
+    // L'essai vérifie ce qui compte : que la valeur neutre soit l'**absence**
     // d'affirmation. Une scène qui ne transporte pas la grandeur doit rendre
     // une herbe non assoiffée, jamais une herbe grillée par défaut.
     expect(couleurHerbe(28, 0.25)).toEqual(couleurHerbe(28, 0.25, 1));
   });
 
   it("aucune constante de palette ne porte un seuil sur une grandeur du moteur", () => {
-    // La palette a le droit de choisir des COULEURS et des façons de les
+    // La palette a le droit de choisir des **couleurs** et des façons de les
     // afficher — `LITIERE_PLEINE_CG` est un plafond visuel, `OPACITE_OMBRE` un
     // choix de dessin, `COUVERT_LE_PLUS_SOMBRE` une correspondance entre une
     // lumière que le moteur calcule et une clarté à l'écran. Ce qu'elle n'a pas
     // le droit de faire, c'est décider qu'une grandeur physique fait basculer
     // un état — « en dessous de tant, l'herbe grille ».
     //
-    // La distinction en une phrase : le rendu choisit COMMENT montrer ce que le
-    // moteur dit ; il ne choisit pas CE QUE le moteur dit.
+    // La distinction en une phrase : le rendu choisit **comment** montrer ce que le
+    // moteur dit ; il ne choisit pas **ce que** le moteur dit.
     expect(ombreDuCouvert(1)).toBeCloseTo(1, 6);
     expect(ombreDuCouvert(0)).toBeGreaterThan(0);
   });
@@ -310,8 +310,8 @@ describe("l'ombre du couvert : ce que le moteur savait et que le rendu ignorait"
     // `soilLumiere`, et le rendu ne la lisait pas. Le sol d'une futaie fermée
     // avait donc exactement la couleur de celui d'une clairière.
     //
-    // L'ombre PORTÉE ne pouvait pas y suppléer, et pas par accident : elle
-    // SATURE à l'opacité d'un seul arbre (`OPACITE_OMBRE`), ce qui est voulu
+    // L'ombre **portée** ne pouvait pas y suppléer, et pas par accident : elle
+    // **sature** à l'opacité d'un seul arbre (`OPACITE_OMBRE`), ce qui est voulu
     // pour éviter les puits d'encre. Un couvert fermé ne pouvait donc jamais
     // assombrir le sol de plus d'un tiers, quel que soit le nombre d'arbres.
     const sol = (lumiere: number) =>

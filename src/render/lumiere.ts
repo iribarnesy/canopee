@@ -3,9 +3,9 @@
  * (docs/interface-visuelle.md §4).
  *
  * **Le soleil vient du moteur, pas de la direction artistique.** `light.ts`
- * décale l'ombre d'une couronne vers le NORD, de `SHADOW_NORTH_OFFSET` fois sa
+ * décale l'ombre d'une couronne vers le **nord**, de `SHADOW_NORTH_OFFSET` fois sa
  * hauteur : le soleil est au sud, comme en France. Le §4 du document parlait
- * d'une lumière au sud-OUEST, ce qui est plus flatteur — et faux ici. Une ombre
+ * d'une lumière au sud-**ouest**, ce qui est plus flatteur — et faux ici. Une ombre
  * qui part au nord-est à l'écran pendant que le moteur calcule la concurrence
  * plein nord mentirait sur qui ombrage qui, et c'est exactement ce que le §0
  * interdit. Le sud gagne, et il a l'avantage d'être plus simple.
@@ -13,11 +13,11 @@
  * **Deux effets distincts**, qu'il ne faut pas confondre :
  *
  * - l'**ombrage de pente** : un versant tourné vers le soleil est plus clair
- *   qu'un versant à l'ombre. C'est ce qui rend le relief LISIBLE — sans lui, le
+ *   qu'un versant à l'ombre. C'est ce qui rend le relief **lisible** — sans lui, le
  *   relief à l'échelle vraie (D3) ne se voit presque pas sur une station à 1 à
  *   6 % de pente, parce que le décalage vertical y est de quelques pixels ;
  * - l'**ombre portée** : la tache qu'un objet projette au sol. Elle a une
- *   direction à l'écran, et cette direction TOURNE avec la caméra (§3), alors
+ *   direction à l'écran, et cette direction **tourne** avec la caméra (§3), alors
  *   que le panneau de l'arbre, lui, ne tourne pas.
  *
  * Module **pur** : pas de canvas, pas de DOM, aucun état.
@@ -52,7 +52,7 @@ export const SOLEIL_HAUTEUR_DEG = (Math.atan(1 / SHADOW_NORTH_OFFSET) * 180) / M
  * **C'est une exagération, et elle est nécessaire.** Le produit scalaire
  * physique donnait ±4 % sur les stations livrées — invisible. La raison est
  * géométrique : 6 m de dénivelé sur 100 m font une inclinaison de 3,4°, que
- * n'importe quel modèle d'éclairement rend imperceptible. Or c'est le SEUL
+ * n'importe quel modèle d'éclairement rend imperceptible. Or c'est le **seul**
  * canal qui rend le relief lisible en vue isométrique, puisque D3 interdit
  * d'exagérer les altitudes elles-mêmes. On exagère donc ce canal-là, une fois,
  * en le disant.
@@ -70,17 +70,17 @@ export const AMPLITUDE_PENTE = 0.22;
 export const PENTE_SATURATION = 0.08;
 
 /**
- * Azimut de la lumière qui MODÈLE le terrain, en degrés depuis le nord.
+ * Azimut de la lumière qui **modèle** le terrain, en degrés depuis le nord.
  *
  * **Deux lumières, deux métiers, et il a fallu se tromper une fois pour le
  * voir.** J'avais aligné l'ombrage de pente sur le soleil du moteur — plein sud,
  * comme le décalage d'ombre de `light.ts` — en refusant le sud-ouest que le §4
- * demandait. Le raisonnement était bon pour l'OMBRE PORTÉE et faux pour
+ * demandait. Le raisonnement était bon pour l'**ombre portée** et faux pour
  * l'ombrage.
  *
  * Ce qui l'a montré : mesuré sur les reliefs que le moteur produit, `dz/dy` vaut
  * 0,0900 sur toutes les cellules, pour les trois formes — `plan`, `croupe` et
- * `vallon`. La forme ne joue QUE sur le profil est-ouest. Un ombrage plein sud
+ * `vallon`. La forme ne joue **que** sur le profil est-ouest. Un ombrage plein sud
  * est donc aveugle à la seule variation de relief qui existe : croupe et vallon
  * y rendaient exactement la même image.
  *
@@ -128,7 +128,7 @@ export function gradient(
  * Facteur d'éclairement d'une cellule par sa pente : 1 sur le plat, plus sur un
  * versant exposé, moins sur un versant à l'ombre.
  *
- * Le soleil est plein sud et haut : seule l'inclinaison NORD-SUD change quelque
+ * Le soleil est plein sud et haut : seule l'inclinaison **nord-sud** change quelque
  * chose. Un versant qui monte vers le nord (`dz/dy > 0`) lui fait face et
  * s'éclaircit ; un versant qui descend vers le nord s'assombrit. La réponse est
  * linéaire jusqu'à `PENTE_SATURATION`, puis plate.
@@ -156,12 +156,12 @@ export function expositionPente(
 ): number {
   const [dzdx, dzdy] = gradient(altitudesM, coteM, x, y);
   const azimut = (AZIMUT_MODELE_DEG * Math.PI) / 180;
-  // Vecteur horizontal pointant VERS le soleil, dans le repère parcelle
+  // Vecteur horizontal pointant **vers** le soleil, dans le repère parcelle
   // (+x est, +y nord) : l'azimut se compte depuis le nord, dans le sens des
   // aiguilles.
   const versEst = Math.sin(azimut);
   const versNord = Math.cos(azimut);
-  // Une pente qui S'ÉLÈVE à l'opposé du soleil lui fait face.
+  // Une pente qui **s'élève** à l'opposé du soleil lui fait face.
   return -(dzdx * versEst + dzdy * versNord);
 }
 
@@ -180,18 +180,18 @@ export function facteurPente(
 }
 
 /**
- * Exposition MOYENNE de la parcelle, en mètres par mètre.
+ * Exposition **moyenne** de la parcelle, en mètres par mètre.
  *
  * **À passer en référence à `facteurPente`, et voici pourquoi.** Les reliefs que
- * le moteur produit sont largement PLANAIRES dans le sens de la pente : mesuré
+ * le moteur produit sont largement **planaires** dans le sens de la pente : mesuré
  * sur une station à 9 %, l'exposition est constante sur les dix mille cellules.
- * Ombrer par rapport à l'horizontale y donnait donc le même facteur PARTOUT —
+ * Ombrer par rapport à l'horizontale y donnait donc le même facteur **partout** —
  * autrement dit, non pas du relief mais une parcelle uniformément éclaircie,
  * ce qui virait la palette entière au jaune acide sans rien apprendre à
  * personne.
  *
  * En prenant la pente moyenne pour référence, une parcelle uniformément inclinée
- * redevient neutre et seuls les ÉCARTS à cette pente — une butte, un talweg, une
+ * redevient neutre et seuls les **écarts** à cette pente — une butte, un talweg, une
  * rupture — s'éclairent ou s'assombrissent. C'est exactement l'information utile.
  *
  * Ce qui est perdu, et c'est assumé : une parcelle plein sud n'a pas l'air plus
@@ -218,7 +218,7 @@ export function expositionMoyenne(altitudesM: readonly number[], coteM: number):
  * Direction écran de l'ombre portée, pour une caméra donnée : le vecteur unité
  * qui va du pied d'un objet vers son ombre.
  *
- * Calculée en PROJETANT le décalage nord du moteur, plutôt qu'en codant quatre
+ * Calculée en **projetant** le décalage nord du moteur, plutôt qu'en codant quatre
  * vecteurs à la main : c'est juste par construction, ça suit automatiquement si
  * la projection change, et ça ne peut pas se désynchroniser de `tourner()`.
  */
@@ -235,7 +235,7 @@ export function directionOmbreEcran(cam: Camera): { sx: number; sy: number } {
 /**
  * Longueur écran de l'ombre d'un objet de hauteur `hauteurM`, en pixels.
  *
- * Le décalage est de `SHADOW_NORTH_OFFSET × hauteur` MÈTRES vers le nord ; on
+ * Le décalage est de `SHADOW_NORTH_OFFSET × hauteur` **mètres** vers le nord ; on
  * le projette pour obtenir des pixels, ce qui tient compte du zoom et de
  * l'écrasement isométrique sans qu'on ait à les répéter ici.
  */
@@ -262,7 +262,7 @@ export const RAYON_COURBURE_M = 4;
  * Positif sur une croupe, négatif dans un creux, nul sur un plan — **y compris
  * sur un plan incliné**, et c'est tout l'intérêt. Le facteur de pente ne peut
  * rien dire d'un versant régulier : sa dérivée est constante, donc son
- * éclairement aussi. La courbure, elle, est la dérivée SECONDE : elle ne voit
+ * éclairement aussi. La courbure, elle, est la dérivée **seconde** : elle ne voit
  * pas l'inclinaison mais les accidents, qui sont précisément ce que l'œil
  * cherche pour lire un relief.
  */
@@ -320,11 +320,11 @@ export const COURBURE_SATURATION_M = 0.12;
 export const AMPLITUDE_COURBURE = 0.3;
 
 /**
- * Facteur d'éclairement complet d'une cellule : la pente ET la courbure.
+ * Facteur d'éclairement complet d'une cellule : la pente **et** la courbure.
  *
  * **C'est la réponse à « relief peu lisible ».** L'ombrage de pente seul
  * échouait pour une raison structurelle expliquée dans `expositionMoyenne` :
- * référencé à la pente moyenne, il ne montre que les écarts d'INCLINAISON, et
+ * référencé à la pente moyenne, il ne montre que les écarts d'**inclinaison**, et
  * un versant régulier n'en a pas. On voyait donc un plan uni là où le terrain a
  * des formes.
  *

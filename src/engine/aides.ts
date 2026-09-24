@@ -1,21 +1,21 @@
 /**
  * Les aides publiques, et l'hypothèse qu'on gèle pour pouvoir en parler.
  *
- * ─── L'AVERTISSEMENT D'ABORD ─────────────────────────────────────────────────
- * **Les règles ci-dessous sont FIGÉES, et la réalité ne l'est pas.** La PAC se
+ * ─── **l'avertissement d'abord** ─────────────────────────────────────────────────
+ * **Les règles ci-dessous sont figées, et la réalité ne l'est pas.** La PAC se
  * renégocie tous les cinq à sept ans, ses montants sont révisés en cours de
  * programmation, et les enveloppes régionales varient. Ce module prend les
  * règles de la programmation 2023-2027 françaises, suppose qu'elles ne bougent
  * plus, et le dit — parce qu'un jeu qui simule deux siècles avec la PAC de 2023
  * ment forcément, et qu'il vaut mieux mentir en le disant.
  *
- * Ce qu'on garde de vrai malgré le gel : la STRUCTURE de l'arbitrage. Une aide
+ * Ce qu'on garde de vrai malgré le gel : la **structure** de l'arbitrage. Une aide
  * à l'hectare conditionnée à un plafond d'arbres, un bonus pour les
  * infrastructures agroécologiques, un autre pour les haies. Ces trois leviers
  * existent sous une forme ou une autre depuis vingt ans et existeront encore ;
  * ce sont les montants qui bougent.
  *
- * ─── LA RÈGLE QUI FAIT LA DÉCISION ───────────────────────────────────────────
+ * ─── **la règle qui fait la décision** ───────────────────────────────────────────
  * Une parcelle agroforestière reste éligible aux aides surfaciques tant qu'elle
  * porte **au plus 100 arbres par hectare** — plafond maintenu pour 2023-2027.
  * Au-delà, ce n'est plus une parcelle agricole avec des arbres, c'est un
@@ -24,7 +24,7 @@
  * C'est le seul endroit du jeu où planter un arbre de plus peut coûter de
  * l'argent, et c'est un vrai arbitrage de terrain.
  *
- * ─── LES MONTANTS RETENUS ────────────────────────────────────────────────────
+ * ─── **les montants retenus** ────────────────────────────────────────────────────
  * Aide de base au revenu (ex-DPB) : moyenne visée de **127 €/ha** en 2023,
  * contre 114 en 2021 — la convergence continue sur la programmation, on prend
  * la valeur cible.
@@ -54,7 +54,7 @@ export const PART_IAE_NIVEAU_SUPERIEUR = 0.1;
 /** Part de haies ouvrant le bonus. */
 export const PART_HAIES_BONUS = 0.06;
 
-/** Le détail d'une année d'aides, pour pouvoir le RACONTER au joueur. */
+/** Le détail d'une année d'aides, pour pouvoir le **raconter** au joueur. */
 export interface AidesAnnuelles {
   /** total versé, € */
   totalEur: number;
@@ -74,7 +74,7 @@ export interface AidesAnnuelles {
  *
  * `partIae` est la part de la surface occupée par des infrastructures
  * agroécologiques — couvert arboré, eau, bandes enherbées. Le moteur la mesure
- * par le couvert, ce qui est une approximation : la PAC compte des LINÉAIRES de
+ * par le couvert, ce qui est une approximation : la PAC compte des **linéaires** de
  * haies convertis en surface équivalente, pas une projection de houppiers
  * *(approximation assumée)*.
  */

@@ -1,32 +1,32 @@
 /**
- * Les ESPÈCES de la strate herbacée (critères B8 et E9 ; issue #70).
+ * Les **espèces** de la strate herbacée (critères B8 et E9 ; issue #70).
  *
  * `herbe.ts` tenait une couverture par cellule : un taux ∈ [0,1] qui montait
  * avec la lumière et l'humidité. C'était une seule plante moyenne, sans espèce,
  * sans calendrier, sans préférence de sol. Un taux de couverture n'a pas de
  * printemps — et c'est précisément le printemps qui manquait, parce que la
- * FENÊTRE VERNALE est un mécanisme forestier majeur : anémone, jacinthe, ail
+ * **fenêtre vernale** est un mécanisme forestier majeur : anémone, jacinthe, ail
  * des ours bouclent tout leur cycle avant que la canopée ne se referme, sur
  * quelques semaines où le sol d'une hêtraie reçoit la lumière d'une clairière.
  * Le moteur savait déjà que les caducs n'ombragent pas hors saison (B5,
  * `phenologie.ts`) : cette lumière existait dans le calcul, personne ne s'en
  * servait.
  *
- * ## Un modèle de POPULATIONS, et il faut l'assumer
+ * ## Un modèle de **populations**, et il faut l'assumer
  *
  * Le reste du moteur raisonne par individu. Pas ici : suivre dix mille pieds
  * d'anémone par parcelle n'est pas tenable, et ne dirait rien de plus. Chaque
- * cellule porte donc une PART DE SOL par espèce. C'est un modèle différent de
+ * cellule porte donc une **part de sol** par espèce. C'est un modèle différent de
  * celui des arbres, il est écrit ici pour qu'on ne le confonde pas — mais il
  * reste local : chaque cellule décide seule, sur sa lumière, son humidité et
  * son pH, sans jamais consulter une moyenne de parcelle.
  *
  * ## Deux grandeurs, et c'est la clé de la fenêtre vernale
  *
- *  - **l'emprise** : la place que l'espèce TIENT au sol, bulbes, rhizomes et
+ *  - **l'emprise** : la place que l'espèce **tient** au sol, bulbes, rhizomes et
  *    souches compris. Elle est pérenne et bouge lentement — des saisons pour
  *    une graminée, des décennies pour un rhizome de vernale ;
- *  - **le feuillage** : ce qui est VERT cette semaine. Il vise l'emprise,
+ *  - **le feuillage** : ce qui est **vert** cette semaine. Il vise l'emprise,
  *    ramenée à ce que la saison et la sécheresse en laissent, et il y va à sa
  *    vitesse de repousse. C'est lui que voient le feu, l'érosion,
  *    l'évaporation, le gibier et les semis, sous la forme de leur somme —
@@ -36,12 +36,12 @@
  * en juillet elle n'est plus là, et le tapis d'une hêtraie est nu.
  *
  * Les deux ne se confondent pas, et une seule variable ne suffisait pas : une
- * fauche, un feu, une dent de chevreuil emportent le FEUILLAGE et laissent
+ * fauche, un feu, une dent de chevreuil emportent le **feuillage** et laissent
  * l'emprise. Confondre les deux — c'est ce qu'on a essayé d'abord — fait
  * disparaître une lande sous la dent du gibier en un hiver, parce que chaque
  * bouchée était prise sur les rhizomes.
  *
- * ## La règle qui TOMBE de ce découpage
+ * ## La règle qui **tombe** de ce découpage
  *
  * Une espèce ne fait bouger son emprise que pendant sa saison de croissance :
  * dormante, elle est gelée — elle ne gagne rien et ne perd rien. Donc
@@ -55,12 +55,12 @@
  * Rien de tout cela n'est écrit dans une règle : ça sort de la phénologie de
  * chaque espèce et de la lumière hebdomadaire que `light.ts` calcule déjà.
  *
- * ## Ce que le modèle NE fait pas
+ * ## Ce que le modèle **ne** fait pas
  *
  *  - **Pas de hiérarchie de hauteur.** La concurrence se joue sur la place
- *    LIBRE : une espèce occupe ce que les autres lâchent, elle ne les déloge
+ *    **libre** : une espèce occupe ce que les autres lâchent, elle ne les déloge
  *    pas. Une graminée haute n'étouffe donc pas une rosette qui se maintient.
- *  - **Fauche, feu et broutage ne trient pas entre les espèces PRÉSENTES** :
+ *  - **Fauche, feu et broutage ne trient pas entre les espèces présentes** :
  *    ils rabattent le feuillage à la même enseigne, alors qu'une faucheuse
  *    prend les hautes et qu'un chevreuil choisit. Ils épargnent en revanche les
  *    dormantes, et sans qu'on ait eu à l'écrire : une espèce rentrée sous terre
@@ -95,14 +95,14 @@ export interface HerbaceeV0 {
     compensation: number;
     /**
      * Saturation ∈ [0,1] : lumière au-delà de laquelle la capacité plafonne.
-     * Les plantes d'ombre saturent BAS — c'est ce qui les rend efficaces sous
+     * Les plantes d'ombre saturent **bas** — c'est ce qui les rend efficaces sous
      * couvert, pas ce qui les empêche de vivre au soleil.
      */
     saturation: number;
   };
   eau: {
     /**
-     * Humidité de surface VÉCUE (`herbe.ts`, lissée sur plusieurs semaines) en
+     * Humidité de surface **vécue** (`herbe.ts`, lissée sur plusieurs semaines) en
      * dessous de laquelle le feuillage grille, proportionnellement. L'herbe
      * grille la première : ses racines sont fines et superficielles. Ce seuil
      * ne touche pas l'emprise — voir `facteurEauHerbacee`.
@@ -130,7 +130,7 @@ export interface HerbaceeV0 {
      */
     seuilJourH: number;
     /**
-     * Retrait PROGRAMMÉ : cumul de degrés-jours auquel l'espèce se retire, que
+     * Retrait **programmé** : cumul de degrés-jours auquel l'espèce se retire, que
      * le sol soit encore éclairé ou non. C'est la signature des géophytes
      * vernales — elles ne se retirent pas parce que la canopée les prive de
      * lumière, elles se retirent parce que leur cycle est fini.
@@ -141,14 +141,14 @@ export interface HerbaceeV0 {
      *
      * Oui pour une molinie, dont la touradon sèche est tout ce qui reste en
      * février. Non pour une touffe de dactyle, qui passe l'hiver verte et
-     * REPART au premier redoux — y compris en novembre sous un couvert caduc
+     * **repart** au premier redoux — y compris en novembre sous un couvert caduc
      * qui vient de s'ouvrir. La différence n'est pas cosmétique : elle décide
-     * si l'espèce peut profiter de la fenêtre d'AUTOMNE, qui dure bien plus
+     * si l'espèce peut profiter de la fenêtre d'**automne**, qui dure bien plus
      * longtemps que celle de printemps.
      */
     senescenceAutomnale: boolean;
     /**
-     * Part de l'appareil COUVRANT qui reste en place hors saison de croissance
+     * Part de l'appareil **couvrant** qui reste en place hors saison de croissance
      * ∈ [0,1]. Une touffe de dactyle reste verte l'hiver ; une molinie ne
      * laisse que sa touradon sèche ; une anémone ne laisse rien.
      */
@@ -162,22 +162,22 @@ export interface HerbaceeV0 {
    * dans le moteur, que les cultures s'ajoutent.
    *
    * Les trois herbacées spontanées sont à 1, ce qui rend le lot des cultures
-   * IDENTIQUE pour elles : la demande d'azote du tapis était une constante
+   * **identique** pour elles : la demande d'azote du tapis était une constante
    * multipliée par la couverture, elle devient une somme par espèce, et la
    * somme vaut exactement l'ancienne tant que tout le monde est à 1.
    */
   exigenceMinerale: number;
   /**
-   * Ce que l'espèce offre aux pollinisateurs quand elle fleurit, et QUAND
+   * Ce que l'espèce offre aux pollinisateurs quand elle fleurit, et **quand**
    * (#70, critères G4 et J6). Même forme que sur la fiche ligneuse
    * (`especes.ts:floraison`), même horloge en degrés-jours.
    *
    * **Absent pour une anémophile**, et c'est le contenu du champ : deux des
-   * trois herbacées du moteur sont des GRAMINÉES. Elles fleurissent
+   * trois herbacées du moteur sont des **graminées**. Elles fleurissent
    * abondamment, leur pollen part au vent, et aucun insecte ne vient le
    * chercher. La strate basse ne nourrit donc les pollinisateurs que par sa
    * vernale — ce qui est exactement ce que dit la littérature de la soudure de
-   * printemps, et ce qui laisse la soudure d'ÉTÉ à la charge des ligneux.
+   * printemps, et ce qui laisse la soudure d'**été** à la charge des ligneux.
    */
   floraison?: {
     /** ouverture : cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier */
@@ -195,30 +195,30 @@ export interface HerbaceeV0 {
   tBaseCroissanceC: number;
   /**
    * Gain d'emprise par semaine de pleine vigueur, en part de cellule. C'est la
-   * vitesse de CONQUÊTE d'un sol libre, et elle sépare radicalement une
+   * vitesse de **conquête** d'un sol libre, et elle sépare radicalement une
    * graminée qui talle d'un rhizome qui avance de quelques centimètres par an.
    *
-   * **Nulle pour une culture**, qui ne conquiert rien : son emprise est POSÉE
+   * **Nulle pour une culture**, qui ne conquiert rien : son emprise est **posée**
    * par le semis. Voir `culture`.
    */
   vitesseInstallation: number;
   /**
-   * CULTURE : présent quand l'espèce est semée et récoltée plutôt que
+   * **culture** : présent quand l'espèce est semée et récoltée plutôt que
    * spontanée. C'est une histoire de vie différente, et il faut l'assumer —
-   * tout le reste de ce module décrit des PÉRENNES.
+   * tout le reste de ce module décrit des **pérennes**.
    *
-   *  - une pérenne CONQUIERT la place libre et REFLUE quand la station ne la
+   *  - une pérenne **conquiert** la place libre et **reflue** quand la station ne la
    *    porte plus ; une culture ne fait ni l'un ni l'autre. Son emprise est
    *    posée au semis et remise à zéro à la moisson, et rien entre les deux ne
    *    la fait bouger ;
-   *  - une pérenne rend TOUTE sa litière à la cellule ; une culture n'en rend
+   *  - une pérenne rend **toute** sa litière à la cellule ; une culture n'en rend
    *    que la paille et le chaume, le grain partant pour de bon avec son
    *    azote. (Cette ligne a longtemps décrit une intention plutôt qu'un
    *    mécanisme : jusqu'à #201, aucune des deux ne rendait quoi que ce
    *    soit.) ;
    *  - une parcelle laissée seule se couvre de molinie, jamais de blé.
    *
-   * Ce qui ne change PAS : le feuillage suit la saison et la sécheresse comme
+   * Ce qui ne change **pas** : le feuillage suit la saison et la sécheresse comme
    * pour tout le monde, si bien qu'une céréale d'hiver profite d'elle-même de
    * la fenêtre où les caducs sont nus — la mécanique de la vernale, sans une
    * ligne de plus.
@@ -226,7 +226,7 @@ export interface HerbaceeV0 {
   culture?: {
     /**
      * Rendement en grain à pleine emprise et sans aucun facteur limitant,
-     * t/ha. C'est un PLAFOND, que la lumière, l'eau et l'azote rabotent.
+     * t/ha. C'est un **plafond**, que la lumière, l'eau et l'azote rabotent.
      */
     rendementMaxTHa: number;
     /** Prix de vente du grain, €/t. */
@@ -241,14 +241,14 @@ export interface HerbaceeV0 {
     /** Coût de la semence, €/ha. */
     semenceEurHa: number;
     /**
-     * Part de l'azote absorbé par la culture qui QUITTE la parcelle dans le
+     * Part de l'azote absorbé par la culture qui **quitte** la parcelle dans le
      * grain (issue #201).
      *
      * Le reste — la paille, le chaume, les racines — est rendu au sol. Sans ce
      * champ, une céréale restituerait tout ce qu'elle a pris, y compris ce
      * qu'on vend, et le moteur rendrait l'exportation gratuite.
      *
-     * Le blé est réputé pour son indice de récolte AZOTÉ élevé : l'essentiel de
+     * Le blé est réputé pour son indice de récolte **azoté** élevé : l'essentiel de
      * l'azote absorbé finit dans le grain, bien plus que la part de biomasse
      * que le grain représente. C'est d'ailleurs le pendant du C/N de 90 de sa
      * paille — ce qui reste au champ est riche en carbone et pauvre en azote,
@@ -257,16 +257,16 @@ export interface HerbaceeV0 {
     azoteDansLeGrain: number;
   };
   /**
-   * CE QUE L'ESPÈCE REND AU SOL (issue #201).
+   * **ce que l'espèce rend au sol** (issue #201).
    *
-   * La strate basse ne rendait RIEN. Mesuré avant ce lot, une prairie
+   * La strate basse ne rendait **rien**. Mesuré avant ce lot, une prairie
    * spontanée à 0,95 de couverture sur limon riche : le stock d'humus perd
    * 42 % en cinquante ans et la litière reste à 0,00 les deux mille six cents
    * semaines. Park Grass, prairie permanente non fertilisée depuis 1856, tient
    * son stock. Une prairie ne se décarbonise pas — c'est même le couvert qui
    * en stocke le plus vite dans l'horizon de surface.
    *
-   * Le seul retour qui existait était celui de la FAUCHE, et il portait deux
+   * Le seul retour qui existait était celui de la **fauche**, et il portait deux
    * nombres nus (`coupe * 4` et `* 25`) qui sont devenus les constantes
    * nommées de ce bloc, à la valeur près : la fauche n'a pas bougé d'un
    * gramme.
@@ -275,8 +275,8 @@ export interface HerbaceeV0 {
     /**
      * Rapport C/N de la litière de l'espèce.
      *
-     * C'est le trait qui décide si un résidu NOURRIT la culture suivante ou
-     * lui VOLE son azote, et l'écart entre les deux bouts est énorme : une
+     * C'est le trait qui décide si un résidu **nourrit** la culture suivante ou
+     * lui **vole** son azote, et l'écart entre les deux bouts est énorme : une
      * feuille tendre de vernale se minéralise en quelques semaines, une paille
      * de blé immobilise l'azote du sol pendant un an avant de le rendre.
      * Ordres de grandeur usuels : feuillage herbacé jeune 15-25, foin de
@@ -285,12 +285,12 @@ export interface HerbaceeV0 {
     cSurN: number;
   };
   /**
-   * **L'AZOTE DU GRAIN N'EST PAS COMPTÉ À LA MOISSON, et c'est voulu.** Il est
+   * **l'azote du grain n'est pas compté à la moisson, et c'est voulu.** Il est
    * déjà sorti du sol pendant la saison, par le prélèvement de la strate
    * (`tick.ts`, pondéré par `exigenceMinerale`), et la strate ne rend pas de
    * litière. Le recompter à la récolte le ferait disparaître deux fois — ce
    * que la propriété de conservation attraperait (#115). Ce qui manque
-   * vraiment est le retour de la PAILLE, qui reste au champ et devrait rendre
+   * vraiment est le retour de la **paille**, qui reste au champ et devrait rendre
    * son azote : c'est une dette de ce lot, écrite ici pour ne pas être oubliée.
    */
   sources: string[];
@@ -312,12 +312,12 @@ const TAYLOR_2001 =
   "Taylor, Rowland & Jones 2001, Biological Flora of the British Isles: Molinia caerulea (L.) Moench, Journal of Ecology 89:126-144 (Grande-Bretagne)";
 
 /**
- * TROIS espèces, contrastées sur les axes que le moteur sait déjà lire : la
+ * **trois** espèces, contrastées sur les axes que le moteur sait déjà lire : la
  * lumière, le pH, le calendrier et la température de départ. Trois, et pas
  * trente : la strate tourne sur toutes les cellules toutes les semaines, et le
  * coût se paye sur toute la suite de tests.
  *
- * Ce ne sont pas trois espèces « représentatives » : ce sont trois STRATÉGIES
+ * Ce ne sont pas trois espèces « représentatives » : ce sont trois **stratégies**
  * qu'on voulait pouvoir opposer — la vernale qui vit avant la canopée, la
  * graminée sociale qui étouffe les plantations sur sol riche, et celle qui fait
  * la même chose sur sol acide. La rudérale nitrophile manque, et il faudra
@@ -335,7 +335,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // *(à calibrer)*.
     eau: { seuilConfort: 0.5 },
     // Sols bruns forestiers, humus doux (SHIRREFFS_1985 la décrit sur mull et
-    // moder). La borne basse n'est pas cosmétique : elle tient l'anémone HORS
+    // moder). La borne basse n'est pas cosmétique : elle tient l'anémone **hors**
     // des podzols de lande, où elle n'a rien à faire — et on l'a appris en la
     // laissant à 4,0, ce qui installait une vernale sous les ajoncs girondins
     // et y renversait l'effet nurse. La borne haute est *à calibrer* : la
@@ -348,16 +348,16 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       // très bas *(à calibrer)*.
       debutDJ: 10,
       seuilJourH: 9.5,
-      // Le retrait est PROGRAMMÉ, achevé en juin : elle disparaît même dans une
+      // Le retrait est **programmé**, achevé en juin : elle disparaît même dans une
       // trouée en plein soleil (SHIRREFFS_1985). L'automne la trouve donc
       // depuis longtemps rentrée.
       finDJ: 500,
       senescenceAutomnale: true,
       partPersistante: 0,
     },
-    // Mars-avril, six à huit semaines (SHIRREFFS_1985). Elle n'a PAS de
+    // Mars-avril, six à huit semaines (SHIRREFFS_1985). Elle n'a **pas** de
     // nectaires : ses visiteurs — diptères, coléoptères, abeilles solitaires —
-    // viennent pour le POLLEN. L'offre est donc réelle mais moindre que celle
+    // viennent pour le **pollen**. L'offre est donc réelle mais moindre que celle
     // d'une rosacée, et elle tombe très tôt, au moment où presque rien d'autre
     // n'est ouvert *(à calibrer : la source décrit les visiteurs, pas un
     // débit)*.
@@ -380,12 +380,12 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     id: "dactylis_glomerata",
     nom: "Dactyle aggloméré",
     nomLatin: "Dactylis glomerata",
-    // Héliophile : c'est LA graminée qui étouffe une plantation sur sol riche.
-    // Point de compensation et saturation REPRIS TELS QUELS du tapis moyen
+    // Héliophile : c'est **la** graminée qui étouffe une plantation sur sol riche.
+    // Point de compensation et saturation **repris tels quels** du tapis moyen
     // d'avant ce lot (0,12 et 0,47 dans `herbe.ts`, calés sur « le tapis
     // disparaît sous un couvert fermé », ch4-A). Les relever parce que ce tapis
     // moyennait aussi des plantes d'ombre était tentant, et c'était déplacer
-    // une calibration acquise : ce lot AJOUTE une espèce sous le plancher, il
+    // une calibration acquise : ce lot **ajoute** une espèce sous le plancher, il
     // ne déplace pas le plancher.
     lumiere: { compensation: 0.12, saturation: 0.47 },
     // Elle grille en été sur sol séchant. Seuil repris du tapis moyen (0,35
@@ -409,7 +409,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       // sénescence à l'automne — lui coûtait un cinquième de sa couverture
       // annuelle sous futaie feuillue (0,61 contre 0,75 sur soixante ans), et
       // l'essentiel venait de la sénescence : la fenêtre qui compte pour une
-      // graminée de sous-bois n'est pas avril, c'est OCTOBRE À MARS.
+      // graminée de sous-bois n'est pas avril, c'est **octobre à mars**.
       senescenceAutomnale: false,
       partPersistante: 1,
     },
@@ -436,7 +436,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // *à calibrer*).
     ph: [3.2, 6.2],
     phenologie: {
-      // Démarrage NOTOIREMENT tardif — avril-mai — et sénescence complète à
+      // Démarrage **notoirement** tardif — avril-mai — et sénescence complète à
       // l'automne : la lande vire au paille et sa touradon sèche devient le
       // combustible de l'hiver (TAYLOR_2001).
       debutDJ: 250,
@@ -459,20 +459,20 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     nom: "Blé tendre d'hiver",
     nomLatin: "Triticum aestivum",
     /**
-     * **LA SATURATION EST LE CHIFFRE DU LOT, et elle vient d'une mesure
+     * **la saturation est le chiffre du lot, et elle vient d'une mesure
      * contre-intuitive.** Je supposais « moins de lumière, moins de grain ».
      * En Méditerranée, blé et orge font +19 % de rendement à 50 %
-     * d'éclairement, et le MÊME +19 % à 90 % : un plateau (ARTRU_2019, serre
-     * IRRIGUÉE — ce n'est donc pas une économie d'eau, c'est un excès de
+     * d'éclairement, et le **même** +19 % à 90 % : un plateau (ARTRU_2019, serre
+     * **irriguée** — ce n'est donc pas une économie d'eau, c'est un excès de
      * lumière au départ). Les auteurs disent explicitement que dans les
      * régions moins ensoleillées, l'ombre fait baisser le rendement.
      *
      * Une saturation à 0,5 reproduit ce plateau sans un mécanisme de plus.
      *
-     * **LIMITE, et il faut la lire avant d'exploiter un chiffre du nord** : la
-     * lumière du moteur est une FRACTION de la pleine lumière locale, pas un
+     * **limite, et il faut la lire avant d'exploiter un chiffre du nord** : la
+     * lumière du moteur est une **fraction** de la pleine lumière locale, pas un
      * éclairement absolu. Dire 0,5 revient donc à dire « la moitié du soleil
-     * d'ici suffit au blé » PARTOUT — ce qui est juste dans le Midi, d'où
+     * d'ici suffit au blé » **partout** — ce qui est juste dans le Midi, d'où
      * viennent les deux ancres de ce lot, et trop généreux sur le plateau
      * picard. Rendre la saturation absolue demande le rayonnement de la
      * station, et c'est un lot à part.
@@ -495,7 +495,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       // pas de bourgeon en dormance à lever.
       debutDJ: 0,
       seuilJourH: 8,
-      // Elle MÛRIT, elle ne sénesce pas : le retrait est programmé, comme chez
+      // Elle **mûrit**, elle ne sénesce pas : le retrait est programmé, comme chez
       // une vernale, sauf qu'il s'appelle la maturation et qu'il finit à la
       // moisson.
       finDJ: 1250,
@@ -503,7 +503,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       partPersistante: 0,
     },
     tBaseCroissanceC: 3,
-    // Elle ne conquiert RIEN : son emprise est posée par le semis.
+    // Elle ne conquiert **rien** : son emprise est posée par le semis.
     vitesseInstallation: 0,
     /**
      * Dix fois une essence forestière. Le commentaire d'`especes.ts` le
@@ -514,13 +514,13 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     exigenceMinerale: 10,
     culture: {
       /**
-       * Le rendement SANS AUCUN FACTEUR LIMITANT — ni lumière, ni eau, ni
+       * Le rendement **sans aucun facteur limitant** — ni lumière, ni eau, ni
        * azote. Ce n'est donc pas la moyenne française (7 t/ha), qui est déjà
        * une moyenne de parcelles fertilisées et diversement limitées : c'est
-       * le plafond que les parcelles pleinement fumées de BROADBALK
+       * le plafond que les parcelles pleinement fumées de **Broadbalk**
        * atteignent, 8 à 9 t/ha (ROTHAMSTED_BROADBALK).
        *
-       * Et le même essai fournit la VALIDATION, sur un autre chiffre : ses
+       * Et le même essai fournit la **validation**, sur un autre chiffre : ses
        * parcelles sans aucun apport tiennent ~1 t/ha depuis 1843. Le moteur
        * n'a pas d'action de fertilisation, donc un blé continu doit y
        * descendre de lui-même — ce qui se vérifie et ne se cale pas.
@@ -541,7 +541,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       azoteDansLeGrain: 0.75,
     },
     // **La paille de blé, et c'est le trait le plus conséquent du bloc.** Son
-    // C/N est célèbre pour son effet : à 90, elle IMMOBILISE l'azote du sol
+    // C/N est célèbre pour son effet : à 90, elle **immobilise** l'azote du sol
     // le temps que les micro-organismes la digèrent, et ne le rend qu'ensuite.
     // Enfouir une paille sans apport d'azote fait donc baisser la culture
     // suivante avant de la faire monter — c'est un fait d'agronomie que le
@@ -567,22 +567,22 @@ export const ETALEMENT_DEPART_DJ = 40;
  */
 export const ETALEMENT_RETRAIT_DJ = 150;
 /**
- * Vitesse de repli de l'EMPRISE quand la station ne porte plus l'espèce, par
+ * Vitesse de repli de l'**emprise** quand la station ne porte plus l'espèce, par
  * semaine de pleine vigueur. Reprise telle quelle de `herbe.ts` : le tapis
  * reculait déjà à 0,2 par semaine, et rien dans ce lot ne justifie de la
  * changer.
  */
 export const REGRESSION_PAR_SEMAINE = 0.2;
 /**
- * Vitesse à laquelle le FEUILLAGE rattrape ce que l'emprise et la saison lui
+ * Vitesse à laquelle le **feuillage** rattrape ce que l'emprise et la saison lui
  * permettent, par semaine : la repousse après une coupe, une dent ou un feu.
  *
  * Elle ne dépend pas de l'espèce, à la différence de la conquête du sol : un
- * chaume repousse, un rhizome avance. Elle est plus RAPIDE — une pelouse
+ * chaume repousse, un rhizome avance. Elle est plus **rapide** — une pelouse
  * fauchée se referme en un mois, un sol nu met une saison *(à calibrer)*.
  *
  * Et elle doit l'être : `herbe.ts` faisait tout d'un coup, à 0,12 par semaine.
- * Couper le même trajet en deux étapes SÉRIELLES au même rythme le rend deux
+ * Couper le même trajet en deux étapes **sérielles** au même rythme le rend deux
  * fois plus lent, ce qui se voyait — le tapis d'une futaie feuillue perdait un
  * dixième de sa couverture annuelle sans qu'aucune cause écologique n'ait
  * bougé.
@@ -590,7 +590,7 @@ export const REGRESSION_PAR_SEMAINE = 0.2;
 export const REPOUSSE_PAR_SEMAINE = 0.25;
 
 /**
- * Inertie de la RESSOURCE FLORALE vécue, par semaine (#70). Même forme que
+ * Inertie de la **ressource florale** vécue, par semaine (#70). Même forme que
  * l'humidité vécue de `herbe.ts`, et pour une raison du même ordre : ce qui
  * décide n'est pas ce qui est ouvert aujourd'hui, c'est ce qui l'a été.
  *
@@ -600,15 +600,15 @@ export const REPOUSSE_PAR_SEMAINE = 0.25;
  * développement par espèce, pas un temps de réponse de communauté)*.
  */
 /**
- * Ce qu'il faut d'offre OUVERTE dans une cellule pour que les insectes y
+ * Ce qu'il faut d'offre **ouverte** dans une cellule pour que les insectes y
  * trouvent à manger — au-delà, la table est garnie et en rajouter ne nourrit
  * personne de plus (#70).
  *
- * Sans ce seuil, la mémoire florale mesure une QUANTITÉ de nectar et non une
- * ADÉQUATION, et elle reste basse partout : mesuré à 0,10 dans le meilleur cas
+ * Sans ce seuil, la mémoire florale mesure une **quantité** de nectar et non une
+ * **adéquation**, et elle reste basse partout : mesuré à 0,10 dans le meilleur cas
  * du banc, contre un habitat à 0,5 — le minimum des deux ne départageait donc
  * plus rien, il remplaçait l'habitat. Avec le seuil, la mémoire devient la
- * PART DE LA SAISON pendant laquelle la cellule a eu de quoi nourrir, qui est
+ * **part de la saison** pendant laquelle la cellule a eu de quoi nourrir, qui est
  * une grandeur sans dimension et comparable à l'habitat.
  *
  * 0,25 : un arbuste mellifère en pleine fleur au-dessus de la cellule
@@ -623,7 +623,7 @@ export const INERTIE_RESSOURCE_FLORALE = 0.15;
 const borne = (x: number) => Math.min(1, Math.max(0, x));
 
 /**
- * VIGUEUR ∈ [0,1] : où en est l'espèce dans sa saison de croissance. Zéro veut
+ * **vigueur** ∈ [0,1] : où en est l'espèce dans sa saison de croissance. Zéro veut
  * dire dormante — et une espèce dormante ne gagne ni ne perd de terrain.
  *
  * Le calcul suit celui du feuillage des arbres (`partFoliaireActive`) : un
@@ -649,7 +649,7 @@ export function vigueurHerbacee(h: HerbaceeV0, ctx: ContextePhenologique): numbe
 }
 
 /**
- * PART SAISONNIÈRE ∈ [0,1] : ce que l'espèce déploie à cette date de l'année,
+ * **Part saisonnière** ∈ [0,1] : ce que l'espèce déploie à cette date de l'année,
  * sécheresse mise à part. C'est la vigueur, relevée par ce qui reste en place
  * hors saison — touffes, chaumes, feuilles d'hiver. Le plancher joue comme
  * celui des semi-persistants chez les arbres : il vaut en mars comme en
@@ -665,10 +665,10 @@ export function partSaisonniere(h: HerbaceeV0, ctx: ContextePhenologique): numbe
 /**
  * Ce que la sécheresse de surface laisse du feuillage ∈ [0,1].
  *
- * Elle joue sur ce qui est VERT, pas sur l'emprise : un été sec grille le
+ * Elle joue sur ce qui est **vert**, pas sur l'emprise : un été sec grille le
  * tapis, il ne tue pas les souches. C'est le partage qui donne son sens aux
- * deux grandeurs — la lumière et le pH décident de qui TIENT le sol, sur des
- * années ; l'eau décide de ce qu'on en VOIT, cette semaine. La faire porter
+ * deux grandeurs — la lumière et le pH décident de qui **tient** le sol, sur des
+ * années ; l'eau décide de ce qu'on en **voit**, cette semaine. La faire porter
  * sur l'emprise faisait disparaître la molinie d'une lande à chaque été, pour
  * la faire repartir de rien au printemps suivant : mesuré, et faux.
  */
@@ -677,7 +677,7 @@ export function facteurEauHerbacee(h: HerbaceeV0, humiditeVecue: number): number
 }
 
 /**
- * ACTIVITÉ ∈ [0,1] : la part de son emprise que l'espèce COUVRE réellement
+ * **activité** ∈ [0,1] : la part de son emprise que l'espèce **couvre** réellement
  * cette semaine, saison et sécheresse comprises.
  */
 export function activiteHerbacee(
@@ -698,7 +698,7 @@ export function facteurThermique(h: HerbaceeV0, tMeanC: number): number {
 }
 
 /**
- * CAPACITÉ ∈ [0,1] : la part de sol que l'espèce pourrait TENIR dans cette
+ * **capacité** ∈ [0,1] : la part de sol que l'espèce pourrait **tenir** dans cette
  * cellule, si elle y était seule. Deux facteurs de station seulement, et tous
  * deux durables : la lumière qui arrive au sol et le pH. La sécheresse n'y est
  * pas — elle est dans l'activité, parce qu'elle grille un feuillage sans
@@ -718,7 +718,7 @@ export function capaciteHerbacee(h: HerbaceeV0, lumiereAuSol: number, ph: number
  */
 const VITESSES = HERBACEES.map((h) => h.vitesseInstallation);
 /**
- * Qui est une CULTURE, précalculé : la question se pose pour chaque espèce et
+ * Qui est une **culture**, précalculé : la question se pose pour chaque espèce et
  * chaque cellule, toutes les semaines.
  */
 const EST_CULTURE = HERBACEES.map((h) => h.culture !== undefined);
@@ -738,7 +738,7 @@ export function estCulture(h: HerbaceeV0): boolean {
 }
 
 /**
- * Le GRAIN est la moyenne des facteurs limitants, PONDÉRÉE PAR LE FEUILLAGE
+ * Le **grain** est la moyenne des facteurs limitants, **pondérée par le feuillage**
  * (#136) — et cette forme-là ne demande aucune constante à caler.
  *
  * Le premier jet divisait le cumul par le nombre de semaines de culture, ce qui
@@ -748,7 +748,7 @@ export function estCulture(h: HerbaceeV0): boolean {
  * 1,1 t/ha là où la fiche annonce 7 — et « rendement maximal » ne voulait plus
  * dire ce que son commentaire promettait.
  *
- * La bonne grandeur est un RAPPORT. On cumule d'un côté ce que la plante a
+ * La bonne grandeur est un **rapport**. On cumule d'un côté ce que la plante a
  * réellement assimilé — son feuillage, multiplié par ce que la station lui
  * permet et par ce que l'azote lui laisse —, de l'autre ce qu'elle aurait
  * assimilé sans aucune limite, c'est-à-dire son feuillage seul. Le quotient
@@ -770,7 +770,7 @@ export function partDuRendement(assimileCum: number, potentielCum: number): numb
 
 /**
  * Nombre de semaines entre le semis et la moisson, en tenant compte du passage
- * par le 1ᵉʳ janvier : une céréale d'HIVER est semée en semaine 41 et moissonnée
+ * par le 1ᵉʳ janvier : une céréale d'**hiver** est semée en semaine 41 et moissonnée
  * en semaine 28 de l'année suivante.
  */
 export function semainesDeCulture(semisWeek: number, recolteWeek: number): number {
@@ -793,14 +793,14 @@ export const SEMAINES_DE_CULTURE = INDEX_CULTURES.map((i) => {
 const demandes = new Array<number>(N_HERBACEES).fill(0);
 
 /**
- * Fait évoluer d'une semaine les emprises d'UNE cellule, en place.
+ * Fait évoluer d'une semaine les emprises d'**une** cellule, en place.
  *
  * `emprises` est le tableau à plat de la partie (nCells × N_HERBACEES),
  * `base = i × N_HERBACEES` ; `capacites`, `vigueurs` et `facteursThermiques`
  * sont des tampons de taille N_HERBACEES que l'appelant réutilise d'une cellule
  * à l'autre.
  *
- * Le sol est fini, et la conquête se fait sur la PLACE LIBRE : chacune
+ * Le sol est fini, et la conquête se fait sur la **place libre** : chacune
  * commence par lâcher ce qu'elle ne peut plus tenir — ce terrain devient libre
  * pour les autres, dans la semaine —, puis les prétendantes se partagent ce
  * qui reste au prorata de ce qu'elles savent prendre. D'une trouée que les deux
@@ -826,10 +826,10 @@ export function evoluerEmprises(
   let demandeTotale = 0;
   for (let s = 0; s < N_HERBACEES; s++) {
     demandes[s] = 0;
-    // **UNE CULTURE NE JUGE PAS SA STATION** (#136). Son emprise est posée au
+    // **une culture ne juge pas sa station** (#136). Son emprise est posée au
     // semis et remise à zéro à la moisson ; rien entre les deux ne la fait
     // bouger, ni la conquête ni le repli. Un blé à l'ombre ne perd pas son
-    // emprise, il perd son GRAIN — et c'est `croissanceDuGrain` qui le dit.
+    // emprise, il perd son **grain** — et c'est `croissanceDuGrain` qui le dit.
     if (EST_CULTURE[s]) continue;
     const vigueur = vigueurs[s] ?? 0;
     // Dormante : ni gain ni perte. C'est de là que sort la fenêtre vernale —
@@ -858,10 +858,10 @@ export function evoluerEmprises(
 }
 
 /**
- * Fait suivre le FEUILLAGE d'une cellule : il vise ce que l'emprise, la saison
+ * Fait suivre le **feuillage** d'une cellule : il vise ce que l'emprise, la saison
  * et l'humidité lui permettent, et il y monte à la vitesse de repousse.
  *
- * La montée est freinée par le FROID : une feuille se fabrique avec de la
+ * La montée est freinée par le **froid** : une feuille se fabrique avec de la
  * chaleur, et une pelouse rasée en décembre attend mars pour se refermer. Sans
  * ce frein, le tapis rattrapait en plein hiver ce qu'une dent de chevreuil lui
  * avait pris, et se remettait à faire des vagues d'une semaine sur l'autre —
@@ -884,7 +884,7 @@ export function suivreFeuillage(
     if (cible <= actuel) {
       // Une feuille ne disparaît pas non plus du jour au lendemain : elle
       // jaunit, elle grille, elle se couche. Même vitesse de repli que le
-      // tapis d'avant ce lot — laisser la chute être INSTANTANÉE rendait le
+      // tapis d'avant ce lot — laisser la chute être **instantanée** rendait le
       // tapis asymétrique (chute immédiate, repousse en huit semaines) et lui
       // faisait perdre un dixième de couverture moyenne sur soixante ans.
       feuillage[base + s] = Math.max(cible, actuel - REGRESSION_PAR_SEMAINE);
@@ -899,9 +899,9 @@ export function suivreFeuillage(
  * Rabat toutes les espèces d'une cellule au même facteur, dans le tableau
  * qu'on lui donne.
  *
- * Appelée sur le FEUILLAGE par la fauche, le feu et le broutage : ils
+ * Appelée sur le **feuillage** par la fauche, le feu et le broutage : ils
  * emportent ce qui est sorti et laissent le sol reprendre. Appelée en plus sur
- * l'EMPRISE par le labour, et par lui seul — la charrue retourne les bulbes et
+ * l'**emprise** par le labour, et par lui seul — la charrue retourne les bulbes et
  * tranche les rhizomes, c'est le seul geste du jeu qui aille les chercher sous
  * terre.
  */
@@ -912,10 +912,10 @@ export function rabattreParEspece(parEspece: number[], base: number, facteur: nu
 }
 
 /**
- * Répartition d'un enherbement de DÉPART entre les espèces, pour une cellule.
+ * Répartition d'un enherbement de **départ** entre les espèces, pour une cellule.
  *
  * La station ne dit qu'un taux (`herbeInitiale`) : à charge pour l'atlas de
- * dire qui le compose. On le pondère par la capacité EN TERRAIN DÉCOUVERT
+ * dire qui le compose. On le pondère par la capacité **en terrain découvert**
  * — toutes les stations de départ le sont — multipliée par la vitesse
  * d'installation : ce qui couvre une friche au premier jour, c'est ce qui
  * s'installe vite. Une anémone n'y tient donc presque rien, ce qui est la

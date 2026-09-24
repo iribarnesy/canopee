@@ -1,6 +1,6 @@
 /**
  * Le terrain comme donnée (terrain.ts) : on dessine des altitudes, et l'eau
- * libre se DÉDUIT au lieu d'être déclarée. Creuser un trou fait une mare ;
+ * libre se **déduit** au lieu d'être déclarée. Creuser un trou fait une mare ;
  * percer ce trou sur le côté n'en fait plus ; un talweg assez drainé devient
  * un cours d'eau. Ensuite, la nappe et la ripisylve suivent sans savoir d'où
  * l'eau vient.

@@ -1,12 +1,12 @@
 /**
  * Le point zéro du bilan carbone (issue #202, critères I1 à I9).
  *
- * Le compteur n'a jamais parti de zéro tonne : `bilanNetTHa` est un ÉCART, et
+ * Le compteur n'a jamais parti de zéro tonne : `bilanNetTHa` est un **écart**, et
  * une parcelle nue démarre à 0,00 alors qu'elle porte déjà soixante-quatorze
  * tonnes de carbone dans son profil. C'était l'intention, et elle est juste.
  *
  * Ce que ce fichier vérifie est l'autre moitié : que l'écart se compte à partir
- * de ce que le joueur TROUVE EN ARRIVANT, arbres compris, et non à partir d'une
+ * de ce que le joueur **trouve en arrivant**, arbres compris, et non à partir d'une
  * constante de la fiche de station.
  */
 
@@ -46,7 +46,7 @@ describe("le bilan part de ce que le joueur trouve", () => {
   });
 
   it("sur une parcelle vieillie, le joueur arrive à zéro — et il arrivait à cent tonnes", () => {
-    // **LE DÉFAUT, ET SON ORDRE DE GRANDEUR.** `faireVieillir` fait tourner le
+    // **le défaut, et son ordre de grandeur.** `faireVieillir` fait tourner le
     // moteur pendant des décennies avant l'arrivée du joueur : la friche se
     // boise toute seule. La référence, elle, restait la constante de la fiche.
     // Relevé à l'écriture de l'issue, limon riche, à la semaine 0 du joueur :
@@ -60,7 +60,7 @@ describe("le bilan part de ce que le joueur trouve", () => {
     // Le joueur lisait « vous avez stocké 108 tonnes à l'hectare » avant d'avoir
     // posé un plant, et ces tonnes étaient celles d'arbres venus tout seuls.
     //
-    // Et le défaut avait une seconde face : pendant la maturation l'humus BAISSE
+    // Et le défaut avait une seconde face : pendant la maturation l'humus **baisse**
     // (73,97 → 56,31), donc la référence surestimait le sol en même temps
     // qu'elle ignorait les arbres. Les deux erreurs ne se compensaient pas,
     // elles s'additionnaient dans deux cases du même total.
@@ -75,7 +75,7 @@ describe("le bilan part de ce que le joueur trouve", () => {
   });
 
   it("le bois sur pied entre dans l'acquis, pas dans le mérite", () => {
-    // La différence entre les deux références EST le carbone des arbres venus
+    // La différence entre les deux références **est** le carbone des arbres venus
     // tout seuls, moins l'humus que la maturation a consommé. C'est ce que le
     // joueur trouve : son acquis. Ce qu'il en fera sera son mérite.
     const fige = figerCarboneDeReference(vieillir(30));

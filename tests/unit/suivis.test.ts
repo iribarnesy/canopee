@@ -1,5 +1,5 @@
 /**
- * LE JOURNAL D'UN ARBRE SUIVI (#149).
+ * **Le journal d'un arbre suivi** (#149).
  *
  * « Je plante des abricotiers, je veux surveiller très précisément ce qui leur
  * arrive — pas qu'ils meurent sans que je comprenne rien. »
@@ -7,10 +7,10 @@
  * Ce que ces essais défendent tient en deux points, et les deux sont des
  * pièges qu'on ne voit pas à l'écran :
  *
- * 1. **Ce qui est un ÉVÉNEMENT se recopie, ce qui est un ÉTAT se compare.** Les
+ * 1. **Ce qui est un événement se recopie, ce qui est un état se compare.** Les
  *    gestes, les morts et les franchissements sont accumulés par le worker
  *    jusqu'à l'instantané ; le gel des fleurs et la souffrance lente, eux, se
- *    LISENT sur l'arbre à chaque image et se rediraient sans fin.
+ *    **lisent** sur l'arbre à chaque image et se rediraient sans fin.
  * 2. **Une souffrance retenue trop tôt se tait pour toujours.** Un arbre qui a
  *    un peu soif pendant dix ans avant de dépérir porte la même `causeLente`
  *    tout du long : retenir la cause dès qu'on la lit aurait fait manquer le
@@ -30,11 +30,11 @@ import {
   LIBELLE_CAUSE,
   type TreeState,
 } from "../../src/engine/trees";
+import { causeDite } from "../../src/game/mots";
 import type { Snapshot, SnapshotTree } from "../../src/game/protocol";
 import { arbreDuSnapshot, construireSnapshot } from "../../src/game/snapshot";
 import {
   accumulerLesSuivis,
-  CAUSE_AU_SINGULIER,
   type EvenementSuivi,
   grouperLesSuivis,
   type MemoireDesSuivis,
@@ -46,7 +46,7 @@ const STATION: Station = { ...LIMON_RICHE.station, coteM: 12, voisinage: [], gib
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
 
 /**
- * Un instantané VRAI, fabriqué par le moteur puis par `construireSnapshot`.
+ * Un instantané **vrai**, fabriqué par le moteur puis par `construireSnapshot`.
  *
  * Pas un simulacre : un objet partiel passe le test et casse le typecheck, ou
  * pire, passe les deux en mentant sur ce que le rendu reçoit vraiment. On part
@@ -211,9 +211,9 @@ describe("ce que le moteur a déjà nommé", () => {
     expect(evenements[0]?.texte).toBe("meurt de sécheresse");
   });
 
-  it("chaque cause du moteur a sa forme au singulier, et aucune n'est vide", () => {
+  it("chaque cause du moteur a sa forme accordable, et aucune n'est vide", () => {
     for (const cause of Object.keys(LIBELLE_CAUSE) as CauseMort[]) {
-      expect(CAUSE_AU_SINGULIER[cause]?.length).toBeGreaterThan(3);
+      expect(causeDite(cause).length, cause).toBeGreaterThan(3);
     }
   });
 });
@@ -264,7 +264,7 @@ describe("ce qui est un état ne se dit qu'une fois", () => {
   it("elle ne se redit pas chaque été, même quand le stress redescend l'hiver", () => {
     // Mesuré dans le navigateur avant correction : 149 arbres suivis
     // annonçaient « souffre : de sécheresse » à chaque instantané d'été, an
-    // après an. `causeLente` est COLLANTE côté moteur ; c'est `stressLent` qui
+    // après an. `causeLente` est **collante** côté moteur ; c'est `stressLent` qui
     // respire avec la saison, et l'oubli sous le seuil rouvrait l'annonce.
     const ete = (week: number) =>
       semaine(week, [arbre({ causeLente: "secheresse", stressLent: 0.4 })]);

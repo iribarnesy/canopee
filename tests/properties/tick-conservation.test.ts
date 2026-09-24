@@ -7,12 +7,12 @@ import { LANDE_SECHE, VALLEE_ENGORGEE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
 /**
- * Conservation au niveau du TICK complet, grille + arbres (docs/regles.md §16) :
+ * Conservation au niveau du **tick** complet, grille + arbres (docs/regles.md §16) :
  * chaque semaine, pluie = évaporation + transpiration + drainage + débordement
  * + Δstock, et minéralisation = prélèvements + lessivage + Δstock d'azote.
  */
 
-/** Stock d'eau moyen par CELLULE, tous horizons confondus (sol stratifié). */
+/** Stock d'eau moyen par **cellule**, tous horizons confondus (sol stratifié). */
 function meanWaterStock(state: GameState): number {
   const nCells = state.soil.mineralNG.length;
   let sum = 0;
@@ -57,8 +57,8 @@ function checkConservation(sc: StationClimat, years: number) {
         fluxes.overflowMm +
         deltaWater,
       // Depuis que la nappe est un stock (nappe.ts), deux flux ont changé de
-      // nature et sortent du bilan : le DRAINAGE ne quitte plus le système, il
-      // recharge l'aquifère ; la REMONTÉE CAPILLAIRE n'arrive plus de nulle
+      // nature et sortent du bilan : le **drainage** ne quitte plus le système, il
+      // recharge l'aquifère ; la **remontée capillaire** n'arrive plus de nulle
       // part, elle y puise. Restent en entrée la pluie, le ruissellement
       // d'amont, ce que le réseau régional donne à la parcelle, et ce qu'un
       // ruisseau voisin fournit en lui imposant une nappe haute.
@@ -86,9 +86,9 @@ function checkConservation(sc: StationClimat, years: number) {
       6,
     );
 
-    // **ET CE QUI SORT DU SOL DOIT ARRIVER DANS UNE PLANTE** (#115). Le bilan
-    // ci-dessus ferme le côté SOL : il compte `uptakeKgHa`, c'est-à-dire ce que
-    // le partage RETIRE. Il ne dit rien de ce que les plantes REÇOIVENT, et
+    // **et ce qui sort du sol doit arriver dans une plante** (#115). Le bilan
+    // ci-dessus ferme le côté **sol** : il compte `uptakeKgHa`, c'est-à-dire ce que
+    // le partage **retire**. Il ne dit rien de ce que les plantes **reçoivent**, et
     // c'est par là qu'un huitième de l'azote d'un limon pauvre s'évaporait —
     // la demande d'un arbre était gonflée par son réseau mycorhizien pour
     // vider la cellule, puis servie sans ce gain. Personne ne recevait
@@ -108,7 +108,7 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
   });
 
   it("avec un ruisseau : l'eau imposée par la nappe est comptée comme un apport", () => {
-    // La nappe ne se contente plus de remonter par capillarité : elle SATURE
+    // La nappe ne se contente plus de remonter par capillarité : elle **sature**
     // le sol sous sa surface libre (eau_surface.ts). Cette eau-là vient de
     // l'extérieur de la parcelle et doit apparaître dans le bilan, sinon elle
     // se créerait toute seule au bord de l'eau.

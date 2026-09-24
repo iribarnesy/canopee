@@ -22,8 +22,8 @@ export const AULNE_GLUTINEUX: FicheGraphique = {
     divergenceDeg: 137,
     ratioLongueur: 0.76,
     dominance: 0.66,
-    // Trois. L'aulne est ALTERNE, et ce n'est pas ce que dit ce chiffre : un
-    // nœud du générateur est une unité de POUSSE, pas une insertion de
+    // Trois. L'aulne est **alterne**, et ce n'est pas ce que dit ce chiffre : un
+    // nœud du générateur est une unité de **pousse**, pas une insertion de
     // feuille, et une pousse d'aulne porte plusieurs latérales. À deux — une
     // seule latérale par nœud — le houppier ne pouvait s'équilibrer qu'en
     // moyenne sur beaucoup de nœuds, et un aulne à forte dominance apicale
@@ -38,7 +38,7 @@ export const AULNE_GLUTINEUX: FicheGraphique = {
     printemps: { r: 108, g: 152, b: 78 },
     // L'aulne reste vert sombre tout l'été, il ne pâlit pas.
     ete: { r: 62, g: 98, b: 56 },
-    // Et il tombe VERT : pas de couleur d'automne, c'est un trait de l'espèce.
+    // Et il tombe **vert** : pas de couleur d'automne, c'est un trait de l'espèce.
     automne: { r: 84, g: 108, b: 62 },
   },
   ecorce: { r: 74, g: 62, b: 54 },

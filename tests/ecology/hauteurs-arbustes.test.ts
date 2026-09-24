@@ -42,7 +42,7 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
   it("le châtaignier de semis reste DERRIÈRE la courbe de taillis en jeunesse", () => {
     // Le sens de l'écart est une prédiction, pas un réglage : un rejet de
     // souche démarre sur un système racinaire déjà fait, un semis non. Si le
-    // moteur passait DEVANT une courbe de taillis à vingt ans tout en tombant
+    // moteur passait **devant** une courbe de taillis à vingt ans tout en tombant
     // juste à quarante, c'est que sa forme de courbe serait fausse.
     const sim = hauteurs("castanea_sativa", 40, LIMON_ACIDE);
     const h20 = a(sim, 20);
@@ -54,7 +54,7 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
 });
 
 /**
- * LES ARBUSTES N'ONT PAS DE TABLE — ils ont des mesures, et ce n'est pas la
+ * **Les arbustes n'ont pas de table** — ils ont des mesures, et ce n'est pas la
  * même chose.
  *
  * Aucun forestier n'a jamais dressé de table de production pour une aubépine :
@@ -62,7 +62,7 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
  * essais en jardin, des plantations de boisement suivies cinq ans, des
  * monographies de la série *Biological Flora of the British Isles*. C'est plus
  * pauvre (souvent un seul chiffre, parfois lu sur une figure), mais c'est
- * MESURÉ, et c'est de la bonne géographie : sud de l'Angleterre, Midlands,
+ * **mesuré**, et c'est de la bonne géographie : sud de l'Angleterre, Midlands,
  * Bretagne, plaine allemande.
  *
  * **Aucune de ces quatre espèces n'est calée** : les quatre valeurs de
@@ -96,7 +96,7 @@ const MESURES: {
   {
     // +135,9 cm en cinq ans sur limon de marne calcaire, à partir de plants de
     // 41-57 cm (Willoughby 2007, via Thomas 2011). La même source donne 7
-    // cm/an sur substrat dégradé : c'est l'écart de STATION, que le moteur doit
+    // cm/an sur substrat dégradé : c'est l'écart de **station**, que le moteur doit
     // produire par ses facteurs et non porter dans sa fiche.
     espece: "euonymus_europaeus",
     nom: "Fusain",
@@ -127,13 +127,13 @@ const MESURES: {
     source: "Peterken & Lloyd 1967 (Grande-Bretagne) : 1,5 à 3,0 m entre 8 et 15 ans",
   },
   {
-    // Repousse de CÉPÉE en taillis anglais : 2,4 à 2,8 m à la quatrième année
+    // Repousse de **cépée** en taillis anglais : 2,4 à 2,8 m à la quatrième année
     // (Buckley 1992), après 1,5-1,75 m la première puis ~50 cm/an (Harmer
     // 2004). Le moteur en fait 2,66 — dedans.
     //
-    // CE QU'ON MESURE ICI EST UN NOISETIER DE TAILLIS, et il faut le savoir :
+    // **Ce qu'on mesure ici est un noisetier de taillis**, et il faut le savoir :
     // une souche établie repart plus vite qu'un semis, et le moteur ne sait
-    // pas faire la différence (sa forme de croissance dépend de la TAILLE,
+    // pas faire la différence (sa forme de croissance dépend de la **taille**,
     // pas de l'âge). C'est son emploi réel en haie, donc la comparaison a un
     // sens — mais elle ne dit rien d'un noisetier de semis.
     espece: "corylus_avellana",
@@ -142,7 +142,7 @@ const MESURES: {
     source: "Buckley 1992 (taillis anglais) : 2,4-2,8 m à la 4ᵉ année",
   },
   {
-    // LA MEILLEURE GÉOGRAPHIE DU FICHIER : des ajoncs bretons et écossais
+    // **La meilleure géographie du fichier** : des ajoncs bretons et écossais
     // semés en jardin commun près de Rennes, donc le climat même du bocage
     // qu'on simule. 110 à 130 cm à deux ans (Hornoy 2011, valeur lue sur la
     // figure — le texte ne donne que des écarts relatifs). Le moteur en fait
@@ -162,7 +162,7 @@ const MESURES: {
   {
     // La plus rapide de l'atlas, et le piège est dans la grandeur mesurée :
     // un turion s'allonge de 3 à 6 m par saison, mais il s'arque et se
-    // marcotte — L'ALLONGEMENT N'EST PAS UN GAIN DE HAUTEUR. La roncière
+    // marcotte — **l'allongement n'est pas un gain de hauteur**. La roncière
     // plafonne bas, et c'est le plafond qu'on éprouve : 1 à 3 m de hauteur
     // finale (bases horticoles allemandes, faute de mesure scientifique de
     // hauteur de roncier). Le moteur fait 2,42 m à cinq ans et plafonne à 2,5.
@@ -172,10 +172,10 @@ const MESURES: {
     source: "bases horticoles allemandes : hauteur finale 1 à 3 m",
   },
   {
-    // UN PLANCHER, PAS UNE BANDE, et c'est tout ce que la littérature donne :
+    // **Un plancher**, **pas une bande**, et c'est tout ce que la littérature donne :
     // 37 cm/an sur gravats de brique en friche urbaine (Gilbert 1991, via la
     // Biological Flora) — le pire sol imaginable pour un nitrophile. Sur un
-    // limon riche, le moteur doit faire MIEUX, et il fait 3,37 m à cinq ans
+    // limon riche, le moteur doit faire **mieux**, et il fait 3,37 m à cinq ans
     // contre 2,15 pour le plancher.
     //
     // La borne haute n'est pas une mesure : c'est un garde-fou à mi-chemin de
@@ -190,9 +190,9 @@ const MESURES: {
     // de callune à 50-60 cm à maturité, vers vingt ans. Le moteur fait 0,60 m
     // à vingt ans.
     //
-    // ON N'ÉPROUVE QUE LE PLATEAU, et c'est délibéré : le moteur fait naître
+    // **On n'éprouve que le plateau**, et c'est délibéré : le moteur fait naître
     // tous ses semis à 30 cm (`regeneration.ts`), si bien que la callune du
-    // jeu SAUTE sa phase pionnière — les guides la donnent sous 10-15 cm.
+    // jeu **saute** sa phase pionnière — les guides la donnent sous 10-15 cm.
     // Mesurer le début de sa courbe mesurerait ce défaut-là, qui n'est pas de
     // sa fiche mais d'une hauteur de semis unique pour un atlas qui va du
     // sous-arbrisseau au chêne.
@@ -220,10 +220,10 @@ describe("arbustes : ce que disent les mesures de terrain, faute de tables", () 
   }
 
   it("le troène devance le fusain, comme dans l'essai de Grubb", () => {
-    // MÊME CAS QUE LE PRUNELLIER, autre espèce : le troène n'a pas de
+    // **Même cas que le prunellier**, autre espèce : le troène n'a pas de
     // Biological Flora, et le seul point publié — 104 cm à deux ans en jardin
     // (Grubb 1999) — inclut la croissance en pépinière avant repiquage, donc
-    // ne vaut pas comme taux. Ce qui reste est ORDINAL : le troène est dans le
+    // ne vaut pas comme taux. Ce qui reste est **ordinal** : le troène est dans le
     // groupe « à croissance rapide » de cet essai, devant le fusain.
     //
     // Sa fiche portait cette contrainte sans que rien ne la garde (#185).
@@ -236,13 +236,13 @@ describe("arbustes : ce que disent les mesures de terrain, faute de tables", () 
   }, 120_000);
 
   it("le prunellier prend l'avance sur l'aubépine, puis se fait dépasser", () => {
-    // LE PRUNELLIER N'A PAS DE COURBE, et il n'en aura sans doute pas : aucune
+    // **Le prunellier n'a pas de courbe**, et il n'en aura sans doute pas : aucune
     // mesure de croissance en climat océanique n'a été trouvée — pas de
     // Biological Flora, rien dans la littérature de haies. La seule contrainte
-    // publiée est ORDINALE : Grubb 1999 le range dans le groupe « à croissance
+    // publiée est **ordinale** : Grubb 1999 le range dans le groupe « à croissance
     // rapide », devant l'aubépine.
     //
-    // Sa fiche portait déjà cette contrainte ET son résultat chiffré, en
+    // Sa fiche portait déjà cette contrainte **et** son résultat chiffré, en
     // commentaire, sans que rien ne la garde (#185). C'est exactement ainsi
     // qu'une affirmation devient fausse en silence : il suffit que quelqu'un
     // ralentisse le prunellier pour une autre raison, et la seule chose qu'on

@@ -5,7 +5,7 @@
  * **Le grain ne suffisait pas, et le retour était sans appel** : « il n'y a pas
  * de texture d'herbe, il n'y a d'ailleurs pas de texture tout court ». C'est
  * juste. Le grain module la clarté de quelques pour cent — il enlève l'aspect
- * plastique, il ne fabrique pas de matière. Une matière, ce sont des MARQUES :
+ * plastique, il ne fabrique pas de matière. Une matière, ce sont des **marques** :
  * des touffes qui se détachent, des feuilles posées, des plaques de terre nue
  * entre les herbes. Sans marques, un sol reste une nappe de couleur.
  *
@@ -16,7 +16,7 @@
  *   sont serrées ; là où elle a chuté, le sol se dénude et on le voit ;
  * - la **feuille** suit `soilLitiereCG`. Sous un fourré, où la litière monte à
  *   trois mille grammes de carbone au mètre carré, le tapis est continu ;
- * - la **terre à nu** apparaît là où NI l'une NI l'autre ne couvre — c'est un
+ * - la **terre à nu** apparaît là où **ni** l'une **ni** l'autre ne couvre — c'est un
  *   complément, pas une quatrième donnée. Une cellule sèche et rase montre son
  *   sol, et c'est exactement ce que le moteur dit d'elle.
  *
@@ -30,7 +30,7 @@
  * fourmillement — le camouflage dont on vient de sortir. Il apparaît avec le
  * zoom, en même temps que le grain, et pour la même raison.
  *
- * Module **pur** : il dit QUOI dessiner et OÙ. Le tracé est dans `terrain.ts`,
+ * Module **pur** : il dit **quoi** dessiner et **où**. Le tracé est dans `terrain.ts`,
  * au moment de la cuisson — donc jamais par image.
  */
 
@@ -54,7 +54,7 @@ export interface Brin {
    * angles** : le motif se répétait à l'identique sur toute la parcelle et le
    * sol se lisait comme un papier peint — un même glyphe tamponné en grille.
    * C'est le défaut que le retour appelait « on dirait un ordinateur qui simule
-   * une forêt », et il tient à la RÉPÉTITION plus qu'au dessin.
+   * une forêt », et il tient à la **répétition** plus qu'au dessin.
    */
   lames: number;
   /** orientation, radians — une touffe penche, une feuille est posée de travers */
@@ -82,11 +82,11 @@ export const TAPIS_PLEIN_PX = 90;
 /**
  * Nombre de brins par mètre carré à densité pleine.
  *
- * **Sept était le compte d'une FRICHE, pas d'une pelouse**, et c'est ce qui
+ * **Sept était le compte d'une friche, pas d'une pelouse**, et c'est ce qui
  * ratait le critère « à couverture 100 % on doit voir une pelouse ». Le
  * raisonnement d'origine — « assez peu pour qu'on distingue encore les marques
  * les unes des autres » — décrit une lande où des touffes se détachent sur du
- * sol nu. Un gazon est le contraire : c'est un COUVERT, et ce qu'on y distingue
+ * sol nu. Un gazon est le contraire : c'est un **couvert**, et ce qu'on y distingue
  * n'est pas la touffe individuelle mais un grain serré et continu.
  *
  * Quinze, avec des marques deux fois plus petites (`dessinerBrin`) : la
@@ -144,7 +144,7 @@ export function motifDuTirage(cellule: CelluleQuantifiee, tirage: number): Motif
  * toujours les mêmes brins, aux mêmes places.
  *
  * `densite` ∈ [0,1] vient du zoom (`densiteTapis`). Le nombre de brins est
- * arrondi de façon DÉTERMINISTE et non stochastique — un arrondi au hasard
+ * arrondi de façon **déterministe** et non stochastique — un arrondi au hasard
  * ferait apparaître et disparaître des brins pendant un zoom continu.
  */
 export function brinsDeLaCellule(
@@ -189,7 +189,7 @@ export function brinsDeLaCellule(
  * **La plaque de terre était trop marquée, et la capture l'a montré crûment :**
  * à 0,82, les marques de terre sortaient en ellipses franchement sombres, toutes
  * de la même taille, et le sol se lisait comme un gravier. C'est le contresens
- * exact du module — la terre à nu n'est pas un objet POSÉ sur le sol, c'est le
+ * exact du module — la terre à nu n'est pas un objet **posé** sur le sol, c'est le
  * sol lui-même là où rien ne le couvre. Elle doit à peine se distinguer : ce
  * qu'on veut voir, c'est qu'il n'y a rien dessus.
  */

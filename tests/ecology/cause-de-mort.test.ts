@@ -1,14 +1,14 @@
 /**
- * À QUI IMPUTER UNE MORT (#103).
+ * **À qui imputer une mort** (#103).
  *
- * `causeMort` retenait le DERNIER COUP et non la cause. Un dominé remplit son
+ * `causeMort` retenait le **dernier coup** et non la cause. Un dominé remplit son
  * compteur de stress pendant des décennies, puis un dégât de ravageur le pousse
  * au-delà du seuil — et le moteur écrivait « ravageurs ». C'est juste comme
  * description du coup de grâce, et faux comme rapport au joueur : le journal
  * l'envoyait traiter là où il fallait éclaircir.
  *
  * Le moteur tient donc, par arbre, la part de son stress venue des causes
- * LENTES (`stressLent`) et laquelle domine (`causeLente`). Un coup brusque cède
+ * **lentes** (`stressLent`) et laquelle domine (`causeLente`). Un coup brusque cède
  * la place quand cette part fait plus de la moitié de ce qui a tué l'arbre.
  */
 
@@ -29,9 +29,9 @@ describe("un coup de grâce n'est pas une cause", () => {
   const causes = new Map<string, number>();
 
   /**
-   * Une parcelle qui se réchauffe : c'est LE cas où les ravageurs tuent
+   * Une parcelle qui se réchauffe : c'est **le** cas où les ravageurs tuent
    * vraiment, puisque la chaleur enchaîne leurs générations. Il faut donc que
-   * les deux lectures y coexistent — des morts par ravageurs ET des morts
+   * les deux lectures y coexistent — des morts par ravageurs **et** des morts
    * imputées à la charge lente.
    */
   beforeAll(() => {
@@ -47,14 +47,14 @@ describe("un coup de grâce n'est pas une cause", () => {
       const w = meteoDerivee(base, i % 52, scenario, 2026 + Math.floor(i / 52), normales);
       const r = advanceWeek(state, w, []);
       state = r.state;
-      // La cause se lit à la SEMAINE DE LA MORT : le moteur purge les morts.
+      // La cause se lit à la **semaine de la mort** : le moteur purge les morts.
       for (const m of r.morts) causes.set(m.cause, (causes.get(m.cause) ?? 0) + 1);
     }
   }, 900_000);
 
   it("les morts par ravageurs ne sont PAS effacées : il en meurt vraiment", () => {
     // C'est la moitié qui compte le plus de cet essai. Trois règles ont été
-    // essayées pour #103 et deux effaçaient TOUTES les morts par ravageurs,
+    // essayées pour #103 et deux effaçaient **toutes** les morts par ravageurs,
     // y compris ici — 89 devenaient zéro, et la case serait devenue du code
     // mort. Mesuré sur le code livré : 67.
     expect(causes.get("ravageurs") ?? 0).toBeGreaterThan(20);

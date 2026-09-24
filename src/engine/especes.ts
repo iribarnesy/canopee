@@ -24,7 +24,7 @@ export interface EspeceV0 {
     seuilConfortSecheresse: number;
     /**
      * Satisfaction en dessous de laquelle l'arbre puise dans ses réserves et
-     * risque la mort (« pousse / s'épanouit / SURVIT », ch3-C). Découplé du
+     * risque la mort (« pousse / s'épanouit / **survit** », ch3-C). Découplé du
      * confort : le hêtre pousse mal dès que l'eau manque mais son semis
      * (pivot) survit ; l'aulne meurt vite hors sol frais.
      */
@@ -36,7 +36,7 @@ export interface EspeceV0 {
    * Amplitude de pH où l'atlas signale l'espèce [min, max] (nuancier
    * acidiphile→calcicole).
    *
-   * C'EST UNE AMPLITUDE DE PRÉSENCE, PAS UN PLATEAU DE VIGUEUR. L'espèce y est
+   * **C'est une amplitude de présence**, **pas un plateau de vigueur**. L'espèce y est
    * pleine en son milieu et réduite au cinquième à ses bornes, où elle est
    * rare et mal en point sans être morte — c'est `soil.ts:facteurGammePh` qui
    * porte la forme, et elle est unimodale. Lire ces deux nombres comme des
@@ -50,22 +50,22 @@ export interface EspeceV0 {
      * laquelle l'arbre cesse de croître et vit sur ses réserves (ch3-B).
      * Sciaphile ≈ 0,03, héliophile ≈ 0,2-0,3.
      *
-     * CE N'EST PAS LE SEUIL DE MORT, et la nuance a déjà trompé deux
+     * **Ce n'est pas le seuil de mort**, et la nuance a déjà trompé deux
      * commentaires. La croissance s'annule à `compensation` (`fLum`) ; le
-     * STRESS, lui, ne monte qu'à `2 × STRESS_ONSET × compensation`, soit 0,9
+     * **stress**, lui, ne monte qu'à `2 × STRESS_ONSET × compensation`, soit 0,9
      * fois celui-ci (`fLumSurvival`, trees.ts). Entre les deux, l'arbre ne
      * pousse plus et ne meurt pas — c'est le semis qui patiente sous couvert,
      * et c'est voulu.
      *
      * Conséquence à connaître : le hêtre (0,01) a un seuil de stress de 0,0090,
-     * SOUS le plancher de lumière du moteur (0,0111). Il ne peut donc jamais
+     * **sous** le plancher de lumière du moteur (0,0111). Il ne peut donc jamais
      * mourir d'ombre (#65, `lumiere.test.ts`).
      */
     compensation: number;
     /** saturation ∈ [0,1] : lumière au-delà de laquelle la croissance plafonne */
     saturation: number;
     /**
-     * Indice foliaire DE LA COURONNE (Beer-Lambert) : ombre d'une couronne
+     * Indice foliaire **de la couronne** (Beer-Lambert) : ombre d'une couronne
      * traversée seule. ≈ LAI de peuplement / chevauchement typique (~2) —
      * un point sous 2-3 couronnes retrouve le LAI de peuplement.
      */
@@ -76,15 +76,15 @@ export interface EspeceV0 {
     caduc: boolean;
     /**
      * Part du feuillage gardée en plein hiver ∈ [0,1], pour les
-     * SEMI-PERSISTANTS. Entre le caduc qui se dénude et le sempervirent qui ne
+     * **semi-persistants**. Entre le caduc qui se dénude et le sempervirent qui ne
      * bouge pas, il y a le troène : il garde une partie de ses feuilles quand
      * l'hiver est doux et les perd quand il est rude. Absente, l'espèce suit
      * son `caduc` — tout ou rien.
      */
     retentionHivernale?: number;
     /**
-     * MARCESCENCE : part du feuillage gardée sur l'arbre après la sénescence,
-     * MORTE ∈ [0,1]. Le charme et le jeune chêne gardent leurs feuilles brunes
+     * **marcescence** : part du feuillage gardée sur l'arbre après la sénescence,
+     * **morte** ∈ [0,1]. Le charme et le jeune chêne gardent leurs feuilles brunes
      * jusqu'à ce que les bourgeons les poussent au printemps. Ce n'est ni de la
      * persistance — ces feuilles ne photosynthétisent plus — ni de la caducité
      * ordinaire : elles ombragent encore tout l'hiver (phenologie.ts).
@@ -101,19 +101,19 @@ export interface EspeceV0 {
     profondeurMaxCm: number;
   };
   /**
-   * ALLÉLOPATHIE : ce que l'espèce libère pour empêcher les autres de pousser
+   * **allélopathie** : ce que l'espèce libère pour empêcher les autres de pousser
    * chez elle. Le seul cas de l'atlas est le noyer et sa juglone, qui inhibe la
    * germination et la croissance dans un rayon de quinze à vingt mètres.
    *
    * Le mécanisme n'a rien d'anecdotique pour ce jeu : il rend le choix des
-   * VOISINS décisif là où, ailleurs, seule la lumière compte.
+   * **voisins** décisif là où, ailleurs, seule la lumière compte.
    */
   allelopathie?: { porteeM: number };
   /**
    * Sensibilité à l'allélopathie ∈ [0,1] : 0 = indifférent, 1 = inhibé de plein
    * fouet.
    *
-   * La littérature de terrain ne donne que des LISTES — le pommier, le pin et
+   * La littérature de terrain ne donne que des **listes** — le pommier, le pin et
    * le bouleau souffrent, les graminées et beaucoup de vivaces ne bronchent
    * pas. Faute de mesure espèce par espèce, les fiches où l'on ne sait pas
    * portent la valeur médiane par défaut, et c'est écrit *(à calibrer)*.
@@ -140,22 +140,22 @@ export interface EspeceV0 {
      *  - `vent` : noyau exponentiel autour du parent (bouleau, frêne, pin) ;
      *  - `oiseaux` : n'importe où, avec les fientes (arbouse, sureau) ;
      *  - `gravite` : sous la couronne, à peine au-delà (faînes) ;
-     *  - `geai` : les GROSSES graines. Un geai enterre des milliers de glands
+     *  - `geai` : les **grosses** graines. Un geai enterre des milliers de glands
      *    par automne, jusqu'à un kilomètre, et il les cache **en terrain
      *    découvert** parce qu'il doit les retrouver. C'est la raison pour
      *    laquelle les chênes colonisent les friches et se régénèrent mal sous
      *    leur propre couvert (ch4-C).
      */
     dissemination: "vent" | "oiseaux" | "gravite" | "geai";
-    /** établissements potentiels par adulte et par an (APRÈS l'entonnoir de mortalité, ch4-B) */
+    /** établissements potentiels par adulte et par an (**après** l'entonnoir de mortalité, ch4-B) */
     semisParAn: number;
     /**
-     * DRAGEONNEMENT : la conquête par la racine, pour les espèces qui en font.
+     * **drageonnement** : la conquête par la racine, pour les espèces qui en font.
      *
      * Un drageon n'est pas un semis. Il naît sur une racine traçante, à
-     * quelques mètres du pied au plus, et il reste RELIÉ à sa mère le temps de
+     * quelques mètres du pied au plus, et il reste **relié** à sa mère le temps de
      * s'installer. Deux conséquences, et ce sont les deux qui comptent : la
-     * tache avance par son BORD au lieu d'essaimer au loin, et le drageon
+     * tache avance par son **bord** au lieu d'essaimer au loin, et le drageon
      * n'a pas besoin de trouver sa lumière tout seul — il pousse sous le
      * couvert de sa propre espèce, là où aucune graine ne lèverait.
      *
@@ -169,8 +169,8 @@ export interface EspeceV0 {
       parAn: number;
     };
     /**
-     * BANQUE DE GRAINES du sol, pour les espèces qui en font une. Absente pour
-     * la plupart : un gland ou une faîne est une graine RÉCALCITRANTE, elle ne
+     * **banque de graines** du sol, pour les espèces qui en font une. Absente pour
+     * la plupart : un gland ou une faîne est une graine **récalcitrante**, elle ne
      * survit pas à un hiver sec et ne fait aucune mémoire du passé.
      *
      * Les légumineuses à tégument dur, elles, en font une qui dure des
@@ -185,7 +185,7 @@ export interface EspeceV0 {
        */
       persistanceAns: number;
       /**
-       * Part de la banque qui lève APRÈS UN PASSAGE DE FEU ∈ [0,1]. Le feu
+       * Part de la banque qui lève **après un passage de feu** ∈ [0,1]. Le feu
        * scarifie le tégument sans détruire la banque : le sol isole assez pour
        * que même un feu intense laisse intactes les graines enfouies, et c'est
        * la chaleur reçue qui lève leur dormance.
@@ -204,7 +204,7 @@ export interface EspeceV0 {
     cnRatio: number;
     /**
      * Calcium de la litière, mg/g de matière sèche — le trait qui décide si
-     * une essence ACIDIFIE le sol qu'elle occupe ou l'entretient (`bases.ts`).
+     * une essence **acidifie** le sol qu'elle occupe ou l'entretient (`bases.ts`).
      *
      * Ce n'est pas un « pouvoir acidifiant » abstrait : c'est une grandeur
      * qu'on mesure et qu'on publie, et la chaîne causale qui en découle a été
@@ -215,13 +215,13 @@ export interface EspeceV0 {
      * dégradation du plancher forestier et les vers de terre).
      *
      * Le tableau de `bases.ts` dit d'où vient chaque valeur. Attention : « un
-     * résineux acidifie » n'est PAS ce que disent les mesures — la litière
+     * résineux acidifie » n'est **pas** ce que disent les mesures — la litière
      * d'épicéa contient deux fois plus de calcium que celle du pin sylvestre.
      */
     calciumMgG: number;
   };
   /**
-   * Calendrier foliaire (phenologie.ts). L'ORDRE de débourrement est un fait
+   * Calendrier foliaire (phenologie.ts). **L'ordre** de débourrement est un fait
    * de terrain massif : le bouleau part début avril quand le frêne attend la
    * mi-mai, et c'est ce décalage qui décide de qui profite de la lumière
    * d'avril sous un couvert encore nu.
@@ -229,7 +229,7 @@ export interface EspeceV0 {
   phenologie: {
     /**
      * Cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier au débourrement.
-     * Calé sur les DATES observées dans le nord de la France, mesurées avec
+     * Calé sur les **dates** observées dans le nord de la France, mesurées avec
      * notre propre série météo *(à calibrer espèce par espèce)*.
      */
     debourrementDJ: number;
@@ -253,7 +253,7 @@ export interface EspeceV0 {
   };
   bois: {
     /**
-     * INFRADENSITÉ du bois : masse anhydre rapportée au volume VERT, t/m³.
+     * **infradensité** du bois : masse anhydre rapportée au volume **vert**, t/m³.
      * C'est la grandeur que demande la biomasse — et non la densité à 12 %
      * d'humidité, celle du commerce et des tables de menuiserie, que ce champ
      * a portée jusqu'à #68 tout en se décrivant déjà comme une infradensité.
@@ -270,7 +270,7 @@ export interface EspeceV0 {
      */
     densite: number;
     /**
-     * Prix du m³ de BOIS D'ŒUVRE de cette essence, € — sans commune mesure
+     * Prix du m³ de **bois d'œuvre** de cette essence, € — sans commune mesure
      * avec le bois de chauffage, mais il faut une bille droite et sans nœuds
      * (donc de l'élagage) et un diamètre suffisant.
      */
@@ -279,7 +279,7 @@ export interface EspeceV0 {
     rejetteDeSouche: boolean;
   };
   /**
-   * Production qu'on prélève SANS abattre l'arbre et qui repousse : le liège
+   * Production qu'on prélève **sans** abattre l'arbre et qui repousse : le liège
    * du chêne-liège, la sève, la résine. C'est ce qui fait vivre une subéraie
    * pendant des siècles sans jamais la couper.
    */
@@ -304,7 +304,7 @@ export interface EspeceV0 {
     inflammabilite: number;
     /**
      * Résistance de l'écorce ∈ [0,1] : chance de survivre au passage du feu
-     * pour un sujet adulte. Le liège est LA réponse évolutive à l'incendie.
+     * pour un sujet adulte. Le liège est **la** réponse évolutive à l'incendie.
      */
     resistanceEcorce: number;
     /** rejette de souche après un feu (châtaignier, arbousier, chêne-liège) */
@@ -323,7 +323,7 @@ export interface EspeceV0 {
    */
   exigenceMinerale: number;
   /**
-   * Type de mycorhize (mycorhizes.ts) : il décide de QUEL réseau l'espèce
+   * Type de mycorhize (mycorhizes.ts) : il décide de **quel** réseau l'espèce
    * profite, et lequel elle entretient. Les trois types ne se remplacent pas.
    */
   mycorhize: "ecto" | "arbusculaire" | "ericoide";
@@ -337,7 +337,7 @@ export interface EspeceV0 {
      */
     sensibilite: number;
     /**
-     * Hôte HIVERNAL : la plante héberge les ravageurs pendant l'hiver et les
+     * Hôte **hivernal** : la plante héberge les ravageurs pendant l'hiver et les
      * relâche au printemps sur ses voisines. Le fusain d'Europe est l'hôte
      * d'hiver du puceron noir. Ce n'est pas un défaut de l'espèce — c'est un
      * chaînon de son cycle, et le connaître change la façon de composer une
@@ -356,7 +356,7 @@ export interface EspeceV0 {
     appetence: number;
   };
   /**
-   * FLEURIR N'EST PAS FRUCTIFIER, et les confondre fabriquait des trous dans
+   * **fleurir n'est pas fructifier**, et les confondre fabriquait des trous dans
    * le calendrier (issue #70, critères G4 et J6).
    *
    * La date de floraison vivait dans le bloc `fruits`, réservé aux essences
@@ -381,7 +381,7 @@ export interface EspeceV0 {
      */
     dureeDJ: number;
     /**
-     * Ce que la floraison OFFRE aux pollinisateurs ∈ [0,1], à pleine couronne.
+     * Ce que la floraison **offre** aux pollinisateurs ∈ [0,1], à pleine couronne.
      *
      * **Zéro pour une anémophile**, et c'est le contenu du champ : le noisetier
      * et le noyer fleurissent abondamment, leur pollen part au vent, et aucun
@@ -410,19 +410,19 @@ export interface EspeceV0 {
     autofertile: boolean;
   };
   /**
-   * PRODUCTION DE SEMENCES — et ce n'est PAS le bloc `fruits` (issue #197).
+   * **production de semences** — et ce n'est **pas** le bloc `fruits` (issue #197).
    *
    * Un chêne ne donne rien à vendre et il nourrit tout un massif. Le bloc
    * `fruits` au-dessus décrit une récolte : un prix, une fenêtre de cueillette,
-   * des semaines de fraîcheur. Celui-ci décrit ce qui TOMBE, ce qui se mange au
+   * des semaines de fraîcheur. Celui-ci décrit ce qui **tombe**, ce qui se mange au
    * sol et ce qui lève au printemps. Les deux notions partagent un mot et rien
    * d'autre, et un châtaignier porte les deux blocs sans contradiction — on
    * ramasse une partie de ses châtaignes, le reste nourrit les sangliers.
    *
    * **Absent veut dire « graine légère »** : le bouleau, le frêne ou le saule
    * sèment abondamment, mais personne ne se nourrit d'une samare et une samare
-   * ne survit pas à l'hiver au sol. Le champ est donc aussi le trait de TAILLE
-   * DE GRAINE que `regeneration.ts` réclamait à la fin de son paragraphe sur le
+   * ne survit pas à l'hiver au sol. Le champ est donc aussi le trait de **taille**
+   * **de graine** que `regeneration.ts` réclamait à la fin de son paragraphe sur le
    * sanglier : la faîne du hêtre, classée `gravite`, est mangée comme un gland,
    * et c'est ce bloc qui le dit — pas son mode de dissémination.
    *
@@ -435,7 +435,7 @@ export interface EspeceV0 {
 const ATLAS = "atlas Espèces - référence (nuanciers eau/trophie/lumière)";
 
 /**
- * SOURCES DE CROISSANCE EN HAUTEUR. L'atlas n'en contient AUCUNE : il ne donne
+ * **sources de croissance en hauteur**. L'atlas n'en contient **aucune** : il ne donne
  * que des traits écologiques. Chaque `pousseMaxMAn` a donc été soit posé à la
  * main pendant le développement, soit confronté à une des références
  * ci-dessous. Une fiche qui ne cite aucune de ces constantes porte une vitesse
@@ -475,7 +475,7 @@ const PEPINIERES_DE =
   "catalogues de pépiniéristes et bases horticoles allemands (Garten von Ehren, Baumschule Horstmann, NaturaDB) — ordre de grandeur commercial, pas une mesure";
 
 /**
- * SOURCES D'INFRADENSITÉ (`bois.densite`, #68). Deux, et dans cet ordre : la
+ * **sources d'infradensité** (`bois.densite`, #68). Deux, et dans cet ordre : la
  * table française d'abord, la base mondiale pour ce qu'elle ne couvre pas.
  * Aucune des deux ne descend jusqu'aux sous-arbrisseaux de lande et de haie —
  * ceux-là gardent leur valeur d'avant, et leur fiche le dit.
@@ -500,7 +500,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Aulne glutineux",
     nomLatin: "Alnus glutinosa",
     hauteurMaxM: 25,
-    // Non calé, et VALIDÉ pour autant : 17,6 m simulés à quarante ans contre
+    // Non calé, et **validé** pour autant : 17,6 m simulés à quarante ans contre
     // 18,0 m dans la table néerlandaise (zwarte els, GK 6). C'est une vraie
     // vérification, puisque personne n'a touché ce chiffre pour l'obtenir.
     pousseMaxMAn: 0.8,
@@ -550,7 +550,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.57,
     // Atlas : mésophile, « aime le frais, sensible à la sécheresse ».
     eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
-    // pH, littérature : Leuschner et al. 2006 (Ann. For. Sci.), 50 peuplements d'Europe centrale : extrêmes MESURÉS pH(H2O) 3,2-7,3 ; PFAF donne 3,5-8,5.
+    // pH, littérature : Leuschner et al. 2006 (Ann. For. Sci.), 50 peuplements d'Europe centrale : extrêmes **mesurés** pH(H2O) 3,2-7,3 ; PFAF donne 3,5-8,5.
     ph: [3.5, 8],
     // Atlas : sciaphile climacique — un semis survit à ~1-2 % de lumière (ch3-B),
     // couronne très opaque.
@@ -588,7 +588,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * La faînée. Les relevés de hêtraies tempérées donnent quelques centaines
      * de kilos de faînes à l'hectare en moyenne pluriannuelle, et plus de mille
      * les années pleines *(à confirmer)*. Le hêtre est l'espèce européenne dont
-     * la fructification est la plus IRRÉGULIÈRE — d'où la période longue et le
+     * la fructification est la plus **irrégulière** — d'où la période longue et le
      * facteur élevé : une année pleine porte ici quinze fois une année creuse.
      */
     semences: { kgParM2HouppierAn: 0.025, periodeAns: 6, facteurAnneePleine: 4.5 },
@@ -599,11 +599,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Chêne pubescent",
     nomLatin: "Quercus pubescens",
     hauteurMaxM: 20,
-    // **INVENTÉ, et il le reste** *(à calibrer)*. Il n'existe aucune table de
+    // **inventé, et il le reste** *(à calibrer)*. Il n'existe aucune table de
     // production du chêne pubescent en climat tempéré océanique : la seule
     // recensée par le CNPF (2025) est roumaine, les autres sont croates,
     // provençales ou valaisannes — d'autres climats. La pratique française
-    // l'assimile au chêne sessile en sachant que cela le SURESTIME ; on reste
+    // l'assimile au chêne sessile en sachant que cela le **surestime** ; on reste
     // donc sous les 15,4 m à quarante ans de la table néerlandaise de chêne.
     pousseMaxMAn: 0.35,
     // Atlas : xérophile, thermophile ; craint les sols engorgés.
@@ -654,7 +654,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nomLatin: "Pinus sylvestris",
     hauteurMaxM: 30,
     /**
-     * Non calé sur table, et VALIDÉ contre elle — c'est-à-dire que ce nombre
+     * Non calé sur table, et **validé** contre elle — c'est-à-dire que ce nombre
      * n'est pas choisi pour retomber sur la table, et que la table le juge.
      *
      * **Il valait 0,5, et le moteur avait dérivé sous lui** (#201). Le
@@ -670,23 +670,23 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * 15,5, on en est à +7,0 %, et elle continue de juger. La vérification
      * tenue à l'écart suit : 8,63 m à vingt ans contre 8,1 dans la table,
      * +6,6 %, là où l'ancienne valeur donnait +18,6 % — le pin était trop
-     * grand aux DEUX âges, et pas seulement à celui qu'on regardait.
+     * grand aux **deux** âges, et pas seulement à celui qu'on regardait.
      */
     pousseMaxMAn: 0.45,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
-    // pH : LAISSÉ TEL QUEL, et la raison mérite d'être lue. L'USFS Silvics
+    // pH : **laissé tel quel**, et la raison mérite d'être lue. L'USFS Silvics
     // donne « 4,0 à 7,0, optimum 4,5-6,0, chlorose au-delà de 6,5 » ; d'autres
     // fiches donnent « tolère l'alcalin jusqu'à 7,5 ». Les deux sont
     // compatibles — une préférence n'est pas une borne — et la seconde est
     // celle qui était déjà là.
     //
-    // Trancher pour 7,0 a été ESSAYÉ et mesuré : le pin tombe alors à 0,05 de
+    // Trancher pour 7,0 a été **essayé** et mesuré : le pin tombe alors à 0,05 de
     // vigueur sur sa station de référence (limon riche, pH 7,0) et sa table de
     // production s'effondre. En le déplaçant sur une station qu'il habite
     // vraiment, on découvre autre chose : limon acide profond 19,5 m (+26 %),
-    // lande sableuse 6,5 m (-58 %) contre 15,5 m tabulés. AUCUNE STATION DU
-    // DÉPÔT NE VAUT UNE CLASSE MÉDIANE POUR UN PIN — la convention « le limon
+    // lande sableuse 6,5 m (-58 %) contre 15,5 m tabulés. **Aucune station du**
+    // **dépôt ne vaut une classe médiane pour un pin** — la convention « le limon
     // riche vaut la médiane » a été taillée pour des feuillus mésophiles, pas
     // pour un pionnier dont le site médian est un sable. C'est ce manque-là
     // qu'il faut traiter, pas cette borne.
@@ -721,7 +721,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Bouleau verruqueux",
     nomLatin: "Betula pendula",
     hauteurMaxM: 25,
-    // ESTIMÉ SANS TABLE, PUIS CONFIRMÉ PAR UNE TABLE TROUVÉE APRÈS COUP —
+    // **estimé sans table**, **puis confirmé par une table trouvée après coup** —
     // c'est la seule validation hors échantillon du fichier.
     //
     // 0,9 m/an a été posé comme « estimation honnête pour un bouleau de plaine
@@ -742,7 +742,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },
-    // pH : LAISSÉ TEL QUEL, et c'est une correction de ma propre correction.
+    // pH : **laissé tel quel**, et c'est une correction de ma propre correction.
     // J'avais resserré la borne haute à 7,0 sur « PFAF : préfère sous 6,5 » —
     // mais la même fiche dit aussi qu'il pousse en sols « basiques (légèrement
     // alcalins) ». Poser la mort à 7,0 contredisait la seconde moitié de la
@@ -776,7 +776,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Noyer commun",
     nomLatin: "Juglans regia",
     hauteurMaxM: 25,
-    // AUCUNE TABLE N'EXISTE, ET ON SAIT MAINTENANT POURQUOI (#185). Ce n'était
+    // **aucune table n'existe**, **et on sait maintenant pourquoi** (#185). Ce n'était
     // pas « pas trouvée » : le *Fichier écologique des essences* wallon
     // (fichierecologique.be, fiche du noyer commun) porte à la ligne
     // productivité « **sans objet, sylviculture d'arbre** ». Le noyer se
@@ -789,7 +789,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // conduit pour le bois, et il le restera : ce n'est pas une recherche
     // inachevée, c'est une référence qui n'existe pas dans cette forme.
     pousseMaxMAn: 0.5,
-    // Atlas : héliophile, mésoxérophile, EUTROPHE — il exige le riche, et c'est
+    // Atlas : héliophile, mésoxérophile, **eutrophe** — il exige le riche, et c'est
     // ce qui limite l'agroforesterie au noyer aux bonnes terres.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
     // Il fuit l'acide : c'est un arbre de sols neutres à calcaires.
@@ -803,7 +803,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // de dispersion, en terrain découvert où l'oiseau les retrouvera.
     regeneration: { maturiteAns: 12, longeviteAns: 150, dissemination: "geai", semisParAn: 0.5 },
     litiere: { cnRatio: 35, calciumMgG: 14 },
-    // LE plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
+    // **Le** plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
     // permet d'échapper aux gels d'avril, et ce qui rend l'agroforesterie au
     // noyer possible — la culture intercalaire pousse avant que l'ombre arrive.
     phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
@@ -825,9 +825,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       autofertile: false,
     },
     /**
-     * ALLÉLOPATHIE. Le noyer libère de la juglone par ses racines et sa
+     * **Allélopathie**. Le noyer libère de la juglone par ses racines et sa
      * litière, et elle inhibe la germination et la croissance de nombreuses
-     * espèces dans un rayon de QUINZE À VINGT MÈTRES autour de l'arbre. C'est
+     * espèces dans un rayon de **quinze à vingt mètres** autour de l'arbre. C'est
      * la contrainte classique de l'agroforesterie au noyer, et la première
      * chose qu'on apprend en plantant un verger à côté.
      */
@@ -838,7 +838,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: false },
     /**
-     * Le noyer ALTERNE — une année chargée, une année creuse — et c'est un fait
+     * Le noyer **alterne** — une année chargée, une année creuse — et c'est un fait
      * de verger avant d'être un fait de forêt *(à confirmer)*.
      */
     semences: { kgParM2HouppierAn: 0.06, periodeAns: 2, facteurAnneePleine: 1.4 },
@@ -849,13 +849,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Pommier",
     nomLatin: "Malus domestica",
     hauteurMaxM: 8,
-    // Ordre de grandeur COHÉRENT avec le pré-verger allemand, pas calé dessus
+    // Ordre de grandeur **cohérent** avec le pré-verger allemand, pas calé dessus
     // *(à confirmer)* : un plein vent sur franc plafonne à 6-8 m (chambre
     // d'agriculture de Rhénanie-du-Nord-Westphalie), et 60 arbres de 10 à 70
     // ans d'un pré-verger bavarois mesurent 7,5 m en moyenne — le moteur en
     // fait 7,6 à quarante ans, donc un peu vite mais dans la fourchette
     // mesurée (3,8 à 12,6 m). La pousse annuelle des rameaux d'un jeune arbre
-    // formé (60 cm à 1 m) n'est PAS un gain de hauteur : on ne s'en sert pas.
+    // formé (60 cm à 1 m) n'est **pas** un gain de hauteur : on ne s'en sert pas.
     pousseMaxMAn: 0.5,
     // Atlas : « fruitier clé » ; mésophile de plaine.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.15 },
@@ -873,8 +873,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Fruitier de plaine : feuillaison après la floraison, mi-avril.
     phenologie: { debourrementDJ: 150, seuilJourH: 11.5, besoinFroidSemaines: 13 },
     economie: { prixPlantEur: 12 },
-    // Infradensité NON SOURCÉE : le pommier cultivé est absent des deux sources,
-    // et le pommier sauvage (Malus sylvestris, 0,60 au GWDD) est une AUTRE espèce.
+    // Infradensité **non sourcée** : le pommier cultivé est absent des deux sources,
+    // et le pommier sauvage (Malus sylvestris, 0,60 au GWDD) est une **autre** espèce.
     // Valeur laissée en l'état plutôt qu'empruntée (#68).
     bois: { densite: 0.6, prixOeuvreEurM3: 150, rejetteDeSouche: false },
     // Fin avril, après la plupart des gels. Le pommier est l'entomophile de
@@ -924,10 +924,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // L'abricotier part très tôt, et c'est bien là son problème : le gel le rattrape.
     phenologie: { debourrementDJ: 110, seuilJourH: 11.2, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 14 },
-    // Infradensité : GWDD, mesure UNIQUE (0,675, Asie du Sud-Est) — sourcée, mais
+    // Infradensité : GWDD, mesure **unique** (0,675, Asie du Sud-Est) — sourcée, mais
     // sur un seul échantillon, et hors d'Europe.
     bois: { densite: 0.68, prixOeuvreEurM3: 150, rejetteDeSouche: false },
-    // Fin février-mars : LE pari du gel tardif (atlas). Très mellifère, et
+    // Fin février-mars : **le** pari du gel tardif (atlas). Très mellifère, et
     // d'autant plus précieux que rien d'autre n'est ouvert à cette date.
     floraison: { debutDJ: 60, dureeDJ: 80, nectar: 0.9 },
     fruits: {
@@ -954,18 +954,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Noisetier",
     nomLatin: "Corylus avellana",
     hauteurMaxM: 8,
-    // Calé sur RIEN, mais confronté : le moteur fait 2,5 m à quatre ans et
-    // 3,0 m à cinq, ce qui est exactement la REPOUSSE DE CÉPÉE mesurée en
+    // Calé sur **rien**, mais confronté : le moteur fait 2,5 m à quatre ans et
+    // 3,0 m à cinq, ce qui est exactement la **repousse de cépée** mesurée en
     // taillis anglais (1,5-1,75 m la première année puis ~50 cm/an, Harmer
     // 2004 ; 2,4-2,8 m à la 4ᵉ année, Buckley 1992). Or une souche établie
     // part plus vite qu'un semis, et le moteur ne sait pas faire la
-    // différence — sa forme de croissance dépend de la TAILLE, pas de l'âge
+    // différence — sa forme de croissance dépend de la **taille**, pas de l'âge
     // (trees.ts). Le noisetier du jeu est donc un noisetier de taillis, ce
     // qui est son emploi réel en haie *(à confirmer)*.
     pousseMaxMAn: 0.6,
     // Atlas : demi-ombre, cépée — l'arbuste des sous-étages agroforestiers.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
-    // pH, littérature : Hicks 2022, Biological Flora : calcaires pH 7-8, dépôts sur craie 4-5, ET sols très acides sous 4.
+    // pH, littérature : Hicks 2022, Biological Flora : calcaires pH 7-8, dépôts sur craie 4-5, **et** sols très acides sous 4.
     ph: [4, 8],
     lumiere: { compensation: 0.05, saturation: 0.4, lai: 2.5, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 90 }, // cépée à racines traçantes
@@ -974,7 +974,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // La noisette est lourde, nourrissante et convoitée : mulots, écureuils,
     // geais et balanin en prélèvent l'essentiel, et un noisetier ne place pas
     // un descendant par an. On reste donc bien en dessous de 1 — le taux est
-    // un nombre d'établissements POTENTIELS, après l'entonnoir de mortalité
+    // un nombre d'établissements **potentiels**, après l'entonnoir de mortalité
     // graine→semis, et cet entonnoir est ici très étroit *(à calibrer)*.
     regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "geai", semisParAn: 0.4 },
     litiere: { cnRatio: 25, calciumMgG: 13 },
@@ -983,7 +983,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 8 },
     // Infradensité : IGN/Dupouey, « Noisetier ».
     bois: { densite: 0.52, prixOeuvreEurM3: 70, rejetteDeSouche: true },
-    // Chatons d'hiver (janv.-fév.), pollinisation par LE VENT : abondants et
+    // Chatons d'hiver (janv.-fév.), pollinisation par **le vent** : abondants et
     // sans nectar. Les abeilles y prélèvent du pollen les jours doux, mais on
     // ne compte pas une noiseraie comme une ressource florale.
     floraison: { debutDJ: 15, dureeDJ: 150, nectar: 0 },
@@ -1018,13 +1018,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Prunellier",
     nomLatin: "Prunus spinosa",
     hauteurMaxM: 4,
-    // **INVENTÉ, et il le reste** *(à calibrer)*. Aucune mesure de croissance
+    // **inventé, et il le reste** *(à calibrer)*. Aucune mesure de croissance
     // du prunellier n'a été trouvée en climat océanique : pas de Biological
     // Flora, rien dans la littérature de haies. La seule contrainte publiée
-    // est ORDINALE — Grubb range le prunellier dans le groupe « à croissance
+    // est **ordinale** — Grubb range le prunellier dans le groupe « à croissance
     // rapide », devant l'aubépine.
     //
-    // ELLE EST MAINTENANT GARDÉE PAR UN ESSAI (#185), ce qu'elle n'était pas :
+    // **Elle est maintenant gardée par un essai** (#185), ce qu'elle n'était pas :
     // ces deux lignes portaient la seule chose qu'on sache de l'espèce, et
     // rien n'empêchait qu'elle devienne fausse en silence. Mesuré sur le banc
     // des arbustes : 1,39 m à trois ans contre 1,14 à l'aubépine (36 cm/an
@@ -1039,7 +1039,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: false },
     // Drupes emportées par les oiseaux, mais la vraie conquête se fait par
-    // DRAGEONS : le fourré avance en tache, d'un mètre par an environ, et c'est
+    // **drageons** : le fourré avance en tache, d'un mètre par an environ, et c'est
     // ce qui en fait un problème de gestion dans une haie. On modélisait ce
     // mécanisme en gonflant le taux de semis ; il est maintenant modélisé pour
     // ce qu'il est, et le semis revient à une valeur d'oiseaux ordinaire.
@@ -1054,10 +1054,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // L'épine noire fleurit avant de feuiller, dès mars.
     phenologie: { debourrementDJ: 115, seuilJourH: 11.3, besoinFroidSemaines: 10 },
     economie: { prixPlantEur: 4 },
-    // Infradensité NON SOURCÉE : absente des deux sources. Valeur d'avant #68,
+    // Infradensité **non sourcée** : absente des deux sources. Valeur d'avant #68,
     // donc vraisemblablement une densité à 12 % d'humidité, donc surestimée.
     bois: { densite: 0.75, prixOeuvreEurM3: 0, rejetteDeSouche: true },
-    // Il fleurit AVANT les feuilles, dès mars : exposé au gel, et c'est la
+    // Il fleurit **avant** les feuilles, dès mars : exposé au gel, et c'est la
     // première nappe blanche des haies — une ressource majeure de sortie
     // d'hiver.
     floraison: { debutDJ: 60, dureeDJ: 100, nectar: 0.8 },
@@ -1083,12 +1083,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "crataegus_monogyna",
     nom: "Aubépine",
     nomLatin: "Crataegus monogyna",
-    // Mai, après les feuilles : l'aubépine est LA nappe blanche de mai, et le
+    // Mai, après les feuilles : l'aubépine est **la** nappe blanche de mai, et le
     // calendrier en avait un trou — entre le pommier (fin avril) et la ronce
     // (juin), le moteur ne connaissait que le noyer, qui est anémophile.
     floraison: { debutDJ: 450, dureeDJ: 150, nectar: 0.9 },
     hauteurMaxM: 8,
-    // ENCADRÉ par deux mesures anglaises, non calé sur l'une d'elles : 37
+    // **Encadré** par deux mesures anglaises, non calé sur l'une d'elles : 37
     // cm/an sur douze ans en jardin (Grubb 1999, via la Biological Flora du
     // genre) et ~28 cm/an sur cinq ans en plantation forestière (Willoughby
     // 2007). Le moteur donne 29 cm/an sur douze ans : dans la bande, à son
@@ -1108,7 +1108,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // L'aubépine suit l'épine noire de quelques semaines.
     phenologie: { debourrementDJ: 135, seuilJourH: 11.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 4 },
-    // Infradensité NON SOURCÉE : le GWDD ne porte que « Crataegus oxyacantha »,
+    // Infradensité **non sourcée** : le GWDD ne porte que « Crataegus oxyacantha »,
     // nom historiquement ambigu entre C. laevigata et C. monogyna — on ne s'en
     // sert pas. Valeur d'avant #68, donc vraisemblablement surestimée.
     bois: { densite: 0.8, prixOeuvreEurM3: 0, rejetteDeSouche: true },
@@ -1131,13 +1131,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // horticoles allemandes donnent 50 à 250 cm/an pour une hauteur finale de
     // 1 à 3 m *(à confirmer)*. Le piège, signalé par la littérature : un
     // turion s'allonge de 3 à 6 m par saison mais s'arque et se marcotte —
-    // l'allongement N'EST PAS un gain de hauteur, et la roncière plafonne
+    // l'allongement **n'est pas** un gain de hauteur, et la roncière plafonne
     // bas. Le moteur plafonne à 2,5 m atteints en trois ans : c'est la bonne
     // lecture.
     pousseMaxMAn: 1.4,
     // Atlas : « nurse (fruticée) », pionnière, cosmopolite tempéré.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.25 },
-    // pH, littérature : BSBI (Fermanagh) : LA PLUS FRÉQUENTE à pH 3,5-5,0, et tolère jusqu'au très alcalin.
+    // pH, littérature : BSBI (Fermanagh) : **la plus fréquente** à pH 3,5-5,0, et tolère jusqu'au très alcalin.
     ph: [3.5, 8],
     // Demi-ombre tolérée : elle tient sous un couvert clair, ce qui lui permet
     // d'attendre la trouée.
@@ -1145,7 +1145,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     racines: { profondeurMaxCm: 60 },
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.7, fixateur: false },
-    // Les mûres sont mangées par tout ce qui vole : c'est LE colonisateur.
+    // Les mûres sont mangées par tout ce qui vole : c'est **le** colonisateur.
     regeneration: {
       maturiteAns: 2,
       longeviteAns: 15,
@@ -1162,7 +1162,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // La ronce ne perd qu'une partie de son feuillage : elle repart tôt.
     phenologie: { debourrementDJ: 120, seuilJourH: 11.3, besoinFroidSemaines: 8 },
     economie: { prixPlantEur: 2 },
-    // Infradensité NON SOURCÉE : absente des deux sources, comme tous les
+    // Infradensité **non sourcée** : absente des deux sources, comme tous les
     // sous-arbrisseaux. Valeur d'avant #68.
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     // Juin, hors d'atteinte des gels, et elle s'étale : la ronce fleurit et
@@ -1190,7 +1190,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Sureau noir",
     nomLatin: "Sambucus nigra",
     hauteurMaxM: 7,
-    // La seule mesure publiée est un PLANCHER : 37 cm/an sur gravats de
+    // La seule mesure publiée est un **plancher** : 37 cm/an sur gravats de
     // brique en friche urbaine (Gilbert 1991, via la Biological Flora). Le
     // moteur en fait 58 à 64 sur un limon riche, soit 1,6 fois plus sur un
     // sol qui n'a rien à voir — plausible pour un nitrophile réputé vif, mais
@@ -1203,7 +1203,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     lumiere: { compensation: 0.1, saturation: 0.55, lai: 2.5, houppierRatio: 0.6, caduc: true },
     racines: { profondeurMaxCm: 80 },
     tBaseCroissanceC: 6,
-    // NITROPHILE : il ne pousse que là où l'azote abonde — lisières fumées,
+    // **Nitrophile** : il ne pousse que là où l'azote abonde — lisières fumées,
     // tas de fumier, pieds de haie. C'est un indicateur, pas un passe-partout.
     azote: { demandeRelative: 1, fixateur: false },
     regeneration: { maturiteAns: 4, longeviteAns: 40, dissemination: "oiseaux", semisParAn: 1.5 },
@@ -1211,7 +1211,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le sureau est l'un des tout premiers à verdir dans les haies.
     phenologie: { debourrementDJ: 105, seuilJourH: 11.2, besoinFroidSemaines: 8 }, // litière tendre, azotée : elle se minéralise vite
     economie: { prixPlantEur: 5 },
-    // Infradensité NON SOURCÉE : le GWDD n'a que des sureaux d'Amérique (0,43 à
+    // Infradensité **non sourcée** : le GWDD n'a que des sureaux d'Amérique (0,43 à
     // 0,46) ; on ne prête pas leur valeur au nôtre. Valeur d'avant #68.
     bois: { densite: 0.5, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     // Juin. Ombelles très visitées, surtout par les diptères — nectar plus
@@ -1239,7 +1239,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Charme",
     nomLatin: "Carpinus betulus",
     hauteurMaxM: 25,
-    // 0,40 → 0,53, CALÉ sur la première table de production du charme jamais
+    // 0,40 → 0,53, **calé** sur la première table de production du charme jamais
     // publiée (Lockow & Lockow 2009) : 16,3 m de hauteur dominante à quarante
     // ans en bonité médiane (HO100 = 25 m, gamme 18→31 m). Avant elle, le
     // charme se taxait par analogie avec le hêtre — c'est dire le vide.
@@ -1247,7 +1247,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // La géographie est à décoter, et on le dit : la table vient du
     // Brandebourg, plaine subcontinentale plus sèche que le bocage. Le
     // recoupement dans la bonne zone est l'équivalence que le CNPF (2025)
-    // recommande pour le charme français, les tables NÉERLANDAISES de chêne :
+    // recommande pour le charme français, les tables **néerlandaises** de chêne :
     // 15,4 m à quarante ans, 6 % sous la table allemande. Le moteur était à
     // 13,4 m, sous les deux — c'est ça qui justifie de le monter, pas le
     // choix d'une source contre l'autre. Voir `hauteurs.test.ts`.
@@ -1257,7 +1257,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // un seul candidat au sous-étage.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.35 },
     ph: [4.5, 8],
-    // MARCESCENT type : c'est lui qu'on voit roux en janvier dans les haies, et
+    // **Marcescent** type : c'est lui qu'on voit roux en janvier dans les haies, et
     // c'est ce qui fait du charme un brise-vent d'hiver quand le hêtre voisin
     // est nu *(à calibrer)*.
     lumiere: {
@@ -1276,7 +1276,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Le charme débourre tôt, avant le hêtre et le chêne.
     phenologie: { debourrementDJ: 130, seuilJourH: 11.5, besoinFroidSemaines: 12 },
     economie: { prixPlantEur: 3 },
-    // Bois très dur : c'est LE bois de chauffage, et le taillis de charme
+    // Bois très dur : c'est **le** bois de chauffage, et le taillis de charme
     // repart indéfiniment — d'où sa place dans toutes les haies plessées.
     // Infradensité : IGN/Dupouey, « Charme ». Il reste parmi les plus denses des
     // feuillus français, mais 0,80 était sa densité du commerce.
@@ -1305,7 +1305,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // ans) là où la sigmoïde du moteur est plus douce *(à confirmer)*.
     pousseMaxMAn: 0.15,
     // Atlas : « persistant », sciaphile climacique. C'est le seul couvert
-    // PERMANENT de sous-bois : en janvier, sous une hêtraie nue, c'est lui qui
+    // **permanent** de sous-bois : en janvier, sous une hêtraie nue, c'est lui qui
     // abrite et nourrit.
     eau: { seuilConfortSecheresse: 0.75, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.2 },
     // pH, littérature : Peterken & Lloyd 1967, Biological Flora : « presque indifférent au pH », de l'acide au riche en calcaire.
@@ -1332,17 +1332,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     id: "salix_alba",
     nom: "Saule blanc",
     nomLatin: "Salix alba",
-    // Février-mars, sur bois nu. Le saule est la ressource de SORTIE D'HIVER
+    // Février-mars, sur bois nu. Le saule est la ressource de **sortie d'hiver**
     // par excellence : c'est de son pollen que les colonies repartent, et
     // aucune autre essence de cette taille n'ouvre aussi tôt. Il n'a pas de
     // bloc `fruits` — on ne récolte rien d'un saule blanc — et c'est
     // exactement pour cette raison qu'il était absent du calendrier.
     floraison: { debutDJ: 30, dureeDJ: 150, nectar: 0.8 },
     hauteurMaxM: 20,
-    // **INVENTÉ, et il le reste** *(à calibrer)*. Il n'existe aucune table de
+    // **inventé, et il le reste** *(à calibrer)*. Il n'existe aucune table de
     // production du saule blanc de plein vent : ce qui existe est de
     // l'osiériculture, du têtard ou du clone à courte rotation. Jansen 1996
-    // prescrit de le taxer comme un PEUPLIER cv. Robusta, dont la table donne
+    // prescrit de le taxer comme un **peuplier** cv. Robusta, dont la table donne
     // 24,7 m à vingt ans — manifestement trop rapide pour un saule, et une
     // hauteur moyenne, pas dominante. Le moteur en fait 13,0 : plus lent que
     // le peuplier, ce qui est la seule chose qu'on puisse défendre ici.
@@ -1363,7 +1363,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Il débourre parmi les tout premiers, avec le bouleau.
     phenologie: { debourrementDJ: 80, seuilJourH: 10.8, besoinFroidSemaines: 7 },
     economie: { prixPlantEur: 3 }, // une bouture suffit
-    // Infradensité : GWDD, mesure UNIQUE (0,284, Europe) — la plus basse du
+    // Infradensité : GWDD, mesure **unique** (0,284, Europe) — la plus basse du
     // référentiel, et basse même pour un saule (les autres Salix du GWDD vont de
     // 0,32 à 0,53). Sourcée, mais sur un seul échantillon.
     bois: { densite: 0.28, prixOeuvreEurM3: 60, rejetteDeSouche: true },
@@ -1386,7 +1386,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // *(à confirmer — c'est du commerce, pas de la mesure)*. Le moteur en
     // fait 26, dans le haut de cette fourchette.
     //
-    // **ET IL NE RESPECTE PAS LE RAPPORT QUE CETTE FICHE AFFIRMAIT** *(à
+    // **et il ne respecte pas le rapport que cette fiche affirmait** *(à
     // calibrer)*. Elle disait : « respecte le seul fait sur lequel toutes les
     // sources s'accordent : le cornouiller mâle est trois à cinq fois plus
     // lent que le noisetier ». Mesuré en allant le vérifier (#185), sur le
@@ -1394,7 +1394,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // noisetier, soit 2,5 fois — pas 3 à 5.** L'affirmation était fausse, et
     // elle a tenu parce que rien ne la gardait.
     //
-    // ON N'Y TOUCHE PAS, ET C'EST ARBITRÉ PLUTÔT QU'OUBLIÉ. Le rapport « 3 à
+    // **On n'y touche pas**, **et c'est arbitré plutôt qu'oublié**. Le rapport « 3 à
     // 5 » est lui-même repris d'un commentaire, sans source nommée ; le
     // vérifier dans la littérature viendrait avant de ralentir l'espèce, et
     // cette recherche a été jugée sans intérêt au regard de ce qu'elle
@@ -1421,7 +1421,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 25, calciumMgG: 14 },
     phenologie: { debourrementDJ: 110, seuilJourH: 11.3, besoinFroidSemaines: 11 },
     economie: { prixPlantEur: 6 },
-    // Infradensité NON SOURCÉE : le cornouiller mâle est absent des deux sources
+    // Infradensité **non sourcée** : le cornouiller mâle est absent des deux sources
     // (le GWDD n'a que le sanguin, 0,68). Valeur d'avant #68, et c'est désormais
     // la plus haute du référentiel, donc la plus suspecte.
     bois: { densite: 0.9, prixOeuvreEurM3: 0, rejetteDeSouche: true }, // le bois le plus dur d'Europe
@@ -1476,7 +1476,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     bois: { densite: 0.6, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     exigenceMinerale: 1.7,
     mycorhize: "arbusculaire",
-    // Hôte d'HIVER du puceron noir : il l'héberge à la mauvaise saison et le
+    // Hôte d'**hiver** du puceron noir : il l'héberge à la mauvaise saison et le
     // relâche au printemps sur ses voisines. C'est ce qui en fait un arbuste à
     // placer en connaissance de cause dans une haie.
     ravageurs: { sensibilite: 0.45, hoteHivernal: true },
@@ -1500,7 +1500,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // la taille → haies ». Ourlets et lisières, surtout sur calcaire.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
     ph: [6, 8.5],
-    // SEMI-PERSISTANT : il ne se dénude jamais tout à fait. C'est le seul de
+    // **Semi-persistant** : il ne se dénude jamais tout à fait. C'est le seul de
     // l'atlas dans ce cas, et c'est ce qui lui vaut sa place dans les haies —
     // il abrite encore en février (phenologie.ts).
     lumiere: {
@@ -1518,7 +1518,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 27, calciumMgG: 12 },
     phenologie: { debourrementDJ: 120, seuilJourH: 11.4, besoinFroidSemaines: 9 },
     economie: { prixPlantEur: 4 },
-    // Infradensité : GWDD, mesure unique (0,805, Europe). Elle MONTE — preuve
+    // Infradensité : GWDD, mesure unique (0,805, Europe). Elle **monte** — preuve
     // qu'un facteur global appliqué aux anciennes valeurs aurait eu tort ici.
     bois: { densite: 0.81, prixOeuvreEurM3: 0, rejetteDeSouche: true },
     // Juin-juillet, très odorant et très visité.
@@ -1547,7 +1547,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Ajonc d'Europe",
     nomLatin: "Ulex europaeus",
     // **Il fleurit presque toute l'année**, avec un pic de mars à juin et des
-    // fleurs éparses dès décembre. C'est la ressource de FOND d'une lande
+    // fleurs éparses dès décembre. C'est la ressource de **fond** d'une lande
     // atlantique, celle qui tient la soudure quand rien d'autre n'est ouvert.
     // Une fenêtre large plutôt qu'un pic : c'est la grandeur `dureeDJ` qui
     // porte la différence *(à calibrer — les sources donnent une saison, pas
@@ -1562,7 +1562,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // dirigé en Galice (57 cm à trois ans) sont bien plus lents : ce sont
     // d'autres régimes, taille commerciale et lande brûlée.
     pousseMaxMAn: 0.45,
-    // Atlas : « épineux, landes acides », façade atlantique — LA nurse de lande.
+    // Atlas : « épineux, landes acides », façade atlantique — **la** nurse de lande.
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.15 },
     ph: [3.5, 6.5],
     // Rameaux épineux persistants : il ombrage et brise le vent toute l'année.
@@ -1576,7 +1576,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       longeviteAns: 25,
       dissemination: "gravite",
       semisParAn: 5,
-      // L'ajonc est LE cas d'école. Sa banque atteint 500 à 2 000 graines/m² sous une lande installée, et jusqu'à des dizaines de milliers ; les graines tiennent 25 à 30 ans dans les six premiers centimètres du sol, et le feu les scarifie sans les détruire — le sol isole assez pour ça. C'est la raison pour laquelle une lande brûlée revient en lande.
+      // L'ajonc est **le** cas d'école. Sa banque atteint 500 à 2 000 graines/m² sous une lande installée, et jusqu'à des dizaines de milliers ; les graines tiennent 25 à 30 ans dans les six premiers centimètres du sol, et le feu les scarifie sans les détruire — le sol isole assez pour ça. C'est la raison pour laquelle une lande brûlée revient en lande.
       banqueGraines: {
         persistanceAns: 28,
         leveeParLeFeu: 0.45,
@@ -1587,7 +1587,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 3 },
-    // Infradensité NON SOURCÉE : aucun Ulex au GWDD, et la table française ne
+    // Infradensité **non sourcée** : aucun Ulex au GWDD, et la table française ne
     // descend pas jusqu'à la lande. Valeur d'avant #68.
     bois: { densite: 0.6, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // épines dissuasives, mais brouté en hiver sur la lande
@@ -1604,7 +1604,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Genêt à balais",
     nomLatin: "Cytisus scoparius",
     // Mai-juin, franc et court. Fabacée à fleurs sans nectar ou presque : le
-    // genêt se visite pour son POLLEN, que les bourdons libèrent en forçant la
+    // genêt se visite pour son **pollen**, que les bourdons libèrent en forçant la
     // carène *(à calibrer)*.
     floraison: { debutDJ: 500, dureeDJ: 200, nectar: 0.5 },
     hauteurMaxM: 2.5,
@@ -1639,7 +1639,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 2.5 },
-    // Infradensité NON SOURCÉE : aucun Cytisus au GWDD. Valeur d'avant #68.
+    // Infradensité **non sourcée** : aucun Cytisus au GWDD. Valeur d'avant #68.
     bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
     // genêt appété, sans épines
     exigenceMinerale: 1,
@@ -1665,8 +1665,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // hauteur de couvert qui va de moins de 10-15 cm en phase pionnière à
     // 50-60 cm à maturité, vers vingt ans. Le moteur gagne 6 cm/an les
     // premières années et plafonne à 0,60 m vers vingt ans : la bonne
-    // trajectoire. MAIS il fait naître tous ses semis à 30 cm (`regeneration.ts`),
-    // si bien que la callune du jeu SAUTE sa phase pionnière — ce n'est pas
+    // trajectoire. **Mais** il fait naître tous ses semis à 30 cm (`regeneration.ts`),
+    // si bien que la callune du jeu **saute** sa phase pionnière — ce n'est pas
     // la fiche qui est en cause, c'est une hauteur de semis unique pour un
     // atlas qui va du sous-arbrisseau au chêne *(à confirmer)*.
     pousseMaxMAn: 0.12,
@@ -1694,7 +1694,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Sempervirent : valeurs sans effet.
     phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
     economie: { prixPlantEur: 2 },
-    // Infradensité NON SOURCÉE : ni Calluna ni Erica au GWDD. Valeur d'avant #68.
+    // Infradensité **non sourcée** : ni Calluna ni Erica au GWDD. Valeur d'avant #68.
     bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
     // consommée l'hiver quand il n'y a rien d'autre
     // le type des landes : il va chercher l'azote organique des sols acides
@@ -1713,12 +1713,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Non calé, et il tombe juste : 19,0 m simulés à quarante ans contre
     // ~18,7 m au faisceau de courbes des taillis français (Lemaire 2005, publié
     // par le CRPF Île-de-France–Centre). Deux réserves honnêtes — les seules
-    // valeurs ÉCRITES de ce faisceau sont les hauteurs dominantes à 25 ans
+    // valeurs **écrites** de ce faisceau sont les hauteurs dominantes à 25 ans
     // (21 / 18,5 / 16 / 13,5 / 11 / 8,5 m des classes 1 à 6), celles à
     // quarante ans se lisent sur le graphique *(à confirmer)* ; et ce sont des
-    // courbes de TAILLIS, où un rejet de souche devance un semis en jeunesse.
+    // courbes de **taillis**, où un rejet de souche devance un semis en jeunesse.
     // C'est bien ce qu'on mesure : 13,0 m simulés à 25 ans contre 14,75 m à
-    // la médiane du faisceau. Le calcifuge se mesure sur limon ACIDE : sur le
+    // la médiane du faisceau. Le calcifuge se mesure sur limon **acide** : sur le
     // limon riche à pH 7, il meurt de chlorose (`hauteurs.test.ts`).
     pousseMaxMAn: 0.65,
     // Atlas : mésoxérophile, **acidiphile (calcifuge)** — l'arbre à valoriser
@@ -1758,7 +1758,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     gibier: { appetence: 0.5 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.3, rejetteApresFeu: true },
     /**
-     * Le châtaignier porte les DEUX blocs, et c'est la démonstration que ce ne
+     * Le châtaignier porte les **deux** blocs, et c'est la démonstration que ce ne
      * sont pas les mêmes : on récolte une partie de ses châtaignes (`fruits`),
      * le reste tombe et nourrit. Production nettement plus lourde et plus
      * régulière que celle d'un chêne *(à calibrer : les rendements publiés sont
@@ -1772,7 +1772,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Chêne-liège",
     nomLatin: "Quercus suber",
     hauteurMaxM: 20,
-    // **NON VÉRIFIABLE ICI, et donc toujours à calibrer.** Les données
+    // **non vérifiable ici, et donc toujours à calibrer.** Les données
     // existent — le modèle de hauteur dominante espagnol et tunisien
     // (Sánchez-González 2010) donne 5,0 m à quarante ans en classe médiane
     // pour des suberaies naturelles denses, quand les jeunes plantations
@@ -1787,7 +1787,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « silice/acide » — calcifuge strict des sables siliceux.
     ph: [3.8, 6.8],
     // Semi-héliophile : contrairement au pin, ses jeunes supportent le couvert
-    // — c'est ainsi qu'une subéraie s'installe SOUS la pinède et prend le
+    // — c'est ainsi qu'une subéraie s'installe **sous** la pinède et prend le
     // relais, le pin ne se régénérant pas sous sa propre ombre.
     lumiere: { compensation: 0.07, saturation: 0.5, lai: 2.8, houppierRatio: 0.42, caduc: false },
     racines: { profondeurMaxCm: 250 }, // pivot profond des sables méditerranéens
@@ -1802,7 +1802,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Infradensité : IGN/Dupouey, « Chêne-liège ». La valeur ne bouge pas — elle
     // était juste par chance, elle est maintenant sourcée.
     bois: { densite: 0.7, prixOeuvreEurM3: 160, rejetteDeSouche: true },
-    // Le liège se lève tous les ~10 ans SANS abattre l'arbre : une subéraie
+    // Le liège se lève tous les ~10 ans **sans** abattre l'arbre : une subéraie
     // produit pendant un siècle et demi. C'est la vraie raison de la planter,
     // bien plus que son bois.
     ecorce: {
@@ -1822,7 +1822,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     gibier: { appetence: 0.6 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.95, rejetteApresFeu: true },
     /**
-     * Le chêne-liège est le chêne le plus RÉGULIER, et ce n'est pas un détail
+     * Le chêne-liège est le chêne le plus **régulier**, et ce n'est pas un détail
      * de fiche : la montado ibérique engraisse ses porcs sur sa glandée chaque
      * automne, ce qu'aucun élevage ne pourrait faire avec une production une
      * année sur quatre *(à confirmer)*.
@@ -1839,10 +1839,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // la table néerlandaise (es, GK 6).
     pousseMaxMAn: 0.7,
     // Atlas : mésophile à hygrocline, il aime les sols frais et riches et
-    // souffre vite en sol sec — c'est LE frêne des fonds de vallée et des
+    // souffre vite en sol sec — c'est **le** frêne des fonds de vallée et des
     // haies bocagères.
     eau: { seuilConfortSecheresse: 0.8, seuilStressSecheresse: 0.45, toleranceEngorgement: 0.5 },
-    // pH, littérature : Thomas 2016, Biological Flora : ABSENT sous pH 4,2 en surface, tolère 4,5, préfère base-riche au-dessus de 5,5.
+    // pH, littérature : Thomas 2016, Biological Flora : **absent** sous pH 4,2 en surface, tolère 4,5, préfère base-riche au-dessus de 5,5.
     ph: [4.2, 8],
     // Demi-héliophile : il s'installe en lisière et dans les trouées, pas sous
     // couvert fermé.
@@ -1900,7 +1900,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 9 },
     // Infradensité : GWDD, mesure unique (0,65).
     bois: { densite: 0.65, prixOeuvreEurM3: 90, rejetteDeSouche: true },
-    // Il fleurit en AUTOMNE, en même temps qu'il mûrit les fruits de l'an
+    // Il fleurit en **automne**, en même temps qu'il mûrit les fruits de l'an
     // passé (atlas : ressource des pollinisateurs). C'est la dernière table
     // de l'année, et elle n'a pas de concurrente.
     floraison: { debutDJ: 1150, dureeDJ: 300, nectar: 0.9 },

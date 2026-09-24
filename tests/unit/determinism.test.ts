@@ -40,7 +40,7 @@ describe("déterminisme du moteur", () => {
       const w = weather[i % 52];
       if (!w) throw new Error("météo manquante");
       state = tick(state, w).state;
-      // Horizon de SURFACE : c'est lui qui suit le rythme des saisons
+      // Horizon de **surface** : c'est lui qui suit le rythme des saisons
       // (le sol est stratifié, cf. soil.ts).
       const nH = Math.max(1, LANDE_SECHE.station.profil.length);
       const arr = state.soil.waterMm;
@@ -60,7 +60,7 @@ describe("déterminisme du moteur", () => {
     // Et la réserve se recharge : retour proche du plein en fin d'année.
     const yearEnd = meanWater[52 * 3 - 1];
     if (yearEnd === undefined) throw new Error("index invalide");
-    // Fin d'année : l'horizon de surface est rechargé. On compare à SA réserve
+    // Fin d'année : l'horizon de surface est rechargé. On compare à **sa** réserve
     // utile (pas à celle du profil entier), diminuée de ce que la strate
     // herbacée continue de boire.
     const premierHorizon = LANDE_SECHE.station.profil[0];

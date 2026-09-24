@@ -1,13 +1,13 @@
 /**
- * La strate herbacée, prise dans son ENSEMBLE (docs/regles.md §5, ch4-B, ch7
+ * La strate herbacée, prise dans son **ensemble** (docs/regles.md §5, ch4-B, ch7
  * « zéro sol nu »).
  *
  * Ce fichier tient ce que la strate fait au reste du monde — sa soif, sa faim
- * d'azote, la mémoire hydrique qui l'empêche d'osciller. QUI la compose, et
+ * d'azote, la mémoire hydrique qui l'empêche d'osciller. **Qui** la compose, et
  * selon quel calendrier, est dans `herbacees.ts` : l'atlas des espèces
  * herbacées et le partage du sol entre elles.
  *
- * Elle n'est pas modélisée en individus mais en TAUX DE COUVERTURE par cellule.
+ * Elle n'est pas modélisée en individus mais en **taux de couverture** par cellule.
  * Elle change tout pour un jeune plant :
  *  - elle lui dispute l'eau et l'azote de l'horizon de surface — c'est la
  *    première cause d'échec des plantations (ch4-B) ;
@@ -47,7 +47,7 @@ export const INERTIE_HUMIDITE_HERBE = 0.16;
 /**
  * Mémoire hydrique du tapis : lissage exponentiel de l'humidité de surface.
  *
- * Le lissage joue dans les DEUX sens, et c'est ce qui casse le cycle. Un tapis
+ * Le lissage joue dans les **deux** sens, et c'est ce qui casse le cycle. Un tapis
  * ne jaunit pas en une semaine sèche (il puise dans ses talles avant de
  * griller — compter trois à quatre semaines) et ne reverdit pas non plus sur
  * une averse (il faut refaire des feuilles). N'amortir que la reprise ne

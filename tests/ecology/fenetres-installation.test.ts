@@ -1,7 +1,7 @@
 /**
  * Ce que la météo réelle apporte que la synthétique ne peut pas (ch4-B) :
  * la colonisation de la lande ne se fait pas à débit constant mais par
- * VAGUES, au gré des séquences humides — quelques semis les années sèches,
+ * **vagues**, au gré des séquences humides — quelques semis les années sèches,
  * des dizaines les années favorables. Seules les frugales (bouleau, pin)
  * passent ; les exigeantes sont exclues (cf. tolerances.test.ts).
  */
@@ -53,36 +53,36 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
     // incendie remet les compteurs à zéro. Ce qu'on vérifie, c'est que chacune
     // s'installe et tient des décennies — pas l'état de la dernière année.
     //
-    // ON NE NOMME PAS LES ANNÉES D'INCENDIE. Le régime de feu dépend
-    // entièrement de la graine : mesuré sur six d'entre elles, on va d'AUCUN
+    // **On ne nomme pas les années d'incendie**. Le régime de feu dépend
+    // entièrement de la graine : mesuré sur six d'entre elles, on va d'**aucun**
     // feu en quarante-deux ans à trois feux (années 1, 19 et 38). Un
     // commentaire qui datait l'incendie s'est déjà retrouvé faux quand le
     // moteur a changé — la date n'est pas une propriété écologique, le
     // comportement en est une.
     //
-    // On compte les années au-dessus du seuil, CONSÉCUTIVES OU NON : une
+    // On compte les années au-dessus du seuil, **consécutives ou non** : une
     // seule interruption ne dit rien de la colonisation.
     expect(anneesAuDessus(betulaByYear, 50)).toBeGreaterThan(12);
 
-    // Le pin, lui, demande DEUX clauses, et c'est le régime de feu qui
+    // Le pin, lui, demande **deux** clauses, et c'est le régime de feu qui
     // l'impose. Il s'installe franchement — il passe la cinquantaine de tiges
     // sur les six graines mesurées, de 98 à 332 selon le nombre de feux — puis
     // il tient la station, sous le bouleau qui monte plus vite et prend la
-    // lumière. Lui demander de tenir DOUZE ANS au-dessus de cinquante
+    // lumière. Lui demander de tenir **douze ans** au-dessus de cinquante
     // échouerait dès qu'une graine met deux ou trois feux dans la fenêtre
     // (9 et 11 années seulement, sur les graines 7 et 12).
     //
-    // LE SEUIL DE LA SECONDE CLAUSE EST MESURÉ, PAS CHOISI. « Tenir » se
-    // comptait naguère au-dessus de TRENTE tiges, et ce nombre-là ne dit rien
+    // **Le seuil de la seconde clause est mesuré**, **pas choisi**. « Tenir » se
+    // comptait naguère au-dessus de **trente** tiges, et ce nombre-là ne dit rien
     // d'écologique : mesuré sur cinq graines (3, 7, 12, 21, 42) de part et
     // d'autre de l'ombrage de bordure, soit dix parties, il va de 11 à 39 —
-    // un rapport de 3,5. Le même comptage au-dessus de DIX tiges va de 21 à
+    // un rapport de 3,5. Le même comptage au-dessus de **dix** tiges va de 21 à
     // 41, moitié moins dispersé, et c'est lui qu'on retient.
     //
     // La dispersion n'est pas du bruit de mesure : le sort du pin sur la lande
-    // se joue sur l'ANNÉE où tombent les feux, et une perturbation d'un pour
+    // se joue sur l'**année** où tombent les feux, et une perturbation d'un pour
     // cent de la lumière suffit à les redistribuer. L'ombrage de bordure (#54)
-    // en est l'exemple : il laisse le pin MIEUX loti sur trois graines (18→38,
+    // en est l'exemple : il laisse le pin **mieux** loti sur trois graines (18→38,
     // 15→21, 20→30) et moins bien sur deux (38→11, 39→23), pour une moyenne
     // quasi inchangée — 26,0 avant, 24,6 après. Un seuil que la graine 7 passe
     // de justesse n'est donc pas une propriété du moteur ; c'est une propriété
@@ -99,11 +99,11 @@ describe("colonisation de la lande (météo réelle 1964→)", () => {
   });
 
   it("l'installation se fait par vagues, pas à débit constant (météo réelle)", () => {
-    // On rapporte les gains au NOMBRE DE SEMENCIERS de l'année. Sans cette
+    // On rapporte les gains au **nombre de semenciers** de l'année. Sans cette
     // normalisation, on ne mesure que la croissance exponentielle d'une
     // population qui se ressème elle-même : dix bouleaux en font plus que
     // deux, quel que soit le temps qu'il fait. Ce qu'on veut voir, c'est que
-    // le RENDEMENT d'un semencier varie fortement d'une année sur l'autre —
+    // le **rendement** d'un semencier varie fortement d'une année sur l'autre —
     // c'est ça, une fenêtre d'installation.
     // La fenêtre d'observation va jusqu'à l'année 38, pas 25 : depuis que la
     // croissance juvénile suit une sigmoïde (`FORME_CROISSANCE`, trees.ts), un

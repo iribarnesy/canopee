@@ -1,7 +1,7 @@
 /**
  * Le calque des changements.
  *
- * **Ce que ces essais gardent avant tout : le calque ne montre QUE ce que le
+ * **Ce que ces essais gardent avant tout : le calque ne montre que ce que le
  * journal nomme.** Un marqueur au mauvais endroit est pire qu'un marqueur
  * absent — il envoie le joueur regarder là où rien ne s'est passé.
  */
@@ -117,14 +117,14 @@ describe("marqueursDuJournal", () => {
     const { marqueurs: m } = marqueursDuJournal(journal, ou, COTE);
     expect(m.length).toBe(2);
     expect(m[0]).toEqual({ x: 4.5, y: 8.5, sorte: "recrue", teinte: TEINTE_DE_LA_RECRUE });
-    // `ou` ne connaît NI 900 NI 901 : la naissance porte sa position, elle n'a
+    // `ou` ne connaît **ni** 900 **ni** 901 : la naissance porte sa position, elle n'a
     // rien à demander à l'instantané.
     expect(ou(900)).toBeUndefined();
   });
 
   it("pointe les MONTÉES de stade, teintées par le stade atteint", () => {
     // La seule bonne nouvelle du calque qui ne soit pas une naissance. Le stade
-    // se calcule de la hauteur côté rendu ; c'est le FRANCHISSEMENT, qui demande
+    // se calcule de la hauteur côté rendu ; c'est le **franchissement**, qui demande
     // de comparer deux instants, que seul le moteur peut voir.
     const journal: JournalDeSemaine = {
       franchissements: [
@@ -152,7 +152,7 @@ describe("marqueursDuJournal", () => {
   });
 
   it("SAUTE une montée dont l'arbre a disparu de l'instantané", () => {
-    // Une tige que le même intervalle a fait monter PUIS mourir n'a plus de
+    // Une tige que le même intervalle a fait monter **puis** mourir n'a plus de
     // position, et c'est la bonne lecture : son halo de mort dit tout ce qu'il
     // y a à dire, et un chevron sur un mort serait un contresens.
     const { marqueurs: m } = marqueursDuJournal(

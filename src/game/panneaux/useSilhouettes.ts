@@ -1,5 +1,5 @@
 /**
- * LES SILHOUETTES DES ARBRES SUIVIS, cuites une par image (#149).
+ * **Les silhouettes des arbres suivis**, cuites une par image (#149).
  *
  * **Parce qu'une cuisson coûte 175 ms.** Mesuré dans le navigateur, volet
  * ouvert à ×13 sur quinze arbres suivis : le fil principal restait bloqué
@@ -12,10 +12,10 @@
  * 1. **Hors du rendu, et une par image.** Un effet cuit au plus une silhouette
  *    par `requestAnimationFrame` : la dépense s'étale au lieu de figer une
  *    image sur cinq secondes, et le volet se remplit sous les yeux.
- * 2. **Rien à refaire tant que la CLÉ n'a pas bougé.** `cleDuPortrait` dit si
+ * 2. **Rien à refaire tant que la clé n'a pas bougé.** `cleDuPortrait` dit si
  *    la silhouette a changé sans la cuire — un arbre qui pousse de dix
  *    centimètres garde la sienne.
- * 3. **On ne rafraîchit QUE LE TEMPS ARRÊTÉ.** C'est un portrait, pas une
+ * 3. **On ne rafraîchit que le temps arrêté.** C'est un portrait, pas une
  *    fenêtre : on le regarde quand le jeu s'arrête — et il s'arrête tout seul
  *    quand un suivi meurt, c'est-à-dire au moment précis où l'on vient voir.
  *    Pendant que les semaines filent, la silhouette déjà cuite reste ; sinon
@@ -46,7 +46,7 @@ export function useSilhouettes(
   const cles = useRef(new Map<number, string>());
 
   /**
-   * **L'EMPREINTE, et non le tableau, fait la dépendance de l'effet.**
+   * **l'empreinte, et non le tableau, fait la dépendance de l'effet.**
    *
    * Sans elle, rien ne se cuisait jamais, et le défaut méritait d'être mesuré
    * pour être cru : l'écran de jeu se rend plusieurs fois par seconde, chaque
@@ -56,7 +56,7 @@ export function useSilhouettes(
    * fois. Relevé dans le navigateur : `<details open>`, l'état React d'accord,
    * et zéro silhouette.
    *
-   * Une chaîne de caractères, elle, ne change que si le CONTENU change.
+   * Une chaîne de caractères, elle, ne change que si le **contenu** change.
    */
   const empreinte = poses
     .map((p) => `${p.id}:${cleDuPortrait(p, hauteurMaxDe(p.especeId))}`)
@@ -67,7 +67,7 @@ export function useSilhouettes(
   useEffect(() => {
     let vivant = true;
     let image: number | undefined;
-    // L'empreinte EST la liste de ce qu'il faut : un identifiant, sa clé.
+    // L'empreinte **est** la liste de ce qu'il faut : un identifiant, sa clé.
     const voulues = new Map<number, string>();
     for (const morceau of empreinte.split("|")) {
       const sep = morceau.indexOf(":");

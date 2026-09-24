@@ -1,17 +1,17 @@
 /**
- * LES NIVEAUX LIVRÉS avec le jeu (#188).
+ * **Les niveaux livrés** avec le jeu (#188).
  *
- * Le mécanisme est dans `niveaux.ts` ; ici, le CONTENU. La séparation est la
+ * Le mécanisme est dans `niveaux.ts` ; ici, le **contenu**. La séparation est la
  * même qu'entre `especes.ts` et le moteur qui les fait pousser : ajouter un
  * niveau ne doit toucher que ce fichier.
  *
  * ## Les chiffres viennent d'une mesure, et les deux premières étaient fausses
  *
- * **La première omettait les BORDURES**, donc la pluie de semis de l'entourage.
+ * **La première omettait les bordures**, donc la pluie de semis de l'entourage.
  *
  * **La seconde a été prise avec un défaut de code non encore trouvé** : la
  * récolte automatique ne cueillait rien après la première essence mûre (#191),
- * et le niveau rendait ZÉRO kilo en vingt ans. J'en ai conclu que le bocage
+ * et le niveau rendait **zéro** kilo en vingt ans. J'en ai conclu que le bocage
  * étouffait le verger, et j'ai déménagé le niveau pour cette raison — qui
  * n'existait pas. Le verger ne disparaissait pas : il portait, et personne ne
  * le cueillait.
@@ -26,7 +26,7 @@
  *
  * **Les deux sont jouables dans les vingt ans impartis.** Ce qui départage
  * n'est donc pas la possibilité mais la douceur : trois ans de marge en plus,
- * et pas un pommier perdu. C'est ce qu'on veut d'un PREMIER niveau — `v1.md`
+ * et pas un pommier perdu. C'est ce qu'on veut d'un **premier** niveau — `v1.md`
  * demande qu'il soit « court et facile ». Le bocage fera un bon deuxième.
  *
  * Trois choses en sortent, et elles font le niveau :
@@ -56,7 +56,7 @@ import type { ProfilDepart } from "./profils";
 const POMMIER = "malus_domestica";
 
 /**
- * Les pommiers VIVANTS sur la parcelle.
+ * Les pommiers **vivants** sur la parcelle.
  *
  * **Un stock, et pas le cumul des plantations** — la première version comptait
  * `cumuls.plantes`, et l'essai dans le navigateur l'a prise en faute : planter
@@ -64,7 +64,7 @@ const POMMIER = "malus_domestica";
  * l'essence (`GesteSurArbres` n'a que des identifiants), l'instantané si.
  *
  * Compter le stock dit d'ailleurs quelque chose de plus juste : ce qu'on
- * demande, c'est d'AVOIR un verger, pas d'avoir acheté des plants. Un palier
+ * demande, c'est d'**avoir** un verger, pas d'avoir acheté des plants. Un palier
  * reste acquis une fois franchi, donc perdre un arbre ensuite ne le retire pas
  * — mais il faut les avoir eus vivants ensemble au moins une fois.
  */
@@ -107,7 +107,7 @@ const VERGER_DE_PLAINE: ProfilDepart = {
 };
 
 /**
- * PREMIER NIVEAU — planter, protéger, récolter.
+ * **Premier niveau** — planter, protéger, récolter.
  *
  * Les trois paliers sont les trois gestes dans l'ordre où l'on en a besoin,
  * ce que `v1.md` demande des objectifs intermédiaires : *« faire de la place
@@ -152,9 +152,9 @@ const VERGER: Niveau = {
     {
       id: "recolter",
       quoi: "Récolter des pommes",
-      // DES POMMES, et pas des fruits. La première version lisait le total
+      // **Des pommes**, et pas des fruits. La première version lisait le total
       // toutes essences, et l'essai dans le navigateur l'a prise en faute de la
-      // pire façon : une partie où l'on ne plante RIEN affichait
+      // pire façon : une partie où l'on ne plante **rien** affichait
       // « 1549 / 200 kg ». Le bocage sème, la parcelle se couvre de noisetiers
       // et de prunelliers, et la récolte automatique les cueille.
       mesure: (e) => e.cumuls.fruitsParEspece[POMMIER] ?? 0,

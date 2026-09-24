@@ -15,7 +15,7 @@
  * jusqu'au bout.
  *
  * **Le budget suit la vitesse, et c'est la politique du §5.11.** « Passer d'une
- * semaine à la suivante est INSTANTANÉ » : à grande vitesse, les instantanés
+ * semaine à la suivante est **instantané** » : à grande vitesse, les instantanés
  * arrivent plus vite qu'une ellipse ne se joue, et une animation qu'on remplace
  * avant sa fin est pire que pas d'animation — elle bouge sans rien dire. Le
  * temps d'écran d'une semaine est donc le plafond, et la pause a droit au
@@ -36,12 +36,7 @@ import {
 import type { Vue } from "../render/camera";
 import { type Marqueur, marqueursDuJournal } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
-import {
-  dureeBloquanteMs,
-  type JournalDeSemaine,
-  planAuRythmeNaturel,
-  planDEllipse,
-} from "../render/temps/ellipse";
+import { dureeBloquanteMs, planAuRythmeNaturel, planDEllipse } from "../render/temps/ellipse";
 import { SANS_VENT, type VentAPencher } from "../render/temps/feu";
 import type { ArbreRemodele, TigeAbattue } from "../render/temps/geste";
 import {
@@ -74,12 +69,13 @@ import {
 } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
+import { journalDe } from "./journal";
 import type { Snapshot, StationInfo } from "./protocol";
 
 /**
  * Temps d'écran d'une ellipse à l'arrêt, ms.
  *
- * Deux secondes et demie, et c'est un BUDGET au sens du §5.11 : le joueur qui
+ * Deux secondes et demie, et c'est un **budget** au sens du §5.11 : le joueur qui
  * saute une semaine et celui qui saute dix ans attendent le même temps, l'un
  * voyant quatre actes et l'autre quarante.
  */
@@ -91,7 +87,7 @@ export const DUREE_ELLIPSE_MS = 2500;
  * **Le seuil n'est pas choisi au doigt mouillé : il est déjà dans le produit.**
  * Le bandeau offre deux sauts (#146) — « +1 mois » qui traverse à ×4 « pour
  * voir la parcelle changer pendant le mois », et « +1 an » qui traverse à ×13.
- * La ligne entre VIVRE le temps et le TRAVERSER est donc posée entre ces deux
+ * La ligne entre **vivre** le temps et le **traverser** est donc posée entre ces deux
  * vitesses-là, et c'est celle qu'on reprend.
  *
  * En deçà, une animation bloquante va jusqu'au bout et le temps l'attend : le
@@ -103,6 +99,37 @@ export const DUREE_ELLIPSE_MS = 2500;
 export const VITESSE_SANS_ATTENTE = 13;
 
 /**
+ * Temps d'écran d'une **relecture**, secondes (#128).
+ *
+ * **C'est le mode cinéma**, et il tombe du même principe que le budget
+ * d'ellipse : le §5.11 dit qu'une durée d'animation est une durée de
+ * **présentation** et non de jeu. Une relecture d'un an et une relecture de vingt
+ * ans durent donc le même temps à l'écran ; ce qui change est la densité de ce
+ * qu'on y voit.
+ *
+ * Quarante-cinq secondes : assez pour qu'une année se lise, assez court pour
+ * qu'on ne quitte pas la pièce. La première version laissait la vitesse à ×4
+ * quelle que soit la période, et l'essai dans le navigateur l'a montrée
+ * inutilisable — cinq ans à ×4, animations bloquantes comprises, tenaient
+ * encore après deux minutes et demie.
+ */
+export const DUREE_RELECTURE_S = 45;
+
+/**
+ * À quelle vitesse revoir une période de tant de semaines.
+ *
+ * Bornée par le bas à ×1 — en dessous, on ne revoit plus, on attend — et par le
+ * haut à ×52, la plus grande vitesse du bandeau. Entre les deux, le §5.11
+ * décide de ce qui se perd : sous `VITESSE_SANS_ATTENTE` l'horloge attend les
+ * animations bloquantes et l'on voit tout ; au-delà, les actes se compriment
+ * dans le temps d'écran d'une semaine. Une relecture de vingt ans est donc
+ * forcément une traversée, et c'est la seule réponse honnête.
+ */
+export function vitesseDeRelecture(semaines: number): number {
+  return Math.max(1, Math.min(52, Math.round(semaines / DUREE_RELECTURE_S)));
+}
+
+/**
  * Ce que la vue reçoit d'une ellipse en cours.
  *
  * Les noms sont ceux des propriétés de `VueParcelle` : l'appelant les étale, il
@@ -110,7 +137,7 @@ export const VITESSE_SANS_ATTENTE = 13;
  */
 export interface EllipseDuJeu {
   /**
-   * Les fûts à poser EN PLUS des arbres de l'instantané : les tiges qu'un
+   * Les fûts à poser **en plus** des arbres de l'instantané : les tiges qu'un
    * geste vient d'abattre, et les chandelles qui s'abattent d'elles-mêmes.
    *
    * Les deux ont quitté `state.trees` dans le tick où ils tombent : sans ça,
@@ -130,7 +157,7 @@ export interface EllipseDuJeu {
   /** le départ d'un incendie, le seul événement qui mérite qu'on cadre */
   cadrerSur?: { x: number; y: number };
   /**
-   * Combien de temps le jeu doit ATTENDRE avant la semaine suivante, ms (#163).
+   * Combien de temps le jeu doit **attendre** avant la semaine suivante, ms (#163).
    *
    * Zéro quand rien ne bloque — plan vide, ou traversée à grande vitesse. Le
    * calcul est ici et non dans la vue parce que c'est une propriété du plan,
@@ -138,7 +165,7 @@ export interface EllipseDuJeu {
    */
   attenteMs: number;
   /**
-   * REJOUER l'ellipse depuis son début (#157).
+   * **rejouer** l'ellipse depuis son début (#157).
    *
    * « L'incendie est déjà fini quand on lève les yeux » : une ellipse se joue
    * une fois, à l'instant précis où le bandeau d'autopause apparaît —
@@ -146,7 +173,7 @@ export interface EllipseDuJeu {
    * Allonger l'acte ne suffit pas, parce que le problème n'est pas sa durée
    * mais le fait qu'il n'a lieu qu'une fois.
    *
-   * Rejouer ne recalcule RIEN : le plan est déjà là, seule l'horloge revient à
+   * Rejouer ne recalcule **rien** : le plan est déjà là, seule l'horloge revient à
    * zéro. C'est pour ça que ça coûte une référence et pas un rembobinage
    * (#128) — l'instantané courant porte encore son journal.
    */
@@ -154,17 +181,17 @@ export interface EllipseDuJeu {
   /** Y a-t-il quelque chose à rejouer ? Faux sur une semaine sans journal. */
   rejouable: boolean;
   /**
-   * La SAISON à cet instant, par essence — le canal continu de la semaine
+   * La **saison** à cet instant, par essence — le canal continu de la semaine
    * (#163, débloqué par #164).
    *
    * **Un hêtre gagne 51 % de sa feuille en un pas de temps**, mesuré ; c'est
    * la résolution hebdomadaire du moteur, pas une quantification du rendu. Le
-   * moteur livre maintenant `contextePhenologiqueFractionnaire`, qui RECALCULE
+   * moteur livre maintenant `contextePhenologiqueFractionnaire`, qui **recalcule**
    * le modèle à un instant intermédiaire — il ne l'interpole pas, parce que le
    * débourrement a des coudes et qu'une droite s'en écarte de 11 points au
    * printemps. Le rendu n'invente donc rien : il demande.
    *
-   * Par ESSENCE et non par arbre : à un instant donné, deux hêtres portent la
+   * Par **essence** et non par arbre : à un instant donné, deux hêtres portent la
    * même feuille. Une dizaine d'appels par image au lieu de trois mille.
    *
    * **Non bloquant** : la saison court en fond, elle ne retient pas l'horloge.
@@ -178,19 +205,6 @@ export interface EllipseDuJeu {
 export interface SaisonDUneEssence {
   partFoliaire: number;
   senescence: number;
-}
-
-/** Le journal que porte un instantané, dans la forme que le plan attend. */
-function journalDe(snapshot: Snapshot): JournalDeSemaine {
-  return {
-    morts: snapshot.morts,
-    chutes: snapshot.chutes,
-    gestes: snapshot.gestes,
-    naissances: snapshot.naissances,
-    franchissements: snapshot.franchissements,
-    ...(snapshot.incendie ? { incendie: snapshot.incendie } : {}),
-    ...(snapshot.tempete ? { tempete: snapshot.tempete } : {}),
-  };
 }
 
 /**
@@ -216,7 +230,7 @@ function ventDuSite(snapshot: Snapshot, station: StationInfo): VentAPencher {
  * le rendu ne les reconnaît plus à leur `brulEeSemaine`, une jointure fausse
  * dès qu'un arbre a brûlé lors d'un incendie précédent.
  *
- * L'état d'AVANT le feu est recalculé par la phénologie du moteur, et il le
+ * L'état d'**avant** le feu est recalculé par la phénologie du moteur, et il le
  * faut : l'instantané décrit l'arbre après — tronc charbonné, sans feuilles — et
  * une mise en scène qui partirait de là interpolerait du néant vers le néant.
  */
@@ -285,12 +299,12 @@ export function useEllipse(
   const enMarche = vitesse > 0;
   const budgetMs = vitesse > 0 ? Math.min(DUREE_ELLIPSE_MS, 1000 / vitesse) : DUREE_ELLIPSE_MS;
 
-  // L'origine des temps. Posée DANS le mémo et non dans un effet : la boucle
+  // L'origine des temps. Posée **dans** le mémo et non dans un effet : la boucle
   // d'images de la vue peut tourner avant qu'un effet ne soit appliqué, et elle
   // lirait alors l'ellipse neuve avec l'horloge de l'ancienne — c'est-à-dire au
   // milieu, ou déjà finie.
   const debut = useRef(0);
-  // **Posée pour TOUTE semaine et plus seulement pour celles qui ont un
+  // **Posée pour toute semaine et plus seulement pour celles qui ont un
   // journal.** La saison court sur les semaines vides aussi — c'est même leur
   // seul mouvement — et une horloge restée sur la semaine d'avant lui ferait
   // lire une fraction déjà supérieure à un.
@@ -323,7 +337,7 @@ export function useEllipse(
     const vent = ventDuSite(snapshot, station);
 
     // Le doigt qui montre (§6.8) : sur deux mille tiges de dix pixels, une
-    // semaine ordinaire ne se VOIT pas sans lui. L'estompe, elle, reste
+    // semaine ordinaire ne se **voit** pas sans lui. L'estompe, elle, reste
     // éteinte — elle est faite pour les grands sauts, et griser la parcelle
     // entière parce que trois arbres sont morts serait violent pour rien.
     const ou = new Map(snapshot.trees.map((t) => [t.id, { x: t.x, y: t.y }]));
@@ -353,13 +367,13 @@ export function useEllipse(
             chuteDeLaChandelle(chandelles, ecoule, id, vue),
           );
         }
-        // Les canaux de POSE se composent : franchir dix ans, c'est voir un
+        // Les canaux de **pose** se composent : franchir dix ans, c'est voir un
         // arbre mourir puis tomber, et `DEBOUT` est neutre pour cette
         // composition.
-        // Trois canaux de POSE qui se composent : tomber, mourir, et sortir de
+        // Trois canaux de **pose** qui se composent : tomber, mourir, et sortir de
         // terre. `DEBOUT` est neutre pour cette composition, donc on les
         // additionne sans se demander lequel a lieu.
-        // Quatre canaux de POSE qui se composent : tomber, mourir, sortir de
+        // Quatre canaux de **pose** qui se composent : tomber, mourir, sortir de
         // terre, et plier sous la rafale. `DEBOUT` est neutre pour cette
         // composition, donc on les additionne sans se demander lequel a lieu.
         return combiner(
@@ -380,13 +394,13 @@ export function useEllipse(
         remodelageDe(gestes, depuis(maintenantMs), id, especeId),
       voiler: (maintenantMs) => {
         const ecoule = depuis(maintenantMs);
-        // Le front d'incendie et le voile d'un geste passent par la MÊME
+        // Le front d'incendie et le voile d'un geste passent par la **même**
         // couche : deux choses différentes qui se dessinent pareil.
         return [...voilesEnCours(voiles, ecoule), ...feuEnCours(feu, ecoule)];
       },
       feu: (maintenantMs) => particulesDuFeu(feu, depuis(maintenantMs), coteM, vent, torches),
       marqueurs: calque.marqueurs,
-      // On n'attend que si le temps COULE : à l'arrêt il n'y a pas de semaine
+      // On n'attend que si le temps **coule** : à l'arrêt il n'y a pas de semaine
       // suivante à retenir, et retenir une horloge arrêtée n'a pas de sens.
       attenteMs: auRythmeNaturel && enMarche ? dureeBloquanteMs(plan) : 0,
       // Remettre l'horloge à zéro suffit : la boucle d'images lit `debut` à
@@ -407,9 +421,9 @@ export function useEllipse(
   }, [snapshot, station, budgetMs, auRythmeNaturel, enMarche]);
 
   /**
-   * Le contexte de la semaine PRÉCÉDENTE, pour avoir d'où l'on part.
+   * Le contexte de la semaine **précédente**, pour avoir d'où l'on part.
    *
-   * L'instantané ne porte que l'état d'ARRIVÉE — c'est la même inversion que
+   * L'instantané ne porte que l'état d'**arrivée** — c'est la même inversion que
    * pour les morts et les gestes : la mise en scène remonte le temps au début
    * de la semaine et redescend.
    */
@@ -441,7 +455,7 @@ export function useEllipse(
     return (maintenantMs: number): ReadonlyMap<string, SaisonDUneEssence> | undefined => {
       const t = Math.min(1, Math.max(0, (maintenantMs - debut.current) / semaineMs));
       // **Arrivé au bout, on ne remplace plus rien**, et ce n'est pas une
-      // économie : à `t = 1` l'état de la semaine EST celui de l'instantané.
+      // économie : à `t = 1` l'état de la semaine **est** celui de l'instantané.
       // Rendre la table quand même laisserait l'arbre sur la valeur du dernier
       // franchissement de palier — une grandeur que le moteur n'a jamais dite,
       // et que l'ombre portée lit.

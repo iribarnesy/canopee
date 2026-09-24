@@ -1,7 +1,7 @@
 /**
- * LA mécanique fondatrice du game design (docs/regles.md §4.2, §16) : le
- * joueur qui coupe ses fixateurs choisit — VENDRE la récolte (argent) ou
- * ÉPANDRE sur place (l'azote fixé retourne au sol et nourrit les voisins).
+ * **La** mécanique fondatrice du game design (docs/regles.md §4.2, §16) : le
+ * joueur qui coupe ses fixateurs choisit — **vendre** la récolte (argent) ou
+ * **épandre** sur place (l'azote fixé retourne au sol et nourrit les voisins).
  * Les deux parties sont identiques jusqu'à la coupe (même seed, même journal
  * amont) ; seul le devenir diffère. La litière annuelle des aulnes vivants
  * fertilise les deux scénarios à l'identique jusqu'à la coupe ; après, la
@@ -66,7 +66,7 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
   };
 
   /**
-   * Les DEUX jalons en une seule passe. La version précédente rejouait la
+   * Les **deux** jalons en une seule passe. La version précédente rejouait la
    * partie depuis le début pour chaque horizon : trente-cinq ans, puis seize
    * ans de la même partie, six fois — soit la moitié du travail jetée. L'essai
    * pesait 267 s des 317 s de la suite entière.
@@ -119,7 +119,7 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // La marge de vingt euros était un chiffre absolu, et elle est tombée avec
     // la correction du volume : un arbre ne vend plus six fois le bois qu'il
     // porte (#62), donc l'écart entre vendre et épandre se resserre en euros
-    // sans que la leçon change. Ce qui doit être vrai, c'est le SENS — vendre
+    // sans que la leçon change. Ce qui doit être vrai, c'est le **sens** — vendre
     // rapporte, épandre coûte — pas un montant que l'allométrie fixe.
     expect(vendre.state.economy.treasuryEur).toBeGreaterThan(epandre.state.economy.treasuryEur);
     expect(epandre.state.economy.hoursUsedYear).toBeGreaterThanOrEqual(0);
@@ -136,17 +136,17 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
       }
       return sum;
     };
-    // **L'ESSAI CHANGE DE GRANDEUR PLUTÔT QUE DE GLISSER UNE TROISIÈME FOIS.**
+    // **l'essai change de grandeur plutôt que de glisser une troisième fois.**
     //
     // Le seuil valait 1,20 pour une mesure à 1,2123 : un pour cent de marge,
     // donc un enregistrement du moteur et non une contrainte. Le correctif des
     // mycorhizes (#115) l'a fait tomber à 1,1834, et il a été reposé à 1,15.
     // Le lot de la litière herbacée (#201) l'amène à 1,1360. Trois glissements
-    // sur la même cause : **un RAPPORT de stocks se resserre dès que quelque
-    // chose enrichit les DEUX parcelles**, alors que l'apport de BRF, lui, n'a
+    // sur la même cause : **un rapport de stocks se resserre dès que quelque
+    // chose enrichit les deux parcelles**, alors que l'apport de BRF, lui, n'a
     // pas bougé d'un gramme.
     //
-    // L'écart ABSOLU ne souffre pas de ça — un terme commun s'y annule au lieu
+    // L'écart **absolu** ne souffre pas de ça — un terme commun s'y annule au lieu
     // de s'y diluer. Mesuré, avec et sans le retour de litière de la strate :
     //
     //                  épandre   vendre   écart   rapport
@@ -162,7 +162,7 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     //
     // Cent grammes sur le bloc de treize par treize cellules, contre 189
     // mesurés : la marge est enfin une marge, et l'énoncé — « épandre
-    // ENRICHIT » — est ce que le nombre soutient.
+    // **enrichit** » — est ce que le nombre soutient.
     const azoteEpandu = nTotal(epandre.state, 30, 30);
     const azoteVendu = nTotal(vendre.state, 30, 30);
     expect(azoteEpandu - azoteVendu).toBeGreaterThan(100);
@@ -179,9 +179,9 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
   it("les hêtres voisins poussent mieux quand les aulnes ont été épandus", () => {
     expect(hauteurMoyenneDesHetres(epandre.state)).toBeGreaterThan(0);
 
-    // Le gain ne se voit PAS à seize ans — huit ans après la coupe, épandre
+    // Le gain ne se voit **pas** à seize ans — huit ans après la coupe, épandre
     // vaut 0,99 fois vendre, moyenné sur quatre parties. Ce n'est pas une panne
-    // du mécanisme, c'est la FAIM D'AZOTE du broyat : le bois raméal a un C/N
+    // du mécanisme, c'est la **faim d'azote** du broyat : le bois raméal a un C/N
     // élevé, les décomposeurs qui l'attaquent puisent d'abord l'azote du sol
     // pour construire leur propre biomasse, et le sol en manque avant d'en
     // avoir plus. Tout agronome qui a épandu du BRF connaît ce creux.
@@ -191,8 +191,8 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // mécanique fondatrice « couper les légumineuses et les épandre » tient
     // donc, et elle tient mieux qu'on ne le croyait ; ce sont les mesures
     // précédentes (+5 %, puis +2 %) qui la lisaient pendant son creux.
-    // LE CREUX S'EST COMBLÉ, ET C'EST UN PROGRÈS (#62). Cet essai exigeait
-    // qu'à seize ans le gain soit encore NUL (< 1,02), parce que le moteur
+    // **Le creux s'est comblé**, **et c'est un progrès** (#62). Cet essai exigeait
+    // qu'à seize ans le gain soit encore **nul** (< 1,02), parce que le moteur
     // mesurait alors une faim d'azote qui durait plus de huit ans. Elle durait
     // si longtemps parce que le volume de bois était faux : on épandait six
     // fois trop de carbone, donc six fois trop de C/N à digérer. Un BRF réel
@@ -200,18 +200,18 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     //
     // Mesuré après correction : 1,043 à seize ans. Le creux existe toujours —
     // il est simplement à l'échelle du broyat qu'on épand vraiment. Ce que
-    // l'essai épingle désormais est la FORME de la courbe, qui est la propriété
+    // l'essai épingle désormais est la **forme** de la courbe, qui est la propriété
     // écologique : le gain est déjà là, et il continue de croître.
     expect(gainA(16)).toBeGreaterThan(1);
-    // Le gain à long terme suit la MASSE épandue, qui vient d'être divisée par
+    // Le gain à long terme suit la **masse** épandue, qui vient d'être divisée par
     // trois (#62) : mesuré à +9 % quand un aulne pesait six fois trop, il est
     // de +3,7 % maintenant qu'il pèse ce qu'il pèse. La mécanique fondatrice
     // « couper les légumineuses et les épandre » tient donc toujours, à
     // l'échelle de ce qu'on épand vraiment.
-    // ET LA COURBE NE MONTE PAS, elle culmine puis s'estompe : +4,3 % à seize
+    // **Et la courbe ne monte pas**, elle culmine puis s'estompe : +4,3 % à seize
     // ans, +3,7 % à trente-cinq. J'avais d'abord écrit ici que le gain devait
-    // CROÎTRE — c'était une supposition, et la mesure l'a démentie. Un épandage
-    // est un apport UNIQUE : il se minéralise, la végétation le reprend, et son
+    // **croître** — c'était une supposition, et la mesure l'a démentie. Un épandage
+    // est un apport **unique** : il se minéralise, la végétation le reprend, et son
     // avance s'érode lentement au lieu de s'accumuler.
     //
     // Ce que l'essai épingle est donc ce qui est vrai et qui suffit : le gain
@@ -223,14 +223,14 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // ans après la coupe » — n'a pas bougé d'un iota ; c'est le chiffre qui
     // datait. Deux points de marge, et on ne prétend toujours pas mesurer
     // l'ampleur.
-    // **ET LA QUATRIÈME FOIS, ON PREND LE FICHIER AU MOT** (#201). Il écrit
+    // **et la quatrième fois, on prend le fichier au mot** (#201). Il écrit
     // depuis deux glissements « on ne prétend toujours pas mesurer l'ampleur »,
     // tout en épinglant 1,02 pour une mesure à 1,0264 — six millièmes. Le lot
     // de la litière herbacée l'amène à 1,0137, par la même cause que le stock
     // ci-dessus : le fond d'azote monte dans les deux bras, et l'extraction
     // sature, donc la valeur marginale de l'apport baisse.
     //
-    // Le seuil devient donc ce que la phrase dit : le SIGNE. Si l'on veut un
+    // Le seuil devient donc ce que la phrase dit : le **signe**. Si l'on veut un
     // jour affirmer l'ampleur, il faudra un dispositif qui la mesure — plusieurs
     // stations, et un témoin qui reçoive le même azote sous une autre forme —
     // pas un nombre relevé sur une sortie.

@@ -1,5 +1,5 @@
 /**
- * Le PORTRAIT d'une essence : la même silhouette que sur la parcelle, cuite
+ * Le **portrait** d'une essence : la même silhouette que sur la parcelle, cuite
  * une fois pour qu'on puisse la regarder de près.
  *
  * Les vingt-cinq silhouettes existent déjà et ne servaient qu'au peuplement.
@@ -21,14 +21,14 @@ import { METRE_VERTICAL_PX } from "../../render/projection";
 const PART_ADULTE = 0.75;
 
 /**
- * La taille de cuisson visée, en pixels — la même pour TOUS les portraits.
+ * La taille de cuisson visée, en pixels — la même pour **tous** les portraits.
  *
  * Le zoom ne cadre rien ici : `classeDe` s'en sert pour décider la finesse de
- * cuisson, et rien d'autre. Un zoom FIXE la faisait donc dépendre de la taille
+ * cuisson, et rien d'autre. Un zoom **fixe** la faisait donc dépendre de la taille
  * de l'arbre — 16 pixels pour un semis d'un mètre, 256 pour un chêne — c'est-à-
  * dire une vignette floue pour les petits et, pour les grands, quatre fois le
  * travail nécessaire à une image affichée en 74 pixels. On vise la taille de
- * SORTIE et on en déduit le zoom : chaque portrait coûte la même chose, et
+ * **sortie** et on en déduit le zoom : chaque portrait coûte la même chose, et
  * aucun n'est flou.
  */
 const TAILLE_DU_PORTRAIT_PX = 128;
@@ -53,16 +53,16 @@ function vueDuPortrait(hauteurM: number): Vue {
 }
 
 /**
- * LE PORTRAIT D'UN ARBRE PARTICULIER — celui qu'on suit, tel qu'il est (#149).
+ * **le portrait d'un arbre particulier** — celui qu'on suit, tel qu'il est (#149).
  *
  * « Peut-être voir le sprite de l'arbre, pour voir ce qu'il a en moins que
  * prévu. » C'est exactement la même cuisson que sur la parcelle : on lui donne
- * l'arbre POSÉ que la scène dessine (`arbresAPoser`), et il en sort la même
+ * l'arbre **posé** que la scène dessine (`arbresAPoser`), et il en sort la même
  * silhouette, en grand. Un houppier clairsemé, une cime sèche, un fût nu sur
  * dix mètres se voient alors d'un coup d'œil, là où la fiche les épelle.
  *
- * **La clé du cache est celle de la CLASSE**, plus les deux grandeurs que la
- * cuisson prend hors classe — ARRONDIES au demi-mètre. C'est ce qui rend
+ * **La clé du cache est celle de la classe**, plus les deux grandeurs que la
+ * cuisson prend hors classe — **arrondies** au demi-mètre. C'est ce qui rend
  * l'affaire abordable quand on suit cent quarante-neuf bouleaux : ils partagent
  * une poignée de classes, donc une poignée d'images, et un arbre qui grandit
  * de dix centimètres ne fait pas recuire la sienne. À soixante-quatorze pixels,
@@ -70,7 +70,7 @@ function vueDuPortrait(hauteurM: number): Vue {
  * invaliderait tout.
  */
 /**
- * LA CLÉ d'un portrait, sans le cuire.
+ * **la clé** d'un portrait, sans le cuire.
  *
  * Elle sert à savoir s'il y a quelque chose à refaire : une cuisson coûte
  * **175 ms** sur la machine de mesure (sans carte graphique, `toDataURL`
@@ -112,7 +112,7 @@ export function portraitDeLArbre(arbre: ArbreAPoser, hauteurMaxM: number): strin
       : undefined,
   );
   const url = vignette.image.toDataURL();
-  // Le cache est BORNÉ : une partie de cinquante ans traverse des centaines de
+  // Le cache est **borné** : une partie de cinquante ans traverse des centaines de
   // classes, et chaque image est une `data:` URL de plusieurs kilo-octets. On
   // jette la plus ancienne — celle d'un arbre qui a grandi depuis.
   if (dejaCuits.size >= PORTRAITS_GARDES) {
@@ -124,9 +124,9 @@ export function portraitDeLArbre(arbre: ArbreAPoser, hauteurMaxM: number): strin
 }
 
 /**
- * LE MÊME ARBRE EN PLEINE FORME : même espèce, même taille, rien d'autre.
+ * **Le même arbre en pleine forme** : même espèce, même taille, rien d'autre.
  *
- * C'est le TÉMOIN de la comparaison, et il est honnête parce qu'il ne change
+ * C'est le **témoin** de la comparaison, et il est honnête parce qu'il ne change
  * qu'une chose à la fois — la santé et le port, pas la taille. Il ne dit pas
  * « voilà ce que cet arbre aurait dû être à son âge » : le moteur ne donne
  * aucune hauteur attendue pour un âge, et l'inventer serait refaire sa

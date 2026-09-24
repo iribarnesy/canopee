@@ -5,11 +5,11 @@
  * Le moteur les traitait comme des clones parfaits : à conditions égales, ils
  * poussaient exactement pareil, et un peuplement pur était une rangée d'arbres
  * identiques. C'est faux, et ce n'est pas un détail cosmétique — c'est cette
- * dispersion qui crée les DOMINANTS et les DOMINÉS, donc la hiérarchie sociale
+ * dispersion qui crée les **dominants** et les **dominés**, donc la hiérarchie sociale
  * d'un peuplement, donc l'auto-éclaircie, donc le sens même d'une éclaircie
  * par le haut ou par le bas.
  *
- * La vigueur ne touche qu'un point : ce que l'arbre TIRE de conditions données.
+ * La vigueur ne touche qu'un point : ce que l'arbre **tire** de conditions données.
  * Elle ne change ni l'eau qu'il reçoit, ni la lumière — deux voisins ont les
  * mêmes ; l'un en fait plus que l'autre.
  */

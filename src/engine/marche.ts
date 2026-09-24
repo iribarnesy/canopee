@@ -2,12 +2,12 @@
  * Le marché du bois : un prix qui bouge, et qui s'effondre quand tout le monde
  * vend en même temps.
  *
- * Les prix du moteur étaient FIXES — 35 €/m³ pour le chauffage, une valeur par
+ * Les prix du moteur étaient **fixes** — 35 €/m³ pour le chauffage, une valeur par
  * espèce pour l'œuvre, quelle que soit l'année et quelle que soit la quantité
  * mise sur le marché. C'est faux de deux façons, et les deux comptent pour un
  * gestionnaire.
  *
- * ─── LE CYCLE ────────────────────────────────────────────────────────────────
+ * ─── **le cycle** ────────────────────────────────────────────────────────────────
  * L'indice des prix des bois sur pied en forêt privée française a fait **+7 %
  * en 2024, −4 % en 2025, et +46 % depuis 2020** (Observatoire économique France
  * Bois Forêt). Les écarts par essence sont plus larges encore sur une seule
@@ -18,16 +18,16 @@
  * qui s'additionnent, sont donc la norme et non l'accident. C'est ce que rend
  * l'indice ci-dessous.
  *
- * ─── L'ENGORGEMENT ───────────────────────────────────────────────────────────
+ * ─── **l'engorgement** ───────────────────────────────────────────────────────────
  * Et surtout : **le prix s'effondre quand tout le monde vend en même temps.**
  * C'est ce que la France a vécu après Lothar en 1999 et Klaus en 2009 — des
  * millions de m³ de chablis jetés d'un coup sur un marché qui ne pouvait pas
- * les absorber, et des cours divisés par deux. Pour un gestionnaire, c'est LA
+ * les absorber, et des cours divisés par deux. Pour un gestionnaire, c'est **la**
  * raison d'étaler ses coupes : vendre tout son bois la même année, c'est le
  * vendre moins cher.
  *
  * Le moteur ne simule pas le marché national — il simule une parcelle. Ce qu'on
- * modélise ici est donc l'engorgement du débouché LOCAL : au-delà d'un certain
+ * modélise ici est donc l'engorgement du débouché **local** : au-delà d'un certain
  * volume dans l'année, le prix baisse *(à calibrer : l'ampleur des chutes
  * post-tempête est documentée, le seuil local ne l'est pas)*.
  */
@@ -48,7 +48,7 @@ export const INDICE_MAX = 1.5;
  * Indice du marché pour une année donnée ∈ [0,6 ; 1,5].
  *
  * Déterministe et dérivé de la graine de la partie : deux parties identiques
- * voient le même marché, et le marché ne PUISE PAS dans le flux aléatoire
+ * voient le même marché, et le marché ne **puise pas** dans le flux aléatoire
  * principal — un mécanisme qui y prendrait un nombre décalerait tous les
  * suivants et ferait basculer les conclusions écologiques du dépôt.
  */

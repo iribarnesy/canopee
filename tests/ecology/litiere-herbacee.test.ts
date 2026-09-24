@@ -1,16 +1,16 @@
 /**
- * CE QUE LA STRATE BASSE REND AU SOL (issue #201).
+ * **Ce que la strate basse rend au sol** (issue #201).
  *
- * Elle ne rendait RIEN, et le trou ne se voyait qu'en ÉNUMÉRANT : tout le
- * moteur verse au pool de litière — la chute des feuilles d'un ARBRE, les
+ * Elle ne rendait **rien**, et le trou ne se voyait qu'en **énumérant** : tout le
+ * moteur verse au pool de litière — la chute des feuilles d'un **arbre**, les
  * crottes de chevreuil, le BRF et le fumier, l'érosion qui redépose — sauf la
  * strate herbacée. Ni sénescence, ni racines fines, ni chaume, ni paille.
  *
  * **Et le vrai défaut n'est pas celui qu'on cherchait.** On cherchait le
  * carbone : une prairie qui perd 42 % de son humus en cinquante ans. On a
- * trouvé une FUITE D'AZOTE. La strate prélevait ~31 kg N/ha/an et rien ne les
+ * trouvé une **fuite d'azote**. La strate prélevait ~31 kg N/ha/an et rien ne les
  * rendait : dans un moteur où l'herbe n'a pas de masse, cet azote ne partait
- * pas dans une plante, il DISPARAISSAIT. Mesuré, prairie permanente sur limon
+ * pas dans une plante, il **disparaissait**. Mesuré, prairie permanente sur limon
  * riche, azote minéral moyen :
  *
  *     an           1       6      11      16
@@ -26,7 +26,7 @@
  *   1. **la conservation** — une plante ne rend que ce qu'elle a pris, et
  *      c'est ce que la deuxième version du lot a dû apprendre de force ;
  *   2. **la fuite bouchée**, mesurée sur la prairie ;
- *   3. **ce que le lot ne fait PAS** : l'humus continue de baisser, et on
+ *   3. **ce que le lot ne fait pas** : l'humus continue de baisser, et on
  *      écrit pourquoi au lieu de remonter un coefficient ;
  *   4. **le C/N de la paille**, le trait qui décide de la suite.
  */
@@ -115,15 +115,15 @@ describe("LE RÉSULTAT DU LOT : la prairie stérilise son sol deux fois moins vi
     // g/m² en seize ans, soit un quart, sans plancher en vue.
     //
     // La propriété de conservation ne pouvait pas le voir : elle compte le
-    // prélèvement comme une SORTIE légitime, puisqu'une plante l'a pris. Rien
+    // prélèvement comme une **sortie** légitime, puisqu'une plante l'a pris. Rien
     // ne vérifiait qu'il revienne, parce que pour les arbres il revient
     // (`LITTER_RETURN_FRACTION`) et que personne n'avait regardé la strate.
-    // **LA FUITE EST DIVISÉE PAR DEUX, PAS ANNULÉE, et c'est la
+    // **la fuite est divisée par deux, pas annulée, et c'est la
     // rétranslocation qui en décide.** Une plante retire l'azote d'un organe
     // avant de le lâcher : elle n'en rend que la moitié au sol, l'autre restant
     // dans ses réserves. Le moteur n'a pas de pool d'azote de la plante — pas
     // plus pour l'arbre que pour la strate —, donc cette moitié-là n'est
-    // toujours pas rendue. C'est une fuite résiduelle, et elle est NOMMÉE :
+    // toujours pas rendue. C'est une fuite résiduelle, et elle est **nommée** :
     // adossée à un fait plutôt qu'à un oubli.
     //
     //     an          1      16
@@ -153,7 +153,7 @@ describe("LE RÉSULTAT DU LOT : la prairie stérilise son sol deux fois moins vi
     const fin = r.litiere[39] ?? 0;
     expect(parHa(fin)).toBeGreaterThan(0.1);
     expect(parHa(fin)).toBeLessThan(10);
-    // Et c'est un ÉQUILIBRE, pas une pente.
+    // Et c'est un **équilibre**, pas une pente.
     const avant = r.litiere[29] ?? 0;
     expect(Math.abs(fin - avant) / avant).toBeLessThan(0.1);
   }, 900_000);
@@ -166,7 +166,7 @@ describe("ce que ce lot ne fait PAS, et il faut le mesurer aussi", () => {
     // moteur n'y arrive pas : l'humus descend encore, à peine moins vite
     // qu'avant (−36 % à quarante ans au lieu de −42 %).
     //
-    // La raison est arithmétique et elle est EN AMONT, pas dans ce lot : le
+    // La raison est arithmétique et elle est **en amont**, pas dans ce lot : le
     // retour conservateur fait ~0,5 t C/ha/an, là où il en faudrait ~1,9 pour
     // équilibrer la décomposition de l'humus. Une plante ne peut rendre que ce
     // qu'elle a pris, et la strate de ce moteur prend 31 kg N/ha/an quand une
@@ -181,14 +181,14 @@ describe("ce que ce lot ne fait PAS, et il faut le mesurer aussi", () => {
     const depart = r.humus[0] ?? 0;
     const fin = r.humus[39] ?? 0;
     expect(fin).toBeLessThan(depart);
-    // Il descend, mais il descend MOINS qu'avant le lot (−42 % mesuré alors).
+    // Il descend, mais il descend **moins** qu'avant le lot (−42 % mesuré alors).
     expect(fin / depart).toBeGreaterThan(0.6);
   }, 900_000);
 });
 
 describe("la paille, et le trait qui décide de la suite", () => {
   it("le C/N du blé est le plus élevé de l'atlas, et de loin", () => {
-    // Une paille de céréale est à 80-100 : elle IMMOBILISE l'azote du sol le
+    // Une paille de céréale est à 80-100 : elle **immobilise** l'azote du sol le
     // temps que les micro-organismes la digèrent, et ne le rend qu'ensuite. Un
     // feuillage herbacé jeune est à 15-25 et se minéralise en quelques
     // semaines. C'est ce que `azoteNetDecomposition` (C9) savait traiter depuis

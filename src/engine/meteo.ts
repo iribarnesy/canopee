@@ -13,7 +13,7 @@ export interface WeekWeather {
   /** mm sur la semaine */
   rainMm: number;
   /**
-   * LA nuit la plus froide de la semaine, °C — les gels tardifs sont des
+   * **la** nuit la plus froide de la semaine, °C — les gels tardifs sont des
    * événements ponctuels, invisibles dans une moyenne (§7.2).
    */
   tMinAbsC: number;
@@ -25,7 +25,7 @@ export interface WeekWeather {
   /** année civile de la semaine (climat.ts) — sert aux maladies datées */
   annee?: number;
   /**
-   * Cap vers lequel le vent SOUFFLE, en radians dans le repère de la carte
+   * Cap vers lequel le vent **souffle**, en radians dans le repère de la carte
    * (+x = est, +y = nord, comme l'ombre portée de `light.ts`). Même convention
    * « vers » que `directionRad` d'une tige tombée ou que `versLAval` : c'est la
    * direction du mouvement, pas sa provenance.
@@ -36,25 +36,25 @@ export interface WeekWeather {
    * rendu ne puisse pas se tromper de signe en inclinant un panache.
    *
    * À ne pas confondre avec `Station.ventExposition`, qui n'est pas un vent
-   * mais un ABRI : le vent régional est le même pour tout le voisinage, ce que
+   * mais un **abri** : le vent régional est le même pour tout le voisinage, ce que
    * la station en reçoit dépend de ce qui l'entoure.
    */
   ventVersRad: number;
   /** Vitesse moyenne du vent sur la semaine, à 10 m, m/s. */
   ventMoyMs: number;
   /**
-   * Ce par quoi la trajectoire climatique multiplie la RAFALE de la semaine
+   * Ce par quoi la trajectoire climatique multiplie la **rafale** de la semaine
    * (`tempete.ts`), critère F19. Optionnel ; absent, il vaut 1.
    *
    * **Il vaut 1 aujourd'hui, et c'est un état assumé, pas un oubli.** Ce champ
    * existe pour réunir deux moitiés de mécanisme qui ne se voyaient pas :
    * `meteoDerivee` connaît le scénario mais pas la graine de partie, donc ne
    * peut tirer de rafale ; `tick` tire la rafale et ne connaît pas le scénario.
-   * La plomberie est faite ; le CHIFFRE manque, et il manque pour une raison
+   * La plomberie est faite ; le **chiffre** manque, et il manque pour une raison
    * qui n'est pas de la paresse — cf. `AMPLIFICATION_RAFALE` (climat.ts).
    *
    * Le jour où la littérature donnera un sens et une ampleur pour la France, il
-   * y aura UNE ligne à changer, dans `climat.ts`, et rien d'autre.
+   * y aura **une** ligne à changer, dans `climat.ts`, et rien d'autre.
    */
   facteurRafale?: number;
 }
@@ -62,12 +62,12 @@ export interface WeekWeather {
 /**
  * Cap dominant du vent, en radians « vers », par défaut.
  *
- * Vent de secteur sud-ouest, donc soufflant VERS le nord-est : `+π/4` avec
+ * Vent de secteur sud-ouest, donc soufflant **vers** le nord-est : `+π/4` avec
  * +x = est et +y = nord. C'est le flux d'ouest à sud-ouest qui domine la
  * façade atlantique et le climat océanique tempéré français — le fait est
  * solide, y compris qu'il domine toute l'année.
  *
- * Ce qui n'est PAS ici : une rose des vents par station. Le coteau bourguignon
+ * Ce qui n'est **pas** ici : une rose des vents par station. Le coteau bourguignon
  * et le limon du Nord n'ont pas le régime de la lande girondine, et la même
  * valeur leur est appliquée faute de données. Une station qui saura mieux le
  * déclarera dans son `climat` *(à calibrer par station)*.
@@ -78,12 +78,12 @@ export const VENT_MOYEN_MS = 4;
 /**
  * Demi-amplitude saisonnière de la vitesse du vent, m/s *(à calibrer)*.
  *
- * Le SENS est sourcé : sous régime océanique, la vitesse moyenne du vent passe
+ * Le **sens** est sourcé : sous régime océanique, la vitesse moyenne du vent passe
  * par un maximum en hiver (rail des dépressions atlantiques) et un minimum en
  * été. Conséquence à retenir, et voulue : la saison des feux tombe dans le bas
  * de la plage de vent. Les grands incendies français ne courent pas sur le vent
- * MOYEN de juillet, ils courent les jours où le vent revient — ce qu'un pas de
- * temps hebdomadaire ne sait pas voir. L'AMPLITUDE, elle, est une convention.
+ * **moyen** de juillet, ils courent les jours où le vent revient — ce qu'un pas de
+ * temps hebdomadaire ne sait pas voir. **L'amplitude**, elle, est une convention.
  */
 export const VENT_AMPLITUDE_SAISONNIERE_MS = 1.2;
 
@@ -177,13 +177,13 @@ export function serieToWeeks(serie: SerieMeteoHebdo, climat?: SyntheticClimate):
  * Vent d'une semaine, purement déterministe — aucun aléa, donc aucun tirage
  * consommé et aucune empreinte déplacée par la seule présence du champ.
  *
- * Le CAP ne bouge pas d'une semaine à l'autre. Ce n'est pas un oubli : un
+ * Le **cap** ne bouge pas d'une semaine à l'autre. Ce n'est pas un oubli : un
  * régime dominant se maintient toute l'année, et je ne sais pas sourcer de
  * virement saisonnier par station. Un virement inventé serait pire que pas de
  * virement — le rendu inclinerait ses panaches dans un sens faux au lieu de les
  * incliner tous du même côté, ce qui est justement ce que l'issue demande.
  *
- * La VITESSE, elle, suit la saison, sur la MÊME phase que la température et la
+ * La **vitesse**, elle, suit la saison, sur la **même** phase que la température et la
  * pluie (une seule saisonnalité, trois usages) mais en opposition : maximum en
  * hiver, minimum fin juillet.
  */
@@ -214,7 +214,7 @@ export interface SyntheticClimate {
   rainWinterShare: number;
   /**
    * Régime de vent de la station. Optionnels, et c'est délibéré : je n'ai
-   * qu'UN régime sourcé (le flux d'ouest à sud-ouest océanique), pas une rose
+   * qu'**un** régime sourcé (le flux d'ouest à sud-ouest océanique), pas une rose
    * des vents par station. Quatre valeurs inventées par station mentiraient
    * plus qu'une valeur par défaut déclarée une seule fois, ici.
    */

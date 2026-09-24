@@ -24,7 +24,7 @@ import {
 } from "../../src/engine/trogne";
 
 /**
- * `avecTete: false` fait un arbre RECÉPÉ : il a été rabattu, mais au ras du
+ * `avecTete: false` fait un arbre **recépé** : il a été rabattu, mais au ras du
  * sol et non sur un tronc conservé — pas de tête, donc pas de cavité.
  *
  * Le drapeau plutôt qu'un `teteTrogneM` optionnel : passer `undefined` à un

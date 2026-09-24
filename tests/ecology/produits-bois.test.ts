@@ -2,7 +2,7 @@
  * La fin de vie du bois d'œuvre (issue #72, critère I4).
  *
  * Ce que le moteur faisait : le carbone vendu en scierie entrait dans
- * `oeuvreCumKgC` et n'en sortait JAMAIS. Une palette stockait autant qu'une
+ * `oeuvreCumKgC` et n'en sortait **jamais**. Une palette stockait autant qu'une
  * charpente, pour toujours, et vendre du bois devenait un geste climatique
  * gratuit et définitif — faux dans le sens qui flatte le joueur.
  *
@@ -71,8 +71,8 @@ describe("la demi-vie vient de l'IPCC, pas du confort de lecture", () => {
 
 describe("le carbone se partage comme la caisse", () => {
   it("seule la bille élaguée part en scierie, le houppier part en bûches", () => {
-    // LE défaut que ce lot corrige, et il était silencieux : un arbre classé
-    // « œuvre » envoyait TOUT son carbone au stock de produits, houppier
+    // **Le** défaut que ce lot corrige, et il était silencieux : un arbre classé
+    // « œuvre » envoyait **tout** son carbone au stock de produits, houppier
     // compris, alors que la vente ne facturait en œuvre que la part élaguée.
     const { state, id } = parcelleAvecUnArbreVendable();
     const arbre = state.trees[0];
@@ -92,7 +92,7 @@ describe("le carbone se partage comme la caisse", () => {
     expect(c.oeuvreStockKgC).toBeGreaterThan(0);
     // Le reste du carbone emporté est parti en chauffage, donc émis.
     expect(c.exportedEnergyCumKgC).toBeGreaterThan(0);
-    // Et le partage est CELUI DE LA VENTE, pas un autre.
+    // Et le partage est **celui de la vente**, pas un autre.
     const emporte = c.oeuvreStockKgC + c.exportedEnergyCumKgC;
     expect(c.oeuvreStockKgC / emporte).toBeCloseTo(vente.partOeuvre, 6);
   });
@@ -155,7 +155,7 @@ describe("le puits se vide, et l'invariant tient", () => {
   it("sur une partie de cinquante ans, les deux tiers sont déjà repartis", () => {
     // **L'issue attendait le contraire**, et la mesure la corrige. Elle
     // supposait « une charpente centenaire ne rendra rien pendant la partie,
-    // ce qui est le bon comportement ». Mais elle demandait aussi UNE SEULE
+    // ce qui est le bon comportement ». Mais elle demandait aussi **une seule**
     // durée moyenne pour l'œuvre — et une moyenne sur charpente, meuble et
     // emballage ne vaut pas un siècle : l'IPCC la place à trente-cinq ans pour
     // les sciages pris comme classe. À ce rythme, un produit vendu au début

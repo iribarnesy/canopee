@@ -1,5 +1,5 @@
 /**
- * LE TAPIS PREND LA TEINTE ET LE SEUIL DE QUI LE TIENT.
+ * **Le tapis prend la teinte et le seuil de qui le tient**.
  *
  * Le rendu lisait le seuil d'eau chez le dactyle pour toutes les cellules, et
  * n'avait qu'un vert pour toute la strate. C'était exact tant que le tapis
@@ -31,7 +31,7 @@ const fiche = (id: string) => HERBACEES.find((h) => h.id === id);
 const seul = (id: string): MelangeDuTapis => ({ ids: [id], parts: [1] });
 const moitie = (a: string, b: string): MelangeDuTapis => ({ ids: [a, b], parts: [0.5, 0.5] });
 
-/** ÉTÉ : phase où la teinte d'espèce porte, plutôt que le gris d'hiver. */
+/** **été** : phase où la teinte d'espèce porte, plutôt que le gris d'hiver. */
 const SEMAINE_ETE = 26;
 
 describe("le seuil d'eau suit les espèces présentes", () => {
@@ -156,11 +156,11 @@ describe("la signature d'une cellule voit tout ce qui la colore", () => {
   });
 
   /**
-   * La signature d'une CELLULE ne porte que les parts : la liste d'espèces est
+   * La signature d'une **cellule** ne porte que les parts : la liste d'espèces est
    * une propriété de la parcelle — l'instantané en envoie une seule, partagée
    * par toutes les cellules. Deux cellules d'une même parcelle se distinguent
    * donc par leurs parts, et c'est ce qui est vérifié ici ; la liste elle-même
-   * entre dans la signature du MORCEAU.
+   * entre dans la signature du **morceau**.
    */
   it("changer de partage entre espèces change la signature", () => {
     const ids = [DACTYLE, ANEMONE];

@@ -64,7 +64,7 @@ function frene(recepages: number, heightM = 8): TreeState {
 describe("le geste", () => {
   function pousserUnFrene(ans: number) {
     let state = createGameState(STATION, rngStateFromSeed(3));
-    // On part d'un baliveau déjà formé : ce test porte sur le GESTE de trogne,
+    // On part d'un baliveau déjà formé : ce test porte sur le **geste** de trogne,
     // pas sur les aléas des dix premières années d'un frêne isolé, qui se
     // jouent à peu de chose et brouillent ce qu'on veut mesurer.
     state = plantAt(state, "fraxinus_excelsior", 10, 10, 6);

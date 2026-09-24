@@ -1,9 +1,9 @@
 /**
- * LA FICHE D'UN ARBRE SUIVI (#149).
+ * **La fiche d'un arbre suivi** (#149).
  *
  * « On aimerait bien voir ses stats détaillées — sa vigueur, son feuillage. »
  *
- * Ce que ces épreuves défendent : que la fiche LISE et n'invente pas. Chaque
+ * Ce que ces épreuves défendent : que la fiche **lise** et n'invente pas. Chaque
  * ligne doit venir d'un champ de l'instantané ou d'une fonction du moteur, et
  * une grandeur absente ne doit pas faire une ligne vide — un « Fruits : 0 % »
  * sur un arbre qui n'a jamais fleuri dit quelque chose de faux.
@@ -58,7 +58,7 @@ const ARBRE: TreeState = {
 /**
  * Un été franc : le feuillage est déployé, la sénescence n'a pas commencé.
  *
- * Construit par la fonction du MOTEUR et non à la main : la durée du jour et
+ * Construit par la fonction du **moteur** et non à la main : la durée du jour et
  * le compteur de chute s'en déduisent, et un contexte bricolé donnerait une
  * part foliaire `NaN` — mesuré, en écrivant cet essai.
  */
@@ -188,7 +188,7 @@ describe("ce qui se lit sans être lu", () => {
     // Première version : l'étiolement était hors alerte, parce qu'un sujet sain
     // remplissait déjà 57 % d'une jauge partant de zéro. La correction n'est pas
     // de l'exclure mais de la faire partir d'où il faut — le haut de la gamme
-    // « au large » que le moteur cite — et d'aller jusqu'à SA limite de flambage.
+    // « au large » que le moteur cite — et d'aller jusqu'à **sa** limite de flambage.
     const trapu = fiche({ heightM: 9, diametreCm: 30 });
     const file = fiche({ heightM: 9, diametreCm: 9 });
     expect(alerteDeLArbre(trapu)).toBe(0);

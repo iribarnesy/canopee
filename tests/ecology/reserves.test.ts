@@ -4,14 +4,14 @@
  *
  * Ce que le moteur ne savait pas faire : rien n'y mourait de manquer de
  * lumière. L'ombre tuait 4 à 7 tiges sur une cohorte de pins de cent vingt ans
- * quand les ravageurs en prenaient 205 à 244, et le hêtre ne mourait JAMAIS
+ * quand les ravageurs en prenaient 205 à 244, et le hêtre ne mourait **jamais**
  * d'ombre — 361 plantés, 361 vivants — parce que son seuil de stress passait
- * SOUS le plancher de lumière que le moteur sait produire.
+ * **sous** le plancher de lumière que le moteur sait produire.
  *
  * Ce que ce fichier vérifie :
- *   1. l'ombre tolérable DÉCROÎT avec la taille — c'est tout le mécanisme ;
+ *   1. l'ombre tolérable **décroît** avec la taille — c'est tout le mécanisme ;
  *   2. les réserves tiennent le temps qu'annonce leur ancre ;
- *   3. un peuplement équienne s'auto-éclaircit, et il le fait LE LONG de la
+ *   3. un peuplement équienne s'auto-éclaircit, et il le fait **le long** de la
  *      ligne de densité maximale, que personne ne lui a apprise.
  */
 
@@ -76,8 +76,8 @@ function anneesAvantDeMourir(heightM: number, light: number, maxAns = 200): numb
   for (let s = 0; s < maxAns * 26; s++) {
     t = tickTree(t, milieu(light)).tree;
     if (!t.alive) return s / 26;
-    // On fige la taille : on mesure la résistance d'un arbre DE CETTE
-    // TAILLE-LÀ, pas celle d'un arbre qui grandit en cours de route.
+    // On fige la taille : on mesure la résistance d'un arbre **de cette**
+    // **taille-là**, pas celle d'un arbre qui grandit en cours de route.
     t = { ...t, heightM, diametreCm: 2 * heightM };
   }
   return Number.POSITIVE_INFINITY;
@@ -185,7 +185,7 @@ describe("l'auto-éclaircie : le peuplement trouve la ligne de densité tout seu
     // Décroissance stricte : c'est l'exclusion des tiges, et elle continue.
     expect(a40).toBeLessThan(a20);
     expect(a60).toBeLessThan(a40);
-    // Et elle est SÉVÈRE : le peuplement perd plus de la moitié de ses tiges.
+    // Et elle est **sévère** : le peuplement perd plus de la moitié de ses tiges.
     expect(a60).toBeLessThan(0.5 * plantes);
     // Sans pour autant s'effondrer : l'issue prévenait qu'empiler cette
     // mortalité sur celle des ravageurs donnerait un peuplement qui meurt deux

@@ -1,10 +1,10 @@
 /**
- * LA CHAÎNE ENTIÈRE du tapis : de l'instantané à la couleur du sol.
+ * **La chaîne entière** du tapis : de l'instantané à la couleur du sol.
  *
  * Les autres essais portent sur la palette seule. Celui-ci vérifie ce que la
  * palette seule ne peut pas dire : que les grilles d'emprise traversent
  * réellement `donneesSolDe` puis la signature du morceau, et qu'une parcelle
- * de molinie ne se peint PAS comme une parcelle de dactyle.
+ * de molinie ne se peint **pas** comme une parcelle de dactyle.
  *
  * Il existe parce qu'une vérification au navigateur n'a rien montré — et la
  * mesure a tranché : sur la lande, le moteur donne bien 100 % de molinie et un
@@ -21,7 +21,7 @@ const COTE = 8;
 const N = COTE * COTE;
 const IDS = ["anemone_nemorosa", "dactylis_glomerata", "molinia_caerulea"];
 
-/** Une parcelle plate, bien arrosée, entièrement tenue par UNE espèce. */
+/** Une parcelle plate, bien arrosée, entièrement tenue par **une** espèce. */
 function solTenuPar(rang: number) {
   const plein = new Uint8Array(N).fill(255);
   const vide = new Uint8Array(N);

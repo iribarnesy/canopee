@@ -6,17 +6,17 @@
  * chacune à six stades, chacune élaguée, trognée, recépée ou sénescente : en
  * dessins séparés c'est un produit cartésien. En squelette généré, les stades
  * **sortent gratuitement** — on déroule le même squelette moins loin, et un
- * gaulis EST un jeune arbre. L'élagage, l'étêtage et le recépage aussi : ce
+ * gaulis **est** un jeune arbre. L'élagage, l'étêtage et le recépage aussi : ce
  * sont des coupes dans le squelette, pas d'autres arbres.
  *
  * **Trois contraintes viennent du lot L0, et aucune n'est négociable :**
  *
- * 1. **Le nombre de segments est PLAFONNÉ**, quel que soit le paramétrage. Il
+ * 1. **Le nombre de segments est plafonné**, quel que soit le paramétrage. Il
  *    croît en (branches par nœud)^(ordres) : trois branches sur sept ordres
  *    font deux mille segments, et la cuisson d'une silhouette passait de 0,3 à
  *    13,3 ms. Le plafond n'est pas une sécurité, c'est un élément du contrat —
  *    une fiche mal réglée doit dessiner un arbre pauvre, pas geler l'image.
- * 2. **Le feuillage s'accroche à tout rameau TERMINAL**, c'est-à-dire à tout
+ * 2. **Le feuillage s'accroche à tout rameau terminal**, c'est-à-dire à tout
  *    axe qui n'a pas engendré de filles, et non au dernier ordre de récursion.
  *    Une branche devient trop courte avant d'atteindre l'ordre maximal ; en
  *    liant le feuillage à l'ordre, l'arbre sortait nu.
@@ -91,7 +91,7 @@ function hacher(a: number, b: number, sel: number): number {
 
 /** Ce que le squelette a besoin de savoir de l'arbre à dessiner. */
 export interface Sujet {
-  /** identifiant du moteur : c'est LUI qui sème toute la variation */
+  /** identifiant du moteur : c'est **lui** qui sème toute la variation */
   id: number;
   hauteurM: number;
   /** rayon du houppier / hauteur — vient du moteur (`lumiere.houppierRatio`) */
@@ -99,7 +99,7 @@ export interface Sujet {
   /**
    * Base du houppier, m : en dessous, plus une branche vivante.
    *
-   * **Elle vient du MOTEUR (`baseHouppierM`), et elle remplace deux choses que
+   * **Elle vient du moteur (`baseHouppierM`), et elle remplace deux choses que
    * le rendu faisait à sa place.** Il calculait la longueur du fût par une
    * formule à lui — `1 − 2 × houppierRatio`, rabattue entre 0,15 et 0,5 de la
    * hauteur — c'est-à-dire une approximation privée d'une grandeur écologique,
@@ -108,7 +108,7 @@ export interface Sujet {
    * façons dont sa couronne remonte.
    *
    * Ce que la formule ne pouvait pas dire, et que le moteur dit : la profondeur
-   * de couronne est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce. Le même
+   * de couronne est un **résultat de compétition**, pas un trait d'espèce. Le même
    * chêne est branchu jusqu'en bas en pré et porte quinze mètres de fût nu en
    * futaie — un ratio par espèce donne le même arbre dans les deux cas.
    *
@@ -118,7 +118,7 @@ export interface Sujet {
    */
   baseHouppierM: number;
   /**
-   * Rayon du fût au pied, m — celui du MOTEUR quand on l'a (`diametreCm / 200`).
+   * Rayon du fût au pied, m — celui du **moteur** quand on l'a (`diametreCm / 200`).
    *
    * Absent, l'allométrie de secours prend le relais (`rayonAuPiedM`). C'est ce
    * champ qui fait qu'une tige filée se dessine mince : sans lui, la hauteur
@@ -134,7 +134,7 @@ export interface Sujet {
   /**
    * Nombre de brins d'une cépée ; absent ou 1 = un fût unique.
    *
-   * Les brins partent tous du SOL et s'écartent : il n'y a pas de tronc. C'est
+   * Les brins partent tous du **sol** et s'écartent : il n'y a pas de tronc. C'est
    * la seule façon d'obtenir un noisetier qui ne soit pas un pommier en
    * miniature — vérifié en mesurant, ils sortaient identiques au segment près.
    */
@@ -160,11 +160,11 @@ export interface Sujet {
  */
 
 /**
- * Rayon du fût au pied, à DÉFAUT de diamètre — l'allométrie de secours.
+ * Rayon du fût au pied, à **défaut** de diamètre — l'allométrie de secours.
  *
  * « Ce n'est pas une grandeur du moteur — il n'a pas de diamètre » : c'est ce
  * que disait cette fonction, et ce n'est plus vrai depuis #62. Le moteur porte
- * `diametreCm` par arbre et l'instantané le transporte NOMMÉMENT pour que le
+ * `diametreCm` par arbre et l'instantané le transporte **nommément** pour que le
  * rendu dessine « un tronc à la bonne épaisseur, ce qu'il déduisait jusqu'ici
  * d'un proxy faux » (protocol.ts). Le proxy était pourtant resté, et avec lui
  * le défaut qu'il cache : deux arbres de neuf mètres, l'un trapu au large et
@@ -194,7 +194,7 @@ interface Axe {
    * prochaine branche.
    *
    * **C'est ce qui équilibre un houppier, et rien d'autre ne le fait.** La
-   * divergence n'a de sens que d'un nœud AU SUIVANT le long d'un même axe —
+   * divergence n'a de sens que d'un nœud **au suivant** le long d'un même axe —
    * c'est la définition même de la phyllotaxie : chaque feuille, donc chaque
    * bourgeon, donc chaque branche, est décalée d'environ 137° de la
    * précédente, et c'est cette rotation qui fait qu'un arbre ne pousse pas
@@ -203,7 +203,7 @@ interface Axe {
    */
   phase: number;
   /**
-   * Vrai si l'axe appartient à la FLÈCHE — la chaîne qui prolonge le tronc
+   * Vrai si l'axe appartient à la **flèche** — la chaîne qui prolonge le tronc
    * jusqu'à la cime — et non à une branche latérale.
    *
    * **Cette distinction manquait, et son absence donnait des houppiers plats.**
@@ -258,7 +258,7 @@ function devier(direction: Point3, azimut: number, inclinaison: number): Point3 
 /**
  * Engendre le squelette.
  *
- * Parcours en LARGEUR et non en profondeur, et ce n'est pas un détail de
+ * Parcours en **largeur** et non en profondeur, et ce n'est pas un détail de
  * style : c'est ce qui rend le plafond de segments **utile**. En profondeur, le
  * plafond couperait une branche entière au milieu de l'arbre et laisserait les
  * autres complètes — un arbre manchot. En largeur, il coupe le dernier ordre,
@@ -272,15 +272,15 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
   // Les brins d'une cépée se partagent la matière : chacun est plus fin qu'un
   // fût unique de même hauteur, et c'est ce qui la fait lire comme un buisson.
   const rayon = (sujet.rayonAuPiedM ?? rayonAuPiedM(sujet.hauteurM)) / Math.sqrt(brins);
-  // Une cépée n'a PAS de fût : ses brins partent du sol. Une trogne s'arrête à
-  // sa tête. Tout le reste monte jusqu'à la base de houppier que le MOTEUR
+  // Une cépée n'a **pas** de fût : ses brins partent du sol. Une trogne s'arrête à
+  // sa tête. Tout le reste monte jusqu'à la base de houppier que le **moteur**
   // donne — et non plus jusqu'à une part de hauteur calculée ici.
   // **Bornée sous la cime, et ce n'est pas une correction de la grandeur.** Le
   // moteur garantit qu'une base de houppier reste sous la hauteur de l'arbre —
   // elle ne monte que par mort des branches basses, et un arbre sans branche
   // n'existe pas. Mais une scène tronquée, un banc mal réglé ou un arbre en
   // cours de rabattage peuvent présenter le cas, et le générateur ne doit alors
-  // pas rendre un arbre PLUS HAUT que celui qu'on lui demande : c'est ce qui
+  // pas rendre un arbre **plus haut** que celui qu'on lui demande : c'est ce qui
   // arrivait, le fût dépassant la cime et `hauteurAtteinteM` avec.
   //
   // On ne remplace pas la valeur par une estimation — ce serait retomber dans
@@ -312,17 +312,17 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
   }
 
   const resteM = Math.max(0.02, sujet.hauteurM - depart.y);
-  // **Le premier axe ne fait PAS toute la hauteur du houppier**, et c'est un
+  // **Le premier axe ne fait pas toute la hauteur du houppier**, et c'est un
   // bug que le premier jet avait : la flèche se prolonge d'ordre en ordre, et
   // la somme de la chaîne apicale — une série géométrique de raison `q` — vaut
   // `L / (1 - q)`. En partant de la hauteur entière, l'arbre sortait trois fois
-  // trop haut. On part donc de ce qu'il faut pour que la SOMME tombe juste.
+  // trop haut. On part donc de ce qu'il faut pour que la **somme** tombe juste.
   const q = Math.min(0.95, b.ratioLongueur * (1 + b.dominance * 0.6));
   const premierM = Math.max(LONGUEUR_MIN_M, resteM * (1 - q));
 
   const filles: Axe[] = [];
   for (let i = 0; i < brins; i++) {
-    // Un brin unique monte droit ; les brins d'une cépée s'ARQUENT, chacun dans
+    // Un brin unique monte droit ; les brins d'une cépée s'**arquent**, chacun dans
     // sa direction, répartis tout autour du pied. C'est cet écartement qui
     // donne la silhouette de buisson.
     const azimut = (i / brins) * Math.PI * 2 + hacher(sujet.id, i, 0x3f19) * 0.9;
@@ -342,7 +342,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
     });
   }
 
-  // ── Le houppier, en LARGEUR ───────────────────────────────────────────
+  // ── Le houppier, en **largeur** ───────────────────────────────────────────
   // Et non en profondeur : c'est ce qui rend le plafond de segments utile. En
   // profondeur, il couperait une branche entière au milieu de l'arbre et
   // laisserait les autres complètes — un arbre manchot. En largeur, il coupe le
@@ -353,7 +353,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
     const suivante: Axe[] = [];
     // Un segment par axe de la file, et pour chacun le nombre de filles qu'il
     // engendre. **Compter par axe et non par ordre** : le premier jet marquait
-    // non-terminal tout axe d'un ordre où QUELQU'UN avait des filles, ce qui
+    // non-terminal tout axe d'un ordre où **quelqu'un** avait des filles, ce qui
     // laissait le feuillage au seul dernier ordre — le défaut exact que L0
     // avait relevé, réintroduit par une paresse d'écriture.
 
@@ -380,11 +380,11 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         const alea = hacher(sujet.id * 7919 + segments.length, k, 0x51a3);
         const tortu = (alea - 0.5) * 2 * b.tortuosite;
         // **En verticille, une branche part de la flèche à l'horizontale et
-        // reste À PLAT.** Hors de la flèche, elle ne se redresse pas : elle
+        // reste à plat.** Hors de la flèche, elle ne se redresse pas : elle
         // s'ouvre en éventail dans son propre plan, ce qui donne l'étage. Un
         // feuillu, lui, garde le même angle de branchement partout.
         const angleLateral = b.verticille && !axe.surLaFleche ? b.angleDeg * 0.34 : b.angleDeg;
-        // **La flèche d'un conifère est DROITE**, et pas « un peu moins tordue
+        // **La flèche d'un conifère est droite**, et pas « un peu moins tordue
         // que ses branches ». Prendre une fraction de l'angle de branchement
         // donnait treize degrés par pousse à un pin dont les branches partent à
         // soixante-douze : au bout de quatre étages la flèche avait quitté
@@ -393,7 +393,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         const angleApical = b.verticille ? 2 : b.angleDeg * 0.18;
         const inclinaison =
           ((prolonge ? angleApical : angleLateral) * Math.PI) / 180 + tortu * 0.35;
-        // **L'azimut est propre à CHAQUE nœud**, et le premier jet ne l'était
+        // **L'azimut est propre à chaque nœud**, et le premier jet ne l'était
         // pas : le décalage de base était tiré de `(id, ordre, k)`, donc tous
         // les axes d'un même ordre partaient dans la même direction. Le
         // houppier s'effondrait d'un côté de l'arbre, la flèche restant nue de
@@ -404,7 +404,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         // La divergence sépare les filles d'un même nœud ; le décalage tiré du
         // nœud lui-même évite que deux nœuds superposés fassent une palissade.
         // En verticille, les branches d'une même couronne se répartissent
-        // RÉGULIÈREMENT autour de l'axe — c'est ce qui fait la couronne — au
+        // **régulièrement** autour de l'axe — c'est ce qui fait la couronne — au
         // lieu de suivre la divergence phyllotaxique d'un feuillu.
         //
         // **Le premier jet tirait le décalage sur `(nœud, k)`** : chaque fille
@@ -419,25 +419,25 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         // 0,32 pour tous les feuillus à fût unique, contre 0,04 à 0,09 pour
         // les cépées et le pin. Ce n'était pas un hasard de graine : cépées et
         // verticilles sont précisément les deux cas où le code répartissait
-        // déjà les azimuts RÉGULIÈREMENT au lieu de les tirer. Les seuls
+        // déjà les azimuts **régulièrement** au lieu de les tirer. Les seuls
         // houppiers centrés étaient ceux qui échappaient à cette ligne.
         //
         // **Tirer une rotation par nœud au lieu d'une par fille ne suffit pas**,
-        // et la mesure l'a dit aussi : l'aulne, qui ne fait qu'UNE latérale par
+        // et la mesure l'a dit aussi : l'aulne, qui ne fait qu'**une** latérale par
         // nœud (`branchesParNoeud: 2`, la première prolongeant l'axe), restait
         // à 0,24. Un nœud à latérale unique est lopsided par nature — aucune
         // répartition au sein du nœud ne peut le corriger, et une rotation
         // tirée au sort ne se compense qu'en moyenne, ce qui demande plus de
         // nœuds qu'un houppier n'en a.
         //
-        // Ce qui l'équilibre est la PHYLLOTAXIE, et c'est justement ce que le
+        // Ce qui l'équilibre est la **phyllotaxie**, et c'est justement ce que le
         // paramètre `divergenceDeg` désigne dans la vraie plante : la
-        // divergence sépare deux nœuds SUCCESSIFS le long d'un axe, pas deux
+        // divergence sépare deux nœuds **successifs** le long d'un axe, pas deux
         // filles d'un même nœud. Un aulne dont les latérales sortent à 0°,
         // 150°, 300°, 90°… tourne autour de sa flèche ; un aulne dont chaque
         // latérale part dans une direction tirée au sort penche.
         //
-        // Les filles d'un même nœud, elles, se répartissent RÉGULIÈREMENT — la
+        // Les filles d'un même nœud, elles, se répartissent **régulièrement** — la
         // règle que le verticille appliquait déjà, et qui n'avait aucune raison
         // de lui être réservée.
         const laterales = Math.max(1, b.branchesParNoeud - 1);
@@ -474,7 +474,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
           // sienne à partir de la direction qu'elle vient de prendre.
           //
           // **Et non `azimut + phaseFille`**, qui était le premier jet : comme
-          // l'azimut d'une latérale VAUT à peu près la phase de son axe, cette
+          // l'azimut d'une latérale **vaut** à peu près la phase de son axe, cette
           // somme revenait à doubler la phase à chaque ordre. Doubler un angle
           // modulo 2π n'est pas un brassage, c'est une application chaotique
           // qui a des points fixes et des cycles courts — l'aulne, qui n'a
@@ -485,8 +485,8 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
         });
       }
     }
-    // **Le plafond agit ICI**, entre deux ordres : si le prochain ordre ne tient
-    // pas, on l'abandonne ENTIER et les axes courants restent terminaux, donc
+    // **Le plafond agit ici**, entre deux ordres : si le prochain ordre ne tient
+    // pas, on l'abandonne **entier** et les axes courants restent terminaux, donc
     // feuillus. C'est ce qui fait perdre du détail à l'arbre et non un membre —
     // et ce qui empêche un arbre tronqué de sortir nu.
     if (segments.length + suivante.length > segmentsMax) break;
@@ -501,7 +501,7 @@ export function engendrer(sujet: Sujet, b: Branchement, segmentsMax = SEGMENTS_M
  *
  * **Déduit à la fin, et non tenu à jour pendant la récursion.** Le premier jet
  * marquait un axe non-terminal au moment où il engendrait des filles — ce qui
- * est faux dès que la boucle s'arrête AVANT de poser ces filles, et elle
+ * est faux dès que la boucle s'arrête **avant** de poser ces filles, et elle
  * s'arrête de deux façons : le plafond de segments, et l'ordre maximal. Dans le
  * second cas, tout le dernier rang d'axes était perdu et ses parents restaient
  * marqués « a des filles » : **la cime de l'arbre n'avait plus de feuilles**.

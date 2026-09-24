@@ -1,12 +1,12 @@
 /**
- * Le dessin des FRUITS, forme par forme (docs/interface-visuelle.md §4).
+ * Le dessin des **fruits**, forme par forme (docs/interface-visuelle.md §4).
  *
  * Le pendant de `feuilles.ts`, et pour la même raison : la forme d'un fruit est
  * un fait botanique que le moteur ne porte pas et n'a aucune raison de porter —
  * il compte des kilos, pas des silhouettes. Elle vit donc dans la fiche
  * graphique, sourcée comme le reste.
  *
- * **Ce qui vient du moteur, en revanche, c'est l'ÉTAT**, et c'est lui qui décide
+ * **Ce qui vient du moteur, en revanche, c'est l'état**, et c'est lui qui décide
  * si l'on dessine quelque chose : `fruitProgress` dit où en est le fruit de
  * l'année, `fruitsKg` dit combien de kilos mûrs attendent la récolte. Aucun
  * fruit n'est dessiné sans que l'une des deux le dise, et le rendu n'invente ni
@@ -31,7 +31,7 @@ import type { Teinte } from "../palette";
  * Les formes de fruits qu'on distingue.
  *
  * Peu nombreuses, et c'est voulu : à la taille où un fruit se lit, ce qui
- * l'identifie n'est pas son contour mais sa COULEUR et son GROUPEMENT. Une
+ * l'identifie n'est pas son contour mais sa **couleur** et son **groupement**. Une
  * cenelle et une prunelle ont la même silhouette ; l'une est rouge et solitaire,
  * l'autre bleu-noir et par deux. Multiplier les contours coûterait du code pour
  * une différence que l'œil ne voit pas à trois pixels.
@@ -50,7 +50,7 @@ export type FormeFruit =
 export interface Fruit {
   forme: FormeFruit;
   /**
-   * La couleur du fruit MÛR.
+   * La couleur du fruit **mûr**.
    *
    * Le fruit vert n'est pas déclaré : il s'obtient en interpolant vers
    * `FRUIT_VERT` selon l'avancement que le moteur donne. Déclarer les deux
@@ -69,7 +69,7 @@ export interface Fruit {
    */
   parRameau: number;
   /**
-   * Diamètre réel du GROUPE de fruits porté par un rameau, en mètres.
+   * Diamètre réel du **groupe** de fruits porté par un rameau, en mètres.
    *
    * **Une dimension de plus, et elle était nécessaire — la déduire était une
    * erreur.** J'estimais d'abord la taille de l'amas depuis celle du fruit
@@ -88,11 +88,11 @@ export interface Fruit {
    */
   grappeM?: number;
   /**
-   * La couleur de la FLEUR ; absente = l'espèce ne fleurit pas de façon visible.
+   * La couleur de la **fleur** ; absente = l'espèce ne fleurit pas de façon visible.
    *
    * Une floraison discrète existe — le noisetier fait des chatons verdâtres, le
    * châtaignier des chatons crème — mais ce qui justifie de la dessiner, c'est
-   * qu'elle CHANGE la silhouette de loin. Un pommier en fleur est blanc sur
+   * qu'elle **change** la silhouette de loin. Un pommier en fleur est blanc sur
    * toute sa couronne ; un noisetier en fleur ressemble à un noisetier.
    *
    * Le moment, lui, ne s'invente pas : c'est `Snapshot.floraison`, calculé sur
@@ -106,7 +106,7 @@ export interface Fruit {
  *
  * Un fruit vert est un fruit vert — une pomme d'août et une prunelle d'août
  * sont toutes deux d'un vert mat que rien ne distingue à cette taille. C'est
- * précisément ce qui rend le mûrissement lisible : la couleur ARRIVE, et
+ * précisément ce qui rend le mûrissement lisible : la couleur **arrive**, et
  * l'arrivée est l'information.
  */
 export const FRUIT_VERT: Teinte = { r: 118, g: 134, b: 82 };
@@ -120,7 +120,7 @@ export const FRUIT_VERT: Teinte = { r: 118, g: 134, b: 82 };
  * disparaisse sous les fruits.
  *
  * Ce n'est pas une grandeur du moteur et ça n'en usurpe pas une : le moteur dit
- * COMBIEN DE KILOS l'arbre porte, pas sur quels rameaux. Répartir cette masse
+ * **combien de kilos** l'arbre porte, pas sur quels rameaux. Répartir cette masse
  * sur les rameaux est un travail de dessin, comme répartir le feuillage.
  */
 export const PART_RAMEAUX_FRUITIERS = 0.2;
@@ -133,7 +133,7 @@ export const PART_RAMEAUX_FRUITIERS = 0.2;
  */
 export function contourFruit(forme: FormeFruit): { x: number; y: number }[] {
   if (forme === "bogue") {
-    // Une bogue est HÉRISSÉE, et c'est tout ce qui la distingue d'une pomme
+    // Une bogue est **hérissée**, et c'est tout ce qui la distingue d'une pomme
     // verte à cette taille : une couronne de pointes autour d'une sphère.
     const points: { x: number; y: number }[] = [];
     for (let i = 0; i < 14; i++) {
@@ -160,7 +160,7 @@ export function contourFruit(forme: FormeFruit): { x: number; y: number }[] {
     ];
   }
   // Charnu et grappe : une sphère, à peine plus haute que large. La différence
-  // entre les deux se joue au NOMBRE (`parRameau`), pas au contour.
+  // entre les deux se joue au **nombre** (`parRameau`), pas au contour.
   const points: { x: number; y: number }[] = [];
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2;
@@ -170,13 +170,13 @@ export function contourFruit(forme: FormeFruit): { x: number; y: number }[] {
 }
 
 /**
- * Diamètre du groupe de fruits d'un rameau, en MÈTRES.
+ * Diamètre du groupe de fruits d'un rameau, en **mètres**.
  *
  * La fiche le déclare quand elle le connaît (`grappeM`) ; sinon on l'estime
  * depuis la taille du fruit et leur nombre, ce qui vaut pour un fruit porté
  * isolément — deux pommes sur un rameau occupent la place de deux pommes.
  *
- * L'estimation ne vaut PAS pour les petites baies groupées, et c'est
+ * L'estimation ne vaut **pas** pour les petites baies groupées, et c'est
  * précisément pourquoi `grappeM` existe : un corymbe de sureau fait dix
  * centimètres, pas quatorze fois six millimètres.
  */

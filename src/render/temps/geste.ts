@@ -1,12 +1,12 @@
 /**
- * La mise en scène des cinq gestes qui touchent des ARBRES (§6.2) : couper,
+ * La mise en scène des cinq gestes qui touchent des **arbres** (§6.2) : couper,
  * éclaircir, élaguer, étêter, recéper.
  *
- * **Le §5.11 les marquait ❌ « il faudrait savoir ce qui TOMBE ».** Le moteur
+ * **Le §5.11 les marquait ❌ « il faudrait savoir ce qui tombe ».** Le moteur
  * le dit maintenant : `GesteSurArbres.retire` porte, par arbre, les deux
  * hauteurs, les deux bases de houppier, le diamètre et la direction de chute
  * quand une tige entière est tombée. Il n'y a plus rien à deviner, et ce module
- * ne devine rien — il ne fait qu'INTERPOLER entre deux états que le moteur
+ * ne devine rien — il ne fait qu'**interpoler** entre deux états que le moteur
  * donne tous les deux.
  *
  * **Deux mises en scène, et c'est le moteur qui les sépare.** Un geste qui
@@ -18,14 +18,14 @@
  *
  * | ce que `retire` en dit | ce qu'on dessine |
  * |---|---|
- * | `directionRad` présent (`couper`, `eclaircir`, `receper`) | une TIGE ABATTUE pivote autour de sa coupe et se couche |
- * | pas de direction (`elaguer`, `trogner`) | l'arbre RESTE, et sa forme passe d'avant à après |
+ * | `directionRad` présent (`couper`, `eclaircir`, `receper`) | une **tige abattue** pivote autour de sa coupe et se couche |
+ * | pas de direction (`elaguer`, `trogner`) | l'arbre **reste**, et sa forme passe d'avant à après |
  *
  * **Ce qui tombe demande un arbre que l'instantané n'a plus.** Une tige abattue
  * quitte `state.trees` dans le même tick : le rendu reçoit son identifiant et ne
  * la trouve plus. D'où la tige abattue ci-dessous, reposée le temps de l'acte à
  * partir du seul `ArbreRetire` — c'est précisément pour ça que le moteur en
- * donne un enregistrement COMPLET plutôt qu'un delta.
+ * donne un enregistrement **complet** plutôt qu'un delta.
  *
  * Module **pur** : pas de canvas, pas de DOM, pas d'horloge.
  */
@@ -72,7 +72,7 @@ export interface TigeAbattue {
   especeId: string;
   x: number;
   y: number;
-  /** ce qui est PARTI : la hauteur d'avant moins ce qui reste debout */
+  /** ce qui est **parti** : la hauteur d'avant moins ce qui reste debout */
   heightM: number;
   /**
    * Diamètre à 1,30 m, cm — le moteur le porte sur `ArbreRetire` justement
@@ -84,7 +84,7 @@ export interface TigeAbattue {
   baseHouppierM: number;
   /**
    * Faux pour une tige fraîchement abattue, qui porte encore son feuillage ;
-   * VRAI pour une chandelle qui s'abat, qui n'en a plus.
+   * **vrai** pour une chandelle qui s'abat, qui n'en a plus.
    *
    * Les deux passent par ce même type parce qu'elles posent le même problème :
    * un fût qui a quitté `state.trees` dans le tick où il tombe, et qu'il faut
@@ -95,7 +95,7 @@ export interface TigeAbattue {
   /** direction dans laquelle elle se couche, radians (0 = +x, sens trigo) */
   directionRad: number;
   /**
-   * Hauteur de la coupe au-dessus du sol, m — le PIED de la tige.
+   * Hauteur de la coupe au-dessus du sol, m — le **pied** de la tige.
    *
    * Zéro pour une coupe rase, la souche pour un recépage. C'est autour de ce
    * point que la tige pivote, et c'est là qu'il faut la poser : à fort zoom,
@@ -125,7 +125,7 @@ export function tigeAbattueDe(retire: ArbreRetire): TigeAbattue | undefined {
     y: retire.y,
     heightM: partie,
     diametreCm: retire.diametreCm,
-    // La base du houppier est comptée depuis le pied de la TIGE, donc depuis
+    // La base du houppier est comptée depuis le pied de la **tige**, donc depuis
     // la coupe : une cépée recépée à trente centimètres emporte son houppier
     // trente centimètres plus bas qu'il n'était sur l'arbre.
     baseHouppierM: Math.max(0, retire.baseHouppierAvantM - retire.hauteurApresM),
@@ -136,10 +136,10 @@ export function tigeAbattueDe(retire: ArbreRetire): TigeAbattue | undefined {
 }
 
 /**
- * La forme d'un arbre qui RESTE debout, à un instant de son acte.
+ * La forme d'un arbre qui **reste** debout, à un instant de son acte.
  *
  * Les deux champs remplacent ceux de l'arbre avant qu'on en calcule la classe
- * de vignette : ils vont donc à la CUISSON, comme l'état d'un mourant. Le coût
+ * de vignette : ils vont donc à la **cuisson**, comme l'état d'un mourant. Le coût
  * reste borné par la quantification de la classe — un élagage ne traverse que
  * les quelques paliers de base de houppier qui existent déjà.
  */
@@ -147,7 +147,7 @@ export interface ArbreRemodele {
   heightM?: number;
   baseHouppierM?: number;
   /**
-   * Fruits encore sur l'arbre et pas encore partis, kg — À AJOUTER à ce que
+   * Fruits encore sur l'arbre et pas encore partis, kg — **à ajouter** à ce que
    * l'instantané porte.
    *
    * Ajouté et non posé, parce que le lecteur ne connaît pas l'instantané : il
@@ -158,7 +158,7 @@ export interface ArbreRemodele {
    */
   fruitsKgEnPlus?: number;
   /**
-   * Âge de l'écorce, semaines — POSÉ, lui, parce que c'est une grandeur
+   * Âge de l'écorce, semaines — **posé**, lui, parce que c'est une grandeur
    * absolue dont le geste connaît les deux bouts : l'écorce était refaite
    * avant (le moteur refuse la levée autrement), elle est à vif après.
    */
@@ -166,11 +166,11 @@ export interface ArbreRemodele {
 }
 
 /**
- * Où en est la forme d'un arbre entre AVANT et APRÈS le geste.
+ * Où en est la forme d'un arbre entre **avant** et **après** le geste.
  *
  * `avancement` va de 0 (l'arbre tel qu'il était) à 1 (tel que l'instantané le
  * décrit). C'est l'inverse d'une animation ordinaire, et c'est voulu : le jeu
- * ne reçoit que l'état d'ARRIVÉE, donc la mise en scène consiste à remonter le
+ * ne reçoit que l'état d'**arrivée**, donc la mise en scène consiste à remonter le
  * temps au début de l'acte et à redescendre. La même inversion que le §6.3
  * applique aux morts.
  *
@@ -193,11 +193,11 @@ export function remodelageEnCours(
  * Interpolation d'une grandeur, du début à la fin de l'acte.
  *
  * Linéaire, et ça suffit : une tronçonneuse ne fait pas de courbe d'inertie.
- * Ce qui accélère, c'est ce qui TOMBE (`chute.ts`), et c'est la gravité qui le
+ * Ce qui accélère, c'est ce qui **tombe** (`chute.ts`), et c'est la gravité qui le
  * justifie — une bille sciée descend, un houppier démonté ne descend pas.
  */
 function entre(avant: number, apres: number, avancement: number): number {
-  // Les deux bouts sont rendus TELS QUELS, et ce n'est pas de la coquetterie :
+  // Les deux bouts sont rendus **tels quels**, et ce n'est pas de la coquetterie :
   // `9 + (0.3 - 9) * 1` vaut 0,300 000 000 000 000 7, et la classe de vignette
   // est quantifiée. Un dernier pas qui rate l'état d'arrivée d'un
   // quadrillionième peut basculer un palier, et l'arbre changerait de dessin en
@@ -211,16 +211,16 @@ function entre(avant: number, apres: number, avancement: number): number {
  * Les trois gestes qui ne démontent rien : plantation, récolte, démasclage.
  *
  * **Ils n'ont pas d'`ArbreRetire`, et c'est le moteur qui le dit** : « un arbre
- * planté, récolté ou démasclé garde sa géométrie — planter l'AJOUTE, récolter
+ * planté, récolté ou démasclé garde sa géométrie — planter l'**ajoute**, récolter
  * vide `fruitsKg`, démascler n'enlève que l'écorce » (actions.ts). Il n'y a
  * donc pas de tige à coucher ni de charpente à remonter : ce qui bouge est un
- * STOCK, et le geste porte sa masse (`masseKg`).
+ * **stock**, et le geste porte sa masse (`masseKg`).
  *
  * Les deux canaux se répartissent selon ce que la classe de vignette contient
  * déjà : `fruit` et `liege` en font partie (`couches/arbres.ts`), donc récolte
- * et démasclage sont des CUISSONS — comme l'élagage, et pour la même raison.
+ * et démasclage sont des **cuissons** — comme l'élagage, et pour la même raison.
  * La plantation, elle, ne change aucune clé : un plant est un arbre de plus,
- * qu'on fait simplement grandir à l'écran. C'est une POSE.
+ * qu'on fait simplement grandir à l'écran. C'est une **pose**.
  */
 
 /**
@@ -233,7 +233,7 @@ function entre(avant: number, apres: number, avancement: number): number {
  */
 export function recolteEnCours(masseKg: number, avancement: number): ArbreRemodele {
   const a = Math.min(1, Math.max(0, avancement));
-  // Le zéro est rendu TEL QUEL, comme les bouts d'`entre` : un reliquat d'un
+  // Le zéro est rendu **tel quel**, comme les bouts d'`entre` : un reliquat d'un
   // milliardième de kilo garderait la classe `FRUIT_MUR` et l'arbre resterait
   // chargé alors que la récolte est finie.
   return { fruitsKgEnPlus: a >= 1 ? 0 : masseKg * (1 - a) };

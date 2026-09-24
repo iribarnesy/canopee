@@ -58,14 +58,14 @@ describe("ce qui fait la valeur d'un arbre", () => {
   });
 
   it("élaguer TÔT vaut bien plus qu'élaguer tard, sur la même bille", () => {
-    // **LE NŒUD EST DÉJÀ DANS LE BOIS** (#180). Élaguer ne retire rien : ça
-    // empêche les cernes SUIVANTS d'en porter. Le moteur ne retenait qu'une
-    // HAUTEUR élaguée, si bien qu'un chêne élagué à 8 cm de diamètre et le même
+    // **le nœud est déjà dans le bois** (#180). Élaguer ne retire rien : ça
+    // empêche les cernes **suivants** d'en porter. Le moteur ne retenait qu'une
+    // **hauteur** élaguée, si bien qu'un chêne élagué à 8 cm de diamètre et le même
     // élagué à 40 sortaient au centime près au même prix — et que la stratégie
     // optimale était d'élaguer la veille de la vente, ce qui est l'inverse de
     // ce que la sylviculture enseigne.
     //
-    // Les deux arbres ci-dessous sont le MÊME arbre : même hauteur, même
+    // Les deux arbres ci-dessous sont le **même** arbre : même hauteur, même
     // diamètre, même bille de six mètres. La seule différence est le diamètre
     // qu'il portait quand la scie est passée.
     const tige = { heightM: 18, diametreCm: 40, hauteurElagueeM: 6 };
@@ -137,7 +137,7 @@ describe("élaguer", () => {
     const { state } = runJournal(STATION, journal, WEATHER, 10 * 52 + 2);
     const arbre = state.trees.find((t) => t.id === 1);
     if (!arbre) throw new Error("arbre manquant");
-    // Le champ existe, et il vaut le diamètre que l'arbre PORTAIT cette
+    // Le champ existe, et il vaut le diamètre que l'arbre **portait** cette
     // semaine-là — pas celui qu'il aura à la vente (#180).
     expect(arbre.diametreElagageCm).toBeGreaterThan(0);
     expect(arbre.diametreElagageCm).toBeLessThanOrEqual(arbre.diametreCm);

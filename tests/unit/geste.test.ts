@@ -2,7 +2,7 @@
  * La mise en scène des cinq gestes sur arbres (§6.2).
  *
  * **Ce que ces essais gardent, c'est le partage entre les deux mises en
- * scène** — et il ne suit pas le type du geste mais ce que le moteur en DIT.
+ * scène** — et il ne suit pas le type du geste mais ce que le moteur en **dit**.
  * Une tige entière couchée porte une `directionRad` ; une charpente démontée
  * sur place n'en porte pas, « parce que le moteur n'y voit pas une direction
  * unique et n'en invente pas ». Le rendu qui trancherait sur le type se
@@ -83,7 +83,7 @@ const RECEPAGE = retire({
 
 describe("les identifiants de tige", () => {
   it("ne peuvent pas entrer en collision avec ceux du moteur", () => {
-    // Un recépage laisse la souche en jeu AVEC son identifiant : si la tige
+    // Un recépage laisse la souche en jeu **avec** son identifiant : si la tige
     // portait le même, la souche tomberait avec la cépée.
     for (const id of [0, 1, 7, 4096, 10 ** 6]) {
       expect(idDeLaTige(id)).toBeLessThan(0);
@@ -108,7 +108,7 @@ describe("ce qui tombe", () => {
   it("emporte la CÉPÉE d'un recépage, pas la souche", () => {
     const t = tigeAbattueDe(RECEPAGE);
     expect(t?.heightM).toBeCloseTo(8.7, 6);
-    // Le houppier est compté depuis le pied de la TIGE, donc depuis la coupe.
+    // Le houppier est compté depuis le pied de la **tige**, donc depuis la coupe.
     expect(t?.baseHouppierM).toBeCloseTo(1.7, 6);
     // Et la tige pivote autour de la coupe, pas du sol : à fort zoom une
     // souche de trente centimètres fait une vingtaine de pixels.
@@ -302,7 +302,7 @@ describe("le plant qui sort de terre", () => {
     expect(poseDeLaPlantation(0).hauteur).toBeLessThan(0.2);
     expect(poseDeLaPlantation(0).opacite).toBe(0);
     expect(poseDeLaPlantation(0.5).hauteur).toBeGreaterThan(poseDeLaPlantation(0).hauteur);
-    // Exactement DEBOUT à la fin : un plant posé est un arbre ordinaire, et
+    // Exactement **debout** à la fin : un plant posé est un arbre ordinaire, et
     // `combiner` doit le trouver neutre.
     expect(poseDeLaPlantation(1)).toEqual(DEBOUT);
   });

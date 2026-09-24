@@ -24,6 +24,7 @@ import type {
 } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 import type { DecorBordures } from "../render/couches/decor";
+import type { Bilan } from "./bilan";
 import type { Cumuls } from "./niveaux";
 import type { ChoixRecolte } from "./recolteAuto";
 
@@ -56,7 +57,7 @@ export interface SaveGame {
   /**
    * L'argent contraignait-il la partie ? Absent = oui, pour que les
    * sauvegardes d'avant restent lisibles. Sans ce champ, une partie jouée sans
-   * contrainte se rejouerait AVEC, et divergerait.
+   * contrainte se rejouerait **avec**, et divergerait.
    */
   economie?: boolean;
   /** année civile du début de partie */
@@ -69,7 +70,7 @@ export interface SaveGame {
   /**
    * Le niveau joué, s'il y en a un (#188). Absent = bac à sable.
    *
-   * Seul l'IDENTIFIANT est rangé, pas la fiche : un niveau corrigé doit
+   * Seul l'**identifiant** est rangé, pas la fiche : un niveau corrigé doit
    * s'appliquer aux parties en cours, et une fiche recopiée dans chaque
    * sauvegarde serait une seconde copie de la règle, donc une divergence (§2.1).
    */
@@ -78,7 +79,7 @@ export interface SaveGame {
    * Les paliers déjà franchis.
    *
    * La plupart se retrouvent tout seuls au rejeu — un cumul ne redescend pas.
-   * Ceux qui portent sur un STOCK, eux, ne se retrouvent pas : douze arbres
+   * Ceux qui portent sur un **stock**, eux, ne se retrouvent pas : douze arbres
    * protégés puis morts ne laissent aucune trace dans l'état. Sans cette
    * liste, reprendre une partie reprendrait un objectif déjà gagné.
    */
@@ -86,7 +87,7 @@ export interface SaveGame {
   /**
    * Ce que le joueur a décidé de la récolte automatique, essence par essence.
    *
-   * Seules ses DÉCISIONS sont rangées, pas la liste effective : celle-ci se
+   * Seules ses **décisions** sont rangées, pas la liste effective : celle-ci se
    * recalcule du journal (ce qu'il a semé) et de ces décisions. Ranger la liste
    * effective en ferait une seconde copie d'une règle, qui dériverait du jour
    * où la règle par défaut changerait.
@@ -104,7 +105,7 @@ export interface SnapshotTree {
   y: number;
   heightM: number;
   /**
-   * Diamètre à 1,30 m, cm. Il ne se déduit PLUS de la hauteur : deux arbres de
+   * Diamètre à 1,30 m, cm. Il ne se déduit **plus** de la hauteur : deux arbres de
    * même taille n'ont pas la même grosseur selon qu'ils ont poussé serrés ou
    * au large (#62).
    *
@@ -117,8 +118,8 @@ export interface SnapshotTree {
   ageWeeks: number;
   stress: number;
   /**
-   * D'OÙ vient ce stress, pour les origines que le moteur sait nommer sur un
-   * arbre VIVANT (#153). `stress` seul est une somme : sécheresse, famine,
+   * **d'où** vient ce stress, pour les origines que le moteur sait nommer sur un
+   * arbre **vivant** (#153). `stress` seul est une somme : sécheresse, famine,
    * ravageurs et maladie y tombent ensemble, et le jeu ne peut pas les
    * départager — il n'a pas le droit de refaire le calcul, et l'information
    * n'y est plus.
@@ -138,7 +139,7 @@ export interface SnapshotTree {
    * Base du houppier, m : en dessous, plus une branche vivante — donc du fût
    * nu à dessiner (`trees.ts`, docs/realisme.md B10).
    *
-   * Elle voyage parce qu'elle ne se déduit de RIEN : ni de l'espèce (le même
+   * Elle voyage parce qu'elle ne se déduit de **rien** : ni de l'espèce (le même
    * chêne est branchu en pré et nu sur quinze mètres en futaie), ni de
    * `hauteurElagueeM` (qui ne compte que le coup de scie, pas l'ombre). Le
    * rendu en avait fabriqué une approximation privée — 0,3 pour un caduc,
@@ -153,7 +154,7 @@ export interface SnapshotTree {
    */
   chandelle: boolean;
   /**
-   * Hauteur de la tête de trogne, m ; absent = jamais étêté. LA TROGNE : une
+   * Hauteur de la tête de trogne, m ; absent = jamais étêté. **La trogne** : une
    * tête renflée à hauteur fixe et un faisceau de rejets au-dessus. C'est la
    * silhouette la plus reconnaissable du bocage, et sans ce champ le rendu
    * dessine un arbre ordinaire.
@@ -161,13 +162,13 @@ export interface SnapshotTree {
   teteTrogneM?: number;
   /**
    * Nombre de recépages subis. La tête d'une trogne grossit et se creuse à
-   * chaque étêtage — mais la DIMENSION qui en découle ne se déduit pas de ce
+   * chaque étêtage — mais la **dimension** qui en découle ne se déduit pas de ce
    * seul compteur sans recopier le modèle : elle voyage, ci-dessous.
    */
   recepages: number;
   /**
    * Diamètre de la tête de trogne, cm — 0 si l'arbre n'a jamais été étêté
-   * (`trogne.ts`). C'est le renflement à dessiner, et il GROSSIT coupe après
+   * (`trogne.ts`). C'est le renflement à dessiner, et il **grossit** coupe après
    * coupe : une tête de trois étêtages et un saule têtard centenaire n'ont
    * pas la même silhouette, ni de loin la même valeur.
    */
@@ -188,27 +189,27 @@ export interface SnapshotTree {
    */
   vigueur: number;
   /**
-   * Dommage hydraulique ∈ [0,1] : la CIME SÈCHE. C'est la mémoire des
+   * Dommage hydraulique ∈ [0,1] : la **cime sèche**. C'est la mémoire des
    * sécheresses passées, et elle ne se répare pas (trees.ts).
    */
   dommageHydraulique: number;
   /**
-   * Semaine où la mort a été enregistrée ; absent = vivant. C'est l'ÂGE de la
+   * Semaine où la mort a été enregistrée ; absent = vivant. C'est l'**âge** de la
    * chandelle : elle grisonne, se creuse et finit par tomber.
    */
   mortSemaine?: number;
   /**
    * Semaine où le feu l'a tué ; absent = pas brûlé. Ce qui distingue la
-   * chandelle NOIRE de la GRISE.
+   * chandelle **noire** de la **grise**.
    */
   brulEeSemaine?: number;
   /**
    * Semaine où une tempête l'a couché ; absent = pas de chablis.
    *
-   * SANS ELLE, L'INSTANTANÉ MENT (#87). Un chablis reste dans `state.trees`
+   * **Sans elle**, **l'instantané ment** (#87). Un chablis reste dans `state.trees`
    * l'année où son bois est encore récupérable, mort mais non purgé — et le
    * rendu le recevait avec `chandelle: true`, c'est-à-dire annoncé comme un
-   * tronc mort resté DEBOUT là où le moteur a un arbre par terre. Ce n'était
+   * tronc mort resté **debout** là où le moteur a un arbre par terre. Ce n'était
    * pas une donnée manquante, c'était une donnée fausse.
    */
   renverseSemaine?: number;
@@ -231,7 +232,7 @@ export interface SnapshotTree {
    */
   derniereLeveeSemaine?: number;
   /**
-   * Part de la couronne EN FLEUR ∈ [0,1] (phenologie.ts). Elle ne se déduit
+   * Part de la couronne **en fleur** ∈ [0,1] (phenologie.ts). Elle ne se déduit
    * d'aucun autre champ : `fruitProgress` vaut 0 avant la floraison, 0
    * pendant, et 0 toute l'année pour un arbre immature — les trois cas sont
    * indiscernables. Et elle ne se recalcule pas côté rendu : la fenêtre est un
@@ -290,13 +291,13 @@ export interface Snapshot {
   soilWater: Float32Array;
   soilPh: Float32Array;
   /**
-   * Bois mort COUCHÉ, g C par m². Ce que les chandelles abattues ont laissé là
+   * Bois mort **couché**, g C par m². Ce que les chandelles abattues ont laissé là
    * où elles sont tombées (boisMort.ts) : le rendu peut y poser des troncs, et
    * ce sont les mêmes cellules qui font de l'humus et retiennent la terre.
    */
   soilBoisAuSol: Float32Array;
   /**
-   * Part de ce bois qui BARRE l'eau, ∈ [0,1] (boisMort.ts) : ce qui reste de sa
+   * Part de ce bois qui **barre** l'eau, ∈ [0,1] (boisMort.ts) : ce qui reste de sa
    * longueur une fois projetée sur la courbe de niveau et le seuil des 30° passé.
    * C'est elle, et pas la masse, qui dit si le tronc barre l'eau ou s'il fait
    * gouttière : deux cellules aussi chargées de bois n'ont pas le même effet
@@ -313,8 +314,8 @@ export interface Snapshot {
    */
   soilHerbeBiomasse: Float32Array;
   /**
-   * Humidité VÉCUE par le tapis herbacé, par cellule ∈ [0,1] (herbe.ts) : le
-   * remplissage de l'horizon de SURFACE, lissé sur ~6 semaines.
+   * Humidité **vécue** par le tapis herbacé, par cellule ∈ [0,1] (herbe.ts) : le
+   * remplissage de l'horizon de **surface**, lissé sur ~6 semaines.
    *
    * Ce n'est ni `soilWater` (la réserve du profil entier, instantanée) ni la
    * couverture : c'est la grandeur sur laquelle le moteur décide lui-même si
@@ -323,25 +324,25 @@ export interface Snapshot {
    * averse ; branchée sur l'humidité instantanée, la couleur du gazon
    * clignoterait à chaque pluie, ce que ce lissage existe pour éviter.
    *
-   * C'est ce qui distingue la pelouse GRILLÉE — couverture pleine, biomasse
+   * C'est ce qui distingue la pelouse **grillée** — couverture pleine, biomasse
    * basse, et pourtant brune — du foin sur pied et de l'herbe qui recule.
    */
   soilHerbeHumidite: Float32Array;
   /**
-   * Emprise de CHAQUE espèce herbacée, par cellule — une grille par espèce,
+   * Emprise de **chaque** espèce herbacée, par cellule — une grille par espèce,
    * dans l'ordre de `HERBACEES` (herbacees.ts), en 0-255 pour une emprise de
    * 0 à 1. `herbesIds` donne la correspondance.
    *
-   * POURQUOI LE MÉLANGE ET NON LA DOMINANTE (#86). Le rendu lisait le seuil
+   * **Pourquoi le mélange et non la dominante** (#86). Le rendu lisait le seuil
    * d'eau chez le dactyle pour toutes les cellules, faute de savoir qui les
    * tient — exact tant que le tapis était un dactyle qui s'ignorait, faux dès
    * qu'autre chose pousse. L'envoi d'un simple indice d'espèce dominante était
    * la réponse évidente, et la mesure la refuse : sur limon riche et sur
    * friche, la première espèce ne tient qu'une médiane de 0,88 à 0,92 de sa
-   * cellule, et surtout SON IDENTITÉ BASCULE d'avril à juillet sur près de
+   * cellule, et surtout **son identité bascule** d'avril à juillet sur près de
    * quarante pour cent des cellules — le dactyle régresse à la sécheresse
    * pendant que l'anémone, dormante, ne perd rien. Un indice unique ferait donc
-   * sauter la teinte ET le seuil (0,35 → 0,50) d'une saison à l'autre, alors
+   * sauter la teinte **et** le seuil (0,35 → 0,50) d'une saison à l'autre, alors
    * que le mélange, lui, ne bouge presque pas. Sur la lande sèche la question
    * ne se pose pas : la molinie tient 100 % de chaque cellule.
    *
@@ -356,12 +357,12 @@ export interface Snapshot {
   /**
    * Population de ravageurs par cellule ∈ [0,1] (ravageurs.ts). Seule la
    * moyenne voyageait (`TickFluxes.ravageurMoyen`), et une moyenne ne se
-   * dessine pas : la défoliation se lit par TACHES, et c'est là que les
+   * dessine pas : la défoliation se lit par **taches**, et c'est là que les
    * arbres finissent par mourir.
    */
   soilRavageurs: Float32Array;
   /**
-   * Épaisseur d'horizon de surface perdue par cellule, cm — NÉGATIVE là où le
+   * Épaisseur d'horizon de surface perdue par cellule, cm — **négative** là où le
    * sédiment s'est déposé (erosion.ts). Les moyennes de `TickFluxes` disent
    * combien la parcelle a perdu, jamais où : sans cette carte le rendu ne peut
    * placer ni les ravines ni les zones d'accumulation.
@@ -411,7 +412,7 @@ export interface Snapshot {
    */
   naissances: NaissanceDeLaSemaine[];
   /**
-   * Tiges que la CROISSANCE a fait changer de stade depuis le dernier
+   * Tiges que la **croissance** a fait changer de stade depuis le dernier
    * instantané (stades.ts). Le stade lui-même se calcule côté rendu depuis
    * `heightM` (`stadeDe`) ; c'est le franchissement, qui demande de comparer
    * deux instants, que le moteur seul peut voir.
@@ -424,7 +425,7 @@ export interface Snapshot {
   gestes: GesteVisible[];
   /**
    * Chandelles abattues depuis le dernier instantané. `soilBoisAuSol` dit où
-   * le tronc s'est retrouvé, mais pas qu'il vient de TOMBER : sans ces
+   * le tronc s'est retrouvé, mais pas qu'il vient de **tomber** : sans ces
    * événements, la trouée n'est qu'un changement d'éclairage entre deux
    * images, au lieu d'être la conséquence lisible d'une chute (boisMort.ts).
    */
@@ -436,7 +437,7 @@ export interface Snapshot {
    * cap du vent, et les tiges qu'elle a couchées avec leur hauteur.
    *
    * Elle voyage pour la même raison que l'incendie : sans l'événement, le rendu
-   * ne voit qu'un état changé entre deux images et n'a pas de MOMENT où jouer
+   * ne voit qu'un état changé entre deux images et n'a pas de **moment** où jouer
    * l'acte. Le moteur la calculait déjà en entier ; elle s'arrêtait au journal
    * de la semaine (#87).
    */
@@ -448,7 +449,7 @@ export interface StationInfo {
   nom: string;
   coteM: number;
   /**
-   * Réserve utile du PROFIL ENTIER, mm — la même grandeur que `Station.ruMm`
+   * Réserve utile du **profil entier**, mm — la même grandeur que `Station.ruMm`
    * du moteur, et sous le même nom exprès.
    *
    * C'est elle que lisent les règles qui parlent du sol où un arbre s'enracine :
@@ -457,7 +458,7 @@ export interface StationInfo {
    */
   ruMm: number;
   /**
-   * Réserve utile du seul HORIZON DE SURFACE, mm.
+   * Réserve utile du seul **horizon de surface**, mm.
    *
    * Séparée, et nommée autrement, parce que c'en est une autre : c'est la
    * borne haute du calque « Eau » de la carte du sol, dont `soilWater` ne
@@ -483,7 +484,7 @@ export interface StationInfo {
   /** profondeur de la nappe sous chaque cellule, cm — fixe, envoyée une fois */
   nappeCm: Float32Array;
   /**
-   * Altitude de chaque cellule, m — le RELIEF, tel que le moteur le voit
+   * Altitude de chaque cellule, m — le **relief**, tel que le moteur le voit
    * (`altitudeParCellule`, relief.ts). Il ne bouge pas d'une semaine à
    * l'autre : envoyé une fois, avec le reste de la station. Sans lui il n'y a
    * pas de vue isométrique du tout.
@@ -504,7 +505,7 @@ export interface StationInfo {
    */
   bassinAmontHa: number;
   /**
-   * Ce qui entoure la parcelle, réduit à ce que le DÉCOR en dessine : trois
+   * Ce qui entoure la parcelle, réduit à ce que le **décor** en dessine : trois
    * parts de couvert et les semenciers, par côté (`decorDesBordures`).
    *
    * Les bordures sont choisies au départ et ne changent plus : elles partent
@@ -538,7 +539,7 @@ export type ToWorker =
   | { type: "resume"; save: SaveGame }
   | { type: "speed"; weeksPerSecond: number }
   /**
-   * RETENIR l'horloge sans toucher à la vitesse (#163).
+   * **retenir** l'horloge sans toucher à la vitesse (#163).
    *
    * Le temps du jeu attend qu'une animation bloquante finisse. Distinct d'une
    * mise en pause, et il le faut : la vitesse choisie par le joueur doit être
@@ -569,7 +570,7 @@ export type ToWorker =
    *
    * **La traversée est jouée, pas sautée.** Le joueur qui demande un mois veut
    * voir la parcelle changer, pas la retrouver changée : le worker avance donc
-   * à la vitesse demandée, semaine après semaine, et c'est LUI qui s'arrête au
+   * à la vitesse demandée, semaine après semaine, et c'est **lui** qui s'arrête au
    * bon moment. Le faire côté jeu voudrait dire guetter le bandeau et
    * re-cliquer sur pause au jugé, ce que le joueur faisait déjà à la main.
    *
@@ -584,9 +585,9 @@ export type ToWorker =
       libelle: string;
     }
   /**
-   * LES ARBRES SUIVIS, pour que le worker sache s'arrêter quand l'un meurt (#149).
+   * **les arbres suivis**, pour que le worker sache s'arrêter quand l'un meurt (#149).
    *
-   * La liste entière à chaque fois, et non un ajout : c'est un ENSEMBLE, et
+   * La liste entière à chaque fois, et non un ajout : c'est un **ensemble**, et
    * s'envoyer des deltas demanderait aux deux côtés de tenir la même liste —
    * deux copies d'un même état, ce que le §2.1 nous a déjà coûté ailleurs.
    *
@@ -599,9 +600,9 @@ export type ToWorker =
   /**
    * Le niveau joué et les paliers déjà franchis (#188).
    *
-   * Le worker ne JOUE pas le niveau — il n'en connaît ni les paliers ni les
+   * Le worker ne **joue** pas le niveau — il n'en connaît ni les paliers ni les
    * cibles, qui sont des fermetures et ne traverseraient pas la frontière du
-   * worker. Il les RANGE, pour que la sauvegarde les porte.
+   * worker. Il les **range**, pour que la sauvegarde les porte.
    */
   | { type: "niveau"; id?: string; acquis: string[] }
   /** allumer ou éteindre la récolte automatique d'une essence */
@@ -614,10 +615,21 @@ export type ToWorker =
   | { type: "reglerFacture"; embaucher: boolean; pourToujours: boolean }
   /** Changer la consigne sans qu'une facture soit posée — pour la révoquer. */
   | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
+  /**
+   * **revenir en arrière** et rejouer jusqu'au présent (#128, §6.8 №3).
+   *
+   * Une **relecture**, pas une reprise : le présent est mis de côté et retrouvé
+   * intact au bout, rien de ce qui est rejoué n'est compté deux fois, et le
+   * joueur ne peut pas agir pendant. « On ne montre pas une année en une
+   * image, on offre de la revoir. »
+   */
+  | { type: "relire"; deSemaine: number; weeksPerSecond: number }
+  /** Rendre la main au présent, que la relecture soit finie ou non. */
+  | { type: "arreterLaRelecture" }
   | { type: "requestSave" };
 
 /**
- * LA FACTURE D'UNE SEMAINE TROP CHARGÉE (#133).
+ * **la facture d'une semaine trop chargée** (#133).
  *
  * Le plafond de soixante heures ne refuse plus rien : il se paie. Ces trois
  * nombres viennent du moteur (`depassementHoraire`, `coutDuDepassement`) ; le
@@ -625,7 +637,7 @@ export type ToWorker =
  * lui seul sait ce que le joueur a posé depuis lundi.
  */
 /**
- * QUE FAIRE DES HEURES SUPPLÉMENTAIRES, la fois d'après (#133).
+ * **que faire des heures supplémentaires**, la fois d'après (#133).
  *
  * « Se souvenir de mon choix » : une semaine trop chargée est une situation
  * ordinaire dans une partie longue, et répondre à la même question toutes les
@@ -649,28 +661,58 @@ export interface FactureHoraire {
 export type FromWorker =
   | { type: "ready"; station: StationInfo }
   /**
-   * L'instantané, et ce qui s'est ACCUMULÉ depuis le début de la partie (#188).
+   * L'instantané, et ce qui s'est **accumulé** depuis le début de la partie (#188).
    *
    * Le cumul voyage à côté de l'instantané, et non dedans : l'instantané est ce
-   * que le MOTEUR dit de la parcelle à cette semaine, le cumul est ce que le
+   * que le **moteur** dit de la parcelle à cette semaine, le cumul est ce que le
    * jeu a compté des gestes qu'il a rapportés. Les mélanger ferait croire que
    * le moteur tient un compte qu'il ne tient pas.
+   *
+   * `bilan` est du même bois (#128) : tout ce qui a changé depuis le début de
+   * la partie, groupé et situé. Il est compté dans le worker pour la raison qui
+   * y garde le cumul — reprendre une sauvegarde rejoue le journal sans qu'un
+   * seul instantané intermédiaire ne remonte. L'écran n'en tient pas de
+   * second : la période qu'il affiche est celui-ci moins celui qu'il avait au
+   * début de la période.
    */
-  | { type: "snapshot"; snapshot: Snapshot; cumuls: Cumuls }
+  | {
+      type: "snapshot";
+      snapshot: Snapshot;
+      cumuls: Cumuls;
+      bilan: Bilan;
+      /**
+       * La plus ancienne semaine où le rembobinage sait revenir (#128).
+       *
+       * Elle voyage à chaque instantané parce qu'elle **avance** : les points de
+       * reprise sont une fenêtre glissante, et l'écran ne doit pas proposer de
+       * revoir une période dont le début est déjà tombé par-dessus bord.
+       */
+      rembobinable: number;
+    }
   /** Le niveau et ses paliers franchis, tels que la sauvegarde les portait. */
   | { type: "niveau"; id?: string; acquis: string[] }
   /**
    * Ce qui est cueilli d'office, et pourquoi.
    *
    * `semees` vient du journal du joueur, `choix` de ses décisions : l'écran a
-   * besoin des DEUX pour dire si une pastille est allumée par défaut ou parce
+   * besoin des **deux** pour dire si une pastille est allumée par défaut ou parce
    * qu'on l'a voulu.
    */
   | { type: "recolteAuto"; semees: string[]; choix: ChoixRecolte }
   | { type: "save"; save: SaveGame }
   | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
-  /** le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la vitesse */
-  | { type: "autopause"; reason: string }
+  /**
+   * Le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la
+   * vitesse.
+   *
+   * `scene` n'est renseignée que pour ce qui **mérite d'être revu** — un incendie,
+   * une tempête, une mortalité de masse — et porte la semaine où revenir. C'est
+   * le « mode cinéma » du §6.8 : *« l'autopause existe déjà pour l'incendie ; on
+   * l'étend à la crue et aux mortalités de masse, puis on rejoue la scène à
+   * ×1 »*. Absente pour une pause qui n'a rien à montrer — l'arrivée d'un saut
+   * « +1 an », des fruits mûrs, une faillite.
+   */
+  | { type: "autopause"; reason: string; scene?: number }
   /**
    * « Votre semaine dépasse : vous embauchez, ou on s'en tient à 60 h ? »
    *
@@ -681,4 +723,31 @@ export type FromWorker =
   /** la consigne en vigueur, à chaque fois qu'elle change (y compris au rejeu) */
   | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
   /** la réponse à `prevoir` : les refus qu'aurait produits ce geste */
-  | { type: "prevision"; cle: string; refusals: ActionRefusal[] };
+  | { type: "prevision"; cle: string; refusals: ActionRefusal[] }
+  /**
+   * **où en est la relecture** (#128).
+   *
+   * `enCours` faux dit qu'on est revenu au présent — y compris quand la
+   * demande a été refusée faute de point de reprise assez ancien. L'écran en a
+   * besoin pour bien plus que l'afficher : pendant une relecture il doit
+   * geler ce qui **compte** — les paliers du niveau, la période du bilan, le
+   * journal des arbres suivis — sans quoi une partie revue se mettrait à
+   * gagner des objectifs qu'elle a déjà gagnés.
+   */
+  | {
+      type: "relecture";
+      enCours: boolean;
+      depuis: number;
+      semaine: number;
+      jusqua: number;
+      /**
+       * La vitesse à laquelle la relecture se joue.
+       *
+       * Elle revient à l'écran au lieu d'y être posée d'avance, et ce n'est pas
+       * un détail : poser la vitesse **avant** de savoir qu'une relecture commence
+       * ouvre une image où l'horloge coule sans qu'on relise — et la partie
+       * jouée l'a prise en faute, la période du bilan s'effaçait au clic même
+       * sur « Revoir ».
+       */
+      vitesse: number;
+    };

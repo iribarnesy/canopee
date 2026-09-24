@@ -146,7 +146,7 @@ def main() -> int:
     if "--ecrire" in sys.argv:
         DOC.write_text(texte[:debut] + attendu + texte[fin:], encoding="utf-8")
         print("\n→ tableau réécrit.")
-        # L'historique, lui, ne se réécrit PAS : personne ne peut deviner ce
+        # L'historique, lui, ne se réécrit **pas** : personne ne peut deviner ce
         # qu'un chantier a fait, et une entrée inventée serait pire que pas
         # d'entrée du tout.
         return 1 if doublons or not historique else 0

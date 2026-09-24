@@ -1,6 +1,6 @@
 /**
  * Profils de départ : figer un terrain, son entourage, son relief, son eau et
- * son climat, pour pouvoir REJOUER plusieurs parties dans les mêmes
+ * son climat, pour pouvoir **rejouer** plusieurs parties dans les mêmes
  * conditions.
  *
  * Sans cela, comparer deux conduites — planter dense ou clair, mélanger ou non
@@ -34,14 +34,14 @@ export interface ProfilDepart {
   anneeDepart: number;
   maturationAns: number;
   /**
-   * La graine ne fait PAS partie du profil : c'est justement ce qu'on veut
+   * La graine ne fait **pas** partie du profil : c'est justement ce qu'on veut
    * faire varier pour savoir si un résultat tient du hasard ou du terrain.
    * Elle est donc laissée au choix à chaque partie.
    */
 }
 
 /**
- * Profils LIVRÉS avec le jeu : des situations réelles, décrites une fois et
+ * Profils **livrés** avec le jeu : des situations réelles, décrites une fois et
  * prêtes à éprouver. Ils ne vivent pas dans le navigateur — on ne peut ni les
  * modifier ni les effacer, mais rien n'empêche d'en repartir et d'enregistrer
  * sa propre variante à côté.
@@ -59,7 +59,7 @@ export const PROFILS_LIVRES: readonly ProfilDepart[] = [
     // Nappe landaise perchée : c'est elle qui fait tenir une forêt sur un sable
     // sans réserve utile.
     nappeCm: 400,
-    // Tout le bassin subit le même sort : c'est un incendie de MASSIF, pas un
+    // Tout le bassin subit le même sort : c'est un incendie de **massif**, pas un
     // feu de parcelle entouré de vert.
     partBassinSemblable: 1,
     scenario: "ssp245",

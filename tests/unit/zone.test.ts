@@ -1,26 +1,26 @@
 /**
- * LA ZONE D'UN CHANTIER (issue #186).
+ * **La zone d'un chantier** (issue #186).
  *
  * Ce fichier tient une chose, et c'est la seule qui rende le refactor sûr :
- * **pour un disque, la nouvelle géométrie rend EXACTEMENT ce que rendait
+ * **pour un disque, la nouvelle géométrie rend exactement ce que rendait
  * l'ancienne.** Pas « à peu près », pas « en moyenne » — les mêmes indices dans
  * le même ordre, et les mêmes flottants au bit près. Dix actions ont changé de
  * signature ; sans cette égalité, rien ne distingue un refactor réussi d'un
  * refactor qui déplace silencieusement toutes les parties.
  *
- * ── CE QUI A ÉTÉ TENTÉ D'ABORD, ET POURQUOI C'ÉTAIT FAUX ─────────────────────
+ * ── **ce qui a été tenté d'abord**, **et pourquoi c'était faux** ─────────────────────
  *
  * Le premier contrôle épinglait en dur le `stateHash` d'une partie de douze ans,
- * relevé sur le commit d'AVANT (`ffca0fb`). Il passait ici et **tombait en CI**.
+ * relevé sur le commit d'**avant** (`ffca0fb`). Il passait ici et **tombait en CI**.
  * Ce n'était pas le refactor : `stateHash` est un FNV-1a sur les flottants bruts
- * de chaque arbre, donc un ULP n'importe où le change, et le moteur ne rend pas
+ * de chaque arbre, donc un **ulp** n'importe où le change, et le moteur ne rend pas
  * les mêmes derniers bits selon la version de V8. Mesuré des deux côtés :
  *
  *     empreinte de la même partie      avant (ffca0fb)   après (ce lot)
  *     Node 20 (V8 11.3), Node 22 (12.4)   3 806 937 118   3 806 937 118
  *     Node 24 (V8 13.6) — celui de la CI    633 354 304     633 354 304
  *
- * Le refactor est donc bien neutre SUR LES DEUX plateformes ; c'est la valeur
+ * Le refactor est donc bien neutre **sur les deux** plateformes ; c'est la valeur
  * absolue qui n'est pas portable. Un essai dont le verdict dépend de la machine
  * ne prouve rien — c'est la même faute que l'essai qui écrivait dans mon dossier
  * de travail et passait chez moi. On ne l'assertait donc pas : on garde la
@@ -29,8 +29,8 @@
  * dont des centaines épinglent des grandeurs écologiques, verts avant comme
  * après, sous Node 22 comme sous Node 24.
  *
- * (Et la conclusion qui dépasse ce lot : les CHIFFRES du moteur sont portables,
- * ses BITS ne le sont pas. Sorti en #193.)
+ * (Et la conclusion qui dépasse ce lot : les **chiffres** du moteur sont portables,
+ * ses **bits** ne le sont pas. Sorti en #193.)
  */
 
 import { describe, expect, it } from "vitest";
@@ -58,9 +58,9 @@ function ancien(cx: number, cy: number, r: number, dims: GridDims = DIMS): numbe
 }
 
 /**
- * `cellulesDuDisque` DE L'ANCIEN `actions.ts`, recopiée telle quelle. Ce n'est
+ * `cellulesDuDisque` **de l'ancien** `actions.ts`, recopiée telle quelle. Ce n'est
  * pas la même route que `forEachDiscCell` : elle balaie toute la parcelle et
- * n'a PAS la garantie « au moins une cellule ». Les deux existaient, les deux
+ * n'a **pas** la garantie « au moins une cellule ». Les deux existaient, les deux
  * doivent être reproduites.
  */
 function ancienneCellulesDuDisque(cote: number, cx: number, cy: number, rayonM: number): number[] {
@@ -112,10 +112,10 @@ describe("le disque ne bouge pas d'un indice", () => {
   it("et sur cinq cents disques tirés au hasard, les deux routes d'avant", () => {
     // Neuf cas choisis prouvent ce à quoi on a pensé. Cinq cents tirés prouvent
     // aussi ce à quoi on n'a pas pensé — et c'est bien ce qui est arrivé : le
-    // balayage a trouvé la SECONDE divergence du refactor, que les neuf cas de
+    // balayage a trouvé la **seconde** divergence du refactor, que les neuf cas de
     // bord avaient manquée.
     //
-    // `cellulesDuDisque` n'avait PAS la garantie « au moins une cellule », que
+    // `cellulesDuDisque` n'avait **pas** la garantie « au moins une cellule », que
     // `forEachDiscCell` avait. Les deux vivaient côte à côte dans `actions.ts` :
     // `semer` et `moissonner` passaient par la première, tout le reste par la
     // seconde, si bien qu'un semis de vingt centimètres ne semait rien du tout
@@ -144,7 +144,7 @@ describe("le disque ne bouge pas d'un indice", () => {
         ]);
       }
     }
-    // Le cas dégénéré doit être RENCONTRÉ, sinon la branche ci-dessus ne prouve
+    // Le cas dégénéré doit être **rencontré**, sinon la branche ci-dessus ne prouve
     // rien — et rester rare, sinon le tirage ne teste plus le cas courant.
     expect(degeneres).toBeGreaterThan(0);
     expect(degeneres).toBeLessThan(40);
@@ -152,7 +152,7 @@ describe("le disque ne bouge pas d'un indice", () => {
 
   it("l'aire et le périmètre sont les MÊMES FLOTTANTS, pas des valeurs proches", () => {
     // `toBe` et non `toBeCloseTo` : ces nombres facturent des heures de chantier
-    // et entrent dans le `stateHash`. Une réassociation d'un ULP suffirait à
+    // et entrent dans le `stateHash`. Une réassociation d'un **ulp** suffirait à
     // déplacer une partie, donc l'expression doit être la même, pas équivalente.
     const suivant = tirage(7);
     for (let n = 0; n < 2000; n++) {
@@ -164,7 +164,7 @@ describe("le disque ne bouge pas d'un indice", () => {
 
   it("et `zoneContient` tranche exactement comme le test au carré d'avant", () => {
     // Les actions ne testent pas que des centres de cellule : `labourer` et
-    // `eclaircir` testent aussi des POSITIONS D'ARBRE, continues.
+    // `eclaircir` testent aussi des **positions d'arbre**, continues.
     const suivant = tirage(99);
     for (let n = 0; n < 5000; n++) {
       const cx = suivant() * 40;
@@ -183,9 +183,9 @@ describe("le disque ne bouge pas d'un indice", () => {
   it("LE SEUL ENDROIT QUI N'EST PAS AU BIT PRÈS, et de combien", () => {
     // `choisirTigesAEclaircir` écrivait `(Math.PI * r2) / 10_000`, soit
     // π·(r·r) ; les cinq autres appels écrivaient `Math.PI * r * r`, soit
-    // (π·r)·r. Les deux familles se contredisaient DÉJÀ d'un ULP entre elles :
+    // (π·r)·r. Les deux familles se contredisaient **déjà** d'un **ulp** entre elles :
     // il n'existe donc pas d'« avant » unique à préserver. `aireM2DeLaZone`
-    // prend la forme majoritaire, et l'éclaircie se décale d'au plus un ULP sur
+    // prend la forme majoritaire, et l'éclaircie se décale d'au plus un **ulp** sur
     // 30 % des rayons.
     //
     // Ce décalage ne peut changer une partie que s'il fait basculer le
@@ -208,10 +208,10 @@ describe("le disque ne bouge pas d'un indice", () => {
 
 describe("l'empreinte d'un chantier sur le sol est celle d'avant", () => {
   // Les contrôles ci-dessus portent sur la géométrie prise à part. Ceux-ci la
-  // prennent PAR L'AUTRE BOUT : on joue l'action, et on regarde quelles cellules
+  // prennent **par l'autre bout** : on joue l'action, et on regarde quelles cellules
   // du sol ont bougé. C'est ce qui attrape un argument mal branché — un centre
   // inversé, un rayon passé à la place d'un autre —, et les zones sont
-  // volontairement DÉCENTRÉES et asymétriques pour qu'un échange de x et y se
+  // volontairement **décentrées** et asymétriques pour qu'un échange de x et y se
   // voie. Instantané, et portable : on compare des ensembles d'indices, pas des
   // flottants.
   const COTE = 40;

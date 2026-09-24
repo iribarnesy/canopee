@@ -1,7 +1,7 @@
 /**
  * Le front d'incendie.
  *
- * **Ce que ces essais gardent : que le front COURT.** C'est la seule chose qui
+ * **Ce que ces essais gardent : que le front court.** C'est la seule chose qui
  * distingue un incendie pédagogique d'une tache noire, et le §6.4 le dit —
  * « une ligne de flammes qui court de cellule en cellule dans l'ordre du rang
  * d'arrivée […] c'est la carte de combustibilité qui devient visible ».
@@ -42,7 +42,7 @@ import {
 const COTE = 40;
 
 /**
- * Un front produit par le MOTEUR, pas par moi.
+ * Un front produit par le **moteur**, pas par moi.
  *
  * **C'est la leçon du banc de bois mort** : un banc qui fabrique un état
  * inatteignable accuse le rendu. On fait donc propager un vrai feu sur une
@@ -151,7 +151,7 @@ describe("frontEnCours", () => {
       expect(c.brulure).toBeGreaterThanOrEqual(0);
       expect(c.brulure).toBeLessThan(VARIANTES_DE_BRULURE);
     }
-    // Les variantes sont VRAIMENT réparties : une seule reformerait une trame,
+    // Les variantes sont **vraiment** réparties : une seule reformerait une trame,
     // plus grosse qu'un damier de cellules mais une trame quand même.
     expect(new Set(milieu.map((c) => c.brulure)).size).toBe(VARIANTES_DE_BRULURE);
   });
@@ -179,7 +179,7 @@ describe("porteeDuFront", () => {
 
   it("croît avec la charge de combustible : c'est la carte qui décide", () => {
     // La propriété pédagogique du §6.4 — « le front s'essouffle dans le feuillu
-    // frais, fonce dans la lande » — tient à ce que la portée SUIVE le
+    // frais, fonce dans la lande » — tient à ce que la portée **suive** le
     // combustible. Ce n'est pas le rendu qui la produit, c'est le moteur ; mais
     // le rendu la perdrait s'il cessait de lire les rangs.
     const portees = [0.35, 1, 2, 4].map((c) => porteeDuFront(frontDuMoteur(c)));
@@ -192,7 +192,7 @@ describe("porteeDuFront", () => {
 /**
  * Les particules : la lueur, les flammes, le panache, les braises.
  *
- * **Ce que ces essais gardent : que le feu S'ÉTEINT tout seul, et que rien ne
+ * **Ce que ces essais gardent : que le feu s'éteint tout seul, et que rien ne
  * sort de ce que le moteur a brûlé.** Le premier est ce qui évite un panache
  * suspendu au-dessus d'une parcelle en cendres à la fin de l'acte ; le second
  * est la règle #1 du cahier, appliquée à un système qui, par nature, invente des
@@ -204,7 +204,7 @@ describe("les particules du feu", () => {
   const brulees = new Set(front.brulees as number[]);
 
   const auSol = (a: number, t = 0) => feuAuSol(front, a, t, COTE_P);
-  // **Un vent EST vent, et le moteur le dit maintenant** : le panache ne devine
+  // **Un vent est vent, et le moteur le dit maintenant** : le panache ne devine
   // plus sa direction depuis l'avance du front. On souffle donc vers l'est-nord-
   // est pour les essais, avec une force qu'on fait varier.
   const enHaut = (a: number, t = 0, recuMs = 5) =>
@@ -247,7 +247,7 @@ describe("les particules du feu", () => {
     for (const p of [...auSol(a), ...enHaut(a)]) {
       expect(p.forme === "traine" ? fument.has(p.cellule) : enFeu.has(p.cellule)).toBe(true);
     }
-    // les deux ensembles sont DISJOINTS : ce qui flambe ne fume pas encore
+    // les deux ensembles sont **disjoints** : ce qui flambe ne fume pas encore
     for (const c of enFeu) expect(fument.has(c)).toBe(false);
     // et le front n'est qu'une petite part du brûlé
     expect(enFeu.size).toBeLessThan(front.brulees.length * 0.5);
@@ -264,7 +264,7 @@ describe("les particules du feu", () => {
     const rangsEnFeu = cellulesEnFlammes(front, a).map((c) => rangDe.get(c.cellule) ?? 0);
     const rangMinEnFeu = Math.min(...rangsEnFeu);
     for (const c of cellulesQuiFument(front, a)) {
-      // ce qui fume est en ARRIÈRE : son rang est inférieur à la ligne de feu
+      // ce qui fume est en **arrière** : son rang est inférieur à la ligne de feu
       expect(rangDe.get(c.cellule) ?? 0).toBeLessThan(rangMinEnFeu);
     }
   });
@@ -359,7 +359,7 @@ describe("les particules du feu", () => {
 
   it("penche dans le sens du VENT, et le moteur le dit maintenant", () => {
     // Ce que ça change à l'image : un front qui descend le vent et un front qui
-    // le REMONTE se dessinaient pareil, puisque la seule direction disponible
+    // le **remonte** se dessinaient pareil, puisque la seule direction disponible
     // était celle de l'avance du front. Maintenant, non.
     for (const versRad of [0, 1.2, Math.PI, -2]) {
       const dx = Math.cos(versRad);
@@ -369,14 +369,14 @@ describe("les particules du feu", () => {
         const ex = p.x - ((p.cellule % COTE_P) + 0.5);
         const ey = p.y - (Math.floor(p.cellule / COTE_P) + 0.5);
         // La composante le long du vent est positive : la bouffée haute est en
-        // AVAL de son pied, quel que soit le sens où le feu court.
+        // **aval** de son pied, quel que soit le sens où le feu court.
         expect(ex * dx + ey * dy).toBeGreaterThan(0);
       }
     }
   });
 
   it("penche PLUS quand le vent est fort", () => {
-    // L'amplitude vient de la vitesse que le SITE reçoit — la vitesse régionale
+    // L'amplitude vient de la vitesse que le **site** reçoit — la vitesse régionale
     // de la semaine multipliée par l'abri de la parcelle (`ventRecuParLeSite`).
     const derive = (recuMs: number) => {
       const bouffees = enHaut(0.6, 400, recuMs).filter((p) => p.forme === "fumee");
@@ -393,7 +393,7 @@ describe("les particules du feu", () => {
   });
 
   it("SUIT le front : la fumée s'éloigne de l'origine à mesure que le feu court", () => {
-    // C'est la même pédagogie que le front lui-même : on voit OÙ le feu est,
+    // C'est la même pédagogie que le front lui-même : on voit **où** le feu est,
     // et pas seulement qu'il y en a un.
     const o = { x: (front.origine % COTE_P) + 0.5, y: Math.floor(front.origine / COTE_P) + 0.5 };
     const rayonDesPieds = (a: number) => {
@@ -442,7 +442,7 @@ describe("les particules du feu", () => {
     const ajonc = mediane(2);
     expect(frais).toBeLessThan(pelouse);
     expect(pelouse).toBeLessThan(ajonc);
-    // et l'écart se VOIT : plus du double du frais à l'ajonc
+    // et l'écart se **voit** : plus du double du frais à l'ajonc
     expect(ajonc).toBeGreaterThan(frais * 2);
   });
 

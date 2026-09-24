@@ -1,7 +1,7 @@
 /**
  * Litières et restitutions (docs/regles.md §4.2, ch2-B) : la litière rend
  * l'azote au sol à une vitesse dictée par son C/N, et l'aulne fixateur
- * ENRICHIT réellement son voisinage — l'effet « améliorante » de l'atlas
+ * **enrichit** réellement son voisinage — l'effet « améliorante » de l'atlas
  * doit émerger.
  */
 
@@ -46,7 +46,7 @@ describe("litières — vitesse selon le C/N (ch2-B)", () => {
 });
 
 describe("l'aulne améliore son sol (fixation → litière → minéral)", () => {
-  // Trois aulnes adultes AU NORD du hêtre : leurs ombres partent encore plus
+  // Trois aulnes adultes **au nord** du hêtre : leurs ombres partent encore plus
   // au nord (décalage solaire, light.ts), mais leur litière tombe sous leurs
   // couronnes, jusqu'aux racines du hêtre. Témoin : le même hêtre seul.
   const YEARS = 15;
@@ -82,24 +82,24 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     if (!hetreAvec || !hetreSeul) throw new Error("hêtre manquant");
     expect(hetreAvec.alive).toBe(true);
     expect(hetreSeul.alive).toBe(true);
-    // **CE SEUIL A GLISSÉ QUATRE FOIS, ET LE DÉFAUT ÉTAIT LE THERMOMÈTRE.**
+    // **ce seuil a glissé quatre fois, et le défaut était le thermomètre.**
     // 1,1006 puis 1,095 (strate herbacée), 1,077 (port serré), 1,030 (les
     // mycorhizes cessent de perdre l'azote du sol pauvre, #115) : à chaque fois
     // on a rabaissé le nombre en nommant correctement la cause, et à chaque
-    // fois on lisait la HAUTEUR.
+    // fois on lisait la **hauteur**.
     //
     // Or la hauteur ne capte qu'un tiers de l'effet. Mesuré ici : le hêtre du
-    // bosquet est 1,030 fois plus HAUT que le témoin, 1,031 fois plus GROS, et
-    // donc 1,095 fois plus VOLUMINEUX — le volume va comme `D²H`, il compose
-    // les deux. « Améliorer son sol » est une affirmation sur la VIGUEUR de
+    // bosquet est 1,030 fois plus **haut** que le témoin, 1,031 fois plus **gros**, et
+    // donc 1,095 fois plus **volumineux** — le volume va comme `D²H`, il compose
+    // les deux. « Améliorer son sol » est une affirmation sur la **vigueur** de
     // l'arbre, pas sur sa taille : c'est la leçon que l'effet nurse avait déjà
-    // donnée (#97), où un sujet collé à sa nurse était le plus HAUT des trois
+    // donnée (#97), où un sujet collé à sa nurse était le plus **haut** des trois
     // et huit fois plus chétif.
     //
     // Le seuil n'est donc pas rabaissé une cinquième fois : l'essai change de
     // grandeur. 1,05 sur le volume, contre 1,095 mesuré.
     //
-    // ─── ET IL S'EST INVERSÉ (#201), PARCE QUE LE TÉMOIN ÉTAIT VOLÉ ──────────
+    // ─── **et il s'est inversé** (#201), **parce que le témoin était volé** ──────────
     //
     // Mesuré avec et sans le retour de litière de la strate herbacée :
     //
@@ -111,12 +111,12 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     //                  D     10,61            11,53       0,920
     //                  V                                  0,782
     //
-    // **Le hêtre du bosquet n'a PAS bougé** — 4,32 → 4,35, 10,55 → 10,61. C'est
-    // le TÉMOIN qui a gagné 12 à 13 %. L'aulne ne fait pas moins ; son témoin
+    // **Le hêtre du bosquet n'a pas bougé** — 4,32 → 4,35, 10,55 → 10,61. C'est
+    // le **témoin** qui a gagné 12 à 13 %. L'aulne ne fait pas moins ; son témoin
     // faisait artificiellement moins.
     //
     // La cause : la strate prélevait ~31 kg N/ha/an et ne les rendait jamais —
-    // dans un moteur où l'herbe n'a pas de masse, cet azote DISPARAISSAIT. Le
+    // dans un moteur où l'herbe n'a pas de masse, cet azote **disparaissait**. Le
     // hêtre isolé, entouré d'herbe, était donc volé en permanence ; celui du
     // bosquet, dont l'herbe est étouffée par l'ombre des aulnes, ne l'était
     // presque pas. **L'effet améliorant qu'on mesurait était pour une bonne
@@ -130,12 +130,12 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     // destruction de matière. *Un nombre calé sur le moteur n'est pas une
     // ancre, et un nombre calé sur un bogue du moteur encore moins.*
     const volume = (t: TreeState) => volumeTigeM3(t.diametreCm, t.heightM);
-    // Ce que l'aulne fait au hêtre reste POSITIF en soi : le bosquet ne nuit
+    // Ce que l'aulne fait au hêtre reste **positif** en soi : le bosquet ne nuit
     // pas, ses arbres vivent et poussent. C'est la comparaison au témoin qui a
     // changé de signe, pas la santé du bosquet.
     expect(volume(hetreAvec)).toBeGreaterThan(0);
     expect(hetreAvec.heightM).toBeGreaterThan(3);
-    // Et LA MOITIÉ DU MÉCANISME TIENT ENCORE, celle qu'aucun bogue ne portait :
+    // Et **la moitié du mécanisme tient encore**, celle qu'aucun bogue ne portait :
     // l'aulne fixe, sa litière se minéralise, et le sol du bosquet en garde la
     // trace. C'est ce que l'essai voisin mesure directement sur l'azote du sol,
     // et c'est lui qui porte désormais le critère.
@@ -143,7 +143,7 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
 
   it("et ce qui tient sans dépendre du témoin : le bosquet d'aulnes enrichit SON sol", () => {
     // L'énoncé qui survit à #201, parce qu'il ne compare pas deux parcelles
-    // dont l'une était volée : il regarde le sol SOUS les aulnes contre le sol
+    // dont l'une était volée : il regarde le sol **sous** les aulnes contre le sol
     // au départ. La fixation symbiotique, elle, n'a jamais rien dû à la strate.
     const azoteSol = (s: typeof finAvec) => {
       let total = 0;

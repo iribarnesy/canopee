@@ -1,7 +1,7 @@
 /**
  * Frêne commun — *Fraxinus excelsior*. Famille : **feuillu de futaie**.
  *
- * Trois signes, et le premier est le meilleur : les **bourgeons NOIRS** sur des
+ * Trois signes, et le premier est le meilleur : les **bourgeons noirs** sur des
  * rameaux gris clair, visibles tout l'hiver et sur aucune autre essence de
  * l'atlas. Puis la feuille **composée** — neuf à treize folioles sur un même
  * pétiole — et le port en éventail, branches montantes puis retombantes en
@@ -21,7 +21,7 @@ export const FRENE: FicheGraphique = {
     divergenceDeg: 90,
     ratioLongueur: 0.72,
     dominance: 0.56,
-    // TROIS, c'est-à-dire la flèche PLUS deux latérales opposées : le frêne
+    // **trois**, c'est-à-dire la flèche **plus** deux latérales opposées : le frêne
     // a des rameaux par paires, et c'est ce qui donne son port en éventail.
     // Le compte disait deux, donc une seule latérale — la paire n'existait
     // pas, et avec 180° de divergence toutes les latérales tombaient dans un

@@ -1,22 +1,22 @@
 /**
  * La banque de graines du sol : la mémoire du passé d'une parcelle.
  *
- * Le moteur ne régénérait que par le PRÉSENT — les adultes qui grainent et le
+ * Le moteur ne régénérait que par le **présent** — les adultes qui grainent et le
  * voisinage qui ensemence. Une parcelle n'avait donc aucune mémoire : ce qui y
  * avait poussé vingt ans plus tôt n'y laissait rien.
  *
  * C'est faux pour toute une catégorie d'espèces, et c'est même la clé de la
- * dynamique landaise. Une graine de chêne ou de hêtre est RÉCALCITRANTE : elle
+ * dynamique landaise. Une graine de chêne ou de hêtre est **récalcitrante** : elle
  * ne survit pas à un hiver sec, et ne fait aucune mémoire. Mais une graine de
  * légumineuse à tégument dur attend sous terre pendant des décennies, et le feu
  * la réveille.
  *
- * ─── LES CHIFFRES ────────────────────────────────────────────────────────────
+ * ─── **les chiffres** ────────────────────────────────────────────────────────────
  * L'ajonc est le cas le mieux documenté. Sous une lande installée, sa banque
  * compte **500 à 2 000 graines/m²**, et peut atteindre des dizaines de milliers ;
  * les graines restent viables **25 à 30 ans** dans les six premiers centimètres
  * du sol. Le feu ne la détruit pas — le sol isole assez pour que même un feu
- * intense laisse les graines enfouies intactes — mais il SCARIFIE leur tégument,
+ * intense laisse les graines enfouies intactes — mais il **scarifie** leur tégument,
  * ce qui lève leur dormance. Non scarifiées, ces graines ne germent qu'à des
  * taux faibles (Element Stewardship Abstract, *Ulex europaeus* ; MDPI *Plants*
  * 8:523, « A World of Gorse »).
@@ -24,8 +24,8 @@
  * C'est pour cela qu'une lande brûlée revient en lande : l'ajonc ne recolonise
  * pas depuis le voisinage, il remonte du sol sur place, et il y était déjà.
  *
- * ─── LA SIMPLIFICATION ASSUMÉE ───────────────────────────────────────────────
- * La banque est tenue à l'échelle de la PARCELLE, pas de la cellule : un
+ * ─── **la simplification assumée** ───────────────────────────────────────────────
+ * La banque est tenue à l'échelle de la **parcelle**, pas de la cellule : un
  * dictionnaire d'espèce vers un stock moyen en graines/m². Une banque par
  * cellule serait plus juste — la mémoire est spatiale, une tache d'ajoncs laisse
  * sa marque là où elle était — mais elle coûterait vingt-cinq champs de dix
@@ -47,7 +47,7 @@ import type { EspeceV0 } from "./especes";
  * surtout, un « adulte » de ce moteur n'est pas un pied de terrain — le moteur
  * manipule des densités de l'ordre du centième de pied au m² là où une vraie
  * lande en compte plusieurs par m². Un adulte du moteur représente donc une
- * TACHE, et son dépôt celui de la tache *(à calibrer)*.
+ * **tache**, et son dépôt celui de la tache *(à calibrer)*.
  */
 export const DEPOT_PAR_ADULTE_PAR_AN = 1600;
 

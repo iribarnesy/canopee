@@ -9,58 +9,58 @@
  *
  * On monte la parcelle telle qu'ils la décrivent — sable landais acide, nappe
  * perchée, tout le bassin logé à la même enseigne — on plante deux
- * compositions, et on laisse le moteur déclencher SES PROPRES incendies. Rien
+ * compositions, et on laisse le moteur déclencher **ses propres** incendies. Rien
  * n'est scénarisé : ni la date des feux, ni leur étendue, ni ce qu'ils
  * emportent.
  *
- * ─── CE QUE MESURE L'ESSAI COMPLET ───────────────────────────────────────────
- * REMESURÉ après la correction du modèle de combustible (feu.ts). Les chiffres
+ * ─── **ce que mesure l'essai complet** ───────────────────────────────────────────
+ * **remesuré** après la correction du modèle de combustible (feu.ts). Les chiffres
  * précédents avaient été obtenus avec un modèle qui amortissait la charge des
  * houppiers par l'ombre que ces mêmes houppiers projetaient — ce qui donnait un
  * avantage artificiel aux peuplements denses, donc aux feuillus.
  *
- * DEUX LOTS INDÉPENDANTS de seize graines, cinquante ans, surface brûlée :
+ * **Deux lots indépendants** de seize graines, cinquante ans, surface brûlée :
  *
  *   composition       lot A     lot B     gros feux A/B   remontée A/B
  *   pinède pure      1 825 m²  1 311 m²     15/16 · 12/16    64 · 53 cm
  *   feuillus         1 715 m²  1 342 m²     16/16 · 13/16    56 · 57 cm
  *   chêne-liège      1 166 m²  1 059 m²     13/16 · 13/16    62 · 77 cm
  *
- * ─── DEUX CONCLUSIONS CHANGENT ───────────────────────────────────────────────
+ * ─── **deux conclusions changent** ───────────────────────────────────────────────
  *
  * 1. « Planter des feuillus réduit d'un tiers les gros incendies et de 38 % la
- *    remontée de nappe » : RETIRÉ. À cinquante ans l'effet ne réplique pas — il
+ *    remontée de nappe » : **retiré**. À cinquante ans l'effet ne réplique pas — il
  *    change de signe d'un lot à l'autre (−6 % puis +2 %), et la remontée ne
  *    montre aucun ordre stable. Ce n'est pas du bruit qu'on aurait mal mesuré,
  *    c'est un effet qui n'existe pas à cet horizon : une fois que tout est passé
- *    au feu au moins une fois, c'est la LANDE qui porte le feu suivant, pas ce
+ *    au feu au moins une fois, c'est la **lande** qui porte le feu suivant, pas ce
  *    qu'on avait planté dessus.
  *
- * 2. Le même essai arrêté à VINGT-SIX ANS dit autre chose, et les deux sont
+ * 2. Le même essai arrêté à **vingt-six ans** dit autre chose, et les deux sont
  *    vrais : les feuillus y brûlent 655 m² contre 1 032 au pin, soit un tiers
- *    de moins. Planter des feuillus ACHÈTE DU TEMPS ; ça ne change pas le
+ *    de moins. Planter des feuillus **achète du temps** ; ça ne change pas le
  *    régime de long terme.
  *
- * ─── ET UNE CONCLUSION S'INVERSE ─────────────────────────────────────────────
+ * ─── **et une conclusion s'inverse** ─────────────────────────────────────────────
  * On avait écrit que le chêne-liège « ne réduit ni la surface parcourue ni la
  * remontée » et que « survivre au feu et l'empêcher sont deux stratégies
  * différentes ». C'est faux, et c'était l'artefact du modèle de combustible.
  *
- * Le chêne-liège est la SEULE composition dont l'avantage réplique aux deux
- * horizons : 507 m² contre 1 032 à vingt-six ans (et AUCUN gros incendie sur
+ * Le chêne-liège est la **seule** composition dont l'avantage réplique aux deux
+ * horizons : 507 m² contre 1 032 à vingt-six ans (et **aucun** gros incendie sur
  * huit parties), 1 166 et 1 059 contre 1 825 et 1 311 à cinquante ans. Le
  * mécanisme est émergent, personne ne l'a écrit : son écorce résiste au feu
  * (0,95), donc le peuplement reste debout, donc le couvert reste fermé, donc la
  * litière reste humide et à l'abri du vent — et le feu suivant trouve moins à
- * brûler. SURVIVRE AU FEU EST CE QUI EMPÊCHE LE SUIVANT.
+ * brûler. **Survivre au feu est ce qui empêche le suivant**.
  *
- * ─── UNE CONCLUSION RETIRÉE ──────────────────────────────────────────────────
+ * ─── **une conclusion retirée** ──────────────────────────────────────────────────
  * On avait mesuré ici que replanter en aulne après le feu raccourcissait d'un
  * tiers la durée pendant laquelle la nappe reste haute, et on l'avait écrit
  * comme un résultat. C'en était un artefact.
  *
  * À l'époque, le feuillage était commandé par un seul booléen — `tMean > 6 °C`
- * — vrai presque tout l'hiver dans les Landes. TOUS les caducs y transpiraient
+ * — vrai presque tout l'hiver dans les Landes. **Tous** les caducs y transpiraient
  * donc en janvier, ce qui n'a aucun sens : un aulne n'a pas de feuilles en
  * hiver et ne peut pas rabattre une nappe hivernale. Depuis que chaque espèce
  * a son calendrier (phenologie.ts), cette transpiration fantôme a disparu — et
@@ -71,15 +71,15 @@
  * que le bruit d'un incendie à l'autre, et l'ordre des essences change avec la
  * graine. On ne conclut donc rien.
  *
- * ─── ET SURTOUT : LA VARIANCE ÉCRASE TOUT ────────────────────────────────────
+ * ─── **et surtout** : **la variance écrase tout** ────────────────────────────────────
  * D'une graine à l'autre, la même composition brûle de 0 à 4 500 m². Trois à
  * cinq parties sur seize ne connaissent aucun incendie. Un seul essai par
- * composition ne prouve donc RIEN — le premier qu'on avait fait donnait « les
+ * composition ne prouve donc **rien** — le premier qu'on avait fait donnait « les
  * feuillus ne brûlent jamais », ce que seize répétitions ont démenti.
  *
  * Et seize ne suffisent pas non plus pour les petits écarts : la pinède brûle
  * 1 825 m² dans un lot de seize graines et 1 311 dans l'autre, soit 28 % de
- * différence entre deux mesures du MÊME dispositif. C'est la raison pour
+ * différence entre deux mesures du **même** dispositif. C'est la raison pour
  * laquelle l'avantage des feuillus, qui vaut moins que cela, ne peut pas être
  * affirmé — alors que celui du chêne-liège, qui vaut le double, le peut.
  */
@@ -104,14 +104,14 @@ function saumos(): Station {
     // Nappe landaise perchée : c'est elle qui fait tenir une forêt sur un
     // sable sans réserve utile.
     profondeurNappeEquilibreCm: 400,
-    // Tout le bassin subit le même sort : c'est un incendie de MASSIF.
+    // Tout le bassin subit le même sort : c'est un incendie de **massif**.
     partBassinSemblable: 1,
     ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),
-    // PAS DE SANGLIER, et c'est un choix d'expérience : cet essai isole la
-    // COMPOSITION, comme il isole déjà le voisinage semencier.
+    // **Pas de sanglier**, et c'est un choix d'expérience : cet essai isole la
+    // **composition**, comme il isole déjà le voisinage semencier.
     //
-    // **LA RAISON D'ORIGINE, ELLE, N'EXISTE PLUS — QUATRIÈME RETRAIT DE CE
-    // FICHIER.** On mettait le sanglier de côté parce qu'il ÉCRASAIT la
+    // **la raison d'origine, elle, n'existe plus — quatrième retrait de ce
+    // fichier.** On mettait le sanglier de côté parce qu'il **écrasait** la
     // mesure : il mangeait la châtaigne, donc le mélange feuillu ne se
     // ressemait pas, donc il ne refermait pas le couvert, donc il n'étouffait
     // plus la lande qui porte le feu. Mesuré à l'époque sur ces seize graines :
@@ -122,7 +122,7 @@ function saumos(): Station {
     // Le premier maillon de cette chaîne a cédé avec #197. Le sanglier mangeait
     // 55 % de la fructification lourde par un coefficient posé sur une
     // production que le moteur ne calculait pas ; il en prélève maintenant une
-    // RATION en kilos sur une production réelle, et une ration ne fait pas le
+    // **ration** en kilos sur une production réelle, et une ration ne fait pas le
     // poids contre une fructification. Refait sur les mêmes seize graines :
     //
     //   sans sanglier      : pin 469 m², feuillus 495 → écart −26 ;
@@ -131,7 +131,7 @@ function saumos(): Station {
     // **Les deux écarts sont dans le bruit que ce fichier documente lui-même**
     // — un même peuplement brûle de 0 à 4 500 m² selon le tirage, et l'écart
     // entre deux lots de seize graines atteint 28 %. L'interaction n'est donc
-    // pas inversée, elle est RETIRÉE : la mesure ne soutient plus d'affirmation
+    // pas inversée, elle est **retirée** : la mesure ne soutient plus d'affirmation
     // dans un sens ni dans l'autre. Le sanglier reste à zéro ici pour isoler la
     // composition, et non parce qu'il écraserait quoi que ce soit.
     sanglierParHa: 0,
@@ -197,7 +197,7 @@ function partie(
     }
     if (anFeu >= 0 && an > anFeu && an <= anFeu + 4) {
       // « Nappe haute » : plus de dix centimètres au-dessus de son niveau
-      // d'avant le feu. C'est la DURÉE de l'anomalie qui compte, pas son pic.
+      // d'avant le feu. C'est la **durée** de l'anomalie qui compte, pas son pic.
       if (r.fluxes.nappeProfondeurCm < nappeAvantFeu - 10) semainesHautes++;
       engorgementApres = Math.max(engorgementApres, r.fluxes.waterloggingMean);
     }
@@ -237,21 +237,21 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     // l'inflammabilité propre de l'essence, et le fait qu'un couvert fermé
     // garde sa litière humide (`portanceDuFeu`, feu.ts).
     //
-    // CONCLUSION RETIRÉE, et c'est la deuxième fois pour ce résultat.
+    // **Conclusion retirée**, et c'est la deuxième fois pour ce résultat.
     //
     // On avait d'abord mesuré que les feuillus brûlaient un tiers de moins à
     // vingt-six ans — le seul horizon où l'avantage tenait, celui de long terme
     // ayant déjà été retiré. Il ne tient plus non plus : sur seize graines, les
-    // feuillus brûlent 656 m² contre 431 au pin, soit la moitié DE PLUS.
+    // feuillus brûlent 656 m² contre 431 au pin, soit la moitié **de plus**.
     //
     // Le changement isolé est l'effet de bord (lisiere.ts) : en désactivant le
     // seul ombrage de l'entourage, l'ancien ordre revient. L'explication qui
     // tient, et elle n'est pas vérifiée pour elle-même : l'atténuation par les
-    // feuillus reposait sur leur capacité à FERMER LE COUVERT vite, ce qui
+    // feuillus reposait sur leur capacité à **fermer le couvert** vite, ce qui
     // étouffe la lande qui porte le feu. Tout ce qui les ralentit défait donc
     // l'atténuation, et l'ombre de la lisière les ralentit.
     //
-    // **ET L'AMPLEUR DE L'ÉCART EST RETIRÉE À SON TOUR — TROISIÈME FOIS.**
+    // **et l'ampleur de l'écart est retirée à son tour — troisième fois.**
     // Il restait « la composition change la surface parcourue », épinglé par un
     // écart de plus de 50 m². Avec l'auto-éclaircie (#96), les deux traitements
     // se rapprochent : 722 m² pour les feuillus contre 685 pour le pin, soit
@@ -266,7 +266,7 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     //
     // Ce qui reste vérifié, et qui est vrai : **le feu passe dans les deux
     // compositions.** L'essai suivant, lui, tient — le chêne-liège se distingue
-    // parce qu'il SURVIT au feu, pas parce qu'il en change la surface.
+    // parce qu'il **survit** au feu, pas parce qu'il en change la surface.
     expect(feuillus.bruleesMoyennes).toBeGreaterThan(0);
     expect(pin.bruleesMoyennes).toBeGreaterThan(0);
   });
@@ -276,14 +276,14 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     // et 1 166 / 1 059 contre 1 825 / 1 311 à cinquante ans sur deux lots
     // indépendants.
     //
-    // Le mécanisme est ÉMERGENT et vaut d'être dit : son écorce résiste au feu
+    // Le mécanisme est **émergent** et vaut d'être dit : son écorce résiste au feu
     // (0,95), donc le peuplement reste debout, donc le couvert reste fermé,
     // donc la litière reste humide et à l'abri du vent — et le feu suivant
     // trouve moins à brûler. Survivre au feu est ce qui empêche le suivant.
     // On avait écrit l'inverse tant que le modèle de combustible amortissait la
     // charge des houppiers par leur propre ombre.
     // L'avantage se réduit avec l'effet de bord — 344 m² contre 431, soit 20 %
-    // de moins au lieu de 30 — mais il RESTE, et il reste dans le même sens à
+    // de moins au lieu de 30 — mais il **reste**, et il reste dans le même sens à
     // travers tous les états du moteur qu'a connus ce dépôt. C'est le seul
     // résultat de ce cas d'étude qui ait cette solidité-là.
     const liege = surPlusieursGraines(["quercus_suber"]);
@@ -304,7 +304,7 @@ describe("l'intervention du gestionnaire : ce que l'essai NE montre pas", () => 
   const replante = surPlusieursGraines(PIN, ["alnus_glutinosa"]);
 
   it("replanter ne change pas de façon fiable la suite hydrologique", () => {
-    // Ce test garde la trace d'une CONCLUSION RETIRÉE. On avait mesuré que
+    // Ce test garde la trace d'une **conclusion retirée**. On avait mesuré que
     // replanter en aulne raccourcissait d'un tiers l'anomalie de nappe, et on
     // l'avait écrit. C'était un artefact : à l'époque, le feuillage était
     // commandé par un simple `tMean > 6 °C`, vrai presque tout l'hiver dans

@@ -1,9 +1,9 @@
 /**
- * LES ARBRES SUIVIS : leur journal à eux (#149).
+ * **Les arbres suivis** : leur journal à eux (#149).
  *
  * Retour de partie : « Je plante des abricotiers, je veux surveiller très
  * précisément ce qui leur arrive — pas qu'ils meurent sans que je comprenne
- * rien. » La sélection montre l'état COURANT d'un arbre ; rien ne
+ * rien. » La sélection montre l'état **courant** d'un arbre ; rien ne
  * s'accumulait, et à ×52 une année passe entre deux images.
  *
  * **Rien n'est recalculé, tout est relu.** Le moteur nomme déjà les identités :
@@ -11,13 +11,13 @@
  * {id, deStade, versStade}`. Ce module ne fait que retenir ce qui concerne les
  * arbres suivis et le ranger en événements datés.
  *
- * **Ces listes-là sont des ÉVÉNEMENTS, et le worker les accumule** jusqu'à
+ * **Ces listes-là sont des événements, et le worker les accumule** jusqu'à
  * l'instantané suivant : à ×52 un instantané couvre une demi-année, et pas une
  * coupe ni un brout ne s'y perd. On peut donc les recopier sans se demander
  * quelle semaine ils portent.
  *
- * **Une mémoire, en revanche, pour ce qui est un ÉTAT** : un gel de floraison
- * et une souffrance lente ne s'annoncent nulle part, ils se LISENT sur l'arbre.
+ * **Une mémoire, en revanche, pour ce qui est un état** : un gel de floraison
+ * et une souffrance lente ne s'annoncent nulle part, ils se **lisent** sur l'arbre.
  * Les redire à chaque instantané ferait un journal illisible, et les tester
  * contre la semaine courante les raterait dès qu'on avance vite. On retient
  * donc ce qu'on a déjà dit, et seul un changement fait un événement.
@@ -27,41 +27,13 @@
 
 import { estGesteSurArbres, type GesteTypeArbre } from "../engine/actions";
 import type { CauseMort } from "../engine/trees";
+import { causeDite, estFeminin } from "./mots";
 import type { Snapshot } from "./protocol";
 
 /**
- * La cause de mort au SINGULIER.
+ * Ce qu'un geste a **fait** à l'arbre, dit au passé, et sous quelle rubrique.
  *
- * Le moteur en a déjà une table (`LIBELLE_CAUSE`), mais accordée au pluriel —
- * « broutés par le gibier » — parce qu'elle sert aux messages collectifs du
- * journal. Un arbre suivi est un individu. Ce n'est donc pas une copie de la
- * même règle mais l'autre nombre de la même phrase, et le `Record` complet
- * garantit ce qui compte : le jour où le moteur ajoute une cause, ceci ne
- * compile plus tant qu'elle n'a pas sa forme au singulier.
- */
-export const CAUSE_AU_SINGULIER: Record<CauseMort, string> = {
-  ecrasement: "écrasé par la chute d'un arbre mort",
-  secheresse: "de sécheresse",
-  engorgement: "asphyxié par l'eau",
-  ombre: "étouffé par l'ombre",
-  vieillesse: "de vieillesse",
-  solHorsGamme: "sur un sol hors de sa gamme de pH",
-  feu: "dans l'incendie",
-  abroutissement: "brouté par le gibier",
-  ravageurs: "achevé par les ravageurs",
-  labour: "retourné par le labour",
-  boutis: "arraché par le boutis du sanglier",
-  fauche: "emporté par la fauche",
-  maladie: "emporté par la maladie",
-  frottis: "annelé par les frottis de cervidés",
-  chablis: "couché par la tempête",
-  volis: "cassé net par la tempête",
-};
-
-/**
- * Ce qu'un geste a FAIT à l'arbre, dit au passé, et sous quelle rubrique.
- *
- * Les deux derniers ne sont pas du joueur : le moteur range le GIBIER parmi les
+ * Les deux derniers ne sont pas du joueur : le moteur range le **gibier** parmi les
  * gestes sur arbres (`actions.ts`), et c'est une bonne nouvelle pour ici — un
  * brout arrive daté et nommé, sans avoir à guetter le changement de
  * `brouteSemaine`. Le `Record` complet fait le reste : un geste ajouté au
@@ -84,7 +56,7 @@ const GESTE_SUBI: Record<GesteTypeArbre, { quoi: QuoiSuivi; texte: string }> = {
 export type QuoiSuivi = "geste" | "stade" | "brout" | "frottis" | "gel" | "souffre" | "mort";
 
 export interface EvenementSuivi {
-  /** semaine de jeu où on l'a APPRIS — celle de l'instantané qui le porte */
+  /** semaine de jeu où on l'a **appris** — celle de l'instantané qui le porte */
   semaine: number;
   idArbre: number;
   quoi: QuoiSuivi;
@@ -95,7 +67,7 @@ export interface EvenementSuivi {
 /** Ce qu'on a déjà vu d'un arbre, pour ne pas le redire à chaque semaine. */
 export interface EtatVu {
   gel: boolean;
-  /** la souffrance DÉJÀ ANNONCÉE, et non celle qu'on lit : voir plus bas */
+  /** la souffrance **déjà annoncée**, et non celle qu'on lit : voir plus bas */
   causeDite?: CauseMort;
   /** l'arbre était-il encore là au dernier instantané ? */
   present: boolean;
@@ -116,7 +88,7 @@ export const SEUIL_SOUFFRANCE = 0.1;
 /**
  * Ce qui est arrivé aux arbres suivis depuis le dernier instantané.
  *
- * Rend les événements ET la mémoire à garder pour la fois suivante ; l'appelant
+ * Rend les événements **et** la mémoire à garder pour la fois suivante ; l'appelant
  * n'a rien à comprendre de ce qui est retenu.
  */
 export function accumulerLesSuivis(
@@ -146,7 +118,9 @@ export function accumulerLesSuivis(
   }
   // Les morts, avec leur cause en clair : c'est la demande de la v1.
   for (const m of snapshot.morts ?? []) {
-    if (suivis.has(m.id)) dire(m.id, "mort", `meurt ${CAUSE_AU_SINGULIER[m.cause]}`);
+    // Accordé à l'**essence** : « la ronce meurt étouffée », pas « étouffé ».
+    if (suivis.has(m.id))
+      dire(m.id, "mort", `meurt ${causeDite(m.cause, 1, estFeminin(m.especeId))}`);
   }
 
   for (const arbre of snapshot.trees) {
@@ -155,11 +129,11 @@ export function accumulerLesSuivis(
     if (arbre.bloomFrosted && !vu?.gel) {
       dire(arbre.id, "gel", "fleurs grillées par un gel tardif");
     }
-    // **Une souffrance s'annonce une fois par CAUSE, et pas une fois par été.**
+    // **Une souffrance s'annonce une fois par cause, et pas une fois par été.**
     // Mesuré dans le navigateur : `stressLent` redescend l'hiver et remonte en
     // juillet, si bien qu'oublier la cause dès qu'elle repasse sous le seuil
     // refaisait l'annonce tous les ans, pour chaque arbre suivi. On retient
-    // donc ce qu'on a DIT — et rien d'autre ne l'efface qu'une cause nouvelle,
+    // donc ce qu'on a **dit** — et rien d'autre ne l'efface qu'une cause nouvelle,
     // qui est une autre nouvelle. En dessous du seuil, on ne dit rien et on ne
     // retient rien : l'arbre qui a soif un peu pendant dix ans avant de
     // dépérir pour de bon doit garder son annonce pour le jour où il dépérit.
@@ -167,7 +141,7 @@ export function accumulerLesSuivis(
     const souffre = cause !== undefined && (arbre.stressLent ?? 0) >= SEUIL_SOUFFRANCE;
     const dite = souffre && cause !== vu?.causeDite ? cause : vu?.causeDite;
     if (souffre && cause !== vu?.causeDite) {
-      dire(arbre.id, "souffre", `souffre : ${CAUSE_AU_SINGULIER[cause]}`);
+      dire(arbre.id, "souffre", `souffre : ${causeDite(cause, 1, estFeminin(arbre.especeId))}`);
     }
     suite.set(arbre.id, {
       gel: arbre.bloomFrosted,
@@ -200,7 +174,7 @@ export function suivisMorts(
 export interface LigneDeSuivi extends EvenementSuivi {
   /** combien de fois de suite, la même chose — 1 dans le cas ordinaire */
   fois: number;
-  /** la semaine du plus ANCIEN du groupe ; `semaine` porte le plus récent */
+  /** la semaine du plus **ancien** du groupe ; `semaine` porte le plus récent */
   depuisSemaine: number;
 }
 
@@ -211,7 +185,7 @@ export interface LigneDeSuivi extends EvenementSuivi {
  * son journal n'était plus qu'une colonne de « brouté par le gibier » — le
  * geste qu'on cherchait et la mort qu'on attendait passaient dessous.
  *
- * **Seulement ce qui se SUIT**, et le texte doit être le même mot pour mot :
+ * **Seulement ce qui se suit**, et le texte doit être le même mot pour mot :
  * un brout, un gel, un brout redevient trois lignes. On ne perd donc pas
  * l'histoire, on cesse de la répéter — et les deux semaines du groupe sont
  * gardées, celle où ça a commencé et celle où on en est.

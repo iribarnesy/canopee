@@ -40,7 +40,7 @@ export const TROENE: FicheGraphique = {
   },
   fruit: {
     // Des baies noires en grappes dressées. **Le moteur leur donne un rendement
-    // NUL** — elles sont toxiques et ne se récoltent pas — mais il suit quand
+    // nul** — elles sont toxiques et ne se récoltent pas — mais il suit quand
     // même leur cycle, donc elles ont un état et peuvent se dessiner. Rendement
     // nul ne veut pas dire fruit absent.
     forme: "grappe",

@@ -149,7 +149,7 @@ describe("le besoin de froid : un hiver doux RETARDE le printemps", () => {
 });
 
 /**
- * Le CONTEXTE phénologique : les cinq scalaires qui suffisent à retrouver le
+ * Le **contexte** phénologique : les cinq scalaires qui suffisent à retrouver le
  * calendrier d'une semaine sans avoir l'état de la partie sous la main. C'est
  * ce qui voyage dans l'instantané, et ce qui garantit que le rendu colore les
  * houppiers avec exactement le calendrier du moteur (src/game/snapshot.ts).
@@ -253,7 +253,7 @@ describe("rien ne tombe hors sénescence", () => {
    * Au printemps, ces deux appels ont le même compteur de sénescence (zéro) —
    * leur seule différence était le besoin de froid, passé d'un côté et pas de
    * l'autre. Un hêtre dont la dormance n'était pas levée versait ainsi près
-   * d'un tiers de son azote foliaire en litière EN PLEINE FEUILLAISON.
+   * d'un tiers de son azote foliaire en litière **en pleine feuillaison**.
    *
    * Ce n'était pas une chute de feuilles : c'était deux lois comparées l'une à
    * l'autre. Le garde `senescenceEnCoursDans` supprime la cause.
@@ -269,7 +269,7 @@ describe("rien ne tombe hors sénescence", () => {
     expect(senescenceEnCoursDans(printemps)).toBe(false);
 
     // C'est bien la comparaison qui divergeait : sans le garde, l'écart entre
-    // les deux appels est positif alors que le feuillage ne fait que SORTIR.
+    // les deux appels est positif alors que le feuillage ne fait que **sortir**.
     const avecFroid = partFoliaireActiveDans(hetre, printemps);
     const sansFroid = partFoliaireActiveDans(hetre, {
       ...printemps,
@@ -291,7 +291,7 @@ describe("rien ne tombe hors sénescence", () => {
 });
 
 /**
- * La MARCESCENCE : le charme et le jeune chêne gardent leurs feuilles MORTES
+ * La **marcescence** : le charme et le jeune chêne gardent leurs feuilles **mortes**
  * tout l'hiver. Elles ombragent encore, elles ne travaillent plus — ce n'est ni
  * la persistance du troène (feuilles vivantes) ni la caducité du bouleau
  * (branches nues).
@@ -336,7 +336,7 @@ describe("la marcescence", () => {
   });
 
   it("ces feuilles sont mortes : l'arbre n'en tire rien, pas plus qu'un bouleau nu", () => {
-    // La croissance et le retour de litière ne lisent que la part ACTIVE
+    // La croissance et le retour de litière ne lisent que la part **active**
     // (tick.ts) : en janvier le marcescent est à l'arrêt comme les autres
     // caducs, tout en faisant de l'ombre.
     const charme = getEspece("carpinus_betulus");

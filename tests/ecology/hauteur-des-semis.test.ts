@@ -2,7 +2,7 @@
  * La taille d'un semis dépend de l'espèce, pas d'une constante.
  *
  * Tous les semis naissaient à trente centimètres. C'est la bonne taille pour un
- * chêne, dont le gland porte les réserves qu'il faut. C'est la MOITIÉ de sa
+ * chêne, dont le gland porte les réserves qu'il faut. C'est la **moitié** de sa
  * taille adulte pour la callune : elle naissait presque faite, et sautait
  * entièrement sa phase pionnière — celle qui dure des années dans la nature, et
  * pendant laquelle un sous-arbrisseau est vulnérable au broutage, à la

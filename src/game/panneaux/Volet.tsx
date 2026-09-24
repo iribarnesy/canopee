@@ -1,13 +1,13 @@
 /**
- * Les VOLETS et les COINS de l'écran de jeu.
+ * Les **volets** et les **coins** de l'écran de jeu.
  *
  * La parcelle occupe toute la fenêtre ; tout le reste se range dans ses
  * angles, qu'une vue isométrique laisse vides. Un coin porte une rangée de
- * boutons, et au plus UN volet ouvert : deux volets côte à côte dans le même
+ * boutons, et au plus **un** volet ouvert : deux volets côte à côte dans le même
  * angle, c'est la colonne de droite qu'on vient de démonter.
  *
  * **Un clic à côté ne ferme rien.** C'était l'idée de départ, et elle est
- * fausse ici : « à côté », c'est la parcelle, et cliquer la parcelle EST le
+ * fausse ici : « à côté », c'est la parcelle, et cliquer la parcelle **est** le
  * geste qu'on est en train de faire. On ferme par le bouton, par la croix, ou
  * par Échap.
  */
@@ -30,7 +30,7 @@ const ANCRE: Record<Coin, React.CSSProperties> = {
 /**
  * Un angle de l'écran : sa rangée de boutons, et le volet qu'elle ouvre.
  *
- * En bas, le volet se déplie AU-DESSUS de ses boutons ; en haut, au-dessous.
+ * En bas, le volet se déplie **au-dessus** de ses boutons ; en haut, au-dessous.
  * Dans les deux cas les boutons ne bougent pas quand un volet s'ouvre —
  * sinon on viserait une cible qui se dérobe.
  */

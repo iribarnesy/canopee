@@ -9,6 +9,7 @@ import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
 import type { Bordures } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
+import { BILAN_VIDE, type Bilan } from "./bilan";
 import { CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { type ChoixRecolte, especesRecoltees } from "./recolteAuto";
 
@@ -53,7 +54,15 @@ export interface GameApi {
   /** message de pause automatique (fruits mûrs…) */
   notice?: string;
   /**
-   * LA FACTURE D'UNE SEMAINE TROP CHARGÉE (#133), quand il y en a une.
+   * La semaine d'où rejouer la **scène** que la pause vient d'interrompre (#128).
+   *
+   * Présente seulement quand il y a quelque chose à revoir — un incendie, une
+   * tempête, une mortalité de masse — et pas pour l'arrivée d'un saut ou des
+   * fruits mûrs. C'est le « mode cinéma » du §6.8.
+   */
+  sceneARevoir?: number;
+  /**
+   * **la facture d'une semaine trop chargée** (#133), quand il y en a une.
    *
    * Présente = le temps est arrêté et attend une réponse. Ce n'est pas un
    * avis : c'est une question, et `reglerFacture` y répond.
@@ -66,6 +75,37 @@ export interface GameApi {
   reglerFacture: (embaucher: boolean, pourToujours?: boolean) => void;
   /** ce que la partie a accumulé depuis son début (#188) */
   cumuls: Cumuls;
+  /**
+   * **le rembobinage** (#128, §6.8 №3).
+   *
+   * `enCours` présent = on revoit le passé, et l'écran doit geler tout ce qui
+   * **compte**. `depuisQuand` est la plus ancienne semaine atteignable.
+   */
+  rembobinage: {
+    enCours?: { depuis: number; semaine: number; jusqua: number };
+    depuisQuand: number;
+    /** revenir à cette semaine et rejouer jusqu'au présent */
+    revoir: (deSemaine: number, weeksPerSecond: number) => void;
+    /** rendre la main au présent */
+    revenir: () => void;
+  };
+  /**
+   * Ce qui a changé depuis qu'on compte, groupé et situé (#128).
+   *
+   * `depuis` est la semaine où la période a commencé ; `oublier` la referme et
+   * en ouvre une neuve. Qui décide de la refermer n'est pas d'ici : c'est
+   * l'écran, qui sait quand le joueur a regardé (`useBilan`).
+   */
+  bilan: {
+    /** tout ce qui a changé depuis le début de la partie */
+    partie: Bilan;
+    /** ce qu'il avait changé au début de la période affichée */
+    reference: Bilan;
+    /** la semaine où la période a commencé */
+    depuis: number;
+    /** refermer la période et en ouvrir une neuve ici */
+    oublier: () => void;
+  };
   /** ce que la récolte automatique cueille, et pourquoi */
   recolteAuto: { semees: string[]; choix: ChoixRecolte; actives: ReadonlySet<string> };
   /** allumer ou éteindre une essence dans la récolte automatique */
@@ -94,7 +134,7 @@ export interface GameApi {
     economie: boolean,
   ) => void;
   /**
-   * Reprendre une partie. `id` est son entrée dans la liste : c'est LÀ que
+   * Reprendre une partie. `id` est son entrée dans la liste : c'est **là** que
    * l'autosave écrira ensuite, sinon reprendre une partie en créerait une
    * seconde copie à la première sauvegarde (#147).
    */
@@ -112,7 +152,7 @@ export interface GameApi {
    * Combien d'instantanés sont arrivés. Ce n'est pas un compteur de semaines :
    * une action en pause en produit un aussi.
    *
-   * Un préavis porte sur un ÉTAT, pas seulement sur une position — planter un
+   * Un préavis porte sur un **état**, pas seulement sur une position — planter un
    * arbre rend refusée la place qu'on survolait il y a une seconde. Sans ce
    * numéro dans la clé, la réponse restait celle d'avant le geste, et le
    * fantôme restait vert sur une place devenue interdite.
@@ -122,7 +162,7 @@ export interface GameApi {
   /**
    * Met en marche ou en pause, d'un seul geste.
    *
-   * La reprise repart à la DERNIÈRE vitesse choisie, et c'est tout l'intérêt
+   * La reprise repart à la **dernière** vitesse choisie, et c'est tout l'intérêt
    * d'avoir une bascule : mettre en pause et reprendre étaient deux cibles
    * différentes qu'il fallait chercher à chaque fois.
    */
@@ -130,7 +170,7 @@ export interface GameApi {
   /** Avance de tant de semaines à la vitesse dite, puis s'arrête tout seul. */
   avancerDe: (semaines: number, weeksPerSecond: number, libelle: string) => void;
   /**
-   * RETIENT le temps du jeu, sans toucher à la vitesse (#163).
+   * **retient** le temps du jeu, sans toucher à la vitesse (#163).
    *
    * Le temps attend qu'une animation bloquante aille jusqu'au bout. Ce n'est
    * pas une pause : la vitesse choisie et la traversée en cours sont intactes
@@ -139,7 +179,7 @@ export interface GameApi {
    */
   attendre: (retenu: boolean) => void;
   /**
-   * Dit au worker QUELS arbres le joueur suit : leur mort arrête le temps
+   * Dit au worker **quels** arbres le joueur suit : leur mort arrête le temps
    * (#149). La liste entière à chaque fois — voir `suivre` dans le protocole.
    */
   suivre: (ids: ReadonlySet<number>) => void;
@@ -171,6 +211,7 @@ export function useGame(): GameApi {
     phase?: "vieillissement" | "rejeu";
   }>();
   const [notice, setNotice] = useState<string>();
+  const [sceneARevoir, setSceneARevoir] = useState<number>();
   const [facture, setFacture] = useState<FactureHoraire>();
   const [politiqueHoraire, setPolitique] = useState<PolitiqueHoraire>("demander");
   /** Ce que la partie a accumulé : kilos cueillis, plants, abattages (#188). */
@@ -188,7 +229,7 @@ export function useGame(): GameApi {
   /**
    * Le niveau joué et ses paliers déjà franchis, tels que le worker les range.
    *
-   * L'AVANCEMENT, lui, ne vient pas d'ici : il se calcule là où les fiches
+   * **L'avancement**, lui, ne vient pas d'ici : il se calcule là où les fiches
    * vivent, c'est-à-dire dans l'écran (`useNiveau`). Le worker ne peut pas le
    * faire — une fiche porte des fermetures, qui ne traversent pas un worker.
    */
@@ -207,10 +248,60 @@ export function useGame(): GameApi {
    */
   const idPartie = useRef(idNeuf());
 
+  /**
+   * **le bilan** (#128) : tout ce qui a changé depuis le début de la partie, et la
+   * borne à partir de laquelle l'écran en lit une **période**.
+   *
+   * **Un seul cumul, dans le worker, et une soustraction ici.** Le §2.1 le
+   * commande : la partie et la période sont la même quantité sur deux fenêtres,
+   * et les compter deux fois, c'est se donner deux chances de compter faux.
+   *
+   * Et le worker est le bon endroit pour les deux, pour une raison qu'une
+   * mesure a établie et une autre confirmée :
+   *
+   * - **replier l'instantané que React garde en état en perd les deux tiers** :
+   *   sur douze ans joués à ×52, cent quinze instantanés reçus, trente-cinq
+   *   repliés, deux mille deux cent trente-sept naissances arrivées et deux
+   *   cent soixante-sept comptées. Un état ne garde que la dernière valeur ;
+   *   ce qui arrive entre deux rendus est écrasé sans bruit ;
+   * - **et même replié depuis le message, ce qui suffirait à la justesse du
+   *   compte, un cumul d'ici ne survivrait pas à une reprise** : rejouer une
+   *   sauvegarde refait la partie dans le worker, sans qu'un seul instantané
+   *   intermédiaire ne remonte. La fin de niveau raconterait alors une partie
+   *   qui commence au chargement.
+   *
+   * Une troisième raison les départage tout à fait, et elle n'est pas
+   * théorique : une semaine trop chargée se **rejoue** amputée (#133). Le worker
+   * défait son cumul, l'écran ne défait rien — il aurait gardé les gestes
+   * annulés.
+   */
+  const [bilan, setBilan] = useState<Bilan>(BILAN_VIDE);
+  /**
+   * **la relecture en cours** (#128), quand il y en a une.
+   *
+   * `rembobinable` est la plus ancienne semaine où l'on sait revenir : elle
+   * avance avec la partie, et sans elle l'écran proposerait de revoir une
+   * période dont le début est déjà tombé de la fenêtre.
+   */
+  const [relecture, setRelecture] = useState<{ depuis: number; semaine: number; jusqua: number }>();
+  const [rembobinable, setRembobinable] = useState(0);
+  /** Le bilan au début de la période affichée : ce qu'on retranche. */
+  const [bilanReference, setBilanReference] = useState<Bilan>(BILAN_VIDE);
+  const [bilanDepuis, setBilanDepuis] = useState(0);
+  /** Le dernier bilan reçu, lisible hors rendu pour borner une période neuve. */
+  const dernierBilan = useRef<Bilan>(BILAN_VIDE);
+  const derniereSemaine = useRef(0);
+
+  /** Le clic « vu » du §6.8 : on referme la période, et une neuve part d'ici. */
+  const oublierLeBilan = useCallback(() => {
+    setBilanReference(dernierBilan.current);
+    setBilanDepuis(derniereSemaine.current);
+  }, []);
+
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
   /**
-   * STABLE, et c'est nécessaire et pas décoratif : l'appelant s'en sert dans
+   * **stable**, et c'est nécessaire et pas décoratif : l'appelant s'en sert dans
    * l'effet qui retient l'horloge. Une fonction recréée à chaque rendu ferait
    * relâcher puis reprendre la retenue à chaque image — le jeu avancerait par
    * à-coups au lieu d'attendre.
@@ -235,6 +326,10 @@ export function useGame(): GameApi {
           break;
         case "snapshot":
           setSnapshot(msg.snapshot);
+          dernierBilan.current = msg.bilan;
+          derniereSemaine.current = msg.snapshot.week;
+          setBilan(msg.bilan);
+          setRembobinable(msg.rembobinable);
           setCumuls(msg.cumuls);
           setRevision((n) => n + 1);
           if (msg.snapshot.refusals.length > 0) {
@@ -252,12 +347,25 @@ export function useGame(): GameApi {
         case "autopause":
           setSpeedState(0);
           setNotice(msg.reason);
+          setSceneARevoir(msg.scene);
           break;
         case "politiqueHoraire":
           setPolitique(msg.politique);
           break;
         case "niveau":
           setNiveauRange({ id: msg.id, acquis: msg.acquis });
+          break;
+        case "relecture":
+          setRelecture(
+            msg.enCours
+              ? { depuis: msg.depuis, semaine: msg.semaine, jusqua: msg.jusqua }
+              : undefined,
+          );
+          // **La vitesse se pose ici et nulle part avant.** Les deux états
+          // changent dans le même rendu, donc il n'existe aucune image où
+          // l'horloge coule sans qu'on sache qu'on relit — et c'est ce qui
+          // empêchait la période du bilan de survivre au clic sur « Revoir ».
+          setSpeedState(msg.enCours ? msg.vitesse : 0);
           break;
         case "recolteAuto":
           setRecolteAuto({ semees: msg.semees, choix: msg.choix });
@@ -310,15 +418,28 @@ export function useGame(): GameApi {
       send({ type: "autoHarvest", enabled });
     },
     notice,
+    ...(sceneARevoir === undefined ? {} : { sceneARevoir }),
     ...(facture ? { facture } : {}),
     reglerFacture: (embaucher, pourToujours = false) => {
       setFacture(undefined);
       send({ type: "reglerFacture", embaucher, pourToujours });
     },
     cumuls,
+    rembobinage: {
+      ...(relecture ? { enCours: relecture } : {}),
+      depuisQuand: rembobinable,
+      revoir: (deSemaine, weeksPerSecond) => send({ type: "relire", deSemaine, weeksPerSecond }),
+      revenir: () => send({ type: "arreterLaRelecture" }),
+    },
+    bilan: {
+      partie: bilan,
+      reference: bilanReference,
+      depuis: bilanDepuis,
+      oublier: oublierLeBilan,
+    },
     recolteAuto: {
       ...recolteAuto,
-      // La règle est appliquée UNE fois, par la même fonction que le worker.
+      // La règle est appliquée **une** fois, par la même fonction que le worker.
       actives: especesRecoltees(new Set(recolteAuto.semees), recolteAuto.choix),
     },
     reglerRecolteAuto: (especeId, actif) => send({ type: "recolteAuto", especeId, actif }),
@@ -356,6 +477,9 @@ export function useGame(): GameApi {
       setEvents([]);
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
+      setBilan(BILAN_VIDE);
+      setBilanReference(BILAN_VIDE);
+      setBilanDepuis(0);
       setRecolteAuto({ semees: [], choix: {} });
       setNiveauRange({ acquis: [] });
       send({
@@ -384,6 +508,9 @@ export function useGame(): GameApi {
       setEvents([]);
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
+      setBilan(BILAN_VIDE);
+      setBilanReference(BILAN_VIDE);
+      setBilanDepuis(0);
       send({ type: "resume", save });
       send({ type: "autoHarvest", enabled: true });
       setAutoHarvestState(true);
@@ -403,24 +530,27 @@ export function useGame(): GameApi {
       send({ type: "speed", weeksPerSecond });
       setSpeedState(weeksPerSecond);
       setNotice(undefined);
+      setSceneARevoir(undefined);
     },
     basculer: () => {
       const cible = speed > 0 ? 0 : vitessePrecedente.current;
       send({ type: "speed", weeksPerSecond: cible });
       setSpeedState(cible);
       setNotice(undefined);
+      setSceneARevoir(undefined);
     },
     avancerDe: (semaines, weeksPerSecond, libelle) => {
       send({ type: "avancerDe", semaines, weeksPerSecond, libelle });
       setSpeedState(weeksPerSecond);
       setNotice(undefined);
+      setSceneARevoir(undefined);
     },
     // Pas de `setSpeedState` ici, et c'est tout l'intérêt : l'état affiché ne
     // bouge pas, seul le worker suspend ses pas.
     attendre,
     suivre,
     /**
-     * Quitter, c'est sauvegarder PUIS fermer — dans cet ordre.
+     * Quitter, c'est sauvegarder **puis** fermer — dans cet ordre.
      *
      * Le worker ne répond pas à `requestSave` sur place : il renvoie un
      * message que le fil principal écrit dans `localStorage`. Terminer le

@@ -1,5 +1,5 @@
 /**
- * Le volet LES ARBRES : ce que le peuplement est aujourd'hui, et ce qui lui
+ * Le volet **les arbres** : ce que le peuplement est aujourd'hui, et ce qui lui
  * mange dessus. Tout vient de l'instantané du moteur — rien n'est recalculé.
  *
  * Il portait ces lignes dans la même liste que les scores et le sol, parce
@@ -16,20 +16,20 @@ import { etatDesEssences } from "./recensement";
 import { btn } from "./styles";
 
 /**
- * LA LISTE DES ESSENCES : un œil sur toute la parcelle, essence par essence.
+ * **la liste des essences** : un œil sur toute la parcelle, essence par essence.
  *
  * Le pendant du volet des suivis, à l'autre échelle : là on surveille des
- * individus, ici des POPULATIONS. Sur une parcelle de deux mille huit cents
+ * individus, ici des **populations**. Sur une parcelle de deux mille huit cents
  * tiges, lire des fiches une par une n'a aucun sens ; savoir que le tiers des
  * noisetiers est étouffé par l'ombre, si.
  *
  * Deux choses à ne pas confondre, et la forme les sépare :
  *
  * - **la couleur de l'essence** est un repère d'identité — la même que la carte
- *   et que le choix des plants. Elle est un LISERÉ au bord de la ligne, comme
+ *   et que le choix des plants. Elle est un **liseré** au bord de la ligne, comme
  *   dans « qu'est-ce qu'on plante ? », pas une pastille : elle ne dit rien de
  *   l'état, et une pastille ferait croire le contraire ;
- * - **la pastille** est un STATUT : la part de l'essence qui souffre, du vert au
+ * - **la pastille** est un **statut** : la part de l'essence qui souffre, du vert au
  *   rouge, par la même règle que le point d'alerte d'un arbre suivi.
  */
 function ListeDesEssences({
@@ -37,13 +37,15 @@ function ListeDesEssences({
   semees,
   choix,
   surBascule,
+  surSelectionner,
 }: {
   vivants: readonly SnapshotTree[];
   semees: ReadonlySet<string>;
   choix: Record<string, boolean>;
   surBascule: (especeId: string, actif: boolean) => void;
+  surSelectionner: (especeId: string) => void;
 }) {
-  // Le MÊME recensement que l'éclaircie par essence (#156) : compter deux fois
+  // Le **même** recensement que l'éclaircie par essence (#156) : compter deux fois
   // les mêmes tiges finirait par donner deux comptes différents.
   const essences = useMemo(() => etatDesEssences(vivants), [vivants]);
   if (essences.length === 0) return null;
@@ -83,10 +85,38 @@ function ListeDesEssences({
                 background: couleurDeLaPart(e.part, "hautMauvais"),
               }}
             />
-            <span style={{ flex: 1, minWidth: 0 }}>
+            {/*
+              CLIQUER UNE ESSENCE LA SÉLECTIONNE TOUT ENTIÈRE, et c'est ce qui
+              rend la liste agissante au lieu d'informative : une fois les
+              quarante ronces sélectionnées, tous les gestes de masse du jeu
+              s'appliquent — éclaircir, recéper, récolter à la main.
+            */}
+            <button
+              type="button"
+              onClick={() => surSelectionner(e.especeId)}
+              title={`Sélectionner les ${e.tiges} ${e.nom.toLowerCase()} de la parcelle`}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                textAlign: "left",
+                border: "none",
+                background: "none",
+                font: "inherit",
+                color: "inherit",
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
               {e.nom}{" "}
+              {/*
+                LA PART DE LA PARCELLE, et pas seulement le compte. « 308 tiges »
+                oblige à diviser de tête ; « 97 % » dit d'un coup que la parcelle
+                est un roncier. C'est ce que disait l'ancienne ligne compacte que
+                cette liste remplace, et qu'elle ne devait pas perdre en route.
+              */}
               <span className="detail">
-                {e.tiges} tige{e.tiges > 1 ? "s" : ""} ·{" "}
+                <strong>{Math.round((e.tiges / Math.max(1, vivants.length)) * 100)} %</strong> ·{" "}
+                {e.tiges} tige{e.tiges > 1 ? "s" : ""} · jusqu'à{" "}
                 {e.hauteurMaxM < 10 ? e.hauteurMaxM.toFixed(1) : e.hauteurMaxM.toFixed(0)} m
               </span>
               {e.enSouffrance > 0 && (
@@ -95,7 +125,7 @@ function ListeDesEssences({
                   {e.cause ? ` — ${LIBELLE_CAUSE[e.cause]}` : ""}
                 </div>
               )}
-            </span>
+            </button>
             <button
               type="button"
               style={{ ...btn(active), marginRight: 0, whiteSpace: "nowrap" }}
@@ -124,11 +154,14 @@ export function PanneauArbres({
   vivants,
   recolteAuto,
   reglerRecolteAuto,
+  surSelectionnerEssence,
 }: {
   snapshot: Snapshot;
   vivants: readonly SnapshotTree[];
   recolteAuto: { semees: string[]; choix: Record<string, boolean> };
   reglerRecolteAuto: (especeId: string, actif: boolean) => void;
+  /** sélectionner toutes les tiges d'une essence, pour agir dessus */
+  surSelectionnerEssence: (especeId: string) => void;
 }) {
   const chandelles = snapshot.trees.length - vivants.length;
   return (
@@ -159,6 +192,7 @@ export function PanneauArbres({
           semees={new Set(recolteAuto.semees)}
           choix={recolteAuto.choix}
           surBascule={reglerRecolteAuto}
+          surSelectionner={surSelectionnerEssence}
         />
       </dd>
       <dt>Pression</dt>

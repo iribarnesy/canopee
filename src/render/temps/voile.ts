@@ -1,24 +1,24 @@
 /**
- * Le VOILE d'un geste de zone : le travail qui passe sur le sol
+ * Le **voile** d'un geste de zone : le travail qui passe sur le sol
  * (docs/interface-visuelle.md §5.11, §6.2).
  *
  * **Ce que le moteur donne, et c'est peu mais c'est exact.** Un `GesteSurZone`
- * porte un type et les cellules RÉELLEMENT touchées — « chauler, ces
+ * porte un type et les cellules **réellement** touchées — « chauler, ces
  * 214 cellules ». Rien d'autre : ni ordre de passage, ni durée, ni engin. Le
  * rendu n'a donc pas à deviner un itinéraire de tracteur, et il ne le fera
  * pas ; il a à montrer que ces cellules-là viennent d'être travaillées.
  *
- * **Le voile ne laisse RIEN derrière lui, et c'est la règle qui tient tout le
+ * **Le voile ne laisse rien derrière lui, et c'est la règle qui tient tout le
  * module.** Ce qu'un chaulage change durablement — la teinte du sol, l'herbe
  * fauchée, la litière du broyat — est déjà dans les grilles de l'instantané,
- * donc dans la CUISSON du morceau de terrain. Si le voile persistait, la même
+ * donc dans la **cuisson** du morceau de terrain. Si le voile persistait, la même
  * information serait dessinée deux fois par deux chemins différents, et le
  * §2.1 dit ce qui arrive alors : les deux copies divergent. Le voile est donc
- * un passage, et à la fin de l'acte son opacité est nulle PARTOUT. C'est une
+ * un passage, et à la fin de l'acte son opacité est nulle **partout**. C'est une
  * propriété, pas une intention : elle se teste.
  *
  * **Pourquoi un front qui balaie et non un fondu d'ensemble.** Un fondu montre
- * qu'un état a changé ; un front montre qu'un TRAVAIL a eu lieu. Le second est
+ * qu'un état a changé ; un front montre qu'un **travail** a eu lieu. Le second est
  * ce que le §6.2 demande (« un voile s'étale sur le disque traité ») et c'est
  * aussi le seul des deux qui distingue un geste du joueur d'un changement de
  * saison. Le front part du centre de gravité des cellules et s'éloigne : c'est
@@ -72,17 +72,17 @@ export const OPACITE_DU_VOILE = 0.62;
  *
  * Passé ce point, tout retombe ensemble. **Le premier jet faisait l'inverse —
  * une traîne courte derrière le front — et la capture a tranché** : ça donnait
- * un ANNEAU qui s'éloignait du centre, le centre étant redevenu nu derrière
+ * un **anneau** qui s'éloignait du centre, le centre étant redevenu nu derrière
  * lui. Ça se lit comme une onde de choc, pas comme un chaulage. Un geste de
  * zone n'est pas une onde qui traverse la parcelle : c'est un travail qui
- * COUVRE une surface, puis de la poussière qui retombe.
+ * **couvre** une surface, puis de la poussière qui retombe.
  */
 export const PART_QUI_S_ETALE = 0.6;
 
 /**
  * L'opacité d'une cellule de rang `rang` à l'avancement `avancement`.
  *
- * Deux temps : la cellule s'allume FRANCHEMENT quand le front l'atteint et
+ * Deux temps : la cellule s'allume **franchement** quand le front l'atteint et
  * reste allumée — le travail est fait, on le voit — puis toute la zone retombe
  * ensemble sur la fin de l'acte. La levée est franche parce qu'un outil qui
  * passe est un événement ; la retombée est douce parce que la poussière qui
@@ -104,11 +104,11 @@ export interface CelluleVoilee {
   teinte: Teinte;
   opacite: number;
   /**
-   * Dessiner cette cellule comme une TACHE ÉTALÉE, et non comme un carreau —
+   * Dessiner cette cellule comme une **tache étalée**, et non comme un carreau —
    * avec cette variante de forme.
    *
    * **Absent pour un geste, présent pour le feu, et c'est une question
-   * d'unité.** Une cellule chaulée EST un carreau : le geste s'applique au
+   * d'unité.** Une cellule chaulée **est** un carreau : le geste s'applique au
    * mètre carré, l'épandeur passe ou ne passe pas, et le bord franc est ce qui
    * dit « ce mètre-là a été travaillé ». Une brûlure n'est pas un carreau : le
    * feu passe, le sol noircit, et la trace bave sur ses voisines. Dessinée au
@@ -118,7 +118,7 @@ export interface CelluleVoilee {
    * comme du bruit et non comme une cicatrice d'incendie.
    *
    * Les données ne changent pas : le moteur dit toujours quelles cellules ont
-   * brûlé et lesquelles ont été épargnées. C'est la TAILLE du pinceau qui
+   * brûlé et lesquelles ont été épargnées. C'est la **taille** du pinceau qui
    * change, et une tache plus large qu'une cellule fait exactement ce que fait
    * un feu — elle noie les îlots isolés et laisse ressortir les grands.
    */
@@ -163,7 +163,7 @@ export function rangsDuBalayage(geste: GesteSurZone, coteM: number): Float32Arra
 /**
  * Les cellules à peindre pour un geste de zone, à cet avancement.
  *
- * Ne rend que les cellules VISIBLES, ce qui n'est pas la même chose que
+ * Ne rend que les cellules **visibles**, ce qui n'est pas la même chose que
  * « toutes » : avant le front elles ne sont pas encore allumées, et après
  * l'acte plus aucune ne l'est. En pleine couverture, en revanche, elles y sont
  * toutes — c'est le prix de la lecture juste, et il est mesuré (§5.11).

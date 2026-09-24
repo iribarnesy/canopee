@@ -22,7 +22,7 @@
 >    seul et sans le dire** ;
 > 2. **le banc chronométrait l'appel de dessin, pas l'image.** `render()` et
 >    `drawImage()` empilent des commandes et rendent la main aussitôt. Les
->    « 9 ms » attribuées à Canvas 2D étaient un temps de SOUMISSION ; l'image
+>    « 9 ms » attribuées à Canvas 2D étaient un temps de **soumission** ; l'image
 >    terminée, dans les mêmes conditions, en coûtait **96 ms** — soit 10 images
 >    par seconde et non 111 ;
 > 3. **la scène figée datait.** Le peuplement avait changé sous elle.
@@ -192,7 +192,7 @@ reste six essences en nombre, donc moins de combinaisons à cuire.
 la cuisson au zoom 4 monte à 372 ms. Les trois remèdes prévus restent valables,
 mais leur urgence baisse d'un cran :
 
-1. **cuire à UNE taille de référence** et mettre à l'échelle, au lieu de cuire
+1. **cuire à une taille de référence** et mettre à l'échelle, au lieu de cuire
    par palier — c'est ce qui divise le travail par douze, et c'est le seul
    remède qui reste clairement rentable ;
 2. **étaler la cuisson sur plusieurs images** plutôt que tout au premier
@@ -216,7 +216,7 @@ distinguent au premier coup d'œil**, y compris nus : le fût blanc et les
 rameaux fins du bouleau, le tronc sombre et la masse globuleuse du chêne, les
 étages horizontaux et le fût orangé du pin.
 
-**Mais le houppier n'ÉMERGE PAS du branchement, et c'est la correction que ce
+**Mais le houppier n'émerge pas du branchement, et c'est la correction que ce
 lot apporte au §4 du document.** Il a fallu :
 
 - baisser la dominance apicale du bouleau de 0,85 à 0,62 et lui ajouter un

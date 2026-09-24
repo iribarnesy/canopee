@@ -1,12 +1,12 @@
 /**
- * Le hors-parcelle : ce qu'on voit AUTOUR, pour que l'hectare cesse de flotter
+ * Le hors-parcelle : ce qu'on voit **autour**, pour que l'hectare cesse de flotter
  * (docs/interface-visuelle.md §5.8).
  *
  * **Le retour était : « une parcelle qui flotte en l'air, c'est bizarre ».** Il
  * a raison, et le défaut est plus grave qu'esthétique. Une parcelle posée sur
  * du vide se lit comme une maquette, pas comme un lieu : le joueur ne peut pas
  * situer son bois, et il ne comprend pas pourquoi le vent vient de l'ouest ou
- * pourquoi les chevreuils arrivent du nord. Or le moteur SAIT ce qu'il y a de
+ * pourquoi les chevreuils arrivent du nord. Or le moteur **sait** ce qu'il y a de
  * chaque côté — `state.bordures` porte un paysage par côté, et c'est de là que
  * viennent le gibier, les semis, les dépôts d'azote, le vent et les départs de
  * feu. Le dessiner, c'est rendre visible une donnée qui agit déjà.
@@ -20,7 +20,7 @@
  *    masse d'arbres continue. On ne choisit pas un joli fond : on affiche
  *    `partBoisee`.
  *
- * 2. **Ça ne doit PAS attirer l'œil**, et le joueur l'a demandé explicitement.
+ * 2. **Ça ne doit pas attirer l'œil**, et le joueur l'a demandé explicitement.
  *    Le décor est là pour asseoir la parcelle, pas pour la concurrencer. Trois
  *    moyens, tous physiques plutôt qu'arbitraires :
  *    - la **perspective aérienne** : plus c'est loin, plus ça se fond dans la
@@ -30,7 +30,7 @@
  *      parcelle garde la sienne. Le regard va au saturé ;
  *    - le **contraste écrasé** : les masses du décor ne s'écartent que de peu
  *      de leur fond, là où dans la parcelle une touffe tranche.
- *    Ce qui reste net, c'est la LIMITE de la parcelle — et c'est voulu : le
+ *    Ce qui reste net, c'est la **limite** de la parcelle — et c'est voulu : le
  *    joueur doit savoir au pixel près où finit ce qui lui appartient.
  *
  * 3. **Le décor ne coûte rien par image.** Il est cuit comme le terrain, et
@@ -54,10 +54,10 @@ import { melange, type Teinte } from "../palette";
  * Ce qu'on connaît d'un côté, sans dépendre du type `Paysage` du moteur.
  *
  * **Les parts viennent du moteur et il faut le dire, parce que j'ai affirmé le
- * contraire.** `GameState` porte un `paysageId` par CÔTÉ (`paysage.ts`,
+ * contraire.** `GameState` porte un `paysageId` par **côté** (`paysage.ts`,
  * `Bordures`), et chaque paysage déclare ses trois parts : le décor n'invente
  * donc pas son voisinage, il le lit. Ce qui était perdu en route, c'était les
- * ESSENCES — la réduction à trois nombres jetait les `semenciers`, et un bois
+ * **essences** — la réduction à trois nombres jetait les `semenciers`, et un bois
  * de pins de lande se dessinait comme une hêtraie. C'est le champ `especes`
  * ci-dessous, et c'est la même leçon que les houppiers du §4 : l'unité de
  * dessin doit porter l'identité de l'espèce, sinon le problème n'a fait que
@@ -93,7 +93,7 @@ export interface DecorBordures {
 /**
  * Distance au-delà de laquelle on ne sème plus de masses dans le décor.
  *
- * **Ce n'est PAS l'étendue du décor**, et j'ai mis deux essais à comprendre
+ * **Ce n'est pas l'étendue du décor**, et j'ai mis deux essais à comprendre
  * pourquoi. J'ai d'abord dessiné une ceinture de soixante mètres, puis, la
  * trouvant envahissante, une de trente-quatre. Les deux captures montraient la
  * même chose : une parcelle posée sur une galette, avec du ciel tout autour —
@@ -104,7 +104,7 @@ export interface DecorBordures {
  * trente degrés, **l'horizon est très loin hors de l'écran** : on ne voit pas
  * de ciel, on voit du sol jusqu'au bord du cadre. La nappe du décor couvre donc
  * tout le visible, sans limite d'étendue (voir `cuireMorceauDecor`), et ce
- * réglage-ci ne borne plus que le SEMIS des masses — au-delà, la brume les
+ * réglage-ci ne borne plus que le **semis** des masses — au-delà, la brume les
  * aurait de toute façon effacées et les cuire ne servirait qu'à ralentir.
  */
 export const MARGE_DECOR_M = 90;
@@ -117,7 +117,7 @@ export const PORTEE_BRUME_M = 80;
  *
  * **Elle ne va pas jusqu'au bout, et c'est la deuxième moitié de la correction
  * ci-dessus.** Un décor qui se dissout complètement redevient du ciel, donc du
- * vide, donc une parcelle qui flotte. Le lointain doit rester du SOL : plus
+ * vide, donc une parcelle qui flotte. Le lointain doit rester du **sol** : plus
  * terne, plus froid, sans détail — mais du sol. Cinquante-cinq pour cent de
  * brume donnent exactement ça, une campagne d'arrière-plan qu'on ne regarde
  * pas et qui n'est pas un trou.
@@ -134,7 +134,7 @@ export const DESATURATION = 0.3;
 export const OMBRE_DU_DECOR = 0.88;
 
 /**
- * Opacité de la COUCHE de décor, appliquée à la pose (`pixi/scene.ts`).
+ * Opacité de la **couche** de décor, appliquée à la pose (`pixi/scene.ts`).
  *
  * **Le quatrième moyen de dire « ce n'est pas à vous »**, et le seul des
  * quatre qu'un joueur ne puisse pas confondre avec du terrain. Les trois
@@ -163,7 +163,7 @@ export const OPACITE_DU_DECOR = 0.78;
  * fait monter le lointain que de deux à quatorze pixels sur huit cent vingt :
  * la géométrie est juste, elle est simplement sous le seuil de perception.
  *
- * L'ALTITUDE, elle, varie d'un bout de l'image à l'autre sur un versant. La
+ * **L'altitude**, elle, varie d'un bout de l'image à l'autre sur un versant. La
  * teindre est la perspective aérienne des peintres — l'amont clair, l'aval
  * sombre — et elle n'invente rien : c'est la grandeur que `altitudeDecor`
  * calcule déjà, rendue lisible au lieu d'être seulement exacte. Sur une
@@ -204,7 +204,7 @@ export function clarteDuRelief(zM: number, moyenneM: number): number {
  * sans horizon. Le plateau flottait toujours, avec du brouillard en plus.
  *
  * La bonne courbe est l'inverse : lente d'abord, rapide ensuite. Les premiers
- * mètres autour de la parcelle sont de la TERRE, franchement lisible comme
+ * mètres autour de la parcelle sont de la **terre**, franchement lisible comme
  * telle ; c'est le lointain qui se dissout. Ne pas attirer l'œil ne se joue pas
  * là — ça se joue sur la saturation et sur le contraste, qui, eux, valent
  * partout.
@@ -221,7 +221,7 @@ export function attenuation(distanceM: number): number {
 
 // ── Les couleurs des trois matières du décor ────────────────────────────────
 // Prises volontairement dans la même famille que la palette du sol : le décor
-// est le MÊME pays que la parcelle, pas une vignette collée derrière.
+// est le **même** pays que la parcelle, pas une vignette collée derrière.
 
 /** Une masse boisée vue de loin : sombre, bleutée, sans détail. */
 export const BOIS: Teinte = { r: 74, g: 88, b: 66 };
@@ -230,7 +230,7 @@ export const CULTURE: Teinte = { r: 146, g: 142, b: 96 };
 /**
  * Du bâti : gris chaud de tuile et d'enduit, jamais franchement coloré.
  *
- * Assombri depuis 138/128/118. Un mur enduit EST plus clair qu'un pré, c'est
+ * Assombri depuis 138/128/118. Un mur enduit **est** plus clair qu'un pré, c'est
  * vrai, mais sur la capture les bâtiments ressortaient en bulles pâles au
  * milieu d'une image par ailleurs sourde — donc le premier détail que l'œil
  * attrapait, exactement ce que le décor a consigne de ne pas faire.
@@ -318,7 +318,7 @@ export const AMPLITUDE_VARIATION = 0.07;
  *
  * Or un pays boisé ne se répartit pas au hasard : il y a des bois et il y a des
  * clairières, des hameaux et des champs vides. En modulant la probabilité par
- * une valeur lente, les cases boisées se GROUPENT, les dômes se recouvrent, et
+ * une valeur lente, les cases boisées se **groupent**, les dômes se recouvrent, et
  * on lit une masse avec une lisière — ce qu'est un bois. La part boisée
  * moyenne, elle, ne change pas : c'est la même donnée du moteur, répartie
  * comme elle l'est en vrai.
@@ -333,7 +333,7 @@ export const FORCE_GRUMEAU = 0.85;
 export function grumeau(x: number, y: number): number {
   // **Deux octaves, et la première version n'en avait qu'une.** Un bruit
   // bilinéaire sur une grille carrée garde ses extrema aux nœuds de cette
-  // grille : dès qu'on le SEUILLE — et la canopée le seuille — le motif
+  // grille : dès qu'on le **seuille** — et la canopée le seuille — le motif
   // s'aligne sur le réseau et le hors-parcelle sort en filet régulier, des
   // champs séparés par des bandes pâles à intervalles parfaitement égaux.
   //
@@ -360,7 +360,7 @@ export const PART_SECONDE_OCTAVE = 0.38;
  * besoin à deux échelles — celle des peuplements et celle des cimes — et deux
  * copies de la même interpolation auraient dérivé. La continuité est ce qui
  * compte : un bruit par case donne des plateaux, et des plateaux voisins de
- * hauteurs différentes donnent un relief à FACETTES, ce qu'une capture a
+ * hauteurs différentes donnent un relief à **facettes**, ce qu'une capture a
  * montré tout de suite sur la canopée.
  */
 export function bruitLisse(x: number, y: number, maille: number, sel: number): number {
@@ -407,7 +407,7 @@ export function couleurDecor(bordures: DecorBordures, x: number, y: number, cote
     g: n.g * w.nord + e.g * w.est + s.g * w.sud + o.g * w.ouest,
     b: n.b * w.nord + e.b * w.est + s.b * w.sud + o.b * w.ouest,
   };
-  // Désaturation : on tire vers le gris de MÊME clarté, ce qui enlève la
+  // Désaturation : on tire vers le gris de **même** clarté, ce qui enlève la
   // couleur sans changer la valeur — sinon le décor s'éclaircirait ou
   // s'assombrirait selon sa teinte, et la parcelle ne serait plus posée dessus.
   const gris = (brut.r + brut.g + brut.b) / 3;
@@ -451,7 +451,7 @@ export interface MasseDecor {
  * Côté d'une case de semis de masses, en mètres. Une masse par case au plus.
  *
  * Ramené de huit à six : à huit, un côté boisé à 90 % donnait encore des dômes
- * SÉPARÉS, et un bois qui se compte en boules n'est pas un bois. À six, ils se
+ * **séparés**, et un bois qui se compte en boules n'est pas un bois. À six, ils se
  * recouvrent et forment une masse continue, ce qui est la lecture juste — de
  * loin, une forêt n'a pas d'arbres, elle a une lisière et une surface.
  */
@@ -486,7 +486,7 @@ export const PART_DE_MATURITE = { min: 0.45, max: 0.85 };
 export const MASSE_LA_PLUS_HAUTE_M = 9;
 
 /**
- * La part BOISÉE et la part BÂTIE à un point du décor, atténuation comprise.
+ * La part **boisée** et la part **bâtie** à un point du décor, atténuation comprise.
  *
  * Extraite parce que deux dessins en ont besoin et qu'il ne doit y en avoir
  * qu'une formule : la canopée (une surface continue) et les bâtiments (des
@@ -528,36 +528,36 @@ export function couvertureDuDecor(
 export const MAILLE_PEUPLEMENT_M = 26;
 
 /**
- * La CANOPÉE à un point du décor : sa couverture, sa hauteur, son essence.
+ * La **canopée** à un point du décor : sa couverture, sa hauteur, son essence.
  *
  * **C'est l'unité de dessin juste du hors-parcelle boisé, et il a fallu cinq
  * essais pour y venir.** Le §0 de ce fichier le disait pourtant depuis le
  * début : « de loin, une forêt n'a pas d'arbres, elle a une lisière et une
- * surface. » Le dessin, lui, en faisait des BOSQUETS dénombrables, et aucun
+ * surface. » Le dessin, lui, en faisait des **bosquets** dénombrables, et aucun
  * réglage ne pouvait corriger ça :
  *
  * 1. rayon 2–5 m, hauteur inventée (`6 + hasard × 10`) : des ovales isolés
- *    d'un seul aplat — des TACHES, et c'est le défaut signalé par le
+ *    d'un seul aplat — des **taches**, et c'est le défaut signalé par le
  *    commanditaire ;
  * 2. rayon = 0,38 × hauteur, hauteur de l'essence : des boules de vingt mètres
- *    à peine recouvrantes — un ÉBOULIS DE GALETS, pire, puisque des objets de
+ *    à peine recouvrantes — un **éboulis de galets**, pire, puisque des objets de
  *    la taille d'un arbre du joueur réclament son attention ;
- * 3. retour au rayon d'une cime avec la hauteur de l'essence : des QUILLES, un
+ * 3. retour au rayon d'une cime avec la hauteur de l'essence : des **quilles**, un
  *    hêtre de trente mètres tenant dans quatre mètres de large ;
- * 4. rayon dérivé d'un aplatissement voulu : des NÉNUPHARS qui se chevauchent,
+ * 4. rayon dérivé d'un aplatissement voulu : des **nénuphars** qui se chevauchent,
  *    encore dénombrables un par un ;
  * 5. modelé presque supprimé pour qu'ils ne ressortent plus : les taches du
  *    départ, en plus large.
  *
  * Les cinq échouent de la même façon parce qu'ils partagent la même erreur —
- * un bois dessiné comme une collection d'objets. Une SURFACE n'a pas ce
+ * un bois dessiné comme une collection d'objets. Une **surface** n'a pas ce
  * problème : elle n'a pas de contour à compter, elle a une altitude et un
  * bord. C'est la même leçon que le bois mort au sol, qui a demandé six essais
  * avant qu'on cesse de dessiner des tas et qu'on trace une ligne.
  *
  * La hauteur est celle de l'essence du peuplement (`hauteurMaxM`, moteur) et
  * elle s'annule à la lisière avec la couverture : le bord d'un bois est donc
- * une PENTE et non un mur, ce qui est ce qu'on voit d'une lisière.
+ * une **pente** et non un mur, ce qui est ce qu'on voit d'une lisière.
  */
 export function canopee(
   bordures: DecorBordures,
@@ -567,11 +567,11 @@ export function canopee(
 ): { couverture: number; hauteurM: number; especeId?: string } {
   const couverture = couvertureDuDecor(bordures, x, y, coteM).boise;
   if (couverture <= 0) return { couverture: 0, hauteurM: 0 };
-  // **L'ESSENCE est celle du peuplement, la HAUTEUR est continue**, et cette
+  // **l'essence est celle du peuplement, la hauteur est continue**, et cette
   // dissymétrie est une correction. Tirer les deux par peuplement donnait à
   // chaque maille de vingt-six mètres son propre plateau d'altitude, et les
   // quads qui enjambaient deux peuplements formaient des rampes : le décor
-  // sortait en FACETTES, un paysage de cristal. Une lisière de couleur entre
+  // sortait en **facettes**, un paysage de cristal. Une lisière de couleur entre
   // deux peuplements est juste — deux essences voisines ne se mélangent pas —
   // mais une marche d'altitude ne l'est pas.
   const px = Math.floor(x / MAILLE_PEUPLEMENT_M);
@@ -589,17 +589,17 @@ export function canopee(
   const bosse = 1 + (bruitLisse(x, y, MAILLE_DES_CIMES_M, 0x63a7) - 0.5) * 2 * AMPLITUDE_DES_CIMES;
   return {
     couverture,
-    // **La levée est PLAFONNÉE, et c'est la dernière correction de la série.**
+    // **La levée est plafonnée, et c'est la dernière correction de la série.**
     // Dessinée à sa hauteur vraie, une canopée de trente mètres présente au
     // bord du bois une jupe de cent dix pixels d'un seul ton : la capture
-    // sortait en FACETTES de cristal, un paysage de plaques. Le remède n'est
+    // sortait en **facettes** de cristal, un paysage de plaques. Le remède n'est
     // pas de texturer ce mur — c'est du décor, il ne mérite pas ce travail —
     // mais de ne pas le dresser. Un bois voisin se lit très bien comme une
-    // surface un peu SOULEVÉE, grainée, de la couleur de son essence ; sa
+    // surface un peu **soulevée**, grainée, de la couleur de son essence ; sa
     // hauteur vraie n'apporte rien au joueur et coûte un mur autour de sa
     // parcelle, ce qui est l'exact contraire de « rester hors du focus ».
     //
-    // Ce qui survit du plafonnement, c'est l'ORDRE : une haie d'épine noire se
+    // Ce qui survit du plafonnement, c'est l'**ordre** : une haie d'épine noire se
     // soulève de trois mètres, un massif de hêtres du maximum. Et la couleur,
     // elle, reste celle de l'essence — c'est là qu'est la cohérence avec le
     // paysage choisi, pas dans l'altitude.
@@ -620,7 +620,7 @@ export const LEVEE_LA_PLUS_HAUTE_M = 7;
 /**
  * De combien chaque morceau de décor déborde pour dessiner la canopée, m.
  *
- * Une canopée soulevée de `h` mètres se projette à l'écran là où le SOL de
+ * Une canopée soulevée de `h` mètres se projette à l'écran là où le **sol** de
  * (x + h, y + h) se projette — un mètre de levée vaut un mètre sur chaque axe,
  * puisque `METRE_VERTICAL_PX` et `TUILE_HAUTEUR_PX` sont égaux. Un morceau doit
  * donc redessiner la canopée jusqu'à une levée maximale au-delà de ses bords,
@@ -650,7 +650,7 @@ export const CANOPEE_LA_PLUS_BASSE_M = 1.5;
 /**
  * Contraste de la canopée avec la nappe sur laquelle elle se pose.
  *
- * Plus bas que celui des masses (0,44) : une canopée couvre de GRANDES
+ * Plus bas que celui des masses (0,44) : une canopée couvre de **grandes**
  * surfaces, là où un bâtiment est un point. À contraste égal, le hors-parcelle
  * boisé deviendrait la chose la plus visible de l'image — l'inverse de ce que
  * le décor doit faire.
@@ -696,7 +696,7 @@ export function masseDeLaCase(
   // **Ni bois ni culture, et les deux ont la même raison.** Une culture n'a pas
   // de volume — un champ est une surface, et `teinteDuCote` le dit déjà ; le
   // premier jet en semait, et elles sortaient en barres pâles comme des
-  // rayures. Un BOIS non plus n'est pas un objet : il a une lisière et une
+  // rayures. Un **bois** non plus n'est pas un objet : il a une lisière et une
   // surface, et cinq essais à le dessiner en bosquets dénombrables ont fini par
   // le démontrer (voir `canopee`). Ne reste dans les masses que ce qui est
   // vraiment un objet posé sur le sol, et qui se compte : un bâtiment.
@@ -803,8 +803,8 @@ export function massesDuDecor(
  * et l'œil irait droit dessus. On la ramène donc vers le fond du décor, d'autant
  * plus qu'elle est loin.
  *
- * Le premier jet gardait 55 % de la matière SANS lui appliquer le retrait de
- * clarté du décor : la capture montrait une nappe sourde CONSTELLÉE de taches
+ * Le premier jet gardait 55 % de la matière **sans** lui appliquer le retrait de
+ * clarté du décor : la capture montrait une nappe sourde **constellée** de taches
  * plus claires, un motif de peau de vache, aussi accrocheur que ce qu'on
  * voulait éviter. En faisant passer la masse par la même chaîne que la nappe,
  * la moitié suffit — et elle dit ce qu'elle doit dire, « c'est boisé de ce
@@ -826,7 +826,7 @@ export function couleurMasse(
   const matiere = propre ?? (masse === "bois" ? BOIS : masse === "bati" ? BATI : CULTURE);
   const gris = (matiere.r + matiere.g + matiere.b) / 3;
   const terne = melange(matiere, { r: gris, g: gris, b: gris }, DESATURATION);
-  // La masse passe par la MÊME chaîne que la nappe — désaturation, retrait
+  // La masse passe par la **même** chaîne que la nappe — désaturation, retrait
   // d'un ton, brume — sinon elle dérive par rapport au fond sur lequel elle se
   // pose : un fond assombri sous une masse qui ne l'est pas donnait des dômes
   // qui s'éclaircissaient à mesure qu'on éteignait le décor.
@@ -840,7 +840,7 @@ export function couleurMasse(
 }
 
 /**
- * Altitude de la lisière, lissée LE LONG du bord et non en travers.
+ * Altitude de la lisière, lissée **le long** du bord et non en travers.
  *
  * Sans lissage, le décor hérite du bruit de relief cellule par cellule de la
  * parcelle : échantillonné tous les quatre mètres, ce bruit se lit en terrasses,
@@ -848,7 +848,7 @@ export function couleurMasse(
  *
  * Mais lisser dans les deux directions casserait la continuité : sur un versant
  * à 10 %, une moyenne sur ±5 m ramène la lisière neuf centimètres en dessous de
- * la cellule du bord, et il apparaît une MARCHE tout autour de la parcelle —
+ * la cellule du bord, et il apparaît une **marche** tout autour de la parcelle —
  * précisément le plateau flottant qu'on cherche à supprimer.
  *
  * On ne lisse donc que dans la direction où l'on n'a pas débordé : au nord de
@@ -924,7 +924,7 @@ export function penteMoyenne(altitudesM: readonly number[], coteM: number): [num
  * **C'est ce qui empêche le plateau de flotter, et il n'y a rien à inventer.**
  * Le moteur ne connaît d'altitudes que dans la parcelle. Au bord, on prolonge
  * donc la valeur de la lisière — la continuité est exacte, sans marche. Au-delà,
- * on continue selon la PENTE MOYENNE de la parcelle.
+ * on continue selon la **pente moyenne** de la parcelle.
  *
  * **Prolonger la pente, et non retomber vers la moyenne.** Le premier jet
  * faisait l'inverse, en se disant qu'on ne sait rien du lointain et qu'une
@@ -952,7 +952,7 @@ export function altitudeDecor(
   // trop petite pour qu'une pente ait un sens.
   const base = Number.isFinite(lisiere) ? lisiere : moyenneM;
   const montee = dzdx * dx + dzdy * dy;
-  // En AVAL rien ne s'arrête : le pays continue de descendre, et personne ne
+  // En **aval** rien ne s'arrête : le pays continue de descendre, et personne ne
   // dit où il s'arrête. C'est en amont seulement qu'il y a une crête.
   if (bassinAmontHa === undefined || montee <= 0) return base + montee;
   const raideur = Math.hypot(dzdx, dzdy);
@@ -963,12 +963,12 @@ export function altitudeDecor(
  * À quelle distance en amont le sol cesse de monter, m (#150).
  *
  * **La seule lecture que je sache tirer de la grandeur sans rien inventer.**
- * Le moteur donne une SURFACE amont, `bassinAmontHa` : ce qui verse sur la
+ * Le moteur donne une **surface** amont, `bassinAmontHa` : ce qui verse sur la
  * parcelle. Une surface ne dit pas une forme — un bassin de cinq hectares peut
  * être une bande étroite et longue ou un éventail court et large, et le moteur
  * n'en sait rien puisque son ruissellement ne dépend que de l'aire.
  *
- * On lit donc le bassin comme une BANDE de la largeur de la parcelle : `A` ha
+ * On lit donc le bassin comme une **bande** de la largeur de la parcelle : `A` ha
  * versant sur un côté de `L` m s'étendent sur `A × 10⁴ / L` mètres en amont.
  * Cinq hectares sur cent mètres de côté font cinq cents mètres. Au-delà,
  * c'est le bassin du voisin : le sol cesse de monter, et ce qui tombe plus

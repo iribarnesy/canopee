@@ -4,7 +4,7 @@
  *
  * Le moteur travaillait avec un booléen — `leavesOn = tMean > 6 °C` — et
  * faisait tomber toute la litière en une semaine. Deux couperets, et le premier
- * était en plus IDENTIQUE POUR TOUTES LES ESPÈCES : un bouleau et un frêne
+ * était en plus **identique pour toutes les espèces** : un bouleau et un frêne
  * débourraient le même jour, ce qui est faux de six semaines. Or l'ordre de
  * débourrement est un fait de terrain massif — c'est lui qui décide de qui
  * profite de la lumière d'avril sous un couvert encore nu.
@@ -12,9 +12,9 @@
  * Le modèle retenu combine les deux commandes que la littérature donne comme
  * indissociables :
  *
- *  - le FORÇAGE : un cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier,
+ *  - le **forçage** : un cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier,
  *    propre à chaque espèce ;
- *  - la PHOTOPÉRIODE : un seuil de durée du jour en dessous duquel rien ne
+ *  - la **photopériode** : un seuil de durée du jour en dessous duquel rien ne
  *    part, quelle que soit la chaleur.
  *
  * Le second n'est pas un raffinement : sans lui, le modèle est absurde au sud.
@@ -29,18 +29,18 @@
  * jour raccourcit sous un seuil, et l'étalement fait tomber la litière sur un
  * mois au lieu d'une semaine.
  *
- * Et l'automne se joue en DEUX temps, qu'on distingue ici : la feuille jaunit
+ * Et l'automne se joue en **deux** temps, qu'on distingue ici : la feuille jaunit
  * d'abord — la chlorophylle se démonte, l'azote est rapatrié — puis elle
  * tombe, deux à trois semaines plus tard.
  *
- * D'où TROIS parts foliaires, qu'il faut tenir séparées :
+ * D'où **trois** parts foliaires, qu'il faut tenir séparées :
  *
  *  - `partFoliaireOmbrageante` : ce qui intercepte la lumière, y compris les
  *    feuilles mortes qu'un marcescent garde accrochées. C'est Beer-Lambert.
  *  - `partFoliaireActive` : le feuillage vivant déployé. C'est lui qui commande
  *    la croissance et la transpiration (tick.ts), en produit avec un facteur
  *    thermique qui ne porte plus que la vitesse du métabolisme.
- *  - `partFoliaireAssimilante` : le vivant ENCORE VERT, soit le précédent moins
+ *  - `partFoliaireAssimilante` : le vivant **encore vert**, soit le précédent moins
  *    ce que `senescenceFoliaire` a jauni.
  *
  * *Ce que la troisième ne commande pas encore* : la croissance. Un houppier
@@ -52,30 +52,30 @@
  * calibration actuelle. Voir docs/realisme.md, « le houppier doré produit
  * encore ».
  *
- * Enfin, le BESOIN DE FROID. Un bourgeon n'est pas une graine qu'on chauffe :
+ * Enfin, le **besoin de froid**. Un bourgeon n'est pas une graine qu'on chauffe :
  * il sort de dormance en accumulant d'abord des semaines fraîches, et ce n'est
  * qu'ensuite que la chaleur le fait partir. C'est le paradoxe bien documenté du
  * réchauffement sur la phénologie de printemps.
  *
  * Mesuré sur le limon du Nord, hêtre : onze semaines de froid à climat figé
  * contre quatre sous SSP5-8.5 en 2090, ce qui porte son exigence de 315 à
- * 420 °C·j. L'effet AMORTIT l'avance sans la renverser à ces latitudes — le
+ * 420 °C·j. L'effet **amortit** l'avance sans la renverser à ces latitudes — le
  * hêtre débourre quand même plus tôt, simplement moins tôt qu'il ne l'aurait
  * fait sans dormance. Le renversement complet ne s'observe que là où l'hiver
  * est déjà doux.
  *
- * Enfin la MARCESCENCE, qui oblige à distinguer deux feuillages là où le moteur
- * n'en comptait qu'un. Le charme garde tout l'hiver ses feuilles MORTES,
+ * Enfin la **marcescence**, qui oblige à distinguer deux feuillages là où le moteur
+ * n'en comptait qu'un. Le charme garde tout l'hiver ses feuilles **mortes**,
  * attachées jusqu'à ce que les bourgeons les poussent en avril. Elles font
  * encore de l'ombre, mais elles ne photosynthétisent plus. Confondre ce cas
- * avec le troène SEMI-PERSISTANT — qui, lui, garde des feuilles VIVANTES —
+ * avec le troène **semi-persistant** — qui, lui, garde des feuilles **vivantes** —
  * reviendrait à faire pousser un charme en janvier ; le confondre avec un
  * caduc ordinaire reviendrait à éclairer son sous-étage tout l'hiver, alors
  * qu'un taillis de charme est notoirement sombre en février.
  *
- * D'où deux parts foliaires : celle qui TRAVAILLE (`partFoliaireActive`, le
+ * D'où deux parts foliaires : celle qui **travaille** (`partFoliaireActive`, le
  * feuillage vivant, seul à compter pour la croissance et la litière) et celle
- * qui OMBRE (`partFoliaireOmbrageante`, feuilles mortes comprises, seule à
+ * qui **ombre** (`partFoliaireOmbrageante`, feuilles mortes comprises, seule à
  * entrer dans Beer-Lambert). Elles ne se séparent que chez les marcescents.
  *
  * Deux limites assumées. Le retour de litière d'un marcescent suit encore la
@@ -107,7 +107,7 @@ export const SEUIL_SENESCENCE_H = 11.5;
 /** Semaines sur lesquelles les feuilles tombent une fois la sénescence lancée. */
 export const ETALEMENT_CHUTE_SEMAINES = 5;
 /**
- * Semaines sur lesquelles une feuille ENCORE ACCROCHÉE jaunit et cesse
+ * Semaines sur lesquelles une feuille **encore accrochée** jaunit et cesse
  * d'assimiler.
  *
  * La sénescence n'est pas la chute : c'est ce qui la précède. Le jour
@@ -116,7 +116,7 @@ export const ETALEMENT_CHUTE_SEMAINES = 5;
  * semaines séparent les deux, et c'est ce décalage qui fait tout l'automne :
  * un houppier presque plein, mais entièrement doré, qui ne produit plus rien.
  *
- * Plus court que `ETALEMENT_CHUTE_SEMAINES`, donc : le jaunissement DEVANCE
+ * Plus court que `ETALEMENT_CHUTE_SEMAINES`, donc : le jaunissement **devance**
  * l'abscission. La conséquence n'est pas décorative — une feuille jaune a
  * cessé de photosynthétiser, donc l'arbre ne pousse plus et ne transpire
  * presque plus, alors que la température, elle, autoriserait encore les deux.
@@ -161,7 +161,7 @@ export function debourrementExigeDJ(espece: EspeceV0, semainesDeFroid: number): 
 }
 
 /**
- * Part du feuillage VIVANT déployé ∈ [0,1] pour une espèce donnée : celui qui
+ * Part du feuillage **vivant** déployé ∈ [0,1] pour une espèce donnée : celui qui
  * assimile, et lui seul. C'est la part qui commande la croissance et le retour
  * de litière — les feuilles marcescentes n'y entrent pas, elles sont mortes.
  *
@@ -181,7 +181,7 @@ export function partFoliaireActive(
   // Les sempervirents gardent leur feuillage : ni débourrement ni chute.
   if (!espece.lumiere.caduc) return 1;
 
-  // Les SEMI-PERSISTANTS gardent une partie de leur feuillage : ils ne se
+  // Les **semi-persistants** gardent une partie de leur feuillage : ils ne se
   // dénudent jamais tout à fait. C'est un plancher, pas un régime à part.
   const plancher = espece.lumiere.retentionHivernale ?? 0;
 
@@ -213,7 +213,7 @@ export function partFoliaireActive(
 export const OPACITE_FEUILLE_MORTE = 0.55;
 
 /**
- * Part du feuillage qui INTERCEPTE la lumière ∈ [0,1] : le feuillage vivant,
+ * Part du feuillage qui **intercepte** la lumière ∈ [0,1] : le feuillage vivant,
  * plus les feuilles mortes qu'un marcescent garde attachées. C'est cette
  * part-là qui entre dans Beer-Lambert (light.ts), et elle seule.
  */
@@ -243,19 +243,19 @@ export function partFoliaireOmbrageante(
 }
 
 /**
- * Avancement de la SÉNESCENCE des feuilles encore accrochées ∈ [0,1] :
+ * Avancement de la **sénescence** des feuilles encore accrochées ∈ [0,1] :
  * 0 = vertes et fonctionnelles, 1 = entièrement jaunies, vidées de leur azote
  * et hors service.
  *
- * C'est la grandeur qui manquait. `partFoliaireActive` dit COMBIEN de feuillage
- * vivant reste ; celle-ci dit DANS QUEL ÉTAT il est. Les deux sont
+ * C'est la grandeur qui manquait. `partFoliaireActive` dit **combien** de feuillage
+ * vivant reste ; celle-ci dit **dans quel état** il est. Les deux sont
  * indépendantes : à la mi-octobre un chêne peut porter les trois quarts de son
  * feuillage et n'en tirer plus rien (sénescence à 1).
  *
  * Un sempervirent ne sénesce pas de façon saisonnière : ses aiguilles se
  * renouvellent sur plusieurs années, sans automne. Il reste donc à 0.
  *
- * Ne pas confondre avec la MARCESCENCE (`OPACITE_FEUILLE_MORTE`,
+ * Ne pas confondre avec la **marcescence** (`OPACITE_FEUILLE_MORTE`,
  * `partFoliaireOmbrageante`), qui est l'étape d'après : la sénescence vide la
  * feuille de son azote et la fait jaunir, la marcescence dit qu'elle reste
  * accrochée après sa mort. Un charme fait les deux, un bouleau seulement la
@@ -273,7 +273,7 @@ export function senescenceFoliaire(
 }
 
 /**
- * Feuillage ASSIMILANT ∈ [0,1] : ce qui est déployé, vivant **et** encore vert.
+ * Feuillage **assimilant** ∈ [0,1] : ce qui est déployé, vivant **et** encore vert.
  *
  * Trois parts foliaires cohabitent maintenant, et il faut les tenir distinctes
  * — c'est la seule difficulté de ce module :
@@ -285,7 +285,7 @@ export function senescenceFoliaire(
  *   jaunie**. La plus petite. Un houppier doré d'octobre est déployé, vivant,
  *   et ne produit plus rien.
  *
- * **Elle n'est PAS branchée sur la croissance**, et c'est délibéré : mesuré, le
+ * **Elle n'est pas branchée sur la croissance**, et c'est délibéré : mesuré, le
  * branchement déplace des seuils écologiques calibrés (`docs/realisme.md`).
  * Elle existe pour le rendu — colorer un houppier demande de savoir s'il
  * travaille encore — et pour le jour où la calibration sera refaite.
@@ -319,7 +319,7 @@ export function senescenceEnCours(dureeJourH: number, automne: boolean): boolean
 }
 
 /**
- * Tout ce qu'il faut savoir de la SAISON pour calculer une part foliaire, sans
+ * Tout ce qu'il faut savoir de la **saison** pour calculer une part foliaire, sans
  * avoir l'état de la partie sous la main.
  *
  * Cinq scalaires : deux viennent de l'état (le cumul de chaleur et le froid
@@ -330,14 +330,14 @@ export function senescenceEnCours(dureeJourH: number, automne: boolean): boolean
  */
 export interface ContextePhenologique {
   /**
-   * De quoi ce contexte est FAIT : la latitude et la semaine dont il est issu
+   * De quoi ce contexte est **fait** : la latitude et la semaine dont il est issu
    * (#164). Sans elles, on ne peut pas en construire un à un instant
    * intermédiaire sans interpoler la durée du jour — ce qui coûte jusqu'à
    * 4,37 minutes d'erreur, soit 6 % de la largeur de la porte photopériodique.
-   * Les porter permet de la RECALCULER exactement.
+   * Les porter permet de la **recalculer** exactement.
    */
   latitudeDeg: number;
-  /** semaine DANS L'ANNÉE dont ce contexte est issu, fractionnaire entre deux semaines */
+  /** semaine **dans l'année** dont ce contexte est issu, fractionnaire entre deux semaines */
   semaineAnnee: number;
   /** cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier (GameState) */
   ddYearBase5: number;
@@ -352,8 +352,8 @@ export interface ContextePhenologique {
 }
 
 /**
- * Le contexte phénologique d'une semaine. `semaineAnnee` est la semaine DANS
- * L'ANNÉE (0–51), pas la semaine absolue de la partie.
+ * Le contexte phénologique d'une semaine. `semaineAnnee` est la semaine **dans**
+ * **l'année** (0–51), pas la semaine absolue de la partie.
  *
  * Un seul endroit calcule ce calendrier : le tick s'en sert pour faire pousser
  * les feuilles, le rendu pour les colorer. Deux copies dériveraient — un
@@ -378,26 +378,26 @@ export function contextePhenologique(
 }
 
 /**
- * Le contexte phénologique ENTRE deux semaines, à l'instant `t` ∈ [0,1] (#164).
+ * Le contexte phénologique **entre** deux semaines, à l'instant `t` ∈ [0,1] (#164).
  *
- * POURQUOI LE MOTEUR ET PAS LE RENDU. Un hêtre passe de nu à à-moitié-feuillu
+ * **Pourquoi le moteur et pas le rendu**. Un hêtre passe de nu à à-moitié-feuillu
  * en un seul pas de temps — mesuré, 51,3 % de part foliaire gagnés en une
  * semaine, 44,0 % pour le bouleau. Le rendu ne peut pas adoucir ça sans
  * reconstituer la phénologie chez lui, ce que la règle du dépôt interdit : les
  * degrés-jours, la porte photopériodique et le besoin de froid vivent ici et
  * doivent y rester.
  *
- * CE N'EST PAS UNE INVENTION, C'EST LE MÊME MODÈLE LU PLUS FIN. Le tick
+ * **Ce n'est pas une invention**, **c'est le même modèle lu plus fin**. Le tick
  * accumule `ddYearBase5 += max(0, tMean − 5) × 7` : un seul apport hebdomadaire
- * tiré d'une température moyenne unique, donc un incrément journalier CONSTANT
+ * tiré d'une température moyenne unique, donc un incrément journalier **constant**
  * dans la semaine. Interpoler linéairement les degrés-jours rend exactement ce
  * que le modèle dit — `ddDebut + (ddFin − ddDebut) t` et
  * `ddDebut + max(0, tMean − 5) × 7t` sont la même expression. Tout le reste est
- * RECALCULÉ à l'instant fractionnaire plutôt qu'interpolé : la durée du jour
+ * **recalculé** à l'instant fractionnaire plutôt qu'interpolé : la durée du jour
  * depuis le jour de l'année, la porte d'automne et le compteur de chute depuis
  * la semaine fractionnaire.
  *
- * POURQUOI PAS L'AUTRE FORME. L'issue proposait aussi de livrer la part
+ * **Pourquoi pas l'autre forme**. L'issue proposait aussi de livrer la part
  * foliaire de la semaine précédente et de laisser le rendu interpoler. Mesuré
  * sur deux ans et deux essences, l'écart entre cette droite et la vraie courbe
  * vaut 0,00 point à l'automne — la chute est une rampe, la droite est exacte —
@@ -406,7 +406,7 @@ export function contextePhenologique(
  * C'est-à-dire un cinquième du plus gros saut, et précisément à la saison que
  * l'issue veut soigner.
  *
- * LA BASCULE DE FIN D'ANNÉE. Le cumul se remet à zéro en semaine 0, si bien
+ * **La bascule de fin d'année**. Le cumul se remet à zéro en semaine 0, si bien
  * qu'entre la 51 et la 0 une interpolation descendrait au lieu de monter. On
  * tient alors la valeur de départ : aucun seuil phénologique ne se franchit
  * dans la première semaine de janvier, où le cumul vaut presque rien.
@@ -430,13 +430,13 @@ export function contextePhenologiqueFractionnaire(
     jourH: dureeDuJourH(debut.latitudeDeg, midWeekDayOfYear(debut.semaineAnnee) + 7 * u),
     automne,
     semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
-    // Compteur de semaines ENTIÈRES : il ne bouge pas dans la semaine, et il ne
+    // Compteur de semaines **entières** : il ne bouge pas dans la semaine, et il ne
     // sert qu'à gonfler le besoin de froid, pas à doser un feuillage.
     semainesDeFroid: debut.semainesDeFroid,
   };
 }
 
-/** Le feuillage qui TRAVAILLE, pris dans son contexte : la forme qu'appellent le tick et le rendu. */
+/** Le feuillage qui **travaille**, pris dans son contexte : la forme qu'appellent le tick et le rendu. */
 export function partFoliaireActiveDans(espece: EspeceV0, ctx: ContextePhenologique): number {
   return partFoliaireActive(
     espece,
@@ -448,7 +448,7 @@ export function partFoliaireActiveDans(espece: EspeceV0, ctx: ContextePhenologiq
   );
 }
 
-/** Le feuillage qui OMBRE, pris dans son contexte : ce que la lumière traverse. */
+/** Le feuillage qui **ombre**, pris dans son contexte : ce que la lumière traverse. */
 export function partFoliaireOmbrageanteDans(espece: EspeceV0, ctx: ContextePhenologique): number {
   return partFoliaireOmbrageante(
     espece,
@@ -465,7 +465,7 @@ export function partFoliaireOmbrageanteDans(espece: EspeceV0, ctx: ContextePheno
  * veut dire « pris dans son contexte ».
  *
  * Ne pas confondre avec `senescenceFoliaire`, qui n'est pas un oui/non mais un
- * AVANCEMENT ∈ [0,1] : la première dit que l'automne a commencé, la seconde à
+ * **avancement** ∈ [0,1] : la première dit que l'automne a commencé, la seconde à
  * quel point le feuillage a jauni. C'est cette dernière qu'il faut pour colorer
  * un houppier ; celle-ci ne sert qu'à savoir si le compteur tourne.
  */
@@ -479,7 +479,7 @@ export function senescenceDans(espece: EspeceV0, ctx: ContextePhenologique): num
 }
 
 /**
- * `partFoliaireAssimilante` prise dans son contexte : déployé, vivant ET vert,
+ * `partFoliaireAssimilante` prise dans son contexte : déployé, vivant **et** vert,
  * donc ce qui travaille. C'est la forme que le rendu appellera pour savoir si
  * un arbre est en pleine production ou déjà à l'arrêt.
  */
@@ -495,7 +495,7 @@ export function partFoliaireAssimilanteDans(espece: EspeceV0, ctx: ContextePheno
 }
 
 /**
- * Largeur PAR DÉFAUT de la fenêtre de floraison, en degrés-jours base 5 °C.
+ * Largeur **par défaut** de la fenêtre de floraison, en degrés-jours base 5 °C.
  * Chaque espèce porte désormais la sienne (`especes.ts:floraison.dureeDJ`),
  * parce que l'écart est l'essentiel du sujet : un verger passe en deux
  * semaines, un ajonc tient six mois, et c'est ce qui sépare une ressource
@@ -505,7 +505,7 @@ export function partFoliaireAssimilanteDans(espece: EspeceV0, ctx: ContextePheno
  */
 export const FLORAISON_DUREE_DJ = 100;
 /**
- * Part de la fenêtre pendant laquelle les fleurs s'OUVRENT. Après, elles se
+ * Part de la fenêtre pendant laquelle les fleurs s'**ouvrent**. Après, elles se
  * fanent, plus lentement qu'elles ne se sont ouvertes — un verger passe au
  * blanc en quelques jours et met deux semaines à perdre ses pétales
  * *(à calibrer)*.
@@ -519,7 +519,7 @@ const FLORAISON_OUVERTURE = 0.25;
  * fait s'ouvrir et se faner. Elle vaut 0 hors fenêtre — donc aussi pour une
  * espèce sans fruits, dont l'appelant ne l'appellera pas.
  *
- * Attention à ce qu'elle N'EST PAS : `fruitProgress` vaut 0 avant la floraison,
+ * Attention à ce qu'elle **n'est pas** : `fruitProgress` vaut 0 avant la floraison,
  * 0 pendant, et 0 toute l'année pour un arbre immature. Les trois cas sont
  * indiscernables, et c'est pour ça que cette part existe.
  */

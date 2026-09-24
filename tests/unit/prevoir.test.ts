@@ -19,13 +19,13 @@ import { tick } from "../../src/engine/tick";
  * Elle le fait en appelant `applyAction` et en ne gardant que les refus. Tout
  * repose donc sur une propriété : `applyAction` ne modifie pas l'état qu'on lui
  * donne, elle en rend un nouveau. Cet essai est ce qui fait de cette propriété
- * un CONTRAT plutôt qu'un usage — et le jour où une branche modifiera un
+ * un **contrat** plutôt qu'un usage — et le jour où une branche modifiera un
  * tableau en place, il tombera sur le commit fautif, pas six mois plus tard au
  * chargement d'une sauvegarde.
  *
  * Deux exigences qu'un essai naïf raterait :
  *
- * — Chaque type d'action doit être éprouvé sur son chemin de TRAVAIL, pas
+ * — Chaque type d'action doit être éprouvé sur son chemin de **travail**, pas
  *   seulement sur son refus. Un geste refusé rend l'état d'entrée tel quel et
  *   passe donc trivialement : c'est le code qui écrit qui pourrait muter. Un
  *   premier jet de cet essai « passait » sur onze actions dont le corps n'avait
@@ -47,7 +47,7 @@ interface Cas {
   attendu: "travail" | "refus";
 }
 
-/** Premier chemin où deux valeurs divergent, pour que l'échec DÉSIGNE le champ muté. */
+/** Premier chemin où deux valeurs divergent, pour que l'échec **désigne** le champ muté. */
 function premiereDivergence(a: unknown, b: unknown, chemin = ""): string | null {
   if (a === b) return null;
   if (typeof a === "number" && typeof b === "number") {
@@ -88,7 +88,7 @@ function avance(s: GameState, semaines: number, meteo: WeekWeather[]): GameState
  * Parcelle de 40 m plutôt que les 100 m des stations : une écriture en place se
  * verrait aussi bien sur une petite grille, et la taille normale portait le
  * coût de cet essai à trois minutes et demie — assez pour faire déborder le
- * hook. Ce qui compte ici est d'ATTEINDRE chaque chemin de travail, pas de
+ * hook. Ce qui compte ici est d'**atteindre** chaque chemin de travail, pas de
  * simuler un peuplement crédible.
  */
 const COTE_M = 40;
@@ -158,7 +158,7 @@ beforeAll(() => {
     .slice(0, 4)
     .map((t) => t.id);
 
-  // Une parcelle NUE : l'engin y manœuvre (labourer), et le labour ouvre le
+  // Une parcelle **nue** : l'engin y manœuvre (labourer), et le labour ouvre le
   // sol assez pour qu'un semis prenne place.
   const nu = parcelle(LIMON_RICHE, [], 3);
   const cn = nu.station.coteM / 2;
@@ -181,7 +181,7 @@ beforeAll(() => {
   }).state;
   const mur = avance(seme, 30, meteo);
 
-  // Un fourré VOULU, plutôt que l'endroit où le semis dispersé est tombé :
+  // Un fourré **voulu**, plutôt que l'endroit où le semis dispersé est tombé :
   // vingt-cinq tiges à 1,3 m, sous les 2,2 m de large de l'engin, donc aucun
   // couloir dans aucune direction. Un premier jet mettait ce cas au milieu de
   // la parcelle boisée ; sur une parcelle réduite l'engin s'y est mis à passer,

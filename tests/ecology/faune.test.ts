@@ -1,5 +1,5 @@
 /**
- * LA FAUNE EN INDIVIDUS (issue #187, lots 1 et 2).
+ * **La faune en individus** (issue #187, lots 1 et 2).
  *
  * Le moteur n'avait que des grandeurs : une densité de paysage pour le gibier,
  * une population anonyme pour les ravageurs, et rien du tout pour les
@@ -25,7 +25,7 @@
  *   5. **un gîte parfait dans un désert reste vide**, et le manque ne compte
  *      qu'à hauteur de ce que la parcelle pèse dans le territoire — un demi-
  *      hectare peut affamer une mésange, jamais une buse ;
- *   6. **et la table PAIE** : une haie de vieux arbres ne nourrit pas ce qu'un
+ *   6. **et la table paie** : une haie de vieux arbres ne nourrit pas ce qu'un
  *      bois nourrit. Un mécanisme qui ne change rien sur une partie réelle
  *      serait un paramètre, pas un mécanisme.
  */
@@ -78,10 +78,10 @@ function arbre(id: number, x: number, y: number, diametreCm: number, partRayon: 
 const SEMAINE_MESANGES = 13;
 
 /**
- * L'aire de parcelle des essais d'ÉLIGIBILITÉ, m² — deux cents hectares.
+ * L'aire de parcelle des essais d'**éligibilité**, m² — deux cents hectares.
  *
- * Deux règles se superposent dans `installations` : QUI peut loger là (le
- * gîte), et À QUELLE FRÉQUENCE le territoire de l'espèce tombe sur la parcelle
+ * Deux règles se superposent dans `installations` : **qui** peut loger là (le
+ * gîte), et **à quelle fréquence** le territoire de l'espèce tombe sur la parcelle
  * (la rareté). Les mélanger rendrait chaque essai illisible — une buse absente
  * ne dirait pas si c'est la fourche qui manquait ou la chance. On isole donc :
  * les essais de gîte se placent sur une parcelle plus grande que le plus grand
@@ -93,7 +93,7 @@ const GRANDE_PARCELLE_M2 = 2_000_000;
 const DIMS: GridDims = { widthM: 200, heightM: 200 };
 
 /**
- * Une table PLEINE, pour la même raison que la grande parcelle : isoler.
+ * Une table **pleine**, pour la même raison que la grande parcelle : isoler.
  *
  * Trois règles se superposent maintenant dans `installations` — le gîte, la
  * rareté du territoire, et la table. Les mélanger rendrait chaque essai muet :
@@ -105,7 +105,7 @@ const TABLE_PLEINE: TableDeLaParcelle = {
   micromammiferes: new Array(DIMS.widthM * DIMS.heightM).fill(1000),
 };
 
-/** Et une table VIDE, pour l'essai qui la regarde. */
+/** Et une table **vide**, pour l'essai qui la regarde. */
 const TABLE_VIDE: TableDeLaParcelle = {
   invertebres: new Array(DIMS.widthM * DIMS.heightM).fill(0),
   micromammiferes: new Array(DIMS.widthM * DIMS.heightM).fill(0),
@@ -119,7 +119,7 @@ function partie(faune: boolean, arbres = 25): { hash: number; state: GameState }
   if (!serie) throw new Error("série manquante");
   const meteo = serieToWeeks(serie);
   // Une vieille futaie claire : vingt-cinq chênes de dix-huit mètres. On les
-  // plante à cette taille et on en CREUSE un sur trois à la main, plutôt que
+  // plante à cette taille et on en **creuse** un sur trois à la main, plutôt que
   // d'attendre le siècle de coups de vent qui les creuserait pour de vrai :
   // ce qu'on éprouve ici est l'installation, pas la carie, et `carie.test.ts`
   // tient déjà l'autre bout de la chaîne.
@@ -151,7 +151,7 @@ function partie(faune: boolean, arbres = 25): { hash: number; state: GameState }
 describe("le gîte trie les espèces, et rien dans le code ne les connaît", () => {
   it("un arbre sain ne loge aucun cavernicole, quelle que soit sa taille", () => {
     // Le point de départ, et il n'est pas décoratif : ce qui fait un
-    // arbre-habitat n'est pas l'âge ni le diamètre, c'est le CREUX. Un chêne
+    // arbre-habitat n'est pas l'âge ni le diamètre, c'est le **creux**. Un chêne
     // d'un mètre jamais blessé n'offre pas une loge (`cavites.ts`, #182).
     const sain = arbre(1, 50, 50, 100, 0);
     expect(volumeCaviteTotalL(sain)).toBe(0);
@@ -188,12 +188,12 @@ describe("le gîte trie les espèces, et rien dans le code ne les connaît", () 
   });
 
   it("un gîte CONSTRUIT ne se juge pas comme un creux : il lui faut un support", () => {
-    // L'écureuil et la buse bâtissent DANS la ramure. Un arbre creux mais grêle
+    // L'écureuil et la buse bâtissent **dans** la ramure. Un arbre creux mais grêle
     // ne leur sert à rien, un gros arbre sain leur suffit — c'est exactement
     // l'inverse du cavernicole, et c'est le même code qui le rend.
     //
     // **On compte sur quarante arbres, pas sur un.** Une installation est un
-    // TIRAGE : à un seul essai, ce qu'on mesure est la graine, pas le
+    // **tirage** : à un seul essai, ce qu'on mesure est la graine, pas le
     // mécanisme, et l'écureuil qui ne vient pas ne prouve rien. C'est la mise
     // en garde de l'issue, et elle vaut ici au mot près.
     const essais = (fabrique: (id: number) => TreeState, semaine: number, especeId: string) => {
@@ -298,7 +298,7 @@ describe("un grand domaine vital rend l'installation RARE, pas impossible", () =
   it("la chance qu'une buse choisisse votre parcelle suit la part de son territoire", () => {
     // Le prolongement de « ce qui s'ancre contre ce qui traverse », et la règle
     // sans laquelle le modèle devient absurde : un couple de buses occupe seul
-    // cent cinquante hectares, donc la chance que SON aire tombe sur un demi-
+    // cent cinquante hectares, donc la chance que **son** aire tombe sur un demi-
     // hectare n'est pas celle d'un couple de mésanges, dont le territoire tient
     // tout entier chez vous.
     //
@@ -322,8 +322,8 @@ describe("un grand domaine vital rend l'installation RARE, pas impossible", () =
     const CENT_CINQUANTE_HA = 1_500_000;
 
     // La buse : quasi jamais sur un demi-hectare, ordinaire sur un domaine à sa
-    // mesure. Sans ce facteur, une parcelle de jardin abritait une buse À COUP
-    // SÛR en dix ans — soit, ramené à l'hectare, cent fois le terrain.
+    // mesure. Sans ce facteur, une parcelle de jardin abritait une buse **à coup**
+    // **sûr** en dix ans — soit, ramené à l'hectare, cent fois le terrain.
     const buseChezVous = essais(DEMI_HECTARE, "buse_variable", 8);
     const buseSurUnDomaine = essais(CENT_CINQUANTE_HA, "buse_variable", 8);
     expect(buseChezVous).toBeLessThanOrEqual(2);
@@ -396,12 +396,12 @@ describe("l'arbre qui disparaît expulse quelqu'un de nommé", () => {
 
 describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
   it("éteinte, la faune n'existe pas — et c'est ÇA, le contrôle du lot 3", () => {
-    // **CET ESSAI AFFIRMAIT LE CONTRAIRE, ET IL AVAIT RAISON JUSQU'AU LOT 3.**
-    // Aux lots 1 et 2, allumer la faune ne déplaçait AUCUNE partie : les
+    // **cet essai affirmait le contraire, et il avait raison jusqu'au lot 3.**
+    // Aux lots 1 et 2, allumer la faune ne déplaçait **aucune** partie : les
     // individus s'installaient, partaient, se nourrissaient, et le peuplement
     // d'arbres était le même au bit près. C'était la preuve qu'ils ne coûtaient
-    // rien — et aussi l'aveu qu'ils ne FAISAIENT rien. Le lot 3 est
-    // exactement celui qui les fait payer (#187), donc il DOIT casser cette
+    // rien — et aussi l'aveu qu'ils ne **faisaient** rien. Le lot 3 est
+    // exactement celui qui les fait payer (#187), donc il **doit** casser cette
     // égalité : un auxiliaire qui mange des chenilles change la parcelle.
     //
     // Ce qui reste, et qui est le vrai contrôle F16 : **éteinte, la faune
@@ -430,7 +430,7 @@ describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
     //
     // Sur 4 ha, même conduite : 38 individus, dont 10 mésanges bleues
     // (2,5/ha — le terrain donne 1 à 2 en chênaie), 13 loirs (3,3/ha, pour 2 à
-    // 10 publiés), 4 écureuils (1/ha, pour 0,5 à 1,5) et UNE buse. Les ordres de
+    // 10 publiés), 4 écureuils (1/ha, pour 0,5 à 1,5) et **une** buse. Les ordres de
     // grandeur sont les bons, et aucun n'a été calé : ils tombent du gîte et du
     // territoire.
     const { state } = partie(true);
@@ -472,7 +472,7 @@ describe("un gîte ne suffit pas : il faut une table (lot 2)", () => {
   it("et une espèce SANS table est jugée sur son seul gîte", () => {
     // L'écureuil et le loir n'ont pas de table, parce que leur nourriture
     // n'existe pas dans ce moteur : le bloc `fruits` de l'atlas décrit une
-    // RÉCOLTE de verger, et un peuplement mûr de chênes rend `fruitsKg = 0`
+    // **récolte** de verger, et un peuplement mûr de chênes rend `fruitsKg = 0`
     // toute l'année. Les brancher dessus les aurait fait manger le verger et
     // jamais les chênes. Ils restent donc au régime du lot 1, et l'essai
     // épingle ce choix plutôt que de le laisser passer pour un oubli.
@@ -498,7 +498,7 @@ describe("un gîte ne suffit pas : il faut une table (lot 2)", () => {
 
 describe("le manque ne compte qu'à hauteur de ce que la parcelle pèse", () => {
   it("un demi-hectare peut affamer une mésange, jamais une buse", () => {
-    // **LE POINT QUI ÉVITE L'ABSURDE**, et il se règle avec une notion déjà
+    // **le point qui évite l'absurde**, et il se règle avec une notion déjà
     // écrite pour la rareté. Une mésange a son hectare chez vous : votre herbe
     // et vos chenilles décident de son sort. Une buse chasse sur cent cinquante
     // hectares dont vous n'êtes que quatre millièmes : ce que vous faites ne
@@ -507,7 +507,7 @@ describe("le manque ne compte qu'à hauteur de ce que la parcelle pèse", () => 
     const buse = especeFaune("buse_variable");
     if (!mesange?.table || !buse?.table) throw new Error("fiches manquantes");
     const DEMI_HECTARE = 5_000;
-    // Offre nulle des deux côtés : c'est le POIDS de la parcelle qui décide.
+    // Offre nulle des deux côtés : c'est le **poids** de la parcelle qui décide.
     expect(satisfaction(mesange, 0, DEMI_HECTARE)).toBeLessThan(0.6);
     expect(satisfaction(buse, 0, DEMI_HECTARE)).toBeGreaterThan(0.99);
     // Et sur un domaine à sa mesure, la buse redevient sensible.
@@ -570,7 +570,7 @@ describe("une mauvaise année est un avertissement, deux sont une décision", ()
 
   it("hors de la semaine de bilan, rien ne se passe et rien ne s'alloue", () => {
     // Le bilan dort cinquante semaines sur cinquante-deux, comme
-    // l'installation. Rendre le MÊME tableau plutôt qu'une copie n'est pas une
+    // l'installation. Rendre le **même** tableau plutôt qu'une copie n'est pas une
     // coquetterie : c'est ce qui rend le mécanisme gratuit le reste du temps.
     const avant = [installee()];
     const r = bilanDeTable(avant, DIMS, TABLE_VIDE, SEMAINE_BILAN_MESANGE + 1, 5_000);
@@ -581,17 +581,17 @@ describe("une mauvaise année est un avertissement, deux sont une décision", ()
 
 describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => {
   it("le même gîte, le même sol, trois arbres au lieu de vingt-cinq", () => {
-    // **L'ESSAI QUI DIT SI LE MÉCANISME SERT À QUELQUE CHOSE.** Un mécanisme
+    // **l'essai qui dit si le mécanisme sert à quelque chose.** Un mécanisme
     // qui ne change rien sur une partie réelle n'est pas un mécanisme, c'est un
     // paramètre. Deux parcelles, même station, même graine, même conduite, même
-    // proportion d'arbres creusés : seul leur NOMBRE change.
+    // proportion d'arbres creusés : seul leur **nombre** change.
     //
     // Relevé sur trente ans, trois graines :
     //
-    //     25 chênes creusés   7 / 7 / 10 individus   AUCUN départ par la faim
+    //     25 chênes creusés   7 / 7 / 10 individus   **aucun** départ par la faim
     //      3 chênes creusés   4 / 4 /  5 individus   3 départs sur deux graines
     //
-    // Et c'est le PIC ÉPEICHE qui disparaît le premier, ce qui est le bon
+    // Et c'est le **pic épeiche** qui disparaît le premier, ce qui est le bon
     // ordre : c'est lui dont le territoire est le plus grand, donc celui qui
     // moyenne le plus de vide. Une mésange se contente d'un hectare, un pic en
     // demande sept — trois arbres ne les nourrissent pas de la même façon.
@@ -608,7 +608,7 @@ describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => 
 });
 
 describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
-  // Même peuplement, même bois mort, même herbe. La SEULE différence est ce
+  // Même peuplement, même bois mort, même herbe. La **seule** différence est ce
   // qu'on passe à `carteBiotique` : rien (le proxy d'avant) ou la liste de qui
   // est effectivement installé.
   const DIMS: GridDims = { widthM: 60, heightM: 60 };
@@ -631,8 +631,8 @@ describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
   });
 
   it("des cavités PLEINES de creux mais VIDES d'oiseaux ne valent plus un habitat", () => {
-    // **L'ÉNONCÉ DU LOT, ET IL TIENT EN UNE LIGNE : une cavité vide ne mange
-    // pas de pucerons.** Le proxy créditait le POTENTIEL comme s'il était
+    // **l'énoncé du lot, et il tient en une ligne : une cavité vide ne mange
+    // pas de pucerons.** Le proxy créditait le **potentiel** comme s'il était
     // réalisé — il suffisait d'avoir de quoi loger. Les individus exigent que
     // quelqu'un soit logé, ce qui suppose en plus que la table nourrisse
     // (lot 2). Le nouveau terme contient donc l'ancien et lui ajoute la
@@ -644,10 +644,10 @@ describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
   });
 
   it("et trois insectivores installés rendent ce que les creux promettaient", () => {
-    // Le terme SATURE à trois territoires superposés (`AUXILIAIRES_SUFFISANTS`),
+    // Le terme **sature** à trois territoires superposés (`AUXILIAIRES_SUFFISANTS`),
     // et les creux saturaient déjà leur propre terme : les deux lectures
     // coïncident donc quand la promesse est tenue. C'est ce qui garantit que le
-    // lot ne DÉPLACE pas le niveau de l'habitat, il en change la CAUSE.
+    // lot ne **déplace** pas le niveau de l'habitat, il en change la **cause**.
     const trois = couvertureAuxiliaires(
       [mesange(1, 30, 30), mesange(2, 30, 30), mesange(3, 30, 30)],
       DIMS,
@@ -660,7 +660,7 @@ describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
 
   it("l'auxiliaire ne sert que là où il chasse : son territoire, pas la parcelle", () => {
     // Une mésange bleue tient 56 m autour de son gîte. Au-delà, elle ne mange
-    // rien — et c'est la raison d'être du mode PAR CELLULE : un gradient à
+    // rien — et c'est la raison d'être du mode **par cellule** : un gradient à
     // l'intérieur de la parcelle, que jamais un scalaire n'aurait donné.
     const couverture = couvertureAuxiliaires([mesange(1, 5, 5)], DIMS);
     expect(couverture[5 * DIMS.widthM + 5] ?? 0).toBe(1);
@@ -679,7 +679,7 @@ describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
     ];
     const couverture = couvertureAuxiliaires(autres, DIMS);
     expect(couverture[30 * DIMS.widthM + 30] ?? 0).toBe(0);
-    // Le même trio avec UNE mésange en plus : elle seule compte.
+    // Le même trio avec **une** mésange en plus : elle seule compte.
     const avecMesange = couvertureAuxiliaires([...autres, mesange(4, 30, 30)], DIMS);
     expect(avecMesange[30 * DIMS.widthM + 30] ?? 0).toBe(1);
   });

@@ -32,7 +32,7 @@ export const CHATAIGNIER: FicheGraphique = {
     automne: { r: 186, g: 146, b: 66 },
   },
   fruit: {
-    // La BOGUE, et non la châtaigne : ce qu'on voit sur l'arbre est une sphère
+    // La **bogue**, et non la châtaigne : ce qu'on voit sur l'arbre est une sphère
     // vert clair hérissée d'épines, grosse comme une balle. La châtaigne
     // elle-même n'apparaît qu'au sol, une fois la bogue ouverte.
     forme: "bogue",

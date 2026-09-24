@@ -76,7 +76,7 @@ describe("journal d'actions — la sauvegarde rejouable", () => {
 
 describe("plafonds économiques (déterministes)", () => {
   /**
-   * LE PLAFOND HORAIRE NE REFUSE PLUS, IL SE COMPTE (#133).
+   * **Le plafond horaire ne refuse plus**, **il se compte** (#133).
    *
    * Il refusait, à quinze endroits, et le joueur découvrait au clic qu'il ne
    * pouvait pas — sans savoir de combien il dépassait ni ce que ça coûterait de
@@ -100,7 +100,7 @@ describe("plafonds économiques (déterministes)", () => {
       ],
     };
     const { state, refusals } = runJournal(STATION, journal, WEATHER, 2);
-    // Tout est planté, et rien n'est refusé POUR CETTE RAISON-LÀ.
+    // Tout est planté, et rien n'est refusé **pour cette raison-là**.
     expect(state.trees).toHaveLength(demandes);
     expect(refusals.filter((r) => r.reason.includes("plafond hebdomadaire"))).toEqual([]);
   });
@@ -192,7 +192,7 @@ describe("plafonds économiques (déterministes)", () => {
       devenir: "vendre",
     });
     // Le prix n'est plus fixe : l'indice de l'année s'y applique (marche.ts).
-    // On vérifie la RELATION plutôt qu'un nombre — épingler le montant exact
+    // On vérifie la **relation** plutôt qu'un nombre — épingler le montant exact
     // reviendrait à réécrire ici la formule du marché, et l'essai ne
     // prouverait plus que lui-même.
     const marche = indiceDuMarche(state.graineMarche, 0);
@@ -206,7 +206,7 @@ describe("plafonds économiques (déterministes)", () => {
 });
 
 /**
- * Les retours de geste : quels arbres l'action a RÉELLEMENT touchés.
+ * Les retours de geste : quels arbres l'action a **réellement** touchés.
  *
  * Sans eux, le rendu reçoit un instantané avec un arbre en moins et n'a aucun
  * moyen de savoir lequel : l'arbre s'escamote au lieu de tomber.
@@ -301,7 +301,7 @@ describe("ce que l'action rapporte au rendu", () => {
   });
 
   /**
-   * LES TROIS GESTES QUI NE SE DISAIENT PAS (#100). `planter`, `recolter` et
+   * **Les trois gestes qui ne se disaient pas** (#100). `planter`, `recolter` et
    * `leverEcorce` s'appliquaient sans rien rapporter : le journal de la semaine
    * les taisait et le rendu n'avait aucun événement où accrocher une
    * animation. Un état n'y suppléait pas, et chacun pour une raison propre —
@@ -318,7 +318,7 @@ describe("ce que l'action rapporte au rendu", () => {
       week: 0,
       especeId: "quercus_pubescens",
       // La deuxième position est à moins d'un mètre du frêne déjà là : elle est
-      // refusée, et elle ne doit donc PAS s'animer. La troisième est hors
+      // refusée, et elle ne doit donc **pas** s'animer. La troisième est hors
       // parcelle. Un geste qui annoncerait trois plants en poserait un de trop.
       positions: [
         { x: 30, y: 30 },
@@ -346,22 +346,22 @@ describe("ce que l'action rapporte au rendu", () => {
     const r = applyAction(state, { type: "recolter", week: 40, treeIds: [1, 2] });
     const geste = (r.gestes ?? []).filter(estGesteSurArbres).find((g) => g.type === "recolter");
     expect(geste?.ids).toEqual([1]);
-    // La MASSE, et pas seulement l'identifiant : sans elle le rendu sait que
+    // La **masse**, et pas seulement l'identifiant : sans elle le rendu sait que
     // quelque chose est parti, pas combien en faire partir.
     expect(geste?.masseKg).toEqual([12]);
     expect(r.state.trees.find((t) => t.id === 1)?.fruitsKg).toBe(0);
   });
 
   /**
-   * LES DEUX MOITIÉS DU §6.2 (#124). Chacun de ces deux gestes touche les DEUX
+   * **Les deux moitiés du** §6.2 (#124). Chacun de ces deux gestes touche les **deux**
    * mailles — des arbres et du sol — et #100 n'avait livré que la première,
    * en refusant d'inventer une maille de terre retournée.
    *
    * Ce refus portait sur la bonne chose et pas sur la bonne question. Le moteur
    * ne retourne effectivement aucune terre en plantant : aucun état de sol ne
-   * bouge. Mais un geste de ZONE dit « ces cellules ont été touchées », pas
+   * bouge. Mais un geste de **zone** dit « ces cellules ont été touchées », pas
    * « leur sol a changé » — `ramasserBoisMort` le dit déjà sans rien changer au
-   * sol non plus. Et il n'y a aucun rayon à deviner : la cellule du plant EST
+   * sol non plus. Et il n'y a aucun rayon à deviner : la cellule du plant **est**
    * l'emprise, un mètre carré étant l'ordre de grandeur d'un potet.
    */
   function cellulesDe(r: ReturnType<typeof applyAction>, type: string): readonly number[] {
@@ -408,7 +408,7 @@ describe("ce que l'action rapporte au rendu", () => {
   it("et le sol n'a pourtant PAS changé : le geste dit où, pas quoi", () => {
     // La distinction qui a fait refuser ce geste une première fois. Le moteur
     // ne modélise aucun travail du sol à la plantation ; que cette terre
-    // ouverte ait des SUITES — lit de germination, tassement — serait un
+    // ouverte ait des **suites** — lit de germination, tassement — serait un
     // mécanisme, donc une évolution, pas cette issue.
     const state = createGameState(STATION, rngStateFromSeed(4));
     const r = applyAction(state, {
@@ -429,7 +429,7 @@ describe("ce que l'action rapporte au rendu", () => {
     state = { ...state, trees: state.trees.map((t) => ({ ...t, ageWeeks: 30 * 52 })) };
     const r = applyAction(state, { type: "leverEcorce", week: 30 * 52, treeIds: [1] });
     expect(cellulesDe(r, "leverEcorce")).toEqual([30 * STATION.coteM + 20]);
-    // `masseKg` dit COMBIEN de planches, la cellule dit OÙ.
+    // `masseKg` dit **combien** de planches, la cellule dit **où**.
     const surArbres = (r.gestes ?? [])
       .filter(estGesteSurArbres)
       .find((g) => g.type === "leverEcorce");
@@ -447,7 +447,7 @@ describe("ce que l'action rapporte au rendu", () => {
     expect(geste?.ids).toEqual([1]);
     expect(geste?.masseKg?.[0]).toBeGreaterThan(0);
 
-    // ET C'EST TOUT L'OBJET : trois ans plus tard l'arbre porte toujours la
+    // **Et c'est tout l'objet** : trois ans plus tard l'arbre porte toujours la
     // marque (`derniereLeveeSemaine` est renseignée), mais le geste n'a pas
     // lieu — il est refusé. Une durée ne sait pas dire « à l'instant ».
     const tropTot = applyAction(premier.state, {
@@ -462,7 +462,7 @@ describe("ce que l'action rapporte au rendu", () => {
 });
 
 /**
- * Ce que le geste RETIRE. `ids` seul ne suffisait pas : `applyCouper` fait un
+ * Ce que le geste **retire**. `ids` seul ne suffisait pas : `applyCouper` fait un
  * `trees.splice`, donc l'arbre coupé a quitté `state.trees` quand le rendu
  * reçoit son identifiant — il n'a plus ni sa position, ni son espèce, ni sa
  * hauteur pour l'animer. D'où un enregistrement complet (issue #37).
@@ -537,7 +537,7 @@ describe("ce que le geste retire, et non seulement à qui", () => {
     for (const d of directions) expect(d).toBeDefined();
     expect(new Set(directions).size).toBe(1);
 
-    // Et c'est bien l'orientation EN TRAVERS de la pente, celle que le moteur
+    // Et c'est bien l'orientation **en travers** de la pente, celle que le moteur
     // applique déjà au bois qu'on laisse au sol (boisMort.ts).
     const dims = { widthM: PENTE.coteM, heightM: PENTE.coteM };
     const { radians: aval } = versLAval(altitudeParCellule(PENTE.relief, dims), dims, 10, 10);
@@ -699,7 +699,7 @@ describe("ramasser le bois mort couché", () => {
 });
 
 /**
- * Les gestes de ZONE. `GesteVisible` ne savait désigner que des arbres
+ * Les gestes de **zone**. `GesteVisible` ne savait désigner que des arbres
  * nommés : toutes les actions de sol étaient donc muettes pour le rendu, et
  * un tronc ramassé disparaissait d'une image à l'autre — indiscernable de sa
  * décomposition, qui est un tout autre phénomène et bien plus lente.
@@ -764,7 +764,7 @@ describe("les gestes qui n'ont pas d'arbre pour cible", () => {
       y: 10.5,
       rayonM: 3,
     });
-    // Seule la cellule qui PORTAIT du bois : les voisines vides n'ont rien
+    // Seule la cellule qui **portait** du bois : les voisines vides n'ont rien
     // perdu, et le rendu n'a pas à les animer.
     expect(cellulesDe(r, "ramasserBoisMort")).toEqual([10 * cote + 10]);
     expect(r.state.soil.boisAuSolCG[10 * cote + 10]).toBe(0);

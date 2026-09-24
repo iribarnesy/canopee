@@ -25,9 +25,9 @@ import { tick } from "../../src/engine/tick";
  * moteur se contredisait d'un facteur quatorze.
  *
  * Deux grandeurs distinctes le corrigent, et ce n'est pas la même question :
- * l'exclusion d'un potet se cale sur ce que l'essence peut DEVENIR (un semis de
+ * l'exclusion d'un potet se cale sur ce que l'essence peut **devenir** (un semis de
  * chêne bloque, une ronce adulte non), le prix du geste sur ce que l'individu
- * EST aujourd'hui (un brin de 4 cm se couche, un fût de 40 s'abat).
+ * **est** aujourd'hui (un brin de 4 cm se couche, un fût de 40 s'abat).
  */
 
 const meteo = syntheticYear(FRICHE_LIMON.climat);
@@ -71,7 +71,7 @@ describe("la brousse n'est pas un arbre", () => {
     // débroussaille. Un chêne en sera un, même haut de trente centimètres.
     expect(rayonEncombrement("rubus_fruticosus")).toBeLessThan(0.4);
     expect(rayonEncombrement("calluna_vulgaris")).toBeLessThan(0.1);
-    // TÉMOIN : tout ce qui est un arbre garde EXACTEMENT l'ancienne exclusion.
+    // **Témoin** : tout ce qui est un arbre garde **exactement** l'ancienne exclusion.
     // L'atlas est vide entre 8 et 20 m, donc le lot ne déplace que la strate
     // basse — si ce test tombe, c'est une essence qu'on vient de déclasser.
     for (const id of [
@@ -145,7 +145,7 @@ describe("la brousse n'est pas un arbre", () => {
     expect(commeDesArbres).toBeGreaterThan(10 * ancre);
     // La nouvelle tient dans le même ordre de grandeur que l'ancre. Pas à
     // l'unité près : la friche porte des ronces plus grosses que la moyenne, et
-    // caler le seuil POUR tomber sur 60 reviendrait à enregistrer le moteur.
+    // caler le seuil **pour** tomber sur 60 reviendrait à enregistrer le moteur.
     expect(reel).toBeLessThan(2 * ancre);
     expect(reel).toBeGreaterThan(ancre / 3);
   });
@@ -212,13 +212,13 @@ describe("la brousse n'est pas un arbre", () => {
         especeId: "quercus_pubescens",
         positions: libres,
       });
-      // Les identifiants que l'ACTION rend : une friche régénère toute seule, et
+      // Les identifiants que l'**action** rend : une friche régénère toute seule, et
       // compter « ce qui est apparu depuis » mesurait la recolonisation.
       const geste = (r.gestes ?? []).find((g) => g.type === "planter" && "ids" in g);
       const poses = new Set(geste && "ids" in geste ? geste.ids : []);
       expect(poses.size).toBe(libres.length);
       const apres = avance(r.state, 15 * 52);
-      // Dénominateur = les plants POSÉS : un arbre mort finit par être retiré du
+      // Dénominateur = les plants **posés** : un arbre mort finit par être retiré du
       // tableau, donc compter les présents faisait disparaître les morts.
       survie.push(apres.trees.filter((t) => poses.has(t.id) && t.alive).length / poses.size);
     }

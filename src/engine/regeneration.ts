@@ -2,7 +2,7 @@
  * Régénération naturelle (docs/regles.md §8, ch4-B) : une fois par an, les
  * adultes en âge de grainer et le paysage voisin (`station.voisinage`)
  * produisent des semis. Tous les tirages passent par le PRNG seedé.
- * `semisParAn` représente les établissements POTENTIELS (après l'entonnoir de
+ * `semisParAn` représente les établissements **potentiels** (après l'entonnoir de
  * mortalité graine→semis, ch4-B) ; le filtre restant est écologique :
  * - lumière au sol ≥ 2 × le point de compensation de l'espèce (un héliophile
  *   ne s'installe pas sous couvert, un sciaphile si) ;
@@ -28,12 +28,12 @@ import { diametreInitialCm, phFactor, type TreeState, tirerVigueurIndividuelle }
 /** distance moyenne de dispersion par le vent, m (exponentielle) */
 const WIND_MEAN_DISTANCE_M = 25;
 /**
- * Plafond d'auto-éclaircie, exprimé en RECOUVREMENT et non en nombre de tiges.
+ * Plafond d'auto-éclaircie, exprimé en **recouvrement** et non en nombre de tiges.
  *
  * Un plafond fixe — on avait 1 500 tiges/ha — est faux aux deux bouts : un
  * fourré de ronces et d'épineux en compte plusieurs milliers, une futaie
  * adulte quelques centaines. Ce qui sature un peuplement, ce n'est pas un
- * nombre, c'est la PLACE : la somme des couronnes rapportée à la surface du
+ * nombre, c'est la **place** : la somme des couronnes rapportée à la surface du
  * sol. Un peuplement stratifié en superpose deux à trois épaisseurs — au-delà,
  * il ne reste plus assez de lumière pour qu'un semis de plus s'installe.
  *
@@ -42,36 +42,36 @@ const WIND_MEAN_DISTANCE_M = 25;
  * elles font trente centimètres, et quelques centaines quand elles font vingt
  * mètres, sans qu'on ait à choisir un chiffre pour chaque étape.
  *
- * ET LA VALEUR N'A PAS BOUGÉ EN DEVENANT LOCALE (#95), ce qui n'allait pas de
+ * **Et la valeur n'a pas bougé en devenant locale** (#95), ce qui n'allait pas de
  * soi : l'issue prévoyait qu'un plafond local demanderait une autre valeur. La
  * mesure dit le contraire, et c'est une propriété de la grandeur elle-même. Le
- * recouvrement local MOYEN d'un peuplement homogène égale son recouvrement
+ * recouvrement local **moyen** d'un peuplement homogène égale son recouvrement
  * global — mesuré sur quatre peuplements, 6,79 contre 6,32, 7,69 contre 7,72,
  * 2,19 contre 2,14, 0,96 contre 1,02. Une moyenne de parts vaut la part de la
- * somme ; ce que la portée change n'est pas le niveau, c'est la VARIANCE. Le
+ * somme ; ce que la portée change n'est pas le niveau, c'est la **variance**. Le
  * plafond continue donc de dire la même chose des peuplements homogènes, et ne
  * dit autre chose que là où le peuplement ne l'est pas — ce qui est exactement
  * ce qu'on voulait corriger.
  */
 const RECOUVREMENT_MAX = 2.5;
 /**
- * Le rayon où la place se dispute, m — l'emprise d'UN houppier adulte.
+ * Le rayon où la place se dispute, m — l'emprise d'**un** houppier adulte.
  *
- * Le plafond était PARCELLAIRE : tant que la somme des couronnes dépassait
+ * Le plafond était **parcellaire** : tant que la somme des couronnes dépassait
  * 2,5 fois la surface, plus aucun semis ne s'installait nulle part, y compris
  * sous une ouverture en pleine lumière. Une futaie dense qui perd un bouquet
  * d'arbres doit régénérer dans son ouverture, quelle que soit la densité du
  * reste (#95).
  *
- * SIX MÈTRES, ET LE CHOIX SE MESURE. Un houppier de hêtre adulte fait sept
+ * **Six mètres**, **et le choix se mesure**. Un houppier de hêtre adulte fait sept
  * mètres de rayon, un de quinze mètres de haut en fait cinq : le disque de six
- * mètres est l'ordre de grandeur de la place qu'UNE couronne prendra, donc de
+ * mètres est l'ordre de grandeur de la place qu'**une** couronne prendra, donc de
  * ce qu'un semis dispute vraiment. Balayé de trois à huit mètres sur une
  * hêtraie serrée de quinze mètres, le recouvrement au centre d'une trouée de
  * huit mètres vaut 0,00 / 0,14 / 0,51 / 0,99 / 1,98 : au-delà de six, le
  * voisinage recommence à voir la matrice et l'ouverture s'efface — à douze
  * mètres, la maille des paniers de `light.ts`, il n'en reste presque rien
- * (1,21 contre 1,02 pour la matrice). La maille de douze mètres reste l'INDEX ;
+ * (1,21 contre 1,02 pour la matrice). La maille de douze mètres reste l'**index** ;
  * elle ne peut pas être la portée *(à calibrer)*.
  */
 const RAYON_VOISINAGE_M = 6;
@@ -79,11 +79,11 @@ const RAYON_VOISINAGE_M = 6;
 const PANIER_M = 12;
 const MIN_SPACING_M = 1.2;
 /**
- * Taille d'un semis qui vient de s'installer, m — PLAFOND, pas valeur fixe.
+ * Taille d'un semis qui vient de s'installer, m — **plafond**, pas valeur fixe.
  *
  * Trente centimètres conviennent à un chêne, dont le gland porte assez de
  * réserves pour ça. Ils ne conviennent pas à la callune, dont l'adulte plafonne
- * à SOIXANTE centimètres : elle naissait à la moitié de sa taille finale et
+ * à **soixante** centimètres : elle naissait à la moitié de sa taille finale et
  * sautait entièrement sa phase pionnière — celle qui dure des années dans la
  * nature, et pendant laquelle elle est vulnérable au broutage, à la concurrence
  * herbacée et au piétinement. Le défaut touchait tous les sous-arbrisseaux de
@@ -94,12 +94,12 @@ const SEEDLING_HEIGHT_MAX_M = 0.3;
 /**
  * Part de la hauteur adulte qu'un semis atteint à l'installation.
  *
- * On passe par la taille ADULTE faute de mieux. Ce qui détermine vraiment la
- * taille d'une plantule, c'est la réserve de la GRAINE : un gland fait un semis
+ * On passe par la taille **adulte** faute de mieux. Ce qui détermine vraiment la
+ * taille d'une plantule, c'est la réserve de la **graine** : un gland fait un semis
  * de vingt centimètres, une graine de callune — qui est une poussière — fait
  * une plantule de quelques millimètres. Or la taille des graines n'est pas dans
  * l'atlas, et elle suit grossièrement celle de la plante. C'est donc une
- * approximation, mais elle corrige le SENS de l'erreur *(à calibrer)*.
+ * approximation, mais elle corrige le **sens** de l'erreur *(à calibrer)*.
  *
  * Le plafond joue dès trois mètres de hauteur adulte, c'est-à-dire pour tous
  * les arbres : eux ne changent pas d'un centimètre.
@@ -135,7 +135,7 @@ export interface RecruitmentInput {
   /** La parcelle a-t-elle brûlé depuis la dernière levée ? Le feu scarifie. */
   aBrule?: boolean;
   /**
-   * Ce que vaut la glandée SURVIVANTE de l'année, par espèce, rapporté à une
+   * Ce que vaut la glandée **survivante** de l'année, par espèce, rapporté à une
    * année moyenne dont rien n'aurait été mangé (`glandee.ts`).
    *
    * Remplace l'ancienne `partGlandeeRestante`, qui était une part ∈ [0,1] de
@@ -146,7 +146,7 @@ export interface RecruitmentInput {
   glandeeRelative?: Readonly<Record<string, number>>;
   /**
    * Part de la parcelle retournée par les sangliers dans l'année ∈ [0,1]. Un
-   * boutis déchire le tapis et enfouit la litière : il OUVRE un lit de
+   * boutis déchire le tapis et enfouit la litière : il **ouvre** un lit de
    * germination, ce dont profitent les petites graines — l'exact contraire de
    * ce que la même bête fait aux glands.
    */
@@ -161,7 +161,7 @@ export interface RecruitmentResult {
 }
 
 /**
- * Combien d'ÉTABLISSEMENTS pour une graine levée de la banque.
+ * Combien d'**établissements** pour une graine levée de la banque.
  *
  * Le rapport est écrasant, et il doit l'être : sous une lande installée, la
  * banque d'ajoncs compte des centaines de graines par m², et un feu en fait
@@ -169,7 +169,7 @@ export interface RecruitmentResult {
  * hectare — dont l'immense majorité meurt dans l'année, et dont ce moteur, qui
  * suit ses ligneux un par un, ne peut de toute façon pas tenir le compte.
  *
- * La valeur est donc CALÉE sur l'échelle de représentation du moteur, pas sur
+ * La valeur est donc **calée** sur l'échelle de représentation du moteur, pas sur
  * la démographie réelle : une lande brûlée doit y revenir en lande, à la
  * densité d'ajoncs que le moteur manipule habituellement (quelques centièmes de
  * pied au m²), pas à celle du terrain. Le plafond de recouvrement des couronnes
@@ -182,7 +182,7 @@ const ETABLISSEMENTS_PAR_LEVEE = 0.00002;
  *
  * Ce n'est pas de l'écologie, c'est une protection, et elle a été gagnée à la
  * dure : la première version sans plafond a fait passer la suite d'essais de
- * deux minutes à DEUX HEURES ET DEMIE. Une banque d'ajoncs bien remplie lève
+ * deux minutes à **deux heures et demie**. Une banque d'ajoncs bien remplie lève
  * des centaines de milliers de graines au m² après un feu ; même avec un taux
  * d'établissement minuscule, cela crée assez d'individus pour que chaque tick
  * suivant coûte dix fois plus cher.
@@ -255,7 +255,7 @@ export function drawPosition(
       // Avec les fientes : n'importe où sur la parcelle.
       return { rng: r.rng, x: u1 * coteM, y: u2 * coteM };
     case "geai": {
-      // Le geai cache ses glands loin du parent, et surtout EN DÉCOUVERT :
+      // Le geai cache ses glands loin du parent, et surtout **en découvert** :
       // il doit pouvoir les retrouver. On tire quelques emplacements et on
       // garde le plus ouvert — c'est ce biais, et non une règle sur les
       // chênes, qui les fait coloniser les friches et se régénérer mal sous
@@ -320,8 +320,8 @@ interface Houppier {
 /**
  * Aire commune à deux disques, m².
  *
- * LE DÉCOUPAGE N'EST PAS UN RAFFINEMENT, il fait la mesure. Compter pour sa
- * surface ENTIÈRE un houppier dont le centre est dehors mais qui mord sur le
+ * **Le découpage n'est pas un raffinement**, il fait la mesure. Compter pour sa
+ * surface **entière** un houppier dont le centre est dehors mais qui mord sur le
  * voisinage donne un recouvrement local trois à cinq fois trop haut — mesuré
  * en écrivant la campagne de #95, où la première version annonçait 17,75 de
  * médiane là où la parcelle entière tenait 6,32. Un plafond calé sur ce
@@ -336,14 +336,14 @@ function aireCommune(r1: number, r2: number, d: number): number {
 }
 
 /**
- * Range un houppier dans tous les paniers où une TENTATIVE pourrait le voir —
- * son disque ÉLARGI du rayon de voisinage, pas son disque seul.
+ * Range un houppier dans tous les paniers où une **tentative** pourrait le voir —
+ * son disque **élargi** du rayon de voisinage, pas son disque seul.
  *
  * C'est ce qui permet à la lecture de ne consulter qu'un panier, celui du point
  * tiré, au lieu d'en balayer neuf et d'y dédoublonner : si un houppier peut
  * mordre sur le voisinage d'un point, il est déjà dans le panier de ce point.
  * `light.ts` fait le même arrangement pour la même raison — la différence est
- * qu'une ombre s'interroge en un POINT et la place dans un DISQUE, d'où
+ * qu'une ombre s'interroge en un **point** et la place dans un **disque**, d'où
  * l'élargissement.
  */
 function rangerHouppier(paniers: Map<number, Houppier[]>, h: Houppier): void {
@@ -383,7 +383,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
   // aussi : c'est ce qui empêche une année exceptionnelle d'en installer mille
   // au même endroit.
   /**
-   * L'index d'ombres, bâti UNE FOIS pour l'année. `lightAtPoint` le
+   * L'index d'ombres, bâti **une fois** pour l'année. `lightAtPoint` le
    * reconstruisait à chaque tentative d'installation, et le peuplement ne bouge
    * pas entre deux : à quatre mille tiges, c'était le deuxième poste de calcul
    * du tick (#99).
@@ -398,7 +398,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
 
   /**
    * `parDrageon` change une chose, et c'est toute la différence : un drageon
-   * n'est pas un semis. Il reste RELIÉ à sa mère, qui le nourrit le temps qu'il
+   * n'est pas un semis. Il reste **relié** à sa mère, qui le nourrit le temps qu'il
    * s'installe, et il n'a donc pas besoin de trouver sa lumière tout seul.
    * C'est précisément ce qui permet à un fourré de prunelliers d'avancer sous
    * son propre couvert, là où aucune graine de la même espèce ne lèverait.
@@ -409,7 +409,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       ? positionDeDrageon(rng, parent, espece)
       : drawPosition(rng, espece, parent, coteM, input.lumiereAuSol);
     rng = pos.rng;
-    // La place se dispute LÀ OÙ LA GRAINE TOMBE, et plus à l'échelle de la
+    // La place se dispute **là où la graine tombe**, et plus à l'échelle de la
     // parcelle (#95). La lecture reste au même endroit du flux aléatoire :
     // après le tirage de position, avant tout le reste.
     if (recouvrementLocal(paniers, pos.x, pos.y) >= RECOUVREMENT_MAX) return;
@@ -440,7 +440,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     rangerHouppier(paniers, {
       x: pos.x,
       y: pos.y,
-      // Semis PROJETÉ : il n'a pas encore de diamètre propre, on lui prête
+      // Semis **projeté** : il n'a pas encore de diamètre propre, on lui prête
       // celui d'une tige sans histoire — donc la forme de référence.
       r: crownRadiusM(
         hauteurDuSemisM(espece.hauteurMaxM),
@@ -498,11 +498,11 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     for (let k = 0; k < n; k++) tryEstablish(v.especeId, null);
   }
 
-  // 1 bis. La BANQUE DE GRAINES du sol, pour les espèces qui en font une. Elle
+  // 1 bis. La **banque de graines** du sol, pour les espèces qui en font une. Elle
   // ne dépend ni des adultes présents ni du voisinage : c'est ce que la
   // parcelle a gardé de son passé, et le feu la réveille (banqueGraines.ts).
   //
-  // Les levées passent par le MÊME entonnoir que les autres semis — lumière,
+  // Les levées passent par le **même** entonnoir que les autres semis — lumière,
   // pH, place disponible, concurrence immédiate — parce qu'une graine réveillée
   // par le feu n'est pas dispensée d'écologie.
   for (const [especeId, stockParM2] of Object.entries(input.banqueGraines ?? {})) {
@@ -512,7 +512,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     for (let k = 0; k < n; k++) tryEstablish(especeId, null);
   }
 
-  // 1 ter. Les DRAGEONS : la conquête par la racine, pas par la graine. Un
+  // 1 ter. Les **drageons** : la conquête par la racine, pas par la graine. Un
   // fourré de prunelliers n'avance pas en semant au loin, il pousse sa tache
   // d'un mètre par an depuis ses propres racines — et c'est ce qui en fait un
   // problème de gestion dans une haie, puisque la tache avance dans le champ.
@@ -528,7 +528,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
 
   // 2. Semis des adultes de la parcelle en âge de grainer.
   //
-  // Le SANGLIER se joue ici, et dans les deux sens (sanglier.ts). Il mange ce
+  // Le **sanglier** se joue ici, et dans les deux sens (sanglier.ts). Il mange ce
   // qui tombe et reste — les graines lourdes, celles dont le mode de
   // dissémination est `geai` ou `gravite` — et il ouvre des lits de germination
   // en retournant le sol, ce dont profitent celles qui arrivent par le vent ou
@@ -538,7 +538,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     if (!tree.alive) continue;
     const espece = getEspece(tree.especeId);
     if (tree.ageWeeks < espece.regeneration.maturiteAns * 52) continue;
-    // **Le trait de TAILLE DE GRAINE, enfin.** Ce bloc triait sur
+    // **Le trait de taille de graine, enfin.** Ce bloc triait sur
     // `dissemination === "geai"`, et le commentaire qu'il portait disait
     // pourquoi c'était un pis-aller : le mode de dissémination ne dit pas le
     // poids. Il avait d'abord rangé l'ajonc et le genêt (`gravite`, graines
@@ -549,7 +549,7 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
     // bien mangée, et le commentaire appelait un trait de taille de graine
     // *(à instruire)*.
     //
-    // Le bloc `semences` EST ce trait (#197). Le porter, c'est produire une
+    // Le bloc `semences` **est** ce trait (#197). Le porter, c'est produire une
     // graine assez grosse pour qu'on s'en nourrisse et assez lourde pour
     // qu'elle reste au sol ; ne pas le porter, c'est une samare. Le hêtre
     // rejoint donc les chênes, et l'ajonc reste dehors — sans qu'aucune espèce

@@ -1,15 +1,15 @@
 /**
- * LA CARTE DU SOL SUIT LA VUE (#145).
+ * **La carte du sol suit la vue** (#145).
  *
  * La carte est un canvas nord-en-haut ; la vue est en dimétrique 2:1 et tourne
  * par quarts de tour. On ne redessine pas la carte dans l'autre sens — on la
- * PRÉSENTE autrement, par une transformation. Reste à prouver que cette
+ * **présente** autrement, par une transformation. Reste à prouver que cette
  * transformation est bien celle de la vue, et pas une qui lui ressemble : à
  * l'œil, une carte tournée du mauvais quart ou réfléchie reste une carte
  * plausible. Trois signes possibles, huit combinaisons, une seule juste.
  *
  * L'épreuve compare donc, pour de vraies cellules et aux quatre orientations,
- * la DIRECTION que la matrice de présentation donne à une cellule depuis le
+ * la **direction** que la matrice de présentation donne à une cellule depuis le
  * centre de la carte, avec celle que `versEcran` — la projection du rendu,
  * celle qui dessine vraiment — lui donne depuis le centre de la parcelle.
  */
@@ -26,7 +26,7 @@ import { type Camera, type Orientation, versEcran } from "../../src/render/proje
 
 const ORIENTATIONS: Orientation[] = [0, 1, 2, 3];
 const COTE_M = 40;
-/** Le côté du canvas, en pixels : un cas où un pixel ne vaut PAS un mètre. */
+/** Le côté du canvas, en pixels : un cas où un pixel ne vaut **pas** un mètre. */
 const COTE_PX = 360;
 
 function camera(orientation: Orientation): Camera {
@@ -43,7 +43,7 @@ function surLaCarte(x: number, y: number, orientation: Orientation): { dx: numbe
   return { dx: a * u + c * v, dy: b * u + d * v };
 }
 
-/** Où la VUE pose la cellule, en écart au centre de la parcelle. */
+/** Où la **vue** pose la cellule, en écart au centre de la parcelle. */
 function surLaVue(x: number, y: number, orientation: Orientation): { dx: number; dy: number } {
   const cam = camera(orientation);
   const p = versEcran({ x: x + 0.5, y: y + 0.5, z: 0 }, cam);
@@ -82,7 +82,7 @@ describe("la carte présentée pointe où la vue pointe", () => {
   it("le rapport des longueurs est le même pour toutes les cellules", () => {
     // Une présentation qui garderait les directions mais pas les proportions
     // déformerait la parcelle : la carte serait juste au centre et fausse au
-    // bord. Le rapport doit donc être une CONSTANTE, à orientation donnée.
+    // bord. Le rapport doit donc être une **constante**, à orientation donnée.
     for (const orientation of ORIENTATIONS) {
       const rapports = CELLULES.map(([x, y]) => {
         const carte = surLaCarte(x, y, orientation);
@@ -190,7 +190,7 @@ describe("remonter de l'écran à la cellule", () => {
   }
 
   it("rend undefined hors du losange", () => {
-    // Le coin de la boîte englobante n'est PAS dans le losange : c'est
+    // Le coin de la boîte englobante n'est **pas** dans le losange : c'est
     // exactement le point où un carré aurait répondu et où un losange ne doit
     // pas répondre.
     const bord = (COTE_PX * LARGEUR_DU_LOSANGE) / 2;

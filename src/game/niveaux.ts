@@ -1,15 +1,15 @@
 /**
- * LES NIVEAUX : un objectif, des paliers, et une fin (#188).
+ * **Les niveaux** : un objectif, des paliers, et une fin (#188).
  *
  * `v1.md` pose la demande — *« Un niveau a un objectif général et des objectifs
  * intermédiaires »*, *« Une fin de niveau qui dit ce qui s'est passé et si
  * l'objectif est atteint »* — et le tag v0.3 constate qu'il n'y a rien de tout
  * ça. Ce module est le mécanisme, pas encore le contenu : **un niveau est une
- * FICHE**, au même titre qu'une espèce ou qu'un paysage, et un seul code les
+ * fiche**, au même titre qu'une espèce ou qu'un paysage, et un seul code les
  * joue tous. Un `if (niveau === "verger")` quelque part signerait l'échec.
  *
  * Ce module ne parle ni à React ni au worker, et ne connaît ni `window` ni
- * l'horloge : on lui DONNE un instantané et un cumul, il rend un avancement.
+ * l'horloge : on lui **donne** un instantané et un cumul, il rend un avancement.
  * C'est ce qui permet de l'éprouver sans navigateur — la même discipline que
  * `suivis.ts` et `facture.ts`.
  *
@@ -19,7 +19,7 @@
  *
  * - **l'instantané**, tel que le moteur le donne — trésorerie, carbone,
  *   biodiversité, arbres, sol ;
- * - **les cumuls**, qui sont la SOMME d'événements que le moteur a rapportés
+ * - **les cumuls**, qui sont la **somme** d'événements que le moteur a rapportés
  *   (les kilos d'une récolte voyagent dans `GesteSurArbres.masseKg`).
  *
  * Additionner ce que le moteur rapporte n'est pas recalculer une de ses
@@ -33,7 +33,7 @@ import type { ProfilDepart } from "./profils";
 import type { Snapshot } from "./protocol";
 
 /**
- * Ce qui s'est ACCUMULÉ depuis le début du niveau.
+ * Ce qui s'est **accumulé** depuis le début du niveau.
  *
  * Un instantané dit ce qui est là ; il ne dit pas ce qui est passé. « Récolter
  * une tonne de pommes » — l'exemple de `v1.md` — porte sur des fruits qui ont
@@ -48,16 +48,16 @@ export interface Cumuls {
   /** fruits réellement cueillis, toutes essences confondues, kg (`recolter`) */
   fruitsKg: number;
   /**
-   * Les mêmes kilos, PAR ESSENCE.
+   * Les mêmes kilos, **par essence**.
    *
    * **Sans quoi « récolter deux cents kilos de pommes » se gagne sans pommier.**
    * Mesuré : sur un limon riche bordé de bocage, une parcelle où l'on ne plante
-   * RIEN se couvre de semis — soixante tiges la première année, mille quatre
+   * **rien** se couvre de semis — soixante tiges la première année, mille quatre
    * cents à la neuvième — et la récolte automatique y cueille noisettes,
    * prunelles et sureau. Quinze cents kilos au compteur, pas un pommier.
    *
    * L'essence ne voyage pas dans le geste (`GesteSurArbres` n'a que des
-   * identifiants), mais elle est dans l'ÉTAT : un arbre récolté est toujours
+   * identifiants), mais elle est dans l'**état** : un arbre récolté est toujours
    * debout après sa cueillette. Joindre deux faits que le moteur rapporte n'est
    * pas recalculer une de ses règles.
    */
@@ -81,7 +81,7 @@ export const CUMULS_VIDES: Cumuls = {
 /**
  * Ajouter au cumul ce que la semaine a produit.
  *
- * Pur, et c'est nécessaire : la partie se REJOUE depuis son journal d'actions à
+ * Pur, et c'est nécessaire : la partie se **rejoue** depuis son journal d'actions à
  * chaque reprise (`SaveGame` = la graine + les actions). Un cumul qui vivrait
  * ailleurs que dans ce rejeu divergerait de la partie à la première
  * sauvegarde.
@@ -90,7 +90,7 @@ export function accumuler(
   cumuls: Cumuls,
   gestes: readonly GesteVisible[],
   /**
-   * Les arbres tels qu'ils sont APRÈS le geste, pour retrouver l'essence de
+   * Les arbres tels qu'ils sont **après** le geste, pour retrouver l'essence de
    * chaque récolte. Absents, les kilos ne comptent que dans le total : mieux
    * vaut un compte par essence vide qu'un compte faux.
    */
@@ -100,9 +100,9 @@ export function accumuler(
   const fruitsParEspece = { ...cumuls.fruitsParEspece };
   let especeDe: Map<number, string> | undefined;
   for (const geste of gestes) {
-    // Les gestes de ZONE portent parfois le même nom (`planter`,
+    // Les gestes de **zone** portent parfois le même nom (`planter`,
     // `leverEcorce`) : c'est un seul geste qui touche deux mailles (#124), et
-    // c'est la FORME qui les sépare, pas le type.
+    // c'est la **forme** qui les sépare, pas le type.
     if (!estGesteSurArbres(geste)) continue;
     switch (geste.type) {
       case "recolter": {
@@ -147,16 +147,16 @@ function somme(masses: readonly number[] | undefined): number {
 export interface EtatDuNiveau {
   snapshot: Snapshot;
   cumuls: Cumuls;
-  /** semaines écoulées DEPUIS LE DÉBUT du niveau */
+  /** semaines écoulées **depuis le début** du niveau */
   semaines: number;
 }
 
 /**
  * Un objectif, général ou intermédiaire.
  *
- * L'énoncé et la condition sont la MÊME donnée : la phrase que le joueur lit
+ * L'énoncé et la condition sont la **même** donnée : la phrase que le joueur lit
  * s'écrit à partir de `quoi`, `cible` et `unite` (`libelleDuPalier`), jamais à
- * côté d'eux. Écrire « Récolter 200 kg » dans un texte ET 200 dans la condition,
+ * côté d'eux. Écrire « Récolter 200 kg » dans un texte **et** 200 dans la condition,
  * c'est deux copies d'une règle, donc deux copies qui divergeront (§2.1).
  */
 export interface Palier {
@@ -170,7 +170,7 @@ export interface Palier {
   /** l'unité affichée derrière les deux chiffres */
   unite: string;
   /**
-   * Un palier ACQUIS le reste, même si la grandeur redescend.
+   * Un palier **acquis** le reste, même si la grandeur redescend.
    *
    * C'est le cas des objectifs intermédiaires de `v1.md`, qui « font découvrir
    * les gestes nécessaires dans l'ordre » : planter douze arbres est une chose
@@ -205,7 +205,7 @@ export interface Niveau {
   /**
    * Le temps imparti, en semaines simulées. Zéro = pas de limite.
    *
-   * Ce n'est PAS la durée réelle d'une partie : `v1.md` demande dix à trente
+   * Ce n'est **pas** la durée réelle d'une partie : `v1.md` demande dix à trente
    * minutes de temps réel, ce qui dépend de la vitesse à laquelle on avance, et
    * se mesure en jouant.
    */
@@ -238,7 +238,7 @@ export interface Avancement {
 /**
  * Où en est le niveau.
  *
- * `acquis` est la MÉMOIRE des paliers déjà franchis, donnée de l'extérieur —
+ * `acquis` est la **mémoire** des paliers déjà franchis, donnée de l'extérieur —
  * même procédé que la mémoire de `suivis.ts`, et pour la même raison : ce
  * module reste pur, et ce qui doit survivre à un rejeu vit là où le rejeu passe.
  */

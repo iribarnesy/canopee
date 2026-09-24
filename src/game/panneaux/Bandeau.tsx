@@ -1,5 +1,5 @@
 /**
- * Le BANDEAU : la seule chose affichée en permanence.
+ * Le **bandeau** : la seule chose affichée en permanence.
  *
  * La date, l'argent, les heures et le temps qu'il fait — ce qu'on lit à chaque
  * semaine de jeu — et les vitesses, sans lesquelles on ne peut pas jouer du
@@ -43,6 +43,18 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
   const semaine = snapshot.week % 52;
   const mois = MOIS[Math.min(11, Math.floor(semaine / SEMAINES_PAR_MOIS))];
   const tresorerie = snapshot.economy.treasuryEur;
+  const relecture = game.rembobinage.enCours;
+  // La part parcourue, bornée : une relecture qui démarre a `semaine` égale à
+  // son départ, et l'arrivée est `jusqua`.
+  const part = relecture
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          (relecture.semaine - relecture.depuis) / Math.max(1, relecture.jusqua - relecture.depuis),
+        ),
+      )
+    : 0;
 
   return (
     <>
@@ -64,7 +76,7 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
           {tresorerie.toFixed(0)} €
         </strong>
         {/*
-          **Le dépassement se voit AU FUR ET À MESURE (#133)**, et pas à la
+          **Le dépassement se voit **au fur et à mesure** (#133)**, et pas à la
           fin : le plafond ne refuse plus rien, il se paie, et une facture qui
           tombe sans prévenir n'est pas un arbitrage. Le nombre d'heures et son
           prix viennent du moteur (`depassementHoraire`, `coutDuDepassement`) —
@@ -83,6 +95,76 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         </span>
         {snapshot.economy.bankrupt && <strong style={{ color: "#c0392b" }}>FAILLITE</strong>}
       </p>
+      {/*
+        ON REGARDE LE PASSÉ, et il faut que ça se voie (#128).
+
+        Une relecture ressemble trait pour trait à une partie qui joue : même
+        parcelle, même horloge qui avance, mêmes animations. C'est justement
+        pourquoi elle a besoin d'être DITE — sans ça, le joueur croit avoir
+        perdu cinq ans, et cherche ce qu'il a fait de travers.
+
+        Les vitesses restent utilisables pendant : c'est la même horloge, et
+        vouloir revoir plus vite ou plus lentement est légitime. Le reste des
+        gestes est refusé par le worker, pas par l'écran — une règle, un
+        endroit.
+      */}
+      {relecture && (
+        <p
+          style={{
+            margin: "0 0 4px",
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            flexWrap: "wrap",
+            padding: "4px 10px",
+            borderRadius: 8,
+            background: "var(--foret)",
+            color: "#fff",
+          }}
+        >
+          <strong>↺ Relecture</strong>
+          {/*
+            **En **semaines** quand la relecture tient dans une année.** Elle
+            annonçait « an 19 sur 19 » pour une scène de vingt-six semaines :
+            vrai, et parfaitement muet. L'unité suit la durée de ce qu'on
+            regarde, comme partout ailleurs dans cette interface.
+          */}
+          <span>
+            {relecture.jusqua - relecture.depuis < 52
+              ? `semaine ${(relecture.semaine % 52) + 1} sur ${(relecture.jusqua % 52) + 1}, an ${Math.floor(relecture.jusqua / 52) + 1}`
+              : `an ${Math.floor(relecture.semaine / 52) + 1} sur ${Math.floor(relecture.jusqua / 52) + 1}`}
+          </span>
+          {/* Une barre, parce qu'une relecture a une FIN et qu'on veut savoir
+              où l'on en est sans compter les années. */}
+          <span
+            aria-hidden="true"
+            style={{
+              flex: 1,
+              minWidth: 60,
+              height: 4,
+              borderRadius: 2,
+              background: "rgba(255,255,255,0.3)",
+            }}
+          >
+            <span
+              style={{
+                display: "block",
+                height: "100%",
+                borderRadius: 2,
+                background: "#fff",
+                width: `${Math.round(100 * part)}%`,
+              }}
+            />
+          </span>
+          <button
+            type="button"
+            style={{ ...btn(), marginRight: 0, marginBottom: 0 }}
+            onClick={game.rembobinage.revenir}
+          >
+            ⏹ Revenir au présent
+          </button>
+        </p>
+      )}
       <p style={{ margin: 0, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
         {/*
           **Une seule cible pour partir et pour s'arrêter.** La pause et la
@@ -93,7 +175,7 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         */}
         <button
           type="button"
-          // Allumé quand le temps COULE, éteint à l'arrêt : dans toute cette
+          // Allumé quand le temps **coule**, éteint à l'arrêt : dans toute cette
           // interface le vert veut dire « en cours », et un ▶ vert à l'arrêt
           // dirait le contraire de ce que le bouton montre.
           style={{ ...btn(game.speed > 0), marginRight: 0, marginBottom: 0, minWidth: 44 }}

@@ -1,7 +1,7 @@
 /**
  * La lumière : l'ombrage de pente et la direction des ombres portées.
  *
- * Le point de ces tests : le soleil du dessin doit être le soleil du MOTEUR.
+ * Le point de ces tests : le soleil du dessin doit être le soleil du **moteur**.
  * Une ombre dessinée ailleurs que là où `light.ts` la calcule mentirait sur qui
  * ombrage qui — c'est le genre d'écart qui ne se voit pas à l'œil et qui rend
  * l'image fausse. D'où les deux propriétés vérifiées ici : le sud éclaire, et
@@ -88,11 +88,11 @@ describe("l'ombrage de pente", () => {
     // Renversement assumé d'un choix précédent. J'avais aligné l'ombrage sur le
     // soleil plein sud du moteur, en refusant le sud-ouest du §4. Mesuré :
     // `dz/dy` vaut 0,0900 partout sur les trois formes de relief du moteur —
-    // `plan`, `croupe`, `vallon` — qui ne diffèrent QUE par leur profil
+    // `plan`, `croupe`, `vallon` — qui ne diffèrent **que** par leur profil
     // est-ouest. Un ombrage plein sud rendait donc une croupe et un vallon
     // identiques, c'est-à-dire ne montrait aucun relief.
     //
-    // La distinction : l'ombre PORTÉE affirme un mécanisme — qui ombrage qui —
+    // La distinction : l'ombre **portée** affirme un mécanisme — qui ombrage qui —
     // et doit suivre le moteur. L'ombrage de pente donne du volume à une
     // surface et n'affirme rien ; un azimut oblique n'y ment sur rien.
     const versLEst: number[] = [];
@@ -194,7 +194,7 @@ describe("la pente de référence, sans laquelle l'ombrage n'ombre rien", () => 
   });
 
   it("neutralise un plan incliné : c'est tout l'intérêt", () => {
-    // Sans référence, l'ombrage éclaircissait la parcelle ENTIÈRE — pas du
+    // Sans référence, l'ombrage éclaircissait la parcelle **entière** — pas du
     // relief, une palette virée au jaune.
     const a = versantVersLeNord(0.09);
     const reference = expositionMoyenne(a, COTE);
@@ -252,7 +252,7 @@ describe("la courbure, qui rend le relief lisible", () => {
   });
 
   it("**c'est elle qui voit ce que la pente ne peut pas voir**", () => {
-    // Le défaut signalé : « relief peu lisible ». On compare le FOND du
+    // Le défaut signalé : « relief peu lisible ». On compare le **fond** du
     // talweg au plan qui l'entoure — deux points où la pente est rigoureusement
     // la même (le fond est symétrique, donc `dz/dx` y est nul comme sur le
     // plan). L'ombrage de pente les rend donc identiques et le talweg est

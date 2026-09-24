@@ -1,7 +1,7 @@
 /**
- * LA FAUNE EN INDIVIDUS (issue #187, lot 1 : « l'animal existe »).
+ * **La faune en individus** (issue #187, lot 1 : « l'animal existe »).
  *
- * Jusqu'ici, tout ce qui vole ou court dans ce moteur était une GRANDEUR. Les
+ * Jusqu'ici, tout ce qui vole ou court dans ce moteur était une **grandeur**. Les
  * cervidés et le sanglier sont une densité de paysage dont la parcelle capte
  * une part (`gibier.ts`, `sanglier.ts`) ; les ravageurs sont une population par
  * cellule, mais anonyme ; et les auxiliaires n'existent même pas — `ravageurs.ts`
@@ -11,23 +11,23 @@
  * explicitement** : on veut des individus, pour que le joueur s'attache, et pour
  * qu'« une mésange vient nicher chez toi » soit un événement de la partie.
  *
- * ── LA RÈGLE DE PARTAGE : CE QUI S'ANCRE CONTRE CE QUI TRAVERSE ──────────────
+ * ── **la règle de partage** : **ce qui s'ancre contre ce qui traverse** ──────────────
  *
  * Une buse dont le domaine vital fait 300 ha n'habite pas une parcelle de deux
- * hectares : elle la survole. Celle qui y NICHE, en revanche, en est un
+ * hectares : elle la survole. Celle qui y **niche**, en revanche, en est un
  * individu, et abattre son arbre l'expulse.
  *
- * > **Est un INDIVIDU ce qui s'ancre dans la parcelle par un nid, une loge ou
- * > une hutte. Est une DENSITÉ DE PAYSAGE ce qui ne fait que la traverser.**
+ * > **Est un individu ce qui s'ancre dans la parcelle par un nid, une loge ou
+ * > une hutte. Est une densité de paysage ce qui ne fait que la traverser.**
  *
  * Cette règle n'est pas une commodité de modélisation, c'est la bonne biologie,
- * et elle fait trois choses d'un coup : elle BORNE l'effectif (un gîte est une
- * place, et il n'y en a qu'un nombre fini), elle donne l'ÉVÉNEMENT (l'arbre qui
+ * et elle fait trois choses d'un coup : elle **borne** l'effectif (un gîte est une
+ * place, et il n'y en a qu'un nombre fini), elle donne l'**événement** (l'arbre qui
  * tombe expulse quelqu'un de nommé, sans que rien ne soit scripté), et elle
- * PLAFONNE LE COÛT (un rapace à 1 000 m de rayon ne touche que les cellules de
+ * **plafonne le coût** (un rapace à 1 000 m de rayon ne touche que les cellules de
  * la parcelle, donc il ne coûte pas plus cher qu'une mésange).
  *
- * ── CE QUE CE LOT FAIT, ET CE QU'IL NE FAIT PAS ──────────────────────────────
+ * ── **ce que ce lot fait**, **et ce qu'il ne fait pas** ──────────────────────────────
  *
  * Il fait exister l'animal : une fiche, une identité, une installation sur un
  * gîte libre, un départ quand le gîte disparaît. **Il ne touche aucun critère
@@ -36,36 +36,36 @@
  * sera le lot 3 de la faire payer. Un effectif qui ne fait rien encore, mais
  * qu'on peut voir naître et partir.
  *
- * **Lot 2 — LA TABLE.** Un gîte ne suffit pas : un nichoir dans un désert reste
- * vide. L'installation demande donc un gîte ET une table, comme le moteur
+ * **Lot 2 — la table.** Un gîte ne suffit pas : un nichoir dans un désert reste
+ * vide. L'installation demande donc un gîte **et** une table, comme le moteur
  * l'exige déjà des pollinisateurs (G4), et un individu qui ne mange pas deux
  * saisons de suite s'en va. Les ressources lues existaient déjà : la table n'a
- * rien inventé, elle a déclaré qui prélève quoi — et elle en a RETIRÉ deux sur
+ * rien inventé, elle a déclaré qui prélève quoi — et elle en a **retiré** deux sur
  * quatre après mesure, ce que `Ressource` raconte juste en dessous.
  *
  * Il ne fait toujours pas se reproduire ni mourir de vieillesse : un individu
  * s'installe, il reste tant que son gîte tient et que la table suit, et il part
  * sinon.
  *
- * ── LA LIMITE À CONNAÎTRE : LA PARCELLE NE VOIT PAS SES VOISINS ──────────────
+ * ── **la limite à connaître** : **la parcelle ne voit pas ses voisins** ──────────────
  *
- * Le territoire exclut les congénères DE LA PARCELLE, et rien d'autre. Sur une
+ * Le territoire exclut les congénères **de la parcelle**, et rien d'autre. Sur une
  * parcelle plus petite qu'un territoire, le modèle dit donc « si le couple du
  * coin niche ici, il niche ici » et ne peut pas savoir qu'il niche déjà trois
- * cents mètres plus loin. C'est une borne SUPÉRIEURE, pas une densité.
+ * cents mètres plus loin. C'est une borne **supérieure**, pas une densité.
  *
  * Ce qui la rend acceptable est la rareté (`partDuTerritoire`) : sur un demi-
  * hectare, l'installation d'une buse est un événement d'une vie, pas d'une
  * décennie. Ce qui la lèverait vraiment est le voisinage (`station.voisinage`),
  * qui dirait ce que le paysage porte déjà. Ce n'est pas ce lot.
  *
- * ── LE COMMUTATEUR, ET LA VRAIE RAISON DE L'AVOIR ────────────────────────────
+ * ── **le commutateur**, **et la vraie raison de l'avoir** ────────────────────────────
  *
- * `station.faune` allume le mécanisme. Le coût de calcul ne le justifie PAS —
+ * `station.faune` allume le mécanisme. Le coût de calcul ne le justifie **pas** —
  * mesuré sur la branche du prototype, la faune par bloc est plate à 500
  * individus, dans le bruit. Il vaut pour deux autres raisons : la
  * reproductibilité (les individus ajoutent des tirages, donc une partie avec
- * faune diverge d'une partie sans), et surtout **il EST le contrôle de
+ * faune diverge d'une partie sans), et surtout **il est le contrôle de
  * neutralité** — éteint, le tick ne fait rien de plus, pas même une allocation,
  * et l'empreinte de la partie est celle d'avant.
  */
@@ -78,9 +78,9 @@ import type { TreeState } from "./trees";
  * Où l'animal s'ancre. Ce n'est pas une étiquette décorative : les trois types
  * ne se jugent pas sur les mêmes grandeurs.
  *
- *  - `cavite` — l'animal loge DANS l'arbre. Ce qui décide est le creux : son
+ *  - `cavite` — l'animal loge **dans** l'arbre. Ce qui décide est le creux : son
  *    volume, l'ouverture qu'il peut porter, sa hauteur au-dessus du sol.
- *  - `hutte` — l'animal construit un dôme de branchages DANS la ramure. Ce qui
+ *  - `hutte` — l'animal construit un dôme de branchages **dans** la ramure. Ce qui
  *    décide est le support : un arbre assez gros, assez haut.
  *  - `aire` — un nid de branches posé sur une fourche maîtresse. Même logique
  *    que la hutte, en beaucoup plus exigeant.
@@ -88,14 +88,14 @@ import type { TreeState } from "./trees";
 export type TypeDeGite = "cavite" | "hutte" | "aire";
 
 /**
- * CE QUI NOURRIT, et d'où le moteur le tire.
+ * **ce qui nourrit**, et d'où le moteur le tire.
  *
  * Deux postes, et **il y en avait quatre dans le premier jet**. Ce qui les a
  * ramenés à deux est une mesure, pas une opinion — voir plus bas.
  *
  *  - `invertebres` — `soil.ravageurs`. Ce que `ravageurs.ts` appelle une
  *    pullulation, une mésange l'appelle un garde-manger : c'est la même
- *    biomasse de chenilles et de larves, vue des deux bouts. **C'est un PROXY
+ *    biomasse de chenilles et de larves, vue des deux bouts. **C'est un proxy
  *    et il faut le dire** : cette grandeur suit la dynamique des ravageurs, pas
  *    la phénologie des chenilles de mai. Ce qu'elle rend justement, c'est que
  *    des arbres nourrissent des insectivores et qu'un champ nu n'en nourrit pas.
@@ -105,7 +105,7 @@ export type TypeDeGite = "cavite" | "hutte" | "aire";
  *    mesure de la proie, c'est une mesure de son habitat. Conséquence juste et
  *    non voulue : une buse préfère l'ouvert au couvert.
  *
- * ── LES DEUX QUI ONT ÉTÉ RETIRÉS, ET POURQUOI ────────────────────────────────
+ * ── **les deux qui ont été retirés**, **et pourquoi** ────────────────────────────────
  *
  * **Le nectar** (`soil.ressourceFlorale`) n'a aucun consommateur dans l'atlas :
  * la guilde des pollinisateurs viendra, et la ressource avec elle. Déclarer un
@@ -114,18 +114,18 @@ export type TypeDeGite = "cavite" | "hutte" | "aire";
  * **Les fruits** ont demandé une mesure pour être compris, et c'est la plus
  * instructive du lot. Un peuplement mûr de chênes rend `fruitsKg = 0` toute
  * l'année, toutes semaines confondues. Ce n'est pas un défaut de fructification :
- * le bloc `fruits` de l'atlas décrit une RÉCOLTE — ce qu'un verger donne au
+ * le bloc `fruits` de l'atlas décrit une **récolte** — ce qu'un verger donne au
  * joueur — et onze espèces sur vingt-six en portent un. **La glandée n'existe
  * pas dans ce moteur.** Un écureuil nourri aux `fruitsKg` mangerait le verger et
  * jamais les chênes, ce qui est le contraire de sa biologie. L'écureuil et le
- * loir restent donc SANS table, jugés sur leur seul gîte comme au lot 1, et la
+ * loir restent donc **sans** table, jugés sur leur seul gîte comme au lot 1, et la
  * glandée est sortie en #197 — c'est un mécanisme à part entière, pas un champ
  * à brancher.
  */
 export type Ressource = "invertebres" | "micromammiferes";
 
 /**
- * Une fiche de faune. **C'est une FICHE, jamais un `if (especeId === …)`** : ce
+ * Une fiche de faune. **C'est une fiche, jamais un `if (especeId === …)`** : ce
  * que l'atlas déclare ici, le moteur le lit sans savoir de quelle bête il
  * s'agit. Ajouter une guilde entière ne doit demander aucune ligne de code.
  */
@@ -156,7 +156,7 @@ export interface EspeceFaune {
    */
   supportMinCm: number;
   /**
-   * Rayon du domaine vital, m. C'est la DISTANCE MINIMALE entre deux gîtes de
+   * Rayon du domaine vital, m. C'est la **distance minimale** entre deux gîtes de
    * la même espèce : un couple n'en tolère pas un autre dans son territoire, et
    * c'est ce qui borne l'effectif bien avant que les gîtes ne manquent.
    */
@@ -176,11 +176,11 @@ export interface EspeceFaune {
    */
   colonisationParAn: number;
   /**
-   * **CE QUE L'ANIMAL MANGE**, et ce qu'il lui en faut (lot 2).
+   * **ce que l'animal mange**, et ce qu'il lui en faut (lot 2).
    *
    * Le gîte ne suffit pas : un nichoir dans un désert reste vide.
    *
-   * **FACULTATIF, et l'absence est une position tenue** : une espèce dont la
+   * **facultatif, et l'absence est une position tenue** : une espèce dont la
    * nourriture n'existe pas encore dans le moteur est jugée sur son seul gîte,
    * comme au lot 1. Mieux vaut une table manquante et dite qu'une table
    * branchée sur une grandeur qui ne veut pas ce qu'on croit — c'est ce qui
@@ -188,7 +188,7 @@ export interface EspeceFaune {
    */
   table?: { ressource: Ressource; seuil: number };
   /**
-   * Semaine de l'année où l'on fait le BILAN de la table. Ignorée sans table.
+   * Semaine de l'année où l'on fait le **bilan** de la table. Ignorée sans table.
    *
    * Ce n'est pas la semaine d'installation : on s'installe au printemps et on
    * échoue à nourrir sa nichée plus tard. Une donnée de fiche, comme le reste.
@@ -197,14 +197,14 @@ export interface EspeceFaune {
 }
 
 /**
- * L'ATLAS DE FAUNE — première fournée, celle que #183 a rendue possible.
+ * **l'atlas de faune** — première fournée, celle que #183 a rendue possible.
  *
  * Les cavernicoles d'abord, parce que le moteur sait depuis peu compter les
  * litres de creux d'un arbre (`cavites.ts`) et que c'est le volume, et lui
  * seul, qui décide de qui peut nicher. Puis l'écureuil et la buse, parce que la
  * consigne était « toute la faune qui peut s'installer » et qu'un modèle qui ne
  * saurait faire que des mésanges aurait mal vieilli : la hutte et l'aire
- * obligent à traiter le gîte CONSTRUIT, qui ne se juge pas comme un creux.
+ * obligent à traiter le gîte **construit**, qui ne se juge pas comme un creux.
  *
  * Les territoires sont des ordres de grandeur d'ouvrages de terrain, arrondis,
  * et convertis en rayon d'un disque de même surface. Les volumes de loge sont
@@ -368,7 +368,7 @@ export interface DepartFaune {
 }
 
 /**
- * L'arbre offre-t-il le support d'un gîte CONSTRUIT (hutte, aire) ?
+ * L'arbre offre-t-il le support d'un gîte **construit** (hutte, aire) ?
  *
  * Une chandelle sèche ne porte pas d'aire : il faut une ramure. C'est le seul
  * endroit où `alive` compte, et il compte pour une raison physique.
@@ -386,12 +386,12 @@ function supporteUnGiteConstruit(tree: TreeState, espece: EspeceFaune): boolean 
  */
 function creuxConvient(tree: TreeState, espece: EspeceFaune): boolean {
   if (volumeCaviteTotalL(tree) < espece.volumeLogeL) return false;
-  // **L'ENTRÉE NE PEUT PAS ÊTRE PLUS LARGE QUE LA CHAMBRE.** C'est une borne
+  // **l'entrée ne peut pas être plus large que la chambre.** C'est une borne
   // géométrique, pas une modélisation de l'entrée elle-même : dans la réalité
-  // c'est le pic qui creuse le trou, et il le fait à SA taille. Ce que le
+  // c'est le pic qui creuse le trou, et il le fait à **sa** taille. Ce que le
   // moteur peut affirmer sans rien inventer, c'est qu'une chevêche ne passe pas
   // par un fût dont l'alésage fait quatre centimètres. La condition est donc
-  // NÉCESSAIRE et pas suffisante, et c'est écrit plutôt que masqué.
+  // **nécessaire** et pas suffisante, et c'est écrit plutôt que masqué.
   if (diametreCaviteCm(tree) * 10 < espece.entreeMinMm) return false;
   return hauteurCaviteM(tree) >= espece.hauteurGiteMinM;
 }
@@ -442,7 +442,7 @@ function territoireLibre(
 }
 
 /**
- * Graine LOCALE d'une tentative d'installation — modèle `graineDeChute`
+ * Graine **locale** d'une tentative d'installation — modèle `graineDeChute`
  * (boisMort.ts).
  *
  * Elle ne consomme pas le flux aléatoire principal, et c'est la règle du dépôt :
@@ -472,7 +472,7 @@ function tirageLocal(graine: number): number {
 }
 
 /**
- * Les individus qui PARTENT, parce que leur ancrage n'est plus là.
+ * Les individus qui **partent**, parce que leur ancrage n'est plus là.
  *
  * Deux causes, et aucune n'est un tirage : l'arbre a quitté la parcelle (abattu,
  * ou sa chandelle s'est abattue — `tick.ts` le retire alors de `state.trees`),
@@ -508,7 +508,7 @@ export function departs(
  *
  * **C'est la règle qui empêche le modèle de devenir absurde**, et elle est le
  * prolongement direct de « ce qui s'ancre contre ce qui traverse ». Un couple
- * de buses occupe seul cent cinquante hectares : la chance que SON aire tombe
+ * de buses occupe seul cent cinquante hectares : la chance que **son** aire tombe
  * sur vos six mille mètres carrés n'est pas celle d'un couple de mésanges, dont
  * le territoire fait un hectare et tient tout entier chez vous.
  *
@@ -535,7 +535,7 @@ function partDuTerritoire(espece: EspeceFaune, aireParcelleM2: number): number {
 export interface TableDeLaParcelle {
   /** `soil.ravageurs`, par cellule */
   invertebres: readonly number[];
-  /** `soil.herbeBiomasse`, par cellule — le PROXY des micromammifères */
+  /** `soil.herbeBiomasse`, par cellule — le **proxy** des micromammifères */
   micromammiferes: readonly number[];
 }
 
@@ -543,7 +543,7 @@ export interface TableDeLaParcelle {
  * Ce que le territoire d'un individu offre, dans son unité propre et rapporté
  * à la cellule (ou à l'hectare pour les fruits).
  *
- * **Seules les cellules DE LA PARCELLE comptent**, parce que ce sont les seules
+ * **Seules les cellules de la parcelle comptent**, parce que ce sont les seules
  * que le moteur connaisse — et c'est la même limite que partout ailleurs ici :
  * la parcelle ne voit pas ses voisins. Ce qu'on en fait est traité par
  * `satisfaction`, pas ici.
@@ -569,7 +569,7 @@ export function offreDuTerritoire(
 }
 
 /**
- * À quel point la parcelle NOURRIT cet individu ∈ [0,1].
+ * À quel point la parcelle **nourrit** cet individu ∈ [0,1].
  *
  * **Le point délicat du lot, et il se règle avec une notion déjà écrite.** Un
  * demi-hectare peut affamer une mésange, dont l'hectare de territoire tient
@@ -609,7 +609,7 @@ export const SATISFACTION_SUFFISANTE = 0.5;
 export const SAISONS_MAIGRES_AVANT_DEPART = 2;
 
 /**
- * Le BILAN DE TABLE de la semaine : qui a faim, et qui s'en va.
+ * Le **bilan de table** de la semaine : qui a faim, et qui s'en va.
  *
  * Rend les individus mis à jour — leur compteur de saisons maigres a bougé — et
  * ceux qui partent. Ne fait rien hors des semaines de bilan déclarées par les
@@ -653,14 +653,14 @@ export function bilanDeTable(
     restants.push(individu);
   }
 
-  // Rendre le MÊME tableau quand rien n'a bougé : le bilan tombe une fois par
+  // Rendre le **même** tableau quand rien n'a bougé : le bilan tombe une fois par
   // an et par espèce, et le reste du temps il ne doit rien coûter, pas même une
   // copie.
   return { individus: quelquUnABouge ? restants : (individus as IndividuFaune[]), partants };
 }
 
 /**
- * Les individus qui S'INSTALLENT cette semaine.
+ * Les individus qui **s'installent** cette semaine.
  *
  * Le balayage n'a lieu que les semaines d'installation déclarées par les fiches
  * — une par espèce et par an —, donc ce mécanisme dort cinquante semaines sur
@@ -695,7 +695,7 @@ export function installations(
         if (porteDejaCeGite(presents, arbre.id, espece.gite)) continue;
       }
       if (!territoireLibre(presents, espece, arbre.x, arbre.y)) continue;
-      // **UN GÎTE ET UNE TABLE, ET LA PLUS RARE DÉCIDE.** C'est l'idiome que le
+      // **un gîte et une table, et la plus rare décide.** C'est l'idiome que le
       // moteur applique déjà aux pollinisateurs (G4, `min(habitat, ressource)`),
       // et il aurait été incohérent que la faune en individus l'ignore. Ici la
       // table ne ferme pas la porte, elle rend le lieu moins attirant : une
@@ -726,19 +726,19 @@ export function installations(
 }
 
 /**
- * Nombre de territoires d'INSECTIVORES qui se recouvrent sur une cellule
+ * Nombre de territoires d'**insectivores** qui se recouvrent sur une cellule
  * au-delà duquel un auxiliaire de plus n'y change plus rien (issue #187, lot 3).
  *
  * Un bois feuillu tempéré bien pourvu porte de l'ordre de trois à cinq couples
  * d'insectivores cavernicoles à l'hectare — mésanges pour l'essentiel, un pic
  * par plusieurs hectares. Trois territoires superposés situent donc le moteur au
- * bas de cette fourchette, ce qui est le bon côté pour un seuil de SATURATION :
+ * bas de cette fourchette, ce qui est le bon côté pour un seuil de **saturation** :
  * on ne veut pas qu'il soit atteint par une parcelle médiocre *(à confirmer)*.
  */
 export const AUXILIAIRES_SUFFISANTS = 3;
 
 /**
- * Combien d'insectivores INSTALLÉS couvrent chaque cellule de leur territoire
+ * Combien d'insectivores **installés** couvrent chaque cellule de leur territoire
  * (issue #187, lot 3).
  *
  * **C'est ce qui fait cesser le proxy.** `ravageurs.ts` estimait jusqu'ici la
@@ -746,15 +746,15 @@ export const AUXILIAIRES_SUFFISANTS = 3;
  * tonnes de bois mort, c'est-à-dire par *« y a-t-il de quoi loger »*. Or une
  * cavité vide ne mange pas de pucerons. Ce que ce lot substitue au proxy est
  * *« y a-t-il effectivement quelqu'un de logé »* — et ce quelqu'un n'existe que
- * si le gîte lui va ET si la table le nourrit (lot 2), donc le nouveau terme
+ * si le gîte lui va **et** si la table le nourrit (lot 2), donc le nouveau terme
  * contient l'ancien et lui ajoute la condition qui manquait.
  *
- * Seules les espèces dont la table est faite d'INVERTÉBRÉS comptent : une
+ * Seules les espèces dont la table est faite d'**invertébrés** comptent : une
  * chevêche mange des campagnols, un écureuil des graines, et ni l'une ni
  * l'autre n'écrête une pullulation de chenilles. Aucune espèce n'est nommée —
  * c'est le champ `table.ressource` de la fiche qui tranche.
  *
- * Le territoire est peint UNIFORMÉMENT sur son disque. Une décroissance depuis
+ * Le territoire est peint **uniformément** sur son disque. Une décroissance depuis
  * le gîte serait plus fine, et elle est à instruire ; en l'état on ne saurait
  * pas la caler, et une forme inventée vaudrait moins qu'un disque assumé.
  */

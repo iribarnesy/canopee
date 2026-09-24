@@ -6,7 +6,7 @@
  * sait pas ce qu'on regarde. C'est ici.
  *
  * **Pas de pan libre**, c'est décidé : on tourne autour de la parcelle, on ne
- * s'en éloigne pas. Il reste pourtant un CENTRE, et ce n'est pas une
+ * s'en éloigne pas. Il reste pourtant un **centre**, et ce n'est pas une
  * contradiction — zoomer vers le curseur suppose de garder le point survolé
  * sous le curseur, donc de déplacer le centre. La différence avec un pan est
  * qu'il est borné à la parcelle : on ne peut pas cadrer le vide.
@@ -93,7 +93,7 @@ export function vueInitiale(
  * Parcelle → écran, en tenant compte du cadrage.
  *
  * `versEcran` de la projection place l'origine au sommet du losange ; ici on
- * ramène le CENTRE de la vue au milieu de l'écran. C'est la seule différence,
+ * ramène le **centre** de la vue au milieu de l'écran. C'est la seule différence,
  * et c'est ce qui fait qu'aucun appelant n'a à connaître le décalage.
  */
 export function versEcranVue(p: PointParcelle, vue: Vue): PointEcran {
@@ -119,14 +119,14 @@ export function versParcelleVue(e: PointEcran, vue: Vue, z = 0): PointParcelle {
 }
 
 /**
- * Écran → CELLULE, sur le terrain tel qu'il est.
+ * Écran → **cellule**, sur le terrain tel qu'il est.
  *
  * Le pendant de `versParcelleVue` pour un joueur qui clique, et il ne s'y
  * ramène pas : `versParcelleVue` inverse la projection sur un plan d'altitude
  * donnée, ce qui est exact pour un sol plat et faux dès qu'il y a du relief —
  * cliquer sur le flanc d'une butte désignerait la cellule qui se trouve
  * derrière elle. `celluleSousLeCurseur` remonte le rayon de vue et rend celle
- * qu'on VOIT, ce qui est la seule réponse juste à « sur quoi ai-je cliqué ».
+ * qu'on **voit**, ce qui est la seule réponse juste à « sur quoi ai-je cliqué ».
  *
  * Rend `undefined` quand le pixel ne touche aucune cellule — hors parcelle, ou
  * ciel au-dessus.
@@ -170,7 +170,7 @@ export function zoomer(vue: Vue, facteur: number, curseur: PointEcran, altitudeM
   const zoom = Math.min(max, Math.max(min, vue.cam.zoom * facteur));
   if (zoom === vue.cam.zoom) return vue;
 
-  // Le point de parcelle visé, AVANT le changement de zoom.
+  // Le point de parcelle visé, **avant** le changement de zoom.
   const vise = versParcelleVue(curseur, vue);
   const zoomee: Vue = { ...vue, cam: { ...vue.cam, zoom } };
   if (zoom <= min) {
@@ -191,7 +191,7 @@ export function zoomer(vue: Vue, facteur: number, curseur: PointEcran, altitudeM
 /**
  * Déplace la vue d'un glissement écran.
  *
- * **En coordonnées de PARCELLE, et pas en pixels.** On pourrait retrancher le
+ * **En coordonnées de parcelle, et pas en pixels.** On pourrait retrancher le
  * décalage au centre en pixels, mais alors le déplacement dépendrait de
  * l'orientation de la caméra et il faudrait la défaire à la main — exactement
  * le genre de calcul qui se désynchronise de `tourner()` un jour. En inversant
@@ -214,9 +214,9 @@ export function deplacer(vue: Vue, dxPx: number, dyPx: number): Vue {
 }
 
 /**
- * CADRER un point de la parcelle : il vient au centre de la vue.
+ * **cadrer** un point de la parcelle : il vient au centre de la vue.
  *
- * **Le zoom ne change PAS, et c'est la décision qui compte.** Le §6.4 demande
+ * **Le zoom ne change pas, et c'est la décision qui compte.** Le §6.4 demande
  * que la vue puisse cadrer le départ d'un incendie — le moteur met déjà le jeu
  * en pause dessus (`autopause`) — mais un cadrage qui zoomerait aussi
  * reprendrait au joueur le réglage qu'il vient de faire, et le lui rendrait
@@ -234,7 +234,7 @@ export function cadrer(vue: Vue, cible: { x: number; y: number }): Vue {
 /**
  * Quart de tour. `sens` = +1 (horaire) ou −1.
  *
- * Le centre est exprimé en nord VRAI, donc il n'a pas à bouger : c'est la
+ * Le centre est exprimé en nord **vrai**, donc il n'a pas à bouger : c'est la
  * projection qui applique l'orientation. C'est tout l'intérêt d'avoir mis la
  * rotation dans `projection.ts` plutôt que dans la caméra.
  */
@@ -257,19 +257,19 @@ export interface Emprise {
  * On inverse les quatre coins de l'écran vers la parcelle (à plat), on prend la
  * boîte englobante, et on l'élargit de ce qu'il faut pour ne rien perdre :
  *
- * - un objet HAUT dont le pied est sous le bord inférieur peut avoir sa cime à
+ * - un objet **haut** dont le pied est sous le bord inférieur peut avoir sa cime à
  *   l'écran. Un mètre de hauteur remonte de `METRE_VERTICAL_PX` pixels, soit
  *   deux cellules de profondeur (`x + y`) puisqu'une cellule en vaut
  *   `TUILE_HAUTEUR_PX / 2`. D'où la marge de `2 × hauteurMaxM`, appliquée aux
  *   deux axes — c'est majorant, et une marge trop large ne coûte que quelques
- *   cellules cuites pour rien. Elle ne vaut que du côté des `x + y` CROISSANTS :
+ *   cellules cuites pour rien. Elle ne vaut que du côté des `x + y` **croissants** :
  *   un arbre ne pousse que vers le haut, et le haut de l'écran est le fond de
  *   la parcelle ;
- * - **le relief joue dans les DEUX sens, et c'est ce qui manquait (#151).** Les
+ * - **le relief joue dans les deux sens, et c'est ce qui manquait (#151).** Les
  *   altitudes sont des écarts autour de zéro — de −2 à +2 m sur les stations
- *   livrées, davantage sur un terrain modelé à la main. Une cellule HAUSSÉE
+ *   livrées, davantage sur un terrain modelé à la main. Une cellule **haussée**
  *   monte à l'écran comme un arbre, donc du côté des `x + y` croissants ; mais
- *   une cellule CREUSÉE descend, et fait entrer dans le cadre une cellule qui
+ *   une cellule **creusée** descend, et fait entrer dans le cadre une cellule qui
  *   en sortait par le haut — du côté des `x + y` décroissants, qui n'avait
  *   qu'une cellule de marge. Le sol qui la porte n'était donc ni cuit ni posé,
  *   et le joueur voyait un carré manquant. `altitudeMaxM` est l'écart le plus
@@ -297,7 +297,7 @@ export function celluleVisibles(vue: Vue, hauteurMaxM = 0, altitudeMaxM = 0): Em
     minY = Math.min(minY, p.y);
     maxY = Math.max(maxY, p.y);
   }
-  // Vers le fond : ce qui monte à l'écran, donc la hauteur ET le relief.
+  // Vers le fond : ce qui monte à l'écran, donc la hauteur **et** le relief.
   const margeFond = 2 * (hauteurMaxM + altitudeMaxM);
   // Vers l'avant : ce qui descend à l'écran, donc le relief seul.
   const margeAvant = 2 * altitudeMaxM;

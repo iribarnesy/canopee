@@ -1,5 +1,5 @@
 /**
- * L'enveloppe du houppier, IMPOSÉE au squelette
+ * L'enveloppe du houppier, **imposée** au squelette
  * (docs/interface-visuelle.md §4, résultat du lot L0).
  *
  * **C'est le résultat le plus coûteux du lot L0, et le plus contre-intuitif.**
@@ -58,7 +58,7 @@ export function rayonRelatif(port: Port, t: number): number {
       return 0.45 + 0.55 * u;
     case "etage":
       // Le plateau du vieux pin : quasi constant, à peine écourté au sommet.
-      // **L'écourtement est ICI et il est explicite** — sans lui, une boule.
+      // **L'écourtement est ici et il est explicite** — sans lui, une boule.
       return u < 0.75 ? 0.92 + 0.08 * u : 1 - (u - 0.75) * 2.6;
     case "fastigie":
       // Étroit partout : l'aulne, le peuplier. Le rayon ne dépasse jamais la
@@ -88,7 +88,7 @@ export function plongeeTerminale(port: Port): number {
  * Impose au squelette l'enveloppe de son port.
  *
  * **Ce n'est pas un rognage, et le premier jet s'est trompé là-dessus.**
- * J'avais écrit une contrainte qui ne fait que RESSERRER : un point plus proche
+ * J'avais écrit une contrainte qui ne fait que **resserrer** : un point plus proche
  * de l'axe que l'enveloppe ne l'autorise était laissé tel quel. Mesuré sur un
  * feuillu de dix-huit mètres, le houppier fait naturellement 1,94 m de rayon
  * là où l'enveloppe en autorise 4 : elle ne mordait nulle part, et **les six
@@ -96,7 +96,7 @@ export function plongeeTerminale(port: Port): number {
  * servait à rien dans le seul cas qui compte, celui où la ramure tient déjà
  * dans son gabarit.
  *
- * L'enveloppe MET DONC À L'ÉCHELLE. Chaque point est ramené du rayon naturel du
+ * L'enveloppe **met donc à l'échelle**. Chaque point est ramené du rayon naturel du
  * houppier au rayon admis à sa hauteur : une branche à mi-distance de l'axe
  * reste à mi-distance, et le profil — cône, boule, gobelet, plateau — s'impose
  * pour de bon. C'est bien la leçon de L0 dans son sens fort : l'enveloppe n'est

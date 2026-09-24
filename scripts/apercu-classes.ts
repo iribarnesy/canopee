@@ -1,11 +1,11 @@
 /**
- * Compte EXACTEMENT les classes de vignette qu'une animation ajoute.
+ * Compte **exactement** les classes de vignette qu'une animation ajoute.
  *
  * **Hors navigateur, et c'est tout l'intérêt.** J'ai d'abord compté au
  * navigateur, en échantillonnant seize images sur soixante et en additionnant
  * les « classes recuites » : la somme d'un échantillon n'est pas un total, et
  * deux variantes du même code ont donné 965 puis 1 364 sans que rien ne le
- * justifie. Ici on énumère les CLÉS, ce qui est exact, déterministe et
+ * justifie. Ici on énumère les **clés**, ce qui est exact, déterministe et
  * instantané.
  *
  * Usage :  npx tsx scripts/apercu-classes.ts [scene]

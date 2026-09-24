@@ -1,9 +1,9 @@
 /**
- * SÉRIALISER L'ÉTAT DU MOTEUR (issue #193).
+ * **Sérialiser l'état du moteur** (issue #193).
  *
- * Jusqu'ici, une sauvegarde de Canopée est un JOURNAL : la station, la graine,
+ * Jusqu'ici, une sauvegarde de Canopée est un **journal** : la station, la graine,
  * les actions datées, et le nombre de semaines. Charger une partie, c'est la
- * REJOUER depuis le premier tick (`game.ts:runJournal`). C'est élégant, c'est
+ * **rejouer** depuis le premier tick (`game.ts:runJournal`). C'est élégant, c'est
  * compact, et ça repose sur une hypothèse que le moteur ne tient pas :
  *
  * > **que rejouer la même partie donne la même partie.**
@@ -19,9 +19,9 @@
  * fait sa partie : un tirage bascule de l'autre côté d'un seuil, un arbre meurt
  * qui vivait, et les trajectoires s'écartent pour de bon. Ce n'est pas une
  * perte de réalisme (les 1 663 essais sont verts des deux côtés) ; c'est une
- * perte de la PARTIE DU JOUEUR, ce qui est pire.
+ * perte de la **partie du joueur**, ce qui est pire.
  *
- * ── CE QUE CE MODULE FAIT ────────────────────────────────────────────────────
+ * ── **ce que ce module fait** ────────────────────────────────────────────────────
  *
  * Il écrit l'état complet du moteur dans un bloc d'octets, et il le relit à
  * l'identique. Pas « à peu près » : le `stateHash` d'un état relu est celui de
@@ -29,35 +29,35 @@
  * la partie qui ne s'est jamais arrêtée. C'est ce que l'essai exige.
  *
  * **Ça ne remplace pas le journal, ça le double.** Le journal reste la mémoire
- * de ce que le joueur a FAIT — les niveaux le lisent, les statistiques aussi —
+ * de ce que le joueur a **fait** — les niveaux le lisent, les statistiques aussi —
  * et il reste le seul recours quand le format d'état a changé. D'où la règle
  * d'usage : *charger l'état s'il se lit, rejouer le journal sinon.* Une version
  * inconnue, une liste de champs qui a bougé, un bloc tronqué : `lireEtat` rend
  * `undefined` plutôt que d'inventer, et l'appelant retombe sur le rejeu.
  *
- * ── POURQUOI CE FORMAT-LÀ ────────────────────────────────────────────────────
+ * ── **pourquoi ce format-là** ────────────────────────────────────────────────────
  *
  * Un état est fait de deux matières très différentes :
  *
- *  - des GRILLES de sol — une trentaine de tableaux d'un nombre par cellule.
+ *  - des **grilles** de sol — une trentaine de tableaux d'un nombre par cellule.
  *    C'est 99 % du volume. En JSON, un flottant coûte une vingtaine de
  *    caractères pour huit octets d'information : une parcelle d'un hectare
  *    pèse 5 Mo, soit le quota entier de `localStorage`. En float64 brut, elle
  *    pèse 2,5 Mo, et gzip la ramène très bas parce que les cellules se
  *    ressemblent ;
- *  - tout le RESTE — les arbres, l'économie, le carbone, la banque de graines,
+ *  - tout le **reste** — les arbres, l'économie, le carbone, la banque de graines,
  *    l'état du tirage, la faune. Quelques dizaines de kilo-octets, une
  *    structure irrégulière, des chaînes de caractères. Le JSON y est le bon
  *    outil, et **il est exact** : `JSON.stringify` d'un flottant rend la plus
  *    courte écriture qui se relit à l'identique.
  *
  * D'où un bloc en deux parties : un en-tête JSON, puis les grilles en float64.
- * Et l'en-tête DÉCLARE les grilles qu'il porte, nom par nom et longueur par
- * longueur. `lireEtat` compare cette liste à celle qu'un sol NEUF de la version
+ * Et l'en-tête **déclare** les grilles qu'il porte, nom par nom et longueur par
+ * longueur. `lireEtat` compare cette liste à celle qu'un sol **neuf** de la version
  * courante produit : un champ ajouté depuis, une parcelle d'une autre taille, et
  * le bloc est refusé au lieu d'être relu de travers.
  *
- * ── CE QUE ÇA PÈSE, MESURÉ ───────────────────────────────────────────────────
+ * ── **ce que ça pèse**, **mesuré** ───────────────────────────────────────────────────
  *
  *     parcelle              valeurs de grille   float64   gzip -9
  *     0,09 ha (30 m), 5 ans        42 300        0,32 Mo     79 Ko
@@ -76,14 +76,14 @@
  * quels et n'a pas ce plafond. Le journal, lui, reste minuscule et peut rester
  * où il est.
  *
- * ── CE QUE CE MODULE NE FAIT PAS ─────────────────────────────────────────────
+ * ── **ce que ce module ne fait pas** ─────────────────────────────────────────────
  *
- * Il ne RANGE rien. Où le bloc est stocké — `localStorage`, IndexedDB, un
+ * Il ne **range** rien. Où le bloc est stocké — `localStorage`, IndexedDB, un
  * fichier — et s'il est compressé au passage ne le regarde pas : c'est la
  * couche jeu qui décide, et c'est elle qui connaît les quotas du navigateur.
  * Le moteur rend des octets.
  *
- * Il ne sérialise pas la STATION non plus, et c'est volontaire : elle est une
+ * Il ne sérialise pas la **station** non plus, et c'est volontaire : elle est une
  * donnée de configuration, la sauvegarde la porte déjà sous forme
  * d'identifiant et de réglages, et la recopier dans chaque bloc en ferait une
  * seconde source de vérité qui dériverait le jour où une station est corrigée.
@@ -97,7 +97,7 @@ import { createGameState, type GameState, type SoilState, type Station } from ".
 const MAGIE = "CANOPEE\u0000";
 
 /**
- * La version du FORMAT, pas celle du jeu.
+ * La version du **format**, pas celle du jeu.
  *
  * Elle ne monte que si la disposition du bloc change. Un changement de la
  * forme de l'état — un champ de sol ajouté, un champ d'arbre retiré — n'a pas
@@ -116,7 +116,7 @@ interface GrilleDeclaree {
 }
 
 /**
- * Les tableaux de sol, à plat et dans un ordre STABLE.
+ * Les tableaux de sol, à plat et dans un ordre **stable**.
  *
  * Trouvés par parcours plutôt que listés à la main : une liste écrite en dur
  * serait une seconde copie de `SoilState`, et le jour où un lot y ajoute un
@@ -138,7 +138,7 @@ function grillesDuSol(soil: SoilState): { nom: string; tableau: unknown[] }[] {
   return out;
 }
 
-/** Ce que l'en-tête porte : tout l'état SAUF les grilles et la station. */
+/** Ce que l'en-tête porte : tout l'état **sauf** les grilles et la station. */
 interface Entete {
   v: number;
   /** le sol privé de ses grilles — il n'y reste que les scalaires */
@@ -153,7 +153,7 @@ interface Entete {
    * valeurs mais rangées autrement, donc son `JSON.stringify` diffère. On
    * perdrait le contrôle le plus simple qui soit — *l'état relu est-il
    * indiscernable de l'état écrit ?* — pour économiser trente octets. Il porte
-   * aussi les champs FACULTATIFS (`faune`, `nextFauneId`), qu'un état neuf
+   * aussi les champs **facultatifs** (`faune`, `nextFauneId`), qu'un état neuf
    * n'aurait pas permis de retrouver.
    */
   ordre: string[];
@@ -169,9 +169,9 @@ interface Entete {
 export function ecrireEtat(state: GameState): Uint8Array {
   const grilles = grillesDuSol(state.soil);
 
-  // **LE SQUELETTE DU SOL** : sa forme exacte, grilles remplacées par `null`.
+  // **le squelette du sol** : sa forme exacte, grilles remplacées par `null`.
   // Garder les clés plutôt que les retirer n'est pas de la décoration — c'est ce
-  // qui porte l'ORDRE, et l'ordre n'est pas connu d'avance : le sol que rend un
+  // qui porte l'**ordre**, et l'ordre n'est pas connu d'avance : le sol que rend un
   // tick ne range pas ses champs comme celui que rend `createGameState`. Sans
   // le squelette, un état relu porterait les mêmes valeurs rangées autrement, et
   // on perdrait le contrôle le plus simple qui soit — *l'état relu est-il
@@ -257,11 +257,11 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   }
   if (!Array.isArray(entete.grilles) || typeof entete.reste !== "object") return undefined;
 
-  // **LE CONTRÔLE QUI ÉVITE DE RELIRE DE TRAVERS.** Un bloc écrit par une
+  // **le contrôle qui évite de relire de travers.** Un bloc écrit par une
   // version du moteur dont le sol n'avait pas les mêmes champs se reconstruirait
   // en un état incomplet — un tableau manquant, et le premier tick lit
   // `undefined`. Plutôt que de le découvrir en jeu, on compare la liste
-  // déclarée à celle qu'un sol NEUF de cette version produit. Les longueurs
+  // déclarée à celle qu'un sol **neuf** de cette version produit. Les longueurs
   // aussi : une parcelle de 30 m ne se relit pas sur une station de 100.
   const solDeCetteVersion = createGameState(station, rngStateFromSeed(1)).soil;
   const attendues = grillesDuSol(solDeCetteVersion).map((g) => `${g.nom}:${g.tableau.length}`);
@@ -276,8 +276,8 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   const nValeurs = entete.grilles.reduce((total, g) => total + g.n, 0);
   if (debutGrilles + bourrage + nValeurs * 8 > octets.length) return undefined;
 
-  // `Float64Array` exige que son décalage soit un multiple de huit DANS SON
-  // TAMPON. Un bloc reçu par tranches peut ne pas l'être ; on recopie alors.
+  // `Float64Array` exige que son décalage soit un multiple de huit **dans son**
+  // **tampon**. Un bloc reçu par tranches peut ne pas l'être ; on recopie alors.
   const depart = octets.byteOffset + debutGrilles + bourrage;
   const valeurs =
     depart % 8 === 0
@@ -297,7 +297,7 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
     lus[g.nom] = tableau;
   }
 
-  // On rebâtit le sol EN MARCHANT SON SQUELETTE : les clés y sont dans l'ordre
+  // On rebâtit le sol **en marchant son squelette** : les clés y sont dans l'ordre
   // qu'elles avaient, et chaque `null` marque la place d'une grille.
   const soil: Record<string, unknown> = {};
   for (const [cle, valeur] of Object.entries(entete.sol)) {

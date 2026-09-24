@@ -3,9 +3,9 @@
  *
  * Le moteur n'avait aucun geste pour apporter de l'azote : un blé continu ne
  * pouvait que s'épuiser. Ce fichier vérifie les deux choses que le lot
- * affirme, et toutes deux contre BROADBALK, l'essai de fertilisation le plus
+ * affirme, et toutes deux contre **Broadbalk**, l'essai de fertilisation le plus
  * ancien du monde :
- *   1. la courbe de réponse TOMBE — elle n'est écrite nulle part ;
+ *   1. la courbe de réponse **tombe** — elle n'est écrite nulle part ;
  *   2. minéral et fumier ne font pas la même chose, et c'est le lessivage qui
  *      les sépare.
  */
@@ -74,7 +74,7 @@ function bleContinu(
           });
         }
       }
-      // L'azote minéral au PRINTEMPS, quand la culture le prend. C'est la règle
+      // L'azote minéral au **printemps**, quand la culture le prend. C'est la règle
       // agronomique de base, et le lessivage hivernal en est la raison.
       if (w === 10 && mineralKgNHa > 0) {
         geste({
@@ -156,7 +156,7 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
     const fort = dernieres(bleContinu(ANS, 192));
     expect(rien).toBeLessThan(moyen);
     expect(moyen).toBeLessThan(fort);
-    // Le point ZÉRO est le seul que Broadbalk cale à la décimale, et il tombe
+    // Le point **zéro** est le seul que Broadbalk cale à la décimale, et il tombe
     // juste : ~1 t/ha tenu sur cent soixante-dix ans.
     expect(rien).toBeGreaterThan(0.6);
     expect(rien).toBeLessThan(1.6);
@@ -165,22 +165,22 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
   }, 900_000);
 
   it("le PLAFOND était dans le tassement, et il est levé (#141)", () => {
-    // Le moteur reproduisait la FORME de la courbe et pas son niveau haut :
+    // Le moteur reproduisait la **forme** de la courbe et pas son niveau haut :
     // 4,88 t/ha à 192 kg N contre 8-9 chez Broadbalk, 6,21 au fumier contre ~9.
     // La cause avait été cherchée plutôt que supposée, et elle était ailleurs
-    // que dans l'azote : le TASSEMENT, qui s'épinglait à 1,000 à l'an 16 et
+    // que dans l'azote : le **tassement**, qui s'épinglait à 1,000 à l'an 16 et
     // retirait 30 % de croissance pour toujours.
     //
-    // CE N'ÉTAIT PAS UN COEFFICIENT TROP GRAND, C'ÉTAIT UN TERME QUI MANQUAIT.
+    // **Ce n'était pas un coefficient trop grand**, **c'était un terme qui manquait**.
     // Le moteur ne modélisait que les roues du tracteur ; le soc, lui, casse la
     // structure tassée de l'horizon travaillé — c'est la raison agronomique du
     // geste, et Broadbalk est labouré chaque année depuis 1843. Le terme ajouté
-    // remplace la saturation par un ÉQUILIBRE : le tassement oscille entre 0,30
+    // remplace la saturation par un **équilibre** : le tassement oscille entre 0,30
     // au sortir du labour et 0,10 après une année de réparation, au lieu de
     // monter à 1 et d'y rester.
     //
-    // CE QUE ÇA REND, moyenne des dix dernières années sur trente. Le témoin
-    // est `PERTE_CROISSANCE_MAX = 0`, REFAIT après le lot comme l'issue le
+    // **Ce que ça rend**, moyenne des dix dernières années sur trente. Le témoin
+    // est `PERTE_CROISSANCE_MAX = 0`, **refait** après le lot comme l'issue le
     // demandait — et pas repris de la mesure d'avant, qui portait sur une autre
     // trajectoire de tassement :
     //
@@ -194,7 +194,7 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
     // plots fertilisés, contre 74 % avant le lot. Le régime d'équilibre coûte
     // 5 %, ce qui est ce qu'un sol labouré doit coûter — pas zéro, pas un tiers.
     //
-    // CE QUI RESTE, et qui n'est pas ce lot : le minéral 192 s'arrête à 6,00
+    // **Ce qui reste**, et qui n'est pas ce lot : le minéral 192 s'arrête à 6,00
     // pour 8-9 chez Broadbalk, et son propre témoin sans tassement plafonne à
     // 6,32. La seconde cause est donc petite mais réelle, et elle est ailleurs.
     const fort = dernieres(bleContinu(ANS, 192));
@@ -215,7 +215,7 @@ describe("minéral et fumier ne font pas la même chose", () => {
     // qu'il ne l'est pas.
     //
     // Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m²
-    // d'azote minéral et RIEN en litière ; le plot fumier en porte 4,50 et
+    // d'azote minéral et **rien** en litière ; le plot fumier en porte 4,50 et
     // 20,25 de litière. Le second a constitué un stock, le premier non.
     const ANS = 30;
     const mineral = bleContinu(ANS, 192);
@@ -231,9 +231,9 @@ describe("et c'est la fertilisation qui rend le gradient LISIBLE (E13)", () => {
   it("allée fertilisée : l'ombre seule, monotone, sans compensation", () => {
     // **C'est le déblocage du lot.** Sans fertilisation, le gradient d'une
     // allée mesurait surtout l'azote que la litière des noyers rendait à un
-    // blé qui s'épuisait : le rapport passait AU-DESSUS de 1 entre H/L 0,93 et
+    // blé qui s'épuisait : le rapport passait **au-dessus** de 1 entre H/L 0,93 et
     // 1,11 (`culture.test.ts`). Les deux côtés étant maintenant fertilisés,
-    // c'est de l'ombre PURE — donc comparable à ce que mesure Dupraz.
+    // c'est de l'ombre **pure** — donc comparable à ce que mesure Dupraz.
     //
     // Relevé, deux rangs de noyers encadrant une allée de 8 m, contre le même
     // blé fertilisé en plein champ :
@@ -241,7 +241,7 @@ describe("et c'est la fertilisation qui rend le gradient LISIBLE (E13)", () => {
     //   H/L    0,29   0,55   0,74   0,84   1,02   1,28
     //   ratio  0,999  0,963  0,912  0,889  0,835  0,787
     //
-    // Monotone d'un bout à l'autre. **Et le moteur ne montre PAS de genou à
+    // Monotone d'un bout à l'autre. **Et le moteur ne montre pas de genou à
     // 0,8** : la baisse commence tout de suite et se poursuit. L'observation
     // de Dupraz — « pas beaucoup affecté sous H/L 0,8 » — reste compatible
     // (−9 % à 0,74), mais le moteur la produit comme une pente douce, pas
@@ -255,7 +255,7 @@ describe("et c'est la fertilisation qui rend le gradient LISIBLE (E13)", () => {
     // Vieille, elle coûte, et l'écart est bien plus net que sans fertilisation
     // (0,787 contre 0,874) parce que rien ne le compense plus.
     expect(rapport(33)).toBeLessThan(0.85);
-    // Et la décroissance est MONOTONE, ce qu'elle n'était pas avant : le
+    // Et la décroissance est **monotone**, ce qu'elle n'était pas avant : le
     // rapport ne remonte jamais au-dessus de 1.
     for (const a of [3, 9, 15, 21, 27, 33]) expect(rapport(a)).toBeLessThanOrEqual(1);
   }, 900_000);
