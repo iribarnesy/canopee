@@ -25,6 +25,7 @@
  */
 
 import { getEspece } from "./especes";
+import type { GrilleLue } from "./grid";
 import type { TreeState } from "./trees";
 
 /**
@@ -331,7 +332,7 @@ export function aPorteeDeDent(tree: TreeState): boolean {
  */
 export function brouter(
   trees: readonly TreeState[],
-  herbeCouverture: readonly number[],
+  herbeCouverture: GrilleLue,
   couvertArbore: readonly number[],
   coteM: number,
   densiteParHa: number,

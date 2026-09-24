@@ -89,6 +89,7 @@ import {
   RETOUR_IMMIGRATION,
 } from "./gibier";
 import { glandeeRelative } from "./glandee";
+import type { GrilleEcrite, GrilleLue } from "./grid";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
   capaciteHerbacee,
@@ -1289,7 +1290,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       );
       if (piege > 0) {
         const f = piege / avantPiege;
-        const rendre = (stock: number[], charge: number[]): void => {
+        const rendre = (stock: GrilleEcrite, charge: number[]): void => {
           const rendu = (charge[i] ?? 0) * f;
           stock[i] = (stock[i] ?? 0) + rendu;
           charge[i] = (charge[i] ?? 0) - rendu;
@@ -1858,7 +1859,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // pH sur le taux de saturation de son complexe. C'est ici, et nulle part
   // ailleurs, que `soil.ph` est écrit — le chaulage lui-même passe par les
   // bases (actions.ts).
-  const ph = new Array<number>(nCells);
+  const ph = new Float32Array(nCells);
   for (let i = 0; i < nCells; i++) {
     ph[i] = cecSurfaceEq > 0 ? phDepuisSaturation((basesEq[i] ?? 0) / cecSurfaceEq) : PH_PLANCHER;
   }
@@ -2409,7 +2410,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     habitatSum += habitat[i] ?? 0;
   }
-  ravageurs = Array.from(disperser(Float64Array.from(ravageurs), dims));
+  ravageurs = Float32Array.from(disperser(Float64Array.from(ravageurs), dims));
   for (let i = 0; i < nCells; i++) ravageurSum += ravageurs[i] ?? 0;
 
   nextTrees = nextTrees.map((tree) => {

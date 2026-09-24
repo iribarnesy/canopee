@@ -15,7 +15,7 @@
  * couché). D'où deux stocks distincts plutôt qu'un seul.
  */
 
-import type { GridDims } from "./grid";
+import type { GridDims, GrilleEcrite } from "./grid";
 import { rngFloat, rngStateFromSeed } from "./rng";
 
 /**
@@ -237,8 +237,8 @@ export function versLAval(
  * REÇOIT : un tronc de trente mètres traverse plusieurs expositions.
  */
 export function poserBoisAuSol(
-  boisAuSolCG: number[],
-  boisEnTraversPart: number[],
+  boisAuSolCG: GrilleEcrite,
+  boisEnTraversPart: GrilleEcrite,
   altitudes: readonly number[],
   dims: GridDims,
   cellule: number,

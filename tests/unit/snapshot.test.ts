@@ -193,9 +193,10 @@ describe("les grilles de l'instantané", () => {
     expect(snapshot.soilHerbeBiomasse).toHaveLength(nCells);
     expect(snapshot.soilRavageurs).toHaveLength(nCells);
     expect(snapshot.soilEpaisseurPerdueCm).toHaveLength(nCells);
-    expect([...snapshot.soilHerbeBiomasse]).toEqual(
-      modifie.soil.herbeBiomasse.map((v) => Math.fround(v)),
-    );
+    // Le `Math.fround` d'avant n'a plus lieu d'être : la grille du moteur EST
+    // déjà en simple précision (#203), donc le transfert est une copie exacte
+    // et non plus une conversion.
+    expect([...snapshot.soilHerbeBiomasse]).toEqual([...modifie.soil.herbeBiomasse]);
     // La tache de ravageurs reste une tache : la cellule 3 se distingue.
     expect(snapshot.soilRavageurs[3]).toBeCloseTo(0.8, 6);
     expect(snapshot.soilRavageurs[0]).toBeCloseTo(0.05, 6);

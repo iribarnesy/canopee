@@ -37,7 +37,11 @@ import {
 } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
-const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+const moyenne = (a: ArrayLike<number>) => {
+  let t = 0;
+  for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+  return a.length === 0 ? 0 : t / a.length;
+};
 
 describe("le pH est une lecture du complexe, pas un état libre", () => {
   it("la courbe pH ↔ saturation est croissante et s'inverse exactement", () => {

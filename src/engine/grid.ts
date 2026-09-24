@@ -5,6 +5,32 @@
  * dans les boucles chaudes du tick.
  */
 
+/**
+ * Une grille de sol en simple précision : un état que la semaine réécrit
+ * (issue #203, voir `SoilState` pour la mesure qui a fait ce partage).
+ */
+export type Grille = Float32Array;
+
+/**
+ * Une grille de sol en DOUBLE précision, et c'est délibéré : un stock à longue
+ * mémoire, qui s'ajuste par différences minuscules sur des décennies.
+ */
+export type GrilleLongue = Float64Array;
+
+/**
+ * Une grille qu'on LIT sans avoir à connaître sa précision — ni même savoir
+ * que c'en est une. C'est le type des paramètres de lecture : il accepte les
+ * deux tableaux typés ET un `number[]`, ce qui laisse les essais construire
+ * leurs grilles à la main.
+ */
+export type GrilleLue = ArrayLike<number>;
+
+/**
+ * Une grille qu'on ÉCRIT, même indifférence. `ArrayLike` ne suffit pas ici :
+ * il ne déclare pas l'écriture indexée.
+ */
+export type GrilleEcrite = Float32Array | Float64Array | number[];
+
 export interface GridDims {
   /** largeur et hauteur en mètres (= en cellules de 1 m²) */
   widthM: number;

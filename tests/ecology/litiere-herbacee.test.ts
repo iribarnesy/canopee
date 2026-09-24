@@ -42,8 +42,12 @@ import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
 const METEO = syntheticYear(LIMON_RICHE.climat);
-const somme = (a: readonly number[] | Float64Array) => Array.from(a).reduce((x, y) => x + y, 0);
-const moyenne = (a: readonly number[] | Float64Array) => somme(a) / a.length;
+const somme = (a: ArrayLike<number>) => {
+  let t = 0;
+  for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+  return t;
+};
+const moyenne = (a: ArrayLike<number>) => (a.length === 0 ? 0 : somme(a) / a.length);
 
 /** Une prairie spontanée, sans arbre et sans geste, sur `ans` années. */
 function prairie(ans: number, cote = 30) {

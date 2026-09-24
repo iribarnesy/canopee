@@ -33,7 +33,7 @@
 import { volumeCaviteTotalL } from "./cavites";
 import { getEspece } from "./especes";
 import { AUXILIAIRES_SUFFISANTS } from "./faune";
-import type { GridDims } from "./grid";
+import type { GridDims, GrilleLue } from "./grid";
 import { forEachDiscCell } from "./grid";
 import { crownRadiusM } from "./light";
 import type { TreeState } from "./trees";
@@ -171,7 +171,7 @@ export interface CarteBiotique {
  */
 export function carteBiotique(
   trees: readonly TreeState[],
-  herbeCouverture: readonly number[],
+  herbeCouverture: GrilleLue,
   boisMortTHa: number,
   dims: GridDims,
   auxiliairesInstalles?: ArrayLike<number>,

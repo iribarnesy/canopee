@@ -14,6 +14,7 @@
 import { leveeParM2 } from "./banqueGraines";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
+import type { GrilleLue } from "./grid";
 import {
   crownRadiusM,
   type IndexOmbres,
@@ -120,7 +121,7 @@ export interface RecruitmentInput {
   /** feuillage ombrageant de chaque arbre : le filtre lumière des semis en dépend */
   partOmbrageante: PartOmbrageante;
   /** pH par cellule (un semis ne s'installe pas hors de sa gamme) */
-  ph: readonly number[];
+  ph: GrilleLue;
   /**
    * Lumière au sol par cellule : elle sert au geai, qui cache ses glands en
    * terrain découvert pour les retrouver.

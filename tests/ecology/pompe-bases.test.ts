@@ -39,7 +39,11 @@ import { LIMON_ACIDE, LIMON_RICHE, type StationClimat } from "../../src/engine/s
 import { tick } from "../../src/engine/tick";
 import { fractionsRacinairesParHorizon } from "../../src/engine/trees";
 
-const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+const moyenne = (a: ArrayLike<number>) => {
+  let t = 0;
+  for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+  return a.length === 0 ? 0 : t / a.length;
+};
 
 describe("ce que la pompe lit, et ce qu'elle refuse de lire", () => {
   it("le même calcium aux deux bouts du voyage", () => {
