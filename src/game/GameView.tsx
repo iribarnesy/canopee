@@ -71,6 +71,7 @@ import type { SaveGame } from "./protocol";
 import {
   type EntreeSauvegarde,
   essencesPlantees,
+  libelleDeLaPartie,
   listerSauvegardes,
   reglagesDeLaPartie,
   supprimerSauvegarde,
@@ -457,7 +458,7 @@ function StartScreen({
                 onClick={() => setPartieChoisie(e.id === partieChoisie ? undefined : e.id)}
                 title={`${e.save.actions.length} actions · ${new Date(e.quand).toLocaleString("fr-FR")}`}
               >
-                {e.nom}
+                {libelleDeLaPartie(e)}
               </button>
             ))}
           </div>
@@ -495,7 +496,7 @@ function StartScreen({
                   appliquerLesReglages(choisieEntree.save);
                   setPartieChoisie(undefined);
                   setMessageProfil(
-                    `Réglages de « ${choisieEntree.nom} » chargés, avec une graine neuve.`,
+                    `Réglages de « ${libelleDeLaPartie(choisieEntree)} » chargés, avec une graine neuve.`,
                   );
                 }}
               >

@@ -1182,7 +1182,13 @@ function stepWeeks(n: number) {
           reason: `Incendie : ${f.arbresTues} arbres perdus`,
           scene: sceneDeLaSemaine(),
         });
-        postSnapshot();
+        // **Pas d'instantané ici**, et c'est le correctif de l'incendie
+        // invisible. `startLoop` en poste un dès que `stepWeeks` rend la main ;
+        // en poster un de plus depuis ici en faisait **deux** pour la même
+        // semaine — le premier portant le feu, le second vidé par le premier,
+        // puisque `postSnapshot` emporte les tampons. L'écran gardait le
+        // second. Le front ne se jouait pas, et « ↺ Revoir la scène » rejouait
+        // le plan de l'instantané courant, c'est-à-dire un plan vide.
         return;
       }
     }
