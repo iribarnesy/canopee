@@ -12,8 +12,21 @@
 export type Grille = Float32Array;
 
 /**
- * Une grille de sol en DOUBLE précision, et c'est délibéré : un stock à longue
- * mémoire, qui s'ajuste par différences minuscules sur des décennies.
+ * Une grille de sol en DOUBLE précision, et c'est délibéré. Deux raisons de
+ * l'être, et une grille peut avoir les deux :
+ *
+ *  1. **un stock à longue mémoire**, qui s'ajuste par différences minuscules
+ *     sur des décennies — l'humus décroît de 1,5 % l'an, donc cinq tonnes
+ *     bougent de quelques kilos par décennie, et un incrément plus petit que
+ *     l'ulp du stock ne s'arrondit pas : il disparaît ;
+ *  2. **un stock qu'un BILAN AUDITE.** `tick-conservation.test.ts` exige que
+ *     l'azote se referme à 5e-7 près ; la simple précision plafonne à ~1e-7 par
+ *     cellule, et sur dix mille cellules l'écart sort à 3e-6. Mesuré : le
+ *     bilan cassait des quatre côtés. **On ne desserre pas la tolérance** — la
+ *     fermeture du bilan est la garantie, l'économie de mémoire n'est qu'un
+ *     confort. Ce sont donc les stocks que la propriété compte qui restent
+ *     longs : `mineralNG` et `litterNG` pour l'azote, `humusCG` pour les deux
+ *     raisons à la fois.
  */
 export type GrilleLongue = Float64Array;
 

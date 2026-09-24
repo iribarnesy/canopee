@@ -217,13 +217,13 @@ export function gridDims(station: Station): GridDims {
  */
 export interface SoilState {
   /** eau de la réserve utile, mm — par (cellule, horizon) */
-  waterMm: Grille;
+  waterMm: GrilleLongue;
   /** eau gravitaire au-dessus de la capacité au champ, mm — par (cellule, horizon) */
-  excessMm: Grille;
+  excessMm: GrilleLongue;
   /** azote minéral, g/m² (1 kg/ha = 0,1 g/m²) */
-  mineralNG: Grille;
+  mineralNG: GrilleLongue;
   /** azote de la litière au sol, g/m² (libéré vers le minéral en se décomposant) */
-  litterNG: Grille;
+  litterNG: GrilleLongue;
   /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
   litterCG: Grille;
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
@@ -290,7 +290,7 @@ export interface SoilState {
    * stock qui manquait : sans lui, ce que la végétation ne transpire pas
    * disparaissait au lieu de faire monter la nappe.
    */
-  nappeMm: Grille;
+  nappeMm: GrilleLongue;
   /**
    * Niveau de référence du réseau régional, mm. Il ne bouge que si ce qui
    * arrive à la parcelle arrive aussi à son bassin (nappe.ts).
@@ -626,7 +626,7 @@ export function createGameState(
   const n = cellCount(gridDims(station));
   const nH = Math.max(1, station.profil.length);
   // Chaque horizon démarre à sa propre réserve utile (sol ressuyé du 1er janvier).
-  const eauInitiale = new Float32Array(n * nH);
+  const eauInitiale = new Float64Array(n * nH);
   for (let i = 0; i < n; i++) {
     for (let h = 0; h < nH; h++)
       eauInitiale[i * nH + h] = ruHorizonMm(station.profil[h] as Horizon);
@@ -664,9 +664,9 @@ export function createGameState(
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: eauInitiale,
-      excessMm: new Float32Array(n * nH),
-      mineralNG: new Float32Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
-      litterNG: new Float32Array(n),
+      excessMm: new Float64Array(n * nH),
+      mineralNG: new Float64Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
+      litterNG: new Float64Array(n),
       litterCG: new Float32Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Float32Array(n),
@@ -689,7 +689,7 @@ export function createGameState(
         station.drainageExterneMmSemaine,
         station.profondeurNappeEquilibreCm,
       ),
-      nappeMm: Float32Array.from(
+      nappeMm: Float64Array.from(
         stocksEquilibreParCellule(
           station.profil,
           altitudeParCellule(station.relief, { widthM: station.coteM, heightM: station.coteM }),
