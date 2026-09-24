@@ -40,17 +40,35 @@ export const PARTIES_GARDEES = 8;
 export interface EntreeSauvegarde {
   /** identifiant stable de l'entrée ; l'autosave écrit toujours dans la sienne */
   id: string;
-  /** ce que le joueur lit dans la liste */
-  nom: string;
+  /**
+   * Le nom que le **joueur** a donné, s'il en a donné un.
+   *
+   * **Absent le reste du temps, et c'est le correctif.** Il était rempli d'un
+   * nom par défaut à la première écriture, puis reconduit à chaque autosave :
+   * une partie créée l'an 6 et jouée jusqu'à l'an 36 s'annonçait « an 6 » dans
+   * la liste pendant que sa fiche disait « an 36 ». Deux copies de l'année, dont
+   * une gelée. Le libellé se calcule maintenant à l'affichage, de l'état.
+   */
+  nom?: string;
   /** date d'écriture, ms depuis l'époque */
   quand: number;
   save: SaveGame;
 }
 
+/** L'année de jeu d'une partie, à partir de 1. */
+export function anneeDeLaPartie(save: SaveGame): number {
+  return Math.floor(save.weeks / 52) + 1;
+}
+
 /** Le nom qu'on donne à une partie qu'on n'a pas nommée. */
 export function nomParDefaut(save: SaveGame): string {
   const station = STATIONS_V0.find((s) => s.station.id === save.stationId);
-  return `${station?.station.nom ?? save.stationId} · an ${Math.floor(save.weeks / 52) + 1}`;
+  return `${station?.station.nom ?? save.stationId} · an ${anneeDeLaPartie(save)}`;
+}
+
+/** Ce que le joueur lit dans la liste : son nom, ou l'état de la partie. */
+export function libelleDeLaPartie(entree: EntreeSauvegarde): string {
+  return entree.nom ?? nomParDefaut(entree.save);
 }
 
 /** Un identifiant d'entrée : la date suffit, on n'en crée pas deux par milliseconde. */
@@ -71,12 +89,7 @@ export function listerSauvegardes(stock: Storage): EntreeSauvegarde[] {
   const ancienne = lireAncienne(stock);
   if (!ancienne) return liste;
   // On ne migre pas deux fois : l'ancienne clé part une fois recopiée.
-  const migree: EntreeSauvegarde = {
-    id: idNeuf(0),
-    nom: nomParDefaut(ancienne),
-    quand: Date.now(),
-    save: ancienne,
-  };
+  const migree: EntreeSauvegarde = { id: idNeuf(0), quand: Date.now(), save: ancienne };
   const suite = [migree, ...liste].slice(0, PARTIES_GARDEES);
   ecrireListe(stock, suite);
   try {
@@ -101,7 +114,9 @@ export function ecrireSauvegarde(
   const avant = liste.find((e) => e.id === id);
   const entree: EntreeSauvegarde = {
     id,
-    nom: nom ?? avant?.nom ?? nomParDefaut(save),
+    // Pas de `nomParDefaut` ici : un nom écrit est un nom **gelé**, et le
+    // libellé par défaut doit suivre la partie.
+    ...((nom ?? avant?.nom) ? { nom: nom ?? avant?.nom } : {}),
     quand: Date.now(),
     save,
   };
@@ -121,6 +136,16 @@ export function derniereSauvegarde(stock: Storage): EntreeSauvegarde | undefined
   return listerSauvegardes(stock)[0];
 }
 
+/**
+ * La forme d'un nom par défaut tel qu'on en écrivait avant le correctif.
+ *
+ * Les entrées déjà rangées en portent un, gelé à l'année de leur création. On
+ * ne peut pas les distinguer d'un nom choisi autrement que par la forme — mais
+ * le dépôt n'a jamais eu d'écran pour renommer une partie, donc aucun nom
+ * choisi n'existe, et la reconnaissance ne peut rien casser aujourd'hui.
+ */
+const ANCIEN_DEFAUT = / · an \d+$/;
+
 function lireListe(stock: Storage): EntreeSauvegarde[] {
   try {
     const brut = stock.getItem(CLE_LISTE);
@@ -130,7 +155,11 @@ function lireListe(stock: Storage): EntreeSauvegarde[] {
     // On ne garde que ce qu'on sait relire : une entrée d'une version future,
     // ou tronquée par un quota dépassé, ne doit pas faire disparaître les
     // autres.
-    return lu.filter((e) => e?.save?.version === 1 && typeof e.id === "string");
+    return lu
+      .filter((e) => e?.save?.version === 1 && typeof e.id === "string")
+      .map((e) =>
+        e.nom !== undefined && ANCIEN_DEFAUT.test(e.nom) ? { ...e, nom: undefined } : e,
+      );
   } catch {
     return [];
   }
@@ -207,7 +236,7 @@ export function reglagesDeLaPartie(save: SaveGame): { quoi: string; valeur: stri
   if (save.economie === false) lignes.push({ quoi: "Économie", valeur: "désactivée" });
   lignes.push({
     quoi: "Avancement",
-    valeur: `an ${Math.floor(save.weeks / 52) + 1}, ${save.actions.length} actions`,
+    valeur: `an ${anneeDeLaPartie(save)}, ${save.actions.length} actions`,
   });
   return lignes;
 }
