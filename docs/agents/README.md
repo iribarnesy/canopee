@@ -24,6 +24,18 @@ l'allométrie du volume, l'élancement individuel) parce que rien ne disait qui
 prenait quoi. Deux PR ont fini fermées en doublon après avoir été écrites,
 mesurées et relues.
 
+**Ouvrir la PR dès le premier commit poussé.** En brouillon si le travail n'est
+pas fini : le but n'est pas d'annoncer une livraison, c'est qu'aucune branche ne
+soit rattachée à rien. Plusieurs issues dans une même PR ne gênent personne —
+une branche que rien ne relie à une issue, si.
+
+Une branche sans PR est **invisible**. Elle n'apparaît dans aucune liste que
+quelqu'un consulte, sa CI ne tourne sur la fusion de personne, et son écart avec
+`main` grandit sans que ça se voie. La section suivante raconte ce que ça a
+coûté la fois où ça n'a pas été fait ; le prix n'était pas du travail perdu,
+c'était un jour d'attente et vingt et un conflits qui n'existaient pas la
+veille.
+
 ## La branche d'un autre agent ne se touche pas
 
 **Ce qui appartient à un agent : sa branche, ses PR, ses issues assignées.**
