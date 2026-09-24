@@ -281,6 +281,95 @@ export const FRICHE_LIMON: StationClimat = {
   },
 };
 
+/**
+ * Suberaie des Maures : **la première station du jeu qui porte un été sec**
+ * (issue #212).
+ *
+ * Les sept autres sont tempérées océaniques ou subocéaniques, et l'atlas
+ * comptait pourtant trois essences méditerranéennes — chêne-liège, arbousier,
+ * chêne pubescent — dont les références de croissance sont, forcément,
+ * méditerranéennes. On ne pouvait donc les caler nulle part : les confronter
+ * sur un limon du Nord, c'est comparer deux climats.
+ *
+ * ── **la météo est réelle, et c'est ce qui a tranché** ───────────────────────
+ *
+ * L'issue posait la bonne question : est-ce que `rainWinterShare` suffit à
+ * faire un été méditerranéen, ou est-ce que l'année synthétique lisse le creux ?
+ * Mesuré sur la formule, la sinusoïde **peut** faire l'étiage — il faut monter
+ * la part à 0,88 pour tomber sur les bons millimètres de juillet. Mais la
+ * mesure a répondu autre chose, et de plus haut : **le maximum de pluie
+ * méditerranéen n'est pas en hiver, il est en automne.**
+ *
+ * Le Luc (Var), poste 83031001, soixante ans de relevés quotidiens
+ * (1964-2023, Météo-France, licence ouverte) :
+ *
+ *   mois   J   F   M   A   M   J   J   A   S    O    N   D
+ *   mm    78  62  57  66  62  44  20  42  72  118  113  84
+ *
+ * Octobre et novembre pèsent 231 mm contre 141 mm pour janvier-février. Aucune
+ * sinusoïde qui culmine en janvier ne rend ça, et pour un chêne-liège c'est
+ * exactement ce qui compte : la pluie qui revient après la sécheresse. La
+ * station porte donc une **série réelle**, comme les quatre autres qui en ont
+ * une (`data/meteo/suberaie-maures.json`).
+ *
+ * Le climat synthétique ci-dessous reste renseigné parce que des essais s'en
+ * servent, et il est calé sur cette même série : 14,7 °C de moyenne,
+ * demi-amplitude 9,1, écart diurne 12,5, 820 mm. `rainWinterShare` vaut 0,72,
+ * la valeur qui reproduit la part réelle du semestre octobre-mars (62,6 %) —
+ * **et il ne reproduit pas le pic d'automne**, ce qui est la limite assumée de
+ * l'année synthétique sur cette station.
+ *
+ * ── le sol ───────────────────────────────────────────────────────────────────
+ *
+ * Arène granitique des Maures : un sol sableux acide issu de l'altération du
+ * socle, filtrant, pauvre, et peu épais avant la roche fissurée. C'est le sol
+ * du chêne-liège, qui est strictement calcifuge — sur calcaire il cède la
+ * place au chêne vert, et ce tri-là, le moteur le fait déjà par le pH.
+ *
+ * Pas de nappe accessible : sur un versant de massif, la réserve est celle de
+ * l'arène et rien ne la réalimente en été. C'est le contraste qui fait la
+ * station, comme l'alios fait la lande.
+ *
+ * *(Profil à calibrer : les textures et les teneurs sont des ordres de grandeur
+ * d'arène granitique acide, aucune analyse de suberaie des Maures n'a été
+ * consultée.)*
+ */
+export const SUBERAIE_MAURES: StationClimat = {
+  station: stationDepuisProfil({
+    id: "suberaie-maures",
+    relief: { altitudeM: 80, pentePct: 8, expositionDeg: 180, forme: "plan", bassinAmontHa: 0 },
+    // **Il n'y a pas de maquis dans le catalogue des paysages**, et c'est une
+    // limite déclarée : le massif forestier est ce qui s'en approche le plus —
+    // beaucoup de semis, beaucoup de gibier, du vent cassé —, mais il sème des
+    // essences tempérées. Le moteur décide ensuite qui survit à l'été, et c'est
+    // mesuré plus bas (`stations-mediterraneennes.test.ts`).
+    paysageId: "massif-forestier",
+    nom: "Suberaie des Maures",
+    latitudeDeg: 43.4,
+    profil: [
+      horizon(25, { sable: 70, limon: 22, argile: 8 }, { moPct: 3.5, ph: 5.2 }),
+      horizon(45, { sable: 78, limon: 16, argile: 6 }, { moPct: 0.9, ph: 5.5 }),
+      horizon(50, { sable: 82, limon: 12, argile: 6 }, { moPct: 0.4, ph: 5.7 }),
+    ],
+    initialMineralNKgHa: 20,
+    // Versant de massif : la roche fissurée sous l'arène ne porte pas de nappe
+    // que les racines atteignent, et rien ne la réalimente en été.
+    profondeurNappeEquilibreCm: 600,
+    remonteeNappeMmSemaine: 0,
+    drainageExterneMmSemaine: 60,
+    // Un maquis bas occupe déjà le sol sous les lièges.
+    herbeInitiale: 0.45,
+    coteM: 100,
+  }),
+  climat: {
+    tMeanAnnual: 14.7,
+    tSeasonalAmplitude: 9.1,
+    tDiurnalRange: 12.5,
+    rainAnnualMm: 820,
+    rainWinterShare: 0.72,
+  },
+};
+
 export const STATIONS_V0: readonly StationClimat[] = [
   LANDE_SECHE,
   VALLEE_ENGORGEE,
@@ -288,4 +377,5 @@ export const STATIONS_V0: readonly StationClimat[] = [
   LIMON_PAUVRE_N,
   LIMON_ACIDE,
   FRICHE_LIMON,
+  SUBERAIE_MAURES,
 ];
