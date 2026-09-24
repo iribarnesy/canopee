@@ -103,8 +103,14 @@ export interface Etape {
   /** son rang réel dans le tick, à partir de 1 */
   rang: number;
   titre: string;
-  /** ce que le commentaire en dit de plus, quand il en dit plus */
+  /**
+   * Ce que le commentaire de section en dit — souvent le mécanisme en clair,
+   * de soixante-dix à six cents caractères. Vide pour les quatre étapes dont
+   * le titre se suffit.
+   */
   detail: string;
+  /** sa ligne dans `tick.ts`, pour aller lire le code qui la fait */
+  ligne: number;
 }
 
 /**
@@ -133,20 +139,44 @@ function sansRenvoiInterne(titre: string): string {
  * écrite avant « 6 ter bis » dans le fichier. L'ordre du fichier, lui, est
  * celui de l'exécution : c'est le seul qui soit vrai sans qu'on le tienne.
  */
+const MARQUEUR = /^\s*\/\/ ── (?:\d+(?: \w+)*)\.\s*(.*?)\s*─*\s*$/;
+
 export function etapesDuTick(source: string): Etape[] {
   const lignes = source.split("\n");
   const etapes: Etape[] = [];
   for (let i = 0; i < lignes.length; i++) {
     const l = lignes[i] ?? "";
-    const m = /^\s*\/\/ ── (?:\d+(?: \w+)*)\.\s*(.*?)\s*─*\s*$/.exec(l);
+    const m = MARQUEUR.exec(l);
     if (!m?.[1]) continue;
     let titre = m[1];
-    // Les titres longs débordent sur la ligne suivante, indentée sous le «//».
-    const detail: string[] = [];
+    // Tout le commentaire qui suit le marqueur, jusqu'au code. C'est là que le
+    // mécanisme est expliqué en clair — « les rameaux de l'année lignifient
+    // peu à peu ; ce qui reste tendre est ce que le chevreuil mange ».
+    //
+    // **On s'arrête au marqueur suivant**, et il a fallu le dire : deux
+    // sections se touchent dans le fichier (la régénération et la mémoire
+    // d'abri), et sans cette garde la première avalait le titre de la seconde.
+    //
+    // **Deux morceaux, et pas un.** Un titre trop long DÉBORDE sur la ligne
+    // suivante, indentée sous le « // » — c'est la même phrase, coupée. Le
+    // paragraphe qui suit, lui, en est une autre. Les fondre ensemble
+    // recollait « au sol et par arbre » à « ET transpiration » avec un point
+    // au milieu, et un essai l'a attrapé.
+    const suiteDuTitre: string[] = [];
+    const paragraphe: string[] = [];
+    let encoreDansLeTitre = true;
     for (let j = i + 1; j < lignes.length; j++) {
-      const suite = /^\s*\/\/ {4,}(.+?)\s*$/.exec(lignes[j] ?? "");
-      if (!suite?.[1]) break;
-      detail.push(suite[1]);
+      const suivante = lignes[j] ?? "";
+      if (MARQUEUR.test(suivante)) break;
+      const suite = /^\s*\/\/(\s*)(.*?)\s*$/.exec(suivante);
+      if (!suite) break;
+      const [, blancs, texte] = suite;
+      if (!texte) continue;
+      if (encoreDansLeTitre && (blancs?.length ?? 0) >= 4) suiteDuTitre.push(texte);
+      else {
+        encoreDansLeTitre = false;
+        paragraphe.push(texte);
+      }
     }
     // Ce qui précède le premier « : » fait un intitulé court ; le reste est du
     // détail. Sans ça, la première étape s'appelle « Lumière : au sol
@@ -161,7 +191,14 @@ export function etapesDuTick(source: string): Etape[] {
     etapes.push({
       rang: etapes.length + 1,
       titre,
-      detail: [reste, ...detail].filter(Boolean).join(" ").replace(/\s+/g, " ").trim(),
+      detail: sansRenvoiInterne(
+        [[reste, ...suiteDuTitre].join(" ").trim(), paragraphe.join(" ")]
+          .filter(Boolean)
+          .join(". "),
+      )
+        .replace(/\s+/g, " ")
+        .trim(),
+      ligne: i + 1,
     });
   }
   return etapes;

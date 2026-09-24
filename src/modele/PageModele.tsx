@@ -25,7 +25,7 @@
 
 import { domaines, etapes } from "virtual:modele";
 import { useMemo, useState } from "react";
-import type { Critere } from "./extraction";
+import type { Critere, Etape } from "./extraction";
 
 /** Ce que les trois états veulent dire, dans les mots du référentiel. */
 const ETAT = {
@@ -91,6 +91,108 @@ function AvecDuGras({ texte }: { texte: string }) {
   );
 }
 
+/**
+ * UNE ÉTAPE DE LA SEMAINE, dépliable.
+ *
+ * **Un bouton, et pas un survol.** La demande était « plus de détail au
+ * survol » ; un survol ne marche ni au doigt ni au clavier, et une infobulle
+ * native tronque quatre cents caractères. La carte porte donc ce qu'elle peut
+ * montrer sans bouger — deux lignes — et le clic ouvre le reste en place.
+ *
+ * Le survol n'est pas perdu pour autant : la bordure s'allume, ce qui dit que
+ * la carte se clique. Sans ce signe, un dépliant ne se découvre pas.
+ *
+ * Les quatre étapes dont le commentaire ne dit rien de plus que leur titre ne
+ * sont pas cliquables : un bouton qui n'ouvre rien est pire qu'un bouton
+ * absent.
+ */
+function CarteDEtape({
+  etape,
+  ouverte,
+  surOuvrir,
+}: {
+  etape: Etape;
+  ouverte: boolean;
+  surOuvrir: () => void;
+}) {
+  const [survolee, setSurvolee] = useState(false);
+  const depliable = etape.detail.length > 0;
+  return (
+    <li style={{ listStyle: "none" }}>
+      <button
+        type="button"
+        disabled={!depliable}
+        onClick={surOuvrir}
+        onMouseEnter={() => setSurvolee(true)}
+        onMouseLeave={() => setSurvolee(false)}
+        aria-expanded={depliable ? ouverte : undefined}
+        style={{
+          display: "block",
+          width: "100%",
+          height: "100%",
+          textAlign: "left",
+          font: "inherit",
+          // **La couleur ne dit pas l'importance.** `disabled` grise le bouton,
+          // et les quatre étapes sans commentaire se mettaient à paraître
+          // secondaires — dont « Croissance de chaque arbre », qui est le cœur
+          // du tick. Ce qui n'ouvre rien n'a pas de « + » et pas de curseur de
+          // main ; ça suffit à le dire, et ça ne ment pas sur le fond.
+          color: "var(--encre)",
+          opacity: 1,
+          border: "1px solid",
+          borderColor: survolee && depliable ? "var(--foret)" : "var(--trait)",
+          borderLeft: "3px solid var(--foret)",
+          borderRadius: 6,
+          padding: "6px 10px",
+          background: ouverte ? "var(--foret-pale)" : "var(--carte)",
+          cursor: depliable ? "pointer" : "default",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: "var(--encre-douce)",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{etape.rang}</span>
+          {depliable && <span aria-hidden="true">{ouverte ? "−" : "+"}</span>}
+        </div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.3 }}>{etape.titre}</div>
+        {etape.detail && (
+          <div
+            style={{
+              fontSize: 12,
+              color: "var(--encre-douce)",
+              marginTop: 3,
+              ...(ouverte
+                ? {}
+                : {
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical" as const,
+                    overflow: "hidden",
+                  }),
+            }}
+          >
+            <AvecDuCode texte={etape.detail} />
+          </div>
+        )}
+        {ouverte && (
+          <a
+            href={`${DEPOT}/blob/main/src/engine/tick.ts#L${etape.ligne}`}
+            onClick={(ev) => ev.stopPropagation()}
+            style={{ fontSize: 12, color: "var(--foret)", display: "inline-block", marginTop: 6 }}
+          >
+            voir le code — tick.ts ligne {etape.ligne} ↗
+          </a>
+        )}
+      </button>
+    </li>
+  );
+}
+
 function Compteur({ nombre, quoi }: { nombre: number; quoi: string }) {
   return (
     <div>
@@ -150,6 +252,7 @@ function LigneDeCritere({ critere }: { critere: Critere }) {
 }
 
 export function PageModele() {
+  const [etapeOuverte, setEtapeOuverte] = useState<number>();
   const [domaineVu, setDomaineVu] = useState<string>();
   const [etatVu, setEtatVu] = useState<keyof typeof ETAT>();
 
@@ -190,38 +293,28 @@ export function PageModele() {
         <h3>Une semaine simulée</h3>
         <p className="sous">
           Les {etapes.length} étapes d'un pas de temps, dans l'ordre où elles s'exécutent. Les trois
-          dernières ne tournent qu'une fois l'an.
+          dernières ne tournent qu'une fois l'an. Cliquez une étape pour lire ce qu'elle fait, et
+          aller voir le code qui la fait.
         </p>
         <ol
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
+            // Sans ça, déplier une carte étire toute sa rangée : les trois
+            // voisines gagnent un fond vide de la hauteur du texte ouvert.
+            alignItems: "start",
             gap: 8,
             margin: 0,
             padding: 0,
-            counterReset: "etape",
           }}
         >
           {etapes.map((e) => (
-            <li
+            <CarteDEtape
               key={e.rang}
-              style={{
-                listStyle: "none",
-                border: "1px solid var(--trait)",
-                borderLeft: "3px solid var(--foret)",
-                borderRadius: 6,
-                padding: "6px 10px",
-                background: "var(--carte)",
-              }}
-            >
-              <div style={{ fontSize: 11, color: "var(--encre-douce)" }}>{e.rang}</div>
-              <div style={{ fontSize: 13.5, lineHeight: 1.3 }}>{e.titre}</div>
-              {e.detail && (
-                <div style={{ fontSize: 12, color: "var(--encre-douce)", marginTop: 2 }}>
-                  {e.detail}
-                </div>
-              )}
-            </li>
+              etape={e}
+              ouverte={etapeOuverte === e.rang}
+              surOuvrir={() => setEtapeOuverte(etapeOuverte === e.rang ? undefined : e.rang)}
+            />
           ))}
         </ol>
       </section>
