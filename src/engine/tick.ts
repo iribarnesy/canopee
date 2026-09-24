@@ -89,7 +89,7 @@ import {
   RETOUR_IMMIGRATION,
 } from "./gibier";
 import { glandeeRelative } from "./glandee";
-import type { GrilleEcrite, GrilleLue } from "./grid";
+import type { GrilleEcrite } from "./grid";
 import { cellCount, cellIndexAt, forEachDiscCell } from "./grid";
 import {
   capaciteHerbacee,
