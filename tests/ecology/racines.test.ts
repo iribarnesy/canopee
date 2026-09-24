@@ -57,21 +57,21 @@ const SABLE_CM = 120;
 
 describe("complémentarité verticale sur sol contrasté", () => {
   /**
-   * Sol à deux étages très différents : un MANTEAU DE SABLE qui sèche vite, sur
+   * Sol à deux étages très différents : un **manteau de sable** qui sèche vite, sur
    * un horizon limoneux profond qui garde l'eau. Le pivot atteint la réserve
    * profonde, le traçant reste prisonnier de la surface.
    *
-   * LE SABLE FAISAIT 25 cm, ET CE BANC NE DÉMONTRAIT RIEN. Un manteau de vingt-
-   * cinq centimètres n'emprisonne personne : le bouleau est LE pionnier des
+   * **Le sable faisait** 25 cm, **et ce banc ne démontrait rien**. Un manteau de vingt-
+   * cinq centimètres n'emprisonne personne : le bouleau est **le** pionnier des
    * sables — il colonise les terrains pauvres et sableux — et l'essentiel de ses
    * racines occupe les soixante premiers centimètres, sans pivot. Il traversait
    * donc le sable sans y penser, et s'il mourait quand même, c'est que son
-   * plancher racinaire tombait par hasard À L'INTÉRIEUR de la couche (19 cm pour
+   * plancher racinaire tombait par hasard **à l'intérieur** de la couche (19 cm pour
    * 25 cm de sable). La conclusion tenait à dix centimètres, pas à une espèce.
    *
    * Le sable fait maintenant 120 cm — un manteau de couverture sur limon, ce qui
-   * est un profil réel du nord de l'Europe — et le contraste tient au TRAIT
-   * D'ESPÈCE que l'atlas déclare : le bouleau plafonne à 100 cm de profondeur
+   * est un profil réel du nord de l'Europe — et le contraste tient au **trait**
+   * **d'espèce** que l'atlas déclare : le bouleau plafonne à 100 cm de profondeur
    * racinaire, le chêne pubescent descend à 250. L'un reste dans le sable parce
    * qu'il ne sait pas faire mieux, l'autre atteint le limon. C'est ce que
    * l'essai voulait dire depuis le début.
@@ -116,24 +116,24 @@ describe("complémentarité verticale sur sol contrasté", () => {
   });
 
   /**
-   * CET ESSAI EXIGEAIT LA MORT DU TRAÇANT, ET C'ÉTAIT FAUX DEUX FOIS (#84).
+   * **Cet essai exigeait la mort du traçant**, **et c'était faux deux fois** (#84).
    *
-   * Faux écologiquement : le bouleau est LE pionnier des sables, et sous
+   * Faux écologiquement : le bouleau est **le** pionnier des sables, et sous
    * 750 mm/an sur un profil sable-sur-limon aucun des deux arbres n'a de raison
    * de mourir. Mesuré après correction du plancher racinaire, ni l'un ni l'autre
    * n'accumule le moindre stress — 0,002 et 0,003 à douze ans, pas même
    * 0,006 à 320 mm/an, tant la réserve du profil est grande. Le bouleau y
-   * DÉPASSE d'ailleurs le chêne (11,6 m contre 7,2), ce qui est juste : un
+   * **dépasse** d'ailleurs le chêne (11,6 m contre 7,2), ce qui est juste : un
    * pionnier rapide contre un chêne lent.
    *
    * Faux mécaniquement : il passait parce que le plancher racinaire du bouleau
-   * tombait par hasard À L'INTÉRIEUR des vingt-cinq centimètres de sable d'alors
+   * tombait par hasard **à l'intérieur** des vingt-cinq centimètres de sable d'alors
    * (19 cm), donc l'arbre mourait de faim d'eau dans une couche qu'il aurait
    * traversée sans y penser. Une conclusion écologique portée par une
    * coïncidence de dix centimètres.
    *
-   * CE QUI EST VRAI, ET MESURABLE, est plus intéressant : le pivot CONVERTIT LA
-   * SÉCHERESSE EN PROFONDEUR, le traçant ne le peut pas. C'est la
+   * **Ce qui est vrai**, **et mesurable**, est plus intéressant : le pivot **convertit la**
+   * **sécheresse en profondeur**, le traçant ne le peut pas. C'est la
    * complémentarité verticale que ce `describe` annonce, et elle se lit sur la
    * réponse des deux espèces au même assèchement.
    */
@@ -163,15 +163,15 @@ describe("complémentarité verticale sur sol contrasté", () => {
     expect(arrose.pivot.rootDepthCm).toBeGreaterThan(SABLE_CM);
     expect(arrose.tracant.rootDepthCm).toBeLessThan(SABLE_CM);
 
-    // Et l'écart se CREUSE quand on assèche, ce qui est le mécanisme lui-même :
-    // 147 cm contre 81. Le pivot gagne vingt-cinq centimètres, le traçant PAS
-    // UN SEUL.
+    // Et l'écart se **creuse** quand on assèche, ce qui est le mécanisme lui-même :
+    // 147 cm contre 81. Le pivot gagne vingt-cinq centimètres, le traçant **pas**
+    // **un seul**.
     expect(sec.pivot.rootDepthCm).toBeGreaterThan(arrose.pivot.rootDepthCm);
     expect(sec.pivot.rootDepthCm - arrose.pivot.rootDepthCm).toBeGreaterThan(
       sec.tracant.rootDepthCm - arrose.tracant.rootDepthCm,
     );
 
-    // Et c'est bien qu'il NE PEUT PAS, non qu'il n'a pas soif : à 320 mm il est
+    // Et c'est bien qu'il **ne peut pas**, non qu'il n'a pas soif : à 320 mm il est
     // collé au potentiel que sa taille et son espèce lui accordent (81 cm pour
     // 81,1 de potentiel), quand le pivot en a encore trente devant lui. Sans
     // cette ligne, l'essai ne saurait pas distinguer « il plafonne » de « rien

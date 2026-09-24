@@ -49,7 +49,7 @@ export const PIN_SYLVESTRE: FicheGraphique = {
     hiver: { r: 70, g: 98, b: 74 },
   },
   ecorce: { r: 96, g: 82, b: 68 },
-  // LA signature. Sans elle on dessine un conifère quelconque.
+  // **La** signature. Sans elle on dessine un conifère quelconque.
   ecorceHaute: { r: 196, g: 122, b: 62 },
   references: [
     "Rameau et al., Flore forestière française, t. 1 — Pinus sylvestris",

@@ -24,8 +24,8 @@ describe("embauche (§10) : saisonnier vs CDI", () => {
   const STATION = { ...LIMON_RICHE.station, coteM: 60 };
 
   it("un saisonnier repousse la facture de la semaine, puis repart tout seul", () => {
-    // DEPUIS #133 UN SAISONNIER NE DÉBLOQUE PLUS RIEN : il n'y a plus de mur à
-    // pousser. Ce qu'il déplace, c'est le SEUIL au-delà duquel les heures se
+    // **Depuis** #133 **un saisonnier ne débloque plus rien** : il n'y a plus de mur à
+    // pousser. Ce qu'il déplace, c'est le **seuil** au-delà duquel les heures se
     // facturent — et c'est une leçon plus juste, parce que c'est celle du
     // terrain. On plante donc la même semaine surchargée dans les deux cas ;
     // seule la note change.

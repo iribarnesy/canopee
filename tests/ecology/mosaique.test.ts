@@ -2,12 +2,12 @@
  * L'arrangement spatial dans l'indice de biodiversité (issue #75, critère J4).
  *
  * Ce que l'indice ne savait pas voir : il comptait ce qu'il Y A — les espèces,
- * les strates, le bois mort, les gros sujets — et jamais COMMENT C'EST ARRANGÉ.
+ * les strates, le bois mort, les gros sujets — et jamais **comment c'est arrangé**.
  * Deux parcelles portant exactement les mêmes espèces, les mêmes hauteurs et le
  * même bois mort recevaient la même note qu'elles forment un bloc homogène ou
  * une mosaïque de bosquets et de clairières.
  *
- * Ce que ce fichier vérifie : que la disposition paie, que le MITAGE ne paie
+ * Ce que ce fichier vérifie : que la disposition paie, que le **mitage** ne paie
  * pas, et que l'étagement local se distingue enfin du damier de blocs.
  */
 
@@ -68,14 +68,14 @@ describe("la mosaïque : ni le bloc plein, ni le mitage", () => {
   });
 
   it("LE MITAGE NE PAIE PAS, et c'est la mise en garde de l'issue", () => {
-    // « Une lisière a de la valeur, un peuplement qui n'est QUE de la lisière
+    // « Une lisière a de la valeur, un peuplement qui n'est **que** de la lisière
     // n'en a pas — les espèces de cœur de massif existent aussi. »
     //
     // Des petits arbres éparpillés font des houppiers disjoints : 94 % de la
     // parcelle en frontière, et pas un mètre carré de cœur. Le produit vaut
     // donc zéro — **sans qu'on ait eu à choisir un sommet de courbe**. C'est
     // tout l'intérêt d'avoir multiplié les deux parts plutôt que d'ajuster une
-    // cloche : le refus du mitage TOMBE de l'énoncé « il faut les deux ».
+    // cloche : le refus du mitage **tombe** de l'énoncé « il faut les deux ».
     const mitage = structureHorizontale(parcelle(REGULIER, 3).trees, COTE);
     expect(mitage.lisiere).toBeGreaterThan(0.5);
     expect(mitage.coeur).toBeCloseTo(0, 3);
@@ -92,7 +92,7 @@ describe("la mosaïque : ni le bloc plein, ni le mitage", () => {
 describe("l'étagement local : ce que le décompte des strates confondait", () => {
   it("un peuplement équienne n'est pas étagé, trois hauteurs le sont", () => {
     // Relevé : 0,000 contre 0,677. L'indice comptait les strates à l'échelle de
-    // la PARCELLE, donc il notait pareil une forêt étagée et un damier de blocs
+    // la **parcelle**, donc il notait pareil une forêt étagée et un damier de blocs
     // monostrates. C'est exactement ce que cette grandeur répare.
     const equienne = parcelle(REGULIER, 14);
     let etage = createGameState(STATION, rngStateFromSeed(1));

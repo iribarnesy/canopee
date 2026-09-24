@@ -5,7 +5,7 @@ import { STATIONS_V0 } from "../../src/engine/stations";
 
 /**
  * Séries météo réelles (Météo-France, hebdomadaires 1964-2023) : intégrité et
- * plausibilité. La variabilité interannuelle est LE point : c'est elle qui
+ * plausibilité. La variabilité interannuelle est **le** point : c'est elle qui
  * crée les fenêtres d'installation et les crises (ch4-B, ch8).
  */
 describe("séries météo réelles", () => {

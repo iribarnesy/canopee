@@ -167,7 +167,7 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
   const GRAINES = [4, 17, 29];
 
   /**
-   * Trois graines, et on garde les parties SÉPARÉES en plus de leur moyenne.
+   * Trois graines, et on garde les parties **séparées** en plus de leur moyenne.
    * Une seule partie ne suffit pas : la vigueur individuelle et la loterie des
    * chandelles qui s'abattent font bouger le compte d'une graine à l'autre.
    * Mais une moyenne ne suffit pas non plus — elle peut cacher une graine qui
@@ -191,7 +191,7 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
 
   it("l'aulnaie pure se fait décimer — et sur chacune des trois graines", () => {
     // Mesuré sur le code livré : 1,88 / 1,49 / 1,83. Le taux dépasse 1 parce
-    // que le dénominateur ne compte que la cohorte PLANTÉE tandis que les
+    // que le dénominateur ne compte que la cohorte **plantée** tandis que les
     // morts comptent aussi les semis nés en cours de partie.
     for (const [i, r] of pur.runs.entries()) {
       expect(r.tauxMortalite, `graine ${GRAINES[i]}`).toBeGreaterThan(0.15);
@@ -199,28 +199,28 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
   });
 
   it("le mélange encaisse, et sur chacune des trois graines", () => {
-    // L'écart de MORTALITÉ, exigé graine par graine et non plus en moyenne.
+    // L'écart de **mortalité**, exigé graine par graine et non plus en moyenne.
     //
     // Il avait failli disparaître : sur la base d'avant les tempêtes (#85), il
     // valait 1,03 / 0,76 / 0,88 une fois l'infradensité corrigée — une graine
-    // sur trois donnait le mélange PERDANT, et seule la moyenne le cachait.
+    // sur trois donnait le mélange **perdant**, et seule la moyenne le cachait.
     // Le lot des tempêtes l'a rétabli largement. Mesuré sur le code livré :
     //
     //   graine  4 : pur 1,88  mélange 0,64   → 0,34
     //   graine 17 : pur 1,49  mélange 0,50   → 0,34
     //   graine 29 : pur 1,83  mélange 0,42   → 0,23
     //
-    // On l'épingle donc de nouveau — mais PAR GRAINE, pour qu'une moyenne ne
+    // On l'épingle donc de nouveau — mais **par graine**, pour qu'une moyenne ne
     // puisse plus masquer une partie qui dit le contraire des deux autres.
     //
-    // **ET IL A FAILLI DISPARAÎTRE UNE SECONDE FOIS, AVEC L'AUTO-ÉCLAIRCIE
+    // **et il a failli disparaître une seconde fois, avec l'auto-éclaircie
     // (#96).** Mesuré depuis : pur 2,10 / 1,98 / 2,16 contre mélange 1,92 /
     // 1,64 / 1,72, soit des rapports de 0,91 / 0,83 / 0,80 au lieu de 0,34 /
-    // 0,34 / 0,23. La mortalité du MÉLANGE a triplé, et la raison est que ce
-    // taux compte TOUTES les morts : depuis que les dominés s'affament, un
+    // 0,34 / 0,23. La mortalité du **mélange** a triplé, et la raison est que ce
+    // taux compte **toutes** les morts : depuis que les dominés s'affament, un
     // peuplement s'éclaircit qu'il soit pur ou mélangé, et cette mortalité-là
     // n'a rien à voir avec les ravageurs. Le taux est devenu un composite à
-    // QUATRE étages.
+    // **quatre** étages.
     //
     // La direction survit sur les trois graines, et on la garde à ce titre — à
     // 0,95, c'est-à-dire presque rien. **L'essai porteur est le suivant**, sur
@@ -234,7 +234,7 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
   });
 
   it("le mélange écrête la pullulation, et sur chacune des trois graines", () => {
-    // La PULLULATION, exigée elle aussi graine par graine — et c'est la
+    // La **pullulation**, exigée elle aussi graine par graine — et c'est la
     // grandeur la plus solide des deux, parce que le mécanisme la produit
     // directement là où le taux de mortalité en est un composite à trois
     // étages. Mesuré sur le code livré : 2,82 × / 3,02 × / 3,06 ×.
@@ -242,27 +242,27 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
     // C'est elle qui a tenu quand l'écart de mortalité a vacillé sous #68 :
     // trois directions concordantes valent mieux qu'un ratio moyen.
     //
-    // **L'ÉTIOLEMENT (#97) A RABOTÉ CES RATIOS, ET LA CAUSE EST UN MANQUE
-    // CONNU.** Mesuré avant puis après, pression maximale en pur / en mélange :
+    // **l'étiolement (#97) a raboté ces ratios, et la cause est un manque
+    // connu.** Mesuré avant puis après, pression maximale en pur / en mélange :
     //
     //   graine  4 : 0,314 / 0,118 = 2,66 ×   →   0,357 / 0,163 = 2,18 ×
     //   graine 17 : 0,332 / 0,110 = 3,01 ×   →   0,375 / 0,168 = 2,24 ×
     //   graine 29 : 0,328 / 0,107 = 3,07 ×   →   0,378 / 0,201 = 1,88 ×
     //
-    // La pression monte des deux côtés, mais bien plus en MÉLANGE (+39 à +88 %)
+    // La pression monte des deux côtés, mais bien plus en **mélange** (+39 à +88 %)
     // qu'en pur (+13 à +15 %) : la dilution protège moins. La chaîne est
     // identifiée, et ce n'est pas l'étiolement qui est en cause —
     // `ressourceEtHabitat` épand la vulnérabilité de chaque hôte sur le disque
     // de son houppier, dont le rayon vaut `houppierRatio × hauteur`. L'ombre
-    // fait désormais MONTER les dominés, davantage en mélange où l'aulne focal
+    // fait désormais **monter** les dominés, davantage en mélange où l'aulne focal
     // est plus ombragé, et le moteur leur attribue donc un houppier plus large.
     // Une perche réelle fait l'inverse : elle a un houppier riquiqui. C'est le
     // « port serré » que B10 déclare manquant depuis toujours, et qui vient de
     // coûter un tiers de l'effet mélange.
     //
-    // **ET L'AUTO-ÉCLAIRCIE (#96) EN A REPRIS UNE SECONDE TRANCHE**, par un
+    // **et l'auto-éclaircie (#96) en a repris une seconde tranche**, par un
     // chemin différent et celui-là défendable : une aulnaie pure s'éclaircit
-    // maintenant, donc elle présente MOINS D'HÔTES au pic. La pression du
+    // maintenant, donc elle présente **moins d'hôtes** au pic. La pression du
     // peuplement pur baisse (0,357 / 0,375 / 0,378 → 0,320 / 0,331 / 0,336)
     // tandis que celle du mélange monte encore. Récapitulatif des trois
     // rapports, lot par lot :
@@ -272,14 +272,14 @@ describe("à l'échelle du peuplement : ce que coûte la monoculture", () => {
     //   après #96    1,75 ×   1,57 ×   1,70 ×   (moins d'hôtes en peuplement pur)
     //   après #105   2,79 ×   2,53 ×   2,35 ×   (le houppier suit le diamètre)
     //
-    // **#105 EN A RENDU L'ESSENTIEL**, et c'était la prédiction écrite ici même
+    // **#105 en a rendu l'essentiel**, et c'était la prédiction écrite ici même
     // — « le jour où le houppier saura se resserrer, ces ratios doivent
     // remonter ». Une perche ne répand plus la vulnérabilité d'un dominant.
     //
     // Le seuil revient donc à 2, sous la plus basse des trois mesures. L'écart
-    // qui subsiste avec l'origine sur deux graines est ATTENDU : #96 en explique
+    // qui subsiste avec l'origine sur deux graines est **attendu** : #96 en explique
     // une part défendable — une aulnaie qui s'auto-éclaircit présente moins
-    // d'hôtes au pic, et la pression du peuplement PUR a effectivement baissé
+    // d'hôtes au pic, et la pression du peuplement **pur** a effectivement baissé
     // (0,357 → 0,308 sur la graine 4).
     for (const [i, p] of pur.runs.entries()) {
       const m = mixte.runs[i];

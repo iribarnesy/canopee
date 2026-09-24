@@ -57,9 +57,9 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
   });
 
   it("l'aubépine est la dernière pionnière debout — mesuré sur trois graines", () => {
-    // L'ÉNONCÉ EST VRAI, C'EST LA MESURE QUI ÉTAIT FAUSSE, et il a fallu trois
+    // **L'énoncé est vrai**, **c'est la mesure qui était fausse**, et il a fallu trois
     // recalibrations pour s'en apercevoir. L'essai exigeait 5 % des tiges, puis
-    // un multiple de 2, puis de 1,5 sur UNE graine — or à cent vingt ans il ne
+    // un multiple de 2, puis de 1,5 sur **une** graine — or à cent vingt ans il ne
     // reste qu'une poignée de pionnières, et un rapport entre deux ou trois
     // individus mesure le tirage, pas l'écologie. Relevé à l'écriture :
     //
@@ -69,7 +69,7 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     //     graine 11 : 274 tiges — aubépine 12, prunellier 4, ronce 1, sureau 3
     //     graine 42 : 256 tiges — aubépine 13, prunellier 0, ronce 0, sureau 1
     //
-    // L'aubépine est en tête sur les cinq, à égalité une fois. C'est ÇA que la
+    // L'aubépine est en tête sur les cinq, à égalité une fois. C'est **ça** que la
     // phrase veut dire, et ça se dit en cumulant — comme §16 le demande pour un
     // critère écologique. Trois graines suffisent à le trancher et coûtent deux
     // parties de plus ; les cinq sont au relevé pour la mémoire.
@@ -83,24 +83,24 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
       const vivants = fin.trees.filter((t) => t.alive);
       const n = (id: string) => vivants.filter((t) => t.especeId === id).length;
       const aubepine = n("crataegus_monogyna");
-      // DEBOUT sur chaque graine — c'est ça qui se vérifie par partie, et rien
-      // de plus. L'essai exigeait aussi qu'elle soit EN TÊTE sur chacune, et
+      // **Debout** sur chaque graine — c'est ça qui se vérifie par partie, et rien
+      // de plus. L'essai exigeait aussi qu'elle soit **en tête** sur chacune, et
       // cette ligne-là est tombée pour la quatrième fois (#170, graine 21 :
       // 7 aubépines contre 11 sureaux). Elle disait en code l'inverse de ce que
       // le commentaire ci-dessus dit en français — « un rapport entre deux ou
       // trois individus mesure le tirage, pas l'écologie » — et il a fallu
-      // quatre chutes pour s'en apercevoir. Le classement se vérifie AU CUMUL,
+      // quatre chutes pour s'en apercevoir. Le classement se vérifie **au cumul**,
       // plus bas, là où les effectifs cessent d'être une poignée.
       expect(aubepine).toBeGreaterThan(0);
       aubepines += aubepine;
       for (const autre of autres) cumuls.set(autre, (cumuls.get(autre) ?? 0) + n(autre));
     }
-    // AU CUMUL, DEVANT CHACUNE — et c'est la phrase du dessus, pas une de plus.
+    // **Au cumul**, **devant chacune** — et c'est la phrase du dessus, pas une de plus.
     //
-    // La première version exigeait le DOUBLE, et la CI l'a fait tomber (28
+    // La première version exigeait le **double**, et la CI l'a fait tomber (28
     // contre 15, soit 1,87×) : un multiple choisi sur un relevé rebascule au
     // premier lot qui déplace le tirage — il y en a eu trois. La deuxième
-    // exigeait que l'aubépine passe les trois autres RÉUNIES, et #161 l'a fait
+    // exigeait que l'aubépine passe les trois autres **réunies**, et #161 l'a fait
     // tomber à son tour (33 contre 46).
     //
     // Cette chute-là n'était pas une régression, et c'est ce qui a décidé de la
@@ -108,12 +108,12 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     // sous sa borne de pH — pH local 5,66 à 7,50, facteurs de croissance 0,764
     // à 1,000, l'aubépine à 7,99 m pour 8 m de potentiel. Le second seuil de pH
     // ne les maintient donc pas en vie ; il garde des tiges ailleurs, et la
-    // succession se redistribue sur cent vingt ans. Il reste simplement DEUX
-    // FOIS PLUS de pionnières qu'avant, si bien que « une contre trois réunies »
+    // succession se redistribue sur cent vingt ans. Il reste simplement **deux**
+    // **fois plus** de pionnières qu'avant, si bien que « une contre trois réunies »
     // est devenue une barre arithmétique là où l'énoncé parle d'un classement.
     //
     // « La dernière debout » dit « devant », et devant tout le monde à la fois.
-    // C'est donc devant CHACUNE que ça se vérifie, au cumul, ce qui écrase le
+    // C'est donc devant **chacune** que ça se vérifie, au cumul, ce qui écrase le
     // tirage sans changer l'affirmation.
     //
     // Relevé sur les cinq graines, avant et après la stratification du budget
@@ -122,7 +122,7 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     //     avant : aubépine 51, prunellier 18, ronce 24, sureau 19
     //     après : aubépine 75, prunellier 21, ronce 16, sureau 24
     //
-    // L'avance s'est ÉLARGIE — de deux fois à trois fois la suivante. Ce qui a
+    // L'avance s'est **élargie** — de deux fois à trois fois la suivante. Ce qui a
     // bougé n'est donc pas l'écologie mais la répartition du tirage entre
     // graines, et c'est exactement ce que le cumul est là pour absorber.
     for (const [autre, n] of cumuls) {

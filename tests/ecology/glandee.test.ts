@@ -1,5 +1,5 @@
 /**
- * LA GLANDÉE (issue #197).
+ * **La glandée** (issue #197).
  *
  * Le moteur savait qu'un pommier donne des pommes qu'on vend, et ne savait pas
  * qu'un chêne donne des glands. Mesuré avant ce lot sur vingt-cinq chênes mûrs,
@@ -74,7 +74,7 @@ describe("une glandée n'est pas une récolte", () => {
 
 describe("une glandée redistribue la production, elle n'en crée pas", () => {
   it("la moyenne est conservée par construction, sur chaque fiche", () => {
-    // `facteurAnneeCreuse` est DÉDUIT et jamais déclaré, précisément pour ça :
+    // `facteurAnneeCreuse` est **déduit** et jamais déclaré, précisément pour ça :
     //     periode × 1 = (periode − 1) × creux + pleine
     // Sans cette égalité, « à production totale égale » ne voudrait rien dire
     // et le témoin central du lot serait faux.
@@ -176,7 +176,7 @@ function chenaieArithmetique(opts: {
   ans: number;
   periodeAns: number;
   sanglierParHa?: number;
-  /** Les mangeurs suivent-ils la glandée de l'AN PASSÉ, ou celle de l'année ? */
+  /** Les mangeurs suivent-ils la glandée de l'**an passé**, ou celle de l'année ? */
   decalage?: boolean;
   moyenneKgHa?: number;
 }): { produit: number; survivant: number } {
@@ -207,7 +207,7 @@ describe("LE POINT DU LOT : à production totale égale, l'irrégulier passe", (
   it("une chênaie irrégulière laisse passer deux fois plus de graines qu'une régulière", () => {
     // **C'est la seule chose qui décide si ce lot a servi à quelque chose.**
     // L'issue l'écrivait ainsi : « le point à ne pas rater est que la
-    // régénération doit être MEILLEURE en irrégulier qu'en régulier à
+    // régénération doit être **meilleure** en irrégulier qu'en régulier à
     // production totale égale — sinon le mécanisme n'a servi à rien ».
     //
     // Vingt mille ans, à la densité de sanglier de référence. La durée n'est
@@ -230,7 +230,7 @@ describe("LE POINT DU LOT : à production totale égale, l'irrégulier passe", (
     // Le témoin, et c'est lui qui explique le précédent au lieu de le
     // constater. On relâche la seule chose qui diffère entre un mangeur et une
     // constante : sa population est dimensionnée par la nourriture de
-    // l'automne PRÉCÉDENT. Qu'elle suive la glandée de l'année même, et
+    // l'automne **précédent**. Qu'elle suive la glandée de l'année même, et
     // l'avantage disparaît intégralement — une glandée irrégulière ne vaut
     // alors pas mieux qu'une glandée régulière de même total.
     //
@@ -309,7 +309,7 @@ describe("en partie : la régénération arrive par vagues", () => {
     //     an 30 : 1 · an 31 : 1 · an 32 : 5 · an 33 : 50* · an 38 : 19*
     //
     // Les deux étoiles sont les deux années pleines, et elles portent 88 % des
-    // recrues du siècle. L'an 34, juste après la glandée, n'en porte AUCUNE :
+    // recrues du siècle. L'an 34, juste après la glandée, n'en porte **aucune** :
     // les mangeurs ont pullulé dessus.
     const { parAn, etat } = chenaie(DENSITE_REFERENCE_PAR_HA, 40);
     const s = getEspece("quercus_pubescens").semences as Semences;
@@ -360,11 +360,11 @@ describe("ce que la mesure a coûté au sanglier", () => {
   });
 
   it("la ration est petite, et ce n'est PAS elle qui fait reculer le chêne", () => {
-    // **L'ATTRIBUTION, ET CE FICHIER EST LE SEUL QUI PUISSE LA FAIRE** : il a la
+    // **l'attribution, et ce fichier est le seul qui puisse la faire** : il a la
     // glandée sous la main, donc il peut séparer les deux prises du sanglier là
     // où `sanglier.test.ts` ne voit que leur somme.
     //
-    // Cet essai a d'abord affirmé le CONTRAIRE, et c'était juste à l'époque. À
+    // Cet essai a d'abord affirmé le **contraire**, et c'était juste à l'époque. À
     // ration ancrée (#197), le sanglier ne pesait plus sur la régénération —
     // 71 · 71 · 71 · 77 · 70 recrues de 0 à 0,5 bête/ha, contre 97 · 82 · 60 · 22
     // sous l'ancienne loi. On n'affirmait donc pas une décroissance qu'on ne
@@ -372,7 +372,7 @@ describe("ce que la mesure a coûté au sanglier", () => {
     // détruit les semis, et le moteur n'en comptait que le bon côté** (#199).
     //
     // Le mécanisme est arrivé, et la décroissance avec. Mesuré ici, quarante
-    // ans, mêmes graine et météo, en lisant les deux grandeurs sur la MÊME
+    // ans, mêmes graine et météo, en lisant les deux grandeurs sur la **même**
     // partie — les recrues d'un côté, la glandée qui survit à la ration de
     // l'autre, moyennée sur les dix dernières années :
     //
@@ -402,7 +402,7 @@ describe("ce que la mesure a coûté au sanglier", () => {
     // La ration reste petite à densité ordinaire : moins d'un vingtième de la
     // glandée, quand l'ancienne loi en mangeait 55 %.
     expect(1 - ordinaire.glandee / sans.glandee).toBeLessThan(0.05);
-    // Et la régénération perd BIEN PLUS que la glandée : la ration ne peut pas
+    // Et la régénération perd **bien plus** que la glandée : la ration ne peut pas
     // rendre compte de l'écart, donc ce n'est pas elle qui l'explique. Six fois
     // mesuré, seuil de marge à trois.
     const perteRecrues = 1 - ordinaire.recrues / sans.recrues;

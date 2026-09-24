@@ -1,15 +1,15 @@
 /**
- * LA POMPE À BASES ET LE BUDGET DU SOUS-SOL (issue #170, critère C15).
+ * **La pompe à bases et le budget du sous-sol** (issue #170, critère C15).
  *
  * Ce que le moteur ne savait pas faire, en deux temps. Le calcium de la litière
- * arrivait de NULLE PART : `effetLitiereEq` créditait la surface de ce qu'une
+ * arrivait de **nulle part** : `effetLitiereEq` créditait la surface de ce qu'une
  * feuille rend en se décomposant, sans que rien nulle part n'ait été débité. Et
  * l'altération, qui se produit dans tout le profil, créditait elle aussi la
  * seule surface — si bien que des bases libérées à un mètre de fond
  * remontaient au jour toutes seules.
  *
  * Le budget est maintenant stratifié en deux pools et il circule : chaque
- * horizon reçoit l'altération qu'il produit, la surface LESSIVE VERS LE FOND
+ * horizon reçoit l'altération qu'il produit, la surface **lessive vers le fond**
  * au lieu de lessiver vers le néant, les racines pompent au fond, et c'est en
  * passant sous la zone racinaire qu'une base quitte la parcelle.
  *
@@ -64,7 +64,7 @@ describe("ce que la pompe lit, et ce qu'elle refuse de lire", () => {
     expect(prelevementProfondEq(100, frene, 0.4)).toBeGreaterThan(
       prelevementProfondEq(100, callune, 0.4),
     );
-    // Le rapport EST celui des deux fiches, et rien d'autre ne s'y ajoute.
+    // Le rapport **est** celui des deux fiches, et rien d'autre ne s'y ajoute.
     expect(
       prelevementProfondEq(100, frene, 0.4) / prelevementProfondEq(100, callune, 0.4),
     ).toBeCloseTo(frene / callune, 12);
@@ -85,7 +85,7 @@ describe("l'altération cesse de remonter toute seule", () => {
   it("chaque horizon crédite SON pool, et la somme est inchangée", () => {
     // Le défaut corrigé : `alterationBasesEqM2Semaine` sommait tout le profil
     // et versait le tout en surface. Le total libéré ne change pas — c'est lui
-    // qui est calé sur les budgets de bases mesurés —, seule sa DESTINATION
+    // qui est calé sur les budgets de bases mesurés —, seule sa **destination**
     // change. Le sous-sol en prend la plus grosse part, parce qu'il fait les
     // deux tiers de l'épaisseur.
     for (const sc of [LIMON_RICHE, LIMON_ACIDE]) {
@@ -163,9 +163,9 @@ function parcelle(sc: StationClimat, especeId: string | null, ans: number) {
 describe("les deux pools se referment, et la pompe ne peut pas toucher la surface", () => {
   it("le budget de SURFACE se referme sans aucun terme de pompe", () => {
     // C'est la garantie qui remplace le « rien n'a bougé » d'un lot additif —
-    // ce lot-ci n'est PAS additif, la surface bouge, et exiger qu'elle ne bouge
+    // ce lot-ci n'est **pas** additif, la surface bouge, et exiger qu'elle ne bouge
     // pas serait faux. Ce qu'on peut exiger, et qui vaut mieux, c'est que son
-    // budget se referme EXACTEMENT sur ses quatre termes d'origine : apport,
+    // budget se referme **exactement** sur ses quatre termes d'origine : apport,
     // litière, lessivage, charge acide. Si la pompe touchait la surface d'un
     // millionième, cette égalité tomberait — sur une parcelle qui pompe fort.
     const r = parcelle(LIMON_ACIDE, "castanea_sativa", 30);
@@ -211,13 +211,13 @@ describe("C15 : la profondeur s'appauvrit sous un peuplement, et pas sans lui", 
     expect(hetre.preleve).toBeGreaterThan(0);
     expect(hetre.phProfond).toBeLessThan(hetre.phProfond0);
     expect(hetre.phProfond).toBeLessThan(nu.phProfond);
-    // Et en DIXIÈMES, pas en unités : un sous-sol vidé en une vie d'arbre
+    // Et en **dixièmes**, pas en unités : un sous-sol vidé en une vie d'arbre
     // serait spectaculaire et faux. Le réservoir fait sept cent mille eq/ha.
     expect(hetre.phProfond0 - hetre.phProfond).toBeLessThan(0.2);
   });
 
   it("pendant que la SURFACE, elle, reçoit — c'est le sens du mot pompe", () => {
-    // « Remonte les bases du sous-sol et les DÉPOSE EN SURFACE » : le critère
+    // « Remonte les bases du sous-sol et les **dépose en surface** » : le critère
     // demande les deux moitiés. Une essence à litière riche tient sa surface
     // au-dessus du sol nu tout en creusant son fond ; le sol nu fait l'inverse
     // exact, surface qui décroche et fond stable.
@@ -232,7 +232,7 @@ describe("C15 : la profondeur s'appauvrit sous un peuplement, et pas sans lui", 
     // sur la même station, le pin descend deux fois plus bas que le hêtre
     // (80 cm de racines contre 42 à cinquante ans) et porte plus de tiges — et
     // il pompe cinquante fois moins, parce que sa litière est à 3,8 mg/g de
-    // calcium contre 7,5. La profondeur donne l'ACCÈS ; la teneur donne la
+    // calcium contre 7,5. La profondeur donne l'**accès** ; la teneur donne la
     // quantité.
     const hetre = parcelle(LIMON_RICHE, "fagus_sylvatica", 50);
     const pin = parcelle(LIMON_RICHE, "pinus_sylvestris", 50);

@@ -67,7 +67,7 @@ describe("l'enveloppe est un profil déclaré, pas un espoir", () => {
   it("le fastigié est le plus étroit des six EN MOYENNE", () => {
     // « Partout » serait faux et c'est instructif : au sommet, un cône est plus
     // étroit qu'un peuplier. Ce qui distingue le fastigié n'est pas d'être
-    // pointu mais d'être étroit SUR TOUTE SA HAUTEUR — donc c'est la moyenne
+    // pointu mais d'être étroit **sur toute sa hauteur** — donc c'est la moyenne
     // qu'il faut regarder, pas le maximum ponctuel.
     const moyenne = (port: Port) => {
       let somme = 0;
@@ -94,7 +94,7 @@ describe("la plongée des rameaux terminaux", () => {
   });
 
   it("**aucun réglage de branchement ne la donnerait**", () => {
-    // Le branchement ne connaît que des angles d'INSERTION : une branche part
+    // Le branchement ne connaît que des angles d'**insertion** : une branche part
     // vers le haut et continue tout droit. Un rameau qui replonge après être
     // parti vers le haut n'est pas exprimable là-dedans, et c'est pour ça que
     // la plongée est ici. Ce test le constate sur les segments.
@@ -120,7 +120,7 @@ describe("contraindre impose la forme, sans écrêter", () => {
     // Une contrainte qui ne fait que resserrer ne sert à rien dans le cas qui
     // compte : la ramure d'un feuillu de dix-huit mètres fait 1,94 m de rayon
     // là où l'enveloppe en autorise 4, l'enveloppe ne mordait nulle part, et
-    // les six ports rendaient le même arbre. Le profil doit s'IMPOSER.
+    // les six ports rendaient le même arbre. Le profil doit s'**imposer**.
     const { segments, base, sommet } = ramure();
     const naturel = rayonAtteintM(segments.filter((s) => s.ordre >= 1));
     const impose = rayonAtteintM(

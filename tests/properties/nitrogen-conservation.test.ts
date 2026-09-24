@@ -72,7 +72,7 @@ describe("cycle de l'azote — briques cellule", () => {
     // La forme est celle d'une cinétique de prélèvement, pas d'une rampe :
     // elle monte vite au début et n'atteint jamais tout à fait 1. La rampe
     // précédente saturait à 3 g/m² — 30 kg N/ha — un stock qu'un sol
-    // FORESTIER ne porte jamais, si bien que le frein était actif en
+    // **forestier** ne porte jamais, si bien que le frein était actif en
     // permanence sur toutes les stations (nitrogen.ts).
     expect(nitrogenAvailabilityFactor(0)).toBe(0);
     expect(nitrogenAvailabilityFactor(DEMI_SATURATION_G_M2)).toBeCloseTo(0.5, 9);

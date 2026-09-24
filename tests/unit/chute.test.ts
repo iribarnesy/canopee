@@ -33,7 +33,7 @@ describe("la chute, aux deux bouts du mouvement", () => {
   });
 
   /**
-   * **Un tronc couché peut être PLUS LONG à l'écran qu'il n'était haut**, et
+   * **Un tronc couché peut être plus long à l'écran qu'il n'était haut**, et
    * ça a pris un essai raté pour le voir. Dans cette dimétrie, un mètre
    * horizontal le long d'un axe se projette sur 5,03 px et un mètre vertical
    * sur 4,50 : un arbre de quinze mètres mesure 67,5 px debout et 75,4 px
@@ -73,9 +73,9 @@ describe("la chute, aux deux bouts du mouvement", () => {
 
 describe("la direction : le même mouvement vu de deux côtés", () => {
   /**
-   * **Le cœur du module.** La direction de chute est un azimut de PARCELLE et
+   * **Le cœur du module.** La direction de chute est un azimut de **parcelle** et
    * la vignette un panneau vu de face : un arbre qui tombe vers la caméra ne
-   * pivote presque pas, il RACCOURCIT. Sans cette distinction, un tel arbre
+   * pivote presque pas, il **raccourcit**. Sans cette distinction, un tel arbre
    * resterait debout jusqu'à disparaître d'un coup.
    */
   it("fait pivoter une chute de profil et raccourcir une chute vers l'objectif", () => {

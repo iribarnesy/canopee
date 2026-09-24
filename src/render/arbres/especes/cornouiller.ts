@@ -8,7 +8,7 @@
  *
  * La feuille est **ovale entière**, à nervures arquées qui suivent le bord —
  * un caractère de cornouiller qu'on ne trouve nulle part ailleurs dans la
- * haie. Et il fleurit JAUNE en février, sur bois nu, avant le prunellier.
+ * haie. Et il fleurit **jaune** en février, sur bois nu, avant le prunellier.
  */
 import type { FicheGraphique } from "../fiche";
 
@@ -21,7 +21,7 @@ export const CORNOUILLER_MALE: FicheGraphique = {
     divergenceDeg: 90,
     ratioLongueur: 0.7,
     dominance: 0.34,
-    // Opposés, comme chez le sureau et le fusain : une PAIRE de latérales,
+    // Opposés, comme chez le sureau et le fusain : une **paire** de latérales,
     // donc trois filles avec la flèche. Ça se lit sur la silhouette.
     branchesParNoeud: 3,
     conicite: 0.82,
@@ -45,7 +45,7 @@ export const CORNOUILLER_MALE: FicheGraphique = {
     // drupes solitaires ou par deux, sur un court pédoncule : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.032,
-    // JAUNE, et en février sur bois nu : le cornouiller mâle est le premier
+    // **Jaune**, et en février sur bois nu : le cornouiller mâle est le premier
     // arbuste à fleurir de la haie, et sa couleur ne ressemble à aucune autre
     // floraison de l'atlas.
     fleur: { r: 226, g: 206, b: 96 },

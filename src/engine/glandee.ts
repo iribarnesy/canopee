@@ -1,5 +1,5 @@
 /**
- * LA GLANDÉE (issue #197) — une production de semences, qui n'est pas une récolte.
+ * **La glandée** (issue #197) — une production de semences, qui n'est pas une récolte.
  *
  * Mesuré avant ce lot, sur un peuplement mûr de vingt-cinq chênes de dix-huit
  * mètres, les cinquante-deux semaines de l'année :
@@ -7,7 +7,7 @@
  *     fruitsKg = 0,0
  *
  * Le moteur savait qu'un pommier donne des pommes qu'on vend. Il ne savait pas
- * qu'un chêne donne des glands. Le bloc `fruits` de l'atlas décrit une RÉCOLTE
+ * qu'un chêne donne des glands. Le bloc `fruits` de l'atlas décrit une **récolte**
  * — un prix au kilo, une fenêtre de cueillette, des semaines de fraîcheur — et
  * onze espèces sur vingt-six en portent un. Le chêne n'en a pas, le hêtre non
  * plus. Les deux notions partagent un mot et rien d'autre : **une glandée ne se
@@ -15,32 +15,32 @@
  *
  * D'où un bloc `semences` séparé sur la fiche, et ce module qui le lit.
  *
- * ─── CE QUI FAIT LA GLANDÉE, ET QUI N'EST PAS LA QUANTITÉ ────────────────────
+ * ─── **ce qui fait la glandée**, **et qui n'est pas la quantité** ────────────────────
  *
  * On pourrait croire qu'il suffisait d'écrire un rendement moyen. Ce serait
- * passer à côté du seul fait qui compte : une glandée est **SYNCHRONE et
- * IRRÉGULIÈRE**. Les chênes d'un massif fructifient la même année, et cette
+ * passer à côté du seul fait qui compte : une glandée est **synchrone et
+ * irrégulière**. Les chênes d'un massif fructifient la même année, et cette
  * année-là dix à cinquante fois plus que les autres.
  *
  * Ce n'est pas une curiosité, c'est la stratégie : les mangeurs de graines sont
- * NOYÉS une année sur quatre, et c'est comme ça que le chêne se régénère malgré
+ * **noyés** une année sur quatre, et c'est comme ça que le chêne se régénère malgré
  * eux. Un rendement moyen et régulier donnerait l'inverse — une population de
  * prédateurs calée sur l'offre, qui mange tout, tous les ans.
  *
  * Le mécanisme ne tient donc que si les mangeurs sont dimensionnés par la
- * glandée de **l'AN PASSÉ** (`PRELEVEMENT_PAR_LA_FAUNE`). Sans ce décalage d'un
+ * glandée de **l'an passé** (`PRELEVEMENT_PAR_LA_FAUNE`). Sans ce décalage d'un
  * an, une glandée irrégulière ne vaut pas mieux qu'une glandée régulière de
  * même total, et tout ce fichier ne serait qu'un détour. C'est mesuré :
  * `tests/ecology/glandee.test.ts`.
  *
- * ─── AUCUN TIRAGE DANS LE FLUX PRINCIPAL, ET AUCUN ÉTAT ──────────────────────
+ * ─── **aucun tirage dans le flux principal**, **et aucun état** ──────────────────────
  *
  * L'année pleine est tirée d'une graine locale dérivée de l'identifiant de la
  * partie et de l'année — même précaution et même forme que `graineDeChute`
  * (`boisMort.ts`) et `graineDeBoutis` (`sanglier.ts`). Une partie sans chêne ne
  * bouge pas d'un cheveu.
  *
- * Et rien n'est stocké : la production d'une année est une FONCTION de la
+ * Et rien n'est stocké : la production d'une année est une **fonction** de la
  * parcelle, de l'année et de la graine. La glandée de l'an passé se recalcule
  * avec les houppiers d'aujourd'hui, donc à un ou deux pour cent près (un
  * houppier grossit lentement) — une approximation assumée qui évite un champ
@@ -54,7 +54,7 @@ import type { TreeState } from "./trees";
 
 /**
  * Semences tombées d'un arbre en un an, kg, pour un mètre carré de houppier —
- * MOYENNE pluriannuelle, années pleines et années creuses confondues.
+ * **moyenne** pluriannuelle, années pleines et années creuses confondues.
  *
  * Le houppier plutôt que la tige : c'est la surface qui capte la lumière, donc
  * celle qui porte les fleurs, et c'est aussi elle qui module la production par
@@ -63,7 +63,7 @@ import type { TreeState } from "./trees";
  * vétéran en produit vingt fois plus. Rien d'autre à dire.
  */
 export interface Semences {
-  /** kg de semences tombées par m² de houppier et par an, en MOYENNE */
+  /** kg de semences tombées par m² de houppier et par an, en **moyenne** */
   kgParM2HouppierAn: number;
   /**
    * Intervalle moyen entre deux glandées, années. 1 signifie « pas de
@@ -79,7 +79,7 @@ export interface Semences {
 }
 
 /**
- * Ce que porte une année CREUSE, en multiple de la moyenne.
+ * Ce que porte une année **creuse**, en multiple de la moyenne.
  *
  * Déduit, jamais déclaré, et c'est délibéré : la moyenne est ainsi conservée
  * par construction. Une glandée redistribue la production dans le temps, elle
@@ -97,7 +97,7 @@ export function facteurAnneeCreuse(s: Semences): number {
  * Graine propre à une année de glandée : l'espèce, l'année et la partie.
  *
  * L'espèce entre dans le hachage pour que chênes et hêtres ne fructifient pas
- * aux mêmes années — ils sont synchrones CHACUN DE SON CÔTÉ, ce qui est le
+ * aux mêmes années — ils sont synchrones **chacun de son côté**, ce qui est le
  * fait. Et la partie y entre pour que deux parties ne voient pas la même suite
  * d'années pleines, ce que `graineDeChute` n'avait pas à faire (un identifiant
  * d'arbre varie déjà d'une partie à l'autre, une année non).
@@ -115,7 +115,7 @@ export function graineDeGlandee(especeId: string, annee: number, graineParcelle:
   // un identifiant d'arbre, un indice de cellule. Ici deux des trois entrées
   // sont minuscules — une année, et des parties qu'on numérote 1 et 2 dans un
   // essai. Sans ce brassage final, changer de partie déplaçait la graine de
-  // quarante mille sur quatre milliards : deux parties voyaient les MÊMES
+  // quarante mille sur quatre milliards : deux parties voyaient les **mêmes**
   // années de glandée, sur deux siècles, et l'essai le montre.
   h = (h ^ (h >>> 16)) >>> 0;
   h = Math.imul(h, 2246822507) >>> 0;
@@ -192,7 +192,7 @@ export function glandeeDeLaParcelleKg(
 }
 
 /**
- * Ce que les mangeurs de graines prélèvent l'année qui SUIT une glandée
+ * Ce que les mangeurs de graines prélèvent l'année qui **suit** une glandée
  * moyenne, en multiple de cette glandée.
  *
  * Mulots, campagnols, écureuils, geais : en année ordinaire, la prédation des
@@ -229,7 +229,7 @@ export const PRELEVEMENT_PAR_LA_FAUNE = 0.9;
  * deux à trois cents kilos. Les deux lectures se tiennent à un facteur deux
  * près, ce qui est l'exactitude disponible ici.
  *
- * **Le sanglier ne suit PAS la glandée de l'an passé, contrairement aux
+ * **Le sanglier ne suit pas la glandée de l'an passé, contrairement aux
  * rongeurs**, et c'est écrit dans `sanglier.ts` : son domaine vital fait cinq
  * cents à deux mille hectares, sa densité est imposée par le paysage, et ce que
  * porte une parcelle de quelques hectares ne la fixe pas. Il arrive avec un

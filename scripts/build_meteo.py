@@ -61,7 +61,7 @@ def build(src_dir: Path, out_dir: Path) -> None:
                     slot["tm"].append(tm)
 
         # première passe : moyennes hebdo quand les données existent
-        # (+ tMinAbs = LA nuit la plus froide de la semaine : les gels tardifs
+        # (+ tMinAbs = **la** nuit la plus froide de la semaine : les gels tardifs
         # sont des événements ponctuels, invisibles dans une moyenne)
         weekly = {}
         for (y, w), s in acc.items():

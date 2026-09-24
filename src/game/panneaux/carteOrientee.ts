@@ -1,5 +1,5 @@
 /**
- * Présenter la carte du sol comme la VUE la montre (#145).
+ * Présenter la carte du sol comme la **vue** la montre (#145).
  *
  * La carte était dessinée nord en haut, en carré ; la vue est en dimétrique
  * 2:1 et tourne par quarts de tour. Situer une tache demandait donc de faire
@@ -7,7 +7,7 @@
  * vue.
  *
  * **La donnée ne bouge pas.** Le canvas reste celui qu'on dessinait, cellule
- * par cellule, nord en haut : c'est sa PRÉSENTATION qui change, par une
+ * par cellule, nord en haut : c'est sa **présentation** qui change, par une
  * transformation CSS. Redessiner en losange aurait mis une seconde copie de la
  * projection en face de la vraie, et le §2.1 dit ce qui arrive à deux copies
  * d'une même règle.
@@ -16,7 +16,7 @@
 import type { Orientation } from "../../render/projection";
 
 /**
- * La matrice qui envoie un écart de PIXELS du canvas sur un écart d'écran,
+ * La matrice qui envoie un écart de **pixels** du canvas sur un écart d'écran,
  * rendue dans l'ordre de `matrix(a, b, c, d)` de CSS — donc
  * `(u, v) → (a·u + c·v, b·u + d·v)`.
  *
@@ -27,7 +27,7 @@ import type { Orientation } from "../../render/projection";
  * `(x′, y′)` est la cellule tournée du quart de tour de la caméra.
  *
  * À l'orientation 0, en substituant : `sx ∝ u + v` et `sy ∝ (u − v) / 2`.
- * C'est une RÉFLEXION et pas une simple rotation — l'inversion du `y` du canvas
+ * C'est une **réflexion** et pas une simple rotation — l'inversion du `y` du canvas
  * l'introduit — d'où le `scaleY(-1)` qui la défait avant la rotation. Le quart
  * de tour de la caméra, lui, se retranche de l'angle : `tourner` envoie
  * `(x, y)` sur `(y, C − x)`, ce qui fait tourner le losange dans l'autre sens
@@ -51,7 +51,7 @@ export function transformeDeLaCarte(orientation: Orientation): string {
 }
 
 /**
- * Le rapport entre le côté du canvas et la LARGEUR que le losange occupe.
+ * Le rapport entre le côté du canvas et la **largeur** que le losange occupe.
  *
  * La rotation étire la boîte : un carré de côté `c` devient un losange de
  * `c√2` de large et, après l'écrasement dimétrique, de `c√2 / 2` de haut. Pour
@@ -61,7 +61,7 @@ export function transformeDeLaCarte(orientation: Orientation): string {
 export const LARGEUR_DU_LOSANGE = Math.SQRT2;
 
 /**
- * De quel côté se trouve le NORD, une fois la carte présentée : en degrés,
+ * De quel côté se trouve le **nord**, une fois la carte présentée : en degrés,
  * zéro vers le haut de l'écran, positif dans le sens des aiguilles.
  *
  * Sans ce repère, une carte qui tourne avec la vue ne dit plus où est le nord,
@@ -70,7 +70,7 @@ export const LARGEUR_DU_LOSANGE = Math.SQRT2;
 export function capDuNord(orientation: Orientation): number {
   const [, , c, d] = matriceDeLaCarte(orientation);
   // Le nord est le sens des `y` croissants de la parcelle, donc des `v`
-  // DÉCROISSANTS du canvas — encore l'inversion. Un écart `(0, −1)` traverse
+  // **décroissants** du canvas — encore l'inversion. Un écart `(0, −1)` traverse
   // la matrice en `(−c, −d)`.
   const dx = -c;
   const dy = -d;
@@ -79,10 +79,10 @@ export function capDuNord(orientation: Orientation): number {
 }
 
 /**
- * La cellule sous un point de la carte PRÉSENTÉE, ou `undefined` hors parcelle.
+ * La cellule sous un point de la carte **présentée**, ou `undefined` hors parcelle.
  *
  * `dxPx`/`dyPx` sont l'écart au centre de la carte, en pixels d'écran ;
- * `cotePx` est le côté du canvas AVANT transformation (sa taille de mise en
+ * `cotePx` est le côté du canvas **avant** transformation (sa taille de mise en
  * page, que la transformation CSS ne change pas). C'est l'inverse de la
  * présentation : le survol arrive en coordonnées d'écran et il faut remonter
  * jusqu'à la cellule pour en lire la valeur (#144).

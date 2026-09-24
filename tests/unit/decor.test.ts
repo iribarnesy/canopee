@@ -203,7 +203,7 @@ describe("l'altitude du décor", () => {
   const altitudes = Array.from({ length: coteM * coteM }, (_, i) => Math.floor(i / coteM) * 0.1);
 
   it("prolonge exactement la lisière, sans marche — même sur un versant", () => {
-    // Le lissage ne joue QUE le long du bord : en travers, la valeur au
+    // Le lissage ne joue **que** le long du bord : en travers, la valeur au
     // contact est celle de la cellule du bord, au centimètre près. Une moyenne
     // dans les deux sens ouvrirait une marche de neuf centimètres tout autour
     // de la parcelle, ce qui est le défaut qu'on corrige.
@@ -249,7 +249,7 @@ describe("l'altitude du décor", () => {
 /**
  * La canopée du hors-parcelle.
  *
- * **Ces essais gardent des propriétés qui ont CHANGÉ DE PORTEUR.** Elles
+ * **Ces essais gardent des propriétés qui ont changé de porteur.** Elles
  * étaient vérifiées sur les masses boisées — plus nombreuses du côté boisé, se
  * raréfiant avec la distance, groupées et non éparpillées. Les bois ne sont
  * plus des masses dénombrables mais une surface (voir `canopee`), et les trois
@@ -409,17 +409,17 @@ describe("la canopée du décor", () => {
   });
 
   it("s'annule à la lisière au lieu de s'arrêter net", () => {
-    // Une lisière est une PENTE : la couverture module la hauteur, donc le bord
+    // Une lisière est une **pente** : la couverture module la hauteur, donc le bord
     // d'un bois descend au sol au lieu de se terminer par une falaise.
     const b = partout(cote(0.45, [{ especeId: "fagus_sylvatica", poids: 1 }]));
-    // Sur une AIRE et non sur une ligne : une transversale unique peut tomber
+    // Sur une **aire** et non sur une ligne : une transversale unique peut tomber
     // entre deux bois, et l'essai mesurerait alors le hasard du tracé.
     const hauteurs: number[] = [];
     for (let y = COTE + 2; y < COTE + 60; y += 2) {
       for (let x = 0; x < COTE; x += 2) hauteurs.push(canopee(b, x, y, COTE).hauteurM);
     }
-    // Il y a des bois francs ET des clairières — mais la clairière n'est pas
-    // une hauteur NULLE : avec 45 % de boisé, le grumeau laisse partout au
+    // Il y a des bois francs **et** des clairières — mais la clairière n'est pas
+    // une hauteur **nulle** : avec 45 % de boisé, le grumeau laisse partout au
     // moins quelques pourcents de couverture, donc un demi-mètre de canopée.
     // C'est le seuil de tracé qui fait les vraies clairières, et c'est à lui
     // qu'il faut comparer — j'avais d'abord attendu un zéro qui n'existe pas.

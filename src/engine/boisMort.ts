@@ -4,12 +4,12 @@
  * Un arbre mort tenait debout des années puis quittait la parcelle sans rien
  * laisser : son carbone passait dans un pool global, indifférent à l'endroit
  * où l'arbre avait vécu. C'est deux fois faux. Un tronc qui s'abat tombe
- * QUELQUE PART, dans une direction, et ce qu'il devient — humus, abri,
+ * **quelque part**, dans une direction, et ce qu'il devient — humus, abri,
  * obstacle à l'eau, écrasement de ce qui poussait dessous — se joue sur les
  * quelques mètres carrés qu'il recouvre, pas sur la parcelle entière.
  *
- * Le bois mort AU SOL n'est pas non plus le même objet que le bois mort
- * DEBOUT. Il se décompose plus vite, parce qu'il touche la terre et reste
+ * Le bois mort **au sol** n'est pas non plus le même objet que le bois mort
+ * **debout**. Il se décompose plus vite, parce qu'il touche la terre et reste
  * humide, là où une chandelle sèche au vent ; et il n'abrite pas les mêmes
  * espèces (les pics veulent du debout, les carabes et les salamandres du
  * couché). D'où deux stocks distincts plutôt qu'un seul.
@@ -19,7 +19,7 @@ import type { GridDims, GrilleEcrite } from "./grid";
 import { rngFloat, rngStateFromSeed } from "./rng";
 
 /**
- * Décomposition du bois mort AU SOL, par an. Plus rapide que les 5 % du bois
+ * Décomposition du bois mort **au sol**, par an. Plus rapide que les 5 % du bois
  * debout (`DEADWOOD_DECAY_PER_YEAR`, carbon.ts) : le contact avec le sol
  * apporte l'humidité et les décomposeurs, et c'est cette humidité qui limite
  * la décomposition d'une chandelle. Les chroniques de bois mort en forêt
@@ -37,7 +37,7 @@ export const DECOMPOSITION_AU_SOL_PAR_AN = 0.09;
 export const PENTE_ORIENTANT_LA_CHUTE_PCT = 40;
 
 /**
- * Part de hasard qui SUBSISTE quand la pente est franche, ∈ [0,1] — ±63° de
+ * Part de hasard qui **subsiste** quand la pente est franche, ∈ [0,1] — ±63° de
  * dispersion autour de l'aval.
  *
  * Sans elle, la contrainte atteignait 1 et tous les arbres d'un versant raide
@@ -50,7 +50,7 @@ export const PENTE_ORIENTANT_LA_CHUTE_PCT = 40;
  * forte variation des directions de chute empêche d'établir une relation
  * statistique constante » avec la pente ou le vent, et pointent l'asymétrie du
  * houppier comme troisième larron. Côté ripisylve, on ne mesure une tendance
- * nettement plus marquée vers l'aval qu'AU-DESSUS de 40 % de pente — d'où le
+ * nettement plus marquée vers l'aval qu'**au-dessus** de 40 % de pente — d'où le
  * seuil ci-dessus, qui valait 30 sans source. La tendance est donc réelle, son
  * ampleur modeste, et elle n'efface jamais le hasard *(à calibrer : aucune de
  * ces sources ne publie d'écart-type angulaire directement réutilisable)*.
@@ -69,7 +69,7 @@ export const EMPRISE_PAR_METRE_DE_TRONC = 0.3;
  * de diamètre fait environ 0,07 m³ par mètre ; à 500 kg/m³ de bois sec dont la
  * moitié est du carbone, cela donne une quinzaine de kilos de carbone par
  * mètre. Cette densité linéique sert à relire une masse déposée comme une
- * LONGUEUR de tronc : un gros arbre couvre du terrain, une branchette non.
+ * **longueur** de tronc : un gros arbre couvre du terrain, une branchette non.
  */
 export const MASSE_LINEIQUE_TRONC_KGC_PAR_M = 15;
 
@@ -77,7 +77,7 @@ export const MASSE_LINEIQUE_TRONC_KGC_PAR_M = 15;
  * Rafale en dessous de laquelle le vent n'oriente pas une chandelle, m/s.
  *
  * Une brise ne décide pas du sens où tombe un tronc mort : ce qui l'abat est un
- * COUP de vent. Douze mètres par seconde (43 km/h) est le bas d'un coup de vent
+ * **coup** de vent. Douze mètres par seconde (43 km/h) est le bas d'un coup de vent
  * ordinaire, celui qui casse les branches mortes *(à calibrer)*.
  */
 export const RAFALE_SANS_EMPRISE_MS = 12;
@@ -87,7 +87,7 @@ export const RAFALE_SANS_EMPRISE_MS = 12;
  * franche, m/s.
  *
  * Trente mètres par seconde (108 km/h) : au-dessus, `tempete.ts` commence à
- * coucher des arbres VIVANTS. Une chandelle pourrie n'a aucune raison de mieux
+ * coucher des arbres **vivants**. Une chandelle pourrie n'a aucune raison de mieux
  * tenir, et à ce régime-là c'est le vent qui décide du sens, pas le terrain
  * *(à calibrer)*.
  */
@@ -96,12 +96,12 @@ export const RAFALE_ORIENTANTE_MS = 30;
 /**
  * Emprise du vent sur le sens d'une chute ∈ [0,1].
  *
- * **C'est la RAFALE qu'on lit, et pas le vent moyen de la semaine.** La
+ * **C'est la rafale qu'on lit, et pas le vent moyen de la semaine.** La
  * distinction a été mesurée avant d'être écrite : branchée sur `ventMoyMs`, une
  * tendance permanente efface complètement un résultat du banc du bois en
  * travers — un versant raide barre moins l'eau que le plat, et le rapport
  * remonte à 0,97 alors qu'il vaut 0,55 sans vent. La raison est que la moyenne
- * hebdomadaire souffle TOUT LE TEMPS : elle peigne les chutes en permanence,
+ * hebdomadaire souffle **tout le temps** : elle peigne les chutes en permanence,
  * dans une direction qui n'a aucune raison d'être celle de l'aval, et brouille
  * une tendance réelle sans en apporter une.
  *
@@ -132,26 +132,26 @@ export const SANS_VENT_DE_CHUTE: VentDeChute = { versRad: 0, emprise: 0 };
  * Direction dans laquelle une chandelle s'abat, en radians (0 = +x, sens
  * trigonométrique).
  *
- * DEUX TENDANCES, COMPOSÉES EN VECTEURS. La pente tire vers l'aval, le coup de
+ * **Deux tendances**, **composées en vecteurs**. La pente tire vers l'aval, le coup de
  * vent vers son cap ; on somme les deux vecteurs et on lit l'angle du
  * résultat, sa longueur donnant la force du resserrement. Une seule formule,
  * pas un arbitrage entre cas :
  *
  *  - la pente seule oriente vers l'aval, d'autant plus qu'elle est raide ;
  *  - le coup de vent seul oriente vers son cap ;
- *  - les deux ensemble orientent vers LEUR RÉSULTANTE — un versant qui descend
+ *  - les deux ensemble orientent vers **leur résultante** — un versant qui descend
  *    à l'est sous un vent de nord couche ses troncs au nord-est ;
  *  - **deux qui s'opposent s'annulent et rendent la main au hasard** — un
  *    versant qui tourne le dos au vent couche dans tous les sens.
  *
- * **Ce que la composition ne fait PAS, et le banc l'a exigé avant moi.** J'avais
+ * **Ce que la composition ne fait pas, et le banc l'a exigé avant moi.** J'avais
  * écrit ici que deux tendances d'accord resserrent plus que chacune séparément.
  * C'est faux, et l'essai l'a démenti au chiffre près : `Math.min(1, norme)`
  * plafonne le resserrement, si bien qu'une pente déjà franche ne se resserre
  * pas davantage sous le vent. Et c'est le bon comportement, parce que
- * `DISPERSION_RESIDUELLE` est un PLANCHER de hasard, pas un reliquat : Rentch
+ * `DISPERSION_RESIDUELLE` est un **plancher** de hasard, pas un reliquat : Rentch
  * et al. concluent que la forte variation des directions de chute empêche
- * d'établir une relation constante avec la pente OU le vent. Deux tendances
+ * d'établir une relation constante avec la pente **ou** le vent. Deux tendances
  * alignées qui mordraient dessus contrediraient la seule source qu'on ait.
  */
 export function directionDeChute(
@@ -180,7 +180,7 @@ export function directionDeChute(
 /**
  * Graine propre à une chute : l'identité de l'arbre et la semaine, mélangées.
  * Deux parties identiques font tomber le même arbre dans le même sens, et la
- * partie reste rejouable — mais la chute ne PUISE PAS dans le flux principal.
+ * partie reste rejouable — mais la chute ne **puise pas** dans le flux principal.
  *
  * Cette précaution n'est pas de la coquetterie. Le flux est unique et
  * séquentiel : un mécanisme qui y ajoute un seul tirage décale tous les
@@ -207,7 +207,7 @@ export function versLAval(
 ): { radians: number; pentePct: number } {
   const { widthM: w, heightM: h } = dims;
   // Le `Math.floor` n'est pas une précaution : un arbre a des coordonnées
-  // FLOTTANTES, et sans lui l'index calculé tombait entre deux cases. Le
+  // **flottantes**, et sans lui l'index calculé tombait entre deux cases. Le
   // tableau rendait alors `undefined` pour ses quatre voisines, donc une pente
   // nulle, donc une chute au hasard — sur un versant à 60 % comme à plat. Le
   // test unitaire ne le voyait pas : il appelait avec des entiers.
@@ -224,17 +224,17 @@ export function versLAval(
 }
 
 /**
- * Pose du bois sur une cellule, masse ET orientation d'un coup. Une seule
+ * Pose du bois sur une cellule, masse **et** orientation d'un coup. Une seule
  * définition de la règle, parce que deux gestes la produisent : la chandelle
  * qui s'abat toute seule, et le tronc qu'un gestionnaire laisse au sol.
  *
- * L'orientation stockée est la moyenne des efficacités barrantes PONDÉRÉE PAR
- * LES MASSES : deux troncs, l'un en travers l'autre le long, barrent la moitié
+ * L'orientation stockée est la moyenne des efficacités barrantes **pondérée par**
+ * **les masses** : deux troncs, l'un en travers l'autre le long, barrent la moitié
  * de ce que barreraient deux troncs en travers. Le seuil des 30° s'applique
  * tronc par tronc et non après coup sur la moyenne — deux troncs à 25° de
  * l'aval ne barrent rien du tout, alors que leur transversalité moyenne, elle,
- * ne serait pas nulle. Et l'orientation se juge contre l'aval de la cellule QUI
- * REÇOIT : un tronc de trente mètres traverse plusieurs expositions.
+ * ne serait pas nulle. Et l'orientation se juge contre l'aval de la cellule **qui**
+ * **reçoit** : un tronc de trente mètres traverse plusieurs expositions.
  */
 export function poserBoisAuSol(
   boisAuSolCG: GrilleEcrite,
@@ -254,7 +254,7 @@ export function poserBoisAuSol(
     cellule % dims.widthM,
     Math.floor(cellule / dims.widthM),
   );
-  // Un tronc qui ne TOUCHE PAS le sol ne barre rien : l'eau passe dessous.
+  // Un tronc qui ne **touche pas** le sol ne barre rien : l'eau passe dessous.
   const barre = contact * partBarrante(transversalite(radiansTronc, radians));
   boisEnTraversPart[cellule] =
     ((boisEnTraversPart[cellule] ?? 0) * avant + barre * masseCG) / (avant + masseCG);
@@ -314,7 +314,7 @@ export function ecrasePar(masseQuiTombeKgC: number, masseDeboutKgC: number): boo
  * effet reconnu du bois mort en travers de la pente : ce qui est dessous ne
  * part pas.
  *
- * Cet effet-là ne dépend PAS de l'orientation : un tronc couché dans le sens
+ * Cet effet-là ne dépend **pas** de l'orientation : un tronc couché dans le sens
  * de la pente abrite la terre sous lui exactement comme un tronc en travers.
  * C'est le barrage qui demande d'être en travers, pas le paillage.
  */
@@ -332,7 +332,7 @@ export function longueurDeTroncM(boisAuSolCG: number): number {
 }
 
 /**
- * TRANSVERSALITÉ d'un tronc, ∈ [0,1] : le sinus de l'angle entre son axe et la
+ * **transversalité** d'un tronc, ∈ [0,1] : le sinus de l'angle entre son axe et la
  * direction que suit l'eau. C'est le cœur du sujet et c'est de la géométrie,
  * pas un réglage — un tronc en travers oppose toute sa longueur au courant, un
  * tronc dans le sens de la pente n'en oppose rien et fait même gouttière. La
@@ -353,7 +353,7 @@ export function transversalite(radiansTronc: number, radiansAval: number): numbe
  * Sinus en deçà duquel un tronc ne barre plus rien : sin 30°.
  *
  * Les essais sur table basculante d'Adams et al. (2023) — dix-huit passages,
- * six orientations, trois inclinaisons — ne trouvent AUCUNE accumulation
+ * six orientations, trois inclinaisons — ne trouvent **aucune** accumulation
  * derrière un tronc orienté à moins de 30° de la direction du courant, et rien
  * du tout en deçà de 15° de la ligne de plus grande pente, quelle que soit
  * l'inclinaison. Les relevés de terrain disent la même chose autrement : Smith
@@ -367,7 +367,7 @@ export function transversalite(radiansTronc: number, radiansAval: number): numbe
 export const SINUS_BARRANT_MINIMAL = 0.5;
 
 /**
- * Part du tronc réellement POSÉE sur le sol, selon qu'il a gardé ses branches
+ * Part du tronc réellement **posée** sur le sol, selon qu'il a gardé ses branches
  * ou non. C'est la variable oubliée du barrage : un tronc en travers qui repose
  * sur son houppier laisse l'eau passer dessous, et Adams et al. donnent une
  * capacité de stockage nulle en classe de décomposition I — le bois frais ne
@@ -382,7 +382,7 @@ export const SINUS_BARRANT_MINIMAL = 0.5;
  *
  * Le geste du gestionnaire est au-dessus des 0,63 mesurés parce qu'il ne se
  * contente pas d'ébrancher : la pratique des *log erosion barriers* demande de
- * CALER le tronc dans le sol, pas de le poser dessus *(inférence, à
+ * **caler** le tronc dans le sol, pas de le poser dessus *(inférence, à
  * confirmer)*.
  *
  * *(Simplification assumée : le contact est figé au moment du dépôt alors
@@ -405,7 +405,7 @@ export function partBarrante(transversalite: number): number {
   return Math.max(0, (transversalite - SINUS_BARRANT_MINIMAL) / (1 - SINUS_BARRANT_MINIMAL));
 }
 
-/** Longueur de tronc EN TRAVERS portée par une cellule, m/m². */
+/** Longueur de tronc **en travers** portée par une cellule, m/m². */
 export function longueurEnTraversM(boisAuSolCG: number, partEnTravers: number): number {
   return longueurDeTroncM(boisAuSolCG) * Math.min(1, Math.max(0, partEnTravers));
 }
@@ -414,7 +414,7 @@ export function longueurEnTraversM(boisAuSolCG: number, partEnTravers: number): 
 
 /**
  * Diamètre du tronc que décrit `MASSE_LINEIQUE_TRONC_KGC_PAR_M`, m. Les deux
- * constantes parlent du MÊME objet — trente centimètres, 0,07 m³ par mètre,
+ * constantes parlent du **même** objet — trente centimètres, 0,07 m³ par mètre,
  * 500 kg/m³ de bois sec à moitié carbone — et doivent bouger ensemble. Le
  * diamètre compte parce que c'est la hauteur du barrage : c'est lui, et non la
  * masse, qui fixe ce qu'un tronc peut retenir derrière lui.
@@ -425,7 +425,7 @@ export const DIAMETRE_TRONC_M = 0.3;
 const COTE_CELLULE_M = 1;
 
 /**
- * Volume du coin amont d'un tronc couché, m³ par mètre de tronc EFFICACE.
+ * Volume du coin amont d'un tronc couché, m³ par mètre de tronc **efficace**.
  *
  * C'est l'équation (3) d'Adams, Dixon, Wilcox & McWethy (2023), « Fire-produced
  * coarse woody debris and its role in sediment storage on hillslopes », *Earth
@@ -451,7 +451,7 @@ const COTE_CELLULE_M = 1;
  * 0,11 m³ sur pente douce. C'est bien le bon ordre : Wagenbrenner, MacDonald &
  * Rough (2006), *Hydrological Processes* 20 : 2989-3006, mesurent sur 210
  * troncs du Colorado 16,3 m³/ha pour 680 m de tronc à l'hectare, soit 0,024 m³
- * par mètre posé et 0,049 m³ par mètre EFFICACE — leur longueur efficace ne
+ * par mètre posé et 0,049 m³ par mètre **efficace** — leur longueur efficace ne
  * faisait que 49 % de la longueur posée. Robichaud, Pierson, Brown &
  * Wagenbrenner (2008), *Hydrological Processes* 22 : 159-170, mesurent 0,098 m³
  * derrière un tronc barrant une placette de 5 m, soit 0,020 m³/m.
@@ -466,7 +466,7 @@ export function volumeDuCoinM3ParM(pentePct: number): number {
 
 /**
  * Part du coin géométrique qui sert vraiment. La géométrie dit ce qu'un coin
- * PEUT contenir ; le terrain dit ce qu'il contient effectivement, et c'est bien
+ * **peut** contenir ; le terrain dit ce qu'il contient effectivement, et c'est bien
  * moins — parce que l'eau contourne les bouts du tronc et le franchit bien
  * avant qu'il ne soit plein.
  *
@@ -485,7 +485,7 @@ export function volumeDuCoinM3ParM(pentePct: number): number {
 export const PART_UTILE_DU_COIN = 0.3;
 
 /**
- * Ce qu'un barrage peut ENCORE contenir, m³ sur sa cellule (donc par m²).
+ * Ce qu'un barrage peut **encore** contenir, m³ sur sa cellule (donc par m²).
  *
  * Un tronc ne retient pas indéfiniment : son coin se remplit, et le jour où le
  * dépôt atteint le haut du tronc, l'eau et la terre passent par-dessus comme
@@ -510,7 +510,7 @@ export function capaciteDuCoinM3M2(
 }
 
 /**
- * Part de l'écoulement d'une cellule qu'un barrage INTERCEPTE, ∈ [0,1] : un
+ * Part de l'écoulement d'une cellule qu'un barrage **intercepte**, ∈ [0,1] : un
  * tronc plus court que la cellule laisse l'eau passer par ses bouts. Au-delà
  * d'un mètre de tronc en travers, la cellule est barrée sur toute sa largeur et
  * en rajouter ne barre pas davantage.
@@ -532,14 +532,14 @@ export function interception(longueurEnTraversM: number): number {
  *    (Girona-García, Vieira, Silva, Fernández, Robichaud & Keizer 2021,
  *    *Earth-Science Reviews* 217 : 103611, taille d'effet −0,82, p < 0,05) ;
  *  - **−52 %** sur trois ans en bassin de l'Èbre (Badía, Sánchez, Aznar & Martí
- *    2015, *Geoderma* 237-238 : 298-307), avec une efficacité qui DÉCROÎT quand
+ *    2015, *Geoderma* 237-238 : 298-307), avec une efficacité qui **décroît** quand
  *    l'intensité de pluie monte ;
  *  - **−25 %** seulement en Calabre, où l'on s'est contenté de faire pivoter sur
  *    la courbe de niveau des troncs déjà tombés (Bombino et al. 2023,
  *    *Water* 15(13) : 2378).
  *
  * On prend 0,4, milieu de cette fourchette. Elle est mesurée sur des dispositifs
- * ENTRETENUS, calés dans une tranchée et remblayés ; un chablis posé sur ses
+ * **entretenus**, calés dans une tranchée et remblayés ; un chablis posé sur ses
  * branches fait moins *(à confirmer)*.
  */
 export const RETENUE_MAX = 0.4;
@@ -558,8 +558,8 @@ export const PIEGEAGE_MAX = 0.6;
 /**
  * Lame d'eau, mm, qu'un barrage de bois détourne du ruissellement.
  *
- * Deux termes, et il faut les deux : une EFFICACITÉ, qui dit quelle part du
- * courant le tronc met en flaque, et une CAPACITÉ, qui dit combien cette flaque
+ * Deux termes, et il faut les deux : une **efficacité**, qui dit quelle part du
+ * courant le tronc met en flaque, et une **capacité**, qui dit combien cette flaque
  * peut contenir. Sans le second, une ligne de troncs arrêterait une crue.
  *
  * *Approximation assumée* : la flaque est comptée une fois par semaine, alors

@@ -1,10 +1,10 @@
 /**
- * L'OBJECTIF ET SES PALIERS, pendant qu'on joue (#188).
+ * **L'objectif et ses paliers**, pendant qu'on joue (#188).
  *
  * `v1.md` : *« Un niveau a un objectif général et des objectifs intermédiaires
  * … annoncés. »* Annoncés, donc tous visibles dès le départ — le joueur voit le
  * chemin entier, pas seulement le pas suivant. Ce qui change en cours de
- * route, c'est lequel est le SIEN à cet instant.
+ * route, c'est lequel est le **sien** à cet instant.
  *
  * Le volet vit en haut à gauche, sous le bandeau : c'est le seul endroit que
  * l'œil retrouve sans chercher, et un objectif qu'on doit aller ouvrir n'en est
@@ -66,7 +66,11 @@ export function PanneauNiveau({ niveau, avancement }: { niveau: Niveau; avanceme
   const annees = avancement.restantes === undefined ? undefined : avancement.restantes / 52;
   return (
     <section
-      style={{ ...VOLET, top: 104, left: 12, maxWidth: 330, fontSize: "0.92em" }}
+      // **Pas de `top` ici.** Il valait 104 — la hauteur du bandeau, recopiée.
+      // Une seconde copie d'une même grandeur, et elle a divergé dès que le
+      // bandeau a gagné une ligne (la relecture de #128) : la fiche est venue
+      // couvrir les boutons de vitesse. C'est l'appelant qui empile.
+      style={{ ...VOLET, position: "static", maxWidth: 330, fontSize: "0.92em" }}
       aria-label="Objectif du niveau"
     >
       <h2 style={{ margin: 0, fontSize: "1em" }}>{niveau.nom}</h2>

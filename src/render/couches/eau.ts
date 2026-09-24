@@ -1,5 +1,5 @@
 /**
- * L'eau libre, tracée par son CONTOUR et non cellule par cellule
+ * L'eau libre, tracée par son **contour** et non cellule par cellule
  * (docs/interface-visuelle.md §5.2).
  *
  * **Le retour était : « la mare est moche, c'est pas du tout beau d'avoir des
@@ -7,11 +7,11 @@
  * défendu le bord franc — une berge n'est pas un dégradé, un ruisseau de deux
  * mètres fondu dans un pavé disparaît — et c'est vrai. Mais « franc » et « en
  * escalier » ne sont pas la même chose : un bord franc peut suivre une diagonale.
- * En dessinant un losange par cellule d'eau, j'obtenais un bord franc ET un
+ * En dessinant un losange par cellule d'eau, j'obtenais un bord franc **et** un
  * escalier, alors que seul le premier était voulu.
  *
  * **La correction : des carrés marcheurs.** L'eau est traitée comme un champ —
- * une valeur par COIN de cellule, moyenne des cellules qui s'y touchent — et on
+ * une valeur par **coin** de cellule, moyenne des cellules qui s'y touchent — et on
  * trace la ligne de niveau à un demi. Le contour coupe alors les cellules en
  * diagonale au lieu de les contourner à angle droit : une rive ronde redevient
  * ronde, et le bord reste net.
@@ -29,7 +29,7 @@
 export const SEUIL_RIVE = 0.5;
 
 /**
- * Le champ d'eau, échantillonné aux COINS des cellules.
+ * Le champ d'eau, échantillonné aux **coins** des cellules.
  *
  * Un coin vaut la moyenne des cellules qui le touchent : au milieu d'une mare
  * il vaut 1, au milieu de la terre 0, et sur la rive une valeur intermédiaire
@@ -165,7 +165,7 @@ export function polygoneEau(
 }
 
 /**
- * Toutes les parts noyées d'une emprise, en coordonnées de PARCELLE.
+ * Toutes les parts noyées d'une emprise, en coordonnées de **parcelle**.
  *
  * Les polygones sont rendus cellule par cellule et non fusionnés : deux cellules
  * voisines partagent exactement leurs sommets de rive, donc les polygones se

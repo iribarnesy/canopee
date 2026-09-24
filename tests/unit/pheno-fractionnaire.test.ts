@@ -14,16 +14,16 @@ import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
 /**
- * La phénologie ENTRE deux semaines (#164).
+ * La phénologie **entre** deux semaines (#164).
  *
  * Un hêtre passait de nu à à-moitié-feuillu en un seul pas de temps, et le
  * rendu ne pouvait pas l'adoucir sans refaire la phénologie chez lui — ce que la
  * règle du dépôt interdit. Le moteur rend donc son propre calendrier à un
  * instant fractionnaire.
  *
- * CE N'EST PAS UNE INVENTION. Le tick accumule les degrés-jours par un apport
+ * **Ce n'est pas une invention**. Le tick accumule les degrés-jours par un apport
  * hebdomadaire unique tiré d'une seule température moyenne : l'incrément
- * journalier est donc CONSTANT dans la semaine, et interpoler linéairement rend
+ * journalier est donc **constant** dans la semaine, et interpoler linéairement rend
  * exactement ce que le modèle dit. Tout le reste — durée du jour, porte
  * d'automne, compteur de chute — est recalculé, pas interpolé.
  */
@@ -102,7 +102,7 @@ describe("la phénologie se lit entre deux semaines", () => {
 
   it("les degrés-jours interpolés sont EXACTEMENT ceux du modèle", () => {
     // Le tick fait `dd += max(0, tMean − 5) × 7`. L'incrément journalier est donc
-    // constant dans la semaine, et la droite entre deux bornes EST la courbe.
+    // constant dans la semaine, et la droite entre deux bornes **est** la courbe.
     for (let k = 1; k < CTXS.length; k++) {
       const a = CTXS[k - 1];
       const b = CTXS[k];
@@ -126,7 +126,7 @@ describe("la phénologie se lit entre deux semaines", () => {
       for (const t of [0.3, 0.7]) {
         const ctx = contextePhenologiqueFractionnaire(a, b, t);
         expect(ctx.jourH).toBe(dureeDuJourH(LATITUDE, midWeekDayOfYear(a.semaineAnnee) + 7 * t));
-        // Et elle DIFFÈRE de la droite quelque part dans l'année, sans quoi cet
+        // Et elle **diffère** de la droite quelque part dans l'année, sans quoi cet
         // essai ne distinguerait pas les deux façons de faire.
       }
     }
@@ -153,8 +153,8 @@ describe("la phénologie se lit entre deux semaines", () => {
     );
     void partFoliaireOmbrageante;
 
-    // LA BASCULE D'ANNÉE : le cumul se remet à zéro en semaine 0. Interpoler
-    // traverserait cette remise à zéro en DESCENDANT, ce qui n'arrive jamais
+    // **La bascule d'année** : le cumul se remet à zéro en semaine 0. Interpoler
+    // traverserait cette remise à zéro en **descendant**, ce qui n'arrive jamais
     // dans le modèle. On tient alors la valeur de départ.
     const bascule = CTXS.findIndex(
       (c, i) => i > 0 && c.ddYearBase5 < (CTXS[i - 1]?.ddYearBase5 ?? 0),

@@ -1,5 +1,5 @@
 /**
- * LE VERSANT SE LIT DANS LE DÉCOR (#150).
+ * **Le versant se lit dans le décor** (#150).
  *
  * Retour de partie : sur une station en pente, les voisins paraissent posés au
  * même niveau que la parcelle.
@@ -59,7 +59,7 @@ describe("la teinte du décor suit l'altitude", () => {
 
   /**
    * La propriété qui compte vraiment : sur un versant, deux points opposés du
-   * décor n'ont PAS la même teinte — et sur un plat, si.
+   * décor n'ont **pas** la même teinte — et sur un plat, si.
    */
   it("un plat ne crée pas de versant, un versant en crée un", () => {
     const ecartDeTeinte = (pentePct: number) => {
@@ -76,7 +76,7 @@ describe("la teinte du décor suit l'altitude", () => {
   });
 
   /**
-   * Et le contrôle qui dit que le mécanisme du décor n'était PAS en cause :
+   * Et le contrôle qui dit que le mécanisme du décor n'était **pas** en cause :
    * la pente moyenne d'un versant sud est bien lue, sur l'axe qui porte la
    * pente et sur lui seul.
    */

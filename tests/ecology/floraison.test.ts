@@ -2,13 +2,13 @@
  * Le calendrier des fleurs (issue #70, critères G4 et J6).
  *
  * Le moteur savait qu'un arbre fleurit — il en tirait un gel tardif et un
- * fruit. Il ne savait pas que cette fleur NOURRIT quelqu'un, ni que ce
+ * fruit. Il ne savait pas que cette fleur **nourrit** quelqu'un, ni que ce
  * quelqu'un doit manger le reste de l'année pour être là le jour venu.
  *
  * Ce que ce fichier vérifie :
  *   1. le trait, et ce qu'il dit de neuf — le nectar, la durée ;
  *   2. que l'étalement cesse de compter les anémophiles et voit la strate basse ;
- *   3. **le témoin du lot** : à haie ÉGALE, un calendrier étalé nourrit et un
+ *   3. **le témoin du lot** : à haie **égale**, un calendrier étalé nourrit et un
  *      calendrier groupé ne nourrit pas.
  */
 
@@ -105,8 +105,8 @@ describe("l'étalement des floraisons cesse d'être un décompte d'espèces", ()
       0.1,
     );
     const groupe = indiceBiodiversite(peuplement(Array(4).fill("crataegus_monogyna")), 0, 0.1);
-    // Mesuré 0,064 contre 0,036, soit 1,79 ×. Et l'écart est OBTENU MALGRÉ UNE
-    // DILUTION : dans la haie étalée chaque espèce ne tient qu'un quart de la
+    // Mesuré 0,064 contre 0,036, soit 1,79 ×. Et l'écart est **obtenu malgré une**
+    // **dilution** : dans la haie étalée chaque espèce ne tient qu'un quart de la
     // surface de houppier, contre la totalité pour l'aubépine de la haie
     // groupée. Une saison couverte à quatre espèces diluées bat donc une
     // espèce pure concentrée sur cinq semaines — ce qui est exactement ce que

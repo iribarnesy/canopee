@@ -3,7 +3,7 @@
  *
  * Aucune règle du moteur ne dit qu'un peuplement dense fabrique des perches.
  * Les parties ci-dessous tournent avec la même espèce, les mêmes constantes et
- * la MÊME graine ; seul l'écartement change. Si le gradient apparaît, c'est
+ * la **même** graine ; seul l'écartement change. Si le gradient apparaît, c'est
  * qu'il émerge de la compétition pour la lumière, ce qui est tout l'intérêt.
  */
 
@@ -40,7 +40,7 @@ function hetraie(ecartM: number) {
     state = tick(state, m).state;
   }
   const vivants = state.trees.filter((t) => t.alive);
-  // LES DOMINANTS SEULEMENT, et c'est une précaution nécessaire : un peuplement
+  // **les dominants seulement**, et c'est une précaution nécessaire : un peuplement
   // serré porte une foule de dominés que le peuplement clair n'a pas, et leur
   // moyenne noierait le signal. On compare ce qui est comparable.
   const tri = [...vivants].sort((a, b) => b.heightM - a.heightM);
@@ -69,7 +69,7 @@ describe("la densité de plantation fait la forme de la tige", () => {
   const clair = hetraie(10);
 
   it("plus on plante serré, plus la tige est élancée", () => {
-    // Le gradient est MONOTONE — serrer davantage élance davantage, sans palier
+    // Le gradient est **monotone** — serrer davantage élance davantage, sans palier
     // sur la gamme testée. C'est le résultat le plus ancien de ce fichier, et
     // le seul que l'étiolement (#97) n'ait pas déplacé : il tenait déjà quand
     // l'amplitude, elle, manquait.
@@ -84,7 +84,7 @@ describe("la densité de plantation fait la forme de la tige", () => {
   });
 
   it("le peuplement serré FABRIQUE des perches, le peuplement clair n'en fait aucune", () => {
-    // C'EST L'AMPLITUDE, ET IL A FALLU INNOCENTER DEUX COUPABLES POUR L'AVOIR.
+    // **C'est l'amplitude**, **et il a fallu innocenter deux coupables pour l'avoir**.
     //
     // La sylviculture mesure H/D 25–40 pour un sujet de plein vent et 90–100
     // pour une perche de plantation serrée. Ce commentaire a longtemps accusé,
@@ -94,13 +94,13 @@ describe("la densité de plantation fait la forme de la tige", () => {
     // à 1 déplace les dominants serrés de H/D 42,1 à 41,7, et pousser les trois
     // constantes de la lumière à fond n'atteint que 45,0.
     //
-    // Ensuite la paire d'allocation (#79). Elle borne bien une FENÊTRE — [40 ;
+    // Ensuite la paire d'allocation (#79). Elle borne bien une **fenêtre** — [40 ;
     // 80] — mais une fenêtre n'est pas une amplitude : ouverte à [40 ; 100] elle
     // ne gagne que 49 → 53, et poussée à l'absurde ([40 ; 200]) la même hêtraie
     // ne monte qu'à 38–62.
     //
     // Le vrai verrou était ailleurs, et c'est #97 qui l'a levé : l'ombre
-    // RABOTAIT la pousse au lieu de la rediriger, donc une tige dominée
+    // **rabotait** la pousse au lieu de la rediriger, donc une tige dominée
     // stagnait au lieu de filer. Depuis que l'allongement se sert avant le
     // diamètre, la tige la plus élancée du peuplement passe de 49 à 87 à 2 m
     // d'écartement, contre 38 à 10 m — et la hêtraie serrée atteint 129 à
@@ -115,7 +115,7 @@ describe("la densité de plantation fait la forme de la tige", () => {
     // ELANCEMENT_CRITIQUE (100), deux valeurs de la sylviculture européenne. Or
     // tant que le diamètre suivait l'allocation pas à pas, H/D plafonnait à 79
     // (essai arithmétique plus bas) : la moitié haute de cette rampe ne pouvait
-    // JAMAIS servir, et #79 l'avait épinglé comme du code mort en attendant.
+    // **jamais** servir, et #79 l'avait épinglé comme du code mort en attendant.
     //
     // L'étiolement l'a réveillée. Le diamètre ne suit plus l'allocation — il
     // encaisse le résidu — donc l'élancement réalisé dépasse la projection : la
@@ -131,7 +131,7 @@ describe("la densité de plantation fait la forme de la tige", () => {
   it("et la perche est un arbre de MILIEU DE CANOPÉE, pas un nabot", () => {
     // Le contrôle qui distingue l'étiolement d'un simple rabougrissement, et
     // qui dit pourquoi l'ancienne intégrale bloquait. Une tige dominée qui
-    // stagne finit TRAPUE : elle garde le H/D 50 de sa naissance, et le moteur
+    // stagne finit **trapue** : elle garde le H/D 50 de sa naissance, et le moteur
     // d'avant faisait précisément ça — ses tiges les moins élancées étaient ses
     // plus dominées. Celle qui file est à mi-hauteur du peuplement : elle a
     // encore de quoi courir après la lumière, et c'est elle qui casse au vent.
@@ -146,12 +146,12 @@ describe("la densité de plantation fait la forme de la tige", () => {
 describe("la fenêtre de la paire d'allocation, et pourquoi le moteur en sort", () => {
   // La borne qui manquait, et qui a laissé chercher la cause dans le mauvais
   // fichier pendant deux lots. Elle ne coûte aucune simulation : un arbre dont
-  // le diamètre SUIT l'allocation `a` pas à pas porte H/D = 100/a, et `a` est
+  // le diamètre **suit** l'allocation `a` pas à pas porte H/D = 100/a, et `a` est
   // bornée par les deux constantes.
   //
-  // **Ce bloc décrit désormais une PROJECTION, plus le moteur**, et c'est le
+  // **Ce bloc décrit désormais une projection, plus le moteur**, et c'est le
   // résultat de #97 : depuis que le diamètre encaisse le résidu au lieu de
-  // suivre l'allocation, l'élancement réalisé DÉPASSE cette fenêtre — 129
+  // suivre l'allocation, l'élancement réalisé **dépasse** cette fenêtre — 129
   // mesurés contre 79 projetés. Les bornes restent justes pour ce qu'elles
   // disent, et utiles pour comprendre ce que l'allocation seule peut faire ;
   // elles ne bornent simplement plus la tige.

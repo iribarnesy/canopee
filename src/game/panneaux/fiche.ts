@@ -1,9 +1,9 @@
 /**
- * LA FICHE D'UN ARBRE : ce qu'il porte, en clair (#149).
+ * **La fiche d'un arbre** : ce qu'il porte, en clair (#149).
  *
  * « Pour un arbre suivi, on aimerait bien voir ses stats détaillées — sa
- * vigueur, son feuillage. » Le journal dit ce qui lui EST ARRIVÉ ; la fiche dit
- * ce qu'il EST aujourd'hui, et les deux se lisent ensemble.
+ * vigueur, son feuillage. » Le journal dit ce qui lui **est arrivé** ; la fiche dit
+ * ce qu'il **est** aujourd'hui, et les deux se lisent ensemble.
  *
  * **Rien n'est recalculé.** Chaque ligne est un champ de l'instantané, rendu
  * lisible — ou, pour le feuillage, un appel aux fonctions du moteur
@@ -25,8 +25,8 @@ import {
 } from "../../engine/phenologie";
 import { stadeDe } from "../../engine/stades";
 import { elancement, elancementLimite, hauteurStableM } from "../../engine/trees";
+import { causeDite } from "../mots";
 import type { SnapshotTree } from "../protocol";
-import { CAUSE_AU_SINGULIER } from "../suivis";
 
 /**
  * Comment se lit une part : une part haute est-elle une bonne nouvelle ?
@@ -34,7 +34,7 @@ import { CAUSE_AU_SINGULIER } from "../suivis";
  * « neutre » n'est pas une facilité, c'est le cas le plus fréquent et le plus
  * important : un chêne nu en janvier n'est pas un chêne malade, et colorer son
  * feuillage en rouge ferait crier l'écran tous les hivers. La couleur ne sert
- * qu'aux grandeurs qui ont un SENS — ce qui monte quand l'arbre va mal, ou
+ * qu'aux grandeurs qui ont un **sens** — ce qui monte quand l'arbre va mal, ou
  * l'inverse.
  */
 export type SensDeLecture = "hautBon" | "hautMauvais" | "neutre";
@@ -54,7 +54,7 @@ export interface LigneDeFiche {
   /**
    * Cette jauge ne compte pas dans le point d'alerte.
    *
-   * **Parce que son ZÉRO ne veut pas dire « rien à signaler ».** L'élancement
+   * **Parce que son zéro ne veut pas dire « rien à signaler ».** L'élancement
    * en est le seul cas aujourd'hui : un arbre sain remplit déjà la moitié de sa
    * jauge — mesuré, 57 % sur un sujet de neuf mètres en pleine forme — parce
    * que la référence est la limite de flambage et non un idéal. Le faire entrer
@@ -68,7 +68,7 @@ export interface LigneDeFiche {
  * La couleur d'une part, en teinte continue du vert au rouge.
  *
  * **Continue, et c'est le point** : un palier serait un seuil, et un seuil est
- * une règle que le moteur n'a pas donnée. Ici la couleur EST le nombre — 120°
+ * une règle que le moteur n'a pas donnée. Ici la couleur **est** le nombre — 120°
  * de teinte pour ce qui va bien, 0° pour ce qui va mal — et le nombre reste
  * écrit à côté d'elle. On ne dit donc jamais « cet arbre va mal », on montre
  * plus de rouge quand la grandeur monte.
@@ -81,7 +81,7 @@ export function couleurDeLaPart(part: number, sens: SensDeLecture = "neutre"): s
 }
 
 /**
- * LE POINT D'ALERTE d'un arbre : la pire de ses grandeurs orientées, ∈ [0,1].
+ * **le point d'alerte** d'un arbre : la pire de ses grandeurs orientées, ∈ [0,1].
  *
  * Suivre toute une plantation veut dire lire cent quarante-neuf fiches. Ce
  * point-là se regarde à la place : il ne dit rien de plus que ce que les lignes
@@ -99,7 +99,7 @@ function partOrientee(ligne: LigneDeFiche | undefined): number {
 }
 
 /**
- * LA LIGNE qui tient l'alerte — celle qu'il faut nommer quand on n'en montre
+ * **la ligne** qui tient l'alerte — celle qu'il faut nommer quand on n'en montre
  * qu'une. Rien à signaler sur aucune : `undefined`.
  */
 export function pireLigne(lignes: readonly LigneDeFiche[]): LigneDeFiche | undefined {
@@ -123,7 +123,7 @@ export function ilYA(semaines: number): string {
 /**
  * Depuis quand — ou « avant votre arrivée ».
  *
- * **Une marque peut être plus VIEILLE que la partie**, et c'est ce qui rendait
+ * **Une marque peut être plus vieille que la partie**, et c'est ce qui rendait
  * la fiche fausse : une parcelle vieillie de quarante ans porte des arbres
  * broutés en semaine 1 800, alors que le compteur du joueur repart de zéro à
  * son arrivée (`worker.ts`, `faireVieillir`). L'écart est négatif, et un
@@ -136,12 +136,12 @@ export function depuis(semaine: number, marque: number): string {
 }
 
 /**
- * OÙ EN EST L'ÉTIOLEMENT, ∈ [0,1] — ou `undefined` si la question n'a pas de
+ * **où en est l'étiolement**, ∈ [0,1] — ou `undefined` si la question n'a pas de
  * sens (une tige sans diamètre mesurable).
  *
  * **Zéro n'est pas « pas d'élancement », c'est « élancement d'un arbre au
  * large ».** La borne basse est le haut de la gamme que le moteur cite pour un
- * arbre de plein vent (25 à 40) ; la borne haute est SA limite structurelle,
+ * arbre de plein vent (25 à 40) ; la borne haute est **sa** limite structurelle,
  * qui dépend du diamètre — une grosse tige flambe plus tôt en H/D qu'une fine.
  * Sans ce décalage, tout le peuplement partait à l'orange : mesuré, un sujet
  * sain remplit déjà 57 % de la jauge si on la fait partir de zéro.
@@ -196,7 +196,7 @@ export function ficheDeLArbre(
     `${arbre.heightM.toFixed(1)} m · Ø ${arbre.diametreCm.toFixed(1)} cm · ${stadeDe(arbre.diametreCm)}`,
     {
       aide: `Le stade est une classe de DIAMÈTRE, pas de hauteur. La jauge dit où il en est de la taille adulte de son espèce (${espece.hauteurMaxM} m).`,
-      // NEUTRE : un jeune arbre n'est pas un arbre malade. La jauge dit sa
+      // **neutre** : un jeune arbre n'est pas un arbre malade. La jauge dit sa
       // maturité, pas sa santé — la colorer reviendrait à reprocher à un semis
       // d'être un semis.
       part: Math.min(1, arbre.heightM / Math.max(0.1, espece.hauteurMaxM)),
@@ -208,7 +208,9 @@ export function ficheDeLArbre(
   if (arbre.chandelle) {
     // Une chandelle n'a plus ni feuillage ni vigueur : ce qui reste à dire
     // d'elle, c'est depuis quand elle est morte et de quoi.
-    if (arbre.causeMort) dire("✝️", "Morte", CAUSE_AU_SINGULIER[arbre.causeMort]);
+    // « Morte » parce que le sujet de la fiche est la **tige**, qui est féminine
+    // quelle que soit l'essence ; la cause s'accorde avec elle.
+    if (arbre.causeMort) dire("✝️", "Morte", causeDite(arbre.causeMort, 1, true));
     if (arbre.mortSemaine !== undefined) {
       dire("🕰", "Sur pied depuis", depuis(ctx.semaine, arbre.mortSemaine));
     }
@@ -222,14 +224,14 @@ export function ficheDeLArbre(
     sens: "hautBon",
   });
 
-  // **L'ÉTIOLEMENT, dit en français et non en H/D.** « La ligne H/D n'est pas
+  // **l'étiolement, dit en français et non en H/D.** « La ligne H/D n'est pas
   // très parlante » — elle ne l'était pas, en effet : le nombre brut ne dit
   // rien sans les deux repères qui l'encadrent. Les voici, et ils ne sont pas
   // de nous : la gamme forestière que `trees.ts` cite (« 25–40 au large, 90–100
   // en perche ») donne le plancher, et `elancementLimite` — le moteur — donne
   // le point où la tige ne se tient plus. La part va de l'un à l'autre.
   //
-  // C'est la seule ligne qui dise l'arbre FILÉ par l'ombre : il est grand ET
+  // C'est la seule ligne qui dise l'arbre **filé** par l'ombre : il est grand **et**
   // mince, donc ni sa taille ni son âge ne le trahissent. Elle compte donc dans
   // l'alerte — « un arbre très étiolé, c'est un risque ».
   const part = partEtiolement(arbre.diametreCm, arbre.heightM);
@@ -257,7 +259,7 @@ export function ficheDeLArbre(
   if (arbre.stress > 0.05) {
     const parts: string[] = [];
     if (arbre.stressLent !== undefined && arbre.stressLent > 0.01 && arbre.causeLente) {
-      parts.push(`${CAUSE_AU_SINGULIER[arbre.causeLente]} ${pourcent(arbre.stressLent)}`);
+      parts.push(`${causeDite(arbre.causeLente, 1, true)} ${pourcent(arbre.stressLent)}`);
     }
     if (arbre.stressRavageurs !== undefined && arbre.stressRavageurs > 0.01) {
       parts.push(`ravageurs ${pourcent(arbre.stressRavageurs)}`);
@@ -309,7 +311,7 @@ export function ficheDeLArbre(
     // posée en partie le dit : « ça voudrait dire que 30 cm au-dessus du sol
     // c'est déjà le houppier ? » Oui, et c'est normal — un jeune pin au large
     // est branchu presque jusqu'au sol. Ce qui manquait, c'est que la grandeur
-    // se lit par le BAS : c'est la hauteur de fût nu, pas le début d'une
+    // se lit par le **bas** : c'est la hauteur de fût nu, pas le début d'une
     // couronne haut perchée.
     const part = arbre.baseHouppierM / Math.max(0.1, arbre.heightM);
     dire(

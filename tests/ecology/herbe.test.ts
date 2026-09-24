@@ -32,11 +32,11 @@ function simuler(
   const weather = serieToWeeks(serie);
   let state = createGameState(station, rngStateFromSeed(3));
   state = plantAt(state, especeId, 15, 15, 0.3);
-  // **LE PLANT PORTE UN MANCHON, ET DANS TOUS LES BRAS** (#184). Depuis que la
+  // **le plant porte un manchon, et dans tous les bras** (#184). Depuis que la
   // fauche emporte les tiges ligneuses qu'elle atteint, un plant de trente
   // centimètres part avec l'herbe : c'est le fait, un gyrobroyeur ne trie pas.
   // Ce qui distingue un dégagement d'une fauche de prairie est qu'on a protégé
-  // ce qu'on veut garder. La protection est posée dans TOUS les bras, fauchés
+  // ce qu'on veut garder. La protection est posée dans **tous** les bras, fauchés
   // ou non — sans quoi le témoin ne différerait plus par la seule fauche.
   const protection: GameAction = { type: "proteger", week: 0, treeIds: [1] };
   let couvertureFinale = 0;
@@ -87,7 +87,7 @@ describe("dynamique du tapis herbacé", () => {
   });
 
   it("elle recule quand le sol de surface s'assèche (l'herbe grille la première)", () => {
-    // La sécheresse joue sur ce qui est VERT, pas sur l'emprise (herbacees.ts) :
+    // La sécheresse joue sur ce qui est **vert**, pas sur l'emprise (herbacees.ts) :
     // c'est le feuillage qui grille, la souche reste.
     for (const h of HERBACEES) {
       expect(facteurEauHerbacee(h, 0.1)).toBeLessThan(facteurEauHerbacee(h, 1));
@@ -96,9 +96,9 @@ describe("dynamique du tapis herbacé", () => {
 });
 
 describe("concurrence herbacée sur les jeunes plants", () => {
-  // **CE BANC MESURAIT UN BOGUE, ET IL A FALLU #201 POUR LE VOIR.**
+  // **ce banc mesurait un bogue, et il a fallu #201 pour le voir.**
   //
-  // Il affirmait « faucher fait NETTEMENT mieux pousser un plant sur sol
+  // Il affirmait « faucher fait **nettement** mieux pousser un plant sur sol
   // pauvre », +30,0 % mesurés contre +20 % exigés, et il avait déjà été réécrit
   // une fois pour cesser d'épingler son propre chiffre à six millièmes près.
   // L'énoncé est vrai sur le terrain — l'entretien du pied est le premier
@@ -108,7 +108,7 @@ describe("concurrence herbacée sur les jeunes plants", () => {
   // `applyFaucher` versait au sol `coupe * 4` grammes d'azote et `* 25` de
   // carbone, **sans que rien ne les retire de nulle part** : la strate
   // herbacée n'était ni au bilan carbone ni au bilan azote, et aucune propriété
-  // de conservation n'exerçait cette action. Faucher FABRIQUAIT de l'engrais et
+  // de conservation n'exerçait cette action. Faucher **fabriquait** de l'engrais et
   // le versait au pied du plant.
   //
   // #201 a retiré cette création. Attribution faite avec le retour de litière
@@ -133,9 +133,9 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     const avec = simuler(sc, especeId, fauches(4), 12);
     return { rapport: avec.hauteur / sans.hauteur, sans: sans.hauteur };
   };
-  // **LE BANC FAISAIT VARIER DEUX CHOSES À LA FOIS** (#210). Le bras « pauvre »
-  // était un PIN sur lande, le bras « riche » un BOULEAU sur limon : leur
-  // différence portait donc la station ET l'espèce, alors que l'essai ne
+  // **le banc faisait varier deux choses à la fois** (#210). Le bras « pauvre »
+  // était un **pin** sur lande, le bras « riche » un **bouleau** sur limon : leur
+  // différence portait donc la station **et** l'espèce, alors que l'essai ne
   // prétend parler que de la station. Mesuré en carré complet, rapport
   // fauché/non fauché à douze ans :
   //
@@ -149,8 +149,8 @@ describe("concurrence herbacée sur les jeunes plants", () => {
   // L'espèce est donc fixée, et c'est le pin qui reste, parce qu'il vit sur les
   // deux stations et que le bouleau n'a rien à faire sur une lande sèche.
   //
-  // Ce qui VARIE ENCORE entre les deux bras, et qu'on ne peut pas fixer : la
-  // couverture herbacée, 0,22 contre 0,96. Mais c'est une CONSÉQUENCE de la
+  // Ce qui **varie encore** entre les deux bras, et qu'on ne peut pas fixer : la
+  // couverture herbacée, 0,22 contre 0,96. Mais c'est une **conséquence** de la
   // station, pas un facteur indépendant — une lande sèche porte peu d'herbe,
   // c'est ce qu'être une lande sèche veut dire. Le noter tout de même, parce
   // qu'il explique la moitié du résultat : il y a peu à faucher sur la lande.
@@ -176,13 +176,13 @@ describe("concurrence herbacée sur les jeunes plants", () => {
   });
 
   it("le contraste pauvre/riche garde son sens, mais il ne fait plus que deux points", () => {
-    // **L'ÉCART ÉTAIT LA PROPRIÉTÉ, et il l'est resté — c'est son AMPLITUDE qui
+    // **l'écart était la propriété, et il l'est resté — c'est son amplitude qui
     // était fausse.** Trente points mesurés, vingt exigés ; il en reste deux.
     // Le sol pauvre décide encore, le sol riche ne décide toujours pas, mais un
     // gestionnaire qui lirait ce moteur conclurait que l'entretien du pied est
     // accessoire — et ce serait faux.
     expect(pauvre.rapport - riche.rapport).toBeGreaterThan(0);
-    // Et on épingle le PLAFOND plutôt que le plancher, ce qui est l'inverse de
+    // Et on épingle le **plafond** plutôt que le plancher, ce qui est l'inverse de
     // ce que ce banc faisait : tant que l'écart reste sous dix points, le
     // moteur n'a pas retrouvé le fait, et l'issue reste ouverte. Le jour où il
     // le dépassera, cette ligne tombera — et ce sera la bonne nouvelle.
@@ -238,7 +238,7 @@ describe("stabilité du tapis (pas d'oscillation artificielle)", () => {
       }
     }
     /**
-     * Inversions de sens VISIBLES : on ignore les variations sous 2 % de
+     * Inversions de sens **visibles** : on ignore les variations sous 2 % de
      * couverture (le gibier prélève un peu d'herbe chaque semaine, ce qui
      * dentelle la courbe sans que rien ne se voie à l'écran). Ce qu'on
      * traque, c'est l'alternance ample, celle qui faisait clignoter.

@@ -85,7 +85,7 @@ describe("ce qui fait pencher le budget", () => {
   it("une litière riche en calcium rend des bases, une litière pauvre en prend", () => {
     expect(effetLitiereEq(100, 16)).toBeGreaterThan(0);
     expect(effetLitiereEq(100, 3.5)).toBeLessThan(0);
-    // Et le seuil est EXACT par construction : la neutralité n'est pas réglée
+    // Et le seuil est **exact** par construction : la neutralité n'est pas réglée
     // deux fois, elle est déduite une fois (bases.ts).
     expect(effetLitiereEq(100, CALCIUM_NEUTRE_MG_G)).toBeCloseTo(0, 12);
   });
@@ -146,7 +146,7 @@ function parcelle(sc: StationClimat, especeId: string | null, ans: number) {
 describe("en partie : le sol dérive, et pas n'importe comment", () => {
   it("le budget se conserve : la variation du pool VAUT la somme de ses termes", () => {
     // La discipline de l'azote, du phosphore et du potassium. Et la mise en
-    // garde du référentiel avec : la conservation ne valide pas le NIVEAU, elle
+    // garde du référentiel avec : la conservation ne valide pas le **niveau**, elle
     // interdit seulement d'en perdre ou d'en fabriquer en route.
     const r = parcelle(LIMON_RICHE, "fagus_sylvatica", 20);
     expect(r.bases - r.bases0).toBeCloseTo(r.budget, 6);
@@ -165,7 +165,7 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
   it("un frêne entretient le sien, et la différence est l'essence seule", () => {
     // Même station, même graine, même météo : seule la fiche change.
     //
-    // **La comparaison se fait contre le SOL NU, et c'est une correction.**
+    // **La comparaison se fait contre le sol nu, et c'est une correction.**
     // L'essai lisait « le frêne remonte son pH au-dessus de son point de
     // départ », ce qui mêlait deux choses : l'effet de la litière, qu'il visait,
     // et la quantité de biomasse que la parcelle porte, qu'il ne contrôlait pas.
@@ -175,7 +175,7 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
     // écologiquement juste (le frêne est une essence de trouée) et ça suffit à
     // faire passer le pH du frêne sous son point de départ.
     //
-    // Le témoin manquait : cette station s'acidifie TOUTE SEULE, 7,00 → 6,87
+    // Le témoin manquait : cette station s'acidifie **toute seule**, 7,00 → 6,87
     // sans un arbre. Comparée à lui, la conclusion est intacte et même plus
     // nette qu'avant — frêne 6,94 au-dessus du sol nu, hêtre 6,75 en dessous.
     // C'est bien la litière de l'essence qu'on mesure, et elle seule.
@@ -196,7 +196,7 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
     // que faisait le premier jet, qui vidait un limon neutre jusqu'au plancher
     // d'acidité en vingt-cinq ans parce qu'il lessivait au taux du potassium.
     //
-    // **La borne était 0,2, et c'était un chiffre du MOTEUR.** Elle avait été
+    // **La borne était 0,2, et c'était un chiffre du moteur.** Elle avait été
     // posée quand le limon riche nu dérivait de 0,125 ; la stratification du
     // budget (#170) l'a portée à 0,203, et la borne est tombée pour trois
     // millièmes. La tentation évidente — baisser la rétention jusqu'à repasser
@@ -206,14 +206,14 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
     // moteur qui a cessé de le contraindre.
     //
     // La borne ci-dessous vient du dehors : les témoins non amendés de
-    // Rothamsted perdent de l'ordre d'un DEMI-POINT de pH par siècle, soit un
+    // Rothamsted perdent de l'ordre d'un **demi-point** de pH par siècle, soit un
     // quart de point sur cinquante ans *(à confirmer sur les séries de Park
     // Grass)*. On laisse une fois cette marge, et on exige surtout ce que le
     // premier jet violait de trois unités : rester dans les dixièmes.
     for (const sc of [LANDE_SECHE, LIMON_ACIDE, LIMON_RICHE]) {
       const nu = parcelle(sc, null, 50);
       expect(Math.abs(nu.ph - nu.ph0)).toBeLessThan(0.5);
-      // Et la DIRECTION, qui elle ne se négocie pas : un sol que sa végétation
+      // Et la **direction**, qui elle ne se négocie pas : un sol que sa végétation
       // ne réalimente pas se décalcifie, il ne se bonifie pas.
       expect(nu.ph).toBeLessThan(nu.ph0);
     }
@@ -238,7 +238,7 @@ describe("le chaulage n'est plus un geste à effet fixe", () => {
     expect(limon.refus).toBe(0);
     expect(sable.apres).toBeGreaterThan(sable.avant);
     expect(limon.apres).toBeGreaterThan(limon.avant);
-    // LA règle qui TOMBE du mécanisme sans avoir été écrite : la même chaux sur
+    // **la** règle qui **tombe** du mécanisme sans avoir été écrite : la même chaux sur
     // un podzol sableux (petit complexe) déplace beaucoup plus que sur un limon
     // argileux, parce que la capacité d'échange est au dénominateur du taux de
     // saturation. Avant ce lot, le chaulage montait de 0,5 partout.

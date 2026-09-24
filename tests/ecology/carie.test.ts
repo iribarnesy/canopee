@@ -1,15 +1,15 @@
 /**
- * LA CARIE DU TRONC (issue #182).
+ * **La carie du tronc** (issue #182).
  *
  * Après le bloc tempêtes, le moteur tenait l'élancement, l'espacement,
  * l'ancrage, le sol gorgé, la prise au vent, la densité du bois, la naïveté
  * d'après-ouverture et la blessure de houppier — et traitait tous ses arbres
- * comme SAINS. Or une part importante des arbres qu'une tempête casse étaient
+ * comme **sains**. Or une part importante des arbres qu'une tempête casse étaient
  * déjà pourris ; c'est même la raison pour laquelle ils cassent au lieu de
  * verser.
  *
  * Ce fichier vérifie surtout une chose, et c'est celle qu'on n'a pas écrite :
- * un tronc creux est un TUBE, donc sa résistance va comme `1 − p⁴`, donc un
+ * un tronc creux est un **tube**, donc sa résistance va comme `1 − p⁴`, donc un
  * arbre creux à la moitié de son rayon ne perd presque rien.
  */
 
@@ -77,14 +77,14 @@ describe("un tronc creux est un TUBE, et c'est tout le lot", () => {
 
   it("mais elle ne POURSUIT pas l'arbre : le mur de compartimentation la borne", () => {
     // Le CODIT, et c'est lui qui décide de tout. À la blessure l'arbre dresse
-    // une barrière sur le bois qu'il a CE JOUR-LÀ ; l'aubier fabriqué ensuite
+    // une barrière sur le bois qu'il a **ce jour-là** ; l'aubier fabriqué ensuite
     // reste hors d'atteinte. Un tronc de 10 cm de rayon blessé aujourd'hui ne
     // pourrira jamais au-delà de ces 10 cm-là, même dans mille ans.
     let c = prochaineCarie(undefined, true, false, 10, 0.5);
     for (let an = 0; an < 500; an++) c = prochaineCarie(c, false, false, 10, 0.5);
     expect(c?.rayonCm).toBeCloseTo(10, 6);
     expect(partCariee(c, 20)).toBe(1);
-    // Et s'il a grossi entre-temps, la MÊME colonne ne fait plus qu'une part
+    // Et s'il a grossi entre-temps, la **même** colonne ne fait plus qu'une part
     // du tronc : le chêne de futaie porte sa cicatrice de jeunesse sans en
     // souffrir à cent ans.
     expect(partCariee(c, 60)).toBeCloseTo(1 / 3, 6);
@@ -127,11 +127,11 @@ describe("en partie : le vieil arbre creux naît des coups de vent", () => {
     // la carie ne se referme pas, et il sort une population de vieux arbres
     // creux — ceux-là mêmes que le moteur compte comme habitats (J3, #183).
     //
-    // **LE PREMIER RELEVÉ EN DONNAIT CINQ FOIS TROP**, et c'est ce banc qui l'a
+    // **le premier relevé en donnait cinq fois trop**, et c'est ce banc qui l'a
     // dit. Il comptait 46 chênes cariés sur 163 vivants dont 43 creux au-delà
     // de la moitié de leur rayon : un quart du peuplement, à l'âge où une
     // futaie de chêne est précisément du bois d'œuvre. La cause n'était ni la
-    // vitesse de la carie ni la compartimentation, mais le SEUIL D'ENTRÉE, qui
+    // vitesse de la carie ni la compartimentation, mais le **seuil d'entrée**, qui
     // n'existait pas : la moindre brindille arrachée inoculait, et comme
     // `houppierArrache` mord dès 27 m/s, tout le monde finissait blessé. Avec
     // `PLAIE_OUVRANTE` — une plaie doit atteindre le bois de cœur pour ouvrir
@@ -161,7 +161,7 @@ describe("en partie : le vieil arbre creux naît des coups de vent", () => {
     // Et une franche minorité : le seuil est posé bien en dessous des 5,5 %
     // mesurés, mais il interdit le quart de peuplement d'avant.
     expect(caries.length).toBeLessThan(vivants.length / 5);
-    // Mais pas TOUS : un arbre jamais blessé reste sain, et c'est la moitié du
+    // Mais pas **tous** : un arbre jamais blessé reste sain, et c'est la moitié du
     // mécanisme. Une carie qui toucherait tout le monde serait de la
     // vieillesse déguisée, or `tickTree` fait déjà décliner la vigueur.
     expect(caries.length).toBeLessThan(vivants.length);

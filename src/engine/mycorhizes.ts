@@ -52,11 +52,11 @@ export const VITESSE_INSTALLATION = 0.004;
 export const SURVIE_APRES_LABOUR = 0.05;
 
 /**
- * Ce que le réseau N'APPORTE PAS, et pourquoi.
+ * Ce que le réseau **n'apporte pas**, et pourquoi.
  *
  * J'avais d'abord modélisé le gain comme une extension du rayon prospecté
  * (+15 %). C'était doublement faux. Faux physiquement : les hyphes explorent
- * les PORES que les racines ne peuvent pas atteindre, pas un disque plus
+ * les **pores** que les racines ne peuvent pas atteindre, pas un disque plus
  * grand — leur bénéfice est une efficacité d'absorption, surtout pour les
  * éléments peu mobiles. Et faux dans ses effets : élargir uniformément les
  * disques racinaires dilue l'asymétrie de compétition entre dominants et

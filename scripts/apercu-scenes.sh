@@ -9,12 +9,12 @@
 # anciennes ici n'avaient ni `lumiere`, ni `herbeHumidite`, ni le bois couché,
 # donc plusieurs grandeurs branchées depuis ne s'y voyaient pas.
 #
-# Les recettes des scènes ANCIENNES ont été reconstituées depuis le contenu
+# Les recettes des scènes **anciennes** ont été reconstituées depuis le contenu
 # des fichiers eux-mêmes (semaine 1536 = an 30 semaine 28 ; relief, eau libre
 # et valeurs forcées relus cellule par cellule). Elles sont donc à vérifier
 # une fois rejouées ; celles du bois couché, ajoutées avec lui, sont sûres.
 #
-# **Depuis le 2026-09-09, chaque scène porte son JOURNAL** — ce qui a changé
+# **Depuis le 2026-09-09, chaque scène porte son journal** — ce qui a changé
 # depuis l'instantané précédent, avec la sémantique du worker. Les scènes cuites
 # avant n'en ont pas, et le banc leur fabrique un journal postiche ; seules les
 # `friche-*` ont été régénérées. Refaire les autres, c'est relancer la ligne
@@ -55,7 +55,7 @@ if veut versant; then
 fi
 
 # ── Le banc de pelouse ─────────────────────────────────────────────────────
-# Des BOUTS d'échelle que la simulation ne produit jamais tous ensemble :
+# Des **bouts** d'échelle que la simulation ne produit jamais tous ensemble :
 # couverture pleine, litière nulle, et la biomasse au choix — rase pour un
 # gazon, sur pied pour du foin.
 if veut pelouse; then
@@ -82,14 +82,14 @@ if veut feu; then
     npx tsx scripts/apercu-scene.ts
 fi
 
-# ── Le banc du TORCHAGE ────────────────────────────────────────────────────
-# **La friche de trois ans ne peut PAS montrer un torchage, et c'est mesuré** :
+# ── Le banc du **torchage** ────────────────────────────────────────────────────
+# **La friche de trois ans ne peut pas montrer un torchage, et c'est mesuré** :
 # elle porte 229 tiges dont la plus haute fait 1,13 m, et le feu en tue 222.
 # Ce n'est pas un torchage, c'est un pré fauché — un torchage a besoin d'une
 # couronne. Le sondage année par année donne : à 5 et 6 ans, une dizaine de
 # cellules brûlent (rien à voir) ; à 7 et 8 ans, quelques centaines et des
 # tiges de 3 m ; à 18 ans, 7 039 cellules, 2 751 tiges tuées dont la plus haute
-# à 11,6 m — et 31 SURVIVANTES de plus de 5 m, qui sont la démonstration de la
+# à 11,6 m — et 31 **survivantes** de plus de 5 m, qui sont la démonstration de la
 # sélection par l'écorce (`survitAuFeu`).
 if veut torchage; then
   APERCU_NOM=feu-bois.json APERCU_ANS=18 APERCU_SEMAINES=30 APERCU_FEU=1 \

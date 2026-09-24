@@ -11,7 +11,7 @@
  * Il ne se lessive pratiquement pas — mais il se **rétrograde** : en sol acide
  * il précipite avec le fer et l'aluminium, en sol calcaire avec le calcium.
  * D'où une disponibilité en cloche autour de pH 6,5, et un immense stock
- * inutilisable dans les sols des deux extrêmes. C'est LE nutriment pour lequel
+ * inutilisable dans les sols des deux extrêmes. C'est **le** nutriment pour lequel
  * les mycorhizes valent leur prix : le mycélium va chercher là où la racine ne
  * peut pas.
  *
@@ -34,7 +34,7 @@
  *
  * Trois erreurs ont dû être corrigées avant que ça tienne, et elles valent
  * d'être notées :
- *  1. le prélèvement suivait la DEMANDE et non l'azote réellement absorbé —
+ *  1. le prélèvement suivait la **demande** et non l'azote réellement absorbé —
  *     un arbre bridé par l'azote se gavait de potassium ;
  *  2. l'altération ne comptait que l'horizon de surface, alors que les racines
  *     vont la chercher dans tout le profil ;
@@ -58,7 +58,7 @@ export const RATIO_K_SUR_N = 0.55;
 /**
  * Disponibilité du phosphore selon le pH : une cloche centrée sur 6,5.
  * En dessous de 5,5 le fer et l'aluminium le piègent ; au-dessus de 7,5 c'est
- * le calcium. Aux deux extrêmes, un sol peut être riche en phosphore TOTAL et
+ * le calcium. Aux deux extrêmes, un sol peut être riche en phosphore **total** et
  * affamer les plantes — c'est le paradoxe classique des sols acides tropicaux
  * comme des rendzines calcaires.
  */
@@ -124,7 +124,7 @@ export function facteurAlterationBiologique(reseauMycorhizien: number): number {
 function alterationG(profil: readonly Horizon[], parAnPour30cm: number, partSable: number): number {
   let total = 0;
   for (const h of profil) {
-    // L'altération se produit dans TOUT le profil, et les racines vont la
+    // L'altération se produit dans **tout** le profil, et les racines vont la
     // chercher en profondeur — ne compter que l'horizon de surface vidait le
     // potassium sous les arbres sans que rien ne le remplace.
     total +=
@@ -172,8 +172,8 @@ export function facteurNutriment(stockG: number, saturationG: number): number {
 }
 
 /**
- * Vitesse d'échange entre le potassium ÉCHANGEABLE (celui que les racines
- * prennent) et la RÉSERVE non échangeable, coincée entre les feuillets des
+ * Vitesse d'échange entre le potassium **échangeable** (celui que les racines
+ * prennent) et la **réserve** non échangeable, coincée entre les feuillets des
  * argiles.
  *
  * Cette réserve est le tampon du sol : elle relargue quand la solution
@@ -200,8 +200,8 @@ export function echangeReserveK(
 /**
  * Seuils de carence : au-dessus, le nutriment ne freine plus.
  *
- * Ce sont des seuils d'ANALYSE DE SOL, pas des besoins annuels, et des seuils
- * FORESTIERS — bien plus bas que les seuils agronomiques. Un arbre mycorhizé
+ * Ce sont des seuils d'**analyse de sol**, pas des besoins annuels, et des seuils
+ * **forestiers** — bien plus bas que les seuils agronomiques. Un arbre mycorhizé
  * qui recycle son phosphore et le retransloque avant la chute des feuilles vit
  * sur des teneurs qui condamneraient une culture : moins d'un kilo à l'hectare
  * de phosphore assimilable, une quinzaine de potassium échangeable. C'est
@@ -236,7 +236,7 @@ export const DEPOSITION_K_KG_HA_AN = 3;
 export function phosphoreAssimilableGM2(profil: readonly Horizon[]): number {
   const surface = profil[0];
   if (!surface) return 0;
-  // Le stock de formes labiles, SANS le filtre du pH : celui-ci s'applique au
+  // Le stock de formes labiles, **sans** le filtre du pH : celui-ci s'applique au
   // moment où une racine vient chercher, pas au stock lui-même. L'appliquer
   // aux deux endroits pénalisait deux fois les sols acides, au point de rendre
   // une pinède landaise impossible — alors qu'elle existe.

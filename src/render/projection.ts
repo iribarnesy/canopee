@@ -9,7 +9,7 @@
  * par `x + y`, et s'inverse analytiquement.
  *
  * **Tout est à l'échelle vraie, relief compris.** La hauteur écran d'un mètre
- * VERTICAL vaut la demi-largeur de tuile, ce qui est exactement ce qu'il faut
+ * **vertical** vaut la demi-largeur de tuile, ce qui est exactement ce qu'il faut
  * pour qu'un cube d'un mètre de côté ait l'air d'un cube. Conséquence heureuse :
  * il n'y a rien à exagérer ni à tasser. Sur les stations livrées, qui font 1 à
  * 6 % de pente, cela représente 1 à 6 m de dénivelé sur 100 m — lisible, jamais
@@ -18,7 +18,7 @@
  * double, et le tassement n'a plus de raison d'être.
  *
  * **Le nord n'est pas figé.** La caméra tourne par quarts de tour (§7) : c'est
- * la façon d'aller voir derrière une butte. La rotation s'applique AVANT la
+ * la façon d'aller voir derrière une butte. La rotation s'applique **avant** la
  * projection, sur les coordonnées de parcelle — le rendu n'a donc qu'une
  * matrice à comprendre, et les arbres, dessinés en panneaux face caméra,
  * n'ont pas à être redessinés.
@@ -33,7 +33,7 @@ export const TUILE_HAUTEUR_PX = 8;
 /** Largeur écran d'une tuile d'un mètre : le 2:1 de la décision D2. */
 export const TUILE_LARGEUR_PX = 2 * TUILE_HAUTEUR_PX;
 /**
- * Hauteur écran d'un mètre VERTICAL, au zoom 1.
+ * Hauteur écran d'un mètre **vertical**, au zoom 1.
  *
  * Égale à la demi-largeur de tuile : c'est la condition pour qu'un cube d'un
  * mètre de côté se dessine comme un cube. La changer casse la cohérence entre
@@ -69,7 +69,7 @@ export interface PointEcran {
  * Applique l'orientation aux coordonnées de parcelle.
  *
  * Une rotation de quart de tour dans un carré de côté c : (x, y) → (y, c − x).
- * On tourne le TERRAIN sous une caméra fixe, ce qui revient au même et évite
+ * On tourne le **terrain** sous une caméra fixe, ce qui revient au même et évite
  * d'avoir deux repères en tête.
  */
 export function tourner(
@@ -126,7 +126,7 @@ export function versEcran(p: PointParcelle, cam: Camera): PointEcran {
 /**
  * Profondeur d'un point, pour l'ordre du peintre : ce qui a la plus grande
  * profondeur est devant. C'est `x + y` dans le repère de la caméra — donc
- * l'altitude n'y entre PAS, un arbre au sommet d'une butte n'est pas « devant »
+ * l'altitude n'y entre **pas**, un arbre au sommet d'une butte n'est pas « devant »
  * ce qui est en bas devant lui.
  */
 export function profondeur(x: number, y: number, cam: Camera): number {
@@ -155,7 +155,7 @@ export function versParcelleAPlat(e: PointEcran, cam: Camera, z = 0): PointParce
  * Là, l'inversion analytique ne suffit plus : un même pixel peut correspondre à
  * plusieurs cellules d'altitudes différentes — c'est le prix du relief à
  * l'échelle vraie (D3). On remonte donc le rayon de vue, de la cellule la plus
- * PROCHE de la caméra vers la plus lointaine, et on retient la première dont la
+ * **proche** de la caméra vers la plus lointaine, et on retient la première dont la
  * surface tombe sur ce pixel : c'est celle qu'on voit, les autres sont
  * derrière.
  *

@@ -1,5 +1,5 @@
 /**
- * Le panneau de SÉLECTION : ce que portent les arbres qu'on a cliqués, et les
+ * Le panneau de **sélection** : ce que portent les arbres qu'on a cliqués, et les
  * gestes qui ne s'appliquent qu'à eux.
  *
  * Il ne décide plus de son affichage : l'écran l'ouvre quand il y a une
@@ -18,11 +18,11 @@ const ESSENCES_LISTEES = 4;
 const ETEINT = { opacity: 0.45, cursor: "not-allowed" } as const;
 
 /**
- * Le bois de cet arbre est-il DÉJÀ dans le pool de bois mort ?
+ * Le bois de cet arbre est-il **déjà** dans le pool de bois mort ?
  *
  * **La question du moteur, mot pour mot** (`actions.ts`) : `mortSemaine` est
  * posée au tick qui suit la mort, en même temps que le carbone aérien est
- * versé au bois mort. C'est ELLE et non `chandelle` qui commande — un brûlé de
+ * versé au bois mort. C'est **elle** et non `chandelle` qui commande — un brûlé de
  * l'année est une chandelle sans `mortSemaine`, son carbone est encore dans
  * l'arbre, et son bois fait donc encore du BRF.
  */
@@ -42,10 +42,10 @@ export function PanneauSelection({
   game: GameApi;
   vivants: readonly SnapshotTree[];
   /**
-   * TOUS les arbres, chandelles comprises (#158).
+   * **tous** les arbres, chandelles comprises (#158).
    *
    * `vivants` ne suffisait pas : « + tous les pins » filtrait sur les vivants,
-   * si bien qu'une essence entièrement morte rendait une sélection VIDE — et
+   * si bien qu'une essence entièrement morte rendait une sélection **vide** — et
    * l'encart, qui ne s'affiche que s'il y a une sélection, se fermait au lieu
    * de répondre.
    */

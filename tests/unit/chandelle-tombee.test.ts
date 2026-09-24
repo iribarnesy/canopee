@@ -1,5 +1,5 @@
 /**
- * LA CHANDELLE QUI TOMBE NE S'ESCAMOTE PLUS (#163).
+ * **La chandelle qui tombe ne s'escamote plus** (#163).
  *
  * Retour de partie : « des arbres disparaissent ». J'ai cherché la cause en
  * mesurant plutôt qu'en devinant, et elle n'était pas celle qu'on attendait.
@@ -96,7 +96,7 @@ describe("la chute du fût reposé", () => {
     const v = vue();
     expect(chuteDeLaChandelle(index, 0, id, v)).toEqual(DEBOUT);
     const milieu = chuteDeLaChandelle(index, 1000, id, v);
-    // **Sur l'inclinaison ET sur la hauteur.** Un fût qui tombe VERS la caméra
+    // **Sur l'inclinaison et sur la hauteur.** Un fût qui tombe **vers** la caméra
     // ne pivote pas : il se raccourcit. Ne regarder que la rotation aurait
     // rendu l'épreuve fausse une orientation de caméra sur quatre.
     expect(Math.abs(milieu.rotationRad) > 0 || milieu.hauteur < 1).toBe(true);
@@ -125,7 +125,7 @@ describe("la chute du fût reposé", () => {
   it("ne dit rien d'un identifiant qu'elle ne connaît pas", () => {
     const plan = planDEllipse([{ chutes: [chute(5)] }], 2000);
     const index = indexerLesChandellesTombees(plan);
-    // Celui de l'ARBRE et non de la tige : c'est l'index des chutes qui le
+    // Celui de l'**arbre** et non de la tige : c'est l'index des chutes qui le
     // porte, et confondre les deux reposerait un fût sur un arbre vivant.
     expect(chuteDeLaChandelle(index, 500, 5, vue())).toEqual(DEBOUT);
     expect(chuteDeLaChandelle(index, 500, idDeLaTige(404), vue())).toEqual(DEBOUT);
@@ -135,7 +135,7 @@ describe("la chute du fût reposé", () => {
 describe("la prémisse, tenue par le moteur", () => {
   /**
    * Le fait mesuré sur lequel tout ce lot repose. Si le moteur se mettait à
-   * garder la chandelle une semaine de plus, on la dessinerait DEUX fois —
+   * garder la chandelle une semaine de plus, on la dessinerait **deux** fois —
    * celle de l'instantané et le fût reposé — et le remède deviendrait le mal.
    */
   it("une chandelle qui tombe a déjà quitté l'instantané de la semaine", () => {

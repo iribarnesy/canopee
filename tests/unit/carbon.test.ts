@@ -12,7 +12,7 @@ import { runYears } from "../helpers";
 
 describe("allométrie carbone", () => {
   it("la tige d'un grand hêtre pèse ce que pèsent les tiges de hêtre mesurées", () => {
-    // C'EST L'ANCRE QUI TIENT L'INFRADENSITÉ (#68), et elle porte sur la TIGE
+    // **C'est l'ancre qui tient l'infradensité** (#68), et elle porte sur la **tige**
     // à dessein. L'ancre d'avant portait sur l'arbre entier et ne discriminait
     // rien : elle acceptait 1 078 kg C (infradensité 0,55) comme 1 333 kg C
     // (densité du commerce 0,68), si bien que le défaut a pu vivre sous un
@@ -44,7 +44,7 @@ describe("allométrie carbone", () => {
     // ce qui contient les 0,55 de l'IGN et les 0,585 du GWDD, et exclut les
     // 0,68 d'avant.
     //
-    // VÉRIFIÉ : à 0,68, le moteur donne 1 669 kg et cet essai TOMBE. C'est la
+    // **Vérifié** : à 0,68, le moteur donne 1 669 kg et cet essai **tombe**. C'est la
     // seule preuve que la correction en est une.
     const hetre = getEspece("fagus_sylvatica");
 
@@ -60,7 +60,7 @@ describe("allométrie carbone", () => {
   });
 
   it("l'arbre entier reste dans l'enveloppe des équations de biomasse", () => {
-    // Garde-fou d'ordre de grandeur, PAS l'ancre : ces bornes-ci ne
+    // Garde-fou d'ordre de grandeur, **pas** l'ancre : ces bornes-ci ne
     // discriminent pas l'infradensité (0,55 donne 1 078 kg, 0,68 en donnait
     // 1 333, les deux passent). C'est l'essai précédent qui tranche ; celui-ci
     // attrape les dérives grossières d'allométrie ou de fraction de carbone.
@@ -72,7 +72,7 @@ describe("allométrie carbone", () => {
     // la plus petite tige publiée augmentée du plus faible rapport
     // aérien/tige observé (1 307 × 1,20), elles donnent 960 à 1 420 kg C.
     //
-    // Le moteur y place 1 078 kg, soit 3 % SOUS le plancher qu'on obtiendrait
+    // Le moteur y place 1 078 kg, soit 3 % **sous** le plancher qu'on obtiendrait
     // en partant des seules équations AB : son expansion de branches (1,30) et
     // l'infradensité de l'IGN (0,55) sont toutes deux au bas de leur
     // fourchette, et les deux se cumulent. C'est à regarder, mais séparément —
@@ -103,7 +103,7 @@ describe("inventaire carbone d'une parcelle", () => {
       ],
     });
     const inv = carbonInventory(state, LIMON_RICHE.station.initialSoilCTHa);
-    // Le sol reste LE stock dominant en tempéré (§12).
+    // Le sol reste **le** stock dominant en tempéré (§12).
     expect(inv.humusTHa).toBeGreaterThan(inv.vivantTHa);
     expect(inv.humusTHa).toBeGreaterThan(50);
     expect(inv.humusTHa).toBeLessThan(70);
@@ -118,7 +118,7 @@ describe("inventaire carbone d'une parcelle", () => {
  * Une chandelle brûlée qu'on vient chercher trop tard. Tant que l'arbre tué par
  * le feu est récupérable, son carbone attend sur pied : le tick n'a rien versé
  * au pool de bois mort. Passé ce délai (CHABLIS_RECUPERABLE_SEMAINES), le tick
- * verse la TOTALITÉ du carbone de l'arbre au pool et pose `mortSemaine` — une
+ * verse la **totalité** du carbone de l'arbre au pool et pose `mortSemaine` — une
  * fois pour toutes. Le couper ensuite, ce n'est plus abattre un arbre : c'est
  * puiser dans le pool, qui a d'ailleurs commencé à se décomposer.
  */
@@ -167,7 +167,7 @@ describe("couper une chandelle déjà versée au bois mort", () => {
 
   it("passé le délai : le bois est déjà au pool, la coupe l'en RETIRE", () => {
     const avant = pinBrule(60);
-    // Le tick a posé la mort en semaine 52 et versé l'arbre ENTIER au pool.
+    // Le tick a posé la mort en semaine 52 et versé l'arbre **entier** au pool.
     // On le dit relativement à `TOTAL` et non en kilos : un nombre en dur ici
     // ne décrirait que l'allométrie du jour, et celle-ci a déjà changé une fois
     // d'un facteur six (#62).
@@ -177,7 +177,7 @@ describe("couper une chandelle déjà versée au bois mort", () => {
 
     const apres = couper(avant);
     expect(apres.carbon.exportedEnergyCumKgC).toBeCloseTo(AERIEN, 6);
-    // Le pool BAISSE de ce qu'on emporte, au lieu de gonfler des racines une
+    // Le pool **baisse** de ce qu'on emporte, au lieu de gonfler des racines une
     // deuxième fois : plus de carbone créé de rien, et plus de tronc au pool
     // pour un arbre qui n'est plus debout.
     expect(poolAvant - apres.carbon.deadWoodKgC).toBeCloseTo(AERIEN, 6);
@@ -189,7 +189,7 @@ describe("couper une chandelle déjà versée au bois mort", () => {
   it("on n'en sort pas plus que ce que la décomposition a laissé", () => {
     const vieilli = pinBrule(60);
     // Une chandelle à moitié retournée au sol. Le reste à prélever se dit en
-    // part de l'aérien, pas en kilos : ce qu'on épingle est un PLAFOND — on ne
+    // part de l'aérien, pas en kilos : ce qu'on épingle est un **plafond** — on ne
     // sort pas du pool plus qu'il ne contient — et ce plafond ne dépend pas du
     // niveau absolu de l'allométrie.
     const restant = AERIEN / 2;

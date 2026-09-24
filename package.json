@@ -25,7 +25,8 @@
     "test": "vitest run",
     "test:rapide": "vitest run tests/unit tests/properties",
     "test:watch": "vitest",
-    "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm run check:realisme && npm test"
+    "verif": "npm run typecheck && npm run lint && npm run check:boundaries && npm run check:realisme && npm test",
+    "verif:rapide": "npm run typecheck && npm run lint && npm run check:boundaries && npm run check:realisme && npm run test:rapide"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",

@@ -24,6 +24,18 @@ l'allométrie du volume, l'élancement individuel) parce que rien ne disait qui
 prenait quoi. Deux PR ont fini fermées en doublon après avoir été écrites,
 mesurées et relues.
 
+**Ouvrir la PR dès le premier commit poussé.** En brouillon si le travail n'est
+pas fini : le but n'est pas d'annoncer une livraison, c'est qu'aucune branche ne
+soit rattachée à rien. Plusieurs issues dans une même PR ne gênent personne —
+une branche que rien ne relie à une issue, si.
+
+Une branche sans PR est **invisible**. Elle n'apparaît dans aucune liste que
+quelqu'un consulte, sa CI ne tourne sur la fusion de personne, et son écart avec
+`main` grandit sans que ça se voie. La section suivante raconte ce que ça a
+coûté la fois où ça n'a pas été fait ; le prix n'était pas du travail perdu,
+c'était un jour d'attente et vingt et un conflits qui n'existaient pas la
+veille.
+
 ## La branche d'un autre agent ne se touche pas
 
 **Ce qui appartient à un agent : sa branche, ses PR, ses issues assignées.**
@@ -71,13 +83,13 @@ Trois détails qui suivent de la même règle :
 | `moteur:maintenance` | agent de maintenance | Corriger un mécanisme existant : défaut, dérive de calibration, hygiène des tests. |
 | `moteur:évolution` | agent d'évolution | Ajouter un mécanisme que le moteur ne sait pas faire. |
 | `réalisme` | celui qui livre | Touche `docs/realisme.md` : un critère change d'état ou de justification. |
-| `à-mesurer` | celui qui livre | Demande une campagne multi-graines AVANT d'écrire du code. |
+| `à-mesurer` | celui qui livre | Demande une campagne multi-graines **avant** d'écrire du code. |
 | `flux-aléatoire` | celui qui livre | Déplace le flux du PRNG : toutes les parties changent, tous les scénarios sont à revérifier. |
 
 Les trois derniers ne routent pas, ils avertissent. Ils se cumulent avec les
 trois premiers.
 
-### Une demande d'un périmètre à l'autre porte DEUX labels
+### Une demande d'un périmètre à l'autre porte **deux** labels
 
 `rendu` dit d'où vient le besoin ; il ne dit pas qui écrit le code. Quand le jeu
 a besoin d'une grandeur que seul `src/engine` peut donner, l'issue porte `rendu`
@@ -123,9 +135,36 @@ chemin critique.** Un mécanisme de plus ne rapproche pas d'une version finie.
 - **Pas d'attribution Claude** dans les messages de commit ni dans les corps de
   PR.
 
+## Un commentaire de section est publié
+
+**Ce que tu écris dans un commentaire finit sur le site.** L'onglet « Le
+modèle » lit `docs/realisme.md` et les commentaires de section de
+`src/engine/tick.ts` **au moment du build**, et les montre tels quels à un
+visiteur qui n'ouvrira jamais le code. Les vingt-trois étapes d'une semaine
+simulée, ce sont vos commentaires — pas une paraphrase, pas un résumé tenu à
+côté.
+
+Trois conséquences, et elles ne coûtent rien une fois sues :
+
+- **Écris pour quelqu'un qui n'a pas le fichier sous les yeux.** « les rameaux
+  de l'année lignifient peu à peu ; ce qui reste tendre est ce que le chevreuil
+  mange » se lit sur la page. « cf. plus haut » ne se lit nulle part.
+- **L'emphase s'écrit en gras markdown, jamais en capitales.** Le gras, la page
+  le rend ; un mot mis en capitales pour insister arrive tel quel à l'écran et
+  crie. Les sigles, eux, gardent leurs capitales — ce sont des sigles, pas des
+  emphases.
+- **Les renvois internes restent dans le code** et sont retirés à l'affichage :
+  « (§7.4, ch5) », « (F18) », « (issue #55) » sont coupés par `extraction.ts`
+  quand la parenthèse ne contient que ça. Une parenthèse qui dit quelque chose
+  — « (en deux passes, ordre-indépendant) » — reste entière. Tu n'as donc pas à
+  choisir entre référencer et être lisible.
+
+Le greffon Vite refuse de construire sous cent critères ou quinze étapes : un
+changement de convention casse le build au lieu de vider la page en silence.
+
 ## Deux pièges de procédure, vérifiés à nos dépens
 
-**Le mot-clé de fermeture doit être EN ANGLAIS.** GitHub ne reconnaît que
+**Le mot-clé de fermeture doit être en anglais.** GitHub ne reconnaît que
 `close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
 `resolves` / `resolved`. « Ferme #34 » ne ferme rien, où qu'on l'écrive.
 

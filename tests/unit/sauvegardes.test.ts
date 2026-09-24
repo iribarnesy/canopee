@@ -1,11 +1,11 @@
 /**
- * PLUSIEURS PARTIES SAUVEGARDÉES, ET LISIBLES (#147).
+ * **Plusieurs parties sauvegardées**, **et lisibles** (#147).
  *
  * Cas vécu : « changer des paramètres, lancer, sortir — et plus aucun moyen de
  * relire les paramètres de la partie précédente ». Une seule sauvegarde, que la
  * partie suivante écrasait au premier autosave.
  *
- * Ce que ces épreuves défendent : qu'on ne perde RIEN — ni la partie d'avant en
+ * Ce que ces épreuves défendent : qu'on ne perde **rien** — ni la partie d'avant en
  * en commençant une autre, ni celle d'un joueur qui avait déjà joué sous
  * l'ancien rangement — et que la fiche dise ce qui a été demandé, pas ce que le
  * moteur en a fait.
@@ -17,8 +17,10 @@ import {
   CLE_ANCIENNE,
   CLE_LISTE,
   derniereSauvegarde,
+  type EntreeSauvegarde,
   ecrireSauvegarde,
   essencesPlantees,
+  libelleDeLaPartie,
   listerSauvegardes,
   nomParDefaut,
   PARTIES_GARDEES,
@@ -62,6 +64,13 @@ const partie = (champs: Partial<SaveGame> = {}): SaveGame => ({
   ...champs,
 });
 
+/** La première entrée rangée, sans point d'exclamation : il n'y en a jamais zéro ici. */
+function premiere(stock: Storage): EntreeSauvegarde {
+  const e = listerSauvegardes(stock)[0];
+  if (!e) throw new Error("aucune partie rangée");
+  return e;
+}
+
 let stock: FauxStock;
 beforeEach(() => {
   stock = new FauxStock();
@@ -83,6 +92,41 @@ describe("le rangement", () => {
     ecrireSauvegarde(stock, "a", partie(), "Ma futaie");
     ecrireSauvegarde(stock, "a", partie({ weeks: 520 }));
     expect(listerSauvegardes(stock)[0]?.nom).toBe("Ma futaie");
+  });
+
+  // Le défaut vu en jouant : une partie créée l'an 3 et menée jusqu'à l'an 36
+  // s'annonçait « an 3 » dans la liste, et « an 36 » dans sa propre fiche. Le
+  // nom par défaut était écrit une fois puis reconduit à chaque autosave.
+  it("suit la partie : le libellé par défaut donne l'année où elle en est", () => {
+    ecrireSauvegarde(stock, "a", partie({ weeks: 104 }));
+    expect(libelleDeLaPartie(premiere(stock))).toContain("an 3");
+    ecrireSauvegarde(stock, "a", partie({ weeks: 1820 }));
+    const entree = premiere(stock);
+    expect(libelleDeLaPartie(entree)).toContain("an 36");
+    expect(reglagesDeLaPartie(entree.save).find((l) => l.quoi === "Avancement")?.valeur).toContain(
+      "an 36",
+    );
+  });
+
+  // Les entrées déjà rangées portent un nom par défaut gelé. On le reconnaît à
+  // sa forme et on le laisse tomber, sans quoi le correctif ne réparerait que
+  // les parties commencées après lui.
+  it("dégèle les noms par défaut déjà écrits", () => {
+    stock.setItem(
+      CLE_LISTE,
+      JSON.stringify([{ id: "a", nom: "Saumos · an 6", quand: 1, save: partie({ weeks: 1820 }) }]),
+    );
+    const entree = premiere(stock);
+    expect(entree.nom).toBeUndefined();
+    expect(libelleDeLaPartie(entree)).toContain("an 36");
+  });
+
+  it("ne dégèle pas un nom que le joueur a choisi", () => {
+    stock.setItem(
+      CLE_LISTE,
+      JSON.stringify([{ id: "a", nom: "Ma futaie", quand: 1, save: partie({ weeks: 1820 }) }]),
+    );
+    expect(libelleDeLaPartie(premiere(stock))).toBe("Ma futaie");
   });
 
   it("borne la liste, et c'est la plus ancienne qui part", () => {
@@ -110,7 +154,7 @@ describe("la migration", () => {
     const liste = listerSauvegardes(stock);
     expect(liste).toHaveLength(1);
     expect(liste[0]?.save.seed).toBe(7);
-    expect(liste[0]?.nom).toContain("an 7");
+    expect(libelleDeLaPartie(premiere(stock))).toContain("an 7");
     // Une seule fois : la clé disparaît, sinon chaque lecture ajouterait un
     // doublon de la même partie.
     expect(stock.getItem(CLE_ANCIENNE)).toBeNull();
@@ -147,7 +191,7 @@ describe("la fiche d'une partie", () => {
     const dit = (quoi: string) => lignes.find((l) => l.quoi === quoi)?.valeur;
     expect(dit("Station")).toBe("Limon profond riche");
     expect(dit("Paysage")).toBe("Dans un bocage d'élevage");
-    // Le libellé du MOTEUR, pas l'identifiant : c'est le mot que l'écran de
+    // Le libellé du **moteur**, pas l'identifiant : c'est le mot que l'écran de
     // réglages affiche, et l'issue demande les mêmes.
     expect(dit("Scénario climatique")).toBe("SSP2-4.5");
     expect(dit("Météo")).toContain("réelle");

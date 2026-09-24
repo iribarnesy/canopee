@@ -1,5 +1,5 @@
 /**
- * Le feu (docs/regles.md §7.4, ch5 « concevoir contre le FEU », ch8).
+ * Le feu (docs/regles.md §7.4, ch5 « concevoir contre le **feu** », ch8).
  *
  * Un incendie ne se déclenche pas au hasard : il faut du combustible sec et
  * continu. Il se propage de proche en proche, tue selon ce que chaque espèce
@@ -47,8 +47,8 @@ const VENT_ATTISANT_MS = 6;
  * *(à calibrer)*.
  *
  * Volontairement modeste, et il faut dire pourquoi. Le modèle elliptique
- * chiffre une anisotropie de VITESSE de propagation ; ici le facteur pondère la
- * probabilité d'UN PAS de cellule, et les probabilités se composent le long du
+ * chiffre une anisotropie de **vitesse** de propagation ; ici le facteur pondère la
+ * probabilité d'**un pas** de cellule, et les probabilités se composent le long du
  * chemin : un flanc à 0,5 par pas ne vaut pas 0,5 à dix cellules, il vaut
  * 0,5¹⁰. L'allongement réellement obtenu dépasse donc largement le rapport
  * nominal. Reprendre telle quelle une excentricité juste au sens du modèle de
@@ -87,9 +87,9 @@ export function excentriciteDuFront(vitesseMs: number): number {
 }
 
 /**
- * Ce que le vent AJOUTE à un pas du front selon son cap, ≥ 1.
+ * Ce que le vent **ajoute** à un pas du front selon son cap, ≥ 1.
  *
- * Forme polaire de l'ellipse dont le point d'allumage occupe un FOYER — la
+ * Forme polaire de l'ellipse dont le point d'allumage occupe un **foyer** — la
  * géométrie classique du comportement du feu, et un fait de terrain avant
  * d'être un modèle : un feu poussé par le vent s'allonge en ellipse, avance
  * vite en tête, moins sur les flancs, et recule à peine contre le vent.
@@ -97,20 +97,20 @@ export function excentriciteDuFront(vitesseMs: number): number {
  *     f(θ) = (1 + e) / (1 − e·cos θ)
  *
  * avec θ l'angle entre le pas et le vent : (1 + e)/(1 − e) dans le vent (tête),
- * (1 + e) sur le flanc, 1 contre le vent (arrière). Les RAPPORTS sont ceux de
- * l'ellipse et c'est la partie sourcée ; ce qui est CHOISI ici, c'est où placer
+ * (1 + e) sur le flanc, 1 contre le vent (arrière). Les **rapports** sont ceux de
+ * l'ellipse et c'est la partie sourcée ; ce qui est **choisi** ici, c'est où placer
  * le 1 — et il va sur l'arrière, de sorte qu'aucun cap ne brûle moins qu'il
  * n'aurait brûlé sans vent.
  *
  * Deux versions ont précédé celle-ci, et leurs deux erreurs disent pourquoi le
  * 1 est là :
  *
- * 1. Normalisé sur la TÊTE (donc plafonné à 1), tout pas se voyait RETIRER
+ * 1. Normalisé sur la **tête** (donc plafonné à 1), tout pas se voyait **retirer**
  *    quelque chose et un feu venté brûlait moins qu'un feu par temps calme —
  *    l'inverse du fait à modéliser.
- * 2. Normalisé sur le FLANC, le défaut restait, en plus discret. `propager` est
- *    une percolation SANS BUDGET DE TEMPS : elle tourne jusqu'à épuisement. Dans
- *    un combustible saturé, le pas sous le vent passait DÉJÀ sans tirage, donc
+ * 2. Normalisé sur le **flanc**, le défaut restait, en plus discret. `propager` est
+ *    une percolation **sans budget de temps** : elle tourne jusqu'à épuisement. Dans
+ *    un combustible saturé, le pas sous le vent passait **déjà** sans tirage, donc
  *    le bonus du vent y était perdu, tandis que la pénalité contre le vent,
  *    elle, mordait pour de bon. Le vent ne pouvait alors que retirer de la
  *    surface. C'est un test de conservation du carbone, écrit pour tout autre
@@ -122,7 +122,7 @@ export function excentriciteDuFront(vitesseMs: number): number {
  * qu'il brûlait avant — mêmes cellules, aucun tirage consommé — parce que tous
  * les facteurs sont ≥ 1 et qu'aucun pas ne se met donc à tirer.
  *
- * Ce que ça surestime, et il faut le dire : un vrai feu d'arrière recule PLUS
+ * Ce que ça surestime, et il faut le dire : un vrai feu d'arrière recule **plus**
  * lentement qu'un feu sans vent, les flammes étant couchées à l'écart du
  * combustible. Ici il recule à la même vitesse. C'est le prix de ne jamais
  * faire mentir le modèle dans le sens « le vent éteint les feux » *(à
@@ -145,10 +145,10 @@ export interface ChargeCombustible {
  * et la litière portent le feu au sol ; les espèces résineuses l'amplifient.
  */
 /**
- * Ce qu'un couvert fermé retire au feu DE SURFACE.
+ * Ce qu'un couvert fermé retire au feu **de surface**.
  *
  * Sous une futaie feuillue dense, la litière reste humide : le couvert coupe le
- * soleil et le vent, et l'air y est saturé. C'est LA raison pour laquelle les
+ * soleil et le vent, et l'air y est saturé. C'est **la** raison pour laquelle les
  * incendies français courent en pinède, en maquis et en lande, et presque
  * jamais en hêtraie — et non parce que le hêtre serait ininflammable en
  * laboratoire. Sans ce facteur, le moteur faisait brûler des hêtraies de
@@ -158,7 +158,7 @@ export interface ChargeCombustible {
  * parce que la littérature opérationnelle du feu la chiffre par deux voies
  * indépendantes, et que les deux tombent au même endroit.
  *
- * LE VENT. Les modèles de comportement du feu appliquent au vent de référence
+ * **Le vent**. Les modèles de comportement du feu appliquent au vent de référence
  * un « facteur d'ajustement » (*wind adjustment factor*) pour obtenir le vent à
  * hauteur de flamme. Rothermel (1983, *How to predict the spread and intensity
  * of forest and range fires*, USDA GTR INT-143, table II-6 p. 33) donne **0,4 à
@@ -168,7 +168,7 @@ export interface ChargeCombustible {
  * couvert : 0,30 entre 5 et 10 % de couvert, **0,10 au-delà de 50 %** — un
  * rapport de 0,33.
  *
- * L'HUMIDITÉ. Les mêmes tables corrigent l'humidité du combustible fin mort
+ * **L'humidité**. Les mêmes tables corrigent l'humidité du combustible fin mort
  * selon l'ombrage : au cœur de la journée d'été, **+3 points d'humidité pour un
  * combustible ombragé à plus de 50 %** contre 0 pour un combustible exposé
  * (INT-143 table B p. 17), et +4 points dans la version indexée sur le couvert
@@ -186,7 +186,7 @@ export interface ChargeCombustible {
 export const PORTANCE_SOUS_COUVERT = 0.3;
 
 /**
- * Coefficient du combustible de HOUPPIER, calé pour qu'une couronne isolée
+ * Coefficient du combustible de **houppier**, calé pour qu'une couronne isolée
  * porte exactement ce qu'elle portait avant.
  *
  * La charge en hauteur s'ajoutait à chaque recouvrement, sans plafond : dans un
@@ -197,18 +197,18 @@ export const PORTANCE_SOUS_COUVERT = 0.3;
  * maquis et en lande, et presque jamais en hêtraie.
  *
  * La charge sature donc en `1 − e^(−n)` avec `n` le nombre de couronnes qui
- * couvrent la cellule, multipliée par leur inflammabilité MOYENNE : une cellule
+ * couvrent la cellule, multipliée par leur inflammabilité **moyenne** : une cellule
  * sous couvert est sous couvert, et ce qui la distingue est ce dont ce couvert
  * est fait. Le coefficient `0,9 / (1 − e⁻¹)` fait qu'à `n = 1` on retrouve
  * exactement l'ancienne valeur `0,9 × inflammabilité` — c'est ce qui permet de
- * corriger la forme SANS déplacer l'échelle sur laquelle la propagation est
+ * corriger la forme **sans** déplacer l'échelle sur laquelle la propagation est
  * calibrée. Seuls les peuplements denses changent, et c'est le but.
  */
 export const SATURATION_HOUPPIER = 0.9 / (1 - Math.exp(-1));
 
 /**
  * Charge de surface qu'il faut pour qu'un feu atteigne un houppier dont la base
- * est à UN mètre. Au-delà, l'exigence croît comme la puissance 3/2 de cette
+ * est à **un** mètre. Au-delà, l'exigence croît comme la puissance 3/2 de cette
  * hauteur.
  *
  * C'est l'amorçage de feu de cime, et il manquait : la charge des houppiers
@@ -219,11 +219,11 @@ export const SATURATION_HOUPPIER = 0.9 / (1 - Math.exp(-1));
  * base du houppier**. C'est la raison pour laquelle une futaie élaguée haut ne
  * passe pas en feu de cime là où un fourré s'embrase.
  *
- * *(La STRUCTURE — l'exposant 3/2 — est celle de Van Wagner et elle est solide.
+ * *(La **structure** — l'exposant 3/2 — est celle de Van Wagner et elle est solide.
  * Ses coefficients d'origine, eux, s'expriment en kW/m et en teneur en eau du
  * feuillage, deux grandeurs que ce moteur n'a pas : je n'ai pas pu récupérer la
  * publication d'origine pour les transcrire, et je ne les invente pas. La
- * constante ci-dessous est donc CALÉE, pas transcrite, sur un repère qu'on peut
+ * constante ci-dessous est donc **calée**, pas transcrite, sur un repère qu'on peut
  * discuter : une charge de surface de 1 — une lande sèche en plein soleil —
  * atteint un houppier dont la base est à quatre mètres. À confirmer.)*
  */
@@ -276,9 +276,9 @@ export function chargeCombustible(
   const parCellule = new Array<number>(n).fill(0);
   // Deux compartiments, et c'est la distinction qui manquait. Les modèles de
   // comportement du feu (Rothermel 1983, Scott & Burgan 2005) séparent le
-  // combustible de SURFACE — herbe, litière, bois couché — de celui du
-  // HOUPPIER, parce que le couvert n'agit pas de la même façon sur les deux :
-  // il maintient le premier humide et à l'abri du vent, mais il EST le second.
+  // combustible de **surface** — herbe, litière, bois couché — de celui du
+  // **houppier**, parce que le couvert n'agit pas de la même façon sur les deux :
+  // il maintient le premier humide et à l'abri du vent, mais il **est** le second.
   const auSol = new Array<number>(n).fill(0);
   const inflammabiliteSomme = new Array<number>(n).fill(0);
   const houppiers = new Array<number>(n).fill(0);
@@ -287,7 +287,7 @@ export function chargeCombustible(
   for (let i = 0; i < n; i++) {
     // Herbe (sèche en été) + litière accumulée.
     auSol[i] = 0.6 * (herbeCouverture[i] ?? 0) + 0.4 * Math.min(1, (litterCG[i] ?? 0) / 300);
-    // Le bois COUCHÉ compte aussi, mais pas comme de l'herbe : le gros bois
+    // Le bois **couché** compte aussi, mais pas comme de l'herbe : le gros bois
     // s'allume mal et porte mal le front — c'est un combustible qui fait
     // durer et chauffer, pas courir. D'où un poids plus faible et un seuil de
     // saturation bien plus haut : un tronc dépose des kilos de carbone sur son
@@ -296,7 +296,7 @@ export function chargeCombustible(
       (auSol[i] ?? 0) + 0.25 * Math.min(1, (boisAuSolCG?.[i] ?? 0) / BOIS_AU_SOL_SATURATION_CG);
   }
   // Les couronnes ajoutent leur propre combustible sous elles — et les
-  // CHANDELLES aussi, davantage même : un tronc mort sur pied est du bois sec,
+  // **chandelles** aussi, davantage même : un tronc mort sur pied est du bois sec,
   // fendillé, sans une goutte d'eau dedans. C'est ce qui fait qu'une parcelle
   // déjà passée au feu ou frappée par la sécheresse rebrûle mieux que celle
   // d'à côté (trees.ts).
@@ -320,7 +320,7 @@ export function chargeCombustible(
           const i = y * coteM + x;
           // Un résineux ajoute énormément sous lui (aiguilles, résine) ;
           // un feuillu frais, presque rien. On accumule ici de quoi calculer
-          // une MOYENNE d'inflammabilité et un taux de recouvrement, pas une
+          // une **moyenne** d'inflammabilité et un taux de recouvrement, pas une
           // somme : voir plus bas.
           inflammabiliteSomme[i] =
             (inflammabiliteSomme[i] ?? 0) +
@@ -332,7 +332,7 @@ export function chargeCombustible(
     }
   }
   for (let i = 0; i < n; i++) {
-    // L'ombre n'amortit QUE le compartiment de surface. L'amortir aussi en
+    // L'ombre n'amortit **que** le compartiment de surface. L'amortir aussi en
     // hauteur rendait le modèle circulaire — plus un peuplement portait de
     // combustible, plus il faisait d'ombre, moins il pouvait brûler — et un
     // fourré d'ajoncs finissait par ne plus s'enflammer du tout.
@@ -364,7 +364,7 @@ export interface DepartFeu {
 }
 
 /**
- * Indice de risque d'incendie ∈ [0,1], calculé UNIQUEMENT à partir des
+ * Indice de risque d'incendie ∈ [0,1], calculé **uniquement** à partir des
  * conditions du moment : sécheresse du sol de surface, chaleur, combustible
  * disponible et vent qui attise. Aucune station n'est déclarée « à feu » ou
  * « sans feu » — c'est le climat qui décide. Un limon du Nord n'atteint
@@ -383,20 +383,20 @@ export function indiceRisqueFeu(
   const fChaleur = Math.min(1, Math.max(0, (tMaxC - CHALEUR_SEUIL_C) / 10));
   const fCombustible = Math.min(1, chargeMoyenne);
   // Le vent est arrivé dans la météo (`WeekWeather.ventMoyMs`) et ce facteur-ci
-  // ne le lit VOLONTAIREMENT pas. Le remplacer par la vitesse hebdomadaire
+  // ne le lit **volontairement** pas. Le remplacer par la vitesse hebdomadaire
   // reçue a été essayé, et c'était une erreur de deux façons :
   //
   // 1. C'est une recalibration écologique déguisée. Sous régime océanique la
-  //    vitesse moyenne est MINIMALE en été, donc en pleine saison des feux :
+  //    vitesse moyenne est **minimale** en été, donc en pleine saison des feux :
   //    brancher la moyenne hebdomadaire faisait tomber la fréquence des
   //    départs d'un quart sur la lande, sans que personne l'ait décidé.
   // 2. C'est la mauvaise grandeur. Ce que ce facteur représente, c'est à quel
-  //    point un site est exposé aux conditions qui font PARTIR un feu — donc
+  //    point un site est exposé aux conditions qui font **partir** un feu — donc
   //    une climatologie de rafales, pas une moyenne sur sept jours, laquelle
   //    efface précisément les journées de vent qui allument les incendies
   //    français.
   //
-  // Le vent sert donc à la FORME du front (`propager`), pas au déclenchement.
+  // Le vent sert donc à la **forme** du front (`propager`), pas au déclenchement.
   // Faire lire le vent au départ de feu demande une grandeur de rafale et une
   // recalibration assumée de `PROBA_DEPART_MAX` *(à instruire)*.
   const fVent = 0.5 + 0.5 * ventExposition;
@@ -404,7 +404,7 @@ export function indiceRisqueFeu(
 }
 
 /**
- * Le vent que la parcelle REÇOIT, m/s : le vent régional, rabattu par l'abri.
+ * Le vent que la parcelle **reçoit**, m/s : le vent régional, rabattu par l'abri.
  * C'est lui qui pousse le front (`propager`), et lui que le rendu doit prendre
  * pour l'amplitude d'un panache ou d'un balancement de houppier.
  *
@@ -436,13 +436,13 @@ export function departDeFeu(
   const risque = indiceRisqueFeu(secheresseSurface, tMaxC, charge.moyenne, ventExposition);
   if (risque <= 0) return { rng };
   const tirage = rngFloat(rng);
-  // Il ne suffit pas que les conditions soient réunies : il faut une SOURCE.
+  // Il ne suffit pas que les conditions soient réunies : il faut une **source**.
   // En France, la quasi-totalité des départs est d'origine humaine — mégot,
   // travaux, barbecue, ligne électrique — et non la foudre. À sécheresse et
   // combustible égaux, un massif isolé s'enflamme donc bien moins souvent
   // qu'un bois de lotissement (paysage.ts). Sans ce facteur, le moteur faisait
   // de l'autocombustion : une hêtraie de Touraine brûlait faute de quiconque
-  // pour ne PAS y mettre le feu.
+  // pour ne **pas** y mettre le feu.
   if (tirage.value > PROBA_DEPART_MAX * risque * frequentationHumaine) {
     return { rng: tirage.state };
   }
@@ -469,7 +469,7 @@ const CHARGE_INTENSITE_MAX = 1.2;
 /**
  * Intensité du feu sur une cellule ∈ [0,1], d'après ce qu'elle avait à brûler.
  *
- * C'est ELLE qui décide qui meurt, en face de la protection que `survitAuFeu`
+ * C'est **elle** qui décide qui meurt, en face de la protection que `survitAuFeu`
  * accorde à chaque espèce : l'écorce de liège traverse ce qui carbonise un pin.
  * Elle vivait en une ligne anonyme au milieu du tick, ce qui obligeait
  * quiconque veut reproduire la sélection du moteur — un banc de scènes, le
@@ -488,7 +488,7 @@ export function intensiteDuFeu(chargeLocale: number): number {
  * ce qu'elle a à offrir au feu. Une lande d'ajoncs ou une pinède s'embrasent à
  * coup sûr ; un sous-bois de feuillus frais et peu chargé éteint souvent le
  * front. C'est ce qui donne leur valeur aux coupures et au choix des essences
- * (ch5 « concevoir contre le FEU »).
+ * (ch5 « concevoir contre le **feu** »).
  */
 export function probabilitePropagation(chargeLocale: number): number {
   if (chargeLocale < CHARGE_MINIMALE) return 0;
@@ -509,7 +509,7 @@ const PAS_DU_FRONT: readonly { dx: number; dy: number; capRad: number }[] = [
 /**
  * Propage le feu de proche en proche depuis l'origine. Chaque cellule prend
  * feu selon sa combustibilité — le front s'essouffle dans ce qui brûle mal et
- * fonce dans ce qui brûle bien — ET selon le CAP par lequel le front l'aborde :
+ * fonce dans ce qui brûle bien — **et** selon le **cap** par lequel le front l'aborde :
  * sous le vent le pas passe presque toujours, contre le vent presque jamais.
  * C'est ce qui fait une ellipse au lieu d'une tache. Tirages seedés.
  *
@@ -517,12 +517,12 @@ const PAS_DU_FRONT: readonly { dx: number; dy: number; capRad: number }[] = [
  * probabilité d'un pas n'est plus celle de la seule cellule visée, donc un pas
  * qui tirait passe parfois librement maintenant, et l'ordre des tirages suit
  * l'ordre d'empilement, qui suit le vent. Toute partie où un feu court en
- * combustible MARGINAL est donc déplacée.
+ * combustible **marginal** est donc déplacée.
  *
  * Deux cas ne bougent pas, et ce n'est pas un hasard :
  * - `SANS_VENT` : excentricité nulle, anisotropie 1 partout, ordre d'empilement
  *   d'origine — propagation identique tirage par tirage à celle d'avant le vent.
- * - combustible SATURÉ : tous les facteurs valant ≥ 1, aucun pas ne tire, donc
+ * - combustible **saturé** : tous les facteurs valant ≥ 1, aucun pas ne tire, donc
  *   le même ensemble brûle sans consommer un seul tirage, comme avant.
  */
 export function propager(
@@ -536,10 +536,10 @@ export function propager(
   const vues = new Set<number>();
   let etat = rng;
   // Le vent ne change pas pendant un incendie : l'ordre d'exploration se
-  // calcule UNE fois. Et il compte, parce qu'une cellule n'est décidée qu'à sa
-  // PREMIÈRE visite : atteinte d'abord par un pas de flanc, elle serait
+  // calcule **une** fois. Et il compte, parce qu'une cellule n'est décidée qu'à sa
+  // **première** visite : atteinte d'abord par un pas de flanc, elle serait
   // refusée puis jamais retentée depuis la tête. On empile donc le pas le plus
-  // sous le vent EN DERNIER — `file.pop()` dépile par la fin — pour que le
+  // sous le vent **en dernier** — `file.pop()` dépile par la fin — pour que le
   // front explore d'abord là où il court vite, comme une tête de feu qui
   // prend de l'avance sur ses flancs.
   const pas =
@@ -558,7 +558,7 @@ export function propager(
     vues.add(cellule);
     const proba = probabilitePropagation(charge.parCellule[cellule] ?? 0) * tete.anisotropie;
     // Le vent n'allume rien qui n'ait de quoi brûler : l'anisotropie est un
-    // FACTEUR, donc une cellule sous le seuil de charge reste à zéro, aussi
+    // **facteur**, donc une cellule sous le seuil de charge reste à zéro, aussi
     // fort qu'il vente. C'est ce qui garde leur sens aux coupures.
     if (proba <= 0) continue;
     // `proba` peut dépasser 1 en tête de feu : pas de tirage, le pas passe —
@@ -596,16 +596,16 @@ export function survitAuFeu(tree: TreeState, intensite: number): boolean {
 /**
  * Rang d'arrivée du front sur chaque cellule brûlée : sa distance à l'origine,
  * comptée en cellules à travers ce qui a brûlé. C'est ce qui permet de faire
- * COURIR une ligne de flammes au lieu de noircir un patch d'un coup.
+ * **courir** une ligne de flammes au lieu de noircir un patch d'un coup.
  *
- * Passe pure et POSTÉRIEURE, et c'est ce qui la rend inoffensive : elle lit
+ * Passe pure et **postérieure**, et c'est ce qui la rend inoffensive : elle lit
  * l'ensemble déjà brûlé et ne consomme aucun tirage. `propager` dépile
  * (`file.pop()`) et l'ordre de consommation du PRNG en dépend, donc tout ce
- * qui touche à SON parcours déplace les parties — le vent l'a fait, en
+ * qui touche à **son** parcours déplace les parties — le vent l'a fait, en
  * connaissance de cause. Ici, rien : un simple BFS sur un ensemble figé, qui ne
  * peut par construction rien changer au résultat.
  *
- * Le rang reste une distance ISOTROPE en cellules, pas un temps d'arrivée.
+ * Le rang reste une distance **isotrope** en cellules, pas un temps d'arrivée.
  * Sous le vent, le front réel court plus vite en tête que sur les flancs, donc
  * deux cellules de même rang ne s'enflamment pas au même instant. C'est une
  * approximation assumée : la forme allongée, elle, est bien dans `brulees`.

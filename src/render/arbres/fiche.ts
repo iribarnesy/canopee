@@ -2,7 +2,7 @@
  * La **fiche graphique** d'une espèce : ce qu'il faut savoir pour la dessiner
  * (docs/interface-visuelle.md §4).
  *
- * **Ce fichier est écrit AVANT les vingt-cinq fiches, et c'est une consigne
+ * **Ce fichier est écrit avant les vingt-cinq fiches, et c'est une consigne
  * explicite du lot L0** : « à écrire dans la structure de la fiche avant les
  * vingt-cinq fiches, sinon on les écrit deux fois ». La pointe technique a
  * montré qu'un paramètre manquant ici ne se rattrape pas en réglant les
@@ -10,7 +10,7 @@
  *
  * **Les trois enseignements de L0 que cette structure encode :**
  *
- * 1. **L'enveloppe du houppier n'émerge PAS du branchement.** C'est le
+ * 1. **L'enveloppe du houppier n'émerge pas du branchement.** C'est le
  *    résultat le plus coûteux de L0, et il est contre-intuitif : on croit
  *    qu'en réglant l'angle et la dominance on obtient un cône, une boule ou un
  *    gobelet. Non. À 0,85 de dominance apicale, le bouleau fait une touffe au
@@ -19,12 +19,12 @@
  *    générateur s'y conforme au lieu de l'espérer.
  * 2. **Les étages décroissent vers le sommet par contrainte, pas par
  *    espoir.** Sans écourtement explicite, un pin étagé fait une boule.
- * 3. **Le feuillage s'accroche à tout rameau TERMINAL**, pas au dernier ordre
+ * 3. **Le feuillage s'accroche à tout rameau terminal**, pas au dernier ordre
  *    de récursion : une branche devient trop courte avant d'atteindre l'ordre
  *    maximal, et l'arbre sort nu. C'est une règle du générateur, mais elle
  *    contraint la fiche : `bouquetParRameau` et non `feuilleParRameau`.
  *
- * **Ce que la fiche N'EST PAS** : une source de vérité écologique. La hauteur
+ * **Ce que la fiche n'est pas** : une source de vérité écologique. La hauteur
  * maximale, le ratio de houppier, la caducité et la marcescence vivent dans
  * `src/engine/especes.ts` et n'ont rien à faire ici — les dupliquer, c'est
  * organiser leur divergence. La fiche graphique ne porte que ce que le moteur
@@ -68,7 +68,7 @@ export interface Branchement {
    */
   angleDeg: number;
   /**
-   * Divergence **phyllotaxique** : la rotation d'un nœud AU SUIVANT le long
+   * Divergence **phyllotaxique** : la rotation d'un nœud **au suivant** le long
    * d'un même axe, en degrés.
    *
    * **D'un nœud au suivant, et non entre les filles d'un même nœud** — c'était
@@ -76,7 +76,7 @@ export interface Branchement {
    * La phyllotaxie est précisément la rotation d'un bourgeon au bourgeon
    * suivant : environ 137° chez la plupart des feuillus alternes, 90° chez les
    * opposés décussés, dont chaque paire est perpendiculaire à la précédente.
-   * C'est CETTE rotation qui fait qu'un arbre ne pousse pas tout d'un côté.
+   * C'est **cette** rotation qui fait qu'un arbre ne pousse pas tout d'un côté.
    *
    * Les filles d'un même nœud, elles, se répartissent régulièrement autour de
    * l'axe : il n'y a rien à régler là, et le générateur le fait seul.
@@ -94,7 +94,7 @@ export interface Branchement {
    * l'emporte sur ses sœurs.
    *
    * **Le paramètre le plus traître de la liste.** À 0,85 le bouleau faisait
-   * une touffe au sommet d'un bâton : il a fallu descendre à 0,62 ET ajouter
+   * une touffe au sommet d'un bâton : il a fallu descendre à 0,62 **et** ajouter
    * un ordre. Un fort chiffre ne donne pas un arbre élancé, il donne un mât.
    */
   dominance: number;
@@ -102,12 +102,12 @@ export interface Branchement {
    * Nombre de filles par nœud, **flèche comprise**.
    *
    * Le piège est dans « flèche comprise », et il s'est refermé sur cinq
-   * fiches : la première fille prolonge l'axe, donc `2` ne donne qu'UNE
+   * fiches : la première fille prolonge l'axe, donc `2` ne donne qu'**une**
    * latérale et non une paire. Toutes les espèces à rameaux opposés — frêne,
    * sureau, cornouiller, fusain, troène — portaient `2` avec un commentaire
    * disant « opposés, par paires » : la paire n'a jamais existé.
    *
-   * **Et un nœud est une unité de POUSSE, pas une insertion de feuille.** Une
+   * **Et un nœud est une unité de pousse, pas une insertion de feuille.** Une
    * pousse annuelle porte plusieurs latérales, y compris chez une espèce
    * alterne ; `3` ne prétend donc pas que l'espèce est opposée. À `2`, le
    * houppier ne s'équilibre qu'en moyenne sur beaucoup de nœuds, et un arbre à
@@ -127,7 +127,7 @@ export interface Branchement {
    */
   tortuosite: number;
   /**
-   * Branchement en VERTICILLES : les branches partent par couronnes réparties
+   * Branchement en **verticilles** : les branches partent par couronnes réparties
    * autour de la flèche, à la même hauteur, et non une à une.
    *
    * **C'est la différence de structure entre un conifère et un feuillu**, et
@@ -159,7 +159,7 @@ export interface Feuillage {
   /**
    * Nombre de feuilles par bouquet terminal.
    *
-   * **Un BOUQUET par rameau, pas une feuille** : L0 a montré qu'une feuille
+   * **Un bouquet par rameau, pas une feuille** : L0 a montré qu'une feuille
    * par rameau donne une brindille décorée, pas une masse foliaire.
    */
   feuillesParBouquet: number;
@@ -210,7 +210,7 @@ export interface FicheGraphique {
   especeId: string;
   port: Port;
   /**
-   * FOURRÉ BAS : l'espèce se dessine par cellule agrégée et non par tige.
+   * **fourré bas** : l'espèce se dessine par cellule agrégée et non par tige.
    *
    * **La huitième famille de port, et la seule qui ne passe pas par le
    * générateur** (§5.4). Une ronce n'a ni fût, ni houppier, ni flèche : c'est
@@ -229,7 +229,7 @@ export interface FicheGraphique {
    * **Une cépée n'est pas un petit arbre**, et le générateur ne l'obtient pas
    * en réglant les autres paramètres — c'est le même constat que pour
    * l'enveloppe, à un autre endroit. Un noisetier, un sureau, un aulne de
-   * ripisylve partent du SOL en plusieurs brins arqués, sans fût. Sans ce
+   * ripisylve partent du **sol** en plusieurs brins arqués, sans fût. Sans ce
    * champ, un noisetier et un pommier taillé en gobelet sortent identiques :
    * mesuré, ils l'étaient exactement, au segment près.
    *

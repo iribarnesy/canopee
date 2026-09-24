@@ -1,5 +1,5 @@
 /**
- * Le port serré (issue #105, critère B10) : le houppier suit le DIAMÈTRE.
+ * Le port serré (issue #105, critère B10) : le houppier suit le **diamètre**.
  *
  * Ce que le moteur faisait : `rayon = houppierRatio × hauteur`. Une perche
  * étiolée de dix mètres et onze centimètres recevait donc le houppier d'un
@@ -8,9 +8,9 @@
  *
  * Ce que ce fichier vérifie :
  *   1. la loi est celle du tube — le rayon suit le diamètre, pas la hauteur ;
- *   2. **pour un arbre normalement conformé, RIEN ne change** — la garantie qui
+ *   2. **pour un arbre normalement conformé, rien ne change** — la garantie qui
  *      borne le rayon d'explosion d'un lot qui touche seize appels ;
- *   3. le gradient va dans le bon sens des DEUX côtés ;
+ *   3. le gradient va dans le bon sens des **deux** côtés ;
  *   4. et ce que ça rend, mesuré sur le peuplement.
  */
 
@@ -44,7 +44,7 @@ describe("la loi du tube : le rayon suit le diamètre", () => {
   });
 
   it("à diamètre ÉGAL, la hauteur ne change plus rien", () => {
-    // L'ancienne loi disait l'inverse : elle ne lisait QUE la hauteur.
+    // L'ancienne loi disait l'inverse : elle ne lisait **que** la hauteur.
     expect(crownRadiusM(20, RATIO, 30)).toBeCloseTo(crownRadiusM(10, RATIO, 30), 10);
   });
 });
@@ -60,7 +60,7 @@ describe("l'arbre normalement conformé ne bouge pas", () => {
   });
 
   it("une tige sans diamètre retombe sur l'ancienne formule", () => {
-    // Un semis qu'on PROJETTE n'a pas de diamètre propre ; il ne doit pas pour
+    // Un semis qu'on **projette** n'a pas de diamètre propre ; il ne doit pas pour
     // autant recevoir un houppier nul, ce qui l'effacerait de l'ombrage.
     expect(crownRadiusM(10, RATIO, 0)).toBeCloseTo(RATIO * 10, 10);
     expect(crownRadiusM(10, RATIO, Number.NaN)).toBeCloseTo(RATIO * 10, 10);
@@ -94,8 +94,8 @@ describe("le gradient va dans le bon sens des deux côtés", () => {
 
 describe("ce que ça rend sur un peuplement", () => {
   it("dans une hêtraie serrée, la perche n'ombrage plus comme un dominant", () => {
-    // Le banc de l'issue, réduit pour tenir dans la suite. On compare, DANS LE
-    // MÊME peuplement, ce que la perche épand et ce qu'elle épandait avant.
+    // Le banc de l'issue, réduit pour tenir dans la suite. On compare, **dans le**
+    // **même** peuplement, ce que la perche épand et ce qu'elle épandait avant.
     const COTE = 30;
     const station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
     const weather = syntheticYear(LIMON_RICHE.climat);
@@ -117,7 +117,7 @@ describe("ce que ça rend sur un peuplement", () => {
     const dominant = [...vivants].sort((a, b) => b.heightM - a.heightM)[0];
     if (!perche || !dominant) throw new Error("peuplement vide");
 
-    // La perche EST étiolée — sans quoi l'essai ne mesurerait rien.
+    // La perche **est** étiolée — sans quoi l'essai ne mesurerait rien.
     expect(elancement(perche.diametreCm, perche.heightM)).toBeGreaterThan(80);
     // Et sa couronne s'est resserrée par rapport à l'ancienne loi.
     const ancien = RATIO * perche.heightM;

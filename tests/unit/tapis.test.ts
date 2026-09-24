@@ -49,7 +49,7 @@ describe("les trois motifs viennent des grandeurs du moteur", () => {
   };
 
   // Note : les paliers ne saturent jamais tout à fait — `valeurDuPalier` rend
-  // le MILIEU d'une tranche, donc le palier le plus haut vaut 15/16 et le plus
+  // le **milieu** d'une tranche, donc le palier le plus haut vaut 15/16 et le plus
   // bas 1/16. Un tapis n'est donc jamais d'un seul motif, et c'est juste : une
   // pelouse a toujours sa plaque pelée.
   it("une cellule couverte d'herbe et sans litière est très majoritairement en touffes", () => {
@@ -183,7 +183,7 @@ describe("les bouts de l'échelle, là où le retour a buté", () => {
     // Le critère est celui du retour, mot pour mot : « avec une densité de
     // 100 % on devrait voir une pelouse quand on zoome ». Ça n'était pas le
     // cas, et la donnée n'y était pour rien — c'était la lecture des paliers.
-    // `valeurDuPalier` rend le MILIEU d'une bande, donc une couverture de 100 %
+    // `valeurDuPalier` rend le **milieu** d'une bande, donc une couverture de 100 %
     // ressortait autour de 0,94 et les 6 % restants tombaient en terre à nu :
     // des plaques sombres semées régulièrement sur un gazon annoncé plein.
     expect(motifs(1, 0)).not.toContain("terre");

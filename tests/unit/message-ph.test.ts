@@ -3,8 +3,8 @@
  *
  * Trouvé en jouant : « 2 pins sylvestres sur un sol hors de leur gamme de pH —
  * sol à pH 4,5, il leur en faut 4 à 7,5 ». Les deux moitiés de la phrase se
- * démentaient, et c'était le calcul qui avait tort : la rampe touchait zéro AUX
- * BORNES de l'amplitude, si bien que chaque espèce mourait à coup sûr au pH que
+ * démentaient, et c'était le calcul qui avait tort : la rampe touchait zéro **aux**
+ * **bornes** de l'amplitude, si bien que chaque espèce mourait à coup sûr au pH que
  * l'atlas lui donne pour tolérable.
  *
  * La réponse est désormais unimodale, ce que mesurent les relevés (modèles de
@@ -32,18 +32,18 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
       const [min, max] = espece.ph;
       const centre = (min + max) / 2;
       expect(facteurGammePh(espece.ph, centre)).toBe(1);
-      // Le sommet est PLAT, et c'est voulu : une espèce à large amplitude est
+      // Le sommet est **plat**, et c'est voulu : une espèce à large amplitude est
       // une généraliste, elle ne culmine pas sur un point. C'est le modèle III
       // de Huisman-Olff-Fresco, le « plateau », et non une cloche.
       //
-      // Le décalage est RELATIF à l'espèce, et il a fallu le corriger : un
+      // Le décalage est **relatif** à l'espèce, et il a fallu le corriger : un
       // +0,4 pH fixe suppose que tout le monde a un plateau large, ce qui
       // était vrai tant que la gamme la plus étroite faisait 2,5 pH. La
       // recalibration sur la littérature (#160) a resserré l'abricotier à
       // 6,0-7,8, dont le plateau ne fait que 0,47 pH : le point d'épreuve
       // tombait dehors et l'essai accusait une fonction saine.
       const demiPlateau = (max - min) / 2 - (RAMPE_PH - RAMPE_PH * VIGUEUR_A_LA_BORNE);
-      // Une gamme plus étroite que deux rampes n'aurait PAS d'optimum plein :
+      // Une gamme plus étroite que deux rampes n'aurait **pas** d'optimum plein :
       // ce serait une cloche, donc une autre forme que celle qu'on affirme.
       expect(demiPlateau).toBeGreaterThan(0);
       expect(facteurGammePh(espece.ph, centre + demiPlateau / 2)).toBe(1);
@@ -69,11 +69,11 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
     const pin = getEspece("pinus_sylvestris");
     expect(pin.ph).toEqual([4, 7.5]);
     // À 4,5 il souffre un peu — 0,76, bien au-dessus du seuil de stress (0,45),
-    // donc il ne peut PAS mourir « hors gamme » à ce pH-là. C'est le message du
+    // donc il ne peut **pas** mourir « hors gamme » à ce pH-là. C'est le message du
     // journal qui trompait : il affichait le pH de la station au départ, pas
     // celui du sol sous l'arbre, qui avait dérivé plus bas.
     expect(facteurGammePh(pin.ph, 4.5)).toBeCloseTo(0.764, 3);
-    // Et à sa borne exacte il n'est plus à ZÉRO. Il reste condamné à terme —
+    // Et à sa borne exacte il n'est plus à **zéro**. Il reste condamné à terme —
     // 0,05 est sous le seuil de stress — mais il n'est plus mort d'avance, et
     // c'est tout ce que ce paramètre corrige.
     expect(facteurGammePh(pin.ph, 4)).toBeCloseTo(VIGUEUR_A_LA_BORNE, 10);

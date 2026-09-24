@@ -1,21 +1,21 @@
 /**
- * Le sanglier (issue #73, critère G10) — et pourquoi il n'est PAS dans
+ * Le sanglier (issue #73, critère G10) — et pourquoi il n'est **pas** dans
  * `gibier.ts`.
  *
  * Le chevreuil est complet depuis longtemps : hauteur de dent, fourrage par
  * cellule, appétence, frottis, écorçage, clôture, chasse. L'issue suggérait de
  * généraliser cette architecture pour y loger le sanglier. **Après lecture,
- * non** : `gibier.ts` est bâti de bout en bout sur le BROUTAGE, et un sanglier
+ * non** : `gibier.ts` est bâti de bout en bout sur le **broutage**, et un sanglier
  * ne broute pas. Généraliser aurait produit une abstraction qui ne décrit ni
  * l'un ni l'autre.
  *
- * Ce qui se partage n'est pas le code, c'est le PATRON, et il est respecté ici :
- * une densité de CONTEXTE imposée par le paysage (un sanglier a un domaine
+ * Ce qui se partage n'est pas le code, c'est le **patron**, et il est respecté ici :
+ * une densité de **contexte** imposée par le paysage (un sanglier a un domaine
  * vital de 500 à 2000 hectares selon l'OFB — la parcelle n'a pas de population,
  * elle en reçoit une part), une répartition locale au prorata de ce que chaque
- * cellule OFFRE, et une comptabilité qui tient.
+ * cellule **offre**, et une comptabilité qui tient.
  *
- * ## Deux effets de signe OPPOSÉ, et aucun n'est écrit par espèce
+ * ## Deux effets de signe **opposé**, et aucun n'est écrit par espèce
  *
  * C'est ce qui rend cet animal intéressant plutôt que décoratif :
  *
@@ -45,7 +45,7 @@ import { rngFloat, rngStateFromSeed } from "./rng";
 /**
  * Part de la surface retournée en un an, à la densité de référence.
  *
- * C'est LE chiffre du lot, et il est mesuré — largement, parce que les études
+ * C'est **le** chiffre du lot, et il est mesuré — largement, parce que les études
  * ne s'accordent qu'à l'ordre de grandeur près et qu'elles ne parlent pas du
  * même milieu :
  *
@@ -54,7 +54,7 @@ import { rngFloat, rngStateFromSeed } from "./rng";
  *  - **en forêt, c'est dix fois plus** : 7,4 %/an pour les porcs féraux de
  *    Californie, 10,9 % puis 8,0 % sur deux années dans le Monte argentin.
  *
- * **Et les deux chiffres forestiers sont des populations INVASIVES** : les porcs
+ * **Et les deux chiffres forestiers sont des populations invasives** : les porcs
  * féraux de Californie et du Monte argentin n'ont pas de prédateurs, pas de
  * chasse réglée, et des densités sans rapport avec un massif français. Les
  * prendre pour référence était une erreur d'échantillon, de la même famille que
@@ -87,9 +87,9 @@ export const PROFONDEUR_BOUTIS_CM = 10;
 /**
  * Hauteur en dessous de laquelle un plant ne survit pas à un boutis, m.
  *
- * **C'EST LE SECOND EFFET DU SANGLIER SUR LA RÉGÉNÉRATION, ET LE SEUL QUI LA
- * SUPPRIME VRAIMENT** (issue #199). Le premier — manger la glandée — est
- * maintenant ancré sur une ration réelle, et il est PETIT : à 0,15 bête à
+ * **c'est le second effet du sanglier sur la régénération, et le seul qui la
+ * supprime vraiment** (issue #199). Le premier — manger la glandée — est
+ * maintenant ancré sur une ration réelle, et il est **petit** : à 0,15 bête à
  * l'hectare, une ration de 400 kg/an fait soixante kilos de glands contre une
  * glandée qui se compte en centaines. Un sanglier ne peut pas manger une
  * glandée, c'est toute l'idée de la glandée. Ce qu'il peut faire, c'est
@@ -108,7 +108,7 @@ export const PROFONDEUR_BOUTIS_CM = 10;
  * à gagner vingt centimètres : une saison en pleine lumière, plusieurs années
  * sous couvert — exactement là où le sanglier va *(à calibrer)*.
  *
- * Comparer avec le LABOUR, qui détruit jusqu'à 1,2 m (`actions.ts`) : l'outil
+ * Comparer avec le **labour**, qui détruit jusqu'à 1,2 m (`actions.ts`) : l'outil
  * retourne deux à trois fois plus profond, sur toute la zone d'un coup, et le
  * moteur dit maintenant les deux choses séparément. Le sanglier n'est pas un
  * petit tracteur : il est plus superficiel, et il ne touche que deux pour cent
@@ -196,7 +196,7 @@ export function effortSemaine(sanglierParHa: number, semaine: number): number {
 }
 
 /**
- * ─── CE QUI A QUITTÉ CE FICHIER, ET POURQUOI (issue #197) ────────────────────
+ * ─── **ce qui a quitté ce fichier**, **et pourquoi** (issue #197) ────────────────────
  *
  * Il y avait ici `PART_GLANDEE_CONSOMMEE = 0,55` et `partGlandeeRestante`, une
  * part de la glandée mangée en fonction de la seule densité de sangliers. La
@@ -206,13 +206,13 @@ export function effortSemaine(sanglierParHa: number, semaine: number): number {
  * aucune glandée**, alors elle en supposait une.
  *
  * Ce qu'elle supposait, en clair : pour que 0,05 sanglier/ha en mangent 55 %, il
- * fallait qu'un hectare ne porte que SEIZE KILOS de glands, et qu'une bête en
+ * fallait qu'un hectare ne porte que **seize kilos** de glands, et qu'une bête en
  * avale deux tonnes et demie par an. Le chiffre ne valait rien comme ration ; il
  * valait comme réglage, et c'est exactement ce que la règle du dépôt interdit —
  * un chiffre calé sur le moteur lui-même n'est pas une ancre.
  *
  * `glandee.ts` produit maintenant la glandée, et le sanglier y prélève une
- * RATION en kilos, ancrée sur ce qu'un animal peut avaler. La loi n'a pas
+ * **ration** en kilos, ancrée sur ce qu'un animal peut avaler. La loi n'a pas
  * changé de forme : celle d'ici valait exp(−k × densité), celle de là vaut
  * exp(−ration/production) — la même, avec la production réelle à la place de la
  * production supposée.
@@ -254,7 +254,7 @@ export const LITIERE_ENFOUIE = 0.6;
 export const HERBE_ARRACHEE = 0.5;
 
 /**
- * Ce qu'un boutis retire au tassement : le sanglier AMEUBLIT.
+ * Ce qu'un boutis retire au tassement : le sanglier **ameublit**.
  *
  * C'est la face qu'on n'attend pas — on pense dégât, et la structure y gagne.
  * Un boutis casse la croûte et remet de la porosité dans les dix premiers

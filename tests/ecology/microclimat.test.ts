@@ -39,7 +39,7 @@ describe("un couvert tamponne la température", () => {
     expect(tMinimumSousCouvert(-3, fermetureDuCouvert(0))).toBeCloseTo(-3 + TAMPON_MINIMUM_C, 9);
     expect(tMaximumSousCouvert(30, fermetureDuCouvert(0))).toBeCloseTo(30 - TAMPON_MAXIMUM_C, 9);
 
-    // Le jour se rafraîchit PLUS que la nuit ne se réchauffe : la forêt écrête
+    // Le jour se rafraîchit **plus** que la nuit ne se réchauffe : la forêt écrête
     // surtout les maxima, et c'est le résultat le plus net de la méta-analyse.
     expect(TAMPON_MAXIMUM_C).toBeGreaterThan(TAMPON_MINIMUM_C);
   });
@@ -88,7 +88,7 @@ describe("un fruitier abrité échappe au gel tardif", () => {
       // Un printemps dur, tous les ans : −2,5 °C là où l'abricotier fleurit.
       tMinAbsC: i >= 2 && i <= 26 ? -2.5 : w.tMinAbsC,
     }));
-    // Huit ans, parce que `plantAt` plante un arbre d'âge ZÉRO quelle que soit
+    // Huit ans, parce que `plantAt` plante un arbre d'âge **zéro** quelle que soit
     // sa taille, et que l'abricotier ne fleurit qu'à quatre ans (`maturiteAns`).
     // Un essai de trois ans ne mesurait rien : l'arbre n'avait jamais fleuri.
     let gele = false;
@@ -101,7 +101,7 @@ describe("un fruitier abrité échappe au gel tardif", () => {
   }
 
   it("le seuil de gel de l'abricotier est bien au-dessus du minimum imposé", () => {
-    // Sans quoi l'essai ne mesurerait rien : il faut que le gel SOIT fatal en
+    // Sans quoi l'essai ne mesurerait rien : il faut que le gel **soit** fatal en
     // découvert pour que l'abri puisse faire une différence.
     const gelFatal = getEspece("prunus_armeniaca").fruits?.gelFatalC;
     expect(gelFatal).toBeDefined();

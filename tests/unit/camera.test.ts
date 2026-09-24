@@ -281,13 +281,13 @@ describe("la cellule sous le curseur", () => {
     const butteX = 60;
     const relief = (x: number, _y: number) => (x >= butteX ? 30 : 0);
     const v = vue();
-    // Le sommet de la butte se projette LÀ où une cellule plus lointaine se
+    // Le sommet de la butte se projette **là** où une cellule plus lointaine se
     // projetterait si le terrain était plat.
     const e = versEcranVue({ x: butteX + 0.5, y: 50.5, z: 30 }, v);
     const aPlat = versParcelleVue(e, v);
     const vu = celluleSousLeCurseurVue(e, v, relief);
     expect(vu).toEqual({ x: butteX, y: 50 });
-    // et ce n'est PAS ce que l'inversion à plat aurait répondu
+    // et ce n'est **pas** ce que l'inversion à plat aurait répondu
     expect(Math.floor(aPlat.x)).not.toBe(butteX);
   });
 

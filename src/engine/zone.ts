@@ -1,7 +1,7 @@
 /**
- * LA ZONE D'UN CHANTIER (issue #186).
+ * **La zone d'un chantier** (issue #186).
  *
- * Toutes les actions qui agissent sur une surface prenaient un DISQUE — un
+ * Toutes les actions qui agissent sur une surface prenaient un **disque** — un
  * centre et un rayon. C'est commode pour un potet, une éclaircie, un épandage ;
  * c'est faux pour tout ce qui, dans une parcelle réelle, est long et étroit :
  * une allée cultivée, une haie, une bande enherbée, une tournière, une lisière
@@ -14,10 +14,10 @@
  * larges de plus d'un mètre » le long du rang (CNPF), et le moteur ne savait
  * pas l'exprimer.
  *
- * ── CE QUE CE MODULE GARANTIT ────────────────────────────────────────────────
+ * ── **ce que ce module garantit** ────────────────────────────────────────────────
  *
  * **Le disque reste le comportement par défaut, au bit près — à deux exceptions
- * près, qui sont écrites.** `zone` est FACULTATIF sur la variante disque : une
+ * près, qui sont écrites.** `zone` est **facultatif** sur la variante disque : une
  * action écrite `{ x, y, rayonM }` — c'est-à-dire toutes celles qui existent,
  * dans le moteur comme dans les essais — reste valide sans être touchée, et rend
  * exactement les mêmes cellules qu'avant. Ce n'est pas une politesse envers
@@ -27,16 +27,16 @@
  *
  * Les deux exceptions, trouvées par ce balayage et par lui seul :
  *
- *  1. **`actions.ts` avait DEUX routes qui ne faisaient pas la même chose.**
+ *  1. **`actions.ts` avait deux routes qui ne faisaient pas la même chose.**
  *     `forEachDiscCell` garantissait au moins une cellule, `cellulesDuDisque`
  *     non — si bien qu'un `semer` de vingt centimètres ne semait rien, en
  *     silence et facturé, quand un `faucher` du même rayon fauchait une cellule.
  *     La zone unifie sur la garantie. Seul ce cas dégénéré change.
- *  2. **L'aire se calculait de deux façons à un ULP près.** Cinq appels
+ *  2. **L'aire se calculait de deux façons à un ulp près.** Cinq appels
  *     écrivaient `Math.PI * r * r`, l'éclaircie écrivait `(Math.PI * r2)`. Il
  *     n'y a donc pas d'« avant » unique à préserver ; on prend la forme
  *     majoritaire, et l'essai borne ce que l'éclaircie y perd : rien, le
- *     `Math.round` du nombre de tiges à garder absorbant l'ULP sur tous les
+ *     `Math.round` du nombre de tiges à garder absorbant l'**ulp** sur tous les
  *     couples (rayon, densité) plausibles.
  *
  * Les six opérations que la forme doit savoir rendre sont celles que le moteur
@@ -66,7 +66,7 @@ export interface ZoneDisque {
 /**
  * Une bande : un centre, une orientation, une longueur et une largeur.
  *
- * Mesurée depuis son CENTRE et non depuis un coin, pour la même raison que le
+ * Mesurée depuis son **centre** et non depuis un coin, pour la même raison que le
  * disque : une action se désigne par le point qu'on vise. L'orientation est
  * celle du grand axe, en radians, zéro vers l'est comme partout ailleurs dans
  * le moteur (`versLAval`, `ventVersRad`).

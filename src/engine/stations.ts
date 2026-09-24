@@ -27,7 +27,7 @@ export interface StationClimat {
 }
 
 /**
- * Construit une station à partir de son PROFIL DE SOL : réserve utile,
+ * Construit une station à partir de son **profil de sol** : réserve utile,
  * drainage, porosité, minéralisation, carbone et pH sont dérivés de la
  * physique du sol (soil.ts), jamais saisis. C'est ce qui permettra de générer
  * des stations quelconques — critère de réalisme A9.
@@ -53,7 +53,7 @@ export function stationDepuisProfil(
   > & { profil: SoilProfile; initialMineralNKgHa: number; eau?: EauDeSurface },
 ): Station {
   const { profil, eau, ...reste } = base;
-  // Tout ce qui vient de l'ENTOURAGE se déduit du paysage, d'un bloc : semis,
+  // Tout ce qui vient de l'**entourage** se déduit du paysage, d'un bloc : semis,
   // gibier, dépôts d'azote, vent. Les saisir un par un permettait de décrire
   // des voisinages incohérents (paysage.ts).
   // Par défaut, les quatre côtés portent le même paysage ; le joueur peut les
@@ -208,7 +208,7 @@ export const LIMON_PAUVRE_N: StationClimat = {
  *
  * Il manquait, et son absence se voyait : la station de référence du moteur est
  * à pH 7, or le châtaignier s'arrête à 6,5 et le houx à 7. Deux espèces de
- * l'atlas ne pouvaient donc vivre sur AUCUNE station de comparaison, et l'essai
+ * l'atlas ne pouvaient donc vivre sur **aucune** station de comparaison, et l'essai
  * des hauteurs devait s'en fabriquer une à la volée pour les mesurer. Ce
  * n'était pas un défaut du modèle de pH — un châtaignier ne pousse pas sur
  * calcaire, c'est un fait — mais une lacune du catalogue.

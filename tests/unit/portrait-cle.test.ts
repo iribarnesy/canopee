@@ -1,13 +1,13 @@
 /**
- * LA CLÉ D'UN PORTRAIT : ce qui vaut la peine d'être recuit (#149).
+ * **La clé d'un portrait** : ce qui vaut la peine d'être recuit (#149).
  *
  * « Voir le sprite de l'arbre » a un prix, et il se mesure : **175 ms par
  * cuisson** sur la machine d'essai, soit cinq secondes de fil principal bloqué
  * par instantané quand on redessinait quinze arbres et leurs témoins. La clé
  * est ce qui évite tout ça — elle dit si l'image a changé sans la peindre.
  *
- * Ces épreuves défendent donc les deux moitiés de la promesse : qu'elle IGNORE
- * ce qui ne se voit pas, et qu'elle SUIVE ce qui se voit.
+ * Ces épreuves défendent donc les deux moitiés de la promesse : qu'elle **ignore**
+ * ce qui ne se voit pas, et qu'elle **suive** ce qui se voit.
  */
 
 import { describe, expect, it } from "vitest";

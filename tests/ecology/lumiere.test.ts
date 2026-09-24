@@ -87,14 +87,14 @@ describe("lumière — en plein découvert, personne n'est limité", () => {
 });
 
 /**
- * LE PLANCHER DE LUMIÈRE, et ce qu'il rend impossible.
+ * **Le plancher de lumière**, et ce qu'il rend impossible.
  *
- * `MAX_EXTINCTION` borne l'empilement des couronnes par une ASYMPTOTE : quelle
+ * `MAX_EXTINCTION` borne l'empilement des couronnes par une **asymptote** : quelle
  * que soit l'extinction brute — huit, vingt, un million — la valeur rendue tend
  * vers 4,5 sans l'atteindre, donc il reste toujours `exp(−MAX_EXTINCTION)` de
  * lumière. L'intention est physique et juste : des couronnes ne s'empilent pas
  * comme des filtres parfaits, elles laissent des trouées de ciel et des taches
- * de soleil. La VALEUR, elle, porte *(à calibrer)* — les sous-bois réels
+ * de soleil. La **valeur**, elle, porte *(à calibrer)* — les sous-bois réels
  * descendent sous 2 % et n'ont pas de mur.
  *
  * Le stress d'ombre ne monte pas au point de compensation mais à 0,9 fois
@@ -114,7 +114,7 @@ describe("ce que le plancher de lumière rend impossible", () => {
    * Lumière en dessous de laquelle une espèce commence à accumuler du stress
    * d'ombre. `fLumSurvival = min(1, 0,5 × lumière / compensation)` doit passer
    * sous `STRESS_ONSET` (0,45), d'où 0,9 × compensation — et non la
-   * compensation elle-même, qui ne gouverne que l'arrêt de la CROISSANCE.
+   * compensation elle-même, qui ne gouverne que l'arrêt de la **croissance**.
    */
   const seuilStress = (id: string) => 2 * STRESS_ONSET * getEspece(id).lumiere.compensation;
 
@@ -122,15 +122,15 @@ describe("ce que le plancher de lumière rend impossible", () => {
     // Le seuil est 0,9 × compensation, pas la compensation : 0,0090 pour le
     // hêtre, contre un plancher de 0,0111. Il reste donc toujours au hêtre 23 %
     // de lumière de plus qu'il ne lui en faudrait pour commencer à souffrir.
-    // C'est une propriété ARITHMÉTIQUE du couple de constantes, pas un résultat
+    // C'est une propriété **arithmétique** du couple de constantes, pas un résultat
     // de simulation, et elle explique qu'une cohorte dense de hêtres ne
     // s'éclaircit jamais (361 tiges plantées, 361 vivantes à cent vingt ans).
     //
-    // VINGT-TROIS POUR CENT, C'EST PEU, et c'est le vrai enseignement. Deux
+    // **Vingt-trois pour cent**, **c'est peu**, et c'est le vrai enseignement. Deux
     // constantes indépendantes se croisent à cette distance : la prochaine
     // recalibration de l'une ou de l'autre renversera le résultat dans un sens
     // ou dans l'autre, sans que personne ait voulu décider que le hêtre meurt
-    // ou survit. Ce que la réalité fait — le hêtre dominé MEURT, par famine
+    // ou survit. Ce que la réalité fait — le hêtre dominé **meurt**, par famine
     // carbonée, et une hêtraie de 120 ans porte quelques centaines de tiges et
     // non 2 256 — demande un mécanisme cumulé, pas un seuil instantané mieux
     // placé (#96).

@@ -1,8 +1,8 @@
 /**
- * LES CAVITÉS D'UN ARBRE VIVANT (critère J3).
+ * **Les cavités d'un arbre vivant** (critère J3).
  *
  * Le moteur savait déjà que les trognes se creusent (`trogne.ts`) et comptait
- * ce creux en LITRES, parce que c'est le volume — et lui seul — qui décide de
+ * ce creux en **litres**, parce que c'est le volume — et lui seul — qui décide de
  * qui peut nicher : une mésange se contente de quelques litres, une chouette
  * chevêche en demande des dizaines. Mais il ne savait le faire que pour une
  * tête de têtard, alors que la carie du tronc (#182) fabrique exactement la
@@ -38,7 +38,7 @@ import {
 } from "./trogne";
 
 /**
- * Part du bois carié qui est réellement CREUSE *(à calibrer)*.
+ * Part du bois carié qui est réellement **creuse** *(à calibrer)*.
  *
  * Une colonne de carie n'est pas un trou : c'est d'abord du bois pourri encore
  * en place, que les champignons minéralisent lentement et que la faune finit de
@@ -53,7 +53,7 @@ export const CARIE_EVIDEE = 0.45;
  *
  * La colonne suit le cœur sur toute la bille — c'est la définition d'une carie
  * du bois de cœur —, donc son volume est celui de la tige dans le rapport des
- * SECTIONS, soit `p²` où `p` est la part du rayon cariée. La puissance deux
+ * **sections**, soit `p²` où `p` est la part du rayon cariée. La puissance deux
  * n'est pas la même que celle de la résistance (`facteurCarie`, en `1 − p⁴`),
  * et c'est normal : l'une compte du bois, l'autre compte de la raideur.
  *
@@ -67,7 +67,7 @@ export function volumeCaviteTroncL(
 ): number {
   const rayonCm = tree.carie?.rayonCm ?? 0;
   if (rayonCm <= 0) return 0;
-  // Le creux se calcule sur la colonne ELLE-MÊME, et non en part du fût
+  // Le creux se calcule sur la colonne **elle-même**, et non en part du fût
   // d'aujourd'hui : ce que le champignon a mangé, il l'a mangé, et l'aubier
   // que l'arbre a fabriqué par-dessus depuis ne le rebouche pas. Les deux
   // écritures sont algébriquement les mêmes tant que le rayon ne change pas ;
@@ -100,7 +100,7 @@ export function partHabitatDeCavites(
 }
 
 /**
- * Le CALIBRE de la chambre, cm — le diamètre du creux lui-même, pas celui de
+ * Le **calibre** de la chambre, cm — le diamètre du creux lui-même, pas celui de
  * l'arbre qui le porte.
  *
  * Il ne demande aucune constante nouvelle : il se lit sur les deux volumes que
@@ -116,11 +116,11 @@ export function partHabitatDeCavites(
  * et c'est celui-là qu'un occupant choisira.
  *
  * **Ce que ce nombre est, et ce qu'il n'est pas.** C'est le calibre de la
- * CHAMBRE. L'entrée, dans la réalité, est bien plus étroite — un pic creuse un
+ * **chambre**. L'entrée, dans la réalité, est bien plus étroite — un pic creuse un
  * trou à sa taille dans un fût de quarante centimètres. Ce que la géométrie
  * permet d'affirmer sans rien inventer, c'est qu'**une entrée ne peut pas être
  * plus large que la chambre qu'elle dessert**. C'est donc une condition
- * NÉCESSAIRE au tri des espèces, et pas une condition suffisante.
+ * **nécessaire** au tri des espèces, et pas une condition suffisante.
  */
 export function diametreCaviteCm(
   tree: Pick<TreeState, "carie" | "diametreCm" | "heightM" | "teteTrogneM" | "recepages">,
@@ -137,7 +137,7 @@ export function diametreCaviteCm(
 }
 
 /**
- * La HAUTEUR du creux au-dessus du sol, m — celle qui décide de l'accès des
+ * La **hauteur** du creux au-dessus du sol, m — celle qui décide de l'accès des
  * prédateurs terrestres, et donc de qui accepte d'y nicher.
  *
  * Une carie du bois de cœur suit le fût sur toute sa longueur : sa loge peut

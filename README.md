@@ -35,13 +35,30 @@ https://iribarnesy.github.io/canopee/
 ```bash
 npm install
 npm run dev          # labo moteur sur http://localhost:5173
-npm test             # tests (unitaires, propriétés de conservation, déterminisme)
-npm run typecheck
-npm run lint
-npm run check:boundaries   # garde-fous : le moteur reste pur (pas de DOM, pas de Math.random)
+npm run verif:rapide # pendant qu'on écrit : tout sauf les essais d'écologie
+npm run verif        # avant de pousser : la vérification complète
 ```
+
+Les deux vérifications enchaînent les mêmes contrôles — types, style, frontières
+du moteur, tableau de réalisme — et ne diffèrent que par les essais :
+
+| | fichiers | essais | mesuré sur quatre cœurs |
+|---|---|---|---|
+| `verif:rapide` | 73 | 1 034 | **3 minutes** |
+| `verif` | 151 | 1 745 | **une heure** |
+
+Les 711 essais d'écart sont ceux de `tests/ecology`, et l'écart n'est pas une
+lenteur à corriger : ils font croître de vrais peuplements sur quarante ans
+pour les comparer aux tables de production. Quatre fichiers à eux seuls font
+42 % de l'heure.
+
+Chaque contrôle se lance aussi tout seul — `npm test`, `npm run typecheck`,
+`npm run lint`, `npm run check:boundaries` (le moteur reste pur : pas de DOM,
+pas de `Math.random`), `npm run check:realisme`.
 
 Le moteur vit dans `src/engine/` et n'importe jamais rien de l'UI — c'est vérifié en CI.
 
 Après le clone : `git config core.hooksPath .githooks` — le hook pre-push
-rejoue toute la vérification (`npm run verif`) avant chaque push.
+rejoue toute la vérification (`npm run verif`) avant chaque push. C'est là que
+l'heure se paie, et c'est le bon endroit : elle se paie une fois par push, pas
+une fois par idée.

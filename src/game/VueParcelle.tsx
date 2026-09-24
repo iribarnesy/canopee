@@ -12,11 +12,11 @@
  * 1. il monte la scène et la démonte proprement — un contexte WebGL qui fuit,
  *    ce sont quelques rechargements avant que le navigateur refuse d'en donner
  *    un de plus ;
- * 2. il tient la CAMÉRA, qui est un état de React parce qu'elle change sur
+ * 2. il tient la **caméra**, qui est un état de React parce qu'elle change sur
  *    interaction et qu'elle doit se rendre à nouveau ;
  * 3. il traduit les gestes en appels de `camera.ts`, sans faire de géométrie
  *    lui-même. Le glissement, le zoom au curseur et le quart de tour sont
- *    tous des fonctions PURES, testées ; ce fichier ne fait que les appeler.
+ *    tous des fonctions **pures**, testées ; ce fichier ne fait que les appeler.
  *
  * **Ce qu'il ne fait pas** : dessiner. Aucun canvas, aucun tracé, aucune
  * couleur. La frontière est la même que partout ailleurs dans le dépôt — la
@@ -48,7 +48,7 @@ import type { CelluleVoilee } from "../render/temps/voile";
 
 export interface VueParcelleProps {
   sol: DonneesSol;
-  /** semaine DANS l'année (0–51) */
+  /** semaine **dans** l'année (0–51) */
   semaineAnnee: number;
   arbres: readonly ArbreAPoser[];
   bordures?: DecorBordures;
@@ -59,7 +59,7 @@ export interface VueParcelleProps {
   /**
    * Comment déformer les arbres en cours d'animation, s'il y a lieu.
    *
-   * Interrogé à CHAQUE image, avec l'horloge et la VUE courante : c'est ainsi
+   * Interrogé à **chaque** image, avec l'horloge et la **vue** courante : c'est ainsi
    * qu'une chandelle tombe sans qu'aucune vignette soit recuite (§5.11). La vue
    * est passée parce qu'une déformation en dépend — un arbre qui tombe vers
    * l'objectif ne pivote pas comme un arbre qui tombe de profil, et le joueur
@@ -72,7 +72,7 @@ export interface VueParcelleProps {
    *
    * Le pendant de `deformer` pour les gestes de zone, et interrogé une fois
    * par image et non une fois par cellule : un front n'éclaire qu'un anneau,
-   * le lecteur rend donc la liste entière d'un coup. Pas de VUE ici — un voile
+   * le lecteur rend donc la liste entière d'un coup. Pas de **vue** ici — un voile
    * est posé au sol, il ne dépend pas de l'angle de caméra, alors qu'un arbre
    * qui tombe vers l'objectif ne pivote pas comme un arbre de profil.
    */
@@ -81,7 +81,7 @@ export interface VueParcelleProps {
    * Comment un arbre en train de mourir se dessine, s'il y a lieu.
    *
    * **Le troisième canal, et il ne ressemble pas aux deux autres** : il ne
-   * déforme pas un sprite, il change l'ÉTAT de l'arbre avant qu'on en calcule
+   * déforme pas un sprite, il change l'**état** de l'arbre avant qu'on en calcule
    * la classe de vignette. C'est ce que le §5.11 exige — un feuillage qui
    * jaunit puis tombe ne s'obtient pas en inclinant une image déjà cuite, il
    * faut la recuire. Le coût est borné par la quantification de la classe :
@@ -95,15 +95,15 @@ export interface VueParcelleProps {
   /**
    * Les particules du feu en cours d'animation, s'il y a lieu (§6.4).
    *
-   * Le pendant de `voiler` pour ce qui BRÛLE, et séparé de lui pour une raison
+   * Le pendant de `voiler` pour ce qui **brûle**, et séparé de lui pour une raison
    * de dessin : un voile est un losange plaqué au sol, une flamme est un panneau
    * qui se lève et une bouffée un panneau qui monte au-dessus du couvert. Les
-   * trois ne passent donc pas par la même couche. Pas de VUE ici non plus : une
-   * particule est placée dans le MONDE, la scène la projette.
+   * trois ne passent donc pas par la même couche. Pas de **vue** ici non plus : une
+   * particule est placée dans le **monde**, la scène la projette.
    */
   feu?: (maintenantMs: number) => IncendieAPoser;
   /**
-   * Un point de la parcelle à CADRER, s'il y a lieu (§6.4).
+   * Un point de la parcelle à **cadrer**, s'il y a lieu (§6.4).
    *
    * Appliqué une fois par cible et non à chaque image : le joueur doit pouvoir
    * glisser aussitôt après, sans que la vue le ramène. C'est un coup d'œil
@@ -114,27 +114,27 @@ export interface VueParcelleProps {
   /**
    * Le calque des changements (§6.8 №1) : où la parcelle a changé.
    *
-   * Un TABLEAU et non un rappel : les marqueurs ne bougent pas dans le temps,
+   * Un **tableau** et non un rappel : les marqueurs ne bougent pas dans le temps,
    * ils s'accumulent. Vide = calque éteint, l'état d'une partie qu'on regarde
    * sans avoir rien sauté.
    */
   marqueurs?: readonly Marqueur[];
   /**
-   * Un clic sur le SOL, rendu en cellule de parcelle — ce par quoi le joueur
+   * Un clic sur le **sol**, rendu en cellule de parcelle — ce par quoi le joueur
    * agit (§6.7).
    *
    * **Une cellule et non un point en mètres**, et c'est la relief qui tranche :
    * sur un terrain accidenté, un même pixel recouvre plusieurs cellules
    * d'altitudes différentes, et l'inversion analytique sur un plan désignerait
-   * celle qui se trouve DERRIÈRE la butte. `celluleSousLeCurseurVue` remonte le
+   * celle qui se trouve **derrière** la butte. `celluleSousLeCurseurVue` remonte le
    * rayon de vue et rend celle qu'on voit ; elle ne sait pas répondre au
    * sous-carreau près, et c'est sans importance — un geste du jeu porte sur une
    * cellule ou sur un disque de plusieurs mètres.
    *
-   * Non appelé quand le pointeur a GLISSÉ : faire tourner la parcelle ne doit
+   * Non appelé quand le pointeur a **glissé** : faire tourner la parcelle ne doit
    * pas planter un arbre au passage.
    *
-   * `idArbre` est l'arbre qu'on VOIT sous le curseur, s'il y en a un : la vue
+   * `idArbre` est l'arbre qu'on **voit** sous le curseur, s'il y en a un : la vue
    * vise le sprite et non le sol, parce qu'un houppier penché déborde de sa
    * cellule et qu'un tronc derrière une butte n'a pas la sienne sous le
    * curseur. La vue rend les deux réponses et ne choisit pas : un geste porte
@@ -149,10 +149,10 @@ export interface VueParcelleProps {
   /** Les arbres à éclairer, parce qu'ils sont choisis. */
   surbrillance?: ReadonlySet<number>;
   /**
-   * Le geste armé et son emprise, pour le montrer sous le curseur AVANT le
+   * Le geste armé et son emprise, pour le montrer sous le curseur **avant** le
    * clic. `undefined` quand on sélectionne : il n'y a rien à annoncer.
    *
-   * La vue ne dit que le OÙ. Savoir si le geste passerait demande un préavis
+   * La vue ne dit que le **où**. Savoir si le geste passerait demande un préavis
    * du moteur, qui n'existe pas encore (#139) — et le rendu n'a pas le droit
    * de refaire une règle du moteur pour le deviner.
    */
@@ -167,16 +167,16 @@ export interface VueParcelleProps {
    */
   fantome?: Omit<Fantome, "x" | "y">;
   /**
-   * La cellule survolée a changé. Appelé seulement quand elle CHANGE, pas à
+   * La cellule survolée a changé. Appelé seulement quand elle **change**, pas à
    * chaque pixel : le jeu s'en sert pour demander un préavis au moteur, et
    * une question par pixel noierait le worker.
    */
   surSurvol?: (cellule: { x: number; y: number } | undefined) => void;
   /**
-   * Comment un geste remodèle un arbre qui RESTE debout, s'il y a lieu (§6.2).
+   * Comment un geste remodèle un arbre qui **reste** debout, s'il y a lieu (§6.2).
    *
    * Le quatrième canal, et il ressemble au troisième : il ne déforme pas un
-   * sprite, il change la GÉOMÉTRIE de l'arbre avant qu'on en calcule la classe
+   * sprite, il change la **géométrie** de l'arbre avant qu'on en calcule la classe
    * de vignette. Un élagage dont la base du houppier monte ne s'obtient pas en
    * inclinant une image déjà cuite ; il faut la recuire, comme un feuillage qui
    * jaunit. Le coût reste borné par la quantification de la classe.
@@ -194,7 +194,7 @@ export interface VueParcelleProps {
   /**
    * L'orientation courante de la caméra, annoncée au jeu quand elle change.
    *
-   * La caméra vit ICI, et c'est bien : le glissement, le zoom et le quart de
+   * La caméra vit **ici**, et c'est bien : le glissement, le zoom et le quart de
    * tour sont des gestes de la vue. Mais la carte du sol doit se présenter
    * comme la vue (#145), et elle vit dans un volet. Un seul quart de tour
    * voyage donc vers le haut — pas la vue entière, qui changerait à chaque
@@ -202,15 +202,15 @@ export interface VueParcelleProps {
    */
   surOrientation?: (orientation: Orientation) => void;
   /**
-   * La SAISON à cet instant, par essence — le canal continu de la semaine
+   * La **saison** à cet instant, par essence — le canal continu de la semaine
    * (#163).
    *
-   * Interrogé une fois par IMAGE et non une fois par arbre : à un instant
+   * Interrogé une fois par **image** et non une fois par arbre : à un instant
    * donné, deux hêtres portent la même feuille. Il rend une table par essence,
    * que `appliquerLesActes` applique aux arbres concernés.
    *
    * Comme les autres canaux de cuisson, il ne remplace un arbre que si le
-   * PALIER change : entre deux marches, le tableau d'origine est rendu tel
+   * **palier** change : entre deux marches, le tableau d'origine est rendu tel
    * quel, et la scène ne recuit rien.
    */
   saison?: (maintenantMs: number) => ReadonlyMap<string, SaisonDUneEssence> | undefined;
@@ -226,7 +226,7 @@ export interface SaisonDUneEssence {
  * Remplace l'état des arbres que la mise en scène touche — ceux qui meurent
  * (§6.3) et ceux qu'un geste remodèle (§6.2) — et laisse les autres tels quels.
  *
- * **Le tableau d'origine est rendu TEL QUEL quand personne ne meurt**, ce qui
+ * **Le tableau d'origine est rendu tel quel quand personne ne meurt**, ce qui
  * est le cas à toutes les images sauf pendant une ellipse : la scène compare
  * des références pour décider quoi recuire, et lui donner un tableau neuf à
  * chaque image lui ferait croire que tout a changé.
@@ -234,7 +234,7 @@ export interface SaisonDUneEssence {
  * Quand quelqu'un meurt, seuls les arbres concernés sont copiés — les autres
  * gardent leur objet, donc leur classe de vignette, donc leur texture.
  *
- * Exportée pour l'essai : c'est une fonction PURE au milieu d'un fichier qui
+ * Exportée pour l'essai : c'est une fonction **pure** au milieu d'un fichier qui
  * ne l'est pas, et c'est elle qui porte la propriété du §5.11 — « une
  * animation continue ne doit pas invalider un cache de cuisson ».
  */
@@ -249,7 +249,7 @@ export function appliquerLesActes(
   if (!mourant && !remodeler && !parEssence) return arbres;
   let touche = false;
   /**
-   * **Copié PARESSEUSEMENT, et c'est nécessaire depuis la saison (#163).**
+   * **Copié paresseusement, et c'est nécessaire depuis la saison (#163).**
    * Avant, ce `map` n'allouait que pendant une ellipse — une seconde ou deux.
    * La saison, elle, est là toute la semaine dès que le temps coule : un
    * tableau de trois mille entrées jeté à chaque image, c'est exactement la
@@ -266,20 +266,20 @@ export function appliquerLesActes(
     const brut = arbres[i];
     if (!brut) continue;
     let a = brut;
-    // Les deux canaux de CUISSON se composent, et dans cet ordre : le geste dit
+    // Les deux canaux de **cuisson** se composent, et dans cet ordre : le geste dit
     // quelle forme avait l'arbre, la mort dit dans quel état il est. Un arbre
     // élagué qui meurt la même semaine doit montrer les deux.
     // Chaque champ n'est posé que si le geste le concerne : un élagage bouge la
     // géométrie, une récolte le stock de fruits, un démasclage l'âge de
     // l'écorce — et un arbre qui subit deux gestes la même semaine reçoit les
     // deux sans que l'un efface l'autre.
-    // **La saison d'abord, et seulement quand elle change de PALIER.** La
+    // **La saison d'abord, et seulement quand elle change de palier.** La
     // phénologie du moteur avance en continu depuis #164, mais la classe de
     // vignette est quantifiée : remplacer l'arbre à chaque image ferait croire
     // à la scène — qui compare des références — que tout a changé, et ferait
     // recuire l'atlas soixante fois par seconde pour une image identique. En
     // ne remplaçant qu'au franchissement, on obtient exactement les marches
-    // que la quantification impose, mais RÉPARTIES sur la semaine au lieu
+    // que la quantification impose, mais **réparties** sur la semaine au lieu
     // d'être empilées sur une image.
     const deLaSaison = parEssence?.get(a.especeId);
     const saisonne =
@@ -325,14 +325,14 @@ export function appliquerLesActes(
       vigueur: e.vigueur,
       dommageHydraulique: e.dommageHydraulique,
       // **Posé et non ajouté, et c'est une correction.** Le premier jet ne
-      // savait qu'AJOUTER la chandelle (`...(e.chandelle ? {chandelle: true} :
+      // savait qu'**ajouter** la chandelle (`...(e.chandelle ? {chandelle: true} :
       // {})`), or un arbre que le journal déclare mort cette semaine est déjà
       // une chandelle dans l'instantané : la mise en scène ne pouvait donc pas
       // le montrer encore debout et feuillu au début de son acte, ce qui est
       // pourtant tout ce que le §6.3 demande. C'est la mise en scène qui décide
       // à quel moment l'arbre devient une chandelle, pas l'instantané.
       chandelle: e.chandelle,
-      // L'écorce charbonnée, elle, reste OPTIONNELLE : aucune des onze causes
+      // L'écorce charbonnée, elle, reste **optionnelle** : aucune des onze causes
       // du §6.3 n'a d'avis sur elle, et si elles rendaient `false` elles
       // effaceraient la trace d'un incendie passé (`mort.ts`).
       ...(e.brulee === undefined ? {} : { brulee: e.brulee }),
@@ -348,7 +348,7 @@ const PAS_DE_ZOOM = 1.18;
 const ANNONCE_MS = 250;
 
 /**
- * Déplacement en deçà duquel un appui reste un CLIC, en pixels.
+ * Déplacement en deçà duquel un appui reste un **clic**, en pixels.
  *
  * Sans ce seuil il n'y a plus de clic du tout : un pointeur bouge toujours d'un
  * pixel ou deux entre l'appui et le relâchement, et la vue interpréterait
@@ -402,7 +402,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   }, []);
 
   // ── Montage : une seule fois, et démonté pour de bon ────────────────────
-  // La scène ne se remonte PAS au redimensionnement : elle se redimensionne,
+  // La scène ne se remonte **pas** au redimensionnement : elle se redimensionne,
   // dans l'effet suivant. Remonter détruirait le contexte WebGL à chaque coup
   // de souris sur le bord de la fenêtre, et un contexte perdu ne se rend pas
   // toujours.
@@ -440,7 +440,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
 
   // ── Le cadrage d'un événement ───────────────────────────────────────────
   //
-  // **Une fois par CIBLE, et pas à chaque rendu.** Sans la référence, l'effet
+  // **Une fois par cible, et pas à chaque rendu.** Sans la référence, l'effet
   // se rejouerait à chaque nouveau rendu de React — donc à chaque changement de
   // caméra — et la vue reviendrait se coller sur l'incendie dès que le joueur
   // essaierait de glisser ailleurs. Ce serait le contraire de ce que le §6.4
@@ -457,7 +457,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
 
   // ── L'image ─────────────────────────────────────────────────────────────
   //
-  // **La boucle d'images n'est PAS un effet de React**, et le premier jet l'a
+  // **La boucle d'images n'est pas un effet de React**, et le premier jet l'a
   // apprise à ses dépens : un effet sans tableau de dépendances qui appelle
   // `surCompte`, lequel pose un état, lequel refait un rendu, lequel relance
   // l'effet — React coupe au bout de cinquante tours avec « Maximum update
@@ -556,7 +556,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         : undefined;
       const avant = celluleAnnoncee.current;
       cible.current = c ? { x: c.x + 0.5, y: c.y + 0.5 } : undefined;
-      // On n'annonce QUE les changements de cellule : le préavis part vers le
+      // On n'annonce **que** les changements de cellule : le préavis part vers le
       // worker à chaque annonce, et une question par pixel parcouru le noierait.
       const cle = c ? `${c.x},${c.y}` : "";
       if (cle !== avant) {
@@ -607,7 +607,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
       ref={hote}
       className="vue-parcelle"
       // Le conteneur reçoit le focus pour que la rotation au clavier marche
-      // sans qu'on ait à cliquer d'abord sur un bouton. La vue EST interactive :
+      // sans qu'on ait à cliquer d'abord sur un bouton. La vue **est** interactive :
       // on y glisse, on y zoome, on la tourne — et `role="application"` est
       // justement le rôle qui dit « ce conteneur gère ses propres touches ».
       // biome-ignore lint/a11y/noNoninteractiveTabindex: voir ci-dessus

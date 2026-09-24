@@ -2,7 +2,7 @@
  * Sureau noir — *Sambucus nigra*. Famille : **arbuste en cépée, grossier**.
  *
  * Le sureau pousse vite et mal : bois tendre, moelle épaisse, rameaux qui
- * cassent. Graphiquement, cela donne peu de segments TRÈS longs — le contraire
+ * cassent. Graphiquement, cela donne peu de segments **très** longs — le contraire
  * d'une aubépine — et un houppier lâche qu'on voit à travers.
  *
  * Sa signature est la **feuille composée** à cinq folioles, la plus grande de
@@ -22,7 +22,7 @@ export const SUREAU: FicheGraphique = {
     // Long : le sureau fait des pousses d'un mètre dans l'année.
     ratioLongueur: 0.78,
     dominance: 0.22,
-    // Trois : la flèche et une PAIRE de latérales opposées. Les rameaux du
+    // Trois : la flèche et une **paire** de latérales opposées. Les rameaux du
     // sureau sont opposés, et une paire demande trois filles, pas deux.
     branchesParNoeud: 3,
     conicite: 0.88,
@@ -37,7 +37,7 @@ export const SUREAU: FicheGraphique = {
     automne: { r: 158, g: 152, b: 86 },
   },
   fruit: {
-    // Un CORYMBE : des dizaines de baies minuscules groupées en ombelle plate,
+    // Un **corymbe** : des dizaines de baies minuscules groupées en ombelle plate,
     // et c'est le groupement qui identifie, pas la baie. Le sureau porte le
     // `parRameau` le plus élevé de l'atlas pour cette raison.
     forme: "grappe",

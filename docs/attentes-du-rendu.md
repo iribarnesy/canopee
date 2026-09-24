@@ -8,7 +8,7 @@
 Le principe est celui de tout le projet : le moteur est l'actif précieux, il
 reste pur et testable, et l'UI ne reçoit que des instantanés (`docs/stack.md`).
 Une conséquence pratique : le rendu ne peut pas aller chercher ce dont il a
-besoin, il faut que ça VOYAGE. D'où ce contrat.
+besoin, il faut que ça **voyage**. D'où ce contrat.
 
 ## Une demande = une issue
 
@@ -44,7 +44,7 @@ une surprise :
    consommation des tirages fait partie du résultat. Le parcours de
    `feu.ts:propager()` en particulier ne se réordonne pas : il dépile, et les
    tests de non-régression du feu en dépendent. Une grandeur dérivée se calcule
-   toujours APRÈS coup, en passe pure.
+   toujours **après** coup, en passe pure.
 3. **C'est de la calibration** — le besoin est réel, mais le satisfaire déplace
    des seuils écologiques. Ça se traite comme un chantier de calibration, avec
    des mesures, pas comme un champ à ajouter.
@@ -72,23 +72,23 @@ La météo (`weather`, un `WeekWeather` entier) porte depuis peu **le vent** :
 
 | Champ | Ce qu'il porte |
 |---|---|
-| `ventVersRad` | cap vers lequel le vent SOUFFLE, radians, repère de la carte (+x = est, +y = nord) |
+| `ventVersRad` | cap vers lequel le vent **souffle**, radians, repère de la carte (+x = est, +y = nord) |
 | `ventMoyMs` | vitesse moyenne de la semaine à 10 m, m/s |
 
 Trois mises en garde, parce que chacune est un contresens possible à l'écran :
 
 1. **`Vers`, pas « d'où »**. La météo nomme un vent par sa provenance — un
-   « vent d'ouest » vient de l'ouest. Ici c'est la direction du MOUVEMENT, comme
+   « vent d'ouest » vient de l'ouest. Ici c'est la direction du **mouvement**, comme
    `directionRad` d'une tige tombée ou `versLAval` : un vent d'ouest vaut
    `ventVersRad = 0`, puisqu'il pousse vers l'est. Incliner un panache avec le
    signe inverse le ferait pencher face au feu.
 2. **`ventMoyMs` n'est pas `ventExposition`.** Le premier est le vent régional,
-   le second (dans `StationInfo`) un ABRI ∈ [0,1]. Ce que la parcelle reçoit,
+   le second (dans `StationInfo`) un **abri** ∈ [0,1]. Ce que la parcelle reçoit,
    c'est le produit des deux — `ventRecuParLeSite()` dans `feu.ts` le calcule, et
    c'est cette valeur-là qui pousse le front. Pour l'amplitude d'un panache ou
    d'un balancement de houppier, c'est aussi le produit qu'il faut, pas la
    vitesse brute : un vallon fermé ne balance pas comme une lande.
-3. **Le cap ne vire pas dans l'année, et la vitesse est un vent MOYEN
+3. **Le cap ne vire pas dans l'année, et la vitesse est un vent moyen
    hebdomadaire.** Le régime dominant est constant (flux d'ouest à sud-ouest,
    `VENT_DOMINANT_VERS_RAD`), la vitesse suit la saison — maximum en hiver,
    minimum fin juillet. Donc : un panache ne tournera pas pendant un acte, et un
@@ -109,13 +109,13 @@ est là pour qu'une station le déclare quand on l'aura).
 | `soilPh` | pH |
 | `soilN` | azote minéral, g/m² |
 | `soilHerbe` | couverture herbacée ∈ [0,1] |
-| `soilHerbeBiomasse` | herbe SUR PIED — elle reste quand l'herbe jaunit |
-| `soilHerbeHumidite` | humidité VÉCUE du tapis ∈ [0,1] : la surface, lissée sur ~6 semaines — la pelouse grillée |
-| `soilHerbeEmprises` + `herbesIds` | l'emprise de CHAQUE herbacée, une grille `Uint8Array` par espèce (0-255 pour 0 à 1), dans l'ordre d'`herbesIds` — qui tient la cellule, et dans quelle proportion (#86) |
+| `soilHerbeBiomasse` | herbe **sur pied** — elle reste quand l'herbe jaunit |
+| `soilHerbeHumidite` | humidité **vécue** du tapis ∈ [0,1] : la surface, lissée sur ~6 semaines — la pelouse grillée |
+| `soilHerbeEmprises` + `herbesIds` | l'emprise de **chaque** herbacée, une grille `Uint8Array` par espèce (0-255 pour 0 à 1), dans l'ordre d'`herbesIds` — qui tient la cellule, et dans quelle proportion (#86) |
 | `soilLitiereCG` | litière, gC/m² : le tapis de novembre, le paillage, les cendres |
-| `soilBoisAuSol` | bois mort COUCHÉ, gC/m² : où poser des troncs |
-| `soilBoisEnTravers` | part de ce bois qui BARRE l'eau ∈ [0,1] : le tronc en travers de la pente |
-| `soilRavageurs` | pression de ravageurs — la TACHE de défoliation, pas sa moyenne |
+| `soilBoisAuSol` | bois mort **couché**, gC/m² : où poser des troncs |
+| `soilBoisEnTravers` | part de ce bois qui **barre** l'eau ∈ [0,1] : le tronc en travers de la pente |
+| `soilRavageurs` | pression de ravageurs — la **tache** de défoliation, pas sa moyenne |
 | `soilEpaisseurPerdueCm` | érosion cumulée, signée : négatif = dépôt |
 | `soilNappeCm` | profondeur de la nappe, cm |
 | `soilEngorgement` | engorgement du profil ∈ [0,1] |
@@ -145,7 +145,7 @@ de l'incendie.
 
 C'est une jointure que le rendu refaisait faute que le moteur la donne — il
 reconnaissait les arbres torchés en comparant `brulEeSemaine` à la fenêtre du
-journal — et elle était fragile, un arbre brûlé lors d'un incendie PRÉCÉDENT
+journal — et elle était fragile, un arbre brûlé lors d'un incendie **précédent**
 gardant son `brulEeSemaine`.
 
 Pourquoi ce n'est pas dans `morts` : un arbre tué par le feu **reste debout**,
@@ -170,19 +170,19 @@ personne ne la recopie.
 **La tempête** (`Snapshot.tempete`) voyage maintenant comme l'incendie, et pour
 la même raison : `rafaleMs`, `versRad`, `arbresVerses`, `volumeM3` et les
 `victimes` nommées, la semaine même. Sans l'événement, le rendu n'a qu'un état
-changé entre deux images et aucun MOMENT où jouer l'acte — d'autant que la mort
+changé entre deux images et aucun **moment** où jouer l'acte — d'autant que la mort
 d'un chablis n'est rapportée qu'un an plus tard, une semaine où `tempete` vaut
 `undefined`.
 
 Côté arbre, `renverseSemaine` et `chuteRad` l'accompagnent, et le second est
 **le cap partagé par tous les arbres d'une même rafale** : un bouquet de troncs
 couchés dans le même sens est la signature d'une tempête, et elle se lit d'un
-coup d'œil. Ils ne réparent pas un manque mais un CONTRESENS : un chablis reste
+coup d'œil. Ils ne réparent pas un manque mais un **contresens** : un chablis reste
 dans `state.trees` l'année où son bois est récupérable, donc il arrivait avec
-`chandelle: true` — annoncé comme un tronc mort resté DEBOUT là où le moteur a
+`chandelle: true` — annoncé comme un tronc mort resté **debout** là où le moteur a
 un arbre par terre (#87).
 
-`brouteSemaine` dit qu'un plant a été brouté, et QUAND. `pousseTendreM` ne le
+`brouteSemaine` dit qu'un plant a été brouté, et **quand**. `pousseTendreM` ne le
 dit pas : c'est un stock, qui baisse par lignification et par dormance autant
 que par la dent du chevreuil — le peindre en « brouté » couvrirait surtout des
 arbres en hiver. Même rôle que `frotteSemaine`, et pour la même raison.
@@ -190,18 +190,18 @@ arbres en hiver. Même rôle que `frotteSemaine`, et pour la même raison.
 `diametreTeteCm` et `caviteTeteL` (trogne.ts) disent la tête d'un têtard : le
 renflement à dessiner, et le creux qu'il abrite. Le compteur `recepages` ne
 suffit pas à les déduire — la part creusée n'est pas linéaire, et elle plafonne
-— et surtout `biodiversite.ts` lit EXACTEMENT ces valeurs pour noter la
+— et surtout `biodiversite.ts` lit **exactement** ces valeurs pour noter la
 parcelle. Les recalculer au rendu, c'est prendre le risque de dessiner une tête
 qui ne vaut pas ce que le moteur lui accorde.
 
 **Ce qui s'est passé depuis le dernier instantané** : `events`, `refusals`,
 `morts` (avec `id` et position), `naissances` (semis installés : `id`, position,
 espèce, hauteur à la levée — la moitié positive de `morts`, même forme ; à ne
-PAS confondre avec « arbre jeune », voir plus bas),
-`franchissements` (`{ id, deStade, versStade }` : les tiges que la CROISSANCE a
+**pas** confondre avec « arbre jeune », voir plus bas),
+`franchissements` (`{ id, deStade, versStade }` : les tiges que la **croissance** a
 fait changer de stade), `chutes` (chandelles abattues : direction et empreinte
 du tronc), `incendie` (compteurs + `origine`, `brulees`, `rangs` et `charges` du front),
-et `gestes`, qui ont DEUX mailles :
+et `gestes`, qui ont **deux** mailles :
 
 - `{ type, ids }` pour ce qui désigne des arbres — `couper`, `eclaircir`,
   `elaguer`, `trogner`, `receper`, `brouter`, `frotter` ;
@@ -209,7 +209,7 @@ et `gestes`, qui ont DEUX mailles :
   `epandreBrf`, `labourer`, `ramasserBoisMort`, `cloturer`. Indices de cellule
   identiques à ceux des grilles.
 
-Dans les deux cas, ce qui est nommé est ce qui a RÉELLEMENT été touché : le
+Dans les deux cas, ce qui est nommé est ce qui a **réellement** été touché : le
 plafond horaire arrête souvent un chantier en cours de route, et une pelouse
 déjà rase ne se fauche pas. `estGesteSurArbres` et `estGesteSurZone` discriminent
 les deux mailles (`find` rend l'union entière, que TypeScript ne rétrécit pas
@@ -218,11 +218,11 @@ sur le seul `type`).
 Les cinq gestes du joueur qui retirent du bois portent en plus `retire`, un
 `ArbreRetire[]` dans le même ordre que `ids` : `id`, `x`, `y`, `especeId`,
 `hauteurAvantM` / `hauteurApresM`, `baseHouppierAvantM` / `baseHouppierApresM`,
-et `directionRad`. C'est un enregistrement COMPLET, pas un delta, parce qu'un
+et `directionRad`. C'est un enregistrement **complet**, pas un delta, parce qu'un
 arbre coupé quitte `state.trees` dans le même tick : son identifiant seul ne
 mène plus à rien dans l'instantané. `hauteurApresM` à 0 signe ce départ ; sinon
 c'est ce qui reste debout — tête de trogne, souche de recépage, tige intacte
-d'un élagage. `directionRad` n'est présent que quand une tige ENTIÈRE est
+d'un élagage. `directionRad` n'est présent que quand une tige **entière** est
 tombée (`couper`, `eclaircir`, `receper`) : c'est l'orientation en travers de
 la pente, la seule que le moteur sache justifier — il ne modélise ni
 cloisonnement ni sens de débardage, et sur terrain plat elle ne veut rien dire.
@@ -241,15 +241,15 @@ plantation du joueur au même titre qu'une recrue — ce n'est pas la même imag
 et l'erreur ne se voit pas avant de planter deux cents tiges d'un coup.
 `naissances` ne contient que ce que le recrutement a installé. Un test le fixe.
 
-Le **stade** d'une tige (`semis`, `gaulis`, `perchis`, `futaie`) ne voyage PAS
+Le **stade** d'une tige (`semis`, `gaulis`, `perchis`, `futaie`) ne voyage **pas**
 par arbre, et c'est volontaire : `stadeDe(diametreCm)` est pure et importable
 depuis l'UI (`src/engine/stades.ts`), donc le rendu la calcule sans rien
 demander — **à condition que le diamètre voyage, et c'est pour ça qu'il voyage
-depuis #62.** Seul le FRANCHISSEMENT voyage, parce que lui seul demande de
+depuis #62.** Seul le **franchissement** voyage, parce que lui seul demande de
 comparer deux instants.
 
-Les bornes sont celles de la sylviculture française, en DIAMÈTRE (2,5 / 7,5 /
-17,5 cm), et elles se lisent désormais sur le diamètre que l'arbre PORTE. Tant
+Les bornes sont celles de la sylviculture française, en **diamètre** (2,5 / 7,5 /
+17,5 cm), et elles se lisent désormais sur le diamètre que l'arbre **porte**. Tant
 qu'il se déduisait de la hauteur par un proxy linéaire, ces bornes n'étaient
 que des bornes de hauteur déguisées.
 
@@ -264,7 +264,7 @@ geste.
 est une fonction pure de l'instantané et des fiches d'espèces, puisque le moteur
 est importable depuis l'UI. En particulier le rayon de houppier depuis la
 hauteur (`light.ts:crownRadiusM`), et le feuillage de n'importe quelle espèce
-depuis `Snapshot.pheno` — mais il y en a **TROIS**, et pour une fois c'est le
+depuis `Snapshot.pheno` — mais il y en a **trois**, et pour une fois c'est le
 rendu que la distinction concerne le plus :
 
 - `partFoliaireOmbrageanteDans(espece, pheno)` — ce qui intercepte la lumière,
@@ -297,14 +297,14 @@ semaines par an sur vingt-six.
 ## Ce qui voyage et que personne ne lit encore
 
 Ce contrat trace les demandes du rendu — une demande, une issue, fermée par la
-PR qui livre. Il ne traçait PAS le sens inverse : ce que le moteur envoie et que
+PR qui livre. Il ne traçait **pas** le sens inverse : ce que le moteur envoie et que
 personne ne consomme. Ça se relève en grepant les noms de champs de
 `protocol.ts` dans `src/render`, `src/game`, `src/ui`, `src/apercu` et `src/lab`
 hors plomberie, et **chaque trouvaille part en issue** plutôt que dans une liste
 ici — une donnée tenue à deux endroits diverge.
 
 Les issues portent le préfixe `[attente-rendu]` comme les demandes, et disent
-leur LOT et leur VERSION, pour que le rendu les prenne au bon moment. Le lot est
+leur **lot** et leur **version**, pour que le rendu les prenne au bon moment. Le lot est
 celui du §9 de `interface-visuelle.md` ; **la version est une décision et non un
 calcul** — il n'existe pas de règle « LN → v0.N », et `v1.md` dit pourquoi :
 
@@ -331,14 +331,14 @@ deux. Ils avaient d'abord été rattachés au plus proche pour ne pas rester san
 date ; le §9 les nomme maintenant, au même endroit : le tapis au terrain (L1,
 déjà livré, donc une correction à prendre tôt), la défoliation aux morts (L5,
 dont la promesse est « on comprend pourquoi ça meurt » — et une tache de
-pullulation est ce qui rend la mort par ravageurs compréhensible AVANT qu'elle
+pullulation est ce qui rend la mort par ravageurs compréhensible **avant** qu'elle
 arrive).
 
 Ce que ce cas a appris : un sujet que le moteur simule et que le découpage ne
 nomme pas ne se voit que si quelqu'un le remarque. Le rattacher au plus proche
 est un bon réflexe ; l'écrire dans le §9 est ce qui le rend trouvable.
 
-La leçon vient de #87 : la seule trace du manque était un COMMENTAIRE dans
+La leçon vient de #87 : la seule trace du manque était un **commentaire** dans
 `src/render/temps/mort.ts`, et l'issue le disait elle-même — « un commentaire ne
 se cherche pas ».
 
@@ -348,7 +348,7 @@ se cherche pas ».
   faudra passer en tableaux typés parallèles (un `Float32Array` par champ). Si
   tu vois le coût monter sur une friche en pleine succession, ouvre une issue.
 - **Le rembobinage n'est pas fait.** Rejouer une période à ×1 après avoir joué à
-  ×64 demande un instantané par semaine SIMULÉE quand l'enregistrement est
+  ×64 demande un instantané par semaine **simulée** quand l'enregistrement est
   actif, au lieu d'un par lot (`startLoop` avale jusqu'à 26 semaines par pas).
   ~280 ko par instantané sur 1 ha, ~15 Mo l'année : tenable, à cadrer avant de
   figer le protocole.
@@ -366,7 +366,7 @@ se cherche pas ».
 
 | Sujet | Décision |
 |---|---|
-| **Les animaux d'élevage** (poules, volaille en verger) | **Plus tard**, quand le moteur les aura prévus. Pas de sprite d'élevage avant son module : une poule qu'on ne peut ni déplacer ni nourrir se retourne contre nous. La faune SAUVAGE, elle, entre dès le lot L9 — le moteur sait déjà la peupler (pression de gibier, broutage, frottis, biodiversité), et la règle est que le nombre et l'activité des bêtes lisent l'état, l'individu restant du décor. |
+| **Les animaux d'élevage** (poules, volaille en verger) | **Plus tard**, quand le moteur les aura prévus. Pas de sprite d'élevage avant son module : une poule qu'on ne peut ni déplacer ni nourrir se retourne contre nous. La faune **sauvage**, elle, entre dès le lot L9 — le moteur sait déjà la peupler (pression de gibier, broutage, frottis, biodiversité), et la règle est que le nombre et l'activité des bêtes lisent l'état, l'individu restant du décor. |
 | **La vraie 3D** | Non. Raisons au §0 de `docs/interface-visuelle.md` — la première étant que la qualité d'illustration par jour de travail y est bien plus basse, la seconde que le moteur est plat (couronne = disque, ombre = disque décalé) et que la 3D afficherait une précision que le modèle n'a pas. |
 | **La météo volumétrique** | Non : c'est la simulation de l'atmosphère en volume, elle n'a pas de sens sans 3D. L'**effet** (pluie, neige, gel, brume) est dedans et ne coûte rien — `weather` est déjà dans l'instantané. |
 | **Le routage de l'eau de surface dans le temps** | Non demandé. La vague d'une crue est une mise en scène ordonnée d'un état hebdomadaire, explicitement bornée : elle ne mouille que ce que `soilNappeCm` et `soilDebordementMm` déclarent mouillé. |

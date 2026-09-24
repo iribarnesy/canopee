@@ -1,9 +1,9 @@
 /**
- * Le générateur des scènes de l'APERÇU (docs/interface-visuelle.md §5).
+ * Le générateur des scènes de l'**aperçu** (docs/interface-visuelle.md §5).
  *
  * **Ce script a changé d'usage, et il a failli disparaître avec le banc.** Il
  * est né pour figer la scène que le banc du lot L0 rejouait, afin de comparer
- * Pixi et Canvas 2D sur le MÊME jeu d'arbres d'une machine à l'autre. Ce
+ * Pixi et Canvas 2D sur le **même** jeu d'arbres d'une machine à l'autre. Ce
  * travail-là est fini : D1 est tranchée, le banc est supprimé.
  *
  * Ce qui reste, et qui n'est pas la même chose : **la boucle de revue du
@@ -25,7 +25,7 @@
  *   APERCU_NOM=pelouse-arbres.json … (sans APERCU_SANS_ARBRES)
  *
  * Paramètres : station `friche-limon` portée à 1 ha, graine 42, météo réelle,
- * climat figé. Le voisinage de la station est CONSERVÉ — c'est lui qui
+ * climat figé. Le voisinage de la station est **conservé** — c'est lui qui
  * colonise la friche, et sans lui la parcelle reste nue.
  *
  * Une passe unique produit tous les instantanés demandés : c'est des décennies
@@ -73,16 +73,16 @@ const DOSSIER = process.env.APERCU_DOSSIER ?? "apercu/scenes";
 /** Nom du fichier produit ; par défaut `scene-anN.json`. */
 const NOM = process.env.APERCU_NOM;
 /**
- * Variantes de STATION. Sans pente on ne voit pas l'ombrage de relief, et sans
+ * Variantes de **station**. Sans pente on ne voit pas l'ombrage de relief, et sans
  * eau on ne voit pas l'eau : une seule station ne suffit pas à juger un rendu.
  */
 const PENTE_PCT = process.env.APERCU_PENTE ? Number(process.env.APERCU_PENTE) : undefined;
 const EAU = process.env.APERCU_EAU as "ruisseau" | "mare" | undefined;
 /**
- * Le BANC DE PELOUSE : forcer le tapis à une valeur uniforme, arbres compris.
+ * Le **banc de pelouse** : forcer le tapis à une valeur uniforme, arbres compris.
  *
  * **Ce n'est pas une scène du moteur, et c'est assumé.** Le critère de la
- * pelouse porte sur des BOUTS d'échelle — couverture pleine, litière nulle,
+ * pelouse porte sur des **bouts** d'échelle — couverture pleine, litière nulle,
  * réserve vide — que la simulation ne produit à peu près jamais toutes à la
  * fois sur la même cellule. Les attendre, c'est ne jamais pouvoir juger le
  * tapis ; les fabriquer à la main dans un JSON qu'on garde sur son disque,
@@ -99,7 +99,7 @@ const LITIERE = process.env.APERCU_LITIERE ? Number(process.env.APERCU_LITIERE) 
 /** Remplissage de la réserve utile ∈ [0,1] imposé à toutes les cellules. */
 const EAU_PART = process.env.APERCU_EAU_PART ? Number(process.env.APERCU_EAU_PART) : undefined;
 /**
- * Le BANC DU BOIS COUCHÉ : forcer une charge de bois et sa transversalité.
+ * Le **banc du bois couché** : forcer une charge de bois et sa transversalité.
  *
  * Même raison que le banc de pelouse : la simulation ne met pas côte à côte,
  * la même semaine, un tronc franchement en travers de la pente et un tronc
@@ -112,7 +112,7 @@ const BOIS = process.env.APERCU_BOIS ? Number(process.env.APERCU_BOIS) : undefin
 const BOIS_AZIMUT = process.env.APERCU_BOIS_AZIMUT ? Number(process.env.APERCU_BOIS_AZIMUT) : 0;
 
 /**
- * Un tronc couché du banc : les cellules qu'il occupe, ET la transversalité
+ * Un tronc couché du banc : les cellules qu'il occupe, **et** la transversalité
  * que le moteur en tire.
  *
  * **Les deux ensemble, et le premier jet ne l'avait pas fait.** Il chargeait
@@ -121,20 +121,20 @@ const BOIS_AZIMUT = process.env.APERCU_BOIS_AZIMUT ? Number(process.env.APERCU_B
  * donc des bouts parallèles mais décalés latéralement, une échelle de tirets
  * au lieu d'un tronc. Le rendu avait raison, le banc fabriquait un état que la
  * simulation ne produit jamais : le moteur écrit la masse le long de
- * l'empreinte de la chute et calcule `barre` depuis la MÊME direction, si bien
+ * l'empreinte de la chute et calcule `barre` depuis la **même** direction, si bien
  * que les cellules chargées sont toujours alignées sur le tronc.
  *
- * Le banc prend donc un AZIMUT de tronc, pose les cellules le long, et laisse
+ * Le banc prend donc un **azimut** de tronc, pose les cellules le long, et laisse
  * `transversalite` — la fonction du moteur — dire ce que ça barre. Aucune
  * formule recopiée : `azimutAval` vient du rendu, `transversalite` du moteur.
  */
 /**
- * L'azimut de l'AVAL en une cellule, en radians du repère de la parcelle.
+ * L'azimut de l'**aval** en une cellule, en radians du repère de la parcelle.
  *
  * C'est la direction que suit l'eau, et c'est par rapport à elle que le moteur
  * mesure la transversalité d'un tronc. Le banc en a besoin pour poser un tronc
  * dont la transversalité déclarée soit celle que le moteur en tirerait ; le
- * RENDU, lui, n'en a pas besoin — il ne peut de toute façon pas retrouver la
+ * **rendu**, lui, n'en a pas besoin — il ne peut de toute façon pas retrouver la
  * direction d'un tronc depuis une valeur absolue de sinus.
  */
 function azimutAval(altitudes: readonly number[], coteM: number, x: number, y: number): number {
@@ -176,15 +176,15 @@ const SANS_ARBRES = process.env.APERCU_SANS_ARBRES === "1";
 /**
  * `APERCU_FEU=1` : allume un incendie sur la scène, à la semaine capturée.
  *
- * **Propagé par le MOTEUR et non fabriqué**, et c'est la leçon du banc de bois
+ * **Propagé par le moteur et non fabriqué**, et c'est la leçon du banc de bois
  * mort : un banc qui fabrique un état inatteignable accuse le rendu. On prend
  * donc la charge de combustible réelle de la parcelle (`chargeCombustible`), on
- * demande à `departDeFeu` OÙ ça s'allume, et on laisse `propager` faire son
+ * demande à `departDeFeu` **où** ça s'allume, et on laisse `propager` faire son
  * travail avec le PRNG de la partie. Le front qui en sort est celui qu'un vrai
  * été sec produirait — y compris son irrégularité, qui est justement ce que le
  * §6.4 veut montrer.
  *
- * **Ce que le banc déclare est la MÉTÉO de la semaine, et rien d'autre** : une
+ * **Ce que le banc déclare est la météo de la semaine, et rien d'autre** : une
  * canicule sur un sol de surface épuisé. Sans elle, l'indice de risque est nul
  * sur un limon du Nord et rien ne s'allume jamais — une scène de démonstration
  * ne peut pas dépendre de la météo de 2026. Le lieu du départ, lui, n'est plus
@@ -195,12 +195,12 @@ const SANS_ARBRES = process.env.APERCU_SANS_ARBRES === "1";
  */
 const FEU = process.env.APERCU_FEU === "1";
 /**
- * Semaines DANS L'ANNÉE à figer, en plus de la fin d'année.
+ * Semaines **dans l'année** à figer, en plus de la fin d'année.
  *
  * Sans ça on ne capture qu'au 31 décembre — soit la semaine la plus humide de
  * l'année, celle où le sol rejette l'eau partout. Le rendu en concluait que la
  * parcelle était inondée en permanence. Pour juger une palette de saison, il
- * faut des instantanés PRIS à ces saisons, pas un instantané d'hiver repeint.
+ * faut des instantanés **pris** à ces saisons, pas un instantané d'hiver repeint.
  */
 const SEMAINES = (process.env.APERCU_SEMAINES ?? "")
   .split(",")
@@ -247,7 +247,7 @@ interface ArbreScene {
   caviteTeteL: number;
   /**
    * `baseHouppierM` : la base du houppier, m — en dessous, plus une branche
-   * vivante. C'est un RÉSULTAT DE COMPÉTITION, pas un trait d'espèce, donc elle
+   * vivante. C'est un **résultat de compétition**, pas un trait d'espèce, donc elle
    * ne se déduit ni de l'essence ni de la hauteur : elle voyage.
    */
   baseHouppierM: number;
@@ -277,7 +277,7 @@ const arrondi = (v: number, n: number) => Math.round(v * 10 ** n) / 10 ** n;
  * le rendu.
  */
 function figer(state: GameState, brules: ReadonlySet<number> = new Set()): ArbreScene[] {
-  // Le banc de pelouse juge le TAPIS : les arbres n'y ont rien à faire, ils
+  // Le banc de pelouse juge le **tapis** : les arbres n'y ont rien à faire, ils
   // couvriraient précisément ce qu'on regarde.
   if (SANS_ARBRES) return [];
   return state.trees.map((t) => {
@@ -288,11 +288,11 @@ function figer(state: GameState, brules: ReadonlySet<number> = new Set()): Arbre
       x: arrondi(t.x, 2),
       y: arrondi(t.y, 2),
       heightM: arrondi(t.heightM, 3),
-      // L'ÂGE, et c'est lui qui reconnaît une recrue sans rien garder : un
+      // **L'âge**, et c'est lui qui reconnaît une recrue sans rien garder : un
       // arbre plus jeune que l'intervalle du journal est arrivé depuis le
       // dernier instantané (`recruesDuSnapshot`).
       ageWeeks: t.ageWeeks,
-      // Un arbre que le feu vient de tuer est un TRONC MORT SUR PIED, et le
+      // Un arbre que le feu vient de tuer est un **tronc mort sur pied**, et le
       // moteur l'écrit ainsi (`{...tree, alive: false, causeMort: "feu",
       // brulEeSemaine: state.week}`). L'instantané le dit donc charbonné, et
       // c'est de là que le rendu apprend qu'il y a un torchage à mettre en
@@ -350,7 +350,7 @@ function recensement(an: number, fichier: string, trees: ArbreScene[]): string {
 }
 
 /**
- * Le SOL de la même scène, ajouté pour le lot L1.
+ * Le **sol** de la même scène, ajouté pour le lot L1.
  *
  * Le premier jet ne figeait que les arbres, parce que le banc de L0 ne
  * dessinait le sol qu'en carte d'humidité. Le lot L1 lui donne sa vraie
@@ -386,15 +386,15 @@ function incendieDeDemonstration(
     [...lumiereAuSol],
     state.soil.boisAuSolCG,
   );
-  // **Le DÉPART est choisi par le moteur, pas par le banc.** Le premier jet
+  // **Le départ est choisi par le moteur, pas par le banc.** Le premier jet
   // allumait au centre de la parcelle : c'était commode, et c'était faux de
   // deux façons — un feu ne part pas au milieu d'un carré, et le cadrage caméra
   // du §6.4 devenait invisible puisque le centre de la parcelle était déjà
-  // cadré. `departDeFeu` tire la cellule AU PRORATA de sa combustibilité (« un
+  // cadré. `departDeFeu` tire la cellule **au prorata** de sa combustibilité (« un
   // fourré d'ajoncs part bien plus souvent qu'un sous-bois frais »), et c'est
   // exactement la pédagogie qu'on veut montrer.
   //
-  // Ce que le banc DÉCLARE, en revanche, c'est la semaine : une canicule sur un
+  // Ce que le banc **déclare**, en revanche, c'est la semaine : une canicule sur un
   // sol de surface épuisé. Sans elle l'indice de risque est nul sur un limon du
   // Nord et rien ne s'allume jamais — ce qui est juste, et ce qui fait qu'une
   // scène de démonstration doit poser ses conditions au lieu de les attendre.
@@ -422,7 +422,7 @@ function incendieDeDemonstration(
   // Rangées par rang d'arrivée, comme le moteur les rend : c'est ce que le
   // rendu attend pour faire courir le front.
   const liste = [...brulees].sort((a, b) => (rangs.get(a) ?? 0) - (rangs.get(b) ?? 0));
-  // **Et le feu TUE, par la règle du moteur.** Sans ça, la scène de feu ne
+  // **Et le feu tue, par la règle du moteur.** Sans ça, la scène de feu ne
   // portait aucun arbre brûlé : `brulEeSemaine` n'était posé sur personne, et
   // le torchage du §6.4 n'avait rien à mettre en scène. C'est `survitAuFeu` qui
   // décide — l'écorce de l'espèce contre l'intensité locale — donc la
@@ -430,7 +430,7 @@ function incendieDeDemonstration(
   //
   // La liste a la forme de `IncendieResult.victimes` (tick.ts), et pour cause :
   // c'est ce que le moteur rapporte désormais, et ce que le rendu doit lire.
-  // Chaque arbre y entre avec la hauteur qu'il avait AVANT le feu et le fait
+  // Chaque arbre y entre avec la hauteur qu'il avait **avant** le feu et le fait
   // que sa souche rejette ou non — la même règle que le moteur applique,
   // `espece.feu.rejetteApresFeu` sur une tige d'au moins 60 cm.
   const victimes: { id: number; hauteurAvantM: number; rejet: boolean }[] = [];
@@ -451,7 +451,7 @@ function incendieDeDemonstration(
     origine,
     brulees: liste,
     rangs: liste.map((c) => rangs.get(c) ?? 0),
-    // La charge de chaque cellule brûlée : c'est DANS QUOI le feu a brûlé, et
+    // La charge de chaque cellule brûlée : c'est **dans quoi** le feu a brûlé, et
     // c'est elle qui donne la hauteur des flammes côté rendu.
     charges: liste.map((c) => Number((charge.parCellule[c] ?? 0).toFixed(3))),
     victimes,
@@ -475,7 +475,7 @@ function intensiteDuFeu(chargeLocale: number): number {
 const GRAINE_DU_FEU = 7717;
 
 /**
- * Les conditions de la semaine que la scène de feu DÉCLARE.
+ * Les conditions de la semaine que la scène de feu **déclare**.
  *
  * Une canicule de plein été sur un horizon de surface épuisé : c'est ce qu'il
  * faut pour que `indiceRisqueFeu` sorte du zéro, et c'est un état que le climat
@@ -488,11 +488,11 @@ const SECHERESSE_DE_CANICULE = 0;
 const CHALEUR_DE_CANICULE_C = 34;
 
 /**
- * La météo que la scène de feu DÉCLARE, pour l'allumage ET pour le vent.
+ * La météo que la scène de feu **déclare**, pour l'allumage **et** pour le vent.
  *
  * **Une seule déclaration pour les deux, et c'est une incohérence attrapée en
  * regardant les chiffres** : la scène forçait la canicule pour l'allumage et
- * prenait le vent de la semaine RÉELLE, qui se trouve être arrosée. Elle
+ * prenait le vent de la semaine **réelle**, qui se trouve être arrosée. Elle
  * décrivait donc un incendie sous vent d'ouest soutenu de régime perturbé —
  * c'est-à-dire un feu de forêt un jour de pluie. Le régime doit être le même
  * pour tout ce qu'on en déduit.
@@ -531,14 +531,14 @@ function figerLeSol(
   const tronc = troncCouche(altitudeParCellule(station.relief, dims), station.coteM, BOIS_AZIMUT);
   return {
     ruMm: station.ruMm,
-    // L'eau libre est FIXE avec la station ; le débordement, lui, est de la
+    // L'eau libre est **fixe** avec la station ; le débordement, lui, est de la
     // semaine — les deux voyagent séparément dans le protocole, et le rendu
     // les dessine différemment (bord franc contre lame translucide).
     enEau: cellulesEnEau(station.eau, dims),
-    // Le débordement vient du RÉSULTAT DU TICK, pas de `state.soil.excessMm`.
+    // Le débordement vient du **résultat du tick**, pas de `state.soil.excessMm`.
     // Les deux existent et ne disent pas la même chose : `excessMm` est la
     // réserve de débordement du profil, une grandeur d'état, tandis que le
-    // rendu veut ce qui n'a pas pu rentrer CETTE SEMAINE — c'est ce que
+    // rendu veut ce qui n'a pas pu rentrer **cette semaine** — c'est ce que
     // `soilDebordementMm` transporte (protocol.ts). Confondre les deux
     // inondait la parcelle entière sur l'aperçu.
     debordementMm: arrondi(debordementMm, 2),
@@ -546,14 +546,14 @@ function figerLeSol(
     // sous-bois sombre et une trouée claire. Le rendu ne l'avait jamais eue, et
     // sans elle une futaie fermée a le sol d'une clairière.
     lumiere: arrondi(lumiereAuSol, 3),
-    // L'humidité VÉCUE par le tapis : l'horizon de surface lissé sur ~6
+    // L'humidité **vécue** par le tapis : l'horizon de surface lissé sur ~6
     // semaines. C'est elle, et non `waterMm`, qui dit si une pelouse grille —
     // l'inertie fait partie de la grandeur.
     herbeHumidite: arrondi(state.soil.herbeHumidite, 3),
     // Le bois mort couché et sa transversalité. Les deux, parce que la masse
     // seule ne dit pas si le tronc barre l'eau — et c'est ce qui explique
     // qu'une cellule soit plus humide que sa voisine.
-    // Un SEUL tronc, pas du bois partout. Charger toutes les cellules donnait
+    // Un **seul** tronc, pas du bois partout. Charger toutes les cellules donnait
     // une tapisserie de tirets réguliers — ce qui a d'ailleurs servi : c'est
     // comme ça qu'on a vu que le rendu dessinait un objet par cellule au lieu
     // d'un tronc traversant. Le banc pose donc une bande, comme un chablis
@@ -595,7 +595,7 @@ function figerLeSol(
       state.semainesDeFroid,
     ),
     // Les quatre bordures, réduites à ce dont le décor a besoin : trois parts
-    // et les ESSENCES, par côté. Le rendu n'a toujours que faire du gibier ou
+    // et les **essences**, par côté. Le rendu n'a toujours que faire du gibier ou
     // des dépôts d'azote (D6) — mais les semenciers, si : ce sont eux qui
     // disent de quoi est fait le bois d'à côté, et sans eux un massif de pins
     // de lande se dessinait comme une hêtraie. Le poids est le `semisParAn` du
@@ -651,19 +651,19 @@ function main() {
   const rapports: string[] = [];
   let dernierDebordement: Float32Array<ArrayBufferLike> = new Float32Array(COTE_M * COTE_M);
   let derniereLumiere: Float32Array<ArrayBufferLike> = new Float32Array(COTE_M * COTE_M).fill(1);
-  // La trajectoire année par année : c'est elle qui dit OÙ est le pire cas,
+  // La trajectoire année par année : c'est elle qui dit **où** est le pire cas,
   // et ce n'est plus là où le premier jet l'avait trouvé.
   process.stderr.write("an\ttiges\tvivantes\tchandelles\thmax\n");
-  // **Le JOURNAL, accumulé d'un instantané au suivant.** C'est la sémantique du
+  // **Le journal, accumulé d'un instantané au suivant.** C'est la sémantique du
   // worker (`pendingMorts` et compagnie) et c'est la seule qui ait un sens :
-  // l'ellipse anime ce qui a changé DEPUIS la dernière fois qu'on a regardé.
+  // l'ellipse anime ce qui a changé **depuis** la dernière fois qu'on a regardé.
   // Sans lui, les scènes du banc étaient des instantanés muets, et le rendu se
   // fabriquait un journal postiche pour avoir quelque chose à animer.
   let enAttente: {
     morts: MortDeLaSemaine[];
     gestes: GesteVisible[];
     chutes: ChuteDeChandelle[];
-    /** les semis installés : la moitié POSITIVE de l'histoire (tick.ts) */
+    /** les semis installés : la moitié **positive** de l'histoire (tick.ts) */
     naissances: NaissanceDeLaSemaine[];
     /** les tiges que la croissance a fait changer de stade (stades.ts) */
     franchissements: FranchissementDeStade[];
@@ -692,11 +692,11 @@ function main() {
       enAttente.franchissements.push(...semaine.franchissements);
       enAttente.semaines++;
     }
-    // Les semaines demandées de la DERNIÈRE année, figées au passage.
+    // Les semaines demandées de la **dernière** année, figées au passage.
     const anEnCours = Math.floor(i / 52) + 1;
     if (anEnCours === dernierAn && SEMAINES.includes(i % 52)) {
       const nom = NOM ? NOM.replace(/\.json$/, "") : `scene-an${dernierAn}`;
-      // L'incendie est calculé AVANT de figer les arbres : ce sont ses victimes
+      // L'incendie est calculé **avant** de figer les arbres : ce sont ses victimes
       // qui décident lesquels l'instantané décrit comme des troncs charbonnés,
       // et c'est ce qui donne au rendu de quoi mettre en scène un torchage.
       const incendie = FEU
@@ -709,10 +709,10 @@ function main() {
           week: i,
           // L'exposition au vent de la station : c'est l'amplitude dont le
           // panache d'un incendie s'incline (`render/temps/feu.ts`). Le moteur
-          // est l'ABRI du site, pas le vent : ce que la parcelle reçoit vraiment
+          // est l'**abri** du site, pas le vent : ce que la parcelle reçoit vraiment
           // est le produit des deux (`ventRecuParLeSite`).
           ventExposition: station.ventExposition,
-          // **Le VENT de la semaine, tel que le moteur le rapporte** dans la
+          // **Le vent de la semaine, tel que le moteur le rapporte** dans la
           // météo (`WeekWeather.ventVersRad`, `ventMoyMs`). C'est lui qui
           // incline le panache d'un incendie ; l'exposition ne dit que
           // l'échelle. Sur une scène de feu, c'est le vent de la canicule

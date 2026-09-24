@@ -8,7 +8,7 @@
  * une parcelle « au cœur d'une hêtraie » qui ne recevait aucun semis de hêtre,
  * ou une parcelle « en pleine ville » pleine de chevreuils.
  *
- * Le paysage est désormais UN objet, décrit en une phrase et en trois parts —
+ * Le paysage est désormais **un** objet, décrit en une phrase et en trois parts —
  * boisé, cultivé, urbanisé — dont tout le reste se déduit :
  *
  *  - **le gibier** a besoin de couvert : beaucoup dans un massif, peu en
@@ -68,8 +68,8 @@ export function gibierParHa(p: Paysage): number {
  * Densité de sangliers, individus/ha (`sanglier.ts`).
  *
  * Elle ne suit pas la même logique que celle des cervidés, et c'est tout
- * l'intérêt d'en faire une fonction à part : le sanglier a besoin de COUVERT
- * pour se remiser, comme le chevreuil, mais aussi de NOURRITURE cultivée — le
+ * l'intérêt d'en faire une fonction à part : le sanglier a besoin de **couvert**
+ * pour se remiser, comme le chevreuil, mais aussi de **nourriture** cultivée — le
  * maïs est la raison de sa multiplication par six en trente ans. Un massif
  * bordé de champs en porte donc bien plus qu'un massif isolé, et un paysage
  * urbain le dérange moins qu'on ne croit : il y vient la nuit.
@@ -97,7 +97,7 @@ export function depositionNKgHaAn(p: Paysage): number {
 /**
  * Pluie de semis annuelle : ce qui pousse alentour, et en quelle abondance.
  *
- * Les semenciers du paysage ne sont qu'une INTENTION — « un massif feuillu »,
+ * Les semenciers du paysage ne sont qu'une **intention** — « un massif feuillu »,
  * « une lande à pins ». Ce qui pousse réellement autour de la parcelle subit le
  * même sol et le même climat qu'elle : on ne peut pas avoir une hêtraie autour
  * d'un podzol sableux, le hêtre n'y tient pas plus dehors que dedans.
@@ -117,7 +117,7 @@ export function voisinageSemencier(
   const retenus = p.semenciers.filter((s) => compatible(s.especeId)).map((s) => ({ ...s }));
   const total = p.semenciers.reduce((somme, s) => somme + s.semisParAn, 0);
   const tenu = retenus.reduce((somme, s) => somme + s.semisParAn, 0);
-  // Le voisinage sème AUTANT quel que soit le sol : ce qui change, c'est QUI.
+  // Le voisinage sème **autant** quel que soit le sol : ce qui change, c'est **qui**.
   // On complète donc avec ce qui pousse là, au lieu de se contenter des rares
   // rescapés de la liste déclarée. Sans ce complément, il suffisait qu'une
   // seule espèce tolère le podzol pour qu'un massif forestier landais devienne
@@ -138,7 +138,7 @@ export function ventExposition(p: Paysage): number {
 }
 
 /**
- * Fréquence relative des départs de feu d'origine HUMAINE.
+ * Fréquence relative des départs de feu d'origine **humaine**.
  *
  * En France, la très grande majorité des incendies part d'une activité
  * humaine — mégot, travaux, barbecue, ligne électrique — et non de la foudre.
@@ -281,7 +281,7 @@ export const PAYSAGES: readonly Paysage[] = [
       { especeId: "pinus_sylvestris", semisParAn: 3 },
       { especeId: "fagus_sylvatica", semisParAn: 2 },
       { especeId: "alnus_glutinosa", semisParAn: 1 },
-      // C'est LE paysage de la fruticée : l'ourlet d'épineux d'où la forêt
+      // C'est **le** paysage de la fruticée : l'ourlet d'épineux d'où la forêt
       // avance sur la friche, protégée du gibier par ce qu'elle traverse.
       { especeId: "prunus_spinosa", semisParAn: 4 },
       { especeId: "crataegus_monogyna", semisParAn: 3 },
@@ -392,14 +392,14 @@ export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number)
   // Ce commentaire disait auparavant « au bord exact de sa gamme, une espèce ne
   // pousse déjà plus du tout, et c'est le cas du hêtre à pH 4,5 » : c'était vrai
   // du code et faux du monde, et ça tenait à un défaut de `facteurGammePh` qui
-  // mettait le zéro SUR la borne de l'atlas. Une hêtraie acidiphile à luzule
+  // mettait le zéro **sur** la borne de l'atlas. Une hêtraie acidiphile à luzule
   // existe jusque vers pH 4 ; ce n'est pas l'acidité qui exclut le hêtre des
   // Landes.
   if (phFactor(espece, phStation) < 0.25) return false;
-  // C'EST LA SOIF QUI L'EXCLUT, et on la lit au bon seuil. `eau` en porte deux,
-  // découplés exprès : celui de la SURVIE (le hêtre pousse mal en sec, mais son
-  // semis survit) et celui du CONFORT. La question posée ici n'est pas « qui
-  // survivrait » mais « qui PEUPLE l'entourage et sème dessus » — donc le
+  // **C'est la soif qui l'exclut**, et on la lit au bon seuil. `eau` en porte deux,
+  // découplés exprès : celui de la **survie** (le hêtre pousse mal en sec, mais son
+  // semis survit) et celui du **confort**. La question posée ici n'est pas « qui
+  // survivrait » mais « qui **peuple** l'entourage et sème dessus » — donc le
   // confort. Sur le seuil de survie, ce filtre n'écartait que l'aulne et le
   // saule, et laissait le hêtre semer sur un sable landais à 92 mm de réserve.
   //

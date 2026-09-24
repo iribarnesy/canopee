@@ -71,7 +71,7 @@ describe("la base du houppier sort de la compétition, pas de l'espèce", () => 
   });
 
   it("sous l'ombre, l'héliophile s'auto-élague et le sciaphile patiente", () => {
-    // MÊME lumière, deux espèces : c'est le point de compensation qui tranche.
+    // **Même** lumière, deux espèces : c'est le point de compensation qui tranche.
     // Le hêtre (0,01) ne bouge pas d'un pouce ; le pin (0,25) se dénude.
     const hetre = partNue("fagus_sylvatica", 0.3);
     const pin = partNue("pinus_sylvestris", 0.3);

@@ -1,11 +1,11 @@
 /**
- * SÉRIALISER L'ÉTAT (issue #193).
+ * **Sérialiser l'état** (issue #193).
  *
- * Une sauvegarde de Canopée est un JOURNAL, et charger une partie c'est la
- * REJOUER. Ça suppose que rejouer la même partie donne la même partie, et le
+ * Une sauvegarde de Canopée est un **journal**, et charger une partie c'est la
+ * **rejouer**. Ça suppose que rejouer la même partie donne la même partie, et le
  * moteur ne tient pas cette promesse : ses bits ne sont pas portables d'une
  * version de moteur JS à l'autre (mesuré en marge de #186 — 3 806 937 118 sous
- * V8 12.4, 633 354 304 sous V8 13.6, sur le MÊME commit). Un joueur qui change
+ * V8 12.4, 633 354 304 sous V8 13.6, sur le **même** commit). Un joueur qui change
  * de navigateur perd sa parcelle, pas un chiffre après la virgule.
  *
  * Ce fichier tient l'exigence, et il n'y en a qu'une qui compte :
@@ -14,7 +14,7 @@
  * > ne s'est jamais arrêtée.**
  *
  * Tout le reste — l'aller-retour exact, les refus — sert celle-là. Et les
- * comparaisons se font DANS LE MÊME PROCESSUS, jamais contre une valeur
+ * comparaisons se font **dans le même processus**, jamais contre une valeur
  * épinglée : épingler une empreinte est exactement l'erreur que #193 raconte.
  */
 
@@ -79,7 +79,7 @@ describe("l'état s'écrit et se relit à l'identique", () => {
     if (!relu) throw new Error("le bloc aurait dû se relire");
     const sansStation = ({ station: _s, ...reste }: GameState) => reste;
     expect(JSON.stringify(sansStation(relu))).toBe(JSON.stringify(sansStation(avant)));
-    // Et la station est bien celle qu'on a FOURNIE, pas une copie rangée dans
+    // Et la station est bien celle qu'on a **fournie**, pas une copie rangée dans
     // le bloc : c'est une donnée de configuration, elle n'a rien à y faire.
     expect(relu.station).toBe(STATION);
   }, 300_000);
@@ -108,7 +108,7 @@ describe("l'état s'écrit et se relit à l'identique", () => {
 
 describe("une partie reprise continue comme une partie qui ne s'est pas arrêtée", () => {
   it("dix ans, puis dix ans, valent vingt ans d'affilée", () => {
-    // **L'EXIGENCE DU LOT, ET LA SEULE QUI COMPTE POUR UN JOUEUR.** Tout le
+    // **l'exigence du lot, et la seule qui compte pour un joueur.** Tout le
     // reste de ce fichier ne sert qu'à celle-là.
     //
     // Comparé dans le même processus, et pas contre une empreinte épinglée :
@@ -128,7 +128,7 @@ describe("une partie reprise continue comme une partie qui ne s'est pas arrêté
 });
 
 describe("ce qu'on ne sait pas lire, on le refuse", () => {
-  // Rendre `undefined` est un RÉSULTAT, pas un échec à cacher : le journal
+  // Rendre `undefined` est un **résultat**, pas un échec à cacher : le journal
   // existe pour ça, et l'appelant rejoue. Un bloc relu de travers serait bien
   // pire qu'un rejeu — d'où un refus à chaque fois qu'on n'est pas certain.
   const bloc = () => ecrireEtat(partie(1));

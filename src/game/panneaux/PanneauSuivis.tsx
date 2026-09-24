@@ -1,9 +1,9 @@
 /**
- * LES ARBRES SUIVIS : un par ligne, avec ce qui leur est arrivé (#149).
+ * **Les arbres suivis** : un par ligne, avec ce qui leur est arrivé (#149).
  *
  * « Je plante des abricotiers, je veux surveiller très précisément ce qui leur
- * arrive. » Le panneau de sélection dit l'état COURANT d'un arbre ; celui-ci
- * dit son HISTOIRE, accumulée au fil des instantanés, et qui survit à sa mort —
+ * arrive. » Le panneau de sélection dit l'état **courant** d'un arbre ; celui-ci
+ * dit son **histoire**, accumulée au fil des instantanés, et qui survit à sa mort —
  * c'est même là qu'elle sert le plus.
  *
  * Rien n'est calculé ici : les phrases viennent de `suivis.ts`, qui ne fait que
@@ -38,13 +38,13 @@ const ICONE: Record<QuoiSuivi, string> = {
 };
 
 /**
- * La hauteur adulte d'une essence — au niveau du MODULE, et c'est nécessaire :
+ * La hauteur adulte d'une essence — au niveau du **module**, et c'est nécessaire :
  * c'est une dépendance d'effet, et une fonction refabriquée à chaque rendu
  * relancerait la cuisson des silhouettes sans fin.
  */
 const hauteurMaxDe = (especeId: string): number => getEspece(especeId).hauteurMaxM;
 
-/** « AN 3 · S12 », comme le journal de la partie. */
+/** « **an** 3 · S12 », comme le journal de la partie. */
 function quand(semaine: number): string {
   return `AN ${Math.floor(semaine / 52) + 1} · S${semaine % 52}`;
 }
@@ -52,7 +52,7 @@ function quand(semaine: number): string {
 /**
  * La date d'un groupe : une semaine, ou la plage qu'il couvre.
  *
- * L'an n'est répété que s'il change — « AN 1 · S1 → AN 1 · S6 » disait deux
+ * L'an n'est répété que s'il change — « **an** 1 · S1 → **an** 1 · S6 » disait deux
  * fois la même chose, sur la ligne où la place manque le plus.
  */
 function quandDuGroupe(semaine: number, depuis: number): string {
@@ -64,7 +64,7 @@ function quandDuGroupe(semaine: number, depuis: number): string {
 /**
  * Combien d'événements on montre par arbre.
  *
- * Le journal complet est gardé ; c'est l'AFFICHAGE qui est borné. Un arbre
+ * Le journal complet est gardé ; c'est l'**affichage** qui est borné. Un arbre
  * suivi cinquante ans finirait par pousser les autres hors de l'écran, et
  * c'est le dernier qui lui est arrivé qu'on vient lire.
  */
@@ -95,7 +95,7 @@ const SILHOUETTES_MONTREES = 4;
 const TAILLE_SILHOUETTE = 96;
 
 /**
- * La JAUGE d'une ligne : la part, en couleur, sous la valeur.
+ * La **jauge** d'une ligne : la part, en couleur, sous la valeur.
  *
  * Une barre et un nombre disent la même chose ; la barre se lit sans être lue,
  * et c'est tout ce qu'on lui demande — repérer la ligne à regarder dans une
@@ -154,9 +154,9 @@ function Fiche({ lignes }: { lignes: readonly LigneDeFiche[] }) {
 }
 
 /**
- * L'ARBRE, ET LE MÊME EN PLEINE FORME — « voir ce qu'il a en moins que prévu ».
+ * **l'arbre**, **et le même en pleine forme** — « voir ce qu'il a en moins que prévu ».
  *
- * Les deux silhouettes sortent de la MÊME cuisson que la parcelle
+ * Les deux silhouettes sortent de la **même** cuisson que la parcelle
  * (`portraits.ts`), et le témoin ne change qu'une chose à la fois : même
  * espèce, même taille, mais houppier plein, vert, branchu bas. Ce qui manque à
  * gauche est donc ce que l'arbre a perdu, et non ce que le dessin suppose.
@@ -201,7 +201,7 @@ function Silhouettes({ silhouette }: { silhouette?: Silhouette }) {
 }
 
 /**
- * CE QU'ON LIT SANS DÉPLIER : la taille, l'âge, et la grandeur qui alerte.
+ * **Ce qu'on lit sans déplier** : la taille, l'âge, et la grandeur qui alerte.
  *
  * Trois choses, pas quinze : la ligne repliée sert à décider s'il faut
  * l'ouvrir. La grandeur nommée est celle qui tient la pastille — inutile de
@@ -216,7 +216,7 @@ function resume(arbre: SnapshotTree | undefined, lignes: readonly LigneDeFiche[]
 }
 
 /**
- * LE POINT D'ALERTE, devant le nom : la pire grandeur orientée de l'arbre.
+ * **le point d'alerte**, devant le nom : la pire grandeur orientée de l'arbre.
  *
  * C'est ce qui permet de balayer une plantation entière au lieu de lire
  * quinze lignes par arbre. Il ne dit rien de plus que la fiche — il dit quelle
@@ -270,10 +270,10 @@ export function PanneauSuivis({
 }: {
   suivis: ReadonlySet<number>;
   journal: readonly EvenementSuivi[];
-  /** TOUS les arbres de l'instantané, chandelles comprises : un suivi mort en est une. */
+  /** **tous** les arbres de l'instantané, chandelles comprises : un suivi mort en est une. */
   tous: readonly SnapshotTree[];
   /**
-   * Les arbres POSÉS, tels que la scène les dessine (`arbresAPoser`).
+   * Les arbres **posés**, tels que la scène les dessine (`arbresAPoser`).
    *
    * C'est d'eux que sort la silhouette du panneau : la refabriquer ici en
    * relisant l'instantané ferait une seconde copie de la pose, et le §2.1 dit
@@ -293,7 +293,7 @@ export function PanneauSuivis({
   selectionner: (id: number) => void;
 }) {
   /**
-   * **LES PLUS FAIBLES EN HAUT**, par vigueur croissante.
+   * **les plus faibles en haut**, par vigueur croissante.
    *
    * C'est ce qu'on vient chercher : « qu'on regarde le détail que des arbres
    * où on voit qu'ils sont dans le rouge ». Le premier jet rangeait par
@@ -303,7 +303,7 @@ export function PanneauSuivis({
    * place, et son haut est l'endroit où regarder.
    *
    * Deux cas n'ont pas de vigueur, et ils ne vont pas au même bout : une
-   * CHANDELLE passe devant tout le monde — c'est l'arbre pour lequel le temps
+   * **chandelle** passe devant tout le monde — c'est l'arbre pour lequel le temps
    * s'est arrêté, et le pire état où un suivi puisse être — tandis qu'un arbre
    * qui a quitté la parcelle ferme la marche : il n'y a plus rien à en faire.
    */
@@ -348,7 +348,7 @@ export function PanneauSuivis({
       {ordre.map((id) => {
         const arbre = tous.find((t) => t.id === id);
         const lignes = arbre ? ficheDeLArbre(arbre, { semaine, pheno }) : [];
-        // **Rangé par la SEMAINE, pas par l'ordre d'arrivée.** Les deux
+        // **Rangé par la semaine, pas par l'ordre d'arrivée.** Les deux
         // coïncident presque toujours, et « presque » suffit à faire lire un
         // journal qui saute d'une année à l'autre : relevé à l'écran, un lot
         // de semaine 18 se plaçait devant un lot de semaine 28. Le tri est
@@ -366,7 +366,7 @@ export function PanneauSuivis({
             onToggle={(e) => basculer(id, e.currentTarget.open)}
           >
             {/*
-              **Une LIGNE par arbre, dépliable.** « Ce serait bien que les
+              **Une **ligne** par arbre, dépliable.** « Ce serait bien que les
               lignes soient repliées par défaut, pour qu'on regarde le détail
               que des arbres où on voit qu'ils sont dans le rouge. » La pastille
               et le mot qui la suit sont donc tout ce qu'on lit d'abord ; le

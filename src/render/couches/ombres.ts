@@ -11,7 +11,7 @@
  * **Une seule tache, cuite une fois, posée des milliers de fois.** C'est
  * littéralement la règle que le lot L0 a produite en la mesurant : dessiner
  * 5 017 ellipses par image coûte 73,9 ms à Canvas 2D contre 2,2 ms en sprites,
- * un facteur trente qui ne doit rien au GPU. On cuit donc UNE tache douce, et
+ * un facteur trente qui ne doit rien au GPU. On cuit donc **une** tache douce, et
  * chaque arbre n'est plus qu'un blit mis à l'échelle. Le corollaire : la tache
  * est ronde à la cuisson, et c'est la mise à l'échelle qui l'aplatit selon
  * l'isométrie — sinon il faudrait une tache par forme d'arbre.
@@ -34,7 +34,7 @@ export const TAILLE_TACHE_PX = 128;
  * Opacité de l'ombre d'un houppier plein, au plus.
  *
  * Une ombre de feuillage n'est pas noire : sous un couvert dense il reste ~1 %
- * de lumière (`MAX_EXTINCTION` dans `light.ts`), mais l'ombre PORTÉE au sol
+ * de lumière (`MAX_EXTINCTION` dans `light.ts`), mais l'ombre **portée** au sol
  * qu'on dessine est celle d'un seul arbre, et le sol y reste très lisible.
  * 0,32 est un choix de dessin, assumé comme tel.
  */
@@ -57,7 +57,7 @@ export interface ArbreOmbre {
   /** rapport houppier/hauteur de l'espèce (fiche écologique) */
   houppierRatio: number;
   /**
-   * Diamètre à 1,30 m, cm. OPTIONNEL, et c'est de l'offre posée d'avance : le
+   * Diamètre à 1,30 m, cm. **Optionnel**, et c'est de l'offre posée d'avance : le
    * houppier du moteur suit désormais le diamètre et non la hauteur
    * (`light.ts`, #105), si bien qu'une perche étiolée porte une couronne
    * étroite. Tant que le rendu ne transmet pas ce champ, l'ombre garde la
@@ -80,7 +80,7 @@ export interface OmbreAPoser {
   largeurPx: number;
   hauteurPx: number;
 
-  /** index de la tache cuite à poser, ∈ [0, DENSITES[ */
+  /** index de la tache cuite à poser, ∈ [0, **densites**[ */
   densite: number;
   /** clé de tri, la même que pour le sol et les arbres */
   profondeur: number;
@@ -111,7 +111,7 @@ export const DENSITES = 4;
  *
  * D'où la marche à suivre, en trois temps :
  *
- * 1. un **masque** de la taille de l'écran, rempli de BLANC ;
+ * 1. un **masque** de la taille de l'écran, rempli de **blanc** ;
  * 2. chaque tache y est posée en `darken` — l'opération garde le minimum, donc
  *    deux ombres superposées ne sont pas plus sombres qu'une seule. C'est la
  *    saturation, obtenue sans compter les recouvrements ;
@@ -129,12 +129,12 @@ export const MODE_ACCUMULATION = "darken" as const;
  * mais pas au même prix, et l'un des deux ment sur un GPU.
  *
  * **Ce que ça a donné, et comment on l'a su.** La vue Pixi montrait un
- * escalier de RECTANGLES sombres le long du bord de la parcelle, absent de la
+ * escalier de **rectangles** sombres le long du bord de la parcelle, absent de la
  * même scène passée par le compositeur Canvas. La comparaison des deux rendus
  * a écarté la cuisson : le défaut naissait à la composition. Une ablation l'a
  * ensuite désigné sans ambiguïté — en sautant les taches, les rectangles
  * disparaissaient, et chacun avait sa tache ronde inscrite dedans. C'était donc
- * le QUAD de la tache qui s'assombrissait, et non son disque.
+ * le **quad** de la tache qui s'assombrissait, et non son disque.
  *
  * La raison tient à la classification de Pixi : `darken` est un mode
  * **avancé**, implémenté par un shader qui doit lire le fond déjà dessiné.
@@ -150,7 +150,7 @@ export const MODE_ACCUMULATION = "darken" as const;
  * pas plus sombres qu'une seule — est conservée exactement.
  *
  * **`multiply` a été essayé et écarté**, bien qu'il soit lui aussi de base et
- * qu'il fasse disparaître les rectangles : il COMPOSE au lieu de saturer, et la
+ * qu'il fasse disparaître les rectangles : il **compose** au lieu de saturer, et la
  * capture le montrait tout de suite — sous une lisière de houppiers qui se
  * recouvrent, le sol virait au noir et le liseré sableux du bord disparaissait.
  * C'est précisément le puits d'encre que la saturation existe pour éviter.
@@ -163,19 +163,19 @@ export const MODE_COMPOSITION = "multiply" as const;
  *
  * Un arbre planté au bord de la parcelle projette son ombre au-delà de la
  * limite. Composée sur toute la surface de l'écran, cette ombre se posait sur
- * le CIEL — d'où une frange grise qui débordait du plateau et le faisait
+ * le **ciel** — d'où une frange grise qui débordait du plateau et le faisait
  * flotter. Le défaut se voyait tout de suite et je ne l'avais pas vu ; il a
  * fallu qu'on me le dise.
  *
  * La correction ne demande pas de découper les ombres une par une, et elle ne
- * demande pas non plus de calque supplémentaire. **C'est le MASQUE qu'on
+ * demande pas non plus de calque supplémentaire. **C'est le masque qu'on
  * découpe**, une fois qu'il est accumulé :
  *
  * 4. le masque reçoit la silhouette du sol en `destination-in` — il ne reste
  *    du masque que ce qui recouvre quelque chose de solide, le reste devient
  *    transparent.
  *
- * Le `multiply` de l'étape 3 vient alors APRÈS, et hors du sol il ne fait plus
+ * Le `multiply` de l'étape 3 vient alors **après**, et hors du sol il ne fait plus
  * rien : une source transparente laisse la destination intacte. C'est ce détail
  * qui interdisait la solution évidente — composer le masque en `source-atop`
  * sur un calque de terrain — car `source-atop` impose le mélange normal et
@@ -192,7 +192,7 @@ export const MODE_COMPOSITION = "multiply" as const;
 export const MODE_LIMITE = "destination-in" as const;
 
 /**
- * Cuit les taches d'ombre : des disques gris à bord doux, sur fond BLANC.
+ * Cuit les taches d'ombre : des disques gris à bord doux, sur fond **blanc**.
  *
  * Le gris et non l'alpha, parce que la composition passe par `darken` puis
  * `multiply` (voir `MODE_ACCUMULATION`) : dans ce schéma, blanc veut dire « pas
@@ -246,7 +246,7 @@ export function indexDensite(partOmbrageante: number): number {
 /**
  * Où poser l'ombre d'un arbre, et de quelle taille.
  *
- * Le centre de l'ombre part du PIED de l'arbre — pas de son centre de houppier
+ * Le centre de l'ombre part du **pied** de l'arbre — pas de son centre de houppier
  * — et se décale de la longueur que `lumiere.ts` tire du décalage du moteur.
  * Sa largeur est le diamètre du houppier, projeté, et sa hauteur en découle par
  * l'aplatissement isométrique.
@@ -265,7 +265,7 @@ export function ombreDeLArbre(arbre: ArbreOmbre, vue: Vue): OmbreAPoser | undefi
   const longueur = longueurOmbreEcran(arbre.heightM, vue.cam);
   const largeurDisque = 2 * rayonM * TUILE_LARGEUR_PX * vue.cam.zoom;
 
-  // **L'ombre est le BALAYAGE du houppier, pas un disque posé au loin**, et
+  // **L'ombre est le balayage du houppier, pas un disque posé au loin**, et
   // c'est ce qui faisait flotter les arbres. La tache était un disque centré à
   // la distance que le moteur donne — plus de six mètres au nord du tronc pour
   // un sujet de seize mètres — si bien que son bord n'atteignait jamais le
@@ -277,7 +277,7 @@ export function ombreDeLArbre(arbre: ArbreOmbre, vue: Vue): OmbreAPoser | undefi
   // le bord proche revient sous l'arbre. On en prend l'ellipse enveloppe : même
   // centre, demi-axes augmentés d'une demi-composante du décalage. Elle
   // déborde un peu aux quatre coins du stade, ce que le bord doux de la tache
-  // rend invisible, et elle n'oblige NI à faire tourner le sprite ni à projeter
+  // rend invisible, et elle n'oblige **ni** à faire tourner le sprite ni à projeter
   // une ellipse du sol — deux complications pour un gain que l'œil ne verrait
   // pas.
   //
@@ -306,7 +306,7 @@ export function ombreDeLArbre(arbre: ArbreOmbre, vue: Vue): OmbreAPoser | undefi
  *
  * Le tri par profondeur n'est pas là pour l'ombre elle-même — deux ombres qui
  * se chevauchent donnent le même résultat dans les deux ordres — mais pour que
- * cette couche puisse être ENTRELACÉE avec le sol et les arbres (§3). Trier ici
+ * cette couche puisse être **entrelacée** avec le sol et les arbres (§3). Trier ici
  * évite de le refaire au lot L2.
  */
 export function ombresAPoser(arbres: readonly ArbreOmbre[], vue: Vue): OmbreAPoser[] {

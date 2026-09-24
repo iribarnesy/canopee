@@ -15,7 +15,7 @@
  * choix qui se paie toute la vie du peuplement — c'est exactement pourquoi
  * l'agroforesterie moderne aligne ses arbres.
  *
- * Un obstacle, c'est tout ce qui est DEBOUT — les chandelles comprises. Elles
+ * Un obstacle, c'est tout ce qui est **debout** — les chandelles comprises. Elles
  * ne font plus ni ombre ni feuilles, mais elles occupent le couloir.
  */
 
@@ -47,7 +47,7 @@ export function partMecanisable(
 ): number {
   const obstacles: { x: number; y: number }[] = [];
   for (const tree of trees) {
-    // Les CHANDELLES comptent. Un tronc mort resté debout n'ombrage plus, ne
+    // Les **chandelles** comptent. Un tronc mort resté debout n'ombrage plus, ne
     // transpire plus, ne pousse plus — mais un tracteur ne passe pas à
     // travers. C'est même le pire des obstacles : un fût sec et cassant, qu'on
     // ne veut pas frôler. On ne filtre donc pas sur `alive` ; tout ce que
@@ -63,13 +63,13 @@ export function partMecanisable(
   if (obstacles.length === 0) return 1;
 
   /**
-   * La DEMI-LARGEUR du chantier en travers de la direction d'essai (#186).
+   * La **demi-largeur** du chantier en travers de la direction d'essai (#186).
    *
    * Pour un disque elle vaut le rayon, quelle que soit la direction — c'est
    * exactement ce que le code faisait avant, et le contrôle d'identité y tient.
    * Pour une bande elle en dépend : un engin qui remonte l'allée dans son axe a
    * toute la longueur devant lui, le même engin qui la traverse n'a que la
-   * largeur. C'est le fait de terrain qui décide qu'on laboure DANS le sens du
+   * largeur. C'est le fait de terrain qui décide qu'on laboure **dans** le sens du
    * rang, et il tombe de la géométrie sans qu'on l'écrive.
    */
   const demiLargeur = (theta: number): number => {

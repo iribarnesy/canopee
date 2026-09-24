@@ -1,14 +1,14 @@
 /**
- * L'ÉTAT D'UNE ESSENCE, ET NON D'UN ARBRE.
+ * **L'état d'une essence**, **et non d'un arbre**.
  *
  * Le volet des suivis surveille des individus ; celui des essences surveille
- * des POPULATIONS, et c'est une autre question. Sur deux mille ronces, une
+ * des **populations**, et c'est une autre question. Sur deux mille ronces, une
  * seule qui dépérit ne dit rien ; un tiers qui dépérit dit tout.
  *
  * Ce que ces essais défendent :
  *
  * 1. **La même définition de « souffrir » que le journal des suivis** — le
- *    moteur NOMME la peine, et elle dépasse le seuil. Deux définitions dans le
+ *    moteur **nomme** la peine, et elle dépasse le seuil. Deux définitions dans le
  *    même jeu finiraient par se contredire d'un panneau à l'autre.
  * 2. **Une part, pas une pire tige** — c'est ce que la pastille montre.
  * 3. **La cause la plus fréquente**, parce qu'une population peut souffrir de

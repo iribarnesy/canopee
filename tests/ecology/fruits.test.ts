@@ -159,23 +159,23 @@ describe("pollinisation croisée (§7.5) et récolte (§10)", () => {
 
 describe("service de pollinisation (§7.4, critère G4)", () => {
   /**
-   * **CET ESSAI AVAIT CHOISI TROIS ESPÈCES QUI NE NOURRISSENT PERSONNE.**
+   * **cet essai avait choisi trois espèces qui ne nourrissent personne.**
    *
    * Son « environnement diversifié » était une haie de noisetier, chêne
-   * pubescent et bouleau. Les trois sont ANÉMOPHILES : leur pollen part au
+   * pubescent et bouleau. Les trois sont **anémophiles** : leur pollen part au
    * vent, aucun insecte ne se déplace pour eux. L'essai passait quand même,
    * parce que le service ne lisait que l'habitat — lequel compte la richesse
    * en essences. Le moteur affirmait donc que planter trois arbres pollinisés
    * par le vent améliore la nouaison d'un verger de 15 %.
    *
-   * Depuis le calendrier des fleurs (#70), le service demande un gîte ET une
+   * Depuis le calendrier des fleurs (#70), le service demande un gîte **et** une
    * table, et la table de cette haie-là est vide : mesuré, elle ne rend plus
    * que +0,9 %. Ce n'est pas une régression, c'est la correction d'une
    * affirmation fausse.
    *
    * L'essai garde donc son énoncé — un verger accompagné produit plus qu'un
    * verger nu — et se donne le dispositif qui peut le montrer, avec le bras
-   * anémophile conservé comme TÉMOIN : c'est lui qui sépare « des voisins »
+   * anémophile conservé comme **témoin** : c'est lui qui sépare « des voisins »
    * de « des voisins qui nourrissent ».
    */
   const positions = [

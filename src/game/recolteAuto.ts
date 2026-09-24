@@ -1,10 +1,10 @@
 /**
- * QUAND RÉCOLTER, ET CE QU'IL Y A À PRENDRE (#191).
+ * **Quand récolter**, **et ce qu'il y a à prendre** (#191).
  *
  * **Une seule mesure de ce qui est mûr**, et c'est tout l'objet de ce module.
  * La règle vivait au milieu du worker, où elle s'était dédoublée sans que
- * personne le voie : ce qu'on CUEILLAIT se filtrait à `SEUIL_ARBRE_KG` par
- * pied, ce à quoi on le COMPARAIT additionnait tous les arbres sans seuil.
+ * personne le voie : ce qu'on **cueillait** se filtrait à `SEUIL_ARBRE_KG` par
+ * pied, ce à quoi on le **comparait** additionnait tous les arbres sans seuil.
  *
  * Deux mesures de la même chose finissent toujours par diverger. Celles-là
  * divergeaient dès le premier sous-bois un peu dense : sur une parcelle où des
@@ -35,7 +35,7 @@ export const SEUIL_ARBRE_KG = 0.5;
 export const SEUIL_PARCELLE_KG = 1;
 
 /**
- * Les essences que le joueur a SEMÉES lui-même, d'après son propre journal.
+ * Les essences que le joueur a **semées** lui-même, d'après son propre journal.
  *
  * **Rien à demander au moteur** : chaque action `planter` porte son essence, et
  * le journal est la sauvegarde. C'est la seule chose qui distingue un verger
@@ -53,11 +53,11 @@ export function especesSemees(
 }
 
 /**
- * Ce que le joueur a DÉCIDÉ, essence par essence — et rien d'autre.
+ * Ce que le joueur a **décidé**, essence par essence — et rien d'autre.
  *
  * Seules les essences qu'il a touchées y figurent. Les autres suivent la règle
  * par défaut (« on cueille ce qu'on a semé »), et c'est ce qui permet à une
- * décision de SURVIVRE à une plantation ultérieure : retirer la ronce de la
+ * décision de **survivre** à une plantation ultérieure : retirer la ronce de la
  * récolte automatique, puis semer de la ronce, ne doit pas la réintroduire en
  * douce.
  */
@@ -67,7 +67,7 @@ export type ChoixRecolte = Record<string, boolean>;
  * Les essences que la récolte automatique cueille : ce qu'on a semé, plus ce
  * qu'on a explicitement ajouté, moins ce qu'on a explicitement retiré.
  *
- * Une seule fonction pour cette règle, appelée par le worker ET par l'écran :
+ * Une seule fonction pour cette règle, appelée par le worker **et** par l'écran :
  * l'un décide qui est cueilli, l'autre affiche des pastilles allumées ou
  * éteintes, et les deux doivent dire la même chose.
  */
@@ -108,7 +108,7 @@ export interface ArbrePorteur {
  * Les arbres qu'il y a lieu de cueillir, et ce qu'ils portent en tout.
  *
  * **On ne cueille que ce qu'on a semé**, quand `semees` est donné. La récolte
- * automatique existe pour qu'on ne rate pas SA fenêtre de récolte en avançant
+ * automatique existe pour qu'on ne rate pas **sa** fenêtre de récolte en avançant
  * vite ; cueillir la friche qui a envahi la parcelle n'est pas ça. Mesuré dans
  * une partie : « Récolte : 382 kg de ronce → +1527 € (152,7 h) », cent
  * cinquante-deux heures dans une semaine qui en compte soixante, passées sur
@@ -139,7 +139,7 @@ export function arbresMurs(
 /**
  * Faut-il cueillir maintenant ? Oui dès qu'il y a de quoi.
  *
- * Pas de front : chaque essence est cueillie dans SA fenêtre, et rien ne peut
+ * Pas de front : chaque essence est cueillie dans **sa** fenêtre, et rien ne peut
  * être pris deux fois.
  */
 export function fautIlCueillir(kgMurs: number): boolean {
@@ -147,7 +147,7 @@ export function fautIlCueillir(kgMurs: number): boolean {
 }
 
 /**
- * Faut-il ARRÊTER LE TEMPS pour laisser le joueur cueillir lui-même ?
+ * Faut-il **arrêter le temps** pour laisser le joueur cueillir lui-même ?
  *
  * Ici le front montant est justifié : on ne prévient qu'à l'arrivée d'une
  * maturité, pas à chaque semaine où elle dure. Il garde l'angle mort que #191

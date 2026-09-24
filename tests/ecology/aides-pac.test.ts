@@ -1,12 +1,12 @@
 /**
  * Les aides publiques, et l'hypothèse qu'on gèle pour pouvoir en parler.
  *
- * Les règles simulées sont FIGÉES sur la programmation 2023-2027 française, et
+ * Les règles simulées sont **figées** sur la programmation 2023-2027 française, et
  * la réalité ne l'est pas : la PAC se renégocie tous les cinq à sept ans. Un
  * jeu qui simule deux siècles avec la PAC de 2023 ment forcément ; il vaut
  * mieux mentir en le disant.
  *
- * Ce qui reste vrai malgré le gel, et que ces essais éprouvent : la STRUCTURE
+ * Ce qui reste vrai malgré le gel, et que ces essais éprouvent : la **structure**
  * de l'arbitrage. Une aide à l'hectare conditionnée à un plafond d'arbres, un
  * bonus pour les infrastructures agroécologiques, un autre pour les haies.
  */
@@ -36,14 +36,14 @@ describe("le plafond de cent arbres à l'hectare décide de tout", () => {
   });
 
   it("un arbre de plus, et elle devient un boisement : plus rien", () => {
-    // C'est le seul endroit du jeu où planter un arbre PEUT COÛTER de l'argent,
+    // C'est le seul endroit du jeu où planter un arbre **peut coûter** de l'argent,
     // et c'est un vrai arbitrage de terrain. Au-delà du plafond, ce n'est plus
     // une parcelle agricole avec des arbres, c'est une forêt.
     const a = aidesAnnuelles(1, DENSITE_MAX_AGROFORESTERIE_PAR_HA + 1, 0.5);
     expect(a.eligible).toBe(false);
     expect(a.totalEur).toBe(0);
     // Même avec la moitié de la parcelle en infrastructures agroécologiques :
-    // l'éligibilité passe AVANT les bonus, elle ne se rattrape pas.
+    // l'éligibilité passe **avant** les bonus, elle ne se rattrape pas.
     expect(a.ecoregimeEur).toBe(0);
   });
 

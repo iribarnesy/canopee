@@ -8,9 +8,9 @@
  * savait plus de quelle matière il était fait. Un sol de forêt a du grain :
  * touffes, flaques de litière, cailloux, terre à nu entre les herbes.
  *
- * **Rien n'est inventé sur l'ÉTAT du sol.** Le grain ne dit pas qu'il y a plus
+ * **Rien n'est inventé sur l'état du sol.** Le grain ne dit pas qu'il y a plus
  * d'herbe ici que là — c'est la palette qui le dit, à partir des grilles du
- * moteur. Il ne module que la CLARTÉ, de quelques pour cent, à une échelle
+ * moteur. Il ne module que la **clarté**, de quelques pour cent, à une échelle
  * inférieure au mètre. Autrement dit il ajoute de la matière sans ajouter
  * d'information : l'œil lit une surface au lieu d'un dégradé, et rien de ce que
  * le joueur peut décider n'en dépend.
@@ -18,7 +18,7 @@
  * **Déterministe, et pas par élégance.** `scripts/check-boundaries.sh` interdit
  * `Math.random` dans `src/render`, parce que deux parties de même graine doivent
  * donner la même image (§8) : sans ça une capture n'est pas reproductible et un
- * bug de rendu ne se rejoue pas. Le grain est donc une fonction PURE de la
+ * bug de rendu ne se rejoue pas. Le grain est donc une fonction **pure** de la
  * position dans la parcelle. Conséquence agréable : il ne scintille pas quand on
  * tourne la caméra ou qu'on rejoue une semaine, puisqu'il est attaché au
  * terrain et non à l'image.
@@ -96,7 +96,7 @@ function bruitDeMaille(x: number, y: number, maille: number, sel: number): numbe
  *
  * Deux octaves, parce qu'une seule donne une trame régulière : la maille fine
  * porte le piqué, la maille large porte les plaques. Les coordonnées sont
- * celles de la PARCELLE (nord vrai), donc le grain est solidaire du terrain —
+ * celles de la **parcelle** (nord vrai), donc le grain est solidaire du terrain —
  * il ne glisse pas quand la caméra tourne.
  */
 export function grain(x: number, y: number): number {

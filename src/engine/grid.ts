@@ -12,14 +12,14 @@
 export type Grille = Float32Array;
 
 /**
- * Une grille de sol en DOUBLE précision, et c'est délibéré. Deux raisons de
+ * Une grille de sol en **double** précision, et c'est délibéré. Deux raisons de
  * l'être, et une grille peut avoir les deux :
  *
  *  1. **un stock à longue mémoire**, qui s'ajuste par différences minuscules
  *     sur des décennies — l'humus décroît de 1,5 % l'an, donc cinq tonnes
  *     bougent de quelques kilos par décennie, et un incrément plus petit que
  *     l'ulp du stock ne s'arrondit pas : il disparaît ;
- *  2. **un stock qu'un BILAN AUDITE.** `tick-conservation.test.ts` exige que
+ *  2. **un stock qu'un bilan audite.** `tick-conservation.test.ts` exige que
  *     l'azote se referme à 5e-7 près ; la simple précision plafonne à ~1e-7 par
  *     cellule, et sur dix mille cellules l'écart sort à 3e-6. Mesuré : le
  *     bilan cassait des quatre côtés. **On ne desserre pas la tolérance** — la
@@ -29,7 +29,7 @@ export type Grille = Float32Array;
  *     raisons à la fois.
  *
  * **La règle est mécanique, et c'est ce qui la rend tenable** : une grille
- * qu'une propriété de conservation SOMME reste longue. Ce sont `waterMm`,
+ * qu'une propriété de conservation **somme** reste longue. Ce sont `waterMm`,
  * `excessMm` et `nappeMm` pour l'eau, `mineralNG` et `litterNG` pour l'azote,
  * `litterCG`, `humusCG` et `boisAuSolCG` pour le carbone, `basesEq` et
  * `basesProfondEq` pour les bases. Le jour où une propriété nouvelle compte une
@@ -38,7 +38,7 @@ export type Grille = Float32Array;
 export type GrilleLongue = Float64Array;
 
 /**
- * Une grille qu'on LIT sans avoir à connaître sa précision — ni même savoir
+ * Une grille qu'on **lit** sans avoir à connaître sa précision — ni même savoir
  * que c'en est une. C'est le type des paramètres de lecture : il accepte les
  * deux tableaux typés ET un `number[]`, ce qui laisse les essais construire
  * leurs grilles à la main.
@@ -46,7 +46,7 @@ export type GrilleLongue = Float64Array;
 export type GrilleLue = ArrayLike<number>;
 
 /**
- * Une grille qu'on ÉCRIT, même indifférence. `ArrayLike` ne suffit pas ici :
+ * Une grille qu'on **écrit**, même indifférence. `ArrayLike` ne suffit pas ici :
  * il ne déclare pas l'écriture indexée.
  */
 export type GrilleEcrite = Float32Array | Float64Array | number[];

@@ -7,12 +7,12 @@ import { LIMON_RICHE, VALLEE_ENGORGEE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
 /**
- * D'où vient le stress d'un arbre VIVANT (#153).
+ * D'où vient le stress d'un arbre **vivant** (#153).
  *
  * `stress` est une somme : la famine, les facteurs de station, les ravageurs et
  * les maladies y tombent ensemble. Jusqu'ici seules les causes lentes en
  * ressortaient nommées (`stressLent` / `causeLente`) ; les deux causes
- * biotiques n'étaient nommées qu'à la MORT de l'arbre, c'est-à-dire presque
+ * biotiques n'étaient nommées qu'à la **mort** de l'arbre, c'est-à-dire presque
  * jamais, puisqu'il survit. Mesuré avant le correctif : soixante abricotiers
  * sur vingt-cinq ans encaissaient 592 unités de dégâts, dont aucune n'était
  * imputable parce qu'aucun arbre n'en mourait.
@@ -64,7 +64,7 @@ describe("les origines du stress sont des PARTS de stress", () => {
           { especeId: "salix_alba", count: 25 },
         ],
       ],
-      // Une frênaie serrée : c'est le SEUL banc où la maladie tire, puisque la
+      // Une frênaie serrée : c'est le **seul** banc où la maladie tire, puisque la
       // chalarose du frêne est la seule maladie de l'atlas. Sans elle, la
       // moitié « maladie » du lot serait livrée sans avoir jamais tourné.
       ["frênaie", LIMON_RICHE, [{ especeId: "fraxinus_excelsior", count: 60 }]],
@@ -73,7 +73,7 @@ describe("les origines du stress sont des PARTS de stress", () => {
         for (const t of etat.trees) {
           const nommé = (t.stressLent ?? 0) + (t.stressRavageurs ?? 0) + (t.stressMaladie ?? 0);
           // Le frottis ajoute du stress sans compteur nommé — il se lit par
-          // `frotteSemaine`. La somme des origines est donc INFÉRIEURE OU ÉGALE
+          // `frotteSemaine`. La somme des origines est donc **inférieure ou égale**
           // au stress, jamais supérieure : une part qui dépasserait son tout
           // voudrait dire qu'une origine a échappé à l'amortissement.
           if (nommé > t.stress + 1e-9) {
@@ -125,7 +125,7 @@ describe("les origines du stress sont des PARTS de stress", () => {
     const malades = vivants.filter((t) => (t.stressMaladie ?? 0) > 0);
     expect(vivants.length).toBeGreaterThan(30);
     expect(malades.length).toBe(vivants.length);
-    // Et la part nommée est SÉPARÉE de celle des ravageurs : un frêne peut
+    // Et la part nommée est **séparée** de celle des ravageurs : un frêne peut
     // porter les deux, et le jeu doit pouvoir dire lequel pèse.
     const cumulMaladie = vivants.reduce((a, t) => a + (t.stressMaladie ?? 0), 0);
     expect(cumulMaladie).toBeGreaterThan(1);

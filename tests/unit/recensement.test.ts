@@ -1,5 +1,5 @@
 /**
- * LE RECENSEMENT DES ESSENCES PRÉSENTES (#156).
+ * **Le recensement des essences présentes** (#156).
  *
  * L'éclaircie par essence existait dans le moteur et n'était demandable nulle
  * part : c'est le seul outil de nettoyage sélectif du jeu, et il était
@@ -7,7 +7,7 @@
  * ouvrir un roncier fauche en boucle sans effet, parce que `faucher` n'écrit
  * que dans la strate herbacée.
  *
- * Ce que ces épreuves tiennent : le recensement compte ce qui est LÀ, dans le
+ * Ce que ces épreuves tiennent : le recensement compte ce qui est **là**, dans le
  * cercle visé, et le trie comme l'issue le demande — par effectif décroissant,
  * avec un second critère pour que la liste ne clignote pas sous le curseur.
  */
@@ -82,7 +82,7 @@ describe("qui est là", () => {
     );
     const bouleau = liste.find((e) => e.especeId === "betula_pendula");
     const inconnue = liste.find((e) => e.especeId === "inconnue_xyz");
-    // Le nom de l'atlas, pas l'identifiant — et surtout PAS d'exception :
+    // Le nom de l'atlas, pas l'identifiant — et surtout **pas** d'exception :
     // `getEspece` lève sur un inconnu, ce que le premier jet ignorait.
     expect(bouleau?.nom).not.toBe("betula_pendula");
     expect(bouleau?.nom?.length ?? 0).toBeGreaterThan(3);

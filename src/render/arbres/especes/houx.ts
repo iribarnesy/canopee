@@ -7,7 +7,7 @@
  * les arbustes en boule qui l'entourent dans la haie.
  *
  * Sa signature est la **feuille coriace**, luisante, aux bords ondulés et
- * épineux — et elle est là DOUZE MOIS SUR DOUZE. Le moteur le sait
+ * épineux — et elle est là **douze mois sur douze**. Le moteur le sait
  * (`caduc: false`) : en janvier, quand tout est nu, ce vert sombre est la
  * seule masse foliaire du sous-bois, et c'est à ça qu'on le reconnaît de loin.
  * D'où une couleur d'hiver, à peine plus terne que l'été.

@@ -1,13 +1,13 @@
 /**
- * Le TORCHAGE : un arbre que le front atteint (§6.4).
+ * Le **torchage** : un arbre que le front atteint (§6.4).
  *
  * **Ce que ces essais gardent : qu'un arbre ne s'embrase pas quand l'acte
- * commence, mais quand le FEU ARRIVE À SON PIED.** C'est la seule chose qui
+ * commence, mais quand le feu arrive à son pied.** C'est la seule chose qui
  * distingue un torchage d'un clignotement décoratif — et c'est aussi ce qui
  * rend l'élagage lisible, puisqu'un fût nu ne flambe pas.
  *
  * Le second point gardé est plus discret et coûte plus cher : un arbre torché
- * doit partir VIVANT. L'instantané le décrit après l'incendie, tronc charbonné
+ * doit partir **vivant**. L'instantané le décrit après l'incendie, tronc charbonné
  * sans feuilles ; une mise en scène qui partirait de là interpolerait du néant
  * vers le néant, et c'est exactement le défaut que les onze morts du §6.3
  * avaient sans qu'on l'ait vu.
@@ -41,7 +41,7 @@ import type { ArbreVivant } from "../../src/render/temps/mort";
 
 const COTE = 40;
 
-/** Un front produit par le MOTEUR, comme dans `feu.test.ts`. */
+/** Un front produit par le **moteur**, comme dans `feu.test.ts`. */
 function frontDuMoteur(): FrontDIncendie & { origine: number; rangDe: Map<number, number> } {
   const n = COTE * COTE;
   const parCellule = new Array<number>(n).fill(2);
@@ -88,12 +88,12 @@ describe("avancementDuTorchage", () => {
   it("court sur TORCHAGE_EN_RANGS puis reste accompli", () => {
     expect(avancementDuTorchage(12 + TORCHAGE_EN_RANGS / 2, 12)).toBeCloseTo(0.5, 6);
     expect(avancementDuTorchage(12 + TORCHAGE_EN_RANGS, 12)).toBe(1);
-    // Accompli le RESTE de l'acte : sans ça, un arbre brûlé reverdirait.
+    // Accompli le **reste** de l'acte : sans ça, un arbre brûlé reverdirait.
     expect(avancementDuTorchage(999, 12)).toBe(1);
   });
 
   it("dure plus longtemps que le front n'est profond", () => {
-    // C'est ce qui fait qu'on voit des torches DERRIÈRE la ligne de flammes —
+    // C'est ce qui fait qu'on voit des torches **derrière** la ligne de flammes —
     // une couronne met plus de temps à brûler que l'herbe sous elle.
     expect(TORCHAGE_EN_RANGS).toBeGreaterThan(3);
   });
@@ -227,7 +227,7 @@ describe("indexerLesTorches et le canal de la mise en scène", () => {
   /** Deux arbres : un dans le brûlé, un hors du brûlé. */
   const candidats: ArbreATorcher[] = [
     {
-      // Décalé de l'origine EXPRÈS : posé dessus, son rang vaut zéro et il
+      // Décalé de l'origine **exprès** : posé dessus, son rang vaut zéro et il
       // flambe dès la première image, ce qui rend l'essai du « rien avant que
       // le front n'arrive » vide de sens. L'essai l'a attrapé.
       id: 1,

@@ -86,7 +86,7 @@ function WaterChart({ points, ruMm }: { points: WeekPoint[]; ruMm: number }) {
 }
 
 /**
- * Hauteur dominante par espèce. On ne trace QUE les espèces encore vivantes à
+ * Hauteur dominante par espèce. On ne trace **que** les espèces encore vivantes à
  * la fin, au plus six, et chaque courbe porte son nom à son extrémité : au-delà
  * d'une demi-douzaine de couleurs, une légende devient un jeu de devinettes.
  * Les autres restent en gris, présentes mais sans prétendre à une identité.
@@ -309,7 +309,7 @@ function TableauEspeces({
 }
 
 /**
- * LA SONDE, dans le worker du labo (#123).
+ * **la sonde**, dans le worker du labo (#123).
  *
  * **Un worker par demande, et c'est lui qui donne l'annulation.** Changer de
  * station ou de météo pendant que la sonde tourne demandait, sans ça, d'ignorer
@@ -321,7 +321,7 @@ function useSonde(
   stationId: string,
   meteoReelle: boolean,
 ): {
-  /** le résultat ET son bilan, ensemble : ils arrivent ensemble */
+  /** le résultat **et** son bilan, ensemble : ils arrivent ensemble */
   pret?: { resultat: SimResult; bilan: BilanCarbone };
   annees: number;
   total: number;

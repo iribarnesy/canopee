@@ -7,16 +7,16 @@
  * déstocker de l'humus (I6, `labourer` émet 5 % de l'humus par passage) ; et
  * les jeunes arbres ne compensent pas avant des années.
  *
- * LA MESURE EN DIT PLUS QUE L'ÉNONCÉ, et c'est la raison d'être du témoin
- * intact. Le creux existe AUSSI sans labour : une parcelle nue plantée de
+ * **La mesure en dit plus que l'énoncé**, et c'est la raison d'être du témoin
+ * intact. Le creux existe **aussi** sans labour : une parcelle nue plantée de
  * chênes perd 8,2 à 8,5 t C/ha avant de remonter, parce que l'humus se
  * minéralise à 1,5 %/an (`HUMUS_DECAY_PER_YEAR`) pendant que des plants de
  * trente centimètres ne rendent presque rien à la litière. Le labour n'est donc
- * pas la CAUSE du bilan négatif : il l'aggrave de 40 % et retarde le retour à
+ * pas la **cause** du bilan négatif : il l'aggrave de 40 % et retarde le retour à
  * l'équilibre de deux ans. Sans le témoin, cet essai aurait attribué au
  * labour un creux qu'il ne fait que creuser.
  *
- * Ce qui est épinglé ici, ce sont des DIRECTIONS vérifiées graine par graine.
+ * Ce qui est épinglé ici, ce sont des **directions** vérifiées graine par graine.
  * La date du croisement est relevée en commentaire et non assertée : elle
  * dépend de tout le moteur de croissance, et un seuil posé dessus périmerait au
  * premier changement d'allométrie (docs/realisme.md, « ce qu'un test écologique
@@ -38,7 +38,7 @@ const PLANTS = 150;
 const GRAINES = [1, 2, 3];
 
 interface Serie {
-  /** total des stocks AVANT le travail du sol, t C/ha */
+  /** total des stocks **avant** le travail du sol, t C/ha */
   depart: number;
   /** total des stocks à la fin de chaque année, t C/ha */
   parAn: number[];
@@ -102,7 +102,7 @@ describe("le bilan carbone d'une plantation", () => {
     // −11,77 / −11,73 t C/ha après labour, aux douzième et treizième années.
     for (const p of parties) {
       expect(p.laboure.creux).toBeLessThan(0);
-      // Et il est atteint TÔT : pas un déclin sans fin, un creux qu'on franchit.
+      // Et il est atteint **tôt** : pas un déclin sans fin, un creux qu'on franchit.
       expect(p.laboure.anneeDuCreux).toBeLessThan(ANS);
     }
   });
@@ -136,7 +136,7 @@ describe("le bilan carbone d'une plantation", () => {
     // 40 % à un creux qu'il n'a pas créé.
     //
     // Cet essai dit donc l'énoncé de I8 plus précisément que I8 lui-même : ce
-    // n'est pas le travail du sol qui rend le bilan négatif, c'est la JEUNESSE
+    // n'est pas le travail du sol qui rend le bilan négatif, c'est la **jeunesse**
     // du peuplement.
     for (const p of parties) {
       expect(p.intact.creux).toBeLessThan(0);

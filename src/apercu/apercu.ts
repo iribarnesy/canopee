@@ -1,6 +1,6 @@
 /**
  * L'aperçu : une page qui compose la scène complète — décor, sol, ombres —
- * pour qu'on puisse la REGARDER.
+ * pour qu'on puisse la **regarder**.
  *
  * Ce n'est pas le jeu, et ce n'est plus le banc de mesure du lot L0, qui est
  * supprimé depuis que D1 est tranchée. C'est la **boucle de revue du rendu** :
@@ -166,7 +166,7 @@ function feuillageDe(
  * Le ciel, qui vaut exactement la brume du décor.
  *
  * J'avais essayé un dégradé, pour donner un horizon. Il fabrique surtout une
- * COUTURE : la ceinture de décor s'éteint vers la brume, or la brume ne
+ * **couture** : la ceinture de décor s'éteint vers la brume, or la brume ne
  * coïncide avec le ciel qu'à une seule hauteur d'écran, et partout ailleurs le
  * bord de la ceinture redevient un trait net. Un ciel d'une seule couleur, la
  * même que celle vers laquelle le décor s'éteint, fait disparaître ce bord où
@@ -181,9 +181,9 @@ function peindreLeCiel(ctx: CanvasRenderingContext2D, largeur: number, hauteur: 
  * Compose une image complète et la rend.
  *
  * **L'ordre est la seule chose qui compte ici, et il porte deux corrections.**
- * Le décor va sur le MÊME calque que le sol, pas derrière : c'est ce qui fait
+ * Le décor va sur le **même** calque que le sol, pas derrière : c'est ce qui fait
  * que l'ombre d'un arbre de bordure tombe sur le décor au lieu de disparaître.
- * Et le masque d'ombre est découpé à la silhouette de ce calque AVANT d'être
+ * Et le masque d'ombre est découpé à la silhouette de ce calque **avant** d'être
  * multiplié — sinon il déborde sur le ciel, ce qui faisait flotter la parcelle.
  */
 interface Options {
@@ -191,11 +191,11 @@ interface Options {
   ombres?: boolean;
   /** dessiner le hors-parcelle (défaut : oui) */
   decor?: boolean;
-  /** NE PAS borner les ombres au sol — pour montrer le défaut qu'on a corrigé */
+  /** **ne pas** borner les ombres au sol — pour montrer le défaut qu'on a corrigé */
   ombresDebordantes?: boolean;
   /** poser les arbres (défaut : oui) */
   arbres?: boolean;
-  /** planche : dessiner les sujets NUS, pour juger la ramure d'hiver */
+  /** planche : dessiner les sujets **nus**, pour juger la ramure d'hiver */
   nu?: boolean;
   /** planche : avancement de la sénescence ∈ [0,1] */
   senescence?: number;
@@ -203,7 +203,7 @@ interface Options {
   echelle?: number;
   /**
    * Planche : avancement du fruit ∈ [0,1] et kilos mûrs, tels que le moteur les
-   * donnerait. Ce sont les DEUX grandeurs du protocole, pas un réglage : la
+   * donnerait. Ce sont les **deux** grandeurs du protocole, pas un réglage : la
    * planche les impose pour qu'on puisse juger les deux états côte à côte, ce
    * qu'aucune semaine réelle ne permet — un pommier et un arbousier ne mûrissent
    * pas le même mois.
@@ -227,11 +227,11 @@ interface Options {
   /** Planche : flèche broutée (`brouteSemaine` renseigné). */
   broute?: boolean;
   /**
-   * Planche : semaines écoulées depuis le démasclage, UNE PAR CASE.
+   * Planche : semaines écoulées depuis le démasclage, **une par case**.
    *
    * La seule option de cette liste qui varie d'une case à l'autre, et c'est
    * qu'elle sert à autre chose que les autres : partout ailleurs la planche
-   * compare des ESPÈCES dans le même état, ici elle compare le même arbre à
+   * compare des **espèces** dans le même état, ici elle compare le même arbre à
    * quatre âges d'écorce. Une valeur par case, répétée si la liste est plus
    * courte que la grille.
    */
@@ -250,9 +250,9 @@ interface Options {
   caviteTeteL?: number;
   recepages?: number;
   /**
-   * Planche : la base du houppier, en PART de la hauteur de l'arbre.
+   * Planche : la base du houppier, en **part** de la hauteur de l'arbre.
    *
-   * Comme le fruit, c'est une grandeur du moteur que la planche IMPOSE pour
+   * Comme le fruit, c'est une grandeur du moteur que la planche **impose** pour
    * pouvoir comparer — un sujet isolé et un sujet de futaie n'existent pas au
    * même endroit de la même parcelle, donc aucune scène réelle ne les met côte
    * à côte. Elle est en part et non en mètres parce que la planche compare des
@@ -276,7 +276,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
   if (!ctx) throw new Error("contexte 2d indisponible");
   peindreLeCiel(ctx, vue.largeurPx, vue.hauteurPx);
 
-  // ── Le calque du sol : TRANSPARENT hors terrain, décor compris ─────────
+  // ── Le calque du sol : **transparent** hors terrain, décor compris ─────────
   const calque = fabriquer(vue.largeurPx, vue.hauteurPx);
   const cq = calque.getContext("2d");
   if (!cq) throw new Error("contexte 2d indisponible");
@@ -290,7 +290,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
     }
   }
 
-  // La silhouette de la PARCELLE SEULE, décor exclu : c'est elle qui borne
+  // La silhouette de la **parcelle seule**, décor exclu : c'est elle qui borne
   // l'ombre. Le décor est là pour se taire, et une tache sombre posée dessus
   // attire l'œil là où il n'y a rien à voir.
   const silhouette = fabriquer(vue.largeurPx, vue.hauteurPx);
@@ -335,7 +335,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
       mq.drawImage(tache, o.sx - o.largeurPx / 2, o.sy - o.hauteurPx / 2, o.largeurPx, o.hauteurPx);
     }
     if (ombresDebordantes) {
-      // Le défaut d'avant, reproduit exprès : le masque est multiplié sur TOUTE
+      // Le défaut d'avant, reproduit exprès : le masque est multiplié sur **toute**
       // l'image une fois le sol posé, ciel compris, et la frange grise déborde
       // du plateau. Le sol est donc collé d'abord, puis le masque par-dessus.
       ctx.drawImage(calque, 0, 0);
@@ -344,7 +344,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
       ctx.globalCompositeOperation = "source-over";
       return sortie;
     }
-    // Découpe à la silhouette de la PARCELLE, puis multiplication : voir
+    // Découpe à la silhouette de la **parcelle**, puis multiplication : voir
     // `MODE_LIMITE`. Sur la silhouette et non sur `calque`, qui porte aussi le
     // décor — c'est ce qui laissait des taches d'ombre hors de la parcelle.
     mq.globalCompositeOperation = MODE_LIMITE;
@@ -357,7 +357,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
   ctx.drawImage(calque, 0, 0);
 
   // ── Les arbres ─────────────────────────────────────────────────────────
-  // **Posés APRÈS le calque du sol, et hors de lui.** Un arbre dépasse du
+  // **Posés après le calque du sol, et hors de lui.** Un arbre dépasse du
   // terrain — c'est même tout l'intérêt d'un arbre — donc le découper à la
   // silhouette du sol, comme on le fait des ombres, le décapiterait.
   //
@@ -370,7 +370,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
   if (arbres) {
     const separe = separerLeFourre(
       scene.trees
-        // **Une espèce que l'atlas ne connaît plus est ÉCARTÉE, pas devinée.**
+        // **Une espèce que l'atlas ne connaît plus est écartée, pas devinée.**
         // Une scène cuite survit au catalogue : une espèce renommée ou retirée
         // faisait lever `getEspece` et tomber le banc entier sur une seule
         // tige périmée. On ne peut pas la dessiner fidèlement, donc on ne la
@@ -398,7 +398,7 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             baseHouppierM: t.baseHouppierM ?? 0,
             ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
             ...(t.chandelle ? { chandelle: true } : {}),
-            // `brulEeSemaine` est une SEMAINE ; le rendu n'en lit que la
+            // `brulEeSemaine` est une **semaine** ; le rendu n'en lit que la
             // présence. De combien un charbon pâlit avec le temps est une
             // question de modèle, et le moteur ne la traite pas.
             ...(t.brulEeSemaine === undefined ? {} : { brulee: true }),
@@ -407,13 +407,13 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
             // Même lecture que `brulee` : la présence, pas la semaine.
             ...(t.frotteSemaine === undefined ? {} : { frotte: true }),
             ...(t.brouteSemaine === undefined ? {} : { broute: true }),
-            // Deux DIMENSIONS, et le rendu n'en fabrique plus aucune : le
+            // Deux **dimensions**, et le rendu n'en fabrique plus aucune : le
             // diamètre du bourrelet et le volume du creux viennent de
             // `trogne.ts` (issue #19).
             ...(t.diametreTeteCm ? { diametreTeteCm: t.diametreTeteCm } : {}),
             ...(t.caviteTeteL ? { caviteTeteL: t.caviteTeteL } : {}),
-            // Une DURÉE, pas une présence : le moteur porte la rotation, donc
-            // on peut dire OÙ EN EST l'écorce, pas seulement qu'elle a été levée.
+            // Une **durée**, pas une présence : le moteur porte la rotation, donc
+            // on peut dire **où en est** l'écorce, pas seulement qu'elle a été levée.
             ...(t.derniereLeveeSemaine === undefined
               ? {}
               : { semainesDepuisLevee: Math.max(0, scene.week - t.derniereLeveeSemaine) }),
@@ -438,16 +438,16 @@ function composer(scene: Scene, vue: Vue, options: Options = {}): HTMLCanvasElem
     );
     const atlas = new AtlasArbres(fabriquer);
     atlas.rafraichir(poses);
-    // Budget SANS LIMITE : une capture n'a pas de deuxième image, donc rien ne
+    // Budget **sans limite** : une capture n'a pas de deuxième image, donc rien ne
     // doit rester en attente. Dans le jeu, c'est le budget par image qui
-    // s'applique — et il se compte en PIXELS, pas en vignettes : passer 10 000
+    // s'applique — et il se compte en **pixels**, pas en vignettes : passer 10 000
     // ici ne cuisait plus qu'une seule vignette, et la parcelle sortait vide.
     atlas.cuire(Number.POSITIVE_INFINITY);
     for (const pose of poses) {
       const vignette = atlas.vignette(pose.classe);
       if (!vignette) continue;
-      // La vignette est cuite à une RÉSOLUTION (puissance de deux, pour que le
-      // cache serve) et posée à sa TAILLE écran. Confondre les deux donnait des
+      // La vignette est cuite à une **résolution** (puissance de deux, pour que le
+      // cache serve) et posée à sa **taille** écran. Confondre les deux donnait des
       // arbres trois fois trop grands.
       const taille = tailleDePose(pose.arbre.heightM, vignette, vue);
       const ancre = ancrageDePose(vignette, taille);
@@ -486,7 +486,7 @@ function planche(
   if (!ctx) throw new Error("contexte 2d indisponible");
   peindreLeCiel(ctx, largeurPx, hauteurPx);
 
-  // **Une GRILLE, et pas une rangée.** Un arbre de seize mètres au houppier
+  // **Une grille, et pas une rangée.** Un arbre de seize mètres au houppier
   // large est aussi large que haut : sept côte à côte demandent une image sept
   // fois plus large que haute, où l'on ne voit plus rien. En deux rangs, chaque
   // sujet a une case à peu près carrée — la proportion d'un arbre.
@@ -494,7 +494,7 @@ function planche(
   const lignes = Math.ceil(especes.length / colonnes);
   const largeurCase = largeurPx / colonnes;
   const hauteurCase = hauteurPx / lignes;
-  // Ce que la case doit CONTENIR, et pas seulement l'arbre : un plant sous
+  // Ce que la case doit **contenir**, et pas seulement l'arbre : un plant sous
   // manchon est plus petit que son tube — c'est même toute la raison d'être du
   // tube — et cadrer sur le plant seul faisait sortir le manchon par le haut.
   const contenuM = options.protege ? Math.max(hauteurM, HAUTEUR_BROUTAGE_M) : hauteurM;
@@ -541,7 +541,7 @@ function planche(
       vigueur: options.vigueur ?? 1,
       ...(options.dommageHydraulique ? { dommageHydraulique: options.dommageHydraulique } : {}),
       // Les états de conduite et de mort. Ils passent par le même chemin que
-      // le reste : la planche IMPOSE la valeur que le moteur donnerait, elle
+      // le reste : la planche **impose** la valeur que le moteur donnerait, elle
       // n'en fabrique pas de nouvelle sorte.
       ...(options.chandelle ? { chandelle: true } : {}),
       ...(options.brulee ? { brulee: true } : {}),
@@ -681,12 +681,12 @@ const HAIE = [
 ];
 
 /**
- * Les espèces dont le MOTEUR suit la fructification, dans l'ordre des tailles
+ * Les espèces dont le **moteur** suit la fructification, dans l'ordre des tailles
  * de fruit.
  *
  * Onze, et la liste n'est pas un choix de dessin : c'est exactement l'ensemble
  * des espèces qui ont un bloc `fruits` dans `especes.ts` — le noyer s'y est
- * ajouté avec l'allélopathie, et son BROU (une drupe verte, la noix n'apparaît
+ * ajouté avec l'allélopathie, et son **brou** (une drupe verte, la noix n'apparaît
  * qu'au sol) se range entre la bogue du châtaignier et l'abricot. L'aubépine, le houx
  * et le fusain en portent de bien visibles et n'y sont pas — le moteur ne suit
  * pas leur fructification, donc le rendu n'en dessine pas.
@@ -771,7 +771,7 @@ const PLANCHE: Planche[] = [
     options: { dommageHydraulique: 0.45 },
   },
   // Les trois âges d'une tête, avec les valeurs que `trogne.ts` produit pour
-  // 1, 6 et 25 étêtages. La planche les IMPOSE plutôt que d'imposer le compte :
+  // 1, 6 et 25 étêtages. La planche les **impose** plutôt que d'imposer le compte :
   // c'est ce qui permet de mettre les trois côte à côte, ce qu'aucune parcelle
   // ne fait — un têtard centenaire et un têtard neuf n'existent pas la même
   // année.
@@ -869,16 +869,16 @@ const PLANCHE: Planche[] = [
     titre: "trois sujets de près",
     options: { echelle: 1 },
   },
-  // Le banc de la PELOUSE : le critère est celui du retour — « avec une densité
+  // Le banc de la **pelouse** : le critère est celui du retour — « avec une densité
   // de 100 % on devrait voir une pelouse quand on zoome ». Trois scènes
   // synthétiques, couverture forcée à 1, sans arbres pour les deux premières :
   // on juge le tapis, pas ce qui pousse dessus.
   //
   // **La seconde moitié du critère — « là où elle sèche, une pelouse sèche » —
-  // n'est PAS montrée ici, et c'est volontaire.** La grandeur qui le dirait
+  // n'est pas montrée ici, et c'est volontaire.** La grandeur qui le dirait
   // (`humiditeVecue`, l'humidité de surface lissée de `herbe.ts`) n'est pas
   // dans l'instantané, et le rendu n'a pas à la fabriquer. Ce banc montre donc
-  // ce que le moteur donne : le FOIN sur pied, commandé par la biomasse. Un
+  // ce que le moteur donne : le **foin** sur pied, commandé par la biomasse. Un
   // banc qui afficherait une pelouse grillée par un seuil inventé ferait
   // croire le sujet réglé.
   {
@@ -912,7 +912,7 @@ const PLANCHE: Planche[] = [
   { scene: "friche-s28", titre: "friche · zoom ×30", facteur: 30, centre: { x: 50, y: 50 } },
   { scene: "friche-s4", titre: "saison · janvier" },
   { scene: "friche-s17", titre: "saison · avril" },
-  // Semaines 13 et 24 : les fenêtres de floraison, et elles sont ÉTROITES —
+  // Semaines 13 et 24 : les fenêtres de floraison, et elles sont **étroites** —
   // deux à trois semaines chacune, calées sur un seuil de degrés-jours. Les
   // rater était facile : les quatre saisons habituelles (s4, s17, s28, s42) ne
   // croisent aucune floraison de la friche, ce qui n'est pas un défaut mais la
@@ -928,7 +928,7 @@ const PLANCHE: Planche[] = [
   { scene: "friche-s28", titre: "saison · juillet" },
   // Semaine 36 : la semaine de récolte du sureau et du noisetier (`recolteWeek`
   // dans `especes.ts`). C'est la seule façon de voir le fruit sur le chemin
-  // RÉEL — sur la friche, 143 sureaux portent des kilos mûrs cette semaine-là,
+  // **réel** — sur la friche, 143 sureaux portent des kilos mûrs cette semaine-là,
   // et le troène en est à mi-croissance.
   { scene: "friche-s36", titre: "saison · septembre · la récolte du sureau" },
   {

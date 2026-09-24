@@ -2,13 +2,13 @@
  * Prunellier — *Prunus spinosa*. Famille : **arbuste épineux drageonnant**.
  *
  * Ce n'est pas un fourré bas — il fait quatre mètres et il a du bois — mais ce
- * n'est pas non plus un petit arbre : il avance par DRAGEONS, et un buisson de
+ * n'est pas non plus un petit arbre : il avance par **drageons**, et un buisson de
  * prunellier est une colonie, pas un individu. D'où la cépée nombreuse, la
  * dominance très basse (aucun brin ne prend la tête) et la tortuosité forte.
  *
  * Sa signature graphique tient à ses **rameaux terminés en épine** : la
  * conicité basse et le grand angle donnent cette ramure raide et divariquée
- * qui, en février, se couvre de fleurs blanches AVANT les feuilles.
+ * qui, en février, se couvre de fleurs blanches **avant** les feuilles.
  */
 import type { FicheGraphique } from "../fiche";
 
@@ -34,7 +34,7 @@ export const PRUNELLIER: FicheGraphique = {
     automne: { r: 172, g: 150, b: 80 },
   },
   fruit: {
-    // Bleu-noir pruineux : la prunelle est le seul fruit BLEU de l'atlas, et
+    // Bleu-noir pruineux : la prunelle est le seul fruit **bleu** de l'atlas, et
     // c'est à ça qu'on la nomme — un buisson épineux couvert de points bleus
     // en octobre ne peut être que ça.
     forme: "charnu",
@@ -44,7 +44,7 @@ export const PRUNELLIER: FicheGraphique = {
     // prunelles serrées le long du rameau : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.05,
-    // Blanc pur sur bois NU, en février-mars : un prunellier en fleur est une
+    // Blanc pur sur bois **nu**, en février-mars : un prunellier en fleur est une
     // écume blanche dans une haie encore grise. Rien d'autre ne fait ça à cette
     // saison.
     fleur: { r: 246, g: 244, b: 238 },

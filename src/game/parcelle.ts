@@ -1,6 +1,6 @@
 /**
- * L'adaptateur instantané → scène : ce qui traduit ce que le moteur RAPPORTE
- * en ce que la couche visuelle POSE.
+ * L'adaptateur instantané → scène : ce qui traduit ce que le moteur **rapporte**
+ * en ce que la couche visuelle **pose**.
  *
  * **Il existait déjà, mais dans le harnais d'aperçu.** `src/apercu/jeu.tsx`
  * portait la traduction complète — les grilles du sol, les vingt-cinq champs
@@ -17,7 +17,7 @@
  * quand une grandeur manque, elle se demande au moteur, elle ne se reconstitue
  * pas.
  *
- * **Les types d'entrée sont STRUCTURELS et non les types du protocole**, et
+ * **Les types d'entrée sont structurels et non les types du protocole**, et
  * c'est délibéré. Deux appelants existent : le jeu, qui tient un `Snapshot`
  * vivant sorti du worker, et le banc d'aperçu, qui relit une scène cuite en
  * JSON — tableaux ordinaires là où le protocole a des tableaux typés, champs
@@ -39,7 +39,7 @@ import type { CoteDecor, DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 
 /**
- * Ce qu'il faut d'un instantané pour poser le SOL.
+ * Ce qu'il faut d'un instantané pour poser le **sol**.
  *
  * `ArrayLike<number>` plutôt que `Float32Array` : le jeu a des tableaux typés,
  * le banc a ce que `JSON.parse` rend, et les deux se lisent pareil.
@@ -104,7 +104,7 @@ export function donneesSolDe(src: SolSource): DonneesSol {
     litiereCG: Float32Array.from(src.litiereCG),
     ...(src.lumiere ? { lumiere: Float32Array.from(src.lumiere) } : {}),
     ...(src.herbeHumidite ? { herbeHumidite: Float32Array.from(src.herbeHumidite) } : {}),
-    // Gardées par RÉFÉRENCE, contrairement aux autres grilles : ce sont les
+    // Gardées par **référence**, contrairement aux autres grilles : ce sont les
     // tableaux de l'instantané, que le worker refabrique à chaque semaine et ne
     // touche plus une fois postés. Les recopier coûterait une copie par semaine
     // pour rien — et le rendu ramène l'emprise en [0,1] au moment de colorer,
@@ -131,7 +131,7 @@ export interface ArbreSource {
   heightM: number;
   /**
    * Diamètre à 1,30 m, cm (#62). Il ne sert pas qu'aux stades : c'est lui qui
-   * donne au fût son épaisseur À L'ÉCRAN, donc qui rend l'étiolement visible —
+   * donne au fût son épaisseur **à l'écran**, donc qui rend l'étiolement visible —
    * une tige filée est mince pour sa hauteur, et c'est la première chose qu'un
    * forestier lit sur un arbre.
    */
@@ -173,8 +173,8 @@ export interface ContexteDePose {
   /**
    * Les arbres que l'incendie est en train de torcher, s'il y en a.
    *
-   * **Un arbre que l'ellipse va torcher part VIVANT**, et c'est la seule façon
-   * d'avoir quoi que ce soit à animer : l'instantané le décrit APRÈS
+   * **Un arbre que l'ellipse va torcher part vivant**, et c'est la seule façon
+   * d'avoir quoi que ce soit à animer : l'instantané le décrit **après**
    * l'incendie — tronc charbonné, sans feuilles — et une mise en scène qui
    * partirait de là interpolerait du néant vers le néant. Ce qu'on remet n'est
    * pas inventé : c'est ce que la phénologie du moteur dit de cette espèce à
@@ -231,7 +231,7 @@ export function arbresAPoser(arbres: readonly ArbreSource[], ctx: ContexteDePose
       ...(t.floraison ? { floraison: t.floraison } : {}),
       ...(t.fruitProgress ? { fruitProgress: t.fruitProgress } : {}),
       ...(t.fruitsKg ? { fruitsKg: t.fruitsKg } : {}),
-      // Une DURÉE, pas une présence : le moteur donne la semaine du dernier
+      // Une **durée**, pas une présence : le moteur donne la semaine du dernier
       // démasclage, donc on peut dire où en est l'écorce et pas seulement
       // qu'elle a été levée.
       ...(t.derniereLeveeSemaine === undefined
@@ -249,7 +249,7 @@ export function arbresAPoser(arbres: readonly ArbreSource[], ctx: ContexteDePose
 /**
  * Les quatre bordures, réduites à ce dont le décor a besoin.
  *
- * Trois parts et les ESSENCES, par côté. Le rendu n'a que faire du gibier ou
+ * Trois parts et les **essences**, par côté. Le rendu n'a que faire du gibier ou
  * des dépôts d'azote — mais les semenciers, si : ce sont eux qui disent de quoi
  * est fait le bois d'à côté, et sans eux un massif de pins de lande se dessine
  * comme une hêtraie. Le poids est le `semisParAn` du paysage, tel quel : c'est

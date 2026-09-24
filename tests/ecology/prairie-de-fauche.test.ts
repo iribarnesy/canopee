@@ -1,5 +1,5 @@
 /**
- * POURQUOI UNE PRAIRIE DE FAUCHE RESTE UNE PRAIRIE (issue #184).
+ * **Pourquoi une prairie de fauche reste une prairie** (issue #184).
  *
  * Elle ne reste pas ouverte parce que l'herbe y gagnerait — sur une friche à
  * limon, l'herbe perd, et `succession.test.ts` le montre sur deux siècles. Elle
@@ -13,7 +13,7 @@
  * l'a rendu visible : ses bandes épargnées le long des rangs se reboisaient
  * toutes seules, dix-huit semis spontanés de noyer, 5,6 % du terme arbre.
  *
- * **LE DISPOSITIF EST UN CONTRÔLE APPARIÉ** : même station, même graine, même
+ * **le dispositif est un contrôle apparié** : même station, même graine, même
  * météo, trente ans, et une seule chose qui change — le passage de la
  * faucheuse. Chaque bras est le témoin de l'autre, ce qui est la seule façon de
  * savoir que c'est bien la fauche qui fait la différence et non la station.
@@ -73,12 +73,12 @@ describe("la fauche arrête la succession", () => {
     expect(libre.tiges).toBeGreaterThan(100);
     expect(libre.hautes).toBeGreaterThan(10);
     // Trente ans de bouleau, mesuré à 20,6 m. Seuil large : ce qui compte ici
-    // est qu'une CANOPÉE se soit fermée, pas sa hauteur exacte.
+    // est qu'une **canopée** se soit fermée, pas sa hauteur exacte.
     expect(libre.plusHauteM).toBeGreaterThan(12);
   });
 
   it("la même friche fauchée une fois l'an ne porte pas un arbre", () => {
-    // **ZÉRO, ET C'EST L'ÉNONCÉ**, pas une photographie qu'on relèvera : une
+    // **zéro, et c'est l'énoncé**, pas une photographie qu'on relèvera : une
     // prairie de fauche n'a pas d'arbres, c'est ce qui en fait une prairie. Le
     // jour où un semis y survivrait, ce serait qu'il aurait dépassé le mètre en
     // une saison — et cet essai doit le dire, pas l'absorber.

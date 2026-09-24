@@ -1,5 +1,5 @@
 /**
- * Le volet PARTIE : ce qui concerne la partie plutôt que la parcelle — la
+ * Le volet **partie** : ce qui concerne la partie plutôt que la parcelle — la
  * récolte automatique, la porte de sortie, et comment on pilote la vue.
  */
 

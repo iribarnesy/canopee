@@ -67,7 +67,7 @@ profondeur de nappe à partir de deux termes :
 
 Trois effets, tous exprimés dans le bilan hydrique existant :
 
-1. **saturation imposée** — sous la surface libre, réserve utile ET
+1. **saturation imposée** — sous la surface libre, réserve utile **et**
    macroporosité sont pleines. Ce n'est pas un flux qu'on choisit, c'est un
    état ; l'eau ainsi ajoutée est comptée comme venue de la nappe, sinon le
    bilan ne bouclerait pas ;
@@ -107,9 +107,9 @@ l'hydrologie numérique.
   d'eau. Un trou creusé se remplit ; le même trou percé jusqu'au bord ne
   retient plus rien.
 - **Accumulation d'écoulement**, en deux versions, et il faut les deux :
-  celle qui suit l'ARBRE du remplissage donne à chaque cellule son bassin
+  celle qui suit l'**arbre** du remplissage donne à chaque cellule son bassin
   versant, y compris sur une surface parfaitement plane où aucune voisine
-  n'est plus basse ; celle qui suit la voisine la plus PENTUE ne donne rien sur
+  n'est plus basse ; celle qui suit la voisine la plus **pentue** ne donne rien sur
   un plat, et c'est elle qui repère les talwegs — sans quoi on inventerait des
   rivières au milieu d'une prairie plane. Au-delà de cinq hectares drainés, le
   talweg porte un cours d'eau permanent : aucune parcelle d'un hectare n'en
@@ -159,7 +159,7 @@ chez le voisin, ce qui est vrai si le voisin est plus bas et faux sinon.
 5. **Moyenne montagne (Massif central, ~900 m)** — sol sur granite, saison courte, gels tardifs fréquents, forte RU. Pour sorbier, myrtille, mélèze ; les fruitiers exigeants y échouent.
 6. **Vallée alluviale ligérienne** — sol profond eutrophe, nappe accessible, risque de crue hivernale scriptée. Peupliers, noyers, frênes ; engorgement à gérer.
 
-Chaque station embarque ses **normales climatiques mensuelles réelles** (Météo-France, à collecter en phase données) et un **réchauffement en trajectoire, pas en décor statique** : la série de 60 ans suit un scénario du GIEC (**SSP1-2.6 / SSP2-4.5 / SSP5-8.5**), régionalisé France via les projections **DRIAS / Météo-France** (la France se réchauffe ~2× plus vite que la moyenne globale). Le joueur choisit le scénario **et l'année de départ** (2026 ou 2040) : même en SSP2 démarré aujourd'hui, la fin de partie est nettement plus chaude que le début — planter en 2026 un arbre qui produira en 2070, c'est LE problème du jeu (ch8). Le CO₂ (ppm) suit la même trajectoire.
+Chaque station embarque ses **normales climatiques mensuelles réelles** (Météo-France, à collecter en phase données) et un **réchauffement en trajectoire, pas en décor statique** : la série de 60 ans suit un scénario du GIEC (**SSP1-2.6 / SSP2-4.5 / SSP5-8.5**), régionalisé France via les projections **DRIAS / Météo-France** (la France se réchauffe ~2× plus vite que la moyenne globale). Le joueur choisit le scénario **et l'année de départ** (2026 ou 2040) : même en SSP2 démarré aujourd'hui, la fin de partie est nettement plus chaude que le début — planter en 2026 un arbre qui produira en 2070, c'est **le** problème du jeu (ch8). Le CO₂ (ppm) suit la même trajectoire.
 
 ---
 
@@ -168,13 +168,13 @@ Chaque station embarque ses **normales climatiques mensuelles réelles** (Mété
 - Par station : une **série météo hebdomadaire scriptée sur 60 ans**, construite à partir des normales mensuelles + événements datés (canicule de l'an 12, gel tardif semaine 16 de l'an 4, tempête de l'an 27…). Rejouable à l'identique → même partie, mêmes résultats.
 - Variables par semaine : T° moyenne/min/max, précipitations (mm), rayonnement (dérivé latitude + nébulosité), vent (événements).
 - **ETP** (évapotranspiration potentielle) calculée par Hargreaves : `ETP = 0,0023 × Ra × (Tmoy + 17,8) × √(Tmax − Tmin)` — **validé**.
-- **VENT : dérivé, pas saisi** (`meteo.ts`). Les séries du dépôt ne portent que quatre colonnes (T moyenne, min, max, pluie) : il n'y a pas de relevé de vent à lire. `WeekWeather` porte donc deux champs calculés, comme l'ETP est calculée :
-  - `ventVersRad`, le cap VERS lequel il souffle — convention « vers » de tout le moteur, comme `directionRad` d'une tige tombée. Constant sur l'année : le flux d'ouest à sud-ouest domine la façade atlantique toute l'année, et un virement saisonnier inventé serait pire que pas de virement. Une rose par station reste à faire, faute de données ;
-  - `ventMoyMs`, la vitesse moyenne hebdomadaire à 10 m, saisonnière — maximum en hiver (rail des dépressions), minimum fin juillet. **Conséquence voulue et importante : la saison des feux tombe dans le BAS de la plage de vent.** Les grands incendies français ne courent pas sur le vent moyen de juillet, ils courent les jours où le vent revient, ce qu'un pas de temps hebdomadaire ne sait pas voir.
-  - ce que la parcelle REÇOIT est le produit de la vitesse régionale et de l'abri `ventExposition` (`ventRecuParLeSite`). Les deux ne sont pas interchangeables : un vallon abrité sous tempête reçoit plus qu'une lande par temps calme.
-  - **Le vent sert à la FORME du front, pas au déclenchement**, et c'est une mesure qui l'a décidé : brancher la moyenne hebdomadaire sur `indiceRisqueFeu` faisait tomber la fréquence des départs d'un quart sur la lande, parce que cette moyenne est minimale en pleine saison des feux. Ce que ce facteur représente est une climatologie de RAFALES, que la météo ne porte pas.
+- **Vent : dérivé, pas saisi** (`meteo.ts`). Les séries du dépôt ne portent que quatre colonnes (T moyenne, min, max, pluie) : il n'y a pas de relevé de vent à lire. `WeekWeather` porte donc deux champs calculés, comme l'ETP est calculée :
+  - `ventVersRad`, le cap **vers** lequel il souffle — convention « vers » de tout le moteur, comme `directionRad` d'une tige tombée. Constant sur l'année : le flux d'ouest à sud-ouest domine la façade atlantique toute l'année, et un virement saisonnier inventé serait pire que pas de virement. Une rose par station reste à faire, faute de données ;
+  - `ventMoyMs`, la vitesse moyenne hebdomadaire à 10 m, saisonnière — maximum en hiver (rail des dépressions), minimum fin juillet. **Conséquence voulue et importante : la saison des feux tombe dans le bas de la plage de vent.** Les grands incendies français ne courent pas sur le vent moyen de juillet, ils courent les jours où le vent revient, ce qu'un pas de temps hebdomadaire ne sait pas voir.
+  - ce que la parcelle **reçoit** est le produit de la vitesse régionale et de l'abri `ventExposition` (`ventRecuParLeSite`). Les deux ne sont pas interchangeables : un vallon abrité sous tempête reçoit plus qu'une lande par temps calme.
+  - **Le vent sert à la forme du front, pas au déclenchement**, et c'est une mesure qui l'a décidé : brancher la moyenne hebdomadaire sur `indiceRisqueFeu` faisait tomber la fréquence des départs d'un quart sur la lande, parce que cette moyenne est minimale en pleine saison des feux. Ce que ce facteur représente est une climatologie de **rafales**, que la météo ne porte pas.
   - **Même verdict pour l'orientation des chablis** : `directionDeChute` sait composer la pente et le vent en vecteurs — deux tendances qui s'accordent resserrent la chute, deux qui s'opposent rendent la main au hasard — mais le tick ne lui passe aucun vent. Mesuré : le rapport « un versant raide barre moins l'eau que le plat » vaut 0,79, et la moyenne hebdomadaire le remonte à 1,00, effaçant l'alignement par la pente. Le mécanisme est écrit, testé et débranché en attendant une grandeur de rafale.
-- **L'incendie rapporte la CHARGE de chaque cellule brûlée** (`IncendieResult.charges`), à côté du rang d'arrivée du front. Le rang dit où le feu est passé et quand ; la charge dit dans quoi il a brûlé, donc avec quelle violence. Elle décidait déjà de l'intensité, donc de qui meurt (`survitAuFeu`) — mais personne ne pouvait la relire. *(L'intensité elle-même vit toujours en une ligne anonyme au milieu de la section incendie du tick, et le banc de scènes a dû la recopier pour reproduire la sélection : issue #52.)*
+- **L'incendie rapporte la charge de chaque cellule brûlée** (`IncendieResult.charges`), à côté du rang d'arrivée du front. Le rang dit où le feu est passé et quand ; la charge dit dans quoi il a brûlé, donc avec quelle violence. Elle décidait déjà de l'intensité, donc de qui meurt (`survitAuFeu`) — mais personne ne pouvait la relire. *(L'intensité elle-même vit toujours en une ligne anonyme au milieu de la section incendie du tick, et le banc de scènes a dû la recopier pour reproduire la sélection : issue #52.)*
 - Dérivés phénologiques : **degrés-jours** (base 5 °C ou 10 °C selon espèce), **heures de froid** hivernales (besoin de vernalisation des fruitiers), **dates de gel** (dernier gel de printemps = risque pour fleurs précoces type abricotier — atlas : « gel des fleurs = risque »).
 - **CO₂ atmosphérique** : chaque scénario fixe sa trajectoire de ppm (≈ 420 aujourd'hui → 550–800 selon scénario). L'**effet fertilisant** est modélisé, honnêtement : hausse **saturante** du potentiel de photosynthèse (ordre de grandeur +10–20 % vers 550 ppm, d'après les expériences FACE *(à calibrer)*) et meilleure **efficience d'usage de l'eau** (stomates moins ouverts → transpiration réduite à production égale). Mais la loi du minimum s'applique toujours : sans azote et sans eau, le bonus CO₂ ne s'exprime pas — c'est l'état de la littérature (limitation progressive par les nutriments ; effet plus faible en forêt mature, et effacé les années de sécheresse).
 - Le **microclimat** modifie la météo localement (ch4-A) : sous couvert, ETP réduite (−20 à −40 %), extrêmes thermiques amortis (moins de gel au sol), vent cassé par les haies (effet sur ~10× leur hauteur) *(coefficients à calibrer)*.
@@ -192,7 +192,7 @@ Chaque station embarque ses **normales climatiques mensuelles réelles** (Mété
 | N minéral (NH₄⁺ + NO₃⁻) | kg/ha équiv. | le nitrate est lessivable, l'ammonium retenu par le CAH (ch1-C) |
 | P et K disponibles | index 0–100 | modèle simplifié : stock lentement renouvelé par altération + MO |
 | Bases échangeables / pH | pH | dérive lente : acidification sous résineux/exports, chaulage possible |
-| Matière organique / C du sol | t C/ha (par horizon) | LE stock central (carbone §12, fertilité, RU bonus) |
+| Matière organique / C du sol | t C/ha (par horizon) | **Le** stock central (carbone §12, fertilité, RU bonus) |
 | Litière | t MS/ha, avec son C/N | pool d'attente avant humification/minéralisation |
 | Structure / compaction | index 0–1 | dégradée par engins & labour répété, restaurée par racines, vers, MO |
 | Activité biologique | index 0–1 | proxy de biomasse microbienne + vers (ch2-B) ; module toutes les vitesses |
@@ -229,7 +229,7 @@ implémentés, pas encore couplés à la croissance*. Les copier sur l'azote aur
   fertilité minérale** — et le réseau mycorhizien cesse d'être décoratif.
 - Résultat : rien ne freine sur un limon profond, où l'azote et l'eau
   commandent ; sur un podzol landais, le phosphore devient le facteur qui
-  manque, avec dix fois moins d'assimilable. Les seuils sont FORESTIERS, bien
+  manque, avec dix fois moins d'assimilable. Les seuils sont **forestiers**, bien
   plus bas que les seuils agronomiques : un arbre mycorhizé qui retransloque
   son phosphore vit sur des teneurs qui condamneraient une culture.
 - **Fixation biologique de N** : légumineuses (*Rhizobium*) et actinorhiziennes (*Frankia* : aulne, argousier, chalef — atlas). Flux ∝ biomasse du fixateur, restitué au sol via litière/racines mortes ou **à la coupe si épandu** (ta règle : épandre vs vendre). Ordre de grandeur : aulne 50–100 kg N/ha/an en peuplement dense *(à calibrer)*. La fixation coûte au fixateur (~10 % de croissance en moins vs N abondant, « la légumineuse paie deux fois », ch1-C).
@@ -388,7 +388,7 @@ celui-là qui n'a plus de quoi faire de la résine. La population croît sur cet
 ressource, d'autant plus vite qu'il fait chaud, **hiverne** (d'où les crises
 qui s'installent sur plusieurs années de suite) et essaime vers les cellules
 voisines. En face, les auxiliaires exercent une **prédation** proportionnelle à
-la qualité de l'habitat du VOISINAGE — pas de la cellule : une mésange
+la qualité de l'habitat du **voisinage** — pas de la cellule : une mésange
 prospecte un hectare, un parasitoïde quelques dizaines de mètres, et évaluer la
 diversité au mètre carré donnait « une seule essence » partout, pur ou mélangé.
 Mesuré : une aulnaie pure perd 30 % de ses tiges aux ravageurs là où le même
@@ -427,11 +427,11 @@ clôture.
 - **Mycorhizes** (ch2-B) — *implémenté* (`src/engine/mycorhizes.ts`) : trois
   types incompatibles (ecto des essences forestières, arbusculaire des
   fruitiers et légumineuses, éricoïde des landes), un réseau par type et par
-  cellule, qui suit les hôtes compatibles à l'échelle de leurs RACINES et met
+  cellule, qui suit les hôtes compatibles à l'échelle de leurs **racines** et met
   ~5 ans à se tisser. Un labour n'en laisse que 5 %, et il faut plus de dix ans
   pour revenir : c'est le coût qu'on ne voit pas sur la facture. Gain modélisé :
   +30 % d'absorption d'azote à réseau complet.
-  *Ce que je n'ai PAS retenu* : j'avais d'abord modélisé le bénéfice comme une
+  *Ce que je n'ai pas retenu* : j'avais d'abord modélisé le bénéfice comme une
   extension du rayon racinaire. C'est faux physiquement (les hyphes explorent
   des pores, pas un disque plus grand) et faux dans ses effets — élargir tous
   les disques dilue l'asymétrie de compétition, au point que le hêtre
@@ -445,7 +445,7 @@ clôture.
 
 ### 7.6 Auto-éclaircie (implémenté)
 
-Ce qui sature un peuplement n'est pas un nombre de tiges mais la PLACE : la
+Ce qui sature un peuplement n'est pas un nombre de tiges mais la **place** : la
 somme des couronnes rapportée à la surface au sol. Au-delà de deux fois et
 demie — un peuplement stratifié superpose deux à trois épaisseurs de houppier —
 il ne reste plus assez de lumière pour qu'un semis de plus s'installe. La même
@@ -470,7 +470,7 @@ Chaque action coûte **de l'argent et/ou du temps de travail** (§10). Liste v1 
 **Sol** : observer/analyser (bêche gratuite = infos partielles, analyse labo payante = valeurs exactes), labour initial (gain N à court terme, casse mycorhizes + déstocke C — le piège classique), paillage, BRF, compost/fumier, chaulage, engrais organique ou minéral (avec pertes par lessivage si mal daté, ch1-C), semis d'engrais verts, faux-semis/fauche.
 
 **Broyat (BRF)** — implémenté : couper offre trois devenirs, et la nuance
-compte. `vendre` exporte le bois ; `epandre` le broie et le laisse SUR PLACE,
+compte. `vendre` exporte le bois ; `epandre` le broie et le laisse **sur place**,
 sous l'ancienne couronne ; `broyer` le charge dans un **tas** (`state.stockBrf`,
 le seul objet du modèle qui n'a pas de position — parce qu'un tas n'en a pas),
 qu'on épand ensuite où l'on veut, au prix de la manutention. C'est ce qui rend
@@ -523,7 +523,7 @@ excellence — et la plus menacée de France depuis l'arrivée de la chalarose.
 ### 10 bis. Trajectoire climatique (implémenté)
 
 **Les chiffres sont français, pas mondiaux.** Le moteur ne part plus du
-réchauffement global qu'il amplifierait : il part des trajectoires FRANÇAISES,
+réchauffement global qu'il amplifierait : il part des trajectoires **françaises**,
 et ne fait que les répartir dans l'année. C'est le seul chiffre qui a un sens
 pour une parcelle — et l'écart avec le monde est considérable :
 
@@ -559,22 +559,22 @@ qu'une semaine plus chaude et un CO₂ plus élevé.
 - **Les étés s'assèchent** (−9 %/°C) pendant que les hivers s'arrosent un peu
   (+3 %/°C) : le total annuel bouge peu, sa répartition beaucoup.
 - **Le CO₂ agit deux fois** : il stimule la croissance (réponse logarithmique,
-  ~+20 % pour un doublement, appliquée au POTENTIEL donc bornée par la loi du
+  ~+20 % pour un doublement, appliquée au **potentiel** donc bornée par la loi du
   minimum — un arbre qui a soif n'en profite pas) et il ferme les stomates, ce
   qui économise de l'eau sans jamais compenser la hausse de l'ETP.
 - **Les extrêmes s'aggravent plus vite que la moyenne** : la distribution ne se
   décale pas, elle s'étire par le haut. On amplifie donc l'écart d'une semaine
-  à sa normale saisonnière quand il est CHAUD (+8 %/°C de réchauffement) et le
-  déficit quand elle est SÈCHE (+5 %/°C) ; les semaines fraîches ou arrosées ne
+  à sa normale saisonnière quand il est **chaud** (+8 %/°C de réchauffement) et le
+  déficit quand elle est **sèche** (+5 %/°C) ; les semaines fraîches ou arrosées ne
   sont pas touchées.
-- **La mémoire des sécheresses est dans l'ARBRE, pas dans le sol.** Mesuré :
+- **La mémoire des sécheresses est dans l'arbre, pas dans le sol.** Mesuré :
   même sous SSP5-8.5, la réserve profonde revient à 94-100 % à chaque sortie
   d'hiver — chaque été repart à plein. Ce qui garde la trace, c'est la
   **cavitation** : sous tension extrême, l'eau casse en colonnes dans les
   vaisseaux, et ces vaisseaux ne se réparent pas ; l'arbre ne récupère qu'en
   fabriquant du bois neuf, soit trois à quatre ans pour effacer un épisode
   sévère. Un arbre embolisé transpire moins et reste en déficit même le sol
-  plein — c'est pourquoi il meurt souvent à la sécheresse SUIVANTE et non à
+  plein — c'est pourquoi il meurt souvent à la sécheresse **suivante** et non à
   celle qui l'a abîmé. C'est le décalage observé après 1976, 2003 et 2018.
 
 Constat au passage : même sans scénario, la série 1964-2023 rejouée telle
@@ -606,7 +606,7 @@ la station : la même terre au milieu d'une hêtraie ou d'un lotissement, ce
 n'est pas la même partie. Un nouveau paysage se décrit en quatre nombres et une
 liste de semenciers.
 
-*Et l'entourage se règle CÔTÉ PAR CÔTÉ* : forêt au nord, champs au sud, ça
+*Et l'entourage se règle côté par côté* : forêt au nord, champs au sud, ça
 n'est pas la même partie. Ce qui se déduit des quatre bordures ne s'agrège pas
 de la même façon selon ce qu'on regarde — les semences **s'additionnent**
 (quatre côtés boisés sèment plus que deux), le gibier et les dépôts d'azote se
@@ -705,7 +705,7 @@ Variabilité individuelle (ta v2 : tirage d'un « génotype » par individu auto
 10. **Un seul phénotype par espèce en v1** ; l'achat de provenances plus méridionales (migration assistée) arrivera en v2, avec la variabilité individuelle.
 11. Aléa (dispersion voisine…) autorisé mais **seedé** : le déterminisme se teste à seed fixée, les tests écologiques valident des critères larges sur plusieurs seeds (§16).
 12. **Le dépassement horaire ne se lisse pas** (2026-09-18). Une heure au-dessus du seuil coûte une semaine de saisonnier entière. C'est un palier assumé, pas un oubli : on n'embauche personne pour une heure. Si une partie montre que l'arbitrage en devient absurde, c'est la partie qui le dira — pas un banc.
-13. **Le bac à sable n'a aucune limite de travail** (2026-09-18). Conséquence assumée du point 4 : la limite hebdomadaire étant devenue une contrainte d'ARGENT, couper l'économie la fait disparaître. Ce mode sert les questions qui ne sont pas économiques (quelle succession sur deux siècles, le chêne-liège protège-t-il du feu) et personne n'y compose des semaines de 200 h. Ce qui reste vrai, et que `economie-optionnelle.test.ts` verrouille : la comptabilité physique ne dépend pas de l'argent — les heures montent à l'identique des deux côtés et le dépassement se lit à l'identique.
+13. **Le bac à sable n'a aucune limite de travail** (2026-09-18). Conséquence assumée du point 4 : la limite hebdomadaire étant devenue une contrainte d'**argent**, couper l'économie la fait disparaître. Ce mode sert les questions qui ne sont pas économiques (quelle succession sur deux siècles, le chêne-liège protège-t-il du feu) et personne n'y compose des semaines de 200 h. Ce qui reste vrai, et que `economie-optionnelle.test.ts` verrouille : la comptabilité physique ne dépend pas de l'argent — les heures montent à l'identique des deux côtés et le dépassement se lit à l'identique.
 
 **Encore ouvert :**
 - **Vue graphique** : hypothèse de travail = **isométrique** ; maquette à faire au moment de l'UI, en vérifiant deux points durs de l'iso : lisibilité des ombres portées (information de gameplay) et occlusion des petits sujets derrière les grands arbres. Une vue de dessus « plan de gestion » restera sans doute nécessaire en complément.
@@ -719,7 +719,7 @@ Variabilité individuelle (ta v2 : tirage d'un « génotype » par individu auto
 Le moteur étant une fonction pure `état + actions → état`, tout se teste sans navigateur, dès la V0 :
 
 - **Tests unitaires par processus** : bilan hydrique, minéralisation, loi du minimum, degrés-jours/phénologie, interception lumineuse par strates.
-- **Tests de conservation (propriétés)** : à chaque tick, l'eau (pluie = interception + ruissellement + drainage + Δstock + prélèvements), le carbone et l'azote sont **conservés** sur l'ensemble des pools. La fuite de matière est LE bug classique des simulateurs.
+- **Tests de conservation (propriétés)** : à chaque tick, l'eau (pluie = interception + ruissellement + drainage + Δstock + prélèvements), le carbone et l'azote sont **conservés** sur l'ensemble des pools. La fuite de matière est **le** bug classique des simulateurs.
 - **Test de déterminisme** : tout l'aléa du moteur (dispersion depuis le voisinage, placement des semis…) passe par un **PRNG seedé** stocké dans la sauvegarde — jamais `Math.random`. Même seed + mêmes actions datées → hash d'état identique à chaque tick (c'est un test de non-régression, pas une contrainte de gameplay : deux parties ont des seeds différentes et divergent normalement).
 - **Tests écologiques de bout en bout** : on simule 60 ans et on vérifie que les **trajectoires émergent** des règles, sans les avoir codées en dur —
   - friche sur limon picard, zéro intervention → fruticée → pionniers → les climaciques (hêtre, chêne) dominent la canopée à l'an 60 ;

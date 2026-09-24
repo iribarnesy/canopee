@@ -4,7 +4,7 @@
  * Canopée est un jeu d'agroforesterie et ne savait pas faire pousser une
  * culture. Ce fichier vérifie les trois choses que le lot affirme :
  *   1. l'histoire de vie — semée, moissonnée, et elle ne colonise rien ;
- *   2. ce que le rendement vaut, contre une source EXTÉRIEURE au moteur ;
+ *   2. ce que le rendement vaut, contre une source **extérieure** au moteur ;
  *   3. que l'ombre des arbres le fait baisser.
  */
 
@@ -26,7 +26,7 @@ const WEATHER = syntheticYear(LIMON_RICHE.climat);
 
 /**
  * Mène une parcelle sur `ans` années : labour, semis, moisson chaque année sur
- * un disque, et rend le rendement annuel en t/ha — lu sur la RECETTE, donc sur
+ * un disque, et rend le rendement annuel en t/ha — lu sur la **recette**, donc sur
  * ce que le joueur touche, pas sur une variable interne.
  */
 function culture(options: {
@@ -84,7 +84,7 @@ function culture(options: {
 describe("l'histoire de vie d'une culture n'est pas celle d'une pérenne", () => {
   const station = { ...LIMON_RICHE.station, coteM: 20, voisinage: [] };
   /**
-   * **Une parcelle NEUVE n'est pas un tapis fermé**, et le premier jet de cet
+   * **Une parcelle neuve n'est pas un tapis fermé**, et le premier jet de cet
    * essai l'avait supposé : il semait sur un `createGameState` et s'étonnait
    * que rien ne refuse. La station démarre à sa couverture initiale, et c'est
    * la strate qui ferme le sol en quelques saisons. On la laisse donc faire —
@@ -103,7 +103,7 @@ describe("l'histoire de vie d'une culture n'est pas celle d'une pérenne", () =>
 
   it("semer dans un tapis fermé est REFUSÉ, et le refus dit quoi faire", () => {
     // **La règle « préparer le lit de semence » n'est écrite nulle part** : le
-    // semis pose la place LIBRE (`actions.ts`), et une friche n'en laisse pas.
+    // semis pose la place **libre** (`actions.ts`), et une friche n'en laisse pas.
     // Mesuré avant la garde : le semis passait, l'emprise valait zéro, et la
     // moisson annonçait « rien à moissonner » neuf mois plus tard.
     const r = applyAction(nu, {
@@ -163,7 +163,7 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // **Le calage et la validation viennent de la même source, sur deux
     // chiffres différents.** Broadbalk (Rothamsted, blé continu depuis 1843)
     // donne 8-9 t/ha sur les parcelles pleinement fumées — c'est le plafond de
-    // la fiche — et ~1 t/ha sur celles qui ne reçoivent RIEN, tenu sur cent
+    // la fiche — et ~1 t/ha sur celles qui ne reçoivent **rien**, tenu sur cent
     // soixante-dix ans. Le moteur n'a pas d'action de fertilisation : un blé
     // continu doit donc descendre de lui-même vers le second, ce que rien dans
     // le code ne lui dit de faire.
@@ -180,14 +180,14 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     //       2,96      1,25    0,84    0,78     0,79      0,70
     //
     // Le moteur passe par la gamme de Broadbalk vers les années 20 à 40 puis
-    // converge SOUS, à 0,70-0,84. Il glisse donc bien sous 1 là où l'essai
-    // tient, et la cause probable reste la PAILLE non restituée
+    // converge **sous**, à 0,70-0,84. Il glisse donc bien sous 1 là où l'essai
+    // tient, et la cause probable reste la **paille** non restituée
     // (`herbacees.ts`). Mesure détaillée dans `labour-desserre.test.ts`.
     const r = culture({ ans: 26, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
     const an24 = r[24] ?? 0;
     // Il part haut — le labour d'une bonne terre minéralise son humus — et il
-    // s'épuise. Le SENS est l'essentiel.
+    // s'épuise. Le **sens** est l'essentiel.
     expect(an2).toBeGreaterThan(3);
     expect(an24).toBeLessThan(an2 / 2);
     // Et il atterrit dans la bande de la parcelle nue, à un facteur deux près :
@@ -202,11 +202,11 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // Deux rangs de noyers encadrant une allée de 8 m : le rapport
     // hauteur / largeur d'allée monte jusqu'à 1,28 en trente-trois ans.
     //
-    // **CE BANC TOURNE SUR CINQ GRAINES DEPUIS #197, ET IL A FALLU ÇA POUR
-    // DÉCOUVRIR QU'UNE DE SES DEUX AFFIRMATIONS ÉTAIT FAUSSE.** Il n'en tirait
-    // qu'une, la 4, et il en concluait qu'à l'an 25 l'allée rend 7 % de PLUS
+    // **ce banc tourne sur cinq graines depuis #197, et il a fallu ça pour
+    // découvrir qu'une de ses deux affirmations était fausse.** Il n'en tirait
+    // qu'une, la 4, et il en concluait qu'à l'an 25 l'allée rend 7 % de **plus**
     // que le blé pur (1,069) — « l'énoncé le plus net de ce que cet essai est
-    // seul à dire ». Relevé sur cinq graines, sur le moteur d'AVANT ce lot :
+    // seul à dire ». Relevé sur cinq graines, sur le moteur d'**avant** ce lot :
     //
     //     graine        4      1      7     33   2022
     //     an 25      1,069  1,052  0,940  0,929  0,922
@@ -218,9 +218,9 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // seconde affirmation, elle, était solide : les cinq graines décrochaient à
     // l'an 33.
     //
-    // Ce que ce lot change vraiment : une graine de noyer se MANGE (elle porte
+    // Ce que ce lot change vraiment : une graine de noyer se **mange** (elle porte
     // `semences`), donc la parcelle porte 49 à 66 noyers à l'an 33 au lieu de
-    // 72 à 89, donc moins d'ombre ET moins de litière. Relevé après :
+    // 72 à 89, donc moins d'ombre **et** moins de litière. Relevé après :
     //
     //     an 25      0,922  1,046  0,947  0,929  0,920   → moyenne 0,953
     //     an 33      1,034  0,799  0,808  0,848  1,006   → moyenne 0,899
@@ -231,7 +231,7 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // longtemps, et elle a une fin.
     //
     // Le premier régime retrouve l'observation de Dupraz — « le rendement
-    // n'est pas beaucoup affecté tant que H/L reste sous 0,8 » — mais PAS pour
+    // n'est pas beaucoup affecté tant que H/L reste sous 0,8 » — mais **pas** pour
     // la même raison, et il faut le dire : chez lui l'allée est fertilisée,
     // donc son seuil est de l'ombre pure. Ici c'est une compensation, l'ombre
     // coûte et la litière de noyer rend. Même chiffre, composition différente,
@@ -255,21 +255,21 @@ describe("l'ombre des arbres coûte du rendement", () => {
     const rapport = (a: number) =>
       parGraine.reduce((somme, r) => somme + r(a), 0) / parGraine.length;
 
-    // **CE QUE CET ESSAI MONTRE, C'EST LE MASQUAGE**, et c'est ce qui a motivé
+    // **ce que cet essai montre, c'est le masquage**, et c'est ce qui a motivé
     // le lot de la fertilisation (#140). Sans apport, le témoin en blé pur
     // s'épuise pendant que l'allée reçoit la litière des noyers : on mesure
     // donc l'azote des arbres bien plus que leur ombre.
     //
-    // Le gradient d'OMBRE PURE est mesuré ailleurs, les deux côtés fertilisés
+    // Le gradient d'**ombre pure** est mesuré ailleurs, les deux côtés fertilisés
     // (`fertilisation.test.ts`) : 0,999 à H/L 0,29 puis 0,787 à 1,28, monotone.
     // Cet essai-ci garde donc ce qu'il est seul à dire — qu'une allée non
-    // fertilisée ne laisse PAS voir l'ombre, parce que l'arbre rend ce qu'il
+    // fertilisée ne laisse **pas** voir l'ombre, parce que l'arbre rend ce qu'il
     // prend.
     expect(rapport(3)).toBeGreaterThan(0.95);
-    // **LA COMPENSATION TIENT JUSQU'À H/L ≈ 1.** À l'an 25, l'allée est à 5 %
+    // **la compensation tient jusqu'à H/L ≈ 1.** À l'an 25, l'allée est à 5 %
     // du blé pur, là où son ombre seule lui coûterait le double
     // (`fertilisation.test.ts` : 0,835 à H/L 1,02). On n'affirme plus qu'elle
-    // passe DEVANT : une graine sur cinq le fait, et c'était déjà le cas avant
+    // passe **devant** : une graine sur cinq le fait, et c'était déjà le cas avant
     // ce lot.
     expect(rapport(25)).toBeGreaterThan(0.9);
     expect(rapport(25)).toBeLessThan(rapport(3));

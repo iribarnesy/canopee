@@ -9,14 +9,14 @@
  * grandeur au-dessus du budget. Les arbres sont donc **cuits en vignettes** et
  * posés comme des images, exactement comme le terrain.
  *
- * **Ce qui rend la cuisson payable, c'est le PARTAGE.** Une vignette n'est pas
+ * **Ce qui rend la cuisson payable, c'est le partage.** Une vignette n'est pas
  * cuite par arbre : elle est cuite par **classe** — une espèce, un palier de
  * hauteur, un stade, une saison, une variante. Cinq mille arbres d'une friche
  * se répartissent sur quelques dizaines de classes, et chacun pose une image
  * déjà prête. C'est ce qui fait passer le coût de « par arbre » à « par
  * classe », et c'est toute l'affaire.
  *
- * **Trois choses qu'on ne partage PAS**, parce que les partager se verrait :
+ * **Trois choses qu'on ne partage pas**, parce que les partager se verrait :
  *
  * 1. **la hauteur**, quantifiée en paliers — sans quoi toute une plantation
  *    aurait la même taille au centimètre ;
@@ -27,10 +27,10 @@
  *    l'arbre ordinaire de sa classe.
  *
  * **Le niveau de détail suit le zoom, et il faut qu'il le suive** : L0 a montré
- * que le point de rupture est le zoom RAPPROCHÉ, pas la parcelle entière. À
+ * que le point de rupture est le zoom **rapproché**, pas la parcelle entière. À
  * l'échelle de l'hectare, un arbre fait quinze pixels : y cuire mille segments
  * et trois cents feuilles serait payer un détail que personne ne voit. On cuit
- * donc la vignette à la taille où elle sera POSÉE, et le squelette se déroule
+ * donc la vignette à la taille où elle sera **posée**, et le squelette se déroule
  * d'autant moins loin que cette taille est petite.
  *
  * Module **pur du DOM** au sens du dépôt : la fabrique de canvas est injectée,
@@ -81,7 +81,7 @@ export interface ArbreAPoser {
    * grandeur écologique décrétée côté dessin. `longueurDuFutM` tirait la
    * longueur du fût de `houppierRatio` par une formule à lui, ce qui donnait le
    * même arbre en pré et en futaie — alors que la profondeur de couronne est un
-   * RÉSULTAT DE COMPÉTITION, et que c'est justement elle qui fait la différence
+   * **résultat de compétition**, et que c'est justement elle qui fait la différence
    * entre un chêne branchu jusqu'au sol et un chêne à quinze mètres de fût nu.
    *
    * Elle absorbe aussi l'élagage : le moteur y range les deux façons dont une
@@ -112,7 +112,7 @@ export interface ArbreAPoser {
   /**
    * Fruits mûrs en attente de récolte, kg : `Snapshot.fruitsKg`, tel quel.
    *
-   * **C'est l'état le plus FONCTIONNEL de l'arbre**, et le seul de cette liste
+   * **C'est l'état le plus fonctionnel de l'arbre**, et le seul de cette liste
    * qui appelle un geste : au-dessus de zéro, il y a quelque chose à récolter,
    * et ça se perd à la fin de la fenêtre (`fenetreRecolteWeeks`). Le rendu ne
    * dessine du fruit mûr que sur ce nombre-là.
@@ -121,14 +121,14 @@ export interface ArbreAPoser {
   teteTrogneM?: number;
   chandelle?: boolean;
   /**
-   * L'arbre a été tué par le FEU : `Snapshot.brulEeSemaine` est renseigné.
+   * L'arbre a été tué par le **feu** : `Snapshot.brulEeSemaine` est renseigné.
    *
    * Ce n'est pas la même chandelle qu'un mort de sécheresse, et la différence
    * est actionnable : le moteur note qu'un arbre brûlé « reste debout : on peut
    * encore le récolter en coupe sanitaire, à prix déprécié, avant que le bois ne
    * bleuisse ». Un fût carbonisé et un fût gris n'appellent pas le même geste.
    *
-   * Le rendu ne lit PAS la semaine, seulement sa présence : de combien de temps
+   * Le rendu ne lit **pas** la semaine, seulement sa présence : de combien de temps
    * un charbon pâlit est une question de modèle, et le moteur ne la traite pas.
    */
   brulee?: boolean;
@@ -144,7 +144,7 @@ export interface ArbreAPoser {
   /**
    * Nombre d'étêtages subis : `Snapshot.recepages`.
    *
-   * Le rendu n'en lit qu'un SEUIL, et c'est celui du moteur : `biodiversite.ts`
+   * Le rendu n'en lit qu'un **seuil**, et c'est celui du moteur : `biodiversite.ts`
    * compte un arbre comme porteur de cavités si `teteTrogneM` est posé et
    * `recepages >= 2`. Au-delà, la tête est creuse — et c'est ce creux qui fait
    * la valeur faunistique d'une trogne.
@@ -165,7 +165,7 @@ export interface ArbreAPoser {
   /**
    * Volume de la cavité de la tête, litres : `Snapshot.caviteTeteL`.
    *
-   * **Une TAILLE, là où le rendu n'avait qu'un seuil.** Il lisait
+   * **Une taille, là où le rendu n'avait qu'un seuil.** Il lisait
    * `recepages >= 2` — le seuil binaire que `biodiversite.ts` appliquait alors
    * — et dessinait le même creux à trois coupes et à quinze. Le moteur note
    * maintenant la parcelle sur ce volume : quelques litres pour une mésange,
@@ -174,7 +174,7 @@ export interface ArbreAPoser {
    */
   caviteTeteL?: number;
   /**
-   * La flèche a été BROUTÉE : `Snapshot.brouteSemaine` est renseigné.
+   * La flèche a été **broutée** : `Snapshot.brouteSemaine` est renseigné.
    *
    * **Le seul dégât du modèle qui était entièrement invisible**, et l'issue
    * #21 disait pourquoi le rendu ne pouvait pas le déduire : `pousseTendreM`
@@ -189,20 +189,20 @@ export interface ArbreAPoser {
    */
   broute?: boolean;
   /**
-   * La tige a été FROTTÉE par un brocard : `Snapshot.frotteSemaine` est
+   * La tige a été **frottée** par un brocard : `Snapshot.frotteSemaine` est
    * renseigné.
    *
    * **Le dégât de gibier le plus actionnable du modèle, et le seul qui laisse
    * une trace lisible.** Le moteur en fait une histoire complète : les brocards
    * frottent leurs bois au printemps sur les tiges isolées et lisses, entre
    * `FROTTIS_HAUTEUR_MIN_M` et `FROTTIS_HAUTEUR_MAX_M` ; une tige trop fine est
-   * annelée et meurt ; une tige déjà marquée est un REPÈRE, et le brocard y
+   * annelée et meurt ; une tige déjà marquée est un **repère**, et le brocard y
    * revient (`BONUS_ARBRE_REPERE`). C'est cette dernière phrase qui rend le
    * dessin utile : une plaie fraîche ne dit pas seulement « il s'est passé
    * quelque chose », elle dit « ça recommencera ici », et le joueur a une
    * réponse — `proteger`, `cloturer`, ou réguler.
    *
-   * Le rendu ne lit PAS la semaine, seulement sa présence, exactement comme
+   * Le rendu ne lit **pas** la semaine, seulement sa présence, exactement comme
    * pour `brulee` : à quelle vitesse une plaie de frottis se referme est une
    * question de modèle, et le moteur ne la traite pas. La marque reste donc,
    * ce qui est d'ailleurs ce que fait une vraie cicatrice de frottis — elle se
@@ -219,7 +219,7 @@ export interface ArbreAPoser {
    * ne le dessine : liège levé, le tronc est ocre-rouge vif, puis il grisonne
    * à mesure que l'écorce se reforme.
    *
-   * **C'est aussi le seul état de cette liste dont le moteur donne la DURÉE.**
+   * **C'est aussi le seul état de cette liste dont le moteur donne la durée.**
    * `especes.ts` porte `ecorce.rotationAns` — dix ans pour le liège — et
    * `ecorceRecoltable` s'en sert pour refuser une levée trop rapprochée. Le
    * rendu peut donc dire où l'arbre en est sans rien inventer, contrairement au
@@ -242,11 +242,11 @@ export interface ArbreAPoser {
    * **À ne pas confondre avec le stress**, et le moteur insiste : le stress ne
    * monte que lorsque l'arbre est en danger de mort, la vigueur dit s'il pousse
    * à son potentiel ou s'il végète. Un sujet dominé ou chroniquement assoiffé a
-   * une vigueur basse BIEN AVANT d'accumuler du stress — et c'est celui-là que
+   * une vigueur basse **bien avant** d'accumuler du stress — et c'est celui-là que
    * les ravageurs trouvent. C'est donc le signal d'alerte précoce, celui qui
    * laisse encore le temps d'agir, et c'est à ce titre qu'il vaut d'être vu.
    *
-   * Elle voyageait déjà jusqu'ici et n'était PAS lue à la cuisson : un arbre
+   * Elle voyageait déjà jusqu'ici et n'était **pas** lue à la cuisson : un arbre
    * qui végétait avait exactement le houppier d'un arbre florissant.
    */
   vigueur: number;
@@ -254,11 +254,11 @@ export interface ArbreAPoser {
    * Dommage hydraulique ∈ [0,1] : `Snapshot.dommageHydraulique`, la part du
    * système conducteur mise hors service par l'embolie.
    *
-   * **C'est la CIME SÈCHE, et elle ne se répare pas.** L'eau qui monte casse en
+   * **C'est la cime sèche, et elle ne se répare pas.** L'eau qui monte casse en
    * colonnes sous la sécheresse sévère, et les vaisseaux embolisés ne
    * redeviennent jamais fonctionnels — l'arbre ne récupère qu'en fabriquant du
    * bois neuf, ce qui prend des années. C'est la mémoire des sécheresses
-   * passées, et c'est ce qui explique les mortalités DIFFÉRÉES : les arbres ne
+   * passées, et c'est ce qui explique les mortalités **différées** : les arbres ne
    * meurent pas l'année de la sécheresse mais deux ou trois ans après.
    *
    * Un joueur qui ne la voit pas ne comprend pas pourquoi ses arbres meurent
@@ -293,12 +293,12 @@ export const PALIERS_FUT = 6;
  * Quatre chacun, et le compte ne coûte que ce qu'il sert : la très grande
  * majorité des arbres d'une parcelle saine tombent dans le même palier, donc
  * partagent la même vignette. Une clé de cache ne se démultiplie que là où les
- * arbres diffèrent vraiment — et là, on VEUT qu'ils diffèrent à l'écran.
+ * arbres diffèrent vraiment — et là, on **veut** qu'ils diffèrent à l'écran.
  */
 export const PALIERS_SANTE = 4;
 
 /**
- * Paliers de HAUTEUR DE TÊTE d'une trogne, en part de la hauteur de l'arbre.
+ * Paliers de **hauteur de tête** d'une trogne, en part de la hauteur de l'arbre.
  *
  * **Elle est entrée dans la clé de cache parce qu'elle n'y était pas, et que ça
  * se voyait.** La classe ne portait qu'un booléen « c'est une trogne » ; la
@@ -323,7 +323,7 @@ export const PALIERS_TETE = 4;
  * dessinait donc la même tête et le même creux pour un têtard de trois coupes
  * et pour un saule centenaire. `trogne.ts` donne maintenant les deux
  * grandeurs ; elles entrent dans la clé par paliers, comme toute grandeur
- * continue, et l'échelle de quantification est celle du MOTEUR
+ * continue, et l'échelle de quantification est celle du **moteur**
  * (`DIAMETRE_TETE_MAX_CM`, `CAVITE_HABITAT_L`) et non une échelle choisie ici.
  *
  * Quatre chacun, et ça ne démultiplie pas la clé autant qu'il y paraît : les
@@ -334,12 +334,12 @@ export const PALIERS_TETE_DIAMETRE = 4;
 export const PALIERS_CAVITE = 4;
 
 /**
- * Part de feuillage que garde un arbre de vigueur NULLE.
+ * Part de feuillage que garde un arbre de vigueur **nulle**.
  *
  * Pas zéro : un arbre qui végète n'est pas un arbre mort. La vigueur dit qu'il
  * ne pousse pas à son potentiel, pas qu'il a lâché — le moteur a `chandelle`
  * pour ça, et `partFoliaireOmbrageante` pour la saison. Ce qu'on montre est un
- * houppier CLAIRSEMÉ, à travers lequel on commence à voir la ramure.
+ * houppier **clairsemé**, à travers lequel on commence à voir la ramure.
  */
 export const MANQUE_VIGUEUR = 0.45;
 
@@ -348,7 +348,7 @@ export const MANQUE_VIGUEUR = 0.45;
  *
  * **À ne pas confondre avec la sénescence d'automne**, qui est un autre axe de
  * la clé et une autre couleur : une feuille d'octobre est franchement dorée ou
- * rousse, alors qu'un arbre qui végète en juillet est d'un vert MALADE — plus
+ * rousse, alors qu'un arbre qui végète en juillet est d'un vert **malade** — plus
  * clair, plus jaune, moins saturé. Confondre les deux ferait lire « l'automne
  * arrive » là où le moteur dit « celui-ci ne va pas bien ».
  */
@@ -373,7 +373,7 @@ const VERT_MALADE: Teinte = { r: 168, g: 172, b: 104 };
  * Nombre de variantes de squelette par classe.
  *
  * Quatre. C'est peu, et c'est assez : dans un peuplement, ce que l'œil attrape
- * n'est pas la diversité des arbres mais la RÉPÉTITION à l'identique. Quatre
+ * n'est pas la diversité des arbres mais la **répétition** à l'identique. Quatre
  * variantes la cassent ; huit coûteraient le double pour un gain nul.
  */
 export const VARIANTES = 4;
@@ -418,7 +418,7 @@ export function etatDuFruit(arbre: ArbreAPoser): number {
 }
 
 /**
- * Taille écran d'une FEUILLE, en pixels, à partir de laquelle on la dessine.
+ * Taille écran d'une **feuille**, en pixels, à partir de laquelle on la dessine.
  *
  * **Le seuil porte sur la feuille, pas sur l'arbre**, et le premier jet s'était
  * trompé de grandeur. Il déclenchait le détail dès que la vignette faisait
@@ -436,7 +436,7 @@ export const FEUILLE_DES_PX = 2.5;
  *
  * Plus bas que le seuil de la feuille (2,5), et à dessein : un fruit est plus
  * gros qu'une feuille en général, mais surtout il porte une information
- * d'ACTION — « il y a quelque chose à récolter » — là où une feuille porte du
+ * d'**action** — « il y a quelque chose à récolter » — là où une feuille porte du
  * détail. On accepte donc de le dessiner un peu plus petit qu'on ne dessinerait
  * une feuille. En dessous, on n'invente rien : le marqueur du calque des
  * changements (§6.8) est le bon outil pour dire ça à l'échelle de la parcelle.
@@ -456,7 +456,7 @@ export const FRUIT_MIN_PX = 1.6;
 export const FLEUR_ETALEMENT = 1.6;
 
 /** Part de rameaux portant des fleurs. Bien plus qu'en fruits : un arbre en
- * fleur est blanc PARTOUT, alors qu'il porte ses fruits çà et là. */
+ * fleur est blanc **partout**, alors qu'il porte ses fruits çà et là. */
 export const PART_RAMEAUX_FLEURIS = 0.55;
 
 /**
@@ -482,10 +482,10 @@ export const RECOUVREMENT = 2.4;
 export const SOMMETS_TACHE = 7;
 
 /**
- * De combien le HAUT d'un houppier est plus clair que son bas.
+ * De combien le **haut** d'un houppier est plus clair que son bas.
  *
  * **Le défaut que ça corrige est celui qui faisait le plus « ordinateur ».**
- * Chaque tache prenait `0,9 + 0,2 × hachage` : un écart de clarté TIRÉ AU SORT,
+ * Chaque tache prenait `0,9 + 0,2 × hachage` : un écart de clarté **tiré au sort**,
  * donc du bruit, donc aucune information. Résultat, tous les arbres de la
  * parcelle exactement de la même valeur moyenne, sans un côté éclairé ni un
  * dessous sombre — le retour l'a nommé sans détour : « la même couleur exacte
@@ -499,7 +499,7 @@ export const SOMMETS_TACHE = 7;
  *
  * **Ce modelé n'affirme rien, et c'est ce qui l'autorise.** Le principe n° 1
  * interdit au rendu d'inventer ce que le moteur ne sait pas ; il n'interdit pas
- * de donner du VOLUME à une forme, ce qui est un choix de dessin et non une
+ * de donner du **volume** à une forme, ce qui est un choix de dessin et non une
  * affirmation sur l'état. C'est exactement le précédent déjà tranché pour le
  * terrain, et `lumiere.ts` le dit dans ces termes : « l'ombrage de pente
  * n'affirme rien de tel : il donne du volume à une surface ». La frontière est
@@ -510,7 +510,7 @@ export const SOMMETS_TACHE = 7;
 export const MODELE_HAUT = 0.3;
 
 /**
- * De combien le côté ÉCLAIRÉ d'un houppier est plus clair que l'autre.
+ * De combien le côté **éclairé** d'un houppier est plus clair que l'autre.
  *
  * Plus faible que le gradient vertical, et pour une raison honnête : la
  * vignette est un panneau face caméra, elle ne tourne pas avec la vue. Un
@@ -568,7 +568,7 @@ export const EPAISSEUR_ARETE_PX = 3;
  * un sujet de seize mètres est cuit sur 384 pixels de haut, soit 24 pixels par
  * mètre : une feuille de hêtre de huit centimètres y fait 1,9 pixel, sous le
  * seuil de `FEUILLE_DES_PX`. Le dessin des feuilles ne se déclenche donc
- * JAMAIS, à aucun zoom — pas seulement de loin. Le critère du §4, « vu de près
+ * **jamais**, à aucun zoom — pas seulement de loin. Le critère du §4, « vu de près
  * on distingue les feuilles », n'est pas approché puis manqué : il est hors
  * d'atteinte par construction tant que ce plafond tient, et une planche vue de
  * près ne montre qu'une cuisson de 256 pixels agrandie par le GPU.
@@ -615,13 +615,13 @@ export interface Classe {
    * Où en est l'écorce de se reformer après un démasclage, en paliers.
    *
    * `PALIERS_LIEGE` (refait, ou espèce sans écorce à lever) à zéro (à vif).
-   * L'écart est un GRADIENT et non un drapeau, parce que la grandeur du moteur
+   * L'écart est un **gradient** et non un drapeau, parce que la grandeur du moteur
    * en est un : `rotationAns` dit combien de temps il faut, pas seulement s'il
    * a coulé.
    */
   liege: number;
   /**
-   * ÉPAISSEUR DU FÛT, en quarts de l'allométrie de secours — 4 = celle-ci
+   * **épaisseur du fût**, en quarts de l'allométrie de secours — 4 = celle-ci
    * exactement, 2 = deux fois plus mince, 8 = deux fois plus épais.
    *
    * **C'est l'étiolement, et c'est ce qui manquait.** Le moteur donne
@@ -631,7 +631,7 @@ export interface Classe {
    * large, l'autre filé sous couvert, sortaient donc identiques — alors que
    * c'est la première chose qu'un forestier voit.
    *
-   * Dans la CLÉ parce que c'est une image différente, et en quarts parce qu'il
+   * Dans la **clé** parce que c'est une image différente, et en quarts parce qu'il
    * faut bien quantifier : un quart de fût ne se voit pas à l'écran, et sans
    * palier chaque semaine de croissance ferait recuire l'arbre.
    */
@@ -643,7 +643,7 @@ export interface Classe {
 /**
  * Le pas de quantification de l'épaisseur du fût : un quart.
  *
- * On ARRONDIT au lieu de tronquer, et c'est voulu : un arbre d'élancement
+ * On **arrondit** au lieu de tronquer, et c'est voulu : un arbre d'élancement
  * ordinaire tombe alors exactement sur `EPAISSEUR_NORMALE`, donc se dessine
  * exactement comme avant ce champ. Ce qui change, ce sont les autres.
  */
@@ -673,7 +673,7 @@ export function rayonDeLaClasse(classe: Classe, hauteurM: number): number {
 /**
  * Quantifie une grandeur ∈ [0,1] en `n` paliers.
  *
- * Exportée depuis #163 : le canal de SAISON doit pouvoir demander « est-ce que
+ * Exportée depuis #163 : le canal de **saison** doit pouvoir demander « est-ce que
  * ça change de palier ? » avant de remplacer quoi que ce soit. Sans cette
  * question, une phénologie à la demi-semaine ferait reconstruire le tableau
  * d'arbres à chaque image — et la scène, qui compare des références, croirait
@@ -705,7 +705,7 @@ export const EST_FROTTE = 16;
  */
 export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Classe {
   const zoom = vue.cam.zoom;
-  // La place que l'arbre occupera à l'écran : c'est ELLE qui décide de la
+  // La place que l'arbre occupera à l'écran : c'est **elle** qui décide de la
   // finesse à cuire. Un arbre de quinze pixels ne mérite pas mille segments —
   // c'est le point de rupture que L0 a mesuré, et il est au zoom rapproché.
   const largeurPx = Math.min(
@@ -714,11 +714,11 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
   );
   // La taille de cuisson est elle-même quantifiée en puissances de deux : un
   // zoom continu ne doit pas recuire l'atlas entier à chaque cran de molette.
-  // Le plafond s'applique AVANT l'arrondi, sinon il le défait : 320 pixels
+  // Le plafond s'applique **avant** l'arrondi, sinon il le défait : 320 pixels
   // plafonnés après arrondi ne sont plus une puissance de deux, et la promesse
   // « le zoom ne recuit pas tout » s'évanouit au zoom maximal.
   const taillePx = 2 ** Math.ceil(Math.log2(Math.min(VIGNETTE_MAX_PX, largeurPx)));
-  // La base du houppier entre dans la clé par PALIERS, comme les autres
+  // La base du houppier entre dans la clé par **paliers**, comme les autres
   // grandeurs continues : elle change la silhouette du tout au tout — c'est
   // elle qui sépare le chêne de pré du chêne de futaie — mais elle bouge d'un
   // centimètre par semaine, et sans quantification chaque tick invaliderait
@@ -734,7 +734,7 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
     (arbre.chandelle ? EST_CHANDELLE : 0) |
     (arbre.brulee ? EST_BRULEE : 0) |
     (arbre.protege ? EST_PROTEGE : 0) |
-    // Le seuil du MOTEUR, pas le mien : `biodiversite.ts` compte une trogne
+    // Le seuil du **moteur**, pas le mien : `biodiversite.ts` compte une trogne
     // comme porteuse de cavités à partir de deux étêtages.
     (arbre.broute ? EST_BROUTE : 0) |
     (arbre.frotte ? EST_FROTTE : 0) |
@@ -764,7 +764,7 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
     gestion,
     sante,
     fruit,
-    // Les deux grandeurs de tête, quantifiées sur les échelles du MOTEUR.
+    // Les deux grandeurs de tête, quantifiées sur les échelles du **moteur**.
     trogne:
       palierDe((arbre.diametreTeteCm ?? 0) / DIAMETRE_TETE_MAX_CM, PALIERS_TETE_DIAMETRE) *
         PALIERS_CAVITE +
@@ -813,11 +813,11 @@ export function cleClasse(c: Classe): string {
 /** Une vignette cuite, et où poser son pied. */
 export interface Vignette {
   image: HTMLCanvasElement;
-  /** décalage du PIED de l'arbre dans l'image, en pixels */
+  /** décalage du **pied** de l'arbre dans l'image, en pixels */
   piedX: number;
   piedY: number;
   /**
-   * Hauteur de l'ARBRE dans l'image, en pixels — et non hauteur de l'image.
+   * Hauteur de l'**arbre** dans l'image, en pixels — et non hauteur de l'image.
    *
    * **Sans ce champ, la vignette ne peut pas avoir de marge**, et c'est le
    * défaut qui a coupé les houppiers de la haie. La pose supposait que l'arbre
@@ -829,7 +829,7 @@ export interface Vignette {
    * 0,6, et une bonne part des arbres de plein vent.
    *
    * En le disant, la vignette peut réserver ce qu'elle veut : la pose divise
-   * par CE nombre, pas par la hauteur de l'image.
+   * par **ce** nombre, pas par la hauteur de l'image.
    */
   hautArbrePx: number;
 }
@@ -873,7 +873,7 @@ export function couleurFeuillage(fiche: FicheGraphique, senescence: number): Tei
 }
 
 /**
- * Replie la PROFONDEUR du squelette dans la largeur du panneau.
+ * Replie la **profondeur** du squelette dans la largeur du panneau.
  *
  * **Le `z` du squelette était purement jeté, et une branche pointée vers la
  * caméra disparaissait donc dans le tronc.** La vignette est un panneau vu de
@@ -883,10 +883,10 @@ export function couleurFeuillage(fiche: FicheGraphique, senescence: number): Tei
  * vers l'avant ou l'arrière.
  *
  * **Ce que ça donnait, et le mécanisme exact — il a fallu deux fausses pistes
- * pour l'établir.** Une ramure OPPOSÉE (`branchesParNoeud: 3`,
+ * pour l'établir.** Une ramure **opposée** (`branchesParNoeud: 3`,
  * `divergenceDeg: 90` — cornouiller, sureau, fusain, troène, frêne) ne prend
  * que quatre azimuts : 0, 90, 180, 270 degrés. Leur cosinus, seul facteur lu
- * par la projection, ne prend donc que TROIS valeurs — 1, 0, −1. Les décalages
+ * par la projection, ne prend donc que **trois** valeurs — 1, 0, −1. Les décalages
  * horizontaux se quantifiaient, les bouts de rameaux tombaient sur un réseau de
  * positions, et les bouquets s'empilaient en colonnes verticales : le
  * cornouiller sortait en chapelets de perles. Replier la profondeur ajoute le
@@ -902,17 +902,17 @@ export function couleurFeuillage(fiche: FicheGraphique, senescence: number): Tei
  * seconde : « les branches vers l'objectif s'écrasent sur l'axe du tronc » —
  * mesuré faux, 2 % des bouts seulement passaient près de l'axe, et le repli
  * fait plutôt monter ce chiffre. Ce qui s'écrasait n'était pas la position
- * ABSOLUE mais l'ÉCART : une latérale à angle droit du panneau n'ajoutait rien
+ * **absolue** mais l'**écart** : une latérale à angle droit du panneau n'ajoutait rien
  * à l'abscisse de son parent, et sa descendance montait tout droit au-dessus
  * de lui.
  *
- * Le repli est une projection OBLIQUE, du même genre que la dimétrie du sol :
+ * Le repli est une projection **oblique**, du même genre que la dimétrie du sol :
  * une convention fixe du panneau, indépendante de la caméra, où la profondeur
  * compte pour une fraction de la largeur. Un dessin d'architecte fait ça depuis
  * toujours, et pour la même raison — donner une place à ce qui vient vers
  * l'œil sans faire tourner l'objet.
  *
- * Appliqué AVANT `contraindre`, pour que le calibrage de la largeur du houppier
+ * Appliqué **avant** `contraindre`, pour que le calibrage de la largeur du houppier
  * voie les coordonnées définitives : replier après aurait fait dépasser les
  * houppiers de la largeur qu'on venait de leur imposer.
  */
@@ -925,7 +925,7 @@ export function replier(segments: readonly Segment[]): Segment[] {
 }
 
 /**
- * Ce que vaut un mètre de PROFONDEUR en largeur de panneau.
+ * Ce que vaut un mètre de **profondeur** en largeur de panneau.
  *
  * Un peu plus de la moitié : assez pour qu'une branche pointée vers l'objectif
  * ait une existence à l'écran, assez peu pour qu'elle se lise comme une branche
@@ -948,7 +948,7 @@ function hacher(a: number, b: number, sel: number): number {
  *
  * L'arbre est dessiné **de face**, pas en projection isométrique, et c'est
  * volontaire : un arbre est vertical, sa silhouette ne change pas quand la
- * caméra tourne autour de lui. Ce qui tourne, c'est sa PLACE au sol, et ça,
+ * caméra tourne autour de lui. Ce qui tourne, c'est sa **place** au sol, et ça,
  * c'est l'affaire de `posesDesArbres`. Dessiner le houppier en isométrie
  * l'aplatirait à l'horizontale, ce qui est faux pour tout ce qui est debout.
  */
@@ -961,7 +961,7 @@ export function cuireVignette(
   trogne?: { teteTrogneM: number; diametreTeteCm: number; caviteTeteL: number },
 ): Vignette {
   const fiche = ficheDe(classe.especeId) ?? FICHE_GENERIQUE;
-  // La hauteur de l'image est la RÉSOLUTION de cuisson : c'est elle que
+  // La hauteur de l'image est la **résolution** de cuisson : c'est elle que
   // `taillePx` quantifie, et elle ne dépend pas de l'espèce.
   const hauteur = Math.max(6, Math.round(classe.taillePx * 1.5));
 
@@ -981,7 +981,7 @@ export function cuireVignette(
     fiche.feuillage.longueurFeuilleM * 1.5,
     classe.gestion & EST_PROTEGE ? HAUTEUR_BROUTAGE_M - hauteurM : 0,
   );
-  // Combien de pixels vaut un mètre dans cette vignette : la cime PLUS sa marge
+  // Combien de pixels vaut un mètre dans cette vignette : la cime **plus** sa marge
   // tiennent dans la hauteur d'image.
   const echelle = (hauteur - 2) / Math.max(0.1, hauteurM + margeM);
   // La largeur suit le houppier réel — `contraindre` le calibre pour qu'il
@@ -999,7 +999,7 @@ export function cuireVignette(
 
   // ── Le fourré bas : une masse, pas un arbre ───────────────────────────
   //
-  // **Il prend la MÊME boîte que les arbres, et c'est la correction.** Il avait
+  // **Il prend la même boîte que les arbres, et c'est la correction.** Il avait
   // la sienne — carrée, de côté `taillePx`, remplie sur toute sa hauteur — et
   // le résultat était un rectangle : le monticule était tranché net en bas par
   // une barre sombre rectiligne et coupé à la verticale sur les deux flancs.
@@ -1019,13 +1019,13 @@ export function cuireVignette(
     hauteurM,
     houppierRatio,
     baseHouppierM,
-    // Le fût que le DIAMÈTRE du moteur demande, et non celui que la hauteur
+    // Le fût que le **diamètre** du moteur demande, et non celui que la hauteur
     // ferait supposer : c'est ce qui rend une tige filée mince à l'écran.
     rayonAuPiedM: rayonDeLaClasse(classe, hauteurM),
     ...(trogne ? { teteTrogneM: trogne.teteTrogneM } : {}),
     ...(fiche.brinsDeCepee ? { brins: fiche.brinsDeCepee } : {}),
   };
-  // **Le squelette est plafonné par la TAILLE de la vignette.** À quinze
+  // **Le squelette est plafonné par la taille de la vignette.** À quinze
   // pixels, mille segments seraient mille traits d'un tiers de pixel : on paie
   // un détail que personne ne voit, et c'est exactement le piège que L0 a
   // mesuré. Le budget croît avec la surface de la vignette.
@@ -1051,7 +1051,7 @@ export function cuireVignette(
     const epaisseur = Math.max(0.6, s.rayonDepartM * 2 * echelle);
     // L'écorce du haut, quand l'espèce en a une : c'est la signature du pin
     // sylvestre, et elle se lit sur la partie haute du fût et les charpentières.
-    // L'écorce haute ne vaut que pour le BOIS PORTEUR : le fût et les
+    // L'écorce haute ne vaut que pour le **bois porteur** : le fût et les
     // charpentières. Appliquée aux brindilles, elle semait des filaments orange
     // dans tout le houppier — à l'échelle de la parcelle, un pin sylvestre
     // ressortait en moustaches vives au milieu des verts, ce qui est l'inverse
@@ -1060,7 +1060,7 @@ export function cuireVignette(
       fiche.ecorceHaute &&
       s.depart.y > hauteurM * 0.45 &&
       s.rayonDepartM > rayonDeLaClasse(classe, hauteurM) * 0.28;
-    // **Les RAMEAUX ne sont pas de la couleur du fût**, et le bouleau l'a montré
+    // **Les rameaux ne sont pas de la couleur du fût**, et le bouleau l'a montré
     // sans appel : peindre en blanc les brindilles d'un houppier donne un arbre
     // mort en plein été, la ramure crevant le feuillage. C'est aussi faux en
     // botanique — l'écorce blanche du bouleau est celle du tronc et des grosses
@@ -1071,7 +1071,7 @@ export function cuireVignette(
       s.rayonDepartM / Math.max(1e-6, rayonDeLaClasse(classe, hauteurM) * 0.35),
     );
     const base = teinteDuBois(fiche, haut, classe);
-    // Le fût est un CYLINDRE, et il était peint comme un trait.
+    // Le fût est un **cylindre**, et il était peint comme un trait.
     //
     // **C'est ce qui faisait la futaie de mâts blancs.** À l'échelle de la
     // parcelle, une friche de bouleaux sortait en semis de poteaux d'un blanc
@@ -1083,7 +1083,7 @@ export function cuireVignette(
     //
     // On assombrit donc le trait entier d'un cran, et on repose par-dessus une
     // arête claire, décalée du côté de la lumière. Deux traits au lieu d'un,
-    // mais SEULEMENT sur le bois porteur : sur une brindille d'un pixel, une
+    // mais **seulement** sur le bois porteur : sur une brindille d'un pixel, une
     // arête ne se voit pas et coûte quand même. C'est là aussi ce qui borne le
     // surcoût de cuisson à quelques pour cent.
     ctx.strokeStyle = versCss(eclairer(base, (0.55 + 0.45 * finesse) * OMBRE_DU_BOIS));
@@ -1105,7 +1105,7 @@ export function cuireVignette(
 
   // ── La tête de trogne ─────────────────────────────────────────────────
   // Le fût s'arrête déjà à `teteTrogneM` et les rejets repartent de là : ce qui
-  // manquait, c'est le RENFLEMENT — le bourrelet de cicatrisation qu'une coupe
+  // manquait, c'est le **renflement** — le bourrelet de cicatrisation qu'une coupe
   // répétée au même endroit finit par former, et qui est la silhouette la plus
   // reconnaissable du bocage.
   if (trogne) {
@@ -1119,7 +1119,7 @@ export function cuireVignette(
   dessinerDemasclage(ctx, fiche, classe, hauteurM, echelle, versPx);
 
   // ── La plaie de frottis ───────────────────────────────────────────────
-  // AVANT le manchon, et c'est volontaire : les deux ne coexistent pas chez le
+  // **avant** le manchon, et c'est volontaire : les deux ne coexistent pas chez le
   // moteur (`attraitFrottis` rend zéro sur un plant protégé), mais si jamais
   // ils se croisaient, c'est le tube qu'on doit voir par-dessus la plaie — il
   // est ce qui la fait cesser.
@@ -1144,7 +1144,7 @@ export function cuireVignette(
       segments,
       fiche,
       teinteSelonVigueur(teinte, vigueur),
-      // Un arbre qui végète porte MOINS de feuilles : c'est la première chose
+      // Un arbre qui végète porte **moins** de feuilles : c'est la première chose
       // qu'on voit d'un sujet dominé, avant même sa couleur.
       partFoliaire * (MANQUE_VIGUEUR + (1 - MANQUE_VIGUEUR) * vigueur),
       echelle,
@@ -1161,7 +1161,7 @@ export function cuireVignette(
   // ce que fait un arbre chargé — les fruits pèsent et pendent sous le
   // feuillage.
   if (fiche.fruit && classe.fruit !== FRUIT_AUCUN) {
-    // La cime sèche s'applique AUSSI aux fruits : un rameau embolisé ne porte
+    // La cime sèche s'applique **aussi** aux fruits : un rameau embolisé ne porte
     // ni feuille ni fruit. Sans ça, un arbre à cime sèche portait des pommes
     // sur du bois mort — le genre de détail qui ne se remarque pas tout de
     // suite et qui, une fois vu, décrédibilise tout le reste.
@@ -1169,14 +1169,14 @@ export function cuireVignette(
   }
 
   // ── Les sections de brout ─────────────────────────────────────────────
-  // **En DERNIER, et le premier jet ne l'était pas** — il posait les sections
+  // **En dernier, et le premier jet ne l'était pas** — il posait les sections
   // avant le feuillage, avec un commentaire affirmant le contraire, et elles
   // étaient purement invisibles : un bout de rameau est par construction sous
   // le bouquet qu'il porte. Un plant brouté sortait donc identique à un plant
   // intact, ce qu'aucun essai ne pouvait dire puisque le compte de tracés,
   // lui, était bien monté.
   //
-  // C'est une information d'ACTION — protéger, clôturer, réguler — au même
+  // C'est une information d'**action** — protéger, clôturer, réguler — au même
   // titre qu'un fruit mûr, et elle passe donc devant tout le reste.
   if (classe.gestion & EST_BROUTE) {
     dessinerBrout(
@@ -1196,8 +1196,8 @@ export function cuireVignette(
  *
  * **Ni squelette, ni houppier, ni fût**, et c'est tout le propos de la huitième
  * famille (§5.4). Une ronce n'a pas d'architecture visible à cette échelle :
- * c'est un enchevêtrement de tiges arquées dont on ne lit qu'une SURFACE et un
- * PROFIL. Le passage par le générateur d'arbres donnait un petit arbre à fût et
+ * c'est un enchevêtrement de tiges arquées dont on ne lit qu'une **surface** et un
+ * **profil**. Le passage par le générateur d'arbres donnait un petit arbre à fût et
  * à couronne — faux en botanique, et visible sur la capture : les ronciers
  * sortaient en bouquets d'arbustes bien peignés au lieu d'une broussaille.
  *
@@ -1239,7 +1239,7 @@ function dessinerFourre(
     // uniforme élevé au carré diverge en zéro, donc la plupart des touffes
     // atterrissaient exactement sur la ligne de sol. Leurs moitiés basses s'y
     // superposaient et s'y faisaient trancher par le bord du canevas : le
-    // fourré avait une BARRE sombre rectiligne pour base, ce qu'aucune
+    // fourré avait une **barre** sombre rectiligne pour base, ce qu'aucune
     // broussaille n'a. Un exposant plus doux garde le monticule — plus fourni
     // en bas qu'au sommet — sans l'empiler sur une seule ligne.
     const t = v ** 1.35;
@@ -1254,7 +1254,7 @@ function dessinerFourre(
     ctx.beginPath();
     for (let n = 0; n < SOMMETS_TACHE; n++) {
       const a = (n / SOMMETS_TACHE) * Math.PI * 2;
-      // Un fourré épineux est HÉRISSÉ : ses touffes ont des pointes, là où une
+      // Un fourré épineux est **hérissé** : ses touffes ont des pointes, là où une
       // ronce ou une callune font des bosses. C'est le peu qui distingue un
       // ajonc d'un roncier quand ni l'un ni l'autre ne fait un mètre.
       const pointe = epines && n % 2 === 0 ? 1.5 : 1;
@@ -1275,7 +1275,7 @@ function dessinerFourre(
  * grisonne et qu'un bois carbonisé soit noir n'est pas une affirmation de
  * modèle, c'est ce qu'est du bois mort et du charbon.
  *
- * Ce que le rendu ne fait PAS : lire la semaine pour faire pâlir le charbon
+ * Ce que le rendu ne fait **pas** : lire la semaine pour faire pâlir le charbon
  * avec le temps. De combien un fût brûlé se décolore en trois ans est une
  * question de modèle, et le moteur ne la traite pas.
  */
@@ -1289,14 +1289,14 @@ function teinteDuBois(fiche: FicheGraphique, haut: boolean | undefined, classe: 
  * Le tronc démasclé : la bande ocre-rouge du liège levé, qui grisonne.
  *
  * **Une bande posée par-dessus le fût, et pas une couleur de segment**, parce
- * que le démasclage a une LIGNE. On le lève au couteau jusqu'à une hauteur
+ * que le démasclage a une **ligne**. On le lève au couteau jusqu'à une hauteur
  * marquée, et la limite est nette — c'est même ce qui rend une subéraie levée
  * reconnaissable de loin. Colorer les segments du squelette donnait l'inverse :
  * le fût d'un chêne-liège tient en un ou deux longs segments, et un segment est
  * coloré tout entier ou pas du tout, si bien que la limite sautait de zéro à
  * quatre mètres selon la découpe du squelette.
  *
- * **Ce que le moteur donne** : la semaine de la levée et la ROTATION
+ * **Ce que le moteur donne** : la semaine de la levée et la **rotation**
  * (`ecorce.rotationAns`), donc le rapport que `partEcorceRefaite` calcule et
  * que `ecorceRecoltable` compare à 1. Le dernier palier veut dire « le liège
  * est refait » — c'est-à-dire « récoltable », et c'est l'information utile.
@@ -1341,13 +1341,13 @@ const LIEGE_A_VIF: Teinte = { r: 164, g: 78, b: 44 };
 /**
  * Jusqu'où le liège se lève sur le tronc, en mètres.
  *
- * **Une hauteur de PRATIQUE, pas un état de parcelle** : on démascle le fût et
+ * **Une hauteur de pratique, pas un état de parcelle** : on démascle le fût et
  * la base des charpentières, et cette hauteur ne varie pas d'une subéraie à
  * l'autre. Même statut que la hauteur de frottis — c'est une propriété du
  * geste, comme la forme d'une feuille est une propriété de l'espèce (§4).
  *
- * **Ce qu'on ne fait PAS, et pourquoi ça ne part pas en issue** : la vraie
- * hauteur de démasclage MONTE d'une levée à l'autre — « la couronne monte », et
+ * **Ce qu'on ne fait pas, et pourquoi ça ne part pas en issue** : la vraie
+ * hauteur de démasclage **monte** d'une levée à l'autre — « la couronne monte », et
  * un vieux chêne-liège est démasclé bien plus haut qu'un jeune. C'est un état
  * par arbre, et le moteur ne le porte pas. La différence est qu'il ne le porte
  * pas *par omission* : `especes.ts` fait déjà dépendre le rendement de la
@@ -1443,7 +1443,7 @@ const CREUX_DE_TROGNE: Teinte = { r: 38, g: 32, b: 28 };
  * mange pas une feuille, il pince le bourgeon terminal et emporte la pousse de
  * l'année — ce qui reste est une section franche, plus claire que l'écorce,
  * au bout d'un rameau qui ne monte plus. C'est la lecture de terrain : on
- * cherche des bouts coupés, pas un plant plus petit. Le plant PLUS PETIT, le
+ * cherche des bouts coupés, pas un plant plus petit. Le plant **plus petit**, le
  * moteur s'en charge déjà en rabattant `heightM`.
  *
  * Sur les rameaux hauts seulement, et c'est encore le moteur qui le dit :
@@ -1460,7 +1460,7 @@ function dessinerBrout(
 ): void {
   const rayonPx = Math.max(0.6, SECTION_DE_BROUT_M * echelle);
   if (rayonPx < 0.6) return;
-  // **La FLÈCHE d'abord, et le haut de ce qui est à portée** — pas un tirage au
+  // **La flèche d'abord, et le haut de ce qui est à portée** — pas un tirage au
   // sort sur tous les rameaux. C'est le premier jet, et il donnait un plant
   // couvert de points crème qui se lisaient comme des baies : un rameau sur
   // deux marqué, sur un semis qui en porte trois cents. Un chevreuil ne broute
@@ -1468,7 +1468,7 @@ function dessinerBrout(
   // l'arbre et ce qui se voit sur le terrain — puis quelques pousses juste en
   // dessous, et il passe à la tige suivante.
   //
-  // On prend donc les bouts les plus HAUTS de la zone atteignable, dans
+  // On prend donc les bouts les plus **hauts** de la zone atteignable, dans
   // l'ordre, et une petite part d'entre eux. Aucun tirage : le choix est celui
   // de l'animal, et il n'est pas aléatoire.
   const aPortee = terminaux
@@ -1496,7 +1496,7 @@ const SECTION_DE_BROUT_M = 0.008;
  * pousses, puis passe à la tige suivante. Le premier jet était à 0,45 et
  * donnait un semis couvert de points crème qu'on lisait comme des baies.
  *
- * Ce n'est pas une grandeur du moteur et ça n'en usurpe aucune — il dit QUE le
+ * Ce n'est pas une grandeur du moteur et ça n'en usurpe aucune — il dit **que** le
  * plant a été brouté et quand, pas sur combien de rameaux, ce qui n'aurait
  * aucun sens à suivre arbre par arbre.
  */
@@ -1517,10 +1517,10 @@ const PART_RAMEAUX_BROUTES = 0.07;
  * ressemble du bois mis à nu. La hauteur du frottis n'est pas une grandeur du
  * moteur et n'a pas à l'être — c'est la hauteur des bois d'un chevreuil, un
  * fait de l'animal, au même titre que la forme d'une feuille est un fait de
- * l'espèce (§4). Le moteur, lui, s'occupe de la hauteur de l'ARBRE, qui est ce
+ * l'espèce (§4). Le moteur, lui, s'occupe de la hauteur de l'**arbre**, qui est ce
  * qui décide s'il est frottable et s'il en meurt.
  *
- * **Ce que le rendu ne fait PAS** : lire la semaine pour faire cicatriser la
+ * **Ce que le rendu ne fait pas** : lire la semaine pour faire cicatriser la
  * plaie. À quelle vitesse un bourrelet recouvre une blessure de frottis est une
  * question de modèle, et le moteur ne la traite pas. La marque reste donc — ce
  * qui se défend, une cicatrice de frottis se voyant des décennies — et sur un
@@ -1533,7 +1533,7 @@ function dessinerFrottis(
   echelle: number,
   versPx: (p: { x: number; y: number }) => { sx: number; sy: number },
 ): void {
-  // La plaie fait la largeur du FÛT, donc celle que la classe demande : sur une
+  // La plaie fait la largeur du **fût**, donc celle que la classe demande : sur une
   // tige filée, une marque à la largeur supposée déborderait du tronc.
   const rayonPx = rayonDeLaClasse(classe, hauteurM) * echelle;
   const hautPx = (FROTTIS_HAUT_M - FROTTIS_BAS_M) * echelle;
@@ -1543,7 +1543,7 @@ function dessinerFrottis(
   if (hautPx < 2 || rayonPx < 0.6) return;
   const bas = versPx({ x: 0, y: FROTTIS_BAS_M });
   const haut = versPx({ x: 0, y: FROTTIS_HAUT_M });
-  // **Sur un CÔTÉ de la tige, et pas au milieu.** Un brocard frotte de flanc :
+  // **Sur un côté de la tige, et pas au milieu.** Un brocard frotte de flanc :
   // la plaie est une bande verticale décalée, et c'est ce décalage qui la fait
   // lire comme une écorce arrachée plutôt que comme une ombre de tronc.
   const cx = bas.sx + rayonPx * 0.3;
@@ -1553,7 +1553,7 @@ function dessinerFrottis(
   // **Deux passes, et la première est celle qui fait la lecture.** Une simple
   // tache claire sur un fût ne se lit pas comme une plaie : elle se lit comme
   // le côté éclairé du tronc, qui est déjà dessiné juste au-dessus par la même
-  // méthode. Ce qui distingue une écorce ARRACHÉE, c'est son bord — le lambeau
+  // méthode. Ce qui distingue une écorce **arrachée**, c'est son bord — le lambeau
   // sombre qui reste autour du bois mis à nu. On pose donc l'ourlet d'abord,
   // le bois clair ensuite, un peu plus petit.
   ctx.fillStyle = versCss(OURLET_DE_FROTTIS);
@@ -1575,8 +1575,8 @@ const OURLET_DE_FROTTIS: Teinte = { r: 62, g: 48, b: 38 };
 /**
  * Entre quelles hauteurs un brocard frotte, en mètres.
  *
- * **La hauteur des BOIS de l'animal, pas une grandeur de parcelle.** Le moteur
- * dit entre quelles hauteurs une TIGE est frottable (`FROTTIS_HAUTEUR_MIN_M` à
+ * **La hauteur des bois de l'animal, pas une grandeur de parcelle.** Le moteur
+ * dit entre quelles hauteurs une **tige** est frottable (`FROTTIS_HAUTEUR_MIN_M` à
  * `FROTTIS_HAUTEUR_MAX_M`, soit 1,2 à 5 m de haut) — c'est une propriété de
  * l'arbre, et elle décide de ce qui arrive. Où l'animal pose ses bois sur cette
  * tige est une propriété de l'animal, elle ne varie pas d'une parcelle à
@@ -1630,8 +1630,8 @@ const MANCHON: Teinte = { r: 186, g: 192, b: 168 };
  * du commerce, et le plant doit y tenir sans plus.
  *
  * Comme la forme d'une feuille ou d'un fruit, ce n'est pas une grandeur que le
- * moteur devrait porter : c'est ce qu'EST l'objet dessiné, pas un état de la
- * parcelle. La HAUTEUR, elle, est un enjeu de simulation — et elle vient donc
+ * moteur devrait porter : c'est ce qu'**est** l'objet dessiné, pas un état de la
+ * parcelle. La **hauteur**, elle, est un enjeu de simulation — et elle vient donc
  * du moteur (`HAUTEUR_BROUTAGE_M`).
  */
 const DIAMETRE_MANCHON_M = 0.1;
@@ -1642,7 +1642,7 @@ const OPACITE_MANCHON = 0.78;
 /**
  * Les rameaux qui portent encore du feuillage, une fois la cime sèche retirée.
  *
- * On coupe en HAUTEUR ÉCRAN et non en ordre de branchement : le dommage
+ * On coupe en **hauteur écran** et non en ordre de branchement : le dommage
  * hydraulique est une histoire de distance aux racines, pas de topologie de
  * l'arbre. Un rameau bas porté par une longue charpentière est mieux alimenté
  * qu'un rameau haut porté par la flèche, et c'est bien ce qu'on veut montrer.
@@ -1661,7 +1661,7 @@ function seuilCimeSeche(
     bas = Math.max(bas, y);
   }
   if (!(bas > haut)) return [...terminaux];
-  // `sy` croît vers le BAS : la limite descend depuis la cime à mesure que le
+  // `sy` croît vers le **bas** : la limite descend depuis la cime à mesure que le
   // dommage monte.
   const limite = haut + (bas - haut) * dommage;
   return terminaux.filter((s) => versPx(s.arrivee).sy >= limite);
@@ -1682,7 +1682,7 @@ function seuilCimeSeche(
  * que la feuille, mais la conclusion est différente et il faut la dire : une
  * feuille invisible n'est qu'un détail perdu, alors qu'un fruit invisible est
  * une information d'action perdue. À l'échelle de la parcelle, « cet arbre est
- * à récolter » ne se dira donc PAS par un fruit d'un demi-pixel — ça se dira
+ * à récolter » ne se dira donc **pas** par un fruit d'un demi-pixel — ça se dira
  * par un marqueur du calque des changements (§6.8), qui est fait pour ça.
  * Peindre trois pixels rouges dans un houppier ne serait ni lisible ni honnête.
  */
@@ -1699,14 +1699,14 @@ function dessinerFruits(
   // Diamètre du groupe que porte un rameau fructifère — déclaré par la fiche
   // quand elle le connaît, estimé sinon.
   const groupePx = diametreDuGroupeM(fruit) * echelle;
-  // **La bonne UNITÉ de dessin n'est pas toujours le fruit**, et c'est ce qui
+  // **La bonne unité de dessin n'est pas toujours le fruit**, et c'est ce qui
   // fait la différence entre « la fonctionnalité marche pour deux espèces » et
   // « elle marche pour neuf ». Une prunelle fait treize millimètres : à la
   // résolution de cuisson maximale elle mesure sept dixièmes de pixel, donc
-  // elle ne serait JAMAIS dessinée, à aucun zoom. Une baie de sureau, un
+  // elle ne serait **jamais** dessinée, à aucun zoom. Une baie de sureau, un
   // sixième de pixel.
   //
-  // Mais ce n'est pas la baie qu'on voit sur un sureau : c'est le CORYMBE, dix
+  // Mais ce n'est pas la baie qu'on voit sur un sureau : c'est le **corymbe**, dix
   // centimètres de large, qui tient largement dans quelques pixels. Même chose
   // pour la grappe du troène ou les prunelles serrées le long d'un rameau. On
   // dessine donc le groupe quand le fruit est sous le pixel et que le groupe,
@@ -1714,19 +1714,19 @@ function dessinerFruits(
   // feuille » du feuillage, appliquée un étage plus bas.
   //
   // Ce n'est pas une approximation qu'on s'autorise faute de mieux : à cette
-  // distance, un amas de baies EST ce que l'œil perçoit, et dessiner une baie
+  // distance, un amas de baies **est** ce que l'œil perçoit, et dessiner une baie
   // isolée de deux pixels serait le mensonge.
   // **Le même seuil pour l'amas que pour le fruit, et non un seuil plus haut.**
   // Le premier jet exigeait une fois et demie, par prudence ; mesuré, ça
   // laissait muets le noisetier (2,1 px) et le cornouiller (1,7 px) alors que
   // leurs amas sont parfaitement lisibles. La prudence était mal placée : un
   // amas est plus visible qu'une feuille à taille égale, parce que ce qui le
-  // porte est la COULEUR — un point rouge saturé sur du vert se voit à deux
+  // porte est la **couleur** — un point rouge saturé sur du vert se voit à deux
   // pixels, là où un contour de feuille verte sur du vert n'existe pas.
-  // **La FLEUR emprunte toute la mécanique du fruit**, et ce n'est pas une
+  // **La fleur emprunte toute la mécanique du fruit**, et ce n'est pas une
   // paresse : elle occupe la même place — le bout des rameaux fructifères — au
   // même nombre, et elle se heurte au même mur de résolution. Ce qui change est
-  // sa couleur, et le fait qu'une floraison COUVRE davantage qu'une fructifi-
+  // sa couleur, et le fait qu'une floraison **couvre** davantage qu'une fructifi-
   // cation : un pommier porte quelques dizaines de pommes et des milliers de
   // fleurs. D'où un groupe plus large, et jamais de fleur isolée.
   const enFleur = classe.fruit === FRUIT_FLEUR;
@@ -1738,7 +1738,7 @@ function dessinerFruits(
   const combien = enAmas ? 1 : fruit.parRameau;
   const contour = contourFruit(enAmas ? "charnu" : fruit.forme);
   const mur = classe.fruit === FRUIT_MUR;
-  // La couleur ARRIVE avec la maturité, et c'est l'arrivée qui est
+  // La couleur **arrive** avec la maturité, et c'est l'arrivée qui est
   // l'information. Un fruit vert est un fruit vert : rien ne distingue une
   // pomme d'août d'une prunelle d'août à cette taille.
   const teinte = enFleur
@@ -1746,21 +1746,21 @@ function dessinerFruits(
     : mur
       ? fruit.couleur
       : melange(FRUIT_VERT, fruit.couleur, 0.25);
-  // **La cime sèche DÉPLACE les fruits, elle n'en retire aucun**, et la
+  // **La cime sèche déplace les fruits, elle n'en retire aucun**, et la
   // distinction a failli m'échapper.
   //
   // Le moteur calcule `fruitsKg` sans le moindre terme de dommage hydraulique :
   // `rendementMaxKg × sizeFactor × fruitProgress × gel × pollinisation ×
-  // service`. Il dit donc qu'un arbre à cime sèche porte sa charge ENTIÈRE. Ma
+  // service`. Il dit donc qu'un arbre à cime sèche porte sa charge **entière**. Ma
   // première version filtrait les rameaux secs puis parcourait le reste avec la
   // même probabilité d'acceptation : elle dessinait 45 % de fruits en moins sur
   // un arbre à 45 % de cime sèche. C'est-à-dire qu'elle atténuait le signal de
-  // RÉCOLTE — le seul de l'arbre qui appelle un geste — au nom d'un mécanisme
+  // **récolte** — le seul de l'arbre qui appelle un geste — au nom d'un mécanisme
   // que le moteur ne modélise pas.
   //
   // Et le « bois mort » n'existe même pas côté moteur : `dommageHydraulique`
   // est un scalaire sur l'arbre, le squelette est une construction du rendu.
-  // L'incohérence à résoudre était donc la MIENNE, à l'intérieur du dessin, et
+  // L'incohérence à résoudre était donc la **mienne**, à l'intérieur du dessin, et
   // il n'y avait aucune raison de la payer avec une grandeur du moteur.
   //
   // On compense : moins de rameaux disponibles, chacun d'autant plus susceptible
@@ -1769,7 +1769,7 @@ function dessinerFruits(
   const tousLesBouts = segments.filter((s) => s.terminal);
   const terminaux = seuilCimeSeche(tousLesBouts, dommageHydraulique, versPx);
   const survie = terminaux.length / Math.max(1, tousLesBouts.length);
-  // En amas, il n'y a qu'une marque par rameau : elle ne s'étale pas, elle EST
+  // En amas, il n'y a qu'une marque par rameau : elle ne s'étale pas, elle **est**
   // l'étalement.
   const etalement = enAmas ? 0 : (diametreDuGroupeM(fruit) * echelle) / 2;
   let i = 0;
@@ -1777,14 +1777,14 @@ function dessinerFruits(
     i++;
     // Une floraison couvre la couronne, une fructification la pique : le
     // pommier de mai est blanc partout, celui de septembre porte des pommes çà
-    // et là. C'est le même arbre et le même rameau — c'est la PART qui change.
+    // et là. C'est le même arbre et le même rameau — c'est la **part** qui change.
     // La part est relevée du taux de survie des rameaux : voir plus haut, la
     // cime sèche déplace les fruits, elle n'en retire pas.
     const part = Math.min(1, (enFleur ? PART_RAMEAUX_FLEURIS : PART_RAMEAUX_FRUITIERS) / survie);
     if (hacher(i, classe.palier, 0x3ef7) > part) continue;
     const bout = versPx(s.arrivee);
     for (let k = 0; k < combien; k++) {
-      // Le groupe s'étale autour du bout du rameau, et PEND : un fruit pèse,
+      // Le groupe s'étale autour du bout du rameau, et **pend** : un fruit pèse,
       // donc le nuage est décalé vers le bas.
       const a = hacher(i * 31 + k, classe.variante, 0x51c9) * Math.PI * 2;
       const r = Math.sqrt(hacher(i * 17 + k, k, 0x2d81)) * etalement;
@@ -1812,7 +1812,7 @@ function dessinerFruits(
 /**
  * Pose les feuilles sur les rameaux terminaux.
  *
- * **Un BOUQUET par rameau, pas une feuille**, et sur TOUT rameau terminal :
+ * **Un bouquet par rameau, pas une feuille**, et sur **tout** rameau terminal :
  * les deux règles viennent de L0, et chacune corrigeait un défaut visible —
  * une brindille décorée dans un cas, un arbre nu dans l'autre.
  *
@@ -1833,7 +1833,7 @@ function dessinerFeuillage(
   dommageHydraulique = 0,
 ): void {
   const tous = segments.filter((s) => s.terminal);
-  // **La CIME SÈCHE, et elle sèche par le HAUT.** Le dommage hydraulique est la
+  // **La cime sèche, et elle sèche par le haut.** Le dommage hydraulique est la
   // part du système conducteur mise hors service par l'embolie ; ce qui lâche
   // en premier, c'est ce qui est hydrauliquement le plus loin des racines,
   // c'est-à-dire le sommet. Un arbre qui a soif garde son feuillage bas et
@@ -1853,7 +1853,7 @@ function dessinerFeuillage(
   // c'est-à-dire bien en dessous du seuil où l'on dessine une feuille.
   const port = portDuBouquet(fiche.feuillage.forme);
 
-  // **Le rayon d'une tache se déduit de la SURFACE à couvrir, pas de la taille
+  // **Le rayon d'une tache se déduit de la surface à couvrir, pas de la taille
   // d'une feuille**, et c'est la deuxième moitié de la correction du houppier
   // vide. Une tache dimensionnée sur la feuille faisait 1,3 pixel : cent
   // soixante-dix taches de ce calibre couvraient la moitié du houppier, et
@@ -1879,7 +1879,7 @@ function dessinerFeuillage(
   const hauteurUtile = Math.max(1, y1 - y0);
   const aireHouppier = (Math.PI / 4) * largeurUtile * hauteurUtile;
   const taches = Math.max(1, terminaux.length * fiche.feuillage.densite * partFoliaire);
-  // La densité de la fiche dit la TRANSPARENCE relative d'un houppier — un
+  // La densité de la fiche dit la **transparence** relative d'un houppier — un
   // bouleau à 0,45 laisse voir le ciel, un hêtre à 0,92 non. Prise telle quelle
   // comme taux de couverture, elle donnait des arbres nus : à 45 % de surface
   // couverte, les rameaux blancs d'un bouleau dominent et l'arbre se lit comme
@@ -1894,7 +1894,7 @@ function dessinerFeuillage(
   let i = 0;
   for (const s of terminaux) {
     i++;
-    // La densité de l'espèce ET la part foliaire de la saison décident si ce
+    // La densité de l'espèce **et** la part foliaire de la saison décident si ce
     // rameau porte un bouquet. Le tirage est déterministe.
     if (hacher(i, classe.palier, 0x77c1) > fiche.feuillage.densite * partFoliaire) continue;
     const bout = versPx(s.arrivee);
@@ -1903,7 +1903,7 @@ function dessinerFeuillage(
     const pied = versPx(s.depart);
     const dx = bout.sx - pied.sx;
     const dy = bout.sy - pied.sy;
-    // **La masse est TOUJOURS posée, et les feuilles viennent dessus.** C'est la
+    // **La masse est toujours posée, et les feuilles viennent dessus.** C'est la
     // formulation exacte du §4 : « vu de loin ça fait une masse ; vu de près on
     // distingue les feuilles ». Le premier jet en faisait une alternative — ou
     // la masse, ou les feuilles — et le résultat était un houppier criblé de
@@ -1932,7 +1932,7 @@ function dessinerFeuillage(
     // on les fait varier du simple au double, ce qui suffit à ce que l'œil y
     // voie une masse.
     const calibre = rayonTache * (0.72 + 0.72 * hacher(i * 7, classe.variante, 0x611d));
-    // **Un contour DÉCHIQUETÉ, pas une ellipse.** Une ellipse est une bulle, et
+    // **Un contour déchiqueté, pas une ellipse.** Une ellipse est une bulle, et
     // un houppier fait de bulles se lit comme du brocoli — c'est ce que la
     // capture montrait au zoom rapproché. Un bord irrégulier ne coûte que
     // quelques sommets de plus et rend au feuillage sa silhouette dentelée,
@@ -1945,30 +1945,30 @@ function dessinerFeuillage(
     // pin à l'autre. Deux branches ne pouvaient pas dire ça, et la boule
     // gagnait par défaut pour tout le monde sauf le pin.
     //
-    // **L'AIRE est conservée** quand le bouquet s'allonge : le calibre a été
+    // **l'aire est conservée** quand le bouquet s'allonge : le calibre a été
     // calculé pour qu'un certain nombre de taches couvre la part voulue du
     // houppier, et étirer sans compenser aurait changé la transparence de
     // chaque espèce au passage — un effet de bord qu'on n'a pas demandé.
     const demiLong = calibre * Math.sqrt(port.allongement);
     const demiTrav = calibre / Math.sqrt(port.allongement);
-    // Un bouquet allongé se pose LE LONG du rameau, centré sur lui ; un bouquet
+    // Un bouquet allongé se pose **le long** du rameau, centré sur lui ; un bouquet
     // rond se pose à son bout, là où les feuilles s'assemblent vraiment.
     const surLeRameau = Math.min(1, Math.max(0, (port.allongement - 1) / 1.2));
     const cx = bout.sx - dx * 0.5 * surLeRameau;
     const cy = bout.sy - dy * 0.5 * surLeRameau;
     ctx.save();
     ctx.translate(cx, cy);
-    // **Orienté ou pas, jamais à moitié.** Le premier jet multipliait l'ANGLE
+    // **Orienté ou pas, jamais à moitié.** Le premier jet multipliait l'**angle**
     // par le facteur d'allongement, ce qui ne veut rien dire : un rameau à 90°
     // se retrouvait tourné de 81°, un rameau à 10° de 9°, sans rapport avec
     // quoi que ce soit de physique. Les brosses du pin sortaient donc de
     // travers, à peu près verticales quel que soit le rameau qui les portait.
-    // Ce qui s'interpole, c'est la FORME — l'allongement — pas la direction :
+    // Ce qui s'interpole, c'est la **forme** — l'allongement — pas la direction :
     // une rosette n'a pas d'axe et n'a donc pas besoin d'être tournée ; dès
     // qu'un bouquet en a un, il suit le rameau, complètement.
     if (port.allongement > 1.15) ctx.rotate(Math.atan2(dy, dx));
     ctx.beginPath();
-    // **Un contour DÉCHIQUETÉ, pas une ellipse.** Une ellipse est une bulle, et
+    // **Un contour déchiqueté, pas une ellipse.** Une ellipse est une bulle, et
     // un houppier fait de bulles se lit comme du brocoli — c'est ce que la
     // capture montrait au zoom rapproché. L'amplitude du bord vient maintenant
     // de l'espèce : un chêne est bosselé là où un hêtre est lisse.
@@ -1981,11 +1981,11 @@ function dessinerFeuillage(
       const a = (n / sommets) * Math.PI * 2;
       const jitter =
         1 - port.decoupe / 2 + port.decoupe * hacher(i * 31 + n, classe.palier, 0x22a7);
-      // **L'irrégularité est TRANSVERSE sur un bouquet allongé**, et c'est ce
+      // **L'irrégularité est transverse sur un bouquet allongé**, et c'est ce
       // qui sépare une brosse d'une étoile. Appliquée aussi au grand axe, elle
       // découpait le fuseau dans sa longueur : les brosses du pin sortaient en
       // feuilles d'érable dentelées — une silhouette de feuillu là où on
-      // voulait exactement l'inverse. Des aiguilles sortent DU rameau,
+      // voulait exactement l'inverse. Des aiguilles sortent **du** rameau,
       // perpendiculairement : la frange est sur les flancs, la pointe reste
       // une pointe.
       const px = Math.cos(a) * demiLong * (allonge ? 1 : jitter);
@@ -2001,7 +2001,7 @@ function dessinerFeuillage(
       const a1 = hacher(i * 131 + k, classe.variante, 0x1d3b);
       const a2 = hacher(i, k * 17 + classe.palier, 0x9e21);
       // Les feuilles d'un bouquet s'écartent autour du bout du rameau.
-      // Une aiguille se pose LE LONG du rameau, une feuille autour de son bout.
+      // Une aiguille se pose **le long** du rameau, une feuille autour de son bout.
       const angle = aiguilles ? Math.atan2(dy, dx) + (a1 - 0.5) * 0.9 : a1 * Math.PI * 2;
       const rayon = tailleFeuillePx * 0.55 * a2;
       const cx = aiguilles
@@ -2014,7 +2014,7 @@ function dessinerFeuillage(
       // c'est la seule modulation qui donne du volume à une masse d'aplats.
       const clarte = 0.86 + 0.28 * (1 - (cy - bout.sy) / (tailleFeuillePx + 1e-6) / 2);
       ctx.fillStyle = versCss(eclairer(teinte, Math.min(1.18, Math.max(0.78, clarte))));
-      // **Une aiguille est ORIENTÉE, une feuille non.** Les contours sont
+      // **Une aiguille est orientée, une feuille non.** Les contours sont
       // normalisés pointe en haut ; les laisser tels quels donnait une brosse
       // de pin dont toutes les aiguilles montaient à la verticale, quel que
       // soit l'angle du rameau qui les porte. Une feuille tombée peut être de
@@ -2023,7 +2023,7 @@ function dessinerFeuillage(
       ctx.translate(cx, cy);
       if (aiguilles) ctx.rotate(angle + Math.PI / 2);
       for (let e = 0; e < parFeuille; e++) {
-        // Les aiguilles vont PAR DEUX : c'est la signature du pin sylvestre.
+        // Les aiguilles vont **par deux** : c'est la signature du pin sylvestre.
         const ecart = parFeuille > 1 ? (e - 0.5) * 0.22 : 0;
         ctx.beginPath();
         contour.forEach((p, n) => {
@@ -2132,7 +2132,7 @@ export function posesDesArbres(
   for (const arbre of arbres) {
     if (arbre.heightM <= 0) continue;
     const e = versEcranVue({ x: arbre.x, y: arbre.y, z: arbre.z }, vue);
-    // **Le test se fait à l'ÉCRAN, arbre par arbre**, et non sur l'emprise des
+    // **Le test se fait à l'écran, arbre par arbre**, et non sur l'emprise des
     // cellules. Le premier jet réutilisait `celluleVisibles`, dont la marge vaut
     // deux fois la hauteur du plus grand sujet — cinquante mètres pour un chêne
     // de vingt-cinq, soit la moitié de la parcelle. Pour du terrain cette marge
@@ -2141,7 +2141,7 @@ export function posesDesArbres(
     // quatre cents classes en retard.
     //
     // Un arbre est visible si son fût, sa cime ou son houppier touchent le
-    // cadre. La hauteur ne compte que vers le HAUT — un arbre dont le pied est
+    // cadre. La hauteur ne compte que vers le **haut** — un arbre dont le pied est
     // sous le bord inférieur peut avoir sa cime à l'écran — et la largeur du
     // houppier des deux côtés.
     const hauteurPx = arbre.heightM * METRE_VERTICAL_PX * vue.cam.zoom;
@@ -2232,7 +2232,7 @@ export class AtlasArbres {
   }
 
   /**
-   * Cuit ce qui tient dans un budget de PIXELS. Rend le nombre de classes
+   * Cuit ce qui tient dans un budget de **pixels**. Rend le nombre de classes
    * réellement cuites.
    *
    * **Le budget compte des pixels et non des vignettes**, et c'est ce qui le
@@ -2294,10 +2294,10 @@ export class AtlasArbres {
 }
 
 /**
- * La taille à laquelle POSER une vignette, en pixels.
+ * La taille à laquelle **poser** une vignette, en pixels.
  *
  * **À ne pas confondre avec `classe.taillePx`, et c'est un piège qui s'est
- * refermé.** `taillePx` est la RÉSOLUTION de cuisson, quantifiée en puissances
+ * refermé.** `taillePx` est la **résolution** de cuisson, quantifiée en puissances
  * de deux pour que le cache serve ; la taille de pose est la place réelle que
  * l'arbre occupe à l'écran. Le premier jet collait la vignette à sa résolution :
  * les arbres sortaient trois fois trop grands, et la capture montrait une
@@ -2314,7 +2314,7 @@ export function tailleDePose(
   vignette: Vignette,
   vue: Vue,
 ): { largeur: number; hauteur: number } {
-  // Ce que l'ARBRE doit mesurer à l'écran, en pixels.
+  // Ce que l'**arbre** doit mesurer à l'écran, en pixels.
   const arbrePx = Math.max(1, hauteurM * METRE_VERTICAL_PX * vue.cam.zoom);
   // Le rapport d'agrandissement de l'image se lit sur l'arbre, pas sur l'image :
   // la vignette réserve une marge au-dessus de la cime et sur les côtés, et

@@ -1,13 +1,13 @@
 /**
- * La nappe comme STOCK, et non plus comme décor (docs/regles.md §4.4).
+ * La nappe comme **stock**, et non plus comme décor (docs/regles.md §4.4).
  *
  * Jusqu'ici l'eau qui traversait le profil disparaissait : le « drainage »
  * sortait du système, et la profondeur de nappe était un champ figé déduit du
  * terrain et de l'eau libre. Deux conséquences, dont la seconde est grave :
  *
  *  - la nappe ne montait ni ne descendait ;
- *  - surtout, RIEN de ce que fait la végétation ne l'atteignait. Or une forêt
- *    transpire, et ce qu'elle transpire ne percole pas : elle FAIT BAISSER la
+ *  - surtout, **rien** de ce que fait la végétation ne l'atteignait. Or une forêt
+ *    transpire, et ce qu'elle transpire ne percole pas : elle **fait baisser** la
  *    nappe. Le fait est massif — dans les Landes de Gascogne, la pinède tient
  *    le plancher hydrique d'un pays de sables plats — et sa contrepartie
  *    l'est autant : après un incendie, la forêt ne pompe plus, la nappe
@@ -16,16 +16,16 @@
  * Le modèle est celui d'un aquifère libre par cellule, posé sur un substratum
  * imperméable sous le profil de sol :
  *
- *  - il se RECHARGE de ce qui percole sous le dernier horizon ;
- *  - il ÉCHANGE avec le réseau régional, dans les deux sens. C'est le point
+ *  - il se **recharge** de ce qui percole sous le dernier horizon ;
+ *  - il **échange** avec le réseau régional, dans les deux sens. C'est le point
  *    important : à l'échelle d'une parcelle, le niveau d'une nappe n'est pas
  *    décidé localement mais par ce qui la draine à des kilomètres de là. Une
  *    parcelle plus chargée que ce niveau se vide vers la région ; un fond de
- *    vallée, lui, en REÇOIT — et c'est précisément pour cela qu'il est
+ *    vallée, lui, en **reçoit** — et c'est précisément pour cela qu'il est
  *    engorgé. La station déclare donc son niveau d'équilibre, qui est un
- *    relevé de terrain, et le moteur simule l'ÉCART à ce niveau ;
+ *    relevé de terrain, et le moteur simule l'**écart** à ce niveau ;
  *  - elle s'écoule aussi latéralement vers l'aval, de proche en proche ;
- *  - son niveau monte comme le stock divisé par la POROSITÉ DRAINABLE : dans
+ *  - son niveau monte comme le stock divisé par la **porosité drainable** : dans
  *    un sable (15 %), cent millimètres d'eau font soixante-dix centimètres de
  *    battement ; dans une argile (5 %), deux mètres.
  *
@@ -59,7 +59,7 @@ export const EPAISSEUR_AQUIFERE_CM = 800;
  * végétal de quoi peser sur le niveau, ce qui est le fait qu'on veut
  * représenter *(à calibrer)*.
  *
- * Le niveau réalisé se tient donc un peu AU-DESSUS du niveau déclaré, de la
+ * Le niveau réalisé se tient donc un peu **au-dessus** du niveau déclaré, de la
  * hauteur qu'y met la recharge : les valeurs déclarées par les stations sont
  * calées pour que le niveau réellement atteint soit celui du terrain.
  */
@@ -78,7 +78,7 @@ export const ECHANGE_REGIONAL = 0.03;
 export const APPORT_REGIONAL_MAX_MM = 20;
 
 /**
- * Vitesse à laquelle le niveau RÉGIONAL suit ce qui arrive à la parcelle, par
+ * Vitesse à laquelle le niveau **régional** suit ce qui arrive à la parcelle, par
  * semaine. Une nappe régionale met des années à bouger : un centième par
  * semaine, soit deux ans pour l'essentiel du chemin *(à calibrer)*.
  */
@@ -100,7 +100,7 @@ export const VIDANGE_MAXIMALE = 0.1;
 /**
  * Porosité drainable du matériau qui porte la nappe ∈ ]0,1[ : la part du
  * volume qui se remplit et se vide vraiment. C'est elle qui décide de
- * l'AMPLITUDE du battement — un même apport fait monter une nappe de sable
+ * l'**amplitude** du battement — un même apport fait monter une nappe de sable
  * trois fois moins qu'une nappe d'argile.
  */
 export function porositeDrainable(profil: SoilProfile): number {
@@ -125,8 +125,8 @@ export function tauxDeVidange(profil: SoilProfile, pentePct: number): number {
 }
 
 /**
- * Capacité totale, mm d'eau : celle de l'aquifère PLUS celle du profil de sol
- * au-dessus. C'est ce qui permet à la nappe de monter DANS le sol au lieu de
+ * Capacité totale, mm d'eau : celle de l'aquifère **plus** celle du profil de sol
+ * au-dessus. C'est ce qui permet à la nappe de monter **dans** le sol au lieu de
  * buter sous lui — et donc d'affleurer, de l'engorger et de l'inonder. Sans
  * cela, une nappe pleine s'arrêtait pile à la base du profil et l'inondation
  * était structurellement impossible.
@@ -190,10 +190,10 @@ export function stockEquilibreMm(
 }
 
 /**
- * Stock d'équilibre CELLULE PAR CELLULE, mm.
+ * Stock d'équilibre **cellule par cellule**, mm.
  *
  * Une nappe n'est pas une couche d'eau posée à profondeur constante sous le
- * terrain : c'est une surface, et elle est bien plus PLATE que la
+ * terrain : c'est une surface, et elle est bien plus **plate** que la
  * topographie. Sous une butte elle est profonde, sous un creux elle affleure —
  * c'est ce qui fait les bas-fonds humides et les crêtes sèches d'un même
  * versant, et c'est exactement ce que le joueur dessine quand il creuse.
@@ -201,7 +201,7 @@ export function stockEquilibreMm(
  * De combien elle suit le terrain dépend du sol (`subordinationAuRelief`) : un
  * sable très conducteur porte une nappe presque horizontale — donc très
  * profonde sous les hauts —, une argile la garde perchée près de la surface
- * partout. La station déclare la profondeur à l'altitude MOYENNE de la
+ * partout. La station déclare la profondeur à l'altitude **moyenne** de la
  * parcelle ; chaque cellule s'en écarte selon sa propre hauteur.
  */
 export function stocksEquilibreParCellule(

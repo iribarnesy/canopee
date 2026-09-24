@@ -1,8 +1,8 @@
 /**
- * LE SOC DESSERRE CE QUE LES ROUES TASSENT (issue #141, critère A13).
+ * **Le soc desserre ce que les roues tassent** (issue #141, critère A13).
  *
  * Le moteur ne modélisait qu'une moitié du labour. `applyLabourer` n'appelait
- * que `tassementApresPassage` — il AJOUTAIT du tassement, et rien ne le
+ * que `tassementApresPassage` — il **ajoutait** du tassement, et rien ne le
  * retirait. Or déplacer la terre sur trente centimètres est précisément ce qui
  * casse la structure tassée de l'horizon travaillé : c'est la raison
  * agronomique du geste. Conséquence mesurée avant ce lot : un blé continu
@@ -104,7 +104,7 @@ describe("la même charrue desserre ou tasse, selon ce qu'elle trouve", () => {
   it("et elle tasse un sol intact, par les mêmes roues", () => {
     expect(tassementApresLabour(0, 1)).toBeGreaterThan(0);
     // Le point qui rend l'ensemble non trivial : les deux cas atterrissent au
-    // MÊME endroit. Sur la part mécanisée, ce que la charrue laisse ne dépend
+    // **même** endroit. Sur la part mécanisée, ce que la charrue laisse ne dépend
     // plus du tout de ce qu'elle a trouvé — c'est ce que fait un retournement.
     expect(tassementApresLabour(0, 1)).toBeCloseTo(tassementApresLabour(0.9, 1), 12);
   });
@@ -112,7 +112,7 @@ describe("la même charrue desserre ou tasse, selon ce qu'elle trouve", () => {
   it("là où le tracteur n'entre pas, ni le soc ni les roues ne font rien", () => {
     // Le bénéfice agroforestier, et il est maintenant à double tranchant :
     // une parcelle plantée serré n'est ni tassée ni desserrée, elle est
-    // LAISSÉE. Avant ce lot, ne pas être tassé était un pur gain ; désormais,
+    // **laissée**. Avant ce lot, ne pas être tassé était un pur gain ; désormais,
     // un sol déjà abîmé sous les arbres ne se répare que par les racines.
     for (const avant of [0, 0.3, 0.7, 1]) {
       expect(tassementApresLabour(avant, 0)).toBeCloseTo(avant, 12);
@@ -145,8 +145,8 @@ describe("la même charrue desserre ou tasse, selon ce qu'elle trouve", () => {
 
 describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
   it("un blé continu sans apport descend sous 1 t/ha, et il met un siècle", () => {
-    // **C'EST LE POINT DÉLICAT DU LOT, ET IL AVAIT ÉTÉ ANNONCÉ COMME UN
-    // RISQUE.** Neutraliser complètement le tassement faisait passer la
+    // **c'est le point délicat du lot, et il avait été annoncé comme un
+    // risque.** Neutraliser complètement le tassement faisait passer la
     // parcelle nue de 1,07 à 1,70 t/ha sur trente ans, là où Broadbalk tient
     // ~1 depuis 1843 : on aurait gagné le haut de la courbe et perdu le bas,
     // qui était juste. L'avertissement figurait dans l'issue.
@@ -160,10 +160,10 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     //     ans 1-20   21-40   41-60   61-80   81-100   101-120
     //       2,96      1,25    0,84    0,78     0,79      0,70
     //
-    // Le moteur passe par ~1 vers les années 20 à 40, puis converge SOUS 1 —
+    // Le moteur passe par ~1 vers les années 20 à 40, puis converge **sous** 1 —
     // 0,70 à 0,84 au lieu du ~1 que l'essai tient. L'écart est donc dans
     // l'autre sens que redouté, et ce n'est pas ce lot qui l'a créé : c'est la
-    // limite déjà écrite sous C16, la PAILLE qui reste au champ dans la réalité
+    // limite déjà écrite sous C16, la **paille** qui reste au champ dans la réalité
     // et ne rend rien ici. Le 1,07 d'avant n'était pas un point juste, c'était
     // une fenêtre de trente ans sur un sol qu'un tassement irréaliste freinait.
     const r = bleContinuSansApport(120);

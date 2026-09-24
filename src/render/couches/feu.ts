@@ -8,7 +8,7 @@
  * du presque-blanc donne un cœur, et le dégradé de température d'un feu ne coûte
  * donc pas une texture de plus.
  *
- * **Tout est fait de TACHES et non de contours, et c'est la décision qui
+ * **Tout est fait de taches et non de contours, et c'est la décision qui
  * compte.** Une flamme tracée au bézier a un bord net, et un bord net se lit
  * comme du carton découpé quel que soit le mouvement qu'on lui donne. Une
  * flamme est un dégradé : on l'obtient en empilant des dégradés radiaux le long
@@ -52,14 +52,14 @@ function tache(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number,
 }
 
 /**
- * Une LANGUE de flamme : des taches empilées le long d'un axe qui s'affine.
+ * Une **langue** de flamme : des taches empilées le long d'un axe qui s'affine.
  *
  * Trois variantes, parce qu'une ligne de flammes faite d'une seule image se lit
  * comme un tampon répété — et à cent soixante langues par image, un tampon se
  * remarque. Les variantes ne diffèrent que par la courbure de l'axe : c'est
  * assez pour casser la répétition, et ça garde une silhouette de famille.
  *
- * La langue est cuite le PIED EN BAS de la texture : c'est là qu'elle est
+ * La langue est cuite le **pied en bas** de la texture : c'est là qu'elle est
  * ancrée à la pose, sur le point de sol de sa cellule.
  */
 export function cuireFlamme(
@@ -92,7 +92,7 @@ export function cuireFlamme(
 }
 
 /**
- * La LUEUR posée au sol autour de ce qui brûle : un seul dégradé, très étalé.
+ * La **lueur** posée au sol autour de ce qui brûle : un seul dégradé, très étalé.
  *
  * **C'est la particule la plus utile du lot, et la moins spectaculaire.** Sans
  * elle, les flammes flottent sur un sol qu'elles n'éclairent pas, et un feu qui
@@ -111,7 +111,7 @@ export function cuireLueur(
 }
 
 /**
- * Une BOUFFÉE de fumée : cinq taches dispersées, en opacité normale.
+ * Une **bouffée** de fumée : cinq taches dispersées, en opacité normale.
  *
  * **Pas un dégradé radial unique**, et le premier jet l'a essayé : un rond
  * fondu se lit comme une bulle, et neuf bulles par colonne comme un chapelet de
@@ -119,7 +119,7 @@ export function cuireLueur(
  * ce sont ses bosses qui disent qu'il roule. Cinq taches décalées suffisent, à
  * condition qu'elles ne soient pas concentriques.
  *
- * En opacité NORMALE et non `lighter`, à la différence des trois autres : la
+ * En opacité **normale** et non `lighter`, à la différence des trois autres : la
  * fumée est la seule chose de ce lot qui masque ce qu'elle survole.
  */
 export function cuireBouffee(
@@ -146,7 +146,7 @@ export function cuireBouffee(
 }
 
 /**
- * Une BRAISE : une tache serrée avec un halo.
+ * Une **braise** : une tache serrée avec un halo.
  *
  * Deux taches, l'une dans l'autre : sans le halo, une braise réduite à cinq
  * pixels à l'écran devient un point dur, et cent points durs se lisent comme
@@ -169,7 +169,7 @@ export function cuireBraise(
 export const COTE_BRULURE_PX = 64;
 
 /**
- * De combien une tache de brûlure DÉPASSE sa cellule.
+ * De combien une tache de brûlure **dépasse** sa cellule.
  *
  * **C'est le nombre qui règle « ça fait des petits carrés ».** À un, chaque
  * cellule brûlée est un losange net et le brûlé est un damier ; pire, les
@@ -186,7 +186,7 @@ export const COTE_BRULURE_PX = 64;
 export const ETALEMENT_DE_LA_BRULURE = 2;
 
 /**
- * Une TACHE de brûlure : des lobes irréguliers, aux bords fondus.
+ * Une **tache** de brûlure : des lobes irréguliers, aux bords fondus.
  *
  * Quatre variantes, et elles diffèrent par la place de leurs lobes : sans ça,
  * l'étalement reforme une trame — plus grosse qu'un damier de cellules, mais

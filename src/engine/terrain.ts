@@ -1,5 +1,5 @@
 /**
- * Du TERRAIN à ce qui y pousse : ce module ne décrit rien, il déduit.
+ * Du **terrain** à ce qui y pousse : ce module ne décrit rien, il déduit.
  *
  * Jusqu'ici le relief se choisissait parmi trois silhouettes (plan, vallon,
  * croupe) et l'eau libre se déclarait (« un ruisseau au sud », « une mare de
@@ -11,11 +11,11 @@
  * on en déduit deux choses, avec les algorithmes classiques de l'hydrologie
  * numérique :
  *
- *  - le REMPLISSAGE DES CUVETTES (Barnes et al., « priority-flood ») : chaque
+ *  - le **remplissage des cuvettes** (Barnes et al., « priority-flood ») : chaque
  *    creux se remplit jusqu'au niveau de son déversoir. Ce qui se retrouve
  *    sous ce niveau est en eau. Un trou creusé devient une mare, un trou percé
  *    sur le côté ne devient rien ;
- *  - l'ACCUMULATION D'ÉCOULEMENT : chaque cellule reçoit l'eau de tout ce qui
+ *  - l'**accumulation d'écoulement** : chaque cellule reçoit l'eau de tout ce qui
  *    verse vers elle. Là où il en passe assez, il y a un cours d'eau — c'est
  *    la définition hydrologique d'un ruisseau, un seuil sur la surface drainée.
  *
@@ -32,7 +32,7 @@ import { conductiviteHorizonMmSemaine, type SoilProfile } from "./soil";
 
 /**
  * Surface drainée à partir de laquelle un talweg porte un cours d'eau
- * PERMANENT, m². Sous nos climats il faut plusieurs hectares — le chiffre
+ * **permanent**, m². Sous nos climats il faut plusieurs hectares — le chiffre
  * varie beaucoup avec la géologie, on prend cinq *(à calibrer)*.
  *
  * Conséquence voulue : aucune parcelle d'un hectare ne fabrique son ruisseau
@@ -51,7 +51,7 @@ export const COLMATAGE_DU_FOND = 0.02;
 /** Pluie annuelle par défaut, mm, quand la station ne la précise pas. */
 export const PLUIE_DEFAUT_MM_AN = 800;
 /**
- * Part de la pluie qui ruisselle ou percole depuis les TERRES du bassin — le
+ * Part de la pluie qui ruisselle ou percole depuis les **terres** du bassin — le
  * reste repart par l'évapotranspiration de la végétation. Un plan d'eau, lui,
  * reçoit la pluie entière : il ne transpire pas *(ordre de grandeur)*.
  */
@@ -135,11 +135,11 @@ export function remplirDepressions(altitudes: readonly number[], dims: GridDims)
 }
 
 /**
- * Le priority-flood, avec son ARBRE : en plus du niveau de remplissage, on
+ * Le priority-flood, avec son **arbre** : en plus du niveau de remplissage, on
  * retient par quelle cellule chacune a été atteinte. Comme l'inondation part
  * des bords — les exutoires — et progresse vers l'intérieur, ce parent est la
  * cellule vers laquelle l'eau s'écoule. On obtient ainsi un réseau de drainage
- * valable PARTOUT, y compris sur les surfaces parfaitement planes où la
+ * valable **partout**, y compris sur les surfaces parfaitement planes où la
  * comparaison de voisines ne donne rien (aucune n'est plus basse), et à
  * l'intérieur des cuvettes pleines, où l'arbre conduit au déversoir.
  */
@@ -240,7 +240,7 @@ function accumulationParArbre(
 }
 
 /**
- * Surface drainée par un vrai TALWEG, m² : cette fois on suit la voisine la
+ * Surface drainée par un vrai **talweg**, m² : cette fois on suit la voisine la
  * plus pentue, et elle seule. Sur une surface plane il n'y en a pas, donc
  * l'accumulation y reste à un mètre carré — ce qui est le résultat voulu.
  *
@@ -295,7 +295,7 @@ export interface OptionsTerrain {
   seuilCoursDeauM2?: number;
   /**
    * Pluie annuelle, mm, et profil du sol. Quand les deux sont fournis, une
-   * cuvette n'est retenue que si elle TIENT L'EAU : ce qu'elle reçoit doit
+   * cuvette n'est retenue que si elle **tient l'eau** : ce qu'elle reçoit doit
    * couvrir ce qui s'infiltre par le fond et ce qui s'évapore. Sans ça, tout
    * trou creusé deviendrait une mare, y compris dans du sable.
    */
@@ -487,7 +487,7 @@ function porteeDesPlansDEau(
 }
 
 /**
- * Les sources d'eau que le TERRAIN fabrique, prêtes pour le champ de nappe.
+ * Les sources d'eau que le **terrain** fabrique, prêtes pour le champ de nappe.
  * `undefined` si le terrain ne tient aucune eau — auquel cas la parcelle se
  * comporte comme avant, sans nappe locale.
  */

@@ -1,28 +1,28 @@
 /**
  * Les tempêtes, et le chablis qu'elles couchent (issue #55).
  *
- * Le moteur connaissait le vent comme un agent DESSÉCHANT — il gonfle la
+ * Le moteur connaissait le vent comme un agent **desséchant** — il gonfle la
  * demande évaporative (A7), une haie l'abrite (E5), il pousse le feu — et
- * jamais comme un agent CASSANT. Un arbre pouvait mourir de soif à cause du
+ * jamais comme un agent **cassant**. Un arbre pouvait mourir de soif à cause du
  * vent ; il ne pouvait pas verser. La seule façon de se retrouver au sol était
  * le joueur qui abat, ou une chandelle déjà morte qui finit par tomber.
  *
  * Le symptôme le plus net était lexical : le mot « chablis » est partout dans
  * le vocabulaire du moteur et n'y désigne jamais une tempête — `DECOTE_CHABLIS`
- * est la décote d'un bois BRÛLÉ, `CHABLIS_RECUPERABLE_SEMAINES` le délai de
- * récupération d'un arbre tué par le FEU. Et `marche.ts` explique longuement
+ * est la décote d'un bois **brûlé**, `CHABLIS_RECUPERABLE_SEMAINES` le délai de
+ * récupération d'un arbre tué par le **feu**. Et `marche.ts` explique longuement
  * l'effondrement des prix après Lothar et Klaus : le moteur enseignait la
  * conséquence d'un événement qu'il ne savait pas produire.
  *
  * ## Une rafale, pas un vent moyen
  *
  * La casse mécanique ne se joue pas sur la moyenne hebdomadaire — c'est
- * structurellement la mauvaise grandeur. Elle se joue sur la RAFALE, le pic de
+ * structurellement la mauvaise grandeur. Elle se joue sur la **rafale**, le pic de
  * quelques secondes. Ce fichier tire donc, pour chaque semaine, un maximum de
  * rafale dont la moyenne du vent fixe le pied et dont une queue exponentielle
  * fait le sommet.
  *
- * Deux conséquences TOMBENT de ce choix, sans qu'on ait eu à les écrire :
+ * Deux conséquences **tombent** de ce choix, sans qu'on ait eu à les écrire :
  *
  *  - **les tempêtes sont hivernales**, parce que la vitesse moyenne du vent
  *    l'est déjà (`meteo.ts` : maximum en janvier, minimum fin juillet). Une
@@ -70,11 +70,11 @@ import { rngFloat, rngStateFromSeed } from "./rng";
 import type { Carie, TreeState } from "./trees";
 
 /**
- * Rapport entre la rafale maximale d'une semaine et la vitesse MOYENNE du vent
+ * Rapport entre la rafale maximale d'une semaine et la vitesse **moyenne** du vent
  * de cette semaine, hors tempête.
  *
  * Le facteur de rafale usuel — pointe de trois secondes sur moyenne de dix
- * minutes — vaut 1,4 à 1,6 en terrain dégagé. Ici la moyenne est HEBDOMADAIRE,
+ * minutes — vaut 1,4 à 1,6 en terrain dégagé. Ici la moyenne est **hebdomadaire**,
  * ce qui est bien plus lisse qu'une moyenne de dix minutes : le rapport au
  * maximum de la semaine est donc plus grand *(à calibrer)*.
  */
@@ -85,14 +85,14 @@ export const FACTEUR_RAFALE = 2.5;
  *
  * C'est elle qui décide de la période de retour des tempêtes, et elle est calée
  * sur ce que Météo-France donne des rafales extrêmes de plaine : une
- * CINQUANTENNALE autour de 40-45 m/s (145-160 km/h), soit la classe de Klaus
+ * **cinquantennale** autour de 40-45 m/s (145-160 km/h), soit la classe de Klaus
  * dans les Landes et de Lothar sur le Bassin parisien.
  *
  * Ce que la valeur ci-dessous produit, mesuré sur vingt mille ans de tirage :
  * 28 m/s tous les 1,6 ans, 36 m/s tous les dix ans, 40 m/s tous les vingt-cinq
  * ans, 45 m/s tous les quatre-vingts. Les coups de vent ordinaires reviennent
  * donc chaque hiver et ne couchent rien — c'est voulu : le seuil de dégât est
- * celui de l'ARBRE, pas celui de la rafale *(à calibrer : la cinquantennale est
+ * celui de l'**arbre**, pas celui de la rafale *(à calibrer : la cinquantennale est
  * un fait, la loi qui l'entoure est une convention)*.
  */
 export const ECHELLE_TEMPETE = 0.35;
@@ -112,7 +112,7 @@ export const RAFALE_MAXIMALE_MS = 55;
 /**
  * Rafale maximale de la semaine, m/s, à la hauteur de référence de 10 m.
  *
- * Dérivée de la graine de partie et de la semaine ABSOLUE : deux parties
+ * Dérivée de la graine de partie et de la semaine **absolue** : deux parties
  * identiques voient les mêmes tempêtes, et aucune ne puise dans le flux
  * principal (`marche.ts` pour le même procédé).
  */
@@ -130,9 +130,9 @@ export function rafaleDeLaSemaine(
   //
   // `facteurClimat` est la moitié manquante de F19 : la trajectoire climatique
   // arrive jusqu'ici, alors que le scénario ne parvenait pas au tick. Il vaut 1
-  // aujourd'hui et le restera tant que le CHIFFRE manquera (`climat.ts`,
+  // aujourd'hui et le restera tant que le **chiffre** manquera (`climat.ts`,
   // `AMPLIFICATION_RAFALE`) — mais la plomberie, elle, ne manque plus. Il
-  // multiplie le PIED de la loi et non son sommet : un climat plus venteux
+  // multiplie le **pied** de la loi et non son sommet : un climat plus venteux
   // décale toute la distribution, il ne rallonge pas seulement sa queue.
   const tire = pied * (1 + ECHELLE_TEMPETE * -Math.log(1 - u));
   return Math.min(RAFALE_MAXIMALE_MS, tire * Math.max(0, facteurClimat));
@@ -143,7 +143,7 @@ export function rafaleDeLaSemaine(
  *
  * 25 m/s (90 km/h) : en dessous, aucun arbre du moteur n'atteint sa vitesse
  * critique, et parcourir le peuplement coûterait du temps pour rien. Ce n'est
- * pas un seuil de dégât — c'est un filtre de calcul, et il doit rester SOUS le
+ * pas un seuil de dégât — c'est un filtre de calcul, et il doit rester **sous** le
  * plus fragile des cas possibles.
  */
 export const RAFALE_MINIMALE_MS = 25;
@@ -195,18 +195,18 @@ export const PERTE_ELANCEMENT = 0.55;
  * sylviculture française : au-delà de 80 on parle de peuplement instable, en
  * dessous de 50 de peuplement ferme. La rampe est écrite sur cette gamme.
  *
- * **`ELANCEMENT_CRITIQUE` est INATTEIGNABLE, et ce n'est pas la faute de ce
+ * **`ELANCEMENT_CRITIQUE` est inatteignable, et ce n'est pas la faute de ce
  * fichier.** L'allocation d'ombre de `trees.ts` plafonne H/D à 80 : la moitié
  * haute de cette rampe est donc du code mort, et en pratique le facteur ne
  * descend jamais sous 0,92 puisque les peuplements ne produisent que 35 à 49.
  *
  * #79 a essayé d'ouvrir la fenêtre en descendant cette allocation, et la mesure
- * l'a refusé : des tiges plus fines résistent moins au FEU, l'incendie leur
+ * l'a refusé : des tiges plus fines résistent moins au **feu**, l'incendie leur
  * vole les victimes que `climat.test.ts` compte pour montrer que le
  * réchauffement tue, et une conclusion climatique se renversait pour quatre
  * points d'amplitude. Le compte rendu est sur `ALLOCATION_DIAMETRE_OMBRE`.
  *
- * Ce qui ouvrira cette rampe est ailleurs : une tige à l'ombre doit FILER au
+ * Ce qui ouvrira cette rampe est ailleurs : une tige à l'ombre doit **filer** au
  * lieu de stagner (#97). Le cadran est écrit sur la bonne gamme ; c'est
  * l'aiguille qui n'y arrive pas.
  */
@@ -222,29 +222,29 @@ export function facteurElancement(hauteurM: number, diametreCm: number): number 
  * qu'il peut tenir.
  *
  * C'est un rapport, et pas une profondeur, parce que le renversement est une
- * affaire de MOMENTS : le vent pousse sur la cime avec un bras de levier qui
+ * affaire de **moments** : le vent pousse sur la cime avec un bras de levier qui
  * est la hauteur, la motte résiste avec un bras qui est sa profondeur. Une
  * profondeur absolue dirait qu'un semis de deux mètres à trente centimètres de
  * racines est mal ancré, ce qui est faux — il l'est très bien pour sa taille,
  * et c'est mesurable : au premier jet, une profondeur absolue couchait des
  * semis et épargnait les dominants, soit l'exact inverse d'une tempête.
  *
- * SIX POUR CENT, ET C'EST UN RETOUR, PAS UNE NOUVEAUTÉ. Le premier jet demandait
+ * **Six pour cent**, **et c'est un retour**, **pas une nouveauté**. Le premier jet demandait
  * six, calé sur de vraies hêtraies et aulnaies de quarante ans (0,054 à 0,073).
  * Il a été abandonné pour quatre, parce que le même hêtre poussé quatre-vingt-dix
  * ans sur un site jamais sec ne tenait que 0,019 à 0,035 : toute une population
  * légitime se retrouvait au fond du barème et la tempête couchait seize hêtres
  * sur soixante-quatre en cinq ans.
  *
- * Ce n'était pas la plasticité racinaire qui déraillait, c'était son PLANCHER —
+ * Ce n'était pas la plasticité racinaire qui déraillait, c'était son **plancher** —
  * ce fichier le disait déjà en renvoyant à #84, « le vrai sujet est ailleurs ».
  * Le plancher est corrigé, il croît avec la maturité, et le hêtre jamais assoiffé
  * tient maintenant 0,039 (79 cm à 20,5 m) contre 0,059 pour l'assoiffé (96 cm à
  * 16,4 m). Les deux régimes se tiennent dans un rapport de 1,5 au lieu de 2,7,
  * et six pour cent redevient ce qu'il était : la valeur mesurée.
  *
- * FORESTGALES RECOUPE, et c'est ce qui achève de la fonder. Les modèles de cette
- * famille classent un sol SUPERFICIEL à 80 cm ou moins. Pour un arbre de vingt
+ * **ForestGALES recoupe**, et c'est ce qui achève de la fonder. Les modèles de cette
+ * famille classent un sol **superficiel** à 80 cm ou moins. Pour un arbre de vingt
  * mètres, 80 cm valent précisément un ratio de 0,04 — donc l'ancien seuil
  * déclarait « complètement ancré » ce que la littérature appelle superficiel.
  * À 0,06, l'ancrage complet demande 120 cm au même arbre, soit la classe
@@ -255,14 +255,14 @@ export const ANCRAGE_SUFFISANT_RATIO = 0.06;
  * Ce qui reste de résistance à un arbre à peine ancré, en part.
  *
  * Un cinquième, et pas deux : les modèles de la famille ForestGALES traitent
- * l'enracinement en CLASSES (superficiel, moyen, profond) dont les
+ * l'enracinement en **classes** (superficiel, moyen, profond) dont les
  * multiplicateurs sur le moment de renversement se tiennent dans un rapport de
  * l'ordre de 0,8 à 1, pas de 0,6 à 1. Le premier jet en faisait le terme
  * dominant de la vitesse critique, devant l'élancement et la prise au vent.
  *
- * Cette valeur-ci n'a pas bougé avec #84, et c'est voulu : elle dit l'AMPLITUDE
+ * Cette valeur-ci n'a pas bougé avec #84, et c'est voulu : elle dit l'**amplitude**
  * de l'effet d'ancrage, que la correction des racines ne remet pas en cause.
- * C'est le SEUIL au-dessus qui était faussé, pas l'écart entre bien et mal
+ * C'est le **seuil** au-dessus qui était faussé, pas l'écart entre bien et mal
  * ancré *(à confirmer sur les tables d'enracinement de ForestGALES)*.
  */
 export const ANCRAGE_MINIMAL = 0.8;
@@ -271,12 +271,12 @@ export const ANCRAGE_MINIMAL = 0.8;
  * Ce que l'ancrage laisse de la résistance ∈ [0,8 ; 1].
  *
  * Aucun trait nouveau, et pas même une lecture de fiche : c'est
- * `TreeState.rootDepthCm`, la profondeur que CET arbre-là a réellement
+ * `TreeState.rootDepthCm`, la profondeur que **cet** arbre-là a réellement
  * explorée. Elle porte déjà tout ce qu'il faut — l'espèce (un pivot vise plus
  * bas qu'un traçant), la taille du sujet, et ce que le sol laisse pénétrer.
  *
  * Elle porte aussi quelque chose qu'on n'aurait pas pensé à écrire : la
- * PLASTICITÉ. Un arbre qui n'a jamais eu soif garde un chevelu superficiel
+ * **plasticité**. Un arbre qui n'a jamais eu soif garde un chevelu superficiel
  * (`nouvelleProfondeurRacines`, trees.ts) — il est donc plus facile à
  * déraciner. « Les hivers doux et humides font des arbres qui versent » n'est
  * écrit nulle part : ça tombe de deux mécanismes qui ne se connaissaient pas.
@@ -288,20 +288,20 @@ export function facteurAncrage(profondeurEffectiveCm: number, hauteurM: number):
   return ANCRAGE_MINIMAL + (1 - ANCRAGE_MINIMAL) * part;
 }
 
-/** Ce qu'un sol saturé AU-DELÀ DE CE QUE L'ESPÈCE SUPPORTE retire à la tenue. */
+/** Ce qu'un sol saturé **au-delà de ce que l'espèce supporte** retire à la tenue. */
 export const PERTE_ENGORGEMENT = 0.45;
 
 /**
  * Ce que l'état du sol laisse de la résistance ∈ [0,55 ; 1].
  *
- * C'est LE facteur des grandes tempêtes, et il était déjà dans l'état du
+ * C'est **le** facteur des grandes tempêtes, et il était déjà dans l'état du
  * moteur : les dégâts de Lothar et de Klaus se sont concentrés là où le sol
  * était gorgé d'eau, parce qu'un sol saturé lâche les racines. Les tempêtes
  * atlantiques arrivent après des semaines de pluie, ce qui n'est pas une
  * coïncidence — et le moteur le produit tout seul, sans qu'on ait à corréler
  * quoi que ce soit : `waterlogging` monte en hiver, la rafale aussi.
  *
- * Ce qui compte est l'engorgement AU-DELÀ de ce que l'espèce supporte, et la
+ * Ce qui compte est l'engorgement **au-delà** de ce que l'espèce supporte, et la
  * forme est celle que `trees.ts:waterloggingFactor` utilise déjà pour la
  * croissance. Sans ce correctif, l'aulnaie d'un fond de vallée — une espèce à
  * `toleranceEngorgement` de 1, chez elle dans l'eau — se faisait coucher tous
@@ -321,7 +321,7 @@ export const PERTE_PRISE_AU_VENT = 0.35;
 /**
  * Ce que la prise au vent laisse de la résistance ∈ [0,65 ; 1].
  *
- * La part foliaire OMBRAGEANTE est la bonne grandeur : c'est celle qui
+ * La part foliaire **ombrageante** est la bonne grandeur : c'est celle qui
  * intercepte, feuilles mortes des marcescents comprises (`phenologie.ts`), et
  * une feuille morte accrochée prend le vent aussi bien qu'une verte. De là
  * sort, sans qu'on l'écrive, le fait de terrain le plus massif des tempêtes
@@ -336,7 +336,7 @@ export function facteurPriseAuVent(partFoliaire: number): number {
  * dégagé.
  *
  * Un volis casse là où le moment appliqué l'emporte sur ce que la section peut
- * tenir, c'est-à-dire À LA BASE DU HOUPPIER : au-dessus la prise au vent est
+ * tenir, c'est-à-dire **à la base du houppier** : au-dessus la prise au vent est
  * maximale, au-dessous le tronc s'épaissit vite. Le moteur connaît cette
  * hauteur (`TreeState.baseHouppierM`) — mais elle vaut zéro sur un arbre resté
  * branchu, et casser au ras du sol ne serait plus un volis, ce serait un
@@ -355,7 +355,7 @@ export const HAUTEUR_SOUPLE_M = 5;
 export const HAUTEUR_RIGIDE_M = 12;
 
 /**
- * Ce que la SOUPLESSE ajoute à la résistance d'une jeune tige ∈ [0,1].
+ * Ce que la **souplesse** ajoute à la résistance d'une jeune tige ∈ [0,1].
  *
  * Elle vaut 0 sous cinq mètres — la tige se couche et se relève, elle ne
  * s'arrache pas — et 1 au-delà de douze, où l'arbre encaisse en tronc rigide.
@@ -392,7 +392,7 @@ export interface ExpositionAuVent {
 export const ABRI_MAX = 0.5;
 
 /**
- * Portée de l'abri, en multiples de la hauteur qui DÉPASSE. Même ordre que
+ * Portée de l'abri, en multiples de la hauteur qui **dépasse**. Même ordre que
  * l'abri de haie (`light.ts:windShelterAt`) : ce qui protège protège loin.
  */
 export const PORTEE_ABRI = 12;
@@ -400,18 +400,18 @@ export const PORTEE_ABRI = 12;
 export const FORCE_ABRI = 0.12;
 
 /**
- * Abri qu'un arbre reçoit de ses voisins AU NIVEAU DE SA CIME ∈ [0,1].
+ * Abri qu'un arbre reçoit de ses voisins **au niveau de sa cime** ∈ [0,1].
  *
  * Pourquoi ne pas réutiliser `windShelterAt` (light.ts), qui existe déjà et
  * calcule un abri : parce qu'il répond à une autre question. Il a été écrit
- * pour la haie brise-vent (E5) — de quoi un JEUNE PLANT est-il protégé, près du
+ * pour la haie brise-vent (E5) — de quoi un **jeune plant** est-il protégé, près du
  * sol — et il compte tout voisin d'une certaine taille, où qu'il soit par
  * rapport au sujet. Dans un peuplement, il sature donc à 1 pour tout le monde :
  * chacun s'abrite de ses semblables, et plus rien ne verse. Mesuré, et c'est
  * ce qui a fait tomber zéro arbre en soixante ans au premier jet.
  *
- * Ce qui abrite une CIME, c'est ce qui la dépasse. La somme ne compte donc que
- * le DÉPASSEMENT des voisins plus hauts, d'où trois comportements qui sont ceux
+ * Ce qui abrite une **cime**, c'est ce qui la dépasse. La somme ne compte donc que
+ * le **dépassement** des voisins plus hauts, d'où trois comportements qui sont ceux
  * du terrain, et qu'on n'a pas eu à écrire :
  *
  *  - une futaie régulière ne s'abrite pas elle-même — tout le monde est au
@@ -425,7 +425,7 @@ export function abriAuVent(
   arbre: Pick<TreeState, "id" | "x" | "y" | "heightM">,
 ): number {
   let abri = 0;
-  // Le voisinage qui compte pour l'abri de PEUPLEMENT : un rayon de deux
+  // Le voisinage qui compte pour l'abri de **peuplement** : un rayon de deux
   // hauteurs, et seulement les tiges d'une taille comparable (cf. plus bas).
   const rayonPeuplement = RAYON_PEUPLEMENT * Math.max(0.5, arbre.heightM);
   let pairs = 0;
@@ -470,7 +470,7 @@ export const PART_HAUTEUR_PAIR = 0.7;
  * Espacement moyen entre tiges comparables, rapporté à la hauteur : le fameux
  * S/H des modèles de risque de chablis.
  *
- * On le déduit du COMPTE de voisins dans un disque, ce qui suppose qu'ils y
+ * On le déduit du **compte** de voisins dans un disque, ce qui suppose qu'ils y
  * sont répartis à peu près régulièrement — c'est l'hypothèse que fait aussi la
  * sylviculture quand elle publie un espacement moyen *(à confirmer sur un
  * peuplement volontairement agrégé)*.
@@ -493,7 +493,7 @@ export function espacementSurHauteur(pairs: number, rayonM: number, hauteurM: nu
 export const ESPACEMENT_PLEIN_VENT = 0.5;
 
 /**
- * Ce qu'un abri de PEUPLEMENT retire, au plus, à la rafale reçue.
+ * Ce qu'un abri de **peuplement** retire, au plus, à la rafale reçue.
  *
  * **Il est volontairement plus faible que l'abri de surcime, et c'est un
  * garde-fou historique.** Le premier jet de ce module avait réutilisé
@@ -506,16 +506,16 @@ export const ESPACEMENT_PLEIN_VENT = 0.5;
 export const ABRI_PEUPLEMENT_MAX = 1 / 3;
 
 /**
- * ABRI QUE LA FUTAIE DONNE À CHACUN DE SES MEMBRES ∈ [0 ; ABRI_PEUPLEMENT_MAX].
+ * **abri que la futaie donne à chacun de ses membres** ∈ [0 ; ABRI_PEUPLEMENT_MAX].
  *
  * Ce que `abriAuVent` ne savait pas dire, et qui bloquait F18 (#179). Il ne
- * comptait que les voisins QUI DÉPASSENT, si bien qu'une futaie régulière
+ * comptait que les voisins **qui dépassent**, si bien qu'une futaie régulière
  * n'abritait personne : les seuls arbres à avoir de l'abri à perdre étaient les
  * dominés, et les dominés sont trop courts pour verser. Aucune ouverture ne
  * pouvait donc faire verser quoi que ce soit de plus.
  *
  * Les modèles de la famille ForestGALES ne raisonnent pas en « qui dépasse
- * qui » mais sur le rapport de l'ESPACEMENT à la HAUTEUR : plus les tiges sont
+ * qui » mais sur le rapport de l'**espacement** à la **hauteur** : plus les tiges sont
  * serrées, plus la quantité de mouvement se partage, et plus le moment appliqué
  * à chacune est faible. C'est ce rapport-là qu'on lit.
  *
@@ -525,7 +525,7 @@ export const ABRI_PEUPLEMENT_MAX = 1 / 3;
  *  - **un arbre de lisière l'est moins** qu'un arbre d'intérieur — il a moins
  *    de voisins, donc un espacement local plus grand. La distance à la lisière
  *    n'a pas à être calculée, elle se lit dans le comptage ;
- *  - **une éclaircie découvre les DOMINANTS**, ceux qui versent, et c'est ce
+ *  - **une éclaircie découvre les dominants**, ceux qui versent, et c'est ce
  *    que la mémoire d'abri (#177) attendait pour mordre.
  */
 export function abriDuPeuplement(espacementSurHauteurLocal: number): number {
@@ -550,7 +550,7 @@ export const MEMOIRE_ABRI_ANS = 5;
  * Nouvelle mémoire d'abri après une année passée sous `abriActuel`.
  *
  * Un lissage exponentiel, mis à jour une fois l'an et non chaque semaine — et
- * c'est un choix de COÛT, à dire : `abriAuVent` parcourt le peuplement pour
+ * c'est un choix de **coût**, à dire : `abriAuVent` parcourt le peuplement pour
  * chaque arbre, donc un n² ; le faire cinquante-deux fois par an pour une
  * constante de temps de cinq ans serait payer très cher une précision qui ne
  * change rien.
@@ -561,16 +561,16 @@ export function memoireDAbri(abriHabituel: number, abriActuel: number): number {
 }
 
 /**
- * NAÏVETÉ AU VENT ∈ [0,1] : de combien l'abri a chuté sous celui auquel
+ * **naïveté au vent** ∈ [0,1] : de combien l'abri a chuté sous celui auquel
  * l'arbre est habitué (critère F18).
  *
  * Une seule soustraction, et elle couvre les trois causes que le critère
  * nomme — l'éclaircie, la lisière neuve, la trouée d'un chablis — sans qu'aucune
  * ne soit écrite. Ce sont toutes des chutes d'abri.
  *
- * Et les deux cas qui ne doivent RIEN donner ne donnent rien : un arbre qui a
+ * Et les deux cas qui ne doivent **rien** donner ne donnent rien : un arbre qui a
  * toujours poussé au large a une mémoire basse, donc aucune naïveté — c'est
- * l'arbre de plein vent, celui qui tient ; et un arbre qu'on vient d'ABRITER
+ * l'arbre de plein vent, celui qui tient ; et un arbre qu'on vient d'**abriter**
  * (un voisin qui pousse, une haie qui monte) n'est pas naïf non plus, il est
  * simplement mieux protégé, d'où le plancher à zéro.
  */
@@ -585,8 +585,8 @@ export const PERTE_NAIVETE = 0.25;
 /**
  * Ce que la naïveté laisse de résistance ∈ [0,75 ; 1].
  *
- * Elle s'applique aux DEUX ruines, et c'est voulu : ce qui n'a pas suivi est
- * le fût autant que l'ancrage. Un arbre élevé à l'abri est effilé ET mal
+ * Elle s'applique aux **deux** ruines, et c'est voulu : ce qui n'a pas suivi est
+ * le fût autant que l'ancrage. Un arbre élevé à l'abri est effilé **et** mal
  * amarré, et c'est précisément pour ça qu'une éclaircie tardive et forte est
  * la faute que Lothar a fait payer le plus cher.
  */
@@ -628,10 +628,10 @@ export const DENSITE_BOIS_REFERENCE = 0.5;
 export const ELANCEMENT_REFERENCE = 50;
 
 /**
- * Vitesse à laquelle le FÛT casse, pour l'arbre de référence en pleine feuille,
+ * Vitesse à laquelle le **fût** casse, pour l'arbre de référence en pleine feuille,
  * m/s.
  *
- * L'ancre n'est pas un nombre isolé, c'est un RAPPORT : les modèles de la
+ * L'ancre n'est pas un nombre isolé, c'est un **rapport** : les modèles de la
  * famille ForestGALES calculent deux vitesses critiques — renversement et
  * rupture — et les publient dans la même bande de 15 à 45 m/s. Aucune des deux
  * ne domine par construction ; ce qui décide est le sol et le bois. La valeur
@@ -646,7 +646,7 @@ export const VITESSE_CRITIQUE_VOLIS_MS = 42;
 /**
  * Ce que la densité du bois laisse de résistance à la rupture.
  *
- * Le module de rupture d'un bois suit sa DENSITÉ — c'est l'une des relations
+ * Le module de rupture d'un bois suit sa **densité** — c'est l'une des relations
  * les mieux établies de la science du bois, et elle dispense d'un trait
  * nouveau : `bois.densite` est à l'atlas depuis #68, sourcée espèce par espèce.
  * La racine carrée vient de ce que la vitesse critique varie comme la racine du
@@ -661,12 +661,12 @@ export function facteurDensiteBois(densite: number): number {
 }
 
 /**
- * Ce que la GÉOMÉTRIE du fût laisse de résistance à la rupture.
+ * Ce que la **géométrie** du fût laisse de résistance à la rupture.
  *
  * C'est ici que le volis se sépare vraiment du renversement, et pas seulement
  * par les facteurs qu'on lui retire. Une motte résiste par un bras de levier
- * qui est sa profondeur ; un fût résiste par son MODULE DE SECTION, qui varie
- * comme le CUBE du diamètre. Le moment appliqué, lui, croît avec la hauteur et
+ * qui est sa profondeur ; un fût résiste par son **module de section**, qui varie
+ * comme le **cube** du diamètre. Le moment appliqué, lui, croît avec la hauteur et
  * la surface du houppier — qu'on suppose homothétique, donc en h².
  *
  * D'où `u ∝ √(d³ / h³)`, soit l'élancement à la puissance −3/2 : la rupture est
@@ -682,16 +682,16 @@ export function facteurGeometrieFut(hauteurM: number, diametreCm: number): numbe
 }
 
 /**
- * Vitesse de rafale à laquelle le FÛT de cet arbre-là casse, m/s (critère F17).
+ * Vitesse de rafale à laquelle le **fût** de cet arbre-là casse, m/s (critère F17).
  *
- * **Ce qui n'entre PAS dans ce calcul est ce qui fait tout le lot.** Ni
+ * **Ce qui n'entre pas dans ce calcul est ce qui fait tout le lot.** Ni
  * `facteurAncrage`, ni `facteurSolGorge` : un fût casse aussi bien sur un sol
  * gelé que sur un sol gorgé, parce que la rupture se joue dans le bois et non
  * dans la terre. De cette absence sort, sans qu'on l'écrive, le fait de terrain
  * que les tempêtes françaises montrent partout :
  *
- *  - **fond de vallon gorgé** → l'ancrage lâche avant le fût, ça DÉRACINE ;
- *  - **sol ferme, tige élancée ou bois tendre** → ça CASSE.
+ *  - **fond de vallon gorgé** → l'ancrage lâche avant le fût, ça **déracine** ;
+ *  - **sol ferme, tige élancée ou bois tendre** → ça **casse**.
  *
  * La souplesse, en revanche, protège des deux : une tige de trois mètres plie
  * et se relève, elle ne casse pas plus qu'elle ne s'arrache.
@@ -715,7 +715,7 @@ export function vitesseCritiqueVolisMs(
 export type ModeDeRuine = "chablis" | "volis";
 
 /**
- * Ce qui cède EN PREMIER : la motte ou le fût.
+ * Ce qui cède **en premier** : la motte ou le fût.
  *
  * Pas un tirage entre deux modes, pas une part posée à la main — une
  * comparaison. Le mode qui l'emporte est celui dont la vitesse critique est la
@@ -745,7 +745,7 @@ export const MARGE_RENVERSEMENT = 0.4;
 /**
  * Probabilité qu'un arbre soit ruiné ∈ [0,1], quel que soit le mode.
  *
- * C'est la PLUS BASSE des deux vitesses critiques qui décide, parce qu'un arbre
+ * C'est la **plus basse** des deux vitesses critiques qui décide, parce qu'un arbre
  * cède par son point faible : le fût casse ou la motte lâche, selon ce qui
  * lâche en premier (critère F17). `densiteBois` à `undefined` neutralise le
  * volis — c'est ce que le banc utilise comme témoin.
@@ -768,11 +768,11 @@ export function probabiliteRenversement(
 }
 
 /**
- * Part de la vitesse critique à partir de laquelle le vent ARRACHE DES BRANCHES
+ * Part de la vitesse critique à partir de laquelle le vent **arrache des branches**
  * sans ruiner l'arbre (critère F17, le troisième mode).
  *
  * Bien en dessous de la ruine, et c'est tout l'intérêt : la casse partielle est
- * le dégât le plus FRÉQUENT d'une tempête, celui qu'on voit après chaque coup
+ * le dégât le plus **fréquent** d'une tempête, celui qu'on voit après chaque coup
  * de vent sans que rien ne soit par terre. Six dixièmes de la vitesse critique
  * *(à calibrer : l'existence d'un seuil bien inférieur à la ruine est le fait
  * de terrain, sa valeur est une convention)*.
@@ -783,14 +783,14 @@ export const PART_CASSE_BRANCHES = 0.6;
 export const HOUPPIER_ARRACHE_MAX = 0.4;
 
 /**
- * Part du houppier qu'un coup de vent arrache à un arbre qui TIENT ∈ [0 ; 0,4].
+ * Part du houppier qu'un coup de vent arrache à un arbre qui **tient** ∈ [0 ; 0,4].
  *
  * Le troisième mode de ruine du critère F17, et le seul qui laisse l'arbre
  * debout : ni motte arrachée, ni fût cassé, mais des branches en moins. C'est
  * une rampe et non un seuil — un vent à peine suffisant casse une branche, un
  * vent proche de la ruine écime.
  *
- * Elle se lit sur le MÊME rapport que la ruine, la rafale reçue sur la vitesse
+ * Elle se lit sur le **même** rapport que la ruine, la rafale reçue sur la vitesse
  * critique, et c'est ce qui la rend cohérente sans rien coûter : tout ce qui
  * fragilise un arbre — son élancement, son ancrage, le sol gorgé, sa prise au
  * vent, l'abri qu'il a perdu — le rend du même coup plus facile à ébrancher.
@@ -822,14 +822,14 @@ export function prochainHouppierPerdu(perdu: number, arrache: number): number {
 /**
  * Part du rayon qu'une plaie neuve ouvre d'emblée à la carie.
  *
- * Une blessure n'est pas une carie : c'est une PORTE. Ce qui entre est petit,
+ * Une blessure n'est pas une carie : c'est une **porte**. Ce qui entre est petit,
  * et c'est ensuite que ça travaille *(à calibrer)*.
  */
 export const CARIE_INITIALE = 0.05;
 
 /**
- * Part de houppier qu'il faut avoir perdue pour qu'une plaie ouvre le BOIS DE
- * CŒUR *(à calibrer)*.
+ * Part de houppier qu'il faut avoir perdue pour qu'une plaie ouvre le **bois de**
+ * **cœur** *(à calibrer)*.
  *
  * Une brindille cassée n'est pas une porte. Un arbre referme une plaie de
  * petit diamètre en une ou deux saisons — le bourrelet de cicatrisation la
@@ -838,28 +838,28 @@ export const CARIE_INITIALE = 0.05;
  * jamais, et c'est celle-là qui compte.
  *
  * Sans ce seuil, le moindre coup de vent inoculait, et comme `houppierArrache`
- * mord dès 27 m/s, à peu près TOUS les arbres finissaient cariés : mesuré à
+ * mord dès 27 m/s, à peu près **tous** les arbres finissaient cariés : mesuré à
  * cent vingt ans, 43 chênes creux au-delà de la moitié de leur rayon sur 163
  * vivants, soit un quart du peuplement à l'âge où une futaie de chêne est
  * précisément du bois d'œuvre. Le seuil est posé au niveau que la campagne de
- * F17 attribue à un coup de vent FORT — 3 % de houppier à 27 m/s, 20 % à
+ * F17 attribue à un coup de vent **fort** — 3 % de houppier à 27 m/s, 20 % à
  * 48 m/s — pour que ce soit la tempête qui inocule, et non la brise.
  */
 export const PLAIE_OUVRANTE = 0.15;
 
 /**
- * Avancée RADIALE annuelle du front de carie, cm/an, sur un bois de densité de
+ * Avancée **radiale** annuelle du front de carie, cm/an, sur un bois de densité de
  * référence.
  *
  * En centimètres et non plus en part du rayon, et ce changement d'unité est le
  * mécanisme lui-même. Une colonne de carie s'étend de plusieurs centimètres par
- * an en HAUTEUR et beaucoup plus lentement en rayon ; surtout, sa vitesse ne
+ * an en **hauteur** et beaucoup plus lentement en rayon ; surtout, sa vitesse ne
  * sait rien de la taille du tronc qu'elle habite. L'exprimer en part du rayon
  * revenait à faire pourrir un gros arbre aussi vite qu'une perche, alors que
  * c'est exactement le contraire qui se passe.
  *
  * L'ordre de grandeur est choisi pour que la comparaison avec l'accroissement
- * radial d'un arbre vigoureux (0,15 à 0,25 cm/an ici) soit SERRÉE, parce que
+ * radial d'un arbre vigoureux (0,15 à 0,25 cm/an ici) soit **serrée**, parce que
  * c'est ce voisinage-là qui est réel : un arbre qui pousse bien distance sa
  * carie, un arbre dominé ou vieux se fait rattraper *(à calibrer : aucune
  * source consultée ne donne une vitesse radiale franche, et pour cause — elle
@@ -868,19 +868,19 @@ export const PLAIE_OUVRANTE = 0.15;
 export const AVANCEE_CARIE_CM_AN = 0.3;
 
 /**
- * LA CARIE D'UN TRONC, une année plus tard (critère F17, #182).
+ * **la carie d'un tronc**, une année plus tard (critère F17, #182).
  *
  * **Elle ne guérit jamais** — un houppier arraché repousse, une colonne de
  * carie ne fait que monter — **mais elle ne poursuit pas l'arbre.** C'est la
- * COMPARTIMENTATION (le CODIT de Shigo), et c'est elle qui décide de tout :
- * à la blessure, l'arbre dresse une barrière chimique sur le bois qu'il a CE
- * JOUR-LÀ, et tout ce qu'il fabriquera ensuite reste hors d'atteinte du
+ * **compartimentation** (le CODIT de Shigo), et c'est elle qui décide de tout :
+ * à la blessure, l'arbre dresse une barrière chimique sur le bois qu'il a **ce**
+ * **jour-là**, et tout ce qu'il fabriquera ensuite reste hors d'atteinte du
  * champignon. Le cœur pourrit ; l'aubier neuf, lui, s'épaissit par-dessus.
  *
  * D'où la conséquence qu'on n'a pas écrite et qui est le fait de terrain :
  * **un arbre vigoureux distance sa carie, un arbre dominé ou vieux se fait
  * rattraper.** La part cariée `p = rayon carié / rayon actuel` peut donc
- * DÉCROÎTRE, et c'est la seule façon d'obtenir à la fois le vieux chêne creux
+ * **décroître**, et c'est la seule façon d'obtenir à la fois le vieux chêne creux
  * du bocage — blessé tard, poussant lentement — et le chêne de futaie qui
  * porte une cicatrice de jeunesse sans en souffrir à cent ans.
  *
@@ -894,10 +894,10 @@ export const AVANCEE_CARIE_CM_AN = 0.3;
  *
  * Le bois dense se carie plus lentement — et ce n'est pas un trait nouveau :
  * `dureeChandelleSemaines` (boisMort.ts) fait déjà de la densité la résistance
- * à la décomposition d'un arbre MORT. C'est la même propriété du bois, lue sur
+ * à la décomposition d'un arbre **mort**. C'est la même propriété du bois, lue sur
  * un arbre vivant.
  *
- * **Limite assumée** : seule une plaie FRAÎCHE repousse la barrière. Un arbre
+ * **Limite assumée** : seule une plaie **fraîche** repousse la barrière. Un arbre
  * réélagué vingt ans plus tard devrait la voir repartir de son rayon du jour,
  * et l'état ne dit pas quand `recepages` ou `hauteurElagueeM` ont changé. Le
  * cas qui compte vraiment — la trogne recoupée sans fin — est modélisé
@@ -928,11 +928,11 @@ export function partCariee(carie: Carie | undefined, diametreCm: number): number
 }
 
 /**
- * Ce que la carie laisse de résistance à la RUPTURE ∈ ]0 ; 1].
+ * Ce que la carie laisse de résistance à la **rupture** ∈ ]0 ; 1].
  *
- * **Un tronc creux est un TUBE, et c'est tout le lot.** Le module de section
+ * **Un tronc creux est un tube, et c'est tout le lot.** Le module de section
  * d'un tube vaut `d³(1 − p⁴)` où `p` est la part du rayon cariée, et la vitesse
- * critique va comme la racine de ce module. La puissance QUATRE est ce qui
+ * critique va comme la racine de ce module. La puissance **quatre** est ce qui
  * produit le fait le plus contre-intuitif de l'arboriculture, celui qu'on n'a
  * pas eu à écrire : **un arbre creux à la moitié de son rayon ne perd que 3 %
  * de sa vitesse critique**, et c'est pour ça qu'un vieux chêne creux tient des
@@ -942,13 +942,13 @@ export function partCariee(carie: Carie | undefined, diametreCm: number): number
  * d'une paroi saine du tiers du rayon, soit `p > 0,67` — où cette formule
  * donne encore 0,90. Le seuil n'est écrit nulle part ; il tombe de l'exposant.
  *
- * **LIMITE ASSUMÉE : le tube est supposé FERMÉ.** `d³(1 − p⁴)` est le module
+ * **limite assumée : le tube est supposé fermé.** `d³(1 − p⁴)` est le module
  * d'un anneau complet, et il suppose que la paroi fait tout le tour. Une
- * cavité OUVERTE — celle qui s'ouvre à la place d'une grosse branche arrachée,
+ * cavité **ouverte** — celle qui s'ouvre à la place d'une grosse branche arrachée,
  * celle par où entre la mésange — n'est plus un tube mais un profil en C, et
  * un profil en C est beaucoup plus faible que l'anneau de même épaisseur :
  * il n'a plus de continuité pour reprendre le cisaillement, et il se ferme sur
- * lui-même en s'ovalisant avant de rompre. Le moteur ne fait donc PAS la
+ * lui-même en s'ovalisant avant de rompre. Le moteur ne fait donc **pas** la
  * différence entre un chêne creux intact et le même chêne fendu par une
  * cicatrice ouverte, alors que le second est le cas qui tombe.
  *
@@ -965,7 +965,7 @@ export function facteurCarie(pourriture: number): number {
 }
 
 /**
- * Ce que la carie DU PIED laisse de tenue à l'ancrage ∈ [0,7 ; 1].
+ * Ce que la carie **du pied** laisse de tenue à l'ancrage ∈ [0,7 ; 1].
  *
  * Plus faible que sur la rupture, et linéaire : une carie de pied pourrit les
  * contreforts et les grosses racines, mais la motte tient encore par le reste

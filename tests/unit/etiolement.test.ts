@@ -1,10 +1,10 @@
 /**
- * L'ÉTIOLEMENT SE VOIT SUR LE FÛT (#149, suite de #62).
+ * **L'étiolement se voit sur le fût** (#149, suite de #62).
  *
  * Retour de partie : « c'est pas possible de voir l'étiolement juste sur le
  * sprite de l'arbre ? » — la question portait sur le panneau des suivis, mais
  * la réponse était plus bas que ça : le rendu dessinait le tronc d'après la
- * HAUTEUR, par une allométrie à lui, alors que le moteur donne `diametreCm`
+ * **hauteur**, par une allométrie à lui, alors que le moteur donne `diametreCm`
  * depuis #62 et que l'instantané le porte nommément pour « dessiner un tronc à
  * la bonne épaisseur, ce qu'il déduisait jusqu'ici d'un proxy faux ».
  *

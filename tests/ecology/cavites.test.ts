@@ -1,7 +1,7 @@
 /**
- * LES ARBRES À CAVITÉS (issue #183, critère J3).
+ * **Les arbres à cavités** (issue #183, critère J3).
  *
- * Le critère dit « les gros arbres ET les arbres à cavités valent plusieurs
+ * Le critère dit « les gros arbres **et** les arbres à cavités valent plusieurs
  * jeunes », et il était ✅ à moitié : le moteur savait creuser une tête de
  * têtard (`trogne.ts`) et rien d'autre. Or le vieux chêne creux d'un bocage
  * n'a pas été conduit en trogne — il a été blessé par des coups de vent, et la
@@ -10,10 +10,10 @@
  * Ce fichier vérifie trois choses, dans l'ordre où elles comptent :
  *   1. le creux se calcule, et son ordre de grandeur sépare la loge d'une
  *      mésange de celle d'une chevêche sans qu'aucun seuil ne le décide ;
- *   2. à cavités nulles, RIEN ne bouge — ni l'indice, ni la carte des
+ *   2. à cavités nulles, **rien** ne bouge — ni l'indice, ni la carte des
  *      auxiliaires. Le lot touche deux critères déjà verts (J3, G3) et il doit
  *      pouvoir prouver qu'il ne les a pas déplacés par accident ;
- *   3. et il PAIE : là où des arbres se creusent, les auxiliaires logent mieux.
+ *   3. et il **paie** : là où des arbres se creusent, les auxiliaires logent mieux.
  */
 
 import { describe, expect, it } from "vitest";
@@ -53,7 +53,7 @@ describe("le creux se compte en litres, et les litres trient les espèces", () =
   it("la même formule donne le nid d'une mésange et le gîte d'une chevêche", () => {
     // Rien dans le code ne distingue les deux cas : c'est la géométrie qui
     // s'en charge. Un chêne de 50 cm creux à mi-rayon et une perche de 15 cm
-    // creuse au même degré ont la MÊME part de rayon cariée, et deux ordres de
+    // creuse au même degré ont la **même** part de rayon cariée, et deux ordres de
     // grandeur d'écart en volume.
     const chene = volumeCaviteTroncL(arbre(50, 20, 12.5));
     const perche = volumeCaviteTroncL(arbre(15, 8, 3.75));
@@ -68,7 +68,7 @@ describe("le creux se compte en litres, et les litres trient les espèces", () =
   it("un arbre sain n'offre rien, et un arbre est UN arbre", () => {
     expect(volumeCaviteTroncL(arbre(50, 20, 0))).toBe(0);
     expect(partHabitatDeCavites(arbre(50, 20, 0))).toBe(0);
-    // Têtard ET carié : les deux creux s'additionnent en litres, mais la part
+    // Têtard **et** carié : les deux creux s'additionnent en litres, mais la part
     // d'habitat plafonne — sans quoi un seul arbre vaudrait deux habitats.
     const double = { ...arbre(60, 10, 20), teteTrogneM: 2, recepages: 10 };
     expect(volumeCaviteTotalL(double)).toBeGreaterThan(volumeCaviteTroncL(double));
@@ -120,10 +120,10 @@ const sansCreux = (trees: readonly TreeState[]): TreeState[] =>
 describe("ce que le lot promet de NE PAS faire", () => {
   it("un peuplement déjà riche en bois mort ne gagne rien aux cavités", () => {
     // Le lot touche G3, qui est ✅, et la garantie doit être structurelle, pas
-    // mesurée. Le terme de gîte prend le PLUS GÉNÉREUX du bois mort et des
+    // mesurée. Le terme de gîte prend le **plus généreux** du bois mort et des
     // creux : au-delà de vingt tonnes à l'hectare il est déjà saturé, donc les
     // creux ne peuvent rien y ajouter, et les deux cartes coïncident au bit
-    // près. Si le terme avait été AJOUTÉ au lieu de se substituer, ce test
+    // près. Si le terme avait été **ajouté** au lieu de se substituer, ce test
     // tomberait sur toutes les cellules à la fois.
     const s = siecleDeChenes(7, 40);
     const dims = gridDims(s.station);
@@ -148,7 +148,7 @@ describe("ce que le lot promet de NE PAS faire", () => {
   }, 900_000);
 });
 
-// **UNE SEULE PARTIE POUR LES DEUX ESSAIS.** Cent vingt ans sur quarante mètres
+// **une seule partie pour les deux essais.** Cent vingt ans sur quarante mètres
 // avec trois cents chênes coûte plusieurs minutes, et ce fichier la faisait
 // tourner deux fois pour en lire deux choses différentes. Elle est déterministe :
 // la partager ne change aucun résultat et divise le fichier par deux.
@@ -156,14 +156,14 @@ const SIECLE = siecleDeChenes(7);
 
 describe("le vieil arbre creux paie, et la boucle se ferme", () => {
   it("un siècle de tempêtes loge les auxiliaires mieux qu'un peuplement sain", () => {
-    // LA BOUCLE, dont tous les maillons existaient sauf le dernier : une
+    // **La boucle**, dont tous les maillons existaient sauf le dernier : une
     // tempête arrache une branche (#181) → la plaie installe une carie qui ne
     // guérit pas (#182) → le cœur se vide → l'arbre devient un gîte → les
     // auxiliaires qui y logent écrêtent les pullulations (G3).
     //
-    // La comparaison est APPARIÉE au sens fort : ce sont les mêmes arbres, au
+    // La comparaison est **appariée** au sens fort : ce sont les mêmes arbres, au
     // même instant, aux mêmes coordonnées, avec les mêmes essences et les
-    // mêmes hauteurs. La SEULE différence est qu'on a effacé leurs creux. Rien
+    // mêmes hauteurs. La **seule** différence est qu'on a effacé leurs creux. Rien
     // d'autre ne peut expliquer l'écart.
     const s = SIECLE;
     const dims = gridDims(s.station);
@@ -174,7 +174,7 @@ describe("le vieil arbre creux paie, et la boucle se ferme", () => {
     const sans = carteBiotique(sansCreux(s.trees), herbe, 0, dims).habitat;
     const moyenne = (a: Float64Array) => a.reduce((x, y) => x + y, 0) / a.length;
     const creux = s.trees.filter((t) => t.alive && volumeCaviteTotalL(t) > 0);
-    // **CE COMPTE EST UN TIRAGE, PAS UNE GRANDEUR** (#199). Il demandait plus de
+    // **ce compte est un tirage, pas une grandeur** (#199). Il demandait plus de
     // cinq arbres creux, et il est tombé à quatre quand le sanglier s'est mis à
     // arracher les semis. On a cherché de combien le boutis coûtait, et la
     // réponse est : de rien du tout. Les trois mesures, même graine, même météo,
@@ -182,17 +182,17 @@ describe("le vieil arbre creux paie, et la boucle se ferme", () => {
     //
     //     sanglier, pas de boutis (avant #199)     6 creux   141 vivants
     //     sanglier + boutis                        4 creux   136 vivants
-    //     AUCUN SANGLIER DU TOUT                   4 creux   127 vivants
+    //     **aucun sanglier du tout**                   4 creux   127 vivants
     //
     // **Retirer la bête entièrement donne le même quatre que le boutis.** Le
     // compte n'est donc monotone en rien : c'est ce que rend un siècle de coups
     // de vent sur une poignée de vieux arbres, et n'importe quelle perturbation
     // le déplace d'un ou deux. Le seuil était une photographie d'une trajectoire.
     //
-    // Ce que cet essai AFFIRME, lui, n'a jamais dépendu de ce nombre : c'est la
+    // Ce que cet essai **affirme**, lui, n'a jamais dépendu de ce nombre : c'est la
     // comparaison appariée de la ligne d'en dessous — les mêmes arbres, au même
     // instant, aux mêmes coordonnées, dont on a seulement effacé les creux. Le
-    // compte reste ici comme GARDE, pour que la comparaison ne soit pas vide, et
+    // compte reste ici comme **garde**, pour que la comparaison ne soit pas vide, et
     // il est ramené à une valeur qui garde sa marge sur les trois mesures.
     expect(creux.length).toBeGreaterThan(2);
     expect(moyenne(avec)).toBeGreaterThan(moyenne(sans));

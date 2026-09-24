@@ -1,5 +1,5 @@
 /**
- * L'ACTE DE LA TEMPÊTE : la rafale qui passe, et les tiges qui vont au sol
+ * **L'acte de la tempête** : la rafale qui passe, et les tiges qui vont au sol
  * ensemble.
  *
  * Deux propriétés portent tout le reste.

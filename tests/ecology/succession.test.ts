@@ -1,6 +1,6 @@
 /**
- * LE test de bout en bout (docs/regles.md §11, §16) : sur une friche nue, la
- * succession écologique doit ÉMERGER des règles (dispersion, lumière, stress,
+ * **Le** test de bout en bout (docs/regles.md §11, §16) : sur une friche nue, la
+ * succession écologique doit **émerger** des règles (dispersion, lumière, stress,
  * sénescence) sans être codée en dur :
  *   friche → colonisation par les pionniers → canopée pionnière avec les
  *   climaciques qui s'installent dessous → effondrement des pionniers
@@ -17,7 +17,7 @@ import { tick } from "../../src/engine/tick";
 
 /**
  * Les pionnières, au sens de l'atlas (colonne « Succ. » = `pion`). La liste ne
- * comptait que les deux ARBRES pionniers parce que l'atlas moteur s'arrêtait
+ * comptait que les deux **arbres** pionniers parce que l'atlas moteur s'arrêtait
  * là ; la strate arbustive — ronce, prunellier, aubépine, sureau — en fait
  * partie de plein droit, et c'est même elle qui prend une friche en premier.
  */
@@ -87,9 +87,9 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
 
   it("an 60 : canopée pionnière, les hêtres attendent dans le sous-étage", () => {
     expect(an60.canopy.length).toBeGreaterThan(15);
-    // **CE SEUIL A DESCENDU TROIS FOIS, ET IL DEVIENT L'ÉNONCÉ.** 0,70 → 0,65
+    // **ce seuil a descendu trois fois, et il devient l'énoncé.** 0,70 → 0,65
     // avec l'effet de bord (lisiere.ts), puis 0,68 → 0,57 avec le port serré
-    // (#105) : les pionniers sont des essences ÉLANCÉES, le bouleau le premier,
+    // (#105) : les pionniers sont des essences **élancées**, le bouleau le premier,
     // et leur houppier suit désormais leur diamètre — un bouleau a bel et bien
     // une couronne étroite quand un chêne de même hauteur l'a large. La canopée
     // pionnière ombrage donc moins, et les intermédiaires y montent plus tôt.
@@ -97,13 +97,13 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     // Trois descentes du même seuil, c'est le signe que le chiffre enregistrait
     // le moteur au lieu de contraindre le monde (docs/realisme.md, « ce qu'un
     // test écologique a le droit d'affirmer »). On le remplace donc par
-    // l'affirmation du titre elle-même — la canopée est MAJORITAIREMENT
+    // l'affirmation du titre elle-même — la canopée est **majoritairement**
     // pionnière — qui ne se renégocie pas : c'est 0,5, mesuré à 0,57.
     expect(an60.canopyPioneerShare).toBeGreaterThan(0.5);
     expect(an60.fagusAlive.length).toBeGreaterThan(3);
-    // « Attendre dans le sous-étage » est une position RELATIVE, et il a fallu
+    // « Attendre dans le sous-étage » est une position **relative**, et il a fallu
     // recalibrer les vitesses de croissance pour s'en apercevoir : la version
-    // précédente comptait les hêtres sous DIX MÈTRES, un seuil qui ne voulait
+    // précédente comptait les hêtres sous **dix mètres**, un seuil qui ne voulait
     // dire « sous-étage » que dans une forêt dont la canopée plafonnait à
     // douze. Avec des hauteurs calées sur les tables, la friche de soixante ans
     // monte à vingt-quatre mètres et le hêtre médian à treize — il est toujours
@@ -122,7 +122,7 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
   });
 
   it("an 120 : la cohorte pionnière initiale s'est éteinte (longévité du bouleau ~90 ans)", () => {
-    // On compte ce que le titre annonce : les VIEUX bouleaux, ceux de la
+    // On compte ce que le titre annonce : les **vieux** bouleaux, ceux de la
     // vague de colonisation. Le nombre total, lui, ne dit rien — le bouleau se
     // maintient en se ressemant dans ses propres trouées, et c'est justement
     // ce qui fait de lui un pionnier qui dure sans jamais vieillir.
@@ -138,14 +138,14 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     // est nommée : le sous-bois d'une futaie feuillue porte maintenant une
     // vernale, qui prélève son eau et son azote en avril — c'est-à-dire au même
     // endroit et au même moment que les semis de hêtre (`herbacees.ts`). Sur
-    // dix-neuf tiges, deux de moins est un ÉCART DE COMPTAGE et pas un
+    // dix-neuf tiges, deux de moins est un **écart de comptage** et pas un
     // effondrement : l'égalité stricte demandait à un décompte d'entiers de ne
     // jamais bouger, ce qu'aucun mécanisme ne garantit.
     expect(an120.fagusAlive.length).toBeGreaterThanOrEqual(0.85 * an60.fagusAlive.length);
   });
 
   it("an 200 : des hêtres ont pris la canopée, leur part y progresse (le vrai tempo : 150-250 ans)", () => {
-    // Le critère, c'est d'ÊTRE dans la canopée — au seuil que ce test se donne
+    // Le critère, c'est d'**être** dans la canopée — au seuil que ce test se donne
     // lui-même (10 m) — et non d'atteindre une taille absolue : un hêtre passé
     // deux siècles sous un couvert de pionniers monte lentement.
     const fagusEnCanopee = an200.canopy.filter((t) => t.especeId === "fagus_sylvatica").length;
@@ -155,7 +155,7 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
   });
 
   it("le peuplement s'auto-éclaircit : une futaie de deux siècles est claire", () => {
-    // Le plafond ne compte plus des tiges mais du RECOUVREMENT (regeneration.ts) :
+    // Le plafond ne compte plus des tiges mais du **recouvrement** (regeneration.ts) :
     // des milliers de tiges quand elles font trente centimètres, quelques
     // centaines quand elles font vingt mètres. Ce qu'on vérifie, c'est que la
     // densité a bien fondu par rapport au fourré — pas qu'elle passe sous un

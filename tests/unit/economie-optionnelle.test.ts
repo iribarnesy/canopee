@@ -1,5 +1,5 @@
 /**
- * L'économie comme OPTION.
+ * L'économie comme **option**.
  *
  * Certaines questions ne sont pas économiques. « Quelle succession sur cette
  * lande en deux siècles », « le chêne-liège protège-t-il du feu », « où planter
@@ -70,17 +70,17 @@ describe("l'argent contraint, ou ne contraint pas", () => {
   });
 
   it("les heures se COMPTENT toujours, même quand elles ne se paient pas", () => {
-    // ATTENTION, CE TEST A CHANGÉ DE SENS AVEC #133, et il faut le dire :
+    // **Attention**, **ce test a changé de sens avec** #133, et il faut le dire :
     // il affirmait « le plafond d'heures reste, ce n'est pas une contrainte
     // d'argent ». Ce n'est plus vrai. Depuis que le dépassement se facture au
-    // lieu de se refuser, la limite de travail EST devenue une contrainte
+    // lieu de se refuser, la limite de travail **est** devenue une contrainte
     // d'argent — donc économie coupée, plus rien ne borne la semaine.
     //
     // C'est assumé, et c'est acté (docs/regles.md §15-13) : le mode sans
     // économie sert les questions qui n'en sont pas (quelle succession sur deux
     // siècles, le chêne-liège protège-t-il du feu), et personne n'y compose des
     // semaines de 200 h. Ce qui doit rester
-    // vrai, et que ce test garde, c'est que la COMPTABILITÉ physique ne dépend
+    // vrai, et que ce test garde, c'est que la **comptabilité** physique ne dépend
     // pas de l'argent : les heures montent pareil, et le dépassement se lit
     // pareil. Savoir ce qu'aurait coûté une conduite reste instructif même
     // quand on ne la paie pas — exactement ce que dit déjà le test du compte

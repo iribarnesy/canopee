@@ -1,20 +1,20 @@
 /**
- * LA NAÏVETÉ AU VENT (issue #177, F18).
+ * **La naïveté au vent** (issue #177, F18).
  *
  * « Un peuplement qu'on vient d'ouvrir verse pendant quelques années. » Le
  * moteur applique la nouvelle exposition à un arbre réputé instantanément
  * adapté, alors que l'épaississement du fût et de l'ancrage sous la contrainte
  * mécanique se compte en années.
  *
- * Chaque arbre retient donc l'abri sous lequel il a grandi, et c'est la CHUTE
+ * Chaque arbre retient donc l'abri sous lequel il a grandi, et c'est la **chute**
  * entre cette mémoire et l'abri du jour qui le fragilise.
  *
  * Le fichier tient deux choses de nature différente. D'abord la naïveté
  * elle-même — son ampleur, sa décroissance, le fait qu'elle distingue toute
  * seule les deux façons d'éclaircir —, qui se lit sur les fonctions et ne
- * dépend d'aucun tirage. Puis, à la fin, **le banc APPARIÉ**, qui mesure ce que
+ * dépend d'aucun tirage. Puis, à la fin, **le banc apparié**, qui mesure ce que
  * l'ouverture coûte en ruines et qu'il a fallu trois essais ratés pour
- * obtenir : la comparaison ne vaut que si les deux bras suivent les MÊMES
+ * obtenir : la comparaison ne vaut que si les deux bras suivent les **mêmes**
  * arbres, et que si on la lit dans la fenêtre où l'abri perdu est leur seule
  * différence.
  */
@@ -109,9 +109,9 @@ function apresEclaircie(critere: "parLeBas" | "parLeHaut", ans = 40) {
 
 describe("en partie : la naïveté distingue les deux façons d'éclaircir", () => {
   it("par le HAUT, elle est massive ; par le BAS, elle est nulle", () => {
-    // LE RÉSULTAT QU'ON N'A PAS ÉCRIT, et le plus instructif du lot. Une
-    // éclaircie par le bas retire les dominés et garde les DOMINANTS — or
-    // `abriAuVent` ne compte que les voisins qui DÉPASSENT, donc les dominants
+    // **le résultat qu'on n'a pas écrit**, et le plus instructif du lot. Une
+    // éclaircie par le bas retire les dominés et garde les **dominants** — or
+    // `abriAuVent` ne compte que les voisins qui **dépassent**, donc les dominants
     // n'étaient abrités par personne : ils ne perdent rien, et ils ne
     // deviennent pas naïfs. C'est juste, et c'est exactement la règle
     // sylvicole : ce qui met un peuplement en danger, c'est d'ouvrir par le
@@ -142,11 +142,11 @@ describe("en partie : la naïveté distingue les deux façons d'éclaircir", () 
 
 describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
   it("les MÊMES arbres versent deux fois et demie plus dans les cinq ans qui suivent", () => {
-    // LE BANC APPARIÉ, et il a fallu trois essais ratés pour l'obtenir.
+    // **Le banc apparié**, et il a fallu trois essais ratés pour l'obtenir.
     //
     // Les deux premiers comparaient des populations différentes — une éclaircie
     // par le haut retire les grands, donc la population vulnérable, et le
-    // peuplement éclairci ressortait plus SÛR que le témoin (8,3 % contre
+    // peuplement éclairci ressortait plus **sûr** que le témoin (8,3 % contre
     // 43,7 %). Ce n'était pas faux : il n'avait plus d'arbres à perdre. Mais ça
     // ne dit rien de la fragilité d'après-ouverture.
     //
@@ -175,7 +175,7 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
         if (!w) throw new Error("météo manquante");
         base = tick(base, w).state;
       }
-      // Une éclaircie PAR LE BAS : elle garde les dominants, et c'est le cas
+      // Une éclaircie **par le bas** : elle garde les dominants, et c'est le cas
       // réel — celui où la question « sont-ils plus fragiles ? » a un sens.
       const eclairci = applyAction(base, {
         type: "eclaircir",
@@ -224,12 +224,12 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     // graines, soit un tiers de leur abri.
     expect(abriEclairci / cohorteTotale).toBeLessThan(0.8 * (abriTemoin / cohorteTotale));
 
-    // ── ET C'EST LA FENÊTRE DE CINQ ANS QUI PORTE LA MESURE (#183) ──────────
+    // ── **et c'est la fenêtre de cinq ans qui porte la mesure** (#183) ──────────
     //
     // Premier relevé, douze graines, avant la carie du tronc : 57 couchés
     // contre 19 sur douze ans, dont 11 contre 1 sur les cinq premières années.
     // La carie (#182, corrigée en #183) a tout déplacé sans rien dire sur le
-    // vent — elle affaiblit les fûts des DEUX bras, donc elle relève le
+    // vent — elle affaiblit les fûts des **deux** bras, donc elle relève le
     // plancher du témoin, qui ne versait presque pas :
     //
     //                     avant carie (12 gr.)   après (6 gr.)
@@ -241,7 +241,7 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     // cariés perd des tiges même sans qu'on l'ouvre. La naïveté reste ce
     // qu'elle était ; c'est le témoin qui a cessé d'être intact.
     //
-    // La fenêtre de CINQ ANS est celle qui compte, et le commentaire ci-dessus
+    // La fenêtre de **cinq ans** est celle qui compte, et le commentaire ci-dessus
     // disait déjà pourquoi : au-delà, les deux bras ont divergé en hauteur et
     // en diamètre, donc on ne mesure plus l'abri perdu mais tout ce qui a
     // suivi. Les deux seuils sont posés sous les rapports mesurés — 1,75 sous

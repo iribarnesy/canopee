@@ -62,8 +62,11 @@ import type {
   TempeteResult,
 } from "../engine/tick";
 import { tick } from "../engine/tick";
-import { type CauseMort, LIBELLE_CAUSE } from "../engine/trees";
+import type { CauseMort, TreeState } from "../engine/trees";
+import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import { prefixeSousLePlafond } from "./facture";
+import { journalDe, type PorteurDeJournal } from "./journal";
+import { accord, causeDite, estFeminin, nomEspece, nomEspeces, s } from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
 import type {
@@ -82,8 +85,8 @@ import {
   especesSemees,
   fautIlPrevenir,
 } from "./recolteAuto";
+import { estUneMortaliteDeMasse, estUneTempeteAVoir } from "./scenes";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
-import { CAUSE_AU_SINGULIER } from "./suivis";
 
 let sc: StationClimat | undefined;
 let weather: WeekWeather[] = [];
@@ -91,10 +94,10 @@ let weather: WeekWeather[] = [];
 let state: GameState | undefined;
 let journal: GameAction[] = [];
 /**
- * Ce que le joueur a SEMÉ, tiré de son propre journal.
+ * Ce que le joueur a **semé**, tiré de son propre journal.
  *
  * C'est ce qui sépare son verger de la friche qui l'entoure, et la récolte
- * automatique s'y tient : elle existe pour qu'on ne rate pas SA fenêtre de
+ * automatique s'y tient : elle existe pour qu'on ne rate pas **sa** fenêtre de
  * récolte en avançant vite, pas pour cueillir des ronces à cent cinquante
  * heures la semaine.
  */
@@ -120,15 +123,15 @@ let retenu = false;
 /** Les arbres que le joueur suit : leur mort arrête le temps (#149). */
 let suivis: ReadonlySet<number> = new Set();
 /**
- * ─── LA FACTURE HORAIRE (#133) ───────────────────────────────────────────
+ * ─── **la facture horaire** (#133) ───────────────────────────────────────────
  *
  * Le plafond de soixante heures ne refuse plus rien (#137) : il se paie. Pour
  * pouvoir le présenter en fin de semaine — « tant d'heures, tant d'euros :
  * vous embauchez, ou on s'en tient à vos 60 h ? » — il faut savoir revenir en
- * arrière, et c'est là qu'était le point dur : une action est appliquée AU
- * CLIC, et couper un arbre change beaucoup de choses.
+ * arrière, et c'est là qu'était le point dur : une action est appliquée **au**
+ * **clic**, et couper un arbre change beaucoup de choses.
  *
- * **On ne défait donc rien : on REJOUE la semaine depuis son début avec une
+ * **On ne défait donc rien : on rejoue la semaine depuis son début avec une
  * liste élaguée**, ce que l'issue désignait comme la piste à instruire. Il
  * suffit pour ça de garder l'état tel qu'il était à l'ouverture de la semaine
  * — une référence, l'état étant remplacé en entier à chaque application — et
@@ -141,7 +144,7 @@ let actionsDeLaSemaine: GameAction[] = [];
  * cueillis, les plants mis en terre, les tiges abattues.
  *
  * **Ici et pas dans l'interface**, parce que c'est ici que la partie se
- * REJOUE : reprendre une sauvegarde rejoue son journal d'actions, et un cumul
+ * **rejoue** : reprendre une sauvegarde rejoue son journal d'actions, et un cumul
  * tenu ailleurs repartirait de zéro à chaque reprise. Un objectif comme
  * « récolter une tonne de pommes » porte sur des fruits qui ont quitté la
  * parcelle — aucun instantané ne les montre plus.
@@ -150,7 +153,164 @@ let cumuls: Cumuls = CUMULS_VIDES;
 /** Le cumul à l'ouverture de la semaine, jumeau de `debutDeSemaine`. */
 let cumulsAuDebut: Cumuls = CUMULS_VIDES;
 /**
- * Le niveau joué et ses paliers franchis (#188) — RANGÉS, pas joués.
+ * **le bilan de la partie** (#128) : tout ce qui a changé depuis son début.
+ *
+ * **Ici pour la même raison que `cumuls`, et la raison est décisive** :
+ * reprendre une sauvegarde **rejoue** le journal d'actions, semaine après semaine,
+ * sans qu'un seul instantané intermédiaire ne remonte à l'écran. Un bilan tenu
+ * là-haut repartirait de zéro à chaque reprise — et c'est justement à la fin
+ * d'un niveau, souvent repris, qu'on veut raconter ce qui s'est passé.
+ *
+ * L'écran, lui, n'en tient pas de second : la période qu'il affiche est ce
+ * bilan-ci moins celui qu'il avait au début de la période (`soustraire`).
+ */
+let bilan: Bilan = BILAN_VIDE;
+/** Le bilan à l'ouverture de la semaine, jumeau de `cumulsAuDebut`. */
+let bilanAuDebut: Bilan = BILAN_VIDE;
+
+/**
+ * ═══ **le rembobinage** (#128, §6.8 №3) ═══
+ *
+ * *« Garder les instantanés récents en mémoire et pouvoir revenir en arrière
+ * pour rejouer la période à ×1, avec toutes les animations. C'est la seule
+ * façon honnête de tout voir : on ne montre pas une année en une image, on
+ * offre de la revoir. »*
+ *
+ * ## Des états, pas des instantanés
+ *
+ * Le §6.8 prévoyait de garder les **instantanés** — « ~280 ko pièce, une année
+ * tient dans 15 Mo » — et notait que le worker devrait alors en poster un par
+ * semaine simulée au lieu d'un par lot de vingt-six. C'est beaucoup de travail
+ * en pure perte, et il y a moins cher : garder des **états de partie**, et
+ * refabriquer les instantanés au moment de la relecture.
+ *
+ * **Ça ne coûte qu'une référence retenue**, parce que le moteur ne modifie
+ * jamais un état : `advanceWeek` en rend un neuf et laisse l'ancien intact —
+ * son sol, ses arbres, sa graine aléatoire, sa banque de graines. Un essai le
+ * tient (`tests/unit/points-de-reprise.test.ts`), et il a fallu le vérifier
+ * avant d'écrire une ligne d'ici : si la propriété tombait, un point de reprise
+ * vieillirait avec la partie et le rembobinage ramènerait au présent **sans que
+ * rien ne casse**. Le pire des défauts, celui qui ne se voit pas.
+ *
+ * Le worker en dépendait d'ailleurs déjà sans le dire : une semaine trop
+ * chargée se rejoue depuis l'état retenu à son ouverture (#133).
+ *
+ * ## Le grain, et ce qu'il coûte — **mesuré**, et deux fois plutôt qu'une
+ *
+ * Le premier jet gardait quarante points, un par trimestre, sur la foi d'un
+ * « quelques centaines de kilo-octets par point » que personne n'avait pesé.
+ * **L'onglet a planté pendant une relecture sur lande sèche**, et c'est ce qui
+ * a fait poser la question.
+ *
+ * La première pesée a répondu six mégaoctets, la deuxième vingt-huit : les deux
+ * étaient fausses, et pour la même raison — sans ramasse-miettes forcé, on
+ * mesure les **déchets** des états intermédiaires et non ce qui est retenu. Avec
+ * `--expose-gc`, deux traversées identiques dont une seule retient : **3,9 Mo
+ * par point**. Quarante points valaient donc cent cinquante mégaoctets, à côté
+ * de la scène Pixi et des instantanés.
+ *
+ * Quatre mégaoctets pour dix mille cellules, parce que `SoilState` porte une
+ * quinzaine de `number[]` dont deux par cellule **et** par horizon. Des tableaux
+ * typés diviseraient ça par deux et rendraient d'autant plus de recul — c'est
+ * au moteur de le décider, pas au rendu.
+ *
+ * D'où le grain d'aujourd'hui : **un point par semestre, huit points, quatre
+ * ans de recul pour trente et un mégaoctets mesurés**. Le §6.8 s'était donné
+ * « une fenêtre glissante d'un an » ; on en tient quatre. Entre deux points, on
+ * rejoue au plus vingt-cinq semaines pour tomber juste, soit quelques secondes
+ * de calcul avant que la relecture ne commence.
+ */
+const PAS_DE_REPRISE = 26;
+const POINTS_GARDES = 8;
+
+/** Les états mis de côté, du plus ancien au plus récent. */
+let pointsDeReprise: { semaine: number; etat: GameState }[] = [];
+
+/**
+ * La semaine du dernier instantané **posté**.
+ *
+ * C'est le début de ce que le joueur n'a pas vu : entre elle et maintenant, le
+ * worker a avalé tout un lot de semaines sans rien montrer. Le mode cinéma
+ * repart de là.
+ */
+let semaineDuDernierInstantane = 0;
+
+/**
+ * **la relecture en cours**, s'il y en a une.
+ *
+ * `vivant` est le présent mis de côté : la relecture ne le touche pas, elle
+ * marche à côté. C'est ce qui en fait une relecture et non une reprise — le
+ * §6.8 demande de **revoir** la période, pas de repartir de là, et rien de ce qui
+ * se joue pendant n'est compté deux fois.
+ */
+let relecture: { depuis: number; jusqua: number; vivant: GameState; vitesse: number } | undefined;
+
+/** Met l'état de la semaine de côté, si c'est une semaine à garder. */
+function poserUnPointDeReprise(etat: GameState): void {
+  if (etat.week % PAS_DE_REPRISE !== 0) return;
+  const dernier = pointsDeReprise[pointsDeReprise.length - 1];
+  if (dernier && dernier.semaine >= etat.week) return;
+  pointsDeReprise.push({ semaine: etat.week, etat });
+  if (pointsDeReprise.length > POINTS_GARDES) pointsDeReprise.shift();
+}
+
+/**
+ * **le mode cinéma** (#128, §6.8) : d'où rejouer la scène qui vient de se passer.
+ *
+ * *« L'`autopause` existe déjà pour l'incendie et la faillite ; on l'étend à la
+ * crue et aux mortalités de masse, puis on rejoue la scène à ×1. »*
+ *
+ * **Depuis le dernier instantané, et pas depuis la semaine d'avant.** La
+ * première version rembobinait d'une seule semaine, et l'essai dans le
+ * navigateur l'a prise en faute : la relecture était finie avant qu'on la voie,
+ * et elle ne montrait rien de plus que le bouton « ▶ revoir » d'à côté.
+ *
+ * Ce qu'il faut rejouer, c'est ce que le **saut** a enjambé. À ×52 l'écran avale
+ * vingt-six semaines entre deux images : la catastrophe est quelque part
+ * dedans, avec ce qui l'a amenée. Repartir du dernier instantané montré, c'est
+ * exactement rejouer ce que le joueur n'a pas vu — vingt-six semaines à ×1,
+ * une ellipse entière par semaine. À ×4, où un instantané couvre une semaine,
+ * c'est une semaine : tout ce qui a été sauté, ni plus ni moins.
+ *
+ * Rend `undefined` s'il n'y a pas de point de reprise assez ancien — mieux vaut
+ * pas de bouton qu'un bouton qui ne fait rien.
+ */
+function sceneDeLaSemaine(): number | undefined {
+  if (!state) return undefined;
+  const depuis = semaineDuDernierInstantane;
+  return plusAncienRetour() <= depuis && depuis < state.week ? depuis : undefined;
+}
+
+/**
+ * La plus ancienne semaine où l'on sait revenir.
+ *
+ * Sans le moindre point de reprise, c'est la semaine courante — c'est-à-dire
+ * « nulle part ». Rendre zéro dirait le contraire et ferait afficher un bouton
+ * « Revoir » qui ne fait rien.
+ */
+function plusAncienRetour(): number {
+  return pointsDeReprise[0]?.semaine ?? state?.week ?? 0;
+}
+
+/**
+ * Replie une semaine dans le bilan de la partie.
+ *
+ * `arbres` sert à **situer** : les gestes et les franchissements ne nomment que des
+ * identifiants. On passe les tiges d'**après** la semaine — un arbre abattu n'y est
+ * plus, et sa ligne existera donc sans endroit, ce qui est plus honnête qu'un
+ * doigt pointé sur un coin de parcelle.
+ */
+function replierLeBilan(
+  porteur: PorteurDeJournal,
+  semaine: number,
+  arbres: readonly TreeState[],
+): void {
+  if (!sc) return;
+  const ou = new Map(arbres.map((a) => [a.id, a]));
+  bilan = agreger(bilan, journalDe(porteur), semaine, sc.station.coteM, (id) => ou.get(id));
+}
+/**
+ * Le niveau joué et ses paliers franchis (#188) — **rangés**, pas joués.
  *
  * Le worker ne sait pas ce qu'est un palier : les fiches portent des
  * fermetures, qui ne traversent pas la frontière d'un worker. Il tient les
@@ -198,7 +358,7 @@ let libelleDArrivee = "";
 let prevFruitsReadyKg = 0;
 let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
-// Ce qui s'est passé depuis le dernier instantané et que le rendu doit ANIMER.
+// Ce qui s'est passé depuis le dernier instantané et que le rendu doit **animer**.
 let pendingMorts: MortDeLaSemaine[] = [];
 let pendingNaissances: NaissanceDeLaSemaine[] = [];
 let pendingFranchissements: FranchissementDeStade[] = [];
@@ -219,7 +379,7 @@ let erosionAnnee = 0;
 let bankruptcyAnnounced = false;
 
 /**
- * Dire au joueur POURQUOI un chantier a coûté ce qu'il a coûté : c'est la
+ * Dire au joueur **pourquoi** un chantier a coûté ce qu'il a coûté : c'est la
  * disposition de ses arbres qui décide si l'engin entre.
  */
 function moyen(
@@ -237,14 +397,10 @@ function event(icone: string, message: string) {
   pendingEvents.push({ week: state.week, icone, message });
 }
 
-function nomEspece(id: string): string {
-  return getEspece(id).nom.toLowerCase();
-}
-
 /**
  * Ce que dit la pause quand un arbre suivi meurt : son essence et sa cause.
  *
- * Au SINGULIER, par la table du journal des suivis (`suivis.ts`) — « meurt de
+ * Au **singulier**, par la table du journal des suivis (`suivis.ts`) — « meurt de
  * sécheresse » et non « morts de sécheresse : 1 ». C'est un arbre qu'on
  * regardait, pas une ligne de bilan.
  *
@@ -260,9 +416,9 @@ function raisonDesMorts(morts: readonly MortDeLaSemaine[]): string {
   if (!premier) return "";
   const nom = nomEspece(premier.especeId);
   if (morts.length === 1) {
-    return `Un arbre suivi (${nom}) meurt ${CAUSE_AU_SINGULIER[premier.cause]}`;
+    return `Un arbre suivi (${nom}) meurt ${causeDite(premier.cause)}`;
   }
-  return `${morts.length} arbres suivis meurent — le premier (${nom}) ${CAUSE_AU_SINGULIER[premier.cause]}`;
+  return `${morts.length} arbres suivis meurent — le premier (${nom}) ${causeDite(premier.cause)}`;
 }
 
 /** Dit si la coupe part en scierie ou en bûches, pour le journal. */
@@ -293,6 +449,11 @@ function ouvrirLaSemaine(etat: GameState): void {
   // Le cumul a le même point de retour que l'état : une semaine ramenée sous
   // le plafond se rejoue amputée, et ce qu'elle a récolté doit se rejouer avec.
   cumulsAuDebut = cumuls;
+  bilanAuDebut = bilan;
+  // Un point de reprise, tous les tant de semaines. Ici parce que c'est le
+  // seul endroit traversé exactement une fois par semaine, quelle que soit la
+  // vitesse — `stepWeeks` en avale jusqu'à vingt-six d'un coup.
+  if (!relecture) poserUnPointDeReprise(state);
   // Une facture appartient à la semaine qui la porte : aucune ne peut survivre
   // à l'ouverture de la suivante — ni, surtout, à une partie neuve.
   factureEnAttente = false;
@@ -307,16 +468,21 @@ function performAction(action: GameAction) {
   state = result.state;
   pendingRefusals.push(...result.refusals);
   pendingGestes.push(...(result.gestes ?? []));
-  // Compté ICI, à la source (#188). Compter au moment de l'instantané aurait
+  // Compté **ici**, à la source (#188). Compter au moment de l'instantané aurait
   // été plus simple d'un cran, et faux : `ouvrirLaSemaine` fige le point de
   // retour du cumul, et un instantané couvre jusqu'à vingt-six semaines. Le
   // point de retour aurait donc toujours été en retard d'un lot entier — et
   // une semaine ramenée sous le plafond aurait effacé les récoltes de tout ce
   // lot, pas seulement les siennes.
-  // Les arbres d'APRÈS le geste : une cueillette laisse l'arbre debout, donc
+  // Les arbres d'**après** le geste : une cueillette laisse l'arbre debout, donc
   // son essence s'y lit encore — et c'est elle qui distingue « deux cents kilos
   // de pommes » de « deux cents kilos de n'importe quoi » (#188).
   cumuls = accumuler(cumuls, result.gestes ?? [], state.trees);
+  replierLeBilan(
+    { morts: [], chutes: [], naissances: [], franchissements: [], gestes: result.gestes ?? [] },
+    state.week,
+    state.trees,
+  );
   const dEur = state.economy.treasuryEur - before.economy.treasuryEur;
   const dHeures = state.economy.hoursUsedWeek - before.economy.hoursUsedWeek;
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
@@ -328,7 +494,7 @@ function performAction(action: GameAction) {
       if (n > 0)
         event(
           "🌱",
-          `${n} ${nomEspece(action.especeId)}${n > 1 ? "s" : ""} planté${n > 1 ? "s" : ""}${action.avecManchon ? ` et manchonné${n > 1 ? "s" : ""}` : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
+          `${n} ${nomEspeces(action.especeId, n)} planté${s(n)}${action.avecManchon ? ` et manchonné${s(n)}` : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
         );
       break;
     }
@@ -598,7 +764,7 @@ function emptyFluxes(): TickFluxes {
 
 function postSnapshot() {
   if (!state || !sc) return;
-  // Le worker ASSEMBLE, il ne décide pas : la traduction état → instantané
+  // Le worker **assemble**, il ne décide pas : la traduction état → instantané
   // est pure et testée dans snapshot.ts.
   const snapshot = construireSnapshot({
     state,
@@ -629,10 +795,16 @@ function postSnapshot() {
   // suivant, sinon la même flambée se rejouerait à l'écran.
   pendingIncendie = undefined;
   pendingTempete = undefined;
-  // Les grandeurs du tick, elles, se GARDENT : une action reçue en pause
+  // Les grandeurs du tick, elles, se **gardent** : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
   // joueur ne doit pas voir la crue disparaître entre deux clics.
-  post({ type: "snapshot", snapshot, cumuls }, transferablesDuSnapshot(snapshot));
+  post(
+    { type: "snapshot", snapshot, cumuls, bilan, rembobinable: plusAncienRetour() },
+    transferablesDuSnapshot(snapshot),
+  );
+  // **Après** l'envoi : la scène à rejouer part du dernier instantané montré, donc
+  // de celui-ci une fois qu'il est parti, pas de celui d'avant.
+  if (!relecture) semaineDuDernierInstantane = snapshot.week;
 }
 
 /**
@@ -644,14 +816,14 @@ function postSnapshot() {
  * Ce que coûterait la semaine telle qu'elle est composée, et ce qu'on perdrait
  * à s'en tenir aux soixante heures — sans rien changer à l'état.
  *
- * Les deux nombres viennent du MOTEUR (`depassementHoraire`,
+ * Les deux nombres viennent du **moteur** (`depassementHoraire`,
  * `coutDuDepassement`) : le rendu ne recalcule ni le plafond ni le prix d'un
  * bras. Le troisième — combien de gestes tomberaient — ne peut se connaître
  * qu'en rejouant la semaine, et c'est ce qu'on fait ici à blanc.
  */
 function factureDeLaSemaine(): FactureHoraire | undefined {
   if (!state) return undefined;
-  // **Pas de facture quand l'argent ne compte pas.** La facture EST
+  // **Pas de facture quand l'argent ne compte pas.** La facture **est**
   // l'arbitrage économique ; sans argent, « embaucher » est un clic gratuit et
   // la question n'en est plus une. Le moteur a tranché dans le même sens en
   // livrant sa part (#133) : en économie coupée, la limite de travail
@@ -670,13 +842,13 @@ function gestesQuiTomberaient(): number {
 }
 
 /**
- * S'EN TENIR AUX SOIXANTE HEURES : la semaine se rejoue amputée de sa fin.
+ * **s'en tenir aux soixante heures** : la semaine se rejoue amputée de sa fin.
  *
  * **L'ordre inverse de saisie**, comme l'issue le demandait : on garde le plus
  * long préfixe qui tienne dans le plafond, donc ce sont les derniers gestes
  * posés qui tombent. C'est la seule règle prévisible, et l'écran la dit.
  *
- * **Le journal de sauvegarde porte la DÉCISION, pas les tentatives** — c'était
+ * **Le journal de sauvegarde porte la décision, pas les tentatives** — c'était
  * le piège nommé dans l'issue : un journal qui garderait les actions annulées
  * les rejouerait au rechargement, et la partie divergerait.
  */
@@ -689,9 +861,18 @@ function seTenirAuPlafond(): number {
   const elaguee = prefixeSousLePlafond(debutDeSemaine, posees);
   pendingGestes = elaguee.gestes;
   // Le cumul se rejoue comme l'état : il repart du début de la semaine, puis
-  // recompte les gestes des SEULES actions gardées. Sans ça, une récolte
+  // recompte les gestes des **seules** actions gardées. Sans ça, une récolte
   // annulée resterait acquise.
   cumuls = accumuler(cumulsAuDebut, elaguee.gestes, elaguee.etat.trees);
+  // Le bilan repart du même point que le cumul et l'état. Il n'y a que les
+  // **gestes** à recompter : la semaine n'a pas encore été close, donc ni mort ni
+  // naissance n'y est encore arrivée.
+  bilan = bilanAuDebut;
+  replierLeBilan(
+    { morts: [], chutes: [], naissances: [], franchissements: [], gestes: elaguee.gestes },
+    elaguee.etat.week,
+    elaguee.etat.trees,
+  );
   state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
   actionsDeLaSemaine = elaguee.gardees;
@@ -714,7 +895,7 @@ function reglerLaFacture(embaucher: boolean, pourToujours = false): void {
     // **L'embauche est rétroactive à la semaine écoulée**, et c'est ce que
     // l'issue demandait : on ne fait pas travailler quelqu'un plus
     // longtemps, on ajoute des bras — pour des heures déjà faites. Un
-    // saisonnier par tranche de plafond entamée, pour UNE semaine : c'est
+    // saisonnier par tranche de plafond entamée, pour **une** semaine : c'est
     // exactement ce que `coutDuDepassement` a chiffré.
     const { embauches } = coutDuDepassement(depassementHoraire(state.economy));
     for (let i = 0; i < embauches; i++) {
@@ -771,8 +952,24 @@ function definirLaPolitique(politique: PolitiqueHoraire): void {
 
 function stepWeeks(n: number) {
   if (!state) return;
+  /**
+   * Une scène a arrêté le temps : on ne simule pas la suite du lot.
+   *
+   * **La tempête et la mortalité de masse ne s'arrêtaient pas vraiment.** Elles
+   * posaient leur autopause, mettaient l'horloge à zéro… et la boucle
+   * continuait à ticker les semaines restantes du lot — jusqu'à quatre de plus
+   * à ×52, vingt-cinq au plafond. Tout ce qui s'y passait était replié dans le
+   * même instantané que la scène, donc joué dans la même ellipse : le joueur
+   * lisait « 350 arbres meurent d'un coup » pendant qu'un mois de plus lui
+   * passait sous les yeux. L'incendie, lui, rendait déjà la main.
+   *
+   * Le drapeau plutôt qu'un `return` sur place : la semaine va **au bout** de
+   * son tour, donc l'incendie de la même semaine écrit encore sa ligne de
+   * journal, et le compteur de fruits reste juste.
+   */
+  let scenePosee = false;
   for (let i = 0; i < n; i++) {
-    // **La facture se présente AVANT que la semaine ne se ferme (#133).** Le
+    // **La facture se présente avant que la semaine ne se ferme (#133).** Le
     // joueur compose sa semaine librement ; c'est au moment de passer à la
     // suivante qu'on lui demande s'il embauche. Le temps s'arrête le temps
     // qu'il réponde — comme il s'arrête pour un incendie ou une mort suivie.
@@ -802,7 +999,7 @@ function stepWeeks(n: number) {
     const before = state;
     const ticked = tick(state, w);
     lastFluxes = ticked.fluxes;
-    // Ce que le rendu doit ANIMER, accumulé jusqu'au prochain instantané : à
+    // Ce que le rendu doit **animer**, accumulé jusqu'au prochain instantané : à
     // ×64 un instantané couvre plusieurs semaines, et rien ne doit se perdre
     // en route (une mort qu'on n'a pas vue est un arbre qui s'escamote).
     lastDebordement = ticked.debordementParCellule;
@@ -812,6 +1009,7 @@ function stepWeeks(n: number) {
     pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
     cumuls = accumuler(cumuls, ticked.gestes, ticked.state.trees);
+    replierLeBilan(ticked, before.week, ticked.state.trees);
     pendingChutes.push(...ticked.chutes);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
@@ -820,7 +1018,7 @@ function stepWeeks(n: number) {
     // pour l'incendie — c'est elle dont les troncs sont encore au sol.
     if (ticked.tempete) pendingTempete = ticked.tempete;
     // Les aides publiques, une fois l'an. On raconte surtout le cas où elles
-    // NE tombent PAS : perdre l'éligibilité en plantant un arbre de trop est
+    // **ne** tombent **pas** : perdre l'éligibilité en plantant un arbre de trop est
     // la décision que ce mécanisme met sur la table (aides.ts).
     if (ticked.aides) {
       const a = ticked.aides;
@@ -850,7 +1048,7 @@ function stepWeeks(n: number) {
 
     // ── Fil d'événements : ce qui a changé cette semaine ────────────────────
     const weekOfYear = before.week % 52;
-    // Morts : regroupées par espèce ET par cause, pour que le joueur sache
+    // Morts : regroupées par espèce **et** par cause, pour que le joueur sache
     // ce qui a tué ses arbres et puisse corriger le tir.
     const parEspeceEtCause = new Map<string, { n: number; hMax: number; phPire: number }>();
     for (const mort of ticked.morts) {
@@ -858,7 +1056,7 @@ function stepWeeks(n: number) {
       const agg = parEspeceEtCause.get(cle) ?? { n: 0, hMax: 0, phPire: Number.NaN };
       agg.n++;
       agg.hMax = Math.max(agg.hMax, mort.heightM);
-      // LE pH SOUS L'ARBRE, pas celui de la station : il dérive chaque semaine
+      // **Le** pH **sous l'arbre**, pas celui de la station : il dérive chaque semaine
       // avec la saturation en bases (C10) et le chaulage le déplace d'un geste.
       // On retient le plus acide du groupe, qui est celui qui a tué.
       if (state) {
@@ -871,11 +1069,16 @@ function stepWeeks(n: number) {
     for (const [cle, agg] of parEspeceEtCause) {
       const [id, cause] = cle.split("|");
       if (!id) continue;
-      const libelle = LIBELLE_CAUSE[(cause ?? "secheresse") as CauseMort] ?? "";
+      // **Accordé, et le mot « mortes » enfin dit.** La table du moteur est au
+      // masculin pluriel et n'a pas de verbe : « 90 ronces étouffés par
+      // l'ombre ». Celle du jeu accorde en genre et en nombre, et c'est la
+      // même que lit le bilan de période — une seule phrase pour les deux.
+      const feminin = estFeminin(id);
+      const libelle = `mort${accord(feminin, agg.n)} ${causeDite((cause ?? "secheresse") as CauseMort, agg.n, feminin)}`;
       const taille = agg.hMax >= 1 ? ` (jusqu'à ${agg.hMax.toFixed(1)} m)` : " (semis)";
       // Sur un sol hors gamme, on donne les chiffres : c'est la seule cause de
       // mort que le joueur peut corriger d'un geste (chauler).
-      // Le pH cité est celui du SOL SOUS L'ARBRE, pas celui de la station au
+      // Le pH cité est celui du **sol sous l'arbre**, pas celui de la station au
       // départ : il dérive chaque semaine avec la saturation en bases (C10) et
       // le chaulage le déplace d'un geste. La gamme citée est celle de l'atlas,
       // et depuis que la réponse au pH est unimodale elle est vraie — un arbre
@@ -885,10 +1088,7 @@ function stepWeeks(n: number) {
         gamme && !Number.isNaN(agg.phPire)
           ? ` — sol à pH ${agg.phPire.toFixed(1)}, il leur en faut ${gamme[0]} à ${gamme[1]}`
           : "";
-      event(
-        "💀",
-        `${agg.n} ${nomEspece(id)}${agg.n > 1 ? "s" : ""} ${libelle}${taille}${precision}`,
-      );
+      event("💀", `${agg.n} ${nomEspeces(id, agg.n)} ${libelle}${taille}${precision}`);
     }
     // Gel des fleurs
     const frostedBefore = new Set(before.trees.filter((t) => t.bloomFrosted).map((t) => t.id));
@@ -901,12 +1101,12 @@ function stepWeeks(n: number) {
     for (const [id, n2] of frosted) {
       event(
         "❄️",
-        `Gel tardif (${w.tMinAbsC.toFixed(0)} °C) : fleurs de ${n2} ${nomEspece(id)}${n2 > 1 ? "s" : ""} détruites — récolte perdue`,
+        `Gel tardif (${w.tMinAbsC.toFixed(0)} °C) : fleurs de ${n2} ${nomEspeces(id, n2)} détruites — récolte perdue`,
       );
     }
     // Semis naturels (semaine du recrutement)
     if (weekOfYear === 14) {
-      // Le compte EXACT, depuis `naissances`. La soustraction d'effectifs
+      // Le compte **exact**, depuis `naissances`. La soustraction d'effectifs
       // qu'on faisait ici se trompait dès qu'un geste de la même semaine avait
       // retiré des tiges : une éclaircie en semaine 14 gonflait le chiffre.
       const recruits = ticked.naissances.length;
@@ -945,9 +1145,7 @@ function stepWeeks(n: number) {
     }
     partInondeePrecedente = inondee;
     // Tempête : elle arrive en une semaine et doit se dire, sinon des arbres
-    // s'escamotent. Pas d'auto-pause en revanche, à la différence du feu — un
-    // chablis reste récupérable un an (`tempete.ts`), le joueur a le temps de
-    // décider s'il sort le bois ou s'il le laisse.
+    // s'escamotent.
     if (ticked.tempete) {
       const t = ticked.tempete;
       event(
@@ -956,6 +1154,34 @@ function stepWeeks(n: number) {
           `${t.arbresVerses > 1 ? "s couchés" : " couché"} — ${t.volumeM3.toFixed(1)} m³ ` +
           `à sortir dans l'année avant que le bois ne se déprécie`,
       );
+      // **Elle arrête le temps, désormais (#128).** Elle ne le faisait pas, et
+      // le raisonnement écrit ici était : « un chablis reste récupérable un an,
+      // le joueur a le temps de décider ». C'est vrai de la **décision** et faux du
+      // **spectacle** — le §6.8 range la tempête parmi les scènes qu'on rejoue, et
+      // à ×52 une rafale qui couche trente arbres passe entre deux images.
+      if (weeksPerSecond > 1 && estUneTempeteAVoir(t.arbresVerses)) {
+        weeksPerSecond = 0;
+        scenePosee = true;
+        post({
+          type: "autopause",
+          reason: `Tempête : ${t.arbresVerses} arbres couchés`,
+          scene: sceneDeLaSemaine(),
+        });
+      }
+    }
+    // **Une mortalité de masse est une scène**, et c'est la troisième que le
+    // §6.8 nomme. Pas une cause en particulier : ce qui la fait, c'est le
+    // **nombre** — une sécheresse qui emporte le tiers d'un peuplement en une
+    // semaine se voit autant qu'un feu, et ne se dit nulle part ailleurs.
+    if (weeksPerSecond > 1 && estUneMortaliteDeMasse(ticked.morts.length, before.trees.length)) {
+      const part = ticked.morts.length / Math.max(1, before.trees.length);
+      weeksPerSecond = 0;
+      scenePosee = true;
+      post({
+        type: "autopause",
+        reason: `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
+        scene: sceneDeLaSemaine(),
+      });
     }
     // Incendie : l'événement le plus marquant d'une partie sur lande.
     if (ticked.incendie) {
@@ -969,12 +1195,22 @@ function stepWeeks(n: number) {
       );
       if (weeksPerSecond > 1) {
         weeksPerSecond = 0;
-        post({ type: "autopause", reason: `Incendie : ${f.arbresTues} arbres perdus` });
-        postSnapshot();
+        post({
+          type: "autopause",
+          reason: `Incendie : ${f.arbresTues} arbres perdus`,
+          scene: sceneDeLaSemaine(),
+        });
+        // **Pas d'instantané ici**, et c'est le correctif de l'incendie
+        // invisible. `startLoop` en poste un dès que `stepWeeks` rend la main ;
+        // en poster un de plus depuis ici en faisait **deux** pour la même
+        // semaine — le premier portant le feu, le second vidé par le premier,
+        // puisque `postSnapshot` emporte les tampons. L'écran gardait le
+        // second. Le front ne se jouait pas, et « ↺ Revoir la scène » rejouait
+        // le plan de l'instantané courant, c'est-à-dire un plan vide.
         return;
       }
     }
-    // **Un arbre SUIVI meurt : le temps s'arrête (#149).** C'est la demande
+    // **Un arbre suivi meurt : le temps s'arrête (#149).** C'est la demande
     // même de l'issue — « pas qu'ils meurent sans que je comprenne rien ». Ici
     // et pas côté jeu, parce qu'ici seulement la mort est connue à la semaine
     // où elle arrive : l'instantané, lui, peut en porter vingt-six.
@@ -999,9 +1235,9 @@ function stepWeeks(n: number) {
     // décisions vivent dans `recolteAuto.ts`, où un essai peut les prendre en
     // faute — ici elles étaient confondues en une seule condition.
     const murs = arbresMurs(state.trees, recoltees);
-    // Le front montant : on n'agit qu'à l'ARRIVÉE d'une maturité, pas à chaque
+    // Le front montant : on n'agit qu'à l'**arrivée** d'une maturité, pas à chaque
     // semaine où elle dure. Il ne vaut que si les deux termes comparés sont la
-    // MÊME grandeur — voir la mise à jour de `prevFruitsReadyKg` plus bas, qui
+    // **même** grandeur — voir la mise à jour de `prevFruitsReadyKg` plus bas, qui
     // ne l'était pas (#191).
     if (fautIlPrevenir(murs.kg, prevFruitsReadyKg)) {
       if (autoHarvest) {
@@ -1024,8 +1260,8 @@ function stepWeeks(n: number) {
         return;
       }
     }
-    // **LA MÊME MESURE DES DEUX CÔTÉS (#191).** Ce compteur additionnait le
-    // fruit de TOUS les arbres, sans le seuil de 0,5 kg par pied que la
+    // **la même mesure des deux côtés (#191).** Ce compteur additionnait le
+    // fruit de **tous** les arbres, sans le seuil de 0,5 kg par pied que la
     // récolte applique. Deux mesures de la même chose, donc deux mesures qui
     // divergent : sur une parcelle où des milliers de ronces portent chacune
     // quelques grammes, le résidu tenait le total au-dessus du kilo toute
@@ -1033,7 +1269,122 @@ function stepWeeks(n: number) {
     // la première essence mûre. Mesuré en jeu : 115 kg de pommes sur l'arbre en
     // semaine 39, comparés à un « précédent » de 28 kg de miettes.
     prevFruitsReadyKg = arbresMurs(state.trees, recoltees).kg;
+    // La scène a arrêté le temps : la suite du lot n'est pas simulée.
+    if (scenePosee) return;
   }
+}
+
+/**
+ * Avance la relecture d'une semaine à la fois.
+ *
+ * **`advanceWeek` et non `tick`**, et c'est ce qui rend la relecture fidèle :
+ * elle rejoue aussi les **gestes** du joueur, que le journal porte datés. Ticker
+ * seul rejouerait une parcelle où personne n'aurait rien fait.
+ *
+ * Rien n'est compté ici — ni le cumul du niveau, ni le bilan, ni le journal de
+ * sauvegarde : ce qui est rejoué a déjà été vécu une fois.
+ */
+function avancerLaRelecture(n: number): void {
+  if (!state || !relecture) return;
+  for (let k = 0; k < n && state.week < relecture.jusqua; k++) {
+    const w = meteoSemaine(state.week);
+    if (!w) return;
+    const step = advanceWeek(state, w, journal);
+    state = step.state;
+    pendingMorts.push(...step.morts);
+    pendingNaissances.push(...step.naissances);
+    pendingFranchissements.push(...step.franchissements);
+    pendingGestes.push(...step.gestes);
+    pendingChutes.push(...step.chutes);
+    if (step.incendie) pendingIncendie = step.incendie;
+    if (step.tempete) pendingTempete = step.tempete;
+    lastFluxes = step.fluxes;
+    lastDebordement = step.debordementParCellule;
+    lastLumiereAuSol = step.lumiereAuSol;
+  }
+}
+
+/**
+ * Revenir en arrière et rejouer jusqu'au présent.
+ *
+ * On repart du point de reprise le plus proche **avant** la semaine demandée, puis
+ * on rejoue en silence jusqu'à elle — au plus un pas de reprise, donc moins de
+ * deux secondes. C'est seulement à partir de là que les instantanés repartent.
+ */
+function commencerLaRelecture(deSemaine: number, vitesse: number): void {
+  if (!state || relecture) return;
+  const vivant = state;
+  const depart = [...pointsDeReprise].reverse().find((p) => p.semaine <= deSemaine);
+  if (!depart || vivant.week <= depart.semaine) {
+    post({
+      type: "relecture",
+      enCours: false,
+      depuis: vivant.week,
+      semaine: vivant.week,
+      jusqua: vivant.week,
+      vitesse: 0,
+    });
+    return;
+  }
+  relecture = {
+    depuis: Math.max(depart.semaine, deSemaine),
+    jusqua: vivant.week,
+    vivant,
+    vitesse,
+  };
+  state = depart.etat;
+  // Rattraper la semaine demandée sans rien montrer : ce qu'on veut revoir
+  // commence à `deSemaine`, pas au point de reprise qui la précède.
+  while (state.week < deSemaine && state.week < vivant.week) {
+    const w = meteoSemaine(state.week);
+    if (!w) break;
+    state = advanceWeek(state, w, journal).state;
+  }
+  viderLesTampons();
+  weeksPerSecond = vitesse;
+  fractionalWeeks = 0;
+  semaineDArret = undefined;
+  post({
+    type: "relecture",
+    enCours: true,
+    depuis: relecture.depuis,
+    semaine: state.week,
+    jusqua: relecture.jusqua,
+    vitesse: relecture.vitesse,
+  });
+  postSnapshot();
+}
+
+/** Revenir au présent, que la relecture soit allée au bout ou non. */
+function arreterLaRelecture(): void {
+  if (!relecture) return;
+  state = relecture.vivant;
+  const jusqua = relecture.jusqua;
+  relecture = undefined;
+  weeksPerSecond = 0;
+  fractionalWeeks = 0;
+  viderLesTampons();
+  post({ type: "relecture", enCours: false, depuis: jusqua, semaine: jusqua, jusqua, vitesse: 0 });
+  postSnapshot();
+}
+
+/**
+ * Jette ce qui attendait d'être montré.
+ *
+ * Au départ d'une relecture comme à son retour : les morts et les gestes
+ * accumulés appartiennent à l'autre temps, et les jouer à l'arrivée ferait
+ * tomber des arbres qui sont debout.
+ */
+function viderLesTampons(): void {
+  pendingRefusals = [];
+  pendingEvents = [];
+  pendingMorts = [];
+  pendingNaissances = [];
+  pendingFranchissements = [];
+  pendingGestes = [];
+  pendingChutes = [];
+  pendingIncendie = undefined;
+  pendingTempete = undefined;
 }
 
 function startLoop() {
@@ -1042,11 +1393,29 @@ function startLoop() {
   timer = setInterval(() => {
     if (!state || weeksPerSecond <= 0) return;
     // **L'horloge attend la fin d'une animation bloquante (#163).** On sort
-    // AVANT d'accumuler la fraction de semaine : sinon la retenue ne ferait
+    // **avant** d'accumuler la fraction de semaine : sinon la retenue ne ferait
     // que différer les semaines, qui repartiraient toutes d'un coup au
     // relâchement — ce qui est le contraire de ce qu'on cherche.
     if (retenu) return;
     fractionalWeeks += weeksPerSecond / 10;
+    if (relecture) {
+      const pas = Math.floor(fractionalWeeks);
+      if (pas > 0) {
+        fractionalWeeks -= pas;
+        avancerLaRelecture(pas);
+        postSnapshot();
+        post({
+          type: "relecture",
+          enCours: true,
+          depuis: relecture.depuis,
+          semaine: state.week,
+          jusqua: relecture.jusqua,
+          vitesse: relecture.vitesse,
+        });
+        if (state.week >= relecture.jusqua) arreterLaRelecture();
+      }
+      return;
+    }
     let n = Math.floor(fractionalWeeks);
     if (n > 0) {
       fractionalWeeks -= n;
@@ -1074,7 +1443,7 @@ function stationInfo(): StationInfo {
   const station = stationAvecPaysage(sc.station);
   const dims = gridDims(station);
   const altitudes = altitudeParCellule(station.relief, dims);
-  // La MÊME résolution que le tick : l'eau affichée est celle que la
+  // La **même** résolution que le tick : l'eau affichée est celle que la
   // simulation connaît, qu'elle soit déclarée ou déduite du modelé.
   const sources = sourcesDeLaParcelle(station.eau, altitudes, dims, {
     apportAmontM2: station.relief.bassinAmontHa * 10_000,
@@ -1105,7 +1474,7 @@ function stationInfo(): StationInfo {
     // dans son unité d'origine, parce que le décor s'en sert pour savoir où
     // poser la crête (#150).
     bassinAmontHa: station.relief.bassinAmontHa,
-    // Et ce qu'il y a AUTOUR, réduit à ce que le décor en dessine. Même
+    // Et ce qu'il y a **autour**, réduit à ce que le décor en dessine. Même
     // raison : les bordures sont choisies au départ et ne bougent plus. La vue
     // ne peut pas les retrouver seule — une partie reprise d'une sauvegarde
     // n'a jamais vu passer les réglages.
@@ -1159,13 +1528,17 @@ function init(
   politiqueHoraire = "demander";
   // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
   cumuls = CUMULS_VIDES;
+  bilan = BILAN_VIDE;
+  pointsDeReprise = [];
+  relecture = undefined;
+  semaineDuDernierInstantane = 0;
   semees = new Set();
   choixRecolte = {};
   recoltees = new Set();
   // …ni son niveau : l'interface réinstalle celui qu'elle lance.
   niveauId = undefined;
   paliersAcquis = [];
-  // **LE POINT ZÉRO DU BILAN CARBONE SE FIGE ICI, ET PAS AILLEURS** (#202) :
+  // **le point zéro du bilan carbone se fige ici, et pas ailleurs** (#202) :
   // c'est l'instant exact où le joueur prend la main. Ce qu'il trouve sur la
   // parcelle — les arbres venus tout seuls pendant la maturation compris — est
   // son acquis, pas son mérite.
@@ -1227,7 +1600,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       nappeCm = msg.save.nappeCm;
       partBassin = msg.save.partBassin;
       maturationAns = msg.save.maturationAns ?? 0;
-      // Absent = vrai : une sauvegarde d'avant l'option a été jouée AVEC
+      // Absent = vrai : une sauvegarde d'avant l'option a été jouée **avec**
       // l'économie, et doit se rejouer ainsi ou elle divergerait.
       economie = msg.save.economie ?? true;
       politiqueHoraire = msg.save.politiqueHoraire ?? "demander";
@@ -1249,15 +1622,23 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // Le vieillissement fait partie de l'histoire de la parcelle : il se
       // rejoue à l'identique avant les actions du joueur.
       if (maturationAns > 0) replayed = faireVieillir(replayed, maturationAns);
-      // Le cumul se REFAIT pendant le rejeu (#188). Rien d'autre ne pourrait le
+      // Le cumul se **refait** pendant le rejeu (#188). Rien d'autre ne pourrait le
       // rendre : les kilos cueillis il y a dix ans ne sont plus nulle part dans
       // l'état, et le journal de sauvegarde porte les actions, pas ce qu'elles
       // ont donné. C'est le même rejeu qui refait la parcelle et son compte.
       cumuls = CUMULS_VIDES;
+      bilan = BILAN_VIDE;
+      pointsDeReprise = [];
+      relecture = undefined;
+      semaineDuDernierInstantane = 0;
       for (let i = 0; i < msg.save.weeks; i++) {
         const step = advanceWeek(replayed, meteoSemaine(i), journal);
         replayed = step.state;
         cumuls = accumuler(cumuls, step.gestes, step.state.trees);
+        // **Le rejeu compte, et c'est tout l'intérêt de tenir le bilan ici** :
+        // une partie reprise retrouve les morts, les semis et les gestes de
+        // toutes ses années, qu'aucun instantané n'a jamais montrés.
+        replierLeBilan(step, i, step.state.trees);
         lastFluxes = step.fluxes;
         // La dernière semaine rejouée est celle qu'on va montrer : son
         // débordement et sa lumière au sol servent au premier instantané.
@@ -1292,7 +1673,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       suivis = new Set(msg.ids);
       break;
     case "niveau":
-      // On RANGE, on ne joue pas : l'avancement se calcule côté interface, où
+      // On **range**, on ne joue pas : l'avancement se calcule côté interface, où
       // les fiches vivent (#188).
       niveauId = msg.id;
       paliersAcquis = [...msg.acquis];
@@ -1311,18 +1692,20 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       postSnapshot();
       break;
     case "attendre":
-      // On ne touche NI à `weeksPerSecond` NI à `semaineDArret` : c'est une
+      // On ne touche **ni** à `weeksPerSecond` **ni** à `semaineDArret` : c'est une
       // retenue, pas une reprise en main. Une traversée « +1 mois » qui
       // s'interromprait pour montrer une chute doit repartir où elle allait.
       retenu = msg.retenu;
       break;
     case "speed":
+      // Changer de vitesse pendant une relecture la règle, sans la quitter :
+      // c'est le seul bouton du bandeau qui garde son sens.
       weeksPerSecond = msg.weeksPerSecond;
       // Le joueur reprend la main : la traversée en cours n'a plus d'objet.
       semaineDArret = undefined;
       break;
     case "avancerDe": {
-      if (!state) return;
+      if (!state || relecture) return;
       semaineDArret = state.week + Math.max(1, Math.round(msg.semaines));
       weeksPerSecond = msg.weeksPerSecond;
       libelleDArrivee = msg.libelle;
@@ -1330,6 +1713,10 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
     }
     case "action": {
       if (!state) return;
+      // **Pendant une relecture, on regarde.** Agir écrirait dans le journal
+      // une action datée d'une semaine déjà vécue, et le rejeu d'après en
+      // sortirait une autre partie.
+      if (relecture) return;
       // La semaine est déjà « ouverte » : l'action s'applique immédiatement,
       // en pause comme en lecture — le rejeu donnera le même résultat.
       performAction({ ...msg.action, week: state.week } as GameAction);
@@ -1343,18 +1730,27 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // essai la propriété dont il dépendait — que `applyAction` ne mute pas
       // l'état qu'on lui donne. Le moteur en a fait un contrat (#139, #152) :
       // `prevoirAction` porte la garantie dans sa signature, et l'essai qui la
-      // défend éprouve désormais TOUS les types d'action sur leur chemin de
+      // défend éprouve désormais **tous** les types d'action sur leur chemin de
       // travail, là où le mien ne couvrait que la plantation.
       const refusals = prevoirAction(state, { ...msg.action, week: state.week } as GameAction);
       const reponse: FromWorker = { type: "prevision", cle: msg.cle, refusals };
       self.postMessage(reponse);
       break;
     }
+    case "relire":
+      commencerLaRelecture(msg.deSemaine, msg.weeksPerSecond);
+      break;
+    case "arreterLaRelecture":
+      arreterLaRelecture();
+      break;
     case "autoHarvest":
       autoHarvest = msg.enabled;
       break;
     case "requestSave": {
-      if (!state) return;
+      // **Pas de sauvegarde pendant une relecture** : l'état courant est un
+      // passé, et l'enregistrer raccourcirait la partie de tout ce qu'on est
+      // en train de revoir.
+      if (!state || relecture) return;
       const save: SaveGame = {
         version: 1,
         stationId: sc?.station.id ?? "",

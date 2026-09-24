@@ -1,14 +1,14 @@
 /**
  * L'allélopathie : empêcher les autres de pousser chez soi.
  *
- * Le moteur ne connaissait que la CONCURRENCE — pour la lumière, l'eau, les
+ * Le moteur ne connaissait que la **concurrence** — pour la lumière, l'eau, les
  * minéraux. Or certaines plantes ne se contentent pas de prendre : elles
  * émettent. Le noyer libère de la juglone par ses racines et sa litière, et
  * elle inhibe la germination et la croissance dans un rayon de quinze à vingt
  * mètres.
  *
  * C'est la contrainte classique de l'agroforesterie au noyer. Pour ce jeu, elle
- * rend le choix des VOISINS décisif là où, ailleurs, seule la lumière compte.
+ * rend le choix des **voisins** décisif là où, ailleurs, seule la lumière compte.
  */
 
 import { describe, expect, it } from "vitest";
@@ -99,7 +99,7 @@ describe("dans une partie, un pommier sous un noyer ne pousse pas", () => {
     const loin = pommierApres(15, 30);
     expect(colle).toBeLessThan(loin);
     // Et il ne s'agit pas seulement de l'ombre : à trois mètres d'un noyer de
-    // dix-huit mètres, l'ombre compte, mais l'écart doit être FRANC.
+    // dix-huit mètres, l'ombre compte, mais l'écart doit être **franc**.
     expect(colle).toBeLessThan(0.7 * loin);
   });
 }, 300_000);

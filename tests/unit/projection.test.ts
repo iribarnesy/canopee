@@ -4,7 +4,7 @@
  * Un rendu ne se teste pas comme un moteur, mais la projection, si : elle est
  * pure, et c'est là que se cachent les bugs les plus coûteux — un picking qui
  * dérive d'une demi-tuile rend le jeu injouable sans qu'aucune capture ne le
- * montre. D'où des tests de PROPRIÉTÉ plutôt que quelques cas : on veut que
+ * montre. D'où des tests de **propriété** plutôt que quelques cas : on veut que
  * l'aller-retour tienne partout, à toutes les orientations, y compris sur un
  * terrain accidenté.
  */
@@ -110,8 +110,8 @@ describe("parcelle ↔ écran", () => {
 
   it("un cube d'un mètre se dessine comme un cube (D2)", () => {
     // La condition qui rend le relief à l'échelle vraie gratuit. En 2:1, la
-    // demi-largeur d'une tuile vaut sa hauteur — donc un mètre VERTICAL occupe
-    // à l'écran exactement ce qu'un mètre HORIZONTAL occupe en largeur, et le
+    // demi-largeur d'une tuile vaut sa hauteur — donc un mètre **vertical** occupe
+    // à l'écran exactement ce qu'un mètre **horizontal** occupe en largeur, et le
     // cube unité se dessine comme un cube. Sans cette égalité, une butte de
     // six mètres ne « pose » pas sur le terrain qui la porte.
     expect(METRE_VERTICAL_PX).toBeCloseTo(TUILE_LARGEUR_PX / 2, 9);
@@ -144,7 +144,7 @@ describe("parcelle ↔ écran", () => {
 
 describe("la profondeur, pour l'ordre du peintre", () => {
   it("l'altitude n'entre pas dans la profondeur", () => {
-    // Un arbre au sommet d'une butte n'est pas DEVANT ce qui est en bas devant
+    // Un arbre au sommet d'une butte n'est pas **devant** ce qui est en bas devant
     // lui : sinon il serait dessiné par-dessus, et le relief mentirait.
     const c = cam();
     expect(profondeur(10, 10, c)).toBe(profondeur(10, 10, c));
@@ -180,12 +180,12 @@ describe("le picking sur terrain accidenté", () => {
           fc.constantFrom(...ORIENTATIONS),
           (cx, cy, o) => {
             const c = cam(o);
-            // On projette le CENTRE de la cellule, puis on demande qui est là.
+            // On projette le **centre** de la cellule, puis on demande qui est là.
             const e = versEcran({ x: cx + 0.5, y: cy + 0.5, z: relief(cx, cy) }, c);
             const trouvee = celluleSousLeCurseur(e, c, relief);
             expect(trouvee).toBeDefined();
             // On ne demande pas la cellule exacte : sur un relief, une cellule
-            // PLUS PROCHE de la caméra peut légitimement occuper ce pixel —
+            // **plus proche** de la caméra peut légitimement occuper ce pixel —
             // c'est précisément ce qu'occulter veut dire. Ce qu'on exige, c'est
             // que la réponse soit sur le même rayon de vue, donc à la même
             // différence `x − y` dans le repère caméra.

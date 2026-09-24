@@ -2,7 +2,7 @@
  * Le marché du bois : un prix qui bouge, et qui s'effondre quand tout le monde
  * vend en même temps.
  *
- * Les prix du moteur étaient FIXES, quelle que soit l'année et quelle que soit
+ * Les prix du moteur étaient **fixes**, quelle que soit l'année et quelle que soit
  * la quantité mise sur le marché. C'est faux de deux façons, et les deux
  * comptent pour un gestionnaire.
  */
@@ -107,7 +107,7 @@ describe("dans une partie, étaler ses coupes rapporte plus", () => {
   }
 
   it("le même bois vendu en quatre fois rapporte plus qu'en une", () => {
-    // C'est LA raison d'étaler ses coupes, et elle n'est écrite nulle part
+    // C'est **la** raison d'étaler ses coupes, et elle n'est écrite nulle part
     // ailleurs : le débouché local sature.
     expect(recette(false)).toBeGreaterThan(recette(true));
   });

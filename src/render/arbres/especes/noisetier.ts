@@ -35,7 +35,7 @@ export const NOISETIER: FicheGraphique = {
     automne: { r: 190, g: 162, b: 76 },
   },
   fruit: {
-    // La noisette se voit par son INVOLUCRE : une collerette frangée verte qui
+    // La noisette se voit par son **involucre** : une collerette frangée verte qui
     // dépasse du fruit, et qui est ce qu'on distingue avant la coque.
     forme: "cupule",
     couleur: { r: 158, g: 132, b: 84 },

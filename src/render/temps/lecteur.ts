@@ -1,9 +1,9 @@
 /**
- * Le LECTEUR d'un plan d'ellipse : où en est-on, et qu'est-ce que ça fait à
+ * Le **lecteur** d'un plan d'ellipse : où en est-on, et qu'est-ce que ça fait à
  * chaque arbre (docs/interface-visuelle.md §5.11).
  *
- * `ellipse.ts` dit CE QU'IL FAUT MONTRER et dans quel ordre ; ce module dit
- * OÙ ON EN EST à un instant donné. La séparation n'est pas cosmétique : un plan
+ * `ellipse.ts` dit **ce qu'il faut montrer** et dans quel ordre ; ce module dit
+ * **où on en est** à un instant donné. La séparation n'est pas cosmétique : un plan
  * se construit une fois par ellipse, un lecteur est interrogé une fois par
  * arbre et par image. L'un peut se permettre de trier et de regrouper, l'autre
  * doit répondre en quelques opérations.
@@ -14,7 +14,7 @@
  *    « debout » pour tout ce qui n'est pas l'acte en cours — et alors chaque
  *    arbre se relève dès que l'acte suivant démarre. Une ellipse serait une
  *    suite de choses qui se défont. Le lecteur cherche donc l'acte qui
- *    concerne un arbre, et si cet acte est PASSÉ, il rend son état FINAL.
+ *    concerne un arbre, et si cet acte est **passé**, il rend son état **final**.
  * 2. **Les sujets d'un acte ne bougent pas en même temps.** « Animer tous les
  *    arbres morts dans la semaine » ne veut pas dire les animer au même
  *    millième de seconde : trente-quatre arbres qui tombent en cadence font une
@@ -62,7 +62,7 @@ import { type ArbreVivant, type EtatMourant, mortAccomplie, mourirEnCours } from
 import { type CelluleVoilee, cellulesVoilees, rangsDuBalayage } from "./voile";
 
 /**
- * Part du créneau d'un acte réservée à l'ÉCHELONNEMENT de ses sujets.
+ * Part du créneau d'un acte réservée à l'**échelonnement** de ses sujets.
  *
  * La moitié : les derniers partent à mi-créneau et finissent avec lui. Plus
  * serré, l'acte se lit comme un seul mouvement ; plus étalé, les premiers sont
@@ -97,7 +97,7 @@ export function ouEnEst(plan: PlanDEllipse, ecouleMs: number): OuEnEst {
 }
 
 /**
- * Un plan INDEXÉ par arbre, prêt à être interrogé image après image.
+ * Un plan **indexé** par arbre, prêt à être interrogé image après image.
  *
  * **Le premier jet cherchait linéairement, et il ne tenait pas.** `deformationDe`
  * parcourait les actes puis leurs sujets à chaque appel — or il est appelé une
@@ -106,7 +106,7 @@ export function ouEnEst(plan: PlanDEllipse, ecouleMs: number): OuEnEst {
  * C'est exactement la « recherche linéaire par image » que le lot L0 proscrit,
  * et l'index est la réponse évidente une fois la question posée.
  *
- * On indexe UNE FOIS par ellipse — un plan ne change pas pendant qu'il se joue
+ * On indexe **une fois** par ellipse — un plan ne change pas pendant qu'il se joue
  * — et on interroge par identifiant.
  */
 export type PlanIndexe = Map<number, { acte: Acte; chute: ChuteDeChandelle }>;
@@ -122,7 +122,7 @@ export function indexerLesChutes(plan: PlanDEllipse): PlanIndexe {
 }
 
 /**
- * Les chandelles qui s'abattent, REPOSÉES le temps de leur acte (#163).
+ * Les chandelles qui s'abattent, **reposées** le temps de leur acte (#163).
  *
  * **Sans elles, l'index ci-dessus n'a personne à déformer.** Mesuré sur six
  * stations et quinze ans : sur 423 chutes rapportées, **423** concernent un
@@ -178,7 +178,7 @@ export function indexerLesChandellesTombees(plan: PlanDEllipse): PlanIndexe {
  * La déformation d'une chandelle reposée, à cet instant de l'ellipse.
  *
  * Même découpage que `chuteDeLaTige`, et pour la même raison : debout avant
- * son acte, en train de tomber pendant, EFFACÉE après. L'effacement n'est pas
+ * son acte, en train de tomber pendant, **effacée** après. L'effacement n'est pas
  * un détail — le fût au sol est désormais l'affaire du terrain
  * (`soilBoisAuSol`), et le laisser couché en dessinerait deux.
  */
@@ -203,7 +203,7 @@ export function chuteDeLaChandelle(
  *
  * **Ne rend une déformation que pour ce qu'un panneau peut montrer**, c'est-à-
  * dire la chute. Les autres actes du plan — une mort de sécheresse qui jaunit
- * puis se défeuille, un élagage — passent par la CUISSON de la vignette et non
+ * puis se défeuille, un élagage — passent par la **cuisson** de la vignette et non
  * par la pose : ce sont des changements de couleur et de feuillage, que la
  * classe porte déjà. Le §5.11 sépare les deux exprès, et confondre les deux
  * canaux ferait recuire l'atlas pendant une animation.
@@ -226,7 +226,7 @@ export function deformationDe(
 }
 
 /**
- * L'avancement d'UN sujet dans son acte, décalage compris.
+ * L'avancement d'**un** sujet dans son acte, décalage compris.
  *
  * Le décalage vient de l'identifiant, donc il est stable d'une image à l'autre
  * et d'une partie à l'autre : rejouer la même ellipse doit donner la même
@@ -247,12 +247,12 @@ function decalageDe(id: number): number {
 }
 
 /**
- * Les gestes sur ARBRES d'un plan, indexés par identifiant (§6.2).
+ * Les gestes sur **arbres** d'un plan, indexés par identifiant (§6.2).
  *
  * Deux tables plutôt qu'une, parce que les deux mises en scène ne s'adressent
- * pas au même objet : `tiges` porte ce qui TOMBE, sous l'identifiant de la tige
+ * pas au même objet : `tiges` porte ce qui **tombe**, sous l'identifiant de la tige
  * abattue — un arbre que l'instantané n'a plus ; `remodeles` porte ce qui reste
- * DEBOUT et change de forme, sous l'identifiant de l'arbre, qui est bien dans
+ * **debout** et change de forme, sous l'identifiant de l'arbre, qui est bien dans
  * l'instantané. Un recépage alimente les deux : la cépée tombe, la souche
  * reste.
  */
@@ -262,13 +262,13 @@ export interface GestesIndexes {
   /** ce qui reste debout et change de forme, par identifiant d'arbre */
   remodeles: Map<number, { acte: Acte; retire: ArbreRetire }>;
   /**
-   * Les gestes qui déplacent un STOCK sans toucher à la forme, par arbre :
+   * Les gestes qui déplacent un **stock** sans toucher à la forme, par arbre :
    * récolte et démasclage. Ils n'ont pas d'`ArbreRetire` — le moteur le dit
    * explicitement — mais ils changent la classe de vignette (`fruit`,
    * `liege`), donc ils passent par la cuisson comme un élagage.
    */
   stocks: Map<number, { acte: Acte; type: "recolter" | "leverEcorce"; masseKg: number }>;
-  /** les plants qui sortent de terre, par arbre — canal de POSE */
+  /** les plants qui sortent de terre, par arbre — canal de **pose** */
   plants: Map<number, Acte>;
 }
 
@@ -320,13 +320,13 @@ export function indexerLesGestes(plan: PlanDEllipse): GestesIndexes {
 }
 
 /**
- * Toutes les tiges abattues du plan, à poser pour la DURÉE de l'ellipse.
+ * Toutes les tiges abattues du plan, à poser pour la **durée** de l'ellipse.
  *
  * Pas d'argument de temps, et c'est une décision de coût : la liste ne change
  * pas pendant que le plan se joue, alors que le tableau d'arbres passé à la
  * scène sert de clé de cache pour la cuisson. Lui donner une liste qui grandit
  * et rétrécit image après image ferait recuire à chaque image. Ce qui varie
- * dans le temps est la DÉFORMATION de chaque tige, qui est un canal de pose.
+ * dans le temps est la **déformation** de chaque tige, qui est un canal de pose.
  */
 export function tigesAbattues(index: GestesIndexes): TigeAbattue[] {
   return [...index.tiges.values()].map((t) => t.tige);
@@ -369,7 +369,7 @@ export function remodelageDe(
 ): ArbreRemodele | undefined {
   const forme = formeRemodelee(index, ecouleMs, idArbre);
   const stock = stockRemodele(index, ecouleMs, idArbre, especeId);
-  // Les deux se cumulent : un arbre récolté ET élagué la même semaine doit
+  // Les deux se cumulent : un arbre récolté **et** élagué la même semaine doit
   // montrer les deux, et chacun ne pose que les champs qui le concernent.
   if (!forme) return stock;
   return stock ? { ...forme, ...stock } : forme;
@@ -390,7 +390,7 @@ function formeRemodelee(
 }
 
 /**
- * La part de STOCK : les fruits qui partent, l'écorce qu'on lève.
+ * La part de **stock** : les fruits qui partent, l'écorce qu'on lève.
  *
  * `especeId` n'est demandé que pour le démasclage, dont les deux bouts se
  * lisent sur la fiche de l'espèce. Le geste ne porte pas l'espèce — il ne donne
@@ -428,7 +428,7 @@ export function poseDuPlant(index: GestesIndexes, ecouleMs: number, idArbre: num
 }
 
 /**
- * Les gestes de ZONE d'un plan, avec leur balayage déjà calculé.
+ * Les gestes de **zone** d'un plan, avec leur balayage déjà calculé.
  *
  * Même raison que l'index des chutes, et une raison de plus : le rang d'une
  * cellule dans le balayage demande un centre de gravité et une distance par
@@ -446,11 +446,11 @@ export interface VoileIndexe {
  * Indexe les voiles d'un plan. `coteM` est le côté de la parcelle, celui qui
  * décode les indices de cellule du moteur.
  *
- * **Les gestes sur ARBRES ne sont pas ici, et c'est délibéré.** Un broutage et
+ * **Les gestes sur arbres ne sont pas ici, et c'est délibéré.** Un broutage et
  * un frottis sont des marques d'écorce que la classe de vignette porte déjà :
  * les animer à la pose dessinerait la même information deux fois. Une coupe,
  * un étêtage, un recépage font tomber quelque chose, et le protocole ne dit
- * pas encore QUOI — voir l'issue ouverte pour ça et la note du §5.11.
+ * pas encore **quoi** — voir l'issue ouverte pour ça et la note du §5.11.
  */
 export function indexerLesVoiles(plan: PlanDEllipse, coteM: number): VoileIndexe[] {
   const voiles: VoileIndexe[] = [];
@@ -485,7 +485,7 @@ export function voilesEnCours(voiles: readonly VoileIndexe[], ecouleMs: number):
 }
 
 /**
- * Les MORTS d'un plan, indexées par arbre.
+ * Les **morts** d'un plan, indexées par arbre.
  *
  * Même raison que les chutes : une fois par ellipse, pas une fois par arbre et
  * par image. Une mort porte sa cause, et c'est la cause qui décide de la mise
@@ -530,11 +530,11 @@ export function etatMourantDe(
 }
 
 /**
- * La part POSE d'une mort : ce qui rapetisse et ce qui s'effface.
+ * La part **pose** d'une mort : ce qui rapetisse et ce qui s'effface.
  *
  * Séparée de `etatMourantDe` parce que les deux canaux n'ont pas le même
  * client : la classe part à la cuisson avant la pose, la déformation part à la
- * pose. Et parce que celle-ci ne demande PAS l'état vivant de l'arbre — un
+ * pose. Et parce que celle-ci ne demande **pas** l'état vivant de l'arbre — un
  * effacement ne dépend que du temps —, ce qui permet à la boucle d'images de
  * l'appeler sans rien reconstruire.
  */
@@ -556,7 +556,7 @@ export function poseDeLaMort(index: MortsIndexees, ecouleMs: number, idArbre: nu
  *
  * `mourirEnCours` prend l'état de départ pour interpoler le feuillage ; la
  * hauteur et l'opacité, elles, n'en dépendent pas. Passer un état bidon est
- * donc sûr ICI et nulle part ailleurs — d'où la constante nommée, plutôt qu'un
+ * donc sûr **ici** et nulle part ailleurs — d'où la constante nommée, plutôt qu'un
  * objet anonyme qu'on finirait par recopier là où il ferait un faux.
  */
 const VIVANT_NEUTRE: ArbreVivant = {
@@ -578,7 +578,7 @@ export function trouverLeFeu(plan: PlanDEllipse): IncendieTrouve | undefined {
     if (acte.sujet.quoi !== "feu") continue;
     return {
       acte,
-      // **L'ORIGINE compte autant que les rangs**, et pas seulement pour cadrer
+      // **l'origine compte autant que les rangs**, et pas seulement pour cadrer
       // la caméra : c'est elle qui donne le sens dans lequel le panache
       // penche, faute d'une direction de vent dans le moteur (`feu.ts`).
       origine: acte.sujet.origine,
@@ -598,7 +598,7 @@ export interface IncendieTrouve {
 /**
  * Où en est l'acte d'un incendie, entre 0 et 1.
  *
- * **Après l'acte, la cendre RESTE**, à la différence du voile d'un geste : un
+ * **Après l'acte, la cendre reste**, à la différence du voile d'un geste : un
  * sol brûlé est un état, pas un passage. L'instantané d'après le dira dans ses
  * grilles — l'herbe a disparu — mais tant que l'ellipse joue, c'est ce calque
  * qui le porte, et l'éteindre ferait reverdir la parcelle.
@@ -626,14 +626,14 @@ export function feuEnCours(trouve: IncendieTrouve | undefined, ecouleMs: number)
 }
 
 /**
- * Les PARTICULES du feu à cet instant : la lueur, les flammes, le panache et
+ * Les **particules** du feu à cet instant : la lueur, les flammes, le panache et
  * les braises.
  *
  * Rendues en un seul tableau, et c'est la couche de pose qui les répartit entre
  * ses deux conteneurs — ce qui brûle au sol passe sous les arbres, ce qui monte
  * passe par-dessus. L'appelant n'a donc qu'un canal à brancher.
  *
- * **L'horloge de phase est celle de l'ELLIPSE et non celle du navigateur.**
+ * **L'horloge de phase est celle de l'ellipse et non celle du navigateur.**
  * C'est ce qui fait qu'une lecture figée (`?ellipse=0.7`) l'est vraiment,
  * jusqu'au battement des flammes, et qu'une capture est reproductible.
  *
@@ -655,7 +655,7 @@ export function particulesDuFeu(
   return {
     particules: [
       ...feuAuSol(trouve.feu, a, ecouleMs, coteM),
-      // Les couronnes qui flambent passent par la MÊME liste que le feu au sol,
+      // Les couronnes qui flambent passent par la **même** liste que le feu au sol,
       // donc par la même couche : une torche est derrière les arbres qui sont
       // devant elle et devant ceux qui sont derrière, ce que le tri par
       // ordonnée d'écran donne gratuitement.
@@ -686,20 +686,20 @@ export const RIEN_NE_BRULE: IncendieAPoser = { particules: [], ciel: 0 };
 /**
  * Un arbre que l'incendie de ce journal a tué, tel que l'appelant le connaît.
  *
- * **L'état d'AVANT le feu est passé par l'appelant, et c'est le point délicat
- * de tout le torchage.** L'instantané décrit l'arbre APRÈS l'incendie : un
+ * **L'état d'avant le feu est passé par l'appelant, et c'est le point délicat
+ * de tout le torchage.** L'instantané décrit l'arbre **après** l'incendie : un
  * tronc charbonné, sans feuilles. Une mise en scène qui partirait de là
  * n'aurait rien à animer — elle interpolerait de « sans feuilles » vers « sans
  * feuilles ».
  *
  * Ce que le rendu reconstruit n'est pourtant pas une invention : c'est ce que
- * le MOTEUR dit d'un arbre de cette espèce, de cette hauteur, à cette semaine
+ * le **moteur** dit d'un arbre de cette espèce, de cette hauteur, à cette semaine
  * de l'année — `partFoliaireOmbrageanteDans` et `senescenceDans` le calculent
  * depuis le contexte phénologique que l'instantané porte. Le rendu ne fabrique
  * donc que l'entre-deux, comme pour toutes les autres morts.
  *
  * **Et c'est un défaut que le §6.3 avait aussi, sans qu'on l'ait vu** : un
- * arbre que le journal déclare mort cette semaine est DÉJÀ une chandelle dans
+ * arbre que le journal déclare mort cette semaine est **déjà** une chandelle dans
  * l'instantané, donc les onze mises en scène de mort partaient elles aussi d'un
  * feuillage nul. Elles ne montraient rien. Le banc ne l'avait pas attrapé
  * parce qu'il choisit exprès des arbres vivants (`?mort=<cause>`).
@@ -711,7 +711,7 @@ export interface ArbreATorcher {
   hauteurM: number;
   baseHouppierM: number;
   rayonHouppierM: number;
-  /** ce que le moteur dit de cet arbre AVANT que le feu passe */
+  /** ce que le moteur dit de cet arbre **avant** que le feu passe */
   avantLeFeu: ArbreVivant;
 }
 
@@ -726,14 +726,14 @@ export interface TorchesIndexees {
 export const AUCUNE_TORCHE: TorchesIndexees = { arbres: new Map() };
 
 /**
- * Indexe les arbres que l'incendie torche, avec le RANG du front sur chacun.
+ * Indexe les arbres que l'incendie torche, avec le **rang** du front sur chacun.
  *
  * Une fois par ellipse et non une fois par image : c'est une jointure entre le
  * front (des milliers de cellules) et les arbres tués (des milliers aussi), et
  * la refaire soixante fois par seconde coûterait plus que tout le reste de la
  * pose.
  *
- * Un candidat dont la cellule n'a PAS brûlé est écarté sans bruit. Ça ne
+ * Un candidat dont la cellule n'a **pas** brûlé est écarté sans bruit. Ça ne
  * devrait pas arriver — le moteur ne tue par le feu que dans les cellules
  * brûlées — mais un instantané qui décrirait un arbre brûlé hors du front est
  * un instantané dont on ne peut rien tirer, et le placer quelque part serait
@@ -789,7 +789,7 @@ function teteALInstant(index: TorchesIndexees, ecouleMs: number): number | undef
  * torcher.
  *
  * Rend `undefined` quand il ne brûle pas dans cette ellipse — l'immense
- * majorité — et AUSSI avant que le front l'atteigne : jusque-là, il doit se
+ * majorité — et **aussi** avant que le front l'atteigne : jusque-là, il doit se
  * dessiner tel que l'appelant l'a préparé, c'est-à-dire vivant.
  *
  * **Après l'acte, le torchage reste accompli**, comme une mort : sans ça, un
@@ -838,7 +838,7 @@ export function flammesDesTorches(index: TorchesIndexees, ecouleMs: number): Par
 }
 
 /**
- * La TEMPÊTE d'un plan, prête à être jouée.
+ * La **tempête** d'un plan, prête à être jouée.
  *
  * Les victimes portent leur position, qui ne vient pas de l'événement : le
  * moteur donne `{ id, hauteurM }`, et le reste se lit dans l'instantané, où
@@ -929,7 +929,7 @@ export function poseDeLaRafale(
 }
 
 /**
- * De quel côté de l'ÉCRAN le vent pousse : +1 vers la droite, -1 vers la
+ * De quel côté de l'**écran** le vent pousse : +1 vers la droite, -1 vers la
  * gauche.
  *
  * Il faut le projeter, et non le lire sur `versRad` : la caméra tourne d'un

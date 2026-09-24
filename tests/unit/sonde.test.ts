@@ -1,12 +1,12 @@
 /**
- * LA SONDE DE STATION, séparée de son affichage (#123).
+ * **La sonde de station**, séparée de son affichage (#123).
  *
  * Elle vivait dans `src/ui/App.tsx` et tournait dans le fil d'interface : la
  * page gelait plusieurs minutes. Le calcul est maintenant un module pur, que
  * le worker du labo exécute — et qu'un essai peut donc éprouver, ce qui
  * n'était pas possible tant qu'il était pris dans un composant React.
  *
- * Ces épreuves ne rejugent pas l'écologie : elles défendent le CONTRAT dont
+ * Ces épreuves ne rejugent pas l'écologie : elles défendent le **contrat** dont
  * l'affichage dépend, et l'avancement sans lequel l'attente redeviendrait un
  * écran muet.
  */
