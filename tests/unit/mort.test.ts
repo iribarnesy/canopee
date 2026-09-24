@@ -78,7 +78,7 @@ describe("les causes de mort", () => {
     // BOUTIS est la quinzième (#199), et le garde-fou a joué pareil — un plant
     // arraché par un groin s'efface comme sous le labour, mais plus lentement,
     // parce qu'un sanglier fouille le temps d'un repas.
-    expect(CAUSES.length).toBe(15);
+    expect(CAUSES.length).toBe(16);
   });
 
   it("se distinguent DEUX À DEUX : aucune paire ne donne la même suite", () => {
@@ -266,7 +266,7 @@ describe("ce que chaque cause raconte", () => {
     // sens.
     const effacent = CAUSES.filter((c) => mortAccomplie(c, vif).opacite < 1);
     expect(new Set(effacent)).toEqual(
-      new Set(["labour", "boutis", "abroutissement", "ombre", "ecrasement", "chablis"]),
+      new Set(["labour", "boutis", "fauche", "abroutissement", "ombre", "ecrasement", "chablis"]),
     );
   });
 
