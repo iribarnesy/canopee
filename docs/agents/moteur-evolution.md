@@ -168,18 +168,35 @@ compilateur couvre les seconds et ignore les premiers.*
 L'en-tête déclare désormais la précision de chaque grille, `VERSION_FORMAT`
 passe à 2, et un bloc de version 1 est refusé plutôt que tronqué.
 
-### Ce que l'issue supposait et qui n'existe pas
+### Ce que l'issue supposait, et que le rendu a livré entre-temps
 
 Elle s'ouvre sur « le rembobinage garde des états de partie tous les six mois ».
-**Le rembobinage n'est pas écrit** — `docs/interface-visuelle.md` le dit,
-« cadré, pas fait », prévu au lot L8. La mesure de l'issue porte sur un
-prototype côté rendu. Ça ne l'invalide pas, mais ça change ce qu'on achète, et
-ça ouvre une troisième voie que le lot n'a pas prise : garder le moteur exact et
-ne compresser qu'**au moment de retenir** un état. Le jeu resterait exact, la
-fenêtre doublerait, et le prix serait qu'un retour en arrière rejouerait depuis
-un état approximatif — donc un passé qui diverge de celui qu'on a vu.
-Acceptable pour revoir, gênant pour rejouer. À trancher avec l'agent du rendu,
-tant que le rembobinage n'est pas écrit.
+Quand j'ai instruit le lot, `docs/interface-visuelle.md` disait « cadré, pas
+fait » et le code n'en portait rien : j'ai donc travaillé en supposant que le
+consommateur n'existait pas, et j'ai gardé en réserve une **troisième voie** —
+garder le moteur exact et ne compresser qu'au moment de retenir un état.
+
+**Le rembobinage a été livré pendant le lot**, et il tranche cette question par
+un fait plutôt que par une préférence : il **rejoue** depuis l'état retenu
+(`revoir(deSemaine)` — « revenir à cette semaine et rejouer jusqu'au présent »).
+Un état retenu approximatif ferait donc rejouer un passé **différent de celui
+que le joueur a vécu**, et sur une station chaotique — la lande varie d'un
+facteur douze d'une graine à l'autre — cette divergence ne serait pas cosmétique.
+La troisième voie est morte, et c'est très bien : ce lot est le seul qui rende
+de la mémoire sans toucher à ce que le joueur a vu.
+
+*La leçon n'est pas « j'ai eu de la chance ». C'est qu'**une hypothèse sur ce
+qui existe ailleurs dans le dépôt se vérifie au moment de conclure, pas au
+moment de commencer** — un lot qui dure une journée traverse les livraisons des
+autres agents. Ici `git log` sur `main` avant d'ouvrir la PR a suffi, et il a
+changé une conclusion.*
+
+Et `worker.ts` posait la question à l'envers de la mienne, noir sur blanc :
+« des tableaux typés diviseraient ça par deux — c'est au moteur de le décider,
+pas au rendu ». La réponse mesurée y est écrite : un tiers et non la moitié,
+parce que les plus grosses grilles sont celles qu'un bilan compte. `POINTS_GARDES`
+n'a pas bougé pour autant : c'est un réglage du rendu, il se décide avec la
+scène sous les yeux.
 
 ## Ce qu'un lot plus ancien a appris (la prairie reste une prairie, #184)
 
