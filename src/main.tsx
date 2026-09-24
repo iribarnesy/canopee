@@ -2,10 +2,11 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GameView } from "./game/GameView";
 import { LabView } from "./lab/LabView";
+import { PageModele } from "./modele/PageModele";
 import "./ui/theme.css";
 
 function Root() {
-  const [tab, setTab] = useState<"jeu" | "labo">("jeu");
+  const [tab, setTab] = useState<"jeu" | "modele" | "labo">("jeu");
   /**
    * Une partie tourne-t-elle ? `GameView` le dit, parce que lui seul le sait.
    *
@@ -50,17 +51,34 @@ function Root() {
           <button type="button" style={tabBtn(tab === "jeu")} onClick={() => setTab("jeu")}>
             Jouer
           </button>
+          {/*
+            LE MODÈLE (#224), entre le jeu et le labo, et pas au bout.
+
+            C'est la question qu'on se pose en arrivant — « qu'est-ce que ça
+            simule, au juste ? » — et elle vient avant celle du labo, qui est
+            « montre-moi les courbes ». Un visiteur qui n'a pas encore joué doit
+            pouvoir y répondre sans lancer une partie ni lire le code.
+          */}
+          <button type="button" style={tabBtn(tab === "modele")} onClick={() => setTab("modele")}>
+            Le modèle
+          </button>
           <button type="button" style={tabBtn(tab === "labo")} onClick={() => setTab("labo")}>
             Labo moteur
           </button>
         </header>
       )}
       {/*
-        Les deux vues gardent leur place dans l'arbre d'un rendu à l'autre : un
+        Les vues gardent leur place dans l'arbre d'un rendu à l'autre : un
         `GameView` qui changerait de position serait démonté, et avec lui le
         worker qui porte la partie en cours.
+
+        Changer d'onglet pendant une partie est de toute façon impossible —
+        l'en-tête disparaît dès qu'une partie tourne — mais la place reste
+        fixe pour que ça le demeure si l'en-tête revenait un jour.
       */}
-      {tab === "jeu" ? <GameView surPartie={setEnPartie} /> : <LabView />}
+      {tab === "jeu" && <GameView surPartie={setEnPartie} />}
+      {tab === "modele" && <PageModele />}
+      {tab === "labo" && <LabView />}
     </main>
   );
 }

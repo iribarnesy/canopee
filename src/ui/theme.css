@@ -77,14 +77,25 @@ select {
   max-width: 660px;
 }
 
-.depart h2 {
+/* La page du modèle (#224) n'est pas une colonne de lecture : elle porte un
+   référentiel de cent cinquante-trois lignes, une grille d'étapes et deux
+   rangées de filtres. À 660 px les étapes tombent sur deux colonnes et les
+   critères longs se coupent en quatre. Elle garde le reste du vocabulaire —
+   les cartes, les segments, les gloses. */
+.modele {
+  max-width: 980px;
+}
+
+.depart h2,
+.modele h2 {
   font-size: 1.55rem;
   font-weight: 600;
   margin: 0 0 2px;
   letter-spacing: 0.01em;
 }
 
-.depart .accroche {
+.depart .accroche,
+.modele .accroche {
   color: var(--encre-douce);
   margin: 0 0 18px;
 }
