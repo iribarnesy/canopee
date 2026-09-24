@@ -27,6 +27,13 @@ export type Grille = Float32Array;
  *     confort. Ce sont donc les stocks que la propriété compte qui restent
  *     longs : `mineralNG` et `litterNG` pour l'azote, `humusCG` pour les deux
  *     raisons à la fois.
+ *
+ * **La règle est mécanique, et c'est ce qui la rend tenable** : une grille
+ * qu'une propriété de conservation SOMME reste longue. Ce sont `waterMm`,
+ * `excessMm` et `nappeMm` pour l'eau, `mineralNG` et `litterNG` pour l'azote,
+ * `litterCG`, `humusCG` et `boisAuSolCG` pour le carbone, `basesEq` et
+ * `basesProfondEq` pour les bases. Le jour où une propriété nouvelle compte une
+ * grille de plus, c'est elle qui le dira — en rougissant.
  */
 export type GrilleLongue = Float64Array;
 

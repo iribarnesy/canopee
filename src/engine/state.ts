@@ -225,7 +225,7 @@ export interface SoilState {
   /** azote de la litière au sol, g/m² (libéré vers le minéral en se décomposant) */
   litterNG: GrilleLongue;
   /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
-  litterCG: Grille;
+  litterCG: GrilleLongue;
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: GrilleLongue;
   /**
@@ -235,7 +235,7 @@ export interface SoilState {
    * l'humus là où il est, protège la terre sous lui et abrite d'autres bêtes
    * que le bois sur pied (boisMort.ts).
    */
-  boisAuSolCG: Grille;
+  boisAuSolCG: GrilleLongue;
   /**
    * Part de ce bois couché qui BARRE l'eau, ∈ [0,1] : moyenne, pondérée par
    * les masses posées, de l'efficacité barrante de chaque tronc — sa longueur
@@ -667,9 +667,9 @@ export function createGameState(
       excessMm: new Float64Array(n * nH),
       mineralNG: new Float64Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
       litterNG: new Float64Array(n),
-      litterCG: new Float32Array(n),
+      litterCG: new Float64Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
-      boisAuSolCG: new Float32Array(n),
+      boisAuSolCG: new Float64Array(n),
       boisEnTraversPart: new Float32Array(n),
       tassement: new Float32Array(n),
       // Les bases sont INVERSÉES depuis le pH déclaré par la station, et non
