@@ -15,7 +15,7 @@
  * choix qui se paie toute la vie du peuplement — c'est exactement pourquoi
  * l'agroforesterie moderne aligne ses arbres.
  *
- * Un obstacle, c'est tout ce qui est DEBOUT — les chandelles comprises. Elles
+ * Un obstacle, c'est tout ce qui est **debout** — les chandelles comprises. Elles
  * ne font plus ni ombre ni feuilles, mais elles occupent le couloir.
  */
 
@@ -48,7 +48,7 @@ export function partMecanisable(
 ): number {
   const obstacles: { x: number; y: number }[] = [];
   for (const tree of trees) {
-    // Les CHANDELLES comptent. Un tronc mort resté debout n'ombrage plus, ne
+    // Les **chandelles** comptent. Un tronc mort resté debout n'ombrage plus, ne
     // transpire plus, ne pousse plus — mais un tracteur ne passe pas à
     // travers. C'est même le pire des obstacles : un fût sec et cassant, qu'on
     // ne veut pas frôler. On ne filtre donc pas sur `alive` ; tout ce que

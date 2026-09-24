@@ -9,7 +9,7 @@ import type * as React from "react";
 /**
  * La scène : toute la fenêtre, et rien qui dépasse. `fixed` et non `absolute`
  * parce que l'écran de jeu ne vit plus dans la colonne centrée du site — il
- * EST la page.
+ * **est** la page.
  */
 export const SCENE: React.CSSProperties = {
   position: "fixed",

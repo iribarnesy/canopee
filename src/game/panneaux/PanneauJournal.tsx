@@ -1,5 +1,5 @@
 /**
- * Le JOURNAL : ce que la parcelle a fait pendant qu'on regardait ailleurs.
+ * Le **journal** : ce que la parcelle a fait pendant qu'on regardait ailleurs.
  */
 
 import type { GameEvent } from "../protocol";

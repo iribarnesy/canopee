@@ -1,7 +1,7 @@
 /**
- * L'ACCORD DES NOMS D'ESSENCE (`src/game/mots.ts`).
+ * **L'accord des noms d'essence** (`src/game/mots.ts`).
  *
- * L'essai passe le CATALOGUE ENTIER, et c'est le point : la règle est une
+ * L'essai passe le **catalogue entier**, et c'est le point : la règle est une
  * poignée de motifs, elle ne prétend pas savoir le français. Ce qu'on garantit,
  * c'est qu'elle couvre les vingt-six noms du moteur — et que le jour où une
  * essence s'ajoute avec une forme qu'elle ne sait pas, l'essai le dit avant le

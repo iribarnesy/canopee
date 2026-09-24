@@ -3,28 +3,28 @@
  *
  * Le moteur ne connaissait que la concurrence — pour la lumière, l'eau, les
  * minéraux. Or certaines plantes ne se contentent pas de prendre : elles
- * ÉMETTENT. Le noyer libère de la juglone par ses racines et sa litière, et
+ * **émettent**. Le noyer libère de la juglone par ses racines et sa litière, et
  * cette molécule inhibe la germination et la croissance de nombreuses espèces
  * dans un rayon de **quinze à vingt mètres** autour de l'arbre.
  *
  * C'est la contrainte classique de l'agroforesterie au noyer, et la première
  * chose qu'on apprend en plantant un verger à côté. Pour ce jeu, elle rend le
- * choix des VOISINS décisif là où, ailleurs, seule la lumière compte.
+ * choix des **voisins** décisif là où, ailleurs, seule la lumière compte.
  *
- * ─── CE QUE DIT LA LITTÉRATURE, ET CE QU'ELLE NE DIT PAS ─────────────────────
- * Elle donne un rayon (15-20 m) et des LISTES : le pommier, le pin, le bouleau
+ * ─── **ce que dit la littérature**, **et ce qu'elle ne dit pas** ─────────────────────
+ * Elle donne un rayon (15-20 m) et des **listes** : le pommier, le pin, le bouleau
  * et le myrtillier souffrent ; la plupart des graminées, et beaucoup de vivaces
  * de sous-bois, ne bronchent pas. Elle ne donne pas de courbe dose-réponse
  * espèce par espèce, et on ne l'invente pas — les fiches où l'on ne sait pas
  * portent une sensibilité médiane, marquée comme telle.
  *
- * ─── LE SOL DÉCIDE AUTANT QUE L'ARBRE ────────────────────────────────────────
+ * ─── **le sol décide autant que l'arbre** ────────────────────────────────────────
  * « Dans un sol lourd et peu drainé, les concentrations peuvent rester élevées
  * près des racines pendant de longues périodes, tandis qu'un sol sableux
  * facilitera le lessivage et une moindre accumulation. »
  *
  * C'est ce qui permet d'en faire une règle générale plutôt qu'une constante :
- * l'intensité dépend de la TEXTURE du sol, que le moteur connaît déjà. Un noyer
+ * l'intensité dépend de la **texture** du sol, que le moteur connaît déjà. Un noyer
  * sur limon lourd stérilise autour de lui ; le même noyer sur sable est
  * beaucoup moins gênant.
  */
@@ -36,7 +36,7 @@ export const SENSIBILITE_MEDIANE = 0.5;
  * Part de juglone qui subsiste sur un sol entièrement sableux.
  *
  * Le lessivage n'est jamais total — la molécule est émise en continu tant que
- * l'arbre est là *(à calibrer : la littérature donne le SENS de l'effet du sol,
+ * l'arbre est là *(à calibrer : la littérature donne le **sens** de l'effet du sol,
  * pas son ampleur)*.
  */
 export const RETENTION_SUR_SABLE = 0.35;

@@ -1,9 +1,9 @@
 /**
- * LA PRÉMISSE DU REMBOBINAGE (#128, §6.8 №3) : un état retenu reste figé.
+ * **La prémisse du rembobinage** (#128, §6.8 №3) : un état retenu reste figé.
  *
  * Le rembobinage garde des points de reprise — des états de partie mis de côté
  * tous les tant de semaines — et revient à l'un d'eux pour rejouer la période.
- * **Tout repose sur une propriété du moteur** : `advanceWeek` rend un état NEUF
+ * **Tout repose sur une propriété du moteur** : `advanceWeek` rend un état **neuf**
  * et ne touche pas à celui qu'on lui donne. Si elle tombait, un point de
  * reprise vieillirait avec la partie et le rembobinage ramènerait au présent
  * sans que rien ne casse — le pire des défauts, celui qui ne se voit pas.
@@ -88,10 +88,10 @@ describe("un point de reprise", () => {
     expect(point.soil.waterMm).not.toBe(suite.soil.waterMm);
     expect(point.soil.ph).not.toBe(suite.soil.ph);
     expect(point.trees).not.toBe(suite.trees);
-    // **`rng`, lui, peut être le MÊME objet**, et l'essai l'a appris en
+    // **`rng`, lui, peut être le même objet**, et l'essai l'a appris en
     // échouant : une semaine qui ne tire rien le laisse tel quel. Ce n'est pas
-    // un danger, c'est la preuve inverse — le moteur REMPLACE au lieu de
+    // un danger, c'est la preuve inverse — le moteur **remplace** au lieu de
     // modifier, donc un tableau partagé est un tableau qui n'a pas changé.
-    // Ce qui se vérifie est donc le CONTENU, et c'est l'essai du dessus.
+    // Ce qui se vérifie est donc le **contenu**, et c'est l'essai du dessus.
   });
 });

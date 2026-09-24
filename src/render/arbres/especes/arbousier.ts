@@ -9,7 +9,7 @@
  * sur du bois lisse plus clair dessous — avec le bouleau, c'est le seul fût de
  * l'atlas qu'on identifie sans regarder les feuilles. La feuille, elle, est
  * **coriace** et dentée, vernissée, et elle tient l'hiver (`caduc: false`) :
- * l'arbousier porte fleurs blanches et arbouses rouges EN MÊME TEMPS, en
+ * l'arbousier porte fleurs blanches et arbouses rouges **en même temps**, en
  * novembre, ce qu'aucune autre espèce d'ici ne fait.
  */
 import type { FicheGraphique } from "../fiche";
@@ -37,7 +37,7 @@ export const ARBOUSIER: FicheGraphique = {
   // Brun-rouge : c'est à ça qu'on le reconnaît, feuilles ou pas.
   fruit: {
     // L'arbouse : rouge-orangé, granuleuse, de la taille d'une petite fraise.
-    // Elle mûrit en NOVEMBRE, en même temps que la floraison suivante — c'est
+    // Elle mûrit en **novembre**, en même temps que la floraison suivante — c'est
     // la signature de l'espèce, et le moteur la porte (`recolteWeek: 46`).
     forme: "charnu",
     couleur: { r: 208, g: 76, b: 44 },
@@ -46,7 +46,7 @@ export const ARBOUSIER: FicheGraphique = {
     // arbouses par petits groupes pendants : le groupe a sa dimension propre, et ce n'est pas
     // une fonction de la taille de la baie.
     grappeM: 0.035,
-    // Clochettes blanc crème EN MÊME TEMPS que les arbouses rouges de l'an
+    // Clochettes blanc crème **en même temps** que les arbouses rouges de l'an
     // passé : c'est la signature de l'espèce, et le moteur la porte — floraison
     // et récolte tombent au même moment de l'année.
     fleur: { r: 240, g: 236, b: 226 },

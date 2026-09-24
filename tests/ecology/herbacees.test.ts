@@ -5,7 +5,7 @@
  *  - des espèces qui ne démarrent pas le même jour ni au même degré-jour ;
  *  - des espèces qui ne tiennent pas les mêmes sols, si bien que la strate
  *    devient une bio-indication comme l'est déjà la strate arborée ;
- *  - une VERNALE qui vit de la fenêtre de printemps, sous un couvert caduc,
+ *  - une **vernale** qui vit de la fenêtre de printemps, sous un couvert caduc,
  *    et qui n'a pas cette fenêtre sous un couvert sempervirent.
  */
 
@@ -89,11 +89,11 @@ describe("le calendrier propre à chaque herbacée", () => {
   });
 
   it("la molinie démarre après tout le monde et se dénude complètement l'hiver", () => {
-    // La semaine où l'espèce se met VRAIMENT à gagner du terrain : calendrier
+    // La semaine où l'espèce se met **vraiment** à gagner du terrain : calendrier
     // et température ensemble. C'est la seule qui ait un sens ici — le dactyle
     // n'a pas de porte à lever, il attend simplement qu'il fasse assez chaud,
     // et une semaine douce de janvier lui suffit. Ce n'est donc pas l'ordre de
-    // DÉPART qui distingue la vernale des graminées (elle a une porte
+    // **départ** qui distingue la vernale des graminées (elle a une porte
     // photopériodique, elles non), c'est son plein déploiement au moment où la
     // molinie n'a pas encore bougé — et son retrait avant l'été, ci-dessus.
     const depart = (h: HerbaceeV0) => annee.findIndex((sem) => travail(h, sem) > 0);
@@ -272,17 +272,17 @@ describe("B8 — les strates basses se partagent la lumière et le sol", () => {
 });
 
 /**
- * E9 — LA FENÊTRE DE PRINTEMPS.
+ * E9 — **la fenêtre de printemps**.
  *
  * Ce qu'on mesure, et pourquoi c'est le bon signal : une vernale ne vit pas de
  * la lumière moyenne de l'année, elle vit de celle de mars. Un couvert qui se
  * ferme en mai lui laisse donc sa fenêtre entière tout en interdisant le sol
  * aux graminées ; un couvert sempervirent ne lui donne rien de plus qu'aux
  * autres. La strate y répond de deux façons qu'on relève toutes les deux :
- * la SAISONNALITÉ de la couverture (un sous-bois vert en avril, nu en juillet)
- * et la PART que la vernale prend dans l'emprise.
+ * la **saisonnalité** de la couverture (un sous-bois vert en avril, nu en juillet)
+ * et la **part** que la vernale prend dans l'emprise.
  *
- * On exige la DIRECTION, graine par graine, et pas un rapport — un rapport
+ * On exige la **direction**, graine par graine, et pas un rapport — un rapport
  * entre deux quantités composites n'est pas une propriété du monde
  * (docs/realisme.md). Les valeurs relevées à l'écriture, en année 40 sur une
  * parcelle de 20 m : hêtre 2,98 et 3,45 de rapport printemps/été, 36 et 40 %
@@ -317,7 +317,7 @@ describe("E9 — les plantes de sous-bois profitent de la fenêtre de printemps"
       const sempervirent = profil("pinus_sylvestris", graine);
       const decouvert = profil(null, graine);
 
-      // Le dispositif tient : c'est bien la SAISON de la lumière qui change,
+      // Le dispositif tient : c'est bien la **saison** de la lumière qui change,
       // pas seulement son niveau.
       expect(caduc.lumierePrintemps).toBeGreaterThan(2 * caduc.lumiereEte);
       expect(sempervirent.lumierePrintemps).toBeLessThan(1.2 * sempervirent.lumiereEte);

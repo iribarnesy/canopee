@@ -7,7 +7,7 @@
  * porte l'humus, l'azote, le phosphore assimilable et la vie du sol. Une
  * parcelle peut perdre sa fertilité sans perdre un gramme d'eau de plus.
  *
- * On garde la STRUCTURE de l'équation universelle de perte en terre (Wischmeier
+ * On garde la **structure** de l'équation universelle de perte en terre (Wischmeier
  * et Smith, puis RUSLE) — une érosivité, une pente, un couvert — mais ramenée
  * au pas de la semaine et à ce que le moteur sait déjà :
  *
@@ -20,10 +20,10 @@
  *
  * Deux choses distinguent l'érosion d'une simple perte de masse :
  *
- *  - ce qui part est PLUS RICHE que le sol moyen — la nappe d'eau emporte les
+ *  - ce qui part est **plus riche** que le sol moyen — la nappe d'eau emporte les
  *    particules fines et les matières organiques légères, pas les cailloux.
  *    C'est le taux d'enrichissement, de 2 à 5 dans la littérature ;
- *  - ce qui part ne disparaît pas forcément : il se DÉPOSE plus bas dès que
+ *  - ce qui part ne disparaît pas forcément : il se **dépose** plus bas dès que
  *    l'eau ralentit, et un sol couvert arrête d'autant mieux les particules.
  *    D'où le colluvium au bas des versants, et l'efficacité des bandes
  *    enherbées et des haies sur courbe de niveau, qui ne sont rien d'autre
@@ -57,7 +57,7 @@ export const PERTE_MAX_PAR_SEMAINE = 0.03;
 /**
  * Terre arrachée à une cellule en une semaine, kg/m².
  *
- * `ruissellementMm` est l'eau qui QUITTE la cellule en surface : sans
+ * `ruissellementMm` est l'eau qui **quitte** la cellule en surface : sans
  * ruissellement, pas d'érosion, quelle que soit la pente. C'est ce qui fait
  * qu'un versant raide sous couvert forestier n'érode pas.
  */

@@ -1,5 +1,5 @@
 /**
- * Les AVIS : ce que la partie a besoin de dire tout de suite — une pause
+ * Les **avis** : ce que la partie a besoin de dire tout de suite — une pause
  * automatique, un geste refusé, une récolte qui attend. Rien de permanent : ce
  * sont des choses qui arrivent, se lisent, et passent. Elles ne sont derrière
  * aucun bouton, justement parce qu'on ne pense pas à aller les chercher.

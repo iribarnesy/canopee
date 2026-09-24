@@ -344,7 +344,7 @@ const BAC_A_SABLE: Experience = {
 
     // Au plus six espèces nommées : au-delà, une légende devient un jeu de
     // devinettes. Le reste est replié dans « autres ».
-    // On nomme les six qui ont compté À UN MOMENT, pas seulement à la fin :
+    // On nomme les six qui ont compté **à un moment**, pas seulement à la fin :
     // sinon les pionnières, qui dominent puis s'effacent, disparaissent dans
     // « autres » et la succession devient illisible.
     const classees = ESPECES_V0.map((e) => ({
@@ -404,7 +404,7 @@ const MYCORHIZES: Experience = {
     const laboure = (s: GameState) =>
       planter(applyAction(s, { type: "labourer", week: 0, x: 15, y: 15, rayonM: 14 }).state);
     const reseau = (s: GameState) => moyenne(s.soil.mycorhizes.ecto) * 100;
-    // Hauteur DOMINANTE, pas médiane : au bout de quinze ans les semis naturels
+    // Hauteur **dominante**, pas médiane : au bout de quinze ans les semis naturels
     // arrivent en masse et écraseraient la médiane, ce qui se lisait comme un
     // effondrement de la plantation alors qu'aucun plant ne mourait.
     const hauteur = (s: GameState) =>

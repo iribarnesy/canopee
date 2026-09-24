@@ -2,11 +2,11 @@
  * Actions du joueur (docs/regles.md §9-10) et économie V0 : argent (€) et
  * temps de travail (heures, seuil hebdomadaire de facturation par UTH — voir
  * `depassementHoraire`). Les actions sont
- * DATÉES (semaine absolue) : le journal d'actions + la seed + la station
+ * **datées** (semaine absolue) : le journal d'actions + la seed + la station
  * forment la sauvegarde rejouable (docs/stack.md).
  * Une action refusée l'est déterministiquement, avec sa raison ; une action
  * partiellement exécutée traite ses éléments dans l'ordre et s'arrête au
- * découvert. LES HEURES N'ARRÊTENT PLUS RIEN (#133) : dépasser le plafond
+ * découvert. **Les heures n'arrêtent plus rien** (#133) : dépasser le plafond
  * hebdomadaire ne se refuse pas, ça se facture — le moteur rapporte le
  * dépassement et son prix, l'arbitrage revient au joueur.
  */
@@ -49,12 +49,12 @@ import {
 /**
  * Heures de travail par UTH et par semaine (docs/regles.md §10).
  *
- * CE N'EST PLUS UN MUR, C'EST UN SEUIL DE FACTURATION (#133). Quinze actions
+ * **Ce n'est plus un mur**, **c'est un seuil de facturation** (#133). Quinze actions
  * refusaient l'excédent : le joueur découvrait au clic qu'il ne pouvait pas,
  * sans savoir de combien il dépassait ni ce que ça coûterait de le faire quand
  * même. On le punissait d'avoir essayé.
  *
- * Les actions s'appliquent désormais, et les heures se comptent AU-DELÀ du
+ * Les actions s'appliquent désormais, et les heures se comptent **au-delà** du
  * plafond. Ce que le moteur en dit s'arrête là : `depassementHoraire` et
  * `coutDuDepassement` donnent de quoi présenter la facture, et c'est à
  * l'interface de la présenter et d'obtenir la décision. La contrainte reste
@@ -71,7 +71,7 @@ export const PLANT_HOURS = 1;
 /** espacement minimal imposé à la plantation, m */
 export const PLANT_MIN_SPACING_M = 1;
 /**
- * Hauteur adulte à partir de laquelle une essence encombre PLEINEMENT un potet,
+ * Hauteur adulte à partir de laquelle une essence encombre **pleinement** un potet,
  * m. En dessous, l'exclusion se réduit dans la même proportion (#154).
  *
  * Le seuil du mètre ne dit pas « il y a un obstacle » — il dit « on ne met pas
@@ -82,13 +82,13 @@ export const PLANT_MIN_SPACING_M = 1;
  *
  * Huit mètres est le haut de la strate arbustive dans l'atlas — pommier,
  * noisetier, aubépine, houx — et l'atlas est vide entre 8 et 20 m, si bien que
- * TOUT ce qui est un arbre garde exactement l'exclusion d'aujourd'hui. Le lot
+ * **tout** ce qui est un arbre garde exactement l'exclusion d'aujourd'hui. Le lot
  * ne déplace que la strate basse : ronce, ajonc, genêt à 2,5 m, callune à 0,6.
  */
 export const HAUTEUR_ARBRE_M = 8;
 /**
- * Diamètre au-dessus duquel une tige s'ABAT, et en dessous duquel elle se
- * DÉBROUSSAILLE, cm *(à calibrer)*. Entre les deux, le prix se mélange.
+ * Diamètre au-dessus duquel une tige s'**abat**, et en dessous duquel elle se
+ * **débroussaille**, cm *(à calibrer)*. Entre les deux, le prix se mélange.
  *
  * `fellingHours` facture 0,3 h d'approche et de façonnage plus 0,15 h par mètre
  * de haut : c'est juste pour un fût qu'on approche, tronçonne, ébranche et
@@ -153,7 +153,7 @@ export const PROTECTION_EUR = 8;
 /**
  * Temps de pose, h. Enfoncer un piquet assez profond pour qu'un chevreuil qui
  * frotte ne le couche pas, monter la gaine, l'attacher : une demi-heure par
- * arbre, sur le terrain. C'est CE chiffre qui fait de la protection une
+ * arbre, sur le terrain. C'est **ce** chiffre qui fait de la protection une
  * décision — protéger mille plants, c'est cinq cents heures.
  */
 export const PROTECTION_HEURES = 0.5;
@@ -162,7 +162,7 @@ export const RECEPAGE_HOURS = 0.8;
 /** Hauteur à laquelle la souche repart après recépage, m. */
 export const RECEPAGE_HAUTEUR_M = 0.5;
 /**
- * Décote d'un bois ACCIDENTÉ récupéré en coupe sanitaire — brûlé sur pied ou
+ * Décote d'un bois **accidenté** récupéré en coupe sanitaire — brûlé sur pied ou
  * couché par la tempête : il vaut encore quelque chose (chauffage,
  * trituration), mais l'œuvre est perdue *(à calibrer)*.
  *
@@ -171,7 +171,7 @@ export const RECEPAGE_HAUTEUR_M = 0.5;
  */
 export const DECOTE_CHABLIS = 0.4;
 /**
- * Décote d'une CHANDELLE sèche abattue pour le chauffage.
+ * Décote d'une **chandelle** sèche abattue pour le chauffage.
  *
  * Un fût mort sur pied est déjà ressuyé — c'est même le bois de chauffage le
  * plus commode, prêt à brûler sans deux ans de séchage. Mais il est fendillé,
@@ -179,7 +179,7 @@ export const DECOTE_CHABLIS = 0.4;
  * un volume utile moindre. Il vaut donc un peu moins que la même tige verte,
  * pas beaucoup moins *(à calibrer)*.
  *
- * Il reste évidemment le choix de NE PAS la couper : une chandelle est un
+ * Il reste évidemment le choix de **ne pas** la couper : une chandelle est un
  * arbre-habitat (biodiversite.ts), et c'est le seul « produit » du jeu qui
  * rapporte davantage debout que par terre.
  */
@@ -252,7 +252,7 @@ export const FAUCHE_COUVERTURE_RESIDUELLE = 0.1;
  */
 export const LIME_PH_STEP = 0.5;
 /**
- * C/N du bois raméal fragmenté épandu : du BOIS, pas des feuilles — libération
+ * C/N du bois raméal fragmenté épandu : du **bois**, pas des feuilles — libération
  * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
  */
 export const BRF_CN_RATIO = 40;
@@ -325,11 +325,11 @@ export interface EconomyState {
    * pas de réalisme, ça ajoute une contrainte hors sujet.
    *
    * Économie désactivée : plus de découvert refusé, plus de faillite. Le compte
-   * continue de tourner et reste AFFICHÉ — savoir ce qu'aurait coûté une
+   * continue de tourner et reste **affiché** — savoir ce qu'aurait coûté une
    * conduite est instructif même quand on ne la paie pas — mais il ne bloque
    * plus rien.
    *
-   * Ce qui NE dépend pas de cette option : le plafond d'heures de travail. Une
+   * Ce qui **ne** dépend pas de cette option : le plafond d'heures de travail. Une
    * journée fait le même nombre d'heures qu'on ait de l'argent ou non ; c'est
    * une contrainte physique, pas économique.
    */
@@ -371,11 +371,11 @@ export type GameAction =
       /**
        * Que fait-on du bois ?
        *  - `vendre` : il part en bois énergie (ou d'œuvre s'il en a la qualité) ;
-       *  - `epandre` : broyé et laissé SUR PLACE, sous l'ancienne couronne ;
+       *  - `epandre` : broyé et laissé **sur place**, sous l'ancienne couronne ;
        *  - `broyer` : broyé et chargé, il rejoint le tas de BRF, à épandre où
        *    l'on veut. C'est plus long — il faut remplir la remorque — mais
-       *    c'est ce qui permet de TRANSPORTER la fertilité.
-       *  - `laisser` : le fût reste au sol, COUCHÉ EN TRAVERS DE LA PENTE. Ça
+       *    c'est ce qui permet de **transporter** la fertilité.
+       *  - `laisser` : le fût reste au sol, **couché en travers de la pente**. Ça
        *    ne rapporte rien et ça demande moins de travail que d'aller le
        *    chercher, mais c'est le seul geste qui arme un versant contre le
        *    ruissellement (boisMort.ts) — et c'est précisément celui de la
@@ -425,7 +425,7 @@ export type GameAction =
   | {
       /**
        * Éclaircir une zone jusqu'à une densité cible, en désignant les tiges
-       * par un CRITÈRE plutôt qu'une par une (ch5-A « les coupes »).
+       * par un **critère** plutôt qu'une par une (ch5-A « les coupes »).
        *  - `parLeBas` : on retire les dominés — l'éclaircie classique, qui
        *    concentre la croissance sur les plus beaux sujets ;
        *  - `parLeHaut` : on prélève les gros — récolte du capital ;
@@ -457,7 +457,7 @@ export type GameAction =
     }
   | {
       /**
-       * Épandre le tas de broyat sur une zone choisie. C'est LE geste de
+       * Épandre le tas de broyat sur une zone choisie. C'est **le** geste de
        * transfert de fertilité : on coupe les fixateurs d'azote là où ils
        * poussent, et on porte leur azote au pied des arbres qu'on veut nourrir.
        */
@@ -471,14 +471,14 @@ export type GameAction =
     }
   | {
       /**
-       * FERTILISER une zone (#140). Deux formes qui ne font pas la même chose,
+       * **fertiliser** une zone (#140). Deux formes qui ne font pas la même chose,
        * et c'est tout l'intérêt du geste :
        *
-       *  - **minéral** : l'azote arrive dans le pool MINÉRAL, tout de suite
-       *    disponible — et tout de suite LESSIVABLE. Un apport posé avant
+       *  - **minéral** : l'azote arrive dans le pool **minéral**, tout de suite
+       *    disponible — et tout de suite **lessivable**. Un apport posé avant
        *    l'hiver part avec le drainage, et le moteur sait déjà le faire
        *    (`cellLeachedG`) ;
-       *  - **fumier** : il arrive dans la LITIÈRE, avec son C/N. Il se
+       *  - **fumier** : il arrive dans la **litière**, avec son C/N. Il se
        *    minéralise sur des années, il ne lessive pas tant qu'il n'est pas
        *    minéralisé, et il construit de l'humus au passage.
        *
@@ -570,8 +570,8 @@ export type GameAction =
     }
   | {
       /**
-       * SEMER une culture sur une zone (#136). Ce que le semis pose, c'est la
-       * PLACE LIBRE : un blé semé dans une friche n'occupe que ce que les
+       * **semer** une culture sur une zone (#136). Ce que le semis pose, c'est la
+       * **place libre** : un blé semé dans une friche n'occupe que ce que les
        * adventices lui laissent, et c'est ce qui fait de `labourer` et de
        * `faucher` des gestes préparatoires plutôt que des ornements. La règle
        * n'est écrite nulle part, elle tombe du partage de la place
@@ -586,7 +586,7 @@ export type GameAction =
     }
   | {
       /**
-       * MOISSONNER : le grain accumulé depuis le semis part en vente, et la
+       * **moissonner** : le grain accumulé depuis le semis part en vente, et la
        * culture libère la place. Hors de sa fenêtre de récolte, il n'y a rien
        * à prendre — un blé moissonné en mai n'a pas fini de remplir.
        */
@@ -598,7 +598,7 @@ export type GameAction =
     }
   | {
       /**
-       * Ramasser le bois mort COUCHÉ d'une zone pour le chauffage. Le geste
+       * Ramasser le bois mort **couché** d'une zone pour le chauffage. Le geste
        * n'est pas neutre : il enlève de l'humus en devenir, un abri et une
        * protection du sol, et il retire du gros combustible. C'est l'arbitrage
        * même du bois mort, et il n'a de bonne réponse qu'au cas par cas.
@@ -621,7 +621,7 @@ export interface ApplyResult {
   refusals: ActionRefusal[];
   /**
    * Ce que l'action a fait subir à quels arbres. Sans ça, un arbre coupé
-   * s'ESCAMOTE au lieu de tomber : le rendu voit un instantané avec un arbre
+   * s'**escamote** au lieu de tomber : le rendu voit un instantané avec un arbre
    * en moins et n'a aucun moyen de savoir lequel, ni pourquoi.
    */
   gestes?: GesteVisible[];
@@ -631,9 +631,9 @@ export interface ApplyResult {
  * Un geste de la semaine, et ce qu'il a touché.
  *
  * Deux mailles, parce qu'il y a deux sortes de gestes et qu'aucune des deux ne
- * s'exprime dans l'autre. Une coupe désigne des ARBRES : le rendu doit savoir
+ * s'exprime dans l'autre. Une coupe désigne des **arbres** : le rendu doit savoir
  * lesquels tombent, sinon ils s'escamotent. Un labour, un chaulage, un
- * ramassage de bois mort désignent des CELLULES : sans elles, le sol change de
+ * ramassage de bois mort désignent des **cellules** : sans elles, le sol change de
  * teinte d'une image à l'autre et le geste n'a pas eu lieu à l'écran.
  *
  * Les indices de cellule sont les mêmes que ceux des grilles de l'instantané —
@@ -646,28 +646,28 @@ export interface GesteSurArbres {
   /** les arbres réellement touchés, pas ceux qu'on avait demandés */
   ids: readonly number[];
   /**
-   * Ce que le geste a RETIRÉ de chaque arbre nommé dans `ids`, même ordre.
+   * Ce que le geste a **retiré** de chaque arbre nommé dans `ids`, même ordre.
    *
    * Sans ça, `ids` ne suffit pas à dessiner le geste : un arbre coupé quitte
    * `state.trees` dans le même tick, donc le rendu qui reçoit son identifiant
    * ne le trouve plus dans l'instantané et n'a plus ni sa position ni sa
-   * taille pour l'animer. D'où un enregistrement COMPLET plutôt qu'un delta —
+   * taille pour l'animer. D'où un enregistrement **complet** plutôt qu'un delta —
    * la même forme que `ChuteDeChandelle` et `MortDeLaSemaine` (tick.ts).
    *
-   * Présent pour les cinq gestes qui DÉMONTENT une tige (`couper`,
+   * Présent pour les cinq gestes qui **démontent** une tige (`couper`,
    * `eclaircir`, `elaguer`, `trogner`, `receper`). Absent partout ailleurs, et
    * pour la même raison à chaque fois : l'arbre est toujours là après le geste,
    * donc le rendu le retrouve dans l'instantané. Le gibier ne retire aucun
    * volume géométrique — ce qu'il mange est un stock (`pousseTendreM`), et sa
    * date voyage déjà par `brouteSemaine`. Un arbre planté, récolté ou démasclé
-   * garde sa géométrie : planter l'AJOUTE, récolter vide `fruitsKg`, démascler
+   * garde sa géométrie : planter l'**ajoute**, récolter vide `fruitsKg`, démascler
    * n'enlève que l'écorce.
    */
   retire?: readonly ArbreRetire[];
   /**
    * Ce que le geste a enlevé de chaque arbre nommé dans `ids`, kg, même ordre.
    *
-   * Renseignée pour les deux gestes qui prélèvent une MASSE sans toucher à la
+   * Renseignée pour les deux gestes qui prélèvent une **masse** sans toucher à la
    * forme de l'arbre : `recolter` (les fruits qui quittent la couronne) et
    * `leverEcorce` (les planches de liège empilées au pied). Le rendu en tire
    * combien en faire partir, là où les seuls `ids` ne diraient que « quelque
@@ -677,7 +677,7 @@ export interface GesteSurArbres {
 }
 
 /**
- * Un arbre tel qu'il était juste AVANT le geste, et tel qu'il en ressort :
+ * Un arbre tel qu'il était juste **avant** le geste, et tel qu'il en ressort :
  * de quoi interpoler l'animation sans rien deviner.
  *
  * Les deux hauteurs se lisent ensemble. `hauteurApresM` à 0 veut dire que la
@@ -693,7 +693,7 @@ export interface ArbreRetire {
   especeId: string;
   /**
    * Diamètre à 1,30 m, cm — inchangé par le geste, et c'est tout l'intérêt de
-   * le porter. Le stade de développement est une classe de DIAMÈTRE
+   * le porter. Le stade de développement est une classe de **diamètre**
    * (`stades.ts`) : sans ce champ, le rendu ne pourrait plus le calculer, car
    * les deux hauteurs ne suffisent plus à le déduire depuis #62.
    *
@@ -712,12 +712,12 @@ export interface ArbreRetire {
   baseHouppierApresM: number;
   /**
    * Direction dans laquelle le fût a été couché, radians (0 = +x, sens
-   * trigonométrique) — présent seulement quand une tige ENTIÈRE est tombée :
+   * trigonométrique) — présent seulement quand une tige **entière** est tombée :
    * `couper`, `eclaircir`, `receper`. Absent pour `elaguer` et `trogner`, où
    * la charpente est démontée sur place : le moteur n'y voit pas une
    * direction unique et n'en invente pas.
    *
-   * C'est la même orientation que celle du fût laissé au sol — EN TRAVERS de
+   * C'est la même orientation que celle du fût laissé au sol — **en travers** de
    * la pente (boisMort.ts) — parce que c'est la seule que le moteur sache
    * justifier : il ne modélise ni cloisonnement ni sens de débardage. Sur un
    * terrain plat elle ne veut rien dire, et ne sert à rien non plus.
@@ -735,13 +735,13 @@ export interface GesteSurZone {
  * Gestes qui désignent des arbres. Le gibier est l'auteur de `brouter` et
  * `frotter` ; tout le reste vient du joueur.
  *
- * LES TROIS DERNIERS ONT MANQUÉ LONGTEMPS (#100), et le rendu ne pouvait pas y
+ * **Les trois derniers ont manqué longtemps** (#100), et le rendu ne pouvait pas y
  * suppléer : les actions `planter`, `recolter` et `leverEcorce` s'appliquaient
  * sans rien rapporter, si bien que le journal de la semaine les taisait et
- * qu'aucune animation n'avait d'événement où s'accrocher. Un ÉTAT ne suffit
+ * qu'aucune animation n'avait d'événement où s'accrocher. Un **état** ne suffit
  * pas à les remplacer, et c'est la même faute qu'ailleurs : des `fruitsKg` qui
  * passent de présents à absents ne disent pas si on a récolté, si la chute a
- * eu lieu ou si la floraison a avorté ; `derniereLeveeSemaine` est une DURÉE,
+ * eu lieu ou si la floraison a avorté ; `derniereLeveeSemaine` est une **durée**,
  * donc un arbre démasclé il y a dix ans porte la même marque que celui qu'on
  * démascle à l'instant ; et un plant n'est pas une naissance — `naissances`
  * vient de la régénération, pas de l'action.
@@ -762,13 +762,13 @@ export type GesteTypeArbre =
 /**
  * Gestes qui désignent une zone de sol.
  *
- * LES DEUX DERNIERS PORTENT LE MÊME NOM QUE DES GESTES SUR ARBRES, et ce n'est
- * pas une collision : c'est un seul geste qui touche les DEUX mailles (#124). Le
+ * **Les deux derniers portent le même nom que des gestes sur arbres**, et ce n'est
+ * pas une collision : c'est un seul geste qui touche les **deux** mailles (#124). Le
  * §6.2 le décrit ainsi — « le plant apparaît, la terre est retournée autour »,
  * « le tronc change de couleur, planches de liège empilées » — une moitié qui
  * désigne des arbres, une moitié qui désigne du sol. Les deux voyagent donc sous
  * le même nom, et `estGesteSurArbres` / `estGesteSurZone` les séparent par leur
- * FORME, pas par leur type.
+ * **forme**, pas par leur type.
  */
 export type GesteTypeZone =
   | "chauler"
@@ -816,7 +816,7 @@ export function valeurSurPied(
         volume * partOeuvre * espece.bois.prixOeuvreEurM3 +
         volume * (1 - partOeuvre) * WOOD_PRICE_EUR_M3,
       qualite: "oeuvre",
-      // Cette part-là ne servait qu'au PRIX ; elle sort maintenant, parce que
+      // Cette part-là ne servait qu'au **prix** ; elle sort maintenant, parce que
       // le carbone doit suivre le même partage que la caisse (issue #72).
       partOeuvre,
     };
@@ -830,11 +830,11 @@ export function fellingHours(heightM: number): number {
 }
 
 /**
- * Part de tige qui relève de l'ABATTAGE plutôt que du débroussaillage, ∈ [0,1].
+ * Part de tige qui relève de l'**abattage** plutôt que du débroussaillage, ∈ [0,1].
  *
  * Une rampe sur le diamètre, parce qu'il n'y a pas de frontière nette entre un
  * brin qu'on couche à la débroussailleuse et une perche qu'on tronçonne. Le
- * zéro en dessous de `DIAMETRE_BROUSSE_CM` porte sur ce TERME, pas sur le prix :
+ * zéro en dessous de `DIAMETRE_BROUSSE_CM` porte sur ce **terme**, pas sur le prix :
  * une tige de brousse coûte son débroussaillage, jamais rien.
  */
 export function partAbattage(diametreCm: number): number {
@@ -846,7 +846,7 @@ export function partAbattage(diametreCm: number): number {
  * Temps pour faire tomber une tige, h — abattage, débroussaillage, ou entre les
  * deux selon son diamètre (#154).
  *
- * Le débroussaillage se facture à la SURFACE que la tige occupe au sol, au tarif
+ * Le débroussaillage se facture à la **surface** que la tige occupe au sol, au tarif
  * que le moteur emploie déjà pour un dégagement à la main
  * (`FAUCHE_HOURS_M2_MAIN`, 60 h/ha). Ce n'est pas un réglage : sur une friche de
  * dix ans, les houppiers de ronce couvrent 2 911 m² d'une parcelle de 2 500, ce
@@ -877,7 +877,7 @@ export function heuresPourAbattre(tree: {
  * plantation — et c'est le bon ordre de grandeur : 60 h/ha sur trois mètres
  * carrés font quelques dizaines de secondes.
  *
- * Ce qui punit vraiment une plantation dans un roncier n'est donc PAS ce
+ * Ce qui punit vraiment une plantation dans un roncier n'est donc **pas** ce
  * surcoût, c'est que le plant s'y fasse étouffer — et ça, le moteur le simule
  * déjà par la lumière. Facturer davantage ici reviendrait à compter deux fois,
  * et à écrire en dur une punition que la simulation produit toute seule.
@@ -916,7 +916,7 @@ export function degagementDuPotet(
 /**
  * Rayon d'exclusion qu'une tige impose à un potet, m (#154).
  *
- * Proportionnel à ce que son essence peut DEVENIR, plafonné à l'espacement
+ * Proportionnel à ce que son essence peut **devenir**, plafonné à l'espacement
  * d'aujourd'hui : tout ce qui est un arbre garde exactement l'ancienne règle,
  * seule la strate basse se relâche.
  */
@@ -926,7 +926,7 @@ export function rayonEncombrement(especeId: string): number {
 }
 
 /**
- * Les heures faites AU-DELÀ de ce que l'effectif couvre, cette semaine.
+ * Les heures faites **au-delà** de ce que l'effectif couvre, cette semaine.
  *
  * Zéro tant qu'on tient dans le plafond. Rien à retenir en plus : le compteur
  * `hoursUsedWeek` existait déjà et continue simplement de monter, ce qu'il
@@ -939,15 +939,15 @@ export function depassementHoraire(economy: { hoursUsedWeek: number; uth: number
 /**
  * Ce que coûteraient les heures supplémentaires, et combien de bras il faut.
  *
- * IL N'Y A PAS DE PLAFOND DUR À INVENTER, et c'est ce qui rend le mécanisme
+ * **Il n'y a pas de plafond dur à inventer**, et c'est ce qui rend le mécanisme
  * honnête : embaucher n'est pas faire travailler quelqu'un plus longtemps,
- * c'est ajouter une personne. Le dépassement se convertit donc en EMBAUCHES —
+ * c'est ajouter une personne. Le dépassement se convertit donc en **embauches** —
  * une par tranche de plafond entamée — et le prix suit les constantes qui
  * existent déjà (`SEASONAL_EUR_WEEK`), sans nouveau nombre à calibrer. Le
  * saisonnier est l'instrument juste ici : on paie une semaine de bras pour une
  * semaine d'heures déjà faites.
  *
- * LE PALIER NE SE LISSE PAS, et c'est une décision actée (docs/regles.md
+ * **Le palier ne se lisse pas**, et c'est une décision actée (docs/regles.md
  * §15-12) : dépasser d'une heure coûte une semaine de saisonnier entière, parce
  * qu'on n'embauche personne pour une heure. Si une partie montre que
  * l'arbitrage en devient absurde, c'est la partie qui le dira — pas un banc, et
@@ -976,7 +976,7 @@ function applyPlanter(
   let nextTreeId = state.nextTreeId;
   let planted = 0;
   let importedKgC = 0;
-  /** Les plants RÉELLEMENT posés — pas ceux qu'on avait demandés (#100). */
+  /** Les plants **réellement** posés — pas ceux qu'on avait demandés (#100). */
   const poses: number[] = [];
   /** Et les cellules où la terre a été ouverte pour les mettre (#124), sans doublon. */
   const travaillees = new Set<number>();
@@ -995,7 +995,7 @@ function applyPlanter(
       refusals.push(refuse(action.week, "planter", "position hors parcelle"));
       continue;
     }
-    // L'exclusion appartient au VOISIN, pas au geste : une ronce n'empêche pas
+    // L'exclusion appartient au **voisin**, pas au geste : une ronce n'empêche pas
     // un potet, un chêne oui, et entre les deux ça se dose (#154). Le message
     // nomme donc l'essence qui bloque — `prevoirAction` (#139) le porte jusque
     // sous le curseur, où « un arbre vivant » n'aidait personne.
@@ -1067,22 +1067,22 @@ function applyPlanter(
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
-    // DEUX GESTES POUR UNE ACTION (#124) : les plants posés, et le sol travaillé
+    // **Deux gestes pour une action** (#124) : les plants posés, et le sol travaillé
     // autour d'eux. #100 n'avait livré que le premier, en refusant d'inventer
     // une maille de terre retournée — et ce refus portait sur la bonne chose,
     // mais pas sur la bonne question. Le moteur ne retourne effectivement rien
     // en plantant : aucun état de sol ne bouge, ni `boutis`, ni `laboure`.
     //
-    // Ce qu'il sait pourtant, et qui n'est pas une invention, c'est OÙ le geste
+    // Ce qu'il sait pourtant, et qui n'est pas une invention, c'est **où** le geste
     // a eu lieu. Un geste de zone dit « ces cellules ont été touchées », pas
     // « leur sol a changé » — c'est ce que `ramasserBoisMort` dit déjà sans
     // rien changer au sol non plus. Le rendu peut donc dessiner sa terre remuée
     // sans que personne ait deviné de rayon : il n'y en a pas à deviner, la
-    // cellule du plant EST l'emprise, et un mètre carré est l'ordre de grandeur
+    // cellule du plant **est** l'emprise, et un mètre carré est l'ordre de grandeur
     // d'un potet.
     //
     // Ce qui reste hors de ce lot, et qui serait un mécanisme : que ce travail
-    // du sol AIT DES SUITES — lit de germination, tassement, minéralisation.
+    // du sol **ait des suites** — lit de germination, tassement, minéralisation.
     gestes:
       poses.length > 0
         ? [
@@ -1115,7 +1115,7 @@ function applyCouper(
 
   for (const id of action.treeIds) {
     // Tout ce qui est debout se coupe : la tige vive, le brûlé de l'année en
-    // coupe sanitaire, et la CHANDELLE sèche en bois de chauffage. Il n'y a
+    // coupe sanitaire, et la **chandelle** sèche en bois de chauffage. Il n'y a
     // rien d'autre dans `state.trees` — un arbre n'en sort que le jour où il
     // s'abat (tick.ts).
     const idx = trees.findIndex((t) => t.id === id);
@@ -1127,11 +1127,11 @@ function applyCouper(
     if (!tree) continue;
     const espece = getEspece(tree.especeId);
     /**
-     * Le bois de cet arbre est-il DÉJÀ dans le pool de bois mort ?
+     * Le bois de cet arbre est-il **déjà** dans le pool de bois mort ?
      *
      * `mortSemaine` est posée au tick qui suit la mort, en même temps que le
      * carbone aérien est versé au bois mort — une fois pour toutes. Passé ce
-     * moment, emporter le fût n'ajoute rien au bilan : ça le DÉPLACE. Sans
+     * moment, emporter le fût n'ajoute rien au bilan : ça le **déplace**. Sans
      * cette distinction on fabriquerait du carbone en abattant un mort, ce
      * qu'un test de conservation refuse à juste titre.
      *
@@ -1140,7 +1140,7 @@ function applyCouper(
      */
     const dejaEnBoisMort = tree.mortSemaine !== undefined;
     if (dejaEnBoisMort && (action.devenir === "epandre" || action.devenir === "broyer")) {
-      // Le BRF est du bois raméal FRAIS : c'est le cambium vivant et l'azote
+      // Le BRF est du bois raméal **frais** : c'est le cambium vivant et l'azote
       // du rameau de l'année qui font son intérêt agronomique. Broyer un fût
       // sec ne donne pas du BRF, ça donne de la sciure — beaucoup de carbone,
       // aucun azote, et une faim d'azote au sol pour des années.
@@ -1172,20 +1172,20 @@ function applyCouper(
      * Carbone qui quitte réellement la parcelle avec le fût.
      *
      * Pour une tige vive, c'est tout son aérien. Pour une chandelle, c'est ce
-     * qu'il en RESTE dans le pool de bois mort — lequel se décompose semaine
+     * qu'il en **reste** dans le pool de bois mort — lequel se décompose semaine
      * après semaine (tick.ts). Une chandelle de dix ans a déjà rendu au sol et
      * à l'atmosphère une bonne part d'elle-même ; en emporter davantage
      * viderait le pool sous zéro et fabriquerait du carbone.
      *
-     * C'est l'approximation qu'impose un pool AGRÉGÉ : le moteur ne sait pas
+     * C'est l'approximation qu'impose un pool **agrégé** : le moteur ne sait pas
      * quelle part du bois mort appartient à quelle chandelle. Un pool séparé
-     * pour le bois mort DEBOUT serait plus juste — il se décompose plus
+     * pour le bois mort **debout** serait plus juste — il se décompose plus
      * lentement, sec et hors sol — et c'est le jour où il existera qu'on
      * pourra dater ce que vaut une chandelle *(limite assumée)*.
      */
     const emporteKgC = dejaEnBoisMort ? Math.min(aerienKgC, Math.max(0, deadWoodKgC)) : aerienKgC;
     if (dejaEnBoisMort) {
-      // On RETIRE du bois mort ce qu'on emporte : la souche et les racines,
+      // On **retire** du bois mort ce qu'on emporte : la souche et les racines,
       // elles, y étaient déjà et y restent.
       deadWoodKgC -= emporteKgC;
     } else {
@@ -1193,14 +1193,14 @@ function applyCouper(
       deadWoodKgC += treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) - aerienKgC;
     }
     /**
-     * Le fût est couché EN TRAVERS de la pente. Pour le bois qu'on laisse sur
+     * Le fût est couché **en travers** de la pente. Pour le bois qu'on laisse sur
      * place c'est le geste de la restauration post-incendie, et le moteur
      * suppose que le bûcheron qui choisit de laisser le bois le pose
      * correctement — on ne simule pas la maladresse. Sur un terrain plat
      * l'orientation ne veut rien dire, et elle ne sert à rien non plus : sans
      * pente, pas d'eau qui court.
      *
-     * On la calcule AVANT de savoir ce que devient le fût, parce que l'arbre
+     * On la calcule **avant** de savoir ce que devient le fût, parce que l'arbre
      * tombe dans tous les cas — même celui qu'on débarde a été mis au sol
      * avant d'être emporté, et le rendu doit pouvoir le montrer. Le moteur ne
      * modélise ni cloisonnement ni sens de débardage : il donne la seule
@@ -1249,7 +1249,7 @@ function applyCouper(
         : 1;
       volumeVenduAnneeM3 += volumeVendu;
       if (dejaEnBoisMort) {
-        // Une chandelle ne fait JAMAIS d'œuvre, même si elle a été élaguée de
+        // Une chandelle ne fait **jamais** d'œuvre, même si elle a été élaguée de
         // son vivant : le bois est fendillé, l'aubier parti, les insectes
         // passés. Elle se vend au volume, au prix du chauffage, décotée — et
         // un fût noirci par le feu vaut encore moins qu'un fût gris.
@@ -1259,11 +1259,11 @@ function applyCouper(
         treasuryEur += vente.eur * (brule ? DECOTE_CHABLIS : 1) * marche;
       }
       if (vente.qualite === "oeuvre" && !brule && !dejaEnBoisMort) {
-        // Le carbone se partage comme la CAISSE, et c'est nouveau : seule la
+        // Le carbone se partage comme la **caisse**, et c'est nouveau : seule la
         // bille élaguée part en scierie et reste piégée dans le produit ; le
         // houppier part en bûches et brûle chez le client. Avant l'issue #72,
         // le prix comptait ce partage et le carbone non — un arbre classé
-        // œuvre envoyait TOUT son carbone au stock de produits, houppier
+        // œuvre envoyait **tout** son carbone au stock de produits, houppier
         // compris, alors même que la vente le facturait en chauffage.
         const enScierie = emporteKgC * vente.partOeuvre;
         oeuvreCumKgC += enScierie;
@@ -1286,10 +1286,10 @@ function applyCouper(
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
       // retournent en litière sous l'ancienne couronne (docs/regles.md §4.2).
-      // Pour un fixateur, c'est de l'azote NOUVEAU — la mécanique fondatrice
+      // Pour un fixateur, c'est de l'azote **nouveau** — la mécanique fondatrice
       // « couper les légumineuses et les épandre » (§16).
       const depositG = 0.5 * tree.uptakeYearG + treeNitrogenNeedGWeek(espece, tree.heightM) * 52;
-      // On ÉPAND le broyat sur la zone (pas en tas au pied) : rayon large,
+      // On **épand** le broyat sur la zone (pas en tas au pied) : rayon large,
       // pour que les racines des voisins y accèdent.
       const crownR = Math.max(
         2.5,
@@ -1360,7 +1360,7 @@ function applyCouper(
       },
     },
     refusals,
-    // Les tiges RÉELLEMENT tombées, pas celles qu'on a demandées : le plafond
+    // Les tiges **réellement** tombées, pas celles qu'on a demandées : le plafond
     // horaire arrête souvent le chantier en cours de route.
     gestes: coupes.length > 0 ? [{ type: "couper", ids: coupes, retire }] : [],
   };
@@ -1476,7 +1476,7 @@ function applyChauler(
   if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
     return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
   }
-  // Le chaulage n'écrit plus le pH : il apporte des BASES, et le pH suit au
+  // Le chaulage n'écrit plus le pH : il apporte des **bases**, et le pH suit au
   // tick suivant (bases.ts). Ce n'est pas un détour — c'est ce qui fait qu'un
   // podzol sableux, dont le complexe est petit, monte beaucoup pour la même
   // chaux et le reperd vite, là où un limon argileux encaisse et retient.
@@ -1593,7 +1593,7 @@ function applyFertiliser(
 
   const soil = { ...state.soil };
   if (mineral) {
-    // **L'AZOTE MINÉRAL ARRIVE DISPONIBLE, ET DONC LESSIVABLE.** Il entre dans
+    // **l'azote minéral arrive disponible, et donc lessivable.** Il entre dans
     // le pool que les plantes prélèvent et que le drainage emporte : un apport
     // posé avant l'hiver part avec l'eau, et le moteur n'a rien eu à apprendre
     // pour ça (`nitrogen.ts:cellLeachedG`). C'est là tout le contraste avec le
@@ -1602,7 +1602,7 @@ function applyFertiliser(
     for (const i of cells) mineralNG[i] = (mineralNG[i] ?? 0) + azoteParCelluleG;
     soil.mineralNG = mineralNG;
   } else {
-    // Le fumier entre dans la LITIÈRE avec son C/N : il se minéralise sur des
+    // Le fumier entre dans la **litière** avec son C/N : il se minéralise sur des
     // années, il ne lessive pas tant qu'il ne l'est pas, et il construit de
     // l'humus au passage. Même patron que `epandreBrf`, avec le C/N d'un
     // fumier au lieu de celui du bois — et la vitesse de décomposition suit,
@@ -1675,7 +1675,7 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
   const cultureGrain = state.soil.cultureGrain.slice();
   const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
   const cellules = cellulesDuDisque(state.station.coteM, action.x, action.y, action.rayonM);
-  // **CE QUE LE SEMIS POSE, C'EST LA PLACE LIBRE.** Un blé semé dans une
+  // **ce que le semis pose, c'est la place libre.** Un blé semé dans une
   // friche n'occupe que ce que les adventices lui laissent, et la règle
   // « préparer le lit de semence avant de semer » n'est écrite nulle part :
   // elle tombe du partage de la place (`herbacees.ts`) et du fait que
@@ -1689,7 +1689,7 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
     }
     placeTotale += Math.max(0, 1 - occupee);
   }
-  // Et semer dans un tapis fermé ne doit pas RÉUSSIR EN SILENCE. Mesuré avant
+  // Et semer dans un tapis fermé ne doit pas **réussir en silence**. Mesuré avant
   // cette garde : le semis passait, l'emprise valait zéro, et la moisson
   // annonçait « rien à moissonner » neuf mois plus tard sans que rien n'ait
   // dit pourquoi. Le joueur doit l'apprendre au semis, pas à la récolte.
@@ -1744,7 +1744,7 @@ function applyMoissonner(
   const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
   // Ce qu'on récolte, culture par culture, en part de rendement maximal cumulée
   // sur les cellules. Diviser par le nombre de cellules donnerait la moyenne ;
-  // on veut la SOMME, parce que c'est elle qui devient des tonnes.
+  // on veut la **somme**, parce que c'est elle qui devient des tonnes.
   let recolteEur = 0;
   let cellulesRecoltees = 0;
   const m2ParCellule = 1;
@@ -2093,7 +2093,7 @@ function applyChasser(state: GameState): ApplyResult {
 }
 
 /**
- * Clôturer. Le coût suit le PÉRIMÈTRE, pas la surface ni le nombre de plants :
+ * Clôturer. Le coût suit le **périmètre**, pas la surface ni le nombre de plants :
  * c'est toute la différence avec les manchons. Clôturer un are est ruineux,
  * clôturer un hectare est la solution la moins chère dès qu'on y plante dense.
  */
@@ -2166,7 +2166,7 @@ function applyLabourer(
   const cote = state.station.coteM;
   const r2 = action.rayonM * action.rayonM;
   const labourees: number[] = [];
-  // L'engin tasse là où il PASSE, et seulement là. `part` dit quelle fraction
+  // L'engin tasse là où il **passe**, et seulement là. `part` dit quelle fraction
   // de la zone lui est accessible selon la façon dont c'est planté
   // (mecanisation.ts) : une parcelle plantée serré ne se tasse pas, parce que
   // le tracteur n'y entre pas. La densité d'arbres protège donc la structure —
@@ -2336,7 +2336,7 @@ function applyReceper(
       directionRad: aval + Math.PI / 2,
     });
     // On récolte la tige et la souche repart : c'est tout l'intérêt du taillis.
-    // Ce qui part, c'est la tige MOINS la souche laissée sur place — la
+    // Ce qui part, c'est la tige **moins** la souche laissée sur place — la
     // compter entière vendait un demi-mètre de bois resté debout, et créait
     // le carbone correspondant.
     treasuryEur +=
@@ -2474,7 +2474,7 @@ function applyLeverEcorce(
     treasuryEur += kg * ecorce.prixEurKg;
     demascles.push(id);
     masses.push(kg);
-    // Les planches s'empilent AU PIED : la cellule de l'arbre est l'endroit,
+    // Les planches s'empilent **au pied** : la cellule de l'arbre est l'endroit,
     // et il n'y a rien à deviner de plus (#124).
     piedsDesArbres.add(Math.floor(tree.y) * state.station.coteM + Math.floor(tree.x));
     trees[idx] = { ...tree, derniereLeveeSemaine: action.week };
@@ -2487,7 +2487,7 @@ function applyLeverEcorce(
     },
     refusals,
     // Deux mailles ici aussi : les troncs mis à vif, et le pied où le liège
-    // s'empile (#124). `masseKg` dit COMBIEN de planches, les cellules disent OÙ.
+    // s'empile (#124). `masseKg` dit **combien** de planches, les cellules disent **où**.
     gestes:
       demascles.length > 0
         ? [
@@ -2603,7 +2603,7 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
         treeIds,
         devenir: action.devenir,
       });
-      // Une éclaircie EST une coupe, mais le rendu la raconte autrement : une
+      // Une éclaircie **est** une coupe, mais le rendu la raconte autrement : une
       // dizaine de dominés qui s'effacent, pas un gros arbre qui tombe.
       return {
         ...coupe,
@@ -2634,10 +2634,10 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
 }
 
 /**
- * Ce qu'`applyAction` REFUSERAIT pour ce geste, sans rien changer à l'état.
+ * Ce qu'`applyAction` **refuserait** pour ce geste, sans rien changer à l'état.
  *
  * Le jeu en a besoin pour dire « ce clic sera refusé, et voici pourquoi »
- * AVANT le clic (#139, #120) : sous le curseur, le viseur passe au rouge avec
+ * **avant** le clic (#139, #120) : sous le curseur, le viseur passe au rouge avec
  * la raison écrite là où l'œil se trouve déjà.
  *
  * Deux chemins étaient possibles, et le second est le bon pour une raison
@@ -2650,18 +2650,18 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
  * pire que pas de préavis : il annonce un refus qui n'arrive pas, ou laisse
  * passer un clic qui sera refusé.
  *
- * Le second — appeler `applyAction` et ne garder que les refus — ne peut PAS
+ * Le second — appeler `applyAction` et ne garder que les refus — ne peut **pas**
  * se désynchroniser, puisque c'est le geste réel qui répond. Il pose deux
  * questions, et les deux ont été mesurées plutôt que pariées :
  *
  * 1. Est-ce assez bon marché pour le survol ? Mesuré sur une parcelle pleine
- *    de 100 m portant deux cents arbres, et sur le chemin de TRAVAIL — celui
+ *    de 100 m portant deux cents arbres, et sur le chemin de **travail** — celui
  *    qu'on paie quand la cible est légale, donc le cher : 1,8 ms au pire, pour
  *    un chaulage de 40 m de rayon qui couvre la moitié de la parcelle ; moins
  *    d'une milliseconde pour les gestes ordinaires. Le survol ne redemande que
  *    lorsque la cellule visée change : il peut le payer.
  *
- *    Pour comparaison, sur le MÊME état, copier l'état avant de l'appeler — la
+ *    Pour comparaison, sur le **même** état, copier l'état avant de l'appeler — la
  *    parade défensive évidente — coûte 53 ms, trente fois plus que le pire cas
  *    qu'elle protégerait. C'est cette mesure qui l'a écartée, pas un avis :
  *    l'idée prudente était la seule des deux qui rendait le préavis
@@ -2669,14 +2669,14 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
  *
  * 2. `applyAction` laisse-t-elle vraiment son entrée intacte ? Aujourd'hui
  *    oui, et ce n'est plus une propriété du code du jour : `prevoir.test.ts`
- *    la vérifie pour CHAQUE type d'action, sur son chemin de refus ET sur son
+ *    la vérifie pour **chaque** type d'action, sur son chemin de refus **et** sur son
  *    chemin de travail, par comparaison profonde de l'état avant et après. La
  *    table des cas y est indexée par `GameAction["type"]`, donc une action
  *    neuve qu'on oublierait d'y inscrire ne compile pas.
  *
  * Ce que l'issue reprochait à ce chemin — « le jeu n'a pas le droit de parier
  * sur du code dont il n'est pas responsable » — reste vrai, et c'est pour ça
- * que la fonction vit ICI. Le pari n'est plus celui du jeu : il est celui du
+ * que la fonction vit **ici**. Le pari n'est plus celui du jeu : il est celui du
  * moteur sur son propre code, et la suite le tient.
  */
 export function prevoirAction(state: GameState, action: GameAction): ActionRefusal[] {

@@ -83,7 +83,7 @@ export function EditeurTerrain({
   const dernierRef = useRef<{ x: number; y: number } | null>(null);
   const altitudes = useMemo(() => valeur ?? terrainInitial(coteM), [valeur, coteM]);
 
-  // Deux lectures du même terrain : les creux qui RETIENNENT l'eau, et tous
+  // Deux lectures du même terrain : les creux qui **retiennent** l'eau, et tous
   // les creux. La différence — une cuvette qui s'assèche — est précisément ce
   // qu'il faut montrer, sinon creuser semble marcher une fois sur deux sans
   // qu'on sache pourquoi.

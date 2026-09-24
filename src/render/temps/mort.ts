@@ -1,49 +1,49 @@
 /**
- * Les MORTS, une mise en scène par cause (docs/interface-visuelle.md §6.3).
+ * Les **morts**, une mise en scène par cause (docs/interface-visuelle.md §6.3).
  *
- * **Ce module passe par la CUISSON et non par la pose, et c'est le point qui
+ * **Ce module passe par la cuisson et non par la pose, et c'est le point qui
  * décide de tout le reste.** Une chute est un mouvement : un panneau qu'on
  * incline suffit, et l'atlas ne bouge pas. Une mort de sécheresse n'est pas un
  * mouvement — c'est un feuillage qui jaunit, roussit, puis tombe. Rien de ça ne
  * s'obtient en déformant une image déjà cuite ; il faut la recuire. Le §5.11 le
- * dit dans ces termes : « les autres actes du plan […] passent par la CUISSON
+ * dit dans ces termes : « les autres actes du plan […] passent par la **cuisson**
  * de la vignette et non par la pose : ce sont des changements de couleur et de
  * feuillage, que la classe porte déjà. »
  *
  * **Ce qui rend ça possible sans rien inventer**, et c'est la raison pour
  * laquelle l'exercice tient debout : les quatre grandeurs qu'une mort fait
  * bouger — `partFoliaire`, `senescence`, `vigueur`, `dommageHydraulique` — sont
- * des champs du MOTEUR, que la classe de vignette quantifie déjà en paliers.
+ * des champs du **moteur**, que la classe de vignette quantifie déjà en paliers.
  * Une mort part donc d'un état que le moteur donne (l'arbre vivant de
  * l'instantané d'avant) et arrive à un état que le moteur donne aussi (la
- * chandelle de l'instantané d'après). Ce module ne fabrique que l'ENTRE-DEUX,
+ * chandelle de l'instantané d'après). Ce module ne fabrique que l'**entre-deux**,
  * ce qui est la définition même d'une animation d'ellipse.
  *
  * **Ce que ça coûte, et j'avais écrit ici le contraire.** J'avais raisonné
  * « la classe est quantifiée, donc une mort ne traverse que quelques paliers
- * déjà cuits ». Faux : la clé de classe est un PRODUIT, et chaque tuple de
+ * déjà cuits ». Faux : la clé de classe est un **produit**, et chaque tuple de
  * paliers se croise avec l'espèce, le palier de hauteur et la variante.
  *
  * D'où la quantification de l'avancement lui-même (`PALIERS_DE_MORT`), qui est
  * le remède que tout le reste du rendu emploie : une grandeur continue ne doit
  * jamais entrer telle quelle dans une clé de cache. Le coût devient alors
- * BORNÉ et prévisible, ce qui est le point — compté exactement sur un banc de
+ * **borné** et prévisible, ce qui est le point — compté exactement sur un banc de
  * 1 868 arbres vivants (`npm run apercu:classes`) :
  *
  * 659 classes au repos ; la mort la plus chère (sécheresse, vieillesse) en
  * ajoute quatre fois autant, la moins chère aucune. Le facteur vaut exactement
- * le nombre d'états de CLASSE que la cause traverse — d'où l'intérêt de ne
+ * le nombre d'états de **classe** que la cause traverse — d'où l'intérêt de ne
  * faire bouger que les grandeurs que le §6.3 nomme, et pas une de plus.
  *
  * Deux choses que ce compte apprend, et qu'aucun raisonnement ne donnait :
  *
- *  - **les trois morts qui font DISPARAÎTRE l'arbre coûtent zéro** — labour,
+ *  - **les trois morts qui font disparaître l'arbre coûtent zéro** — labour,
  *    abroutissement, écrasement ne touchent que la pose. La séparation des deux
  *    canaux n'est donc pas qu'une question de principe, elle se paie ou se
  *    gagne ;
  *  - **le coût ne dépend pas du nombre de morts.** Trente-quatre bouleaux qui
  *    meurent ensemble au même palier partagent leurs vignettes. Le cas
- *    pathologique n'est pas « beaucoup de morts » mais « beaucoup d'ESPÈCES qui
+ *    pathologique n'est pas « beaucoup de morts » mais « beaucoup d'**espèces** qui
  *    meurent », et il est atteint par un banc qui tue toute la parcelle — pas
  *    par une semaine de jeu, qui en tue deux ou trois.
  *
@@ -53,7 +53,7 @@
  * variantes du même code, ce qui n'a aucun sens — la somme d'un échantillon
  * n'est pas un total. Le compte exact se fait hors navigateur, sur les clés.
  *
- * Ce qui reste continu, c'est ce qui va à la POSE : l'opacité et la hauteur ne
+ * Ce qui reste continu, c'est ce qui va à la **pose** : l'opacité et la hauteur ne
  * touchent aucune clé et gagnent à être lisses.
  *
  * **La trajectoire par cause vient du §6.3 et pas de moi.** Le cahier décrit
@@ -70,7 +70,7 @@ import type { CauseMort } from "../../engine/trees";
  * L'état d'un arbre en train de mourir, à un instant de son acte.
  *
  * Les quatre premiers champs remplacent ceux de l'arbre avant qu'on en calcule
- * la classe : ils vont donc à la CUISSON. Les deux derniers vont à la POSE, et
+ * la classe : ils vont donc à la **cuisson**. Les deux derniers vont à la **pose**, et
  * ne servent qu'aux morts qui font disparaître l'arbre.
  */
 export interface EtatMourant {
@@ -81,7 +81,7 @@ export interface EtatMourant {
   /** vrai dès que l'arbre doit se dessiner en chandelle */
   chandelle: boolean;
   /**
-   * Vrai dès que l'écorce doit se dessiner CHARBONNÉE ; absent = laisser
+   * Vrai dès que l'écorce doit se dessiner **charbonnée** ; absent = laisser
    * l'instantané décider.
    *
    * **Aucune des onze causes du §6.3 ne s'en sert, et c'est pour le torchage du
@@ -91,7 +91,7 @@ export interface EtatMourant {
    * qu'on voit d'un arbre en train d'être torché.
    *
    * Optionnel plutôt que faux par défaut : une mort de sécheresse n'a rien à
-   * dire sur l'écorce, et si elle rendait `false`, elle EFFACERAIT la trace d'un
+   * dire sur l'écorce, et si elle rendait `false`, elle **effacerait** la trace d'un
    * incendie passé sur un arbre que la sécheresse achève cinq ans plus tard.
    */
   brulee?: boolean;
@@ -114,7 +114,7 @@ export interface ArbreVivant {
  *
  * Trois nombres et deux drapeaux suffisent aux onze causes, et c'est ce qui
  * m'a convaincu que le découpage était le bon. `jaunit` et `defeuille` sont des
- * FENÊTRES dans l'acte — « la sénescence monte entre 0 et 0,5 », « les feuilles
+ * **fenêtres** dans l'acte — « la sénescence monte entre 0 et 0,5 », « les feuilles
  * tombent entre 0,4 et 0,9 » — et leur chevauchement fait la différence entre
  * une sécheresse (jaunit puis tombe) et une défoliation de ravageurs (tombe
  * sans jaunir).
@@ -132,7 +132,7 @@ interface Trajectoire {
   fane?: [number, number];
   /** fenêtre où le dommage hydraulique monte : la cime se dégarnit */
   cimeSeche?: [number, number];
-  /** fenêtre où le sprite s'efface : seulement pour ce qui DISPARAÎT */
+  /** fenêtre où le sprite s'efface : seulement pour ce qui **disparaît** */
   seffaceEntre?: [number, number];
   /** fenêtre où le sprite rapetisse : le plant brouté rentre en boule */
   rapetisseEntre?: [number, number];
@@ -154,14 +154,14 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   // dont le cahier dit qu'elle l'est.
   // Pas de `cimeSeche` ici, et c'est une correction : je l'avais ajoutée, le
   // §6.3 ne la demande pas, et chaque grandeur qui bouge multiplie les classes
-  // à cuire. La cime sèche est la signature de la VIEILLESSE — « cime dégarnie
+  // à cuire. La cime sèche est la signature de la **vieillesse** — « cime dégarnie
   // progressive sur des années » — pas d'une sécheresse d'un été.
   secheresse: {
     jaunit: [0, 0.45],
     defeuille: [0.35, 0.85],
     chandelleA: 0.85,
   },
-  // « jaunissement PAR LE BAS, feuillage terne » : le terne, c'est la vigueur,
+  // « jaunissement **par le bas**, feuillage terne » : le terne, c'est la vigueur,
   // que `teinteSelonVigueur` désature déjà. Le « par le bas » n'est pas
   // dessinable sur un panneau — la vignette n'a pas de gradient vertical de
   // feuillage — et je ne fais donc pas semblant.
@@ -189,7 +189,7 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
     defeuille: [0.4, 0.9],
     chandelleA: 0.9,
   },
-  // « chlorose : le feuillage jaunit ENTRE LES NERVURES EN GARDANT SA FORME, la
+  // « chlorose : le feuillage jaunit **entre les nervures en gardant sa forme**, la
   // croissance s'arrête ». Donc pas de défeuillaison avant la fin : c'est la
   // seule cause où l'arbre meurt avec sa couronne entière.
   solHorsGamme: {
@@ -204,7 +204,7 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   // absence, pour que la table reste exhaustive et le type sûr.
   feu: { chandelleA: 0 },
   // « le plant rapetisse par paliers, en boule, puis disparaît ». Rapetisser
-  // est un changement de TAILLE, donc la pose : la classe ne sait pas dessiner
+  // est un changement de **taille**, donc la pose : la classe ne sait pas dessiner
   // un arbre plus petit que sa hauteur.
   abroutissement: {
     rapetisseEntre: [0, 0.75],
@@ -212,7 +212,7 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
     chandelleA: 1.1,
   },
   // « défoliation qui progresse, couronne trouée » : la part foliaire tombe, et
-  // elle tombe SANS jaunir — une feuille mangée n'est pas une feuille d'automne.
+  // elle tombe **sans** jaunir — une feuille mangée n'est pas une feuille d'automne.
   ravageurs: {
     defeuille: [0, 0.8],
     fane: [0.3, 0.9],
@@ -220,7 +220,7 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   },
   // « disparition immédiate, terre retournée » : 0,5 s dans le cahier, donc
   // presque tout l'acte est déjà fini quand il commence. La terre retournée,
-  // c'est le VOILE du geste `labourer`, qui joue dans le même plan.
+  // c'est le **voile** du geste `labourer`, qui joue dans le même plan.
   labour: {
     seffaceEntre: [0, 0.3],
     chandelleA: 1.1,
@@ -235,7 +235,7 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
     defeuilleVers: 0.45,
     chandelleA: 0.9,
   },
-  // « écorce arrachée au pied, l'arbre GARDE SES FEUILLES puis s'effondre d'un
+  // « écorce arrachée au pied, l'arbre **garde ses feuilles** puis s'effondre d'un
   // coup (annelé) ». Rien ne bouge, donc, jusqu'au dernier moment : c'est une
   // mort sans préavis, et c'est ce qui la rend lisible.
   frottis: {
@@ -251,7 +251,7 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
     seffaceEntre: [0, 0.35],
     chandelleA: 1.1,
   },
-  // « couchés par la tempête ». Le moteur est net : « un CHABLIS n'en est pas
+  // « couchés par la tempête ». Le moteur est net : « un **chablis** n'en est pas
   // une [chandelle] : il est déjà par terre », et la mort n'est rapportée qu'un
   // an après le coup de vent, sur un arbre couché depuis. Il n'y a donc ni
   // jaunissement ni défeuillaison à jouer — ce qui restait s'en va, et le bois
@@ -261,7 +261,7 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   //
   // **Et c'est un pis-aller qu'il faut dire.** La tempête elle-même ne se
   // dessine pas : ni `renverseSemaine` ni `TickResult.tempete` n'arrivent au
-  // protocole, donc le rendu ne sait ni QUELS arbres sont couchés, ni quand, ni
+  // protocole, donc le rendu ne sait ni **quels** arbres sont couchés, ni quand, ni
   // dans quel sens — alors que le moteur tient les trois, `chuteRad` compris.
   // Le §6.6 demande pourtant que les coups durs se voient. Issue ouverte ; en
   // attendant, un chablis s'efface là où il devrait basculer.
@@ -269,11 +269,11 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
     seffaceEntre: [0.1, 0.5],
     chandelleA: 1.1,
   },
-  // Un VOLIS n'est pas un chablis : le fût a cassé, la souche est restée
+  // Un **volis** n'est pas un chablis : le fût a cassé, la souche est restée
   // debout, et sur une espèce qui rejette elle est même vivante (F17). Ce qui
   // meurt ici est l'arbre qui ne rejette pas — il reste un moignon sec, donc
   // une chandelle qui vient tout de suite et ne s'efface pas. Le rendu ne sait
-  // pas encore le RACCOURCIR au moment de la casse, faute que `tempete`
+  // pas encore le **raccourcir** au moment de la casse, faute que `tempete`
   // atteigne le protocole : même pis-aller que le chablis, et même issue.
   volis: {
     defeuille: [0, 0.2],
@@ -293,7 +293,7 @@ export function dansLaFenetre(avancement: number, fenetre?: [number, number]): n
 /**
  * L'état d'un arbre mourant à un avancement donné de son acte.
  *
- * `vivant` est ce que l'instantané d'avant disait : on part de LÀ et non d'un
+ * `vivant` est ce que l'instantané d'avant disait : on part de **là** et non d'un
  * arbre en pleine forme, sinon un arbre qui végétait depuis trois ans
  * reverdirait au moment de mourir.
  */
@@ -304,8 +304,8 @@ export function mourirEnCours(
 ): EtatMourant {
   const t = TRAJECTOIRES[cause];
   const brut = Math.min(1, Math.max(0, avancement));
-  // **L'avancement est quantifié pour les grandeurs de CLASSE et continu pour
-  // celles de POSE.** Les premières entrent dans une clé de cache, et une
+  // **L'avancement est quantifié pour les grandeurs de classe et continu pour
+  // celles de pose.** Les premières entrent dans une clé de cache, et une
   // grandeur continue dans une clé de cache est un cache qui ne sert à rien —
   // c'est la règle que `palierDe` applique partout ailleurs dans le rendu, et
   // l'oublier ici a coûté 965 recuissons là où il en faut cinq fois moins.
@@ -320,7 +320,7 @@ export function mourirEnCours(
     dommageHydraulique:
       vivant.dommageHydraulique + (1 - vivant.dommageHydraulique) * dansLaFenetre(a, t.cimeSeche),
     chandelle: a >= t.chandelleA,
-    // L'opacité et la hauteur suivent l'avancement BRUT : elles ne touchent pas
+    // L'opacité et la hauteur suivent l'avancement **brut** : elles ne touchent pas
     // la clé de classe, et un effacement en cinq marches se verrait.
     opacite: 1 - dansLaFenetre(brut, t.seffaceEntre),
     // Jamais tout à fait zéro : un sprite de hauteur nulle n'est pas un arbre
@@ -341,7 +341,7 @@ export const RAPETISSEMENT_MAXIMAL = 0.22;
 /**
  * Combien d'états distincts une mort traverse, du vivant au mort.
  *
- * **Cinq, et ce nombre est un budget de CUISSON, pas un réglage esthétique.**
+ * **Cinq, et ce nombre est un budget de cuisson, pas un réglage esthétique.**
  * Chaque état supplémentaire multiplie les vignettes à cuire par le nombre
  * d'espèces, de paliers de hauteur et de variantes présents — c'est le produit
  * qui a fait 965 recuissons quand l'avancement était continu. À cinq, on lit
@@ -354,7 +354,7 @@ export const RAPETISSEMENT_MAXIMAL = 0.22;
  */
 export const PALIERS_DE_MORT = 5;
 
-/** L'état FINAL d'une mort : ce que l'arbre doit être quand l'acte est passé. */
+/** L'état **final** d'une mort : ce que l'arbre doit être quand l'acte est passé. */
 export function mortAccomplie(cause: CauseMort, vivant: ArbreVivant): EtatMourant {
   return mourirEnCours(cause, vivant, 1);
 }

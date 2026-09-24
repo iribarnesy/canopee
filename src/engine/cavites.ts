@@ -1,8 +1,8 @@
 /**
- * LES CAVITÉS D'UN ARBRE VIVANT (critère J3).
+ * **Les cavités d'un arbre vivant** (critère J3).
  *
  * Le moteur savait déjà que les trognes se creusent (`trogne.ts`) et comptait
- * ce creux en LITRES, parce que c'est le volume — et lui seul — qui décide de
+ * ce creux en **litres**, parce que c'est le volume — et lui seul — qui décide de
  * qui peut nicher : une mésange se contente de quelques litres, une chouette
  * chevêche en demande des dizaines. Mais il ne savait le faire que pour une
  * tête de têtard, alors que la carie du tronc (#182) fabrique exactement la
@@ -20,7 +20,7 @@
  * (`ravageurs.ts`, G3). La conduite en trogne et la tempête arrivent au même
  * résultat par deux chemins que rien ne relie dans le code.
  *
- * **Ce qui n'est PAS modélisé** : le diamètre de l'entrée, qui dans la réalité
+ * **Ce qui n'est pas modélisé** : le diamètre de l'entrée, qui dans la réalité
  * trie les espèces autant que le volume (28 mm pour une mésange bleue, 80 pour
  * une chevêche), et la hauteur de la loge au-dessus du sol, qui décide de
  * l'accès aux prédateurs. Les deux appellent une fiche de faune, qui n'existe
@@ -32,7 +32,7 @@ import { volumeTigeM3 } from "./trees";
 import { CAVITE_HABITAT_L, volumeCaviteL as volumeTeteCreuseL } from "./trogne";
 
 /**
- * Part du bois carié qui est réellement CREUSE *(à calibrer)*.
+ * Part du bois carié qui est réellement **creuse** *(à calibrer)*.
  *
  * Une colonne de carie n'est pas un trou : c'est d'abord du bois pourri encore
  * en place, que les champignons minéralisent lentement et que la faune finit de
@@ -47,7 +47,7 @@ export const CARIE_EVIDEE = 0.45;
  *
  * La colonne suit le cœur sur toute la bille — c'est la définition d'une carie
  * du bois de cœur —, donc son volume est celui de la tige dans le rapport des
- * SECTIONS, soit `p²` où `p` est la part du rayon cariée. La puissance deux
+ * **sections**, soit `p²` où `p` est la part du rayon cariée. La puissance deux
  * n'est pas la même que celle de la résistance (`facteurCarie`, en `1 − p⁴`),
  * et c'est normal : l'une compte du bois, l'autre compte de la raideur.
  *
@@ -61,7 +61,7 @@ export function volumeCaviteTroncL(
 ): number {
   const rayonCm = tree.carie?.rayonCm ?? 0;
   if (rayonCm <= 0) return 0;
-  // Le creux se calcule sur la colonne ELLE-MÊME, et non en part du fût
+  // Le creux se calcule sur la colonne **elle-même**, et non en part du fût
   // d'aujourd'hui : ce que le champignon a mangé, il l'a mangé, et l'aubier
   // que l'arbre a fabriqué par-dessus depuis ne le rebouche pas. Les deux
   // écritures sont algébriquement les mêmes tant que le rayon ne change pas ;

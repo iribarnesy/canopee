@@ -1,6 +1,6 @@
 /**
- * LE BILAN DE PÉRIODE (#128, §6.8 №2) : ce qui s'est passé entre deux dates,
- * groupé, chiffré, et SITUÉ.
+ * **Le bilan de période** (#128, §6.8 №2) : ce qui s'est passé entre deux dates,
+ * groupé, chiffré, et **situé**.
  *
  * ## Pourquoi il existe
  *
@@ -10,7 +10,7 @@
  * pointés revient à l'appelant *« parce que c'est le bilan de période (§6.8 №2)
  * qui est le bon outil dans ce cas »*. Sur la friche de référence : quarante-cinq
  * marqueurs, et **sept mille neuf cent soixante-six changements que personne ne
- * montre**. Le calque dit OÙ, le bilan dit QUOI et COMBIEN — « le gibier a
+ * montre**. Le calque dit **où**, le bilan dit **quoi** et **combien** — « le gibier a
  * brouté partout, encore » en trois mots plutôt qu'en huit mille repères.
  *
  * ## Ce qu'il n'est pas
@@ -18,13 +18,13 @@
  * **Ce n'est pas le fil du journal.** Le worker écrit une ligne par instantané,
  * avec ce que le moteur seul sait — le pH sous l'arbre qui a tué, la gamme de
  * l'espèce, la hauteur du plus grand mort. Le bilan, lui, ne lit que ce qui
- * voyage dans l'instantané, et il couvre une PÉRIODE : cinquante instantanés
+ * voyage dans l'instantané, et il couvre une **période** : cinquante instantanés
  * qui disent chacun « deux aulnes asphyxiés » font une ligne à cent.
  *
  * Les deux disent donc parfois la même chose, et le §2.1 veut savoir laquelle
  * des deux tient la règle. Réponse : **aucune des deux ne tient de règle**. Le
  * groupement est une somme, pas un calcul — il n'y a rien qui puisse diverger.
- * Ce qui pouvait diverger, c'est le VOCABULAIRE, et il est tenu ailleurs :
+ * Ce qui pouvait diverger, c'est le **vocabulaire**, et il est tenu ailleurs :
  * `mots.ts` tient l'accord des noms d'essence, le genre de chacune, et la
  * cause de mort accordable. Le fil du journal, la fiche d'un arbre, le volet
  * des suivis et ce bilan lisent tous ces mêmes tables.
@@ -35,7 +35,7 @@
  * regrouper à l'affichage ; ce serait des dizaines de milliers de morts et de
  * semis retenus pour en afficher quinze lignes. `agreger` replie chaque journal
  * dans le bilan à mesure qu'il arrive, et le bilan ne grandit qu'avec le nombre
- * de COMBINAISONS (essence × cause), qui est borné par le catalogue.
+ * de **combinaisons** (essence × cause), qui est borné par le catalogue.
  *
  * Le centre de gravité se tient de la même façon, par les sommes : une ligne
  * qui porte mille morts n'a pas besoin de mille positions pour savoir où
@@ -69,7 +69,7 @@ export interface LigneDeBilan {
   cause?: CauseMort;
   /** le type de geste, pour les gestes */
   geste?: GesteType;
-  /** le stade ATTEINT, pour les montées */
+  /** le stade **atteint**, pour les montées */
   stade?: StadeDeDeveloppement;
   /** combien : des tiges, ou des m² pour le feu */
   combien: number;
@@ -98,7 +98,7 @@ function cleDe(
 /**
  * Le centre de gravité d'un lot d'arbres nommés par identifiant.
  *
- * Les inconnus sont SAUTÉS, pas placés à l'origine : un arbre abattu a quitté
+ * Les inconnus sont **sautés**, pas placés à l'origine : un arbre abattu a quitté
  * l'instantané, et le compter au coin de la parcelle tirerait le centre vers un
  * endroit où rien ne s'est passé. Quand aucun n'est connu, il n'y a pas de
  * centre — la ligne existera sans endroit.
@@ -126,11 +126,11 @@ function centreDesArbres(
  *
  * `positionDe` rend la position d'un arbre par identifiant, quand l'appelant la
  * connaît — les gestes et les franchissements ne nomment que des identifiants.
- * Un identifiant inconnu fait une ligne SANS position plutôt qu'une ligne
+ * Un identifiant inconnu fait une ligne **sans** position plutôt qu'une ligne
  * placée à l'origine : mieux vaut une ligne qu'on ne peut pas suivre du doigt
  * qu'un doigt qui montre un coin de parcelle où rien ne s'est passé.
  *
- * Rend un bilan NEUF : React compare par identité, et replier en place ferait
+ * Rend un bilan **neuf** : React compare par identité, et replier en place ferait
  * un panneau qui ne se redessine pas.
  */
 export function agreger(
@@ -200,7 +200,7 @@ export function agreger(
       );
       continue;
     }
-    // Un geste de ZONE se compte en cellules, c'est-à-dire en m² : « labouré
+    // Un geste de **zone** se compte en cellules, c'est-à-dire en m² : « labouré
     // 340 m² » dit ce qu'on a fait, « 1 labour » ne dit rien.
     ajouter(
       { sorte: "geste", geste: geste.type },
@@ -214,7 +214,7 @@ export function agreger(
   }
   const tempete = journal.tempete;
   if (tempete) {
-    // Les arbres VERSÉS seulement : un arbre ébranché est debout, et compter
+    // Les arbres **versés** seulement : un arbre ébranché est debout, et compter
     // les trois catégories ensemble dirait une catastrophe là où il y a du
     // ménage à faire. Les victimes portent un identifiant, donc une position.
     ajouter(
@@ -230,17 +230,17 @@ export function agreger(
 }
 
 /**
- * CE QUI S'EST PASSÉ DEPUIS, c'est-à-dire un bilan moins un autre.
+ * **Ce qui s'est passé depuis**, c'est-à-dire un bilan moins un autre.
  *
  * **Une soustraction plutôt qu'un second cumul**, et c'est le §2.1 qui tranche :
  * le bilan de la partie et celui de la période sont la même quantité sur deux
  * fenêtres. Les compter deux fois, c'est se donner deux chances de compter
  * faux — et le jour où l'un se corrige, l'autre ment.
  *
- * Elle marche parce que le bilan ne retient que des SOMMES : les comptes, les
+ * Elle marche parce que le bilan ne retient que des **sommes** : les comptes, les
  * positions, les places. Un centre de gravité se soustrait comme le reste.
  *
- * Ce qui ne se soustrait pas, c'est la DATE : le bilan ne garde pas quelle
+ * Ce qui ne se soustrait pas, c'est la **date** : le bilan ne garde pas quelle
  * semaine a apporté quoi, donc la première semaine d'une ligne héritée du passé
  * serait celle d'avant la période. On la ramène à `depuis`, qui est vrai par
  * construction — la période commence là.
@@ -313,7 +313,7 @@ const ICONE: Record<SorteDeBilan, string> = {
 /**
  * Ce qu'un geste a fait, dit au passé et au pluriel, avec ce qu'il compte.
  *
- * `quoi` est l'objet compté : des TIGES pour les gestes sur arbres, des mètres
+ * `quoi` est l'objet compté : des **tiges** pour les gestes sur arbres, des mètres
  * carrés pour les gestes de zone. Le `Record` complet fait le reste — un geste
  * ajouté au moteur ne compile plus tant qu'on ne lui a pas donné sa phrase.
  */
@@ -343,7 +343,7 @@ const GESTE_DIT: Record<
  * Une surface, dite dans l'unité qui se lit.
  *
  * Une cellule du moteur fait un mètre de côté (`centreDesCellules`), donc un
- * compte de cellules EST une surface en m². Au-delà d'un demi-hectare on passe
+ * compte de cellules **est** une surface en m². Au-delà d'un demi-hectare on passe
  * à l'hectare : « 12 000 m² » ne se lit pas.
  */
 export function surface(m2: number): string {
@@ -359,7 +359,7 @@ const EN_HECTARES = 5000;
  * L'accord d'un participe qui suit une surface.
  *
  * Il ne se lit pas sur le nombre de mètres carrés mais sur le nombre dans
- * l'unité AFFICHÉE : « 12 000 m² » s'écrit « 1,2 ha brûlé », au singulier.
+ * l'unité **affichée** : « 12 000 m² » s'écrit « 1,2 ha brûlé », au singulier.
  */
 function accordDeSurface(m2: number): string {
   return m2 >= EN_HECTARES ? s(m2 / 10000) : s(m2);
@@ -374,7 +374,7 @@ function texteDe(l: LigneDeBilan): string {
     case "tempete":
       return `${n} tige${s(n)} couchée${s(n)} par la tempête`;
     case "mort": {
-      // **Accordé à l'ESSENCE, en genre et en nombre.** La partie jouée l'a
+      // **Accordé à l'essence, en genre et en nombre.** La partie jouée l'a
       // pris en faute sur l'écran de fin : « 90 ronces morts étouffés par
       // l'ombre ». Trois essences du catalogue sont féminines.
       const f = estFeminin(l.especeId ?? "");
@@ -388,7 +388,7 @@ function texteDe(l: LigneDeBilan): string {
       return `${n} tige${s(n)} passée${s(n)} au stade ${l.stade}`;
     case "geste": {
       const dit = GESTE_DIT[l.geste ?? "couper"];
-      // **L'accord porte sur le PARTICIPE, pas sur la phrase.** Le premier jet
+      // **L'accord porte sur le participe, pas sur la phrase.** Le premier jet
       // collait le « s » à la fin, et la partie jouée l'a pris en faute :
       // « 27 279 tiges broutée par le gibiers ».
       return dit.quoi === "surface"

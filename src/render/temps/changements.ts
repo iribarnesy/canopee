@@ -1,32 +1,32 @@
 /**
- * Le CALQUE DES CHANGEMENTS : un doigt qui montre où la parcelle a changé
+ * Le **calque des changements** : un doigt qui montre où la parcelle a changé
  * (docs/interface-visuelle.md §6.8 №1).
  *
  * **Ce module existe parce qu'une mesure l'a rendu nécessaire, pas parce que le
  * cahier le prévoyait.** Le §6.8 le rangeait au repli de l'animation, pour
  * quand celle-ci déborde : mille morts ne tiennent pas dans deux secondes. Or
- * en jouant enfin le VRAI journal du moteur, une ellipse entière de la friche
+ * en jouant enfin le **vrai** journal du moteur, une ellipse entière de la friche
  * de référence ne change que 196 pixels sur 880 000 — 0,02 % de l'image.
  * Quarante-cinq morts et cinquante-quatre chutes sont bien jouées, et
  * invisibles : deux mille huit cents tiges de dix pixels, ça ne se compare pas.
  *
- * Le problème est donc SYMÉTRIQUE de celui que le §6.8 anticipait. À grande
+ * Le problème est donc **symétrique** de celui que le §6.8 anticipait. À grande
  * vitesse il y a trop à montrer ; à vitesse normale il y en a trop peu pour
- * qu'on le TROUVE. Dans les deux cas, il faut quelque chose qui pointe.
+ * qu'on le **trouve**. Dans les deux cas, il faut quelque chose qui pointe.
  *
  * **Ce qui distingue un marqueur d'un objet du monde, et c'est tout ce qui
- * compte ici** : un marqueur a une taille en PIXELS, pas en mètres. Il ne
+ * compte ici** : un marqueur a une taille en **pixels**, pas en mètres. Il ne
  * grandit pas quand on zoome, il ne se cache pas derrière un houppier, il ne
  * se confond avec rien de ce que la simulation contient. C'est de l'interface
  * posée sur la carte, et ça doit se voir comme tel — sans quoi on aurait
  * ajouté un objet de plus à une scène qui en a déjà trois mille.
  *
- * **Le SOL ne s'estompe pas, et je l'ai essayé deux fois avant de comprendre
+ * **Le sol ne s'estompe pas, et je l'ai essayé deux fois avant de comprendre
  * pourquoi.** J'avais baissé l'opacité de la couche de sol à 0,62, puis à 0,88
  * en trouvant la première trop forte. Les deux sont fausses pour une raison que
  * seule la capture donne : derrière le sol il y a le fond de brume de
- * l'interface, qui est PÂLE. Baisser l'alpha d'une couche ne la fait donc pas
- * reculer, ça la fait BLANCHIR — la parcelle sortait comme sous un voile de
+ * l'interface, qui est **pâle**. Baisser l'alpha d'une couche ne la fait donc pas
+ * reculer, ça la fait **blanchir** — la parcelle sortait comme sous un voile de
  * lait, ce qui estompait aussi ce qui devait rester net dessus. Le sol n'a de
  * toute façon pas changé : c'est la référence sur laquelle on lit les
  * positions. Ce qui s'estompe, ce sont les arbres, qui se posent sur du sombre
@@ -47,7 +47,7 @@ import type { Teinte } from "../palette";
 import type { JournalDeSemaine } from "./ellipse";
 
 /**
- * Ce qu'un marqueur montre. La forme dit la NATURE du changement, la teinte
+ * Ce qu'un marqueur montre. La forme dit la **nature** du changement, la teinte
  * en dit la cause — deux canaux, parce qu'un halo roux et un liseré roux ne
  * racontent pas la même chose.
  */
@@ -61,11 +61,11 @@ export type SorteDeMarqueur =
   /** un semis s'est installé : un point, parce que deux pixels ne se trouvent pas */
   | "recrue"
   /**
-   * une tige a changé de STADE en grandissant : un chevron vers le haut.
+   * une tige a changé de **stade** en grandissant : un chevron vers le haut.
    *
    * **La seule bonne nouvelle du calque qui ne soit pas une naissance**, et le
    * moteur a dû apprendre à la dire : le stade se calcule de la hauteur
-   * (`stadeDe`), donc le rendu le connaît déjà — mais le FRANCHISSEMENT demande
+   * (`stadeDe`), donc le rendu le connaît déjà — mais le **franchissement** demande
    * de comparer deux instants, ce que seul le moteur peut faire. D'où
    * `Snapshot.franchissements`.
    */
@@ -88,9 +88,9 @@ export interface Marqueur {
  * l'agent, jamais une gravité. Un marqueur ne classe pas les morts en bonnes
  * et mauvaises, il dit de quoi il s'agit.
  *
- * Les trois morts d'origine ANIMALE partagent une famille de fauve — le gibier
+ * Les trois morts d'origine **animale** partagent une famille de fauve — le gibier
  * est un seul agent, qu'il broute, frotte ou écrase par une chute —, et les
- * deux morts d'origine HUMAINE (le labour) reprennent la teinte du geste
+ * deux morts d'origine **humaine** (le labour) reprennent la teinte du geste
  * correspondant, pour qu'un labour et sa mort se lisent comme un seul
  * événement.
  */
@@ -127,7 +127,7 @@ export const TEINTE_DU_MARQUEUR_DE_GESTE: Teinte = { r: 236, g: 232, b: 210 };
 export const TEINTE_DE_LA_RECRUE: Teinte = { r: 126, g: 206, b: 108 };
 
 /**
- * L'ESTOMPE : ce qui n'a pas changé s'efface pour laisser voir ce qui a changé.
+ * **l'estompe** : ce qui n'a pas changé s'efface pour laisser voir ce qui a changé.
  *
  * **C'est le commanditaire qui l'a proposée, et c'est un meilleur mécanisme que
  * le mien.** J'avais ajouté un halo autour de chaque arbre mort ; il a demandé
@@ -138,20 +138,20 @@ export const TEINTE_DE_LA_RECRUE: Teinte = { r: 126, g: 206, b: 108 };
  * 1. **Ça n'ajoute rien à la scène.** Un halo est un objet de plus dans une
  *    image qui en compte déjà trois mille ; l'estompe n'en ajoute aucun, elle
  *    en retire. Le §0 du décor disait déjà ça de la brume : ne pas attirer l'œil
- *    est un travail de SOUSTRACTION.
- * 2. **Ça marche pour les ANIMATIONS aussi**, et c'est le mot qu'il a employé.
+ *    est un travail de **soustraction**.
+ * 2. **Ça marche pour les animations aussi**, et c'est le mot qu'il a employé.
  *    Un halo montre un endroit ; l'estompe fait que le seul arbre net qui bouge
  *    est celui qui tombe. Le mouvement redevient visible sans qu'on le pointe.
  * 3. **Ça ne demande aucun vocabulaire.** Un anneau ouvert doit s'apprendre ;
  *    « ce qui est net vient de changer » se comprend sans notice.
  *
- * Elle passe par l'OPACITÉ de la pose, donc par un canal qui existe déjà et ne
+ * Elle passe par l'**opacité** de la pose, donc par un canal qui existe déjà et ne
  * recuit rien.
  *
- * **Et elle ne suffit PAS seule, ce que seule la mesure dit.** L'estompe rend
- * trouvable ce qui est CLAIR ou COLORÉ — un semis vert, un front de flammes,
+ * **Et elle ne suffit pas seule, ce que seule la mesure dit.** L'estompe rend
+ * trouvable ce qui est **clair** ou **coloré** — un semis vert, un front de flammes,
  * une couronne qui jaunit de sécheresse ressortent immédiatement sur un
- * peuplement éteint. Elle échoue sur ce qui est SOMBRE ou MINUSCULE : une
+ * peuplement éteint. Elle échoue sur ce qui est **sombre** ou **minuscule** : une
  * chandelle nue parmi du feuillage sombre reste sombre même à pleine opacité,
  * et un semis de trente centimètres fait deux pixels. Sur la capture des
  * quarante-cinq morts d'une semaine, l'estompe seule ne montrait rien.
@@ -165,7 +165,7 @@ export const OPACITE_HORS_SUJET = 0.14;
 
 /**
  * Les identifiants d'arbres que ce journal concerne, et que l'estompe garde
- * NETS — tout le reste s'efface.
+ * **nets** — tout le reste s'efface.
  *
  * **Les gestes de masse en sont exclus, et j'avais écrit ici le contraire.**
  * Le premier jet les gardait en entier, avec ce raisonnement : « estomper ne
@@ -202,7 +202,7 @@ export function sujetsDuJournal(journal: JournalDeSemaine): Set<number> {
 }
 
 /**
- * La teinte d'une montée de stade, par le stade ATTEINT.
+ * La teinte d'une montée de stade, par le stade **atteint**.
  *
  * **Teintée par l'arrivée et non par le départ**, parce que c'est l'arrivée qui
  * est la nouvelle : « celui-là est passé perchis » se lit, « celui-là a quitté
@@ -210,7 +210,7 @@ export function sujetsDuJournal(journal: JournalDeSemaine): Set<number> {
  *
  * Une échelle qui se fonce et se sature en montant, du vert tendre d'un semis
  * qui prend au vert profond d'une tige de futaie. C'est le seul endroit du
- * calque où la teinte encode un ORDRE plutôt qu'une catégorie, et l'ordre se lit
+ * calque où la teinte encode un **ordre** plutôt qu'une catégorie, et l'ordre se lit
  * sans légende : plus c'est sombre, plus c'est gros.
  */
 export const TEINTE_DU_STADE: Record<StadeDeDeveloppement, Teinte> = {
@@ -240,10 +240,10 @@ export interface Calque {
  *
  * `positionDe` rend la position d'un arbre par identifiant : les gestes sur
  * arbres n'en portent pas, et c'est l'appelant qui tient la liste des tiges.
- * Un identifiant inconnu est SAUTÉ et non placé à l'origine — un marqueur au
+ * Un identifiant inconnu est **sauté** et non placé à l'origine — un marqueur au
  * coin de la parcelle montrerait un endroit où rien ne s'est passé.
  *
- * Un geste de ZONE ne rend qu'UN marqueur, à son centre de gravité : c'est un
+ * Un geste de **zone** ne rend qu'**un** marqueur, à son centre de gravité : c'est un
  * événement, pas mille. Un chaulage de deux cents cellules avec deux cents
  * repères ne montrerait plus rien.
  *
@@ -294,7 +294,7 @@ export function marqueursDuJournal(
   for (const n of journal.naissances ?? []) {
     marqueurs.push({ x: n.x, y: n.y, sorte: "recrue", teinte: TEINTE_DE_LA_RECRUE });
   }
-  // **Les montées de stade**, teintées par le stade ATTEINT. Elles n'ont pas de
+  // **Les montées de stade**, teintées par le stade **atteint**. Elles n'ont pas de
   // position dans l'événement — le moteur ne donne que l'identifiant — donc on
   // la demande à l'appelant, comme pour un geste sur arbres. Une tige que le
   // même intervalle a fait monter puis mourir n'est pas trouvée, et c'est la
@@ -303,11 +303,11 @@ export function marqueursDuJournal(
     const p = positionDe(f.id);
     if (p) marqueurs.push({ ...p, sorte: "montée", teinte: TEINTE_DU_STADE[f.versStade] });
   }
-  // Les chandelles qui tombent ne sont PAS marquées, et c'est un choix : une
-  // chute est le seul changement de la liste qu'on VOIT — c'est un mouvement de
+  // Les chandelles qui tombent ne sont **pas** marquées, et c'est un choix : une
+  // chute est le seul changement de la liste qu'on **voit** — c'est un mouvement de
   // vingt mètres. La marquer ajouterait un repère là où l'œil va déjà.
   if (marqueurs.length <= plafond) return { marqueurs, omis };
-  // Le plafond s'applique ICI et pas seulement à l'accumulation : un seul
+  // Le plafond s'applique **ici** et pas seulement à l'accumulation : un seul
   // journal suffit à couvrir la carte, et le premier jet ne bornait que
   // l'empilement de plusieurs.
   return {
@@ -319,7 +319,7 @@ export function marqueursDuJournal(
 /**
  * Au-delà de combien de tiges un geste n'est plus pointé tige par tige.
  *
- * Vingt-quatre : l'ordre de grandeur d'un chantier du JOUEUR — une éclaircie,
+ * Vingt-quatre : l'ordre de grandeur d'un chantier du **joueur** — une éclaircie,
  * un élagage d'une rangée, une récolte. Au-delà, c'est un phénomène et non un
  * chantier : le gibier qui broute un hectare, un feu qui traverse. Le §6.8 ne
  * liste d'ailleurs que des gestes de joueur pour le liseré — « récoltés,
@@ -343,7 +343,7 @@ export function centreDesCellules(
 }
 
 /**
- * Fusionne les marqueurs de plusieurs journaux, en gardant l'ORDRE d'arrivée.
+ * Fusionne les marqueurs de plusieurs journaux, en gardant l'**ordre** d'arrivée.
  *
  * **Ils s'accumulent, et c'est la demande littérale du §6.8** : « les marqueurs
  * s'accumulent tant qu'on avance vite, et ne s'effacent qu'à la pause ».
@@ -356,7 +356,7 @@ export function accumuler(
   plafond = PLAFOND_DE_MARQUEURS,
 ): Marqueur[] {
   const tout = [...deja, ...nouveaux];
-  // Les plus RÉCENTS sont gardés : au-delà du plafond, ce qui compte est ce qui
+  // Les plus **récents** sont gardés : au-delà du plafond, ce qui compte est ce qui
   // vient de se passer. Tronquer par le début garderait dix ans de vieux
   // repères et cacherait la semaine en cours.
   return tout.length <= plafond ? tout : tout.slice(tout.length - plafond);
@@ -365,7 +365,7 @@ export function accumuler(
 /**
  * Combien de marqueurs au plus.
  *
- * **Un plafond de LISIBILITÉ avant d'être un plafond de coût.** Deux mille
+ * **Un plafond de lisibilité avant d'être un plafond de coût.** Deux mille
  * repères sur un hectare, c'est un tapis : le calque ne montre plus rien, il
  * remplace la parcelle. Quand il est atteint, c'est que le bilan de période
  * (§6.8 №2) est le bon outil et pas celui-ci — et l'appelant peut le savoir en

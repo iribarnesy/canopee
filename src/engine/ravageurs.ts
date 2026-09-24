@@ -17,7 +17,7 @@
  *  - les auxiliaires freinent cette croissance à hauteur de ce que l'habitat
  *    local leur offre ;
  *  - les insectes essaiment vers les cellules voisines ;
- *  - les dégâts retombent sur les arbres au prorata de leur sensibilité ET de
+ *  - les dégâts retombent sur les arbres au prorata de leur sensibilité **et** de
  *    leur état — ce qui referme la spirale : un arbre attaqué s'affaiblit et
  *    devient plus attaquable.
  *
@@ -57,7 +57,7 @@ export const DECLIN = 0.08;
 /**
  * Perte hebdomadaire hors saison d'activité.
  *
- * Les ravageurs HIVERNENT — sous l'écorce, dans la litière, en diapause. Les
+ * Les ravageurs **hivernent** — sous l'écorce, dans la litière, en diapause. Les
  * faire repartir de rien chaque printemps était mon erreur : ça interdisait
  * toute pullulation, puisqu'une saison ne suffit jamais à passer de
  * l'inoculum au ravage. C'est justement l'accumulation sur deux ou trois
@@ -70,7 +70,7 @@ export const PERTE_HIVERNAGE = 0.02;
  * Mortalité hebdomadaire supplémentaire qu'un habitat parfait pour les
  * auxiliaires inflige à la population de ravageurs.
  *
- * C'est une PRÉDATION, pas un frein à la croissance — et la différence est
+ * C'est une **prédation**, pas un frein à la croissance — et la différence est
  * tout sauf cosmétique. Un frein ne fait que retarder l'arrivée au plateau :
  * la pullulation finit au même niveau, un peu plus tard. Une mortalité, elle,
  * abaisse l'équilibre, et au-delà d'un certain habitat elle dépasse la
@@ -174,20 +174,20 @@ export function carteBiotique(
   boisMortTHa: number,
   dims: GridDims,
 ): CarteBiotique {
-  // Les CAVITÉS comptent parmi les gîtes, au même titre que le bois mort et
+  // Les **cavités** comptent parmi les gîtes, au même titre que le bois mort et
   // dans le même terme (#182). Un tronc creux est un abri d'hiver et un site
   // de nid — c'est ce qui loge les mésanges et les chauves-souris que le
   // commentaire de tête de ce module nomme sans que rien ne les porte.
   //
-  // Le terme prend le PLUS GÉNÉREUX des deux et ne les additionne pas, et ce
+  // Le terme prend le **plus généreux** des deux et ne les additionne pas, et ce
   // n'est pas une précaution d'écriture : ce que ce 0,15 mesure est « y a-t-il
-  // où se loger », et cette question-là SATURE. Un peuplement qui a déjà
+  // où se loger », et cette question-là **sature**. Un peuplement qui a déjà
   // vingt tonnes de bois mort à l'hectare ne loge pas mieux parce qu'il a
   // aussi des creux. La conséquence est qu'à cavités nulles la carte est
   // rigoureusement celle d'avant — le lot se neutralise tout seul, et un
   // essai l'épingle.
   //
-  // Les creux, EUX, sont spatialisés, là où le pool de bois mort ne l'est pas :
+  // Les creux, **eux**, sont spatialisés, là où le pool de bois mort ne l'est pas :
   // une cavité est sur un arbre, à un endroit. Ils s'agrègent donc par bloc et
   // se lisent dans la même fenêtre de 3×3 que la richesse — celle que le
   // commentaire de `BLOC_AUXILIAIRES_M` justifie par la prospection d'une
@@ -349,9 +349,9 @@ export function degatsSurArbre(tree: TreeState, pressionMoyenne: number): number
 }
 
 /**
- * Ce que le MÊME arbre aurait encaissé en pleine vigueur.
+ * Ce que le **même** arbre aurait encaissé en pleine vigueur.
  *
- * L'écart avec `degatsSurArbre` est la part du dégât qui n'existe QUE parce que
+ * L'écart avec `degatsSurArbre` est la part du dégât qui n'existe **que** parce que
  * l'arbre ne se défend plus — il ne refait ni ses tanins ni sa résine faute de
  * carbone. Cette part-là est à porter au compte de ce qui l'affame, pas des
  * ravageurs : sans elle, un dominé meurt « de ravageurs » alors que la seule

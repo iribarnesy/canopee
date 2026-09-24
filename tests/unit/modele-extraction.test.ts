@@ -1,12 +1,12 @@
 /**
- * CE QUE LA PAGE « LE MODÈLE » LIT DU DÉPÔT (#224).
+ * **Ce que la page** « **le modèle** » **lit du dépôt** (#224).
  *
  * L'essai a deux moitiés, et la seconde est la plus importante :
  *
  * 1. **sur du texte écrit à la main**, que l'extraction fait bien ce qu'on
  *    croit — y compris sur les pièges du vrai document (une barre dans un bloc
  *    de code, un titre qui déborde sur la ligne suivante) ;
- * 2. **sur les VRAIS fichiers du dépôt**, que ce qu'elle en tire concorde avec
+ * 2. **sur les vrais fichiers du dépôt**, que ce qu'elle en tire concorde avec
  *    ce que le document dit de lui-même. Le référentiel porte son propre
  *    tableau de score ; si l'extraction comptait autrement, l'un des deux
  *    mentirait — et sur une page montrée à des tiers, c'est le genre de
@@ -60,7 +60,7 @@ describe("les critères du référentiel", () => {
 
 describe("les étapes du tick", () => {
   it("les rend dans l'ordre du FICHIER, pas dans celui des étiquettes", () => {
-    // Le vrai tick porte « 7. Régénération » AVANT « 6 ter bis » : les
+    // Le vrai tick porte « 7. Régénération » **avant** « 6 ter bis » : les
     // étiquettes écrites à la main ont dérivé, l'ordre du fichier non.
     const e = etapesDuTick(`
   // ── 5. Croissance ─────────────
@@ -80,11 +80,11 @@ describe("les étapes du tick", () => {
   it("sépare l'intitulé de son détail, et ramasse la suite du commentaire", () => {
     const e = etapesDuTick(`
   // ── 0. Lumière : au sol et par arbre
-  //      ET transpiration — l'effet nurse.
+  //      **et** transpiration — l'effet nurse.
   const x = 1;
 `);
     expect(e[0]?.titre).toBe("Lumière");
-    expect(e[0]?.detail).toBe("au sol et par arbre ET transpiration — l'effet nurse.");
+    expect(e[0]?.detail).toBe("au sol et par arbre **et** transpiration — l'effet nurse.");
   });
 
   it("retire les renvois internes, et garde les parenthèses qui disent quelque chose", () => {

@@ -1,7 +1,7 @@
 /**
  * Litières et restitutions (docs/regles.md §4.2, ch2-B) : la litière rend
  * l'azote au sol à une vitesse dictée par son C/N, et l'aulne fixateur
- * ENRICHIT réellement son voisinage — l'effet « améliorante » de l'atlas
+ * **enrichit** réellement son voisinage — l'effet « améliorante » de l'atlas
  * doit émerger.
  */
 
@@ -46,7 +46,7 @@ describe("litières — vitesse selon le C/N (ch2-B)", () => {
 });
 
 describe("l'aulne améliore son sol (fixation → litière → minéral)", () => {
-  // Trois aulnes adultes AU NORD du hêtre : leurs ombres partent encore plus
+  // Trois aulnes adultes **au nord** du hêtre : leurs ombres partent encore plus
   // au nord (décalage solaire, light.ts), mais leur litière tombe sous leurs
   // couronnes, jusqu'aux racines du hêtre. Témoin : le même hêtre seul.
   const YEARS = 15;
@@ -82,18 +82,18 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     if (!hetreAvec || !hetreSeul) throw new Error("hêtre manquant");
     expect(hetreAvec.alive).toBe(true);
     expect(hetreSeul.alive).toBe(true);
-    // **CE SEUIL A GLISSÉ QUATRE FOIS, ET LE DÉFAUT ÉTAIT LE THERMOMÈTRE.**
+    // **ce seuil a glissé quatre fois, et le défaut était le thermomètre.**
     // 1,1006 puis 1,095 (strate herbacée), 1,077 (port serré), 1,030 (les
     // mycorhizes cessent de perdre l'azote du sol pauvre, #115) : à chaque fois
     // on a rabaissé le nombre en nommant correctement la cause, et à chaque
-    // fois on lisait la HAUTEUR.
+    // fois on lisait la **hauteur**.
     //
     // Or la hauteur ne capte qu'un tiers de l'effet. Mesuré ici : le hêtre du
-    // bosquet est 1,030 fois plus HAUT que le témoin, 1,031 fois plus GROS, et
-    // donc 1,095 fois plus VOLUMINEUX — le volume va comme `D²H`, il compose
-    // les deux. « Améliorer son sol » est une affirmation sur la VIGUEUR de
+    // bosquet est 1,030 fois plus **haut** que le témoin, 1,031 fois plus **gros**, et
+    // donc 1,095 fois plus **volumineux** — le volume va comme `D²H`, il compose
+    // les deux. « Améliorer son sol » est une affirmation sur la **vigueur** de
     // l'arbre, pas sur sa taille : c'est la leçon que l'effet nurse avait déjà
-    // donnée (#97), où un sujet collé à sa nurse était le plus HAUT des trois
+    // donnée (#97), où un sujet collé à sa nurse était le plus **haut** des trois
     // et huit fois plus chétif.
     //
     // Le seuil n'est donc pas rabaissé une cinquième fois : l'essai change de

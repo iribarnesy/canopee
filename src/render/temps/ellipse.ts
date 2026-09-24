@@ -1,21 +1,21 @@
 /**
- * Le PLAN D'UNE ELLIPSE : ce qui a changé, et dans quel ordre le montrer
+ * Le **plan d'une ellipse** : ce qui a changé, et dans quel ordre le montrer
  * (docs/interface-visuelle.md §5.11).
  *
  * **Ce module existe parce que deux sections du cahier se contredisaient**, et
  * que le commanditaire a tranché en relisant la sienne. Le §6.8 partait de
- * « on ne peut pas ANIMER ce qui s'est passé » — l'animation d'une mort de
+ * « on ne peut pas **animer** ce qui s'est passé » — l'animation d'une mort de
  * sécheresse dure trois semaines de jeu, elle n'a pas sa place dans une image
  * à ×512 — et proposait donc des marqueurs qui persistent, un bilan de période
  * et un rembobinage. Le §5.11 dit l'inverse : « une fois le temps réel acquis,
- * l'ellipse n'est plus un cas particulier, c'est une ANIMATION », et le
+ * l'ellipse n'est plus un cas particulier, c'est une **animation** », et le
  * principe « ne dépend pas de la durée : une semaine, un mois, dix ans, c'est
  * la même mécanique avec plus ou moins à montrer ».
  *
  * Les deux se réconcilient sur un mot : la durée de l'animation est une durée
  * de **présentation**, pas une durée de jeu. Une mort de sécheresse ne prend
  * pas trois semaines à montrer, elle prend le temps qu'on lui donne. Ce module
- * ne fait donc qu'une chose : ranger les changements dans un BUDGET de temps
+ * ne fait donc qu'une chose : ranger les changements dans un **budget** de temps
  * d'écran, dans un ordre où les causes précèdent leurs conséquences.
  *
  * **Et il dit quand il n'y arrive pas.** À grande vitesse, mille arbres morts
@@ -53,7 +53,7 @@ import type { CauseMort } from "../../engine/trees";
  * d'arrivée. C'est un journal complet, et il traversait le worker sans
  * lecteur.
  *
- * On accepte PLUSIEURS journaux : franchir dix ans, c'est concaténer dix ans
+ * On accepte **plusieurs** journaux : franchir dix ans, c'est concaténer dix ans
  * de semaines. Le plan est le même, il a seulement plus à montrer — c'est
  * exactement la propriété que le §5.11 demande.
  */
@@ -65,7 +65,7 @@ export interface JournalDeSemaine {
   /**
    * La tempête de la semaine (`Snapshot.tempete`).
    *
-   * **Il faut l'ÉVÉNEMENT, pas l'état**, et le piège est pire que pour le feu :
+   * **Il faut l'événement, pas l'état**, et le piège est pire que pour le feu :
    * un chablis n'est rapporté mort qu'un an plus tard
    * (`CHABLIS_RECUPERABLE_SEMAINES`), une semaine où `tempete` vaut
    * `undefined`. Se raccrocher aux `morts` ferait jouer la rafale avec un an
@@ -75,7 +75,7 @@ export interface JournalDeSemaine {
   /**
    * Les semis installés depuis le dernier instantané (`Snapshot.naissances`).
    *
-   * **Le rendu les DÉDUISAIT, et il avait tort de devoir le faire.** Il
+   * **Le rendu les déduisait, et il avait tort de devoir le faire.** Il
    * reconnaissait une recrue à son `ageWeeks` inférieur à l'intervalle du
    * journal — ce qui marchait, mais confondait « arrivé depuis la dernière
    * fois » avec « jeune », et perdait toute naissance suivie d'une mort dans le
@@ -83,7 +83,7 @@ export interface JournalDeSemaine {
    */
   naissances?: readonly NaissanceDeLaSemaine[];
   /**
-   * Les tiges que la CROISSANCE a fait changer de stade
+   * Les tiges que la **croissance** a fait changer de stade
    * (`Snapshot.franchissements`).
    *
    * Le stade lui-même se calcule de la hauteur (`stadeDe`), donc le rendu le
@@ -105,7 +105,7 @@ export type Sujet =
        * **Il manquait, et c'est une correction de ce module.** Le sujet ne
        * portait que les cellules brûlées — or `IncendieResult` donne aussi les
        * rangs, et le commentaire du moteur dit à quoi ils servent : « c'est ce
-       * qui permet de faire COURIR une ligne de flammes au lieu de noircir un
+       * qui permet de faire **courir** une ligne de flammes au lieu de noircir un
        * patch d'un coup ». Sans eux, le plan aurait obligé le dessin à
        * noircir d'un coup, c'est-à-dire à perdre la seule chose qui rend un
        * incendie pédagogique.
@@ -114,7 +114,7 @@ export type Sujet =
       /**
        * Charge de combustible de chaque cellule de `brulees`, même ordre.
        *
-       * **C'est DANS QUOI le feu a brûlé**, et le moteur le dit depuis qu'il
+       * **C'est dans quoi le feu a brûlé**, et le moteur le dit depuis qu'il
        * expose `IncendieResult.charges`. Le rang dit où le front passe et
        * quand ; la charge dit avec quelle violence, et c'est elle qui donne la
        * hauteur des flammes — hautes dans l'ajonc, basses dans le pré. Sans
@@ -129,7 +129,7 @@ export type Sujet =
       /**
        * Le cap vers lequel le vent poussait, radians.
        *
-       * **C'est la direction du MOUVEMENT, pas la provenance** — le contresens
+       * **C'est la direction du mouvement, pas la provenance** — le contresens
        * est signalé par le moteur lui-même. Il est le même pour toutes les
        * victimes d'une même semaine, et c'est ce qui fait qu'elles penchent du
        * même côté : la signature d'une tempête sur le terrain.
@@ -142,11 +142,11 @@ export type Sujet =
   | { quoi: "geste"; geste: GesteVisible };
 
 /**
- * Un ACTE : un groupe de changements montrés ensemble, sur un créneau.
+ * Un **acte** : un groupe de changements montrés ensemble, sur un créneau.
  *
  * **Groupés, et c'est la demande littérale** : « par exemple animer tous les
  * arbres qui sont morts dans la semaine ». Trente-quatre bouleaux morts de
- * sécheresse font UN acte à trente-quatre sujets, pas trente-quatre actes.
+ * sécheresse font **un** acte à trente-quatre sujets, pas trente-quatre actes.
  * Sans ce regroupement, une semaine ordinaire de friche produirait des
  * centaines d'actes de quelques millisecondes.
  */
@@ -156,7 +156,7 @@ export interface Acte {
   debutMs: number;
   dureeMs: number;
   /**
-   * Cet acte RETIENT-il l'horloge ? (#163)
+   * Cet acte **retient**-il l'horloge ? (#163)
    *
    * **Le commanditaire a renversé la politique, et il faut le dire en toutes
    * lettres** : jusqu'ici la vitesse imposait sa durée à l'animation — « une
@@ -165,11 +165,11 @@ export interface Acte {
    * « c'est mieux d'attendre la fin d'une animation que de couper ». Un acte
    * bloquant va donc jusqu'au bout, et le temps du jeu l'attend.
    *
-   * Tout ce qui vient du JOURNAL est bloquant, et c'est cohérent : le journal
+   * Tout ce qui vient du **journal** est bloquant, et c'est cohérent : le journal
    * ne rapporte que des événements, c'est-à-dire des choses qui arrivent une
    * fois et qu'on manque si on ne les montre pas. Le non bloquant est
    * l'ambiance — le vent sur les feuillages, les oiseaux (§5.11 point 1) — et
-   * la CROISSANCE, qui court sur toute l'ellipse sans rien retenir.
+   * la **croissance**, qui court sur toute l'ellipse sans rien retenir.
    */
   bloquant: boolean;
 }
@@ -206,7 +206,7 @@ export const ACTE_LE_PLUS_COURT_MS = 100;
  *
  * **Une première calibration, et elle s'assume comme telle.** Rien dans le
  * moteur ne dit combien de temps une chute doit prendre à l'écran : c'est une
- * durée de PRÉSENTATION, donc un choix. Les valeurs partent de ce que le
+ * durée de **présentation**, donc un choix. Les valeurs partent de ce que le
  * mouvement demande pour être suivi — un quart de tour de fût se lit en une
  * seconde environ, un feuillage qui jaunit puis tombe demande davantage parce
  * que c'est un changement d'état et non un déplacement, et un front d'incendie
@@ -222,7 +222,7 @@ export const DUREE_NATURELLE_MS: Readonly<Record<Sujet["quoi"], number>> = {
   feu: 2500,
   // Une rafale couche ses victimes ensemble, échelonnées.
   tempete: 1200,
-  // Un changement d'ÉTAT et non un déplacement : jaunir, se défeuiller, griser.
+  // Un changement d'**état** et non un déplacement : jaunir, se défeuiller, griser.
   mort: 1400,
   // Un quart de tour autour du pied, accéléré comme une chute libre.
   chute: 900,
@@ -244,11 +244,11 @@ const BLOQUANT: Readonly<Record<Sujet["quoi"], boolean>> = {
 };
 
 /**
- * L'ORDRE des actes : les causes avant leurs conséquences.
+ * **l'ordre** des actes : les causes avant leurs conséquences.
  *
  * Ce n'est pas une préférence esthétique, c'est ce qui rend une ellipse
- * lisible. Un feu passe, PUIS les arbres qu'il a tués se transforment en
- * chandelles, PUIS certaines tombent — montrer les chutes avant le feu ferait
+ * lisible. Un feu passe, **puis** les arbres qu'il a tués se transforment en
+ * chandelles, **puis** certaines tombent — montrer les chutes avant le feu ferait
  * de l'enchaînement un hasard. Les gestes du joueur viennent en tête : c'est
  * lui qui a agi, et le reste de la semaine en découle.
  */
@@ -271,7 +271,7 @@ export function planDEllipse(
     return VIDE;
   }
   // Combien d'actes tiennent au plancher de lisibilité. Au-delà, on tronque et
-  // on le DIT : c'est le repli du §6.8, pas un échec silencieux.
+  // on le **dit** : c'est le repli du §6.8, pas un échec silencieux.
   const tiennent = Math.max(1, Math.floor(budgetMs / ACTE_LE_PLUS_COURT_MS));
   const gardes = sujets.slice(0, tiennent);
   const dureeMs = budgetMs / gardes.length;
@@ -292,7 +292,7 @@ export function planDEllipse(
 const VIDE: PlanDEllipse = { actes: [], dureeMs: 0, deborde: false, actesOmis: 0 };
 
 /**
- * Le même plan, mais chaque acte prend le TEMPS QU'IL LUI FAUT (#163).
+ * Le même plan, mais chaque acte prend le **temps qu'il lui faut** (#163).
  *
  * **C'est l'inverse de `planDEllipse`, et c'est la demande** : là-bas un
  * budget se partage entre les actes, quitte à les réduire sous le plancher de
@@ -303,7 +303,7 @@ const VIDE: PlanDEllipse = { actes: [], dureeMs: 0, deborde: false, actesOmis: 0
  * exactement le défaut qu'on vient corriger.
  *
  * Le regroupement, l'ordre et le débordement ne changent pas : trente-quatre
- * bouleaux morts de sécheresse restent UN acte, et les causes précèdent
+ * bouleaux morts de sécheresse restent **un** acte, et les causes précèdent
  * toujours leurs conséquences.
  */
 export function planAuRythmeNaturel(journaux: readonly JournalDeSemaine[]): PlanDEllipse {
@@ -319,7 +319,7 @@ export function planAuRythmeNaturel(journaux: readonly JournalDeSemaine[]): Plan
   return { actes, dureeMs: debutMs, deborde: false, actesOmis: 0 };
 }
 
-/** Le temps pendant lequel un plan RETIENT l'horloge, ms. */
+/** Le temps pendant lequel un plan **retient** l'horloge, ms. */
 export function dureeBloquanteMs(plan: PlanDEllipse): number {
   let fin = 0;
   for (const acte of plan.actes) {
@@ -331,7 +331,7 @@ export function dureeBloquanteMs(plan: PlanDEllipse): number {
 /**
  * Regroupe les journaux en sujets, dans l'ordre de présentation.
  *
- * Le regroupement se fait sur TOUTE la période et non semaine par semaine : dix
+ * Le regroupement se fait sur **toute** la période et non semaine par semaine : dix
  * ans de sécheresse donnent un acte « morts de sécheresse » avec dix ans
  * d'arbres, pas dix actes. C'est encore la même propriété — le principe ne
  * dépend pas de la durée — et c'est ce qui empêche une longue ellipse de
@@ -347,7 +347,7 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
     if (j.gestes) gestes.push(...j.gestes);
     if (j.chutes) chutes.push(...j.chutes);
     if (j.incendie) feux.push(j.incendie);
-    // Une tempête par ACTE, et non fusionnées : deux rafales de deux hivers
+    // Une tempête par **acte**, et non fusionnées : deux rafales de deux hivers
     // n'ont pas le même cap, et les confondre coucherait les arbres de l'une
     // dans le sens de l'autre.
     if (j.tempete) tempetes.push(j.tempete);
@@ -359,7 +359,7 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
   }
 
   const sujets: Sujet[] = [];
-  // Un geste par TYPE, pas un par appel : trois éclaircies dans la période
+  // Un geste par **type**, pas un par appel : trois éclaircies dans la période
   // sont une éclaircie à montrer.
   const parType = new Map<string, GesteVisible>();
   for (const g of gestes) {
@@ -391,7 +391,7 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
   for (const [cause, morts] of parCause) sujets.push({ quoi: "mort", cause, morts });
   if (chutes.length > 0) sujets.push({ quoi: "chute", chutes });
 
-  // **Trié PAR ORDRE STABLE**, pour qu'un même journal donne toujours le même
+  // **Trié par ordre stable**, pour qu'un même journal donne toujours le même
   // plan : le rendu est déterministe, le plan aussi (§2.1).
   return sujets.sort((a, b) => ORDRE.indexOf(a.quoi) - ORDRE.indexOf(b.quoi));
 }
@@ -399,7 +399,7 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
 /**
  * Fusionne deux gestes de même type : leurs arbres, ou leurs cellules.
  *
- * **`retire` se fusionne AUSSI, et c'était un défaut.** Cette fonction a été
+ * **`retire` se fusionne aussi, et c'était un défaut.** Cette fonction a été
  * écrite avant que le champ n'existe : elle reconstruisait `{ type, ids }` et
  * laissait tomber le reste. Tant que personne ne lisait `retire`, la perte ne
  * se voyait pas ; depuis que la mise en scène des gestes s'y appuie (§6.2),

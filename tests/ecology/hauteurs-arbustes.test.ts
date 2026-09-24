@@ -42,7 +42,7 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
   it("le châtaignier de semis reste DERRIÈRE la courbe de taillis en jeunesse", () => {
     // Le sens de l'écart est une prédiction, pas un réglage : un rejet de
     // souche démarre sur un système racinaire déjà fait, un semis non. Si le
-    // moteur passait DEVANT une courbe de taillis à vingt ans tout en tombant
+    // moteur passait **devant** une courbe de taillis à vingt ans tout en tombant
     // juste à quarante, c'est que sa forme de courbe serait fausse.
     const sim = hauteurs("castanea_sativa", 40, LIMON_ACIDE);
     const h20 = a(sim, 20);
@@ -54,7 +54,7 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
 });
 
 /**
- * LES ARBUSTES N'ONT PAS DE TABLE — ils ont des mesures, et ce n'est pas la
+ * **Les arbustes n'ont pas de table** — ils ont des mesures, et ce n'est pas la
  * même chose.
  *
  * Aucun forestier n'a jamais dressé de table de production pour une aubépine :
@@ -62,7 +62,7 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
  * essais en jardin, des plantations de boisement suivies cinq ans, des
  * monographies de la série *Biological Flora of the British Isles*. C'est plus
  * pauvre (souvent un seul chiffre, parfois lu sur une figure), mais c'est
- * MESURÉ, et c'est de la bonne géographie : sud de l'Angleterre, Midlands,
+ * **mesuré**, et c'est de la bonne géographie : sud de l'Angleterre, Midlands,
  * Bretagne, plaine allemande.
  *
  * **Aucune de ces quatre espèces n'est calée** : les quatre valeurs de
@@ -96,7 +96,7 @@ const MESURES: {
   {
     // +135,9 cm en cinq ans sur limon de marne calcaire, à partir de plants de
     // 41-57 cm (Willoughby 2007, via Thomas 2011). La même source donne 7
-    // cm/an sur substrat dégradé : c'est l'écart de STATION, que le moteur doit
+    // cm/an sur substrat dégradé : c'est l'écart de **station**, que le moteur doit
     // produire par ses facteurs et non porter dans sa fiche.
     espece: "euonymus_europaeus",
     nom: "Fusain",

@@ -1,5 +1,5 @@
 /**
- * Conservation de l'eau au niveau du PROFIL stratifié (docs/regles.md §16).
+ * Conservation de l'eau au niveau du **profil** stratifié (docs/regles.md §16).
  *
  * Le bilan d'une cellule était testé (water-conservation.test.ts) mais pas
  * celui du profil à plusieurs horizons, et il fuyait : ce qu'un horizon ne

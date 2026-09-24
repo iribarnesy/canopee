@@ -7,7 +7,7 @@
  * plus rouge. Un verger mixte doit laisser lire les deux.
  *
  * Sa singularité de jeu est ailleurs et le moteur la porte : il fleurit
- * TÔT, et le gel de mars lui prend sa récolte (`gelFatalC`). La feuille est
+ * **tôt**, et le gel de mars lui prend sa récolte (`gelFatalC`). La feuille est
  * **cordée**, presque ronde, à long pétiole rougeâtre.
  */
 import type { FicheGraphique } from "../fiche";
@@ -40,7 +40,7 @@ export const ABRICOTIER: FicheGraphique = {
     couleur: { r: 222, g: 138, b: 60 },
     longueurM: 0.05,
     parRameau: 3,
-    // Rose franc, et AVANT les feuilles : l'abricotier fleurit sur bois nu, ce
+    // Rose franc, et **avant** les feuilles : l'abricotier fleurit sur bois nu, ce
     // qui rend sa floraison encore plus voyante — et c'est exactement ce qui
     // l'expose au gel de mars (`gelFatalC`).
     fleur: { r: 240, g: 192, b: 202 },

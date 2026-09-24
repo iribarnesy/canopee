@@ -1,5 +1,5 @@
 /**
- * LES PARTIES SAUVEGARDÉES : plusieurs, et lisibles (#147).
+ * **Les parties sauvegardées** : plusieurs, et lisibles (#147).
  *
  * Cas vécu : « changer des paramètres, lancer, sortir — et plus aucun moyen de
  * relire les paramètres de la partie précédente ». Il y avait une seule
@@ -8,11 +8,11 @@
  *
  * **Rien de nouveau ne se stocke.** `SaveGame` portait déjà tout : station,
  * graine, météo, scénario, bordures, relief, eau, nappe, bassin,
- * vieillissement, année de départ, économie. Ce qui manquait était un RANGEMENT
+ * vieillissement, année de départ, économie. Ce qui manquait était un **rangement**
  * — une liste au lieu d'un emplacement — et de quoi la relire.
  *
  * Ce module ne parle pas à React et ne connaît pas `window` : le stockage lui
- * est DONNÉ. C'est ce qui permet de l'éprouver avec un faux stockage, donc de
+ * est **donné**. C'est ce qui permet de l'éprouver avec un faux stockage, donc de
  * vérifier la migration sans navigateur.
  */
 
@@ -30,7 +30,7 @@ export const CLE_LISTE = "canopee-sauvegardes";
 /**
  * Combien de parties on garde.
  *
- * Une sauvegarde porte le JOURNAL des actions, qui grossit avec la partie, et
+ * Une sauvegarde porte le **journal** des actions, qui grossit avec la partie, et
  * `localStorage` tient dans quelques mégaoctets. Au-delà de huit, on laisse
  * tomber la plus ancienne — c'est le comportement qu'on attend d'une liste de
  * parties, et le silence en face d'un quota dépassé serait pire.
@@ -59,7 +59,7 @@ export function idNeuf(maintenant = Date.now()): string {
 }
 
 /**
- * Ce qui est rangé, le plus RÉCEMMENT écrit d'abord.
+ * Ce qui est rangé, le plus **récemment** écrit d'abord.
  *
  * **La migration se fait ici**, à la lecture, et une seule fois : l'ancienne
  * clé devient la première entrée, puis disparaît. Une partie en cours sous
@@ -167,7 +167,7 @@ export function reglagesDeLaPartie(save: SaveGame): { quoi: string; valeur: stri
   const lignes: { quoi: string; valeur: string }[] = [
     { quoi: "Station", valeur: station?.station.nom ?? save.stationId },
     { quoi: "Année de départ", valeur: `${save.anneeDepart}` },
-    // Les LIBELLÉS du moteur, pas les identifiants : « SSP5-8.5 » et non
+    // Les **libellés** du moteur, pas les identifiants : « SSP5-8.5 » et non
     // « SSP585 », « Dans un bocage d'élevage » et non « bocage ». C'est ce que
     // l'issue demande — les mêmes mots que l'écran de réglages — et ces mots
     // ont déjà une source.
@@ -225,7 +225,7 @@ function nomDuPaysage(id: string | undefined): string {
 
 /** Les essences plantées dans cette partie, pour reconnaître ce qu'on a fait. */
 export function essencesPlantees(save: SaveGame): string[] {
-  // La MÊME dérivation que celle dont la récolte automatique se sert pour savoir
+  // La **même** dérivation que celle dont la récolte automatique se sert pour savoir
   // ce qu'elle a le droit de cueillir (`recolteAuto.ts`). Deux copies de cette
   // liste finiraient par ne plus désigner le même verger.
   return [...especesSemees(save.actions)].map((id) => getEspece(id).nom);

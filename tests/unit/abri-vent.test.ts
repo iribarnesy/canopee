@@ -1,14 +1,14 @@
 /**
- * L'abri au vent indexé donne EXACTEMENT ce que donnait le balayage complet.
+ * L'abri au vent indexé donne **exactement** ce que donnait le balayage complet.
  *
  * `windShelterAt` coûtait le peuplement entier par arbre et par semaine — un n²
  * hebdomadaire, premier poste de calcul du tick dès qu'une parcelle se peuple
  * (#99). `abriVentIndexe` ne lit que le panier du point interrogé.
  *
- * CE QU'IL FAUT PROUVER N'EST PAS « À PEU PRÈS PAREIL ». Une somme de flottants
- * n'est pas associative : changer l'ORDRE des voisins changerait les derniers
+ * **Ce qu'il faut prouver n'est pas** « **à peu près pareil** ». Une somme de flottants
+ * n'est pas associative : changer l'**ordre** des voisins changerait les derniers
  * chiffres, et un seuil quelque part dans la suite pourrait basculer sans que
- * personne comprenne pourquoi. L'égalité est donc exigée STRICTE, `toBe` et non
+ * personne comprenne pourquoi. L'égalité est donc exigée **stricte**, `toBe` et non
  * `toBeCloseTo`, sur des peuplements où la somme a beaucoup de termes.
  */
 

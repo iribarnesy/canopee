@@ -22,7 +22,7 @@ export const AJONC: FicheGraphique = {
     conicite: 0.9,
     tortuosite: 0.3,
   },
-  // Les « feuilles » d'un ajonc adulte sont des ÉPINES : c'est ce qu'on dessine.
+  // Les « feuilles » d'un ajonc adulte sont des **épines** : c'est ce qu'on dessine.
   feuillage: { forme: "aiguille", feuillesParBouquet: 7, longueurFeuilleM: 0.025, densite: 0.96 },
   couleurs: {
     // Le vert sombre presque noir d'un ajonc, sur lequel le jaune tranche.

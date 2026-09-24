@@ -139,7 +139,7 @@ describe("les huit familles de port sont éprouvées", () => {
     // il constate que les squelettes diffèrent, pas qu'un humain les nomme —
     // mais il attrape le cas où deux fiches auraient convergé par mégarde.
     //
-    // **La signature ne peut PAS être le rayon atteint**, et c'est le piège où
+    // **La signature ne peut pas être le rayon atteint**, et c'est le piège où
     // cet essai est tombé : `contraindre` calibre le houppier pour qu'il
     // touche exactement `rayonMaxM`, donc ce rayon vaut `houppierRatio × h`
     // pour tout le monde — c'est une constante déguisée en mesure. Deux
@@ -147,7 +147,7 @@ describe("les huit familles de port sont éprouvées", () => {
     // sortaient donc identiques quels que soient leurs angles : mesuré sur le
     // pommier et l'abricotier, qui n'ont pourtant pas la même charpente.
     //
-    // On mesure donc la RÉPARTITION des bouts et non l'extension : leur
+    // On mesure donc la **répartition** des bouts et non l'extension : leur
     // écartement moyen à l'axe, et leur hauteur moyenne. L'angle d'insertion,
     // la dominance et la tortuosité s'y lisent ; la calibration, non.
     const moyenne = (xs: number[]) => xs.reduce((a, v) => a + v, 0) / Math.max(1, xs.length);
@@ -215,7 +215,7 @@ describe("les houppiers tiennent debout", () => {
     // avait trois causes empilées, et il a fallu les trois mesures pour les
     // séparer — c'est pour ça que cet essai mesure au lieu de regarder.
     //
-    //   1. Le décalage d'azimut était tiré par FILLE et non par nœud, ce qui
+    //   1. Le décalage d'azimut était tiré par **fille** et non par nœud, ce qui
     //      effaçait la divergence : chaque fille partait dans une direction
     //      indépendante, et trois tirages uniformes se groupent au lieu de se
     //      répartir. (0,17→0,32 sur les feuillus à fût unique.)
@@ -223,7 +223,7 @@ describe("les houppiers tiennent debout", () => {
     //      l'être d'un nœud au suivant : ce n'est pas ce que le mot désigne
     //      dans la plante, et ce n'est pas ce qui équilibre un arbre.
     //   3. Les espèces à rameaux opposés déclaraient `branchesParNoeud: 2`,
-    //      c'est-à-dire UNE latérale, la flèche comptant pour la première.
+    //      c'est-à-dire **une** latérale, la flèche comptant pour la première.
     //
     // Les cépées et le pin, eux, étaient déjà centrés : ce sont précisément les
     // deux cas où le code répartissait les azimuts régulièrement. Le seuil est
@@ -308,7 +308,7 @@ describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
 
   it("**l'état lu est celui du moteur, et le mûr l'emporte**", () => {
     // `fruitsKg` passe devant `fruitProgress`, et ce n'est pas arbitraire : un
-    // arbre chargé de fruits mûrs a AUSSI un `fruitProgress` de 1, et c'est le
+    // arbre chargé de fruits mûrs a **aussi** un `fruitProgress` de 1, et c'est le
     // mûr qui est l'information — c'est le seul état de la liste qui appelle un
     // geste, et il se perd si on le rate (`fenetreRecolteWeeks`).
     const arbre = (patch: Partial<ArbreAPoser>): ArbreAPoser => ({
@@ -332,7 +332,7 @@ describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
     // Et l'inverse ne s'invente pas : sans grandeur, pas de fruit. Un arbre
     // dont la scène ne transporte pas l'état n'en porte pas.
     expect(etatDuFruit(arbre({ fruitsKg: 0, fruitProgress: 0 }))).toBe(FRUIT_AUCUN);
-    // L'arbousier fleurit PENDANT que mûrissent les arbouses de l'an passé —
+    // L'arbousier fleurit **pendant** que mûrissent les arbouses de l'an passé —
     // c'est sa signature, et le moteur la porte. Le fruit mûr l'emporte alors,
     // parce que c'est lui qui appelle un geste.
     expect(etatDuFruit(arbre({ floraison: 1, fruitsKg: 5 }))).toBe(FRUIT_MUR);
@@ -365,7 +365,7 @@ describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
     // La contrainte n'est plus structurelle depuis que la floraison a quitté le
     // bloc `fruits` (#70) : une espèce peut désormais fleurir sans qu'on
     // récolte rien d'elle, ce qui est le cas de l'ajonc, de la callune et du
-    // saule. Ce que l'essai vérifie reste le même — une fleur DESSINÉE doit
+    // saule. Ce que l'essai vérifie reste le même — une fleur **dessinée** doit
     // avoir une date dans le moteur, sinon le rendu la pose quand il veut.
     for (const f of FICHES) {
       if (!f.fruit?.fleur) continue;
@@ -376,7 +376,7 @@ describe("les fruits : l'état vient du moteur, le dessin de la fiche", () => {
   it("toutes les espèces à fruits ne fleurissent PAS de façon visible", () => {
     // Une floraison discrète existe — chatons verdâtres du noisetier, chatons
     // crème du châtaignier — et ne se dessine pas : ce qui justifie de la
-    // peindre, c'est qu'elle CHANGE la silhouette de loin. Un noisetier en
+    // peindre, c'est qu'elle **change** la silhouette de loin. Un noisetier en
     // fleur ressemble à un noisetier.
     expect(ficheDe("corylus_avellana")?.fruit?.fleur).toBeUndefined();
     expect(ficheDe("castanea_sativa")?.fruit?.fleur).toBeUndefined();
@@ -415,12 +415,12 @@ describe("les couleurs de feuillage", () => {
     // qui donnerait un feuillage d'hiver à un caduc pur mentirait sur l'ombre
     // portée, que le moteur calcule à partir de `caduc`.
     //
-    // **Le moteur a TROIS façons de porter quelque chose en janvier**, et cet
+    // **Le moteur a trois façons de porter quelque chose en janvier**, et cet
     // essai n'en connaissait que deux — il aurait refusé le troène, qui a
     // pourtant raison de garder du vert. Les voici :
     //   - `caduc: false` — le persistant vrai (houx, pin, arbousier) ;
-    //   - `marcescence` — la feuille MORTE qui tient (hêtre, charme, chêne) ;
-    //   - `retentionHivernale` — la feuille VIVANTE qui tient, le
+    //   - `marcescence` — la feuille **morte** qui tient (hêtre, charme, chêne) ;
+    //   - `retentionHivernale` — la feuille **vivante** qui tient, le
     //     semi-persistant, et le troène est le seul de l'atlas dans ce cas.
     // Les trois font de l'ombre, donc les trois ont une couleur d'hiver ; ce
     // qui change, c'est laquelle — morte pour le deuxième, verte pour l'autre.

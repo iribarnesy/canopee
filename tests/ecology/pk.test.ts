@@ -140,11 +140,11 @@ describe("les cycles, et ce qui leur manque encore", () => {
     //
     // Ce chiffre m'avait gêné, et il tient. Le piège est qu'on lit partout des
     // valeurs bien plus basses — 3 à 16 kg K/ha/an sous une hêtraie — mais ce
-    // sont des RETOURS PAR LITIÈRE, pas des prélèvements. Le potassium est le
+    // sont des **retours par litière**, pas des prélèvements. Le potassium est le
     // plus mobile des cations : l'arbre en retransloque une grande part avant
     // la chute des feuilles, et la pluie lessive le reste du feuillage avant
     // qu'il ne tombe. La litière n'en garde donc qu'une fraction. Les bilans
-    // qui mesurent le PRÉLÈVEMENT, eux, montent à 80 kg/ha/an en peuplement
+    // qui mesurent le **prélèvement**, eux, montent à 80 kg/ha/an en peuplement
     // feuillu productif. Soixante-dix est dans la gamme, à son haut.
     // *(À confirmer : je n'ai pas trouvé de bilan français de hêtraie
     // directement citable, seulement des ordres de grandeur concordants.)*

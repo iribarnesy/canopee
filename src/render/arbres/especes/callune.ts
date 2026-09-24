@@ -2,7 +2,7 @@
  * Callune — *Calluna vulgaris*. Famille : **fourré bas**.
  *
  * « Tapis violet ras en fin d'été » (§5.4). C'est la plus basse de l'atlas — un
- * tapis de vingt à cinquante centimètres — et la seule dont la SAISON est le
+ * tapis de vingt à cinquante centimètres — et la seule dont la **saison** est le
  * trait principal : verte-grise onze mois, puis violette en août-septembre,
  * assez franchement pour qu'une lande change de couleur d'un instantané à
  * l'autre.

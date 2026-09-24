@@ -1,5 +1,5 @@
 /**
- * LE BILAN DE PÉRIODE, CLIQUABLE (#128, §6.8 №2).
+ * **Le bilan de période**, **cliquable** (#128, §6.8 №2).
  *
  * *« Un panneau qui remplace le fil texte quand la vitesse est haute : les
  * changements regroupés, chaque ligne cliquable pour que la caméra aille se
@@ -8,14 +8,14 @@
  *
  * Deux choix de forme, et ils viennent tous les deux de cette phrase :
  *
- * - **la ligne EST le bouton**, et pas un texte suivi d'une loupe. Ce qu'on
+ * - **la ligne est le bouton**, et pas un texte suivi d'une loupe. Ce qu'on
  *   veut du joueur qui lit « 34 bouleaux morts de sécheresse », c'est qu'il
  *   aille voir ; mettre la cible ailleurs que sur la phrase, c'est lui demander
  *   de viser ;
  * - **une ligne sans endroit ne fait pas semblant d'en avoir un.** Elle reste
  *   lisible, elle ne réagit pas au survol, et elle ne prend pas le curseur de
  *   la main. C'est le cas d'un franchissement de stade dont l'arbre a disparu
- *   de l'instantané depuis — le bilan sait COMBIEN, pas OÙ, et il le montre.
+ *   de l'instantané depuis — le bilan sait **combien**, pas **où**, et il le montre.
  *
  * Il ne compte rien lui-même : `bilan.ts` tient le pli et la phrase, ici on
  * dessine. La fin de niveau affiche le même composant avec le bilan de la

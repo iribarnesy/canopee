@@ -1,8 +1,8 @@
 /**
- * LA RÈGLE DU MODE CINÉMA (`src/game/scenes.ts`, #128 / §6.8).
+ * **La règle du mode cinéma** (`src/game/scenes.ts`, #128 / §6.8).
  *
  * Deux défauts qu'on ne voit pas en jouant une heure, et que cet essai borne :
- * une scène qui ne se déclenche JAMAIS, et une scène qui se déclenche toutes
+ * une scène qui ne se déclenche **jamais**, et une scène qui se déclenche toutes
  * les trois semaines. Les chiffres sont ceux des parcelles réelles du jeu — une
  * ronceraie de deux mille huit cents tiges, un verger de treize pommiers.
  */

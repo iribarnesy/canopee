@@ -1,5 +1,5 @@
 /**
- * L'effet de bord : ce qu'il y a AUTOUR de la parcelle ombrage ses lisières.
+ * L'effet de bord : ce qu'il y a **autour** de la parcelle ombrage ses lisières.
  *
  * Le moteur traitait la limite de parcelle comme une limite du monde : au-delà,
  * rien. Un carré de bocage au milieu d'un massif forestier recevait donc autant
@@ -7,10 +7,10 @@
  * dans le sens qui compte, puisque la lisière est justement l'endroit où
  * l'agroforesterie se joue.
  *
- * ─── LA GÉOMÉTRIE, ET ELLE N'EST PAS SYMÉTRIQUE ──────────────────────────────
+ * ─── **la géométrie**, **et elle n'est pas symétrique** ──────────────────────────────
  * Le point qui rend ce mécanisme non trivial : **ce qui vous ombrage est ce qui
- * est au SUD.** Le soleil est au sud en France, les ombres tombent vers le nord
- * (`SHADOW_NORTH_OFFSET`, light.ts), et un bois planté au NORD d'une parcelle ne
+ * est au sud.** Le soleil est au sud en France, les ombres tombent vers le nord
+ * (`SHADOW_NORTH_OFFSET`, light.ts), et un bois planté au **nord** d'une parcelle ne
  * lui coûte pas une heure de soleil — c'est elle qui l'ombrage, pas l'inverse.
  *
  * Les quatre bordures ne pèsent donc pas pareil. La bordure sud ombrage
@@ -18,13 +18,13 @@
  * extrémités de la journée, quand le soleil est bas et son rayonnement faible ;
  * la bordure nord ne fait rien du tout.
  *
- * ─── LA PROFONDEUR ───────────────────────────────────────────────────────────
+ * ─── **la profondeur** ───────────────────────────────────────────────────────────
  * On reprend la géométrie du moteur plutôt qu'un chiffre importé : un arbre
  * projette son ombre sur `SHADOW_NORTH_OFFSET` fois sa hauteur. Un peuplement
  * de bordure fait donc de même, et la bande ombragée est d'autant plus profonde
  * que le bois voisin est haut.
  *
- * La hauteur du voisin se DÉDUIT de sa part boisée, faute d'être déclarée : un
+ * La hauteur du voisin se **déduit** de sa part boisée, faute d'être déclarée : un
  * paysage boisé à 90 % est un massif et ombrage comme une futaie ; un bocage
  * boisé à 20 % ombrage comme une haie, parce que c'est une haie. Supposer une
  * futaie mûre autour de toute parcelle, comme le faisait la première version,
@@ -76,7 +76,7 @@ export function lumiereApresBordures(
   dims: GridDims,
   bordures: Bordures,
 ): number {
-  // y croît vers le NORD (light.ts) : la bordure sud est donc en y = 0.
+  // y croît vers le **nord** (light.ts) : la bordure sud est donc en y = 0.
   const cotes: [string, number, number][] = [
     [bordures.sud, y, POIDS_SUD],
     [bordures.nord, dims.heightM - y, POIDS_NORD],
@@ -87,7 +87,7 @@ export function lumiereApresBordures(
   for (const [paysageId, distance, poids] of cotes) {
     if (poids <= 0) continue;
     const partBoisee = getPaysage(paysageId).partBoisee;
-    // Chaque côté a SA profondeur : une haie n'ombrage pas aussi loin qu'une
+    // Chaque côté a **sa** profondeur : une haie n'ombrage pas aussi loin qu'une
     // futaie, et c'est ce qui distingue un bocage d'un massif.
     const profondeur = profondeurOmbrageM(partBoisee);
     if (profondeur <= 0 || distance >= profondeur) continue;

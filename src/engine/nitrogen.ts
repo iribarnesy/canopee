@@ -1,5 +1,5 @@
 /**
- * Cycle de l'azote d'UNE cellule de 1 m², en grammes (1 kg/ha = 0,1 g/m²) :
+ * Cycle de l'azote d'**une** cellule de 1 m², en grammes (1 kg/ha = 0,1 g/m²) :
  *   1. minéralisation (f(T°, humidité, anoxie)) ;
  *   2. prélèvement par les arbres dont les racines occupent la cellule —
  *      alloué spatialement par tick.ts : chaque arbre a un besoin en grammes
@@ -26,7 +26,7 @@ function moistureFactor(moistureRatio: number, waterloggingRatio: number): numbe
 }
 
 /**
- * Facteur climatique commun de l'activité des décomposeurs (humus ET litière) :
+ * Facteur climatique commun de l'activité des décomposeurs (humus **et** litière) :
  * T°, humidité, anoxie — la boucle microbienne du ch2-B.
  */
 export function decompositionClimateFactor(
@@ -74,13 +74,13 @@ export const RENDEMENT_MICROBIEN = 0.3;
 export const CN_MICROBES = 8;
 
 /**
- * Azote NET libéré par la décomposition d'un substrat, g.
+ * Azote **net** libéré par la décomposition d'un substrat, g.
  *
  * Les décomposeurs ont besoin d'azote pour construire leur propre biomasse.
  * Si le substrat n'en contient pas assez — au-delà d'un C/N d'environ 27 —
  * ils vont le chercher dans le sol : c'est la **faim d'azote**, bien connue de
  * quiconque a enfoui du BRF ou de la paille. L'azote n'est pas perdu, il est
- * IMMOBILISÉ ; il reviendra quand ces micro-organismes mourront à leur tour.
+ * **immobilisé** ; il reviendra quand ces micro-organismes mourront à leur tour.
  *
  * Valeur négative = immobilisation (le sol se fait ponctionner).
  */
@@ -90,35 +90,35 @@ export function azoteNetDecomposition(carboneDecomposeG: number, azoteDecomposeG
 }
 
 /**
- * Stock d'azote minéral pour lequel une racine prélève à la MOITIÉ de sa
+ * Stock d'azote minéral pour lequel une racine prélève à la **moitié** de sa
  * capacité : 0,5 g/m², soit 5 kg N/ha.
  *
  * La version précédente écrivait ce frein comme une rampe linéaire saturant à
  * 3 g/m² — 30 kg N/ha — et cela ne tenait pas debout de deux façons.
  *
- * D'ABORD L'ÉCHELLE. Un sol forestier ne porte jamais 30 kg N/ha de minéral en
+ * **D'abord l'échelle**. Un sol forestier ne porte jamais 30 kg N/ha de minéral en
  * même temps : le nôtre plafonne à 1,9 g/m² sur le limon riche et 0,5 sur la
- * lande. Le frein était donc actif EN PERMANENCE, partout, sur toutes les
+ * lande. Le frein était donc actif **en permanence**, partout, sur toutes les
  * stations — jamais une racine ne prélevait librement.
  *
- * ENSUITE LA FORME. Un prélèvement racinaire sature (cinétique de
+ * **Ensuite la forme**. Un prélèvement racinaire sature (cinétique de
  * Michaelis-Menten sur la concentration en solution), il ne croît pas
  * linéairement jusqu'à un couperet. Et la mesure de terrain va plus loin :
  * dans neuf forêts tempérées suivies sur une saison (Nadelhoffer et al., *Plant
- * and Soil*), le nitrate est prélevé à un rythme RÉGULIER alors même que les
+ * and Soil*), le nitrate est prélevé à un rythme **régulier** alors même que les
  * stocks d'ammonium et la minéralisation nette fluctuent fortement d'un mois à
- * l'autre. Autrement dit : l'arbre vit du FLUX de minéralisation qu'il
+ * l'autre. Autrement dit : l'arbre vit du **flux** de minéralisation qu'il
  * intercepte, et le stock debout est petit précisément parce que le
  * prélèvement est rapide. Un modèle qui bride le prélèvement à proportion du
  * stock inverse la causalité.
  *
- * La demi-saturation est donc placée BAS, dans le bas de la gamme des stocks
+ * La demi-saturation est donc placée **bas**, dans le bas de la gamme des stocks
  * minéraux observés en forêt tempérée *(à calibrer : aucune source ne publie
  * cette constante sous cette forme — c'est une inférence de la gamme des
  * stocks et de la régularité du prélèvement)*.
  *
  * Ce changement a été soumis à une réfutation avant d'être retenu : les trois
- * essences dont la vitesse de croissance n'est PAS calée sur les tables de
+ * essences dont la vitesse de croissance n'est **pas** calée sur les tables de
  * production (pin, aulne, frêne) auraient dû se mettre à les dépasser si le
  * frein compensait autre chose. Elles restent à +6 %, +1 % et +2 % à quarante
  * ans (`hauteurs.test.ts`).

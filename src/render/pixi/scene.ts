@@ -10,11 +10,11 @@
  *
  * **Le partage du travail est simple, et c'est tout l'intérêt du montage :**
  *
- * - **le Canvas 2D CUIT.** Le terrain, le décor et les arbres sont dessinés une
+ * - **le Canvas 2D cuit.** Le terrain, le décor et les arbres sont dessinés une
  *   fois dans des canvas hors écran, par les modules `couches/`. C'est du
  *   vectoriel, c'est cher, et ça ne se refait qu'au changement — de semaine, de
  *   zoom, d'orientation.
- *   - **Pixi POSE.** Chaque canvas cuit devient une texture, chaque texture un
+ *   - **Pixi pose.** Chaque canvas cuit devient une texture, chaque texture un
  *   sprite, et le GPU les compose. Par image, il n'y a plus une seule primitive
  *   vectorielle : c'est la règle que L0 a produite en mesurant un facteur trente
  *   sur les ombres, et le montage la rend structurelle plutôt que disciplinaire.
@@ -26,8 +26,8 @@
  * derrière elle — et les listes sont déjà triées par la même clé de profondeur,
  * ce qui rendra la fusion mécanique.
  *
- * **L'ordre porte une règle, et une seule** : ce qui ÉCLAIRE passe après ce qui
- * assombrit, et ce qui MONTE passe après ce qui est planté. D'où le feu entre
+ * **L'ordre porte une règle, et une seule** : ce qui **éclaire** passe après ce qui
+ * assombrit, et ce qui **monte** passe après ce qui est planté. D'où le feu entre
  * l'ombre et les arbres, et la fumée par-dessus les arbres.
  *
  * **Les ombres passent par une texture de rendu**, et pas par des sprites en
@@ -116,7 +116,7 @@ export const BUDGET_ARBRES_PX = 300_000;
 /** Ce que la scène a besoin de recevoir à chaque rafraîchissement. */
 export interface EtatScene {
   sol: DonneesSol;
-  /** semaine DANS l'année (0–51) : c'est elle qui décale la palette */
+  /** semaine **dans** l'année (0–51) : c'est elle qui décale la palette */
   semaineAnnee: number;
   arbres: readonly ArbreAPoser[];
   /** les quatre bordures ; absentes = pas de hors-parcelle */
@@ -140,7 +140,7 @@ export interface Compte {
   /** classes de vignette en attente de cuisson */
   arbresEnRetard: number;
   /**
-   * Millisecondes passées à POSER, hors cuisson et hors rendu GPU.
+   * Millisecondes passées à **poser**, hors cuisson et hors rendu GPU.
    *
    * **Le poste que rien ne mesurait, et donc que rien ne surveillait.** Le
    * compte disait combien de sprites étaient posés, jamais ce que les poser
@@ -148,7 +148,7 @@ export interface Compte {
    * proscrite. Un chiffre qu'on ne mesure pas est un chiffre qui dérive.
    *
    * Séparé du reste exprès : la cuisson est budgétée et s'arrête d'elle-même,
-   * le rendu GPU dépend de la machine, la POSE est du JavaScript pur et ne
+   * le rendu GPU dépend de la machine, la **pose** est du JavaScript pur et ne
    * dépend que de nous. C'est le seul des trois qu'on puisse comparer d'une
    * version à l'autre depuis un conteneur sans carte graphique.
    */
@@ -165,13 +165,13 @@ export interface Compte {
  * jeu et doit rendre la main dans le budget d'une image.
  */
 /**
- * Un arbre tel qu'il a été POSÉ : de quoi refaire, dans l'autre sens, le
+ * Un arbre tel qu'il a été **posé** : de quoi refaire, dans l'autre sens, le
  * chemin du pixel écran vers le pixel de sa vignette.
  */
 interface ArbrePose {
   id: number;
   image: HTMLCanvasElement;
-  /** le PIED de l'arbre à l'écran */
+  /** le **pied** de l'arbre à l'écran */
   sx: number;
   sy: number;
   /** le pied dans la vignette, une fois mise à l'échelle */
@@ -244,7 +244,7 @@ export class SceneParcelle {
   /**
    * Où chaque arbre a été posé à la dernière image, dans l'ordre du peintre.
    *
-   * C'est ce qui permet de désigner un arbre par ce qu'on VOIT de lui plutôt
+   * C'est ce qui permet de désigner un arbre par ce qu'on **voit** de lui plutôt
    * que par la cellule de sol sous le curseur : un houppier penché déborde de
    * sa cellule, et un tronc derrière une butte n'a pas la sienne sous le
    * curseur. Relu à l'envers, l'ordre du peintre donne aussi gratuitement la
@@ -286,12 +286,12 @@ export class SceneParcelle {
   /**
    * La signature du masque d'ombre déjà cuit : caméra + arbres.
    *
-   * **Le masque est une FONCTION de (arbres, caméra), et rien d'autre.** Tant
+   * **Le masque est une fonction de (arbres, caméra), et rien d'autre.** Tant
    * que ni l'une ni les autres ne bougent, la texture d'ombre déjà rendue est
    * exactement celle qu'on s'apprêtait à refaire — et la refaire coûte deux
    * passes plein écran plus un placement par arbre.
    *
-   * Ce n'est pas une optimisation de banc : le jeu est au TOUR. Entre deux
+   * Ce n'est pas une optimisation de banc : le jeu est au **tour**. Entre deux
    * ticks, la caméra immobile est le régime normal, pas le cas particulier.
    * Ce qui bouge dans une image d'attente, ce sont les cuissons en retard et
    * rien d'autre.
@@ -302,7 +302,7 @@ export class SceneParcelle {
   /**
    * Ce qui déforme les arbres en cours d'animation, s'il y a lieu.
    *
-   * Une FONCTION et non un état : la scène ne tient pas d'horloge et ne sait
+   * Une **fonction** et non un état : la scène ne tient pas d'horloge et ne sait
    * rien d'une ellipse. Elle demande, par identifiant d'arbre, comment poser
    * le sprite — et par défaut la réponse est « debout ». Tout le reste vit
    * au-dessus, dans `src/render/temps`, qui est pur et testé.
@@ -311,7 +311,7 @@ export class SceneParcelle {
   /**
    * Les cellules à voiler cette image, s'il y en a.
    *
-   * Un TABLEAU et non une fonction, à la différence de la déformation : le
+   * Un **tableau** et non une fonction, à la différence de la déformation : le
    * lecteur rend d'un coup les quelques cellules qu'un front éclaire, alors
    * qu'un arbre s'interroge par identifiant. Vide au repos, ce qui est l'état
    * ordinaire.
@@ -330,14 +330,14 @@ export class SceneParcelle {
    * Les taches de brûlure, cuites une fois.
    *
    * Elles passent par la même couche que le voile des gestes et le même
-   * poseur : ce qui change n'est pas où la marque se dessine, c'est sa FORME —
+   * poseur : ce qui change n'est pas où la marque se dessine, c'est sa **forme** —
    * un carreau pour un geste, une tache étalée pour une brûlure (`voile.ts`).
    */
   private brulures?: Texture[];
   /**
    * Les particules du feu de cette image, s'il y en a.
    *
-   * Un TABLEAU, comme les voiles et pour la même raison : le lecteur rend d'un
+   * Un **tableau**, comme les voiles et pour la même raison : le lecteur rend d'un
    * coup les quelques centaines de particules qu'un front produit, alors qu'un
    * arbre s'interroge par identifiant. Vide au repos, c'est-à-dire toujours,
    * sauf pendant l'acte d'un incendie.
@@ -387,26 +387,26 @@ export class SceneParcelle {
       preference: "webgl",
     });
     parent.appendChild(this.app.canvas as HTMLCanvasElement);
-    // **Le décor est TRANSPARENT, et c'est une demande explicite** : « faut
+    // **Le décor est transparent, et c'est une demande explicite** : « faut
     // trouver un moyen pour pas que le joueur croie que c'est à lui ». La
     // désaturation et le contraste écrasé disaient déjà « au loin » ; ils ne
     // disaient pas « pas à toi ». Une opacité franchement inférieure à un le
     // dit, parce qu'elle est la seule de ces trois choses qu'un joueur ne peut
     // pas prendre pour une variation de terrain : ce qui est derrière le décor,
     // c'est le fond de brume de l'interface, donc le décor se lit comme une vue
-    // à travers quelque chose. Posée sur la COUCHE et non dans les couleurs
+    // à travers quelque chose. Posée sur la **couche** et non dans les couleurs
     // cuites : c'est gratuit, ça ne recuit rien, et ça se règle d'un nombre.
     this.couches.decor.alpha = OPACITE_DU_DECOR;
     this.app.stage.addChild(
       this.couches.decor,
       this.couches.sol,
-      // Le voile d'un geste est SUR le sol et SOUS les arbres : un chaulage
+      // Le voile d'un geste est **sur** le sol et **sous** les arbres : un chaulage
       // passe devant la terre et derrière les troncs, comme la poussière qu'il
       // est. Sous les ombres aussi, donc : l'ombre d'un arbre tombe sur la
       // poussière de chaux.
       this.couches.voiles,
       this.couches.ombres,
-      // **Les flammes sont SUR l'ombre et SOUS les arbres.** Sur l'ombre,
+      // **Les flammes sont sur l'ombre et sous les arbres.** Sur l'ombre,
       // parce qu'un feu éclaire au lieu d'être éclairé : une flamme assombrie
       // par l'ombre du houppier qu'elle est en train de brûler serait une
       // absurdité. Sous les arbres, parce qu'un feu courant est à leurs pieds
@@ -414,36 +414,36 @@ export class SceneParcelle {
       // lisible, quand la flamme monte derrière une tige et pas devant.
       this.couches.feu,
       this.couches.arbres,
-      // La surbrillance est un CALQUE et non une teinte : la teinte de Pixi
+      // La surbrillance est un **calque** et non une teinte : la teinte de Pixi
       // multiplie, donc elle ne sait qu'assombrir. Un double du sprite posé
       // par-dessus, en `add`, éclaire l'arbre sans toucher à sa vignette — et
       // la vignette cuite reste intacte, ce qu'exige le §5.11.
       this.couches.surbrillance,
-      // L'anneau de sélection est posé À PART de la couche des halos, et pas
+      // L'anneau de sélection est posé **à part** de la couche des halos, et pas
       // dedans : `poserImages` y range des sprites par rang, et un `Graphics`
       // glissé au milieu de ce rangement se ferait prendre pour l'un d'eux.
       this.anneaux,
       this.visee,
       this.couchefantome,
-      // **Le panache est AU-DESSUS des arbres, et c'est le seul calque du monde
+      // **Le panache est au-dessus des arbres, et c'est le seul calque du monde
       // qui ait le droit de masquer un houppier** : de la fumée passe devant ce
       // qu'elle survole, sinon ce n'est pas de la fumée. Le calque des
       // changements, lui, passe encore par-dessus : c'est de l'interface.
       this.couches.panache,
-      // **Le ciel orangé passe sur TOUT le monde, fumée comprise** (§6.4) : un
+      // **Le ciel orangé passe sur tout le monde, fumée comprise** (§6.4) : un
       // incendie de cette taille éclaire la brume du hors-parcelle, les champs
       // voisins et son propre panache. Il reste sous les marqueurs — le calque
       // des changements est de l'interface, et l'interface ne prend pas la
       // couleur du feu.
       this.couches.ciel,
-      // **Le calque des changements est AU-DESSUS de tout**, y compris des
+      // **Le calque des changements est au-dessus de tout**, y compris des
       // arbres et de l'ombre : c'est de l'interface posée sur la carte, et un
       // repère caché derrière un houppier ne repère rien. C'est aussi ce qui le
       // distingue de tout le reste — rien d'autre dans cette scène ne passe
       // devant un arbre.
       this.couches.marqueurs,
     );
-    // Les taches d'ombre sont cuites UNE fois pour la partie : ce sont des
+    // Les taches d'ombre sont cuites **une** fois pour la partie : ce sont des
     // dégradés radiaux, ils ne dépendent ni du zoom ni de la saison.
     this.taches = cuireTachesOmbre(this.fabriquer).map((c) => Texture.from(c));
     this.monte = true;
@@ -485,7 +485,7 @@ export class SceneParcelle {
   /**
    * Pose (ou retire) le calque des changements.
    *
-   * Un TABLEAU et non un rappel, à la différence des deux autres canaux : les
+   * Un **tableau** et non un rappel, à la différence des deux autres canaux : les
    * marqueurs ne bougent pas dans le temps, ils apparaissent et s'accumulent.
    * L'appelant en donne la liste quand elle change, et rien ne se recalcule
    * entre-temps.
@@ -552,7 +552,7 @@ export class SceneParcelle {
     const enRetardDecor = this.decor?.rafraichir(vue) ?? 0;
     const decorCuit = this.decor?.cuire(vue, BUDGET_DECOR) ?? 0;
 
-    // Le fourré bas prend son chemin AVANT le reste : agrégé par carreau, il
+    // Le fourré bas prend son chemin **avant** le reste : agrégé par carreau, il
     // passe de plusieurs milliers de tiges à quelques centaines de masses.
     const separe = separerLeFourre(etat.arbres);
     const poses = posesDesArbres(
@@ -578,7 +578,7 @@ export class SceneParcelle {
     spritesPoses += this.poserLeFantome(etat, vue);
     // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
     // laissait une découpe périmée. La signature ne regarde que les arbres et
-    // la caméra ; or l'ombre est aussi découpée à la SILHOUETTE de la parcelle,
+    // la caméra ; or l'ombre est aussi découpée à la **silhouette** de la parcelle,
     // rendue depuis la couche du sol — qui, elle, change tant que la cuisson
     // rattrape son retard. Sans ce forçage, les premières secondes d'une
     // parcelle froide gardaient l'ombre découpée sur un sol à moitié cuit.
@@ -601,7 +601,7 @@ export class SceneParcelle {
   /**
    * Le sprite numéro `rang` d'une couche : celui qui y est déjà, sinon un neuf.
    *
-   * **La couche est un POOL, pas une liste qu'on refait.** Chaque couche
+   * **La couche est un pool, pas une liste qu'on refait.** Chaque couche
    * gardait ses sprites une image seulement : `removeChildren()` en tête de
    * pose, puis un `new Sprite` par image — soit, sur une friche, trois mille
    * objets alloués et jetés soixante fois par seconde. C'est exactement la
@@ -618,10 +618,10 @@ export class SceneParcelle {
    * L'ordre de grandeur, lui, se lit sans ambiguïté contre le budget d'une
    * image à soixante par seconde, qui est de 16,7 ms : la pose seule le
    * dépassait du double, avant même que quoi que ce soit ne soit dessiné.
-   * Et contrairement au temps de RENDU, ce chiffre-là veut dire quelque chose
+   * Et contrairement au temps de **rendu**, ce chiffre-là veut dire quelque chose
    * depuis ce conteneur — c'est du JavaScript, il ne passe pas par SwiftShader.
    *
-   * Le rang suffit comme identité : ce qui compte n'est pas QUEL sprite sert à
+   * Le rang suffit comme identité : ce qui compte n'est pas **quel** sprite sert à
    * quoi — ils sont interchangeables — mais qu'il y en ait le bon nombre et
    * qu'ils portent la bonne texture.
    */
@@ -680,7 +680,7 @@ export class SceneParcelle {
       // anticrénelée ne se voit pas, et il évite de tout recuire à chaque cran
       // de molette.
       //
-      // Le sprite est RECYCLÉ : il peut porter la taille d'un autre morceau, à
+      // Le sprite est **recyclé** : il peut porter la taille d'un autre morceau, à
       // une autre échelle. On repose donc la taille dans les deux cas, sans
       // quoi un morceau posé à l'échelle 1 garderait l'étirement du précédent.
       sprite.setSize(texture.width * image.echelle, texture.height * image.echelle);
@@ -692,7 +692,7 @@ export class SceneParcelle {
   /**
    * Où poser une image cuite à un autre zoom, et de combien l'étirer.
    *
-   * L'ancre est un point de PARCELLE : on le reprojette au zoom courant, et le
+   * L'ancre est un point de **parcelle** : on le reprojette au zoom courant, et le
    * décalage relatif — mesuré en pixels du zoom de cuisson — suit le même
    * rapport. C'est exact parce que la projection est linéaire en zoom : tout
    * point de l'image retombe exactement là où il tomberait s'il avait été cuit
@@ -737,7 +737,7 @@ export class SceneParcelle {
    * image, c'est exactement ce que le rendu s'interdit ; un losange blanc cuit
    * une fois, teinté et rendu translucide à la pose, ne coûte rien de plus
    * qu'un sprite d'arbre. C'est aussi ce qui garantit qu'un voile en cours ne
-   * recuit AUCUN morceau de terrain (§5.11).
+   * recuit **aucun** morceau de terrain (§5.11).
    *
    * Le losange est cuit à quatre fois la taille d'une tuile, pas à sa taille :
    * une cellule fait seize pixels au zoom de parcelle et cent au zoom
@@ -803,15 +803,15 @@ export class SceneParcelle {
   }
 
   /**
-   * Le FEU : la lueur, les langues de flamme, le panache et les braises.
+   * Le **feu** : la lueur, les langues de flamme, le panache et les braises.
    *
    * **Deux conteneurs et un seul canal.** Ce qui brûle au sol va sous les
-   * arbres, ce qui monte va par-dessus ; c'est la FORME de la particule qui le
+   * arbres, ce qui monte va par-dessus ; c'est la **forme** de la particule qui le
    * décide, parce que c'est elle qui dit de quoi il s'agit. L'appelant n'a rien
    * à savoir de cet arrangement.
    *
    * **Le mode de fusion est ce qui fait la différence entre du feu et du papier
-   * orange.** Une flamme, une braise, une lueur s'AJOUTENT à ce qu'elles
+   * orange.** Une flamme, une braise, une lueur s'**ajoutent** à ce qu'elles
    * éclairent — c'est de la lumière, elle ne remplace pas le sol, elle s'y
    * ajoute, et deux flammes qui se recouvrent sont plus claires que chacune. La
    * fumée est la seule à se poser en opacité normale : elle masque.
@@ -842,7 +842,7 @@ export class SceneParcelle {
     let auSol = 0;
     let enHaut = 0;
     for (const { p, e } of places) {
-      // **La TRAÎNE reste au sol**, avec les flammes, et pas avec le panache :
+      // **La traîne reste au sol**, avec les flammes, et pas avec le panache :
       // c'est une brume qui rampe sur ce qui vient de brûler, à hauteur de
       // buisson. Passée par-dessus les arbres, elle les effacerait à travers
       // toute la parcelle brûlée alors qu'elle est censée passer entre eux.
@@ -857,7 +857,7 @@ export class SceneParcelle {
               ? formes.lueur
               : formes.braise;
       const sprite = SceneParcelle.sprite(couche, monte ? enHaut++ : auSol++, texture);
-      // **Une flamme est ancrée par son PIED**, tout le reste par son centre :
+      // **Une flamme est ancrée par son pied**, tout le reste par son centre :
       // une langue de feu pousse depuis le sol de sa cellule, une bouffée et une
       // braise flottent autour de leur position.
       const parLePied = p.forme === "flamme" || p.forme === "coeur";
@@ -868,7 +868,7 @@ export class SceneParcelle {
       sprite.y = e.sy;
       sprite.tint = versEntier(p.teinte);
       sprite.alpha = p.opacite;
-      // Reposé à chaque image parce que le sprite est RECYCLÉ : il peut porter
+      // Reposé à chaque image parce que le sprite est **recyclé** : il peut porter
       // le mode d'une bouffée alors qu'il sert maintenant une braise.
       sprite.blendMode = p.forme === "fumee" || p.forme === "traine" ? "normal" : "add";
     }
@@ -904,7 +904,7 @@ export class SceneParcelle {
   }
 
   /**
-   * Le CIEL ORANGÉ d'un incendie : un seul sprite, plein cadre, en fusion
+   * Le **ciel orangé** d'un incendie : un seul sprite, plein cadre, en fusion
    * additive (§6.4).
    *
    * **De la lumière ajoutée et non un filtre posé.** Un calque en opacité
@@ -938,7 +938,7 @@ export class SceneParcelle {
   }
 
   /**
-   * Le calque des changements : un marqueur par changement, à taille FIXE.
+   * Le calque des changements : un marqueur par changement, à taille **fixe**.
    *
    * **La taille en pixels et non en mètres est tout l'intérêt.** Un halo de
    * dix-huit pixels se voit au zoom de parcelle comme au zoom rapproché ; s'il
@@ -946,7 +946,7 @@ export class SceneParcelle {
    * — précisément au zoom où une tige fait dix pixels et où une mort ne se
    * remarque pas.
    *
-   * Placé à MI-HAUTEUR de l'arbre et non à son pied : au pied, le marqueur
+   * Placé à **mi-hauteur** de l'arbre et non à son pied : au pied, le marqueur
    * disparaît sous le houppier de la tige de devant.
    */
   private poserMarqueurs(etat: EtatScene, vue: Vue): number {
@@ -1010,7 +1010,7 @@ export class SceneParcelle {
       // trois fois de suite : la santé, le fruit et le liège sont entrés dans la
       // classe sans entrer dans cette copie.
       //
-      // Ce n'était pas un défaut cosmétique, c'était un PLANTAGE. Deux classes
+      // Ce n'était pas un défaut cosmétique, c'était un **plantage**. Deux classes
       // distinctes tombaient sur la même clé de texture ; à la deuxième, le
       // canvas ne correspondait plus, on détruisait la texture — celle qu'un
       // sprite déjà posé de la première classe tenait encore — et `app.render()`
@@ -1028,7 +1028,7 @@ export class SceneParcelle {
         texture = Texture.from(vignette.image);
         this.posees.set(cle, texture);
       }
-      // La vignette est cuite à une RÉSOLUTION et posée à sa TAILLE écran : ce
+      // La vignette est cuite à une **résolution** et posée à sa **taille** écran : ce
       // sont deux choses différentes, et les confondre donnait des arbres trois
       // fois trop grands.
       const taille = tailleDePose(pose.arbre.heightM, vignette, vue);
@@ -1037,7 +1037,7 @@ export class SceneParcelle {
       // **La déformation à la pose, et l'atlas ne bouge pas d'un octet.**
       // C'est la contrainte que le §5.11 pose nommément : « une animation
       // continue ne doit pas invalider un cache de cuisson […] ce sera une
-      // déformation à la POSE (un sprite qu'on incline), pas un redessin ».
+      // déformation à la **pose** (un sprite qu'on incline), pas un redessin ».
       // Une chandelle qui tombe passe donc par ici, avec la vignette déjà
       // cuite de l'arbre debout.
       const d = this.deformer?.(pose.arbre.id) ?? DEBOUT;
@@ -1050,8 +1050,8 @@ export class SceneParcelle {
         sprite.x = pose.sx - ancre.dx;
         sprite.y = pose.sy - ancre.dy;
       } else {
-        // **On pivote autour du PIED**, pas du centre du sprite : une souche
-        // reste où elle est. Le pivot est en coordonnées de TEXTURE, donc le
+        // **On pivote autour du pied**, pas du centre du sprite : une souche
+        // reste où elle est. Le pivot est en coordonnées de **texture**, donc le
         // point du pied dans la vignette — d'où la division par l'échelle de
         // pose, que `setSize` a déjà appliquée.
         const echelleX = taille.largeur / Math.max(1, texture.width);
@@ -1087,7 +1087,7 @@ export class SceneParcelle {
    * Éclaire l'arbre survolé et les arbres choisis.
    *
    * Un double du sprite, en `add` : la teinte de Pixi multiplie et ne sait
-   * qu'assombrir, alors qu'il faut ici que l'arbre RESSORTE. Le survol est
+   * qu'assombrir, alors qu'il faut ici que l'arbre **ressorte**. Le survol est
    * discret — il dit « celui-ci partirait » — et le choix est plus franc.
    */
   private poserLaSurbrillance(): number {
@@ -1138,7 +1138,7 @@ export class SceneParcelle {
   }
 
   /**
-   * L'ARBRE ADULTE sous le curseur, avant de planter.
+   * **l'arbre adulte** sous le curseur, avant de planter.
    *
    * Adulte, et c'est le point : ce qu'on met en terre est un plant de trente
    * centimètres, mais ce qu'on décide en cliquant est la place qu'il occupera
@@ -1208,7 +1208,7 @@ export class SceneParcelle {
     sprite.rotation = 0;
     sprite.pivot.set(0, 0);
     sprite.blendMode = "normal";
-    // La teinte MULTIPLIE : elle ne sait qu'assombrir, et c'est exactement ce
+    // La teinte **multiplie** : elle ne sait qu'assombrir, et c'est exactement ce
     // qu'on veut ici — un arbre refusé vire au rouge sombre, un arbre accepté
     // garde ses couleurs.
     sprite.tint = f.refuse ? 0xff6a5a : 0xffffff;
@@ -1227,7 +1227,7 @@ export class SceneParcelle {
   }
 
   /**
-   * L'emprise du geste, posée SUR LE RELIEF et non à plat.
+   * L'emprise du geste, posée **sur le relief** et non à plat.
    *
    * Un cercle de huit mètres dessiné comme une ellipse mentirait dès qu'il
    * traverse une butte : le disque que le moteur traitera épouse le terrain,
@@ -1271,7 +1271,7 @@ export class SceneParcelle {
   }
 
   /**
-   * L'arbre sous un point de l'écran — celui qu'on VOIT à cet endroit.
+   * L'arbre sous un point de l'écran — celui qu'on **voit** à cet endroit.
    *
    * On remonte l'ordre du peintre à l'envers : le dernier posé est devant, et
    * c'est lui qui a le clic quand deux houppiers se recouvrent. Le rectangle
@@ -1322,7 +1322,7 @@ export class SceneParcelle {
    * Les ombres, en deux temps : accumulation dans une texture blanche, puis une
    * seule composition en `multiply`.
    *
-   * Rend les millisecondes de POSE, et elles seules : les deux passes de rendu
+   * Rend les millisecondes de **pose**, et elles seules : les deux passes de rendu
    * de cette couche sont du GPU et n'ont rien à faire dans un chiffre censé
    * mesurer notre JavaScript.
    */
@@ -1332,7 +1332,7 @@ export class SceneParcelle {
     this.masque ??= RenderTexture.create({ width: largeur, height: hauteur });
 
     const debut = performance.now();
-    // La signature se calcule sur des NOMBRES seulement — position, hauteur,
+    // La signature se calcule sur des **nombres** seulement — position, hauteur,
     // caméra, semaine. La part ombrageante en fait partie sans y figurer : elle
     // ne dépend que de l'espèce et de la phénologie, l'une ne change pas sans
     // que la liste d'arbres change, l'autre est la semaine. La lire ici
@@ -1387,7 +1387,7 @@ export class SceneParcelle {
       // saturation, obtenue sans compter les recouvrements.
       //
       // `MODE_ACCUMULATION_GPU` et non `MODE_ACCUMULATION` : le mode Canvas
-      // (`darken`) est un mode AVANCÉ pour Pixi, donc un shader qui lit le fond
+      // (`darken`) est un mode **avancé** pour Pixi, donc un shader qui lit le fond
       // — lecture qui échoue dans une `RenderTexture` fraîchement effacée et
       // assombrit le quad entier au lieu du seul disque. C'est ce qui faisait
       // l'escalier de rectangles le long du bord de la parcelle.
@@ -1398,7 +1398,7 @@ export class SceneParcelle {
     this.app.renderer.render({ container: this.pinceau, target: this.masque, clear: true });
 
     // Les deux sprites de cette couche — la nappe d'ombre et sa découpe —
-    // gardent la même texture d'une image à l'autre : seul leur CONTENU change,
+    // gardent la même texture d'une image à l'autre : seul leur **contenu** change,
     // puisque ce sont des `RenderTexture` redessinées juste au-dessus. Les
     // refaire à chaque image ne servait qu'à jeter deux objets de plus.
     if (!this.spriteOmbres) {
@@ -1407,9 +1407,9 @@ export class SceneParcelle {
       this.couches.ombres.addChild(this.spriteOmbres);
     }
 
-    // **Borner l'ombre À LA PARCELLE.** Un arbre du bord projette son ombre
+    // **Borner l'ombre à la parcelle.** Un arbre du bord projette son ombre
     // au-delà de la limite ; composée sur toute la surface, elle se poserait
-    // sur le CIEL, et c'est la frange grise qui faisait flotter le plateau.
+    // sur le **ciel**, et c'est la frange grise qui faisait flotter le plateau.
     //
     // **La découpe était conditionnelle, et c'était une erreur de jugement.**
     // On ne découpait que sans décor, au motif que la nappe du hors-parcelle
@@ -1419,24 +1419,24 @@ export class SceneParcelle {
     // sombres attire l'œil exactement là où il n'y a rien à voir. Le retour est
     // sans ambiguïté : « je vois encore des taches à l'extérieur de la
     // parcelle, c'est vraiment étrange », et « les taches d'ombre autour de la
-    // parcelle, c'est pas important ». Ce qui compte, c'est l'ombre PORTÉE SUR
-    // CE QU'ON GÈRE : elle dit où il fait sombre, donc où rien ne poussera.
+    // parcelle, c'est pas important ». Ce qui compte, c'est l'ombre **portée sur**
+    // **ce qu'on gère** : elle dit où il fait sombre, donc où rien ne poussera.
     //
     // On découpe donc toujours, et sur `couches.sol` seul — jamais sur le décor,
     // qui n'est pas la parcelle.
     //
     // **Ce que ça coûte, mesuré et non supposé** : une passe plein écran de
     // plus, soit +10 % sur le temps par image (1 640 → 1 807 ms de médiane sur
-    // 90 images, friche de 3 264 sprites, 1 500 × 1 000). Le chiffre ABSOLU ne
+    // 90 images, friche de 3 264 sprites, 1 500 × 1 000). Le chiffre **absolu** ne
     // veut rien dire — le conteneur de mesure n'a pas de GPU et rend par
-    // SwiftShader, un rastériseur logiciel — mais l'écart RELATIF, si : une
+    // SwiftShader, un rastériseur logiciel — mais l'écart **relatif**, si : une
     // passe plein écran n'est pas gratuite ici, et il ne faut pas prétendre
     // qu'elle l'est. Sur un vrai GPU, un quad plein écran se compte en dixièmes
     // de milliseconde et la part serait invisible ; ce n'est pas vérifiable
     // depuis ce conteneur, donc ce n'est pas affirmé.
     //
     // Le vrai poste de cette couche était ailleurs, et il était bien plus gros :
-    // un `Sprite` reconstruit PAR ARBRE À CHAQUE IMAGE. C'est corrigé — la
+    // un `Sprite` reconstruit **par arbre à chaque image**. C'est corrigé — la
     // couche est un pool (voir `sprite`), et le masque entier est sauté quand
     // ni la caméra ni les arbres n'ont bougé, ce qui est le régime normal d'un
     // jeu au tour. Ces deux passes-ci ne se paient donc plus qu'aux images qui

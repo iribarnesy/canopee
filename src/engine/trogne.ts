@@ -3,14 +3,14 @@
  *
  * `trees.ts` l'annonçait sans le modéliser : « une trogne se recoupe toujours
  * au même endroit ; la tête grossit, se creuse, et c'est ce creux qui fait sa
- * valeur pour la faune ». L'état portait `teteTrogneM` (OÙ l'on coupe) et
- * `recepages` (COMBIEN DE FOIS), jamais une dimension. La conséquence
+ * valeur pour la faune ». L'état portait `teteTrogneM` (**où** l'on coupe) et
+ * `recepages` (**combien de fois**), jamais une dimension. La conséquence
  * écologique, elle, était déjà tirée — et à l'emporte-pièce :
  *
  *     if (t.heightM >= 15 || (t.teteTrogneM !== undefined && t.recepages >= 2))
  *
  * Un têtard coupé deux fois valait donc autant qu'un têtard coupé quinze fois,
- * et autant qu'un arbre de quinze mètres. Or c'est le VOLUME de cavité qui
+ * et autant qu'un arbre de quinze mètres. Or c'est le **volume** de cavité qui
  * décide de qui peut nicher : une mésange se contente de quelques litres, une
  * chouette chevêche en demande des dizaines, et l'écart entre une tête de
  * trois coupes et un saule têtard centenaire va du litre à la centaine.
@@ -21,7 +21,7 @@
  * creuse derrière, parce que le bois de cœur mis à nu pourrit pendant que
  * l'aubier continue de s'épaissir autour.
  *
- * TOUTES les valeurs ci-dessous sont à calibrer : elles donnent le bon ordre
+ * **Toutes** les valeurs ci-dessous sont à calibrer : elles donnent le bon ordre
  * de grandeur et la bonne monotonie, pas davantage. Aucune ne sort de l'atlas,
  * qui ne couvre pas l'architecture des arbres — les inventer en les créditant
  * d'une source aurait été pire que les assumer.
@@ -78,7 +78,7 @@ export function volumeTeteL(tree: { teteTrogneM?: number; recepages: number }): 
 }
 
 /**
- * Volume de la CAVITÉ, litres — ce qui vaut habitat.
+ * Volume de la **cavité**, litres — ce qui vaut habitat.
  *
  * Nulle au premier étêtage : une coupe est une plaie, pas encore un creux. Il
  * faut que le bois de cœur mis à nu ait le temps de pourrir, et c'est

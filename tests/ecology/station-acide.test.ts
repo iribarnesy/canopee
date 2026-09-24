@@ -2,7 +2,7 @@
  * Le limon acide sur socle : la station qui manquait.
  *
  * La station de référence du moteur est à pH 7. Or le châtaignier s'arrête à
- * 6,5 et le houx à 7 : deux espèces de l'atlas ne pouvaient vivre sur AUCUNE
+ * 6,5 et le houx à 7 : deux espèces de l'atlas ne pouvaient vivre sur **aucune**
  * station de comparaison, et l'essai des hauteurs devait s'en fabriquer une à
  * la volée. Ce n'était pas un défaut du modèle de pH — un châtaignier ne pousse
  * pas sur calcaire — mais une lacune du catalogue.

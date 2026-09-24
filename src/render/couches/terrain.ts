@@ -11,7 +11,7 @@
  *
  * **Trois mécanismes, et chacun répond à un problème mesuré :**
  *
- * 1. **La signature d'un morceau** ne retient que les PALIERS des grandeurs du
+ * 1. **La signature d'un morceau** ne retient que les **paliers** des grandeurs du
  *    sol (`palette.ts`). Un tick change l'humidité de tout le monde d'un
  *    centième ; sans quantification, chaque semaine invalide les dix mille
  *    tuiles et le cache ne sert à rien.
@@ -24,14 +24,14 @@
  *    mesure de L0 a montré que le point de rupture est le zoom rapproché, où le
  *    banc dessinait encore l'hectare entier.
  *
- * **Le sol n'a PAS de liseré, contrairement à ce que le lot L0 recommandait.**
+ * **Le sol n'a pas de liseré, contrairement à ce que le lot L0 recommandait.**
  * Q6 concluait « aplats + liseré » sur des chiffres — le contour ne coûte rien.
  * Deux captures ont défait cette conclusion, pour le sol seulement. La première,
  * au zoom d'ensemble : le quadrillage fait lire un champ labouré. La seconde,
  * après le passage aux quads interpolés : le liseré devenait le seul bord franc
  * de l'image et le sol lisait comme un fil de fer posé sur du brouillard.
  *
- * La conclusion de Q6 vaut donc pour les FORMES — un arbre, une souche, un
+ * La conclusion de Q6 vaut donc pour les **formes** — un arbre, une souche, un
  * tronc couché gagnent à être détourés — et pas pour le sol, qui n'est pas une
  * forme mais un fond. Pour aider à placer un arbre, la bonne réponse est
  * d'éclairer la cellule sous le curseur, pas de quadriller l'hectare.
@@ -88,7 +88,7 @@ import { type Brin, brinsDeLaCellule, clarteDuMotif, densiteTapis } from "./tapi
 export const COTE_MORCEAU_M = 16;
 
 /**
- * Le zoom auquel on CUIT, qui n'est pas celui auquel on POSE.
+ * Le zoom auquel on **cuit**, qui n'est pas celui auquel on **pose**.
  *
  * **Sans cette distinction, zoomer jette tout le cache.** Un morceau cuit à un
  * zoom donné ne peut être posé qu'à ce zoom-là : au moindre cran de molette, la
@@ -97,7 +97,7 @@ export const COTE_MORCEAU_M = 16;
  * cinq cents morceaux en attente et l'écran se vidait de son sol — le joueur
  * voyait sa parcelle disparaître pendant qu'il zoomait dessus.
  *
- * On cuit donc sur une ÉCHELLE de zooms, par pas de √2, et le GPU met à
+ * On cuit donc sur une **échelle** de zooms, par pas de √2, et le GPU met à
  * l'échelle la texture entre deux barreaux. Un facteur au plus 1,41 sur une
  * image déjà anticrénelée ne se voit pas ; recuire à chaque cran, si.
  *
@@ -123,16 +123,16 @@ export const BUDGET_CUISSON_PAR_IMAGE = 4;
 /**
  * Largeur écran visée d'un pavé de sol, en pixels.
  *
- * **Le niveau de détail du SOL, et il vient d'une capture.** Le premier jet
+ * **Le niveau de détail du sol, et il vient d'une capture.** Le premier jet
  * coloriait chaque mètre carré séparément : à huit pixels par mètre, les
  * grandeurs du moteur — litière sous chaque fourré, humidité cellule par
  * cellule — sortaient en motif de camouflage. C'est la même leçon que pour les
- * arbres : à l'échelle de la parcelle, l'œil veut des MASSES, pas la valeur de
+ * arbres : à l'échelle de la parcelle, l'œil veut des **masses**, pas la valeur de
  * chaque cellule.
  *
  * On agrège donc les cellules en pavés jusqu'à ce qu'un pavé fasse à peu près
  * cette largeur. Rien n'est inventé : la couleur d'un pavé est celle de la
- * MOYENNE de ses cellules, qui est une valeur que le moteur produit. Et en
+ * **moyenne** de ses cellules, qui est une valeur que le moteur produit. Et en
  * zoomant, les pavés redeviennent des cellules — le détail est là quand on
  * s'approche, et c'est bien ce qu'on veut.
  */
@@ -153,11 +153,11 @@ export function cotePavage(zoom: number): number {
 }
 
 /**
- * Largeur écran visée d'un QUAD dessiné, en pixels.
+ * Largeur écran visée d'un **quad** dessiné, en pixels.
  *
  * **À ne pas confondre avec le pavage, et c'est toute l'idée de ce module.** Le
- * pavage dit à quelle finesse on ÉCHANTILLONNE le sol — il combat le bruit. La
- * subdivision dit à quelle finesse on le DESSINE — elle combat les bords francs.
+ * pavage dit à quelle finesse on **échantillonne** le sol — il combat le bruit. La
+ * subdivision dit à quelle finesse on le **dessine** — elle combat les bords francs.
  * Les deux étaient confondus au premier jet : chaque cellule était un aplat
  * bordé net, et le sol lisait comme une mosaïque de carrelage, surtout au zoom
  * où une cellule fait cinquante pixels.
@@ -197,12 +197,12 @@ export interface DonneesSol {
    * `Snapshot.soilLumiere` : la lumière arrivant au sol ∈ [0,1], par cellule.
    *
    * Absente = pas de couvert connu, le sol est en pleine lumière. Le repli est
-   * volontairement le cas CLAIR : une scène qui ne transporte pas la grandeur
+   * volontairement le cas **clair** : une scène qui ne transporte pas la grandeur
    * doit rendre ce qu'elle rendait avant, pas une parcelle noire.
    */
   lumiere?: Float32Array;
   /**
-   * `Snapshot.soilHerbeHumidite` : l'humidité VÉCUE par le tapis herbacé ∈ [0,1].
+   * `Snapshot.soilHerbeHumidite` : l'humidité **vécue** par le tapis herbacé ∈ [0,1].
    *
    * Absente = pas de tapis connu ; on n'affirme alors aucune soif, ce qui rend
    * la scène telle qu'elle était avant que la grandeur n'existe.
@@ -232,7 +232,7 @@ export interface DonneesSol {
    */
   debordementMm?: Float32Array;
   /**
-   * `Snapshot.soilBoisAuSol` : le bois mort COUCHÉ, g C par m².
+   * `Snapshot.soilBoisAuSol` : le bois mort **couché**, g C par m².
    *
    * **Le protocole demandait ce dessin en toutes lettres** — « le rendu peut y
    * poser des troncs » — et personne ne lisait le champ. C'est un chablis, ou
@@ -242,7 +242,7 @@ export interface DonneesSol {
    */
   boisAuSol?: Float32Array;
   /**
-   * `Snapshot.soilBoisEnTravers` : la TRANSVERSALITÉ du bois couché ∈ [0,1].
+   * `Snapshot.soilBoisEnTravers` : la **transversalité** du bois couché ∈ [0,1].
    *
    * **La grandeur qui explique une chose que le joueur voyait sans la
    * comprendre.** Le moteur modélise qu'un tronc en travers de la pente barre
@@ -252,7 +252,7 @@ export interface DonneesSol {
    * pouvait donc être plus humide que sa voisine à charge de bois égale, sans
    * que rien à l'écran ne dise pourquoi.
    *
-   * Elle donne directement l'ANGLE du tronc à dessiner : `asin(part)` depuis
+   * Elle donne directement l'**angle** du tronc à dessiner : `asin(part)` depuis
    * la direction de l'aval. Ce n'est pas une interprétation, c'est l'inverse
    * exact de la fonction du moteur.
    */
@@ -280,14 +280,14 @@ export interface Morceau {
   signature: number;
   /** image cuite, prête à être posée */
   image?: HTMLCanvasElement;
-  /** décalage de l'image, en pixels DU ZOOM DE CUISSON */
+  /** décalage de l'image, en pixels **du zoom de cuisson** */
   decalage?: { dx: number; dy: number };
   /**
    * Le point de parcelle qui sert de référence pour reposer l'image à un autre
    * zoom, et le décalage de l'image par rapport à lui.
    *
    * On ne peut pas se contenter du décalage écran : il vaut pour le zoom de
-   * cuisson et pour lui seul. En gardant un point de PARCELLE, on le reprojette
+   * cuisson et pour lui seul. En gardant un point de **parcelle**, on le reprojette
    * au zoom courant et on remet l'image dessus, mise à l'échelle du rapport des
    * deux zooms — ce qui est exact, la projection étant linéaire en zoom.
    */
@@ -300,7 +300,7 @@ export interface Morceau {
 
 /** Cellule d'une grille de sol, lue à l'indice `i`. */
 /**
- * La cellule telle que la SIGNATURE doit la voir.
+ * La cellule telle que la **signature** doit la voir.
  *
  * **Elle oubliait la lumière et la soif du tapis**, que `couleurSol` lit
  * pourtant. Une cellule dont la seule chose à changer était l'ombre portée ou
@@ -363,7 +363,7 @@ export function morceauxParCote(coteM: number): number {
 /**
  * Signature d'un morceau : un entier qui ne change que si l'image doit changer.
  *
- * Y entrent les paliers de chaque cellule ET la semaine de l'année, parce que
+ * Y entrent les paliers de chaque cellule **et** la semaine de l'année, parce que
  * la saison décale la palette. Le mélange est un FNV-1a tronqué à 31 bits —
  * n'importe quel hachage ferait l'affaire, ce qui compte est qu'il soit stable
  * et sans allocation.
@@ -375,7 +375,7 @@ export function signatureMorceau(
   semaineAnnee: number,
 ): number {
   let h = 0x811c9dc5 ^ (semaineAnnee & 0x3f);
-  // La liste d'espèces entre ICI et non dans chaque cellule : elle est la même
+  // La liste d'espèces entre **ici** et non dans chaque cellule : elle est la même
   // pour toute la parcelle, et les cellules ne portent que leurs parts. Sans
   // elle, un atlas qui gagnerait une herbacée ne redessinerait rien.
   for (const id of donnees.herbesIds ?? []) {
@@ -401,7 +401,7 @@ export function signatureMorceau(
       // façon dans le même palier, donc rien ne se recuit pour rien.
       h = (h ^ eau) >>> 0;
       h = (h * 0x01000193) >>> 0;
-      // Le bois couché entre dans la signature, masse ET orientation : un
+      // Le bois couché entre dans la signature, masse **et** orientation : un
       // chablis qui tombe doit redessiner son morceau, et un tronc qui pourrit
       // jusqu'à disparaître aussi.
       const bois =
@@ -420,7 +420,7 @@ export function signatureMorceau(
  *
  * L'ordre est celui de `profondeur()`, donc `x + y` dans le repère de la
  * caméra. C'est la même clé que pour les arbres, et c'est délibéré : le relief
- * à l'échelle vraie (D3) impose d'ENTRELACER sol et arbres dans un seul ordre,
+ * à l'échelle vraie (D3) impose d'**entrelacer** sol et arbres dans un seul ordre,
  * sinon une butte au premier plan ne masque pas le pied des arbres derrière
  * elle. Rendre les morceaux déjà triés est ce qui rendra cet entrelacement
  * possible au lot L2 sans rien réécrire ici.
@@ -449,7 +449,7 @@ export function morceauxDeLEmprise(
 
 /**
  * Trace un brin du tapis. Trois formes, aussi simples que possible : ce qui les
- * distingue à l'œil est leur SILHOUETTE et leur clarté, pas leur détail — à
+ * distingue à l'œil est leur **silhouette** et leur clarté, pas leur détail — à
  * cette taille, un brin fait dix pixels de haut.
  */
 function dessinerBrin(
@@ -464,7 +464,7 @@ function dessinerBrin(
   // comme tout le reste, sans qu'on ait à connaître le zoom ici.
   // 0,13 et non 0,22 : la marque est deux fois plus petite depuis qu'il y en a
   // deux fois plus. C'est le même volume d'encre, réparti plus finement — un
-  // gazon a du GRAIN, pas des objets.
+  // gazon a du **grain**, pas des objets.
   const u = demiLargeurTuile * 0.13 * brin.taille;
   ctx.fillStyle = couleur;
   if (brin.motif === "touffe") {
@@ -531,14 +531,14 @@ function altitudeMoyenne(
 }
 
 /**
- * Couleur et altitude d'un pavé : la MOYENNE de ses cellules, quantifiée
+ * Couleur et altitude d'un pavé : la **moyenne** de ses cellules, quantifiée
  * ensuite.
  *
  * L'ordre compte. Moyenner puis quantifier donne la couleur du pavé moyen ;
  * quantifier puis moyenner donnerait la moyenne de huit paliers, qui n'est pas
  * la même chose et qui perd de la nuance pour rien. On garde donc les valeurs
  * continues jusqu'au dernier moment — et le cache, lui, continue de hacher les
- * paliers CELLULE PAR CELLULE, ce qui est plus fin que nécessaire mais jamais
+ * paliers **cellule par cellule**, ce qui est plus fin que nécessaire mais jamais
  * faux.
  */
 function teintePave(
@@ -561,7 +561,7 @@ function teintePave(
   let n = 0;
   const emprises = new Array<number>(donnees.herbeEmprises?.length ?? 0).fill(0);
   // Les bornes sont rabattues dans la parcelle : un échantillon de l'anneau de
-  // débordement tombe DEHORS, et y lire des zéros donnerait une terre sèche
+  // débordement tombe **dehors**, et y lire des zéros donnerait une terre sèche
   // fictive vers laquelle le bord interpolerait. C'est exactement la frange
   // pâle qu'une capture a montrée le long des lisières.
   for (let y = Math.max(0, y0); y < Math.min(donnees.coteM, y0 + hauteur); y++) {
@@ -573,7 +573,7 @@ function teintePave(
       litiere += donnees.litiereCG[i] ?? 0;
       lumiere += donnees.lumiere?.[i] ?? 1;
       herbeHumidite += donnees.herbeHumidite?.[i] ?? 1;
-      // Les emprises se moyennent comme le reste : on moyenne PUIS on
+      // Les emprises se moyennent comme le reste : on moyenne **puis** on
       // quantifie, pour que le pavé rende la couleur du sol moyen et non la
       // moyenne de paliers — la même règle que l'humidité, deux lignes plus
       // haut, et la raison est écrite au-dessus de cette fonction.
@@ -655,7 +655,7 @@ function echantillonner(
 
 /** Interpolation bilinéaire du champ, en un point de parcelle quelconque. */
 function lireChamp(champ: ChampSol, px: number, py: number): { teinte: Teinte; z: number } {
-  // Les nœuds sont au CENTRE de leur pavé : d'où le demi-pas.
+  // Les nœuds sont au **centre** de leur pavé : d'où le demi-pas.
   const u = (px - (champ.ox + champ.pas / 2)) / champ.pas;
   const v = (py - (champ.oy + champ.pas / 2)) / champ.pas;
   const i = Math.min(champ.n - 2, Math.max(0, Math.floor(u)));
@@ -749,7 +749,7 @@ export function cuireMorceau(
 
   const largeurTuilePx = TUILE_LARGEUR_PX * vue.cam.zoom;
   const densite = densiteTapis(largeurTuilePx);
-  // La pente de référence est celle de la PARCELLE, pas du morceau : une
+  // La pente de référence est celle de la **parcelle**, pas du morceau : une
   // référence par morceau ferait des marches d'éclairement à chaque frontière.
   const penteReference = expositionMoyenne(donnees.altitudesM, donnees.coteM);
   const champ = echantillonner(donnees, x0, y0, COTE_MORCEAU_M, pas, semaineAnnee, penteReference);
@@ -761,7 +761,7 @@ export function cuireMorceau(
     const hauteurPave = Math.min(pas, yFin - y);
     const centre = lireChamp(champ, x + largeurPave / 2, y + hauteurPave / 2);
 
-    // ── Le flanc, sur la grille GROSSIÈRE ────────────────────────────────
+    // ── Le flanc, sur la grille **grossière** ────────────────────────────────
     // Ce qui se voit sous le pavé parce que l'aval est plus bas. Dessiné avant
     // la surface, et plus sombre — c'est de la terre à nu vue de côté, jamais
     // éclairée par un soleil haut. Il reste grossier volontairement : un flanc
@@ -776,7 +776,7 @@ export function cuireMorceau(
     // était faite de losanges plats, l'ourlet bouchait le décrochement de
     // chaque pavé, donc il fallait le dessiner dès le premier centimètre — et
     // c'est ce qui hachurait les versants. Une surface continue n'a plus rien à
-    // boucher : l'ourlet ne sert plus qu'aux VRAIES ruptures, une berge, un
+    // boucher : l'ourlet ne sert plus qu'aux **vraies** ruptures, une berge, un
     // talus, un front de taille, où il y a bel et bien une paroi à montrer.
     if (chute > 0.5) {
       const c = versEcranVue({ x: x + largeurPave / 2, y: y + hauteurPave / 2, z: centre.z }, vue);
@@ -801,7 +801,7 @@ export function cuireMorceau(
       ctx.fill();
     }
 
-    // ── La surface, en quads FINS et interpolés ──────────────────────────
+    // ── La surface, en quads **fins** et interpolés ──────────────────────────
     // Chaque quad reçoit sa couleur du champ lu à son centre, et ses quatre
     // altitudes du champ lu à ses coins.
     for (let sy = 0; sy < sous; sy++) {
@@ -814,11 +814,11 @@ export function cuireMorceau(
         const echantillon = lireChamp(champ, qx + ql / 2, qy + qh / 2);
         // Le grain se multiplie à l'ombrage de pente : deux facteurs de clarté,
         // l'un qui vient du relief, l'autre de la matière. Il est attaché aux
-        // coordonnées de PARCELLE, donc il ne glisse pas quand la caméra tourne.
+        // coordonnées de **parcelle**, donc il ne glisse pas quand la caméra tourne.
         const matiere = facteurGrain(qx + ql / 2, qy + qh / 2, largeurTuilePx);
         const teinteQuad =
           matiere === 1 ? echantillon.teinte : eclairer(echantillon.teinte, matiere);
-        // Le quad est tracé par ses QUATRE COINS, chacun à l'altitude que le
+        // Le quad est tracé par ses **quatre coins**, chacun à l'altitude que le
         // champ lui donne — et non comme un losange plat posé à l'altitude du
         // centre.
         //
@@ -858,7 +858,7 @@ export function cuireMorceau(
       }
     }
     // ── Le tapis : les marques qui font la matière ───────────────────────
-    // Tracé au moment de la CUISSON, donc jamais par image — la règle « aucune
+    // Tracé au moment de la **cuisson**, donc jamais par image — la règle « aucune
     // primitive vectorielle par image » porte sur le dessin de la scène, pas
     // sur la fabrication d'une texture qui sera ensuite posée en une image.
     if (densite > 0) {
@@ -884,7 +884,7 @@ export function cuireMorceau(
       }
     }
 
-    // ── La LAME d'eau : un débordement, qui n'a pas de rive ──────────────
+    // ── La **lame** d'eau : un débordement, qui n'a pas de rive ──────────────
     // Une flaque n'a pas de bord franc, elle s'étale : elle se dessine donc à
     // la cellule et se mélange au sol au lieu de le couvrir. C'est ce qui la
     // distingue d'un plan d'eau, et c'est vrai — on voit la litière sous deux
@@ -920,7 +920,7 @@ export function cuireMorceau(
     }
   }
 
-  // ── L'EAU LIBRE, tracée par son contour ────────────────────────────────
+  // ── **l'eau libre**, tracée par son contour ────────────────────────────────
   // En dehors de la boucle des pavés, et pour une raison : le contour d'une
   // mare traverse les cellules en diagonale, il ne se découpe pas par pavé.
   // Une seule passe sur le morceau, après le sol, avant rien d'autre.
@@ -931,7 +931,7 @@ export function cuireMorceau(
     ctx.fillStyle = teinteEau;
     ctx.strokeStyle = teinteEau;
     ctx.lineWidth = 1;
-    // **Un SEUL chemin pour tous les morceaux d'eau du chunk, et une seule
+    // **Un seul chemin pour tous les morceaux d'eau du chunk, et une seule
     // peinture.** Remplir polygone par polygone laissait, à chaque sommet
     // partagé, un point d'antialiasing plus sombre : la mare sortait mouchetée
     // de gris, comme grêlée. En accumulant tout dans un chemin unique, la règle
@@ -969,7 +969,7 @@ export function cuireMorceau(
   }
 
   // L'ancre : le coin du morceau, à l'altitude de sa cellule. N'importe quel
-  // point de parcelle ferait l'affaire — ce qui compte est qu'il soit FIXE et
+  // point de parcelle ferait l'affaire — ce qui compte est qu'il soit **fixe** et
   // reprojetable ; le coin est celui dont on se souvient le plus facilement.
   const ancre = { x: x0, y: y0, z: donnees.altitudesM[y0 * donnees.coteM + x0] ?? 0 };
   const ancreEcran = versEcranVue(ancre, vue);
@@ -993,9 +993,9 @@ export function cuireMorceau(
  * **Trois jets pour trouver d'où vient la direction du tronc**, et les deux
  * premiers ont été réfutés par une capture :
  *
- * 1. `asin(transversalité)`. Ça paraissait exact — la transversalité EST le
+ * 1. `asin(transversalité)`. Ça paraissait exact — la transversalité **est** le
  *    sinus de l'angle entre le tronc et l'aval. C'est faux : la fonction du
- *    moteur rend une valeur ABSOLUE, délibérément (« un tronc n'a pas de
+ *    moteur rend une valeur **absolue**, délibérément (« un tronc n'a pas de
  *    sens : couché vers l'est ou vers l'ouest, il barre pareil »), donc un arc
  *    sinus laisse quatre directions candidates et le rendu en choisissait une
  *    au hasard. Résultat : des échelles de tirets en travers du vrai tronc.
@@ -1003,19 +1003,19 @@ export function cuireMorceau(
  *    occupe, cellule par cellule. Honnête, mais la couverture réelle d'un
  *    tronc de trente centimètres dans une cellule d'un mètre est de 30 % :
  *    les taches ne se soudent pas, et on obtenait une chaîne de losanges.
- * 3. Le VOISINAGE, en axe quantifié : la paire de voisins opposés la plus
+ * 3. Le **voisinage**, en axe quantifié : la paire de voisins opposés la plus
  *    chargée. Bonne idée, mauvaise résolution — à quarante-cinq degrés près,
  *    l'empreinte d'un tronc oblique est un escalier, et chaque décrochement
  *    laissait un trou.
  * 4. Le graphe de l'empreinte, cellule à cellule. Continu, cette fois, mais
  *    fidèle à l'escalier : un tuyau en marches, avec un trou triangulaire à
- *    chaque décrochement. L'empreinte est la RASTÉRISATION d'un tronc droit,
+ *    chaque décrochement. L'empreinte est la **rastérisation** d'un tronc droit,
  *    et la dessiner fidèlement reproduit la rastérisation.
  * 5. La direction ajustée sur le voisinage, par le moment d'ordre deux du
  *    nuage des cellules chargées. Direction juste et continue — mais chaque
- *    segment restait centré sur SA cellule, donc des traits parallèles
+ *    segment restait centré sur **sa** cellule, donc des traits parallèles
  *    décalés latéralement. Une direction ne suffit pas à dessiner une droite.
- * 6. **La droite entière, direction ET position.** Le centroïde local donne
+ * 6. **La droite entière, direction et position.** Le centroïde local donne
  *    par où elle passe, le moment d'ordre deux autour de lui donne son
  *    inclinaison : c'est la droite des moindres carrés du nuage. Toutes les
  *    cellules d'un même tronc tracent alors sur la même droite et leurs
@@ -1024,9 +1024,9 @@ export function cuireMorceau(
  *
  * **Ce que le dessin pose** : la couleur d'un tronc pourrissant, et le fait
  * qu'un tronc qui barre soit plus sombre — il est mouillé de son côté amont.
- * Le SEUIL qui décide, lui, vient du moteur : `SINUS_BARRANT_MINIMAL`, le
+ * Le **seuil** qui décide, lui, vient du moteur : `SINUS_BARRANT_MINIMAL`, le
  * sinus de trente degrés, mesuré sur table basculante avec sa source. Et
- * l'ÉPAISSEUR vient de `couvertureDuBoisAuSol` : le segment traverse un
+ * l'**épaisseur** vient de `couvertureDuBoisAuSol` : le segment traverse un
  * mètre, donc la part couverte est sa largeur en mètres.
  *
  * **Ce qui explique enfin quelque chose au joueur** : une cellule plus humide
@@ -1062,12 +1062,12 @@ function dessinerBoisAuSol(
       const largeurM = Math.min(1, couvertureDuBoisAuSol(longueurM));
       ctx.strokeStyle = versCss(part >= SINUS_BARRANT_MINIMAL ? TRONC_BARRANT : TRONC_AU_SOL);
       ctx.lineWidth = Math.max(1, largeurM * METRE_VERTICAL_PX * vue.cam.zoom);
-      // **La direction, ajustée sur un VOISINAGE et non sur les huit voisins
+      // **La direction, ajustée sur un voisinage et non sur les huit voisins
       // immédiats.** L'empreinte que le moteur écrit est la rastérisation d'un
       // tronc droit : à un mètre de résolution, un tronc oblique devient un
       // escalier. Relier fidèlement les cellules voisines reproduisait donc
       // l'escalier — un tuyau en marches, avec un trou triangulaire à chaque
-      // décrochement. Ce qu'on veut est la droite QUE l'escalier approxime.
+      // décrochement. Ce qu'on veut est la droite **que** l'escalier approxime.
       //
       // Elle se lit dans le moment d'ordre deux de l'empreinte locale, ce qui
       // est la façon standard de retrouver une droite dans un nuage : l'axe
@@ -1075,7 +1075,7 @@ function dessinerBoisAuSol(
       const dir = axeDeLEmpreinte(charge, x, y);
       // Le segment passe par le centroïde local, pas par le centre de la
       // cellule : toutes les cellules d'un même tronc tracent alors sur la
-      // MÊME droite, et leurs segments se recouvrent en une seule ligne.
+      // **même** droite, et leurs segments se recouvrent en une seule ligne.
       const mx = x + 0.5 + dir.cx;
       const my = y + 0.5 + dir.cy;
       const a = versEcranVue(
@@ -1108,7 +1108,7 @@ function axeDeLEmpreinte(
   x: number,
   y: number,
 ): { x: number; y: number; cx: number; cy: number } {
-  // Le CENTROÏDE d'abord, et c'est lui qui manquait au jet précédent : une
+  // Le **centroïde** d'abord, et c'est lui qui manquait au jet précédent : une
   // direction juste ne suffit pas à dessiner une droite, il faut aussi savoir
   // par où elle passe. Des segments bien orientés mais centrés chacun sur sa
   // cellule donnaient des traits parallèles décalés latéralement — l'escalier
@@ -1127,7 +1127,7 @@ function axeDeLEmpreinte(
   }
   const cx = poids > 0 ? mx / poids : 0;
   const cy = poids > 0 ? my / poids : 0;
-  // Puis le moment d'ordre deux AUTOUR du centroïde : c'est la droite des
+  // Puis le moment d'ordre deux **autour** du centroïde : c'est la droite des
   // moindres carrés du nuage, donc le tronc que l'escalier approxime.
   let sxx = 0;
   let sxy = 0;
@@ -1218,7 +1218,7 @@ export class Terrain {
    */
   public rafraichir(donnees: DonneesSol, semaineAnnee: number, vue: Vue): number {
     // `aPoser` ne reçoit pas les données du sol : l'amplitude est retenue ici,
-    // et les deux doivent voir la MÊME emprise — un morceau cuit que la pose
+    // et les deux doivent voir la **même** emprise — un morceau cuit que la pose
     // ignore, ou l'inverse, laisse le trou qu'on corrige.
     this.amplitudeRelief = amplitudeDuRelief(donnees.altitudesM);
     const emprise = celluleVisibles(vue, 0, this.amplitudeRelief);
@@ -1231,7 +1231,7 @@ export class Terrain {
     for (const { ix, iy } of attendus) {
       const signature = signatureMorceau(donnees, ix, iy, semaineAnnee);
       const existant = this.morceaux.get(this.cle(ix, iy));
-      // Le zoom COMPARÉ est celui de cuisson : deux zooms voisins tombent sur
+      // Le zoom **comparé** est celui de cuisson : deux zooms voisins tombent sur
       // le même barreau de l'échelle et partagent donc leur image.
       const bonZoom =
         existant?.zoomCuit === zoomDeCuisson(vue.cam.zoom) &&
@@ -1290,7 +1290,7 @@ export class Terrain {
     const sortie: Morceau[] = [];
     for (const { ix, iy } of morceauxDeLEmprise(emprise, vue)) {
       const m = this.morceaux.get(this.cle(ix, iy));
-      // **Une image d'une AUTRE orientation ne se repose pas.** Le zoom, si :
+      // **Une image d'une autre orientation ne se repose pas.** Le zoom, si :
       // l'ancre se reprojette et l'image s'étire. La rotation, non — l'image
       // montre la parcelle vue d'un autre côté, et la reprojeter la poserait au
       // bon endroit avec le mauvais contenu. Une capture l'a montré : après un
@@ -1315,16 +1315,16 @@ export class Terrain {
 }
 
 /**
- * Le décor : les morceaux du HORS-parcelle, cuits comme le terrain.
+ * Le décor : les morceaux du **hors**-parcelle, cuits comme le terrain.
  *
  * Séparé de `Terrain` et non fondu dedans, pour trois raisons qui tiennent
  * toutes à la nature du décor :
- *  - il ne dépend d'AUCUNE grandeur qui change dans le temps — ni saison, ni
+ *  - il ne dépend d'**aucune** grandeur qui change dans le temps — ni saison, ni
  *    humidité, ni litière — donc il n'a pas de signature à comparer : une fois
  *    cuit pour un zoom et une orientation, il est bon pour la partie entière ;
- *  - ses indices de morceau sont NÉGATIFS, ce que la clé entière de `Terrain`
+ *  - ses indices de morceau sont **négatifs**, ce que la clé entière de `Terrain`
  *    ne sait pas encoder ;
- *  - il se dessine AVANT la parcelle et n'entre pas dans l'ordre du peintre des
+ *  - il se dessine **avant** la parcelle et n'entre pas dans l'ordre du peintre des
  *    arbres : rien de ce qu'il contient n'est un objet de la simulation.
  */
 
@@ -1360,7 +1360,7 @@ export interface MorceauDecor {
  * d'anticrénelage ; un mètre de recouvrement le ferme et ne coûte rien,
  * puisque le terrain le couvre.
  *
- * **Ce recouvrement n'explique PAS le liseré pâle** qu'on voit sur les deux
+ * **Ce recouvrement n'explique pas le liseré pâle** qu'on voit sur les deux
  * bords lointains de la parcelle : il est toujours là après. Voir la liste des
  * défauts ouverts du §5.6 — j'ai écarté par la mesure la variation des champs
  * et le réseau du bruit, puis ce joint-ci, et je n'ai pas voulu affirmer une
@@ -1458,7 +1458,7 @@ export function cuireMorceauDecor(
     }
   }
   quads.sort((a, b) => profondeur(a.x, a.y, vue.cam) - profondeur(b.x, b.y, vue.cam));
-  // Chaque quad est tracé par ses QUATRE COINS, chacun à sa propre altitude,
+  // Chaque quad est tracé par ses **quatre coins**, chacun à sa propre altitude,
   // et non comme un losange plat posé à l'altitude du centre.
   //
   // **C'est la correction d'un défaut qu'une capture a montré tout de suite.**
@@ -1471,7 +1471,7 @@ export function cuireMorceauDecor(
   for (const { x, y } of quads) {
     const cxM = x + pas / 2;
     const cyM = y + pas / 2;
-    // Le quad ENTIÈREMENT dans la parcelle est sauté : c'est du terrain, et le
+    // Le quad **entièrement** dans la parcelle est sauté : c'est du terrain, et le
     // terrain se dessine par-dessus de toute façon.
     //
     if (quadEntierementDansLaParcelle(x, y, pas, coteM)) continue;
@@ -1482,7 +1482,7 @@ export function cuireMorceauDecor(
     const matiereDecor = 1 + (facteurGrain(cxM, cyM, TUILE_LARGEUR_PX * vue.cam.zoom) - 1) * 0.6;
     // **L'amont s'éclaircit, l'aval s'assombrit.** C'est le seul indice de
     // pente qu'une isométrie puisse porter sur un plan uniforme : sa géométrie
-    // ne le déforme pas, mais son ALTITUDE, elle, varie d'un bout de l'image à
+    // ne le déforme pas, mais son **altitude**, elle, varie d'un bout de l'image à
     // l'autre. Rien n'est inventé — c'est le `z` que ce même quad utilise déjà
     // pour se placer.
     const relief = clarteDuRelief(z(cxM, cyM), moyenne);
@@ -1515,7 +1515,7 @@ export function cuireMorceauDecor(
     ctx.stroke();
   }
 
-  // ── La CANOPÉE ────────────────────────────────────────────────────────
+  // ── La **canopée** ────────────────────────────────────────────────────────
   //
   // **Une surface, pas des bosquets** — voir `canopee` dans `decor.ts`, qui
   // porte les cinq essais ratés qui ont mené là. Le dessin est celui de la
@@ -1524,14 +1524,14 @@ export function cuireMorceauDecor(
   // qui rend la canopée continue par construction, sans terrasse ni joint —
   // pour la raison exacte qui l'a imposé à la nappe.
   //
-  // Deux passes par quad : la JUPE d'abord — la face verticale entre le sol et
+  // Deux passes par quad : la **jupe** d'abord — la face verticale entre le sol et
   // le dessous de la canopée, qui est ce qu'on voit d'une lisière de face — et
   // le dessus ensuite. Dans l'ordre du peintre, la jupe d'un quad de devant
   // recouvre celle de derrière, donc il n'y a que le bord du bois qui reste
   // visible : on n'a pas à chercher où est la lisière, la projection le fait.
   // **Le débord n'est pas un confort, c'est la correction d'un défaut de
   // découpe.** Chaque morceau de décor est une image posée sur les autres ;
-  // une canopée SOULEVÉE d'un morceau se projette dans la zone d'écran du
+  // une canopée **soulevée** d'un morceau se projette dans la zone d'écran du
   // morceau d'à côté, et la nappe opaque de celui-là l'effaçait. Sur la
   // capture, le hors-parcelle sortait en filet régulier de bandes pâles — un
   // motif de grillage, à la période exacte des morceaux de seize mètres.
@@ -1539,7 +1539,7 @@ export function cuireMorceauDecor(
   // J'ai accusé deux innocents avant de le trouver : la variation des champs,
   // éteinte pour rien (image identique au pixel), puis le réseau du bruit de
   // grumeau, à qui j'ai ajouté une octave pour rien non plus. C'est en
-  // ÉTEIGNANT la canopée que la bonne piste est apparue — les bandes pâles
+  // **éteignant** la canopée que la bonne piste est apparue — les bandes pâles
   // disparaissaient avec elle, mais des joints fins restaient, ce qui désignait
   // le découpage et pas le bruit. Mesurer coûte moins cher que raisonner, et
   // c'est la troisième fois de ce chantier.
@@ -1558,8 +1558,8 @@ export function cuireMorceauDecor(
     const cxM = x + pas / 2;
     const cyM = y + pas / 2;
     if (quadEntierementDansLaParcelle(x, y, pas, coteM)) continue;
-    // **Les QUATRE COINS décident, pas le centre**, et c'est une mesure qui l'a
-    // imposé. Un quad à cheval sur la limite a son centre DANS la parcelle, où
+    // **Les quatre coins décident, pas le centre**, et c'est une mesure qui l'a
+    // imposé. Un quad à cheval sur la limite a son centre **dans** la parcelle, où
     // la couverture est nulle par définition : le quad était donc sauté, et il
     // restait tout autour de la parcelle une bande de quatre mètres sans
     // canopée. Mesurée sur la capture : cinq pixels de clarté 109 contre 78 au
@@ -1567,7 +1567,7 @@ export function cuireMorceauDecor(
     // d'ombre — sans le vérifier, et à tort.
     //
     // En prenant les coins, un quad de bord se dessine avec ses coins
-    // intérieurs au sol et ses coins extérieurs levés : la canopée DESCEND
+    // intérieurs au sol et ses coins extérieurs levés : la canopée **descend**
     // jusqu'à la limite, ce qui est exactement la lisière qu'on veut voir là.
     const coins = (
       [
@@ -1645,7 +1645,7 @@ export function cuireMorceauDecor(
 
   // ── Les masses ────────────────────────────────────────────────────────
   for (const m of massesDuDecor(bordures, coteM, x0 - 8, y0 - 8, x1 + 8, y1 + 8)) {
-    // Une masse n'appartient au morceau que si son PIED y est : sinon deux
+    // Une masse n'appartient au morceau que si son **pied** y est : sinon deux
     // morceaux voisins la dessineraient tous les deux, et le recouvrement se
     // verrait sur les bords doux.
     if (m.x < x0 || m.x >= x1 || m.y < y0 || m.y >= y1) continue;
@@ -1664,7 +1664,7 @@ export function cuireMorceauDecor(
       // Un volume isométrique : le losange du toit, et les deux faces qui
       // descendent au sol. La demi-hauteur du losange se déduit de sa
       // demi-largeur par l'écrasement de la projection — la calculer autrement
-      // donnait un toit qui passait SOUS sa propre base, et le bâtiment
+      // donnait un toit qui passait **sous** sa propre base, et le bâtiment
       // sortait en chevron.
       const rh = (rx * TUILE_HAUTEUR_PX) / TUILE_LARGEUR_PX;
       const toit = py - hy;
@@ -1714,7 +1714,7 @@ export function cuireMorceauDecor(
 export class Decor {
   private readonly morceaux = new Map<string, MorceauDecor>();
   /**
-   * Les morceaux qui n'ont RIEN à dessiner — ceux qui tombent entièrement dans
+   * Les morceaux qui n'ont **rien** à dessiner — ceux qui tombent entièrement dans
    * la parcelle.
    *
    * **Sans cette mémoire, ils se recuisent à chaque image**, et pour toujours :
@@ -1773,7 +1773,7 @@ export class Decor {
   }
 
   private morceauxVisibles(emprise: Emprise, vue: Vue): { ix: number; iy: number }[] {
-    // L'emprise des CELLULES s'arrête à la parcelle ; le décor, lui, occupe
+    // L'emprise des **cellules** s'arrête à la parcelle ; le décor, lui, occupe
     // tout l'écran. On élargit donc jusqu'à couvrir la diagonale du cadre — ce
     // qui, dans cette projection, est le plus grand débordement possible.
     const portee = Math.ceil(
@@ -1788,10 +1788,10 @@ export class Decor {
       x1: emprise.x1 + portee,
       y1: emprise.y1 + portee,
     };
-    // **Et l'élargissement seul ne suffit pas : il faut ensuite ÉCARTER ce qui
+    // **Et l'élargissement seul ne suffit pas : il faut ensuite écarter ce qui
     // ne touche pas le cadre.** La portée est un rayon, appliqué dans les deux
-    // axes : elle décrit un CARRÉ de parcelle là où la région visible, dans une
-    // projection dimétrique, est un LOSANGE. Les quatre coins du carré sont
+    // axes : elle décrit un **carré** de parcelle là où la région visible, dans une
+    // projection dimétrique, est un **losange**. Les quatre coins du carré sont
     // donc entièrement hors écran, et ils font la majorité de sa surface.
     //
     // Mesuré à la vue par défaut d'une parcelle d'un hectare (900 × 640, zoom
@@ -1818,13 +1818,13 @@ export class Decor {
    * traversait, à l'endroit exact des morceaux rejetés.
    *
    * **Et la deuxième explication était fausse aussi.** J'ai d'abord cru aux
-   * MASSES : un bois monte à seize mètres, donc un morceau dont le sol passe
+   * **masses** : un bois monte à seize mètres, donc un morceau dont le sol passe
    * au-dessus du bord garderait ses masses dans le cadre. Remonter le bord
    * supérieur n'a rien changé — au pixel près le même millier d'écarts — parce
    * qu'une masse se dessine vers le haut, ce qui l'éloigne du cadre au lieu de
    * l'y ramener.
    *
-   * Ce qui débordait était l'IMAGE du morceau elle-même : elle est cuite avec
+   * Ce qui débordait était l'**image** du morceau elle-même : elle est cuite avec
    * sa propre marge (brume, dégradés, masses qui dépassent du carreau) et ne se
    * réduit pas à l'emprise au sol. Plutôt que de chercher de quel côté et de
    * combien — on l'a vu, une explication plausible ne suffit pas — on gonfle

@@ -2,7 +2,7 @@
  * Le sanglier (issue #73, critère G10).
  *
  * Le dernier grand absent du module biotique, et le seul herbivore qui puisse
- * FAVORISER la régénération. Deux effets de signe opposé, portés par le même
+ * **favoriser** la régénération. Deux effets de signe opposé, portés par le même
  * animal et par des traits que l'atlas déclarait déjà : il mange ce qui tombe
  * et reste (les graines lourdes), il ouvre un lit de germination pour ce qui
  * arrive par le vent.
@@ -85,7 +85,7 @@ describe("combien il retourne, et quand", () => {
 describe("aucun tirage ne quitte le flux local", () => {
   it("une parcelle avec sangliers tire exactement comme une parcelle sans", () => {
     // La précaution du lot des tempêtes : le choix des cellules retournées
-    // dérive d'une graine locale. Sur une parcelle SANS arbres — donc sans
+    // dérive d'une graine locale. Sur une parcelle **sans** arbres — donc sans
     // recrutement pour diverger — les deux flux doivent rester identiques au
     // bit près, alors que l'un retourne du sol et l'autre non.
     const base: Station = { ...LIMON_RICHE.station, coteM: 10, voisinage: [] };
@@ -158,7 +158,7 @@ describe("en partie : le geai plante les chênes, le sanglier les mange", () => 
   });
 
   it("ce qu'il enfouit ne disparaît pas : l'humus y gagne", () => {
-    // Un boutis est un ENFOUISSEMENT, pas une combustion. La litière passe au
+    // Un boutis est un **enfouissement**, pas une combustion. La litière passe au
     // pool lent, elle ne part pas en fumée — et ça se voit sur le stock.
     const sans = chenaie(0, 40);
     const beaucoup = chenaie(0.15, 40);

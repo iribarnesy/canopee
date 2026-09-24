@@ -1,5 +1,5 @@
 /**
- * UNE ANIMATION VA JUSQU'AU BOUT, ET LE TEMPS L'ATTEND (#163).
+ * **Une animation va jusqu'au bout**, **et le temps l'attend** (#163).
  *
  * **Le commanditaire a renversé la politique du §5.11, et c'est écrit tel
  * quel** : « c'est mieux d'attendre la fin d'une animation que de couper. Par
@@ -8,9 +8,9 @@
  * désormais l'animation impose la sienne au temps, en deçà d'un seuil.
  *
  * Trois troncatures existaient, et elles sont distinctes — la mesure les a
- * séparées : la COMPRESSION (un acte seul tombait à 77 ms en ×13, sous le
- * plancher de lisibilité que le module se donne), l'OMISSION (13 % des actes
- * au-delà de ×13), et le REMPLACEMENT (le plan reconstruit à chaque
+ * séparées : la **compression** (un acte seul tombait à 77 ms en ×13, sous le
+ * plancher de lisibilité que le module se donne), l'**omission** (13 % des actes
+ * au-delà de ×13), et le **remplacement** (le plan reconstruit à chaque
  * instantané). Le rythme naturel ferme les trois en deçà du seuil.
  */
 
@@ -102,7 +102,7 @@ describe("le rythme naturel", () => {
 
   it("fusionne plusieurs semaines en un seul acte par sujet", () => {
     // La propriété du §5.11 que le rythme naturel ne doit pas casser : dix ans
-    // de sécheresse font UN acte, pas dix.
+    // de sécheresse font **un** acte, pas dix.
     const dix: JournalDeSemaine[] = Array.from({ length: 10 }, (_, i) => ({
       morts: [mort(i, "secheresse")],
     }));

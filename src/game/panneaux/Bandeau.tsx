@@ -1,5 +1,5 @@
 /**
- * Le BANDEAU : la seule chose affichée en permanence.
+ * Le **bandeau** : la seule chose affichée en permanence.
  *
  * La date, l'argent, les heures et le temps qu'il fait — ce qu'on lit à chaque
  * semaine de jeu — et les vitesses, sans lesquelles on ne peut pas jouer du
@@ -76,7 +76,7 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
           {tresorerie.toFixed(0)} €
         </strong>
         {/*
-          **Le dépassement se voit AU FUR ET À MESURE (#133)**, et pas à la
+          **Le dépassement se voit **au fur et à mesure** (#133)**, et pas à la
           fin : le plafond ne refuse plus rien, il se paie, et une facture qui
           tombe sans prévenir n'est pas un arbitrage. Le nombre d'heures et son
           prix viennent du moteur (`depassementHoraire`, `coutDuDepassement`) —
@@ -124,7 +124,7 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         >
           <strong>↺ Relecture</strong>
           {/*
-            **En SEMAINES quand la relecture tient dans une année.** Elle
+            **En **semaines** quand la relecture tient dans une année.** Elle
             annonçait « an 19 sur 19 » pour une scène de vingt-six semaines :
             vrai, et parfaitement muet. L'unité suit la durée de ce qu'on
             regarde, comme partout ailleurs dans cette interface.
@@ -175,7 +175,7 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         */}
         <button
           type="button"
-          // Allumé quand le temps COULE, éteint à l'arrêt : dans toute cette
+          // Allumé quand le temps **coule**, éteint à l'arrêt : dans toute cette
           // interface le vert veut dire « en cours », et un ▶ vert à l'arrêt
           // dirait le contraire de ce que le bouton montre.
           style={{ ...btn(game.speed > 0), marginRight: 0, marginBottom: 0, minWidth: 44 }}

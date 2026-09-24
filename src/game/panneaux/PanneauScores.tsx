@@ -1,5 +1,5 @@
 /**
- * Le volet SCORES : les deux notes sur lesquelles une parcelle se juge — la
+ * Le volet **scores** : les deux notes sur lesquelles une parcelle se juge — la
  * biodiversité et le carbone — et le cadre dans lequel elles se lisent, car
  * 42/100 ne veut pas dire la même chose dans un bocage et dans une plaine
  * céréalière, ni en 2026 et en 2080.

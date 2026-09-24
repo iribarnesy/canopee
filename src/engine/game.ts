@@ -1,5 +1,5 @@
 /**
- * Le runner de partie : rejoue un JOURNAL d'actions datées sur une station et
+ * Le runner de partie : rejoue un **journal** d'actions datées sur une station et
  * une seed — c'est le format de sauvegarde (docs/stack.md). Une semaine :
  * `beginWeek` (salaires, remise à zéro des compteurs, faillite) → actions
  * datées de la semaine (dans l'ordre du journal) → tick de simulation.
@@ -30,7 +30,7 @@ export interface Journal {
   treasuryEur?: number;
   /**
    * L'économie comptait-elle dans cette partie ? Sans ce champ, une partie
-   * jouée sans contrainte d'argent se REJOUERAIT avec, et divergerait : un
+   * jouée sans contrainte d'argent se **rejouerait** avec, et divergerait : un
    * plant refusé pour découvert au rejeu n'est pas le plant qui avait poussé.
    * Absent = vrai, pour que les journaux d'avant restent lisibles.
    */
@@ -61,7 +61,7 @@ export function beginWeek(state: GameState): GameState {
       hoursUsedWeek: 0,
       hoursUsedYear: state.week % 52 === 0 ? 0 : state.economy.hoursUsedYear,
       // Le volume vendu se compte par année civile : c'est l'engorgement du
-      // débouché LOCAL qu'on modélise, et un acheteur reprend son appétit d'une
+      // débouché **local** qu'on modélise, et un acheteur reprend son appétit d'une
       // campagne à l'autre (marche.ts).
       volumeVenduAnneeM3: state.week % 52 === 0 ? 0 : state.economy.volumeVenduAnneeM3,
       // Économie désactivée : le compte tourne et s'affiche, mais il ne met
@@ -89,7 +89,7 @@ export function advanceWeek(
   incendie?: IncendieResult;
   /** tempête de la semaine, si elle a couché au moins un arbre (tempete.ts) */
   tempete?: TempeteResult;
-  /** gestes du joueur ET du gibier de la semaine, pour le rendu (tick.ts) */
+  /** gestes du joueur **et** du gibier de la semaine, pour le rendu (tick.ts) */
   gestes: GesteVisible[];
   /** chandelles abattues cette semaine (boisMort.ts) */
   chutes: ChuteDeChandelle[];

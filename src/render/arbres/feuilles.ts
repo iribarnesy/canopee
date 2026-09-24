@@ -10,7 +10,7 @@
  * un tracé de dix à trente points : une heure de travail par espèce, pas une
  * journée, et zéro fichier binaire ».
  *
- * **Les tracés sont NORMALISÉS** : une feuille tient dans un rectangle de
+ * **Les tracés sont normalisés** : une feuille tient dans un rectangle de
  * longueur 1 (de la base au sommet, vers +y) et de largeur libre, centrée sur
  * l'axe. C'est la fiche qui donne sa longueur réelle en mètres, et le rendu qui
  * la met à l'échelle. Un tracé qui ne serait pas normalisé se remettrait à
@@ -18,7 +18,7 @@
  *
  * **Ce qu'on ne dessine pas** : la nervation, les dents une à une, le duvet du
  * revers. À la taille où une feuille s'affiche — quelques pixels au zoom de
- * travail, quelques dizaines au plus près — c'est la SILHOUETTE qui porte
+ * travail, quelques dizaines au plus près — c'est la **silhouette** qui porte
  * l'information, et rien d'autre. Le lot L0 l'avait déjà établi pour les
  * houppiers ; ça vaut à l'échelle en dessous.
  *
@@ -44,7 +44,7 @@ export type FormeFeuille =
   | "ovale"
   /** triangulaire à long pétiole — bouleau */
   | "triangulaire"
-  /** arrondie TRONQUÉE au sommet — aulne, et personne d'autre */
+  /** arrondie **tronquée** au sommet — aulne, et personne d'autre */
   | "tronquee"
   /** aiguille, par deux — pin sylvestre */
   | "aiguille"
@@ -64,7 +64,7 @@ export type FormeFeuille =
 /**
  * Le contour d'une feuille, en tracé fermé.
  *
- * Les points vont du pétiole (en bas, y = 0) au sommet (y = 1) par la DROITE,
+ * Les points vont du pétiole (en bas, y = 0) au sommet (y = 1) par la **droite**,
  * puis reviennent par la gauche. Le tracé est donné explicitement des deux
  * côtés plutôt que miroité : une feuille parfaitement symétrique se voit, et
  * les asymétries sont ce qui donne à un dessin fait main son air de dessin.
@@ -104,7 +104,7 @@ export function contourFeuille(forme: FormeFeuille): readonly PointFeuille[] {
         { x: -0.14, y: 0.05 },
       ];
     case "tronquee":
-      // Aulne : arrondie et COUPÉE NET au sommet, souvent même échancrée. Une
+      // Aulne : arrondie et **coupée net** au sommet, souvent même échancrée. Une
       // feuille qui a l'air d'avoir été taillée aux ciseaux — c'est le seul
       // feuillu de l'atlas dans ce cas, et ça se voit à dix mètres.
       return [
@@ -123,7 +123,7 @@ export function contourFeuille(forme: FormeFeuille): readonly PointFeuille[] {
       ];
     case "aiguille":
       // Pin sylvestre : deux aiguilles vrillées, longues et fines. Le contour
-      // n'en décrit qu'une ; c'est le semis qui les pose PAR DEUX.
+      // n'en décrit qu'une ; c'est le semis qui les pose **par deux**.
       return [
         { x: 0, y: 0 },
         { x: 0.045, y: 0.12 },
@@ -170,7 +170,7 @@ export function contourFeuille(forme: FormeFeuille): readonly PointFeuille[] {
         { x: -0.13, y: 0.11 },
       ];
     case "lobee":
-      // Chêne : les LOBES, avec leurs sinus arrondis. C'est la feuille la plus
+      // Chêne : les **lobes**, avec leurs sinus arrondis. C'est la feuille la plus
       // reconnaissable de la flore tempérée, et son contour est le seul du lot
       // qui ait besoin d'autant de points — les lobes sont l'information.
       return [
@@ -196,7 +196,7 @@ export function contourFeuille(forme: FormeFeuille): readonly PointFeuille[] {
         { x: -0.11, y: 0.07 },
       ];
     case "composee":
-      // Frêne, sureau : le contour d'UNE foliole. C'est le semis qui les pose
+      // Frêne, sureau : le contour d'**une** foliole. C'est le semis qui les pose
       // par cinq ou sept le long d'un pétiole — une feuille composée dessinée
       // d'un seul tenant ne se distinguerait pas d'une feuille simple.
       return [
@@ -231,7 +231,7 @@ export function contourFeuille(forme: FormeFeuille): readonly PointFeuille[] {
         { x: -0.09, y: 0.09 },
       ];
     default:
-      // Noisetier : GRANDE, cordée — donc échancrée à la base, ce qui est son
+      // Noisetier : **grande**, cordée — donc échancrée à la base, ce qui est son
       // signe le plus sûr — et doublement dentée.
       return [
         { x: 0.09, y: 0.06 },
@@ -267,12 +267,12 @@ export function largeurRelative(forme: FormeFeuille): number {
  * plus fiable en botanique de terrain. Un pour tout le reste.
  */
 /**
- * Le port du BOUQUET : de combien il s'allonge le long du rameau, et de combien
+ * Le port du **bouquet** : de combien il s'allonge le long du rameau, et de combien
  * son bord est découpé.
  *
  * **La grandeur qui manquait, et elle manquait à l'échelle où l'on joue.** Le
  * §4 pose que l'unité de dessin est le bouquet et non la feuille — « dessine
- * l'objet que l'œil perçoit à cette distance ». Il était pourtant le SEUL
+ * l'objet que l'œil perçoit à cette distance ». Il était pourtant le **seul**
  * élément du houppier sans caractère d'espèce : chaque essence recevait le même
  * disque déchiqueté, et seules la couleur et la densité les séparaient. Sur la
  * planche des trois sujets vus de près, un hêtre et un bouleau portaient
@@ -280,14 +280,14 @@ export function largeurRelative(forme: FormeFeuille): number {
  * une brosse — sortait en boules rondes.
  *
  * **Rien de nouveau n'est déclaré pour autant.** Le port d'un bouquet est une
- * CONSÉQUENCE de la feuille qui le compose, et la fiche déclare déjà sa forme :
+ * **conséquence** de la feuille qui le compose, et la fiche déclare déjà sa forme :
  * cinq folioles sur un pétiole font une fronde allongée et profondément
  * échancrée, une rosette de feuilles ovales fait une boule pleine à bord doux,
  * des aiguilles font une brosse dans l'axe du rameau. On lit donc la
  * conséquence au lieu d'ajouter une déclaration qui pourrait la contredire.
  *
  * `allongement` est le rapport de l'axe du rameau à l'axe transverse ; le
- * dessin conserve l'AIRE, sans quoi allonger un bouquet changerait la
+ * dessin conserve l'**aire**, sans quoi allonger un bouquet changerait la
  * couverture du houppier et donc sa transparence — un effet qu'on n'a pas
  * demandé. `decoupe` est l'amplitude du bord, de 0 (lisse) à 1 (lacéré).
  */
@@ -308,7 +308,7 @@ export function portDuBouquet(forme: FormeFeuille): {
     // Longue et étroite : le bouquet suit. Châtaignier, saule.
     case "lanceolee":
       return { allongement: 1.7, decoupe: 0.6 };
-    // Les lobes se lisent sur le BORD du bouquet, pas sur chaque feuille : un
+    // Les lobes se lisent sur le **bord** du bouquet, pas sur chaque feuille : un
     // houppier de chêne est bosselé là où celui d'un hêtre est lisse.
     case "lobee":
       return { allongement: 1.15, decoupe: 0.72 };

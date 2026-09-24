@@ -6,12 +6,12 @@
  * perd sa flèche chaque printemps n'échappe jamais à la hauteur de dent.
  *
  * Ce qui est modélisé, et comment :
- *  - les cervidés ne sont PAS une population de la parcelle. Leur domaine
+ *  - les cervidés ne sont **pas** une population de la parcelle. Leur domaine
  *    vital fait des dizaines d'hectares : le paysage alentour impose une
  *    densité (`station.gibierParHa`, une donnée de contexte au même titre que
  *    le voisinage semencier ou l'exposition au vent), et la parcelle en reçoit
  *    la part que son attrait justifie ;
- *  - le broutage est LOCAL et se compte en kilos de matière sèche, pas en
+ *  - le broutage est **local** et se compte en kilos de matière sèche, pas en
  *    pourcentages : chaque cellule offre un fourrage (herbe + rameaux tendres
  *    à hauteur de dent), le gibier s'y répartit au prorata de ce qu'elle offre
  *    et de l'abri qu'elle donne, et chaque arbre perd la longueur de pousse
@@ -47,7 +47,7 @@ export const KG_PAR_M_POUSSE = 0.05;
 export const HERBE_KG_M2_SEMAINE = 0.06;
 
 /**
- * Part de la ration cherchée en rameaux ligneux. C'est LE point qui décide de
+ * Part de la ration cherchée en rameaux ligneux. C'est **le** point qui décide de
  * tout : un chevreuil est un « cueilleur sélectif », pas un brouteur d'herbe.
  * Il va chercher le ligneux et les plantes à feuilles larges ; l'herbe ne fait
  * qu'une petite part de son régime. Se répartir au prorata de la masse
@@ -174,13 +174,13 @@ export interface Frottis {
 
 /**
  * Attrait d'une tige pour un brocard : la bonne taille, une écorce lisse, et
- * surtout de l'ISOLEMENT — c'est un marquage de territoire, il vise ce qui se
+ * surtout de l'**isolement** — c'est un marquage de territoire, il vise ce qui se
  * voit. Une tige noyée dans un fourré n'intéresse personne.
  */
 /**
  * Un arbre peut-il être frotté du tout, avant même de regarder son voisinage ?
  *
- * Cette question se pose SÉPARÉMENT parce qu'elle est bon marché et que le
+ * Cette question se pose **séparément** parce qu'elle est bon marché et que le
  * comptage des voisins, lui, ne l'est pas : il coûtait le peuplement entier par
  * arbre, y compris pour les morts, les protégés et les tiges hors gamme de
  * hauteur — dont l'attrait allait de toute façon ressortir nul (#99).
@@ -247,7 +247,7 @@ export function frottisDeLaSemaine(
 
   /**
    * Les vivants rangés par mailles de la taille du voisinage : compter les
-   * voisins proches coûtait le PEUPLEMENT ENTIER par arbre — un n² sur les
+   * voisins proches coûtait le **peuplement entier** par arbre — un n² sur les
    * semaines de brame, et le troisième poste de calcul du tick à quatre mille
    * tiges (#99). Un compte d'entiers ne dépend pas de l'ordre où on le fait :
    * le résultat est identique, pas seulement proche.
@@ -296,7 +296,7 @@ export function frottisDeLaSemaine(
     ) {
       continue;
     }
-    // Le tri bon marché AVANT le comptage : un arbre qui ne peut pas être
+    // Le tri bon marché **avant** le comptage : un arbre qui ne peut pas être
     // frotté n'a pas besoin qu'on lui compte ses voisins.
     if (!frottable(tree)) continue;
     const attrait = attraitFrottis(tree, compterVoisins(tree), resistanceEcorce(tree.especeId));

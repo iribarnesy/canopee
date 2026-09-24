@@ -1,12 +1,12 @@
 /**
- * LA RÈGLE DE RÉCOLTE COMPARAIT DEUX GRANDEURS DIFFÉRENTES (#191).
+ * **La règle de récolte comparait deux grandeurs différentes** (#191).
  *
  * Le constat : le journal d'une partie de treize ans ne montrait qu'une récolte
  * par an, toujours de la ronce, alors que treize pommiers vivants portaient
  * jusqu'à 115 kg en semaine 39.
  *
- * La cause, et elle est invisible à la lecture : ce qu'on CUEILLE se filtre à
- * `SEUIL_ARBRE_KG` par pied, ce à quoi on le COMPARAIT additionnait tous les
+ * La cause, et elle est invisible à la lecture : ce qu'on **cueille** se filtre à
+ * `SEUIL_ARBRE_KG` par pied, ce à quoi on le **comparait** additionnait tous les
  * arbres sans seuil. Les miettes d'un sous-bois de ronces — vingt-huit kilos,
  * jamais cueillables — tenaient le compteur en l'air toute l'année.
  *
@@ -44,7 +44,7 @@ const POMMIER = fruitsDe("malus_domestica");
 
 /**
  * Une parcelle avec de la ronce et des pommiers, rejouée de la semaine 30 à la
- * 48. Chaque essence porte pendant SA fenêtre, et rien en dehors — c'est ce que
+ * 48. Chaque essence porte pendant **sa** fenêtre, et rien en dehors — c'est ce que
  * le moteur fait (`tick.ts` pose `fruitsKg` à `recolteWeek` et le remet à zéro
  * à `recolteWeek + fenetreRecolteWeeks`).
  */
@@ -108,7 +108,7 @@ describe("une saison à deux essences", () => {
   });
 
   it("le front les cueille toutes DEUX quand le calendrier seul est en jeu", () => {
-    // Cet essai a servi à ÉCARTER une conclusion trop rapide : j'avais accusé
+    // Cet essai a servi à **écarter** une conclusion trop rapide : j'avais accusé
     // le chevauchement des fenêtres de récolte. Avec ces deux essences-là, la
     // cueillette de la semaine 35 vide la parcelle et remet le compte à zéro,
     // donc le front remonte sans difficulté pour les pommes de la semaine 38.
@@ -120,8 +120,8 @@ describe("une saison à deux essences", () => {
 
 describe("la même mesure des deux côtés (#191)", () => {
   /**
-   * Le vrai défaut, et il est invisible à la lecture : ce qu'on CUEILLE se
-   * filtre à `SEUIL_ARBRE_KG` par pied, ce à quoi on le COMPARAIT ne se
+   * Le vrai défaut, et il est invisible à la lecture : ce qu'on **cueille** se
+   * filtre à `SEUIL_ARBRE_KG` par pied, ce à quoi on le **comparait** ne se
    * filtrait pas. Sur une parcelle où des milliers de ronces portent chacune
    * quelques grammes, le résidu tenait le total au-dessus du seuil toute
    * l'année : le front ne retombait jamais, et plus rien n'était cueilli après

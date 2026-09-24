@@ -3,7 +3,7 @@
  * creusée dedans (docs/regles.md §2 bis).
  *
  * Ce n'est pas un décor. Ce qui fait une ripisylve, ce n'est pas le ruisseau
- * qu'on voit, c'est la NAPPE qu'il tient sous les pieds des arbres : au bord
+ * qu'on voit, c'est la **nappe** qu'il tient sous les pieds des arbres : au bord
  * de l'eau elle affleure, et elle s'enfonce à mesure qu'on s'éloigne. Un aulne
  * et un saule y trouvent l'eau qu'ils réclament toute l'année ; un chêne
  * pubescent s'y asphyxie. Aucune espèce n'est traitée à part — c'est la même
@@ -17,10 +17,10 @@
  * presque plate (l'eau file vers le ruisseau), une argile la porte raide.
  *
  * Deux conséquences, toutes deux déjà connues du bilan hydrique :
- *  - une REMONTÉE CAPILLAIRE d'autant plus forte que la nappe est proche, et
+ *  - une **remontée capillaire** d'autant plus forte que la nappe est proche, et
  *    d'autant plus haute que le sol est fin (30 cm dans un sable, 2 m dans un
  *    limon) — c'est elle qui fait tenir la ripisylve en août ;
- *  - un EXUTOIRE BOUCHÉ : un sol dont la nappe est dans le profil ne peut plus
+ *  - un **exutoire bouché** : un sol dont la nappe est dans le profil ne peut plus
  *    évacuer vers le bas, donc il s'engorge l'hiver.
  */
 
@@ -253,7 +253,7 @@ export function champDeNappeCm(
 }
 
 /**
- * Les sources d'eau DÉCLARÉES : « un ruisseau au sud », « une mare de 4 m ».
+ * Les sources d'eau **déclarées** : « un ruisseau au sud », « une mare de 4 m ».
  * Le plan d'eau est horizontal, sa cote est le point le plus bas qu'il touche
  * moins l'encaissement de la berge.
  */
@@ -296,7 +296,7 @@ export function profondeurNappeCm(
  */
 export function remonteeCapillaireMm(profondeurCm: number, profil: SoilProfile): number {
   if (!Number.isFinite(profondeurCm) || profondeurCm >= PROFONDEUR_SANS_EFFET_CM) return 0;
-  // On compte la distance depuis la BASE du profil : ce qui compte, c'est
+  // On compte la distance depuis la **base** du profil : ce qui compte, c'est
   // l'écart entre la nappe et les racines les plus profondes.
   const sousLeProfil = Math.max(0, profondeurCm - profondeurTotaleCm(profil));
   return REMONTEE_MAX_MM * Math.exp(-sousLeProfil / hauteurCapillaireCm(profil));

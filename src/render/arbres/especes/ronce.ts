@@ -3,7 +3,7 @@
  *
  * « Masse hérissée, mûres » (§5.4). C'est l'espèce la plus abondante d'une
  * friche à l'an 30, et celle qui décide si un coin est praticable — ce que le
- * joueur lit d'un roncier, c'est une SURFACE à débroussailler, pas des tiges à
+ * joueur lit d'un roncier, c'est une **surface** à débroussailler, pas des tiges à
  * compter.
  *
  * Dessinée par cellule agrégée (`fourre.ts`), donc ni port ni branchement : ce

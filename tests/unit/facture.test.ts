@@ -1,14 +1,14 @@
 /**
- * LA SEMAINE RAMENÉE SOUS LE PLAFOND (#133).
+ * **La semaine ramenée sous le plafond** (#133).
  *
  * Le plafond de soixante heures ne refuse plus rien : il se paie. L'autre
  * branche de l'arbitrage — « ou on s'en tient à vos 60 h » — suppose de revenir
- * en arrière sur des actions DÉJÀ appliquées, ce que l'issue désignait comme le
+ * en arrière sur des actions **déjà** appliquées, ce que l'issue désignait comme le
  * point dur : couper un arbre change beaucoup de choses.
  *
- * La réponse n'est pas de défaire, c'est de REJOUER la semaine depuis son début
+ * La réponse n'est pas de défaire, c'est de **rejouer** la semaine depuis son début
  * avec une liste élaguée. Ces épreuves défendent les trois promesses de cet
- * élagage : il tient dans le plafond, il tombe par la FIN, et il ne touche à
+ * élagage : il tient dans le plafond, il tombe par la **fin**, et il ne touche à
  * rien quand il n'y a rien à élaguer.
  */
 
@@ -64,7 +64,7 @@ describe("l'élagage d'une semaine trop chargée", () => {
     const actions = [planter(25, 0), planter(25, 25), planter(25, 50)];
     const elaguee = prefixeSousLePlafond(depart, actions);
     expect(elaguee.annulees).toBeGreaterThan(0);
-    // Un préfixe, donc : ce qui reste est le DÉBUT de la liste, dans l'ordre.
+    // Un préfixe, donc : ce qui reste est le **début** de la liste, dans l'ordre.
     expect(elaguee.gardees).toEqual(actions.slice(0, elaguee.gardees.length));
     expect(depassementHoraire(elaguee.etat.economy)).toBe(0);
     expect(elaguee.etat.economy.hoursUsedWeek).toBeLessThanOrEqual(WEEK_HOURS_CAP);

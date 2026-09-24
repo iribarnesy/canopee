@@ -1,18 +1,18 @@
 /**
- * LE LAND EQUIVALENT RATIO (issue #136, critère H21 ; docs/regles.md §7.5).
+ * **Le Land Equivalent Ratio** (issue #136, critère H21 ; docs/regles.md §7.5).
  *
- * C'EST LE CHIFFRE DE L'AGROFORESTERIE. Pas un score de plus : la réponse à la
+ * **C'est le chiffre de l'agroforesterie**. Pas un score de plus : la réponse à la
  * question que le jeu pose depuis son premier commit — *est-ce que des arbres
- * ET une culture sur la même parcelle valent mieux que les deux séparément ?*
+ * **et** une culture sur la même parcelle valent mieux que les deux séparément ?*
  * Un LER de 1,3 veut dire qu'il faudrait 1,3 hectare de monocultures, blé d'un
  * côté et bois de l'autre, pour produire ce qu'un hectare d'allées produit. En
  * dessous de 1, le mélange perd, et c'est un résultat aussi utile.
  *
- * ── CE QUE C'EST, ET POURQUOI CE N'EST PAS UN AFFICHAGE ──────────────────────
+ * ── **ce que c'est**, **et pourquoi ce n'est pas un affichage** ──────────────────────
  *
  * `LER = Y_culture / Ym_culture + Y_arbre / Ym_arbre`, où les `Y` sont les
- * rendements par hectare DE LA PARCELLE MIXTE et les `Ym` ceux des deux
- * monocultures. Chaque terme est une SURFACE ÉQUIVALENTE : « il faudrait 0,54
+ * rendements par hectare **de la parcelle mixte** et les `Ym` ceux des deux
+ * monocultures. Chaque terme est une **surface équivalente** : « il faudrait 0,54
  * hectare de blé pur pour faire le blé de cet hectare-là ».
  *
  * La conséquence est architecturale et il faut la dire : **le LER exige deux
@@ -25,24 +25,24 @@
  *    plus : elles reçoivent l'azote de la litière des arbres, et c'est
  *    exactement ce que #140 a dû neutraliser pour rendre le gradient lisible ;
  *  - et côté arbre il n'existe aucun analogue : la monoculture de référence est
- *    une plantation à SA densité, qui n'est pas celle des alignements.
+ *    une plantation à **sa** densité, qui n'est pas celle des alignements.
  *
- * Ce module calcule donc l'indice à partir de rendements qu'on lui DONNE, et le
+ * Ce module calcule donc l'indice à partir de rendements qu'on lui **donne**, et le
  * dispositif à trois bras vit dans l'essai (`ler.test.ts`). Brancher
  * l'indicateur permanent que `regles.md` demande suppose de faire avancer deux
  * parcelles témoins en même temps que celle du joueur, soit trois fois le coût
  * du moteur par tick : c'est un choix d'architecture, pas un lot.
  *
- * ── CE QU'ON NE DOIT PAS LUI FAIRE DIRE ──────────────────────────────────────
+ * ── **ce qu'on ne doit pas lui faire dire** ──────────────────────────────────────
  *
- * Un LER compare des PRODUCTIONS, pas des revenus : les deux termes n'ont pas
+ * Un LER compare des **productions**, pas des revenus : les deux termes n'ont pas
  * la même unité (des tonnes de grain, des mètres cubes de bois) et c'est
  * justement pour ça qu'on les rend sans dimension avant de les additionner.
  * Additionner des euros donnerait une tout autre grandeur, qui dépendrait du
  * marché et non de la parcelle.
  *
  * Et il ne dit rien du temps : un jeune alignement a un LER arbre ridicule et
- * un LER culture proche de 1, puis les deux basculent. C'est une PHOTO d'une
+ * un LER culture proche de 1, puis les deux basculent. C'est une **photo** d'une
  * période, et la période fait partie du résultat.
  */
 
@@ -53,7 +53,7 @@ import { type TreeState, volumeTigeM3 } from "./trees";
  *
  * « Par hectare de parcelle » et non « par hectare semé » : c'est ce qui rend
  * le partage du sol visible. Une parcelle dont les arbres occupent un tiers de
- * la surface produit moins de grain par hectare DE PARCELLE, et c'est bien le
+ * la surface produit moins de grain par hectare **de parcelle**, et c'est bien le
  * prix qu'on veut compter.
  */
 export interface Production {
@@ -102,12 +102,12 @@ export function ler(mixte: Production, temoinCulture: Production, temoinArbre: P
 /**
  * Ce qu'une parcelle a produit, ramené à l'hectare et à l'année.
  *
- * Le bois compte ce qui est SUR PIED plus ce qui a été récolté, parce que le
+ * Le bois compte ce qui est **sur pied** plus ce qui a été récolté, parce que le
  * LER mesure une production et non un stock : une éclaircie ne doit pas faire
  * baisser le LER arbre de ce qu'elle a sorti. Le grain, lui, est déjà sorti par
  * définition — on ne récolte pas un blé deux fois.
  *
- * Le volume retenu est celui de la TIGE (`volumeTigeM3`), pas l'aérien : c'est
+ * Le volume retenu est celui de la **tige** (`volumeTigeM3`), pas l'aérien : c'est
  * ce qui part en scierie, et c'est la grandeur que les tables de production
  * forestières publient.
  */

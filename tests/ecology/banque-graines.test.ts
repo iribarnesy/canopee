@@ -1,11 +1,11 @@
 /**
  * La banque de graines du sol : la mémoire du passé d'une parcelle.
  *
- * Le moteur ne régénérait que par le PRÉSENT — les adultes qui grainent et le
+ * Le moteur ne régénérait que par le **présent** — les adultes qui grainent et le
  * voisinage qui ensemence. Une parcelle n'avait donc aucune mémoire.
  *
  * C'est faux pour toute une catégorie d'espèces, et c'est la clé de la
- * dynamique landaise. Une graine de chêne est RÉCALCITRANTE : elle ne survit
+ * dynamique landaise. Une graine de chêne est **récalcitrante** : elle ne survit
  * pas à un hiver sec. Une graine de légumineuse à tégument dur attend sous
  * terre pendant des décennies, et le feu la réveille.
  */

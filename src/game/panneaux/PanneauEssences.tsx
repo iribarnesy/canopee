@@ -1,5 +1,5 @@
 /**
- * Le volet ESSENCES : choisir ce qu'on plante en le connaissant.
+ * Le volet **essences** : choisir ce qu'on plante en le connaissant.
  *
  * On choisissait sur un nom et un prix, dans vingt-cinq boutons empilés —
  * « Arbousier (9 €) » — sans jamais voir l'arbre ni savoir s'il avait la
@@ -8,7 +8,7 @@
  * **« Tient ici » se lit chez le moteur.** `especeTenable` est la fonction
  * dont le moteur se sert déjà pour filtrer les semis naturels d'un paysage
  * (`entourageDeLaStation`) : le filtre du joueur et celui de la nature sont
- * donc la MÊME règle, et ils ne peuvent pas diverger. Refaire ici une
+ * donc la **même** règle, et ils ne peuvent pas diverger. Refaire ici une
  * comparaison de pH aurait donné une seconde règle qui dérive en silence.
  */
 
@@ -97,7 +97,7 @@ export function PanneauEssences({
                 borderRadius: 8,
                 background: choisie ? "var(--foret-pale)" : "var(--carte)",
                 cursor: "pointer",
-                // Une essence hors gamme reste CHOISISSABLE : le moteur, lui,
+                // Une essence hors gamme reste **choisissable** : le moteur, lui,
                 // ne l'interdit pas — il la laissera végéter puis mourir. Lui
                 // barrer le passage serait inventer une règle ; l'afficher
                 // effacée dit ce que le moteur sait, sans décider à sa place.

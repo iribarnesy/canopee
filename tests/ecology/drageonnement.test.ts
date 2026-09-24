@@ -3,15 +3,15 @@
  *
  * La fiche du prunellier le disait elle-même : « faute de savoir modéliser le
  * drageonnement, on compense par un taux de semis généreux ». La compensation
- * donnait à peu près le bon NOMBRE de prunelliers et la mauvaise MANIÈRE — des
+ * donnait à peu près le bon **nombre** de prunelliers et la mauvaise **manière** — des
  * semis d'oiseaux essaimés au hasard au lieu d'un fourré qui s'épaissit.
  *
  * Un drageon n'est pas un semis, et deux choses le distinguent :
  *  - il naît sur une racine traçante, donc à quelques mètres de sa mère ;
- *  - il reste RELIÉ à elle, qui le nourrit, donc il n'a pas besoin de trouver
+ *  - il reste **relié** à elle, qui le nourrit, donc il n'a pas besoin de trouver
  *    sa lumière tout seul.
  *
- * C'est la seconde qui fait le fourré : un drageon s'installe SOUS le couvert
+ * C'est la seconde qui fait le fourré : un drageon s'installe **sous** le couvert
  * de sa propre espèce, là où aucune graine de la même espèce ne lèverait.
  */
 
@@ -83,8 +83,8 @@ describe("le fourré s'épaissit là où la haie se contente de s'étendre", () 
 
   it("le prunellier fait bien plus de pieds, et les serre plus", () => {
     // 423 pieds contre 170, et 1,36 m entre voisins contre 1,78. Le nombre de
-    // TENTATIVES est pourtant le même qu'avant (0,4 semis + 0,8 drageons contre
-    // 1,2 semis) : ce qui change est le taux de RÉUSSITE, parce qu'un drageon
+    // **tentatives** est pourtant le même qu'avant (0,4 semis + 0,8 drageons contre
+    // 1,2 semis) : ce qui change est le taux de **réussite**, parce qu'un drageon
     // échappe au filtre de lumière et s'installe sous le couvert des siens.
     const prunellier = fourre("prunus_spinosa");
     const aubepine = fourre("crataegus_monogyna");
@@ -93,9 +93,9 @@ describe("le fourré s'épaissit là où la haie se contente de s'étendre", () 
   });
 
   it("mais sur cette parcelle-là, les deux finissent par occuper tout l'espace", () => {
-    // Ce que l'essai NE montre pas, et qu'il vaut mieux dire : sur quarante
+    // Ce que l'essai **ne** montre pas, et qu'il vaut mieux dire : sur quarante
     // mètres et en vingt-cinq ans, les oiseaux ont le temps de semer partout.
-    // La différence n'est donc pas dans l'emprise, elle est dans la DENSITÉ.
+    // La différence n'est donc pas dans l'emprise, elle est dans la **densité**.
     // Mesurer une tache qui avance demanderait une parcelle plus grande et une
     // partie plus longue que ce qu'une suite d'essais peut se payer.
     const prunellier = fourre("prunus_spinosa");

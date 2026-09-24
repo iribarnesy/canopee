@@ -1,11 +1,11 @@
 /**
- * Bilan hydrique d'UNE cellule de 1 m² : réservoir à deux compartiments.
+ * Bilan hydrique d'**une** cellule de 1 m² : réservoir à deux compartiments.
  * - la réserve utile (RU) : l'eau disponible pour les plantes ;
  * - l'eau gravitaire au-dessus de la capacité au champ : elle draine à une
  *   vitesse limitée (conductivité) et, tant qu'elle stagne, crée de
  *   l'**engorgement** (anoxie racinaire).
  * La cellule gère pluie, débordement, drainage et évaporation du sol nu ;
- * la TRANSPIRATION des arbres est prélevée ensuite, cellule par cellule,
+ * la **transpiration** des arbres est prélevée ensuite, cellule par cellule,
  * par l'allocation spatiale de tick.ts (docs/regles.md §4.2).
  * Invariant testé : pluie = évaporation + drainage + débordement + Δstock.
  * 1 mm sur 1 m² = 1 L.
@@ -58,7 +58,7 @@ export function drynessFactor(soilWaterMm: number, ruMm: number): number {
 }
 
 /**
- * Frein propre à l'ÉVAPORATION du sol : quadratique, car un sol qui sèche
+ * Frein propre à l'**évaporation** du sol : quadratique, car un sol qui sèche
  * s'auto-protège — la couche superficielle desséchée devient une barrière
  * (« mulch naturel », phase 2 de l'évaporation). Les racines, elles, vont
  * chercher l'eau liée bien plus efficacement, d'où deux courbes distinctes.
@@ -136,7 +136,7 @@ export interface ProfilHydroInput {
   /** eau gravitaire de chaque horizon, mm */
   excesMm: readonly number[];
   rainMm: number;
-  /** demande évaporatoire (elle ne touche QUE l'horizon de surface) */
+  /** demande évaporatoire (elle ne touche **que** l'horizon de surface) */
   evapDemandMm: number;
   /** remontée capillaire depuis la nappe, alimente l'horizon le plus profond */
   nappeMm: number;
@@ -144,7 +144,7 @@ export interface ProfilHydroInput {
   drainageExterneMm: number;
   /**
    * Profondeur de la nappe permanente sous la cellule, cm (`Infinity` = pas de
-   * nappe à portée). Ce n'est pas un flux mais une CONTRAINTE : sous la
+   * nappe à portée). Ce n'est pas un flux mais une **contrainte** : sous la
    * surface libre, le sol est saturé par définition, et c'est ce qui asphyxie
    * les racines au bord d'un ruisseau (eau_surface.ts).
    */
@@ -165,13 +165,13 @@ export interface ProfilHydroOutput {
 }
 
 /**
- * Bilan hydrique d'une cellule STRATIFIÉE (critère A10). Deux passes :
+ * Bilan hydrique d'une cellule **stratifiée** (critère A10). Deux passes :
  *  1. remplissage descendant — la pluie remplit la réserve utile puis la
  *     macroporosité de chaque horizon, le surplus descend ;
  *  2. ressuyage gravitaire — chaque horizon vidange son eau libre vers le bas,
  *     à la vitesse que sa texture permet et dans la place disponible.
  * L'évaporation ne prélève qu'en surface, la nappe recharge par le bas, et ce
- * que l'exutoire refuse remonte en nappe perchée. L'engorgement devient LOCAL
+ * que l'exutoire refuse remonte en nappe perchée. L'engorgement devient **local**
  * à chaque horizon : de l'eau bloquée en profondeur n'asphyxie pas les racines
  * de surface.
  * Invariant : pluie + nappe = évaporation + drainage + débordement + Δstock.
@@ -190,7 +190,7 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
 
   // ── Passe 1 : la pluie s'infiltre de haut en bas ──────────────────────────
   // Ce qu'un horizon ne peut pas laisser descendre à temps ne disparaît pas :
-  // il REFLUE vers le haut, remplit ce qui reste de porosité au-dessus, et ce
+  // il **reflue** vers le haut, remplit ce qui reste de porosité au-dessus, et ce
   // qui ne tient nulle part finit par ruisseler. C'est ce qui fait qu'un orage
   // sur un sol déjà plein ne s'infiltre pas : il part en surface.
   let refus = 0;
@@ -265,7 +265,7 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
 
   // ── Saturation imposée par la nappe ──────────────────────────────────────
   // La surface libre d'une nappe, c'est le haut de la zone saturée : tout ce
-  // qui est dessous a sa réserve utile pleine ET sa macroporosité pleine. Ce
+  // qui est dessous a sa réserve utile pleine **et** sa macroporosité pleine. Ce
   // n'est pas un apport qu'on choisit, c'est un état. L'eau ainsi ajoutée est
   // comptée comme venue de la nappe, sans quoi le bilan ne bouclerait pas.
   const nappeCm = input.nappeProfondeurCm ?? Number.POSITIVE_INFINITY;

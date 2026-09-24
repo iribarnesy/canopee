@@ -1,9 +1,9 @@
 /**
- * LES CALQUES DE LA CARTE DU SOL SONT CHIFFRÉS (#144).
+ * **Les calques de la carte du sol sont chiffrés** (#144).
  *
  * La carte montrait six dégradés sans bornes ni valeurs : on chaulait, la
  * tache changeait de teinte, et on ne savait toujours pas si le pH visé était
- * atteint. La légende qu'on ajoute n'a de valeur que si elle dit la MÊME chose
+ * atteint. La légende qu'on ajoute n'a de valeur que si elle dit la **même** chose
  * que le dessin — une légende qui dérive est pire qu'une absence de légende,
  * parce qu'on la croit.
  *
@@ -73,7 +73,7 @@ function station(enEau: boolean[] = new Array(COTE_M * COTE_M).fill(false)): Sta
     id: STATION.id,
     nom: STATION.nom,
     coteM: COTE_M,
-    // LES DEUX, depuis #190 : le profil entier et l'horizon de surface ont
+    // **les deux**, depuis #190 : le profil entier et l'horizon de surface ont
     // longtemps porté le même nom, et c'est ce qui a permis au sélecteur
     // d'essences de prendre l'un pour l'autre.
     ruMm: STATION.ruMm,
@@ -92,11 +92,11 @@ const SNAPSHOT = instantane();
 
 describe("les bornes sont de vraies bornes", () => {
   it("l'eau va de zéro à la réserve utile de l'horizon de surface", () => {
-    // Pas un maximum choisi : `ruHorizonSurfaceMm` EST la capacité de
+    // Pas un maximum choisi : `ruHorizonSurfaceMm` **est** la capacité de
     // l'horizon que `soilWater` mesure (worker.ts). Une échelle qui ne peut pas
     // être atteinte serait un mensonge de légende.
     //
-    // Et c'est bien CELLE-LÀ, pas la réserve du profil : sur un limon à deux
+    // Et c'est bien **celle-là**, pas la réserve du profil : sur un limon à deux
     // horizons les deux diffèrent d'un facteur trois, et borner sur le profil
     // ferait paraître la parcelle sèche en permanence (#190).
     const st = station();
@@ -116,7 +116,7 @@ describe("les bornes sont de vraies bornes", () => {
       // rabat le rapport à 1 partout où il s'en sert (`tick.ts`). La borne
       // reste donc « le sol plein », qui est ce qu'un joueur lit, et la carte
       // rabat comme le moteur.
-      // La nappe, elle, est un SEUIL déclaré : elle descend à 6 m sur ce
+      // La nappe, elle, est un **seuil** déclaré : elle descend à 6 m sur ce
       // limon-là, et la légende l'écrit « ≥ 3 » plutôt que de prétendre un
       // maximum. C'est le sens de `borneHauteOuverte`, et c'est pourquoi ce
       // calque ne passe pas sous cette épreuve.
@@ -132,7 +132,7 @@ describe("les bornes sont de vraies bornes", () => {
   });
 
   it("la position dans le dégradé et la valeur sont l'inverse l'une de l'autre", () => {
-    // Y compris sur l'azote, dont l'échelle est COURBE : c'est justement là
+    // Y compris sur l'azote, dont l'échelle est **courbe** : c'est justement là
     // qu'une légende graduée à part dériverait sans qu'on le voie.
     const st = station();
     for (const fiche of CALQUES) {
@@ -174,7 +174,7 @@ describe("l'extraction n'a pas changé la carte", () => {
       const ph = s.soilPh[i] ?? 7;
       return `hsl(${20 + ((ph - 4) / 4.5) * 200} 35% 70%)`;
     },
-    // L'azote n'y est PAS : son échelle a changé exprès (bornes doublées,
+    // L'azote n'y est **pas** : son échelle a changé exprès (bornes doublées,
     // courbe en racine), et prétendre le contraire noierait la seule
     // modification voulue de ce lot dans un test qui dit « rien n'a bougé ».
     herbe: (s, _st, i) => {

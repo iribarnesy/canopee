@@ -1,5 +1,5 @@
 /**
- * LES MOTS DU JEU : comment on nomme, et comment on accorde.
+ * **Les mots du jeu** : comment on nomme, et comment on accorde.
  *
  * Un fichier minuscule et une seule raison d'être : **le jeu compose des
  * phrases à partir de comptes, à plusieurs endroits**. Le journal du worker dit
@@ -18,7 +18,7 @@ import { getEspece } from "../engine/especes";
 import type { CauseMort } from "../engine/trees";
 
 /**
- * Les mots qui ARRÊTENT l'accord dans un nom composé.
+ * Les mots qui **arrêtent** l'accord dans un nom composé.
  *
  * « Ajonc d'Europe » fait « ajoncs d'Europe » et non « ajoncs d'Europes » :
  * ce qui suit la préposition est un complément, il ne s'accorde pas avec le
@@ -72,7 +72,7 @@ export function nomEspeces(id: string, n: number): string {
 /**
  * « s » quand il en faut un — pour les mots que le jeu écrit lui-même.
  *
- * À partir de DEUX, et pas au-delà de un : la différence ne se voit pas sur un
+ * À partir de **deux**, et pas au-delà de un : la différence ne se voit pas sur un
  * compte d'arbres, qui est entier, mais sur une surface — « 1,2 hectare
  * brûlé » est au singulier en français, et `n > 1` l'aurait mis au pluriel.
  */
@@ -81,7 +81,7 @@ export function s(n: number): string {
 }
 
 /**
- * LE GENRE DE CHAQUE ESSENCE.
+ * **le genre de chaque essence**.
  *
  * Trois féminins sur vingt-six, et ils suffisent à rendre faux tout ce qui
  * s'accorde avec eux : l'écran de fin d'un niveau écrivait « 90 ronces morts
@@ -134,14 +134,14 @@ export function estFeminin(especeId: string): boolean {
  * La terminaison d'un participe accordé : rien, « e », « s » ou « es ».
  *
  * `feminin` et non une essence : ce qui s'accorde n'est pas toujours l'essence.
- * Une ligne qui compte des TIGES est au féminin quelle que soit l'espèce.
+ * Une ligne qui compte des **tiges** est au féminin quelle que soit l'espèce.
  */
 export function accord(feminin: boolean, n: number): string {
   return `${feminin ? "e" : ""}${s(n)}`;
 }
 
 /**
- * CE QUI A TUÉ, accordé.
+ * **ce qui a tué**, accordé.
  *
  * **Une table qui en remplace une, et non une de plus.** Le moteur en a une au
  * masculin pluriel (`LIBELLE_CAUSE`), pour ses messages collectifs ; le jeu en
@@ -154,7 +154,7 @@ export function accord(feminin: boolean, n: number): string {
  * sécheresse » par un participe, on en meurt tout court. Leur phrase est alors
  * le complément seul.
  *
- * `pl` n'existe que là où le COMPLÉMENT change avec le nombre — « hors de sa
+ * `pl` n'existe que là où le **complément** change avec le nombre — « hors de sa
  * gamme de pH » contre « hors de leur gamme ».
  */
 const CAUSE_DITE: Record<CauseMort, { participe?: string; sg: string; pl?: string }> = {

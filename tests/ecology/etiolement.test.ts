@@ -1,14 +1,14 @@
 /**
- * L'étiolement (issue #97, critère E10) : à l'ombre, une tige FILE.
+ * L'étiolement (issue #97, critère E10) : à l'ombre, une tige **file**.
  *
  * Ce que le moteur faisait : la lumière entrait dans la loi du minimum, donc
  * elle rabotait la pousse totale ; le partage hauteur/diamètre ne portait que
- * sur le reste. Un arbre à l'ombre poussait moins des DEUX côtés à la fois, et
+ * sur le reste. Un arbre à l'ombre poussait moins des **deux** côtés à la fois, et
  * son élancement ne bougeait quasiment pas — il stagnait au lieu de filer.
  *
  * Ce que ce fichier vérifie, dans cet ordre :
  *   1. le bois se compte exactement, et rien n'est créé ni perdu au partage ;
- *   2. **pour un arbre que l'ombre ne limite pas, RIEN ne change** — c'est la
+ *   2. **pour un arbre que l'ombre ne limite pas, rien ne change** — c'est la
  *      garantie qui protège les hauteurs calées sur Jansen 1996 ;
  *   3. pour un arbre que l'ombre limite, la hauteur résiste et le diamètre
  *      encaisse ;
@@ -84,7 +84,7 @@ function semaine(t: TreeState, light: number) {
 describe("le bois se compte, et le compte est exact", () => {
   it("le coût d'un mètre et le diamètre achetable sont réciproques", () => {
     // `bois = dH + 2 (H/D) dD` : si la tige dépense `dH × (coût − 1)` en
-    // épaississement, elle doit racheter EXACTEMENT `dH × allocation`.
+    // épaississement, elle doit racheter **exactement** `dH × allocation`.
     for (const e of [20, 50, 80, 130]) {
       for (const a of [0.5, 1.25, 2, 2.5]) {
         const dH = 0.03;
@@ -141,9 +141,9 @@ describe("ce que l'ombre limite, elle redirige avant de le raboter", () => {
 
   it("et c'est le DIAMÈTRE qui paie : le dernier servi", () => {
     // Le cambium ne reçoit que le résidu, et sous cette ombre-là le résidu est
-    // NUL. Ce zéro n'est pas un défaut de forme : c'est le cerne manquant d'une
+    // **nul**. Ce zéro n'est pas un défaut de forme : c'est le cerne manquant d'une
     // tige dominée, un fait de dendrochronologie ordinaire. Ce qui en fait un
-    // zéro sûr est qu'il est BORNÉ — la tige finit par rencontrer son enveloppe
+    // zéro sûr est qu'il est **borné** — la tige finit par rencontrer son enveloppe
     // de flambage (essai suivant), et tout son bois repart alors au diamètre.
     expect(ombre.dD).toBe(0);
     expect(ombre.dH).toBeGreaterThan(0);
@@ -162,7 +162,7 @@ describe("c'est le FLAMBAGE qui arrête la perche, et rien d'autre", () => {
     // croissance relative en diamètre rattrape celle en hauteur, soit à
     // `H/D = (3/f_lum − 1) × 50 / allocation`. Mesuré avant d'y croire : sous
     // cette ombre-là il vaut 295, et la tige y allait (H/D 166 en quarante
-    // ans). C'est ce chiffre-là qui a rendu la mécanique NÉCESSAIRE, et cet
+    // ans). C'est ce chiffre-là qui a rendu la mécanique **nécessaire**, et cet
     // essai le garde écrit pour qu'on ne retire pas le plafond par distraction.
     const { compensation, saturation } = HETRE.lumiere;
     const fLum = (0.12 - compensation) / (saturation - compensation);
@@ -192,7 +192,7 @@ describe("c'est le FLAMBAGE qui arrête la perche, et rien d'autre", () => {
     for (let s = 0; s < 10 * 26; s++) t = tickTree(t, milieu(0.12)).tree;
     expect(t.heightM).toBeGreaterThan(avant.h);
     expect(t.diametreCm).toBeGreaterThan(avant.d);
-    // Et l'élancement REDESCEND : plus la tige grossit, moins elle a le droit
+    // Et l'élancement **redescend** : plus la tige grossit, moins elle a le droit
     // d'être élancée. C'est l'exposant 2/3 de Greenhill, pas un réglage.
     expect(elancement(t.diametreCm, t.heightM)).toBeLessThan(elancement(avant.d, avant.h) + 1e-9);
   });

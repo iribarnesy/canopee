@@ -40,13 +40,13 @@ export interface IndiceBiodiversite {
   /** étalement des floraisons dans l'année ∈ [0,1] */
   floraisonsEtalees: number;
   /**
-   * La MOSAÏQUE ∈ [0,1] : lisière × cœur, normalisé (issue #75). Ce que
+   * La **mosaïque** ∈ [0,1] : lisière × cœur, normalisé (issue #75). Ce que
    * l'indice ne savait pas voir — deux parcelles portant exactement les mêmes
    * espèces, les mêmes hauteurs et le même bois mort n'abritent pas la même
    * faune selon qu'elles forment un bloc ou une mosaïque.
    */
   mosaique: number;
-  /** étagement LOCAL ∈ [0,1] : l'écart-type des hauteurs dans un voisinage */
+  /** étagement **local** ∈ [0,1] : l'écart-type des hauteurs dans un voisinage */
   etagement: number;
   /** note globale ∈ [0,100] */
   note: number;
@@ -99,23 +99,23 @@ export function hauteurParCellule(trees: readonly TreeState[], coteM: number): F
   return h;
 }
 
-/** Ce que l'ARRANGEMENT des arbres vaut, indépendamment des espèces. */
+/** Ce que l'**arrangement** des arbres vaut, indépendamment des espèces. */
 export interface StructureHorizontale {
   /** part de cellules en lisière : voisinage contrasté couvert / ouvert */
   lisiere: number;
   /** part de cellules de cœur : voisinage entièrement couvert */
   coeur: number;
-  /** la mosaïque ∈ [0,1] : le PRODUIT des deux, normalisé */
+  /** la mosaïque ∈ [0,1] : le **produit** des deux, normalisé */
   mosaique: number;
 }
 
 /**
  * La structure horizontale : lisière, cœur, et ce que leur rencontre vaut.
  *
- * ## Pourquoi un PRODUIT, et pas une courbe en cloche
+ * ## Pourquoi un **produit**, et pas une courbe en cloche
  *
  * L'issue pose le vrai problème et le laisse ouvert : « ne pas récompenser le
- * mitage. Une lisière a de la valeur, un peuplement qui n'est QUE de la lisière
+ * mitage. Une lisière a de la valeur, un peuplement qui n'est **que** de la lisière
  * n'en a pas — les espèces de cœur de massif existent aussi. » Il fallait donc
  * une courbe qui monte puis redescend, et tailler une cloche demande de choisir
  * son sommet à la main.
@@ -152,7 +152,7 @@ export function structureHorizontale(
         }
       }
       if (vus === 0) continue;
-      // Une lisière est une FRONTIÈRE : du couvert et de l'ouvert à portée.
+      // Une lisière est une **frontière** : du couvert et de l'ouvert à portée.
       if (couverts > 0 && couverts < vus) lisiere++;
       else if (couverts === vus) coeur++;
     }
@@ -163,15 +163,15 @@ export function structureHorizontale(
 }
 
 /**
- * Hétérogénéité VERTICALE locale ∈ [0,1] : l'étagement, et non le damier.
+ * Hétérogénéité **verticale** locale ∈ [0,1] : l'étagement, et non le damier.
  *
- * L'indice comptait les strates à l'échelle de la PARCELLE, ce qui confond deux
+ * L'indice comptait les strates à l'échelle de la **parcelle**, ce qui confond deux
  * situations que rien ne devrait confondre : une parcelle où chaque mètre carré
  * porte trois étages, et une parcelle où un tiers porte des arbres, un tiers des
  * arbustes et un tiers de l'herbe. La première est étagée, la seconde est en
  * blocs, et l'équitabilité de Shannon leur donne la même note.
  *
- * On mesure donc l'écart-type des hauteurs DANS un voisinage, moyenné sur la
+ * On mesure donc l'écart-type des hauteurs **dans** un voisinage, moyenné sur la
  * parcelle. Il est nul sur un peuplement équienne, maximal là où un sous-étage
  * pousse sous une canopée.
  */
@@ -220,9 +220,9 @@ const SAISON_POLLINISATEURS_DJ = 1800;
 const PAS_CALENDRIER_DJ = 30;
 
 /**
- * ÉTALEMENT DES FLORAISONS ∈ [0,1] — critère J6, refait (#70).
+ * **étalement des floraisons** ∈ [0,1] — critère J6, refait (#70).
  *
- * Ce que la mesure d'avant faisait : un ENSEMBLE de tranches de 250 °C·j, une
+ * Ce que la mesure d'avant faisait : un **ensemble** de tranches de 250 °C·j, une
  * par espèce ligneuse présente, divisé par quatre. Quatre défauts, et le
  * premier suffit à la disqualifier.
  *
@@ -232,13 +232,13 @@ const PAS_CALENDRIER_DJ = 30;
  *     étalées et ne nourrissait personne.
  *  2. **Elle ignorait la strate basse**, qui est précisément ce qui nourrit
  *     pendant les soudures.
- *  3. **Elle ignorait la DURÉE.** Un ajonc qui tient six mois comptait pour une
+ *  3. **Elle ignorait la durée.** Un ajonc qui tient six mois comptait pour une
  *     tranche, comme un abricotier qui passe en dix jours.
  *  4. **Elle comptait des espèces, pas une couverture.** Un pommier isolé parmi
  *     trois cents hêtres valait une tranche pleine.
  *
  * Ce qu'elle fait maintenant : elle balaie la saison de vol et demande, à
- * chaque pas, ce qui est OUVERT et ce que ça offre. Les sources s'additionnent
+ * chaque pas, ce qui est **ouvert** et ce que ça offre. Les sources s'additionnent
  * et saturent — deux tables valent une table garnie —, et la note est la
  * moyenne sur la saison. Un trou dans le calendrier se lit donc comme un trou,
  * ce que l'ensemble de tranches ne savait pas faire.
@@ -287,7 +287,7 @@ export function indiceBiodiversite(
   boisMortKgC: number,
   surfaceHa: number,
   /**
-   * Côté de la parcelle, m. Les deux grandeurs SPATIALES en ont besoin : sans
+   * Côté de la parcelle, m. Les deux grandeurs **spatiales** en ont besoin : sans
    * grille, pas de voisinage, donc ni lisière ni étagement local. Absent, elles
    * valent zéro et l'indice se comporte comme avant — les appelants qui ne
    * décrivent pas une vraie parcelle (un essai sur une liste d'arbres) ne sont
@@ -296,18 +296,18 @@ export function indiceBiodiversite(
   coteM?: number,
   /**
    * Emprise moyenne de chaque herbacée sur la parcelle, dans l'ordre de
-   * `HERBACEES` (#70). OPTIONNEL : un essai qui décrit une liste d'arbres n'a
+   * `HERBACEES` (#70). **Optionnel** : un essai qui décrit une liste d'arbres n'a
    * pas de tapis, et l'indice se comporte alors comme si le sol était nu —
    * ce qu'il faisait pour tout le monde avant ce lot.
    */
   empriseHerbacee?: readonly number[],
 ): IndiceBiodiversite {
   const vivants = trees.filter((t) => t.alive);
-  // Les CHANDELLES comptent parmi les arbres-habitats, et pas qu'un peu : un
+  // Les **chandelles** comptent parmi les arbres-habitats, et pas qu'un peu : un
   // tronc mort resté debout est ce que les pics attaquent en premier, et le
   // trou qu'ils abandonnent sert ensuite à des dizaines d'espèces qui ne
   // savent pas creuser. Un arbre vivant sain n'offre rien de tel. Elles se
-  // comptent AVANT le cas « pas un arbre vivant » : une parcelle brûlée n'est
+  // comptent **avant** le cas « pas un arbre vivant » : une parcelle brûlée n'est
   // pas vide de vie, elle en porte une autre.
   const chandelles = trees.filter(
     (t) => !t.alive && t.mortSemaine !== undefined && t.heightM >= CHANDELLE_HABITAT_M,
@@ -334,7 +334,7 @@ export function indiceBiodiversite(
   let gros = chandelles;
   /**
    * Surface de houppier par espèce : c'est elle, et non le nombre de tiges,
-   * qui dit ce qu'une espèce OFFRE en fleur. Un pommier isolé parmi trois
+   * qui dit ce qu'une espèce **offre** en fleur. Un pommier isolé parmi trois
    * cents hêtres ne nourrit pas une parcelle (#70).
    */
   const surfaceParEspece = new Map<string, number>();
@@ -344,21 +344,21 @@ export function indiceBiodiversite(
     parEspece.set(t.especeId, (parEspece.get(t.especeId) ?? 0) + 1);
     const strate = STRATES.findIndex((h) => t.heightM < h);
     if (strate >= 0) parStrate[strate] = (parStrate[strate] ?? 0) + 1;
-    // Arbres-habitats : les gros sujets, mais aussi les TROGNES. Une tête de
+    // Arbres-habitats : les gros sujets, mais aussi les **trognes**. Une tête de
     // trogne recoupée pendant des décennies se creuse, et ce creux vaut mieux
     // pour la faune qu'un fût sain de vingt mètres — c'est même la raison pour
     // laquelle on protège les vieux têtards de nos haies (critère J3).
     //
-    // Le creux se compte en LITRES, pas en oui/non. Un seuil à deux étêtages
+    // Le creux se compte en **litres**, pas en oui/non. Un seuil à deux étêtages
     // donnait la même valeur à une tête de trois coupes et à un saule têtard
     // centenaire, alors que l'écart va du litre à la centaine — et que c'est
     // ce volume, et lui seul, qui décide entre une mésange et une chevêche
     // (cavites.ts).
     //
-    // ET LA TROGNE N'EST PLUS LA SEULE SOURCE DE CREUX (#182). Un tronc carié
-    // se vide de la même façon, et c'est même le chemin ORDINAIRE : le vieux
+    // **Et la trogne n'est plus la seule source de creux** (#182). Un tronc carié
+    // se vide de la même façon, et c'est même le chemin **ordinaire** : le vieux
     // chêne creux d'un bocage n'a pas été conduit en trogne, il a été blessé
-    // par des coups de vent. L'énoncé du critère dit « les gros arbres ET les
+    // par des coups de vent. L'énoncé du critère dit « les gros arbres **et** les
     // arbres à cavités » ; jusqu'ici le moteur ne savait compter que les
     // premiers et les têtards.
     //
@@ -366,7 +366,7 @@ export function indiceBiodiversite(
     // que le seuil de 15 m dit déjà : écorce crevassée, grosses branches,
     // volume. Sous ce seuil, ce sont ses creux qui décident, et ils ne
     // s'additionnent jamais au-delà de un : tête de têtard et fût carié se
-    // somment en LITRES (`cavites.ts`) avant de se convertir, parce qu'un
+    // somment en **litres** (`cavites.ts`) avant de se convertir, parce qu'un
     // arbre reste un arbre.
     gros += t.heightM >= 15 ? 1 : partHabitatDeCavites(t);
     // Le couvert permanent se mesure en surface de houppier, pas en tiges.
@@ -389,7 +389,7 @@ export function indiceBiodiversite(
     for (const [id, surf] of surfaceParEspece) partParEspece.set(id, surf / surfaceTotale);
   }
   const floraisonsEtalees = etalementDesFloraisons(partParEspece, empriseHerbacee);
-  // L'ARRANGEMENT, enfin (issue #75) : la mosaïque et l'étagement local. Ils
+  // **L'arrangement**, enfin (issue #75) : la mosaïque et l'étagement local. Ils
   // ne coûtent rien aux appelants sans géométrie, qui les reçoivent à zéro.
   const spatial = coteM && coteM > 0 ? structureHorizontale(vivants, coteM) : undefined;
   const mosaique = spatial?.mosaique ?? 0;
@@ -400,7 +400,7 @@ export function indiceBiodiversite(
   //
   // Les deux termes spatiaux prennent leurs douze points sur `strates`, qui
   // passe de 0,20 à 0,08 — et ce n'est pas un arbitrage de place, c'est une
-  // correction. `strates` compte les étages à l'échelle de la PARCELLE, donc
+  // correction. `strates` compte les étages à l'échelle de la **parcelle**, donc
   // elle note pareil une forêt étagée et un damier de blocs monostrates.
   // `etagement` mesure ce que `strates` croyait mesurer ; il est juste qu'il en
   // reprenne le poids *(à calibrer)*.

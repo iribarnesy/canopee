@@ -5,23 +5,23 @@
  * Le moteur n'avait aucune variable de structure. Un sol y était défini par sa
  * texture, sa matière organique et son pH — trois choses qui ne bougent pas ou
  * peu — alors que ce qui change vraiment sous une conduite agricole, c'est
- * l'ARRANGEMENT de ces particules. Un limon tassé et le même limon en bonne
+ * l'**arrangement** de ces particules. Un limon tassé et le même limon en bonne
  * structure ont la même texture et ne se comportent pas pareil.
  *
- * ─── CE QUE FAIT LE TASSEMENT ────────────────────────────────────────────────
+ * ─── **ce que fait le tassement** ────────────────────────────────────────────────
  * Il réduit l'infiltration de l'eau et de l'air, il restreint la pénétration
  * des racines, et il gêne l'activité biologique. Les essais d'Arvalis sur cinq
  * ans mesurent des pertes de rendement de **5 à 30 %** selon les passages, quel
  * que soit la culture ou le système.
  *
- * ─── CE QUI LE RÉPARE ────────────────────────────────────────────────────────
+ * ─── **ce qui le répare** ────────────────────────────────────────────────────────
  * Les racines, d'abord : elles percent, meurent, et laissent des galeries.
  * L'alternance gel-dégel et l'activité biologique ensuite. C'est lent, et les
- * sources consultées ne chiffrent PAS ce temps de retour — on prend une échelle
+ * sources consultées ne chiffrent **pas** ce temps de retour — on prend une échelle
  * pluriannuelle, marquée comme telle *(à calibrer)*.
  *
- * ─── CE QU'IL EN EST AUJOURD'HUI, MESURÉ ─────────────────────────────────────
- * **UN SEUL GESTE TASSE** : `labourer`. Semer, fertiliser et moissonner ne
+ * ─── **ce qu'il en est aujourd'hui**, **mesuré** ─────────────────────────────────────
+ * **un seul geste tasse** : `labourer`. Semer, fertiliser et moissonner ne
  * touchent pas la variable, alors que ce sont des passages d'engin eux aussi.
  * Le compte qui circulait dans le dépôt — « quatre passages, soit 1,00 par an
  * contre 0,20 de réparation, donc épinglé dès la deuxième année » — était donc
@@ -35,8 +35,8 @@
  * 6,21 → 8,39. Un bon tiers du rendement, et le plot fumé neutralisé tombe
  * dans la gamme de Broadbalk (~9 t/ha).
  *
- * **CE N'EST PAS UN COEFFICIENT TROP GRAND, C'EST UN TERME QUI MANQUE** : le
- * soc DESSERRE l'horizon travaillé — c'est même la raison agronomique du
+ * **ce n'est pas un coefficient trop grand, c'est un terme qui manque** : le
+ * soc **desserre** l'horizon travaillé — c'est même la raison agronomique du
  * geste — et le moteur ne modélise que les roues du tracteur. Broadbalk est
  * labouré chaque année depuis 1843 et fait 9 t/ha. Baisser
  * `TASSEMENT_PAR_PASSAGE` soulèverait aussi le point zéro (1,07 → 1,70 alors
@@ -44,8 +44,8 @@
  * défaut : le tassement fait en partie le travail de la paille qui manque.
  * Voir l'issue #141, passée à `moteur:évolution` pour cette raison.
  *
- * ─── ET C'EST UN ARGUMENT AGROFORESTIER ──────────────────────────────────────
- * Le tassement ne se produit que là où l'engin PASSE. Or le moteur sait déjà
+ * ─── **et c'est un argument agroforestier** ──────────────────────────────────────
+ * Le tassement ne se produit que là où l'engin **passe**. Or le moteur sait déjà
  * dire quelle part d'une zone est mécanisable selon la façon dont c'est planté
  * (mecanisation.ts) : une parcelle plantée serré ne se tasse pas, parce que le
  * tracteur n'y entre pas. La densité d'arbres protège donc la structure, et
@@ -80,7 +80,7 @@ export function tassementApresUneAnnee(tassement: number, partRacinaire: number)
 }
 
 /**
- * Ce qu'un passage d'engin laisse, sachant que seule la part MÉCANISABLE de la
+ * Ce qu'un passage d'engin laisse, sachant que seule la part **mécanisable** de la
  * zone est réellement parcourue : là où le tracteur n'entre pas, il ne tasse
  * pas.
  */

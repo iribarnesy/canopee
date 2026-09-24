@@ -1,5 +1,5 @@
 /**
- * Les RÉGLAGES DE GESTE : ce que le joueur a choisi de faire, et avec quoi.
+ * Les **réglages de geste** : ce que le joueur a choisi de faire, et avec quoi.
  *
  * Ils vivent ici plutôt que dans le panneau qui les affiche parce que deux
  * endroits les lisent — le panneau, et le clic sur la parcelle, qui doit
@@ -44,7 +44,7 @@ export interface ReglagesDeGeste {
   /**
    * L'essence que l'éclaircie par espèce vise (#156).
    *
-   * Distincte de `especeId`, qui est ce qu'on PLANTE : viser le roncier pour
+   * Distincte de `especeId`, qui est ce qu'on **plante** : viser le roncier pour
    * le nettoyer et choisir un merisier pour le remplacer sont deux décisions,
    * et les confondre ferait changer l'une en touchant l'autre.
    */

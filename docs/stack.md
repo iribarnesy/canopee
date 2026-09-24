@@ -12,7 +12,7 @@
 | Exécution en jeu | **Web Worker** | À vitesse ×512 le moteur calcule beaucoup ; l'UI reste fluide, le moteur envoie des snapshots. |
 | Rendu parcelle | **PixiJS v8** (WebGL/WebGPU) | Vue isométrique avec des dizaines de milliers de sprites (10 ha = 100 k cellules) : Canvas 2D ne suivra pas, Three.js est du sur-mesure 3D inutile. Pixi = 2D batché, culling simple, et sait faire la vue « plan » de dessus aussi. |
 | UI (HUD, panneaux, menus) | **React 19** + **Zustand** | Tu le pratiques déjà (VL-React) ; les panneaux (fiche arbre, bilan C, marché) sont du formulaire/tableau, le domaine de React. Zustand plutôt que Redux : minuscule et suffisant. |
-| Données espèces/stations | **JSON versionnés + schémas Zod** | Chaque fiche espèce/variété/station est un JSON relu par un schéma Zod à la compilation ET au chargement — l'équivalent de tes data contracts : une valeur manquante ou hors bornes casse le build, pas la partie. Champ `sources` obligatoire. |
+| Données espèces/stations | **JSON versionnés + schémas Zod** | Chaque fiche espèce/variété/station est un JSON relu par un schéma Zod à la compilation **et** au chargement — l'équivalent de tes data contracts : une valeur manquante ou hors bornes casse le build, pas la partie. Champ `sources` obligatoire. |
 | Aléa | **PRNG seedé maison (xoshiro128)** | `Math.random` interdit dans `engine/` (règle lint). La seed vit dans la sauvegarde. |
 | Tests | **Vitest** + **fast-check** | Vitest = Jest moderne natif Vite. fast-check = property-based testing, taillé pour les invariants de conservation (eau/C/N) du §16 des règles. |
 | Lint/format | **Biome** | Un seul outil, rapide, remplace ESLint+Prettier. + une règle d'architecture : `engine/` n'importe jamais depuis `ui/`/`render/`. |
@@ -51,13 +51,13 @@ Un seul package (pas de monorepo pnpm-workspaces pour l'instant) : la frontière
 Le protocole est dans `src/game/protocol.ts`, la traduction état → instantané dans `src/game/snapshot.ts`, et le worker ne fait que l'assembler. Trois règles, chacune payée par un bug :
 
 - **Aucun filtre dans le worker.** Un `filter((t) => t.alive)` posé avant `chandelle: !t.alive` a rendu ce drapeau constamment faux et les troncs morts sur pied invisibles, sans qu'un test ne bronche — la traduction vivait dans un worker qu'aucun test n'instancie. Elle est maintenant pure et testée (`tests/unit/snapshot.test.ts`) : tout nouveau champ passe par là.
-- **Ce qui est de l'ÉTAT se lit dans l'état ; ce qui est une grandeur de TICK remonte par `TickResult`.** La litière et le pH sont de l'état ; le débordement et la lumière au sol sont recalculés chaque semaine et étaient jusqu'ici jetés.
-- **Tout tableau typé de l'instantané est TRANSFÉRÉ**, pas copié (`transferablesDuSnapshot`, à côté du constructeur pour qu'un champ ajouté d'un côté ne s'oublie pas de l'autre — un oubli coûte une copie complète par semaine simulée). Un test le vérifie champ par champ.
+- **Ce qui est de l'état se lit dans l'état ; ce qui est une grandeur de tick remonte par `TickResult`.** La litière et le pH sont de l'état ; le débordement et la lumière au sol sont recalculés chaque semaine et étaient jusqu'ici jetés.
+- **Tout tableau typé de l'instantané est transféré**, pas copié (`transferablesDuSnapshot`, à côté du constructeur pour qu'un champ ajouté d'un côté ne s'oublie pas de l'autre — un oubli coûte une copie complète par semaine simulée). Un test le vérifie champ par champ.
 
 Deux limites connues, à surveiller sans agir tout de suite :
 
 - **Volume des arbres** : ils sont sérialisés, pas transférés. Au-delà de ~20 000 arbres il faudra passer en tableaux typés parallèles (un `Float32Array` par champ) — à surveiller sur une friche en pleine succession.
-- **Rembobinage** : rejouer une période à ×1 après avoir joué à ×64 demande un instantané par semaine SIMULÉE quand l'enregistrement est actif, au lieu d'un par lot (`startLoop` avale jusqu'à 26 semaines par pas). Coût : ~280 ko par instantané sur 1 ha, soit ~15 Mo pour un an — tenable. Sur 10 ha il faudra n'enregistrer que les différences. À cadrer avant de figer le protocole.
+- **Rembobinage** : rejouer une période à ×1 après avoir joué à ×64 demande un instantané par semaine **simulée** quand l'enregistrement est actif, au lieu d'un par lot (`startLoop` avale jusqu'à 26 semaines par pas). Coût : ~280 ko par instantané sur 1 ha, soit ~15 Mo pour un an — tenable. Sur 10 ha il faudra n'enregistrer que les différences. À cadrer avant de figer le protocole.
 
 ## Alternatives écartées (et pourquoi)
 

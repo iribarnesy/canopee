@@ -3,7 +3,7 @@
  * - biomasse vivante (dérivée des arbres, allométrie hauteur → volume → C) ;
  * - bois mort (troncs des morts et souches des coupés) ;
  * - carbone de la litière (par cellule, décomposé avec l'azote) ;
- * - humus du sol (par cellule : LE plus gros stock en tempéré).
+ * - humus du sol (par cellule : **le** plus gros stock en tempéré).
  * Flux : NPP (croissance + feuillage), humification (litière/bois mort →
  * humus), émissions (décompositions → CO₂), export bois énergie (brûlé chez
  * le client = émis immédiatement, §12 : le bois énergie ne stocke rien).
@@ -29,7 +29,7 @@ export const DEADWOOD_HUMIFICATION = 0.25;
 export const DEADWOOD_DECAY_PER_YEAR = 0.05;
 
 /**
- * Demi-vie d'un produit en bois de SCIAGE, années.
+ * Demi-vie d'un produit en bois de **sciage**, années.
  *
  * Trente-cinq ans, et ce n'est pas un chiffre de confort : c'est la valeur par
  * défaut de l'IPCC pour les sciages (lignes directrices 2006, volume 4,
@@ -39,7 +39,7 @@ export const DEADWOOD_DECAY_PER_YEAR = 0.05;
  * papier ; le moteur ne sait pas distinguer ce que devient une bille, donc il
  * retient celle qui correspond à ce qu'il produit — du sciage.
  *
- * Une demi-vie n'est PAS une durée de vie : au bout de trente-cinq ans il reste
+ * Une demi-vie n'est **pas** une durée de vie : au bout de trente-cinq ans il reste
  * la moitié du carbone, au bout de soixante-dix le quart. Une charpente vendue
  * au début d'une partie de cinquante ans en aura rendu à peine plus du tiers à
  * la fin, ce qui est le bon comportement — l'issue #72 prévient explicitement
@@ -78,17 +78,17 @@ export const T_HA_TO_G_M2 = 100;
  * Carbone aérien d'un arbre, kg C.
  *
  * Le volume ne se déduit plus de la seule hauteur : il se lit sur le diamètre
- * que l'arbre PORTE (`volumeAerienM3`, trees.ts). Ce module gardait sa propre
+ * que l'arbre **porte** (`volumeAerienM3`, trees.ts). Ce module gardait sa propre
  * copie de la règle allométrique — deux copies d'une même règle finissent
  * toujours par diverger, et celle-ci impliquait un tronc plus lourd que son
  * cylindre (#62).
  *
- * Le diamètre et la hauteur restent SÉPARÉS, et ce n'est pas une coquetterie :
+ * Le diamètre et la hauteur restent **séparés**, et ce n'est pas une coquetterie :
  * rabattre un arbre lui retire de la hauteur sans toucher au diamètre de ce
  * qui reste, et c'est ainsi que la trogne et le recépage comptent ce qu'ils
  * emportent.
  *
- * `bois.densite` porte bien l'INFRADENSITÉ depuis #68 — masse anhydre sur
+ * `bois.densite` porte bien l'**infradensité** depuis #68 — masse anhydre sur
  * volume vert, essence par essence et depuis une source citée. C'était la
  * réserve de ce module : elle est levée, et l'ancre de `carbon.test.ts` la
  * tient désormais sur la tige, où elle discrimine.
@@ -103,9 +103,9 @@ export function treeTotalCarbonKg(espece: EspeceV0, diametreCm: number, heightM:
 }
 
 /**
- * Carbone RACINAIRE d'un arbre, kg C.
+ * Carbone **racinaire** d'un arbre, kg C.
  *
- * Il se déduit de l'aérien par un rapport fixe, donc RABATTRE un arbre lui
+ * Il se déduit de l'aérien par un rapport fixe, donc **rabattre** un arbre lui
  * retire des racines sur le papier. C'est une simplification qu'il faut
  * connaître : sur le terrain, la souche d'un taillis garde son système
  * racinaire — c'est même ce qui fait la vigueur du rejet. Tant que le modèle
@@ -118,7 +118,7 @@ export function treeRootCarbonKg(espece: EspeceV0, diametreCm: number, heightM: 
 }
 
 /**
- * Carbone racinaire qu'un arbre RABATTU cesse de porter, kg C — recépage,
+ * Carbone racinaire qu'un arbre **rabattu** cesse de porter, kg C — recépage,
  * étêtage, rejet après feu. C'est du bois mort qui reste dans le sol : il ne
  * s'exporte pas, il ne s'émet pas, il se décompose sur place.
  *
@@ -152,7 +152,7 @@ export interface CarbonState {
   /** carbone importé par les plants achetés en pépinière, kg C */
   importedPlantsCumKgC: number;
   /**
-   * Bois d'ŒUVRE vendu, kg C, CUMULÉ depuis le début de la partie : tout ce
+   * Bois d'**œuvre** vendu, kg C, **cumulé** depuis le début de la partie : tout ce
    * qui est un jour parti en scierie. Ce n'est plus un stock — c'est
    * l'historique, et il ne redescend jamais.
    *
@@ -161,7 +161,7 @@ export interface CarbonState {
    */
   oeuvreCumKgC: number;
   /**
-   * Ce qui est ENCORE dans les produits, kg C — la charpente qui tient, le
+   * Ce qui est **encore** dans les produits, kg C — la charpente qui tient, le
    * plancher qui sert. C'est lui, et non le cumul, qui compte au crédit du
    * bilan : un puits qui ne se vide jamais n'est pas un puits, c'est une
    * erreur de comptabilité (issue #72, critère I4).
@@ -169,7 +169,7 @@ export interface CarbonState {
   oeuvreStockKgC: number;
   /**
    * Ce que les produits ont rendu à l'atmosphère en fin de vie, kg C, cumulé.
-   * Séparé des émissions de décomposition parce qu'il ne se passe PAS sur la
+   * Séparé des émissions de décomposition parce qu'il ne se passe **pas** sur la
    * parcelle : c'est la benne, la chaudière ou la décharge du client.
    */
   oeuvreFinDeVieCumKgC: number;
@@ -210,7 +210,7 @@ export interface CarbonInventory {
   exporteCumTHa: number;
   /** bois d'œuvre vendu depuis le début, t C/ha — l'historique, pas un stock */
   oeuvreCumTHa: number;
-  /** ce qui est ENCORE dans les produits, t C/ha — c'est lui qui compte au crédit */
+  /** ce qui est **encore** dans les produits, t C/ha — c'est lui qui compte au crédit */
   oeuvreStockTHa: number;
   /** ce que les produits ont rendu en fin de vie, t C/ha, cumulé */
   oeuvreFinDeVieCumTHa: number;
@@ -257,8 +257,8 @@ export function carbonInventory(state: GameState, initialHumusTHa: number): Carb
     oeuvreCumTHa: state.carbon.oeuvreCumKgC / 1000 / areaHa,
     oeuvreStockTHa: state.carbon.oeuvreStockKgC / 1000 / areaHa,
     oeuvreFinDeVieCumTHa: state.carbon.oeuvreFinDeVieCumKgC / 1000 / areaHa,
-    // Le bois d'œuvre compte au crédit — mais seulement CE QUI EST ENCORE
-    // DEDANS. Avant l'issue #72, c'est le cumul qui était crédité : une
+    // Le bois d'œuvre compte au crédit — mais seulement **ce qui est encore**
+    // **dedans**. Avant l'issue #72, c'est le cumul qui était crédité : une
     // palette vendue en 2030 comptait encore en 2090, et vendre du bois
     // devenait un geste climatique gratuit et définitif.
     bilanNetTHa: totalTHa + state.carbon.oeuvreStockKgC / 1000 / areaHa - initialHumusTHa,

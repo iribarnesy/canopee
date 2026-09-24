@@ -1,10 +1,10 @@
 /**
- * L'OBJECTIF ET SES PALIERS, pendant qu'on joue (#188).
+ * **L'objectif et ses paliers**, pendant qu'on joue (#188).
  *
  * `v1.md` : *« Un niveau a un objectif général et des objectifs intermédiaires
  * … annoncés. »* Annoncés, donc tous visibles dès le départ — le joueur voit le
  * chemin entier, pas seulement le pas suivant. Ce qui change en cours de
- * route, c'est lequel est le SIEN à cet instant.
+ * route, c'est lequel est le **sien** à cet instant.
  *
  * Le volet vit en haut à gauche, sous le bandeau : c'est le seul endroit que
  * l'œil retrouve sans chercher, et un objectif qu'on doit aller ouvrir n'en est

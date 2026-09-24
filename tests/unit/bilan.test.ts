@@ -1,15 +1,15 @@
 /**
- * LE BILAN DE PÉRIODE (`src/game/bilan.ts`, #128 / §6.8 №2).
+ * **Le bilan de période** (`src/game/bilan.ts`, #128 / §6.8 №2).
  *
  * Ce que l'essai tient, et c'est tout ce qui compte pour ce module :
  *
- * 1. **il ADDITIONNE** — cinquante instantanés qui disent chacun deux morts
+ * 1. **il additionne** — cinquante instantanés qui disent chacun deux morts
  *    font une ligne à cent, et c'est la raison d'être du bilan face au fil du
  *    journal, qui les dirait cinquante fois ;
- * 2. **il SITUE** — chaque ligne rend un centre de gravité, celui sur lequel la
+ * 2. **il situe** — chaque ligne rend un centre de gravité, celui sur lequel la
  *    caméra ira se poser, et il est bien la moyenne des membres et non la
  *    position du premier arrivé ;
- * 3. **il ACCORDE** — « 1 aulne mort asphyxié par l'eau » et « 4 aulnes morts
+ * 3. **il accorde** — « 1 aulne mort asphyxié par l'eau » et « 4 aulnes morts
  *    asphyxiés par l'eau », deux tables de cause différentes ;
  * 4. **il ne montre pas ce qu'il ne sait pas** — un identifiant d'arbre inconnu
  *    fait une ligne sans endroit, et pas une ligne au coin de la parcelle.
@@ -210,7 +210,7 @@ describe("soustraire", () => {
     const avant = agreger(BILAN_VIDE, { morts: [mort(0, 0)] }, 0, COTE_M);
     const apres = agreger(avant, { morts: [mort(50, 60), mort(70, 80)] }, 10, COTE_M);
     const [ligne] = lignesDuBilan(soustraire(apres, avant, 5));
-    // Le mort à l'origine ne doit PAS tirer le centre vers le coin.
+    // Le mort à l'origine ne doit **pas** tirer le centre vers le coin.
     expect(ligne?.ou).toEqual({ x: 60, y: 70 });
   });
 
@@ -231,7 +231,7 @@ describe("soustraire", () => {
     const avant = agreger(BILAN_VIDE, { morts: [mort(1, 1)] }, 0, COTE_M);
     const apres = agreger(avant, { morts: [mort(2, 2)] }, 300, COTE_M);
     const [ligne] = lignesDuBilan(soustraire(apres, avant, 260));
-    // La ligne existe depuis l'an 1, mais la PÉRIODE commence à la semaine 260.
+    // La ligne existe depuis l'an 1, mais la **période** commence à la semaine 260.
     expect(ligne?.premiereSemaine).toBe(260);
     expect(ligne?.derniereSemaine).toBe(300);
   });

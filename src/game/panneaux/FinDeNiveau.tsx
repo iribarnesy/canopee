@@ -1,5 +1,5 @@
 /**
- * LA FIN D'UN NIVEAU : ce qui s'est passé, et si l'objectif est atteint (#188).
+ * **La fin d'un niveau** : ce qui s'est passé, et si l'objectif est atteint (#188).
  *
  * `v1.md` en fait une exigence à part entière, et ajoute pourquoi : le premier
  * public est celui des experts de sol et de biodiversité, et *« un expert du
@@ -12,7 +12,7 @@
  * de la fin est celle que le mécanisme a retenue — jamais une phrase écrite
  * pour faire joli.
  *
- * L'ÉCHEC EST UNE FIN COMME UNE AUTRE, et il n'est pas un reproche : le même
+ * **L'échec est une fin comme une autre**, et il n'est pas un reproche : le même
  * écran, le même détail, et de quoi repartir.
  */
 
@@ -54,7 +54,7 @@ export function FinDeNiveau({
     >
       <section
         // Plus large qu'avant, et pour une raison qui se voit : les lignes du
-        // bilan portent une phrase ET une date, et à 460 px « il manquait 12
+        // bilan portent une phrase **et** une date, et à 460 px « il manquait 12
         // pommiers » repassait à la ligne au milieu d'un palier.
         style={{
           ...panel,
@@ -85,7 +85,7 @@ export function FinDeNiveau({
               <span aria-hidden="true">{ligne.atteint ? "✔" : "✘"}</span>
               <span style={{ flex: 1 }}>{libelleDuPalier(ligne)}</span>
               {!ligne.atteint && (
-                // DE COMBIEN il s'en est fallu : c'est la seule chose qui
+                // **De combien** il s'en est fallu : c'est la seule chose qui
                 // permette de savoir si l'on est passé à côté ou très loin.
                 <span style={{ opacity: 0.7, whiteSpace: "nowrap" }}>
                   il manquait {arrondi(Math.max(0, ligne.palier.cible - ligne.valeur))}{" "}

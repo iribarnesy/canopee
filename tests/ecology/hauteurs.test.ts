@@ -1,5 +1,5 @@
 /**
- * Calibration des HAUTEURS ABSOLUES sur les tables de production.
+ * Calibration des **hauteurs absolues** sur les tables de production.
  *
  * Les rapports entre essences et entre stations étaient justes de longue date ;
  * les niveaux, non — un hêtre de plaine plafonnait à moins de cinq mètres à
@@ -9,11 +9,11 @@
  * **Référence principale** : Jansen J.J., Sevenster J., Faber P.J. (1996),
  * *Opbrengsttabellen voor belangrijke boomsoorten in Nederland*, IBN-DLO
  * rapport 221 / Hinkeloord Report 17 (https://edepot.wur.nl/174739). C'est la
- * seule table du corpus consulté qui donne directement la HAUTEUR DOMINANTE,
+ * seule table du corpus consulté qui donne directement la **hauteur dominante**,
  * avec un âge compté depuis la germination et de nombreuses classes de
  * fertilité ; le CNPF (2025, *Faciliter l'utilisation des tables de production
  * forestières*) la juge parmi les mieux adaptées au contexte français pour
- * plusieurs de ces essences. On prend la CLASSE MÉDIANE de chaque essence.
+ * plusieurs de ces essences. On prend la **classe médiane** de chaque essence.
  *
  * **Ce qu'on compare.** Le moteur ne connaît pas la notion de « cent plus gros
  * arbres à l'hectare » : on lui fait pousser huit sujets au large sur la
@@ -30,38 +30,38 @@
  * **Ce que cet essai prouve, et ce qu'il ne prouve pas.** Les âges n'ont pas
  * tous le même statut, et c'est délibéré.
  *
- * CALÉES sur la table à quarante ans, donc gardées et non validées ici : le
- * HÊTRE et le CHARME. Leur `pousseMaxMAn` a été dérivé de cette valeur-là
+ * **Calées** sur la table à quarante ans, donc gardées et non validées ici : le
+ * **hêtre** et le **charme**. Leur `pousseMaxMAn` a été dérivé de cette valeur-là
  * (especes.ts). L'essai ne les mesure pas ; il attrapera leur dérive.
  *
- * NON CALÉES, donc réellement mises à l'épreuve : pin, aulne, frêne,
- * CHÂTAIGNIER à quarante ans ; aubépine, fusain, genêt et houx dans le bloc
+ * **Non calées**, donc réellement mises à l'épreuve : pin, aulne, frêne,
+ * **châtaignier** à quarante ans ; aubépine, fusain, genêt et houx dans le bloc
  * des arbustes. Leur accord avec la mesure est un résultat, pas un réglage.
  *
- * À VINGT ANS, aucune espèce n'est calée. C'est la vérification tenue à
+ * **À vingt ans**, aucune espèce n'est calée. C'est la vérification tenue à
  * l'écart : un seul paramètre par espèce a été ajusté, sur un seul âge, et le
- * second âge est une PRÉDICTION de la forme de la courbe. Mesuré : −13 % à
+ * second âge est une **prédiction** de la forme de la courbe. Mesuré : −13 % à
  * +10 % selon l'essence, le charme arrivé depuis à −3 %. C'est ce chiffre-là
  * qui dit quelque chose du moteur.
  *
  * **Convention assumée** : le moteur n'a pas de notion d'indice de fertilité.
  * Caler une essence sur une classe de table oblige donc à décréter qu'une
- * station la représente — ici, `LIMON_RICHE` VAUT la classe médiane. Une
+ * station la représente — ici, `LIMON_RICHE` **vaut** la classe médiane. Une
  * station plus pauvre en jeu donnera moins, une plus riche davantage ; c'est
- * le comportement RELATIF que le moteur modélise, et la table lui donne son
+ * le comportement **relatif** que le moteur modélise, et la table lui donne son
  * échelle.
  *
  * Les tolérances tiennent compte de deux bruits : les classes de fertilité de
  * la table s'étalent déjà de −18 % à +16 % autour de la médiane (hêtre à 40
  * ans : 13,1 m en GK6, 16,0 en GK8, 18,6 en GK10), et chaque arbre porte une
  * vigueur individuelle à ±20 % (`trees.ts`) — d'où la moyenne sur plusieurs
- * individus ET plusieurs graines.
+ * individus **et** plusieurs graines.
  */
 
 /**
- * POURQUOI CE FICHIER EST COUPÉ EN DEUX. Les essais de hauteur pesaient 700 s,
- * soit 16 % de la suite entière, et `vitest --shard` répartit des FICHIERS :
- * tant qu'ils tenaient dans un seul, ce fichier était le PLANCHER du temps de
+ * **pourquoi ce fichier est coupé en deux**. Les essais de hauteur pesaient 700 s,
+ * soit 16 % de la suite entière, et `vitest --shard` répartit des **fichiers** :
+ * tant qu'ils tenaient dans un seul, ce fichier était le **plancher** du temps de
  * CI, qu'on prenne quatre tranches ou vingt.
  *
  * La coupe ne recalcule aucune espèce. Les trois essais de forme ne lisent que
@@ -94,7 +94,7 @@ describe("hauteurs absolues contre les tables de production (hêtre, pin, aulne)
     }, 300_000);
   }
   it("le bouleau reste devant le hêtre en jeunesse : c'est un pionnier", () => {
-    // Le bouleau n'est PAS calé sur une table, et l'essai ne prétend donc pas
+    // Le bouleau n'est **pas** calé sur une table, et l'essai ne prétend donc pas
     // le mesurer. La seule table du corpus est norvégienne (Braastad 1967) :
     // 8,6 m à vingt ans, ce qui est un bouleau boréal, pas un bouleau de
     // bocage. On avait un moment conclu que l'atlas se trompait de rang parce

@@ -1,5 +1,5 @@
 /**
- * LE MODÈLE : ce que le simulateur prend en compte (#224).
+ * **Le modèle** : ce que le simulateur prend en compte (#224).
  *
  * Trois choses, dans cet ordre, parce que c'est l'ordre des questions qu'on se
  * pose : **qu'est-ce que ça calcule** (une semaine simulée, étape par étape),
@@ -61,7 +61,7 @@ function AvecDuCode({ texte }: { texte: string }) {
     <>
       {morceaux.map((m, i) =>
         i % 2 === 1 ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: le rang EST l'identité d'un morceau de texte
+          // biome-ignore lint/suspicious/noArrayIndexKey: le rang **est** l'identité d'un morceau de texte
           <code key={i} style={{ fontSize: "0.92em", color: "var(--terre)" }}>
             {m}
           </code>
@@ -80,7 +80,7 @@ function AvecDuGras({ texte }: { texte: string }) {
     <>
       {morceaux.map((m, i) =>
         i % 2 === 1 ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: le rang EST l'identité d'un morceau de texte
+          // biome-ignore lint/suspicious/noArrayIndexKey: le rang **est** l'identité d'un morceau de texte
           <strong key={i}>{m}</strong>
         ) : (
           // biome-ignore lint/suspicious/noArrayIndexKey: idem
@@ -92,7 +92,7 @@ function AvecDuGras({ texte }: { texte: string }) {
 }
 
 /**
- * UNE ÉTAPE DE LA SEMAINE, dépliable.
+ * **une étape de la semaine**, dépliable.
  *
  * **Un bouton, et pas un survol.** La demande était « plus de détail au
  * survol » ; un survol ne marche ni au doigt ni au clavier, et une infobulle

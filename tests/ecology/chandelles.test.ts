@@ -3,7 +3,7 @@
  *
  * Jusqu'ici, un arbre tué par la sécheresse quittait la parcelle le tick même.
  * C'est faux de plusieurs façons : un tronc mort sèche sur pied et tient des
- * années, il occupe la place, et surtout c'est LE bois mort qui compte pour la
+ * années, il occupe la place, et surtout c'est **le** bois mort qui compte pour la
  * faune. Les pics attaquent le bois debout, et le trou qu'ils abandonnent sert
  * ensuite à des dizaines d'espèces qui ne savent pas creuser — mésanges,
  * sittelles, chauves-souris, abeilles solitaires. Un arbre vivant sain n'offre
@@ -238,7 +238,7 @@ describe("abattre une chandelle", () => {
  *
  * Jusqu'ici la chandelle tombée quittait la parcelle et son bois se dissolvait
  * dans un pool global, indifférent à l'endroit où l'arbre avait vécu. Un tronc
- * tombe pourtant QUELQUE PART : ce qu'il devient — humus, abri, obstacle à
+ * tombe pourtant **quelque part** : ce qu'il devient — humus, abri, obstacle à
  * l'eau, écrasement de ce qui poussait dessous — se joue sur les quelques
  * mètres carrés qu'il recouvre.
  */
@@ -296,7 +296,7 @@ describe("un tronc qui tombe tombe quelque part", () => {
 
   it("sur une pente, il tombe vers l'aval — et à plat, n'importe où", () => {
     // Une seule chute ne prouve rien : le tirage est aléatoire et c'est le
-    // RESSERREMENT autour de l'aval que la pente produit, pas une direction
+    // **resserrement** autour de l'aval que la pente produit, pas une direction
     // imposée. On compare donc deux nuages de directions.
     const dims = { widthM: 20, heightM: 20 };
     const versLeSud = (pentePct: number) => {
@@ -349,11 +349,11 @@ describe("un tronc qui tombe tombe quelque part", () => {
 });
 
 /**
- * LE COUP DE VENT ORIENTE LA CHUTE (issue #58).
+ * **Le coup de vent oriente la chute** (issue #58).
  *
  * `directionDeChute` ne composait qu'une tendance, la pente, alors que ce qui
  * abat un tronc mort est le plus souvent un coup de vent. Elle en compose deux
- * désormais, en vecteurs — et la grandeur lue est la RAFALE de la semaine
+ * désormais, en vecteurs — et la grandeur lue est la **rafale** de la semaine
  * (`tempete.ts`), pas le vent moyen : la distinction est tout le lot.
  */
 describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l'aval", () => {
@@ -384,7 +384,7 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
   });
 
   it("sans vent, rien ne change : la pente décide, comme avant le lot", () => {
-    // La garantie d'identité du lot. `SANS_VENT_DE_CHUTE` doit rendre EXACTEMENT
+    // La garantie d'identité du lot. `SANS_VENT_DE_CHUTE` doit rendre **exactement**
     // ce que rendait la fonction à une seule tendance — sans quoi le lot
     // déplacerait toutes les chutes des parties sans tempête.
     for (let k = 0; k < 50; k++) {
@@ -418,8 +418,8 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
   });
 
   it("en partie : les chandelles d'une semaine ventée partent dans le même sens", () => {
-    // LA PRÉMISSE D'ABORD, et elle a failli manquer. Le banc du bois en travers
-    // ne voyait AUCUN effet de ce lot, et pour une raison qu'il fallait
+    // **La prémisse d'abord**, et elle a failli manquer. Le banc du bois en travers
+    // ne voyait **aucun** effet de ce lot, et pour une raison qu'il fallait
     // mesurer : il tue ses cent vingt saules la même semaine, `dureeChandelle`
     // est un délai fixe par espèce, donc elles tombent toutes la même semaine —
     // une semaine calme, en l'occurrence. Un banc peut passer sans jamais
@@ -460,7 +460,7 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     const conc = (a: readonly { d: number; cap: number }[]) =>
       a.length ? a.reduce((s, x) => s + Math.cos(x.d - x.cap), 0) / a.length : 0;
     // Le mécanisme a bien tourné : une chute sur sept tombe un jour de coup de
-    // vent. Sur un terrain PLAT, où la pente ne dit rien, c'est le vent seul.
+    // vent. Sur un terrain **plat**, où la pente ne dit rien, c'est le vent seul.
     expect(ventees.length).toBeGreaterThan(30);
     expect(calmes.length).toBeGreaterThan(100);
     // Et il fait ce qu'il annonce : ces chutes-là penchent du côté où soufflait
@@ -483,7 +483,7 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
 
   it("deux tendances opposées s'annulent et rendent la main au hasard", () => {
     // Et le symétrique : un versant qui tourne le dos au vent couche dans tous
-    // les sens. Aucune des deux ne gagne — c'est une SOMME de vecteurs, pas un
+    // les sens. Aucune des deux ne gagne — c'est une **somme** de vecteurs, pas un
     // arbitrage entre deux cas.
     const aval = 0;
     const penteSeule = concentration(paquet(versLEst, SANS_VENT_DE_CHUTE), aval);

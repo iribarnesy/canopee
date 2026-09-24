@@ -2,13 +2,13 @@
  * Noyer commun — *Juglans regia*. Famille : **feuillu de futaie**.
  *
  * Arrivé avec l'allélopathie (#49) : c'est l'espèce qui empêche les autres de
- * pousser chez elle, et le joueur doit pouvoir la RECONNAÎTRE pour comprendre
+ * pousser chez elle, et le joueur doit pouvoir la **reconnaître** pour comprendre
  * pourquoi le dessous de son houppier reste nu. Une fiche générique en aurait
  * fait un feuillu de plus, et la leçon du juglone serait passée inaperçue.
  *
  * Trois signes, et ils tiennent ensemble :
  *
- *  - **un houppier CLAIR et large.** Le noyer de plein vent porte peu de
+ *  - **un houppier clair et large.** Le noyer de plein vent porte peu de
  *    branches, très grosses, très écartées, sur un fût court. On voit le ciel à
  *    travers, ce qui est rare chez un feuillu de cette taille — et c'est ce que
  *    dit `densite`, la plus basse des feuillus de futaie de l'atlas ;
@@ -18,7 +18,7 @@
  *  - **l'écorce gris pâle**, presque argentée chez le jeune sujet, nettement
  *    plus claire que celle du châtaignier ou des chênes.
  *
- * Ce que la fiche ne règle PAS, et c'est voulu : le noyer débourre tard et
+ * Ce que la fiche ne règle **pas**, et c'est voulu : le noyer débourre tard et
  * perd ses feuilles tôt — sa saison est courte. Ça vient de la part foliaire
  * que le moteur calcule (`partFoliaireOmbrageanteDans`), comme pour le frêne,
  * et non d'un réglage d'ici.
@@ -38,13 +38,13 @@ export const NOYER: FicheGraphique = {
     // Faible : le noyer n'a pas de flèche qui domine longtemps, il fourche tôt
     // et fait un houppier aussi large que haut.
     dominance: 0.3,
-    // TROIS, et l'essai des houppiers me l'a imposé : à deux — donc la flèche
-    // plus UNE latérale — le houppier du noyer penchait d'un côté (excentricité
+    // **Trois**, et l'essai des houppiers me l'a imposé : à deux — donc la flèche
+    // plus **une** latérale — le houppier du noyer penchait d'un côté (excentricité
     // 0,46 pour une limite de 0,25). C'est exactement le piège que
     // `Branchement` documente : un arbre qui fourche tôt n'a pas assez de nœuds
     // pour s'équilibrer en moyenne, et il faut la paire.
     branchesParNoeud: 3,
-    // Branches ÉPAISSES, qui s'affinent peu : c'est une part de ce qui donne
+    // Branches **épaisses**, qui s'affinent peu : c'est une part de ce qui donne
     // au noyer son air massif malgré un houppier clair.
     conicite: 0.82,
     tortuosite: 0.24,
@@ -60,7 +60,7 @@ export const NOYER: FicheGraphique = {
     automne: { r: 170, g: 156, b: 88 },
   },
   fruit: {
-    // Le BROU, et non la noix : ce qu'on voit sur l'arbre est une drupe verte
+    // Le **brou**, et non la noix : ce qu'on voit sur l'arbre est une drupe verte
     // et lisse, de la taille d'une petite prune. La noix elle-même n'apparaît
     // qu'au sol, une fois le brou fendu et noirci — même distinction que la
     // bogue du châtaignier.
@@ -70,7 +70,7 @@ export const NOYER: FicheGraphique = {
     // fruit qu'on ne distingue pas ne dit pas « il y a quelque chose à
     // récolter », qui est toute la question que cette planche pose. Et le jaune
     // est honnête au moment où le rendu le dessine : cette planche montre le
-    // fruit MÛR, et un brou mûr jaunit avant de se fendre.
+    // fruit **mûr**, et un brou mûr jaunit avant de se fendre.
     couleur: { r: 186, g: 194, b: 106 },
     longueurM: 0.045,
     parRameau: 2,

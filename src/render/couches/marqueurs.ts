@@ -6,12 +6,12 @@
  * arrive à la pose par le `tint` de Pixi, donc douze causes de mort et deux
  * sortes de gestes partagent trois textures.
  *
- * **La forme dit la NATURE du changement**, la teinte en dit la cause. Un halo
+ * **La forme dit la nature du changement**, la teinte en dit la cause. Un halo
  * pour un arbre mort — un anneau ouvert, qui entoure sans masquer ; un liseré
  * pour un arbre travaillé — un arc, qui souligne sans entourer ; un repère
  * pour une zone — une croix fine, qui désigne un point du sol.
  *
- * Ces trois formes sont cuites à une taille FIXE en pixels et posées telles
+ * Ces trois formes sont cuites à une taille **fixe** en pixels et posées telles
  * quelles : un marqueur ne grandit pas quand on zoome, parce qu'il n'est pas
  * dans le monde. C'est ce qui l'empêche d'être pris pour un objet.
  */
@@ -28,7 +28,7 @@ export const COTE_MARQUEUR_PX = 32;
 export const TRAIT_MARQUEUR_PX = 2.5;
 
 /**
- * Chaque forme est tracée DEUX FOIS : un liseré sombre plus large, puis le
+ * Chaque forme est tracée **deux fois** : un liseré sombre plus large, puis le
  * trait clair par-dessus.
  *
  * **Sans ça, un marqueur pâle sur un houppier clair ne se voit pas**, et la
@@ -58,7 +58,7 @@ function doubleTrait(ctx: CanvasRenderingContext2D, tracer: () => void): void {
 }
 
 /**
- * Un HALO : un anneau ouvert en haut.
+ * Un **halo** : un anneau ouvert en haut.
  *
  * Ouvert, et pas fermé : un cercle complet posé sur un houppier se lit comme
  * un fruit géant ou une bulle. Une ouverture suffit à dire « ceci est un
@@ -77,7 +77,7 @@ export function cuireHalo(
 }
 
 /**
- * Un LISERÉ : un arc bas, comme un souligné.
+ * Un **liseré** : un arc bas, comme un souligné.
  *
  * Sous l'arbre et non autour : un geste s'applique à une tige qu'on garde, là
  * où une mort la retire. La différence doit se lire sans la couleur, parce
@@ -96,7 +96,7 @@ export function cuireLisere(
 }
 
 /**
- * Un REPÈRE de zone : une croix fine avec un vide au centre.
+ * Un **repère** de zone : une croix fine avec un vide au centre.
  *
  * Le vide au centre est ce qui en fait un repère et non une cible : on montre
  * un endroit du sol, on ne le recouvre pas.
@@ -125,7 +125,7 @@ export function cuireRepere(
 }
 
 /**
- * Taille d'un marqueur À L'ÉCRAN, en pixels, quel que soit le zoom.
+ * Taille d'un marqueur **à l'écran**, en pixels, quel que soit le zoom.
  *
  * Dix-huit : de quoi entourer une tige de dix pixels sans l'effacer, et de
  * quoi rester visible sur un houppier de deux cents.
@@ -133,7 +133,7 @@ export function cuireRepere(
 export const TAILLE_MARQUEUR_PX = 18;
 
 /**
- * De combien un marqueur se pose AU-DESSUS du pied de l'arbre, en pixels.
+ * De combien un marqueur se pose **au-dessus** du pied de l'arbre, en pixels.
  *
  * Au pied, un marqueur passe sous le houppier de la tige de devant — la
  * profondeur du tri le met derrière tout ce qui est plus proche. Une dizaine de
@@ -144,17 +144,17 @@ export const HAUTEUR_DU_MARQUEUR_PX = 12;
 /**
  * Opacité d'un marqueur.
  *
- * Pas tout à fait opaque : on doit voir CE QU'IL MONTRE à travers. Un repère
+ * Pas tout à fait opaque : on doit voir **ce qu'il montre** à travers. Un repère
  * qui masque son sujet répond à la mauvaise question — le joueur ne cherche pas
  * le marqueur, il cherche l'arbre.
  */
 export const OPACITE_DU_MARQUEUR = 0.88;
 
 /**
- * Un POINT : un disque plein, pour une recrue.
+ * Un **point** : un disque plein, pour une recrue.
  *
  * Plein et non ajouré, à la différence des trois autres : un semis de deux
- * pixels n'a rien à laisser voir, et c'est le seul cas où le marqueur REMPLACE
+ * pixels n'a rien à laisser voir, et c'est le seul cas où le marqueur **remplace**
  * son sujet plutôt que de l'entourer. Petit, parce qu'une naissance est une
  * bonne nouvelle discrète et qu'il y en a des centaines.
  */
@@ -181,10 +181,10 @@ export function cuirePoint(
 export const PART_DU_POINT = 0.6;
 
 /**
- * Une MONTÉE : un chevron vers le haut.
+ * Une **montée** : un chevron vers le haut.
  *
  * Ouvert vers le bas et pointant vers le haut : c'est le seul marqueur du
- * calque qui ait une ORIENTATION, et il en a une parce qu'il dit une direction
+ * calque qui ait une **orientation**, et il en a une parce qu'il dit une direction
  * — cette tige a monté d'un cran. Un cercle ou une croix diraient « il s'est
  * passé quelque chose ici » ; un chevron dit lequel.
  *

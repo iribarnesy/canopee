@@ -1,5 +1,5 @@
 /**
- * LA SAISON COURT SANS FAIRE RECUIRE (#163, débloqué par #164).
+ * **La saison court sans faire recuire** (#163, débloqué par #164).
  *
  * Un hêtre gagne 51 % de sa part foliaire en un pas de temps : c'est la
  * résolution hebdomadaire du moteur, pas une quantification du rendu. Le
@@ -12,7 +12,7 @@
  * références — que tout a changé, et ferait recuire l'atlas soixante fois par
  * seconde pour une image identique. C'est exactement ce que le §5.11 interdit.
  * D'où la règle que ces épreuves tiennent : on ne remplace qu'au
- * FRANCHISSEMENT de palier.
+ * **franchissement** de palier.
  */
 
 import { describe, expect, it } from "vitest";
@@ -55,7 +55,7 @@ const saisonA = (partFoliaire: number, senescence = 0) => {
 
 describe("la saison ne recuit qu'au franchissement", () => {
   it("rend le tableau D'ORIGINE tant qu'on reste dans le palier", () => {
-    // La propriété qui compte : l'IDENTITÉ du tableau. La scène s'en sert pour
+    // La propriété qui compte : l'**identité** du tableau. La scène s'en sert pour
     // décider quoi recuire ; un tableau neuf par image lui ferait tout refaire.
     const arbres = [arbre(1, 0.5)];
     const memePalier = 0.5 + 0.5 / PALIERS_FEUILLAGE / 2;
@@ -103,7 +103,7 @@ describe("la saison ne recuit qu'au franchissement", () => {
 
   it("combien de franchissements sur un débourrement complet", () => {
     // Le gain se chiffre : une part foliaire qui passe de 0 à 1 en une semaine
-    // traverse tous les paliers. Empilés sur une image, c'est UNE marche de
+    // traverse tous les paliers. Empilés sur une image, c'est **une** marche de
     // 100 % ; répartis sur la semaine, c'est autant de marches que de paliers.
     let arbres: readonly ArbreAPoser[] = [arbre(1, 0)];
     let franchissements = 0;
@@ -113,7 +113,7 @@ describe("la saison ne recuit qu'au franchissement", () => {
       arbres = suite;
     }
     expect(franchissements).toBe(PALIERS_FEUILLAGE - 1);
-    // Et l'arbre reste sur la valeur du DERNIER franchissement, pas sur 1 :
+    // Et l'arbre reste sur la valeur du **dernier** franchissement, pas sur 1 :
     // au-delà, la saison est dans le même palier et ne remplace plus rien.
     expect(arbres[0]?.partFoliaire).toBeCloseTo((PALIERS_FEUILLAGE - 1) / PALIERS_FEUILLAGE, 6);
   });
@@ -151,7 +151,7 @@ describe("les autres canaux, après la réécriture en copie paresseuse", () => 
     expect(sortie).not.toBe(arbres);
     expect(sortie[0]?.partFoliaire).toBe(0.2);
     expect(sortie[0]?.vigueur).toBe(0.1);
-    // L'identité du VOISIN est la propriété qui compte : la scène s'en sert
+    // L'identité du **voisin** est la propriété qui compte : la scène s'en sert
     // pour ne pas le recuire.
     expect(sortie[1]).toBe(arbres[1]);
   });

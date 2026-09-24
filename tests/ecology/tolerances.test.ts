@@ -1,6 +1,6 @@
 /**
  * Tests écologiques de bout en bout (docs/regles.md §16) : les tolérances des
- * espèces doivent produire les bonnes trajectoires SANS être codées en dur.
+ * espèces doivent produire les bonnes trajectoires **sans** être codées en dur.
  * Critères volontairement larges (« vivant », « nettement plus grand »),
  * robustes aux recalibrages du moteur.
  */
@@ -46,12 +46,12 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
   it("le pin sylvestre, xérophile acidiphile, tient", () => {
     // « Tient » ne veut pas dire « aucun ne meurt ». Le test exigeait dix
     // survivants sur dix ; sur trois parties, le moteur en donne vingt et un
-    // sur trente, et huit des neuf morts sont des morts de SOIF. C'est ce
+    // sur trente, et huit des neuf morts sont des morts de **soif**. C'est ce
     // qu'on attend d'une lande sableuse à faible réserve utile : une mortalité
     // d'un tiers en trente ans n'y a rien d'anormal, et elle s'est révélée le
     // jour où les arbres ont cessé d'être bridés par l'azote — plus vigoureux,
     // ils transpirent plus, et le sable ne suit pas. Ce qui compte est le
-    // CONTRASTE avec les deux essais suivants : le chêne pubescent est balayé,
+    // **contraste** avec les deux essais suivants : le chêne pubescent est balayé,
     // le hêtre dominé.
     expect(aliveCount(state, "pinus_sylvestris", 30)).toBeGreaterThan(5);
     // Croissance lente : sable pauvre, vent, et concurrence de la lande.
@@ -83,14 +83,14 @@ describe("azote (même limon, riche vs pauvre)", () => {
       1 - meanHeight(pauvre, especeId, 300) / meanHeight(riche, especeId, 300);
     const hetre = perte("fagus_sylvatica");
     const aulne = perte("alnus_glutinosa");
-    // **L'ÉNONCÉ EST UN CONTRASTE, pas une valeur absolue.** L'ancien seuil
+    // **l'énoncé est un contraste, pas une valeur absolue.** L'ancien seuil
     // exigeait que le hêtre perde plus de 20 % de sa hauteur sur sol pauvre ;
     // il en perdait 21,0 %, soit une marge de 1,3 % — le seuil n'était pas une
     // contrainte sur le moteur, c'était une photographie. Le correctif des
     // mycorhizes (#115), qui a rendu au sol pauvre l'azote qu'il perdait, l'a
     // fait tomber à 18,0 % et l'essai avec lui.
     //
-    // Ce que l'essai veut dire vit dans la comparaison avec l'AULNE, planté au
+    // Ce que l'essai veut dire vit dans la comparaison avec l'**aulne**, planté au
     // même moment dans les deux mêmes stations : un fixateur ne dépend pas de
     // l'azote du sol, donc il ne doit rien payer. Mesuré, hêtre 18,0 %, aulne
     // −0,5 % (il fait même un cheveu de mieux sur sol pauvre, où il est moins
@@ -98,7 +98,7 @@ describe("azote (même limon, riche vs pauvre)", () => {
     // l'exigence en azote — le climat, la densité, l'ombre mutuelle — et il ne
     // se cale sur rien : dix points, contre dix-huit mesurés.
     expect(hetre - aulne).toBeGreaterThan(0.1);
-    // Et le hêtre paie DANS L'ABSOLU, sans quoi le contraste tiendrait avec un
+    // Et le hêtre paie **dans l'absolu**, sans quoi le contraste tiendrait avec un
     // aulne qui prospère et un hêtre qui ne sent rien.
     expect(hetre).toBeGreaterThan(0.1);
   });

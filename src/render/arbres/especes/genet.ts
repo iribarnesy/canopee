@@ -26,7 +26,7 @@ export const GENET: FicheGraphique = {
   couleurs: {
     printemps: { r: 108, g: 142, b: 72 },
     ete: { r: 92, g: 124, b: 62 },
-    // Il reste vert : ce sont ses RAMEAUX qui portent la chlorophylle.
+    // Il reste vert : ce sont ses **rameaux** qui portent la chlorophylle.
     automne: { r: 88, g: 118, b: 60 },
     hiver: { r: 84, g: 112, b: 58 },
   },

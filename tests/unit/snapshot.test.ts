@@ -5,7 +5,7 @@
  * `filter((t) => t.alive)` posé avant `chandelle: !t.alive` a donc rendu ce
  * drapeau constamment faux et les troncs morts sur pied invisibles, sans
  * qu'un seul test ne bronche. Ces essais sont le garde-fou : ils regardent ce
- * que le rendu reçoit RÉELLEMENT, pas ce que le moteur calcule.
+ * que le rendu reçoit **réellement**, pas ce que le moteur calcule.
  */
 
 import { describe, expect, it } from "vitest";
@@ -96,7 +96,7 @@ describe("les arbres de l'instantané", () => {
     state = { ...state, trees: [vivant, mort] };
     const snapshot = construireSnapshot({ ...entrees(state), state });
 
-    // Le piège d'origine : filtrer les vivants AVANT de calculer `chandelle`
+    // Le piège d'origine : filtrer les vivants **avant** de calculer `chandelle`
     // laissait ce drapeau à false partout et escamotait les troncs morts.
     expect(snapshot.trees).toHaveLength(2);
     expect(snapshot.trees.map((t) => t.chandelle)).toEqual([false, true]);
@@ -154,7 +154,7 @@ describe("les arbres de l'instantané", () => {
     } as TreeState;
     const t = arbreDuSnapshot(brule, 0);
     expect(t.causeMort).toBe("feu");
-    // La chandelle NOIRE se distingue de la grise par cette seule semaine.
+    // La chandelle **noire** se distingue de la grise par cette seule semaine.
     expect(t.brulEeSemaine).toBe(199);
   });
 });
@@ -167,9 +167,9 @@ describe("les grilles de l'instantané", () => {
     expect(snapshot.soilDebordementMm).toHaveLength(nCells);
     expect(snapshot.soilLumiere).toHaveLength(nCells);
     expect(snapshot.soilLitiereCG).toHaveLength(nCells);
-    // Sans arbre, le sol est éclairé — SAUF sur les bandes de bordure, que
+    // Sans arbre, le sol est éclairé — **sauf** sur les bandes de bordure, que
     // l'entourage ombrage désormais (lisiere.ts). La cellule 0 est au coin
-    // sud-ouest, donc dans la bande la plus ombragée de toutes ; c'est au CŒUR
+    // sud-ouest, donc dans la bande la plus ombragée de toutes ; c'est au **cœur**
     // de la parcelle que l'absence d'arbre se lit.
     const centre = Math.floor(nCells / 2) + Math.floor(STATION.coteM / 2);
     expect(snapshot.soilLumiere[centre]).toBeCloseTo(1, 6);
@@ -277,7 +277,7 @@ describe("les grilles de l'instantané", () => {
 describe("les chutes de chandelle", () => {
   it("voyagent dans l'instantané, avec de quoi coucher le tronc", () => {
     // Le rendu n'a que l'instantané : `soilBoisAuSol` lui dit où le tronc est
-    // arrivé, mais pas qu'il vient de TOMBER. Sans l'événement, la trouée
+    // arrivé, mais pas qu'il vient de **tomber**. Sans l'événement, la trouée
     // n'est qu'un changement d'éclairage entre deux images.
     const state = etatNeuf();
     const chute = {
@@ -403,8 +403,8 @@ describe("ce qui s'est passé cette semaine", () => {
     if (!w) throw new Error("météo manquante");
     const ticked = tick(state, w);
 
-    // Le compte ne suffit pas : sans id ni position, le rendu ne sait pas OÙ
-    // animer QUOI, et les onze morts se ressemblent toutes à l'écran.
+    // Le compte ne suffit pas : sans id ni position, le rendu ne sait pas **où**
+    // animer **quoi**, et les onze morts se ressemblent toutes à l'écran.
     expect(ticked.morts).toEqual([
       { id: 77, x: 3.5, y: 8.25, especeId: "carpinus_betulus", cause: "secheresse", heightM: 7 },
     ]);
@@ -422,11 +422,11 @@ describe("ce qui s'est passé cette semaine", () => {
 });
 
 /**
- * CE QUE LE MOTEUR SAIT ET QUE L'INSTANTANÉ TAISAIT (#86, #87).
+ * **Ce que le moteur sait et que l'instantané taisait** (#86, #87).
  *
  * Les deux défauts sont de la même famille — une donnée que le moteur tient et
  * qui s'arrête avant le rendu — mais celui du chablis est pire qu'un manque :
- * l'instantané annonçait DEBOUT un arbre que le moteur a couché.
+ * l'instantané annonçait **debout** un arbre que le moteur a couché.
  */
 describe("ce que le chablis emporte jusqu'au rendu", () => {
   /** Un arbre couché par une tempête, tel que `tick.ts` le laisse. */
@@ -461,7 +461,7 @@ describe("ce que le chablis emporte jusqu'au rendu", () => {
   it("il arrive marqué chandelle, et c'est justement pourquoi les deux champs manquaient", () => {
     // `chandelle` vaut `!alive`, donc un chablis le porte aussi. Sans
     // `renverseSemaine`, le rendu ne pouvait pas distinguer le tronc mort resté
-    // DEBOUT de l'arbre par terre, et dessinait le premier dans les deux cas.
+    // **debout** de l'arbre par terre, et dessinait le premier dans les deux cas.
     const t = arbreDuSnapshot(chablis(), 800);
     expect(t.chandelle).toBe(true);
     expect(t.renverseSemaine).toBeDefined();

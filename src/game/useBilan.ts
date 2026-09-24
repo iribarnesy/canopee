@@ -1,5 +1,5 @@
 /**
- * LA PÉRIODE DU BILAN (#128, §6.8 №2) : jusqu'où remonte « ce qui a changé ».
+ * **La période du bilan** (#128, §6.8 №2) : jusqu'où remonte « ce qui a changé ».
  *
  * ## La période, c'est « depuis que le temps s'est remis à couler »
  *
@@ -10,14 +10,14 @@
  * emmène la caméra là où ils sont.
  *
  * Concrètement : l'horloge repart → on oublie et on recommence ; l'horloge
- * s'arrête → on GÈLE, parce que c'est là qu'on lit. Geler plutôt qu'effacer
+ * s'arrête → on **gèle**, parce que c'est là qu'on lit. Geler plutôt qu'effacer
  * n'est pas un détail : effacer à la pause viderait le panneau à la seconde
  * exacte où le joueur s'arrête pour le consulter.
  *
- * ## Ce que ce module ne fait PAS, et pourquoi
+ * ## Ce que ce module ne fait **pas**, et pourquoi
  *
  * **Il n'accumule rien, et la période n'est même pas un second compte.** Le
- * worker tient UN cumul, depuis le début de la partie ; la période est ce
+ * worker tient **un** cumul, depuis le début de la partie ; la période est ce
  * cumul moins celui qu'il valait quand elle a commencé (`soustraire`). Ici on
  * ne décide donc que d'une chose — quand la refermer — parce que c'est la
  * seule qui regarde l'écran et non la simulation.
@@ -43,7 +43,7 @@ export function useBilan(
   const oublier = bilan.oublier;
 
   useEffect(() => {
-    // La REPRISE de l'horloge ouvre une période neuve. Pas l'arrêt : c'est à
+    // La **reprise** de l'horloge ouvre une période neuve. Pas l'arrêt : c'est à
     // l'arrêt qu'on lit.
     if (enMarche && !marchait.current) oublier();
     marchait.current = enMarche;

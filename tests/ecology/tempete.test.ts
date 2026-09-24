@@ -48,7 +48,7 @@ describe("la rafale : une grandeur d'hiver, et de queue de distribution", () => 
   }
 
   it("les fortes rafales sont rares, et d'autant plus rares qu'elles sont fortes", () => {
-    // Ce qu'on exige est l'ORDRE DE GRANDEUR et la monotonie, pas la valeur :
+    // Ce qu'on exige est l'**ordre de grandeur** et la monotonie, pas la valeur :
     // la cinquantennale de plaine, que Météo-France situe vers 40-45 m/s, doit
     // tomber dans la bonne décennie de période de retour. Mesuré à l'écriture :
     // 1,6 an à 28 m/s, 10 ans à 36, 25 ans à 40, 84 ans à 45.
@@ -62,7 +62,7 @@ describe("la rafale : une grandeur d'hiver, et de queue de distribution", () => 
   });
 
   it("elles tombent en hiver, sans qu'on l'ait écrit nulle part", () => {
-    // La saison sort de la vitesse MOYENNE du vent (meteo.ts), maximale en
+    // La saison sort de la vitesse **moyenne** du vent (meteo.ts), maximale en
     // janvier : la queue de distribution s'appuie dessus. Aucune ligne de
     // `tempete.ts` ne parle de décembre.
     let hiver = 0;
@@ -113,7 +113,7 @@ describe("ce qui décide qu'un arbre verse", () => {
   });
 
   it("l'ancrage se juge sur le BRAS DE LEVIER, pas en centimètres", () => {
-    // Un semis de deux mètres à trente centimètres de racines est MIEUX ancré
+    // Un semis de deux mètres à trente centimètres de racines est **mieux** ancré
     // qu'un fût de vingt mètres à quarante : c'est le rapport qui compte, et
     // c'est ce qui a empêché la tempête de coucher des semis.
     expect(facteurAncrage(30, 2)).toBeGreaterThan(facteurAncrage(40, 20));
@@ -129,7 +129,7 @@ describe("ce qui décide qu'un arbre verse", () => {
     // vent.
     //
     //
-    // LES DEUX POPULATIONS ONT ÉTÉ REMESURÉES (#84), parce que celle de
+    // **Les deux populations ont été remesurées** (#84), parce que celle de
     // gauche était un artefact : le plancher racinaire traitait un arbre mûr
     // comme un semis, et le hêtre jamais assoiffé ne tenait que 44 cm à 20 m
     // (ratio 0,022). Plancher corrigé, quatre-vingt-dix ans de croissance,
@@ -221,22 +221,22 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
     for (let x = 2; x < COTE; x += 3) state = plantAt(state, especeId, x, y, 0.5);
   }
   let tempetes = 0;
-  // TOUTES les ruines, les deux modes confondus. Depuis #176 une tempête casse
+  // **toutes** les ruines, les deux modes confondus. Depuis #176 une tempête casse
   // aussi bien qu'elle déracine, et `arbresVerses` ne compte plus que la
   // seconde : compter les couchés seuls ferait dire à cet essai « le pin
   // déracine moins qu'avant » là où il veut dire « la tempête lui prend plus
   // d'arbres qu'au hêtre ». Quand un mécanisme change ce qu'une grandeur
-  // VEUT DIRE, c'est le thermomètre qu'on change, pas le seuil.
+  // **veut dire**, c'est le thermomètre qu'on change, pas le seuil.
   let verses = 0;
   let volumeM3 = 0;
   const semaines: number[] = [];
   /**
-   * La plus grande hauteur ATTEINTE, relevée semaine après semaine, et pas
+   * La plus grande hauteur **atteinte**, relevée semaine après semaine, et pas
    * celle des survivants à la fin. La seconde est contaminée par ce que l'essai
    * cherche justement à mesurer : un peuplement que la tempête décapite finit
    * avec des survivants courts, donc « il était petit » et « il s'est fait
    * coucher » deviennent la même phrase. Ce qu'on veut savoir est si les deux
-   * espèces ont atteint une taille comparable AVANT que le vent ne trie.
+   * espèces ont atteint une taille comparable **avant** que le vent ne trie.
    */
   let hMaxAtteint = 0;
   for (let i = 0; i < 60 * 52; i++) {
@@ -265,7 +265,7 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
 }
 
 /**
- * EN PARTIE : ce que la tempête trie.
+ * **en partie** : ce que la tempête trie.
  *
  * Valeurs relevées à l'écriture, soixante ans sur limon riche, parcelle de
  * 24 m plantée à 3 m, deux graines :
@@ -278,10 +278,10 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
  *
  * La colonne « tempêtes » compte les semaines où quelque chose est tombé : une
  * rafale qui passe sans rien coucher ne remonte pas (tick.ts). Les deux
- * peuplements voient donc les MÊMES rafales et n'en retiennent pas le même
+ * peuplements voient donc les **mêmes** rafales et n'en retiennent pas le même
  * nombre — c'est déjà le tri.
  *
- * On exige la DIRECTION graine par graine, pas le rapport : un rapport entre
+ * On exige la **direction** graine par graine, pas le rapport : un rapport entre
  * deux comptes d'événements rares n'est pas une propriété du monde
  * (docs/realisme.md).
  */
@@ -293,7 +293,7 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       // Les deux peuplements arrivent à taille comparable : ce qui les sépare
       // au vent n'est pas leur hauteur, c'est leur feuillage de janvier.
       //
-      // Se lit sur la hauteur ATTEINTE, pas sur celle des survivants (#84) :
+      // Se lit sur la hauteur **atteinte**, pas sur celle des survivants (#84) :
       // la seconde disait 9,3 m pour le pin, ce qui n'est pas « le pin reste
       // petit » mais « la tempête lui a pris ses plus grands » — soit la
       // conclusion de l'essai déguisée en son hypothèse.
@@ -307,13 +307,13 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       // Et les tempêtes sont des événements d'hiver. Pas « jamais en été » :
       // une bourrasque de juin qui couche un arbre existe, et la série en donne
       // une (semaine 22, graine 11). Ce qui est une propriété du
-      // monde, c'est la FORME de la distribution — les semaines où le vent
+      // monde, c'est la **forme** de la distribution — les semaines où le vent
       // moyen de la série est au plancher (2,8-3,0 m/s, semaines 23 à 37) n'en
       // produisent aucune, et le gros tombe dans la moitié hivernale.
       const semaines = [...pin.semaines, ...hetre.semaines];
       for (const s of semaines) expect(s < 23 || s > 37).toBe(true);
       const hivernales = semaines.filter((s) => s >= 40 || s < 14).length;
-      // **LE ZÉRO DE RÉFÉRENCE EST 50 %, ET LE SEUIL NE LE DISAIT PAS.** La
+      // **le zéro de référence est 50 %, et le seuil ne le disait pas.** La
       // fenêtre « hivernale » retenue ici — semaines 40 à 13 — fait vingt-six
       // semaines, soit exactement la moitié du calendrier. Une distribution
       // sans saison y placerait donc la moitié des chablis, et le vieux seuil
@@ -322,8 +322,8 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       // le lot des mycorhizes (#115) le lui a pris en déplaçant à peine le
       // peuplement.
       //
-      // On énonce donc l'asymétrie contre son zéro : il en tombe au moins DEUX
-      // FOIS PLUS dans la moitié hivernale que dans l'autre. Mesuré 22 contre 8
+      // On énonce donc l'asymétrie contre son zéro : il en tombe au moins **deux**
+      // **fois plus** dans la moitié hivernale que dans l'autre. Mesuré 22 contre 8
       // (graine 3) et 31 contre 6 (graine 11) — un rapport de 2,8 et de 5,2.
       const estivales = semaines.length - hivernales;
       expect(hivernales).toBeGreaterThan(2 * estivales);

@@ -15,7 +15,7 @@
  *  - les pluies d'été reculent quand les hivers s'arrosent un peu plus ;
  *  - le CO₂ monte, ce qui **stimule la croissance et ferme les stomates**.
  *
- * Ce qui n'est PAS modélisé : l'aggravation propre des extrêmes (vagues de
+ * Ce qui n'est **pas** modélisé : l'aggravation propre des extrêmes (vagues de
  * chaleur plus longues que ne le dit la moyenne), les sécheresses de sol
  * pluriannuelles, la variabilité des trajectoires (on prend la médiane).
  * La variabilité vient donc entièrement des observations réelles, décalées.
@@ -32,7 +32,7 @@ export interface Scenario {
   /** réchauffement global médian vs 1850-1900, °C, par année d'ancrage (AR6 WG1) */
   rechauffement: readonly (readonly [number, number])[];
   /**
-   * Réchauffement ANNUEL EN FRANCE vs 1850-1900, °C. C'est lui que le moteur
+   * Réchauffement **annuel en France** vs 1850-1900, °C. C'est lui que le moteur
    * applique — la parcelle est en France, pas sur la moyenne du globe — et
    * c'est lui qu'il faut lire quand on compare deux trajectoires.
    */
@@ -46,14 +46,14 @@ export interface Scenario {
 /**
  * Réchauffement global déjà contenu dans la série d'observations, °C vs
  * 1850-1900. Nos séries couvrent 1964-2023, dont le milieu (~1994) valait
- * environ +0,5 °C. C'est de CE niveau que part la dérive, sans quoi on
+ * environ +0,5 °C. C'est de **ce** niveau que part la dérive, sans quoi on
  * compterait deux fois le réchauffement déjà observé *(approximation assumée :
  * la série contient sa propre tendance, on l'assimile à sa moyenne)*.
  */
 export const RECHAUFFEMENT_SERIE_C = 0.5;
 
 /**
- * Réchauffement FRANÇAIS déjà contenu dans la série, °C vs 1850-1900. La
+ * Réchauffement **français** déjà contenu dans la série, °C vs 1850-1900. La
  * France s'est réchauffée plus vite que le globe : au milieu de la période
  * observée (~1994), elle était à environ +0,9 °C quand le globe était à +0,5.
  */
@@ -198,7 +198,7 @@ export function poidsEte(week: number): number {
 
 /**
  * Répartition saisonnière du réchauffement français : combien vaut une semaine
- * donnée par rapport à la MOYENNE ANNUELLE. De moyenne 1 par construction, donc
+ * donnée par rapport à la **moyenne annuelle**. De moyenne 1 par construction, donc
  * sans effet sur le total — elle ne fait que le distribuer.
  *
  * En France, l'été se réchauffe beaucoup plus que le reste de l'année, et
@@ -208,7 +208,7 @@ export function poidsEte(week: number): number {
  * +3,0 l'hiver et +5,1 l'été, ce qui est l'estimation contrainte pour la
  * France (Ribes et al. 2022, base des paliers TRACC).
  *
- * *(La version précédente amplifiait le réchauffement GLOBAL d'un facteur
+ * *(La version précédente amplifiait le réchauffement **global** d'un facteur
  * 1,4 en hiver et 1,9 en été. L'été tombait juste, mais l'hiver était trop
  * chaud, et la moyenne annuelle française sortait à +4,5 °C au lieu de +3,8
  * sous SSP2-4.5.)*
@@ -220,7 +220,7 @@ export function formeSaisonniere(week: number): number {
 
 /**
  * Facteur d'amplification français : ce que vaut une semaine française par
- * rapport au réchauffement GLOBAL. Conservé parce qu'il se lit bien — la
+ * rapport au réchauffement **global**. Conservé parce qu'il se lit bien — la
  * France se réchauffe une fois et demie plus vite que le globe, ses étés
  * presque deux fois — mais le moteur, lui, part désormais des trajectoires
  * françaises directement.
@@ -239,7 +239,7 @@ export function rechauffementFranceC(scenario: Scenario, annee: number): number 
 /**
  * Anomalie de température à ajouter à la semaine observée, °C.
  *
- * On part du réchauffement FRANÇAIS — la parcelle est en France — dont on
+ * On part du réchauffement **français** — la parcelle est en France — dont on
  * retire ce que la série d'observations contient déjà, puis on le répartit
  * dans l'année.
  */
@@ -267,7 +267,7 @@ export function facteurPluie(scenario: Scenario, annee: number, week: number): n
  * réchauffent nettement plus vite que l'été moyen — la distribution ne se
  * décale pas, elle s'étire par le haut. Ne décaler que la moyenne, comme on le
  * faisait, sous-estime donc précisément ce qui tue les arbres. On amplifie
- * l'écart POSITIF d'une semaine à sa normale saisonnière ; les semaines
+ * l'écart **positif** d'une semaine à sa normale saisonnière ; les semaines
  * fraîches, elles, ne sont pas refroidies *(ordre de grandeur : +8 % d'écart
  * par degré, à calibrer)*.
  */
@@ -280,15 +280,15 @@ export const AMPLIFICATION_EXTREMES = 0.08;
 export const AMPLIFICATION_SECHERESSE = 0.05;
 
 /**
- * Amplification des RAFALES par degré de réchauffement global (critère F19).
+ * Amplification des **rafales** par degré de réchauffement global (critère F19).
  *
- * **Elle vaut ZÉRO, et c'est une conclusion, pas une case à cocher.** Le
+ * **Elle vaut zéro, et c'est une conclusion, pas une case à cocher.** Le
  * référentiel demande que la fréquence des tempêtes suive la dérive du climat,
  * et l'endroit où la brancher est bien celui-ci — la rafale, pas le vent moyen,
  * puisque c'est elle qui casse. Mais le nombre manque, et il manque pour une
  * raison qu'il faut écrire plutôt que de la contourner :
  *
- * **le SIGNE lui-même n'est pas établi pour la France.** Les projections
+ * **le signe lui-même n'est pas établi pour la France.** Les projections
  * européennes sur les tempêtes hivernales sont de faible confiance et se
  * contredisent d'un modèle à l'autre ; ce qui fait consensus est plutôt un
  * léger déplacement vers le nord des trajectoires, dont la France
@@ -297,7 +297,7 @@ export const AMPLIFICATION_SECHERESSE = 0.05;
  * plus d'arbres — une affirmation que rien ne soutient, et qui commanderait la
  * mortalité, le bois mort et le marché du bois d'une partie entière.
  *
- * Ce qui est fait ici est donc la PLOMBERIE, et elle seule : les deux moitiés
+ * Ce qui est fait ici est donc la **plomberie**, et elle seule : les deux moitiés
  * du mécanisme se voient enfin. Le jour où un chiffre sourçable existera, il se
  * pose ici et rien d'autre ne bouge *(à instruire : projections Euro-CORDEX de
  * vent extrême sur la France, et leur dispersion inter-modèles)*.
@@ -360,7 +360,7 @@ export function meteoDerivee(
   const dT = anomalieC(scenario, annee, week);
   const dGlobal = Math.max(0, rechauffementGlobalC(scenario, annee) - RECHAUFFEMENT_SERIE_C);
   const s = week % 52;
-  // Écart chaud de la semaine par rapport à sa normale : c'est LUI qu'on étire.
+  // Écart chaud de la semaine par rapport à sa normale : c'est **lui** qu'on étire.
   const ecartChaud = normales ? Math.max(0, base.tMean - (normales.tMean[s] ?? base.tMean)) : 0;
   const supplement = ecartChaud * AMPLIFICATION_EXTREMES * dGlobal;
   const pluieNormale = normales?.rainMm[s];
@@ -379,7 +379,7 @@ export function meteoDerivee(
     rainMm: Math.max(0, pluie),
     co2Ppm: co2Ppm(scenario, annee),
     annee,
-    // Le vent MOYEN traverse le scénario inchangé. Le réchauffement modifie
+    // Le vent **moyen** traverse le scénario inchangé. Le réchauffement modifie
     // bel et bien la circulation, mais dans quel sens et de combien en France,
     // je ne sais pas le sourcer — et l'appliquer au vent des feux serait
     // décider en creux si les incendies futurs courent plus vite. Tant que la
@@ -387,7 +387,7 @@ export function meteoDerivee(
     // étiré au hasard *(à instruire)*.
     ventVersRad: base.ventVersRad,
     ventMoyMs: base.ventMoyMs,
-    // La RAFALE, elle, a désormais par où passer (F19). Le facteur vaut 1
+    // La **rafale**, elle, a désormais par où passer (F19). Le facteur vaut 1
     // aujourd'hui ; ce qui change est que `tick` peut enfin le lire, alors que
     // le scénario ne lui parvenait pas (`AMPLIFICATION_RAFALE`).
     facteurRafale: facteurRafale(scenario, annee),
@@ -400,7 +400,7 @@ export function meteoDerivee(
  * Réponse logarithmique : doubler le CO₂ ne double rien, ça ajoute de l'ordre
  * de 20 % de production ligneuse dans les expériences en air libre (FACE) —
  * et encore, seulement là où l'eau et l'azote suivent. C'est bien un facteur
- * sur le POTENTIEL : la loi du minimum s'applique ensuite, donc un arbre qui a
+ * sur le **potentiel** : la loi du minimum s'applique ensuite, donc un arbre qui a
  * soif ne profite de rien.
  */
 export const BETA_CO2 = 0.28;
@@ -411,7 +411,7 @@ export function facteurCo2Croissance(ppm: number): number {
 /**
  * Effet du CO₂ sur la transpiration. À forte concentration, les stomates
  * s'ouvrent moins pour capter le même carbone : l'arbre perd moins d'eau par
- * unité de croissance. C'est le seul aspect du réchauffement qui joue POUR
+ * unité de croissance. C'est le seul aspect du réchauffement qui joue **pour**
  * l'arbre, et il ne compense jamais entièrement la hausse de l'ETP.
  */
 export const GAMMA_CO2 = 0.2;

@@ -2,7 +2,7 @@
  * Le sol comme capital (critères A12, C8, C9, I6 ; docs/regles.md §2 et §12).
  *
  * Trois boucles se referment ici, et elles vont ensemble :
- *  - l'humus EST le stock d'azote organique : ce qui s'en minéralise rend de
+ *  - l'humus **est** le stock d'azote organique : ce qui s'en minéralise rend de
  *    l'azote aux plantes, au rapport C/N de l'humus ;
  *  - l'humus retient l'eau : en construire améliore la réserve utile ;
  *  - le labour brûle du capital pour un gain immédiat.
@@ -151,7 +151,7 @@ describe("le labour : un gain immédiat payé par le capital", () => {
     // Un quart de siècle de charrue : le stock d'humus s'effondre — d'un bon
     // quart. Le seuil est à 0,80 et non à la valeur mesurée (~0,75), parce que
     // la vitesse de minéralisation dépend de l'humidité du sol : elle bouge
-    // donc à chaque fois qu'on touche au bilan hydrique, et c'est la PERTE
+    // donc à chaque fois qu'on touche au bilan hydrique, et c'est la **perte**
     // qu'on veut garder sous surveillance, pas sa troisième décimale.
     expect(laboure.humusTHa).toBeLessThan(0.8 * tranquille.humusTHa);
     // …et à la fin, le sol rend moins d'azote qu'un sol qu'on a laissé vivre,
@@ -208,7 +208,7 @@ describe("la faim d'azote (C9)", () => {
     };
     const avecBrf = suivre(true);
     const sans = suivre(false);
-    // Un mois après le broyage, le sol EN A MOINS que s'il n'avait rien reçu :
+    // Un mois après le broyage, le sol **en a moins** que s'il n'avait rien reçu :
     // les décomposeurs se servent avant les plantes. C'est la raison pour
     // laquelle on n'enfouit pas du BRF juste avant de planter.
     const apresUnMois = 5 + 4;

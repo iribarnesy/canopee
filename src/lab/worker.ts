@@ -18,7 +18,7 @@ import {
 export type VersLabo =
   | { type: "executer"; id: string; reglages: Reglages }
   /**
-   * LA SONDE D'UNE STATION (#123). Elle passe par le même worker que les
+   * **la sonde d'une station** (#123). Elle passe par le même worker que les
    * expériences, et pour la même raison : c'est vingt ans de moteur, et le fil
    * d'interface n'a rien à y faire.
    */

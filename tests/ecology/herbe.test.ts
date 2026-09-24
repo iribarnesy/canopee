@@ -80,7 +80,7 @@ describe("dynamique du tapis herbacé", () => {
   });
 
   it("elle recule quand le sol de surface s'assèche (l'herbe grille la première)", () => {
-    // La sécheresse joue sur ce qui est VERT, pas sur l'emprise (herbacees.ts) :
+    // La sécheresse joue sur ce qui est **vert**, pas sur l'emprise (herbacees.ts) :
     // c'est le feuillage qui grille, la souche reste.
     for (const h of HERBACEES) {
       expect(facteurEauHerbacee(h, 0.1)).toBeLessThan(facteurEauHerbacee(h, 1));
@@ -89,13 +89,13 @@ describe("dynamique du tapis herbacé", () => {
 });
 
 describe("concurrence herbacée sur les jeunes plants", () => {
-  // **LES DEUX ESSAIS SONT UN SEUL FAIT, ET ILS LE DISAIENT MAL.** Chacun
+  // **les deux essais sont un seul fait, et ils le disaient mal.** Chacun
   // portait le nombre 1,3 — mesuré à 1,3073 d'un côté, recopié à la main de
   // l'autre sous le nom `gainPauvre`. Une marge de six millièmes : ce n'était
   // pas une contrainte sur le moteur, c'était son empreinte, et le correctif
   // des mycorhizes (#115) l'a fait tomber en déplaçant la valeur de 0,6 %.
   //
-  // Le fait écologique est un CONTRASTE : l'entretien décide sur un sol pauvre
+  // Le fait écologique est un **contraste** : l'entretien décide sur un sol pauvre
   // et ne décide pas sur un sol riche, parce que ce que l'herbe dispute au
   // plant est justement ce qui manque. On mesure donc les deux gains sur le
   // même banc et on compare, ce qui annule tout ce qui n'est pas la richesse
@@ -173,7 +173,7 @@ describe("stabilité du tapis (pas d'oscillation artificielle)", () => {
       }
     }
     /**
-     * Inversions de sens VISIBLES : on ignore les variations sous 2 % de
+     * Inversions de sens **visibles** : on ignore les variations sous 2 % de
      * couverture (le gibier prélève un peu d'herbe chaque semaine, ce qui
      * dentelle la courbe sans que rien ne se voie à l'écran). Ce qu'on
      * traque, c'est l'alternance ample, celle qui faisait clignoter.

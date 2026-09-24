@@ -80,7 +80,7 @@ interface Scene {
   ventExposition?: number;
   /**
    * Le vent de la semaine, tel que la météo du moteur le porte
-   * (`WeekWeather.ventVersRad`, `ventMoyMs`) plus ce que le SITE en reçoit
+   * (`WeekWeather.ventVersRad`, `ventMoyMs`) plus ce que le **site** en reçoit
    * (`ventRecuParLeSite`, produit de la vitesse régionale et de l'abri).
    *
    * **Absent des scènes cuites avant le 2026-09-14.** C'est lui qui incline le
@@ -94,7 +94,7 @@ interface Scene {
    *
    * **Absent des scènes cuites avant le 2026-09-09** : celles-là n'en portaient
    * pas, et le banc leur fabriquait un journal. Le repli existe donc encore,
-   * mais il est réservé aux bancs de MÉCANISME (`?ellipse-tout`, `?mort=`) —
+   * mais il est réservé aux bancs de **mécanisme** (`?ellipse-tout`, `?mort=`) —
    * une scène qui porte son journal joue le vrai.
    */
   journal?: {
@@ -126,12 +126,12 @@ interface Scene {
       rangs: number[];
       charges?: number[];
       /**
-       * `IncendieResult.victimes` : QUI le feu a emporté, et non plus seulement
+       * `IncendieResult.victimes` : **qui** le feu a emporté, et non plus seulement
        * combien.
        *
        * **Absent des scènes cuites avant le 2026-09-14.** Celles-là obligent à
        * reconnaître les torchés à leur `brulEeSemaine`, une jointure fausse dès
-       * qu'un arbre a brûlé lors d'un incendie PRÉCÉDENT — il en garde la
+       * qu'un arbre a brûlé lors d'un incendie **précédent** — il en garde la
        * semaine. Le repli existe donc encore, mais il n'est plus le chemin
        * normal.
        */
@@ -201,7 +201,7 @@ interface Scene {
  * Les grilles du sol de la scène, dans la forme du terrain.
  *
  * Le corps de la conversion est partagé avec le jeu (`src/game/parcelle.ts`) :
- * ici il ne reste que le RANGEMENT — la scène cuite niche ses grilles sous
+ * ici il ne reste que le **rangement** — la scène cuite niche ses grilles sous
  * `sol`, l'instantané les porte à plat — et pas une règle.
  */
 function donneesDe(scene: Scene): DonneesSol {
@@ -230,7 +230,7 @@ function donneesDe(scene: Scene): DonneesSol {
  * plus l'être. La boucle tourne un peu plus longtemps que l'ellipse pour qu'on
  * voie l'état d'arrivée avant qu'elle ne reprenne.
  *
- * **La boucle se règle sur la durée du PLAN** depuis #163 : les actes prennent
+ * **La boucle se règle sur la durée du plan** depuis #163 : les actes prennent
  * maintenant leur durée propre, et une boucle calée sur un budget fixe aurait
  * rejoué le début avant la fin, ou attendu dans le vide.
  */
@@ -258,7 +258,7 @@ function Demo(): React.ReactElement {
   // plan, un lecteur, une déformation à la pose. C'est le chemin que le jeu
   // suivra ; seule l'origine du journal est postiche ici.
   //
-  // Postiche parce que les scènes du banc sont un INSTANTANÉ : elles ne
+  // Postiche parce que les scènes du banc sont un **instantané** : elles ne
   // portent aucun journal. On en fabrique donc un — les chandelles de la scène
   // qui ne sont pas du fourré, tombant chacune dans une direction tirée de son
   // identifiant. Le jour où le worker livrera `Snapshot.chutes` à la vue, ces
@@ -271,7 +271,7 @@ function Demo(): React.ReactElement {
   // chandelles sont des ronces — ce qui tombe, ce sont les quelques dizaines
   // d'arbres restants.
   //
-  // `?ellipse-tout=1` fait tomber TOUS les arbres et non les seules
+  // `?ellipse-tout=1` fait tomber **tous** les arbres et non les seules
   // chandelles. **Ce n'est pas une scène, c'est un banc de mécanisme, et il
   // fallait le construire** : les quelques dizaines de chandelles non-fourré
   // d'un hectare font quelques pixels au zoom de parcelle, et il n'y en a
@@ -279,20 +279,20 @@ function Demo(): React.ReactElement {
   // quinzaine de captures avant d'admettre que le sujet manquait, pas le
   // mécanisme.
   //
-  // **Le tout AVANT le retour anticipé**, et pas après : des `useMemo` placés
+  // **Le tout avant le retour anticipé**, et pas après : des `useMemo` placés
   // sous un `if (!scene) return` s'exécutent en nombre variable d'un rendu à
   // l'autre, et React refuse — « Rendered more hooks than during the previous
   // render ». La page ne chargeait plus du tout.
   const ellipse = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const tout = params.get("ellipse-tout") === "1";
-    // `?mort=secheresse` fait mourir de cette cause TOUS les arbres vivants —
+    // `?mort=secheresse` fait mourir de cette cause **tous** les arbres vivants —
     // banc de mécanisme, comme `ellipse-tout`. C'est le seul moyen de juger les
     // onze mises en scène : une semaine ordinaire en produit deux ou trois, sur
     // des arbres de dix pixels.
     const cause = params.get("mort") as CauseMort | null;
     // `?geste-arbres=receper` force lui aussi un sujet que la scène n'a pas :
-    // il appartient donc aux bancs de MÉCANISME, et court-circuite le journal
+    // il appartient donc aux bancs de **mécanisme**, et court-circuite le journal
     // réel comme les deux autres.
     const surArbres = params.get("geste-arbres") as GesteTypeArbre | null;
     // `?tempete=1` fabrique une rafale, pour la même raison que les trois
@@ -300,7 +300,7 @@ function Demo(): React.ReactElement {
     // hasard d'une partie n'est pas une façon de juger un acte. La part qui
     // verse se règle (`?tempete-part=0.3`), le cap aussi (`?tempete-vers`).
     const rafale = params.get("tempete");
-    // **Le journal RÉEL quand la scène en porte un**, et c'est le seul cas
+    // **Le journal réel quand la scène en porte un**, et c'est le seul cas
     // normal. Les deux bancs de mécanisme le remplacent exprès — ils fabriquent
     // un sujet que la scène n'a pas — et c'est pour ça qu'ils portent un nom
     // qui dit qu'ils forcent quelque chose.
@@ -309,7 +309,7 @@ function Demo(): React.ReactElement {
       // L'incendie rejoint le journal sous la forme que le plan attend. Les
       // trois nombres que `IncendieResult` porte en plus — cellules brûlées,
       // arbres tués, carbone — ne servent qu'au fil d'actualité.
-      // `incendie` est retiré du reste AVANT le mélange : la forme sérialisée
+      // `incendie` est retiré du reste **avant** le mélange : la forme sérialisée
       // et la forme du protocole ne sont pas la même, et les répandre toutes
       // les deux donnerait une union des deux.
       const { incendie: incendieBrut, ...reste } = reel;
@@ -346,7 +346,7 @@ function Demo(): React.ReactElement {
       // n'apparaît dans `morts` qu'un an plus tard, une semaine sans incendie,
       // si bien que le feu et ses victimes ne pouvaient jamais figurer dans le
       // même journal. Le rendu les reconnaissait donc à leur `brulEeSemaine` —
-      // ce qui marchait, sauf pour un arbre brûlé lors d'un incendie PRÉCÉDENT,
+      // ce qui marchait, sauf pour un arbre brûlé lors d'un incendie **précédent**,
       // qui garde la sienne.
       //
       // Le repli sur `brulEeSemaine` ne sert plus qu'aux scènes cuites avant
@@ -378,7 +378,7 @@ function Demo(): React.ReactElement {
             baseHouppierM: t.baseHouppierM ?? 0,
             // Le rayon du houppier, de la même fiche que le dessin de l'arbre.
             rayonHouppierM: Math.max(0.3, t.heightM * ratio * 0.5),
-            // **Ce qu'il était AVANT le feu**, calculé par la phénologie du
+            // **Ce qu'il était avant le feu**, calculé par la phénologie du
             // moteur et non deviné : `partFoliaireOmbrageanteDans` dit ce que
             // cette espèce porte à cette semaine de l'année. Sans ça, la mise
             // en scène partirait du tronc charbonné que l'instantané décrit et
@@ -394,7 +394,7 @@ function Demo(): React.ReactElement {
         scene?.coteM ?? 1,
       );
       const tous = marqueursDuJournal(journalReel, (id) => ou.get(id), scene?.coteM ?? 1);
-      // **L'estompe ET les marqueurs, et la mesure a tranché contre mon premier
+      // **L'estompe et les marqueurs, et la mesure a tranché contre mon premier
       // choix.** J'avais mis l'estompe seule par défaut, en pensant qu'elle
       // remplaçait les repères. Elle rend trouvable ce qui est clair ou coloré,
       // et échoue sur ce qui est sombre ou minuscule : une chandelle nue parmi
@@ -419,7 +419,7 @@ function Demo(): React.ReactElement {
         estompe: quoi !== "0" && quoi !== "marqueurs" && sujets.size > 0,
         dureeMs: plan.dureeMs,
         gestes: indexerLesGestes(plan),
-        // Une scène qui porte un VRAI journal a déjà été cuite après coup : ses
+        // Une scène qui porte un **vrai** journal a déjà été cuite après coup : ses
         // chandelles tombées n'y sont plus, et il n'y a donc rien à en retirer.
         // Il y a bien quelque chose à reposer, en revanche (#163).
         chandelles: chandellesTombees(plan),
@@ -488,11 +488,11 @@ function Demo(): React.ReactElement {
           empreinte: [],
         })),
     };
-    // Indexé UNE FOIS : le rappel de déformation est appelé une fois par arbre
+    // Indexé **une fois** : le rappel de déformation est appelé une fois par arbre
     // et par image, et une recherche linéaire à cet endroit-là ne tient pas —
     // trois mille chutes en donnaient neuf millions de comparaisons par image,
     // et la page ne finissait jamais de charger.
-    // `?geste=chauler&geste-rayon=18` ajoute un geste de zone POSTICHE, au
+    // `?geste=chauler&geste-rayon=18` ajoute un geste de zone **postiche**, au
     // centre de la parcelle. Postiche pour la même raison que les chutes — un
     // instantané ne porte pas de journal — mais la maille est celle du moteur :
     // des indices `y * coteM + x`, ceux que `applyChauler` rend vraiment.
@@ -510,15 +510,15 @@ function Demo(): React.ReactElement {
       }
       journal.gestes = [{ type: quel as GesteTypeZone, cellules }];
     }
-    // **`?geste-arbres=receper` : le banc des cinq gestes sur ARBRES** (§6.2).
+    // **`?geste-arbres=receper` : le banc des cinq gestes sur arbres** (§6.2).
     //
     // Banc de mécanisme au même titre que `?mort=` et `?ellipse-tout=1`, et
     // pour la même raison, mesurée en jouant : trois cépées recépées dans une
     // friche de quatre mille bouleaux ne se voient pas. Ce qu'on vient juger
-    // ici, c'est le DESSIN du geste, et il lui faut un sujet visible — donc les
+    // ici, c'est le **dessin** du geste, et il lui faut un sujet visible — donc les
     // plus grosses tiges de la scène, et beaucoup.
     //
-    // Le banc fabrique l'`ArbreRetire` ET applique l'après à la scène, comme le
+    // Le banc fabrique l'`ArbreRetire` **et** applique l'après à la scène, comme le
     // moteur le fait : sans ça, un arbre coupé resterait debout à côté de son
     // fantôme et on en verrait deux.
     let apres = new Map<number, { heightM: number; baseHouppierM: number }>();
@@ -577,7 +577,7 @@ function Demo(): React.ReactElement {
     // captures. On retire donc ce qui tombe, comme le moteur le retire, et
     // c'est `chandellesTombees` qui le repose.
     for (const chute of journal.chutes ?? []) partis.add(chute.id);
-    // La DURÉE du plan et non le budget : un plan vide dure zéro, et c'est ce
+    // La **durée** du plan et non le budget : un plan vide dure zéro, et c'est ce
     // zéro-là qu'il faut porter pour que `?ellipse=` ne prétende pas figer une
     // ellipse qui n'existe pas.
     const ouEtQuelleHauteur = new Map(
@@ -641,7 +641,7 @@ function Demo(): React.ReactElement {
   // avait une à lui que `floraison`, `fruitProgress` et `fruitsKg` s'y
   // perdaient en route, déclarés dans la scène et posés nulle part.
   // La scène telle que le geste l'a laissée : ce qui est parti n'est plus là,
-  // ce qui reste debout porte son état d'APRÈS. C'est le rôle du moteur dans
+  // ce qui reste debout porte son état d'**après**. C'est le rôle du moteur dans
   // une vraie partie, et le banc doit le tenir — sans quoi un arbre coupé
   // resterait debout à côté de son fantôme.
   const restants =
@@ -664,7 +664,7 @@ function Demo(): React.ReactElement {
     },
   );
 
-  // `?ellipse=0.4` FIGE la lecture à cet avancement, et c'est ce qui rend la
+  // `?ellipse=0.4` **fige** la lecture à cet avancement, et c'est ce qui rend la
   // démonstration jugeable : une animation qui tourne à une image par seconde
   // sur un conteneur sans carte graphique n'est pas observable autrement.
   const brut = new URLSearchParams(location.search).get("ellipse");
@@ -682,11 +682,11 @@ function Demo(): React.ReactElement {
       marqueurs={ellipse.marqueurs}
       deformer={(id, maintenantMs, vue) => {
         const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
-        // Les deux canaux de pose se COMPOSENT : franchir dix ans, c'est voir
+        // Les deux canaux de pose se **composent** : franchir dix ans, c'est voir
         // un arbre mourir puis tomber, et `DEBOUT` est neutre pour cette
         // composition — on peut donc appeler les deux sans se demander lequel
         // a lieu.
-        // L'estompe est une TROISIÈME déformation, et elle se compose comme les
+        // L'estompe est une **troisième** déformation, et elle se compose comme les
         // deux autres : ce qui n'est pas sujet du journal s'efface.
         const estompe: Deformation =
           ellipse.estompe && !ellipse.sujets.has(id)
@@ -727,7 +727,7 @@ function Demo(): React.ReactElement {
       }}
       voiler={(maintenantMs) => {
         const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
-        // Le front d'incendie et le voile d'un geste passent par la MÊME
+        // Le front d'incendie et le voile d'un geste passent par la **même**
         // couche : deux choses différentes qui se dessinent pareil.
         return [...voilesEnCours(ellipse.voiles, ou), ...feuEnCours(ellipse.feu, ou)];
       }}
@@ -740,7 +740,7 @@ function Demo(): React.ReactElement {
           ellipse.torches,
         )
       }
-      // **Cadrer le DÉPART de l'incendie** (§6.4). Le moteur met déjà le jeu en
+      // **Cadrer le départ de l'incendie** (§6.4). Le moteur met déjà le jeu en
       // pause dessus (`autopause`), donc la vue a le droit d'y aller — et c'est
       // le seul événement du jeu qui le mérite, parce que c'est le seul qui
       // puisse tout changer en une semaine.

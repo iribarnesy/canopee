@@ -1,5 +1,5 @@
 /**
- * LA PLOMBERIE DE F19 : la trajectoire climatique atteint enfin la rafale.
+ * **La plomberie de** F19 : la trajectoire climatique atteint enfin la rafale.
  *
  * Le critère demande que la fréquence des tempêtes suive la dérive du climat.
  * Le blocage n'était pas conceptuel mais topologique : `meteoDerivee` connaît le
@@ -7,10 +7,10 @@
  * tire la rafale et ne connaît pas le scénario. Deux moitiés dans deux
  * fonctions qui ne se voient pas.
  *
- * Ce lot les réunit, et RIEN DE PLUS. Le facteur vaut 1, parce que le chiffre
+ * Ce lot les réunit, et **rien de plus**. Le facteur vaut 1, parce que le chiffre
  * manque et que son signe même n'est pas établi pour la France
  * (`AMPLIFICATION_RAFALE`). Ce fichier vérifie donc deux choses opposées, et
- * c'est voulu : que le tuyau existe VRAIMENT, et qu'il ne coule pas encore.
+ * c'est voulu : que le tuyau existe **vraiment**, et qu'il ne coule pas encore.
  */
 
 import { describe, expect, it } from "vitest";
@@ -30,7 +30,7 @@ const NORMALES = normalesHebdo(SERIE);
 
 describe("le tuyau existe : un facteur non neutre change la rafale", () => {
   it("la rafale répond au facteur climatique, proportionnellement", () => {
-    // LA PRÉMISSE. Un champ qu'on branche sans vérifier qu'il agit est un
+    // **la prémisse**. Un champ qu'on branche sans vérifier qu'il agit est un
     // ornement ; le jour où le chiffre arrivera, il faut qu'il serve.
     const sans = rafaleDeLaSemaine(12345, 40, 6);
     expect(rafaleDeLaSemaine(12345, 40, 6, 1.2)).toBeCloseTo(1.2 * sans, 9);
@@ -38,7 +38,7 @@ describe("le tuyau existe : un facteur non neutre change la rafale", () => {
   });
 
   it("et il ne touche pas au tirage : même graine, même semaine, même hasard", () => {
-    // Le facteur MULTIPLIE ce qui a été tiré ; il ne retire pas un tirage
+    // Le facteur **multiplie** ce qui a été tiré ; il ne retire pas un tirage
     // différent. Sans quoi brancher le climat rebattrait toutes les tempêtes
     // d'une partie, au lieu de les échelonner.
     for (const vent of [3, 6, 11]) {
@@ -88,7 +88,7 @@ describe("mais il ne coule pas encore, et c'est une décision", () => {
       }
     }
     // Contrôle de la prémisse du contrôle : sous SSP5-8.5 en 2100, quelque
-    // chose DOIT avoir bougé dans cette météo — sans quoi « le vent ne bouge
+    // chose **doit** avoir bougé dans cette météo — sans quoi « le vent ne bouge
     // pas » ne dirait rien.
     const chaud = SCENARIOS.find((s) => s.id === "ssp585");
     if (!chaud) throw new Error("scénario manquant");

@@ -406,7 +406,7 @@ function arbreNu(heightM: number): TreeState {
 }
 
 /**
- * Ce que le gibier fait, le rendu doit pouvoir le MONTRER la semaine où ça
+ * Ce que le gibier fait, le rendu doit pouvoir le **montrer** la semaine où ça
  * arrive : une pousse mangée, une écorce arrachée au pied. Le tick les
  * rapporte comme des gestes, au même titre que ceux du joueur (tick.ts).
  */
@@ -485,7 +485,7 @@ describe("les gestes du gibier remontent au rendu", () => {
 });
 
 /**
- * La TRACE de l'abroutissement (issue #21).
+ * La **trace** de l'abroutissement (issue #21).
  *
  * Le tick calculait le dégât arbre par arbre — `brouter()` rend une
  * `Map<number, BroutageArbre>` — s'en servait pour rabattre la hauteur, pour
@@ -547,7 +547,7 @@ describe("un plant brouté le dit, et dit quand", () => {
   });
 
   it("se souvient de ce que `pousseTendreM` oublie", () => {
-    // Le cœur de l'affaire : `pousseTendreM` est un STOCK, sans date. Il
+    // Le cœur de l'affaire : `pousseTendreM` est un **stock**, sans date. Il
     // remonte dès que l'arbre repousse, et l'événement disparaît avec.
     //
     // Deux parcelles menées deux ans, l'une sous 0,4 cervidé/ha et l'autre

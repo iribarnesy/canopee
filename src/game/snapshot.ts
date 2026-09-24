@@ -1,12 +1,12 @@
 /**
- * Traduction état du moteur → INSTANTANÉ (protocol.ts). Pure, testable, et
+ * Traduction état du moteur → **instantané** (protocol.ts). Pure, testable, et
  * volontairement sortie du worker.
  *
  * Pourquoi elle ne vit plus dans `worker.ts` : un `filter((t) => t.alive)`
  * posé juste avant `chandelle: !t.alive` a rendu ce drapeau constamment faux
  * et une fonctionnalité entière invisible — les troncs morts sur pied — sans
  * qu'aucun test ne bronche, parce que la traduction vivait dans un worker
- * qu'aucun test n'instancie. Le worker ASSEMBLE, il ne décide pas : tout
+ * qu'aucun test n'instancie. Le worker **assemble**, il ne décide pas : tout
  * nouveau champ passe par ici, et se teste ici.
  */
 
@@ -35,7 +35,7 @@ import { diametreTeteCm, volumeCaviteL } from "../engine/trogne";
 import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
 
 /**
- * Un arbre, tel que le rendu doit pouvoir le DESSINER. Aucun filtre ici : les
+ * Un arbre, tel que le rendu doit pouvoir le **dessiner**. Aucun filtre ici : les
  * chandelles sont des arbres du jeu, elles ont juste cessé de vivre.
  *
  * `ddYearBase5` est le cumul de degrés-jours de la semaine (l'état le porte) :
@@ -131,7 +131,7 @@ function floraisonDe(t: TreeState, ddYearBase5: number): number {
 /**
  * Emprise moyenne de chaque herbacée sur la parcelle, dans l'ordre de
  * `HERBACEES`. C'est une moyenne de parcelle, et c'est assumé : l'indice de
- * biodiversité est lui-même une note de parcelle. Le MÉCANISME, lui, reste
+ * biodiversité est lui-même une note de parcelle. Le **mécanisme**, lui, reste
  * local — la ressource florale que lit la pollinisation est par cellule
  * (`tick.ts`).
  */
@@ -148,7 +148,7 @@ function empriseHerbaceeMoyenne(state: GameState): number[] {
   return out;
 }
 
-/** Eau de l'horizon de SURFACE, par cellule (le sol est stratifié, cf. soil.ts). */
+/** Eau de l'horizon de **surface**, par cellule (le sol est stratifié, cf. soil.ts). */
 export function eauDeSurface(state: GameState, nH: number): Float32Array {
   const nCells = state.soil.mineralNG.length;
   const out = new Float32Array(nCells);
@@ -165,7 +165,7 @@ export function nappeParCellule(state: GameState): Float32Array {
 /**
  * Engorgement moyen du profil sous chaque cellule ∈ [0,1] : la part de la
  * macroporosité occupée par l'eau, moyennée sur les horizons. C'est ce que les
- * racines subissent, et ce qu'on veut pouvoir REGARDER sur la carte.
+ * racines subissent, et ce qu'on veut pouvoir **regarder** sur la carte.
  */
 export function engorgementParCellule(state: GameState, nH: number): Float32Array {
   const profil = state.station.profil;
@@ -237,7 +237,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     co2Ppm: e.weather.co2Ppm ?? CO2_ACTUEL_PPM,
     stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
     pressionGibier: state.pressionGibier,
-    // Le bois COUCHÉ compte autant que le debout, et pas pour les mêmes
+    // Le bois **couché** compte autant que le debout, et pas pour les mêmes
     // bêtes : les pics veulent du sur-pied, les carabes et les salamandres du
     // par-terre. L'indice ne fait pour l'instant pas la différence, mais il
     // serait faux d'oublier la moitié du bois mort d'une vieille parcelle.
@@ -245,17 +245,17 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
       state.trees,
       state.carbon.deadWoodKgC + somme(state.soil.boisAuSolCG) / 1000,
       areaHa,
-      // Le côté de la parcelle : c'est lui qui permet de voir la MOSAÏQUE et
+      // Le côté de la parcelle : c'est lui qui permet de voir la **mosaïque** et
       // l'étagement local, donc de récompenser la disposition (biodiversite.ts).
       state.station.coteM,
-      // L'emprise MOYENNE de chaque herbacée : c'est par elle que la strate
+      // L'emprise **moyenne** de chaque herbacée : c'est par elle que la strate
       // basse entre enfin dans l'étalement des floraisons (#70). Une vernale
       // qui tient un tiers du sol nourrit les pollinisateurs de mars, et
       // l'indice l'ignorait.
       empriseHerbaceeMoyenne(state),
     ),
     fluxes: e.fluxes,
-    // Le calendrier foliaire se RECALCULE à l'identique : mêmes entrées que
+    // Le calendrier foliaire se **recalcule** à l'identique : mêmes entrées que
     // celles du tick, donc mêmes couleurs de saison de part et d'autre.
     pheno: contextePhenologique(
       station.latitudeDeg,
@@ -266,7 +266,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // Aucun filtre : les chandelles sont des arbres, elles ont juste cessé de
     // vivre. Les compter comme vivants est l'affaire de l'UI, pas la nôtre.
     trees: state.trees.map((t) => arbreDuSnapshot(t, state.ddYearBase5)),
-    // Carte : on montre l'eau de l'horizon de SURFACE, celle que voient les
+    // Carte : on montre l'eau de l'horizon de **surface**, celle que voient les
     // semis et l'évaporation.
     soilWater: eauDeSurface(state, nH),
     soilPh: Float32Array.from(state.soil.ph),
@@ -280,7 +280,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // quand l'herbe jaunit, et seul le feu, la fauche et la décomposition la
     // font baisser.
     soilHerbeBiomasse: Float32Array.from(state.soil.herbeBiomasse),
-    // L'humidité VÉCUE, pas celle de la semaine : le moteur la porte d'une
+    // L'humidité **vécue**, pas celle de la semaine : le moteur la porte d'une
     // semaine à l'autre (elle est récurrente par construction), et c'est cette
     // mémoire-là qui fait griller un tapis — pas la pluie de mardi.
     soilHerbeHumidite: Float32Array.from(state.soil.herbeHumidite),
@@ -289,7 +289,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // Les ravageurs par cellule, pas seulement leur moyenne : c'est la tache
     // de défoliation, et la mort qui la suit, que le rendu doit montrer.
     soilRavageurs: Float32Array.from(state.soil.ravageurs),
-    // L'érosion est un CUMUL signé porté par l'état, pas un flux de la
+    // L'érosion est un **cumul** signé porté par l'état, pas un flux de la
     // semaine : c'est lui qui dit où le sol s'est creusé et où il s'est
     // rechargé.
     soilEpaisseurPerdueCm: Float32Array.from(state.soil.epaisseurPerdueCm),
@@ -300,7 +300,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // La clôture change quand le joueur en pose : elle voyage à chaque
     // instantané, sinon il ne verrait pas ce qu'il vient de payer.
     soilCloture: Uint8Array.from(state.soil.cloture, (c) => (c ? 1 : 0)),
-    // Grandeurs du dernier tick. On les COPIE : elles sont transférées avec
+    // Grandeurs du dernier tick. On les **copie** : elles sont transférées avec
     // l'instantané (donc détachées), et le worker en a encore besoin pour
     // l'instantané suivant — une action reçue en pause en déclenche un sans
     // qu'aucune semaine n'ait été simulée entre-temps.
@@ -312,7 +312,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     soilLumiere: e.lumiereAuSol
       ? Float32Array.from(e.lumiereAuSol)
       : new Float32Array(nCells).fill(1),
-    // La litière EST de l'état (elle s'accumule et se décompose) : on la lit
+    // La litière **est** de l'état (elle s'accumule et se décompose) : on la lit
     // dans le sol, comme le pH, plutôt que de la faire remonter du tick.
     soilLitiereCG: Float32Array.from(state.soil.litterCG),
     refusals: e.refusals,
@@ -328,7 +328,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
 }
 
 /**
- * Les tampons à TRANSFÉRER avec l'instantané. À côté de `construireSnapshot`
+ * Les tampons à **transférer** avec l'instantané. À côté de `construireSnapshot`
  * pour qu'un champ ajouté d'un côté ne s'oublie pas de l'autre : oublié, il se
  * paie en une copie complète par semaine simulée.
  */

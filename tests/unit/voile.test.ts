@@ -146,7 +146,7 @@ describe("cellulesVoilees", () => {
     const milieu = cellulesVoilees(geste, rangs, PART_QUI_S_ETALE / 2);
     expect(milieu.length).toBeGreaterThan(cellules.length * 0.15);
     expect(milieu.length).toBeLessThan(cellules.length);
-    // à pleine couverture, TOUTES les cellules nommées sont peintes
+    // à pleine couverture, **toutes** les cellules nommées sont peintes
     expect(cellulesVoilees(geste, rangs, PART_QUI_S_ETALE).length).toBe(cellules.length);
   });
 

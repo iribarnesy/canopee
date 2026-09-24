@@ -1,15 +1,15 @@
 /**
- * DEUX RÉSERVES UTILES, DEUX NOMS (#190).
+ * **Deux réserves utiles**, **deux noms** (#190).
  *
- * Un même nom — `ruMm` — désignait la réserve du PROFIL ENTIER côté moteur et
- * celle du SEUL HORIZON DE SURFACE dans `StationInfo`. Les deux sont des
+ * Un même nom — `ruMm` — désignait la réserve du **profil entier** côté moteur et
+ * celle du **seul horizon de surface** dans `StationInfo`. Les deux sont des
  * millimètres d'eau, rien à l'usage ne les distinguait, et le sélecteur
  * d'essences a pris l'une pour l'autre : sur le limon le plus riche du jeu, il
  * écartait huit espèces — dont le hêtre, le frêne et le pommier — comme si le
  * sol était trop sec pour elles.
  *
  * Ces essais tiennent la propriété par ses deux bouts : que les deux grandeurs
- * soient bien DIFFÉRENTES sur une station à plusieurs horizons (sinon
+ * soient bien **différentes** sur une station à plusieurs horizons (sinon
  * l'essai ne prouverait rien), et que ce soit la bonne des deux qui décide.
  */
 

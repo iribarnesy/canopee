@@ -8,7 +8,7 @@
  *
  * **C'est cette fiche qui a coûté le plus cher au lot L0.** À 0,85 de dominance
  * apicale, le générateur en faisait *une touffe au sommet d'un bâton* : il a
- * fallu descendre à 0,62 ET ajouter un ordre de récursion. Le chiffre ci-dessous
+ * fallu descendre à 0,62 **et** ajouter un ordre de récursion. Le chiffre ci-dessous
  * est celui-là, et il ne doit pas être « corrigé » vers le haut au prétexte que
  * le bouleau est élancé — c'est précisément l'erreur qui a été faite.
  *
@@ -44,7 +44,7 @@ export const BOULEAU: FicheGraphique = {
     automne: { r: 208, g: 176, b: 70 },
   },
   // Blanc, et c'est un problème de palette autant qu'une signature : sur un sol
-  // clair il DISPARAÎT (contrainte L0). Ou le sol reste soutenu, ou le fût
+  // clair il **disparaît** (contrainte L0). Ou le sol reste soutenu, ou le fût
   // reçoit un liseré sombre ; il n'y a pas de troisième option.
   //
   // Ramené de 236 à 212, parce que le problème s'est présenté par l'autre bout :

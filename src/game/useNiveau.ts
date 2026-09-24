@@ -1,12 +1,12 @@
 /**
- * LE NIVEAU EN COURS, côté écran (#188).
+ * **Le niveau en cours**, côté écran (#188).
  *
  * Trois choses vivent ici, et aucune ne pouvait vivre ailleurs :
  *
  * 1. **La fiche**, parce qu'un palier est une fermeture : ça ne traverse pas la
- *    frontière d'un worker. Le worker range un IDENTIFIANT, l'écran retrouve la
+ *    frontière d'un worker. Le worker range un **identifiant**, l'écran retrouve la
  *    fiche.
- * 2. **La mémoire des paliers franchis**, parce qu'un palier de STOCK ne se
+ * 2. **La mémoire des paliers franchis**, parce qu'un palier de **stock** ne se
  *    retrouve pas : douze arbres protégés puis broutés ne laissent aucune trace
  *    dans l'état. Elle repart vers le worker, qui l'écrit dans la sauvegarde.
  * 3. **L'arrêt du temps à la fin**, parce que c'est l'écran qui commande la
@@ -34,10 +34,10 @@ export function useNiveau(game: GameApi): NiveauEnCours {
   );
 
   /**
-   * La mémoire des paliers franchis — CELLE DU WORKER, et pas une copie.
+   * La mémoire des paliers franchis — **celle du worker**, et pas une copie.
    *
    * Elle a d'abord été tenue ici, en état local, synchronisée par une garde sur
-   * l'identifiant du niveau. Le défaut est arrivé par là : rejouer LE MÊME
+   * l'identifiant du niveau. Le défaut est arrivé par là : rejouer **le même**
    * niveau ne change pas l'identifiant, la garde sortait, et la mémoire de la
    * partie précédente survivait. On voyait une coche sur un palier qui
    * affichait « 0 / 12 ».
@@ -51,7 +51,7 @@ export function useNiveau(game: GameApi): NiveauEnCours {
   const acquis = useMemo(() => new Set(niveauRange.acquis), [niveauRange.acquis]);
 
   /**
-   * L'AVANCEMENT SE GÈLE PENDANT UNE RELECTURE (#128).
+   * **l'avancement se gèle pendant une relecture** (#128).
    *
    * Revoir une période, c'est remonter le temps : la semaine recule, les
    * arbres coupés se relèvent, les kilos récoltés ne sont pas encore cueillis.
@@ -59,7 +59,7 @@ export function useNiveau(game: GameApi): NiveauEnCours {
    * stock et croire qu'il lui reste des années — sur un niveau déjà fini,
    * l'écran de fin disparaîtrait au milieu de la relecture.
    *
-   * On retient donc le dernier avancement VIVANT et on le rend tel quel. Ce
+   * On retient donc le dernier avancement **vivant** et on le rend tel quel. Ce
    * n'est pas une copie d'état au sens du §2.1 : c'est la valeur courante,
    * mise en attente le temps qu'on regarde ailleurs.
    */
@@ -74,7 +74,7 @@ export function useNiveau(game: GameApi): NiveauEnCours {
   }, [niveau, snapshot, cumuls, acquis, enRelecture]);
 
   // **Un palier franchi se retient**, et le worker l'apprend pour l'écrire dans
-  // la sauvegarde. La comparaison porte sur le CONTENU et non sur la taille :
+  // la sauvegarde. La comparaison porte sur le **contenu** et non sur la taille :
   // un ensemble peut changer sans grandir quand une fiche évolue.
   const ranger = useRef(rangerLeNiveau);
   ranger.current = rangerLeNiveau;

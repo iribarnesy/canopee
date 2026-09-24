@@ -1,5 +1,5 @@
 /**
- * L'effet de bord : ce qu'il y a AUTOUR de la parcelle ombrage ses lisières.
+ * L'effet de bord : ce qu'il y a **autour** de la parcelle ombrage ses lisières.
  *
  * Le moteur traitait la limite de parcelle comme une limite du monde : au-delà,
  * rien. Un carré de bocage au milieu d'un massif recevait donc autant de
@@ -27,7 +27,7 @@ const CHAMPS = bordersUniformes("plaine-cerealiere");
 describe("ce qui ombrage une parcelle est ce qui est au SUD", () => {
   it("le massif au sud coûte de la lumière, le même au nord n'en coûte pas", () => {
     // C'est le point qui rend ce mécanisme non trivial. Le soleil est au sud en
-    // France, les ombres tombent vers le nord : un bois planté au NORD d'une
+    // France, les ombres tombent vers le nord : un bois planté au **nord** d'une
     // parcelle ne lui prend pas une heure de soleil — c'est elle qui l'ombrage.
     const sudBoise = { ...CHAMPS, sud: "massif-forestier" };
     const nordBoise = { ...CHAMPS, nord: "massif-forestier" };
@@ -99,10 +99,10 @@ describe("dans une partie, l'entourage se paie — ou se gagne", () => {
   it("mais un SCIAPHILE assoiffé y gagne, et ce n'est pas un bug", () => {
     // Résultat contre-intuitif, trouvé en écrivant l'essai précédent : le même
     // dispositif avec un hêtre donne 8,7 m à l'ombre du massif contre 7,4 en
-    // plaine découverte. L'ombre lui PROFITE.
+    // plaine découverte. L'ombre lui **profite**.
     //
     // La raison tient en une ligne : sur le limon riche, à 750 mm de pluie, le
-    // hêtre est limité par l'EAU et non par la lumière (voir la section des
+    // hêtre est limité par l'**eau** et non par la lumière (voir la section des
     // hauteurs). Moins de rayonnement, c'est moins de transpiration, donc moins
     // de stress hydrique — et il supporte l'ombre par tempérament. C'est
     // exactement le mécanisme de l'effet nurse, appliqué à une lisière.

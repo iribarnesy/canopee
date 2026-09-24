@@ -1,5 +1,5 @@
 /**
- * LE SUIVI D'ARBRES, côté React : qui l'on suit, et ce qui leur est arrivé (#149).
+ * **Le suivi d'arbres**, côté React : qui l'on suit, et ce qui leur est arrivé (#149).
  *
  * Le calcul, lui, est ailleurs et il est pur (`suivis.ts`). Ce fichier ne fait
  * que trois choses que seul React peut faire : garder l'ensemble suivi, le
@@ -35,7 +35,7 @@ export const EVENEMENTS_GARDES = 400;
 export interface SuivisDuJeu {
   /** les identifiants suivis */
   suivis: ReadonlySet<number>;
-  /** le journal, le plus RÉCENT en tête */
+  /** le journal, le plus **récent** en tête */
   journal: readonly EvenementSuivi[];
   /**
    * Suivre ou ne plus suivre, d'un seul geste, pour toute une sélection.
@@ -71,7 +71,7 @@ export function useSuivis(
   /**
    * Une relecture est-elle en cours (#128) ? Alors on ne réapprend rien.
    *
-   * Le journal d'un arbre suivi est fait d'ÉVÉNEMENTS datés, et revoir une
+   * Le journal d'un arbre suivi est fait d'**événements** datés, et revoir une
    * période les ferait tous survenir une seconde fois — un arbre mort il y a
    * cinq ans remourrait, la caméra irait s'y poser, et le compteur de
    * nouveautés sonnerait pour du déjà-vu.

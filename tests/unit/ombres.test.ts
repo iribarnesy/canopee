@@ -1,7 +1,7 @@
 /**
  * Les ombres portées.
  *
- * Ce qui compte ici, c'est que l'ombre tombe là où le MOTEUR la met : `light.ts`
+ * Ce qui compte ici, c'est que l'ombre tombe là où le **moteur** la met : `light.ts`
  * décale l'ombre d'une couronne vers le nord de `SHADOW_NORTH_OFFSET` fois sa
  * hauteur, et c'est ce décalage exact qu'on doit retrouver au sol. Une ombre
  * dessinée ailleurs mentirait sur qui ombrage qui — le genre d'écart qui ne se
@@ -40,10 +40,10 @@ function arbre(patch: Partial<ArbreOmbre> = {}): ArbreOmbre {
 describe("où tombe l'ombre", () => {
   it("**s'étend du PIED jusqu'au décalage exact du moteur — aux quatre orientations**", () => {
     // La propriété centrale, et elle a changé de forme sans changer de fond.
-    // L'ombre n'est plus un disque CENTRÉ sur la cellule que `light.ts` désigne
+    // L'ombre n'est plus un disque **centré** sur la cellule que `light.ts` désigne
     // — c'est-à-dire (x, y + 0,4 h) — mais le balayage du houppier entre le
     // pied de l'arbre et cette cellule-là. Le décalage du moteur reste donc lu
-    // au pixel près : il place l'EXTRÉMITÉ au lieu du milieu.
+    // au pixel près : il place l'**extrémité** au lieu du milieu.
     //
     // Le disque centré au loin était ce qui faisait flotter les arbres : son
     // bord n'atteignait jamais le tronc, et on voyait un arbre, un trou de
@@ -64,7 +64,7 @@ describe("où tombe l'ombre", () => {
 
   it("**couvre le pied de l'arbre : c'est ce qui le pose au sol**", () => {
     // Le test qui garde fermé le défaut « l'arbre flotte ». Quelle que soit
-    // l'orientation, le pied du tronc doit tomber DANS l'ellipse — sinon il n'y
+    // l'orientation, le pied du tronc doit tomber **dans** l'ellipse — sinon il n'y
     // a rien qui relie l'arbre à son ombre, et l'œil lit un collage.
     for (const o of [0, 1, 2, 3] as const) {
       const v: Vue = { ...vue(), cam: { ...vue().cam, orientation: o } };
@@ -106,7 +106,7 @@ describe("la taille de l'ombre", () => {
   it("part du diamètre du houppier que le MOTEUR calcule, allongé du balayage", () => {
     // La largeur n'est plus le seul diamètre : c'est l'enveloppe du disque
     // balayé du pied jusqu'au point d'ombre. L'invariant garde le diamètre
-    // comme SOCLE — c'est toujours `crownRadiusM` qui commande la taille — et y
+    // comme **socle** — c'est toujours `crownRadiusM` qui commande la taille — et y
     // ajoute exactement la course, ni plus ni moins.
     const v = vue();
     const a = arbre({ heightM: 14, houppierRatio: 0.35 });
@@ -168,7 +168,7 @@ describe("ce qui ne porte pas d'ombre", () => {
 describe("la densité, et pourquoi elle n'est pas une opacité", () => {
   it("choisit une tache cuite, jamais une transparence variable", () => {
     // Le mécanisme entier tient à ça : les ombres se composent en `darken`
-    // (donc en MINIMUM) puis se multiplient une fois. Une opacité par ombre
+    // (donc en **minimum**) puis se multiplient une fois. Une opacité par ombre
     // ferait s'empiler les couches et rendrait une bouillie noire sous un
     // fourré — c'est ce que la première capture de ce lot montrait.
     expect(MODE_ACCUMULATION).toBe("darken");
@@ -201,11 +201,11 @@ describe("le mode d'accumulation tient sur un GPU", () => {
     // rectangles sombres le long du bord de la parcelle, absent de la même
     // scène passée par le compositeur Canvas. Une ablation l'a désigné — en
     // sautant les taches, les rectangles disparaissaient, et chacun avait sa
-    // tache ronde inscrite dedans : c'était le QUAD de la tache qui
+    // tache ronde inscrite dedans : c'était le **quad** de la tache qui
     // s'assombrissait, pas son disque.
     //
     // La cause est la classification des modes de fusion. `darken` est un mode
-    // AVANCÉ : Pixi l'implémente par un shader qui doit lire le fond déjà
+    // **avancé** : Pixi l'implémente par un shader qui doit lire le fond déjà
     // dessiné. Dans une `RenderTexture` rendue avec `clear: true`, cette
     // lecture ne trouve pas le rectangle blanc posé juste avant dans la même
     // passe, et `min(blanc, noir)` vaut noir sur tout le quad. Le carré blanc
@@ -229,7 +229,7 @@ describe("le mode d'accumulation tient sur un GPU", () => {
 
   it("**`multiply` ne convient pas, et c'est mesuré, pas supposé**", () => {
     // Il est pourtant de base, et il fait bien disparaître les rectangles. Mais
-    // il COMPOSE au lieu de saturer : sous une lisière où les houppiers se
+    // il **compose** au lieu de saturer : sous une lisière où les houppiers se
     // recouvrent, la capture montrait le sol viré au noir et le liseré sableux
     // du bord effacé. C'est le puits d'encre que la saturation existe pour
     // éviter, et `MODE_COMPOSITION` l'emploie déjà pour la passe finale — une
@@ -241,7 +241,7 @@ describe("le mode d'accumulation tient sur un GPU", () => {
 describe("la liste des ombres", () => {
   it("est triée par profondeur, comme le sol et les arbres", () => {
     // Pas pour l'ombre elle-même — deux ombres qui se croisent donnent le même
-    // résultat dans les deux ordres — mais pour pouvoir ENTRELACER les couches
+    // résultat dans les deux ordres — mais pour pouvoir **entrelacer** les couches
     // au lot L2 sans retrier.
     const v = vue();
     const arbres = [
@@ -269,7 +269,7 @@ describe("la liste des ombres", () => {
 describe("les ombres s'arrêtent au terrain", () => {
   it("le masque est découpé en `destination-in` avant d'être multiplié", () => {
     // Le défaut qu'on corrige : un arbre du bord projetait son ombre sur le
-    // CIEL, et la parcelle avait une frange grise qui la faisait flotter.
+    // **ciel**, et la parcelle avait une frange grise qui la faisait flotter.
     // Découper le masque à la silhouette du sol règle le cas de n'importe quel
     // bord, y compris irrégulier, sans avoir à le décrire.
     expect(MODE_LIMITE).toBe("destination-in");
@@ -285,7 +285,7 @@ describe("les ombres s'arrêtent au terrain", () => {
     const limite = versEcranVue({ x: 50, y: COTE, z: 0 }, v);
     // Le soleil est au sud : l'ombre part vers le nord, donc au-delà du bord.
     // Dans cette projection `sy` croît avec `x + y` : aller vers le nord fait
-    // DESCENDRE à l'écran, donc la tache est plus bas que la limite.
+    // **descendre** à l'écran, donc la tache est plus bas que la limite.
     expect(auBord.sy).toBeGreaterThan(limite.sy);
   });
 });

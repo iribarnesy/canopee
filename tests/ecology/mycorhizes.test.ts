@@ -2,7 +2,7 @@
  * Réseaux mycorhiziens (critère C12, docs/regles.md §7.5).
  *
  * Ce qu'ils doivent produire :
- *  - un réseau met des ANNÉES à se tisser, et suit les hôtes compatibles ;
+ *  - un réseau met des **années** à se tisser, et suit les hôtes compatibles ;
  *  - les trois types ne se remplacent pas : un chêne ne profite pas du réseau
  *    d'une lande à bruyères ;
  *  - le labour les tranche, et ce coût-là dure bien après le passage.

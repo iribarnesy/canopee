@@ -1,21 +1,21 @@
 /**
- * Le sanglier (issue #73, critère G10) — et pourquoi il n'est PAS dans
+ * Le sanglier (issue #73, critère G10) — et pourquoi il n'est **pas** dans
  * `gibier.ts`.
  *
  * Le chevreuil est complet depuis longtemps : hauteur de dent, fourrage par
  * cellule, appétence, frottis, écorçage, clôture, chasse. L'issue suggérait de
  * généraliser cette architecture pour y loger le sanglier. **Après lecture,
- * non** : `gibier.ts` est bâti de bout en bout sur le BROUTAGE, et un sanglier
+ * non** : `gibier.ts` est bâti de bout en bout sur le **broutage**, et un sanglier
  * ne broute pas. Généraliser aurait produit une abstraction qui ne décrit ni
  * l'un ni l'autre.
  *
- * Ce qui se partage n'est pas le code, c'est le PATRON, et il est respecté ici :
- * une densité de CONTEXTE imposée par le paysage (un sanglier a un domaine
+ * Ce qui se partage n'est pas le code, c'est le **patron**, et il est respecté ici :
+ * une densité de **contexte** imposée par le paysage (un sanglier a un domaine
  * vital de 500 à 2000 hectares selon l'OFB — la parcelle n'a pas de population,
  * elle en reçoit une part), une répartition locale au prorata de ce que chaque
- * cellule OFFRE, et une comptabilité qui tient.
+ * cellule **offre**, et une comptabilité qui tient.
  *
- * ## Deux effets de signe OPPOSÉ, et aucun n'est écrit par espèce
+ * ## Deux effets de signe **opposé**, et aucun n'est écrit par espèce
  *
  * C'est ce qui rend cet animal intéressant plutôt que décoratif :
  *
@@ -45,7 +45,7 @@ import { rngFloat, rngStateFromSeed } from "./rng";
 /**
  * Part de la surface retournée en un an, à la densité de référence.
  *
- * C'est LE chiffre du lot, et il est mesuré — largement, parce que les études
+ * C'est **le** chiffre du lot, et il est mesuré — largement, parce que les études
  * ne s'accordent qu'à l'ordre de grandeur près et qu'elles ne parlent pas du
  * même milieu :
  *
@@ -54,7 +54,7 @@ import { rngFloat, rngStateFromSeed } from "./rng";
  *  - **en forêt, c'est dix fois plus** : 7,4 %/an pour les porcs féraux de
  *    Californie, 10,9 % puis 8,0 % sur deux années dans le Monte argentin.
  *
- * **Et les deux chiffres forestiers sont des populations INVASIVES** : les porcs
+ * **Et les deux chiffres forestiers sont des populations invasives** : les porcs
  * féraux de Californie et du Monte argentin n'ont pas de prédateurs, pas de
  * chasse réglée, et des densités sans rapport avec un massif français. Les
  * prendre pour référence était une erreur d'échantillon, de la même famille que
@@ -170,7 +170,7 @@ export function effortSemaine(sanglierParHa: number, semaine: number): number {
  * Il ne reste pas grand-chose d'une glandée là où les sangliers sont nombreux,
  * et c'est le contrepoids du geai : l'un cache les glands en les dispersant,
  * l'autre les mange sur place. La valeur est choisie pour que la régénération
- * du chêne reste POSSIBLE sous densité ordinaire et devienne difficile sous
+ * du chêne reste **possible** sous densité ordinaire et devienne difficile sous
  * forte densité — c'est la tension qu'on cherche, pas une extinction
  * *(à calibrer : la part réellement consommée d'une glandée varie de tout au
  * rien selon l'année semencière)*.
@@ -185,9 +185,9 @@ export const PART_GLANDEE_CONSOMMEE = 0.55;
  * `vent` et `oiseaux` s'en vont).
  */
 export function partGlandeeRestante(sanglierParHa: number): number {
-  // Forme exponentielle, et PAS une droite tronquée à zéro. Le premier jet
+  // Forme exponentielle, et **pas** une droite tronquée à zéro. Le premier jet
   // soustrayait linéairement : à 1,8 fois la densité de référence il ne restait
-  // exactement RIEN, et la régénération du chêne s'éteignait d'un coup. Mesuré
+  // exactement **rien**, et la régénération du chêne s'éteignait d'un coup. Mesuré
   // à 0,15 sanglier/ha : zéro recrue en quarante ans, contre 97 sans sanglier.
   //
   // Un seuil dur comme celui-là est le défaut que ce dépôt a déjà payé deux
@@ -233,7 +233,7 @@ export const LITIERE_ENFOUIE = 0.6;
 export const HERBE_ARRACHEE = 0.5;
 
 /**
- * Ce qu'un boutis retire au tassement : le sanglier AMEUBLIT.
+ * Ce qu'un boutis retire au tassement : le sanglier **ameublit**.
  *
  * C'est la face qu'on n'attend pas — on pense dégât, et la structure y gagne.
  * Un boutis casse la croûte et remet de la porosité dans les dix premiers

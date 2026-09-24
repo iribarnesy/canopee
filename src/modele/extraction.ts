@@ -1,5 +1,5 @@
 /**
- * CE QUE LE SIMULATEUR PREND EN COMPTE, lu à la source (#224).
+ * **Ce que le simulateur prend en compte**, lu à la source (#224).
  *
  * Deux extractions, et la même exigence derrière les deux : **la page ne tient
  * aucune liste**. Le dépôt porte déjà ces informations à un endroit, et une
@@ -11,7 +11,7 @@
  *   état et le mécanisme qui les tient. `scripts/recompte-realisme.py` garde
  *   déjà son tableau de score honnête ; on lit les mêmes lignes que lui.
  * - **Les étapes de la semaine** viennent des commentaires de section de
- *   `src/engine/tick.ts`, DANS L'ORDRE DU FICHIER — c'est-à-dire dans l'ordre
+ *   `src/engine/tick.ts`, **dans l'ordre du fichier** — c'est-à-dire dans l'ordre
  *   où elles s'exécutent.
  *
  * Module **pur** : il ne lit aucun fichier, on lui donne du texte. C'est ce qui
@@ -119,7 +119,7 @@ export interface Etape {
  * Les commentaires du tick renvoient aux règles, aux issues et aux critères —
  * « Le feu (§7.4, ch5) », « La mémoire d'abri, une fois l'an (F18) ». Ces
  * renvois sont précieux dans le code et muets pour qui lit la page. On ne coupe
- * que les parenthèses qui n'en contiennent QUE : « en deux passes
+ * que les parenthèses qui n'en contiennent **que** : « en deux passes
  * (ordre-indépendant) » reste entière.
  *
  * `issue ` est dans la liste parce qu'un essai a trouvé le trou : tous les
@@ -133,7 +133,7 @@ function sansRenvoiInterne(titre: string): string {
 /**
  * Les étapes d'une semaine, dans l'ordre où le tick les exécute.
  *
- * **Le rang est celui du FICHIER, pas celui du commentaire**, et il fallait
+ * **Le rang est celui du fichier, pas celui du commentaire**, et il fallait
  * choisir : les étiquettes écrites à la main (« 5 ter ter », « 6 ter bis »)
  * ont dérivé de l'ordre réel à force d'insertions — « 7. Régénération » est
  * écrite avant « 6 ter bis » dans le fichier. L'ordre du fichier, lui, est
@@ -157,10 +157,10 @@ export function etapesDuTick(source: string): Etape[] {
     // sections se touchent dans le fichier (la régénération et la mémoire
     // d'abri), et sans cette garde la première avalait le titre de la seconde.
     //
-    // **Deux morceaux, et pas un.** Un titre trop long DÉBORDE sur la ligne
+    // **Deux morceaux, et pas un.** Un titre trop long **déborde** sur la ligne
     // suivante, indentée sous le « // » — c'est la même phrase, coupée. Le
     // paragraphe qui suit, lui, en est une autre. Les fondre ensemble
-    // recollait « au sol et par arbre » à « ET transpiration » avec un point
+    // recollait « au sol et par arbre » à « **et** transpiration » avec un point
     // au milieu, et un essai l'a attrapé.
     const suiteDuTitre: string[] = [];
     const paragraphe: string[] = [];

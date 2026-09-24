@@ -41,7 +41,7 @@ export interface Station {
   nom: string;
   latitudeDeg: number;
   /**
-   * Profil de sol : la description PHYSIQUE dont tout le reste est dérivé
+   * Profil de sol : la description **physique** dont tout le reste est dérivé
    * (soil.ts). Les champs qui suivent sont calculés, jamais saisis.
    */
   profil: SoilProfile;
@@ -55,14 +55,14 @@ export interface Station {
   mineralizationPotentialKgHaWeek: number;
   /** azote minéral au démarrage, kg/ha */
   initialMineralNKgHa: number;
-  /** stock initial de carbone du sol (humus), t C/ha — LE gros stock (§12) */
+  /** stock initial de carbone du sol (humus), t C/ha — **le** gros stock (§12) */
   initialSoilCTHa: number;
   /** pH initial du sol (nuancier acidiphile→calcicole des espèces, atlas) */
   phInitial: number;
   /** remontée capillaire de nappe, mm/semaine (0 = pas de nappe accessible) */
   remonteeNappeMmSemaine: number;
   /**
-   * Drainage EXTERNE, mm/semaine : ce que l'exutoire peut évacuer, quelle que
+   * Drainage **externe**, mm/semaine : ce que l'exutoire peut évacuer, quelle que
    * soit la perméabilité du sol. Un fond de vallée à nappe affleurante ne peut
    * rien évacuer même sur sol sableux — c'est la topographie qui commande.
    * `Infinity` = versant bien drainé.
@@ -73,7 +73,7 @@ export interface Station {
    * plateau ouvert. Le vent dessèche les sujets découverts — c'est ce qui rend
    * l'effet brise-vent d'une haie ou d'une nurse payant (ch5, docs §9).
    *
-   * C'est l'ABRI du site, pas le vent : la vitesse régionale de la semaine est
+   * C'est l'**abri** du site, pas le vent : la vitesse régionale de la semaine est
    * dans `WeekWeather.ventMoyMs`, et ce que la parcelle reçoit vraiment est le
    * produit des deux (`ventRecuParLeSite`, feu.ts).
    */
@@ -106,7 +106,7 @@ export interface Station {
   /** couverture herbacée au démarrage ∈ [0,1] (friche enherbée vs sol nu) */
   herbeInitiale: number;
   /**
-   * Le paysage autour de la parcelle (paysage.ts). C'est LUI qui décide de la
+   * Le paysage autour de la parcelle (paysage.ts). C'est **lui** qui décide de la
    * pluie de semis, de la densité de gibier, des dépôts d'azote, de
    * l'exposition au vent et de la fréquentation humaine — ces cinq choses ne
    * sont pas indépendantes, et les saisir séparément permettait de décrire une
@@ -122,7 +122,7 @@ export interface Station {
   voisinage: { especeId: string; semisParAn: number }[];
   /**
    * Densité de cervidés du paysage, individus/ha (« équivalent chevreuil »).
-   * C'est une donnée de CONTEXTE, au même titre que le voisinage semencier :
+   * C'est une donnée de **contexte**, au même titre que le voisinage semencier :
    * le domaine vital d'un chevreuil fait des dizaines d'hectares, la parcelle
    * ne détermine pas sa population, elle en reçoit la part que son attrait
    * justifie (gibier.ts). Ordres de grandeur français : 0,05/ha en plaine
@@ -133,7 +133,7 @@ export interface Station {
    * Dépôts atmosphériques d'azote, kg/ha/an. Ce n'est pas un détail : entre
    * les oxydes d'azote de la combustion et l'ammoniac de l'élevage, le ciel
    * français apporte 8 à 25 kg N/ha/an selon la région. Sur un sol pauvre,
-   * c'est PLUS que ce que la minéralisation de l'humus fournit — c'est même
+   * c'est **plus** que ce que la minéralisation de l'humus fournit — c'est même
    * ce qui fait disparaître les landes et les pelouses maigres d'Europe, en
    * les fertilisant assez pour que les graminées et les ligneux prennent le
    * dessus. L'ignorer rendait nos stations pauvres invivables.
@@ -141,7 +141,7 @@ export interface Station {
   depositionNKgHaAn: number;
   /**
    * Densité de sangliers du paysage, individus/ha (`sanglier.ts`). Donnée de
-   * CONTEXTE comme celle des cervidés, et pour une raison plus forte encore :
+   * **contexte** comme celle des cervidés, et pour une raison plus forte encore :
    * le domaine vital d'un sanglier fait 500 à 2000 hectares.
    */
   sanglierParHa: number;
@@ -176,7 +176,7 @@ export interface SoilState {
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: number[];
   /**
-   * Carbone du bois mort COUCHÉ sur cette cellule, g/m². Distinct du bois mort
+   * Carbone du bois mort **couché** sur cette cellule, g/m². Distinct du bois mort
    * debout (`carbon.deadWoodKgC`, qui reste un stock de parcelle tant que les
    * chandelles tiennent) : un tronc par terre se décompose plus vite, fait de
    * l'humus là où il est, protège la terre sous lui et abrite d'autres bêtes
@@ -184,16 +184,16 @@ export interface SoilState {
    */
   boisAuSolCG: number[];
   /**
-   * Part de ce bois couché qui BARRE l'eau, ∈ [0,1] : moyenne, pondérée par
+   * Part de ce bois couché qui **barre** l'eau, ∈ [0,1] : moyenne, pondérée par
    * les masses posées, de l'efficacité barrante de chaque tronc — sa longueur
-   * efficace au-delà du seuil de 30° (boisMort.ts). Ce n'est PAS un stock de
+   * efficace au-delà du seuil de 30° (boisMort.ts). Ce n'est **pas** un stock de
    * carbone : c'est un descriptif du stock voisin, et l'ajouter aux bilans
    * compterait le même bois deux fois.
    *
    * Une masse seule ne suffisait pas : un tronc en travers d'un thalweg barre
    * l'eau, le même tronc couché dans le sens de la pente ne barre rien. Deux
-   * choses entrent donc ici, et pas une : l'ORIENTATION du tronc, et son
-   * CONTACT avec le sol — un tronc qui repose sur son houppier laisse l'eau
+   * choses entrent donc ici, et pas une : l'**orientation** du tronc, et son
+   * **contact** avec le sol — un tronc qui repose sur son houppier laisse l'eau
    * passer dessous, quelle que soit sa direction (boisMort.ts). Un chablis
    * naturel barre ainsi près de quatre fois moins qu'un fût qu'on a ébranché
    * et calé.
@@ -204,25 +204,25 @@ export interface SoilState {
    */
   boisEnTraversPart: number[];
   /**
-   * TASSEMENT du sol par cellule ∈ [0,1] : 0 = structure intacte, 1 = tassé.
+   * **tassement** du sol par cellule ∈ [0,1] : 0 = structure intacte, 1 = tassé.
    *
    * Ce qui change vraiment sous une conduite agricole n'est pas la texture ni
-   * le pH, c'est l'ARRANGEMENT des particules. Un limon tassé et le même limon
+   * le pH, c'est l'**arrangement** des particules. Un limon tassé et le même limon
    * en bonne structure ne se comportent pas pareil (tassement.ts).
    */
   tassement: number[];
   /**
-   * Phosphore ASSIMILABLE, g/m². Il ne diffuse pas : ce qui est dans une
+   * Phosphore **assimilable**, g/m². Il ne diffuse pas : ce qui est dans une
    * cellule n'y bougera pas (pk.ts).
    */
   phosphoreG: number[];
   /**
-   * Phosphore FIXÉ (fer, aluminium, calcium), g/m². Immense et lentement
+   * Phosphore **fixé** (fer, aluminium, calcium), g/m². Immense et lentement
    * relargué : un sol peut être riche en phosphore total et affamer les
    * plantes.
    */
   phosphoreFixeG: number[];
-  /** Potassium ÉCHANGEABLE, g/m² : retenu par le complexe, lessivable. */
+  /** Potassium **échangeable**, g/m² : retenu par le complexe, lessivable. */
   potassiumG: number[];
   /**
    * Réserve de potassium non échangeable, g/m² : coincée entre les feuillets
@@ -250,32 +250,32 @@ export interface SoilState {
    */
   epaisseurPerdueCm: number[];
   /**
-   * BASES ÉCHANGEABLES de la cellule, eq/m² : le calcium, le magnésium, le
+   * **bases échangeables** de la cellule, eq/m² : le calcium, le magnésium, le
    * potassium et le sodium fixés sur le complexe argilo-humique (`bases.ts`).
    *
    * C'est ce pool-là qui est l'état ; le pH n'en est que la lecture.
    */
   basesEq: number[];
   /**
-   * Les bases échangeables du SOUS-SOL, eq/m² : tout ce qui est sous l'horizon
+   * Les bases échangeables du **sous-sol**, eq/m² : tout ce qui est sous l'horizon
    * de surface, en un seul compartiment (`bases.ts`, critère C15).
    *
-   * C'est un BUDGET, pas un compteur : il reçoit l'altération de ses propres
+   * C'est un **budget**, pas un compteur : il reçoit l'altération de ses propres
    * horizons et ce que la surface lui lessive, il perd ce que les racines y
-   * pompent et ce qui passe sous la zone racinaire. Aucun arbre ne le LIT
+   * pompent et ce qui passe sous la zone racinaire. Aucun arbre ne le **lit**
    * encore : le moteur sait dire que le fond s'appauvrit, pas encore ce que
    * l'appauvrissement fait aux racines qui y poussent.
    */
   basesProfondEq: number[];
   /**
-   * Teneur en calcium de la litière PRÉSENTE sur la cellule, mg/g de matière
+   * Teneur en calcium de la litière **présente** sur la cellule, mg/g de matière
    * sèche : moyenne pondérée par les masses déposées, tenue comme l'est déjà la
    * vitesse de décomposition (`litterK`). C'est elle qui décide si ce qui se
    * décompose ici acidifie le complexe ou l'alimente.
    */
   litterCaMgG: number[];
   /**
-   * pH de la cellule. **Ce n'est plus un état : c'est une LECTURE** du taux de
+   * pH de la cellule. **Ce n'est plus un état : c'est une lecture** du taux de
    * saturation du complexe, recalculée à chaque tick depuis `basesEq`
    * (`bases.ts`). Le chaulage n'écrit plus ici — il apporte des bases, et le pH
    * suit. Le tableau est conservé parce que tout le moteur lit un pH par
@@ -286,8 +286,8 @@ export interface SoilState {
    * Couverture de la strate herbacée ∈ [0,1] par cellule (herbe.ts) : la
    * concurrence que subissent les jeunes plants, et la protection du sol.
    *
-   * C'est une SOMME, recalculée chaque semaine depuis `herbeEmprise` : ce que
-   * les espèces présentes couvrent VRAIMENT cette semaine-là. Tout ce qui lit
+   * C'est une **somme**, recalculée chaque semaine depuis `herbeEmprise` : ce que
+   * les espèces présentes couvrent **vraiment** cette semaine-là. Tout ce qui lit
    * la strate — le feu, l'érosion, l'évaporation, le gibier — lit cette ligne
    * et n'a pas à connaître les espèces.
    */
@@ -295,45 +295,45 @@ export interface SoilState {
   /**
    * Emprise de chaque espèce herbacée sur chaque cellule ∈ [0,1], à plat :
    * `herbeEmprise[i * N_HERBACEES + s]` (herbacees.ts). C'est la place que
-   * l'espèce TIENT — bulbes et rhizomes compris —, pas ce qu'elle montre : une
+   * l'espèce **tient** — bulbes et rhizomes compris —, pas ce qu'elle montre : une
    * anémone tient son mètre carré toute l'année et ne le couvre qu'en avril.
    * La somme sur une cellule ne dépasse jamais 1 : le sol est fini.
    */
   herbeEmprise: number[];
   /**
    * Feuillage de chaque espèce herbacée, même indexation à plat : ce qui est
-   * VERT. Il suit l'emprise à travers la saison et la sécheresse, et c'est lui
+   * **vert**. Il suit l'emprise à travers la saison et la sécheresse, et c'est lui
    * que la fauche, le feu et le gibier emportent — l'emprise, elle, reste.
    * `herbeCouverture` en est la somme par cellule.
    */
   herbeFeuillage: number[];
   /**
-   * Biomasse herbacée présente ∈ [0,1] : elle SUIT la couverture mais ne
+   * Biomasse herbacée présente ∈ [0,1] : elle **suit** la couverture mais ne
    * disparaît pas quand l'herbe jaunit — le foin sur pied reste le meilleur
    * combustible de l'été. Seuls le feu, la fauche et la décomposition la font
    * baisser.
    */
   herbeBiomasse: number[];
   /**
-   * GRAIN accumulé par cellule et par culture, en part du rendement annuel
+   * **grain** accumulé par cellule et par culture, en part du rendement annuel
    * maximal de l'espèce (#136). Même indexation à plat que `herbeEmprise`.
    *
-   * C'est une INTÉGRALE : le grain est ce que la plante a assimilé pendant sa
+   * C'est une **intégrale** : le grain est ce que la plante a assimilé pendant sa
    * saison, semaine après semaine, et non une fonction de son état du jour.
    * La moisson le remet à zéro et l'emporte hors de la parcelle.
    */
   cultureGrain: number[];
   /**
-   * Le DÉNOMINATEUR du rendement : ce que la culture aurait assimilé sans
+   * Le **dénominateur** du rendement : ce que la culture aurait assimilé sans
    * aucun facteur limitant, cumulé de la même façon. Le rapport des deux est
    * la part du rendement maximal (`herbacees.ts:partDuRendement`).
    */
   cultureGrainPotentiel: number[];
   /**
-   * RESSOURCE FLORALE vécue par cellule ∈ [0,1] (#70, critère G4) : ce que les
+   * **ressource florale** vécue par cellule ∈ [0,1] (#70, critère G4) : ce que les
    * pollinisateurs ont trouvé à manger ici, ces dernières semaines.
    *
-   * C'est une MÉMOIRE, comme `herbeHumidite`, et c'est tout le sujet : une
+   * C'est une **mémoire**, comme `herbeHumidite`, et c'est tout le sujet : une
    * colonie qui a jeûné en mars n'est pas là en juin pour polliniser le
    * pommier. Une valeur instantanée dirait l'inverse — que chaque arbre se
    * pollinise lui-même à proportion de ses propres fleurs.
@@ -371,7 +371,7 @@ export interface GameState {
   economy: EconomyState;
   carbon: CarbonState;
   /**
-   * Tas de broyat en attente d'être épandu. C'est un TAS : il n'a pas de
+   * Tas de broyat en attente d'être épandu. C'est un **tas** : il n'a pas de
    * position sur la parcelle, contrairement à tout le reste du modèle — et
    * c'est bien ce qu'il est dans la réalité, une remorque de plaquettes qu'on
    * ira vider là où on en a besoin.
@@ -437,26 +437,26 @@ export interface TickFluxes {
   /** potassium lessivé, kg/ha */
   leachedKKgHa: number;
   /**
-   * LE BUDGET DE BASES de la semaine, eq/ha, terme par terme (bases.ts). Il est
-   * exposé pour être VÉRIFIÉ : la variation du pool doit valoir apports +
+   * **le budget de bases** de la semaine, eq/ha, terme par terme (bases.ts). Il est
+   * exposé pour être **vérifié** : la variation du pool doit valoir apports +
    * litière − lessivage − charge acide, à l'arrondi près. Un pool dont on ne
    * publie pas le budget est un pool qu'on ne peut pas mettre en défaut.
    */
   basesApportEqHa: number;
-  /** ce qui DESCEND de la surface vers le sous-sol (ce n'est plus une sortie) */
+  /** ce qui **descend** de la surface vers le sous-sol (ce n'est plus une sortie) */
   basesLessiveEqHa: number;
   basesLitiereEqHa: number;
   basesAcideEqHa: number;
   /**
-   * LA POMPE : bases retirées au sous-sol par les racines cette semaine, eq/ha
-   * (bases.ts, critère C15). Elle n'entre pas dans le budget de SURFACE ci-
+   * **la pompe** : bases retirées au sous-sol par les racines cette semaine, eq/ha
+   * (bases.ts, critère C15). Elle n'entre pas dans le budget de **surface** ci-
    * dessus — c'est le budget du pool profond à elle seule, et la variation de
    * `basesProfondEq` doit valoir exactement son opposé.
    */
   basesPreleveEqHa: number;
   /**
-   * LE BUDGET DU SOUS-SOL, eq/ha : ce qu'il reçoit (son altération, plus ce que
-   * la surface lui a lessivé) et ce qui QUITTE le profil par le bas. Avec la
+   * **le budget du sous-sol**, eq/ha : ce qu'il reçoit (son altération, plus ce que
+   * la surface lui a lessivé) et ce qui **quitte** le profil par le bas. Avec la
    * pompe ci-dessus, la variation de `basesProfondEq` doit valoir
    * `apportProfond − prélèvement − export`.
    */
@@ -485,7 +485,7 @@ export interface TickFluxes {
   /** terre effectivement sortie de la parcelle, kg/m² (le reste s'est déposé) */
   erosionSortieKgM2: number;
   /**
-   * Lame que le bois couché EN TRAVERS a détournée du ruissellement vers le
+   * Lame que le bois couché **en travers** a détournée du ruissellement vers le
    * sol cette semaine, mm (boisMort.ts). Zéro dès que le sol est plein : un
    * barrage ne fait pas rentrer l'eau dans une éponge saturée.
    */
@@ -509,10 +509,10 @@ export interface TickFluxes {
   /** développement moyen des réseaux mycorhiziens ∈ [0,1] */
   mycorhizesMoyen: number;
   mineralizationKgHa: number;
-  /** N SORTI du sol cette semaine (arbres + tapis), kg/ha */
+  /** N **sorti** du sol cette semaine (arbres + tapis), kg/ha */
   uptakeKgHa: number;
   /**
-   * N réellement SERVI aux arbres non fixateurs, kg/ha. Avec `uptakeHerbeKgHa`,
+   * N réellement **servi** aux arbres non fixateurs, kg/ha. Avec `uptakeHerbeKgHa`,
    * il doit retrouver `uptakeKgHa` au gramme près : le sol ne perd rien qui
    * n'arrive dans une plante. L'égalité est tenue par
    * `tests/properties/tick-conservation.test.ts` — elle manquait, et un
@@ -526,7 +526,7 @@ export interface TickFluxes {
   litterfallKgHa: number;
   /** N libéré par la décomposition de la litière, kg/ha */
   litterDecayKgHa: number;
-  /** N NOUVEAU entré par la fixation symbiotique (litière des fixateurs), kg/ha */
+  /** N **nouveau** entré par la fixation symbiotique (litière des fixateurs), kg/ha */
   fixationKgHa: number;
 }
 
@@ -550,7 +550,7 @@ export function createGameState(
   const cecDepart = station.profil[0] ? capaciteEchangeEqM2(station.profil[0]) : 0;
   const saturationDepart = saturationDepuisPh(station.phInitial);
   const basesDepart = cecDepart * saturationDepart;
-  // Le sous-sol démarre au MÊME taux de saturation que la surface : la station
+  // Le sous-sol démarre au **même** taux de saturation que la surface : la station
   // ne déclare qu'un pH, et lui inventer un gradient de départ serait affirmer
   // quelque chose qu'elle ne dit pas.
   const basesProfondDepart = capaciteEchangeProfondeEqM2(station.profil) * saturationDepart;
@@ -580,7 +580,7 @@ export function createGameState(
       boisAuSolCG: new Array(n).fill(0),
       boisEnTraversPart: new Array(n).fill(0),
       tassement: new Array(n).fill(0),
-      // Les bases sont INVERSÉES depuis le pH déclaré par la station, et non
+      // Les bases sont **inversées** depuis le pH déclaré par la station, et non
       // l'inverse : les stations décrivent un pH, pas un taux de saturation, et
       // une partie doit démarrer exactement au pH annoncé (bases.ts).
       basesEq: new Array(n).fill(basesDepart),
@@ -656,7 +656,7 @@ export function createGameState(
 const RACINES_PLANCHER_INSTANCIE = 0.35;
 
 /**
- * Profondeur racinaire d'un arbre qu'on INSTANCIE à une taille donnée, cm.
+ * Profondeur racinaire d'un arbre qu'on **instancie** à une taille donnée, cm.
  *
  * Les deux semeurs posaient 20 cm quelle que soit la hauteur demandée (#84) :
  * un arbre instancié à vingt-cinq mètres — ce que font une bonne part des essais
@@ -664,7 +664,7 @@ const RACINES_PLANCHER_INSTANCIE = 0.35;
  * première semaine. Tout le reste de son état est pourtant dérivé de sa hauteur,
  * le diamètre compris.
  *
- * On lui donne donc le PLANCHER que `nouvelleProfondeurRacines` lui garantirait
+ * On lui donne donc le **plancher** que `nouvelleProfondeurRacines` lui garantirait
  * de toute façon, et jamais moins que les 20 cm d'un semis. Ce n'est pas une
  * faveur : c'est l'état qu'il aurait s'il avait poussé jusque-là.
  */
@@ -717,7 +717,7 @@ export function plantAt(
 }
 
 /**
- * Proto-action : planter n plants à des positions pseudo-aléatoires SEEDÉES
+ * Proto-action : planter n plants à des positions pseudo-aléatoires **seedées**
  * (consomme le rng de la partie — deux parties de même seed plantent pareil).
  */
 export function plantScattered(

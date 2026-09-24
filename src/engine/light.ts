@@ -1,8 +1,8 @@
 /**
  * Lumière spatiale (docs/regles.md §5) : chaque arbre reçoit la lumière qui
- * traverse les couronnes des arbres PLUS HAUTS dont l'ombre couvre sa
+ * traverse les couronnes des arbres **plus hauts** dont l'ombre couvre sa
  * position (Beer-Lambert par couronne traversée, k = 0,5). L'ombre d'une
- * couronne est décalée vers le NORD (+y) d'une fraction de la hauteur —
+ * couronne est décalée vers le **nord** (+y) d'une fraction de la hauteur —
  * le soleil est au sud en France : planter en lignes est-ouest ou nord-sud
  * n'a pas le même effet. Les caducs n'ombragent pas hors saison de végétation,
  * sauf les marcescents, qui gardent leurs feuilles mortes jusqu'au printemps.
@@ -18,7 +18,7 @@ const BEER_LAMBERT_K = 0.5;
  * Décalage de l'ombre vers le nord, en fraction de la hauteur (moyenne
  * annuelle, lat ~45°).
  *
- * Exporté parce que le RENDU le lit : une ombre dessinée dans une autre
+ * Exporté parce que le **rendu** le lit : une ombre dessinée dans une autre
  * direction que celle où le moteur la calcule mentirait sur qui ombrage qui,
  * et c'est précisément ce que le §0 de `docs/interface-visuelle.md` interdit.
  * Le soleil est donc au sud à l'écran comme dans le modèle.
@@ -31,14 +31,14 @@ const BUCKET_M = 12;
  * couches parfaites. exp(−4,5) ≈ 1,1 % de lumière au sol — l'ordre de grandeur
  * mesuré sous les couverts les plus sombres *(à calibrer)*.
  *
- * C'est une ASYMPTOTE : l'extinction brute a beau valoir huit, vingt ou un
+ * C'est une **asymptote** : l'extinction brute a beau valoir huit, vingt ou un
  * million, la valeur rendue tend vers 4,5 sans jamais l'atteindre. Il reste donc
  * toujours `exp(−MAX_EXTINCTION)` = 1,11 % de lumière, partout, quoi qu'on
  * empile. L'intention est juste — un sous-bois n'est jamais noir, il y a des
- * trouées de ciel et des taches de soleil — mais la VALEUR n'est pas sourcée :
+ * trouées de ciel et des taches de soleil — mais la **valeur** n'est pas sourcée :
  * les sous-bois mesurés descendent sous 2 % et n'ont pas de mur.
  *
- * EXPORTÉE parce que ce plancher porte une conséquence qu'aucune simulation ne
+ * **Exportée** parce que ce plancher porte une conséquence qu'aucune simulation ne
  * révèle : une espèce dont le seuil de stress d'ombre passe dessous devient
  * immortelle à l'ombre. Ce seuil vaut `2 × STRESS_ONSET × compensation`, soit
  * 0,9 fois la compensation — et non la compensation, qui ne gouverne que
@@ -46,16 +46,16 @@ const BUCKET_M = 12;
  * c'est pourquoi une hêtraie plantée à deux mètres garde ses 361 tiges au bout
  * de cent vingt ans (#65).
  *
- * VINGT-TROIS POUR CENT D'ÉCART, c'est-à-dire un équilibre sur le fil : deux
+ * **Vingt-trois pour cent d'écart**, c'est-à-dire un équilibre sur le fil : deux
  * constantes indépendantes se croisent là, et recalibrer l'une ou l'autre
  * renverserait le résultat sans que personne l'ait décidé. Dans la réalité le
- * hêtre dominé MEURT, par famine carbonée — un budget cumulé, pas un seuil
+ * hêtre dominé **meurt**, par famine carbonée — un budget cumulé, pas un seuil
  * instantané (#96). `lumiere.test.ts` épingle le rapport entre les deux.
  */
 export const MAX_EXTINCTION = 4.5;
 
 /**
- * ─── LE HOUPPIER SUIT LE DIAMÈTRE, PAS LA HAUTEUR ────────────────────────────
+ * ─── **le houppier suit le diamètre**, **pas la hauteur** ────────────────────────────
  *
  * Ce que la formule d'avant disait : `rayon = houppierRatio × hauteur`. Une
  * perche étiolée de dix mètres et onze centimètres recevait donc le houppier
@@ -72,7 +72,7 @@ export const MAX_EXTINCTION = 4.5;
  * `r` et d'indice foliaire `λ` porte `π r² λ` de feuille, alimentée par une
  * section `∝ D²` — donc **`r ∝ D`**. C'est aussi l'allométrie que les
  * forestiers emploient depuis toujours : les tables de largeur de houppier se
- * lisent contre le DIAMÈTRE, jamais contre la hauteur.
+ * lisent contre le **diamètre**, jamais contre la hauteur.
  *
  * **Et le lot est l'identité pour un arbre normalement conformé.** Le rayon
  * vaut exactement l'ancien quand la tige porte l'élancement d'une tige sans
@@ -109,7 +109,7 @@ export const ELANCEMENT_HOUPPIER_REFERENCE = 50;
 export const ELARGISSEMENT_HOUPPIER_MAX = 1.6;
 
 /**
- * Rayon du houppier, m. Proportionnel au DIAMÈTRE (modèle du tube), calé pour
+ * Rayon du houppier, m. Proportionnel au **diamètre** (modèle du tube), calé pour
  * redonner `houppierRatio × hauteur` à l'élancement de référence.
  *
  * Une tige sans diamètre enregistré retombe sur l'ancienne formule : c'est un
@@ -127,7 +127,7 @@ export function crownRadiusM(heightM: number, houppierRatio: number, diametreCm:
  * Profondeur maximale d'un houppier, en fraction de la hauteur : un arbre venu
  * seul garde ses branches presque jusqu'au sol *(à calibrer)*.
  *
- * C'est un PLAFOND, pas un trait d'espèce. La profondeur réelle, elle, se
+ * C'est un **plafond**, pas un trait d'espèce. La profondeur réelle, elle, se
  * calcule — voir `baseHouppierCible`.
  */
 export const PROFONDEUR_HOUPPIER_MAX = 0.9;
@@ -136,9 +136,9 @@ export const PROFONDEUR_HOUPPIER_MAX = 0.9;
  * Hauteur en dessous de laquelle les branches ne paient plus leur respiration,
  * m — la base du houppier vers laquelle l'arbre tend (docs/realisme.md B10).
  *
- * Ce n'est PAS une constante d'espèce, et c'est tout l'enjeu : le même chêne
+ * Ce n'est **pas** une constante d'espèce, et c'est tout l'enjeu : le même chêne
  * garde ses branches jusqu'en bas au milieu d'un pré et s'auto-élague sur
- * quinze mètres en futaie serrée. Ce que l'espèce apporte, c'est le SEUIL
+ * quinze mètres en futaie serrée. Ce que l'espèce apporte, c'est le **seuil**
  * (`lumiere.compensation`, déjà sourcé par l'atlas) et l'opacité de sa propre
  * couronne (`lumiere.lai`) ; la compétition apporte le reste.
  *
@@ -171,7 +171,7 @@ export function baseHouppierCible(
   if (opacite <= 0 || compensation <= 0) return 0;
   // Une cime déjà sous son point de compensation : plus une seule branche ne
   // paie sa respiration, pas même la plus haute. C'est la limite continue du
-  // calcul (ln(1) = 0), et c'est un arbre qui ne pousse plus. Il ne MEURT pas
+  // calcul (ln(1) = 0), et c'est un arbre qui ne pousse plus. Il ne **meurt** pas
   // pour autant : le stress ne monte qu'à 0,9 fois la compensation
   // (`fLumSurvival`, trees.ts), et entre les deux l'arbre patiente sur ses
   // réserves.
@@ -190,7 +190,7 @@ export function baseHouppierCible(
  * d'œuvre). Dans les deux cas la couronne perd sa tranche basse, et intercepte
  * moins.
  *
- * C'est LINÉAIRE en profondeur de couronne, donc probablement un peu fort —
+ * C'est **linéaire** en profondeur de couronne, donc probablement un peu fort —
  * les branches basses sont les plus ombragées, donc les moins fournies.
  * Affiner demande une source sur la distribution verticale du feuillage.
  */
@@ -214,7 +214,7 @@ interface Shadow {
 
 /** Ombres actives (arbres vivants, en feuilles), indexées par panier spatial. */
 /**
- * Part du feuillage d'un arbre qui INTERCEPTE la lumière ∈ [0,1]. Un booléen ne
+ * Part du feuillage d'un arbre qui **intercepte** la lumière ∈ [0,1]. Un booléen ne
  * suffit pas : le bouleau est en feuilles quand le frêne est encore nu, et un
  * houppier à moitié sorti ne fait pas la même ombre qu'un houppier plein
  * (phenologie.ts). Ce qui ombre n'est pas ce qui assimile — les feuilles mortes
@@ -278,22 +278,22 @@ function extinctionAt(
     // Plus haut = ombrage plein ; codominant (dans les 25 % sous la cible) =
     // ombrage latéral partiel.
     //
-    // CE COMMENTAIRE JUSTIFIAIT LE TERME PAR L'AUTO-ÉCLAIRCIE — « sans lui, une
+    // **Ce commentaire justifiait le terme par l'auto-éclaircie** — « sans lui, une
     // cohorte dense de même hauteur ne se gênerait jamais et l'auto-éclaircie
     // n'émergerait pas » — et la campagne de #65 a mesuré le contraire. Terme
-    // ANNULÉ (poids 0), une pineraie plantée à 2 m passe quand même de 361 à
+    // **annulé** (poids 0), une pineraie plantée à 2 m passe quand même de 361 à
     // 59-69 tiges en cent vingt ans, contre 47-54 au poids d'aujourd'hui. Elle
     // s'éclaircit donc sans lui, et à peine moins vite.
     //
-    // Ce qui l'éclaircit n'est pas la lumière : sur ~310 morts, les RAVAGEURS en
-    // prennent 205 à 244 et les CHABLIS 55 à 98 ; l'ombre, 4 à 7. La mortalité
+    // Ce qui l'éclaircit n'est pas la lumière : sur ~310 morts, les **ravageurs** en
+    // prennent 205 à 244 et les **chablis** 55 à 98 ; l'ombre, 4 à 7. La mortalité
     // densité-dépendante de ce moteur passe par la pression parasitaire et le
     // vent. Le poids ne déplace ni l'élancement, ni l'auto-éclaircie, ni le
     // tempo de la succession, ni le tri des espèces.
     //
     // Le terme reste — il est physiquement juste, un voisin de même taille
-    // ombrage bel et bien de côté — mais il ne porte AUCUNE des conclusions
-    // qu'on lui prêtait. Ce qui porte, c'est le SEUIL : le passer de 0,75 à 0
+    // ombrage bel et bien de côté — mais il ne porte **aucune** des conclusions
+    // qu'on lui prêtait. Ce qui porte, c'est le **seuil** : le passer de 0,75 à 0
     // effondre le peuplement (45 tiges au lieu de 276 à cent vingt ans). Ce
     // n'est pas une piste de calibration pour autant, c'est une absurdité
     // physique — à seuil nul, un semis de deux mètres ombrage une cime de
@@ -308,7 +308,7 @@ function extinctionAt(
     if (d2 <= s.r2) {
       // Pénombre : l'ombre est pleine à l'aplomb du houppier et s'estompe vers
       // son bord (couronne moins épaisse, lumière latérale). C'est ce dégradé
-      // qui crée les micro-situations d'abri — un sujet planté EN LISIÈRE d'une
+      // qui crée les micro-situations d'abri — un sujet planté **en lisière** d'une
       // nurse est protégé du vent et du rayonnement sans être étouffé (ch1-A).
       extinction += weight * s.extinction * (1 - d2 / s.r2);
     }
@@ -345,7 +345,7 @@ export function lightAtPoint(
 /**
  * L'index d'ombres, bâti une fois pour plusieurs interrogations.
  *
- * `lightAtPoint` est commode et coûte cher : elle RECONSTRUIT l'index à chaque
+ * `lightAtPoint` est commode et coûte cher : elle **reconstruit** l'index à chaque
  * appel. Tant qu'on lui demandait un point, ça ne se voyait pas ; la
  * régénération, elle, lui en demande des centaines dans la même année, et le
  * peuplement ne bouge pas entre deux. À quatre mille tiges, cette
@@ -367,7 +367,7 @@ export function lumiereAuPointIndexee(ombres: IndexOmbres, x: number, y: number)
 
 /**
  * Abri au vent d'un point ∈ [0,1] (docs/regles.md §3, ch5 « haie brise-vent »).
- * Contrairement à l'ombre et aux racines, la protection au vent PORTE LOIN :
+ * Contrairement à l'ombre et aux racines, la protection au vent **porte loin** :
  * une haie abrite sur 10 à 20 fois sa hauteur. C'est ce découplage qui rend
  * l'agroforesterie payante en milieu venté — on protège sans concurrencer,
  * à condition d'espacer.
@@ -387,7 +387,7 @@ export function windShelterAt(
     // Au-delà de 12 hauteurs, l'effet est nul ; tout près, il plafonne.
     if (d > 12 * t.heightM) continue;
     shelter += (0.12 * t.heightM) / Math.max(1.5, d);
-    // L'abri SATURE, et c'est ce qui rend l'arrêt exact : tous les termes qui
+    // L'abri **sature**, et c'est ce qui rend l'arrêt exact : tous les termes qui
     // restent sont positifs (`heightM` vaut au moins 0,5), donc une somme déjà
     // au-dessus de 1 ne peut plus que monter et le `min` rendra 1 de toute
     // façon. Sur un fourré de quatre mille tiges, la plupart des points sont
@@ -400,20 +400,20 @@ export function windShelterAt(
 /**
  * L'abri au vent, rangé par paniers — même résultat, sans le balayage complet.
  *
- * `windShelterAt` coûtait le PEUPLEMENT ENTIER par arbre et par semaine, donc un
+ * `windShelterAt` coûtait le **peuplement entier** par arbre et par semaine, donc un
  * n² hebdomadaire : c'est le premier poste de calcul du tick dès qu'une parcelle
  * se peuple, 9,7 % du temps à 2 300 tiges et une part qui grandit avec le carré
  * (#99). Or la boucle jette la plupart des voisins sur un test de distance.
  *
- * Chaque arbre est donc rangé dans les paniers que sa PORTÉE couvre — douze fois
+ * Chaque arbre est donc rangé dans les paniers que sa **portée** couvre — douze fois
  * sa hauteur, la distance au-delà de laquelle il n'abrite plus rien — et une
  * interrogation ne lit que le panier de son point. Un sous-arbrisseau de
  * soixante centimètres porte à sept mètres et n'encombre qu'un panier ; un arbre
  * de vingt mètres porte plus loin que la parcelle et entre dans tous, ce qui est
  * exactement ce qu'il faut puisqu'il abrite tout le monde.
  *
- * LE RÉSULTAT EST LE MÊME AU BIT PRÈS, et ça ne va pas de soi : une somme de
- * flottants n'est pas associative, donc changer l'ORDRE des voisins changerait
+ * **Le résultat est le même au bit près**, et ça ne va pas de soi : une somme de
+ * flottants n'est pas associative, donc changer l'**ordre** des voisins changerait
  * les derniers chiffres et pourrait déplacer un seuil quelque part dans la
  * suite. Les arbres sont insérés dans l'ordre de `trees`, si bien que chaque
  * panier les garde dans cet ordre et que la somme parcourt la même suite de
@@ -459,7 +459,7 @@ export function abriVentIndexe(
     const dx = t.x - x;
     const dy = t.y - y;
     const d = Math.sqrt(dx * dx + dy * dy);
-    // Le panier est un SURENSEMBLE : il retient les arbres dont la portée
+    // Le panier est un **surensemble** : il retient les arbres dont la portée
     // touche la maille, pas ceux dont elle atteint le point. Le même test que
     // la référence tranche, et c'est lui qui garantit l'égalité.
     if (d > 12 * t.heightM) continue;
@@ -470,7 +470,7 @@ export function abriVentIndexe(
 }
 
 /**
- * Lumière relative au sol de CHAQUE cellule (microclimat : l'évaporation est
+ * Lumière relative au sol de **chaque** cellule (microclimat : l'évaporation est
  * réduite sous couvert, docs/regles.md §3).
  */
 export function computeGroundLight(

@@ -5,7 +5,7 @@
  * Le moteur n'avait aucune variable de structure. Un sol y était défini par sa
  * texture, sa matière organique et son pH — trois choses qui ne bougent pas ou
  * peu — alors que ce qui change vraiment sous une conduite agricole, c'est
- * l'ARRANGEMENT de ces particules. Un limon tassé et le même limon en bonne
+ * l'**arrangement** de ces particules. Un limon tassé et le même limon en bonne
  * structure ont la même texture et ne se comportent pas pareil.
  */
 
@@ -112,9 +112,9 @@ describe("dans une partie, labourer tasse — sauf sous les arbres", () => {
 
 describe("le tassement se paie sur ce qui pousse (câblage du moteur)", () => {
   /**
-   * On ne compare PAS une parcelle labourée à une parcelle intacte : le labour
+   * On ne compare **pas** une parcelle labourée à une parcelle intacte : le labour
    * brûle de l'humus, libère de l'azote et tue les mycorhizes, et on ne saurait
-   * pas lequel de ces effets on mesure. On fait varier LE SEUL tassement, tout
+   * pas lequel de ces effets on mesure. On fait varier **le seul** tassement, tout
    * le reste identique, même graine.
    */
   function apresDesAnnees(tassementInitial: number, ans: number) {
@@ -157,15 +157,15 @@ describe("le tassement se paie sur ce qui pousse (câblage du moteur)", () => {
     // mais il n'est plus au maximum non plus.
     //
     // **Les deux bornes étaient serrées, et la basse enregistrait un proxy
-    // FAUX.** Elle exigeait plus de 0,5 pour une mesure qui valait un peu plus
+    // faux.** Elle exigeait plus de 0,5 pour une mesure qui valait un peu plus
     // de 0,5 : moins de deux pour cent de marge. Et elle a bougé avec #140,
     // qui a corrigé la densité racinaire — elle était lue sur `1 - groundLight`,
-    // c'est-à-dire sur le COUVERT DES ARBRES, si bien qu'une strate herbacée
+    // c'est-à-dire sur le **couvert des arbres**, si bien qu'une strate herbacée
     // dense ne réparait rien faute de canopée. La réparation est donc plus
     // rapide qu'avant, à juste titre, et la mesure passe à 0,497.
     //
     // Les deux bornes disent maintenant ce que l'essai veut dire, avec de la
-    // marge des deux côtés : le sol a CLAIREMENT réparé, et il n'est CLAIREMENT
+    // marge des deux côtés : le sol a **clairement** réparé, et il n'est **clairement**
     // pas revenu à neuf.
     const tasse = apresDesAnnees(1, 3);
     expect(tasse.tassementRestant).toBeLessThan(0.9);

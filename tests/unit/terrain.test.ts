@@ -40,7 +40,7 @@ const COTE = 48; // trois morceaux de 16 m par côté
 
 /** Un contexte 2d bouchonné qui compte ce qu'on lui demande. */
 function fabriqueBouchon() {
-  // `traitsColores` compte les traits qui NE SONT PAS de la couleur du
+  // `traitsColores` compte les traits qui **ne sont pas** de la couleur du
   // remplissage en cours : ce sont les seuls qui se voient, et donc les seuls
   // qui violeraient la règle « pas de liseré sur le sol ». Les autres ne font
   // que fermer le demi-pixel d'antialiasing entre deux surfaces jointives.
@@ -141,7 +141,7 @@ describe("le découpage en morceaux", () => {
     const tourne = tournerVue(v, 1);
     const est = morceauxDeLEmprise(emprise, tourne).map((m) => `${m.ix},${m.iy}`);
     expect(est).not.toEqual(nord);
-    // Et le premier posé est bien le plus lointain dans le NOUVEAU repère.
+    // Et le premier posé est bien le plus lointain dans le **nouveau** repère.
     const premier = morceauxDeLEmprise(emprise, tourne)[0];
     if (!premier) throw new Error("vide");
     const cx = premier.ix * COTE_MORCEAU_M + COTE_MORCEAU_M / 2;
@@ -249,7 +249,7 @@ describe("la cuisson", () => {
 
   it("ne dessine aucun flanc sur un terrain plat", () => {
     // Le nombre de remplissages suit la subdivision ; ce qui doit être vérifié
-    // ici, c'est qu'un terrain plat n'engendre AUCUN flanc — sinon on peindrait
+    // ici, c'est qu'un terrain plat n'engendre **aucun** flanc — sinon on peindrait
     // des falaises là où le sol ne descend pas.
     const { fabriquer, compte } = fabriqueBouchon();
     const v = vue();
@@ -304,7 +304,7 @@ describe("la cuisson", () => {
     // est de fermer le demi-pixel que l'antialiasing laisse entre deux quads
     // voisins, sans quoi la grille reparaît en clair — le défaut même que Q6
     // voulait éviter. Ce qu'il faut vérifier n'est donc plus « aucun trait »
-    // mais « aucun trait d'une AUTRE couleur ».
+    // mais « aucun trait d'une **autre** couleur ».
     for (const zoom of [0.3, 1, 4, 20]) {
       const bouchon = fabriqueBouchon();
       const v: Vue = { ...vue(), cam: { ...vue().cam, zoom } };
@@ -523,7 +523,7 @@ describe("le décor ne cuit pas ce qui ne touche pas le cadre", () => {
 
   /**
    * **La portée est un rayon, la région visible est un losange.** Élargir
-   * l'emprise de la parcelle d'un scalaire dans les deux axes décrit un CARRÉ,
+   * l'emprise de la parcelle d'un scalaire dans les deux axes décrit un **carré**,
    * dont les quatre coins sont entièrement hors écran — et ils font la majorité
    * de sa surface. Mesuré à la vue par défaut d'un hectare : 729 morceaux
    * demandés pour 150 réellement à l'écran.
@@ -545,7 +545,7 @@ describe("le décor ne cuit pas ce qui ne touche pas le cadre", () => {
   });
 
   /**
-   * Et la découpe ne doit RIEN retirer de visible. C'est vérifié à l'image près
+   * Et la découpe ne doit **rien** retirer de visible. C'est vérifié à l'image près
    * dans le navigateur — la même vue, avec et sans découpe, identique au pixel
    * près — mais l'essai garde le bord : les morceaux qui touchent le cadre
    * doivent tous être demandés, y compris ceux qui n'en montrent qu'un coin.
@@ -563,7 +563,7 @@ describe("le décor ne cuit pas ce qui ne touche pas le cadre", () => {
     }
     const poses = decor.aPoser(vue);
     // La ceinture fait le tour : il y a des morceaux des quatre côtés de la
-    // parcelle, donc des indices négatifs ET au-delà du côté.
+    // parcelle, donc des indices négatifs **et** au-delà du côté.
     expect(poses.some((m) => m.ix < 0)).toBe(true);
     expect(poses.some((m) => m.iy < 0)).toBe(true);
     expect(poses.some((m) => m.ix * COTE_MORCEAU_M >= COTE)).toBe(true);
@@ -601,14 +601,14 @@ describe("le bois mort couché : deux Float32Array que personne ne lisait", () =
   });
 
   /**
-   * **La direction d'un tronc n'est PAS dans la transversalité**, et il a fallu
+   * **La direction d'un tronc n'est pas dans la transversalité**, et il a fallu
    * plusieurs jets pour l'admettre. `transversalite` rend une valeur absolue,
    * délibérément — « un tronc n'a pas de sens : couché vers l'est ou vers
    * l'ouest, il barre pareil » — donc un arc sinus laisse quatre directions
    * candidates. Le rendu en choisissait une, et les captures sortaient en
    * échelles de tirets.
    *
-   * Elle est dans l'EMPREINTE : le moteur écrit la masse le long des cellules
+   * Elle est dans l'**empreinte** : le moteur écrit la masse le long des cellules
    * que la chute a couvertes. Le rendu ajuste donc la droite des moindres
    * carrés du nuage local — direction et position — et c'est cette droite
    * qu'on vérifie ici : une empreinte en rangée donne un tronc en rangée, une
@@ -633,7 +633,7 @@ describe("le bois mort couché : deux Float32Array que personne ne lisait", () =
   });
 
   /**
-   * Et la transversalité, elle, ne change RIEN à la direction dessinée — c'est
+   * Et la transversalité, elle, ne change **rien** à la direction dessinée — c'est
    * exactement ce que le jet fautif faisait, et l'essai le garde fermé.
    */
   it("ne fait pas tourner le tronc quand la transversalité change", () => {

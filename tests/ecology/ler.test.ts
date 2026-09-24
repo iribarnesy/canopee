@@ -1,13 +1,13 @@
 /**
- * LE LAND EQUIVALENT RATIO (issue #136, critère H21 ; docs/regles.md §7.5).
+ * **Le Land Equivalent Ratio** (issue #136, critère H21 ; docs/regles.md §7.5).
  *
  * Le chiffre de l'agroforesterie, et le dernier morceau de #136 : la culture
  * existait (C16, C18, H19, H20), le gradient sous les arbres existait (E13), et
  * il manquait la question que les deux préparaient — *est-ce que le mélange bat
  * la somme des parties ?*
  *
- * **C'EST UN DISPOSITIF, PAS UN AFFICHAGE**, et c'est ce qui fait la longueur
- * de ce fichier. Un LER a besoin de DEUX monocultures témoins, sur la même
+ * **c'est un dispositif, pas un affichage**, et c'est ce qui fait la longueur
+ * de ce fichier. Un LER a besoin de **deux** monocultures témoins, sur la même
  * station, sous le même climat, avec la même graine et la même conduite. Aucune
  * quantité mesurée sur la seule parcelle mixte ne les remplace, et `ler.ts`
  * explique pourquoi chacune des trois tentatives tentantes échoue.
@@ -52,27 +52,27 @@ const ANS = 60;
 const DOSE_N = 192;
 
 /**
- * ── LA GÉOMÉTRIE, ET C'EST ELLE LE CŒUR DU DISPOSITIF ────────────────────────
+ * ── **la géométrie**, **et c'est elle le cœur du dispositif** ────────────────────────
  *
  * Deux rangs à 13,3 m — l'allée de Restinclières — et 5 m sur le rang, soit
  * **100 tiges/ha**, la densité du dispositif réel. La plantation témoin est à
- * 6 × 6, soit 278 tiges/ha : le témoin d'un LER est la monoculture à SA
+ * 6 × 6, soit 278 tiges/ha : le témoin d'un LER est la monoculture à **sa**
  * densité, pas la même densité sans culture.
  *
- * **ET LA CULTURE ÉPARGNE LE PIED DES RANGS.** C'est ce que le premier
+ * **et la culture épargne le pied des rangs.** C'est ce que le premier
  * dispositif ne savait pas faire, et ça lui coûtait 77 % du volume des arbres :
  * il labourait par-dessus les noyers tous les ans, ce qu'aucun agroforestier ne
  * fait — la règle d'installation est justement « des bandes larges de plus d'un
  * mètre » le long du rang (CNPF, *Les noyers à bois*).
  *
- * Les actions du moteur prennent toutes un DISQUE, et un disque ne pave pas une
+ * Les actions du moteur prennent toutes un **disque**, et un disque ne pave pas une
  * bande. On la pave donc de plusieurs disques qui se chevauchent, ce que
- * `semer` autorise sans le savoir : son calcul de place libre EXCLUT la culture
+ * `semer` autorise sans le savoir : son calcul de place libre **exclut** la culture
  * qu'on sème, donc deux disques de blé ne se refusent pas l'un l'autre. Le
  * moteur gagnera des zones en bande un jour (#186) ; en attendant, ceci marche
  * et se mesure.
  *
- * La surface réellement cultivée n'est pas calculée mais MESURÉE, cellule par
+ * La surface réellement cultivée n'est pas calculée mais **mesurée**, cellule par
  * cellule, et rapportée avec le résultat — c'est elle qui porte le partage du
  * sol que le LER met en nombres.
  */
@@ -105,13 +105,13 @@ interface Disque {
 function paverBande(yBas: number, yHaut: number): Disque[] {
   const centre = (yBas + yHaut) / 2;
   const demi = (yHaut - yBas) / 2;
-  // Le rayon vaut EXACTEMENT la demi-largeur : aucun débord, donc la bande
+  // Le rayon vaut **exactement** la demi-largeur : aucun débord, donc la bande
   // épargnée est celle qu'on a déclarée. Le premier jet prenait un rayon plus
   // grand pour couvrir les creux entre disques, et mesuré, il cultivait 93,3 %
   // de la parcelle au lieu des ~82 % voulus — les rangs ne gardaient plus que
   // 0,67 m de chaque côté au lieu de 1,75, sous la règle du « plus d'un mètre ».
   // Le prix de cette rigueur est une petite lentille non semée au bord de bande
-  // entre deux disques voisins ; elle est DANS la bande, pas dans le rang, et
+  // entre deux disques voisins ; elle est **dans** la bande, pas dans le rang, et
   // la surface réellement cultivée est mesurée plus bas.
   const rayonM = demi;
   const pas = demi * 0.7;
@@ -220,7 +220,7 @@ function bras(
   const disque = { x: CENTRE, y: CENTRE, rayonM: RAYON };
   let grainT = 0;
   let boisRecolteM3 = 0;
-  /** Surface réellement cultivée, MESURÉE et non calculée (cellules d'un m²). */
+  /** Surface réellement cultivée, **mesurée** et non calculée (cellules d'un m²). */
   let semeesMax = 0;
   for (let an = 0; an < ANS; an++) {
     for (let w = 0; w < 52; w++) {
@@ -241,12 +241,12 @@ function bras(
         }
       }
       if (!avecBle && options.labourerQuandMeme) {
-        // Le contrôle doit ne changer QU'UNE chose. Mesuré d'abord sans l'azote,
+        // Le contrôle doit ne changer **qu'une** chose. Mesuré d'abord sans l'azote,
         // il donnait 0,319 m³/arbre contre 0,427 pour le bras cultivé — le
-        // labour paraissait coûter PLUS que le labour plus le blé, ce qui est
+        // labour paraissait coûter **plus** que le labour plus le blé, ce qui est
         // absurde. La cause était le confondant : la fertilisation du blé
         // profite aussi aux noyers, et la retirer avec lui mélangeait deux
-        // effets. On laboure donc ET on fertilise, sans semer.
+        // effets. On laboure donc **et** on fertilise, sans semer.
         if (w === BLE.semisWeek - 1)
           for (const z of BANDES_CULTIVEES) geste({ type: "labourer", week, ...z });
         if (w === 10)
@@ -267,7 +267,7 @@ function bras(
             geste({ type: "fertiliser", week, ...z, forme: "mineral", doseKgNHa: DOSE_N });
         }
         if (w === BLE.recolteWeek) {
-          // Le grain se compte AVANT la moisson et sur toute la parcelle : les
+          // Le grain se compte **avant** la moisson et sur toute la parcelle : les
           // chantiers se chevauchent, et additionner disque par disque
           // compterait deux fois les cellules communes.
           grainT += grainSurPiedT(state);
@@ -287,7 +287,7 @@ function bras(
   return {
     autres: autres.length,
     partCultivee: semeesMax / (COTE * COTE),
-    // **Le bois du LER est celui de l'ESPÈCE CULTIVÉE**, pas celui de tout ce
+    // **Le bois du LER est celui de l'espèce cultivée**, pas celui de tout ce
     // qui pousse. Un LER compare deux productions : le grain d'un côté, le bois
     // d'œuvre de l'autre. Les semis spontanés d'autres essences qui s'installent
     // dans la plantation ne sont pas le produit, et les compter gonflerait le
@@ -297,7 +297,7 @@ function bras(
     production: production(noyers, AIRE_HA, ANS, grainT, boisRecolteM3),
     tiges: noyers.length,
     boisRecolteM3,
-    /** Les arbres PLANTÉS, suivis par leur identité : le seul échantillon comparable d'un bras à l'autre. */
+    /** Les arbres **plantés**, suivis par leur identité : le seul échantillon comparable d'un bras à l'autre. */
     cohorte: cohorte.length,
     volCohorte,
     dCohorte: cohorte.length ? cohorte.reduce((a, t) => a + t.diametreCm, 0) / cohorte.length : 0,
@@ -340,23 +340,23 @@ describe("l'indice lui-même, avant toute partie", () => {
 
 describe("le dispositif à trois bras, soixante ans", () => {
   /**
-   * CE QUE LE DISPOSITIF A DÛ APPRENDRE, ET DANS L'ORDRE OÙ IL L'A APPRIS.
+   * **Ce que le dispositif a dû apprendre**, **et dans l'ordre où il l'a appris**.
    * Cinq relevés, quatre causes écartées, une retenue — et c'était la mienne.
    *
-   * 1. LE TÉMOIN FORESTIER N'EN ÉTAIT PAS UN. 49 noyers plantés, **187** à
+   * 1. **Le témoin forestier n'en était pas un**. 49 noyers plantés, **187** à
    *    l'arrivée : les sujets mûrs s'étaient ressemés et le « témoin » était un
    *    fourré. Une plantation, ça se conduit — d'où `ECLAIRCIES`.
    *
-   * 2. IL COMPTAIT LE BOIS DES ESSENCES SPONTANÉES : 15,0 m³ là où les noyers
-   *    n'en faisaient que 6,7. Un LER compare des PRODUITS.
+   * 2. **Il comptait le bois des essences spontanées** : 15,0 m³ là où les noyers
+   *    n'en faisaient que 6,7. Un LER compare des **produits**.
    *
-   * 3. J'AI ACCUSÉ LA CROISSANCE DU NOYER, ET C'ÉTAIT FAUX. Sa fiche est
-   *    marquée « NON calé sur table », les moyennes semblaient l'accabler —
+   * 3. **J'AI accusé la croissance du noyer**, **et c'était faux**. Sa fiche est
+   *    marquée « **non** calé sur table », les moyennes semblaient l'accabler —
    *    et **comparer des moyennes de distributions asymétriques ne dit rien**.
    *    En volume l'écart était de 2,5, pas de 1,2. Le seul échantillon
-   *    comparable est la COHORTE PLANTÉE, suivie par ses identités.
+   *    comparable est la **cohorte plantée**, suivie par ses identités.
    *
-   * 4. J'AI ENSUITE ACCUSÉ LE LABOUR ET LA CONCURRENCE DU BLÉ, sur la foi d'un
+   * 4. **J'AI ensuite accusé le labour et la concurrence du blé**, sur la foi d'un
    *    écart de 77 % du volume des arbres. **C'était encore ma géométrie.** Le
    *    dispositif labourait jusqu'au pied des rangs, ce qu'aucun agroforestier
    *    ne fait : la règle d'installation est « des bandes larges de plus d'un
@@ -365,34 +365,34 @@ describe("le dispositif à trois bras, soixante ans", () => {
    *
    *      allée, blé + labour              0,551 m³/arbre
    *      mêmes rangs, sans blé ni labour  0,561
-   *      mêmes rangs, LABOURÉS+fertilisés 0,563
+   *      mêmes rangs, **labourés**+fertilisés 0,563
    *      plantation 6 × 6                 0,498
    *
    *    Cultiver coûte **2 %**, et le soc seul ne coûte rien. Mieux : l'arbre
-   *    d'allée DÉPASSE celui de la plantation, ce qui est le fait réel — il a
+   *    d'allée **dépasse** celui de la plantation, ce qui est le fait réel — il a
    *    plus de place. Les 77 % étaient intégralement l'artefact.
    *
    *    Et le contrôle du labour a dû être purifié : mesuré d'abord sans azote,
-   *    il donnait 0,319 m³/arbre, donc le labour paraissait coûter PLUS que le
+   *    il donnait 0,319 m³/arbre, donc le labour paraissait coûter **plus** que le
    *    labour plus le blé. Absurde, et confondant évident — la fertilisation du
    *    blé profite aussi aux noyers. On laboure et on fertilise, sans semer.
    *
-   * 5. MES BANDES ÉPARGNÉES N'EN ÉTAIENT PAS. Le rayon des disques dépassait la
+   * 5. **Mes bandes épargnées n'en étaient pas**. Le rayon des disques dépassait la
    *    demi-largeur pour couvrir les creux, et mangeait le rang : mesuré,
    *    93,3 % de la parcelle cultivée au lieu de 82 %, donc 0,67 m épargné de
-   *    chaque côté au lieu de 1,75 — sous la règle. C'est la SURFACE MESURÉE,
+   *    chaque côté au lieu de 1,75 — sous la règle. C'est la **surface mesurée**,
    *    et non calculée, qui l'a dit.
    *
-   * CAMPAGNE FINALE, trois graines, soixante ans :
+   * **Campagne finale**, trois graines, soixante ans :
    *
    *   graine        4       11      23
    *   culture     0,719   0,719   0,734
    *   arbre       0,604   0,668   0,468
-   *   TOTAL       1,323   1,388   1,202
+   *   **total**       1,323   1,388   1,202
    *
    * Les trois dépassent la cible de Restinclières (> 1,2), et la composition
-   * est celle de la littérature (~0,7 et ~0,5) sur les trois. Le terme CULTURE
-   * est quasi constant et le terme ARBRE varie du simple au tiers : c'est
+   * est celle de la littérature (~0,7 et ~0,5) sur les trois. Le terme **culture**
+   * est quasi constant et le terme **arbre** varie du simple au tiers : c'est
    * attendu, le blé répond à la lumière et à l'azote, tous deux déterministes
    * ici, pendant que la mortalité et la régénération des arbres sont des
    * tirages. L'essai n'en garde qu'une par coût de calcul, et ses seuils sont
@@ -415,23 +415,23 @@ describe("le dispositif à trois bras, soixante ans", () => {
     expect(blePur.production.grainTHaAn).toBeGreaterThan(0);
     expect(boisPur.production.boisM3HaAn).toBeGreaterThan(0);
     expect(agro.tiges).toBeGreaterThan(0);
-    // Le témoin forestier doit être CONDUIT, sans quoi il n'en est pas un :
+    // Le témoin forestier doit être **conduit**, sans quoi il n'en est pas un :
     // sans éclaircie il finissait à 187 tiges pour 49 plantées.
     expect(boisPur.tiges).toBeLessThan(PLANTATION_PURE.length * 1.5);
-    // LE PARTAGE DU SOL EST CE QUE LE LER MET EN NOMBRES, donc il se vérifie :
+    // **Le partage du sol est ce que le LER met en nombres**, donc il se vérifie :
     // le mélange cède au rang ce que la monoculture garde. Mesuré, pas calculé.
     expect(blePur.partCultivee).toBeGreaterThan(0.99);
     expect(agro.partCultivee).toBeGreaterThan(0.75);
     expect(agro.partCultivee).toBeLessThan(0.9);
-    // LES ARBRES D'ALLÉE NE PAIENT PAS LA CULTURE, et c'est ce qui a demandé
+    // **Les arbres d'allée ne paient pas la culture**, et c'est ce qui a demandé
     // cinq relevés. Un écart de plus de 10 % ici voudrait dire que le chantier
     // repasse sur les rangs.
     const parArbre = (b: { volCohorte: number; cohorte: number }) => b.volCohorte / b.cohorte;
     expect(parArbre(agro)).toBeGreaterThan(0.9 * parArbre(rangsSansBle));
     // Et ils dépassent ceux de la plantation, parce qu'ils ont plus de place.
     expect(parArbre(agro)).toBeGreaterThan(parArbre(boisPur));
-    // LA CULTURE, ELLE, PAIE — et c'est le sens même d'un LER : le mélange rend
-    // moins de grain par hectare de PARCELLE qu'un champ de blé pur, puisqu'il
+    // **La culture**, **elle**, **paie** — et c'est le sens même d'un LER : le mélange rend
+    // moins de grain par hectare de **parcelle** qu'un champ de blé pur, puisqu'il
     // lui cède la place des rangs. Un terme culture au-dessus de 1 serait le
     // signe que les arbres n'ombragent rien, ce qui fut le cas et fut le défaut.
     expect(r.culture).toBeLessThan(1);

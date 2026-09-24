@@ -32,13 +32,13 @@ mesurées et relues.
 | `moteur:maintenance` | agent de maintenance | Corriger un mécanisme existant : défaut, dérive de calibration, hygiène des tests. |
 | `moteur:évolution` | agent d'évolution | Ajouter un mécanisme que le moteur ne sait pas faire. |
 | `réalisme` | celui qui livre | Touche `docs/realisme.md` : un critère change d'état ou de justification. |
-| `à-mesurer` | celui qui livre | Demande une campagne multi-graines AVANT d'écrire du code. |
+| `à-mesurer` | celui qui livre | Demande une campagne multi-graines **avant** d'écrire du code. |
 | `flux-aléatoire` | celui qui livre | Déplace le flux du PRNG : toutes les parties changent, tous les scénarios sont à revérifier. |
 
 Les trois derniers ne routent pas, ils avertissent. Ils se cumulent avec les
 trois premiers.
 
-### Une demande d'un périmètre à l'autre porte DEUX labels
+### Une demande d'un périmètre à l'autre porte **deux** labels
 
 `rendu` dit d'où vient le besoin ; il ne dit pas qui écrit le code. Quand le jeu
 a besoin d'une grandeur que seul `src/engine` peut donner, l'issue porte `rendu`
@@ -86,7 +86,7 @@ chemin critique.** Un mécanisme de plus ne rapproche pas d'une version finie.
 
 ## Deux pièges de procédure, vérifiés à nos dépens
 
-**Le mot-clé de fermeture doit être EN ANGLAIS.** GitHub ne reconnaît que
+**Le mot-clé de fermeture doit être en anglais.** GitHub ne reconnaît que
 `close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
 `resolves` / `resolved`. « Ferme #34 » ne ferme rien, où qu'on l'écrive.
 

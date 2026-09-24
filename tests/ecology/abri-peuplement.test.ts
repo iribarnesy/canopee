@@ -1,7 +1,7 @@
 /**
- * UNE FUTAIE S'ABRITE ELLE-MÊME (issue #179).
+ * **Une futaie s'abrite elle-même** (issue #179).
  *
- * `abriAuVent` ne comptait que les voisins QUI DÉPASSENT. Dans une futaie
+ * `abriAuVent` ne comptait que les voisins **qui dépassent**. Dans une futaie
  * régulière personne ne dépasse personne, donc personne n'était abrité — et la
  * chaîne se refermait sur elle-même : les seuls arbres à avoir de l'abri à
  * perdre étaient les dominés, les dominés sont courts, les courts ne versent
@@ -9,7 +9,7 @@
  * C'est ce qui a bloqué F18 (#177).
  *
  * Les modèles de la famille ForestGALES ne raisonnent pas en « qui dépasse
- * qui » mais sur le rapport de l'ESPACEMENT à la HAUTEUR : plus les tiges sont
+ * qui » mais sur le rapport de l'**espacement** à la **hauteur** : plus les tiges sont
  * serrées, plus la quantité de mouvement se partage. C'est ce rapport qu'on lit.
  */
 

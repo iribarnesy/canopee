@@ -1,5 +1,5 @@
 /**
- * ─── LES RÉSERVES GLUCIDIQUES : MOURIR DE FAIM, PAS DE PASSER SOUS UN SEUIL ──
+ * ─── **les réserves glucidiques** : **mourir de faim**, **pas de passer sous un seuil** ──
  *
  * Ce que le moteur ne savait pas faire, et c'était le trou annoncé en tête de
  * `trees.ts` depuis l'origine — « le stress létal par carence viendra avec le
@@ -16,18 +16,18 @@
  * Et pour le hêtre c'était pire : 361 plantés, **361 vivants à cent vingt ans**,
  * à tous les réglages d'ombrage essayés. Pas une calibration à retoucher, une
  * impossibilité arithmétique — son seuil de stress (0,0090 de lumière) passe
- * SOUS le plancher que le moteur sait produire (0,0111). Le hêtre dominé était
+ * **sous** le plancher que le moteur sait produire (0,0111). Le hêtre dominé était
  * hors d'atteinte, où qu'il soit et quoi qu'on plante autour.
  *
  * **Pourquoi un seuil ne pouvait pas y suffire.** Le point de compensation est
- * INSTANTANÉ : il dit si la feuille gagne ou perd à cet instant. Un arbre
+ * **instantané** : il dit si la feuille gagne ou perd à cet instant. Un arbre
  * dominé ne meurt pas parce que la lumière est passée sous une valeur ; il meurt
  * parce que, des années durant, il a dépensé plus qu'il n'a assimilé, que ses
  * réserves glucidiques se sont vidées, et qu'à la fin il n'a plus de quoi
  * refaire des feuilles au printemps. C'est la famine carbonée, et c'est un
- * ÉPUISEMENT — donc un stock, pas un seuil.
+ * **épuisement** — donc un stock, pas un seuil.
  *
- * ─── CE QUI FAIT QUE LA TAILLE DÉCIDE ────────────────────────────────────────
+ * ─── **ce qui fait que la taille décide** ────────────────────────────────────────
  *
  * Le contenu du mécanisme tient dans une phrase que le seuil ne pouvait pas
  * dire : **la même ombre qu'un semis traverse tue une perche.** Un semis est
@@ -38,7 +38,7 @@
  *
  * **Le modèle du tube donne la loi d'échelle** (Shinozaki et al. 1964) : la
  * section d'aubier est proportionnelle à la surface foliaire qu'elle alimente.
- * Le VOLUME d'aubier — donc le tissu vivant à entretenir — vaut donc cette
+ * Le **volume** d'aubier — donc le tissu vivant à entretenir — vaut donc cette
  * section multipliée par la hauteur. La charge d'entretien par unité de feuille
  * croît ainsi **proportionnellement à la hauteur**, et rien d'autre n'est
  * supposé : ni biomasse totale (le bois de cœur est mort et ne respire pas), ni
@@ -51,7 +51,7 @@
  * avec une vraie dispersion). On pose donc qu'un arbre de la hauteur d'une
  * futaie adulte dépense la moitié de ce qu'il gagnerait en plein soleil.
  *
- * ─── CE QUE ÇA DONNE, ET C'EST LE VRAI TEST ──────────────────────────────────
+ * ─── **ce que ça donne**, **et c'est le vrai test** ──────────────────────────────────
  *
  * Pour le hêtre, dont la réponse lumineuse sature à 0,35, le mécanisme sort tout
  * seul la lumière minimale de survie par taille :
@@ -67,9 +67,9 @@
  * patiente une décennie sous couvert fermé, une perche de dix mètres n'y tient
  * pas trois ans.
  *
- * ─── CE QU'ON N'EMPILE PAS ───────────────────────────────────────────────────
+ * ─── **ce qu'on n'empile pas** ───────────────────────────────────────────────────
  *
- * L'issue prévenait : ajouter une mortalité de lumière PAR-DESSUS les ravageurs
+ * L'issue prévenait : ajouter une mortalité de lumière **par-dessus** les ravageurs
  * donnerait un peuplement qui s'effondre deux fois. Deux dispositions
  * l'évitent, et aucune n'est un garde-fou artificiel.
  *
@@ -82,7 +82,7 @@
  * arbre affamé se défend mal, les ravageurs le trouvent, et l'acte de décès
  * porte leur nom alors que la cause est la famine. Le moteur le disait déjà
  * autrement, par `vigueur`, que `ravageurs.ts` lit pour choisir ses victimes.
- * Des risques CONCURRENTS, pas cumulés : un arbre mort ne meurt pas deux fois.
+ * Des risques **concurrents**, pas cumulés : un arbre mort ne meurt pas deux fois.
  */
 
 import type { EspeceV0 } from "./especes";
@@ -104,7 +104,7 @@ export const HAUTEUR_FUTAIE_ADULTE_M = 25;
 
 /**
  * Combien d'années de saison de végétation les réserves tiennent quand le
- * revenu est NUL.
+ * revenu est **nul**.
  *
  * Ancré sur la défoliation totale, qui est le cas de revenu nul qu'on sait
  * observer : un arbre feuillu supporte une défoliation complète, en refait des
@@ -116,13 +116,13 @@ export const HAUTEUR_FUTAIE_ADULTE_M = 25;
 export const RESERVES_ANS = 2.5;
 
 /**
- * Ce que l'entretien coûte à CET arbre, en part de ce qu'il gagnerait sous une
+ * Ce que l'entretien coûte à **cet** arbre, en part de ce qu'il gagnerait sous une
  * lumière saturante. Croît avec la hauteur (modèle du tube) : le volume
  * d'aubier à entretenir par unité de feuille est proportionnel à la longueur
  * des tuyaux.
  *
  * Pas de cas particulier d'espèce, et pas non plus de normalisation par la
- * hauteur maximale de l'essence : la charge dépend de la taille RÉELLE de
+ * hauteur maximale de l'essence : la charge dépend de la taille **réelle** de
  * l'individu, pas de son ambition. C'est ce qui fait qu'une callune de
  * cinquante centimètres ne paie presque rien là où un hêtre de vingt mètres
  * paie cher — et non l'inverse, qu'une normalisation par espèce aurait produit.
@@ -132,8 +132,8 @@ export function partEntretien(heightM: number): number {
 }
 
 /**
- * Lumière en dessous de laquelle CET arbre ne couvre plus son entretien : sa
- * compensation À L'ÉCHELLE DE L'ARBRE ENTIER, par opposition à celle de la
+ * Lumière en dessous de laquelle **cet** arbre ne couvre plus son entretien : sa
+ * compensation **à l'échelle de l'arbre entier**, par opposition à celle de la
  * feuille que porte l'atlas. Elle monte avec la taille, et c'est tout le
  * mécanisme.
  *
@@ -151,7 +151,7 @@ export function compensationDeLArbre(espece: EspeceV0, heightM: number): number 
  * Part de son entretien que l'arbre doit payer sur ses réserves cette semaine,
  * ∈ [0,1]. Zéro tant qu'il gagne sa vie ; un quand il ne gagne rien.
  *
- * Le revenu suit la MÊME courbe de réponse lumineuse que la croissance — celle
+ * Le revenu suit la **même** courbe de réponse lumineuse que la croissance — celle
  * de l'atlas, entre le point de compensation de la feuille et la saturation.
  * Aucune courbe nouvelle : la lumière ne se lit pas de deux façons selon qu'on
  * parle de pousser ou de survivre.
@@ -169,7 +169,7 @@ export function partPuiseeSurLesReserves(espece: EspeceV0, heightM: number, ligh
  * `RESERVES_ANS` et de la létalité du stress : les réserves sont exactement ce
  * compteur-là, vu par l'autre bout.
  *
- * Le nombre de semaines se compte en SAISON DE VÉGÉTATION (`GROWING_WEEKS`),
+ * Le nombre de semaines se compte en **saison de végétation** (`GROWING_WEEKS`),
  * pas en semaines calendaires : un arbre dormant ne consomme presque rien, et
  * c'est déjà la convention du moteur pour l'ombre.
  */

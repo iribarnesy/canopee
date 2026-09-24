@@ -38,7 +38,7 @@ export const HETRE: FicheGraphique = {
     // Marcescent jeune : les feuilles mortes tiennent tout l'hiver.
     hiver: { r: 148, g: 116, b: 82 },
   },
-  // Gris argenté LISSE : c'est la signature, et elle ne se lit que si le sol
+  // Gris argenté **lisse** : c'est la signature, et elle ne se lit que si le sol
   // reste soutenu (contrainte L0 sur la palette).
   ecorce: { r: 148, g: 148, b: 140 },
   references: [

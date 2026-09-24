@@ -1,5 +1,5 @@
 /**
- * L'écran de jeu : parcelle en vue OBLIQUE (les arbres montrent leur hauteur,
+ * L'écran de jeu : parcelle en vue **oblique** (les arbres montrent leur hauteur,
  * triés du fond vers l'avant) sur le sol en vue de dessus, HUD, fil
  * d'événements, actions (planter, couper, récolter, chauler, embaucher).
  * Rendu Canvas 2D — l'isométrique complète viendra comme couche visuelle.
@@ -126,11 +126,11 @@ function StartScreen({
   /**
    * Le bac à sable est-il ouvert ? (#189)
    *
-   * Un ÉTAT et pas une page à part : les deux écrans partagent les réglages,
+   * Un **état** et pas une page à part : les deux écrans partagent les réglages,
    * et revenir de l'un à l'autre ne doit rien perdre de ce qu'on a posé.
    *
    * L'entrée pousse une entrée d'historique, et la sortie la consomme. C'est ce
-   * qui fait que le bouton retour du navigateur remonte d'UN écran et pas de
+   * qui fait que le bouton retour du navigateur remonte d'**un** écran et pas de
    * deux, comme #148 l'a établi pour la sortie de partie — avec un écran de
    * plus, la règle doit continuer de valoir.
    */
@@ -172,7 +172,7 @@ function StartScreen({
    */
   const [economie, setEconomie] = useState(true);
   /**
-   * LES PARTIES SAUVEGARDÉES (#147) : on ne les lit qu'au montage. La liste ne
+   * **les parties sauvegardées** (#147) : on ne les lit qu'au montage. La liste ne
    * change pas sous nos yeux — c'est le jeu qui écrit dedans, et il n'y a pas
    * de jeu tant que cet écran est là.
    */
@@ -181,7 +181,7 @@ function StartScreen({
   const choisieEntree = parties.find((e) => e.id === partieChoisie);
 
   /**
-   * PRÉ-REMPLIR L'ÉCRAN avec les réglages d'une partie (#147).
+   * **pré-remplir l'écran** avec les réglages d'une partie (#147).
    *
    * Tout sauf la graine : c'est elle qu'on change pour éprouver un résultat.
    * Les valeurs absentes de la sauvegarde sont celles que la partie n'avait pas
@@ -216,8 +216,8 @@ function StartScreen({
    * qui va avec ce sol, un podzol landais n'est pas sur un flanc de montagne —
    * et abandonne le modelage, qui valait pour une parcelle d'une autre taille.
    *
-   * Tout se fait ICI, dans le gestionnaire de clic, et non dans un effet : un
-   * effet se déclenche APRÈS le rendu, si bien qu'un joueur qui choisissait
+   * Tout se fait **ici**, dans le gestionnaire de clic, et non dans un effet : un
+   * effet se déclenche **après** le rendu, si bien qu'un joueur qui choisissait
    * une station puis ouvrait l'éditeur voyait son modelage effacé dans la
    * foulée par l'effet en retard.
    */
@@ -232,7 +232,7 @@ function StartScreen({
     }
   };
   // Ce que l'entourage donnera vraiment, calculé par le moteur lui-même : les
-  // semis annoncés par un paysage sont filtrés par ce que CE sol supporte.
+  // semis annoncés par un paysage sont filtrés par ce que **ce** sol supporte.
   const entourage = useMemo(
     () =>
       choisie
@@ -274,7 +274,7 @@ function StartScreen({
   const surfaceHa = (choisie?.station.coteM ?? 100) ** 2 / 10000;
   const amontMm = (pluieHebdoMm * RUISSELLEMENT_AMONT * relief.bassinAmontHa) / surfaceHa;
 
-  // Aperçu du champ de nappe sur CETTE parcelle : mêmes fonctions que le
+  // Aperçu du champ de nappe sur **cette** parcelle : mêmes fonctions que le
   // moteur, appliquées au terrain et au relief choisis.
   const nappe = useMemo(() => {
     if (!choisie || eau.type === "aucune") return undefined;
@@ -1222,14 +1222,14 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
 
   const { station, snapshot } = game;
   /**
-   * ─── LE BOUTON RETOUR DU NAVIGATEUR (#148) ──────────────────────────────
+   * ─── **le bouton retour du navigateur** (#148) ──────────────────────────────
    *
    * Lancer une partie n'écrivait rien dans l'historique : « retour » quittait
    * le site en pleine partie, et c'est par ce chemin que des paramètres de
    * partie ont été perdus. Le réflexe « retour = un écran en arrière » est
    * celui de tout le monde.
    *
-   * Une partie pousse donc UNE entrée, et le retour la consomme pour revenir à
+   * Une partie pousse donc **une** entrée, et le retour la consomme pour revenir à
    * l'écran titre — par le même chemin que « Sauvegarder et quitter », c'est-à-
    * dire en sauvegardant d'abord, et non par un déchargement de page.
    *
@@ -1244,7 +1244,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   quitter.current = game.quit;
   const sortieDemandee = useRef(false);
   /**
-   * Le retour du navigateur DEMANDE à sortir, il ne sort pas (#188).
+   * Le retour du navigateur **demande** à sortir, il ne sort pas (#188).
    *
    * Le geste est trop facile à faire sans le vouloir — un coup de pouce sur un
    * pavé tactile — et il coûtait une partie en cours : la parcelle disparaît, il
@@ -1275,7 +1275,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     game.quit();
   };
   /**
-   * LES ARBRES SUIVIS et leur journal (#149). Le worker en tient la liste, lui
+   * **les arbres suivis** et leur journal (#149). Le worker en tient la liste, lui
    * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
    */
   const suivis = useSuivis(snapshot, game.suivre, game.rembobinage.enCours !== undefined);
@@ -1287,7 +1287,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    *
    * L'ordre des deux messages compte : `newGame` remet le niveau à zéro dans le
    * worker — une partie neuve n'hérite pas de la précédente — donc c'est
-   * APRÈS qu'on installe celui qu'on lance.
+   * **après** qu'on installe celui qu'on lance.
    */
   const lancerLeNiveau = (niveau: Niveau) => {
     const d = niveau.depart;
@@ -1318,7 +1318,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     [snapshot, selectedIds],
   );
   /**
-   * L'instantané porte TOUS les arbres, chandelles comprises (snapshot.ts) :
+   * L'instantané porte **tous** les arbres, chandelles comprises (snapshot.ts) :
    * elles se dessinent, mais elles ne se comptent pas comme un peuplement.
    */
   const vivants = useMemo(
@@ -1330,7 +1330,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * Le sol et les arbres dans la forme que la couche visuelle attend
    * (`src/game/parcelle.ts`). Rien n'est calculé ici : chaque champ vient du
    * protocole, et les deux conversions sont mémorisées parce que la scène
-   * compare des RÉFÉRENCES pour décider ce qu'elle doit recuire — lui donner un
+   * compare des **références** pour décider ce qu'elle doit recuire — lui donner un
    * tableau neuf à chaque rendu de React lui ferait tout refaire.
    */
   const solAPoser = useMemo(
@@ -1338,7 +1338,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       station && snapshot
         ? donneesSolDe({
             coteM: station.coteM,
-            // L'HORIZON DE SURFACE, parce que `soilWater` ne rapporte que
+            // **l'horizon de surface**, parce que `soilWater` ne rapporte que
             // lui : le rapport des deux est le remplissage de cette couche-là.
             // Passer la réserve du profil entier ferait paraître la parcelle
             // sèche en permanence (#190).
@@ -1365,12 +1365,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   /**
    * Le journal du dernier instantané, joué comme une ellipse (§5.11) : les
    * morts, les chutes, les gestes, l'incendie. C'est ce qui fait qu'un arbre
-   * coupé TOMBE au lieu de s'escamoter.
+   * coupé **tombe** au lieu de s'escamoter.
    */
   const ellipse = useEllipse(snapshot, station, game.speed);
 
   /**
-   * LE BILAN DE LA PÉRIODE (#128, §6.8 №2) : ce qui s'est passé pendant qu'on
+   * **le bilan de la période** (#128, §6.8 №2) : ce qui s'est passé pendant qu'on
    * avançait, groupé et situé. Il vit à côté des marqueurs de l'ellipse et sur
    * la même durée qu'eux — voir `useBilan.ts`.
    */
@@ -1380,7 +1380,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const bilan = useBilan(game.bilan, game.speed > 0 && game.rembobinage.enCours === undefined);
 
   /**
-   * CE QUI S'EST PASSÉ PENDANT TOUT LE NIVEAU, pour l'écran de fin.
+   * **Ce qui s'est passé pendant tout le niveau**, pour l'écran de fin.
    *
    * La partie entière et non la période : c'est le même bilan, lu sur l'autre
    * fenêtre. Calculé à part parce qu'un écran de fin ne s'ouvre qu'une fois,
@@ -1397,7 +1397,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * sait retenir son horloge, l'ellipse sait combien de temps, et ce lien-là
    * est le seul endroit qui connaisse les deux.
    *
-   * Le nettoyage RELÂCHE toujours, et ce n'est pas une précaution de style :
+   * Le nettoyage **relâche** toujours, et ce n'est pas une précaution de style :
    * sans lui, changer de vitesse ou fermer la partie pendant une chute
    * laisserait le worker retenu pour de bon, c'est-à-dire un jeu figé sans que
    * rien ne l'indique.
@@ -1406,7 +1406,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const retenuJusqua = useRef(0);
   const minuteurDAttente = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
-    // **Sur l'ELLIPSE et non sur sa durée**, et c'est le premier piège : deux
+    // **Sur l'ellipse et non sur sa durée**, et c'est le premier piège : deux
     // semaines de suite portent souvent la même attente — une chute, 900 ms,
     // une chute, 900 ms. Un effet qui dépend du nombre ne se rejouerait pas et
     // une semaine sur deux couperait son animation.
@@ -1455,7 +1455,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             pheno: snapshot.pheno,
             seTorche: ellipse.seTorche,
           }).map((a) =>
-            // Une tige abattue pivote autour de sa COUPE et non du sol : à fort
+            // Une tige abattue pivote autour de sa **coupe** et non du sol : à fort
             // zoom, une souche de recépage fait une vingtaine de pixels, et une
             // cépée qui tomberait au ras du sol traverserait sa propre souche.
             a.id < 0 ? { ...a, z: a.z + (coupeDeLaTige.get(a.id) ?? 0) } : a,
@@ -1468,7 +1468,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * La cellule survolée, et ce que le moteur en dit.
    *
    * Elle vit dans un état de React alors que le reste du survol vit dans des
-   * références : c'est qu'elle sert à POSER UNE QUESTION au worker, pas à
+   * références : c'est qu'elle sert à **poser une question** au worker, pas à
    * dessiner. La vue ne l'annonce qu'aux changements de cellule — une question
    * par pixel parcouru noierait le worker pour rien.
    */
@@ -1482,8 +1482,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    */
   const marquerLu = suivis.marquerLu;
   // Ce qu'on a sous les yeux : le dernier événement quand le volet est ouvert,
-  // et rien du tout quand il est fermé. C'est LUI la dépendance de l'effet —
-  // dire « le volet est ouvert ET le journal a changé » demanderait une
+  // et rien du tout quand il est fermé. C'est **lui** la dépendance de l'effet —
+  // dire « le volet est ouvert **et** le journal a changé » demanderait une
   // dépendance dont l'effet ne se sert pas, ce que le linteur refuse à juste
   // titre. Le premier élément change de référence à chaque arrivée, y compris
   // quand le journal est plein et que sa longueur, elle, ne bouge plus.
@@ -1502,13 +1502,13 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const cadrageAuto = suivis.cadrerSur ?? ellipse.cadrerSur;
 
   /**
-   * OÙ LE JOUEUR A DEMANDÉ D'ALLER : la ligne du bilan qu'il a cliquée (#128).
+   * **où le joueur a demandé d'aller** : la ligne du bilan qu'il a cliquée (#128).
    *
-   * Un objet NEUF à chaque clic, parce que la vue n'applique un cadrage qu'une
+   * Un objet **neuf** à chaque clic, parce que la vue n'applique un cadrage qu'une
    * fois par cible (`VueParcelle`) : recliquer la même ligne après avoir fait
    * glisser la parcelle doit y ramener.
    *
-   * **Il retient CONTRE QUOI il a été posé, et c'est ce qui le périme.** Il
+   * **Il retient contre quoi il a été posé, et c'est ce qui le périme.** Il
    * passe devant les deux cadrages automatiques — c'est lui qu'on vient de
    * demander — mais dès que l'un d'eux a du neuf à montrer, il rend la main :
    * un arbre suivi qui meurt pendant qu'on lit le bilan est plus urgent que la
@@ -1524,7 +1524,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     cadrageDemande && cadrageDemande.contre === cadrageAuto ? cadrageDemande.ou : cadrageAuto;
 
   /**
-   * LA BARRE ESPACE met en marche et arrête, où qu'on ait cliqué.
+   * **la barre espace** met en marche et arrête, où qu'on ait cliqué.
    *
    * `preventDefault` sert deux fois : il empêche la page de défiler, et il
    * empêche la barre d'activer le bouton qui a le focus. C'est voulu — après
@@ -1591,17 +1591,17 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * Un clic sur la parcelle : le geste en cours s'applique là, ou bien on
    * sélectionne l'arbre qui s'y trouve.
    *
-   * **Un geste vise une CELLULE, une sélection vise un ARBRE**, et la vue rend
+   * **Un geste vise une cellule, une sélection vise un arbre**, et la vue rend
    * les deux. Pour le geste, la cellule suffit : sur un terrain accidenté un
    * même pixel recouvre plusieurs cellules et `celluleSousLeCurseurVue` rend
    * celle qu'on voit, à un demi-mètre près — sans importance quand le geste le
    * plus fin porte sur un disque de huit mètres.
    *
    * Pour la sélection, non. On désignait l'arbre par la distance de sa cellule
-   * au clic, c'est-à-dire en visant le SOL : il fallait toucher le pied, un
+   * au clic, c'est-à-dire en visant le **sol** : il fallait toucher le pied, un
    * houppier penché ne comptait pas, et sur un semis de trente centimètres
    * personne ne trouvait la cible. La vue vise maintenant le sprite — ce qu'on
-   * voit de l'arbre EST l'arbre — et `idArbre` est sa réponse.
+   * voit de l'arbre **est** l'arbre — et `idArbre` est sa réponse.
    */
   /**
    * Ce que le geste armé couvre, pour que la vue le montre sous le curseur.
@@ -1864,7 +1864,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           surRejouer={() => {
             if (enNiveau.niveau) lancerLeNiveau(enNiveau.niveau);
           }}
-          // `quitterLaPartie` et non `game.quit` : la sortie doit CONSOMMER
+          // `quitterLaPartie` et non `game.quit` : la sortie doit **consommer**
           // l'entrée d'historique poussée à l'entrée en partie (#148), sinon
           // le bouton retour du navigateur ramènerait à une partie finie.
           surQuitter={quitterLaPartie}
@@ -1983,7 +1983,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 vivants={vivants}
                 recolteAuto={game.recolteAuto}
                 reglerRecolteAuto={game.reglerRecolteAuto}
-                // Cliquer une essence sélectionne toutes ses tiges VIVANTES :
+                // Cliquer une essence sélectionne toutes ses tiges **vivantes** :
                 // c'est ce qui rend la liste agissante. Les chandelles en sont
                 // exclues — elles ne se gèrent pas comme des arbres, et le
                 // volet « Les arbres » les compte déjà à part.

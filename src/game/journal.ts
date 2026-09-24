@@ -1,5 +1,5 @@
 /**
- * LE JOURNAL D'UNE SEMAINE, d'où qu'il vienne.
+ * **Le journal d'une semaine**, d'où qu'il vienne.
  *
  * Une seule fonction, et elle a une raison d'exister à part : **quatre lectures
  * différentes partent du même journal**. L'ellipse le joue (`useEllipse`), le

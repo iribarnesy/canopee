@@ -1,7 +1,7 @@
 /**
  * Fusain d'Europe — *Euonymus europaeus*. Famille : **arbuste grêle de lisière**.
  *
- * Le plus léger de la haie : quelques brins fins, dressés, à rameaux VERTS et
+ * Le plus léger de la haie : quelques brins fins, dressés, à rameaux **verts** et
  * nettement quadrangulaires, et un houppier qu'on traverse du regard. C'est
  * l'écorce qui le trahit hors saison, et elle est ici franchement verdâtre —
  * le seul fût de l'atlas dans ce cas avec le genêt.

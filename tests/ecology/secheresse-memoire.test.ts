@@ -6,7 +6,7 @@
  * sous SSP5-8.5, la réserve profonde est à 94-100 % à chaque sortie d'hiver —
  * chaque été repart à plein.
  *
- * La mémoire existe pourtant, et elle est dans l'ARBRE. Quand la tension
+ * La mémoire existe pourtant, et elle est dans l'**arbre**. Quand la tension
  * devient extrême, l'eau casse en colonnes dans les vaisseaux : la cavitation.
  * Ces vaisseaux ne se réparent pas — l'arbre ne récupère qu'en fabriquant du
  * bois neuf, ce qui prend des années. C'est ce qui explique les mortalités

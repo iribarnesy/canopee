@@ -20,7 +20,7 @@
  *
  * **Ce qui est agrégé, et ce qui ne l'est pas.** On regroupe les tiges d'une
  * même espèce par carreau de `COTE_MASSE_M`, et la masse en retient ce que le
- * moteur donne : la hauteur MOYENNE des tiges du carreau, et leur nombre — d'où
+ * moteur donne : la hauteur **moyenne** des tiges du carreau, et leur nombre — d'où
  * la densité. Aucune tige n'est inventée ni oubliée ; on change d'échelle, pas
  * de données.
  *

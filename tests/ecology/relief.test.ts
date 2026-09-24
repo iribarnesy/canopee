@@ -50,7 +50,7 @@ describe("le terrain a une forme", () => {
     const vallon = altitudeParCellule(relief({ ...p, forme: "vallon" }), DIMS);
     const croupe = altitudeParCellule(relief({ ...p, forme: "croupe" }), DIMS);
     const auMilieu = (a: number[]) => (a[10 * 20 + 10] ?? 0) - (a[10 * 20 + 1] ?? 0);
-    // Dans un vallon, le milieu est plus BAS que les côtés : l'eau des deux
+    // Dans un vallon, le milieu est plus **bas** que les côtés : l'eau des deux
     // versants s'y rassemble. Sur une croupe, l'inverse.
     expect(auMilieu(vallon)).toBeLessThan(0);
     expect(auMilieu(croupe)).toBeGreaterThan(0);
@@ -176,7 +176,7 @@ describe("l'adret est plus chaud, pas seulement plus sec", () => {
   it("l'écart adret/ubac reste dans la fourchette de terrain", () => {
     // Le seul vrai contrôle possible ici : confronter le chiffre du moteur à
     // ce que mesurent les relevés. Sous nos latitudes, l'écart de température
-    // de l'AIR entre deux versants opposés de forte pente se compte en
+    // de l'**air** entre deux versants opposés de forte pente se compte en
     // dixièmes de degré à un degré et demi — bien moins que l'écart des
     // températures de sol, qui atteint plusieurs degrés et qu'on ne modélise
     // pas. Un test qui se contenterait de vérifier que `adret === +CONSTANTE`
@@ -191,7 +191,7 @@ describe("l'adret est plus chaud, pas seulement plus sec", () => {
 
   it("la chaleur et la soif ont la MÊME cause : elles ne peuvent pas diverger", () => {
     // C'est l'argument physique qui a motivé le mécanisme : le rayonnement
-    // supplémentaire d'un adret évapore ET chauffe. Les deux effets se
+    // supplémentaire d'un adret évapore **et** chauffe. Les deux effets se
     // déduisent donc d'un seul facteur, et le rapport de l'un à l'autre est le
     // même quelle que soit la pente ou l'orientation.
     const cas = [

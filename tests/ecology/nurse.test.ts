@@ -2,7 +2,7 @@
  * L'effet nurse (docs/regles.md §7.5, ch1-A) : sur la lande sèche et ventée,
  * un couvert d'ajoncs abrite ses voisins — moins de vent, moins de
  * rayonnement, donc moins de transpiration — mais leur dispute aussi l'eau.
- * Tout se joue à la DISTANCE : à bonne distance la facilitation l'emporte,
+ * Tout se joue à la **distance** : à bonne distance la facilitation l'emporte,
  * collé à la nurse c'est la compétition qui gagne.
  */
 
@@ -21,17 +21,17 @@ if (!serie) throw new Error("série lande manquante");
 const WEATHER = serieToWeeks(serie);
 
 /**
- * Ce qu'a fait le sujet planté au centre, MOYENNÉ sur plusieurs graines. Une
+ * Ce qu'a fait le sujet planté au centre, **moyenné** sur plusieurs graines. Une
  * seule ne suffit plus : depuis que chaque arbre porte sa vigueur propre
  * (trees.ts), comparer un individu à un individu revient à comparer deux
- * tirages. On neutralise la vigueur pour isoler l'abri, ET on répète — parce
+ * tirages. On neutralise la vigueur pour isoler l'abri, **et** on répète — parce
  * que le reste de la partie (semis du voisinage, ravageurs) tire lui aussi dans
  * le même générateur.
  *
- * **On mesure le VOLUME, et ce choix est une correction.** Cet essai lisait la
- * hauteur, en la prenant pour de la vigueur. Depuis que l'ombre fait FILER une
+ * **On mesure le volume, et ce choix est une correction.** Cet essai lisait la
+ * hauteur, en la prenant pour de la vigueur. Depuis que l'ombre fait **filer** une
  * tige au lieu de la raboter (`trees.ts`, étiolement), les deux grandeurs se
- * sont séparées : le chêne-liège collé à sa nurse est le PLUS HAUT des trois
+ * sont séparées : le chêne-liège collé à sa nurse est le **plus haut** des trois
  * (0,80 m contre 0,76 à trois mètres) et le plus chétif de loin — 0,89 cm de
  * diamètre contre 2,66, soit huit fois moins de bois, et un H/D de 90 quand
  * celui de ses voisins vaut 29. C'est une perche d'ombre, pas un arbre qui
@@ -74,7 +74,7 @@ function sujetUneGraine(
   }
   state = plantAt(state, especeId, 20, 20, 0.3);
   const id = state.nextTreeId - 1;
-  // On NEUTRALISE la vigueur individuelle : cet essai isole l'effet nurse, et
+  // On **neutralise** la vigueur individuelle : cet essai isole l'effet nurse, et
   // il compare un arbre à un autre. Avec ±20 % de dispersion individuelle
   // (trees.ts), c'est le tirage qui déciderait, pas l'abri.
   state = {
@@ -113,12 +113,12 @@ describe("effet nurse sur lande sèche et ventée", () => {
   });
 
   it("abrité à bonne distance, il pousse mieux qu'à découvert", () => {
-    // Le vent lui coûte plus que l'ombre — mais à BONNE DISTANCE seulement.
+    // Le vent lui coûte plus que l'ombre — mais à **bonne distance** seulement.
     expect(liegeAbrite).toBeGreaterThan(liegeNu);
   });
 
   it("même pour le sciaphile, il existe une bonne distance — et ce n'est pas zéro", () => {
-    // ATTENTION à ce test : son verdict a changé TROIS FOIS, et l'historique
+    // **Attention** à ce test : son verdict a changé **trois fois**, et l'historique
     // vaut plus que la conclusion du jour.
     //
     // Version 1 — « l'abri et l'ombre s'annulent » : on mesurait 0,38 m collé
@@ -136,7 +136,7 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // l'azote cesse d'être le facteur qui décide de tout, la concurrence pour
     // l'eau et la lumière reprend la main, et se coller à sa nurse se paie.
     //
-    // Ce qui SURVIT aux quatre versions, et qui est donc le vrai résultat :
+    // Ce qui **survit** aux quatre versions, et qui est donc le vrai résultat :
     // abrité à bonne distance bat toujours découvert. L'optimum de distance
     // — assez près pour couper le vent, assez loin pour ne pas se disputer
     // l'eau — est le résultat classique de la littérature sur les plantes
@@ -145,16 +145,16 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // conclusion robuste si le mécanisme sous-jacent, lui, est faux.
     //
     // Version 4 — et celle-ci ne change pas le verdict, elle change la
-    // GRANDEUR. Depuis que l'ombre fait filer une tige (étiolement, #97), la
-    // hauteur ne mesure plus la vigueur : le liège collé est le plus HAUT des
+    // **grandeur**. Depuis que l'ombre fait filer une tige (étiolement, #97), la
+    // hauteur ne mesure plus la vigueur : le liège collé est le plus **haut** des
     // trois (0,80 m contre 0,76) et de loin le plus chétif — 0,025 dm³ de bois
     // contre 0,213, H/D 90 contre 29. L'essai lisait donc, sans le savoir, une
     // grandeur que le moteur venait de rendre ambiguë. Mesuré en volume, le
-    // classement est le même AVANT et APRÈS le lot (0,040 puis 0,025 contre
+    // classement est le même **avant** et **après** le lot (0,040 puis 0,025 contre
     // 0,212 puis 0,213) : la conclusion écologique tient, c'est le thermomètre
     // qui était faux. Quatrième leçon du même essai, et la plus générale : une
-    // conclusion n'est pas robuste tant qu'on n'a pas vérifié que sa GRANDEUR
-    // DE MESURE dit encore ce qu'on croit.
+    // conclusion n'est pas robuste tant qu'on n'a pas vérifié que sa **grandeur**
+    // **de mesure** dit encore ce qu'on croit.
     //
     // (Trace de la version 2 :) Le verdict a changé avec la recalibration de l'azote
     // (`AZOTE_HOUPPIER_G_M2_AN`, trees.ts). Tant que l'azote bridait tout le
@@ -167,7 +167,7 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // pour lui l'abri est tout bénéfice ». Sur une lande sèche et ventée, plus
     // il est près de la nurse, mieux il pousse — 0,53 m collé, 0,44 m à trois
     // mètres, 0,37 m à découvert. Ce qui n'a pas bougé, et qui est le fond de
-    // l'affaire : la bonne distance dépend du TEMPÉRAMENT, et l'héliophile,
+    // l'affaire : la bonne distance dépend du **tempérament**, et l'héliophile,
     // lui, paie l'ombre (essai suivant).
     expect(liegeAbrite).toBeGreaterThan(liegeColle);
     expect(liegeAbrite).toBeGreaterThan(liegeNu);

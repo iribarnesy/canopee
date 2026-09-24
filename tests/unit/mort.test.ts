@@ -1,7 +1,7 @@
 /**
  * Les mises en scène de mort, une par cause.
  *
- * **Ce que ces essais gardent, c'est la LISIBILITÉ des causes** : le §6.3 ne
+ * **Ce que ces essais gardent, c'est la lisibilité des causes** : le §6.3 ne
  * demande pas des animations jolies, il demande des animations qu'on
  * distingue. Deux causes qui donneraient la même suite d'images ne diraient
  * rien au joueur, et c'est une propriété qui se teste sans regarder.
@@ -71,8 +71,8 @@ describe("dansLaFenetre", () => {
 
 describe("les causes de mort", () => {
   it("ont toutes une trajectoire : la table est exhaustive", () => {
-    // Le type l'impose déjà, mais une valeur ajoutée au moteur doit CASSER ici
-    // et non passer silencieusement. Il l'a fait : le VOLIS est la quatorzième
+    // Le type l'impose déjà, mais une valeur ajoutée au moteur doit **casser** ici
+    // et non passer silencieusement. Il l'a fait : le **volis** est la quatorzième
     // (#176, F17), et ce garde-fou est ce qui a forcé à lui dessiner une mort
     // plutôt qu'à la laisser hériter de celle du chablis.
     expect(CAUSES.length).toBe(14);
@@ -258,7 +258,7 @@ describe("ce que chaque cause raconte", () => {
     // garde en jeu, et l'effacer serait le contredire. Le chablis rejoint la
     // liste avec les tempêtes, et pour une raison différente des quatre
     // autres : il ne disparaît pas, il est déjà couché depuis un an quand sa
-    // mort est rapportée — d'où une issue pour qu'il BASCULE au lieu de
+    // mort est rapportée — d'où une issue pour qu'il **bascule** au lieu de
     // s'effacer, le jour où le moteur dira lesquels sont tombés et dans quel
     // sens.
     const effacent = CAUSES.filter((c) => mortAccomplie(c, vif).opacite < 1);
@@ -270,7 +270,7 @@ describe("ce que chaque cause raconte", () => {
   it("les morts qui laissent une chandelle la laissent, les autres non", () => {
     const chandelles = CAUSES.filter((c) => mortAccomplie(c, vif).chandelle);
     // Le feu a sa trajectoire neutre (§6.4) : `chandelleA: 0` la rend vraie
-    // dès le premier instant, ce qui est correct — un arbre torché EST une
+    // dès le premier instant, ce qui est correct — un arbre torché **est** une
     // chandelle noire.
     expect(chandelles).toContain("secheresse");
     expect(chandelles).toContain("vieillesse");
