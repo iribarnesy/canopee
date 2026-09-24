@@ -12,6 +12,7 @@
  */
 
 import { getEspece } from "./especes";
+import type { GrilleLue } from "./grid";
 import { crownRadiusM } from "./light";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
@@ -265,11 +266,11 @@ export const BOIS_AU_SOL_SATURATION_CG = 5000;
 
 export function chargeCombustible(
   trees: readonly TreeState[],
-  herbeCouverture: readonly number[],
-  litterCG: readonly number[],
+  herbeCouverture: GrilleLue,
+  litterCG: GrilleLue,
   coteM: number,
   lumiereAuSol?: readonly number[],
-  boisAuSolCG?: readonly number[],
+  boisAuSolCG?: GrilleLue,
 ): ChargeCombustible {
   const n = coteM * coteM;
   const parCellule = new Array<number>(n).fill(0);

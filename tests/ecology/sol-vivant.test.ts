@@ -44,7 +44,11 @@ function partie(actions: GameAction[], semaines: number) {
     mineralisationCum += r.fluxes.mineralizationKgHa;
     serieN.push(r.fluxes.mineralizationKgHa);
   }
-  const moyenne = (a: readonly number[]) => a.reduce((s, v) => s + v, 0) / a.length;
+  const moyenne = (a: ArrayLike<number>) => {
+    let t = 0;
+    for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+    return a.length === 0 ? 0 : t / a.length;
+  };
   return {
     state,
     mineralisationCum,

@@ -71,7 +71,7 @@
  */
 
 import { diametreCaviteCm, hauteurCaviteM, volumeCaviteTotalL } from "./cavites";
-import { forEachDiscCell, type GridDims } from "./grid";
+import { forEachDiscCell, type GridDims, type GrilleLue } from "./grid";
 import type { TreeState } from "./trees";
 
 /**
@@ -534,9 +534,9 @@ function partDuTerritoire(espece: EspeceFaune, aireParcelleM2: number): number {
  */
 export interface TableDeLaParcelle {
   /** `soil.ravageurs`, par cellule */
-  invertebres: readonly number[];
+  invertebres: GrilleLue;
   /** `soil.herbeBiomasse`, par cellule — le **proxy** des micromammifères */
-  micromammiferes: readonly number[];
+  micromammiferes: GrilleLue;
 }
 
 /**

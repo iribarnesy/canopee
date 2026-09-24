@@ -526,8 +526,7 @@ function figerLeSol(
   lumiereAuSol: Float32Array<ArrayBufferLike>,
   semaineAnnee: number,
 ) {
-  const arrondi = (a: readonly number[] | Float32Array<ArrayBufferLike>, d = 3) =>
-    Array.from(a, (v) => Number(v.toFixed(d)));
+  const arrondi = (a: ArrayLike<number>, d = 3) => Array.from(a, (v) => Number(v.toFixed(d)));
   const dims = { widthM: station.coteM, heightM: station.coteM };
   const tronc = troncCouche(altitudeParCellule(station.relief, dims), station.coteM, BOIS_AZIMUT);
   return {

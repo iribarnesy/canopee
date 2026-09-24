@@ -50,7 +50,7 @@ import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
  * jamais 1 : multiplier par 255 et arrondir garde donc tout l'intervalle, et
  * 1/255 est bien au-delà de ce qu'une teinte ou un seuil pondéré demandent.
  */
-export function emprisesParEspece(emprise: readonly number[]): Uint8Array[] {
+export function emprisesParEspece(emprise: ArrayLike<number>): Uint8Array[] {
   const n = emprise.length / N_HERBACEES;
   const grilles = Array.from({ length: N_HERBACEES }, () => new Uint8Array(n));
   for (let i = 0; i < n; i++) {
@@ -335,9 +335,9 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
  * paie en une copie complète par semaine simulée.
  */
 /** Somme d'un champ par cellule — assez fréquent pour ne pas se réécrire. */
-function somme(champ: readonly number[]): number {
+function somme(champ: ArrayLike<number>): number {
   let total = 0;
-  for (const v of champ) total += v;
+  for (let i = 0; i < champ.length; i++) total += champ[i] ?? 0;
   return total;
 }
 

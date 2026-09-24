@@ -103,16 +103,53 @@ const MAGIE = "CANOPEE\u0000";
  * forme de l'état — un champ de sol ajouté, un champ d'arbre retiré — n'a pas
  * besoin d'elle : l'en-tête déclare ses grilles, et le reste est du JSON qui se
  * relit tel quel.
+ *
+ * **2 (issue #203)** : les grilles du sol sont des tableaux **typés**, et l'en-tête
+ * déclare désormais la précision de chacune. Un bloc de version 1 porte des
+ * grilles qui étaient toutes en double précision ; les relire dans un
+ * `Float32Array` les tronquerait, donc l'état relu ne serait plus indiscernable
+ * de l'état écrit. On refuse, et le journal reprend la main — c'est exactement
+ * ce pour quoi cette version existe.
  */
-export const VERSION_FORMAT = 1;
+export const VERSION_FORMAT = 2;
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {
   /** `mineralNG`, ou `mycorhizes.ectomycorhizien` pour un sous-objet */
   nom: string;
   n: number;
-  /** `b` pour un tableau de booléens, absent pour des nombres */
-  type?: "b";
+  /**
+   * `b` pour un tableau de booléens, `f32` pour une grille en simple précision,
+   * absent pour une grille en double précision (#203).
+   *
+   * **La précision est déclarée et non devinée**, pour la même raison que les
+   * noms et les longueurs le sont : le lecteur doit reconstruire le conteneur
+   * que le moteur attend, et non celui qu'il croit deviner. Les **valeurs**, elles,
+   * restent écrites en float64 quelle que soit la grille — un nombre issu d'un
+   * `Float32Array` est exactement représentable en double, donc l'aller-retour
+   * est exact, et le bloc garde un pas d'alignement unique.
+   */
+  type?: "b" | "f32";
+}
+
+/**
+ * Est-ce une grille ? Un tableau simple ou un tableau **typé**.
+ *
+ * `Array.isArray` rend **faux** sur un `Float32Array`, et c'est le piège que ce
+ * lot a failli poser : un champ converti aurait disparu du bloc écrit ET de la
+ * liste attendue à la relecture, si bien que les deux côtés se seraient
+ * accordés sur un état amputé au lieu de le refuser. Le contrôle de l'en-tête
+ * ne l'aurait pas vu, puisqu'il compare deux listes produites par ce même test.
+ */
+function estGrille(v: unknown): v is ArrayLike<number> | boolean[] {
+  return Array.isArray(v) || ArrayBuffer.isView(v);
+}
+
+/** La précision d'une grille, telle qu'elle se déclare dans l'en-tête. */
+function typeDeGrille(tableau: ArrayLike<number> | boolean[]): "b" | "f32" | undefined {
+  if (tableau instanceof Float32Array) return "f32";
+  if (Array.isArray(tableau) && tableau.length > 0 && typeof tableau[0] === "boolean") return "b";
+  return undefined;
 }
 
 /**
@@ -123,14 +160,14 @@ interface GrilleDeclaree {
  * champ, la copie serait muette au lieu d'être fausse — donc pire. Le tri par
  * nom rend l'ordre indépendant de celui des déclarations.
  */
-function grillesDuSol(soil: SoilState): { nom: string; tableau: unknown[] }[] {
-  const out: { nom: string; tableau: unknown[] }[] = [];
+function grillesDuSol(soil: SoilState): { nom: string; tableau: ArrayLike<number> | boolean[] }[] {
+  const out: { nom: string; tableau: ArrayLike<number> | boolean[] }[] = [];
   for (const [cle, valeur] of Object.entries(soil)) {
-    if (Array.isArray(valeur)) {
+    if (estGrille(valeur)) {
       out.push({ nom: cle, tableau: valeur });
     } else if (valeur !== null && typeof valeur === "object") {
       for (const [sousCle, sousValeur] of Object.entries(valeur)) {
-        if (Array.isArray(sousValeur)) out.push({ nom: `${cle}.${sousCle}`, tableau: sousValeur });
+        if (estGrille(sousValeur)) out.push({ nom: `${cle}.${sousCle}`, tableau: sousValeur });
       }
     }
   }
@@ -178,12 +215,12 @@ export function ecrireEtat(state: GameState): Uint8Array {
   // indiscernable de l'état écrit ?*
   const sol: Record<string, unknown> = {};
   for (const [cle, valeur] of Object.entries(state.soil)) {
-    if (Array.isArray(valeur)) {
+    if (estGrille(valeur)) {
       sol[cle] = null;
     } else if (valeur !== null && typeof valeur === "object") {
       const reduit: Record<string, unknown> = {};
       for (const [sousCle, sousValeur] of Object.entries(valeur)) {
-        reduit[sousCle] = Array.isArray(sousValeur) ? null : sousValeur;
+        reduit[sousCle] = estGrille(sousValeur) ? null : sousValeur;
       }
       sol[cle] = reduit;
     } else {
@@ -197,8 +234,8 @@ export function ecrireEtat(state: GameState): Uint8Array {
     v: VERSION_FORMAT,
     sol,
     grilles: grilles.map(({ nom, tableau }) => {
-      const booleen = tableau.length > 0 && typeof tableau[0] === "boolean";
-      return booleen ? { nom, n: tableau.length, type: "b" as const } : { nom, n: tableau.length };
+      const type = typeDeGrille(tableau);
+      return type === undefined ? { nom, n: tableau.length } : { nom, n: tableau.length, type };
     }),
     reste: reste as unknown as Record<string, unknown>,
     ordre: Object.keys(state),
@@ -222,7 +259,10 @@ export function ecrireEtat(state: GameState): Uint8Array {
   const valeurs = new Float64Array(octets.buffer, debutGrilles + bourrage, nValeurs);
   let k = 0;
   for (const { tableau } of grilles) {
-    for (const v of tableau) valeurs[k++] = typeof v === "boolean" ? (v ? 1 : 0) : (v as number);
+    for (let i = 0; i < tableau.length; i++) {
+      const v = tableau[i];
+      valeurs[k++] = typeof v === "boolean" ? (v ? 1 : 0) : ((v as number) ?? 0);
+    }
   }
   return octets;
 }
@@ -264,8 +304,10 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   // déclarée à celle qu'un sol **neuf** de cette version produit. Les longueurs
   // aussi : une parcelle de 30 m ne se relit pas sur une station de 100.
   const solDeCetteVersion = createGameState(station, rngStateFromSeed(1)).soil;
-  const attendues = grillesDuSol(solDeCetteVersion).map((g) => `${g.nom}:${g.tableau.length}`);
-  const trouvees = entete.grilles.map((g) => `${g.nom}:${g.n}`);
+  const attendues = grillesDuSol(solDeCetteVersion).map(
+    (g) => `${g.nom}:${g.tableau.length}:${typeDeGrille(g.tableau) ?? "f64"}`,
+  );
+  const trouvees = entete.grilles.map((g) => `${g.nom}:${g.n}:${g.type ?? "f64"}`);
   if (attendues.length !== trouvees.length) return undefined;
   for (let i = 0; i < attendues.length; i++) {
     if (attendues[i] !== trouvees[i]) return undefined;
@@ -289,11 +331,15 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   const lus: Record<string, unknown> = {};
   let k = 0;
   for (const g of entete.grilles) {
-    const tableau: (number | boolean)[] = new Array(g.n);
-    for (let i = 0; i < g.n; i++) {
-      const v = valeurs[k++] ?? 0;
-      tableau[i] = g.type === "b" ? v !== 0 : v;
+    if (g.type === "b") {
+      const tableau: boolean[] = new Array(g.n);
+      for (let i = 0; i < g.n; i++) tableau[i] = (valeurs[k++] ?? 0) !== 0;
+      lus[g.nom] = tableau;
+      continue;
     }
+    // Le conteneur est celui que l'en-tête déclare, pas celui qu'on devine.
+    const tableau = g.type === "f32" ? new Float32Array(g.n) : new Float64Array(g.n);
+    for (let i = 0; i < g.n; i++) tableau[i] = valeurs[k++] ?? 0;
     lus[g.nom] = tableau;
   }
 

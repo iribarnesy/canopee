@@ -77,6 +77,7 @@
  *    ferait de l'épandage un choix visible au sol.
  */
 
+import type { GrilleEcrite, GrilleLue } from "./grid";
 import type { ContextePhenologique } from "./phenologie";
 import { ETALEMENT_CHUTE_SEMAINES, LARGEUR_PORTE_H, SEUIL_SENESCENCE_H } from "./phenologie";
 import { facteurGammePh } from "./soil";
@@ -814,7 +815,7 @@ const demandes = new Array<number>(N_HERBACEES).fill(0);
  * déguisé.
  */
 export function evoluerEmprises(
-  emprises: number[],
+  emprises: GrilleEcrite,
   base: number,
   capacites: readonly number[],
   vigueurs: readonly number[],
@@ -871,8 +872,8 @@ export function evoluerEmprises(
  * le grillage, tous deux progressifs.
  */
 export function suivreFeuillage(
-  feuillage: number[],
-  emprises: number[],
+  feuillage: GrilleEcrite,
+  emprises: GrilleLue,
   base: number,
   partsSaisonnieres: readonly number[],
   facteursEau: readonly number[],
@@ -905,7 +906,7 @@ export function suivreFeuillage(
  * tranche les rhizomes, c'est le seul geste du jeu qui aille les chercher sous
  * terre.
  */
-export function rabattreParEspece(parEspece: number[], base: number, facteur: number): void {
+export function rabattreParEspece(parEspece: GrilleEcrite, base: number, facteur: number): void {
   for (let s = 0; s < N_HERBACEES; s++) {
     parEspece[base + s] = (parEspece[base + s] ?? 0) * facteur;
   }

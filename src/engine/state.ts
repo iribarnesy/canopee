@@ -17,7 +17,7 @@ import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
 import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { IndividuFaune } from "./faune";
-import type { GridDims } from "./grid";
+import type { GridDims, Grille, GrilleLongue } from "./grid";
 import { cellCount } from "./grid";
 import { empriseInitiale, N_HERBACEES } from "./herbacees";
 import { stockEquilibreMm, stocksEquilibreParCellule } from "./nappe";
@@ -172,6 +172,43 @@ export function gridDims(station: Station): GridDims {
 }
 
 /**
+ * ── **la précision d'une grille de sol est déclarée par son type** (issue #203) ──
+ *
+ * Une trentaine de tableaux d'un nombre par cellule : c'est 99 % du volume d'un
+ * état de partie, et c'est ce qui borne la fenêtre de rembobinage, qui n'est
+ * bornée que par la mémoire. Un `number[]` de doubles coûte huit octets par
+ * case ; un `Float32Array` en coûte quatre, d'un bloc au lieu d'un objet par
+ * champ.
+ *
+ * **Mais la simple précision n'est pas gratuite pour tout le monde, et la
+ * mesure a désigné qui la paie.** Quatre traversées appariées de cent cinquante
+ * ans sur lande sableuse, même graine, même météo, une seule chose qui change
+ * — les tableaux du sol rabattus en simple précision après chaque tick :
+ *
+ *   bras                        tiges   volume    humus     bases
+ *   double                       2530   85,517   7752,07   −5,425
+ *   simple, stocks rapides       2528   85,518   7752,07   −5,425
+ *   simple, stocks lents         1145   57,998   8658,53   −8,585
+ *   simple, tous                 1145   57,998   8658,53   −8,585
+ *
+ * Les cinq stocks lents portent **toute** la divergence : le bras « lents
+ * seuls » reproduit le bras « tous » au chiffre près, et les vingt-sept autres
+ * champs — dont les deux plus gros du sol — laissent le volume identique à cinq
+ * chiffres. C'est le régime de **stagnation d'accumulateur** : `HUMUS_DECAY_PER_YEAR`
+ * vaut 0,015, donc un stock de cinq tonnes s'ajuste par différences de quelques
+ * kilos par décennie, et un incrément plus petit que l'ulp du stock ne s'ajoute
+ * pas du tout — il ne s'arrondit pas, il disparaît.
+ *
+ * **Et il a fallu un témoin pour le lire.** Le premier relevé donnait « −55 %
+ * de tiges » et concluait à la catastrophe. Trois graines en double précision
+ * sur la même station donnent 2530, 1653 et 887 tiges, pour des volumes de
+ * 85,5, 290,6 et 24,7 : la lande varie d'un facteur douze d'un tirage à
+ * l'autre, et le bras simple tombait en plein dedans. Ce qui tient dans le
+ * tableau ci-dessus, ce ne sont pas les écarts — ce sont les **quasi-identités**,
+ * qu'aucun tirage ne produit par hasard.
+ */
+
+/**
  * État dynamique du sol. L'eau est stratifiée : indexée par
  * `cellule * nbHorizons + horizon` (critère A10). L'azote, le carbone et le pH
  * restent mono-couche — la vie du sol, l'absorption d'azote et le chaulage se
@@ -180,17 +217,17 @@ export function gridDims(station: Station): GridDims {
  */
 export interface SoilState {
   /** eau de la réserve utile, mm — par (cellule, horizon) */
-  waterMm: number[];
+  waterMm: GrilleLongue;
   /** eau gravitaire au-dessus de la capacité au champ, mm — par (cellule, horizon) */
-  excessMm: number[];
+  excessMm: GrilleLongue;
   /** azote minéral, g/m² (1 kg/ha = 0,1 g/m²) */
-  mineralNG: number[];
+  mineralNG: GrilleLongue;
   /** azote de la litière au sol, g/m² (libéré vers le minéral en se décomposant) */
-  litterNG: number[];
+  litterNG: GrilleLongue;
   /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
-  litterCG: number[];
+  litterCG: GrilleLongue;
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
-  humusCG: number[];
+  humusCG: GrilleLongue;
   /**
    * Carbone du bois mort **couché** sur cette cellule, g/m². Distinct du bois mort
    * debout (`carbon.deadWoodKgC`, qui reste un stock de parcelle tant que les
@@ -198,7 +235,7 @@ export interface SoilState {
    * l'humus là où il est, protège la terre sous lui et abrite d'autres bêtes
    * que le bois sur pied (boisMort.ts).
    */
-  boisAuSolCG: number[];
+  boisAuSolCG: GrilleLongue;
   /**
    * Part de ce bois couché qui **barre** l'eau, ∈ [0,1] : moyenne, pondérée par
    * les masses posées, de l'efficacité barrante de chaque tronc — sa longueur
@@ -218,7 +255,7 @@ export interface SoilState {
    * toute la masse d'une cellule, cette part-là ne bouge pas avec eux : elle ne
    * change que lorsqu'un nouveau tronc se pose.
    */
-  boisEnTraversPart: number[];
+  boisEnTraversPart: Grille;
   /**
    * **tassement** du sol par cellule ∈ [0,1] : 0 = structure intacte, 1 = tassé.
    *
@@ -226,26 +263,26 @@ export interface SoilState {
    * le pH, c'est l'**arrangement** des particules. Un limon tassé et le même limon
    * en bonne structure ne se comportent pas pareil (tassement.ts).
    */
-  tassement: number[];
+  tassement: Grille;
   /**
    * Phosphore **assimilable**, g/m². Il ne diffuse pas : ce qui est dans une
    * cellule n'y bougera pas (pk.ts).
    */
-  phosphoreG: number[];
+  phosphoreG: Grille;
   /**
    * Phosphore **fixé** (fer, aluminium, calcium), g/m². Immense et lentement
    * relargué : un sol peut être riche en phosphore total et affamer les
    * plantes.
    */
-  phosphoreFixeG: number[];
+  phosphoreFixeG: GrilleLongue;
   /** Potassium **échangeable**, g/m² : retenu par le complexe, lessivable. */
-  potassiumG: number[];
+  potassiumG: Grille;
   /**
    * Réserve de potassium non échangeable, g/m² : coincée entre les feuillets
    * des argiles, elle tamponne la solution — elle relargue quand les racines
    * puisent, elle réabsorbe quand il y en a trop.
    */
-  potassiumReserveG: number[];
+  potassiumReserveG: GrilleLongue;
   /** cellule enclose : le gibier n'y entre pas (gibier.ts) */
   cloture: boolean[];
   /**
@@ -253,7 +290,7 @@ export interface SoilState {
    * stock qui manquait : sans lui, ce que la végétation ne transpire pas
    * disparaissait au lieu de faire monter la nappe.
    */
-  nappeMm: number[];
+  nappeMm: GrilleLongue;
   /**
    * Niveau de référence du réseau régional, mm. Il ne bouge que si ce qui
    * arrive à la parcelle arrive aussi à son bassin (nappe.ts).
@@ -264,14 +301,14 @@ export interface SoilState {
    * sédiment s'est déposé). Un sol qui s'amincit retient moins d'eau, donc
    * ruisselle davantage, donc s'érode plus vite (erosion.ts).
    */
-  epaisseurPerdueCm: number[];
+  epaisseurPerdueCm: Grille;
   /**
    * **bases échangeables** de la cellule, eq/m² : le calcium, le magnésium, le
    * potassium et le sodium fixés sur le complexe argilo-humique (`bases.ts`).
    *
    * C'est ce pool-là qui est l'état ; le pH n'en est que la lecture.
    */
-  basesEq: number[];
+  basesEq: GrilleLongue;
   /**
    * Les bases échangeables du **sous-sol**, eq/m² : tout ce qui est sous l'horizon
    * de surface, en un seul compartiment (`bases.ts`, critère C15).
@@ -282,14 +319,14 @@ export interface SoilState {
    * encore : le moteur sait dire que le fond s'appauvrit, pas encore ce que
    * l'appauvrissement fait aux racines qui y poussent.
    */
-  basesProfondEq: number[];
+  basesProfondEq: GrilleLongue;
   /**
    * Teneur en calcium de la litière **présente** sur la cellule, mg/g de matière
    * sèche : moyenne pondérée par les masses déposées, tenue comme l'est déjà la
    * vitesse de décomposition (`litterK`). C'est elle qui décide si ce qui se
    * décompose ici acidifie le complexe ou l'alimente.
    */
-  litterCaMgG: number[];
+  litterCaMgG: Grille;
   /**
    * pH de la cellule. **Ce n'est plus un état : c'est une lecture** du taux de
    * saturation du complexe, recalculée à chaque tick depuis `basesEq`
@@ -297,7 +334,7 @@ export interface SoilState {
    * suit. Le tableau est conservé parce que tout le moteur lit un pH par
    * cellule et n'a aucune raison de connaître la chimie qui le produit.
    */
-  ph: number[];
+  ph: Grille;
   /**
    * Couverture de la strate herbacée ∈ [0,1] par cellule (herbe.ts) : la
    * concurrence que subissent les jeunes plants, et la protection du sol.
@@ -307,7 +344,7 @@ export interface SoilState {
    * la strate — le feu, l'érosion, l'évaporation, le gibier — lit cette ligne
    * et n'a pas à connaître les espèces.
    */
-  herbeCouverture: number[];
+  herbeCouverture: Grille;
   /**
    * Emprise de chaque espèce herbacée sur chaque cellule ∈ [0,1], à plat :
    * `herbeEmprise[i * N_HERBACEES + s]` (herbacees.ts). C'est la place que
@@ -315,21 +352,21 @@ export interface SoilState {
    * anémone tient son mètre carré toute l'année et ne le couvre qu'en avril.
    * La somme sur une cellule ne dépasse jamais 1 : le sol est fini.
    */
-  herbeEmprise: number[];
+  herbeEmprise: Grille;
   /**
    * Feuillage de chaque espèce herbacée, même indexation à plat : ce qui est
    * **vert**. Il suit l'emprise à travers la saison et la sécheresse, et c'est lui
    * que la fauche, le feu et le gibier emportent — l'emprise, elle, reste.
    * `herbeCouverture` en est la somme par cellule.
    */
-  herbeFeuillage: number[];
+  herbeFeuillage: Grille;
   /**
    * Biomasse herbacée présente ∈ [0,1] : elle **suit** la couverture mais ne
    * disparaît pas quand l'herbe jaunit — le foin sur pied reste le meilleur
    * combustible de l'été. Seuls le feu, la fauche et la décomposition la font
    * baisser.
    */
-  herbeBiomasse: number[];
+  herbeBiomasse: Grille;
   /**
    * **grain** accumulé par cellule et par culture, en part du rendement annuel
    * maximal de l'espèce (#136). Même indexation à plat que `herbeEmprise`.
@@ -338,13 +375,13 @@ export interface SoilState {
    * saison, semaine après semaine, et non une fonction de son état du jour.
    * La moisson le remet à zéro et l'emporte hors de la parcelle.
    */
-  cultureGrain: number[];
+  cultureGrain: Grille;
   /**
    * Le **dénominateur** du rendement : ce que la culture aurait assimilé sans
    * aucun facteur limitant, cumulé de la même façon. Le rapport des deux est
    * la part du rendement maximal (`herbacees.ts:partDuRendement`).
    */
-  cultureGrainPotentiel: number[];
+  cultureGrainPotentiel: Grille;
   /**
    * **ressource florale** vécue par cellule ∈ [0,1] (#70, critère G4) : ce que les
    * pollinisateurs ont trouvé à manger ici, ces dernières semaines.
@@ -354,27 +391,27 @@ export interface SoilState {
    * pommier. Une valeur instantanée dirait l'inverse — que chaque arbre se
    * pollinise lui-même à proportion de ses propres fleurs.
    */
-  ressourceFlorale: number[];
+  ressourceFlorale: Grille;
   /**
    * Humidité de surface telle que le tapis la « vit » : moyenne lissée sur
    * plusieurs semaines (herbe.ts). Sans cette mémoire, la couverture réagit à
    * sa propre consommation avec une semaine de retard et se met à osciller.
    */
-  herbeHumidite: number[];
+  herbeHumidite: Grille;
   /**
    * Population de ravageurs par cellule ∈ [0,1] (ravageurs.ts). Elle vit là où
    * des hôtes sensibles s'affaiblissent, et recule là où l'habitat nourrit les
    * auxiliaires.
    */
-  ravageurs: number[];
+  ravageurs: Grille;
   /**
    * Réseaux mycorhiziens par cellule, un par type (mycorhizes.ts) : ils
    * mettent des années à se tisser et ne survivent pas au labour.
    */
-  mycorhizes: { ecto: number[]; arbusculaire: number[]; ericoide: number[] };
+  mycorhizes: { ecto: Grille; arbusculaire: Grille; ericoide: Grille };
   /** vitesse de décomposition de la litière de la cellule, /semaine à T°/humidité optimales
    * (moyenne pondérée des apports : litière d'aulne rapide, aiguilles de pin lentes, ch2-B) */
-  litterK: number[];
+  litterK: Grille;
 }
 
 export interface GameState {
@@ -589,9 +626,10 @@ export function createGameState(
   const n = cellCount(gridDims(station));
   const nH = Math.max(1, station.profil.length);
   // Chaque horizon démarre à sa propre réserve utile (sol ressuyé du 1er janvier).
-  const eauInitiale: number[] = [];
+  const eauInitiale = new Float64Array(n * nH);
   for (let i = 0; i < n; i++) {
-    for (let h = 0; h < nH; h++) eauInitiale.push(ruHorizonMm(station.profil[h] as Horizon));
+    for (let h = 0; h < nH; h++)
+      eauInitiale[i * nH + h] = ruHorizonMm(station.profil[h] as Horizon);
   }
   // La même friche de départ dans toutes les cellules : la station ne décrit
   // qu'un taux d'enherbement, l'atlas dit qui le compose (herbacees.ts).
@@ -626,73 +664,73 @@ export function createGameState(
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.
     soil: {
       waterMm: eauInitiale,
-      excessMm: new Array(n * nH).fill(0),
-      mineralNG: new Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
-      litterNG: new Array(n).fill(0),
-      litterCG: new Array(n).fill(0),
-      humusCG: new Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
-      boisAuSolCG: new Array(n).fill(0),
-      boisEnTraversPart: new Array(n).fill(0),
-      tassement: new Array(n).fill(0),
+      excessMm: new Float64Array(n * nH),
+      mineralNG: new Float64Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
+      litterNG: new Float64Array(n),
+      litterCG: new Float64Array(n),
+      humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
+      boisAuSolCG: new Float64Array(n),
+      boisEnTraversPart: new Float32Array(n),
+      tassement: new Float32Array(n),
       // Les bases sont **inversées** depuis le pH déclaré par la station, et non
       // l'inverse : les stations décrivent un pH, pas un taux de saturation, et
       // une partie doit démarrer exactement au pH annoncé (bases.ts).
-      basesEq: new Array(n).fill(basesDepart),
-      basesProfondEq: new Array(n).fill(basesProfondDepart),
-      litterCaMgG: new Array(n).fill(CALCIUM_NEUTRE_MG_G),
-      ph: new Array(n).fill(station.phInitial),
+      basesEq: new Float64Array(n).fill(basesDepart),
+      basesProfondEq: new Float64Array(n).fill(basesProfondDepart),
+      litterCaMgG: new Float32Array(n).fill(CALCIUM_NEUTRE_MG_G),
+      ph: new Float32Array(n).fill(station.phInitial),
       cloture: new Array(n).fill(false),
       // La partie démarre à l'équilibre : la nappe est là où la région la met,
       // creux par creux — elle est plus plate que le terrain (nappe.ts).
-      epaisseurPerdueCm: new Array(n).fill(0),
+      epaisseurPerdueCm: new Float32Array(n),
       nappeRegionaleMm: stockEquilibreMm(
         station.profil,
         station.remonteeNappeMmSemaine,
         station.drainageExterneMmSemaine,
         station.profondeurNappeEquilibreCm,
       ),
-      nappeMm: [
-        ...stocksEquilibreParCellule(
+      nappeMm: Float64Array.from(
+        stocksEquilibreParCellule(
           station.profil,
           altitudeParCellule(station.relief, { widthM: station.coteM, heightM: station.coteM }),
           station.remonteeNappeMmSemaine,
           station.drainageExterneMmSemaine,
           station.profondeurNappeEquilibreCm,
         ),
-      ],
-      phosphoreG: new Array(n).fill(station.phosphoreInitialGM2),
+      ),
+      phosphoreG: new Float32Array(n).fill(station.phosphoreInitialGM2),
       // Le stock fixé de départ : dix fois l'assimilable, l'ordre de grandeur
       // habituel entre phosphore total et phosphore assimilable.
-      phosphoreFixeG: new Array(n).fill(station.phosphoreInitialGM2 * 10),
-      potassiumG: new Array(n).fill(station.potassiumInitialGM2),
-      potassiumReserveG: new Array(n).fill(station.potassiumInitialGM2 * 10),
+      phosphoreFixeG: new Float64Array(n).fill(station.phosphoreInitialGM2 * 10),
+      potassiumG: new Float32Array(n).fill(station.potassiumInitialGM2),
+      potassiumReserveG: new Float64Array(n).fill(station.potassiumInitialGM2 * 10),
       // Une parcelle nue au départ : la strate s'installe d'elle-même. Qui la
       // compose au premier jour, c'est l'atlas qui le dit, d'après le pH de la
       // station et la vitesse d'installation de chacune (herbacees.ts).
-      herbeCouverture: new Array(n).fill(station.herbeInitiale),
-      herbeEmprise: Array.from({ length: n }, () => depart).flat(),
+      herbeCouverture: new Float32Array(n).fill(station.herbeInitiale),
+      herbeEmprise: Float32Array.from(Array.from({ length: n }, () => depart).flat()),
       // Le feuillage part au niveau de l'emprise : la station dit un sol déjà
       // couvert, pas des souches nues. La première semaine le ramènera à ce
       // que la saison permet.
-      herbeFeuillage: Array.from({ length: n }, () => depart).flat(),
-      herbeBiomasse: new Array(n).fill(station.herbeInitiale),
+      herbeFeuillage: Float32Array.from(Array.from({ length: n }, () => depart).flat()),
+      herbeBiomasse: new Float32Array(n).fill(station.herbeInitiale),
       // Rien de semé au premier jour : une culture s'obtient par une action.
-      cultureGrain: new Array(n * N_HERBACEES).fill(0),
-      cultureGrainPotentiel: new Array(n * N_HERBACEES).fill(0),
+      cultureGrain: new Float32Array(n * N_HERBACEES),
+      cultureGrainPotentiel: new Float32Array(n * N_HERBACEES),
       // Aucune mémoire florale au premier jour : la première saison la
       // construit. Partir d'un plancher supposerait une année d'avant.
-      ressourceFlorale: new Array(n).fill(0),
+      ressourceFlorale: new Float32Array(n),
       // Le 1er janvier, la réserve de surface est pleine.
-      herbeHumidite: new Array(n).fill(1),
-      ravageurs: new Array(n).fill(0),
+      herbeHumidite: new Float32Array(n).fill(1),
+      ravageurs: new Float32Array(n),
       // Une parcelle de départ porte déjà un fond de réseau : elle n'a pas
       // été stérilisée. C'est le labour qui remet à zéro.
       mycorhizes: {
-        ecto: new Array(n).fill(0.25),
-        arbusculaire: new Array(n).fill(0.25),
-        ericoide: new Array(n).fill(0.25),
+        ecto: new Float32Array(n).fill(0.25),
+        arbusculaire: new Float32Array(n).fill(0.25),
+        ericoide: new Float32Array(n).fill(0.25),
       },
-      litterK: new Array(n).fill(0),
+      litterK: new Float32Array(n),
     },
     trees: [],
     stockBrf: { carboneG: 0, azoteG: 0 },

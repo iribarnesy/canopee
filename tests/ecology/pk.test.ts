@@ -94,7 +94,11 @@ describe("les cycles, et ce qui leur manque encore", () => {
     for (let i = 0; i < 25; i++) {
       state = plantAt(state, "betula_pendula", 5 + (i % 5) * 5, 5 + Math.floor(i / 5) * 5, 2);
     }
-    const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+    const moyenne = (a: ArrayLike<number>) => {
+      let t = 0;
+      for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+      return a.length === 0 ? 0 : t / a.length;
+    };
     const debut = {
       p: moyenne(state.soil.phosphoreG),
       pTotal: moyenne(state.soil.phosphoreG) + moyenne(state.soil.phosphoreFixeG),
@@ -195,7 +199,11 @@ describe("où le phosphore et le potassium limitent — et où ils ne limitent p
       state = advanceWeek(state, semaine, entretien).state;
     }
     const vivants = state.trees.filter((t) => t.alive && t.especeId === especeId);
-    const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+    const moyenne = (a: ArrayLike<number>) => {
+      let t = 0;
+      for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+      return a.length === 0 ? 0 : t / a.length;
+    };
     return {
       hauteur: Math.max(0, ...vivants.map((t) => t.heightM)),
       pDisponible: moyenne(state.soil.phosphoreG) * disponibilitePhosphore(state.station.phInitial),

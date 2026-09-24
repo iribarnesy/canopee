@@ -114,7 +114,11 @@ describe("ce que le réseau apporte", () => {
     for (let i = 0; i < 25; i++) {
       state = plantAt(state, "betula_pendula", 5 + (i % 5) * 5, 5 + Math.floor(i / 5) * 5, 2);
     }
-    const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+    const moyenne = (a: ArrayLike<number>) => {
+      let t = 0;
+      for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+      return a.length === 0 ? 0 : t / a.length;
+    };
     const debut = moyenne(state.soil.mycorhizes.ecto);
     const releves: number[] = [];
     for (let i = 0; i < 30 * 52; i++) {

@@ -105,8 +105,10 @@ function hauteurMediane(state: GameState, especeId: string): number {
   return h.length === 0 ? 0 : (h[Math.floor(h.length / 2)] ?? 0);
 }
 
-function moyenne(a: readonly number[]): number {
-  return a.length === 0 ? 0 : a.reduce((s, v) => s + v, 0) / a.length;
+function moyenne(a: ArrayLike<number>): number {
+  let total = 0;
+  for (let i = 0; i < a.length; i++) total += a[i] ?? 0;
+  return a.length === 0 ? 0 : total / a.length;
 }
 
 /**
@@ -397,7 +399,6 @@ const MYCORHIZES: Experience = {
   executer: () => {
     const st = station(LIMON_RICHE, { coteM: 30, gibierParHa: 0 });
     const w = meteo("limon-riche");
-    const moyenne = (a: readonly number[]) => a.reduce((x, y) => x + y, 0) / a.length;
     const planter = (s: GameState) => planterGrille(s, "betula_pendula", 5, 5, 0.5).state;
     // Même parcelle, même graine, mêmes plants : seul le labour préalable
     // change. On laboure une semaine avant de planter, comme on le ferait.

@@ -211,8 +211,21 @@ let bilanAuDebut: Bilan = BILAN_VIDE;
  *
  * Quatre mégaoctets pour dix mille cellules, parce que `SoilState` porte une
  * quinzaine de `number[]` dont deux par cellule **et** par horizon. Des tableaux
- * typés diviseraient ça par deux et rendraient d'autant plus de recul — c'est
+ * typés diviseraient ça par deux et rendraient d'autant plus de recul — c'était
  * au moteur de le décider, pas au rendu.
+ *
+ * **Le moteur a décidé, et la réponse est un tiers, pas la moitié** (#203). Les
+ * grilles du sol sont désormais typées et leur précision est déclarée par leur
+ * type : **4,46 Mo par point retenu, contre 3,03 après**, mesuré en apparié.
+ * Pas la moitié, parce que les plus grosses grilles du sol sont précisément
+ * celles qu'une propriété de conservation compte — l'eau, l'azote, le carbone,
+ * les bases — et que la simple précision casse la fermeture de ces bilans à
+ * 5e-7. Elles restent en double, et c'est écrit dans leur type.
+ *
+ * Ce qui veut dire qu'à mémoire égale le grain peut se resserrer ou la fenêtre
+ * s'allonger : douze points au lieu de huit pour les mêmes trente mégaoctets.
+ * `POINTS_GARDES` n'a pas bougé pour autant — c'est un réglage du rendu, et il
+ * se décide avec la scène Pixi sous les yeux, pas depuis le moteur.
  *
  * D'où le grain d'aujourd'hui : **un point par semestre, huit points, quatre
  * ans de recul pour trente et un mégaoctets mesurés**. Le §6.8 s'était donné

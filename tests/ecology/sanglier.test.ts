@@ -98,7 +98,11 @@ describe("aucun tirage ne quitte le flux local", () => {
     }
     expect(avec.rng).toEqual(sans.rng);
     // Et pourtant le sanglier a bien travaillé : la litière a bougé.
-    const somme = (a: readonly number[]) => a.reduce((x, y) => x + y, 0);
+    const somme = (a: ArrayLike<number>) => {
+      let t = 0;
+      for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+      return t;
+    };
     expect(somme(avec.soil.humusCG)).not.toBeCloseTo(somme(sans.soil.humusCG), 3);
   });
 });
@@ -142,7 +146,11 @@ function chenaie(densite: number, ans: number, graine = 3) {
     s = tick(s, w).state;
   }
   const vivants = s.trees.filter((t) => t.alive).length;
-  const somme = (a: readonly number[]) => a.reduce((x, y) => x + y, 0);
+  const somme = (a: ArrayLike<number>) => {
+    let t = 0;
+    for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
+    return t;
+  };
   return { recrues: vivants - plantes, vivants, humus: somme(s.soil.humusCG) };
 }
 

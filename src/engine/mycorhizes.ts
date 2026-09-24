@@ -24,7 +24,7 @@
 
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
-import type { GridDims } from "./grid";
+import type { GridDims, GrilleLue } from "./grid";
 import { forEachDiscCell } from "./grid";
 import { rootRadiusM, type TreeState } from "./trees";
 
@@ -109,7 +109,7 @@ export function prochainReseau(actuel: number, cible: number): number {
  * réellement connecté.
  */
 export function reseauSousArbre(
-  reseau: readonly number[],
+  reseau: GrilleLue,
   tree: TreeState,
   espece: EspeceV0,
   dims: GridDims,

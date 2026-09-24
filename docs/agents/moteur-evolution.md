@@ -61,7 +61,144 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la prairie reste une prairie, #184)
+## Ce que le dernier lot a appris (la précision se déclare, #203)
+
+Un lot de représentation mémoire, sans une ligne d'écologie — et il a appris
+plus de méthode que les trois précédents réunis.
+
+### Le résultat, d'abord
+
+Les trente-deux grilles du sol sont des tableaux typés, et **le type déclare la
+politique de précision** : `Grille = Float32Array` pour ce que la semaine
+réécrit, `GrilleLongue = Float64Array` pour ce qui ne le supporte pas. Poids
+d'un état retenu, mesuré en apparié contre `main` : **4,46 → 3,03 Mo, soit
+−32 %**. Et la trajectoire ne bouge pas — cent ans, deux stations, deux graines,
+le peuplement est identique **tige pour tige**, seul l'humus diffère au septième
+chiffre.
+
+### Le témoin, pour la troisième fois en quatre lots
+
+Premier relevé : les tableaux du sol rabattus en simple précision font passer la
+lande de 2530 à 1145 tiges. **−55 %, catastrophe, on n'y touche pas.** J'ai
+failli l'écrire.
+
+Trois graines en double précision sur la même station donnent 2530, 1653 et 887
+tiges, pour des volumes de 85,5, 290,6 et **24,7** m³. La lande varie d'un
+facteur douze d'un tirage à l'autre, et le bras simple tombait en plein dedans.
+
+*C'est la troisième fois que cette faute se présente, sous trois déguisements :
+un bras de banc lu pour deux (#210), une géométrie lue en moyenne quand elle
+comptait au bord (#184), et maintenant un écart lu sans sa variabilité. Le
+remède est toujours le même et il est bon marché : **une station stochastique
+ne rend pas un écart, elle rend une fourchette.** Avant de rapporter un delta
+sur une grandeur de peuplement, faire tourner deux graines de plus. Ça coûte
+vingt minutes et ça a sauvé le lot.*
+
+### Attribuer en deux bras plutôt qu'en trente
+
+Trente-deux champs, et la question « lesquels paient ? ». Les convertir un par
+un aurait fait trente relevés. Deux ont suffi, en pariant sur une hypothèse
+plutôt qu'en balayant : **les stocks lents d'un côté, tout le reste de
+l'autre.**
+
+  bras                    tiges   volume    humus     bases
+  double                   2530   85,517   7752,07   −5,425
+  simple, stocks rapides   2528   85,518   7752,07   −5,425
+  simple, stocks lents     1145   57,998   8658,53   −8,585
+  simple, tous             1145   57,998   8658,53   −8,585
+
+Le bras « lents seuls » reproduit le bras « tous » au chiffre près : les cinq
+stocks lents portent **toute** la divergence. Et ce qui rend ce tableau solide,
+ce ne sont pas les écarts — ce sont les **quasi-identités**, qu'aucun tirage ne
+produit par hasard. *Une hypothèse mécaniste bien posée transforme un balayage
+en deux mesures. Ici c'était la stagnation d'accumulateur : un incrément plus
+petit que l'ulp du stock ne s'arrondit pas, il disparaît, et l'humus décroît de
+1,5 % l'an sur cinq tonnes.*
+
+### `heapUsed` ne compte pas les tableaux typés
+
+Première mesure mémoire : 3,74 → 0,24 Mo par point, **quinze fois mieux**. Faux.
+Le tampon d'un tableau typé vit **hors** du tas V8, dans `arrayBuffers` ; je
+comparais un `number[]` résident à un `Float32Array` invisible. En sommant les
+deux : 4,46 → 2,10. *Quand un gain dépasse ce que l'arithmétique permet — ici
+un facteur deux sur la taille d'un mot —, c'est l'instrument qu'il faut
+suspecter, pas la chance.*
+
+### Ce qui a vraiment décidé du lot : les propriétés, pas la physique
+
+La suite complète a rendu dix rouges, tous le même motif, révélé par paliers :
+le bilan azote, puis le bilan eau, puis le carbone d'un fût laissé au sol.
+Chaque fois une propriété de conservation qui exige 5e-7 là où la simple
+précision plafonne à ~1e-7 par cellule — dix mille cellules sommées sortent à
+3e-6.
+
+**Et ce n'est pas une exigence physique.** La dérive qu'on s'autoriserait vaut
+0,008 % du stock d'azote sur cent cinquante ans : rigoureusement rien. Ce qu'on
+perdrait est un **instrument**. Tant qu'un invariant vaut zéro au bit près, tout
+écart non nul EST un bogue — c'est comme ça que #201 a attrapé `faucher` en
+train de fabriquer 37 kg de carbone. Desserrer la tolérance ne dégrade pas le
+détecteur, elle l'éteint : on perd le droit de demander « est-ce l'arrondi ou
+une fuite ? ».
+
+D'où la règle, mécanique et écrite dans le type : **une grille qu'une propriété
+de conservation **somme** reste longue.** Eau, azote, carbone, bases — dix grilles,
+et ce sont les plus grosses. Le gain est tombé de 53 % à 46 % puis à 32 %, un
+palier par propriété qui parlait.
+
+*Deux choses à en retenir. La première : **le coût d'une optimisation ne se lit
+pas dans la physique mais dans les garanties.** J'ai instruit ce lot en me
+demandant « quelle précision le sol mérite-t-il », et c'était la mauvaise
+question ; la bonne était « quelles propriétés comptent ce champ ». La seconde :
+**c'est un arbitrage, pas une loi**, et il se dit comme tel au propriétaire —
+l'autre branche existe, elle rend 46 % au lieu de 32, et elle coûte l'exactitude
+de I1.*
+
+### Le piège qui n'aurait pas rougi
+
+`serialisation.ts` énumère les grilles du sol par `Array.isArray`, qui rend
+**faux** sur un `Float32Array`. Un champ converti aurait disparu du bloc écrit
+**et** de la liste attendue à la relecture — donc les deux côtés se seraient
+accordés sur un état amputé au lieu de le refuser, puisque le contrôle d'en-tête
+compare deux listes produites par ce même test. *Un contrôle qui compare la
+sortie d'une fonction à elle-même ne détecte rien de ce que cette fonction ne
+voit pas. Quand on change la **forme** d'une donnée, relire les endroits qui
+l'inspectent par introspection avant ceux qui la lisent par son type : le
+compilateur couvre les seconds et ignore les premiers.*
+
+L'en-tête déclare désormais la précision de chaque grille, `VERSION_FORMAT`
+passe à 2, et un bloc de version 1 est refusé plutôt que tronqué.
+
+### Ce que l'issue supposait, et que le rendu a livré entre-temps
+
+Elle s'ouvre sur « le rembobinage garde des états de partie tous les six mois ».
+Quand j'ai instruit le lot, `docs/interface-visuelle.md` disait « cadré, pas
+fait » et le code n'en portait rien : j'ai donc travaillé en supposant que le
+consommateur n'existait pas, et j'ai gardé en réserve une **troisième voie** —
+garder le moteur exact et ne compresser qu'au moment de retenir un état.
+
+**Le rembobinage a été livré pendant le lot**, et il tranche cette question par
+un fait plutôt que par une préférence : il **rejoue** depuis l'état retenu
+(`revoir(deSemaine)` — « revenir à cette semaine et rejouer jusqu'au présent »).
+Un état retenu approximatif ferait donc rejouer un passé **différent de celui
+que le joueur a vécu**, et sur une station chaotique — la lande varie d'un
+facteur douze d'une graine à l'autre — cette divergence ne serait pas cosmétique.
+La troisième voie est morte, et c'est très bien : ce lot est le seul qui rende
+de la mémoire sans toucher à ce que le joueur a vu.
+
+*La leçon n'est pas « j'ai eu de la chance ». C'est qu'**une hypothèse sur ce
+qui existe ailleurs dans le dépôt se vérifie au moment de conclure, pas au
+moment de commencer** — un lot qui dure une journée traverse les livraisons des
+autres agents. Ici `git log` sur `main` avant d'ouvrir la PR a suffi, et il a
+changé une conclusion.*
+
+Et `worker.ts` posait la question à l'envers de la mienne, noir sur blanc :
+« des tableaux typés diviseraient ça par deux — c'est au moteur de le décider,
+pas au rendu ». La réponse mesurée y est écrite : un tiers et non la moitié,
+parce que les plus grosses grilles sont celles qu'un bilan compte. `POINTS_GARDES`
+n'a pas bougé pour autant : c'est un réglage du rendu, il se décide avec la
+scène sous les yeux.
+
+## Ce qu'un lot plus ancien a appris (la prairie reste une prairie, #184)
 
 Un lot qui gagne un critère, en rend un autre, et **découvre que le résultat du
 lot précédent était un artefact de géométrie**. Les trois en une fois, et c'est
