@@ -952,6 +952,22 @@ function definirLaPolitique(politique: PolitiqueHoraire): void {
 
 function stepWeeks(n: number) {
   if (!state) return;
+  /**
+   * Une scène a arrêté le temps : on ne simule pas la suite du lot.
+   *
+   * **La tempête et la mortalité de masse ne s'arrêtaient pas vraiment.** Elles
+   * posaient leur autopause, mettaient l'horloge à zéro… et la boucle
+   * continuait à ticker les semaines restantes du lot — jusqu'à quatre de plus
+   * à ×52, vingt-cinq au plafond. Tout ce qui s'y passait était replié dans le
+   * même instantané que la scène, donc joué dans la même ellipse : le joueur
+   * lisait « 350 arbres meurent d'un coup » pendant qu'un mois de plus lui
+   * passait sous les yeux. L'incendie, lui, rendait déjà la main.
+   *
+   * Le drapeau plutôt qu'un `return` sur place : la semaine va **au bout** de
+   * son tour, donc l'incendie de la même semaine écrit encore sa ligne de
+   * journal, et le compteur de fruits reste juste.
+   */
+  let scenePosee = false;
   for (let i = 0; i < n; i++) {
     // **La facture se présente avant que la semaine ne se ferme (#133).** Le
     // joueur compose sa semaine librement ; c'est au moment de passer à la
@@ -1145,6 +1161,7 @@ function stepWeeks(n: number) {
       // à ×52 une rafale qui couche trente arbres passe entre deux images.
       if (weeksPerSecond > 1 && estUneTempeteAVoir(t.arbresVerses)) {
         weeksPerSecond = 0;
+        scenePosee = true;
         post({
           type: "autopause",
           reason: `Tempête : ${t.arbresVerses} arbres couchés`,
@@ -1159,6 +1176,7 @@ function stepWeeks(n: number) {
     if (weeksPerSecond > 1 && estUneMortaliteDeMasse(ticked.morts.length, before.trees.length)) {
       const part = ticked.morts.length / Math.max(1, before.trees.length);
       weeksPerSecond = 0;
+      scenePosee = true;
       post({
         type: "autopause",
         reason: `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
@@ -1251,6 +1269,8 @@ function stepWeeks(n: number) {
     // la première essence mûre. Mesuré en jeu : 115 kg de pommes sur l'arbre en
     // semaine 39, comparés à un « précédent » de 28 kg de miettes.
     prevFruitsReadyKg = arbresMurs(state.trees, recoltees).kg;
+    // La scène a arrêté le temps : la suite du lot n'est pas simulée.
+    if (scenePosee) return;
   }
 }
 
