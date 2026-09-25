@@ -159,7 +159,15 @@ function CarteDEtape({
           <span>{etape.rang}</span>
           {depliable && <span aria-hidden="true">{ouverte ? "−" : "+"}</span>}
         </div>
-        <div style={{ fontSize: 13.5, lineHeight: 1.3 }}>{etape.titre}</div>
+        {/*
+          Le titre passe par le même rendu que le détail, et ça manquait : la
+          migration des emphases (#228) a mis du gras markdown dans les
+          commentaires du tick, et l'étape 11 s'affichait
+          « La **ressource florale**, et c'est une mémoire », étoiles comprises.
+        */}
+        <div style={{ fontSize: 13.5, lineHeight: 1.3 }}>
+          <AvecDuCode texte={etape.titre} />
+        </div>
         {etape.detail && (
           <div
             style={{

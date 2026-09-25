@@ -27,8 +27,12 @@ dérivé (texture, MO, pierrosité → réserve utile, drainage, fertilité), gr
 1 m², arbres positionnés qui puisent selon la **profondeur de leurs racines**,
 lumière avec ombres portées et pénombre, effet nurse et brise-vent, régénération
 et succession émergente, météo réelle Météo-France (60 ans), phénologie et
-récoltes, carbone, économie (argent, UTH, contrats). Jeu jouable en ligne :
-https://iribarnesy.github.io/canopee/
+récoltes, carbone, économie (argent, UTH, contrats).
+
+**Jouer** : https://iribarnesy.github.io/canopee/
+**Ce que le simulateur prend en compte** — les 153 critères de réalisme et les
+23 étapes d'une semaine simulée, extraits du dépôt au build :
+https://iribarnesy.github.io/canopee/#/modele
 
 ## Développement
 
