@@ -47,6 +47,14 @@
  * s'installe, il reste tant que son gîte tient et que la table suit, et il part
  * sinon.
  *
+ * **Guilde 4 — les chauves-souris arboricoles.** Elle n'a demandé **aucune ligne**
+ * de mécanisme : deux fiches, et le module les a portées telles quelles. C'est
+ * le contrôle de la promesse écrite plus bas sur `EspeceFaune`, et il fallait
+ * bien qu'une guilde entière vienne l'éprouver. Ce qu'elle a coûté est ailleurs
+ * — dans le choix de ce qu'on déclare : l'individu est ici une **colonie**, et la
+ * noctule est restée **sans table** parce que ce qu'elle mange n'est pas dans ce
+ * moteur.
+ *
  * ── **la limite à connaître** : **la parcelle ne voit pas ses voisins** ──────────────
  *
  * Le territoire exclut les congénères **de la parcelle**, et rien d'autre. Sur une
@@ -184,7 +192,21 @@ export interface EspeceFaune {
    * nourriture n'existe pas encore dans le moteur est jugée sur son seul gîte,
    * comme au lot 1. Mieux vaut une table manquante et dite qu'une table
    * branchée sur une grandeur qui ne veut pas ce qu'on croit — c'est ce qui
-   * serait arrivé à l'écureuil, faute de glandée.
+   * serait arrivé à l'écureuil, faute de glandée, et à la noctule, faute
+   * d'insectes de haut vol.
+   *
+   * ── **attention : ce champ a DEUX lecteurs** ──────────────────────────────────
+   *
+   * Le second ne se voit pas d'ici. Depuis le lot 3, `couvertureAuxiliaires` lit
+   * `table.ressource` pour décider **de quoi l'animal est l'auxiliaire**, et le
+   * résultat entre dans `carteBiotique` — donc dans un critère vert du
+   * référentiel (G3, J5).
+   *
+   * **Déclarer une table, ce n'est donc pas seulement dire ce qu'on mange : c'est
+   * aussi déclarer un service de régulation.** Une espèce qui prélève la
+   * ressource loin de la parcelle, ou une autre forme de la même proie, mange
+   * peut-être bien mais ne régule rien ici. Remplir ce champ demande de penser
+   * aux deux lectures.
    */
   table?: { ressource: Ressource; seuil: number };
   /**
@@ -197,7 +219,7 @@ export interface EspeceFaune {
 }
 
 /**
- * **l'atlas de faune** — première fournée, celle que #183 a rendue possible.
+ * **l'atlas de faune**, celui que #183 a rendu possible.
  *
  * Les cavernicoles d'abord, parce que le moteur sait depuis peu compter les
  * litres de creux d'un arbre (`cavites.ts`) et que c'est le volume, et lui
@@ -205,6 +227,10 @@ export interface EspeceFaune {
  * consigne était « toute la faune qui peut s'installer » et qu'un modèle qui ne
  * saurait faire que des mésanges aurait mal vieilli : la hutte et l'aire
  * obligent à traiter le gîte **construit**, qui ne se juge pas comme un creux.
+ *
+ * Puis les chauves-souris, qui ne creusent rien et **héritent** : leur loge est
+ * celle qu'un pic a taillée dans un fût que la carie avait rendu tendre, donc
+ * toute la chaîne devait exister avant elles.
  *
  * Les territoires sont des ordres de grandeur d'ouvrages de terrain, arrondis,
  * et convertis en rayon d'un disque de même surface. Les volumes de loge sont
@@ -323,6 +349,99 @@ export const FAUNE: readonly EspeceFaune[] = [
     colonisationParAn: 0.2,
     table: { ressource: "micromammiferes", seuil: 0.6 },
     semaineBilan: 24,
+  },
+
+  // ── **les chauves-souris arboricoles** (issue #187, guilde 4) ──────────────────
+  //
+  // **Cette guilde est le contrôle de la promesse du module** : « ajouter une
+  // guilde entière ne doit demander aucune ligne de code ». Elle l'a tenue —
+  // ce qui suit est de l'atlas, et rien d'autre n'a bougé dans `faune.ts`.
+  //
+  // Elles arrivent maintenant plutôt qu'au premier jet pour une raison qui
+  // n'est pas de commodité : une chauve-souris arboricole ne creuse pas, elle
+  // **hérite**. Sa loge est celle qu'un pic a taillée dix ans plus tôt dans un
+  // fût que la carie avait rendu tendre. Toute la chaîne était donc nécessaire
+  // avant elles, et `cavites.ts` (#183) en est le dernier maillon.
+  //
+  // **L'individu est ici une colonie de parturition**, pas une bête, et il faut
+  // le dire : une noctule solitaire n'est pas un événement de la parcelle, une
+  // colonie de quarante femelles dans le vieux chêne en est un, et c'est elle
+  // que l'abattage expulse. Les volumes de loge sont donc ceux d'une chambre
+  // entière, pas d'un individu.
+  {
+    id: "murin_de_bechstein",
+    nom: "murin de Bechstein",
+    nomLatin: "Myotis bechsteinii",
+    gite: "cavite",
+    // Une colonie de dix à trente femelles occupe une loge de pic épeiche :
+    // chambre d'une douzaine de centimètres de calibre sur trente de profond,
+    // soit trois à quatre litres *(à calibrer)*.
+    volumeLogeL: 4,
+    // Le diamètre d'une loge de pic épeiche, qui est **le** gîte de l'espèce en
+    // chênaie (45 à 50 mm).
+    entreeMinMm: 45,
+    // Bas, et c'est mesuré ainsi sur le terrain : les gîtes de Bechstein sont
+    // trouvés entre deux et huit mètres, souvent sous cinq. L'espèce est
+    // casanière et ne cherche pas la hauteur.
+    hauteurGiteMinM: 3,
+    supportMinCm: 0,
+    // Deux grandeurs se rejoignent ici, et c'est ce qui rend le chiffre solide.
+    // Une chênaie mûre bien pourvue porte de l'ordre d'une colonie par
+    // cinquante hectares, soit un rayon de 400 m ; et le rayon de chasse de
+    // l'espèce, qui est la plus sédentaire des forestières, tient sous les
+    // cinq cents mètres autour du gîte. Inter-gîte et aire de chasse coïncident
+    // donc, ce que `territoireM` suppose partout ailleurs dans cette fiche.
+    territoireM: 400,
+    // Les colonies de parturition se forment en avril-mai.
+    semaineInstallation: 17,
+    // Rare et exigeante en vieux bois : c'est l'espèce que la sylviculture cite
+    // comme indicatrice des futaies feuillues âgées.
+    colonisationParAn: 0.2,
+    // **Elle glane les chenilles sur le feuillage** — la proie de la mésange, au
+    // même endroit et à la même saison. Le seuil est donc le sien, et c'est une
+    // **borne haute assumée** plutôt qu'un réglage : rapportée à l'hectare, une
+    // colonie de vingt femelles sur cinquante hectares demande bien moins
+    // qu'un couple de mésanges sur un seul. Lui laisser le seuil de la mésange,
+    // c'est donc la traiter plus sévèrement que son régime ne l'exige
+    // *(à calibrer)*.
+    table: { ressource: "invertebres", seuil: 0.004 },
+    // Le bilan tombe à l'élevage des jeunes, en juin.
+    semaineBilan: 24,
+  },
+  {
+    id: "noctule_commune",
+    nom: "noctule commune",
+    nomLatin: "Nyctalus noctula",
+    gite: "cavite",
+    // Vingt à soixante femelles en loge de pic noir : une chambre d'une
+    // vingtaine de centimètres de calibre sur quarante de profond, soit une
+    // dizaine de litres *(à calibrer)*.
+    volumeLogeL: 10,
+    // La loge de pic noir, ovale, fait huit à douze centimètres. C'est la plus
+    // large exigence de l'atlas, et elle est **discriminante** : elle demande un
+    // fût largement évidé, donc un très vieil arbre.
+    entreeMinMm: 75,
+    // Espèce de haut vol : elle se laisse tomber de son gîte pour prendre son
+    // envol, et ses loges sont trouvées entre huit et vingt mètres.
+    hauteurGiteMinM: 8,
+    supportMinCm: 0,
+    // Les colonies de parturition sont distantes : de l'ordre d'une par centaine
+    // d'hectares en forêt, soit un rayon de 560 m, arrondi à 600.
+    territoireM: 600,
+    // Mise bas fin mai ; les colonies se rassemblent en mai.
+    semaineInstallation: 19,
+    // Moins liée à la forêt que le Bechstein — elle gîte aussi en falaise et en
+    // ville —, donc une parcelle boisée n'est pour elle qu'une option.
+    colonisationParAn: 0.15,
+    // **Pas de table, et c'est la même position que pour l'écureuil.** La noctule
+    // chasse à trente mètres du sol, à dix kilomètres de son gîte, des hannetons
+    // et des papillons de nuit en vol. Rien de cela n'est dans le moteur :
+    // `soil.ravageurs` tient des chenilles et des larves au feuillage, ce que la
+    // noctule ne prend pas. La brancher dessus la ferait juger sur une ressource
+    // qu'elle ne mange pas, et — plus grave — la ferait compter comme auxiliaire
+    // d'une pullulation qu'elle ne régule pas depuis cette parcelle-ci. Sans
+    // table, elle est jugée sur son seul gîte, et `couvertureAuxiliaires`
+    // l'ignore : c'est exactement ce qu'on veut.
   },
 ];
 

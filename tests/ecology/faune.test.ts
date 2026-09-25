@@ -684,3 +684,152 @@ describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
     expect(avecMesange[30 * DIMS.widthM + 30] ?? 0).toBe(1);
   });
 });
+
+describe("les chauves-souris héritent, et elles ne comptent pas toutes pareil (guilde 4)", () => {
+  /**
+   * Un fût carié dont on choisit la **hauteur**.
+   *
+   * L'aide `arbre` plus haut lie la hauteur au diamètre (× 0,45), ce qui
+   * convient tant qu'on éprouve le creux. Ici on éprouve ce qui est **au-dessus
+   * du sol**, et il faut donc pouvoir faire varier l'une sans l'autre — sinon un
+   * arbre bas est aussi un arbre grêle, et on ne saurait pas lequel des deux a
+   * fermé la porte.
+   */
+  function futCarie(id: number, diametreCm: number, hauteurM: number, partRayon: number) {
+    return {
+      id,
+      x: 50,
+      y: 50,
+      especeId: "quercus_pubescens",
+      alive: true,
+      heightM: hauteurM,
+      diametreCm,
+      recepages: 0,
+      carie: { rayonCm: (diametreCm / 2) * partRayon, barriereCm: diametreCm / 2 },
+    } as unknown as TreeState;
+  }
+
+  /** Combien de fois l'espèce vient, sur quarante arbres — une installation est un tirage. */
+  function essais(fabrique: (id: number) => TreeState, semaine: number, especeId: string): number {
+    let venus = 0;
+    for (let id = 1; id <= 40; id++) {
+      const nouveaux = installations(
+        [],
+        [fabrique(id)],
+        semaine,
+        id,
+        GRANDE_PARCELLE_M2,
+        DIMS,
+        TABLE_PLEINE,
+      );
+      if (nouveaux.some((n) => n.individu.especeId === especeId)) venus++;
+    }
+    return venus;
+  }
+
+  const SEMAINE_BECHSTEIN = 17;
+  const SEMAINE_NOCTULE = 19;
+
+  it("la guilde n'a coûté aucune ligne de mécanisme : deux fiches, et rien d'autre", () => {
+    // **c'est le contrôle de la promesse du module** — « ajouter une guilde
+    // entière ne doit demander aucune ligne de code ». Elle se vérifie par le
+    // fait que les deux nouvelles venues passent par le **même** tri que les
+    // autres cavernicoles, sans qu'aucun de leurs identifiants n'apparaisse
+    // ailleurs que dans l'atlas. L'essai ci-dessous n'utilise que des fonctions
+    // écrites avant elles.
+    const chene = futCarie(1, 70, 22, 0.6);
+    const chiro = FAUNE.filter((e) => e.id === "murin_de_bechstein" || e.id === "noctule_commune");
+    expect(chiro).toHaveLength(2);
+    for (const e of chiro) {
+      expect(e.gite).toBe("cavite");
+      expect(volumeCaviteTotalL(chene)).toBeGreaterThan(e.volumeLogeL);
+      expect(diametreCaviteCm(chene) * 10).toBeGreaterThan(e.entreeMinMm);
+    }
+  });
+
+  it("la noctule demande l'envol : le même creux, cinq mètres plus bas, et elle ne vient plus", () => {
+    // Une noctule se **laisse tomber** de son gîte pour prendre son vol, et ses
+    // loges sont trouvées entre huit et vingt mètres. Le murin de Bechstein,
+    // lui, est bas et casanier : deux à huit mètres, souvent sous cinq.
+    //
+    // On leur présente **le même fût**, à deux hauteurs. Le diamètre ne bouge
+    // pas, donc ni le calibre de la chambre ni ses litres : la seule chose qui
+    // change est la distance au sol.
+    const haut = (id: number) => futCarie(id, 60, 20, 0.6);
+    const bas = (id: number) => futCarie(id, 60, 5, 0.6);
+    expect(essais(haut, SEMAINE_NOCTULE, "noctule_commune")).toBeGreaterThan(0);
+    expect(essais(bas, SEMAINE_NOCTULE, "noctule_commune")).toBe(0);
+    // Et le Bechstein prend les deux, ce qui prouve que le fût bas était bon.
+    expect(essais(haut, SEMAINE_BECHSTEIN, "murin_de_bechstein")).toBeGreaterThan(0);
+    expect(essais(bas, SEMAINE_BECHSTEIN, "murin_de_bechstein")).toBeGreaterThan(0);
+  });
+
+  it("et la loge de pic noir n'est pas celle de l'épeiche : 75 mm contre 45", () => {
+    // **la plus large exigence de l'atlas**, et elle est discriminante : la
+    // noctule occupe des loges de pic noir, qui sont ovales et font huit à douze
+    // centimètres. Le Bechstein se contente d'une loge d'épeiche, quatre fois
+    // moins ample en section.
+    //
+    // Un fût de vingt centimètres creux à mi-rayon ouvre une chambre de 67 mm :
+    // entre les deux. Assez haut pour que la hauteur ne joue pas, assez plein
+    // pour que les litres ne jouent pas non plus.
+    const moyen = (id: number) => futCarie(id, 20, 12, 0.5);
+    const calibreMm = diametreCaviteCm(moyen(1)) * 10;
+    expect(calibreMm).toBeGreaterThan(45);
+    expect(calibreMm).toBeLessThan(75);
+    expect(essais(moyen, SEMAINE_BECHSTEIN, "murin_de_bechstein")).toBeGreaterThan(0);
+    expect(essais(moyen, SEMAINE_NOCTULE, "noctule_commune")).toBe(0);
+  });
+
+  it("le Bechstein PAIE, la noctule non — et c'est la fiche qui tranche, pas le code", () => {
+    // Le Bechstein glane les chenilles sur le feuillage : c'est la proie de la
+    // mésange, au même endroit. Il entre donc dans `couvertureAuxiliaires`.
+    //
+    // La noctule chasse à trente mètres du sol et à dix kilomètres de son gîte,
+    // des hannetons et des papillons de nuit en vol. Rien de cela n'est dans le
+    // moteur, donc **sa fiche ne déclare pas de table** — exactement la position
+    // tenue pour l'écureuil faute de glandée —, et la même ligne qui écarte
+    // l'écureuil l'écarte.
+    const petit: GridDims = { widthM: 60, heightM: 60 };
+    const gite = (id: number, especeId: string): IndividuFaune => ({
+      id,
+      especeId,
+      arbreId: 1,
+      x: 30,
+      y: 30,
+      depuisSemaine: 0,
+    });
+    const centre = 30 * petit.widthM + 30;
+    expect(couvertureAuxiliaires([gite(1, "murin_de_bechstein")], petit)[centre] ?? 0).toBe(1);
+    expect(couvertureAuxiliaires([gite(2, "noctule_commune")], petit)[centre] ?? 0).toBe(0);
+  });
+
+  it("et une colonie n'est pas une bête : le territoire la rend rare sur une parcelle", () => {
+    // **l'individu est ici une colonie de parturition**, et c'est ce qui donne
+    // son sens au territoire : de l'ordre d'une colonie par cinquante hectares
+    // pour le Bechstein, par centaine pour la noctule. Sur un hectare, la part
+    // du territoire fait donc de l'installation un événement rare — le même
+    // mécanisme que pour la buse, sans une ligne de plus.
+    const bechstein = especeFaune("murin_de_bechstein");
+    const mesange = especeFaune("mesange_bleue");
+    if (!bechstein || !mesange) throw new Error("fiche manquante");
+    expect(bechstein.territoireM).toBeGreaterThan(mesange.territoireM * 5);
+    // Sur un hectare, quarante gros chênes creux et un seul essai par arbre :
+    // la colonie ne vient pas à tous les coups, et c'est le fait.
+    const surUnHectare = (id: number) => futCarie(id, 70, 22, 0.6);
+    let venus = 0;
+    for (let id = 1; id <= 40; id++) {
+      const nouveaux = installations(
+        [],
+        [surUnHectare(id)],
+        SEMAINE_BECHSTEIN,
+        id,
+        10_000,
+        DIMS,
+        TABLE_PLEINE,
+      );
+      venus += nouveaux.length;
+    }
+    expect(venus).toBeLessThan(10);
+  });
+});
