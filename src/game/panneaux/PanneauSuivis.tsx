@@ -3,8 +3,13 @@
  *
  * « Je plante des abricotiers, je veux surveiller très précisément ce qui leur
  * arrive. » Le panneau de sélection dit l'état **courant** d'un arbre ; celui-ci
- * dit son **histoire**, accumulée au fil des instantanés, et qui survit à sa mort —
- * c'est même là qu'elle sert le plus.
+ * dit son **histoire**, celle que le worker tient depuis le début de la partie,
+ * et qui survit à sa mort — c'est même là qu'elle sert le plus.
+ *
+ * **Toute sa vie, et pas seulement depuis qu'on le suit** (#225) : suivre une
+ * chandelle morte il y a quatre ans montre les quatre années d'avant. C'est ce
+ * que l'issue demandait — *« cliquer sur un arbre au pif et regarder tout son
+ * historique »*.
  *
  * Rien n'est calculé ici : les phrases viennent de `suivis.ts`, qui ne fait que
  * relire ce que le moteur a nommé.
@@ -15,7 +20,7 @@ import { getEspece } from "../../engine/especes";
 import type { ContextePhenologique } from "../../engine/phenologie";
 import type { ArbreAPoser } from "../../render/couches/arbres";
 import type { SnapshotTree } from "../protocol";
-import { type EvenementSuivi, grouperLesSuivis, type QuoiSuivi } from "../suivis";
+import type { LigneDeSuivi, QuoiSuivi } from "../suivis";
 import {
   alerteDeLArbre,
   couleurDeLaPart,
@@ -44,8 +49,19 @@ const ICONE: Record<QuoiSuivi, string> = {
  */
 const hauteurMaxDe = (especeId: string): number => getEspece(especeId).hauteurMaxM;
 
-/** « **an** 3 · S12 », comme le journal de la partie. */
+/**
+ * « **an** 3 · S12 », comme le journal de la partie.
+ *
+ * **Les semaines d'avant l'arrivée sont négatives** (#225) : le vieillissement
+ * de la parcelle a son histoire, et le compteur du joueur repart de zéro quand
+ * il prend la main. « an -2 · S-40 » n'aurait rien voulu dire ; on compte donc
+ * ces années-là à rebours, depuis son arrivée.
+ */
 function quand(semaine: number): string {
+  if (semaine < 0) {
+    const ans = Math.ceil(-semaine / 52);
+    return `${ans} AN${ans > 1 ? "S" : ""} AVANT VOUS`;
+  }
   return `AN ${Math.floor(semaine / 52) + 1} · S${semaine % 52}`;
 }
 
@@ -58,15 +74,27 @@ function quand(semaine: number): string {
 function quandDuGroupe(semaine: number, depuis: number): string {
   if (depuis === semaine) return quand(semaine);
   const memeAn = Math.floor(depuis / 52) === Math.floor(semaine / 52);
+  // Avant l'arrivée on compte à rebours, et l'on ne répète pas « avant vous »
+  // de part et d'autre de la flèche : « 15 → 13 ANS AVANT VOUS ».
+  if (semaine < 0 && depuis < 0) {
+    const deAns = Math.ceil(-depuis / 52);
+    // Même année à rebours des deux côtés : « 11 → 11 ANS AVANT VOUS » ne dit
+    // rien de plus que « 11 ANS AVANT VOUS », et la place manque.
+    if (deAns === Math.ceil(-semaine / 52)) return quand(semaine);
+    return `${deAns} → ${quand(semaine)}`;
+  }
+  if (semaine < 0 || depuis < 0) return `${quand(depuis)} → ${quand(semaine)}`;
   return `${quand(depuis)} → ${memeAn ? `S${semaine % 52}` : quand(semaine)}`;
 }
 
 /**
- * Combien d'événements on montre par arbre.
+ * Combien d'événements on montre par arbre, avant de demander à voir.
  *
- * Le journal complet est gardé ; c'est l'**affichage** qui est borné. Un arbre
- * suivi cinquante ans finirait par pousser les autres hors de l'écran, et
- * c'est le dernier qui lui est arrivé qu'on vient lire.
+ * Le journal complet est gardé — depuis #225 il couvre toute la vie de l'arbre,
+ * et pas seulement depuis qu'on le suit ; c'est l'**affichage** qui est borné.
+ * Un arbre suivi cinquante ans pousserait les autres hors de l'écran, et c'est
+ * le dernier qui lui est arrivé qu'on vient lire d'abord. Le reste est à un
+ * clic.
  */
 const LIGNES_PAR_ARBRE = 6;
 
@@ -257,9 +285,31 @@ function useOuverts(): {
   return { ouverts, basculer };
 }
 
+/**
+ * Les arbres dont on lit l'histoire **en entier**.
+ *
+ * Séparé du dépliage de la ligne : on ouvre une fiche pour la regarder, on
+ * demande le siècle quand la fin de l'histoire ne suffit pas.
+ */
+function useEntiers(): {
+  entiers: ReadonlySet<number>;
+  montrerTout: (id: number, tout: boolean) => void;
+} {
+  const [entiers, setEntiers] = useState<ReadonlySet<number>>(new Set());
+  const montrerTout = useCallback((id: number, tout: boolean) => {
+    setEntiers((avant) => {
+      const suite = new Set(avant);
+      if (tout) suite.add(id);
+      else suite.delete(id);
+      return suite;
+    });
+  }, []);
+  return { entiers, montrerTout };
+}
+
 export function PanneauSuivis({
   suivis,
-  journal,
+  histoires,
   tous,
   poses,
   semaine,
@@ -269,7 +319,13 @@ export function PanneauSuivis({
   selectionner,
 }: {
   suivis: ReadonlySet<number>;
-  journal: readonly EvenementSuivi[];
+  /**
+   * L'histoire de chaque arbre, du plus **ancien** au plus récent.
+   *
+   * Absente de la table = la réponse du worker n'est pas encore arrivée, ce qui
+   * n'est pas la même chose qu'une vie sans histoire.
+   */
+  histoires: ReadonlyMap<number, readonly LigneDeSuivi[]>;
   /** **tous** les arbres de l'instantané, chandelles comprises : un suivi mort en est une. */
   tous: readonly SnapshotTree[];
   /**
@@ -315,6 +371,7 @@ export function PanneauSuivis({
   };
   const ordre = [...suivis].sort((a, b) => rang(a) - rang(b));
   const { ouverts, basculer } = useOuverts();
+  const { entiers, montrerTout } = useEntiers();
   // **Ce qui est ouvert, et rien d'autre.** Les silhouettes ne se cuisent que
   // pour les lignes dépliées : replier par défaut ne rend pas seulement la
   // liste lisible, ça supprime la dépense là où elle n'a pas lieu d'être.
@@ -354,9 +411,13 @@ export function PanneauSuivis({
         // de semaine 18 se plaçait devant un lot de semaine 28. Le tri est
         // stable, donc les événements d'un même instantané — qui portent tous
         // sa semaine — gardent l'ordre où le moteur les a nommés.
-        const sien = grouperLesSuivis(
-          journal.filter((e) => e.idArbre === id).sort((a, b) => b.semaine - a.semaine),
-        );
+        const histoire = histoires.get(id);
+        // **Déjà groupé** : le worker écrit une ligne par répétition, avec son
+        // compte et sa plage (#225). Ici on ne fait que la retourner — le plus
+        // récent en tête — et trier par semaine, parce que les gestes d'une même
+        // semaine et ceux du tick n'arrivent pas dans l'ordre de la pendule.
+        const sien = [...(histoire ?? [])].reverse().sort((a, b) => b.semaine - a.semaine);
+        const tout = entiers.has(id);
         const ouvert = ouverts.has(id);
         return (
           <details
@@ -406,13 +467,13 @@ export function PanneauSuivis({
                 <Silhouettes silhouette={silhouettes.get(id)} />
                 <div style={{ flex: 1, minWidth: 0 }}>{arbre && <Fiche lignes={lignes} />}</div>
               </div>
-              {sien.length === 0 ? (
-                <div style={{ color: "var(--encre-douce)" }}>
-                  Rien ne lui est arrivé depuis qu'on le suit.
-                </div>
+              {histoire === undefined ? (
+                <div style={{ color: "var(--encre-douce)" }}>On demande son histoire…</div>
+              ) : sien.length === 0 ? (
+                <div style={{ color: "var(--encre-douce)" }}>Rien ne lui est jamais arrivé.</div>
               ) : (
                 <div className="journal">
-                  {sien.slice(0, LIGNES_PAR_ARBRE).map((e) => (
+                  {(tout ? sien : sien.slice(0, LIGNES_PAR_ARBRE)).map((e) => (
                     <div key={`${e.semaine}-${e.quoi}-${e.texte}`} className="entree">
                       <span className="quand">{quandDuGroupe(e.semaine, e.depuisSemaine)}</span>{" "}
                       {ICONE[e.quoi]} {e.texte}
@@ -420,9 +481,23 @@ export function PanneauSuivis({
                     </div>
                   ))}
                   {sien.length > LIGNES_PAR_ARBRE && (
-                    <div style={{ color: "var(--encre-douce)" }}>
-                      … et {sien.length - LIGNES_PAR_ARBRE} plus anciens
-                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        ...btn(),
+                        marginLeft: 0,
+                        color: "var(--encre-douce)",
+                        background: "none",
+                        border: "none",
+                        padding: "2px 0",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => montrerTout(id, !tout)}
+                    >
+                      {tout
+                        ? "↑ n'en montrer que 6"
+                        : `… et ${sien.length - LIGNES_PAR_ARBRE} plus anciens`}
+                    </button>
                   )}
                 </div>
               )}

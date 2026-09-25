@@ -21,6 +21,7 @@ import {
   alerteDeLArbre,
   couleurDeLaPart,
   depuis,
+  duree,
   ELANCEMENT_AU_LARGE,
   ficheDeLArbre,
   ilYA,
@@ -128,7 +129,70 @@ describe("une chandelle", () => {
     expect(quoi).not.toContain("Vigueur");
     expect(quoi).not.toContain("Feuillage");
     expect(valeur(l, "Morte")).toBe("de sécheresse");
-    expect(valeur(l, "Sur pied depuis")).toBe("il y a 2 ans");
+  });
+
+  it("dit lequel des deux nombres est lequel", () => {
+    // *« Sur pied depuis il y a 4 ans »* : planté il y a quatre ans, ou mort
+    // depuis quatre ans ? Les deux lectures tenaient debout, et c'est
+    // l'ambiguïté qui était le défaut, pas le chiffre (#225). Un arbre mort à
+    // un an et chandelle depuis quatre le montre : les deux nombres diffèrent.
+    const l = fiche({ alive: false, ageWeeks: 52, mortSemaine: 52 * 27 }, 52 * 31);
+    expect(valeur(l, "Âge")).toBe("1 ans à sa mort");
+    expect(valeur(l, "Chandelle depuis")).toBe("4 ans");
+    expect(l.map((x) => x.quoi)).not.toContain("Sur pied depuis");
+  });
+
+  it("garde une chandelle plus vieille que la partie hors du « depuis »", () => {
+    expect(valeur(fiche({ alive: false, mortSemaine: 1800 }, 12), "Chandelle depuis")).toBe(
+      "avant votre arrivée",
+    );
+  });
+
+  it("dit aussi DE QUOI elle se mourait déjà", () => {
+    // `snapshot.ts` relaie `causeLente` pour les chandelles aussi — aucun
+    // filtre sur `alive` — et la fiche sortait par une porte dérobée avant de
+    // la lire (#225). C'est pourtant la moitié de la réponse à « de quoi
+    // est-il mort » : la cause rapportée dit le coup de grâce, celle-ci dit ce
+    // qui l'avait affaibli.
+    const l = fiche(
+      {
+        alive: false,
+        mortSemaine: 52 * 30,
+        causeMort: "chablis",
+        stress: 6,
+        stressLent: 0.5,
+        causeLente: "secheresse",
+      },
+      52 * 31,
+    );
+    expect(valeur(l, "Morte")).toBe("couchée par la tempête");
+    expect(valeur(l, "Se mourait")).toBe("de sécheresse");
+  });
+
+  it("… mais SANS part chiffrée, que le moteur ne tient plus", () => {
+    // Relevé à l'écran sur une chandelle de bouleau : `stress` valait 10,6 sur
+    // 10 et `stressLent` 10,3, que la fiche affichait « 1031 % ». Les parts
+    // sont des parts du stress d'un arbre **vivant** ; après la mort elles ne
+    // sont plus tenues, et les montrer serait inventer un chiffre.
+    const quoi = fiche(
+      { alive: false, mortSemaine: 52 * 30, stress: 10.6, stressLent: 10.3 },
+      52 * 31,
+    ).map((x) => x.quoi);
+    expect(quoi).not.toContain("Stress");
+  });
+
+  it("ne redit pas la cause lente quand c'est déjà celle de la mort", () => {
+    const quoi = fiche(
+      {
+        alive: false,
+        mortSemaine: 52 * 30,
+        causeMort: "secheresse",
+        stress: 6,
+        causeLente: "secheresse",
+      },
+      52 * 31,
+    ).map((x) => x.quoi);
+    expect(quoi).not.toContain("Se mourait");
   });
 });
 
@@ -229,6 +293,14 @@ describe("l'étiolement, qui dit l'arbre filé", () => {
 });
 
 describe("les durées", () => {
+  it("se disent nues quand la phrase porte déjà le « depuis »", () => {
+    expect(duree(0)).toBe("0 semaine");
+    expect(duree(1)).toBe("1 semaine");
+    expect(duree(51)).toBe("51 semaines");
+    expect(duree(52)).toBe("1 an");
+    expect(duree(129)).toBe("2 ans");
+  });
+
   it("se disent en semaines sous l'année, en années au-delà", () => {
     expect(ilYA(0)).toBe("il y a 0 semaine");
     expect(ilYA(1)).toBe("il y a 1 semaine");
