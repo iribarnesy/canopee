@@ -408,6 +408,17 @@ export function effetLitiereEq(carboneDecomposeGM2: number, calciumMgG: number):
  * stock physiquement impossible — ce qui est le défaut que C14 ne pouvait pas
  * attraper.
  *
+ * **Ce que le plancher rend, mesuré.** Même banc, même graine, une seule chose
+ * changée, à 150 ans : la cellule la plus pauvre passe de −9,768 à 0,000 et la
+ * moyenne de −0,157 à 0,911 — un sol désaturé cesse de creuser et se stabilise
+ * bas, ce qui est son comportement. Le sous-sol finit à **3,820 contre 3,383**,
+ * soit 0,437 eq/m² qu'il perdait en bases n'ayant jamais existé, et sa cellule
+ * la plus pauvre à 1,846 au lieu de 0,000 après être passée par −0,037. Les deux
+ * budgets se referment exactement des deux côtés. Sur la période, le complexe
+ * tamponne 3,037 eq/m² de charge acide et **0,916 n'ont rien trouvé en face** :
+ * près d'un quart de ce que la litière a produit, que le moteur convertissait
+ * jusqu'ici en bases négatives.
+ *
  * Ce que cette fonction rend n'est donc **pas** un `Math.max(0, …)` déguisé : la
  * part que le complexe n'a pas pu neutraliser ne disparaît pas du bilan, elle
  * est comptée à part (`basesAcideNonTamponneEqHa`). Borner sans ce poste aurait
