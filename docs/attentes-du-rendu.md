@@ -167,6 +167,21 @@ recalcule avec `intensiteDuFeu(charges[i])`, désormais exportée de
 `src/engine/feu.ts` — la règle a un nom et un seul propriétaire, pour que
 personne ne la recopie.
 
+**`chandellesConsumees`** (`{ id, hauteurM }`) nomme les chandelles
+**préexistantes** que le feu a consumées (#236). Elles ne sont ni dans
+`victimes` ni dans `arbresTues`, et c'est juste — elles étaient déjà mortes, les
+compter deux fois serait faux — mais elles quittaient la parcelle sans que rien
+ne le dise. Mesuré dans le navigateur sur la lande sableuse à ×52 : à
+l'incendie de l'an 19, **1 433 arbres disparaissent d'une image à l'autre, tous
+des chandelles**, quand les 2 736 victimes déclarées sont toutes encore là. Un
+tiers de la parcelle s'effaçait avant que le front n'arrive. Avec la liste, la
+chandelle consumée prend le chemin des autres fûts qui quittent `state.trees` :
+elle reste debout le temps que le front l'atteigne, se torche, et s'abat.
+
+Un essai tient l'invariant qui motive tout cela : la semaine d'un incendie,
+**tout arbre qui disparaît est nommé** — soit par `chandellesConsumees`, soit par
+`chutes`.
+
 **La tempête** (`Snapshot.tempete`) voyage maintenant comme l'incendie, et pour
 la même raison : `rafaleMs`, `versRad`, `arbresVerses`, `volumeM3` et les
 `victimes` nommées, la semaine même. Sans l'événement, le rendu n'a qu'un état
@@ -218,9 +233,9 @@ sur le seul `type`).
 Les cinq gestes du joueur qui retirent du bois portent en plus `retire`, un
 `ArbreRetire[]` dans le même ordre que `ids` : `id`, `x`, `y`, `especeId`,
 `hauteurAvantM` / `hauteurApresM`, `baseHouppierAvantM` / `baseHouppierApresM`,
-et `directionRad`. C'est un enregistrement **complet**, pas un delta, parce qu'un
-arbre coupé quitte `state.trees` dans le même tick : son identifiant seul ne
-mène plus à rien dans l'instantané. `hauteurApresM` à 0 signe ce départ ; sinon
+`directionRad` et **`mortAvantLeGeste`**. C'est un enregistrement **complet**,
+pas un delta, parce qu'un arbre coupé quitte `state.trees` dans le même tick :
+son identifiant seul ne mène plus à rien dans l'instantané. `hauteurApresM` à 0 signe ce départ ; sinon
 c'est ce qui reste debout — tête de trogne, souche de recépage, tige intacte
 d'un élagage. `directionRad` n'est présent que quand une tige **entière** est
 tombée (`couper`, `eclaircir`, `receper`) : c'est l'orientation en travers de
@@ -230,6 +245,20 @@ Pour `elaguer` et `trogner` la charpente est démontée sur place, le moteur n'y
 voit pas de direction unique et n'en invente pas. `brouter` et `frotter` n'ont
 pas de `retire` : le gibier prélève un stock (`pousseTendreM`), pas un volume
 géométrique, et sa date voyage par `brouteSemaine`.
+
+**`mortAvantLeGeste`** dit si la tige était **morte sur pied** au moment du geste
+(#235). Sans lui, une chandelle abattue **reverdissait en tombant** : le fût
+couché traverse le rendu comme n'importe quel arbre et prenait la feuillaison
+saisonnière de son espèce, si bien qu'un chicot sec depuis trois ans se couchait
+en pleine feuille. Il ne se recalcule pas depuis l'instantané — l'arbre coupé a
+quitté `state.trees` dans le tick du geste, et le chercher dans l'instantané
+précédent, qui peut avoir vingt-six semaines de retard, ferait une seconde copie
+d'un fait du moteur. Avoir des feuilles ou non fait partie de « tel qu'il était
+avant le geste ».
+
+Il n'est vrai que pour `couper` : c'est le seul geste qui puisse atteindre une
+chandelle, les quatre autres ne cherchant que des tiges vivantes. Chez eux la
+valeur est `false` par **constatation** et non par défaut.
 
 Une **naissance n'est pas un arbre jeune**, et `ageWeeks` ne suffit pas à les
 confondre impunément : les trois endroits qui créent un arbre — recrutement

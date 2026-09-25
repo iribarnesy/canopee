@@ -419,6 +419,30 @@ export interface IncendieResult {
    * compte pas non plus dans `arbresTues`.
    */
   victimes: readonly VictimeDuFeu[];
+  /**
+   * Les **chandelles préexistantes** que le feu a consumées (#236) : elles ne
+   * sont ni dans `victimes` ni dans `arbresTues`, et c'est juste — elles
+   * étaient déjà mortes, les compter deux fois serait faux.
+   *
+   * Mais elles quittaient la parcelle sans que rien ne le dise, et le rendu ne
+   * peut pas dessiner ce qu'on ne lui rapporte pas. Mesuré dans le navigateur
+   * sur la lande sableuse à ×52 : à l'incendie de l'an 19, **1 433 arbres
+   * disparaissent d'une image à l'autre, tous des chandelles**, quand les
+   * 2 736 victimes déclarées sont toutes encore là, en rejet ou en chandelle
+   * noire. Un tiers de la parcelle s'effaçait avant que le front n'arrive.
+   *
+   * L'identifiant et la hauteur suffisent : la position se relit dans
+   * l'instantané précédent tant que l'arbre y est, comme le fait déjà la
+   * tempête pour ses chablis. Le rendu sait reposer un fût qui a quitté
+   * `state.trees` dans le tick où il tombe — avec cette liste, la chandelle
+   * consumée reste debout le temps que le front l'atteigne, se torche, et
+   * s'abat.
+   *
+   * **Ne pas la déduire de la différence entre deux instantanés** : celui
+   * d'avant peut avoir vingt-six semaines de retard, et ce serait une
+   * reconstruction d'un fait du moteur à partir de deux photos.
+   */
+  chandellesConsumees: readonly { id: number; hauteurM: number }[];
   carboneTHa: number;
   /** cellule où le feu est parti */
   origine: number;
@@ -2829,6 +2853,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       let tues = 0;
       let rejets = 0;
       const victimes: VictimeDuFeu[] = [];
+      const chandellesConsumees: { id: number; hauteurM: number }[] = [];
       const apresFeu: TreeState[] = [];
       for (const tree of nextTrees) {
         const cellule =
@@ -2869,6 +2894,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           }
           // Le tronc a brûlé : la chandelle ne tient plus debout. Ses racines
           // restent au pool, et la place se libère.
+          //
+          // **On le DIT, désormais (#236).** Elle sortait d'ici sans laisser de
+          // trace : juste pour le compte — elle était déjà morte — et faux pour
+          // l'écran, qui avait un fût debout à l'image d'avant et plus rien à la
+          // suivante.
+          chandellesConsumees.push({ id: tree.id, hauteurM: tree.heightM });
           continue;
         }
         tues++;
@@ -2951,6 +2982,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         arbresTues: tues,
         rejets,
         victimes,
+        chandellesConsumees,
         carboneTHa: carboneFeuKgC / 1000 / areaHa,
         origine: depart.origine,
         brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
