@@ -35,8 +35,10 @@ import type { Snapshot, SnapshotTree } from "../../src/game/protocol";
 import { arbreDuSnapshot, construireSnapshot } from "../../src/game/snapshot";
 import {
   accumulerLesSuivis,
+  ajouterAuJournal,
   type EvenementSuivi,
   grouperLesSuivis,
+  type LigneDeSuivi,
   type MemoireDesSuivis,
   SEUIL_SOUFFRANCE,
   suivisMorts,
@@ -134,40 +136,54 @@ const mort = (id: number, cause: CauseMort): MortDeLaSemaine => ({
   heightM: 6,
 });
 
-const SUIVI = new Set([1]);
 const VIDE: MemoireDesSuivis = new Map();
 
-describe("ce qui n'est pas suivi ne fait pas de journal", () => {
-  it("un ensemble vide ne rend rien, même une semaine chargée", () => {
-    const { evenements } = accumulerLesSuivis(
+/**
+ * Dépouiller une semaine entière, comme le worker le fait.
+ *
+ * L'instantané **est** un porteur de journal et porte ses arbres : depuis #225
+ * la fonction prend les deux séparément, pour que le worker n'ait pas à
+ * fabriquer un instantané afin de dépouiller une semaine qu'il vient de
+ * simuler. Les essais, eux, partent d'un instantané vrai.
+ */
+const depouiller = (memoire: MemoireDesSuivis, snap: Snapshot) =>
+  accumulerLesSuivis(memoire, snap.week, snap, snap.trees);
+
+describe("rien n'est filtré : c'est tout le lot de #225", () => {
+  it("une semaine chargée est retenue même si personne n'est suivi", () => {
+    // *« Je voulais voir pourquoi mon pommier était mort a posteriori, c'est pas
+    // possible — j'ai commencé à le suivre après qu'il soit mort. »* La fonction
+    // commençait par `if (suivis.size === 0) return` : sans abonné, rien n'était
+    // même regardé, et un arbre n'avait par construction aucun passé.
+    const { evenements } = depouiller(
       VIDE,
       semaine(10, [arbre()], {
         gestes: [{ type: "couper", ids: [1] }],
         morts: [mort(1, "secheresse")],
       }),
-      new Set(),
     );
-    expect(evenements).toEqual([]);
+    expect(evenements.map((e) => e.texte)).toEqual(["abattu", "meurt de sécheresse"]);
   });
 
-  it("les arbres voisins ne s'invitent pas dans le journal de celui qu'on suit", () => {
-    const { evenements } = accumulerLesSuivis(
+  it("chaque arbre garde ce qui lui arrive, sous son propre identifiant", () => {
+    // Le tri par arbre se fait à la lecture : ce qui compte ici est qu'aucun
+    // des deux ne soit jeté, et que les lignes ne se mélangent pas.
+    const { evenements } = depouiller(
       VIDE,
       semaine(10, [arbre(), arbre({ id: 2 })], {
         gestes: [{ type: "elaguer", ids: [2, 1] }],
       }),
-      SUIVI,
     );
-    expect(evenements.map((e) => e.idArbre)).toEqual([1]);
+    expect(evenements.map((e) => e.idArbre)).toEqual([2, 1]);
+    expect(new Set(evenements.map((e) => e.texte))).toEqual(new Set(["élagué"]));
   });
 });
 
 describe("ce que le moteur a déjà nommé", () => {
   it("un geste subi est dit au passé, sous sa rubrique", () => {
-    const { evenements } = accumulerLesSuivis(
+    const { evenements } = depouiller(
       VIDE,
       semaine(7, [arbre()], { gestes: [{ type: "trogner", ids: [1] }] }),
-      SUIVI,
     );
     expect(evenements).toHaveLength(1);
     expect(evenements[0]?.quoi).toBe("geste");
@@ -176,7 +192,7 @@ describe("ce que le moteur a déjà nommé", () => {
   });
 
   it("le GIBIER passe par la même porte : le moteur le range dans les gestes", () => {
-    const { evenements } = accumulerLesSuivis(
+    const { evenements } = depouiller(
       VIDE,
       semaine(20, [arbre()], {
         gestes: [
@@ -184,29 +200,23 @@ describe("ce que le moteur a déjà nommé", () => {
           { type: "frotter", ids: [1] },
         ],
       }),
-      SUIVI,
     );
     expect(evenements.map((e) => e.quoi)).toEqual(["brout", "frottis"]);
   });
 
   it("un franchissement de stade se recopie, il ne se recalcule pas", () => {
-    const { evenements } = accumulerLesSuivis(
+    const { evenements } = depouiller(
       VIDE,
       semaine(60, [arbre()], {
         franchissements: [{ id: 1, deStade: "gaulis", versStade: "perchis" }],
       }),
-      SUIVI,
     );
     expect(evenements[0]?.quoi).toBe("stade");
     expect(evenements[0]?.texte).toBe("passe de gaulis à perchis");
   });
 
   it("la mort arrive avec sa cause EN CLAIR, et au singulier", () => {
-    const { evenements } = accumulerLesSuivis(
-      VIDE,
-      semaine(99, [], { morts: [mort(1, "secheresse")] }),
-      SUIVI,
-    );
+    const { evenements } = depouiller(VIDE, semaine(99, [], { morts: [mort(1, "secheresse")] }));
     expect(evenements[0]?.quoi).toBe("mort");
     expect(evenements[0]?.texte).toBe("meurt de sécheresse");
   });
@@ -221,26 +231,18 @@ describe("ce que le moteur a déjà nommé", () => {
 describe("ce qui est un état ne se dit qu'une fois", () => {
   it("le gel des fleurs s'annonce, puis se tait tant qu'il dure", () => {
     const gele = semaine(15, [arbre({ bloomFrosted: true })]);
-    const premier = accumulerLesSuivis(VIDE, gele, SUIVI);
+    const premier = depouiller(VIDE, gele);
     expect(premier.evenements.map((e) => e.quoi)).toEqual(["gel"]);
-    const second = accumulerLesSuivis(premier.memoire, gele, SUIVI);
+    const second = depouiller(premier.memoire, gele);
     expect(second.evenements).toEqual([]);
   });
 
   it("… et se redit l'année suivante, parce que c'est un autre gel", () => {
     const gele = semaine(15, [arbre({ bloomFrosted: true })]);
-    const apres = accumulerLesSuivis(VIDE, gele, SUIVI);
-    const degele = accumulerLesSuivis(
-      apres.memoire,
-      semaine(30, [arbre({ bloomFrosted: false })]),
-      SUIVI,
-    );
+    const apres = depouiller(VIDE, gele);
+    const degele = depouiller(apres.memoire, semaine(30, [arbre({ bloomFrosted: false })]));
     expect(degele.evenements).toEqual([]);
-    const encore = accumulerLesSuivis(
-      degele.memoire,
-      semaine(67, [arbre({ bloomFrosted: true })]),
-      SUIVI,
-    );
+    const encore = depouiller(degele.memoire, semaine(67, [arbre({ bloomFrosted: true })]));
     expect(encore.evenements.map((e) => e.quoi)).toEqual(["gel"]);
   });
 
@@ -248,14 +250,13 @@ describe("ce qui est un état ne se dit qu'une fois", () => {
     const petiteSoif = semaine(20, [
       arbre({ causeLente: "secheresse", stressLent: SEUIL_SOUFFRANCE / 2 }),
     ]);
-    const tue = accumulerLesSuivis(VIDE, petiteSoif, SUIVI);
+    const tue = depouiller(VIDE, petiteSoif);
     expect(tue.evenements).toEqual([]);
     // Le piège : si la cause avait été retenue sous le seuil, le jour où
     // l'arbre dépérit pour de bon n'aurait plus rien à annoncer.
-    const vraiment = accumulerLesSuivis(
+    const vraiment = depouiller(
       tue.memoire,
       semaine(72, [arbre({ causeLente: "secheresse", stressLent: SEUIL_SOUFFRANCE * 3 })]),
-      SUIVI,
     );
     expect(vraiment.evenements.map((e) => e.quoi)).toEqual(["souffre"]);
     expect(vraiment.evenements[0]?.texte).toBe("souffre : de sécheresse");
@@ -274,7 +275,7 @@ describe("ce qui est un état ne se dit qu'une fois", () => {
     const dits: string[] = [];
     for (let an = 0; an < 5; an++) {
       for (const snap of [ete(an * 52 + 28), hiver(an * 52 + 50)]) {
-        const tour = accumulerLesSuivis(memoire, snap, SUIVI);
+        const tour = depouiller(memoire, snap);
         memoire = tour.memoire;
         dits.push(...tour.evenements.map((e) => e.texte));
       }
@@ -284,13 +285,12 @@ describe("ce qui est un état ne se dit qu'une fois", () => {
 
   it("la souffrance qui dure ne se répète pas, celle qui CHANGE de cause se dit", () => {
     const soif = semaine(20, [arbre({ causeLente: "secheresse", stressLent: 0.5 })]);
-    const un = accumulerLesSuivis(VIDE, soif, SUIVI);
-    const deux = accumulerLesSuivis(un.memoire, soif, SUIVI);
+    const un = depouiller(VIDE, soif);
+    const deux = depouiller(un.memoire, soif);
     expect(deux.evenements).toEqual([]);
-    const trois = accumulerLesSuivis(
+    const trois = depouiller(
       deux.memoire,
       semaine(40, [arbre({ causeLente: "ombre", stressLent: 0.5 })]),
-      SUIVI,
     );
     expect(trois.evenements[0]?.texte).toBe("souffre : étouffé par l'ombre");
   });
@@ -298,20 +298,19 @@ describe("ce qui est un état ne se dit qu'une fois", () => {
 
 describe("l'arbre qui disparaît", () => {
   it("un suivi qui quitte l'instantané sans mort rapportée est quand même dit", () => {
-    const present = accumulerLesSuivis(VIDE, semaine(10, [arbre()]), SUIVI);
-    const parti = accumulerLesSuivis(present.memoire, semaine(11, []), SUIVI);
+    const present = depouiller(VIDE, semaine(10, [arbre()]));
+    const parti = depouiller(present.memoire, semaine(11, []));
     expect(parti.evenements.map((e) => e.texte)).toEqual(["a quitté la parcelle"]);
     // Et une seule fois : la mémoire sait qu'il n'est plus là.
-    const encore = accumulerLesSuivis(parti.memoire, semaine(12, []), SUIVI);
+    const encore = depouiller(parti.memoire, semaine(12, []));
     expect(encore.evenements).toEqual([]);
   });
 
   it("… mais pas quand la semaine dit DÉJÀ ce qui lui est arrivé", () => {
-    const present = accumulerLesSuivis(VIDE, semaine(10, [arbre()]), SUIVI);
-    const coupe = accumulerLesSuivis(
+    const present = depouiller(VIDE, semaine(10, [arbre()]));
+    const coupe = depouiller(
       present.memoire,
       semaine(11, [], { gestes: [{ type: "couper", ids: [1] }] }),
-      SUIVI,
     );
     expect(coupe.evenements.map((e) => e.texte)).toEqual(["abattu"]);
   });
@@ -361,10 +360,60 @@ describe("les répétitions qu'on regroupe pour pouvoir lire", () => {
 
 describe("les morts qui arrêtent le temps", () => {
   it("ne retiennent que les suivis, avec où regarder et pourquoi", () => {
+    // Le seul endroit qui filtre encore, et il le doit : c'est la caméra qui
+    // va se poser sur l'arbre, pas le journal — on ne cadre que ce qu'on suit.
     const morts = suivisMorts(
       semaine(50, [], { morts: [mort(2, "ombre"), mort(1, "chablis")] }),
-      SUIVI,
+      new Set([1]),
     );
     expect(morts).toEqual([{ id: 1, x: 3, y: 4, cause: "chablis" }]);
+  });
+});
+
+describe("l'histoire s'écrit groupée, pas seulement relue groupée (#225)", () => {
+  const brout = (semaine: number): EvenementSuivi => ({
+    semaine,
+    idArbre: 1,
+    quoi: "brout",
+    texte: "brouté par le gibier",
+  });
+
+  it("dix ans de brouts hebdomadaires tiennent en une ligne", () => {
+    // Mesuré dans le navigateur avant de l'écrire : sur trente ans de
+    // maturation, un seul plant accumulait 806 lignes, dont 800 brouts. Le
+    // worker garde l'histoire de tous les arbres depuis toujours — ce qui n'est
+    // pas écrit est ce qui ne pèse rien.
+    const lignes: LigneDeSuivi[] = [];
+    for (let k = 0; k < 520; k++) ajouterAuJournal(lignes, brout(k));
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]?.fois).toBe(520);
+    expect(lignes[0]?.depuisSemaine).toBe(0);
+    expect(lignes[0]?.semaine).toBe(519);
+  });
+
+  it("la plage est la même dans les deux sens de lecture", () => {
+    // Le worker écrit du passé vers le présent ; le volet relit du présent vers
+    // le passé. Une règle qui ne marcherait que dans un sens donnerait deux
+    // dates différentes pour le même groupe.
+    const montant: LigneDeSuivi[] = [];
+    for (const e of [brout(10), brout(11), brout(12)]) ajouterAuJournal(montant, e);
+    const descendant = grouperLesSuivis([brout(12), brout(11), brout(10)]);
+    expect(montant[0]?.semaine).toBe(12);
+    expect(montant[0]?.depuisSemaine).toBe(10);
+    expect(descendant[0]?.semaine).toBe(12);
+    expect(descendant[0]?.depuisSemaine).toBe(10);
+  });
+
+  it("ce qui s'intercale coupe le groupe : on ne perd pas l'histoire", () => {
+    const lignes: LigneDeSuivi[] = [];
+    for (const e of [
+      brout(1),
+      brout(2),
+      { semaine: 3, idArbre: 1, quoi: "gel" as const, texte: "fleurs grillées par un gel tardif" },
+      brout(4),
+    ]) {
+      ajouterAuJournal(lignes, e);
+    }
+    expect(lignes.map((l) => `${l.quoi}×${l.fois}`)).toEqual(["brout×2", "gel×1", "brout×1"]);
   });
 });

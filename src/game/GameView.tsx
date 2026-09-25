@@ -1279,7 +1279,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * **les arbres suivis** et leur journal (#149). Le worker en tient la liste, lui
    * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
    */
-  const suivis = useSuivis(snapshot, game.suivre, game.rembobinage.enCours !== undefined);
+  const suivis = useSuivis(snapshot, game, game.rembobinage.enCours !== undefined);
   const enNiveau = useNiveau(game);
 
   /**
@@ -1482,13 +1482,13 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * refaire de rendu, donc l'effet peut se rejouer à chaque événement.
    */
   const marquerLu = suivis.marquerLu;
-  // Ce qu'on a sous les yeux : le dernier événement quand le volet est ouvert,
-  // et rien du tout quand il est fermé. C'est **lui** la dépendance de l'effet —
-  // dire « le volet est ouvert **et** le journal a changé » demanderait une
-  // dépendance dont l'effet ne se sert pas, ce que le linteur refuse à juste
-  // titre. Le premier élément change de référence à chaque arrivée, y compris
-  // quand le journal est plein et que sa longueur, elle, ne bouge plus.
-  const enLecture = volets.estOuvert("bd", "suivis") ? (suivis.journal[0] ?? null) : undefined;
+  // Ce qu'on a sous les yeux : le compte d'événements quand le volet est
+  // ouvert, et rien du tout quand il est fermé. C'est **lui** la dépendance de
+  // l'effet — dire « le volet est ouvert **et** il est arrivé quelque chose »
+  // demanderait une dépendance dont l'effet ne se sert pas, ce que le linteur
+  // refuse à juste titre. Le compte ne recule pas, donc il change à chaque
+  // arrivée sans jamais revenir sur ses pas.
+  const enLecture = volets.estOuvert("bd", "suivis") ? suivis.recus : undefined;
   useEffect(() => {
     if (enLecture !== undefined) marquerLu();
   }, [enLecture, marquerLu]);
@@ -2061,7 +2061,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             <Volet titre="Arbres suivis" largeur={420} surFermer={() => volets.fermer("bd")}>
               <PanneauSuivis
                 suivis={suivis.suivis}
-                journal={suivis.journal}
+                histoires={suivis.histoires}
                 tous={snapshot.trees}
                 poses={arbresPoses}
                 semaine={snapshot.week}

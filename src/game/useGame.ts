@@ -29,6 +29,7 @@ import type {
   ToWorker,
 } from "./protocol";
 import { derniereSauvegarde, ecrireSauvegarde, idNeuf } from "./sauvegardes";
+import type { LigneDeSuivi } from "./suivis";
 
 /** Combien de temps on attend la sauvegarde avant de fermer quand même, ms. */
 const DELAI_SAUVEGARDE_MS = 2000;
@@ -183,6 +184,28 @@ export interface GameApi {
    * (#149). La liste entière à chaque fois — voir `suivre` dans le protocole.
    */
   suivre: (ids: ReadonlySet<number>) => void;
+  /**
+   * **L'histoire des arbres**, telle que le worker la tient (#225).
+   *
+   * Une **antémémoire** et non une seconde accumulation : le worker est seul à
+   * voir toutes les semaines — à ×52 l'écran n'en reçoit qu'une sur deux, et
+   * n'en rend qu'un tiers —, donc l'histoire se **demande**, elle ne se
+   * refabrique pas ici. Ce qu'on garde, c'est la dernière réponse reçue.
+   *
+   * Absent de la table = on ne l'a pas encore demandée, et non « rien ne lui
+   * est arrivé » : un arbre sans histoire répond par une liste vide.
+   */
+  histoires: ReadonlyMap<number, readonly LigneDeSuivi[]>;
+  /** « Que s'est-il passé pour celui-là ? » La réponse arrive dans `histoires`. */
+  demanderLHistoire: (id: number) => void;
+  /**
+   * Combien d'événements ont touché les arbres suivis depuis le début.
+   *
+   * **Un compteur et pas une liste** : il ne sert qu'à faire un chiffre sur le
+   * bouton du volet. Les événements eux-mêmes sont dans l'histoire de chaque
+   * arbre, et les tenir une seconde fois ici les ferait diverger (§2.1).
+   */
+  suivisRecus: number;
   quit: () => void;
 }
 
@@ -216,6 +239,17 @@ export function useGame(): GameApi {
   const [politiqueHoraire, setPolitique] = useState<PolitiqueHoraire>("demander");
   /** Ce que la partie a accumulé : kilos cueillis, plants, abattages (#188). */
   const [cumuls, setCumuls] = useState<Cumuls>(CUMULS_VIDES);
+  /** Les histoires reçues, par arbre (#225) — voir `histoires` dans l'API. */
+  const [histoires, setHistoires] = useState<ReadonlyMap<number, readonly LigneDeSuivi[]>>(
+    new Map(),
+  );
+  const [suivisRecus, setSuivisRecus] = useState(0);
+  /**
+   * Les arbres dont on suit l'histoire de près : on la **redemande** dès qu'il
+   * leur arrive quelque chose. Une référence, parce que le gestionnaire de
+   * messages du worker est créé une fois pour toutes.
+   */
+  const histoiresSuivies = useRef<Set<number>>(new Set());
   /**
    * Ce qui est cueilli d'office : ce que le joueur a semé, et ce qu'il a décidé.
    *
@@ -314,6 +348,29 @@ export function useGame(): GameApi {
     [send],
   );
 
+  /**
+   * Demander l'histoire d'un arbre, et rester à l'écoute de la suite.
+   *
+   * L'identifiant est retenu : tant que le volet le montre, chaque nouvel
+   * événement le fait redemander tout seul. Le lâcher n'est pas nécessaire —
+   * une poignée d'arbres suivis, et le worker répond par une liste vide pour
+   * un identifiant qu'il ne connaît pas.
+   */
+  /** Une partie neuve, ou une reprise : l'antémémoire des histoires repart vide. */
+  const oublierLesHistoires = useCallback(() => {
+    histoiresSuivies.current = new Set();
+    setHistoires(new Map());
+    setSuivisRecus(0);
+  }, []);
+
+  const demanderLHistoire = useCallback(
+    (id: number) => {
+      histoiresSuivies.current.add(id);
+      send({ type: "histoire", id });
+    },
+    [send],
+  );
+
   const ensureWorker = useCallback(() => {
     if (workerRef.current) return workerRef.current;
     const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
@@ -339,6 +396,16 @@ export function useGame(): GameApi {
             setEvents((prev) =>
               [...msg.snapshot.events.map(withUid).reverse(), ...prev].slice(0, 60),
             );
+          }
+          if (msg.suivis.length > 0) {
+            setSuivisRecus((n) => n + msg.suivis.length);
+            // Ce qui a bougé se redemande, plutôt que de recoller le delta ici :
+            // le worker est la source, et une semaine ramenée sous le plafond
+            // horaire (#133) défait des lignes qu'un recollage garderait.
+            const touches = new Set(msg.suivis.map((e) => e.idArbre));
+            for (const id of touches) {
+              if (histoiresSuivies.current.has(id)) worker.postMessage({ type: "histoire", id });
+            }
           }
           break;
         case "progress":
@@ -382,6 +449,9 @@ export function useGame(): GameApi {
           // la garder ferait clignoter le fantôme entre rouge et normal.
           if (msg.cle === cleDemandee.current)
             setPrevision({ cle: msg.cle, refusals: msg.refusals });
+          break;
+        case "histoire":
+          setHistoires((prev) => new Map(prev).set(msg.id, msg.evenements));
           break;
         case "save":
           // Chaque partie a son entrée, et l'autosave écrit dans la sienne :
@@ -478,6 +548,10 @@ export function useGame(): GameApi {
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
       setBilan(BILAN_VIDE);
+      // Les histoires de la partie précédente s'en vont avec elle : le worker
+      // oublie les siennes au même instant, et garder l'antémémoire ferait
+      // porter à l'arbre n°12 de la partie neuve le passé de son homonyme.
+      oublierLesHistoires();
       setBilanReference(BILAN_VIDE);
       setBilanDepuis(0);
       setRecolteAuto({ semees: [], choix: {} });
@@ -509,6 +583,10 @@ export function useGame(): GameApi {
       setSnapshot(undefined);
       setCumuls(CUMULS_VIDES);
       setBilan(BILAN_VIDE);
+      // Les histoires de la partie précédente s'en vont avec elle : le worker
+      // oublie les siennes au même instant, et garder l'antémémoire ferait
+      // porter à l'arbre n°12 de la partie neuve le passé de son homonyme.
+      oublierLesHistoires();
       setBilanReference(BILAN_VIDE);
       setBilanDepuis(0);
       send({ type: "resume", save });
@@ -549,6 +627,9 @@ export function useGame(): GameApi {
     // bouge pas, seul le worker suspend ses pas.
     attendre,
     suivre,
+    histoires,
+    demanderLHistoire,
+    suivisRecus,
     /**
      * Quitter, c'est sauvegarder **puis** fermer — dans cet ordre.
      *
