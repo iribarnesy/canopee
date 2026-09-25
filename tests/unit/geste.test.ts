@@ -126,6 +126,15 @@ describe("ce qui tombe", () => {
     expect(tigeAbattueDe(TROGNE)).toBeUndefined();
   });
 
+  // Le défaut vu en jouant : « quand on coupe un arbre pour le coucher en
+  // travers, même si c'est une chandelle, il retrouve ses feuilles ». Le fût
+  // couché passe par le même chemin de pose que les arbres debout, et c'est ce
+  // champ qui décide s'il porte du feuillage.
+  it("couche une chandelle en chandelle, et un arbre vivant en arbre vivant", () => {
+    expect(tigeAbattueDe(retire({ mortAvantLeGeste: true }))?.chandelle).toBe(true);
+    expect(tigeAbattueDe(retire({ mortAvantLeGeste: false }))?.chandelle).toBe(false);
+  });
+
   it("ne fabrique pas une tige de hauteur nulle", () => {
     expect(tigeAbattueDe(retire({ hauteurAvantM: 5, hauteurApresM: 5 }))).toBeUndefined();
   });
