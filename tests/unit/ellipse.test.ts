@@ -43,6 +43,9 @@ const feu = (origine: number): IncendieResult => ({
   arbresTues: 2,
   rejets: 1,
   victimes: [],
+  // Aucune chandelle préexistante dans ce feu de banc : l'essai porte sur le
+  // plan d'ellipse, pas sur ce que le feu consume (#236).
+  chandellesConsumees: [],
   carboneTHa: 0.4,
   origine,
   brulees: Int32Array.from([origine, origine + 1, origine + 2]),

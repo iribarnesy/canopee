@@ -52,6 +52,10 @@ const retire = (patch: Partial<ArbreRetire> = {}): ArbreRetire => ({
   baseHouppierAvantM: 6,
   baseHouppierApresM: 0,
   directionRad: -Math.PI / 4,
+  // Vivante par défaut : les essais de ce fichier portent sur la géométrie du
+  // geste. Le cas de la chandelle abattue se mesure sur le moteur, dans
+  // `actions.test.ts` (#235).
+  mortAvantLeGeste: false,
   ...patch,
 });
 

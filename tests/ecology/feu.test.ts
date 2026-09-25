@@ -324,6 +324,80 @@ describe("le front du feu : où il est passé, et dans quel ordre", () => {
   });
 });
 
+describe("ce que le feu consume et qui était déjà mort", () => {
+  it("les chandelles consumées sont NOMMÉES, pas effacées (#236)", () => {
+    // Vu en jouant : « l'incendie, je n'ai rien vu, tout a disparu d'un coup ».
+    // Mesuré dans le navigateur, lande sableuse à ×52 : à l'incendie de l'an
+    // 19, **1 433 arbres disparaissent d'une image à l'autre, tous des
+    // chandelles**, quand les 2 736 victimes déclarées sont toutes encore là,
+    // en rejet ou en chandelle noire.
+    //
+    // Le mécanisme des victimes marchait ; ce qui manquait, c'étaient les
+    // chandelles PRÉEXISTANTES que le feu consume. Elles ne comptent ni dans
+    // `arbresTues` ni dans `victimes` — elles étaient déjà mortes, et les
+    // compter deux fois serait faux — mais elles quittaient la parcelle sans
+    // que rien ne le dise. Le rendu ne peut pas dessiner ce qu'on ne lui
+    // rapporte pas.
+    //
+    // **Le décor ne fabrique aucune chandelle** : une lande d'ajoncs en produit
+    // d'elle-même, et le feu les trouve debout des années plus tard. Un premier
+    // jet en tuait un sur trois au départ pour s'en assurer — et n'obtenait
+    // plus aucun incendie : assez d'ajoncs morts, plus assez de couvert pour
+    // que l'herbe porte le feu. Le décor se regarde, il ne se force pas.
+    const station: Station = { ...LANDE_SECHE.station, coteM: 30, voisinage: [] };
+    let consumeesVues = 0;
+    // Graines en ordre croissant : une liste où celles qui marchent seraient
+    // mises devant serait un tirage choisi. Sondé sur neuf graines et quarante
+    // ans — la 3 donne un feu à l'an 20 qui consume 24 chandelles sur 28
+    // debout, la 11 en consume 57 sur 58, la 37 en donne deux dont un à 128.
+    for (const graine of [2, 3, 5, 7, 11] as const) {
+      let state = createGameState(station, rngStateFromSeed(graine));
+      for (let i = 0; i < 36; i++) {
+        state = plantAt(state, "ulex_europaeus", 2 + (i % 6) * 5, 2 + Math.floor(i / 6) * 5, 1.2);
+      }
+      for (let i = 0; i < 25 * 52 && consumeesVues === 0; i++) {
+        const w = WEATHER[i % WEATHER.length];
+        if (!w) throw new Error("météo manquante");
+        const avant = new Map(state.trees.map((t) => [t.id, t]));
+        const r = advanceWeek(state, w, []);
+        state = r.state;
+        const consumees = r.incendie?.chandellesConsumees ?? [];
+        if (consumees.length === 0) continue;
+        consumeesVues = consumees.length;
+        const apres = new Set(state.trees.map((t) => t.id));
+        for (const c of consumees) {
+          const cetArbre = avant.get(c.id);
+          // Elle était là, et elle était DÉJÀ morte : c'est ce qui la
+          // distingue d'une victime.
+          expect(cetArbre).toBeDefined();
+          expect(cetArbre?.alive).toBe(false);
+          // Elle n'y est plus : le feu l'a consumée pour de bon.
+          expect(apres.has(c.id)).toBe(false);
+          // Sa hauteur est celle qu'elle avait debout, de quoi la dessiner
+          // avant de l'abattre.
+          expect(c.hauteurM).toBeCloseTo(cetArbre?.heightM ?? -1, 6);
+          // Et elle ne compte pas deux fois : une victime est un arbre VIVANT
+          // que le feu emporte.
+          expect((r.incendie?.victimes ?? []).some((v) => v.id === c.id)).toBe(false);
+        }
+        // **L'INVARIANT QUI MOTIVE TOUT LE LOT** : rien ne disparaît sans être
+        // nommé. Un arbre qui était là et qui n'y est plus est soit une
+        // chandelle consumée par le feu, soit une chandelle qui s'est écroulée
+        // d'elle-même — et le rendu a une animation pour chacune. Avant ce
+        // lot, la première liste n'existait pas et le compte ne tombait pas.
+        const nommes = new Set([...consumees.map((c) => c.id), ...r.chutes.map((c) => c.id)]);
+        for (const id of avant.keys()) {
+          if (!apres.has(id)) expect(nommes.has(id)).toBe(true);
+        }
+      }
+      if (consumeesVues > 0) break;
+    }
+    // Sans incendie sur chandelles, l'essai ne prouve rien — on le dit plutôt
+    // que de passer au vert sur un décor qui n'a pas brûlé.
+    expect(consumeesVues).toBeGreaterThan(0);
+  }, 300_000);
+});
+
 describe("le feu trie les espèces", () => {
   it("le chêne-liège traverse un incendie qui tue le pin", () => {
     const intensite = 0.8;
