@@ -31,9 +31,40 @@ export type Grille = Float32Array;
  * **La règle est mécanique, et c'est ce qui la rend tenable** : une grille
  * qu'une propriété de conservation **somme** reste longue. Ce sont `waterMm`,
  * `excessMm` et `nappeMm` pour l'eau, `mineralNG` et `litterNG` pour l'azote,
- * `litterCG`, `humusCG` et `boisAuSolCG` pour le carbone, `basesEq` et
- * `basesProfondEq` pour les bases. Le jour où une propriété nouvelle compte une
- * grille de plus, c'est elle qui le dira — en rougissant.
+ * `litterCG`, `humusCG` et `boisAuSolCG` pour le carbone, `phosphoreFixeG` et
+ * `potassiumReserveG` pour les réserves que `pk.test.ts` additionne à leurs
+ * pools assimilables, `basesEq` et `basesProfondEq` pour les bases. Le jour où
+ * une propriété nouvelle compte une grille de plus, c'est elle qui le dira — en
+ * rougissant.
+ *
+ * ## La règle compagne : **ce qu'on retire d'un stock se lit sur le stock**
+ *
+ * Être conservatif ne suffit pas, et l'issue #234 l'a montré au prix d'un défaut
+ * de cent ans. Le pool de bases échangeables passait sous zéro pendant que son
+ * bilan se refermait à 1e-13 : il était cohérent avec lui-même et comptait un
+ * stock physiquement impossible. **Une conservation interdit d'en perdre ou
+ * d'en fabriquer en route ; elle ne dit rien de ce que le stock a le droit de
+ * valoir.**
+ *
+ * L'audit qui a suivi a passé tous les pools au même crible, site de débit par
+ * site de débit. Il n'a **rien trouvé d'autre**, et la raison est structurelle :
+ * partout ailleurs, ce qu'on retire est soit une **proportion du stock
+ * lui-même** — décomposition, lessivage, érosion, rétrogradation —, soit un
+ * `Math.min` contre lui — prélèvement racinaire, réserve de potassium, pompe à
+ * bases. Un tel débit ne peut pas dépasser ce qu'il débite.
+ *
+ * Les bases étaient le seul endroit où une quantité **absolue**, calculée à
+ * partir d'autre chose (le budget calcium de la litière), était retranchée d'un
+ * stock. C'est cette forme-là qu'il faut reconnaître, et elle n'est pas
+ * interdite : elle demande seulement de borner le retrait par le stock **et** de
+ * compter le reliquat quelque part, sans quoi on remplace un stock négatif par
+ * une destruction silencieuse du flux (`bases.ts`, `acideTamponnable`).
+ *
+ * Le garde-fou est dans `tests/properties/pools-positifs.test.ts`, et ses décors
+ * sont calibrés à l'envers : plancher retiré, ils tombent. Un essai de
+ * non-négativité qui ne sait pas rougir décore la suite sans rien garder — le
+ * premier jet, un plant tous les trois mètres sur les sept stations, restait
+ * vert sur le défaut de #234 lui-même.
  */
 export type GrilleLongue = Float64Array;
 
