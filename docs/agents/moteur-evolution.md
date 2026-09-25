@@ -61,7 +61,82 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la précision se déclare, #203)
+## Ce que le dernier lot a appris (une station a un été sec, #212)
+
+### La question de l'issue avait une meilleure réponse qu'elle ne le croyait
+
+Elle demandait : `rainWinterShare` suffit-il à faire un été méditerranéen, ou
+l'année synthétique lisse-t-elle le creux ? Et elle prévenait que si elle le
+lisse, le lot change de nature — il devient un mécanisme de régime de pluie.
+
+Les deux branches étaient fausses. Calculé sur la formule, la sinusoïde **peut**
+faire l'étiage, à 0,88 de part et non aux 0,75 proposés. Mais les données
+réelles disent autre chose, et de plus haut : **le maximum de pluie
+méditerranéen est en automne, pas en hiver.** Le Luc (Var), soixante ans de
+relevés quotidiens — octobre 118 mm, novembre 113, contre janvier 78 et février
+62. Aucune sinusoïde qui culmine en janvier ne rend ça, et pour un chêne-liège
+la pluie qui revient après la sécheresse est exactement ce qui compte.
+
+Et le dépôt avait déjà la réponse : `scripts/build_meteo.py` construit des
+séries réelles depuis l'open data Météo-France. Quatre stations en avaient une ;
+la cinquième a coûté une ligne dans un dictionnaire et un fichier de 100 ko.
+
+*Avant de se demander comment approximer une donnée, chercher si le dépôt ne
+sait pas déjà aller la chercher. Le coût de la vraie donnée était ici plus
+faible que celui de l'approximation, et je l'ai découvert en lisant un script
+que je n'avais pas ouvert.*
+
+### Deux fautes de lecture dans le même lot, et c'est la même faute
+
+**J'ai lu un défaut du moteur dans un indicateur que j'avais mal construit.**
+Mesurant « la part de réserve utile » du profil entier, j'ai trouvé 0,62 sur la
+station méditerranéenne contre 0,59 sur la tempérée, et conclu qu'elle ne
+séchait pas. Trois bancs plus loin, horizon par horizon : la surface tombe à
+**0,14** de la mi-avril à la mi-août, les deux horizons du bas restent pleins —
+ce qui est correct, évaporer est un geste de surface et sans racine rien ne
+puise en dessous. La moyenne des trois noyait le signal.
+
+**Puis j'ai soupçonné mon propre changement sur des échecs qui étaient des
+dépassements de délai**, parce que j'avais lancé deux suites complètes en
+parallèle après avoir affirmé le contraire. Un `grep -c "Test timed out"` a
+réglé la question en une commande.
+
+*Le point commun n'est pas l'inattention : dans les deux cas j'ai lu le
+RÉSULTAT avant de lire ce que l'instrument mesurait. Une moyenne sur des
+compartiments qui ne se comportent pas pareil ne mesure rien — c'est la même
+leçon qu'au lot du LER, où trois pour cent de surface cultivée lus en moyenne
+cachaient tout le résultat, au pied du rang. Deux lots de suite, deux
+déguisements. Le remède tient en une habitude : **avant de conclure d'un
+chiffre, dire à voix haute ce qu'il agrège.***
+
+### Ce que la station lève, et ce qu'elle ne lève pas
+
+La règle géographique du référentiel écartait « le bassin méditerranéen sec ».
+Ce n'était pas un jugement sur ces mesures : il n'existait aucune station où les
+poser. L'exclusion tombe donc — **sur cette station-là**. Les trois essences
+méditerranéennes ne sont pas calées pour autant : le blocage est levé, le calage
+reste un lot, avec son témoin par neutralisation, et il devra trancher entre les
+5,0 m à quarante ans d'une suberaie naturelle dense et les ~11 m d'une jeune
+plantation portugaise — ce qui est décider ce que le jeu modélise, pas choisir
+un nombre.
+
+*Un trou nommé vaut mieux qu'un trou partout, et il faut résister à l'écrire
+comme s'il était bouché.*
+
+### Deux observations que je n'ai pas attribuées, et que je laisse telles
+
+**Le chêne pubescent sort à zéro** sur la station qui devrait lui convenir,
+contre 17 tiges sur le limon riche, après soixante ans. Ça peut être les 2 047
+ronces qui occupent la suberaie autant qu'un filtre d'installation mal placé.
+Non mesuré, donc non diagnostiqué.
+
+**Il n'y a pas de maquis dans le catalogue des paysages.** La station emprunte
+« massif forestier », qui sème du hêtre, du charme, de l'aulne et du saule —
+l'été sec les élimine tous, ce qui est mesuré et rassurant, mais aucun semis de
+chêne-liège ni d'arbousier ne tombe jamais sur une suberaie. La limite est
+déclarée dans la fiche de la station.
+
+## Ce qu'un lot plus ancien a appris (la précision se déclare, #203)
 
 Un lot de représentation mémoire, sans une ligne d'écologie — et il a appris
 plus de méthode que les trois précédents réunis.

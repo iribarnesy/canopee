@@ -9,6 +9,7 @@
 import fricheLimon from "../../data/meteo/friche-limon.json";
 import landeSeche from "../../data/meteo/lande-seche.json";
 import limonRiche from "../../data/meteo/limon-riche.json";
+import suberaieMaures from "../../data/meteo/suberaie-maures.json";
 import valleeEngorgee from "../../data/meteo/vallee-engorgee.json";
 import type { SerieMeteoHebdo } from "../engine/meteo";
 
@@ -17,6 +18,7 @@ const SERIES: SerieMeteoHebdo[] = [
   valleeEngorgee as SerieMeteoHebdo,
   limonRiche as SerieMeteoHebdo,
   fricheLimon as SerieMeteoHebdo,
+  suberaieMaures as SerieMeteoHebdo,
 ];
 
 /**

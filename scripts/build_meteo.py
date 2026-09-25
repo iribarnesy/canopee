@@ -24,6 +24,10 @@ STATIONS = {
     "vallee-engorgee": ("Q_37_previous-1950-2024_RR-T-Vent.csv.gz", "TOURS"),
     "limon-riche": ("Q_80_previous-1950-2024_RR-T-Vent.csv.gz", "ABBEVILLE"),
     "friche-limon": ("Q_21_previous-1950-2024_RR-T-Vent.csv.gz", "DIJON-LONGVIC"),
+    # La seule station non tempérée du jeu (#212). Le Luc est au pied du massif
+    # des Maures, en pleine plaine des Maures : c'est le pays du chêne-liège, et
+    # le poste couvre 1950-2024 sans trou.
+    "suberaie-maures": ("Q_83_previous-1950-2024_RR-T-Vent.csv.gz", "LE LUC"),
 }
 YEAR_START, YEAR_END = 1964, 2023  # 60 ans, incluant 1976, 2003 et 2022
 
