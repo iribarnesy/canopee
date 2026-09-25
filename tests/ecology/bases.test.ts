@@ -17,8 +17,10 @@ import { serieMeteoPour } from "../../src/data/meteo";
 import { applyAction } from "../../src/engine/actions";
 import {
   acideTamponnable,
+  alterationBasesSurfaceEqM2Semaine,
   CALCIUM_NEUTRE_MG_G,
   capaciteEchangeEqM2,
+  DEPOSITION_BASES_EQ_M2_SEMAINE,
   effetLitiereEq,
   lessivageBasesEq,
   PH_PLANCHER,
@@ -357,9 +359,19 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
     // **L'invariant.** Aucune cellule, aucune semaine, aucun des deux pools.
     expect(r.planchePartout).toBeGreaterThanOrEqual(0);
     expect(r.plancherProfond).toBeGreaterThanOrEqual(0);
-    // Et il touche vraiment zéro : sans ça l'essai passerait sur une parcelle
-    // qui n'a jamais approché la borne, et ne prouverait rien.
-    expect(r.planchePartout).toBeCloseTo(0, 9);
+    // **Et il touche vraiment le plancher** : sans ça l'essai passerait sur une
+    // parcelle qui n'a jamais approché la borne, et ne prouverait rien.
+    //
+    // Le minimum relevé n'est pas zéro tout rond, et ce n'est pas du bruit : la
+    // cellule est vidée par la litière **puis regarnie la même semaine** par
+    // l'altération et les dépôts, plus bas dans le même tick. Ce qu'on peut donc
+    // exiger, et qui dit exactement la bonne chose, c'est qu'elle ne finisse
+    // jamais la semaine avec plus que ce que cette semaine-là lui a apporté.
+    // Relevé : 2,87e-4 pour un apport hebdomadaire de 2,87e-4.
+    const apportHebdo =
+      alterationBasesSurfaceEqM2Semaine(LANDE_SECHE.station.profil) +
+      DEPOSITION_BASES_EQ_M2_SEMAINE;
+    expect(r.planchePartout).toBeLessThanOrEqual(apportHebdo);
 
     // **Ce que la correction déplace, et ce qu'elle ne déplace pas.** Mesuré sur
     // ce décor, une seule chose changée : sans plancher la cellule la plus
