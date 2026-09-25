@@ -13,6 +13,7 @@ import { type AidesAnnuelles, aidesAnnuelles } from "./aides";
 import { intensiteAllelopathique } from "./allelopathie";
 import { banqueApresUneAnnee, DEPOT_PAR_ADULTE_PAR_AN } from "./banqueGraines";
 import {
+  acideTamponnable,
   alterationBasesProfondeEqM2Semaine,
   alterationBasesSurfaceEqM2Semaine,
   CALCIUM_NEUTRE_MG_G,
@@ -795,6 +796,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let basesLessiveSumEq = 0;
   let basesLitiereSumEq = 0;
   let basesAcideSumEq = 0;
+  // Les protons que la litière a produits et qu'aucune base n'a pu neutraliser,
+  // le pool de surface étant déjà vide (#234). Ils ne sont **pas** un terme du
+  // budget du pool — ils ne l'ont jamais touché ; c'est précisément ce qui les
+  // définit. On les publie pour que le bilan reste lisible : ce que la litière
+  // a produit vaut `basesAcideEqHa + basesAcideNonTamponneEqHa`.
+  let basesAcideNonTamponneSumEq = 0;
   let basesPreleveSumEq = 0;
   let basesApportProfondSumEq = 0;
   let basesExportSumEq = 0;
@@ -1085,9 +1092,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // essence acidifiante d'une essence améliorante. Aucun nom d'espèce ici :
     // la teneur en calcium de ce qui est tombé sur **cette** cellule suffit.
     const effetBases = effetLitiereEq(decayedC, litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G);
-    basesEq[i] = (basesEq[i] ?? 0) + effetBases;
-    if (effetBases >= 0) basesLitiereSumEq += effetBases;
-    else basesAcideSumEq -= effetBases;
+    if (effetBases >= 0) {
+      basesEq[i] = (basesEq[i] ?? 0) + effetBases;
+      basesLitiereSumEq += effetBases;
+    } else {
+      // **Le complexe ne peut céder que les bases qu'il porte** (#234). Il
+      // encaissait sans plancher, et le pool descendait sous zéro — un stock de
+      // bases échangeables négatif n'existe pas : quand il est vide, ce sont les
+      // protons et l'aluminium qui occupent les sites.
+      //
+      // La part qu'aucune base n'a neutralisée ne disparaît pas pour autant du
+      // bilan : elle va à son propre poste de sortie. Borner sans le compter
+      // aurait remplacé une création de bases négatives par une destruction
+      // d'acidité, le même défaut dans l'autre sens (bases.ts).
+      const tamponne = acideTamponnable(basesEq[i] ?? 0, -effetBases);
+      basesEq[i] = (basesEq[i] ?? 0) - tamponne;
+      basesAcideSumEq += tamponne;
+      basesAcideNonTamponneSumEq += -effetBases - tamponne;
+    }
     humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
     emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
     // L'humus est **le** stock d'azote organique du sol : ce qui s'en minéralise
@@ -3515,6 +3537,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       basesPreleveEqHa: (basesPreleveSumEq / nCells) * 10_000,
       basesApportProfondEqHa: (basesApportProfondSumEq / nCells) * 10_000,
       basesExportEqHa: (basesExportSumEq / nCells) * 10_000,
+      basesAcideNonTamponneEqHa: (basesAcideNonTamponneSumEq / nCells) * 10_000,
       saturationMoyenne:
         cecSurfaceEq > 0 ? basesEq.reduce((a, b) => a + b, 0) / nCells / cecSurfaceEq : 0,
       saturationProfondeMoyenne:

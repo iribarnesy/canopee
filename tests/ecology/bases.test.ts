@@ -16,8 +16,11 @@ import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import { applyAction } from "../../src/engine/actions";
 import {
+  acideTamponnable,
+  alterationBasesSurfaceEqM2Semaine,
   CALCIUM_NEUTRE_MG_G,
   capaciteEchangeEqM2,
+  DEPOSITION_BASES_EQ_M2_SEMAINE,
   effetLitiereEq,
   lessivageBasesEq,
   PH_PLANCHER,
@@ -258,4 +261,138 @@ describe("le chaulage n'est plus un geste à effet fixe", () => {
     }
     expect(Math.max(...s.soil.ph)).toBeLessThanOrEqual(PH_SATURE);
   });
+});
+
+/**
+ * **Un stock de bases échangeables ne peut pas être négatif** (#234).
+ *
+ * `effetLitiereEq` rend un effet négatif quand la litière est sous le seuil de
+ * calcium — le mécanisme est juste, une litière pauvre acidifie — mais il était
+ * encaissé **sans plancher**. Mesuré sur la lande sèche telle qu'elle est
+ * déclarée, cent cinquante ans, une graine : la première cellule bascule à
+ * l'an 58, exactement quand la lande se boise (1630 tiges à l'an 45, 3226 à
+ * l'an 58), la moyenne franchit zéro vers l'an 105, et la cellule la plus
+ * pauvre finit à **−13 eq/m²**. Le pool profond y passait lui aussi (−0,037 à
+ * l'an 120), parce que `lessivageBasesEq` rend un lessivage **négatif** sur un
+ * stock négatif et que le tick l'**ajoute** au sous-sol : il perdait des bases
+ * qui n'avaient jamais existé.
+ *
+ * **Pourquoi aucun essai ne l'attrapait, et c'est le plus instructif.** Le pH
+ * est borné et le pool ne l'était pas : `phDepuisSaturation` ramène la
+ * saturation dans `[0,1]`, donc le pH lu restait au plancher, parfaitement
+ * correct, pendant que le stock plongeait — et le pH est la seule grandeur que
+ * le reste du moteur consulte. Quant au budget de C14, il **passait** : il est
+ * cohérent avec lui-même. Il comptait simplement un stock impossible. Une
+ * conservation n'est pas une vérification de domaine, et ce lot est l'exemple.
+ */
+describe("le complexe ne peut céder que les bases qu'il porte", () => {
+  it("rend au plus ce que le stock contient, et jamais un négatif", () => {
+    // La règle seule, avant la partie. Les trois cas qui comptent : de quoi
+    // tamponner, pas assez, et plus rien du tout.
+    expect(acideTamponnable(5, 2)).toBe(2);
+    expect(acideTamponnable(1, 2)).toBe(1);
+    expect(acideTamponnable(0, 2)).toBe(0);
+    // Un stock déjà négatif — il ne peut plus en venir, mais la règle ne doit
+    // pas creuser davantage si jamais il s'en présentait un.
+    expect(acideTamponnable(-3, 2)).toBe(0);
+    // Et une charge nulle ou positive ne prend rien : la fonction ne sert que
+    // dans un sens.
+    expect(acideTamponnable(5, 0)).toBe(0);
+  });
+
+  /**
+   * Le décor où le plancher mord, et il n'est pas fabriqué : des ajoncs sur la
+   * lande sèche, c'est-à-dire l'espèce du lieu sur la station du lieu. Le
+   * complexe y est petit (17,4 eq/m² de capacité, un sable), la litière y est
+   * pauvre (4,5 mg/g de calcium), et soixante ans suffisent à vider la cellule
+   * la plus exposée.
+   */
+  function lande(ans: number) {
+    const COTE = 16;
+    const station: Station = {
+      ...LANDE_SECHE.station,
+      coteM: COTE,
+      voisinage: [],
+      ventExposition: 0,
+    };
+    const serie = serieMeteoPour(LANDE_SECHE.station.id);
+    if (!serie) throw new Error("série manquante");
+    const METEO = serieToWeeks(serie);
+    let s = createGameState(station, rngStateFromSeed(3));
+    for (let y = 1; y < COTE; y += 2)
+      for (let x = 1; x < COTE; x += 2) s = plantAt(s, "ulex_europaeus", x, y, 0.3);
+    const bases0 = moyenne(s.soil.basesEq);
+    let budget = 0;
+    let nonTamponne = 0;
+    let planchePartout = Number.POSITIVE_INFINITY;
+    let plancherProfond = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < ans * 52; i++) {
+      const w = METEO[i % METEO.length];
+      if (!w) throw new Error("météo manquante");
+      const r = tick(s, w);
+      s = r.state;
+      const f = r.fluxes;
+      budget +=
+        (f.basesApportEqHa + f.basesLitiereEqHa - f.basesLessiveEqHa - f.basesAcideEqHa) / 10_000;
+      nonTamponne += f.basesAcideNonTamponneEqHa / 10_000;
+      // On regarde **chaque semaine**, pas seulement à l'arrivée : un pool qui
+      // plonge puis remonte passerait un contrôle final.
+      for (const v of s.soil.basesEq) planchePartout = Math.min(planchePartout, v);
+      for (const v of s.soil.basesProfondEq) plancherProfond = Math.min(plancherProfond, v);
+    }
+    return {
+      bases0,
+      bases: moyenne(s.soil.basesEq),
+      budget,
+      nonTamponne,
+      planchePartout,
+      plancherProfond,
+      tiges: s.trees.filter((t) => t.alive).length,
+    };
+  }
+
+  it("soixante ans d'ajoncs sur la lande : le pool touche zéro et s'y arrête", () => {
+    const r = lande(60);
+    // Le décor a bien fait son travail : il a vidé une cellule.
+    expect(r.nonTamponne).toBeGreaterThan(0);
+    expect(r.tiges).toBeGreaterThan(0);
+    // **L'invariant.** Aucune cellule, aucune semaine, aucun des deux pools.
+    expect(r.planchePartout).toBeGreaterThanOrEqual(0);
+    expect(r.plancherProfond).toBeGreaterThanOrEqual(0);
+    // **Et il touche vraiment le plancher** : sans ça l'essai passerait sur une
+    // parcelle qui n'a jamais approché la borne, et ne prouverait rien.
+    //
+    // Le minimum relevé n'est pas zéro tout rond, et ce n'est pas du bruit : la
+    // cellule est vidée par la litière **puis regarnie la même semaine** par
+    // l'altération et les dépôts, plus bas dans le même tick. Ce qu'on peut donc
+    // exiger, et qui dit exactement la bonne chose, c'est qu'elle ne finisse
+    // jamais la semaine avec plus que ce que cette semaine-là lui a apporté.
+    // Relevé : 2,87e-4 pour un apport hebdomadaire de 2,87e-4.
+    const apportHebdo =
+      alterationBasesSurfaceEqM2Semaine(LANDE_SECHE.station.profil) +
+      DEPOSITION_BASES_EQ_M2_SEMAINE;
+    expect(r.planchePartout).toBeLessThanOrEqual(apportHebdo);
+
+    // **Ce que la correction déplace, et ce qu'elle ne déplace pas.** Mesuré sur
+    // ce décor, une seule chose changée : sans plancher la cellule la plus
+    // pauvre finit à −1,132, avec plancher à 0,000 — pendant que la moyenne
+    // passe de 1,856 à 1,864. La correction est **locale aux cellules
+    // désaturées**, ce qui est la bonne forme : elle n'ajoute de bases nulle
+    // part, elle cesse d'en retirer là où il n'y en a plus.
+    expect(r.bases).toBeGreaterThan(1.5);
+    expect(r.bases).toBeLessThan(2.3);
+  }, 300_000);
+
+  it("et le budget se referme quand même — c'est bien pour ça qu'on ne le voyait pas", () => {
+    // **L'essai qui dit la limite de C14.** Le budget se referme à 1e-13 sur ce
+    // décor avec le plancher ; il se refermait aussi bien **sans** (−3,37e-13
+    // contre −3,36e-13, mesuré). Une conservation vérifie qu'on ne perd ni ne
+    // fabrique en route ; elle ne vérifie pas que le stock existe. La part que
+    // le complexe n'a pas pu neutraliser n'est donc pas escamotée : elle a son
+    // propre poste, hors du budget du pool, parce qu'elle n'a jamais touché le
+    // pool — et c'est exactement ce qui la définit.
+    const r = lande(60);
+    expect(r.bases - r.bases0).toBeCloseTo(r.budget, 9);
+    expect(r.nonTamponne).toBeGreaterThan(0);
+  }, 300_000);
 });
