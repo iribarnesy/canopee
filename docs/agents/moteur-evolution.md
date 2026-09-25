@@ -61,7 +61,78 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (une station a un été sec, #212)
+## Ce que le dernier lot a appris (une guilde entière sans une ligne, #187 guilde 4)
+
+### Une promesse écrite dans un module doit finir par être éprouvée
+
+`faune.ts` annonçait depuis le lot 1 : *« ajouter une guilde entière ne doit
+demander aucune ligne de code »*. Trois guildes étaient entrées depuis, mais
+toutes par la porte pour laquelle le module avait été taillé. Les chauves-souris
+sont les premières à arriver **après** — et la promesse a tenu : deux fiches, et
+rien d'autre n'a bougé dans le mécanisme.
+
+Ce n'est pas une formalité. Une promesse d'architecture qu'on ne fait jamais
+éprouver reste une intention, et c'est précisément quand elle est fausse qu'on
+ne s'en aperçoit pas.
+
+### Le coût d'une guilde n'est pas dans le code, il est dans ce qu'on déclare
+
+Tout le lot a tenu dans deux décisions, et aucune n'était technique.
+
+**L'individu est ici une colonie**, pas une bête. Une noctule solitaire n'est pas
+un événement de la parcelle ; une colonie de quarante femelles dans le vieux
+chêne en est un, et c'est elle que l'abattage expulse. Les litres de loge sont
+donc ceux d'une chambre entière.
+
+**Et la noctule est repartie sans table.** Elle chasse à trente mètres du sol et
+à dix kilomètres de son gîte des hannetons et des papillons de nuit ;
+`soil.ravageurs` tient des chenilles au feuillage. La brancher dessus l'aurait
+jugée sur une ressource qu'elle ne mange pas. C'est la position déjà tenue pour
+l'écureuil faute de glandée, et il faut savoir la retenir deux fois.
+
+### `table.ressource` fait deux choses, et la seconde ne se voit pas
+
+Le piège du lot, et il est structurel. Depuis le lot 3, `couvertureAuxiliaires`
+lit `table.ressource` pour décider **de quoi l'animal est l'auxiliaire**. Déclarer
+une table, ce n'est donc pas seulement dire ce qu'on mange : c'est aussi déclarer
+un service de régulation, et l'inscrire dans un critère vert.
+
+Une noctule à table `invertebres` aurait donc peint son disque de 600 m sur toute
+la parcelle et compté comme régulatrice d'une pullulation qu'elle ne régule pas
+d'ici. **Un champ qui a deux lecteurs doit être rempli en pensant aux deux**, et
+c'est à écrire dans la fiche plutôt qu'à redécouvrir.
+
+### La preuve la plus forte du lot est une quasi-identité, encore
+
+Contrôle apparié, cinq graines, vieille chênaie d'un hectare, soixante ans.
+**Aucun des sept effectifs d'avant ne bouge d'une unité** — et le loir, qui
+partageait pourtant les mêmes litres de creux, garde exactement ses 6/4/5/4/1.
+La guilde est additive et non substitutive, et ça se lit d'un coup d'œil sur une
+colonne de chiffres identiques, là où une moyenne n'aurait rien dit.
+
+### Un mécanisme peut être juste **et** invisible, et c'est le banc qui décide
+
+L'habitat des auxiliaires n'a bougé que de +0,6 % au mieux, et pas du tout sur
+trois graines sur cinq. Non parce que le Bechstein ne compte pas, mais parce que
+le terme **sature** à trois insectivores et que la chênaie en portait déjà sept.
+
+La tentation est de conclure « le mécanisme ne fait rien ». Le bon énoncé est
+« ce banc-là ne peut pas le montrer » : il faudrait une parcelle pauvre en
+cavernicoles pour que la colonie pèse. Et le contrôle interne est dans la
+mesure — sur la graine où le Bechstein ne s'installe pas, rien ne bouge du tout.
+
+### Une borne supérieure qui converge vers elle-même n'est pas une densité
+
+Sur un hectare, un territoire de 400 m ne laisse au modèle que deux réponses :
+zéro ou une colonie. Sur soixante ans il donne à peu près toujours la même, et
+« une colonie par hectare » se lirait comme cinquante fois le terrain.
+
+C'est la limite que `faune.ts` écrit déjà — le territoire n'exclut que les
+congénères **de** la parcelle. Elle devient beaucoup plus visible dès que le
+territoire dépasse la parcelle, ce qui est le cas de toutes les espèces à grand
+domaine. Le chiffre est une borne, et il doit être cité comme telle.
+
+## Ce qu'un lot plus ancien a appris (une station a un été sec, #212)
 
 ### La question de l'issue avait une meilleure réponse qu'elle ne le croyait
 
