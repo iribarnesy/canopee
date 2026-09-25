@@ -193,10 +193,37 @@ export const OPACITE_HORS_SUJET = 0.14;
  * que tu cherches ». Un phénomène de masse ne se cherche pas, il se lit dans
  * une phrase.
  */
+/**
+ * En dessous, un fût ne fait pas huit pixels et ne se **cherche** pas.
+ *
+ * `METRE_VERTICAL_PX` vaut 8 : une tige d'un mètre fait huit pixels à zoom 1,
+ * une de trente-sept centimètres en fait trois. Ce n'est pas une question de
+ * goût, c'est ce que l'écran peut rendre.
+ *
+ * **Mesuré sur la scène qui a motivé le seuil** (#233) : une mortalité de masse
+ * de 924 tiges, dont la médiane fait 0,37 m et dont 72 seulement dépassent le
+ * mètre. Garder les 924 nettes, c'est 34 % des arbres nets — le régime où
+ * l'estompe s'est déjà fait défaire (2 058 sur 2 831, voir ci-dessus). Garder
+ * les 72, c'est 2,7 % : une poignée de fûts nets sur une parcelle éteinte.
+ *
+ * Les 852 autres ne sont pas escamotées pour autant : elles restent dans le
+ * compte des changements non pointés, et dans la phrase du bilan de période.
+ */
+export const HAUTEUR_TROUVABLE_M = 1;
+
 export function sujetsDuJournal(journal: JournalDeSemaine): Set<number> {
   const sujets = new Set<number>();
-  for (const m of journal.morts ?? []) sujets.add(m.id);
-  for (const c of journal.chutes ?? []) sujets.add(c.id);
+  // **Les morts et les chutes passent par une porte de taille**, les autres non.
+  // Ce sont les deux que ce module appelle « sombres » : on ne les trouve que
+  // par le contraste, et un fût de trois pixels n'a pas de contraste à offrir.
+  // Une recrue, elle, est minuscule par définition et c'est un marqueur qui la
+  // montre — la filtrer ne ferait que retirer la seule bonne nouvelle du calque.
+  for (const m of journal.morts ?? []) {
+    if (m.heightM >= HAUTEUR_TROUVABLE_M) sujets.add(m.id);
+  }
+  for (const c of journal.chutes ?? []) {
+    if (c.heightM >= HAUTEUR_TROUVABLE_M) sujets.add(c.id);
+  }
   for (const geste of journal.gestes ?? []) {
     if (estGesteSurZone(geste)) continue;
     if (geste.ids.length > TIGES_PAR_GESTE_MAX) continue;

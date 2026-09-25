@@ -13,6 +13,7 @@ import type { CauseMort } from "../../src/engine/trees";
 import {
   accumuler,
   centreDesCellules,
+  HAUTEUR_TROUVABLE_M,
   type Marqueur,
   marqueursDuJournal,
   PLAFOND_DE_MARQUEURS,
@@ -25,6 +26,18 @@ import {
 import type { JournalDeSemaine } from "../../src/render/temps/ellipse";
 
 const COTE = 100;
+
+/** Une chandelle qui s'abat, telle que le moteur la rapporte. */
+const CHUTE = {
+  id: 1,
+  x: 5,
+  y: 5,
+  especeId: "betula_pendula",
+  heightM: 12,
+  directionRad: 1,
+  masseKgC: 10,
+  empreinte: [],
+};
 
 const mort = (id: number, x: number, y: number, cause: CauseMort): MortDeLaSemaine => ({
   id,
@@ -279,6 +292,40 @@ describe("ce que l'estompe laisse net", () => {
       franchissements: [{ id: 2, deStade: "semis", versStade: "gaulis" }],
     });
     expect([...sujets].sort((a, b) => a - b)).toEqual([1, 2, 900]);
+  });
+
+  // Le cas qui a motivé le seuil (#233) : une mortalité de masse de 924 tiges
+  // dont la médiane fait 37 cm. Les garder toutes nettes, c'est un tiers des
+  // arbres nets — le régime où l'estompe s'est déjà fait défaire.
+  it("laisse dehors les fûts qui ne font pas huit pixels", () => {
+    const sujets = sujetsDuJournal({
+      morts: [
+        { ...mort(1, 1, 1, "feu"), heightM: 2.4 },
+        { ...mort(2, 2, 2, "feu"), heightM: HAUTEUR_TROUVABLE_M },
+        { ...mort(3, 3, 3, "feu"), heightM: 0.37 },
+      ],
+    });
+    expect([...sujets].sort((a, b) => a - b)).toEqual([1, 2]);
+  });
+
+  it("applique la même porte aux chandelles qui s'abattent", () => {
+    const sujets = sujetsDuJournal({
+      chutes: [
+        { ...CHUTE, id: 10, heightM: 6 },
+        { ...CHUTE, id: 11, heightM: 0.5 },
+      ],
+    });
+    expect([...sujets]).toEqual([10]);
+  });
+
+  // Une recrue est minuscule par définition : la filtrer retirerait la seule
+  // bonne nouvelle du calque, et c'est un marqueur qui la montre, pas le
+  // contraste.
+  it("ne ferme pas la porte aux recrues, qui sont minuscules par nature", () => {
+    const sujets = sujetsDuJournal({
+      naissances: [{ id: 900, x: 4, y: 8, especeId: "betula_pendula", heightM: 0.3 }],
+    });
+    expect([...sujets]).toEqual([900]);
   });
 });
 

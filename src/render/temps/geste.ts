@@ -129,7 +129,11 @@ export function tigeAbattueDe(retire: ArbreRetire): TigeAbattue | undefined {
     // la coupe : une cépée recépée à trente centimètres emporte son houppier
     // trente centimètres plus bas qu'il n'était sur l'arbre.
     baseHouppierM: Math.max(0, retire.baseHouppierAvantM - retire.hauteurApresM),
-    chandelle: false,
+    // Le moteur le dit depuis #235, et il le disait déjà trois lignes plus haut
+    // dans sa propre boucle : sans ce champ, une chandelle abattue reverdissait
+    // en tombant, le fût couché prenant la feuillaison saisonnière de son
+    // espèce faute de savoir qu'il n'en avait plus.
+    chandelle: retire.mortAvantLeGeste,
     directionRad: retire.directionRad,
     hauteurDeCoupeM: Math.max(0, retire.hauteurApresM),
   };
