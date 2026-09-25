@@ -699,23 +699,9 @@ const APPROFONDISSEMENT_CM_AN = 25;
 
 /**
  * Plasticité racinaire : l'arbre n'investit vers le bas que si la surface ne
- * lui suffit pas. Comblé, il garde un chevelu superficiel (économe) ; en
- * manque, il descend chercher la réserve profonde. Les racines déjà faites ne
- * disparaissent pas — la profondeur ne régresse jamais.
- *
- * **Et « en manque » ne veut pas dire « assoiffé »** (issue #222). La soif était
- * le seul déclencheur, et ça se payait exactement là où l'agroforesterie se
- * joue : sous une allée cultivée, le noyer perd 26,8 % de son prélèvement
- * d'azote au profit du blé et **21,3 % de son volume**, pendant que son eau ne
- * bouge que d'un pour cent. Il ne descendait donc jamais, et restait en
- * concurrence frontale avec la culture dans les horizons de surface — alors
- * qu'à Restinclières c'est précisément la descente des racines sous l'allée qui
- * fait que l'arbre d'allée dépasse le témoin forestier.
- *
- * Le déclencheur est donc le manque le plus fort, eau ou azote : **la loi du
- * minimum, appliquée au déclencheur** comme elle l'est déjà au reste de la
- * croissance. Aucune constante nouvelle — la vitesse d'approfondissement est
- * celle qui existait, et elle porte toujours son *(à calibrer)*.
+ * lui suffit pas. Comblé en eau, il garde un chevelu superficiel (économe) ;
+ * assoiffé, il descend chercher la réserve profonde. Les racines déjà faites
+ * ne disparaissent pas — la profondeur ne régresse jamais.
  */
 export function nouvelleProfondeurRacines(
   espece: EspeceV0,
@@ -723,18 +709,15 @@ export function nouvelleProfondeurRacines(
   solPenetrableCm: number,
   waterSatisfaction: number,
   season: number,
-  nitrogenSatisfaction = 1,
 ): number {
   const potentiel = profondeurRacinesCm(espece, tree.heightM, solPenetrableCm);
   const plancher = Math.min(
     potentiel,
     Math.max(15, partPlancherRacines(espece, tree.heightM) * potentiel),
   );
-  // Le manque déclenche l'investissement vers le bas, et c'est le plus fort des
-  // deux qui commande : une racine ne distingue pas ce qui lui manque, elle
-  // prospecte là où il y en a.
-  const manque = Math.max(0, 1 - Math.min(waterSatisfaction, nitrogenSatisfaction));
-  const gain = (APPROFONDISSEMENT_CM_AN / 52) * season * manque;
+  // La soif (et elle seule) déclenche l'investissement vers le bas.
+  const soif = Math.max(0, 1 - waterSatisfaction);
+  const gain = (APPROFONDISSEMENT_CM_AN / 52) * season * soif;
   return Math.min(potentiel, Math.max(plancher, tree.rootDepthCm + gain));
 }
 
@@ -1359,15 +1342,13 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // travailler. Un hiver doux ne fait pas pousser un arbre nu.
   const feuillageActif = env.partFoliaire ?? 1;
   const season = seasonFactor(espece, env.tMean) * feuillageActif;
-  // Plasticité racinaire : l'arbre approfondit s'il a manqué d'eau OU d'azote
-  // cette semaine (#222).
+  // Plasticité racinaire : l'arbre approfondit s'il a manqué d'eau cette semaine.
   const rootDepthCm = nouvelleProfondeurRacines(
     espece,
     tree,
     env.solPenetrableCm,
     env.waterSatisfaction,
     season,
-    env.nitrogenSatisfaction,
   );
   const fSec = droughtFactor(espece, env.waterSatisfaction);
   // Survie hydrique : seuil découplé du confort (le hêtre pousse mal en sec
