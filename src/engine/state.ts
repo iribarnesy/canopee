@@ -214,6 +214,17 @@ export function gridDims(station: Station): GridDims {
  * restent mono-couche — la vie du sol, l'absorption d'azote et le chaulage se
  * jouent pour l'essentiel dans les premiers centimètres *(approximation
  * assumée, à lever si le besoin apparaît)*.
+ *
+ * **Le besoin est apparu, et il est chiffré : #247.** Sous une allée cultivée,
+ * le blé coûte au noyer 26,8 % de son prélèvement d'azote et 21,3 % de son
+ * volume, quand son eau ne bouge que d'un pour cent (#222). À Restinclières
+ * l'arbre d'allée pousse pourtant plus vite que le témoin forestier, et
+ * l'explication de terrain est la complémentarité verticale — ses racines vont
+ * chercher plus bas ce que la culture ne touche pas. **Le moteur ne peut pas la
+ * produire tant qu'il n'y a qu'un pool d'azote par cellule** : mesuré en
+ * faisant répondre la plasticité racinaire au manque d'azote, l'arbre descend
+ * de 0,9 cm et son volume ne bouge pas d'une décimale. Descendre ne mène nulle
+ * part quand il n'y a rien de différent en bas.
  */
 export interface SoilState {
   /** eau de la réserve utile, mm — par (cellule, horizon) */
