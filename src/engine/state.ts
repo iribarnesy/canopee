@@ -534,7 +534,30 @@ export interface TickFluxes {
   /** ce qui **descend** de la surface vers le sous-sol (ce n'est plus une sortie) */
   basesLessiveEqHa: number;
   basesLitiereEqHa: number;
+  /**
+   * La charge acide que le complexe a **réellement** encaissée, eq/ha — donc un
+   * flux sortant du pool, et non la charge que la litière a produite.
+   *
+   * La nuance a un coût mesuré (#234) : le pool était débité sans plancher et
+   * descendait sous zéro, ce qu'un stock de bases échangeables ne peut pas
+   * faire. Le budget se refermait quand même — il était cohérent avec lui-même,
+   * et comptait un stock impossible.
+   */
   basesAcideEqHa: number;
+  /**
+   * Les protons que la litière a produits et qu'**aucune base n'a neutralisés**,
+   * le complexe étant déjà vide, eq/ha (#234).
+   *
+   * Ce n'est **pas** un terme du budget de surface, et c'est exactement ce qui le
+   * définit : ces protons n'ont jamais touché le pool. Le poste existe pour que
+   * le bilan reste lisible — ce que la litière a produit vaut
+   * `basesAcideEqHa + basesAcideNonTamponneEqHa` — et pour qu'on puisse dire
+   * **quand** une cellule bascule dans la gamme tampon de l'aluminium : ce champ
+   * est nul tant que le complexe a des bases à céder, strictement positif
+   * ensuite. Ce que ces protons font à la matrice minérale, et l'aluminium
+   * qu'elle relargue, restent hors du moteur (`bases.ts`).
+   */
+  basesAcideNonTamponneEqHa: number;
   /**
    * **la pompe** : bases retirées au sous-sol par les racines cette semaine, eq/ha
    * (bases.ts, critère C15). Elle n'entre pas dans le budget de **surface** ci-

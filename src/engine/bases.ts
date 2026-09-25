@@ -382,6 +382,50 @@ export function effetLitiereEq(carboneDecomposeGM2: number, calciumMgG: number):
 }
 
 /**
+ * Ce qu'un complexe peut réellement **tamponner** d'une charge acide, eq/m².
+ *
+ * Un stock de bases échangeables ne peut pas être négatif : quand il est vide,
+ * ce sont les protons et l'aluminium qui occupent les sites. `effetLitiereEq`
+ * rend un effet négatif quand la litière est sous le seuil de calcium — le
+ * mécanisme est juste, une litière pauvre acidifie — mais il était encaissé
+ * **sans plancher**, si bien que le pool descendait sous zéro et que tout ce qui
+ * se calcule dessus partait avec lui.
+ *
+ * Ce que ça coûtait, mesuré (#234). Lande sèche, station telle qu'elle est
+ * déclarée, cent cinquante ans, une graine : la première cellule bascule à
+ * l'**an 58** — exactement quand la lande se boise, 1630 tiges à l'an 45 contre
+ * 3226 à l'an 58 — et la moyenne de la parcelle franchit zéro vers l'an 105
+ * pour finir à **−5,4 eq/m²**. Et le stock impossible se propageait :
+ * `lessivageBasesEq` rend, sur un stock négatif, un lessivage **négatif**, que le
+ * tick **ajoute** au pool profond. Le sous-sol perdait des bases qui n'avaient
+ * jamais existé — 19 % de sa perte sur la période, 0,53 des 2,75 eq/m².
+ *
+ * **Personne ne l'avait vu parce que le pH est borné et que le pool ne l'était
+ * pas** : `phDepuisSaturation` ramène la saturation dans `[0,1]`, donc le pH lu
+ * restait au plancher, parfaitement correct, pendant que le stock plongeait. Or
+ * le pH est la seule grandeur que le reste du moteur consulte. Et le budget des
+ * bases **passait** : il était cohérent avec lui-même. Il comptait simplement un
+ * stock physiquement impossible — ce qui est le défaut que C14 ne pouvait pas
+ * attraper.
+ *
+ * Ce que cette fonction rend n'est donc **pas** un `Math.max(0, …)` déguisé : la
+ * part que le complexe n'a pas pu neutraliser ne disparaît pas du bilan, elle
+ * est comptée à part (`basesAcideNonTamponneEqHa`). Borner sans ce poste aurait
+ * remplacé une création de bases négatives par une **destruction d'acidité**, ce
+ * qui est le même défaut dans l'autre sens.
+ *
+ * Ce qu'elle ne fait pas, et c'est un autre lot : **modéliser ce que cette
+ * acidité devient**. En réalité, sous un certain taux de saturation, ce n'est
+ * plus le complexe qui encaisse mais la matrice minérale, et elle relargue de
+ * l'aluminium — toxique pour les racines. C'est la gamme tampon d'Ulrich que
+ * `PH_PLANCHER` nomme déjà sans la simuler. Le poste de sortie dit **combien**
+ * de protons y arrivent ; il ne dit pas ce qu'ils y font.
+ */
+export function acideTamponnable(stockEq: number, chargeAcideEq: number): number {
+  return Math.min(Math.max(0, chargeAcideEq), Math.max(0, stockEq));
+}
+
+/**
  * Les bases que **porte** une litière, eq/m² : son calcium, converti en charges.
  *
  * C'est le terme positif de `effetLitiereEq`, sorti pour être réutilisé — et
