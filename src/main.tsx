@@ -1,12 +1,52 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GameView } from "./game/GameView";
 import { LabView } from "./lab/LabView";
 import { PageModele } from "./modele/PageModele";
+import { hashDeLOnglet, type Onglet, ongletDeLUrl, TITRE } from "./onglets";
 import "./ui/theme.css";
 
 function Root() {
-  const [tab, setTab] = useState<"jeu" | "modele" | "labo">("jeu");
+  /**
+   * **L'onglet vient de l'URL**, pour qu'un lien mène où il dit (#224).
+   *
+   * Lu à l'ouverture, réécrit à chaque clic, et suivi ensuite : changer
+   * d'onglet pose une entrée d'historique, donc le bouton « retour » du
+   * navigateur ramène à l'onglet précédent, ce qu'on attend d'un site.
+   */
+  const [tab, setTab] = useState<Onglet>(() =>
+    typeof window === "undefined" ? "jeu" : ongletDeLUrl(window.location.hash),
+  );
+  useEffect(() => {
+    const suivre = () => setTab(ongletDeLUrl(window.location.hash));
+    window.addEventListener("hashchange", suivre);
+    return () => window.removeEventListener("hashchange", suivre);
+  }, []);
+  // Le titre suit l'onglet : c'est ce que montrent l'onglet du navigateur et
+  // l'aperçu d'un lien partagé.
+  useEffect(() => {
+    document.title = TITRE[tab];
+  }, [tab]);
+  /**
+   * Aller à un onglet **par l'URL**, et se laisser ramener par `hashchange`.
+   *
+   * Poser l'état ici en plus serait une seconde copie de la même grandeur : le
+   * jour où l'une des deux ne serait pas mise à jour, l'écran et l'adresse
+   * diraient deux choses différentes. L'URL décide, l'état suit.
+   */
+  const allerA = (onglet: Onglet) => {
+    const cible = hashDeLOnglet(onglet);
+    if (cible === window.location.hash) return;
+    // Un hash vide ne s'écrit pas avec `location.hash = ""` — ça laisse un
+    // « # » orphelin dans la barre d'adresse. `pushState` rend l'adresse nue,
+    // et `hashchange` ne se déclenchant pas dessus, on pose l'état à la main.
+    if (cible === "") {
+      window.history.pushState(null, "", window.location.pathname + window.location.search);
+      setTab(onglet);
+    } else {
+      window.location.hash = cible;
+    }
+  };
   /**
    * Une partie tourne-t-elle ? `GameView` le dit, parce que lui seul le sait.
    *
@@ -48,7 +88,7 @@ function Root() {
           <span style={{ flex: 1, fontSize: 13, color: "var(--encre-douce)" }}>
             agroforesterie tempérée, une semaine à la fois
           </span>
-          <button type="button" style={tabBtn(tab === "jeu")} onClick={() => setTab("jeu")}>
+          <button type="button" style={tabBtn(tab === "jeu")} onClick={() => allerA("jeu")}>
             Jouer
           </button>
           {/*
@@ -59,10 +99,10 @@ function Root() {
             « montre-moi les courbes ». Un visiteur qui n'a pas encore joué doit
             pouvoir y répondre sans lancer une partie ni lire le code.
           */}
-          <button type="button" style={tabBtn(tab === "modele")} onClick={() => setTab("modele")}>
+          <button type="button" style={tabBtn(tab === "modele")} onClick={() => allerA("modele")}>
             Le modèle
           </button>
-          <button type="button" style={tabBtn(tab === "labo")} onClick={() => setTab("labo")}>
+          <button type="button" style={tabBtn(tab === "labo")} onClick={() => allerA("labo")}>
             Labo moteur
           </button>
         </header>
