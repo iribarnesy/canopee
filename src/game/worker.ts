@@ -63,6 +63,7 @@ import type {
 } from "../engine/tick";
 import { tick } from "../engine/tick";
 import type { CauseMort, TreeState } from "../engine/trees";
+import { HAUTEUR_TROUVABLE_M } from "../render/temps/changements";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import { prefixeSousLePlafond } from "./facture";
 import { journalDe, type PorteurDeJournal } from "./journal";
@@ -1188,11 +1189,29 @@ function stepWeeks(n: number) {
     // semaine se voit autant qu'un feu, et ne se dit nulle part ailleurs.
     if (weeksPerSecond > 1 && estUneMortaliteDeMasse(ticked.morts.length, before.trees.length)) {
       const part = ticked.morts.length / Math.max(1, before.trees.length);
+      /**
+       * **Dire ce que la parcelle peut montrer** (#233).
+       *
+       * Le bandeau annonçait « 924 arbres meurent d'un coup (34 % du
+       * peuplement) », et le joueur ne voyait rien. Les deux sont vrais et ne
+       * parlent pas de la même chose : sur ces 924 tiges, **852 font moins d'un
+       * mètre** — moins de huit pixels — et la médiane en fait 37 centimètres.
+       * Le chiffre promettait un spectacle que l'écran ne pouvait pas rendre.
+       *
+       * La phrase le dit maintenant, et seulement quand elle a quelque chose à
+       * dire : si tout ce qui meurt se voit, l'ancienne suffit. Le compte
+       * complet, lui, reste dans le bilan de période — « un phénomène de masse
+       * ne se cherche pas, il se lit dans une phrase » (`changements.ts`).
+       */
+      const trouvables = ticked.morts.filter((m) => m.heightM >= HAUTEUR_TROUVABLE_M).length;
       weeksPerSecond = 0;
       scenePosee = true;
       post({
         type: "autopause",
-        reason: `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
+        reason:
+          trouvables < ticked.morts.length
+            ? `${ticked.morts.length} arbres meurent d'un coup, dont ${trouvables} de plus d'un mètre`
+            : `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
         scene: sceneDeLaSemaine(),
       });
     }
