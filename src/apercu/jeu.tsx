@@ -326,6 +326,10 @@ function Demo(): React.ReactElement {
                 arbresTues: incendieBrut.victimes?.length ?? 0,
                 rejets: (incendieBrut.victimes ?? []).filter((v) => v.rejet).length,
                 victimes: incendieBrut.victimes ?? [],
+                // Le banc de scènes ne met en scène aucune chandelle
+                // préexistante : ce qu'il rejoue est un front et ses victimes.
+                // Le jour où il en posera, elles se diraient ici (#236).
+                chandellesConsumees: [],
                 carboneTHa: 0,
               },
             }
@@ -552,6 +556,11 @@ function Demo(): React.ReactElement {
           hauteurApresM: reste,
           baseHouppierAvantM: baseAvant,
           baseHouppierApresM: baseApres,
+          // Faux sans condition : le banc ne met en scène que des tiges
+          // VIVANTES (`!t.chandelle` au filtre, trois lignes plus haut). Pour
+          // voir une chandelle se coucher sèche (#235), il faudrait lever ce
+          // filtre — c'est une décision de banc, pas de moteur.
+          mortAvantLeGeste: false,
           // Absente pour l'élagage et l'étêtage : « la charpente est démontée
           // sur place, le moteur n'y voit pas une direction unique ».
           ...(surArbres === "elaguer" || surArbres === "trogner"

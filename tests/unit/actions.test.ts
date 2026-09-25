@@ -26,7 +26,7 @@ import { altitudeParCellule } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
-import { stateHash } from "../../src/engine/tick";
+import { stateHash, tick } from "../../src/engine/tick";
 import { diametreInitialCm, volumeTigeM3 } from "../../src/engine/trees";
 
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
@@ -248,6 +248,52 @@ describe("ce que l'action rapporte au rendu", () => {
     });
     expect(idsDe(r, "couper")).toEqual([ids[0]]);
     expect(r.refusals).toHaveLength(1);
+  });
+
+  it("une chandelle abattue se couche SÈCHE : le geste dit qu'elle était morte (#235)", () => {
+    // Vu en jouant : « quand on coupe un arbre pour le coucher en travers,
+    // même si c'est une chandelle, il retrouve ses feuilles ». Le fût couché
+    // traverse le rendu comme n'importe quel arbre, et sans ce drapeau il
+    // prenait la feuillaison saisonnière de son espèce — un chicot sec depuis
+    // trois ans se couchait en pleine feuille.
+    //
+    // Le moteur le savait déjà : il lit la même chose trois lignes plus haut
+    // pour ne pas fabriquer de carbone en abattant un mort. Il ne le DISAIT
+    // pas.
+    let state = createGameState(STATION, rngStateFromSeed(13));
+    state = plantAt(state, "pinus_sylvestris", 25, 25, 15);
+    state = plantAt(state, "pinus_sylvestris", 31, 25, 15);
+    const [mort, vivant] = state.trees.map((t) => t.id);
+    // Le premier est tué par le feu, et on le laisse debout assez longtemps
+    // pour que le tick verse son carbone au bois mort et pose `mortSemaine` :
+    // c'est cet instant-là qui en fait une chandelle pour de bon.
+    state = {
+      ...state,
+      trees: state.trees.map((t) =>
+        t.id === mort ? { ...t, alive: false, causeMort: "feu" as const, brulEeSemaine: 0 } : t,
+      ),
+    };
+    for (let i = 0; i < 60; i++) {
+      const w = WEATHER[i % 52];
+      if (!w) throw new Error("météo manquante");
+      state = tick(state, w).state;
+    }
+    // La prémisse de l'essai, dite plutôt que supposée.
+    expect(state.trees.find((t) => t.id === mort)?.mortSemaine).toBeDefined();
+    expect(state.trees.find((t) => t.id === vivant)?.alive).toBe(true);
+
+    const r = applyAction(state, {
+      type: "couper",
+      week: state.week,
+      treeIds: [mort ?? 0, vivant ?? 0],
+      devenir: "laisser",
+    });
+    const retire = (r.gestes ?? [])
+      .filter(estGesteSurArbres)
+      .find((g) => g.type === "couper")?.retire;
+    expect(retire?.find((a) => a.id === mort)?.mortAvantLeGeste).toBe(true);
+    // Le témoin, sans quoi l'essai passerait avec un drapeau toujours vrai.
+    expect(retire?.find((a) => a.id === vivant)?.mortAvantLeGeste).toBe(false);
   });
 
   it("l'éclaircie se distingue de la coupe : ce n'est pas la même animation", () => {

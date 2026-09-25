@@ -719,6 +719,26 @@ export interface ArbreRetire {
    * terrain plat elle ne veut rien dire, et ne sert à rien non plus.
    */
   directionRad?: number;
+  /**
+   * La tige était-elle **morte sur pied** au moment du geste ? (#235)
+   *
+   * Une chandelle abattue reverdissait en tombant : le fût couché traverse le
+   * rendu comme n'importe quel arbre, et sans ce drapeau il prenait la
+   * feuillaison saisonnière de son espèce. Un chicot sec depuis trois ans se
+   * couchait donc en pleine feuille — l'inverse de ce que le joueur venait de
+   * faire, et sur un mécanisme que le jeu met en avant (cavités, biodiversité,
+   * bois en travers).
+   *
+   * Il ne se recalcule PAS depuis l'instantané : l'arbre coupé a quitté
+   * `state.trees` dans le tick du geste, et le chercher dans l'instantané
+   * précédent — vingt-six semaines de retard au plafond — ferait une seconde
+   * copie d'un fait du moteur. Avoir des feuilles ou non fait partie de « tel
+   * qu'il était avant le geste », qui est le contrat de cette interface.
+   *
+   * **Obligatoire et non optionnel**, pour qu'aucun site de construction ne
+   * puisse l'oublier : il n'y en a que six, et le compilateur les tient.
+   */
+  mortAvantLeGeste: boolean;
 }
 
 export interface GesteSurZone {
@@ -1366,6 +1386,11 @@ function applyCouper(
       baseHouppierAvantM: tree.baseHouppierM ?? 0,
       baseHouppierApresM: 0,
       directionRad,
+      // **Le seul geste qui puisse atteindre une chandelle** : les trois
+      // autres ne cherchent que des tiges vivantes. La valeur est déjà là,
+      // calculée plus haut pour ne pas fabriquer de carbone en abattant un
+      // mort — on ne fait que la dire au rendu.
+      mortAvantLeGeste: dejaEnBoisMort,
     });
     trees.splice(idx, 1); // l'arbre coupé quitte la carte (bois mort/carbone en V1)
   }
@@ -2022,6 +2047,10 @@ function applyElaguer(
       // cliquet du tick la fera monter là (tick.ts), on l'annonce tout de
       // suite pour que le rendu n'attende pas une semaine.
       baseHouppierApresM: Math.max(tree.baseHouppierM ?? 0, cible),
+      // Toujours faux, et c'est une constatation : ce geste ne cherche que des
+      // tiges VIVANTES (`t.id === id && t.alive` à la sélection). Une chandelle
+      // ne s'élague pas, ne s'étête pas et ne se recèpe pas.
+      mortAvantLeGeste: false,
     });
     trees[idx] = {
       ...tree,
@@ -2096,6 +2125,10 @@ function applyTrogner(
       hauteurApresM: hauteurTete,
       baseHouppierAvantM: tree.baseHouppierM ?? 0,
       baseHouppierApresM: Math.min(tree.baseHouppierM ?? 0, hauteurTete),
+      // Toujours faux, et c'est une constatation : ce geste ne cherche que des
+      // tiges VIVANTES (`t.id === id && t.alive` à la sélection). Une chandelle
+      // ne s'élague pas, ne s'étête pas et ne se recèpe pas.
+      mortAvantLeGeste: false,
     });
     // Ce qu'on emporte : tout ce qui dépassait la tête, en bois de chauffage.
     const emporte =
@@ -2388,6 +2421,10 @@ function applyReceper(
       baseHouppierAvantM: tree.baseHouppierM ?? 0,
       baseHouppierApresM: 0,
       directionRad: aval + Math.PI / 2,
+      // Toujours faux, et c'est une constatation : ce geste ne cherche que des
+      // tiges VIVANTES (`t.id === id && t.alive` à la sélection). Une chandelle
+      // ne s'élague pas, ne s'étête pas et ne se recèpe pas.
+      mortAvantLeGeste: false,
     });
     // On récolte la tige et la souche repart : c'est tout l'intérêt du taillis.
     // Ce qui part, c'est la tige **moins** la souche laissée sur place — la
