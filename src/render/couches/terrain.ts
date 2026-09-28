@@ -780,12 +780,7 @@ export function cuireMorceau(
   ancre: { x: number; y: number; z: number };
   decalageRelatif: { dx: number; dy: number };
 } {
-  const { x0, y0, xFin, yFin, largeur, hauteur, decalage } = empriseDuMorceau(
-    donnees,
-    ix,
-    iy,
-    vue,
-  );
+  const { x0, y0, xFin, yFin, largeur, hauteur, decalage } = empriseDuMorceau(donnees, ix, iy, vue);
   const image = fabriquer(largeur, hauteur);
   const ctx = image.getContext("2d");
   if (!ctx) throw new Error("contexte 2d indisponible");
@@ -1084,15 +1079,7 @@ export function cuireMorceauPlat(
   if (!ctx) throw new Error("contexte 2d indisponible");
 
   const penteReference = expositionMoyenne(donnees.altitudesM, donnees.coteM);
-  const pave = teintePave(
-    donnees,
-    x0,
-    y0,
-    xFin - x0,
-    yFin - y0,
-    semaineAnnee,
-    penteReference,
-  );
+  const pave = teintePave(donnees, x0, y0, xFin - x0, yFin - y0, semaineAnnee, penteReference);
 
   // Le dessus du morceau : les quatre coins projetés à l'altitude du morceau,
   // et les flancs qui descendent jusqu'à son point le plus bas. C'est la même
@@ -1107,11 +1094,7 @@ export function cuireMorceauPlat(
     coin(xFin, yFin, pave.z),
     coin(x0, yFin, pave.z),
   ];
-  const bas = [
-    coin(xFin, y0, zMin),
-    coin(xFin, yFin, zMin),
-    coin(x0, yFin, zMin),
-  ];
+  const bas = [coin(xFin, y0, zMin), coin(xFin, yFin, zMin), coin(x0, yFin, zMin)];
   // Le flanc d'abord, plus sombre — c'est de la terre vue de côté, jamais
   // éclairée par un soleil haut. Le même facteur que la cuisson détaillée.
   ctx.fillStyle = versCss(eclairer(pave.teinte, 0.62));
