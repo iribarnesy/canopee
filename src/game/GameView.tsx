@@ -35,6 +35,8 @@ import {
   RUISSELLEMENT_AMONT,
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
+import type { Zone } from "../engine/zone";
+import { bandeDuTrace, type EmpriseDuGeste } from "../render/emprise";
 import type { Orientation } from "../render/projection";
 import { gitesOccupes } from "../render/temps/habitants";
 import { lignesDuBilan } from "./bilan";
@@ -57,7 +59,7 @@ import { PanneauNiveau } from "./panneaux/PanneauNiveau";
 import { PanneauScores } from "./panneaux/PanneauScores";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
 import { PanneauSuivis } from "./panneaux/PanneauSuivis";
-import { useReglagesDeGeste } from "./panneaux/reglages";
+import { type Mode, useReglagesDeGeste } from "./panneaux/reglages";
 import { btn, panel, SCENE, VOLET } from "./panneaux/styles";
 import { Angle, BoutonDeVolet, useVolets, Volet } from "./panneaux/Volet";
 import { arbresAPoser, donneesSolDe } from "./parcelle";
@@ -1214,6 +1216,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     especeId,
     avecManchon,
     rayonChaulage,
+    traceBande,
+    largeurBande,
     densiteCible,
     critereEclaircie,
     especeEclaircie,
@@ -1488,6 +1492,23 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * par pixel parcouru noierait le worker pour rien.
    */
   const [survol, setSurvol] = useState<{ x: number; y: number }>();
+  /**
+   * Le départ d'une bande en cours de tracé, **et l'outil qui l'a posé** (#205).
+   *
+   * **Deux clics et non un** : une bande a une orientation, et le joueur ne
+   * saisit jamais des radians — il montre un départ et une arrivée, comme il
+   * parcourrait l'allée.
+   *
+   * L'outil est retenu avec le point, plutôt qu'un effet qui remettrait à zéro
+   * au changement : un départ appartient au geste qui l'a commencé. Reprendre
+   * le chaulage en disque puis repasser en bande ne doit pas repartir d'un
+   * départ posé une minute plus tôt, ailleurs et pour autre chose.
+   */
+  const [traceEnCours, setTraceEnCours] = useState<{ x: number; y: number; mode: Mode }>();
+  const departBande =
+    traceBande && traceEnCours?.mode === mode
+      ? { x: traceEnCours.x, y: traceEnCours.y }
+      : undefined;
 
   /**
    * **Ce qu'on lit est lu**, y compris ce qui arrive pendant qu'on le lit : le
@@ -1625,12 +1646,39 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * est le bon zéro : un plant occupe un point, et l'espacement minimal est
    * une règle du moteur qu'on ne redit pas ici.
    */
-  const empriseDuGeste: { rayonM: number } | undefined =
+  /**
+   * La **bande en cours de tracé**, du départ au curseur (#205).
+   *
+   * Non nulle seulement entre les deux clics. C'est elle que la vue montre, et
+   * c'est elle que le panneau recense : le devis et le compte des tiges portent
+   * donc sur ce qu'on s'apprête vraiment à faire, et non sur un disque qu'on ne
+   * demandera pas.
+   */
+  const bandeEnCours =
+    traceBande && departBande && survol
+      ? bandeDuTrace(departBande, { x: survol.x + 0.5, y: survol.y + 0.5 }, largeurBande)
+      : undefined;
+
+  const empriseDuGeste: EmpriseDuGeste | undefined =
     mode === "selection"
       ? undefined
       : mode === "planter"
         ? { rayonM: 0 }
-        : { rayonM: rayonChaulage };
+        : traceBande
+          ? // Avant le premier clic, il n'y a pas d'emprise à montrer : la croix
+            // de visée dit « ici », et c'est tout ce qu'on sait.
+            (bandeEnCours ?? { rayonM: 0 })
+          : { rayonM: rayonChaulage };
+
+  /** La zone que le geste armé demanderait si on cliquait maintenant. */
+  const zoneDuGeste: Zone | undefined =
+    mode === "selection" || mode === "planter"
+      ? undefined
+      : traceBande
+        ? bandeEnCours
+        : survol
+          ? { x: survol.x + 0.5, y: survol.y + 0.5, rayonM: rayonChaulage }
+          : undefined;
 
   const refusDuPreavis =
     cleDuPreavis && game.prevision?.cle === cleDuPreavis ? game.prevision.refusals : [];
@@ -1658,6 +1706,25 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   ) => {
     const mx = cellule.x + 0.5;
     const my = cellule.y + 0.5;
+    /**
+     * Le geste demande une zone : disque sous le curseur, ou bande tracée.
+     *
+     * **Rend `undefined` au premier clic d'un tracé**, et l'appelant s'arrête
+     * là : une bande se désigne en deux temps, et le premier ne fait rien
+     * d'autre que poser le départ.
+     */
+    const zoneDuClic = (): Zone | undefined => {
+      if (!traceBande) return { x: mx, y: my, rayonM: rayonChaulage };
+      if (!departBande) {
+        setTraceEnCours({ x: mx, y: my, mode });
+        return undefined;
+      }
+      const bande = bandeDuTrace(departBande, { x: mx, y: my }, largeurBande);
+      // Deux clics sur la même cellule : il n'y a pas d'orientation à en tirer.
+      // On repart du départ plutôt que de facturer une bande de longueur nulle.
+      setTraceEnCours(undefined);
+      return bande;
+    };
     if (mode === "planter") {
       game.dispatch({
         type: "planter",
@@ -1666,26 +1733,34 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         avecManchon,
       });
     } else if (mode === "chauler") {
-      game.dispatch({ type: "chauler", x: mx, y: my, rayonM: rayonChaulage });
+      // **La zone remplace le rayon**, et c'est tout ce que le moteur demande :
+      // `{ x, y, rayonM }` et `{ x, y, longueurM, largeurM, orientationRad,
+      // zone: "bande" }` sont les deux variantes d'un même champ (#186).
+      const zone = zoneDuClic();
+      if (zone) game.dispatch({ type: "chauler", ...zone });
     } else if (mode === "boisMort") {
-      game.dispatch({ type: "ramasserBoisMort", x: mx, y: my, rayonM: rayonChaulage });
+      const zone = zoneDuClic();
+      if (zone) game.dispatch({ type: "ramasserBoisMort", ...zone });
     } else if (mode === "faucher") {
-      game.dispatch({ type: "faucher", x: mx, y: my, rayonM: rayonChaulage });
+      const zone = zoneDuClic();
+      if (zone) game.dispatch({ type: "faucher", ...zone });
     } else if (mode === "cloturer") {
-      game.dispatch({ type: "cloturer", x: mx, y: my, rayonM: rayonChaulage });
+      const zone = zoneDuClic();
+      if (zone) game.dispatch({ type: "cloturer", ...zone });
     } else if (mode === "brf") {
-      game.dispatch({ type: "epandreBrf", x: mx, y: my, rayonM: rayonChaulage, part: 1 });
+      const zone = zoneDuClic();
+      if (zone) game.dispatch({ type: "epandreBrf", ...zone, part: 1 });
     } else if (mode === "eclaircir") {
       // Par essence, c'est l'essence qui décide et non la densité : le moteur
       // prend toutes ses tiges dans le disque (#156). Sans essence choisie, on
       // ne lance rien — une éclaircie par essence sans essence abattrait zéro
       // tige en facturant le déplacement.
       if (critereEclaircie === "espece" && !especeEclaircie) return;
+      const zone = zoneDuClic();
+      if (!zone) return;
       game.dispatch({
         type: "eclaircir",
-        x: mx,
-        y: my,
-        rayonM: rayonChaulage,
+        ...zone,
         densiteCibleParHa: densiteCible,
         critere: critereEclaircie,
         ...(critereEclaircie === "espece" ? { especeId: especeEclaircie } : {}),
@@ -1940,7 +2015,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 // Le centre de la cellule, comme le clic : `survol` donne des
                 // indices entiers, et viser le coin décalerait le recensement
                 // d'un demi-mètre par rapport au disque qui sera appliqué.
-                zoneVisee={survol ? { x: survol.x + 0.5, y: survol.y + 0.5 } : undefined}
+                {...(zoneDuGeste ? { zoneVisee: zoneDuGeste } : {})}
               />
             </Volet>
           ) : volets.estOuvert("bg", "essences") ? (
