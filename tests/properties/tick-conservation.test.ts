@@ -24,11 +24,19 @@ function meanWaterStock(state: GameState): number {
   return sum / nCells;
 }
 
-/** Stock d'azote du sol = minéral + litière, kg/ha. */
+/** Stock d'azote du sol = minéral de surface + minéral profond + litière, kg/ha. */
 function meanNStockKgHa(state: GameState): number {
   const n = state.soil.mineralNG.length;
   let sum = 0;
-  for (let i = 0; i < n; i++) sum += (state.soil.mineralNG[i] ?? 0) + (state.soil.litterNG[i] ?? 0);
+  for (let i = 0; i < n; i++)
+    sum +=
+      (state.soil.mineralNG[i] ?? 0) +
+      // **Le sous-sol compte, sinon le lot le ferait disparaître** (#247 lot A).
+      // Ce que la surface lessive descend désormais au lieu de sortir du monde ;
+      // sans cette ligne, la propriété lirait le transfert comme une perte et
+      // fermerait sur un bilan faux — c'est-à-dire qu'elle le ratifierait.
+      (state.soil.mineralNProfondG[i] ?? 0) +
+      (state.soil.litterNG[i] ?? 0);
   // Le tas de broyat en attente compte lui aussi : sinon, broyer un arbre
   // ferait disparaître son azote du bilan.
   return ((sum + state.stockBrf.azoteG) / n) * 10;

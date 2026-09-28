@@ -233,6 +233,51 @@ export interface SoilState {
   excessMm: GrilleLongue;
   /** azote minéral, g/m² (1 kg/ha = 0,1 g/m²) */
   mineralNG: GrilleLongue;
+  /**
+   * L'azote minéral du **sous-sol**, g/m² : tout ce qui est sous l'horizon de
+   * surface, en un seul compartiment (issue #247, lot A).
+   *
+   * **C'est la forme des bases, et c'est délibéré.** `basesEq` / `basesProfondEq`
+   * avaient déjà posé la question — que devient ce qu'on lessive de la surface ?
+   * — et y avaient répondu par deux compartiments plutôt que par N horizons. Le
+   * carnet (#71) prévenait qu'un vrai profil à N horizons n'a de sens qu'avec
+   * l'azote, le phosphore et le potassium ensemble ; deux compartiments ne sont
+   * pas un profil, ce sont deux budgets, et chacun de ces éléments peut les
+   * adopter séparément le jour venu.
+   *
+   * **Une seule entrée, et c'est une conséquence du modèle, pas un choix.** Les
+   * bases reçoivent en profondeur l'altération de leurs propres horizons ;
+   * l'azote n'a pas d'équivalent, parce que `humusCG`, `litterNG` et `litterCG`
+   * sont mono-couche et que la litière tombe **en surface**. Il n'y a rien à
+   * minéraliser en bas. Ce compartiment ne reçoit donc que ce que la surface lui
+   * lessive, et il ne perd que ce qui passe sous la zone racinaire.
+   *
+   * **Aucune plante ne le lit encore**, exactement comme `basesProfondEq` à sa
+   * naissance : le moteur sait désormais où va l'azote lessivé, pas encore qui le
+   * retrouve. C'est le lot B de #247, et c'est lui qui porte la
+   * complémentarité racinaire de Restinclières.
+   *
+   * ── **ce qu'il fait, mesuré** ─────────────────────────────────────────────────
+   *
+   * Parcelle nue, limon riche, trente ans :
+   *
+   *     an  1   surface 8,81   profond 24,26 kg/ha   rapport 2,75
+   *     an  3   surface 8,96   profond 23,31                 2,60
+   *     an  6   surface 8,68   profond 22,76                 2,62
+   *     an 15   surface 7,67   profond 20,15                 2,63
+   *     an 30   surface 6,23   profond 16,47                 2,64
+   *
+   * **C'est un budget à l'équilibre, pas un puits.** J'attendais qu'il monte ; il
+   * plafonne, parce qu'un compartiment qui reçoit un flux et en perd un
+   * proportionnel s'équilibre au lieu de s'accumuler. Le rapport au stock de
+   * surface tient à 1 % près pendant que les deux perdent un tiers — il n'est pas
+   * calé, il tombe des deux vitesses de lessivage.
+   *
+   * Et il dit au passage ce que le lot change vraiment : `leachedKgHa` cessait de
+   * mesurer ce que la littérature mesure. Ce qui sort d'un horizon labouré n'est
+   * pas perdu pour le peuplement ; ce qui passe sous la zone racinaire, si.
+   */
+  mineralNProfondG: GrilleLongue;
   /** azote de la litière au sol, g/m² (libéré vers le minéral en se décomposant) */
   litterNG: GrilleLongue;
   /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
@@ -700,6 +745,14 @@ export function createGameState(
       waterMm: eauInitiale,
       excessMm: new Float64Array(n * nH),
       mineralNG: new Float64Array(n).fill(station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2),
+      // **Zéro, et c'est une position plutôt qu'un défaut.** `initialMineralNKgHa`
+      // est un champ de station qui décrit ce qu'une analyse de terre mesure,
+      // c'est-à-dire l'horizon de surface. Lui attribuer aussi le sous-sol
+      // doublerait l'azote de toutes les stations du dépôt sans qu'aucune source
+      // ne le dise. Le fond se remplit donc de ce que la surface lui lessive, à
+      // partir de rien, ce qui est aussi la lecture la plus prudente : le lot B
+      // n'y trouvera que ce que la partie y aura mis *(à calibrer)*.
+      mineralNProfondG: new Float64Array(n),
       litterNG: new Float64Array(n),
       litterCG: new Float64Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
