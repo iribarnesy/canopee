@@ -163,6 +163,12 @@ ailleurs qu'au limon riche, chacun pour une raison écrite.
   trente et un fichiers d'essai citent encore le pin. Le banc des hauteurs ne
   l'y plante plus ; les autres, si. C'est un lot avec la suite complète pour
   témoin.
+- **Ce que le lot débloque, sans l'avoir vérifié.** L'issue nommait trois
+  travaux arrêtés sur ce manque, dont l'ombrage herbacé de #210 lot 3, où « seul
+  le pin échoue » parce que le banc lui demandait sa table sur une station où il
+  ne tient pas. La cause est levée ; que le banc passe maintenant reste à
+  mesurer, et c'est à l'auteur de cette branche-là de le faire — on ne touche
+  pas la branche d'un autre agent.
 - **Les dépôts d'azote néerlandais.** Le moteur dérive les dépôts de
   l'occupation du sol, donc le sable reçoit 7,4 kg N/ha/an. Les pineraies que
   Jansen mesurait en recevaient trois à cinq fois plus, parce que l'élevage
