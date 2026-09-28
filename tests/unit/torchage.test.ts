@@ -16,12 +16,14 @@
 import { describe, expect, it } from "vitest";
 import { propager, rangsDuFront } from "../../src/engine/feu";
 import { rngStateFromSeed } from "../../src/engine/rng";
+import { DEBOUT } from "../../src/render/temps/chute";
 import {
   type ArbreQuiSeTorche,
   avancementDuTorchage,
   BRAISES_PAR_TORCHE,
   CHANDELLE_A,
   CHARBONNE_A,
+  consomptionEnCours,
   FLAMMES_PAR_TORCHE,
   type FrontDIncendie,
   flammesDeTorche,
@@ -31,11 +33,15 @@ import {
   torchageEnCours,
   vivaciteDeLaTorche,
 } from "../../src/render/temps/feu";
+import { idDeLaTige } from "../../src/render/temps/geste";
 import {
   type ArbreATorcher,
   etatDuTorchage,
   flammesDesTorches,
+  futsConsumes,
+  futsConsumesATorcher,
   indexerLesTorches,
+  poseDuFutConsume,
 } from "../../src/render/temps/lecteur";
 import type { ArbreVivant } from "../../src/render/temps/mort";
 
@@ -317,5 +323,92 @@ describe("indexerLesTorches et le canal de la mise en scène", () => {
     }
     // et l'essai ne vaut que si le plafond a vraiment servi
     expect(vues).toBeGreaterThan(1);
+  });
+});
+
+describe("le fût que le feu consume (#246)", () => {
+  const front = frontDuMoteur();
+  const acte = {
+    debutMs: 0,
+    dureeMs: 1000,
+    bloquant: true,
+    sujet: {
+      quoi: "feu" as const,
+      origine: front.origine,
+      brulees: front.brulees as number[],
+      rangs: front.rangs as number[],
+      charges: (front.brulees as number[]).map(() => 1.2),
+    },
+  };
+  const trouve = { acte, origine: front.origine, feu: front as FrontDIncendie };
+  /** Ce que le moteur rapporte d'une chandelle consumée depuis #246. */
+  const incendie = {
+    chandellesConsumees: [{ id: 7, x: 26.5, y: 23.5, especeId: "pinus_sylvestris", hauteurM: 9 }],
+  } as unknown as Parameters<typeof futsConsumes>[0];
+
+  it("repose le fût là où le moteur dit qu'il était, sous un identifiant de tige", () => {
+    // Sans position, rien ne se pose : c'est tout l'objet de l'aller-retour
+    // avec le moteur. L'identifiant est négatif parce que le fût n'est plus
+    // dans `state.trees` — il partage le chemin des tiges abattues.
+    const [tige] = futsConsumes(incendie);
+    expect(tige?.id).toBe(idDeLaTige(7));
+    expect([tige?.x, tige?.y]).toEqual([26.5, 23.5]);
+    expect(tige?.especeId).toBe("pinus_sylvestris");
+    expect(tige?.heightM).toBe(9);
+    expect(tige?.chandelle).toBe(true);
+  });
+
+  it("brûle sous le MÊME identifiant que celui sous lequel il se dessine", () => {
+    // L'invariant qui fait tenir l'ensemble : l'index des torches est consulté
+    // par l'identifiant de pose. Deux numérotations, et le fût serait posé
+    // sans jamais flamber.
+    const poses = futsConsumes(incendie).map((t) => t.id);
+    const torches = futsConsumesATorcher(incendie).map((t) => t.id);
+    expect(torches).toEqual(poses);
+  });
+
+  it("reste DEBOUT et entier tant que le front ne l'a pas atteint", () => {
+    // Le défaut rapporté en jouant : « l'incendie, je n'ai rien vu, tout a
+    // disparu d'un coup » — 1 433 fûts escamotés entre deux images.
+    const index = indexerLesTorches(trouve, futsConsumesATorcher(incendie), COTE);
+    expect(poseDuFutConsume(index, 0, idDeLaTige(7))).toBe(DEBOUT);
+  });
+
+  it("s'efface pendant qu'il flambe, et il n'en reste rien", () => {
+    const index = indexerLesTorches(trouve, futsConsumesATorcher(incendie), COTE);
+    const opacites = [0.25, 0.5, 0.75, 1].map(
+      (part) => poseDuFutConsume(index, acte.dureeMs * part, idDeLaTige(7)).opacite,
+    );
+    // Décroissante, et nulle au bout : le moteur dit qu'elle a été consumée.
+    for (let i = 1; i < opacites.length; i++) {
+      expect(opacites[i]).toBeLessThanOrEqual(opacites[i - 1] ?? 1);
+    }
+    expect(opacites[opacites.length - 1]).toBe(0);
+  });
+
+  it("n'efface pas un arbre que le feu laisse en chandelle", () => {
+    // Un arbre vivant que le front torche RESTE sur la parcelle, noir :
+    // l'instantané suivant le montre. Effacer les deux serait reprendre d'une
+    // main ce que l'issue corrige de l'autre.
+    const vivant: ArbreATorcher = {
+      id: 1,
+      x: 26.5,
+      y: 23.5,
+      hauteurM: 12,
+      baseHouppierM: 4,
+      rayonHouppierM: 2.5,
+      avantLeFeu: VIVANT,
+    };
+    const index = indexerLesTorches(trouve, [vivant], COTE);
+    expect(poseDuFutConsume(index, acte.dureeMs, 1)).toBe(DEBOUT);
+    expect(etatDuTorchage(index, acte.dureeMs, 1)?.opacite).toBe(1);
+  });
+
+  it("le fût consumé n'a pas de feuillage à perdre, et il est chandelle d'emblée", () => {
+    const etat = consomptionEnCours(0);
+    expect(etat.partFoliaire).toBe(0);
+    expect(etat.chandelle).toBe(true);
+    expect(etat.opacite).toBe(1);
+    expect(consomptionEnCours(1).opacite).toBe(0);
   });
 });

@@ -9,7 +9,7 @@
  * en silence — et personne ne s'en aperçoit, puisque rien ne casse.
  *
  * **La forme est structurelle et non nominale**, et c'est ce qui permet la
- * quatrième lecture : un `Snapshot` et un `TickResult` portent les mêmes sept
+ * quatrième lecture : un `Snapshot` et un `TickResult` portent les mêmes
  * champs sous les mêmes noms. Le worker n'a donc pas à fabriquer un instantané
  * pour compter une semaine qu'il vient de simuler.
  *
@@ -17,6 +17,7 @@
  */
 
 import type { GesteVisible } from "../engine/actions";
+import type { DepartFaune, InstallationFaune } from "../engine/faune";
 import type {
   ChuteDeChandelle,
   FranchissementDeStade,
@@ -34,6 +35,14 @@ export interface PorteurDeJournal {
   gestes: readonly GesteVisible[];
   naissances: readonly NaissanceDeLaSemaine[];
   franchissements: readonly FranchissementDeStade[];
+  /**
+   * Les mouvements de faune de la semaine (#255) — **facultatifs**, parce qu'un
+   * porteur fabriqué à la main pour compter des gestes n'en a pas, et que ce
+   * n'est pas au journal de la parcelle d'exiger ce qui n'existe qu'avec
+   * `station.faune`.
+   */
+  installationsFaune?: readonly InstallationFaune[];
+  departsFaune?: readonly DepartFaune[];
   incendie?: IncendieResult;
   tempete?: TempeteResult;
 }

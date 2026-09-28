@@ -10,8 +10,20 @@
 
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0 } from "../../src/engine/especes";
+import { FAUNE } from "../../src/engine/faune";
 import { type CauseMort, LIBELLE_CAUSE } from "../../src/engine/trees";
-import { accord, causeDite, estFeminin, GENRE, nomEspeces, pluriel, s } from "../../src/game/mots";
+import {
+  accord,
+  capitale,
+  causeDite,
+  departDit,
+  estFeminin,
+  GENRE,
+  laFaune,
+  nomEspeces,
+  pluriel,
+  s,
+} from "../../src/game/mots";
 
 /** Le pluriel attendu de chaque nom du catalogue, écrit à la main. */
 const ATTENDU: Record<string, string> = {
@@ -136,5 +148,42 @@ describe("pluriel", () => {
     expect(s(0)).toBe("");
     expect(s(1)).toBe("");
     expect(s(2)).toBe("s");
+  });
+});
+
+describe("la faune, nommée sans être comptée (#255)", () => {
+  it("prend l'article défini, parce qu'un individu du modèle n'est pas toujours une bête", () => {
+    // `faune.ts` le dit en commentaire : l'individu est tantôt un couple,
+    // tantôt une colonie de parturition, tantôt la population d'un arbre. Aucun
+    // champ ne le porte (#259), donc le jeu ne peut pas l'affirmer — et
+    // l'article défini nomme l'espèce sans compter les bêtes.
+    expect(laFaune("mesange_bleue", "mésange bleue")).toBe("la mésange bleue");
+    expect(laFaune("pic_epeiche", "pic épeiche")).toBe("le pic épeiche");
+    expect(laFaune("ecureuil_roux", "écureuil roux")).toBe("l'écureuil roux");
+  });
+
+  it("élide devant une voyelle, quel que soit le genre", () => {
+    expect(laFaune("aigle_imaginaire", "aigle noir")).toBe("l'aigle noir");
+  });
+
+  it("nomme les douze espèces de l'atlas sans en laisser une sans article", () => {
+    // La table des genres est du jeu, pas du moteur — c'est de la grammaire.
+    // Si l'atlas grandit sans elle, ça se voit ici et non à l'écran.
+    for (const espece of FAUNE) {
+      const dit = laFaune(espece.id, espece.nom);
+      expect(dit, espece.id).toMatch(/^(le |la |l')/);
+      expect(dit, espece.id).toContain(espece.nom);
+    }
+  });
+
+  it("chaque cause de départ a sa phrase, et aucune n'est vide", () => {
+    for (const cause of ["arbreDisparu", "giteTropPetit", "tableVide"] as const) {
+      expect(departDit(cause).length, cause).toBeGreaterThan(5);
+    }
+  });
+
+  it("met la capitale sur la première lettre, élision comprise", () => {
+    expect(capitale("l'écureuil roux s'installe")).toBe("L'écureuil roux s'installe");
+    expect(capitale("la buse variable s'en va")).toBe("La buse variable s'en va");
   });
 });

@@ -371,13 +371,23 @@ function incendieDeDemonstration(
   state: GameState,
   station: Station,
   lumiereAuSol: Float32Array<ArrayBufferLike>,
-): {
-  origine: number;
-  brulees: number[];
-  rangs: number[];
-  charges: number[];
-  victimes: { id: number; hauteurAvantM: number; rejet: boolean }[];
-} {
+  graine = GRAINE_DU_FEU,
+):
+  | {
+      origine: number;
+      brulees: number[];
+      rangs: number[];
+      charges: number[];
+      victimes: { id: number; hauteurAvantM: number; rejet: boolean }[];
+      chandellesConsumees: {
+        id: number;
+        x: number;
+        y: number;
+        especeId: string;
+        hauteurM: number;
+      }[];
+    }
+  | undefined {
   const charge = chargeCombustible(
     state.trees,
     state.soil.herbeCouverture,
@@ -400,7 +410,7 @@ function incendieDeDemonstration(
   // scène de démonstration doit poser ses conditions au lieu de les attendre.
   // Tout le reste — le risque, la fréquentation humaine, le tirage pondéré —
   // vient du moteur.
-  let tirage = rngStateFromSeed(GRAINE_DU_FEU);
+  let tirage = rngStateFromSeed(graine);
   let origine: number | undefined;
   for (let essai = 0; essai < ESSAIS_D_ALLUMAGE && origine === undefined; essai++) {
     const depart = departDeFeu(
@@ -416,7 +426,14 @@ function incendieDeDemonstration(
     tirage = depart.rng;
     origine = depart.origine;
   }
-  if (origine === undefined) throw new Error("aucun allumage : la parcelle ne brûle pas");
+  // **Un départ qui ne prend pas n'est pas une erreur quand on en essaie
+  // plusieurs** : c'est une réponse, et c'est même celle du modèle — une cellule
+  // fraîche ne s'allume pas. L'appelant tranche, lui qui sait s'il lui reste
+  // des graines.
+  if (origine === undefined) {
+    console.log(`  feu (graine ${graine}) : aucun allumage`);
+    return undefined;
+  }
   const { brulees } = propager(origine, charge, COTE_M, tirage);
   const rangs = rangsDuFront(brulees, origine, COTE_M);
   // Rangées par rang d'arrivée, comme le moteur les rend : c'est ce que le
@@ -434,19 +451,45 @@ function incendieDeDemonstration(
   // que sa souche rejette ou non — la même règle que le moteur applique,
   // `espece.feu.rejetteApresFeu` sur une tige d'au moins 60 cm.
   const victimes: { id: number; hauteurAvantM: number; rejet: boolean }[] = [];
+  // **Et les chandelles que le feu consume** (#246). Le banc les ignorait — il
+  // sautait tout ce qui n'était pas vivant —, si bien que la scène de feu ne
+  // pouvait pas montrer ce que le joueur a signalé en premier : *« l'incendie,
+  // je n'ai rien vu, tout a disparu d'un coup »*. Le partage entre les deux
+  // listes est celui du moteur, pas un choix du banc : même prédicat de survie,
+  // et `alive` décide de quelle liste on relève.
+  const chandellesConsumees: {
+    id: number;
+    x: number;
+    y: number;
+    especeId: string;
+    hauteurM: number;
+  }[] = [];
   for (const tree of state.trees) {
-    if (!tree.alive) continue;
     const cellule =
       Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.y))) * COTE_M +
       Math.min(COTE_M - 1, Math.max(0, Math.floor(tree.x)));
     if (!brulees.has(cellule)) continue;
     if (survitAuFeu(tree, intensiteDuFeu(charge.parCellule[cellule] ?? 0))) continue;
+    if (!tree.alive) {
+      chandellesConsumees.push({
+        id: tree.id,
+        x: tree.x,
+        y: tree.y,
+        especeId: tree.especeId,
+        hauteurM: tree.heightM,
+      });
+      continue;
+    }
     victimes.push({
       id: tree.id,
       hauteurAvantM: tree.heightM,
       rejet: getEspece(tree.especeId).feu.rejetteApresFeu && tree.heightM > 0.6,
     });
   }
+  console.log(
+    `  feu (graine ${graine}) : ${liste.length} cellules, ${victimes.length} arbres tués,` +
+      ` ${chandellesConsumees.length} chandelles consumées`,
+  );
   return {
     origine,
     brulees: liste,
@@ -455,6 +498,7 @@ function incendieDeDemonstration(
     // c'est elle qui donne la hauteur des flammes côté rendu.
     charges: liste.map((c) => Number((charge.parCellule[c] ?? 0).toFixed(3))),
     victimes,
+    chandellesConsumees,
   };
 }
 
@@ -473,6 +517,26 @@ function intensiteDuFeu(chargeLocale: number): number {
 
 /** La graine de l'allumage de démonstration. Fixe : une scène est reproductible. */
 const GRAINE_DU_FEU = 7717;
+
+/**
+ * Les graines d'allumage à essayer, et celle qu'on garde (`APERCU_FEU_GRAINES`).
+ *
+ * **Une scène de démonstration pose ses conditions**, le banc le dit déjà pour
+ * la semaine de canicule : sans elle, un limon du Nord ne s'allume jamais. Le
+ * départ, lui, est tiré au prorata de la combustibilité, et le tirage tombe où
+ * il tombe — sur la friche de dix-huit ans, la graine d'origine allume un feu
+ * de **dix-huit cellules**, qui ne montre rien de ce qu'on vient voir.
+ *
+ * On essaie donc plusieurs départs sur la **même** parcelle — le vieillissement,
+ * qui coûte les minutes, n'est fait qu'une fois — et l'on garde le plus
+ * démonstratif. Rien du modèle n'est touché : c'est le même `departDeFeu`, la
+ * même propagation, les mêmes règles de survie. Seule la graine change, et elle
+ * s'écrit dans la recette pour que la scène reste reproductible.
+ */
+const GRAINES_DU_FEU = (process.env.APERCU_FEU_GRAINES ?? "")
+  .split(",")
+  .map((g) => Number(g.trim()))
+  .filter((g) => Number.isFinite(g) && g !== 0);
 
 /**
  * Les conditions de la semaine que la scène de feu **déclare**.
@@ -699,9 +763,28 @@ function main() {
       // L'incendie est calculé **avant** de figer les arbres : ce sont ses victimes
       // qui décident lesquels l'instantané décrit comme des troncs charbonnés,
       // et c'est ce qui donne au rendu de quoi mettre en scène un torchage.
-      const incendie = FEU
-        ? incendieDeDemonstration(state, station, semaine.lumiereAuSol)
-        : undefined;
+      // Plusieurs départs essayés sur la **même** parcelle quand la recette le
+      // demande, et le plus démonstratif gardé : le vieillissement coûte des
+      // minutes, la propagation coûte des millisecondes (`GRAINES_DU_FEU`).
+      // Plusieurs départs essayés sur la **même** parcelle quand la recette le
+      // demande, et le plus démonstratif gardé : le vieillissement coûte des
+      // minutes, la propagation coûte des millisecondes (`GRAINES_DU_FEU`).
+      const essais = FEU
+        ? [GRAINE_DU_FEU, ...GRAINES_DU_FEU]
+            .map((graine) => incendieDeDemonstration(state, station, semaine.lumiereAuSol, graine))
+            .filter((essai) => essai !== undefined)
+        : [];
+      if (FEU && essais.length === 0) throw new Error("aucun allumage : la parcelle ne brûle pas");
+      const incendie = essais.reduce(
+        (meilleur, essai) =>
+          meilleur === undefined ||
+          essai.chandellesConsumees.length > meilleur.chandellesConsumees.length ||
+          (essai.chandellesConsumees.length === meilleur.chandellesConsumees.length &&
+            essai.brulees.length > meilleur.brulees.length)
+            ? essai
+            : meilleur,
+        undefined as (typeof essais)[number] | undefined,
+      );
       writeFileSync(
         `${DOSSIER}/${nom}-s${i % 52}.json`,
         `${JSON.stringify({

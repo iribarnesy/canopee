@@ -18,6 +18,7 @@
  */
 
 import { getEspece } from "../../engine/especes";
+import { especeFaune, type IndividuFaune } from "../../engine/faune";
 import {
   type ContextePhenologique,
   partFoliaireOmbrageanteDans,
@@ -25,7 +26,7 @@ import {
 } from "../../engine/phenologie";
 import { stadeDe } from "../../engine/stades";
 import { elancement, elancementLimite, hauteurStableM } from "../../engine/trees";
-import { causeDite } from "../mots";
+import { causeDite, laFaune } from "../mots";
 import type { SnapshotTree } from "../protocol";
 
 /**
@@ -121,6 +122,20 @@ export function ilYA(semaines: number): string {
 }
 
 /**
+ * Une durée nue : « 4 ans », « 12 semaines ».
+ *
+ * Le pendant d'`ilYA` pour les phrases où la durée n'est pas une date mais un
+ * complément — « chandelle depuis 4 ans ». Écrire « chandelle depuis il y a 4
+ * ans » ferait dire deux fois le même mot.
+ */
+export function duree(semaines: number): string {
+  const n = Math.max(0, Math.round(semaines));
+  if (n < 52) return `${n} semaine${n >= 2 ? "s" : ""}`;
+  const ans = Math.floor(n / 52);
+  return `${ans} an${ans > 1 ? "s" : ""}`;
+}
+
+/**
  * Depuis quand — ou « avant votre arrivée ».
  *
  * **Une marque peut être plus vieille que la partie**, et c'est ce qui rendait
@@ -171,7 +186,19 @@ export function motDeLEtiolement(part: number): string {
 
 export function ficheDeLArbre(
   arbre: SnapshotTree,
-  ctx: { semaine: number; pheno: ContextePhenologique },
+  ctx: {
+    semaine: number;
+    pheno: ContextePhenologique;
+    /**
+     * Qui loge dans cet arbre-là (#255).
+     *
+     * **Sur la fiche de l'arbre et pas seulement dans la liste des habitants**,
+     * parce que c'est là qu'on regarde avant d'abattre. Le moteur ancre chaque
+     * individu à un `arbreId` : la question « est-ce que quelqu'un vit ici »
+     * a une réponse exacte, elle n'a jamais été posée.
+     */
+    habitants?: readonly IndividuFaune[];
+  },
 ): LigneDeFiche[] {
   const lignes: LigneDeFiche[] = [];
   const espece = getEspece(arbre.especeId);
@@ -190,6 +217,40 @@ export function ficheDeLArbre(
       ...(extra.horsAlerte ? { horsAlerte: true } : {}),
     });
 
+  /**
+   * Le stress et ce qui le compose, pour un arbre **vivant**.
+   *
+   * Les parts n'ont de sens que là : mesuré à l'écran sur une chandelle, le
+   * moteur ne les entretient plus après la mort — `stress` montait à 10,6 sur
+   * 10 et `stressLent` à 10,3, ce que la fiche affichait « 1031 % ». Une
+   * chandelle a donc sa propre ligne, qui ne dit que ce qui est encore vrai :
+   * la cause. Nommer un pourcentage que le moteur ne tient plus, ce serait
+   * l'inventer.
+   */
+  const direLeStress = () => {
+    if (arbre.stress <= 0.05) return;
+    const parts: string[] = [];
+    if (arbre.stressLent !== undefined && arbre.stressLent > 0.01 && arbre.causeLente) {
+      parts.push(`${causeDite(arbre.causeLente, 1, true)} ${pourcent(arbre.stressLent)}`);
+    }
+    if (arbre.stressRavageurs !== undefined && arbre.stressRavageurs > 0.01) {
+      parts.push(`ravageurs ${pourcent(arbre.stressRavageurs)}`);
+    }
+    if (arbre.stressMaladie !== undefined && arbre.stressMaladie > 0.01) {
+      parts.push(`maladie ${pourcent(arbre.stressMaladie)}`);
+    }
+    dire(
+      "⚠️",
+      "Stress",
+      `${arbre.stress.toFixed(1)}/10${parts.length > 0 ? ` — ${parts.join(", ")}` : ""}`,
+      {
+        aide: "Les parts nommées sont des parts de ce stress ; ce qui manque est ce que le moteur ne sait pas encore nommer.",
+        part: arbre.stress / 10,
+        sens: "hautMauvais",
+      },
+    );
+  };
+
   dire(
     "📏",
     "Taille",
@@ -203,16 +264,55 @@ export function ficheDeLArbre(
       sens: "neutre",
     },
   );
-  dire("🎂", "Âge", `${Math.floor(arbre.ageWeeks / 52)} ans`);
+  const ans = Math.floor(arbre.ageWeeks / 52);
+  // **L'âge d'une chandelle est celui qu'elle avait en mourant** : le moteur
+  // arrête le compteur à la mort. Le dire évite la lecture qui faisait le
+  // défaut de #225 — deux nombres justes dont on ne savait pas lequel était
+  // lequel.
+  dire("🎂", "Âge", arbre.chandelle ? `${ans} ans à sa mort` : `${ans} ans`);
+
+  // **Avant la porte des chandelles**, et il le faut : une chandelle est
+  // précisément ce qui porte le plus de monde — loges de pic, rosalie des
+  // Alpes. La sortir sans le dire ferait disparaître l'habitant au moment où
+  // l'arbre devient intéressant pour lui.
+  for (const habitant of ctx.habitants ?? []) {
+    const espece = especeFaune(habitant.especeId);
+    if (!espece) continue;
+    const faim = (habitant.saisonsMaigres ?? 0) > 0 ? " — et il a faim" : "";
+    dire("🐾", "Habité par", `${laFaune(espece.id, espece.nom)}${faim}`, {
+      aide: "Un habitant tient à son arbre : l'abattre l'expulse, et le moteur le dira par son nom.",
+      horsAlerte: true,
+    });
+  }
 
   if (arbre.chandelle) {
-    // Une chandelle n'a plus ni feuillage ni vigueur : ce qui reste à dire
-    // d'elle, c'est depuis quand elle est morte et de quoi.
+    // Une chandelle n'a plus ni feuillage ni vigueur ; ce qui lui reste, c'est
+    // sa mort et ce qui l'y a menée.
     // « Morte » parce que le sujet de la fiche est la **tige**, qui est féminine
     // quelle que soit l'essence ; la cause s'accorde avec elle.
     if (arbre.causeMort) dire("✝️", "Morte", causeDite(arbre.causeMort, 1, true));
     if (arbre.mortSemaine !== undefined) {
-      dire("🕰", "Sur pied depuis", depuis(ctx.semaine, arbre.mortSemaine));
+      // **« Sur pied depuis il y a 4 ans » ne disait rien** (#225) : planté il y
+      // a quatre ans, ou mort depuis quatre ans ? Les deux lectures tenaient
+      // debout sur un arbre mort à un an. On nomme donc ce qu'on compte.
+      dire(
+        "🕰",
+        "Chandelle depuis",
+        arbre.mortSemaine > ctx.semaine
+          ? "avant votre arrivée"
+          : duree(ctx.semaine - arbre.mortSemaine),
+      );
+    }
+    // **Ce dont elle se mourait déjà** : le moteur le calcule chaque semaine et
+    // `snapshot.ts` le relaie pour les chandelles aussi — la fiche sortait par
+    // une porte dérobée avant de le lire (#225). C'est pourtant la moitié de la
+    // réponse à « de quoi est-il mort » : la cause rapportée dit le coup de
+    // grâce, celle-ci dit ce qui l'avait affaibli, et les deux diffèrent
+    // souvent — un chablis emporte l'arbre que la sécheresse avait miné.
+    if (arbre.causeLente && arbre.causeLente !== arbre.causeMort) {
+      dire("🥀", "Se mourait", causeDite(arbre.causeLente, 1, true), {
+        aide: "Ce dont le moteur la voyait dépérir, semaine après semaine, avant le coup qui l'a emportée. Sans part chiffrée : le moteur ne tient plus ses comptes de stress après la mort.",
+      });
     }
     if (arbre.caviteTeteL > 0) dire("🕳", "Cavité", `${arbre.caviteTeteL.toFixed(0)} L`);
     return lignes;
@@ -256,28 +356,7 @@ export function ficheDeLArbre(
     },
   );
 
-  if (arbre.stress > 0.05) {
-    const parts: string[] = [];
-    if (arbre.stressLent !== undefined && arbre.stressLent > 0.01 && arbre.causeLente) {
-      parts.push(`${causeDite(arbre.causeLente, 1, true)} ${pourcent(arbre.stressLent)}`);
-    }
-    if (arbre.stressRavageurs !== undefined && arbre.stressRavageurs > 0.01) {
-      parts.push(`ravageurs ${pourcent(arbre.stressRavageurs)}`);
-    }
-    if (arbre.stressMaladie !== undefined && arbre.stressMaladie > 0.01) {
-      parts.push(`maladie ${pourcent(arbre.stressMaladie)}`);
-    }
-    dire(
-      "⚠️",
-      "Stress",
-      `${arbre.stress.toFixed(1)}/10${parts.length > 0 ? ` — ${parts.join(", ")}` : ""}`,
-      {
-        aide: "Les parts nommées sont des parts de ce stress ; ce qui manque est ce que le moteur ne sait pas encore nommer.",
-        part: arbre.stress / 10,
-        sens: "hautMauvais",
-      },
-    );
-  }
+  direLeStress();
   if (arbre.dommageHydraulique > 0.01) {
     dire("🥀", "Cime sèche", pourcent(arbre.dommageHydraulique), {
       aide: "La mémoire des sécheresses passées. Elle ne se répare pas.",

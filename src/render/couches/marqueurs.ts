@@ -216,3 +216,49 @@ export function cuireChevron(
  * beaucoup plus qu'il n'y a de morts dans une friche qui se boise.
  */
 export const PART_DU_CHEVRON = 0.78;
+
+/**
+ * Un **gîte occupé** : un dôme plein, posé sur sa base (#255).
+ *
+ * **Ce n'est pas un marqueur de changement**, et la forme le dit. Les trois
+ * autres sont des traits — un anneau, un arc, une croix — parce qu'ils
+ * **désignent** quelque chose qui vient d'arriver. Un habitant, lui, n'est pas un
+ * événement : il est là, semaine après semaine, et ce qu'il faut lire c'est une
+ * **présence**. Une forme pleine et fermée se lit comme un objet du monde, ce
+ * qu'un repère d'interface doit précisément éviter — ici c'est voulu.
+ *
+ * Le dôme vaut pour les cinq familles de gîte ; c'est la **teinte** qui les
+ * sépare, exactement comme elle sépare les douze causes de mort. Une forme par
+ * famille aurait fait cinq textures pour une information que le volet donne
+ * déjà en toutes lettres.
+ */
+export function cuireGite(
+  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+): HTMLCanvasElement {
+  const canvas = fabriquer(COTE_MARQUEUR_PX, COTE_MARQUEUR_PX);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  const c = COTE_MARQUEUR_PX / 2;
+  const r = COTE_MARQUEUR_PX * 0.3;
+  // Le dôme, deux fois : le liseré sombre d'abord, pour qu'il se détache d'un
+  // houppier clair comme d'un tronc sombre — la même raison que `doubleTrait`.
+  for (const [couleur, debord] of [
+    [OMBRE_DU_TRAIT, DEBORD_DU_LISERE_PX],
+    [CLARTE_DU_TRAIT, 0],
+  ] as const) {
+    ctx.fillStyle = couleur;
+    ctx.beginPath();
+    ctx.arc(c, c + r / 2, r + debord, Math.PI, 0);
+    ctx.closePath();
+    ctx.fill();
+  }
+  return canvas;
+}
+
+/**
+ * Part de la taille d'un marqueur que prend un gîte.
+ *
+ * **Plus petit qu'un marqueur de changement**, et c'est une hiérarchie voulue :
+ * une mort doit se voir de loin, une présence doit se remarquer sans crier.
+ */
+export const PART_DU_GITE = 0.55;

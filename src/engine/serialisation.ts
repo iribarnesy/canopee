@@ -110,8 +110,14 @@ const MAGIE = "CANOPEE\u0000";
  * `Float32Array` les tronquerait, donc l'état relu ne serait plus indiscernable
  * de l'état écrit. On refuse, et le journal reprend la main — c'est exactement
  * ce pour quoi cette version existe.
+ *
+ * **3 (issue #247)** : le sol porte une grille de plus, `mineralNProfondG`. Un
+ * bloc de version 2 ne la contient pas, et la reconstruire à zéro serait un
+ * choix silencieux : l'état relu aurait perdu tout l'azote que la partie avait
+ * lessivé sous la surface, sans que rien ne le signale. On refuse, et le journal
+ * reprend la main — la même règle que pour la précision.
  */
-export const VERSION_FORMAT = 2;
+export const VERSION_FORMAT = 3;
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {

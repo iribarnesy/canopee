@@ -49,6 +49,8 @@ import {
   etatDuTorchage,
   etatMourantDe,
   feuEnCours,
+  futsConsumes,
+  futsConsumesATorcher,
   indexerLesChandellesTombees,
   indexerLesChutes,
   indexerLesGestes,
@@ -58,6 +60,7 @@ import {
   particulesDuFeu,
   poseDeLaMort,
   poseDeLaRafale,
+  poseDuFutConsume,
   remodelageDe,
   tigesAbattues,
   trouverLaTempete,
@@ -136,6 +139,21 @@ interface Scene {
        * normal.
        */
       victimes?: { id: number; hauteurAvantM: number; rejet: boolean }[];
+      /**
+       * `IncendieResult.chandellesConsumees` : les fûts morts que le front a
+       * fait disparaître (#246).
+       *
+       * **Absent des scènes cuites avant le 2026-09-28**, comme `victimes`
+       * l'était avant elles : une scène d'alors n'en porte pas, et le banc
+       * n'en pose donc aucune — ce qui est exactement ce qu'elle montrait.
+       */
+      chandellesConsumees?: {
+        id: number;
+        x: number;
+        y: number;
+        especeId: string;
+        hauteurM: number;
+      }[];
     };
   };
   trees: {
@@ -326,10 +344,12 @@ function Demo(): React.ReactElement {
                 arbresTues: incendieBrut.victimes?.length ?? 0,
                 rejets: (incendieBrut.victimes ?? []).filter((v) => v.rejet).length,
                 victimes: incendieBrut.victimes ?? [],
-                // Le banc de scènes ne met en scène aucune chandelle
-                // préexistante : ce qu'il rejoue est un front et ses victimes.
-                // Le jour où il en posera, elles se diraient ici (#236).
-                chandellesConsumees: [],
+                // **Les chandelles que le front consume** (#246). Le banc n'en
+                // posait aucune, et il le disait en commentaire — « le jour où
+                // il en posera, elles se diraient ici ». C'est ce jour-là : la
+                // scène les porte depuis que son générateur les relève, avec la
+                // règle du moteur.
+                chandellesConsumees: incendieBrut.chandellesConsumees ?? [],
                 carboneTHa: 0,
               },
             }
@@ -369,32 +389,38 @@ function Demo(): React.ReactElement {
                 t.brulEeSemaine !== undefined &&
                 (scene?.week ?? 0) - t.brulEeSemaine < Math.max(1, semaines),
             );
+      // **Et les fûts que le front consume** (#246) : mêmes fonctions que le jeu,
+      // pas une seconde écriture — le banc est là pour juger ce que le jeu fait.
+      const consumes = futsConsumes(journalReel.incendie);
       const torches = indexerLesTorches(
         trouverLeFeu(plan),
-        torchees.map((t) => {
-          const espece = getEspece(t.especeId);
-          const ratio = espece?.lumiere.houppierRatio ?? 0.4;
-          return {
-            id: t.id,
-            x: t.x,
-            y: t.y,
-            hauteurM: t.heightM,
-            baseHouppierM: t.baseHouppierM ?? 0,
-            // Le rayon du houppier, de la même fiche que le dessin de l'arbre.
-            rayonHouppierM: Math.max(0.3, t.heightM * ratio * 0.5),
-            // **Ce qu'il était avant le feu**, calculé par la phénologie du
-            // moteur et non deviné : `partFoliaireOmbrageanteDans` dit ce que
-            // cette espèce porte à cette semaine de l'année. Sans ça, la mise
-            // en scène partirait du tronc charbonné que l'instantané décrit et
-            // n'aurait rien à animer.
-            avantLeFeu: {
-              partFoliaire: espece && saison ? partFoliaireOmbrageanteDans(espece, saison) : 1,
-              senescence: espece && saison ? senescenceDans(espece, saison) : 0,
-              vigueur: 1,
-              dommageHydraulique: 0,
-            },
-          };
-        }),
+        [
+          ...futsConsumesATorcher(journalReel.incendie),
+          ...torchees.map((t) => {
+            const espece = getEspece(t.especeId);
+            const ratio = espece?.lumiere.houppierRatio ?? 0.4;
+            return {
+              id: t.id,
+              x: t.x,
+              y: t.y,
+              hauteurM: t.heightM,
+              baseHouppierM: t.baseHouppierM ?? 0,
+              // Le rayon du houppier, de la même fiche que le dessin de l'arbre.
+              rayonHouppierM: Math.max(0.3, t.heightM * ratio * 0.5),
+              // **Ce qu'il était avant le feu**, calculé par la phénologie du
+              // moteur et non deviné : `partFoliaireOmbrageanteDans` dit ce que
+              // cette espèce porte à cette semaine de l'année. Sans ça, la mise
+              // en scène partirait du tronc charbonné que l'instantané décrit et
+              // n'aurait rien à animer.
+              avantLeFeu: {
+                partFoliaire: espece && saison ? partFoliaireOmbrageanteDans(espece, saison) : 1,
+                senescence: espece && saison ? senescenceDans(espece, saison) : 0,
+                vigueur: 1,
+                dommageHydraulique: 0,
+              },
+            };
+          }),
+        ],
         scene?.coteM ?? 1,
       );
       const tous = marqueursDuJournal(journalReel, (id) => ou.get(id), scene?.coteM ?? 1);
@@ -426,7 +452,7 @@ function Demo(): React.ReactElement {
         // Une scène qui porte un **vrai** journal a déjà été cuite après coup : ses
         // chandelles tombées n'y sont plus, et il n'y a donc rien à en retirer.
         // Il y a bien quelque chose à reposer, en revanche (#163).
-        chandelles: chandellesTombees(plan),
+        chandelles: [...chandellesTombees(plan), ...consumes],
         indexChandelles: indexerLesChandellesTombees(plan),
         apres: new Map<number, { heightM: number; baseHouppierM: number }>(),
         partis: new Set<number>(),
@@ -706,8 +732,12 @@ function Demo(): React.ReactElement {
         // s'abat (#163) ; l'index qui ne le connaît pas rend `DEBOUT`.
         if (id < 0) {
           return combiner(
-            chuteDeLaTige(ellipse.gestes, ou, id, vue),
-            chuteDeLaChandelle(ellipse.indexChandelles, ou, id, vue),
+            combiner(
+              chuteDeLaTige(ellipse.gestes, ou, id, vue),
+              chuteDeLaChandelle(ellipse.indexChandelles, ou, id, vue),
+            ),
+            // Un fût consumé ne tombe pas : il s'efface en flambant (#246).
+            poseDuFutConsume(ellipse.torches, ou, id),
           );
         }
         return combiner(
