@@ -167,7 +167,7 @@ recalcule avec `intensiteDuFeu(charges[i])`, désormais exportée de
 `src/engine/feu.ts` — la règle a un nom et un seul propriétaire, pour que
 personne ne la recopie.
 
-**`chandellesConsumees`** (`{ id, hauteurM }`) nomme les chandelles
+**`chandellesConsumees`** (`{ id, x, y, especeId, hauteurM }`) nomme les chandelles
 **préexistantes** que le feu a consumées (#236). Elles ne sont ni dans
 `victimes` ni dans `arbresTues`, et c'est juste — elles étaient déjà mortes, les
 compter deux fois serait faux — mais elles quittaient la parcelle sans que rien
@@ -178,9 +178,25 @@ tiers de la parcelle s'effaçait avant que le front n'arrive. Avec la liste, la
 chandelle consumée prend le chemin des autres fûts qui quittent `state.trees` :
 elle reste debout le temps que le front l'atteigne, se torche, et s'abat.
 
+**L'entrée porte sa position, et le premier jet ne la portait pas** (#246). La
+demande d'origine annonçait que l'identifiant et la hauteur suffisaient, « la
+position se relit dans l'instantané tant que l'arbre y est, comme le fait déjà
+la tempête pour ses chablis », et ce document l'a repris sans le vérifier.
+**C'était faux des deux bouts.** `trouverLaTempete` relit la position dans
+l'instantané **courant**, et elle le peut parce qu'une victime de tempête y est
+encore : elle devient chandelle sur-le-champ et reste en jeu. Une chandelle
+consumée quitte `state.trees` dans le tick du feu — c'est le fait même que la
+liste rapporte. Elle n'est donc dans aucun instantané, et le rendu, qui refuse
+d'inventer une position, ne pouvait rien poser.
+
+La forme est donc celle de `ChuteDeChandelle`, qui est dans exactement la même
+situation. `especeId` n'est pas du décor : une chandelle n'a plus de houppier,
+mais un fût de pin et un fût de chêne n'ont pas la même silhouette, et sans elle
+le rendu poserait des troncs sans essence — une invention en creux.
+
 Un essai tient l'invariant qui motive tout cela : la semaine d'un incendie,
 **tout arbre qui disparaît est nommé** — soit par `chandellesConsumees`, soit par
-`chutes`.
+`chutes` — et chaque nom porte de quoi le poser.
 
 **La tempête** (`Snapshot.tempete`) voyage maintenant comme l'incendie, et pour
 la même raison : `rafaleMs`, `versRad`, `arbresVerses`, `volumeM3` et les
