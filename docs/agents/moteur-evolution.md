@@ -61,7 +61,129 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'azote lessivé descend, #247 lot A)
+## Ce que le dernier lot a appris (aucune station ne valait une médiane pour un pin, #254)
+
+### Une convention juste pour vingt essences peut être fausse pour la vingt-et-unième
+
+Le dépôt n'a pas d'indice de fertilité : caler une essence sur une classe de
+table oblige donc à **décréter** qu'une station la représente, et la station
+retenue était le limon riche. Elle a tenu pour les cinq feuillus mésophiles de
+plaine qu'elle juge — hêtre, charme, aulne, frêne, bouleau : le limon riche
+**est** leur milieu. Le pin sylvestre n'en est pas un, et rien dans la
+convention ne le disait.
+
+Ce n'est donc pas un paramètre qui manquait, c'est une **station**. Mesuré sur
+quatre graines avant d'écrire une ligne, hauteur à quarante ans contre 15,5 m
+tabulés :
+
+| station | 17 | 43 | 71 | 101 | moyenne |
+|---|---|---|---|---|---|
+| lande sableuse (alios à 75 cm) | 7,85 | 6,42 | 6,47 | **0,00** | 5,19 m (−67 %) |
+| limon riche (pH 7,0) | 17,14 | 16,03 | 16,96 | 16,34 | 16,62 m (+7 %) |
+| limon sableux acide (Sologne) | 19,15 | 18,62 | 18,45 | 18,77 | 18,75 m (+21 %) |
+
+Les extrêmes **encadrent** la table sans la contenir, et la médiane tombe dans
+le trou : un sable que rien n'ampute. La lande est un sable que l'alios coupe,
+la Sologne un limon qui n'est pas un sable.
+
+**La bonne réponse n'était pas à inventer, elle était dans la source.** Les
+pineraies que Jansen 1996 tabule poussent sur les dekzand, les sables de
+couverture des Pays-Bas ; la classe médiane du pin y **est** un sable profond.
+Aller chercher le site que la table décrit n'est pas caler le moteur sur
+lui-même — c'est le seul geste qui ne le fasse pas.
+
+### La rampe de pH décide avant le sol, et elle a failli être mesurée à sa place
+
+Le premier jet du profil portait le pH du terrain, 4,2 en surface — c'est ce que
+titre un podzol de dekzand sous pin. Mesuré à profil, paysage et climat
+identiques, **le seul pH de surface décide de plus de la moitié de la hauteur** :
+6,79 m à quarante ans contre 14,91 m à pH 4,8, sur les deux mêmes graines. À son
+pH de terrain, le sable rendait la lande — alors qu'il est meilleur qu'elle à
+tous points de vue : plus profond, sans plancher, mieux pourvu.
+
+La cause n'est pas dans le sol. `facteurGammePh` lit l'amplitude de l'atlas
+comme un **plateau à bords en rampe** de 0,7 pH : le pin (4,0-7,5) n'est à pleine
+vigueur qu'entre 4,67 et 6,84, et il tombe à **0,34 dès pH 4,2**. La loi du
+minimum fait le reste. Déclarer le sol à son pH réel aurait mesuré la rampe, pas
+le sable.
+
+Deux choses à en retenir, et la seconde est la plus utile. La première : le
+profil porte **4,8 en surface**, le haut de la fourchette de terrain, et le dit.
+La seconde : `soil.ts` avait écrit le piège d'avance — *« la poser [la forme
+unimodale] déplacerait la calibration de toutes les essences dont la station de
+référence tombe dans une rampe, à commencer par le pin sylvestre »*. La dette
+était nommée, datée, et personne n'en connaissait le prix ; il est maintenant
+chiffré à **huit mètres de hauteur dominante pour six dixièmes de pH**. Relire
+les commentaires des mécanismes qu'on traverse coûte cinq minutes.
+
+### Une graine sur quatre ne rend aucune mesure, et la moyenne l'avale
+
+Sur la lande, la graine 101 rend **zéro**. Relevé arbre par arbre : un semis
+arraché par un boutis de sanglier à un an et demi, les sept autres brûlés la
+même semaine à cinq ans et demi. Une moyenne de quatre graines digère ça en un
+chiffre plausible — 5,2 m — et on discuterait d'un écart de croissance là où le
+fait est un incendie. Le relevé se publie graine par graine, y compris quand une
+colonne est vide : c'est elle qui porte l'information, et elle ne dit pas ce
+qu'on croit tant qu'on n'a pas demandé la cause.
+
+Même piège, même lot, et la seconde fois il portait sur la météo : sous le
+climat de Mont-de-Marsan, le sable rend un pin **plus grand** à vingt ans (10,10 et
+9,56 m contre 9,43 et 8,58 sous Abbeville) et **plus rien** à quarante, sur les
+deux graines. Un banc qui ne relèverait que quarante ans y lirait une station
+stérile ; un banc qui ne relèverait que vingt ans y lirait la meilleure des deux.
+
+Et la cause n'a pas le même statut selon l'arbre. Les semis meurent
+d'**engorgement** à trois ans et trois mois, au même mois sur les deux graines :
+un sable se noie quand l'hiver recharge plus vite que la pente n'évacue, et là
+c'est le climat qui parle. Les adultes versent en **chablis** (vingt-six et
+trente-deux ans sur une graine, trente sur l'autre) ou **brûlent** (trente-trois
+ans), et un coup de vent comme un incendie sont des tirages — deux graines n'en
+font pas une loi. Le même relevé porte donc une conclusion et une coïncidence, et
+il fallait le lire arbre par arbre pour les séparer.
+
+### Ce qu'un contrôle structurel prouve, et qu'une mesure ne prouve pas
+
+Déplacer une essence de station change ce que le banc mesure : le lot touche
+F13, et le traitement F16 demande de montrer qu'aucune **autre** essence ne
+bouge. Le contrôle retenu ne simule rien. Il sérialise, pour chacune des sept
+essences du banc, le triplet (fiche de l'atlas, station de référence, climat) et
+le hache : six empreintes sur sept sont identiques au bit près avant et après,
+et seule celle du pin change. Le moteur étant déterministe, cela vaut pour
+**toutes** les graines, quand deux courses n'auraient parlé que de deux.
+
+Un essai le garde désormais (`hauteurs.test.ts`), et il n'inspecte pas le code :
+il énumère la table et exige que seuls le pin et le châtaignier soient jugés
+ailleurs qu'au limon riche, chacun pour une raison écrite.
+
+### Ce que ce lot laisse
+
+- **La borne haute de pH du pin**, que l'issue voulait reprendre « une fois la
+  station en place ». Elle est en place, et la borne ne suit pas : passer de 7,5
+  à 7,0 fait tomber le facteur de pH de 0,764 à 0,05 **sur le limon riche**, où
+  trente et un fichiers d'essai citent encore le pin. Le banc des hauteurs ne
+  l'y plante plus ; les autres, si. C'est un lot avec la suite complète pour
+  témoin.
+- **Ce que le lot débloque, sans l'avoir vérifié.** L'issue nommait trois
+  travaux arrêtés sur ce manque, dont l'ombrage herbacé de #210 lot 3, où « seul
+  le pin échoue » parce que le banc lui demandait sa table sur une station où il
+  ne tient pas. La cause est levée ; que le banc passe maintenant reste à
+  mesurer, et c'est à l'auteur de cette branche-là de le faire — on ne touche
+  pas la branche d'un autre agent.
+- **Les dépôts d'azote néerlandais.** Le moteur dérive les dépôts de
+  l'occupation du sol, donc le sable reçoit 7,4 kg N/ha/an. Les pineraies que
+  Jansen mesurait en recevaient trois à cinq fois plus, parce que l'élevage
+  intensif des années 1980 les arrosait d'ammoniac. La station est un dekzand
+  **propre**, et sa classe médiane est celle d'un site que le ciel n'a pas
+  engraissé — ce qui est plus honnête, et pas tout à fait la même chose que la
+  table.
+- **Une collision d'identifiant** : `hauteurs-commun.ts` fabrique un limon riche
+  acidifié qu'il baptise `limon-acide`, et c'est aussi l'identifiant de la
+  Sologne dans `stations.ts`. Les deux profils diffèrent (65 % de limon sur
+  100 cm contre 55 % sur 90). Rien ne casse aujourd'hui — les deux ne se
+  croisent dans aucun fichier —, mais la mémoïsation du banc et
+  `serieMeteoPour` s'indexent tous deux sur cet identifiant.
+
+## Ce qu'un lot plus ancien a appris (l'azote lessivé descend, #247 lot A)
 
 ### Le pool n'était que la moitié du problème, et l'autre moitié n'était pas dans l'issue
 
@@ -126,6 +248,7 @@ mesure ce qui passe **sous la zone racinaire** — ce n'est pas la même grandeu
 et l'écart n'est pas petit. Le lot ne l'a pas corrigé pour faire joli : tant que
 le flux ne mesurait pas la bonne chose, aucune source extérieure ne pouvait le
 caler.
+
 
 ## Ce qu'un lot plus ancien a appris (le bois se mange, #187 guilde 5)
 

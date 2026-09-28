@@ -34,11 +34,19 @@
  * **hêtre** et le **charme**. Leur `pousseMaxMAn` a été dérivé de cette valeur-là
  * (especes.ts). L'essai ne les mesure pas ; il attrapera leur dérive.
  *
- * **Non calées**, donc réellement mises à l'épreuve : pin, aulne, frêne,
+ * **Non calées**, donc réellement mises à l'épreuve : aulne, frêne,
  * **châtaignier** et **bouleau** à quarante ans ; aubépine, fusain, genêt et houx dans
  * le bloc des arbustes. Leur accord avec la mesure est un résultat, pas un
  * réglage — et le bouleau en est le cas le plus net, son `pousseMaxMAn` ayant
  * été posé des mois avant qu'on trouve la table qui le juge (#185).
+ *
+ * **Le pin est un troisième cas, et il faut le nommer pour ne pas le
+ * surestimer** (#254). Son `pousseMaxMAn` reste ce qu'il était, validé contre la
+ * table en #201 et non touché ici ; ce qui a été ajusté est sa **station** —
+ * `SABLE_PROFOND`, le sable de couverture que la table néerlandaise décrit.
+ * L'ajustement s'est fait sur quarante ans, donc cet âge-là le **garde** plutôt
+ * qu'il ne le valide, exactement comme le hêtre. Vingt ans reste tenu à
+ * l'écart, et c'est là que le pin dit quelque chose du moteur.
  *
  * **À vingt ans**, aucune espèce n'est calée. C'est la vérification tenue à
  * l'écart : un seul paramètre par espèce a été ajusté, sur un seul âge, et le
@@ -52,6 +60,14 @@
  * station plus pauvre en jeu donnera moins, une plus riche davantage ; c'est
  * le comportement **relatif** que le moteur modélise, et la table lui donne son
  * échelle.
+ *
+ * **Et la convention a une limite, qui a coûté une station** (#254) : elle vaut
+ * pour les essences dont le limon riche **est** le milieu, c'est-à-dire des
+ * feuillus mésophiles. Une classe médiane se lit sur le site médian de
+ * l'essence, et celui d'un pionnier de sable n'est pas celui d'un hêtre. Deux
+ * essences sont donc jugées ailleurs : le châtaignier sur un limon acide,
+ * parce que le pH 7,0 le tue, et le pin sur un sable profond, parce que c'est
+ * là que pousse la pineraie que la table mesure.
  *
  * Les tolérances tiennent compte de deux bruits : les classes de fertilité de
  * la table s'étalent déjà de −18 % à +16 % autour de la médiane (hêtre à 40
@@ -72,7 +88,52 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { a, hauteurs, TABLE, TOLERANCE_CALAGE, TOLERANCE_TENUE_A_LECART } from "./hauteurs-commun";
+import { profondeurPenetrableCm, profondeurTotaleCm } from "../../src/engine/soil";
+import { LIMON_RICHE } from "../../src/engine/stations";
+import {
+  a,
+  hauteurs,
+  LIMON_ACIDE,
+  TABLE,
+  TOLERANCE_CALAGE,
+  TOLERANCE_TENUE_A_LECART,
+} from "./hauteurs-commun";
+
+describe("chaque essence est jugée sur la station de sa table", () => {
+  /**
+   * Le contrôle du lot #254, et il porte sur le **dispositif** plutôt que sur une
+   * hauteur : déplacer une espèce de station de référence change ce que le banc
+   * mesure, donc il faut que rien d'autre ne se déplace en douce.
+   *
+   * Il est structurel et non simulé, et c'est plus fort qu'une mesure : le
+   * moteur est déterministe, donc une essence dont la fiche, la station et le
+   * climat n'ont pas bougé rend la même course sur **toutes** les graines, pas
+   * seulement sur les deux du banc.
+   */
+  it("seuls le pin et le châtaignier quittent le limon riche, et on sait pourquoi", () => {
+    const ailleurs: Record<string, string> = {
+      // Le pH 7,0 du limon riche est hors de son amplitude : il y meurt.
+      castanea_sativa: LIMON_ACIDE.station.id,
+      // Le site médian d'un pin est un sable, pas un limon (#254).
+      pinus_sylvestris: "sable-profond",
+    };
+    for (const [especeId, ref] of Object.entries(TABLE)) {
+      expect((ref.sc ?? LIMON_RICHE).station.id, especeId).toBe(
+        ailleurs[especeId] ?? LIMON_RICHE.station.id,
+      );
+    }
+  });
+
+  it("la station du pin est un sable que rien n'ampute", () => {
+    // Ce qui la distingue de la lande, et c'est tout l'objet de #254 : la lande
+    // est un sable dont l'alios arrête les racines à 75 cm. Si un plancher
+    // revenait ici, le pin retomberait sous sa table sans que rien ne le dise.
+    const profil = (TABLE.pinus_sylvestris?.sc ?? LIMON_RICHE).station.profil;
+    expect(profondeurPenetrableCm(profil)).toBeCloseTo(profondeurTotaleCm(profil), 6);
+    expect(profondeurTotaleCm(profil)).toBeGreaterThan(100);
+    for (const h of profil) expect(h.sable).toBeGreaterThan(0.8);
+  });
+});
 
 describe("hauteurs absolues contre les tables de production (hêtre, pin, aulne)", () => {
   const especes = ["fagus_sylvatica", "pinus_sylvestris", "alnus_glutinosa", "betula_pendula"];

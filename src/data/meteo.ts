@@ -22,17 +22,24 @@ const SERIES: SerieMeteoHebdo[] = [
 ];
 
 /**
- * Série réelle pour une station du jeu. Le limon pauvre partage Abbeville, la
- * Sologne partage Tours.
+ * Série réelle pour une station du jeu. Le limon pauvre et le sable profond
+ * partagent Abbeville, la Sologne partage Tours.
  */
 export function serieMeteoPour(stationId: string): SerieMeteoHebdo | undefined {
-  // Deux stations partagent la série d'une voisine plutôt que d'en inventer
+  // Trois stations partagent la série d'une voisine plutôt que d'en inventer
   // une : le limon pauvre en azote est le même limon qu'Abbeville, et la
   // Sologne est à une heure de Tours. Ajouter une série demanderait de
   // reconstruire un département entier de données Météo-France.
+  //
+  // Le sable profond (#254) est le troisième, et son partage se justifie
+  // autrement : la station représente un dekzand néerlandais, dont aucune série
+  // ne figure ici et ne peut y figurer — ces relevés-là sont du KNMI, pas de
+  // Météo-France. Abbeville est la plus océanique-septentrionale des cinq,
+  // c'est-à-dire la moins loin de De Bilt.
   const partages: Record<string, string> = {
     "limon-pauvre-n": "limon-riche",
     "limon-acide": "vallee-engorgee",
+    "sable-profond": "limon-riche",
   };
   const id = partages[stationId] ?? stationId;
   return SERIES.find((s) => s.id === id);
