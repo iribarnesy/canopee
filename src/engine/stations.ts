@@ -389,6 +389,199 @@ export const SUBERAIE_MAURES: StationClimat = {
   },
 };
 
+/**
+ * Sable acide profond **sans alios** : la station qui vaut une classe médiane
+ * **pour un pin**, et il n'y en avait aucune (issue #254).
+ *
+ * ── le manque, et l'atlas l'avait écrit avant l'issue ────────────────────────
+ *
+ * Le dépôt cale ses hauteurs sur les tables néerlandaises de Jansen 1996 et,
+ * faute d'indice de fertilité, il **décrète** qu'une station vaut la classe
+ * médiane. Cette convention a été taillée sur le limon riche, c'est-à-dire pour
+ * des feuillus mésophiles. Un pin sylvestre n'en est pas un : son site médian,
+ * dans la table même qui le juge, est un sable.
+ *
+ * Mesuré avant d'écrire une ligne, hauteur moyenne de huit sujets au large à
+ * quarante ans, graine par graine (table : 15,5 m) :
+ *
+ *   station                          17      43      71      101     moyenne
+ *   lande sableuse (alios à 75 cm)   7,85    6,42    6,47    0,00    5,2 m
+ *   limon riche (pH 7,0)            17,14   16,03   16,96   16,34   16,6 m
+ *   limon sableux acide (Sologne)   19,15   18,62   18,45   18,77   18,7 m
+ *
+ * Les deux extrêmes **encadrent** la table sans la contenir, et le zéro de la
+ * lande n'est pas un arrondi : sur cette graine-là, un semis a été arraché par
+ * un boutis de sanglier à un an et demi, et les sept autres ont brûlé la même
+ * semaine, à cinq ans et demi. Ce qui manque entre les deux est un **sable que
+ * rien n'ampute** — la lande est un sable que l'alios coupe à 75 cm, la Sologne
+ * un limon qui n'est pas un sable.
+ *
+ * ── et la station n'est pas inventée : c'est celle de la table ───────────────
+ *
+ * Les pineraies que Jansen tabule poussent sur les **dekzand**, les sables de
+ * couverture éoliens du Pléistocène supérieur qui font le sous-sol de la
+ * Veluwe, de la Drenthe et de la Campine. Le sol y est un podzol — Bakker &
+ * Schelling 1966 les range en *veldpodzolgronden* et *haarpodzolgronden* sur
+ * « sable fin pauvre en limon » —, donc profond, acide, pauvre, **et sans
+ * alios** : l'horizon spodique y est une accumulation d'humus et de fer que les
+ * racines traversent, pas la dalle de grès ferrugineux des Landes. Prendre
+ * cette station n'est donc pas caler le moteur sur lui-même, c'est aller
+ * chercher le site que la source décrit. C'est le geste de la suberaie (#212).
+ *
+ * Elle a un analogue français, et il vaut d'être nommé parce qu'il est jouable :
+ * le sable landais **après défoncement**, c'est-à-dire la conduite réelle des
+ * Landes de Gascogne depuis l'assainissement de Chambrelent et la loi du 19 juin
+ * 1857 — on casse l'alios au soc avant de planter, et le podzol redevient un
+ * sable profond. La lande sèche du dépôt est l'état d'avant ce geste.
+ *
+ * ── la météo est celle d'Abbeville, et c'est un partage assumé ───────────────
+ *
+ * `LIMON_ACIDE` a posé le précédent : partager la série d'un voisin plutôt que
+ * d'en inventer une. Abbeville (poste 80001001, 50,14° N) est la plus
+ * océanique-septentrionale des cinq séries du dépôt, et c'est elle qui approche
+ * le mieux le climat de la table : **10,33 °C et 773 mm** sur les soixante ans
+ * de la série, quand De Bilt tourne autour de 10 °C et 800 mm. Mont-de-Marsan,
+ * elle, est à 13,07 °C et 933 mm.
+ *
+ * Le **climat synthétique** déclaré plus bas est celui du limon riche, et c'est
+ * délibéré : c'est celui que toutes les autres essences du banc subissent, donc
+ * le pin sur son sable et le hêtre sur son limon sont comparés à climat égal.
+ * Une partie, elle, joue sur la série réelle.
+ *
+ * **Mont-de-Marsan, l'autre candidate, a été mesurée, et elle n'a pas rendu de
+ * banc.** C'est l'analogue landais, plus chaud de deux degrés et plus arrosé en
+ * hiver (68 % de 800 mm contre 55 % de 750). Sur le même sol et le même
+ * paysage, et sur le climat synthétique correspondant, le pin monte **plus
+ * vite** à vingt ans — 10,10 et 9,56 m contre 9,43 et 8,58 sous Abbeville — et
+ * il n'en reste **aucun** à quarante, sur les deux graines essayées. Deux causes, et elles n'ont pas le même statut : deux
+ * ou trois semis meurent d'**engorgement** à trois ans et trois mois, au même
+ * mois sur les deux graines — un sable se noie quand l'hiver recharge plus vite
+ * que la pente n'évacue, et là c'est le climat qui parle ; les autres versent en
+ * **chablis** (vingt-six et trente-deux ans sur une graine, trente sur l'autre)
+ * ou **brûlent** (trente-trois ans), et un coup de vent comme un incendie sont
+ * des tirages, donc deux graines n'en font pas une loi.
+ *
+ * Ce qui décide n'est donc pas ce relevé, c'est la température et la pluie ;
+ * le relevé dit seulement qu'on n'a pas échangé un bon analogue climatique
+ * contre une station qui aurait rendu des mesures plus sûres.
+ *
+ * La latitude déclarée est donc celle d'Abbeville : la durée du jour doit aller
+ * avec la série qui la porte.
+ *
+ * ── le sol ───────────────────────────────────────────────────────────────────
+ *
+ * Trois horizons, 130 cm en tout, sans une trace d'induration : l'humifère
+ * mince d'une pineraie, le sable lessivé, le sable de fond. Les textures sont
+ * celles d'un sable de couverture (moins de 10 % de limon + argile, ce que la
+ * classification néerlandaise appelle *leemarm fijn zand*) *(à calibrer : aucune
+ * analyse granulométrique n'a été consultée, ce sont des ordres de grandeur)*.
+ *
+ * **Le pH est le chiffre qui a demandé le plus de prudence, et il est plus haut
+ * que le terrain.** Un podzol de dekzand sous pin titre pH-KCl 3,3 à 4,0, soit
+ * pH-eau 4,0 à 4,8 environ *(à confirmer)*. Le moteur, lui, lit l'amplitude
+ * déclarée de l'espèce comme un **plateau à bords en rampe** : le pin (4,0-7,5)
+ * n'est à pleine vigueur qu'entre 4,67 et 6,84, et il tombe à 0,34 dès pH 4,2.
+ * Déclarer le sol à son pH réel aurait donc mesuré `facteurGammePh`, pas le
+ * sable — `soil.ts` avait prévu le piège en toutes lettres, en nommant le pin
+ * sylvestre comme l'espèce dont la station de référence tombe dans une rampe.
+ * On retient donc **4,8 en surface**, le haut de la fourchette de terrain, qui
+ * est aussi ce que donne un sable landais remué par le défoncement ; et la
+ * dette de forme reste ouverte, elle n'est pas payée ici.
+ *
+ * Ce que ça pèse, mesuré à profil, paysage et climat identiques : à pH 4,2 le
+ * pin rend **6,79 m** à quarante ans, à pH 4,8 **14,91 m** sur les deux mêmes
+ * graines. Six dixièmes de pH valent ici plus de la moitié de la hauteur — la
+ * station serait donc muette sur le sol tant que cette rampe décide.
+ *
+ * Pas de nappe dans le profil, mais une nappe à deux mètres : c'est le
+ * *veldpodzol*, le podzol de bas de pente qui porte l'essentiel des pineraies
+ * néerlandaises, et le pin la touche du pivot (200 cm à l'atlas). Sans elle on
+ * décrit un *haarpodzol* de dune, qui est un site de mauvaise classe et non la
+ * médiane.
+ *
+ * ── ce que la station produit, mesuré ────────────────────────────────────────
+ *
+ * Réserve utile **104 mm sur 130 cm entièrement pénétrables**, contre 186 mm sur
+ * le limon riche et 92 mm sur la lande — dont l'alios ne laisse explorer que
+ * 75 cm, si bien que la lande en offre réellement moins que ce que son profil
+ * annonce. Carbone 83 t C/ha, minéralisation potentielle 113 kg N/ha/an contre
+ * 172 sur le limon riche et 45 sur la lande.
+ *
+ * Ce dernier chiffre corrige une intuition qu'il vaut mieux écrire que garder :
+ * **ce sable n'est pas un sol mort**. Sa pauvreté n'est pas dans ce qu'il
+ * minéralise, c'est dans ce qu'il ne retient pas — 104 mm de réserve et
+ * 1 614 mm/semaine de conductivité, donc une eau qui passe et un azote qui
+ * part avec elle.
+ *
+ * **Limite déclarée** : le paysage de lande rend 7,4 kg N/ha/an de dépôts
+ * atmosphériques, ce qui est un chiffre pré-industriel. Les pineraies que
+ * Jansen tabulait recevaient trois à cinq fois cela — l'azote néerlandais des
+ * années 1980 est un fait d'élevage intensif, pas de géographie —, et le moteur
+ * dérive les dépôts de l'occupation du sol, pas d'une époque. La station est
+ * donc un dekzand **propre**, et sa classe médiane est celle d'un site qui n'a
+ * jamais été engraissé par le ciel.
+ *
+ * ── et le pin y tombe sur sa table ───────────────────────────────────────────
+ *
+ * Huit pins au large, quatre graines, hauteur moyenne à quarante ans : 14,99 ·
+ * 14,82 · 14,42 · 15,12, soit **14,84 m pour 15,5 m tabulés (−4,3 %)**. Les
+ * quatre graines tiennent dans cinq pour cent, là où la lande allait de 7,8 m à
+ * la mortalité totale.
+ *
+ * **Ce que cet âge prouve, et ce qu'il ne prouve pas.** Quarante ans est l'âge
+ * que la station visait : elle a été bâtie pour valoir une classe médiane, donc
+ * il la **garde** plutôt qu'il ne la valide, comme le hêtre garde son
+ * `pousseMaxMAn`. Ce qui est vrai, et qui vaut d'être noté : le profil est celui
+ * du premier jet au pH près, aucun de ses chiffres n'a été retouché après la
+ * mesure, et le pH a été relevé pour une raison qui n'est pas la hauteur.
+ *
+ * Vingt ans reste tenu à l'écart, et c'est l'âge qui dit quelque chose :
+ * **8,98 m pour 8,1 tabulés (+10,8 %)**. Le pin monte donc un peu vite en
+ * jeunesse sur ce sable — c'est la forme de la courbe, pas son niveau, et
+ * l'écart est du même ordre que sur les autres essences (−13 % à +10 %).
+ *
+ * **Sur combien d'arbres porte cette moyenne** : 3, 7, 3 et 7 des huit sujets
+ * sont encore debout à quarante ans selon la graine, et **tous les manquants
+ * sont des chablis** — aucun n'est mort de soif ni de faim, ce qui dit au
+ * passage que la station nourrit son pin. La moyenne porte donc sur les
+ * survivants d'un coup de vent. Ce n'est pas contre la hauteur dominante — une
+ * table compte les cent plus gros à l'hectare, pas les tiges couchées — mais il
+ * faut le savoir : sur la graine 71, un sujet de 18,79 m est tombé à trente-sept
+ * ans, et il aurait tiré la moyenne vers le haut.
+ */
+export const SABLE_PROFOND: StationClimat = {
+  station: stationDepuisProfil({
+    id: "sable-profond",
+    relief: { altitudeM: 25, pentePct: 1, expositionDeg: 180, forme: "plan", bassinAmontHa: 0 },
+    // Le paysage du dekzand : bruyère, pins et bouleaux, et le vent qui passe.
+    // C'est aussi celui de la lande landaise, et pour la même raison — un sable
+    // pauvre ne porte pas de bocage.
+    paysageId: "lande-ouverte",
+    nom: "Sable acide profond (sans alios)",
+    latitudeDeg: 50.1,
+    profil: [
+      horizon(25, { sable: 88, limon: 9, argile: 3 }, { moPct: 3, ph: 4.8 }),
+      horizon(45, { sable: 92, limon: 6, argile: 2 }, { moPct: 0.9, ph: 4.9 }),
+      horizon(60, { sable: 94, limon: 4, argile: 2 }, { moPct: 0.3, ph: 5 }),
+    ],
+    // Le stock minéral de départ est bas, et ce n'est pas parce que le sol ne
+    // libère rien — il porte 113 kg N/ha/an de minéralisation potentielle. C'est
+    // qu'un sable ne retient pas : ce qui n'est pas prélevé dans la semaine
+    // s'en va avec l'eau.
+    initialMineralNKgHa: 25,
+    // Veldpodzol : la nappe est à portée du pivot, et c'est ce qui sépare un
+    // site de classe médiane d'une dune sèche.
+    profondeurNappeEquilibreCm: 200,
+    remonteeNappeMmSemaine: 0,
+    // Sable de couverture sur sable : l'exutoire n'est jamais le goulot.
+    drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
+    herbeInitiale: 0.4, // callune et molinie sous la pineraie claire
+    coteM: 100,
+  }),
+  // Série partagée avec le limon riche, c'est-à-dire Abbeville (data/meteo.ts).
+  climat: LIMON_RICHE.climat,
+};
+
 export const STATIONS_V0: readonly StationClimat[] = [
   LANDE_SECHE,
   VALLEE_ENGORGEE,
@@ -397,4 +590,5 @@ export const STATIONS_V0: readonly StationClimat[] = [
   LIMON_ACIDE,
   FRICHE_LIMON,
   SUBERAIE_MAURES,
+  SABLE_PROFOND,
 ];

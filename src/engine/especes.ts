@@ -671,6 +671,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * tenue à l'écart suit : 8,63 m à vingt ans contre 8,1 dans la table,
      * +6,6 %, là où l'ancienne valeur donnait +18,6 % — le pin était trop
      * grand aux **deux** âges, et pas seulement à celui qu'on regardait.
+     *
+     * **Ces deux chiffres ont été relevés sur le limon riche, et le banc a
+     * changé de station depuis** (#254) : le pin est maintenant confronté à sa
+     * table sur un sable de couverture, parce que c'est là que poussent les
+     * pineraies que Jansen mesure. Le nombre ci-dessous n'a pas bougé pour
+     * autant — c'est même tout l'objet du lot —, et il rend 14,84 m à quarante
+     * ans et 8,98 m à vingt sur la nouvelle station (`stations.ts`).
      */
     pousseMaxMAn: 0.45,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
@@ -681,15 +688,16 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // compatibles — une préférence n'est pas une borne — et la seconde est
     // celle qui était déjà là.
     //
-    // Trancher pour 7,0 a été **essayé** et mesuré : le pin tombe alors à 0,05 de
-    // vigueur sur sa station de référence (limon riche, pH 7,0) et sa table de
-    // production s'effondre. En le déplaçant sur une station qu'il habite
-    // vraiment, on découvre autre chose : limon acide profond 19,5 m (+26 %),
-    // lande sableuse 6,5 m (-58 %) contre 15,5 m tabulés. **Aucune station du**
-    // **dépôt ne vaut une classe médiane pour un pin** — la convention « le limon
-    // riche vaut la médiane » a été taillée pour des feuillus mésophiles, pas
-    // pour un pionnier dont le site médian est un sable. C'est ce manque-là
-    // qu'il faut traiter, pas cette borne.
+    // **Le manque que ce commentaire signalait est comblé** (#254) : la station
+    // qui vaut une classe médiane pour un pin existe — `SABLE_PROFOND`, le
+    // sable de couverture sans alios que la table néerlandaise décrit —, et
+    // c'est là que le banc juge désormais l'espèce. La borne, elle, n'est
+    // **toujours pas** tranchée, et ce n'est plus faute de station : passer à 7,0
+    // ferait tomber le facteur de pH du pin de 0,764 à 0,05 **sur le limon
+    // riche**, où le banc des hauteurs ne le plante plus mais où trente et un
+    // fichiers d'essai le citent encore — l'appétence du gibier (G7), la survie
+    // au pH, l'abri de peuplement, la tempête. Trancher demande donc son propre
+    // lot, avec la suite complète pour témoin.
     ph: [4, 7.5],
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     lumiere: { compensation: 0.25, saturation: 0.7, lai: 1.2, houppierRatio: 0.25, caduc: false },
