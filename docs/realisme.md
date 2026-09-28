@@ -4040,6 +4040,16 @@ large, quarante ans, seuls les profils changent. Deux essences, un traçant
 |---|---|---|---|---|
 | Lande sèche | 75 → 75 | 92 → 92 | mort avant comme après | mort avant comme après |
 | Fond de vallée | 85 → 195 | 149 → 326 | mort avant comme après | mort avant comme après |
+
+Le hêtre et le chêne pubescent ne vivent ni sur la lande ni dans le fond de
+vallée : la comparaison y est vide, et elle sert seulement à vérifier que le
+banc est bien apparié — les deux colonnes sont identiques au chiffre près. Le
+fond de vallée a donc été repris avec ses essences à lui, et c'est **la station
+qui ne bouge pas** : l'aulne y fait 19,96 puis 19,81 m (−0,7 %), huit survivants
+des deux côtés, racines 85 → 90 cm. C'est la seule station dont l'horizon
+ajouté ne change ni la texture du fond ni le goulot de drainage — son exutoire
+à 5 mm/semaine commandait déjà tout —, et c'est exactement celle qui ne perd
+rien. La suite dit pourquoi ça n'est pas une coïncidence.
 | Limon riche | 100 → 200 | 186 → 275 | 16,46 → 16,18 m (**−1,7 %**) | 10,97 → 10,95 m ; racines 99 → **157 cm** |
 | Limon pauvre en N | 100 → 200 | 178 → 267 | 14,40 → 13,85 m (**−3,8 %**) | 10,46 → 10,27 m ; racines 100 → **153 cm** |
 | Limon acide | 90 → 200 | 148 → 244 | 17,71 → 15,80 m (**−10,8 %**) | ne survit pas, avant comme après |
@@ -4114,8 +4124,17 @@ le prix se lit sur les essences sensibles à l'anoxie : jusqu'à −10,9 % de
 hauteur dominante à quarante ans.
 
 Ce qu'il faut avant de reprendre ces profils est donc un correctif de
-`profilHydro` — c'est de la **maintenance** du moteur, pas une évolution — après
-quoi le contrôle apparié ci-dessus est à rejouer tel quel : il est écrit pour ça.
+`profilHydro` — c'est de la **maintenance** du moteur, pas une évolution, et ça a
+son ticket — après quoi le contrôle apparié ci-dessus est à rejouer tel quel :
+il est écrit pour ça.
+
+**Un reste n'est pas expliqué**, et il faut l'écrire aussi. Sur le limon acide
+de Sologne, l'horizon ajouté est du **sable** : il ne devient pas le goulot de
+drainage du profil (la conductivité minimale reste celle de l'horizon lessivé,
+209 mm/semaine, avant comme après) et l'engorgement des horizons enracinés
+**baisse** — 48 % → 39 % puis 42 % → 16 % au fil de l'année. Le sol n'y est ni
+plus sec ni plus asphyxiant, et le hêtre y perd pourtant 10,8 %. Ni l'eau ni
+l'anoxie ne rendent compte de ce cas-là ; il reste ouvert.
 
 ### Ce que le lot ne règle pas, et il faut le dire
 
