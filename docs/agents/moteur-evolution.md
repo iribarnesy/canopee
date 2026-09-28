@@ -61,7 +61,85 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (une guilde entière sans une ligne, #187 guilde 4)
+## Ce que le dernier lot a appris (le bois se mange, #187 guilde 5)
+
+### Payer la dette d'abord, sinon la guilde l'aggrave
+
+Le module triait en `gite === "cavite" ? … : …`, **écrit deux fois** — dans
+`departs` et dans `installations`. Avec deux familles c'était lisible ; une
+troisième en aurait fait deux endroits à tenir d'accord pour chaque famille
+suivante.
+
+Le lot a donc commencé par réduire les deux à un `giteConvient`, **avant**
+d'ajouter quoi que ce soit. Et l'essai qui le garde n'inspecte pas le code : il
+éprouve la conséquence — pour chacune des cinq familles, un arbre qui
+n'accueillerait pas fait partir celui qui y est. Si les deux chemins
+divergeaient un jour, cette ligne tomberait.
+
+### J'ai annoncé « une ligne », et c'était faux — vérifier son propre chiffrage
+
+J'avais écrit sur l'issue que les saproxyliques demandaient une ligne. Je l'ai
+vérifié avant que le propriétaire ne donne son feu vert dessus, et c'était faux
+pour deux raisons : le branchement est double, et surtout **la guilde n'a pas un
+gîte mais deux, opposés** — le capricorne exige `alive: true`, la rosalie
+`alive: false`.
+
+Un chiffrage annoncé sert à décider. Le corriger avant la décision coûte un
+commentaire ; le laisser coûte le lot.
+
+### La grandeur manquait-elle vraiment ? Le commentaire disait déjà oui
+
+`CARIE_EVIDEE` vaut 0,45, et son commentaire disait : *« une colonne de carie
+n'est pas un trou : c'est d'abord du bois pourri encore en place […] que la
+faune finit de curer »*. **La faune n'existait pas, et le commentaire la nommait
+déjà.** Le complément `1 − CARIE_EVIDEE` était la ration, il n'y avait qu'à
+l'écrire — aucune constante nouvelle.
+
+D'où l'identité qui tient le lot : `volumeCaviteTroncL + volumeBoisPourriL`
+redonne la colonne entière. **L'oiseau habite le vide, la larve mange la paroi,
+et le même vieux chêne rend les deux sans que rien ne les arbitre.**
+
+Avant d'ajouter une grandeur, relire les commentaires des constantes voisines :
+celui qui a écrit la constante avait souvent déjà vu ce qui manquait.
+
+### Un compte ne se compare à rien ; un taux, si
+
+Le premier relevé disait **« 5 à 9 pique-prunes à l'hectare »**. Grand ou petit ?
+Aucune source ne répond, parce que la littérature ne compte pas comme ça.
+
+Rapporté à l'offre — 23 et 34 arbres à creux de 40 litres sur la parcelle — le
+même relevé donne **22 % et 26 % d'arbres favorables occupés**, et là le terrain
+répond : 5 à 20 % dans un bon bocage, jusqu'à 30 % dans les exceptionnels. Le
+moteur est au haut de la fourchette, pas au-dessus, et l'effectif absolu était
+grand parce que **le peuplement de banc est riche en creux**, pas parce que la
+fiche était laxiste.
+
+C'est la troisième fois que ce lot-ci bute sur la même chose : **dire à voix
+haute ce que le chiffre agrège avant de le juger.** Ici, le dénominateur
+manquait.
+
+### Une absence n'est pas un blocage — le vérifier plutôt que le supposer
+
+La rosalie ne s'installe sur aucune des cinq graines. La lecture paresseuse est
+« un seuil est inatteignable, la fiche est décorative ». Mesuré : **sept
+chandelles éligibles** sur l'une d'elles, la plus grosse à 40 cm sur 19,7 m et
+1 243 litres. Le seuil est atteignable ; c'est la rareté qui décide — 1,7 % de
+chance par arbre éligible et par an.
+
+Et c'est le bon comportement : une chênaie de soixante ans ne fait presque pas
+de gros bois mort sur pied. Compter les **gîtes éligibles** avant de conclure
+quoi que ce soit d'un effectif nul coûte un banc de cinq minutes.
+
+### Ce qu'un format ne sait pas dire doit être écrit, pas contourné
+
+La rosalie est d'abord une bête de **hêtre**. `EspeceFaune` n'a pas de champ
+« telle essence », et **il ne doit pas en avoir** : ce serait le cas particulier
+par espèce que ce dépôt s'interdit. Elle prendra donc toute chandelle feuillue
+assez grosse, et la fiche le dit. Ce qui lèverait la limite est un trait
+d'arbre que le gîte pourrait lire — la densité du bois est déjà à l'atlas —, et
+c'est un lot à soi.
+
+## Ce qu'un lot plus ancien a appris (une guilde entière sans une ligne, #187 guilde 4)
 
 ### Une promesse écrite dans un module doit finir par être éprouvée
 

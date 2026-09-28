@@ -32,7 +32,13 @@
 
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
-import { diametreCaviteCm, volumeCaviteTotalL } from "../../src/engine/cavites";
+import {
+  diametreCaviteCm,
+  volumeBoisPourriL,
+  volumeCaviteTotalL,
+  volumeCaviteTroncL,
+  volumeChandelleL,
+} from "../../src/engine/cavites";
 import {
   bilanDeTable,
   couvertureAuxiliaires,
@@ -54,6 +60,7 @@ import { createGameState, type GameState, plantAt, type Station } from "../../sr
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { stateHash } from "../../src/engine/tick";
 import type { TreeState } from "../../src/engine/trees";
+import { volumeTigeM3 } from "../../src/engine/trees";
 
 /** Un arbre, creusé à la part de rayon demandée. */
 function arbre(id: number, x: number, y: number, diametreCm: number, partRayon: number): TreeState {
@@ -73,6 +80,34 @@ function arbre(id: number, x: number, y: number, diametreCm: number, partRayon: 
         carie: { rayonCm: (diametreCm / 2) * partRayon, barriereCm: diametreCm / 2 },
       }
     : base;
+}
+
+/**
+ * Un fût carié dont on choisit la **hauteur**.
+ *
+ * L'aide `arbre` ci-dessus lie la hauteur au diamètre (× 0,45), ce qui convient
+ * tant qu'on éprouve le creux. Dès qu'on éprouve ce qui est **au-dessus du sol**,
+ * il faut pouvoir faire varier l'une sans l'autre — sinon un arbre bas est aussi
+ * un arbre grêle, et on ne saurait pas lequel des deux a fermé la porte.
+ */
+function futCarie(
+  id: number,
+  diametreCm: number,
+  hauteurM: number,
+  partRayon: number,
+  vivant = true,
+): TreeState {
+  return {
+    id,
+    x: 50,
+    y: 50,
+    especeId: "quercus_pubescens",
+    alive: vivant,
+    heightM: hauteurM,
+    diametreCm,
+    recepages: 0,
+    carie: { rayonCm: (diametreCm / 2) * partRayon, barriereCm: diametreCm / 2 },
+  } as unknown as TreeState;
 }
 
 const SEMAINE_MESANGES = 13;
@@ -686,29 +721,6 @@ describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {
 });
 
 describe("les chauves-souris héritent, et elles ne comptent pas toutes pareil (guilde 4)", () => {
-  /**
-   * Un fût carié dont on choisit la **hauteur**.
-   *
-   * L'aide `arbre` plus haut lie la hauteur au diamètre (× 0,45), ce qui
-   * convient tant qu'on éprouve le creux. Ici on éprouve ce qui est **au-dessus
-   * du sol**, et il faut donc pouvoir faire varier l'une sans l'autre — sinon un
-   * arbre bas est aussi un arbre grêle, et on ne saurait pas lequel des deux a
-   * fermé la porte.
-   */
-  function futCarie(id: number, diametreCm: number, hauteurM: number, partRayon: number) {
-    return {
-      id,
-      x: 50,
-      y: 50,
-      especeId: "quercus_pubescens",
-      alive: true,
-      heightM: hauteurM,
-      diametreCm,
-      recepages: 0,
-      carie: { rayonCm: (diametreCm / 2) * partRayon, barriereCm: diametreCm / 2 },
-    } as unknown as TreeState;
-  }
-
   /** Combien de fois l'espèce vient, sur quarante arbres — une installation est un tirage. */
   function essais(fabrique: (id: number) => TreeState, semaine: number, especeId: string): number {
     let venus = 0;
@@ -831,5 +843,151 @@ describe("les chauves-souris héritent, et elles ne comptent pas toutes pareil (
       venus += nouveaux.length;
     }
     expect(venus).toBeLessThan(10);
+  });
+});
+
+describe("le bois se mange, et ce n'est pas le vide qui se loge (guilde 5)", () => {
+  const SEMAINE_PIQUE_PRUNE = 26;
+  const SEMAINE_CAPRICORNE = 24;
+  const SEMAINE_ROSALIE = 29;
+
+  /** Combien de fois l'espèce vient, sur quarante arbres — une installation est un tirage. */
+  function essais(fabrique: (id: number) => TreeState, semaine: number, especeId: string): number {
+    let venus = 0;
+    for (let id = 1; id <= 40; id++) {
+      const nouveaux = installations(
+        [],
+        [fabrique(id)],
+        semaine,
+        id,
+        GRANDE_PARCELLE_M2,
+        DIMS,
+        TABLE_PLEINE,
+      );
+      if (nouveaux.some((n) => n.individu.especeId === especeId)) venus++;
+    }
+    return venus;
+  }
+
+  it("le même chêne rend DEUX matières, et elles ne se disputent pas", () => {
+    // **l'énoncé de la guilde, et il se vérifie par une identité.** L'oiseau
+    // habite le vide, la larve mange la paroi ; `CARIE_EVIDEE` partage la
+    // colonne entre les deux et rien ne se perd. Le vieux chêne carié nourrit
+    // donc les deux guildes **sans qu'aucune constante nouvelle ne l'arbitre**.
+    const chene = futCarie(1, 70, 28, 0.6);
+    const colonneL = volumeTigeM3(70 * 0.6, 28) * 1000;
+    expect(volumeCaviteTroncL(chene) + volumeBoisPourriL(chene)).toBeCloseTo(colonneL, 9);
+    // Et les deux sont servis : une chevêche dans le creux, un capricorne dans
+    // la paroi, sur le même arbre et la même semaine si les dates coïncidaient.
+    expect(essais((id) => futCarie(id, 70, 28, 0.6), 12, "chouette_cheveche")).toBeGreaterThan(0);
+    expect(
+      essais((id) => futCarie(id, 70, 28, 0.6), SEMAINE_CAPRICORNE, "grand_capricorne"),
+    ).toBeGreaterThan(0);
+  });
+
+  it("le capricorne veut le vivant, la rosalie le mort — le même fût, deux réponses", () => {
+    // Et c'est **l'inverse** du tri de toutes les guildes précédentes : là où
+    // `supporteUnGiteConstruit` exige une ramure vivante, la rosalie exige une
+    // chandelle. Le champ `alive` décide dans les deux sens, désormais.
+    const vivant = (id: number) => futCarie(id, 70, 28, 0.6, true);
+    const mort = (id: number) => futCarie(id, 70, 28, 0.6, false);
+    expect(essais(vivant, SEMAINE_CAPRICORNE, "grand_capricorne")).toBeGreaterThan(0);
+    expect(essais(mort, SEMAINE_CAPRICORNE, "grand_capricorne")).toBe(0);
+    expect(essais(mort, SEMAINE_ROSALIE, "rosalie_des_alpes")).toBeGreaterThan(0);
+    expect(essais(vivant, SEMAINE_ROSALIE, "rosalie_des_alpes")).toBe(0);
+    // Le volume le dit aussi, et sans détour.
+    expect(volumeChandelleL(mort(1))).toBeGreaterThan(0);
+    expect(volumeChandelleL(vivant(1))).toBe(0);
+  });
+
+  it("et la rosalie veut du mort DEBOUT : un chicot de deux mètres ne suffit pas", () => {
+    // Un tronc couché à l'ombre n'est pas son gîte, et le moteur n'a pas d'autre
+    // manière de dire « debout » que la hauteur. Trois mètres écartent la souche.
+    const chandelle = (id: number) => futCarie(id, 70, 20, 0.6, false);
+    const chicot = (id: number) => futCarie(id, 70, 2, 0.6, false);
+    expect(essais(chandelle, SEMAINE_ROSALIE, "rosalie_des_alpes")).toBeGreaterThan(0);
+    expect(essais(chicot, SEMAINE_ROSALIE, "rosalie_des_alpes")).toBe(0);
+  });
+
+  it("le grand capricorne est un indicateur de TRÈS gros arbres, et le seuil le dit", () => {
+    // Soixante centimètres, et c'est ce qui fait de l'espèce ce qu'elle est en
+    // conservation. Un chêne de quarante centimètres, carié au même degré et
+    // aussi haut, ne suffit pas — ce n'est pas le bois qui manque, c'est l'âge.
+    const petit = (id: number) => futCarie(id, 40, 28, 0.6);
+    const gros = (id: number) => futCarie(id, 70, 28, 0.6);
+    expect(volumeBoisPourriL(petit(1))).toBeGreaterThan(50);
+    expect(essais(petit, SEMAINE_CAPRICORNE, "grand_capricorne")).toBe(0);
+    expect(essais(gros, SEMAINE_CAPRICORNE, "grand_capricorne")).toBeGreaterThan(0);
+  });
+
+  it("le pique-prune n'a demandé AUCUNE famille nouvelle, et son entrée ne le trie pas", () => {
+    // Il loge dans le vide comme une mésange : c'est un `cavite` ordinaire, et
+    // c'est la preuve que le lot n'a ouvert que ce qu'il devait.
+    //
+    // Mais **le calibre ne le sélectionne pas**, parce qu'il ne sort pas. Un fût
+    // élancé dont la chambre fait soixante millimètres offre assez de terreau
+    // pour lui et **ferme la porte à la chevêche**, qui en demande soixante-dix :
+    // le même creux, deux réponses, et aucune n'est écrite dans le code.
+    const eleve = (id: number) => futCarie(id, 20, 30, 0.45);
+    expect(especeFaune("pique_prune")?.gite).toBe("cavite");
+    expect(diametreCaviteCm(eleve(1)) * 10).toBeLessThan(70);
+    expect(volumeCaviteTotalL(eleve(1))).toBeGreaterThan(40);
+    expect(essais(eleve, SEMAINE_PIQUE_PRUNE, "pique_prune")).toBeGreaterThan(0);
+    expect(essais(eleve, 12, "chouette_cheveche")).toBe(0);
+  });
+
+  it("aucun saproxylique ne compte comme auxiliaire, et c'est la fiche qui tranche", () => {
+    // Une larve de capricorne mange du bois, pas des chenilles. Aucune des trois
+    // ne déclare de table — non par manque, comme l'écureuil, mais parce que
+    // **le gîte EST la table** —, et la même ligne qui écarte l'écureuil les
+    // écarte.
+    const petit: GridDims = { widthM: 60, heightM: 60 };
+    const centre = 30 * petit.widthM + 30;
+    for (const id of ["pique_prune", "grand_capricorne", "rosalie_des_alpes"]) {
+      expect(especeFaune(id)?.table).toBeUndefined();
+      const occupant: IndividuFaune = {
+        id: 1,
+        especeId: id,
+        arbreId: 1,
+        x: 30,
+        y: 30,
+        depuisSemaine: 0,
+      };
+      expect(couvertureAuxiliaires([occupant], petit)[centre] ?? 0).toBe(0);
+    }
+  });
+
+  it("et le tri est en UN endroit : ce qui fait entrer fait sortir, pour les cinq familles", () => {
+    // **la dette que ce lot a payée d'abord.** `departs` et `installations`
+    // portaient chacun leur `gite === "cavite" ? … : …` ; une troisième famille
+    // aurait fait deux endroits à tenir d'accord pour chaque famille suivante.
+    //
+    // L'essai ne lit pas le code, il éprouve la conséquence : pour **chaque**
+    // famille, un arbre qui n'accueillerait pas fait partir celui qui y est. Si
+    // les deux chemins divergeaient un jour, cette ligne tomberait.
+    const cas: [string, TreeState, TreeState][] = [
+      ["mesange_bleue", futCarie(1, 50, 22, 0.6), arbre(1, 50, 50, 50, 0)],
+      ["ecureuil_roux", arbre(1, 50, 50, 60, 0), arbre(1, 50, 50, 10, 0)],
+      ["grand_capricorne", futCarie(1, 70, 28, 0.6), futCarie(1, 40, 28, 0.6)],
+      ["rosalie_des_alpes", futCarie(1, 70, 20, 0.6, false), futCarie(1, 70, 20, 0.6, true)],
+    ];
+    for (const [especeId, bon, mauvais] of cas) {
+      const occupant: IndividuFaune = {
+        id: 1,
+        especeId,
+        arbreId: 1,
+        x: 50,
+        y: 50,
+        depuisSemaine: 0,
+      };
+      // Le bon arbre accueille — donc il ne fait partir personne.
+      expect(departs([occupant], [bon]), especeId).toEqual([]);
+      // Le mauvais n'accueille pas — donc il expulse.
+      const sortants = departs([occupant], [mauvais]);
+      expect(
+        sortants.map((d) => d.cause),
+        especeId,
+      ).toEqual(["giteTropPetit"]);
+    }
   });
 });

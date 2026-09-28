@@ -78,7 +78,13 @@
  * et l'empreinte de la partie est celle d'avant.
  */
 
-import { diametreCaviteCm, hauteurCaviteM, volumeCaviteTotalL } from "./cavites";
+import {
+  diametreCaviteCm,
+  hauteurCaviteM,
+  volumeBoisPourriL,
+  volumeCaviteTotalL,
+  volumeChandelleL,
+} from "./cavites";
 import { forEachDiscCell, type GridDims, type GrilleLue } from "./grid";
 import type { TreeState } from "./trees";
 
@@ -92,8 +98,20 @@ import type { TreeState } from "./trees";
  *    décide est le support : un arbre assez gros, assez haut.
  *  - `aire` — un nid de branches posé sur une fourche maîtresse. Même logique
  *    que la hutte, en beaucoup plus exigeant.
+ *  - `boisDeCoeur` — l'animal se développe **dans** le bois, et le bois est celui
+ *    d'un arbre **vivant** : la colonne de carie d'un vieux chêne, que le
+ *    champignon a rendue tendre et que l'aubier vivant entoure encore. Ce qui
+ *    décide est le volume de bois pourri, pas le vide (`volumeBoisPourriL`).
+ *  - `chandelle` — même chose sur un arbre **mort encore debout**, dont le fût
+ *    tout entier est du bois mort (`volumeChandelleL`).
+ *
+ * **Les deux dernières ne sont pas une variante des trois premières, et c'est
+ * pourquoi elles ont demandé un lot.** Un oiseau habite un vide et une larve
+ * mange une paroi : ni la même matière, ni le même arbre. Le même vieux chêne
+ * carié rend les deux sans se contredire, et c'est le fait de terrain — un
+ * arbre-habitat héberge plusieurs guildes, chacune sur ce qu'elle consomme.
  */
-export type TypeDeGite = "cavite" | "hutte" | "aire";
+export type TypeDeGite = "cavite" | "hutte" | "aire" | "boisDeCoeur" | "chandelle";
 
 /**
  * **ce qui nourrit**, et d'où le moteur le tire.
@@ -143,10 +161,18 @@ export interface EspeceFaune {
   nomLatin: string;
   gite: TypeDeGite;
   /**
-   * Volume de loge, litres — ce que l'animal occupe dans le creux *(à
-   * calibrer ; ancré sur le volume intérieur des nichoirs normalisés, qui est
-   * la seule mesure publiée de ce que ces espèces acceptent)*. Ignoré hors
-   * `cavite`.
+   * Ce que l'animal demande à l'arbre, litres — et **la matière change avec le
+   * gîte**, pas le champ :
+   *
+   *  - `cavite` — le volume de la **loge** qu'il occupe dans le creux *(à
+   *    calibrer ; ancré sur le volume intérieur des nichoirs normalisés, qui est
+   *    la seule mesure publiée de ce que ces espèces acceptent)* ;
+   *  - `boisDeCoeur`, `chandelle` — les litres de **bois à manger** dont la
+   *    population a besoin (guilde 5).
+   *
+   * C'est le même champ parce que c'est la même question : « l'arbre en a-t-il
+   * assez pour cet animal-là ». Ignoré pour les gîtes construits, qui se jugent
+   * sur le support.
    */
   volumeLogeL: number;
   /**
@@ -443,6 +469,137 @@ export const FAUNE: readonly EspeceFaune[] = [
     // table, elle est jugée sur son seul gîte, et `couvertureAuxiliaires`
     // l'ignore : c'est exactement ce qu'on veut.
   },
+
+  // ── **les saproxyliques** (issue #187, guilde 5) ───────────────────────────────
+  //
+  // **Le gîte EST la table**, et c'est ce qui les distingue de tout le reste de
+  // l'atlas : une larve de capricorne mange le bois où elle vit. Aucune n'a donc
+  // de `table` — non par manque, comme l'écureuil ou la noctule, mais parce que
+  // la question ne se pose pas. `couvertureAuxiliaires` les ignore, et c'est
+  // juste : un lucane n'écrête pas une pullulation de chenilles.
+  //
+  // **L'individu est ici la population de l'arbre**, comme la colonie l'était
+  // pour les chauves-souris, et pour une raison plus forte encore : un vieux
+  // chêne porte des dizaines de larves de capricorne, et c'est **l'arbre** qui
+  // est occupé ou non. « Combien de vos arbres portent une population » est la
+  // question que pose la conservation, et c'est celle que le moteur rend.
+  //
+  // D'où des territoires **courts** — quelques dizaines de mètres — qui ne sont
+  // pas des domaines vitaux mais des distances de dispersion. Ces insectes sont
+  // parmi les plus sédentaires qu'on connaisse ; c'est précisément ce qui les
+  // rend vulnérables, et ce que `colonisationParAn`, très bas, dit à son tour :
+  // **un arbre-habitat abattu ne se remplace pas en une génération.**
+  //
+  // ── **ce que la mesure a dit, et comment il faut lire le chiffre** ──────────────
+  //
+  // Vieille chênaie d'un hectare, soixante ans, cinq graines. Le premier relevé
+  // se lisait « 5 à 9 pique-prunes à l'hectare », et c'est un **compte**, donc
+  // c'est la mauvaise lecture. Compté contre l'offre :
+  //
+  //     graine 11   23 arbres à creux de 40 L    5 occupés   22 %
+  //     graine 37   34                           9           26 %
+  //
+  // **Un taux d'occupation des arbres favorables**, et là le chiffre se compare :
+  // le terrain donne 5 à 20 % dans un bon bocage, jusqu'à 30 % dans les
+  // exceptionnels. Le moteur est donc au haut de la fourchette, pas au-dessus —
+  // et l'effectif absolu est grand parce que **le peuplement de banc est riche en
+  // creux** (23 à 34 gros arbres creux à l'hectare, contre 5 à 20 dans une
+  // futaie réelle), pas parce que la fiche est laxiste.
+  //
+  // Le capricorne suit exactement les très gros arbres : une tige de plus de
+  // soixante centimètres sur les graines 11 et 37, une population sur la 51 qui
+  // en portait trois. **C'est ce que l'espèce indique**, et le moteur le rend sans
+  // qu'on l'ait demandé.
+  //
+  // La rosalie ne s'installe sur aucune des cinq, et ce n'est pas un seuil
+  // inatteignable : sept chandelles éligibles sur la graine 11 (la plus grosse
+  // fait 40 cm sur 19,7 m, soit 1 243 L). C'est la **rareté** — 1,7 % de chance
+  // par arbre éligible et par an, une poignée d'arbres éligibles à la fois. Une
+  // chênaie de soixante ans ne fait presque pas de gros bois mort sur pied, et
+  // c'est le fait.
+  {
+    id: "pique_prune",
+    nom: "pique-prune",
+    nomLatin: "Osmoderma eremita",
+    // Le seul des trois à loger dans le **vide** : il vit dans le terreau qui
+    // s'accumule au fond d'une grande cavité de tronc. C'est donc un `cavite`
+    // ordinaire, et **il n'a demandé aucune des deux familles nouvelles** — la
+    // preuve, s'il en fallait une, que le lot n'a ouvert que ce qu'il devait.
+    gite: "cavite",
+    // Il lui faut une **grande** cavité à terreau, celle d'un vieux têtard ou
+    // d'un chêne creux — les arbres occupés dépassent la cinquantaine de
+    // centimètres de diamètre *(à calibrer)*.
+    volumeLogeL: 40,
+    // **Zéro, et c'est une position tenue.** Le diamètre d'entrée trie les
+    // oiseaux parce qu'ils entrent et sortent chaque jour ; l'osmoderme passe sa
+    // vie dedans et ne vole presque pas. Ce n'est pas le trou qui le sélectionne.
+    entreeMinMm: 0,
+    // Les cavités occupées vont du pied à la couronne : la hauteur ne trie pas.
+    hauteurGiteMinM: 0,
+    supportMinCm: 0,
+    // **La dispersion la plus courte de l'atlas**, et elle est documentée : la
+    // plupart des individus ne quittent jamais leur arbre natal, et le
+    // déplacement médian se compte en dizaines de mètres. Deux vieux têtards
+    // voisins portent donc chacun leur population, ce qui est le fait du bocage.
+    territoireM: 30,
+    // Les adultes sortent en plein été.
+    semaineInstallation: 26,
+    // **L'emblème de la colonisation lente.** Une cavité neuve reste vide des
+    // décennies s'il n'y a pas de source à portée *(à calibrer)*.
+    colonisationParAn: 0.08,
+  },
+  {
+    id: "grand_capricorne",
+    nom: "grand capricorne",
+    nomLatin: "Cerambyx cerdo",
+    // La larve creuse ses galeries dans le bois de cœur d'un chêne **vivant** :
+    // c'est la colonne de carie, vue par ce qui la mange.
+    gite: "boisDeCoeur",
+    // Litres de bois pourri qu'il faut à une population *(à calibrer)*.
+    volumeLogeL: 50,
+    entreeMinMm: 0,
+    hauteurGiteMinM: 0,
+    // **Le très gros arbre, et lui seul** : les chênes occupés font plus de
+    // soixante centimètres de diamètre, souvent bien plus. C'est ce seuil qui
+    // fait de l'espèce un indicateur d'arbres âgés.
+    supportMinCm: 60,
+    // Disperse mieux que l'osmoderme, mais les arbres occupés se groupent.
+    territoireM: 100,
+    // Les adultes volent de juin à août.
+    semaineInstallation: 24,
+    colonisationParAn: 0.15,
+  },
+  {
+    id: "rosalie_des_alpes",
+    nom: "rosalie des Alpes",
+    nomLatin: "Rosalia alpina",
+    // Le bois **mort sur pied**, ensoleillé. C'est la guilde qui donne enfin un
+    // lecteur au critère J8 du référentiel — *« un arbre mort reste debout des
+    // années : c'est LE bois mort qui compte pour la faune »* — qu'aucun
+    // individu ne lisait jusqu'ici.
+    gite: "chandelle",
+    // Un fût mort entier en offre beaucoup : le seuil dit « une chandelle, pas
+    // une branche » *(à calibrer)*.
+    volumeLogeL: 100,
+    entreeMinMm: 0,
+    // **Debout, et c'est tout le sujet** : la rosalie ne prend pas un tronc
+    // couché à l'ombre, il lui faut du bois mort sec et exposé. Trois mètres
+    // écartent la souche et le chicot.
+    hauteurGiteMinM: 3,
+    supportMinCm: 30,
+    territoireM: 150,
+    // Les adultes volent en juillet-août, sur les grumes et les chandelles
+    // ensoleillées.
+    semaineInstallation: 29,
+    colonisationParAn: 0.12,
+    // **Ce que la fiche ne sait pas dire, et il faut l'écrire** : en France la
+    // rosalie est d'abord une bête de **hêtre**. Le format n'a pas de champ pour
+    // « telle essence », et il ne doit pas en avoir — ce serait le cas
+    // particulier par espèce que ce dépôt s'interdit. Elle prendra donc toute
+    // chandelle feuillue assez grosse. Ce qui lèverait vraiment la limite est un
+    // trait d'arbre que le gîte pourrait lire (la densité du bois est déjà à
+    // l'atlas), et c'est un lot à soi.
+  },
 ];
 
 const PAR_ID = new Map(FAUNE.map((e) => [e.id, e]));
@@ -489,8 +646,10 @@ export interface DepartFaune {
 /**
  * L'arbre offre-t-il le support d'un gîte **construit** (hutte, aire) ?
  *
- * Une chandelle sèche ne porte pas d'aire : il faut une ramure. C'est le seul
- * endroit où `alive` compte, et il compte pour une raison physique.
+ * Une chandelle sèche ne porte pas d'aire : il faut une ramure. `alive` compte
+ * ici pour une raison physique — et depuis la guilde 5 il compte aussi dans
+ * `boisConvient`, où il décide de l'inverse : la larve veut le bois que
+ * l'oiseau fuit.
  */
 function supporteUnGiteConstruit(tree: TreeState, espece: EspeceFaune): boolean {
   return (
@@ -513,6 +672,45 @@ function creuxConvient(tree: TreeState, espece: EspeceFaune): boolean {
   // **nécessaire** et pas suffisante, et c'est écrit plutôt que masqué.
   if (diametreCaviteCm(tree) * 10 < espece.entreeMinMm) return false;
   return hauteurCaviteM(tree) >= espece.hauteurGiteMinM;
+}
+
+/**
+ * Le bois de l'arbre nourrit-il une larve de saproxylique (guilde 5) ?
+ *
+ * Deux substrats, et le même chiffre de fiche les mesure : `volumeLogeL` cesse
+ * d'être des litres de chambre pour devenir des **litres de bois à manger**.
+ * C'est le même champ parce que c'est la même question — « l'arbre en a-t-il
+ * assez pour cet animal-là ».
+ */
+function boisConvient(tree: TreeState, espece: EspeceFaune): boolean {
+  if (tree.diametreCm < espece.supportMinCm) return false;
+  if (tree.heightM < espece.hauteurGiteMinM) return false;
+  const litres =
+    espece.gite === "chandelle" ? volumeChandelleL(tree) : tree.alive ? volumeBoisPourriL(tree) : 0;
+  return litres >= espece.volumeLogeL;
+}
+
+/**
+ * **L'arbre convient-il à l'espèce ?** Le tri, en un seul endroit.
+ *
+ * Il y en avait **deux** avant la guilde 5, et ils disaient la même chose : un
+ * `gite === "cavite" ? … : …` dans `departs`, le même dans `installations`.
+ * Tant que le module ne connaissait que deux familles, la duplication était
+ * lisible ; une troisième l'aurait rendue dangereuse — deux endroits à tenir
+ * d'accord pour chaque famille qu'on ajoute. La guilde a donc commencé par
+ * payer cette dette-là, et elle n'en a pas contracté de nouvelle : la prochaine
+ * famille se déclare ici, une fois.
+ */
+function giteConvient(tree: TreeState, espece: EspeceFaune): boolean {
+  switch (espece.gite) {
+    case "cavite":
+      return creuxConvient(tree, espece);
+    case "boisDeCoeur":
+    case "chandelle":
+      return boisConvient(tree, espece);
+    default:
+      return supporteUnGiteConstruit(tree, espece);
+  }
 }
 
 /**
@@ -613,11 +811,7 @@ export function departs(
     }
     const espece = especeFaune(individu.especeId);
     if (espece === undefined) continue;
-    const tientEncore =
-      espece.gite === "cavite"
-        ? creuxConvient(arbre, espece)
-        : supporteUnGiteConstruit(arbre, espece);
-    if (!tientEncore) sortants.push({ individu, cause: "giteTropPetit" });
+    if (!giteConvient(arbre, espece)) sortants.push({ individu, cause: "giteTropPetit" });
   }
   return sortants;
 }
@@ -805,13 +999,18 @@ export function installations(
   let prochainId = premierId;
   for (const espece of especes) {
     for (const arbre of trees) {
+      if (!giteConvient(arbre, espece)) continue;
       if (espece.gite === "cavite") {
-        if (!creuxConvient(arbre, espece)) continue;
+        // Un creux se **partage** en litres : un vieux chêne à deux cents litres
+        // loge plusieurs pensionnaires.
         const reste = volumeCaviteTotalL(arbre) - litresOccupes(presents, arbre.id);
         if (reste < espece.volumeLogeL) continue;
-      } else {
-        if (!supporteUnGiteConstruit(arbre, espece)) continue;
-        if (porteDejaCeGite(presents, arbre.id, espece.gite)) continue;
+      } else if (porteDejaCeGite(presents, arbre.id, espece.gite)) {
+        // Tout le reste est **exclusif** par arbre : une seule aire, une seule
+        // hutte — et, pour les saproxyliques, une seule population, parce que
+        // l'individu du modèle **est** la population de l'arbre (voir leur
+        // fournée dans l'atlas).
+        continue;
       }
       if (!territoireLibre(presents, espece, arbre.x, arbre.y)) continue;
       // **un gîte et une table, et la plus rare décide.** C'est l'idiome que le
