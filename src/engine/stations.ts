@@ -453,7 +453,9 @@ export const SUBERAIE_MAURES: StationClimat = {
  * hiver (68 % de 800 mm contre 55 % de 750). Sur le même sol et le même
  * paysage, et sur le climat synthétique correspondant, le pin monte **plus
  * vite** à vingt ans — 10,10 et 9,56 m contre 9,43 et 8,58 sous Abbeville — et
- * il n'en reste **aucun** à quarante, sur les deux graines essayées. Deux causes, et elles n'ont pas le même statut : deux
+ * il n'en reste **aucun** à quarante, sur les deux graines essayées.
+ *
+ * Deux causes, et elles n'ont pas le même statut : deux
  * ou trois semis meurent d'**engorgement** à trois ans et trois mois, au même
  * mois sur les deux graines — un sable se noie quand l'hiver recharge plus vite
  * que la pente n'évacue, et là c'est le climat qui parle ; les autres versent en
