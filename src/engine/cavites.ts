@@ -77,6 +77,53 @@ export function volumeCaviteTroncL(
   return volumeTigeM3(diametreCarieCm, tree.heightM) * CARIE_EVIDEE * 1000;
 }
 
+/**
+ * Le **bois pourri encore en place** d'une colonne de carie, litres (issue #187,
+ * guilde 5).
+ *
+ * C'est le **complément** du creux, et il ne demande aucune constante nouvelle :
+ * `CARIE_EVIDEE` dit quelle part de la colonne est vide, donc `1 − CARIE_EVIDEE`
+ * dit quelle part est encore du bois. Le commentaire de cette constante nommait
+ * déjà le consommateur sans l'avoir — *« du bois pourri encore en place, que les
+ * champignons minéralisent lentement et **que la faune finit de curer** »*. Voici
+ * la faune, et voici sa ration.
+ *
+ * **Deux lectures du même arbre, et elles ne se disputent pas** : l'oiseau habite
+ * le vide, la larve mange la paroi. Un vieux chêne carié rend donc les deux, et
+ * c'est le fait de terrain — un arbre-habitat n'héberge pas une guilde, il en
+ * héberge plusieurs, chacune sur une matière différente.
+ *
+ * Ne compte que le fût : une tête de têtard est un creux d'exploitation, pas une
+ * colonne de carie du bois de cœur, et le moteur ne sait pas ce qu'il y reste de
+ * bois en décomposition.
+ */
+export function volumeBoisPourriL(
+  tree: Pick<TreeState, "carie" | "diametreCm" | "heightM">,
+): number {
+  const rayonCm = tree.carie?.rayonCm ?? 0;
+  if (rayonCm <= 0) return 0;
+  const diametreCarieCm = Math.min(tree.diametreCm, 2 * rayonCm);
+  return volumeTigeM3(diametreCarieCm, tree.heightM) * (1 - CARIE_EVIDEE) * 1000;
+}
+
+/**
+ * Le bois mort d'une **chandelle**, litres (issue #187, guilde 5).
+ *
+ * Un arbre mort encore debout est du bois mort **en entier**, et c'est ce qui le
+ * distingue du précédent : on ne cherche plus une colonne dans un fût vivant,
+ * le fût tout entier en est une. C'est exactement ce que J8 du référentiel
+ * affirme — *« un arbre mort reste debout des années : c'est LE bois mort qui
+ * compte pour la faune »* — et jusqu'ici aucun individu ne le lisait.
+ *
+ * Rend zéro sur un arbre vivant : la question ne se pose pas.
+ */
+export function volumeChandelleL(
+  tree: Pick<TreeState, "alive" | "diametreCm" | "heightM">,
+): number {
+  if (tree.alive) return 0;
+  return volumeTigeM3(tree.diametreCm, tree.heightM) * 1000;
+}
+
 /** Tout le creux d'un arbre, litres : sa tête de trogne et son fût carié. */
 export function volumeCaviteTotalL(
   tree: Pick<TreeState, "carie" | "diametreCm" | "heightM" | "teteTrogneM" | "recepages">,
