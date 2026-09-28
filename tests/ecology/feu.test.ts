@@ -376,6 +376,16 @@ describe("ce que le feu consume et qui était déjà mort", () => {
           // Sa hauteur est celle qu'elle avait debout, de quoi la dessiner
           // avant de l'abattre.
           expect(c.hauteurM).toBeCloseTo(cetArbre?.heightM ?? -1, 6);
+          // **Et sa position, et son essence** (#246). Le premier jet ne les
+          // portait pas : la demande annonçait que le rendu relirait la
+          // position dans l'instantané, comme le fait la tempête pour ses
+          // chablis. C'était faux — une victime de tempête reste en jeu en
+          // chandelle, celle que le feu consume a quitté `state.trees` dans ce
+          // tick-ci. Elle n'est donc nulle part ailleurs, et un fût sans
+          // position ne se pose pas.
+          expect(c.x).toBeCloseTo(cetArbre?.x ?? -1, 6);
+          expect(c.y).toBeCloseTo(cetArbre?.y ?? -1, 6);
+          expect(c.especeId).toBe(cetArbre?.especeId);
           // Et elle ne compte pas deux fois : une victime est un arbre VIVANT
           // que le feu emporte.
           expect((r.incendie?.victimes ?? []).some((v) => v.id === c.id)).toBe(false);
