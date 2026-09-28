@@ -96,6 +96,26 @@ if veut torchage; then
     npx tsx scripts/apercu-scene.ts
 fi
 
+# ── Le banc des **fûts consumés** (#246) ──────────────────────────────────────
+# La friche de dix-huit ans ne peut pas le montrer non plus, et pour une raison
+# voisine : ses morts sont des ronces et des prunelliers d'un mètre. Mesuré, son
+# feu ne consume que **cinq** chandelles, hautes de 1,0 à 1,3 m.
+#
+# À quarante-cinq ans, la même friche donne ce qu'il faut : 7 479 cellules
+# brûlées, 2 378 arbres tués et **788 chandelles consumées** — les fûts qui
+# s'escamotaient entre deux images avant #246.
+#
+# `APERCU_FEU_GRAINES` essaie plusieurs départs sur la **même** parcelle et garde
+# le plus démonstratif : le vieillissement coûte les minutes, la propagation
+# coûte des millisecondes. Ici la graine 909 gagne d'un cheveu (788 contre 779
+# pour celle d'origine) ; la ligne est gardée telle quelle pour que la scène se
+# rejoue à l'identique.
+if veut chandelles; then
+  APERCU_NOM=feu-chandelles.json APERCU_ANS=45 APERCU_SEMAINES=30 APERCU_FEU=1 \
+    APERCU_FEU_GRAINES=202,404,606,808,909,1111,1313 \
+    npx tsx scripts/apercu-scene.ts
+fi
+
 # ── Le banc du bois couché ─────────────────────────────────────────────────
 # Deux troncs de vingt-cinq mètres, à deux azimuts. La transversalité n'est pas
 # forcée : `transversalite` du moteur la calcule depuis l'azimut posé et l'aval

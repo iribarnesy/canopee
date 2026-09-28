@@ -55,6 +55,8 @@ import {
   etatDuTorchage,
   etatMourantDe,
   feuEnCours,
+  futsConsumes,
+  futsConsumesATorcher,
   type IncendieAPoser,
   indexerLesChandellesTombees,
   indexerLesChutes,
@@ -65,6 +67,7 @@ import {
   particulesDuFeu,
   poseDeLaMort,
   poseDeLaRafale,
+  poseDuFutConsume,
   poseDuPlant,
   RIEN_NE_BRULE,
   remodelageDe,
@@ -337,8 +340,14 @@ export function useEllipse(
     const voiles = indexerLesVoiles(plan, coteM);
     const gestes = indexerLesGestes(plan);
     const feu = trouverLeFeu(plan);
+    // **Les fûts consumés brûlent avec les autres** (#246) : un seul index, et
+    // ce qui les distingue — il n'en reste rien — voyage dedans.
     const torches = feu
-      ? indexerLesTorches(feu, candidatsAuTorchage(snapshot), coteM)
+      ? indexerLesTorches(
+          feu,
+          [...candidatsAuTorchage(snapshot), ...futsConsumesATorcher(snapshot.incendie)],
+          coteM,
+        )
       : AUCUNE_TORCHE;
     const vent = ventDuSite(snapshot, station);
 
@@ -379,7 +388,13 @@ export function useEllipse(
     const depuis = (maintenantMs: number) => maintenantMs - debut.current;
 
     return {
-      tiges: [...tigesAbattues(gestes), ...chandellesTombees(plan)],
+      tiges: [
+        ...tigesAbattues(gestes),
+        ...chandellesTombees(plan),
+        // Reposés le temps de brûler : sans eux, 1 433 fûts s'escamotaient
+        // entre deux images sur l'incendie de l'an 19 (#236, #246).
+        ...futsConsumes(snapshot.incendie),
+      ],
       seTorche: (id) => torches.arbres.has(id),
       deformer: (id, maintenantMs, vue) => {
         const ecoule = depuis(maintenantMs);
@@ -389,8 +404,12 @@ export function useEllipse(
         // connaît pas rend `DEBOUT`, qui est neutre.
         if (id < 0) {
           return combiner(
-            chuteDeLaTige(gestes, ecoule, id, vue),
-            chuteDeLaChandelle(chandelles, ecoule, id, vue),
+            combiner(
+              chuteDeLaTige(gestes, ecoule, id, vue),
+              chuteDeLaChandelle(chandelles, ecoule, id, vue),
+            ),
+            // Un fût consumé ne tombe pas : il s'efface pendant qu'il flambe.
+            poseDuFutConsume(torches, ecoule, id),
           );
         }
         // Les canaux de **pose** se composent : franchir dix ans, c'est voir un
