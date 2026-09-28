@@ -18,7 +18,7 @@ import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { horizon } from "../../src/engine/soil";
 import { createGameState, plantScattered } from "../../src/engine/state";
-import { LIMON_RICHE, stationDepuisProfil } from "../../src/engine/stations";
+import { LIMON_RICHE, SABLE_PROFOND, stationDepuisProfil } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
 /**
@@ -66,7 +66,21 @@ export const TABLE: Record<string, Reference> = {
   // Jansen 1996, beuk, GK 8 (gamme 4→12), d'après Carbonnier 1971 et Schober 1972.
   fagus_sylvatica: { nom: "Hêtre", h20: 7.7, h40: 16.0 },
   // Jansen 1996, groveden, GK 8 (gamme 4→12), d'après Faber 1996a.
-  pinus_sylvestris: { nom: "Pin sylvestre", h20: 8.1, h40: 15.5 },
+  //
+  // **Et il ne se mesure pas sur le limon riche** (#254). La convention « cette
+  // station vaut la classe médiane » a été taillée pour des feuillus
+  // mésophiles ; le site médian d'un pin, dans la table néerlandaise qui le
+  // juge, est un **sable de couverture** — les pineraies que Jansen tabule
+  // poussent sur les podzols de dekzand. Le pin est donc jugé sur la station
+  // que sa source décrit, `SABLE_PROFOND`, et non sur celle des hêtres.
+  //
+  // Ce que ça change, mesuré sur quatre graines avant de toucher à quoi que ce
+  // soit : 16,6 m sur le limon riche (+7 %), 18,7 m sur le limon acide de
+  // Sologne (+21 %), 5,2 m sur la lande — dont une graine à zéro, le peuplement
+  // entier parti au feu à cinq ans et demi. Les stations **encadraient** la table
+  // sans la contenir, et c'est le dispositif qui manquait, pas le paramètre de
+  // l'espèce : `pousseMaxMAn` n'a pas bougé de 0,45.
+  pinus_sylvestris: { nom: "Pin sylvestre", h20: 8.1, h40: 15.5, sc: SABLE_PROFOND },
   // Jansen 1996, zwarte els, GK 6 (gamme 4→8), d'après Mitscherlich 1945.
   alnus_glutinosa: { nom: "Aulne", h20: 12.6, h40: 18.0 },
   // Jansen 1996, es, GK 6 (gamme 4→9), d'après Volquardts 1958.

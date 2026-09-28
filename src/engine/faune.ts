@@ -55,6 +55,19 @@
  * noctule est restée **sans table** parce que ce qu'elle mange n'est pas dans ce
  * moteur.
  *
+ * ── **#255 — le module dit enfin ce qu'il compte** ──────────────────────────────────
+ *
+ * Rien de mécanique n'a bougé dans ce lot-là : il a ajouté **un champ de fiche**,
+ * `unite`, et il l'a ajouté parce que la faune sortait enfin du moteur. Douze
+ * espèces s'installaient, partaient et écrêtaient les pullulations depuis trois
+ * lots sans que personne, hors d'ici, ne puisse lire une seule ligne de tout ça.
+ *
+ * Or dès qu'on nomme un individu à voix haute, le mot « individu » ment : c'est
+ * tantôt un couple nicheur, tantôt une colonie de parturition, tantôt la
+ * population d'un arbre. **Les fiches le disaient déjà, mais en prose** — et un
+ * commentaire ne traverse pas une frontière de module. `unite` est cette prose
+ * remontée dans le format, rien de plus, et aucune ligne du mécanisme ne la lit.
+ *
  * ── **la limite à connaître** : **la parcelle ne voit pas ses voisins** ──────────────
  *
  * Le territoire exclut les congénères **de la parcelle**, et rien d'autre. Sur une
@@ -114,6 +127,39 @@ import type { TreeState } from "./trees";
 export type TypeDeGite = "cavite" | "hutte" | "aire" | "boisDeCoeur" | "chandelle";
 
 /**
+ * **Ce qu'un `IndividuFaune` représente vraiment sur le terrain.**
+ *
+ * Le mot « individu » est celui du modèle, et il ment sur plus d'un tiers de
+ * l'atlas. Les fiches le disaient déjà, mais **en prose** : « l'individu est ici
+ * une colonie de parturition, pas une bête » pour les chauves-souris, « la
+ * population de l'arbre » pour les saproxyliques. Un commentaire ne se lit pas
+ * depuis l'extérieur du module, et le premier lecteur qui a eu besoin de nommer
+ * une entrée du tableau allait écrire « une noctule s'installe » — ce qui est
+ * faux d'un facteur quarante, et faux dans ce que ça raconte : une noctule
+ * solitaire n'est pas un événement de la parcelle, une colonie de quarante
+ * femelles dans le vieux chêne en est un.
+ *
+ * Ce champ est donc **la prose remontée dans le format**, et rien d'autre : il ne
+ * change aucun calcul, il dit à qui lit ce que le compte compte.
+ *
+ *  - `couple` — le territoire de la fiche est un territoire **de couple**, et
+ *    c'est ce que les ouvrages publient pour les oiseaux nicheurs (« ~1 ha par
+ *    couple en futaie feuillue »). Une entrée du tableau est donc un couple
+ *    nicheur, pas un oiseau.
+ *  - `individu` — une bête, au sens ordinaire. Un écureuil, un loir.
+ *  - `colonie` — une colonie de parturition : les femelles d'une chauve-souris
+ *    rassemblées dans une même loge le temps d'élever les jeunes.
+ *  - `population` — tout ce que l'arbre porte de cette espèce. Un vieux chêne
+ *    porte des dizaines de larves de capricorne, et la question que pose la
+ *    conservation est « combien de vos arbres en portent », pas « combien de
+ *    larves ». C'est **l'arbre** qui est occupé ou non.
+ *
+ * **Ce n'est pas un cas particulier par espèce** : c'est un trait déclaré, que
+ * ceux qui écrivent les phrases lisent comme ils lisent `gite` ou `territoireM`.
+ */
+export type UniteDeFaune = "couple" | "individu" | "colonie" | "population";
+
+/**
  * **ce qui nourrit**, et d'où le moteur le tire.
  *
  * Deux postes, et **il y en avait quatre dans le premier jet**. Ce qui les a
@@ -159,6 +205,13 @@ export interface EspeceFaune {
   id: string;
   nom: string;
   nomLatin: string;
+  /**
+   * Ce qu'une entrée du tableau **est** : un couple, une bête, une colonie, la
+   * population d'un arbre (voir `UniteDeFaune`). Obligatoire exprès — une fiche
+   * neuve ne doit pas pouvoir entrer dans l'atlas sans avoir dit ce qu'elle
+   * installe, sans quoi on retombe sur le défaut que ce champ corrige.
+   */
+  unite: UniteDeFaune;
   gite: TypeDeGite;
   /**
    * Ce que l'animal demande à l'arbre, litres — et **la matière change avec le
@@ -268,6 +321,9 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "mesange_bleue",
     nom: "mésange bleue",
     nomLatin: "Cyanistes caeruleus",
+    // Le territoire ci-dessous est celui d'un **couple** nicheur, comme chez
+    // tous les oiseaux de cet atlas : c'est l'unité que les ouvrages publient.
+    unite: "couple",
     gite: "cavite",
     volumeLogeL: 2,
     entreeMinMm: 28,
@@ -284,6 +340,7 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "mesange_charbonniere",
     nom: "mésange charbonnière",
     nomLatin: "Parus major",
+    unite: "couple",
     gite: "cavite",
     volumeLogeL: 3,
     entreeMinMm: 32,
@@ -300,6 +357,7 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "pic_epeiche",
     nom: "pic épeiche",
     nomLatin: "Dendrocopos major",
+    unite: "couple",
     gite: "cavite",
     volumeLogeL: 4,
     entreeMinMm: 50,
@@ -316,6 +374,7 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "chouette_cheveche",
     nom: "chouette chevêche",
     nomLatin: "Athene noctua",
+    unite: "couple",
     gite: "cavite",
     volumeLogeL: 15,
     entreeMinMm: 70,
@@ -335,6 +394,10 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "loir_gris",
     nom: "loir gris",
     nomLatin: "Glis glis",
+    // Le loir est solitaire hors de la portée : une entrée est une bête, et son
+    // territoire de 45 m est le plus court de ceux qui ne sont pas des insectes
+    // *(à confirmer)*.
+    unite: "individu",
     gite: "cavite",
     volumeLogeL: 3,
     entreeMinMm: 40,
@@ -348,6 +411,9 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "ecureuil_roux",
     nom: "écureuil roux",
     nomLatin: "Sciurus vulgaris",
+    // « ~5 ha par individu », dit le territoire juste en dessous : l'écureuil
+    // n'est pas territorial en couple, il l'est tout seul.
+    unite: "individu",
     gite: "hutte",
     volumeLogeL: 0,
     entreeMinMm: 0,
@@ -362,6 +428,7 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "buse_variable",
     nom: "buse variable",
     nomLatin: "Buteo buteo",
+    unite: "couple",
     gite: "aire",
     volumeLogeL: 0,
     entreeMinMm: 0,
@@ -398,6 +465,9 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "murin_de_bechstein",
     nom: "murin de Bechstein",
     nomLatin: "Myotis bechsteinii",
+    // **Une colonie de parturition**, dix à trente femelles — c'est ce que le
+    // volume de loge dimensionne, et c'est elle que l'abattage expulse.
+    unite: "colonie",
     gite: "cavite",
     // Une colonie de dix à trente femelles occupe une loge de pic épeiche :
     // chambre d'une douzaine de centimètres de calibre sur trente de profond,
@@ -438,6 +508,8 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "noctule_commune",
     nom: "noctule commune",
     nomLatin: "Nyctalus noctula",
+    // Vingt à soixante femelles dans la même loge de pic noir.
+    unite: "colonie",
     gite: "cavite",
     // Vingt à soixante femelles en loge de pic noir : une chambre d'une
     // vingtaine de centimètres de calibre sur quarante de profond, soit une
@@ -521,6 +593,9 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "pique_prune",
     nom: "pique-prune",
     nomLatin: "Osmoderma eremita",
+    // **La population de l'arbre**, pas une bête : un vieux têtard en porte des
+    // dizaines, et ce que la conservation compte est le nombre d'arbres occupés.
+    unite: "population",
     // Le seul des trois à loger dans le **vide** : il vit dans le terreau qui
     // s'accumule au fond d'une grande cavité de tronc. C'est donc un `cavite`
     // ordinaire, et **il n'a demandé aucune des deux familles nouvelles** — la
@@ -552,6 +627,7 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "grand_capricorne",
     nom: "grand capricorne",
     nomLatin: "Cerambyx cerdo",
+    unite: "population",
     // La larve creuse ses galeries dans le bois de cœur d'un chêne **vivant** :
     // c'est la colonne de carie, vue par ce qui la mange.
     gite: "boisDeCoeur",
@@ -573,6 +649,7 @@ export const FAUNE: readonly EspeceFaune[] = [
     id: "rosalie_des_alpes",
     nom: "rosalie des Alpes",
     nomLatin: "Rosalia alpina",
+    unite: "population",
     // Le bois **mort sur pied**, ensoleillé. C'est la guilde qui donne enfin un
     // lecteur au critère J8 du référentiel — *« un arbre mort reste debout des
     // années : c'est LE bois mort qui compte pour la faune »* — qu'aucun

@@ -991,3 +991,51 @@ describe("le bois se mange, et ce n'est pas le vide qui se loge (guilde 5)", () 
     }
   });
 });
+
+describe("l'atlas dit ce qu'il compte : un couple, une bête, une colonie, une population (#259)", () => {
+  it("chaque fiche déclare son unité, et le type l'exige", () => {
+    // **Obligatoire exprès.** Une fiche neuve ne doit pas pouvoir entrer dans
+    // l'atlas sans avoir dit ce qu'elle installe, sans quoi on retombe sur le
+    // défaut que ce champ corrige : le mot « individu » ment sur plus d'un tiers
+    // de l'atlas, et seul un commentaire le disait.
+    const unites = new Set(["couple", "individu", "colonie", "population"]);
+    for (const e of FAUNE) expect(unites.has(e.unite), e.id).toBe(true);
+  });
+
+  it("et il le dit là où le commentaire le disait déjà", () => {
+    // Les trois affirmations que `faune.ts` portait en prose, désormais lisibles
+    // depuis l'extérieur du module. Si une fiche changeait d'unité sans que sa
+    // prose suive, cet essai tomberait.
+    const unite = (id: string) => especeFaune(id)?.unite;
+    // « une colonie de parturition, pas une bête »
+    expect(unite("murin_de_bechstein")).toBe("colonie");
+    expect(unite("noctule_commune")).toBe("colonie");
+    // « l'individu est ici la population de l'arbre »
+    expect(unite("pique_prune")).toBe("population");
+    expect(unite("grand_capricorne")).toBe("population");
+    expect(unite("rosalie_des_alpes")).toBe("population");
+    // « ~1 ha par couple en futaie feuillue » — le territoire est calibré ainsi
+    expect(unite("mesange_bleue")).toBe("couple");
+    expect(unite("buse_variable")).toBe("couple");
+    // Et ceux qui sont vraiment une bête le restent.
+    expect(unite("ecureuil_roux")).toBe("individu");
+    expect(unite("loir_gris")).toBe("individu");
+  });
+
+  it("aucune ligne du mécanisme ne lit ce champ", () => {
+    // **Le contrôle qui le garde déclaratif.** `unite` est de la prose remontée
+    // dans le format : elle sert à écrire une phrase juste, pas à calculer. Deux
+    // parties identiques en tout doivent le rester quelle que soit la valeur
+    // déclarée — et c'est structurel, puisque `installations`, `departs`,
+    // `bilanDeTable` et `couvertureAuxiliaires` ne la nomment jamais.
+    const sansUnite = (e: (typeof FAUNE)[number]) => {
+      const { unite: _, ...reste } = e;
+      return reste;
+    };
+    // Si un jour le mécanisme s'en servait, ce clone appauvri ne suffirait plus
+    // à le faire tourner, et le compilateur le dirait ici.
+    const clone = FAUNE.map(sansUnite);
+    expect(clone).toHaveLength(FAUNE.length);
+    for (const e of clone) expect("unite" in e).toBe(false);
+  });
+});

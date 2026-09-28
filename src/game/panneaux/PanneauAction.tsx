@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { getEspece } from "../../engine/especes";
+import { aireM2DeLaZone, type Zone } from "../../engine/zone";
+import { capitale } from "../mots";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
 import { essencesPresentes } from "./recensement";
@@ -19,6 +21,86 @@ const LEGENDE_RAYON: Partial<Record<Mode, string>> = {
   cloturer: "le disque est mis hors d'atteinte du gibier",
 };
 
+/**
+ * Comment on nomme une zone dans une phrase — « le cercle de 8 m », « la bande
+ * de 42 × 4 m ».
+ *
+ * Le rayon du réglage sert de repli : tant qu'on ne vise rien, il n'y a pas de
+ * zone, mais il y a un rayon armé et le joueur a le droit de savoir ce qu'il
+ * ferait.
+ */
+function ditLaZone(zone: Zone | undefined, rayonM: number): string {
+  if (!zone) return `le cercle de ${rayonM} m`;
+  if (zone.zone !== "bande") return `le cercle de ${zone.rayonM} m`;
+  return `la bande de ${Math.round(zone.longueurM)} × ${Math.round(zone.largeurM)} m`;
+}
+
+/**
+ * **Disque ou bande**, et la mesure qui va avec (#205).
+ *
+ * Le moteur sait traiter les deux depuis #186 ; l'interface ne savait demander
+ * qu'un disque. Une allée agroforestière *est* une bande : tant qu'on ne
+ * pouvait viser qu'un cercle, on labourait jusqu'au pied des rangs — ce
+ * qu'aucun agroforestier ne fait, et ce qui coûte 77 % de son volume au noyer
+ * d'allée (#184).
+ *
+ * **Le même réglage pour les six gestes de zone**, comme le rayon : c'est une
+ * façon de travailler, pas un paramètre par outil.
+ */
+function FormeDuChantier({ geste, legende }: { geste: ReglagesDeGeste; legende?: string }) {
+  const {
+    rayonChaulage,
+    setRayonChaulage,
+    traceBande,
+    setTraceBande,
+    largeurBande,
+    setLargeurBande,
+  } = geste;
+  return (
+    <>
+      <button type="button" style={btn(!traceBande)} onClick={() => setTraceBande(false)}>
+        ⬤ Disque
+      </button>
+      <button type="button" style={btn(traceBande)} onClick={() => setTraceBande(true)}>
+        ▬ Bande
+      </button>
+      {traceBande ? (
+        <>
+          {" "}
+          largeur{" "}
+          <input
+            type="range"
+            min={1}
+            max={20}
+            value={largeurBande}
+            onChange={(e) => setLargeurBande(Number(e.target.value))}
+            style={{ verticalAlign: "middle", width: 70 }}
+          />{" "}
+          {largeurBande} m{legende ? ` — ${legende}.` : ""}
+          <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 2 }}>
+            Un clic pour le départ, un second pour l'arrivée : la longueur et l'orientation viennent
+            du tracé. Le long des rangs, c'est une allée.
+          </div>
+        </>
+      ) : (
+        <>
+          {" "}
+          rayon{" "}
+          <input
+            type="range"
+            min={3}
+            max={20}
+            value={rayonChaulage}
+            onChange={(e) => setRayonChaulage(Number(e.target.value))}
+            style={{ verticalAlign: "middle", width: 70 }}
+          />{" "}
+          {rayonChaulage} m{legende ? ` — ${legende}.` : ""}
+        </>
+      )}
+    </>
+  );
+}
+
 export function PanneauAction({
   game,
   snapshot,
@@ -35,7 +117,15 @@ export function PanneauAction({
    * La cellule sous le curseur, s'il y en a une : le recensement des essences
    * porte sur le disque visé plutôt que sur toute la parcelle (#156).
    */
-  zoneVisee?: { x: number; y: number } | undefined;
+  /**
+   * La zone que le geste armé demanderait si on cliquait maintenant (#205).
+   *
+   * **La zone entière et non son centre** : depuis la bande, le panneau ne peut
+   * plus reconstituer l'emprise à partir d'un point et du rayon — une bande a
+   * une longueur, une largeur et une orientation, et c'est le tracé du joueur
+   * qui les donne.
+   */
+  zoneVisee?: Zone | undefined;
 }) {
   const {
     mode,
@@ -54,26 +144,33 @@ export function PanneauAction({
     setEspeceEclaircie,
     mainOuvertePanneau,
     setMainOuvertePanneau,
+    traceBande,
   } = geste;
 
+  /**
+   * La zone sur laquelle le panneau raisonne.
+   *
+   * Celle qu'on vise, ou le disque du réglage tant qu'on ne vise rien : le
+   * joueur doit pouvoir lire ce que son rayon fait **avant** de survoler la
+   * parcelle. En bande, il n'y a rien à supposer — la longueur vient du tracé —
+   * donc on ne montre l'arithmétique qu'une fois le tracé commencé.
+   */
+  const zonePourLeDevis: Zone | undefined =
+    zoneVisee ?? (traceBande ? undefined : { x: 0, y: 0, rayonM: rayonChaulage });
+  /** L'aire vient du moteur : un disque et une bande ne se mesurent pas pareil. */
+  const aireM2 = zonePourLeDevis ? aireM2DeLaZone(zonePourLeDevis) : undefined;
   // Ce que l'éclaircie va garder : c'est l'arithmétique que le joueur ne peut
   // pas faire de tête, et sans elle « densité visée » ne veut rien dire.
-  const tigesGardees = Math.max(
-    0,
-    Math.round((densiteCible * Math.PI * rayonChaulage * rayonChaulage) / 10_000),
-  );
+  const tigesGardees =
+    aireM2 === undefined ? undefined : Math.max(0, Math.round((densiteCible * aireM2) / 10_000));
 
   // Qui est là, dans le cercle qu'on vise — ou sur toute la parcelle tant
   // qu'on ne vise rien (#156). Recalculé au survol : c'est une somme sur
   // quelques milliers de tiges, et le panneau ne se rend qu'aux changements de
   // cellule (`survol` n'est annoncé qu'aux changements, `VueParcelle`).
   const presentes = useMemo(
-    () =>
-      essencesPresentes(
-        snapshot.trees,
-        zoneVisee ? { x: zoneVisee.x, y: zoneVisee.y, rayonM: rayonChaulage } : undefined,
-      ),
-    [snapshot.trees, zoneVisee, rayonChaulage],
+    () => essencesPresentes(snapshot.trees, zoneVisee),
+    [snapshot.trees, zoneVisee],
   );
   /** Ce que l'éclaircie par essence abattrait, si une essence est choisie. */
   const visee = presentes.find((e) => e.especeId === especeEclaircie);
@@ -261,8 +358,10 @@ export function PanneauAction({
             <div style={{ marginTop: 6 }}>
               <div style={{ color: "var(--encre-douce)", fontSize: 13 }}>
                 {zoneVisee
-                  ? `Dans le cercle de ${rayonChaulage} m visé :`
-                  : "Sur toute la parcelle (survolez pour viser un cercle) :"}
+                  ? `Dans ${ditLaZone(zoneVisee, rayonChaulage)} visée :`
+                  : traceBande
+                    ? "Sur toute la parcelle (tracez la bande pour viser) :"
+                    : "Sur toute la parcelle (survolez pour viser un cercle) :"}
               </div>
               {presentes.length === 0 ? (
                 <div style={{ color: "var(--encre-douce)", fontSize: 13 }}>aucune tige ici.</div>
@@ -311,36 +410,28 @@ export function PanneauAction({
               {densiteCible} tiges/ha ·{" "}
             </>
           )}
-          rayon{" "}
-          <input
-            type="range"
-            min={3}
-            max={20}
-            value={rayonChaulage}
-            onChange={(e) => setRayonChaulage(Number(e.target.value))}
-            style={{ verticalAlign: "middle", width: 70 }}
-          />{" "}
-          {rayonChaulage} m
+          <FormeDuChantier geste={geste} />
           <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
             {critereEclaircie === "espece" ? (
               tigesVisees === undefined ? (
                 <>Choisissez l'essence à nettoyer dans la liste ci-dessus.</>
               ) : (
                 <>
-                  Un cercle de {rayonChaulage} m fait{" "}
-                  {Math.round(Math.PI * rayonChaulage * rayonChaulage)} m² : on y abat les{" "}
+                  {capitale(ditLaZone(zonePourLeDevis, rayonChaulage))}
+                  {aireM2 === undefined ? "" : ` fait ${Math.round(aireM2)} m²`} : on y abat les{" "}
                   <strong>
                     {tigesVisees} tiges de {nomVise}
                   </strong>{" "}
                   et rien d'autre.
                 </>
               )
+            ) : tigesGardees === undefined ? (
+              <>Tracez la bande : la longueur décide de ce qu'on garde.</>
             ) : (
               <>
-                Un cercle de {rayonChaulage} m fait{" "}
-                {Math.round(Math.PI * rayonChaulage * rayonChaulage)} m² : à {densiteCible}{" "}
-                tiges/ha, on y <strong>garde {tigesGardees} tiges</strong> et on abat tout le reste,
-                en commençant par les{" "}
+                {capitale(ditLaZone(zonePourLeDevis, rayonChaulage))} fait {Math.round(aireM2 ?? 0)}{" "}
+                m² : à {densiteCible} tiges/ha, on y <strong>garde {tigesGardees} tiges</strong> et
+                on abat tout le reste, en commençant par les{" "}
                 {critereEclaircie === "parLeHaut" ? "plus grandes" : "plus petites"}.
               </>
             )}
@@ -353,15 +444,10 @@ export function PanneauAction({
         mode === "brf" ||
         mode === "cloturer") && (
         <div style={{ marginTop: 6 }}>
-          Rayon :{" "}
-          <input
-            type="range"
-            min={3}
-            max={20}
-            value={rayonChaulage}
-            onChange={(e) => setRayonChaulage(Number(e.target.value))}
-          />{" "}
-          {rayonChaulage} m — {LEGENDE_RAYON[mode] ?? ""}.
+          <FormeDuChantier
+            geste={geste}
+            {...(LEGENDE_RAYON[mode] ? { legende: LEGENDE_RAYON[mode] } : {})}
+          />
         </div>
       )}
     </>
