@@ -17,6 +17,7 @@
 
 import { Fragment, useCallback, useMemo, useState } from "react";
 import { getEspece } from "../../engine/especes";
+import type { IndividuFaune } from "../../engine/faune";
 import type { ContextePhenologique } from "../../engine/phenologie";
 import type { ArbreAPoser } from "../../render/couches/arbres";
 import type { SnapshotTree } from "../protocol";
@@ -40,6 +41,7 @@ const ICONE: Record<QuoiSuivi, string> = {
   gel: "❄️",
   souffre: "⚠️",
   mort: "✝️",
+  hote: "🐾",
 };
 
 /**
@@ -314,6 +316,7 @@ export function PanneauSuivis({
   poses,
   semaine,
   pheno,
+  habitants,
   aLArret,
   oublier,
   selectionner,
@@ -340,6 +343,8 @@ export function PanneauSuivis({
   semaine: number;
   /** le calendrier foliaire de la semaine, pour le feuillage de la fiche */
   pheno: ContextePhenologique;
+  /** les habitants de la parcelle : la fiche dit qui loge dans l'arbre (#255) */
+  habitants: readonly IndividuFaune[];
   /**
    * Le temps est-il arrêté ? Les silhouettes ne se recuisent qu'à l'arrêt —
    * voir `useSilhouettes.ts`, où la mesure est écrite.
@@ -404,7 +409,13 @@ export function PanneauSuivis({
       </div>
       {ordre.map((id) => {
         const arbre = tous.find((t) => t.id === id);
-        const lignes = arbre ? ficheDeLArbre(arbre, { semaine, pheno }) : [];
+        const lignes = arbre
+          ? ficheDeLArbre(arbre, {
+              semaine,
+              pheno,
+              habitants: habitants.filter((h) => h.arbreId === id),
+            })
+          : [];
         // **Rangé par la semaine, pas par l'ordre d'arrivée.** Les deux
         // coïncident presque toujours, et « presque » suffit à faire lire un
         // journal qui saute d'une année à l'autre : relevé à l'écran, un lot

@@ -570,6 +570,11 @@ export function useGame(): GameApi {
         maturationAns,
         anneeDepart,
         economie,
+        // **Toujours, pour une partie neuve** (#255) : neuf espèces s'installent
+        // et partent, et le moteur ne les fait vivre que si on le lui demande.
+        // Une sauvegarde d'avant ce lot, elle, reprend sans — la relire avec
+        // ferait diverger la parcelle qu'on a quittée (`SaveGame.faune`).
+        faune: true,
       });
       send({ type: "autoHarvest", enabled: true });
       setAutoHarvestState(true);

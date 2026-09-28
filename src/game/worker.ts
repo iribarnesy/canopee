@@ -25,6 +25,7 @@ import {
 } from "../engine/climat";
 import { champDeNappeCm, type EauDeSurface } from "../engine/eau_surface";
 import { getEspece } from "../engine/especes";
+import { type DepartFaune, especeFaune, type InstallationFaune } from "../engine/faune";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
@@ -67,7 +68,17 @@ import { HAUTEUR_TROUVABLE_M } from "../render/temps/changements";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import { prefixeSousLePlafond } from "./facture";
 import { journalDe, type PorteurDeJournal } from "./journal";
-import { accord, causeDite, estFeminin, nomEspece, nomEspeces, s } from "./mots";
+import {
+  accord,
+  capitale,
+  causeDite,
+  departDit,
+  estFeminin,
+  laFaune,
+  nomEspece,
+  nomEspeces,
+  s,
+} from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
 import type {
@@ -449,6 +460,14 @@ let politiqueHoraire: PolitiqueHoraire = "demander";
 let maturationAns = 0;
 /** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
 let economie = true;
+/**
+ * **La faune vit-elle en individus dans cette partie** ? (#187, #255)
+ *
+ * Allumé pour toute partie neuve, éteint pour une sauvegarde qui ne le portait
+ * pas : les individus ajoutent des tirages, et une partie rejouée avec eux ne
+ * se superpose pas à celle qui a été jouée sans.
+ */
+let faune = false;
 // Eau libre choisie au lancement (ruisseau, mare) ; à défaut, aucune.
 let eau: EauDeSurface | undefined;
 // Profondeur d'équilibre de la nappe choisie au lancement, cm.
@@ -480,6 +499,9 @@ let pendingNaissances: NaissanceDeLaSemaine[] = [];
 let pendingFranchissements: FranchissementDeStade[] = [];
 let pendingGestes: GesteVisible[] = [];
 let pendingChutes: ChuteDeChandelle[] = [];
+/** Gîtes trouvés et habitants partis depuis le dernier instantané (#255). */
+let pendingInstallations: InstallationFaune[] = [];
+let pendingDeparts: DepartFaune[] = [];
 let pendingIncendie: IncendieResult | undefined;
 /** Même traitement que l'incendie : l'événement attend l'instantané (#87). */
 let pendingTempete: TempeteResult | undefined;
@@ -821,6 +843,9 @@ function stationAvecPaysage(base: Station): Station {
     partBassinSemblable: partBassin ?? base.partBassinSemblable,
     // Sert à savoir si une cuvette creusée tient l'eau (terrain.ts).
     pluieAnnuelleMm: sc?.climat.rainAnnualMm,
+    // Le commutateur du moteur (#187) : éteint, le tick ne parcourt rien et
+    // n'alloue rien, et la partie est exactement celle d'avant le lot.
+    faune,
     paysageId: bordures.nord,
     bordures,
     ...entourageDeLaStation(bordures, base.phInitial, base.ruMm),
@@ -912,6 +937,8 @@ function postSnapshot() {
     franchissements: pendingFranchissements,
     gestes: pendingGestes,
     chutes: pendingChutes,
+    installationsFaune: pendingInstallations,
+    departsFaune: pendingDeparts,
     incendie: pendingIncendie,
     tempete: pendingTempete,
   });
@@ -922,6 +949,8 @@ function postSnapshot() {
   pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
+  pendingInstallations = [];
+  pendingDeparts = [];
   // **Mis de côté avant d'être vidé** : mesuré dans le navigateur, le vider ici
   // comme les autres tampons envoyait un tableau déjà vide — l'instantané ne
   // porte pas une copie du tampon, il porte le tampon.
@@ -1161,6 +1190,8 @@ function stepWeeks(n: number) {
     replierLeBilan(ticked, before.week, ticked.state.trees);
     retenirCeQuiArrive(ticked, before.week, before.trees);
     pendingChutes.push(...ticked.chutes);
+    pendingInstallations.push(...ticked.installationsFaune);
+    pendingDeparts.push(...ticked.departsFaune);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
     if (ticked.incendie) pendingIncendie = ticked.incendie;
@@ -1261,6 +1292,29 @@ function stepWeeks(n: number) {
       // retiré des tiges : une éclaircie en semaine 14 gonflait le chiffre.
       const recruits = ticked.naissances.length;
       if (recruits > 0) event("🌿", `${recruits} semis naturels se sont installés`);
+    }
+    // ── **la faune qui s'ancre** (#187, #255) ──────────────────────────────────
+    //
+    // Une ligne par mouvement et non un compte : *« pour que le joueur
+    // s'attache, et pour qu'une mésange vient nicher chez toi soit un
+    // événement »*. Les effectifs le permettent — une vieille chênaie d'un
+    // hectare porte une à trois mésanges bleues, zéro ou une buse.
+    for (const { individu } of ticked.installationsFaune) {
+      const espece = especeFaune(individu.especeId);
+      if (!espece) continue;
+      // L'arbre d'**après** le tick : un gîte vient d'y être pris, il est debout.
+      const hote = ticked.state.trees.find((t) => t.id === individu.arbreId);
+      const ou = hote ? ` dans un ${nomEspece(hote.especeId)}` : "";
+      event("🐾", `${capitale(laFaune(espece.id, espece.nom))} s'installe${ou}`);
+    }
+    for (const { individu, cause } of ticked.departsFaune) {
+      const espece = especeFaune(individu.especeId);
+      if (!espece) continue;
+      // L'arbre d'**avant** : quand la cause est `arbreDisparu`, il n'est déjà
+      // plus dans l'état d'après, et c'est justement le cas qu'on veut nommer.
+      const hote = before.trees.find((t) => t.id === individu.arbreId);
+      const ou = hote ? ` le ${nomEspece(hote.especeId)}` : " la parcelle";
+      event("🐾", `${capitale(laFaune(espece.id, espece.nom))} quitte${ou} : ${departDit(cause)}`);
     }
     // Sécheresse (sol moyen presque à sec en saison de végétation)
     const year = Math.floor(before.week / 52);
@@ -1464,6 +1518,8 @@ function avancerLaRelecture(n: number): void {
     pendingFranchissements.push(...step.franchissements);
     pendingGestes.push(...step.gestes);
     pendingChutes.push(...step.chutes);
+    pendingInstallations.push(...step.installationsFaune);
+    pendingDeparts.push(...step.departsFaune);
     if (step.incendie) pendingIncendie = step.incendie;
     if (step.tempete) pendingTempete = step.tempete;
     lastFluxes = step.fluxes;
@@ -1552,6 +1608,8 @@ function viderLesTampons(): void {
   pendingGestes = [];
   pendingChutes = [];
   pendingSuivis = [];
+  pendingInstallations = [];
+  pendingDeparts = [];
   pendingIncendie = undefined;
   pendingTempete = undefined;
 }
@@ -1673,6 +1731,7 @@ function init(
   maturation: number,
   annee: number,
   economieActive: boolean,
+  fauneActive: boolean,
 ) {
   scenario = scenarioId;
   anneeDepart = annee;
@@ -1683,6 +1742,7 @@ function init(
   partBassin = partBassinChoisie;
   maturationAns = maturation;
   economie = economieActive;
+  faune = fauneActive;
   sc = STATIONS_V0.find((s) => s.station.id === stationId);
   if (!sc) throw new Error(`station inconnue : ${stationId}`);
   meteoMode = mode;
@@ -1724,6 +1784,8 @@ function init(
   pendingGestes = [];
   pendingChutes = [];
   pendingSuivis = [];
+  pendingInstallations = [];
+  pendingDeparts = [];
   pendingIncendie = undefined;
   pendingTempete = undefined;
   lastFluxes = undefined;
@@ -1757,6 +1819,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         msg.maturationAns,
         msg.anneeDepart,
         msg.economie,
+        msg.faune,
       );
       break;
     case "resume": {
@@ -1774,6 +1837,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // Absent = vrai : une sauvegarde d'avant l'option a été jouée **avec**
       // l'économie, et doit se rejouer ainsi ou elle divergerait.
       economie = msg.save.economie ?? true;
+      // **Absent = éteint**, à l'inverse de l'économie : une sauvegarde d'avant
+      // #255 n'a jamais eu d'habitants, et la rejouer avec les ferait diverger.
+      faune = msg.save.faune ?? false;
       politiqueHoraire = msg.save.politiqueHoraire ?? "demander";
       niveauId = msg.save.niveauId;
       paliersAcquis = msg.save.paliersAcquis ? [...msg.save.paliersAcquis] : [];
@@ -1958,6 +2024,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         partBassin: partBassin ?? sc?.station.partBassinSemblable,
         maturationAns,
         economie,
+        faune,
         anneeDepart,
         // La consigne suit la partie : c'est un choix de conduite, pas un
         // réglage de la session (#133).

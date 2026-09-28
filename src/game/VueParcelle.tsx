@@ -42,6 +42,7 @@ import type { Orientation } from "../render/projection";
 import type { Marqueur } from "../render/temps/changements";
 import type { Deformation } from "../render/temps/chute";
 import type { ArbreRemodele } from "../render/temps/geste";
+import type { GiteOccupe } from "../render/temps/habitants";
 import { type IncendieAPoser, RIEN_NE_BRULE } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
 import type { CelluleVoilee } from "../render/temps/voile";
@@ -119,6 +120,13 @@ export interface VueParcelleProps {
    * sans avoir rien sauté.
    */
   marqueurs?: readonly Marqueur[];
+  /**
+   * Qui habite la parcelle, posé sur l'arbre qui le porte (#255).
+   *
+   * Un tableau comme les marqueurs, et pour la même raison : un habitant ne
+   * bouge pas dans le temps — il est là, ou il est parti.
+   */
+  habitants?: readonly GiteOccupe[];
   /**
    * Un clic sur le **sol**, rendu en cellule de parcelle — ce par quoi le joueur
    * agit (§6.7).
@@ -487,6 +495,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.voilerLesCellules(p.voiler?.(horloge) ?? []);
         scene.current?.embraser(p.feu?.(horloge) ?? RIEN_NE_BRULE);
         scene.current?.montrerLesChangements(p.marqueurs ?? []);
+        scene.current?.montrerLesHabitants(p.habitants ?? []);
         scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
         const vise = p.emprise && cible.current ? { ...cible.current, ...p.emprise } : undefined;
         scene.current?.viserLeGeste(vise);

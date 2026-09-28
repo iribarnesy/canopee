@@ -18,6 +18,7 @@
  */
 
 import { getEspece } from "../../engine/especes";
+import { especeFaune, type IndividuFaune } from "../../engine/faune";
 import {
   type ContextePhenologique,
   partFoliaireOmbrageanteDans,
@@ -25,7 +26,7 @@ import {
 } from "../../engine/phenologie";
 import { stadeDe } from "../../engine/stades";
 import { elancement, elancementLimite, hauteurStableM } from "../../engine/trees";
-import { causeDite } from "../mots";
+import { causeDite, laFaune } from "../mots";
 import type { SnapshotTree } from "../protocol";
 
 /**
@@ -185,7 +186,19 @@ export function motDeLEtiolement(part: number): string {
 
 export function ficheDeLArbre(
   arbre: SnapshotTree,
-  ctx: { semaine: number; pheno: ContextePhenologique },
+  ctx: {
+    semaine: number;
+    pheno: ContextePhenologique;
+    /**
+     * Qui loge dans cet arbre-là (#255).
+     *
+     * **Sur la fiche de l'arbre et pas seulement dans la liste des habitants**,
+     * parce que c'est là qu'on regarde avant d'abattre. Le moteur ancre chaque
+     * individu à un `arbreId` : la question « est-ce que quelqu'un vit ici »
+     * a une réponse exacte, elle n'a jamais été posée.
+     */
+    habitants?: readonly IndividuFaune[];
+  },
 ): LigneDeFiche[] {
   const lignes: LigneDeFiche[] = [];
   const espece = getEspece(arbre.especeId);
@@ -257,6 +270,20 @@ export function ficheDeLArbre(
   // défaut de #225 — deux nombres justes dont on ne savait pas lequel était
   // lequel.
   dire("🎂", "Âge", arbre.chandelle ? `${ans} ans à sa mort` : `${ans} ans`);
+
+  // **Avant la porte des chandelles**, et il le faut : une chandelle est
+  // précisément ce qui porte le plus de monde — loges de pic, rosalie des
+  // Alpes. La sortir sans le dire ferait disparaître l'habitant au moment où
+  // l'arbre devient intéressant pour lui.
+  for (const habitant of ctx.habitants ?? []) {
+    const espece = especeFaune(habitant.especeId);
+    if (!espece) continue;
+    const faim = (habitant.saisonsMaigres ?? 0) > 0 ? " — et il a faim" : "";
+    dire("🐾", "Habité par", `${laFaune(espece.id, espece.nom)}${faim}`, {
+      aide: "Un habitant tient à son arbre : l'abattre l'expulse, et le moteur le dira par son nom.",
+      horsAlerte: true,
+    });
+  }
 
   if (arbre.chandelle) {
     // Une chandelle n'a plus ni feuillage ni vigueur ; ce qui lui reste, c'est

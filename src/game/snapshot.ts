@@ -15,6 +15,7 @@ import { indiceBiodiversite } from "../engine/biodiversite";
 import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import { CO2_ACTUEL_PPM } from "../engine/climat";
 import { getEspece } from "../engine/especes";
+import type { DepartFaune, InstallationFaune } from "../engine/faune";
 import { HERBACEES, N_HERBACEES } from "../engine/herbacees";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
@@ -211,6 +212,10 @@ export interface EntreesSnapshot {
   gestes: GesteVisible[];
   /** chandelles abattues depuis le dernier instantané (`TickResult`) */
   chutes: ChuteDeChandelle[];
+  /** gîtes qui ont trouvé preneur depuis le dernier instantané (#255) */
+  installationsFaune: readonly InstallationFaune[];
+  /** habitants partis depuis le dernier instantané, avec leur cause (#255) */
+  departsFaune: readonly DepartFaune[];
   incendie?: IncendieResult;
   tempete?: TempeteResult;
 }
@@ -324,6 +329,12 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     franchissements: e.franchissements,
     gestes: e.gestes,
     chutes: e.chutes,
+    // **Lu dans l'état, comme la litière** : les habitants ne sont pas un flux
+    // du tick, ils sont là. On recopie l'absence telle quelle — elle dit « pas
+    // de faune dans cette partie », ce qu'un tableau vide ne dirait pas.
+    ...(state.faune ? { faune: state.faune } : {}),
+    installationsFaune: e.installationsFaune,
+    departsFaune: e.departsFaune,
     incendie: e.incendie,
     tempete: e.tempete,
   };

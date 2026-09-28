@@ -36,6 +36,7 @@ import {
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
 import type { Orientation } from "../render/projection";
+import { gitesOccupes } from "../render/temps/habitants";
 import { lignesDuBilan } from "./bilan";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import type { Niveau } from "./niveaux";
@@ -49,6 +50,7 @@ import { PanneauAction } from "./panneaux/PanneauAction";
 import { PanneauArbres } from "./panneaux/PanneauArbres";
 import { PanneauBilan } from "./panneaux/PanneauBilan";
 import { PanneauEssences } from "./panneaux/PanneauEssences";
+import { PanneauHabitants } from "./panneaux/PanneauHabitants";
 import { PanneauJournal } from "./panneaux/PanneauJournal";
 import { PanneauMenu } from "./panneaux/PanneauMenu";
 import { PanneauNiveau } from "./panneaux/PanneauNiveau";
@@ -1280,6 +1282,18 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
    */
   const suivis = useSuivis(snapshot, game, game.rembobinage.enCours !== undefined);
+  /**
+   * Les gîtes occupés, posés sur leurs arbres (#255).
+   *
+   * Mémorisé sur l'instantané : c'est une prop de la scène, et un tableau neuf
+   * à chaque rendu ferait retracer le calque à chaque image de l'interface.
+   * La hauteur vient de l'arbre lui-même — le moteur donne la position du gîte,
+   * pas son altitude.
+   */
+  const habitants = useMemo(() => {
+    const hauteurs = new Map(snapshot?.trees.map((t) => [t.id, t.heightM]) ?? []);
+    return gitesOccupes(snapshot?.faune ?? [], (id) => hauteurs.get(id));
+  }, [snapshot]);
   const enNiveau = useNiveau(game);
 
   /**
@@ -1723,6 +1737,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             voiler={ellipse.voiler}
             feu={ellipse.feu}
             marqueurs={ellipse.marqueurs}
+            habitants={habitants}
             {...(cadrage ? { cadrerSur: cadrage } : {})}
           />
         )}
@@ -2057,6 +2072,17 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               <h3 style={{ margin: "12px 0 4px", fontSize: 13 }}>Le fil</h3>
               <PanneauJournal evenements={game.events} />
             </Volet>
+          ) : volets.estOuvert("bd", "habitants") ? (
+            <Volet titre="Les habitants" largeur={380} surFermer={() => volets.fermer("bd")}>
+              <PanneauHabitants
+                faune={snapshot.faune ?? []}
+                fauneEteinte={snapshot.faune === undefined}
+                tous={snapshot.trees}
+                semaine={snapshot.week}
+                selectionner={(id) => setSelectedIds(new Set([id]))}
+                allerVoir={(ou) => setCadrageDemande({ ou, contre: cadrageAuto })}
+              />
+            </Volet>
           ) : volets.estOuvert("bd", "suivis") ? (
             <Volet titre="Arbres suivis" largeur={420} surFermer={() => volets.fermer("bd")}>
               <PanneauSuivis
@@ -2066,6 +2092,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 poses={arbresPoses}
                 semaine={snapshot.week}
                 pheno={snapshot.pheno}
+                habitants={snapshot.faune ?? []}
                 aLArret={game.speed === 0}
                 oublier={suivis.oublier}
                 selectionner={(id) => setSelectedIds(new Set([id]))}
@@ -2103,6 +2130,22 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           déjà quoi dire quand il est vide : il explique comment suivre un
           arbre.
         */}
+        {/*
+          **Le bouton ne s'affiche que si la partie a une faune**, et c'est la
+          seule exception à la règle voisine (« le bouton est toujours là »).
+          Elle se justifie par le contraire d'un oubli : une sauvegarde d'avant
+          #255 n'aura **jamais** d'habitants, quoi que le joueur fasse. Un volet
+          qui n'explique que son propre vide n'est pas une entrée vers un outil,
+          c'est une impasse.
+        */}
+        {snapshot.faune !== undefined && (
+          <BoutonDeVolet
+            ouvert={volets.estOuvert("bd", "habitants")}
+            surClic={() => volets.basculer("bd", "habitants")}
+          >
+            🐾 Habitants{snapshot.faune.length > 0 ? ` (${snapshot.faune.length})` : ""}
+          </BoutonDeVolet>
+        )}
         <BoutonDeVolet
           ouvert={volets.estOuvert("bd", "suivis")}
           surClic={() => volets.basculer("bd", "suivis")}

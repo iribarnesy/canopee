@@ -26,9 +26,10 @@
  */
 
 import { estGesteSurArbres, type GesteTypeArbre } from "../engine/actions";
+import { especeFaune } from "../engine/faune";
 import type { CauseMort } from "../engine/trees";
 import type { PorteurDeJournal } from "./journal";
-import { causeDite, estFeminin } from "./mots";
+import { causeDite, departDit, estFeminin, laFaune } from "./mots";
 
 /**
  * Ce qu'il faut savoir d'un arbre pour lire ce qui lui arrive.
@@ -69,7 +70,16 @@ const GESTE_SUBI: Record<GesteTypeArbre, { quoi: QuoiSuivi; texte: string }> = {
 };
 
 /** Ce qui peut arriver à un arbre suivi. */
-export type QuoiSuivi = "geste" | "stade" | "brout" | "frottis" | "gel" | "souffre" | "mort";
+export type QuoiSuivi =
+  | "geste"
+  | "stade"
+  | "brout"
+  | "frottis"
+  | "gel"
+  | "souffre"
+  | "mort"
+  /** un habitant arrive ou s'en va (#255) */
+  | "hote";
 
 export interface EvenementSuivi {
   /** semaine de jeu où on l'a **appris** — celle de l'instantané qui le porte */
@@ -140,6 +150,26 @@ export function accumulerLesSuivis(
   for (const m of porteur.morts ?? []) {
     // Accordé à l'**essence** : « la ronce meurt étouffée », pas « étouffé ».
     dire(m.id, "mort", `meurt ${causeDite(m.cause, 1, estFeminin(m.especeId))}`);
+  }
+  // **Qui vient habiter l'arbre, et qui le quitte** (#255). L'ancrage du moteur
+  // est un identifiant d'arbre : l'événement tombe donc tout seul dans
+  // l'histoire de cet arbre-là, sans rien croiser ni deviner. C'est même le
+  // premier lecteur de `arbreId` — et l'endroit où le pari de #187 se paie,
+  // puisque « on a abattu son arbre » se lit désormais dans la fiche de l'arbre
+  // qu'on a abattu.
+  for (const { individu } of porteur.installationsFaune ?? []) {
+    const espece = especeFaune(individu.especeId);
+    if (espece) dire(individu.arbreId, "hote", `${laFaune(espece.id, espece.nom)} s'y installe`);
+  }
+  for (const { individu, cause } of porteur.departsFaune ?? []) {
+    const espece = especeFaune(individu.especeId);
+    if (espece) {
+      dire(
+        individu.arbreId,
+        "hote",
+        `${laFaune(espece.id, espece.nom)} s'en va : ${departDit(cause)}`,
+      );
+    }
   }
 
   for (const arbre of arbres) {
