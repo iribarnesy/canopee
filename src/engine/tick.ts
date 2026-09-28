@@ -432,18 +432,42 @@ export interface IncendieResult {
    * 2 736 victimes déclarées sont toutes encore là, en rejet ou en chandelle
    * noire. Un tiers de la parcelle s'effaçait avant que le front n'arrive.
    *
-   * L'identifiant et la hauteur suffisent : la position se relit dans
-   * l'instantané précédent tant que l'arbre y est, comme le fait déjà la
-   * tempête pour ses chablis. Le rendu sait reposer un fût qui a quitté
-   * `state.trees` dans le tick où il tombe — avec cette liste, la chandelle
-   * consumée reste debout le temps que le front l'atteigne, se torche, et
-   * s'abat.
+   * **L'entrée porte sa position, et le premier jet ne la portait pas** (#246).
+   * La demande d'origine disait que l'identifiant et la hauteur suffisaient,
+   * « la position se relit dans l'instantané tant que l'arbre y est, comme le
+   * fait déjà la tempête pour ses chablis » — et ce fichier l'a recopié sans le
+   * vérifier. **C'était faux des deux bouts.** `trouverLaTempete` relit la
+   * position dans l'instantané **courant**, et elle peut le faire parce qu'une
+   * victime de tempête y est encore : elle devient chandelle sur-le-champ et
+   * reste en jeu. Une chandelle consumée, elle, quitte `state.trees` dans le
+   * tick du feu — c'est le fait même que cette liste rapporte. Elle n'est donc
+   * dans aucun instantané, et le rendu, qui refuse d'inventer une position
+   * (« on l'ignore plutôt que de lui inventer une position »), ne pouvait rien
+   * poser.
+   *
+   * D'où la même forme que `ChuteDeChandelle` vingt lignes plus bas, qui est
+   * dans exactement la même situation et l'avait résolue de cette façon : `x`,
+   * `y`, `especeId`, la hauteur. L'espèce n'est pas du décor — une chandelle
+   * n'a plus de houppier, mais un fût de pin et un fût de chêne n'ont pas la
+   * même silhouette, et sans elle le rendu poserait des troncs sans essence,
+   * ce qui est une invention en creux.
+   *
+   * Avec ça, la chandelle consumée reste debout le temps que le front
+   * l'atteigne, se torche, et s'abat — au lieu de disparaître entre deux
+   * images.
    *
    * **Ne pas la déduire de la différence entre deux instantanés** : celui
    * d'avant peut avoir vingt-six semaines de retard, et ce serait une
    * reconstruction d'un fait du moteur à partir de deux photos.
    */
-  chandellesConsumees: readonly { id: number; hauteurM: number }[];
+  chandellesConsumees: readonly {
+    id: number;
+    /** position du fût, m — sans elle le rendu ne sait pas où le poser */
+    x: number;
+    y: number;
+    especeId: string;
+    hauteurM: number;
+  }[];
   carboneTHa: number;
   /** cellule où le feu est parti */
   origine: number;
@@ -2899,7 +2923,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       let tues = 0;
       let rejets = 0;
       const victimes: VictimeDuFeu[] = [];
-      const chandellesConsumees: { id: number; hauteurM: number }[] = [];
+      const chandellesConsumees: {
+        id: number;
+        x: number;
+        y: number;
+        especeId: string;
+        hauteurM: number;
+      }[] = [];
       const apresFeu: TreeState[] = [];
       for (const tree of nextTrees) {
         const cellule =
@@ -2945,7 +2975,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // trace : juste pour le compte — elle était déjà morte — et faux pour
           // l'écran, qui avait un fût debout à l'image d'avant et plus rien à la
           // suivante.
-          chandellesConsumees.push({ id: tree.id, hauteurM: tree.heightM });
+          chandellesConsumees.push({
+            id: tree.id,
+            x: tree.x,
+            y: tree.y,
+            especeId: tree.especeId,
+            hauteurM: tree.heightM,
+          });
           continue;
         }
         tues++;
