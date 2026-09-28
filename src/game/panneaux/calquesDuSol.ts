@@ -19,14 +19,14 @@
 
 import type { Snapshot, StationInfo } from "../protocol";
 
-export type Calque = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement";
+export type Calque = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement" | "ravageurs";
 
 /** Une teinte HSL, telle que le canvas et le CSS l'attendent. */
 export type Teinte = readonly [hue: number, saturation: number, luminosite: number];
 
 export interface FicheDeCalque {
   id: Calque;
-  /** Le nom sur le bouton : court, il y en a six sur une ligne. */
+  /** Le nom sur le bouton : court, ils tiennent sur une ligne ou deux. */
   libelle: string;
   /** Ce que le calque montre vraiment, en toutes lettres, pour la légende. */
   titre: string;
@@ -196,6 +196,43 @@ export const CALQUES: readonly FicheDeCalque[] = [
     teinte: (part) => [280, 6 + 44 * part, 90 - 45 * part],
     format: (v) => (v * 100).toFixed(0),
     sens: "des racines au sec aux racines asphyxiées",
+  },
+  {
+    // **Ce n'est pas du sol, et c'est pourtant ici que ça se lit** (#109). Le
+    // volet porte les grandeurs qui vivent *par cellule* et que la vue en
+    // losange ne peut pas montrer — l'herbe y est déjà pour la même raison. La
+    // défoliation se lit par **taches** : une pullulation part d'un foyer et
+    // s'étend, et seule une carte peut dire où. La moyenne, elle, voyageait
+    // depuis toujours (`fluxes.ravageurMoyen`) sans jamais dire vers où
+    // regarder.
+    id: "ravageurs",
+    libelle: "Ravageurs",
+    titre: "Population de ravageurs",
+    // Une part de la population maximale, que le moteur tient entre 0 et 1
+    // (`ravageurs.ts`) : ce n'est pas un effectif d'insectes, et l'écrire en
+    // pourcents est la seule façon honnête de le dire.
+    unite: "%",
+    // **La gamme du moteur, et non celle qu'on observe.** Sondé sur les huit
+    // stations livrées, quarante ans chacune : la cellule la plus chargée de
+    // toutes les parties monte à 0,75, et le pic d'une année ordinaire tient
+    // entre 0,15 et 0,49. Borner sur ce qu'on a vu ferait saturer la carte la
+    // première fois qu'une partie fait pire, et une carte saturée ne montre
+    // plus de foyer — c'est justement ce qu'on vient chercher ici.
+    bornes: () => [0, 1],
+    // **Et l'échelle est courbe, pour la même raison que l'azote.** Le même
+    // sondage donne une médiane de cellule entre 0,02 et 0,12 : la parcelle
+    // ordinaire vit dans le premier dixième d'une échelle droite, où toutes
+    // les teintes se ressemblent. La racine carrée étale ce bas-là — 0,04
+    // passe à un cinquième du dégradé, 0,30 à plus de la moitié — sans
+    // tronquer le haut, et la légende gradue avec elle.
+    courbe: { vers: Math.sqrt, depuis: (t) => t * t },
+    lire: (snapshot, _station, i) => snapshot.soilRavageurs[i] ?? 0,
+    // Du paille au rouge sombre : la couleur de ce qui grille sur pied. Aucun
+    // autre calque ne va vers le rouge — l'acide du pH est un orangé pâle et
+    // désaturé, qui ne se confond pas avec un foyer.
+    teinte: (part) => [45 - 37 * part, 15 + 55 * part, 92 - 47 * part],
+    format: (v) => (v * 100).toFixed(0),
+    sens: "de la parcelle indemne au foyer de pullulation",
   },
 ];
 

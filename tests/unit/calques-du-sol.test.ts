@@ -196,7 +196,12 @@ describe("l'extraction n'a pas changé la carte", () => {
     },
   };
 
-  for (const fiche of CALQUES.filter((c) => c.id !== "azote")) {
+  // L'azote et les ravageurs n'y sont **pas**, et pour deux raisons opposées :
+  // l'azote a changé d'échelle exprès (bornes doublées, courbe en racine), les
+  // ravageurs n'avaient pas de teinte d'avant — personne ne les dessinait
+  // (#109). Les faire passer sous une épreuve qui dit « rien n'a bougé »
+  // noierait l'un et mentirait sur l'autre.
+  for (const fiche of CALQUES.filter((c) => c.id !== "azote" && c.id !== "ravageurs")) {
     it(`même teinte qu'avant, calque ${fiche.id}`, () => {
       const st = station();
       for (let i = 0; i < COTE_M * COTE_M; i++) {
@@ -259,5 +264,66 @@ describe("chaque calque dit quelque chose", () => {
       expect(fiche.sens).not.toBe("");
       expect(fiche.libelle.length).toBeLessThanOrEqual(12);
     }
+  });
+});
+
+/**
+ * **La tache de ravageurs** (#109).
+ *
+ * Ce que ces épreuves défendent tient en deux points. D'abord que la carte lit
+ * la **grille** et rien d'autre : la moyenne voyageait depuis toujours, et une
+ * moyenne ne dit pas où regarder. Ensuite que le foyer se **voit** — une
+ * échelle qui range toute une partie ordinaire dans le premier dixième du
+ * dégradé dessine un aplat, ce qui revient à ne rien dessiner.
+ */
+describe("la grille de ravageurs se dessine par taches", () => {
+  const FICHE = ficheDuCalque("ravageurs");
+
+  /** Un instantané où un coin pullule et le reste dort. */
+  function avecFoyer(): Snapshot {
+    const grille = new Float32Array(COTE_M * COTE_M).fill(0.05);
+    grille[0] = 0.45;
+    grille[1] = 0.4;
+    grille[COTE_M] = 0.4;
+    return { ...SNAPSHOT, soilRavageurs: grille };
+  }
+
+  it("lit la cellule, pas la moyenne de la parcelle", () => {
+    const s = avecFoyer();
+    const st = station();
+    expect(FICHE.lire(s, st, 0)).toBeCloseTo(0.45, 6);
+    expect(FICHE.lire(s, st, 40)).toBeCloseTo(0.05, 6);
+  });
+
+  it("le foyer et le calme ne portent pas la même couleur, et de loin", () => {
+    // Les deux valeurs sont celles qu'on mesure : médiane de cellule autour de
+    // 0,05, pic d'une année ordinaire autour de 0,45. Si ces deux-là se
+    // ressemblent à l'écran, le calque ne sert à rien — c'est la seule chose
+    // que le joueur doit pouvoir distinguer d'un coup d'œil.
+    const st = station();
+    const calme = partDuDegrade(0.05, FICHE, st);
+    const foyer = partDuDegrade(0.45, FICHE, st);
+    expect(foyer - calme).toBeGreaterThan(0.4);
+    const [, , lCalme] = FICHE.teinte(calme);
+    const [, , lFoyer] = FICHE.teinte(foyer);
+    expect(lCalme - lFoyer).toBeGreaterThan(18);
+  });
+
+  it("une parcelle indemne reste claire : on ne crie pas pour rien", () => {
+    const [, , clarte] = FICHE.teinte(partDuDegrade(0, FICHE, station()));
+    expect(clarte).toBeGreaterThan(85);
+  });
+
+  it("l'échelle va jusqu'au bout de ce que le moteur peut produire", () => {
+    // Bornée sur ce qu'on a observé, la carte saturerait à la première partie
+    // qui fait pire — et une carte saturée ne montre plus de foyer.
+    expect(FICHE.bornes(station())).toEqual([0, 1]);
+    expect(partDuDegrade(1, FICHE, station())).toBe(1);
+  });
+
+  it("l'étendue encadre le foyer et le calme", () => {
+    const e = etendueDuCalque(FICHE, avecFoyer(), station(), COTE_M * COTE_M);
+    expect(e?.bas).toBeCloseTo(0.05, 6);
+    expect(e?.haut).toBeCloseTo(0.45, 6);
   });
 });
