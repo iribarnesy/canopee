@@ -27,7 +27,7 @@
  */
 
 import { type ArbreRetire, estGesteSurZone, type GesteSurZone } from "../../engine/actions";
-import type { ChuteDeChandelle } from "../../engine/tick";
+import type { ChuteDeChandelle, IncendieResult } from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
 import { type Vue, versEcranVue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
@@ -36,6 +36,7 @@ import {
   type ArbreQuiSeTorche,
   avancementDuTorchage,
   chargeDuCiel,
+  consomptionEnCours,
   type FrontDIncendie,
   feuAuSol,
   flammesDeTorche,
@@ -163,6 +164,79 @@ export function chandellesTombees(plan: PlanDEllipse): TigeAbattue[] {
   }
   return tiges;
 }
+
+/**
+ * **Les fûts que l'incendie consume**, à reposer le temps qu'ils brûlent (#246).
+ *
+ * *« L'incendie, je n'ai rien vu, tout a disparu d'un coup »* — mesuré à
+ * **1 433 fûts** sur l'incendie de l'an 19. Une chandelle consumée quitte
+ * `state.trees` dans le tick du feu : elle n'est ni dans l'instantané d'après,
+ * ni dans celui d'avant, donc rien ne la posait et elle s'escamotait entre deux
+ * images. C'est le même problème qu'une tige abattue, et c'est donc le même
+ * chemin : on la repose sous un identifiant de tige, le temps de son acte.
+ *
+ * **Elle ne tombe pas.** Une chandelle qui s'écroule d'elle-même passe par
+ * `chutes` et porte sa direction ; celle-ci brûle sur pied et il n'en reste
+ * rien. Sa direction est donc nulle et ne sert à rien : ce qui la fait
+ * disparaître est son opacité, pas sa rotation (`consomptionEnCours`).
+ */
+export function futsConsumes(incendie: IncendieResult | undefined): TigeAbattue[] {
+  const tiges: TigeAbattue[] = [];
+  for (const fut of incendie?.chandellesConsumees ?? []) {
+    if (fut.hauteurM <= 0) continue;
+    tiges.push({
+      id: idDeLaTige(fut.id),
+      especeId: fut.especeId,
+      x: fut.x,
+      y: fut.y,
+      heightM: fut.hauteurM,
+      // Une chandelle n'a plus de houppier : `arbresAPoser` lui met une part
+      // foliaire nulle sur ce seul drapeau.
+      baseHouppierM: 0,
+      chandelle: true,
+      // Elle ne se couche pas : elle brûle debout et s'efface. Zéro est ici la
+      // valeur d'un champ qui ne sert pas, et non une direction choisie.
+      directionRad: 0,
+      hauteurDeCoupeM: 0,
+    });
+  }
+  return tiges;
+}
+
+/**
+ * Les mêmes, en candidats au torchage — c'est ainsi qu'elles brûlent.
+ *
+ * **Les mêmes identifiants que les tiges posées**, et c'est tout ce qui fait
+ * tenir l'ensemble : l'index des torches est consulté par l'identifiant sous
+ * lequel l'arbre se dessine, donc un fût posé sous un identifiant de tige doit
+ * être torché sous celui-là.
+ *
+ * Pas de houppier : le rayon est celui du fût, une grosse tige fait un demi-
+ * mètre. Ce qui flambe est le bois, sur toute sa hauteur — d'où une base de
+ * houppier nulle, qui donne des flammes du pied à la cime.
+ */
+export function futsConsumesATorcher(incendie: IncendieResult | undefined): ArbreATorcher[] {
+  return futsConsumes(incendie).map((tige) => ({
+    id: tige.id,
+    x: tige.x,
+    y: tige.y,
+    hauteurM: tige.heightM,
+    baseHouppierM: 0,
+    rayonHouppierM: RAYON_DU_FUT_M,
+    avantLeFeu: { partFoliaire: 0, senescence: 0, vigueur: 0, dommageHydraulique: 0 },
+    consumee: true,
+  }));
+}
+
+/**
+ * Rayon des flammes autour d'un fût consumé, m.
+ *
+ * Un demi-mètre : c'est l'ordre de grandeur d'un tronc de futaie, et les
+ * flammes d'un fût mort ne s'étalent pas — il n'y a plus de branchaison pour
+ * les porter. Le comparer au rayon d'un houppier, qui se compte en mètres, dit
+ * la différence qu'on veut voir à l'écran.
+ */
+const RAYON_DU_FUT_M = 0.5;
 
 /** Les mêmes, indexées par l'identifiant sous lequel elles se dessinent. */
 export function indexerLesChandellesTombees(plan: PlanDEllipse): PlanIndexe {
@@ -713,13 +787,22 @@ export interface ArbreATorcher {
   rayonHouppierM: number;
   /** ce que le moteur dit de cet arbre **avant** que le feu passe */
   avantLeFeu: ArbreVivant;
+  /**
+   * Le feu le **consume**-t-il au lieu de le laisser en chandelle (#246) ?
+   *
+   * Un arbre vivant que le front torche reste sur la parcelle, noir ; une
+   * chandelle déjà sèche est consumée et quitte `state.trees` dans le tick même
+   * (`IncendieResult.chandellesConsumees`). Le drapeau porte cette différence
+   * jusqu'à la mise en scène, qui l'efface au lieu de la charbonner.
+   */
+  consumee?: boolean;
 }
 
 /** Les arbres que le front torche, indexés par identifiant. */
 export interface TorchesIndexees {
   acte?: Acte;
   front?: FrontDIncendie;
-  arbres: Map<number, { torche: ArbreQuiSeTorche; avantLeFeu: ArbreVivant }>;
+  arbres: Map<number, { torche: ArbreQuiSeTorche; avantLeFeu: ArbreVivant; consumee?: boolean }>;
 }
 
 /** Rien ne brûle : l'index vide, partagé — donc sans allocation par image. */
@@ -748,7 +831,10 @@ export function indexerLesTorches(
   const rangDe = new Map<number, number>();
   const n = Math.min(trouve.feu.brulees.length, trouve.feu.rangs.length);
   for (let i = 0; i < n; i++) rangDe.set(trouve.feu.brulees[i] ?? 0, trouve.feu.rangs[i] ?? 0);
-  const arbres = new Map<number, { torche: ArbreQuiSeTorche; avantLeFeu: ArbreVivant }>();
+  const arbres = new Map<
+    number,
+    { torche: ArbreQuiSeTorche; avantLeFeu: ArbreVivant; consumee?: boolean }
+  >();
   for (const a of candidats) {
     const cellule =
       Math.min(coteM - 1, Math.max(0, Math.floor(a.y))) * coteM +
@@ -757,6 +843,7 @@ export function indexerLesTorches(
     if (rang === undefined) continue;
     arbres.set(a.id, {
       avantLeFeu: a.avantLeFeu,
+      ...(a.consumee ? { consumee: true } : {}),
       torche: {
         id: a.id,
         x: a.x,
@@ -805,7 +892,39 @@ export function etatDuTorchage(
   const tete = teteALInstant(index, ecouleMs);
   if (tete === undefined) return undefined;
   const u = avancementDuTorchage(tete, trouve.torche.rang);
-  return u === undefined ? undefined : torchageEnCours(trouve.avantLeFeu, u);
+  if (u === undefined) return undefined;
+  // **Un seul index, deux fins.** Le front passe de la même façon sur les deux ;
+  // ce qui les sépare est ce qu'il en reste après, et le moteur l'a dit.
+  return trouve.consumee ? consomptionEnCours(u) : torchageEnCours(trouve.avantLeFeu, u);
+}
+
+/**
+ * **Ce qui efface un fût consumé**, à cet instant de l'ellipse (#246).
+ *
+ * L'opacité ne passe pas par le canal de la mort — `appliquerLesActes` n'en
+ * lit que l'état (feuillage, vigueur, chandelle) — mais par celui de la
+ * **pose**, comme la chute d'une tige. D'où cette fonction à côté
+ * d'`etatDuTorchage` : c'est le même instant et le même avancement, dit à
+ * l'autre canal.
+ *
+ * La règle d'effacement n'est écrite qu'une fois, dans `consomptionEnCours` :
+ * deux copies dériveraient, et la fumée finirait par s'éteindre avant ou après
+ * que le fût ait disparu.
+ */
+export function poseDuFutConsume(
+  index: TorchesIndexees,
+  ecouleMs: number,
+  idArbre: number,
+): Deformation {
+  const trouve = index.arbres.get(idArbre);
+  if (!trouve?.consumee) return DEBOUT;
+  const tete = teteALInstant(index, ecouleMs);
+  if (tete === undefined) return DEBOUT;
+  const u = avancementDuTorchage(tete, trouve.torche.rang);
+  // Avant que le front ne l'atteigne, elle est debout et entière. C'est tout
+  // l'objet de l'issue : elle ne disparaît plus **avant** d'avoir brûlé.
+  if (u === undefined) return DEBOUT;
+  return { rotationRad: 0, hauteur: 1, opacite: consomptionEnCours(u).opacite };
 }
 
 /**

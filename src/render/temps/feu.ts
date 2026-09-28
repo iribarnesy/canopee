@@ -1215,3 +1215,42 @@ export function torchageEnCours(avantLeFeu: ArbreVivant, u: number): EtatMourant
 /** À quel avancement du torchage l'écorce est noircie, puis l'arbre une chandelle. */
 export const CHARBONNE_A = 0.2;
 export const CHANDELLE_A = 0.7;
+
+/**
+ * À partir de quel avancement un fût **consumé** commence à ne plus être là (#246).
+ *
+ * Les deux tiers, et non la fin : le moteur dit que la chandelle a été
+ * consumée, donc qu'il n'en reste rien — pas un tronc couché, pas une souche
+ * noire. Ce qu'on montre est la seule chose vraie entre « debout » et
+ * « disparue » : elle flambe, et elle s'efface pendant qu'elle flambe. La faire
+ * disparaître d'un coup à la fin redonnerait l'escamotage que #236 a nommé.
+ */
+export const CONSUMEE_DES = 0.66;
+
+/**
+ * Un fût mort que le feu **consume** : il brûle, et il n'en reste rien (#246).
+ *
+ * **La différence avec `torchageEnCours` tient en un champ**, et c'est le fait
+ * que le moteur rapporte : un arbre vivant que le front torche reste sur la
+ * parcelle en chandelle noire — l'instantané suivant le montre —, tandis qu'une
+ * chandelle déjà sèche est *consumée* et quitte `state.trees` dans le tick même.
+ * Ce qui s'efface ici n'est donc pas une commodité de mise en scène, c'est la
+ * seule façon de finir sur ce que le moteur dit de la parcelle.
+ *
+ * Elle n'a pas de feuillage à perdre : `partFoliaire` part de zéro et le
+ * torchage n'a rien à en retrancher. Ce qui brûle est le bois.
+ */
+export function consomptionEnCours(u: number): EtatMourant {
+  const brut = Math.min(1, Math.max(0, u));
+  const etat = torchageEnCours(
+    { partFoliaire: 0, senescence: 0, vigueur: 0, dommageHydraulique: 0 },
+    brut,
+  );
+  return {
+    ...etat,
+    // Elle l'était déjà avant que le feu ne la prenne : c'est une chandelle
+    // qui brûle, pas un arbre qui en devient une.
+    chandelle: true,
+    opacite: 1 - dansLaFenetre(brut, [CONSUMEE_DES, 1]),
+  };
+}
