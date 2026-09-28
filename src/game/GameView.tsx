@@ -41,12 +41,14 @@ import type { Orientation } from "../render/projection";
 import { gitesOccupes } from "../render/temps/habitants";
 import { lignesDuBilan } from "./bilan";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
+import { useEcranEmpile } from "./ecranEmpile";
 import type { Niveau } from "./niveaux";
 import { NIVEAUX_LIVRES } from "./niveauxLivres";
 import { PlanEau } from "./PlanEau";
 import { Avis } from "./panneaux/Avis";
 import { Bandeau } from "./panneaux/Bandeau";
 import { CarteDuSol } from "./panneaux/CarteDuSol";
+import { Confirmation } from "./panneaux/Confirmation";
 import { FinDeNiveau } from "./panneaux/FinDeNiveau";
 import { PanneauAction } from "./panneaux/PanneauAction";
 import { PanneauArbres } from "./panneaux/PanneauArbres";
@@ -60,7 +62,7 @@ import { PanneauScores } from "./panneaux/PanneauScores";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
 import { PanneauSuivis } from "./panneaux/PanneauSuivis";
 import { type Mode, useReglagesDeGeste } from "./panneaux/reglages";
-import { btn, panel, SCENE, VOLET } from "./panneaux/styles";
+import { btn, SCENE, VOLET } from "./panneaux/styles";
 import { Angle, BoutonDeVolet, useVolets, Volet } from "./panneaux/Volet";
 import { arbresAPoser, donneesSolDe } from "./parcelle";
 import {
@@ -140,27 +142,6 @@ function StartScreen({
    * plus, la règle doit continuer de valoir.
    */
   const [bac, setBac] = useState(false);
-  const sortieDuBac = useRef(false);
-  const entrerDansLeBac = () => {
-    sortieDuBac.current = false;
-    history.pushState({ canopee: "bac" }, "");
-    setBac(true);
-  };
-  const quitterLeBac = () => {
-    sortieDuBac.current = true;
-    if (window.history.state?.canopee === "bac") history.back();
-    setBac(false);
-  };
-  useEffect(() => {
-    if (!bac) return;
-    const surRetour = () => {
-      if (sortieDuBac.current) return;
-      sortieDuBac.current = true;
-      setBac(false);
-    };
-    window.addEventListener("popstate", surRetour);
-    return () => window.removeEventListener("popstate", surRetour);
-  }, [bac]);
 
   const [profils, setProfils] = useState<ProfilDepart[]>(() => chargerProfils());
   const [nomProfil, setNomProfil] = useState("");
@@ -168,6 +149,27 @@ function StartScreen({
   const [messageProfil, setMessageProfil] = useState("");
   const [nappeCm, setNappeCm] = useState(STATIONS_V0[0]?.station.profondeurNappeEquilibreCm ?? 300);
   const [terrain, setTerrain] = useState<number[] | undefined>(undefined);
+  /**
+   * **La sortie du bac à sable, sans question** (#226) — et l'absence de
+   * question est une décision, pas un oubli : les réglages posés ici survivent
+   * au retour, puisque les deux écrans les partagent (voir `bac`). Il n'y a
+   * donc rien à défaire, et une boîte qui demanderait pour rien apprendrait à
+   * répondre oui sans lire — alors que celle de la partie, elle, mérite d'être
+   * lue.
+   *
+   * **Un terrain dessiné à la main, en revanche, ne survit pas à la fermeture
+   * de l'onglet** : rien ne l'écrit nulle part. C'est le seul « quelque chose à
+   * perdre » de cet écran (#226).
+   */
+  const ecranDuBac = useEcranEmpile({
+    actif: bac,
+    nom: "bac",
+    surSortie: () => setBac(false),
+    aPerdre: terrain !== undefined,
+  });
+  const entrerDansLeBac = () => setBac(true);
+  const quitterLeBac = ecranDuBac.sortir;
+
   const [maturationAns, setMaturationAns] = useState(0);
   /**
    * L'argent contraint-il la partie ? Certaines questions ne sont pas
@@ -1240,47 +1242,40 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * l'écran titre — par le même chemin que « Sauvegarder et quitter », c'est-à-
    * dire en sauvegardant d'abord, et non par un déchargement de page.
    *
-   * Les deux références évitent chacune un piège. `quitter` parce que la
-   * fonction du jeu change d'identité à chaque rendu : un effet qui en
-   * dépendrait pousserait une entrée d'historique par rendu. `sortieDemandee`
-   * parce que le bouton, lui, appelle `history.back()` pour consommer l'entrée
-   * — et ce retour-là ne doit pas déclencher une seconde sortie.
+   * **La manœuvre elle-même vit dans `ecranEmpile.ts` depuis #226**, avec les
+   * deux pièges qu'elle évite — une entrée poussée par rendu, et le retour du
+   * bouton pris pour un retour du navigateur. Elle était écrite ici et dans le
+   * bac à sable ; elle allait l'être une troisième fois.
    */
   const enPartie = Boolean(station && snapshot);
-  const quitter = useRef(game.quit);
-  quitter.current = game.quit;
-  const sortieDemandee = useRef(false);
   /**
-   * Le retour du navigateur **demande** à sortir, il ne sort pas (#188).
+   * **Le retour du navigateur demande à sortir, il ne sort pas** (#188, #226).
    *
    * Le geste est trop facile à faire sans le vouloir — un coup de pouce sur un
-   * pavé tactile — et il coûtait une partie en cours : la parcelle disparaît, il
-   * faut retrouver la sauvegarde et la relancer. La partie est sauvegardée, donc
-   * rien n'est perdu, mais rien ne le dit non plus au moment où l'écran se vide.
+   * pavé tactile — et il coûtait une partie en cours : la parcelle disparaît,
+   * il faut retrouver la sauvegarde et la relancer.
    *
-   * On repousse donc l'entrée d'historique consommée par le retour — sinon un
-   * second retour sortirait vraiment du site — et on pose la question.
+   * **Ce qui est en jeu est une interruption, pas une perte**, et c'est ce qui
+   * décide du texte de la boîte : `quit()` demande la sauvegarde au worker et
+   * **attend sa réponse** avant de terminer. Une boîte qui laisserait craindre
+   * une perte mentirait ; dire que la partie est sauvegardée rassure autant que
+   * la question.
+   *
+   * **La fermeture de l'onglet, elle, perd vraiment quelque chose** : le
+   * démontage termine le worker sans sauvegarder, et ce qui survit est le
+   * dernier autosave — trente secondes au pire. D'où l'avertissement, armé en
+   * partie et nulle part ailleurs.
    */
-  const [sortieAConfirmer, setSortieAConfirmer] = useState(false);
-  useEffect(() => {
-    if (!enPartie) return;
-    sortieDemandee.current = false;
-    history.pushState({ canopee: "partie" }, "");
-    const surRetour = () => {
-      if (sortieDemandee.current) return;
-      history.pushState({ canopee: "partie" }, "");
-      setSortieAConfirmer(true);
-    };
-    window.addEventListener("popstate", surRetour);
-    return () => window.removeEventListener("popstate", surRetour);
-  }, [enPartie]);
+  const ecranDeLaPartie = useEcranEmpile({
+    actif: enPartie,
+    nom: "partie",
+    surSortie: () => game.quit(),
+    confirmer: true,
+    aPerdre: true,
+  });
+  /** Quitter par le bouton : on ne redemande pas ce que le joueur vient de demander. */
+  const quitterLaPartie = ecranDeLaPartie.sortir;
 
-  /** Quitter par le bouton : on consomme l'entrée d'historique qu'on a poussée. */
-  const quitterLaPartie = () => {
-    sortieDemandee.current = true;
-    if (window.history.state?.canopee === "partie") history.back();
-    game.quit();
-  };
   /**
    * **les arbres suivis** et leur journal (#149). Le worker en tient la liste, lui
    * aussi, mais pour une seule raison : arrêter le temps quand l'un meurt.
@@ -1906,44 +1901,17 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         la partie était bien sauvegardée, mais rien ne le disait — d'où cette
         phrase, qui répond à la seule question qu'on se pose à cet instant.
       */}
-      {sortieAConfirmer && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            display: "grid",
-            placeItems: "center",
-            background: "rgba(30, 26, 18, 0.55)",
-            backdropFilter: "blur(2px)",
-            zIndex: 45,
-          }}
+      {ecranDeLaPartie.aConfirmer && (
+        <Confirmation
+          titre="Quitter la partie ?"
+          confirmer={ecranDeLaPartie.confirmer}
+          annuler={ecranDeLaPartie.annuler}
+          motConfirmer="💾 Sauvegarder et quitter"
+          motAnnuler="↩ Continuer à jouer"
         >
-          <section
-            style={{ ...panel, maxWidth: 420, padding: "18px 22px" }}
-            aria-label="Quitter la partie ?"
-          >
-            <h2 style={{ margin: 0, fontSize: "1.1em" }}>Quitter la partie ?</h2>
-            <p style={{ margin: "8px 0 0", opacity: 0.85 }}>
-              Elle est sauvegardée : vous la retrouverez dans « Parties sauvegardées », sur l'écran
-              d'accueil.
-            </p>
-            <div style={{ marginTop: 14 }}>
-              <button
-                type="button"
-                style={btn(true)}
-                onClick={() => {
-                  setSortieAConfirmer(false);
-                  quitterLaPartie();
-                }}
-              >
-                💾 Sauvegarder et quitter
-              </button>
-              <button type="button" style={btn()} onClick={() => setSortieAConfirmer(false)}>
-                ↩ Continuer à jouer
-              </button>
-            </div>
-          </section>
-        </div>
+          Elle est sauvegardée : vous la retrouverez dans « Parties sauvegardées », sur l'écran
+          d'accueil.
+        </Confirmation>
       )}
 
       {enNiveau.niveau && enNiveau.avancement && enNiveau.fini && (
