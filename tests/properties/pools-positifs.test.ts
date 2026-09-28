@@ -65,6 +65,7 @@ const POOLS = [
   "excessMm",
   "nappeMm",
   "mineralNG",
+  "mineralNProfondG",
   "litterNG",
   "litterCG",
   "humusCG",

@@ -737,6 +737,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const waterMm = state.soil.waterMm.slice();
   const excessMm = state.soil.excessMm.slice();
   const mineralNG = state.soil.mineralNG.slice();
+  const mineralNProfondG = state.soil.mineralNProfondG.slice();
   const litterNG = state.soil.litterNG.slice();
   // La structure du sol : ce que les engins tassent et ce que les racines
   // réparent (tassement.ts). Déclaré tôt parce que le bilan hydrique en dépend
@@ -1848,9 +1849,32 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // ── 4. Lessivage de l'azote minéral restant ────────────────────────────────
   let leachedSumG = 0;
   for (let i = 0; i < nCells; i++) {
-    const leached = cellLeachedG(mineralNG[i] ?? 0, drainageMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
-    mineralNG[i] = (mineralNG[i] ?? 0) - leached;
-    leachedSumG += leached;
+    // **Ce que la surface perd, elle ne le perd plus pour le monde** (#247 lot A).
+    // Un nitrate lessivé de l'horizon labouré est dans l'horizon d'en dessous,
+    // pas dans la rivière — et c'est de là que des racines profondes le
+    // reprendront, le jour où le moteur saura les faire descendre (lot B).
+    //
+    // C'est la même correction que les bases ont reçue en #170, au même endroit
+    // du tick et avec la même garde : `waterMm[i * nH]` est l'eau de l'horizon
+    // 0, donc ce calcul-ci était **déjà** écrit comme un flux de surface. On ne
+    // réinterprète rien, on écrit sa destination.
+    const descendu = cellLeachedG(mineralNG[i] ?? 0, drainageMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
+    mineralNG[i] = (mineralNG[i] ?? 0) - descendu;
+    if (nH > 1) {
+      mineralNProfondG[i] = (mineralNProfondG[i] ?? 0) + descendu;
+      // Et c'est en **sortant** du sous-sol qu'un nitrate quitte la parcelle.
+      // C'est ce flux-là que la littérature mesure, pas celui de la surface :
+      // ce qui passe sous la zone racinaire.
+      let eauProfondeMm = 0;
+      for (let h = 1; h < nH; h++) eauProfondeMm += waterMm[i * nH + h] ?? 0;
+      const exporte = cellLeachedG(mineralNProfondG[i] ?? 0, drainageMmArr[i] ?? 0, eauProfondeMm);
+      mineralNProfondG[i] = (mineralNProfondG[i] ?? 0) - exporte;
+      leachedSumG += exporte;
+    } else {
+      // Un profil d'un seul horizon n'a pas de sous-sol : ce qui sort de la
+      // surface sort du monde, comme avant le lot. Même clause que les bases.
+      leachedSumG += descendu;
+    }
     // Le potassium part lui aussi avec l'eau, mais le complexe d'échange le
     // retient : c'est pourquoi les sables en manquent et les argiles non.
     const perduK = lessivagePotassiumG(
@@ -3414,6 +3438,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         boisEnTraversPart,
         tassement,
         mineralNG,
+        mineralNProfondG,
         litterNG,
         litterCG,
         humusCG,

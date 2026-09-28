@@ -61,7 +61,73 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (une guilde entière sans une ligne, #187 guilde 4)
+## Ce que le dernier lot a appris (l'azote lessivé descend, #247 lot A)
+
+### Le pool n'était que la moitié du problème, et l'autre moitié n'était pas dans l'issue
+
+L'énoncé demandait de stratifier `mineralNG`. Lu de près, le tick fusionne la
+demande **avant** de toucher au stock : `cellNWanted[i]` additionne les arbres
+(1532) et la strate (1564), et `nServedRatio[i]` est **un** nombre que les deux
+relisent (1720, 1830). Un stock stratifié servi par une demande fusionnée les
+sert encore au même taux — le noyer ne trouverait rien que le blé n'ait pas.
+
+C'est la forme exacte du mécanisme de plasticité racinaire que ce même chantier
+avait écrit puis retiré : répondre à un gradient que le consommateur ne sait pas
+lire. **Avant d'ajouter une dimension à un stock, vérifier que le consommateur
+sait la lire.**
+
+### Le dépôt avait déjà joué ce coup, et sa réponse n'était pas celle de l'issue
+
+`basesEq` / `basesProfondEq` posaient la même question — que devient ce qu'on
+lessive de la surface ? — et y répondaient par **deux compartiments**, pas par N
+horizons. La plomberie était là, aux quatre flux près, et le commentaire de
+`basesProfondEq` décrivait même le lot à rejouer : *« Aucun arbre ne le lit
+encore. »*
+
+Et ça **répond** à l'objection de #71 (« N horizons n'a de sens qu'avec N, P et K
+ensemble ») au lieu de la heurter : deux budgets ne sont pas un profil, et
+chaque élément peut les adopter séparément. Une grille de plus, contre × nH sur
+le poste le plus lourd d'un état retenu.
+
+Chercher si le dépôt a déjà résolu la même plomberie ailleurs coûte un `grep` et
+peut diviser un lot par trois.
+
+### Le code disait déjà la moitié de ce qu'on croyait ajouter
+
+`cellLeachedG(mineralNG[i], drainage, waterMm[i * nH])` — `waterMm[i * nH]` est
+l'eau de l'horizon 0. **Le lessivage de l'azote était déjà un flux de surface**,
+et ce qu'il emportait quittait le monde. Le lot n'a donc pas réinterprété une
+grandeur, il a écrit une destination qui manquait. La différence compte pour le
+traitement F16 : ce n'est pas un changement de sémantique à re-valider partout,
+c'est un flux qui cesse d'être une fuite.
+
+### J'attendais un puits, c'était un budget — et l'essai est tombé, ce qui est son travail
+
+Le premier essai affirmait que le sous-sol monte avec le temps. Il a échoué :
+22,76 kg/ha à six ans contre 23,31 à trois. **Un compartiment qui reçoit un flux
+et en perd un proportionnel s'équilibre au lieu de s'accumuler** — c'est de la
+physique élémentaire, et je ne l'avais pas vue.
+
+Ce que la mesure a donné à la place est plus fort que ce que je cherchais :
+
+    an  1   surface 8,81   profond 24,26   rapport 2,75
+    an  6   surface 8,68   profond 22,76           2,62
+    an 30   surface 6,23   profond 16,47           2,64
+
+**Le rapport tient à 1 % près sur trente ans pendant que les deux stocks perdent
+un tiers.** Ce n'est pas un chiffre calé — il tombe des deux vitesses de
+lessivage —, et une quasi-identité vaut toujours mieux qu'une tendance qu'on
+avait décidée d'avance.
+
+### Un flux publié peut mesurer autre chose que ce que son nom dit
+
+`leachedKgHa` comptait ce qui sort de l'horizon de surface. La littérature
+mesure ce qui passe **sous la zone racinaire** — ce n'est pas la même grandeur,
+et l'écart n'est pas petit. Le lot ne l'a pas corrigé pour faire joli : tant que
+le flux ne mesurait pas la bonne chose, aucune source extérieure ne pouvait le
+caler.
+
+## Ce qu'un lot plus ancien a appris (une guilde entière sans une ligne, #187 guilde 4)
 
 ### Une promesse écrite dans un module doit finir par être éprouvée
 
