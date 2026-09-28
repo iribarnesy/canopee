@@ -121,6 +121,18 @@ const COINS_MORCEAU: readonly (readonly [number, number])[] = [
 export const BUDGET_CUISSON_PAR_IMAGE = 4;
 
 /**
+ * Aplats provisoires cuits au maximum par image (#265).
+ *
+ * **Bien plus haut que le budget détaillé, parce qu'un aplat coûte bien moins.**
+ * Là où une cuisson fine dessine plusieurs centaines de quads interpolés, leur
+ * flanc, leur tapis d'herbe et leur eau, l'aplat fait deux polygones. Le
+ * plafond n'est là que pour qu'une parcelle immense ne prenne pas toute une
+ * image d'un coup ; une parcelle d'un hectare en compte quarante-neuf et les
+ * reçoit donc tous dès la première.
+ */
+export const BUDGET_APLAT_PAR_IMAGE = 64;
+
+/**
  * Largeur écran visée d'un pavé de sol, en pixels.
  *
  * **Le niveau de détail du sol, et il vient d'une capture.** Le premier jet
@@ -280,6 +292,13 @@ export interface Morceau {
   signature: number;
   /** image cuite, prête à être posée */
   image?: HTMLCanvasElement;
+  /**
+   * L'image est-elle l'**aplat** provisoire et non la cuisson détaillée (#265) ?
+   *
+   * Un morceau provisoire reste dans la file : il est posé pour que la parcelle
+   * n'ait pas de trou, et recuit dès que le budget le permet.
+   */
+  provisoire?: boolean;
   /** décalage de l'image, en pixels **du zoom de cuisson** */
   decalage?: { dx: number; dy: number };
   /**
@@ -675,29 +694,27 @@ function lireChamp(champ: ChampSol, px: number, py: number): { teinte: Teinte; z
 }
 
 /**
- * Cuit un morceau dans une image, et rend l'image avec son décalage.
+ * L'emprise écran d'un morceau, et la taille d'image qu'il faut pour le tenir.
  *
- * Le décalage existe parce qu'un morceau ne se projette pas en rectangle : le
- * losange d'un carré de 16 m dépasse à gauche et à droite de son coin, et les
- * flancs verticaux dépassent par le bas. On mesure donc l'emprise réelle avant
- * de dimensionner l'image — c'est exactement le bug qui coupait les arbres en
- * haut dans le prototype de L0, et il n'y a pas de raison de le refaire ici.
- *
- * `fabriquer` est injecté pour que ce module ne dépende pas du DOM : en test on
- * passe une fabrique factice, en jeu `document.createElement`.
+ * **Extraite parce que deux cuissons la demandent** — la détaillée et la
+ * provisoire (#265) —, et deux copies d'un calcul de cadrage, c'est un décalage
+ * d'un pixel entre les deux images d'un même morceau, donc une couture visible
+ * au moment précis où l'une remplace l'autre.
  */
-export function cuireMorceau(
+function empriseDuMorceau(
   donnees: DonneesSol,
   ix: number,
   iy: number,
-  semaineAnnee: number,
   vue: Vue,
-  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
 ): {
-  image: HTMLCanvasElement;
+  x0: number;
+  y0: number;
+  xFin: number;
+  yFin: number;
+  zMin: number;
+  largeur: number;
+  hauteur: number;
   decalage: { dx: number; dy: number };
-  ancre: { x: number; y: number; z: number };
-  decalageRelatif: { dx: number; dy: number };
 } {
   const xFin = Math.min(donnees.coteM, (ix + 1) * COTE_MORCEAU_M);
   const yFin = Math.min(donnees.coteM, (iy + 1) * COTE_MORCEAU_M);
@@ -726,12 +743,47 @@ export function cuireMorceau(
   // Les flancs descendent jusqu'à l'altitude la plus basse du morceau, et un
   // peu plus bas pour que l'ourlet ne se termine pas net.
   const flancPx = (Math.max(0, maxSy - minSy) || 0) + TUILE_HAUTEUR_PX * vue.cam.zoom * 2;
-  const largeur = Math.max(1, Math.ceil(maxSx - minSx) + 2);
-  const hauteur = Math.max(1, Math.ceil(maxSy - minSy + flancPx) + 2);
+  return {
+    x0,
+    y0,
+    xFin,
+    yFin,
+    zMin,
+    largeur: Math.max(1, Math.ceil(maxSx - minSx) + 2),
+    hauteur: Math.max(1, Math.ceil(maxSy - minSy + flancPx) + 2),
+    decalage: { dx: minSx - 1, dy: minSy - 1 },
+  };
+}
+
+/**
+ * Cuit un morceau dans une image, et rend l'image avec son décalage.
+ *
+ * Le décalage existe parce qu'un morceau ne se projette pas en rectangle : le
+ * losange d'un carré de 16 m dépasse à gauche et à droite de son coin, et les
+ * flancs verticaux dépassent par le bas. On mesure donc l'emprise réelle avant
+ * de dimensionner l'image — c'est exactement le bug qui coupait les arbres en
+ * haut dans le prototype de L0, et il n'y a pas de raison de le refaire ici.
+ *
+ * `fabriquer` est injecté pour que ce module ne dépende pas du DOM : en test on
+ * passe une fabrique factice, en jeu `document.createElement`.
+ */
+export function cuireMorceau(
+  donnees: DonneesSol,
+  ix: number,
+  iy: number,
+  semaineAnnee: number,
+  vue: Vue,
+  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+): {
+  image: HTMLCanvasElement;
+  decalage: { dx: number; dy: number };
+  ancre: { x: number; y: number; z: number };
+  decalageRelatif: { dx: number; dy: number };
+} {
+  const { x0, y0, xFin, yFin, largeur, hauteur, decalage } = empriseDuMorceau(donnees, ix, iy, vue);
   const image = fabriquer(largeur, hauteur);
   const ctx = image.getContext("2d");
   if (!ctx) throw new Error("contexte 2d indisponible");
-  const decalage = { dx: minSx - 1, dy: minSy - 1 };
 
   const demiLargeur = (TUILE_LARGEUR_PX * vue.cam.zoom) / 2;
   const demiHauteur = (TUILE_HAUTEUR_PX * vue.cam.zoom) / 2;
@@ -971,6 +1023,95 @@ export function cuireMorceau(
   // L'ancre : le coin du morceau, à l'altitude de sa cellule. N'importe quel
   // point de parcelle ferait l'affaire — ce qui compte est qu'il soit **fixe** et
   // reprojetable ; le coin est celui dont on se souvient le plus facilement.
+  const ancre = { x: x0, y: y0, z: donnees.altitudesM[y0 * donnees.coteM + x0] ?? 0 };
+  const ancreEcran = versEcranVue(ancre, vue);
+  return {
+    image,
+    decalage,
+    ancre,
+    decalageRelatif: { dx: decalage.dx - ancreEcran.sx, dy: decalage.dy - ancreEcran.sy },
+  };
+}
+
+/**
+ * **Cuit un morceau à plat** : un aplat de sa teinte moyenne, et rien d'autre (#265).
+ *
+ * **Pourquoi une seconde cuisson, alors qu'il en existe déjà une.** Un morceau
+ * qui n'a pas encore d'image n'est pas posé du tout, et ce qui se voit alors
+ * n'est pas le sol en retard : c'est le **fond de la page** — `--fond`, un beige
+ * très clair —, mesuré à (240, 240, 232) au milieu de la parcelle. La règle
+ * écrite plus bas, « mieux vaut un trou d'une image ou deux qu'un sol faux »,
+ * tenait tant que le trou durait une image ou deux. Mesuré au démarrage : 49
+ * morceaux périmés, quatre cuits par image, et sur la machine de mesure —
+ * rastériseur logiciel, sans GPU — **treize images en trente secondes**. Le trou
+ * a donc duré une demi-minute, et il ressemblait à un défaut de rendu au point
+ * qu'il a fallu une mesure pour établir que c'en était un de **chargement**.
+ *
+ * L'aplat n'est pas un sol faux : sa teinte sort de `teintePave`, la même
+ * fonction que la cuisson détaillée appelle pour chaque pavé, appelée une fois
+ * pour le morceau entier. C'est le sol, à sa résolution la plus grossière.
+ *
+ * Même emprise, même ancre, même décalage que la cuisson détaillée
+ * (`empriseDuMorceau`) : l'image fine prend exactement la place de l'aplat
+ * quand elle arrive, sans saut d'un pixel.
+ */
+export function cuireMorceauPlat(
+  donnees: DonneesSol,
+  ix: number,
+  iy: number,
+  semaineAnnee: number,
+  vue: Vue,
+  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+): {
+  image: HTMLCanvasElement;
+  decalage: { dx: number; dy: number };
+  ancre: { x: number; y: number; z: number };
+  decalageRelatif: { dx: number; dy: number };
+} {
+  const { x0, y0, xFin, yFin, zMin, largeur, hauteur, decalage } = empriseDuMorceau(
+    donnees,
+    ix,
+    iy,
+    vue,
+  );
+  const image = fabriquer(largeur, hauteur);
+  const ctx = image.getContext("2d");
+  if (!ctx) throw new Error("contexte 2d indisponible");
+
+  const penteReference = expositionMoyenne(donnees.altitudesM, donnees.coteM);
+  const pave = teintePave(donnees, x0, y0, xFin - x0, yFin - y0, semaineAnnee, penteReference);
+
+  // Le dessus du morceau : les quatre coins projetés à l'altitude du morceau,
+  // et les flancs qui descendent jusqu'à son point le plus bas. C'est la même
+  // silhouette que la cuisson détaillée produit, en un seul polygone.
+  const coin = (x: number, y: number, z: number) => {
+    const e = versEcranVue({ x, y, z }, vue);
+    return { sx: e.sx - decalage.dx, sy: e.sy - decalage.dy };
+  };
+  const hauts = [
+    coin(x0, y0, pave.z),
+    coin(xFin, y0, pave.z),
+    coin(xFin, yFin, pave.z),
+    coin(x0, yFin, pave.z),
+  ];
+  const bas = [coin(xFin, y0, zMin), coin(xFin, yFin, zMin), coin(x0, yFin, zMin)];
+  // Le flanc d'abord, plus sombre — c'est de la terre vue de côté, jamais
+  // éclairée par un soleil haut. Le même facteur que la cuisson détaillée.
+  ctx.fillStyle = versCss(eclairer(pave.teinte, 0.62));
+  ctx.beginPath();
+  ctx.moveTo(hauts[1]?.sx ?? 0, hauts[1]?.sy ?? 0);
+  for (const p of [hauts[2], hauts[3], bas[2], bas[1], bas[0]]) {
+    if (p) ctx.lineTo(p.sx, p.sy);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = versCss(pave.teinte);
+  ctx.beginPath();
+  ctx.moveTo(hauts[0]?.sx ?? 0, hauts[0]?.sy ?? 0);
+  for (const p of hauts.slice(1)) ctx.lineTo(p.sx, p.sy);
+  ctx.closePath();
+  ctx.fill();
+
   const ancre = { x: x0, y: y0, z: donnees.altitudesM[y0 * donnees.coteM + x0] ?? 0 };
   const ancreEcran = versEcranVue(ancre, vue);
   return {
@@ -1236,7 +1377,14 @@ export class Terrain {
       const bonZoom =
         existant?.zoomCuit === zoomDeCuisson(vue.cam.zoom) &&
         existant?.orientationCuite === vue.cam.orientation;
-      if (!existant || existant.signature !== signature || !bonZoom || !existant.image) {
+      if (
+        !existant ||
+        existant.signature !== signature ||
+        !bonZoom ||
+        !existant.image ||
+        // L'aplat tient la place, il ne la garde pas (#265).
+        existant.provisoire
+      ) {
         aCuire.push({ ix, iy });
       }
     }
@@ -1247,6 +1395,46 @@ export class Terrain {
     return aCuire.length;
   }
 
+  /**
+   * **Boucher les trous avant de peindre** (#265).
+   *
+   * Tout morceau de la file qui n'a **aucune** image en reçoit une à plat, tout
+   * de suite. Sans ça, il n'est pas posé du tout et c'est le fond de la page
+   * qu'on voit à travers la parcelle — mesuré au démarrage : une demi-minute de
+   * trou sur la moitié de l'hectare, sur une machine sans GPU.
+   *
+   * Seulement ceux qui n'ont rien : un morceau dont l'image fine est périmée
+   * garde la sienne, parce qu'un sol d'une semaine de retard vaut mieux qu'un
+   * aplat — c'est la règle qui existait déjà, et elle ne change pas.
+   */
+  private combler(donnees: DonneesSol, semaineAnnee: number, vue: Vue): number {
+    let faits = 0;
+    const vueDeCuisson: Vue = { ...vue, cam: { ...vue.cam, zoom: zoomDeCuisson(vue.cam.zoom) } };
+    for (const { ix, iy } of this.aCuire) {
+      if (faits >= BUDGET_APLAT_PAR_IMAGE) break;
+      const existant = this.morceaux.get(this.cle(ix, iy));
+      if (existant?.image && existant.orientationCuite === vue.cam.orientation) continue;
+      const plat = cuireMorceauPlat(donnees, ix, iy, semaineAnnee, vueDeCuisson, this.fabriquer);
+      this.morceaux.set(this.cle(ix, iy), {
+        ix,
+        iy,
+        x0: ix * COTE_MORCEAU_M,
+        y0: iy * COTE_MORCEAU_M,
+        coteM: COTE_MORCEAU_M,
+        signature: signatureMorceau(donnees, ix, iy, semaineAnnee),
+        image: plat.image,
+        decalage: plat.decalage,
+        ancre: plat.ancre,
+        decalageRelatif: plat.decalageRelatif,
+        zoomCuit: zoomDeCuisson(vue.cam.zoom),
+        orientationCuite: vue.cam.orientation,
+        provisoire: true,
+      });
+      faits++;
+    }
+    return faits;
+  }
+
   /** Cuit au plus `budget` morceaux périmés. Rend le nombre réellement cuit. */
   public cuire(
     donnees: DonneesSol,
@@ -1254,6 +1442,7 @@ export class Terrain {
     vue: Vue,
     budget = BUDGET_CUISSON_PAR_IMAGE,
   ): number {
+    this.combler(donnees, semaineAnnee, vue);
     let faits = 0;
     while (faits < budget) {
       const suivant = this.aCuire.shift();
