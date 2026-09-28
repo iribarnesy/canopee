@@ -292,7 +292,7 @@ maladie-là, pas une preuve de santé.*
 | A22 | Une crue noie le bas de la parcelle quand le bassin d'amont verse, et reflue ensuite | ✅ | `hauteurDeCrueM` ; `eau-surface.test.ts` — même eau que le ruissellement d'amont, relue depuis le cours d'eau |
 | A21 | Un orage sur un sol déjà plein ruisselle intégralement | ✅ | passe 1 de `profilHydro` : le refus reflue au lieu d'être perdu ; `profil-hydro-conservation.test.ts` |
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
-| A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
+| A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` — et le mécanisme ne servait à rien tant que **les sept profils s'arrêtaient entre 80 et 120 cm** (#257), parce qu'une fosse pédologique s'arrête là et qu'on avait pris sa profondeur pour celle du terrain. Dix espèces sur vingt-six n'atteignaient donc **jamais** leur enracinement déclaré, et le blé descendait plus bas que le noyer. Chaque station meuble porte désormais son **horizon C** — formation à silex sous le limon des plateaux, sables de Sologne, arène des Maures, alluvion profonde du fond de vallée — et l'alios landais, lui, arrête toujours tout le monde à 75 cm |
 | A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` — et il faut distinguer **deux** choses que le moteur confondait (#84) : la plasticité, qui ne répond qu'à la soif, et le **squelette** d'ancrage, qu'un arbre bâtit en grandissant qu'il ait soif ou non. Le plancher `partPlancherRacines` croît donc avec la maturité (0,35 → 0,80 du potentiel), alors qu'il valait 0,35 à tout âge : un hêtre de vingt mètres jamais assoiffé avait les racines d'un semis, et c'est ce qui forçait le barème d'ancrage de `tempete.ts` à mentir (F15). L'extrémité jeune est inchangée — un semis démarre toujours en surface |
 | A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ✅ | `relief.ts` + `erosion.ts` ; `erosion.test.ts` — 4 t/ha/an à 15 % sur sol nu, quasi rien sous couvert |
 | A27 | Ce que l'eau emporte est plus riche que le sol moyen, et se dépose plus bas | ✅ | enrichissement ×3, dépôt fonction du couvert de la cellule d'arrivée — le versant se déshabille par le sommet |
@@ -3886,6 +3886,126 @@ donc 🟡, et le score baisse d'un point.
 **La part retenue par rétranslocation n'est pas rendue non plus.** Elle devrait
 vivre dans un pool d'azote de la plante, que le moteur n'a pas — c'est encore
 une fuite, moitié de celle d'avant, et l'arbre porte exactement la même.
+
+## Les profils s'arrêtaient où s'arrête une fosse, pas où s'arrêtent les racines (#257)
+
+Les sept stations du dépôt plafonnaient entre **75 et 120 cm** de profondeur
+pénétrable. Ce n'était pas une limite de mécanisme — `profondeurPenetrableCm`
+rendrait trois mètres si un profil les déclarait — c'était que **le dépôt n'avait
+aucun profil profond**. Et ce n'était pas non plus une négligence : une fosse
+pédologique s'arrête là. Le pédologue décrit le **sol**, c'est-à-dire la partie du
+terrain que la pédogenèse a transformée, note « substrat » sous le dernier
+horizon et referme le trou. La convention est juste ; ce qui était faux est de
+lire ces épaisseurs comme le **volume que les racines explorent**.
+
+Ce que ça coûtait, mesuré sur tout l'atlas : **dix espèces sur vingt-six**
+déclarent plus de 120 cm d'enracinement — chêne pubescent et chêne-liège 250,
+pin sylvestre 200, châtaignier et abricotier 180, noyer 160, arbousier 150,
+ajonc 140, aubépine et genêt 130 — et **aucune n'atteignait jamais sa profondeur
+déclarée, sur aucune station**. Le blé tendre, qui descend à 120 cm en agronomie
+ordinaire, s'enracinait donc plus profond que le noyer sur six stations sur
+sept, ce qui retourne l'argument même de l'agroforesterie à noyers.
+
+### La vérité terrain, et elle se compte en mètres
+
+Les deux synthèses globales d'enracinement — **Canadell et al. 1996**
+(*Oecologia* 108:583-595) et **Jackson et al. 1996** (*Oecologia* 108:389-411) —
+donnent un maximum moyen de **2,9 ± 0,2 m** en forêt décidue tempérée et **3,9 m**
+en conifères tempérés, le maximum global, toutes formations confondues, étant à
+4,6 m. En France, **Lucot & Bruckert 1992** (*Ann. Sci. For.* 49:465-479) ont
+dégagé au jet le système racinaire de chênes pédonculés de cent cinquante ans
+dans un sol brun lessivé colluvial de quatre mètres : enracinement intensif
+jusqu'à 60 cm, encore dense de 60 à 120, puis des pivots sub-verticaux **au-delà
+de quatre mètres**, prospectant huit cents mètres cubes de terre.
+
+### Chaque station porte maintenant son horizon C, et il est sourcé
+
+| Station | avant | après | l'horizon ajouté | source |
+|---|---|---|---|---|
+| Lande sèche | 75 cm | **75 cm** | aucun | l'alios est un vrai plancher, et cette station-là n'a pas à s'approfondir |
+| Fond de vallée | 85 cm | **195 cm** | 110 cm d'alluvion fine, même texture | un remblaiement alluvial fait des mètres ; « alluvions profondes » le disait déjà |
+| Limon riche | 100 cm | **200 cm** | 100 cm de formation résiduelle à silex, 45 % de pierrosité | le Plateau picard est une craie coiffée de plusieurs mètres de limon, avec une formation à silex intercalée (notices BRGM ; CNPF Hauts-de-France, *Le Plateau picard*) |
+| Limon pauvre en N | 100 cm | **200 cm** | idem | même plateau, même substrat : la charrue ne descend pas à un mètre |
+| Limon acide (Sologne) | 90 cm | **200 cm** | 110 cm de sable de Sologne | sables et argiles de Sologne, 20 à 50 m d'épaisseur ; la lentille imperméable est plus bas (CAUE 41 / CDPNE) |
+| Friche sur limon | 80 cm | **180 cm** | 100 cm de formation à silex | même famille de substrat, aux confins de Touraine et du Berry |
+| Suberaie des Maures | 120 cm | **260 cm** | 140 cm d'arène grossière, 45 % de pierrosité | l'altération des formations cristallines des Maures développe une arène sableuse jusqu'à une dizaine de mètres (fiche hydrogéologique PAC13A, Eaufrance) |
+
+Un profil est une **donnée**, pas un réglage : c'est pour ça que chaque ligne
+porte d'où elle vient, et que l'épaisseur décrite est conservatrice partout — on
+décrit un mètre d'une formation qui en fait souvent plusieurs.
+
+**Ce qu'il ne fallait surtout pas faire**, et l'essai le garde : raboter les
+profondeurs déclarées de l'atlas pour les faire tenir dans un mètre. Ce serait
+caler la donnée écologique sur le moteur, c'est-à-dire le défaut que ce dépôt
+poursuit partout ailleurs. `racines.test.ts` échoue désormais si l'atlas cesse
+de déclarer dix espèces au-delà de 120 cm.
+
+### Ce que l'issue supposait, et ce que la mesure a répondu
+
+L'issue pariait sur une piste précise : un horizon C **qui retient peu d'eau**
+donnerait de la profondeur sans gonfler la réserve utile, et c'est la réserve
+utile qui fait peur, parce que toute la calibration des hauteurs (Jansen 1996)
+tient à elle. Trois variantes ont donc été comparées sur le limon riche, à
+dispositif strictement apparié — huit sujets au large, trois graines (17, 43,
+91), quarante ans, même météo.
+
+| | pénétrable | RU | hêtre 40 ans | noyer | chêne pubescent | pin sylvestre |
+|---|---|---|---|---|---|---|
+| profil actuel | 100 cm | 186 mm | 16,46 m / 94 cm | 9,98 m / 99 cm | 10,97 m / 99 cm | 16,16 m / 100 cm |
+| + C à silex (peu réservant) | 210 cm | 291 mm | 16,24 m / 94 cm | 9,73 m / 111 cm | 10,96 m / **163 cm** | 16,42 m / **152 cm** |
+| + C de lœss (très réservant) | 210 cm | 378 mm | 16,36 m / 94 cm | 9,97 m / 114 cm | 10,97 m / **163 cm** | 16,20 m / **150 cm** |
+
+*(hauteur dominante / profondeur racinaire moyenne à quarante ans)*
+
+**Le premier résultat est que l'économie de réserve utile existe** : à profondeur
+égale, la formation caillouteuse coûte 105 mm de RU quand le lœss en coûte
+192 — l'horizon C en épargne à peu près la moitié, comme l'issue le prévoyait.
+
+**Le second est que ça n'avait aucune importance**, et c'est le résultat qui
+compte. Doubler la réserve utile du profil (186 → 378 mm) déplace la hauteur du
+hêtre à quarante ans de **−0,6 %**. Les quatre essences tiennent dans ±2,5 %
+quelle que soit la variante, et la variante la **plus** réservante est celle qui
+s'écarte le moins du profil actuel. La crainte qui faisait de ce ticket une
+issue et non une retouche — « rallonger les profils déplace l'eau partout, donc
+tout le calage des hauteurs avec » — **ne se vérifie pas.**
+
+La raison est dans le moteur, et elle était écrite : la réserve profonde n'est
+atteinte que par les racines qui y descendent, et la densité racinaire décroît
+exponentiellement avec la profondeur (`fractionsRacinairesParHorizon`). Un hêtre
+plafonne à 110 cm d'enracinement déclaré : **il ne voit pas le mètre qu'on ajoute
+sous lui**, et sa réserve à lui est celle des horizons qu'il occupe, qui n'ont
+pas bougé d'un millimètre. Ce que le profil profond change, il ne le change que
+pour qui descend. C'est exactement ce qu'on veut d'un modèle stratifié, et c'est
+la preuve que la stratification n'était pas décorative.
+
+Le choix de l'horizon C ne se fait donc **pas** sur sa réserve utile, mais sur la
+géologie de la station. Une contrainte réelle demeure, et elle est ailleurs : le
+**dernier** horizon du profil commande la nappe — `porositeDrainable`,
+`subordinationAuRelief` et `hauteurCapillaireCm` le lisent, lui et pas un autre.
+C'est pour cela que le fond de vallée prolonge ses alluvions **à texture
+identique** : y mettre un matériau grossier aurait divisé sa porosité drainable
+par 1,5 et coupé sa frange capillaire de moitié, sur la seule station dont la
+nappe fait l'identité.
+
+### Ce que le lot ne règle pas, et il faut le dire
+
+**Le noyer ne dépasse le blé que tard.** `profondeurRacinesCm` fait croître la
+profondeur avec la **taille** : un noyer n'atteint ses 160 cm qu'à quinze mètres.
+À dix mètres — ce que le moteur lui donne à quarante ans sur le limon riche — il
+en est à 127 cm de potentiel et 111 réalisés. Il passe donc devant les 120 cm du
+blé, mais de peu et tard, et sur le dispositif de Restinclières (vingt-cinq ans)
+il ne les dépasse toujours pas. **Ce qui reste en cause à ce stade n'est plus le
+sol, c'est la vitesse du noyer** — dont le `pousseMaxMAn` est le seul du
+catalogue à n'avoir aucune table derrière lui, le *Fichier écologique des
+essences* wallon portant « sans objet, sylviculture d'arbre » à la ligne
+productivité. C'est une autre issue.
+
+**Le voisinage, lui, n'a pas bougé du tout**, et c'était le risque le moins
+visible : `especeTenable` écarte les espèces exigeantes sous 120 mm de réserve
+utile, et un profil plus profond aurait pu faire basculer une station d'une
+flore à l'autre. Vérifié station par station — 10, 23, 21, 21, 16, 22 et 19
+espèces tenables — **la liste est identique avant et après sur les sept**. Les
+scénarios de succession gardent donc exactement les mêmes acteurs.
 
 ## Règle de travail
 

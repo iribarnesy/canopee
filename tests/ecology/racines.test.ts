@@ -7,14 +7,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { getEspece } from "../../src/engine/especes";
+import { ESPECES_V0, getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
 import { syntheticYear as anneeSynthetique, syntheticYear } from "../../src/engine/meteo";
 import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { horizon, profondeurPenetrableCm } from "../../src/engine/soil";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
+import { LIMON_RICHE, STATIONS_V0, type StationClimat } from "../../src/engine/stations";
 import { fractionsRacinairesParHorizon, profondeurRacinesCm } from "../../src/engine/trees";
 
 describe("profondeur explorée", () => {
@@ -242,5 +242,88 @@ describe("plasticité racinaire : on ne creuse que si on a soif", () => {
   it("un semis démarre en surface, quelles que soient ses capacités d'espèce", () => {
     const jeune = eleverUnChene(10, 1000, 1);
     expect(jeune.rootDepthCm).toBeLessThan(60);
+  });
+});
+
+/**
+ * **Les stations offrent-elles aux racines le volume que l'atlas leur promet ?**
+ * (issue #257)
+ *
+ * Le dépôt a vécu longtemps avec sept profils qui s'arrêtaient tous entre 80 et
+ * 120 cm, parce qu'une fosse pédologique s'arrête là. Conséquence mesurée :
+ * **dix espèces sur vingt-six n'atteignaient jamais leur profondeur déclarée**,
+ * **sur aucune station**, et le blé tendre — 120 cm d'enracinement en agronomie
+ * ordinaire — descendait plus bas que le noyer, qui en déclare 160.
+ *
+ * Ces essais tiennent la propriété par ses deux bouts. D'un côté le catalogue
+ * de stations doit laisser s'exprimer l'atlas ; de l'autre **l'atlas ne doit pas**
+ * **être raboté pour tenir dans les stations** — ce serait caler la donnée
+ * écologique sur le moteur, ce que ce dépôt s'interdit. Le premier essai échoue
+ * donc si quelqu'un « répare » par le mauvais bout.
+ */
+describe("les profils portent la profondeur que l'atlas déclare", () => {
+  /** Une station est **indurée** quand un horizon arrête franchement les racines. */
+  const induree = (sc: StationClimat) => sc.station.profil.some((h) => h.induration >= 0.9);
+
+  it("l'atlas déclare bien des enracinements profonds, et personne ne les rabote", () => {
+    const profondes = ESPECES_V0.filter((e) => e.racines.profondeurMaxCm > 120);
+    expect(profondes.length).toBeGreaterThanOrEqual(10);
+    expect(Math.max(...ESPECES_V0.map((e) => e.racines.profondeurMaxCm))).toBeGreaterThanOrEqual(
+      250,
+    );
+  });
+
+  it("aucune station meuble ne borne les racines sous la médiane de l'atlas", () => {
+    const declarees = ESPECES_V0.map((e) => e.racines.profondeurMaxCm).sort((a, b) => a - b);
+    const mediane = declarees[Math.floor(declarees.length / 2)] ?? 0;
+    for (const sc of STATIONS_V0) {
+      if (induree(sc)) continue;
+      expect(
+        profondeurPenetrableCm(sc.station.profil),
+        `${sc.station.nom} (médiane de l'atlas : ${mediane} cm)`,
+      ).toBeGreaterThan(mediane);
+    }
+  });
+
+  it("au moins une station laisse s'exprimer l'espèce la plus profonde du catalogue", () => {
+    const maxi = Math.max(...ESPECES_V0.map((e) => e.racines.profondeurMaxCm));
+    const plusProfonde = Math.max(
+      ...STATIONS_V0.map((sc) => profondeurPenetrableCm(sc.station.profil)),
+    );
+    expect(plusProfonde).toBeGreaterThanOrEqual(maxi);
+  });
+
+  it("l'alios, lui, arrête toujours tout le monde — un plancher réel reste un plancher", () => {
+    const lande = STATIONS_V0.find((sc) => sc.station.id === "lande-seche");
+    if (!lande) throw new Error("station de la lande introuvable");
+    expect(induree(lande)).toBe(true);
+    // 75 cm : les deux horizons meubles, l'alios est exclu de la somme.
+    expect(profondeurPenetrableCm(lande.station.profil)).toBeCloseTo(75, 5);
+    const chene = getEspece("quercus_pubescens");
+    expect(profondeurRacinesCm(chene, 0.9 * chene.hauteurMaxM, 75)).toBeLessThanOrEqual(75);
+  });
+
+  /**
+   * Le symptôme qui a ouvert l'issue, pris par son bout le plus concret : un
+   * noyer **adulte** sur la station de référence de l'agroforesterie doit
+   * dépasser les 120 cm d'un blé. C'est cet ordre-là, et lui seul, qui rend
+   * l'argument de la complémentarité racinaire défendable.
+   *
+   * **Et un sol profond n'y suffit pas** : un noyer n'atteint ses 160 cm qu'une
+   * fois grand (quinze mètres, `profondeurRacinesCm`). À dix mètres — ce que le
+   * moteur lui donne à quarante ans sur cette station — il en est à 127 cm de
+   * potentiel. Il passe donc devant le blé, mais tard, et ce qui reste en cause
+   * est la **vitesse** du noyer, pas le sol. L'essai le dit plutôt que de le
+   * taire : c'est la borne honnête de ce que ce lot règle.
+   */
+  it("un noyer adulte descend plus bas qu'un blé sur le limon riche", () => {
+    const noyer = getEspece("juglans_regia");
+    const penetrable = profondeurPenetrableCm(LIMON_RICHE.station.profil);
+    const adulte = profondeurRacinesCm(noyer, 0.9 * noyer.hauteurMaxM, penetrable);
+    expect(adulte).toBeCloseTo(noyer.racines.profondeurMaxCm, 5);
+    /** Enracinement du blé tendre à maturité, cm — agronomie ordinaire (100-150). */
+    const BLE_CM = 120;
+    expect(adulte).toBeGreaterThan(BLE_CM);
+    expect(profondeurRacinesCm(noyer, 10, penetrable)).toBeLessThan(noyer.racines.profondeurMaxCm);
   });
 });
