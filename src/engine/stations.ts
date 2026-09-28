@@ -39,11 +39,12 @@
  *
  * La première est que l'horizon C **ne se choisit pas pour sa réserve utile**.
  * L'issue espérait qu'un C peu réservant permettrait de gagner de la profondeur
- * sans gonfler la RU ; mesuré, il en économise environ la moitié (sur le limon
- * riche, 186 → 275 mm avec une formation à silex caillouteuse, contre 380 avec
- * du lœss prolongé) — mais la mesure a surtout dit que **la question ne se
- * posait pas** : les hauteurs à quarante ans ne bougent pas de plus de 2 % dans
- * un cas comme dans l'autre. La raison est que la réserve profonde n'est
+ * sans gonfler la RU ; mesuré, il en économise à peu près la moitié — à
+ * profondeur égale sur le limon riche (210 cm), une formation à silex
+ * caillouteuse porte la réserve de 186 à 291 mm quand du lœss prolongé la
+ * pousse à 378. Mais la mesure a surtout dit que **la question ne se posait
+ * pas** : les hauteurs à quarante ans ne bougent pas de plus de 2,5 % dans un
+ * cas comme dans l'autre. La raison est que la réserve profonde n'est
  * atteinte que par les racines qui y descendent, et que la densité racinaire
  * décroît exponentiellement (`fractionsRacinairesParHorizon`) : un hêtre, qui
  * plafonne à 110 cm, ne voit pas le mètre qu'on ajoute sous lui. Le C se choisit

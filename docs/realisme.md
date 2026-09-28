@@ -3987,6 +3987,40 @@ identique** : y mettre un matériau grossier aurait divisé sa porosité drainab
 par 1,5 et coupé sa frange capillaire de moitié, sur la seule station dont la
 nappe fait l'identité.
 
+### Le reste de ce qui se dérive du profil, relevé avant et après
+
+Un profil ne porte pas que la réserve utile ; sept autres grandeurs en sortent,
+et les relever est le seul moyen de savoir qu'on n'a pas déplacé autre chose en
+silence.
+
+- **Carbone du sol, minéralisation, phosphore, potassium** : moins de 5 %
+  d'écart partout, et c'est mécanique — `poidsBiologique` pondère les horizons
+  par leur profondeur et plafonne à 0,15 sous un mètre, si bien qu'un horizon C
+  à 0,15 % de matière organique n'ajoute presque rien.
+- **Drainage interne** : il tombe de 138 à 91 mm/semaine sur les deux limons de
+  plateau et de 182 à 91 sur la friche, parce que le profil draine à la vitesse
+  de son horizon le plus lent et que la formation à silex est argileuse. Près de
+  cinq mille millimètres par an restent six fois la pluie de la station : le
+  plateau reste un plateau bien drainé.
+- **Porosité de drainage** (`excessCapacityMm`) : elle augmente partout, de 50 à
+  150 %. C'est de l'eau gravitaire que le profil peut encaisser avant de
+  déborder — un sol profond ruisselle moins, ce qui est le fait attendu.
+- **Ce qui tient à la texture du dernier horizon** — porosité drainable,
+  subordination au relief, hauteur capillaire — bouge sur les stations dont le
+  fond change de matériau, et ne bouge **pas du tout** sur le fond de vallée, qui
+  prolonge ses alluvions à texture identique. C'était le but.
+
+Restait la question que l'issue posait explicitement : **un profil plus profond
+contourne-t-il les bornes que le tassement et l'engorgement posent ailleurs ?**
+Non, et par construction dans les deux cas. Le tassement est un facteur de
+croissance multiplicatif par cellule (`facteurCroissanceTassement`) ; il ne
+touche pas la profondeur d'enracinement et n'a aucune raison de bouger.
+L'engorgement, lui, va dans le sens **inverse** de ce qu'on pouvait craindre :
+l'anoxie ressentie par un arbre est la moyenne des engorgements par horizon
+**pondérée par ses fractions racinaires** (tick.ts), donc plus un arbre descend,
+plus il en ressent. Dans un fond de vallée à nappe affleurante, ce n'est pas la
+roche qui borne les racines, c'est l'eau — et le moteur le dit déjà.
+
 ### Ce que le lot ne règle pas, et il faut le dire
 
 **Le noyer ne dépasse le blé que tard.** `profondeurRacinesCm` fait croître la
@@ -3999,6 +4033,16 @@ sol, c'est la vitesse du noyer** — dont le `pousseMaxMAn` est le seul du
 catalogue à n'avoir aucune table derrière lui, le *Fichier écologique des
 essences* wallon portant « sans objet, sylviculture d'arbre » à la ligne
 productivité. C'est une autre issue.
+
+**La station fabriquée des essais de hauteur garde son ancien profil.**
+`hauteurs-commun.ts` se construit un « limon profond acide » à deux horizons
+pour mesurer le châtaignier et le houx, que le pH 7 du limon riche tue. Ce
+n'est pas une station du catalogue, c'est un témoin dont la seule raison d'être
+est d'isoler le pH, et le châtaignier y est **calé** : l'approfondir déplacerait
+sa référence sans rien apprendre, puisque la mesure ci-dessus montre déjà que la
+profondeur ne déplace pas les hauteurs. Elle reste donc à 100 cm, et le
+châtaignier — 180 cm déclarés — n'y atteint toujours pas sa profondeur. C'est
+une dette écrite, pas un oubli.
 
 **Le voisinage, lui, n'a pas bougé du tout**, et c'était le risque le moins
 visible : `especeTenable` écarte les espèces exigeantes sous 120 mm de réserve
