@@ -39,6 +39,7 @@
  */
 
 import { Application, Container, Graphics, RenderTexture, Sprite, Texture } from "pixi.js";
+import type { Zone } from "../../engine/zone";
 import { ficheDe } from "../arbres/especes";
 import { type Vue, versEcranVue } from "../camera";
 import {
@@ -86,6 +87,7 @@ import {
 } from "../couches/ombres";
 import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
 import { cuireLosangeVoile } from "../couches/voile";
+import { contourDeLaZone } from "../emprise";
 import { versCss, versEntier } from "../palette";
 import { METRE_VERTICAL_PX, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import type { Marqueur } from "../temps/changements";
@@ -219,15 +221,6 @@ const OPACITE_CLIQUABLE = 24;
 /** En deçà, l'anneau de sélection ne se verrait plus. */
 const RAYON_ANNEAU_MIN_PX = 9;
 
-/**
- * En combien de points on échantillonne l'emprise d'un geste.
- *
- * Quarante-huit : assez pour qu'un disque de huit mètres n'ait pas l'air d'un
- * polygone au zoom rapproché, et assez peu pour que le tracé ne coûte rien —
- * il est refait à chaque image, comme tout ce qui suit le curseur.
- */
-const POINTS_DEMPRISE = 48;
-
 export class SceneParcelle {
   private readonly app = new Application();
   private readonly couches = {
@@ -259,7 +252,7 @@ export class SceneParcelle {
   private readonly anneaux = new Graphics();
   /** Où le geste armé porterait, dessiné sur le sol avant le clic. */
   private readonly visee = new Graphics();
-  private viseeDemandee?: { x: number; y: number; rayonM: number };
+  private viseeDemandee?: Zone;
   /** L'arbre adulte en transparence, sous le curseur, avant de planter. */
   private readonly couchefantome = new Container();
   private fantomeDemande?: Fantome;
@@ -1281,7 +1274,7 @@ export class SceneParcelle {
    * en a une. `undefined` quand aucun geste n'est armé : on sélectionne, et
    * un viseur n'aurait rien à annoncer.
    */
-  viserLeGeste(visee?: { x: number; y: number; rayonM: number }): void {
+  viserLeGeste(visee?: Zone): void {
     this.viseeDemandee = visee;
   }
 
@@ -1312,12 +1305,16 @@ export class SceneParcelle {
     this.visee.lineTo(centre.sx, centre.sy + bras);
     this.visee.stroke({ width: 1.5, color: 0xffe9a8, alpha: 0.95 });
 
-    if (v.rayonM <= 0) return;
-    for (let i = 0; i <= POINTS_DEMPRISE; i++) {
-      const a = (i / POINTS_DEMPRISE) * Math.PI * 2;
-      const x = v.x + v.rayonM * Math.cos(a);
-      const y = v.y + v.rayonM * Math.sin(a);
-      const e = versEcranVue({ x, y, z: altitude(x, y) }, vue);
+    // Le contour vient d'un module pur (`emprise.ts`) : un disque et une bande
+    // n'ont pas la même forme, et ce n'est pas à la scène de le savoir. Elle
+    // relève l'altitude de chaque jalon et projette — c'est tout ce qu'elle
+    // ajoute, et c'est ce qui pose l'emprise **sur** le relief.
+    const contour = contourDeLaZone(v);
+    if (contour.length === 0) return;
+    for (let i = 0; i < contour.length; i++) {
+      const p = contour[i];
+      if (!p) continue;
+      const e = versEcranVue({ x: p.x, y: p.y, z: altitude(p.x, p.y) }, vue);
       if (i === 0) this.visee.moveTo(e.sx, e.sy);
       else this.visee.lineTo(e.sx, e.sy);
     }

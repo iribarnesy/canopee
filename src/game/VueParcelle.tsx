@@ -37,6 +37,7 @@ import {
 import { type ArbreAPoser, PALIERS_FEUILLAGE, palierDe } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
+import type { EmpriseDuGeste } from "../render/emprise";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
 import type { Orientation } from "../render/projection";
 import type { Marqueur } from "../render/temps/changements";
@@ -164,7 +165,7 @@ export interface VueParcelleProps {
    * du moteur, qui n'existe pas encore (#139) — et le rendu n'a pas le droit
    * de refaire une règle du moteur pour le deviner.
    */
-  emprise?: { rayonM: number };
+  emprise?: EmpriseDuGeste;
   /**
    * L'arbre adulte à montrer en transparence sous le curseur, avant de
    * planter — et s'il serait refusé là.
@@ -497,7 +498,17 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.montrerLesChangements(p.marqueurs ?? []);
         scene.current?.montrerLesHabitants(p.habitants ?? []);
         scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
-        const vise = p.emprise && cible.current ? { ...cible.current, ...p.emprise } : undefined;
+        // **Le disque se centre sous le curseur, la bande porte son centre.**
+        // Une bande se trace d'un point à un autre : son centre est le milieu
+        // du tracé, qui n'est pas là où pointe la souris (#205).
+        const vise =
+          p.emprise === undefined
+            ? undefined
+            : p.emprise.zone === "bande"
+              ? p.emprise
+              : cible.current
+                ? { ...cible.current, ...p.emprise }
+                : undefined;
         scene.current?.viserLeGeste(vise);
         scene.current?.montrerLeFantome(
           p.fantome && cible.current ? { ...p.fantome, ...cible.current } : undefined,

@@ -19,6 +19,7 @@
 
 import { ESPECES_V0 } from "../../engine/especes";
 import type { CauseMort } from "../../engine/trees";
+import { type Zone, zoneContient } from "../../engine/zone";
 import { SEUIL_SOUFFRANCE } from "../suivis";
 
 /**
@@ -53,24 +54,25 @@ export interface TigeRecensee {
 }
 
 /**
- * Les essences présentes dans le disque visé, ou sur toute la parcelle si
+ * Les essences présentes dans la zone visée, ou sur toute la parcelle si
  * aucune zone n'est visée, triées par effectif **décroissant**.
  *
  * Le tri est celui que l'issue demande, et il a une raison : sur une friche,
  * ce qu'on vient nettoyer est presque toujours le plus nombreux.
+ *
+ * **L'appartenance se demande au moteur** (`zoneContient`) depuis #205. Elle se
+ * refaisait ici, en deux lignes de Pythagore : c'était la même règle écrite une
+ * seconde fois, et elle ne savait donc pas ce que le moteur avait appris — une
+ * bande. Le panneau comptait dans un disque ce que l'éclaircie allait abattre
+ * dans un rectangle.
  */
 export function essencesPresentes(
   tiges: readonly TigeRecensee[],
-  zone: { x: number; y: number; rayonM: number } | undefined,
+  zone: Zone | undefined,
 ): EssencePresente[] {
-  const r2 = zone ? zone.rayonM * zone.rayonM : 0;
   const compte = new Map<string, { tiges: number; hauteurMaxM: number }>();
   for (const t of tiges) {
-    if (zone) {
-      const dx = t.x - zone.x;
-      const dy = t.y - zone.y;
-      if (dx * dx + dy * dy > r2) continue;
-    }
+    if (zone && !zoneContient(zone, t.x, t.y)) continue;
     const deja = compte.get(t.especeId);
     if (deja) {
       deja.tiges++;

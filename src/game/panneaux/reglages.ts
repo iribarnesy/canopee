@@ -35,6 +35,23 @@ export interface ReglagesDeGeste {
   setAvecManchon: (v: boolean) => void;
   rayonChaulage: number;
   setRayonChaulage: (v: number) => void;
+  /**
+   * Le geste se trace-t-il en **bande** plutôt qu'en disque (#205) ?
+   *
+   * Une allée agroforestière *est* une bande, et le moteur sait la traiter
+   * depuis #186 : dix actions acceptent `{ longueurM, largeurM, orientationRad,
+   * zone: "bande" }` à la place d'un rayon. Tant que l'interface ne savait
+   * demander qu'un disque, on labourait jusqu'au pied des rangs — ce qu'aucun
+   * agroforestier ne fait (#184).
+   *
+   * Un seul réglage pour tous les gestes de zone, comme le rayon : c'est une
+   * façon de travailler, pas un paramètre par outil.
+   */
+  traceBande: boolean;
+  setTraceBande: (v: boolean) => void;
+  /** Largeur de la bande tracée, m. La longueur vient du tracé. */
+  largeurBande: number;
+  setLargeurBande: (v: number) => void;
   semainesSaison: number;
   setSemainesSaison: (v: number) => void;
   densiteCible: number;
@@ -62,6 +79,11 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
   const [especeId, setEspeceId] = useState("betula_pendula");
   const [avecManchon, setAvecManchon] = useState(false);
   const [rayonChaulage, setRayonChaulage] = useState(8);
+  const [traceBande, setTraceBande] = useState(false);
+  // Quatre mètres : la largeur d'une allée entretenue au gyrobroyeur, et la
+  // borne basse que le CNPF donne pour une bande le long d'un rang (« des
+  // bandes larges de plus d'un mètre », `zone.ts`).
+  const [largeurBande, setLargeurBande] = useState(4);
   const [semainesSaison, setSemainesSaison] = useState(4);
   const [densiteCible, setDensiteCible] = useState(400);
   const [critereEclaircie, setCritereEclaircie] = useState<CritereEclaircie>("parLeBas");
@@ -79,6 +101,10 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
     setAvecManchon,
     rayonChaulage,
     setRayonChaulage,
+    traceBande,
+    setTraceBande,
+    largeurBande,
+    setLargeurBande,
     semainesSaison,
     setSemainesSaison,
     densiteCible,

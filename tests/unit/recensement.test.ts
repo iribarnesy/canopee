@@ -94,3 +94,35 @@ describe("qui est là", () => {
     expect(essencesPresentes([tige("a", 50, 50)], { x: 0, y: 0, rayonM: 3 })).toEqual([]);
   });
 });
+
+describe("le recensement compte dans la zone du moteur (#205)", () => {
+  const tiges = [
+    { especeId: "quercus_robur", x: 10, y: 50, heightM: 12 },
+    { especeId: "quercus_robur", x: 30, y: 50, heightM: 10 },
+    { especeId: "betula_pendula", x: 50, y: 50, heightM: 8 },
+    // Hors de l'allée, à trois mètres de son axe : c'est le pied du rang, que
+    // le chantier doit justement épargner (#184).
+    { especeId: "betula_pendula", x: 30, y: 54, heightM: 9 },
+  ];
+
+  it("une bande le long des rangs ne prend pas le pied des rangs", () => {
+    const dansLaBande = essencesPresentes(tiges, {
+      zone: "bande",
+      x: 30,
+      y: 50,
+      longueurM: 60,
+      largeurM: 4,
+      orientationRad: 0,
+    });
+    const total = dansLaBande.reduce((n, e) => n + e.tiges, 0);
+    expect(total).toBe(3);
+    expect(dansLaBande.find((e) => e.especeId === "betula_pendula")?.tiges).toBe(1);
+  });
+
+  it("le disque du même centre, lui, le prend", () => {
+    // La démonstration que la forme change le compte, et donc le devis : c'est
+    // toute la raison d'être de la bande.
+    const dansLeDisque = essencesPresentes(tiges, { x: 30, y: 50, rayonM: 5 });
+    expect(dansLeDisque.reduce((n, e) => n + e.tiges, 0)).toBe(2);
+  });
+});
