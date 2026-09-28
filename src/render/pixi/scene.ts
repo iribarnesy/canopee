@@ -65,6 +65,7 @@ import {
 } from "../couches/feu";
 import {
   cuireChevron,
+  cuireGite,
   cuireHalo,
   cuireLisere,
   cuirePoint,
@@ -72,6 +73,7 @@ import {
   HAUTEUR_DU_MARQUEUR_PX,
   OPACITE_DU_MARQUEUR,
   PART_DU_CHEVRON,
+  PART_DU_GITE,
   PART_DU_POINT,
   TAILLE_MARQUEUR_PX,
 } from "../couches/marqueurs";
@@ -89,6 +91,7 @@ import { METRE_VERTICAL_PX, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projec
 import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
 import { CIEL, CIEL_LE_PLUS_CHARGE, type Particule } from "../temps/feu";
+import type { GiteOccupe } from "../temps/habitants";
 import type { CelluleVoilee } from "../temps/voile";
 
 /** Budget de cuisson par image, en morceaux de terrain. */
@@ -237,6 +240,7 @@ export class SceneParcelle {
     surbrillance: new Container(),
     panache: new Container(),
     ciel: new Container(),
+    habitants: new Container(),
     marqueurs: new Container(),
   };
   private terrain?: Terrain;
@@ -322,6 +326,9 @@ export class SceneParcelle {
    * normal d'une partie qu'on regarde sans avoir rien sauté.
    */
   private marqueurs: readonly Marqueur[] = [];
+  /** Les gîtes occupés, à poser sur leur arbre (#255). Vide = personne. */
+  private habitants: readonly GiteOccupe[] = [];
+  private formeGite?: Texture;
   /** Les trois formes du calque, cuites une fois. */
   private formes?: Record<Marqueur["sorte"], Texture>;
   /** Le losange blanc, cuit une fois : c'est la seule forme d'un voile. */
@@ -435,6 +442,10 @@ export class SceneParcelle {
       // voisins et son propre panache. Il reste sous les marqueurs — le calque
       // des changements est de l'interface, et l'interface ne prend pas la
       // couleur du feu.
+      // **Les habitants sont sous les marqueurs et au-dessus des arbres** : ce
+      // sont des objets du monde, posés sur un arbre précis, mais un gîte caché
+      // derrière le houppier de devant ne dit rien à personne (#255).
+      this.couches.habitants,
       this.couches.ciel,
       // **Le calque des changements est au-dessus de tout**, y compris des
       // arbres et de l'ombre : c'est de l'interface posée sur la carte, et un
@@ -490,6 +501,17 @@ export class SceneParcelle {
    * L'appelant en donne la liste quand elle change, et rien ne se recalcule
    * entre-temps.
    */
+  /**
+   * Qui habite la parcelle, à poser sur les arbres qui les portent (#255).
+   *
+   * **Comme les marqueurs et pour la même raison** : un tableau et non un
+   * rappel, parce qu'un habitant ne bouge pas dans le temps — il est là, ou il
+   * n'y est plus.
+   */
+  public montrerLesHabitants(habitants: readonly GiteOccupe[]): void {
+    this.habitants = habitants;
+  }
+
   public montrerLesChangements(marqueurs: readonly Marqueur[]): void {
     this.marqueurs = marqueurs;
   }
@@ -573,6 +595,7 @@ export class SceneParcelle {
     spritesPoses += this.poserFeu(etat, vue);
     spritesPoses += this.poserLeCiel();
     spritesPoses += this.poserArbres(poses, vue);
+    spritesPoses += this.poserHabitants(etat, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
     this.poserLaVisee(etat, vue);
     spritesPoses += this.poserLeFantome(etat, vue);
@@ -985,6 +1008,42 @@ export class SceneParcelle {
       n++;
     }
     SceneParcelle.tailler(this.couches.marqueurs, n);
+    return n;
+  }
+
+  /**
+   * Le calque des habitants : un dôme par gîte occupé, **sur** son arbre.
+   *
+   * La taille est en pixels comme celle des marqueurs — un gîte de huit pixels
+   * se voit au zoom de parcelle comme au zoom rapproché —, mais la **position**
+   * est dans le monde, à la hauteur du gîte : c'est ce qui le rattache à son
+   * arbre plutôt qu'à une cellule de sol.
+   */
+  private poserHabitants(etat: EtatScene, vue: Vue): number {
+    if (this.habitants.length === 0) {
+      SceneParcelle.tailler(this.couches.habitants, 0);
+      return 0;
+    }
+    this.formeGite ??= Texture.from(cuireGite(this.fabriquer));
+    const cote = etat.sol.coteM;
+    let n = 0;
+    for (const gite of this.habitants) {
+      const cx = Math.min(cote - 1, Math.max(0, Math.floor(gite.x)));
+      const cy = Math.min(cote - 1, Math.max(0, Math.floor(gite.y)));
+      const z = (etat.sol.altitudesM[cy * cote + cx] ?? 0) + gite.hauteurM;
+      const p = versEcranVue({ x: gite.x, y: gite.y, z }, vue);
+      const sprite = SceneParcelle.sprite(this.couches.habitants, n, this.formeGite);
+      sprite.anchor.set(0.5, 0.5);
+      const taille = TAILLE_MARQUEUR_PX * PART_DU_GITE;
+      sprite.width = taille;
+      sprite.height = taille;
+      sprite.x = p.sx;
+      sprite.y = p.sy;
+      sprite.tint = versEntier(gite.teinte);
+      sprite.alpha = OPACITE_DU_MARQUEUR;
+      n++;
+    }
+    SceneParcelle.tailler(this.couches.habitants, n);
     return n;
   }
 

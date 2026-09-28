@@ -15,6 +15,7 @@
  */
 
 import { getEspece } from "../engine/especes";
+import type { CauseDepart } from "../engine/faune";
 import type { CauseMort } from "../engine/trees";
 
 /**
@@ -184,4 +185,70 @@ export function causeDite(cause: CauseMort, n = 1, feminin = false): string {
   const dite = CAUSE_DITE[cause];
   const complement = (n >= 2 && dite.pl) || dite.sg;
   return dite.participe ? `${dite.participe}${accord(feminin, n)}${complement}` : complement;
+}
+
+// ── **la faune en individus** (#187, #255) ───────────────────────────────────────
+
+/**
+ * Le genre des noms d'espèces de faune, pour l'article et l'accord.
+ *
+ * La jumelle de `GENRE` et pour la même raison : le moteur nomme l'espèce, le
+ * jeu la fait entrer dans une phrase française. La table couvre l'atlas entier
+ * (`faune.ts`) ; une espèce ajoutée sans son genre passera au masculin, ce qui
+ * est le défaut français et se corrige en une ligne.
+ */
+const GENRE_FAUNE: Record<string, "m" | "f"> = {
+  mesange_bleue: "f",
+  mesange_charbonniere: "f",
+  pic_epeiche: "m",
+  chouette_cheveche: "f",
+  loir_gris: "m",
+  ecureuil_roux: "m",
+  buse_variable: "f",
+  murin_de_bechstein: "m",
+  noctule_commune: "f",
+  pique_prune: "m",
+  grand_capricorne: "m",
+  rosalie_des_alpes: "f",
+};
+
+/**
+ * L'espèce, avec son article défini — « la mésange bleue », « le pic épeiche ».
+ *
+ * **Défini et non indéfini, et ce n'est pas un détail de style.** « Une mésange
+ * bleue » affirmerait un individu ; or ce que le moteur installe est tantôt un
+ * couple, tantôt une colonie de parturition, tantôt la population d'un arbre —
+ * `faune.ts` l'écrit en toutes lettres, mais **en commentaire** : aucun champ ne
+ * le dit, donc le jeu ne peut pas le savoir sans le recopier, et recopier une
+ * vérité du moteur est ce que le §2.1 nous interdit. L'article défini nomme
+ * l'espèce sans compter les bêtes, ce qui est vrai dans les trois cas.
+ *
+ * L'issue #259 demande au moteur le champ qui lèverait la réserve.
+ */
+export function laFaune(especeId: string, nom: string): string {
+  const feminin = GENRE_FAUNE[especeId] === "f";
+  const voyelle = /^[aeiouyéèêàâîôûh]/i.test(nom);
+  return `${voyelle ? "l'" : feminin ? "la " : "le "}${nom}`;
+}
+
+/**
+ * La même chaîne, première lettre en capitale — pour ouvrir une phrase.
+ *
+ * Écrit ici et pas en ligne : « l'écureuil » doit donner « L'écureuil », donc
+ * la capitale ne tombe pas toujours sur la même lettre que l'article.
+ */
+export function capitale(texte: string): string {
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
+/** Pourquoi un habitant s'en va, dit en clair (`CauseDepart`). */
+const DEPART_DIT: Record<CauseDepart, string> = {
+  arbreDisparu: "son arbre n'est plus là",
+  giteTropPetit: "son gîte ne lui suffit plus",
+  tableVide: "il n'y a plus assez à manger",
+};
+
+/** La cause d'un départ, telle qu'on la lit dans le journal. */
+export function departDit(cause: CauseDepart): string {
+  return DEPART_DIT[cause];
 }

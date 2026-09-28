@@ -75,6 +75,8 @@ function instantaneDeBase(): Snapshot {
     franchissements: [],
     gestes: [],
     chutes: [],
+    installationsFaune: [],
+    departsFaune: [],
   });
 }
 
@@ -415,5 +417,48 @@ describe("l'histoire s'écrit groupée, pas seulement relue groupée (#225)", ()
       ajouterAuJournal(lignes, e);
     }
     expect(lignes.map((l) => `${l.quoi}×${l.fois}`)).toEqual(["brout×2", "gel×1", "brout×1"]);
+  });
+});
+
+describe("qui habite l'arbre entre dans l'histoire de l'arbre (#255)", () => {
+  const individu = {
+    id: 1,
+    especeId: "mesange_bleue",
+    arbreId: 1,
+    x: 3,
+    y: 4,
+    depuisSemaine: 40,
+  };
+
+  it("l'installation se range sous l'arbre qui porte le gîte, pas ailleurs", () => {
+    // L'ancrage du moteur **est** un identifiant d'arbre : il n'y a rien à
+    // croiser ni à deviner, l'événement tombe dans la bonne histoire.
+    const { evenements } = accumulerLesSuivis(
+      VIDE,
+      40,
+      { ...semaine(40, [arbre()]), installationsFaune: [{ individu }] },
+      [arbre()],
+    );
+    const hote = evenements.filter((e) => e.quoi === "hote");
+    expect(hote).toHaveLength(1);
+    expect(hote[0]?.idArbre).toBe(1);
+    expect(hote[0]?.texte).toBe("la mésange bleue s'y installe");
+  });
+
+  it("le départ dit sa cause — et « on a abattu son arbre » est la plus forte", () => {
+    const { evenements } = accumulerLesSuivis(
+      VIDE,
+      60,
+      { ...semaine(60, [arbre()]), departsFaune: [{ individu, cause: "arbreDisparu" as const }] },
+      [arbre()],
+    );
+    const hote = evenements.find((e) => e.quoi === "hote");
+    expect(hote?.idArbre).toBe(1);
+    expect(hote?.texte).toBe("la mésange bleue s'en va : son arbre n'est plus là");
+  });
+
+  it("une semaine sans faune n'écrit rien : le champ est facultatif", () => {
+    const { evenements } = accumulerLesSuivis(VIDE, 12, semaine(12, [arbre()]), [arbre()]);
+    expect(evenements.filter((e) => e.quoi === "hote")).toEqual([]);
   });
 });

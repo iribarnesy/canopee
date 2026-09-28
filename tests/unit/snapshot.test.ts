@@ -56,6 +56,8 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     franchissements: ticked.franchissements,
     gestes: ticked.gestes,
     chutes: ticked.chutes,
+    installationsFaune: [],
+    departsFaune: [],
     incendie: ticked.incendie,
     tempete: ticked.tempete,
   };

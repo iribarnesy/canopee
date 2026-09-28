@@ -9,6 +9,7 @@ import type { IndiceBiodiversite } from "../engine/biodiversite";
 import type { CarbonInventory } from "../engine/carbon";
 import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
+import type { DepartFaune, IndividuFaune, InstallationFaune } from "../engine/faune";
 import type { WeekWeather } from "../engine/meteo";
 import type { Bordures } from "../engine/paysage";
 import type { ContextePhenologique } from "../engine/phenologie";
@@ -61,6 +62,15 @@ export interface SaveGame {
    * contrainte se rejouerait **avec**, et divergerait.
    */
   economie?: boolean;
+  /**
+   * **La faune vivait-elle en individus dans cette partie** ? (#187, #255)
+   *
+   * Absent = **non**, et c'est l'inverse du défaut d'`economie` : la faune
+   * ajoute des tirages, donc une partie rejouée avec elle diverge d'une partie
+   * jouée sans, à graine égale (`state.ts`). Une sauvegarde d'avant ce lot n'a
+   * jamais vu une mésange ; la rejouer avec en ferait une autre parcelle.
+   */
+  faune?: boolean;
   /** année civile du début de partie */
   anneeDepart: number;
   /**
@@ -431,6 +441,37 @@ export interface Snapshot {
    * images, au lieu d'être la conséquence lisible d'une chute (boisMort.ts).
    */
   chutes: ChuteDeChandelle[];
+  /**
+   * **Qui habite la parcelle**, individu par individu (`faune.ts`, #255).
+   *
+   * L'état courant et non un mouvement : un habitant reste tant que son gîte
+   * tient et que la table suit. Chacun porte l'arbre qui le porte (`arbreId`),
+   * donc sa position et son histoire.
+   *
+   * **Absent quand la faune est éteinte**, et c'est la même convention que
+   * `state.faune` dans le moteur : absent et vide ne disent pas la même chose.
+   * Vide = la parcelle n'a pas encore d'habitants ; absent = elle n'en aura pas,
+   * parce que `station.faune` n'a jamais été allumé — le cas d'une sauvegarde
+   * d'avant #255, qu'on ne peut pas rejouer avec sans la faire diverger.
+   */
+  faune?: readonly IndividuFaune[];
+  /**
+   * Les gîtes qui ont trouvé preneur depuis le dernier instantané.
+   *
+   * Un **événement**, comme les morts et les naissances, et pour la même
+   * raison : sans lui le rendu ne voit qu'un habitant de plus entre deux
+   * images, et n'a pas de moment où le dire. C'est tout le pari de #187 — *« une
+   * mésange vient nicher chez toi »* doit être un fait de la partie.
+   */
+  installationsFaune: readonly InstallationFaune[];
+  /**
+   * Les départs, avec leur **cause**.
+   *
+   * `arbreDisparu` est le plus fort des trois : abattre l'arbre porteur expulse
+   * quelqu'un de nommé, et c'est une conséquence de la conduite du joueur, pas
+   * un message.
+   */
+  departsFaune: readonly DepartFaune[];
   /** l'incendie de la semaine, avec son front, s'il y en a eu un (feu.ts) */
   incendie?: IncendieResult;
   /**
@@ -536,6 +577,8 @@ export type ToWorker =
       anneeDepart: number;
       /** l'argent contraint-il la partie ? (actions.ts) */
       economie: boolean;
+      /** la faune vit-elle en individus ? (`station.faune`, #187) */
+      faune: boolean;
     }
   | { type: "resume"; save: SaveGame }
   | { type: "speed"; weeksPerSecond: number }
