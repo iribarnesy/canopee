@@ -550,6 +550,12 @@ export const SUBERAIE_MAURES: StationClimat = {
  * table compte les cent plus gros à l'hectare, pas les tiges couchées — mais il
  * faut le savoir : sur la graine 71, un sujet de 18,79 m est tombé à trente-sept
  * ans, et il aurait tiré la moyenne vers le haut.
+ *
+ * **Et cette station verse plus que l'ancienne** : le même pin sur le limon
+ * riche garde 7 sujets sur 8 aux quatre graines, contre 20 sur 32 ici. Une
+ * différence déclarée va dans ce sens — un paysage de lande expose au vent
+ * (0,76 contre 0,69 en bocage) —, et le reste est ce qu'une pineraie de sable
+ * est réputée être. Ce lot ne démêle pas leurs parts, il note le fait.
  */
 export const SABLE_PROFOND: StationClimat = {
   station: stationDepuisProfil({
