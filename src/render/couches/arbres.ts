@@ -135,6 +135,21 @@ export interface ArbreAPoser {
    */
   coucheRad?: number;
   /**
+   * L'**âge** de la chandelle, en part de ce que le moteur lui donne à tenir
+   * debout ∈ [0,1] : zéro le jour de sa mort, un quand elle est à bout.
+   *
+   * Calculé dans `parcelle.ts` à partir de `mortSemaine` et de la règle du
+   * moteur (`dureeChandelleSemaines`, qui tient de la densité du bois) — le
+   * rendu ne décide donc pas combien de temps un fût mort tient debout, il lit.
+   * Ce dont il décide est ce que ça **fait à l'image** : un bois mort blanchit
+   * au soleil et perd ses rameaux les plus fins, ce qui est ce qu'est du bois
+   * mort et non une affirmation de modèle (#107).
+   *
+   * Absent ou zéro sur un arbre vivant, et sur un **chablis** : celui-là est par
+   * terre, et son bois est désormais l'affaire du sol, pas de cette règle-ci.
+   */
+  ageChandelle?: number;
+  /**
    * L'arbre a été tué par le **feu** : `Snapshot.brulEeSemaine` est renseigné.
    *
    * Ce n'est pas la même chandelle qu'un mort de sécheresse, et la différence
@@ -618,6 +633,16 @@ export interface Classe {
   /** état de fructification : `FRUIT_AUCUN`, `FRUIT_CROISSANCE` ou `FRUIT_MUR` */
   fruit: number;
   /**
+   * Âge de la chandelle en paliers — zéro sur un arbre vivant, sur un chablis,
+   * et sur une chandelle de l'année.
+   *
+   * Dans la clé parce que c'est une **image** différente : un fût qui vient de
+   * mourir et un fût blanchi et ébranché ne se dessinent pas pareil, et c'est
+   * la moitié de ce que le lot des morts annonce — « les chandelles qui
+   * vieillissent » (#107).
+   */
+  vieillesse: number;
+  /**
    * Diamètre de tête et volume de cavité, quantifiés puis empaquetés — zéro
    * pour un arbre qui n'est pas une trogne.
    *
@@ -765,6 +790,9 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
   // partageraient la même image — et ce serait le pommier nu qu'on verrait, ou
   // le chargé, au hasard de qui a été cuit le premier.
   const fruit = ficheDe(arbre.especeId)?.fruit ? etatDuFruit(arbre) : FRUIT_AUCUN;
+  // L'âge de la chandelle n'entre dans la clé que **pour une chandelle** : sur un
+  // vivant il vaut zéro, donc il ne multiplie rien.
+  const vieillesse = arbre.chandelle ? palierDe(arbre.ageChandelle ?? 0, PALIERS_CHANDELLE) : 0;
   return {
     especeId: arbre.especeId,
     palier: palierDe(arbre.heightM / Math.max(0.1, hauteurMaxM), PALIERS_HAUTEUR),
@@ -778,6 +806,7 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
     gestion,
     sante,
     fruit,
+    vieillesse,
     // Les deux grandeurs de tête, quantifiées sur les échelles du **moteur**.
     trogne:
       palierDe((arbre.diametreTeteCm ?? 0) / DIAMETRE_TETE_MAX_CM, PALIERS_TETE_DIAMETRE) *
@@ -801,6 +830,17 @@ export function classeDe(arbre: ArbreAPoser, hauteurMaxM: number, vue: Vue): Cla
 export const PALIERS_LIEGE = 4;
 
 /**
+ * Paliers d'**âge de chandelle**, du fût qui vient de mourir à celui qui va
+ * tomber.
+ *
+ * Trois, et pas plus : chaque palier est une vignette de plus à cuire, et il
+ * n'en faut que ce qu'on distingue. Trois donnent le gris frais, le gris
+ * blanchi et le squelette ébranché — les trois états qu'on reconnaît en forêt.
+ * Ils ne coûtent que sur les arbres **morts**, une minorité de toute parcelle.
+ */
+export const PALIERS_CHANDELLE = 3;
+
+/**
  * Où en est l'écorce de se reformer, ∈ [0,1] — 0 à vif, 1 refaite.
  *
  * **La durée vient du moteur, et c'est ce qui rend cette fonction honnête.**
@@ -821,7 +861,7 @@ export function partEcorceRefaite(arbre: ArbreAPoser): number {
 
 /** La clé de cache d'une classe. */
 export function cleClasse(c: Classe): string {
-  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.sante}|${c.fruit}|${c.trogne}|${c.liege}|${c.epaisseur}|${c.taillePx}`;
+  return `${c.especeId}|${c.palier}|${c.variante}|${c.feuillage}|${c.gestion}|${c.sante}|${c.fruit}|${c.trogne}|${c.liege}|${c.epaisseur}|${c.vieillesse}|${c.taillePx}`;
 }
 
 /** Une vignette cuite, et où poser son pied. */
@@ -1048,7 +1088,10 @@ export function cuireVignette(
   const houppier = brut.filter((s) => s.ordre >= 1);
   const base = houppier.length > 0 ? Math.min(...houppier.map((s) => s.depart.y)) : 0;
   const sommet = houppier.length > 0 ? Math.max(...houppier.map((s) => s.arrivee.y)) : hauteurM;
-  const segments = contraindre(brut, fiche.port, base, sommet, houppierRatio * hauteurM);
+  const segments = ebranchee(
+    contraindre(brut, fiche.port, base, sommet, houppierRatio * hauteurM),
+    classe,
+  );
 
   const versPx = (p: { x: number; y: number }) => ({
     sx: piedX + p.x * echelle,
@@ -1295,7 +1338,18 @@ function dessinerFourre(
  */
 function teinteDuBois(fiche: FicheGraphique, haut: boolean | undefined, classe: Classe): Teinte {
   if (classe.gestion & EST_BRULEE) return BOIS_BRULE;
-  if (classe.gestion & EST_CHANDELLE) return BOIS_MORT;
+  // **Et elle blanchit avec l'âge** (#107). Le charbon, lui, ne pâlit toujours
+  // pas : la différence n'est pas un caprice, c'est que le moteur donne l'âge
+  // d'une chandelle (`mortSemaine`, et la durée qu'elle tient debout) et ne
+  // donne rien sur la décoloration d'un charbon.
+  if (classe.gestion & EST_CHANDELLE) {
+    const part = classe.vieillesse / Math.max(1, PALIERS_CHANDELLE - 1);
+    return {
+      r: Math.round(BOIS_MORT.r + (BOIS_MORT_BLANCHI.r - BOIS_MORT.r) * part),
+      g: Math.round(BOIS_MORT.g + (BOIS_MORT_BLANCHI.g - BOIS_MORT.g) * part),
+      b: Math.round(BOIS_MORT.b + (BOIS_MORT_BLANCHI.b - BOIS_MORT.b) * part),
+    };
+  }
   return haut && fiche.ecorceHaute ? fiche.ecorceHaute : fiche.ecorce;
 }
 
@@ -1374,6 +1428,15 @@ const HAUTEUR_DEMASCLAGE_M = 2.6;
 
 /** Bois mort sur pied : gris argenté, l'écorce partie. */
 const BOIS_MORT: Teinte = { r: 138, g: 132, b: 122 };
+/**
+ * Bois mort **blanchi** : la chandelle de dix ans, lessivée par la pluie et le
+ * soleil.
+ *
+ * L'écorce est tombée depuis longtemps, le bois est à nu et il a grisonné vers
+ * l'argenté — c'est ce qu'on voit sur un arbre sec debout, et c'est la raison
+ * pour laquelle on les repère de loin dans un peuplement vert.
+ */
+const BOIS_MORT_BLANCHI: Teinte = { r: 186, g: 181, b: 170 };
 /** Bois carbonisé : noir mat, à peine plus clair que le noir pur. */
 const BOIS_BRULE: Teinte = { r: 44, g: 40, b: 38 };
 
@@ -1652,6 +1715,28 @@ const DIAMETRE_MANCHON_M = 0.1;
 
 /** Ce que laisse passer le plastique d'un manchon : assez pour deviner la tige. */
 const OPACITE_MANCHON = 0.78;
+
+/**
+ * Ce qu'une **vieille chandelle** a déjà perdu : ses rameaux les plus fins.
+ *
+ * Un ordre de branchement par palier d'âge, le fût étant toujours gardé. Ce
+ * n'est pas un modèle de décomposition — le moteur en a un, et il est global
+ * (`DEADWOOD_DECAY_PER_YEAR`, 5 % par an sur le bois **debout**, contre 9 % au
+ * sol parce qu'il y est humide). C'est la lecture de ce que ce chiffre veut
+ * dire sur un arbre : ce qui part d'abord est le menu bois, qui sèche, casse
+ * au premier coup de vent et tombe. Une charpentière tient des décennies.
+ *
+ * **Le fût reste**, même au dernier palier : une chandelle qui se réduirait à
+ * rien cesserait d'être ce qu'elle est — un tronc sec debout, qu'on voit de
+ * loin et qui loge des pics.
+ */
+function ebranchee(segments: Segment[], classe: Classe): Segment[] {
+  if (!(classe.gestion & EST_CHANDELLE) || classe.vieillesse === 0) return segments;
+  let ordreMax = 0;
+  for (const s of segments) ordreMax = Math.max(ordreMax, s.ordre);
+  const garde = Math.max(1, ordreMax - classe.vieillesse);
+  return segments.filter((s) => s.ordre <= garde);
+}
 
 /**
  * Les rameaux qui portent encore du feuillage, une fois la cime sèche retirée.

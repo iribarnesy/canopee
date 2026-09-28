@@ -718,8 +718,41 @@ function Demo(): React.ReactElement {
             : t,
         )
       : restants;
+  /**
+   * `?chandelle-ans=25` : vieillit **toutes** les chandelles de la scène (#107).
+   *
+   * Les scènes cuites avant ce lot ne portent pas `mortSemaine` — elles ont
+   * donc des chandelles de l'année, quel que soit leur âge réel. Ce réglage
+   * donne le même âge à toutes, ce qui est exactement ce qu'il faut pour juger
+   * les trois paliers côte à côte : gris frais, gris blanchi, squelette
+   * ébranché. Une scène régénérée, elle, porte l'âge de chacune.
+   */
+  const ansDeChandelle = Number(new URLSearchParams(location.search).get("chandelle-ans") ?? "-1");
+  /**
+   * `?chandelle-tout=1` : et alors **tout** ce qui est assez haut est une
+   * chandelle de cet âge-là.
+   *
+   * Les chandelles d'une scène ordinaire sont surtout des arbustes de fourré,
+   * que le rendu agrège — mesuré sur `pelouse-arbres-s28` : 2 057 chandelles,
+   * presque toutes de l'aubépine et du prunellier. On n'y voit donc pas ce
+   * qu'un fût sec devient. Celui-ci fait une futaie de chandelles, ce qui est le
+   * seul moyen de juger les trois paliers côte à côte.
+   */
+  const toutEnChandelle = new URLSearchParams(location.search).get("chandelle-tout") === "1";
+  const vieillis: ArbreSource[] =
+    ansDeChandelle >= 0
+      ? debout.map((t) =>
+          t.chandelle || (toutEnChandelle && t.heightM > 5)
+            ? {
+                ...t,
+                chandelle: true,
+                mortSemaine: scene.week - Math.round(ansDeChandelle * 52),
+              }
+            : t,
+        )
+      : debout;
   const arbres: ArbreAPoser[] = arbresAPoser(
-    [...debout, ...tigesAbattues(ellipse.gestes), ...ellipse.chandelles],
+    [...vieillis, ...tigesAbattues(ellipse.gestes), ...ellipse.chandelles],
     {
       coteM: scene.coteM,
       week: scene.week,

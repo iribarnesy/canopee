@@ -34,6 +34,7 @@ import {
   partFoliaireOmbrageanteDans,
   senescenceDans,
 } from "../engine/phenologie";
+import { dureeChandelleSemaines } from "../engine/trees";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { CoteDecor, DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
@@ -137,6 +138,8 @@ export interface ArbreSource {
    */
   diametreCm?: number;
   chandelle: boolean;
+  /** présent = l'arbre est mort ; c'est l'**âge** de la chandelle */
+  mortSemaine?: number;
   /** présent = une tempête l'a couché ; c'est un **chablis** et non une chandelle */
   renverseSemaine?: number;
   /** le sens dans lequel le tronc est parti, radians — il ne se déduit de rien */
@@ -229,6 +232,20 @@ export function arbresAPoser(arbres: readonly ArbreSource[], ctx: ContexteDePose
       t.renverseSemaine < ctx.week &&
       t.chuteRad !== undefined
         ? { coucheRad: t.chuteRad }
+        : {}),
+      // **L'âge de la chandelle, en part de ce que le moteur lui donne à tenir
+      // debout** (#107). La durée vient de `trees.ts` — elle tient de la densité
+      // du bois, un chêne sec dure bien plus qu'un bouleau — et le rendu la lit
+      // au lieu d'en choisir une. Un **chablis** n'y a pas droit : il est par
+      // terre, et le moteur le couche à la fin du délai de récupération, pas au
+      // bout de cette durée-ci.
+      ...(t.chandelle && t.mortSemaine !== undefined && t.renverseSemaine === undefined && espece
+        ? {
+            ageChandelle: Math.min(
+              1,
+              Math.max(0, (ctx.week - t.mortSemaine) / dureeChandelleSemaines(espece)),
+            ),
+          }
         : {}),
       ...(t.brulEeSemaine === undefined || torche ? {} : { brulee: true }),
       ...(t.protege ? { protege: true } : {}),

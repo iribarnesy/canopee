@@ -231,6 +231,18 @@ interface ArbreScene {
   dommageHydraulique: number;
   /** `brulEeSemaine` : la semaine où le feu l'a tué ; absent = pas brûlé */
   brulEeSemaine?: number;
+  /**
+   * `mortSemaine` : la semaine où la mort a été enregistrée ; absent = vivant.
+   *
+   * C'est l'**âge** de la chandelle, dont le rendu tire le blanchiment et
+   * l'ébranchage (#107). Sans lui, toute chandelle d'une scène a l'air de
+   * mourir le jour même.
+   */
+  mortSemaine?: number;
+  /** `renverseSemaine` : la semaine où une tempête l'a couché ; absent = debout */
+  renverseSemaine?: number;
+  /** `chuteRad` : le sens dans lequel le tronc est parti — il ne se déduit de rien */
+  chuteRad?: number;
   /** `protege` : plant sous manchon */
   protege: boolean;
   /** `recepages` : nombre d'étêtages subis */
@@ -308,6 +320,13 @@ function figer(state: GameState, brules: ReadonlySet<number> = new Set()): Arbre
         : s.brulEeSemaine === undefined
           ? {}
           : { brulEeSemaine: s.brulEeSemaine }),
+      ...(s.mortSemaine === undefined ? {} : { mortSemaine: s.mortSemaine }),
+      // Les deux du chablis vont **ensemble** : sans le sens, le rendu ne
+      // couche rien, et il a raison — la pente orienterait une chandelle, pas
+      // un chablis.
+      ...(s.renverseSemaine === undefined || s.chuteRad === undefined
+        ? {}
+        : { renverseSemaine: s.renverseSemaine, chuteRad: arrondi(s.chuteRad, 4) }),
       protege: s.protege,
       recepages: s.recepages,
       ...(s.frotteSemaine === undefined ? {} : { frotteSemaine: s.frotteSemaine }),

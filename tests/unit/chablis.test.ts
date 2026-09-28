@@ -15,6 +15,12 @@
 import { describe, expect, it } from "vitest";
 import { type ArbreSource, arbresAPoser, type ContexteDePose } from "../../src/game/parcelle";
 import { type Vue, vueInitiale } from "../../src/render/camera";
+import {
+  type ArbreAPoser,
+  classeDe,
+  cleClasse,
+  PALIERS_CHANDELLE,
+} from "../../src/render/couches/arbres";
 import { chuteEnCours, troncCouche } from "../../src/render/temps/chute";
 
 const COTE = 40;
@@ -90,5 +96,109 @@ describe("qui se pose couché, et quand", () => {
     // décrit plutôt que d'en inventer un.
     const [pose] = arbresAPoser([chablis({ chuteRad: undefined })], ctx(101));
     expect(pose?.coucheRad).toBeUndefined();
+  });
+});
+
+/**
+ * **Une chandelle a un âge, et il se voit** (#107, la seconde moitié).
+ *
+ * Le moteur donne la semaine de la mort et la durée qu'un fût de cette essence
+ * tient debout ; le rendu lit les deux et n'en choisit aucune. Ce dont il
+ * décide est ce que ça fait à l'image — un bois mort blanchit et perd son menu
+ * bois —, et il faut que ça se voie : une chandelle de l'année et une chandelle
+ * à bout ne peuvent pas partager la même vignette.
+ */
+describe("l'âge de la chandelle", () => {
+  const ctx = (week: number): ContexteDePose => ({
+    coteM: COTE,
+    week,
+    altitudesM: new Array(COTE * COTE).fill(0),
+  });
+  const morte = (mortSemaine: number, champs: Partial<ArbreSource> = {}): ArbreSource => ({
+    id: 2,
+    especeId: "fagus_sylvatica",
+    x: 20,
+    y: 20,
+    heightM: 15,
+    chandelle: true,
+    mortSemaine,
+    ...champs,
+  });
+
+  it("zéro la semaine de la mort, et il monte avec les années", () => {
+    const neuve = arbresAPoser([morte(100)], ctx(100))[0]?.ageChandelle;
+    const vieille = arbresAPoser([morte(100)], ctx(100 + 52 * 10))[0]?.ageChandelle;
+    expect(neuve).toBe(0);
+    expect(vieille ?? 0).toBeGreaterThan(neuve ?? 1);
+  });
+
+  it("il se compte sur la durée du moteur, essence par essence", () => {
+    // Le hêtre est un bois lourd, le bouleau un bois léger : à même nombre
+    // d'années debout, le bouleau est **plus** avancé sur sa propre durée. Le
+    // rendu ne choisit pas ce rapport, il lit `dureeChandelleSemaines`.
+    const ans = 100 + 52 * 8;
+    const hetre = arbresAPoser([morte(100)], ctx(ans))[0]?.ageChandelle ?? 0;
+    const bouleau =
+      arbresAPoser([morte(100, { especeId: "betula_pendula" })], ctx(ans))[0]?.ageChandelle ?? 0;
+    expect(bouleau).toBeGreaterThan(hetre);
+  });
+
+  it("il ne dépasse pas un, même sur une chandelle qui s'attarde", () => {
+    expect(arbresAPoser([morte(100)], ctx(100 + 52 * 200))[0]?.ageChandelle).toBe(1);
+  });
+
+  it("un chablis n'en a pas : il est par terre, sa durée n'est pas celle-là", () => {
+    const pose = arbresAPoser(
+      [morte(100, { renverseSemaine: 100, chuteRad: 0.5 })],
+      ctx(100 + 52),
+    )[0];
+    expect(pose?.ageChandelle).toBeUndefined();
+    expect(pose?.coucheRad).toBe(0.5);
+  });
+
+  it("un arbre vivant n'en a pas non plus", () => {
+    expect(
+      arbresAPoser([morte(100, { chandelle: false, mortSemaine: undefined })], ctx(200))[0]
+        ?.ageChandelle,
+    ).toBeUndefined();
+  });
+});
+
+describe("la vignette d'une chandelle change avec son âge", () => {
+  const vueDuBanc = (): Vue => vueInitiale(COTE, 900, 640, 0);
+  const chandelleDe = (ageChandelle: number): ArbreAPoser => ({
+    id: 3,
+    especeId: "fagus_sylvatica",
+    x: 20,
+    y: 20,
+    z: 0,
+    heightM: 15,
+    houppierRatio: 0.45,
+    baseHouppierM: 4,
+    partFoliaire: 0,
+    senescence: 0,
+    vigueur: 0,
+    chandelle: true,
+    ageChandelle,
+  });
+
+  it("une chandelle de l'année et une chandelle à bout ne partagent pas la même image", () => {
+    const jeune = cleClasse(classeDe(chandelleDe(0), 30, vueDuBanc()));
+    const vieille = cleClasse(classeDe(chandelleDe(1), 30, vueDuBanc()));
+    expect(jeune).not.toBe(vieille);
+  });
+
+  it("mais l'âge ne multiplie rien sur un arbre vivant", () => {
+    const vivant = { ...chandelleDe(0), chandelle: false, partFoliaire: 1, vigueur: 1 };
+    expect(cleClasse(classeDe(vivant, 30, vueDuBanc()))).toBe(
+      cleClasse(classeDe({ ...vivant, ageChandelle: 0.9 }, 30, vueDuBanc())),
+    );
+  });
+
+  it("trois paliers et pas un de plus : une vignette de plus se paie", () => {
+    const cles = new Set(
+      [0, 0.2, 0.4, 0.6, 0.8, 1].map((a) => cleClasse(classeDe(chandelleDe(a), 30, vueDuBanc()))),
+    );
+    expect(cles.size).toBe(PALIERS_CHANDELLE);
   });
 });
