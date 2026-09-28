@@ -213,27 +213,62 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
 
   // ── Passe 2 : ressuyage de l'eau gravitaire, du bas vers le haut ──────────
   // (du bas d'abord, pour libérer la place avant que le dessus ne descende)
-  for (let i = n - 1; i >= 0; i--) {
-    const h = horizons[i];
-    if (!h) continue;
-    const dispo = excesMm[i] ?? 0;
-    if (dispo <= 0) continue;
-    if (i === n - 1) {
-      const sortie = Math.min(dispo, h.conductiviteMm);
-      excesMm[i] = dispo - sortie;
-      drainageBrut += sortie;
-    } else {
-      const hBas = horizons[i + 1];
-      if (!hBas) continue;
-      const place =
-        Math.max(0, hBas.ruMm - (eauMm[i + 1] ?? 0)) +
-        Math.max(0, hBas.porositeMm - (excesMm[i + 1] ?? 0));
-      const transfert = Math.min(dispo, h.conductiviteMm, place);
-      excesMm[i] = dispo - transfert;
-      const versRu = Math.min(transfert, Math.max(0, hBas.ruMm - (eauMm[i + 1] ?? 0)));
-      eauMm[i + 1] = (eauMm[i + 1] ?? 0) + versRu;
-      excesMm[i + 1] = (excesMm[i + 1] ?? 0) + (transfert - versRu);
+  //
+  // **Et on recommence tant que ça bouge** (issue #263), parce qu'un seul
+  // balayage ne fait descendre l'eau que d'un horizon par semaine. Le défaut se
+  // voyait sur un dernier horizon **mince** : il vidangeait les quelques
+  // millimètres qu'il détenait, l'horizon du dessus s'y déversait jusqu'à le
+  // remplir, et tout s'arrêtait là. Un fond de cinq centimètres n'exportait donc
+  // que sept millimètres par semaine **quelle que soit sa conductivité** — de
+  // quoi noyer un plateau bien drainé sous cinq centimètres de sable, mesuré :
+  // 95 % d'engorgement du haut en bas, aucun hêtre survivant à quarante ans.
+  //
+  // **Le profil se drainait à la vitesse de ce que son fond peut contenir, quand
+  // il doit se drainer à la vitesse de ce qu'il peut laisser passer.** La passe 1
+  // faisait déjà la bonne chose — `Math.min(flux, h.conductiviteMm)` y borne un
+  // **flux** ; celle-ci bornait un stock, et l'asymétrie était le défaut.
+  //
+  // Chaque horizon garde donc un **budget hebdomadaire** égal à sa conductivité,
+  // et on balaie jusqu'à ce que plus rien ne bouge. Au plus `n` balayages : il en
+  // faut un par interface pour qu'une goutte du sommet atteigne l'exutoire, et
+  // les suivants ne trouvent plus de budget. Sur les sept stations du dépôt,
+  // dont le dernier horizon fait 40 à 70 cm, le second balayage ne déplace rien —
+  // le défaut était **latent**, pas actif, et la correction est donc neutre sur
+  // l'existant.
+  const budgetMm = new Array<number>(n);
+  for (let i = 0; i < n; i++) budgetMm[i] = horizons[i]?.conductiviteMm ?? 0;
+  for (let passe = 0; passe < n; passe++) {
+    let bouge = false;
+    for (let i = n - 1; i >= 0; i--) {
+      const h = horizons[i];
+      if (!h) continue;
+      const dispo = excesMm[i] ?? 0;
+      const budget = budgetMm[i] ?? 0;
+      if (dispo <= 0 || budget <= 0) continue;
+      if (i === n - 1) {
+        const sortie = Math.min(dispo, budget);
+        if (sortie <= 0) continue;
+        excesMm[i] = dispo - sortie;
+        budgetMm[i] = budget - sortie;
+        drainageBrut += sortie;
+        bouge = true;
+      } else {
+        const hBas = horizons[i + 1];
+        if (!hBas) continue;
+        const place =
+          Math.max(0, hBas.ruMm - (eauMm[i + 1] ?? 0)) +
+          Math.max(0, hBas.porositeMm - (excesMm[i + 1] ?? 0));
+        const transfert = Math.min(dispo, budget, place);
+        if (transfert <= 0) continue;
+        excesMm[i] = dispo - transfert;
+        budgetMm[i] = budget - transfert;
+        const versRu = Math.min(transfert, Math.max(0, hBas.ruMm - (eauMm[i + 1] ?? 0)));
+        eauMm[i + 1] = (eauMm[i + 1] ?? 0) + versRu;
+        excesMm[i + 1] = (excesMm[i + 1] ?? 0) + (transfert - versRu);
+        bouge = true;
+      }
     }
+    if (!bouge) break;
   }
 
   // ── L'exutoire limite la sortie ; le refus remonte en nappe perchée ───────

@@ -103,3 +103,107 @@ describe("bilan hydrique d'un profil stratifié", () => {
     expect(out.overflowMm).toBeGreaterThan(190);
   });
 });
+
+describe("un fond mince ne bouche pas le profil (#263)", () => {
+  const h = (ruMm: number, porositeMm: number, conductiviteMm: number): HorizonHydro =>
+    ({ ruMm, porositeMm, conductiviteMm, epaisseurCm: 30 }) as HorizonHydro;
+
+  /** Régime permanent d'un plateau à drainage libre qu'on arrose chaque semaine. */
+  function regime(horizons: HorizonHydro[], pluieMm: number, semaines = 60) {
+    let r = {
+      eauMm: horizons.map(() => 0),
+      excesMm: horizons.map(() => 0),
+      evapMm: 0,
+      drainageMm: 0,
+      overflowMm: 0,
+      nappeMm: 0,
+      engorgementParHorizon: horizons.map(() => 0),
+    };
+    for (let s = 0; s < semaines; s++) {
+      r = profilHydro(
+        {
+          horizons,
+          eauMm: r.eauMm,
+          excesMm: r.excesMm,
+          rainMm: pluieMm,
+          evapDemandMm: 0,
+          nappeMm: 0,
+          drainageExterneMm: Number.POSITIVE_INFINITY,
+        },
+        r,
+      );
+    }
+    return r;
+  }
+
+  const SURFACE = h(70, 25, 120);
+  const SOUS = h(69, 40, 120);
+
+  it("cinq centimètres de sable sous un limon ne noient pas la surface", () => {
+    // **le fait qui a ouvert l'issue**, et il était spectaculaire : glisser un
+    // horizon de cinq centimètres — du sable, le matériau le plus filtrant du
+    // catalogue — sous un plateau bien drainé engorgeait le profil **du haut en
+    // bas** et tuait tous les hêtres en quarante ans. Cinq centimètres de sable
+    // ne peuvent pas noyer un plateau.
+    //
+    // La cause n'était pas le sable : c'était que le ressuyage ne faisait
+    // descendre l'eau que d'un horizon par semaine, et qu'un fond mince, une
+    // fois plein, ne laissait plus de place à celui du dessus.
+    const fondMince = h(7, 7, 1200);
+    const avec = regime([SURFACE, SOUS, fondMince], 20);
+    expect(avec.engorgementParHorizon[0] ?? 1).toBe(0);
+  });
+
+  it("et le profil s'écoule à ce que son fond CONDUIT, pas à ce qu'il contient", () => {
+    // Le même profil, avec un fond mince et un fond épais **de même
+    // conductivité** : à pluie égale, ils doivent évacuer la même chose. Avant
+    // le correctif, le mince plafonnait aux sept millimètres qu'il détenait.
+    const mince = regime([SURFACE, SOUS, h(7, 7, 1200)], 20);
+    const epais = regime([SURFACE, SOUS, h(90, 130, 1200)], 20);
+    expect(mince.drainageMm).toBeCloseTo(epais.drainageMm, 6);
+  });
+
+  it("un plateau à drainage libre ne garde pas d'eau gravitaire d'une semaine sur l'autre", () => {
+    // **Et c'est là que la correction cesse d'être neutre, il faut le dire.**
+    // Avant, l'horizon de fond des sept stations du dépôt vivait à 50-62 % de
+    // saturation en permanence : ce qu'il recevait du dessus attendait la
+    // semaine suivante pour sortir. Un plateau dont l'exutoire est libre revient
+    // à la capacité au champ en quelques jours, pas en plusieurs semaines.
+    for (const pluie of [20, 60]) {
+      const r = regime([SURFACE, SOUS], pluie);
+      for (const [i, e] of r.engorgementParHorizon.entries()) {
+        expect(e, `horizon ${i}, pluie ${pluie} mm/sem`).toBe(0);
+      }
+    }
+  });
+
+  it("mais un exutoire fermé engorge toujours : le correctif ne débouche pas un fond de vallée", () => {
+    // Le contrôle qui dit que la correction n'a pas simplement supprimé
+    // l'engorgement. Ce qui retenait l'eau d'un fond de vallée n'est pas la
+    // vidange interne, c'est l'exutoire — et lui n'a pas bougé.
+    let r = {
+      eauMm: [0, 0],
+      excesMm: [0, 0],
+      evapMm: 0,
+      drainageMm: 0,
+      overflowMm: 0,
+      nappeMm: 0,
+      engorgementParHorizon: [0, 0],
+    };
+    for (let s = 0; s < 60; s++) {
+      r = profilHydro(
+        {
+          horizons: [SURFACE, SOUS],
+          eauMm: r.eauMm,
+          excesMm: r.excesMm,
+          rainMm: 20,
+          evapDemandMm: 0,
+          nappeMm: 0,
+          drainageExterneMm: 5,
+        },
+        r,
+      );
+    }
+    expect(r.engorgementParHorizon[0] ?? 0).toBeGreaterThan(0.5);
+  });
+});
