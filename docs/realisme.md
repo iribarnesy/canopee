@@ -3889,6 +3889,15 @@ une fuite, moitié de celle d'avant, et l'arbre porte exactement la même.
 
 ## Les profils s'arrêtaient où s'arrête une fosse, pas où s'arrêtent les racines (#257)
 
+> **Ce lot est une instruction, pas une livraison.** Les profils sont écrits et
+> sourcés, la profondeur racinaire fait ce qu'on lui demandait, mais le contrôle
+> apparié a trouvé en chemin un défaut de `profilHydro` qui rend l'ajout d'un
+> horizon de fond **engorgeant** : cinq centimètres de sable sous un profil de
+> plateau y noient le peuplement entier. Tant que ce défaut n'est pas corrigé —
+> c'est de la maintenance du moteur —, ces profils coûtent jusqu'à 10,9 % de
+> hauteur dominante au hêtre. Le détail est plus bas, avec les mesures.
+
+
 Les sept stations du dépôt plafonnaient entre **75 et 120 cm** de profondeur
 pénétrable. Ce n'était pas une limite de mécanisme — `profondeurPenetrableCm`
 rendrait trois mètres si un profil les déclarait — c'était que **le dépôt n'avait
@@ -4020,6 +4029,93 @@ l'anoxie ressentie par un arbre est la moyenne des engorgements par horizon
 **pondérée par ses fractions racinaires** (tick.ts), donc plus un arbre descend,
 plus il en ressent. Dans un fond de vallée à nappe affleurante, ce n'est pas la
 roche qui borne les racines, c'est l'eau — et le moteur le dit déjà.
+
+### Le contrôle apparié station par station, et ce qu'il refuse
+
+Traitement F16 : mêmes graines (17, 43, 91), même dispositif, huit sujets au
+large, quarante ans, seuls les profils changent. Deux essences, un traçant
+(hêtre, 110 cm déclarés) et un pivot (chêne pubescent, 250).
+
+| station | pénétrable | RU | hêtre | chêne pubescent |
+|---|---|---|---|---|
+| Lande sèche | 75 → 75 | 92 → 92 | mort avant comme après | mort avant comme après |
+| Fond de vallée | 85 → 195 | 149 → 326 | mort avant comme après | mort avant comme après |
+| Limon riche | 100 → 200 | 186 → 275 | 16,46 → 16,18 m (**−1,7 %**) | 10,97 → 10,95 m ; racines 99 → **157 cm** |
+| Limon pauvre en N | 100 → 200 | 178 → 267 | 14,40 → 13,85 m (**−3,8 %**) | 10,46 → 10,27 m ; racines 100 → **153 cm** |
+| Limon acide | 90 → 200 | 148 → 244 | 17,71 → 15,80 m (**−10,8 %**) | ne survit pas, avant comme après |
+| Friche sur limon | 80 → 180 | 139 → 228 | 16,67 → 14,85 m (**−10,9 %**) | 10,96 → 10,57 m ; racines 79 → **142 cm** |
+| Suberaie des Maures | 120 → 260 | 121 → 179 | 11,37 → 10,55 m (**−7,1 %**) | ne s'installe pas, avant comme après |
+
+**Le pivot gagne ce qu'on lui avait promis** : sur les trois stations où il vit,
+il passe de 99-79 cm — le plancher de la station — à 142-157 cm, et **sa hauteur
+ne bouge pas** (−0,1 %, −1,7 %, −3,6 %). C'est exactement l'objet du ticket.
+
+**Mais le traçant perd**, et il perd partout : de −1,7 % sur le limon riche à
+−10,9 % sur la friche. Ce n'est pas une graine malheureuse — relevé graine par
+graine sur la friche, les trois perdent : 17,89 → 15,86, 16,35 → 14,53,
+15,76 → 14,15. **Un hêtre n'a aucune raison de pousser moins bien parce qu'on a
+décrit un mètre de substrat sous ses racines**, et c'est ce qui a fait chercher
+plus loin.
+
+### Ce que la mesure a trouvé en cherchant, et qui arrête le lot
+
+L'eau du sol n'y est pour rien. Relevé sous un peuplement de quarante ans,
+friche, remplissage de chaque horizon en pourcentage de sa réserve utile :
+l'horizon de surface passe de 53 à 56 % au creux de l'été, le second de 71 à
+75 %. **Le sol est plus humide après, pas moins.**
+
+C'est **l'engorgement** qui explose. Même relevé, part de la macroporosité
+occupée par de l'eau libre :
+
+| friche, semaine | 4 | 12 | 20 | 28 | 36 | 44 |
+|---|---|---|---|---|---|---|
+| horizon de surface, avant | 6 % | 6 % | 6 % | 6 % | 6 % | 6 % |
+| horizon de surface, après | 23 % | 35 % | 28 % | 15 % | 13 % | 15 % |
+| second horizon, avant | 34 % | 32 % | 13 % | 10 % | 11 % | 20 % |
+| second horizon, après | 55 % | 62 % | 54 % | 36 % | 29 % | 38 % |
+
+Le hêtre tolère mal l'anoxie ; il paie donc un engorgement qu'il ne subissait
+pas. Et la cause n'est pas la texture du matériau ajouté, comme on pouvait le
+croire d'une formation argileuse : **c'est l'épaisseur**. L'expérience qui
+tranche est celle du C mince, et son résultat ne se discute pas :
+
+| friche, épaisseur du C | pénétrable | hêtre à 40 ans | engorgement de surface |
+|---|---|---|---|
+| pas de C | 80 cm | 17,8 m | 6 % |
+| C de **5 cm** | 85 cm | **0,0 m — tout est mort** | 92 à 95 % |
+| C de 30 cm | 110 cm | 16,4 m | 14 à 32 % |
+| C de 100 cm | 180 cm | 15,7 m | 13 à 35 % |
+
+Et le même essai sur le limon acide, avec un C **sableux** — mille deux cents
+millimètres par semaine de conductivité, le matériau le plus filtrant du
+catalogue — donne la même chose : **cinq centimètres de sable sous le profil
+noient le peuplement entier**, quatre-vingt-quinze pour cent d'engorgement du
+haut en bas.
+
+**Cinq centimètres de sable ne peuvent pas noyer un plateau.** C'est un défaut
+de mécanisme, pas de donnée, et il se lit dans `profilHydro` : la passe de
+ressuyage vidange chaque horizon vers le suivant **dans la place que le suivant
+laisse**, et le dernier horizon n'évacue hors du profil que l'eau libre **qu'il
+détient déjà**. Un horizon de fond mince ne détient presque rien — sept
+millimètres de macroporosité pour cinq centimètres — donc il ne peut rien
+évacuer, l'horizon au-dessus n'a plus de place où se vider, et la saturation
+remonte jusqu'à la surface. Le profil se draine à la vitesse de ce que son
+dernier horizon peut contenir, alors qu'il devrait se drainer à la vitesse de ce
+que son dernier horizon peut **laisser passer**.
+
+### Conclusion : le lot est instruit, il n'est pas livrable
+
+Les profils sont justes et sourcés, la profondeur racinaire fait ce qu'on lui
+demandait, la réserve utile n'est pas le danger qu'on craignait — mais **le
+moteur ne sait pas encore porter un horizon de fond**. Tant que la vidange du
+dernier horizon dépend de ce qu'il contient plutôt que de ce qu'il conduit,
+ajouter un substrat à un profil engorge la station au lieu de l'approfondir, et
+le prix se lit sur les essences sensibles à l'anoxie : jusqu'à −10,9 % de
+hauteur dominante à quarante ans.
+
+Ce qu'il faut avant de reprendre ces profils est donc un correctif de
+`profilHydro` — c'est de la **maintenance** du moteur, pas une évolution — après
+quoi le contrôle apparié ci-dessus est à rejouer tel quel : il est écrit pour ça.
 
 ### Ce que le lot ne règle pas, et il faut le dire
 

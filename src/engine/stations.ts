@@ -6,6 +6,18 @@
  *
  * ── **un profil n'est pas une fosse pédologique** (issue #257) ───────────────
  *
+ * **Avertissement, et il vient avant le reste** : ces horizons de fond sont
+ * justes et sourcés, mais le moteur ne sait pas encore les porter. Le contrôle
+ * apparié du lot a trouvé que `profilHydro` vidange son dernier horizon à la
+ * hauteur de ce qu'il **contient** au lieu de ce qu'il **conduit** : un horizon de
+ * fond mince ne retient presque rien, donc n'évacue presque rien, et la
+ * saturation remonte jusqu'à la surface. Mesuré : **cinq centimètres de sable**
+ * ajoutés sous le limon de la friche — le matériau le plus filtrant du
+ * catalogue — **tuent le peuplement entier**, et les cent centimètres décrits
+ * ci-dessous coûtent jusqu'à 10,9 % de hauteur dominante au hêtre à quarante
+ * ans, par engorgement et non par manque d'eau. Le tableau complet est dans
+ * `docs/realisme.md`. **Corriger la vidange avant de se fier à ces profils.**
+ *
  * Les sept profils s'arrêtaient tous entre 80 et 120 cm, et ce n'était pas une
  * décision : c'est la profondeur à laquelle **une fosse s'arrête**. Un pédologue
  * décrit le sol, c'est-à-dire la partie du terrain qui a été transformée par
