@@ -27,8 +27,24 @@
 
 import { estGesteSurArbres, type GesteTypeArbre } from "../engine/actions";
 import type { CauseMort } from "../engine/trees";
+import type { PorteurDeJournal } from "./journal";
 import { causeDite, estFeminin } from "./mots";
-import type { Snapshot } from "./protocol";
+
+/**
+ * Ce qu'il faut savoir d'un arbre pour lire ce qui lui arrive.
+ *
+ * **Structurel, comme `PorteurDeJournal`**, et pour la même raison : l'arbre du
+ * moteur et celui de l'instantané portent ces champs-là sous les mêmes noms.
+ * Le worker n'a donc pas à fabriquer un instantané pour dépouiller une semaine
+ * qu'il vient de simuler.
+ */
+export interface ArbreSuivable {
+  id: number;
+  especeId: string;
+  bloomFrosted: boolean;
+  causeLente?: CauseMort;
+  stressLent?: number;
+}
 
 /**
  * Ce qu'un geste a **fait** à l'arbre, dit au passé, et sous quelle rubrique.
@@ -86,45 +102,47 @@ export type MemoireDesSuivis = ReadonlyMap<number, EtatVu>;
 export const SEUIL_SOUFFRANCE = 0.1;
 
 /**
- * Ce qui est arrivé aux arbres suivis depuis le dernier instantané.
+ * Ce qui est arrivé aux arbres cette semaine.
  *
- * Rend les événements **et** la mémoire à garder pour la fois suivante ; l'appelant
- * n'a rien à comprendre de ce qui est retenu.
+ * **Plus de filtre, et c'est tout le lot de #225.** Ce module ne retenait que
+ * les arbres déjà suivis, si bien qu'un arbre dont on venait de remarquer la
+ * mort n'avait, par construction, aucun passé — « j'ai commencé à le suivre
+ * après qu'il soit mort ». Or tout ce qui arrive est déjà **nommé** par le
+ * moteur : il n'y avait rien à demander, seulement à cesser de jeter.
+ *
+ * Rend les événements **et** la mémoire à garder pour la fois suivante ;
+ * l'appelant n'a rien à comprendre de ce qui est retenu.
  */
 export function accumulerLesSuivis(
   memoire: MemoireDesSuivis,
-  snapshot: Snapshot,
-  suivis: ReadonlySet<number>,
+  semaine: number,
+  porteur: PorteurDeJournal,
+  arbres: readonly ArbreSuivable[],
 ): { evenements: EvenementSuivi[]; memoire: MemoireDesSuivis } {
   const evenements: EvenementSuivi[] = [];
   const suite = new Map<number, EtatVu>();
-  if (suivis.size === 0) return { evenements, memoire: suite };
-  const semaine = snapshot.week;
   const dire = (idArbre: number, quoi: QuoiSuivi, texte: string) =>
     evenements.push({ semaine, idArbre, quoi, texte });
 
-  // Les gestes : le moteur nomme les arbres touchés, on n'a qu'à filtrer.
-  for (const geste of snapshot.gestes ?? []) {
+  // Les gestes : le moteur nomme les arbres touchés, on n'a qu'à les lire.
+  for (const geste of porteur.gestes ?? []) {
     if (!estGesteSurArbres(geste)) continue;
     for (const id of geste.ids) {
-      if (!suivis.has(id)) continue;
       const subi = GESTE_SUBI[geste.type];
       dire(id, subi.quoi, subi.texte);
     }
   }
   // Les franchissements de stade, de même.
-  for (const f of snapshot.franchissements ?? []) {
-    if (suivis.has(f.id)) dire(f.id, "stade", `passe de ${f.deStade} à ${f.versStade}`);
+  for (const f of porteur.franchissements ?? []) {
+    dire(f.id, "stade", `passe de ${f.deStade} à ${f.versStade}`);
   }
   // Les morts, avec leur cause en clair : c'est la demande de la v1.
-  for (const m of snapshot.morts ?? []) {
+  for (const m of porteur.morts ?? []) {
     // Accordé à l'**essence** : « la ronce meurt étouffée », pas « étouffé ».
-    if (suivis.has(m.id))
-      dire(m.id, "mort", `meurt ${causeDite(m.cause, 1, estFeminin(m.especeId))}`);
+    dire(m.id, "mort", `meurt ${causeDite(m.cause, 1, estFeminin(m.especeId))}`);
   }
 
-  for (const arbre of snapshot.trees) {
-    if (!suivis.has(arbre.id)) continue;
+  for (const arbre of arbres) {
     const vu = memoire.get(arbre.id);
     if (arbre.bloomFrosted && !vu?.gel) {
       dire(arbre.id, "gel", "fleurs grillées par un gel tardif");
@@ -149,10 +167,10 @@ export function accumulerLesSuivis(
       present: true,
     });
   }
-  // Un arbre suivi qui a quitté l'instantané sans mort rapportée : abattu,
-  // tombé. On le dit plutôt que de laisser son journal s'arrêter net.
+  // Un arbre qui a quitté la parcelle sans mort rapportée : abattu, tombé,
+  // consumé. On le dit plutôt que de laisser son journal s'arrêter net.
   for (const [id, vu] of memoire) {
-    if (!suivis.has(id) || suite.has(id) || !vu.present) continue;
+    if (suite.has(id) || !vu.present) continue;
     const nomme = evenements.some((e) => e.idArbre === id);
     if (!nomme) dire(id, "mort", "a quitté la parcelle");
     suite.set(id, { ...vu, present: false });
@@ -162,10 +180,10 @@ export function accumulerLesSuivis(
 
 /** Les suivis morts dans cet instantané : de quoi arrêter le temps et cadrer. */
 export function suivisMorts(
-  snapshot: Snapshot,
+  porteur: PorteurDeJournal,
   suivis: ReadonlySet<number>,
 ): { id: number; x: number; y: number; cause: CauseMort }[] {
-  return (snapshot.morts ?? [])
+  return (porteur.morts ?? [])
     .filter((m) => suivis.has(m.id))
     .map((m) => ({ id: m.id, x: m.x, y: m.y, cause: m.cause }));
 }
@@ -179,29 +197,37 @@ export interface LigneDeSuivi extends EvenementSuivi {
 }
 
 /**
- * Regrouper ce qui se répète à l'identique et se suit.
+ * Ranger un événement à la suite d'un journal, en groupant ce qui se répète.
  *
  * Mesuré à l'écran : un jeune pin sylvestre est brouté toutes les semaines, et
  * son journal n'était plus qu'une colonne de « brouté par le gibier » — le
- * geste qu'on cherchait et la mort qu'on attendait passaient dessous.
+ * geste qu'on cherchait et la mort qu'on attendait passaient dessous. Mesuré
+ * dans le navigateur une seconde fois, en gardant l'histoire complète (#225) :
+ * **806 lignes pour un seul arbre** sur trente ans de maturation, dont 800
+ * brouts. C'est pourquoi le groupage se fait à l'écriture et pas seulement à
+ * la lecture : ce qui n'est pas écrit ne pèse rien.
  *
  * **Seulement ce qui se suit**, et le texte doit être le même mot pour mot :
  * un brout, un gel, un brout redevient trois lignes. On ne perd donc pas
  * l'histoire, on cesse de la répéter — et les deux semaines du groupe sont
- * gardées, celle où ça a commencé et celle où on en est.
- *
- * Attend la liste déjà triée comme elle sera lue.
+ * gardées, la plus ancienne et la plus récente, quel que soit le **sens** dans
+ * lequel on l'a parcourue : le worker écrit du passé vers le présent, l'écran
+ * relit du présent vers le passé.
  */
+export function ajouterAuJournal(lignes: LigneDeSuivi[], e: EvenementSuivi): void {
+  const derniere = lignes[lignes.length - 1];
+  if (derniere && derniere.idArbre === e.idArbre && derniere.texte === e.texte) {
+    derniere.fois += 1;
+    derniere.depuisSemaine = Math.min(derniere.depuisSemaine, e.semaine);
+    derniere.semaine = Math.max(derniere.semaine, e.semaine);
+    return;
+  }
+  lignes.push({ ...e, fois: 1, depuisSemaine: e.semaine });
+}
+
+/** Le même groupage, sur une liste entière : une seule règle pour les deux. */
 export function grouperLesSuivis(evenements: readonly EvenementSuivi[]): LigneDeSuivi[] {
   const lignes: LigneDeSuivi[] = [];
-  for (const e of evenements) {
-    const derniere = lignes[lignes.length - 1];
-    if (derniere && derniere.idArbre === e.idArbre && derniere.texte === e.texte) {
-      derniere.fois += 1;
-      derniere.depuisSemaine = Math.min(derniere.depuisSemaine, e.semaine);
-      continue;
-    }
-    lignes.push({ ...e, fois: 1, depuisSemaine: e.semaine });
-  }
+  for (const e of evenements) ajouterAuJournal(lignes, e);
   return lignes;
 }

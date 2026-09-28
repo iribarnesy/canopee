@@ -27,6 +27,7 @@ import type { DecorBordures } from "../render/couches/decor";
 import type { Bilan } from "./bilan";
 import type { Cumuls } from "./niveaux";
 import type { ChoixRecolte } from "./recolteAuto";
+import type { EvenementSuivi, LigneDeSuivi } from "./suivis";
 
 /** Omit distributif sur l'union des actions (Omit natif écrase l'union). */
 type DistributiveOmit<T, K extends string> = T extends unknown ? Omit<T, K> : never;
@@ -598,6 +599,18 @@ export type ToWorker =
    */
   | { type: "suivre"; ids: number[] }
   /**
+   * « Que s'est-il passé pour cet arbre-là ? » (#225)
+   *
+   * Le worker tient l'histoire de **tous** les arbres depuis le début de la
+   * partie — c'est le seul endroit qui voit toutes les semaines. Elle ne part
+   * pas avec les instantanés : celle d'un siècle pèse quelques centaines de
+   * kilo-octets que personne ne lit. On demande celle qu'on ouvre.
+   *
+   * Sans identifiant connu du worker, rien ne revient : un arbre disparu garde
+   * son histoire, c'est même tout l'objet de l'issue.
+   */
+  | { type: "histoire"; id: number }
+  /**
    * Le niveau joué et les paliers déjà franchis (#188).
    *
    * Le worker ne **joue** pas le niveau — il n'en connaît ni les paliers ni les
@@ -681,6 +694,16 @@ export type FromWorker =
       cumuls: Cumuls;
       bilan: Bilan;
       /**
+       * Ce qui est arrivé aux arbres **suivis** depuis l'instantané précédent (#225).
+       *
+       * Accumulé dans le worker et non à l'écran, pour la raison qui y garde le
+       * bilan : à ×52, React ne voit qu'un tiers des instantanés — 35 repliés
+       * sur 115 reçus, mesuré — et un journal dépouillé côté page perdait le
+       * reste. Ce sont les **suivis seulement** : l'histoire complète d'un
+       * arbre se demande par `histoire`.
+       */
+      suivis: EvenementSuivi[];
+      /**
        * La plus ancienne semaine où le rembobinage sait revenir (#128).
        *
        * Elle voyage à chaque instantané parce qu'elle **avance** : les points de
@@ -689,6 +712,17 @@ export type FromWorker =
        */
       rembobinable: number;
     }
+  /**
+   * L'histoire demandée, du plus ancien au plus récent (#225).
+   *
+   * **Groupée**, parce qu'elle est écrite groupée : un plant brouté toutes les
+   * semaines pendant dix ans fait une ligne et non cinq cents.
+   *
+   * Vide si le worker ne connaît pas cet identifiant — une partie reprise d'une
+   * sauvegarde **la reconstitue** par le rejeu, mais une sauvegarde d'avant
+   * #225 chargée dans une page ouverte de longue date n'a rien à dire.
+   */
+  | { type: "histoire"; id: number; evenements: LigneDeSuivi[] }
   /** Le niveau et ses paliers franchis, tels que la sauvegarde les portait. */
   | { type: "niveau"; id?: string; acquis: string[] }
   /**
