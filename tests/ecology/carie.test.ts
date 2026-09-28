@@ -156,7 +156,15 @@ describe("en partie : le vieil arbre creux naît des coups de vent", () => {
     const vivants = s.trees.filter((t) => t.alive);
     const caries = vivants.filter((t) => t.carie !== undefined);
     const creux = vivants.filter((t) => partCariee(t.carie, t.diametreCm) > 0.5);
-    expect(caries.length).toBeGreaterThan(3);
+    // **Trois, et c'en était quatre avant #263.** Le correctif de vidange a
+    // retiré l'engorgement permanent de l'horizon de fond, donc les arbres
+    // poussent un peu mieux et la loterie des coups de vent ne tombe plus
+    // exactement sur les mêmes. Le fait que cet essai porte — un siècle de
+    // tempêtes fabrique des chênes creux — ne dépend pas de cette unité : il est
+    // tenu par la ligne suivante, qui exige qu'au moins un soit **creux**.
+    // Le seuil était une photographie à une graine, et une marge d'une unité sur
+    // une graine ne dit rien de plus que le tirage.
+    expect(caries.length).toBeGreaterThanOrEqual(3);
     expect(creux.length).toBeGreaterThan(0);
     // Et une franche minorité : le seuil est posé bien en dessous des 5,5 %
     // mesurés, mais il interdit le quart de peuplement d'avant.

@@ -118,7 +118,20 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     const hetres = an60.fagusAlive.map((t) => t.heightM).sort((a, b) => a - b);
     const medianeHetre = hetres[Math.floor(hetres.length / 2)] ?? 0;
     expect(medianeHetre).toBeLessThan(0.7 * dominante);
-    expect(an60.canopyFagusShare).toBeLessThan(0.3);
+    // **16 % avant #263, 30,4 % après**, et le sens est instructif plutôt
+    // qu'inquiétant. Le correctif de vidange a retiré l'engorgement permanent de
+    // l'horizon de fond — 50 à 62 % de saturation en régime établi — et **le
+    // hêtre est l'essence de cet atlas que l'engorgement pénalise le plus**. Il
+    // gagne donc davantage que les pionnières, ce qui est exactement la
+    // signature qu'on attend quand on retire une anoxie qui n'avait pas lieu
+    // d'être.
+    //
+    // Le fait que l'essai porte ne bouge pas, et il est tenu par les deux
+    // lignes qui précèdent : la canopée reste **majoritairement pionnière**, et
+    // le hêtre médian reste **sous les sept dixièmes de la dominante**. Ce
+    // plafond-ci n'était qu'une marge autour d'un chiffre mesuré ; il en garde
+    // une, autour du nouveau.
+    expect(an60.canopyFagusShare).toBeLessThan(0.4);
   });
 
   it("an 120 : la cohorte pionnière initiale s'est éteinte (longévité du bouleau ~90 ans)", () => {

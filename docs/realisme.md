@@ -265,7 +265,12 @@ un sous-sol que personne ne lit encore. Aucun point gagné, c'est de la plomberi
 conservative — mais `leachedKgHa` cessait de mesurer ce que la littérature
 mesure, et le compartiment s'est révélé un **budget à l'équilibre** là où
 j'attendais un puits : son rapport au stock de surface tient à 1 % près sur
-trente ans pendant que les deux perdent un tiers)**.*
+trente ans pendant que les deux perdent un tiers) → 92 % (le profil s'écoule à ce que son fond conduit :
+le ressuyage bornait un stock là où l'infiltration borne un flux, et cinq
+centimètres de sable sous un plateau bien drainé noyaient le peuplement entier.
+Aucun point gagné, c'est un correctif — mais il n'est **pas** neutre : l'horizon
+de fond des sept stations vivait à 50-62 % de saturation en permanence, et il
+revient à zéro)**.*
 
 *Le score a **baissé** en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -298,7 +303,7 @@ maladie-là, pas une preuve de santé.*
 | A22 | Une crue noie le bas de la parcelle quand le bassin d'amont verse, et reflue ensuite | ✅ | `hauteurDeCrueM` ; `eau-surface.test.ts` — même eau que le ruissellement d'amont, relue depuis le cours d'eau |
 | A21 | Un orage sur un sol déjà plein ruisselle intégralement | ✅ | passe 1 de `profilHydro` : le refus reflue au lieu d'être perdu ; `profil-hydro-conservation.test.ts` |
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
-| A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` |
+| A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` — **et depuis #263 le profil s'écoule à ce que son fond CONDUIT, plus à ce qu'il contient.** Le ressuyage ne faisait descendre l'eau que d'un horizon par semaine : le dernier vidangeait les millimètres qu'il détenait, celui du dessus s'y déversait jusqu'à le remplir, et tout s'arrêtait là. Asymétrique avec la passe d'infiltration, qui borne un **flux** (`Math.min(flux, h.conductiviteMm)`) là où le ressuyage bornait un **stock**. Chaque horizon garde désormais un budget hebdomadaire égal à sa conductivité et on balaie jusqu'à ce que plus rien ne bouge — au plus une passe par interface. **Le fait qui l'a révélé** : glisser cinq centimètres de sable, le matériau le plus filtrant du catalogue, sous un plateau bien drainé engorgeait le profil du haut en bas et tuait tous les hêtres en quarante ans. Cinq centimètres de sable ne peuvent pas noyer un plateau. **Et la correction n'est pas neutre, il faut le dire** : l'horizon de fond des sept stations vivait à 50-62 % de saturation en permanence, il revient à zéro. C'est la bonne physique — un plateau à exutoire libre retrouve la capacité au champ en quelques jours, pas en plusieurs semaines — mais ça déplace le régime hydrique sur lequel le calage des hauteurs a été fait, et c'est pourquoi le banc des hauteurs, celui des tolérances et la propriété de conservation du profil sont les témoins du lot. Ce qui **ne** bouge pas : un exutoire fermé engorge toujours, parce que ce qui retenait l'eau d'un fond de vallée n'était pas la vidange interne |
 | A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` — et il faut distinguer **deux** choses que le moteur confondait (#84) : la plasticité, qui ne répond qu'à la soif, et le **squelette** d'ancrage, qu'un arbre bâtit en grandissant qu'il ait soif ou non. Le plancher `partPlancherRacines` croît donc avec la maturité (0,35 → 0,80 du potentiel), alors qu'il valait 0,35 à tout âge : un hêtre de vingt mètres jamais assoiffé avait les racines d'un semis, et c'est ce qui forçait le barème d'ancrage de `tempete.ts` à mentir (F15). L'extrémité jeune est inchangée — un semis démarre toujours en surface |
 | A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ✅ | `relief.ts` + `erosion.ts` ; `erosion.test.ts` — 4 t/ha/an à 15 % sur sol nu, quasi rien sous couvert |
 | A27 | Ce que l'eau emporte est plus riche que le sol moyen, et se dépose plus bas | ✅ | enrichissement ×3, dépôt fonction du couvert de la cellule d'arrivée — le versant se déshabille par le sommet |
