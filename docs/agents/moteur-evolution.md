@@ -61,7 +61,72 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'azote lessivé descend, #247 lot A)
+## Ce que le dernier lot a appris (qui puise où, #247 lot B)
+
+### Trois prédictions, trois démentis — et c'est le lot qui s'est le mieux passé
+
+Ce lot a eu raison de moi trois fois, et chaque fois la mesure valait mieux que
+ce que j'allais écrire.
+
+**1. « Déclarer le blé profond va lui rendre de la concurrence. »** Faux : ça la
+lui **retire**, de moitié. Le blé passe de −11,4 % à −6,2 % de coût sur le volume
+du noyer. La raison est dans les fractions : blé 0,564 de part de surface contre
+noyer 0,604, **presque superposés**. Il n'y a pas de complémentarité verticale à
+en tirer. Ce que le lot produit est autre chose — le compartiment de surface est
+**rare** (3,5 kg/ha), le profond **abondant** (19, rempli par le lessivage et que
+personne ne reprenait) ; un blé superficiel met toute sa demande sur le rare, un
+blé profond en déplace 44 % sur l'abondant, et **cesse d'écraser la ressource
+disputée**. Nommer correctement ce qu'on vient de produire est la moitié du
+travail : annoncer « complémentarité » ici aurait été faux.
+
+**2. « Le sous-sol se remplit avec le temps. »** (lot A) Il plafonne.
+
+**3. « Une parcelle boisée a moins d'azote profond qu'une parcelle nue, puisque
+les arbres y puisent. »** Elle en a **plus** — 23,99 contre 21,42 kg/ha — parce
+que la litière des arbres en ajoute davantage qu'ils n'en prélèvent. Le banc ne
+séparait pas les deux effets, donc il ne mesurait ni l'un ni l'autre. L'essai a
+été remplacé par une égalité qu'on peut affirmer sans confondant.
+
+### Un banc écrit à côté d'un banc existant est un banc à RECOPIER
+
+Deux faux départs sur le même dispositif, et les deux étaient déjà documentés
+dans `ler.test.ts` :
+
+- j'ai labouré par-dessus les noyers — le commentaire du fichier raconte
+  exactement cette erreur et ce qu'elle lui avait coûté (77 % du volume) ;
+- puis la fauche annuelle de la bande épargnée a emporté le rang entier, parce
+  que je plantais à 0,8 m et que la fauche emporte les tiges sous un mètre
+  (#223, **que j'avais écrit moi-même**). `ler.test.ts` plante à 2 m.
+
+Le premier a failli passer pour un résultat : j'ai lu « −100 % de volume » avant
+de lire « 0 vivants ». Le second était plus sournois — des zéros dans les
+**deux** bras, donc aucun écart suspect.
+
+### Le verrou n'était pas le stock, c'était la demande
+
+Le lot A avait stratifié le pool. Ça n'aurait rien changé seul : `cellNWanted`
+fusionnait les arbres et la strate **avant** de toucher au stock, et rendait
+**un** taux de service aux deux. Avant d'ajouter une dimension à une ressource,
+vérifier que le consommateur sait la lire — sinon on répond à un gradient que
+personne ne voit.
+
+### Une hypothèse silencieuse se trouve dans une ligne, pas dans un commentaire
+
+`cellWaterDemand[i * nH] += demandeEau` versait toute la demande du tapis dans
+l'horizon 0. Personne n'avait décidé que le blé était superficiel ; c'est tombé
+d'une ligne écrite quand la strate n'avait qu'une espèce en tête. Le trait
+`profondeurRacinesCm` rend la décision explicite — et **l'eau, l'azote et la
+sécheresse vécue ont dû bouger ensemble**, sans quoi un blé enraciné à plus d'un
+mètre aurait grillé comme une anémone.
+
+### La limite était annoncée par l'issue, et la mesure la confirme au mot
+
+Les racines du noyer sont à **100,0 cm dans tous les bras** : exactement la
+profondeur pénétrable du limon riche. L'arbre est borné par la station, pas par
+sa biologie — l'atlas lui en déclare 200. Tant que les profils font un mètre,
+aucun mécanisme ne fera descendre un arbre plus bas qu'une culture.
+
+## Ce qu'un lot plus ancien a appris (l'azote lessivé descend, #247 lot A)
 
 ### Le pool n'était que la moitié du problème, et l'autre moitié n'était pas dans l'issue
 

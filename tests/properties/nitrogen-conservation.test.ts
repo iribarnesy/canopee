@@ -1,5 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import {
   cellLeachedG,
@@ -8,9 +9,10 @@ import {
   nitrogenAvailabilityFactor,
 } from "../../src/engine/nitrogen";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, type Station } from "../../src/engine/state";
+import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE, type StationClimat } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { fractionsRacinairesParHorizon } from "../../src/engine/trees";
 
 /**
  * Briques du cycle de l'azote, niveau cellule. La conservation du cycle
@@ -18,6 +20,37 @@ import { tick } from "../../src/engine/tick";
  * niveau du tick (tests/properties/tick-conservation), car l'allocation est
  * spatiale.
  */
+/**
+ * Une station à deux horizons, et une à un seul : les deux clauses du lot.
+ *
+ * On plante peu et on laisse filer : ce qu'on regarde est la **plomberie**, et
+ * un peuplement dense la masquerait en prélevant tout avant le drainage.
+ */
+function partie(sc: StationClimat, ans: number, unSeulHorizon = false) {
+  const premier = sc.station.profil[0];
+  if (premier === undefined) throw new Error("profil vide");
+  const profil = unSeulHorizon ? [premier] : sc.station.profil;
+  const station: Station = { ...sc.station, coteM: 20, voisinage: [], profil };
+  const weather = syntheticYear(sc.climat);
+  let state = createGameState(station, rngStateFromSeed(5));
+  let sortiSumKgHa = 0;
+  for (let w = 0; w < ans * 52; w++) {
+    const m = weather[w % weather.length];
+    if (!m) throw new Error("météo manquante");
+    const r = tick(state, m);
+    state = r.state;
+    sortiSumKgHa += r.fluxes.leachedKgHa;
+  }
+  const n = state.soil.mineralNG.length;
+  let surface = 0;
+  let profond = 0;
+  for (let i = 0; i < n; i++) {
+    surface += state.soil.mineralNG[i] ?? 0;
+    profond += state.soil.mineralNProfondG[i] ?? 0;
+  }
+  return { surface: (surface / n) * 10, profond: (profond / n) * 10, sortiSumKgHa };
+}
+
 describe("cycle de l'azote — briques cellule", () => {
   it("gel → pas de minéralisation", () => {
     expect(
@@ -93,37 +126,6 @@ describe("cycle de l'azote — briques cellule", () => {
 });
 
 describe("le sous-sol de l'azote : ce que la surface perd, elle le passe (#247 lot A)", () => {
-  /**
-   * Une station à deux horizons, et une à un seul : les deux clauses du lot.
-   *
-   * On plante peu et on laisse filer : ce qu'on regarde est la **plomberie**, et
-   * un peuplement dense la masquerait en prélevant tout avant le drainage.
-   */
-  function partie(sc: StationClimat, ans: number, unSeulHorizon = false) {
-    const premier = sc.station.profil[0];
-    if (premier === undefined) throw new Error("profil vide");
-    const profil = unSeulHorizon ? [premier] : sc.station.profil;
-    const station: Station = { ...sc.station, coteM: 20, voisinage: [], profil };
-    const weather = syntheticYear(sc.climat);
-    let state = createGameState(station, rngStateFromSeed(5));
-    let sortiSumKgHa = 0;
-    for (let w = 0; w < ans * 52; w++) {
-      const m = weather[w % weather.length];
-      if (!m) throw new Error("météo manquante");
-      const r = tick(state, m);
-      state = r.state;
-      sortiSumKgHa += r.fluxes.leachedKgHa;
-    }
-    const n = state.soil.mineralNG.length;
-    let surface = 0;
-    let profond = 0;
-    for (let i = 0; i < n; i++) {
-      surface += state.soil.mineralNG[i] ?? 0;
-      profond += state.soil.mineralNProfondG[i] ?? 0;
-    }
-    return { surface: (surface / n) * 10, profond: (profond / n) * 10, sortiSumKgHa };
-  }
-
   it("sur un profil à deux horizons, le sous-sol se remplit — il ne restait rien avant", () => {
     // **L'énoncé du lot.** `cellLeachedG` lisait déjà `waterMm[i * nH]`, l'eau de
     // l'horizon 0 : le lessivage de l'azote était donc **déjà** un flux de
@@ -183,5 +185,85 @@ describe("le sous-sol de l'azote : ce que la surface perd, elle le passe (#247 l
     // Et pourtant leur rapport ne bouge pas.
     const rapport = (r: { surface: number; profond: number }) => r.profond / r.surface;
     expect(rapport(trente)).toBeCloseTo(rapport(six), 1);
+  });
+});
+
+describe("qui puise où : la profondeur devient un trait, et elle se lit (#247 lot B)", () => {
+  const EPAISSEURS = LIMON_RICHE.station.profil.map((h) => h.epaisseurCm);
+
+  it("l'atlas déclare enfin jusqu'où chaque herbacée descend, et ça les sépare", () => {
+    // **Le trait qui manquait.** La strate entière était traitée comme
+    // strictement superficielle, parce que `cellWaterDemand[i * nH]` versait
+    // toute sa demande dans l'horizon 0. Vrai d'une anémone, faux d'un blé.
+    const part = (id: string) => {
+      const h = HERBACEES.find((x) => x.id === id);
+      if (!h) throw new Error(`${id} absente`);
+      return fractionsRacinairesParHorizon(EPAISSEURS, h.profondeurRacinesCm)[0] ?? 1;
+    };
+    // Une géophyte à rhizome ne quitte pas l'horizon de surface : le profil de
+    // limon riche ouvre à 35 cm, elle en fait 15.
+    expect(part("anemone_nemorosa")).toBe(1);
+    // Un blé tendre descend à plus d'un mètre, donc il va chercher en bas une
+    // part qui n'est pas marginale.
+    expect(part("triticum_aestivum")).toBeLessThan(0.65);
+    // Et les deux graminées se rangent entre les deux, dans le bon ordre : la
+    // molinie des landes humides est plus superficielle que le dactyle.
+    expect(part("molinia_caerulea")).toBeGreaterThan(part("dactylis_glomerata"));
+    expect(part("dactylis_glomerata")).toBeGreaterThan(part("triticum_aestivum"));
+  });
+
+  it("et le blé se superpose au noyer, ce qui dit pourquoi la complémentarité n'est PAS là", () => {
+    // **Le résultat que je n'attendais pas, et il faut le garder sous les
+    // yeux.** Sur un profil d'un mètre, un blé à 120 cm et un noyer à 100 cm
+    // ont presque la même répartition — 0,564 contre 0,604 de part de surface.
+    // Il n'y a donc aucune complémentarité verticale à en tirer.
+    //
+    // Ce que le lot produit est autre chose : le blé profond **cesse d'écraser
+    // le compartiment rare**. Confondre les deux ferait annoncer Restinclières
+    // là où le moteur ne fait que mieux partager une pénurie de surface.
+    const ble = HERBACEES.find((h) => h.id === "triticum_aestivum");
+    if (!ble) throw new Error("blé absent");
+    const partBle = fractionsRacinairesParHorizon(EPAISSEURS, ble.profondeurRacinesCm)[0] ?? 1;
+    const partNoyer = fractionsRacinairesParHorizon(EPAISSEURS, 100)[0] ?? 1;
+    expect(Math.abs(partBle - partNoyer)).toBeLessThan(0.1);
+  });
+
+  it("et le partage en deux compartiments reste conservatif, arbres ET tapis servis", () => {
+    // **l'essai que je voulais écrire affirmait autre chose, et il est tombé.**
+    // Je comparais une parcelle boisée à une parcelle nue en attendant que la
+    // première ait moins d'azote profond, « puisque les arbres y puisent ». Elle
+    // en a **plus** — 23,99 contre 21,42 kg/ha à douze ans — parce que la
+    // litière des arbres en ajoute davantage qu'ils n'en prélèvent. Le banc ne
+    // séparait pas les deux effets, donc il ne mesurait ni l'un ni l'autre.
+    //
+    // Ce qu'on peut affirmer sans confondant, et qui est propre à ce lot : sur
+    // une parcelle **boisée et semée** — la configuration que le lot ouvre, où
+    // les deux consommateurs tirent chacun de deux compartiments avec leurs
+    // propres fractions —, la somme de ce que chacun reçoit vaut exactement ce
+    // qui sort du sol. Si le découpage se trompait d'un compartiment, ou
+    // servait deux fois, cette égalité tomberait.
+    const station: Station = { ...LIMON_RICHE.station, coteM: 20, voisinage: [] };
+    const weather = syntheticYear(LIMON_RICHE.climat);
+    let state = createGameState(station, rngStateFromSeed(5));
+    for (let x = 3; x < 20; x += 6)
+      for (let y = 3; y < 20; y += 6) state = plantAt(state, "juglans_regia", x, y, 2);
+    let arbresVus = 0;
+    let herbeVue = 0;
+    for (let w = 0; w < 8 * 52; w++) {
+      const m = weather[w % weather.length];
+      if (!m) throw new Error("météo manquante");
+      const r = tick(state, m);
+      state = r.state;
+      expect(r.fluxes.uptakeArbresKgHa + r.fluxes.uptakeHerbeKgHa).toBeCloseTo(
+        r.fluxes.uptakeKgHa,
+        9,
+      );
+      arbresVus += r.fluxes.uptakeArbresKgHa;
+      herbeVue += r.fluxes.uptakeHerbeKgHa;
+    }
+    // Et les deux mangent vraiment : un banc où l'un des deux serait à zéro
+    // vérifierait l'égalité sans rien éprouver.
+    expect(arbresVus).toBeGreaterThan(0);
+    expect(herbeVue).toBeGreaterThan(0);
   });
 });

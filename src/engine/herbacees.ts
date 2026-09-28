@@ -103,13 +103,33 @@ export interface HerbaceeV0 {
   };
   eau: {
     /**
-     * Humidité de surface **vécue** (`herbe.ts`, lissée sur plusieurs semaines) en
-     * dessous de laquelle le feuillage grille, proportionnellement. L'herbe
-     * grille la première : ses racines sont fines et superficielles. Ce seuil
-     * ne touche pas l'emprise — voir `facteurEauHerbacee`.
+     * Humidité **vécue** (`herbe.ts`, lissée sur plusieurs semaines) en dessous de
+     * laquelle le feuillage grille, proportionnellement. Ce seuil ne touche pas
+     * l'emprise — voir `facteurEauHerbacee`.
+     *
+     * **L'humidité en question est celle des horizons que l'espèce explore**, et
+     * plus celle de la surface pour tout le monde (#247). Le commentaire disait
+     * auparavant « ses racines sont fines et superficielles » comme si c'était
+     * vrai de la strate entière : ça l'est d'une anémone, pas d'un blé.
      */
     seuilConfort: number;
   };
+  /**
+   * Jusqu'où l'espèce descend, cm (#247).
+   *
+   * **Le trait qui manquait**, et son absence était une position que personne
+   * n'avait prise : la strate entière était traitée comme strictement
+   * superficielle, parce que `cellWaterDemand[i * nH]` versait toute sa demande
+   * dans l'horizon 0. Ça convient à une anémone ; ça fait d'un blé — qui
+   * descend à plus d'un mètre — un concurrent que l'arbre distance trop
+   * facilement, et donc ça **fabriquait** de la complémentarité racinaire.
+   *
+   * Lu par `fractionsRacinairesParHorizon` (trees.ts), la même fonction qui
+   * répartit les racines des arbres, avec la même décroissance exponentielle :
+   * déclarer une profondeur ne veut pas dire que les racines y sont
+   * uniformément, et la moitié reste dans le premier tiers.
+   */
+  profondeurRacinesCm: number;
   /**
    * Gamme de pH tolérée [min, max], bordure douce de ±0,7 comme pour les
    * ligneux (`soil.ts:facteurGammePh`). C'est l'axe qui sépare le plus
@@ -327,6 +347,11 @@ const TAYLOR_2001 =
 export const HERBACEES: readonly HerbaceeV0[] = [
   {
     id: "anemone_nemorosa",
+    // Géophyte à rhizome traçant : le rhizome court à deux ou trois
+    // centimètres, et les racines ne s'en éloignent guère. C'est la plus
+    // superficielle de l'atlas, et celle qui justifiait l'ancienne hypothèse
+    // pour tout le monde *(à calibrer)*.
+    profondeurRacinesCm: 15,
     nom: "Anémone des bois",
     nomLatin: "Anemone nemorosa",
     // Géophyte de sous-bois : elle sature autour du quart de la pleine
@@ -379,6 +404,10 @@ export const HERBACEES: readonly HerbaceeV0[] = [
   },
   {
     id: "dactylis_glomerata",
+    // Graminée pérenne à enracinement profond pour une herbe : les relevés
+    // donnent couramment 60 à 100 cm, et jusqu'à 140 sur sol meuble. C'est ce
+    // qui lui permet de tenir un été que la molinie passe mal *(à calibrer)*.
+    profondeurRacinesCm: 80,
     nom: "Dactyle aggloméré",
     nomLatin: "Dactylis glomerata",
     // Héliophile : c'est **la** graminée qui étouffe une plantation sur sol riche.
@@ -427,6 +456,9 @@ export const HERBACEES: readonly HerbaceeV0[] = [
   },
   {
     id: "molinia_caerulea",
+    // Touradon des landes humides : 40 à 80 cm, et elle descend surtout quand
+    // la tourbe s'assèche *(à calibrer)*.
+    profondeurRacinesCm: 60,
     nom: "Molinie bleue",
     nomLatin: "Molinia caerulea",
     lumiere: { compensation: 0.12, saturation: 0.45 },
@@ -457,6 +489,13 @@ export const HERBACEES: readonly HerbaceeV0[] = [
   },
   {
     id: "triticum_aestivum",
+    // **Le chiffre qui change le résultat de #247.** Un blé tendre descend à
+    // 100-150 cm à maturité, avec environ deux tiers de la longueur racinaire
+    // dans les trente premiers centimètres — ce que la décroissance
+    // exponentielle de `fractionsRacinairesParHorizon` rend sans qu'on l'écrive.
+    // Le traiter comme superficiel exagérait la complémentarité en faveur de
+    // l'arbre, et c'était une faveur non déclarée *(à calibrer)*.
+    profondeurRacinesCm: 120,
     nom: "Blé tendre d'hiver",
     nomLatin: "Triticum aestivum",
     /**

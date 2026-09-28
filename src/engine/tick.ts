@@ -1439,7 +1439,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const phMean = new Array<number>(nTrees).fill(7);
   const rootFractions = new Array<number[]>(nTrees);
   const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
-  const cellNWanted = new Array<number>(nCells).fill(0);
+  /**
+   * **La demande d'azote se range par compartiment** (#247 lot B), et c'est ce
+   * qui manquait pour que le lot A serve à quelque chose.
+   *
+   * Avant, une seule grille additionnait les arbres et la strate, et **un seul**
+   * taux de service leur était rendu à tous les deux : le blé et le noyer
+   * étaient servis au même taux, au prorata de leur demande, quelle que soit
+   * leur profondeur. Stratifier le stock sans découper la demande n'aurait rien
+   * changé — on aurait répondu à un gradient que le consommateur ne sait pas
+   * lire, ce qui est exactement l'erreur que la plasticité racinaire avait
+   * commise dans cette même issue.
+   */
+  const cellNWantedSurface = new Array<number>(nCells).fill(0);
+  const cellNWantedProfond = new Array<number>(nCells).fill(0);
   /**
    * L'abri au vent, rangé une fois pour la semaine au lieu d'être recalculé en
    * balayant tout le peuplement pour chaque arbre (#99). Construit seulement
@@ -1530,22 +1543,98 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // (où le frein est déjà levé).
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
       const demandeN = Math.min(needPerCell, capPerCell * dispo);
-      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
+      // **Et elle se répartit comme celle d'eau, par les mêmes fractions.**
+      // `fractionsRacinairesParHorizon` faisait déjà ce calcul trois lignes plus
+      // haut pour l'eau ; l'azote s'y range enfin. `partProfonde` est la même
+      // quantité que `bases.ts` lit pour la pompe à bases — le dépôt savait
+      // déjà écrire « ce que cet arbre-là va chercher en bas ».
+      const partSurface = fractions[0] ?? 1;
+      cellNWantedSurface[i] = (cellNWantedSurface[i] ?? 0) + demandeN * partSurface;
+      cellNWantedProfond[i] = (cellNWantedProfond[i] ?? 0) + demandeN * (1 - partSurface);
     });
   }
 
-  // ── 3 bis. La strate herbacée demande sa part, en surface uniquement ──────
+  // ── 3 bis. La strate herbacée demande sa part, à SA profondeur ────────────
   // C'est la concurrence qui fait échouer les plantations non entretenues.
+  //
+  // **Elle ne demandait qu'en surface, et c'était une hypothèse silencieuse**
+  // (#247) : `cellWaterDemand[i * nH]` versait toute sa demande dans l'horizon
+  // 0. Vrai d'une anémone, faux d'un blé qui descend à plus d'un mètre — et
+  // comme l'arbre, lui, répartit la sienne, la différence **fabriquait** de la
+  // complémentarité racinaire au lieu de la mesurer.
+  //
+  // Chaque espèce répartit donc la sienne par les mêmes fractions que les
+  // arbres, et elles ne dépendent que du profil : on les calcule **une fois par
+  // tick**, pas une fois par cellule.
+  //
+  // ── **ce que la mesure a dit, et elle a démenti la prédiction** ────────────────
+  //
+  // Dispositif de `ler.test.ts` — rangs de noyers à 13,33 et 26,67 m, bandes
+  // épargnées fauchées, le témoin labouré et fertilisé lui aussi —, soixante
+  // ans, trois graines. Ce que le blé coûte au noyer :
+  //
+  //                                          volume/arbre   prélèvement N
+  //     lot A seul, un pool servi en commun     −13,3 %        −22,8 %
+  //     + blé forcé superficiel (15 cm)         −11,4 %        −21,6 %
+  //     + blé à sa profondeur (120 cm)           −6,2 %        −16,1 %
+  //
+  // **J'attendais l'inverse.** Déclarer le blé profond devait lui rendre la
+  // concurrence qu'un blé superficiel n'exerçait pas — or ça la lui **retire**,
+  // et de moitié. La raison est dans les fractions, et elle n'est pas celle
+  // qu'on croit :
+  //
+  //     blé 120 cm    surface 0,564   profond 0,436
+  //     noyer 100 cm  surface 0,604   profond 0,396
+  //
+  // Les deux sont **presque superposés**. Il n'y a donc pas de complémentarité
+  // verticale ici, au sens des manuels. Ce que le lot produit est autre chose :
+  // le compartiment de surface est **rare** (3,5 kg/ha) et le profond
+  // **abondant** (19 kg/ha, rempli par le lessivage et que personne ne reprenait).
+  // Un blé superficiel met 100 % de sa demande sur le compartiment rare, là où
+  // le noyer a 60 % de la sienne ; un blé profond en déplace 44 % sur
+  // l'abondant. **Il cesse d'écraser la ressource disputée**, et c'est tout le
+  // gain — pas un partage des profondeurs.
+  //
+  // ── **la limite, et elle est la même que celle de l'issue** ────────────────────
+  //
+  // Les racines du noyer sont mesurées à **100,0 cm dans tous les bras** : c'est
+  // exactement la profondeur pénétrable du limon riche (35 + 65). L'arbre n'est
+  // pas borné par sa biologie — l'atlas lui en déclare 200 — mais par la
+  // station. Tant que les profils font un mètre, aucun mécanisme ne fera
+  // descendre un arbre plus bas qu'une culture, et la complémentarité de
+  // Restinclières restera hors de portée. **C'est la question jumelle que #247
+  // posait, et la mesure la confirme mot pour mot.**
   const saisonHerbe = Math.min(1, Math.max(0, (weather.tMean - 4) / 8));
+  const fractionsHerbe = HERBACEES.map((h) =>
+    fractionsRacinairesParHorizon(epaisseurs, h.profondeurRacinesCm),
+  );
+  /** Tampon réutilisé : la demande d'eau du tapis, ventilée par horizon. */
+  const eauParHorizon = new Array<number>(nH).fill(0);
   const herbeDemandeL = new Array<number>(nCells).fill(0);
   /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
   const herbeDemandeNG = new Array<number>(nCells).fill(0);
+  /** Et la part qu'il va chercher **en surface**, qui n'est plus le tout (#247). */
+  const herbeDemandeNSurfaceG = new Array<number>(nCells).fill(0);
   for (let i = 0; i < nCells; i++) {
     const couverture = herbeCouverture[i] ?? 0;
     if (couverture <= 0) continue;
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
     herbeDemandeL[i] = demandeEau;
-    cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
+    // `herbeDemandeEauL` est **linéaire en couverture**, donc la répartir au
+    // prorata du feuillage de chaque espèce est exact et non approché : la
+    // somme des parts vaut la demande de la cellule, au flottant près.
+    for (let h = 0; h < nH; h++) eauParHorizon[h] = 0;
+    for (let s_ = 0; s_ < N_HERBACEES; s_++) {
+      const feuillage = herbeFeuillage[i * N_HERBACEES + s_] ?? 0;
+      if (feuillage <= 0) continue;
+      const part = (demandeEau * feuillage) / couverture;
+      const fr = fractionsHerbe[s_];
+      for (let h = 0; h < nH; h++)
+        eauParHorizon[h] = (eauParHorizon[h] ?? 0) + part * (fr?.[h] ?? 0);
+    }
+    for (let h = 0; h < nH; h++) {
+      cellWaterDemand[i * nH + h] = (cellWaterDemand[i * nH + h] ?? 0) + (eauParHorizon[h] ?? 0);
+    }
     // **par espèce, et pondérée par son exigence** (#136). C'était une
     // constante multipliée par la couverture ; un blé demande dix fois ce que
     // demande une graminée spontanée, et sans ça `exigenceMinerale` ne veut
@@ -1553,16 +1642,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // l'ancienne valeur tant qu'aucune culture n'est semée : le lot est
     // l'identité sur une parcelle sans culture.
     let demandeN = 0;
+    let demandeNSurface = 0;
     for (let s_ = 0; s_ < N_HERBACEES; s_++) {
       const h = HERBACEES[s_];
       if (!h) continue;
-      demandeN += herbeDemandeAzoteG(
+      const part = herbeDemandeAzoteG(
         (herbeFeuillage[i * N_HERBACEES + s_] ?? 0) * h.exigenceMinerale,
         saisonHerbe,
       );
+      demandeN += part;
+      // La même fraction que pour son eau : une espèce ne peut pas boire à un
+      // horizon où elle n'a pas de racine et y manger quand même.
+      demandeNSurface += part * (fractionsHerbe[s_]?.[0] ?? 1);
     }
     herbeDemandeNG[i] = demandeN;
-    cellNWanted[i] = (cellNWanted[i] ?? 0) + (herbeDemandeNG[i] ?? 0);
+    herbeDemandeNSurfaceG[i] = demandeNSurface;
+    cellNWantedSurface[i] = (cellNWantedSurface[i] ?? 0) + demandeNSurface;
+    cellNWantedProfond[i] = (cellNWantedProfond[i] ?? 0) + (demandeN - demandeNSurface);
   }
 
   // ── Plafond d'énergie ─────────────────────────────────────────────────────
@@ -1592,7 +1688,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
-  const nServedRatio = new Array<number>(nCells).fill(0);
+  /** Ce que chaque compartiment a pu servir ∈ [0,1] (#247 lot B). */
+  const nServiSurface = new Array<number>(nCells).fill(0);
+  const nServiProfond = new Array<number>(nCells).fill(0);
+  /** Et ce que **le tapis** a reçu, les deux compartiments mélangés par ses racines. */
+  const herbeServiRatio = new Array<number>(nCells).fill(0);
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   /**
@@ -1616,16 +1716,38 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       transpirationSumL += extracted;
     }
     let azotePris = 0;
-    const nWanted = cellNWanted[i] ?? 0;
-    if (nWanted > 0) {
+    // **Chaque compartiment se sert de son propre stock**, et c'est là que la
+    // complémentarité devient possible : une surface épuisée par la culture ne
+    // dit plus rien de ce que l'arbre trouve en dessous.
+    const vouluSurface = cellNWantedSurface[i] ?? 0;
+    if (vouluSurface > 0) {
       const stock = mineralNG[i] ?? 0;
-      const taken = Math.min(stock, nWanted);
-      const servi = taken / nWanted;
-      nServedRatio[i] = servi;
-      uptakeHerbeSumG += (herbeDemandeNG[i] ?? 0) * servi;
-      mineralNG[i] = stock - taken;
-      uptakeSumG += taken;
-      azotePris = taken;
+      const pris = Math.min(stock, vouluSurface);
+      nServiSurface[i] = pris / vouluSurface;
+      mineralNG[i] = stock - pris;
+      uptakeSumG += pris;
+      azotePris += pris;
+    }
+    const vouluProfond = cellNWantedProfond[i] ?? 0;
+    if (vouluProfond > 0) {
+      const stock = mineralNProfondG[i] ?? 0;
+      const pris = Math.min(stock, vouluProfond);
+      nServiProfond[i] = pris / vouluProfond;
+      mineralNProfondG[i] = stock - pris;
+      uptakeSumG += pris;
+      azotePris += pris;
+    }
+    // La strate relit les deux compartiments avec ses propres fractions, comme
+    // les arbres : c'est ce qui rend le partage symétrique.
+    const herbeVoulu = herbeDemandeNG[i] ?? 0;
+    if (herbeVoulu > 0) {
+      const herbeSurface = herbeDemandeNSurfaceG[i] ?? 0;
+      const servi =
+        (herbeSurface * (nServiSurface[i] ?? 0) +
+          (herbeVoulu - herbeSurface) * (nServiProfond[i] ?? 0)) /
+        herbeVoulu;
+      herbeServiRatio[i] = servi;
+      uptakeHerbeSumG += herbeVoulu * servi;
     }
     // Phosphore et potassium suivent l'azote **réellement** absorbé, pas la
     // demande : une plante bridée par l'azote n'accumule pas du potassium pour
@@ -1668,6 +1790,30 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     herbeHumidite[i] = humiditeVecue(herbeHumidite[i] ?? remplissage, remplissage);
+    // **Et elle reste celle de la SURFACE, même pour une espèce qui boit en bas**
+    // (#247). Ça paraît incohérent et ça ne l'est pas — mais je l'ai cru, je l'ai
+    // changé, et la mesure m'a détrompé.
+    //
+    // Mélanger l'humidité profonde dans ce que chaque espèce « vit » faisait
+    // tomber **quinze essais verts**, dont la chênaie chaulée de
+    // `embauche-chaulage.test.ts` : trois chênes survivants devenaient zéro.
+    // Bisecté, le coupable était bien celui-là et non la répartition de
+    // l'extraction — l'extraction seule, elle, ne casse rien.
+    //
+    // **La raison est une question de calibration, pas de physique.** Les
+    // `seuilConfort` de l'atlas ont été choisis espèce par espèce pour qu'elles
+    // grillent au bon moment *sur l'humidité de surface*. Leur donner une
+    // variable plus humide sans les recaler les rend toutes plus tolérantes
+    // d'un coup — ce n'est pas un raffinement, c'est un changement silencieux
+    // de ce que le seuil mesure.
+    //
+    // Et le dépôt avait déjà la bonne position, écrite dans `herbe.test.ts` :
+    // *« la sécheresse joue sur ce qui est vert, pas sur l'emprise : c'est le
+    // feuillage qui grille, la souche reste. »* Une molinie qui boit à
+    // soixante centimètres roussit quand même en août ; ce que ses racines
+    // profondes lui achètent est la survie du touradon, pas la turgescence du
+    // limbe. Recaler `seuilConfort` sur une humidité mélangée est un lot à soi,
+    // avec son banc.
     // Le tassement plafonne aussi la strate herbacée — c'est même sur elle que
     // les essais d'Arvalis ont mesuré la perte. La boucle qui se referme :
     // moins de couverture, donc plus de ruissellement, sur un sol qui infiltre
@@ -1711,7 +1857,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // prélèvement, faute d'un pool d'azote dans la plante. L'azote ne
     // court-circuite pas pour autant — il passe par la **litière**, dont il ne
     // ressort qu'au rythme de la décomposition, donc avec le délai qu'il faut.
-    const servi = nServedRatio[i] ?? 0;
+    const servi = herbeServiRatio[i] ?? 0;
     if (servi > 0) {
       let poidsTotal = 0;
       for (let s = 0; s < N_HERBACEES; s++) {
@@ -1774,16 +1920,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // fonction de son état du jour. Les trois facteurs sont déjà là : ce
     // qu'elle couvre (le feuillage, qui porte la saison et la sécheresse), ce
     // que la station lui permet (`capacites`, qui porte la lumière, le pH et
-    // le tassement), et ce que l'azote lui laisse — `nServedRatio`, la part
-    // réellement servie à cette cellule cette semaine.
+    // le tassement), et ce que l'azote lui laisse — mélangé **à la profondeur de
+    // cette culture-là**, et non à celle du tapis moyen : un blé qui descend à
+    // plus d'un mètre ne subit pas la même surface épuisée qu'une anémone
+    // (#247 lot B).
     for (let s = 0; s < N_CULTURES; s++) {
       const s_ = INDEX_CULTURES[s];
       if (s_ === undefined) continue;
       if ((herbeEmprise[base + s_] ?? 0) <= 0) continue;
+      const partSurfaceCulture = fractionsHerbe[s_]?.[0] ?? 1;
       const { assimile, potentiel } = grainDeLaSemaine(
         herbeFeuillage[base + s_] ?? 0,
         capacites[s_] ?? 0,
-        nServedRatio[i] ?? 0,
+        partSurfaceCulture * (nServiSurface[i] ?? 0) +
+          (1 - partSurfaceCulture) * (nServiProfond[i] ?? 0),
       );
       cultureGrain[base + s_] = (cultureGrain[base + s_] ?? 0) + assimile;
       cultureGrainPotentiel[base + s_] = (cultureGrainPotentiel[base + s_] ?? 0) + potentiel;
@@ -1828,7 +1978,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // passe 3).
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
       const demandeCell = Math.min(needPerCell, capPerCell * dispo);
-      gotN += demandeCell * (nServedRatio[i] ?? 0);
+      // **Et il relit les deux compartiments avec ses propres fractions**, les
+      // mêmes qu'à la passe de demande — c'est la règle de #115, servir sur la
+      // demande qui a vidé la cellule. Un arbre profond n'est plus solidaire du
+      // sort de la surface : c'est tout l'objet du lot.
+      const partSurface = fractions[0] ?? 1;
+      gotN +=
+        demandeCell *
+        (partSurface * (nServiSurface[i] ?? 0) + (1 - partSurface) * (nServiProfond[i] ?? 0));
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;
