@@ -166,6 +166,8 @@ describe("la prémisse, tenue par le moteur", () => {
         franchissements: t.franchissements,
         gestes: t.gestes,
         chutes: t.chutes,
+        installationsFaune: t.installationsFaune,
+        departsFaune: t.departsFaune,
         incendie: t.incendie,
         tempete: t.tempete,
       });

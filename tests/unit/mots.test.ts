@@ -10,8 +10,22 @@
 
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0 } from "../../src/engine/especes";
+import { type CauseDepart, FAUNE } from "../../src/engine/faune";
 import { type CauseMort, LIBELLE_CAUSE } from "../../src/engine/trees";
-import { accord, causeDite, estFeminin, GENRE, nomEspeces, pluriel, s } from "../../src/game/mots";
+import {
+  accord,
+  capitale,
+  causeDite,
+  departDit,
+  estFeminin,
+  GENRE,
+  GENRE_FAUNE,
+  libelleFaune,
+  nomEspeces,
+  nomFaunes,
+  pluriel,
+  s,
+} from "../../src/game/mots";
 
 /** Le pluriel attendu de chaque nom du catalogue, écrit à la main. */
 const ATTENDU: Record<string, string> = {
@@ -136,5 +150,90 @@ describe("pluriel", () => {
     expect(s(0)).toBe("");
     expect(s(1)).toBe("");
     expect(s(2)).toBe("s");
+  });
+});
+
+/**
+ * **Nommer ce qui s'installe** (issue #255).
+ *
+ * Le moteur appelle « individu » ce qui est tantôt une bête, tantôt un couple
+ * nicheur, tantôt quarante femelles dans une loge de pic noir, tantôt des
+ * dizaines de larves dans un fût — et les fiches ne le disaient qu'en prose.
+ * L'essai passe **l'atlas entier**, comme celui des essences : la phrase attendue
+ * est écrite à la main espèce par espèce, donc une guilde qui s'ajoute sans
+ * avoir décidé ce qu'elle installe se fait prendre ici.
+ */
+describe("les mots de la faune", () => {
+  /** Ce qu'on doit lire pour chaque fiche, écrit à la main. */
+  const ATTENDU_FAUNE: Record<string, string> = {
+    mesange_bleue: "un couple de mésanges bleues",
+    mesange_charbonniere: "un couple de mésanges charbonnières",
+    pic_epeiche: "un couple de pics épeiches",
+    chouette_cheveche: "un couple de chouettes chevêches",
+    loir_gris: "un loir gris",
+    ecureuil_roux: "un écureuil roux",
+    buse_variable: "un couple de buses variables",
+    murin_de_bechstein: "une colonie de murins de Bechstein",
+    noctule_commune: "une colonie de noctules communes",
+    pique_prune: "une population de pique-prunes",
+    grand_capricorne: "une population de grands capricornes",
+    rosalie_des_alpes: "une population de rosalies des Alpes",
+  };
+
+  it("nomme les douze fiches de l'atlas, et aucune autre", () => {
+    for (const espece of FAUNE) {
+      const attendu = ATTENDU_FAUNE[espece.id];
+      expect(attendu, `libellé non écrit pour « ${espece.nom} »`).toBeDefined();
+      expect(libelleFaune(espece.id), espece.id).toBe(attendu);
+    }
+    const ids = new Set(FAUNE.map((e) => e.id));
+    for (const id of Object.keys(ATTENDU_FAUNE)) {
+      expect(ids.has(id), `« ${id} » n'est plus à l'atlas`).toBe(true);
+    }
+  });
+
+  it("ne dit jamais « une noctule » d'une colonie", () => {
+    // Le défaut que le champ `unite` existe pour empêcher : la noctule
+    // s'installe par colonie de parturition, pas par bête, et l'écrire au
+    // singulier serait faux d'un facteur quarante.
+    expect(libelleFaune("noctule_commune")).toContain("colonie");
+    // Et une larve de capricorne n'est pas non plus l'unité : c'est **l'arbre**
+    // qui porte une population, et c'est ce que la conservation compte.
+    expect(libelleFaune("grand_capricorne")).toContain("population");
+  });
+
+  it("accorde « pique-prune » sans accorder le verbe", () => {
+    // Un composé verbe + nom : « pique » ne s'accorde pas, quand « chêne-liège »
+    // accorde ses deux moitiés. Rien dans la forme ne les distingue, donc la
+    // règle générale se trompe et la liste la rattrape.
+    expect(nomFaunes("pique_prune", 3)).toBe("pique-prunes");
+    expect(nomFaunes("pique_prune", 1)).toBe("pique-prune");
+  });
+
+  it("donne un genre à chaque fiche, et à rien d'autre", () => {
+    for (const espece of FAUNE) {
+      expect(GENRE_FAUNE[espece.id], `genre non écrit pour « ${espece.nom} »`).toBeDefined();
+    }
+    const ids = new Set(FAUNE.map((e) => e.id));
+    for (const id of Object.keys(GENRE_FAUNE)) {
+      expect(ids.has(id), `« ${id} » n'est plus à l'atlas`).toBe(true);
+    }
+  });
+
+  it("dit les trois causes de départ, sans en laisser une muette", () => {
+    for (const cause of ["arbreDisparu", "giteTropPetit", "tableVide"] as CauseDepart[]) {
+      expect(departDit(cause).length, cause).toBeGreaterThan(3);
+    }
+    // Celle-ci est la seule qui soit une conséquence de la conduite du joueur,
+    // et elle doit le dire.
+    expect(departDit("arbreDisparu")).toContain("arbre");
+  });
+
+  it("une espèce inconnue ne fait pas exploser la phrase", () => {
+    expect(libelleFaune("chimere")).toBe("chimere");
+  });
+
+  it("capitale() ouvre une phrase sans toucher au reste", () => {
+    expect(capitale(libelleFaune("mesange_bleue"))).toBe("Un couple de mésanges bleues");
   });
 });

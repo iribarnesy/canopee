@@ -9,6 +9,7 @@ import type { IndiceBiodiversite } from "../engine/biodiversite";
 import type { CarbonInventory } from "../engine/carbon";
 import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
+import type { DepartFaune, IndividuFaune, InstallationFaune } from "../engine/faune";
 import type { WeekWeather } from "../engine/meteo";
 import type { Bordures } from "../engine/paysage";
 import type { ContextePhenologique } from "../engine/phenologie";
@@ -288,6 +289,33 @@ export interface Snapshot {
   pressionGibier: number;
   fluxes: TickFluxes;
   trees: SnapshotTree[];
+  /**
+   * **Les individus de faune installés** sur la parcelle (`faune.ts`, #187) —
+   * l'état, pas la fiche.
+   *
+   * Chacun porte son identité (`id`, stable d'une semaine à l'autre : c'est ce
+   * qui permet de s'y attacher), son espèce, **l'arbre qui le porte**, la position
+   * de son gîte et la semaine où il est arrivé — donc son ancienneté, qui se
+   * calcule `week - depuisSemaine` et ne voyage pas deux fois.
+   *
+   * **La fiche ne voyage pas non plus** : le nom, le type de gîte, le territoire
+   * et l'unité (couple, colonie, population…) se lisent dans `FAUNE` /
+   * `especeFaune(especeId)`, importés directement depuis le moteur. C'est
+   * l'idiome déjà suivi par les arbres, qui n'envoient que leur `especeId`, et
+   * par les herbacées, qui n'envoient que `herbesIds` : l'atlas est une
+   * constante pure, la recopier par individu et par semaine serait du transport
+   * pour rien — et une seconde source de vérité à tenir d'accord.
+   *
+   * ── **absent ≠ vide, et la différence porte du sens** ─────────────────────────
+   *
+   * **Absent** veut dire « cette partie n'a pas de faune en individus » :
+   * `station.faune` est éteint, le tick ne parcourt rien, et il n'y a rien à
+   * montrer — pas même un panneau vide. **Présent et vide** veut dire « le
+   * mécanisme tourne et personne ne s'est encore installé », ce qui est une
+   * information tout à fait différente et la situation normale des premières
+   * années. Rien d'autre dans l'instantané ne dit si le commutateur est allumé.
+   */
+  faune?: readonly IndividuFaune[];
   soilWater: Float32Array;
   soilPh: Float32Array;
   /**
@@ -430,6 +458,27 @@ export interface Snapshot {
    * images, au lieu d'être la conséquence lisible d'une chute (boisMort.ts).
    */
   chutes: ChuteDeChandelle[];
+  /**
+   * **Qui est arrivé** depuis le dernier instantané (`faune.ts`).
+   *
+   * Vide quand la faune est éteinte, et vide la plupart des semaines : une
+   * espèce ne prospecte qu'une semaine par an. L'individu est le même objet que
+   * celui qu'on retrouvera dans `faune` — même `id` —, ce qui permet de faire
+   * arriver quelque chose à l'écran puis de le suivre.
+   */
+  installationsFaune: readonly InstallationFaune[];
+  /**
+   * **Qui est parti, et pourquoi** depuis le dernier instantané (`faune.ts`).
+   *
+   * Il voyage pour la raison qui fait déjà voyager les chutes de chandelle : le
+   * partant n'est plus dans `faune`, et deux instantanés successifs ne disent
+   * pas qui manque, ni surtout **pourquoi**. Or la cause est tout l'intérêt —
+   * `arbreDisparu` veut dire que le joueur vient d'expulser quelqu'un en
+   * abattant son arbre, et c'est une conséquence de sa conduite, pas un
+   * message. Sans l'événement, il ne resterait qu'une ligne de moins dans un
+   * tableau.
+   */
+  departsFaune: readonly DepartFaune[];
   /** l'incendie de la semaine, avec son front, s'il y en a eu un (feu.ts) */
   incendie?: IncendieResult;
   /**

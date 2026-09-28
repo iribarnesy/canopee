@@ -15,6 +15,7 @@
  */
 
 import { getEspece } from "../engine/especes";
+import { type CauseDepart, especeFaune } from "../engine/faune";
 import type { CauseMort } from "../engine/trees";
 
 /**
@@ -184,4 +185,146 @@ export function causeDite(cause: CauseMort, n = 1, feminin = false): string {
   const dite = CAUSE_DITE[cause];
   const complement = (n >= 2 && dite.pl) || dite.sg;
   return dite.participe ? `${dite.participe}${accord(feminin, n)}${complement}` : complement;
+}
+
+// ── **les mots de la faune** (issue #255) ──────────────────────────────────────
+//
+// Ils vivent ici pour la raison qui a fait naître ce fichier : **plusieurs
+// lecteurs vont nommer les mêmes bêtes**. Le fil d'actualité annonce une
+// arrivée, un panneau listera les pensionnaires, un bilan de fin de partie les
+// recomptera. Trois façons d'écrire « une colonie de murins de Bechstein », et
+// deux au moins seront fausses.
+
+/**
+ * **le genre de chaque espèce de faune**, comme `GENRE` pour les essences.
+ *
+ * Rien dans les données ne le donne, et il n'y a pas de règle : « le loir » et
+ * « la buse » se ressemblent trait pour trait. Un essai vérifie que la table
+ * couvre l'atlas et rien de plus, donc une guilde qui s'ajoute sans son genre
+ * se fait prendre avant le joueur.
+ */
+export const GENRE_FAUNE: Record<string, "m" | "f"> = {
+  mesange_bleue: "f",
+  mesange_charbonniere: "f",
+  pic_epeiche: "m",
+  chouette_cheveche: "f",
+  loir_gris: "m",
+  ecureuil_roux: "m",
+  buse_variable: "f",
+  murin_de_bechstein: "m",
+  noctule_commune: "f",
+  pique_prune: "m",
+  grand_capricorne: "m",
+  rosalie_des_alpes: "f",
+};
+
+/**
+ * Les noms de faune que la règle de `pluriel` ne sait pas accorder.
+ *
+ * Un seul, et il montre bien pourquoi la règle ne peut pas s'en tirer seule :
+ * « pique-prune » est un composé **verbe + nom**, dont le verbe reste invariable
+ * (« pique-prunes »), alors que « chêne-liège » est un composé nom + nom, dont
+ * les deux s'accordent (« chênes-lièges »). Rien dans la **forme** ne les
+ * distingue — il faudrait savoir que « pique » est un verbe. La règle traite le
+ * cas général, la liste traite ce qu'elle ne peut pas savoir.
+ */
+const PLURIELS_FAUNE: Record<string, string> = {
+  pique_prune: "pique-prunes",
+};
+
+/**
+ * Le nom d'une espèce de faune au fil du texte, au singulier.
+ *
+ * **Il n'est pas mis en minuscules**, contrairement à celui d'une essence, et
+ * c'est une différence entre les deux atlas et non un oubli : les essences y
+ * sont écrites en tête de fiche (« Bouleau verruqueux »), la faune au fil du
+ * texte (« mésange bleue »). Abaisser la casse ici donnerait « murin de
+ * bechstein » et « rosalie des alpes » — un nom propre reste un nom propre.
+ */
+export function nomFaune(especeId: string): string {
+  return especeFaune(especeId)?.nom ?? especeId;
+}
+
+/** Le nom d'une espèce de faune, accordé au nombre : « deux mésanges bleues ». */
+export function nomFaunes(especeId: string, n: number): string {
+  if (n <= 1) return nomFaune(especeId);
+  return PLURIELS_FAUNE[especeId] ?? pluriel(nomFaune(especeId), n);
+}
+
+/**
+ * « de » ou « d' », selon ce qui suit. Aucune espèce de l'atlas ne commence
+ * aujourd'hui par une voyelle au pluriel, mais « une colonie d'oreillards » est
+ * exactement le genre de phrase qu'une fiche de plus fabriquerait.
+ */
+function de(mot: string): string {
+  return /^[aeiouyâàéèêëîïôöûüh]/i.test(mot) ? `d'${mot}` : `de ${mot}`;
+}
+
+/**
+ * **Ce qui s'installe**, nommé juste : un groupe nominal avec son article.
+ *
+ * > « un couple de mésanges bleues », « une colonie de murins de Bechstein »,
+ * > « une population de pique-prunes », « un écureuil roux ».
+ *
+ * **Et c'est tout l'objet de la fonction.** Le moteur appelle « individu » ce qui
+ * est tantôt une bête, tantôt un couple nicheur, tantôt quarante femelles dans
+ * une loge de pic noir, tantôt des dizaines de larves dans un fût. Écrire « une
+ * noctule s'installe » serait faux d'un facteur quarante, et surtout faux dans
+ * ce que ça raconte : une noctule solitaire n'est pas un événement de la
+ * parcelle, une colonie de parturition en est un. Ce que le moteur en dit est le
+ * champ `unite` de la fiche (`faune.ts`) ; cette fonction ne fait que le mettre
+ * en français, et aucune espèce n'y est nommée.
+ *
+ * Le sujet rendu est toujours **singulier** — un couple, une colonie, une
+ * population, une bête — donc le verbe qui suit ne s'accorde jamais :
+ * « s'installe », « quitte la parcelle », quelle que soit l'espèce. C'est
+ * délibéré, et ça épargne une seconde table d'accord à tous les appelants.
+ */
+export function libelleFaune(especeId: string): string {
+  const espece = especeFaune(especeId);
+  if (!espece) return especeId;
+  switch (espece.unite) {
+    case "couple":
+      return `un couple ${de(nomFaunes(especeId, 2))}`;
+    case "colonie":
+      return `une colonie ${de(nomFaunes(especeId, 2))}`;
+    case "population":
+      return `une population ${de(nomFaunes(especeId, 2))}`;
+    default:
+      return `${GENRE_FAUNE[especeId] === "f" ? "une" : "un"} ${nomFaune(especeId)}`;
+  }
+}
+
+/**
+ * **Pourquoi il est parti** (`CauseDepart`, faune.ts).
+ *
+ * Aucune des trois phrases ne s'accorde, et c'est voulu : le sujet peut être un
+ * couple, une colonie ou une population, et « la parcelle ne **le** nourrit plus »
+ * aurait obligé à savoir lequel. Des compléments impersonnels disent la même
+ * chose et restent justes partout.
+ *
+ * `arbreDisparu` est la seule des trois qui soit une **conséquence directe de la
+ * conduite du joueur** — il vient d'abattre l'arbre porteur, ou la chandelle
+ * qu'il a laissée debout s'est abattue. Elle se dit donc franchement.
+ */
+const DEPART_DIT: Record<CauseDepart, string> = {
+  arbreDisparu: "son arbre porteur a disparu",
+  giteTropPetit: "son gîte a cessé de convenir",
+  tableVide: "deux saisons de suite sans assez à manger",
+};
+
+/** La cause d'un départ de faune, en clair. */
+export function departDit(cause: CauseDepart): string {
+  return DEPART_DIT[cause];
+}
+
+/**
+ * Un groupe nominal devient un **début de phrase**.
+ *
+ * `libelleFaune` rend « un couple de mésanges bleues », qui s'écrit tel quel au
+ * fil du texte et prend une capitale en tête de ligne. Mettre la capitale dans
+ * le libellé aurait obligé chaque autre appelant à la retirer.
+ */
+export function capitale(phrase: string): string {
+  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }

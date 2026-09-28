@@ -56,6 +56,8 @@ function instantane(): Snapshot {
     franchissements: ticked.franchissements,
     gestes: ticked.gestes,
     chutes: ticked.chutes,
+    installationsFaune: ticked.installationsFaune,
+    departsFaune: ticked.departsFaune,
     incendie: ticked.incendie,
     tempete: ticked.tempete,
   });

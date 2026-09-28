@@ -25,6 +25,7 @@ import {
 } from "../engine/climat";
 import { champDeNappeCm, type EauDeSurface } from "../engine/eau_surface";
 import { getEspece } from "../engine/especes";
+import type { DepartFaune, InstallationFaune } from "../engine/faune";
 import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
@@ -67,7 +68,17 @@ import { HAUTEUR_TROUVABLE_M } from "../render/temps/changements";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import { prefixeSousLePlafond } from "./facture";
 import { journalDe, type PorteurDeJournal } from "./journal";
-import { accord, causeDite, estFeminin, nomEspece, nomEspeces, s } from "./mots";
+import {
+  accord,
+  capitale,
+  causeDite,
+  departDit,
+  estFeminin,
+  libelleFaune,
+  nomEspece,
+  nomEspeces,
+  s,
+} from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
 import type {
@@ -378,6 +389,12 @@ let pendingNaissances: NaissanceDeLaSemaine[] = [];
 let pendingFranchissements: FranchissementDeStade[] = [];
 let pendingGestes: GesteVisible[] = [];
 let pendingChutes: ChuteDeChandelle[] = [];
+// Qui est arrivé, qui est parti (`faune.ts`). Ils s'accumulent comme les
+// chutes : à ×64 un instantané couvre plusieurs semaines, et une arrivée qu'on
+// laisse tomber est un pensionnaire qui apparaît de nulle part la semaine
+// suivante.
+let pendingInstallationsFaune: InstallationFaune[] = [];
+let pendingDepartsFaune: DepartFaune[] = [];
 let pendingIncendie: IncendieResult | undefined;
 /** Même traitement que l'incendie : l'événement attend l'instantané (#87). */
 let pendingTempete: TempeteResult | undefined;
@@ -796,6 +813,8 @@ function postSnapshot() {
     franchissements: pendingFranchissements,
     gestes: pendingGestes,
     chutes: pendingChutes,
+    installationsFaune: pendingInstallationsFaune,
+    departsFaune: pendingDepartsFaune,
     incendie: pendingIncendie,
     tempete: pendingTempete,
   });
@@ -806,6 +825,8 @@ function postSnapshot() {
   pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
+  pendingInstallationsFaune = [];
+  pendingDepartsFaune = [];
   // Les tampons du feu partent avec l'instantané : on ne les garde pas pour le
   // suivant, sinon la même flambée se rejouerait à l'écran.
   pendingIncendie = undefined;
@@ -1026,6 +1047,8 @@ function stepWeeks(n: number) {
     cumuls = accumuler(cumuls, ticked.gestes, ticked.state.trees);
     replierLeBilan(ticked, before.week, ticked.state.trees);
     pendingChutes.push(...ticked.chutes);
+    pendingInstallationsFaune.push(...ticked.installationsFaune);
+    pendingDepartsFaune.push(...ticked.departsFaune);
     // Deux incendies dans un même lot d'instantané : on garde le dernier, le
     // seul dont l'écran a encore quelque chose à montrer.
     if (ticked.incendie) pendingIncendie = ticked.incendie;
@@ -1126,6 +1149,33 @@ function stepWeeks(n: number) {
       // retiré des tiges : une éclaircie en semaine 14 gonflait le chiffre.
       const recruits = ticked.naissances.length;
       if (recruits > 0) event("🌿", `${recruits} semis naturels se sont installés`);
+    }
+    // ── **la faune qui arrive, et celle qu'on expulse** (#187, #255) ──────────
+    //
+    // **Une ligne par mouvement, et aucun regroupement**, contrairement aux morts
+    // d'arbres. Ce n'est pas une inconséquence : les morts se comptent par
+    // dizaines et une ligne par tige noierait le fil, là où une vieille chênaie
+    // d'un hectare porte une à trois mésanges bleues et zéro ou une buse sur
+    // toute une partie. **Ici l'unité est l'événement**, et c'est précisément ce
+    // que le modèle par individu a coûté ; « 2 arrivées cette semaine » le
+    // jetterait.
+    //
+    // Les deux tableaux sont vides la plupart du temps — une espèce ne prospecte
+    // qu'une semaine par an — et toujours vides quand la faune est éteinte.
+    for (const { individu } of ticked.installationsFaune) {
+      // L'arbre porteur vient d'accueillir quelqu'un : il est forcément là. On
+      // le nomme parce que c'est **lui** que le joueur peut abattre demain.
+      const porteur = ticked.state.trees.find((t) => t.id === individu.arbreId);
+      const ou = porteur
+        ? ` dans un ${nomEspece(porteur.especeId)} de ${porteur.heightM.toFixed(0)} m`
+        : "";
+      event("🪺", `${capitale(libelleFaune(individu.especeId))} s'installe${ou}`);
+    }
+    for (const { individu, cause } of ticked.departsFaune) {
+      event(
+        "🪹",
+        `${capitale(libelleFaune(individu.especeId))} quitte la parcelle : ${departDit(cause)}`,
+      );
     }
     // Sécheresse (sol moyen presque à sec en saison de végétation)
     const year = Math.floor(before.week / 52);
@@ -1329,6 +1379,8 @@ function avancerLaRelecture(n: number): void {
     pendingFranchissements.push(...step.franchissements);
     pendingGestes.push(...step.gestes);
     pendingChutes.push(...step.chutes);
+    pendingInstallationsFaune.push(...step.installationsFaune);
+    pendingDepartsFaune.push(...step.departsFaune);
     if (step.incendie) pendingIncendie = step.incendie;
     if (step.tempete) pendingTempete = step.tempete;
     lastFluxes = step.fluxes;
@@ -1416,6 +1468,8 @@ function viderLesTampons(): void {
   pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
+  pendingInstallationsFaune = [];
+  pendingDepartsFaune = [];
   pendingIncendie = undefined;
   pendingTempete = undefined;
 }
@@ -1586,6 +1640,8 @@ function init(
   pendingFranchissements = [];
   pendingGestes = [];
   pendingChutes = [];
+  pendingInstallationsFaune = [];
+  pendingDepartsFaune = [];
   pendingIncendie = undefined;
   pendingTempete = undefined;
   lastFluxes = undefined;
@@ -1689,6 +1745,8 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       pendingFranchissements = [];
       pendingGestes = [];
       pendingChutes = [];
+      pendingInstallationsFaune = [];
+      pendingDepartsFaune = [];
       pendingIncendie = undefined;
       pendingTempete = undefined;
       weeksPerSecond = 0;

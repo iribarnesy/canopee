@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { applyAction, estGesteSurArbres } from "../../src/engine/actions";
+import { especeFaune, type IndividuFaune } from "../../src/engine/faune";
 import { syntheticYear } from "../../src/engine/meteo";
 import { contextePhenologique } from "../../src/engine/phenologie";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -56,6 +57,8 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     franchissements: ticked.franchissements,
     gestes: ticked.gestes,
     chutes: ticked.chutes,
+    installationsFaune: ticked.installationsFaune,
+    departsFaune: ticked.departsFaune,
     incendie: ticked.incendie,
     tempete: ticked.tempete,
   };
@@ -465,6 +468,86 @@ describe("ce que le chablis emporte jusqu'au rendu", () => {
     const t = arbreDuSnapshot(chablis(), 800);
     expect(t.chandelle).toBe(true);
     expect(t.renverseSemaine).toBeDefined();
+  });
+});
+
+/**
+ * **La faune passe la frontière** (issue #255).
+ *
+ * `grep -rln "faune" src/game src/render src/lab` ne rendait rien : douze
+ * espèces s'installaient, partaient quand on abattait leur arbre et écrêtaient
+ * les pullulations, et **rien de tout ça ne sortait du moteur**. Ces essais
+ * tiennent le chemin de sortie, et surtout la distinction que l'issue signale
+ * comme le piège du lot — *absent* n'est pas *vide*.
+ */
+describe("la faune dans l'instantané", () => {
+  /** Un individu de fiche, posé à la main : ce qu'on éprouve est le transport. */
+  function individu(id: number, especeId: string, arbreId: number): IndividuFaune {
+    return { id, especeId, arbreId, x: 3, y: 4, depuisSemaine: 12 };
+  }
+
+  it("éteinte, elle n'est pas dans l'instantané du tout", () => {
+    // Le commutateur est **absent** de la station de référence, donc le champ
+    // doit manquer — et manquer, pas valoir `[]` : une interface qui verrait un
+    // tableau vide montrerait un panneau « aucun pensionnaire » à une partie
+    // qui n'a jamais eu de faune.
+    const snapshot = construireSnapshot(entrees(etatNeuf()));
+    expect(snapshot.faune).toBeUndefined();
+  });
+
+  it("allumée et déserte, elle est là et elle est vide", () => {
+    // Le cas des premières années, et il n'est pas rare : le mécanisme tourne,
+    // aucune espèce n'a encore trouvé son gîte. Rien d'autre dans l'instantané
+    // ne dirait au rendu que le commutateur est allumé.
+    const state = createGameState({ ...STATION, faune: true }, rngStateFromSeed(7));
+    const snapshot = construireSnapshot({ ...entrees(state), state });
+    expect(snapshot.faune).toEqual([]);
+  });
+
+  it("les individus arrivent entiers : identité, espèce, arbre porteur, date", () => {
+    const state = createGameState({ ...STATION, faune: true }, rngStateFromSeed(7));
+    const habite = {
+      ...state,
+      faune: [individu(1, "mesange_bleue", 42), individu(2, "noctule_commune", 42)],
+    };
+    const snapshot = construireSnapshot({ ...entrees(habite), state: habite });
+    expect(snapshot.faune).toHaveLength(2);
+    const premier = snapshot.faune?.[0];
+    // L'`id` est ce qui permet de s'attacher à une bête d'une semaine sur
+    // l'autre, et l'`arbreId` est l'ancrage — donc la position, et l'arbre que
+    // le joueur peut abattre.
+    expect(premier?.id).toBe(1);
+    expect(premier?.especeId).toBe("mesange_bleue");
+    expect(premier?.arbreId).toBe(42);
+    expect(premier?.depuisSemaine).toBe(12);
+    // La fiche, elle, ne voyage pas : elle se lit dans l'atlas du moteur, comme
+    // pour les arbres. Ce qui compte est que l'identifiant y renvoie.
+    expect(especeFaune(premier?.especeId ?? "")?.nom).toBe("mésange bleue");
+  });
+
+  it("l'arrivée et le départ voyagent, et le départ garde sa cause", () => {
+    const state = createGameState({ ...STATION, faune: true }, rngStateFromSeed(7));
+    const venu = individu(1, "mesange_bleue", 42);
+    const parti = individu(2, "chouette_cheveche", 7);
+    const snapshot = construireSnapshot({
+      ...entrees(state),
+      state,
+      installationsFaune: [{ individu: venu }],
+      departsFaune: [{ individu: parti, cause: "arbreDisparu" }],
+    });
+    expect(snapshot.installationsFaune).toEqual([{ individu: venu }]);
+    // **La cause est tout l'intérêt du départ.** Le partant n'est plus dans
+    // `faune`, son arbre n'est plus dans `trees`, et deux instantanés
+    // successifs ne diraient ni qui manque ni pourquoi — alors que
+    // `arbreDisparu` veut dire « le joueur vient d'expulser quelqu'un ».
+    expect(snapshot.departsFaune[0]?.cause).toBe("arbreDisparu");
+    expect(snapshot.departsFaune[0]?.individu.arbreId).toBe(7);
+  });
+
+  it("une semaine sans mouvement porte deux listes vides, pas `undefined`", () => {
+    const snapshot = construireSnapshot(entrees(etatNeuf()));
+    expect(snapshot.installationsFaune).toEqual([]);
+    expect(snapshot.departsFaune).toEqual([]);
   });
 });
 

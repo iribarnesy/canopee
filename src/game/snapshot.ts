@@ -15,6 +15,7 @@ import { indiceBiodiversite } from "../engine/biodiversite";
 import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import { CO2_ACTUEL_PPM } from "../engine/climat";
 import { getEspece } from "../engine/especes";
+import type { DepartFaune, InstallationFaune } from "../engine/faune";
 import { HERBACEES, N_HERBACEES } from "../engine/herbacees";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
@@ -211,6 +212,16 @@ export interface EntreesSnapshot {
   gestes: GesteVisible[];
   /** chandelles abattues depuis le dernier instantané (`TickResult`) */
   chutes: ChuteDeChandelle[];
+  /**
+   * Faune arrivée et faune partie depuis le dernier instantané (`TickResult`,
+   * faune.ts). **Obligatoires plutôt que facultatives**, bien qu'elles soient
+   * vides cinquante semaines sur cinquante-deux et toujours vides quand la
+   * faune est éteinte : c'est la règle de ce fichier — un champ qu'on peut
+   * oublier de passer finit par être oublié, et une fonctionnalité entière
+   * disparaît sans qu'aucun essai ne bronche (voir l'en-tête).
+   */
+  installationsFaune: readonly InstallationFaune[];
+  departsFaune: readonly DepartFaune[];
   incendie?: IncendieResult;
   tempete?: TempeteResult;
 }
@@ -268,6 +279,18 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // Aucun filtre : les chandelles sont des arbres, elles ont juste cessé de
     // vivre. Les compter comme vivants est l'affaire de l'UI, pas la nôtre.
     trees: state.trees.map((t) => arbreDuSnapshot(t, state.ddYearBase5)),
+    // **La faune n'est là que si elle existe dans cette partie** (`faune.ts`).
+    // Le commutateur `station.faune` décide, et pas la présence d'individus :
+    // `state.faune` est encore absent la première semaine d'une partie où le
+    // mécanisme tourne, et le confondre avec « éteint » ferait clignoter un
+    // panneau entier entre l'instantané d'ouverture et le suivant. D'où le
+    // `?? []` : allumé et désert se dit par un tableau vide, éteint par
+    // l'absence du champ.
+    //
+    // Le tableau part **tel quel**, sans copie : `postMessage` le clone, et les
+    // individus sont immuables côté moteur — le tick en refabrique un plutôt
+    // que d'en modifier un (`bilanDeTable`).
+    ...(station.faune ? { faune: state.faune ?? [] } : {}),
     // Carte : on montre l'eau de l'horizon de **surface**, celle que voient les
     // semis et l'évaporation.
     soilWater: eauDeSurface(state, nH),
@@ -324,6 +347,8 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     franchissements: e.franchissements,
     gestes: e.gestes,
     chutes: e.chutes,
+    installationsFaune: e.installationsFaune,
+    departsFaune: e.departsFaune,
     incendie: e.incendie,
     tempete: e.tempete,
   };

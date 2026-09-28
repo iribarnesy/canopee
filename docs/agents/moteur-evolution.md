@@ -61,7 +61,61 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le bois se mange, #187 guilde 5)
+## Ce que le dernier lot a appris (la faune passe la frontière, #255)
+
+### Le canal existait déjà, et personne ne le lisait
+
+Le lot ressemblait à un lot d'exposition, et il l'était : `TickResult` portait
+`installationsFaune` et `departsFaune` **depuis le lot 1**, `advanceWeek` les
+relayait consciencieusement, et `grep -rln "faune" src/game src/render src/lab`
+ne rendait rien. Le moteur produisait l'événement depuis trois lots ; aucune
+ligne hors de `src/engine` ne l'avait jamais reçu.
+
+Il n'y avait donc **rien à produire** — seulement à brancher, et à décider de la
+forme. Chercher ce qui existe avant d'inventer un canal a fait tomber la moitié
+du lot : l'instantané avait déjà sa place pour ce genre de charge (les chutes de
+chandelle, la tempête), et le fil d'actualité avait déjà sa fonction `event`.
+
+### Un commentaire n'est pas un format
+
+`faune.ts` écrivait depuis deux guildes que l'individu du modèle est « une
+colonie de parturition, pas une bête », et « la population de l'arbre » pour les
+saproxyliques. **C'était vrai, écrit, et illisible depuis l'extérieur du
+module** : le premier lecteur qui a eu besoin de nommer une entrée du tableau
+allait écrire « une noctule s'installe », ce qui est faux d'un facteur quarante.
+
+Remonter la prose dans un champ déclaré (`unite`, quatre valeurs) a coûté douze
+lignes d'atlas et **aucune ligne de mécanisme** : rien dans le moteur ne le lit.
+La leçon se généralise — quand une fiche dit en commentaire ce que son lecteur
+devra savoir, c'est que le format a un champ de retard.
+
+### Absent n'est pas vide
+
+`station.faune` éteint veut dire « cette partie n'a pas de faune » ; allumé et
+sans personne veut dire « le mécanisme tourne et le gîte ne trouve pas
+preneur ». Les deux se disent dans l'instantané par **la présence du champ**
+contre un tableau vide, parce que rien d'autre n'y dit si le commutateur est
+allumé. Confondre les deux aurait fait clignoter un panneau entier entre la
+première semaine d'une partie et la deuxième.
+
+### Ce que le banc a tranché : une ligne par mouvement
+
+Vieille chênaie de vingt-cinq chênes creusés, trente ans, une graine :
+**trente-trois mouvements**, arrivées et départs confondus, soit environ un par
+an. Les morts d'arbres se comptent par dizaines par semaine et se regroupent par
+espèce et par cause ; la faune, non — et le regrouper effacerait exactement ce
+que le modèle par individu a coûté. Le relevé dit aussi que la première année en
+concentre dix à elle seule, parce que la mortalité des tiges plantées expulse ce
+qui venait de s'installer.
+
+### Ce que ce lot n'a pas fait, et qui n'est pas à lui
+
+Le **journal de semaine** que rejoue l'ellipse (`journalDe`, `PorteurDeJournal`)
+est typé dans `src/render/temps/ellipse` : y verser la faune est un geste du
+rendu, pas du moteur. La frontière s'arrête à l'instantané, et c'est bien là
+qu'elle doit s'arrêter.
+
+## Ce qu'un lot plus ancien a appris (le bois se mange, #187 guilde 5)
 
 ### Payer la dette d'abord, sinon la guilde l'aggrave
 

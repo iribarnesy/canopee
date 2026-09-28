@@ -73,6 +73,8 @@ function instantaneDeBase(): Snapshot {
     franchissements: [],
     gestes: [],
     chutes: [],
+    installationsFaune: [],
+    departsFaune: [],
   });
 }
 
