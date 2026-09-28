@@ -24,7 +24,7 @@
  */
 
 import type React from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   cadrer,
   celluleSousLeCurseurVue,
@@ -41,7 +41,7 @@ import type { EmpriseDuGeste } from "../render/emprise";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
 import type { Orientation } from "../render/projection";
 import type { Marqueur } from "../render/temps/changements";
-import type { Deformation } from "../render/temps/chute";
+import { combiner, DEBOUT, type Deformation, troncCouche } from "../render/temps/chute";
 import type { ArbreRemodele } from "../render/temps/geste";
 import type { GiteOccupe } from "../render/temps/habitants";
 import { type IncendieAPoser, RIEN_NE_BRULE } from "../render/temps/lecteur";
@@ -477,8 +477,32 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   // lui faut dans des références et ne redéclenche jamais de rendu. C'est aussi
   // ce qui permet à la cuisson budgétée de rattraper son retard image après
   // image sans que personne ne la relance.
-  const dernier = useRef({ props, vue });
-  dernier.current = { props, vue };
+  /**
+   * Les troncs **déjà couchés**, indexés pour la boucle d'images (#107).
+   *
+   * Un chablis n'est pas un acte d'ellipse : il a été versé une semaine plus
+   * tôt et il reste par terre tant que le moteur le garde. Sa pose ne peut donc
+   * pas venir du journal, qui ne parle que de la semaine en cours — une semaine
+   * sans journal rendrait `DEBOUT` pour tout le monde, et le tronc se relèverait.
+   *
+   * L'index se refait quand la liste d'arbres change, c'est-à-dire une fois par
+   * instantané : le balayage ne coûte rien à côté de la pose, et le faire par
+   * image le paierait deux mille fois pour rien.
+   */
+  const couches = useMemo(() => {
+    const index = new Map<
+      number,
+      { x: number; y: number; heightM: number; directionRad: number }
+    >();
+    for (const a of props.arbres) {
+      if (a.coucheRad === undefined) continue;
+      index.set(a.id, { x: a.x, y: a.y, heightM: a.heightM, directionRad: a.coucheRad });
+    }
+    return index;
+  }, [props.arbres]);
+
+  const dernier = useRef({ props, vue, couches });
+  dernier.current = { props, vue, couches };
 
   useEffect(() => {
     if (!pret) return;
@@ -486,13 +510,25 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
     let derniereAnnonce = 0;
     const image = () => {
       if (!vivant) return;
-      const { props: p, vue: v } = dernier.current;
+      const { props: p, vue: v, couches: parTerre } = dernier.current;
       if (v) {
         // L'horloge est ici et nulle part ailleurs : la scène Pixi n'apprend
         // pas le mot « temps », et `src/render/temps` reste pur.
         const horloge = performance.now();
         const rappel = p.deformer;
-        scene.current?.deformerLesArbres(rappel ? (id) => rappel(id, horloge, v) : undefined);
+        // **Deux origines pour une même déformation, et elles se composent.**
+        // Le journal fait tomber ce qui tombe cette semaine ; l'instantané dit
+        // ce qui est déjà par terre. `DEBOUT` étant neutre pour la
+        // composition, on les additionne sans se demander lequel a lieu.
+        scene.current?.deformerLesArbres(
+          rappel || parTerre.size > 0
+            ? (id) => {
+                const tronc = parTerre.get(id);
+                const pose = tronc ? troncCouche(tronc, v) : DEBOUT;
+                return rappel ? combiner(pose, rappel(id, horloge, v)) : pose;
+              }
+            : undefined,
+        );
         scene.current?.voilerLesCellules(p.voiler?.(horloge) ?? []);
         scene.current?.embraser(p.feu?.(horloge) ?? RIEN_NE_BRULE);
         scene.current?.montrerLesChangements(p.marqueurs ?? []);

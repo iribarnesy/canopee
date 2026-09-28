@@ -274,12 +274,13 @@ export const TRAJECTOIRES: Record<CauseMort, Trajectoire> = {
   // que l'écrasement, sans le rapetissement : un chablis ne rentre pas en
   // boule, il s'est couché il y a un an.
   //
-  // **Et c'est un pis-aller qu'il faut dire.** La tempête elle-même ne se
-  // dessine pas : ni `renverseSemaine` ni `TickResult.tempete` n'arrivent au
-  // protocole, donc le rendu ne sait ni **quels** arbres sont couchés, ni quand, ni
-  // dans quel sens — alors que le moteur tient les trois, `chuteRad` compris.
-  // Le §6.6 demande pourtant que les coups durs se voient. Issue ouverte ; en
-  // attendant, un chablis s'efface là où il devrait basculer.
+  // **Et ce n'est plus un pis-aller** (#107). L'arbre a basculé un an plus tôt,
+  // à la rafale, et il est resté couché depuis : `renverseSemaine` dit quand,
+  // `chuteRad` dit de quel côté, et la pose les lit (`troncCouche`). Ce que cet
+  // acte-ci joue est donc la **purge** et non la chute — le délai de
+  // récupération est passé, le bois quitte la liste des arbres pour celle du
+  // terrain (`soilBoisAuSol`), et un tronc qui s'efface pendant que le sol
+  // s'en charge est exactement ce qui se passe.
   chablis: {
     seffaceEntre: [0.1, 0.5],
     chandelleA: 1.1,

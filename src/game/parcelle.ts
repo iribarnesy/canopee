@@ -137,6 +137,10 @@ export interface ArbreSource {
    */
   diametreCm?: number;
   chandelle: boolean;
+  /** présent = une tempête l'a couché ; c'est un **chablis** et non une chandelle */
+  renverseSemaine?: number;
+  /** le sens dans lequel le tronc est parti, radians — il ne se déduit de rien */
+  chuteRad?: number;
   baseHouppierM?: number;
   teteTrogneM?: number;
   floraison?: number;
@@ -216,6 +220,16 @@ export function arbresAPoser(arbres: readonly ArbreSource[], ctx: ContexteDePose
       baseHouppierM: t.baseHouppierM ?? 0,
       ...(t.teteTrogneM ? { teteTrogneM: t.teteTrogneM } : {}),
       ...(t.chandelle && !torche ? { chandelle: true } : {}),
+      // **Couché seulement s'il l'était déjà la semaine d'avant** (#107). La
+      // semaine de la rafale, c'est la mise en scène qui le fait tomber
+      // (`poseDeLaRafale`) : le poser couché d'entrée le montrerait par terre
+      // avant que le coup de vent ne soit joué, ce qui revient à escamoter le
+      // seul instant où la tempête se voit.
+      ...(t.renverseSemaine !== undefined &&
+      t.renverseSemaine < ctx.week &&
+      t.chuteRad !== undefined
+        ? { coucheRad: t.chuteRad }
+        : {}),
       ...(t.brulEeSemaine === undefined || torche ? {} : { brulee: true }),
       ...(t.protege ? { protege: true } : {}),
       ...(t.recepages ? { recepages: t.recepages } : {}),

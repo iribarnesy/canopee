@@ -121,6 +121,20 @@ export interface ArbreAPoser {
   teteTrogneM?: number;
   chandelle?: boolean;
   /**
+   * L'arbre est **couché**, et dans quelle direction (radians, zéro vers l'est).
+   *
+   * Un chablis, donc : `Snapshot.renverseSemaine` dit qu'une tempête l'a versé,
+   * `chuteRad` dit de quel côté, et le moteur le garde debout dans sa liste
+   * l'année où son bois se récolte encore. Sans ce champ le rendu n'avait que
+   * `chandelle`, qui veut dire « mort **debout** » : il dessinait donc un tronc
+   * vertical là où le moteur a un arbre par terre (#107).
+   *
+   * **La classe de vignette n'en dépend pas**, et c'est voulu : coucher un arbre
+   * est une déformation à la **pose** (§5.11), pas une image de plus à cuire —
+   * la même vignette sert debout et couchée.
+   */
+  coucheRad?: number;
+  /**
    * L'arbre a été tué par le **feu** : `Snapshot.brulEeSemaine` est renseigné.
    *
    * Ce n'est pas la même chandelle qu'un mort de sécheresse, et la différence
