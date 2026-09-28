@@ -25,6 +25,7 @@ import {
   COTE_MORCEAU_M,
   cotePavage,
   cuireMorceau,
+  cuireMorceauPlat,
   Decor,
   type DonneesSol,
   morceauxDeLEmprise,
@@ -381,19 +382,32 @@ describe("le cache de terrain", () => {
     expect(rapproche * 10).toBeLessThan(tous);
   });
 
-  it("pose les morceaux cuits dans l'ordre du peintre, et seulement ceux-là", () => {
+  it("pose TOUS les morceaux visibles, dans l'ordre du peintre — quitte à les poser à plat", () => {
+    // **Ce qu'on défendait ici a changé de sens avec #265.** L'épreuve disait
+    // « seulement les morceaux cuits », et le trou qui restait ailleurs n'était
+    // pas noir : c'était le fond de la page, un beige très clair, au milieu de
+    // la parcelle. Mesuré au démarrage : quarante-neuf morceaux périmés, quatre
+    // cuits par image, treize images en trente secondes sur une machine sans
+    // GPU — une demi-minute de trou. La parcelle est donc complète dès la
+    // première image, à la résolution la plus grossière là où le budget n'est
+    // pas encore passé.
     const { fabriquer } = fabriqueBouchon();
     const terrain = new Terrain(fabriquer, COTE);
     const sol = solPlat();
     const v = vue();
     terrain.rafraichir(sol, 20, v);
-    // Rien de cuit encore : rien à poser, et surtout pas de trou noir.
+    // Avant toute cuisson, rien n'a encore été comblé : c'est `cuire` qui le fait.
     expect(terrain.aPoser(v)).toEqual([]);
     terrain.cuire(sol, 20, v, 3);
-    expect(terrain.aPoser(v)).toHaveLength(3);
+    const apresTrois = terrain.aPoser(v);
+    expect(apresTrois).toHaveLength(9);
+    expect(apresTrois.filter((m) => !m.provisoire)).toHaveLength(3);
+    terrain.rafraichir(sol, 20, v);
     terrain.cuire(sol, 20, v, 99);
     const poses = terrain.aPoser(v);
     expect(poses).toHaveLength(9);
+    // Tout est fin au bout du compte : l'aplat tient la place, il ne la garde pas.
+    expect(poses.every((m) => !m.provisoire)).toBe(true);
     for (let i = 1; i < poses.length; i++) {
       const a = poses[i - 1];
       const b = poses[i];
@@ -414,8 +428,11 @@ describe("le cache de terrain", () => {
     terrain.rafraichir(sol, 20, v);
     terrain.cuire(sol, 20, v, 1);
     const pose = terrain.aPoser(v);
-    expect(pose).toHaveLength(1);
-    const seul = pose[0];
+    // Tous posés, un seul **fin** : c'est lui qui doit être le plus proche.
+    expect(pose).toHaveLength(9);
+    const fins = pose.filter((m) => !m.provisoire);
+    expect(fins).toHaveLength(1);
+    const seul = fins[0];
     if (!seul) throw new Error("vide");
     const emprise = celluleVisibles(v);
     if (!emprise) throw new Error("emprise");
@@ -674,5 +691,47 @@ describe("le bois mort couché : deux Float32Array que personne ne lisait", () =
     };
     // Celui qui barre est mouillé en amont, donc plus sombre.
     expect(clarte(dessus)).toBeLessThan(clarte(sous));
+  });
+});
+
+describe("l'aplat provisoire : une parcelle sans trou dès la première image (#265)", () => {
+  it("ne laisse aucun morceau visible sans image, même avec un budget d'un seul", () => {
+    // Le défaut mesuré : ce qui se voit à travers un morceau non posé n'est pas
+    // « le sol en retard », c'est le fond de la page — beige très clair, au
+    // milieu de la parcelle.
+    const { fabriquer } = fabriqueBouchon();
+    const terrain = new Terrain(fabriquer, COTE);
+    const sol = solPlat();
+    const v = vue();
+    const attendus = terrain.rafraichir(sol, 20, v);
+    terrain.cuire(sol, 20, v, 1);
+    expect(terrain.aPoser(v)).toHaveLength(attendus);
+  });
+
+  it("l'aplat se fait remplacer, il ne s'installe pas", () => {
+    const { fabriquer } = fabriqueBouchon();
+    const terrain = new Terrain(fabriquer, COTE);
+    const sol = solPlat();
+    const v = vue();
+    terrain.rafraichir(sol, 20, v);
+    terrain.cuire(sol, 20, v, 1);
+    // Un morceau provisoire reste périmé : la file le reprend à l'image
+    // suivante, sinon la parcelle garderait sa version grossière pour toujours.
+    expect(terrain.rafraichir(sol, 20, v)).toBe(terrain.aPoser(v).length - 1);
+  });
+
+  it("l'image fine prend EXACTEMENT la place de l'aplat", () => {
+    // Deux calculs de cadrage donneraient un décalage d'un pixel, donc une
+    // couture visible au moment précis où l'une remplace l'autre. C'est
+    // pourquoi `empriseDuMorceau` est une fonction et pas deux copies.
+    const { fabriquer } = fabriqueBouchon();
+    const sol = solPlat();
+    const v = vue();
+    const plat = cuireMorceauPlat(sol, 1, 1, 20, v, fabriquer);
+    const fin = cuireMorceau(sol, 1, 1, 20, v, fabriquer);
+    expect(plat.decalage).toEqual(fin.decalage);
+    expect(plat.ancre).toEqual(fin.ancre);
+    expect(plat.decalageRelatif).toEqual(fin.decalageRelatif);
+    expect([plat.image.width, plat.image.height]).toEqual([fin.image.width, fin.image.height]);
   });
 });
