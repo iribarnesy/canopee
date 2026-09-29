@@ -66,6 +66,14 @@ import { tick } from "../engine/tick";
 import type { CauseMort, TreeState } from "../engine/trees";
 import { HAUTEUR_TROUVABLE_M } from "../render/temps/changements";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
+import {
+  ajouterAuCompte,
+  COMPTE_VIDE,
+  type CompteDeLAnnee,
+  compteVide,
+  direLeCompte,
+  type LigneDeCompte,
+} from "./compteDeLAnnee";
 import { prefixeSousLePlafond } from "./facture";
 import { journalDe, type PorteurDeJournal } from "./journal";
 import {
@@ -457,6 +465,24 @@ let factureEnAttente = false;
  * dépenserait de l'argent — ou annulerait des gestes — sans qu'on l'ait voulu.
  */
 let politiqueHoraire: PolitiqueHoraire = "demander";
+
+/**
+ * ─── **le compte de l'année** (#117) ────────────────────────────────────────
+ *
+ * Ce que la récolte automatique et les saisonniers de la facture ont fait
+ * depuis le 1er janvier, dit en une phrase le 31 décembre (`compteDeLAnnee.ts`).
+ *
+ * **Deux étages, et le second est ce qui le rend juste.** Une action
+ * automatique est mesurée au moment où elle s'applique, mais elle n'est
+ * **acquise** qu'à la fermeture de sa semaine : d'ici là, s'en tenir au
+ * plafond de soixante heures peut la reprendre (`seTenirAuPlafond`). Compter
+ * tout de suite ferait figurer au compte une cueillette annulée. Les mesures
+ * attendent donc dans `aCompter`, rangées par **action** — `prefixeSousLePlafond`
+ * garde les mêmes objets —, et `ouvrirLaSemaine` ne verse que celles que la
+ * semaine a gardées.
+ */
+let compteAnnee: CompteDeLAnnee = COMPTE_VIDE;
+let aCompter = new Map<GameAction, LigneDeCompte>();
 let maturationAns = 0;
 /** L'argent contraint-il la partie ? Choisi au démarrage (actions.ts). */
 let economie = true;
@@ -580,6 +606,13 @@ function qualiteVente(avant: GameState, treeIds: readonly number[]): string {
  * retour — et personne n'a plus à y penser (#133).
  */
 function ouvrirLaSemaine(etat: GameState): void {
+  // La semaine qui se ferme est acquise : ses actions automatiques entrent au
+  // compte de l'année, et seulement celles qu'elle a gardées.
+  for (const action of actionsDeLaSemaine) {
+    const ligne = aCompter.get(action);
+    if (ligne) compteAnnee = ajouterAuCompte(compteAnnee, ligne);
+  }
+  aCompter = new Map();
   state = beginWeek(etat);
   debutDeSemaine = state;
   actionsDeLaSemaine = [];
@@ -600,8 +633,19 @@ function ouvrirLaSemaine(etat: GameState): void {
   factureEnAttente = false;
 }
 
-function performAction(action: GameAction) {
-  if (!state) return;
+/**
+ * Ce qu'une action a produit, pour qui veut le compter (#117) : le mouvement de
+ * trésorerie qu'elle a causé, et les gestes que le moteur en a rapportés.
+ */
+interface EffetDeLAction {
+  dEur: number;
+  gestes: readonly GesteVisible[];
+}
+
+const SANS_EFFET: EffetDeLAction = { dEur: 0, gestes: [] };
+
+function performAction(action: GameAction): EffetDeLAction {
+  if (!state) return SANS_EFFET;
   journal.push(action);
   actionsDeLaSemaine.push(action);
   const before = state;
@@ -770,6 +814,7 @@ function performAction(action: GameAction) {
       break;
     }
   }
+  return { dEur, gestes: result.gestes ?? [] };
 }
 
 /**
@@ -1077,12 +1122,16 @@ function reglerLaFacture(embaucher: boolean, pourToujours = false): void {
     // exactement ce que `coutDuDepassement` a chiffré.
     const { embauches } = coutDuDepassement(depassementHoraire(state.economy));
     for (let i = 0; i < embauches; i++) {
-      performAction({
-        type: "embaucher",
+      const embauche = {
+        type: "embaucher" as const,
         week: state.week,
-        contrat: "saisonnier",
+        contrat: "saisonnier" as const,
         semaines: 1,
-      });
+      };
+      const effet = performAction(embauche);
+      // Au compte de l'année (#117), et seulement si elle a été payée : une
+      // embauche refusée — découvert plafonné — ne coûte rien et ne se compte pas.
+      if (effet.dEur < 0) aCompter.set(embauche, { eur: effet.dEur, semainesDeSaisonnier: 1 });
     }
     const reste = depassementHoraire(state.economy);
     if (reste > 0) {
@@ -1218,6 +1267,16 @@ function stepWeeks(n: number) {
       }
     }
     ouvrirLaSemaine(ticked.state);
+    // **Le 1er janvier, l'année écoulée rend ses comptes** (#117). Ici et non dans
+    // `ouvrirLaSemaine`, qui ouvre aussi la semaine d'une partie qu'on charge :
+    // une sauvegarde tombée pile sur un 1er janvier y réécrirait le compte d'une
+    // année déjà racontée.
+    if (state.week > 0 && state.week % 52 === 0) {
+      if (!compteVide(compteAnnee)) {
+        event("📒", direLeCompte(compteAnnee, anneeDepart + state.week / 52 - 1, nomEspece));
+      }
+      compteAnnee = COMPTE_VIDE;
+    }
     const finis =
       before.economy.saisonniersFinSemaine.length - state.economy.saisonniersFinSemaine.length;
     if (finis > 0) {
@@ -1463,18 +1522,20 @@ function stepWeeks(n: number) {
     // ne l'était pas (#191).
     if (fautIlPrevenir(murs.kg, prevFruitsReadyKg)) {
       if (autoHarvest) {
-        const refusalsBefore = pendingRefusals.length;
-        performAction({ type: "recolter", week: state.week, treeIds: murs.ids });
-        if (pendingRefusals.length > refusalsBefore) {
-          weeksPerSecond = 0;
-          post({
-            type: "autopause",
-            reason:
-              "récolte auto incomplète : plus assez d'heures cette semaine — embauchez un saisonnier ou récoltez à la main",
-          });
-          prevFruitsReadyKg = 0;
-          return;
-        }
+        // **Plus d'arrêt « plus assez d'heures »**, et ce n'est pas un oubli : depuis
+        // #133 les heures ne refusent plus rien, elles se paient — c'est la facture
+        // de la semaine qui pose la question, et la consigne qui y répond. Le
+        // message qui était ici annonçait donc une cause qui ne pouvait plus
+        // arriver, et c'était exactement la corvée que #117 décrit.
+        const cueillette = { type: "recolter" as const, week: state.week, treeIds: murs.ids };
+        const effet = performAction(cueillette);
+        // Mesurée maintenant, acquise à la fermeture de la semaine (#117). L'essence
+        // se lit comme le cumul la lit, par la même fonction : un arbre cueilli
+        // reste debout, et c'est dans l'état qu'on retrouve ce qu'il était.
+        aCompter.set(cueillette, {
+          eur: effet.dEur,
+          fruitsKg: accumuler(CUMULS_VIDES, effet.gestes, state.trees).fruitsParEspece,
+        });
       } else if (weeksPerSecond > 4) {
         prevFruitsReadyKg = murs.kg;
         weeksPerSecond = 0;
@@ -1772,6 +1833,11 @@ function init(
   // …ni son niveau : l'interface réinstalle celui qu'elle lance.
   niveauId = undefined;
   paliersAcquis = [];
+  // Une partie neuve n'hérite d'aucun compte (#117), et la semaine d'avant n'a
+  // rien à verser : c'était une autre partie.
+  compteAnnee = COMPTE_VIDE;
+  aCompter = new Map();
+  actionsDeLaSemaine = [];
   // **le point zéro du bilan carbone se fige ici, et pas ailleurs** (#202) :
   // c'est l'instant exact où le joueur prend la main. Ce qu'il trouve sur la
   // parcelle — les arbres venus tout seuls pendant la maturation compris — est
@@ -1899,7 +1965,14 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         if (i % 104 === 0)
           post({ type: "progress", done: i, total: msg.save.weeks, phase: "rejeu" });
       }
+      // Rien à verser au compte : le rejeu passe par `advanceWeek` et non par les
+      // consignes, donc aucune action n'a été mesurée. Le compte de l'année en
+      // cours vient de la sauvegarde — les euros d'une cueillette ne sont nulle
+      // part dans le journal d'actions, et rien ne permettrait de les refaire.
+      aCompter = new Map();
+      actionsDeLaSemaine = [];
       ouvrirLaSemaine(replayed);
+      compteAnnee = msg.save.compteDeLAnnee ?? COMPTE_VIDE;
       // Le rejeu n'a rien à raconter : ce sont des semaines déjà vécues.
       pendingRefusals = [];
       pendingEvents = [];
@@ -2034,6 +2107,13 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         // réglage de la session (#133).
         ...(politiqueHoraire === "demander" ? {} : { politiqueHoraire }),
         ...(Object.keys(choixRecolte).length > 0 ? { recolteAuto: { ...choixRecolte } } : {}),
+        // Le compte de l'année en cours, **y compris** la semaine ouverte : ce
+        // qu'elle a cueilli est déjà dans l'état qu'on sauve, et la reprise ne
+        // le remesurera pas (#117).
+        ...(() => {
+          const aVerser = [...aCompter.values()].reduce(ajouterAuCompte, compteAnnee);
+          return compteVide(aVerser) ? {} : { compteDeLAnnee: aVerser };
+        })(),
         ...(niveauId ? { niveauId } : {}),
         ...(paliersAcquis.length > 0 ? { paliersAcquis: [...paliersAcquis] } : {}),
         weeks: state.week,

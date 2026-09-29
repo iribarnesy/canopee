@@ -26,6 +26,7 @@ import type {
 import type { CauseMort } from "../engine/trees";
 import type { DecorBordures } from "../render/couches/decor";
 import type { Bilan } from "./bilan";
+import type { CompteDeLAnnee } from "./compteDeLAnnee";
 import type { Cumuls } from "./niveaux";
 import type { ChoixRecolte } from "./recolteAuto";
 import type { EvenementSuivi, LigneDeSuivi } from "./suivis";
@@ -104,6 +105,14 @@ export interface SaveGame {
    * où la règle par défaut changerait.
    */
   recolteAuto?: ChoixRecolte;
+  /**
+   * Ce que les consignes ont fait depuis le 1er janvier de l'année en cours (#117).
+   *
+   * Rangé et non recalculé, parce qu'il ne peut pas l'être : le journal porte
+   * les actions, pas ce qu'elles ont rapporté, et le rejeu passe par le moteur,
+   * pas par les consignes. Absent = rien d'automatique cette année.
+   */
+  compteDeLAnnee?: CompteDeLAnnee;
   /** semaines déjà simulées (pour rejouer jusqu'au même point) */
   weeks: number;
   actions: GameAction[];
