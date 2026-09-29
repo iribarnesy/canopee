@@ -38,6 +38,7 @@ import {
   sujetsDuJournal,
 } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
+import { crueDeLaSemaine } from "../render/temps/crue";
 import { type JournalDeSemaine, planAuRythmeNaturel } from "../render/temps/ellipse";
 import { SANS_VENT } from "../render/temps/feu";
 import {
@@ -45,6 +46,7 @@ import {
   chandellesTombees,
   chuteDeLaChandelle,
   chuteDeLaTige,
+  crueEnCours,
   deformationDe,
   etatDuTorchage,
   etatMourantDe,
@@ -53,6 +55,7 @@ import {
   futsConsumesATorcher,
   indexerLesChandellesTombees,
   indexerLesChutes,
+  indexerLesCrues,
   indexerLesGestes,
   indexerLesMorts,
   indexerLesTorches,
@@ -303,6 +306,9 @@ function Demo(): React.ReactElement {
   // render ». La page ne chargeait plus du tout.
   const ellipse = useMemo(() => {
     const params = new URLSearchParams(location.search);
+    // Ce que la scène dit de l'eau refusée cette semaine-là : la même grandeur
+    // que `Snapshot.soilDebordementMm`, sous le même nom.
+    const crueDeLaScene = crueDeLaSemaine(scene?.sol.debordementMm, scene?.sol.altitudesM ?? []);
     const tout = params.get("ellipse-tout") === "1";
     // `?mort=secheresse` fait mourir de cette cause **tous** les arbres vivants —
     // banc de mécanisme, comme `ellipse-tout`. C'est le seul moyen de juger les
@@ -333,6 +339,12 @@ function Demo(): React.ReactElement {
       const { incendie: incendieBrut, ...reste } = reel;
       const journalReel: JournalDeSemaine = {
         ...reste,
+        // **La crue de la semaine** (#127) : la scène porte le débordement par
+        // cellule, exactement comme l'instantané du jeu, et l'onde se joue
+        // donc ici aussi. Sans cette ligne, le banc verrait la lame d'eau
+        // cuite dans le terrain et jamais l'eau passer — l'écart banc/jeu qui
+        // avait laissé #246 invisible.
+        ...(crueDeLaScene ? { crue: crueDeLaScene } : {}),
         ...(incendieBrut
           ? {
               incendie: {
@@ -438,6 +450,7 @@ function Demo(): React.ReactElement {
       return {
         index: indexerLesChutes(plan),
         voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
+        crues: indexerLesCrues(plan),
         morts: indexerLesMorts(plan),
         feu: trouverLeFeu(plan),
         tempete: undefined as ReturnType<typeof trouverLaTempete>,
@@ -465,6 +478,11 @@ function Demo(): React.ReactElement {
     );
     const partVersee = Number(params.get("tempete-part") ?? "0.25");
     const journal: JournalDeSemaine = {
+      // **La crue vient de la scène et non du banc** (#127) : elle n'est pas
+      // fabriquée comme la rafale ou les morts ci-dessous, elle est là dès que
+      // la scène porte de l'eau refusée. Une scène sans journal — la plupart —
+      // passe par ici, et c'est le seul chemin où elle pouvait se perdre.
+      ...(crueDeLaScene ? { crue: crueDeLaScene } : {}),
       ...(rafale
         ? {
             tempete: {
@@ -620,6 +638,7 @@ function Demo(): React.ReactElement {
     );
     return {
       index: indexerLesChutes(plan),
+      crues: indexerLesCrues(plan),
       voiles: indexerLesVoiles(plan, scene?.coteM ?? 1),
       morts: indexerLesMorts(plan),
       feu: trouverLeFeu(plan),
@@ -831,7 +850,11 @@ function Demo(): React.ReactElement {
         const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
         // Le front d'incendie et le voile d'un geste passent par la **même**
         // couche : deux choses différentes qui se dessinent pareil.
-        return [...voilesEnCours(ellipse.voiles, ou), ...feuEnCours(ellipse.feu, ou)];
+        return [
+          ...voilesEnCours(ellipse.voiles, ou),
+          ...feuEnCours(ellipse.feu, ou),
+          ...crueEnCours(ellipse.crues, ou, scene.week % 52),
+        ];
       }}
       feu={(maintenantMs) =>
         particulesDuFeu(

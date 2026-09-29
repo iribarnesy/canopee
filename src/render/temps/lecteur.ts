@@ -31,6 +31,7 @@ import type { ChuteDeChandelle, IncendieResult } from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
 import { type Vue, versEcranVue } from "../camera";
 import { chuteEnCours, DEBOUT, type Deformation } from "./chute";
+import { type CrueDeLaSemaine, ondeDeLaCrue } from "./crue";
 import type { Acte, PlanDEllipse } from "./ellipse";
 import {
   type ArbreQuiSeTorche,
@@ -553,6 +554,53 @@ export function voilesEnCours(voiles: readonly VoileIndexe[], ecouleMs: number):
     const ici = cellulesVoilees(geste, rangs, avancement);
     // Presque toujours un seul acte ouvert : on évite la concaténation quand
     // il n'y a rien à concaténer.
+    sorties = sorties.length === 0 ? ici : sorties.concat(ici);
+  }
+  return sorties;
+}
+
+/**
+ * Les **crues** d'un plan, avec leur créneau (#127).
+ *
+ * Plusieurs quand l'ellipse franchit plusieurs semaines noyées : chacune a son
+ * emprise et son acte, comme les rafales. Une liste plate suffit — il y en a
+ * zéro presque toujours, et jamais beaucoup.
+ */
+export type CruesIndexees = readonly { acte: Acte; crue: CrueDeLaSemaine }[];
+
+export function indexerLesCrues(plan: PlanDEllipse): CruesIndexees {
+  const index: { acte: Acte; crue: CrueDeLaSemaine }[] = [];
+  for (const acte of plan.actes) {
+    if (acte.sujet.quoi !== "crue") continue;
+    index.push({
+      acte,
+      crue: {
+        cellules: acte.sujet.cellules,
+        lamesMm: acte.sujet.lamesMm,
+        rangs: acte.sujet.rangs,
+      },
+    });
+  }
+  return index;
+}
+
+/**
+ * L'onde de crue à cet instant, sous la forme que la couche des voiles attend.
+ *
+ * Elle passe par le **même** canal que le voile d'un geste et le front
+ * d'incendie : trois choses différentes qui se dessinent pareil — une cellule,
+ * une teinte, une opacité — et qui ne laissent rien derrière elles.
+ */
+export function crueEnCours(
+  crues: CruesIndexees,
+  ecouleMs: number,
+  semaineAnnee: number,
+): CelluleVoilee[] {
+  let sorties: CelluleVoilee[] = [];
+  for (const { acte, crue } of crues) {
+    if (ecouleMs < acte.debutMs || ecouleMs >= acte.debutMs + acte.dureeMs) continue;
+    const avancement = acte.dureeMs > 0 ? (ecouleMs - acte.debutMs) / acte.dureeMs : 1;
+    const ici = ondeDeLaCrue(crue, avancement, semaineAnnee);
     sorties = sorties.length === 0 ? ici : sorties.concat(ici);
   }
   return sorties;

@@ -42,6 +42,7 @@ import {
   sujetsDuJournal,
 } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
+import { crueDeLaSemaine } from "../render/temps/crue";
 import { dureeBloquanteMs, planAuRythmeNaturel, planDEllipse } from "../render/temps/ellipse";
 import { SANS_VENT, type VentAPencher } from "../render/temps/feu";
 import type { ArbreRemodele, TigeAbattue } from "../render/temps/geste";
@@ -51,6 +52,7 @@ import {
   chandellesTombees,
   chuteDeLaChandelle,
   chuteDeLaTige,
+  crueEnCours,
   deformationDe,
   etatDuTorchage,
   etatMourantDe,
@@ -60,6 +62,7 @@ import {
   type IncendieAPoser,
   indexerLesChandellesTombees,
   indexerLesChutes,
+  indexerLesCrues,
   indexerLesGestes,
   indexerLesMorts,
   indexerLesTorches,
@@ -325,7 +328,14 @@ export function useEllipse(
   // Tout sauf la saison, qui se calcule après pour pouvoir lire l'attente.
   const noyau = useMemo<Omit<EllipseDuJeu, "saison">>(() => {
     if (!snapshot || !station) return RIEN;
-    const journal = journalDe(snapshot);
+    // **La crue de la semaine**, qui n'est pas un événement du moteur mais la
+    // grandeur qu'il donne pour elle (#127) : `soilDebordementMm`, dont il dit
+    // lui-même qu'elle est « la seule base honnête pour une crue ». Elle rejoint
+    // le journal ici, et non dans `journalDe` : celui-ci est **structurel** — il
+    // sert aussi au worker, qui replie un `TickResult` où le champ ne porte pas
+    // le même nom — et il n'a pas d'altitudes sous la main.
+    const crue = crueDeLaSemaine(snapshot.soilDebordementMm, station.altitudesM);
+    const journal = { ...journalDe(snapshot), ...(crue ? { crue } : {}) };
     const plan = auRythmeNaturel
       ? planAuRythmeNaturel([journal])
       : planDEllipse([journal], budgetMs);
@@ -338,6 +348,7 @@ export function useEllipse(
     const chandelles = indexerLesChandellesTombees(plan);
     const morts = indexerLesMorts(plan);
     const voiles = indexerLesVoiles(plan, coteM);
+    const crues = indexerLesCrues(plan);
     const gestes = indexerLesGestes(plan);
     const feu = trouverLeFeu(plan);
     // **Les fûts consumés brûlent avec les autres** (#246) : un seul index, et
@@ -444,9 +455,14 @@ export function useEllipse(
         remodelageDe(gestes, depuis(maintenantMs), id, especeId),
       voiler: (maintenantMs) => {
         const ecoule = depuis(maintenantMs);
-        // Le front d'incendie et le voile d'un geste passent par la **même**
-        // couche : deux choses différentes qui se dessinent pareil.
-        return [...voilesEnCours(voiles, ecoule), ...feuEnCours(feu, ecoule)];
+        // Le front d'incendie, le voile d'un geste et l'onde d'une crue passent
+        // par la **même** couche : trois choses différentes qui se dessinent
+        // pareil, et dont aucune ne laisse quoi que ce soit derrière elle.
+        return [
+          ...voilesEnCours(voiles, ecoule),
+          ...feuEnCours(feu, ecoule),
+          ...crueEnCours(crues, ecoule, snapshot.week % 52),
+        ];
       },
       feu: (maintenantMs) => particulesDuFeu(feu, depuis(maintenantMs), coteM, vent, torches),
       marqueurs: calque.marqueurs,

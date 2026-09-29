@@ -42,6 +42,7 @@ import type {
   TempeteResult,
 } from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
+import type { CrueDeLaSemaine } from "./crue";
 
 /**
  * Le journal des changements, tel que le protocole le livre.
@@ -91,6 +92,17 @@ export interface JournalDeSemaine {
    * D'où l'événement, et lui seul.
    */
   franchissements?: readonly FranchissementDeStade[];
+  /**
+   * L'eau que la semaine n'a pas pu faire rentrer dans le sol (#127).
+   *
+   * **Ce n'est pas un événement du moteur, et c'est assumé** : il n'existe pas
+   * d'`IncendieResult` de la crue. Ce qui existe est la grandeur de la semaine
+   * — `TickResult.debordementParCellule` —, dont le moteur dit lui-même qu'elle
+   * est « la seule base honnête pour une crue, une lame d'eau ou une ravine ».
+   * L'acte joue donc l'eau **de cette semaine-là**, jamais un écart entre deux
+   * instantanés.
+   */
+  crue?: CrueDeLaSemaine;
 }
 
 /** Ce qu'un acte montre. Une union, pour que le dessin sache quoi faire. */
@@ -136,6 +148,15 @@ export type Sujet =
        */
       versRad: number;
       victimes: readonly { id: number; hauteurM: number }[];
+    }
+  | {
+      quoi: "crue";
+      /** les cellules noyées, rangées du haut vers le bas du versant */
+      cellules: readonly number[];
+      /** ce que chacune a refusé cette semaine, mm — même ordre */
+      lamesMm: readonly number[];
+      /** quand l'onde atteint chacune ∈ [0,1] — même ordre */
+      rangs: readonly number[];
     }
   | { quoi: "chute"; chutes: readonly ChuteDeChandelle[] }
   | { quoi: "mort"; cause: CauseMort; morts: readonly MortDeLaSemaine[] }
@@ -226,6 +247,9 @@ export const DUREE_NATURELLE_MS: Readonly<Record<Sujet["quoi"], number>> = {
   mort: 1400,
   // Un quart de tour autour du pied, accéléré comme une chute libre.
   chute: 900,
+  // L'eau traverse la parcelle : c'est un parcours, comme le front d'incendie,
+  // et un peu plus court parce qu'elle n'a rien à consumer en chemin.
+  crue: 1800,
 };
 
 /**
@@ -241,6 +265,7 @@ const BLOQUANT: Readonly<Record<Sujet["quoi"], boolean>> = {
   tempete: true,
   mort: true,
   chute: true,
+  crue: true,
 };
 
 /**
@@ -252,7 +277,7 @@ const BLOQUANT: Readonly<Record<Sujet["quoi"], boolean>> = {
  * de l'enchaînement un hasard. Les gestes du joueur viennent en tête : c'est
  * lui qui a agi, et le reste de la semaine en découle.
  */
-const ORDRE: readonly Sujet["quoi"][] = ["geste", "feu", "tempete", "mort", "chute"];
+const ORDRE: readonly Sujet["quoi"][] = ["geste", "feu", "tempete", "crue", "mort", "chute"];
 
 /**
  * Range un journal de changements dans un budget de temps d'écran.
@@ -343,6 +368,7 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
   const parCause = new Map<CauseMort, MortDeLaSemaine[]>();
   const feux: IncendieResult[] = [];
   const tempetes: TempeteResult[] = [];
+  const crues: CrueDeLaSemaine[] = [];
   for (const j of journaux) {
     if (j.gestes) gestes.push(...j.gestes);
     if (j.chutes) chutes.push(...j.chutes);
@@ -351,6 +377,10 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
     // n'ont pas le même cap, et les confondre coucherait les arbres de l'une
     // dans le sens de l'autre.
     if (j.tempete) tempetes.push(j.tempete);
+    // Une crue par **semaine**, et non fusionnées, pour la même raison que les
+    // rafales : deux crues de deux hivers ne noient pas les mêmes cellules, et
+    // les confondre ferait courir l'onde de l'une sur l'emprise de l'autre.
+    if (j.crue) crues.push(j.crue);
     for (const m of j.morts ?? []) {
       const deja = parCause.get(m.cause);
       if (deja) deja.push(m);
@@ -387,6 +417,9 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
       versRad: t.versRad,
       victimes: [...t.victimes],
     });
+  }
+  for (const c of crues) {
+    sujets.push({ quoi: "crue", cellules: c.cellules, lamesMm: c.lamesMm, rangs: c.rangs });
   }
   for (const [cause, morts] of parCause) sujets.push({ quoi: "mort", cause, morts });
   if (chutes.length > 0) sujets.push({ quoi: "chute", chutes });
