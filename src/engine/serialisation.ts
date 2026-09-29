@@ -116,8 +116,17 @@ const MAGIE = "CANOPEE\u0000";
  * choix silencieux : l'état relu aurait perdu tout l'azote que la partie avait
  * lessivé sous la surface, sans que rien ne le signale. On refuse, et le journal
  * reprend la main — la même règle que pour la précision.
+ *
+ * **4 (issue #280)** : une grille de plus encore, `ammoniacalNG`, qui porte la
+ * part ammoniacale de `mineralNG`. Un bloc de version 3 ne la contient pas, et
+ * la reconstruire à zéro dirait « tout l'azote minéral de cette partie est du
+ * nitrate » — donc entièrement lessivable dès la semaine suivante. Ce n'est pas
+ * une approximation, c'est un état qui n'a jamais existé. On refuse, et le
+ * journal reprend la main. Troisième fois que cette règle sert, et toujours
+ * pour la même raison : une grille absente n'a pas de valeur par défaut
+ * innocente.
  */
-export const VERSION_FORMAT = 3;
+export const VERSION_FORMAT = 4;
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {

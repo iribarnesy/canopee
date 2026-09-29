@@ -136,8 +136,96 @@ export function nitrogenAvailabilityFactor(stockG: number): number {
 /**
  * Lessivage d'une cellule : l'azote en solution part avec l'eau qui draine
  * (modèle de mélange : fraction = eau partie / eau totale).
+ *
+ * **Ne lui donner que la part nitrique** (#280). L'ammonium est un cation, il
+ * tient sur le complexe d'échange et ne suit pas l'eau ; le nitrate est un
+ * anion et la suit entièrement. Passer le stock minéral entier à cette
+ * fonction, ce que le moteur faisait, revenait à lessiver un cinquième
+ * d'azote qui ne bouge pas.
  */
 export function cellLeachedG(stockG: number, drainageMm: number, soilWaterMm: number): number {
   const leachFraction = drainageMm / Math.max(1e-9, drainageMm + soilWaterMm);
   return stockG * leachFraction;
+}
+
+/**
+ * Part de l'ammonium nitrifiée en une semaine **au régime optimal** (#280).
+ *
+ * Ce que la littérature agronomique donne n'est pas un taux hebdomadaire mais
+ * une durée : l'ammonium apporté à un sol chaud est **essentiellement nitrifié
+ * en deux à quatre semaines**, ce qui est la raison d'être de la règle des
+ * apports d'automne (« remember 50 degrees » : au-dessus de 10 °C, l'azote
+ * ammoniacal qu'on apporte ne reste pas ammoniacal). Une fraction de 0,6 par
+ * semaine vide 97 % du pool en quatre semaines et 84 % en deux : c'est le
+ * milieu de cette fourchette *(à calibrer)*.
+ *
+ * **Ce n'est pas ce chiffre qui porte le lot**, et c'est ce qui permet de
+ * l'admettre imprécis. La part d'ammonium en sortie d'hiver — la grandeur
+ * qu'on confronte au relevé — ne dépend presque pas de lui : elle dépend du
+ * temps passé sous 5 °C, où le facteur de température l'annule de toute façon.
+ */
+export const NITRIFICATION_MAX_SEMAINE = 0.6;
+
+/**
+ * Frein de la température sur la nitrification ∈ [0,1] (#280).
+ *
+ * **Deux points tenus, et ils viennent du dehors** : une paramétrisation
+ * publiée donne « 50 % reduction at 12 °C and 100 % at 5 °C », avec un régime
+ * plein entre 15 et 35 °C. La rampe passe donc exactement par (5 ; 0),
+ * (12 ; 0,5) et (15 ; 1), en deux segments — ce n'est pas une courbe lissée
+ * faute de mieux, c'est la droite qui relie les points mesurés.
+ *
+ * La règle agronomique nord-américaine dit la même chose plus grossièrement
+ * (« remember 50 degrees », soit 10 °C) en précisant que la nitrification
+ * **ne s'arrête pas tout à fait** avant 0 °C. Le zéro à 5 °C est donc un peu
+ * dur, et c'est assumé : l'écart porte sur des semaines où le stock ne bouge
+ * de toute façon presque pas.
+ *
+ * **Hors domaine, et dit** : au-delà de 35 °C la nitrification décline, ce que
+ * cette fonction ignore. Aucune moyenne hebdomadaire du moteur n'y monte.
+ */
+export function facteurTemperatureNitrification(tMean: number): number {
+  if (tMean <= 5) return 0;
+  if (tMean >= 15) return 1;
+  // (5 ; 0) → (12 ; 0,5) puis (12 ; 0,5) → (15 ; 1)
+  if (tMean <= 12) return (0.5 * (tMean - 5)) / 7;
+  return 0.5 + (0.5 * (tMean - 12)) / 3;
+}
+
+/**
+ * Frein de l'acidité sur la nitrification ∈ [0,1] (#280).
+ *
+ * **Plus raide que le frein de la vie du sol en général** (`facteurPhBiologie`,
+ * soil.ts), et c'est le fait : les nitrifiants autotrophes classiques ne
+ * croissent pas sous pH 5,5, quand la minéralisation, elle, continue. Relever
+ * le pH stimule la nitrification sur toute la gamme 4,8-8,5.
+ *
+ * Elle ne tombe pas à zéro pour autant — « nitrification continued at much
+ * lower rates at pH values of 3 to 4.8 », le travail des archées —, d'où le
+ * plancher à 0,1. C'est **la raison pour laquelle un sol forestier acide
+ * accumule son azote sous forme ammoniacale**, fait documenté de longue date,
+ * et le moteur le rendra sans qu'on l'ait écrit.
+ *
+ * Le plancher et le plein régime sont deux lectures de sources qualitatives
+ * *(à calibrer)* ; ce qui est solide est la **forme** — bas et plat en acide,
+ * plein vers la neutralité.
+ */
+export function facteurPhNitrification(ph: number): number {
+  if (ph <= 5) return 0.1;
+  if (ph >= 7) return 1;
+  return 0.1 + (0.9 * (ph - 5)) / 2;
+}
+
+/**
+ * Ce qu'une cellule nitrifie en une semaine, en grammes (#280).
+ *
+ * L'ammonium qui reste ne « résiste » pas : il attend simplement qu'il fasse
+ * assez chaud, ou que le sol soit assez peu acide, pour que les nitrifiants
+ * travaillent. C'est pour ça que le partage entre les deux formes ne se
+ * déclare nulle part — il **tombe** du climat et du pH de la cellule.
+ */
+export function nitrifieG(ammoniacalG: number, tMean: number, ph: number): number {
+  const part =
+    NITRIFICATION_MAX_SEMAINE * facteurTemperatureNitrification(tMean) * facteurPhNitrification(ph);
+  return Math.max(0, Math.min(ammoniacalG, ammoniacalG * part));
 }
