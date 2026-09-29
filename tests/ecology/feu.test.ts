@@ -347,15 +347,31 @@ describe("ce que le feu consume et qui était déjà mort", () => {
     const station: Station = { ...LANDE_SECHE.station, coteM: 30, voisinage: [] };
     let consumeesVues = 0;
     // Graines en ordre croissant : une liste où celles qui marchent seraient
-    // mises devant serait un tirage choisi. Sondé sur neuf graines et quarante
-    // ans — la 3 donne un feu à l'an 20 qui consume 24 chandelles sur 28
-    // debout, la 11 en consume 57 sur 58, la 37 en donne deux dont un à 128.
+    // mises devant serait un tirage choisi.
+    //
+    // **L'horizon est de quarante ans, et il l'a toujours dû** (#280). Il était
+    // de vingt-cinq, alors que les premiers feux de ce décor tombent entre l'an
+    // 17 et l'an 37 : il coupait la distribution en son milieu, si bien que le
+    // moindre décalage vers la droite faisait taire la garde sans que les feux
+    // aient disparu. Relevé sur neuf graines et quarante ans, les deux versions
+    // du moteur :
+    //
+    //     avant #280    6 graines sur 9 brûlent · 10 feux · premier feu an 26,5
+    //     après #280    7 graines sur 9 brûlent ·  7 feux · premier feu an 29,1
+    //
+    // Chaque feu consume toutes ses chandelles dans les deux cas. Le retard de
+    // deux à trois ans est dans le bruit (sept ans de dispersion) ; ce qui a
+    // réellement changé est qu'il rebrûle moins. Et le commentaire précédent
+    // disait « la 3 donne un feu à l'an 20 » : c'était déjà faux avant #280, un
+    // lot antérieur l'avait déplacé sans que la garde le voie, puisqu'il lui
+    // suffit d'une graine qui brûle. Quarante ans est l'horizon que l'auteur de
+    // l'essai avait lui-même sondé.
     for (const graine of [2, 3, 5, 7, 11] as const) {
       let state = createGameState(station, rngStateFromSeed(graine));
       for (let i = 0; i < 36; i++) {
         state = plantAt(state, "ulex_europaeus", 2 + (i % 6) * 5, 2 + Math.floor(i / 6) * 5, 1.2);
       }
-      for (let i = 0; i < 25 * 52 && consumeesVues === 0; i++) {
+      for (let i = 0; i < 40 * 52 && consumeesVues === 0; i++) {
         const w = WEATHER[i % WEATHER.length];
         if (!w) throw new Error("météo manquante");
         const avant = new Map(state.trees.map((t) => [t.id, t]));
