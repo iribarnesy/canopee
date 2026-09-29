@@ -259,12 +259,42 @@ l'envers de ce que son issue espérait.
 
 ### Un atlas peut être incohérent sans qu'aucune fiche soit fausse
 
-Chaque fiche sourcée cite honnêtement sa source. Mais elles n'y lisent pas la
-même grandeur : une tolérance publiée pour l'une, un optimum horticole pour la
-deuxième, et pour la ronce une **classe de fréquence** — « la plus fréquente à
-pH 3,5-5,0 » devient la borne `3,5`, si bien que le moteur la met à 5 % de
-vigueur au bas de la classe où on la rencontre le plus. Quinze fiches sur vingt-six ne
-portent aucune source dans le commentaire de ce champ.
+Chaque fiche sourcée cite honnêtement **un nom de source**. Mais l'audit qui a
+suivi (#279) a ouvert onze de ces sources, et **une seule fiche tombe juste** —
+le hêtre, qui cite un article, nomme sa grandeur (*extrêmes tolérés*, pH H₂O) et
+rend 3,2-7,3 au dixième.
+
+Trois familles de défaut, et elles ne se corrigent pas pareil :
+
+1. **La catégorie traduite en nombre, attribution conservée** — six fiches. Les
+   flores publient une échelle à crans (« mildly acid, neutral, basic ») sans un
+   chiffre ; le dépôt a traduit « légèrement alcalin » par 7,5, quatre fois, et
+   laissé le nom de la source dessus. **Une décision, pas six corrections.**
+2. **La grandeur interchangée** — le pommier est le cas net : PFAF donne
+   « **tolerates** a pH range from 6 to 7, **preferring** 6.5 to 6.8 », la fiche
+   appelle « optimum » le premier et jette le second. **Disparaît avec le champ
+   `optimum`**, pas avant.
+3. **L'énoncé durci** — le frêne fait « absent sous 4,2 » d'un « commonest on
+   soils with pH > 4.2 » ; le pin se voit prêter une chlorose que l'USFS ne
+   mentionne pas. Trois fiches à réécrire, et c'est le plus petit tas.
+
+Et quinze fiches sur vingt-six ne citent aucune source pour ce champ.
+
+### Une citation dans un commentaire n'est pas une source
+
+C'est la leçon transportable, et elle m'a eu **deux fois dans le même lot**.
+J'ai bâti l'illustration principale de cette décision sur la ronce, « la plus
+fréquente à pH 3,5-5,0 » d'après sa fiche, attribué au BSBI de Fermanagh. Le
+compte d'espèce du BSBI dit : *« Brambles are most abundant on damp to wet acid
+soils »* — **aucun nombre**. Même chose pour la chlorose du pin. Les deux fois,
+j'avais recopié une citation sans l'ouvrir, en documentant précisément ce
+défaut-là.
+
+Une citation entre guillemets se lit comme une garantie et n'en est pas une :
+c'est une **affirmation sur** une source, et elle **désarme** la vérification —
+on voit un nom, on passe. Le réflexe : quand un chiffre porte le lot, ouvrir la
+source, même si la fiche a l'air sûre d'elle. Surtout si elle a l'air sûre
+d'elle.
 
 **Rien n'a été touché** : une borne déplacée déplace une calibration, donc c'est
 un lot à mesurer, pas une correction de texte.
