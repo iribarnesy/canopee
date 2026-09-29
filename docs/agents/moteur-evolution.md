@@ -61,7 +61,104 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (ce que `ph` déclare, #262)
+## Ce que le dernier lot a appris (l'azote profond rencontre une ancre, #247)
+
+Lot de **mesure**, sans une ligne de code : opposer le profil d'azote du moteur
+à un relevé de terrain, ce que le lot A de #247 n'avait jamais fait.
+
+### Deux bras identiques au bit près ne sont pas deux bras
+
+Le premier banc cultivé était muet. Le semis était **refusé** — « le tapis
+occupe déjà le sol : labourer ou faucher avant de semer » — et je jetais les
+`refusals` sans les lire. Les deux bras cultivés rendaient donc le témoin nu
+**à la décimale**, 10,56 / 32,57 des deux côtés, et le bras « blé fertilisé »
+était en réalité du sol nu arrosé de 150 kg N/ha sans rien pour le prendre.
+
+**Ce qui l'a trahi est l'égalité elle-même** : deux bras censés différer ne
+peuvent pas coïncider sur six chiffres. C'est le même piège que `ler.ts`
+documente depuis #136 sous une autre forme — un témoin, ça se conduit — et la
+parade est mécanique : **toute action refusée doit lever**, jamais être avalée.
+Le banc a d'ailleurs fini par en attraper une seconde, un labour refusé pour
+« découvert plafonné » à l'an 42 : le bras avait fait faillite.
+
+### Une part stable, un niveau qui ne l'est pas
+
+| | part de l'azote minéral sous l'horizon de surface |
+|---|---|
+| moteur, sol nu, an 3 à 45 | **75,5 à 75,8 %** |
+| moteur, blé fertilisé, an 3 à 32 | 83,8 → **88,0 %** |
+| relevé RSH Pays de la Loire, sous 30 cm | **61,2 %** |
+
+La part profonde du sol nu tient **quatre chiffres identiques sur quarante-cinq
+ans** pendant que le stock perd un tiers. Ce n'est pas une grandeur qui flotte :
+c'est une propriété structurelle du modèle à deux compartiments, et c'est ce qui
+en fait une bonne cible de comparaison.
+
+Le **niveau**, lui, ne conclut rien, et il faut savoir s'arrêter là : le bras
+fertilisé décline de 188 à 42 kg/ha en trente-deux ans sans se poser. Il
+**traverse** les 43 kg/ha du relevé, il ne s'y installe pas. Annoncer « 42
+contre 43 » serait lire un croisement de courbe et l'appeler un accord.
+
+### Le réflexe : une comparaison de part survit à ce qu'une comparaison de niveau ne supporte pas
+
+C'est la leçon transportable. Un moteur qui n'a pas convergé ne peut pas être
+jugé sur un stock, mais il peut l'être sur une **répartition**, si celle-ci est
+stable — et ici elle l'est à 0,3 point près. Chercher la grandeur invariante
+avant de chercher l'accord.
+
+### Et normaliser par le découpage avant d'annoncer un écart
+
+L'horizon de surface du moteur fait **35 cm**, le relevé **30**. L'objection
+évidente à toute comparaison de parts est donc « vos compartiments n'ont pas la
+même épaisseur », et elle est fondée : une part de surface se compare d'abord à
+ce qu'une concentration **uniforme** donnerait, soit l'épaisseur de l'horizon
+de surface rapportée à celle du profil.
+
+Ça ne fait pas que blinder le résultat, **ça le renverse** :
+
+| | h0 / profil | uniforme | observé | écart |
+|---|---|---|---|---|
+| **relevé RSH** | 30/90 | 33,3 % | 38,8 % | **+5,4** |
+| limon riche | 35/100 | 35,0 % | 24,2 % | −10,8 |
+| limon pauvre en N | 30/100 | 30,0 % | 21,0 % | −9,0 |
+| friche limon | 30/80 | 37,5 % | 29,0 % | −8,5 |
+| vallée engorgée | 30/85 | 35,3 % | 29,4 % | −5,9 |
+| limon acide | 30/90 | 33,3 % | 28,9 % | −4,4 |
+| suberaie des Maures | 25/120 | 20,8 % | 17,4 % | −3,5 |
+| lande sèche | 20/115 | 17,4 % | 16,0 % | −1,4 |
+| sable profond | 25/130 | 19,2 % | 21,6 % | **+2,4** |
+
+**Au champ l'azote minéral est concentré en haut ; dans le moteur il l'est en
+bas**, sur sept stations sur huit. La comparaison de parts brute disait « même
+direction, magnitude fausse » ; normalisée, elle dit « direction inverse ».
+
+**La huitième est dite, pas escamotée** : le sable profond est à +2,4, et c'est
+le cas dégénéré — ses deux compartiments ne portent ensemble que 0,88 kg N/ha
+et se vident presque entièrement, si bien que le partage n'y mesure plus rien.
+Une exception qu'on explique reste une exception, et l'annonce est « sept sur
+huit », pas « sans exception ».
+
+### Trois candidates, une seule chiffrée
+
+**Tout l'azote minéral du moteur est lessivable, alors qu'un cinquième du réel
+ne l'est pas** : l'ammonium tient sur le complexe argilo-humique, et il pèse
+25 % de l'horizon labouré dans le relevé. C'est #280, et le crochet existe déjà
+— `bases.ts` tient ce complexe par horizon depuis #170, donc le mécanisme
+tomberait d'un existant, sans trait d'espèce.
+
+Les deux autres, non chiffrées : la cellule de mélange, qui vide un compartiment
+là où un limon déplace un front, et le nombre de compartiments.
+
+### Lire un chiffre dans un graphique de PDF, et le contraindre
+
+Les valeurs du relevé sortent de l'extraction dans l'ordre de tracé, donc
+l'appariement horizon ↔ forme était ambigu — et un mauvais appariement donnait
+un ammonium de 15,46 à 30-60 cm, absurde mais pas impossible à l'œil. Il a été
+**fixé sur les bornes d'axe** : le bon donne une barre maximale de 20,68 sous un
+axe à 25, le concurrent 31,08 au-dessus. Contraint, pas deviné, et le second
+graphique du document tombe de même sous son propre axe.
+
+## Ce qu'un lot plus ancien a appris (ce que `ph` déclare, #262)
 
 ### Une grandeur qu'on n'a pas définie, le moteur la définit à votre place
 
