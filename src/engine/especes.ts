@@ -36,12 +36,50 @@ export interface EspeceV0 {
    * Amplitude de pH où l'atlas signale l'espèce [min, max] (nuancier
    * acidiphile→calcicole).
    *
-   * **C'est une amplitude de présence**, **pas un plateau de vigueur**. L'espèce y est
-   * pleine en son milieu et réduite au cinquième à ses bornes, où elle est
-   * rare et mal en point sans être morte — c'est `soil.ts:facteurGammePh` qui
-   * porte la forme, et elle est unimodale. Lire ces deux nombres comme des
-   * murs a déjà coûté : le moteur tuait à coup sûr au pH exact qu'il annonçait
-   * tolérable.
+   * **C'est une amplitude de présence**, **pas un plateau de vigueur**, **pas un
+   * optimum** : les deux bornes de l'aire où l'espèce est encore observée au
+   * champ. Tranché en #262, contre une ancre du dehors et non contre l'usage
+   * du dépôt.
+   *
+   * **L'ancre.** L'étalon de l'analyse de gradient décrit une réponse d'espèce
+   * par une courbe **unimodale à deux paramètres** — un optimum et une
+   * tolérance, cette dernière étant la largeur de la courbe (ter Braak &
+   * Looman 1986, *Vegetatio* 65) — et l'ajuste sur de la **présence-absence**
+   * justement parce que l'abondance est brouillée par la concurrence. Ce champ
+   * est donc le **second** paramètre, celui de largeur ; le premier n'est pas
+   * déclaré.
+   *
+   * **Ce que ça impose à la forme**, et `soil.ts:facteurGammePh` ne le respecte
+   * pas encore (#262) : une unimodale n'a **pas de genou**, et son cœur à
+   * quasi-plein régime vaut la **même part** de l'amplitude pour toutes les
+   * espèces — 13 à 27 % selon la convention de largeur, contre 30 à 72 %
+   * aujourd'hui, où une généraliste à large amplitude est pleine presque
+   * partout et une spécialiste presque nulle part.
+   *
+   * **Ce qui manque**, et c'est le vrai défaut de l'atlas : l'**optimum**. Le
+   * moteur le devine au milieu de l'amplitude *(hypothèse, pas mesure)* alors
+   * que **six** fiches le portent déjà dans leur propre commentaire et le
+   * jettent — le pin « optimum 4,5-6,0 » (USFS Silvics), le noyer « préfère
+   * 6,6-7,5 », le pommier « optimum 6-7 », l'abricotier « optimum 6,7-7,5 »,
+   * le cornouiller « préfère 5,5-7,5 », le frêne « préfère base-riche au-dessus
+   * de 5,5 ».
+   *
+   * Et c'est ce manque, pas la largeur de la rampe, qui fait le défaut de
+   * #262 : le milieu de l'amplitude met l'optimum du pin à 5,75 quand sa source
+   * le met à 5,25, si bien que le moteur en fait une espèce à l'aise sur un
+   * limon neutre (0,764 à pH 7,0) et en peine sur un podzol (0,336 à pH 4,2).
+   * C'est exactement l'inverse d'un calcifuge.
+   *
+   * **Et l'atlas n'est pas homogène** : les bornes ci-dessous ont été lues
+   * tantôt sur une tolérance publiée, tantôt sur un optimum horticole, tantôt
+   * sur une **classe de fréquence** (la ronce, « la plus fréquente à
+   * pH 3,5-5,0 » : la borne 3,5 est le bas de la classe où on la rencontre le
+   * plus, et le moteur l'y met à 5 % de vigueur). Quinze fiches sur vingt-six
+   * ne portent aucune source pour ce champ. Recensé et non corrigé : toucher
+   * une borne déplace une calibration, donc c'est un lot à part, à mesurer.
+   *
+   * Lire ces deux nombres comme des **murs** a déjà coûté : le moteur tuait à
+   * coup sûr au pH exact qu'il annonçait tolérable.
    */
   ph: [number, number];
   lumiere: {
