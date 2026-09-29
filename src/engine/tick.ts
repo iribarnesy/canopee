@@ -1917,6 +1917,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // du tick et avec la même garde : `waterMm[i * nH]` est l'eau de l'horizon
     // 0, donc ce calcul-ci était **déjà** écrit comme un flux de surface. On ne
     // réinterprète rien, on écrit sa destination.
+    // **Un sous-pool ne peut pas dépasser son parent, et c'est l'arithmétique
+    // flottante qui le lui fait faire** : l'invariant tient exactement en algèbre,
+    // mais les retraits proportionnels rabattent les deux grilles par des chemins
+    // d'arrondi différents, et là où l'ammonium fait 99,9 % du stock — les stations
+    // acides — la marge descend à **−2,2e-16**, un ULP de double précision, mesuré
+    // en CI. Ce plafond vient donc ici, après le dernier retrait proportionnel du
+    // tick, et pas au moment de la nitrification.
+    //
+    // Il n'escamote **aucune quantité**, à la différence du plancher des bases
+    // (#234) où borner sans compter aurait détruit de l'acidité réelle : ce qui
+    // est retranché ici est la moitié du plus petit écart représentable. Borner
+    // est la définition du sous-pool, pas une correction — et l'invariant reste
+    // à **zéro strict** dans `pools-positifs.test.ts`, donc une vraie fuite le
+    // ferait toujours tomber.
+    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0)) ammoniacalNG[i] = mineralNG[i] ?? 0;
     // **Seul le nitrate suit l'eau** (#280) : l'ammonium est un cation, il tient
     // sur le complexe d'échange. Passer le stock entier, ce que faisait ce
     // calcul, lessivait un cinquième d'azote qui ne bouge pas.
