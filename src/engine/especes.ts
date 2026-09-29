@@ -70,13 +70,19 @@ export interface EspeceV0 {
    * limon neutre (0,764 à pH 7,0) et en peine sur un podzol (0,336 à pH 4,2).
    * C'est exactement l'inverse d'un calcifuge.
    *
-   * **Et l'atlas n'est pas homogène** : les bornes ci-dessous ont été lues
-   * tantôt sur une tolérance publiée, tantôt sur un optimum horticole, tantôt
-   * sur une **classe de fréquence** (la ronce, « la plus fréquente à
-   * pH 3,5-5,0 » : la borne 3,5 est le bas de la classe où on la rencontre le
-   * plus, et le moteur l'y met à 5 % de vigueur). Quinze fiches sur vingt-six
-   * ne portent aucune source pour ce champ. Recensé et non corrigé : toucher
-   * une borne déplace une calibration, donc c'est un lot à part, à mesurer.
+   * **Et l'atlas n'est pas homogène** : les bornes ci-dessous ne déclarent pas
+   * toutes la même grandeur. Onze fiches sourcées ont été ouvertes à la
+   * source (#279) ; **une seule tombe juste**. Le cas le plus net est le
+   * pommier : PFAF donne « **tolerates** a pH range from 6 to 7, **preferring**
+   * 6.5 to 6.8 », et la fiche appelle « optimum » le premier en jetant le
+   * second — les deux paramètres du modèle, intervertis. Six autres portent
+   * des nombres attribués à une source qui n'en donne **aucun** : les flores
+   * publient des catégories (« mildly acid, neutral, basic »), le dépôt les a
+   * traduites en nombres et a laissé l'attribution dessus. Et quinze fiches
+   * sur vingt-six ne citent aucune source pour ce champ.
+   *
+   * Recensé et non corrigé : toucher une borne déplace une calibration, donc
+   * c'est un lot à part, à mesurer.
    *
    * Lire ces deux nombres comme des **murs** a déjà coûté : le moteur tuait à
    * coup sûr au pH exact qu'il annonçait tolérable.
