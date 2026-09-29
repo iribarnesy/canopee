@@ -61,7 +61,118 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (aucune station ne valait une médiane pour un pin, #254)
+## Ce que le dernier lot a appris (ce que `ph` déclare, #262)
+
+### Une grandeur qu'on n'a pas définie, le moteur la définit à votre place
+
+Le champ `ph` de l'atlas est lu par le moteur depuis le premier commit et
+personne n'avait écrit **ce qu'il déclare**. Une amplitude de survie ? de
+croissance ? un optimum ? Chacune des trois donne une forme de réponse
+différente, donc un moteur différent, et trois lots de pH s'étaient succédé en
+discutant la forme sans jamais poser la question de la grandeur.
+
+Elle n'était pas ouverte : elle était **tranchée en silence** par une constante.
+`VIGUEUR_A_LA_BORNE = 0,05`, choisi pour « la plus petite valeur qui ne casse
+rien », pose en fait que les deux nombres déclarés encadrent **4,9 écarts-types**
+de la courbe de réponse. Un chiffre retenu pour ce qu'il ne casse pas avait
+défini une grandeur.
+
+**La leçon générale** : quand un champ de l'atlas n'a pas de définition écrite,
+ce n'est pas une définition qui manque, c'en est une qui est cachée dans une
+constante — et elle a été choisie pour de mauvaises raisons.
+
+### L'ancre existait, et elle donne plus que la réponse demandée
+
+L'étalon de l'analyse de gradient décrit une réponse d'espèce par une courbe
+**unimodale à deux paramètres** — un optimum et une tolérance, cette dernière
+étant la largeur de la courbe — et l'ajuste sur de la **présence-absence**,
+explicitement parce que l'abondance est brouillée par la concurrence et la
+morphologie (ter Braak & Looman 1986, *Vegetatio* 65 ; définitions reprises par
+la documentation de JUICE). Le champ est donc le paramètre de **largeur** d'une
+amplitude de **présence**.
+
+Mais l'ancre dit surtout ce que l'atlas ne déclare pas : **l'optimum**, le
+premier des deux paramètres. Le moteur le devine au milieu de l'amplitude, et
+c'est une hypothèse écrite comme telle depuis longtemps — sauf que **six fiches
+portent déjà l'optimum dans leur propre commentaire** et le jettent : « optimum
+4,5-6,0 » pour le pin, « préfère 6,6-7,5 » pour le noyer, « optimum 6-7 » pour
+le pommier, « optimum 6,7-7,5 » pour l'abricotier, « préfère 5,5-7,5 » pour le
+cornouiller, « préfère base-riche au-dessus de 5,5 » pour le frêne. La donnée
+était là, sous le nombre qui l'écrase.
+
+### Et c'est l'optimum, pas la rampe, qui explique #262
+
+Le pin le montre mieux que n'importe quel raisonnement. Sa fiche cite l'USFS
+Silvics — « 4,0 à 7,0, **optimum 4,5-6,0**, chlorose au-delà de 6,5 » — et ne
+retient que la largeur, élargie à 7,5. Le moteur en déduit un optimum à 5,75.
+La source le met à **5,25**, un demi-point plus bas, et resserre la borne haute
+d'un demi-point aussi.
+
+Avec l'optimum de la source, et à la convention de largeur que le moteur
+s'impose déjà (0,05 à la borne) :
+
+| pH | trapèze actuel | unimodale, optimum deviné 5,75 | unimodale, **optimum publié 5,25** |
+|---|---|---|---|
+| 4,2 — podzol réel | 0,336 | 0,095 | **0,230** |
+| 4,5 | 0,764 | 0,217 | **0,473** |
+| 4,8 — `SABLE_PROFOND` | 1,000 | 0,414 | **0,764** |
+| 7,0 — limon riche | 0,764 | 0,217 | **0,017** |
+
+Le pin redevient ce qu'il est : **un calcifuge**, bon en sol acide, presque
+exclu d'un limon neutre. Le trapèze en faisait l'inverse — plein régime à
+pH 7,0 à 0,764 et effondré à 4,2 — et c'est de là que venaient les huit mètres.
+
+**Ce que ça coûte, et il faut le dire** : trente et un fichiers d'essai plantent
+encore un pin sur le limon riche. Passer de 0,764 à 0,017 les traverse tous.
+C'est un lot, pas une retouche.
+
+### Deux contraintes qui ne dépendent d'aucune convention
+
+La convention de largeur — que valent les bornes déclarées en écarts-types ? —
+n'est pas tranchable ici : elle se lit dans les sources, fiche par fiche. Mais
+deux écarts survivent à **toutes** les conventions, et ce sont donc des
+contraintes et non des photographies :
+
+1. **Le cœur doit valoir la même part de l'amplitude pour toutes les espèces.**
+   Sur une unimodale, la part où le facteur passe 0,95 vaut 27 % (largeur à
+   mi-hauteur), 16 % (quatre écarts-types) ou 13 % (la convention qu'implique
+   0,05) — la même pour chacune. Ici elle vaut **30 % pour l'abricotier et 72 %
+   pour le hêtre**, parce que la rampe est une largeur **absolue** (0,7)
+   opposée à des amplitudes de 1,8 à 4,5.
+2. **Une unimodale n'a pas de genou.** Et c'est le genou qui coûte les huit
+   mètres de #262.
+
+### Le résultat qui contredit celui qu'on attendait
+
+#262 reprochait à la rampe de trop pénaliser le pin à pH 4,2. Corriger la forme
+**ne lui rend rien** : à valeur de borne égale, la gaussienne rend 0,095 à 4,2
+et 0,217 à 4,5, là où le trapèze rend 0,336 et 0,764. Plus dure partout dans la
+moitié basse, simplement sans marche.
+
+| pH | trapèze | gaussienne, même borne | gaussienne, mi-hauteur |
+|---|---|---|---|
+| 4,2 | 0,336 | 0,095 | 0,581 |
+| 4,5 | 0,764 | 0,217 | 0,702 |
+
+Ce qui rendrait ses mètres au pin n'est pas la forme, c'est une **convention
+plus étroite**. Les deux questions sont couplées, et un lot qui n'en traiterait
+qu'une se tromperait de moitié. **Le réflexe à garder** : avant de corriger une
+courbe, vérifier dans quel sens la correction pousse. Celle-ci poussait à
+l'envers de ce que son issue espérait.
+
+### Un atlas peut être incohérent sans qu'aucune fiche soit fausse
+
+Chaque fiche sourcée cite honnêtement sa source. Mais elles n'y lisent pas la
+même grandeur : une tolérance publiée pour l'une, un optimum horticole pour la
+deuxième, et pour la ronce une **classe de fréquence** — « la plus fréquente à
+pH 3,5-5,0 » devient la borne `3,5`, si bien que le moteur la met à 5 % de
+vigueur au bas de la classe où on la rencontre le plus. Quinze fiches sur vingt-six ne
+portent aucune source dans le commentaire de ce champ.
+
+**Rien n'a été touché** : une borne déplacée déplace une calibration, donc c'est
+un lot à mesurer, pas une correction de texte.
+
+## Ce qu'un lot plus ancien a appris (aucune station ne valait une médiane pour un pin, #254)
 
 ### Une convention juste pour vingt essences peut être fausse pour la vingt-et-unième
 

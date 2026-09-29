@@ -117,6 +117,16 @@ export const RAMPE_PH = 0.7;
  * exprès — « le hêtre pousse mal en sec, mais son semis survit ». Un arbre au
  * bord de son amplitude de pH devrait pousser mal **et** tenir ; le moteur n'a
  * aucun moyen de le dire.
+ *
+ * **Ce que cette valeur déclare sans le dire** (#262). Choisir un facteur à la
+ * borne, c'est choisir **ce que l'amplitude de l'atlas veut dire** : 0,05
+ * revient à poser que les deux nombres déclarés encadrent **4,9 écarts-types**
+ * de la courbe de réponse. Les deux conventions publiées en donnent d'autres —
+ * 0,50 si l'amplitude est la largeur à mi-hauteur, 0,14 si elle vaut quatre
+ * écarts-types. Aucune n'est établie pour cet atlas, dont les fiches n'ont pas
+ * toutes lu la même chose dans leur source ; ce qui est établi, c'est que le
+ * chiffre n'est pas libre — il se lit dans les sources, pas dans le moteur
+ * *(à confirmer, fiche par fiche)*.
  */
 export const VIGUEUR_A_LA_BORNE = 0.05;
 
@@ -148,6 +158,15 @@ export const VIGUEUR_A_LA_BORNE = 0.05;
  * mesure : une spécialiste et une généraliste n'ont sûrement pas la même marge,
  * mais aucune donnée par espèce ne permettrait ici de les distinguer. Uniforme
  * est l'honnête tant qu'on n'a pas mieux *(à mesurer)*.
+ *
+ * **Ce que la marge représente a maintenant un nom** (#262) : l'écart entre la
+ * niche **réalisée** — où l'espèce se trouve, et c'est ce que l'atlas
+ * déclare — et la niche **fondamentale**, plus large, où elle tiendrait si la
+ * concurrence la laissait. C'est la distinction classique, et elle dit
+ * pourquoi une espèce survit hors de l'aire où on l'observe. Elle dit aussi
+ * que cette marge devrait suivre la largeur de la courbe, comme le reste :
+ * 0,7 pH absolus font 39 % de l'amplitude de l'abricotier et 16 % de celle du
+ * hêtre. Même défaut que la rampe, même lot.
  */
 export const MARGE_SURVIE_PH = 0.7;
 
@@ -186,6 +205,27 @@ export function facteurSurviePh(gamme: readonly [number, number], ph: number): n
  * référence tombe dans une rampe, à commencer par le pin sylvestre. C'est donc
  * une dette écrite, pas un acquis *(à mesurer)*. Le moteur tient d'ailleurs la
  * réponse du phosphore au pH par une gaussienne : celui-ci fait exception.
+ *
+ * **La dette est maintenant spécifiée** (#262), et par deux écarts qui ne
+ * dépendent d'aucune convention de largeur — donc par deux contraintes, pas
+ * deux photographies :
+ *
+ * 1. **Le cœur est trop large, et il varie.** Sur une unimodale, la part de
+ *    l'amplitude où le facteur passe 0,95 est la **même pour toutes les
+ *    espèces** : 27 % si l'amplitude déclarée est la largeur à mi-hauteur,
+ *    16 % si elle vaut quatre écarts-types (la convention de la DCA), 13 % à
+ *    la convention qu'implique `VIGUEUR_A_LA_BORNE` ci-dessus — 4,9 σ. Ici
+ *    elle vaut **30 % pour l'abricotier et 72 % pour le hêtre** : la rampe est
+ *    une largeur **absolue** (0,7) opposée à des amplitudes de 1,8 à 4,5, si
+ *    bien qu'une généraliste est pleine presque partout et une spécialiste
+ *    presque nulle part.
+ * 2. **Le trapèze a un genou, l'unimodale n'en a pas.** C'est le genou qui
+ *    coûte les huit mètres de #262 : le pin passe de 0,336 à 0,764 entre
+ *    pH 4,2 et 4,5. Une gaussienne à la **même** valeur de borne rend 0,095 et
+ *    0,217 — plus dure, mais sans marche. Corriger la forme ne **rend** donc
+ *    rien au pin ; ce qui le lui rendrait est une convention de largeur plus
+ *    étroite, et les deux questions sont couplées. C'est pourquoi le lot de
+ *    forme ne peut pas se faire sans elle.
  *
  * **Ce qui était faux**. La rampe touchait zéro **aux bornes** : mesuré sur les 26
  * espèces, `f(min) = 0` pour toutes — chacune en mort certaine au pH exact que
