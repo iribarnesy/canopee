@@ -61,7 +61,80 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (ce que `ph` déclare, #262)
+## Ce que le dernier lot a appris (l'azote profond rencontre une ancre, #247)
+
+Lot de **mesure**, sans une ligne de code : opposer le profil d'azote du moteur
+à un relevé de terrain, ce que le lot A de #247 n'avait jamais fait.
+
+### Deux bras identiques au bit près ne sont pas deux bras
+
+Le premier banc cultivé était muet. Le semis était **refusé** — « le tapis
+occupe déjà le sol : labourer ou faucher avant de semer » — et je jetais les
+`refusals` sans les lire. Les deux bras cultivés rendaient donc le témoin nu
+**à la décimale**, 10,56 / 32,57 des deux côtés, et le bras « blé fertilisé »
+était en réalité du sol nu arrosé de 150 kg N/ha sans rien pour le prendre.
+
+**Ce qui l'a trahi est l'égalité elle-même** : deux bras censés différer ne
+peuvent pas coïncider sur six chiffres. C'est le même piège que `ler.ts`
+documente depuis #136 sous une autre forme — un témoin, ça se conduit — et la
+parade est mécanique : **toute action refusée doit lever**, jamais être avalée.
+Le banc a d'ailleurs fini par en attraper une seconde, un labour refusé pour
+« découvert plafonné » à l'an 42 : le bras avait fait faillite.
+
+### Une part stable, un niveau qui ne l'est pas
+
+| | part de l'azote minéral sous l'horizon de surface |
+|---|---|
+| moteur, sol nu, an 3 à 45 | **75,5 à 75,8 %** |
+| moteur, blé fertilisé, an 3 à 32 | 83,8 → **88,0 %** |
+| relevé RSH Pays de la Loire, sous 30 cm | **61,2 %** |
+
+La part profonde du sol nu tient **quatre chiffres identiques sur quarante-cinq
+ans** pendant que le stock perd un tiers. Ce n'est pas une grandeur qui flotte :
+c'est une propriété structurelle du modèle à deux compartiments, et c'est ce qui
+en fait une bonne cible de comparaison.
+
+Le **niveau**, lui, ne conclut rien, et il faut savoir s'arrêter là : le bras
+fertilisé décline de 188 à 42 kg/ha en trente-deux ans sans se poser. Il
+**traverse** les 43 kg/ha du relevé, il ne s'y installe pas. Annoncer « 42
+contre 43 » serait lire un croisement de courbe et l'appeler un accord.
+
+### Le réflexe : une comparaison de part survit à ce qu'une comparaison de niveau ne supporte pas
+
+C'est la leçon transportable. Un moteur qui n'a pas convergé ne peut pas être
+jugé sur un stock, mais il peut l'être sur une **répartition**, si celle-ci est
+stable — et ici elle l'est à 0,3 point près. Chercher la grandeur invariante
+avant de chercher l'accord.
+
+### Et vérifier le sens de l'écart avant de l'annoncer
+
+L'horizon de surface du moteur fait **35 cm**, le relevé **30**. Un compartiment
+plus épais devrait retenir **plus**, donc la comparaison brute **sous-estime**
+l'écart au lieu de l'exagérer. Un quart d'heure de vérification qui change le
+statut du résultat : sans elle, la première objection en réunion l'aurait
+renvoyé à un artefact de découpage.
+
+### Trois candidates, une seule chiffrée
+
+**Tout l'azote minéral du moteur est lessivable, alors qu'un cinquième du réel
+ne l'est pas** : l'ammonium tient sur le complexe argilo-humique, et il pèse
+25 % de l'horizon labouré dans le relevé. C'est #280, et le crochet existe déjà
+— `bases.ts` tient ce complexe par horizon depuis #170, donc le mécanisme
+tomberait d'un existant, sans trait d'espèce.
+
+Les deux autres, non chiffrées : la cellule de mélange, qui vide un compartiment
+là où un limon déplace un front, et le nombre de compartiments.
+
+### Lire un chiffre dans un graphique de PDF, et le contraindre
+
+Les valeurs du relevé sortent de l'extraction dans l'ordre de tracé, donc
+l'appariement horizon ↔ forme était ambigu — et un mauvais appariement donnait
+un ammonium de 15,46 à 30-60 cm, absurde mais pas impossible à l'œil. Il a été
+**fixé sur les bornes d'axe** : le bon donne une barre maximale de 20,68 sous un
+axe à 25, le concurrent 31,08 au-dessus. Contraint, pas deviné, et le second
+graphique du document tombe de même sous son propre axe.
+
+## Ce qu'un lot plus ancien a appris (ce que `ph` déclare, #262)
 
 ### Une grandeur qu'on n'a pas définie, le moteur la définit à votre place
 
