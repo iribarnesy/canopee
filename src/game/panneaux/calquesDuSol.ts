@@ -19,7 +19,15 @@
 
 import type { Snapshot, StationInfo } from "../protocol";
 
-export type Calque = "eau" | "ph" | "azote" | "herbe" | "nappe" | "engorgement" | "ravageurs";
+export type Calque =
+  | "eau"
+  | "ph"
+  | "azote"
+  | "herbe"
+  | "nappe"
+  | "engorgement"
+  | "ravageurs"
+  | "erosion";
 
 /** Une teinte HSL, telle que le canvas et le CSS l'attendent. */
 export type Teinte = readonly [hue: number, saturation: number, luminosite: number];
@@ -67,6 +75,16 @@ export interface FicheDeCalque {
    * elle affirme un maximum qui n'existe pas.
    */
   borneHauteOuverte?: boolean;
+  /**
+   * Et son symétrique, pour une échelle qui a **deux** bouts ouverts.
+   *
+   * Le cas de l'érosion, et le seul : ce qu'une cellule perd et ce qu'une autre
+   * reçoit n'ont pas de maximum, ils s'accumulent tant que la partie dure. Les
+   * deux bornes sont donc des seuils de teinte, et la légende doit écrire
+   * « ≤ −3 » comme elle écrit « ≥ 3 » — sinon elle affirme deux extrêmes qui
+   * n'existent pas.
+   */
+  borneBasseOuverte?: boolean;
 }
 
 /** Où tombe une valeur dans son dégradé, entre 0 et 1. */
@@ -98,6 +116,40 @@ export const TEINTE_EAU_LIBRE: Teinte = [200, 55, 45];
 
 /** Au delà de cette profondeur, la nappe ne concerne plus la parcelle, cm. */
 const NAPPE_HORS_DE_PORTEE_CM = 300;
+
+/**
+ * De combien la courbe de l'érosion étale son bas.
+ *
+ * Cent, et c'est une décision de **plage** : ce calque doit tenir ensemble le
+ * millimètre d'un versant tranquille et les dizaines de centimètres d'une
+ * ravine. Sondé sur limon riche, trente ans : la cellule médiane perd deux
+ * centièmes de centimètre à 2 % de pente et un dixième à 45 %, tandis que les
+ * cellules de tête en perdent des centimètres. Une racine carrée ne suffit pas
+ * à couvrir trois ordres de grandeur — le logarithme, si.
+ */
+const ETALEMENT_EROSION = 100;
+
+/**
+ * La courbe d'une échelle **divergente**, étalée des deux côtés du zéro.
+ *
+ * Même intention que la racine carrée de l'azote et des ravageurs — la moitié
+ * des cellules vit trop près de zéro pour se distinguer sur une échelle droite
+ * — mais appliquée **en miroir** : on ramène la position à un écart signé au
+ * zéro, on étale cet écart, et on revient. Écrite ici avec son inverse, comme
+ * toute courbe de ce module, pour que la légende gradue avec le dessin.
+ */
+const LOG_SIGNE = {
+  vers: (t: number) => {
+    const ecart = t * 2 - 1;
+    const etale = Math.log1p(Math.abs(ecart) * ETALEMENT_EROSION) / Math.log1p(ETALEMENT_EROSION);
+    return (Math.sign(ecart) * etale + 1) / 2;
+  },
+  depuis: (t: number) => {
+    const ecart = t * 2 - 1;
+    const brut = Math.expm1(Math.abs(ecart) * Math.log1p(ETALEMENT_EROSION)) / ETALEMENT_EROSION;
+    return (Math.sign(ecart) * brut + 1) / 2;
+  },
+};
 
 export const CALQUES: readonly FicheDeCalque[] = [
   {
@@ -233,6 +285,52 @@ export const CALQUES: readonly FicheDeCalque[] = [
     teinte: (part) => [45 - 37 * part, 15 + 55 * part, 92 - 47 * part],
     format: (v) => (v * 100).toFixed(0),
     sens: "de la parcelle indemne au foyer de pullulation",
+  },
+  {
+    // **Un seul champ dit les deux moitiés du phénomène** (#110) : la terre qui
+    // part d'un versant et celle qui se dépose en bas. C'est ce qui permet de
+    // les dessiner comme un même mouvement plutôt que deux effets sans rapport
+    // — et c'est pour ça que le calque est **divergent**, avec le zéro au milieu.
+    //
+    // Les moyennes de `TickFluxes` disent déjà combien la parcelle a perdu, et
+    // ce volet les affiche en t/ha/an. Elles ne disent jamais **où** : ni la
+    // ravine, ni le bas de pente qui s'engraisse.
+    id: "erosion",
+    libelle: "Érosion",
+    titre: "Sol emporté ou déposé depuis le début",
+    unite: "cm",
+    // **Un cumul, et non un débit.** Le moteur ajoute à cette grille semaine
+    // après semaine (`tick.ts`) : ce qu'on lit est l'épaisseur d'horizon de
+    // surface que la cellule a perdue depuis le premier jour de la partie.
+    // **L'échelle est l'horizon lui-même**, et c'est la seule qui veuille dire
+    // quelque chose : perdre un centimètre n'est pas la même chose sur un
+    // horizon de 20 cm et sur un horizon de 40. Au bout, la couche que
+    // l'érosion mange a entièrement disparu — ou l'équivalent s'est déposé.
+    //
+    // **Les deux bouts sont des seuils**, parce qu'un cumul n'a pas de maximum :
+    // mesuré dans le jeu, une parcelle d'un hectare à 45 % de pente laissée
+    // 120 ans perd jusqu'à 18 m sur ses cellules de crête et en entasse autant
+    // en bas — bien au-delà de ce qu'un horizon contient, et c'est une question
+    // pour le moteur (issue ouverte). La carte s'arrête donc à l'horizon, la
+    // légende l'écrit « ≤ » et « ≥ », et le curseur donne le chiffre exact.
+    bornes: (station) => [-station.epaisseurHorizonSurfaceCm, station.epaisseurHorizonSurfaceCm],
+    courbe: LOG_SIGNE,
+    lire: (snapshot, _station, i) => snapshot.soilEpaisseurPerdueCm[i] ?? 0,
+    // Brun d'un côté, bleu-vert de l'autre, pâle au milieu : c'est la paire que
+    // la cartographie des sols emploie pour ce genre de carte, et aucun autre
+    // calque n'occupe ces deux teintes-là — le vert de l'herbe est plus jaune,
+    // le bleu de la nappe plus franc.
+    teinte: (part) => {
+      const cote = part * 2 - 1;
+      const force = Math.abs(cote);
+      return [cote >= 0 ? 25 : 175, 6 + 52 * force, 92 - 48 * force];
+    },
+    // Deux décimales : la moitié des cellules d'une parcelle en pente vit sous
+    // le dixième de centimètre, et arrondir y écrirait « 0 » partout.
+    format: (v) => v.toFixed(2),
+    sens: "du limon accumulé (−) à l'horizon décapé (+)",
+    borneHauteOuverte: true,
+    borneBasseOuverte: true,
   },
 ];
 

@@ -79,6 +79,8 @@ function station(enEau: boolean[] = new Array(COTE_M * COTE_M).fill(false)): Sta
     // d'essences de prendre l'un pour l'autre.
     ruMm: STATION.ruMm,
     ruHorizonSurfaceMm: horizon ? ruHorizonMm(horizon) : STATION.ruMm,
+    // L'épaisseur de ce même horizon : c'est l'échelle du calque d'érosion (#110).
+    epaisseurHorizonSurfaceCm: horizon?.epaisseurCm ?? 0,
     phInitial: STATION.phInitial,
     meteoLabel: "essai",
     enEau,
@@ -196,12 +198,13 @@ describe("l'extraction n'a pas changé la carte", () => {
     },
   };
 
-  // L'azote et les ravageurs n'y sont **pas**, et pour deux raisons opposées :
-  // l'azote a changé d'échelle exprès (bornes doublées, courbe en racine), les
-  // ravageurs n'avaient pas de teinte d'avant — personne ne les dessinait
-  // (#109). Les faire passer sous une épreuve qui dit « rien n'a bougé »
-  // noierait l'un et mentirait sur l'autre.
-  for (const fiche of CALQUES.filter((c) => c.id !== "azote" && c.id !== "ravageurs")) {
+  // L'azote, les ravageurs et l'érosion n'y sont **pas**, et pour deux raisons
+  // opposées : l'azote a changé d'échelle exprès (bornes doublées, courbe en
+  // racine), les deux autres n'avaient pas de teinte d'avant — personne ne les
+  // dessinait (#109, #110). Les faire passer sous une épreuve qui dit « rien
+  // n'a bougé » noierait l'un et mentirait sur les autres.
+  const SANS_PASSE = new Set(["azote", "ravageurs", "erosion"]);
+  for (const fiche of CALQUES.filter((c) => !SANS_PASSE.has(c.id))) {
     it(`même teinte qu'avant, calque ${fiche.id}`, () => {
       const st = station();
       for (let i = 0; i < COTE_M * COTE_M; i++) {
@@ -325,5 +328,83 @@ describe("la grille de ravageurs se dessine par taches", () => {
     const e = etendueDuCalque(FICHE, avecFoyer(), station(), COTE_M * COTE_M);
     expect(e?.bas).toBeCloseTo(0.05, 6);
     expect(e?.haut).toBeCloseTo(0.45, 6);
+  });
+});
+
+/**
+ * **L'érosion se lit des deux côtés du zéro** (#110).
+ *
+ * Un seul champ dit les deux moitiés du phénomène : la terre qui part d'un
+ * versant et celle qui se dépose en bas. Ce que ces épreuves défendent est que
+ * le dessin garde ce lien — le zéro au milieu, les deux sens de part et
+ * d'autre — et que la légende n'affirme pas des extrêmes qui n'existent pas :
+ * un cumul n'a pas de maximum, il monte tant que la partie dure.
+ */
+describe("le calque de l'érosion, une échelle qui diverge", () => {
+  const FICHE = ficheDuCalque("erosion");
+
+  function avecRavine(): Snapshot {
+    const grille = new Float32Array(COTE_M * COTE_M).fill(0.02);
+    // Une ravine qui décape, et le bas de pente qui s'engraisse.
+    grille[10] = 1.4;
+    grille[11] = 2.1;
+    grille[COTE_M * 2] = -2.6;
+    return { ...SNAPSHOT, soilEpaisseurPerdueCm: grille };
+  }
+
+  it("le zéro tombe au milieu du dégradé, et il y est neutre", () => {
+    const st = station();
+    expect(partDuDegrade(0, FICHE, st)).toBeCloseTo(0.5, 10);
+    // Pâle : une cellule que rien n'a touchée ne doit pas crier.
+    const [, saturation, clarte] = FICHE.teinte(0.5);
+    expect(saturation).toBeLessThan(12);
+    expect(clarte).toBeGreaterThan(88);
+  });
+
+  it("perte et dépôt tombent de part et d'autre, et ne portent pas la même teinte", () => {
+    const st = station();
+    const perte = partDuDegrade(2, FICHE, st);
+    const depot = partDuDegrade(-2, FICHE, st);
+    expect(perte).toBeGreaterThan(0.5);
+    expect(depot).toBeLessThan(0.5);
+    const [teintePerte] = FICHE.teinte(perte);
+    const [teinteDepot] = FICHE.teinte(depot);
+    expect(teintePerte).not.toBe(teinteDepot);
+  });
+
+  it("la courbe étale le bas des deux côtés, symétriquement", () => {
+    // La moitié des cellules d'une parcelle en pente vit sous le dixième de
+    // centimètre : sur une échelle droite, tout ce monde-là serait neutre.
+    const st = station();
+    const petitePerte = partDuDegrade(0.5, FICHE, st);
+    const petitDepot = partDuDegrade(-0.5, FICHE, st);
+    expect(petitePerte - 0.5).toBeGreaterThan(0.05);
+    expect(petitePerte - 0.5).toBeCloseTo(0.5 - petitDepot, 10);
+  });
+
+  it("l'échelle est l'horizon de surface lui-même, pas un nombre choisi", () => {
+    // Perdre un centimètre n'est pas la même chose sur un horizon de 20 cm et
+    // sur un horizon de 40 : l'échelle vient donc du profil de la station.
+    const st = station();
+    expect(st.epaisseurHorizonSurfaceCm).toBeGreaterThan(0);
+    expect(FICHE.bornes(st)).toEqual([-st.epaisseurHorizonSurfaceCm, st.epaisseurHorizonSurfaceCm]);
+  });
+
+  it("les deux bornes sont des seuils, et la légende doit le dire", () => {
+    expect(FICHE.borneHauteOuverte).toBe(true);
+    expect(FICHE.borneBasseOuverte).toBe(true);
+    // Un cumul n'a pas de maximum : mesuré dans le jeu, une parcelle d'un
+    // hectare à 45 % de pente laissée 120 ans perd des mètres. Ça se rabat sur
+    // la teinte de bout, et le curseur donne le chiffre.
+    const st = station();
+    expect(partDuDegrade(-1800, FICHE, st)).toBe(0);
+    expect(partDuDegrade(1800, FICHE, st)).toBe(1);
+    expect(FICHE.format(-10.2)).toBe("-10.20");
+  });
+
+  it("lit la cellule, et l'étendue encadre la ravine comme le dépôt", () => {
+    const e = etendueDuCalque(FICHE, avecRavine(), station(), COTE_M * COTE_M);
+    expect(e?.haut).toBeCloseTo(2.1, 6);
+    expect(e?.bas).toBeCloseTo(-2.6, 6);
   });
 });
