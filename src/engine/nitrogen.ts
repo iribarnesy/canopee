@@ -169,27 +169,37 @@ export const NITRIFICATION_MAX_SEMAINE = 0.6;
 /**
  * Frein de la température sur la nitrification ∈ [0,1] (#280).
  *
- * **Deux points tenus, et ils viennent du dehors** : une paramétrisation
- * publiée donne « 50 % reduction at 12 °C and 100 % at 5 °C », avec un régime
- * plein entre 15 et 35 °C. La rampe passe donc exactement par (5 ; 0),
- * (12 ; 0,5) et (15 ; 1), en deux segments — ce n'est pas une courbe lissée
- * faute de mieux, c'est la droite qui relie les points mesurés.
+ * **Une loi en Q10, et le Q10 est celui que la littérature publie** : 1,90 en
+ * moyenne pour la nitrification nette, dans une fourchette allant de 1,1 à 3,8
+ * selon les sols. Le plein régime est posé à 15 °C, début du plateau
+ * d'activité optimale (15-35 °C).
  *
- * La règle agronomique nord-américaine dit la même chose plus grossièrement
- * (« remember 50 degrees », soit 10 °C) en précisant que la nitrification
- * **ne s'arrête pas tout à fait** avant 0 °C. Le zéro à 5 °C est donc un peu
- * dur, et c'est assumé : l'écart porte sur des semaines où le stock ne bouge
- * de toute façon presque pas.
+ * **La première version de cette fonction était fausse, et sa faute est
+ * instructive.** Elle montait de 0 à 1 entre 5 et 15 °C, sur une
+ * paramétrisation unique — « 50 % reduction at 12 °C and 100 % at 5 °C ». Le
+ * Q10 que cette rampe implique vaut **environ 10**, c'est-à-dire hors de
+ * **toute** valeur publiée pour ce processus. C'était vérifiable sans rien
+ * mesurer : une ancre doit être confrontée aux ordres de grandeur de son
+ * propre domaine avant d'être retenue, et un seul chiffre tiré d'une étude ne
+ * vaut pas une fourchette établie.
+ *
+ * **Le plancher à 0 °C, lui, ne vient pas du Q10** mais de l'autre source : la
+ * règle agronomique du « remember 50 degrees » dit que la nitrification
+ * ralentit fortement sous 10 °C et **continue jusqu'à 0 °C**, où elle s'arrête.
+ * Une loi en Q10 seule rendrait encore 38 % du régime optimal à 0 °C, ce qu'un
+ * sol gelé ne fait pas. D'où la rampe linéaire de 0 à 5 °C qui la multiplie.
  *
  * **Hors domaine, et dit** : au-delà de 35 °C la nitrification décline, ce que
  * cette fonction ignore. Aucune moyenne hebdomadaire du moteur n'y monte.
  */
+export const Q10_NITRIFICATION = 1.9;
+
 export function facteurTemperatureNitrification(tMean: number): number {
-  if (tMean <= 5) return 0;
-  if (tMean >= 15) return 1;
-  // (5 ; 0) → (12 ; 0,5) puis (12 ; 0,5) → (15 ; 1)
-  if (tMean <= 12) return (0.5 * (tMean - 5)) / 7;
-  return 0.5 + (0.5 * (tMean - 12)) / 3;
+  if (tMean <= 0) return 0;
+  const q10 = Math.min(1, Q10_NITRIFICATION ** ((tMean - 15) / 10));
+  // Près du gel, l'activité tombe plus vite qu'une loi en Q10 ne le dit.
+  const proximiteDuGel = Math.min(1, tMean / 5);
+  return q10 * proximiteDuGel;
 }
 
 /**
