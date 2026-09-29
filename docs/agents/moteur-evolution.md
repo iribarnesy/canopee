@@ -106,13 +106,37 @@ jugé sur un stock, mais il peut l'être sur une **répartition**, si celle-ci e
 stable — et ici elle l'est à 0,3 point près. Chercher la grandeur invariante
 avant de chercher l'accord.
 
-### Et vérifier le sens de l'écart avant de l'annoncer
+### Et normaliser par le découpage avant d'annoncer un écart
 
-L'horizon de surface du moteur fait **35 cm**, le relevé **30**. Un compartiment
-plus épais devrait retenir **plus**, donc la comparaison brute **sous-estime**
-l'écart au lieu de l'exagérer. Un quart d'heure de vérification qui change le
-statut du résultat : sans elle, la première objection en réunion l'aurait
-renvoyé à un artefact de découpage.
+L'horizon de surface du moteur fait **35 cm**, le relevé **30**. L'objection
+évidente à toute comparaison de parts est donc « vos compartiments n'ont pas la
+même épaisseur », et elle est fondée : une part de surface se compare d'abord à
+ce qu'une concentration **uniforme** donnerait, soit l'épaisseur de l'horizon
+de surface rapportée à celle du profil.
+
+Ça ne fait pas que blinder le résultat, **ça le renverse** :
+
+| | h0 / profil | uniforme | observé | écart |
+|---|---|---|---|---|
+| **relevé RSH** | 30/90 | 33,3 % | 38,8 % | **+5,4** |
+| limon riche | 35/100 | 35,0 % | 24,2 % | −10,8 |
+| limon pauvre en N | 30/100 | 30,0 % | 21,0 % | −9,0 |
+| friche limon | 30/80 | 37,5 % | 29,0 % | −8,5 |
+| vallée engorgée | 30/85 | 35,3 % | 29,4 % | −5,9 |
+| limon acide | 30/90 | 33,3 % | 28,9 % | −4,4 |
+| suberaie des Maures | 25/120 | 20,8 % | 17,4 % | −3,5 |
+| lande sèche | 20/115 | 17,4 % | 16,0 % | −1,4 |
+| sable profond | 25/130 | 19,2 % | 21,6 % | **+2,4** |
+
+**Au champ l'azote minéral est concentré en haut ; dans le moteur il l'est en
+bas**, sur sept stations sur huit. La comparaison de parts brute disait « même
+direction, magnitude fausse » ; normalisée, elle dit « direction inverse ».
+
+**La huitième est dite, pas escamotée** : le sable profond est à +2,4, et c'est
+le cas dégénéré — ses deux compartiments ne portent ensemble que 0,88 kg N/ha
+et se vident presque entièrement, si bien que le partage n'y mesure plus rien.
+Une exception qu'on explique reste une exception, et l'annonce est « sept sur
+huit », pas « sans exception ».
 
 ### Trois candidates, une seule chiffrée
 
