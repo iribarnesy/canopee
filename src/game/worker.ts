@@ -1711,6 +1711,10 @@ function stationInfo(): StationInfo {
     coteM: sc.station.coteM,
     ruMm: sc.station.ruMm,
     ruHorizonSurfaceMm: sc.station.profil[0] ? ruHorizonMm(sc.station.profil[0]) : sc.station.ruMm,
+    // L'**épaisseur** du même horizon, et pas seulement ce qu'il retient d'eau :
+    // c'est la mesure de ce que l'érosion mange (#110), donc l'échelle à
+    // laquelle une perte de sol se juge.
+    epaisseurHorizonSurfaceCm: sc.station.profil[0]?.epaisseurCm ?? 0,
     phInitial: sc.station.phInitial,
     meteoLabel: serie
       ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France)`

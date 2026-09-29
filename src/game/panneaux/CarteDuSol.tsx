@@ -262,6 +262,9 @@ function Legende({
         {graduations.map((g) => (
           <span key={g}>
             {g === 1 && fiche.borneHauteOuverte ? "≥ " : ""}
+            {/* Et le bas aussi, sur une échelle qui diverge : ce qu'une cellule
+                reçoit n'a pas plus de maximum que ce qu'une autre perd (#110). */}
+            {g === 0 && fiche.borneBasseOuverte ? "≤ " : ""}
             {fiche.format(valeurDuDegrade(g, fiche, station))}
           </span>
         ))}

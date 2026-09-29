@@ -509,6 +509,16 @@ export interface StationInfo {
    * du limon le plus riche du jeu (#190).
    */
   ruHorizonSurfaceMm: number;
+  /**
+   * Épaisseur de l'horizon de surface, cm.
+   *
+   * **C'est la mesure de ce que l'érosion emporte**, et c'est ce qui permet au
+   * calque de l'érosion d'avoir une échelle qui veut dire quelque chose :
+   * perdre un centimètre n'est pas la même chose sur un horizon de 20 cm et
+   * sur un horizon de 40 (#110). Le rendu ne la choisit donc pas — il lit
+   * celle du profil de la station.
+   */
+  epaisseurHorizonSurfaceCm: number;
   phInitial: number;
   meteoLabel: string;
   /** eau libre de la parcelle : l'UI la dessine (eau_surface.ts) */
