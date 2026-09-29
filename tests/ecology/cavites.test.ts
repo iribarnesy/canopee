@@ -213,11 +213,18 @@ describe("le vieil arbre creux paie, et la boucle se ferme", () => {
     // **sous** ce seuil. Sans arbre creux petit, la comparaison ci-dessous est
     // vraie trivialement et l'essai ne prouve rien.
     //
-    // Elle tenait jusqu'ici sur trois chênes creux de **quarante centimètres**
-    // que le siècle produisait — c'est-à-dire sur des nains que le moteur
-    // n'arrivait ni à faire pousser ni à faire mourir, faute d'azote
-    // disponible en peuplement dense. #280 les a fait disparaître, et la garde
-    // est tombée avec eux : elle était verte par artefact.
+    // Elle tenait jusqu'ici sur **une trajectoire**, pas sur un fait. Le siècle
+    // de la graine 7 finissait avec trois chênes creux de quarante centimètres ;
+    // #280 a déplacé cette trajectoire, et les seuls arbres creux restants
+    // faisaient seize mètres. La garde est tombée pour un mètre.
+    //
+    // **Ce n'était pas une pathologie que #280 aurait guérie**, et il faut le
+    // dire parce que ça a été affirmé à tort pendant le lot. Répété sur les
+    // graines 3, 11 et 23, le moteur d'avant #280 n'a que 3 à 5 % de tiges sous
+    // cinquante centimètres, comme celui d'après : les 70 % de la graine 7
+    // étaient propres à cette partie. Une conclusion tirée d'une seule graine
+    // n'était pas une mesure — la règle du dépôt, oubliée deux fois dans le
+    // même lot.
     //
     // Le décor produit donc maintenant le cas **exprès**, et par le geste que
     // le critère nomme lui-même — « gros sujets, **têtards** et troncs creux ».
