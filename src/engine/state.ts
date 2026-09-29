@@ -717,6 +717,14 @@ export interface TickFluxes {
   uptakeArbresKgHa: number;
   /** N réellement servi à la strate herbacée, kg/ha */
   uptakeHerbeKgHa: number;
+  /**
+   * N **organique** miné par les ectomycorhizes et livré à leurs hôtes, kg/ha
+   * (#289). Il ne passe **pas** par le pool minéral — c'est tout son sens —,
+   * donc il n'entre ni dans `uptakeKgHa` ni dans `uptakeArbresKgHa`, et
+   * l'égalité de #115 entre les deux reste exacte. Il sort de l'humus, pas du
+   * sol minéral.
+   */
+  minageEctoKgHa: number;
   leachedKgHa: number;
   /** N retourné au sol par la chute des feuilles (recyclage interne), kg/ha */
   litterfallKgHa: number;

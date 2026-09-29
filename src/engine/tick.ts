@@ -44,6 +44,7 @@ import {
   sedimentPiegeKgM2,
 } from "./boisMort";
 import {
+  CN_HUMUS,
   cnHumusDuProfil,
   DEADWOOD_DECAY_PER_YEAR,
   DEADWOOD_HUMIFICATION,
@@ -127,6 +128,8 @@ import { fermetureDuCouvert, tMinimumSousCouvert } from "./microclimat";
 import {
   cibleReseau,
   facteurAbsorption,
+  offreMinageG,
+  porteMinage,
   prochainReseau,
   reseauSousArbre,
   TYPES_MYCORHIZE,
@@ -766,6 +769,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const ammoniacalNG = state.soil.ammoniacalNG.slice();
   // L'humus de ce sol : mull par défaut, mor sur un podzol qui le déclare (#289).
   const cnHumus = cnHumusDuProfil(station.profil);
+  // Ce que l'humus de chaque cellule a décomposé cette semaine : l'offre de
+  // minage des ectomycorhizes s'y lit (#289).
+  const humusPerteCG = new Float64Array(nCells);
   const litterNG = state.soil.litterNG.slice();
   // La structure du sol : ce que les engins tassent et ce que les racines
   // réparent (tassement.ts). Déclaré tôt parce que le bilan hydrique en dépend
@@ -1151,6 +1157,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       ((HUMUS_DECAY_PER_YEAR / 52) * climate * facteurPhBiologie(state.soil.ph[i] ?? 7));
     humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
     emittedG += humusLoss;
+    humusPerteCG[i] = humusLoss;
     const mineralized = humusLoss / cnHumus;
     // Dépôts atmosphériques : pour moitié lessivés par la pluie, pour moitié
     // secs (poussières, gaz absorbés).
@@ -1907,6 +1914,61 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (!espece.azote.fixateur) uptakeArbresSumG += gotN;
   }
 
+  // ── 3 ter. Le minage de l'azote organique par les ectomycorhizes (#289) ────
+  // **Après** la récolte minérale, et pour les seuls hôtes ecto qui ont encore
+  // faim. L'azote miné ne passe pas par le pool minéral : ni la strate herbacée
+  // ni le lessivage ne le voient, et c'est exactement le « contournement de la
+  // minéralisation » que Näsholm mesure. Sur un mull la porte est nulle, donc
+  // cette passe ne fait rien sur aucune station limoneuse.
+  let minageSumG = 0;
+  if (porteMinage(cnHumus, CN_HUMUS) > 0) {
+    const reseauEcto = state.soil.mycorhizes.ecto;
+    const demandeMinage = new Float64Array(nCells);
+    const faimParCellule = new Array<number>(nTrees).fill(0);
+    for (let t = 0; t < nTrees; t++) {
+      const tree = trees[t];
+      if (!tree?.alive) continue;
+      const espece = getEspece(tree.especeId);
+      if (espece.mycorhize !== "ecto" || espece.azote.fixateur) continue;
+      const faim = Math.max(0, (nNeedG[t] ?? 0) - (acquiredNG[t] ?? 0));
+      if (faim <= 0) continue;
+      const parCellule = faim / (rootCells[t] ?? 1);
+      faimParCellule[t] = parCellule;
+      forEachDiscCell(dims, tree.x, tree.y, rootRadiusM(espece, tree.heightM), (i) => {
+        demandeMinage[i] = (demandeMinage[i] ?? 0) + parCellule;
+      });
+    }
+    const servi = new Float64Array(nCells);
+    for (let i = 0; i < nCells; i++) {
+      const demande = demandeMinage[i] ?? 0;
+      if (demande <= 0) continue;
+      const offre = offreMinageG(humusPerteCG[i] ?? 0, cnHumus, CN_HUMUS, reseauEcto[i] ?? 0);
+      const pris = Math.min(offre, demande);
+      if (pris <= 0) continue;
+      servi[i] = pris / demande;
+      // **Le carbone paie** : pour tirer cet azote, le champignon décompose de
+      // l'humus au C/N du sol, et le respire. Les deux budgets restent fermés.
+      const carbone = pris * cnHumus;
+      humusCG[i] = Math.max(0, (humusCG[i] ?? 0) - carbone);
+      emittedG += carbone;
+      minageSumG += pris;
+    }
+    for (let t = 0; t < nTrees; t++) {
+      const parCellule = faimParCellule[t] ?? 0;
+      if (parCellule <= 0) continue;
+      const tree = trees[t];
+      if (!tree) continue;
+      const espece = getEspece(tree.especeId);
+      let recu = 0;
+      forEachDiscCell(dims, tree.x, tree.y, rootRadiusM(espece, tree.heightM), (i) => {
+        recu += parCellule * (servi[i] ?? 0);
+      });
+      acquiredNG[t] = (acquiredNG[t] ?? 0) + recu;
+      const nd = nNeedG[t] ?? 0;
+      nSatisfaction[t] = nd > 0 ? Math.min(1, (acquiredNG[t] ?? 0) / nd) : 1;
+    }
+  }
+
   // ── 4. Lessivage de l'azote minéral restant ────────────────────────────────
   let leachedSumG = 0;
   for (let i = 0; i < nCells; i++) {
@@ -1940,6 +2002,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const nitriqueG = Math.max(0, (mineralNG[i] ?? 0) - (ammoniacalNG[i] ?? 0));
     const descendu = cellLeachedG(nitriqueG, drainageMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
     mineralNG[i] = (mineralNG[i] ?? 0) - descendu;
+    // **Et le plafond se repose ici, après la soustraction** : le lessivage retire
+    // du total une part de la différence, ce qui en algèbre ne peut pas le faire
+    // passer sous la part ammoniacale — mais en virgule flottante si, d'un bit.
+    // Mesuré : −1,1e-16, sur la lande, une fois le premier plafond en place. Le
+    // premier sert à calculer `nitriqueG` sur un état cohérent ; celui-ci garde
+    // l'invariant à la sortie. Aucun des deux ne déplace une quantité.
+    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0)) ammoniacalNG[i] = mineralNG[i] ?? 0;
     if (nH > 1) {
       mineralNProfondG[i] = (mineralNProfondG[i] ?? 0) + descendu;
       // Et c'est en **sortant** du sous-sol qu'un nitrate quitte la parcelle.
@@ -3648,6 +3717,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       uptakeKgHa: (uptakeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeArbresKgHa: (uptakeArbresSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeHerbeKgHa: (uptakeHerbeSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      minageEctoKgHa: (minageSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKgHa: (leachedSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       phosphoreMoyenGM2: phosphoreG.reduce((a, b) => a + b, 0) / nCells,
       potassiumMoyenGM2: potassiumG.reduce((a, b) => a + b, 0) / nCells,

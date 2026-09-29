@@ -127,3 +127,92 @@ export function reseauSousArbre(
 export function facteurAbsorption(reseau: number): number {
   return 1 + GAIN_ABSORPTION * Math.min(1, Math.max(0, reseau));
 }
+
+// ── Le minage de l'azote organique (#289) ───────────────────────────────────
+//
+// **Ce que le réseau n'apportait pas, et qui manquait au pin.** Jusqu'ici une
+// mycorhize ne faisait que rendre le prélèvement **minéral** plus efficace.
+// Or les plantes d'un mor prennent l'azote **organique** directement :
+// Näsholm et al. 1998 (Nature) injectent de la glycine marquée dans la couche
+// de mor d'une forêt boréale, et le pin sylvestre en prélève l'azote sous
+// forme de glycine intacte — les plantes du mor « bypass nitrogen
+// mineralization ». Le champignon décompose l'humus pour en tirer l'azote et
+// le livre à son hôte avant que les microbes ne le minéralisent.
+//
+// **Pourquoi ça manquait sans que rien ne le montre** : un humus compté comme
+// un mull (C/N 11) fabriquait assez d'azote minéral pour nourrir le pin, et un
+// lessivage qui emportait l'ammonium jetait l'excès. Les deux erreurs se
+// compensaient ; #280 a retiré la seconde, et déclarer le vrai mor a retiré la
+// première en laissant le pin sans le mécanisme qu'elle remplaçait.
+
+/**
+ * **Ce que le minage intercepte**, en part de la minéralisation nette.
+ *
+ * **Un plancher, pas un plafond** — et la première version de ce commentaire
+ * disait l'inverse. L'écart entre minéralisation brute et nette ne mesure que
+ * ce que les microbes réimmobilisent : par dilution isotopique en couche
+ * organique forestière, brut 10,9 à 11,1 mg N/kg/j contre net 6,1 à 6,8, soit
+ * un rapport de 1,6 à 1,8, d'où un **minimum de 0,7**. Or le champignon prend
+ * des acides aminés **avant** qu'ils soient même comptés dans la minéralisation
+ * brute : Schimel et Bennett 2004 (Ecology) établissent que c'est la
+ * **dépolymérisation**, non la minéralisation, qui limite le cycle de l'azote,
+ * et que les plantes entrent en concurrence pour les acides aminés. Ce qu'une
+ * ectomycorhize peut prendre excède donc l'écart brut/net, d'une quantité
+ * qu'aucune source trouvée ne borne.
+ *
+ * **D'où un calage, et il est déclaré** : faute de plafond, la valeur est calée
+ * sur la table de Jansen à **quarante ans** pour le pin, avec le plancher de 0,7
+ * comme contrainte, et la hauteur à **vingt ans** tenue à l'écart comme
+ * validation — la règle du dépôt, celle-là même qui régit `pousseMaxMAn`. Si le
+ * pin sortait de sa tolérance à vingt ans, c'est le mécanisme qui tomberait.
+ */
+export const EXCES_BRUT_SUR_NET = 1.5;
+
+/**
+ * C/N à partir duquel l'humus est un mor, et le minage pleinement actif.
+ *
+ * La typologie des humus : mull voisin de 10, moder 15 à 25, mor « toujours
+ * plus de 20, ou même 30 à 40 ». Le bas du mor est donc 25.
+ */
+export const CN_MOR = 25;
+
+/**
+ * **La porte du minage** ∈ [0,1], lue sur le C/N déclaré du sol.
+ *
+ * Sur un **mull**, l'azote se minéralise librement et les arbres le prennent
+ * sous forme minérale : le champignon n'a rien à miner. Sur un **mor**, il
+ * reste bloqué dans la matière organique, et c'est là que le minage devient la
+ * voie principale — c'est le contraste mull/mor de la typologie, et la raison
+ * pour laquelle les mycorhizes ecto et éricoïdes dominent les mors.
+ *
+ * **Conséquence voulue** : sur toutes les stations limoneuses du dépôt, dont
+ * l'humus est un mull à C/N 11, la porte vaut zéro et **rien ne bouge**. Le
+ * hêtre, le chêne, le charme et le bouleau, calés sur le limon riche, sont
+ * intacts par construction.
+ */
+export function porteMinage(cnHumus: number, cnMull: number): number {
+  return Math.min(1, Math.max(0, (cnHumus - cnMull) / (CN_MOR - cnMull)));
+}
+
+/**
+ * L'azote organique qu'une cellule offre aux arbres ectomycorhiziens cette
+ * semaine, en grammes.
+ *
+ * Il se lit sur ce que l'humus y minéralise déjà (`humusPerteCG`, le carbone
+ * décomposé cette semaine), au C/N du sol, étendu de l'écart brut/net, et
+ * pondéré par le réseau présent dans la cellule. Un semis dont le réseau n'est
+ * pas tissé n'y a pas accès ; un adulte, si. C'est cette dépendance à la
+ * taille qui doit corriger à la fois le pin trop rapide en jeunesse et trop
+ * lent à l'âge adulte — la prédiction qui rend le mécanisme réfutable.
+ */
+export function offreMinageG(
+  humusPerteCG: number,
+  cnHumus: number,
+  cnMull: number,
+  reseauEcto: number,
+): number {
+  const porte = porteMinage(cnHumus, cnMull);
+  if (porte <= 0 || humusPerteCG <= 0) return 0;
+  const reseau = Math.min(1, Math.max(0, reseauEcto));
+  return (humusPerteCG / cnHumus) * EXCES_BRUT_SUR_NET * porte * reseau;
+}
