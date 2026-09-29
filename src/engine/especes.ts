@@ -1189,7 +1189,16 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 1.4,
     // Atlas : « nurse (fruticée) », pionnière, cosmopolite tempéré.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.25 },
-    // pH, littérature : BSBI (Fermanagh) : **la plus fréquente** à pH 3,5-5,0, et tolère jusqu'au très alcalin.
+    // pH : **les deux bornes sont sans source**, et la mention qui les portait était
+    // fausse (#279). Elle disait « BSBI (Fermanagh) : la plus fréquente à pH 3,5-5,0,
+    // et tolère jusqu'au très alcalin » ; le compte d'espèce du BSBI dit « brambles are
+    // most abundant on damp to wet acid soils and comparatively few microspecies grow
+    // on chalk or limestone » — aucun nombre, nulle part. *(Les chiffres viennent
+    // peut-être de la flore imprimée de Fermanagh ; ce qui est établi, c'est qu'ils ne
+    // sont pas dans la source consultable sous ce nom.)*
+    //
+    // Les valeurs n'ont pas bougé : une borne déplacée déplace une calibration, et
+    // c'est un lot à mesurer *(à confirmer)*.
     ph: [3.5, 8],
     // Demi-ombre tolérée : elle tient sous un couvert clair, ce qui lui permet
     // d'attendre la trouée.
