@@ -172,3 +172,28 @@ export function chuteEnCours(
 
   return { rotationRad, hauteur, opacite: 1 };
 }
+
+/**
+ * Un tronc **déjà couché**, posé une fois pour toutes (#107).
+ *
+ * Ce n'est pas une animation, et c'est ce qui la distingue de tout le reste de
+ * ce module : un chablis renversé la semaine d'avant est par terre, et il y
+ * reste l'année où son bois est encore récupérable — le moteur le garde dans
+ * `state.trees` pour qu'on puisse encore l'y récolter. Le rendu le recevait
+ * pourtant avec `chandelle: true`, c'est-à-dire annoncé comme un tronc mort
+ * resté **debout**, et il le dessinait vertical : *« ce n'était pas une donnée
+ * manquante, c'était une donnée fausse »*.
+ *
+ * **C'est la fin de la chute et rien d'autre.** On ne récrit pas une seconde
+ * géométrie pour l'arbre couché : on rend celle de `chuteEnCours` à son dernier
+ * instant. Deux copies d'une même règle dérivent (§2.1), et celle-ci a une
+ * subtilité qu'on ne veut surtout pas réécrire — un arbre couché **vers**
+ * l'objectif raccourcit au lieu de pivoter, et le plancher d'écrasement est là
+ * pour qu'il ne s'évanouisse pas.
+ */
+export function troncCouche(
+  tronc: { x: number; y: number; heightM: number; directionRad: number },
+  vue: Vue,
+): Deformation {
+  return chuteEnCours(tronc, 1, vue);
+}

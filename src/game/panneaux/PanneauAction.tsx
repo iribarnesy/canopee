@@ -133,7 +133,6 @@ export function PanneauAction({
     especeId,
     avecManchon,
     rayonChaulage,
-    setRayonChaulage,
     semainesSaison,
     setSemainesSaison,
     densiteCible,

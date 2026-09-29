@@ -24,7 +24,7 @@ import type {
   NaissanceDeLaSemaine,
 } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
-import { arbresAPoser, donneesSolDe } from "../game/parcelle";
+import { type ArbreSource, arbresAPoser, donneesSolDe } from "../game/parcelle";
 import { VueParcelle } from "../game/VueParcelle";
 import { ficheDe } from "../render/arbres/especes";
 import type { ArbreAPoser } from "../render/couches/arbres";
@@ -688,8 +688,71 @@ function Demo(): React.ReactElement {
             const a = ellipse.apres.get(t.id);
             return a ? { ...t, heightM: a.heightM, baseHouppierM: a.baseHouppierM } : t;
           });
+  /**
+   * `?chablis-part=0.2` : la parcelle **la semaine d'après** une rafale (#107).
+   *
+   * Un chablis versé reste dans la liste des arbres l'année où son bois se
+   * récolte encore, couché. C'est un état qu'aucune autre commande du banc ne
+   * montre : `?tempete=1` joue la rafale, et l'acte fini, l'ellipse est finie
+   * aussi. Or c'est bien cet état-là qui était faux — un tronc dressé là où le
+   * moteur a un arbre par terre.
+   *
+   * Un banc de **mécanisme**, comme `?mort=` ou `?tempete=` : mesuré sur
+   * soixante ans de limon riche, un épisode de chablis en tout, donc l'attendre
+   * au hasard d'une partie n'est pas une façon de juger une pose.
+   */
+  const partCouchee = Number(new URLSearchParams(location.search).get("chablis-part") ?? "0");
+  const capDuChablis = Number(new URLSearchParams(location.search).get("chablis-vers") ?? "0.785");
+  const debout: ArbreSource[] =
+    partCouchee > 0
+      ? restants.map((t, i) =>
+          t.heightM > 5 && !t.chandelle && i % Math.max(1, Math.round(1 / partCouchee)) === 0
+            ? {
+                ...t,
+                // Versé : mort sur-le-champ pour le moteur, et couché depuis la
+                // semaine d'avant — celle de la rafale.
+                chandelle: true,
+                renverseSemaine: scene.week - 1,
+                chuteRad: capDuChablis,
+              }
+            : t,
+        )
+      : restants;
+  /**
+   * `?chandelle-ans=25` : vieillit **toutes** les chandelles de la scène (#107).
+   *
+   * Les scènes cuites avant ce lot ne portent pas `mortSemaine` — elles ont
+   * donc des chandelles de l'année, quel que soit leur âge réel. Ce réglage
+   * donne le même âge à toutes, ce qui est exactement ce qu'il faut pour juger
+   * les trois paliers côte à côte : gris frais, gris blanchi, squelette
+   * ébranché. Une scène régénérée, elle, porte l'âge de chacune.
+   */
+  const ansDeChandelle = Number(new URLSearchParams(location.search).get("chandelle-ans") ?? "-1");
+  /**
+   * `?chandelle-tout=1` : et alors **tout** ce qui est assez haut est une
+   * chandelle de cet âge-là.
+   *
+   * Les chandelles d'une scène ordinaire sont surtout des arbustes de fourré,
+   * que le rendu agrège — mesuré sur `pelouse-arbres-s28` : 2 057 chandelles,
+   * presque toutes de l'aubépine et du prunellier. On n'y voit donc pas ce
+   * qu'un fût sec devient. Celui-ci fait une futaie de chandelles, ce qui est le
+   * seul moyen de juger les trois paliers côte à côte.
+   */
+  const toutEnChandelle = new URLSearchParams(location.search).get("chandelle-tout") === "1";
+  const vieillis: ArbreSource[] =
+    ansDeChandelle >= 0
+      ? debout.map((t) =>
+          t.chandelle || (toutEnChandelle && t.heightM > 5)
+            ? {
+                ...t,
+                chandelle: true,
+                mortSemaine: scene.week - Math.round(ansDeChandelle * 52),
+              }
+            : t,
+        )
+      : debout;
   const arbres: ArbreAPoser[] = arbresAPoser(
-    [...restants, ...tigesAbattues(ellipse.gestes), ...ellipse.chandelles],
+    [...vieillis, ...tigesAbattues(ellipse.gestes), ...ellipse.chandelles],
     {
       coteM: scene.coteM,
       week: scene.week,
