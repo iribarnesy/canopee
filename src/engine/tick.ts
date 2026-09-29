@@ -44,7 +44,7 @@ import {
   sedimentPiegeKgM2,
 } from "./boisMort";
 import {
-  CN_HUMUS,
+  cnHumusDuProfil,
   DEADWOOD_DECAY_PER_YEAR,
   DEADWOOD_HUMIFICATION,
   HUMUS_DECAY_PER_YEAR,
@@ -764,6 +764,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const mineralNG = state.soil.mineralNG.slice();
   const mineralNProfondG = state.soil.mineralNProfondG.slice();
   const ammoniacalNG = state.soil.ammoniacalNG.slice();
+  // L'humus de ce sol : mull par défaut, mor sur un podzol qui le déclare (#289).
+  const cnHumus = cnHumusDuProfil(station.profil);
   const litterNG = state.soil.litterNG.slice();
   // La structure du sol : ce que les engins tassent et ce que les racines
   // réparent (tassement.ts). Déclaré tôt parce que le bilan hydrique en dépend
@@ -1149,7 +1151,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       ((HUMUS_DECAY_PER_YEAR / 52) * climate * facteurPhBiologie(state.soil.ph[i] ?? 7));
     humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
     emittedG += humusLoss;
-    const mineralized = humusLoss / CN_HUMUS;
+    const mineralized = humusLoss / cnHumus;
     // Dépôts atmosphériques : pour moitié lessivés par la pluie, pour moitié
     // secs (poussières, gaz absorbés).
     const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);

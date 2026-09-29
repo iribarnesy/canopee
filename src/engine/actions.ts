@@ -15,7 +15,7 @@ import { CHAULAGE_EQ_M2, capaciteEchangeEqM2, phDepuisSaturation } from "./bases
 import { CONTACT_TRONC_EBRANCHE, empreinteDeChute, poserBoisAuSol, versLAval } from "./boisMort";
 import {
   CARBON_FRACTION,
-  CN_HUMUS,
+  cnHumusDuProfil,
   racinesPerduesEnRabattant,
   treeAboveCarbonKg,
   treeTotalCarbonKg,
@@ -2264,6 +2264,8 @@ function applyLabourer(
   // un bénéfice de l'agroforesterie que personne n'a écrit dans une règle
   // (tassement.ts).
   const tassement = state.soil.tassement.slice();
+  // Le même C/N que la minéralisation du tick, pas un second (#289).
+  const cnHumus = cnHumusDuProfil(state.station.profil);
   let emisKgC = 0;
   for (let y = 0; y < cote; y++) {
     for (let x = 0; x < cote; x++) {
@@ -2274,8 +2276,8 @@ function applyLabourer(
       // Le coup de fouet : de l'humus part en fumée, son azote reste.
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;
-      mineralNG[i] = (mineralNG[i] ?? 0) + perdu / CN_HUMUS;
-      emisKgC += (perdu * (1 - 1 / CN_HUMUS)) / 1000;
+      mineralNG[i] = (mineralNG[i] ?? 0) + perdu / cnHumus;
+      emisKgC += (perdu * (1 - 1 / cnHumus)) / 1000;
       // La litière est enfouie et se minéralise avec le reste.
       mineralNG[i] = (mineralNG[i] ?? 0) + (litterNG[i] ?? 0);
       emisKgC += (litterCG[i] ?? 0) / 1000;

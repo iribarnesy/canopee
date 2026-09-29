@@ -71,6 +71,17 @@ export const HUMUS_DECAY_PER_YEAR = 0.015;
  * qui convertit le carbone minéralisé en azote rendu aux plantes.
  */
 export const CN_HUMUS = 11;
+
+/**
+ * Le C/N de l'humus **d'un sol donné** (#289) : celui que déclare son horizon de
+ * surface, ou le mull par défaut. C'est la seule porte par laquelle le moteur
+ * lit ce rapport — la minéralisation du tick et le coup de fouet du labour
+ * passent tous deux par elle, pour qu'un podzol ne soit pas mor dans l'un et
+ * mull dans l'autre.
+ */
+export function cnHumusDuProfil(profil: readonly { cnHumus?: number }[]): number {
+  return profil[0]?.cnHumus ?? CN_HUMUS;
+}
 /** 1 t/ha = 100 g/m² */
 export const T_HA_TO_G_M2 = 100;
 
