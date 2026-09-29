@@ -183,6 +183,69 @@ ailleurs qu'au limon riche, chacun pour une raison écrite.
   croisent dans aucun fichier —, mais la mémoïsation du banc et
   `serieMeteoPour` s'indexent tous deux sur cet identifiant.
 
+## Ce qu'un lot plus ancien a appris (la vidange du dernier horizon, #263)
+
+### « Latent » est une hypothèse, pas un constat
+
+L'issue disait le défaut latent : les sept stations ayant un dernier horizon
+épais, le goulot ne devait pas les concerner. L'agent qui l'a ouverte le
+croyait, et moi aussi.
+
+Mesuré, cet horizon vivait à **50-62 % de saturation en permanence** — ce qu'il
+recevait du dessus attendait la semaine suivante pour sortir. Le correctif le
+ramène à zéro, donc il **déplace le régime hydrique de tout le dépôt**, celui
+sur lequel le calage des hauteurs a été fait.
+
+Coût réel : trois essais sur 1 916. Mais le coût annoncé était **zéro**, et
+c'est l'écart qui compte. Avant d'écrire qu'un défaut est latent, il faut le
+mesurer sur la configuration où on le dit sans effet — ça tient en un banc de
+cinq minutes.
+
+### Le contrôle qui distingue « j'ai corrigé » de « j'ai supprimé »
+
+Retirer un engorgement fait toujours pousser mieux. Rien, dans une suite qui
+passe, ne dit si on a corrigé la vidange ou simplement débranché l'anoxie.
+
+L'essai qui tranche est celui qui exige que **l'engorgement subsiste là où il
+doit** : un fond de vallée à exutoire fermé s'engorge toujours, parce que ce qui
+retient son eau n'est pas la vidange interne. Un correctif qui enlève quelque
+chose a besoin d'un essai qui vérifie ce qu'il n'a **pas** enlevé.
+
+### Un seuil qui casse d'une unité ne dit rien de plus que le tirage
+
+Deux des trois essais tombés l'étaient d'un cheveu — 3 arbres cariés contre
+« plus de 3 », 15 callunes survivantes contre « plus de 15 » —, sur une graine
+unique. Ces marges-là étaient des photographies, pas des contraintes, et elles
+ne mesuraient que la loterie.
+
+Ce qui les rend réancrables sans mauvaise conscience est que **le fait qu'elles
+gardent est porté par une autre ligne du même essai** : au moins un arbre creux,
+trois quarts des callunes debout. Quand ce n'est pas le cas, il n'y a pas de
+réancrage possible, seulement un lot à refaire.
+
+### Le sens d'un écart vaut mieux que sa taille
+
+Le troisième essai a bougé pour de bon : le hêtre passe de 16 % à 30,4 % de la
+canopée à soixante ans. Ce qui l'a rendu acceptable n'est pas l'amplitude, c'est
+la **direction** — le hêtre est l'essence que l'engorgement pénalise le plus
+dans cet atlas, donc c'est elle qui devait gagner le plus quand on retire une
+anoxie fantôme.
+
+Si le gain était tombé sur les pionnières, le correctif aurait eu le bon effet
+pour la mauvaise raison, et il aurait fallu chercher ailleurs. **Un contrôle de
+signe coûte une ligne de raisonnement et vaut mieux qu'un seuil.**
+
+### Là où deux passes du même calcul divergent, l'une des deux a tort
+
+`profilHydro` bornait un **flux** à l'infiltration (`Math.min(flux,
+h.conductiviteMm)`) et un **stock** au ressuyage. La même grandeur physique, la
+conductivité, servait à deux choses différentes à vingt lignes d'écart.
+
+Cette asymétrie-là était visible sans rien mesurer, et elle était dans le code
+depuis le début. Relire les deux passes d'un même mécanisme côte à côte est un
+geste bon marché ; personne ne l'avait fait.
+
+
 ## Ce qu'un lot plus ancien a appris (l'azote lessivé descend, #247 lot A)
 
 ### Le pool n'était que la moitié du problème, et l'autre moitié n'était pas dans l'issue
