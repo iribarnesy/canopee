@@ -61,7 +61,49 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'ammonium, le mor et le pin qui mine, #280 et #289)
+## Ce que le dernier lot a appris (la cellule de mélange, #247)
+
+Lot d'**instruction**, sans une ligne de moteur. Il devait confirmer une cause
+que `realisme.md` nommait depuis deux lots ; il l'a réfutée pour la grandeur où
+on l'accusait, et l'a établie pour une autre.
+
+### Une ancre dit ce qu'elle mesure, et rien d'autre
+
+L'abaque COMIFER/LIXIM donne la part d'un nitrate perdue **sous 90 cm**. Pendant
+deux lots, ce chiffre a servi à juger aussi ce que la surface **cède au
+sous-sol**, qu'il ne dit pas : 4,2 % du nitrate de 0-30 sort du profil, mais
+l'essentiel de ce nitrate a quitté 0-30. Avant d'opposer un chiffre au moteur,
+écrire la grandeur exacte qu'il mesure, et vérifier que le moteur est lu sur la
+même.
+
+### Un relevé pris sous culture n'est pas la cible d'un banc sur sol nu
+
+L'écart de répartition « sur tout le domaine du jeu » comparait un moteur en
+sol nu à des parcelles de céréales. Or ce qui manque au moteur est justement ce
+qu'une céréale fait en hiver : aller chercher le nitrate en profondeur. Le
+décor du banc fait partie de l'ancre.
+
+### Prédire le signe avant de corriger, sur un émulateur recoupé
+
+Corriger la plomberie devait remonter la part de surface. Une émulation 1-D, à
+entrées et drainage relevés sur le moteur et recoupée contre lui (1,5 point),
+a dit l'inverse en quelques secondes, et la physique l'explique : un vrai front
+emporte l'azote d'été plus bas qu'un mélange. Coder d'abord aurait coûté un lot
+entier pour découvrir la même chose sur une suite de quatre-vingt-dix minutes.
+
+### Deux défauts qui n'agissent qu'ensemble ne se livrent pas séparément
+
+L'eau totale seule : 45 d'écart à l'abaque contre 46. Les tranches seules : 38.
+Les deux : 6. Mesurer chaque correction isolément aurait conclu qu'aucune ne
+sert. Quand une forme dépend de deux choix, tester la grille entière.
+
+### Un bilan qui boucle ne dit pas que les flux sont justes
+
+L'eau du sable se conserve au millimètre et fait pourtant une boucle de 4,9 m
+par an entre la nappe et le bas du profil (#291). Les solutés, eux, la prennent
+pour de la percolation. La conservation valide les stocks, pas le chemin.
+
+## Ce qu'un lot plus ancien a appris (l'ammonium, le mor et le pin qui mine, #280 et #289)
 
 Un lot parti pour une seule chose — l'ammonium ne suit pas l'eau — et qui a dû
 en trouver deux autres pour pouvoir partir : l'humus d'un podzol est un mor, et
