@@ -61,7 +61,70 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'azote profond rencontre une ancre, #247)
+## Ce que le dernier lot a appris (l'ammonium, le mor et le pin qui mine, #280 et #289)
+
+Un lot parti pour une seule chose — l'ammonium ne suit pas l'eau — et qui a dû
+en trouver deux autres pour pouvoir partir : l'humus d'un podzol est un mor, et
+le pin tire son azote de ce mor par ses ectomycorhizes. Chaque étape a été
+forcée par l'échec mesuré de la précédente.
+
+### Une ancre se confronte à son domaine avant d'être retenue
+
+La première rampe de nitrification passait par une paramétrisation publiée —
+« 50 % reduction at 12 °C and 100 % at 5 °C ». Le Q10 que cette pente implique
+vaut **dix**, quand la littérature donne 1,9 en moyenne pour la nitrification
+nette. La mesure a refusé la fonction (75 % d'ammonium au lieu de 25), mais
+l'incohérence était **détectable sans rien mesurer**. Un chiffre unique tiré
+d'une étude ne vaut pas une fourchette établie ; il faut les comparer avant.
+
+### Une partie n'est pas une mesure — le témoin non plus
+
+**Trois conclusions tirées d'une seule graine dans ce lot, deux fausses.** Une
+chênaie dont 70 % des tiges seraient restées bloquées à 0,4 m (« des nains
+immortels », disait-on déjà en #161) : répété sur trois autres graines, 3 à 5 %.
+Une lande 36 % moins acidifiée : sur huit graines, un peu plus acidifiée, et le
+complexe ne se vide pas sur trois graines avant contre deux après. Chaque fois,
+la lecture était spectaculaire et cohérente, et c'est ce qui aurait dû alerter.
+
+Le **témoin apparié** protège contre un défaut du banc ; il ne protège pas contre
+le hasard d'une trajectoire. Les deux sont nécessaires.
+
+### Quand une correction ancrée casse un calage, suspecter le calage
+
+Le réflexe, devant quatre essais rouges, a été de défendre l'existant parce
+qu'il était vert. C'est l'inverse qui était juste : **la charge de la preuve
+appartient à ce qui n'est pas ancré**. Et ici l'existant reposait sur deux
+erreurs qui se compensaient — un humus compté comme un mull fabriquait trop
+d'azote, un lessivage qui emportait l'ammonium jetait l'excès. Corriger la
+seconde a fait apparaître la première.
+
+### Fixer la valeur avant la mesure, et laisser la mesure réfuter
+
+Le C/N du mor a été posé à 30 **avant** de mesurer quoi que ce soit, avec la
+prédiction écrite de la minéralisation qui en découlerait (16 à 21 kg N/ha/an).
+Elle est tombée juste — et le pin s'est effondré. C'est ce second résultat qui a
+servi : un apport d'azote réaliste ne suffisait pas au pin du moteur alors qu'il
+suffit à un vrai pin, donc il manquait au moteur la voie par laquelle un vrai
+pin se nourrit. Retoucher le C/N pour sauver le pin aurait effacé la découverte.
+
+### Un paramètre sans plafond ancré se choisit par parcimonie
+
+Le minage a un plancher ancré (l'écart brut/net de minéralisation, 0,7) et aucun
+plafond : la dépolymérisation l'excède d'une quantité qu'aucune source trouvée
+ne borne. Les données du pin admettaient tout un intervalle. La valeur retenue
+est **le plus petit excès au-dessus du plancher que la table exige** — le moins
+de non-ancré possible — et non celle qui colle le mieux. Vingt ans, tenu à
+l'écart, est tombé à +0,6 % de la table.
+
+### Une porte déclarée par le sol confine un mécanisme
+
+Le minage aurait pu toucher toutes les essences ectomycorhiziennes, donc presque
+toutes les tables. Sa porte se lit sur le C/N déclaré du sol : nulle sur un
+mull, la passe ne s'exécute même pas sur les limons, et le hêtre, le chêne, le
+charme et le bouleau sont intacts **par construction**, pas par mesure. Un
+mécanisme dont la portée dépend d'un trait déclaré se confine lui-même.
+
+## Ce qu'un lot plus ancien a appris (l'azote profond rencontre une ancre, #247)
 
 Lot de **mesure**, sans une ligne de code : opposer le profil d'azote du moteur
 à un relevé de terrain, ce que le lot A de #247 n'avait jamais fait.
