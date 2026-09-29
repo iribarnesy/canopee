@@ -154,6 +154,13 @@ describe("ce que le lot promet de NE PAS faire", () => {
 // la partager ne change aucun résultat et divise le fichier par deux.
 const SIECLE = siecleDeChenes(7);
 
+/** La même série que `siecleDeChenes`, pour prolonger l'état d'une semaine. */
+const METEO_SIECLE = (() => {
+  const serie = serieMeteoPour(LIMON_RICHE.station.id);
+  if (!serie) throw new Error("série manquante");
+  return serieToWeeks(serie);
+})();
+
 describe("le vieil arbre creux paie, et la boucle se ferme", () => {
   it("un siècle de tempêtes loge les auxiliaires mieux qu'un peuplement sain", () => {
     // **La boucle**, dont tous les maillons existaient sauf le dernier : une
@@ -199,7 +206,45 @@ describe("le vieil arbre creux paie, et la boucle se ferme", () => {
   }, 900_000);
 
   it("et l'indice de biodiversité les compte comme arbres-habitats", () => {
-    const s = SIECLE;
+    // **La garde de cet essai porte, et elle a failli être affaiblie** (#280).
+    // `indiceBiodiversite` compte `heightM >= 15 ? 1 : partHabitatDeCavites(t)` :
+    // au-dessus de quinze mètres un arbre vaut un habitat entier **quoi qu'il
+    // arrive**, donc ses creux n'ajoutent rien. Le terme de cavité ne pèse que
+    // **sous** ce seuil. Sans arbre creux petit, la comparaison ci-dessous est
+    // vraie trivialement et l'essai ne prouve rien.
+    //
+    // Elle tenait jusqu'ici sur **une trajectoire**, pas sur un fait. Le siècle
+    // de la graine 7 finissait avec trois chênes creux de quarante centimètres ;
+    // #280 a déplacé cette trajectoire, et les seuls arbres creux restants
+    // faisaient seize mètres. La garde est tombée pour un mètre.
+    //
+    // **Ce n'était pas une pathologie que #280 aurait guérie**, et il faut le
+    // dire parce que ça a été affirmé à tort pendant le lot. Répété sur les
+    // graines 3, 11 et 23, le moteur d'avant #280 n'a que 3 à 5 % de tiges sous
+    // cinquante centimètres, comme celui d'après : les 70 % de la graine 7
+    // étaient propres à cette partie. Une conclusion tirée d'une seule graine
+    // n'était pas une mesure — la règle du dépôt, oubliée deux fois dans le
+    // même lot.
+    //
+    // Le décor produit donc maintenant le cas **exprès**, et par le geste que
+    // le critère nomme lui-même — « gros sujets, **têtards** et troncs creux ».
+    // Une trogne rabat la charpente à hauteur d'homme : l'arbre repasse sous
+    // quinze mètres et porte une tête creuse. C'est déterministe là où le
+    // siècle de tempêtes était un tirage, donc l'essai y gagne.
+    const semaine = SIECLE.week;
+    const w = METEO_SIECLE[semaine % METEO_SIECLE.length];
+    if (!w) throw new Error("météo manquante");
+    // Les trois plus gros : ce sont eux qu'on trogne dans une parcelle réelle,
+    // et ce sont eux qui portent assez de bois pour une tête creuse.
+    const aTrogner = [...SIECLE.trees]
+      .filter((t) => t.alive)
+      .sort((x, y) => y.heightM - x.heightM)
+      .slice(0, 3)
+      .map((t) => t.id);
+    const s = advanceWeek(SIECLE, w, [
+      { type: "trogner", week: semaine, treeIds: aTrogner, hauteurTeteM: 2.5 },
+    ]).state;
+
     const petitsCreux = s.trees.filter(
       (t) => t.alive && t.heightM < 15 && partHabitatDeCavites(t) > 0,
     );

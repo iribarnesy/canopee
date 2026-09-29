@@ -278,6 +278,35 @@ export interface SoilState {
    * pas perdu pour le peuplement ; ce qui passe sous la zone racinaire, si.
    */
   mineralNProfondG: GrilleLongue;
+  /**
+   * Part **ammoniacale** de `mineralNG`, g/m² — un sous-pool, pas un pool (#280).
+   *
+   * `mineralNG` reste l'azote minéral **total** : prélèvement, disponibilité,
+   * érosion et retour de litière continuent de le lire sans rien savoir des
+   * deux formes. Cette grille dit seulement **quelle fraction de ce stock est
+   * de l'ammonium**, et elle sert à une seule chose : le lessivage ne voit que
+   * la différence, `mineralNG − ammoniacalNG`.
+   *
+   * **Pourquoi un sous-pool et pas deux pools francs.** `mineralNG` est lu ou
+   * écrit à une quinzaine d'endroits du tick ; scinder aurait obligé chacun à
+   * choisir son pool, et #234 a montré ce que coûte un site de débit oublié.
+   * Ici les sites d'ajout et de prélèvement gardent leur code, à une ligne près
+   * pour ceux qui retirent — un retrait proportionnel doit rabattre le
+   * sous-pool dans la même proportion.
+   *
+   * **L'invariant est `0 ≤ ammoniacalNG ≤ mineralNG`**, cellule par cellule,
+   * et il est gardé avec les autres pools (`pools-positifs.test.ts`). C'est lui
+   * qui attrape un site oublié, pas le bilan conservatif : un budget peut se
+   * refermer parfaitement sur un stock qui n'a pas de sens.
+   *
+   * **Il n'y a pas d'ammonium en profondeur**, et c'est une conséquence du
+   * modèle, pas un choix : `humusCG` et `litterNG` sont mono-couche et la
+   * litière tombe en surface, donc rien ne s'ammonifie en bas. Le sous-sol ne
+   * reçoit que du nitrate lessivé. Le relevé de terrain, lui, en trouve
+   * (2,90 et 2,20 kg/ha à 30-60 et 60-90) — une limite de plus qui pointe vers
+   * le nombre de compartiments (#247, #257).
+   */
+  ammoniacalNG: GrilleLongue;
   /** azote de la litière au sol, g/m² (libéré vers le minéral en se décomposant) */
   litterNG: GrilleLongue;
   /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
@@ -688,6 +717,14 @@ export interface TickFluxes {
   uptakeArbresKgHa: number;
   /** N réellement servi à la strate herbacée, kg/ha */
   uptakeHerbeKgHa: number;
+  /**
+   * N **organique** miné par les ectomycorhizes et livré à leurs hôtes, kg/ha
+   * (#289). Il ne passe **pas** par le pool minéral — c'est tout son sens —,
+   * donc il n'entre ni dans `uptakeKgHa` ni dans `uptakeArbresKgHa`, et
+   * l'égalité de #115 entre les deux reste exacte. Il sort de l'humus, pas du
+   * sol minéral.
+   */
+  minageEctoKgHa: number;
   leachedKgHa: number;
   /** N retourné au sol par la chute des feuilles (recyclage interne), kg/ha */
   litterfallKgHa: number;
@@ -753,6 +790,7 @@ export function createGameState(
       // partir de rien, ce qui est aussi la lecture la plus prudente : le lot B
       // n'y trouvera que ce que la partie y aura mis *(à calibrer)*.
       mineralNProfondG: new Float64Array(n),
+      ammoniacalNG: new Float64Array(n),
       litterNG: new Float64Array(n),
       litterCG: new Float64Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),

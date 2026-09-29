@@ -568,14 +568,31 @@ export const SABLE_PROFOND: StationClimat = {
     nom: "Sable acide profond (sans alios)",
     latitudeDeg: 50.1,
     profil: [
-      horizon(25, { sable: 88, limon: 9, argile: 3 }, { moPct: 3, ph: 4.8 }),
+      // **L'humus d'un podzol sous pin est un mor**, et il rend peu d'azote
+      // (#289). C/N 30 : le bas de la fourchette typique du mor (« toujours plus
+      // de 20, ou même 30 à 40 »), donc la correction la plus modeste qui fasse
+      // de cet humus ce qu'il est. **Fixé avant d'en mesurer l'effet** — voir le
+      // commentaire du stock minéral ci-dessous.
+      horizon(25, { sable: 88, limon: 9, argile: 3 }, { moPct: 3, ph: 4.8, cnHumus: 30 }),
       horizon(45, { sable: 92, limon: 6, argile: 2 }, { moPct: 0.9, ph: 4.9 }),
       horizon(60, { sable: 94, limon: 4, argile: 2 }, { moPct: 0.3, ph: 5 }),
     ],
-    // Le stock minéral de départ est bas, et ce n'est pas parce que le sol ne
-    // libère rien — il porte 113 kg N/ha/an de minéralisation potentielle. C'est
-    // qu'un sable ne retient pas : ce qui n'est pas prélevé dans la semaine
-    // s'en va avec l'eau.
+    // **Ce commentaire disait le contraire de la vérité, et il a tenu deux lots.**
+    // Il disait : « ce n'est pas parce que le sol ne libère rien — il porte
+    // 113 kg N/ha/an de minéralisation potentielle. C'est qu'un sable ne retient
+    // pas : ce qui n'est pas prélevé dans la semaine s'en va avec l'eau. »
+    //
+    // Les deux moitiés étaient fausses, et elles se compensaient. Le sol
+    // minéralisait **45 à 56 kg N/ha/an** mesurés dans le tick — deux à trois fois
+    // la minéralisation nette d'un podzol sableux sous pin, **6 à 24** —, parce
+    // que son humus était compté comme un mull à C/N 11. Et le lessivage en
+    // jetait l'essentiel, parce qu'il emportait aussi l'ammonium, qui ne suit
+    // pas l'eau (#280). Le pin avait été calé en #254 sur la somme des deux
+    // erreurs. #280 a corrigé la seconde, et la première est apparue : le pin
+    // s'est mis à dépasser sa table d'un quart à vingt ans.
+    //
+    // À C/N 30 le sol minéralise ce qu'un podzol minéralise. Le stock minéral de
+    // départ est donc bas pour la bonne raison.
     initialMineralNKgHa: 25,
     // Veldpodzol : la nappe est à portée du pivot, et c'est ce qui sépare un
     // site de classe médiane d'une dune sèche.

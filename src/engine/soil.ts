@@ -31,6 +31,21 @@ export interface Horizon {
    * **et** la pénétration des racines. 0 = horizon meuble, 1 = quasi imperméable.
    */
   induration: number;
+  /**
+   * **Rapport C/N de l'humus de cet horizon** (#289). Absent = 11, le mull des
+   * sols biologiquement actifs (`carbon.ts:CN_HUMUS`), et c'est juste pour tous
+   * les limons du dépôt.
+   *
+   * Il ne l'est pas pour un podzol, et c'était le défaut que #280 a découvert.
+   * La typologie des humus est nette et ancienne : **mull**, C/N voisin de 10 ;
+   * **moder**, 15 à 25 ; **mor**, « toujours plus de 20, ou même 30 à 40 », sous
+   * les résineux des podzols. Pour un même carbone décomposé, un mor rend deux à
+   * trois fois moins d'azote qu'un mull — c'est ce qui fait qu'un sable sous pin
+   * est pauvre, bien plus que sa matière organique.
+   *
+   * Seul l'horizon de surface le lit : l'humus du moteur est mono-couche.
+   */
+  cnHumus?: number;
 }
 
 export type SoilProfile = readonly Horizon[];
@@ -341,7 +356,13 @@ export function profondeurTotaleCm(profil: SoilProfile): number {
 export function horizon(
   epaisseurCm: number,
   texture: { sable: number; limon: number; argile: number },
-  options: { moPct: number; ph: number; pierrosite?: number; induration?: number },
+  options: {
+    moPct: number;
+    ph: number;
+    pierrosite?: number;
+    induration?: number;
+    cnHumus?: number;
+  },
 ): Horizon {
   const somme = texture.sable + texture.limon + texture.argile || 1;
   return {
@@ -353,5 +374,6 @@ export function horizon(
     moPct: options.moPct,
     ph: options.ph,
     induration: options.induration ?? 0,
+    ...(options.cnHumus === undefined ? {} : { cnHumus: options.cnHumus }),
   };
 }

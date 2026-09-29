@@ -951,6 +951,7 @@ function emptyFluxes(): TickFluxes {
     uptakeKgHa: 0,
     uptakeArbresKgHa: 0,
     uptakeHerbeKgHa: 0,
+    minageEctoKgHa: 0,
     leachedKgHa: 0,
     phosphoreMoyenGM2: 0,
     potassiumMoyenGM2: 0,

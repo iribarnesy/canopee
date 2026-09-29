@@ -66,6 +66,7 @@ const POOLS = [
   "nappeMm",
   "mineralNG",
   "mineralNProfondG",
+  "ammoniacalNG",
   "litterNG",
   "litterCG",
   "humusCG",
@@ -102,6 +103,11 @@ function pireDeChaquePool(cote: number, ans: number) {
   }
   const pire: Record<string, number> = {};
   for (const p of [...POOLS, ...STOCKS_PARCELLE]) pire[p] = Number.POSITIVE_INFINITY;
+  // `ammoniacalNG` est un **sous-pool** de `mineralNG` (#280), donc il a une
+  // borne de plus que les autres : la marge `minéral − ammoniacal` ne doit
+  // jamais devenir négative. C'est elle qui attrape un site de débit oublié —
+  // un retrait qui rabat le total sans rabattre la part.
+  pire[MARGE] = Number.POSITIVE_INFINITY;
   for (let i = 0; i < ans * 52; i++) {
     const w = METEO[i % METEO.length];
     if (!w) throw new Error("météo manquante");
@@ -118,13 +124,22 @@ function pireDeChaquePool(cote: number, ans: number) {
       const v = (s.carbon as unknown as Record<string, number>)[p] ?? 0;
       if (v < (pire[p] ?? 0)) pire[p] = v;
     }
+    const min = s.soil.mineralNG;
+    const amm = s.soil.ammoniacalNG;
+    for (let k = 0; k < min.length; k++) {
+      const marge = (min[k] ?? 0) - (amm[k] ?? 0);
+      if (marge < (pire[MARGE] ?? 0)) pire[MARGE] = marge;
+    }
   }
   return { pire, tiges: s.trees.filter((t) => t.alive).length };
 }
 
+/** La borne haute du sous-pool ammoniacal, suivie comme un pool (#280). */
+const MARGE = "mineralNG - ammoniacalNG";
+
 /** Nomme le fautif : un `expect` par pool dirait « false » sans dire lequel. */
 function aucunNegatif(pire: Record<string, number>) {
-  const fautifs = [...POOLS, ...STOCKS_PARCELLE]
+  const fautifs = [...POOLS, ...STOCKS_PARCELLE, MARGE]
     .filter((p) => (pire[p] ?? 0) < 0)
     .map((p) => `${p}=${(pire[p] ?? 0).toExponential(3)}`);
   expect(fautifs).toEqual([]);
