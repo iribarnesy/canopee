@@ -116,10 +116,14 @@ describe("le labour : un gain immédiat payé par le capital", () => {
   });
 
   it("…et il brûle du capital sol, qui met des décennies à revenir", () => {
+    // Ce qui part est la part de West et Post (2002), pas davantage : le seuil
+    // d'avant (« moins de 96 % ») épinglait les 5 % sans source que la
+    // constante portait.
     const cellule = 15 * 30 + 15;
-    expect(apres.state.soil.humusCG[cellule] ?? 0).toBeLessThan(
-      (avant.soil.humusCG[cellule] ?? 0) * 0.96,
-    );
+    const h0 = avant.soil.humusCG[cellule] ?? 0;
+    const h1 = apres.state.soil.humusCG[cellule] ?? 0;
+    expect(h1).toBeLessThan(h0);
+    expect(1 - h1 / h0).toBeCloseTo(LABOUR_PERTE_HUMUS, 6);
   });
 
   it("il fait table rase : herbe et jeunes plants y passent", () => {
