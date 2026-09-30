@@ -116,10 +116,14 @@ describe("le labour : un gain immédiat payé par le capital", () => {
   });
 
   it("…et il brûle du capital sol, qui met des décennies à revenir", () => {
+    // Ce qui part est la part de West et Post (2002), pas davantage : le seuil
+    // d'avant (« moins de 96 % ») épinglait les 5 % sans source que la
+    // constante portait.
     const cellule = 15 * 30 + 15;
-    expect(apres.state.soil.humusCG[cellule] ?? 0).toBeLessThan(
-      (avant.soil.humusCG[cellule] ?? 0) * 0.96,
-    );
+    const h0 = avant.soil.humusCG[cellule] ?? 0;
+    const h1 = apres.state.soil.humusCG[cellule] ?? 0;
+    expect(h1).toBeLessThan(h0);
+    expect(1 - h1 / h0).toBeCloseTo(LABOUR_PERTE_HUMUS, 6);
   });
 
   it("il fait table rase : herbe et jeunes plants y passent", () => {
@@ -152,12 +156,15 @@ describe("le labour : un gain immédiat payé par le capital", () => {
     }
     const laboure = partie(chaque, 25 * 52);
     const tranquille = partie([], 25 * 52);
-    // Un quart de siècle de charrue : le stock d'humus s'effondre — d'un bon
-    // quart. Le seuil est à 0,80 et non à la valeur mesurée (~0,75), parce que
-    // la vitesse de minéralisation dépend de l'humidité du sol : elle bouge
-    // donc à chaque fois qu'on touche au bilan hydrique, et c'est la **perte**
-    // qu'on veut garder sous surveillance, pas sa troisième décimale.
-    expect(laboure.humusTHa).toBeLessThan(0.8 * tranquille.humusTHa);
+    // Un quart de siècle de charrue : le stock d'humus finit sous celui du sol
+    // laissé vivre — 52,0 t C/ha contre 56,5, 8 % de moins. Avec la perte de
+    // 5 % par passage d'avant, sans source, il « s'effondrait d'un bon quart » ;
+    // West et Post (2002) mesurent de l'ordre de 57 g C m⁻² an⁻¹ d'écart entre
+    // labour et semis direct, soit une dizaine de tonnes en vingt-cinq ans
+    // **sous la même culture**. Ce dispositif-ci oppose un sol nu labouré à une
+    // friche qui se recolonise, pas deux conduites d'un même blé : il garde la
+    // direction, pas la taille.
+    expect(laboure.humusTHa).toBeLessThan(tranquille.humusTHa);
     // …et à la fin, le sol rend moins d'azote qu'un sol qu'on a laissé vivre,
     // alors même que chaque labour en libérait beaucoup sur le moment.
     const cinqDerniers = (s: readonly number[]) => s.slice(-5 * 52).reduce((a, b) => a + b, 0) / 5;

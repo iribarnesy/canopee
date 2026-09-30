@@ -566,7 +566,7 @@ export const EXPERIENCES: readonly Experience[] = [
     titre: "Le labour",
     question: "Qu'est-ce qu'on brûle vraiment en retournant un sol ?",
     attendu:
-      "Chaque passage libère d'un coup l'azote de 5 % de l'humus — le « coup de fouet » qui a fait la réputation de la charrue. Mais l'humus met des décennies à revenir : au bout d'un quart de siècle, le sol labouré rend MOINS d'azote que celui qu'on a laissé vivre.",
+      "Chaque passage libère d'un coup l'azote de 1 % de l'humus — le « coup de fouet » qui a fait la réputation de la charrue, des dizaines de kilos à l'hectare. Mais l'humus met des décennies à revenir : au bout d'un quart de siècle, le sol labouré rend MOINS d'azote que celui qu'on a laissé vivre.",
     cout: "court",
     executer: () => {
       // Une friche : laissée tranquille, elle se recolonise et construit du
