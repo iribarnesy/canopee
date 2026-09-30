@@ -168,32 +168,51 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // continu doit donc descendre de lui-même vers le second, ce que rien dans
     // le code ne lui dit de faire.
     //
-    // Relevé après #141, qui a levé le plafond de tassement : 4,16 t/ha à
-    // l'an 4, 2,63 à l'an 12, **1,45 à l'an 24**, 1,20 à l'an 29. Toute la
-    // trajectoire a monté d'un quart, et elle descend toujours.
+    // Le moteur passe par la gamme de Broadbalk vers les années 20 à 40 puis
+    // converge **sous**, à 0,70-0,79. Il glisse donc sous 1 là où l'essai tient,
+    // et la cause probable reste la **paille** non restituée (`herbacees.ts`).
+    // Mesure détaillée dans `labour-desserre.test.ts`.
     //
-    // **Et elle a été poursuivie jusqu'à l'échelle de l'essai**, parce que
-    // comparer trente ans de moteur à cent quatre-vingts ans d'épuisement n'est
-    // pas le même dispositif (moyennes par tranche de vingt ans) :
+    // **Réancré sur l'équilibre (#247), comme ce commentaire le demandait déjà.**
+    // La borne tenait à l'an 24 (« sous 2 t/ha ») et comparait donc un sol
+    // encore riche — il minéralise ~70 kg N/ha/an, dans le Mh du COMIFER pour un
+    // limon profond (80) — à l'équilibre d'un sol que Broadbalk épuise depuis
+    // cent cinquante ans. La méthode COMIFER elle-même prête à un blé non
+    // fertilisé sur ce limon de l'ordre de 3 t/ha à ce stade (0,5 × 80 + un
+    // reliquat de ~40 kg, à 3 kg N par quintal) : c'est une déduction, pas une
+    // mesure, mais elle dit que l'an 24 n'est pas le moment de Broadbalk.
+    //
+    // La comparaison juste est celle de l'échelle de l'essai : les moyennes par
+    // tranche de vingt ans **une fois la décroissance amortie**. Relevé sur ce
+    // moteur, cent vingt ans :
     //
     //     ans 1-20   21-40   41-60   61-80   81-100   101-120
-    //       2,96      1,25    0,84    0,78     0,79      0,70
+    //       2,94      1,18    0,83    0,79     0,79      0,70
     //
-    // Le moteur passe par la gamme de Broadbalk vers les années 20 à 40 puis
-    // converge **sous**, à 0,70-0,84. Il glisse donc bien sous 1 là où l'essai
-    // tient, et la cause probable reste la **paille** non restituée
-    // (`herbacees.ts`). Mesure détaillée dans `labour-desserre.test.ts`.
-    const r = culture({ ans: 26, cote: 30, rayonM: 14 });
+    // et avec le prélèvement en profondeur (lot B de #247, pas encore livré) :
+    // 5,86 / 2,70 / 1,79 / 1,62 / 1,60 / 1,46. Les deux restent dans le facteur
+    // deux de Broadbalk que cet essai s'accorde, l'un dessous, l'autre dessus.
+    const r = culture({ ans: 121, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
     const an24 = r[24] ?? 0;
+    const tranche = (debut: number) => {
+      const t = r.slice(debut, debut + 20);
+      return t.reduce((s, v) => s + v, 0) / Math.max(1, t.length);
+    };
     // Il part haut — le labour d'une bonne terre minéralise son humus — et il
     // s'épuise. Le **sens** est l'essentiel.
     expect(an2).toBeGreaterThan(3);
     expect(an24).toBeLessThan(an2 / 2);
-    // Et il atterrit dans la bande de la parcelle nue, à un facteur deux près :
-    // on ne prétend pas mesurer Broadbalk, on prétend ne pas en être loin.
-    expect(an24).toBeGreaterThan(0.5);
-    expect(an24).toBeLessThan(2);
+    // Il atterrit dans la bande de la parcelle nue, à un facteur deux près, sur
+    // chacune des trois dernières tranches : on ne prétend pas mesurer Broadbalk,
+    // on prétend ne pas en être loin une fois le sol à l'équilibre.
+    for (const debut of [61, 81, 101]) {
+      expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeGreaterThan(0.5);
+      expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeLessThan(2);
+    }
+    // Et il y est posé, pas en train de le traverser : la dernière tranche ne
+    // s'écarte de la précédente que de quelques centièmes de ce qu'elle vaut.
+    expect(Math.abs(tranche(101) / tranche(81) - 1)).toBeLessThan(0.2);
   }, 900_000);
 });
 
