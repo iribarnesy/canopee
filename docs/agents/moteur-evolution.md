@@ -61,7 +61,34 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les tranches de nitrate, #247)
+## Ce que le dernier lot a appris (la perte d'humus au labour, #247)
+
+`LABOUR_PERTE_HUMUS` valait 5 % « à calibrer », sans source, et c'est lui qui
+vidait la surface en février. Il vaut 1 %, calé sur West et Post (2002).
+
+### Une ancre qui mesure un écart se reproduit comme un écart
+
+West et Post mesurent ce que le semis direct stocke **de plus** que le labour
+(57 ± 14 g C m⁻² an⁻¹), pas ce qu'un passage brûle. La lecture directe — 57 g
+sur 70 t, 0,8 % — tombe bas sur vingt ans, parce que l'écart se referme quand
+le bras labouré a moins d'humus à perdre. On monte les deux bras sur le moteur
+et on lit l'écart : 1 % rend 60 et 50 sur dix et vingt ans.
+
+### Un banc dont la variable ne fait rien ne mesure rien
+
+Premier passage : six valeurs, écart nul partout. Le banc lisait le dépôt
+principal et non le worktree patché. Avant de lire un banc paramétré, vérifier
+qu'un bras extrême bouge (contrôle positif), sinon on conclut sur du vide.
+
+### Un seuil calé sur un chiffre sans source tombe avec lui
+
+Quatre essais épinglaient les 5 % sans le dire : « l'humus s'effondre d'un bon
+quart », « moins de 96 % après un passage », « l'an 24 sous la moitié de l'an
+2 », « dans la gamme de Broadbalk aux ans 21-40 ». C'étaient des dates et des
+tailles du moteur, pas de Broadbalk. En recalant, chacun a été réécrit sur ce
+qui est sourcé (la direction, l'équilibre), jamais desserré pour passer.
+
+## Ce qu'un lot plus ancien a appris (les tranches de nitrate, #247)
 
 La plomberie ancrée sur l'abaque (tranches de 10 cm, eau totale) est posée,
 et la suite passe sans qu'un essai bouge. Elle devait aussi dégonfler le fond
