@@ -82,6 +82,7 @@ import {
   reglagesDeLaPartie,
   supprimerSauvegarde,
 } from "./sauvegardes";
+import { useSon } from "./son/useSon";
 import { useBilan } from "./useBilan";
 import { useEllipse, vitesseDeRelecture } from "./useEllipse";
 import { useFaune } from "./useFaune";
@@ -1483,6 +1484,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   );
   const residents = useResidents(snapshot, arbresPoses, station?.coteM);
   const nuee = useNuee(snapshot, station?.coteM);
+  const son = useSon(snapshot, station, ellipse.feu, residents);
 
   /**
    * La cellule survolée, et ce que le moteur en dit.
@@ -1859,7 +1861,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           }}
         >
           <div style={{ ...VOLET, position: "static", pointerEvents: "auto" }}>
-            <Bandeau game={game} snapshot={snapshot} />
+            <Bandeau game={game} snapshot={snapshot} son={son} />
           </div>
           {/*
           L'OBJECTIF (#188), sous le bandeau et par-dessus la vue : c'est le

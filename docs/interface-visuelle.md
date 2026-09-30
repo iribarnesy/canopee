@@ -102,24 +102,22 @@ pas contradictoire, c'est exactement ce que fait une planche botanique.
 
 **Dedans, et c'était une erreur de l'exclure** :
 
-- **La faune visible** (§5.10, lot L9). Des brocards qui se grattent, des
-  oiseaux, des papillons sur les floraisons. Le moteur ne simule aucun animal
-  individuellement — il connaît une `pressionGibier` (un scalaire), un
-  `broutageKg` hebdomadaire, un `frotteSemaine` par arbre, une densité de
-  cervidés du paysage et un indice de biodiversité. La règle : **le nombre et
-  le comportement des bêtes lisent l'état du moteur, les individus ne sont pas
-  simulés.** Trois brocards à l'écran parce que `pressionGibier` est haute, et
-  celui qui frotte le fait sur un arbre dont `frotteSemaine` vient d'être
-  posée. C'est de la figuration honnête, et ça rend enfin *visible* un indice
-  de biodiversité qui ne se lit aujourd'hui qu'en chiffre.
+- **La faune visible** (§5.10, lot L9). Des chevreuils qui broutent là où le
+  moteur a brouté, les nicheurs du moteur qui sortent de leur gîte, le geai
+  qui revient à ses glands, la nuée d'une pullulation. La règle : **le nombre,
+  l'emplacement et l'activité des bêtes viennent du moteur ; l'individu est de
+  la figuration.** Le premier jet de ce paragraphe disait que le moteur ne
+  simulait aucun animal individuellement ; c'est faux depuis #187, et §5.10 le
+  reprend.
 - **La pluie, la neige, le gel, la brume** (§5.7). Une animation de pluie la
   semaine où il a plu, c'est `weather.rainMm` qui est déjà dans l'instantané :
   rien à demander au moteur, un grand effet.
-- **Le son** (§5.10, lot L9). Le vent dans les feuilles dont l'intensité suit
-  `ventExposition` et la densité du couvert, les oiseaux selon la saison et
-  l'indice de biodiversité, la pluie, la tronçonneuse, le ronflement de
-  l'incendie. Web Audio, quelques boucles courtes. Rapport effet/coût
-  excellent, et c'est ce qui fait qu'on reste devant l'écran.
+- **Le son** (§5.10, lot L9). Le vent dans les feuilles selon ce que la
+  parcelle en reçoit et le couvert qu'elle porte, les nicheurs du moteur qui
+  chantent selon la saison, la pluie de la semaine, le ruisseau, la
+  tronçonneuse des chantiers, le ronflement de l'incendie. Web Audio, quelques
+  boucles courtes. Rapport effet/coût excellent, et c'est ce qui fait qu'on
+  reste devant l'écran.
 
 **Les poules** (et les animaux d'élevage) sont un cas à part, et il faut le
 dire franchement : **le moteur ne les connaît pas du tout**.
@@ -1108,49 +1106,86 @@ d'avance** : on ne génère que les combinaisons présentes sur la parcelle, ave
 un cache LRU. C'est un point que le lot 0 doit valider (temps de cuisson d'un
 arbre : viser < 2 ms, sinon l'apparition d'une essence fait un à-coup).
 
-### 5.10 La faune et le son (nouveau en v0.2)
+### 5.10 La faune et le son (nouveau en v0.2, livré en L9 — #129)
+
+#### La règle
+
+**Le nombre, l'emplacement et l'activité des bêtes viennent du moteur ;
+l'individu, lui, est de la figuration.** Le rendu ne pose aucun animal que le
+moteur n'implique pas, et ne dessine pas une population que le moteur dit
+absente. Quand une grandeur manque, c'est une issue au moteur, pas une règle
+écrite dans le rendu.
+
+La v0.2 de ce document disait que « le moteur ne simule aucun animal
+individuellement ». C'est faux depuis #187 : les nicheurs sont des individus
+(`Snapshot.faune`), chacun ancré à l'arbre qui porte son gîte. Le rendu s'y tient.
 
 #### La faune visible
 
-Le moteur ne simule aucun animal individuellement. Ce qu'il sait : une
-`pressionGibier ∈ [0,1]`, un `broutageKg` hebdomadaire, un `frotteSemaine` par
-arbre, une densité de cervidés du paysage (`gibierParHa`), une population de
-ravageurs par cellule, un indice de biodiversité avec l'étalement des
-floraisons. C'est assez pour peupler honnêtement la parcelle, à condition de
-tenir la règle : **le nombre, l'emplacement et l'activité des bêtes dérivent de
-l'état ; l'individu, lui, est de la figuration.**
+| Animal | Ce qui le fait apparaître (moteur) | Ce qu'il fait (mise en scène) | Où | État |
+|---|---|---|---|---|
+| **Chevreuil** | densité que le moteur fait brouter, `gibierParHa × pressionGibier`, fois la surface hors clôture — une présence moyenne, montrée comme une part du temps d'écran | entre par un bord, s'arrête au pied des arbres **broutés ou frottés** ces deux dernières semaines (sinon broute l'herbe), repart ; jamais dans une cellule close | `render/faune/chevreuils.ts` | livré (#294) |
+| **Mésanges, pic, chevêche, buse, écureuil** | les individus du moteur (`Snapshot.faune`) ; un couple fait deux corps (`unite`) | autour de l'arbre du gîte : la mésange va de houppier en houppier et rentre à sa loge, le pic grimpe aux fûts et va aux chandelles, la chevêche guette, la buse tourne au-dessus de son aire, l'écureuil court d'un pied à l'autre ; tous fuient un chantier proche | `render/faune/residents.ts` | livré (#297) |
+| **Geai** | les semis levés des espèces à dissémination `geai` (`Snapshot.naissances`) | **revient** à sa cachette au printemps, s'y pose et fouille — l'enfouissement est d'automne, et le moteur fait lever les semis en avril | `render/faune/geai.ts` | livré (#298) |
+| **Nuée de ravageurs** | `soilRavageurs` au-delà de 0,2, et `facteurChaleur` : sous la température de base, elle se pose | points qui dansent autour des houppiers de la tache | `render/faune/nuee.ts` | livré (#300) |
+| **Papillons, abeilles** | la présence des pollinisateurs, `min(habitat, ressourceFlorale)` — que le moteur calcule sans l'exposer | tourneront autour de ce qui fleurit, là où il y en a | — | attend #299 |
+| **Oiseaux de passage** | aucune grandeur : le moteur ne tient que les nicheurs | — | — | attend #296 |
 
-| Animal | Ce qui le fait apparaître | Ce qu'il fait | Charge |
-|---|---|---|---|
-| **Brocard / chevreuil** | `pressionGibier` × surface, et il évite les cellules closes (`soilCloture`) | broute un plant dont `pousseTendreM` a baissé, **se frotte** contre un arbre dont `frotteSemaine` vient d'être posée, lève la tête, s'en va | `L` |
-| **Oiseaux** | indice de biodiversité + saison ; plus nombreux avec les strates et le bois mort | se posent sur les branches, sur les **chandelles** en priorité (les pics y creusent), s'envolent au passage | `M` |
-| **Geai** | l'espèce est déjà dans le moteur comme **disséminateur** (`dissemination: "geai"`) | enterre un gland en terrain découvert à la semaine du recrutement — c'est littéralement le mécanisme du moteur, rendu visible | `M` |
-| **Papillons, abeilles** | floraisons en cours (`fruitProgress`) | tournent autour des arbres en fleurs, disparaissent hors floraison | `S` |
-| **Insectes ravageurs** | `ravageurs` par cellule au-delà d'un seuil | nuée discrète sur les couronnes défoliées | `S` |
+**Invisibles, et c'est tenu** : les chauves-souris (elles chassent de nuit, et le
+rendu n'a pas de nuit), le loir (il dort le jour et la moitié de l'année), les
+saproxyliques (ils vivent dans le bois). **Le sanglier** est refusé par
+`docs/v1.md`. **Les poules** : voir §0 — pas de sprite sans module d'élevage (Q7).
 
-Le geai est le meilleur de la liste : il ne décore pas, il **explique** pourquoi
-les chênes colonisent les friches et se régénèrent mal sous leur propre
-couvert. C'est le genre de figuration qui vaut un paragraphe de cours.
+**L'échelle est vraie** : une mésange de 12 cm fait cinq pixels au zoom le plus
+rapproché. Seule la nuée déroge — des points de taille fixe à l'écran, parce
+qu'un insecte à l'échelle ne se verrait à aucun zoom.
 
-**Les poules** : voir §0 — pas de sprite sans module d'élevage (Q7).
+**Le dessin** suit la règle des arbres (§5.11) : des silhouettes de profil
+cuites une fois par figure et par palier (`couches/faune.ts`,
+`couches/residents.ts`), posées dans l'ordre du peintre des arbres — une bête
+passe derrière le tronc de devant.
 
 #### Le son
 
-Des couches d'ambiance pilotées par l'état, mixées en continu (Web Audio) :
+Des couches pilotées par l'état, mixées en continu (Web Audio,
+`src/game/son/`). **Allumé par défaut**, il démarre au premier geste du joueur
+(le navigateur n'en permet pas d'autre) ; un bouton muet et un volume sont dans
+le bandeau, et le réglage se garde.
 
-| Couche | Pilotée par | Charge |
+| Couche | Pilotée par | Son |
 |---|---|---|
-| Vent dans les feuilles | `weather.ventMoyMs × ventExposition` de la station × densité du couvert × feuillaison (un couvert nu siffle, un couvert plein bruisse). L'abri seul ne suffisait pas : il ne disait pas s'il ventait cette semaine-là | `M` |
-| Oiseaux | saison + indice de biodiversité (une parcelle riche est bruyante ; une pinède pure, silencieuse) | `M` |
-| Pluie, grêle, vent fort | `rainMm`, `tMinAbsC` | `S` |
-| Ruisseau, mare | proximité de l'eau libre à la caméra | `S` |
-| Incendie | ronflement qui monte avec la surface du front | `M` |
-| Chantiers | tronçonneuse, sécateur, débroussailleuse, tracteur — sur l'action jouée | `M` |
+| Vent dans les feuilles | `ventRecuParLeSite(ventMoyMs, ventExposition)` × couvert (`1 − soilLumiere` moyen) : un couvert en feuilles bruisse, une friche nue siffle à peine | `vent.ogg` |
+| Pluie | `weather.rainMm` de la semaine | `pluie.ogg` |
+| Eau | un **ruisseau** coule toujours ; une **mare** ne fait de bruit que quand la crue la déborde (`estInondee`) | `ruisseau.ogg` |
+| Incendie | les particules de feu en vol : un grand front gronde plus qu'une lisière | `feu.ogg` |
+| Chantiers | les gestes qui démontent une tige (`couper`, `eclaircir`, `elaguer`, `trogner`, `receper`), environ une seconde par tige, neuf au plus | `tronconneuse.ogg` |
+| Oiseaux | **les nicheurs du moteur**, espèce par espèce, à une cadence de saison (le printemps chante, l'été se tait) ; le geai quand il vient à un semis. Une parcelle sans nicheur ne chante pas | un cri par espèce |
 
-**Coût annexe** : c'est la seule entorse au « pas d'asset binaire ». Quelques
-boucles courtes en `.ogg` (< 500 ko au total), dans `data/sons/`, avec licence
-et provenance documentées — la même exigence de sourcing que pour les valeurs
-écologiques. Un réglage de volume et un bouton muet sont obligatoires.
+**Les fichiers** : dix extraits d'enregistrements **déposés par leurs auteurs**
+sous licence libre (CC0, domaine public, CC BY, CC BY-SA) — les ambiances sur
+**radio aporee ::: maps** (Internet Archive), les oiseaux sur **xeno-canto**.
+Ils sont tirés par `scripts/sourcer-sons.py`, qui **relit la licence à la
+source** et refuse toute clause NC ou ND, choisit l'extrait par l'énergie du
+signal, nettoie les cris sous 250 Hz (500 Hz pour le pic, dont le tambourinage
+était noyé dans un grondement de route), normalise, fond les boucles et vérifie
+le budget : **392 ko pour les dix**, sous les 500 ko. La provenance est écrite
+dans `data/sons/PROVENANCE.md`, fichier par fichier. Ce qu'aucune source
+n'avait de propre — la hache, le sécateur, la débroussailleuse — n'est pas joué.
+
+Le premier jet les tirait de Wikimedia Commons, qui en héberge des copies ;
+Commons a refusé nos téléchargements (429), et on est allé chercher les
+originaux chez leurs auteurs. Les sons sont **découverts** dans `data/sons/` et
+non importés un par un : un fichier absent se tait, rien ne casse.
+
+**Personne ne les a encore écoutés** : le choix des extraits est un calcul
+(énergie, spectre, régularité), vérifié par des mesures — les chants logent
+leur énergie au-dessus de 2 kHz, le tambourinage montre ses vingt-cinq coups
+en quatre secondes, le mélange hors ligne suit les grandeurs du moteur. Une
+oreille reste à passer.
+
+**À surveiller** : Safari a longtemps refusé l'Ogg Vorbis. Un son qui ne se
+décode pas se tait sans rien casser, mais un joueur sous un vieux Safari
+n'entendrait rien.
 
 ### 5.11 Le temps qui passe : un seul rendu, plusieurs vitesses
 

@@ -16,3 +16,6 @@ apercu/scenes/
 # Outils de capture jetables, propres à une session.
 .apercu.mjs
 .p*.mts
+
+# Originaux téléchargés par `scripts/sourcer-sons.py` : régénérables, jamais versionnés.
+.cache/

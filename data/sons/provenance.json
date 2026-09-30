@@ -1,0 +1,162 @@
+[
+  {
+    "id": "vent",
+    "fichier": "vent.ogg",
+    "sorte": "ambiance",
+    "source": "Tempelhofer Feld, Berlin, Deutschland - wind in poplar trees",
+    "page": "https://archive.org/details/aporee_13863_41578",
+    "auteur": "udo noll",
+    "credit": "radio aporee ::: maps, Internet Archive",
+    "licence": "CC BY-SA 3.0",
+    "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "extraitS": [
+      86.74,
+      106.24
+    ],
+    "modifications": "extrait, mono 22 kHz, intensité normalisée, boucle fondue sur 1,5 s, Ogg Vorbis q1"
+  },
+  {
+    "id": "pluie",
+    "fichier": "pluie.ogg",
+    "sorte": "ambiance",
+    "source": "Löhrstraße 2, 56626 Andernach, Deutschland - December rain",
+    "page": "https://archive.org/details/aporee_62266_71666",
+    "auteur": "oliverfuchs67",
+    "credit": "radio aporee ::: maps, Internet Archive",
+    "licence": "Domaine public",
+    "licenceUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "extraitS": [
+      128.24,
+      144.74
+    ],
+    "modifications": "extrait, mono 22 kHz, intensité normalisée, boucle fondue sur 1,5 s, Ogg Vorbis q1"
+  },
+  {
+    "id": "ruisseau",
+    "fichier": "ruisseau.ogg",
+    "sorte": "ambiance",
+    "source": "Schleiden, Deutschland - Das Plätschern eines wieder freigelegten Baches / The babbling of a brook, uncovered",
+    "page": "https://archive.org/details/aporee_21934_25484",
+    "auteur": "Matthes",
+    "credit": "radio aporee ::: maps, Internet Archive",
+    "licence": "Domaine public",
+    "licenceUrl": "http://creativecommons.org/publicdomain/mark/1.0/",
+    "extraitS": [
+      4.0,
+      17.5
+    ],
+    "modifications": "extrait, mono 22 kHz, intensité normalisée, boucle fondue sur 1,5 s, Ogg Vorbis q1"
+  },
+  {
+    "id": "feu",
+    "fichier": "feu.ogg",
+    "sorte": "ambiance",
+    "source": "Whitney Portal Rd, California, USA - Fire near the campground",
+    "page": "https://archive.org/details/aporee_52994_60560",
+    "auteur": "samuelcarladams",
+    "credit": "radio aporee ::: maps, Internet Archive",
+    "licence": "Domaine public",
+    "licenceUrl": "http://creativecommons.org/publicdomain/mark/1.0/",
+    "extraitS": [
+      13.25,
+      29.75
+    ],
+    "modifications": "extrait, mono 22 kHz, intensité normalisée, boucle fondue sur 1,5 s, Ogg Vorbis q1"
+  },
+  {
+    "id": "tronconneuse",
+    "fichier": "tronconneuse.ogg",
+    "sorte": "ambiance",
+    "source": "Unnamed Road, 31000 Toulouse, France - winter chainsaw",
+    "page": "https://archive.org/details/aporee_55426_63339",
+    "auteur": "kaoss012",
+    "credit": "radio aporee ::: maps, Internet Archive",
+    "licence": "Domaine public",
+    "licenceUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "extraitS": [
+      18.75,
+      30.25
+    ],
+    "modifications": "extrait, mono 22 kHz, intensité normalisée, boucle fondue sur 1,5 s, Ogg Vorbis q1"
+  },
+  {
+    "id": "mesange_bleue",
+    "fichier": "mesange_bleue.ogg",
+    "sorte": "cri",
+    "source": "XC121562 Eurasian Blue Tit (Cyanistes caeruleus)",
+    "page": "https://xeno-canto.org/121562",
+    "auteur": "Adrienne Eaton",
+    "credit": "xeno-canto",
+    "licence": "CC BY-SA 3.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "extraitS": [
+      9.75,
+      15.75
+    ],
+    "modifications": "extrait, mono 22 kHz, passe-haut 250 Hz, intensité normalisée, fondus de 80 ms, Ogg Vorbis q1"
+  },
+  {
+    "id": "mesange_charbonniere",
+    "fichier": "mesange_charbonniere.ogg",
+    "sorte": "cri",
+    "source": "XC129643 Great Tit (Parus major)",
+    "page": "https://xeno-canto.org/129643",
+    "auteur": "Gavin Vella",
+    "credit": "xeno-canto",
+    "licence": "CC BY-SA 3.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "extraitS": [
+      25.5,
+      31.5
+    ],
+    "modifications": "extrait, mono 22 kHz, passe-haut 250 Hz, intensité normalisée, fondus de 80 ms, Ogg Vorbis q1"
+  },
+  {
+    "id": "pic_epeiche",
+    "fichier": "pic_epeiche.ogg",
+    "sorte": "cri",
+    "source": "4FH2+GW Malton, UK - great spotted woodpecker ... drumming ...",
+    "page": "https://archive.org/details/aporee_63892_73703",
+    "auteur": "david m",
+    "credit": "radio aporee ::: maps, Internet Archive",
+    "licence": "CC BY 3.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "extraitS": [
+      66.99,
+      70.99
+    ],
+    "modifications": "extrait, mono 22 kHz, passe-haut 500 Hz, intensité normalisée, fondus de 80 ms, Ogg Vorbis q1"
+  },
+  {
+    "id": "buse_variable",
+    "fichier": "buse_variable.ogg",
+    "sorte": "cri",
+    "source": "XC538277 Common Buzzard (Buteo buteo)",
+    "page": "https://xeno-canto.org/538277",
+    "auteur": "Benoît Van Hecke",
+    "credit": "xeno-canto",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "extraitS": [
+      51.25,
+      56.25
+    ],
+    "modifications": "extrait, mono 22 kHz, passe-haut 250 Hz, intensité normalisée, fondus de 80 ms, Ogg Vorbis q1"
+  },
+  {
+    "id": "geai",
+    "fichier": "geai.ogg",
+    "sorte": "cri",
+    "source": "XC461842 Eurasian Jay (Garrulus glandarius)",
+    "page": "https://xeno-canto.org/461842",
+    "auteur": "Marie-Lan Taÿ Pamart",
+    "credit": "xeno-canto",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "extraitS": [
+      5.75,
+      9.75
+    ],
+    "modifications": "extrait, mono 22 kHz, passe-haut 250 Hz, intensité normalisée, fondus de 80 ms, Ogg Vorbis q1"
+  }
+]

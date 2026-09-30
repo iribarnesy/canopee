@@ -8,6 +8,7 @@
 
 import { coutDuDepassement, depassementHoraire } from "../../engine/actions";
 import type { Snapshot } from "../protocol";
+import type { ReglagesDuSon } from "../son/useSon";
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
 
@@ -36,7 +37,16 @@ const MOIS = [
   "décembre",
 ];
 
-export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot }) {
+export function Bandeau({
+  game,
+  snapshot,
+  son,
+}: {
+  game: GameApi;
+  snapshot: Snapshot;
+  /** le son de la parcelle (#129) ; absent = pas de commande */
+  son?: ReglagesDuSon & { regler: (r: Partial<ReglagesDuSon>) => void };
+}) {
   // L'économie coupée ne facture pas les heures : voir `factureDeLaSemaine`.
   const depassement = snapshot.economy.active ? depassementHoraire(snapshot.economy) : 0;
   const annee = Math.floor(snapshot.week / 52) + 1;
@@ -218,6 +228,34 @@ export function Bandeau({ game, snapshot }: { game: GameApi; snapshot: Snapshot 
         >
           ⏭ +1 an
         </button>
+        {/*
+          **Le son, à côté du temps**, parce qu'on le règle au même moment :
+          quand on lance la parcelle. Allumé par défaut, il ne démarre qu'au
+          premier geste — le navigateur n'en permet pas d'autre (#129).
+        */}
+        {son && (
+          <span style={{ display: "inline-flex", gap: 4, alignItems: "center", marginLeft: 6 }}>
+            <button
+              type="button"
+              style={{ ...btn(!son.coupe), marginRight: 0, marginBottom: 0, minWidth: 36 }}
+              onClick={() => son.regler({ coupe: !son.coupe })}
+              title={son.coupe ? "Rallumer le son" : "Couper le son"}
+              aria-label={son.coupe ? "Rallumer le son" : "Couper le son"}
+            >
+              {son.coupe ? "🔇" : "🔊"}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(son.volume * 100)}
+              onChange={(e) => son.regler({ volume: Number(e.target.value) / 100, coupe: false })}
+              aria-label="Volume"
+              title={`Volume ${Math.round(son.volume * 100)} %`}
+              style={{ width: 72 }}
+            />
+          </span>
+        )}
       </p>
     </>
   );
