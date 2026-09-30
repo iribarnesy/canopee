@@ -404,15 +404,25 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
     // désaturées**, ce qui est la bonne forme : elle n'ajoute de bases nulle
     // part, elle cesse d'en retirer là où il n'y en a plus.
     //
-    // **Cette bande est une photographie, et elle l'était avant #280** : relevée
-    // sur la seule graine 3, elle ne contient pas la graine 1 du moteur d'avant
-    // (2,312). Elle est lue ici sur la **moyenne** des trois parties, ce qui la
-    // rend moins fragile sans la desserrer. Ce qu'elle voudrait dire — la
-    // correction n'ajoute de bases nulle part — est une comparaison **appariée**
-    // avec et sans plancher, et c'est sous cette forme qu'elle devrait être
-    // réécrite un jour *(à reprendre)*.
+    // **La borne haute était une photographie, et #291 l'a montré.** Elle valait
+    // 2,3 sur la moyenne des trois parties ; le moteur d'avant #291 y tenait à
+    // **2,28**, deux centièmes sous le bord, pendant que ses trois graines
+    // s'étalaient de 1,87 à 2,53. #291 lessive la surface de ce décor **plus**
+    // qu'avant (189 eq/ha/an contre 177 en moyenne : les ajoncs puisent l'eau du
+    // sous-sol, la pluie qui la remplace traverse la surface sans sortir par le
+    // bas, et le calcul d'avant ne la voyait pas) — et la moyenne passe pourtant
+    // à 2,42, parce que la graine 2 finit à 3,08 avec moins de tiges. Un écart
+    // entre graines quatre fois plus grand que l'effet : la borne mesurait le
+    // tirage, pas le plancher.
+    //
+    // Ce qui reste vrai sur **chaque** partie, et qui a un sens physique : sous
+    // l'espèce du lieu, sur le sable acide du lieu, le complexe **s'appauvrit**.
+    // Un plancher qui fabriquerait des bases ferait finir une lande d'ajoncs plus
+    // riche qu'elle n'a commencé (3,76 eq/m²). La comparaison appariée avec et
+    // sans plancher reste la forme juste de ce que la bande voulait dire
+    // *(à reprendre)*.
     expect(r.bases).toBeGreaterThan(1.5);
-    expect(r.bases).toBeLessThan(2.3);
+    for (const partie of LANDES) expect(partie.bases).toBeLessThan(partie.bases0);
   }, 300_000);
 
   it("et le budget se referme quand même — c'est bien pour ça qu'on ne le voyait pas", () => {

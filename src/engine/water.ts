@@ -160,6 +160,35 @@ export interface ProfilHydroOutput {
   /** eau refusée en surface (sol saturé) */
   overflowMm: number;
   nappeMm: number;
+  /**
+   * Eau qui **traverse** la base de l'horizon de surface vers le bas, nette de ce
+   * que la nappe et le reflux y remettent par dessous, mm. C'est elle, et pas
+   * `drainageMm`, qui emporte les solutés de la surface (#291).
+   *
+   * Les deux diffèrent dès que la nappe entre dans le profil : chaque semaine,
+   * la saturation imposée remplit la macroporosité des horizons noyés, le
+   * ressuyage la vidange par le bas la semaine suivante, et l'aquifère la
+   * reprend. L'eau se conserve — le bilan boucle — mais elle fait une **boucle**
+   * sous la surface, et l'horizon 0 ne la voit jamais passer. Mesuré sur le sable
+   * profond : 5 240 mm/an de drainage pour 331 de percolation nette.
+   *
+   * Profil d'un seul horizon : la surface est le profil, c'est `drainageNetMm`.
+   */
+  percolationSurfaceMm: number;
+  /**
+   * Ce qui quitte le profil par le bas **net** de ce que la nappe y a fait
+   * entrer par le bas (remontée capillaire et saturation), plancher 0, mm : la
+   * recharge nette. C'est l'eau qui emporte un soluté du sous-sol hors de la
+   * parcelle (#291) ; l'eau de la boucle n'a traversé aucun horizon qui ne soit
+   * pas déjà sous la nappe.
+   *
+   * Le plancher est hebdomadaire : la saturation d'une semaine se vidange la
+   * semaine suivante, donc les deux termes ne se répondent qu'en moyenne. Une
+   * nappe qui monte fait une semaine à zéro, une nappe qui baisse une semaine
+   * où l'on compte un peu trop. Mesuré, sur l'année, ce décalage ne coûte que
+   * l'arrondi (voir la PR de #291).
+   */
+  drainageNetMm: number;
   /** engorgement de chaque horizon ∈ [0,1] */
   engorgementParHorizon: number[];
 }
@@ -334,12 +363,43 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     engorgementParHorizon[i] =
       h && h.porositeMm > 0 ? Math.min(1, (excesMm[i] ?? 0) / h.porositeMm) : 0;
   }
+  const drainageNetMm = Math.max(0, drainageMm - nappeMm);
+  // **Ce qui a traversé la base de l'horizon 0 se lit sur le bilan du
+  // sous-sol**, pas en suivant les passes : ce que les horizons profonds ont
+  // gagné, plus ce qu'ils ont laissé sortir, moins ce que la nappe a fait
+  // entrer par le bas. C'est exact contre l'état du modèle quel que soit le
+  // chemin de l'eau dans la semaine — et le chemin est tortueux : dans la
+  // vallée engorgée, compter la descente sans le reflux voyait 631 mm/an
+  // traverser une surface que la nappe (à 19 cm) tient saturée, eau qui
+  // remontait aussitôt et ressortait en ruissellement.
+  let percolationSurfaceMm = drainageNetMm;
+  if (n > 1) {
+    let sousSolAvant = 0;
+    let sousSolApres = 0;
+    for (let i = 1; i < n; i++) {
+      sousSolAvant += (input.eauMm[i] ?? 0) + (input.excesMm[i] ?? 0);
+      sousSolApres += (eauMm[i] ?? 0) + (excesMm[i] ?? 0);
+    }
+    percolationSurfaceMm = Math.max(0, sousSolApres - sousSolAvant + drainageMm - nappeMm);
+  }
   if (out) {
     out.evapMm = evapMm;
     out.drainageMm = drainageMm;
     out.overflowMm = overflowMm;
     out.nappeMm = nappeMm;
+    out.percolationSurfaceMm = percolationSurfaceMm;
+    out.drainageNetMm = drainageNetMm;
     return out;
   }
-  return { eauMm, excesMm, evapMm, drainageMm, overflowMm, nappeMm, engorgementParHorizon };
+  return {
+    eauMm,
+    excesMm,
+    evapMm,
+    drainageMm,
+    overflowMm,
+    nappeMm,
+    percolationSurfaceMm,
+    drainageNetMm,
+    engorgementParHorizon,
+  };
 }
