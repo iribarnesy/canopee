@@ -198,7 +198,7 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
 });
 
 describe("l'ombre des arbres coûte du rendement", () => {
-  it("sans fertilisation, l'azote de l'arbre MASQUE son ombre", () => {
+  it("sans fertilisation ni prélèvement profond, l'azote de l'arbre ne masque plus son ombre", () => {
     // Deux rangs de noyers encadrant une allée de 8 m : le rapport
     // hauteur / largeur d'allée monte jusqu'à 1,28 en trente-trois ans.
     //
@@ -255,27 +255,45 @@ describe("l'ombre des arbres coûte du rendement", () => {
     const rapport = (a: number) =>
       parGraine.reduce((somme, r) => somme + r(a), 0) / parGraine.length;
 
-    // **ce que cet essai montre, c'est le masquage**, et c'est ce qui a motivé
-    // le lot de la fertilisation (#140). Sans apport, le témoin en blé pur
-    // s'épuise pendant que l'allée reçoit la litière des noyers : on mesure
-    // donc l'azote des arbres bien plus que leur ombre.
+    // **ce que cet essai montrait, c'était le masquage**, et c'est ce qui a
+    // motivé le lot de la fertilisation (#140). Sans apport, le témoin en blé
+    // pur s'épuise pendant que l'allée reçoit la litière des noyers : on mesure
+    // donc l'azote des arbres autant que leur ombre.
     //
     // Le gradient d'**ombre pure** est mesuré ailleurs, les deux côtés fertilisés
     // (`fertilisation.test.ts`) : 0,999 à H/L 0,29 puis 0,787 à 1,28, monotone.
-    // Cet essai-ci garde donc ce qu'il est seul à dire — qu'une allée non
-    // fertilisée ne laisse **pas** voir l'ombre, parce que l'arbre rend ce qu'il
-    // prend.
+    // Cet essai-ci garde ce qu'il est seul à dire : ce que l'azote de l'arbre
+    // fait, ou ne fait plus, à une allée qui n'en reçoit pas d'autre.
     expect(rapport(3)).toBeGreaterThan(0.95);
-    // **la compensation tient jusqu'à H/L ≈ 1.** À l'an 25, l'allée est à 5 %
-    // du blé pur, là où son ombre seule lui coûterait le double
-    // (`fertilisation.test.ts` : 0,835 à H/L 1,02). On n'affirme plus qu'elle
-    // passe **devant** : une graine sur cinq le fait, et c'était déjà le cas avant
-    // ce lot.
-    expect(rapport(25)).toBeGreaterThan(0.9);
+    // **Le masquage est tombé avec #291, et il faut dire pourquoi.** Cet essai
+    // affirmait que la compensation tenait jusqu'à H/L ≈ 1 : 0,953 à l'an 25,
+    // 0,899 à l'an 33, sur la moyenne des cinq graines. Mesuré après :
+    //
+    //     graine        4      1      7     33   2022   moyenne
+    //     an 25      0,781  0,921  0,841  0,828  0,795    0,833
+    //     an 33      0,678  0,696  0,730  0,757  0,739    0,720
+    //
+    // Deux variantes l'ont isolé : l'export net ne change rien ici (pas de
+    // nappe) ; c'est la traversée de la surface. Sous les noyers, les racines
+    // vident les horizons profonds l'été, et la pluie qui les remplit traverse
+    // l'horizon de surface en emportant son nitrate — ce que le calcul d'avant,
+    // qui lisait le drainage sous le profil, ne voyait pas. La physique est plus
+    // juste ; le masquage d'avant reposait en partie sur une rétention de surface
+    // qui n'existe pas.
+    //
+    // **Mais ce nitrate, un vrai noyer le reprend** par ses racines profondes —
+    // le « filet de sécurité » de l'agroforesterie —, et le moteur ne sait pas
+    // encore le faire : c'est le lot B de #247. Tant qu'il manque, l'allée non
+    // fertilisée perd **au moins** ce que l'ombre seule lui coûte
+    // (`fertilisation.test.ts` : 0,835 à H/L 1,02, 0,787 à 1,28). Cet essai le
+    // garde tel quel, et il est **attendu qu'il bascule** quand le lot B
+    // arrivera : c'est à ce moment-là qu'il faudra le réécrire, pas avant.
+    expect(rapport(25)).toBeLessThan(0.9);
     expect(rapport(25)).toBeLessThan(rapport(3));
-    // Puis l'ombre finit par gagner : à H/L 1,28 l'allée décroche de 10 %. Le
-    // masquage a une fin, et le classement des quatre âges est strict.
+    // L'ombre gagne toujours avec l'âge, et le classement des âges reste strict.
     expect(rapport(33)).toBeLessThan(rapport(25));
-    expect(rapport(33)).toBeGreaterThan(0.75);
+    // Le plancher garde contre un effondrement : la plus basse des cinq graines
+    // est à 0,678.
+    expect(rapport(33)).toBeGreaterThan(0.6);
   }, 1_800_000);
 });

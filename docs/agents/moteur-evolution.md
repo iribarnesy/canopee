@@ -104,6 +104,18 @@ dépassement de bande comme un effet, regarder l'écart entre graines. Et la
 remplacer par ce qui est vrai sur chaque partie (le complexe finit plus
 pauvre qu'il n'a commencé), pas l'élargir.
 
+### Un correctif juste peut retirer un bénéfice qui reposait sur l'erreur
+
+Le masquage de l'allée non fertilisée (la litière du noyer compensant son
+ombre) est tombé : 0,953 → 0,833 à vingt-cinq ans. Deux variantes ont situé la
+cause dans la traversée de la surface, et la physique est du côté du
+correctif : l'eau qui recharge le sous-sol vidé par les racines emporte le
+nitrate. Ce qui manque, c'est l'arbre qui le reprend en profondeur (#247
+lot B). La décision (merger, puis construire le lot B) a été prise par le
+propriétaire, et l'essai a été réécrit pour dire le manque, avec l'annonce
+qu'il basculera quand le mécanisme arrivera. Ni garder l'ancien calcul pour
+sauver le bénéfice, ni baisser un seuil sans nommer la cause.
+
 ### Pré-enregistrer sert aussi à dire ce qu'on n'a pas mesuré
 
 Cinq prédictions écrites avant la mesure. Quatre tombent juste (le sable
