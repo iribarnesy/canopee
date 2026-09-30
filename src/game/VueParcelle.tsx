@@ -39,6 +39,7 @@ import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import type { EmpriseDuGeste } from "../render/emprise";
 import type { PoseDuChevreuil } from "../render/faune/chevreuils";
+import type { PoseDHabitant } from "../render/faune/residents";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
 import type { Orientation } from "../render/projection";
 import type { Marqueur } from "../render/temps/changements";
@@ -136,6 +137,11 @@ export interface VueParcelleProps {
    * personne, ce qui est aussi ce que rend une parcelle close.
    */
   faune?: (maintenantMs: number) => readonly PoseDuChevreuil[];
+  /**
+   * Les habitants hors de leur gîte à cet instant (#129) : les oiseaux qui
+   * volent, l'écureuil qui court. Un rappel par image, comme `faune`.
+   */
+  residents?: (maintenantMs: number) => readonly PoseDHabitant[];
   /**
    * Un clic sur le **sol**, rendu en cellule de parcelle — ce par quoi le joueur
    * agit (§6.7).
@@ -541,7 +547,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.embraser(p.feu?.(horloge) ?? RIEN_NE_BRULE);
         scene.current?.montrerLesChangements(p.marqueurs ?? []);
         scene.current?.montrerLesHabitants(p.habitants ?? []);
-        scene.current?.montrerLaFaune(p.faune?.(horloge) ?? []);
+        scene.current?.montrerLaFaune(p.faune?.(horloge) ?? [], p.residents?.(horloge) ?? []);
         scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
         // **Le disque se centre sous le curseur, la bande porte son centre.**
         // Une bande se trace d'un point à un autre : son centre est le milieu

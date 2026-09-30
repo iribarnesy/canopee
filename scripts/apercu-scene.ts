@@ -79,6 +79,13 @@ const NOM = process.env.APERCU_NOM;
 const PENTE_PCT = process.env.APERCU_PENTE ? Number(process.env.APERCU_PENTE) : undefined;
 const EAU = process.env.APERCU_EAU as "ruisseau" | "mare" | undefined;
 /**
+ * `APERCU_FAUNE=1` : la faune vit en individus, comme dans une partie neuve
+ * (`useGame` l'allume). Les scènes portent alors qui habite la parcelle — sans
+ * quoi le banc ne peut juger ni les gîtes (#255) ni les oiseaux qui en partent
+ * (#129).
+ */
+const FAUNE = process.env.APERCU_FAUNE === "1";
+/**
  * Le **banc de pelouse** : forcer le tapis à une valeur uniforme, arbres compris.
  *
  * **Ce n'est pas une scène du moteur, et c'est assumé.** Le critère de la
@@ -710,6 +717,7 @@ function main() {
   const station: Station = {
     ...base,
     coteM: COTE_M,
+    ...(FAUNE ? { faune: true } : {}),
     ...(PENTE_PCT === undefined
       ? {}
       : { relief: { ...base.relief, pentePct: PENTE_PCT, forme: "croupe" as const } }),
@@ -831,6 +839,7 @@ function main() {
             };
           })(),
           trees: figer(state, new Set((incendie?.victimes ?? []).map((v) => v.id))),
+          ...(state.faune ? { faune: state.faune } : {}),
           journal: {
             ...enAttente,
             ...(incendie ? { incendie } : {}),
@@ -870,6 +879,7 @@ function main() {
         week: an * 52,
         ventExposition: station.ventExposition,
         trees,
+        ...(state.faune ? { faune: state.faune } : {}),
         sol: figerLeSol(state, station, dernierDebordement, derniereLumiere, (an * 52 - 1) % 52),
       })}\n`,
     );

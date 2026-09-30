@@ -61,6 +61,16 @@ const TEINTE_DU_GITE: Record<TypeDeGite, Teinte> = {
 export const PART_DE_LA_HAUTEUR = 0.66;
 
 /**
+ * La hauteur du gîte sur un arbre de `hauteurArbreM`, m : aux deux tiers, sans
+ * descendre sous ce que l'espèce exige. Une fonction parce que deux lecteurs
+ * la veulent — le dôme du gîte et l'oiseau qui y rentre (#129) —, et deux
+ * copies de la règle poseraient l'oiseau à côté de sa loge (§2.1).
+ */
+export function hauteurDuGite(hauteurGiteMinM: number, hauteurArbreM: number): number {
+  return Math.max(hauteurGiteMinM, hauteurArbreM * PART_DE_LA_HAUTEUR);
+}
+
+/**
  * Les gîtes occupés, prêts à poser — un par habitant.
  *
  * L'arbre est cherché par `arbreId` et non par la position : c'est l'ancrage du
@@ -82,7 +92,7 @@ export function gitesOccupes(
     gites.push({
       x: habitant.x,
       y: habitant.y,
-      hauteurM: Math.max(espece.hauteurGiteMinM, hauteurArbreM * PART_DE_LA_HAUTEUR),
+      hauteurM: hauteurDuGite(espece.hauteurGiteMinM, hauteurArbreM),
       teinte,
     });
   }

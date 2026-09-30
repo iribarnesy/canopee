@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { GesteTypeArbre, GesteTypeZone, GesteVisible } from "../engine/actions";
 import { getEspece } from "../engine/especes";
+import type { IndividuFaune } from "../engine/faune";
 import {
   type ContextePhenologique,
   partFoliaireOmbrageanteDans,
@@ -31,6 +32,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type MondeDuGibier, Troupeau } from "../render/faune/chevreuils";
+import { type Derangement, type PoseDHabitant, Residents } from "../render/faune/residents";
 import type { Compte } from "../render/pixi/scene";
 import {
   type Marqueur,
@@ -76,6 +78,8 @@ import { especeSiConnue } from "./atlasDuBanc";
 interface Scene {
   coteM: number;
   week: number;
+  /** `Snapshot.faune` : qui habite la parcelle ; absent = faune éteinte (`APERCU_FAUNE=1`) */
+  faune?: IndividuFaune[];
   /**
    * `StationInfo.ventExposition` : l'exposition au vent de la parcelle ∈ [0,1],
    * telle que les bordures la font (`paysage.ts`).
@@ -305,6 +309,38 @@ function mondeDuBanc(scene: Scene): { monde?: MondeDuGibier; figeMs?: number } {
 
 let rechauffe = false;
 
+/** Les habitants du banc : un seul objet pour la page, comme dans le jeu. */
+const residentsDuBanc = new Residents();
+let residentsRechauffes = false;
+
+/**
+ * Les habitants d'une scène qui en porte (`APERCU_FAUNE=1`), à cet instant.
+ *
+ * `?residents-t=90000` **fige** leur horloge — rejouée depuis zéro une fois,
+ * pour la même raison que le troupeau — et `?derange=x,y,t` pose un chantier
+ * au point (x, y) à l'instant t, pour juger la fuite.
+ */
+function residentsDuBancA(
+  scene: Scene,
+  arbres: readonly ArbreAPoser[],
+  maintenantMs: number,
+): readonly PoseDHabitant[] {
+  if (!scene.faune) return [];
+  const q = new URLSearchParams(location.search);
+  const d = q.get("derange")?.split(",").map(Number);
+  const derangements: Derangement[] =
+    d && d.length === 3 ? [{ x: d[0] ?? 0, y: d[1] ?? 0, depuisMs: d[2] ?? 0 }] : [];
+  const monde = { habitants: scene.faune, arbres, derangements };
+  const fige = q.get("residents-t");
+  if (fige === null) return residentsDuBanc.poses(monde, maintenantMs);
+  const t = Number(fige);
+  if (!residentsRechauffes) {
+    for (let u = 0; u < t; u += 100) residentsDuBanc.poses(monde, u);
+    residentsRechauffes = true;
+  }
+  return residentsDuBanc.poses(monde, t);
+}
+
 /**
  * Les bêtes du banc à cet instant — ou à l'instant figé.
  *
@@ -322,6 +358,49 @@ function posesDuBanc(monde: MondeDuGibier, figeMs: number | undefined, maintenan
   return troupeauDuBanc.poses(monde, figeMs);
 }
 
+/**
+ * `?vitrine=residents` : une clairière où l'on voit chaque habitant (#129).
+ *
+ * Dans une friche de soixante ans, les houppiers cachent les oiseaux — c'est
+ * juste, et c'est ce qui empêche de juger leur dessin. La vitrine pose, sur la
+ * scène demandée (une pelouse de préférence), **trois vrais arbres** du moteur
+ * pris dans `faune-s28` — deux grands et une chandelle — et un habitant de
+ * chaque espèce qu'on dessine. C'est une mise en scène de banc, et elle ne sert
+ * qu'à ça.
+ */
+async function vitrineDesResidents(base: Scene): Promise<Scene> {
+  const source: Scene = await (await fetch("/apercu/scenes/faune-s28.json")).json();
+  const grands = source.trees
+    .filter((t) => !t.chandelle && t.heightM > 11 && t.heightM < 18)
+    .slice(0, 2);
+  const chandelle = source.trees.find((t) => t.chandelle && t.heightM > 6);
+  const [a, b] = grands;
+  if (!a || !b || !chandelle) return base;
+  const ici = (t: Scene["trees"][number], x: number, y: number) => ({ ...t, x, y });
+  const arbres = [ici(a, 44, 50), ici(b, 54, 47), ici(chandelle, 50, 57)];
+  const sur = (id: number, especeId: string, t: Scene["trees"][number]): IndividuFaune => ({
+    id,
+    especeId,
+    arbreId: t.id,
+    x: t.x,
+    y: t.y,
+    depuisSemaine: 0,
+  });
+  const [ta, tb] = arbres as [Scene["trees"][number], Scene["trees"][number]];
+  return {
+    ...base,
+    trees: arbres,
+    faune: [
+      sur(1, "mesange_bleue", ta),
+      sur(2, "mesange_charbonniere", tb),
+      sur(3, "pic_epeiche", tb),
+      sur(4, "buse_variable", ta),
+      sur(5, "ecureuil_roux", ta),
+      sur(6, "chouette_cheveche", tb),
+    ],
+  };
+}
+
 function ouLire(maintenantMs: number, fige: number | undefined, dureeMs: number): number {
   return fige === undefined ? maintenantMs % Math.max(1, dureeMs * 1.6) : fige * dureeMs;
 }
@@ -332,9 +411,10 @@ function Demo(): React.ReactElement {
 
   useEffect(() => {
     const nom = new URLSearchParams(location.search).get("scene") ?? "friche-s28";
+    const vitrine = new URLSearchParams(location.search).get("vitrine") === "residents";
     void fetch(`/apercu/scenes/${nom}.json`)
       .then((r) => r.json())
-      .then((s: Scene) => setScene(s));
+      .then(async (s: Scene) => setScene(vitrine ? await vitrineDesResidents(s) : s));
   }, []);
 
   useEffect(() => {
@@ -873,6 +953,22 @@ function Demo(): React.ReactElement {
       ? posesDuBanc(gibier.monde, gibier.figeMs, 0)[0]
       : undefined;
 
+  // `?residents-cadrer=pic_epeiche`, avec une horloge figée : la vue se centre
+  // sur cette bête-là. Elle est en l'air : on vise le point du sol qui tombe
+  // sous elle **à l'écran** — reculer de `h` sur les deux axes remonte l'image
+  // de `h` mètres verticaux à l'orientation du banc.
+  const especeCadree = new URLSearchParams(location.search).get("residents-cadrer");
+  const individuCadre = especeCadree
+    ? scene.faune?.find((f) => f.especeId === especeCadree)
+    : undefined;
+  const beteCadree =
+    individuCadre && new URLSearchParams(location.search).get("residents-t") !== null
+      ? residentsDuBancA(scene, arbres, 0).find((p) => p.cle.startsWith(`${individuCadre.id}:`))
+      : undefined;
+  const giteCadre = beteCadree
+    ? { x: beteCadree.x - beteCadree.hauteurM, y: beteCadree.y - beteCadree.hauteurM }
+    : individuCadre;
+
   return (
     <VueParcelle
       sol={donneesDe(scene)}
@@ -884,6 +980,9 @@ function Demo(): React.ReactElement {
       surCompte={setCompte}
       marqueurs={ellipse.marqueurs}
       {...(choisis.size > 0 ? { surbrillance: choisis } : {})}
+      {...(scene.faune
+        ? { residents: (maintenantMs: number) => residentsDuBancA(scene, arbres, maintenantMs) }
+        : {})}
       {...(gibier.monde
         ? {
             faune: (maintenantMs: number) =>
@@ -971,7 +1070,9 @@ function Demo(): React.ReactElement {
           }
         : premiereBete
           ? { cadrerSur: { x: premiereBete.x, y: premiereBete.y } }
-          : {})}
+          : giteCadre
+            ? { cadrerSur: { x: giteCadre.x, y: giteCadre.y } }
+            : {})}
     />
   );
 }

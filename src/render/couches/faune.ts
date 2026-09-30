@@ -243,29 +243,41 @@ export function cuireChevreuil(
   ctx.ellipse(piedX, piedY, 0.55 * pxParM, 0.12 * pxParM, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Le liseré : la silhouette teinte en sombre, posée huit fois autour.
-  const lisere = fabriquer(largeur, hauteur);
-  const l = lisere.getContext("2d");
-  if (l) {
-    l.drawImage(bete, 0, 0);
-    l.globalCompositeOperation = "source-in";
-    l.fillStyle = LISERE;
-    l.fillRect(0, 0, largeur, hauteur);
-    for (const [dx, dy] of [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-      [-1, -1],
-      [1, -1],
-      [-1, 1],
-      [1, 1],
-    ] as const) {
-      ctx.drawImage(lisere, dx, dy);
-    }
-  }
+  poserLeLisere(fabriquer, ctx, bete, LISERE);
   ctx.drawImage(bete, 0, 0);
   return { image, piedX, piedY, pxParM };
+}
+
+/**
+ * Le liseré : la silhouette de `bete` teinte en `couleur`, posée huit fois
+ * autour d'elle sur `ctx`, à un pixel. La bête elle-même se pose ensuite
+ * par-dessus. Partagé par tout ce qui vit sur la parcelle (#129).
+ */
+export function poserLeLisere(
+  fabriquer: (largeur: number, hauteur: number) => HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  bete: HTMLCanvasElement,
+  couleur: string,
+): void {
+  const lisere = fabriquer(bete.width, bete.height);
+  const l = lisere.getContext("2d");
+  if (!l) return;
+  l.drawImage(bete, 0, 0);
+  l.globalCompositeOperation = "source-in";
+  l.fillStyle = couleur;
+  l.fillRect(0, 0, bete.width, bete.height);
+  for (const [dx, dy] of [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+  ] as const) {
+    ctx.drawImage(lisere, dx, dy);
+  }
 }
 
 /** L'atlas de la faune : chaque vignette cuite une fois, à la demande. */
