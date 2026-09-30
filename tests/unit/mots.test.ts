@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0 } from "../../src/engine/especes";
-import { FAUNE } from "../../src/engine/faune";
+import { especeFaune, FAUNE } from "../../src/engine/faune";
 import { type CauseMort, LIBELLE_CAUSE } from "../../src/engine/trees";
 import {
   accord,
@@ -19,10 +19,12 @@ import {
   departDit,
   estFeminin,
   GENRE,
+  ilOuElle,
   laFaune,
   nomEspeces,
   pluriel,
   s,
+  uneFaune,
 } from "../../src/game/mots";
 
 /** Le pluriel attendu de chaque nom du catalogue, écrit à la main. */
@@ -151,28 +153,55 @@ describe("pluriel", () => {
   });
 });
 
-describe("la faune, nommée sans être comptée (#255)", () => {
-  it("prend l'article défini, parce qu'un individu du modèle n'est pas toujours une bête", () => {
-    // `faune.ts` le dit en commentaire : l'individu est tantôt un couple,
-    // tantôt une colonie de parturition, tantôt la population d'un arbre. Aucun
-    // champ ne le porte (#259), donc le jeu ne peut pas l'affirmer — et
-    // l'article défini nomme l'espèce sans compter les bêtes.
-    expect(laFaune("mesange_bleue", "mésange bleue")).toBe("la mésange bleue");
-    expect(laFaune("pic_epeiche", "pic épeiche")).toBe("le pic épeiche");
-    expect(laFaune("ecureuil_roux", "écureuil roux")).toBe("l'écureuil roux");
+describe("la faune, comptée comme le moteur la compte (#259)", () => {
+  const fiche = (id: string) => {
+    const e = especeFaune(id);
+    if (!e) throw new Error(id);
+    return e;
+  };
+
+  it("une arrivée dit ce qui s'installe : un couple, une colonie, une population, une bête", () => {
+    expect(uneFaune(fiche("mesange_bleue"))).toBe("un couple de mésanges bleues");
+    expect(uneFaune(fiche("pic_epeiche"))).toBe("un couple de pics épeiches");
+    expect(uneFaune(fiche("murin_de_bechstein"))).toBe("une colonie de murins de Bechstein");
+    expect(uneFaune(fiche("noctule_commune"))).toBe("une colonie de noctules communes");
+    expect(uneFaune(fiche("grand_capricorne"))).toBe("une population de grands capricornes");
+    expect(uneFaune(fiche("rosalie_des_alpes"))).toBe("une population de rosalies des Alpes");
+    expect(uneFaune(fiche("ecureuil_roux"))).toBe("un écureuil roux");
   });
 
-  it("élide devant une voyelle, quel que soit le genre", () => {
-    expect(laFaune("aigle_imaginaire", "aigle noir")).toBe("l'aigle noir");
+  it("le pique-prune ne s'accorde que sur son nom", () => {
+    expect(uneFaune(fiche("pique_prune"))).toBe("une population de pique-prunes");
   });
 
-  it("nomme les douze espèces de l'atlas sans en laisser une sans article", () => {
+  it("un départ désigne ce qui était là, à l'article défini", () => {
+    expect(laFaune(fiche("buse_variable"))).toBe("le couple de buses variables");
+    expect(laFaune(fiche("noctule_commune"))).toBe("la colonie de noctules communes");
+    expect(laFaune(fiche("ecureuil_roux"))).toBe("l'écureuil roux");
+    expect(laFaune(fiche("loir_gris"))).toBe("le loir gris");
+  });
+
+  it("le pronom suit le mot qui compte, pas l'espèce", () => {
+    // « la mésange » est féminine, « le couple » ne l'est pas.
+    expect(ilOuElle(fiche("mesange_bleue"))).toBe("il");
+    expect(ilOuElle(fiche("murin_de_bechstein"))).toBe("elle");
+    expect(ilOuElle(fiche("ecureuil_roux"))).toBe("il");
+  });
+
+  it("l'unité vient de la fiche, pas d'une liste du jeu", () => {
+    const inventee = { id: "aigle_imaginaire", nom: "aigle noir", unite: "colonie" } as const;
+    expect(uneFaune(inventee)).toBe("une colonie d'aigles noirs");
+    expect(laFaune({ ...inventee, unite: "individu" })).toBe("l'aigle noir");
+  });
+
+  it("nomme les douze espèces de l'atlas, chacune avec son article et son nom", () => {
     // La table des genres est du jeu, pas du moteur — c'est de la grammaire.
     // Si l'atlas grandit sans elle, ça se voit ici et non à l'écran.
     for (const espece of FAUNE) {
-      const dit = laFaune(espece.id, espece.nom);
-      expect(dit, espece.id).toMatch(/^(le |la |l')/);
-      expect(dit, espece.id).toContain(espece.nom);
+      expect(uneFaune(espece), espece.id).toMatch(/^(un |une )/);
+      expect(laFaune(espece), espece.id).toMatch(/^(le |la |l')/);
+      if (espece.unite === "individu") expect(uneFaune(espece)).toContain(espece.nom);
+      else expect(uneFaune(espece)).toContain(`${espece.unite} de`);
     }
   });
 

@@ -26,7 +26,7 @@ import {
 } from "../../engine/phenologie";
 import { stadeDe } from "../../engine/stades";
 import { elancement, elancementLimite, hauteurStableM } from "../../engine/trees";
-import { causeDite, laFaune } from "../mots";
+import { causeDite, ilOuElle, laFaune } from "../mots";
 import type { SnapshotTree } from "../protocol";
 
 /**
@@ -278,8 +278,8 @@ export function ficheDeLArbre(
   for (const habitant of ctx.habitants ?? []) {
     const espece = especeFaune(habitant.especeId);
     if (!espece) continue;
-    const faim = (habitant.saisonsMaigres ?? 0) > 0 ? " — et il a faim" : "";
-    dire("🐾", "Habité par", `${laFaune(espece.id, espece.nom)}${faim}`, {
+    const faim = (habitant.saisonsMaigres ?? 0) > 0 ? ` — et ${ilOuElle(espece)} a faim` : "";
+    dire("🐾", "Habité par", `${laFaune(espece)}${faim}`, {
       aide: "Un habitant tient à son arbre : l'abattre l'expulse, et le moteur le dira par son nom.",
       horsAlerte: true,
     });

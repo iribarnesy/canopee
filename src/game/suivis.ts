@@ -29,7 +29,7 @@ import { estGesteSurArbres, type GesteTypeArbre } from "../engine/actions";
 import { especeFaune } from "../engine/faune";
 import type { CauseMort } from "../engine/trees";
 import type { PorteurDeJournal } from "./journal";
-import { causeDite, departDit, estFeminin, laFaune } from "./mots";
+import { causeDite, departDit, estFeminin, laFaune, uneFaune } from "./mots";
 
 /**
  * Ce qu'il faut savoir d'un arbre pour lire ce qui lui arrive.
@@ -159,16 +159,12 @@ export function accumulerLesSuivis(
   // qu'on a abattu.
   for (const { individu } of porteur.installationsFaune ?? []) {
     const espece = especeFaune(individu.especeId);
-    if (espece) dire(individu.arbreId, "hote", `${laFaune(espece.id, espece.nom)} s'y installe`);
+    if (espece) dire(individu.arbreId, "hote", `${uneFaune(espece)} s'y installe`);
   }
   for (const { individu, cause } of porteur.departsFaune ?? []) {
     const espece = especeFaune(individu.especeId);
     if (espece) {
-      dire(
-        individu.arbreId,
-        "hote",
-        `${laFaune(espece.id, espece.nom)} s'en va : ${departDit(cause)}`,
-      );
+      dire(individu.arbreId, "hote", `${laFaune(espece)} s'en va : ${departDit(cause)}`);
     }
   }
 

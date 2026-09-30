@@ -86,6 +86,7 @@ import {
   nomEspece,
   nomEspeces,
   s,
+  uneFaune,
 } from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
@@ -1365,7 +1366,7 @@ function stepWeeks(n: number) {
       // L'arbre d'**après** le tick : un gîte vient d'y être pris, il est debout.
       const hote = ticked.state.trees.find((t) => t.id === individu.arbreId);
       const ou = hote ? ` dans un ${nomEspece(hote.especeId)}` : "";
-      event("🐾", `${capitale(laFaune(espece.id, espece.nom))} s'installe${ou}`);
+      event("🐾", `${capitale(uneFaune(espece))} s'installe${ou}`);
     }
     for (const { individu, cause } of ticked.departsFaune) {
       const espece = especeFaune(individu.especeId);
@@ -1374,7 +1375,7 @@ function stepWeeks(n: number) {
       // plus dans l'état d'après, et c'est justement le cas qu'on veut nommer.
       const hote = before.trees.find((t) => t.id === individu.arbreId);
       const ou = hote ? ` le ${nomEspece(hote.especeId)}` : " la parcelle";
-      event("🐾", `${capitale(laFaune(espece.id, espece.nom))} quitte${ou} : ${departDit(cause)}`);
+      event("🐾", `${capitale(laFaune(espece))} quitte${ou} : ${departDit(cause)}`);
     }
     // Sécheresse (sol moyen presque à sec en saison de végétation)
     const year = Math.floor(before.week / 52);

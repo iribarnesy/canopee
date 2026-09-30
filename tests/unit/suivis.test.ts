@@ -442,7 +442,7 @@ describe("qui habite l'arbre entre dans l'histoire de l'arbre (#255)", () => {
     const hote = evenements.filter((e) => e.quoi === "hote");
     expect(hote).toHaveLength(1);
     expect(hote[0]?.idArbre).toBe(1);
-    expect(hote[0]?.texte).toBe("la mésange bleue s'y installe");
+    expect(hote[0]?.texte).toBe("un couple de mésanges bleues s'y installe");
   });
 
   it("le départ dit sa cause — et « on a abattu son arbre » est la plus forte", () => {
@@ -454,7 +454,7 @@ describe("qui habite l'arbre entre dans l'histoire de l'arbre (#255)", () => {
     );
     const hote = evenements.find((e) => e.quoi === "hote");
     expect(hote?.idArbre).toBe(1);
-    expect(hote?.texte).toBe("la mésange bleue s'en va : son arbre n'est plus là");
+    expect(hote?.texte).toBe("le couple de mésanges bleues s'en va : son arbre n'est plus là");
   });
 
   it("une semaine sans faune n'écrit rien : le champ est facultatif", () => {
