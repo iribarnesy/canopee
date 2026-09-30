@@ -1161,20 +1161,27 @@ le bandeau, et le réglage se garde.
 | Chantiers | les gestes qui démontent une tige (`couper`, `eclaircir`, `elaguer`, `trogner`, `receper`), environ une seconde par tige, neuf au plus | `tronconneuse.ogg` |
 | Oiseaux | **les nicheurs du moteur**, espèce par espèce, à une cadence de saison (le printemps chante, l'été se tait) ; le geai quand il vient à un semis. Une parcelle sans nicheur ne chante pas | un cri par espèce |
 
-**Les fichiers** : des extraits de Wikimedia Commons sous licence libre (CC0,
-domaine public, CC BY, CC BY-SA), tirés par `scripts/sourcer-sons.py`. Le
-script **relit la licence à la source**, choisit l'extrait par l'énergie du
-signal, normalise, fond les boucles et vérifie le budget (**moins de 500 ko au
-total**). La provenance est écrite dans `data/sons/PROVENANCE.md`, fichier par
-fichier. Ce que Commons n'avait pas — la hache, le sécateur, la débroussailleuse
-— n'est pas joué.
+**Les fichiers** : dix extraits d'enregistrements **déposés par leurs auteurs**
+sous licence libre (CC0, domaine public, CC BY, CC BY-SA) — les ambiances sur
+**radio aporee ::: maps** (Internet Archive), les oiseaux sur **xeno-canto**.
+Ils sont tirés par `scripts/sourcer-sons.py`, qui **relit la licence à la
+source** et refuse toute clause NC ou ND, choisit l'extrait par l'énergie du
+signal, nettoie les cris sous 250 Hz (500 Hz pour le pic, dont le tambourinage
+était noyé dans un grondement de route), normalise, fond les boucles et vérifie
+le budget : **392 ko pour les dix**, sous les 500 ko. La provenance est écrite
+dans `data/sons/PROVENANCE.md`, fichier par fichier. Ce qu'aucune source
+n'avait de propre — la hache, le sécateur, la débroussailleuse — n'est pas joué.
 
-**État au 2026-09-30** : le code est livré, **les fichiers pas encore**. Le
-serveur de médias de Wikimedia a refusé les téléchargements de ce jour (429,
-« please contact noc@wikimedia.org »), et le script s'arrête plutôt que
-d'insister. Les sons sont **découverts** dans `data/sons/` et non importés un
-par un : sans eux la parcelle est muette, rien ne casse, et il suffit de
-relancer `python3 scripts/sourcer-sons.py` pour qu'elle se mette à sonner.
+Le premier jet les tirait de Wikimedia Commons, qui en héberge des copies ;
+Commons a refusé nos téléchargements (429), et on est allé chercher les
+originaux chez leurs auteurs. Les sons sont **découverts** dans `data/sons/` et
+non importés un par un : un fichier absent se tait, rien ne casse.
+
+**Personne ne les a encore écoutés** : le choix des extraits est un calcul
+(énergie, spectre, régularité), vérifié par des mesures — les chants logent
+leur énergie au-dessus de 2 kHz, le tambourinage montre ses vingt-cinq coups
+en quatre secondes, le mélange hors ligne suit les grandeurs du moteur. Une
+oreille reste à passer.
 
 **À surveiller** : Safari a longtemps refusé l'Ogg Vorbis. Un son qui ne se
 décode pas se tait sans rien casser, mais un joueur sous un vieux Safari

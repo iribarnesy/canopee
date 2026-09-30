@@ -26,7 +26,7 @@ export const GLISSEMENT_S = 0.8;
 export const POIDS: Record<Ambiance | Voix, number> = {
   vent: 0.55,
   pluie: 0.6,
-  ruisseau: 0.45,
+  ruisseau: 0.8,
   feu: 0.8,
   tronconneuse: 0.5,
   mesange_bleue: 0.5,
