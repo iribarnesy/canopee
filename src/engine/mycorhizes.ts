@@ -160,13 +160,27 @@ export function facteurAbsorption(reseau: number): number {
  * ectomycorhize peut prendre excède donc l'écart brut/net, d'une quantité
  * qu'aucune source trouvée ne borne.
  *
- * **D'où un calage, et il est déclaré** : faute de plafond, la valeur est calée
- * sur la table de Jansen à **quarante ans** pour le pin, avec le plancher de 0,7
- * comme contrainte, et la hauteur à **vingt ans** tenue à l'écart comme
- * validation — la règle du dépôt, celle-là même qui régit `pousseMaxMAn`. Si le
- * pin sortait de sa tolérance à vingt ans, c'est le mécanisme qui tomberait.
+ * **La valeur est le plancher, et elle n'est plus calée** (#291). #289 l'avait
+ * calée à 1,5 sur la table de Jansen à quarante ans, par parcimonie : le plus
+ * petit excès au-dessus du plancher qui mette le pin dans sa tolérance. Or une
+ * part de ce calage compensait un défaut ailleurs : sous la nappe du sable,
+ * l'eau faisait une boucle de 4,9 m par an que le lessivage de surface prenait
+ * pour de la percolation, et qui rinçait chaque semaine ~87 % du nitrate de
+ * surface au lieu de ~29 %. Le défaut retiré, la même règle, appliquée sur six
+ * graines, désigne le plancher lui-même :
+ *
+ * | excès | 20 ans | 40 ans |
+ * |---|---|---|
+ * | **0,7** | 8,11 m (+0,1 %) | 13,91 m (−10,2 %) |
+ * | 1,0 | 8,43 m (+4,1 %) | 14,39 m (−7,2 %) |
+ * | 1,5 | 8,83 m (+9,0 %) | 14,77 m (−4,7 %) |
+ *
+ * (table : 8,1 et 15,5 m). Une valeur plus haute colle mieux à quarante ans, et
+ * on ne le prend pas : aucune source ne borne l'excès par le haut, et la règle
+ * du dépôt veut le moins de non-ancré possible, pas le meilleur ajustement.
+ * Vingt ans, tenu à l'écart, tombe à +0,1 %.
  */
-export const EXCES_BRUT_SUR_NET = 1.5;
+export const EXCES_BRUT_SUR_NET = 0.7;
 
 /**
  * C/N à partir duquel l'humus est un mor, et le minage pleinement actif.
