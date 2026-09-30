@@ -31,7 +31,8 @@ export type FigureDHabitant =
   | "grimpe"
   | "plane"
   | "course0"
-  | "course1";
+  | "course1"
+  | "picore";
 
 /** Longueur du corps à la cuisson, pixels, par palier. */
 export const PALIERS_CORPS_PX = [4, 8, 16, 32, 64] as const;
@@ -80,6 +81,10 @@ interface Robe {
   tete: string;
   joue?: string;
   accent?: string;
+  /** la queue, quand elle n'est pas de la couleur de l'aile */
+  queue?: string;
+  /** le miroir de l'aile : le bleu du geai */
+  miroir?: string;
 }
 
 const ROBES: Record<Dessin, Robe> = {
@@ -115,6 +120,17 @@ const ROBES: Record<Dessin, Robe> = {
   },
   buse: { dos: "#6d4c33", ventre: "#dcc9aa", aile: "#5d3f2a", tete: "#6d4c33", accent: "#2b1e15" },
   ecureuil: { dos: "#b4542a", ventre: "#f0e6d4", aile: "#a14a24", tete: "#b4542a" },
+  // Le geai : brun rosé, queue noire, et le miroir bleu barré de noir sur
+  // l'aile — la plume qu'on ramasse en forêt.
+  geai: {
+    dos: "#c4a08a",
+    ventre: "#d9bfae",
+    aile: "#b89480",
+    tete: "#cbb09e",
+    accent: "#1c1c1c",
+    queue: "#1c1c1c",
+    miroir: "#3a6fcf",
+  },
 };
 
 type Ctx = CanvasRenderingContext2D;
@@ -126,11 +142,17 @@ function ovale(ctx: Ctx, x: number, y: number, rx: number, ry: number, rot = 0):
 }
 
 /** Un passereau, un pic ou une chevêche, perché : de profil, tourné à droite. */
-function perche(ctx: Ctx, d: Dessin, r: Robe): void {
+function perche(ctx: Ctx, d: Dessin, r: Robe, picore = false): void {
   const rond = d === "cheveche";
+  if (picore) {
+    // Tête basse, bec au sol : on bascule tout l'oiseau vers l'avant autour
+    // de ses pattes.
+    ctx.save();
+    ctx.rotate(-0.55);
+  }
   // La queue d'abord, derrière le corps.
   if (!rond) {
-    ctx.strokeStyle = r.aile;
+    ctx.strokeStyle = r.queue ?? r.aile;
     ctx.lineWidth = 0.12;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -142,6 +164,10 @@ function perche(ctx: Ctx, d: Dessin, r: Robe): void {
   ovale(ctx, 0, 0.36, rond ? 0.3 : 0.28, rond ? 0.3 : 0.2, rond ? 0 : -0.35);
   ctx.fillStyle = r.aile;
   ovale(ctx, -0.05, 0.42, rond ? 0.24 : 0.22, rond ? 0.2 : 0.11, rond ? 0 : -0.35);
+  if (r.miroir) {
+    ctx.fillStyle = r.miroir;
+    ovale(ctx, 0.04, 0.44, 0.07, 0.035, -0.35);
+  }
   ctx.fillStyle = r.tete;
   ovale(ctx, rond ? 0.08 : 0.24, rond ? 0.72 : 0.58, rond ? 0.21 : 0.14, rond ? 0.17 : 0.13);
   if (r.joue) {
@@ -194,6 +220,7 @@ function perche(ctx: Ctx, d: Dessin, r: Robe): void {
   ctx.moveTo(-0.06, 0.18);
   ctx.lineTo(-0.04, 0);
   ctx.stroke();
+  if (picore) ctx.restore();
 }
 
 /** En vol, ailes hautes ou ailes basses. */
@@ -211,12 +238,16 @@ function vol(ctx: Ctx, d: Dessin, r: Robe, haut: boolean): void {
   ovale(ctx, -0.02, 0.3, 0.26, 0.07);
   ctx.fillStyle = r.tete;
   ovale(ctx, 0.32, 0.3, 0.12, 0.1);
-  ctx.fillStyle = r.aile;
+  ctx.fillStyle = r.queue ?? r.aile;
   ctx.beginPath();
   ctx.moveTo(-0.26, 0.28);
   ctx.lineTo(-0.56, 0.36);
   ctx.lineTo(-0.56, 0.2);
   ctx.fill();
+  if (r.miroir) {
+    ctx.fillStyle = r.miroir;
+    ovale(ctx, 0, 0.32, 0.06, 0.03);
+  }
   if (d === "pic" && r.accent) {
     ctx.fillStyle = r.accent;
     ovale(ctx, -0.22, 0.2, 0.06, 0.04);
@@ -346,6 +377,9 @@ function dessiner(ctx: Ctx, c: ClasseDHabitant): void {
     case "grimpe":
       if (c.dessin === "pic") grimpePic(ctx, r);
       else perche(ctx, c.dessin, r);
+      return;
+    case "picore":
+      perche(ctx, c.dessin, r, true);
       return;
     default:
       perche(ctx, c.dessin, r);

@@ -32,6 +32,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type MondeDuGibier, Troupeau } from "../render/faune/chevreuils";
+import { posesDesGeais, visitesDuGeai } from "../render/faune/geai";
 import { type Derangement, type PoseDHabitant, Residents } from "../render/faune/residents";
 import type { Compte } from "../render/pixi/scene";
 import {
@@ -325,20 +326,44 @@ function residentsDuBancA(
   arbres: readonly ArbreAPoser[],
   maintenantMs: number,
 ): readonly PoseDHabitant[] {
-  if (!scene.faune) return [];
+  const geais = geaisDuBanc(scene, maintenantMs);
+  if (!scene.faune) return geais;
   const q = new URLSearchParams(location.search);
   const d = q.get("derange")?.split(",").map(Number);
   const derangements: Derangement[] =
     d && d.length === 3 ? [{ x: d[0] ?? 0, y: d[1] ?? 0, depuisMs: d[2] ?? 0 }] : [];
   const monde = { habitants: scene.faune, arbres, derangements };
   const fige = q.get("residents-t");
-  if (fige === null) return residentsDuBanc.poses(monde, maintenantMs);
+  if (fige === null) return [...residentsDuBanc.poses(monde, maintenantMs), ...geais];
   const t = Number(fige);
   if (!residentsRechauffes) {
     for (let u = 0; u < t; u += 100) residentsDuBanc.poses(monde, u);
     residentsRechauffes = true;
   }
-  return residentsDuBanc.poses(monde, t);
+  return [...residentsDuBanc.poses(monde, t), ...geais];
+}
+
+/**
+ * `?geai=3` : trois semis de chêne pubescent levés cette semaine, aux coins
+ * les plus ouverts de la scène — ce que le moteur fait des glands que le geai
+ * a cachés. `?geai-t=<ms>` fige l'instant, et la visite recommence toutes les
+ * vingt secondes sinon, pour qu'on la voie passer.
+ */
+function geaisDuBanc(scene: Scene, maintenantMs: number): PoseDHabitant[] {
+  const q = new URLSearchParams(location.search);
+  const n = Number(q.get("geai") ?? "0");
+  if (!(n > 0)) return [];
+  const naissances = Array.from({ length: n }, (_, i) => ({
+    id: 900_000 + i,
+    especeId: "quercus_pubescens",
+    x: scene.coteM * (0.3 + 0.2 * i),
+    y: scene.coteM * (0.55 - 0.1 * i),
+    heightM: 0.05,
+  }));
+  const visites = visitesDuGeai(naissances, () => true, scene.coteM, 0);
+  const brut = q.get("geai-t");
+  const t = brut === null ? maintenantMs % 20_000 : Number(brut);
+  return posesDesGeais(visites, t);
 }
 
 /**
@@ -980,7 +1005,7 @@ function Demo(): React.ReactElement {
       surCompte={setCompte}
       marqueurs={ellipse.marqueurs}
       {...(choisis.size > 0 ? { surbrillance: choisis } : {})}
-      {...(scene.faune
+      {...(scene.faune || new URLSearchParams(location.search).has("geai")
         ? { residents: (maintenantMs: number) => residentsDuBancA(scene, arbres, maintenantMs) }
         : {})}
       {...(gibier.monde
