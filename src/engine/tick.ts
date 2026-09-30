@@ -819,7 +819,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   /** engorgement par (cellule, horizon) */
   const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
-  const drainageMmArr = new Array<number>(nCells);
+  // **Les solutés ne lisent pas le drainage sous le profil** (#291). Il compte
+  // l'eau que la nappe fait entrer par le bas et ressortir par le bas — 4,9 m
+  // par an sur le sable profond — et qui ne traverse jamais la surface. Deux
+  // flux nets le remplacent : ce qui passe vraiment sous l'horizon 0, et ce qui
+  // quitte vraiment le profil (water.ts).
+  const percolationSurfaceMmArr = new Array<number>(nCells);
+  const drainageNetMmArr = new Array<number>(nCells);
   let evapSum = 0;
   let drainageSum = 0;
   let overflowSum = 0;
@@ -993,6 +999,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     drainageMm: 0,
     overflowMm: 0,
     nappeMm: 0,
+    percolationSurfaceMm: 0,
+    drainageNetMm: 0,
     engorgementParHorizon: new Array<number>(nH).fill(0),
   };
   for (let i = 0; i < nCells; i++) {
@@ -1055,7 +1063,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       excessMm[base + h] = bilan.excesMm[h] ?? 0;
       waterlogging[base + h] = bilan.engorgementParHorizon[h] ?? 0;
     }
-    drainageMmArr[i] = bilan.drainageMm;
+    percolationSurfaceMmArr[i] = bilan.percolationSurfaceMm;
+    drainageNetMmArr[i] = bilan.drainageNetMm;
     ruissellementEntrantMm += amontIci;
     // Le débordement, c'est l'eau que la cellule n'a pas pu absorber. Sur du
     // plat elle stagne puis s'en va ; sur une pente, elle **ruisselle** — et c'est
@@ -2000,7 +2009,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // sur le complexe d'échange. Passer le stock entier, ce que faisait ce
     // calcul, lessivait un cinquième d'azote qui ne bouge pas.
     const nitriqueG = Math.max(0, (mineralNG[i] ?? 0) - (ammoniacalNG[i] ?? 0));
-    const descendu = cellLeachedG(nitriqueG, drainageMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
+    const descendu = cellLeachedG(nitriqueG, percolationSurfaceMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
     mineralNG[i] = (mineralNG[i] ?? 0) - descendu;
     // **Et le plafond se repose ici, après la soustraction** : le lessivage retire
     // du total une part de la différence, ce qui en algèbre ne peut pas le faire
@@ -2016,7 +2025,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // ce qui passe sous la zone racinaire.
       let eauProfondeMm = 0;
       for (let h = 1; h < nH; h++) eauProfondeMm += waterMm[i * nH + h] ?? 0;
-      const exporte = cellLeachedG(mineralNProfondG[i] ?? 0, drainageMmArr[i] ?? 0, eauProfondeMm);
+      const exporte = cellLeachedG(
+        mineralNProfondG[i] ?? 0,
+        drainageNetMmArr[i] ?? 0,
+        eauProfondeMm,
+      );
       mineralNProfondG[i] = (mineralNProfondG[i] ?? 0) - exporte;
       leachedSumG += exporte;
     } else {
@@ -2028,7 +2041,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // retient : c'est pourquoi les sables en manquent et les argiles non.
     const perduK = lessivagePotassiumG(
       potassiumG[i] ?? 0,
-      drainageMmArr[i] ?? 0,
+      percolationSurfaceMmArr[i] ?? 0,
       waterMm[i * nH] ?? 0,
       cecSurface,
     );
@@ -2044,7 +2057,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // que les racines profondes la reprennent.
     const perduBases = lessivageBasesEq(
       basesEq[i] ?? 0,
-      drainageMmArr[i] ?? 0,
+      percolationSurfaceMmArr[i] ?? 0,
       waterMm[i * nH] ?? 0,
       cecSurface,
     );
@@ -2060,7 +2073,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       for (let h = 1; h < nH; h++) eauProfondeMm += waterMm[i * nH + h] ?? 0;
       const exporteBases = lessivageBasesEq(
         basesProfondEq[i] ?? 0,
-        drainageMmArr[i] ?? 0,
+        drainageNetMmArr[i] ?? 0,
         eauProfondeMm,
         cecProfond,
       );

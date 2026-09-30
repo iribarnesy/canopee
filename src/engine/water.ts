@@ -160,6 +160,35 @@ export interface ProfilHydroOutput {
   /** eau refusée en surface (sol saturé) */
   overflowMm: number;
   nappeMm: number;
+  /**
+   * Eau qui **traverse** la base de l'horizon de surface vers le bas, nette de ce
+   * que la nappe et le reflux y remettent par dessous, mm. C'est elle, et pas
+   * `drainageMm`, qui emporte les solutés de la surface (#291).
+   *
+   * Les deux diffèrent dès que la nappe entre dans le profil : chaque semaine,
+   * la saturation imposée remplit la macroporosité des horizons noyés, le
+   * ressuyage la vidange par le bas la semaine suivante, et l'aquifère la
+   * reprend. L'eau se conserve — le bilan boucle — mais elle fait une **boucle**
+   * sous la surface, et l'horizon 0 ne la voit jamais passer. Mesuré sur le sable
+   * profond : 5 240 mm/an de drainage pour 331 de percolation nette.
+   *
+   * Profil d'un seul horizon : la surface est le profil, c'est `drainageNetMm`.
+   */
+  percolationSurfaceMm: number;
+  /**
+   * Ce qui quitte le profil par le bas **net** de ce que la nappe y a fait
+   * entrer par le bas (remontée capillaire et saturation), plancher 0, mm : la
+   * recharge nette. C'est l'eau qui emporte un soluté du sous-sol hors de la
+   * parcelle (#291) ; l'eau de la boucle n'a traversé aucun horizon qui ne soit
+   * pas déjà sous la nappe.
+   *
+   * Le plancher est hebdomadaire : la saturation d'une semaine se vidange la
+   * semaine suivante, donc les deux termes ne se répondent qu'en moyenne. Une
+   * nappe qui monte fait une semaine à zéro, une nappe qui baisse une semaine
+   * où l'on compte un peu trop. Mesuré, sur l'année, ce décalage ne coûte que
+   * l'arrondi (voir la PR de #291).
+   */
+  drainageNetMm: number;
   /** engorgement de chaque horizon ∈ [0,1] */
   engorgementParHorizon: number[];
 }
@@ -195,6 +224,8 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
   // sur un sol déjà plein ne s'infiltre pas : il part en surface.
   let refus = 0;
   let flux = input.rainMm;
+  // Ce qui passe sous l'horizon 0, compté aux deux passes (#291).
+  let descenduSurface = 0;
   for (let i = 0; i < n && flux > 0; i++) {
     const h = horizons[i];
     if (!h) continue;
@@ -208,6 +239,7 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     const peutDescendre = Math.min(flux, h.conductiviteMm);
     refus += flux - peutDescendre;
     flux = peutDescendre;
+    if (i === 0) descenduSurface += flux;
   }
   let drainageBrut = flux;
 
@@ -260,6 +292,7 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
           Math.max(0, hBas.porositeMm - (excesMm[i + 1] ?? 0));
         const transfert = Math.min(dispo, budget, place);
         if (transfert <= 0) continue;
+        if (i === 0) descenduSurface += transfert;
         excesMm[i] = dispo - transfert;
         budgetMm[i] = budget - transfert;
         const versRu = Math.min(transfert, Math.max(0, hBas.ruMm - (eauMm[i + 1] ?? 0)));
@@ -281,6 +314,8 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     const pris = Math.min(place, remontant);
     excesMm[i] = (excesMm[i] ?? 0) + pris;
     remontant -= pris;
+    // Ce qui reflue jusque dans l'horizon 0 ne l'a pas quitté pour de bon.
+    if (i === 0) descenduSurface -= pris;
   }
   const overflowMm = remontant; // le sol est plein : ça ruisselle
 
@@ -318,11 +353,13 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
       const cibleRu = h.ruMm * partNoyee;
       if ((eauMm[i] ?? 0) < cibleRu) {
         nappeMm += cibleRu - (eauMm[i] ?? 0);
+        if (i === 0) descenduSurface -= cibleRu - (eauMm[i] ?? 0);
         eauMm[i] = cibleRu;
       }
       const cibleExces = h.porositeMm * partNoyee;
       if ((excesMm[i] ?? 0) < cibleExces) {
         nappeMm += cibleExces - (excesMm[i] ?? 0);
+        if (i === 0) descenduSurface -= cibleExces - (excesMm[i] ?? 0);
         excesMm[i] = cibleExces;
       }
     }
@@ -334,12 +371,26 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     engorgementParHorizon[i] =
       h && h.porositeMm > 0 ? Math.min(1, (excesMm[i] ?? 0) / h.porositeMm) : 0;
   }
+  const drainageNetMm = Math.max(0, drainageMm - nappeMm);
+  const percolationSurfaceMm = n > 1 ? Math.max(0, descenduSurface) : drainageNetMm;
   if (out) {
     out.evapMm = evapMm;
     out.drainageMm = drainageMm;
     out.overflowMm = overflowMm;
     out.nappeMm = nappeMm;
+    out.percolationSurfaceMm = percolationSurfaceMm;
+    out.drainageNetMm = drainageNetMm;
     return out;
   }
-  return { eauMm, excesMm, evapMm, drainageMm, overflowMm, nappeMm, engorgementParHorizon };
+  return {
+    eauMm,
+    excesMm,
+    evapMm,
+    drainageMm,
+    overflowMm,
+    nappeMm,
+    percolationSurfaceMm,
+    drainageNetMm,
+    engorgementParHorizon,
+  };
 }

@@ -117,6 +117,8 @@ describe("un fond mince ne bouche pas le profil (#263)", () => {
       drainageMm: 0,
       overflowMm: 0,
       nappeMm: 0,
+      percolationSurfaceMm: 0,
+      drainageNetMm: 0,
       engorgementParHorizon: horizons.map(() => 0),
     };
     for (let s = 0; s < semaines; s++) {
@@ -188,6 +190,8 @@ describe("un fond mince ne bouche pas le profil (#263)", () => {
       drainageMm: 0,
       overflowMm: 0,
       nappeMm: 0,
+      percolationSurfaceMm: 0,
+      drainageNetMm: 0,
       engorgementParHorizon: [0, 0],
     };
     for (let s = 0; s < 60; s++) {
@@ -205,5 +209,92 @@ describe("un fond mince ne bouche pas le profil (#263)", () => {
       );
     }
     expect(r.engorgementParHorizon[0] ?? 0).toBeGreaterThan(0.5);
+  });
+});
+
+describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
+  // Sous une nappe, la saturation imposée remplit chaque semaine la
+  // macroporosité des horizons noyés, le ressuyage la vidange par le bas la
+  // semaine suivante : 5 240 mm/an de drainage sur le sable profond pour 331 de
+  // percolation nette. L'eau se conserve (le premier bloc de ce fichier le
+  // garde) ; ce bloc-ci garde que les solutés ne prennent pas la boucle pour de
+  // la percolation.
+  const SABLE_0 = { ruMm: 26, porositeMm: 37, conductiviteMm: 4000, epaisseurCm: 25 };
+  const SABLE_1 = { ruMm: 34, porositeMm: 62, conductiviteMm: 5000, epaisseurCm: 45 };
+  const SABLE_2 = { ruMm: 40, porositeMm: 85, conductiviteMm: 6000, epaisseurCm: 60 };
+
+  function semaines(horizons: HorizonHydro[], pluieMm: number, nappeProfondeurCm: number, n = 30) {
+    let r = {
+      eauMm: horizons.map((h) => h.ruMm),
+      excesMm: horizons.map(() => 0),
+      evapMm: 0,
+      drainageMm: 0,
+      overflowMm: 0,
+      nappeMm: 0,
+      percolationSurfaceMm: 0,
+      drainageNetMm: 0,
+      engorgementParHorizon: horizons.map(() => 0),
+    };
+    const cumul = { drainage: 0, net: 0, surface: 0, nappe: 0 };
+    for (let s = 0; s < n; s++) {
+      r = profilHydro(
+        {
+          horizons,
+          eauMm: r.eauMm,
+          excesMm: r.excesMm,
+          rainMm: pluieMm,
+          evapDemandMm: 0,
+          nappeMm: 0,
+          drainageExterneMm: Number.POSITIVE_INFINITY,
+          nappeProfondeurCm,
+        },
+        r,
+      );
+      if (s >= 5) {
+        cumul.drainage += r.drainageMm;
+        cumul.net += r.drainageNetMm;
+        cumul.surface += r.percolationSurfaceMm;
+        cumul.nappe += r.nappeMm;
+      }
+    }
+    return cumul;
+  }
+
+  it("sans pluie, la boucle sous la nappe draine mais rien ne traverse la surface", () => {
+    const c = semaines([SABLE_0, SABLE_1, SABLE_2], 0, 50);
+    // La boucle existe, et elle est grosse : c'est le fait de l'issue.
+    expect(c.drainage).toBeGreaterThan(1000);
+    // Aucune goutte n'a traversé l'horizon de surface, qui est au-dessus de la nappe.
+    expect(c.surface).toBe(0);
+    // Et ce qui sort du profil n'est, en net, que ce que la nappe y a mis.
+    expect(c.net).toBeLessThan(1e-6);
+  });
+
+  it("avec pluie, les deux flux nets retrouvent la pluie et pas la boucle", () => {
+    const c = semaines([SABLE_0, SABLE_1, SABLE_2], 12, 50);
+    const pluie = 12 * 25;
+    expect(c.drainage).toBeGreaterThan(5 * pluie);
+    expect(c.surface).toBeCloseTo(pluie, 6);
+    expect(c.net).toBeCloseTo(pluie, 6);
+  });
+
+  it("sans nappe, rien ne change : les flux nets valent le drainage", () => {
+    const c = semaines([SABLE_0, SABLE_1, SABLE_2], 12, Number.POSITIVE_INFINITY);
+    expect(c.nappe).toBe(0);
+    expect(c.net).toBeCloseTo(c.drainage, 9);
+    expect(c.surface).toBeCloseTo(c.drainage, 6);
+  });
+
+  it("les flux nets ne sont jamais négatifs, et le net ne dépasse pas le drainage", () => {
+    fc.assert(
+      fc.property(casArb, (c) => {
+        const out = profilHydro(c as { horizons: HorizonHydro[] } & typeof c);
+        expect(out.percolationSurfaceMm).toBeGreaterThanOrEqual(0);
+        expect(out.drainageNetMm).toBeGreaterThanOrEqual(0);
+        expect(out.drainageNetMm).toBeLessThanOrEqual(out.drainageMm + 1e-9);
+        if (c.horizons.length === 1) expect(out.percolationSurfaceMm).toBe(out.drainageNetMm);
+      }),
+      { numRuns: 3000 },
+    );
   });
 });
