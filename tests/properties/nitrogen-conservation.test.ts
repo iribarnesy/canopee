@@ -175,13 +175,22 @@ describe("le sous-sol de l'azote : ce que la surface perd, elle le passe (#247 l
     // tiers.** Ce n'est pas un chiffre calé — il tombe des deux vitesses de
     // lessivage, celle de la surface et celle du fond — et c'est la signature
     // d'un régime permanent : le fond suit la surface au lieu de vivre sa vie.
+    //
+    // **Depuis les tranches de nitrate (#247), le fond pèse plus lourd, et c'est
+    // la physique qui le veut.** Son stock d'équilibre vaut l'apport multiplié
+    // par le temps de séjour de l'eau, c'est-à-dire l'eau totale sur la lame qui
+    // le traverse ; diluer dans l'eau totale plutôt que dans la réserve utile
+    // allonge ce séjour. Relevé : rapport 4,43 à l'an 6, 4,24 à l'an 30 (contre
+    // ~2,1 avec les deux cellules de mélange). Il dérive de 4 % en vingt-quatre
+    // ans pendant que les deux stocks perdent un tiers : toujours un budget qui
+    // suit la surface, pas un puits. La garde se lit donc en **relatif**.
     const six = partie(LIMON_RICHE, 6);
     const trente = partie(LIMON_RICHE, 30);
     // Les deux stocks se vident — la parcelle nue perd son azote.
     expect(trente.surface).toBeLessThan(six.surface * 0.8);
     expect(trente.profond).toBeLessThan(six.profond * 0.8);
-    // Et pourtant leur rapport ne bouge pas.
+    // Et pourtant leur rapport bouge à peine.
     const rapport = (r: { surface: number; profond: number }) => r.profond / r.surface;
-    expect(rapport(trente)).toBeCloseTo(rapport(six), 1);
+    expect(Math.abs(rapport(trente) / rapport(six) - 1)).toBeLessThan(0.08);
   });
 });

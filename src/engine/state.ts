@@ -29,6 +29,7 @@ import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
 import type { Horizon, SoilProfile } from "./soil";
 import { profondeurPenetrableCm, ruHorizonMm } from "./soil";
+import { geometrieTranches } from "./tranches";
 import {
   diametreInitialCm,
   profondeurRacinesCm,
@@ -278,6 +279,24 @@ export interface SoilState {
    * pas perdu pour le peuplement ; ce qui passe sous la zone racinaire, si.
    */
   mineralNProfondG: GrilleLongue;
+  /**
+   * La **répartition verticale du nitrate**, g/m², par (cellule, tranche) :
+   * `nitrateTranchesG[i * nT + k]`, `nT` tranches d'environ 10 cm alignées sur
+   * les horizons (`tranches.ts`). Les premières couvrent l'horizon 0, les suivantes
+   * le sous-sol.
+   *
+   * **Elle ne remplace aucun pool.** `mineralNG` et `mineralNProfondG` restent les
+   * totaux que le reste du moteur lit et écrit ; cette grille dit seulement
+   * **où**, dans chacun, se trouve le nitrate — et c'est ce qui manquait pour qu'il
+   * descende en front au lieu d'être rendu en bloc par deux cellules de mélange
+   * (#247 : 29,9 / 51,7 / 56,1 % perdus sous 90 cm selon l'horizon de départ,
+   * contre 4,2 / 23,7 / 82,2 à l'abaque COMIFER/LIXIM). Avant chaque lessivage,
+   * les tranches se ramènent aux deux totaux ; après, le sous-sol se relit sur
+   * les siennes.
+   *
+   * L'ammonium n'y est pas : il ne suit pas l'eau (#280).
+   */
+  nitrateTranchesG: GrilleLongue;
   /**
    * Part **ammoniacale** de `mineralNG`, g/m² — un sous-pool, pas un pool (#280).
    *
@@ -791,6 +810,10 @@ export function createGameState(
       // n'y trouvera que ce que la partie y aura mis *(à calibrer)*.
       mineralNProfondG: new Float64Array(n),
       ammoniacalNG: new Float64Array(n),
+      // L'azote de départ est tout nitrate (l'ammonium part de zéro) et tout en
+      // surface : il se répartit sur les tranches de l'horizon 0 au prorata de
+      // leur épaisseur, celles du sous-sol partent vides comme `mineralNProfondG`.
+      nitrateTranchesG: nitrateTranchesInitiales(station, n),
       litterNG: new Float64Array(n),
       litterCG: new Float64Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
@@ -885,6 +908,20 @@ const RACINES_PLANCHER_INSTANCIE = 0.35;
  * de toute façon, et jamais moins que les 20 cm d'un semis. Ce n'est pas une
  * faveur : c'est l'état qu'il aurait s'il avait poussé jusque-là.
  */
+/** Les tranches de nitrate au premier jour : tout l'azote de départ en surface. */
+function nitrateTranchesInitiales(station: Station, n: number): Float64Array {
+  const g = geometrieTranches(station.profil);
+  const out = new Float64Array(n * g.n);
+  const surfaceCm = g.epaisseurCm.slice(0, g.nSurface).reduce((a, b) => a + b, 0);
+  if (surfaceCm <= 0) return out;
+  const total = station.initialMineralNKgHa * KG_PER_HA_TO_G_PER_M2;
+  for (let i = 0; i < n; i++) {
+    for (let k = 0; k < g.nSurface; k++)
+      out[i * g.n + k] = (total * (g.epaisseurCm[k] ?? 0)) / surfaceCm;
+  }
+  return out;
+}
+
 function racinesInitialesCm(especeId: string, heightM: number, station: Station): number {
   const penetrable = profondeurPenetrableCm(station.profil);
   const potentiel = profondeurRacinesCm(getEspece(especeId), heightM, penetrable);

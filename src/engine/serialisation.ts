@@ -125,8 +125,14 @@ const MAGIE = "CANOPEE\u0000";
  * journal reprend la main. Troisième fois que cette règle sert, et toujours
  * pour la même raison : une grille absente n'a pas de valeur par défaut
  * innocente.
+ *
+ * **5 (issue #247, tranches)** : `nitrateTranchesG`, la répartition verticale du
+ * nitrate. Un bloc de version 4 ne la contient pas, et la reconstruire dirait où
+ * se trouve un nitrate que la partie a fait descendre — la mettre à plat
+ * rendrait au nitrate profond la même chance de sortir qu'à celui de surface, ce
+ * que cette grille existe précisément pour empêcher. On refuse, quatrième fois.
  */
-export const VERSION_FORMAT = 4;
+export const VERSION_FORMAT = 5;
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {

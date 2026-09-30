@@ -61,7 +61,34 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la boucle de nappe, #291)
+## Ce que le dernier lot a appris (les tranches de nitrate, #247)
+
+La plomberie ancrée sur l'abaque (tranches de 10 cm, eau totale) est posée,
+et la suite passe sans qu'un essai bouge. Elle devait aussi dégonfler le fond
+pour que le lot B puisse s'y brancher ; elle l'a gonflé.
+
+### Deux grandeurs d'une même plomberie peuvent partir en sens contraire
+
+L'abaque juge la vitesse à laquelle un nitrate **déjà au fond** en sort : les
+tranches la corrigent (56 → 83 %). Le stock du fond, lui, vaut l'apport fois
+le **temps de séjour**, et l'eau totale l'allonge : 13,7 → 21,0 kg/ha sur sol
+nu. Une correction juste pour un flux peut aggraver un stock ; il faut
+prédire les deux.
+
+### Un réservoir trop gros se cherche dans ses sorties, pas dans sa tuyauterie
+
+Le relevé RSH, l'abaque et Broadbalk désignent le même excès, et la
+plomberie ne l'explique pas. Le moteur n'a aucune dénitrification : l'azote
+minéral ne sort que par les plantes et le lessivage. Chercher les sorties
+manquantes avant de retoucher les tuyaux.
+
+### Une plomberie neutre sur la suite n'est pas une plomberie neutre sur le monde
+
+Aucun essai n'a bougé, et pourtant le fond pèse moitié plus. La suite ne
+regarde pas le fond d'hiver ; le banc apparié, si. Merger sur une suite verte
+ne dispense pas de dire ce qui a bougé dehors.
+
+## Ce qu'un lot plus ancien a appris (la boucle de nappe, #291)
 
 Un défaut trouvé en passant (l'eau de la nappe du sable faisait une boucle de
 4,9 m par an que les solutés prenaient pour de la percolation), une première
