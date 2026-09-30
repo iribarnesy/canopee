@@ -226,7 +226,7 @@ export interface SaisonDUneEssence {
  * c'est le moteur qui le calcule (`ventRecuParLeSite`) : le rendu ne refait pas
  * le produit, il appelle la fonction.
  */
-function ventDuSite(snapshot: Snapshot, station: StationInfo): VentAPencher {
+export function ventDuSite(snapshot: Snapshot, station: StationInfo): VentAPencher {
   const w = snapshot.weather;
   if (w.ventVersRad === undefined || w.ventMoyMs === undefined) return SANS_VENT;
   return {

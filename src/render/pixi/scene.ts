@@ -104,12 +104,21 @@ import { contourDeLaZone } from "../emprise";
 import { boisDuBrocard, type PoseDuChevreuil, pelageDEte } from "../faune/chevreuils";
 import { type PointDeNuee, TAILLE_DU_POINT_PX } from "../faune/nuee";
 import type { PoseDHabitant } from "../faune/residents";
-import { versCss, versEntier } from "../palette";
+import { eclairer, versCss, versEntier } from "../palette";
 import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
+import { type BouffeeDeBrume, TEINTE_DE_LA_BRUME } from "../temps/brume";
 import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
 import { CIEL, CIEL_LE_PLUS_CHARGE, type Particule } from "../temps/feu";
 import type { GiteOccupe } from "../temps/habitants";
+import {
+  type CielDeLaSemaine,
+  fondDuCiel,
+  type Goutte,
+  GRIS_DE_PLUIE,
+  SOL_MOUILLE_MAX,
+  VOILE_DE_PLUIE_MAX,
+} from "../temps/pluie";
 import type { CelluleVoilee } from "../temps/voile";
 
 /** Budget de cuisson par image, en morceaux de terrain. */
@@ -275,6 +284,8 @@ export class SceneParcelle {
     surbrillance: new Container(),
     panache: new Container(),
     ciel: new Container(),
+    couvert: new Container(),
+    pluie: new Container(),
     habitants: new Container(),
     marqueurs: new Container(),
   };
@@ -371,6 +382,15 @@ export class SceneParcelle {
   /** Les points de la nuée de ravageurs à cette image (#129). Vide = pas de pullulation. */
   private nuee: readonly PointDeNuee[] = [];
   private pointDeNuee?: HTMLCanvasElement;
+  /** Le ciel et le sol de la semaine (#130). Dégagé et sec par défaut. */
+  private tempsDuCiel: CielDeLaSemaine = { couvert: 0, mouille: 0 };
+  /** Les gouttes à cette image (#130). Vide = il ne pleut pas. */
+  private gouttes: readonly Goutte[] = [];
+  private textureGoutte?: Texture;
+  private spriteCouvert?: Sprite;
+  /** Les bouffées de brume à cette image (#130). Vide = pas de brume. */
+  private brume: readonly BouffeeDeBrume[] = [];
+  private bouffee?: HTMLCanvasElement;
   private atlasHabitants?: AtlasHabitants;
   private formeGite?: Texture;
   /** Les trois formes du calque, cuites une fois. */
@@ -490,6 +510,12 @@ export class SceneParcelle {
       // sont des objets du monde, posés sur un arbre précis, mais un gîte caché
       // derrière le houppier de devant ne dit rien à personne (#255).
       this.couches.habitants,
+      // **Le temps qu'il fait passe sur le monde et sous l'interface** (#130) :
+      // un ciel gris ternit tout ce qui est dehors, bêtes comprises, et la pluie
+      // tombe devant les houppiers. Le ciel orangé d'un incendie passe encore
+      // par-dessus : il éclaire la pluie comme il éclaire la fumée.
+      this.couches.couvert,
+      this.couches.pluie,
       this.couches.ciel,
       // **Le calque des changements est au-dessus de tout**, y compris des
       // arbres et de l'ombre : c'est de l'interface posée sur la carte, et un
@@ -579,6 +605,23 @@ export class SceneParcelle {
     this.nuee = points;
   }
 
+  /**
+   * Le temps qu'il fait (#130) : le ciel de la semaine, et les gouttes à cette
+   * image. Rien n'est décidé ici — `temps/pluie.ts` a tout dit.
+   */
+  public faireLeTemps(ciel: CielDeLaSemaine, gouttes: readonly Goutte[]): void {
+    this.tempsDuCiel = ciel;
+    this.gouttes = gouttes;
+  }
+
+  /**
+   * La brume d'un matin, bouffée par bouffée (#130). Posée parmi les arbres,
+   * comme les bêtes : elle noie les troncs de derrière.
+   */
+  public montrerLaBrume(bouffees: readonly BouffeeDeBrume[]): void {
+    this.brume = bouffees;
+  }
+
   public montrerLesChangements(marqueurs: readonly Marqueur[]): void {
     this.marqueurs = marqueurs;
   }
@@ -661,6 +704,7 @@ export class SceneParcelle {
     spritesPoses += this.poserVoiles(etat, vue);
     spritesPoses += this.poserFeu(etat, vue);
     spritesPoses += this.poserLeCiel();
+    spritesPoses += this.poserLeTemps(etat.semaineAnnee);
     spritesPoses += this.poserArbres(poses, this.betesAPoser(etat, vue, poses), vue);
     spritesPoses += this.poserHabitants(etat, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
@@ -1028,6 +1072,74 @@ export class SceneParcelle {
   }
 
   /**
+   * Le temps qu'il fait (#130) : le fond, le voile gris, le sol mouillé et la
+   * pluie.
+   *
+   * **Le fond change aussi**, et c'est le seul endroit du rendu qui le touche :
+   * derrière le décor transparent, il y a la brume de l'interface ; sous un
+   * ciel de pluie elle grisonne, sinon le hors-parcelle garderait un beau
+   * temps que la parcelle n'a pas.
+   *
+   * **Le sol fonce par une teinte de couche**, sans rien recuire : un sol
+   * mouillé est le même sol, plus sombre. Le décor fonce avec lui, parce qu'il
+   * pleut aussi chez le voisin.
+   */
+  private poserLeTemps(semaineAnnee: number): number {
+    const { couvert, mouille } = this.tempsDuCiel;
+    this.app.renderer.background.color = versEntier(fondDuCiel(semaineAnnee, couvert));
+    const sol = versEntier(eclairer({ r: 255, g: 255, b: 255 }, 1 - SOL_MOUILLE_MAX * mouille));
+    this.couches.sol.tint = sol;
+    this.couches.decor.tint = sol;
+    let poses = 0;
+    if (couvert > 0) {
+      if (!this.spriteCouvert) {
+        this.spriteCouvert = new Sprite(Texture.WHITE);
+        this.couches.couvert.addChild(this.spriteCouvert);
+      }
+      const s = this.spriteCouvert;
+      s.visible = true;
+      s.tint = versEntier(GRIS_DE_PLUIE);
+      s.alpha = VOILE_DE_PLUIE_MAX * couvert;
+      s.x = 0;
+      s.y = 0;
+      s.setSize(this.app.renderer.width, this.app.renderer.height);
+      poses++;
+    } else if (this.spriteCouvert) {
+      this.spriteCouvert.visible = false;
+    }
+    if (this.gouttes.length > 0 && !this.textureGoutte) {
+      // Un trait vertical qui s'éclaircit vers le bas : la tête de la goutte
+      // est en bas, sa traînée au-dessus.
+      const c = this.fabriquer(2, 32);
+      const g = c.getContext("2d");
+      if (g) {
+        const d = g.createLinearGradient(0, 0, 0, 32);
+        d.addColorStop(0, "rgba(214, 226, 236, 0)");
+        d.addColorStop(1, "rgba(226, 236, 244, 1)");
+        g.fillStyle = d;
+        g.fillRect(0, 0, 2, 32);
+      }
+      this.textureGoutte = Texture.from(c);
+    }
+    let rang = 0;
+    if (this.textureGoutte) {
+      for (const goutte of this.gouttes) {
+        const sprite = SceneParcelle.sprite(this.couches.pluie, rang++, this.textureGoutte);
+        sprite.anchor.set(0.5, 1);
+        sprite.x = goutte.sx;
+        sprite.y = goutte.sy;
+        sprite.scale.set(0.5, goutte.longueurPx / 32);
+        // Pixi tourne dans le sens horaire : pour que le bas du trait parte à
+        // droite, la rotation est l'opposé de l'inclinaison.
+        sprite.rotation = -goutte.inclinaisonRad;
+        sprite.alpha = goutte.opacite;
+      }
+    }
+    SceneParcelle.tailler(this.couches.pluie, rang);
+    return poses + rang;
+  }
+
+  /**
    * Le calque des changements : un marqueur par changement, à taille **fixe**.
    *
    * **La taille en pixels et non en mètres est tout l'intérêt.** Un halo de
@@ -1136,7 +1248,12 @@ export class SceneParcelle {
     vue: Vue,
     arbres: ReturnType<typeof posesDesArbres>,
   ): BeteAPoser[] {
-    if (this.faune.length === 0 && this.residents.length === 0 && this.nuee.length === 0) {
+    if (
+      this.faune.length === 0 &&
+      this.residents.length === 0 &&
+      this.nuee.length === 0 &&
+      this.brume.length === 0
+    ) {
       return [];
     }
     const cote = etat.sol.coteM;
@@ -1267,6 +1384,47 @@ export class SceneParcelle {
           echelle,
           versLaGauche: false,
           opacite: p.opacite,
+        });
+      }
+    }
+    if (this.brume.length > 0) {
+      // Une bouffée, cuite une fois : une ellipse aplatie au bord perdu, de la
+      // teinte de la brume. Sa taille suit le zoom : c'est un objet du monde,
+      // posé sur le sol, pas un signe.
+      if (!this.bouffee) {
+        const c = this.fabriquer(64, 32);
+        const g = c.getContext("2d");
+        if (g) {
+          const { r, g: v, b } = TEINTE_DE_LA_BRUME;
+          const d = g.createRadialGradient(32, 16, 0, 32, 16, 32);
+          d.addColorStop(0, `rgba(${r}, ${v}, ${b}, 1)`);
+          d.addColorStop(0.55, `rgba(${r}, ${v}, ${b}, 0.55)`);
+          d.addColorStop(1, `rgba(${r}, ${v}, ${b}, 0)`);
+          g.setTransform(1, 0, 0, 0.5, 0, 8);
+          g.fillStyle = d;
+          g.fillRect(0, 0, 64, 64);
+        }
+        this.bouffee = c;
+      }
+      // Un mètre de sol fait `TUILE_LARGEUR_PX / √2` pixels de large à zoom 1
+      // dans la projection : une cellule est un losange de cette diagonale.
+      const pxParMSol = (TUILE_LARGEUR_PX * vue.cam.zoom) / Math.SQRT2;
+      for (const b of this.brume) {
+        // Posée un peu au-dessus du sol, pour qu'elle voile le pied des troncs
+        // plutôt que la terre seule.
+        const q = versEcranVue({ x: b.x, y: b.y, z: sol(b.x, b.y) + 0.6 }, vue);
+        if (horsCadre(q)) continue;
+        sorties.push({
+          sx: q.sx,
+          sy: q.sy,
+          profondeur: profondeur(b.x, b.y, vue.cam),
+          cle: "brume:bouffee",
+          image: this.bouffee,
+          piedX: 32,
+          piedY: 16,
+          echelle: (2 * b.rayonM * pxParMSol) / 64,
+          versLaGauche: false,
+          opacite: b.opacite,
         });
       }
     }

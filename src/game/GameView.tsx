@@ -5,7 +5,7 @@
  * Rendu Canvas 2D — l'isométrique complète viendra comme couche visuelle.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   formeSaisonniere,
   rechauffementFranceC,
@@ -84,9 +84,10 @@ import {
 } from "./sauvegardes";
 import { useSon } from "./son/useSon";
 import { useBilan } from "./useBilan";
-import { useEllipse, vitesseDeRelecture } from "./useEllipse";
+import { useEllipse, ventDuSite, vitesseDeRelecture } from "./useEllipse";
 import { useFaune } from "./useFaune";
 import { useGame } from "./useGame";
+import { useMatin } from "./useMatin";
 import { useNiveau } from "./useNiveau";
 import { useNuee } from "./useNuee";
 import { useResidents } from "./useResidents";
@@ -1484,6 +1485,27 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   );
   const residents = useResidents(snapshot, arbresPoses, station?.coteM);
   const nuee = useNuee(snapshot, station?.coteM);
+  // Le givre et la brume passent par la même couche que les voiles de
+  // l'ellipse (#130) : une cellule, une teinte, une opacité.
+  const matin = useMatin(snapshot, station);
+  const voilerLEllipse = ellipse.voiler;
+  const voiler = useCallback(
+    (maintenantMs: number) => {
+      const avant = matin.givre(maintenantMs);
+      const ellipseEnCours = voilerLEllipse(maintenantMs);
+      return avant.length === 0 ? ellipseEnCours : [...avant, ...ellipseEnCours];
+    },
+    [matin, voilerLEllipse],
+  );
+  // Le temps qu'il fait (#130) : la pluie de la semaine et le vent que le site
+  // en reçoit, tels que le moteur les donne.
+  const temps = useMemo(
+    () =>
+      snapshot && station
+        ? { pluieMm: snapshot.weather.rainMm, vent: ventDuSite(snapshot, station) }
+        : undefined,
+    [snapshot, station],
+  );
   const son = useSon(snapshot, station, ellipse.feu, residents);
 
   /**
@@ -1812,13 +1834,15 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             remodeler={ellipse.remodeler}
             surOrientation={setOrientation}
             saison={ellipse.saison}
-            voiler={ellipse.voiler}
+            voiler={voiler}
             feu={ellipse.feu}
             marqueurs={ellipse.marqueurs}
             habitants={habitants}
             faune={faune}
             residents={residents}
             nuee={nuee}
+            temps={temps}
+            brume={matin.brume}
             {...(cadrage ? { cadrerSur: cadrage } : {})}
           />
         )}

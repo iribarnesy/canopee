@@ -964,19 +964,63 @@ plus discrète des trois, parce qu'elle se déguise en souci de cohérence.
 
 ### 5.7 Saisons, météo, lumière
 
-Tout se lit dans l'instantané, qui transporte déjà la `WeekWeather` complète —
-il n'y a **rien à demander au moteur** pour cette section.
+Presque tout se lit dans l'instantané, qui transporte la `WeekWeather`
+complète. **Presque** : le premier jet de ce paragraphe disait qu'il n'y avait
+« rien à demander au moteur », et la neige l'a démenti (voir plus bas).
 
-| Élément | Donnée | Charge |
-|---|---|---|
-| Quatre palettes de saison interpolées en continu | `Snapshot.pheno` | `M` |
-| **Pluie** : rideau de gouttes obliques, intensité ∝ `rainMm`, sol qui foncit, gouttes qui rebondissent, flaques dans les creux | `weather.rainMm` ✅ | `M` |
-| **Neige** : tuiles blanchies, couronnes chargées, fonte progressive | `tMean`, `tMinAbsC` ✅ | `M` |
-| **Gel** : givre blanc au sol au petit matin, et les fleurs qui brunissent quand `bloomFrosted` passe | `tMinAbsC` ✅ + `bloomFrosted` ✅ | `S` |
-| **Brume** : nappe basse dans les creux quand la nappe affleure — le fond de vallon respire | `soilNappeCm` ✅ | `M` |
-| **Voile de chaleur** : l'air tremble au-dessus du sol nu en canicule | `tMaxC` ✅ | `S` |
-| Ciel : teinte selon saison, couvert selon la pluie, orangé pendant un incendie | ✅ | `S` |
-| Ombres qui s'allongent et tournent avec la saison | semaine ✅ | `S` |
+| Élément | Donnée | Charge | État |
+|---|---|---|---|
+| Quatre palettes de saison interpolées en continu | `Snapshot.pheno` | `M` | — |
+| **Pluie** : rideau de gouttes obliques, intensité ∝ `rainMm`, sol qui fonce | `weather.rainMm`, `ventVersRad`, `ventRecuParLeSite` ✅ | `M` | ✅ #130 |
+| Gouttes qui rebondissent, flaques dans les creux | — | `S` | non fait |
+| **Neige** : tuiles blanchies, couronnes chargées, fonte progressive | **aucune** — ni part solide, ni manteau | `M` | attend le moteur, #303 |
+| **Gel** : givre blanc au sol au petit matin | `tMinAbsC` + `tMinimumSousCouvert` ✅ | `S` | ✅ #130 |
+| Les fleurs qui brunissent quand `bloomFrosted` passe | `bloomFrosted` ✅ | `S` | — |
+| **Brume** : nappe basse dans les creux quand la nappe affleure | `soilNappeCm` = 0, vent reçu ✅ | `M` | ✅ #130 |
+| **Voile de chaleur** : l'air tremble au-dessus du sol nu en canicule | `tMax` ✅ | `S` | non fait |
+| Ciel : teinte selon la saison, gris selon la pluie, orangé pendant un incendie | semaine, `rainMm` ✅ | `S` | ✅ #130 |
+| Ombres qui s'allongent et tournent avec la saison | semaine ✅ | `S` | — |
+
+**Ce que #130 a livré, et d'où chaque chose vient.**
+
+- **Le ciel et la pluie** (`render/temps/pluie.ts`). Le fond derrière le décor
+  transparent prend la teinte de la saison : un hiver froid et pâle, un été
+  chaud, un automne doré. Il grisonne avec la pluie de la semaine. Un voile gris
+  passe sur tout le monde, le sol fonce d'une teinte de couche (rien n'est
+  recuit), et un rideau de gouttes tombe devant les houppiers. **Il n'y a pas de
+  nuage sans pluie** : le moteur ne connaît pas la nébulosité, et une semaine
+  sèche a un ciel dégagé. Le rideau penche du côté où le vent **souffle**, avec
+  le même vent reçu que le panache d'un incendie. Ce qu'on voit et ce qu'on
+  entend suivent **une seule courbe** (`intensiteDeLaPluie`), que le son lit
+  aussi : une averse qu'on entend sans la voir se remarquerait tout de suite.
+  **La pluie tombe toute l'ellipse**, et ce n'est pas un choix : le moteur donne
+  un cumul de semaine, pas les jours où il a plu.
+- **Le givre** (`render/temps/givre.ts`). Une cellule blanchit quand la nuit la
+  plus froide y passe sous zéro **au sol**. Le minimum est tamponné par le
+  couvert grâce à la fonction du moteur, celle-là même qui décide si les fleurs
+  d'un fruitier gèlent. Sous une futaie fermée, le même froid ne blanchit donc
+  rien. Le givre est un **matin** : il est là quand la semaine arrive et fond
+  par plaques en trois secondes et demie, sans rien laisser derrière lui.
+  **Un carreau et non une tache** : la tache étalée d'une brûlure donnait, sur
+  une friche gelée d'un bout à l'autre, un grillage de points gris.
+- **La brume** (`render/temps/brume.ts`). Elle se pose sur les cellules où la
+  nappe **affleure** (`soilNappeCm` = 0, c'est le moteur qui le dit, pas un seuil
+  d'ici), et le vent reçu la chasse : par six mètres par seconde, il n'y en a
+  plus. C'est aussi un matin, qui se lève en six secondes au plus. Ce sont
+  **des bouffées posées dans l'ordre du peintre**, comme les bêtes, et non un
+  voile au sol : posée sous les arbres, la brume d'un creux boisé disparaissait
+  sous les houppiers, alors que c'est au pied des troncs qu'elle se voit.
+
+**La neige n'est pas dessinée, et c'est la règle qui le veut.** `tMean` et
+`tMinAbsC` disent qu'il fait froid, pas qu'il a neigé. `rainMm` est **toute** la
+précipitation, sans part solide, et rien ne s'accumule ni ne fond d'une semaine
+à l'autre. Dessiner un manteau, ce serait écrire dans le rendu une loi de
+partage pluie/neige et une fonte que le bilan d'eau ignore. #303 demande les
+deux champs au moteur.
+
+**Le voile de chaleur et les flaques** restent à faire. Aucun ne manque au
+moteur (`tMax`, les creux et la crue sont là), ils ne sont simplement pas dans
+ce lot.
 
 ### 5.8 Le hors-parcelle
 
