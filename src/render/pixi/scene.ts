@@ -57,6 +57,13 @@ import {
 } from "../couches/arbres";
 import { BRUME, type DecorBordures, OPACITE_DU_DECOR } from "../couches/decor";
 import {
+  AtlasFaune,
+  type ClasseChevreuil,
+  cleChevreuil,
+  type Figure,
+  palierDe,
+} from "../couches/faune";
+import {
   cuireBouffee,
   cuireBraise,
   cuireBrulure,
@@ -88,8 +95,9 @@ import {
 import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
 import { cuireLosangeVoile } from "../couches/voile";
 import { contourDeLaZone } from "../emprise";
+import { boisDuBrocard, type PoseDuChevreuil, pelageDEte } from "../faune/chevreuils";
 import { versCss, versEntier } from "../palette";
-import { METRE_VERTICAL_PX, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
+import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
 import { CIEL, CIEL_LE_PLUS_CHARGE, type Particule } from "../temps/feu";
@@ -175,6 +183,15 @@ export interface Compte {
  */
 interface ArbrePose {
   id: number;
+  /**
+   * Le rang du sprite dans la couche des arbres.
+   *
+   * **Pas le rang dans cette liste**, et le halo les a confondus : la couche
+   * porte aussi les masses de fourré, les arbres encore transparents — et
+   * désormais les bêtes (#129) —, qui n'entrent pas ici. Le halo copiait donc
+   * le sprite d'à côté dès qu'il y en avait un.
+   */
+  rang: number;
   image: HTMLCanvasElement;
   /** le **pied** de l'arbre à l'écran */
   sx: number;
@@ -186,6 +203,18 @@ interface ArbrePose {
   hauteur: number;
   rotationRad: number;
   opacite: number;
+}
+
+/** Une bête projetée, prête à entrer dans l'ordre du peintre des arbres. */
+interface BeteAPoser {
+  sx: number;
+  sy: number;
+  profondeur: number;
+  classe: ClasseChevreuil;
+  versLaGauche: boolean;
+  opacite: number;
+  /** pixels par mètre à l'écran */
+  pxParM: number;
 }
 
 /** L'arbre adulte annoncé sous le curseur. */
@@ -321,6 +350,9 @@ export class SceneParcelle {
   private marqueurs: readonly Marqueur[] = [];
   /** Les gîtes occupés, à poser sur leur arbre (#255). Vide = personne. */
   private habitants: readonly GiteOccupe[] = [];
+  /** Les bêtes de passage à cette image (#129). Vide = personne. */
+  private faune: readonly PoseDuChevreuil[] = [];
+  private atlasFaune?: AtlasFaune;
   private formeGite?: Texture;
   /** Les trois formes du calque, cuites une fois. */
   private formes?: Record<Marqueur["sorte"], Texture>;
@@ -505,6 +537,17 @@ export class SceneParcelle {
     this.habitants = habitants;
   }
 
+  /**
+   * Les bêtes de passage, à poser **parmi** les arbres (#129).
+   *
+   * Un tableau, comme le feu : elles bougent, et c'est le rappel de la boucle
+   * d'images qui les place à chaque image. La scène ne sait rien de leurs
+   * visites, elle ne fait que les projeter.
+   */
+  public montrerLaFaune(poses: readonly PoseDuChevreuil[]): void {
+    this.faune = poses;
+  }
+
   public montrerLesChangements(marqueurs: readonly Marqueur[]): void {
     this.marqueurs = marqueurs;
   }
@@ -587,7 +630,7 @@ export class SceneParcelle {
     spritesPoses += this.poserVoiles(etat, vue);
     spritesPoses += this.poserFeu(etat, vue);
     spritesPoses += this.poserLeCiel();
-    spritesPoses += this.poserArbres(poses, vue);
+    spritesPoses += this.poserArbres(poses, this.betesAPoser(etat, vue), vue);
     spritesPoses += this.poserHabitants(etat, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
     this.poserLaVisee(etat, vue);
@@ -1050,11 +1093,86 @@ export class SceneParcelle {
     return this.poserImages(this.couches.decor, images);
   }
 
-  private poserArbres(poses: ReturnType<typeof posesDesArbres>, vue: Vue): number {
+  /**
+   * Les bêtes de cette image, projetées et rangées par profondeur.
+   *
+   * Rangées par la **même** clé que les arbres (`profondeur`) : c'est ce qui
+   * fait qu'un chevreuil passe derrière le tronc de devant et devant celui de
+   * derrière, sans couche à part qui le mettrait toujours au-dessus.
+   */
+  private betesAPoser(etat: EtatScene, vue: Vue): BeteAPoser[] {
+    if (this.faune.length === 0) return [];
+    const cote = etat.sol.coteM;
+    const pxParM = METRE_VERTICAL_PX * vue.cam.zoom;
+    const palier = palierDe(pxParM);
+    const ete = pelageDEte(etat.semaineAnnee);
+    const bois = boisDuBrocard(etat.semaineAnnee);
+    const sorties: BeteAPoser[] = [];
+    for (const b of this.faune) {
+      if (b.opacite <= 0) continue;
+      const cx = Math.min(cote - 1, Math.max(0, Math.floor(b.x)));
+      const cy = Math.min(cote - 1, Math.max(0, Math.floor(b.y)));
+      const z = etat.sol.altitudesM[cy * cote + cx] ?? 0;
+      const p = versEcranVue({ x: b.x, y: b.y, z }, vue);
+      if (p.sx < -64 || p.sx > vue.largeurPx + 64 || p.sy < -8 || p.sy > vue.hauteurPx + 96) {
+        continue;
+      }
+      // Le sens se lit **à l'écran** : la bête est dessinée de profil, et c'est
+      // la caméra qui décide si son cap part vers la gauche ou vers la droite.
+      const devant = versEcranVue({ x: b.x + b.capX, y: b.y + b.capY, z }, vue);
+      const figure: Figure =
+        b.attitude === "marche" ? (b.pas === 0 ? "marche0" : "marche1") : b.attitude;
+      sorties.push({
+        sx: p.sx,
+        sy: p.sy,
+        profondeur: profondeur(b.x, b.y, vue.cam),
+        classe: { figure, ete, bois: b.brocard && bois, palier },
+        versLaGauche: devant.sx < p.sx,
+        opacite: b.opacite,
+        pxParM,
+      });
+    }
+    return sorties.sort((a, b) => a.profondeur - b.profondeur);
+  }
+
+  /** Une bête, posée dans la couche des arbres : son sprite est un de ceux-là. */
+  private poserUneBete(bete: BeteAPoser, rang: number): void {
+    this.atlasFaune ??= new AtlasFaune(this.fabriquer);
+    const v = this.atlasFaune.vignette(bete.classe);
+    const cle = `faune:${cleChevreuil(bete.classe)}`;
+    let texture = this.posees.get(cle);
+    if (!texture) {
+      texture = Texture.from(v.image);
+      this.posees.set(cle, texture);
+    }
+    const sprite = SceneParcelle.sprite(this.couches.arbres, rang, texture);
+    const k = bete.pxParM / v.pxParM;
+    sprite.pivot.set(0, 0);
+    sprite.rotation = 0;
+    // Retournée par l'échelle, la vignette pivote autour de son bord gauche :
+    // le pied se replace donc de l'autre côté.
+    sprite.scale.set(bete.versLaGauche ? -k : k, k);
+    sprite.x = bete.versLaGauche ? bete.sx + v.piedX * k : bete.sx - v.piedX * k;
+    sprite.y = bete.sy - v.piedY * k;
+    sprite.alpha = bete.opacite;
+  }
+
+  private poserArbres(
+    poses: ReturnType<typeof posesDesArbres>,
+    betes: readonly BeteAPoser[],
+    vue: Vue,
+  ): number {
     if (!this.atlas) return 0;
     let n = 0;
+    let b = 0;
     this.arbresPoses.length = 0;
     for (const pose of poses) {
+      // Les bêtes plus lointaines que cet arbre passent avant lui : l'ordre du
+      // peintre est un seul ordre pour tout ce qui se tient debout.
+      while (b < betes.length && (betes[b]?.profondeur ?? 0) < pose.profondeur) {
+        this.poserUneBete(betes[b] as BeteAPoser, n++);
+        b++;
+      }
       const vignette = this.atlas.vignette(pose.classe);
       if (!vignette) continue;
       // **`cleClasse`, et surtout pas une clé écrite à la main.** Il y en avait
@@ -1093,6 +1211,9 @@ export class SceneParcelle {
       // Une chandelle qui tombe passe donc par ici, avec la vignette déjà
       // cuite de l'arbre debout.
       const d = this.deformer?.(pose.arbre.id) ?? DEBOUT;
+      // Un sprite du pool a pu servir à une bête retournée : la largeur de Pixi
+      // garde le signe de l'échelle, et l'arbre se poserait en miroir.
+      if (sprite.scale.x < 0) sprite.scale.x = -sprite.scale.x;
       sprite.width = taille.largeur;
       sprite.height = taille.hauteur * d.hauteur;
       sprite.alpha = d.opacite;
@@ -1119,6 +1240,7 @@ export class SceneParcelle {
       if (pose.arbre.id >= 0 && d.opacite > 0.5) {
         this.arbresPoses.push({
           id: pose.arbre.id,
+          rang: n - 1,
           image: vignette.image,
           sx: pose.sx,
           sy: pose.sy,
@@ -1130,6 +1252,10 @@ export class SceneParcelle {
           opacite: d.opacite,
         });
       }
+    }
+    while (b < betes.length) {
+      this.poserUneBete(betes[b] as BeteAPoser, n++);
+      b++;
     }
     SceneParcelle.tailler(this.couches.arbres, n);
     return n + this.poserLaSurbrillance();
@@ -1145,10 +1271,9 @@ export class SceneParcelle {
   private poserLaSurbrillance(): number {
     let n = 0;
     this.anneaux.clear();
-    for (let i = 0; i < this.couches.arbres.children.length; i++) {
-      const pose = this.arbresPoses[i];
-      const source = this.couches.arbres.children[i] as Sprite | undefined;
-      if (!pose || !source) continue;
+    for (const pose of this.arbresPoses) {
+      const source = this.couches.arbres.children[pose.rang] as Sprite | undefined;
+      if (!source) continue;
       const choisi = this.surligne.choisis.has(pose.id);
       const survole = this.surligne.survole === pose.id;
       if (!choisi && !survole) continue;

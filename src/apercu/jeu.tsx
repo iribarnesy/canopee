@@ -30,6 +30,7 @@ import { ficheDe } from "../render/arbres/especes";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
+import { type MondeDuGibier, Troupeau } from "../render/faune/chevreuils";
 import type { Compte } from "../render/pixi/scene";
 import {
   type Marqueur,
@@ -255,6 +256,72 @@ function donneesDe(scene: Scene): DonneesSol {
  * maintenant leur durée propre, et une boucle calée sur un budget fixe aurait
  * rejoué le début avant la fin, ou attendu dans le vide.
  */
+/**
+ * Le troupeau du banc : un seul pour la page, comme dans le jeu il survit aux
+ * instantanés.
+ */
+const troupeauDuBanc = new Troupeau();
+
+/**
+ * `?faune=0.5` : des chevreuils à cette densité, têtes par hectare (#129).
+ *
+ * Les scènes cuites ne portent ni la pression de gibier ni la clôture, donc le
+ * banc les donne. `?faune-temoins=1` fait de chaque tige à portée de dent un
+ * pied brouté cette semaine — ce que le moteur fait une semaine de printemps —,
+ * `?faune-cloture=x0,y0,x1,y1` clôt un rectangle, et `?faune-t=40000` **fige**
+ * l'horloge des bêtes à cet instant, pour qu'une capture tombe au milieu d'une
+ * visite plutôt qu'au hasard.
+ */
+function mondeDuBanc(scene: Scene): { monde?: MondeDuGibier; figeMs?: number } {
+  const q = new URLSearchParams(location.search);
+  const brut = q.get("faune");
+  if (brut === null) return {};
+  const cote = scene.coteM;
+  const cloture = new Uint8Array(cote * cote);
+  const rect = q.get("faune-cloture")?.split(",").map(Number);
+  if (rect && rect.length === 4) {
+    const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = rect;
+    for (let y = Math.max(0, y0); y < Math.min(cote, y1); y++) {
+      for (let x = Math.max(0, x0); x < Math.min(cote, x1); x++) cloture[y * cote + x] = 1;
+    }
+  }
+  const temoins = q.get("faune-temoins") === "1";
+  const t = q.get("faune-t");
+  return {
+    monde: {
+      coteM: cote,
+      semaine: scene.week,
+      densiteParHa: Number(brut),
+      cloture,
+      arbres: scene.trees
+        .filter((a) => !a.chandelle)
+        .map((a) =>
+          temoins && a.heightM <= 1.5 && !a.protege ? { ...a, brouteSemaine: scene.week } : a,
+        ),
+    },
+    ...(t === null ? {} : { figeMs: Number(t) }),
+  };
+}
+
+let rechauffe = false;
+
+/**
+ * Les bêtes du banc à cet instant — ou à l'instant figé.
+ *
+ * Le troupeau se lit **dans l'ordre** du temps : une horloge figée d'emblée à
+ * quarante secondes ne verrait jamais la première visite commencer. On rejoue
+ * donc une fois le chemin depuis zéro, et l'image figée est celle d'une
+ * partie qu'on aurait regardée jusque-là.
+ */
+function posesDuBanc(monde: MondeDuGibier, figeMs: number | undefined, maintenantMs: number) {
+  if (figeMs === undefined) return troupeauDuBanc.poses(monde, maintenantMs);
+  if (!rechauffe) {
+    for (let t = 0; t < figeMs; t += 200) troupeauDuBanc.poses(monde, t);
+    rechauffe = true;
+  }
+  return troupeauDuBanc.poses(monde, figeMs);
+}
+
 function ouLire(maintenantMs: number, fige: number | undefined, dureeMs: number): number {
   return fige === undefined ? maintenantMs % Math.max(1, dureeMs * 1.6) : fige * dureeMs;
 }
@@ -787,6 +854,25 @@ function Demo(): React.ReactElement {
   const brut = new URLSearchParams(location.search).get("ellipse");
   const fige = brut === null ? undefined : Math.min(1, Math.max(0, Number(brut)));
 
+  const gibier = mondeDuBanc(scene);
+  // `?choisir=12,40` : ces arbres sont choisis, et leur halo se voit. C'est ce
+  // qui permet de juger le halo là où il se trompait — parmi les masses de
+  // fourré, dont les sprites s'intercalent entre ceux des arbres (#129).
+  const choisis = new Set(
+    (new URLSearchParams(location.search).get("choisir") ?? "")
+      .split(",")
+      .filter((x) => x !== "")
+      .map(Number),
+  );
+  // `?faune-cadrer=1`, avec une horloge figée : la vue se centre sur la
+  // première bête, ce qui est la seule façon de la trouver dans une friche.
+  const premiereBete =
+    gibier.monde &&
+    gibier.figeMs !== undefined &&
+    new URLSearchParams(location.search).get("faune-cadrer") === "1"
+      ? posesDuBanc(gibier.monde, gibier.figeMs, 0)[0]
+      : undefined;
+
   return (
     <VueParcelle
       sol={donneesDe(scene)}
@@ -797,6 +883,13 @@ function Demo(): React.ReactElement {
       ombreDe={(a) => a.partFoliaire}
       surCompte={setCompte}
       marqueurs={ellipse.marqueurs}
+      {...(choisis.size > 0 ? { surbrillance: choisis } : {})}
+      {...(gibier.monde
+        ? {
+            faune: (maintenantMs: number) =>
+              gibier.monde ? posesDuBanc(gibier.monde, gibier.figeMs, maintenantMs) : [],
+          }
+        : {})}
       deformer={(id, maintenantMs, vue) => {
         const ou = ouLire(maintenantMs, fige, ellipse.dureeMs);
         // Les deux canaux de pose se **composent** : franchir dix ans, c'est voir
@@ -876,7 +969,9 @@ function Demo(): React.ReactElement {
               y: Math.floor(ellipse.feu.origine / scene.coteM) + 0.5,
             },
           }
-        : {})}
+        : premiereBete
+          ? { cadrerSur: { x: premiereBete.x, y: premiereBete.y } }
+          : {})}
     />
   );
 }

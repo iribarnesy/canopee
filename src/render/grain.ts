@@ -24,6 +24,8 @@
  * terrain et non à l'image.
  */
 
+import { hacher } from "./hachage";
+
 /**
  * Maille du grain fin, en mètres.
  *
@@ -57,18 +59,6 @@ export const AMPLITUDE_GRAIN = 0.06;
 export const GRAIN_DES_PX = 24;
 /** Taille de tuile à partir de laquelle le grain est à pleine amplitude. */
 export const GRAIN_PLEIN_PX = 80;
-
-/**
- * Hachage entier → [0,1[. Un mélange de bits sans multiplication flottante,
- * stable d'une machine à l'autre — ce qui compte ici bien plus que sa qualité
- * statistique, dont on n'a aucun besoin.
- */
-function hacher(ix: number, iy: number, sel: number): number {
-  let h = (Math.imul(ix | 0, 0x27d4eb2d) ^ Math.imul(iy | 0, 0x165667b1) ^ sel) >>> 0;
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
-  h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0;
-  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
-}
 
 /** Lissage cubique : sans lui, le bruit fait des carrés au lieu de plaques. */
 function adoucir(t: number): number {

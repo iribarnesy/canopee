@@ -84,6 +84,7 @@ import {
 } from "./sauvegardes";
 import { useBilan } from "./useBilan";
 import { useEllipse, vitesseDeRelecture } from "./useEllipse";
+import { useFaune } from "./useFaune";
 import { useGame } from "./useGame";
 import { useNiveau } from "./useNiveau";
 import { useSuivis } from "./useSuivis";
@@ -1293,6 +1294,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     const hauteurs = new Map(snapshot?.trees.map((t) => [t.id, t.heightM]) ?? []);
     return gitesOccupes(snapshot?.faune ?? [], (id) => hauteurs.get(id));
   }, [snapshot]);
+  const faune = useFaune(snapshot, station);
   const enNiveau = useNiveau(game);
 
   /**
@@ -1808,6 +1810,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             feu={ellipse.feu}
             marqueurs={ellipse.marqueurs}
             habitants={habitants}
+            faune={faune}
             {...(cadrage ? { cadrerSur: cadrage } : {})}
           />
         )}

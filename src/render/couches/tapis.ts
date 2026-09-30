@@ -34,6 +34,7 @@
  * au moment de la cuisson — donc jamais par image.
  */
 
+import { hacher } from "../hachage";
 import type { CelluleQuantifiee } from "../palette";
 import { partDuPalier } from "../palette";
 
@@ -94,14 +95,6 @@ export const TAPIS_PLEIN_PX = 90;
  * sol cesse de se lire comme des objets posés dessus.
  */
 export const BRINS_PAR_M2 = 15;
-
-/** Hachage entier → [0,1[, stable et sans allocation. Le même que le grain. */
-function hacher(a: number, b: number, sel: number): number {
-  let h = (Math.imul(a | 0, 0x27d4eb2d) ^ Math.imul(b | 0, 0x165667b1) ^ sel) >>> 0;
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
-  h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0;
-  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
-}
 
 /** Densité du tapis pour une taille de tuile écran : nulle de loin, pleine de près. */
 export function densiteTapis(largeurTuilePx: number): number {

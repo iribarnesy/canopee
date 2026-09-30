@@ -53,6 +53,7 @@ import {
 import { contraindre } from "../arbres/port";
 import { engendrer, rayonAuPiedM, type Segment, type Sujet } from "../arbres/squelette";
 import { type Vue, versEcranVue } from "../camera";
+import { hacher } from "../hachage";
 import { eclairer, melange, type Teinte, versCss } from "../palette";
 import { METRE_VERTICAL_PX, profondeur, TUILE_LARGEUR_PX } from "../projection";
 import { agreger, type MasseFourre, type TigeFourre } from "./fourre";
@@ -988,14 +989,6 @@ export function replier(segments: readonly Segment[]): Segment[] {
  * être nul.
  */
 export const PROFONDEUR_OBLIQUE = 0.55;
-
-/** Hachage entier → [0,1[. Le même que partout ailleurs dans le rendu. */
-function hacher(a: number, b: number, sel: number): number {
-  let h = (Math.imul(a | 0, 0x27d4eb2d) ^ Math.imul(b | 0, 0x165667b1) ^ sel) >>> 0;
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
-  h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0;
-  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
-}
 
 /**
  * Cuit la vignette d'une classe.

@@ -33,6 +33,7 @@
  * Aucun canvas, aucune projection.
  */
 
+import { hacher } from "../hachage";
 import type { Branchement } from "./fiche";
 
 /** Un point dans le repère local de l'arbre, en mètres. */
@@ -80,14 +81,6 @@ export const LONGUEUR_MIN_M = 0.04;
 
 /** Ordre de récursion maximal, quelle que soit la fiche. */
 export const ORDRE_MAX = 8;
-
-/** Hachage entier → [0,1[, stable et sans allocation. Le même que le tapis. */
-function hacher(a: number, b: number, sel: number): number {
-  let h = (Math.imul(a | 0, 0x27d4eb2d) ^ Math.imul(b | 0, 0x165667b1) ^ sel) >>> 0;
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
-  h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0;
-  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
-}
 
 /** Ce que le squelette a besoin de savoir de l'arbre à dessiner. */
 export interface Sujet {
