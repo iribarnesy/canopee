@@ -22,7 +22,7 @@
 
 import { getEspece } from "../../engine/especes";
 import { especeFaune, type IndividuFaune, type TypeDeGite } from "../../engine/faune";
-import { laFaune } from "../mots";
+import { ilOuElle, laFaune } from "../mots";
 import type { SnapshotTree } from "../protocol";
 import { btn } from "./styles";
 
@@ -56,12 +56,16 @@ const DIT_LE_GITE: Record<TypeDeGite, string> = {
   chandelle: "bois mort sur pied",
 };
 
-/** « an 3 », comme partout ailleurs — et « avant vous » pour ce qui précède la partie. */
-function depuisQuand(semaineInstallation: number, semaine: number): string {
-  if (semaineInstallation < 0) return "installé avant votre arrivée";
+/**
+ * « an 3 », comme partout ailleurs — et « avant vous » pour ce qui précède la
+ * partie. Accordé à ce qui s'est installé : une colonie est « installée ».
+ */
+function depuisQuand(semaineInstallation: number, semaine: number, feminin: boolean): string {
+  const installe = feminin ? "installée" : "installé";
+  if (semaineInstallation < 0) return `${installe} avant votre arrivée`;
   const ans = Math.floor((semaine - semaineInstallation) / 52);
-  if (ans <= 0) return "installé cette année";
-  return `installé il y a ${ans} an${ans > 1 ? "s" : ""}`;
+  if (ans <= 0) return `${installe} cette année`;
+  return `${installe} il y a ${ans} an${ans > 1 ? "s" : ""}`;
 }
 
 /**
@@ -92,16 +96,17 @@ function Habitant({
   return (
     <div style={{ borderTop: "1px solid var(--trait)", padding: "5px 0" }}>
       <div>
-        {ICONE_GITE[espece.gite]} <strong>{laFaune(espece.id, espece.nom)}</strong>{" "}
+        {ICONE_GITE[espece.gite]} <strong>{laFaune(espece)}</strong>{" "}
         <em style={{ color: "var(--encre-douce)" }}>{espece.nomLatin}</em>
       </div>
       <div style={{ color: "var(--encre-douce)" }}>
-        {DIT_LE_GITE[espece.gite]} · {depuisQuand(individu.depuisSemaine, semaine)}
+        {DIT_LE_GITE[espece.gite]} ·{" "}
+        {depuisQuand(individu.depuisSemaine, semaine, ilOuElle(espece) === "elle")}
       </div>
       {maigres > 0 && (
         <div style={{ color: "var(--alerte, #a4442c)" }}>
-          ⚠️ la table ne suffit plus depuis {maigres} saison{maigres > 1 ? "s" : ""} — il partira à
-          la suivante
+          ⚠️ la table ne suffit plus depuis {maigres} saison{maigres > 1 ? "s" : ""} —{" "}
+          {ilOuElle(espece)} partira à la suivante
         </div>
       )}
       {hote ? (

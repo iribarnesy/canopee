@@ -15,7 +15,7 @@
  */
 
 import { getEspece } from "../engine/especes";
-import type { CauseDepart } from "../engine/faune";
+import type { CauseDepart, EspeceFaune, UniteDeFaune } from "../engine/faune";
 import type { CauseMort } from "../engine/trees";
 
 /**
@@ -187,7 +187,7 @@ export function causeDite(cause: CauseMort, n = 1, feminin = false): string {
   return dite.participe ? `${dite.participe}${accord(feminin, n)}${complement}` : complement;
 }
 
-// ── **la faune en individus** (#187, #255) ───────────────────────────────────────
+// ── **la faune en individus** (#187, #255, #259) ─────────────────────────────────
 
 /**
  * Le genre des noms d'espèces de faune, pour l'article et l'accord.
@@ -212,23 +212,67 @@ const GENRE_FAUNE: Record<string, "m" | "f"> = {
   rosalie_des_alpes: "f",
 };
 
+/** Ce qu'il faut d'une fiche de faune pour la nommer : son nom, et ce qu'elle compte. */
+export type FauneANommer = Pick<EspeceFaune, "id" | "nom" | "unite">;
+
 /**
- * L'espèce, avec son article défini — « la mésange bleue », « le pic épeiche ».
- *
- * **Défini et non indéfini, et ce n'est pas un détail de style.** « Une mésange
- * bleue » affirmerait un individu ; or ce que le moteur installe est tantôt un
- * couple, tantôt une colonie de parturition, tantôt la population d'un arbre —
- * `faune.ts` l'écrit en toutes lettres, mais **en commentaire** : aucun champ ne
- * le dit, donc le jeu ne peut pas le savoir sans le recopier, et recopier une
- * vérité du moteur est ce que le §2.1 nous interdit. L'article défini nomme
- * l'espèce sans compter les bêtes, ce qui est vrai dans les trois cas.
- *
- * L'issue #259 demande au moteur le champ qui lèverait la réserve.
+ * Le genre du mot qui compte : « **un** couple », « **une** colonie », « **une**
+ * population ». Un individu prend celui de son espèce.
  */
-export function laFaune(especeId: string, nom: string): string {
-  const feminin = GENRE_FAUNE[especeId] === "f";
-  const voyelle = /^[aeiouyéèêàâîôûh]/i.test(nom);
-  return `${voyelle ? "l'" : feminin ? "la " : "le "}${nom}`;
+const GENRE_UNITE: Record<Exclude<UniteDeFaune, "individu">, "m" | "f"> = {
+  couple: "m",
+  colonie: "f",
+  population: "f",
+};
+
+/**
+ * Les noms que la règle de `pluriel` ne sait pas accorder. « Pique-prune » est
+ * un verbe et un nom : seul le nom s'accorde, comme « des tire-bouchons ».
+ */
+const PLURIEL_FAUNE: Record<string, string> = {
+  pique_prune: "pique-prunes",
+};
+
+const VOYELLE = /^[aeiouyéèêàâîôûh]/i;
+
+function feminin(e: FauneANommer): boolean {
+  return e.unite === "individu" ? GENRE_FAUNE[e.id] === "f" : GENRE_UNITE[e.unite] === "f";
+}
+
+/** « couple de mésanges bleues », « colonie de murins de Bechstein », « écureuil roux ». */
+function sansArticle(e: FauneANommer): string {
+  if (e.unite === "individu") return e.nom;
+  const nom = PLURIEL_FAUNE[e.id] ?? pluriel(e.nom, 2);
+  return `${e.unite} ${VOYELLE.test(nom) ? "d'" : "de "}${nom}`;
+}
+
+/**
+ * Ce que le moteur installe, **compté comme il le compte** (#259) : « un couple
+ * de mésanges bleues », « une colonie de murins de Bechstein », « une
+ * population de grands capricornes », et l'écureuil, qui vit seul, reste « un
+ * écureuil roux ».
+ *
+ * L'unité est le champ `unite` de la fiche : le jeu ne décide pas qui est un
+ * couple et qui une colonie, il lit ce que le moteur déclare. C'est la phrase
+ * d'une arrivée — l'article indéfini présente ce qu'on n'a pas encore vu.
+ */
+export function uneFaune(e: FauneANommer): string {
+  return `${feminin(e) ? "une" : "un"} ${sansArticle(e)}`;
+}
+
+/**
+ * La même chose à l'article défini — « le couple de mésanges bleues », « la
+ * colonie de noctules communes », « l'écureuil roux » : pour ce qui est déjà là
+ * et qu'on désigne, un départ, un habitant de fiche.
+ */
+export function laFaune(e: FauneANommer): string {
+  const dit = sansArticle(e);
+  return `${VOYELLE.test(dit) ? "l'" : feminin(e) ? "la " : "le "}${dit}`;
+}
+
+/** Le pronom qui la reprend : un couple part, une colonie part — « il », « elle ». */
+export function ilOuElle(e: FauneANommer): "il" | "elle" {
+  return feminin(e) ? "elle" : "il";
 }
 
 /**
