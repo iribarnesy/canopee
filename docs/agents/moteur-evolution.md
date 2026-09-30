@@ -93,7 +93,7 @@ excès qui mette le pin dans sa tolérance. La boucle retirée, la **même règl
 désigne le plancher ancré (0,7), et le paramètre cesse d'être calé. Garder
 1,5 parce que le pin restait dans sa tolérance aurait gardé la trace d'un
 défaut disparu. C'est la troisième erreur compensée trouvée sur cette station,
-après le mull de #280 et l'ammonium lessivable.
+après l'humus compté comme un mull (#289) et l'ammonium lessivable (#280).
 
 ### Une borne à deux centièmes du témoin mesure le tirage
 
