@@ -158,14 +158,20 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     // autre chose (moyennes par tranche de vingt ans) :
     //
     //     ans 1-20   21-40   41-60   61-80   81-100   101-120
-    //       2,96      1,25    0,84    0,78     0,79      0,70
+    //       3,66      2,29    1,51    1,14     0,97      0,79
     //
-    // Le moteur passe par ~1 vers les années 20 à 40, puis converge **sous** 1 —
-    // 0,70 à 0,84 au lieu du ~1 que l'essai tient. L'écart est donc dans
+    // Le moteur passe par la gamme de l'essai vers les années 40 à 100, puis
+    // finit **sous** 1 au lieu du ~1 que l'essai tient. L'écart est donc dans
     // l'autre sens que redouté, et ce n'est pas ce lot qui l'a créé : c'est la
     // limite déjà écrite sous C16, la **paille** qui reste au champ dans la réalité
     // et ne rend rien ici. Le 1,07 d'avant n'était pas un point juste, c'était
     // une fenêtre de trente ans sur un sol qu'un tassement irréaliste freinait.
+    //
+    // Avec la perte d'humus au labour d'avant (5 %, sans source, trois à quatre
+    // fois l'écart labour / semis direct de West et Post 2002) : 2,96 / 1,25 /
+    // 0,84 / 0,78 / 0,79 / 0,70. Le passage dans la gamme avait lieu vers les
+    // années 20 à 40 parce que l'humus était brûlé en trente ans ; c'était une
+    // date du moteur, pas une date de Broadbalk, et elle n'est plus assertée.
     const r = bleContinuSansApport(120);
     const tranche = (d: number) => {
       const t = r.slice(d * 20, (d + 1) * 20);
@@ -173,9 +179,9 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     };
     // Il descend, sans jamais remonter.
     for (let d = 1; d < 4; d++) expect(tranche(d)).toBeLessThan(tranche(d - 1));
-    // Il passe par la gamme de l'essai…
-    expect(tranche(1)).toBeGreaterThan(0.8);
-    expect(tranche(1)).toBeLessThan(1.6);
+    // Il passe par la gamme de l'essai à un moment de sa descente…
+    const dansLaGamme = [1, 2, 3, 4].filter((d) => tranche(d) > 0.8 && tranche(d) < 1.6);
+    expect(dansLaGamme.length).toBeGreaterThan(0);
     // …et il finit dessous, ce qui est la limite de C16 et non celle du labour.
     expect(tranche(5)).toBeLessThan(1);
     expect(tranche(5)).toBeGreaterThan(0.4);
