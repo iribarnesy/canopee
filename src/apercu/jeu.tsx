@@ -36,6 +36,7 @@ import { posesDesGeais, visitesDuGeai } from "../render/faune/geai";
 import { type Essaim, essaimsDeLaNuee, pointsDeLaNuee } from "../render/faune/nuee";
 import { type Derangement, type PoseDHabitant, Residents } from "../render/faune/residents";
 import type { Compte } from "../render/pixi/scene";
+import { brumeEnCours, cellulesAffleurantes } from "../render/temps/brume";
 import {
   type Marqueur,
   marqueursDuJournal,
@@ -46,6 +47,7 @@ import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
 import { crueDeLaSemaine } from "../render/temps/crue";
 import { type JournalDeSemaine, planAuRythmeNaturel } from "../render/temps/ellipse";
 import { SANS_VENT } from "../render/temps/feu";
+import { type CelluleGelee, cellulesGelees, givreEnCours } from "../render/temps/givre";
 import {
   AUCUNE_TORCHE,
   chandellesTombees,
@@ -75,6 +77,7 @@ import {
   trouverLeFeu,
   voilesEnCours,
 } from "../render/temps/lecteur";
+import type { TempsQuIlFait } from "../render/temps/pluie";
 import { especeSiConnue } from "./atlasDuBanc";
 
 interface Scene {
@@ -317,6 +320,58 @@ let rechauffe = false;
  * ni la grille des ravageurs ni la température ; le banc les donne, comme il
  * donne la densité de gibier.
  */
+/**
+ * `?pluie=30&vent=8&vent-vers=0` : une semaine à tant de millimètres, sous un
+ * vent reçu de tant de mètres par seconde qui souffle **vers** ce cap, en
+ * degrés (0 = vers l'est) (#130). Les scènes cuites ne portent pas la météo ;
+ * le banc la donne.
+ */
+function tempsDuBanc(): TempsQuIlFait | undefined {
+  const q = new URLSearchParams(location.search);
+  if (!q.has("pluie")) return undefined;
+  return {
+    pluieMm: Number(q.get("pluie") ?? "0"),
+    vent: {
+      versRad: (Number(q.get("vent-vers") ?? "0") * Math.PI) / 180,
+      recuMs: Number(q.get("vent") ?? "0"),
+    },
+  };
+}
+const TEMPS_DU_BANC = tempsDuBanc();
+
+/**
+ * `?gel=-5` : la nuit la plus froide de la semaine, °C, et `?brume=1` : la nappe
+ * affleure dans les creux (#130). Les scènes cuites ne portent ni la météo ni
+ * la nappe ; le banc prend pour creux le dixième le plus bas de la parcelle, ce
+ * qui est l'endroit où le moteur la fait affleurer.
+ */
+let matinDuBanc: { gelees: CelluleGelee[]; affleurantes: number[] } | undefined;
+function voilesDuMatin(scene: Scene, ecouleMs: number) {
+  const q = new URLSearchParams(location.search);
+  if (!q.has("gel") && !q.has("brume")) return { givre: [], brume: [] };
+  if (!matinDuBanc) {
+    const n = scene.coteM * scene.coteM;
+    const lumiere = scene.sol.lumiere ?? new Array<number>(n).fill(1);
+    const altitudes = scene.sol.altitudesM;
+    const seuil = [...altitudes].sort((a, b) => a - b)[Math.floor(altitudes.length * 0.1)] ?? 0;
+    matinDuBanc = {
+      gelees: q.has("gel") ? cellulesGelees(Number(q.get("gel")), lumiere) : [],
+      affleurantes: q.has("brume")
+        ? cellulesAffleurantes(altitudes.map((z) => (z <= seuil ? 0 : 300)))
+        : [],
+    };
+  }
+  return {
+    givre: givreEnCours(matinDuBanc.gelees, ecouleMs),
+    brume: brumeEnCours(
+      matinDuBanc.affleurantes,
+      scene.coteM,
+      TEMPS_DU_BANC?.vent.recuMs ?? 0,
+      ecouleMs,
+    ),
+  };
+}
+
 let essaimsDuBanc: { cote: number; pression: number; essaims: Essaim[] } | undefined;
 function nueeDuBanc(scene: Scene, maintenantMs: number) {
   const pression = Number(new URLSearchParams(location.search).get("nuee") ?? "0");
@@ -1028,6 +1083,10 @@ function Demo(): React.ReactElement {
       surCompte={setCompte}
       marqueurs={ellipse.marqueurs}
       {...(choisis.size > 0 ? { surbrillance: choisis } : {})}
+      {...(TEMPS_DU_BANC ? { temps: TEMPS_DU_BANC } : {})}
+      brume={(maintenantMs) =>
+        voilesDuMatin(scene, ouLire(maintenantMs, fige, ellipse.dureeMs)).brume
+      }
       {...(new URLSearchParams(location.search).has("nuee")
         ? { nuee: (maintenantMs: number) => nueeDuBanc(scene, maintenantMs) }
         : {})}
@@ -1094,6 +1153,7 @@ function Demo(): React.ReactElement {
         // Le front d'incendie et le voile d'un geste passent par la **même**
         // couche : deux choses différentes qui se dessinent pareil.
         return [
+          ...voilesDuMatin(scene, ou).givre,
           ...voilesEnCours(ellipse.voiles, ou),
           ...feuEnCours(ellipse.feu, ou),
           ...crueEnCours(ellipse.crues, ou, scene.week % 52),

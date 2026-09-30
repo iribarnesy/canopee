@@ -43,12 +43,19 @@ import type { PointDeNuee } from "../render/faune/nuee";
 import type { PoseDHabitant } from "../render/faune/residents";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
 import type { Orientation } from "../render/projection";
+import type { BouffeeDeBrume } from "../render/temps/brume";
 import type { Marqueur } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation, troncCouche } from "../render/temps/chute";
 import type { ArbreRemodele } from "../render/temps/geste";
 import type { GiteOccupe } from "../render/temps/habitants";
 import { type IncendieAPoser, RIEN_NE_BRULE } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
+import {
+  CIEL_DEGAGE,
+  cielDeLaSemaine,
+  gouttesDeLaPluie,
+  type TempsQuIlFait,
+} from "../render/temps/pluie";
 import type { CelluleVoilee } from "../render/temps/voile";
 
 export interface VueParcelleProps {
@@ -145,6 +152,13 @@ export interface VueParcelleProps {
   residents?: (maintenantMs: number) => readonly PoseDHabitant[];
   /** La nuée de ravageurs à cet instant (#129) : des points qui dansent. */
   nuee?: (maintenantMs: number) => readonly PointDeNuee[];
+  /**
+   * Le temps qu'il fait cette semaine (#130) : la pluie et le vent du moteur.
+   * Absent, le ciel est dégagé et le sol sec.
+   */
+  temps?: TempsQuIlFait;
+  /** La brume d'un matin, bouffée par bouffée (#130). */
+  brume?: (maintenantMs: number) => readonly BouffeeDeBrume[];
   /**
    * Un clic sur le **sol**, rendu en cellule de parcelle — ce par quoi le joueur
    * agit (§6.7).
@@ -552,6 +566,11 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.montrerLesHabitants(p.habitants ?? []);
         scene.current?.montrerLaFaune(p.faune?.(horloge) ?? [], p.residents?.(horloge) ?? []);
         scene.current?.montrerLaNuee(p.nuee?.(horloge) ?? []);
+        scene.current?.montrerLaBrume(p.brume?.(horloge) ?? []);
+        scene.current?.faireLeTemps(
+          p.temps ? cielDeLaSemaine(p.temps) : CIEL_DEGAGE,
+          p.temps ? gouttesDeLaPluie(p.temps, v, horloge) : [],
+        );
         scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
         // **Le disque se centre sous le curseur, la bande porte son centre.**
         // Une bande se trace d'un point à un autre : son centre est le milieu

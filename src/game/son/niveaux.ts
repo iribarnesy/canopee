@@ -32,6 +32,7 @@
 
 import type { GesteVisible } from "../../engine/actions";
 import { ventRecuParLeSite } from "../../engine/feu";
+import { intensiteDeLaPluie } from "../../render/temps/pluie";
 
 /** Les couches qui bouclent. */
 export type Ambiance = "vent" | "pluie" | "ruisseau" | "feu" | "tronconneuse";
@@ -88,8 +89,6 @@ const borne = (v: number) => Math.min(1, Math.max(0, v));
 /** Vent reçu en deçà duquel les feuilles ne bruissent pas, et au-delà duquel c'est plein, m/s. */
 export const VENT_MUET_MS = 1;
 export const VENT_PLEIN_MS = 10;
-/** Pluie de la semaine qui fait une averse franche, mm. */
-export const PLUIE_PLEINE_MM = 35;
 /** Particules de feu pour un grondement plein : un front large. */
 export const FEU_PLEIN = 120;
 
@@ -130,7 +129,8 @@ export function niveauxDuSon(e: EntreeDuSon): Niveaux {
   const vent = borne((recu - VENT_MUET_MS) / (VENT_PLEIN_MS - VENT_MUET_MS)) ** 0.8;
   // Le vent seul siffle un peu ; c'est le feuillage qui fait le bruissement.
   const bruissement = vent * (0.35 + 0.65 * couvert(e.lumiereAuSol));
-  const pluie = borne(e.pluieMm / PLUIE_PLEINE_MM) ** 0.7;
+  // La même courbe que le rideau de gouttes : on entend l'averse qu'on voit.
+  const pluie = intensiteDeLaPluie(e.pluieMm);
   const crue = borne(e.partNoyee * 4);
   const ruisseau = e.eau === "ruisseau" ? borne(0.45 + 0.55 * crue) : crue;
   const feu = borne(e.particulesDeFeu / FEU_PLEIN) ** 0.6;
