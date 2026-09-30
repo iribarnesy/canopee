@@ -87,6 +87,7 @@ import { useEllipse, vitesseDeRelecture } from "./useEllipse";
 import { useFaune } from "./useFaune";
 import { useGame } from "./useGame";
 import { useNiveau } from "./useNiveau";
+import { useResidents } from "./useResidents";
 import { useSuivis } from "./useSuivis";
 import { VueParcelle } from "./VueParcelle";
 
@@ -1479,6 +1480,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         : [],
     [station, snapshot, ellipse, coupeDeLaTige],
   );
+  const residents = useResidents(snapshot, arbresPoses, station?.coteM);
 
   /**
    * La cellule survolée, et ce que le moteur en dit.
@@ -1811,6 +1813,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             marqueurs={ellipse.marqueurs}
             habitants={habitants}
             faune={faune}
+            residents={residents}
             {...(cadrage ? { cadrerSur: cadrage } : {})}
           />
         )}

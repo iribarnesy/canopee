@@ -92,10 +92,17 @@ import {
   MODE_COMPOSITION,
   ombresAPoser,
 } from "../couches/ombres";
+import {
+  AtlasHabitants,
+  cleDHabitant,
+  type FigureDHabitant,
+  palierDuCorps,
+} from "../couches/residents";
 import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
 import { cuireLosangeVoile } from "../couches/voile";
 import { contourDeLaZone } from "../emprise";
 import { boisDuBrocard, type PoseDuChevreuil, pelageDEte } from "../faune/chevreuils";
+import type { PoseDHabitant } from "../faune/residents";
 import { versCss, versEntier } from "../palette";
 import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import type { Marqueur } from "../temps/changements";
@@ -210,11 +217,16 @@ interface BeteAPoser {
   sx: number;
   sy: number;
   profondeur: number;
-  classe: ClasseChevreuil;
+  /** clé de texture : une par vignette cuite */
+  cle: string;
+  image: HTMLCanvasElement;
+  /** le point posé dans la vignette, pixels */
+  piedX: number;
+  piedY: number;
+  /** échelle de la vignette à l'écran */
+  echelle: number;
   versLaGauche: boolean;
   opacite: number;
-  /** pixels par mètre à l'écran */
-  pxParM: number;
 }
 
 /** L'arbre adulte annoncé sous le curseur. */
@@ -353,6 +365,9 @@ export class SceneParcelle {
   /** Les bêtes de passage à cette image (#129). Vide = personne. */
   private faune: readonly PoseDuChevreuil[] = [];
   private atlasFaune?: AtlasFaune;
+  /** Les habitants qui bougent à cette image (#129). Vide = personne dehors. */
+  private residents: readonly PoseDHabitant[] = [];
+  private atlasHabitants?: AtlasHabitants;
   private formeGite?: Texture;
   /** Les trois formes du calque, cuites une fois. */
   private formes?: Record<Marqueur["sorte"], Texture>;
@@ -544,8 +559,12 @@ export class SceneParcelle {
    * d'images qui les place à chaque image. La scène ne sait rien de leurs
    * visites, elle ne fait que les projeter.
    */
-  public montrerLaFaune(poses: readonly PoseDuChevreuil[]): void {
+  public montrerLaFaune(
+    poses: readonly PoseDuChevreuil[],
+    residents: readonly PoseDHabitant[] = [],
+  ): void {
     this.faune = poses;
+    this.residents = residents;
   }
 
   public montrerLesChangements(marqueurs: readonly Marqueur[]): void {
@@ -630,7 +649,7 @@ export class SceneParcelle {
     spritesPoses += this.poserVoiles(etat, vue);
     spritesPoses += this.poserFeu(etat, vue);
     spritesPoses += this.poserLeCiel();
-    spritesPoses += this.poserArbres(poses, this.betesAPoser(etat, vue), vue);
+    spritesPoses += this.poserArbres(poses, this.betesAPoser(etat, vue, poses), vue);
     spritesPoses += this.poserHabitants(etat, vue);
     spritesPoses += this.poserMarqueurs(etat, vue);
     this.poserLaVisee(etat, vue);
@@ -1100,60 +1119,118 @@ export class SceneParcelle {
    * fait qu'un chevreuil passe derrière le tronc de devant et devant celui de
    * derrière, sans couche à part qui le mettrait toujours au-dessus.
    */
-  private betesAPoser(etat: EtatScene, vue: Vue): BeteAPoser[] {
-    if (this.faune.length === 0) return [];
+  private betesAPoser(
+    etat: EtatScene,
+    vue: Vue,
+    arbres: ReturnType<typeof posesDesArbres>,
+  ): BeteAPoser[] {
+    if (this.faune.length === 0 && this.residents.length === 0) return [];
     const cote = etat.sol.coteM;
     const pxParM = METRE_VERTICAL_PX * vue.cam.zoom;
-    const palier = palierDe(pxParM);
-    const ete = pelageDEte(etat.semaineAnnee);
-    const bois = boisDuBrocard(etat.semaineAnnee);
+    const sol = (x: number, y: number) => {
+      const cx = Math.min(cote - 1, Math.max(0, Math.floor(x)));
+      const cy = Math.min(cote - 1, Math.max(0, Math.floor(y)));
+      return etat.sol.altitudesM[cy * cote + cx] ?? 0;
+    };
+    const horsCadre = (p: { sx: number; sy: number }) =>
+      p.sx < -64 || p.sx > vue.largeurPx + 64 || p.sy < -8 || p.sy > vue.hauteurPx + 96;
     const sorties: BeteAPoser[] = [];
-    for (const b of this.faune) {
-      if (b.opacite <= 0) continue;
-      const cx = Math.min(cote - 1, Math.max(0, Math.floor(b.x)));
-      const cy = Math.min(cote - 1, Math.max(0, Math.floor(b.y)));
-      const z = etat.sol.altitudesM[cy * cote + cx] ?? 0;
-      const p = versEcranVue({ x: b.x, y: b.y, z }, vue);
-      if (p.sx < -64 || p.sx > vue.largeurPx + 64 || p.sy < -8 || p.sy > vue.hauteurPx + 96) {
-        continue;
+
+    if (this.faune.length > 0) {
+      this.atlasFaune ??= new AtlasFaune(this.fabriquer);
+      const palier = palierDe(pxParM);
+      const ete = pelageDEte(etat.semaineAnnee);
+      const bois = boisDuBrocard(etat.semaineAnnee);
+      for (const b of this.faune) {
+        if (b.opacite <= 0) continue;
+        const z = sol(b.x, b.y);
+        const p = versEcranVue({ x: b.x, y: b.y, z }, vue);
+        if (horsCadre(p)) continue;
+        // Le sens se lit **à l'écran** : la bête est dessinée de profil, et
+        // c'est la caméra qui décide si son cap part vers la gauche ou la droite.
+        const devant = versEcranVue({ x: b.x + b.capX, y: b.y + b.capY, z }, vue);
+        const figure: Figure =
+          b.attitude === "marche" ? (b.pas === 0 ? "marche0" : "marche1") : b.attitude;
+        const classe: ClasseChevreuil = { figure, ete, bois: b.brocard && bois, palier };
+        const v = this.atlasFaune.vignette(classe);
+        sorties.push({
+          sx: p.sx,
+          sy: p.sy,
+          profondeur: profondeur(b.x, b.y, vue.cam),
+          cle: `faune:${cleChevreuil(classe)}`,
+          image: v.image,
+          piedX: v.piedX,
+          piedY: v.piedY,
+          echelle: pxParM / v.pxParM,
+          versLaGauche: devant.sx < p.sx,
+          opacite: b.opacite,
+        });
       }
-      // Le sens se lit **à l'écran** : la bête est dessinée de profil, et c'est
-      // la caméra qui décide si son cap part vers la gauche ou vers la droite.
-      const devant = versEcranVue({ x: b.x + b.capX, y: b.y + b.capY, z }, vue);
-      const figure: Figure =
-        b.attitude === "marche" ? (b.pas === 0 ? "marche0" : "marche1") : b.attitude;
-      sorties.push({
-        sx: p.sx,
-        sy: p.sy,
-        profondeur: profondeur(b.x, b.y, vue.cam),
-        classe: { figure, ete, bois: b.brocard && bois, palier },
-        versLaGauche: devant.sx < p.sx,
-        opacite: b.opacite,
-        pxParM,
-      });
+    }
+
+    if (this.residents.length > 0) {
+      this.atlasHabitants ??= new AtlasHabitants(this.fabriquer);
+      // **Posé sur un arbre, il passe juste devant lui** : même profondeur que
+      // son arbre, un rien de plus. Sans quoi une mésange au bord d'un houppier
+      // se rangerait selon son propre point, et le tronc voisin la mangerait.
+      const deLArbre = new Map(arbres.map((a) => [a.arbre.id, a.profondeur]));
+      for (const h of this.residents) {
+        if (h.opacite <= 0) continue;
+        const z = sol(h.x, h.y) + h.hauteurM;
+        const p = versEcranVue({ x: h.x, y: h.y, z }, vue);
+        if (horsCadre(p)) continue;
+        const devant = versEcranVue({ x: h.x + h.capX, y: h.y + h.capY, z }, vue);
+        const corpsPx = h.tailleM * pxParM;
+        const figure: FigureDHabitant =
+          h.geste === "vol"
+            ? h.battement === 0
+              ? "vol0"
+              : "vol1"
+            : h.geste === "course"
+              ? h.battement === 0
+                ? "course0"
+                : "course1"
+              : h.geste;
+        const classe = { dessin: h.dessin, figure, palier: palierDuCorps(corpsPx) };
+        const v = this.atlasHabitants.vignette(classe);
+        const surSonArbre = h.surArbre === undefined ? undefined : deLArbre.get(h.surArbre);
+        sorties.push({
+          sx: p.sx,
+          sy: p.sy,
+          profondeur: h.enCiel
+            ? Number.POSITIVE_INFINITY
+            : surSonArbre !== undefined
+              ? surSonArbre + 1e-6
+              : profondeur(h.x, h.y, vue.cam),
+          cle: `habitant:${cleDHabitant(classe)}`,
+          image: v.image,
+          piedX: v.piedX,
+          piedY: v.piedY,
+          echelle: corpsPx / v.pxParCorps,
+          versLaGauche: devant.sx < p.sx,
+          opacite: h.opacite,
+        });
+      }
     }
     return sorties.sort((a, b) => a.profondeur - b.profondeur);
   }
 
   /** Une bête, posée dans la couche des arbres : son sprite est un de ceux-là. */
   private poserUneBete(bete: BeteAPoser, rang: number): void {
-    this.atlasFaune ??= new AtlasFaune(this.fabriquer);
-    const v = this.atlasFaune.vignette(bete.classe);
-    const cle = `faune:${cleChevreuil(bete.classe)}`;
-    let texture = this.posees.get(cle);
+    let texture = this.posees.get(bete.cle);
     if (!texture) {
-      texture = Texture.from(v.image);
-      this.posees.set(cle, texture);
+      texture = Texture.from(bete.image);
+      this.posees.set(bete.cle, texture);
     }
     const sprite = SceneParcelle.sprite(this.couches.arbres, rang, texture);
-    const k = bete.pxParM / v.pxParM;
+    const k = bete.echelle;
     sprite.pivot.set(0, 0);
     sprite.rotation = 0;
     // Retournée par l'échelle, la vignette pivote autour de son bord gauche :
     // le pied se replace donc de l'autre côté.
     sprite.scale.set(bete.versLaGauche ? -k : k, k);
-    sprite.x = bete.versLaGauche ? bete.sx + v.piedX * k : bete.sx - v.piedX * k;
-    sprite.y = bete.sy - v.piedY * k;
+    sprite.x = bete.versLaGauche ? bete.sx + bete.piedX * k : bete.sx - bete.piedX * k;
+    sprite.y = bete.sy - bete.piedY * k;
     sprite.alpha = bete.opacite;
   }
 
