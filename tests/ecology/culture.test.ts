@@ -313,12 +313,28 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // (`fertilisation.test.ts` : 0,835 à H/L 1,02, 0,787 à 1,28). Cet essai le
     // garde tel quel, et il est **attendu qu'il bascule** quand le lot B
     // arrivera : c'est à ce moment-là qu'il faudra le réécrire, pas avant.
-    expect(rapport(25)).toBeLessThan(0.9);
+    //
+    // **Il a bougé avant, et pas à cause du lot B** (#247). Avec la perte d'humus
+    // au labour calée sur West et Post (1 % par passage au lieu de 5 % sans
+    // source) :
+    //
+    //     graine        4      1      7     33   2022   moyenne
+    //     an 25      0,864  0,960  0,905  0,899  0,868    0,899
+    //     an 33      0,765  0,786  0,836  0,835  0,822    0,809
+    //
+    // L'allée ne perd plus « au moins ce que l'ombre seule lui coûte » : 0,899
+    // à l'an 25 contre 0,835 d'ombre pure à H/L 1,02. La litière des noyers
+    // recompense de nouveau quelques points, parce que le labour annuel ne brûle
+    // plus l'humus qu'elle construit. L'ancienne borne (0,9) tomberait à un
+    // millième de la moyenne, et une borne à ce point du relevé mesure le tirage.
+    // Ce qui reste affirmé : l'allée non fertilisée paie son ombre à l'an 25, et
+    // de plus en plus avec l'âge.
+    expect(rapport(25)).toBeLessThan(0.95);
     expect(rapport(25)).toBeLessThan(rapport(3));
     // L'ombre gagne toujours avec l'âge, et le classement des âges reste strict.
     expect(rapport(33)).toBeLessThan(rapport(25));
     // Le plancher garde contre un effondrement : la plus basse des cinq graines
-    // est à 0,678.
+    // était à 0,678 avec les 5 % d'avant, à 0,765 depuis.
     expect(rapport(33)).toBeGreaterThan(0.6);
   }, 1_800_000);
 });
