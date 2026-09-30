@@ -224,8 +224,6 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
   // sur un sol déjà plein ne s'infiltre pas : il part en surface.
   let refus = 0;
   let flux = input.rainMm;
-  // Ce qui passe sous l'horizon 0, compté aux deux passes (#291).
-  let descenduSurface = 0;
   for (let i = 0; i < n && flux > 0; i++) {
     const h = horizons[i];
     if (!h) continue;
@@ -239,7 +237,6 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     const peutDescendre = Math.min(flux, h.conductiviteMm);
     refus += flux - peutDescendre;
     flux = peutDescendre;
-    if (i === 0) descenduSurface += flux;
   }
   let drainageBrut = flux;
 
@@ -292,7 +289,6 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
           Math.max(0, hBas.porositeMm - (excesMm[i + 1] ?? 0));
         const transfert = Math.min(dispo, budget, place);
         if (transfert <= 0) continue;
-        if (i === 0) descenduSurface += transfert;
         excesMm[i] = dispo - transfert;
         budgetMm[i] = budget - transfert;
         const versRu = Math.min(transfert, Math.max(0, hBas.ruMm - (eauMm[i + 1] ?? 0)));
@@ -314,8 +310,6 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     const pris = Math.min(place, remontant);
     excesMm[i] = (excesMm[i] ?? 0) + pris;
     remontant -= pris;
-    // Ce qui reflue jusque dans l'horizon 0 ne l'a pas quitté pour de bon.
-    if (i === 0) descenduSurface -= pris;
   }
   const overflowMm = remontant; // le sol est plein : ça ruisselle
 
@@ -353,13 +347,11 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
       const cibleRu = h.ruMm * partNoyee;
       if ((eauMm[i] ?? 0) < cibleRu) {
         nappeMm += cibleRu - (eauMm[i] ?? 0);
-        if (i === 0) descenduSurface -= cibleRu - (eauMm[i] ?? 0);
         eauMm[i] = cibleRu;
       }
       const cibleExces = h.porositeMm * partNoyee;
       if ((excesMm[i] ?? 0) < cibleExces) {
         nappeMm += cibleExces - (excesMm[i] ?? 0);
-        if (i === 0) descenduSurface -= cibleExces - (excesMm[i] ?? 0);
         excesMm[i] = cibleExces;
       }
     }
@@ -372,7 +364,24 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
       h && h.porositeMm > 0 ? Math.min(1, (excesMm[i] ?? 0) / h.porositeMm) : 0;
   }
   const drainageNetMm = Math.max(0, drainageMm - nappeMm);
-  const percolationSurfaceMm = n > 1 ? Math.max(0, descenduSurface) : drainageNetMm;
+  // **Ce qui a traversé la base de l'horizon 0 se lit sur le bilan du
+  // sous-sol**, pas en suivant les passes : ce que les horizons profonds ont
+  // gagné, plus ce qu'ils ont laissé sortir, moins ce que la nappe a fait
+  // entrer par le bas. C'est exact contre l'état du modèle quel que soit le
+  // chemin de l'eau dans la semaine — et le chemin est tortueux : dans la
+  // vallée engorgée, compter la descente sans le reflux voyait 631 mm/an
+  // traverser une surface que la nappe (à 19 cm) tient saturée, eau qui
+  // remontait aussitôt et ressortait en ruissellement.
+  let percolationSurfaceMm = drainageNetMm;
+  if (n > 1) {
+    let sousSolAvant = 0;
+    let sousSolApres = 0;
+    for (let i = 1; i < n; i++) {
+      sousSolAvant += (input.eauMm[i] ?? 0) + (input.excesMm[i] ?? 0);
+      sousSolApres += (eauMm[i] ?? 0) + (excesMm[i] ?? 0);
+    }
+    percolationSurfaceMm = Math.max(0, sousSolApres - sousSolAvant + drainageMm - nappeMm);
+  }
   if (out) {
     out.evapMm = evapMm;
     out.drainageMm = drainageMm;

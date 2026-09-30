@@ -265,7 +265,7 @@ describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
     // La boucle existe, et elle est grosse : c'est le fait de l'issue.
     expect(c.drainage).toBeGreaterThan(1000);
     // Aucune goutte n'a traversé l'horizon de surface, qui est au-dessus de la nappe.
-    expect(c.surface).toBe(0);
+    expect(c.surface).toBeLessThan(1e-9);
     // Et ce qui sort du profil n'est, en net, que ce que la nappe y a mis.
     expect(c.net).toBeLessThan(1e-6);
   });
@@ -276,6 +276,55 @@ describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
     expect(c.drainage).toBeGreaterThan(5 * pluie);
     expect(c.surface).toBeCloseTo(pluie, 6);
     expect(c.net).toBeCloseTo(pluie, 6);
+  });
+
+  it("une nappe dans l'horizon de surface : ce qui reflue ne compte pas pour traversé", () => {
+    // La vallée engorgée : nappe à 19 cm dans une surface de 30, exutoire presque
+    // fermé. La pluie descend, traverse, se fait refuser à l'exutoire et reflue
+    // jusqu'à ruisseler. La première version comptait la descente sans le
+    // reflux et voyait passer sous la surface dix fois ce qui sort du profil.
+    const horizons = [
+      { ruMm: 60, porositeMm: 30, conductiviteMm: 300, epaisseurCm: 30 },
+      { ruMm: 100, porositeMm: 55, conductiviteMm: 200, epaisseurCm: 55 },
+    ];
+    let r = {
+      eauMm: [60, 100],
+      excesMm: [0, 0],
+      evapMm: 0,
+      drainageMm: 0,
+      overflowMm: 0,
+      nappeMm: 0,
+      percolationSurfaceMm: 0,
+      drainageNetMm: 0,
+      engorgementParHorizon: [0, 0],
+    };
+    let surface = 0;
+    let net = 0;
+    let ruissele = 0;
+    for (let s = 0; s < 40; s++) {
+      r = profilHydro(
+        {
+          horizons,
+          eauMm: r.eauMm,
+          excesMm: r.excesMm,
+          rainMm: 20,
+          evapDemandMm: 0,
+          nappeMm: 0,
+          drainageExterneMm: 1.1,
+          nappeProfondeurCm: 19,
+        },
+        r,
+      );
+      if (s >= 10) {
+        surface += r.percolationSurfaceMm;
+        net += r.drainageNetMm;
+        ruissele += r.overflowMm;
+      }
+    }
+    expect(ruissele).toBeGreaterThan(400);
+    // En régime, ce qui traverse la surface est ce qui sort du profil, pas la pluie.
+    expect(surface).toBeCloseTo(net, 6);
+    expect(surface).toBeLessThan(40);
   });
 
   it("sans nappe, rien ne change : les flux nets valent le drainage", () => {
