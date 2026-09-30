@@ -542,6 +542,16 @@ export interface StationInfo {
    * station. C'est ce qui règle le balancement des arbres.
    */
   ventExposition: number;
+  /**
+   * Densité de cervidés que le paysage impose à la parcelle, têtes par hectare
+   * (`paysage.ts`) — fixée au départ, comme l'exposition au vent.
+   *
+   * **Ce n'est pas le nombre de bêtes présentes** : le moteur la multiplie par
+   * `Snapshot.pressionGibier`, que la chasse fait baisser, et c'est ce produit
+   * qui broute et qui frotte. Le rendu fait de même pour savoir combien de
+   * chevreuils montrer (#129), et ne choisit donc pas leur nombre.
+   */
+  gibierParHa: number;
   /** profondeur de la nappe sous chaque cellule, cm — fixe, envoyée une fois */
   nappeCm: Float32Array;
   /**

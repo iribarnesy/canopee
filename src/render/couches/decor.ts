@@ -48,6 +48,7 @@
 
 import { getEspece } from "../../engine/especes";
 import { ficheDe } from "../arbres/especes";
+import { hacher } from "../hachage";
 import { melange, type Teinte } from "../palette";
 
 /**
@@ -289,14 +290,6 @@ export function distanceAuBord(x: number, y: number, coteM: number): number {
   const dx = Math.max(0, Math.max(-x, x - coteM));
   const dy = Math.max(0, Math.max(-y, y - coteM));
   return Math.hypot(dx, dy);
-}
-
-/** Hachage entier → [0,1[, stable et sans allocation. Le même que le tapis. */
-function hacher(a: number, b: number, sel: number): number {
-  let h = (Math.imul(a | 0, 0x27d4eb2d) ^ Math.imul(b | 0, 0x165667b1) ^ sel) >>> 0;
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
-  h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0;
-  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
 }
 
 /**

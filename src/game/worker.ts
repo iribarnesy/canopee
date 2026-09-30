@@ -1750,6 +1750,11 @@ function stationInfo(): StationInfo {
     // Déjà calculée par `stationAvecPaysage` pour le moteur : elle ne dépend
     // que des bordures, qui ne changent pas en cours de partie.
     ventExposition: station.ventExposition,
+    // La densité de cervidés que le paysage impose, têtes par hectare (#129).
+    // Donnée de contexte, fixée par les bordures au départ comme l'exposition
+    // au vent : c'est elle, multipliée par la pression de la semaine, que le
+    // moteur fait brouter et frotter (`tick.ts`).
+    gibierParHa: station.gibierParHa,
     // Ni les cellules en eau ni le champ de nappe ne bougent : on les envoie
     // une fois pour toutes, la carte s'en sert telles quelles.
     enEau: sources
