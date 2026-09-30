@@ -189,7 +189,7 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // moteur, cent vingt ans :
     //
     //     ans 1-20   21-40   41-60   61-80   81-100   101-120
-    //       3,86      2,32    1,56    1,18     0,99      0,80
+    //       3,81      2,24    1,48    1,13     0,96      0,78
     //
     // Avec l'ancienne perte d'humus au labour (5 %, sans source, six fois West
     // et Post 2002) : 2,94 / 1,18 / 0,83 / 0,79 / 0,79 / 0,70 — plus tôt posé,
@@ -205,7 +205,7 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // Il part haut — une bonne terre minéralise son humus — et il s'épuise. Le
     // **sens** est l'essentiel : chaque tranche des soixante premières années
     // sous la précédente. La borne d'avant, « l'an 24 sous la moitié de l'an 2 »,
-    // n'avait pas de source ; c'était une attente sur le moteur (4,80 → 2,66).
+    // n'avait pas de source ; c'était une attente sur le moteur (4,78 → 2,57).
     expect(an2).toBeGreaterThan(3);
     expect(tranche(21)).toBeLessThan(tranche(1));
     expect(tranche(41)).toBeLessThan(tranche(21));

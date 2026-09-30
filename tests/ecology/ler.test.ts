@@ -442,6 +442,12 @@ describe("le dispositif à trois bras, soixante ans", () => {
    * non en plancher : tant qu'ils tiennent, le moteur n'a pas retrouvé le fait.
    * C'est la question 2 de #184, et elle reste ouverte — elle vise la pénalité
    * qu'un sol travaillé inflige aux racines voisines, pas la géométrie.
+   *
+   * **Relevé depuis que le labour ne brûle plus que 1 % de l'humus** (#247,
+   * West et Post 2002), mêmes graines : culture 0,735 / 0,734 / 0,749, arbre
+   * 0,524 / 0,592 / 0,422, **total 1,259 / 1,326 / 1,171** — la cible de 1,2
+   * sur deux graines sur trois, et l'arbre d'allée à 0,88-1,02 du témoin
+   * forestier au lieu de 0,80-0,91.
    */
   it("le mélange bat la somme des parties", () => {
     const agro = bras(RANGS_AGROFORESTERIE, true);
@@ -471,18 +477,43 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // pavage de disques qui épargnait un feston au pied du rang ; les vraies
     // bandes rendent la mesure à 0,79-0,81 du témoin sans blé. Un encadrement
     // plutôt qu'un plancher, parce que les deux sorties veulent dire quelque
-    // chose : au-dessus de 0,9 c'est le feston qui serait revenu, en dessous de
-    // 0,7 c'est que le chantier repasse sur les rangs.
+    // chose : au-dessus de 0,95 c'est le feston qui serait revenu (il rendait
+    // 0,98), en dessous de 0,7 c'est que le chantier repasse sur les rangs.
+    //
+    // **Une part de ce que l'arbre payait était l'humus que le labour des bandes
+    // brûlait** (#247). Avec la perte au labour calée sur West et Post (1 % par
+    // passage au lieu de 5 % sans source), campagne appariée à trois graines :
+    //
+    //   graine                     4       11      23
+    //   5 %                      0,807   0,813   0,828
+    //   1 %                      0,903   0,906   0,918
+    //
+    // Même direction partout : le blé ne coûte plus que 8 à 10 % à l'arbre
+    // d'allée au lieu de 18 à 19 %. C'est la question 2 de #184 — ce qu'un sol
+    // travaillé coûte aux racines voisines — et une moitié de la réponse était
+    // un nombre sans source.
     const parArbre = (b: { volCohorte: number; cohorte: number }) => b.volCohorte / b.cohorte;
     const rapport = parArbre(agro) / parArbre(rangsSansBle);
     expect(rapport).toBeGreaterThan(0.7);
-    expect(rapport).toBeLessThan(0.9);
+    expect(rapport).toBeLessThan(0.95);
     // **et voici le fait que le moteur ne rend pas** — épinglé en **plafond**, pas
     // en plancher, comme E12 : à Restinclières l'arbre d'allée pousse plus vite
-    // que celui du témoin forestier, parce qu'il a plus de place. Ici il reste
-    // dessous. Le jour où cette ligne tombera, le moteur aura retrouvé le fait
-    // et il faudra la retourner — c'est la question 2 de #184.
-    expect(parArbre(agro)).toBeLessThan(parArbre(boisPur));
+    // que celui du témoin forestier, parce qu'il a plus de place. Rapport de
+    // l'arbre d'allée au témoin forestier, même campagne :
+    //
+    //   graine                     4       11      23    moyenne
+    //   5 %                      0,911   0,852   0,798    0,854
+    //   1 %                      1,020   0,950   0,884    0,951
+    //
+    // Le recalage du labour rapproche les trois graines du fait, de 9 à 11
+    // points, et la graine 4 — celle de cet essai — passe au-dessus de 1. **Une
+    // graine sur trois n'est pas le fait retrouvé** : la moyenne reste dessous.
+    // Le plafond était posé sur « dessous » à la graine 4, qui mesurait le
+    // tirage autant que le moteur ; il est reposé sur ce que dit la campagne,
+    // pas de dépassement net (1,1 : seuil choisi, pas sourcé). Le jour où il tombera, il faudra une campagne à
+    // plusieurs graines pour dire que le fait est retrouvé, et retourner la
+    // ligne — c'est toujours la question 2 de #184.
+    expect(parArbre(agro) / parArbre(boisPur)).toBeLessThan(1.1);
     // **La culture**, **elle**, **paie** — et c'est le sens même d'un LER : le mélange rend
     // moins de grain par hectare de **parcelle** qu'un champ de blé pur, puisqu'il
     // lui cède la place des rangs. Un terme culture au-dessus de 1 serait le

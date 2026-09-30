@@ -88,6 +88,15 @@ quart », « moins de 96 % après un passage », « l'an 24 sous la moitié de l
 tailles du moteur, pas de Broadbalk. En recalant, chacun a été réécrit sur ce
 qui est sourcé (la direction, l'équilibre), jamais desserré pour passer.
 
+### Un nombre sans source peut porter la moitié d'un écart attribué ailleurs
+
+La pénalité de l'arbre d'allée (question 2 de #184) était cherchée dans ce
+qu'un sol travaillé fait aux racines. La moitié tenait à l'humus que le labour
+des bandes brûlait : 18-19 % → 8-10 % sur trois graines. Et le fait de
+Restinclières, épinglé en plafond sur une graine, a basculé sur cette graine
+seulement ; la campagne dit qu'il n'est pas retrouvé. Un plafond posé sur une
+graine mesure le tirage autant que le moteur.
+
 ## Ce qu'un lot plus ancien a appris (les tranches de nitrate, #247)
 
 La plomberie ancrée sur l'abaque (tranches de 10 cm, eau totale) est posée,
