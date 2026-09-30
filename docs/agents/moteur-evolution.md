@@ -61,7 +61,58 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la cellule de mélange, #247)
+## Ce que le dernier lot a appris (la boucle de nappe, #291)
+
+Un défaut trouvé en passant (l'eau de la nappe du sable faisait une boucle de
+4,9 m par an que les solutés prenaient pour de la percolation), une première
+correction fausse que le banc a attrapée, et une erreur compensée de plus sur
+la station du pin.
+
+### Un flux se lit sur un bilan de stock, pas en suivant l'eau
+
+La première version comptait ce qui descend sous l'horizon 0, passe par
+passe. Elle oubliait le reflux, et dans la vallée engorgée (nappe à 19 cm dans
+une surface de 30) elle voyait 631 mm/an traverser une surface saturée : l'eau
+descendait, se faisait refuser à l'exutoire, remontait et ruisselait. La
+version retenue lit la traversée sur le **bilan du sous-sol** (ce qu'il gagne,
+plus ce qu'il laisse sortir, moins ce que la nappe fait entrer). Elle est
+exacte contre l'état du modèle quel que soit le chemin de l'eau dans la
+semaine, et elle a divisé le code par deux.
+
+### Le banc apparié se passe sur toutes les stations, pas sur celle visée
+
+Le défaut était sur le sable, et le sable a donné exactement ce qui était
+prédit. C'est la **vallée**, que rien ne visait, qui est partie dans le sens
+inverse : azote de surface 41,0 → 2,8 kg/ha. Un banc restreint à la station
+de l'issue aurait livré la première version.
+
+### Quand une erreur compensée tombe, rejouer la règle de calage
+
+`EXCES_BRUT_SUR_NET` avait été calé à 1,5 par parcimonie : le plus petit
+excès qui mette le pin dans sa tolérance. La boucle retirée, la **même règle**
+désigne le plancher ancré (0,7), et le paramètre cesse d'être calé. Garder
+1,5 parce que le pin restait dans sa tolérance aurait gardé la trace d'un
+défaut disparu. C'est la troisième erreur compensée trouvée sur cette station,
+après le mull de #280 et l'ammonium lessivable.
+
+### Une borne à deux centièmes du témoin mesure le tirage
+
+La bande de la lande d'ajoncs tenait à 0,02 sous son bord, avec des graines
+étalées de 1,87 à 2,53. Le correctif lessive la surface davantage, et la
+moyenne a pourtant monté, parce qu'une graine a fini à 3,08. Avant de lire un
+dépassement de bande comme un effet, regarder l'écart entre graines. Et la
+remplacer par ce qui est vrai sur chaque partie (le complexe finit plus
+pauvre qu'il n'a commencé), pas l'élargir.
+
+### Pré-enregistrer sert aussi à dire ce qu'on n'a pas mesuré
+
+Cinq prédictions écrites avant la mesure. Quatre tombent juste (le sable
+retient son nitrate, le pin monte, le pH du sable monte, les limons ne bougent
+pas). La cinquième (la somme annuelle du drainage net retrouve ~331 mm) n'a
+pas été mesurée, faute de flux exposé, et c'est écrit ainsi plutôt que
+rangé parmi les succès.
+
+## Ce qu'un lot plus ancien a appris (la cellule de mélange, #247)
 
 Lot d'**instruction**, sans une ligne de moteur. Il devait confirmer une cause
 que `realisme.md` nommait depuis deux lots ; il l'a réfutée pour la grandeur où
