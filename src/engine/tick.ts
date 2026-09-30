@@ -146,7 +146,6 @@ import {
 } from "./nappe";
 import {
   azoteNetDecomposition,
-  cellLeachedG,
   decompositionClimateFactor,
   litterDecayRate,
   nitrifieG,
@@ -214,6 +213,7 @@ import {
   conductiviteHorizonMmSemaine,
   densiteApparente,
   facteurPhBiologie,
+  type Horizon,
   porositeDrainageMm,
   profondeurPenetrableCm,
   ruHorizonMm,
@@ -244,6 +244,12 @@ import {
   vitesseCritiqueVolisMs,
 } from "./tempete";
 import { PLUIE_DEFAUT_MM_AN, SEUIL_COURS_DEAU_M2, sourcesDeLaParcelle } from "./terrain";
+import {
+  cascadeNitrate,
+  eauFletrissementMmParCm,
+  geometrieTranches,
+  reconcilierTranches,
+} from "./tranches";
 import type { CauseMort, TreeState } from "./trees";
 import {
   dureeChandelleSemaines,
@@ -767,6 +773,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const mineralNG = state.soil.mineralNG.slice();
   const mineralNProfondG = state.soil.mineralNProfondG.slice();
   const ammoniacalNG = state.soil.ammoniacalNG.slice();
+  // La répartition verticale du nitrate, tranche par tranche (#247, tranches.ts).
+  const nitrateTranchesG = state.soil.nitrateTranchesG.slice();
+  const tranches = geometrieTranches(station.profil);
+  const eauFletrissementTranche = tranches.epaisseurCm.map(
+    (e, k) => e * eauFletrissementMmParCm(station.profil[tranches.horizon[k] ?? 0] as Horizon),
+  );
+  const eauTranche = new Array<number>(tranches.n).fill(0);
+  const fluxTranche = new Array<number>(tranches.n).fill(0);
   // L'humus de ce sol : mull par défaut, mor sur un podzol qui le déclare (#289).
   const cnHumus = cnHumusDuProfil(station.profil);
   // Ce que l'humus de chaque cellule a décomposé cette semaine : l'offre de
@@ -2009,7 +2023,49 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // sur le complexe d'échange. Passer le stock entier, ce que faisait ce
     // calcul, lessivait un cinquième d'azote qui ne bouge pas.
     const nitriqueG = Math.max(0, (mineralNG[i] ?? 0) - (ammoniacalNG[i] ?? 0));
-    const descendu = cellLeachedG(nitriqueG, percolationSurfaceMmArr[i] ?? 0, waterMm[i * nH] ?? 0);
+    // **Le nitrate descend en front, tranche par tranche** (#247, tranches.ts).
+    // Les tranches se ramènent d'abord aux deux totaux que le reste du tick a
+    // lus et écrits cette semaine, puis la cascade les fait descendre avec l'eau
+    // qui traverse vraiment (#291) : le flux net sous l'horizon 0 dans la
+    // surface, puis, dans le sous-sol, de lui au drainage net qui sort du
+    // profil. Chaque tranche dilue dans son eau **totale** — flétrissement
+    // compris — et non dans la seule réserve utile.
+    const nT = tranches.n;
+    const nS = tranches.nSurface;
+    const baseT = i * nT;
+    reconcilierTranches(nitrateTranchesG, baseT, nS, tranches.epaisseurCm, 0, nitriqueG);
+    if (nT > nS) {
+      reconcilierTranches(
+        nitrateTranchesG,
+        baseT + nS,
+        nT - nS,
+        tranches.epaisseurCm,
+        nS,
+        mineralNProfondG[i] ?? 0,
+      );
+    }
+    const qSurface = percolationSurfaceMmArr[i] ?? 0;
+    const qSortie = drainageNetMmArr[i] ?? 0;
+    for (let k = 0; k < nT; k++) {
+      const h = tranches.horizon[k] ?? 0;
+      const partHorizon = (tranches.epaisseurCm[k] ?? 0) / (station.profil[h]?.epaisseurCm ?? 1);
+      eauTranche[k] =
+        (eauFletrissementTranche[k] ?? 0) +
+        ((waterMm[i * nH + h] ?? 0) + (excessMm[i * nH + h] ?? 0)) * partHorizon;
+      if (k < nS - 1) fluxTranche[k] = qSurface;
+      else if (nT === nS) fluxTranche[k] = qSortie;
+      else if (k === nS - 1) fluxTranche[k] = qSurface;
+      else fluxTranche[k] = qSurface + ((qSortie - qSurface) * (k - nS + 1)) / (nT - nS);
+    }
+    const { descenduG, sortiG } = cascadeNitrate(
+      nitrateTranchesG,
+      baseT,
+      nT,
+      nS,
+      eauTranche,
+      fluxTranche,
+    );
+    const descendu = nT > nS ? descenduG : sortiG;
     mineralNG[i] = (mineralNG[i] ?? 0) - descendu;
     // **Et le plafond se repose ici, après la soustraction** : le lessivage retire
     // du total une part de la différence, ce qui en algèbre ne peut pas le faire
@@ -2018,20 +2074,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // premier sert à calculer `nitriqueG` sur un état cohérent ; celui-ci garde
     // l'invariant à la sortie. Aucun des deux ne déplace une quantité.
     if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0)) ammoniacalNG[i] = mineralNG[i] ?? 0;
-    if (nH > 1) {
-      mineralNProfondG[i] = (mineralNProfondG[i] ?? 0) + descendu;
+    if (nT > nS) {
       // Et c'est en **sortant** du sous-sol qu'un nitrate quitte la parcelle.
       // C'est ce flux-là que la littérature mesure, pas celui de la surface :
-      // ce qui passe sous la zone racinaire.
-      let eauProfondeMm = 0;
-      for (let h = 1; h < nH; h++) eauProfondeMm += waterMm[i * nH + h] ?? 0;
-      const exporte = cellLeachedG(
-        mineralNProfondG[i] ?? 0,
-        drainageNetMmArr[i] ?? 0,
-        eauProfondeMm,
-      );
-      mineralNProfondG[i] = (mineralNProfondG[i] ?? 0) - exporte;
-      leachedSumG += exporte;
+      // ce qui passe sous la zone racinaire. Le total du sous-sol se relit sur
+      // ses tranches, qui viennent de tout compter.
+      let profond = 0;
+      for (let k = nS; k < nT; k++) profond += nitrateTranchesG[baseT + k] ?? 0;
+      mineralNProfondG[i] = profond;
+      leachedSumG += sortiG;
     } else {
       // Un profil d'un seul horizon n'a pas de sous-sol : ce qui sort de la
       // surface sort du monde, comme avant le lot. Même clause que les bases.
@@ -3620,6 +3671,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         mineralNG,
         mineralNProfondG,
         ammoniacalNG,
+        nitrateTranchesG,
         litterNG,
         litterCG,
         humusCG,
