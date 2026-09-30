@@ -36,7 +36,8 @@ export const POIDS: Record<Ambiance | Voix, number> = {
   geai: 0.45,
 };
 
-export type UrlsDesSons = Readonly<Record<Ambiance | Voix, string>>;
+/** Les sons disponibles ; un son absent se tait, le reste joue. */
+export type UrlsDesSons = Readonly<Partial<Record<Ambiance | Voix, string>>>;
 
 interface Couche {
   gain: GainNode;
@@ -66,8 +67,10 @@ export class MixeurDuSon {
     this.maitre.connect(this.ctx.destination);
     await Promise.all(
       [...AMBIANCES, ...VOIX].map(async (nom) => {
+        const url = this.urls[nom];
+        if (!url) return;
         try {
-          const brut = await this.charger(this.urls[nom]);
+          const brut = await this.charger(url);
           this.tampons.set(nom, await this.ctx.decodeAudioData(brut));
         } catch {
           // Un son qui ne se charge pas — un navigateur qui ne lit pas l'Ogg —
