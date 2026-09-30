@@ -11,13 +11,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { applyAction, type GameAction } from "../../src/engine/actions";
+import { applyAction, type GameAction, grainRecoltableT } from "../../src/engine/actions";
 import { HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { cellulesDeLaZone } from "../../src/engine/zone";
 
 const FICHE = HERBACEES.find((h) => h.id === "triticum_aestivum");
 if (!FICHE?.culture) throw new Error("fiche du blé manquante");
@@ -35,8 +36,11 @@ function bleContinu(
 ): number[] {
   const cote = options.cote ?? COTE;
   const rayon = options.rayonM ?? R;
-  const aireHa = (Math.PI * rayon * rayon) / 10_000;
   const centre = cote / 2;
+  // Le grain se lit sur pied : la trésorerie compte aussi le passage d'engin,
+  // 0,6 t/ha de blé (`grainRecoltableT`, #247).
+  const zone = { x: centre, y: centre, rayonM: rayon };
+  const aireHa = cellulesDeLaZone(cote, zone).length / 10_000;
   const station = { ...LIMON_RICHE.station, coteM: cote, voisinage: [] };
   let state: GameState = createGameState(station, rngStateFromSeed(4));
   for (const y of options.rangs ?? []) {
@@ -88,11 +92,8 @@ function bleContinu(
         });
       }
       if (w === BLE.recolteWeek) {
-        rendements.push(
-          geste({ type: "moissonner", week, x: centre, y: centre, rayonM: rayon }) /
-            BLE.prixEurT /
-            aireHa,
-        );
+        rendements.push(grainRecoltableT(state, zone) / aireHa);
+        geste({ type: "moissonner", week, x: centre, y: centre, rayonM: rayon });
       }
       const m = WEATHER[w];
       if (!m) throw new Error("météo manquante");
@@ -144,10 +145,12 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
 
   it("plus d'azote, plus de grain — et c'est monotone", () => {
     // Relevé sur les paliers de l'essai, moyenne des dix dernières années :
-    // **rien 2,55 / 96 kg 5,49 / 192 kg 6,90** depuis que le labour ne brûle
-    // plus que 1 % de l'humus par passage (West et Post 2002, #247) ; avec les
-    // 5 % sans source d'avant : rien 1,44 / 48 kg 3,25 / 96 kg 4,26 / 144 kg
-    // 5,16 / 192 kg 6,00.
+    // **rien 3,15 / 96 kg 6,09 / 192 kg 7,49**, grain lu sur pied, depuis que le
+    // labour ne brûle plus que 1 % de l'humus par passage (West et Post 2002,
+    // #247). Tous les relevés d'avant se lisaient sur la trésorerie, qui compte
+    // aussi le passage d'engin de la moisson, soit 0,6 t/ha de moins : avec les
+    // 5 % sans source, rien 1,44 / 48 kg 3,25 / 96 kg 4,26 / 144 kg 5,16 / 192 kg
+    // 6,00.
     //
     // Toute la courbe a monté d'un quart depuis #141 (1,07 / 2,54 / 3,40 /
     // 4,17 / 4,88), et cette fois ce n'est pas le flux aléatoire : le soc
@@ -204,6 +207,12 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
     // **Ce qui reste**, et qui n'est pas ce lot : le minéral 192 s'arrête à 6,00
     // pour 8-9 chez Broadbalk, et son propre témoin sans tassement plafonne à
     // 6,32. La seconde cause est donc petite mais réelle, et elle est ailleurs.
+    //
+    // **Elle était surtout dans la mesure** (#247). Tous ces chiffres se lisaient
+    // sur la trésorerie, qui compte aussi le passage d'engin de la moisson :
+    // 0,6 t/ha de moins. Grain lu sur pied, et labour à 1 % d'humus par passage
+    // (West et Post 2002) : **minéral 192 → 7,49, fumier → 8,61**, contre 8-9 et
+    // ~9 chez Broadbalk.
     const fort = dernieres(bleContinu(ANS, 192));
     const fumier = dernieres(bleContinu(ANS, 0, 240));
     // Le plafond d'avant est franchi, et largement.
@@ -245,14 +254,21 @@ describe("et c'est la fertilisation qui rend le gradient LISIBLE (E13)", () => {
     // Relevé, deux rangs de noyers encadrant une allée de 8 m, contre le même
     // blé fertilisé en plein champ :
     //
+    //   an       3      9      15     21     27     33
     //   H/L    0,29   0,55   0,74   0,84   1,02   1,28
-    //   ratio  0,999  0,963  0,912  0,889  0,835  0,787
+    //   ratio  0,993  0,973  0,932  0,882  0,808  0,706
     //
     // Monotone d'un bout à l'autre. **Et le moteur ne montre pas de genou à
     // 0,8** : la baisse commence tout de suite et se poursuit. L'observation
     // de Dupraz — « pas beaucoup affecté sous H/L 0,8 » — reste compatible
-    // (−9 % à 0,74), mais le moteur la produit comme une pente douce, pas
+    // (−7 % à 0,74), mais le moteur la produit comme une pente douce, pas
     // comme un seuil, et il faut le dire.
+    //
+    // Relevé d'avant : 0,999 / 0,963 / 0,912 / 0,889 / 0,835 / 0,787, lu sur la
+    // trésorerie. Elle compte le passage d'engin de la moisson au prorata de la
+    // part mécanisable, plus petite entre des rangs d'arbres : l'allée payait
+    // moins d'engin que le plein champ, et la mesure lui rendait une part de
+    // son ombre (#247, `grainRecoltableT`).
     const ANS = 34;
     const pur = bleContinu(ANS, 192, 0, { cote: 40, rayonM: 3 });
     const allee = bleContinu(ANS, 192, 0, { cote: 40, rayonM: 3, rangs: [16, 24] });
@@ -260,7 +276,7 @@ describe("et c'est la fertilisation qui rend le gradient LISIBLE (E13)", () => {
     // Jeune, l'allée ne coûte presque rien.
     expect(rapport(1)).toBeGreaterThan(0.99);
     // Vieille, elle coûte, et l'écart est bien plus net que sans fertilisation
-    // (0,787 contre 0,874) parce que rien ne le compense plus.
+    // (0,706 contre 0,832) parce que rien ne le compense plus.
     expect(rapport(33)).toBeLessThan(0.85);
     // Et la décroissance est **monotone**, ce qu'elle n'était pas avant : le
     // rapport ne remonte jamais au-dessus de 1.
