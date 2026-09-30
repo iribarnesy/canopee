@@ -11,7 +11,9 @@
  */
 
 import { useCallback, useMemo, useRef } from "react";
+import { getEspece } from "../engine/especes";
 import type { ArbreAPoser } from "../render/couches/arbres";
+import { posesDesGeais, type VisiteDuGeai, visitesDuGeai } from "../render/faune/geai";
 import {
   type Derangement,
   derangementsDuJournal,
@@ -45,6 +47,25 @@ export function useResidents(
     ];
     return derangements.current;
   }, [snapshot, coteM]);
+  // Les geais que les semis de l'instantané appellent (#129). Même règle que
+  // les dérangements : datés une fois, à l'arrivée de l'instantané.
+  const precedents = useRef<VisiteDuGeai[]>([]);
+  const geais = useMemo(() => {
+    if (!snapshot || coteM === undefined) return precedents.current;
+    const maintenant = performance.now();
+    precedents.current = [
+      ...precedents.current.filter((v) => v.finMs > maintenant),
+      ...visitesDuGeai(
+        snapshot.naissances,
+        (id) => getEspece(id).regeneration.dissemination === "geai",
+        coteM,
+        maintenant,
+      ),
+    ];
+    return precedents.current;
+  }, [snapshot, coteM]);
+  const derniersGeais = useRef(geais);
+  derniersGeais.current = geais;
   const monde = useMemo<MondeDesHabitants | undefined>(
     () =>
       snapshot?.faune && snapshot.faune.length > 0
@@ -59,6 +80,8 @@ export function useResidents(
 
   return useCallback((maintenantMs: number) => {
     const m = dernier.current;
-    return m ? residents.current.poses(m, maintenantMs) : PERSONNE;
+    const habitants = m ? residents.current.poses(m, maintenantMs) : PERSONNE;
+    if (derniersGeais.current.length === 0) return habitants;
+    return [...habitants, ...posesDesGeais(derniersGeais.current, maintenantMs)];
   }, []);
 }

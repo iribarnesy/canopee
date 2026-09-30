@@ -55,10 +55,11 @@ export type Dessin =
   | "pic"
   | "cheveche"
   | "buse"
-  | "ecureuil";
+  | "ecureuil"
+  | "geai";
 
 /** Ce que fait l'animal à un instant. */
-export type Geste = "perche" | "vol" | "grimpe" | "plane" | "course";
+export type Geste = "perche" | "vol" | "grimpe" | "plane" | "course" | "fouille";
 
 /**
  * Ce que le rendu sait dessiner, par espèce du moteur.

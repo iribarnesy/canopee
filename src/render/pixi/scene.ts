@@ -1190,7 +1190,11 @@ export class SceneParcelle {
               ? h.battement === 0
                 ? "course0"
                 : "course1"
-              : h.geste;
+              : h.geste === "fouille"
+                ? h.battement === 0
+                  ? "picore"
+                  : "perche"
+                : h.geste;
         const classe = { dessin: h.dessin, figure, palier: palierDuCorps(corpsPx) };
         const v = this.atlasHabitants.vignette(classe);
         const surSonArbre = h.surArbre === undefined ? undefined : deLArbre.get(h.surArbre);
