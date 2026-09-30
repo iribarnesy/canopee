@@ -435,26 +435,43 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     };
     const meteo = syntheticYear(LIMON_RICHE.climat);
     const expo = Math.min(1, Math.max(0, station.ventExposition));
-    let state = plantScattered(createGameState(station, rngStateFromSeed(5)), "salix_alba", 200);
     const ventees: { d: number; cap: number }[] = [];
     const calmes: { d: number; cap: number }[] = [];
-    for (let i = 0; i < 40 * 52; i++) {
-      if (i % 13 === 0) {
-        let reste = 3;
-        state = {
-          ...state,
-          trees: state.trees.map((t) => (t.alive && reste-- > 0 ? { ...t, alive: false } : t)),
-        };
-      }
-      const w = meteo[i % 52];
-      if (!w) throw new Error("météo manquante");
-      const r = tick(state, w);
-      state = r.state;
-      const emprise = empriseDuVentSurLaChute(
-        rafaleDeLaSemaine(state.graineMarche, i, w.ventMoyMs) * expo,
+    // **Trois parties, pas une** (#291) — le remède que le dépôt a déjà pris pour
+    // le feu et pour la lande d'ajoncs, et pour la même maladie. Une trentaine de
+    // chutes ventées par partie donnent à leur concentration une erreur-type de
+    // l'ordre de ±0,1, soit la hauteur du seuil. Mesuré sur six graines (5 à 10) :
+    // moteur d'avant #291, 0,105 / 0,178 / 0,143 / 0,141 / 0,166 / **0,065** ;
+    // après, **0,085** / **0,081** / 0,176 / 0,111 / 0,155 / 0,123. La graine 5
+    // passait à cinq millièmes du bord, la 10 échouait déjà, et un correctif qui
+    // touche à peine le limon riche a suffi à dévier la trajectoire. Les chutes
+    // des trois parties sont **cumulées** ; aucune borne n'a bougé. La graine
+    // d'origine et les deux suivantes ne sont pas choisies : cumulées sur 5-7 ou
+    // sur 5-10, les trois assertions passent sur les deux moteurs.
+    for (const graine of [5, 6, 7]) {
+      let state = plantScattered(
+        createGameState(station, rngStateFromSeed(graine)),
+        "salix_alba",
+        200,
       );
-      for (const c of r.chutes) {
-        (emprise > 0 ? ventees : calmes).push({ d: c.directionRad, cap: w.ventVersRad });
+      for (let i = 0; i < 40 * 52; i++) {
+        if (i % 13 === 0) {
+          let reste = 3;
+          state = {
+            ...state,
+            trees: state.trees.map((t) => (t.alive && reste-- > 0 ? { ...t, alive: false } : t)),
+          };
+        }
+        const w = meteo[i % 52];
+        if (!w) throw new Error("météo manquante");
+        const r = tick(state, w);
+        state = r.state;
+        const emprise = empriseDuVentSurLaChute(
+          rafaleDeLaSemaine(state.graineMarche, i, w.ventMoyMs) * expo,
+        );
+        for (const c of r.chutes) {
+          (emprise > 0 ? ventees : calmes).push({ d: c.directionRad, cap: w.ventVersRad });
+        }
       }
     }
     const conc = (a: readonly { d: number; cap: number }[]) =>
@@ -468,7 +485,7 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     expect(conc(ventees)).toBeGreaterThan(0.1);
     expect(Math.abs(conc(calmes))).toBeLessThan(0.1);
     expect(conc(ventees)).toBeGreaterThan(3 * Math.abs(conc(calmes)));
-  });
+  }, 400_000);
 
   it("mais elles ne resserrent PAS au-delà du plancher de hasard", () => {
     // L'essai qui a démenti une phrase que j'avais écrite dans le module. Deux
