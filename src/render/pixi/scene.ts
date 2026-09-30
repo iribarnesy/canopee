@@ -102,6 +102,7 @@ import { Decor, type DonneesSol, Terrain } from "../couches/terrain";
 import { cuireLosangeVoile } from "../couches/voile";
 import { contourDeLaZone } from "../emprise";
 import { boisDuBrocard, type PoseDuChevreuil, pelageDEte } from "../faune/chevreuils";
+import { type PointDeNuee, TAILLE_DU_POINT_PX } from "../faune/nuee";
 import type { PoseDHabitant } from "../faune/residents";
 import { versCss, versEntier } from "../palette";
 import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
@@ -367,6 +368,9 @@ export class SceneParcelle {
   private atlasFaune?: AtlasFaune;
   /** Les habitants qui bougent à cette image (#129). Vide = personne dehors. */
   private residents: readonly PoseDHabitant[] = [];
+  /** Les points de la nuée de ravageurs à cette image (#129). Vide = pas de pullulation. */
+  private nuee: readonly PointDeNuee[] = [];
+  private pointDeNuee?: HTMLCanvasElement;
   private atlasHabitants?: AtlasHabitants;
   private formeGite?: Texture;
   /** Les trois formes du calque, cuites une fois. */
@@ -565,6 +569,14 @@ export class SceneParcelle {
   ): void {
     this.faune = poses;
     this.residents = residents;
+  }
+
+  /**
+   * La nuée de ravageurs, point par point (#129). Posée parmi les arbres comme
+   * les bêtes, parce qu'elle danse **dans** les houppiers.
+   */
+  public montrerLaNuee(points: readonly PointDeNuee[]): void {
+    this.nuee = points;
   }
 
   public montrerLesChangements(marqueurs: readonly Marqueur[]): void {
@@ -1124,7 +1136,9 @@ export class SceneParcelle {
     vue: Vue,
     arbres: ReturnType<typeof posesDesArbres>,
   ): BeteAPoser[] {
-    if (this.faune.length === 0 && this.residents.length === 0) return [];
+    if (this.faune.length === 0 && this.residents.length === 0 && this.nuee.length === 0) {
+      return [];
+    }
     const cote = etat.sol.coteM;
     const pxParM = METRE_VERTICAL_PX * vue.cam.zoom;
     const sol = (x: number, y: number) => {
@@ -1213,6 +1227,46 @@ export class SceneParcelle {
           echelle: corpsPx / v.pxParCorps,
           versLaGauche: devant.sx < p.sx,
           opacite: h.opacite,
+        });
+      }
+    }
+    if (this.nuee.length > 0) {
+      // Un seul point, cuit une fois : un disque sombre au bord adouci. Sa
+      // taille à l'écran est fixe (`TAILLE_DU_POINT_PX`) — la nuée est un signe,
+      // et un insecte de deux millimètres ne se verrait à aucun zoom.
+      if (!this.pointDeNuee) {
+        // Le liseré clair d'abord : sans lui, un point sombre sur un sol de
+        // friche sombre disparaît — mesuré sur le banc, la nuée ne se lisait
+        // qu'au-dessus des houppiers clairs.
+        const c = this.fabriquer(10, 10);
+        const g = c.getContext("2d");
+        if (g) {
+          g.fillStyle = "rgba(236, 228, 204, 0.55)";
+          g.beginPath();
+          g.arc(5, 5, 4.6, 0, Math.PI * 2);
+          g.fill();
+          g.fillStyle = "rgba(28, 24, 18, 0.95)";
+          g.beginPath();
+          g.arc(5, 5, 3, 0, Math.PI * 2);
+          g.fill();
+        }
+        this.pointDeNuee = c;
+      }
+      const echelle = TAILLE_DU_POINT_PX / 6;
+      for (const p of this.nuee) {
+        const q = versEcranVue({ x: p.x, y: p.y, z: sol(p.x, p.y) + p.hauteurM }, vue);
+        if (horsCadre(q)) continue;
+        sorties.push({
+          sx: q.sx,
+          sy: q.sy,
+          profondeur: profondeur(p.x, p.y, vue.cam),
+          cle: "nuee:point",
+          image: this.pointDeNuee,
+          piedX: 5,
+          piedY: 5,
+          echelle,
+          versLaGauche: false,
+          opacite: p.opacite,
         });
       }
     }

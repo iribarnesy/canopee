@@ -33,6 +33,7 @@ import type { DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
 import { type MondeDuGibier, Troupeau } from "../render/faune/chevreuils";
 import { posesDesGeais, visitesDuGeai } from "../render/faune/geai";
+import { type Essaim, essaimsDeLaNuee, pointsDeLaNuee } from "../render/faune/nuee";
 import { type Derangement, type PoseDHabitant, Residents } from "../render/faune/residents";
 import type { Compte } from "../render/pixi/scene";
 import {
@@ -309,6 +310,28 @@ function mondeDuBanc(scene: Scene): { monde?: MondeDuGibier; figeMs?: number } {
 }
 
 let rechauffe = false;
+
+/**
+ * `?nuee=0.6` : une pullulation à cette pression, en tache de quinze mètres au
+ * centre de la parcelle, un jour à 20 °C (#129). Les scènes cuites ne portent
+ * ni la grille des ravageurs ni la température ; le banc les donne, comme il
+ * donne la densité de gibier.
+ */
+let essaimsDuBanc: { cote: number; pression: number; essaims: Essaim[] } | undefined;
+function nueeDuBanc(scene: Scene, maintenantMs: number) {
+  const pression = Number(new URLSearchParams(location.search).get("nuee") ?? "0");
+  if (!(pression > 0)) return [];
+  if (essaimsDuBanc?.cote !== scene.coteM || essaimsDuBanc.pression !== pression) {
+    const c = scene.coteM;
+    const grille = new Float32Array(c * c);
+    for (let i = 0; i < c * c; i++) {
+      const d = Math.hypot((i % c) + 0.5 - c / 2, Math.floor(i / c) + 0.5 - c / 2);
+      grille[i] = d < 15 ? pression * (1 - (d / 15) ** 2 * 0.5) : 0.02;
+    }
+    essaimsDuBanc = { cote: c, pression, essaims: essaimsDeLaNuee(grille, c, 20) };
+  }
+  return pointsDeLaNuee(essaimsDuBanc.essaims, maintenantMs);
+}
 
 /** Les habitants du banc : un seul objet pour la page, comme dans le jeu. */
 const residentsDuBanc = new Residents();
@@ -1005,6 +1028,9 @@ function Demo(): React.ReactElement {
       surCompte={setCompte}
       marqueurs={ellipse.marqueurs}
       {...(choisis.size > 0 ? { surbrillance: choisis } : {})}
+      {...(new URLSearchParams(location.search).has("nuee")
+        ? { nuee: (maintenantMs: number) => nueeDuBanc(scene, maintenantMs) }
+        : {})}
       {...(scene.faune || new URLSearchParams(location.search).has("geai")
         ? { residents: (maintenantMs: number) => residentsDuBancA(scene, arbres, maintenantMs) }
         : {})}
