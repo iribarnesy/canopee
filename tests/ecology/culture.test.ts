@@ -168,10 +168,12 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // continu doit donc descendre de lui-même vers le second, ce que rien dans
     // le code ne lui dit de faire.
     //
-    // Le moteur passe par la gamme de Broadbalk vers les années 20 à 40 puis
-    // converge **sous**, à 0,70-0,79. Il glisse donc sous 1 là où l'essai tient,
-    // et la cause probable reste la **paille** non restituée (`herbacees.ts`).
-    // Mesure détaillée dans `labour-desserre.test.ts`.
+    // Le moteur passe par la gamme de Broadbalk vers les années 60 à 100 et
+    // continue de descendre lentement : il glisse sous 1 là où l'essai tient.
+    // Deux causes probables : la **paille** non restituée (`herbacees.ts`, mesure
+    // détaillée dans `labour-desserre.test.ts`), et un humus à un seul pool, qui
+    // n'a pas la fraction stable que les jachères nues de longue durée isolent
+    // (Barré et al. 2010) et se vide donc sans plancher.
     //
     // **Réancré sur l'équilibre (#247), comme ce commentaire le demandait déjà.**
     // La borne tenait à l'an 24 (« sous 2 t/ha ») et comparait donc un sol
@@ -187,22 +189,26 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // moteur, cent vingt ans :
     //
     //     ans 1-20   21-40   41-60   61-80   81-100   101-120
-    //       2,94      1,18    0,83    0,79     0,79      0,70
+    //       3,86      2,32    1,56    1,18     0,99      0,80
     //
-    // et avec le prélèvement en profondeur (lot B de #247, pas encore livré) :
-    // 5,86 / 2,70 / 1,79 / 1,62 / 1,60 / 1,46. Les deux restent dans le facteur
-    // deux de Broadbalk que cet essai s'accorde, l'un dessous, l'autre dessus.
+    // Avec l'ancienne perte d'humus au labour (5 %, sans source, six fois West
+    // et Post 2002) : 2,94 / 1,18 / 0,83 / 0,79 / 0,79 / 0,70 — plus tôt posé,
+    // parce que l'humus était brûlé en trente ans. **La stabilisation tient
+    // désormais au bord** (19 % pour 20) : le moteur traverse encore la bande à
+    // cent vingt ans, et c'est dit plutôt que desserré.
     const r = culture({ ans: 121, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
-    const an24 = r[24] ?? 0;
     const tranche = (debut: number) => {
       const t = r.slice(debut, debut + 20);
       return t.reduce((s, v) => s + v, 0) / Math.max(1, t.length);
     };
-    // Il part haut — le labour d'une bonne terre minéralise son humus — et il
-    // s'épuise. Le **sens** est l'essentiel.
+    // Il part haut — une bonne terre minéralise son humus — et il s'épuise. Le
+    // **sens** est l'essentiel : chaque tranche des soixante premières années
+    // sous la précédente. La borne d'avant, « l'an 24 sous la moitié de l'an 2 »,
+    // n'avait pas de source ; c'était une attente sur le moteur (4,80 → 2,66).
     expect(an2).toBeGreaterThan(3);
-    expect(an24).toBeLessThan(an2 / 2);
+    expect(tranche(21)).toBeLessThan(tranche(1));
+    expect(tranche(41)).toBeLessThan(tranche(21));
     // Il atterrit dans la bande de la parcelle nue, à un facteur deux près, sur
     // chacune des trois dernières tranches : on ne prétend pas mesurer Broadbalk,
     // on prétend ne pas en être loin une fois le sol à l'équilibre.
@@ -210,8 +216,8 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
       expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeGreaterThan(0.5);
       expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeLessThan(2);
     }
-    // Et il y est posé, pas en train de le traverser : la dernière tranche ne
-    // s'écarte de la précédente que de quelques centièmes de ce qu'elle vaut.
+    // Et il y ralentit : la dernière tranche ne s'écarte pas de la précédente de
+    // plus d'un cinquième de ce qu'elle vaut.
     expect(Math.abs(tranche(101) / tranche(81) - 1)).toBeLessThan(0.2);
   }, 900_000);
 });

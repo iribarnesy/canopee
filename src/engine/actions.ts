@@ -229,9 +229,26 @@ export const LABOUR_EUR_M2 = 0.02;
  * jusque-là protégée : les micro-organismes la brûlent en quelques semaines.
  * C'est le fameux « coup de fouet » — une bouffée d'azote qui nourrit la
  * culture suivante, payée par du capital sol qui, lui, met des décennies à se
- * reconstituer. De l'ordre de 5 % du stock par labour *(à calibrer)*.
+ * reconstituer.
+ *
+ * **0,8 % du stock par passage, ancré sur West et Post (2002)** (*SSSAJ*
+ * 66:1930, 67 essais longs, 276 paires) : passer du labour au semis direct
+ * stocke 57 ± 14 g C m⁻² an⁻¹, soit 0,8 % des ~70 t C/ha de l'horizon labouré
+ * d'un limon riche (0,6 à 1,0). Rapporter une moyenne mondiale à un stock en
+ * fait une fraction, qui prend moins à un sol pauvre *(à confirmer)*.
+ *
+ * La valeur d'avant, 5 % sans source, en brûlait six fois plus : un blé labouré
+ * chaque automne perdait 79 % de son humus en vingt ans, le haut de ce que des
+ * jachères nues **sans aucun apport** perdent en trente à quatre-vingts ans (34 à
+ * 72 %, Barré et al. 2010, six essais). Sa bouffée d'octobre partait au fond
+ * avec la lame drainante, et c'est elle qui vidait la surface en février (#247).
+ *
+ * **Borne haute, et c'est dit** : `HUMUS_DECAY_PER_YEAR` est ancré sur le Mh du
+ * COMIFER, mesuré sur des sols déjà labourés, si bien qu'une part du labour est
+ * comptée deux fois. Luo et al. (2010) ne trouvent pas de différence nette entre
+ * labour et semis direct sur 0-40 cm *(à confirmer)*.
  */
-export const LABOUR_PERTE_HUMUS = 0.05;
+export const LABOUR_PERTE_HUMUS = 0.008;
 /** Hauteur en dessous de laquelle un plant ne survit pas au passage de l'outil, m. */
 export const LABOUR_HAUTEUR_DETRUITE_M = 1.2;
 /** Hauteur de tête de trogne par défaut : au-dessus de la dent du bétail. */
