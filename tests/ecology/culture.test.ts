@@ -9,13 +9,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { applyAction } from "../../src/engine/actions";
+import { applyAction, grainRecoltableT } from "../../src/engine/actions";
 import { HERBACEES, N_HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { cellulesDeLaZone } from "../../src/engine/zone";
 
 const S_BLE = HERBACEES.findIndex((h) => h.id === "triticum_aestivum");
 const FICHE_BLE = HERBACEES[S_BLE];
@@ -44,7 +45,10 @@ function culture(options: {
     for (let x = 2; x < cote; x += 8) state = plantAt(state, rang.especeId, x, rang.y, 2);
   }
   const centre = cote / 2;
-  const aireHa = (Math.PI * rayonM * rayonM) / 10_000;
+  // Le grain se lit sur pied, avant la moisson : la trésorerie compte aussi le
+  // passage d'engin, 0,6 t/ha de blé (`grainRecoltableT`, #247).
+  const zone = { x: centre, y: centre, rayonM };
+  const aireHa = cellulesDeLaZone(cote, zone).length / 10_000;
   const rendements: number[] = [];
   for (let an = 0; an < ans; an++) {
     for (let w = 0; w < 52; w++) {
@@ -63,7 +67,7 @@ function culture(options: {
         }).state;
       }
       if (w === BLE.recolteWeek) {
-        const avant = state.economy.treasuryEur;
+        rendements.push(grainRecoltableT(state, zone) / aireHa);
         state = applyAction(state, {
           type: "moissonner",
           week,
@@ -71,7 +75,6 @@ function culture(options: {
           y: centre,
           rayonM,
         }).state;
-        rendements.push((state.economy.treasuryEur - avant) / BLE.prixEurT / aireHa);
       }
       const m = WEATHER[w];
       if (!m) throw new Error("météo manquante");
@@ -168,12 +171,13 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // continu doit donc descendre de lui-même vers le second, ce que rien dans
     // le code ne lui dit de faire.
     //
-    // Le moteur passe par la gamme de Broadbalk vers les années 60 à 100 et
-    // continue de descendre lentement : il glisse sous 1 là où l'essai tient.
-    // Deux causes probables : la **paille** non restituée (`herbacees.ts`, mesure
-    // détaillée dans `labour-desserre.test.ts`), et un humus à un seul pool, qui
-    // n'a pas la fraction stable que les jachères nues de longue durée isolent
-    // (Barré et al. 2010) et se vide donc sans plancher.
+    // Le moteur entre dans la gamme de Broadbalk vers les années 40 à 60 et s'y
+    // pose **au-dessus** de ~1, à 1,4 t/ha. Il en était dit qu'il « glissait sous
+    // 1 » à cause de la paille non restituée : c'était la mesure. Le rendement se
+    // lisait sur la trésorerie, qui compte aussi le passage d'engin de la moisson
+    // — 120 €/ha, 0,6 t/ha de blé —, et le grain était donc lu 0,6 t/ha trop bas
+    // sur toute la courbe (#247). Il se lit maintenant sur pied
+    // (`grainRecoltableT`).
     //
     // **Réancré sur l'équilibre (#247), comme ce commentaire le demandait déjà.**
     // La borne tenait à l'an 24 (« sous 2 t/ha ») et comparait donc un sol
@@ -189,13 +193,15 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // moteur, cent vingt ans :
     //
     //     ans 1-20   21-40   41-60   61-80   81-100   101-120
-    //       3,81      2,24    1,48    1,13     0,96      0,78
+    //       4,40      2,83    2,08    1,73     1,56      1,38
     //
-    // Avec l'ancienne perte d'humus au labour (5 %, sans source, six fois West
-    // et Post 2002) : 2,94 / 1,18 / 0,83 / 0,79 / 0,79 / 0,70 — plus tôt posé,
-    // parce que l'humus était brûlé en trente ans. **La stabilisation tient
-    // désormais au bord** (19 % pour 20) : le moteur traverse encore la bande à
-    // cent vingt ans, et c'est dit plutôt que desserré.
+    // Lu sur la trésorerie, le même moteur rendait 3,81 / 2,24 / 1,48 / 1,13 /
+    // 0,96 / 0,78 ; avec en plus l'ancienne perte d'humus au labour (5 %, sans
+    // source, trois à quatre fois West et Post 2002) : 2,94 / 1,18 / 0,83 / 0,79
+    // / 0,79 / 0,70. La dernière tranche s'écarte de la précédente de 11,5 % :
+    // il ralentit encore à cent vingt ans, un humus à un seul pool n'ayant pas
+    // la fraction stable que les jachères nues de longue durée isolent (Barré
+    // et al. 2010).
     const r = culture({ ans: 121, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
     const tranche = (debut: number) => {
@@ -205,7 +211,7 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // Il part haut — une bonne terre minéralise son humus — et il s'épuise. Le
     // **sens** est l'essentiel : chaque tranche des soixante premières années
     // sous la précédente. La borne d'avant, « l'an 24 sous la moitié de l'an 2 »,
-    // n'avait pas de source ; c'était une attente sur le moteur (4,78 → 2,57).
+    // n'avait pas de source ; c'était une attente sur le moteur (5,38 → ~3,2 en grain).
     expect(an2).toBeGreaterThan(3);
     expect(tranche(21)).toBeLessThan(tranche(1));
     expect(tranche(41)).toBeLessThan(tranche(21));
@@ -286,7 +292,7 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // donc l'azote des arbres autant que leur ombre.
     //
     // Le gradient d'**ombre pure** est mesuré ailleurs, les deux côtés fertilisés
-    // (`fertilisation.test.ts`) : 0,999 à H/L 0,29 puis 0,787 à 1,28, monotone.
+    // (`fertilisation.test.ts`) : 0,993 à H/L 0,29 puis 0,706 à 1,28, monotone.
     // Cet essai-ci garde ce qu'il est seul à dire : ce que l'azote de l'arbre
     // fait, ou ne fait plus, à une allée qui n'en reçoit pas d'autre.
     expect(rapport(3)).toBeGreaterThan(0.95);
@@ -310,7 +316,7 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // le « filet de sécurité » de l'agroforesterie —, et le moteur ne sait pas
     // encore le faire : c'est le lot B de #247. Tant qu'il manque, l'allée non
     // fertilisée perd **au moins** ce que l'ombre seule lui coûte
-    // (`fertilisation.test.ts` : 0,835 à H/L 1,02, 0,787 à 1,28). Cet essai le
+    // (`fertilisation.test.ts` : 0,808 à H/L 1,02, 0,706 à 1,28). Cet essai le
     // garde tel quel, et il est **attendu qu'il bascule** quand le lot B
     // arrivera : c'est à ce moment-là qu'il faudra le réécrire, pas avant.
     //
@@ -319,14 +325,18 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // source) :
     //
     //     graine        4      1      7     33   2022   moyenne
-    //     an 25      0,864  0,960  0,905  0,899  0,868    0,899
-    //     an 33      0,765  0,786  0,836  0,835  0,822    0,809
+    //     an 25      0,890  0,925  0,924  0,919  0,894    0,910
+    //     an 33      0,791  0,818  0,875  0,843  0,834    0,832
     //
-    // L'allée ne perd plus « au moins ce que l'ombre seule lui coûte » : 0,899
-    // à l'an 25 contre 0,835 d'ombre pure à H/L 1,02. La litière des noyers
+    // (grain lu sur pied, `grainRecoltableT` : la trésorerie comptait aussi le
+    // passage d'engin, moins cher entre des rangs d'arbres.) L'allée ne perd
+    // plus « au moins ce que l'ombre seule lui coûte » : 0,910 à l'an 25 et
+    // 0,832 à l'an 33, contre 0,808 et 0,706 d'ombre pure, fertilisée des deux
+    // côtés (`fertilisation.test.ts`). La litière des noyers
     // recompense de nouveau quelques points, parce que le labour annuel ne brûle
-    // plus l'humus qu'elle construit. L'ancienne borne (0,9) tomberait à un
-    // millième de la moyenne, et une borne à ce point du relevé mesure le tirage.
+    // plus l'humus qu'elle construit. L'ancienne borne (0,9) tombait à un
+    // millième de la moyenne relevée à travers la trésorerie, et une borne à ce
+    // point du relevé mesure le tirage.
     // Ce qui reste affirmé : l'allée non fertilisée paie son ombre à l'an 25, et
     // de plus en plus avec l'âge.
     expect(rapport(25)).toBeLessThan(0.95);
@@ -334,7 +344,7 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // L'ombre gagne toujours avec l'âge, et le classement des âges reste strict.
     expect(rapport(33)).toBeLessThan(rapport(25));
     // Le plancher garde contre un effondrement : la plus basse des cinq graines
-    // était à 0,678 avec les 5 % d'avant, à 0,765 depuis.
+    // était à 0,678 avec les 5 % d'avant, à 0,791 depuis, grain lu sur pied.
     expect(rapport(33)).toBeGreaterThan(0.6);
   }, 1_800_000);
 });

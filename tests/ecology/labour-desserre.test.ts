@@ -27,7 +27,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { applyAction, type GameAction } from "../../src/engine/actions";
+import { applyAction, type GameAction, grainRecoltableT } from "../../src/engine/actions";
 import { HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -42,6 +42,7 @@ import {
   tassementApresUneAnnee,
 } from "../../src/engine/tassement";
 import { tick } from "../../src/engine/tick";
+import { cellulesDeLaZone } from "../../src/engine/zone";
 
 const FICHE = HERBACEES.find((h) => h.id === "triticum_aestivum");
 if (!FICHE?.culture) throw new Error("fiche du blé manquante");
@@ -52,8 +53,10 @@ const WEATHER = syntheticYear(LIMON_RICHE.climat);
 function bleContinuSansApport(ans: number): number[] {
   const COTE = 30;
   const R = 14;
-  const aireHa = (Math.PI * R * R) / 10_000;
   const centre = COTE / 2;
+  // Le grain se lit sur pied : la trésorerie compte aussi le passage d'engin.
+  const zone = { x: centre, y: centre, rayonM: R };
+  const aireHa = cellulesDeLaZone(COTE, zone).length / 10_000;
   const station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
   let state: GameState = createGameState(station, rngStateFromSeed(4));
   const rendements: number[] = [];
@@ -78,11 +81,8 @@ function bleContinuSansApport(ans: number): number[] {
         });
       }
       if (w === BLE.recolteWeek) {
-        rendements.push(
-          geste({ type: "moissonner", week, x: centre, y: centre, rayonM: R }) /
-            BLE.prixEurT /
-            aireHa,
-        );
+        rendements.push(grainRecoltableT(state, zone) / aireHa);
+        geste({ type: "moissonner", week, x: centre, y: centre, rayonM: R });
       }
       const m = WEATHER[w];
       if (!m) throw new Error("météo manquante");
@@ -144,7 +144,7 @@ describe("la même charrue desserre ou tasse, selon ce qu'elle trouve", () => {
 });
 
 describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
-  it("un blé continu sans apport descend sous 1 t/ha, et il met un siècle", () => {
+  it("un blé continu sans apport rejoint la bande de Broadbalk, et il met un siècle", () => {
     // **c'est le point délicat du lot, et il avait été annoncé comme un
     // risque.** Neutraliser complètement le tassement faisait passer la
     // parcelle nue de 1,07 à 1,70 t/ha sur trente ans, là où Broadbalk tient
@@ -158,18 +158,22 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     // autre chose (moyennes par tranche de vingt ans) :
     //
     //     ans 1-20   21-40   41-60   61-80   81-100   101-120
-    //       3,66      2,29    1,51    1,14     0,97      0,79
+    //       4,23      2,89    2,11    1,74     1,57      1,39
     //
-    // Le moteur passe par la gamme de l'essai vers les années 40 à 100, puis
-    // finit **sous** 1 au lieu du ~1 que l'essai tient. L'écart est donc dans
-    // l'autre sens que redouté, et ce n'est pas ce lot qui l'a créé : c'est la
-    // limite déjà écrite sous C16, la **paille** qui reste au champ dans la réalité
-    // et ne rend rien ici. Le 1,07 d'avant n'était pas un point juste, c'était
-    // une fenêtre de trente ans sur un sol qu'un tassement irréaliste freinait.
+    // Le moteur entre dans la gamme de l'essai vers les années 60 à 100 et finit
+    // à 1,4 t/ha, au-dessus du ~1 que l'essai tient, dans le facteur deux. Le 1,07
+    // d'avant n'était pas un point juste, c'était une fenêtre de trente ans sur un
+    // sol qu'un tassement irréaliste freinait.
+    //
+    // **Tous les chiffres d'avant ce paragraphe étaient lus 0,6 t/ha trop bas**
+    // (#247) : le rendement se lisait sur la trésorerie, qui compte aussi le
+    // passage d'engin de la moisson (120 €/ha). Lu ainsi, le moteur « finissait
+    // sous 1 », et cet essai l'attribuait à la paille non restituée ; c'était la
+    // mesure. Le grain se lit maintenant sur pied (`grainRecoltableT`).
     //
     // Avec la perte d'humus au labour d'avant (5 %, sans source, trois à quatre
-    // fois l'écart labour / semis direct de West et Post 2002) : 2,96 / 1,25 /
-    // 0,84 / 0,78 / 0,79 / 0,70. Le passage dans la gamme avait lieu vers les
+    // fois l'écart labour / semis direct de West et Post 2002), et lu sur la
+    // trésorerie : 2,96 / 1,25 / 0,84 / 0,78 / 0,79 / 0,70. Le passage dans la gamme avait lieu vers les
     // années 20 à 40 parce que l'humus était brûlé en trente ans ; c'était une
     // date du moteur, pas une date de Broadbalk, et elle n'est plus assertée.
     const r = bleContinuSansApport(120);
@@ -182,8 +186,8 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     // Il passe par la gamme de l'essai à un moment de sa descente…
     const dansLaGamme = [1, 2, 3, 4].filter((d) => tranche(d) > 0.8 && tranche(d) < 1.6);
     expect(dansLaGamme.length).toBeGreaterThan(0);
-    // …et il finit dessous, ce qui est la limite de C16 et non celle du labour.
-    expect(tranche(5)).toBeLessThan(1);
-    expect(tranche(5)).toBeGreaterThan(0.4);
+    // …et il finit dans le facteur deux de l'essai, comme C16 le demande.
+    expect(tranche(5)).toBeGreaterThan(0.5);
+    expect(tranche(5)).toBeLessThan(2);
   }, 1_800_000);
 });

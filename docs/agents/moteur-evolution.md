@@ -61,10 +61,11 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la perte d'humus au labour, #247)
+## Ce que le dernier lot a appris (la perte d'humus au labour et le grain lu sur pied, #247)
 
 `LABOUR_PERTE_HUMUS` valait 5 % « à calibrer », sans source, et c'est lui qui
-vidait la surface en février. Il vaut 1 %, calé sur West et Post (2002).
+vidait la surface en février. Il vaut 1 %, calé sur West et Post (2002). Et
+le rendement des essais se lisait sur la trésorerie, 0,6 t/ha trop bas.
 
 ### Une ancre qui mesure un écart se reproduit comme un écart
 
@@ -96,6 +97,15 @@ des bandes brûlait : 18-19 % → 8-10 % sur trois graines. Et le fait de
 Restinclières, épinglé en plafond sur une graine, a basculé sur cette graine
 seulement ; la campagne dit qu'il n'est pas retrouvé. Un plafond posé sur une
 graine mesure le tirage autant que le moteur.
+
+### Une grandeur se lit là où elle est, pas sur un compte qui la contient
+
+Trois essais lisaient le rendement sur la trésorerie, qui crédite la recette
+**moins** le passage d'engin : 0,6 t/ha de blé de moins partout, et moins
+encore entre des arbres, où l'engin coûte moins. C16 « glissait sous 1 t/ha »
+et une cause avait été écrite pour ça (la paille) ; le plafond de C18 aussi.
+Le grain se lit sur pied (`grainRecoltableT`). Un rendement négatif dans un
+banc a trahi le biais : un chiffre impossible se suit jusqu'au bout.
 
 ## Ce qu'un lot plus ancien a appris (les tranches de nitrate, #247)
 

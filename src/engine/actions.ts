@@ -1799,6 +1799,37 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
   };
 }
 
+/**
+ * Le grain qu'une moisson de la zone récolterait maintenant, en tonnes, toutes
+ * cultures confondues. C'est la somme que `applyMoissonner` vend, cellule par
+ * cellule, sans rien toucher.
+ *
+ * **Un rendement se lit ici, pas sur la trésorerie** (#247). La moisson crédite
+ * la recette **moins** le passage d'engin (`COUT_ENGIN_EUR_M2`, 120 €/ha, soit
+ * 0,6 t/ha au prix du blé) : trois essais divisaient cette différence par le
+ * prix et l'aire, et lisaient donc un grain de 0,6 t/ha trop bas. C'est ce biais
+ * qui faisait « glisser sous 1 t/ha » le blé sans apport de C16.
+ */
+export function grainRecoltableT(state: GameState, zone: Zone): number {
+  const { cultureGrain, cultureGrainPotentiel, herbeEmprise } = state.soil;
+  const m2ParCellule = 1;
+  let tonnes = 0;
+  for (const s of INDEX_CULTURES) {
+    const culture = HERBACEES[s]?.culture;
+    if (!culture) continue;
+    for (const i of cellulesDeLaZone(state.station.coteM, zone)) {
+      const base = i * N_HERBACEES;
+      const grain = partDuRendement(
+        cultureGrain[base + s] ?? 0,
+        cultureGrainPotentiel[base + s] ?? 0,
+      );
+      if ((herbeEmprise[base + s] ?? 0) <= 0 && grain <= 0) continue;
+      tonnes += (grain * culture.rendementMaxTHa * m2ParCellule) / 10_000;
+    }
+  }
+  return tonnes;
+}
+
 function applyMoissonner(
   state: GameState,
   action: Extract<GameAction, { type: "moissonner" }>,
