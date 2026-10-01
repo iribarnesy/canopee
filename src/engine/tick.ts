@@ -1274,7 +1274,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // ammoniacale qui restera en sortie d'hiver tombe du froid et du pH de
     // cette cellule-là, pas d'un paramètre calé dessus (nitrogen.ts).
     const nitrifie = nitrifieG(ammoniacalNG[i] ?? 0, weather.tMean, state.soil.ph[i] ?? 7);
-    ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) - nitrifie;
+    ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) - nitrifie);
 
     // ── Phosphore et potassium (pk.ts) ─────────────────────────────────────
     const phCell = state.soil.ph[i] ?? 7;
@@ -1448,7 +1448,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) * (1 - emporte);
       mineralNG[i] = (mineralNG[i] ?? 0) - dNmin;
       // Le sédiment emporte les deux formes dans la même proportion (#280).
-      ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * (1 - emporte);
+      ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * (1 - emporte));
       litterNG[i] = (litterNG[i] ?? 0) - dNlit;
       phosphoreG[i] = (phosphoreG[i] ?? 0) - dP;
       potassiumG[i] = (potassiumG[i] ?? 0) - dK;
@@ -1580,6 +1580,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const pSatisfaction = new Array<number>(nTrees).fill(1);
   const kSatisfaction = new Array<number>(nTrees).fill(1);
   const nNeedG = new Array<number>(nTrees).fill(0);
+  /**
+   * Ce que chaque arbre tire cette semaine de sa **réserve** d'azote, g (#247) :
+   * l'azote résorbé l'automne d'avant, remobilisé avant tout prélèvement au sol.
+   */
+  const tirageReserveG = new Array<number>(nTrees).fill(0);
   const rootCells = new Array<number>(nTrees).fill(1);
   /**
    * Le gain mycorhizien de chaque arbre, **rangé**, parce que les deux passes
@@ -1669,8 +1674,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // ses vaisseaux cassés ne conduisent plus (trees.ts).
       (1 - tree.dommageHydraulique);
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
+    // La réserve paie d'abord, au rythme où l'arbre pousse : ce qu'il en tire
+    // ne lui est plus demandé au sol.
+    tirageReserveG[t] = Math.min(
+      tree.reserveAzoteG ?? 0,
+      treeNitrogenNeedGWeek(espece, tree.heightM) * season,
+    );
     const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
-    const needPerCell = (nNeedG[t] ?? 0) / n;
+    const needPerCell = Math.max(0, (nNeedG[t] ?? 0) - (tirageReserveG[t] ?? 0)) / n;
     const capPerCell = capG / n;
     const wPerCell = (waterDemandL[t] ?? 0) / n;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
@@ -1780,7 +1791,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       mineralNG[i] = stock - taken;
       // Une racine ne trie pas : elle prend les deux formes dans la proportion
       // où elles se présentent (#280).
-      if (stock > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * ((stock - taken) / stock);
+      if (stock > 0)
+        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * ((stock - taken) / stock));
       uptakeSumG += taken;
       azotePris = taken;
     }
@@ -1970,7 +1982,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const n = rootCells[t] ?? 1;
     const fractions = rootFractions[t] ?? [1];
     const wPerCell = (waterDemandL[t] ?? 0) / n;
-    const needPerCell = (nNeedG[t] ?? 0) / n;
+    const needPerCell = Math.max(0, (nNeedG[t] ?? 0) - (tirageReserveG[t] ?? 0)) / n;
     const capPerCell = (espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM)) / n;
     let gotW = 0;
     let gotN = 0;
@@ -1994,10 +2006,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé.
     const besoinIntact = wd / Math.max(0.15, 1 - tree.dommageHydraulique);
     waterSatisfaction[t] = besoinIntact > 0 ? Math.min(1, gotW / besoinIntact) : 1;
-    nSatisfaction[t] = nd > 0 ? Math.min(1, gotN / nd) : 1;
+    const tirage = tirageReserveG[t] ?? 0;
+    nSatisfaction[t] = nd > 0 ? Math.min(1, (gotN + tirage) / nd) : 1;
+    // Un fixateur tire aussi sur sa réserve, et l'air fournit le reste.
     acquiredNG[t] = espece.azote.fixateur
-      ? 0.95 * treeNitrogenNeedGWeek(espece, tree.heightM) * seasonFactor(espece, weather.tMean)
-      : gotN;
+      ? tirage +
+        0.95 *
+          Math.max(0, treeNitrogenNeedGWeek(espece, tree.heightM) - tirage) *
+          seasonFactor(espece, weather.tMean)
+      : gotN + tirage;
     // Un fixateur ne prend rien au sol : son azote vient de l'air, et le
     // compter ici fausserait le bilan que la propriété de conservation lit.
     if (!espece.azote.fixateur) uptakeArbresSumG += gotN;
@@ -2084,7 +2101,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // est la définition du sous-pool, pas une correction — et l'invariant reste
     // à **zéro strict** dans `pools-positifs.test.ts`, donc une vraie fuite le
     // ferait toujours tomber.
-    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0)) ammoniacalNG[i] = mineralNG[i] ?? 0;
+    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0))
+      ammoniacalNG[i] = Math.max(0, mineralNG[i] ?? 0);
     // **Seul le nitrate suit l'eau** (#280) : l'ammonium est un cation, il tient
     // sur le complexe d'échange. Passer le stock entier, ce que faisait ce
     // calcul, lessivait un cinquième d'azote qui ne bouge pas.
@@ -2139,7 +2157,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Mesuré : −1,1e-16, sur la lande, une fois le premier plafond en place. Le
     // premier sert à calculer `nitriqueG` sur un état cohérent ; celui-ci garde
     // l'invariant à la sortie. Aucun des deux ne déplace une quantité.
-    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0)) ammoniacalNG[i] = mineralNG[i] ?? 0;
+    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0))
+      ammoniacalNG[i] = Math.max(0, mineralNG[i] ?? 0);
     if (nT > nS) {
       // Et c'est en **sortant** du sous-sol qu'un nitrate quitte la parcelle.
       // C'est ce flux-là que la littérature mesure, pas celui de la surface :
@@ -2287,6 +2306,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       houppierPerdu,
       baseHouppierM,
       uptakeYearG: next.uptakeYearG + Math.max(0, acquired),
+      reserveAzoteG: Math.max(0, (tree.reserveAzoteG ?? 0) - (tirageReserveG[t] ?? 0)),
     };
   });
 
@@ -2926,7 +2946,28 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const part = Math.min(1, tombe / Math.max(1e-9, restantAvant));
     const azote = part * tree.uptakeYearG;
     depositLitter(tree, LITTER_RETURN_FRACTION * azote);
-    return { ...tree, uptakeYearG: tree.uptakeYearG - azote };
+    // L'autre moitié est résorbée avant la chute : elle part en réserve (#247).
+    return {
+      ...tree,
+      uptakeYearG: tree.uptakeYearG - azote,
+      reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * azote,
+    };
+  });
+  // **Un persistant renouvelle son feuillage toute l'année** (#247) : chaque
+  // semaine, la part de ses feuilles qui atteint sa durée de vie tombe, avec la
+  // moitié de son azote, et l'autre moitié part en réserve. Il ne rendait rien
+  // de son vivant : son azote de l'année s'empilait jusqu'à sa mort.
+  nextTrees = nextTrees.map((tree) => {
+    if (!tree.alive || tree.uptakeYearG <= 0) return tree;
+    const lumiere = getEspece(tree.especeId).lumiere;
+    if (lumiere.caduc || !lumiere.dureeVieFeuillageAns) return tree;
+    const azote = tree.uptakeYearG * Math.min(1, 1 / (52 * lumiere.dureeVieFeuillageAns));
+    depositLitter(tree, LITTER_RETURN_FRACTION * azote);
+    return {
+      ...tree,
+      uptakeYearG: tree.uptakeYearG - azote,
+      reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * azote,
+    };
   });
   // Filet de sécurité : ce qu'un arbre n'a pas lâché avant la fin de l'année
   // tombe quand même, sinon son azote resterait dans un feuillage qui n'existe
@@ -2936,7 +2977,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (!tree.alive || tree.uptakeYearG <= 0) return tree;
       if (!getEspece(tree.especeId).lumiere.caduc) return tree;
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
-      return { ...tree, uptakeYearG: 0 };
+      return {
+        ...tree,
+        uptakeYearG: 0,
+        reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * tree.uptakeYearG,
+      };
     });
   }
 
@@ -2997,8 +3042,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (tree.mortSemaine === undefined) {
       // Il vient de mourir : sa litière tombe et son bois rejoint le pool de
       // bois mort. Ce transfert n'a lieu qu'**une** fois — ensuite l'arbre reste
-      // en jeu comme chandelle, sans plus rien à donner.
-      depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
+      // en jeu comme chandelle, sans plus rien à donner. Un arbre qui meurt ne
+      // résorbe rien : ses feuilles et sa réserve vont entières à la litière
+      // (#247) — il n'en rendait que la moitié des feuilles.
+      depositLitter(tree, tree.uptakeYearG + (tree.reserveAzoteG ?? 0));
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM);
       morts.push({
         id: tree.id,
@@ -3105,7 +3152,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         debout.push(tree);
         continue;
       }
-      depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
+      depositLitter(tree, tree.uptakeYearG + (tree.reserveAzoteG ?? 0));
       poserBois(cellule, masse * 1000, recu.radians);
       morts.push({
         id: tree.id,

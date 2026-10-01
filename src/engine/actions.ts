@@ -38,12 +38,7 @@ import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tassementApresLabour } from "./tassement";
-import {
-  diametreInitialCm,
-  tirerVigueurIndividuelle,
-  treeNitrogenNeedGWeek,
-  volumeTigeM3,
-} from "./trees";
+import { diametreInitialCm, tirerVigueurIndividuelle, volumeTigeM3 } from "./trees";
 import {
   aireM2DeLaZone,
   cellulesDeLaZone,
@@ -1365,17 +1360,19 @@ function applyCouper(
       stockBrf = {
         carboneG:
           stockBrf.carboneG + treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000,
-        azoteG:
-          stockBrf.azoteG +
-          0.5 * tree.uptakeYearG +
-          treeNitrogenNeedGWeek(espece, tree.heightM) * 52,
+        // L'azote que l'arbre porte vraiment : ses feuilles de l'année et sa
+        // réserve (#247). Le broyat en comptait une année de besoin en plus,
+        // qui n'existait nulle part dans l'arbre.
+        azoteG: stockBrf.azoteG + tree.uptakeYearG + (tree.reserveAzoteG ?? 0),
       };
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
       // retournent en litière sous l'ancienne couronne (docs/regles.md §4.2).
       // Pour un fixateur, c'est de l'azote **nouveau** — la mécanique fondatrice
-      // « couper les légumineuses et les épandre » (§16).
-      const depositG = 0.5 * tree.uptakeYearG + treeNitrogenNeedGWeek(espece, tree.heightM) * 52;
+      // « couper les légumineuses et les épandre » (§16). C'est l'azote que
+      // l'arbre porte vraiment, feuilles et réserve : un arbre coupé vert ne
+      // résorbe rien, et le broyat comptait une année de besoin inventée (#247).
+      const depositG = tree.uptakeYearG + (tree.reserveAzoteG ?? 0);
       // On **épand** le broyat sur la zone (pas en tas au pied) : rayon large,
       // pour que les racines des voisins y accèdent.
       const crownR = Math.max(

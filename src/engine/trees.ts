@@ -154,6 +154,15 @@ export interface TreeState {
   alive: boolean;
   /** azote acquis depuis la dernière chute des feuilles, g (recyclé en litière) */
   uptakeYearG: number;
+  /**
+   * **Réserve d'azote** de l'arbre, g (#247) : ce qu'il résorbe de ses feuilles
+   * avant qu'elles tombent, stocké dans ses tissus pérennes et remobilisé au
+   * départ suivant, avant tout prélèvement au sol. Il disparaissait : le moteur
+   * rendait la moitié de l'azote foliaire à la litière et perdait l'autre,
+   * l'arbre redemandant chaque année son besoin entier au sol. Absente sur une
+   * sauvegarde d'avant, elle vaut zéro.
+   */
+  reserveAzoteG?: number;
   /** fruits mûrs en attente de récolte, kg (perdus après la fenêtre, §10) */
   fruitsKg: number;
   /** avancement de la croissance des fruits de l'année ∈ [0,1] */
