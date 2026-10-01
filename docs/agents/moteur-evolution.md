@@ -90,6 +90,30 @@ code ne faisait que borner le transfert, et une litière pauvre se vidait
 jusqu'à un C/N de 43 000 dès que la strate prélevait vraiment. Relire le code
 sous un commentaire qui affirme un mécanisme.
 
+### Fermer une fuite peut nourrir trop si l'autre moitié du budget manque
+
+L'arbre perdait l'azote qu'il résorbe ; rendu à une réserve, il a nourri le
+feuillage seul, parce que le bois n'en réclamait rien alors que le besoin se
+dit « feuillage + bois neuf ». Le pin a pris un quart de trop à vingt ans et
+il versait. La doc de `LITTER_RETURN_FRACTION` disait déjà « le reste est
+retenu dans le bois ». Quand une correction fait trop bien, chercher le puits
+que la fuite remplaçait avant de recaler un paramètre.
+
+### Un défaut peut porter un résultat qu'on attribuait à un trait
+
+Le pin « pompait cinquante fois moins » que le hêtre, et l'essai l'attribuait
+au calcium de sa litière : c'était un persistant qui ne perdait jamais ses
+aiguilles. Le gain des hêtres voisins d'un broyat d'aulnes venait de l'azote
+que l'humification créait. Avant de réécrire l'ampleur d'un essai qui tombe,
+chercher ce qui la produisait.
+
+### Une prédiction ratée dit où regarder
+
+J'avais prédit qu'un peuplement dense rendrait au hêtre sa faim sur sol
+pauvre : il ne perd que 3,5 %. L'eau le limite avant l'azote, et les aulnes du
+mélange fixent 60 kg N/ha/an. Le redessin de l'essai s'arrête là ; le constat
+est écrit.
+
 ## Ce qu'un lot plus ancien a appris (la perte d'humus au labour et le grain lu sur pied, #247)
 
 `LABOUR_PERTE_HUMUS` valait 5 % « à calibrer », sans source, et c'est lui qui
