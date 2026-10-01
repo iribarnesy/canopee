@@ -451,10 +451,15 @@ describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
     // Le pendant du précédent. Deux parties identiques en tout sauf le
     // commutateur, trente ans : si les empreintes coïncidaient encore, c'est
     // que les auxiliaires ne mangeraient toujours rien.
+    //
+    // Deux parties de trente ans : 155 s sur main, 164 s depuis que la strate
+    // fabrique de la matière (#247), contre le délai de 180 s par défaut. Le
+    // runner d'intégration l'a dépassé une fois ; le délai est porté à celui des
+    // autres parties longues du dépôt.
     const sans = partie(false);
     const avec = partie(true);
     expect(avec.hash).not.toBe(sans.hash);
-  });
+  }, 600_000);
 
   it("et allumée, elle peuple la parcelle à des densités plausibles", () => {
     // Relevé sur trente ans, vingt-cinq chênes creusés sur 0,64 ha, trois
