@@ -1170,16 +1170,26 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     climateSum += climate;
     // La litière se décompose selon son C/N (aulne vite, pin lentement, ch2-B) ;
     // son carbone part pour partie en humus (humification), le reste en CO2.
-    const decayFraction = Math.min(1, (litterK[i] ?? 0) * climate);
-    const decayedN = (litterNG[i] ?? 0) * decayFraction;
-    const decayedC = (litterCG[i] ?? 0) * decayFraction;
     // Faim d'azote (C9) : un substrat à C/N élevé oblige les décomposeurs à
     // puiser dans l'azote minéral du sol. Rien ne se perd — l'azote passe du
     // pool minéral au pool en décomposition, et reviendra plus tard.
-    const netN = azoteNetDecomposition(decayedC, decayedN);
+    //
+    // **À défaut d'azote, la décomposition ralentit, elle ne s'endette pas** —
+    // ce commentaire le disait, et le code ne faisait que borner le transfert :
+    // la litière se décomposait quand même, et les décomposeurs comme l'humus
+    // nouveau se servaient dans son azote jusqu'à la vider, son C/N filant vers
+    // l'infini (#247). La part décomposée est donc ramenée à ce que l'azote
+    // disponible, celui de la litière et celui du sol, permet de digérer.
     const disponible = mineralNG[i] ?? 0;
-    // On ne peut pas immobiliser plus que ce qu'il y a : à défaut d'azote, la
-    // décomposition ralentit, elle ne s'endette pas.
+    const manqueSiTout = -azoteNetDecomposition(litterCG[i] ?? 0, litterNG[i] ?? 0);
+    const decayFraction = Math.min(
+      1,
+      (litterK[i] ?? 0) * climate,
+      manqueSiTout > 0 ? disponible / manqueSiTout : 1,
+    );
+    const decayedN = (litterNG[i] ?? 0) * decayFraction;
+    const decayedC = (litterCG[i] ?? 0) * decayFraction;
+    const netN = azoteNetDecomposition(decayedC, decayedN);
     const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
     litterNG[i] = (litterNG[i] ?? 0) - transfere;
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
