@@ -100,6 +100,20 @@ lessivé, et dans une allée non fertilisée le noyer lui dispute l'azote du
 fond (0,52 à l'an 33 au lieu de 0,56). Un mécanisme qui donne accès à une
 ressource le donne à tous ceux dont les racines y arrivent.
 
+### Quand une famille d'échecs a une seule cause, ne pas soigner chaque membre
+
+Une fois l'eau de surface partagée avec l'herbe, les jeunes plantations sont
+mortes de soif dans deux essais à la fois : l'aulnaie des ravageurs et la
+cohorte de hêtres de `climat`. Le premier remède, le prélèvement compensatoire à ωc = 0,5, est
+la valeur la plus forte qu'on trouve dans la littérature. Il ne sauvait que 47
+aulnes sur 144. Les deux échecs avaient une cause commune : un hêtre de dix
+ans n'avait que 25-30 cm de racines. Le plancher racinaire montait avec la
+maturité, sans rien pour le justifier (Bakker et al. 2008 : les hêtraies les
+plus jeunes ont le plus de racines fines, réparties selon le sol). Avec le
+plancher constant, 121 aulnes sur 144 vivent, 0 hêtre meurt de soif, et ωc
+revient à 0,9, la valeur qu'on mesure sur le terrain. Avant de doser un
+remède, chercher l'organe qui manque.
+
 ### Un surplus faux peut nourrir tout ce qui pousse à côté
 
 Sur main, la prairie minait son humus (−36 % en quarante ans) et lessivait 85 à
