@@ -718,8 +718,14 @@ export interface TickFluxes {
   boisRetenueMm: number;
   /** terre que le bois couché en travers a retenue derrière lui, kg/m² */
   boisSedimentPiegeKgM2: number;
-  /** azote parti avec la terre, kg/ha */
+  /** azote parti avec la terre, kg/ha — minéral et litière */
   erosionNKgHa: number;
+  /**
+   * azote de l'**humus** parti avec la terre, kg/ha, au C/N du profil (#247). À
+   * part parce que l'humus n'entrait pas au bilan d'azote : sa minéralisation y
+   * comptait comme une entrée.
+   */
+  erosionNHumusKgHa: number;
   /** phosphore assimilable parti avec la terre, kg/ha */
   erosionPKgHa: number;
   /** potassium échangeable parti avec la terre, kg/ha */

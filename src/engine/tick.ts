@@ -783,6 +783,42 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const fluxTranche = new Array<number>(tranches.n).fill(0);
   // L'humus de ce sol : mull par défaut, mor sur un podzol qui le déclare (#289).
   const cnHumus = cnHumusDuProfil(station.profil);
+  /**
+   * **L'humus a un C/N, donc humifier demande de l'azote** (#247). Le carbone qui
+   * passe à l'humus y entrait seul, et l'humus porte son azote implicitement,
+   * au C/N du profil : chaque gramme de carbone humifié créait ~1/11 de gramme
+   * d'azote, que la minéralisation de l'humus rendait ensuite aux plantes.
+   * Environ 27 kg N/ha/an par tonne de carbone de litière décomposée par an,
+   * venus de nulle part. La propriété de conservation ne pouvait pas le voir :
+   * elle comptait la minéralisation de l'humus comme une entrée.
+   *
+   * L'azote de l'humus nouveau est pris là où il est : d'abord dans la litière
+   * qui se décompose — les décomposeurs y ont retenu 0,3/8 g d'azote par gramme
+   * de carbone (C9), plus que les 0,3/11 dont l'humus a besoin, donc le seuil
+   * de la faim d'azote ne bouge pas —, puis dans l'azote minéral : un bois qui
+   * pourrit immobilise l'azote du sol, ce que tout forestier sait. Ce que
+   * l'azote ne permet pas d'humifier part en CO₂. Rend le carbone humifié.
+   */
+  const humifier = (i: number, carboneG: number, depuisLitiere: boolean): number => {
+    if (carboneG <= 0) return 0;
+    const besoin = carboneG / cnHumus;
+    let reste = besoin;
+    if (depuisLitiere) {
+      const pris = Math.min(litterNG[i] ?? 0, reste);
+      litterNG[i] = (litterNG[i] ?? 0) - pris;
+      reste -= pris;
+    }
+    if (reste > 0) {
+      const stock = mineralNG[i] ?? 0;
+      const pris = Math.min(stock, reste);
+      if (stock > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * ((stock - pris) / stock);
+      mineralNG[i] = stock - pris;
+      reste -= pris;
+    }
+    const humifie = (besoin - reste) * cnHumus;
+    humusCG[i] = (humusCG[i] ?? 0) + humifie;
+    return humifie;
+  };
   // Ce que l'humus de chaque cellule a décomposé cette semaine : l'offre de
   // minage des ectomycorhizes s'y lit (#289).
   const humusPerteCG = new Float64Array(nCells);
@@ -1175,8 +1211,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       basesAcideSumEq += tamponne;
       basesAcideNonTamponneSumEq += -effetBases - tamponne;
     }
-    humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
-    emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
+    const humifieLitiere = humifier(i, LITTER_HUMIFICATION * decayedC, true);
+    emittedG += decayedC - humifieLitiere;
     // L'humus est **le** stock d'azote organique du sol : ce qui s'en minéralise
     // part en CO₂ pour le carbone et revient aux plantes pour l'azote, au
     // rapport C/N de l'humus. Les deux cycles ne peuvent plus diverger — et
@@ -3067,8 +3103,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const deadDecayKgC = deadWoodKgC * ((DEADWOOD_DECAY_PER_YEAR / 52) * meanClimate);
   deadWoodKgC -= deadDecayKgC;
   const humifiedPerCellG = (deadDecayKgC * DEADWOOD_HUMIFICATION * 1000) / nCells;
-  for (let i = 0; i < nCells; i++) humusCG[i] = (humusCG[i] ?? 0) + humifiedPerCellG;
-  emittedG += deadDecayKgC * (1 - DEADWOOD_HUMIFICATION) * 1000;
+  let humifieBoisG = 0;
+  for (let i = 0; i < nCells; i++) humifieBoisG += humifier(i, humifiedPerCellG, false);
+  emittedG += deadDecayKgC * 1000 - humifieBoisG;
   // Le bois couché se décompose plus vite que le bois debout, et il fait son
   // humus **sur place** : c'est là toute la différence avec le pool de parcelle.
   for (let i = 0; i < nCells; i++) {
@@ -3076,8 +3113,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (stock <= 0) continue;
     const decompose = stock * ((DECOMPOSITION_AU_SOL_PAR_AN / 52) * meanClimate);
     boisAuSolCG[i] = stock - decompose;
-    humusCG[i] = (humusCG[i] ?? 0) + decompose * DEADWOOD_HUMIFICATION;
-    emittedG += decompose * (1 - DEADWOOD_HUMIFICATION);
+    emittedG += decompose - humifier(i, decompose * DEADWOOD_HUMIFICATION, false);
   }
 
   // ── 6 bis. Le feu (§7.4, ch5) ─────────────────────────────────────────────
@@ -3780,6 +3816,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       boisSedimentPiegeKgM2: boisSedimentPiegeKg / nCells,
       erosionSortieKgM2: erosionSortieKg / nCells,
       erosionNKgHa: ((erosionSortieNminG + erosionSortieNlitG) / nCells) * 10,
+      erosionNHumusKgHa: (erosionSortieHumusCG / cnHumus / nCells) * 10,
       erosionPKgHa: (erosionSortiePG / nCells) * 10,
       erosionKKgHa: (erosionSortieKG / nCells) * 10,
       herbeCouvertureMean: herbeSum / nCells,
