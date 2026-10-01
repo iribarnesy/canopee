@@ -219,9 +219,8 @@ describe("un incendie qui emporte des chandelles", () => {
     };
 
     let feux = 0;
-    let poolAvantFeu = 0;
-    let brulKgC = 0;
     let chandellesEmportees = 0;
+    let boisEmporteKgC = 0;
     for (let i = 0; i < 5 * 52; i++) {
       const w = METEO_SECHE[i % 52];
       if (!w) throw new Error("météo manquante");
@@ -235,9 +234,26 @@ describe("un incendie qui emporte des chandelles", () => {
         // maintenant plusieurs — les chandelles portent le feu, et l'ombre
         // n'amortit plus leur charge (feu.ts) — et le dernier, qui ne trouve
         // plus rien à brûler, écrasait le compte du premier par un zéro.
-        if (feux === 0) poolAvantFeu = avant.carbon.deadWoodKgC;
         feux++;
-        brulKgC += state.carbon.emittedCumKgC - avant.carbon.emittedCumKgC;
+        // **Ce qui a brûlé de bois, compté sur le bois** (#247). L'essai lisait le
+        // bois brûlé sur la hausse des émissions de la semaine du feu, qui compte
+        // aussi la litière brûlée et la respiration du sol. Tant que la lande ne
+        // portait presque pas de litière, l'écart tenait dans la décomposition
+        // des années suivantes ; depuis que la strate fabrique de la matière, la
+        // litière brûlée pèse 343 kg C et l'inégalité tombait de 2 kg C. Le bois
+        // emporté est l'aérien des chandelles qui quittent la carte, borné par
+        // le pool comme dans le moteur.
+        const restants = new Set(state.trees.map((t) => t.id));
+        let aerienKgC = 0;
+        for (const t of avant.trees) {
+          if (restants.has(t.id)) continue;
+          aerienKgC += treeAboveCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
+        }
+        const emporte = Math.min(aerienKgC, avant.carbon.deadWoodKgC);
+        boisEmporteKgC += emporte;
+        // Le pool perd au moins ce bois-là : il ne le garde pas en plus de
+        // l'avoir émis. La décomposition de la semaine ne fait que l'abaisser.
+        expect(state.carbon.deadWoodKgC).toBeLessThan(avant.carbon.deadWoodKgC - emporte + 1e-6);
         chandellesEmportees += avant.trees.length - state.trees.length;
         // Aucun arbre vivant sur la parcelle : le feu ne tue personne, et
         // surtout ne fait rejeter aucun mort.
@@ -251,8 +267,7 @@ describe("un incendie qui emporte des chandelles", () => {
     // fumée a été **pris** au pool, pas émis en plus de lui.
     expect(chandellesEmportees).toBeGreaterThan(60);
     expect(state.trees).toEqual([]);
-    expect(brulKgC).toBeGreaterThan(0);
-    expect(state.carbon.deadWoodKgC).toBeLessThan(poolAvantFeu - brulKgC + 1e-6);
+    expect(boisEmporteKgC).toBeGreaterThan(0);
     // Il reste les racines : le feu emporte l'aérien, pas ce qui est en terre.
     expect(state.carbon.deadWoodKgC).toBeGreaterThan(0);
   });

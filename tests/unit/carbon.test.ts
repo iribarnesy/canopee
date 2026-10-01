@@ -105,8 +105,13 @@ describe("inventaire carbone d'une parcelle", () => {
     const inv = carbonInventory(state, LIMON_RICHE.station.initialSoilCTHa);
     // Le sol reste **le** stock dominant en tempéré (§12).
     expect(inv.humusTHa).toBeGreaterThan(inv.vivantTHa);
-    expect(inv.humusTHa).toBeGreaterThan(50);
-    expect(inv.humusTHa).toBeLessThan(70);
+    // L'humus **tient** sous une prairie plantée, comme celui de Park Grass (#247) :
+    // 73,8 t C/ha à quinze ans pour 74,0 au départ. La fourchette de 50 à 70
+    // écrivait la perte d'une prairie qui minait son humus (−36 % en quarante
+    // ans) faute de rendre ce qu'elle fabrique. Elle est remplacée par celle de
+    // `litiere-herbacee.test.ts`, écrite avant la mesure : ±10 % du départ.
+    const depart = LIMON_RICHE.station.initialSoilCTHa;
+    expect(Math.abs(inv.humusTHa / depart - 1)).toBeLessThan(0.1);
     expect(inv.vivantTHa).toBeGreaterThan(0.5);
     expect(inv.nppCumTHa).toBeGreaterThan(0);
     // Rien vendu ni brûlé dans ce run.

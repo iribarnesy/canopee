@@ -157,10 +157,24 @@ describe("concurrence herbacée sur les jeunes plants", () => {
   const pauvre = gain(LANDE_SECHE, "pinus_sylvestris");
   const riche = gain(LIMON_RICHE, "pinus_sylvestris");
 
-  it("faucher ne NUIT pas, et le sens reste le bon sur sol pauvre", () => {
-    // Le signe, et rien de plus : retirer un concurrent ne coûte jamais au
-    // plant. C'est tout ce que le moteur soutient aujourd'hui.
-    expect(pauvre.rapport).toBeGreaterThan(1);
+  it("faucher n'est pas désherber : sur la lande sèche, la fauche ne libère pas le plant", () => {
+    // **L'essai disait « faucher ne nuit pas », et la fauche coûte maintenant
+    // 8 % au pin sur la lande** (#247) : 0,917 à la graine 3, 0,918 à la graine
+    // 7, prédit sous 1 avant la seconde mesure. La loi du minimum le dit. Le pin
+    // fauché a plus d'azote (0,98 contre 0,96) et moins d'eau (0,70-0,76 contre
+    // 0,72-0,79), et sur un sable sec c'est l'eau qui commande. Le sol découvert
+    // et la nappe de tontes lui en laissent moins ; emportées, les tontes ne
+    // rendent qu'un quart de l'écart (2,65 m contre 2,59, et 2,83 sans fauche).
+    // Tant que le frein de l'azote bridait la demande du pin partout, le petit
+    // gain d'azote de la fauche suffisait à faire passer l'essai.
+    //
+    // **C'est le constat des essais de la Forestry Commission** : couper l'herbe
+    // ne retire pas le concurrent, elle repousse et garde son système
+    // racinaire ; la fauche n'améliore pas la reprise et peut la dégrader, seuls
+    // le désherbage chimique et le paillage la libèrent (Davies 1985,
+    // *Forestry* 58 : 167 ; Willoughby et al. 2009, *Reducing pesticide use in
+    // forestry*). Le moteur n'a ni l'un ni l'autre comme geste.
+    expect(pauvre.rapport).toBeLessThan(1.05);
   });
 
   it("sur sol riche, l'entretien ne rapporte rien — et ça, c'est toujours vrai", () => {
@@ -175,18 +189,14 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     expect(riche.sans).toBeGreaterThan(pauvre.sans);
   });
 
-  it("le contraste pauvre/riche garde son sens, mais il ne fait plus que deux points", () => {
-    // **l'écart était la propriété, et il l'est resté — c'est son amplitude qui
-    // était fausse.** Trente points mesurés, vingt exigés ; il en reste deux.
-    // Le sol pauvre décide encore, le sol riche ne décide toujours pas, mais un
-    // gestionnaire qui lirait ce moteur conclurait que l'entretien du pied est
-    // accessoire — et ce serait faux.
-    expect(pauvre.rapport - riche.rapport).toBeGreaterThan(0);
-    // Et on épingle le **plafond** plutôt que le plancher, ce qui est l'inverse de
-    // ce que ce banc faisait : tant que l'écart reste sous dix points, le
-    // moteur n'a pas retrouvé le fait, et l'issue reste ouverte. Le jour où il
-    // le dépassera, cette ligne tombera — et ce sera la bonne nouvelle.
-    expect(pauvre.rapport - riche.rapport).toBeLessThan(0.1);
+  it("la fauche ne fait pas dix points d'écart entre sol pauvre et sol riche", () => {
+    // **Le sens que cet essai gardait s'est retourné** (#247) : la fauche ne
+    // libérait le plant sur sol pauvre que par un gain d'azote, et sur la lande
+    // c'est l'eau qui commande (voir l'essai au-dessus). La ligne « pauvre
+    // gagne plus que riche » est retirée ; le plafond, lui, tient : 0,917 contre
+    // ~1,00, huit points. Ce qui reste ouvert (#210) est la reprise d'un plant
+    // **désherbé**, et le moteur n'a pas le geste qui la mesurerait.
+    expect(Math.abs(pauvre.rapport - riche.rapport)).toBeLessThan(0.1);
   });
 });
 
