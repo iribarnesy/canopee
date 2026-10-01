@@ -61,7 +61,36 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la perte d'humus au labour et le grain lu sur pied, #247)
+## Ce que le dernier lot a appris (l'azote de l'humus, #247)
+
+Retirer une règle spéciale (la litière minéralisée d'un coup au labour) a fait
+sortir C16 de sa bande, et la cause était ailleurs : l'humification créait de
+l'azote depuis toujours.
+
+### Une propriété qui compte un stock comme une source ne voit rien dedans
+
+Le bilan d'azote du tick comptait la minéralisation de l'humus comme une
+entrée, et l'humus hors du stock : tout ce qui se créait dans l'humus passait
+sans bruit. Étendue à l'humus, la même propriété échoue sur les quatre
+stations du moteur d'avant. Avant de croire qu'un bilan ferme, vérifier qu'il
+compte tous les compartiments que le flux traverse.
+
+### Retirer une erreur peut en démasquer une autre
+
+La bouffée de litière d'octobre, lessivée aussitôt, effaçait l'azote que
+l'humification inventait. Corrigée seule, elle faisait sortir C16 de la bande
+de Broadbalk ; corrigées ensemble, les rendements ne bougent presque pas. Quand
+une correction juste casse une ancre, chercher l'erreur qu'elle compensait
+avant de toucher l'ancre.
+
+### Un commentaire dit l'intention, le code dit ce qui arrive
+
+« À défaut d'azote, la décomposition ralentit, elle ne s'endette pas » : le
+code ne faisait que borner le transfert, et une litière pauvre se vidait
+jusqu'à un C/N de 43 000 dès que la strate prélevait vraiment. Relire le code
+sous un commentaire qui affirme un mécanisme.
+
+## Ce qu'un lot plus ancien a appris (la perte d'humus au labour et le grain lu sur pied, #247)
 
 `LABOUR_PERTE_HUMUS` valait 5 % « à calibrer », sans source, et c'est lui qui
 vidait la surface en février. Il vaut 1 %, calé sur West et Post (2002). Et
