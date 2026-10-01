@@ -411,7 +411,19 @@ describe("ce que le feu consume et qui était déjà mort", () => {
         // chandelle consumée par le feu, soit une chandelle qui s'est écroulée
         // d'elle-même — et le rendu a une animation pour chacune. Avant ce
         // lot, la première liste n'existait pas et le compte ne tombait pas.
-        const nommes = new Set([...consumees.map((c) => c.id), ...r.chutes.map((c) => c.id)]);
+        //
+        // **Et une troisième porte, que l'essai ne voyait pas** (#247) : un
+        // arbre vivant qu'une chandelle écrase en tombant quitte la parcelle
+        // dans le même tick, son bois couché au sol. Il est nommé dans
+        // `morts`, cause `ecrasement`, et le rendu a sa teinte
+        // (`changements.ts`). Graine 2, an 31,6 : une chute écrase deux ajoncs
+        // la semaine même de l'incendie, et l'essai les croyait effacés.
+        const ecrases = r.morts.filter((m) => m.cause === "ecrasement").map((m) => m.id);
+        const nommes = new Set([
+          ...consumees.map((c) => c.id),
+          ...r.chutes.map((c) => c.id),
+          ...ecrases,
+        ]);
         for (const id of avant.keys()) {
           if (!apres.has(id)) expect(nommes.has(id)).toBe(true);
         }
