@@ -16,6 +16,7 @@ import {
   acideTamponnable,
   alterationBasesProfondeEqM2Semaine,
   alterationBasesSurfaceEqM2Semaine,
+  basesBoisEq,
   CALCIUM_NEUTRE_MG_G,
   capaciteEchangeEqM2,
   capaciteEchangeProfondeCmolKg,
@@ -898,6 +899,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let basesPreleveSumEq = 0;
   let basesApportProfondSumEq = 0;
   let basesExportSumEq = 0;
+  // Les bases que le bois neuf prend à chaque pool, et ce que les morts rendent
+  // à la surface (#247).
+  let basesBoisSurfaceSumEq = 0;
+  let basesBoisProfondSumEq = 0;
+  let basesRetourBoisSumEq = 0;
   let litterDecaySumG = 0;
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
@@ -2263,6 +2269,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // (`treeNitrogenNeedGWeek`) couvre le feuillage et le bois neuf. À court,
     // le bois est simplement plus pauvre. Le reste va au feuillage.
     let azoteMisAuBois = 0;
+    let basesMisAuBois = 0;
     // Ce que le bois prend à l'azote acquis pour le feuillage.
     let prisAuFeuillage = 0;
     if (tree.alive && next.heightM > tree.heightM) {
@@ -2276,6 +2283,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // de son bois en plus de celui de son feuillage.
       azoteMisAuBois = espece.azote.fixateur ? besoinBois : Math.min(acquired, besoinBois);
       prisAuFeuillage = espece.azote.fixateur ? 0 : azoteMisAuBois;
+      // **Et il y met des bases** (#247), prises sous son disque racinaire, au
+      // prorata de ses racines en surface et au fond. Un pool vide ne s'endette
+      // pas : le bois est alors plus pauvre.
+      const besoinBases = basesBoisEq(boisNeufKgC * 1000, espece.litiere.calciumMgG);
+      if (besoinBases > 0) {
+        const partSurface = fractionsRacinairesParHorizon(epaisseurs, tree.rootDepthCm)[0] ?? 1;
+        const cellules: number[] = [];
+        forEachDiscCell(dims, tree.x, tree.y, rootRadiusM(espece, tree.heightM), (i) => {
+          cellules.push(i);
+        });
+        const parCellule = besoinBases / Math.max(1, cellules.length);
+        for (const i of cellules) {
+          const enSurface = Math.min(basesEq[i] ?? 0, parCellule * partSurface);
+          const auFond = Math.min(basesProfondEq[i] ?? 0, parCellule * (1 - partSurface));
+          basesEq[i] = (basesEq[i] ?? 0) - enSurface;
+          basesProfondEq[i] = (basesProfondEq[i] ?? 0) - auFond;
+          basesBoisSurfaceSumEq += enSurface;
+          basesBoisProfondSumEq += auFond;
+          basesMisAuBois += enSurface + auFond;
+        }
+      }
     }
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
@@ -2318,6 +2346,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       uptakeYearG: next.uptakeYearG + acquired - prisAuFeuillage,
       reserveAzoteG: Math.max(0, (tree.reserveAzoteG ?? 0) - (tirageReserveG[t] ?? 0)),
       azoteBoisG: (tree.azoteBoisG ?? 0) + azoteMisAuBois,
+      basesBoisEq: (tree.basesBoisEq ?? 0) + basesMisAuBois,
     };
   });
 
@@ -2942,12 +2971,29 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     else litterfallSumG += amountG;
   };
   /**
+   * Rendre à la surface, sous le houppier, des bases que le bois portait : celles
+   * d'un arbre mort, ou les cendres d'un aérien brûlé (#247).
+   */
+  const rendreBases = (tree: TreeState, eq: number) => {
+    if (eq <= 0) return;
+    const espece = getEspece(tree.especeId);
+    const crownR = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
+    const cellules: number[] = [];
+    forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
+      cellules.push(i);
+    });
+    const part = eq / Math.max(1, cellules.length);
+    for (const i of cellules) basesEq[i] = (basesEq[i] ?? 0) + part;
+    if (cellules.length > 0) basesRetourBoisSumEq += eq;
+  };
+  /**
    * Ce qu'un arbre qui meurt rend au sol : ses feuilles entières, sans rien
    * résorber, plus sa réserve et l'azote de son bois (#247).
    */
   const rendreAuSol = (tree: TreeState) => {
     depositLitter(tree, tree.uptakeYearG);
     depositLitter(tree, (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0), false);
+    rendreBases(tree, tree.basesBoisEq ?? 0);
   };
 
   // La chute des feuilles s'étale sur un mois au lieu de tomber en une
@@ -3097,6 +3143,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         uptakeYearG: 0,
         reserveAzoteG: 0,
         azoteBoisG: 0,
+        basesBoisEq: 0,
       });
       continue;
     }
@@ -3362,6 +3409,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
               HAUTEUR_REJET_M,
             );
           }
+          const partRestante =
+            treeTotalCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M) /
+            Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM));
+          rendreBases(tree, (tree.basesBoisEq ?? 0) * (1 - partRestante));
           apresFeu.push({
             ...tree,
             heightM: HAUTEUR_REJET_M,
@@ -3372,11 +3423,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             fruitProgress: 0,
             uptakeYearG: 0,
             // Le bois qui a brûlé emporte son azote en fumée ; la souche garde
-            // le sien, au prorata du carbone qui reste.
-            azoteBoisG:
-              ((tree.azoteBoisG ?? 0) *
-                treeTotalCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M)) /
-              Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM)),
+            // le sien, au prorata du carbone qui reste. Ses bases, elles, ne
+            // brûlent pas : elles retombent en cendres (#247).
+            azoteBoisG: (tree.azoteBoisG ?? 0) * partRestante,
+            basesBoisEq: (tree.basesBoisEq ?? 0) * partRestante,
             hauteurElagueeM: 0,
             pousseTendreM: 0,
             vigueur: 1,
@@ -3959,6 +4009,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       basesPreleveEqHa: (basesPreleveSumEq / nCells) * 10_000,
       basesApportProfondEqHa: (basesApportProfondSumEq / nCells) * 10_000,
       basesExportEqHa: (basesExportSumEq / nCells) * 10_000,
+      basesBoisEqHa: ((basesRetourBoisSumEq - basesBoisSurfaceSumEq) / nCells) * 10_000,
+      basesBoisProfondEqHa: (basesBoisProfondSumEq / nCells) * 10_000,
       basesAcideNonTamponneEqHa: (basesAcideNonTamponneSumEq / nCells) * 10_000,
       saturationMoyenne:
         cecSurfaceEq > 0 ? basesEq.reduce((a, b) => a + b, 0) / nCells / cecSurfaceEq : 0,

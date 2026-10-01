@@ -681,6 +681,18 @@ export interface TickFluxes {
    */
   basesPreleveEqHa: number;
   /**
+   * **Ce que le bois fait au budget de surface**, eq/ha (#247) : ce que les morts
+   * rendent, moins ce que le bois neuf prend à l'horizon de surface. Négatif
+   * tant qu'un peuplement pousse. Avec les quatre termes du budget de surface,
+   * la variation de `basesEq` vaut leur somme.
+   */
+  basesBoisEqHa: number;
+  /**
+   * Ce que le bois neuf prend au **sous-sol**, eq/ha (#247). Il s'ajoute à la pompe
+   * dans le budget du pool profond.
+   */
+  basesBoisProfondEqHa: number;
+  /**
    * **le budget du sous-sol**, eq/ha : ce qu'il reçoit (son altération, plus ce que
    * la surface lui a lessivé) et ce qui **quitte** le profil par le bas. Avec la
    * pompe ci-dessus, la variation de `basesProfondEq` doit valoir

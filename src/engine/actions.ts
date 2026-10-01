@@ -1179,12 +1179,17 @@ function applyPlanter(
 
 /**
  * L'azote du bois qui reste à un arbre rabattu à `hauteurM`, au prorata de son
- * carbone (#247). Ce qui part avec le bois coupé est exporté.
+ * carbone (#247). Ce qui part avec le bois coupé est exporté, et ses bases avec.
  */
 function azoteBoisRestant(tree: TreeState, espece: EspeceV0, hauteurM: number): number {
+  return (tree.azoteBoisG ?? 0) * partBoisRestant(tree, espece, hauteurM);
+}
+
+/** Part du bois qui reste à un arbre rabattu à `hauteurM`, au prorata du carbone. */
+function partBoisRestant(tree: TreeState, espece: EspeceV0, hauteurM: number): number {
   const avant = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
   if (avant <= 0) return 0;
-  return ((tree.azoteBoisG ?? 0) * treeTotalCarbonKg(espece, tree.diametreCm, hauteurM)) / avant;
+  return treeTotalCarbonKg(espece, tree.diametreCm, hauteurM) / avant;
 }
 
 function applyCouper(
@@ -1198,6 +1203,7 @@ function applyCouper(
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
   let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC } = state.carbon;
+  const basesEq = state.soil.basesEq.slice();
   let volumeVenduAnneeM3 = state.economy.volumeVenduAnneeM3;
   let stockBrf = state.stockBrf;
   const coupes: number[] = [];
@@ -1274,6 +1280,12 @@ function applyCouper(
     const azoteAerienG = (dejaEnBoisMort ? 0 : tree.uptakeYearG) + partAerienne * azotePerenneG;
     const azoteRacinesG = (1 - partAerienne) * azotePerenneG;
     const souche = cellIndexAt(dims, tree.x, tree.y);
+    // Les bases du bois (#247) : vendu, l'aérien les emporte ; dans les autres
+    // devenirs elles restent à la souche, racines comprises. Le broyat ne les
+    // emporte pas avec lui : le tas ne compte que son carbone et son azote.
+    const basesBois = dejaEnBoisMort ? 0 : (tree.basesBoisEq ?? 0);
+    const basesRestantes = action.devenir === "vendre" ? (1 - partAerienne) * basesBois : basesBois;
+    basesEq[souche] = (basesEq[souche] ?? 0) + basesRestantes;
     // Les racines restent dans les quatre devenirs : leur azote va à la litière
     // de la souche, sans carbone (le leur est déjà au bois mort).
     if (azoteRacinesG > 0) {
@@ -1472,7 +1484,7 @@ function applyCouper(
     state: {
       ...state,
       trees,
-      soil: { ...state.soil, litterNG, litterCG, litterK, boisAuSolCG, boisEnTraversPart },
+      soil: { ...state.soil, litterNG, litterCG, litterK, basesEq, boisAuSolCG, boisEnTraversPart },
       stockBrf,
       carbon: {
         ...state.carbon,
@@ -2249,6 +2261,7 @@ function applyTrogner(
       heightM: hauteurTete,
       teteTrogneM: hauteurTete,
       azoteBoisG: azoteBoisRestant(tree, espece, hauteurTete),
+      basesBoisEq: (tree.basesBoisEq ?? 0) * partBoisRestant(tree, espece, hauteurTete),
       recepages: tree.recepages + 1,
       hauteurElagueeM: Math.min(tree.hauteurElagueeM, hauteurTete),
       // La tête est rabattue : ce qui repartira part d'elle, et une base de
@@ -2576,6 +2589,7 @@ function applyReceper(
       uptakeYearG: 0,
       // La tige emporte l'azote de son bois ; la souche garde le sien (#247).
       azoteBoisG: azoteBoisRestant(tree, espece, RECEPAGE_HAUTEUR_M),
+      basesBoisEq: (tree.basesBoisEq ?? 0) * partBoisRestant(tree, espece, RECEPAGE_HAUTEUR_M),
       recepages: tree.recepages + 1,
     };
   }

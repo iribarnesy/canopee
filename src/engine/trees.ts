@@ -170,6 +170,13 @@ export interface TreeState {
    * coupe. Absent sur une sauvegarde d'avant, il vaut zéro.
    */
   azoteBoisG?: number;
+  /**
+   * **Bases du bois**, eq (#247) : le calcium que l'arbre a mis dans son bois
+   * neuf (`basesBoisEq`, bases.ts), pris sous son disque racinaire en surface
+   * et au fond, et rendu à la surface à sa mort. Absent sur une sauvegarde
+   * d'avant, il vaut zéro.
+   */
+  basesBoisEq?: number;
   /** fruits mûrs en attente de récolte, kg (perdus après la fenêtre, §10) */
   fruitsKg: number;
   /** avancement de la croissance des fruits de l'année ∈ [0,1] */

@@ -136,9 +136,18 @@ function parcelle(sc: StationClimat, especeId: string | null, ans: number) {
     const r = tick(s, w);
     s = r.state;
     const f = r.fluxes;
+    // Le bois est un terme de chaque budget (#247) : il prend aux deux pools en
+    // poussant et rend à la surface en mourant. Ce n'est pas la pompe.
     budgetSurface +=
-      (f.basesApportEqHa + f.basesLitiereEqHa - f.basesLessiveEqHa - f.basesAcideEqHa) / 10_000;
-    budgetProfond += (f.basesApportProfondEqHa - f.basesPreleveEqHa - f.basesExportEqHa) / 10_000;
+      (f.basesApportEqHa +
+        f.basesLitiereEqHa +
+        f.basesBoisEqHa -
+        f.basesLessiveEqHa -
+        f.basesAcideEqHa) /
+      10_000;
+    budgetProfond +=
+      (f.basesApportProfondEqHa - f.basesPreleveEqHa - f.basesBoisProfondEqHa - f.basesExportEqHa) /
+      10_000;
     descendu += f.basesLessiveEqHa / 10_000;
     recuAuFond += f.basesApportProfondEqHa / 10_000;
     preleve += f.basesPreleveEqHa / 10_000;
@@ -168,6 +177,8 @@ describe("les deux pools se referment, et la pompe ne peut pas toucher la surfac
     // budget se referme **exactement** sur ses quatre termes d'origine : apport,
     // litière, lessivage, charge acide. Si la pompe touchait la surface d'un
     // millionième, cette égalité tomberait — sur une parcelle qui pompe fort.
+    // Un cinquième terme s'y ajoute depuis #247, et ce n'est pas la pompe : le
+    // bois, qui prend en poussant et rend en mourant.
     const r = parcelle(LIMON_ACIDE, "castanea_sativa", 30);
     expect(r.preleve).toBeGreaterThan(0);
     expect(r.surface - r.surface0).toBeCloseTo(r.budgetSurface, 8);
@@ -206,6 +217,15 @@ describe("C15 : la profondeur s'appauvrit sous un peuplement, et pas sans lui", 
     // Le critère lui-même. Même station, même graine, même météo : seule la
     // présence du peuplement change, et elle renverse le signe. Relevé sur
     // cinquante ans : 7,000 → 6,976 sous hêtraie contre 7,018 au sol nu.
+    //
+    // **Ce relevé a tenu pour deux raisons fausses qui s'annulaient, puis pour la
+    // bonne** (#247). La pompe d'avant lisait une litière deux fois trop lourde,
+    // celle d'un arbre dont tout l'azote finissait dans les feuilles. Avec la
+    // litière ramenée à ~4 à 5 t de matière sèche, le fond finissait à 7,004 :
+    // la pompe seule ne descend plus sous le départ. Le terme qui manquait est
+    // celui qui domine l'acidification sous forêt, les bases que le **bois**
+    // stocke en poussant (`basesBoisEq`). Relevé avec lui : **6,976 sous
+    // hêtraie, 7,013 au sol nu** (le recrû y fait aussi un peu de bois).
     const hetre = parcelle(LIMON_RICHE, "fagus_sylvatica", 50);
     const nu = parcelle(LIMON_RICHE, null, 50);
     expect(hetre.preleve).toBeGreaterThan(0);

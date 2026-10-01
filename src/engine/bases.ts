@@ -54,6 +54,11 @@
  * de décider ce qu'une racine ressent quand ses deux horizons diffèrent, ce qui
  * est une affirmation distincte et qui a besoin de sa propre mesure.
  *
+ * **Le bois, lui, est suivi** (#247) : ce qu'un arbre met dans son bois ne revient
+ * qu'à sa mort, et c'est le terme qui domine l'acidification sous une forêt qui
+ * pousse (`basesBoisEq`). Il prend aux deux pools au prorata des racines, et rend
+ * à la surface.
+ *
  * **La boucle interne prélèvement ↔ litière n'est pas suivie en surface.** Les
  * bases qui montent dans les feuilles et redescendent à l'automne font un flux
  * plus gros que l'altération, mais tant qu'elles partent et reviennent au même
@@ -448,6 +453,33 @@ export function acideTamponnable(stockEq: number, chargeAcideEq: number): number
  */
 export function basesLitiereEq(carboneGM2: number, calciumMgG: number): number {
   return ((carboneGM2 / PART_C_LITIERE) * (calciumMgG / 1000)) / G_CALCIUM_PAR_EQ;
+}
+
+/**
+ * Teneur en bases du **bois**, rapportée au calcium de la litière de la même
+ * espèce (#247).
+ *
+ * Un arbre qui pousse met des bases dans son bois et ne les rend qu'à sa mort.
+ * C'est le terme qui domine l'acidification d'un sol sous forêt en croissance,
+ * plus que la boucle feuille → litière qui revient chaque automne. Le calcium
+ * n'est presque pas résorbé : la litière en porte autant que la feuille
+ * verte, et c'est à elle qu'on rapporte le bois.
+ *
+ * - Lira-Martins et al. 2019 (*Frontiers in Plant Science*) : le calcium du bois
+ *   de branche vaut 17 à 42 % du calcium foliaire, selon le peuplement.
+ * - Pineraies mûres de Jagodziński et al. 2018 (*Forests* 9:593), avec les
+ *   masses de Węgiel et Polowy 2020 (*Forests* 11:240) : le bois aérien porte
+ *   de 170 à 220 kg de calcium sur 147 t, soit 1,2 à 1,5 mg/g, contre 3,8 mg/g
+ *   dans la litière de pin de l'atlas, d'où un rapport de 0,30 à 0,39.
+ *
+ * 0,3 est pris dans le bas des deux *(à confirmer : deux sources, dont des
+ * branches tropicales)*.
+ */
+export const BASES_BOIS_SUR_LITIERE = 0.3;
+
+/** Les bases que porte un bois de `carboneG` grammes de carbone, eq. */
+export function basesBoisEq(carboneG: number, calciumLitiereMgG: number): number {
+  return basesLitiereEq(carboneG, BASES_BOIS_SUR_LITIERE * calciumLitiereMgG);
 }
 
 /**
