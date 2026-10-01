@@ -83,6 +83,23 @@ tout le reste : il ne bougeait ni avec la lumière, ni avec la fertilisation,
 ni avec l'âge des tissus. Remplacer un flux calé par la loi qui le produit fait
 bouger ensemble ce qui doit bouger ensemble.
 
+### Le chiffre qu'on refuse d'écrire désigne le mécanisme qui manque
+
+Le besoin du blé sortait à 2,4-2,5 kg N par quintal, contre 3 chez Arvalis.
+L'écrire sur la fiche aurait fermé l'écart sans rien apprendre. Il désignait
+une cause : la racine du blé ne lisait que la surface, et 123 kg N/ha/an
+filaient dessous. Le lot B (chaque plante puise là où sont ses racines) le
+fait tomber à 2,99 sans qu'aucun nombre du blé ait bougé, et Broadbalk sans
+apport se pose sur son ~1 t/ha.
+
+### Une complémentarité attendue peut devenir une concurrence
+
+Le lot B devait rendre au noyer le nitrate lessivé sous le blé, le « filet de
+sécurité » de l'agroforesterie. Mais le blé descend aussi : plus rien n'est
+lessivé, et dans une allée non fertilisée le noyer lui dispute l'azote du
+fond (0,52 à l'an 33 au lieu de 0,56). Un mécanisme qui donne accès à une
+ressource le donne à tous ceux dont les racines y arrivent.
+
 ### Un surplus faux peut nourrir tout ce qui pousse à côté
 
 Sur main, la prairie minait son humus (−36 % en quarante ans) et lessivait 85 à

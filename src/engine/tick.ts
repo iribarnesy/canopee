@@ -304,6 +304,15 @@ const MULCH_MAX_EFFECT = 0.5;
 const PLAFOND_ENERGIE = 1.15;
 
 const MULCH_FULL_CG = 250;
+/**
+ * Seuil de compensation du prélèvement d'eau, ωc ∈ (0, 1] (Jarvis 1989 ;
+ * Šimůnek et Hopmans 2009). Tant que l'indice de stress pondéré par les racines
+ * reste au-dessus, l'arbre reporte sur les horizons humides ce que les horizons
+ * secs ne donnent plus, et prend toute sa demande ; en dessous, il en prend
+ * ω / ωc. ωc = 1 serait le moteur d'avant, sans compensation *(0,5 : valeur
+ * courante dans la littérature des modèles de prélèvement, à confirmer)*.
+ */
+const OMEGA_CRITIQUE = 0.5;
 const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
 const RECRUITMENT_WEEK = 14;
@@ -1610,6 +1619,30 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const phMean = new Array<number>(nTrees).fill(7);
   const rootFractions = new Array<number[]>(nTrees);
   const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
+  /**
+   * **Le prélèvement compensatoire** (Jarvis 1989 ; Šimůnek et Hopmans 2009) :
+   * un arbre dont la surface sèche reporte sa demande sur les horizons encore
+   * humides, au lieu de ne prendre dans chacun que sa part de racines. La
+   * disponibilité de chaque horizon (`drynessFactor`) est relevée ici, avant
+   * tout prélèvement, et relue à l'identique au service (#115).
+   */
+  const dispoEau = new Float64Array(nCells * nH);
+  for (let i = 0; i < nCells; i++) {
+    for (let h = 0; h < nH; h++) {
+      dispoEau[i * nH + h] = drynessFactor(waterMm[i * nH + h] ?? 0, horizonsHydro[h]?.ruMm ?? 0);
+    }
+  }
+  /**
+   * Le facteur qui répartit la demande d'un arbre entre horizons dans une
+   * cellule : 1 / max(ω, ωc), ω étant l'indice de stress pondéré par ses racines.
+   * La demande de l'horizon h vaut W f_h / max(ω, ωc), et le service la rabat
+   * de la disponibilité de l'horizon : le servi total vaut W ω / max(ω, ωc).
+   */
+  const reportCompensatoire = (i: number, fractions: readonly number[]): number => {
+    let omega = 0;
+    for (let h = 0; h < nH; h++) omega += (fractions[h] ?? 0) * (dispoEau[i * nH + h] ?? 0);
+    return 1 / Math.max(omega, OMEGA_CRITIQUE);
+  };
   const cellNWanted = new Array<number>(nCells).fill(0);
   /**
    * **Le partage d'un azote rare** (#247) : la demande et la capacité d'extraction
@@ -1725,9 +1758,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const capPerCell = capG / n;
     const wPerCell = (waterDemandL[t] ?? 0) / n;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
+      const report = reportCompensatoire(i, fractions);
       for (let h = 0; h < nH; h++) {
         cellWaterDemand[i * nH + h] =
-          (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0);
+          (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0) * report;
       }
       // **Le frein pèse sur le partage, pas sur la demande** (#247). L'arbre vit
       // du flux de minéralisation qu'il intercepte (nitrogen.ts) : seul dans
@@ -2151,8 +2185,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     let gotN = 0;
 
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
+      const report = reportCompensatoire(i, fractions);
       for (let h = 0; h < nH; h++) {
-        gotW += wPerCell * (fractions[h] ?? 0) * (waterServedRatio[i * nH + h] ?? 0);
+        gotW += wPerCell * (fractions[h] ?? 0) * report * (waterServedRatio[i * nH + h] ?? 0);
       }
       // La **même** demande qu'à la passe de demande, et c'est tout le correctif
       // de #115 : servir sur une demande plus petite que celle qui a vidé la
