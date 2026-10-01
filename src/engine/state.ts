@@ -330,6 +330,17 @@ export interface SoilState {
   litterNG: GrilleLongue;
   /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
   litterCG: GrilleLongue;
+  /**
+   * Part de `litterCG` qui est **enfouie**, g C/m² — toujours au plus `litterCG`.
+   *
+   * Une litière enfouie par la charrue ou le boutis se décompose comme les
+   * autres, selon son C/N (C9), mais elle ne couvre plus le sol : ni paillis
+   * contre l'évaporation, ni frein au ruissellement. C'est la seule chose que
+   * l'enfouissement change, et c'est pourquoi il ne porte pas de règle de
+   * décomposition à lui (#247). Elle décroît avec la décomposition de la
+   * litière, dans la même proportion.
+   */
+  litiereEnfouieCG: GrilleLongue;
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: GrilleLongue;
   /**
@@ -816,6 +827,7 @@ export function createGameState(
       nitrateTranchesG: nitrateTranchesInitiales(station, n),
       litterNG: new Float64Array(n),
       litterCG: new Float64Array(n),
+      litiereEnfouieCG: new Float64Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Float64Array(n),
       boisEnTraversPart: new Float32Array(n),

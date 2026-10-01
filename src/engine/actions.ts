@@ -261,6 +261,12 @@ export const LABOUR_EUR_M2 = 0.02;
  * labour et semis direct sur 0-40 cm *(à confirmer)*.
  */
 export const LABOUR_PERTE_HUMUS = 0.01;
+/**
+ * Part de la litière au sol que la charrue enfouit. Une charrue à versoir
+ * laisse 0 à 10 % des résidus en surface (NRCS, norme 345, données
+ * d'enfouissement des résidus) : 95 %, le milieu de la fourchette.
+ */
+export const LABOUR_ENFOUISSEMENT = 0.95;
 /** Hauteur en dessous de laquelle un plant ne survit pas au passage de l'outil, m. */
 export const LABOUR_HAUTEUR_DETRUITE_M = 1.2;
 /** Hauteur de tête de trogne par défaut : au-dessus de la dent du bétail. */
@@ -2308,6 +2314,7 @@ function applyLabourer(
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
+  const litiereEnfouieCG = state.soil.litiereEnfouieCG.slice();
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
     arbusculaire: state.soil.mycorhizes.arbusculaire.slice(),
@@ -2346,7 +2353,10 @@ function applyLabourer(
       // sol le temps que les micro-organismes la digèrent (Recous et al. 1995,
       // azote 15 ; Mary et al. 1996). C'est exactement ce que la décomposition
       // du tick fait déjà selon le C/N (seuil vers 27, C9) : la litière reste
-      // où elle est, et la règle commune décide.
+      // où elle est, et la règle commune décide. Ce que le soc change est ce
+      // qu'elle **couvre** : enfouie, elle ne paille plus le sol.
+      const auSol = Math.max(0, (state.soil.litterCG[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
+      litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) + auSol * LABOUR_ENFOUISSEMENT;
       // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
       // charrue est le seul geste du jeu qui aille sous terre : elle retourne
       // les bulbes et tranche les rhizomes, donc l'emprise part avec le
@@ -2382,6 +2392,7 @@ function applyLabourer(
         herbeEmprise,
         herbeFeuillage,
         herbeBiomasse,
+        litiereEnfouieCG,
         mycorhizes,
         tassement,
       },

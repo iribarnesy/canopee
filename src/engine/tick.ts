@@ -792,6 +792,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // — un sol tassé infiltre moins et ruisselle plus.
   const tassement = state.soil.tassement.slice();
   const litterCG = state.soil.litterCG.slice();
+  const litiereEnfouieCG = state.soil.litiereEnfouieCG.slice();
+  /** La litière qui couvre le sol : ce qui n'a pas été enfoui (#247). */
+  const litiereAuSolCG = (i: number) =>
+    Math.max(0, (litterCG[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
   const humusCG = state.soil.humusCG.slice();
   const phosphoreG = state.soil.phosphoreG.slice();
   const phosphoreFixeG = state.soil.phosphoreFixeG.slice();
@@ -1032,7 +1036,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // freinent — c'est là que « couvrir le sol » paie en eau.
     const couvertureSol = Math.min(
       1,
-      (herbeCouverture[i] ?? 0) + Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG),
+      (herbeCouverture[i] ?? 0) + Math.min(0.6, litiereAuSolCG(i) / MULCH_FULL_CG),
     );
     const saturationSurface = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     const amontIci = apportCelluleMm(i);
@@ -1057,7 +1061,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           etpMm *
           SOIL_EVAP_FRACTION *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
-          (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
+          (1 - MULCH_MAX_EFFECT * Math.min(1, litiereAuSolCG(i) / MULCH_FULL_CG)),
         // La remontée capillaire **puise** dans la nappe : ce n'est plus un apport
         // venu de nulle part, c'est un transfert.
         nappeMm: Number.isFinite(nappeCm[i] ?? Number.POSITIVE_INFINITY)
@@ -1143,6 +1147,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
     litterNG[i] = (litterNG[i] ?? 0) - transfere;
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
+    // L'enfouie se décompose au même rythme que le reste : enfouir ne change
+    // que ce que la litière couvre, pas ce qu'elle fait (#247).
+    litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) * (1 - decayFraction);
     // ── Ce que cette litière-là fait au complexe d'échange (bases.ts) ───────
     // La décomposition produit des acides organiques ; les bases de la litière
     // en neutralisent une part. Au-dessus du seuil de calcium elle rend au
@@ -1313,7 +1320,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     Math.min(
       1,
       (herbeCouverture[i] ?? 0) +
-        Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG) +
+        Math.min(0.6, litiereAuSolCG(i) / MULCH_FULL_CG) +
         couvertureDuBoisAuSol(longueurDeTroncM(state.soil.boisAuSolCG[i] ?? 0)),
     );
   // Le paillage ci-dessus se moque de l'orientation ; le **barrage**, non. Un
@@ -1380,6 +1387,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const dK = (potassiumG[i] ?? 0) * emporte;
       humusCG[i] = (humusCG[i] ?? 0) - dHumus;
       litterCG[i] = (litterCG[i] ?? 0) - dLitiere;
+      // La terre emportée emporte aussi ce qu'elle a enfoui.
+      litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) * (1 - emporte);
       mineralNG[i] = (mineralNG[i] ?? 0) - dNmin;
       // Le sédiment emporte les deux formes dans la même proportion (#280).
       ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * (1 - emporte);
@@ -2619,16 +2628,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
       cellulesRetournees++;
       retourneesCetteSemaine.add(i);
-      // La litière est **enfouie** : elle ne disparaît pas, elle passe au pool
-      // lent. Un boutis est un enfouissement, pas une combustion.
-      const litiereC = (litterCG[i] ?? 0) * LITIERE_ENFOUIE;
-      const litiereN = (litterNG[i] ?? 0) * LITIERE_ENFOUIE;
-      litterCG[i] = (litterCG[i] ?? 0) - litiereC;
-      litterNG[i] = (litterNG[i] ?? 0) - litiereN;
-      humusCG[i] = (humusCG[i] ?? 0) + litiereC;
-      mineralNG[i] = (mineralNG[i] ?? 0) + litiereN;
-      // Ce que l'organique rend est ammoniacal, ici comme ailleurs (#280).
-      ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) + litiereN;
+      // La litière est **enfouie** : elle ne disparaît pas, elle passe sous terre
+      // et ne couvre plus le sol. Un boutis est un enfouissement, pas une
+      // combustion — et c'est le même geste que le soc, donc la même règle
+      // (#247). Elle passait jusqu'ici dans l'humus côté carbone et dans l'azote
+      // minéral côté azote : une paille à C/N 46 versée dans un humus à C/N 11
+      // y créait l'azote qui lui manquait. Enfouie, elle se décompose selon son
+      // C/N comme toute litière (C9).
+      litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) + litiereAuSolCG(i) * LITIERE_ENFOUIE;
       // La croûte est cassée : la structure y **gagne**, ce qu'on n'attend pas
       // d'un dégât (sanglier.ts).
       tassement[i] = (tassement[i] ?? 0) * (1 - TASSEMENT_CASSE);
@@ -3084,7 +3091,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const charge = chargeCombustible(
       nextTrees,
       herbeBiomasse,
-      litterCG,
+      // Ce qui brûle est ce qui est au sol, pas ce que la charrue a enfoui.
+      litterCG.map((c, i) => Math.max(0, c - (litiereEnfouieCG[i] ?? 0))),
       station.coteM,
       groundLight,
       boisAuSolCG,
@@ -3239,6 +3247,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 0);
         carboneFeuKgC += (litterCG[i] ?? 0) / 1000;
         litterCG[i] = 0;
+        litiereEnfouieCG[i] = 0;
         // L'azote de la litière part en fumée pour l'essentiel ; le reste
         // reste en cendres, immédiatement disponible.
         const cendresN = (litterNG[i] ?? 0) * 0.2;
@@ -3674,6 +3683,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         nitrateTranchesG,
         litterNG,
         litterCG,
+        litiereEnfouieCG,
         humusCG,
         basesEq,
         basesProfondEq,
