@@ -1707,12 +1707,18 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cellWaterDemand[i * nH + h] =
           (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0);
       }
-      // Le mycélium sait capter l'azote **dilué**, là où une racine nue ne
-      // trouverait plus rien : c'est sur ce frein-là qu'il agit, et c'est
-      // pourquoi il compte sur les sols pauvres et pas sur les riches
-      // (où le frein est déjà levé).
+      // **Le frein pèse sur le partage, pas sur la demande** (#247). L'arbre vit
+      // du flux de minéralisation qu'il intercepte (nitrogen.ts) : seul dans
+      // son sol, il prend ce qui arrive, aussi bas que tienne le stock. Brider
+      // sa demande au stock de la semaine faisait d'une racine lente une racine
+      // plafonnée : sous une prairie qui tient le minéral à zéro, un hêtre isolé
+      // ne demandait plus que 9 % de sa capacité et finissait à 10,6 m à
+      // quarante ans, contre 16 dans la table. Le frein dit qui gagne quand
+      // l'azote est rare : il pondère la capacité au partage. Le mycélium, qui
+      // sait capter l'azote **dilué** là où une racine nue ne trouverait plus
+      // rien, agit sur ce frein-là, donc sur la part de l'arbre.
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
-      const demandeN = Math.min(needPerCell, capPerCell * dispo);
+      const demandeN = Math.min(needPerCell, capPerCell);
       cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
       arbresNWanted[i] = (arbresNWanted[i] ?? 0) + demandeN;
       arbresCapacite[i] = (arbresCapacite[i] ?? 0) + capPerCell * dispo;
@@ -2040,12 +2046,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       for (let h = 0; h < nH; h++) {
         gotW += wPerCell * (fractions[h] ?? 0) * (waterServedRatio[i * nH + h] ?? 0);
       }
-      // Le **même** `dispo` qu'à la passe de demande, et c'est tout le correctif
+      // La **même** demande qu'à la passe de demande, et c'est tout le correctif
       // de #115 : servir sur une demande plus petite que celle qui a vidé la
       // cellule fait disparaître la différence (mycorhizes.ts, `tick.ts`
       // passe 3).
-      const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
-      const demandeCell = Math.min(needPerCell, capPerCell * dispo);
+      const demandeCell = Math.min(needPerCell, capPerCell);
       gotN += demandeCell * (arbresServedRatio[i] ?? 0);
     });
     const wd = waterDemandL[t] ?? 0;

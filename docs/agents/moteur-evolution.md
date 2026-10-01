@@ -83,6 +83,44 @@ tout le reste : il ne bougeait ni avec la lumière, ni avec la fertilisation,
 ni avec l'âge des tissus. Remplacer un flux calé par la loi qui le produit fait
 bouger ensemble ce qui doit bouger ensemble.
 
+### Un surplus faux peut nourrir tout ce qui pousse à côté
+
+Sur main, la prairie minait son humus (−36 % en quarante ans) et lessivait 85 à
+105 kg N/ha/an. Les arbres de tous les essais plantés dans l'herbe vivaient de
+ce surplus, que personne ne voyait comme une source. La prairie réaliste le
+retire, et quarante-neuf essais tombent d'un coup : un hêtre isolé fait 10,6 m
+à quarante ans au lieu de 16. Quand une correction juste fait tomber un pan
+entier, chercher ce que l'erreur nourrissait avant de chercher ce que la
+correction casse.
+
+### Un frein sur un stock devient un plafond quand un voisin vide le stock
+
+Le frein de Michaelis-Menten était appliqué à la demande de l'arbre, calculé
+sur le stock de la semaine. Sous une prairie qui tient le minéral à zéro,
+l'arbre ne demandait plus que 9 % de sa capacité, alors que le partage lui en
+aurait donné 36 %. Le frein dit la vitesse d'une racine face à une
+concentration ; au pas d'une semaine, appliqué à la demande, il interdisait à
+l'arbre de vivre du flux. Il pèse maintenant sur le partage, et le hêtre isolé
+revient à 16,7 m sans qu'aucun nombre ait bougé. La même phrase était écrite
+dans `nitrogen.ts` (« brider le prélèvement à proportion du stock inverse la
+causalité ») : le code la contredisait.
+
+### Un correctif sans effet se retire
+
+Freiner la demande de l'herbe comme celle de l'arbre semblait la symétrie
+évidente. Mesuré avant d'être gardé : prairie identique, blé 7,43 t/ha contre
+7,49, hêtre 10,65 m. Il ne corrigeait rien, il est parti. Un correctif qui ne
+change pas le résultat ajoute une règle sans ajouter de comportement.
+
+### Un dispositif d'essai peut cacher une plante
+
+Les essais de plomberie du sous-sol disaient « parcelle nue » et tournaient
+sous la prairie par défaut. Elle fuyait, donc le fond se remplissait, et
+personne n'a vu qu'il y avait une prairie. Quand elle a cessé de fuir, les
+essais ont perdu leur sujet. Ils tournent maintenant sur un lysimètre tenu nu
+par le banc. Une jachère travaillée a été essayée d'abord : à cinq labours par
+an, l'herbe repousse à 0,91 de couverture entre deux passages.
+
 ## Ce qu'un lot plus ancien a appris (l'azote de l'humus, #247)
 
 Retirer une règle spéciale (la litière minéralisée d'un coup au labour) a fait
