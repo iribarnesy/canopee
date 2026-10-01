@@ -61,7 +61,29 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'azote de l'humus, #247)
+## Ce que le dernier lot a appris (la strate fabrique de la matière, #247)
+
+La strate prélevait un débit fixe, multiplié par une « exigence » de dix pour
+le blé. Elle fabrique maintenant de la matière, et son besoin d'azote sort de
+la courbe critique de dilution. On demandait que les 3 kg N par quintal du blé
+se déduisent d'autre chose : ils sortent à 2,4-2,5.
+
+### Écrire la cible sur la fiche empêche de la retrouver
+
+Un besoin par quintal posé sur la fiche aurait rendu 3 kg N/q à coup sûr, et
+n'aurait rien dit. Tiré d'une loi commune aux plantes en C3, il tombe à 2,5, et
+l'écart désigne une cause (la racine qui ne lit que la surface) au lieu de la
+cacher. La même loi, sans rien de plus, rend Park Grass : une prairie qui
+prélève 50 kg N/ha/an et dont l'humus tient.
+
+### Un débit déclaré ne sait pas ce que la plante fabrique
+
+Le débit de la strate était juste en moyenne pour une prairie, et faux pour
+tout le reste : il ne bougeait ni avec la lumière, ni avec la fertilisation,
+ni avec l'âge des tissus. Remplacer un flux calé par la loi qui le produit fait
+bouger ensemble ce qui doit bouger ensemble.
+
+## Ce qu'un lot plus ancien a appris (l'azote de l'humus, #247)
 
 Retirer une règle spéciale (la litière minéralisée d'un coup au labour) a fait
 sortir C16 de sa bande, et la cause était ailleurs : l'humification créait de
@@ -3380,7 +3402,9 @@ montre — un gradient monotone sur trois couverts — et non ce qu'on espérait
 
 ## File d'attente
 
-**Ce que #201 laisse, et c'est le gros morceau.** **le prélèvement d'azote de la**
+**Fait depuis (#247)** : la strate fabrique de la matière, son prélèvement en
+sort, et la rétranslocation vit dans un pool d'azote de la plante. Ce qui
+suit est l'état d'avant, gardé pour l'histoire. **Ce que #201 laisse, et c'est le gros morceau.** **le prélèvement d'azote de la**
 **strate est trop bas**. La strate rend maintenant sa matière, mais ce qu'elle rend
 est borné par ce qu'elle prend — 31 kg N/ha/an (`HERBE_AZOTE_G_M2_SEMAINE`,
 marqué *(à calibrer)*), soit 0,52 t C/ha/an de litière là où il en faudrait ~1,9
