@@ -24,11 +24,54 @@
  */
 export const HERBE_TRANSPIRATION_COEFF = 0.3;
 /**
- * Azote prélevé par un couvert fermé, g/m²/semaine en pleine saison :
- * ~0,06 g/m²/sem ≈ 30 kg N/ha/an, l'ordre de grandeur d'une végétation
- * herbacée spontanée *(à calibrer)*.
+ * **La strate fabrique de la matière, et c'est d'elle que vient sa faim d'azote**
+ * (#247). Elle prélevait jusqu'ici un débit fixe par unité de couverture
+ * (~30 kg N/ha/an *(à calibrer)*), multiplié par une « exigence » déclarée par
+ * espèce — dix pour le blé. Rien ne reliait ce qu'elle prenait à ce qu'elle
+ * produisait : le blé du moteur faisait 8,6 t/ha de grain avec 82 kg N, et
+ * l'apport au-delà de 80 kg partait au lessivage. Deux lois générales, et aucun
+ * nombre propre à une espèce, remplacent ce débit.
+ *
+ * **Rendement de conversion du rayonnement**, g de matière sèche aérienne par MJ
+ * de rayonnement solaire intercepté : 1,4 pour les cultures en C3, constant hors
+ * stress (Sinclair et Muchow 1999, *Adv. Agron.* 65 ; Gallagher et Biscoe 1978).
+ * Les quatre herbacées du moteur sont en C3.
  */
-export const HERBE_AZOTE_G_M2_SEMAINE = 0.06;
+export const RUE_HERBACEE_G_MJ = 1.4;
+
+/**
+ * **Courbe critique de dilution de l'azote**, en % de la matière sèche : la
+ * teneur en azote juste suffisante pour la croissance maximale baisse à mesure
+ * que la plante grossit, parce que la part des tissus de structure, pauvres en
+ * azote, augmente. Greenwood et al. (1990, *Ann. Bot.* 66:425) la donnent
+ * commune aux cultures en C3 : %Nc = 5,7 × W^−0,5, W en t/ha, pour W ≥ 1 t/ha ;
+ * en dessous, la courbe est tenue à sa valeur de 1 t/ha. La courbe propre au
+ * blé d'hiver (Justes et al. 1994 : 5,35 W^−0,442) en est proche, et c'est la
+ * générale qui est retenue : le besoin d'un blé doit en sortir, pas y être écrit.
+ *
+ * C'est d'elle que tombe le besoin par quintal des agronomes (~3 kg N/q pour le
+ * blé, Arvalis) : à 17 t/ha de biomasse et un indice de récolte de 0,5, la
+ * courbe rend 2,8 kg N par quintal de grain.
+ */
+export function azoteCritiquePct(matiereSecheGM2: number): number {
+  return 5.7 * Math.max(1, matiereSecheGM2 / 100) ** -0.5;
+}
+
+/** L'azote critique d'une biomasse, g/m². */
+export function azoteCritiqueG(matiereSecheGM2: number): number {
+  return (matiereSecheGM2 * azoteCritiquePct(matiereSecheGM2)) / 100;
+}
+
+/**
+ * Durée de vie des tissus d'une herbacée pérenne, degrés-jours base 4 °C :
+ * 400 à 520 dans une prairie tempérée, en commun pour les espèces codominantes
+ * (Lemaire et Agnusdei 2000 : trois feuilles vivantes par talle au plus). Le
+ * milieu de la fourchette. C'est ce qui empêche une prairie d'empiler vingt
+ * tonnes sur pied : passé cet âge, une feuille meurt et tombe en litière.
+ */
+export const DUREE_VIE_TISSUS_DJ = 460;
+/** Base des degrés-jours de la durée de vie des tissus, °C. */
+export const T_BASE_TISSUS_C = 4;
 
 /**
  * Inertie du tapis face à l'humidité : part de l'écart rattrapée chaque semaine
@@ -74,9 +117,4 @@ export function herbeDemandeEauL(
   saison: number,
 ): number {
   return etpMm * couverture * lumiereAuSol * HERBE_TRANSPIRATION_COEFF * saison;
-}
-
-/** Demande en azote d'une cellule d'herbe, g/semaine. */
-export function herbeDemandeAzoteG(couverture: number, saison: number): number {
-  return HERBE_AZOTE_G_M2_SEMAINE * couverture * saison;
 }

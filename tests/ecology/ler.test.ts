@@ -22,13 +22,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { applyAction, type GameAction } from "../../src/engine/actions";
-import {
-  HERBACEES,
-  INDEX_CULTURES,
-  N_HERBACEES,
-  partDuRendement,
-} from "../../src/engine/herbacees";
+import { applyAction, type GameAction, grainRecoltableT } from "../../src/engine/actions";
+import { HERBACEES, INDEX_CULTURES, N_HERBACEES } from "../../src/engine/herbacees";
 import { ler, lerPartiel, production } from "../../src/engine/ler";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -136,23 +131,7 @@ const PARCELLE_ENTIERE: Chantier[] = [{ x: CENTRE, y: CENTRE, rayonM: RAYON }];
 
 /** Le grain mûr sur la parcelle, en tonnes — ce que la moissonneuse va emporter. */
 function grainSurPiedT(state: GameState): number {
-  let t = 0;
-  const { cultureGrain, cultureGrainPotentiel } = state.soil;
-  const nCells = COTE * COTE;
-  for (const s of INDEX_CULTURES) {
-    const culture = HERBACEES[s]?.culture;
-    if (!culture) continue;
-    for (let i = 0; i < nCells; i++) {
-      const base = i * N_HERBACEES;
-      const part = partDuRendement(
-        cultureGrain[base + s] ?? 0,
-        cultureGrainPotentiel[base + s] ?? 0,
-      );
-      // Un m² par cellule, et `rendementMaxTHa` est en tonnes par hectare.
-      t += (part * culture.rendementMaxTHa) / 10_000;
-    }
-  }
-  return t;
+  return grainRecoltableT(state, { x: COTE / 2, y: COTE / 2, rayonM: COTE });
 }
 
 /**

@@ -136,8 +136,14 @@ const MAGIE = "CANOPEE\u0000";
  * que la charrue ou le boutis a enfouie. Un bloc de version 5 ne la contient
  * pas, et la reconstruire à zéro remettrait au sol, comme paillis, toute la
  * litière d'une parcelle qu'on vient de labourer. On refuse, cinquième fois.
+ *
+ * **7 (issue #247, matière sèche)** : `herbeMatiereSecheG` et `herbeAzoteG`, la
+ * biomasse et l'azote de chaque herbacée, remplacent l'intégrale de grain
+ * (`cultureGrain`, `cultureGrainPotentiel`). Un bloc de version 6 ne les contient
+ * pas, et les reconstruire à zéro ferait d'un blé de juin un semis sans matière
+ * ni azote. On refuse, sixième fois.
  */
-export const VERSION_FORMAT = 6;
+export const VERSION_FORMAT = 7;
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {

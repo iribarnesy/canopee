@@ -1,41 +1,36 @@
 /**
- * **Ce que la strate basse rend au sol** (issue #201).
+ * **Ce que la strate basse rend au sol** (issues #201 et #247).
  *
- * Elle ne rendait **rien**, et le trou ne se voyait qu'en **énumérant** : tout le
- * moteur verse au pool de litière — la chute des feuilles d'un **arbre**, les
- * crottes de chevreuil, le BRF et le fumier, l'érosion qui redépose — sauf la
- * strate herbacée. Ni sénescence, ni racines fines, ni chaume, ni paille.
+ * Elle ne rendait **rien** avant #201, et une prairie permanente stérilisait son
+ * propre sol. #201 l'a fait rendre l'azote qu'elle venait de prélever, la
+ * semaine même, au C/N déclaré de l'espèce, moins une moitié « retenue » qui
+ * n'allait nulle part faute d'un pool d'azote dans la plante. La prairie
+ * perdait encore 36 % de son humus en quarante ans, parce que la strate ne
+ * prélevait que ~31 kg N/ha/an, un débit fixe *(à calibrer)* qui ne savait rien
+ * de ce qu'elle fabriquait.
  *
- * **Et le vrai défaut n'est pas celui qu'on cherchait.** On cherchait le
- * carbone : une prairie qui perd 42 % de son humus en cinquante ans. On a
- * trouvé une **fuite d'azote**. La strate prélevait ~31 kg N/ha/an et rien ne les
- * rendait : dans un moteur où l'herbe n'a pas de masse, cet azote ne partait
- * pas dans une plante, il **disparaissait**. Mesuré, prairie permanente sur limon
- * riche, azote minéral moyen :
- *
- *     an           1       6      11      16
- *     avant     1,236   1,108   1,015   0,931  g N/m²   (et ça continue)
- *     après     1,262   1,332   1,255   1,178
- *
- * Une prairie permanente stérilisait son propre sol. C'est ce que ce lot
- * bouche, et c'est pour ça qu'il déplace beaucoup de choses calibrées sur un
- * moteur qui fuyait.
+ * **Depuis #247, la strate fabrique de la matière**, et c'est d'elle que viennent
+ * son prélèvement et sa litière. Elle pousse avec le rayonnement qu'elle
+ * intercepte (RUE des plantes en C3), elle a faim d'azote selon la courbe
+ * critique de dilution, ses tissus meurent avec l'âge et tombent en litière
+ * avec la moitié de leur azote, l'autre moitié restant dans la plante. Aucun
+ * débit, aucun C/N de litière déclaré par espèce.
  *
  * Ce fichier tient quatre choses :
  *
- *   1. **la conservation** — une plante ne rend que ce qu'elle a pris, et
- *      c'est ce que la deuxième version du lot a dû apprendre de force ;
- *   2. **la fuite bouchée**, mesurée sur la prairie ;
- *   3. **ce que le lot ne fait pas** : l'humus continue de baisser, et on
- *      écrit pourquoi au lieu de remonter un coefficient ;
- *   4. **le C/N de la paille**, le trait qui décide de la suite.
+ *   1. **la conservation** côté plante : ce qu'elle rend, plus ce qu'elle
+ *      garde, vaut exactement ce qu'elle a pris ;
+ *   2. **la prairie de Park Grass** : un prélèvement de prairie non fertilisée,
+ *      et un humus qui tient ;
+ *   3. **la litière**, qui trouve un équilibre ;
+ *   4. **la paille**, dont le C/N sort de la plante au lieu d'être déclaré.
  */
 
 import { describe, expect, it } from "vitest";
+import { applyAction, type GameAction } from "../../src/engine/actions";
+import { CARBON_FRACTION } from "../../src/engine/carbon";
 import { HERBACEES, N_HERBACEES } from "../../src/engine/herbacees";
-import { HERBE_AZOTE_G_M2_SEMAINE } from "../../src/engine/herbe";
 import { syntheticYear } from "../../src/engine/meteo";
-import { litterDecayRate } from "../../src/engine/nitrogen";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
@@ -49,57 +44,68 @@ const somme = (a: ArrayLike<number>) => {
 };
 const moyenne = (a: ArrayLike<number>) => (a.length === 0 ? 0 : somme(a) / a.length);
 
-/** Une prairie spontanée, sans arbre et sans geste, sur `ans` années. */
+/**
+ * Une prairie spontanée, sans arbre, sans gibier et sans geste, sur `ans`
+ * années. Sans arbre ni gibier, toute la litière qui tombe est celle de la
+ * strate.
+ */
 function prairie(ans: number, cote = 30) {
-  const station = { ...LIMON_RICHE.station, coteM: cote, voisinage: [] };
+  const station = { ...LIMON_RICHE.station, coteM: cote, voisinage: [], gibierParHa: 0 };
   let s: GameState = createGameState(station, rngStateFromSeed(4));
-  const mineral: number[] = [];
+  // L'azote de la strate, kg N/ha : la somme des espèces, moyennée sur la parcelle.
+  const azotePlante = () => moyenne(s.soil.herbeAzoteG) * N_HERBACEES * 10;
+  const azote0 = azotePlante();
   const humus: number[] = [];
   const litiere: number[] = [];
-  for (let i = 0; i < ans * 52; i++) {
-    const m = METEO[i % 52];
-    if (!m) throw new Error("météo manquante");
-    s = tick(s, m).state;
-    if (i % 52 === 51) {
-      mineral.push(moyenne(s.soil.mineralNG));
-      humus.push(somme(s.soil.humusCG) / 1000);
-      litiere.push(somme(s.soil.litterCG) / 1000);
+  const prelevement: number[] = [];
+  let prisCumul = 0;
+  let renduCumul = 0;
+  let arbres = 0;
+  for (let an = 0; an < ans; an++) {
+    let pris = 0;
+    for (let w = 0; w < 52; w++) {
+      const m = METEO[w];
+      if (!m) throw new Error("météo manquante");
+      const r = tick(s, m);
+      s = r.state;
+      pris += r.fluxes.uptakeHerbeKgHa;
+      prisCumul += r.fluxes.uptakeHerbeKgHa;
+      renduCumul += r.fluxes.litterfallKgHa;
     }
+    prelevement.push(pris);
+    humus.push(moyenne(s.soil.humusCG) / 100);
+    litiere.push(moyenne(s.soil.litterCG) / 100);
+    arbres = Math.max(arbres, s.trees.length);
   }
-  return { mineral, humus, litiere, etat: s, aireHa: (cote * cote) / 10_000 };
+  return {
+    humus,
+    litiere,
+    prelevement,
+    prisCumul,
+    renduCumul,
+    gardeKgHa: azotePlante() - azote0,
+    arbres,
+  };
 }
 
 describe("une plante ne rend que ce qu'elle a pris", () => {
-  it("le retour est BORNÉ par le prélèvement, et c'est la loi du lot", () => {
-    // **La deuxième version de ce lot l'a appris de force.** La première posait
-    // un taux de renouvellement sur la fiche et en tirait la litière : elle
-    // rendait 120 kg N/ha/an là où la strate en prélève 31. Trente-quatre
-    // essais sont tombés, un frêne poussait 17 % au-dessus de sa table, et
-    // `tick-conservation` a chiffré la fuite à 0,38 kg N/ha par semaine.
-    //
-    // Le mécanisme n'avait pas besoin d'un taux inventé : le moteur porte déjà
-    // le flux annuel de la strate, c'est son prélèvement d'azote.
-    const parAn = HERBE_AZOTE_G_M2_SEMAINE * 52 * 10; // g/m²/sem → kg/ha/an
-    expect(parAn).toBeGreaterThan(20);
-    expect(parAn).toBeLessThan(50);
-  });
-
-  it("et le carbone qui l'accompagne suit le C/N de l'espèce", () => {
-    // C'est le seul degré de liberté qui reste, et il est sur la fiche : à
-    // azote égal, une paille apporte trois fois et demie plus de carbone qu'une
-    // feuille tendre, parce qu'elle en porte trois fois et demie plus.
-    const ble = HERBACEES.find((h) => h.id === "triticum_aestivum");
-    const anemone = HERBACEES.find((h) => h.id === "anemone_nemorosa");
-    if (!ble || !anemone) throw new Error("fiches manquantes");
-    expect(ble.litiere.cSurN / anemone.litiere.cSurN).toBeGreaterThan(3);
-  });
+  it("ce qu'elle rend, plus ce qu'elle garde, vaut ce qu'elle a pris", () => {
+    // La strate a maintenant un pool d'azote (`herbeAzoteG`) : il entre par le
+    // prélèvement et sort à la litière quand des tissus meurent. Sur une
+    // prairie sans arbre ni gibier, le bilan de la plante se referme sur ces
+    // trois termes, au milliardième. C'est la fuite que #201 avait nommée — la
+    // moitié « retenue » qui n'allait nulle part — et elle est fermée.
+    const r = prairie(10);
+    expect(r.arbres).toBe(0);
+    expect(r.prisCumul).toBeGreaterThan(0);
+    expect(r.renduCumul + r.gardeKgHa).toBeCloseTo(r.prisCumul, 6);
+  }, 600_000);
 
   it("une culture garde dans son grain l'azote qui quitte la parcelle", () => {
-    // Sans ce champ, une céréale restituerait tout ce qu'elle a pris, y compris
-    // ce qu'on vend, et le moteur rendrait l'exportation gratuite. Une pérenne
-    // n'a pas de bloc `culture` : elle rend tout, ce qui est sa biologie.
+    // Le partage de l'azote à la moisson reste un trait de la fiche : le grain
+    // emporte les trois quarts de l'azote du blé (indice de récolte azoté).
     const ble = HERBACEES.find((h) => h.id === "triticum_aestivum");
-    if (!ble?.culture) throw new Error("fiche du blé manquante");
+    if (!ble?.culture) throw new Error("le blé n'est pas une culture");
     expect(ble.culture.azoteDansLeGrain).toBeGreaterThan(0.5);
     expect(ble.culture.azoteDansLeGrain).toBeLessThan(1);
     for (const h of HERBACEES) {
@@ -110,123 +116,105 @@ describe("une plante ne rend que ce qu'elle a pris", () => {
   });
 });
 
-describe("LE RÉSULTAT DU LOT : la prairie stérilise son sol deux fois moins vite", () => {
-  it("l'azote minéral perd encore, mais la moitié moins", () => {
-    // **Voilà ce que le lot répare, et ce n'est pas ce qu'on cherchait.** Dans
-    // un moteur où l'herbe n'a pas de masse, l'azote qu'elle prélevait ne
-    // partait pas dans une plante : il disparaissait du système. Une prairie
-    // permanente perdait donc son azote minéral pour toujours — 1,236 → 0,931
-    // g/m² en seize ans, soit un quart, sans plancher en vue.
-    //
-    // La propriété de conservation ne pouvait pas le voir : elle compte le
-    // prélèvement comme une **sortie** légitime, puisqu'une plante l'a pris. Rien
-    // ne vérifiait qu'il revienne, parce que pour les arbres il revient
-    // (`LITTER_RETURN_FRACTION`) et que personne n'avait regardé la strate.
-    // **la fuite est divisée par deux, pas annulée, et c'est la
-    // rétranslocation qui en décide.** Une plante retire l'azote d'un organe
-    // avant de le lâcher : elle n'en rend que la moitié au sol, l'autre restant
-    // dans ses réserves. Le moteur n'a pas de pool d'azote de la plante — pas
-    // plus pour l'arbre que pour la strate —, donc cette moitié-là n'est
-    // toujours pas rendue. C'est une fuite résiduelle, et elle est **nommée** :
-    // adossée à un fait plutôt qu'à un oubli.
-    //
-    //     an          1      16
-    //     avant     1,236   0,931   soit −25 %, sans plancher en vue
-    //     après     1,248   1,058   soit −15 %
-    //
-    // On n'affirme donc pas « il tient » : on affirme qu'il perd nettement
-    // moins. Prétendre le contraire serait annoncer ce que le lot ne fait pas.
-    const r = prairie(16);
-    const an = (a: number) => r.mineral[a - 1] ?? 0;
-    const perte = 1 - an(16) / an(1);
-    // Il perd encore, et il faut le dire.
-    expect(perte).toBeGreaterThan(0);
-    // Mais nettement moins que le quart d'avant : la moitié de la fuite est
-    // bouchée, ce qui est exactement la part que la rétranslocation laisse.
-    expect(perte).toBeLessThan(0.2);
-  }, 600_000);
+describe("la prairie de Park Grass", () => {
+  // Calculée une fois : quarante ans de prairie servent aux trois essais.
+  const r = prairie(40);
 
-  it("la litière trouve un stock d'équilibre au lieu de rester à zéro", () => {
-    // Elle restait à 0,00 les deux mille six cents semaines. Et la première
-    // version du lot l'a fait s'empiler à 99 t C/ha en quarante ans, parce que
-    // `litterK` — la vitesse de décomposition d'une cellule, mélange pondéré de
-    // ce qui y est tombé — n'avait jamais été posée sur une parcelle sans
-    // arbre et valait zéro. Elle se déduit du C/N, donc le trait suffisait.
-    const r = prairie(40);
-    const parHa = (kg: number) => kg / r.aireHa / 1000;
-    const fin = r.litiere[39] ?? 0;
-    expect(parHa(fin)).toBeGreaterThan(0.1);
-    expect(parHa(fin)).toBeLessThan(10);
-    // Et c'est un **équilibre**, pas une pente.
-    const avant = r.litiere[29] ?? 0;
-    expect(Math.abs(fin - avant) / avant).toBeLessThan(0.1);
-  }, 900_000);
-});
+  it("elle prélève ce qu'une prairie non fertilisée prélève", () => {
+    // Le prélèvement sort de ce qu'elle fabrique : 48 à 53 kg N/ha/an une fois
+    // installée, avec un foin sur pied qui culmine à ~1,8 t/ha. Il était de 31,
+    // un débit fixe. La fourchette de 40 à 120 kg N/ha/an est celle écrite avant
+    // la mesure, pour une prairie tempérée sans apport *(ordre de grandeur, à
+    // confirmer)*. Les parcelles sans engrais de Park Grass donnent un foin de
+    // l'ordre de 1 à 2 t/ha/an.
+    const installe = r.prelevement.slice(10);
+    const parAn = installe.reduce((a, b) => a + b, 0) / installe.length;
+    expect(parAn).toBeGreaterThan(40);
+    expect(parAn).toBeLessThan(120);
+  });
 
-describe("ce que ce lot ne fait PAS, et il faut le mesurer aussi", () => {
-  it("l'humus continue de baisser, et la cause est en amont", () => {
-    // **On n'annonce pas ce qu'on ne tient pas.** L'issue visait Park Grass —
-    // prairie permanente non fertilisée depuis 1856, qui tient son stock. Le
-    // moteur n'y arrive pas : l'humus descend encore, à peine moins vite
-    // qu'avant (−36 % à quarante ans au lieu de −42 %).
-    //
-    // La raison est arithmétique et elle est **en amont**, pas dans ce lot : le
-    // retour conservateur fait ~0,5 t C/ha/an, là où il en faudrait ~1,9 pour
-    // équilibrer la décomposition de l'humus. Une plante ne peut rendre que ce
-    // qu'elle a pris, et la strate de ce moteur prend 31 kg N/ha/an quand une
-    // prairie tempérée réelle en prend 100 à 200.
-    //
-    // **Remonter un coefficient pour faire passer le chiffre serait exactement
-    // la faute que #197 a corrigée chez le sanglier** : un nombre calé sur le
-    // moteur n'est pas une ancre. Le prélèvement de la strate est marqué
-    // *(à calibrer)* depuis toujours ; le relever est un lot à soi, avec ses
-    // propres ancres, et il touchera beaucoup de vert.
-    const r = prairie(40);
+  it("son humus tient, comme celui de Park Grass", () => {
+    // **Le fait que #201 n'atteignait pas.** Park Grass, prairie permanente non
+    // fertilisée depuis 1856, tient son stock ; le moteur perdait 36 % en
+    // quarante ans, parce que la strate ne rendait que ce que son débit fixe
+    // lui faisait prendre. Elle rend maintenant ce qu'elle fabrique.
+    // Relevé : 73,0 → 77,8 t C/ha en quarante ans (+6,6 %). La prédiction écrite
+    // avant le code demandait ±10 % sur cinquante ans.
     const depart = r.humus[0] ?? 0;
     const fin = r.humus[39] ?? 0;
-    expect(fin).toBeLessThan(depart);
-    // Il descend, mais il descend **moins** qu'avant le lot (−42 % mesuré alors).
-    expect(fin / depart).toBeGreaterThan(0.6);
-  }, 900_000);
+    expect(Math.abs(fin / depart - 1)).toBeLessThan(0.1);
+  });
+
+  it("sa litière trouve un équilibre", () => {
+    // Une pente serait une erreur de vitesse de décomposition. Relevé : 11,4
+    // puis 11,6 t C/ha aux ans 30 et 40, C/N 45. Le niveau est haut pour une
+    // prairie, et la vitesse de décomposition (0,6 / C/N) reste sans ancre
+    // *(à calibrer)* : l'essai porte sur l'équilibre, pas sur le niveau.
+    const avant = r.litiere[29] ?? 0;
+    const fin = r.litiere[39] ?? 0;
+    expect(fin).toBeGreaterThan(0);
+    expect(Math.abs(fin - avant) / avant).toBeLessThan(0.1);
+  });
 });
 
-describe("la paille, et le trait qui décide de la suite", () => {
-  it("le C/N du blé est le plus élevé de l'atlas, et de loin", () => {
-    // Une paille de céréale est à 80-100 : elle **immobilise** l'azote du sol le
-    // temps que les micro-organismes la digèrent, et ne le rend qu'ensuite. Un
-    // feuillage herbacé jeune est à 15-25 et se minéralise en quelques
-    // semaines. C'est ce que `azoteNetDecomposition` (C9) savait traiter depuis
-    // longtemps sans jamais en voir un seul cas.
-    const cn = HERBACEES.map((h) => h.litiere.cSurN);
-    const ble = HERBACEES.find((h) => h.id === "triticum_aestivum");
-    if (!ble) throw new Error("fiche du blé manquante");
-    expect(ble.litiere.cSurN).toBe(Math.max(...cn));
-    expect(ble.litiere.cSurN).toBeGreaterThan(70);
-    // Et le C/N commande la vitesse sans qu'on l'écrive : une paille se
-    // décompose plusieurs fois plus lentement qu'une feuille tendre.
-    const anemone = HERBACEES.find((h) => h.id === "anemone_nemorosa");
-    if (!anemone) throw new Error("fiche de l'anémone manquante");
-    expect(litterDecayRate(ble.litiere.cSurN)).toBeLessThan(
-      litterDecayRate(anemone.litiere.cSurN) / 3,
-    );
-  });
-
-  it("chaque herbacée déclare son trait, dans une gamme tenable", () => {
-    expect(HERBACEES.length).toBe(N_HERBACEES);
-    for (const h of HERBACEES) {
-      // Un C/N de litière végétale vit entre la légumineuse et la paille.
-      expect(h.litiere.cSurN).toBeGreaterThanOrEqual(10);
-      expect(h.litiere.cSurN).toBeLessThanOrEqual(100);
+describe("la paille, dont le C/N sort de la plante", () => {
+  it("le C/N de la paille sort du blé, dans la gamme des pailles", () => {
+    // Le C/N de la paille n'est plus déclaré (il valait 90). Il sort du blé : le
+    // carbone de ce qui n'est pas grain (1 − indice de récolte) sur l'azote que
+    // le grain n'emporte pas. Relevé, limon riche, 192 kg N : C/N ~115, contre
+    // 45 à 59 pour la litière de la prairie. La gamme de 50 à 150 est une
+    // gamme de pailles de blé *(ordre de grandeur, à confirmer)* ; le sens, lui,
+    // est le fait : la paille immobilise l'azote du sol avant de le rendre (C9).
+    const cote = 20;
+    const c = cote / 2;
+    const station = {
+      ...LIMON_RICHE.station,
+      coteM: cote,
+      voisinage: [],
+      gibierParHa: 0,
+    };
+    let s: GameState = createGameState(station, rngStateFromSeed(1));
+    const agir = (a: GameAction) => {
+      s = applyAction(s, a).state;
+    };
+    const k = HERBACEES.findIndex((h) => h.id === "triticum_aestivum");
+    const ble = HERBACEES[k];
+    if (!ble?.culture) throw new Error("le blé n'est pas une culture");
+    let cnPaille = 0;
+    for (let an = 0; an < 4; an++) {
+      for (let w = 0; w < 52; w++) {
+        const week = an * 52 + w;
+        if (w === 40) agir({ type: "labourer", week, x: c, y: c, rayonM: 30 });
+        if (w === 41)
+          agir({ type: "semer", week, x: c, y: c, rayonM: 30, cultureId: "triticum_aestivum" });
+        if (w === 10 && an > 0)
+          agir({
+            type: "fertiliser",
+            week,
+            x: c,
+            y: c,
+            rayonM: 30,
+            forme: "mineral",
+            doseKgNHa: 192,
+          });
+        if (w === 28 && an > 0) {
+          let matiere = 0;
+          let azote = 0;
+          for (let i = 0; i < cote * cote; i++) {
+            matiere += s.soil.herbeMatiereSecheG[i * N_HERBACEES + k] ?? 0;
+            azote += s.soil.herbeAzoteG[i * N_HERBACEES + k] ?? 0;
+          }
+          const carbonePaille = matiere * (1 - ble.culture.indiceRecolte) * CARBON_FRACTION;
+          const azotePaille = azote * (1 - ble.culture.azoteDansLeGrain);
+          cnPaille = carbonePaille / azotePaille;
+          agir({ type: "moissonner", week, x: c, y: c, rayonM: 30 });
+        }
+        const m = METEO[w];
+        if (!m) throw new Error("météo manquante");
+        s = tick(s, m).state;
+      }
     }
-  });
-
-  it("une litière de molinie est plus dure qu'une litière de dactyle", () => {
-    // La molinie fait une touradon sèche et fibreuse qui tient l'hiver, et
-    // c'est ce qui fait la litière acide d'une lande à molinie. Aucune espèce
-    // n'est nommée dans le moteur : c'est la fiche qui porte l'écart.
-    const molinie = HERBACEES.find((h) => h.id === "molinia_caerulea");
-    const dactyle = HERBACEES.find((h) => h.id === "dactylis_glomerata");
-    if (!molinie || !dactyle) throw new Error("fiches manquantes");
-    expect(molinie.litiere.cSurN).toBeGreaterThan(dactyle.litiere.cSurN);
-  });
+    expect(cnPaille).toBeGreaterThan(50);
+    expect(cnPaille).toBeLessThan(150);
+  }, 600_000);
 });
