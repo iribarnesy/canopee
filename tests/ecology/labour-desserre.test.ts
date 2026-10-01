@@ -181,10 +181,21 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
       const t = r.slice(d * 20, (d + 1) * 20);
       return t.reduce((a, b) => a + b, 0) / t.length;
     };
+    //
+    // **Depuis que l'azote se conserve** (#247 : l'humification le prend au lieu
+    // de le créer, la décomposition ralentit faute d'azote, l'humus se
+    // minéralise avant que la litière se décompose) : **4,11 / 2,90 / 2,17 /
+    // 1,79 / 1,62 / 1,45**. La descente est plus lente, et le blé n'entre dans
+    // la bande qu'à la dernière tranche, aux ans 101 à 120 : il met un siècle,
+    // ce que le titre disait. La recherche s'arrêtait à la tranche 4 (ans 81 à
+    // 100) sans raison écrite ; elle porte maintenant sur toute la descente. La
+    // bande elle-même (0,8 à 1,6) est un choix autour du ~1 t/ha que Rothamsted
+    // donne pour les parcelles Nil (e-RA, jeu 03-OAWWYields), pas une mesure.
+    //
     // Il descend, sans jamais remonter.
-    for (let d = 1; d < 4; d++) expect(tranche(d)).toBeLessThan(tranche(d - 1));
+    for (let d = 1; d < 6; d++) expect(tranche(d)).toBeLessThan(tranche(d - 1));
     // Il passe par la gamme de l'essai à un moment de sa descente…
-    const dansLaGamme = [1, 2, 3, 4].filter((d) => tranche(d) > 0.8 && tranche(d) < 1.6);
+    const dansLaGamme = [1, 2, 3, 4, 5].filter((d) => tranche(d) > 0.8 && tranche(d) < 1.6);
     expect(dansLaGamme.length).toBeGreaterThan(0);
     // …et il finit dans le facteur deux de l'essai, comme C16 le demande.
     expect(tranche(5)).toBeGreaterThan(0.5);
