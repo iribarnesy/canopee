@@ -811,7 +811,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (reste > 0) {
       const stock = mineralNG[i] ?? 0;
       const pris = Math.min(stock, reste);
-      if (stock > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * ((stock - pris) / stock);
+      if (stock > 0)
+        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * ((stock - pris) / stock));
       mineralNG[i] = stock - pris;
       reste -= pris;
     }
@@ -1265,7 +1266,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // ce que l'humus et les dépôts viennent de rendre — c'est la priorité
       // qu'ils ont sur les racines.
       const puise = (mineralNG[i] ?? 0) - transfere;
-      if (puise > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * (1 + transfere / puise);
+      // Borné à zéro : à la limite, l'arrondi du produit rend un résidu négatif.
+      if (puise > 0)
+        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * (1 + transfere / puise));
     }
     // **La nitrification**, et elle ne connaît pas sa cible : la part
     // ammoniacale qui restera en sortie d'hiver tombe du froid et du pH de
