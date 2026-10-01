@@ -23,6 +23,7 @@ import {
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
+import { cellIndexAt } from "./grid";
 import {
   HERBACEES,
   INDEX_CULTURES,
@@ -38,12 +39,8 @@ import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tassementApresLabour } from "./tassement";
-import {
-  diametreInitialCm,
-  tirerVigueurIndividuelle,
-  treeNitrogenNeedGWeek,
-  volumeTigeM3,
-} from "./trees";
+import type { TreeState } from "./trees";
+import { diametreInitialCm, tirerVigueurIndividuelle, volumeTigeM3 } from "./trees";
 import {
   aireM2DeLaZone,
   cellulesDeLaZone,
@@ -261,6 +258,12 @@ export const LABOUR_EUR_M2 = 0.02;
  * labour et semis direct sur 0-40 cm *(à confirmer)*.
  */
 export const LABOUR_PERTE_HUMUS = 0.01;
+/**
+ * Part de la litière au sol que la charrue enfouit. Une charrue à versoir
+ * laisse 0 à 10 % des résidus en surface (NRCS, norme 345, données
+ * d'enfouissement des résidus) : 95 %, le milieu de la fourchette.
+ */
+export const LABOUR_ENFOUISSEMENT = 0.95;
 /** Hauteur en dessous de laquelle un plant ne survit pas au passage de l'outil, m. */
 export const LABOUR_HAUTEUR_DETRUITE_M = 1.2;
 /** Hauteur de tête de trogne par défaut : au-dessus de la dent du bétail. */
@@ -1174,6 +1177,21 @@ function applyPlanter(
   };
 }
 
+/**
+ * L'azote du bois qui reste à un arbre rabattu à `hauteurM`, au prorata de son
+ * carbone (#247). Ce qui part avec le bois coupé est exporté, et ses bases avec.
+ */
+function azoteBoisRestant(tree: TreeState, espece: EspeceV0, hauteurM: number): number {
+  return (tree.azoteBoisG ?? 0) * partBoisRestant(tree, espece, hauteurM);
+}
+
+/** Part du bois qui reste à un arbre rabattu à `hauteurM`, au prorata du carbone. */
+function partBoisRestant(tree: TreeState, espece: EspeceV0, hauteurM: number): number {
+  const avant = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
+  if (avant <= 0) return 0;
+  return treeTotalCarbonKg(espece, tree.diametreCm, hauteurM) / avant;
+}
+
 function applyCouper(
   state: GameState,
   action: Extract<GameAction, { type: "couper" }>,
@@ -1185,6 +1203,7 @@ function applyCouper(
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
   let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC } = state.carbon;
+  const basesEq = state.soil.basesEq.slice();
   let volumeVenduAnneeM3 = state.economy.volumeVenduAnneeM3;
   let stockBrf = state.stockBrf;
   const coupes: number[] = [];
@@ -1250,6 +1269,33 @@ function applyCouper(
 
     const aerienKgC = treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM);
     /**
+     * L'azote de l'arbre, et où il va (#247). Les feuilles suivent l'aérien. La
+     * réserve et l'azote du bois se partagent au prorata du carbone : la part
+     * aérienne part avec le fût et le houppier, celle des racines reste au sol
+     * sous la souche. Une chandelle a déjà tout rendu à sa mort.
+     */
+    const partAerienne =
+      aerienKgC / Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM));
+    const azotePerenneG = dejaEnBoisMort ? 0 : (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0);
+    const azoteAerienG = (dejaEnBoisMort ? 0 : tree.uptakeYearG) + partAerienne * azotePerenneG;
+    const azoteRacinesG = (1 - partAerienne) * azotePerenneG;
+    const souche = cellIndexAt(dims, tree.x, tree.y);
+    // Les bases du bois (#247) : vendu, l'aérien les emporte ; dans les autres
+    // devenirs elles restent à la souche, racines comprises. Le broyat ne les
+    // emporte pas avec lui : le tas ne compte que son carbone et son azote.
+    const basesBois = dejaEnBoisMort ? 0 : (tree.basesBoisEq ?? 0);
+    const basesRestantes = action.devenir === "vendre" ? (1 - partAerienne) * basesBois : basesBois;
+    basesEq[souche] = (basesEq[souche] ?? 0) + basesRestantes;
+    // Les racines restent dans les quatre devenirs : leur azote va à la litière
+    // de la souche, sans carbone (le leur est déjà au bois mort).
+    if (azoteRacinesG > 0) {
+      const oldN = litterNG[souche] ?? 0;
+      const k = litterDecayRate(espece.litiere.cnRatio);
+      litterK[souche] =
+        (oldN * (litterK[souche] ?? 0) + azoteRacinesG * k) / (oldN + azoteRacinesG);
+      litterNG[souche] = oldN + azoteRacinesG;
+    }
+    /**
      * Carbone qui quitte réellement la parcelle avec le fût.
      *
      * Pour une tige vive, c'est tout son aérien. Pour une chandelle, c'est ce
@@ -1291,6 +1337,14 @@ function applyCouper(
     const { radians: aval } = versLAval(altitudes, dims, tree.x, tree.y);
     const directionRad = aval + Math.PI / 2;
     if (action.devenir === "laisser") {
+      // Tout reste : l'azote de l'aérien rejoint celui des racines.
+      if (azoteAerienG > 0) {
+        const oldN = litterNG[souche] ?? 0;
+        const k = litterDecayRate(espece.litiere.cnRatio);
+        litterK[souche] =
+          (oldN * (litterK[souche] ?? 0) + azoteAerienG * k) / (oldN + azoteAerienG);
+        litterNG[souche] = oldN + azoteAerienG;
+      }
       const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, directionRad, dims);
       const longueur = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
       if (longueur > 0) {
@@ -1359,17 +1413,19 @@ function applyCouper(
       stockBrf = {
         carboneG:
           stockBrf.carboneG + treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000,
-        azoteG:
-          stockBrf.azoteG +
-          0.5 * tree.uptakeYearG +
-          treeNitrogenNeedGWeek(espece, tree.heightM) * 52,
+        // L'azote que l'aérien porte vraiment : ses feuilles, et la part
+        // aérienne de sa réserve et de son bois (#247). Le broyat en comptait
+        // une année de besoin, qui n'existait nulle part dans l'arbre.
+        azoteG: stockBrf.azoteG + azoteAerienG,
       };
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
       // retournent en litière sous l'ancienne couronne (docs/regles.md §4.2).
       // Pour un fixateur, c'est de l'azote **nouveau** — la mécanique fondatrice
-      // « couper les légumineuses et les épandre » (§16).
-      const depositG = 0.5 * tree.uptakeYearG + treeNitrogenNeedGWeek(espece, tree.heightM) * 52;
+      // « couper les légumineuses et les épandre » (§16). C'est l'azote que
+      // l'aérien porte vraiment : feuilles, réserve et bois. Un arbre coupé vert
+      // ne résorbe rien, et le broyat comptait une année de besoin inventée (#247).
+      const depositG = azoteAerienG;
       // On **épand** le broyat sur la zone (pas en tas au pied) : rayon large,
       // pour que les racines des voisins y accèdent.
       const crownR = Math.max(
@@ -1428,7 +1484,7 @@ function applyCouper(
     state: {
       ...state,
       trees,
-      soil: { ...state.soil, litterNG, litterCG, litterK, boisAuSolCG, boisEnTraversPart },
+      soil: { ...state.soil, litterNG, litterCG, litterK, basesEq, boisAuSolCG, boisEnTraversPart },
       stockBrf,
       carbon: {
         ...state.carbon,
@@ -2204,6 +2260,8 @@ function applyTrogner(
       ...tree,
       heightM: hauteurTete,
       teteTrogneM: hauteurTete,
+      azoteBoisG: azoteBoisRestant(tree, espece, hauteurTete),
+      basesBoisEq: (tree.basesBoisEq ?? 0) * partBoisRestant(tree, espece, hauteurTete),
       recepages: tree.recepages + 1,
       hauteurElagueeM: Math.min(tree.hauteurElagueeM, hauteurTete),
       // La tête est rabattue : ce qui repartira part d'elle, et une base de
@@ -2304,12 +2362,11 @@ function applyLabourer(
 
   const humusCG = state.soil.humusCG.slice();
   const mineralNG = state.soil.mineralNG.slice();
-  const litterNG = state.soil.litterNG.slice();
-  const litterCG = state.soil.litterCG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
+  const litiereEnfouieCG = state.soil.litiereEnfouieCG.slice();
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
     arbusculaire: state.soil.mycorhizes.arbusculaire.slice(),
@@ -2337,12 +2394,21 @@ function applyLabourer(
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;
       mineralNG[i] = (mineralNG[i] ?? 0) + perdu / cnHumus;
-      emisKgC += (perdu * (1 - 1 / cnHumus)) / 1000;
-      // La litière est enfouie et se minéralise avec le reste.
-      mineralNG[i] = (mineralNG[i] ?? 0) + (litterNG[i] ?? 0);
-      emisKgC += (litterCG[i] ?? 0) / 1000;
-      litterNG[i] = 0;
-      litterCG[i] = 0;
+      // Tout le carbone de l'humus minéralisé part en CO₂, comme dans le tick :
+      // l'ancienne ligne en retranchait la masse de l'azote libéré, et un
+      // onzième du carbone perdu sortait des comptes sans être émis.
+      emisKgC += perdu / 1000;
+      // **La litière enfouie n'a pas de règle à elle** (#247). Elle se minéralisait
+      // ici d'un coup, azote compris, quel que soit son C/N : une paille de blé à
+      // C/N 46 rendait tout son azote en octobre, juste avant la lame drainante.
+      // Au champ, elle fait l'inverse : enfouie, elle **immobilise** l'azote du
+      // sol le temps que les micro-organismes la digèrent (Recous et al. 1995,
+      // azote 15 ; Mary et al. 1996). C'est exactement ce que la décomposition
+      // du tick fait déjà selon le C/N (seuil vers 27, C9) : la litière reste
+      // où elle est, et la règle commune décide. Ce que le soc change est ce
+      // qu'elle **couvre** : enfouie, elle ne paille plus le sol.
+      const auSol = Math.max(0, (state.soil.litterCG[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
+      litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) + auSol * LABOUR_ENFOUISSEMENT;
       // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
       // charrue est le seul geste du jeu qui aille sous terre : elle retourne
       // les bulbes et tranche les rhizomes, donc l'emprise part avec le
@@ -2374,12 +2440,11 @@ function applyLabourer(
         ...state.soil,
         humusCG,
         mineralNG,
-        litterNG,
-        litterCG,
         herbeCouverture,
         herbeEmprise,
         herbeFeuillage,
         herbeBiomasse,
+        litiereEnfouieCG,
         mycorhizes,
         tassement,
       },
@@ -2522,6 +2587,9 @@ function applyReceper(
       fruitsKg: 0,
       fruitProgress: 0,
       uptakeYearG: 0,
+      // La tige emporte l'azote de son bois ; la souche garde le sien (#247).
+      azoteBoisG: azoteBoisRestant(tree, espece, RECEPAGE_HAUTEUR_M),
+      basesBoisEq: (tree.basesBoisEq ?? 0) * partBoisRestant(tree, espece, RECEPAGE_HAUTEUR_M),
       recepages: tree.recepages + 1,
     };
   }

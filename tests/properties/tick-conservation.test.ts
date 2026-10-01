@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { cnHumusDuProfil } from "../../src/engine/carbon";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../../src/engine/state";
@@ -24,9 +25,10 @@ function meanWaterStock(state: GameState): number {
   return sum / nCells;
 }
 
-/** Stock d'azote du sol = minéral de surface + minéral profond + litière, kg/ha. */
+/** Stock d'azote du sol = minéral de surface + minéral profond + litière + humus, kg/ha. */
 function meanNStockKgHa(state: GameState): number {
   const n = state.soil.mineralNG.length;
+  const cnHumus = cnHumusDuProfil(state.station.profil);
   let sum = 0;
   for (let i = 0; i < n; i++)
     sum +=
@@ -36,7 +38,12 @@ function meanNStockKgHa(state: GameState): number {
       // sans cette ligne, la propriété lirait le transfert comme une perte et
       // fermerait sur un bilan faux — c'est-à-dire qu'elle le ratifierait.
       (state.soil.mineralNProfondG[i] ?? 0) +
-      (state.soil.litterNG[i] ?? 0);
+      (state.soil.litterNG[i] ?? 0) +
+      // **L'humus compte aussi** (#247). Sa minéralisation entrait au bilan comme
+      // un apport, ce qui laissait passer sans bruit toute création d'azote
+      // dans l'humus — et l'humification en créait : le carbone humifié y
+      // entrait seul, son azote implicite venant de nulle part.
+      (state.soil.humusCG[i] ?? 0) / cnHumus;
   // Le tas de broyat en attente compte lui aussi : sinon, broyer un arbre
   // ferait disparaître son azote du bilan.
   return ((sum + state.stockBrf.azoteG) / n) * 10;
@@ -78,21 +85,21 @@ function checkConservation(sc: StationClimat, years: number) {
       5,
     );
 
-    // Entrées : minéralisation de l'humus + retour de litière (recyclage des
-    // arbres) + fixation symbiotique. Sorties : prélèvements + lessivage.
     const deltaN = meanNStockKgHa(next) - beforeN;
-    // Entrées : minéralisation de l'humus, retours de litière, fixation
+    // Entrées : retours de litière, fixation
     // symbiotique et dépôts atmosphériques (ces derniers sont un apport venu
     // de l'extérieur du système, au même titre que la fixation).
     // Sorties : prélèvements, lessivage, et ce que la terre emporte en
     // ruisselant hors de la parcelle (erosion.ts).
-    expect(fluxes.uptakeKgHa + fluxes.leachedKgHa + fluxes.erosionNKgHa + deltaN).toBeCloseTo(
-      fluxes.mineralizationKgHa +
-        fluxes.litterfallKgHa +
-        fluxes.fixationKgHa +
-        fluxes.depositionKgHa,
-      6,
-    );
+    // La minéralisation de l'humus et l'humification ne sont plus que des
+    // transferts entre deux postes du stock.
+    expect(
+      fluxes.uptakeKgHa +
+        fluxes.leachedKgHa +
+        fluxes.erosionNKgHa +
+        fluxes.erosionNHumusKgHa +
+        deltaN,
+    ).toBeCloseTo(fluxes.litterfallKgHa + fluxes.fixationKgHa + fluxes.depositionKgHa, 6);
 
     // **et ce qui sort du sol doit arriver dans une plante** (#115). Le bilan
     // ci-dessus ferme le côté **sol** : il compte `uptakeKgHa`, c'est-à-dire ce que

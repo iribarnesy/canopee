@@ -119,6 +119,14 @@ export interface EspeceV0 {
     /** true = perd ses feuilles (n'ombrage plus l'hiver) */
     caduc: boolean;
     /**
+     * **Persistants seulement** : durée de vie d'une feuille ou d'une aiguille,
+     * années (#247). Un persistant renouvelle chaque semaine la part
+     * correspondante de son feuillage, qui tombe en litière avec la moitié de son
+     * azote ; l'autre moitié est résorbée. Sans ce trait, un pin ne rendait rien
+     * au sol de son vivant : son azote de l'année s'empilait jusqu'à sa mort.
+     */
+    dureeVieFeuillageAns?: number;
+    /**
      * Part du feuillage gardée en plein hiver ∈ [0,1], pour les
      * **semi-persistants**. Entre le caduc qui se dénude et le sempervirent qui ne
      * bouge pas, il y a le troène : il garde une partie de ses feuilles quand
@@ -744,7 +752,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // lot, avec la suite complète pour témoin.
     ph: [4, 7.5],
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
-    lumiere: { compensation: 0.25, saturation: 0.7, lai: 1.2, houppierRatio: 0.25, caduc: false },
+    // Aiguilles : 2 à 8 ans selon la latitude, plus longtemps au nord (Reich et al. 1996) ; le bas de la fourchette pour une plaine tempérée *(à confirmer)*.
+    lumiere: {
+      compensation: 0.25,
+      saturation: 0.7,
+      lai: 1.2,
+      houppierRatio: 0.25,
+      caduc: false,
+      dureeVieFeuillageAns: 3,
+    },
     racines: { profondeurMaxCm: 200 }, // pivot, d'où sa résistance sur sols filtrants
     // Les pins figurent parmi les sensibles documentés.
     sensibiliteAllelopathie: 0.9,
@@ -1371,7 +1387,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.75, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.2 },
     // pH, littérature : Peterken & Lloyd 1967, Biological Flora : « presque indifférent au pH », de l'acide au riche en calcaire.
     ph: [4, 8],
-    lumiere: { compensation: 0.02, saturation: 0.35, lai: 3, houppierRatio: 0.4, caduc: false },
+    // Feuilles : 25 ± 7 mois (Mediavilla et Escudero 2003).
+    lumiere: {
+      compensation: 0.02,
+      saturation: 0.35,
+      lai: 3,
+      houppierRatio: 0.4,
+      caduc: false,
+      dureeVieFeuillageAns: 2.1,
+    },
     racines: { profondeurMaxCm: 80 },
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.4, fixateur: false },
@@ -1627,7 +1651,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.15 },
     ph: [3.5, 6.5],
     // Rameaux épineux persistants : il ombrage et brise le vent toute l'année.
-    lumiere: { compensation: 0.25, saturation: 0.75, lai: 2.2, houppierRatio: 0.55, caduc: false },
+    // Épines vertes, même ordre que le houx *(à confirmer)*.
+    lumiere: {
+      compensation: 0.25,
+      saturation: 0.75,
+      lai: 2.2,
+      houppierRatio: 0.55,
+      caduc: false,
+      dureeVieFeuillageAns: 2,
+    },
     racines: { profondeurMaxCm: 140 }, // pivot de fabacée : il prospecte plus bas que sa taille ne le suggère
     tBaseCroissanceC: 5,
     // Fabacée fixatrice (Rhizobium) : elle enrichit le sable qu'elle colonise.
@@ -1680,7 +1712,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « landes acides, améliore le sol » — l'autre pionnière fixatrice.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.1 },
     ph: [4, 7],
-    lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.6, houppierRatio: 0.45, caduc: false },
+    // Tiges vertes qui portent la photosynthèse, même ordre que le houx *(à confirmer)*.
+    lumiere: {
+      compensation: 0.25,
+      saturation: 0.75,
+      lai: 1.6,
+      houppierRatio: 0.45,
+      caduc: false,
+      dureeVieFeuillageAns: 2,
+    },
     racines: { profondeurMaxCm: 130 }, // pivot de fabacée
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.5, fixateur: true },
@@ -1734,7 +1774,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « lande acide pauvre, bio-indicatrice acidité » — couvre-sol.
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.2 },
     ph: [3.5, 6],
-    lumiere: { compensation: 0.22, saturation: 0.7, lai: 2, houppierRatio: 0.6, caduc: false },
+    // Même ordre que les persistants mesurés de l'atlas *(à confirmer)*.
+    lumiere: {
+      compensation: 0.22,
+      saturation: 0.7,
+      lai: 2,
+      houppierRatio: 0.6,
+      caduc: false,
+      dureeVieFeuillageAns: 1.5,
+    },
     racines: { profondeurMaxCm: 40 }, // sous-arbrisseau à racines fines superficielles
     tBaseCroissanceC: 5,
     azote: { demandeRelative: 0.15, fixateur: false },
@@ -1850,7 +1898,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Semi-héliophile : contrairement au pin, ses jeunes supportent le couvert
     // — c'est ainsi qu'une subéraie s'installe **sous** la pinède et prend le
     // relais, le pin ne se régénérant pas sous sa propre ombre.
-    lumiere: { compensation: 0.07, saturation: 0.5, lai: 2.8, houppierRatio: 0.42, caduc: false },
+    // Feuilles : 15 ± 3 mois (Mediavilla et Escudero 2003).
+    lumiere: {
+      compensation: 0.07,
+      saturation: 0.5,
+      lai: 2.8,
+      houppierRatio: 0.42,
+      caduc: false,
+      dureeVieFeuillageAns: 1.25,
+    },
     racines: { profondeurMaxCm: 250 }, // pivot profond des sables méditerranéens
     // Thermophile, mais chez lui sur la façade atlantique douce.
     tBaseCroissanceC: 7,
@@ -1950,7 +2006,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.05 },
     // pH, littérature : van den Berk et World Agroforestry : de 5,0 (grès acide) à 7,8 (limon calcaire) ; tolérance à l'alcalin rare chez une éricacée.
     ph: [4, 7.8],
-    lumiere: { compensation: 0.12, saturation: 0.6, lai: 2.4, houppierRatio: 0.45, caduc: false },
+    // Entre le chêne-liège et le houx, les deux persistants mesurés de l'atlas *(à confirmer)*.
+    lumiere: {
+      compensation: 0.12,
+      saturation: 0.6,
+      lai: 2.4,
+      houppierRatio: 0.45,
+      caduc: false,
+      dureeVieFeuillageAns: 1.5,
+    },
     racines: { profondeurMaxCm: 150 }, // racines profondes, adaptation méditerranéenne
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.3, fixateur: false },

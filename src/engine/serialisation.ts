@@ -131,8 +131,13 @@ const MAGIE = "CANOPEE\u0000";
  * se trouve un nitrate que la partie a fait descendre — la mettre à plat
  * rendrait au nitrate profond la même chance de sortir qu'à celui de surface, ce
  * que cette grille existe précisément pour empêcher. On refuse, quatrième fois.
+ *
+ * **6 (issue #247, litière enfouie)** : `litiereEnfouieCG`, la part de la litière
+ * que la charrue ou le boutis a enfouie. Un bloc de version 5 ne la contient
+ * pas, et la reconstruire à zéro remettrait au sol, comme paillis, toute la
+ * litière d'une parcelle qu'on vient de labourer. On refuse, cinquième fois.
  */
-export const VERSION_FORMAT = 5;
+export const VERSION_FORMAT = 6;
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {

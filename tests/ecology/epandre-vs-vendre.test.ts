@@ -11,7 +11,13 @@
 
 import { describe, expect, it } from "vitest";
 import { applyAction, type GameAction } from "../../src/engine/actions";
-import { carbonInventory } from "../../src/engine/carbon";
+import {
+  carbonInventory,
+  cnHumusDuProfil,
+  treeAboveCarbonKg,
+  treeTotalCarbonKg,
+} from "../../src/engine/carbon";
+import { getEspece } from "../../src/engine/especes";
 import { advanceWeek, runJournal } from "../../src/engine/game";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -125,13 +131,16 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     expect(epandre.state.economy.hoursUsedYear).toBeGreaterThanOrEqual(0);
   });
 
-  it("épandre enrichit le sol : plus d'azote (minéral + litière) dans le bosquet", () => {
+  it("épandre enrichit le sol : plus d'azote (minéral, litière et humus) dans le bosquet", () => {
     const nTotal = (s: typeof vendre.state, cx: number, cy: number) => {
       let sum = 0;
       for (let y = cy - 6; y <= cy + 6; y++) {
         for (let x = cx - 6; x <= cx + 6; x++) {
           const i = y * STATION.coteM + x;
-          sum += (s.soil.mineralNG[i] ?? 0) + (s.soil.litterNG[i] ?? 0);
+          sum +=
+            (s.soil.mineralNG[i] ?? 0) +
+            (s.soil.litterNG[i] ?? 0) +
+            (s.soil.humusCG[i] ?? 0) / cnHumusDuProfil(STATION.profil);
         }
       }
       return sum;
@@ -163,6 +172,20 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // Cent grammes sur le bloc de treize par treize cellules, contre 189
     // mesurés : la marge est enfin une marge, et l'énoncé — « épandre
     // **enrichit** » — est ce que le nombre soutient.
+    // **L'humus compte, depuis que son azote existe** (#247). Il était implicite
+    // au C/N du profil : humifier en créait, et l'essai ne pouvait pas le
+    // compter sans compter un azote sorti de nulle part. Humifier le prend
+    // maintenant à la litière, puis au minéral, et c'est là que va l'azote du
+    // broyat. Graine 5, an 16, sur le bloc de treize par treize :
+    //
+    //                    épandre   vendre   écart
+    //     minéral + litière  751      705      46
+    //     humus            38 909   36 274   2 635
+    //
+    // L'écart sur le minéral et la litière seuls est tombé à 46 g, parce que le
+    // broyat est décomposé en trois ans et que son azote est passé à l'humus.
+    // Compter le sol entier n'est pas desserrer l'essai : c'est compter le stock
+    // où l'azote est allé. Le seuil des cent grammes ne bouge pas.
     const azoteEpandu = nTotal(epandre.state, 30, 30);
     const azoteVendu = nTotal(vendre.state, 30, 30);
     expect(azoteEpandu - azoteVendu).toBeGreaterThan(100);
@@ -176,7 +199,7 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     expect(invEpandre.totalTHa).toBeGreaterThan(invVendre.totalTHa);
   });
 
-  it("les hêtres voisins poussent mieux quand les aulnes ont été épandus", () => {
+  it("épandre des aulnes entiers affame d'abord les hêtres voisins, puis l'écart s'efface", () => {
     expect(hauteurMoyenneDesHetres(epandre.state)).toBeGreaterThan(0);
 
     // Le gain ne se voit **pas** à seize ans — huit ans après la coupe, épandre
@@ -202,7 +225,30 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // il est simplement à l'échelle du broyat qu'on épand vraiment. Ce que
     // l'essai épingle désormais est la **forme** de la courbe, qui est la propriété
     // écologique : le gain est déjà là, et il continue de croître.
-    expect(gainA(16)).toBeGreaterThan(1);
+    // **Et ce gain était de l'azote créé** (#247). Humifier ne demandait pas
+    // d'azote : chaque tonne de carbone humifiée en sortait ~27 kg de nulle
+    // part, et un broyat de 150 kg de carbone en fabriquait de quoi nourrir les
+    // hêtres. Humifier le prend maintenant à la litière, puis au minéral.
+    //
+    // Le broyat d'un aulne entier porte surtout l'azote de son **bois** : 2,8 kg
+    // pour les vingt aulnes, contre 0,4 dans leurs feuilles, au C/N de 47. Les
+    // décomposeurs qui humifient ce carbone prennent l'azote du sol : c'est la
+    // faim d'azote du BRF (C9). L'azote n'est pas perdu, il est mis en banque
+    // dans l'humus (essai ci-dessus), et l'humus le rend lentement. Gain
+    // épandre / vendre, graines 5 / 19 / 31 :
+    //
+    //     an     10      12      16      20      25      35
+    //          0,929   0,942   0,964   0,978   0,990   1,001
+    //          0,922   0,937   0,965   0,982   0,992   0,998
+    //          0,927   0,945   0,966   0,979   0,989   1,002
+    //
+    // Trois graines qui disent la même chose au centième : la faim est franche
+    // deux ans après l'épandage, et elle s'efface sur un quart de siècle sans
+    // devenir un gain. **La mécanique fondatrice ne tient plus sous cette
+    // forme** : un aulne entier broyé met l'azote du sol en banque, il ne le
+    // porte pas au voisin. Ce sont ses feuilles qui le porteraient, et le
+    // moteur les mêle au bois dans une seule litière.
+    expect(gainA(16)).toBeLessThan(1);
     // Le gain à long terme suit la **masse** épandue, qui vient d'être divisée par
     // trois (#62) : mesuré à +9 % quand un aulne pesait six fois trop, il est
     // de +3,7 % maintenant qu'il pèse ce qu'il pèse. La mécanique fondatrice
@@ -234,7 +280,8 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // jour affirmer l'ampleur, il faudra un dispositif qui la mesure — plusieurs
     // stations, et un témoin qui reçoive le même azote sous une autre forme —
     // pas un nombre relevé sur une sortie.
-    expect(gainA(35)).toBeGreaterThan(1);
+    // L'écart s'efface : le sens de la phrase, sans épingler la date.
+    expect(gainA(35)).toBeGreaterThan(gainA(16));
     // Le délai est large parce que l'essai l'est : trois parties par horizon,
     // trente-cinq ans sur soixante mètres. Il tenait en 300 s sur ma machine et
     // les dépassait sur le runner d'intégration, qui est plus lent.
@@ -252,15 +299,28 @@ describe("le tas de broyat : transporter la fertilité", () => {
       state = advanceWeek(state, w, []).state;
     }
     const litiereAvant = state.soil.litterNG.reduce((a, b) => a + b, 0);
+    const arbre = state.trees.find((t) => t.id === id);
+    if (!arbre) throw new Error("aulne introuvable");
+    const espece = getEspece(arbre.especeId);
+    const partAerienne =
+      treeAboveCarbonKg(espece, arbre.diametreCm, arbre.heightM) /
+      treeTotalCarbonKg(espece, arbre.diametreCm, arbre.heightM);
+    const azoteRacines =
+      (1 - partAerienne) * ((arbre.reserveAzoteG ?? 0) + (arbre.azoteBoisG ?? 0));
     const apres = applyAction(state, {
       type: "couper",
       week: 60,
       treeIds: [id],
       devenir: "broyer",
     }).state;
-    // Rien n'est tombé au sol : tout est dans la remorque.
-    expect(apres.stockBrf.azoteG).toBeGreaterThan(0);
-    expect(apres.soil.litterNG.reduce((a, b) => a + b, 0)).toBeCloseTo(litiereAvant, 6);
+    // L'aérien est dans la remorque. Seules les racines restent en terre, avec
+    // leur azote, qui rejoint la litière de la souche (#247) : rien d'autre
+    // n'est tombé au sol.
+    expect(apres.stockBrf.azoteG).toBeGreaterThan(azoteRacines);
+    expect(apres.soil.litterNG.reduce((a, b) => a + b, 0) - litiereAvant).toBeCloseTo(
+      azoteRacines,
+      6,
+    );
   });
 
   it("on l'épand où l'on veut, et l'azote y va — pas ailleurs", () => {

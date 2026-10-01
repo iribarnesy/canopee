@@ -138,7 +138,8 @@ function parcelle(sc: StationClimat, especeId: string | null, ans: number) {
     s = r.state;
     budget +=
       (r.fluxes.basesApportEqHa +
-        r.fluxes.basesLitiereEqHa -
+        r.fluxes.basesLitiereEqHa +
+        r.fluxes.basesBoisEqHa -
         r.fluxes.basesLessiveEqHa -
         r.fluxes.basesAcideEqHa) /
       10_000;
@@ -333,7 +334,12 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
       s = r.state;
       const f = r.fluxes;
       budget +=
-        (f.basesApportEqHa + f.basesLitiereEqHa - f.basesLessiveEqHa - f.basesAcideEqHa) / 10_000;
+        (f.basesApportEqHa +
+          f.basesLitiereEqHa +
+          f.basesBoisEqHa -
+          f.basesLessiveEqHa -
+          f.basesAcideEqHa) /
+        10_000;
       nonTamponne += f.basesAcideNonTamponneEqHa / 10_000;
       // On regarde **chaque semaine**, pas seulement à l'arrivée : un pool qui
       // plonge puis remonte passerait un contrôle final.

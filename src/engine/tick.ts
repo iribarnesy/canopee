@@ -16,6 +16,7 @@ import {
   acideTamponnable,
   alterationBasesProfondeEqM2Semaine,
   alterationBasesSurfaceEqM2Semaine,
+  basesBoisEq,
   CALCIUM_NEUTRE_MG_G,
   capaciteEchangeEqM2,
   capaciteEchangeProfondeCmolKg,
@@ -252,8 +253,10 @@ import {
 } from "./tranches";
 import type { CauseMort, TreeState } from "./trees";
 import {
+  cnBois,
   dureeChandelleSemaines,
   fractionsRacinairesParHorizon,
+  LITTER_RETURN_FRACTION,
   prochainDommageHydraulique,
   rootRadiusM,
   STRESS_LETHAL,
@@ -315,11 +318,6 @@ const DERNIERE_SEMAINE = 51;
  * ne se déprécie (bleuissement, insectes) : environ un an *(à calibrer)*.
  */
 const CHABLIS_RECUPERABLE_SEMAINES = 52;
-/**
- * Part de l'azote acquis dans l'année qui retourne au sol avec les feuilles ;
- * le reste est retenu dans le bois *(à calibrer — rétranslocation ch3-B)*.
- */
-const LITTER_RETURN_FRACTION = 0.5;
 
 /** Un arbre mort pendant le tick : de quoi le raconter **et** l'animer là où il est. */
 export interface MortDeLaSemaine {
@@ -783,6 +781,43 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const fluxTranche = new Array<number>(tranches.n).fill(0);
   // L'humus de ce sol : mull par défaut, mor sur un podzol qui le déclare (#289).
   const cnHumus = cnHumusDuProfil(station.profil);
+  /**
+   * **L'humus a un C/N, donc humifier demande de l'azote** (#247). Le carbone qui
+   * passe à l'humus y entrait seul, et l'humus porte son azote implicitement,
+   * au C/N du profil : chaque gramme de carbone humifié créait ~1/11 de gramme
+   * d'azote, que la minéralisation de l'humus rendait ensuite aux plantes.
+   * Environ 27 kg N/ha/an par tonne de carbone de litière décomposée par an,
+   * venus de nulle part. La propriété de conservation ne pouvait pas le voir :
+   * elle comptait la minéralisation de l'humus comme une entrée.
+   *
+   * L'azote de l'humus nouveau est pris là où il est : d'abord dans la litière
+   * qui se décompose — les décomposeurs y ont retenu 0,3/8 g d'azote par gramme
+   * de carbone (C9), plus que les 0,3/11 dont l'humus a besoin, donc le seuil
+   * de la faim d'azote ne bouge pas —, puis dans l'azote minéral : un bois qui
+   * pourrit immobilise l'azote du sol, ce que tout forestier sait. Ce que
+   * l'azote ne permet pas d'humifier part en CO₂. Rend le carbone humifié.
+   */
+  const humifier = (i: number, carboneG: number, depuisLitiere: boolean): number => {
+    if (carboneG <= 0) return 0;
+    const besoin = carboneG / cnHumus;
+    let reste = besoin;
+    if (depuisLitiere) {
+      const pris = Math.min(litterNG[i] ?? 0, reste);
+      litterNG[i] = (litterNG[i] ?? 0) - pris;
+      reste -= pris;
+    }
+    if (reste > 0) {
+      const stock = mineralNG[i] ?? 0;
+      const pris = Math.min(stock, reste);
+      if (stock > 0)
+        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * ((stock - pris) / stock));
+      mineralNG[i] = stock - pris;
+      reste -= pris;
+    }
+    const humifie = (besoin - reste) * cnHumus;
+    humusCG[i] = (humusCG[i] ?? 0) + humifie;
+    return humifie;
+  };
   // Ce que l'humus de chaque cellule a décomposé cette semaine : l'offre de
   // minage des ectomycorhizes s'y lit (#289).
   const humusPerteCG = new Float64Array(nCells);
@@ -792,6 +827,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // — un sol tassé infiltre moins et ruisselle plus.
   const tassement = state.soil.tassement.slice();
   const litterCG = state.soil.litterCG.slice();
+  const litiereEnfouieCG = state.soil.litiereEnfouieCG.slice();
+  /** La litière qui couvre le sol : ce qui n'a pas été enfoui (#247). */
+  const litiereAuSolCG = (i: number) =>
+    Math.max(0, (litterCG[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
   const humusCG = state.soil.humusCG.slice();
   const phosphoreG = state.soil.phosphoreG.slice();
   const phosphoreFixeG = state.soil.phosphoreFixeG.slice();
@@ -860,6 +899,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let basesPreleveSumEq = 0;
   let basesApportProfondSumEq = 0;
   let basesExportSumEq = 0;
+  // Les bases que le bois neuf prend à chaque pool, et ce que les morts rendent
+  // à la surface (#247).
+  let basesBoisSurfaceSumEq = 0;
+  let basesBoisProfondSumEq = 0;
+  let basesRetourBoisSumEq = 0;
   let litterDecaySumG = 0;
   let climateSum = 0;
   let emittedG = 0; // CO2 des décompositions (litière + humus), g C
@@ -1032,7 +1076,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // freinent — c'est là que « couvrir le sol » paie en eau.
     const couvertureSol = Math.min(
       1,
-      (herbeCouverture[i] ?? 0) + Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG),
+      (herbeCouverture[i] ?? 0) + Math.min(0.6, litiereAuSolCG(i) / MULCH_FULL_CG),
     );
     const saturationSurface = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
     const amontIci = apportCelluleMm(i);
@@ -1057,7 +1101,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           etpMm *
           SOIL_EVAP_FRACTION *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
-          (1 - MULCH_MAX_EFFECT * Math.min(1, (litterCG[i] ?? 0) / MULCH_FULL_CG)),
+          (1 - MULCH_MAX_EFFECT * Math.min(1, litiereAuSolCG(i) / MULCH_FULL_CG)),
         // La remontée capillaire **puise** dans la nappe : ce n'est plus un apport
         // venu de nulle part, c'est un transfert.
         nappeMm: Number.isFinite(nappeCm[i] ?? Number.POSITIVE_INFINITY)
@@ -1130,19 +1174,53 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     climateSum += climate;
     // La litière se décompose selon son C/N (aulne vite, pin lentement, ch2-B) ;
     // son carbone part pour partie en humus (humification), le reste en CO2.
-    const decayFraction = Math.min(1, (litterK[i] ?? 0) * climate);
-    const decayedN = (litterNG[i] ?? 0) * decayFraction;
-    const decayedC = (litterCG[i] ?? 0) * decayFraction;
+    // L'humus se minéralise et les dépôts tombent **avant** que la litière se
+    // décompose : à l'échelle de la semaine, les micro-organismes passent avant
+    // les racines pour l'azote minéral (Kaye et Hart 1997). La décomposition
+    // lisait le stock après que les plantes l'avaient vidé la semaine d'avant,
+    // et une prairie affamée n'en laissait jamais rien aux décomposeurs (#247).
+    // L'humus est **le** stock d'azote organique du sol : ce qui s'en minéralise
+    // part en CO₂ pour le carbone et revient aux plantes pour l'azote, au
+    // rapport C/N de l'humus. Les deux cycles ne peuvent plus diverger — et
+    // c'est ce couplage qui donne son sens à « construire du sol » (§12).
+    // L'acidité freine la vie du sol : un humus mor tient son azote.
+    const humusLoss =
+      (humusCG[i] ?? 0) *
+      ((HUMUS_DECAY_PER_YEAR / 52) * climate * facteurPhBiologie(state.soil.ph[i] ?? 7));
+    humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
+    emittedG += humusLoss;
+    humusPerteCG[i] = humusLoss;
+    const mineralized = humusLoss / cnHumus;
+    // Dépôts atmosphériques : pour moitié lessivés par la pluie, pour moitié
+    // secs (poussières, gaz absorbés).
+    const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);
+    depositionSumG += depositionG;
     // Faim d'azote (C9) : un substrat à C/N élevé oblige les décomposeurs à
     // puiser dans l'azote minéral du sol. Rien ne se perd — l'azote passe du
     // pool minéral au pool en décomposition, et reviendra plus tard.
+    //
+    // **À défaut d'azote, la décomposition ralentit, elle ne s'endette pas** —
+    // ce commentaire le disait, et le code ne faisait que borner le transfert :
+    // la litière se décomposait quand même, et les décomposeurs comme l'humus
+    // nouveau se servaient dans son azote jusqu'à la vider, son C/N filant vers
+    // l'infini (#247). La part décomposée est donc ramenée à ce que l'azote
+    // disponible, celui de la litière et celui du sol, permet de digérer.
+    const disponible = (mineralNG[i] ?? 0) + mineralized + depositionG;
+    const manqueSiTout = -azoteNetDecomposition(litterCG[i] ?? 0, litterNG[i] ?? 0);
+    const decayFraction = Math.min(
+      1,
+      (litterK[i] ?? 0) * climate,
+      manqueSiTout > 0 ? disponible / manqueSiTout : 1,
+    );
+    const decayedN = (litterNG[i] ?? 0) * decayFraction;
+    const decayedC = (litterCG[i] ?? 0) * decayFraction;
     const netN = azoteNetDecomposition(decayedC, decayedN);
-    const disponible = mineralNG[i] ?? 0;
-    // On ne peut pas immobiliser plus que ce qu'il y a : à défaut d'azote, la
-    // décomposition ralentit, elle ne s'endette pas.
     const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
     litterNG[i] = (litterNG[i] ?? 0) - transfere;
     litterCG[i] = (litterCG[i] ?? 0) - decayedC;
+    // L'enfouie se décompose au même rythme que le reste : enfouir ne change
+    // que ce que la litière couvre, pas ce qu'elle fait (#247).
+    litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) * (1 - decayFraction);
     // ── Ce que cette litière-là fait au complexe d'échange (bases.ts) ───────
     // La décomposition produit des acides organiques ; les bases de la litière
     // en neutralisent une part. Au-dessus du seuil de calcium elle rend au
@@ -1168,24 +1246,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       basesAcideSumEq += tamponne;
       basesAcideNonTamponneSumEq += -effetBases - tamponne;
     }
-    humusCG[i] = (humusCG[i] ?? 0) + LITTER_HUMIFICATION * decayedC;
-    emittedG += (1 - LITTER_HUMIFICATION) * decayedC;
-    // L'humus est **le** stock d'azote organique du sol : ce qui s'en minéralise
-    // part en CO₂ pour le carbone et revient aux plantes pour l'azote, au
-    // rapport C/N de l'humus. Les deux cycles ne peuvent plus diverger — et
-    // c'est ce couplage qui donne son sens à « construire du sol » (§12).
-    // L'acidité freine la vie du sol : un humus mor tient son azote.
-    const humusLoss =
-      (humusCG[i] ?? 0) *
-      ((HUMUS_DECAY_PER_YEAR / 52) * climate * facteurPhBiologie(state.soil.ph[i] ?? 7));
-    humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
-    emittedG += humusLoss;
-    humusPerteCG[i] = humusLoss;
-    const mineralized = humusLoss / cnHumus;
-    // Dépôts atmosphériques : pour moitié lessivés par la pluie, pour moitié
-    // secs (poussières, gaz absorbés).
-    const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);
-    depositionSumG += depositionG;
+    const humifieLitiere = humifier(i, LITTER_HUMIFICATION * decayedC, true);
+    emittedG += decayedC - humifieLitiere;
     mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + transfere + depositionG;
 
     // ── Les deux formes de l'azote minéral (#280) ──────────────────────────
@@ -1203,14 +1265,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const rendu = mineralized + Math.max(0, transfere);
     ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) + rendu;
     if (transfere < 0) {
-      const avant = (mineralNG[i] ?? 0) - rendu - depositionG - transfere;
-      if (avant > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * (1 + transfere / avant);
+      // Les décomposeurs puisent dans tout ce qui est là cette semaine, y compris
+      // ce que l'humus et les dépôts viennent de rendre — c'est la priorité
+      // qu'ils ont sur les racines.
+      const puise = (mineralNG[i] ?? 0) - transfere;
+      // Borné à zéro : à la limite, l'arrondi du produit rend un résidu négatif.
+      if (puise > 0)
+        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * (1 + transfere / puise));
     }
     // **La nitrification**, et elle ne connaît pas sa cible : la part
     // ammoniacale qui restera en sortie d'hiver tombe du froid et du pH de
     // cette cellule-là, pas d'un paramètre calé dessus (nitrogen.ts).
     const nitrifie = nitrifieG(ammoniacalNG[i] ?? 0, weather.tMean, state.soil.ph[i] ?? 7);
-    ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) - nitrifie;
+    ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) - nitrifie);
 
     // ── Phosphore et potassium (pk.ts) ─────────────────────────────────────
     const phCell = state.soil.ph[i] ?? 7;
@@ -1313,7 +1380,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     Math.min(
       1,
       (herbeCouverture[i] ?? 0) +
-        Math.min(0.6, (litterCG[i] ?? 0) / MULCH_FULL_CG) +
+        Math.min(0.6, litiereAuSolCG(i) / MULCH_FULL_CG) +
         couvertureDuBoisAuSol(longueurDeTroncM(state.soil.boisAuSolCG[i] ?? 0)),
     );
   // Le paillage ci-dessus se moque de l'orientation ; le **barrage**, non. Un
@@ -1380,9 +1447,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const dK = (potassiumG[i] ?? 0) * emporte;
       humusCG[i] = (humusCG[i] ?? 0) - dHumus;
       litterCG[i] = (litterCG[i] ?? 0) - dLitiere;
+      // La terre emportée emporte aussi ce qu'elle a enfoui.
+      litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) * (1 - emporte);
       mineralNG[i] = (mineralNG[i] ?? 0) - dNmin;
       // Le sédiment emporte les deux formes dans la même proportion (#280).
-      ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * (1 - emporte);
+      ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * (1 - emporte));
       litterNG[i] = (litterNG[i] ?? 0) - dNlit;
       phosphoreG[i] = (phosphoreG[i] ?? 0) - dP;
       potassiumG[i] = (potassiumG[i] ?? 0) - dK;
@@ -1514,6 +1583,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const pSatisfaction = new Array<number>(nTrees).fill(1);
   const kSatisfaction = new Array<number>(nTrees).fill(1);
   const nNeedG = new Array<number>(nTrees).fill(0);
+  /**
+   * Ce que chaque arbre tire cette semaine de sa **réserve** d'azote, g (#247) :
+   * l'azote résorbé l'automne d'avant, remobilisé avant tout prélèvement au sol.
+   */
+  const tirageReserveG = new Array<number>(nTrees).fill(0);
   const rootCells = new Array<number>(nTrees).fill(1);
   /**
    * Le gain mycorhizien de chaque arbre, **rangé**, parce que les deux passes
@@ -1603,8 +1677,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // ses vaisseaux cassés ne conduisent plus (trees.ts).
       (1 - tree.dommageHydraulique);
     nNeedG[t] = espece.azote.fixateur ? 0 : treeNitrogenNeedGWeek(espece, tree.heightM);
+    // La réserve paie d'abord, au rythme où l'arbre pousse : ce qu'il en tire
+    // ne lui est plus demandé au sol.
+    tirageReserveG[t] = Math.min(
+      tree.reserveAzoteG ?? 0,
+      treeNitrogenNeedGWeek(espece, tree.heightM) * season,
+    );
     const capG = espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM);
-    const needPerCell = (nNeedG[t] ?? 0) / n;
+    const needPerCell = Math.max(0, (nNeedG[t] ?? 0) - (tirageReserveG[t] ?? 0)) / n;
     const capPerCell = capG / n;
     const wPerCell = (waterDemandL[t] ?? 0) / n;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
@@ -1714,7 +1794,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       mineralNG[i] = stock - taken;
       // Une racine ne trie pas : elle prend les deux formes dans la proportion
       // où elles se présentent (#280).
-      if (stock > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * ((stock - taken) / stock);
+      if (stock > 0)
+        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * ((stock - taken) / stock));
       uptakeSumG += taken;
       azotePris = taken;
     }
@@ -1904,7 +1985,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const n = rootCells[t] ?? 1;
     const fractions = rootFractions[t] ?? [1];
     const wPerCell = (waterDemandL[t] ?? 0) / n;
-    const needPerCell = (nNeedG[t] ?? 0) / n;
+    const needPerCell = Math.max(0, (nNeedG[t] ?? 0) - (tirageReserveG[t] ?? 0)) / n;
     const capPerCell = (espece.azote.fixateur ? 0 : treeExtractionCapacityGWeek(tree.heightM)) / n;
     let gotW = 0;
     let gotN = 0;
@@ -1928,10 +2009,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé.
     const besoinIntact = wd / Math.max(0.15, 1 - tree.dommageHydraulique);
     waterSatisfaction[t] = besoinIntact > 0 ? Math.min(1, gotW / besoinIntact) : 1;
-    nSatisfaction[t] = nd > 0 ? Math.min(1, gotN / nd) : 1;
+    const tirage = tirageReserveG[t] ?? 0;
+    nSatisfaction[t] = nd > 0 ? Math.min(1, (gotN + tirage) / nd) : 1;
+    // Un fixateur tire aussi sur sa réserve, et l'air fournit le reste.
     acquiredNG[t] = espece.azote.fixateur
-      ? 0.95 * treeNitrogenNeedGWeek(espece, tree.heightM) * seasonFactor(espece, weather.tMean)
-      : gotN;
+      ? tirage +
+        0.95 *
+          Math.max(0, treeNitrogenNeedGWeek(espece, tree.heightM) - tirage) *
+          seasonFactor(espece, weather.tMean)
+      : gotN + tirage;
     // Un fixateur ne prend rien au sol : son azote vient de l'air, et le
     // compter ici fausserait le bilan que la propriété de conservation lit.
     if (!espece.azote.fixateur) uptakeArbresSumG += gotN;
@@ -2018,7 +2104,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // est la définition du sous-pool, pas une correction — et l'invariant reste
     // à **zéro strict** dans `pools-positifs.test.ts`, donc une vraie fuite le
     // ferait toujours tomber.
-    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0)) ammoniacalNG[i] = mineralNG[i] ?? 0;
+    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0))
+      ammoniacalNG[i] = Math.max(0, mineralNG[i] ?? 0);
     // **Seul le nitrate suit l'eau** (#280) : l'ammonium est un cation, il tient
     // sur le complexe d'échange. Passer le stock entier, ce que faisait ce
     // calcul, lessivait un cinquième d'azote qui ne bouge pas.
@@ -2073,7 +2160,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Mesuré : −1,1e-16, sur la lande, une fois le premier plafond en place. Le
     // premier sert à calculer `nitriqueG` sur un état cohérent ; celui-ci garde
     // l'invariant à la sortie. Aucun des deux ne déplace une quantité.
-    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0)) ammoniacalNG[i] = mineralNG[i] ?? 0;
+    if ((ammoniacalNG[i] ?? 0) > (mineralNG[i] ?? 0))
+      ammoniacalNG[i] = Math.max(0, mineralNG[i] ?? 0);
     if (nT > nS) {
       // Et c'est en **sortant** du sous-sol qu'un nitrate quitte la parcelle.
       // C'est ce flux-là que la littérature mesure, pas celui de la surface :
@@ -2175,11 +2263,47 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
     const next = result.tree;
     limitingFactors[t] = result.limitingFactor;
+    const acquired = Math.max(0, acquiredNG[t] ?? 0);
+    // **Le bois neuf se construit avec de l'azote** (#247), au C/N du bois de
+    // l'espèce, et l'arbre le paie sur ce qu'il vient d'acquérir : le besoin
+    // (`treeNitrogenNeedGWeek`) couvre le feuillage et le bois neuf. À court,
+    // le bois est simplement plus pauvre. Le reste va au feuillage.
+    let azoteMisAuBois = 0;
+    let basesMisAuBois = 0;
+    // Ce que le bois prend à l'azote acquis pour le feuillage.
+    let prisAuFeuillage = 0;
     if (tree.alive && next.heightM > tree.heightM) {
       const espece = getEspece(tree.especeId);
-      nppKgC +=
+      const boisNeufKgC =
         treeTotalCarbonKg(espece, next.diametreCm, next.heightM) -
         treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
+      nppKgC += boisNeufKgC;
+      const besoinBois = Math.max(0, (boisNeufKgC * 1000) / cnBois(espece));
+      // Un fixateur règle sa fixation sur sa demande : il tire de l'air l'azote
+      // de son bois en plus de celui de son feuillage.
+      azoteMisAuBois = espece.azote.fixateur ? besoinBois : Math.min(acquired, besoinBois);
+      prisAuFeuillage = espece.azote.fixateur ? 0 : azoteMisAuBois;
+      // **Et il y met des bases** (#247), prises sous son disque racinaire, au
+      // prorata de ses racines en surface et au fond. Un pool vide ne s'endette
+      // pas : le bois est alors plus pauvre.
+      const besoinBases = basesBoisEq(boisNeufKgC * 1000, espece.litiere.calciumMgG);
+      if (besoinBases > 0) {
+        const partSurface = fractionsRacinairesParHorizon(epaisseurs, tree.rootDepthCm)[0] ?? 1;
+        const cellules: number[] = [];
+        forEachDiscCell(dims, tree.x, tree.y, rootRadiusM(espece, tree.heightM), (i) => {
+          cellules.push(i);
+        });
+        const parCellule = besoinBases / Math.max(1, cellules.length);
+        for (const i of cellules) {
+          const enSurface = Math.min(basesEq[i] ?? 0, parCellule * partSurface);
+          const auFond = Math.min(basesProfondEq[i] ?? 0, parCellule * (1 - partSurface));
+          basesEq[i] = (basesEq[i] ?? 0) - enSurface;
+          basesProfondEq[i] = (basesProfondEq[i] ?? 0) - auFond;
+          basesBoisSurfaceSumEq += enSurface;
+          basesBoisProfondSumEq += auFond;
+          basesMisAuBois += enSurface + auFond;
+        }
+      }
     }
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
@@ -2194,7 +2318,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterSatisfaction[t] ?? 1,
       getEspece(tree.especeId).eau.seuilStressSecheresse,
     );
-    const acquired = acquiredNG[t] ?? 0;
     // Élagage naturel (docs/realisme.md B10) : sous l'ombre, les branches
     // basses cessent de payer leur respiration et meurent. La base du houppier
     // **monte**, et ne redescend jamais — une branche morte ne repousse pas. C'est
@@ -2220,7 +2343,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       dommageHydraulique,
       houppierPerdu,
       baseHouppierM,
-      uptakeYearG: next.uptakeYearG + Math.max(0, acquired),
+      uptakeYearG: next.uptakeYearG + acquired - prisAuFeuillage,
+      reserveAzoteG: Math.max(0, (tree.reserveAzoteG ?? 0) - (tirageReserveG[t] ?? 0)),
+      azoteBoisG: (tree.azoteBoisG ?? 0) + azoteMisAuBois,
+      basesBoisEq: (tree.basesBoisEq ?? 0) + basesMisAuBois,
     };
   });
 
@@ -2619,16 +2745,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
       cellulesRetournees++;
       retourneesCetteSemaine.add(i);
-      // La litière est **enfouie** : elle ne disparaît pas, elle passe au pool
-      // lent. Un boutis est un enfouissement, pas une combustion.
-      const litiereC = (litterCG[i] ?? 0) * LITIERE_ENFOUIE;
-      const litiereN = (litterNG[i] ?? 0) * LITIERE_ENFOUIE;
-      litterCG[i] = (litterCG[i] ?? 0) - litiereC;
-      litterNG[i] = (litterNG[i] ?? 0) - litiereN;
-      humusCG[i] = (humusCG[i] ?? 0) + litiereC;
-      mineralNG[i] = (mineralNG[i] ?? 0) + litiereN;
-      // Ce que l'organique rend est ammoniacal, ici comme ailleurs (#280).
-      ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) + litiereN;
+      // La litière est **enfouie** : elle ne disparaît pas, elle passe sous terre
+      // et ne couvre plus le sol. Un boutis est un enfouissement, pas une
+      // combustion — et c'est le même geste que le soc, donc la même règle
+      // (#247). Elle passait jusqu'ici dans l'humus côté carbone et dans l'azote
+      // minéral côté azote : une paille à C/N 46 versée dans un humus à C/N 11
+      // y créait l'azote qui lui manquait. Enfouie, elle se décompose selon son
+      // C/N comme toute litière (C9).
+      litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) + litiereAuSolCG(i) * LITIERE_ENFOUIE;
       // La croûte est cassée : la structure y **gagne**, ce qu'on n'attend pas
       // d'un dégât (sanglier.ts).
       tassement[i] = (tassement[i] ?? 0) * (1 - TASSEMENT_CASSE);
@@ -2774,7 +2898,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let litterfallSumG = broutageAzoteG + herbeLitiereNG;
   let fixationSumG = 0;
   let leafNppKgC = 0; // le feuillage tombé a été produit dans l'année (NPP feuilles)
-  const depositLitter = (tree: TreeState, amountG: number) => {
+  /**
+   * Verser de l'azote à la litière sous le houppier. `feuilles` dit s'il tombe
+   * avec des feuilles, donc avec leur carbone, leur calcium, leur phosphore et
+   * leur potassium. Sinon c'est l'azote seul de la réserve ou du bois d'un
+   * arbre qui meurt : leur carbone est déjà compté au bois mort (#247).
+   */
+  const depositLitter = (tree: TreeState, amountG: number, feuilles = true) => {
     if (amountG <= 0) return;
     const espece = getEspece(tree.especeId);
     const crownR = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
@@ -2785,6 +2915,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const share = amountG / n;
     const shareC = share * espece.litiere.cnRatio;
     const kSpecies = litterDecayRate(espece.litiere.cnRatio);
+    if (!feuilles) {
+      forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
+        const oldN = litterNG[i] ?? 0;
+        litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
+        litterNG[i] = oldN + share;
+      });
+      if (espece.azote.fixateur) fixationSumG += amountG;
+      else litterfallSumG += amountG;
+      return;
+    }
     // **La pompe à bases** (bases.ts, critère C15). Le calcium qui tombe ici,
     // l'arbre est allé le chercher — et il l'a cherché là où sont ses racines.
     // On débite donc le sous-sol de la part profonde de son système racinaire,
@@ -2830,6 +2970,31 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (espece.azote.fixateur) fixationSumG += amountG;
     else litterfallSumG += amountG;
   };
+  /**
+   * Rendre à la surface, sous le houppier, des bases que le bois portait : celles
+   * d'un arbre mort, ou les cendres d'un aérien brûlé (#247).
+   */
+  const rendreBases = (tree: TreeState, eq: number) => {
+    if (eq <= 0) return;
+    const espece = getEspece(tree.especeId);
+    const crownR = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
+    const cellules: number[] = [];
+    forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
+      cellules.push(i);
+    });
+    const part = eq / Math.max(1, cellules.length);
+    for (const i of cellules) basesEq[i] = (basesEq[i] ?? 0) + part;
+    if (cellules.length > 0) basesRetourBoisSumEq += eq;
+  };
+  /**
+   * Ce qu'un arbre qui meurt rend au sol : ses feuilles entières, sans rien
+   * résorber, plus sa réserve et l'azote de son bois (#247).
+   */
+  const rendreAuSol = (tree: TreeState) => {
+    depositLitter(tree, tree.uptakeYearG);
+    depositLitter(tree, (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0), false);
+    rendreBases(tree, tree.basesBoisEq ?? 0);
+  };
 
   // La chute des feuilles s'étale sur un mois au lieu de tomber en une
   // semaine : chaque arbre lâche ce que sa propre sénescence lui a fait
@@ -2862,7 +3027,28 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const part = Math.min(1, tombe / Math.max(1e-9, restantAvant));
     const azote = part * tree.uptakeYearG;
     depositLitter(tree, LITTER_RETURN_FRACTION * azote);
-    return { ...tree, uptakeYearG: tree.uptakeYearG - azote };
+    // L'autre moitié est résorbée avant la chute : elle part en réserve (#247).
+    return {
+      ...tree,
+      uptakeYearG: tree.uptakeYearG - azote,
+      reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * azote,
+    };
+  });
+  // **Un persistant renouvelle son feuillage toute l'année** (#247) : chaque
+  // semaine, la part de ses feuilles qui atteint sa durée de vie tombe, avec la
+  // moitié de son azote, et l'autre moitié part en réserve. Il ne rendait rien
+  // de son vivant : son azote de l'année s'empilait jusqu'à sa mort.
+  nextTrees = nextTrees.map((tree) => {
+    if (!tree.alive || tree.uptakeYearG <= 0) return tree;
+    const lumiere = getEspece(tree.especeId).lumiere;
+    if (lumiere.caduc || !lumiere.dureeVieFeuillageAns) return tree;
+    const azote = tree.uptakeYearG * Math.min(1, 1 / (52 * lumiere.dureeVieFeuillageAns));
+    depositLitter(tree, LITTER_RETURN_FRACTION * azote);
+    return {
+      ...tree,
+      uptakeYearG: tree.uptakeYearG - azote,
+      reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * azote,
+    };
   });
   // Filet de sécurité : ce qu'un arbre n'a pas lâché avant la fin de l'année
   // tombe quand même, sinon son azote resterait dans un feuillage qui n'existe
@@ -2872,7 +3058,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       if (!tree.alive || tree.uptakeYearG <= 0) return tree;
       if (!getEspece(tree.especeId).lumiere.caduc) return tree;
       depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
-      return { ...tree, uptakeYearG: 0 };
+      return {
+        ...tree,
+        uptakeYearG: 0,
+        reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * tree.uptakeYearG,
+      };
     });
   }
 
@@ -2933,8 +3123,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (tree.mortSemaine === undefined) {
       // Il vient de mourir : sa litière tombe et son bois rejoint le pool de
       // bois mort. Ce transfert n'a lieu qu'**une** fois — ensuite l'arbre reste
-      // en jeu comme chandelle, sans plus rien à donner.
-      depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
+      // en jeu comme chandelle, sans plus rien à donner. Un arbre qui meurt ne
+      // résorbe rien : ses feuilles et sa réserve vont entières à la litière
+      // (#247) — il n'en rendait que la moitié des feuilles.
+      rendreAuSol(tree);
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM);
       morts.push({
         id: tree.id,
@@ -2944,7 +3136,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cause: tree.causeMort ?? "secheresse",
         heightM: tree.heightM,
       });
-      survivors.push({ ...tree, mortSemaine: state.week });
+      // Son azote est rendu : la chandelle n'en porte plus.
+      survivors.push({
+        ...tree,
+        mortSemaine: state.week,
+        uptakeYearG: 0,
+        reserveAzoteG: 0,
+        azoteBoisG: 0,
+        basesBoisEq: 0,
+      });
       continue;
     }
     // Chandelle : un tronc mort tient debout des années avant de s'abattre.
@@ -3041,7 +3241,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         debout.push(tree);
         continue;
       }
-      depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
+      rendreAuSol(tree);
       poserBois(cellule, masse * 1000, recu.radians);
       morts.push({
         id: tree.id,
@@ -3060,8 +3260,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const deadDecayKgC = deadWoodKgC * ((DEADWOOD_DECAY_PER_YEAR / 52) * meanClimate);
   deadWoodKgC -= deadDecayKgC;
   const humifiedPerCellG = (deadDecayKgC * DEADWOOD_HUMIFICATION * 1000) / nCells;
-  for (let i = 0; i < nCells; i++) humusCG[i] = (humusCG[i] ?? 0) + humifiedPerCellG;
-  emittedG += deadDecayKgC * (1 - DEADWOOD_HUMIFICATION) * 1000;
+  let humifieBoisG = 0;
+  for (let i = 0; i < nCells; i++) humifieBoisG += humifier(i, humifiedPerCellG, false);
+  emittedG += deadDecayKgC * 1000 - humifieBoisG;
   // Le bois couché se décompose plus vite que le bois debout, et il fait son
   // humus **sur place** : c'est là toute la différence avec le pool de parcelle.
   for (let i = 0; i < nCells; i++) {
@@ -3069,8 +3270,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (stock <= 0) continue;
     const decompose = stock * ((DECOMPOSITION_AU_SOL_PAR_AN / 52) * meanClimate);
     boisAuSolCG[i] = stock - decompose;
-    humusCG[i] = (humusCG[i] ?? 0) + decompose * DEADWOOD_HUMIFICATION;
-    emittedG += decompose * (1 - DEADWOOD_HUMIFICATION);
+    emittedG += decompose - humifier(i, decompose * DEADWOOD_HUMIFICATION, false);
   }
 
   // ── 6 bis. Le feu (§7.4, ch5) ─────────────────────────────────────────────
@@ -3084,7 +3284,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const charge = chargeCombustible(
       nextTrees,
       herbeBiomasse,
-      litterCG,
+      // Ce qui brûle est ce qui est au sol, pas ce que la charrue a enfoui.
+      litterCG.map((c, i) => Math.max(0, c - (litiereEnfouieCG[i] ?? 0))),
       station.coteM,
       groundLight,
       boisAuSolCG,
@@ -3208,6 +3409,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
               HAUTEUR_REJET_M,
             );
           }
+          const partRestante =
+            treeTotalCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M) /
+            Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM));
+          rendreBases(tree, (tree.basesBoisEq ?? 0) * (1 - partRestante));
           apresFeu.push({
             ...tree,
             heightM: HAUTEUR_REJET_M,
@@ -3217,6 +3422,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             fruitsKg: 0,
             fruitProgress: 0,
             uptakeYearG: 0,
+            // Le bois qui a brûlé emporte son azote en fumée ; la souche garde
+            // le sien, au prorata du carbone qui reste. Ses bases, elles, ne
+            // brûlent pas : elles retombent en cendres (#247).
+            azoteBoisG: (tree.azoteBoisG ?? 0) * partRestante,
+            basesBoisEq: (tree.basesBoisEq ?? 0) * partRestante,
             hauteurElagueeM: 0,
             pousseTendreM: 0,
             vigueur: 1,
@@ -3239,6 +3449,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         rabattreParEspece(herbeFeuillage, i * N_HERBACEES, 0);
         carboneFeuKgC += (litterCG[i] ?? 0) / 1000;
         litterCG[i] = 0;
+        litiereEnfouieCG[i] = 0;
         // L'azote de la litière part en fumée pour l'essentiel ; le reste
         // reste en cendres, immédiatement disponible.
         const cendresN = (litterNG[i] ?? 0) * 0.2;
@@ -3674,6 +3885,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         nitrateTranchesG,
         litterNG,
         litterCG,
+        litiereEnfouieCG,
         humusCG,
         basesEq,
         basesProfondEq,
@@ -3770,6 +3982,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       boisSedimentPiegeKgM2: boisSedimentPiegeKg / nCells,
       erosionSortieKgM2: erosionSortieKg / nCells,
       erosionNKgHa: ((erosionSortieNminG + erosionSortieNlitG) / nCells) * 10,
+      erosionNHumusKgHa: (erosionSortieHumusCG / cnHumus / nCells) * 10,
       erosionPKgHa: (erosionSortiePG / nCells) * 10,
       erosionKKgHa: (erosionSortieKG / nCells) * 10,
       herbeCouvertureMean: herbeSum / nCells,
@@ -3796,6 +4009,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       basesPreleveEqHa: (basesPreleveSumEq / nCells) * 10_000,
       basesApportProfondEqHa: (basesApportProfondSumEq / nCells) * 10_000,
       basesExportEqHa: (basesExportSumEq / nCells) * 10_000,
+      basesBoisEqHa: ((basesRetourBoisSumEq - basesBoisSurfaceSumEq) / nCells) * 10_000,
+      basesBoisProfondEqHa: (basesBoisProfondSumEq / nCells) * 10_000,
       basesAcideNonTamponneEqHa: (basesAcideNonTamponneSumEq / nCells) * 10_000,
       saturationMoyenne:
         cecSurfaceEq > 0 ? basesEq.reduce((a, b) => a + b, 0) / nCells / cecSurfaceEq : 0,

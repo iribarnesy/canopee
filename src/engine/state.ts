@@ -330,6 +330,17 @@ export interface SoilState {
   litterNG: GrilleLongue;
   /** carbone de la litière au sol, g/m² (se décompose avec l'azote) */
   litterCG: GrilleLongue;
+  /**
+   * Part de `litterCG` qui est **enfouie**, g C/m² — toujours au plus `litterCG`.
+   *
+   * Une litière enfouie par la charrue ou le boutis se décompose comme les
+   * autres, selon son C/N (C9), mais elle ne couvre plus le sol : ni paillis
+   * contre l'évaporation, ni frein au ruissellement. C'est la seule chose que
+   * l'enfouissement change, et c'est pourquoi il ne porte pas de règle de
+   * décomposition à lui (#247). Elle décroît avec la décomposition de la
+   * litière, dans la même proportion.
+   */
+  litiereEnfouieCG: GrilleLongue;
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: GrilleLongue;
   /**
@@ -670,6 +681,18 @@ export interface TickFluxes {
    */
   basesPreleveEqHa: number;
   /**
+   * **Ce que le bois fait au budget de surface**, eq/ha (#247) : ce que les morts
+   * rendent, moins ce que le bois neuf prend à l'horizon de surface. Négatif
+   * tant qu'un peuplement pousse. Avec les quatre termes du budget de surface,
+   * la variation de `basesEq` vaut leur somme.
+   */
+  basesBoisEqHa: number;
+  /**
+   * Ce que le bois neuf prend au **sous-sol**, eq/ha (#247). Il s'ajoute à la pompe
+   * dans le budget du pool profond.
+   */
+  basesBoisProfondEqHa: number;
+  /**
    * **le budget du sous-sol**, eq/ha : ce qu'il reçoit (son altération, plus ce que
    * la surface lui a lessivé) et ce qui **quitte** le profil par le bas. Avec la
    * pompe ci-dessus, la variation de `basesProfondEq` doit valoir
@@ -707,8 +730,14 @@ export interface TickFluxes {
   boisRetenueMm: number;
   /** terre que le bois couché en travers a retenue derrière lui, kg/m² */
   boisSedimentPiegeKgM2: number;
-  /** azote parti avec la terre, kg/ha */
+  /** azote parti avec la terre, kg/ha — minéral et litière */
   erosionNKgHa: number;
+  /**
+   * azote de l'**humus** parti avec la terre, kg/ha, au C/N du profil (#247). À
+   * part parce que l'humus n'entrait pas au bilan d'azote : sa minéralisation y
+   * comptait comme une entrée.
+   */
+  erosionNHumusKgHa: number;
   /** phosphore assimilable parti avec la terre, kg/ha */
   erosionPKgHa: number;
   /** potassium échangeable parti avec la terre, kg/ha */
@@ -816,6 +845,7 @@ export function createGameState(
       nitrateTranchesG: nitrateTranchesInitiales(station, n),
       litterNG: new Float64Array(n),
       litterCG: new Float64Array(n),
+      litiereEnfouieCG: new Float64Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Float64Array(n),
       boisEnTraversPart: new Float32Array(n),

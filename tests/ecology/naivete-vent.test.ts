@@ -78,10 +78,10 @@ describe("ce que la mémoire d'abri sait dire", () => {
   });
 });
 
-/** Quarante ans de pins, puis une éclaircie, et ce qu'il en reste. */
-function apresEclaircie(critere: "parLeBas" | "parLeHaut", ans = 40) {
+/** Quarante ans de pins : le peuplement qu'on va éclaircir. */
+function peuplement(graine: number, ans = 40): GameState {
   let s: GameState = plantScattered(
-    createGameState(STATION, rngStateFromSeed(7)),
+    createGameState(STATION, rngStateFromSeed(graine)),
     "pinus_sylvestris",
     600,
   );
@@ -90,7 +90,17 @@ function apresEclaircie(critere: "parLeBas" | "parLeHaut", ans = 40) {
     if (!w) throw new Error("météo manquante");
     s = tick(s, w).state;
   }
-  s = applyAction(s, {
+  return s;
+}
+
+const naivete = (etat: GameState) => {
+  const v = etat.trees.filter((t) => t.alive && t.heightM > HAUTEUR_SOUPLE_M);
+  return moyenne(v.map((t) => naiveteAuVent(t.abriHabituel, abriAuVent(etat.trees, t))));
+};
+
+/** Le même peuplement, éclairci d'une façon ou de l'autre. */
+function eclairci(s: GameState, critere: "parLeBas" | "parLeHaut", ans = 40): GameState {
+  return applyAction(s, {
     type: "eclaircir",
     week: ans * 52,
     x: COTE / 2,
@@ -100,11 +110,11 @@ function apresEclaircie(critere: "parLeBas" | "parLeHaut", ans = 40) {
     critere,
     devenir: "laisser",
   }).state;
-  const naivete = (etat: GameState) => {
-    const v = etat.trees.filter((t) => t.alive && t.heightM > HAUTEUR_SOUPLE_M);
-    return moyenne(v.map((t) => naiveteAuVent(t.abriHabituel, abriAuVent(etat.trees, t))));
-  };
-  return { etat: s, naivete, debut: ans * 52 };
+}
+
+/** Quarante ans de pins, puis une éclaircie, et ce qu'il en reste. */
+function apresEclaircie(critere: "parLeBas" | "parLeHaut", ans = 40) {
+  return { etat: eclairci(peuplement(7, ans), critere, ans), naivete, debut: ans * 52 };
 }
 
 describe("en partie : la naïveté distingue les deux façons d'éclaircir", () => {
@@ -116,11 +126,24 @@ describe("en partie : la naïveté distingue les deux façons d'éclaircir", () 
     // deviennent pas naïfs. C'est juste, et c'est exactement la règle
     // sylvicole : ce qui met un peuplement en danger, c'est d'ouvrir par le
     // haut. Relevé 0,589 contre 0,012.
-    const haut = apresEclaircie("parLeHaut");
-    const bas = apresEclaircie("parLeBas");
-    expect(haut.naivete(haut.etat)).toBeGreaterThan(0.3);
-    expect(bas.naivete(bas.etat)).toBeLessThan(0.05);
-  });
+    //
+    // **Le seuil « sous 0,05 » sur une seule graine était une photographie**
+    // (#247). Sur main, avant le lot de l'azote, les graines 7 / 8 / 9 donnent
+    // 0,025 / 0,074 / 0,017 par le bas : la graine 8 le franchissait déjà. Le
+    // lot de l'azote, qui fait des arbres plus égaux, les porte à 0,051 /
+    // 0,095 / 0,034, contre 0,571 / 0,637 / 0,580 par le haut. Ce qui ne bouge
+    // pas d'une graine à l'autre est le **contraste** : par le bas, la naïveté
+    // est au moins cinq fois plus faible que par le haut (6,7 au plus serré).
+    // Le facteur cinq est un seuil choisi, pas une mesure.
+    for (const graine of [7, 8, 9]) {
+      const s = peuplement(graine);
+      const haut = naivete(eclairci(s, "parLeHaut"));
+      const bas = naivete(eclairci(s, "parLeBas"));
+      expect(haut, `graine ${graine}`).toBeGreaterThan(0.3);
+      expect(5 * bas, `graine ${graine}`).toBeLessThan(haut);
+    }
+    // Trois peuplements de quarante ans : le délai par défaut ne les couvre pas.
+  }, 900_000);
 
   it("et elle s'estompe d'elle-même en quelques années", () => {
     // Le cœur du critère : « pendant quelques années », pas pour toujours.

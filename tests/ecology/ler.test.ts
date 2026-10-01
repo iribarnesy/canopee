@@ -492,10 +492,25 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // d'allée au lieu de 18 à 19 %. C'est la question 2 de #184 — ce qu'un sol
     // travaillé coûte aux racines voisines — et une moitié de la réponse était
     // un nombre sans source.
+    //
+    // **Et depuis que l'azote se conserve, le blé ne coûte plus rien à l'arbre
+    // d'allée** (#247). L'arbre résorbe l'azote de ses feuilles et le
+    // remobilise, et les bandes reçoivent 192 kg N/ha : ce que le blé lui prend
+    // au sol ne le prive plus. Même campagne :
+    //
+    //   graine                     4       11      23
+    //   azote conservé           0,999   0,998   1,000
+    //
+    // La borne haute à 0,95 n'a donc plus de sens : elle ne savait pas
+    // distinguer le feston revenu (0,98) d'un arbre qui ne paie rien pour une
+    // autre raison. Le feston est une affaire de **géométrie**, et il se garde par
+    // la géométrie : la surface cultivée vaut 0,850 avec les vraies bandes et
+    // valait 0,823 avec le pavage de disques (H21). Le plancher à 0,84 ci-dessous
+    // tombe s'il revient, quoi que fasse l'azote.
+    expect(agro.partCultivee).toBeGreaterThan(0.84);
     const parArbre = (b: { volCohorte: number; cohorte: number }) => b.volCohorte / b.cohorte;
     const rapport = parArbre(agro) / parArbre(rangsSansBle);
     expect(rapport).toBeGreaterThan(0.7);
-    expect(rapport).toBeLessThan(0.95);
     // **et voici le fait que le moteur ne rend pas** — épinglé en **plafond**, pas
     // en plancher, comme E12 : à Restinclières l'arbre d'allée pousse plus vite
     // que celui du témoin forestier, parce qu'il a plus de place. Rapport de
@@ -513,7 +528,17 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // pas de dépassement net (1,1 : seuil choisi, pas sourcé). Le jour où il tombera, il faudra une campagne à
     // plusieurs graines pour dire que le fait est retrouvé, et retourner la
     // ligne — c'est toujours la question 2 de #184.
-    expect(parArbre(agro) / parArbre(boisPur)).toBeLessThan(1.1);
+    //
+    // **Il est tombé, et la campagne est faite** (#247, l'azote conservé) :
+    //
+    //   graine                     4       11      23    moyenne
+    //   azote conservé           1,103   1,048   0,965    1,039
+    //
+    // L'arbre d'allée pousse plus vite que le témoin forestier en moyenne et sur
+    // deux graines sur trois : le fait de Restinclières est retrouvé, et la
+    // ligne est retournée en plancher. Il est posé sur la graine 4, celle de
+    // l'essai ; la graine 23 dit qu'il reste un tirage dans ce chiffre.
+    expect(parArbre(agro) / parArbre(boisPur)).toBeGreaterThan(1);
     // **La culture**, **elle**, **paie** — et c'est le sens même d'un LER : le mélange rend
     // moins de grain par hectare de **parcelle** qu'un champ de blé pur, puisqu'il
     // lui cède la place des rangs. Un terme culture au-dessus de 1 serait le
