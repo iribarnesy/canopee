@@ -111,6 +111,21 @@ export interface HerbaceeV0 {
     seuilConfort: number;
   };
   /**
+   * Jusqu'où l'espèce descend, cm (#247, lot B).
+   *
+   * **Le trait qui manquait**, et son absence était une position que personne
+   * n'avait prise : la strate entière puisait son azote et son eau dans
+   * l'horizon de surface. Ça convient à une anémone ; ça fait d'un blé — qui
+   * descend à plus d'un mètre — une plante qui laisse filer sous elle l'azote
+   * qu'elle réclame, et un concurrent que l'arbre distance trop facilement.
+   *
+   * Lu par `fractionsRacinairesParHorizon` (trees.ts), la fonction qui répartit
+   * les racines des arbres, avec la même décroissance exponentielle : déclarer
+   * une profondeur ne met pas les racines uniformément au fond, la moitié reste
+   * dans le premier tiers.
+   */
+  profondeurRacinesCm: number;
+  /**
    * Gamme de pH tolérée [min, max], bordure douce de ±0,7 comme pour les
    * ligneux (`soil.ts:facteurGammePh`). C'est l'axe qui sépare le plus
    * nettement les deux graminées : le dactyle fuit l'acidité, la molinie y
@@ -289,6 +304,9 @@ const TAYLOR_2001 =
 export const HERBACEES: readonly HerbaceeV0[] = [
   {
     id: "anemone_nemorosa",
+    // Géophyte à rhizome traçant : le rhizome court à deux ou trois
+    // centimètres, et les racines ne s'en éloignent guère *(à calibrer)*.
+    profondeurRacinesCm: 15,
     nom: "Anémone des bois",
     nomLatin: "Anemone nemorosa",
     // Géophyte de sous-bois : elle sature autour du quart de la pleine
@@ -337,6 +355,9 @@ export const HERBACEES: readonly HerbaceeV0[] = [
   },
   {
     id: "dactylis_glomerata",
+    // Graminée de pâture : 0,5 à 1,5 m d'enracinement maximal (Allen et al.
+    // 1998, FAO-56, tableau 22) ; le milieu de la gamme.
+    profondeurRacinesCm: 80,
     nom: "Dactyle aggloméré",
     nomLatin: "Dactylis glomerata",
     // Héliophile : c'est **la** graminée qui étouffe une plantation sur sol riche.
@@ -381,6 +402,8 @@ export const HERBACEES: readonly HerbaceeV0[] = [
   },
   {
     id: "molinia_caerulea",
+    // Touradon des landes humides : 40 à 80 cm *(à confirmer)*.
+    profondeurRacinesCm: 60,
     nom: "Molinie bleue",
     nomLatin: "Molinia caerulea",
     lumiere: { compensation: 0.12, saturation: 0.45 },
@@ -406,6 +429,10 @@ export const HERBACEES: readonly HerbaceeV0[] = [
   },
   {
     id: "triticum_aestivum",
+    // Blé : 1,0 à 1,5 m d'enracinement maximal (Allen et al. 1998, FAO-56,
+    // tableau 22). La profondeur est prise atteinte dès le semis, ce qui
+    // avance l'accès au fond en hiver, quand le blé demande peu *(à confirmer)*.
+    profondeurRacinesCm: 120,
     nom: "Blé tendre d'hiver",
     nomLatin: "Triticum aestivum",
     /**

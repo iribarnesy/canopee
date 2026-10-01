@@ -878,6 +878,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   /** engorgement par (cellule, horizon) */
   const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
+  /** Le même frein, lu sur le stock du sous-sol (lot B). */
+  const availFactorFond = new Array<number>(nCells).fill(0);
   // **Les solutés ne lisent pas le drainage sous le profil** (#291). Il compte
   // l'eau que la nappe fait entrer par le bas et ressortir par le bas — 4,9 m
   // par an sur le sable profond — et qui ne traverse jamais la surface. Deux
@@ -1341,6 +1343,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     mineralizationSumG += mineralized;
     litterDecaySumG += transfere;
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
+    availFactorFond[i] = nitrogenAvailabilityFactor(mineralNProfondG[i] ?? 0);
   }
 
   // ── 2 bis. Ruissellement : l'eau descend la pente ─────────────────────────
@@ -1618,6 +1621,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const arbresCapacite = new Float64Array(nCells);
   const herbeCapacite = new Float64Array(nCells);
   /**
+   * **Le même partage, au fond** (#247, lot B) : ce que chaque plante demande au
+   * sous-sol (`mineralNProfondG`) et la capacité qu'elle y a, au prorata de ses
+   * racines sous l'horizon de surface. Le fond ne recevait que le lessivage de
+   * la surface et le rendait au monde : aucune plante n'y puisait.
+   */
+  const cellNWantedFond = new Float64Array(nCells);
+  const arbresNWantedFond = new Float64Array(nCells);
+  const arbresCapaciteFond = new Float64Array(nCells);
+  const herbeCapaciteFond = new Float64Array(nCells);
+  /**
+   * La part de ses racines que chaque herbacée met sous l'horizon de surface, et
+   * sa répartition par horizon : la fonction des arbres, sur la profondeur que
+   * l'atlas lui donne (bornée par le sol pénétrable).
+   */
+  const fractionsHerbe = HERBACEES.map((h) =>
+    fractionsRacinairesParHorizon(epaisseurs, Math.min(h.profondeurRacinesCm, solPenetrableCm)),
+  );
+  const partFondHerbe = fractionsHerbe.map((f) => (nH > 1 ? 1 - (f[0] ?? 1) : 0));
+  /**
    * L'abri au vent, rangé une fois pour la semaine au lieu d'être recalculé en
    * balayant tout le peuplement pour chaque arbre (#99). Construit seulement
    * s'il va servir : sur une parcelle abritée, `ventExposition` vaut zéro et
@@ -1719,9 +1741,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // rien, agit sur ce frein-là, donc sur la part de l'arbre.
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
       const demandeN = Math.min(needPerCell, capPerCell);
-      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
-      arbresNWanted[i] = (arbresNWanted[i] ?? 0) + demandeN;
-      arbresCapacite[i] = (arbresCapacite[i] ?? 0) + capPerCell * dispo;
+      // Chaque compartiment reçoit la part de la demande et de la capacité que
+      // les racines y mettent (lot B).
+      const fond = nH > 1 ? 1 - (fractions[0] ?? 1) : 0;
+      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN * (1 - fond);
+      arbresNWanted[i] = (arbresNWanted[i] ?? 0) + demandeN * (1 - fond);
+      arbresCapacite[i] = (arbresCapacite[i] ?? 0) + capPerCell * dispo * (1 - fond);
+      cellNWantedFond[i] = (cellNWantedFond[i] ?? 0) + demandeN * fond;
+      arbresNWantedFond[i] = (arbresNWantedFond[i] ?? 0) + demandeN * fond;
+      arbresCapaciteFond[i] =
+        (arbresCapaciteFond[i] ?? 0) +
+        capPerCell * Math.min(1, (availFactorFond[i] ?? 0) * (gainMyco[t] ?? 1)) * fond;
     });
   }
 
@@ -1731,6 +1761,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const herbeDemandeL = new Array<number>(nCells).fill(0);
   /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
   const herbeDemandeNG = new Array<number>(nCells).fill(0);
+  /** Et ce qu'il demande au sous-sol (lot B). */
+  const herbeDemandeFondNG = new Array<number>(nCells).fill(0);
   /** Par cellule et par espèce : la production possible et l'azote qu'elle demande. */
   const herbePotentielG = new Float64Array(nCells * N_HERBACEES);
   const herbeDemandeEspeceG = new Float64Array(nCells * N_HERBACEES);
@@ -1740,7 +1772,26 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (couverture <= 0) continue;
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
     herbeDemandeL[i] = demandeEau;
-    cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
+    // L'eau de la strate se prend là où sont ses racines (lot B) : chaque espèce
+    // au prorata de son feuillage, sur ses fractions racinaires. Une anémone
+    // puise en surface, un blé descend jusqu'au fond.
+    let feuillageTotal = 0;
+    for (let s_ = 0; s_ < N_HERBACEES; s_++)
+      feuillageTotal += Math.max(0, herbeFeuillage[i * N_HERBACEES + s_] ?? 0);
+    for (let s_ = 0; s_ < N_HERBACEES; s_++) {
+      const part =
+        feuillageTotal > 0
+          ? Math.max(0, herbeFeuillage[i * N_HERBACEES + s_] ?? 0) / feuillageTotal
+          : s_ === 0
+            ? 1
+            : 0;
+      if (part <= 0) continue;
+      const fr = fractionsHerbe[s_] ?? [1];
+      for (let h = 0; h < nH; h++) {
+        cellWaterDemand[i * nH + h] =
+          (cellWaterDemand[i * nH + h] ?? 0) + demandeEau * part * (fr[h] ?? 0);
+      }
+    }
     // **Ce que la strate fabrique cette semaine, et l'azote que ça demande** (#247).
     // La production est le rayonnement que le feuillage intercepte, fois ce
     // que la station permet (`capaciteHerbacee` : lumière, pH, tassement — le
@@ -1753,6 +1804,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const plafondTassement = facteurCroissanceTassement(tassement[i] ?? 0);
     const ph = state.soil.ph[i] ?? 7;
     let demandeN = 0;
+    let demandeFondN = 0;
     for (let s_ = 0; s_ < N_HERBACEES; s_++) {
       const h = HERBACEES[s_];
       const k = i * N_HERBACEES + s_;
@@ -1760,9 +1812,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // Ses racines occupent la cellule au prorata de son feuillage, avec la même
       // capacité par m² de couvert qu'un houppier d'arbre, freinée de même dans
       // un sol pauvre.
+      const fondH = partFondHerbe[s_] ?? 0;
       herbeCapacite[i] =
         (herbeCapacite[i] ?? 0) +
-        (AZOTE_HOUPPIER_G_M2_AN / 52) * Math.max(0, feuillage) * (availFactor[i] ?? 0);
+        (AZOTE_HOUPPIER_G_M2_AN / 52) *
+          Math.max(0, feuillage) *
+          (availFactor[i] ?? 0) *
+          (1 - fondH);
+      herbeCapaciteFond[i] =
+        (herbeCapaciteFond[i] ?? 0) +
+        (AZOTE_HOUPPIER_G_M2_AN / 52) * Math.max(0, feuillage) * (availFactorFond[i] ?? 0) * fondH;
       if (!h || feuillage <= 0) {
         herbePotentielG[k] = 0;
         herbeDemandeEspeceG[k] = 0;
@@ -1783,10 +1842,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const demande = potentiel > 0 ? Math.max(0, azoteCritiqueG(vise) - (herbeAzoteG[k] ?? 0)) : 0;
       herbePotentielG[k] = potentiel;
       herbeDemandeEspeceG[k] = demande;
-      demandeN += demande;
+      demandeN += demande * (1 - fondH);
+      demandeFondN += demande * fondH;
     }
     herbeDemandeNG[i] = demandeN;
+    herbeDemandeFondNG[i] = demandeFondN;
     cellNWanted[i] = (cellNWanted[i] ?? 0) + (herbeDemandeNG[i] ?? 0);
+    cellNWantedFond[i] = (cellNWantedFond[i] ?? 0) + demandeFondN;
   }
 
   // ── Plafond d'énergie ─────────────────────────────────────────────────────
@@ -1819,6 +1881,43 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   /** La part servie à la strate, et celle servie aux arbres (#247). */
   const nServedRatio = new Array<number>(nCells).fill(0);
   const arbresServedRatio = new Float64Array(nCells);
+  /** Les mêmes parts, servies par le sous-sol (lot B). */
+  const nServedRatioFond = new Float64Array(nCells);
+  const arbresServedRatioFond = new Float64Array(nCells);
+  /**
+   * **Un azote rare se partage selon la place occupée, pas selon la faim**
+   * (#247). Servi au prorata des demandes, il allait à la plante la plus
+   * carencée : une prairie qui réclame tout son déficit chaque semaine laissait
+   * les semis d'une friche sans rien. Deux systèmes racinaires dans le même sol
+   * se le partagent selon leur capacité d'extraction, chacun borné par ce qu'il
+   * demande ; ce que l'un ne prend pas va à l'autre. La règle vaut pour chaque
+   * compartiment, surface et fond (lot B). Rend ce qui est pris, et les parts
+   * servies aux arbres et à la strate.
+   */
+  const partager = (
+    stock: number,
+    demandeArbres: number,
+    demandeHerbe: number,
+    capA: number,
+    capH: number,
+  ): { pris: number; ratioArbres: number; ratioHerbe: number; partHerbe: number } => {
+    const voulu = demandeArbres + demandeHerbe;
+    const pris = Math.min(stock, voulu);
+    let partArbres = demandeArbres;
+    let partHerbe = demandeHerbe;
+    if (pris < voulu) {
+      const poidsA = capA + capH > 0 ? capA / (capA + capH) : voulu > 0 ? demandeArbres / voulu : 0;
+      partArbres = Math.min(demandeArbres, pris * poidsA);
+      partHerbe = Math.min(demandeHerbe, pris - partArbres);
+      partArbres = Math.min(demandeArbres, pris - partHerbe);
+    }
+    return {
+      pris,
+      ratioArbres: demandeArbres > 0 ? partArbres / demandeArbres : 0,
+      ratioHerbe: demandeHerbe > 0 ? partHerbe / demandeHerbe : 0,
+      partHerbe,
+    };
+  };
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   /**
@@ -1845,29 +1944,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const nWanted = cellNWanted[i] ?? 0;
     if (nWanted > 0) {
       const stock = mineralNG[i] ?? 0;
-      const taken = Math.min(stock, nWanted);
-      // **Un azote rare se partage selon la place occupée, pas selon la faim**
-      // (#247). Servi au prorata des demandes, il allait à la plante la plus
-      // carencée : une prairie qui réclame tout son déficit chaque semaine
-      // laissait les semis d'une friche sans rien. Deux systèmes racinaires
-      // dans le même sol se le partagent selon leur capacité d'extraction,
-      // chacun borné par ce qu'il demande ; ce que l'un ne prend pas va à
-      // l'autre.
-      const demandeArbres = arbresNWanted[i] ?? 0;
-      const demandeHerbe = herbeDemandeNG[i] ?? 0;
-      let partArbres = demandeArbres;
-      let partHerbe = demandeHerbe;
-      if (taken < nWanted) {
-        const capA = arbresCapacite[i] ?? 0;
-        const capH = herbeCapacite[i] ?? 0;
-        const poidsA = capA + capH > 0 ? capA / (capA + capH) : demandeArbres / nWanted;
-        partArbres = Math.min(demandeArbres, taken * poidsA);
-        partHerbe = Math.min(demandeHerbe, taken - partArbres);
-        partArbres = Math.min(demandeArbres, taken - partHerbe);
-      }
-      arbresServedRatio[i] = demandeArbres > 0 ? partArbres / demandeArbres : 0;
-      nServedRatio[i] = demandeHerbe > 0 ? partHerbe / demandeHerbe : 0;
-      uptakeHerbeSumG += partHerbe;
+      const surface = partager(
+        stock,
+        arbresNWanted[i] ?? 0,
+        herbeDemandeNG[i] ?? 0,
+        arbresCapacite[i] ?? 0,
+        herbeCapacite[i] ?? 0,
+      );
+      const taken = surface.pris;
+      arbresServedRatio[i] = surface.ratioArbres;
+      nServedRatio[i] = surface.ratioHerbe;
+      uptakeHerbeSumG += surface.partHerbe;
       mineralNG[i] = stock - taken;
       // Une racine ne trie pas : elle prend les deux formes dans la proportion
       // où elles se présentent (#280).
@@ -1875,6 +1962,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * ((stock - taken) / stock));
       uptakeSumG += taken;
       azotePris = taken;
+    }
+    // **Le sous-sol se partage de même** (lot B). Il ne porte que du nitrate
+    // (l'ammonium ne lessive pas, #280) : rien à rabattre.
+    const nWantedFond = cellNWantedFond[i] ?? 0;
+    if (nWantedFond > 0) {
+      const stockFond = mineralNProfondG[i] ?? 0;
+      const fond = partager(
+        stockFond,
+        arbresNWantedFond[i] ?? 0,
+        herbeDemandeFondNG[i] ?? 0,
+        arbresCapaciteFond[i] ?? 0,
+        herbeCapaciteFond[i] ?? 0,
+      );
+      arbresServedRatioFond[i] = fond.ratioArbres;
+      nServedRatioFond[i] = fond.ratioHerbe;
+      uptakeHerbeSumG += fond.partHerbe;
+      mineralNProfondG[i] = stockFond - fond.pris;
+      uptakeSumG += fond.pris;
+      azotePris += fond.pris;
     }
     // Phosphore et potassium suivent l'azote **réellement** absorbé, pas la
     // demande : une plante bridée par l'azote n'accumule pas du potassium pour
@@ -1967,7 +2073,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const fiche = HERBACEES[s];
       if (!fiche) continue;
       const k = base + s;
-      let azote = (herbeAzoteG[k] ?? 0) + (herbeDemandeEspeceG[k] ?? 0) * servi;
+      const fondS = partFondHerbe[s] ?? 0;
+      const serviEspece = (1 - fondS) * servi + fondS * (nServedRatioFond[i] ?? 0);
+      let azote = (herbeAzoteG[k] ?? 0) + (herbeDemandeEspeceG[k] ?? 0) * serviEspece;
       let matiere = herbeMatiereSecheG[k] ?? 0;
       const potentiel = herbePotentielG[k] ?? 0;
       if (potentiel > 0) {
@@ -2051,7 +2159,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // cellule fait disparaître la différence (mycorhizes.ts, `tick.ts`
       // passe 3).
       const demandeCell = Math.min(needPerCell, capPerCell);
-      gotN += demandeCell * (arbresServedRatio[i] ?? 0);
+      const fond = nH > 1 ? 1 - (fractions[0] ?? 1) : 0;
+      gotN +=
+        demandeCell *
+        ((1 - fond) * (arbresServedRatio[i] ?? 0) + fond * (arbresServedRatioFond[i] ?? 0));
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;

@@ -229,7 +229,7 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
 });
 
 describe("l'ombre des arbres coûte du rendement", () => {
-  it("sans fertilisation ni prélèvement profond, l'azote de l'arbre ne masque plus son ombre", () => {
+  it("sans fertilisation, l'arbre dispute au blé son ombre et son azote", () => {
     // Deux rangs de noyers encadrant une allée de 8 m : le rapport
     // hauteur / largeur d'allée monte jusqu'à 1,28 en trente-trois ans.
     //
@@ -339,12 +339,29 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // point du relevé mesure le tirage.
     // Ce qui reste affirmé : l'allée non fertilisée paie son ombre à l'an 25, et
     // de plus en plus avec l'âge.
+    //
+    // **Le lot B est arrivé, et l'essai a basculé dans l'autre sens** (#247).
+    // On attendait que le noyer reprenne au fond le nitrate perdu, et rende de
+    // la compensation. Mais le blé y descend aussi désormais (120 cm, FAO-56) :
+    // rien n'est plus lessivé, ni sous le blé pur ni sous l'allée, et le noyer
+    // dispute au blé l'azote du fond comme celui de la surface. Mesuré :
+    //
+    //     graine        4      1      7     33   2022   moyenne
+    //     an 25      0,653  0,712  0,766  0,738  0,689    0,712
+    //     an 33      0,431  0,504  0,620  0,527  0,521    0,521
+    //
+    // contre 0,862 et 0,749 pour la même allée fertilisée à 192 kg N (graine
+    // 4) : sans apport, la concurrence pour l'azote s'ajoute à l'ombre. Le
+    // plancher qui suivait (0,6) n'avait pas de source, c'était un relevé du
+    // moteur ; il est remplacé par ce que chaque graine montre sans exception,
+    // une perte qui croît avec l'âge.
     expect(rapport(25)).toBeLessThan(0.95);
     expect(rapport(25)).toBeLessThan(rapport(3));
     // L'ombre gagne toujours avec l'âge, et le classement des âges reste strict.
     expect(rapport(33)).toBeLessThan(rapport(25));
-    // Le plancher garde contre un effondrement : la plus basse des cinq graines
-    // était à 0,678 avec les 5 % d'avant, à 0,791 depuis, grain lu sur pied.
-    expect(rapport(33)).toBeGreaterThan(0.6);
+    for (const [i, r] of parGraine.entries()) {
+      expect(r(25), `graine ${GRAINES[i]}`).toBeLessThan(r(3));
+      expect(r(33), `graine ${GRAINES[i]}`).toBeLessThan(r(25));
+    }
   }, 1_800_000);
 });
